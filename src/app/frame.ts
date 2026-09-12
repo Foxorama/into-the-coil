@@ -5133,35 +5133,82 @@ export function detonateArsenal(w: World, charges: number): void {
 const ENTRANCE_AT = new Float64Array(3);
 
 function entranceAt(e: Entrance, startAlong: number, s: number): void {
-  const r = e.radius;
-  const cx = e.centre.along;
-  const cy = e.centre.across;
-  // In along the coil's top edge from where the boss was put on the field. Behind the start, the
-  // same line carries on, which is where the tail is before the animal has flown its own length.
-  const lead = startAlong - cx;
-  if (s <= lead) {
-    ENTRANCE_AT[0] = startAlong - s;
-    ENTRANCE_AT[1] = cy - r;
-    ENTRANCE_AT[2] = Math.PI;
-    return;
+  // A coil or a leap — 0313; the `never` arm is what makes the union closed (0016).
+  switch (e.kind) {
+    case 'coil': {
+      const r = e.radius;
+      const cx = e.centre.along;
+      const cy = e.centre.across;
+      // In along the coil's top edge from where the boss was put on the field. Behind the start, the
+      // same line carries on, which is where the tail is before the animal has flown its own length.
+      const lead = startAlong - cx;
+      if (s <= lead) {
+        ENTRANCE_AT[0] = startAlong - s;
+        ENTRANCE_AT[1] = cy - r;
+        ENTRANCE_AT[2] = Math.PI;
+        return;
+      }
+      // Round the coil from its top, toward the trailing edge first: the angle falls as the head goes.
+      const ring = e.turns * TAU * r;
+      if (s <= lead + ring) {
+        const phi = -Math.PI / 2 - (s - lead) / r;
+        ENTRANCE_AT[0] = cx + r * Math.cos(phi);
+        ENTRANCE_AT[1] = cy + r * Math.sin(phi);
+        ENTRANCE_AT[2] = Math.atan2(-Math.cos(phi), Math.sin(phi));
+        return;
+      }
+      // And straight on along the tangent it leaves by.
+      const phi = -Math.PI / 2 - e.turns * TAU;
+      const dAlong = Math.sin(phi);
+      const dAcross = -Math.cos(phi);
+      const on = s - lead - ring;
+      ENTRANCE_AT[0] = cx + r * Math.cos(phi) + dAlong * on;
+      ENTRANCE_AT[1] = cy + r * Math.sin(phi) + dAcross * on;
+      ENTRANCE_AT[2] = Math.atan2(dAcross, dAlong);
+      return;
+    }
+    case 'breach': {
+      /*
+        ⚠️ **`s` IS ALONG DISTANCE HERE AND PATH LENGTH ABOVE, WHICH IS THE WHOLE OF WHY THE ARCS ARE
+        BALLISTIC — 0313.** A thrown body has constant horizontal speed, so parametrising by the
+        horizontal axis IS what makes the path a parabola: fastest where it leaves and re-enters,
+        slowest at the crest. `src/content/bosses.ts` has the two shapes this rejected.
+      */
+      const lead = startAlong - e.from;
+      if (s <= lead) {
+        /*
+          ⚠️ **ALONG THE EDGE ITSELF, WHICH IS THE TELL AND NOT DEAD AIR.** The hull's centre is ON the
+          surface for the run-in, so its far half is off the screen and its near half is a back cutting
+          along the bottom of the lane. The alternatives were a straight line at an authored depth —
+          which arrives at the first leap as a jump of exactly that depth — and the first parabola run
+          backwards, which brings the animal up from six hundred units under at seven units a step and
+          pops it into view already at full speed.
+        */
+        ENTRANCE_AT[0] = startAlong - s;
+        ENTRANCE_AT[1] = e.surface;
+        ENTRANCE_AT[2] = Math.PI;
+        return;
+      }
+      const u = s - lead;
+      // Clamped to the last leap, so past the final crossing the SAME parabola carries the fish down
+      // through the edge. A straight tangent would be a second description of one dive.
+      const leap = Math.min(Math.floor(u / e.span), e.leaps - 1);
+      const t = u / e.span - leap;
+      const height = e.height * Math.pow(e.rise, leap);
+      ENTRANCE_AT[0] = e.from - u;
+      ENTRANCE_AT[1] = e.surface - 4 * height * t * (1 - t);
+      // The path's heading: along falls at one unit for one of `u`, and the arc's slope is the rest.
+      ENTRANCE_AT[2] = Math.atan2((-4 * height * (1 - 2 * t)) / e.span, -1);
+      return;
+    }
+    // ⚠️ **INSIDE the switch and RETURNED rather than thrown**, on this file's own two rules: 0016's
+    // guard reads the arm out of the switch's own braces, and a `throw` with a message in it builds an
+    // object and a string in a hot file (0025). `src/app/frame.ts`'s flight switch is the same shape.
+    default: {
+      const unhandled: never = e;
+      return unhandled;
+    }
   }
-  // Round the coil from its top, toward the trailing edge first: the angle falls as the head goes.
-  const ring = e.turns * TAU * r;
-  if (s <= lead + ring) {
-    const phi = -Math.PI / 2 - (s - lead) / r;
-    ENTRANCE_AT[0] = cx + r * Math.cos(phi);
-    ENTRANCE_AT[1] = cy + r * Math.sin(phi);
-    ENTRANCE_AT[2] = Math.atan2(-Math.cos(phi), Math.sin(phi));
-    return;
-  }
-  // And straight on along the tangent it leaves by.
-  const phi = -Math.PI / 2 - e.turns * TAU;
-  const dAlong = Math.sin(phi);
-  const dAcross = -Math.cos(phi);
-  const on = s - lead - ring;
-  ENTRANCE_AT[0] = cx + r * Math.cos(phi) + dAlong * on;
-  ENTRANCE_AT[1] = cy + r * Math.sin(phi) + dAcross * on;
-  ENTRANCE_AT[2] = Math.atan2(dAcross, dAlong);
 }
 
 /**
@@ -5173,24 +5220,66 @@ function entranceAt(e: Entrance, startAlong: number, s: number): void {
  * teleport, and the only place one is invisible is with every node of the body off the screen.
  */
 function entranceLength(e: Entrance, startAlong: number, reach: number, girth: number): number {
-  const r = e.radius;
-  const phi = -Math.PI / 2 - e.turns * TAU;
-  const fromAlong = e.centre.along + r * Math.cos(phi);
-  const fromAcross = e.centre.across + r * Math.sin(phi);
-  const dAlong = Math.sin(phi);
-  const dAcross = -Math.cos(phi);
-  let out = Number.POSITIVE_INFINITY;
-  if (dAcross > 1e-9) out = Math.min(out, (ACROSS_SPAN + girth - fromAcross) / dAcross);
-  if (dAcross < -1e-9) out = Math.min(out, (fromAcross + girth) / -dAcross);
-  if (dAlong > 1e-9) out = Math.min(out, (MAX_ALONG_SPAN + girth - fromAlong) / dAlong);
-  if (dAlong < -1e-9) out = Math.min(out, (fromAlong + girth) / -dAlong);
-  return startAlong - e.centre.along + e.turns * TAU * r + out + reach;
+  switch (e.kind) {
+    case 'coil': {
+      const r = e.radius;
+      const phi = -Math.PI / 2 - e.turns * TAU;
+      const fromAlong = e.centre.along + r * Math.cos(phi);
+      const fromAcross = e.centre.across + r * Math.sin(phi);
+      const dAlong = Math.sin(phi);
+      const dAcross = -Math.cos(phi);
+      let out = Number.POSITIVE_INFINITY;
+      if (dAcross > 1e-9) out = Math.min(out, (ACROSS_SPAN + girth - fromAcross) / dAcross);
+      if (dAcross < -1e-9) out = Math.min(out, (fromAcross + girth) / -dAcross);
+      if (dAlong > 1e-9) out = Math.min(out, (MAX_ALONG_SPAN + girth - fromAlong) / dAlong);
+      if (dAlong < -1e-9) out = Math.min(out, (fromAlong + girth) / -dAlong);
+      return startAlong - e.centre.along + e.turns * TAU * r + out + reach;
+    }
+    case 'breach': {
+      /*
+        ⚠️ **THE LAST PARABOLA CARRIED ON UNTIL THE HULL IS PAST THE EDGE, OR THE TRAILING EDGE IF THAT
+        COMES FIRST — 0313.** `4h·t(t−1) = girth` past `t = 1` is a quadratic with one root above one,
+        which is how far into the dive the whole animal is out of sight; a `from` authored so low that
+        the fish leaves the screen along the lane before it gets there is the other way this ends, and
+        taking the nearer of the two is the coil's own `min` over its four edges.
+      */
+      const last = e.height * Math.pow(e.rise, e.leaps - 1);
+      const dive = (1 + Math.sqrt(1 + girth / last)) / 2;
+      const acrossOut = (e.leaps - 1 + dive) * e.span;
+      const alongOut = e.from + girth;
+      /*
+        ⚠️ **AND ONE STEP MORE, BECAUSE WHAT HAS TO BE OFF THE SCREEN IS THE LAST POSITION DRAWN.** The
+        hand-over fires on the first step at or past this, and on that step the hull is already at its
+        station — so the last pose anybody sees is a whole `speed` short of wherever this says. Without
+        the step the fish hands over at 115 across with a drawn half-extent of 21: six units of it still
+        showing at the edge, which `tests/volans.test.ts` measured before this line existed. The coil
+        needs none of it, because its length is set by the TAIL and its head is long past the edge.
+      */
+      return startAlong - e.from + Math.min(acrossOut, alongOut) + e.speed + reach;
+    }
+    // The same arm, on the same two rules as `entranceAt`'s.
+    default: {
+      const unhandled: never = e;
+      return unhandled;
+    }
+  }
 }
 
-/** The thickest the animal is, or nothing for a hull without a body — 0306. */
-function thickest(chain: Chain | null): number {
+/**
+ * The thickest the animal is, or `hull` — half its DRAWN extent — for a boss without a body: 0306, and
+ * the second half since 0313.
+ *
+ * ⚠️ **`0` SAID A HULL WITH NO CHAIN HAS NO SIZE**, so an entrance that hides the animal behind an edge
+ * before handing over would hand over with half of it still on the screen. No boss had both an
+ * entrance and no chain until the fish, which is why it read zero and nothing noticed.
+ *
+ * ⚠️ **AND IT IS THE DRAWN EXTENT AND NOT `radius`**, which is the smaller of the two on purpose
+ * (`src/content/sprites.ts`): what has to be off the screen is the picture, not the hurtbox.
+ */
+function thickest(chain: Chain | null, hull: number): number {
+  if (chain === null) return hull;
   let most = 0;
-  if (chain !== null) for (let i = 0; i < chain.girth.length; i++) if (chain.girth[i]! > most) most = chain.girth[i]!;
+  for (let i = 0; i < chain.girth.length; i++) if (chain.girth[i]! > most) most = chain.girth[i]!;
   return most;
 }
 
@@ -5205,7 +5294,7 @@ function thickest(chain: Chain | null): number {
 function driveEntrance(w: World, boss: Entity): void {
   const entrance = w.bossRow.entrance!;
   const chain = w.bossRow.chain;
-  const total = entranceLength(entrance, w.bossEntryAt, chain === null ? 0 : chainReach(chain), thickest(chain));
+  const total = entranceLength(entrance, w.bossEntryAt, chain === null ? 0 : chainReach(chain), thickest(chain, SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! / 2));
   w.bossEntering += 1;
   const s = w.bossEntering * entrance.speed;
   if (s >= total) {
@@ -5229,9 +5318,46 @@ function driveEntrance(w: World, boss: Entity): void {
     entranceAt(entrance, w.bossEntryAt, s);
     boss.velAlong = w.cameraAlong + ENTRANCE_AT[0]! - boss.along;
     boss.velAcross = ENTRANCE_AT[1]! - boss.across;
+    /*
+      ⚠️ **A HULL WITH NO CHAIN TURNS TO ITS PATH HERE, AND A CHAIN'S HEAD IS TURNED IN `layChain`
+      INSTEAD — 0313.** The serpent's head takes its turn beside its nodes, because one description of
+      which way a node faces is the whole of what 0306 settled and the head is the first node. A boss
+      that IS its hull has no such list, so the only place its heading exists is the path it just read.
+    */
+    if (chain === null) boss.turn = turnFor(ENTRANCE_AT[2]!);
+    breakSurface(w, entrance, w.bossEntryAt, s);
   }
   w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
   w.bossAcross = boss.across + boss.velAcross;
+}
+
+/**
+ * The spray where a breach goes through the edge of the lane — 0313.
+ *
+ * ⚠️ **[0036](docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md).** A leap
+ * ends where the next one begins, so a breach of `leaps` arcs crosses the edge `leaps + 1` times: out,
+ * a skip for every junction, and the dive. Each one is an event the model resolves and the screen
+ * would otherwise not mention at all — the fish would slide through an invisible line four times.
+ *
+ * ⚠️ **COUNTED OFF THE PATH RATHER THAN REMEMBERED.** How many crossings have happened by `s` is a
+ * function of `s`, so comparing it with the same function a step back needs no field on the world and
+ * nothing to reset when a fight restarts. A `prevAcross` test cannot do it: the run-in sits exactly ON
+ * the surface, so the first break never changes sign.
+ *
+ * ⚠️ **EMBERS AND NOT WATER, WHICH IS THE PLACE AND NOT THE ANIMAL** — `BURST.breach` is thrown at the
+ * edge under the hull, exactly as 0251 throws them at the far edge over a rock that came in there.
+ */
+function breakSurface(w: World, e: Entrance, startAlong: number, s: number): void {
+  if (e.kind !== 'breach') return;
+  const lead = startAlong - e.from;
+  if (crossingsBy(e, s - lead) === crossingsBy(e, s - lead - e.speed)) return;
+  burst(w, w.cameraAlong + ENTRANCE_AT[0]!, e.surface, BURST.breach);
+  w.onCue('bossBreach', e.surface);
+}
+
+/** How many times a breach has been through the edge, `u` along units after its first leap — 0313. */
+function crossingsBy(e: Entrance & { kind: 'breach' }, u: number): number {
+  return u < 0 ? 0 : Math.min(Math.floor(u / e.span) + 1, e.leaps + 1);
 }
 
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
@@ -5990,7 +6116,14 @@ function spawnBoss(w: World): void {
   w.bossEntering = entrance === null ? -1 : 0;
   w.bossSettle = false;
   if (entrance !== null) {
-    boss.across = entrance.centre.across - entrance.radius;
+    /*
+      ⚠️ **THE START OF THE PATH ASKED OF THE PATH, RATHER THAN WRITTEN OUT A SECOND TIME — 0313.** It
+      was the coil's own `centre.across - radius`, which is one kind's answer to *where does this
+      begin*; a breach begins at the edge of the lane instead, and a third kind would have made this
+      the third place that has to know. `entranceAt` at zero is the one description.
+    */
+    entranceAt(entrance, w.bossEntryAt, 0);
+    boss.across = ENTRANCE_AT[1]!;
     boss.prevAcross = boss.across;
   }
 }

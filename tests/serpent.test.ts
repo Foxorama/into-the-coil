@@ -1921,6 +1921,10 @@ describe('0306 — the serpent coils in', () => {
     */
     const entrance = BOSSES.jormungandr.entrance!;
     expect(entrance, 'the serpent makes no entrance').not.toBeNull();
+    // An entrance is a closed union since 0313, and the serpent's kind is the coil: every measurement
+    // below is taken about a centre, which is a thing only a coil has.
+    expect(entrance.kind, 'the serpent no longer coils in').toBe('coil');
+    if (entrance.kind !== 'coil') throw new Error('unreachable');
     const { world, frame, poses } = flyEntrance();
     const flying = poses.filter((p) => p.entering >= 0);
     expect(flying.length, 'the serpent arrived without an entrance').toBeGreaterThan(60);

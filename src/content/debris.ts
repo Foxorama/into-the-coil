@@ -219,6 +219,20 @@ export const BURST = {
    */
   belch: 5,
   /**
+   * Embers where the flying fish goes through the near edge of the lane on its entrance — 0313.
+   *
+   * ⚠️ **BIGGER THAN THE BELCH AND SMALLER THAN A PHASE, WHICH IS WHAT IT IS.** A rock arriving over
+   * the far edge needs no help being noticed, so `belch` only says WHERE it came in; a breach is the
+   * boss making its entrance and the spray is half of what the player is supposed to be watching. It
+   * happens four times in one flight and never again in the fight, which is the other half of why it
+   * may cost more than a belch: nothing else is on the field at all.
+   *
+   * ⚠️ **AND THERE IS NO SURFACE DRAWN IN THAT PLACE** — `src/content/themes.ts` has `ground: null` for
+   * the nebula. So this is not the picture of a thing hitting water; it is the *only* thing that says
+   * the fish went through anything, which is 0036 with nothing else to lean on.
+   */
+  breach: 11,
+  /**
    * A puff of frost at a ship inside the frost ship's cold, every few steps — 0253.
    *
    * ⚠️ **One, and often, rather than many once**: the cold is a STATE and not an event, and what

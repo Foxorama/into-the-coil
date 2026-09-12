@@ -16,8 +16,9 @@ export const PROBES = [
     guard: 'coils ROUND the middle of the screen leaving the centre open',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'entrance: { centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },',
-      replace: 'entrance: { centre: { along: 95, across: 50 }, radius: 9, turns: 1.25, speed: 1.5 },',
+      // ⚠️ Re-anchored by 0313, which made an entrance a closed union and put a `kind` on this row.
+      find: "entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },",
+      replace: "entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 9, turns: 1.25, speed: 1.5 },",
     },
   },
   {
@@ -28,8 +29,9 @@ export const PROBES = [
     guard: 'coils ROUND the middle of the screen leaving the centre open',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'entrance: { centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },',
-      replace: 'entrance: { centre: { along: 95, across: 50 }, radius: 24, turns: 0.5, speed: 1.5 },',
+      // ⚠️ Re-anchored by 0313, on the same line and for the same reason.
+      find: "entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },",
+      replace: "entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 0.5, speed: 1.5 },",
     },
   },
   {
@@ -40,8 +42,9 @@ export const PROBES = [
     guard: 'coils ROUND the middle of the screen leaving the centre open',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return startAlong - e.centre.along + e.turns * TAU * r + out + reach;',
-      replace: '  return startAlong - e.centre.along + e.turns * TAU * r + out + reach * 0;',
+      // ⚠️ Re-anchored by 0313: the coil's length is one arm of a switch now, so the line is indented.
+      find: '      return startAlong - e.centre.along + e.turns * TAU * r + out + reach;',
+      replace: '      return startAlong - e.centre.along + e.turns * TAU * r + out + reach * 0;',
     },
   },
   {
