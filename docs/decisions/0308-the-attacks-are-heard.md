@@ -53,9 +53,9 @@ saturation.
 
 | cue | what it is | length | loud | where its weight is |
 |---|---|---|---|---|
-| `bossAcid` | a spit, then two grain rates frying over a coarse boil, and one short gulp | 0.90 s | **−26.1 dBFS** | `hi` 1.00, `sub` 0.001 |
-| `bossVoid` | three bass pulses a quarter-second apart, falling away, in a wash with no top | 0.92 s | **−32.3 dBFS** | `sub` 0.188, `air` 0.002 |
-| `bossBolt` | a flash, then a grain coarsening from 5 kHz to 90 Hz, over a short clap | 0.64 s | **−28.9 dBFS** | `himid` 1.00, `hi` 0.85 |
+| `bossAcid` | a spit, two grain rates frying over ringing bubbles, a wet glop, a second spatter | 0.95 s | **−25.0 dBFS** | `hi` 1.00, `sub` 0.001 |
+| `bossVoid` | a dark knock and three bass pulses, each swept through its own harmonics, falling away | 0.96 s | **−32.1 dBFS** | `sub` 0.181, `air` 0.003 |
+| `bossBolt` | a flash, a grain coarsening 5.2 kHz → 72 Hz, a clap fifty milliseconds behind it | 0.66 s | **−28.4 dBFS** | `himid` 1.00 |
 
 Against `bossShot`'s **−33.6 dBFS** and its `sub` of 0.011. `scripts/weigh-cue.mjs --loud` is where
 every number here comes from, and the last column is the point: no two of the three have their weight
@@ -74,9 +74,30 @@ sizzle dying down or a discharge stuttering out. `bossAcid` has three grain rate
 `bossBolt` is one rate coarsening from 5 kHz to 90 Hz in half a second, which is the difference
 between a crackle and the roll of thunder the first draft had.
 
-`bossVoid` needs no grain at all: *null wumm wumms* is three sub pulses and the absence of everything
+`bossVoid` needs no grain at all: *null wumm wumms* is three bass pulses and the absence of everything
 else, and what makes it a figure rather than an event is that there are **three** of them, each lower
 and quieter than the last.
+
+### And the second knob was resonance, which is what made them GOOD rather than merely different
+
+> *"second version is much better, but I think we can do better, remember the rule of quality, make it
+> really good"*
+
+⚠️ **THE GRAIN RATES HAD SEPARATED THE THREE AND LEFT ALL THREE DRY.** `q` is lowpass resonance, and
+`CueLayer`'s own note says *"past about 2 it stops being a filter and starts being a pitch"* — the whole
+table had never taken it past 1.5. A resonant peak that MOVES is the only thing this synthesiser has
+that can be a throat, a bubble, a formant or a spark:
+
+- **the acid** — the fry at 1.9 and the bubbles at 2.4, so each grain rings instead of ticking; and a
+  **glop**, a sweep from 1.1 kHz to 200 at `q` 2.9, which is the one sound in the table that is liquid.
+  Its highpass **rises** (1500 → 2700), the only one in the file that does: acid stops by drying, and a
+  tail that fills out as it fades is being switched off rather than running out.
+- **the void** — each wumm's lowpass sweeps down through the harmonics its own drive created, at `q`
+  2.7. That formant travelling downward **is the *w***; without it a driven sine with a fast attack is a
+  thump. The third wumm has a slow attack and swells rather than hitting, so the figure sinks away.
+- **the bolt** — the grains at 2.1 and 2.5, which is the difference between a spark and a rasp; and the
+  clap moved **fifty milliseconds behind the flash**, because light arriving first is the one thing
+  everybody already knows about lightning.
 
 **The gain did none of it.** All three sit at `0.46` — under `bossDown`'s `0.468`, so the boss dying
 stays the loudest single row — and the peak moved from −15.1 to −14.5 dBFS. **The ceiling is the
@@ -129,13 +150,31 @@ that resolves (`phase-burst`, `boss-burst`, `blast-ring`, `ship-burst`), and eve
 none. It widens the rule without moving one existing answer, which is what makes it the rule the old
 one was standing in for rather than an exception carved for this change.
 
-**And 0089's explosion recipe was widened onto these three and then taken back off.** That widening
-was correct about the first draft and is what the second report condemned: a sizzle **is** a hiss —
-the thing the recipe's clauses exist to forbid — and a wumm has no crack, no grain and no debris in it
-at all. The list of kinds inside a guard is the cheapest possible version of *changing the work to
-suit the guard* ([0192](0192-a-guard-holds-an-invariant.md)), because adding a row to it looks like
-coverage rather than like a design decision. The four cues 0089's own report named are what it is a
-rule about.
+**And 0089's explosion recipe was widened onto these three, taken back off, and put back — and the
+middle step is the mistake worth recording.** The reason given for removing them was *a sizzle is a
+hiss, and this guard forbids hisses*. The player refused it:
+
+> *"why does the guard forbid hisses? it should forbid shitty quality hissing sound, but not 'hisses as
+> a sound'"*
+
+⚠️ **AND THE GUARD SAYS NOTHING WHATEVER ABOUT BRIGHTNESS.** Its six clauses are: built out of layers,
+has noise in it, its loudest noise layer is filtered and darkens as it decays, the box is taken out,
+and something low sits underneath. That is a rule about being *made properly* — 0089's subject is
+*"too tinny, way too Atari 2600"*, a cue that was one oscillator — and driven against all three as they
+stand, every one passes it unchanged. The clause about brightness does not exist.
+
+⚠️ **IT IS [0192](0192-a-guard-holds-an-invariant.md)'s WARNING POINTED THE OTHER WAY.** That rule is
+*a red guard is never answered by changing the work to suit it*; here nothing was red, and the guard's
+own LIST was narrowed against a summary of what it holds rather than against what it holds. **A list of
+kinds inside a guard is the cheapest place in this repository to lose coverage**, because removing a row
+from one looks like scoping and reads as nothing at all. Re-adding them was one edit; noticing was the
+whole cost.
+
+⚠️ **The list they ARE correctly out of is [0179](0179-an-explosion-ends-low.md)'s**, and the
+difference is exactly the one the player drew: *an explosion leaves its top behind* is a claim about
+being an explosion. The sizzle's centroid **rises** 9 dB, because acid thins out as it dries. Made
+properly, and not an explosion. (The crackle happens to end 17 dB lower and would pass it — it is still
+out, because a later pass that made it a pure crackle would redden a guard for being right.)
 
 ⚠️ **So nothing hard holds what these three sound like, and that is correct.** *A sizzle* is a taste,
 and [0295](0295-a-ranking-guard-is-a-content-limiter.md) is explicit that a guard answering a question

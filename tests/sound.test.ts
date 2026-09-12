@@ -988,18 +988,30 @@ describe('the cue table', () => {
       `src/content/saurian.ts` has the fix and the reason it is material rather than a guard change.
     */
     /*
-      ⚠️ **AND A BOSS'S NAMED ATTACKS ARE DELIBERATELY NOT IN IT — 0308.** They were, for one draft, and
-      the draft is what the player heard: three cues built to this recipe came back *"pretty terrible…
-      give me acid sizzle, void null wumm wumms, lightning crackles."* **A sizzle IS a hiss** — the thing
-      the clauses below exist to forbid — and a wumm has no crack, no grain and no debris in it at all.
-      The recipe is what *everything that explodes* is made of, and the four cues 0089's report named are
-      what it is a rule about. Holding an attack to it made every attack an explosion, which is the fault
-      0308 opened with living one layer down. `docs/decisions/0192-a-guard-holds-an-invariant.md`: a red
-      guard is answered by fixing the defect, changing the guard, or deleting it — never by changing the
-      work to suit it, and a guard's own LIST is the cheapest version of that mistake to make.
+      ── AND A BOSS'S NAMED ATTACKS SINCE 0308, WHICH TOOK TWO GOES AND THE SECOND ONE WAS ASKED FOR ──
+
+      ⚠️ **THEY WERE TAKEN OFF THIS LIST FOR ONE COMMIT, ON THE GROUND THAT *A SIZZLE IS A HISS AND THIS
+      GUARD FORBIDS HISSES*. THAT WAS WRONG, AND THE PLAYER SAID SO:** *"why does the guard forbid
+      hisses? it should forbid shitty quality hissing sound, but not 'hisses as a sound'."* Read again,
+      not one clause below is about brightness, smoothness or how much top a cue has. They are: built out
+      of layers, has noise in it, its loudest noise layer is FILTERED and darkens as it decays, the box
+      is taken out of it, and something low sits underneath. **That is a rule about being made properly**
+      — the 2600-voice report at the top of this test — and an acid sizzle satisfies every word of it.
+      Driven before re-adding them: all three pass, unchanged.
+
+      ⚠️ **AND THE MISTAKE IS WORTH THE PARAGRAPH BECAUSE IT WAS THE ONE 0192 WARNS ABOUT, POINTED THE
+      OTHER WAY.** A guard reddens and the work is changed to suit it; here nothing was red, and the
+      GUARD's own list was narrowed on a summary of what it holds rather than on what it holds. A list
+      of kinds inside a guard is the cheapest place in the repository to lose coverage, because taking a
+      row out of one looks like a scoping decision and reads as nothing at all.
+
+      ⚠️ **`docs/decisions/0179-an-explosion-ends-low.md`'s LIST IS THE ONE THEY ARE CORRECTLY OUT OF**,
+      and the difference is exactly the one above: *an explosion leaves its top behind* is a claim about
+      being an explosion, which a sizzle is not — its centroid RISES by 12 dB, because acid thins out as
+      it dries. Made properly, and not an explosion.
     */
     for (const theme of [undefined, ...THEME_KINDS] as const)
-    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death'] as const) {
+    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death', 'bossAcid', 'bossVoid', 'bossBolt'] as const) {
       const where = theme === undefined ? kind : `${theme}/${kind}`;
       const layers = cueLayersOf(theme, kind);
       expect(layers.length, `${where} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);
