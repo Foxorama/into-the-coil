@@ -805,6 +805,22 @@ export interface Aura {
    * is drawn at the node's own girth; the head has none, so the row says what girth its skull reads as.
    */
   head: number;
+  /**
+   * What the HEAD's flame wears instead while a strike is coming, or absent — 0310.
+   *
+   * ⚠️ **ASKED FOR**: *"the horns need to grow and .5sec before the lightning attack happens, they need to
+   * flare with red lightning."* The growth is the faces' own drawing; this is the flare.
+   *
+   * ⚠️ **THE HEAD'S FLAME ALONE, AND THAT IS THE WHOLE ECONOMY OF IT.** A flaring variant of all seven
+   * faces and their hurt twins is sixteen more bakes of the widest sprite in the game, for a state that
+   * lasts thirty steps. The aura already carries one flame for the skull, in a layer drawn before the
+   * body, so a flare is three tiles and no new faces — and the horns are swept back off the crown, so what
+   * shows from behind the head is exactly the arc between their tips.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's DEFAULT TERMS**: an aura that does not flare says nothing, and the void
+   * phase's does not — it has no strike to warn about.
+   */
+  flare?: readonly number[];
 }
 
 /**
@@ -1977,6 +1993,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
             hold: 3,
             stride: 1,
             head: 15,
+            /*
+              ⚠️ **AND THE CROWN FLARES BEFORE A STRIKE — 0310.** Three frames on the same three-step hold
+              the flames run at, so the discharge crackles at the rate the rest of the animal does rather
+              than at a rate of its own. Held for the thirty steps before the bolt lands, which is
+              `src/app/frame.ts`'s arithmetic off the bolt's own warning clock and not a second timer.
+            */
+            flare: [SPRITE.serpentFlare0, SPRITE.serpentFlare1, SPRITE.serpentFlare2],
           },
         },
         shot: null,

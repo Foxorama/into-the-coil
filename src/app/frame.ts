@@ -5767,8 +5767,29 @@ function layAura(w: World): void {
     if (flame === null) break;
     reset(flame, head.along, head.across, AURA_FLAME);
   }
-  const n = aura.frames.length;
   const tick = Math.floor(w.steps / aura.hold);
+  /*
+    ⚠️ **AND WHETHER THE CROWN IS FLARING — 0310.** *"Half a second before the lightning attack happens,
+    the horns need to flare with red lightning."*
+
+    ⚠️ **READ OFF THE BOLT THAT IS ALREADY IN THE AIR, NOT A SECOND TIMER.** A `rain` bolt is spawned with
+    `lifeFor = warning + BOLT_STEPS` and strikes on the step that reaches `BOLT_STEPS` (`strikeShip`), so
+    *thirty steps before the strike* is `lifeFor <= BOLT_STEPS + FLARE_STEPS` — exactly, for every column,
+    on every tier, with nothing to reset when the boss dies. A countdown stored beside this would be a
+    second answer to *when does the lightning land*, and 0248's warning is the first.
+
+    ⚠️ **AND IT IS A WARNING INSIDE A WARNING, WHICH IS DELIBERATE.** The column has been drawn for
+    forty-five steps by then; what the flare adds is *now*. Thirty steps is half a second at 60Hz.
+  */
+  const flare = aura.flare;
+  let charging = false;
+  if (flare !== undefined) {
+    for (let i = 0; i < w.bolts.size; i++) {
+      const bolt = w.bolts.at(i);
+      if (bolt.kind !== RAIN_BOLT_KIND) continue;
+      if (bolt.lifeFor > BOLT_STEPS && bolt.lifeFor <= BOLT_STEPS + FLARE_STEPS) charging = true;
+    }
+  }
   for (let i = 0; i < w.bossAura.size; i++) {
     const flame = w.bossAura.at(i);
     // The body's nodes first, tail to neck in their own order, then the head's — last, so it is drawn
@@ -5781,11 +5802,26 @@ function layAura(w: World): void {
     flame.swell = on === head ? aura.head / SERPENT_BODY_DIAMETER : on.swell;
     // Node `k` counted from the head, so the ripple runs from the skull toward the tail.
     const k = w.bossAura.size - 1 - i;
-    const frame = aura.frames[(((tick + k * aura.stride) % n) + n) % n]!;
+    /*
+      ⚠️ **THE HEAD'S FLAME ALONE TAKES THE FLARE, WHICH IS WHAT MAKES IT THE HORNS AND NOT THE WEATHER.**
+      The body goes on crackling at its own subdued rate; the crown is the one place a charge builds, and
+      the two together are the animal winding up rather than the animal being brighter.
+    */
+    const set = charging && on === head && flare !== undefined ? flare : aura.frames;
+    const frame = set[(((tick + k * aura.stride) % set.length) + set.length) % set.length]!;
     flame.sprite = frame;
     flame.spriteBase = frame;
   }
 }
+
+/**
+ * How long before a strike lands the crown is already flaring, in steps — 0310.
+ *
+ * ⚠️ **ASKED FOR AS HALF A SECOND**, which at the fixed 60Hz step (0022) is thirty of them. It sits inside
+ * 0248's forty-five-step warning rather than in front of it: the column says *somewhere here*, and this
+ * says *now*.
+ */
+const FLARE_STEPS = 30;
 
 /**
  * The body a flame is spawned from — 0305. It has no reach and no health worth taking: it is in no

@@ -81,6 +81,10 @@ const HULLLESS: readonly SpriteKind[] = [
   'serpentStorm3',
   'serpentStorm4',
   'serpentStorm5',
+  // And the crown's flare, which IS the head's own flame with a discharge over it — 0310.
+  'serpentFlare0',
+  'serpentFlare1',
+  'serpentFlare2',
   'skyFar',
   'skyNear',
   'skyRush',

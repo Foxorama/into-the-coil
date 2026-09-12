@@ -315,6 +315,11 @@ export const SPRITE_KINDS = [
   'serpentStorm3',
   'serpentStorm4',
   'serpentStorm5',
+  // The crown discharging in the half-second before a strike — 0310. Three, because a flare holding
+  // one shape is a lamp coming on rather than a charge building.
+  'serpentFlare0',
+  'serpentFlare1',
+  'serpentFlare2',
   'boss9',
   'boss9Hit',
   'boss10',
@@ -1038,6 +1043,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   serpentStorm3: 44,
   serpentStorm4: 44,
   serpentStorm5: 44,
+  /*
+    ⚠️ **THE FLARE IS THE HEAD'S FLAME AND SO IT IS THE HEAD'S BOX — 0310.** `layAura` blits it where the
+    skull is, at the girth the phase's `aura.head` names, so it has to be the same tile the storm frames
+    are: a different extent here would scale the discharge relative to the flame it replaces and the
+    crown would jump size for half a second, which is the one thing a tell must not do.
+  */
+  serpentFlare0: 44,
+  serpentFlare1: 44,
+  serpentFlare2: 44,
 
   boss9: 42,
   boss9Hit: 42,
