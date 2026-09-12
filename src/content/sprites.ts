@@ -379,6 +379,18 @@ export const SPRITE_KINDS = [
   // shot has (`tests/legibility.test.ts`), and their own inks.
   'acid',
   'void',
+  /*
+    The serpent's last mouthful — 0311: acid and void as one ball, and the drops it bursts into.
+
+    ⚠️ **THE ONLY BULLET IN THE GAME WITH A HURT TWIN, AND IT IS NOT DECORATION.** 0035 says damage is
+    legible on the body that took it, and `tests/combat.test.ts` holds that *a shot never flashes* —
+    because every shot but a blade is spent by arriving and never takes a hit at all. This one takes
+    thirty, over three seconds, in front of the player: a ball that swallowed a volley and showed
+    nothing would read as fire passing through it, which is 0036's own subject.
+  */
+  'maw',
+  'mawHit',
+  'droplet',
   // The eagle's flame — 0249: a tongue of fire, the smallest bullet there is.
   'flame',
   // The volcanoes' rock — 0251: a jagged lump lit from a crack, the biggest bullet there is.
@@ -1116,6 +1128,20 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A drop bigger than any enemy bullet and a ring between it and the quill — 0248.
   acid: 5.8,
   void: 5,
+  /*
+    ⚠️ **THE BIGGEST THING THAT IS NOT A HULL — 0311, AND IT IS ALLOWED TO BE.** `CLAUDE.md`'s *consider
+    the screen* is the rule and 0295 deleted the ranking guards that used to answer it in advance: this
+    is a bullet the player is meant to SHOOT, held in front of them for three and a half seconds, and a
+    thing you are asked to destroy has to look like a target rather than like a bullet to dodge. At 14.4
+    it is two and a half acid drops across and about half the width of the skull that spat it.
+
+    ⚠️ **AND IT GROWS FROM THERE**, a tenth a bite, so a well-fed one is drawn half again as wide —
+    `VOID_SWELL` in `src/app/frame.ts`, which scales the blit and the hurtbox together (0291).
+  */
+  maw: 14.4,
+  mawHit: 14.4,
+  // A drop of what it was carrying — smaller and quicker than the acid globe, because sixteen leave at once.
+  droplet: 3.6,
   /*
     ⚠️ **1.2 → 5, WHICH IS THE VOID'S — 0301.** It was the quickest and the smallest (0249), and at
     1.2 units it drew **8.6 px**: the smallest thing in the game, reported twice — *"the eagle boss's

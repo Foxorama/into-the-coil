@@ -707,6 +707,22 @@ function throwAttack(
 
   const step = count > 1 ? phase.spread / (count - 1) : 0;
   switch (attack.kind) {
+    case 'lob': {
+      /*
+        ONE shot, straight down the lane — 0311. The arm that does not spend `phase.shots`, and
+        `src/content/bosses.ts` has the whole argument for why a ball the player is meant to shoot down
+        is the one object in this table whose difficulty must not be multiplied by a phase.
+
+        ⚠️ **`π` IS STRAIGHT BACK DOWN THE LANE**, the same centre every fan here is built around, so
+        nothing about this reacts to where the ship is — 0258.
+      */
+      const shot = shots.spawn();
+      if (shot === null) break;
+      reset(shot, muzzleAlong, muzzleAcross, bullet, kind);
+      shot.velAlong = -speed + scrollPerStep;
+      shot.velAcross = 0;
+      break;
+    }
     case 'spray':
     case 'rake': {
       let centre = Math.PI;

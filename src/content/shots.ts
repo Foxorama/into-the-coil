@@ -37,6 +37,8 @@ export type ShotKind =
   | 'flak'
   | 'acid'
   | 'void'
+  | 'maw'
+  | 'droplet'
   | 'flame'
   | 'rock'
   | 'frost'
@@ -125,6 +127,50 @@ export interface ShotRow extends Body {
    * the two lightnings are the model, one base with the style on the instance.
    */
   trail?: DebrisKind;
+  /**
+   * What this bullet does if it gets close enough to the player without being killed — 0311, or absent.
+   *
+   * ⚠️ **REPORTED**: *"it eats damage and gets bigger and if the player does not kill it, it explodes when
+   * it gets to 20% away from the left screen and the explosion size is based on how much health left, the
+   * explosion is an outward circular blast of acid and void droplets."*
+   *
+   * ⚠️ **A FUSE ON A PLACE, WHERE `fission` IS A FUSE ON A CLOCK.** 0263's stages burn down in steps, which
+   * is the right shape for a thing that comes apart on its own; this comes apart **where the player let it
+   * get to**, and the two are different questions about the same bullet. A `fission` timed to arrive at the
+   * right distance would be a quantity that is only correct at one speed and one station.
+   *
+   * ⚠️ **AND IT IS A DISTANCE FROM THE CAMERA'S TRAILING EDGE**, not a share of the view — 0023. *"20% away
+   * from the left screen"* is a fraction of a screen that is 178 world units wide at its narrowest and 240
+   * at its widest, so a share would put the blast twelve units further from the player on a wide monitor.
+   * The number is read off the narrowest view once, and every device gets the same fight.
+   */
+  swallow?: Swallow;
+}
+
+/**
+ * What a swallowing bullet does when it arrives — 0311.
+ *
+ * ⚠️ **EVERY FIELD IS A PROPERTY OF THE BULLET RATHER THAN OF THE BOSS THAT THREW IT**, on
+ * [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s terms: a
+ * second animal that throws one of these gets to say how far in it bursts and how big.
+ */
+export interface Swallow {
+  /** How far from the camera's trailing edge it bursts, in world units. */
+  at: number;
+  /** What it bursts into, alternating — 0311's *"acid and void droplets"*. */
+  into: readonly ShotKind[];
+  /**
+   * The most droplets a burst at FULL health throws; a hurt one throws its share of them.
+   *
+   * ⚠️ **THE COUNT IS THE SIZE, AND THAT IS THE ASK READ LITERALLY.** *"The explosion size is based on how
+   * much health left"* — so a ball the player never touched fills the lane and one they nearly killed puts
+   * out a handful. What scales is how much of the circle is covered, which is what a player has to move
+   * through; scaling the droplets' own size instead would make a weak blast a small target rather than an
+   * easy one.
+   */
+  droplets: number;
+  /** How fast the droplets leave, in world units a step, before the tier's own scale. */
+  speed: number;
 }
 
 /**
@@ -181,6 +227,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'flak',
   'acid',
   'void',
+  'maw',
+  'droplet',
   'flame',
   'rock',
   'frost',
@@ -374,6 +422,52 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     roll added anywhere would rebuild every level.
   */
   void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 2.2, health: 6, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING, swallows: true },
+  /**
+   * The serpent's last mouthful: acid and void thrown as one ball — `docs/decisions/0311-the-acid-and-the-void-come-as-one-ball.md`.
+   *
+   * ⚠️ **REPORTED**: *"the acid splash and void orb attacks need to change at the lightning phase, currently
+   * they go on for too long and get boring → they need to change to a combined acid/void ball → it eats
+   * damage and gets bigger and if the player does not kill it, it explodes when it gets to 20% away from the
+   * left screen and the explosion size is based on how much health left."*
+   *
+   * ⚠️ **IT IS ONE OBJECT WHERE THE PHASE THREW TWENTY-FOUR.** The sweep is twenty-one globes over a second
+   * and the void head three more; what the report calls *boring* is a stretch of the fight where nothing the
+   * player does changes what is coming. This is the opposite shape — **one thing, and what happens to it is
+   * entirely theirs.** Kill it and nothing arrives; leave it and the lane fills.
+   *
+   * ⚠️ **A BIG APPETITE, AND IT IS THE WHOLE DIFFICULTY DIAL.** Thirty is about five of the arc's links or a
+   * second and a half of the opening gun held on it — enough that ignoring it is a decision rather than an
+   * oversight, and little enough that a loadout with any reach at all can take it down before it arrives.
+   * Slow, because a thing you are meant to shoot has to be shootable: at 0.55 it takes about three and a half
+   * seconds to cross from the mouth to where it bursts.
+   */
+  maw: {
+    sprite: SPRITE.maw,
+    spriteHit: SPRITE.mawHit,
+    radius: 3.6,
+    health: 30,
+    damage: 3,
+    speed: 0.55,
+    fission: SPENT_BY_ARRIVING,
+    swallows: true,
+    /*
+      ⚠️ **35.6 IS *20% AWAY FROM THE LEFT SCREEN*, MEASURED ONCE ON THE NARROWEST VIEW** — a fifth of
+      `ACROSS_SPAN × MIN_ASPECT`. 0023 says a spawn is placed against a view the device cannot change, and a
+      literal share of the CURRENT view would put the burst twelve units further from the player on a 2.4:1
+      monitor than on a 16:9 one. The ship's own box runs from 10.7 to 167, so this bursts inside the room the
+      player flies in — which is what makes it a thing to deal with rather than a thing to watch.
+    */
+    swallow: { at: 35.6, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },
+  },
+  /**
+   * One drop of what a maw was carrying — 0311. The acid half of the burst; the void half is `void` itself.
+   *
+   * ⚠️ **ITS OWN ROW RATHER THAN `acid`, AND THE DIFFERENCE IS THE LIFE.** An acid globe is thrown at a ship
+   * from a mouth and is spent by arriving; sixteen of these leave one point in every direction at once, and a
+   * ring that is still crossing the lane when the next ball arrives is a fight that silts up. Smaller, quicker
+   * and worth one hit, which is a thing to fly between rather than a wall.
+   */
+  droplet: { sprite: SPRITE.droplet, spriteHit: SPRITE.droplet, radius: 1.1, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
    * The eagle's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
    * feathered quills."* A feather, shaft first, in the enemy's ink — the eagle's own bullet where

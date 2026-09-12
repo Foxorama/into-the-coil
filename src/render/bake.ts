@@ -481,6 +481,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // kinds of shot in one colour is one bullet wearing three shapes.
   acid: 'acid',
   void: 'void',
+  /*
+    ⚠️ **THE BALL IS IN THE VOID'S INK AND ITS DROPS IN THE ACID'S — 0311.** It carries both, and the two
+    have to be tellable apart the instant it bursts: one object becomes sixteen, half of them the ink it
+    was drawn in and half the other. So the hull is the void's ring and the acid is what churns inside it.
+  */
+  maw: 'void',
+  mawHit: 'impact',
+  droplet: 'acid',
   // The eagle's flame in its own ink — 0249, on the same argument.
   flame: 'fire',
   // The volcanoes' rock in the fire ink — 0251: hot, and told from the flame by five times the
@@ -6224,6 +6232,49 @@ export function drawKind(
       glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      return;
+    case 'maw':
+    case 'mawHit':
+      /*
+        THE COMBINED BALL — 0311: *"a combined acid/void ball."* A void ring with acid churning inside
+        it, because it is carrying both and bursts into both.
+
+        ⚠️ **FILLED AND NOT HOLED, WHICH IS THE ONE THING IT DOES NOT SHARE WITH THE VOID.** The ring
+        above is `evenodd` with a hole, and a hole is what makes a void read as an absence. This is the
+        opposite object — a mouthful of something, with a surface the player is meant to shoot at — so
+        the disc is solid and the void is its RIM. A hole here would also be a lie the moment the thing
+        swells, because what grows is the drawing and the hole would grow with it into a bangle.
+
+        ⚠️ **AND IT IS THE ONE SHOT WITH A HURT TWIN** (0035, and `tests/combat.test.ts`'s *a shot never
+        flashes* is about shots that are spent by arriving). The wash is the standard one, so the twin
+        is this same art under the flash ink and no second drawing.
+      */
+      ctx.arc(half, half, r * 0.86, 0, Math.PI * 2);
+      seal(ctx);
+      glow(ctx, f, palette.void, 0, 0, 1.15, 0.55);
+      /*
+        THE ACID INSIDE — three blots off centre, in the drops' own ink, so the ball reads as carrying
+        something rather than as a bigger void. Their sizes fall, which is what keeps three marks from
+        reading as a pattern.
+      */
+      disc(ctx, f, palette.acid, -0.22, -0.18, 0.3);
+      disc(ctx, f, palette.acid, 0.26, 0.1, 0.22);
+      disc(ctx, f, shade(palette.acid, 1.2), -0.05, 0.32, 0.14);
+      // And the rim light the void wears, so the two are visibly the same family of thing.
+      disc(ctx, f, shade(palette.void, 0.7), 0, -0.66, 0.15);
+      return;
+    case 'droplet':
+      /*
+        ONE DROP OF WHAT IT WAS CARRYING — 0311. A teardrop, point trailing, in the acid ink: the acid
+        globe's family at two thirds its size, because sixteen of these leave one point at once and a
+        ring of full-sized globes is a wall rather than a thing to fly between.
+      */
+      ctx.moveTo(half + r * 0.72, half);
+      ctx.quadraticCurveTo(half + r * 0.2, half + r * 0.66, half - r * 0.78, half);
+      ctx.quadraticCurveTo(half + r * 0.2, half - r * 0.66, half + r * 0.72, half);
+      seal(ctx);
+      glow(ctx, f, palette.acid, 0, 0, 1.05, 0.45);
+      disc(ctx, f, shade(palette.acid, 1.3), -0.15, -0.12, 0.2);
       return;
     case 'frost':
       /*

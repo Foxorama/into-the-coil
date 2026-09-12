@@ -20,7 +20,7 @@ import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { DIFFICULTIES, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
+import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -2113,5 +2113,185 @@ describe('0307 — the serpent is armoured', () => {
         ).toBeGreaterThanOrEqual(8);
       });
     }
+  });
+});
+
+/*
+  ── 0311: THE ACID AND THE VOID COME AS ONE BALL ────────────────────────────────────────────────
+
+  `docs/decisions/0311-the-acid-and-the-void-come-as-one-ball.md`. Reported:
+
+  > *"5. the acid splash and void orb attacks need to change at the lightning phase, currently they go
+  > on for too long and get boring → they need to change to a combined acid/void ball → it eats damage
+  > and gets bigger and if the player does not kill it, it explodes when it gets to 20% away from the
+  > left screen and the explosion size is based on how much health left, the explosion is an outward
+  > circular blast of acid and void droplets."*
+*/
+describe('0311 — the acid and the void come as one ball', () => {
+  /** The last phase's heads, which is the round the report is about. */
+  const round = (): readonly { shot: string; attack: { kind: string } }[] => {
+    const row = BOSSES.jormungandr;
+    const attack = row.phases[row.phases.length - 1]!.attack ?? row.attack;
+    return attack.kind === 'heads' ? attack.heads : [];
+  };
+
+  /**
+   * A serpent in its last third, with one ball on the field and nothing else of its own.
+   *
+   * ⚠️ **THE BALL IS PUT WELL OUT OF THE SHIP'S LANE, AND THE FIRST VERSION WAS NOT.** On the ship's own
+   * `across` it never reached the place it bursts: `collideIntoOne` spends a hostile shot on the hull it
+   * hits, so the fixture was measuring a collision and reporting it as *the ball vanished at 46.2*. These
+   * guards are about what happens when the player does NOT deal with it, which means the fixture has to
+   * let it past.
+   */
+  const BALL_LANE = 14;
+  function withBall(health = SHOTS.maw.health): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+    const made = serpentAt(0.2);
+    made.world.bossPool.at(0).fireIn = 999;
+    made.world.enemyShots.clear();
+    const ball = made.world.enemyShots.spawn()!;
+    reset(ball, made.world.ship.along + 60, BALL_LANE, SHOTS.maw, SHOT_INDEX.maw);
+    ball.health = health;
+    return { world: made.world, frame: made.frame };
+  }
+
+  /** Every hostile shot on the field, by name. */
+  const onField = (world: ReturnType<typeof playableWorld>['world']): string[] => {
+    const out: string[] = [];
+    for (let i = 0; i < world.enemyShots.size; i++) out.push(SHOT_KINDS[world.enemyShots.at(i).kind]!);
+    return out;
+  };
+
+  /** Hold everything the ship and the boss would otherwise put on the field, and keep the lanes apart. */
+  const quiet = (world: ReturnType<typeof playableWorld>['world']): void => {
+    world.bossPool.at(0).fireIn = 999;
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    world.missiles.clear();
+    // The far side of the lane from `BALL_LANE`, so nothing here is measuring a collision — see `withBall`.
+    world.ship.across = ACROSS_SPAN - BALL_LANE;
+  };
+
+  it('THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets', () => {
+    /*
+      ⚠️ **THE COUNT IS THE COMPLAINT.** *"They go on for too long and get boring"* — the sweep threw
+      twenty-one globes over a second and the void head three more, so two volleys in every three were
+      twenty-four bullets the player could only wait out. What is asserted is the shape of the round: no
+      sweep and no void fan left in it, and the ball's own volley putting exactly ONE thing on the field
+      however wide the phase's fan is authored. The phase says three.
+    */
+    const heads = round();
+    expect(heads.length, 'the serpent’s last third grows no heads at all').toBeGreaterThan(1);
+    expect(
+      heads.filter((h) => h.attack.kind === 'sweep' || (h.attack.kind === 'spray' && h.shot === 'void')).length,
+      'the sweep or the void fan is still in the last third’s round',
+    ).toBe(0);
+    expect(
+      heads.some((h) => h.shot === 'maw'),
+      'the last third throws no ball at all',
+    ).toBe(true);
+    const { world, frame } = serpentAt(0.2);
+    const boss = world.bossPool.at(0);
+    boss.headAt = heads.findIndex((h) => h.shot === 'maw');
+    world.enemyShots.clear();
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    boss.fireIn = 1;
+    frame.step();
+    const thrown = onField(world);
+    expect(thrown, `the ball's volley put ${thrown.length} shots on the field: ${thrown.join(', ')}`).toEqual(['maw']);
+  });
+
+  it('and it EATS the player’s fire and grows, which is the only thing that says it is eating', () => {
+    // 0291's machinery, on a bullet with five times the appetite. What is asserted is that it applies.
+    const { world, frame } = withBall();
+    const wide = world.enemyShots.at(0).radius;
+    const before = world.enemyShots.at(0).health;
+    for (let i = 0; i < 8 && world.enemyShots.size === 1; i++) {
+      quiet(world);
+      const shot = world.playerShots.spawn()!;
+      reset(shot, world.enemyShots.at(0).along, world.enemyShots.at(0).across, SHOTS.pulse);
+      frame.step();
+    }
+    expect(world.enemyShots.size, 'the ball was gone after eight pulses, which is not an appetite').toBe(1);
+    expect(before - world.enemyShots.at(0).health, 'the ball swallowed nothing at all').toBeGreaterThan(0);
+    expect(world.enemyShots.at(0).radius, 'the ball ate and did not grow').toBeGreaterThan(wide);
+  });
+
+  it('and if it is NOT killed it bursts where the row says, into acid and void together', () => {
+    /*
+      ⚠️ **A FUSE ON A PLACE, DRIVEN RATHER THAN COMPUTED.** The ball is put well up-lane and flown until
+      it is gone, and what is checked is where that happened against the row's own number — and that it
+      was still there at every point before it.
+    */
+    const swallow = SHOTS.maw.swallow!;
+    const { world, frame } = withBall();
+    world.enemyShots.at(0).along = world.cameraAlong + 120;
+    let lastSeen = Number.POSITIVE_INFINITY;
+    let burst = false;
+    for (let i = 0; i < 500 && !burst; i++) {
+      quiet(world);
+      frame.step();
+      let ball = -1;
+      for (let s = 0; s < world.enemyShots.size; s++) if (SHOT_KINDS[world.enemyShots.at(s).kind] === 'maw') ball = s;
+      if (ball >= 0) lastSeen = world.enemyShots.at(ball).along - world.cameraAlong;
+      else burst = true;
+    }
+    expect(burst, 'the ball never burst at all').toBe(true);
+    expect(
+      lastSeen,
+      `the ball was last seen ${lastSeen.toFixed(1)} from the trailing edge, where the row says it bursts at ${swallow.at}`,
+    ).toBeLessThanOrEqual(swallow.at + 2);
+    // And what it left is both inks — *"an outward circular blast of acid and void droplets"*.
+    const left = new Set(onField(world));
+    for (const kind of swallow.into) expect(left.has(kind), `the burst left no ${kind} behind`).toBe(true);
+    expect(left.has('maw'), 'the burst left another ball behind, which is a chain and not a blast').toBe(false);
+  });
+
+  it('and the blast is SMALLER for a ball the player hurt, which is the reward for shooting it', () => {
+    /*
+      ⚠️ **THE COUNT IS THE SIZE** — *"the explosion size is based on how much health left."* What scales is
+      how much of the ring is covered, which is what somebody dodging has to move through. Driven at full
+      appetite and at a tenth of it, and the two are compared against each other rather than against a
+      number, because the row's `droplets` is a hand's.
+    */
+    const drops = (health: number): number => {
+      const { world, frame } = withBall(health);
+      world.enemyShots.at(0).along = world.cameraAlong + swallowAt + 1;
+      for (let i = 0; i < 40; i++) {
+        quiet(world);
+        frame.step();
+        if (!onField(world).includes('maw')) break;
+      }
+      return world.enemyShots.size;
+    };
+    const swallowAt = SHOTS.maw.swallow!.at;
+    const whole = drops(SHOTS.maw.health);
+    const nearlyDead = drops(Math.max(1, Math.round(SHOTS.maw.health * 0.1)));
+    expect(whole, 'a ball at full appetite burst into nothing').toBeGreaterThan(4);
+    expect(
+      nearlyDead,
+      `a ball at a tenth of its appetite threw ${nearlyDead} drops against a whole one's ${whole} — the blast does ` +
+        'not answer to what the player did to it',
+    ).toBeLessThan(whole);
+    expect(nearlyDead, 'a hurt ball burst into nothing at all, which is not a blast').toBeGreaterThan(1);
+  });
+
+  it('and KILLING it leaves nothing behind, which is the whole reward for shooting it', () => {
+    /*
+      ⚠️ **THE CHAIN THIS EXISTS TO REFUSE.** A void that is emptied bursts into seven shards of its own
+      kind (0291, 0299) and the ball inherits that machinery — so without `spendVoid`'s check a player who
+      did exactly what they were asked would be handed **seven more balls**, each bursting again where it
+      arrived. *"If the player does not kill it, it explodes"* means killing it is the half where nothing
+      happens.
+    */
+    const { world, frame } = withBall(1);
+    quiet(world);
+    const shot = world.playerShots.spawn()!;
+    reset(shot, world.enemyShots.at(0).along, world.enemyShots.at(0).across, SHOTS.pulse);
+    frame.step();
+    const left = onField(world);
+    expect(left, `killing the ball left ${left.length} shots behind: ${left.join(', ')}`).toEqual([]);
   });
 });
