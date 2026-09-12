@@ -12,7 +12,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "            { shot: 'maw', attack: { kind: 'lob' } },",
+      find: "            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid' },",
       replace:
         "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },",
     },
@@ -29,7 +29,7 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the last third throws ONE ball where it threw twenty-four bullets',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "            { shot: 'maw', attack: { kind: 'lob' } },",
+      find: "            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid' },",
       replace: "            { shot: 'maw', attack: { kind: 'spray' } },",
     },
   },

@@ -18,9 +18,11 @@ export const PROBES = [
     guard: 'THE BAN: nothing that decides an outcome may import the style table',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0263, which made the frame read a shot's row by its index.
-      find: "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts';",
-      replace: "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind } from '../content/shots.ts';\nimport { STYLES } from '../content/styles.ts';\nvoid STYLES;",
+      // ⚠️ Re-anchored by 0263, which made the frame read a shot's row by its index — and by 0311, which
+      // needs the row's TYPE as well, to hand one to `burstMaw`.
+      find: "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';",
+      replace:
+        "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';\nimport { STYLES } from '../content/styles.ts';\nvoid STYLES;",
     },
   },
   {
