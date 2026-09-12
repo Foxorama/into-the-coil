@@ -41,8 +41,9 @@ export const PROBES = [
     guard: 'THE RAIN: a volley draws its warning lines first',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'rain', warning: 45, halfWidth: 4 } },",
-      replace: "attack: { kind: 'rain', warning: 0, halfWidth: 4 } },",
+      // ⚠️ Re-anchored by 0308, which gave the lightning head a cue of its own.
+      find: "attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },",
+      replace: "attack: { kind: 'rain', warning: 0, halfWidth: 4 }, cue: 'bossBolt' },",
     },
   },
   {

@@ -987,8 +987,14 @@ describe('the cue table', () => {
       against its four-millisecond SNAP, because a crack is short, filtered and high-passed too.
       `src/content/saurian.ts` has the fix and the reason it is material rather than a guard change.
     */
+    /*
+      ⚠️ **AND A BOSS'S NAMED ATTACKS SINCE 0308.** Three cues of 0.8 to 1.2 seconds with a boom under
+      them are explosions by every clause below, and the list is what decides whether anything checks
+      that. `bossShot` stays out of it: it is 0.38 s of crash and was never built to this recipe, and
+      widening the guard onto it would be this test asking for a change nobody reported.
+    */
     for (const theme of [undefined, ...THEME_KINDS] as const)
-    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death'] as const) {
+    for (const kind of ['missile', 'kill', 'blast', 'bossDown', 'death', 'bossAcid', 'bossVoid', 'bossBolt'] as const) {
       const where = theme === undefined ? kind : `${theme}/${kind}`;
       const layers = cueLayersOf(theme, kind);
       expect(layers.length, `${where} is not built out of layers, so it cannot have a body`).toBeGreaterThan(2);
@@ -1642,14 +1648,41 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
       ⚠️ **It is derived and there is nothing to keep in step.** Driven over the whole table it
       separates the nine short cues from the four long ones exactly, and a thirteenth row is judged by
       what it is rather than by whether somebody remembered to add it here.
+
+      ── AND IT HELD *LONG* AND *RARE* AS ONE THING UNTIL A CUE WAS BOTH LONG AND FREQUENT — 0308 ──
+
+      ⚠️ **`docs/decisions/0308-the-attacks-are-heard.md`.** Every cue over a beat was, until now, an
+      OUTCOME: a death, a boss coming apart, a blast, a phase turning over. Each happens a handful of
+      times a level, so *the music gets out of the way* costs a handful of half-seconds and the bed
+      always comes back. 0308 gives a boss's attacks cues of 0.8 and 1.2 seconds — and the serpent's
+      last phase fires **every 36 steps, which is 0.6 s**, against a duck that takes 0.445 s to
+      recover. A duck there is not an event marker, it is the bed turned down for the rest of the
+      fight.
+
+      ⚠️ **AND THE PARAGRAPH ABOVE THIS ONE ALREADY SAYS SO ABOUT THE GUN**: *"a pulse that ducked
+      would hold the bed down for the whole game… that is 'background too quiet' returning as a
+      consequence of the fix for 'they don't mesh'."* The rule was never *long ducks*; it was *an event
+      that takes the bar over ducks*, and how often it happens is half of whether it can.
+
+      ⚠️ **SO THE SECOND AXIS IS THE TWIN, WHICH IS DERIVED AND NOT A LIST OF NAMES.** A cue whose
+      picture is a thing APPEARING is a thing being fired, and a thing being fired recurs on a cadence;
+      a cue whose picture is a thing resolving happened once. Driven over the table this partitions it
+      **exactly as it already stood** — every one of the four rows that ducks has a twin that resolves
+      (`phase-burst`, `boss-burst`, `blast-ring`, `ship-burst`) and every `-appears` row has none — so
+      this widens the rule without moving a single existing answer. That is what makes it the rule the
+      old one was standing in for rather than an exception carved for 0308.
     */
+    /** Whether a cue's picture is a thing ARRIVING — which is a thing fired, and fired things recur. */
+    const fired = (kind: CueKind): boolean => CUES[kind].twin.endsWith('-appears');
     for (const kind of CUE_KINDS) {
-      const long = cueSeconds(CUES[kind]) > BEAT_SECONDS;
+      const long = cueSeconds(CUES[kind]) > BEAT_SECONDS && !fired(kind);
       expect(
         CUES[kind].duck !== undefined,
         long
           ? `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(2)}s — over a beat — and the music plays straight through it`
-          : `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(2)}s and ducks the music, which is the bed turned down for punctuation`,
+          : fired(kind) && CUES[kind].duck !== undefined
+            ? `${kind} is a cue for a thing being FIRED and ducks the music, which holds the bed down on a cadence`
+            : `${kind} lasts ${cueSeconds(CUES[kind]).toFixed(2)}s and ducks the music, which is the bed turned down for punctuation`,
       ).toBe(long);
       if (CUES[kind].duck === undefined) continue;
       expect(CUES[kind].duck, `${kind} ducks the bed by more than half, which is a hole and not a dip`).toBeLessThan(0.5);
@@ -1808,7 +1841,18 @@ describe('every cue is played by something, and every cue the frame plays exists
       than once per bullet — and this guard reported the new cue as dead weight because it was not
       looking at the file the frame keeps its boss in.
     */
-    const sources = read('src/app/frame.ts') + read('src/app/boss.ts') + read('src/app/mount.ts');
+    /*
+      ⚠️ **AND `src/content/bosses.ts` SINCE 0308, BECAUSE A CUE MAY NOW BE NAMED BY A ROW.** The
+      paragraph above is about a READABILITY split not being a permission boundary; this is a different
+      widening and it is worth telling apart. *"Sounds for all the attacks need to be massively buffed"*
+      made *which sound* a property of the attack — so the serpent's acid, void and lightning name
+      their own cues on the rows that author them, which is
+      `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s default shape:
+      the row says what its version is and `src/app/boss.ts` holds the fallback. A cue named by a row
+      IS played, and reading only the frame reported all three as dead weight.
+    */
+    const sources =
+      read('src/app/frame.ts') + read('src/app/boss.ts') + read('src/app/mount.ts') + read('src/content/bosses.ts');
     const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`));
     expect(unplayed, `these cues are in the table and nothing ever plays them: ${unplayed.join(', ')}`).toEqual([]);
   });
@@ -2432,18 +2476,40 @@ describe('0127 — a cue has a place', () => {
       the whole game would pay for so that one cue could be placed. `src/app/frame.ts` says so where
       it happens.
     */
+    /*
+      ⚠️ **AND IT READ THREE SHAPES OF FIRST ARGUMENT UNTIL 0308 ADDED A FOURTH THE PATTERN COULD NOT
+      SEE.** It matched a literal name or `cueOfFlight(…)`; the cue a boss's ROW names arrives as
+      `cue ?? 'bossShot'`, which matched NEITHER — so the site was not an offender and was not checked
+      either, which is the silent half of the failure this guard is about. A regex over an argument
+      list is the wrong shape for the question: what is being asked is *does this call have a second
+      argument*, so the scan finds the matching close paren and looks for a comma outside any nesting.
+    */
     const CENTRED: readonly string[] = ['hit'];
     const offenders: string[] = [];
+    let scanned = 0;
     for (const file of ['src/app/frame.ts', 'src/app/boss.ts']) {
       const source = readFileSync(resolve(root, file), 'utf8');
-      // A literal name, or the flight's own cue asked of `cueOfFlight` — 0233. The second form is
-      // the one call site that fires more than one gun, and a scan that could not see it would let
-      // exactly that site forget its place.
-      for (const match of source.matchAll(/onCue\(\s*(?:'([a-zA-Z]+)'|(cueOfFlight\([^)]*\)))\s*([,)])/g)) {
-        const kind = match[1] ?? match[2]!;
-        if (match[3] === ')' && !CENTRED.includes(kind)) offenders.push(`${file}: ${kind}`);
+      for (const match of source.matchAll(/onCue\(/g)) {
+        scanned++;
+        const open = match.index + match[0].length;
+        let depth = 0;
+        let placed = false;
+        let end = open;
+        for (; end < source.length; end++) {
+          const c = source[end]!;
+          if (c === '(' || c === '[') depth++;
+          else if (c === ')' && depth === 0) break;
+          else if (c === ')' || c === ']') depth--;
+          else if (c === ',' && depth === 0) placed = true;
+        }
+        // What it fires, in the words the call site uses — a name, or the expression that picks one.
+        const kind = source.slice(open, placed ? source.indexOf(',', open) : end).trim().replaceAll("'", '');
+        if (!placed && !CENTRED.includes(kind)) offenders.push(`${file}: ${kind}`);
       }
     }
+    // ⚠️ A source scan that finds nothing reports success over zero work — 0199. The game fires a
+    // dozen-odd cues from these two files; the floor is well under that and says the scan ran.
+    expect(scanned, 'the scan found no onCue calls at all, so it is measuring nothing').toBeGreaterThan(8);
     expect(
       offenders,
       `these fire a cue without saying where it happened: ${offenders.join(', ')}. Pass the across the ` +

@@ -181,3 +181,54 @@ export function centroid(samples: Float32Array, from: number, to: number, rate: 
   }
   return den > 0 ? num / den : 0;
 }
+
+// ── AND HOW LOUD A SOUND IS, WHICH IS NOT THE SAME QUESTION AS WHAT IT IS MADE OF ───────────────
+
+/**
+ * The window loudness is measured over, in seconds — roughly what an ear integrates across.
+ *
+ * ⚠️ **A FIXED WINDOW, AND A SHORTER SOUND IS MEASURED AGAINST THE WHOLE OF IT.** A 60 ms click and a
+ * 400 ms boom at the same peak are not equally loud, and dividing each by its own length would say
+ * they were. It is what a broadcast short-term meter does, for the same reason.
+ */
+export const LOUD_WINDOW = 0.4;
+
+/**
+ * How loud a buffer IS — the A-weighted level of its loudest `LOUD_WINDOW`, as a linear amplitude.
+ *
+ * ── WHY IT IS NOT A MEAN OVER THE WHOLE THING, WHICH IS WHAT WAS TRIED FIRST ─────────────────────
+ *
+ * ⚠️ **`docs/decisions/0308-the-attacks-are-heard.md`.** *"Sounds for all the attacks need to be
+ * massively buffed"* is a report about SIZE, and every other measure in this file is a ratio inside one
+ * signal on purpose — `weigh-cue`'s own header says why. The first answer was an A-weighted mean over
+ * the cue's length, and it was wrong in the one direction that mattered: a mean DIVIDES by the tail, so
+ * lengthening a cue made the number go down. It reported three cues two to three times as long as the
+ * crash they replace, with a boom under them the crash never had, as **quieter than it**.
+ *
+ * ⚠️ **`bandLevels` SUMMED IN POWER, BECAUSE THAT IS ALREADY THE HONEST ONE.** Its own header says why
+ * `bandEnergy` cannot compare two different signals; this is that function over a window, and a second
+ * A-weighting written beside it would be the duplication `centroid` moved into this file to avoid.
+ *
+ * ⚠️ **THE WINDOW IS FOUND UNWEIGHTED AND THEN WEIGHED**, so the search is cheap and the answer is not
+ * a different measure from `bandLevels`.
+ */
+export function loudest(samples: Float32Array, rate: number): number {
+  const span = Math.round(LOUD_WINDOW * rate);
+  const stride = Math.max(1, Math.round(0.01 * rate));
+  let at = 0;
+  let best = -1;
+  for (let from = 0; from === 0 || from + span <= samples.length; from += stride) {
+    let sum = 0;
+    for (let i = from; i < Math.min(samples.length, from + span); i++) sum += samples[i]! * samples[i]!;
+    if (sum > best) {
+      best = sum;
+      at = from;
+    }
+  }
+  // Padded to the whole window, so a buffer shorter than it is measured against the window, not itself.
+  const window = new Float32Array(span);
+  window.set(samples.subarray(at, Math.min(samples.length, at + span)));
+  let power = 0;
+  for (const rms of bandLevels(window, rate)) power += rms * rms;
+  return Math.sqrt(power);
+}

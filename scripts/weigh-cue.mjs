@@ -25,18 +25,31 @@
 // column that moved when the mix moved would report a re-voice that never happened. The bands are
 // normalised to the cue's own loudest, exactly as `tests/spectrum.ts` does for the guards.
 //
-// Usage:  node scripts/weigh-cue.mjs [--only=pulse,kill] [--json]
+// Usage:  node scripts/weigh-cue.mjs [--only=pulse,kill] [--loud] [--json]
 //
 // `--json` prints one object per cue, for diffing two runs against each other rather than by eye.
+//
+// ⚠️ `--loud` IS THE EXCEPTION TO THE PARAGRAPH ABOVE AND IS OFF BY DEFAULT FOR THE REASON IT GIVES.
+// Every other column here is a ratio, so that a re-voice reads as a change and a mix move does not.
+// But *"the sounds need to be massively buffed"* is a report about ABSOLUTE level — how big the thing
+// is, not what it is made of — and answering it off the ratio columns is answering a different
+// question. So: `peak` and `loud`, both post-`gain` and post-`MASTER_GAIN`, which is where the signal
+// actually leaves the cue bus. They move when the mix moves, which is why they are behind a flag.
+//
+//   peak   the loudest sample, in dBFS. What the limiter sees, and `CUE_LIMIT` is 0.8 (−1.9 dBFS).
+//   loud   A-weighted level of the cue's loudest 400 ms, in dBFS — the column a report about SIZE is
+//          written in. `loudest` in tests/spectrum.ts is the measure, and its header says why the mean
+//          over the whole cue was tried first and said a longer, heavier sound was a quieter one.
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
+import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { BANDS, centroid, spectrum } from '../tests/spectrum.ts';
+import { BANDS, centroid, loudest, spectrum } from '../tests/spectrum.ts';
 
 const args = process.argv.slice(2);
 const only = args.find((a) => a.startsWith('--only='))?.slice('--only='.length);
 const asJson = args.includes('--json');
+const loud = args.includes('--loud');
 
 const db = (x) => 20 * Math.log10(Math.max(x, 1e-12));
 
@@ -56,6 +69,17 @@ function crestDb(samples, rate) {
   }
   return n > 0 ? db(peak) - db(Math.sqrt(sum / n)) : 0;
 }
+
+/**
+ * How loud a cue IS, in dBFS at the master — `--loud`'s second column.
+ *
+ * ⚠️ **`loudest` LIVES IN `tests/spectrum.ts` AND IS IMPORTED, NOT REPEATED**, exactly as `centroid`
+ * is and for the reason written there: `tests/authored.test.ts` holds a claim about this quantity, and
+ * a printed figure that disagrees with an asserted one is
+ * `docs/decisions/0029-the-tracked-record-is-the-record.md` happening in arithmetic. Its own header
+ * has why this is the loudest 400 ms rather than a mean over the length.
+ */
+const loudDb = (samples) => db(loudest(samples, SAMPLE_RATE) * MASTER_GAIN);
 
 const kinds = only ? only.split(',') : CUE_KINDS;
 const rows = [];
@@ -81,6 +105,8 @@ for (const kind of kinds) {
     hi: Number(bands[5].toFixed(3)),
     air: Number(bands[6].toFixed(3)),
     crestDb: Number(crestDb(samples, SAMPLE_RATE).toFixed(1)),
+    peakDb: Number(db(samples.reduce((m, v) => Math.max(m, Math.abs(v)), 0) * MASTER_GAIN).toFixed(1)),
+    loudDb: Number(loudDb(samples).toFixed(1)),
     onsetHz: Math.round(onset),
     tailHz: Math.round(tail),
     fallDb: Number(db(tail / Math.max(onset, 1e-9)).toFixed(1)),
@@ -90,7 +116,16 @@ for (const kind of kinds) {
 if (asJson) {
   console.log(JSON.stringify(rows, null, 1));
 } else {
-  const head = ['cue', 'secs', ...BANDS.map((b) => b[2]), 'crest', 'onset', 'tail', 'fall'];
+  const head = [
+    'cue',
+    'secs',
+    ...BANDS.map((b) => b[2]),
+    ...(loud ? ['peak', 'loud'] : []),
+    'crest',
+    'onset',
+    'tail',
+    'fall',
+  ];
   const widths = head.map((h) => h.length);
   const body = rows.map((r) => [
     r.kind,
@@ -102,6 +137,7 @@ if (asJson) {
     r.himid.toFixed(3),
     r.hi.toFixed(3),
     r.air.toFixed(3),
+    ...(loud ? [`${r.peakDb}dB`, `${r.loudDb}dB`] : []),
     `${r.crestDb}dB`,
     `${r.onsetHz}Hz`,
     `${r.tailHz}Hz`,
@@ -114,6 +150,10 @@ if (asJson) {
     '\nbands are a share of the cue’s own loudest, A-weighted (tests/spectrum.ts).\n' +
       'crest = peak over the RMS after 20 ms — how much of the sound is its front edge.\n' +
       'onset/tail = unweighted spectral centroid over the first 25 ms and the last third.\n' +
-      'fall = tail over onset in dB. A falling centroid IS an explosion; flat is a hiss.',
+      'fall = tail over onset in dB. A falling centroid IS an explosion; flat is a hiss.' +
+      (loud
+        ? '\npeak/loud are the ONE absolute pair, post-gain and post-MASTER_GAIN — dBFS at the bus.\n' +
+          'loud is A-weighted RMS over the whole cue: what *massively buffed* is a report about.'
+        : ''),
   );
 }

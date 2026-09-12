@@ -552,18 +552,28 @@ export function stepBoss(
     must not be able to read whether sound is on — handing it a function to call keeps the arrow
     pointing the same way `src/app/frame.ts` already points it.
   */
-  // Where the boss is, which is the one body in the game the player is watching for — 0127.
-  onCue('bossShot', boss.across);
+  /*
+    ── AND WHICH SOUND IT IS MOVED INTO `throwAttack` — 0308 ─────────────────────────────────────
+
+    ⚠️ **THE CUE WAS `onCue('bossShot', boss.across)` ON THIS LINE AND THE VOLLEY HAD NOT BEEN CHOSEN
+    YET.** For a `heads` round that is the whole defect: the head is picked inside `throwAttack`, so
+    the only sound the gate could name was the one every attack in the game shared. Reported: *"sounds
+    for all the attacks need to be massively buffed"* — and *all* is the half a level cannot fix.
+
+    ⚠️ **STILL ONCE PER VOLLEY, WHICH IS THE PROPERTY THE GATE WAS PROTECTING.** `heads` recurses
+    exactly one deep and the outer arm sounds nothing, so a volley emits one cue whether or not the
+    boss has a round — the rake's nine bullets still make one noise. `tests/serpent.test.ts` holds it.
+  */
   // ⚠️ The tier's gap over the PHASE's, so escalation and difficulty compose rather than compete: a
   // hard tier's opening phase is still slower than its own last one.
   boss.fireIn = fireGapFor(phase.fireEvery, tier);
 
   // Inside the hull is contact damage's business, and `Math.atan2(0, 0)` is a direction nobody asked
-  // for.
+  // for. It costs the volley AND its cue, which is the pair 0036 asks to keep together.
   if (ship.along === boss.along && ship.across === boss.across) return direction;
   // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
   // lightning, and the row's `attack` is the first of those.
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, phase.cue);
   return direction;
 }
 
@@ -595,8 +605,24 @@ function throwAttack(
   scrollPerStep: number,
   bolts: Pool<Entity>,
   rainRng: Rng,
+  onCue: (kind: CueKind, across?: number) => void,
+  /**
+   * What this attack sounds like, or `undefined` for the crash every boss shares — 0308.
+   *
+   * ⚠️ **THE FALLBACK IS HERE AND NOT ON FOURTEEN ROWS**, which is
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s own sentence:
+   * *no row can forget it* is an argument for a DEFAULT and never for a CONSTANT — the row says what
+   * its version is, and shared code holds the fallback.
+   */
+  cue: CueKind | undefined,
 ): void {
   const speed = bullet.speed * tier.shotSpeed;
+  /*
+    ⚠️ **BEFORE THE SWITCH, SO THE SOUND AND THE BULLETS LEAVE ON ONE STEP** — 0036, and the reason the
+    gate used to hold it: a cue after a `break` would be a second statement about the same event.
+    `heads` is the one arm that does not reach here, because its own recursion does.
+  */
+  if (attack.kind !== 'heads') onCue(cue ?? 'bossShot', boss.across);
   /*
     ⚠️ **THE MOUTH, OR THE CENTRE WHERE A ROW DOES NOT NAME ONE.** `null` is not a placeholder — a
     gyre throws from its own axis and a jellyfish from its bell, and the centre is where those belong.
@@ -875,7 +901,9 @@ function throwAttack(
       const n = attack.heads.length;
       const head = attack.heads[((boss.headAt % n) + n) % n]!;
       boss.headAt++;
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);
+      // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
+      // is the one place a per-attack cue was always going to have to be chosen.
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);
       break;
     }
     default: {

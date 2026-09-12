@@ -37,7 +37,10 @@ import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
 import { AA_FLOOR, contrast } from './contrast.ts';
 import { DECOR_INKS, DEFAULT_PALETTE, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { BOSSES } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { CUES, type CueKind } from '../src/content/cues.ts';
+import { loudest } from './spectrum.ts';
+import { makeRng } from '../src/sim/rng.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { bakeSize, cloudCover, drawKind } from '../src/render/bake.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -54,7 +57,7 @@ function over(base: string, top: string, alpha: number): string {
   return `#${a.map((v, i) => Math.round(v + (b[i]! - v) * alpha).toString(16).padStart(2, '0')).join('')}`;
 }
 import { loopsAt } from './bakes.ts';
-import { SAMPLE_RATE } from '../src/app/sound.ts';
+import { SAMPLE_RATE, sampleCue } from '../src/app/sound.ts';
 import { PICKUP_CYCLE_STEPS } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -253,6 +256,42 @@ function measurePair(): void {
   observe('0304-pair', shared.length === 0, shared);
 }
 
+/**
+ * 0308 — a boss's attack is as loud as the things that explode.
+ *
+ * ⚠️ **THE REFERENCE IS `blast`, AND IT IS THE QUIETEST OF THE FOUR EXPLOSIONS.** So the claim is the
+ * weakest form of *in the family*: a boss's attack is no more than a decibel and a half under the
+ * quietest thing in the game that goes bang. Measured when the claim was written: `bossShot` **−33.6**
+ * against the blast's **−26.6**, which is the seven decibels the report was about, and the three named
+ * attacks at −28.4, −29.4 and −27.8.
+ *
+ * ⚠️ **`bossShot` IS NOT IN IT, DELIBERATELY.** It is the crash thirteen bosses share and nobody has
+ * reported it; the claim is about an attack a row has NAMED, which is the thing 0308 made possible.
+ */
+function measureLoud(): void {
+  const reference = loudest(sampleCue(CUES.blast, SAMPLE_RATE, makeRng('cues').stream('blast')), SAMPLE_RATE);
+  const named = new Set<CueKind>();
+  for (const kind of BOSS_KINDS) {
+    const row = BOSSES[kind];
+    for (const phase of row.phases) {
+      if (phase.cue !== undefined) named.add(phase.cue);
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind !== 'heads') continue;
+      for (const head of attack.heads) if (head.cue !== undefined) named.add(head.cue);
+    }
+  }
+  const quiet: string[] = [];
+  for (const kind of named) {
+    const level = loudest(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
+    const under = 20 * Math.log10(reference / level);
+    if (under > LOUD_UNDER_DB) quiet.push(`${kind} is ${under.toFixed(1)}dB under blast`);
+  }
+  observe('0308-loud', quiet.length === 0 && named.size > 0, named.size === 0 ? ['no boss names a cue at all'] : quiet);
+}
+
+/** How far under the blast a boss's attack may be and still be *in the family*, in dB — 0308. */
+const LOUD_UNDER_DB = 3;
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -264,6 +303,7 @@ function measureAll(): void {
   measureThrow();
   measureLean();
   measurePair();
+  measureLoud();
 }
 
 /**

@@ -32,7 +32,8 @@ export const PROBES = [
         the lightning is not to be touched — so the two lines this used to name are no longer adjacent.
         The rain line alone is unique and is the thing being dropped.
       */
-      find: "            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },",
+      // ⚠️ **And re-anchored again by 0308**, which gave that head its own cue.
+      find: "            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },",
       replace: '',
     },
   },
