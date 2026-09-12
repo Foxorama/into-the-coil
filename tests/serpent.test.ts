@@ -28,7 +28,7 @@ import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { BOLT_STEPS, paintScene } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { ACROSS_SPAN, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -833,20 +833,26 @@ describe('0248 — the serpent strikes', () => {
  * rather than against the creature on the screen. The body is laid out every step now, so the shape
  * the player watches is a thing a fixture can ask about.
  */
-describe('0283 — the serpent is a chain', () => {
-  /** The laid-out spine this step: every node's place, head-end first, in world units. */
-  function spine(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number }[] {
-    const out: { along: number; across: number; girth: number }[] = [];
-    const head = world.bossPool.at(0);
-    out.push({ along: head.along, across: head.across, girth: head.radius * 2 });
-    // The pool is spawned tail-first so the neck draws over the tail, so read it backwards.
-    for (let i = world.bossBody.size - 1; i >= 0; i--) {
-      const node = world.bossBody.at(i);
-      out.push({ along: node.along, across: node.across, girth: node.radius * 2 });
-    }
-    return out;
+/**
+ * The laid-out spine this step: every node's place, head-end first, in world units.
+ *
+ * ⚠️ **AT THE FILE'S SCOPE SINCE 0309, AND IT WAS INSIDE 0283's BLOCK.** The bend rule and the reared
+ * posture are two claims about the same shape, and a second copy of *what the spine IS* is the drift
+ * `src/content/sprites.ts` records the cost of. Moved rather than duplicated.
+ */
+function spine(world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; girth: number }[] {
+  const out: { along: number; across: number; girth: number }[] = [];
+  const head = world.bossPool.at(0);
+  out.push({ along: head.along, across: head.across, girth: head.radius * 2 });
+  // The pool is spawned tail-first so the neck draws over the tail, so read it backwards.
+  for (let i = world.bossBody.size - 1; i >= 0; i--) {
+    const node = world.bossBody.at(i);
+    out.push({ along: node.along, across: node.across, girth: node.radius * 2 });
   }
+  return out;
+}
 
+describe('0283 — the serpent is a chain', () => {
   it('THE REPORTED ONE: the body moves, and it moves differently from the head', () => {
     /*
       ⚠️ **REPORTED TWICE, THREE PRs APART**: *"it needs to actually move/undulate, it's a static
@@ -904,35 +910,48 @@ describe('0283 — the serpent is a chain', () => {
       at one moment is a body checked in one pose, and the tightest bend an undulating animal ever
       reaches is the thing the rule is about.
     */
-    const { world, frame } = serpentAt(1);
-    let tightest = Infinity;
-    let at = -1;
-    for (let i = 0; i < 300; i++) {
-      world.bossPool.at(0).fireIn = 999;
-      frame.step();
-      if (world.bossBody.size === 0) continue;
-      const s = spine(world);
-      for (let k = 1; k < s.length - 1; k++) {
-        const a = s[k - 1]!;
-        const b = s[k]!;
-        const c = s[k + 1]!;
-        let turn = Math.atan2(c.across - b.across, c.along - b.along) - Math.atan2(b.across - a.across, b.along - a.along);
-        while (turn > Math.PI) turn -= Math.PI * 2;
-        while (turn < -Math.PI) turn += Math.PI * 2;
-        if (turn === 0) continue;
-        const arc = (Math.hypot(b.along - a.along, b.across - a.across) + Math.hypot(c.along - b.along, c.across - b.across)) / 2;
-        const overGirth = arc / Math.abs(turn) / b.girth;
-        if (overGirth < tightest) {
-          tightest = overGirth;
-          at = k;
+    /*
+      ⚠️ **AND OVER THE REARED PHASE TOO, WHICH IS THE TIGHTEST THE ANIMAL EVER GETS — 0309.** This drove
+      `serpentAt(1)` alone, and the bow the lightning phase adds is a curve the unreared body never has:
+      authored at six over thirty-four it measured **1.39** and this guard catches it — the span was spent
+      instead of the amplitude, and it reads **1.85** now against **2.50** whole.
+
+      ⚠️ **THE SHIP IS WALKED ACROSS THE LANE**, because the bow takes the side of the head's committed
+      gaze (0285): a fixture whose ship never moves exercises one half of the posture and calls it covered.
+    */
+    for (const fraction of [1, 0.2]) {
+      const { world, frame } = serpentAt(fraction);
+      let tightest = Infinity;
+      let at = -1;
+      for (let i = 0; i < 600; i++) {
+        world.bossPool.at(0).fireIn = 999;
+        world.bossPool.at(0).health = world.bossFullHealth * fraction;
+        world.ship.across = i % 400 < 200 ? 8 : 92;
+        frame.step();
+        if (world.bossBody.size === 0) continue;
+        const s = spine(world);
+        for (let k = 1; k < s.length - 1; k++) {
+          const a = s[k - 1]!;
+          const b = s[k]!;
+          const c = s[k + 1]!;
+          let turn = Math.atan2(c.across - b.across, c.along - b.along) - Math.atan2(b.across - a.across, b.along - a.along);
+          while (turn > Math.PI) turn -= Math.PI * 2;
+          while (turn < -Math.PI) turn += Math.PI * 2;
+          if (turn === 0) continue;
+          const arc = (Math.hypot(b.along - a.along, b.across - a.across) + Math.hypot(c.along - b.along, c.across - b.across)) / 2;
+          const overGirth = arc / Math.abs(turn) / b.girth;
+          if (overGirth < tightest) {
+            tightest = overGirth;
+            at = k;
+          }
         }
       }
+      expect(
+        tightest,
+        `at ${fraction} of its health the serpent kinks at node ${at}: its bend radius there is ` +
+          `${tightest.toFixed(2)} of its own girth, and a body that turns inside its own width has no spine in it`,
+      ).toBeGreaterThan(1.5);
     }
-    expect(
-      tightest,
-      `the serpent kinks at node ${at}: its bend radius there is ${tightest.toFixed(2)} of its own girth, and a ` +
-        'body that turns inside its own width has no spine in it',
-    ).toBeGreaterThan(1.5);
   });
 
   it('0285 — THE REPORTED ONE: the head snaps at a ship that crosses it, and a ship that holds its lane is only watched', () => {
@@ -1323,6 +1342,206 @@ describe('0308 — the attacks are heard', () => {
     }
     expect(boss.sprayLeft, 'the sweep never ran, so nothing about its silence was measured').toBe(0);
     expect(heard, `the sweep sounded ${heard.length} times for one attack`).toHaveLength(1);
+  });
+});
+
+/*
+  ── 0309: THE SERPENT REARS BACK ────────────────────────────────────────────────────────────────
+
+  `docs/decisions/0309-the-serpent-rears-back.md`. Reported: *"at the lightning phase, the serpent needs
+  to rear back with it's head and upper body, keeping the rest of it's body off screen."*
+
+  ⚠️ **THE SECOND HALF IS TRUE BEFORE THIS CHANGE AND IS MEASURED HERE ANYWAY**, because it is the
+  constraint the first half had to be designed inside: the head plus five of twenty-six nodes is all that
+  is ever on the narrowest screen.
+*/
+describe('0309 — the serpent rears back', () => {
+  /** The reared phase's own numbers, read off the row rather than restated. */
+  const rearOf = (fraction: number) => phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * fraction).rear;
+
+  /**
+   * Fly the animal and report the ends of its swing, its tightest visible node and the head's turn.
+   *
+   * ⚠️ **THE SHIP IS WALKED ACROSS THE LANE**, because the bow takes the side of the head's committed
+   * gaze — a fixture whose ship holds one lane exercises one half of the posture.
+   */
+  function flown(fraction: number, steps = 700): { near: number; far: number; turn: number; bow: number } {
+    const { world, frame } = serpentAt(fraction);
+    let near = Infinity;
+    let far = -Infinity;
+    let turn = 0;
+    let bow = 0;
+    for (let i = 0; i < steps; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      world.bossPool.at(0).health = world.bossFullHealth * fraction;
+      world.ship.across = i % 400 < 200 ? 8 : 92;
+      frame.step();
+      const head = world.bossPool.at(0);
+      near = Math.min(near, head.along - world.cameraAlong);
+      far = Math.max(far, head.along - world.cameraAlong);
+      turn = Math.max(turn, Math.abs(head.turn));
+      bow = Math.max(bow, Math.abs(world.bossBow));
+    }
+    return { near, far, turn, bow };
+  }
+
+  it('THE REPORTED ONE: at the lightning phase it holds further off than it ever has, and the skull is still on the screen', () => {
+    /*
+      ⚠️ **THE NEAR END OF THE SWING IS THE QUANTITY, WHICH IS 0101's OWN.** *"The bosses come too far
+      into the screen"* was measured at `station − drift − rear − radius`, and a rear that moved only the
+      station would be a boss that stands back and lunges just as far in. Both terms move here: `stand`
+      shifts the whole swing and `lunge` cuts 0289's strike, so the near end travels nearly nineteen units
+      and the far end does not move at all.
+
+      ⚠️ **AND THE FAR END IS THE OTHER HALF, BECAUSE A HULL CAN REAR OFF THE SCREEN.** The leading edge
+      of the narrowest view is 177.8 and the drawn skull is 38 units across in this phase, so what has to
+      fit is `far + 19`. A guard on the near end alone would pass an animal that had backed out of the
+      fight.
+    */
+    const rear = rearOf(0.2);
+    expect(rear, 'the lightning phase does not rear at all, so nothing below measured it').toBeDefined();
+    const reared = flown(0.2);
+    const before = flown(0.5);
+    expect(
+      reared.near - before.near,
+      `the reared phase's closest approach is ${reared.near.toFixed(1)} against ${before.near.toFixed(1)} in the ` +
+        'phase before it — the animal did not pull back',
+    ).toBeGreaterThan(12);
+    // Where the drawn skull's leading edge gets to, against the narrowest screen the clamp allows.
+    const edge = reared.far + SPRITE_EXTENT.boss8Horn3 / 2;
+    const narrow = ACROSS_SPAN * MIN_ASPECT;
+    expect(
+      edge,
+      `the reared skull's drawn edge reaches ${edge.toFixed(1)} of a screen ${narrow.toFixed(1)} wide — it has ` +
+        'reared off the leading edge',
+    ).toBeLessThan(narrow);
+  });
+
+  it('and the NECK bows, which is what stops it reading as a boss that repositioned', () => {
+    /*
+      ⚠️ **MEASURED AS A DEPARTURE FROM THE LAY-OUT THE BODY WOULD OTHERWISE HAVE**, not as an absolute
+      shape: the sway and the lag put every node somewhere already, and what this adds is a crest. So the
+      claim is that the node nearest the bow's own crest sits further off the line between its neighbours
+      than any node does in the phase before — which is the definition of a bend that was not there.
+    */
+    const rear = rearOf(0.2)!;
+    const worst = (fraction: number): number => {
+      const { world, frame } = serpentAt(fraction);
+      let most = 0;
+      for (let i = 0; i < 500; i++) {
+        world.bossPool.at(0).fireIn = 999;
+        world.bossPool.at(0).health = world.bossFullHealth * fraction;
+        world.ship.across = 8;
+        frame.step();
+        if (world.bossBody.size === 0) continue;
+        const s = spine(world);
+        // Only the stretch the bow runs over: beyond `span` it is the ordinary body and always was.
+        for (let k = 1; k < s.length - 1; k++) {
+          if (s[k]!.along - s[0]!.along > rear.span) break;
+          const line = (s[k - 1]!.across + s[k + 1]!.across) / 2;
+          most = Math.max(most, Math.abs(s[k]!.across - line));
+        }
+      }
+      return most;
+    };
+    const reared = worst(0.2);
+    const straight = worst(0.5);
+    expect(
+      reared / straight,
+      `the reared neck departs from its own line by ${reared.toFixed(2)} units against ${straight.toFixed(2)} ` +
+        'in the phase before — the bow is not in the body',
+    ).toBeGreaterThan(1.5);
+  });
+
+  it('and the SKULL turns with its own neck, which is what stops a gap opening behind it', () => {
+    /*
+      ⚠️ **ONE DESCRIPTION, AND THE REASON IT IS ARITHMETIC RATHER THAN A FIELD.** 0284 closed a
+      *"slight gap between head and body"* by measuring the first node against the skull's back edge; a
+      head turned by a hand while its body left it straight would re-open exactly that on one side. So the
+      turn IS the bow's slope at the skull, and this asserts the two agree rather than asserting a number
+      somebody typed — `docs/decisions/0027-measure-the-picture-not-the-model.md`'s own complaint about a
+      guard that measures a constant against itself.
+    */
+    const rear = rearOf(0.2)!;
+    const { world, frame } = serpentAt(0.2);
+    let checked = 0;
+    for (let i = 0; i < 500; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      world.bossPool.at(0).health = world.bossFullHealth * 0.2;
+      world.ship.across = i % 400 < 200 ? 8 : 92;
+      frame.step();
+      const head = world.bossPool.at(0);
+      const slope = (world.bossBow * rear.arch * Math.PI) / rear.span;
+      expect(head.turn, `the skull is turned ${head.turn.toFixed(3)} where its neck leaves it at ${Math.atan(slope).toFixed(3)}`).toBeCloseTo(
+        Math.atan(slope),
+        6,
+      );
+      if (Math.abs(head.turn) > 0.1) checked++;
+    }
+    expect(checked, 'the skull never turned at all, so the agreement above was between two zeroes').toBeGreaterThan(200);
+    // And it reaches the tilt the row's two numbers imply — 23 degrees — rather than a fraction of it.
+    const full = Math.atan((rear.arch * Math.PI) / rear.span);
+    expect(flown(0.2).turn, 'the skull never reaches the tilt its own bow asks for').toBeGreaterThan(full * 0.95);
+  });
+
+  it('and the bow EASES across when the player crosses it, because a neck cannot flip in a step', () => {
+    /*
+      ⚠️ **THE SIDE IS A DISCRETE ±1 AND FLIPS IN ONE STEP** — 0285's committed gaze. The crest is six
+      world units off the spine, so a body following that directly crosses twelve units in a sixtieth of a
+      second, through its own middle, carrying twenty-six hurtboxes and twenty-seven flames. What is
+      asserted is the RATE: no step moves the bow by more than the ease allows.
+    */
+    const { world, frame } = serpentAt(0.2);
+    let biggest = 0;
+    let last = world.bossBow;
+    let crossings = 0;
+    for (let i = 0; i < 900; i++) {
+      world.bossPool.at(0).fireIn = 999;
+      world.bossPool.at(0).health = world.bossFullHealth * 0.2;
+      // Teleported from one edge to the other, which is the worst a player can do to it.
+      world.ship.across = i % 300 < 150 ? 4 : 96;
+      frame.step();
+      if (Math.sign(world.bossBow) !== Math.sign(last) && world.bossBow !== 0) crossings++;
+      biggest = Math.max(biggest, Math.abs(world.bossBow - last));
+      last = world.bossBow;
+    }
+    expect(crossings, 'the bow never changed sides, so nothing about the ease was measured').toBeGreaterThan(2);
+    expect(
+      biggest,
+      `the bow moved ${biggest.toFixed(3)} of its range in one step — a neck that crosses the animal's own ` +
+        'middle in a frame is a teleport, not a posture',
+    ).toBeLessThan(0.06);
+  });
+
+  it('and nothing about the phases that do not rear has changed', () => {
+    /*
+      ⚠️ **THE HALF A NEW FIELD PUTS AT RISK.** `rear` is optional and absent on every phase of every
+      other boss and on this animal's first two, so the arithmetic that reads it has to be identity when
+      it is missing. A `stand` defaulting to anything but zero, or a `lunge` defaulting to anything but
+      one, would move thirteen bosses nobody has played since.
+    */
+    for (const fraction of [1, 0.5]) {
+      expect(rearOf(fraction), `the serpent rears at ${fraction} of its health, which is not the lightning phase`).toBeUndefined();
+    }
+    const whole = flown(1);
+    expect(whole.turn, 'the unreared skull is turned, so the head faces somewhere the body does not go').toBe(0);
+    expect(whole.bow, 'the unreared body bows, so a phase with no rear is not the body it used to be').toBe(0);
+    /*
+      The row's own station and lunge, which is what the unreared swing has to be made of.
+
+      ⚠️ **TO WITHIN THE STATION TRACKER'S OWN LAG, WHICH IS A REAL 2.4 UNITS AND NOT SLOP.** `stepBoss`
+      eases the hull toward its station at `STATION_TRACK` with the approach rate as a cap, so a hull
+      chasing a station that is itself moving never quite arrives — measured, the far end reaches 146.6
+      against the 149 the row describes. Asserting equality here would be asserting that 0061's tracker
+      does not exist.
+    */
+    const row = BOSSES.jormungandr;
+    const station = row.station + row.drift + (row.move.kind === 'bob' ? row.move.rear : 0);
+    expect(
+      station - whole.far,
+      `the unreared far end is ${whole.far.toFixed(1)} against the ${station} its row describes — further off than ` +
+        'the station tracker can account for',
+    ).toBeLessThan(3);
   });
 });
 

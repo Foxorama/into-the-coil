@@ -1040,6 +1040,16 @@ export interface World {
    */
   bossGazeSide: number;
   /**
+   * How far into its reared bow the neck is, in `[-1, 1]` — 0309. `0` is a body running straight.
+   *
+   * ⚠️ **A FLOAT THAT EASES, BECAUSE `bossGazeSide` IS A DISCRETE ±1 AND A NECK IS NOT.** The side the
+   * bow takes flips in a single step when the ship finally clears the head's width; the body following
+   * that directly would swing twenty units across the lane in a sixtieth of a second, which is a
+   * teleport through the animal's own middle. `layAura`'s flames and every node's hurtbox come with it,
+   * so this is not only a drawing.
+   */
+  bossBow: number;
+  /**
    * Steps into the boss's entrance, or `-1` when it is not making one — 0306.
    *
    * ⚠️ **A COUNT OF STEPS AND NOT A DISTANCE, ON `holdFor`'s TERMS.** The step is fixed (0022), so a
@@ -5453,6 +5463,17 @@ const FACE_GAPE = 20;
 const FACE_LOOK = 6;
 
 /**
+ * How fast the reared neck swaps the side it bows to, per step — 0309.
+ *
+ * ⚠️ **A THIRD OF A SECOND TO CROSS, AND IT IS SLOWER THAN THE GAZE THAT DRIVES IT ON PURPOSE.** The
+ * side is a discrete ±1 that flips in one step (0285's committed gaze); the crest of the bow is five
+ * world units off the spine, so a body that followed it directly would cross ten units in a sixtieth of
+ * a second — through its own middle, with twenty-six hurtboxes and twenty-seven flames on it. At this
+ * rate the neck takes about twenty steps to come over, which is a body changing its mind.
+ */
+const BOW_PER_STEP = 0.05;
+
+/**
  * How long the jaws stay shut on a snap, in steps — 0285.
  *
  * ⚠️ **SHORT, BECAUSE A SNAP IS A SNAP.** A tenth of a second is what a mouth closing on something
@@ -5601,6 +5622,39 @@ function layChain(w: World): void {
   w.bossTrail[w.bossTrailAt] = head.across;
   w.chainPhase += chain.rate;
 
+  /*
+    ── THE REAR, WHICH IS A BOW IN THE NECK AND A TURN OF THE SKULL — 0309 ─────────────────────────
+
+    ⚠️ **REPORTED**: *"at the lightning phase, the serpent needs to rear back with it's head and upper
+    body, keeping the rest of it's body off screen."* `src/app/boss.ts` has the withdrawal; this is the
+    posture, and the posture is what stops it reading as a boss that repositioned.
+
+    ⚠️ **WHICH WAY IT BOWS IS THE WAY THE HEAD IS NOT LOOKING, AND THAT SIDE IS ALREADY SMOOTHED.**
+    `bossGazeSide` is 0285's committed gaze: it changes only once the ship is a head's width clear of the
+    head's own centreline, expressly so that a jaw armed off it does not chatter. A bow armed off the raw
+    sign of `ship.across - boss.across` would be a neck snapping side to side several times a second; this
+    one turns when the player has actually gone somewhere. The animal cocks its head toward the ship and
+    coils the other way, which is the shape of something about to strike.
+
+    ⚠️ **EASED RATHER THAN ASSIGNED, BECAUSE THE SIDE FLIPS IN ONE STEP AND A NECK CANNOT.** `bossBow`
+    walks toward the side at `BOW_PER_STEP`; the gaze is a discrete ±1 and this is the only thing between
+    it and the body teleporting through the animal's own middle.
+  */
+  const reared = phaseFor(w.bossRow, head.health, w.bossFullHealth).rear;
+  const want = reared === undefined ? 0 : -w.bossGazeSide;
+  w.bossBow += Math.max(-BOW_PER_STEP, Math.min(BOW_PER_STEP, want - w.bossBow));
+  /*
+    ⚠️ **AND THE SKULL FACES THE WAY ITS OWN NECK LEAVES IT, WHICH IS DERIVED AND NOT AUTHORED.** The bow
+    is a half-sine, so its slope at the skull is `arch × π / span`; the head's heading is down-lane tilted
+    by the arctangent of that. Two consequences, and the second is why it is arithmetic rather than a
+    field: the drawn skull reads as reared, **and the neck cannot open a gap behind it**. 0284 closed a
+    *"slight gap between head and body"* by measuring the first node against the skull's back edge — a head
+    turned by a hand while the body left it straight would re-open exactly that, on one side, by
+    `10.8 × sin(turn)` units. A head that turns with its own neck cannot.
+  */
+  const bowSlope = reared === undefined ? 0 : (w.bossBow * reared.arch * Math.PI) / reared.span;
+  head.turn = turnFor(Math.PI + Math.atan(bowSlope));
+
   const trail = w.bossTrail.length;
   const reach = chainReach(chain);
   // The first node sits at the back of the skull, not in the middle of it — the row says where.
@@ -5637,7 +5691,14 @@ function layChain(w: World): void {
     const down = offset / reach;
     const sway = chain.sway * down;
     node.along = head.along + offset;
-    node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU);
+    /*
+      ⚠️ **AND THE BOW ON TOP OF THE WAVE — 0309.** A half-sine of the body's own length behind the skull:
+      zero at the neck, zero again at `span`, and a crest between. It is ADDED to the undulation rather
+      than replacing it, because the animal is still swimming while it rears — and it dies out over
+      `span`, so the body beyond the bow runs up-lane exactly as it always did.
+    */
+    const bow = reared === undefined || offset >= reared.span ? 0 : w.bossBow * reared.arch * Math.sin((Math.PI * offset) / reared.span);
+    node.across = followed + sway * Math.sin(w.chainPhase - (offset / chain.wavelength) * TAU) + bow;
   }
   /*
     ⚠️ **EVERY NODE TURNED TO THE WAY THE BODY RUNS THROUGH IT — 0306, AND IN THE FIGHT TOO.** A node

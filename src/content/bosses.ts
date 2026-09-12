@@ -825,6 +825,48 @@ export interface Look {
   aura: Aura | null;
 }
 
+/**
+ * A creature reared back on its own neck — `docs/decisions/0309-the-serpent-rears-back.md`.
+ *
+ * ⚠️ **ASKED FOR**: *"at the lightning phase, the serpent needs to rear back with it's head and upper
+ * body, keeping the rest of it's body off screen."*
+ *
+ * ⚠️ **AND THE SECOND HALF OF THAT SENTENCE IS ALREADY TRUE, WHICH IS WHAT DECIDED THE FIRST.**
+ * Measured on the narrowest view the clamp allows, at the far end of the bob: the head plus **five of
+ * twenty-six nodes** is on the screen — about **25 world units** of a body that is 134 long, with the
+ * tail at 283 against a screen 178 wide. So *keeping the rest off screen* is not a thing to arrange, it
+ * is a constraint: the rear happens in the neck, because the neck is all there is to see.
+ *
+ * ⚠️ **A POSTURE AND A WITHDRAWAL, BECAUSE ONE ALONE IS NOT A REAR.** `stand` and `lunge` move the
+ * animal back; `arch` and `span` bend what is left in front of the player. A withdrawal alone is a boss
+ * that repositioned, and a bow alone is a boss doing neck exercises where it stood.
+ *
+ * ⚠️ **AND THE ARCH IS BOUNDED BY THE ANIMAL'S OWN SPINE, WHICH IS WHY IT IS NOT BIGGER.** 0283's bend
+ * rule — no turn tighter than 1.5 of the local girth — caps a half-sine bow over `span` at about
+ * `span² / 163` world units of `arch`, and the sway is already spending part of that budget. Over the
+ * span the screen allows, a dramatic bow is anatomically impossible for a body eleven units thick;
+ * `tests/serpent.test.ts` drives the bend through the reared phase and the decision has the numbers.
+ * **What carries the read instead is the skull, which TURNS** — and that is not a field here, because a
+ * head faces the way its own neck leaves it, which is arithmetic rather than a choice.
+ */
+export interface Rear {
+  /** Extra world units of station it holds, so the whole swing moves away from the player. */
+  stand: number;
+  /**
+   * What it scales the bob's own `rear` by — 0289's lunge. `0` stops the strike altogether.
+   *
+   * ⚠️ **IT IS HOW THE NEAR END MOVES WITHOUT THE FAR END LEAVING THE SCREEN.** 0101 measures a boss at
+   * `station − drift − rear − radius`; the leading edge measures it at `station + drift + rear + half a
+   * skull`. Standing back moves both ends, and a hull that stops lunging moves only the near one — so the
+   * two together buy the player twenty units of room while the head stays where it can be seen.
+   */
+  lunge: number;
+  /** How far across the lane the neck bows, in world units, at the crest of the bow. */
+  arch: number;
+  /** How far behind the skull the bow runs, in world units. Zero at the skull and zero again here. */
+  span: number;
+}
+
 export interface BossPhase {
   /**
    * Active while remaining health is at or below this fraction of the row's full `health`.
@@ -879,6 +921,18 @@ export interface BossPhase {
    * round is what makes them tellable apart in the first place.
    */
   cue?: CueKind;
+  /**
+   * How it rears in this phase, or absent for standing as it always does — 0309.
+   *
+   * ⚠️ **OPTIONAL, WHERE `look`, `shot` AND `attack` BESIDE IT ARE REQUIRED WITH AN EXPLICIT `null`.**
+   * That convention is right where a field is a decision every author has to make; this one is
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s default shape
+   * instead — *"no row can forget it" is an argument for a DEFAULT, never for a CONSTANT* — and the
+   * reason is measured rather than aesthetic: adding a field to every phase line in this file would
+   * re-anchor the probes of 0040, 0124, 0248, 0254, 0261 and 0304, which all `find` a whole phase line.
+   * A required field whose value is `null` forty-odd times buys nothing and spends six probes.
+   */
+  rear?: Rear;
 }
 
 export interface BossRow extends Body {
@@ -1879,6 +1933,28 @@ export const BOSSES: Record<BossKind, BossRow> = {
         spread: 0.9,
         patrolScale: 1.6,
         stance: { kind: 'volley' },
+        /*
+          ⚠️ **AND IT REARS BACK ONTO ITS OWN NECK — 0309.** *"At the lightning phase, the serpent needs
+          to rear back with it's head and upper body, keeping the rest of it's body off screen."*
+
+          ⚠️ **TEN AND A THIRD, AND THE PAIR IS WHAT KEEPS THE HEAD ON THE SCREEN.** Standing ten units
+          further back moves both ends of the swing; cutting 0289's lunge to a third moves only the near
+          one. Driven, with the ship crossing the lane so the gaze commits both ways: the head's closest
+          approach goes **114.3 → 133.1** and its furthest **146.6 → 146.1** — so the player gains nearly
+          nineteen units of room in the hardest phase of the fight and the skull's drawn edge still sits
+          **165.1 of the narrowest screen's 177.8**, twelve clear. 0101's own quantity goes from 60% of
+          the screen to 70%.
+
+          ⚠️ **SIX OVER FORTY-FOUR IS THE BOW, AND THE SPINE CHOSE BOTH NUMBERS.** 0283's bend rule — no
+          turn tighter than 1.5 of the local girth — caps a half-sine over `span` at roughly `span² / 163`,
+          and the sway is already spending part of that budget. **Six over thirty-four was authored first
+          and measured 1.39, which the rule refuses**; the bend goes as `span² / arch`, so the span bought
+          it back rather than the amplitude. Driven through the whole reared phase: **1.85**, against 2.50
+          in the phases that do not rear — so this posture is the tightest the animal ever gets, which is
+          what a rear should be. The turn of the skull is derived from these two numbers
+          (`src/app/frame.ts`) and comes out at **23 degrees**, which is what actually reads as reared.
+        */
+        rear: { stand: 10, lunge: 0.3, arch: 6, span: 44 },
         /*
           ⚠️ **AND THE LIGHTNING PHASE SETS IT CRACKLING — 0305.** *"When the lightning attack phase
           starts it needs to get a super saiyan red lightning flicker through the aura and it's horns
