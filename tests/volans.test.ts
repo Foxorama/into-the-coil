@@ -13,12 +13,13 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES } from '../src/content/bosses.ts';
+import { BURST } from '../src/content/debris.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The fish alone, a short way in, with no mid-boss in front of it. */
@@ -178,5 +179,172 @@ describe('0249 — the eagle summons', () => {
     for (const level of Object.values(LEVELS)) {
       for (const wave of level.waves) expect(wave.enemy, 'a level authors the kite, which is the fish’s to call').not.toBe('kite');
     }
+  });
+});
+
+/**
+ * The fish breaches — `docs/decisions/0313-the-fish-breaches.md`. *"Needs a flashy entrance."*
+ *
+ * ⚠️ **EVERY CLAIM HERE IS MEASURED OFF THE FLIGHT THE FRAME ACTUALLY FLEW, IN THE UNITS THE PLAYER'S
+ * OWN LANE IS MEASURED IN** — 0027. What the row says is not evidence about what the animal does: the
+ * path is read by two functions and handed over by a third, and 0306's own probe list has four entries
+ * that are exactly the gap between the two.
+ */
+describe('0313 — the fish breaches', () => {
+  const ROW = BOSSES.volans;
+  /** Half the DRAWN extent, which is what has to be off the screen — not the hurtbox. */
+  const HULL = SPRITE_EXTENT[SPRITE_KINDS[ROW.sprite]!]! / 2;
+
+  type Leap = { along: number; across: number; turn: number; entering: number };
+
+  /** The whole entrance flown, one pose a step, with the player's fire held and the ship kept alive. */
+  function flyBreach(): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame; poses: Leap[] } {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    const poses: Leap[] = [];
+    for (let i = 0; i < 2400; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      if (world.bossPool.size === 0) continue;
+      const hull = world.bossPool.at(0);
+      poses.push({ along: hull.along - world.cameraAlong, across: hull.across, turn: hull.turn, entering: world.bossEntering });
+      if (world.bossEntering < 0 && poses.length > 1) break;
+    }
+    return { world, frame, poses };
+  }
+
+  it('THE ASKED-FOR ONE: it comes up through the near edge, leaps three times and each leap goes higher than the last, and dives back out of sight', () => {
+    const entrance = ROW.entrance!;
+    expect(entrance, 'the fish makes no entrance').not.toBeNull();
+    expect(entrance.kind, 'the fish does not breach').toBe('breach');
+    if (entrance.kind !== 'breach') throw new Error('unreachable');
+    const { poses } = flyBreach();
+    const flying = poses.filter((p) => p.entering >= 0);
+    expect(flying.length, 'the fish arrived without an entrance').toBeGreaterThan(60);
+    /*
+      ⚠️ **THE CRESTS ARE COUNTED OFF THE FLIGHT, NOT OFF THE ROW.** A crest is a step that is further
+      past the edge than the step before it and the step after — so this counts what the animal did,
+      and a path that quietly flew one long arc instead of three would be one crest, not three.
+    */
+    const height = flying.map((p) => entrance.surface - p.across);
+    const crests: number[] = [];
+    for (let i = 1; i + 1 < height.length; i++) if (height[i]! > height[i - 1]! && height[i]! >= height[i + 1]! && height[i]! > 1) crests.push(height[i]!);
+    expect(crests.length, `it made ${crests.length} leaps and the row says ${entrance.leaps}`).toBe(entrance.leaps);
+    // AND EACH ONE HIGHER THAN THE LAST, which is the escalation the flight is supposed to have.
+    for (let i = 1; i < crests.length; i++) {
+      expect(crests[i], `leap ${i + 1} crested ${crests[i]!.toFixed(1)} units up and leap ${i} crested ${crests[i - 1]!.toFixed(1)} — it is not building`).toBeGreaterThan(crests[i - 1]!);
+    }
+    /*
+      ⚠️ **AND IT LEAVES THE WAY IT CAME: OFF THE SCREEN, WHICH IS WHAT MAKES THE HAND-OVER INVISIBLE.**
+      The arrival puts the hull back at the leading edge; a jump anybody can see is a teleport, and the
+      only place one is invisible is with the whole drawing past an edge. 0306's own third probe.
+    */
+    const last = flying[flying.length - 1]!;
+    const widest = viewOf(2400, 1000).alongSpan;
+    const clear = last.across - HULL >= ACROSS_SPAN || last.across + HULL <= 0 || last.along - HULL > widest || last.along + HULL < 0;
+    expect(clear, `the fish was still on the screen — at ${last.along.toFixed(0)} along, ${last.across.toFixed(0)} across — when the arrival took over`).toBe(true);
+  });
+
+  it('and the far side of the lane is the place to be: a ship parked there is never touched, and the fish still sweeps past the middle', () => {
+    const entrance = ROW.entrance!;
+    if (entrance.kind !== 'breach') throw new Error('the fish does not breach');
+    /*
+      ⚠️ **ASKED AS THE PLAYER WOULD ASK IT, WHICH IS 0306's OWN GUARD AND NOT A GEOMETRY.** *"Players
+      can learn the pattern to avoid the damage from being hit by it"* is a claim about a ship, so the
+      guard is the pattern learned: a live ship, hurtbox and all, parked at the far side of the lane for
+      the whole of a fully-live entrance. Where THAT is falls out of the tallest crest, which is the last
+      one — and the band is read off the row rather than picked here, so a row that raised `rise` until
+      there was no band left would redden this rather than quietly closing it.
+    */
+    const tallest = entrance.height * entrance.rise ** (entrance.leaps - 1);
+    const band = entrance.surface - tallest - HULL;
+    expect(band, `the tallest leap leaves ${band.toFixed(1)} units of lane, which is not a place to be`).toBeGreaterThan(ROW.radius / 2);
+    {
+      const parked = playableWorld(VOLANS_ONLY).world;
+      const flown = new GameFrame(parked);
+      let hits = 0;
+      let seen = 0;
+      for (let i = 0; i < 2400 && !(parked.bossPool.size > 0 && parked.bossEntering < 0); i++) {
+        parked.fireIn = Number.MAX_SAFE_INTEGER;
+        parked.missileIn = Number.MAX_SAFE_INTEGER;
+        parked.ship.health = parked.shipRow.health;
+        parked.ship.invulnFor = 0;
+        parked.ship.across = band / 2;
+        parked.ship.prevAcross = parked.ship.across;
+        flown.step();
+        if (parked.bossEntering > 0) seen++;
+        if (parked.ship.health < parked.shipRow.health) hits++;
+      }
+      expect(seen, 'the parked ship never saw the entrance, so this measures nothing').toBeGreaterThan(60);
+      expect(hits, 'a ship holding the far side of the lane was hit — there is no band to learn').toBe(0);
+    }
+    /*
+      ⚠️ **AND THE REST OF THE LANE IS NOT SAFE, WHICH THE SAME MEASUREMENT HAS TO SHOW.** An entrance
+      that is dodged by standing anywhere is scenery, and a guard that only asks *was the ship safe* is
+      green for a fish that never left the edge at all.
+    */
+    const { poses } = flyBreach();
+    const nearest = Math.min(...poses.filter((p) => p.entering >= 0).map((p) => p.across));
+    expect(nearest, `the fish never came past ${nearest.toFixed(0)} across, so it never crossed the middle of the lane`).toBeLessThan(ACROSS_SPAN / 2);
+  });
+
+  it('and the hull noses into its arc, which is the first whole hull in the game that turns', () => {
+    /*
+      ⚠️ **0027'S SUBJECT, AND 0306 FOUND IT THE HARD WAY ON THE SERPENT'S HEAD.** A path that turns and
+      a picture that does not is a fish flying its whole leap facing down-lane; every assertion about the
+      MODEL stays green over that, so what is asked here is the angle the hull carries.
+    */
+    const { poses } = flyBreach();
+    const flying = poses.filter((p) => p.entering >= 0);
+    const turned = flying.filter((p) => Math.abs(p.turn) > 0.2);
+    expect(turned.length, 'the hull flew its whole breach facing down the lane').toBeGreaterThan(flying.length / 4);
+    // Nose UP on the way out of the edge and DOWN on the way back into it — the sign flips at a crest.
+    const up = flying.filter((p) => p.turn > 0.2).length;
+    const down = flying.filter((p) => p.turn < -0.2).length;
+    expect(Math.min(up, down), `the hull turned one way only — ${up} steps up against ${down} down`).toBeGreaterThan(10);
+    // And it is level again for the fight: the arrival clears the turn, so nothing patrols on its side.
+    expect(Math.abs(poses[poses.length - 1]!.turn), 'the fish stands on station still tilted from its entrance').toBeLessThan(1e-9);
+  });
+
+  it('and every time it goes through the edge the screen says so: four crossings, four sprays of embers and four cracks', () => {
+    const entrance = ROW.entrance!;
+    if (entrance.kind !== 'breach') throw new Error('the fish does not breach');
+    /*
+      ⚠️ **0036, WITH NOTHING ELSE TO LEAN ON.** There is no surface drawn in this place
+      (`src/content/themes.ts`: `ground: null`), so a crossing the picture does not mention is a fish
+      sliding through an invisible line. A leap ends where the next begins, so `leaps` arcs cross the
+      edge `leaps + 1` times: out, a skip per junction, and the dive.
+    */
+    const { world, cues } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    let sprayed = 0;
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      const before = world.debris.size;
+      frame.step();
+      if (world.bossEntering >= 0 && world.debris.size - before >= BURST.breach) sprayed++;
+    }
+    expect(sprayed, `the edge was broken ${sprayed} times and the flight crosses it ${entrance.leaps + 1}`).toBe(entrance.leaps + 1);
+    expect(cues.filter((c) => c === 'bossBreach').length, 'the breach is silent').toBe(entrance.leaps + 1);
+  });
+
+  it('and the whole skip happens on the NARROWEST screen, because a flashy entrance nobody can see is not one', () => {
+    const entrance = ROW.entrance!;
+    if (entrance.kind !== 'breach') throw new Error('the fish does not breach');
+    /*
+      ⚠️ **0023: CONTENT IS AUTHORED AGAINST EVERY DEVICE AND NOT THE ONE IT WAS WRITTEN ON.** The leaps
+      run from `from` down the lane, and a `from` past the narrowest view's leading edge puts the first
+      crest off the screen for anyone on 16:9 — the aspect the whole box is sized to.
+    */
+    const narrowest = viewOf(1280, 720).alongSpan;
+    expect(entrance.from, `the first leap starts ${entrance.from} ahead and the narrowest screen ends at ${narrowest.toFixed(0)}`).toBeLessThanOrEqual(narrowest);
+    // And the last leap is done by the trailing edge, so no crest is spent behind the player.
+    expect(entrance.from - entrance.leaps * entrance.span, 'the fish is still leaping past the trailing edge, where there is no screen left').toBeLessThan(entrance.span / 2);
   });
 });

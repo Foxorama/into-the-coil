@@ -106,14 +106,20 @@ import { BOSSES } from '../src/content/bosses.ts';
  *
  * ⚠️ **THE LAST PHASE, because that is the fight at its loudest** — which is what a `boss` or `bossPeak`
  * take is for. An earlier phase throws fewer of them.
+ *
+ * ⚠️ **AND THE ENTRANCE IS IN THE LIST SINCE 0313, WHICH IS THE FIRST CUE HERE THAT IS NOT AN ATTACK.**
+ * A breach plays `bossBreach` four times in the flight that starts the fight, so it is a sound that has
+ * to sit over the same bed the attacks do — and a sound nobody can hear next to what it shares a fight
+ * with is a sound tuned against nothing. It goes FIRST, because that is when it happens.
  */
 function bossCuesOf(theme) {
   const level = LEVEL_KINDS.find((k) => LEVELS[k].theme === theme);
   const row = BOSSES[level === undefined ? 'jormungandr' : LEVELS[level].boss];
   const phase = row.phases[row.phases.length - 1];
   const attack = phase.attack ?? row.attack;
-  if (attack.kind === 'heads') return attack.heads.map((head) => head.cue ?? 'bossShot');
-  return [phase.cue ?? 'bossShot'];
+  const entrance = row.entrance !== null && row.entrance.kind === 'breach' ? ['bossBreach'] : [];
+  if (attack.kind === 'heads') return [...entrance, ...attack.heads.map((head) => head.cue ?? 'bossShot')];
+  return [...entrance, phase.cue ?? 'bossShot'];
 }
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';

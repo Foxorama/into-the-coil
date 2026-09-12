@@ -19,6 +19,9 @@
  * there: nothing says how much boss is left.
  */
 
+// The lane's width, so a breach's surface is the edge of the lane rather than a second opinion about
+// where that is — 0313. `src/content/sprites.ts` already reads it from here; the ladder allows it.
+import { ACROSS_SPAN } from '../sim/camera.ts';
 import type { Body } from '../sim/entity.ts';
 // What an attack SOUNDS like is on the row that authors the attack — 0308. A sibling in this layer,
 // exactly as `src/content/themes.ts` already reads it to re-voice a place's own cues.
@@ -1105,39 +1108,101 @@ export interface BossRow extends Body {
 }
 
 /**
- * An entrance: a flight the boss makes onto the field, round a coil and off it again, before it
- * arrives as every boss does — 0306.
+ * Every shape an entrance can be. Closed — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
+ *
+ * ⚠️ **ONE KIND UNTIL 0313, AND THE SECOND ONE IS WHY THIS IS A UNION AND NOT A PARAMETER.**
+ * `docs/decisions/0313-the-fish-breaches.md`: *"Don't make the serpent boss a hard rule, the pattern
+ * is what we want, the style is what makes the different bosses unique."* A coil with enough knobs on
+ * it to also be a leap is the shape
+ * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md` is named for — the
+ * tell is a mechanism whose output is the same picture for every kind. A snake coils and a fish leaps,
+ * and those are two paths rather than two settings of one.
+ */
+export const ENTRANCE_KINDS = ['coil', 'breach'] as const;
+
+/** Derived from the list, so an entrance cannot exist in the union and be missing from the switch. */
+export type EntranceKind = (typeof ENTRANCE_KINDS)[number];
+
+/**
+ * An entrance: a flight the boss makes onto the field before it arrives as every boss does — 0306,
+ * and a second kind since 0313.
  *
  * ⚠️ **ASKED FOR**: *"can we make it fly onto screen, do a coil, fly off and then enter where it is
  * now?"* — and, asked whether it is part of the fight: *"Not-shootable, fully live - there's needs to
  * be a gap in the center of the screen. Players can learn the pattern to avoid the damage from being
- * hit by it and there's a music tone to alert of it's arrival."*
+ * hit by it and there's a music tone to alert of it's arrival."* Asked again for the fish, in one
+ * line: *"needs a flashy entrance."*
  *
- * ⚠️ **A PATH IN THE CAMERA'S FRAME, AND THE WHOLE ANIMAL FLIES IT.** In from the spawn point along
- * the coil's top edge, round the coil the way a hand turns from the top toward the player —
- * trailing side, bottom, leading side — `turns` times, and straight on along the tangent it leaves
- * by until the tail is off the screen. Every node of the body is where the head was a body-length
- * ago, so the animal coils rather than swinging round a pivot — the one time in the fight its body
- * FOLLOWS the head, because the one time the head travels (`src/app/frame.ts`'s `layChain` has why
- * it is placed the rest of the fight).
- *
- * ⚠️ **THE CENTRE IS LEFT OPEN, AND THAT IS THE ASK RATHER THAN A SIDE-EFFECT.** A coil round the
- * middle of the screen with a hole in it is a pattern a player learns to sit inside; `radius` less
- * the thickest girth is how wide that hole is, and `tests/serpent.test.ts` measures it off the flight.
+ * ⚠️ **A PATH IN THE CAMERA'S FRAME, AND THE WHOLE ANIMAL FLIES IT** — whichever kind it is. Every
+ * node of a body is where the head was a body-length ago, so the animal follows its own path rather
+ * than swinging round a pivot: the one time in the fight its body FOLLOWS the head, because the one
+ * time the head travels (`src/app/frame.ts`'s `layChain` has why it is placed the rest of the fight).
  *
  * ⚠️ **UNTOUCHABLE BY THE PLAYER'S FIRE AND HURTING ON CONTACT** — the frame's, not the row's: it is
  * what an entrance IS, and a row that wanted otherwise would be a different decision.
+ *
+ * ⚠️ **AND EVERY KIND OWES THE PLAYER A PLACE TO BE**, which is *"players can learn the pattern to
+ * avoid the damage"* and is held per boss, off the flight, in world units the lane is measured in
+ * (0027) — the coil's is the hole in its middle, and the breach's is the far side of the lane.
  */
-export interface Entrance {
-  /** The coil's centre: world units ahead of the camera's trailing edge, and across the lane. */
-  centre: { along: number; across: number };
-  /** The coil's radius to the spine, in world units. Its tightest bend, so at least 1.5 girths. */
-  radius: number;
-  /** How many times round it goes before it peels away. */
-  turns: number;
-  /** World units of path a step. */
-  speed: number;
-}
+export type Entrance =
+  /**
+   * A coil — 0306. In from the spawn point along the coil's top edge, round it the way a hand turns
+   * from the top toward the player — trailing side, bottom, leading side — `turns` times, and
+   * straight on along the tangent it leaves by until the tail is off the screen.
+   *
+   * ⚠️ **THE CENTRE IS LEFT OPEN, AND THAT IS THE ASK RATHER THAN A SIDE-EFFECT.** A coil round the
+   * middle of the screen with a hole in it is a pattern a player learns to sit inside; `radius` less
+   * the thickest girth is how wide that hole is, and `tests/serpent.test.ts` measures it off the flight.
+   */
+  | {
+      kind: 'coil';
+      /** The coil's centre: world units ahead of the camera's trailing edge, and across the lane. */
+      centre: { along: number; across: number };
+      /** The coil's radius to the spine, in world units. Its tightest bend, so at least 1.5 girths. */
+      radius: number;
+      /** How many times round it goes before it peels away. */
+      turns: number;
+      /** World units of path a step. */
+      speed: number;
+    }
+  /**
+   * A breach — 0313: the flying fish coming up through the near edge of the lane, skipping across the
+   * screen in `leaps` arcs that each go higher than the last, and going back down through it.
+   *
+   * ⚠️ **EACH LEAP IS A BALLISTIC ARC AND `speed` IS ITS ALONG SPEED, NOT ITS PATH SPEED.** The
+   * parabola through the edge, the crest and the edge again over one `span` of along — which is what a
+   * thrown body's path IS when its horizontal speed is constant. What that buys is the thing that
+   * makes a leap read as one: fastest where it leaves and re-enters, slowest at the top. A sine
+   * leaves the edge with no across speed at all, so the animal slides out instead of bursting out.
+   *
+   * ⚠️ **THE FAR SIDE OF THE LANE IS THE PLACE TO BE, AND `height` × `rise` IS WHAT SETS IT.** The
+   * tallest crest is the last one, and the band between it and the far edge is the one stretch of the
+   * lane the hull never reaches. `tests/volans.test.ts` measures it off the flight and parks a live
+   * ship in it, exactly as the coil's hole is measured.
+   *
+   * ⚠️ **THERE IS NO SURFACE DRAWN IN THIS PLACE, AND THAT WAS CHECKED.** `src/content/themes.ts` says
+   * `ground: null` for the nebula — *"In space, and the Pillars are the proof."* So `surface` is the
+   * edge of the lane and nothing more; what says the fish went THROUGH something is the spray of
+   * embers at the crossing, which is 0251's own picture at the other edge.
+   */
+  | {
+      kind: 'breach';
+      /** The across it breaks through, in world units: the lane's near edge. */
+      surface: number;
+      /** Where the first leap starts, in world units ahead of the camera's trailing edge. */
+      from: number;
+      /** How many times it comes out. */
+      leaps: number;
+      /** The along one leap covers, in world units. */
+      span: number;
+      /** How far past `surface` the FIRST leap crests, in world units. */
+      height: number;
+      /** What each leap multiplies the last one's crest by. */
+      rise: number;
+      /** World units of ALONG a step — see above. */
+      speed: number;
+    };
 
 /**
  * How far up-lane a chain's tail reaches from its head, in world units.
@@ -1757,7 +1822,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       than closing on a station: about six and a half seconds in, round and off, and then the arrival
       every boss has.
     */
-    entrance: { centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
+    entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -2083,10 +2148,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * volley, which hunt. *"Hordes of flying kites and raptors as adds at various points throughout
    * the fight"* — the points are the phases.
    *
-   * ⚠️ **AND EVERY ONE OF SIX ITEMS IS OWED A CHANGE HERE** —
-   * [`the-fish-asked`](../../reports/the-fish-asked-2026-09-12.md): a flashy entrance, quality art on
-   * the attacks, more attack styles, attacking WHILE the adds arrive, better art on the adds, and adds
-   * that are a reason to react. **This decision is the name and the fiction only.**
+   * ⚠️ **AND IT BREACHES IN — `docs/decisions/0313-the-fish-breaches.md`.** *"Needs a flashy
+   * entrance."* Up through the near edge of the lane, three leaps across the whole screen that each go
+   * higher than the last, and back down through it — a thing a fish does and a snake cannot, which is
+   * the brief's *"the style is what makes the different bosses unique."*
+   *
+   * ⚠️ **AND FIVE OF SIX ITEMS ARE STILL OWED HERE** —
+   * [`the-fish-asked`](../../reports/the-fish-asked-2026-09-12.md): quality art on the attacks, more
+   * attack styles, attacking WHILE the adds arrive, better art on the adds, and adds that are a reason
+   * to react.
    */
   volans: {
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
@@ -2101,7 +2171,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
     muzzle: null,
     chain: null,
     face: null,
-    entrance: null,
+    /*
+      A BREACH — 0313. `from` 176 is inside the leading edge of the NARROWEST view any device gets
+      (177.8), so all three crests are on the screen everywhere — 0023, and the guard reads the view
+      rather than trusting this sentence. Three spans of 59 carry it a unit past the trailing edge.
+      34 rising by 1.4 crests at 34, 47.6 and 66.6 past the edge, so the furthest the hull's top ever
+      gets is 18 units short of the far side of the lane — which is the place to be, and
+      `tests/volans.test.ts` parks a live ship in it for the whole flight.
+    */
+    entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,

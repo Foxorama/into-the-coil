@@ -181,6 +181,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the serpent REARS BACK: a phase may carry a `Rear` — stand further off, scale 0289's lunge, and bow the neck over the body that is actually on screen; the skull's turn is derived from the bow's own slope, so it cannot open a gap behind it** | [0309](decisions/0309-the-serpent-rears-back.md) — amends [0289](decisions/0289-a-bob-can-rear.md) |
 | **the STORM runs the whole body and the horns fire it: the lightning phase's aura crackles on five frames of six at two thirds the weight, the horns reach three times their drawn length, and the crown discharges for the half-second before a strike — read off the bolt already in the air** | [0310](decisions/0310-the-storm-runs-the-whole-body.md) — amends [0305](decisions/0305-the-serpent-darkens.md) |
 | **the EAGLE was always a fish: Ember Nebula's end boss is `volans`, the flying fish — the name, the fiction and every sentence that describes the animal as it is today; the hull deliberately not repainted; and a probe must still name a test that EXISTS, which renaming a test file is what broke** | [0312](decisions/0312-the-eagle-was-always-a-fish.md), [`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) |
+| **the fish BREACHES: an entrance is a closed union of kinds, and the second one is a leap — up through the near edge of the lane, three ballistic arcs that each crest higher than the last, and back down out of sight, with the hull nosed into its own path and a spray of embers at every crossing** | [0313](decisions/0313-the-fish-breaches.md) — amends [0306](decisions/0306-the-serpent-coils-in.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -907,10 +908,11 @@ posture and the horn flare photographed in situ rather than off the sheet, and
 ⚠️ **[`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) IS THE RECORD AND HOLDS THE ORDER**,
 so this file does not. *"Use the 'pattern' of the serpent boss to improve the level 2 end boss. Don't
 make the serpent boss a hard rule, the pattern is what we want, the style is what makes the different
-bosses unique."* Six items: the rename ([0312](decisions/0312-the-eagle-was-always-a-fish.md)), a
-flashy entrance, quality art on the attacks, more attack styles, **attacking while the adds arrive** —
-the one item that needs a mechanism the game does not have, because a volley IS an arm of `BossAttack`
-— quality art on the adds, and adds worth reacting to.
+bosses unique."* Six items: the rename ([0312](decisions/0312-the-eagle-was-always-a-fish.md)) and the
+flashy entrance ([0313](decisions/0313-the-fish-breaches.md)) are landed. **Four are owed**: quality art
+on the attacks, more attack styles, **attacking while the adds arrive** — the one that needs a mechanism
+the game does not have, because a volley IS an arm of `BossAttack` — quality art on the adds, and adds
+worth reacting to.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

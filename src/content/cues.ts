@@ -116,6 +116,8 @@ export const CUE_KINDS = [
   'bossAcid',
   'bossVoid',
   'bossBolt',
+  // The fish going through the edge of the lane on its entrance — 0313.
+  'bossBreach',
   'bossPhase',
   'bossDown',
   'bomb',
@@ -164,6 +166,9 @@ export const PLACE_CUES: readonly CueKind[] = [
   'bossAcid',
   'bossVoid',
   'bossBolt',
+  // And its entrance, which is the most a place-owned cue has ever been about the place — 0313: what
+  // the fish goes through is the Ember Nebula, and a breach in Rime Shelf would not crackle.
+  'bossBreach',
   'bossPhase',
   'bossDown',
 ];
@@ -187,6 +192,8 @@ export const TWIN_KINDS = [
   'blade-appears',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
+  /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
+  'breach-appears',
   /** A body flashes its hit sprite for `IMPACT_FLASH_STEPS` — 0035. */
   'impact-flash',
   /** A dead enemy scatters `BURST.enemy` fragments where it died — 0036. */
@@ -1331,6 +1338,78 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.42, gain: 0.84, attack: 0.004, curve: 2.8, lowFrom: 1400, lowTo: 125, highFrom: 68, q: 0.85, drive: 0.5 },
       // THE FLOOR — the fifth of the key falling below the root, under the clap and over before the ticks.
       { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.42, at: 0.05, gain: 1, attack: 0.003, curve: 3, drive: 0.35 },
+    ],
+  },
+  /**
+   * The flying fish going through the edge of the lane on its entrance — 0313.
+   *
+   * ⚠️ **A SPRAY OF EMBERS AND NOT A SPLASH, BECAUSE THERE IS NO WATER AND NO SURFACE DRAWN.**
+   * `src/content/themes.ts` says `ground: null` for the nebula — *"In space, and the Pillars are the
+   * proof."* So what this is the sound of is **the fish and the place meeting**, four times in one
+   * flight: something big displacing gas, a sheet thrown up off it, and embers crackling back down.
+   * It is the only thing on the screen that says the animal went through anything —
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with nothing else to
+   * lean on.
+   *
+   * ⚠️ **THE SHEET'S LOWPASS OPENS UPWARD, WHICH NO NOISE LAYER IN THIS TABLE DOES.** 2.6 kHz to 9.5
+   * over a third of a second: the sound gets WIDER as it goes, which is what a spray fanning out does
+   * and is the opposite of everything else here — the acid thins upward as it dries, the bolt's grain
+   * coarsens downward, and both are things running out. Two pitched layers already brighten this way
+   * (`bomb`'s saw and `shield`'s square) and both do it under a note that is rising; this is the only
+   * one where the widening IS the event.
+   *
+   * ⚠️ **AND IT IS NOT `bossAcid`'s SIZZLE WITH A NEW NAME.** That is a fine grain at 8.2 kHz thinning
+   * upward over most of a second while its highpass rises. This is a broadband front with a coarse
+   * crackle at 900 Hz under it — **an octave and a half apart** — over half the length.
+   *
+   * ⚠️ **IT DOES NOT DUCK, AND THE RULE SAYS SO RATHER THAN AN EXCEPTION DOING IT.** Half a second is
+   * over a beat, but its twin is a thing APPEARING and a thing that appears recurs: the four crossings
+   * of one breach are 0.82 s apart, which is inside a duck's own recovery. 0308's second axis, applied
+   * to the first cue written after it.
+   */
+  bossBreach: {
+    twin: 'breach-appears',
+    // More room than the bolt's and less than a phase's: it happens in the open, and a spray with too
+    // much air on it is weather rather than an impact.
+    air: 0.34,
+    onGrid: true,
+    hold: 8,
+    gain: 0.46,
+    // Enough to hold the front and the crackle together as one event. Past this the grain flattens,
+    // which is `bossAcid`'s own reason for staying low.
+    glue: 0.22,
+    layers: [
+      /*
+        THE WHOOMPH — the fifth of the key falling below the root, over in under a fifth of a second:
+        something big displacing what it came through. 0089's *something low under it*, and the one
+        layer here with a pitch.
+      */
+      { wave: 'sine', from: inKey(7), to: inKey(-4), seconds: 0.18, gain: 0.62, attack: 0.0025, curve: 3.6, drive: 0.32 },
+      /*
+        THE SHEET — white noise whose lowpass OPENS from 2.6 kHz to 9.5 while its highpass climbs under
+        it. A band that widens upward and is cut from below is a sheet of spray leaving a surface: it
+        starts as a thump with air in it and ends as hiss with no body left.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.58, attack: 0.0035, curve: 2, lowFrom: 2600, lowTo: 9500, highFrom: 700, highTo: 1600, q: 0.9 },
+      /*
+        THE EMBERS — sample-and-hold at 900 Hz falling to 180, ringing at `q` 2.3. 900 is a grain every
+        millisecond and 180 is one every five, so the crackle coarsens into countable sparks; the
+        resonance is what makes each one ring rather than tick, which is the knob `bossBolt` uses to be
+        electric and `bossAcid`'s bubbles use to be wet. Here it is fire.
+      */
+      { wave: 'noise', from: 900, to: 180, at: 0.06, seconds: 0.44, gain: 0.52, attack: 0.003, curve: 2.6, lowFrom: 5200, lowTo: 1400, highFrom: 380, q: 2.3, drive: 0.38 },
+      /*
+        THE FALL-BACK — a finer grain, late and short, darkening fast: the sheet coming down again. It
+        is the only layer that starts after the front has passed and ends before the embers do, which is
+        what makes the figure a thing going up and then a thing coming down rather than one wash.
+      */
+      { wave: 'noise', from: 4200, to: 1100, at: 0.22, seconds: 0.22, gain: 0.36, attack: 0.004, curve: 3.4, lowFrom: 9000, lowTo: 2600, highFrom: 1200, q: 1.4, drive: 0.28 },
+      /*
+        THE WAKE — a resonant peak travelling from 1.8 kHz down to 300 over a fifth of a second: the
+        body going past. It is the acid's glop knob on a different sweep and a different band, and what
+        it adds is MASS — without it the front is a spray with nothing in the middle of it.
+      */
+      { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.46, attack: 0.002, curve: 4, lowFrom: 1800, lowTo: 300, highFrom: 90, q: 2.2, drive: 0.4 },
     ],
   },
   bossPhase: {
