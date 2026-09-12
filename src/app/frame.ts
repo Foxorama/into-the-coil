@@ -1152,6 +1152,24 @@ export interface World {
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
   bossFallIn: number;
+  /**
+   * Steps until the current phase's escort next calls — 0314. Set to the escort's gap when the boss
+   * arrives and again after every call; zero for a phase with no escort, which nothing reads.
+   *
+   * ⚠️ **NOT RESET WHEN THE PHASE TURNS OVER, WHICH IS THE FALL'S OWN BEHAVIOUR AND IS DELIBERATE.**
+   * A phase change already sheds its own burst and its own cue; an escort's first call landing on the
+   * same step would read as part of that rather than as a thing arriving, and a clock the phase resets
+   * is a clock a player who is doing well never sees run out.
+   */
+  bossEscortIn: number;
+  /**
+   * Which across edge the escort's next call flanks from — 0314, `1` or `-1`, alternating a call.
+   *
+   * ⚠️ **THE SUMMONS'S OWN `spin` RIDES THE BOSS AND THIS DOES NOT SHARE IT.** One counter would make
+   * each stream's side a function of how often the other fired — unpredictable to whoever authors
+   * either, and measurable by a guard over either only intermittently, which is 0044's subject.
+   */
+  bossEscortSide: number;
   /** Steps the ship has spent inside the boss's chill without a break — 0253; zero outside it. */
   chilledFor: number;
   /** Steps the ship has left frozen — 0253; the stick asks for nothing while it is above zero. */
@@ -1654,6 +1672,9 @@ export class GameFrame implements Frame {
       logs now, and `scripts/probes/0072-*.mjs` breaks that instead.
     */
     if (w.deaths.count > 0) w.onCue('kill', w.deaths.across[0]);
+    // The shoal reaching what it was swimming for — 0314. Here rather than beside the other pairings
+    // because it does not need a ship: a fish eats whether or not the player is alive to watch.
+    feedTheLord(w);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -2083,6 +2104,8 @@ function nextFight(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossFallIn = 0;
+  w.bossEscortIn = 0;
+  w.bossEscortSide = 1;
   w.chilledFor = 0;
   w.frozenFor = 0;
 }
@@ -3833,6 +3856,57 @@ function standingAdds(w: World, kind: number): number {
   return standing;
 }
 
+/**
+ * A body that swims for the boss, arriving — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
+ *
+ * ⚠️ **THE WHOLE OF WHAT MAKES THE SHOAL WORTH SHOOTING.** A minnow that reaches the fish is eaten and
+ * the fish is fed, so every one the player lets past is health they have to take off again. Nothing
+ * else in this game puts a body on the field with somewhere to be other than the player.
+ *
+ * ⚠️ **IT CANNOT PUT THE BOSS BACK INTO A PHASE IT HAS LEFT.** A phase is keyed to remaining health
+ * (`docs/game.md`), so an unclamped heal would walk the fight backwards through the table — the look,
+ * the cadence and the attack all reverting, and 0111's phase burst firing again on the way down. The
+ * ceiling is the current phase's own `upTo`, so feeding can undo everything the player did **inside**
+ * this phase and nothing they did before it. That is the trade being offered, with a floor under it.
+ *
+ * ⚠️ **NOT A PAIRING IN `src/sim/collide.ts`**, and the reason is that nothing here is a hit: no damage
+ * is dealt, no invulnerable window opens, and the thing that is consumed is the one that arrived.
+ * Writing it as a collision would mean a fourth meaning for `damage` on a row that already has one.
+ *
+ * ⚠️ **Nothing allocates**, and the walk is backwards because releasing reorders the pool
+ * (`src/sim/pool.ts` says so at the top).
+ */
+function feedTheLord(w: World): void {
+  if (w.bossPool.size === 0 || w.bossEntering >= 0) return;
+  const lord = w.bossPool.at(0);
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const body = w.enemies.at(i);
+    const row = w.enemyRows[body.kind];
+    if (row === undefined || row.motion.kind !== 'feed') continue;
+    const reach = lord.radius + body.radius;
+    if (Math.hypot(lord.along - body.along, lord.across - body.across) > reach) continue;
+    /*
+      ⚠️ **THE CEILING IS READ OFF THE PHASE THE BOSS IS IN, NOT OFF THE ONE IT WOULD BE IN AFTER.**
+      `phaseFor` takes the health it has now; `upTo` is the share of full health at which that phase
+      begins, so this is *back to the top of where you are* and never past it.
+    */
+    const ceiling = phaseFor(w.bossRow, lord.health, w.bossFullHealth).upTo * w.bossFullHealth;
+    const fed = Math.min(lord.health + row.motion.feeds, ceiling);
+    const gained = fed > lord.health;
+    lord.health = fed;
+    w.enemies.releaseAt(i);
+    /*
+      ⚠️ **0036, AND THE GAIN IS THE HALF THAT WOULD OTHERWISE BE INVISIBLE.** A body vanishing at the
+      hull is a body vanishing; what the player has to see is that it was EATEN, so the burst is thrown
+      at the mouth and the fight's own *something changed on the boss* cue plays with it. A feed that
+      was refused by the ceiling gets the burst and no cue: the minnow still died there, and the sound
+      is what says it was worth something.
+    */
+    burst(w, body.along, body.across, BURST.fed);
+    if (gained) w.onCue('bossPhase', body.across);
+  }
+}
+
 function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind, from: SummonFrom, side: number): void {
   const kind = w.enemyKinds[enemy];
   const row = w.enemyRows[kind];
@@ -4189,6 +4263,42 @@ function steerEnemies(w: World): void {
         arm of the clamp — using the gap itself when it is smaller than the rate — is what lands it
         exactly rather than jittering around the line.
       */
+      /*
+        Swim for the BOSS, in both axes at once — 0314.
+
+        ⚠️ **THE ONLY ARM HERE THAT READS SOMETHING OTHER THAN THE SHIP**, which is what a minnow is
+        for: the player's question stops being *dodge or shoot* and becomes *is this worth my fire*.
+
+        ⚠️ **`velAlong` IS SET AS WELL, AND EVERY OTHER ARM LEAVES IT ALONE.** The spawner gives a body
+        a velocity that carries it towards the player and the arms only steer across; a feeder has to
+        go the other way, up the lane, so it owns both. `scrollPerStep` is added because 0023 says
+        every speed is in the camera's frame — without it a minnow swimming at the boss would lose a
+        whole scroll rate a step and arrive from behind, or never.
+
+        ⚠️ **NO BOSS ON THE FIELD, OR ONE STILL MAKING ITS ENTRANCE, AND IT HAS NOWHERE TO BE.** It
+        holds whatever the spawner gave it and leaves at the cull like anything else — which is what a
+        level that authored one would get, and is why none does.
+      */
+      case 'feed': {
+        const lord = w.bossPool.size > 0 && w.bossEntering < 0 ? w.bossPool.at(0) : null;
+        if (lord === null) break;
+        const dAlong = lord.along - e.along;
+        const dAcross = lord.across - e.across;
+        const far = Math.hypot(dAlong, dAcross);
+        if (far < 1e-6) break;
+        const rate = m.agility * aggression;
+        e.velAlong = w.scrollPerStep + (dAlong / far) * rate;
+        e.velAcross = (dAcross / far) * rate;
+        /*
+          ⚠️ **AND IT FACES WHERE IT SWIMS, WHICH IS THE ONE BODY IN THE GAME THAT HAS TO.** Every hull
+          is baked facing down the lane because every hull GOES that way; a minnow goes the other way,
+          so one that did not turn would swim to the fish tail first — which is exactly how it came out
+          on the sprite sheet before this line existed. `blit` has taken an angle since 0306 and 0313
+          put a whole hull on it; this is the third user of it and the first that is not a boss.
+        */
+        e.turn = turnFor(Math.atan2(dAcross, dAlong));
+        break;
+      }
       case 'hunt': {
         const rate = m.agility * aggression;
         const gap = ship.across - e.across;
@@ -5464,8 +5574,11 @@ function driveBoss(w: World): void {
     const room = crowdFor(calling.standing, w.difficulty) - standingAdds(w, w.enemyKinds[calling.enemy]);
     if (room > 0) {
       // Which across edge this call comes in from, alternating a volley — 0262. `spin` is a field
-      // nothing else reads on a boss, and the summons is the only thing that writes it.
+      // nothing else reads on a boss, and the summons is the only thing that writes it: the escort
+      // added by 0314 alternates on a counter of its own, so each stream flanks on its own count.
       boss.spin = boss.spin > 0 ? -1 : 1;
+      // ⚠️ Anchored by `scripts/probes/0262-*.mjs`, which needs this line to be distinguishable from
+      // the escort's — 0314 gave the same three lines a second home.
       summonAdds(w, calling.enemy, Math.min(boss.turnsLeft, room), calling.formation, calling.from, boss.spin);
     }
     boss.turnsLeft = 0;
@@ -5594,6 +5707,42 @@ function driveBoss(w: World): void {
         }
       }
       w.bossFallIn = fireGapFor(fall.every, w.difficulty);
+    }
+  }
+  /*
+    ── THE ESCORT — 0314 ──────────────────────────────────────────────────────────────────────────
+
+    *"Needs to be attack while the adds are coming in."* Read HERE, beside the fall, and for the fall's
+    own reason: it runs on a clock of its own rather than on the volley clock, so the phase above goes
+    on throwing whatever it throws while this keeps the horde topped up. A `summon` cannot do it —
+    it IS the volley — and that is the whole of why this exists.
+
+    ⚠️ **ON THE PHASE AND NOT ON THE ROW, WHICH IS THE DIFFERENCE FROM THE FALL.** A fall is weather
+    over a whole fight; an escort is one phase's idea, so a boss can open alone and be joined later,
+    and the phase table stays the place a reader goes to find out what a stretch of the fight IS —
+    0282: *a change is finished when the thing it added can differ per instance.*
+
+    ⚠️ **THE SAME CEILING AND THE SAME ALTERNATION AS A SUMMONS**, through the same `summonAdds`: the
+    call tops the horde up rather than adding to it (0270), a full field spends no turn, and `spin`
+    flips the edge only when something was actually put on it (0262).
+  */
+  const escort = throwing.escort;
+  if (escort !== undefined) {
+    w.bossEscortIn--;
+    if (w.bossEscortIn <= 0) {
+      const room = crowdFor(escort.standing, w.difficulty) - standingAdds(w, w.enemyKinds[escort.enemy]);
+      if (room > 0) {
+        /*
+          ⚠️ **ITS OWN SIDE COUNTER AND NOT THE SUMMONS'S `spin` — 0314.** Sharing one reads well —
+          *the horde comes in from wherever the last one did not* — and it makes each stream's side a
+          function of how often the OTHER one fired, which is a thing no author of either can predict
+          and a guard over either can only measure intermittently (0044). Two counters, two alternations.
+        */
+        w.bossEscortSide = w.bossEscortSide > 0 ? -1 : 1;
+        summonAdds(w, escort.enemy, Math.min(escort.count, room), escort.formation, escort.from, w.bossEscortSide);
+        w.onCue('threat', boss.across);
+      }
+      w.bossEscortIn = fireGapFor(escort.every, w.difficulty);
     }
   }
   /*
@@ -6103,6 +6252,16 @@ function spawnBoss(w: World): void {
   w.bossUncoilAt = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
+  /*
+    ⚠️ **AND THE ESCORT'S CLOCK STARTS AT ZERO, SO ITS FIRST CALL IS THE STEP ITS PHASE OPENS — 0314.**
+    That is a choice and not the fall's default: a fall waits its own gap because the boss arriving is
+    already an event and a rock landing on top of it is noise, and an escort belongs to a phase that
+    usually is not the first — so *the phase turns over and the shoal comes in with it* is the reading,
+    which is what a change of phase is for. Nothing resets this between phases: a phase with no escort
+    leaves the counter wherever it was, and the next phase that has one is at most one call behind.
+  */
+  w.bossEscortIn = 0;
+  w.bossEscortSide = 1;
   w.chilledFor = 0;
   w.frozenFor = 0;
   /*
@@ -6421,6 +6580,8 @@ function beginScript(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossFallIn = 0;
+  w.bossEscortIn = 0;
+  w.bossEscortSide = 1;
   w.chilledFor = 0;
   w.frozenFor = 0;
 }

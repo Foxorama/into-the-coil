@@ -20,6 +20,7 @@ import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
+import { reset } from '../src/sim/entity.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The fish alone, a short way in, with no mid-boss in front of it. */
@@ -51,12 +52,20 @@ function volansAt(fraction: number): { world: ReturnType<typeof playableWorld>['
 }
 
 describe('0249 — the eagle summons', () => {
-  it('THE FIVE PHASES: darts, a whip, kites, a wider whip, raptors — and it is Ember Nebula’s real boss', () => {
+  it('THE FIVE PHASES: darts, a whip, and then three that throw AND call — and it is Ember Nebula’s real boss', () => {
     const row = BOSSES.volans;
     const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
     // A spray since 0258: the fish is the one end boss that stalks, and what reacts is where it is.
     // A rake since 0262: a fan of quills that sweeps, which a fan that sits was not — *"boring"*.
-    expect(kinds).toEqual(['rake', 'whip', 'summon', 'whip', 'summon']);
+    /*
+      ⚠️ **AND TWO OF THE FIVE STOPPED BEING SUMMONS IN 0314** — *"needs to be attack while the adds
+      are coming in."* A summons is a volley that throws nothing, so a third of this fight was the fish
+      not fighting. The kites and the shoal are `escort`s now, on clocks of their own, and the phases
+      they belong to go on raking and whipping over the top of them. The last third keeps a summons AS
+      WELL, which is what makes the two different things rather than two spellings of one.
+    */
+    expect(kinds).toEqual(['rake', 'whip', 'rake', 'whip', 'summon']);
+    expect(row.phases.filter((p) => p.escort !== undefined).length, 'no phase of the fish calls a horde while it fights').toBe(3);
     expect(LEVELS.descent.boss).toBe('volans');
     expect(LEVELS.descent.theme).toBe('nebula');
   });
@@ -120,22 +129,30 @@ describe('0249 — the eagle summons', () => {
     expect(INK_OF[SPRITE_KINDS[SHOTS.flame.sprite]!], 'a flame wears the player’s own bullet ink').not.toBe('bullet');
   });
 
-  it('THE SUMMONS: a volley at half health puts kites on the field at the leading edge, and one at the end puts raptors', () => {
+  it('THE SUMMONS: a volley at the last sixth puts kites on the field from the sides in turn', () => {
     /*
       *"Summons hordes of flying kites and raptors as adds at various points throughout the fight."*
       Driven: a volley throws no bullet and the enemy pool gains the phase's count of its kind,
       ahead of the ship and on the screen — where a wave arrives — and the next volley adds more.
+
+      ⚠️ **ONE PHASE RATHER THAN TWO SINCE 0314, AND COUNTED BY KIND RATHER THAN BY POOL.** The
+      half-health summons is an ESCORT now — the fish rakes while its kites arrive — so the volley that
+      throws nothing is the last third's alone; and that phase has an escort running under it, so the
+      pool holds minnows as well and *how many did the volley call* is a question about one kind.
+      What the escort does on its own clock is `0314 — the escort` below.
     */
-    for (const [fraction, enemy] of [
-      [0.45, 'kite'],
-      [0.1, 'raptor'],
-    ] as const) {
+    for (const [fraction, enemy] of [[0.1, 'kite']] as const) {
       const { world, frame } = volansAt(fraction);
       const boss = world.bossPool.at(0);
+      const called = (): number => {
+        let n = 0;
+        for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) n++;
+        return n;
+      };
       boss.fireIn = 1;
       frame.step();
       const count = (phaseFor(BOSSES.volans, boss.health, world.bossFullHealth).attack as { count: number }).count;
-      expect(world.enemies.size, `the summons at ${fraction} put ${world.enemies.size} adds on the field`).toBe(count);
+      expect(called(), `the summons at ${fraction} put ${called()} ${enemy}s on the field`).toBe(count);
       expect(world.enemyShots.size, 'a summons threw bullets as well').toBe(0);
       /*
         ⚠️ **FROM THE SIDES SINCE 0262** — *"they marched in gently from the left side in a single
@@ -146,7 +163,7 @@ describe('0249 — the eagle summons', () => {
       const sides = new Set<number>();
       for (let i = 0; i < world.enemies.size; i++) {
         const add = world.enemies.at(i);
-        expect(add.kind, `an add at ${fraction} is not a ${enemy}`).toBe(world.enemyKinds[enemy]);
+        if (add.kind !== world.enemyKinds[enemy]) continue;
         const inView = add.along - world.cameraAlong;
         expect(inView, 'an add arrived behind the ship').toBeGreaterThan(world.ship.along - world.cameraAlong);
         expect(inView, 'an add arrived a whole view beyond the screen').toBeLessThan(world.view.alongSpan * 2);
@@ -160,8 +177,10 @@ describe('0249 — the eagle summons', () => {
       // And again on the next volley, from the other side: a horde is many calls, not one.
       boss.fireIn = 1;
       frame.step();
-      expect(world.enemies.size, 'the second volley called nobody').toBe(count * 2);
-      const latest = world.enemies.at(world.enemies.size - 1);
+      expect(called(), 'the second volley called nobody').toBe(count * 2);
+      // The newest of THAT kind, because the escort under this phase is filling the pool as well.
+      let latest = world.enemies.at(0);
+      for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) latest = world.enemies.at(i);
       expect(Math.sign(latest.across), 'the second call came from the same side as the first').toBe(-firstSide);
     }
   });
@@ -346,5 +365,202 @@ describe('0313 — the fish breaches', () => {
     expect(entrance.from, `the first leap starts ${entrance.from} ahead and the narrowest screen ends at ${narrowest.toFixed(0)}`).toBeLessThanOrEqual(narrowest);
     // And the last leap is done by the trailing edge, so no crest is spent behind the player.
     expect(entrance.from - entrance.leaps * entrance.span, 'the fish is still leaping past the trailing edge, where there is no screen left').toBeLessThan(entrance.span / 2);
+  });
+});
+
+/**
+ * The shoal comes in while it fights — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
+ *
+ * *"Needs to be attack while the adds are coming in"* and *"the adds need to be more interesting than
+ * a boring line of fish and a boring line of space shrimp — there needs to be a reason for the player
+ * to react and interact with them."* Two claims, and both are measured off a fight that was flown.
+ */
+describe('0314 — the escort', () => {
+  /** The fish on station with an empty field, ready to be held in a phase. */
+  function flown(fraction: number): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the fish never arrived').toBe(1);
+    world.bossPool.at(0).health = world.bossFullHealth * fraction;
+    world.enemies.clear();
+    world.enemyShots.clear();
+    return { world, frame };
+  }
+
+  /** And held there for `steps`, with the ship alive and not firing. */
+  function hold(fraction: number, steps: number): ReturnType<typeof playableWorld>['world'] {
+    const { world, frame } = flown(fraction);
+    for (let i = 0; i < steps; i++) {
+      // Pinned every step, so the phase under test is the phase the whole run is in — `tests/crowd.ts`
+      // makes the same argument: a phase keyed to health cannot otherwise be stood in.
+      world.bossPool.at(0).health = world.bossFullHealth * fraction;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    return world;
+  }
+
+  const countOf = (world: ReturnType<typeof playableWorld>['world'], enemy: 'kite' | 'minnow'): number => {
+    let n = 0;
+    for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) n++;
+    return n;
+  };
+
+  it('THE ASKED-FOR ONE: the adds come in WHILE it is throwing, which a summons cannot do', () => {
+    /*
+      ⚠️ **THE CLAIM, AND IT IS ABOUT THE SAME STRETCH OF FIGHT RATHER THAN ABOUT TWO.** A `summon` is
+      an arm of `BossAttack`, so the volley that calls a horde throws nothing — the adds ARE the attack.
+      What is measured here is one phase over five seconds: bullets left the hull, adds arrived, and
+      **neither stopped for the other.**
+    */
+    const row = BOSSES.volans;
+    const phase = row.phases.findIndex((p) => p.escort !== undefined);
+    expect(phase, 'no phase of the fish carries an escort').toBeGreaterThanOrEqual(0);
+    const escort = row.phases[phase]!.escort!;
+    expect((row.phases[phase]!.attack ?? row.attack).kind, 'the escorting phase is a summons, so this proves nothing').not.toBe('summon');
+    // Inside the phase: its own `upTo` is its ceiling and the NEXT phase's is its floor.
+    const world = hold((row.phases[phase]!.upTo + (row.phases[phase + 1]?.upTo ?? 0)) / 2, 300);
+    expect(countOf(world, escort.enemy as 'kite'), 'nothing arrived in five seconds of an escorted phase').toBeGreaterThan(0);
+    expect(world.enemyShots.size, 'the fish threw nothing while the escort was arriving — which is a summons again').toBeGreaterThan(0);
+  });
+
+  it('and a minnow swims for the FISH and not for the player, which is the reason to react to it', () => {
+    /*
+      ⚠️ **MEASURED AS A JOURNEY AND NOT AS A ROW.** `motion.kind === 'feed'` is what the table says;
+      what the frame does with it is the claim. Three minnows are put a lane's width down-lane of the
+      fish, one near each edge and one in the middle, and half a second is flown: each must end up
+      **closer to the fish than it started and further from the ship than it started**, which is the
+      whole of *it is not coming for you* in the two distances the player can see.
+
+      ⚠️ **PLACED RATHER THAN CALLED, because a shoal called by the escort arrives over four seconds in
+      ones and twos.** A guard that walks whatever happens to be on the field is measuring the escort's
+      clock as well as the motion, and the two failure modes it would then have are not tellable apart.
+    */
+    const { world, frame } = flown(0.28);
+    const lord = world.bossPool.at(0);
+    const ship = world.ship;
+    ship.along = world.cameraAlong + 30;
+    ship.across = ACROSS_SPAN / 2;
+    const placed = [12, 50, 88].map((across) => {
+      const fry = world.enemies.spawn()!;
+      reset(fry, lord.along - 70, across, ENEMIES.minnow, world.enemyKinds.minnow);
+      return { fry, toLord: Math.hypot(lord.along - fry.along, lord.across - fry.across), toShip: Math.hypot(ship.along - fry.along, ship.across - fry.across) };
+    });
+    for (let i = 0; i < 30; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.28;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    for (const { fry, toLord, toShip } of placed) {
+      const nowLord = Math.hypot(lord.along - fry.along, lord.across - fry.across);
+      const nowShip = Math.hypot(ship.along - fry.along, ship.across - fry.across);
+      expect(nowLord, `a minnow started ${toLord.toFixed(0)} from the fish and is ${nowLord.toFixed(0)} away half a second later`).toBeLessThan(toLord - 5);
+      expect(nowShip, `a minnow closed on the SHIP, which is what every other add in the game does`).toBeGreaterThan(toShip);
+      /*
+        ⚠️ **AND IT IS DRAWN FACING THE WAY IT SWIMS — 0027, AND THE SPRITE SHEET FOUND IT.** Every
+        hull is baked facing down the lane because every hull goes that way. This one goes up it, so
+        the first photograph of it was a fish swimming to the fish **tail first**, with every
+        assertion about its position green over the top. `turn` is what the painter is handed.
+      */
+      const heading = Math.atan2(fry.velAcross, fry.velAlong - world.scrollPerStep);
+      const want = heading - Math.PI;
+      const swing = Math.abs(Math.atan2(Math.sin(fry.turn - want), Math.cos(fry.turn - want)));
+      expect(swing, `a minnow is drawn ${((swing * 180) / Math.PI).toFixed(0)}° away from the way it is swimming`).toBeLessThan(0.2);
+    }
+  });
+
+  it('and one that gets there is EATEN, so the fish gains health the player has to take off again', () => {
+    /*
+      ⚠️ **THE WHOLE TRADE, ASKED AS THE PLAYER WOULD ASK IT: what does letting one past cost me?** The
+      minnow is put where it would arrive, one step is flown, and the answer is in health — the unit the
+      player spends their whole fight in. Nothing here asserts how big a bite is; what it asserts is
+      that it is a bite.
+    */
+    const world = hold(0.28, 60);
+    const lord = world.bossPool.at(0);
+    lord.health = world.bossFullHealth * 0.28;
+    const before = lord.health;
+    world.enemies.clear();
+    const fry = world.enemies.spawn()!;
+    reset(fry, lord.along, lord.across, ENEMIES.minnow, world.enemyKinds.minnow);
+    const frame = new GameFrame(world);
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    frame.step();
+    expect(countOf(world, 'minnow'), 'the minnow reached the fish and is still on the field').toBe(0);
+    expect(lord.health, `the fish ate a minnow and gained ${(lord.health - before).toFixed(0)} health`).toBeGreaterThan(before);
+    const feeds = ENEMIES.minnow.motion.kind === 'feed' ? ENEMIES.minnow.motion.feeds : 0;
+    expect(lord.health - before, 'a bite is worth more than the row says').toBeLessThanOrEqual(feeds);
+  });
+
+  it('and feeding can never push it back into a phase it has left, which is the floor under the trade', () => {
+    /*
+      ⚠️ **A PHASE IS KEYED TO REMAINING HEALTH** (`docs/game.md`), so an unclamped heal walks the fight
+      BACKWARDS through the table — the look, the cadence and the attack all reverting, and 0111's phase
+      burst firing again on the way down. The ceiling is the phase's own `upTo`: everything the player
+      did inside this phase is undoable and nothing before it is.
+    */
+    const row = BOSSES.volans;
+    const world = hold(0.3, 60);
+    const lord = world.bossPool.at(0);
+    const phase = phaseFor(row, world.bossFullHealth * 0.3, world.bossFullHealth);
+    // Right at the top of the phase, where one more bite would cross it.
+    lord.health = world.bossFullHealth * phase.upTo - 1;
+    const frame = new GameFrame(world);
+    world.enemies.clear();
+    for (let i = 0; i < 3; i++) {
+      const fry = world.enemies.spawn()!;
+      reset(fry, lord.along, lord.across, ENEMIES.minnow, world.enemyKinds.minnow);
+    }
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    frame.step();
+    expect(lord.health, `three bites put the fish at ${lord.health.toFixed(0)}, over the ${(world.bossFullHealth * phase.upTo).toFixed(0)} its phase begins at`).toBeLessThanOrEqual(world.bossFullHealth * phase.upTo);
+    expect(phaseFor(row, lord.health, world.bossFullHealth).upTo, 'feeding put the fish back into a phase it had left').toBe(phase.upTo);
+  });
+
+  it('and the shoal comes in from the SIDES, alternating, and no level sends one', () => {
+    // 0262's entry, on the escort's own counter rather than the summons's — the decision has why.
+    const row = BOSSES.volans;
+    for (const phase of row.phases) {
+      if (phase.escort === undefined) continue;
+      expect(phase.escort.from, 'an escort marches in down the lane, which is what 0262 was reported for').toBe('sides');
+    }
+    /*
+      ⚠️ **SAMPLED ON THE STEP THEY ARRIVE, BECAUSE A MINNOW DOES NOT STAY WHERE IT CAME IN.** Reading
+      the pool at the end asks where the shoal IS, and by then every one of them is inside the lane on
+      its way to the fish — which is the same answer whichever edge it entered over.
+    */
+    const { world, frame } = flown(0.28);
+    const seen = new Set<number>();
+    for (let i = 0; i < 400; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * 0.28;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+      for (let k = 0; k < world.enemies.size; k++) {
+        const add = world.enemies.at(k);
+        if (add.kind === world.enemyKinds.minnow && (add.across < 0 || add.across > ACROSS_SPAN)) seen.add(Math.sign(add.across));
+      }
+    }
+    expect(seen.size, 'every call of the shoal came in over the same edge').toBeGreaterThan(1);
+    for (const level of Object.values(LEVELS)) {
+      for (const wave of level.waves) expect(wave.enemy, 'a level authors the minnow, which is the fish’s to call').not.toBe('minnow');
+    }
   });
 });

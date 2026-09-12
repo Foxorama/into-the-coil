@@ -233,6 +233,19 @@ export const BURST = {
    */
   breach: 11,
   /**
+   * A minnow eaten at the boss's mouth — 0314.
+   *
+   * ⚠️ **BIGGER THAN A KILL AND SMALLER THAN A PHASE, BECAUSE IT IS NEITHER AND THE PLAYER HAS TO
+   * TELL.** A body reaching the fish is a body the player did NOT kill, so drawing it as a kill would
+   * say the opposite of what happened; and it is not the fight getting harder either, which is what a
+   * phase burst means. What it is is *something was taken away from you*, four or five times a phase.
+   *
+   * ⚠️ **AND IT IS THROWN WHETHER OR NOT THE FEED LANDED.** A minnow arriving at a boss already at the
+   * top of its phase is still a minnow arriving; the burst says the thing happened and the cue is what
+   * says it cost something — `src/app/frame.ts` has the split.
+   */
+  fed: 7,
+  /**
    * A puff of frost at a ship inside the frost ship's cold, every few steps — 0253.
    *
    * ⚠️ **One, and often, rather than many once**: the cold is a STATE and not an event, and what

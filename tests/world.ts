@@ -129,6 +129,8 @@ export function inertLevel(): {
   bossPhaseAt: number;
   bossUncoilAt: number;
   bossFallIn: number;
+  bossEscortIn: number;
+  bossEscortSide: number;
   chilledFor: number;
   frozenFor: number;
   dyingIn: number;
@@ -204,6 +206,8 @@ export function inertLevel(): {
     bossPhaseAt: -1,
     bossUncoilAt: 0,
     bossFallIn: 0,
+    bossEscortIn: 0,
+    bossEscortSide: 1,
     chilledFor: 0,
     frozenFor: 0,
     // Nothing is dying in a fixture that has not been driven yet — 0079.
@@ -439,6 +443,8 @@ export function playableWorld(
     bossPhaseAt: -1,
     bossUncoilAt: 0,
     bossFallIn: 0,
+    bossEscortIn: 0,
+    bossEscortSide: 1,
     chilledFor: 0,
     frozenFor: 0,
     dyingIn: 0,

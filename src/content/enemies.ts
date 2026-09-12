@@ -35,7 +35,9 @@ export type EnemyKind =
   | 'sentry'
   | 'shard'
   | 'spore'
-  | 'gaze';
+  | 'gaze'
+  // The flying fish's shoal — 0314. Sent by no level and by no summons: an escort's, and its own.
+  | 'minnow';
 
 /**
  * Every way a body can SHOOT. Closed.
@@ -180,7 +182,7 @@ export function shotsPerVolley(attack: Attack): number {
  * the affordance* at the top and calls it the only tier that reliably works; that guard is deleted
  * with this change, and its reason is recorded rather than its assertion.
  */
-export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop'] as const;
+export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop', 'feed'] as const;
 
 /** Derived from the list, so a motion cannot exist in the union and be missing from the switch. */
 export type MotionKind = (typeof MOTION_KINDS)[number];
@@ -265,7 +267,39 @@ export type Motion =
    * velocity it computes while the body is still approaching is the one the spawner already gave it,
    * to the unit.
    */
-  | { kind: 'loop'; turns: number };
+  | { kind: 'loop'; turns: number }
+  /**
+   * Swims for the BOSS and not for the player — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
+   *
+   * ⚠️ **THE FIRST MOTION IN THIS TABLE THAT IS NOT ABOUT THE SHIP AT ALL, WHICH IS THE WHOLE POINT.**
+   * Asked for: *"the adds need to be more interesting than a boring line of fish and a boring line of
+   * space shrimp — there needs to be a reason for the player to react and interact with them."* Every
+   * other kind here either ignores the player or converges on them, and both are answered by *shoot it
+   * or do not*. A body with somewhere else to be is a body the player has a REASON about: it is going
+   * to reach the thing they are trying to kill, and the fish eats it.
+   *
+   * ⚠️ **`agility` IS A SPEED AND NOT A TURN RATE, WHICH IS THE ONE PLACE THIS DIFFERS FROM `hunt`.**
+   * A feeder steers in both axes at once, so what it needs is how fast it swims along its own heading;
+   * the row's `closing` is *how fast it comes at the player*, which is a quantity a feeder has no use
+   * for. It carries one anyway, because `closing` is what the spawner gives every body its entry
+   * velocity from and what `tests/pilots.test.ts` measures time-on-screen with.
+   *
+   * ⚠️ **AND IT HAS NOWHERE TO BE WHEN THERE IS NO BOSS ON THE FIELD**, so it holds its lane and leaves
+   * like anything else — a level that authored one would get a body that drifts, which is why no level
+   * authors one and `tests/volans.test.ts` holds that.
+   */
+  /*
+    ⚠️ **AND `feeds` RIDES THE MOTION RATHER THAN THE ROW, WHICH IS THE ONLY PLACE IT CANNOT BE
+    FORGOTTEN OR WASTED.** *What the boss gains by eating this* is meaningless for a body that is not
+    swimming at one, so a field on `EnemyRow` would be a number seventeen rows have to state and one
+    row has to mean — and the first time somebody sets it on a drifter, nothing would read it and
+    nothing would say so. In the arm, the compiler asks for it exactly when it applies.
+
+    ⚠️ **In health, absolutely, and nothing asserts the value** — on `SHIP_SPEED`'s terms. What IS
+    asserted is that a feed moves the boss's health up and that the ceiling holds; how big a bite is
+    worth is a play number, and `tests/volans.test.ts` prints what it comes to against the fight.
+  */
+  | { kind: 'feed'; agility: number; feeds: number };
 
 export interface EnemyRow extends Body {
   /**
@@ -347,6 +381,7 @@ export const ENEMY_KINDS: readonly EnemyKind[] = [
   'shard',
   'spore',
   'gaze',
+  'minnow',
 ];
 
 /**
@@ -804,6 +839,48 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // has — which, from the side of the lane the fish now calls it in on, is a dive. The fish's
     // to call and no level's (0249), so 0258's one pilot a level does not read it.
     motion: { kind: 'hunt', agility: 0.9 },
+  },
+  /**
+   * The minnow — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`. Ember Nebula's second,
+   * and the flying fish's own: a shoal that swims **to the boss** while the boss goes on fighting.
+   *
+   * ⚠️ **THE REASON TO REACT IS THAT IT IS NOT COMING FOR THE PLAYER.** *"The adds need to be more
+   * interesting than a boring line of fish and a boring line of space shrimp — there needs to be a
+   * reason for the player to react and interact with them."* A minnow that reaches the fish is eaten
+   * and the fish is fed; every one the player lets past is health they have to take off again. So the
+   * question it asks is not *dodge or shoot* — it is **what is worth your fire right now**, which is
+   * the first time anything in this game has asked that.
+   *
+   * ⚠️ **ONE HIT AND NO GUN, WHICH IS WHAT MAKES THE QUESTION FAIR.** It cannot punish being ignored
+   * except by arriving, and a player who ignores it entirely is choosing a longer fight rather than a
+   * worse one. `tests/volans.test.ts` holds what one feed is worth, which is the number the whole
+   * trade rides on.
+   *
+   * ⚠️ **THE SLOWEST THING ON THE FIELD, AND THAT IS THE WINDOW.** Its `agility` is what it swims at,
+   * and it comes in from the side of the lane the escort called it on — so it crosses the player's
+   * fire on its way up-lane and has to be dealt with somewhere in the several seconds that takes.
+   */
+  minnow: {
+    sprite: SPRITE.minnow,
+    spriteHit: SPRITE.minnowHit,
+    radius: 2.2,
+    health: 1,
+    damage: 1,
+    // It is not coming at the player, so its closing is the entry velocity the spawner gives it and
+    // nothing else — the `feed` arm overwrites both axes from its first step inside the fight.
+    closing: 0.3,
+    shatter: null,
+    fireEvery: 0,
+    shot: 'spit',
+    attack: { kind: 'aimed' },
+    /*
+      ⚠️ **14 HEALTH A BITE AGAINST THE FISH'S 3040 ON THE TUNED TIER, AND IT IS A PLAY NUMBER.** A
+      call of three every two seconds is at most 21 health a second handed back, against a max-weapon
+      loadout taking off the order of sixty — so ignoring the shoal entirely is a fight about a third
+      longer, and clearing it costs three shots each. That is meant to be a real choice and not a tax,
+      and the first play-test is what settles it.
+    */
+    motion: { kind: 'feed', agility: 0.62, feeds: 14 },
   },
   /**
    * The moon jelly — `docs/decisions/0255-the-jellyfish-opens.md`: the Black Heart's rain.

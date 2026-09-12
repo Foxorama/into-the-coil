@@ -315,14 +315,45 @@ describe('0270 — a shattering volley is counted in shards', () => {
       decision, the adds reached 26 at Legendary and 40 at Burn — and 40 is `CAPACITY.enemies`, so
       what stopped the horde was the pool running out. The tier scales the row's number, so this asks
       the row and the tier rather than restating either.
+
+      ⚠️ **AND A PHASE MAY AUTHOR TWO HORDES SINCE 0314, SO THE CEILING IS THE SUM OF WHAT IT AUTHORS.**
+      An `escort` keeps its own kind topped up beside whatever the volley calls — the fish's last third
+      dumps kites while the shoal arrives underneath it. The claim is unchanged, *no more standing than
+      the row says*; what moved is that a row can now say it twice. It went red on the fish at 14
+      against 8, which is this guard doing its job on a mechanism that did not exist when it was
+      written, and both halves of the widened number are still authored rather than chosen here.
     */
     for (const { kind, index, attack } of SUMMONS) {
       for (const tier of DIFFICULTY_KINDS) {
-        const ceiling = crowdFor(attack.standing, DIFFICULTIES[tier]);
+        const escort = BOSSES[kind].phases[index]!.escort;
+        const ceiling = crowdFor(attack.standing, DIFFICULTIES[tier]) + (escort === undefined ? 0 : crowdFor(escort.standing, DIFFICULTIES[tier]));
         const { peakAdds } = fly(kind, index, tier, 12);
         expect(
           peakAdds,
           `${kind} phase ${index + 1} at ${tier} kept ${peakAdds} adds standing against a ceiling of ${ceiling}`,
+        ).toBeLessThanOrEqual(ceiling);
+      }
+    }
+  });
+
+  it('0314 — and an ESCORT keeps its own horde standing too, in a phase that never stops throwing', () => {
+    /*
+      ⚠️ **THE HALF THE GUARD ABOVE CANNOT SEE.** It walks the phases whose ATTACK is a summons; an
+      escort runs beside an attack that is a fan, so a phase with an escort and no summons is not in
+      that list at all — and the fish has two of those. Same claim, read off the escort's own row.
+    */
+    const escorts = BOSS_KINDS.flatMap((kind) =>
+      BOSSES[kind].phases.flatMap((phase, index) => (phase.escort === undefined ? [] : [{ kind, index, escort: phase.escort }])),
+    );
+    expect(escorts.length, 'no boss authors an escort, so this measures nothing').toBeGreaterThan(0);
+    for (const { kind, index, escort } of escorts) {
+      for (const tier of DIFFICULTY_KINDS) {
+        const volley = BOSSES[kind].phases[index]!.attack ?? BOSSES[kind].attack;
+        const ceiling = crowdFor(escort.standing, DIFFICULTIES[tier]) + (volley.kind === 'summon' ? crowdFor(volley.standing, DIFFICULTIES[tier]) : 0);
+        const { peakAdds } = fly(kind, index, tier, 12);
+        expect(
+          peakAdds,
+          `${kind} phase ${index + 1} at ${tier} kept ${peakAdds} adds standing against an escort ceiling of ${ceiling}`,
         ).toBeLessThanOrEqual(ceiling);
       }
     }

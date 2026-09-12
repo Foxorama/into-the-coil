@@ -878,6 +878,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPhaseAt: -1,
     bossUncoilAt: 0,
     bossFallIn: 0,
+    bossEscortIn: 0,
+    bossEscortSide: 1,
     chilledFor: 0,
     frozenFor: 0,
     // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet

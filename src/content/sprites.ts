@@ -185,6 +185,10 @@ export const SPRITE_KINDS = [
   // fish in hordes and sent by nothing else.
   'kite',
   'kiteHit',
+  // The minnow — 0314: the flying fish's shoal, a small fish with a forked tail and a pale eye, which
+  // swims for the boss rather than for the player and is eaten when it arrives.
+  'minnow',
+  'minnowHit',
   // The moon jelly — 0255: the Black Heart's rain, a bell with a fringe, sent by the jellyfish's
   // fall and by nothing else.
   'moonJelly',
@@ -925,6 +929,11 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Smaller than the moth it flies beside and than the raptor it is summoned with — 0249.
   kite: 6.5,
   kiteHit: 6.5,
+  // ⚠️ **THE SMALLEST BODY IN THE GAME, AND SMALLER THAN THE KITE ON PURPOSE** — 0314. A minnow is not
+  // coming for the player, so it must not read as a thing that is: the kite it shares a sky with is a
+  // third bigger, and a shoal of these reads as a shoal rather than as a wave.
+  minnow: 5,
+  minnowHit: 5,
   // The kite's size, and told from it by shape: a bell over a fringe against a diamond — 0255.
   moonJelly: 6.5,
   moonJellyHit: 6.5,

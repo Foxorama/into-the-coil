@@ -182,6 +182,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the STORM runs the whole body and the horns fire it: the lightning phase's aura crackles on five frames of six at two thirds the weight, the horns reach three times their drawn length, and the crown discharges for the half-second before a strike — read off the bolt already in the air** | [0310](decisions/0310-the-storm-runs-the-whole-body.md) — amends [0305](decisions/0305-the-serpent-darkens.md) |
 | **the EAGLE was always a fish: Ember Nebula's end boss is `volans`, the flying fish — the name, the fiction and every sentence that describes the animal as it is today; the hull deliberately not repainted; and a probe must still name a test that EXISTS, which renaming a test file is what broke** | [0312](decisions/0312-the-eagle-was-always-a-fish.md), [`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) |
 | **the fish BREACHES: an entrance is a closed union of kinds, and the second one is a leap — up through the near edge of the lane, three ballistic arcs that each crest higher than the last, and back down out of sight, with the hull nosed into its own path and a spray of embers at every crossing** | [0313](decisions/0313-the-fish-breaches.md) — amends [0306](decisions/0306-the-serpent-coils-in.md) |
+| **the SHOAL comes in while it fights: a phase may carry an `escort` — a horde on a clock of its own, so the boss goes on throwing while the adds arrive, which a summons cannot do; and the minnow swims for the BOSS rather than the player, is eaten when it gets there, and feeds it back health the player has to take off again — clamped so it can never cross a phase boundary** | [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -909,10 +910,17 @@ posture and the horn flare photographed in situ rather than off the sheet, and
 so this file does not. *"Use the 'pattern' of the serpent boss to improve the level 2 end boss. Don't
 make the serpent boss a hard rule, the pattern is what we want, the style is what makes the different
 bosses unique."* Six items: the rename ([0312](decisions/0312-the-eagle-was-always-a-fish.md)) and the
-flashy entrance ([0313](decisions/0313-the-fish-breaches.md)) are landed. **Four are owed**: quality art
-on the attacks, more attack styles, **attacking while the adds arrive** — the one that needs a mechanism
-the game does not have, because a volley IS an arm of `BossAttack` — quality art on the adds, and adds
-worth reacting to.
+flashy entrance ([0313](decisions/0313-the-fish-breaches.md)) are landed, and so are **attacking while
+the adds arrive** and **adds worth reacting to** — [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md),
+which is one change because they are one thing: a horde that arrives instead of an attack is a horde the
+player deals with in peace.
+
+⚠️ **TWO ARE OWED, AND THEY ARE THE SAME PASS**: *"a high class good quality art and assets for the
+attacks"* and *"multiple styles of attacks"*. The fish throws quills on a rake and flames on a whip —
+0262's and 0249's — and the quill is still drawn as a FEATHER, which is the one place the rename left an
+eagle behind on purpose (0312 says why: renaming a drawing in the PR before the one that redraws it is
+churn). **Half of the art item is done**: the minnow is new and is drawn as the place's own creature;
+the kite's diamond is 0249's and wants the same pass.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 
