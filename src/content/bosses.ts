@@ -20,6 +20,9 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+// What an attack SOUNDS like is on the row that authors the attack — 0308. A sibling in this layer,
+// exactly as `src/content/themes.ts` already reads it to re-voice a place's own cues.
+import type { CueKind } from './cues.ts';
 import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
@@ -354,6 +357,25 @@ export type SummonFrom = 'lead' | 'sides';
 export interface Head {
   shot: ShotKind;
   attack: Exclude<BossAttack, { kind: 'heads' } | { kind: 'rake' }>;
+  /**
+   * What this head SOUNDS like, or absent for `bossShot` — `docs/decisions/0308-the-attacks-are-heard.md`.
+   *
+   * ⚠️ **REPORTED**: *"sounds for all the attacks need to be massively buffed."* Half of that sentence
+   * is level and is answered in `src/content/cues.ts`; the other half is the word *all* — the serpent's
+   * acid, its void and its lightning made one noise, which is
+   * [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s tell
+   * exactly: *a mechanism whose output is identical for every kind.*
+   *
+   * ⚠️ **OPTIONAL, WHICH IS 0282's DEFAULT SHAPE AND NOT A FIELD SOMEBODY FORGOT.** *No row can forget
+   * it is an argument for a DEFAULT, never for a CONSTANT* — so the fallback is in `src/app/boss.ts`
+   * and a head with something to say says it. Eleven of the hydra's and the serpent's heads name one;
+   * a boss whose attacks are all one kind of violence is entitled to one sound for them.
+   *
+   * ⚠️ **ON THE HEAD AND NOT ON THE SHOT ROW, BECAUSE THE LIGHTNING PROVES IT CANNOT BE THE SHOT.**
+   * The serpent's `rain` head throws `void` — the bolt takes its damage from that row — so a cue keyed
+   * to the bullet would make thunder sound like a void blast. What the player hears is the ATTACK.
+   */
+  cue?: CueKind;
 }
 
 /**
@@ -848,6 +870,15 @@ export interface BossPhase {
   shot: ShotKind | null;
   /** The attack this phase fires instead of the row's, or `null` for the row's — 0248. */
   attack: BossAttack | null;
+  /**
+   * What this phase's volley SOUNDS like, or absent for `bossShot` — 0308. `Head.cue` has the argument.
+   *
+   * ⚠️ **A PHASE AND NOT THE ROW, BECAUSE WHAT A BOSS THROWS IS A PHASE'S** — 0248 put `shot` and
+   * `attack` here for that reason, and the sound of an attack cannot live further away than the attack
+   * does. A phase whose attack is `heads` does not read this: each head names its own, because the
+   * round is what makes them tellable apart in the first place.
+   */
+  cue?: CueKind;
 }
 
 export interface BossRow extends Body {
@@ -1779,8 +1810,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'acid',
     phases: [
-      // Whole: five acid globes in an arc straight down the lane — the row's own attack and shot (0304).
-      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      // Whole: five acid globes in an arc straight down the lane — the row's own attack and shot (0304),
+      // and the wet burst 0308 gave it in place of the crash every boss shared.
+      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
       /*
         Hurt: the acid spray and a fan of three void in turn — two heads (0254), one a volley.
 
@@ -1831,8 +1863,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },
-            { shot: 'void', attack: { kind: 'spray' } },
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },
+            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },
           ],
         },
       },
@@ -1875,11 +1907,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },
-            { shot: 'void', attack: { kind: 'spray' } },
-            // ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
-            // really good."* It is the one attack on this boss with a verdict already in.
-            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },
+            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },
+            /*
+              ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
+              really good."* It is the one attack on this boss with a verdict already in.
+
+              ⚠️ **AND `cue` IS NOT A CHANGE TO IT — 0308.** The strike, the column and the 45-step
+              warning are 0248's and are untouched; what this says is that it no longer falls out of
+              the sky making the same noise as a mouthful of acid. *"Sounds for all the attacks need to
+              be massively buffed"* was reported in the same breath as *don't change the lightning*.
+            */
+            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },
           ],
         },
       },

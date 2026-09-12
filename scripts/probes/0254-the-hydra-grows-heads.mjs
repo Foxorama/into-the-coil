@@ -12,9 +12,10 @@ export const PROBES = [
     edit: {
       path: 'src/app/boss.ts',
       // ⚠️ Re-anchored by 0261, which moved the round's count off `firePhase` — that field is an
-      // angle for a rake, and the serpent is the first boss to rake AND grow heads.
-      find: '      boss.headAt++;\n      throwAttack(head.attack, SHOTS[head.shot],',
-      replace: '      throwAttack(head.attack, SHOTS[head.shot],',
+      // angle for a rake, and the serpent is the first boss to rake AND grow heads. And by 0308, which
+      // put a comment between the two lines: the increment alone is unique and is the thing dropped.
+      find: '      boss.headAt++;\n',
+      replace: '',
     },
   },
   {
@@ -25,10 +26,15 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      // ⚠️ Re-anchored by 0263, which put a shot's kind on the shot — and again by 0277, which threads
-      // the row through for `row.muzzle`. What it breaks is unchanged: a head throwing the ROW's shot.
-      find: '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
-      replace: '      throwAttack(head.attack, bullet, kind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng);',
+      /*
+        ⚠️ Re-anchored by 0263, which put a shot's kind on the shot — and again by 0277, which threads
+        the row through for `row.muzzle`, and again by 0308, which threads the head's own cue. What it
+        breaks is unchanged: a head throwing the ROW's shot.
+      */
+      find:
+        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
+      replace:
+        '      throwAttack(head.attack, bullet, kind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
     },
   },
   {

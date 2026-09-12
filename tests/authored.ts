@@ -41,6 +41,7 @@ export const AUTHORED_IDS = [
   '0285-throw',
   '0288-lean',
   '0304-pair',
+  '0308-loud',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -156,6 +157,20 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'no two real bosses both fly the same way and open with the same fan',
     correctly: 'a real boss asked to open simply, whose own attacks come later in the fight',
     decision: '0304-the-serpent-sprays',
+  },
+  /*
+    ⚠️ **A TASTE AND NOT A GUARD, AND `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` IS
+    WHY.** A floor under how loud a boss's attack may be is a limiter on what a boss may be: a stealthy
+    one whose attack is a whisper is a fight somebody is entitled to write, and a guard here would
+    refuse it before it was proposed. What the report was about is that three attacks were **7 to 9 dB**
+    under the things that explode while being the loudest events in the game, and the value of holding
+    it as a claim is that the next boss's attacks are measured against the same reference rather than
+    against nothing.
+  */
+  '0308-loud': {
+    claim: 'a boss’s attack is as loud as the things that explode',
+    correctly: 'a boss whose attack is meant to be quiet — a hiss, a whisper, something that sneaks up',
+    decision: '0308-the-attacks-are-heard',
   },
 };
 

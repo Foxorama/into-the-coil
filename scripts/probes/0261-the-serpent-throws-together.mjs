@@ -32,7 +32,8 @@ export const PROBES = [
         the lightning is not to be touched — so the two lines this used to name are no longer adjacent.
         The rain line alone is unique and is the thing being dropped.
       */
-      find: "            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 } },",
+      // ⚠️ **And re-anchored again by 0308**, which gave that head its own cue.
+      find: "            { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },",
       replace: '',
     },
   },
@@ -44,9 +45,10 @@ export const PROBES = [
     guard: 'THE THREE WEAPONS: five globes of acid',
     edit: {
       path: 'src/app/boss.ts',
-      // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below.
-      find: '      boss.headAt++;\n      throwAttack(head.attack',
-      replace: '      throwAttack(head.attack',
+      // ⚠️ Re-anchored when the round's count moved off `firePhase` — see the probe below. And by 0308,
+      // which put a comment between the increment and the throw.
+      find: '      boss.headAt++;\n',
+      replace: '',
     },
   },
   /*

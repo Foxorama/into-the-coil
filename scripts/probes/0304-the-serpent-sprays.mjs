@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'whole, it throws a forward arc of FIVE globes',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-      replace: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      // ⚠️ Re-anchored by 0308, which gave the opening phase a cue of its own.
+      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      replace: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
     },
   },
   {
@@ -103,13 +104,14 @@ export const PROBES = [
     guard: 'every phase is reachable, and they only get harder',
     edit: {
       path: 'src/content/bosses.ts',
+      // ⚠️ Re-anchored by 0308, which gave the two heads of this phase their own cues.
       find:
-        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 } },\n" +
-        "            { shot: 'void', attack: { kind: 'spray' } },\n" +
+        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },\n" +
+        "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n" +
         '          ],',
       replace:
-        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 3, every: 3 } },\n" +
-        "            { shot: 'void', attack: { kind: 'spray' } },\n" +
+        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 3, every: 3 }, cue: 'bossAcid' },\n" +
+        "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n" +
         '          ],',
     },
   },

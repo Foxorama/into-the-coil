@@ -1208,6 +1208,124 @@ describe('0283 — the serpent is a chain', () => {
   });
 });
 
+/*
+  ── 0308: THE ATTACKS ARE HEARD ─────────────────────────────────────────────────────────────────
+
+  `docs/decisions/0308-the-attacks-are-heard.md`. Reported: *"sounds for all the attacks need to be
+  massively buffed."* Half of that is level and lives in `src/content/cues.ts`, measured by
+  `scripts/weigh-cue.mjs --loud` and claimed in `tests/authored.ts`. The half that is here is the word
+  *all*: this animal's acid, its void and its lightning made ONE noise, which is 0282's own tell.
+*/
+describe('0308 — the attacks are heard', () => {
+  /** Every cue the serpent's rows name, in the order its phases and heads name them. */
+  function named(): string[] {
+    const row = BOSSES.jormungandr;
+    const out: string[] = [];
+    for (const phase of row.phases) {
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind === 'heads') for (const head of attack.heads) out.push(head.cue ?? 'bossShot');
+      else out.push(phase.cue ?? 'bossShot');
+    }
+    return out;
+  }
+
+  it('THE REPORTED ONE: the acid, the void and the lightning are three different sounds', () => {
+    /*
+      ⚠️ **THE STATE OF `main` IS THAT THEY WERE ONE**, and nothing in the suite could say so: the cue
+      was emitted at the fire gate, one line above the call that chooses which head throws. So the
+      count below is the whole claim — three attacks the player reads one at a time, sounding three
+      ways — and `bossShot` appearing anywhere in this animal's rows is the defect returning.
+    */
+    const all = named();
+    expect(all.length, 'the serpent names no attacks at all, so this measured nothing').toBeGreaterThan(5);
+    expect(
+      all.filter((cue) => cue === 'bossShot'),
+      'an attack of this animal still makes the crash every boss shares',
+    ).toEqual([]);
+    /*
+      ⚠️ **PER ROUND, AND COUNTING OVER THE WHOLE TABLE LEFT `npm run prove` GREEN.** The first version
+      asked that the serpent's phases name three distinct cues between them — and the probe that makes the
+      last phase's void head sound like its acid head passed it, because phase TWO still has a void head
+      and the set over all three phases was still three. **The claim was never about the table**: it is
+      that a round of attacks the player meets one at a time makes one sound each, which is a claim about
+      the round. `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` is what caught it.
+    */
+    const row = BOSSES.jormungandr;
+    let rounds = 0;
+    for (const phase of row.phases) {
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind !== 'heads') continue;
+      rounds++;
+      const cues = attack.heads.map((head) => head.cue ?? 'bossShot');
+      expect(
+        new Set(cues).size,
+        `a round of ${cues.length} attacks sounds ${new Set(cues).size} ways: ${cues.join(', ')} — the heads of ` +
+          'one round are what the player is being asked to tell apart',
+      ).toBe(cues.length);
+    }
+    expect(rounds, 'the serpent grows no heads at all, so no round was measured').toBeGreaterThan(1);
+    expect(
+      new Set(all).size,
+      `the serpent's attacks sound ${new Set(all).size} ways: ${[...new Set(all)].join(', ')} — the acid, the ` +
+        'void and the lightning are three things to tell apart',
+    ).toBe(3);
+  });
+
+  it('and a VOLLEY still makes exactly one sound, however many bullets are in it', () => {
+    /*
+      ⚠️ **THE PROPERTY THE FIRE GATE WAS PROTECTING, AND MOVING THE CUE IS WHAT PUT IT AT RISK.** 0114
+      put the cue at the gate because *"a rake puts nine shots out in one step; nine cues would be one
+      smeared noise and would spend the whole per-step voice budget"* (0104's four voices). It is
+      inside `throwAttack` now, and `heads` calls that function a second time — so *one per volley*
+      stopped being true by construction and has to be measured.
+
+      ⚠️ **DRIVEN THROUGH EVERY PHASE, because the round is what recurses.** The opening phase throws
+      its own attack and the other two grow heads, so the arm that does not sound and the arm that
+      does are both covered.
+    */
+    for (const fraction of [1, 0.5, 0.2]) {
+      const { world, frame } = serpentAt(fraction);
+      const heard: string[] = [];
+      world.onCue = (kind): void => {
+        if (kind.startsWith('boss') && kind !== 'bossPhase' && kind !== 'bossDown') heard.push(kind);
+      };
+      // One volley: the gate is armed for the next step and nothing else on the field can fire.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      world.bossPool.at(0).fireIn = 1;
+      world.bossPool.at(0).sprayLeft = 0;
+      frame.step();
+      expect(heard, `a volley at ${fraction} of its health sounded ${heard.length} cues: ${heard.join(', ')}`).toHaveLength(1);
+      expect(named(), `a volley at ${fraction} sounded ${heard[0]}, which is not one of this animal's`).toContain(heard[0]);
+    }
+  });
+
+  it('and the SPRAY it leaves behind does not sound again, because it is one attack', () => {
+    /*
+      ⚠️ **A SWEEP OUTLIVES THE STEP IT WAS THROWN ON — 0304 — AND IT IS THE ONE ATTACK THAT COULD.**
+      Twenty-one globes over a second, thrown from `stepBoss` rather than from `throwAttack`: a cue
+      beside any of them would be twenty-one crashes for one attack, which is the smear 0114 named.
+    */
+    const { world, frame } = serpentAt(0.5);
+    const heard: string[] = [];
+    world.onCue = (kind): void => {
+      if (kind.startsWith('boss') && kind !== 'bossPhase' && kind !== 'bossDown') heard.push(kind);
+    };
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    const boss = world.bossPool.at(0);
+    boss.headAt = 0;
+    boss.fireIn = 1;
+    // Long enough for the whole sweep and no second volley: the gate is pushed out after the step.
+    for (let i = 0; i < 70; i++) {
+      if (i > 0) boss.fireIn = 999;
+      frame.step();
+    }
+    expect(boss.sprayLeft, 'the sweep never ran, so nothing about its silence was measured').toBe(0);
+    expect(heard, `the sweep sounded ${heard.length} times for one attack`).toHaveLength(1);
+  });
+});
+
 describe('0305 — the serpent darkens', () => {
   /** The phase the serpent is standing in, and the look it wears there. */
   const lookAt = (fraction: number) => phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * fraction).look;
