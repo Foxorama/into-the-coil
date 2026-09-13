@@ -914,3 +914,214 @@ describe('0318 — the fish is drawn', () => {
     });
   });
 });
+
+/**
+ * ── THE FISH HAS A FACE — 0319 ─────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0319-the-fish-has-a-face.md`. The second creature in the game to wear 0285's six
+ * frames, and the first one that is not a chain's head — which is the test that type had to pass.
+ *
+ * ⚠️ **WHAT IS HELD IS THE TWO THINGS A FACE IS FOR, AND NEITHER IS ABOUT THE ART.** The mouth's
+ * three silhouettes have to be **three**, ordered so the snap and the tell are opposite throws; and
+ * the animal has to answer THE PILOT rather than a clock, so two different players get two different
+ * fish out of the same fight. How pretty any of it is belongs in `tests/authored.ts`
+ * ([0192](../docs/decisions/0192-a-guard-holds-an-invariant.md)).
+ */
+describe('0319 — the fish has a face', () => {
+  const face = BOSSES.volans.face;
+
+  /**
+   * How much fish there is on a line drawn across the snout, in CSS pixels of a 1280×720 screen.
+   *
+   * ⚠️ **A SCAN LINE AND NOT THE WHOLE AREA, WHICH IS THE MEASUREMENT 0027 IS ABOUT.** The serpent's
+   * jaw swings a quarter of its skull, so the flesh its outline encloses is a fair reading of how far
+   * the mouth is open. A fish seen from above opens ACROSS: the mandibles splay outward as the notch
+   * cuts inward, and the two nearly cancel — measured, the three whole-hull areas differ by under
+   * half a percent, which is a number no player will ever see. **What a player sees is how much
+   * animal is in front of the eyes**, and that is this line.
+   */
+  const snoutAt = (index: number, along: number): number => {
+    const kind = SPRITE_KINDS[index]!;
+    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'nebula');
+    const hull = trace.passes[0]!.subpaths[0]!;
+    const at = size / 2 + along * size * 0.42;
+    const crossings: number[] = [];
+    for (let i = 0; i < hull.length; i++) {
+      const [ax, ay] = hull[i]!;
+      const [bx, by] = hull[(i + 1) % hull.length]!;
+      if (ax <= at === bx <= at) continue;
+      crossings.push(ay + ((at - ax) / (bx - ax)) * (by - ay));
+    }
+    crossings.sort((a, b) => a - b);
+    let flesh = 0;
+    for (let i = 0; i + 1 < crossings.length; i += 2) flesh += crossings[i + 1]! - crossings[i]!;
+    return flesh;
+  };
+
+  it('THE ASKED-FOR ONE: the mouth has three silhouettes, and the snap and the tell are OPPOSITE throws of it', () => {
+    /*
+      ⚠️ **A GAPE THAT DOES NOT MEAN *A VOLLEY IS COMING* IS A LIE THE FIGHT TELLS ONCE**, which is
+      0285's own sentence and is why this is an invariant and not taste. `boss9Shut` goes on when the
+      ship crosses in front of the fish and costs nothing to miss; `boss9Gape` goes on in the steps
+      before a volley leaves and does not. If the two read alike the tell is not a tell, and no
+      redrawing of this head makes a snap that opens the mouth correct.
+    */
+    if (face === null) throw new Error('the fish has no faces');
+    // 0.9 of the drawing radius: across the jaw, in front of the eyes, behind the very tip.
+    const gape = snoutAt(face.gape, -0.9);
+    const rest = snoutAt(face.rest, -0.9);
+    const shut = snoutAt(face.shut, -0.9);
+    expect(
+      gape < rest && rest < shut,
+      `the fish's snout carries ${gape.toFixed(1)}px of flesh agape, ${rest.toFixed(1)}px at rest and ` +
+        `${shut.toFixed(1)}px shut, so the snap and the tell are not opposite throws of the same mouth`,
+    ).toBe(true);
+    /*
+      ⚠️ **AND EACH THROW CLEARS 0106's FLOOR, BECAUSE *DIFFERENT* IS A CLAIM ABOUT PIXELS.** A mark
+      thinner than 2.5px on this screen is not drawn at all, so two faces that differ by less than
+      that differ in the file and nowhere else.
+    */
+    expect(rest - gape, `the gape takes ${(rest - gape).toFixed(1)}px off the snout`).toBeGreaterThanOrEqual(2.5);
+    expect(shut - rest, `the snap packs ${(shut - rest).toFixed(1)}px onto it`).toBeGreaterThanOrEqual(2.5);
+    // And the hurt twins pair with their own silhouettes, or a hit flashes a different animal — 0035.
+    expect(snoutAt(face.gapeHit, -0.9)).toBeCloseTo(gape, 1);
+    expect(snoutAt(face.shutHit, -0.9)).toBeCloseTo(shut, 1);
+    // `up` and `down` move the PUPIL, so they are the resting silhouette and share its hurt twin.
+    expect(snoutAt(face.up, -0.9)).toBeCloseTo(rest, 1);
+    expect(snoutAt(face.down, -0.9)).toBeCloseTo(rest, 1);
+  });
+
+  it('and it answers the PILOT and not a clock: one who cuts across it is snapped at, one who holds a lane is only watched', () => {
+    /*
+      ⚠️ **THIS IS 0282's TEST AND NOT AN ANIMATION CHECK.** *The mouth moves* is satisfied by a jaw
+      worked on a timer, which is the same animation for every player and every run. What is measured
+      is that two different pilots get two different fish: one who cuts across the head is bitten at,
+      one who holds a lane never sees the snap and is watched instead. A boss on a clock cannot pass
+      this at any amount of art — and the serpent's own version of this claim is
+      `tests/serpent.test.ts`, which this deliberately mirrors rather than restates.
+    */
+    if (face === null) throw new Error('the fish has no faces');
+    /**
+     * Fly a pilot for four seconds beside the fish, and report every face it wore.
+     *
+     * ⚠️ **THE FIRST SECOND AND A HALF IS FLOWN AND NOT RECORDED.** A pilot has to reach the lane it
+     * means to hold, and the trip there is itself a crossing — so a run recorded from the first step
+     * reports a snap for every pilot, including the one whose whole point is not to cause one.
+     */
+    const flown = (fly: (step: number, world: ReturnType<typeof playableWorld>['world']) => number): Set<number> => {
+      const { world, stick } = playableWorld(VOLANS_ONLY);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+        world.ship.health = world.shipRow.health;
+        if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+        frame.step();
+      }
+      expect(world.bossPool.size, 'the fish never arrived').toBe(1);
+      const worn = new Set<number>();
+      for (let i = -90; i < 240; i++) {
+        // The volley tell outranks the snap, so it is silenced: what is under test is the other one.
+        world.bossPool.at(0).fireIn = 999;
+        world.ship.health = world.shipRow.health;
+        stick.across = fly(i, world);
+        frame.step();
+        if (i >= 0) worn.add(world.bossPool.at(0).spriteBase);
+      }
+      return worn;
+    };
+
+    /*
+      ⚠️ **THE CROSSING PILOT FLIES FULL STICK AND REVERSES**, which is what a player dodging a boss
+      does and is the only way to be sure the ship passes the head rather than drifting near it. The
+      fish holds its own patrol across the lane while this happens, so the crossings are the two of
+      them meeting rather than a number this test picked.
+    */
+    const crossing = flown((step) => (Math.floor((step + 90) / 40) % 2 === 0 ? 1 : -1));
+    expect(
+      crossing.has(face.shut),
+      'a ship flown back and forth across the fish for four seconds was never snapped at — the mouth is not ' +
+        'answering the player',
+    ).toBe(true);
+    /*
+      ⚠️ **AND THE HOLDING PILOT SITS WHERE THE FISH IS NOT.** This is the half that fails if the jaw
+      is on a timer, and it is the half 0285's report was about.
+    */
+    const holding = flown((_step, world) => {
+      const gaze = world.ship.across - world.bossPool.at(0).across;
+      return gaze > ACROSS_SPAN * 0.3 ? -1 : gaze < ACROSS_SPAN * 0.25 ? 1 : 0;
+    });
+    expect(
+      holding.has(face.shut),
+      'a ship that held its lane a third of the span away was snapped at anyway, so the jaw is on a clock and every ' +
+        'player watches the same animal',
+    ).toBe(false);
+    /*
+      ⚠️ **AND IT IS STILL WATCHED, WHICH IS WHY THIS IS NOT SIMPLY *NOTHING HAPPENED*.** A fish that
+      wore one face for the whole four seconds would pass the line above and be exactly the wall the
+      report named — and on THIS boss it matters most, because the fish is the one end boss that
+      stalks onto the player's lane (0258) and so the one they spend the fight looking straight at.
+    */
+    expect(
+      holding.has(face.up) || holding.has(face.down),
+      'the fish never turned its eye on a ship parked off to one side of it, so nothing about it is watching',
+    ).toBe(true);
+  });
+
+  it('and the GAPE is the volley’s own tell: every open mouth is followed by shots, and the mouth is shut the rest of the time', () => {
+    /*
+      ⚠️ **THE HALF THE SERPENT'S SUITE NEVER ASKED, AND IT IS THE HALF THAT MAKES A TELL A TELL.** The
+      guard above silences the gun to test the snap; this one lets it fire and asks the opposite
+      question. A mouth that hangs open BETWEEN volleys is a mouth that means nothing when one comes —
+      the fish would be *aggressively moving its mouth* and telling the player nothing, which is 0285's
+      report answered in the letter and not in the substance.
+
+      ⚠️ **AND IT IS MEASURED OFF THE SHOTS AND NOT OFF `fireIn`, WHICH THE FIRST DRAFT GOT WRONG.**
+      `wearFace` gapes when `fireIn <= FACE_GAPE`, so a guard reading `fireIn` back asks whether the
+      code agrees with itself and would stay green over any constant at all — the exact defect
+      `docs/decisions/0027-measure-the-picture-not-the-model.md` names. What the PLAYER learns is *when
+      that mouth opens, something comes out of it*, and what says so is the bullet pool.
+    */
+    if (face === null) throw new Error('the fish has no faces');
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the fish never arrived').toBe(1);
+    const gaped: number[] = [];
+    const volleys: number[] = [];
+    for (let i = 0; i < 900; i++) {
+      world.ship.health = world.shipRow.health;
+      const before = world.enemyShots.size;
+      frame.step();
+      if (world.bossPool.size === 0) break;
+      // A VOLLEY is three or more at once: this boss throws five to seven, and an escort throws one.
+      if (world.enemyShots.size - before >= 3) volleys.push(i);
+      if (world.bossPool.at(0).spriteBase === face.gape) gaped.push(i);
+    }
+    expect(gaped.length, 'the fish never opened its mouth in fifteen seconds of fighting, so the tell never fires').toBeGreaterThan(0);
+    expect(volleys.length, 'the fish never threw a volley, so there is nothing for a tell to be about').toBeGreaterThan(0);
+    /*
+      ⚠️ **THE LAST HALF-SECOND OF THE RUN IS NOT ASKED, BECAUSE ITS ANSWER HAS NOT HAPPENED YET.** The
+      first draft counted the thirteen steps at the end of the window as orphans: the mouth was open
+      and correct, and the volley it was telling the player about landed seven steps after the fixture
+      stopped watching. A guard that reddens because it stopped looking is measuring its own window.
+    */
+    const watched = gaped.filter((at) => at <= 900 - 25);
+    const orphan = watched.filter((at) => !volleys.some((shot) => shot >= at && shot - at <= 25));
+    expect(
+      orphan.length,
+      `${orphan.length} of ${watched.length} steps with the mouth open were not followed by a volley within ` +
+        'half a second, so the fish opens its mouth for nothing',
+    ).toBe(0);
+    /*
+      ⚠️ **AND THE MOUTH IS SHUT FOR MOST OF THE FIGHT, WHICH IS THE OTHER HALF OF BEING A TELL.** A
+      face worn nearly always carries no information, however well it is drawn: what the player has to
+      be able to read is the CHANGE.
+    */
+    const share = gaped.length / 900;
+    expect(share, `the fish is agape for ${(share * 100).toFixed(0)}% of the fight`).toBeLessThan(0.4);
+  });
+});

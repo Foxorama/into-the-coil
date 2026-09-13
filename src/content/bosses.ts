@@ -2250,7 +2250,30 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
-    face: null,
+    /*
+      ⚠️ **THE SECOND CREATURE TO WEAR ONE — 0319, and `Face` was written for exactly this.** 0285 put
+      the type on the ROW rather than on the chain, and said the day a second creature could not wear
+      it is the day the type was wrong. It can: `wearFace` runs for every boss and returns early on a
+      `null` face, so the fish tracking the ship, gaping before a volley and snapping at one that
+      crosses it is six bakes and this literal, with no mechanism added
+      ([0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md)).
+
+      ⚠️ **AND IT MATTERS MOST ON THIS BOSS**, because the fish is the one end boss that stalks onto
+      the player's lane ([0258](../../docs/decisions/0258-one-pilot-a-level.md)) — it is the boss the
+      player spends the whole fight looking straight at, and until now it looked back with a fixed
+      stare. *"It still feels like a non-interactive wall object"* is 0285's own report, and nothing
+      about it was specific to a serpent.
+    */
+    face: {
+      rest: SPRITE.boss9,
+      restHit: SPRITE.boss9Hit,
+      up: SPRITE.boss9Up,
+      down: SPRITE.boss9Down,
+      gape: SPRITE.boss9Gape,
+      gapeHit: SPRITE.boss9GapeHit,
+      shut: SPRITE.boss9Shut,
+      shutHit: SPRITE.boss9ShutHit,
+    },
     /*
       A BREACH — 0313. `from` 176 is inside the leading edge of the NARROWEST view any device gets
       (177.8), so all three crests are on the screen everywhere — 0023, and the guard reads the view
