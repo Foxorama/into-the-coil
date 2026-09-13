@@ -17,7 +17,7 @@ import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
-import { DIFFICULTIES, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
@@ -168,12 +168,23 @@ describe('0248 — the serpent strikes', () => {
     */
     const row = BOSSES.jormungandr;
     const whole = phaseFor(row, row.health);
-    const hurt = phaseFor(row, row.health * 0.6);
+    // ⚠️ Half rather than 0.6: the hurt phase runs from 0.55 of the bar since 0322 split the opening.
+    const hurt = phaseFor(row, row.health * 0.5);
     const last = phaseFor(row, row.health * 0.3);
     expect(whole.shot ?? row.shot, 'the serpent does not open with acid').toBe('acid');
     const fan = whole.attack ?? row.attack;
     expect(fan.kind, 'the serpent’s opening acid is not a plain fan straight down the lane').toBe('spray');
-    expect(whole.shots, 'the opening arc is not five globes').toBe(5);
+    /*
+      ⚠️ **THREE WHILE WHOLE AND FIVE A FIFTH DOWN — 0322, AND THE GUARD MOVES WITH THE TABLE.** It read
+      `toBe(5)`, which was 0304's *"a forward arc of 5 globes"* and is now the SECOND phase. Reported:
+      *"at the start it needs to fire slightly fewer acid balls, then increase them."* What is held here is
+      the pair rather than either number — an opening that grows — because a count alone is a taste
+      (`tests/authored.ts` prints it) and the growth is the ask.
+    */
+    expect(whole.shots, 'the opening arc is not three globes').toBe(3);
+    const filled = phaseFor(row, row.health * 0.7);
+    expect(filled.shots, 'the arc does not fill in to five once the serpent is a fifth down').toBe(5);
+    expect(filled.shots, 'the opening arc does not grow').toBeGreaterThan(whole.shots);
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
     expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw the acid spray and void in turn').toEqual(['acid/sweep', 'void/spray']);
     const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
@@ -216,41 +227,53 @@ describe('0248 — the serpent strikes', () => {
     ]);
   });
 
-  it('0304 — THE REPORTED ONE: whole, it throws a forward arc of FIVE globes, and every volley points the same way', () => {
+  it('0304 — THE REPORTED ONE: whole, it throws a forward arc — THREE globes, then FIVE (0322) — and every volley points the same way', () => {
     /*
       ⚠️ **ASKED FOR**: *"for phase 1 can we have it shoot a forward arc of 5 globes."* Three halves,
       each in something the player sees: how many, that the arc faces them, and that it holds still —
       the rake this replaces turned a little every volley, which is a different thing to dodge.
 
+      ⚠️ **AND *five* IS NOW THE SECOND PHASE — 0322.** *"At the start it needs to fire slightly fewer
+      acid balls, then increase them."* So the same three claims are driven TWICE, at full health and a
+      fifth down, and the counts are written as the literals a player would count rather than read off
+      `phase.shots` — a guard that took its number from the row it is checking would agree with the
+      table whatever the table said, which is
+      `docs/decisions/0027-measure-the-picture-not-the-model.md`'s own subject.
+
       ⚠️ **MEASURED OFF THE VELOCITIES IN THE CAMERA'S FRAME**, which is where the aim is: every globe
       leaves the mouth on the same step, so the arc is in where they point. The scroll is taken out,
       because it is in every velocity and is not the animal aiming anywhere.
     */
-    const opening = serpentAt(1);
-    const centres: number[] = [];
-    for (let volley = 0; volley < 2; volley++) {
-      opening.world.enemyShots.clear();
-      opening.world.bossPool.at(0).fireIn = 1;
-      opening.frame.step();
-      const headings: number[] = [];
-      for (let i = 0; i < opening.world.enemyShots.size; i++) {
-        const s = opening.world.enemyShots.at(i);
-        expect(s.sprite, 'the opening arc is not acid').toBe(SHOTS.acid.sprite);
-        // Down the lane is π; measured from it so the arc's two sides are negative and positive.
-        const off = Math.atan2(s.velAcross, s.velAlong - opening.world.scrollPerStep);
-        headings.push(off < 0 ? off + Math.PI : off - Math.PI);
+    for (const [at, globes] of [
+      [1, 3],
+      [0.7, 5],
+    ] as const) {
+      const opening = serpentAt(at);
+      const centres: number[] = [];
+      for (let volley = 0; volley < 2; volley++) {
+        opening.world.enemyShots.clear();
+        opening.world.bossPool.at(0).fireIn = 1;
+        opening.frame.step();
+        const headings: number[] = [];
+        for (let i = 0; i < opening.world.enemyShots.size; i++) {
+          const s = opening.world.enemyShots.at(i);
+          expect(s.sprite, 'the opening arc is not acid').toBe(SHOTS.acid.sprite);
+          // Down the lane is π; measured from it so the arc's two sides are negative and positive.
+          const off = Math.atan2(s.velAcross, s.velAlong - opening.world.scrollPerStep);
+          headings.push(off < 0 ? off + Math.PI : off - Math.PI);
+        }
+        expect(headings.length, `at ${at} of the bar the arc threw ${headings.length} globes, not ${globes}`).toBe(globes);
+        const wide = Math.max(...headings) - Math.min(...headings);
+        expect(wide, 'the globes left on one heading, so they are a line and not an arc').toBeGreaterThan(0.3);
+        const centre = headings.reduce((a, b) => a + b, 0) / headings.length;
+        expect(
+          Math.abs(centre),
+          `the arc is centred ${((centre * 180) / Math.PI).toFixed(1)}° off the lane, so it is not thrown forward at the player`,
+        ).toBeLessThan(0.05);
+        centres.push(centre);
       }
-      expect(headings.length, `the opening arc threw ${headings.length} globes, not five`).toBe(5);
-      const wide = Math.max(...headings) - Math.min(...headings);
-      expect(wide, 'the five globes left on one heading, so they are a line and not an arc').toBeGreaterThan(0.3);
-      const centre = headings.reduce((a, b) => a + b, 0) / headings.length;
-      expect(
-        Math.abs(centre),
-        `the arc is centred ${((centre * 180) / Math.PI).toFixed(1)}° off the lane, so it is not thrown forward at the player`,
-      ).toBeLessThan(0.05);
-      centres.push(centre);
+      expect(Math.abs(centres[1]! - centres[0]!), 'the arc turned between two volleys — the rake is back').toBeLessThan(0.05);
     }
-    expect(Math.abs(centres[1]! - centres[0]!), 'the arc turned between two volleys — the rake is back').toBeLessThan(0.05);
   });
 
   it('0304 — THE REPORTED ONE: once hurt, the acid is a SPRAY — one globe at a time, the aim turning from below-behind, round through the front, to above-behind', () => {
@@ -265,7 +288,8 @@ describe('0248 — the serpent strikes', () => {
       TIME, so the first thing asked is how long the stream lasts, and the angles are read in the
       picture's own terms: down, forward, up.
     */
-    const { world, frame } = serpentAt(0.6);
+    // ⚠️ Half rather than 0.6: the hurt phase runs from 0.55 of the bar since 0322 split the opening.
+    const { world, frame } = serpentAt(0.5);
     const boss = world.bossPool.at(0);
     boss.headAt = 0;
     world.enemyShots.clear();
@@ -421,7 +445,8 @@ describe('0248 — the serpent strikes', () => {
     const kind = SHOT_INDEX.void;
     reset(blast, world.ship.along + 20, world.ship.across, SHOTS.void, kind);
     const appetite = SHOTS.void.health;
-    expect(SHOTS.void.swallows, 'the void does not swallow, so this measures nothing').toBe(true);
+    // ⚠️ An appetite is an object since 0322 — it carries the swell that says eating is happening.
+    expect(SHOTS.void.swallows, 'the void does not swallow, so this measures nothing').not.toBeUndefined();
     expect(appetite, 'the void swallows a single hit, so there is no appetite to measure').toBeGreaterThan(1);
 
     /*
@@ -1747,7 +1772,12 @@ describe('0310 — the storm runs the whole body, and the horns fire it', () => 
 });
 
 describe('0305 — the serpent darkens', () => {
-  /** The phase the serpent is standing in, and the look it wears there. */
+  /**
+   * The phase the serpent is standing in, and the look it wears there.
+   *
+   * ⚠️ **THE VOID PHASE IS READ AT HALF THE BAR AND NOT AT 0.6 — 0322.** The opening is two phases now
+   * and the hurt phase runs from 0.55, so 0.6 is the second acid phase, which wears no aura at all.
+   */
   const lookAt = (fraction: number) => phaseFor(BOSSES.jormungandr, BOSSES.jormungandr.health * fraction).look;
 
   it('THE REPORTED ONE: the void phase burns with an aura behind every node and the head, the lightning phase with another, and neither while whole', () => {
@@ -1757,7 +1787,7 @@ describe('0305 — the serpent darkens', () => {
       to get a super saiyan red lightning flicker through the aura."* Driven, because the table is not
       the fight: a flame is where its node is on the step, and there is one for every node and the head.
     */
-    const hurtAura = lookAt(0.6)?.aura ?? null;
+    const hurtAura = lookAt(0.5)?.aura ?? null;
     const lastAura = lookAt(0.3)?.aura ?? null;
     expect(hurtAura, 'the void phase burns with no aura').not.toBeNull();
     expect(lastAura, 'the lightning phase burns with no aura').not.toBeNull();
@@ -1765,7 +1795,7 @@ describe('0305 — the serpent darkens', () => {
     expect(lastAura!.frames.some((f) => hurtAura!.frames.includes(f)), 'the lightning phase wears the void phase’s very frames').toBe(false);
     for (const [fraction, aura] of [
       [1, null],
-      [0.6, hurtAura],
+      [0.5, hurtAura],
       [0.3, lastAura],
     ] as const) {
       const { world, frame } = serpentAt(fraction);
@@ -1800,7 +1830,8 @@ describe('0305 — the serpent darkens', () => {
       *"Flicker"* is the word, and a still aura is a glow. Both halves in the picture's own terms: at one
       moment the body is not one frame end to end, and a moment later the flames have moved on.
     */
-    const { world, frame } = serpentAt(0.6);
+    // ⚠️ Half rather than 0.6: the hurt phase runs from 0.55 of the bar since 0322 split the opening.
+    const { world, frame } = serpentAt(0.5);
     frame.step();
     const at = (): number[] => Array.from({ length: world.bossAura.size }, (_, i) => world.bossAura.at(i).sprite);
     const now = at();
@@ -1827,7 +1858,7 @@ describe('0305 — the serpent darkens', () => {
       return { up: size / 2 - Math.min(...hull.map(([, y]) => y)), down: Math.max(...hull.map(([, y]) => y)) - size / 2 };
     };
     const whole = reach(BOSSES.jormungandr.face!.rest);
-    const hurt = reach(lookAt(0.6)!.face.rest);
+    const hurt = reach(lookAt(0.5)!.face.rest);
     const last = reach(lookAt(0.3)!.face.rest);
     expect(hurt.up - whole.up, `the void phase's horns reach ${(hurt.up - whole.up).toFixed(1)}px further — not longer`).toBeGreaterThan(2);
     expect(last.up - hurt.up, `the lightning phase's horns reach ${(last.up - hurt.up).toFixed(1)}px further again — not longer again`).toBeGreaterThan(1);
@@ -1838,7 +1869,7 @@ describe('0305 — the serpent darkens', () => {
       expect(Math.abs(stage.down - whole.down), `the ${name} phase's skull is a different size below the horns — the head grew, not the horns`).toBeLessThan(0.5);
     }
     // And every face of a phase wears that phase's horns, or they would shrink each time the jaw moved.
-    for (const fraction of [0.6, 0.3]) {
+    for (const fraction of [0.5, 0.3]) {
       const face = lookAt(fraction)!.face;
       const tall = reach(face.rest).up;
       for (const other of [face.up, face.down, face.gape, face.shut]) {
@@ -1859,7 +1890,7 @@ describe('0305 — the serpent darkens', () => {
       drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * 8, 'approach');
       return trace.inks.length;
     };
-    const hurt = lookAt(0.6)!.aura!.frames.map(strokesIn);
+    const hurt = lookAt(0.5)!.aura!.frames.map(strokesIn);
     const last = lookAt(0.3)!.aura!.frames.map(strokesIn);
     expect(hurt.every((n) => n === 0), 'the void phase’s aura has lightning in it before the lightning phase').toBe(true);
     expect(last.some((n) => n > 0), 'the lightning phase’s aura has no lightning in it').toBe(true);
@@ -2369,5 +2400,216 @@ describe('0311 — the acid and the void come as one ball', () => {
     frame.step();
     const left = onField(world);
     expect(left, `killing the ball left ${left.length} shots behind: ${left.join(', ')}`).toEqual([]);
+  });
+});
+
+/*
+  ── 0322: THE BALL IS WORTH SHOOTING ────────────────────────────────────────────────────────────
+
+  `docs/decisions/0322-the-ball-is-worth-shooting.md`. Reported:
+
+  > *"the last stage with the combined balls is great, but the fire rate of the serpent is too fast, you
+  > can't kill the combined balls fast enough at all and still damage the serpent and avoid everything."*
+
+  And, of the two phases before it:
+
+  > *"at the start it needs to fire slightly fewer acid balls, then increase them, then it gets to the
+  > acid spray and void balls. the acid spray and void balls needs the a slightly slower fire rate and the
+  > void balls to be spaced out slightly more between the acid sprays."*
+*/
+describe('0322 — the ball is worth shooting', () => {
+  /** A ball on a lane of its own, well clear of the ship, and nothing else on the field. */
+  function ballAlone(tier?: DifficultyKind): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame; ball: number } {
+    const made = serpentAt(0.2, tier);
+    made.world.bossPool.at(0).fireIn = 999;
+    made.world.enemyShots.clear();
+    made.world.playerShots.clear();
+    made.world.missiles.clear();
+    const ball = made.world.enemyShots.spawn()!;
+    reset(ball, made.world.ship.along + 60, 14, SHOTS.maw, SHOT_INDEX.maw);
+    return { world: made.world, frame: made.frame, ball: 0 };
+  }
+
+  /** Hold everything else off the field, and keep the ship on the far side of the lane from the ball. */
+  const alone = (world: ReturnType<typeof playableWorld>['world']): void => {
+    world.bossPool.at(0).fireIn = 999;
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    world.missiles.clear();
+    world.ship.across = ACROSS_SPAN - 14;
+  };
+
+  /**
+   * Feed the ball `total` points of damage in bites of `damage`, and report the hurtbox it reached.
+   *
+   * ⚠️ **THE LAST BITE CAN NEVER BE OBSERVED**, because a blast taken to nothing is released on the step
+   * it dies — so every measurement here stops one point short of empty and says so.
+   */
+  const feed = (damage: number, total: number): { radius: number; swell: number; bites: number } => {
+    const { world, frame } = ballAlone();
+    let bites = 0;
+    let fed = 0;
+    for (let i = 0; i < 400 && fed + damage <= total; i++) {
+      alone(world);
+      if (world.enemyShots.size === 0 || SHOT_KINDS[world.enemyShots.at(0).kind] !== 'maw') break;
+      const at = world.enemyShots.at(0);
+      const shot = world.playerShots.spawn()!;
+      reset(shot, at.along, at.across, SHOTS.pulse, SHOT_INDEX.pulse);
+      shot.damage = damage;
+      const before = at.health;
+      frame.step();
+      if (world.enemyShots.size > 0 && SHOT_KINDS[world.enemyShots.at(0).kind] === 'maw' && world.enemyShots.at(0).health < before) {
+        fed += before - world.enemyShots.at(0).health;
+        bites++;
+      }
+    }
+    const still = world.enemyShots.size > 0 && SHOT_KINDS[world.enemyShots.at(0).kind] === 'maw' ? world.enemyShots.at(0) : null;
+    expect(still, `the ball was gone before ${total} points had been fed to it in bites of ${damage}`).not.toBeNull();
+    return { radius: still!.radius, swell: still!.swell, bites };
+  };
+
+  it('THE REPORTED ONE: how big a fed ball gets is what it ATE, not how many shots it took to feed it', () => {
+    /*
+      ⚠️ **THE DEFECT THIS DECISION IS NAMED FOR.** 0291's growth was a step of 1.1 **per bite**, tuned on a
+      void that takes six of them. The ball takes twelve — thirty before this — so the same line gave the
+      one-damage pulse twenty-nine steps and a hurtbox of **51.9 world units on a hundred-unit lane**, while
+      a four-damage shot got seven steps and 5.3. **The weakest gun in the game made the biggest wall**, by
+      doing the thing the player was asked to do.
+
+      ⚠️ **SO THE CLAIM IS THAT THE SIZE IS A FUNCTION OF THE DAMAGE EATEN AND OF NOTHING ELSE.** Half the
+      appetite, fed in bites of one, two, three and six: the same hurtbox to within a hundredth of a unit.
+      No content change makes it correct for a player's rate of fire to choose how big a bullet is, which is
+      what makes this an invariant rather than a number somebody likes —
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`.
+    */
+    const appetite = SHOTS.maw.health;
+    const half = appetite / 2;
+    const runs = [1, 2, 3, 6].map((damage) => ({ damage, ...feed(damage, half) }));
+    expect(new Set(runs.map((r) => r.bites)).size, 'every run took the same number of bites, so nothing was varied').toBeGreaterThan(1);
+    const widest = Math.max(...runs.map((r) => r.radius));
+    const narrowest = Math.min(...runs.map((r) => r.radius));
+    expect(
+      widest - narrowest,
+      `the same ${half} points of damage left the ball between ${narrowest.toFixed(2)} and ${widest.toFixed(2)} units of hurtbox — ` +
+        `${runs.map((r) => `${r.damage}s: ${r.radius.toFixed(2)}`).join(', ')}`,
+    ).toBeLessThan(0.01);
+    // And it grew, which is the tell 0291 put there: half the appetite, half the swell.
+    expect(narrowest, 'the ball ate half its appetite and did not grow at all').toBeGreaterThan(SHOTS.maw.radius);
+  });
+
+  it('and a fed ball is a TARGET rather than a wall, in the units the player flies in', () => {
+    /*
+      ⚠️ **IN WORLD UNITS ACROSS THE LANE, WHICH IS WHAT THE PLAYER SEES — 0027.** The row promises
+      `swallows.swell`; what is held here is both halves of that promise: that the fed ball measures what the
+      row says (the mechanism agreeing with the table), and that what the row says is small enough to be a
+      thing you fly around (the table agreeing with the lane). The second half is the one a probe can break
+      by editing content, and it is the one the old constant failed — at 51.9 units of radius the ball was
+      **wider than the room the ship has to dodge in**.
+    */
+    const appetite = SHOTS.maw.health;
+    const nearly = feed(1, appetite - 1);
+    const promised = SHOTS.maw.radius * SHOTS.maw.swallows!.swell;
+    expect(
+      nearly.radius,
+      `a ball fed all but one point of its appetite is ${nearly.radius.toFixed(2)} units where its row promises ${promised.toFixed(2)}`,
+    ).toBeCloseTo(promised * (SHOTS.maw.swallows!.swell ** (-1 / appetite)), 1);
+    /*
+      ⚠️ **AN EIGHTH OF THE LANE, AND THE SHIP IS WHERE THAT NUMBER COMES FROM.** The ship is drawn seven
+      units across (`SPRITE_EXTENT.ship`) on a lane of a hundred, so a bullet under 12.5 across is under two
+      ship-widths and leaves several more of them free on one side of it wherever it sits — *a thing to fly
+      around*. The old per-bite growth reached **103.8 units across**, which is the lane.
+    */
+    expect(
+      promised * 2,
+      `a fully fed ball is ${(promised * 2).toFixed(1)} units across a ${ACROSS_SPAN}-unit lane, which is a wall and not a target`,
+    ).toBeLessThan(ACROSS_SPAN / 8);
+  });
+
+  it('THE REPORTED ONE: the OPENING gun clears a ball before it reaches the ship, at every tier', () => {
+    /*
+      ⚠️ **REPORTED**: *"you can't kill the combined balls fast enough at all."* Driven, and this is the bar
+      0311 set for itself and did not measure — *"if the base gun cannot clear a ball before it bursts, the
+      last phase becomes dodge the ring for every player who has not upgraded, which is the opposite of the
+      ask."* At thirty points of appetite it was four seconds of the opening gun against a flight of two and
+      a half, so the answer was no at every tier, always.
+     *
+      ⚠️ **THE SHIP'S OWN `along` IS THE FINISH LINE AND NOT `swallow.at`.** A ball lobbed down the lane the
+      player is flying in arrives at the PLAYER first; where it would have burst is behind them. So what is
+      asked is the player's question — *can I clear this before it gets to me* — and the margin is reported
+      in world units of lane, which is the thing they are watching close.
+     *
+      ⚠️ **THE REAL GUN, at the loadout the fight is met with**: `playableWorld` hands the ship its own
+      weapon and the frame fires it, so nothing here models a rate of fire. The ship is pinned to the ball's
+      lane because that is the player who is dealing with it; dodging instead is the other half of the same
+      round and is what the lightning is for.
+    */
+    for (const tier of DIFFICULTY_KINDS) {
+      const made = serpentAt(0.2, tier);
+      const { world, frame } = made;
+      world.bossPool.at(0).fireIn = 999;
+      world.enemyShots.clear();
+      const boss = world.bossPool.at(0);
+      const ball = world.enemyShots.spawn()!;
+      reset(ball, boss.along, world.ship.across, SHOTS.maw, SHOT_INDEX.maw);
+      let died = -1;
+      let hit = false;
+      const was = world.ship.health;
+      for (let i = 0; i < 600; i++) {
+        boss.fireIn = 999;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        world.missiles.clear();
+        // The ball flies straight down the lane it was lobbed on; the pilot stays on it.
+        if (world.enemyShots.size > 0) world.ship.across = world.enemyShots.at(0).across;
+        frame.step();
+        if (world.ship.health < was) hit = true;
+        if (world.enemyShots.size === 0 || SHOT_KINDS[world.enemyShots.at(0).kind] !== 'maw') {
+          died = i;
+          break;
+        }
+      }
+      expect(died, `on ${tier} the opening gun never finished the ball at all`).toBeGreaterThanOrEqual(0);
+      expect(hit, `on ${tier} the ball reached the ship before the opening gun emptied it`).toBe(false);
+    }
+  });
+
+  it('and the void gets a lane the spray has LEFT, on every tier — which `fireEvery` cannot buy', () => {
+    /*
+      ⚠️ **REPORTED**: *"the void balls [need] to be spaced out slightly more between the acid sprays."*
+     *
+      ⚠️ **AND THE MECHANISM IS THE CLAIM.** A `sweep` holds the cadence out to its own sixty steps, so on
+      any tier whose `fireGap` takes the phase's gap below that, the next head lands on the spray's LAST
+      GLOBE however slow `fireEvery` is — the hold is a floor and the cadence is what it floors. What is
+      held is the gap composing with the hold: the void's volley arrives a clear stretch of steps after the
+      last globe, at every tier, and no value of `fireEvery` this phase may carry can do that.
+     *
+      ⚠️ **MEASURED IN STEPS BETWEEN TWO THINGS APPEARING**, which is what the player watches: the last acid
+      globe to leave the mouth, and the first void ball to.
+    */
+    for (const tier of DIFFICULTY_KINDS) {
+      const { world, frame } = serpentAt(0.5, tier);
+      const boss = world.bossPool.at(0);
+      boss.headAt = 0;
+      boss.fireIn = 1;
+      let lastGlobe = -1;
+      let firstVoid = -1;
+      for (let i = 0; i < 400 && firstVoid < 0; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        const before = world.enemyShots.size;
+        frame.step();
+        for (let s = before; s < world.enemyShots.size; s++) {
+          const kind = SHOT_KINDS[world.enemyShots.at(s).kind];
+          if (kind === 'acid') lastGlobe = i;
+          if (kind === 'void' && firstVoid < 0) firstVoid = i;
+        }
+      }
+      expect(lastGlobe, `on ${tier} the hurt phase threw no acid at all`).toBeGreaterThanOrEqual(0);
+      expect(firstVoid, `on ${tier} the hurt phase threw no void at all`).toBeGreaterThanOrEqual(0);
+      expect(
+        firstVoid - lastGlobe,
+        `on ${tier} the void arrived ${firstVoid - lastGlobe} steps after the spray's last globe`,
+      ).toBeGreaterThanOrEqual(18);
+    }
   });
 });

@@ -8,13 +8,19 @@ export const PROBES = [
     decision: '0304',
     suite: 'tests/serpent.test.ts',
     // The state of `main` before this decision, as far as the count goes: the phase's three.
-    broke: 'the opening arc back to three globes',
-    guard: 'whole, it throws a forward arc of FIVE globes',
+    broke: 'the arc of five cut back to three, so the opening never fills in',
+    guard: 'whole, it throws a forward arc',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0308, which gave the opening phase a cue of its own.
-      find: "      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
-      replace: "      { upTo: 1, fireEvery: 84, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      /*
+        ⚠️ **AND BY 0322, ONTO THE SECOND PHASE, WHICH IS WHERE THE FIVE WENT.** The opening is two phases
+        now — three globes while whole and five a fifth down — so *the arc of five* is the row below the
+        one this used to name. 0322's own probe breaks the other half, the three; between them the pair
+        the report asked for is held from both ends.
+      */
+      find: "      { upTo: 0.78, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      replace: "      { upTo: 0.78, fireEvery: 72, shots: 3, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
     },
   },
   {
@@ -25,8 +31,8 @@ export const PROBES = [
       0261 gave this opening and 0290 kept. Five globes that sweep across the lane are a different
       thing to dodge from five that come straight at the player, and a count alone cannot see it.
     */
-    broke: 'the opening arc raking again, so it is five globes that turn rather than an arc straight ahead',
-    guard: 'whole, it throws a forward arc of FIVE globes',
+    broke: 'the opening arc raking again, so the globes turn rather than coming straight ahead',
+    guard: 'whole, it throws a forward arc',
     edit: {
       path: 'src/content/bosses.ts',
       find: "    attack: { kind: 'spray' },\n    uncoil: null,\n    fall: null,\n    chill: null,\n    sprite: SPRITE.boss8,",
@@ -97,28 +103,18 @@ export const PROBES = [
     `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s own subject wearing a green tick, and one
     that shortened the cadence as well would be proving the cadence rather than the wait.
   */
-  {
-    decision: '0304',
-    suite: 'tests/level.test.ts',
-    /*
-      ⚠️ THE ESCALATION GUARD, ON THE QUANTITY IT NOW READS. It compared `shots` and the serpent's
-      second phase has three of them beside a spray of twenty-one, so the old comparison said *relief*
-      about a phase that throws four times as much. Cut the spray to three and the phase after the arc
-      of five really is a relief — which is what the guard exists to say.
-    */
-    broke: 'the spray cut to three globes, so the phase after the arc of five throws less',
-    guard: 'every phase is reachable, and they only get harder',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0308, which gave the two heads of this phase their own cues.
-      find:
-        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },\n" +
-        "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n" +
-        '          ],',
-      replace:
-        "            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 3, every: 3 }, cue: 'bossAcid' },\n" +
-        "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n" +
-        '          ],',
-    },
-  },
+  /*
+    ── ⚠️ AND THE ESCALATION PROBE IS RETIRED — 0322 ───────────────────────────────────────────────
+
+    It cut the spray to three globes so that *the phase after the arc of five throws less* would redden
+    `tests/level.test.ts`'s **every phase is reachable, and they only get harder** — a clause that
+    compared the biggest volley each phase throws. **That clause is a taste now** (`0322-volley` in
+    `tests/authored.ts`): it had been re-fitted twice to keep one table green, and a taste cannot fail a
+    suite, so this probe would report STILL GREEN — which is
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md`'s own subject wearing a green tick.
+
+    **What 0304's claim rests on instead is the two probes above**, which are about the arc the report
+    asked for rather than about its rank among the other phases. The decision that demoted the clause has
+    the argument; nothing here is weakened to suit it.
+  */
 ];

@@ -111,8 +111,23 @@ export interface ShotRow extends Body {
    * with `appetite: 6` and `health: 1` was popped by a single pulse while the field that was supposed
    * to say six sat there being read by nobody. One number, and it is the one every other body in the
    * game already uses for *how much it takes*.
+   *
+   * ── AND WHAT IT CARRIES IS HOW BIG IT GETS, WHICH IS NOT THE SAME QUESTION — 0322 ───────────────
+   *
+   * ⚠️ **`swell` IS THE SIZE IT REACHES WHEN ITS APPETITE IS SPENT, AS A MULTIPLE OF WHAT IT WAS
+   * THROWN AT** — so the paragraph above still holds: the amount it eats is `health` and this is the
+   * amount it grows. It is on the row because a growth identical for every swallowing kind is
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s own tell, and
+   * because one constant tuned on a six-point void was applied to a thirty-point ball and took its
+   * hurtbox to **fifty-two world units** —
+   * `docs/decisions/0322-the-ball-is-worth-shooting.md` has the measurement.
+   *
+   * ⚠️ **AND THE OBJECT IS WHAT MAKES THE PAIR UNFORGETTABLE.** A `swallows: true` beside a separate
+   * `swell?: number` is two fields that mean nothing apart and a guard to hold them together; nested,
+   * the type refuses a bullet that eats and does not say what eating looks like, and refuses a bullet
+   * that does not eat and says anyway. 0016's *the table is the guard*, where a test would otherwise be.
    */
-  swallows?: boolean;
+  swallows?: { swell: number };
   /**
    * What this shot drops behind it as it flies, or absent for the thirteen that drop nothing — 0301.
    *
@@ -421,7 +436,9 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     `docs/decisions/0021-one-stream-per-concern.md` refuses a shared generator, because a cosmetic
     roll added anywhere would rebuild every level.
   */
-  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 2.2, health: 6, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING, swallows: true },
+  // ⚠️ **1.77 IS WHAT 0291's PER-BITE 1.1 CAME TO ON A SIX-POINT APPETITE FED BY THE PULSE** — *"about
+  // three quarters again as wide"*, in its own words — so the void is unchanged and 0322 is the ball.
+  void: { sprite: SPRITE.void, spriteHit: SPRITE.void, radius: 2.2, health: 6, damage: 2, speed: 0.9, fission: SPENT_BY_ARRIVING, swallows: { swell: 1.77 } },
   /**
    * The serpent's last mouthful: acid and void thrown as one ball — `docs/decisions/0311-the-acid-and-the-void-come-as-one-ball.md`.
    *
@@ -435,21 +452,43 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * player does changes what is coming. This is the opposite shape — **one thing, and what happens to it is
    * entirely theirs.** Kill it and nothing arrives; leave it and the lane fills.
    *
-   * ⚠️ **A BIG APPETITE, AND IT IS THE WHOLE DIFFICULTY DIAL.** Thirty is about five of the arc's links or a
+   * ⚠️ **A BIG APPETITE, AND IT IS THE WHOLE DIFFICULTY DIAL.** Thirty was about five of the arc's links or a
    * second and a half of the opening gun held on it — enough that ignoring it is a decision rather than an
    * oversight, and little enough that a loadout with any reach at all can take it down before it arrives.
    * Slow, because a thing you are meant to shoot has to be shootable: at 0.55 it takes about three and a half
    * seconds to cross from the mouth to where it bursts.
+   *
+   * ── ⚠️ AND *A SECOND AND A HALF OF THE OPENING GUN* WAS THE ONE NUMBER IN THAT PARAGRAPH NOBODY DROVE ──
+   *
+   * ⚠️ **REPORTED**: *"you can't kill the combined balls fast enough at all and still damage the serpent and
+   * avoid everything."* Driven — `docs/decisions/0322-the-ball-is-worth-shooting.md` has the rig — the opening
+   * gun is **7.5 damage a second**, so thirty points is **four seconds** of it against a flight of 2.27 to 2.95
+   * depending on the tier: the gun the player meets this animal with **could not clear one ball at any tier**,
+   * ever. 0311 wrote that exact risk down — *"if the base gun cannot clear a ball before it bursts, the last
+   * phase becomes dodge the ring for every player who has not upgraded"* — and shipped the number without
+   * pointing `scripts/weigh-boss.mjs` at it. Twelve is **1.6 s** of the opening gun: inside the flight at every
+   * tier with about a third of it spare, and a fifth of a second for the loadout that has upgraded twice.
+   *
+   * ⚠️ **AND IT IS STILL TWICE THE TOUGHEST BULLET IN THE GAME.** A void is six and a shard is two; nothing
+   * else the player may shoot at needs more than one hit. What made thirty wrong was not that it was big, it
+   * was that the number was chosen against a gun nobody measured.
    */
   maw: {
     sprite: SPRITE.maw,
     spriteHit: SPRITE.mawHit,
     radius: 3.6,
-    health: 30,
+    health: 12,
     damage: 3,
     speed: 0.55,
     fission: SPENT_BY_ARRIVING,
-    swallows: true,
+    /*
+      ⚠️ **HALF AGAIN WHEN ITS APPETITE IS SPENT, AND THE OLD MECHANISM MADE IT FIFTEEN TIMES — 0322.** The
+      swell was a step of 1.1 **per bite**, measured on a void that takes six of them; a thirty-point ball fed
+      by the one-damage pulse takes twenty-nine, and 1.1²⁹ took its hurtbox from 3.6 units to **fifty-two on a
+      hundred-unit lane** — half the room the player flies in, on a ball drawn fourteen units wide. The worse
+      the player's gun, the bigger the wall they made by doing the thing they were asked to do.
+    */
+    swallows: { swell: 1.5 },
     /*
       ⚠️ **35.6 IS *20% AWAY FROM THE LEFT SCREEN*, MEASURED ONCE ON THE NARROWEST VIEW** — a fifth of
       `ACROSS_SPAN × MIN_ASPECT`. 0023 says a spawn is placed against a view the device cannot change, and a

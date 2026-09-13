@@ -29,7 +29,7 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
-import { FIRE_GRID } from '../content/cadence.ts';
+import { FIRE_GRID, onFireGrid } from '../content/cadence.ts';
 import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotRow } from '../content/shots.ts';
 
 /**
@@ -978,6 +978,14 @@ function throwAttack(
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
       throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);
+      /*
+        ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
+        between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets
+        the cadence to its own length from inside that call, so a gap added before it would be the number
+        the spray's hold then overwrote. Added rather than maxed, for the same reason `beam` adds its
+        hold — this is quiet the head asked for on top of whatever it already costs.
+      */
+      if (head.gap !== undefined) boss.fireIn += onFireGrid(head.gap);
       break;
     }
     default: {

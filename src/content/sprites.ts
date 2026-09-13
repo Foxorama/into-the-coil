@@ -1238,8 +1238,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     thing you are asked to destroy has to look like a target rather than like a bullet to dodge. At 14.4
     it is two and a half acid drops across and about half the width of the skull that spat it.
 
-    ⚠️ **AND IT GROWS FROM THERE**, a tenth a bite, so a well-fed one is drawn half again as wide —
-    `VOID_SWELL` in `src/app/frame.ts`, which scales the blit and the hurtbox together (0291).
+    ⚠️ **AND IT GROWS FROM THERE** to half again as wide when its appetite is spent — 21.6 units — which
+    is its own row's `swallows.swell` and not a constant since 0322: `bite` in `src/app/frame.ts` scales
+    the blit and the hurtbox together (0291), and the per-bite version of that number reached **fifty-two
+    units of hurtbox** on this ball because the steps were the player's rate of fire rather than a size.
   */
   maw: 14.4,
   mawHit: 14.4,

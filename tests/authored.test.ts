@@ -37,7 +37,8 @@ import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
 import { AA_FLOOR, contrast } from './contrast.ts';
 import { DECOR_INKS, DEFAULT_PALETTE, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
+import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { CUES, type CueKind } from '../src/content/cues.ts';
 import { loudest } from './spectrum.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -299,6 +300,51 @@ function measureLoud(): void {
 /** How far under the blast a boss's attack may be and still be *in the family*, in dB — 0308. */
 const LOUD_UNDER_DB = 6;
 
+/**
+ * The most one volley of `phase` throws — 0304, and a taste since
+ * `docs/decisions/0322-the-ball-is-worth-shooting.md` demoted the guard it was written for.
+ *
+ * ⚠️ **ONLY `sweep` CARRIES ITS OWN COUNT**, and it is named rather than defaulted: every other arm
+ * either spends `shots` or carries it unused for exactly this rule to read (`bare`, `summon`, `beam`),
+ * which `src/content/bosses.ts` says in each of their comments.
+ *
+ * ⚠️ **A BULLET THE PLAYER HAS TO SHOOT DOWN COUNTS AS WHAT IT COSTS THEM — 0311**, so a `swallow`ing
+ * shot is worth its appetite and everything else is worth one. **A shot the player may merely dodge is
+ * worth one however much it eats**, and the first version of that line read `swallows` — which counted
+ * the void's appetite of six as well, measured the serpent's hurt phase at 18 rather than 21, and sent
+ * 0304's own probe STILL GREEN. It is `swallow` that makes dealing with a bullet compulsory, because
+ * what it does otherwise is burst in the lane the player is flying in.
+ */
+function largestVolley(
+  row: BossRow,
+  phase: BossPhase,
+  attack: BossAttack = phase.attack ?? row.attack,
+  shot: ShotKind = phase.shot ?? row.shot,
+): number {
+  const each = SHOTS[shot].swallow !== undefined ? SHOTS[shot].health : 1;
+  if (attack.kind === 'sweep') return attack.globes * each;
+  // One shot, whatever the phase's fan says — the arm 0311 added for exactly that reason.
+  if (attack.kind === 'lob') return each;
+  if (attack.kind === 'heads') {
+    return Math.max(...attack.heads.map((head) => largestVolley(row, phase, head.attack, head.shot)));
+  }
+  return phase.shots * each;
+}
+
+/** 0322 — a later phase puts at least as much on the screen as the one before it. Advisory. */
+function measureVolley(): void {
+  const eased: string[] = [];
+  for (const kind of BOSS_KINDS) {
+    const row = BOSSES[kind];
+    for (let i = 1; i < row.phases.length; i++) {
+      const before = largestVolley(row, row.phases[i - 1]!);
+      const after = largestVolley(row, row.phases[i]!);
+      if (after < before) eased.push(`${kind} phase ${i + 1} throws ${after} against ${before}`);
+    }
+  }
+  observe('0322-volley', eased.length === 0, eased);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -311,6 +357,7 @@ function measureAll(): void {
   measureLean();
   measurePair();
   measureLoud();
+  measureVolley();
 }
 
 /**

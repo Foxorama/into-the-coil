@@ -42,6 +42,7 @@ export const AUTHORED_IDS = [
   '0288-lean',
   '0304-pair',
   '0308-loud',
+  '0322-volley',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -171,6 +172,21 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'a boss’s attack is as loud as the things that explode',
     correctly: 'a boss whose attack is meant to be quiet — a hiss, a whisper, something that sneaks up',
     decision: '0308-the-attacks-are-heard',
+  },
+  /*
+    ⚠️ **DEMOTED FROM `tests/level.test.ts`, WHERE IT HAD BEEN RE-FITTED TWICE AND WAS ABOUT TO BE A
+    THIRD TIME.** 0304 widened its quantity from `shots` to *the attack's own count*; 0311 widened it
+    again, to *a swallowing bullet is worth its appetite*, so that one ball could outweigh a spray of
+    twenty-one; 0322 brought the ball's appetite down to twelve and the same conversion turned the
+    serpent's last third back into a *relief* — a phase whose whole content is a thing the player must
+    destroy and a column of lightning. **Bullets on the screen and difficulty stopped being the same
+    axis the moment a bullet had to be shot down**, which is
+    `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` arriving at a second table.
+  */
+  '0322-volley': {
+    claim: 'a boss’s later phase puts at least as much on the screen as the phase before it',
+    correctly: 'a phase that asks the player to DESTROY something rather than to dodge a fan — fewer objects, more to do',
+    decision: '0322-the-ball-is-worth-shooting',
   },
 };
 
