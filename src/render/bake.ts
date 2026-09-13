@@ -5795,18 +5795,53 @@ function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
 }
 
 /** Saurian Belt's raptor: a crescent, horns down the lane. */
-/** The kite — 0249: a diamond ahead, two streamers behind. */
+/**
+ * The kite — 0249's *a diamond ahead, two streamers behind*, drawn as a creature by 0321.
+ *
+ * ── WHAT 0276's KIT LEAVES BEHIND AT SIX AND A HALF UNITS ───────────────────────────────────────
+ *
+ * ⚠️ **THE FISH IS 42 UNITS AND THIS IS 6.5, AND ALMOST NONE OF ITS TECHNIQUE SURVIVES THE TRIP.** On
+ * a 1280×720 screen the kite is 47 CSS pixels wide, so its drawing radius is 20 — and
+ * [0106](../../docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md)'s 2.5px floor is
+ * **0.13 of that radius**. The fish's seams are drawn at 0.022 to 0.034; every one of them is thinner
+ * than a pixel here. Fin rays, a lateral line, a dust of motes and a ridge along the snout are all
+ * things this animal cannot have, and the first draft that tried them would have baked nothing.
+ *
+ * ⚠️ **SO WHAT IS LIFTED IS THE THREE THINGS THAT DO NOT CARE ABOUT SIZE**: a silhouette that is a
+ * CURVE rather than a polygon, a form-shade across the whole body, and a halo behind it. A halo is
+ * translucent, so no floor applies to it at all — it is the one mark from the fish's pass that reads
+ * *better* small, because at 47 pixels it is most of what says *this thing is made of the nebula*.
+ *
+ * ⚠️ **AND THE SHAPE IS A SWEPT DELTA NOW RATHER THAN A LOZENGE.** Ten straight segments baked as a
+ * chunky arrow with a bite out of it; what 0249 asks for is a thing that flies, so the leading edges
+ * rake back to two wing tips and the two streamers trail from the body between them.
+ */
+/*
+  ⚠️ **AND IT STAYS STRAIGHT-EDGED, WHICH IS THE ONE THING 0321 TRIED TO CHANGE AND PUT BACK.** Drawn
+  as a `curveLoop` it came back a handsome thing and a WRONG one: 0314 separates this from the minnow
+  on exactly two channels — *straight-edged and symmetrical about its long axis* against *curved, with
+  a top and a bottom* — and rounding the kite spends one of the two. Photographed, the two then
+  differed only in symmetry, and the pair a player has to separate is *the one coming for me* and *the
+  one going somewhere else*. **The complaint the brief makes is that this is FLAT, and flat is about
+  shading rather than about edges.** So the volume arrives and the angles stay.
+*/
 const KITE_HULL: readonly Pt[] = [
-  [-1, 0],
-  [-0.3, -0.56],
-  [0.3, -0.22],
-  [0.56, -0.5],
-  [1, -0.14],
-  [0.68, 0],
-  [1, 0.14],
-  [0.56, 0.5],
-  [0.3, 0.22],
-  [-0.3, 0.56],
+  [-0.95, 0],
+  [-0.2, -0.52],
+  [0.1, -0.64],
+  [0.2, -0.42],
+  [0.3, -0.2],
+  [0.95, -0.34],
+  [0.6, -0.14],
+  [0.34, -0.05],
+  [0.3, 0],
+  [0.34, 0.05],
+  [0.6, 0.14],
+  [0.95, 0.34],
+  [0.3, 0.2],
+  [0.2, 0.42],
+  [0.1, 0.64],
+  [-0.2, 0.52],
 ];
 
 /** The moon jelly's hull — 0255: a dome across the front, four short tendrils ragged off the back. */
@@ -5851,27 +5886,108 @@ function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): vo
   ], 'moonJelly');
   disc(ctx, f, skin.eye, -0.34, 0.06, 0.1);
 }
-function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The lower half of the diamond in shadow, its leading edge lit, an eye at the point.
-  plate(ctx, f, skin, [
-    [-0.7, 0.06],
-    [0.1, 0.06],
-    [0.24, 0.2],
-    [-0.28, 0.44],
-  ]);
-  lit(ctx, f, skin, [
-    [-0.88, -0.02],
-    [-0.34, -0.44],
-    [-0.26, -0.34],
-    [-0.7, -0.04],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [-0.2, -0.3],
-    [0.2, -0.16],
-    [0.2, 0.16],
-    [-0.2, 0.3],
-  ], 'kite');
-  disc(ctx, f, skin.eye, -0.6, 0, 0.09);
+/**
+ * A soft ring or two behind a small body, in the place's own light — 0321.
+ *
+ * ⚠️ **THE ONE MARK FROM THE FISH'S PASS THAT READS BETTER SMALL, AND IT IS BECAUSE IT IS
+ * TRANSLUCENT.** 0106's floor is about a mark being drawn at all, and it applies to solid ink; a halo
+ * has no width to lose. At 47 CSS pixels it is most of what says *this thing is made of the place*,
+ * where a seam at the same scale would be the outline again.
+ *
+ * ⚠️ **BRIGHTEST RING FIRST, WHICH IS 0277's OWN FINDING AND 0318's** — `destination-over` puts each
+ * new fill further back, so the falloff stacks outward. Two rings and not three: at this size a third
+ * is a pixel wide and buys a bake.
+ *
+ * ⚠️ **AND THE CAP IS ABSOLUTE, on 0320's terms.** The reach is read off the hull the caller hands
+ * over, so a body whose own points go past 1.0 cannot push the outer ring into the next bitmap.
+ */
+function nimbus(ctx: Pen, f: Frame, colour: string, hull: readonly Pt[], smooth = false): void {
+  const skirt = Math.max(...hull.map(([x, y]) => Math.max(Math.abs(x), Math.abs(y))));
+  ctx.globalCompositeOperation = 'destination-over';
+  for (const [gap, alpha] of [
+    [0.05, 0.22],
+    [0.13, 0.09],
+  ] as const) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    const swell = Math.min(1 + gap, 1.13 / skirt);
+    const swollen = hull.map(([x, y]) => [x * swell, y * swell] as const);
+    /*
+      ⚠️ **A HALO TAKES THE SHAPE OF THE BODY IT IS AROUND, INCLUDING ITS CORNERS.** Rounded off an
+      angular hull it reads as a glowing blob the animal is sitting in rather than as the animal's own
+      light, which is the same distinction `nimbus`'s own note makes about why this is worth having at
+      47 pixels at all.
+    */
+    if (smooth) curveLoop(ctx, f, swollen);
+    else trace(ctx, f, swollen);
+    ctx.fill('evenodd');
+    ctx.globalAlpha = 1;
+  }
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/**
+ * The kite's paint — 0321, on 0276's kit and cut to what survives at 47 CSS pixels.
+ *
+ * ⚠️ **FOUR MARKS AND NOT FOURTEEN.** The fish carries thirty; this carries a halo, a form-shade, one
+ * wash a side under each wing, the place's motif and an eye. Every one of them is either translucent
+ * or wider than 0.13 of the drawing radius, which is where a solid mark on THIS body stops being
+ * drawn at all — and the arithmetic is in `KITE_HULL`'s own note rather than discovered again here.
+ */
+function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  nimbus(ctx, f, skin.lit, KITE_HULL);
+  // The form-shade: lit along one edge, shadowed at the other, across the whole animal. It is what
+  // turns a cut-out into a body, and it is the first mark the serpent's and the fish's paint both make.
+  shaded(ctx, f, [0, -0.64], [0, 0.64], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), KITE_HULL, 1, false);
+  for (const side of [-1, 1]) {
+    // Each wing darkened toward its trailing edge, so it reads as a membrane rather than as more body.
+    shaded(
+      ctx,
+      f,
+      [-0.5, -0.1 * side],
+      [0.14, -0.6 * side],
+      rgba(skin.plate, 0.08),
+      rgba(skin.plate, 0.6),
+      [
+        [-0.5, 0.14 * side],
+        [-0.16, 0.4 * side],
+        [0.08, 0.5 * side],
+        [0.16, 0.34 * side],
+        [0.2, 0.18 * side],
+      ],
+      1,
+      false,
+    );
+  }
+  /*
+    ⚠️ **THE PLACE'S MOTIF IS OFF THIS BODY, AND THE ARITHMETIC IS WHY RATHER THAN THE TASTE.** `motif`
+    scatters on a fixed 0.24 grid and keeps only a mark whose whole 0.09 square fits, so on a hull this
+    small it survives **exactly one cell** — and 0.09 of a 19.7px radius is a 3.5px disc, which is the
+    size of this animal's EYE. Photographed twice, once with the belly across the body and once moved
+    aft: both times the kite came back reading as a thing with two eyes. One speck the size of an eye
+    is worse than no speck.
+
+    ⚠️ **AND WHAT REPLACES IT IS THE SAME INK DOING A JOB THIS SIZE CAN CARRY** — the leading edge lit,
+    a mark 0.13 wide because that is where 0106's floor sits here. The place is already on this animal
+    in its hull, plate and lit colours ([0228](../../docs/decisions/0228-an-enemy-wears-its-place.md));
+    the motif was a fourth channel, and it is the one that does not survive the scale.
+  */
+  for (const side of [-1, 1]) {
+    seam(ctx, f, rgba(skin.lit, 0.85), 0.13, [
+      [-0.58, 0.17 * side],
+      [-0.42, 0.28 * side],
+      [-0.27, 0.39 * side],
+    ]);
+  }
+  /*
+    ⚠️ **0.115 IS A FLOOR AND NOT A TASTE, AND `eye`'s PUPIL IS WHAT SETS IT.** A pupil is 0.62 of its
+    eye, so on a body whose drawing radius is 19.7 CSS pixels an eye smaller than **0.102** has a pupil
+    under 0106's 2.5px and is drawn as a plain dark disc with nothing in it. Written at 0.1 first, and
+    `tests/accents.test.ts` reported 2.44px — six hundredths of a pixel, which is the whole of the
+    difference between a creature that is looking at you and a hole in its face.
+  */
+  eye(ctx, f, skin, -0.66, 0, 0.115);
 }
 
 /*
@@ -5882,8 +5998,19 @@ function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   diamond with two streamers; this is a spindle with a notch in its back end. The pair the player
   actually has to separate is *the one coming for me* and *the one going somewhere else*, so the
   silhouettes are deliberately not variations on each other — one is straight-edged and symmetrical
-  about its long axis, the other is curved and has a top and a bottom. `tests/legibility.test.ts`
-  holds the distance between every pair of hulls in this game.
+  about its long axis, the other is curved and has a top and a bottom.
+
+  ⚠️ **AND THAT SEPARATION IS AUTHORED AND UNHELD, WHICH THIS COMMENT USED TO CLAIM OTHERWISE — 0321.**
+  It said *"`tests/legibility.test.ts` holds the distance between every pair of hulls in this game."*
+  It does not, and never did: what exists is *no two BOSS hulls are the same drawing*
+  (`tests/accents.test.ts`) and *every sprite kind appears exactly once on the sheet*. Identity is
+  held; DISTANCE is not held anywhere, for any pair of enemies.
+
+  ⚠️ **AND A DISTANCE GUARD IS REFUSED RATHER THAN OWED.** It would be a loop over a content table
+  comparing every instance of a kind against every other on one channel with a `>` in it, which is
+  exactly the shape [0295](../../docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md) deleted
+  five of at once — it would forbid a legitimately similar pair the day somebody wants one. The claim
+  is a real authored judgement, and naming it as one is the repair.
 
   ⚠️ **THE FINS ARE IN THE OUTLINE AND NOT DRAWN ON IT** — 0276's rule for a creature: exactly one
   stroke is the hull and everything else is paint held inside it, so a fin that reads at this size has
@@ -5907,32 +6034,37 @@ const MINNOW_HULL: readonly Pt[] = [
 ];
 
 /** The minnow's paint — 0314: a lit back, a shadowed belly, embers of the place, and a pale eye. */
-function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The belly in shadow, from behind the head to the tail root — what makes it read as lit from above.
-  plate(ctx, f, skin, [
-    [-0.66, 0.1],
-    [0.1, 0.1],
-    [0.5, 0.16],
-    [0.1, 0.28],
-    [-0.5, 0.3],
-  ]);
-  // The back lit along the same stretch, so the two together are a round body rather than a flat one.
-  lit(ctx, f, skin, [
-    [-0.72, -0.16],
-    [-0.34, -0.3],
-    [-0.04, -0.3],
-    [-0.04, -0.18],
-    [-0.62, -0.08],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [-0.3, -0.22],
-    [0.16, -0.16],
-    [0.16, 0.16],
-    [-0.3, 0.2],
-  ], 'minnow');
-  // Forward of the kite's, because the head is shorter: a fish's eye is in front of its gill, not at
-  // the point of a diamond.
-  disc(ctx, f, skin.eye, -0.68, -0.04, 0.1);
+function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  /*
+    ⚠️ **THE SAME THREE MARKS THE KITE GETS, BECAUSE THE SCALE IS THE SAME PROBLEM — 0321.** This is 5
+    units where the kite is 6.5, so 0106's floor is **0.17 of the drawing radius** here: even wider
+    than the kite's 0.13, and the motif's single surviving speck would be a third of the body. What
+    lifts from the fish's pass is the halo, the form-shade, and nothing else that has a width.
+
+    ⚠️ **AND THE HALO IS SMOOTH HERE AND ANGULAR THERE**, which is the two animals' own difference
+    carried into their light rather than contradicted by it.
+  */
+  nimbus(ctx, f, skin.lit, MINNOW_HULL, true);
+  shaded(ctx, f, [0, -0.6], [0, 0.5], rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), MINNOW_HULL, 1, true);
+  /*
+    The back lit along the shoulder, where the light is: 0.17 wide, which is the floor on this body.
+
+    ⚠️ **IT HUGS THE DORSAL CONTOUR AND STARTS BEHIND THE EYE, WHICH THE FIRST DRAFT DID NEITHER.** Run
+    down the middle of the animal at full weight it photographed as a pale **lozenge lying on** the
+    fish rather than as light on its back — and it reached the eye, so the two read as one mark. A
+    sheen follows the edge it is a sheen on.
+  */
+  seam(ctx, f, rgba(skin.lit, 0.55), 0.17, [
+    [-0.5, -0.16],
+    [-0.3, -0.25],
+    [-0.04, -0.22],
+  ], 1, true);
+  /*
+    ⚠️ **0.14 IS THE EYE'S FLOOR ON A FIVE-UNIT BODY**, by the same arithmetic the kite's 0.115 comes
+    from: a pupil is 0.62 of its eye, the radius here is 15 CSS pixels, and below 0.134 the pupil is
+    thinner than 0106's 2.5px. The old drawing was a flat `disc` at 0.1 with no pupil at all.
+  */
+  eye(ctx, f, skin, -0.68, -0.04, 0.14);
 }
 
 const RAPTOR_HULL: readonly Pt[] = [
@@ -7238,21 +7370,25 @@ export function drawKind(
       return;
     case 'kite':
     case 'kiteHit':
-      // A diamond with a FORKED TAIL — 0249. The drifter is a diamond too, and what tells the two
-      // apart at twenty pixels is the tail: two streamers off the back, which the drifter has not.
+      /*
+        A SWEPT DELTA WITH TWO STREAMERS — 0249, redrawn by 0321. The drifter is a diamond too, and
+        what tells the two apart at twenty pixels is the tail: two ribbons off the back, which the
+        drifter has not. **Straight-edged on purpose** — `KITE_HULL`'s own note has why, and it is one
+        of the two channels 0314 separates this from the minnow on.
+      */
       trace(ctx, f, KITE_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintKite(ctx, f, skin, theme);
+      if (skin !== null) paintKite(ctx, f, skin);
       return;
     case 'minnow':
     case 'minnowHit':
       // A SPINDLE WITH A FORKED TAIL — 0314: a blunt snout, a dorsal fin up and an anal fin down, and
       // a notch in the back end. The kite beside it is a straight-edged diamond with two streamers.
-      trace(ctx, f, MINNOW_HULL);
+      curveLoop(ctx, f, MINNOW_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintMinnow(ctx, f, skin, theme);
+      if (skin !== null) paintMinnow(ctx, f, skin);
       return;
     case 'moonJelly':
     case 'moonJellyHit':
