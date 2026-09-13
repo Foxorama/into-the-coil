@@ -18,6 +18,8 @@ import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
+import { CUES, type CueKind } from '../src/content/cues.ts';
+import { cueSeconds } from '../src/app/sound.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
@@ -2610,6 +2612,73 @@ describe('0322 — the ball is worth shooting', () => {
         firstVoid - lastGlobe,
         `on ${tier} the void arrived ${firstVoid - lastGlobe} steps after the spray's last globe`,
       ).toBeGreaterThanOrEqual(18);
+    }
+  });
+});
+
+/*
+  ── 0323: A SOUND IS MADE FOR THE HUNDREDTH TIME ────────────────────────────────────────────────
+
+  `docs/decisions/0323-a-sound-is-made-for-the-hundredth-time.md`. Reported:
+
+  > *"and the sound is horrible, it's actively unpleasant too listen to for the serpent's attacks."*
+*/
+describe('0323 — a sound is made for the hundredth time', () => {
+  it('THE REPORTED ONE, DRIVEN: no attack of this animal is still sounding when it sounds again', () => {
+    /*
+      ⚠️ **THE ARITHMETIC IS IN `tests/sound.test.ts` AND THIS IS THE FIGHT.** That guard reads the boss
+      table and works out how often each cue comes back; everything in it is a model of `stepBoss` —
+      the tier's cadence, a sweep's hold, a head's gap — and a model of a thing is not the thing
+      (`docs/decisions/0027-measure-the-picture-not-the-model.md`). This flies the real frame at every
+      phase and every tier and measures the gap between two soundings of the same cue as the fight
+      actually emits them.
+
+      ⚠️ **AT EVERY TIER, BECAUSE THE HARD ONES ARE WHERE IT BREAKS.** `fireGap` is 0.5 at `burn`, so a
+      cadence the easiest tier has room for is half as long there — the acid's 0.95 s against 0.60 s was
+      a `burn` measurement and a `legendary` player would never have heard it overlap.
+
+      ⚠️ **MEASURED IN SECONDS OF SILENCE**, which is what the ear is being asked about: a cue that is
+      still ringing when the next one starts is the *"continuous tone with bumps"* 0104 named.
+    */
+    const worst = new Map<string, { gap: number; where: string }>();
+    for (const tier of DIFFICULTY_KINDS) {
+      for (const at of [1, 0.7, 0.5, 0.2]) {
+        const { world, frame } = serpentAt(at, tier);
+        const boss = world.bossPool.at(0);
+        const heard: { kind: string; step: number }[] = [];
+        world.onCue = (kind): void => {
+          // The animal's own attacks: the gun, the hits and the kills are other guards' business.
+          if (kind.startsWith('boss') && kind !== 'bossPhase' && kind !== 'bossDown') heard.push({ kind, step: world.steps });
+        };
+        boss.fireIn = 1;
+        for (let i = 0; i < 20 * STEPS_PER_SECOND; i++) {
+          // Held at this phase, so the fight cannot walk out of the band being measured.
+          boss.health = world.bossFullHealth * at;
+          world.ship.health = world.shipRow.health;
+          world.ship.invulnFor = 2;
+          frame.step();
+        }
+        expect(heard.length, `at ${at} of the bar on ${tier} the serpent made no sound at all`).toBeGreaterThan(2);
+        const last = new Map<string, number>();
+        for (const { kind, step } of heard) {
+          const before = last.get(kind);
+          if (before !== undefined) {
+            const gap = (step - before) / STEPS_PER_SECOND;
+            const seen = worst.get(kind);
+            if (seen === undefined || gap < seen.gap) worst.set(kind, { gap, where: `${tier} at ${at} of the bar` });
+          }
+          last.set(kind, step);
+        }
+      }
+    }
+    expect(worst.size, 'no cue was heard twice, so no recurrence was measured').toBeGreaterThan(2);
+    for (const [kind, { gap, where }] of worst) {
+      const seconds = cueSeconds(CUES[kind as CueKind]);
+      expect(
+        seconds,
+        `${kind} sounds for ${seconds.toFixed(2)}s and came back after ${gap.toFixed(2)}s (${where}), so it was still ` +
+          'ringing when the serpent threw the next one',
+      ).toBeLessThanOrEqual(gap);
     }
   });
 });

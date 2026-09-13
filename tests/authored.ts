@@ -43,6 +43,7 @@ export const AUTHORED_IDS = [
   '0304-pair',
   '0308-loud',
   '0322-volley',
+  '0323-struck',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -187,6 +188,18 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'a boss’s later phase puts at least as much on the screen as the phase before it',
     correctly: 'a phase that asks the player to DESTROY something rather than to dodge a fan — fewer objects, more to do',
     decision: '0322-the-ball-is-worth-shooting',
+  },
+  /*
+    ⚠️ **A TASTE AND NOT A GUARD, BECAUSE SAMENESS IS A CHARACTER SOMETHING COULD WANT.** 0102's finding is
+    real — *"identical repetition at a fixed interval is not LIKE a metronome, it is the definition of
+    one"* — and a boss that IS a machine is a fight somebody is entitled to author, where the sameness is
+    the point. What the claim buys is that the next attack cue is measured against a table where four rows
+    are struck four ways, rather than against nothing.
+  */
+  '0323-struck': {
+    claim: 'every cue a boss throws is struck at more than one weight, so no two soundings are identical',
+    correctly: 'a boss that IS a machine, where a sound repeating itself exactly is the character',
+    decision: '0323-a-sound-is-made-for-the-hundredth-time',
   },
 };
 

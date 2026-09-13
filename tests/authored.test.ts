@@ -345,6 +345,33 @@ function measureVolley(): void {
   observe('0322-volley', eased.length === 0, eased);
 }
 
+/**
+ * 0323 — every cue a boss throws is struck at more than one weight. Advisory.
+ *
+ * ⚠️ **THE SAME WALK `measureLoud` MAKES, PLUS THE FALLBACK IT LEAVES OUT.** A phase or a head that names
+ * no cue still makes a noise — `bossShot`, chosen in `src/app/boss.ts` — and that crash is the most
+ * repeated boss sound in the game, so a claim about repetition that skipped it would skip its own worst
+ * case.
+ */
+function measureStruck(): void {
+  const thrown = new Set<CueKind>();
+  for (const kind of BOSS_KINDS) {
+    const row = BOSSES[kind];
+    for (const phase of row.phases) {
+      if (phase.stance.kind === 'bare') continue;
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind === 'heads') for (const head of attack.heads) thrown.add(head.cue ?? 'bossShot');
+      else thrown.add(phase.cue ?? 'bossShot');
+    }
+  }
+  const same: string[] = [];
+  for (const kind of thrown) {
+    const weights = new Set(CUES[kind].figure ?? [1]);
+    if (weights.size < 2) same.push(`${kind} is struck at one weight, every time`);
+  }
+  observe('0323-struck', same.length === 0 && thrown.size > 0, thrown.size === 0 ? ['no boss throws a cue at all'] : same);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -358,6 +385,7 @@ function measureAll(): void {
   measurePair();
   measureLoud();
   measureVolley();
+  measureStruck();
 }
 
 /**

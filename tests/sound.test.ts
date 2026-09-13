@@ -65,6 +65,8 @@ import {
   type ThemeKind,
 } from '../src/content/themes.ts';
 import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
+import { BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -1429,6 +1431,115 @@ describe('the synthesiser', () => {
     }
   });
 
+  it('0323 — THE REPORTED ONE: and a BOSS’s attack finishes before its own next volley, which nobody had asked', () => {
+    /*
+      ⚠️ **REPORTED**: *"the sound is horrible, it's actively unpleasant too listen to for the serpent's
+      attacks."* — `docs/decisions/0323-a-sound-is-made-for-the-hundredth-time.md`.
+
+      ⚠️ **THE GUARD ABOVE IS THE SAME CLAIM AND IT HAS ONLY EVER BEEN ASKED ABOUT THE PLAYER.** 0104's
+      sentence is *an auto-weapon's cue finishes before its own next volley*, and its reason has nothing
+      to do with whose weapon it is: *"a sound with no gap in it is not a rhythm — it is a continuous tone
+      with bumps."* A boss throws on a cadence the content authors, exactly as the gun does, and
+      `bossAcid` was **0.95 s against 0.60 s** at `burn` — it overlapped itself two and three deep for as
+      long as the phase lasted, and nothing in this file had an opinion.
+
+      ⚠️ **THE GAP IS THE ROUND AND NOT THE CADENCE, WHICH IS THE ONE THING TO GET RIGHT.** A `heads`
+      phase (0254) gives each head one turn per round, so a head's cue recurs every ROUND — measuring it
+      against `fireEvery` alone would refuse the serpent's void for a gap it never has. The round is the
+      sum of the turns, each one the tier's cadence plus whatever that head holds it out by: a `gap`
+      (0322), a `beam`'s warning and hold, or a `sweep`'s own length rounded to the fire grid, which is
+      `src/app/boss.ts`'s arithmetic read off the table rather than a number typed here.
+
+      ⚠️ **AND IT IS DRIVEN AS WELL, in `tests/serpent.test.ts`** — this is the arithmetic over every
+      boss, and the fight is what says the arithmetic describes it
+      (`docs/decisions/0019-a-probe-must-be-seen-to-apply.md`).
+    */
+    /** What a head holds the round out by, beyond the tier's own cadence — `src/app/boss.ts`. */
+    const heldBy = (attack: BossAttack, gap: number): number => {
+      if (attack.kind === 'sweep') {
+        const steps = (attack.globes - 1) * attack.every;
+        return Math.max(gap, Math.ceil(steps / FIRE_GRID) * FIRE_GRID);
+      }
+      if (attack.kind === 'beam') return gap + attack.warning + attack.hold;
+      return gap;
+    };
+    let checked = 0;
+    for (const boss of BOSS_KINDS) {
+      const row = BOSSES[boss];
+      for (const phase of row.phases) {
+        if (phase.stance.kind === 'bare') continue;
+        const attack = phase.attack ?? row.attack;
+        const heads = attack.kind === 'heads' ? attack.heads : null;
+        for (const tier of DIFFICULTY_KINDS) {
+          const gap = fireGapFor(phase.fireEvery, DIFFICULTIES[tier]);
+          // The round, in steps: one turn per head, or the single volley a phase without a round throws.
+          const round = heads
+            ? heads.reduce((sum, head) => sum + heldBy(head.attack, gap) + (head.gap ?? 0), 0)
+            : heldBy(attack, gap);
+          // How often each cue in this phase comes back: a cue two heads share sounds twice a round.
+          const sounds = heads ? heads.map((head) => head.cue ?? 'bossShot') : [phase.cue ?? 'bossShot'];
+          for (const cue of new Set(sounds)) {
+            const turns = sounds.filter((k) => k === cue).length;
+            const seconds = round / turns / STEPS_PER_SECOND;
+            checked++;
+            expect(
+              cueSeconds(CUES[cue as CueKind]),
+              `${boss}'s ${cue} sounds for ${cueSeconds(CUES[cue as CueKind]).toFixed(2)}s and comes back every ` +
+                `${seconds.toFixed(2)}s on ${tier} at ${phase.upTo} of the bar, so the attack never stops making a noise`,
+            ).toBeLessThanOrEqual(seconds);
+          }
+        }
+      }
+    }
+    expect(checked, 'no boss phase was examined, so this measured nothing').toBeGreaterThan(60);
+  });
+
+  it('0323 — the death RESOLVES, which is what a sound heard two hundred times has to do', () => {
+    /*
+      ⚠️ **REPORTED**: *"the player's death needs to sound better, you're going to be hear the death noise a
+      lot so it needs to be a sound you want to hear over and over and over again."*
+
+      ⚠️ **THE ROW USED TO END ON THE SEVENTH ON PURPOSE**, and said so: *"the ear is left waiting for a note
+      that never comes. It is the only cue in the game that ends unfinished."* An unresolved cadence is a
+      question, and a question asked every ninety seconds is nagging —
+      `docs/decisions/0323-a-sound-is-made-for-the-hundredth-time.md`.
+
+      ⚠️ **READ OFF THE ENDPOINTS AND NOT OFF THE SAMPLES, WHICH IS 0099's OWN ANSWER.** That decision
+      tried to measure the pitch a listener names and found two defensible models disagreeing by four
+      semitones on this very cue — *"a fast chirp does not have a pitch in the sense the question
+      assumes."* What both models agree on is that it lies between the endpoints, so the endpoint is the
+      claim that cannot be wrong either way.
+
+      ⚠️ **AND IT IS THE *LONGEST* PITCHED LAYERS THAT HAVE TO LAND**, because those are the ones still
+      sounding when the ear decides whether the thing finished. A short layer inside the figure may go
+      anywhere in the key.
+    */
+    const root = (hz: number): boolean => {
+      // Any octave of the root: 55 Hz doubled or halved, to within a cent.
+      const ratio = Math.log2(hz / MUSIC_ROOT);
+      return Math.abs(ratio - Math.round(ratio)) < 0.0006;
+    };
+    const pitchedIn = (kind: CueKind): CueLayer[] => CUES[kind].layers.filter((layer) => layer.wave !== 'noise');
+    const longest = Math.max(...pitchedIn('death').map((layer) => layer.seconds));
+    const bodies = pitchedIn('death').filter((layer) => layer.seconds >= longest * 0.8);
+    expect(bodies.length, 'the death has no long pitched layer, so there is nothing to land').toBeGreaterThan(0);
+    for (const layer of bodies) {
+      expect(
+        root(layer.to),
+        `the death's ${layer.seconds.toFixed(2)}s ${layer.wave} ends on ${layer.to.toFixed(1)}Hz, which is not the root ` +
+          'in any octave — the fall asks a question and the player hears it every time they die',
+      ).toBe(true);
+    }
+    /*
+      ⚠️ **AND IT STILL FALLS, which is the half a resolution must not cost.** `shield` and `death` are the
+      two halves of the same instant — the ship was hit — and the only thing that separates them is whether
+      the player still has a ship. The rise belongs to the one they survived.
+    */
+    for (const layer of bodies) {
+      expect(layer.to, `the death's ${layer.wave} RISES to its root, which is the shield's gesture`).toBeLessThan(layer.from);
+    }
+  });
+
   it('bakes each cue to the length its row asks for, and none past the ceiling', () => {
     const baked = bakeCues();
     expect(baked.length, 'the bake and the table disagree about how many cues there are').toBe(CUE_KINDS.length);
@@ -1502,10 +1613,17 @@ describe('the speaker decides WHEN, and it is the half that is arithmetic', () =
     expect(variantAt(1, FIRE_GRID * 3), 'a cue with no figure was struck at a weight it never baked').toBe(0);
   });
 
-  it('0104 — and a cue with no figure is untouched, which is eleven of the twelve rows', () => {
+  it('0104 — and a cue with no figure is untouched, which is most of the table', () => {
     /*
       The mechanism is opt-in: a row without one bakes a single buffer at full weight and is asked for
       index 0 for ever, which is byte for byte what every cue did before this decision.
+    */
+    /*
+      ⚠️ **THE TITLE SAID *eleven of the twelve* AND THE TABLE HAS TWENTY-ONE ROWS — 0323.** The
+      assertion never counted: it walks whatever has no figure, which is why it went on holding while
+      the number in its own name rotted. *Most of the table* now — a count in a title is a second
+      description of a list, and `docs/decisions/0029-the-tracked-record-is-the-record.md` is the
+      standing rule about those. 0323 gives three more rows a figure: the serpent's attacks.
     */
     const { out, struck } = recorder();
     const speaker = makeSpeaker(out);

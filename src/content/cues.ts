@@ -1075,25 +1075,58 @@ export const CUES: Record<CueKind, CueRow> = {
     air: 0.22,
     onGrid: true,
     hold: 8,
-    gain: 0.42,
+    /*
+      ⚠️ **0.42 → 0.46, WHICH IS WHAT THE SHORTENING COST PUT BACK — 0323.** A cue an eighth shorter reads
+      quieter on a 400 ms meter whatever its peak does (−33.6 → −35.0 dBFS measured), and 0308's ask was
+      *"sounds for all the attacks need to be massively buffed"* — all of them, including the thirteen
+      bosses that share this one. 0.46 is the level the serpent's three named attacks already sit at, so
+      the four loudest rows still sum to 1.848 and still pass the limiter untouched, which is the ceiling
+      `tests/sound.test.ts` owns.
+    */
+    gain: 0.46,
     glue: 0.14,
+    /*
+      ⚠️ **AND THE MOST REPEATED BOSS SOUND IN THE GAME WAS STRUCK AT ONE WEIGHT — 0323.** Thirteen bosses
+      throw this, a few dozen times each; 0102's finding about the drums is the whole argument — *"identical
+      repetition at a fixed interval is not LIKE a metronome, it is the definition of one"* — and 0104 built
+      the answer and pointed it at the gun. Four weights, and the lightest is four fifths of full.
+    */
+    figure: [1, 0.82, 0.92, 0.78],
     layers: [
       // THE STRIKE — bright, immediate, and wider than an enemy's tick. This is the crash's edge.
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.5, attack: 0.0005, curve: 7, lowFrom: 9000, lowTo: 3200, highFrom: 1100 },
       /*
-        THE RING — six times a `threat`'s length, falling through the band a cymbal occupies. It is
+        THE RING — five times a `threat`'s length, falling through the band a cymbal occupies. It is
         what makes this a crash rather than a shot, and it is affordable because a fight sounds it a
         few dozen times where a level sends `threat` in the hundreds.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.22, attack: 0.002, curve: 2.4, lowFrom: 11000, lowTo: 2600, highFrom: 1800, q: 0.6 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.22, attack: 0.002, curve: 2.6, lowFrom: 11000, lowTo: 2600, highFrom: 1800, q: 0.6 },
       /*
         THE BODY — 0089: a cue without one is a hiss. Two notes of the key a fifth apart, falling to
         the root, so the crash lands in the music rather than across it. `inKey` keeps it consonant;
         the DISSONANCE in a boss fight belongs to the music, where it is a choice rather than a note
         repeated every volley.
       */
-      { wave: 'sine', from: inKey(11), to: inKey(4), seconds: 0.34, gain: 1.1, attack: 0.001, curve: 3, drive: 0.35 },
-      { wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.38, gain: 0.62, attack: 0.002, curve: 2.6, drive: 0.2 },
+      /*
+        ── ⚠️ AND IT IS 0.38 → 0.28 s, WHICH IS THE PRICE OF THE GUARD 0323 ADDS ────────────────────
+
+        ⚠️ **THE PARAGRAPH BELOW THIS ROW SAYS `bossShot` IS UNTOUCHED BECAUSE THE ASK WAS ABOUT ONE
+        ANIMAL, AND THAT IS STILL WHY ITS CHARACTER IS UNTOUCHED.** What moved is its LENGTH, and the
+        reason is not the serpent: driven over the whole table, the crash thirteen bosses share was
+        **0.38 s against a recurrence of 0.30 s** in the medusa's last phase at `burn`, and within a
+        fortieth of a second of overlapping itself on the harrow, the shoal-mother, the axis and the
+        fish. It was the tightest thing in the table and nothing had ever measured it.
+        `docs/decisions/0323-a-sound-is-made-for-the-hundredth-time.md` has the table.
+
+        ⚠️ **A CADENCE CHANGE WAS THE ALTERNATIVE AND IT WOULD HAVE BEEN THE WRONG PAYER.** The medusa's
+        last phase fires every 36 steps because that is the fight somebody authored; slowing a boss
+        nobody has complained about, to fit a sound, is
+        `docs/decisions/0192-a-guard-holds-an-invariant.md`'s *a red guard is never answered by changing
+        the work to suit it* pointed at the content instead of the guard. **The sound is what is too
+        long**, on 0104's own reasoning: a cue that outlasts its own repetition is not punctuation.
+      */
+      { wave: 'sine', from: inKey(11), to: inKey(4), seconds: 0.26, gain: 1.1, attack: 0.001, curve: 3.2, drive: 0.35 },
+      { wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.28, gain: 0.62, attack: 0.002, curve: 2.8, drive: 0.2 },
     ],
   },
   /*
@@ -1158,35 +1191,75 @@ export const CUES: Record<CueKind, CueRow> = {
    * it really good"* — and the honest reading of that was not *more layers*, it was that a grain rate
    * had separated these three from each other while leaving all three DRY.
    *
-   * ⚠️ **THE HIGHPASS RISES, WHICH IS THE ONE IN THE FILE THAT DOES.** 1700 → 3600 over the sizzle's
-   * whole length: the sound thins upward as it dies instead of filling out. Acid stops by drying, and a
-   * tail that gets fuller as it fades is a tail that is being switched off rather than running out.
+   * ── ⚠️ AND IT WAS THE LOUDEST, BRIGHTEST, LONGEST THING IN THE GAME, ARRIVING EVERY SECOND — 0323 ──
+   *
+   * ⚠️ **REPORTED**: *"the sound is horrible, it's actively unpleasant too listen to for the serpent's
+   * attacks."* Four measurements, every one of them off `scripts/weigh-cue.mjs`, and they all point the
+   * same way — `docs/decisions/0323-a-sound-is-made-for-the-hundredth-time.md` has the table:
+   *
+   * - **0.95 s long against a cadence of 0.60 s** at `burn`, so it overlapped ITSELF, two and three
+   *   deep, for as long as the phase lasted. That is 0104's rule — *an auto-weapon's cue finishes before
+   *   its own next volley* — which this repository has held for every gun and every tube since it was
+   *   written and had never once asked about a boss.
+   * - **its loudest band was `hi`, 2–5 kHz**, which is where the ear is most sensitive and where
+   *   listening fatigue lives. 1.00 there against 0.52 in the `mid`.
+   * - **its centroid ROSE 9.4 dB**, 512 Hz to 1509, because of the rising highpass the paragraph above
+   *   was so pleased with. A rising centroid is a whoosh; over a second, repeated, it is a kettle.
+   * - **−25.0 dBFS A-weighted, the loudest cue in the game bar the boss dying** — 0308 set out to make
+   *   it as loud as the things that explode and overshot into the one band that cannot take it.
+   *
+   * ⚠️ **SO WHAT IS KEPT IS THE WET HALF AND WHAT GOES IS THE BRIGHT HALF.** The glop, the bubbles and
+   * the fry are the character the player asked for; the long fine sizzle on top of them was the
+   * fatigue. **0.95 → 0.34 s**, the grain rates down about an octave, the lowpasses closing further, and
+   * the highpass FALLING now rather than rising, so the tail fills out as the thing dries. The centroid
+   * falls where it rose, the weight leaves 2–5 kHz, and it is punctuation instead of a wash.
+   *
+   * ⚠️ **AND IT IS STRUCK BY WHERE IN THE BEAT IT LANDS, LIKE THE GUN AND THE KILL.** 0102's own
+   * finding — *"identical repetition at a fixed interval is not LIKE a metronome, it is the definition of
+   * one"* — and 0104's answer to it. The acid sounds forty-odd times in a fight and was bit-identical
+   * every time; it has a `figure` now, which is four weights and no new mechanism.
+   *
+   * ⚠️ **THE ROOM COMES DOWN WITH THE LENGTH, 0.30 → 0.22.** `air` is a send, so a cue that arrives
+   * every second builds its own wash out of its own tails — which is exactly why the pulse is dry
+   * (0173). A short cue in a smaller room is the version that stays a spit.
    */
   bossAcid: {
     twin: 'threat-appears',
-    air: 0.3,
+    air: 0.22,
     onGrid: true,
     hold: 8,
     gain: 0.46,
+    // The weights, by sixteenth — 0104's mechanism, and 0323 is what made it a boss's business too.
+    figure: [1, 0.78, 0.9, 0.72],
     // Gentle here, unlike the wumms: saturation over a grain rate squashes the grain flat, which is
     // the one thing this cue cannot spare. What it does at 0.16 is glue the glop to the fizz above it.
     glue: 0.16,
     layers: [
       // THE SPIT — the mouth opening. Wet rather than sharp: a slap of white with the top taken off.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.032, gain: 0.5, attack: 0.0006, curve: 9, lowFrom: 9000, lowTo: 3000, highFrom: 1100 },
+      // ⚠️ 0323 took its top down from 9 kHz to 6: it is the front of a wet sound, not a cymbal.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.5, attack: 0.0006, curve: 9, lowFrom: 9000, lowTo: 2600, highFrom: 1000 },
       /*
-        THE SIZZLE — a fine grain falling from 9 kHz to 4.2, decaying slowly over most of a second, and
-        thinning upward as it goes. This is the cue: frying, not hissing, because the grain is audible.
+        THE SIZZLE — a grain falling from 4.2 kHz to 1.6, over a third of a second, filling out as it
+        goes. This is the cue: frying, not hissing, because the grain is audible.
+
+        ⚠️ **IT WAS 8.2 kHz FOR 0.95 s WITH A HIGHPASS THAT ROSE TO 2.7 kHz — 0323.** An octave down, a
+        third of the length, and the highpass falls instead: the fine bright fry ON TOP of the wet part
+        was the whole of *actively unpleasant*, and the wet part is what the word *acid* was asking for.
       */
-      { wave: 'noise', from: 8200, to: 3800, seconds: 0.95, gain: 0.46, attack: 0.004, curve: 1.5, lowFrom: 8600, lowTo: 3600, highFrom: 1500, highTo: 2700, q: 1.1 },
+      { wave: 'noise', from: 4200, to: 1400, seconds: 0.24, gain: 0.44, attack: 0.004, curve: 2.2, lowFrom: 4600, lowTo: 900, highFrom: 700, highTo: 200, q: 1.2 },
       // THE FRY — a coarser grain under it, through a resonant sweep, which is what makes it throaty.
-      { wave: 'noise', from: 2600, to: 1050, seconds: 0.72, gain: 0.44, attack: 0.006, curve: 2, lowFrom: 5200, lowTo: 1500, highFrom: 700, q: 1.9, drive: 0.3 },
+      // ⚠️ 0323: 1.8 kHz rather than 2.6, and over in 0.3 s rather than 0.72.
+      { wave: 'noise', from: 1800, to: 700, seconds: 0.3, gain: 0.44, attack: 0.006, curve: 2.4, lowFrom: 3000, lowTo: 900, highFrom: 400, q: 1.8, drive: 0.3 },
       /*
         THE BUBBLES — a grain coarse enough to hear as separate events: 300 Hz is a grain every three
         milliseconds and 105 is one every ten, so the rate falling across the layer is a boil dying
-        down. At `q` 2.4 each grain RINGS, which is the difference between a bubble and a tick.
+        down. At `q` 2.3 each grain RINGS, which is the difference between a bubble and a tick.
+
+        ⚠️ **UNTOUCHED BY 0323 EXCEPT ITS LENGTH**, because this is the layer the word *acid* is made of:
+        it is coarse, low and liquid, and none of the four measurements that condemned this cue was
+        about it.
       */
-      { wave: 'noise', from: 300, to: 105, seconds: 0.58, gain: 0.36, attack: 0.008, curve: 2.2, lowFrom: 3000, lowTo: 820, highFrom: 230, q: 2.4, drive: 0.34 },
+      { wave: 'noise', from: 300, to: 105, seconds: 0.34, gain: 0.36, attack: 0.008, curve: 2.4, lowFrom: 3000, lowTo: 820, highFrom: 230, q: 2.3, drive: 0.34 },
       /*
         THE GLOP — a resonant sweep from 1.1 kHz down to 200 over an eighth of a second. Nothing else in
         this table sounds like liquid and this is why: the peak travelling down through the band IS the
@@ -1197,9 +1270,10 @@ export const CUES: Record<CueKind, CueRow> = {
       // THE WEIGHT — a fifth of the key falling to the root, and over early: a mouthful leaving, not a
       // bomb landing. The one thing in here 0089's *something low under it* is satisfied by.
       { wave: 'sine', from: inKey(9), to: inKey(2), seconds: 0.24, gain: 0.5, attack: 0.003, curve: 3.8, drive: 0.3 },
-      // AND A SECOND SPATTER, a quarter of a second in. Acid does not arrive once: the irregularity is
-      // the only thing here that cannot be got from an envelope, and one extra layer buys it.
-      { wave: 'noise', from: 0, to: 0, at: 0.26, seconds: 0.035, gain: 0.3, attack: 0.0008, curve: 9, lowFrom: 7000, lowTo: 2200, highFrom: 850 },
+      // AND A SECOND SPATTER. Acid does not arrive once: the irregularity is the only thing here that
+      // cannot be got from an envelope, and one extra layer buys it.
+      // ⚠️ 0323: at 0.18 rather than 0.26, and darker — it has to land inside a cue a third as long.
+      { wave: 'noise', from: 0, to: 0, at: 0.18, seconds: 0.035, gain: 0.3, attack: 0.0008, curve: 9, lowFrom: 4800, lowTo: 1600, highFrom: 600 },
     ],
   },
   /**
@@ -1232,6 +1306,15 @@ export const CUES: Record<CueKind, CueRow> = {
     // Enough to keep the three pulses of one weight and no more. `saturate` is normalised at unity, so
     // past about a third the squash costs more output than the density buys — measured on the first draft.
     glue: 0.26,
+    /*
+      ⚠️ **A FIGURE AND NOTHING ELSE — 0323, AND WHAT IT DOES NOT DO IS THE POINT.** Measured beside the
+      acid, this cue goes the other way on every axis the report is about: 0.96 s inside a round of 1.7 s
+      at the tightest tier, its loudest band the `mid` with **0.099** in the harsh 2–5 kHz, a centroid
+      that **falls 8.4 dB**, and −32.1 dBFS. There is nothing here the measurements condemn, and the
+      player named this one in their own words (*"void null wumm wumms"*) — so it gets the one thing
+      every repeated sound in this game needs and no re-voice at all.
+    */
+    figure: [1, 0.84, 0.92, 0.8],
     layers: [
       /*
         THE KNOCK — a soft dark thud on the front of the first wumm, so it ARRIVES. 700 Hz down to 140
@@ -1307,6 +1390,14 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.46,
     // Least of the three: a bolt is the one that has to keep its edge, and glue is what takes an edge off.
     glue: 0.2,
+    /*
+      ⚠️ **A FIGURE, AND ITS TIMBRE IS UNTOUCHED FOR THE THIRD TIME — 0323.** *"Don't change the lightning
+      attack it's really good"*, said twice, and the measurements agree with the verdict: the biggest fall
+      in the table (**−17.5 dB**, 1850 Hz down to 247), 0.66 s inside a round of 1.7, and −28.4 dBFS. What
+      it had in common with the acid was being the same sound every single time; the weights are the whole
+      change, and the lightest of the four is still four fifths of full.
+    */
+    figure: [1, 0.86, 0.94, 0.82],
     layers: [
       // THE FLASH — the hardest edge in the table: a bolt arrives before the sound of it does.
       { wave: 'noise', from: 0, to: 0, seconds: 0.028, gain: 0.62, attack: 0.0002, curve: 12, lowFrom: 15000, lowTo: 5200, highFrom: 2600 },
@@ -1550,10 +1641,32 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(6), to: inKey(7), seconds: 0.2, gain: 0.5, attack: 0.002, curve: 3.4 },
     ],
   },
-  /** The run lost a ship. Falling, long, and the only cue with nothing above it in the mix. */
+  /**
+   * The run lost a ship. Falling, long, and the only cue with nothing above it in the mix.
+   *
+   * ── ⚠️ AND IT LANDS ON THE ROOT NOW, WHICH REVERSES THE ONE CHOICE 0099 WAS PROUDEST OF — 0323 ─────
+   *
+   * ⚠️ **REPORTED**: *"the player's death needs to sound better, you're going to be hear the death noise
+   * a lot so it needs to be a sound you want to hear over and over and over again."*
+   *
+   * ⚠️ **THE OLD NOTE BELOW THIS ONE SAID *it is the only cue in the game that ends unfinished*, AND
+   * MEANT IT AS THE FEATURE.** A fall from the sixth onto the seventh, so *"the ear is left waiting for a
+   * note that never comes."* That is a fine idea about a sound heard once and a bad one about a sound
+   * heard two hundred times: an unresolved cadence is a question, and a question you are asked every
+   * ninety seconds is the definition of nagging. **The ask is the answer**: what you want to hear again
+   * is a thing that finishes.
+   *
+   * ⚠️ **SO IT FALLS ONTO THE ROOT, AND A BELL IN THE KEY RINGS OVER IT.** F3 → A1 where it was F3 → G1,
+   * the low body onto the octave below the root, and two `tri` voices a minor third apart — the key's own
+   * colour — struck a tenth of a second in and left to ring for most of a second. The impact is still an
+   * impact, the fall is still a fall, and what is different is that the thing stops asking.
+   *
+   * ⚠️ **AND THE NOISE IS DARKER AND SHORTER BY A FIFTH**, because what was making it a crash rather than
+   * a toll was a 1.15 s band of noise over the whole figure. The bell is what the tail is for now.
+   */
   death: {
     twin: 'ship-burst',
-    // It does not resolve (see the layers) and now it does not stop, either.
+    // The biggest room in the table, and the bell 0323 put in it is the layer that needs one.
     air: 0.7,
     // +11.1 dB. The run just lost a ship; the track getting out of the way is the point.
     duck: 0.4,
@@ -1567,18 +1680,38 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.45,
     glue: 0.14,
     layers: [
-      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.3, attack: 0.0006, curve: 6, lowFrom: 5600, lowTo: 1800, highFrom: 600 },
-      { wave: 'noise', from: 0, to: 0, seconds: 1.15, gain: 1, attack: 0.005, curve: 2.3, lowFrom: 1800, lowTo: 340, highFrom: 95, highTo: 40, q: 0.7, drive: 0.45 },
-      { wave: 'noise', from: 0, to: 0, seconds: 1.25, gain: 0.055, attack: 0.03, curve: 2, lowFrom: 5800, highFrom: 1100, highTo: 580 },
+      // THE IMPACT — the ship coming apart. Softer at the top than it was: 4.2 kHz rather than 5.6, because
+      // what has to be sharp here is the timing and not the brightness.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.28, attack: 0.0006, curve: 6, lowFrom: 4200, lowTo: 1400, highFrom: 600 },
+      // THE BODY — 1.15 → 0.95 s and darker, so it is the thud under a figure rather than the figure.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 1, attack: 0.005, curve: 2.5, lowFrom: 1500, lowTo: 260, highFrom: 95, highTo: 40, q: 0.7, drive: 0.45 },
+      // THE DEBRIS — quiet, long, and the only thing here with any top left in it.
+      { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.05, attack: 0.03, curve: 2, lowFrom: 5200, highFrom: 1100, highTo: 580 },
       /*
-        F3 → G1, F2 → G0, F2 → G1. **IT DOES NOT RESOLVE, AND THAT IS THE WHOLE CHOICE.** The blast
-        and the boss both fall onto the root because the player did those; a death falls from the
-        sixth onto the seventh — a step UP in the scale under a falling pitch — so the ear is left
-        waiting for a note that never comes. It is the only cue in the game that ends unfinished.
+        F3 → A1, F2 → A0. **IT RESOLVES, AND THAT IS 0323's WHOLE CHANGE.** It fell onto the seventh —
+        a step UP in the scale under a falling pitch, so the ear was left waiting for a note that never
+        came, which the note above this row argued for at length. *"A sound you want to hear over and
+        over"* is the opposite instruction, and the root is where a thing that finishes lands. The blast
+        and the boss coming apart already do it; what made the death different was an idea about the
+        FIRST hearing.
       */
-      { wave: 'sine', from: inKey(12), to: inKey(-1), seconds: 1.2, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
-      { wave: 'sine', from: inKey(5), to: inKey(-8), seconds: 1.3, gain: 0.8, attack: 0.02, curve: 1.6 },
-      { wave: 'saw', from: inKey(5), to: inKey(-1), seconds: 0.85, gain: 0.26, attack: 0.01, curve: 2.3, lowFrom: 1600, lowTo: 300, highFrom: 70, drive: 0.4 },
+      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.15, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 1.25, gain: 0.8, attack: 0.02, curve: 1.6 },
+      /*
+        THE BELL — two `tri` voices a minor third apart, struck a tenth of a second in and left to ring:
+        A3 sagging a tone to G3, and C4 sagging a semitone to B3. `tri` is the wave this file's own note
+        calls *"the ones that have to be pleasant"*, and it is the only pleasant thing in a cue that is
+        otherwise a hull failing.
+
+        ⚠️ **A MINOR THIRD BECAUSE THE KEY IS MINOR** — the two notes of the scale that say which key this
+        is — and it replaces a saw that was doing the opposite job: 0.85 s of filtered buzz whose only
+        contribution was weight the two sines already had.
+
+        ⚠️ **AND IT SAGS RATHER THAN HOLDING, because a struck body drops in pitch as it decays.** One
+        degree each, which is the smallest interval this table has ever authored bar the shield's own lean.
+      */
+      { wave: 'tri', from: inKey(14), to: inKey(13), at: 0.1, seconds: 0.9, gain: 0.3, attack: 0.004, curve: 1.3 },
+      { wave: 'tri', from: inKey(16), to: inKey(15), at: 0.14, seconds: 0.8, gain: 0.2, attack: 0.005, curve: 1.4 },
     ],
   },
   /**
