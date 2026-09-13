@@ -948,13 +948,14 @@ verdict at all. **What to look at, in the order the fight shows it:**
 | the shoal | is *what is worth my fire* a real choice at 14 health a bite, or a tax? 0314's number is a play number and nothing asserts it |
 | the breaker | is a wave off the edge readable while the shoal is on the screen as well — 0295's *consider what else shares the screen* |
 | the spine | photographed on the sheet, never seen in flight |
+| the fish's own body, since 0318 | same: shot on the sheet at 4×, never seen at 42 units against a starfield in motion. The trails and the halo are the marks a 4× photograph flatters most |
 | the whole fight, since 0317 | it lands 0.17 hits a second on a parked ship where it landed 0.10, and 0.25 against a shuriken where it landed **nothing at all**. Is that pressure or is it noise — and does the empty third phase read as a breath or as a gap? |
 
 ⚠️ **AND HALF OF THE ADDS' ART IS STILL 0249's.** The minnow is new and drawn as the place's own
 creature; the kite is the diamond with two streamers it has always been, and wants the pass the spine
 has just had.
 
-### ⚠️ AND THE ART PASS IS THE ASK AFTER THAT, IN THREE
+### ⚠️ AND THE ART PASS IS THE ASK AFTER THAT, IN FOUR — ONE LANDED, THREE TO GO
 
 Asked, having seen the fight measured: *"Now do a fully great graphics pass over the fish and the shoal
 and kites and get them up to par with the serpent pass in style — we need the boss to change/morph
@@ -962,7 +963,7 @@ between phases."*
 
 | | |
 |---|---|
-| the fish redrawn | `VOLANS_HULL` is still 0264's **eagle** path — 0312 refused to repaint it and said why. It gets drawn on [0276](decisions/0276-the-kit-draws-a-creature.md)'s lifted kit, against [`the-vocabulary-is-the-ceiling`](../reports/the-vocabulary-is-the-ceiling-2026-09-08.md), which is the reference handed over as *"the minimum level of what I'm after"* |
+| ~~the fish redrawn~~ | landed as [0318](decisions/0318-the-fish-is-drawn.md), which discharges 0312's *"the hull is deliberately not repainted"*: a flying fish seen from above on [0276](decisions/0276-the-kit-draws-a-creature.md)'s kit, five trailing filaments a side, and an astral pass of halo, inner cores and motes. **Shot on the sheet and shown before it merged; never seen in flight** |
 | and a `Face` | `wearFace` writes `spriteBase` on ANY boss, not only a chain's head — so the fish can track the player, **gape before a volley** and snap at a ship crossing its centreline, which is 0284's whole tell vocabulary with no new mechanism |
 | it morphs between phases | `look` per phase, as 0305 gives the serpent grown horns and an aura. Costed: the serpent spends 32 baked kinds on its head, and this is the same order |
 | the shoal and the kites | the kite is 0249's flat diamond and the minnow is honest but not serpent-grade |
