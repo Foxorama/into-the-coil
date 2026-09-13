@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'THE WHIP: one volley is a lash',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },",
-      replace: "shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0 } },",
+      // ⚠️ Re-anchored by 0317, which moved the whip to the third phase and widened its arc.
+      find: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },",
+      replace: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0 } },",
     },
   },
   {

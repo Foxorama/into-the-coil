@@ -864,6 +864,14 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     sprite: SPRITE.minnow,
     spriteHit: SPRITE.minnowHit,
     radius: 2.2,
+    /*
+      ⚠️ **STILL ONE, AND 0317 MEASURED WHY RAISING IT WAS THE WRONG ANSWER.** The shoal never arrived:
+      nineteen called in a fight and **not one reached the fish** — because the fish is the one boss
+      that stalks onto the player's lane (0258), so the shoal converged on the fish by converging on a
+      stream of auto-fire that cannot be switched off (0104). Three health changed nothing (0 arrived),
+      and neither did six. What fixed it was **where they come in from**, not how much they take: from
+      the lead edge, behind the fish, 22 of 49 arrive. A number that buys nothing does not get raised.
+    */
     health: 1,
     damage: 1,
     // It is not coming at the player, so its closing is the entry velocity the spawner gives it and

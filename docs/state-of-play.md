@@ -185,6 +185,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the SHOAL comes in while it fights: a phase may carry an `escort` — a horde on a clock of its own, so the boss goes on throwing while the adds arrive, which a summons cannot do; and the minnow swims for the BOSS rather than the player, is eaten when it gets there, and feeds it back health the player has to take off again — clamped so it can never cross a phase boundary** | [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
 | **the fish throws a BREAKER: a wave of spines up off the near edge of the lane over a span centred on the hull, the crest leading and the shoulders trailing — the one attack in the game that does not leave the boss, so the answer to it is along the lane rather than across it; it takes the second whip's place, and a sixth phase was refused by the eight-volley rule** | [0315](decisions/0315-the-fish-throws-a-breaker.md) |
 | **the quill is a SPINE: the fish's own bullet redrawn as a barbed fin-spine, point first, where 0262 drew a feather for an animal that was then an eagle — every number of 0262's kept, and the mark settled by three photographs and the two guards that refused the first two** | [0316](decisions/0316-the-quill-is-a-spine.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md) |
+| **the PRESSURE comes forward: `scripts/weigh-threat.mjs` is the other half of `weigh-boss` — how hard a boss is to STAND IN FRONT OF, and whether its adds ever arrive; a rake may bound its sweep, because `firePhase` accumulated and the fish's fan walked a whole circle every thirteen volleys; a feeding horde comes in from the LEAD, past the boss, because from the sides it swam up the player's own firing line and none of nineteen ever arrived** | [0317](decisions/0317-the-pressure-comes-forward.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md), [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -947,10 +948,29 @@ verdict at all. **What to look at, in the order the fight shows it:**
 | the shoal | is *what is worth my fire* a real choice at 14 health a bite, or a tax? 0314's number is a play number and nothing asserts it |
 | the breaker | is a wave off the edge readable while the shoal is on the screen as well — 0295's *consider what else shares the screen* |
 | the spine | photographed on the sheet, never seen in flight |
+| the whole fight, since 0317 | it lands 0.17 hits a second on a parked ship where it landed 0.10, and 0.25 against a shuriken where it landed **nothing at all**. Is that pressure or is it noise — and does the empty third phase read as a breath or as a gap? |
 
 ⚠️ **AND HALF OF THE ADDS' ART IS STILL 0249's.** The minnow is new and drawn as the place's own
 creature; the kite is the diamond with two streamers it has always been, and wants the pass the spine
 has just had.
+
+### ⚠️ AND THE ART PASS IS THE ASK AFTER THAT, IN THREE
+
+Asked, having seen the fight measured: *"Now do a fully great graphics pass over the fish and the shoal
+and kites and get them up to par with the serpent pass in style — we need the boss to change/morph
+between phases."*
+
+| | |
+|---|---|
+| the fish redrawn | `VOLANS_HULL` is still 0264's **eagle** path — 0312 refused to repaint it and said why. It gets drawn on [0276](decisions/0276-the-kit-draws-a-creature.md)'s lifted kit, against [`the-vocabulary-is-the-ceiling`](../reports/the-vocabulary-is-the-ceiling-2026-09-08.md), which is the reference handed over as *"the minimum level of what I'm after"* |
+| and a `Face` | `wearFace` writes `spriteBase` on ANY boss, not only a chain's head — so the fish can track the player, **gape before a volley** and snap at a ship crossing its centreline, which is 0284's whole tell vocabulary with no new mechanism |
+| it morphs between phases | `look` per phase, as 0305 gives the serpent grown horns and an aura. Costed: the serpent spends 32 baked kinds on its head, and this is the same order |
+| the shoal and the kites | the kite is 0249's flat diamond and the minnow is honest but not serpent-grade |
+
+⚠️ **AND THE ENTRANCE ALREADY DOES WHAT WAS ASKED OF IT** — *"pops out from under the screen and then
+splashes down, full hits like the serpent."* That is 0313, merged: up through the near edge, three
+leaps, back down through it, fully live, and a ship in the way loses a life. What it does NOT do is go
+down through the FAR edge, which is a two-line change if that is what was wanted.
 
 ### ⚠️ AND THE NEXT ONE IS A FORK THAT HAS TO BE PICKED BEFORE IT IS BUILT
 

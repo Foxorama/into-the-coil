@@ -730,7 +730,14 @@ function throwAttack(
         // The turn rides `firePhase` — the field 0110 added for the spinner, and the one description
         // of *where in its turn a body has got to*.
         boss.firePhase += attack.turn;
-        centre = Math.PI + boss.firePhase;
+        /*
+          ⚠️ **BOUNDED BY `arc` WHERE THE ROW AUTHORS ONE — 0317.** `firePhase` accumulates without
+          limit, so unbounded the fan walks a whole circle every `2π / turn` volleys and points down the
+          lane once in thirteen; `src/content/bosses.ts` has what that measured. Within an arc the
+          centre is a sine of the same phase, so it slows at the ends and comes back — which is a rake
+          rather than a sprinkler, and is what 0262 said this attack was.
+        */
+        centre = Math.PI + (attack.arc === undefined ? boss.firePhase : (attack.arc / 2) * Math.sin(boss.firePhase));
       }
       const first = centre - (step * (count - 1)) / 2;
       for (let i = 0; i < count; i++) {

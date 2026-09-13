@@ -17,8 +17,10 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the adds come in WHILE it is throwing',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },",
-      replace: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 0, every: 150 } },",
+      // ⚠️ Re-anchored by 0317: the FIRST escorted phase is the breaker and its shoal now, and the
+      // guard reads the first one — breaking a later escort left it green.
+      find: "escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'lead', standing: 4, every: 150 } },",
+      replace: "escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'lead', standing: 0, every: 150 } },",
     },
   },
   {
@@ -33,8 +35,10 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the adds come in WHILE it is throwing',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort:",
-      replace: "patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 }, escort:",
+      // ⚠️ Re-anchored by 0317 onto the FIRST escorted phase, which the guard reads: it is the breaker
+      // and its shoal now, where it was the rake and its kites.
+      find: "patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort:",
+      replace: "patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6 }, cue: 'bossBreach', escort:",
     },
   },
   {
@@ -101,7 +105,7 @@ export const PROBES = [
     // Every call of the shoal over one edge: the flanking entry 0262 was reported for, undone on the
     // mechanism that inherited it.
     broke: 'the escort’s side never alternating, so the shoal is a file after all',
-    guard: 'and the shoal comes in from the SIDES',
+    guard: 'a horde comes in from the end of the lane the thing it is COMING FOR is at',
     edit: {
       path: 'src/app/frame.ts',
       find: '        w.bossEscortSide = w.bossEscortSide > 0 ? -1 : 1;',

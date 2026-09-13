@@ -73,6 +73,35 @@ and that the rule's own guard cannot see it. Three ways out, none of them taken 
 | teach `dpsAt` the other weapon kinds | makes the guard see what the instrument sees — and would redden it for the fish today, which is the point of doing it |
 | leave it and say so | a stalking boss sits in the player's fire by design (0258), and *the one that comes to you dies faster* is a real answer if it is a chosen one |
 
+## What the table did NOT say, and the question that got it out
+
+⚠️ **ASKED, AND IT WAS THE RIGHT QUESTION**: *"Is the measurement report based on the player sitting in
+one spot and firing straight ahead? If it's a static player position, that possibly highlights the fish
+has no direct forward facing attacks, whereas the other bosses keep blowing up the ship."*
+
+It is, and the ship is unhittable besides — `weigh-boss` says so in its own header and gives the reason
+(*"a death is a respawn and a lost rung, which would measure the pilot"*). So every number above is **how
+fast a boss can die**, and none of them is **how hard it is to stand there.**
+
+`scripts/weigh-threat.mjs` is the other half, built to answer it, and what it found is worse than the
+sixteen seconds — hits a second on a parked ship, pulse then shuriken:
+
+| | | |
+|---|---|---|
+| **volans** | **0.10 / 0.00** | never touched once in a whole fight |
+| quetzal | 0.13 / 0.13 | |
+| gyre | 0.15 / 0.26 | |
+| hydra | 0.43 / 0.40 | |
+| jormungandr | 0.33 / 0.43 | |
+| hoarfrost | **1.11 / 0.97** | eleven times the fish |
+| medusa | 0.11 / 0.74 | |
+
+**And the cause was not the phase table.** It is in
+[0317](../docs/decisions/0317-the-pressure-comes-forward.md): the rake's centre accumulates without
+limit, so the fan walks a whole circle every thirteen volleys and points down the lane once in thirteen.
+That decision has what the fight measures now, and what three tuning passes against the wrong quantity
+cost before the cause was found.
+
 **The play comes first either way.** None of the fish's six items has been played — the report they came
 from is [`the-fish-asked`](the-fish-asked-2026-09-12.md), and `docs/state-of-play.md` lists what to look
 at, in the order the fight shows it.

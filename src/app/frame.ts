@@ -3913,6 +3913,15 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
   if (row === undefined) return;
   const formation = FORMATIONS[formationKind];
   const flanking = from === 'sides';
+  /*
+    ⚠️ **A FLANK IS BESIDE THE SHIP, AND 0317 TRIED PUTTING A FEEDER'S BESIDE THE BOSS AND MEASURED IT
+    NOT WORKING.** A horde coming for the player has to start where the player is (0262); a shoal
+    coming for the boss (0314) arrived beside the ship and swam the length of the lane up its own
+    firing line, and **not one of nineteen survived it**. Flanking them in level with the boss instead
+    changed nothing — two of fifty-six. What fixed it is not where along the lane they enter but which
+    END: `from: 'lead'` puts them past the boss, with its hull between them and a stream of auto-fire
+    that cannot be switched off. So this line is 0262's, unchanged, and the row says which end.
+  */
   const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   const gap = gapAcross(row.radius);

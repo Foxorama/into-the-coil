@@ -222,8 +222,23 @@ export type BossAttack =
    *
    * ⚠️ **The turn is carried on the entity's `firePhase`**, the field 0110 added for the spinner —
    * one description of *where in its turn a body has got to*, used by both.
+   *
+   * ⚠️ **`arc` BOUNDS THE SWEEP, AND WITHOUT IT THE FAN GOES ALL THE WAY ROUND —
+   * `docs/decisions/0317-the-pressure-comes-forward.md`.** `firePhase` accumulates without limit, so a
+   * `turn` of 0.5 walks the centre through a **whole circle every thirteen volleys**: the fan spends
+   * most of its life pointing sideways and backwards, at nothing, and *down the lane* is one volley in
+   * thirteen. Flown, that is why the fish landed **0.02 hits a second** on a parked ship and why
+   * neither more shots nor a tighter spread moved it — density cannot help a fan that is aimed away.
+   *
+   * ⚠️ **PRESENT, THE CENTRE OSCILLATES WITHIN `arc` RADIANS OF THE LANE** — `sin` of the same
+   * `firePhase`, so the sweep slows at the ends and turns round, which is what a rake DOES and what
+   * *"a fan of quills that rakes across the lane"* says in 0262's own prose.
+   *
+   * ⚠️ **ABSENT, IT IS THE FULL ROTATION IT ALWAYS WAS.** The gyre rakes too, and a silent change to
+   * another boss's fight is not this decision's to make — 0282's default shape, and the gyre's own
+   * play-test can ask for it.
    */
-  | { kind: 'rake'; turn: number }
+  | { kind: 'rake'; turn: number; arc?: number }
   /*
     ── `serpentine` WAS HERE — 0290's wave of acid — AND 0304 TOOK IT BACK OUT ────────────────────
 
@@ -2227,7 +2242,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // rakes across the lane — 0262, *"the bullet attacks were boring"* — so what reacts is where
     // it is and not where it points, and the fan is a pattern that sweeps.
     move: { kind: 'stalk', agility: 0.22 },
-    attack: { kind: 'rake', turn: 0.5 },
+    // An arc since 0317: the sweep stays within 1.4 radians of the lane instead of walking round the
+    // circle, so the fan is pointing at the player's half of the world rather than at the wall.
+    attack: { kind: 'rake', turn: 0.5, arc: 1.4 },
     uncoil: null,
     fall: null,
     chill: null,
@@ -2258,9 +2275,23 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // ladder, the speed and the hurtbox are 0262's; what changed is that the animal is not a bird.
     shot: 'spine',
     phases: [
-      // A fan of three spines, raking — 0262; it was one dart aimed at the ship.
-      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.1, reach: 0.9 } },
+      /*
+        ⚠️ **THE OPENING THROWS FROM THE FIRST SECOND — `docs/decisions/0317-the-pressure-comes-forward.md`.**
+        It was three spines every 78 steps, and flown it was the least threatening thing in the game:
+        `scripts/weigh-threat.mjs` put a parked ship at **0.10 hits a second** over the whole fight and
+        at **0.00** against a shuriken — never touched, once, in sixteen seconds. Five spines every 72
+        is 1.7 times the throughput and one more volley in the band, so 0260's eight is safer not
+        tighter.
+      */
+      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      /*
+        ⚠️ **AND THE BREAKER COMES FORWARD TO A QUARTER OF THE BAR, FROM TWO THIRDS — 0317.** It is the
+        one attack that covers a PLACE rather than a direction, so it is the one that makes a player
+        move rather than lean; at a third of health a shuriken had already ended the fight before it
+        was ever thrown. The shoal arrives under it, which is where the fight first asks two questions
+        at once.
+      */
+      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'lead', standing: 4, every: 150 } },
       /*
         ⚠️ **AND FROM HERE IT THROWS *AND* CALLS — 0314.** *"Needs to be attack while the adds are
         coming in."* These two phases used to be `summon` volleys, which is a volley that throws
@@ -2268,24 +2299,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
         send it. The horde is an `escort` now, on a clock of its own, and the phase goes on raking and
         whipping over the top of it.
       */
-      // It rakes while the kites come in: three a call from the sides in turn, diving — 0262's horde
-      // on 0314's clock.
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
       /*
-        ⚠️ **AND AT A THIRD IT THROWS A BREAKER — 0315: THE ONE ATTACK IN THE GAME THAT DOES NOT LEAVE
-        THE HULL.** A wave of spines up off the near edge over 96 units of lane centred on the fish, the
-        crest rising at one and a half times a spine's own speed and the shoulders at two thirds of
-        that — so the answer is to be somewhere along the lane the fish is not, which is the axis every
-        other attack in this table leaves alone. `cue` is the entrance's, because it is the same edge
-        being broken by the same animal.
-
-        ⚠️ **IT REPLACES THE SECOND WHIP RATHER THAN JOINING IT, AND THE ARITHMETIC IS WHY.** A sixth
-        phase was written and measured first: every phase owes eight volleys at max weapons (0260), and
-        six bands of this fight's length do not fit — `tests/level.test.ts` had it at 6.8. What was
-        asked for is *multiple styles of attacks*, and a table with the same whip twice had a slot
-        going spare.
+        ⚠️ **AND THEN THE FIELD EMPTIES, WHICH IS THE POINT OF THIS PHASE — 0317.** Asked for: *"a phase
+        that lasts too long or starts early and goes till end of the fight ends up being boring."* Both
+        escorts used to run from where they started to the end, so from half health on there was always
+        something in the way and the shoal was wallpaper. Here there is nothing on the field but the
+        whip and the fish, and what makes the shoal read when it comes back is that it went away.
       */
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'sides', standing: 4, every: 150 } },
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 1.1, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },
+      // And the kites come back, diving from the sides in turn while it rakes — 0262's horde on 0314's
+      // clock, in the slot the breaker used to have (0317).
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
       /*
         ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
         RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the
@@ -2293,7 +2317,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         The raptor that used to be called here is the Saurian Belt's animal and is not missed: what the
         fish sends now is its own.
       */
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'sides', standing: 5, every: 108 } },
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'lead', standing: 5, every: 108 } },
     ],
   },
   /**
