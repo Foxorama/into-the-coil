@@ -442,6 +442,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   serpentFlare1: 'glass',
   serpentFlare2: 'glass',
   boss9: 'enemy',
+  boss9Up: 'enemy',
+  boss9Down: 'enemy',
+  boss9Gape: 'enemy',
+  boss9Shut: 'enemy',
   boss10: 'enemy',
   boss11: 'enemy',
   boss12: 'enemy',
@@ -684,6 +688,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss8Horn3GapeHit: 'impact',
   boss8Horn3ShutHit: 'impact',
   boss9Hit: 'impact',
+  boss9GapeHit: 'impact',
+  boss9ShutHit: 'impact',
   boss10Hit: 'impact',
   boss11Hit: 'impact',
   boss12Hit: 'impact',
@@ -2995,9 +3001,15 @@ const plate = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void =
 const lit = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.lit, points);
 
 /** An eye: a dark socket and the eye colour inside it, looking down the lane. */
-function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: number): void {
+function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: number, gaze = 0): void {
   disc(ctx, f, shade(skin.plate, -0.5), x, y, radius);
-  disc(ctx, f, skin.eye, x - radius * 0.15, y, radius * 0.62);
+  /*
+    ⚠️ **`gaze` MOVES THE PUPIL WITHIN THE EYE AND NOTHING ELSE** — 0319. It is `-1`, `0` or `1`: which
+    side of its own lane the thing it is watching is on, which is what `wearFace` already commits to a
+    side before it lets the pupil follow. Off by default, on 0282's terms — every eye in the game had
+    one argument list before this and eleven of them still want it.
+  */
+  disc(ctx, f, skin.eye, x - radius * 0.15, y + gaze * radius * 0.34, radius * 0.62);
 }
 
 /*
@@ -4605,11 +4617,18 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
   ⚠️ **THE SILHOUETTE CARRIES THE ANIMAL AND THE PAINT ONLY LIGHTS IT** — 0284. Snout, gill, two
   pectorals, a pelvic pair, a notched peduncle and a deeply forked tail.
 */
-const VOLANS_HULL: readonly Pt[] = [
-  // The snout, doubled so it stays a point, and the head widening back to the gill.
-  [-1, 0],
-  [-1, 0],
-  [-0.93, -0.09],
+/*
+  ⚠️ **EVERYTHING BUT THE SNOUT — 0319, AND THE SPLIT IS WHAT MAKES THREE FACES ONE ANIMAL.** The
+  mouth is the only part of this hull that moves, so it is the only part written three times; the
+  rest is one list and cannot drift between frames. `paintSerpentHead`'s own note says the same about
+  a hinged jaw: *"three authored jaws is three sets of coordinates to keep in step, and the day one of
+  them gains a tooth the other two do not is the day the animal flickers."*
+
+  ⚠️ **IT STARTS AT THE UPPER CHEEK AND ENDS AT THE LOWER ONE**, so a snout listed lower-cheek to
+  upper-cheek closes the loop. `curveLoop` is closed, so where the list begins is nothing the picture
+  can see — and the resting hull below is the same LOOP 0318 shipped, rotated.
+*/
+const VOLANS_BODY: readonly Pt[] = [
   [-0.82, -0.15],
   [-0.66, -0.19],
   // The shoulder, and the pectoral thrown wide and swept back to a point.
@@ -4661,8 +4680,172 @@ const VOLANS_HULL: readonly Pt[] = [
   [-0.52, 0.21],
   [-0.66, 0.19],
   [-0.82, 0.15],
-  [-0.93, 0.09],
 ];
+
+/**
+ * The three mouths, each listed lower cheek → tip → upper cheek — 0319.
+ *
+ * ── A MOUTH SEEN FROM ABOVE OPENS ACROSS, NOT DOWN ──────────────────────────────────────────────
+ *
+ * ⚠️ **THE SERPENT HINGES ITS JAW AND THIS CANNOT, AND THAT IS THE VIEW AND NOT A SHORTCUT.** A
+ * hinge is a thing you see in PROFILE; every hull in this game is drawn from overhead
+ * ([0023](../../docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)), so what a fish's mouth
+ * does on this screen is **two mandibles splaying apart with the throat between them**. Same ladder,
+ * same three silhouettes, a geometry of its own — *"the pattern is what we want, the style is what
+ * makes the different bosses unique"* (0313's own quote).
+ *
+ * ⚠️ **AND THE TWO THROWS GO OPPOSITE WAYS FROM REST, WHICH IS 0285's WHOLE POINT.** `gape` cuts a
+ * notch back into the snout and so takes flesh AWAY; `shut` swells the cheeks and packs flesh ON. A
+ * snap that read as a gape would make the tell a lie, and `tests/volans.test.ts` measures the three
+ * areas rather than trusting these numbers.
+ *
+ * ⚠️ **`rest` IS BYTE-FOR-BYTE WHAT 0318 SHIPPED**, because that silhouette is the one the ask
+ * approved — *"the shape is good"* — and a face set is not a licence to redraw the animal.
+ */
+const VOLANS_JAWS = ['rest', 'gape', 'shut'] as const;
+type VolansJaw = (typeof VOLANS_JAWS)[number];
+
+const VOLANS_SNOUTS: Record<VolansJaw, readonly Pt[]> = {
+  rest: [
+    [-0.93, 0.09],
+    [-1, 0],
+    [-1, 0],
+    [-0.93, -0.09],
+  ],
+  /*
+    Out along the underside of the lower mandible to its point, back along its inside to the throat,
+    across, and out again the other way. Doubled at each point, on `curveLoop`'s own terms.
+  */
+  gape: [
+    [-0.88, 0.15],
+    [-0.99, 0.23],
+    [-0.99, 0.23],
+    [-0.92, 0.1],
+    [-0.85, 0.02],
+    [-0.85, -0.02],
+    [-0.92, -0.1],
+    [-0.99, -0.23],
+    [-0.99, -0.23],
+    [-0.88, -0.15],
+  ],
+  // Jaws meshed: the point is where it was and the cheeks behind it are packed out, which is what a
+  // head that has just bitten down does. It must not LENGTHEN — a snap is not a lunge.
+  shut: [
+    [-0.9, 0.17],
+    [-1, 0],
+    [-1, 0],
+    [-0.9, -0.17],
+  ],
+};
+
+/** The fish's whole outline wearing one of its three mouths. */
+function volansHull(jaw: VolansJaw): readonly Pt[] {
+  return [...VOLANS_BODY, ...VOLANS_SNOUTS[jaw]];
+}
+
+/**
+ * Which mouth and which way the eyes are looking, read off the sprite's own name — 0319.
+ *
+ * ⚠️ **OFF THE NAME, WHICH IS `skullOf`'s ARRANGEMENT AND ITS REASON TOO.** The alternative is eight
+ * arms in the switch that each repeat the same six lines with two literals changed, and the day one
+ * of them gains a mark the others do not is the day the animal flickers — which is exactly what
+ * `paintSerpentHead` says about writing a jaw out three times.
+ */
+function volansFace(kind: SpriteKind): { jaw: VolansJaw; gaze: number } {
+  if (kind === 'boss9Gape' || kind === 'boss9GapeHit') return { jaw: 'gape', gaze: 0 };
+  if (kind === 'boss9Shut' || kind === 'boss9ShutHit') return { jaw: 'shut', gaze: 0 };
+  // Seen from above, the ship being up-lane of the fish puts it to one side across the lane — 0023.
+  if (kind === 'boss9Up') return { jaw: 'rest', gaze: -1 };
+  if (kind === 'boss9Down') return { jaw: 'rest', gaze: 1 };
+  return { jaw: 'rest', gaze: 0 };
+}
+
+/**
+ * The head marks that have to move with the mouth — 0319.
+ *
+ * ⚠️ **THREE OF THEM AND NOT THE WHOLE HEAD.** The gill seam and the eyes sit behind the jaw and do
+ * not move with it; the lit ridge along the snout, the mouth line under it and the throat are on the
+ * jaw itself, so they are authored per face or they slide off it. `tests/accents.test.ts` measures
+ * each one against the face's own outline, which is what caught the first draft of all three.
+ */
+interface VolansSnoutPaint {
+  /** The lit strip along the top of the upper mandible. */
+  ridge: readonly Pt[];
+  /** The mouth line, under it. */
+  mouth: readonly Pt[];
+  /** The dark of the open mouth, behind the notch — `null` on a closed one. */
+  throat: readonly Pt[] | null;
+}
+
+const VOLANS_SNOUT_PAINT: Record<VolansJaw, VolansSnoutPaint> = {
+  rest: {
+    // ⚠️ Narrow, and short of the point: photographed wide once and it read as a BEAK, which is the
+    // one thing this hull spent 0312 and 0316 getting away from.
+    ridge: [
+      [-0.96, -0.025],
+      [-0.9, -0.078],
+      [-0.81, -0.108],
+      [-0.815, -0.072],
+      [-0.895, -0.045],
+    ],
+    mouth: [
+      [-0.97, 0.02],
+      [-0.86, 0.08],
+      [-0.72, 0.11],
+    ],
+    throat: null,
+  },
+  gape: {
+    ridge: [
+      [-0.965, -0.205],
+      [-0.93, -0.18],
+      [-0.89, -0.148],
+      [-0.895, -0.122],
+      [-0.945, -0.172],
+    ],
+    mouth: [
+      [-0.945, 0.172],
+      [-0.92, 0.14],
+      [-0.885, 0.11],
+    ],
+    /*
+      ⚠️ **A TAPERED GULLET AND NOT A BAR, WHICH IS WHAT THE FIRST DRAFT PHOTOGRAPHED AS.** Held at an
+      even width it baked as a dark RECTANGLE parked between the eyes — a hole in the paint rather
+      than a depth in the animal. It has to be widest where the notch leaves off and run out to
+      nothing behind, which is what a throat seen down is.
+
+      ⚠️ **AND IT STARTS BEHIND THE NOTCH'S APEX, BECAUSE IN FRONT OF IT THERE IS NO FISH.** The
+      mandibles meet at 0.85 along; anything drawn forward of that at the centreline is ink in the
+      void, and `tests/accents.test.ts` says so in pixels.
+    */
+    throat: [
+      [-0.835, 0.052],
+      [-0.78, 0.045],
+      [-0.71, 0.026],
+      [-0.65, 0.008],
+      [-0.65, -0.008],
+      [-0.71, -0.026],
+      [-0.78, -0.045],
+      [-0.835, -0.052],
+    ],
+  },
+  shut: {
+    ridge: [
+      [-0.955, -0.03],
+      [-0.885, -0.1],
+      [-0.795, -0.145],
+      [-0.8, -0.105],
+      [-0.88, -0.065],
+    ],
+    mouth: [
+      [-0.96, 0.025],
+      [-0.85, 0.1],
+      [-0.71, 0.135],
+    ],
+    throat: null,
+  },
+};
+
 /**
  * The flying fish's paint — 0318, on 0276's lifted kit and in the serpent's own order.
  *
@@ -4677,7 +4860,9 @@ const VOLANS_HULL: readonly Pt[] = [
  * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` makes about the predecessor's serpent before
  * 0276 lifted the kit.
  */
-function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: VolansJaw, gaze: number): void {
+  const hull = volansHull(jaw);
+  const snout = VOLANS_SNOUT_PAINT[jaw];
   /*
     ⚠️ **THE ASTRAL HALO, BEHIND THE HULL** — asked for: *"give it overall a more nebulous astral
     look."* `destination-over`, **brightest ring first**, so each new fill goes further back and the
@@ -4698,7 +4883,7 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = skin.lit;
     ctx.beginPath();
-    curveLoop(ctx, f, VOLANS_HULL.map(([x, y]) => [x * swell, y * swell] as const));
+    curveLoop(ctx, f, hull.map(([x, y]) => [x * swell, y * swell] as const));
     ctx.fill('evenodd');
     ctx.globalAlpha = 1;
   }
@@ -4716,7 +4901,7 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     edge to the shadowed one over the hull's own path: it is what turns a cut-out into a body, and it
     is the first mark the serpent's own paint makes.
   */
-  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.22), rgba(skin.plate, 0.5), VOLANS_HULL, 1, true);
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.22), rgba(skin.plate, 0.5), hull, 1, true);
   /*
     ⚠️ **AND IT IS LIT FROM INSIDE, WHICH IS THE HALF OF *ASTRAL* A HALO CANNOT DO.** A halo says
     there is light around the animal; a core says the light is coming OUT of it. Over the form-shade
@@ -4910,21 +5095,23 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
     [-0.54, 0],
     [-0.61, 0.165],
   ], 1, true);
-  // ⚠️ Narrow, and short of the point: photographed wide once and it read as a BEAK, which is the one
-  // thing this hull spent 0312 and 0316 getting away from.
-  poly(ctx, f, skin.lit, [
-    [-0.96, -0.025],
-    [-0.9, -0.078],
-    [-0.81, -0.108],
-    [-0.815, -0.072],
-    [-0.895, -0.045],
-  ], 0.7);
-  seam(ctx, f, rgba(skin.plate, 0.5), 0.024, [
-    [-0.97, 0.02],
-    [-0.86, 0.08],
-    [-0.72, 0.11],
-  ], 1, true);
-  for (const side of [-1, 1]) eye(ctx, f, skin, -0.8, 0.095 * side, 0.042);
+  /*
+    ⚠️ **THE THROAT FIRST, BECAUSE AN OPEN MOUTH IS A DARK PLACE AND NOT A GAP IN THE OUTLINE** —
+    0319. The notch is cut OUT of the silhouette, so what shows through it is the starfield; what
+    says *mouth* is the dark immediately behind it, which the two mandibles then frame. The
+    predecessor's own finding, quoted at `paintSerpentHead`: draw the gullet first, or *"the first
+    pass managed to draw a lit mouth nobody could see."*
+  */
+  if (snout.throat !== null) poly(ctx, f, shade(skin.plate, -0.55), snout.throat, 0.85);
+  poly(ctx, f, skin.lit, snout.ridge, 0.7);
+  seam(ctx, f, rgba(skin.plate, 0.5), 0.024, snout.mouth, 1, true);
+  /*
+    ⚠️ **THE PUPIL MOVES AND THE EYE DOES NOT, WHICH IS THE WHOLE OF `up` AND `down`** — 0285, and it
+    is why those two faces share the resting hull's hurt twin: a hurt twin is the silhouette with no
+    paint on it (0035), and the silhouette has not moved. Seen from above, *up-lane* and *down-lane*
+    are ACROSS the sprite, which is the direction `gaze` pushes it.
+  */
+  for (const side of [-1, 1]) eye(ctx, f, skin, -0.8, 0.095 * side, 0.042, gaze);
 }
 
 /*
@@ -6328,20 +6515,34 @@ export function drawKind(
       return;
     case 'boss9':
     case 'boss9Hit':
+    case 'boss9Up':
+    case 'boss9Down':
+    case 'boss9Gape':
+    case 'boss9GapeHit':
+    case 'boss9Shut':
+    case 'boss9ShutHit': {
       /*
-        THE FLYING FISH — 0264's slot, renamed by 0312 and REDRAWN by 0318. Seen from above, as every
-        hull in this game is: a spindle with two enormous pectorals thrown wide and swept back, a
-        pelvic pair, a pinched peduncle and a deeply forked tail — still the widest span in the game.
+        THE FLYING FISH — 0264's slot, renamed by 0312, REDRAWN by 0318 and given faces by 0319. Seen
+        from above, as every hull in this game is: a spindle with two enormous pectorals thrown wide
+        and swept back, a pelvic pair, a pinched peduncle and a deeply forked tail — still the widest
+        span in the game.
 
         The outline is a CURVE, `curveLoop` rather than `trace`, so the snout and the fins are the
         shapes they are rather than the corners their samples would be. The serpent's skull says the
         same thing about itself, and for the same reason.
+
+        ⚠️ **ONE BODY AND THREE MOUTHS, READ OFF THE NAME — the skull's own arrangement.** `boss9`
+        rests; `boss9Up` and `boss9Down` are that silhouette with the pupil swung to the side the ship
+        is on; `boss9Gape` splays the mandibles before a volley leaves; `boss9Shut` packs the cheeks
+        out on a ship crossing in front of it. The mouth is the only part of the hull that moves.
       */
-      curveLoop(ctx, f, VOLANS_HULL);
+      const worn = volansFace(kind);
+      curveLoop(ctx, f, volansHull(worn.jaw));
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintBoss9(ctx, f, skin, theme);
+      if (skin !== null) paintBoss9(ctx, f, skin, theme, worn.jaw, worn.gaze);
       return;
+    }
     case 'boss10':
     case 'boss10Hit':
       // THE PTERODACTYL — 0264: a long beak, a crest swept back, and wings swept to the corners

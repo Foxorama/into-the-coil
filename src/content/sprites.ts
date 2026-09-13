@@ -326,6 +326,32 @@ export const SPRITE_KINDS = [
   'serpentFlare2',
   'boss9',
   'boss9Hit',
+  /*
+    ── AND THE FISH HAS FACES TOO, WHICH IS 0285 ON A SECOND ANIMAL — 0319 ───────────────────────
+
+    `docs/decisions/0319-the-fish-has-a-face.md`. The same six frames the serpent wears, on the boss
+    that **stalks onto the player's lane** ([0258](../../docs/decisions/0258-one-pilot-a-level.md)) and
+    is therefore the one the player spends the fight looking straight at.
+
+    ⚠️ **IT IS THE SAME MECHANISM AND NOT A SECOND ONE**, which is the whole test 0285's type had to
+    pass: `wearFace` already runs for every boss and returns early on a `null` face, so what this costs
+    is six bakes and a row field. [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md):
+    a feature may land on one boss and not the others, and the day a second creature could not wear
+    this is the day `Face` was the wrong type.
+
+    ⚠️ **AND THE MOUTH IS SEEN FROM ABOVE, SO IT OPENS ACROSS AND NOT DOWN.** A serpent's jaw swings
+    about a hinge because the player is looking at its profile; every hull in this game is drawn from
+    overhead ([0023](../../docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)), so a fish's mouth
+    is two mandibles splaying apart with the throat between them. Same ladder, same three silhouettes,
+    a different geometry — which is what *the pattern is what we want, the style is what makes the
+    different bosses unique* asked for.
+  */
+  'boss9Up',
+  'boss9Down',
+  'boss9Gape',
+  'boss9GapeHit',
+  'boss9Shut',
+  'boss9ShutHit',
   'boss10',
   'boss10Hit',
   'boss11',
@@ -1077,6 +1103,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
 
   boss9: 42,
   boss9Hit: 42,
+  // Every face is the same animal in the same box — 0319. A head that changed size when the mouth
+  // moved would read as the fish lunging, which is a thing it does not do.
+  boss9Up: 42,
+  boss9Down: 42,
+  boss9Gape: 42,
+  boss9GapeHit: 42,
+  boss9Shut: 42,
+  boss9ShutHit: 42,
   boss10: 44,
   boss10Hit: 44,
   boss11: 36,
