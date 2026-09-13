@@ -47,7 +47,7 @@ import {
   type Collected,
   type Deaths,
 } from '../sim/collide.ts';
-import { type Body, type Entity, reset, stepEntities } from '../sim/entity.ts';
+import { type Body, type Entity, reset, stepEntities, turnFor } from '../sim/entity.ts';
 // `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
 // other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
@@ -6104,17 +6104,6 @@ function layChain(w: World): void {
     }
     w.bossSettle = false;
   }
-}
-
-/**
- * The turn that points a bitmap baked facing down the lane along `heading` — 0306, in `(−π, π]`.
- *
- * Every hull is baked facing `π`, so the turn is the heading less that, folded back into one turn
- * either side so the painter's short-way-round interpolation starts from the number it expects.
- */
-function turnFor(heading: number): number {
-  const turn = heading - Math.PI;
-  return turn <= -Math.PI ? turn + TAU : turn > Math.PI ? turn - TAU : turn;
 }
 
 /**

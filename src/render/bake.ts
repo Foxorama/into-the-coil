@@ -497,8 +497,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   rock: 'fire',
   // The frost ship's shard in its own ink — 0253: the one cold thing that hurts.
   frost: 'frost',
-  // The fish's quill in the enemy's ink — 0262: a feather is told from a slab by its shape.
-  quill: 'enemy',
+  // The fish's spine in the enemy's ink — 0262: a spine is told from a slab by its shape.
+  spine: 'enemy',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -6457,47 +6457,67 @@ export function drawKind(
       disc(ctx, f, palette.hazard, -0.06, -0.04, 0.28);
       return;
     }
-    case 'quill':
+    case 'spine':
       /*
-        A FEATHER — 0262: *"the bullets need to be feathered quills."* The shaft points the way it
-        flies, and the vane behind it is barbed — a notched edge either side, widest near the back
-        and cut square at the tail. Not the lance's dash (a bar with no vane), not the acid's drop
-        (round at the back), not the missile's dart (pointed both ends). In the enemy's ink, with
-        the shaft darker down the middle so the barbs read as barbs at thirty pixels.
+        A BARBED FIN-SPINE — 0316. It was a FEATHER, which 0262 asked for in those words and which was
+        true of an eagle; this is the same bullet on the same rung of the ladder, drawn as the thing a
+        fish actually throws.
+
+        ⚠️ **WHAT SEPARATES IT FROM THE FEATHER IT REPLACES IS THE BARBS, AND THEY RAKE BACKWARDS.** A
+        vane is a fine even comb down both sides, widest near the tail; this is **three barbs a side,
+        each bigger than the one in front of it**, off a needle point — so the silhouette reads as a
+        thing that goes in and does not come out. Still not the lance's dash (a bar with no edge), not
+        the acid's drop (round at the back), not the missile's dart (pointed both ends).
+
+        ⚠️ **THE POINT LEADS, WHICH THE SHAFT DID TOO.** Both are drawn along their own travel, and that
+        half of 0262 is what made the bullet legible in the first place — it is kept on purpose.
       */
       trace(ctx, f, [
         [1, 0],
-        [0.3, -0.06],
-        [0.2, -0.3],
-        [0.05, -0.16],
-        [-0.1, -0.42],
-        [-0.25, -0.26],
-        [-0.4, -0.5],
-        [-0.55, -0.32],
-        [-0.7, -0.52],
-        [-0.85, -0.3],
-        [-1, -0.14],
-        [-1, 0.14],
-        [-0.85, 0.3],
-        [-0.7, 0.52],
-        [-0.55, 0.32],
-        [-0.4, 0.5],
-        [-0.25, 0.26],
-        [-0.1, 0.42],
-        [0.05, 0.16],
-        [0.2, 0.3],
-        [0.3, 0.06],
+        [0.4, -0.07],
+        [0.24, -0.32],
+        [0.1, -0.12],
+        [-0.1, -0.15],
+        [-0.26, -0.46],
+        [-0.4, -0.17],
+        [-0.56, -0.2],
+        [-0.72, -0.58],
+        [-0.84, -0.22],
+        [-1, -0.2],
+        [-1, 0.2],
+        [-0.84, 0.22],
+        [-0.72, 0.58],
+        [-0.56, 0.2],
+        [-0.4, 0.17],
+        [-0.26, 0.46],
+        [-0.1, 0.15],
+        [0.1, 0.12],
+        [0.24, 0.32],
+        [0.4, 0.07],
       ]);
       seal(ctx);
-      // The shaft, darker, from the tail to where the vane narrows to the tip — inside the hull
-      // by a margin, and wide enough to be a mark at thirty pixels (tests/accents.test.ts).
+      /*
+        The core, darker, from the base to where the needle narrows — inside the hull by a margin, and
+        wide enough to be a mark at thirty pixels (`tests/accents.test.ts` holds the containment).
+
+        ⚠️ **SHORTER THAN 0262's SHAFT RATHER THAN THINNER, AND TWO GUARDS DECIDED THAT BETWEEN THEM.**
+        The feather's vane was wide, so a shaft of 0.12 read as a stripe inside it; this hull is a
+        needle, and the same rectangle filled it edge to edge — forty-two pixels of bright bar with
+        three pairs of spikes off it, which is a **fish bone** and not a spine. Thinning it to 0.08
+        fixed the picture and `tests/accents.test.ts` refused it at **2.03 px against a floor of 2.5**:
+        a mark too thin to be drawn is not a mark. So it keeps its width and gives up its front half
+        instead — it now runs only where the hull is thick, and the needle is bare ink to the point.
+      */
       poly(ctx, f, shade(ink, 0.55), [
-        [-0.9, -0.12],
-        [0.25, -0.12],
-        [0.25, 0.12],
-        [-0.9, 0.12],
+        [-0.86, -0.105],
+        [-0.06, -0.105],
+        [-0.06, 0.105],
+        [-0.86, 0.105],
       ]);
-      glow(ctx, f, ink, 0.5, 0, 0.5, 0.35);
+      // ⚠️ On the BODY rather than ahead of the point, where 0262 put it: a feather's glow sat over the
+      // wide end of its vane, and the same offset on a needle is a halo round the tip that fills the
+      // taper back in. Photographed twice.
+      glow(ctx, f, ink, -0.1, 0, 0.5, 0.35);
       return;
     case 'kite':
     case 'kiteHit':

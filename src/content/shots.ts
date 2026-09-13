@@ -42,7 +42,7 @@ export type ShotKind =
   | 'flame'
   | 'rock'
   | 'frost'
-  | 'quill'
+  | 'spine'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -232,7 +232,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'flame',
   'rock',
   'frost',
-  'quill',
+  'spine',
   'missile',
   'seeker',
   'bomb',
@@ -408,7 +408,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * The serpent's void blast — 0248, and the hydra's last head's. Quicker than acid, worth two
    * hits, and in the `void` ink; the black heart's rain is made of these.
    */
-  // 1.3 since 0262 — the ring is drawn a size bigger to make room for the quill on the ladder, and the
+  // 1.3 since 0262 — the ring is drawn a size bigger to make room for the spine on the ladder, and the
   // hurtbox keeps to the band `tests/combat.test.ts` holds.
   /*
     ⚠️ **1.3 → 2.2, AND IT EATS — 0291.** *"The void blasts should be bigger and a bit random and
@@ -469,13 +469,21 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   droplet: { sprite: SPRITE.droplet, spriteHit: SPRITE.droplet, radius: 1.1, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   /**
-   * The fish's quill — `docs/decisions/0262-the-eagle-throws-quills.md`: *"the bullets need to be
-   * feathered quills."* A feather, shaft first, in the enemy's ink — the fish's own bullet where
-   * it threw the lancer's lance. On the ladder between the slab and the void ring: bigger than the
-   * flak and slower, smaller than the ring and quicker, which is 0098's rule for what a new bullet
-   * costs. The hurtbox is 0.26 of the drawing.
+   * The fish's spine — `docs/decisions/0316-the-quill-is-a-spine.md`. A barbed fin-spine, point first,
+   * in the enemy's ink: the flying fish's own bullet where it threw the lancer's lance.
+   *
+   * ⚠️ **IT WAS A FEATHER — `docs/decisions/0262-the-eagle-throws-quills.md`, asked for in those words:
+   * *"the bullets need to be feathered quills."*** That was true of an eagle, and
+   * [0312](../../docs/decisions/0312-the-eagle-was-always-a-fish.md) is the animal not being one any
+   * more. The ask this answers is the next line of the same brief — *"a high class good quality art and
+   * assets for the attacks"* — and 0312 named this as the one place it deliberately left the eagle in,
+   * because renaming a drawing in the PR before the one that redraws it is churn.
+   *
+   * ⚠️ **EVERY NUMBER IS 0262's AND UNTOUCHED.** On the ladder between the slab and the void ring:
+   * bigger than the flak and slower, smaller than the ring and quicker, which is 0098's rule for what a
+   * new bullet costs, and the hurtbox is 0.26 of the drawing. What changed is the shape.
    */
-  quill: { sprite: SPRITE.quill, spriteHit: SPRITE.quill, radius: 1.1, health: 1, damage: 1, speed: 0.95, fission: SPENT_BY_ARRIVING },
+  spine: { sprite: SPRITE.spine, spriteHit: SPRITE.spine, radius: 1.1, health: 1, damage: 1, speed: 0.95, fission: SPENT_BY_ARRIVING },
   /**
    * The fish's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
    * The smallest and quickest bullet in the game, on 0098's rule the other way round from the

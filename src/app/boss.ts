@@ -21,7 +21,7 @@
  */
 
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { type Entity, reset } from '../sim/entity.ts';
+import { type Entity, reset, turnFor } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossAttack, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
@@ -862,6 +862,16 @@ function throwAttack(
         shot.velAlong = scrollPerStep;
         shot.velAcross = -rise;
         shot.lifeFor = Math.ceil((ACROSS_SPAN + 2 * bullet.radius) / rise) + 1;
+        /*
+          ⚠️ **AND IT POINTS THE WAY IT FLIES — 0316, WHICH IS 0262's OWN CLAIM ABOUT THIS DRAWING.**
+          *"The shaft points the way it flies"* is why a quill was legible and why a spine is; every
+          bullet in this game is baked facing down the lane and every fan's angles are small enough
+          that it holds. **A breaker is the first attack that sends one sideways** — ninety degrees off
+          — and the first photograph of it was a rank of little bars sliding up the screen edge-on.
+          `blit` has taken an angle since 0306.
+        */
+        shot.turn = turnFor(Math.atan2(-rise, 0));
+        shot.prevTurn = shot.turn;
       }
       break;
     }
