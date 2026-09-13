@@ -1274,3 +1274,80 @@ describe('0320 — the fish kindles', () => {
     expect(back(grown), 'the kindled fish reaches no further aft than the calm one').toBeGreaterThan(back(calm));
   });
 });
+
+/**
+ * ── THE SHOAL IS DRAWN — 0321 ──────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0321-the-shoal-is-drawn.md`. The last of the four items in *"a fully great graphics
+ * pass over the fish and the shoal and kites."*
+ *
+ * ⚠️ **AND THE INTERESTING PART IS WHAT DOES NOT SURVIVE THE SCALE.** The fish is 42 units and these
+ * are 6.5 and 5, so 0106's 2.5px floor is 0.13 and 0.17 of their drawing radii where it is 0.02 of
+ * the fish's. Fin rays, a lateral line, a dust of motes: none of them can exist here. What lifts is
+ * the halo — translucent, so no floor applies — and the form-shade.
+ */
+describe('0321 — the shoal is drawn', () => {
+  /** One body's hull pass and everything painted over it, at the size it is drawn on a 1280×720 screen. */
+  function drawn(kind: 'kite' | 'minnow'): ReturnType<typeof tracingPen>['trace'] {
+    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'nebula');
+    return trace;
+  }
+
+  it('THE ASKED-FOR ONE: neither add is FLAT — each has a light behind it and a shade across it', () => {
+    /*
+      ⚠️ **THE BRIEF'S WORD IS *FLAT*, AND FLAT IS A CLAIM ABOUT SHADING.** What made the kite flat was
+      not its outline: it was four marks in four flat tones on a cut-out. The two things from the
+      fish's pass that survive at a twentieth of its size are a halo BEHIND the hull and a gradient
+      ACROSS it — one gives the animal a place to be and the other gives it a back and a belly, and
+      neither has a width that 0106 can take away.
+    */
+    for (const kind of ['kite', 'minnow'] as const) {
+      const { passes } = drawn(kind);
+      const behind = passes.filter((p) => p.composite === 'destination-over');
+      expect(behind.length, `the ${kind} has nothing behind its own hull, so it is a cut-out on the void`).toBeGreaterThanOrEqual(2);
+      // Fainter and wider as it goes back, which is the halo's own claim on the fish — 0277, 0318.
+      expect(behind[1]!.alpha, `the ${kind}'s outer ring is not fainter than its inner one`).toBeLessThan(behind[0]!.alpha);
+      const shade = passes.filter((p, i) => i > 0 && p.colour === 'gradient' && p.composite === 'source-over');
+      expect(shade.length, `the ${kind} carries no gradient at all, so every tone on it is flat`).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('and the two are not drawn the SAME way: one outline is a polygon and the other is a curve', () => {
+    /*
+      ⚠️ **THIS IS A CLAIM ABOUT THE PAIR AND NOT ABOUT EITHER ONE, WHICH IS WHAT MAKES IT AN
+      INVARIANT.** 0314 separates these two on exactly two channels — *straight-edged and symmetrical
+      about its long axis* against *curved, with a top and a bottom* — because the pair a player has
+      to tell apart at twenty pixels is *the one coming for me* and *the one going somewhere else*.
+      0321 drew the kite as a curve, photographed it, and put it back: handsome, and it spent one of
+      the two channels. Which of them is the polygon is a drawing decision; that they are not BOTH is
+      not.
+
+      ⚠️ **MEASURED AS SAMPLES PER CORNER, ON THE TRACE OF THE REAL DRAWING.** A polygon is its own
+      corners and needs no samples between them; a curve is nearly all samples. It is the picture and
+      not the code: what a player sees at this size is whether the edges are straight.
+    */
+    const detail = (kind: 'kite' | 'minnow'): number => {
+      const hull = drawn(kind).passes[0]!.subpaths[0]!;
+      let corners = 0;
+      for (let i = 0; i < hull.length; i++) {
+        const [ax, ay] = hull[(i - 1 + hull.length) % hull.length]!;
+        const [bx, by] = hull[i]!;
+        const [cx, cy] = hull[(i + 1) % hull.length]!;
+        let turn = Math.abs(Math.atan2(cy - by, cx - bx) - Math.atan2(by - ay, bx - ax));
+        if (turn > Math.PI) turn = Math.PI * 2 - turn;
+        if (turn > 0.25) corners += 1;
+      }
+      return hull.length / Math.max(1, corners);
+    };
+    const kite = detail('kite');
+    const minnow = detail('minnow');
+    const apart = Math.max(kite, minnow) / Math.min(kite, minnow);
+    expect(
+      apart,
+      `the kite's outline carries ${kite.toFixed(1)} samples a corner and the minnow's ${minnow.toFixed(1)} — ` +
+        'two hulls drawn the same way are separated only by their outlines, and 0314 spends both channels on purpose',
+    ).toBeGreaterThanOrEqual(8);
+  });
+});

@@ -951,13 +951,10 @@ verdict at all. **What to look at, in the order the fight shows it:**
 | the fish's own body, since 0318 | same: shot on the sheet at 4×, never seen at 42 units against a starfield in motion. The trails and the halo are the marks a 4× photograph flatters most |
 | its face, since 0319 | **the pupil travels 1.8 CSS pixels**, which is as far as an eye 5.3px across allows — does the fish read as watching you, or is that two pixels nobody sees? And does a 20-step gape land as a tell at speed? 0319 costs both and settles neither |
 | the fire, since 0320 | a 61-unit ember behind a 42-unit fish, on a starfield, at the phase that also has kites AND a shoal on the field — 0295's *consider what else shares the screen*, and the one question a sprite sheet cannot answer |
+| the adds, since 0321 | both have a halo now, and a halo is the one mark that gets BIGGER relative to its body as the body shrinks. Do two dozen on the screen at once read as a shoal or as a haze? The last phase has kites and minnows together |
 | the whole fight, since 0317 | it lands 0.17 hits a second on a parked ship where it landed 0.10, and 0.25 against a shuriken where it landed **nothing at all**. Is that pressure or is it noise — and does the empty third phase read as a breath or as a gap? |
 
-⚠️ **AND HALF OF THE ADDS' ART IS STILL 0249's.** The minnow is new and drawn as the place's own
-creature; the kite is the diamond with two streamers it has always been, and wants the pass the spine
-has just had.
-
-### ⚠️ AND THE ART PASS IS THE ASK AFTER THAT, IN FOUR — THREE LANDED, ONE TO GO
+### ⚠️ THE ART PASS IS DONE, IN FOUR — AND NOT ONE OF THEM HAS BEEN PLAYED
 
 Asked, having seen the fight measured: *"Now do a fully great graphics pass over the fish and the shoal
 and kites and get them up to par with the serpent pass in style — we need the boss to change/morph
@@ -968,7 +965,7 @@ between phases."*
 | ~~the fish redrawn~~ | landed as [0318](decisions/0318-the-fish-is-drawn.md), which discharges 0312's *"the hull is deliberately not repainted"*: a flying fish seen from above on [0276](decisions/0276-the-kit-draws-a-creature.md)'s kit, five trailing filaments a side, and an astral pass of halo, inner cores and motes. **Shot on the sheet and shown before it merged; never seen in flight** |
 | ~~and a `Face`~~ | landed as [0319](decisions/0319-the-fish-has-a-face.md): six bakes, one row field and **no change to `src/app/frame.ts` at all**. The mouth opens ACROSS rather than down, because every hull here is drawn from overhead. **Shot on the sheet; never played** |
 | ~~it morphs between phases~~ | landed as [0320](decisions/0320-the-fish-kindles.md): it **kindles**. Two stages — an ember aura at the rung where its shot becomes flame, then fins risen and the fire bigger at the last sixth. The first stage costs no new drawing of the animal at all, because a `Look` may name the row's own face. **Shot on the sheet; never played** |
-| the shoal and the kites | the kite is 0249's flat diamond and the minnow is honest but not serpent-grade |
+| ~~the shoal and the kites~~ | landed as [0321](decisions/0321-the-shoal-is-drawn.md). **The interesting half is what does not survive the scale**: at 6.5 and 5 units 0106's floor is 0.13 and 0.17 of the drawing radius, so rays, lines and motes cannot exist — what lifts is the halo and the form-shade. The kite was drawn as a curve, photographed and put back, because it spends one of the two channels 0314 separates the pair on. **Shot on the sheet; never played** |
 
 ⚠️ **AND THE ENTRANCE ALREADY DOES WHAT WAS ASKED OF IT** — *"pops out from under the screen and then
 splashes down, full hits like the serpent."* That is 0313, merged: up through the near edge, three
