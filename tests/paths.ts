@@ -57,6 +57,17 @@ export interface Pass {
    * paint on the hull and only has to stay on it. Telling the two apart is one string.
    */
   readonly colour: string;
+  /**
+   * The `globalCompositeOperation` in force when it was filled.
+   *
+   * ⚠️ **ADDED FOR 0318, AND IT IS THE SAME EXTENSION 0276 MADE FOR A STROKE** — `Stroke` below says
+   * why at length: a claim the harness cannot see picks the drawing technique, which is
+   * [0192](../docs/decisions/0192-a-guard-holds-an-invariant.md) read backwards. *A halo is BEHIND the
+   * animal* is not a shape, a size or an alpha; it is one string, and without it here the one thing
+   * [0277](../docs/decisions/0277-the-serpent-has-menace.md) shipped the wrong way round can only be
+   * checked by reading the source and believing it. Recorded and not applied, per the pen's own note.
+   */
+  readonly composite: string;
 }
 
 /** One `fillRect()`: its rectangle and the alpha it was laid down at. */
@@ -265,6 +276,7 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
         rule: rule ?? 'nonzero',
         alpha: pen.globalAlpha,
         colour: typeof pen.fillStyle === 'string' ? pen.fillStyle : 'gradient',
+        composite: pen.globalCompositeOperation,
       });
     },
     stroke(): void {

@@ -4584,110 +4584,347 @@ function paintSerpentHead(ctx: Pen, f: Frame, skin: FoeSkin, jaw: Jaw, gaze: num
 
 
 /*
-  THE FLYING FISH. A pointed snout at the front, two pectoral fins thrown wide with their rays
-  notched along the trailing edges, and a fanned caudal fin — the widest span in the game, and the
-  only hull whose edge is feathered.
+  ── THE FLYING FISH, REDRAWN — 0318 ─────────────────────────────────────────────────────────────
 
-  ⚠️ **EVERY POINT BELOW WAS AUTHORED AS A BIRD'S AND NOT ONE OF THEM MOVED — 0312.** The path is
-  byte-identical to the `EAGLE_HULL` this was called until 0312; the name over it moved and the
-  sentence above it moved, and nothing else did. The report's reason
-  for the rename is that this drawing *already reads as a fish* — the hooked beak is the snout, the
-  notched primaries are fin rays, and the fanned tail is a tail either way. A repaint is the one
-  thing the ask does not want, and a boss hull wants eyes rather than a confident hour (0027).
+  ⚠️ **IT WAS AN EAGLE'S PATH UNTIL NOW, AND 0312 SAID SO IN WRITING WHILE REFUSING TO REPAINT IT** —
+  *"a repaint is the one thing the ask does not want, and a boss hull wants eyes rather than a
+  confident hour."* This is the pass that hour was being saved for, asked for by name: *"a fully great
+  graphics pass over the fish … up to par with the serpent pass in style."*
+
+  ⚠️ **SEEN FROM ABOVE, WHICH IS THE VIEW EVERY OTHER HULL IN THIS GAME IS DRAWN IN.** The ship has a
+  wing either side of the screen's centreline and so does every boss; a fish drawn in profile would be
+  the one body in the game seen from somewhere else. From above, a flying fish is a spindle with **two
+  enormous pectorals thrown wide and swept back** — which also keeps 0264's widest span in the game, so
+  nothing about what shares the screen with it changes.
+
+  ⚠️ **A CURVE AND NOT A POLYGON** — `curveLoop` rather than `trace`, which is the serpent's skull's own
+  note: every point below is a SAMPLE of a curve rather than a corner. A fish has no corners except
+  where a fin ends, and those are the doubled points, because `curveLoop` smooths a lone sample into a
+  bump and a fin tip is a point (0284's fangs, the same trick).
+
+  ⚠️ **THE SILHOUETTE CARRIES THE ANIMAL AND THE PAINT ONLY LIGHTS IT** — 0284. Snout, gill, two
+  pectorals, a pelvic pair, a notched peduncle and a deeply forked tail.
 */
 const VOLANS_HULL: readonly Pt[] = [
-  [-1, -0.04],
-  [-0.9, -0.16],
-  [-0.76, -0.24],
-  [-0.62, -0.3],
-  [-0.4, -0.34],
-  [-0.3, -0.5],
-  [-0.1, -0.86],
-  [0.06, -1],
-  [0.22, -0.96],
-  [0.18, -0.8],
-  [0.34, -0.84],
-  [0.3, -0.64],
-  [0.46, -0.68],
-  [0.42, -0.48],
-  [0.56, -0.5],
-  [0.5, -0.3],
-  [0.68, -0.24],
-  [0.84, -0.34],
-  [1, -0.3],
-  [0.92, -0.14],
-  [1, -0.02],
-  [1, 0.02],
-  [0.92, 0.14],
-  [1, 0.3],
-  [0.84, 0.34],
-  [0.68, 0.24],
-  [0.5, 0.3],
-  [0.56, 0.5],
-  [0.42, 0.48],
-  [0.46, 0.68],
-  [0.3, 0.64],
-  [0.34, 0.84],
-  [0.18, 0.8],
-  [0.22, 0.96],
-  [0.06, 1],
-  [-0.1, 0.86],
-  [-0.3, 0.5],
-  [-0.4, 0.34],
-  [-0.62, 0.3],
-  [-0.76, 0.24],
-  [-0.86, 0.12],
-  [-0.92, 0.02],
+  // The snout, doubled so it stays a point, and the head widening back to the gill.
+  [-1, 0],
+  [-1, 0],
+  [-0.93, -0.09],
+  [-0.82, -0.15],
+  [-0.66, -0.19],
+  // The shoulder, and the pectoral thrown wide and swept back to a point.
+  [-0.52, -0.21],
+  [-0.42, -0.46],
+  [-0.26, -0.74],
+  [-0.06, -0.95],
+  [0.02, -1],
+  [0.02, -1],
+  // Its trailing edge, raked back in to the flank.
+  [0.14, -0.72],
+  [0.2, -0.46],
+  [0.24, -0.3],
+  // The flank, and the pelvic fin.
+  [0.36, -0.27],
+  [0.44, -0.41],
+  [0.5, -0.42],
+  [0.5, -0.42],
+  [0.58, -0.25],
+  // The peduncle, pinched in before the tail spreads.
+  [0.7, -0.17],
+  [0.74, -0.16],
+  // The caudal fin: upper lobe out, the fork in, lower lobe out.
+  [0.9, -0.36],
+  [1, -0.52],
+  [1, -0.52],
+  [0.95, -0.28],
+  [0.86, -0.05],
+  [0.86, 0.05],
+  [0.95, 0.28],
+  [1, 0.52],
+  [1, 0.52],
+  [0.9, 0.36],
+  [0.74, 0.16],
+  [0.7, 0.17],
+  [0.58, 0.25],
+  [0.5, 0.42],
+  [0.5, 0.42],
+  [0.44, 0.41],
+  [0.36, 0.27],
+  [0.24, 0.3],
+  [0.2, 0.46],
+  [0.14, 0.72],
+  [0.02, 1],
+  [0.02, 1],
+  [-0.06, 0.95],
+  [-0.26, 0.74],
+  [-0.42, 0.46],
+  [-0.52, 0.21],
+  [-0.66, 0.19],
+  [-0.82, 0.15],
+  [-0.93, 0.09],
 ];
+/**
+ * The flying fish's paint — 0318, on 0276's lifted kit and in the serpent's own order.
+ *
+ * ⚠️ **THE ORDER IS THE DEPTH, WHICH IS `paintSerpentHead`'s NOTE AND IS THE WHOLE OF WHY THAT ONE
+ * WORKS.** Form-shade over the entire body first, so everything after it sits on a hull that already
+ * has a back and a belly; then the membranes, which are the fins and are thinner than the flesh; then
+ * the flank marks; then the head, which is the part that says what it is and so is painted last and
+ * over everything.
+ *
+ * ⚠️ **WHAT IT REPLACES WAS SIX FLAT MARKS** — three dark quills a side, a lit leading edge, a bar
+ * across the tail and a disc for an eye — which is the exact list
+ * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` makes about the predecessor's serpent before
+ * 0276 lifted the kit.
+ */
 function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // Feathers: dark quills radiating from each shoulder to the notches, on both wings.
+  /*
+    ⚠️ **THE ASTRAL HALO, BEHIND THE HULL** — asked for: *"give it overall a more nebulous astral
+    look."* `destination-over`, **brightest ring first**, so each new fill goes further back and the
+    falloff stacks outward; 0277 shipped this the other way round once and it baked as two flat slabs
+    with a hard edge between them.
+
+    ⚠️ **AND IT STOPS AT 1.12, BECAUSE THE TAIL AND THE WING TRAILS BOTH REACH 1.0 NOW.** A halo is
+    the one mark that leaves its hull on purpose, so it is the one that can run off its own tile and
+    bleed into the next bitmap in the atlas — `tests/accents.test.ts` holds every translucent mark at
+    1.16 of the drawing radius, and the serpent's own halo sits at 1.14 over a hull that reaches 1.06.
+  */
+  ctx.globalCompositeOperation = 'destination-over';
+  for (const [swell, alpha] of [
+    [1.02, 0.2],
+    [1.06, 0.11],
+    [1.12, 0.05],
+  ] as const) {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = skin.lit;
+    ctx.beginPath();
+    curveLoop(ctx, f, VOLANS_HULL.map(([x, y]) => [x * swell, y * swell] as const));
+    ctx.fill('evenodd');
+    ctx.globalAlpha = 1;
+  }
+  /*
+    ⚠️ **AND ONE SOFT LIGHT IN THE TAIL'S OWN NOTCH, WHICH IS THE ONLY PLACE A LOOSE GLOW EARNED ITS
+    KEEP.** A first pass hung four behind each side, out where the streamers end: photographed, they
+    baked as **detached brown smudges** — a glow over the void at a fifth alpha is not a light, it is a
+    stain, and nothing joined them to the animal. The halo is what lights the space around this body;
+    a glow only works where there is hull on both sides of it to pick it up.
+  */
+  glow(ctx, f, skin.lit, 0.86, 0, 0.26, 0.3);
+  ctx.globalCompositeOperation = 'source-over';
+  /*
+    ⚠️ **THE FORM-SHADE, ACROSS THE WHOLE ANIMAL AND UNDER EVERYTHING ELSE.** A gradient from the lit
+    edge to the shadowed one over the hull's own path: it is what turns a cut-out into a body, and it
+    is the first mark the serpent's own paint makes.
+  */
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.22), rgba(skin.plate, 0.5), VOLANS_HULL, 1, true);
+  /*
+    ⚠️ **AND IT IS LIT FROM INSIDE, WHICH IS THE HALF OF *ASTRAL* A HALO CANNOT DO.** A halo says
+    there is light around the animal; a core says the light is coming OUT of it. Over the form-shade
+    and under every seam, so everything painted after it reads as sitting on a body that glows rather
+    than beside one.
+
+    ⚠️ **`source-atop`, BECAUSE A ROUND GLOW ON A LONG BODY SPILLS PAST THE HEAD.** At 0.42 the disc
+    reaches ±0.42 across while the snout is 0.17 wide, and unclipped it baked as a haze sitting beside
+    the animal rather than inside it. The flash wash is clipped the same way and for the same reason
+    (0287); the halo above is what light OUTSIDE the hull is for.
+  */
+  ctx.globalCompositeOperation = 'source-atop';
+  glow(ctx, f, skin.lit, -0.34, 0, 0.42, 0.16);
+  glow(ctx, f, skin.lit, 0.3, 0, 0.3, 0.1);
+  ctx.globalCompositeOperation = 'source-over';
   for (const side of [-1, 1]) {
-    for (const [tx, ty] of [
-      [0.14, 0.86],
-      [0.26, 0.7],
-      [0.38, 0.54],
+    /*
+      ⚠️ **A FIN IS A MEMBRANE OVER RAYS, AND BOTH ARE INSIDE THE OUTLINE.** The wash darkens the
+      pectoral towards its trailing edge so the fin reads as thinner than the flesh it leaves; the rays
+      are seams rather than filled wedges, because a ray is a line in a membrane and a wedge is a
+      feather — which is what this hull used to be drawn with.
+    */
+    shaded(
+      ctx,
+      f,
+      [-0.4, -0.2 * side],
+      [0.06, -0.92 * side],
+      rgba(skin.plate, 0.1),
+      rgba(skin.plate, 0.62),
+      [
+        [-0.46, 0.215 * side],
+        [-0.37, 0.42 * side],
+        [-0.23, 0.66 * side],
+        [-0.06, 0.85 * side],
+        [0.1, 0.65 * side],
+        [0.16, 0.43 * side],
+        [0.15, 0.27 * side],
+      ],
+      1,
+      true,
+    );
+    /*
+      ⚠️ **EVERY RAY STOPS SHORT OF THE LEADING EDGE, AND THE FIRST DRAFT DID NOT** — it ran to 0.74
+      across at 0.32 along, where the fin only reaches 0.64, so `tests/accents.test.ts`'s stroke claim
+      read it as ink in the void. The wash above had the same fault at its root: 0.02 inside an outline
+      is inside a straight polygon and outside a smoothed one, because `curveLoop` overshoots a corner.
+    */
+    for (const [ax, ay, bx, by] of [
+      [-0.44, 0.27, -0.34, 0.52],
+      [-0.38, 0.26, -0.22, 0.7],
+      [-0.3, 0.26, -0.06, 0.84],
+      [-0.22, 0.26, 0.06, 0.78],
+      [-0.14, 0.26, 0.12, 0.52],
     ] as const) {
-      const px = 0.02 * side;
-      const sy = 0.42 * side;
-      plate(ctx, f, skin, [
-        [-0.02 + px, sy],
-        [tx - 0.03, ty * side],
-        [tx + 0.03, ty * side],
-        [0.06 + px, sy],
+      seam(ctx, f, rgba(skin.plate, 0.5), 0.022, [
+        [ax, ay * side],
+        [bx, by * side],
       ]);
     }
-    // The wing's leading edge lit, well inside it.
-    lit(ctx, f, skin, [
-      [-0.22, 0.5 * side],
-      [-0.02, 0.84 * side],
-      [0.04, 0.84 * side],
-      [-0.14, 0.5 * side],
+    // The pelvic fin gets the same treatment at a third the size — one ray, and a wash off the flank.
+    shaded(
+      ctx,
+      f,
+      [0.42, 0.2 * side],
+      [0.5, 0.48 * side],
+      rgba(skin.plate, 0.1),
+      rgba(skin.plate, 0.55),
+      [
+        [0.39, 0.26 * side],
+        [0.44, 0.38 * side],
+        [0.49, 0.39 * side],
+        [0.53, 0.26 * side],
+      ],
+      1,
+      true,
+    );
+    seam(ctx, f, rgba(skin.plate, 0.45), 0.02, [
+      [0.41, 0.3 * side],
+      [0.47, 0.38 * side],
     ]);
-    // A bar across the tail.
-    plate(ctx, f, skin, [
-      [0.7, 0.16 * side],
-      [0.9, 0.22 * side],
-      [0.9, 0.1 * side],
-      [0.7, 0.08 * side],
-    ]);
+    /*
+      ⚠️ **THE TAIL'S RAYS RUN OUT OF THE PEDUNCLE AND NOT OFF THE SPINE**, which is what a caudal fin
+      does and is the difference between a tail and a pair of flaps. Three a lobe, fanning.
+    */
+    for (const [tx, ty] of [
+      [0.95, 0.38],
+      [0.9, 0.28],
+      [0.86, 0.16],
+    ] as const) {
+      seam(ctx, f, rgba(skin.plate, 0.5), 0.022, [
+        [0.76, 0.12 * side],
+        [tx, ty * side],
+      ]);
+    }
+    // And the back lit along the shoulder, where the light is coming from — a ribbon, tapering out.
+    seam(ctx, f, rgba(skin.lit, 0.28), 0.034, [
+      [-0.86, 0.1 * side],
+      [-0.6, 0.15 * side],
+      [-0.3, 0.17 * side],
+      [0.1, 0.16 * side],
+      [0.45, 0.13 * side],
+    ], 1, true);
+    /*
+      ── THE TRAILS, WHICH ARE PAINT AND NOT SILHOUETTE ───────────────────────────────────────────
+
+      Asked for: *"extend the wings to have longer finny trails coming off them… the shape is good,
+      just needs some extra flavour enhancements."*
+
+      ⚠️ **THE FIRST DRAFT PUT THEM IN THE HULL AND THE PHOTOGRAPH REFUSED IT.** A filament drawn as
+      silhouette gets the outline traced round it, so the gap between the streamer and the fin it
+      leaves becomes a black wedge with a hard edge — at 4× the wing read as a **hook** rather than a
+      wing, and the notch read as a bite out of the animal. *"The shape is good"* is the sentence that
+      settles it: the hull the ask approved is the hull that ships, and the trails go on it.
+
+      ⚠️ **AND A TRAIL SHOULD BE SOFT ANYWAY, WHICH IS THE HALF THE FIRST DRAFT HAD BACKWARDS.** These
+      are the one mark on this body that is allowed to leave the hull, on the halo's own terms — a
+      translucent ribbon fading to nothing, bounded by `tests/accents.test.ts` at 1.16 of the drawing
+      radius. Three off the pectoral at falling lengths, one off the pelvic and one off the tail lobe,
+      each swept clear of every fin behind it.
+
+      ⚠️ **EACH ONE TAPERS TO A POINT AND IS DRAWN BRIGHT**, which the draft before this did neither:
+      five-sided with the root ON the trailing edge and the far end a single vertex, so it reads as a
+      filament rather than a slab, and at 0.8 rather than 0.6 because a `lit` ink laid at a third over
+      the void bakes olive. Still under 0.9, which is where `tests/accents.test.ts` starts calling a
+      mark solid and holding it inside the silhouette.
+    */
+    for (const [ax, ay, bx, by, cx, cy, dx, dy, ex, ey] of [
+      [0.03, 0.96, 0.5, 1.02, 1.08, 0.99, 0.48, 0.94, 0.05, 0.9],
+      [0.08, 0.845, 0.45, 0.88, 0.95, 0.85, 0.44, 0.81, 0.1, 0.79],
+      [0.13, 0.73, 0.4, 0.75, 0.8, 0.71, 0.38, 0.67, 0.15, 0.66],
+      [0.47, 0.41, 0.64, 0.5, 0.84, 0.57, 0.62, 0.45, 0.49, 0.365],
+      [0.99, 0.52, 1.06, 0.58, 1.13, 0.63, 1.03, 0.53, 0.975, 0.485],
+    ] as const) {
+      shaded(
+        ctx,
+        f,
+        [ax, ay * side],
+        [cx, cy * side],
+        rgba(skin.lit, 0.7),
+        rgba(skin.lit, 0),
+        [
+          [ax, ay * side],
+          [bx, by * side],
+          [cx, cy * side],
+          [dx, dy * side],
+          [ex, ey * side],
+        ],
+        0.8,
+        true,
+      );
+    }
+    /*
+      ⚠️ **AND A DUST OF MOTES ALONG THE BACK.** Three small lights a side, staggered off the dorsal
+      line and shrinking aft: it is the mark that makes the flesh look like it is made of the place
+      rather than painted in its colours, and it is the cheapest half of *nebulous* there is. Small,
+      low and staggered, which is the finding 0277 records three ways about a run of identical marks.
+    */
+    for (const [x, y, radius] of [
+      [-0.46, 0.11, 0.1],
+      [-0.12, 0.14, 0.085],
+      [0.26, 0.1, 0.07],
+    ] as const)
+      glow(ctx, f, skin.lit, x, y * side, radius, 0.24);
   }
-  // Embers on the chest, in the place's motif.
+  /*
+    ⚠️ **THE LATERAL LINE, WHICH IS THE ONE MARK ON A FISH EVERYBODY KNOWS AND NOBODY NAMES.** A seam
+    from the gill to the tail root, dead centre: it is the mark that makes the two halves of this
+    silhouette read as one animal rather than as a shape with a mirror down it.
+  */
+  seam(ctx, f, rgba(skin.plate, 0.55), 0.03, [
+    [-0.72, -0.02],
+    [-0.3, 0.01],
+    [0.2, 0.02],
+    [0.62, 0.01],
+  ], 1, true);
+  // The place's own motif along the flank — embers in the nebula, scales in the Saurian Belt.
   motif(ctx, f, skin, theme, [
-    [-0.5, -0.18],
-    [0.36, -0.18],
-    [0.36, 0.18],
-    [-0.5, 0.18],
+    [-0.58, -0.16],
+    [0.5, -0.13],
+    [0.5, 0.13],
+    [-0.58, 0.16],
   ], 'boss9');
-  // The beak, lit along its hook; the eye in its socket, looking down the lane.
-  lit(ctx, f, skin, [
-    [-0.96, -0.05],
-    [-0.88, -0.14],
-    [-0.82, -0.1],
-    [-0.9, -0.02],
-  ]);
-  disc(ctx, f, shade(skin.plate, -0.5), -0.72, -0.12, 0.06);
-  disc(ctx, f, skin.eye, -0.73, -0.12, 0.04);
-  disc(ctx, f, shade(skin.plate, -0.6), -0.735, -0.12, 0.016);
+  /*
+    ⚠️ **THE HEAD LAST AND OVER EVERYTHING** — 0284's order, and its warning with it: *"the first pass
+    drew a fully-detailed head that read as a blunt stump"*, because a head against open space needs
+    its own light and not only its outline. So: the gill plate as a seam, the jaw line under it, the
+    snout lit along its top, and the eye high and forward where a fish's is.
+  */
+  seam(ctx, f, rgba(skin.plate, 0.6), 0.03, [
+    [-0.61, -0.165],
+    [-0.54, 0],
+    [-0.61, 0.165],
+  ], 1, true);
+  // ⚠️ Narrow, and short of the point: photographed wide once and it read as a BEAK, which is the one
+  // thing this hull spent 0312 and 0316 getting away from.
+  poly(ctx, f, skin.lit, [
+    [-0.96, -0.025],
+    [-0.9, -0.078],
+    [-0.81, -0.108],
+    [-0.815, -0.072],
+    [-0.895, -0.045],
+  ], 0.7);
+  seam(ctx, f, rgba(skin.plate, 0.5), 0.024, [
+    [-0.97, 0.02],
+    [-0.86, 0.08],
+    [-0.72, 0.11],
+  ], 1, true);
+  for (const side of [-1, 1]) eye(ctx, f, skin, -0.8, 0.095 * side, 0.042);
 }
 
 /*
@@ -6091,10 +6328,16 @@ export function drawKind(
       return;
     case 'boss9':
     case 'boss9Hit':
-      // THE FLYING FISH — 0264, renamed by 0312 and not redrawn: a pointed snout, two pectoral fins
-      // thrown wide with the rays notched along their trailing edges, a fanned tail — the widest
-      // span in the game, and the feathered edge.
-      trace(ctx, f, VOLANS_HULL);
+      /*
+        THE FLYING FISH — 0264's slot, renamed by 0312 and REDRAWN by 0318. Seen from above, as every
+        hull in this game is: a spindle with two enormous pectorals thrown wide and swept back, a
+        pelvic pair, a pinched peduncle and a deeply forked tail — still the widest span in the game.
+
+        The outline is a CURVE, `curveLoop` rather than `trace`, so the snout and the fins are the
+        shapes they are rather than the corners their samples would be. The serpent's skull says the
+        same thing about itself, and for the same reason.
+      */
+      curveLoop(ctx, f, VOLANS_HULL);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss9(ctx, f, skin, theme);

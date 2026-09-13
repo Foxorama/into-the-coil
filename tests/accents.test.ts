@@ -4,13 +4,30 @@ import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
 
 /*
   ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
-  containment claim samples every mark on every body in every place at a pixel a step; alone it takes
+  containment claim samples every mark on every body in every place at a pixel a step; alone it took
   under a second and inside `npm run check`, beside sixty other suites, it took eight — and vitest's
   five-second default called that a failure. `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`:
   a guard that reddens under load is reading the clock where it means work. The work is deterministic;
   the clock is not the measurement.
+
+  ⚠️ **60s → 150s, AND THE MEASUREMENT IS BESIDE THE NUMBER BECAUSE 0245 SAYS IT HAS TO BE.** The
+  sentence above is stale: *under a second* was one curved hull ago. The claim is O(outline samples ×
+  hull edges), and a hull drawn with `curveLoop` flattens to some twelve hundred edges where a polygon
+  has thirty — so the serpent (0277) and now the fish (0318) each cost what a dozen polygons cost.
+
+  | | |
+  |---|---|
+  | alone, before the fish was redrawn | **13.4s** |
+  | alone, after | **14.1s** — the redraw is a fifteenth of the cost and not the cause |
+  | under `npx vitest run`, whole suite | **47.4s**, which the 60s ceiling survived and `npm run prove` did not |
+
+  **150s is three times the worst measured under load**, per
+  `docs/decisions/0245-a-budget-is-sized-under-load.md`. ⚠️ **AND THE NEXT CURVED HULL IS THE ONE TO
+  MAKE THE WORK CHEAPER FOR, NOT TO RAISE THIS AGAIN FOR** — six bosses still ride the lifted kit
+  undrawn, and each is a third of a minute. A bounding-box reject was tried at `distanceToEdge` and
+  measured slower; the win left is fusing its edge walk with `inside`'s, which halves them.
 */
-vi.setConfig({ testTimeout: 60_000 });
+vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -148,7 +165,15 @@ function traceAt(kind: SpriteKind, size: number, theme: ThemeKind = 'approach'):
 const trace = (kind: SpriteKind, theme: ThemeKind = 'approach'): ReturnType<typeof tracingPen>['trace'] =>
   traceAt(kind, cssSize(kind), theme);
 
-/** How far a point is from the nearest edge of a pass, in the pass's own pixels. Unsigned. */
+/**
+ * How far a point is from the nearest edge of a pass, in the pass's own pixels. Unsigned.
+ *
+ * ⚠️ **A BOUNDING-BOX REJECT WAS TRIED HERE AND MEASURED SLOWER** — 0318. *A point is never nearer to
+ * a segment than to that segment's own box* is exact and would skip most edges once `best` is small,
+ * and it cost a second a run: the four comparisons are not cheaper than the projection they skip, on
+ * a hull whose every edge is a fraction of a pixel long. The measurement is the reason this is a
+ * comment and not code.
+ */
 function distanceToEdge(pass: Pass, [px, py]: Point): number {
   let best = Number.POSITIVE_INFINITY;
   for (const subpath of pass.subpaths) {
@@ -353,7 +378,7 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
         paint.forEach((mark, i) => {
           if (mark.alpha < SOLID) return;
           for (const subpath of mark.subpaths) {
-            const box = boundsOf({ subpaths: [subpath], rule: mark.rule, alpha: mark.alpha, colour: mark.colour });
+            const box = boundsOf({ ...mark, subpaths: [subpath] });
             const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
             expect(
               thinnest,

@@ -34,6 +34,7 @@ const SQUARE: Pass = {
   rule: 'evenodd',
   alpha: 1,
   colour: '#fff',
+  composite: 'source-over',
 };
 
 /**
@@ -56,6 +57,7 @@ const HORSESHOE: Pass = {
   rule: 'evenodd',
   alpha: 1,
   colour: '#fff',
+  composite: 'source-over',
 };
 
 const line = (points: readonly Point[], width: number, closed = false): Stroke => ({
@@ -89,6 +91,7 @@ describe('the pen records what was drawn', () => {
       rule: 'nonzero',
       alpha: 1,
       colour: '#fff',
+      composite: 'source-over',
     };
     for (const p of flat!.subpaths[0]!.slice(1, -1)) expect(inside(hull, p)).toBe(true);
   });

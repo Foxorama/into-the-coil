@@ -17,10 +17,13 @@ import { BURST } from '../src/content/debris.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { INK_OF } from '../src/render/bake.ts';
+import type { ThemeKind } from '../src/content/themes.ts';
+import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
+import { inside, tracingPen, type Pass } from './paths.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The fish alone, a short way in, with no mid-boss in front of it. */
@@ -763,5 +766,151 @@ describe('0317 — the pressure comes forward', () => {
       if (off > worst) worst = off;
     }
     expect(worst, `a volley pointed ${((worst * 180) / Math.PI).toFixed(0)}° off the lane, and the arc is ${(((attack.arc ?? 0) / 2 / Math.PI) * 180).toFixed(0)}°`).toBeLessThanOrEqual((attack.arc ?? 0) / 2 + 0.01);
+  });
+});
+
+/**
+ * ── THE FISH IS DRAWN — 0318 ───────────────────────────────────────────────────────────────────
+ *
+ * Asked: *"A fully great graphics pass over the fish … up to par with the serpent pass in style"*, and
+ * then, having seen it: *"extend the wings to have longer finny trails coming off them and give it
+ * overall a more nebulous astral look as well — the shape is good, just needs some extra flavour
+ * enhancements."*
+ *
+ * ⚠️ **WHAT IS HELD HERE IS THE TWO THINGS THAT SENTENCE ASKED FOR, AND NOTHING ELSE ABOUT THE PAINT.**
+ * How many rays a fin has and where the lateral line runs are taste, and taste has a file
+ * ([0192](../docs/decisions/0192-a-guard-holds-an-invariant.md)). *The wings trail* and *the light is
+ * behind the animal* are not: each is a claim a wrong drawing makes false, each was got wrong once
+ * while this was built, and each is measured off the trace of the real drawing rather than off the
+ * numbers beside it ([0027](../docs/decisions/0027-measure-the-picture-not-the-model.md)).
+ *
+ * ⚠️ **AND *EVERY MARK STAYS ON THE HULL* IS NOT RE-ASSERTED HERE.** `tests/accents.test.ts` already
+ * holds it over every body in the game, and it is what caught the eight marks this redraw had over the
+ * edge — a fin ray reaching 0.74 across a fin that reaches 0.64, and both membrane washes overshooting
+ * their own roots. A second copy of a guard is a second thing to drift
+ * ([0029](../docs/decisions/0029-the-tracked-record-is-the-record.md)).
+ */
+describe('0318 — the fish is drawn', () => {
+  /** The fish traced at the size it is drawn on the screen every report was made on, in a place. */
+  function fish(theme: ThemeKind = 'nebula'): { size: number; hull: Pass; paint: readonly Pass[] } {
+    const size = SPRITE_EXTENT.boss9 * viewOf(1280, 720).scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, 'boss9', PALETTES[DEFAULT_PALETTE], size, theme);
+    const [hull, ...paint] = trace.passes;
+    expect(hull, 'the fish draws nothing').toBeDefined();
+    return { size, hull: hull!, paint };
+  }
+
+  /** A mark's furthest reach from the sprite's centre along the lane, in CSS pixels of that screen. */
+  function reachOf(mark: Pass, size: number): number {
+    return Math.max(...mark.subpaths.flat().map(([x]) => Math.abs(x - size / 2)));
+  }
+
+  /**
+   * How far past the hull's own edge a mark's furthest point lies, in those same pixels — 0 if none is.
+   *
+   * ⚠️ **PAST THE HULL WHERE THE MARK IS, AND NOT PAST THE WHOLE ANIMAL.** The first draft of this
+   * guard asked whether a streamer reached further down the lane than the tail did, and four of the
+   * ten did — which says nothing, because a wing sits **forward of the tail** and a trail coming off
+   * one is streaming past the fin it left, not past the furthest point of the body. A guard measuring
+   * a quantity that is not the claim is 0027's own failure, one layer in.
+   */
+  function overhang(hull: Pass, mark: Pass): number {
+    let worst = 0;
+    for (const point of mark.subpaths.flat()) {
+      if (inside(hull, point)) continue;
+      let near = Infinity;
+      for (const subpath of hull.subpaths)
+        for (let i = 0; i < subpath.length; i++) {
+          const [ax, ay] = subpath[i]!;
+          const [bx, by] = subpath[(i + 1) % subpath.length]!;
+          const dx = bx - ax;
+          const dy = by - ay;
+          const len = dx * dx + dy * dy;
+          const t = len === 0 ? 0 : Math.max(0, Math.min(1, ((point[0] - ax) * dx + (point[1] - ay) * dy) / len));
+          near = Math.min(near, Math.hypot(point[0] - (ax + t * dx), point[1] - (ay + t * dy)));
+        }
+      worst = Math.max(worst, near);
+    }
+    return worst;
+  }
+
+  it('THE ASKED-FOR ONE: the wings TRAIL — filaments that start on the fin and stream out past the hull, both sides', () => {
+    /*
+      ⚠️ **THE FIRST DRAFT PUT THEM IN THE SILHOUETTE AND THE PHOTOGRAPH REFUSED IT.** A trail drawn as
+      hull gets the outline traced round it, so the gap between the streamer and the fin becomes a black
+      wedge — at 4× the wing read as a hook with a bite out of it. *"The shape is good"* settles which
+      half moves: the hull the ask approved is the hull that ships, and the trails are paint on it.
+
+      ⚠️ **SO WHAT IS ASSERTED IS THE PAIR, AND NEITHER HALF ALONE IS THE ASK.** A mark that starts
+      inside the hull and ends outside it is a trail; one wholly inside is a stripe, and one wholly
+      outside is a cloud floating beside the animal. Both wrong drawings pass half of this.
+    */
+    const { size, hull, paint } = fish();
+    const streamers = paint.filter((mark) => {
+      if (mark.composite !== 'source-over' || mark.alpha >= 0.9) return false;
+      const points = mark.subpaths.flat();
+      return points.some((p) => inside(hull, p)) && points.some((p) => !inside(hull, p));
+    });
+    /*
+      ⚠️ **EIGHT PIXELS, IN UNITS OF THE SCREEN EVERY REPORT IN `reports/` WAS GIVEN ON** — 0027's *at
+      least one assertion written in what the player experiences*. It is
+      [0106](../docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md)'s floor three times
+      over: a mark hanging less than that off the outline is a fringe ON it rather than something
+      coming off the animal, and at 42 units wide on a 1280×720 screen there is room to tell.
+    */
+    const aft = streamers.filter((mark) => overhang(hull, mark) >= 8);
+    expect(
+      aft.length,
+      `the fish paints ${streamers.length} marks that cross its own outline and ${aft.length} of them hang 8px or ` +
+        'more off it — a mark that stays inside is a stripe and one that never touches the hull is a cloud beside ' +
+        'the animal, and neither is a wing that trails',
+    ).toBeGreaterThanOrEqual(6);
+    // Both sides, because a fish with one wing trailing is a fish that has lost one.
+    for (const side of [-1, 1]) {
+      const mine = aft.filter((mark) => mark.subpaths.flat().some(([, y]) => (y - size / 2) * side > size * 0.1));
+      expect(mine.length, `${mine.length} of the ${aft.length} streamers are on the ${side < 0 ? 'near' : 'far'} side`).toBeGreaterThanOrEqual(3);
+    }
+    // And the longest of them streams a real distance, rather than six marks each just clearing the bar.
+    const furthest = Math.max(...aft.map((mark) => overhang(hull, mark)));
+    expect(furthest, `the longest trail hangs ${furthest.toFixed(1)}px off the hull`).toBeGreaterThanOrEqual(24);
+  });
+
+  it('and the astral light is BEHIND the animal, brightest ring first, so the falloff stacks outward', () => {
+    /*
+      ⚠️ **0277 SHIPPED THIS THE OTHER WAY ROUND ONCE AND IT BAKED AS TWO FLAT SLABS WITH A HARD EDGE.**
+      `destination-over` puts each new fill further back than the last, so a halo drawn brightest-first
+      has its dim rings behind its bright one and fades outward; drawn dimmest-first, the bright ring
+      is hidden behind the dim one and what is left is a step. It is one string and one ordering, and
+      `tests/paths.ts` could not see either until this decision recorded the composite mode.
+    */
+    const { size, hull, paint } = fish();
+    const skirt = Math.max(...hull.subpaths.flat().map(([x]) => Math.abs(x - size / 2)));
+    /*
+      ⚠️ **A RING IS A FILL IN A FLAT INK AND A GLOW IS A GRADIENT, WHICH THE HARNESS ALREADY TELLS
+      APART** — 0227 put `colour` on a pass for exactly this kind of question. The fish also hangs one
+      soft light behind itself, in the tail's own notch; it is not part of the halo and asking it to be
+      fainter than the ring before it is asking the wrong thing of it.
+    */
+    const rings = paint.filter(
+      (mark) => mark.composite === 'destination-over' && mark.colour !== 'gradient' && reachOf(mark, size) > skirt,
+    );
+    expect(
+      rings.length,
+      'the fish draws no ring wider than itself behind its own hull, so every light it has is ON it and it has no aura',
+    ).toBeGreaterThanOrEqual(3);
+    rings.forEach((ring, i) => {
+      if (i === 0) return;
+      const inner = rings[i - 1]!;
+      expect(
+        ring.alpha,
+        `halo ring ${i + 1} is laid at ${ring.alpha} over ring ${i} at ${inner.alpha} — each ring goes BEHIND the ` +
+          'one before it, so a ring that is not fainter than its neighbour is a slab and the edge between them is hard',
+      ).toBeLessThan(inner.alpha);
+      expect(
+        reachOf(ring, size),
+        `halo ring ${i + 1} reaches ${reachOf(ring, size).toFixed(1)}px where ring ${i} reaches ${reachOf(inner, size).toFixed(1)}px`,
+      ).toBeGreaterThan(reachOf(inner, size));
+    });
   });
 });
