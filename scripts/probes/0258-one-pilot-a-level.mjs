@@ -69,9 +69,10 @@ export const PROBES = [
     guard: 'among the end bosses exactly one stalks',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0262, which gave the fish the rake.
-      find: "    move: { kind: 'stalk', agility: 0.22 },\n    attack: { kind: 'rake', turn: 0.5 },",
-      replace: "    move: { kind: 'patrol' },\n    attack: { kind: 'rake', turn: 0.5 },",
+      // ⚠️ Re-anchored by 0262, which gave the fish the rake, and by 0317, which wrote a comment between
+      // the flight and the fan.
+      find: "    move: { kind: 'stalk', agility: 0.22 },\n    // An arc since 0317",
+      replace: "    move: { kind: 'patrol' },\n    // An arc since 0317",
     },
   },
   {

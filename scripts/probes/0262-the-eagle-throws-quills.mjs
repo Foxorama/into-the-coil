@@ -12,9 +12,10 @@ export const PROBES = [
     guard: '0262 — THE SPINE: the fish’s bullet is its own',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0316, which redrew the bullet and renamed it with the drawing.
-      find: "    shot: 'spine',\n    phases: [\n      // A fan of three spines, raking",
-      replace: "    shot: 'lance',\n    phases: [\n      // A fan of three spines, raking",
+      // ⚠️ Re-anchored by 0316, which redrew the bullet and renamed it with the drawing, and by 0317,
+      // which rewrote the comment over the opening phase.
+      find: "    shot: 'spine',\n    phases: [",
+      replace: "    shot: 'lance',\n    phases: [",
     },
   },
   {
@@ -25,8 +26,9 @@ export const PROBES = [
     guard: '0262 — THE SPINE: the fish’s bullet is its own',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-      replace: "      { upTo: 1, fireEvery: 78, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      // ⚠️ Re-anchored by 0317, which quickened the opening and widened its fan.
+      find: "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      replace: "      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
     },
   },
   {
@@ -36,7 +38,7 @@ export const PROBES = [
     broke: 'the kites called at the leading edge again, in a file down the lane',
     // ⚠️ Re-aimed by 0314 with the anchor: the kites are an escort now, and the guard that reads where
     // an escort flanks from is 0314's, not the summons's.
-    guard: 'and the shoal comes in from the SIDES',
+    guard: 'a horde comes in from the end of the lane the thing it is COMING FOR is at',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0270, which said how many of the horde may stand. And again by 0314, which

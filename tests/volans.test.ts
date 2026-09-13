@@ -69,7 +69,12 @@ describe('0249 — the eagle summons', () => {
       table had the same lash twice with a wider arc; what it has now is four kinds across five phases,
       and the new one is the only attack in the game that does not leave the hull.
     */
-    expect(kinds).toEqual(['rake', 'whip', 'rake', 'breaker', 'summon']);
+    /*
+      ⚠️ **AND 0317 BROUGHT THE BREAKER FORWARD TO SECOND**, where the whip was: it is the one attack
+      that covers a place rather than a direction, and at a third of the bar a shuriken had ended the
+      fight before it was ever thrown.
+    */
+    expect(kinds).toEqual(['rake', 'breaker', 'whip', 'rake', 'summon']);
     expect(new Set(kinds).size, 'the fish throws fewer than four kinds of thing across its five phases').toBe(4);
     expect(row.phases.filter((p) => p.escort !== undefined).length, 'no phase of the fish calls a horde while it fights').toBe(3);
     expect(LEVELS.descent.boss).toBe('volans');
@@ -116,8 +121,13 @@ describe('0249 — the eagle summons', () => {
       *"Throws out whips of fire."* Driven: every shot of the volley is a flame; laid out by their
       own speed they climb from the root to the tip, and they span an arc rather than a line — the
       first and last leave in different directions across the lane.
+
+      ⚠️ **THE BAND IS FOUND RATHER THAN TYPED SINCE 0317**, which moved the whip from second to third.
+      A fraction written out here is a second description of where a phase begins, and it went stale
+      the first time the table did.
     */
-    const { world, frame } = volansAt(0.7);
+    const whipAt = BOSSES.volans.phases.findIndex((p) => (p.attack ?? BOSSES.volans.attack).kind === 'whip');
+    const { world, frame } = volansAt((BOSSES.volans.phases[whipAt]!.upTo + (BOSSES.volans.phases[whipAt + 1]?.upTo ?? 0)) / 2);
     world.bossPool.at(0).fireIn = 1;
     frame.step();
     const n = world.enemyShots.size;
@@ -420,6 +430,10 @@ describe('0314 — the escort', () => {
     return world;
   }
 
+  /** The middle of the band a phase owns, found rather than typed — 0317 moved every one of them. */
+  const inside = (at: number): number => (BOSSES.volans.phases[at]!.upTo + (BOSSES.volans.phases[at + 1]?.upTo ?? 0)) / 2;
+  const shoalAt = (): number => inside(BOSSES.volans.phases.findIndex((p) => p.escort?.enemy === "minnow"));
+
   const countOf = (world: ReturnType<typeof playableWorld>['world'], enemy: 'kite' | 'minnow'): number => {
     let n = 0;
     for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) n++;
@@ -456,7 +470,8 @@ describe('0314 — the escort', () => {
       ones and twos.** A guard that walks whatever happens to be on the field is measuring the escort's
       clock as well as the motion, and the two failure modes it would then have are not tellable apart.
     */
-    const { world, frame } = flown(0.28);
+    const at = shoalAt();
+    const { world, frame } = flown(at);
     const lord = world.bossPool.at(0);
     const ship = world.ship;
     ship.along = world.cameraAlong + 30;
@@ -467,7 +482,7 @@ describe('0314 — the escort', () => {
       return { fry, toLord: Math.hypot(lord.along - fry.along, lord.across - fry.across), toShip: Math.hypot(ship.along - fry.along, ship.across - fry.across) };
     });
     for (let i = 0; i < 30; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * 0.28;
+      world.bossPool.at(0).health = world.bossFullHealth * at;
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 2;
       world.fireIn = Number.MAX_SAFE_INTEGER;
@@ -499,9 +514,10 @@ describe('0314 — the escort', () => {
       player spends their whole fight in. Nothing here asserts how big a bite is; what it asserts is
       that it is a bite.
     */
-    const world = hold(0.28, 60);
+    const at = shoalAt();
+    const world = hold(at, 60);
     const lord = world.bossPool.at(0);
-    lord.health = world.bossFullHealth * 0.28;
+    lord.health = world.bossFullHealth * at;
     const before = lord.health;
     world.enemies.clear();
     const fry = world.enemies.spawn()!;
@@ -524,7 +540,7 @@ describe('0314 — the escort', () => {
       did inside this phase is undoable and nothing before it is.
     */
     const row = BOSSES.volans;
-    const world = hold(0.3, 60);
+    const world = hold(shoalAt(), 60);
     const lord = world.bossPool.at(0);
     const phase = phaseFor(row, world.bossFullHealth * 0.3, world.bossFullHealth);
     // Right at the top of the phase, where one more bite would cross it.
@@ -542,22 +558,32 @@ describe('0314 — the escort', () => {
     expect(phaseFor(row, lord.health, world.bossFullHealth).upTo, 'feeding put the fish back into a phase it had left').toBe(phase.upTo);
   });
 
-  it('and the shoal comes in from the SIDES, alternating, and no level sends one', () => {
-    // 0262's entry, on the escort's own counter rather than the summons's — the decision has why.
+  it('and a horde comes in from the end of the lane the thing it is COMING FOR is at, and no level sends a minnow', () => {
+    /*
+      ⚠️ **THE PAIRING 0317 MEASURED, AND IT IS THE WHOLE OF WHY THE SHOAL WORKS.** A horde that hunts
+      the ship flanks from the SIDES — 0262 was reported for the version that marched down the lane. A
+      horde that feeds the BOSS must come from the LEAD, past it, with its hull between them and a
+      stream of auto-fire that cannot be switched off: from the sides, nineteen were called in a fight
+      and not one arrived, and from the lead twenty-two of forty-nine do.
+    */
     const row = BOSSES.volans;
     for (const phase of row.phases) {
       if (phase.escort === undefined) continue;
-      expect(phase.escort.from, 'an escort marches in down the lane, which is what 0262 was reported for').toBe('sides');
+      const feeds = ENEMIES[phase.escort.enemy].motion.kind === 'feed';
+      expect(phase.escort.from, `a ${phase.escort.enemy} escort comes in from the ${phase.escort.from}, and it is ${feeds ? 'coming for the boss' : 'coming for the ship'}`).toBe(feeds ? 'lead' : 'sides');
     }
     /*
-      ⚠️ **SAMPLED ON THE STEP THEY ARRIVE, BECAUSE A MINNOW DOES NOT STAY WHERE IT CAME IN.** Reading
-      the pool at the end asks where the shoal IS, and by then every one of them is inside the lane on
-      its way to the fish — which is the same answer whichever edge it entered over.
+      ⚠️ **AND THE KITES STILL ALTERNATE, SAMPLED ON THE STEP THEY ARRIVE.** Reading the pool at the
+      end asks where a horde IS, and by then every one of them is inside the lane on its way somewhere,
+      which is the same answer whichever edge it entered over. The shoal has no side to alternate any
+      more — it comes past the fish, from one end — so what is asked of it is that it ARRIVES, which is
+      `one that gets there is EATEN` above.
     */
-    const { world, frame } = flown(0.28);
+    const kiteAt = inside(row.phases.findIndex((p) => p.escort?.enemy === 'kite'));
+    const { world, frame } = flown(kiteAt);
     const seen = new Set<number>();
     for (let i = 0; i < 400; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * 0.28;
+      world.bossPool.at(0).health = world.bossFullHealth * kiteAt;
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 2;
       world.fireIn = Number.MAX_SAFE_INTEGER;
@@ -565,10 +591,10 @@ describe('0314 — the escort', () => {
       frame.step();
       for (let k = 0; k < world.enemies.size; k++) {
         const add = world.enemies.at(k);
-        if (add.kind === world.enemyKinds.minnow && (add.across < 0 || add.across > ACROSS_SPAN)) seen.add(Math.sign(add.across));
+        if (add.kind === world.enemyKinds.kite && (add.across < 0 || add.across > ACROSS_SPAN)) seen.add(Math.sign(add.across));
       }
     }
-    expect(seen.size, 'every call of the shoal came in over the same edge').toBeGreaterThan(1);
+    expect(seen.size, 'every call of the kites came in over the same edge').toBeGreaterThan(1);
     for (const level of Object.values(LEVELS)) {
       for (const wave of level.waves) expect(wave.enemy, 'a level authors the minnow, which is the fish’s to call').not.toBe('minnow');
     }
@@ -652,5 +678,90 @@ describe('0315 — the breaker', () => {
     hull.fireIn = 1;
     frame.step();
     expect(world.debris.size - before, 'the wave came up through the edge and the edge said nothing').toBeGreaterThanOrEqual(BURST.breach);
+  });
+});
+
+/**
+ * The pressure comes forward — `docs/decisions/0317-the-pressure-comes-forward.md`.
+ *
+ * Reported, having read the fight flown: *"more forward pressure early and bring the breaker forward,
+ * but we need to make sure there's variety in the pressure as well, a phase that lasts too long or
+ * starts early and goes till end of the fight ends up being boring."*
+ *
+ * ⚠️ **BOTH CLAIMS ARE ABOUT THIS ROW AND NEITHER RANKS IT AGAINST ANOTHER BOSS** —
+ * [0295](../docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md). *Does it make sense for THIS
+ * THING to be hard?* is the question, and the answer for the fish is *yes, this is the shape its own
+ * decision claims*; a rule about where every boss's attacks may sit would be the content limiter.
+ */
+describe('0317 — the pressure comes forward', () => {
+  const row = BOSSES.volans;
+
+  it('THE ASKED-FOR ONE: the breaker opens in the first half of the bar, where it used to wait for the last third', () => {
+    /*
+      ⚠️ **IT IS THE ONE ATTACK THAT COVERS A PLACE RATHER THAN A DIRECTION** — 0315 — so it is the one
+      that makes a player move rather than lean. At a third of health a shuriken had already finished
+      the fight before it was ever thrown: `scripts/weigh-threat.mjs` measured sixteen seconds and a
+      parked ship hit **zero times**.
+    */
+    const at = row.phases.findIndex((p) => (p.attack ?? row.attack).kind === 'breaker');
+    expect(at, 'the fish throws no breaker at all').toBeGreaterThanOrEqual(0);
+    expect(row.phases[at]!.upTo, `the breaker waits until ${row.phases[at]!.upTo} of the bar`).toBeGreaterThan(0.5);
+  });
+
+  it('and the field EMPTIES between the two hordes, so neither runs from where it starts to the end', () => {
+    /*
+      ⚠️ **THE HALF OF THE ASK THAT IS ABOUT PACING RATHER THAN PRESSURE.** *"A phase that lasts too
+      long or starts early and goes till end of the fight ends up being boring."* Both escorts used to
+      run in consecutive phases to the last one, so from half health on there was always something in
+      the way — and a horde that is always there is scenery. What makes the shoal read when it comes
+      back is that it went away.
+    */
+    const escorted = row.phases.map((p) => p.escort !== undefined);
+    expect(escorted.filter(Boolean).length, 'the fish calls no horde at all').toBeGreaterThan(1);
+    const first = escorted.indexOf(true);
+    const gaps = escorted.slice(first).filter((on) => !on).length;
+    expect(gaps, 'every phase from the first horde to the last carries one, so the field never empties').toBeGreaterThan(0);
+  });
+
+  it('THE ONE THAT EXPLAINS THE REST: its fan sweeps ACROSS THE LANE and never round the circle', () => {
+    /*
+      ⚠️ **THE DEFECT UNDER EVERY OTHER NUMBER, AND ONLY THE INSTRUMENT FOUND IT.** `firePhase`
+      accumulates without limit, so a `turn` of 0.5 walks the rake's centre through a **whole circle
+      every thirteen volleys**: the fan spends most of its life pointing sideways and backwards, and
+      *down the lane* comes up once in thirteen. It is why the fish landed 0.02 hits a second on a
+      parked ship, and why neither more shots nor a tighter spread moved it — density cannot help a fan
+      that is aimed at the wall.
+
+      ⚠️ **DRIVEN OVER TWO FULL SWEEPS, AND MEASURED AS THE MEAN DIRECTION OF THE VOLLEY** rather than
+      off `firePhase`, which is the model's own number. What the player sees is where the shots went.
+    */
+    const attack = row.attack;
+    expect(attack.kind, 'the fish no longer rakes').toBe('rake');
+    if (attack.kind !== 'rake') throw new Error('unreachable');
+    expect(attack.arc, 'the fish rakes with no arc, so its fan walks round the circle').toBeDefined();
+    const { world, frame } = volansAt(1);
+    const hull = world.bossPool.at(0);
+    let worst = 0;
+    for (let volley = 0; volley < 30; volley++) {
+      world.enemyShots.clear();
+      hull.fireIn = 1;
+      frame.step();
+      /*
+        ⚠️ **THE VECTORS ARE SUMMED AND NOT THE ANGLES, WHICH THE FIRST DRAFT GOT WRONG AND LOUDLY.**
+        Down the lane is ±π and `atan2` hands it back either way, so a mean of the ANGLES over volleys
+        that straddle the half-turn lands near zero — and the guard reported a fan pointing 155° off
+        the lane for a fan that was pointing straight down it.
+      */
+      let along = 0;
+      let across = 0;
+      for (let i = 0; i < world.enemyShots.size; i++) {
+        const s = world.enemyShots.at(i);
+        along += s.velAlong - world.scrollPerStep;
+        across += s.velAcross;
+      }
+      const off = Math.abs(Math.abs(Math.atan2(across, along)) - Math.PI);
+      if (off > worst) worst = off;
+    }
+    expect(worst, `a volley pointed ${((worst * 180) / Math.PI).toFixed(0)}° off the lane, and the arc is ${(((attack.arc ?? 0) / 2 / Math.PI) * 180).toFixed(0)}°`).toBeLessThanOrEqual((attack.arc ?? 0) / 2 + 0.01);
   });
 });
