@@ -187,6 +187,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the fish throws a BREAKER: a wave of spines up off the near edge of the lane over a span centred on the hull, the crest leading and the shoulders trailing — the one attack in the game that does not leave the boss, so the answer to it is along the lane rather than across it; it takes the second whip's place, and a sixth phase was refused by the eight-volley rule** | [0315](decisions/0315-the-fish-throws-a-breaker.md) |
 | **the quill is a SPINE: the fish's own bullet redrawn as a barbed fin-spine, point first, where 0262 drew a feather for an animal that was then an eagle — every number of 0262's kept, and the mark settled by three photographs and the two guards that refused the first two** | [0316](decisions/0316-the-quill-is-a-spine.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md) |
 | **the PRESSURE comes forward: `scripts/weigh-threat.mjs` is the other half of `weigh-boss` — how hard a boss is to STAND IN FRONT OF, and whether its adds ever arrive; a rake may bound its sweep, because `firePhase` accumulated and the fish's fan walked a whole circle every thirteen volleys; a feeding horde comes in from the LEAD, past the boss, because from the sides it swam up the player's own firing line and none of nineteen ever arrived** | [0317](decisions/0317-the-pressure-comes-forward.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md), [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
+| **a sound is made for the HUNDREDTH time: 0104's rule — a cue finishes before its own next volley — asked about a boss for the first time, over the table and in the flown fight; the serpent's acid a third of its length with its weight out of the 2–5 kHz band; four boss cues struck at four weights; and the ship's death landing on the root, which reverses the one thing 0099 was proudest of** | [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0099](decisions/0099-the-cues-are-in-the-key.md), [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -914,16 +915,25 @@ attacks heard ([0308](decisions/0308-the-attacks-are-heard.md)), the rear
 ([0309](decisions/0309-the-serpent-rears-back.md)), the storm over the whole body and the crown's
 discharge ([0310](decisions/0310-the-storm-runs-the-whole-body.md)), and the acid and the void as one
 ball ([0311](decisions/0311-the-acid-and-the-void-come-as-one-ball.md)). **Owed from the play:** how
-the three attack cues sit over the bed — *"it's probably a case of we'll ship and see"* — and the reared
-posture and the horn flare photographed in situ rather than off the sheet.
+the reared posture and the horn flare are photographed in situ rather than off the sheet.
 
-⚠️ **AND THE THIRD SERPENT BRIEF ANSWERED THE BALL'S APPETITE, WHICH 0311 OWED AND THE PLAY FOUND
-FIRST** — [0322](decisions/0322-the-ball-is-worth-shooting.md). *"You can't kill the combined balls fast
-enough at all and still damage the serpent and avoid everything."* The fight's cadences, its phase bands,
-the ball's appetite and the swell every swallowing bullet grows by all moved; a head may hold the round;
-and `tests/level.test.ts`'s *a later phase throws at least as much* is a taste now. **Owed from the
-play:** whether the last third reads as *shoot the thing, then dodge the bolt*; whether a fed ball reads
-as eating at half again its size; and `burn`, which the decision measures and does not fix.
+⚠️ **THE THIRD SERPENT BRIEF IS TWO DECISIONS AND BOTH ARE IN.** It arrived as one message about the
+fight and the mix together:
+
+- **the fight** — [0322](decisions/0322-the-ball-is-worth-shooting.md). *"You can't kill the combined
+  balls fast enough at all and still damage the serpent and avoid everything."* The cadences, the phase
+  bands, the ball's appetite and the swell every swallowing bullet grows by all moved; a head may hold the
+  round; and `tests/level.test.ts`'s *a later phase throws at least as much* is a taste now. **Owed from
+  the play:** whether the last third reads as *shoot the thing, then dodge the bolt*; whether a fed ball
+  reads as eating at half again its size; and `burn`, which the decision measures and does not fix.
+- **the mix and the death** — [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md). *"The
+  sound is horrible, it's actively unpleasant too listen to"*, and *"a sound you want to hear over and
+  over and over again."* 0104's rule — a cue finishes before its own next volley — is asked about a boss
+  for the first time; the acid is a third of its length with its weight out of 2–5 kHz; four boss cues are
+  struck at four weights; and the death lands on the root. **Owed from the play, and it is the whole
+  verdict:** a hand on `node scripts/hear.mjs`, because nothing in a suite can hear —
+  [0027](decisions/0027-measure-the-picture-not-the-model.md). *"It's probably a case of we'll ship and
+  see"* was said of the cues 0308 shipped, and it is still the position.
 
 ### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
 

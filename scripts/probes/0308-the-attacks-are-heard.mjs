@@ -86,8 +86,10 @@ export const PROBES = [
     guard: '0104 — and the gun never ducks, whatever it is doing',
     edit: {
       path: 'src/content/cues.ts',
-      find: "  bossAcid: {\n    twin: 'threat-appears',\n    air: 0.3,",
-      replace: "  bossAcid: {\n    twin: 'threat-appears',\n    duck: 0.3,\n    air: 0.3,",
+      // ⚠️ Re-anchored by 0323, which brought the acid's room down with its length (0.30 → 0.22): a cue
+      // arriving every second builds its own wash out of its own tails. Same break, same guard.
+      find: "  bossAcid: {\n    twin: 'threat-appears',\n    air: 0.22,",
+      replace: "  bossAcid: {\n    twin: 'threat-appears',\n    duck: 0.3,\n    air: 0.22,",
     },
   },
   {

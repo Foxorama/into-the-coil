@@ -41,8 +41,11 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every pitched cue glides between two notes of the key',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(12), to: inKey(-1), seconds: 1.2",
-      replace: "{ wave: 'sine', from: inKey(12), to: inKey(-1) * Math.pow(2, -1 / 12), seconds: 1.2",
+      // ⚠️ Re-anchored by 0323, which landed the death on the ROOT instead of the seventh. The break is
+      // the same one — a semitone off whatever note the fall is authored to end on, so both ends still
+      // look musical and only the in-the-key assertion fires.
+      find: "{ wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.15",
+      replace: "{ wave: 'sine', from: inKey(12), to: inKey(0) * Math.pow(2, -1 / 12), seconds: 1.15",
     },
   },
   {
