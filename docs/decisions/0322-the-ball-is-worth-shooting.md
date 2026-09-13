@@ -200,9 +200,18 @@ nothing; the two clauses that stay are invariants (phases ordered full to empty,
 slows). Demoted rather than deleted, which is
 [0192](0192-a-guard-holds-an-invariant.md)'s own asymmetry: *demoting a guard takes one edit and a reason.*
 
-⚠️ **AND 0304's PROBE FOR THAT CLAUSE IS RETIRED WITH IT**, because a probe against a taste reports STILL
-GREEN — [0019](0019-a-probe-must-be-seen-to-apply.md)'s subject wearing a green tick. Its claim rests on
-the two probes about the arc itself instead.
+⚠️ **AND TWO PROBES FOR THAT CLAUSE ARE RETIRED WITH IT**, because a probe against a taste reports STILL
+GREEN — [0019](0019-a-probe-must-be-seen-to-apply.md)'s subject wearing a green tick. 0304's rests on the
+two probes about the arc itself instead; 0042's was *the second boss made an easier fight as it dies*, and
+**the full proof is what found it** — `npm run prove` reported STILL GREEN on that one break out of 1139
+after everything above was green.
+
+⚠️ **SO HERE IS WHAT THE DEMOTION ACTUALLY COSTS, SINCE A PROBE HAD TO SAY IT**: nothing hard now catches a
+phase table that throws FEWER things as the bar empties. The cadence half is still hard — a later phase
+never fires slower — and the count half is printed every run with its offenders named. That is the trade,
+and it is the one [0192](0192-a-guard-holds-an-invariant.md) describes: *fix the defect, change the guard
+and say why, or delete it.* What it buys is that a phase may be quieter and harder, which is the fight the
+report asked for.
 
 ## The health, and the thing it teaches about a bullet with an appetite
 

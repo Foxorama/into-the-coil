@@ -53,25 +53,27 @@ export const PROBES = [
       replace: "  if (state.screen.current === 'cleared' && state.run.level >= 1) {",
     },
   },
-  {
-    decision: '0042',
-    suite: 'tests/level.test.ts',
-    // A second boss that eases off. It is the one that has four phases, so it has the most places to
-    // get this wrong, and a phase table is where nobody looks twice.
-    broke: 'the second boss made an easier fight as it dies rather than a harder one',
-    guard: 'every phase is reachable, and they only get harder',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0096, which snapped every authored cadence to a sixteenth. Same break, same
-      // guard: the last phase throwing FEWER shots than the first.
-      // ⚠️ Re-anchored by 0247, which made the harrow a two-phase mid-boss opening on three shots;
-      // the last phase throws ONE, which is fewer.
-      // And by 0248, which gave every phase a shot and an attack of its own.
-      // And by 0269, which gave the harrow three phases paced to the fish's.
-      find: "      { upTo: 0.33, fireEvery: 48, shots: 7, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-      replace: "      { upTo: 0.33, fireEvery: 48, shots: 1, spread: 1.4, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-    },
-  },
+  /*
+    ── ⚠️ AND THE *EASIER AS IT DIES* PROBE IS RETIRED, WHICH IS A LOSS AND IS SAID SO — 0322 ───────
+
+    It cut a mid-boss's last phase from seven shots to one and watched `tests/level.test.ts`'s **every
+    phase is reachable, and they only get harder** go red. **That comparison is a taste now**
+    (`0322-volley` in `tests/authored.ts`), so the break reports **STILL GREEN** — and
+    `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` is explicit that a probe reporting STILL
+    GREEN is worse than no probe, because it wears a tick.
+
+    ⚠️ **WHAT IS ACTUALLY LOST: nothing hard now catches a phase table that throws FEWER things as the
+    bar empties.** The cadence half is still hard in `tests/difficulty.test.ts` — a later phase never
+    fires slower — and the count half is printed every run with the offenders named, where a human sees
+    it and a suite does not. `docs/decisions/0322-the-ball-is-worth-shooting.md` has the argument for
+    why the count cannot hold the claim: the serpent's last third is ONE ball the player must destroy
+    against a spray of twenty-one, which is fewer objects and more to do, and three separate decisions
+    had to redefine the quantity to keep saying otherwise.
+
+    ⚠️ **0042's OWN CLAIM IS UNAFFECTED AND STILL HAS FOUR PROBES.** *A run is a sequence of levels* is
+    about what carries forward and where a run ends; a boss's phase table was the one break here that
+    was about neither.
+  */
   /*
     ── THE WARDEN PROBE WAS HERE, AND 0295 RETIRED IT WITH THE GUARD IT AIMED AT ───────────────────
 
