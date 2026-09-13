@@ -16,7 +16,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a void blast eats the player’s fire',
     edit: {
       path: 'src/content/shots.ts',
-      find: 'fission: SPENT_BY_ARRIVING, swallows: true }',
+      // ⚠️ Re-anchored by 0322: an appetite is an object now, because it carries the swell it spends.
+      find: 'fission: SPENT_BY_ARRIVING, swallows: { swell: 1.77 } }',
       replace: 'fission: SPENT_BY_ARRIVING }',
     },
   },
@@ -64,15 +65,20 @@ export const PROBES = [
     broke: 'the blast no longer growing as it feeds, so a swallowed pulse looks like one that passed through',
     guard: 'THE REPORTED ONE: a void blast eats the player’s fire',
     edit: {
-      path: 'src/app/frame.ts',
       /*
         ⚠️ **Re-anchored by 0292 ONTO THE CONSTANT, which is the better anchor and always was.** The
         two swell lines appear three times now — the guns, the missiles and the bomb each take their
         own bite — so naming one pair would prove the claim for one mouth out of three. A growth of
         exactly one is *it does not grow*, said once for all of them.
+
+        ⚠️ **AND RE-ANCHORED AGAIN BY 0322, ONTO THE VOID'S OWN ROW, WHICH IS BETTER STILL.** The
+        constant is gone: the size a fed blast reaches is on the row and `bite` spends it per point of
+        damage, so *this blast does not grow* is now a thing one row can say. All four mouths read the
+        one function, so the claim still covers every one of them.
       */
-      find: 'const VOID_SWELL = 1.1;',
-      replace: 'const VOID_SWELL = 1;',
+      path: 'src/content/shots.ts',
+      find: 'swallows: { swell: 1.77 } }',
+      replace: 'swallows: { swell: 1 } }',
     },
   },
   {
@@ -89,9 +95,12 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       find: "  acid: { sprite: SPRITE.acid, spriteHit: SPRITE.acid, radius: 1.5, health: 1, damage: 1, speed: 0.8, fission: SPENT_BY_ARRIVING },",
+      // ⚠️ An appetite is an object since 0322, and a probe that planted the old flag would leave the
+      // swell `undefined` — which reddens the guard for the wrong reason. The row it plants is a row
+      // somebody could really author.
       replace:
         '  acid: { sprite: SPRITE.acid, spriteHit: SPRITE.acid, radius: 1.5, health: 1, damage: 1, speed: 0.8, ' +
-        'fission: SPENT_BY_ARRIVING, swallows: true },',
+        'fission: SPENT_BY_ARRIVING, swallows: { swell: 1.2 } },',
     },
   },
 ];

@@ -16,8 +16,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a MISSILE feeds it too',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        blast.health -= missile.damage;',
-      replace: '        if (missile.damage < 0) blast.health -= missile.damage;',
+      // ⚠️ Re-anchored by 0322, which made the four mouths one `bite`; this is the missile's.
+      find: '        bite(blast, row, missile.damage);',
+      replace: '        if (missile.damage < 0) bite(blast, row, missile.damage);',
     },
   },
   {
@@ -32,8 +33,10 @@ export const PROBES = [
     guard: 'and a BOMB feeds it, which is an area rather than a body',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        blast.health -= bomb.damage;',
-      replace: '        if (bomb.damage < 0) blast.health -= bomb.damage;',
+      // ⚠️ Re-anchored by 0322, which made the four mouths one `bite` — the bomb's is the one that
+      // takes `bomb.damage`, so the break is still *this mouth feeds nothing* and no other.
+      find: '        bite(blast, row, bomb.damage);',
+      replace: '        if (bomb.damage < 0) bite(blast, row, bomb.damage);',
     },
   },
   {

@@ -1075,7 +1075,9 @@ describe('damage is legible on the body that took it', () => {
         expect(SHOTS[kind].health, `${kind} is a blade with nothing to survive an arrival on`).toBeGreaterThan(1);
         continue;
       }
-      if (SHOTS[kind].swallows === true) {
+      // ⚠️ An appetite is an object since 0322 — it carries the swell the growth spends — so *does it eat*
+      // is *does it say how eating looks*. The claim is unchanged: a shot that survives a hit owes a picture.
+      if (SHOTS[kind].swallows !== undefined) {
         expect(SHOTS[kind].health, `${kind} swallows the player’s fire but is spent by one hit of it`).toBeGreaterThan(1);
         continue;
       }

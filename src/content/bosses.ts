@@ -431,6 +431,28 @@ export interface Head {
    * to the bullet would make thunder sound like a void blast. What the player hears is the ATTACK.
    */
   cue?: CueKind;
+  /**
+   * Extra steps of quiet after this head's volley, before the round moves on to the next — absent is
+   * none. `docs/decisions/0322-the-ball-is-worth-shooting.md`.
+   *
+   * ⚠️ **REPORTED**: *"the void balls [need] to be spaced out slightly more between the acid sprays."*
+   *
+   * ⚠️ **AND `fireEvery` CANNOT SAY IT, WHICH IS THE WHOLE REASON THIS FIELD EXISTS.** A `sweep` pushes
+   * the cadence out to its own length (`src/app/boss.ts`), so on any tier whose `fireGap` takes the
+   * phase's gap below the spray's sixty steps the next head lands **on the spray's last globe** — at
+   * `burn` the serpent's void arrived the instant the acid stopped, and no value of `fireEvery` moved it,
+   * because the spray's hold is a floor and the cadence is what it floors. Measured at all three tiers in
+   * the decision. What the phase says is *how often the round comes round*; what a head says here is *how
+   * much air this head gets*, and only the second one composes with a hold.
+   *
+   * ⚠️ **ON THE HEAD, NOT ON THE PHASE, ON 0282's TERMS**: a round of three where one head wants room and
+   * two do not is a thing this table has to be able to say. The gap belongs to the head that was thrown,
+   * so it is *the pause after the acid* rather than *the phase is slower* — which are different fights.
+   *
+   * ⚠️ **AND IT IS PUT ON THE FIRE GRID like every other cadence** (0096), so the volley after a gap still
+   * lands on the lattice a dozen bodies are already firing on.
+   */
+  gap?: number;
 }
 
 /**
@@ -2089,7 +2111,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
       loadout. Chosen from the table in the decision, measured by `scripts/weigh-boss.mjs` rather
       than divided.
     */
-    health: 1000,
+    /*
+      ⚠️ **1000 → 1100, AND IT IS THE BALL'S APPETITE BEING PAID FOR BY THE ANIMAL — 0322.** A maw eats the
+      player's fire, so thirty points of appetite were thirty points of damage that never reached the
+      serpent: cutting it to twelve handed the difference back to the hull and the arc's quickest fight fell
+      from **40.0 s to 38.0**, under 0260's forty-second floor. The bullet was tanking for the boss, which
+      is exactly the shape 0307 warned about when *"the void rule the same decision changed made the
+      lightning the quickest gun here"* — a change to what a bullet does is a change to how long the fight
+      takes, every time. Flown at 1100: the arc **43 s** from its best place, three clear of the floor, and
+      every phase now gets ten volleys away or more where the floor is eight. Measured by
+      `scripts/weigh-boss.mjs`, not divided.
+    */
+    health: 1100,
     damage: 3,
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
@@ -2108,9 +2141,43 @@ export const BOSSES: Record<BossKind, BossRow> = {
     patrol: 0.3,
     shot: 'acid',
     phases: [
-      // Whole: five acid globes in an arc straight down the lane — the row's own attack and shot (0304),
+      /*
+        ── THE OPENING IS TWO PHASES NOW, AND THE ARC FILLS IN — 0322 ────────────────────────────────
+
+        ⚠️ **REPORTED**: *"at the start it needs to fire slightly fewer acid balls, then increase them,
+        then it gets to the acid spray and void balls."* So the opening arc is **three globes while it is
+        whole and five once it is a sixth down** — the same 0.9 of arc either way, filled in rather than
+        widened, which is the escalation `phases[].shots` has been for since 0040 said so.
+
+        ⚠️ **A PHASE AND NOT A RAMP INSIDE ONE, BECAUSE THE TABLE ALREADY SAYS THIS.** A count that grows
+        with the health bar inside a single phase is a second escalation mechanism beside the one every
+        boss in the game uses, and it would be the serpent's alone —
+        [0282](0282-a-mechanism-for-every-instance-makes-them-one-instance.md). Two rows say it, and any
+        boss can say it the same way tomorrow.
+
+        ⚠️ **AND THE BANDS AND THE CADENCES WERE BOTH RE-DERIVED, BECAUSE TWO GUARDS SQUEEZE FROM
+        OPPOSITE ENDS AND A SPLIT PHASE IS WHERE THEY MEET.** `tests/serpent.test.ts` holds that every
+        phase gets **eight volleys away** in the quickest fight any gun can fly (0260's *"I only saw
+        about 50% of their attacks"*), and `tests/difficulty.test.ts` holds that a later phase is never
+        slower than an earlier one. Two phases out of one opening halves each band, so at 84 steps a
+        half-band got **6.7** volleys — and answering that by slowing the late phases is the one thing
+        the second guard forbids. The whole ladder moved instead: cadences of **78, 72, 66, 60** — one
+        notch of the fire grid apart, four phases, each quicker than the last — over bands of **0.22,
+        0.23, 0.22, 0.33**, which are **sized by the volley floor rather than by round numbers**. Flown
+        at the quickest gun's quickest place, that is 8.8, 8.9, 10 and 17 volleys against a floor of
+        eight; the pretty version (fifths of the bar) measured 7.9 in the second phase and is why the
+        boundaries are 0.78 and 0.55. Neither guard was touched, and the decision has the table.
+
+        ⚠️ **THE OPENING IS SIX STEPS QUICKER AND THROWS TWO FEWER**, which is a cut in what arrives and
+        not a swap: at the tuned tier it was five globes a 1.1 s and is three a second — **4.5 bullets a
+        second down to 3.0.** *"Slightly fewer"* is the count; the cadence moved because the band did.
+      */
+      // Whole: three acid globes in an arc straight down the lane — the row's own attack and shot (0304),
       // and the wet burst 0308 gave it in place of the crash every boss shared.
-      { upTo: 1, fireEvery: 84, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
+      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
+      // A fifth down: the same arc with five in it — *"then increase them"* — and the patrol a shade
+      // quicker, so the phase is a change in what the animal does and not only in what it throws.
+      { upTo: 0.78, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
       /*
         Hurt: the acid spray and a fan of three void in turn — two heads (0254), one a volley.
 
@@ -2124,10 +2191,26 @@ export const BOSSES: Record<BossKind, BossRow> = {
         the spray has finished (`src/app/boss.ts`), so every step of spray is a step the round is
         longer — and the last third's round is where the lightning lives. At a second, it still falls
         about every two and a quarter seconds where it fell every 1.8; at 1.2 it was 2.4.
+
+        ── ⚠️ AND IT BREATHES NOW, WHICH IS TWO NUMBERS AND NOT ONE — 0322 ───────────────────────────
+
+        ⚠️ **REPORTED**: *"the acid spray and void balls needs a slightly slower fire rate and the void
+        balls to be spaced out slightly more between the acid sprays."* **60 → 66** is the first half — one
+        notch of the fire grid, which is as far as it can go and stay under the phase above it. The
+        second half is the head's own `gap`, because `fireEvery` cannot say it: the spray pushes the
+        cadence out to its own sixty steps, so at `savior` and `burn` — where `fireGap` is 0.78 and 0.5 —
+        the void landed on the spray's **last globe**, at every value of `fireEvery` this phase may carry.
+        The gap is added after the hold rather than competing with it, so the void gets **0.4 s** of clear
+        lane at the hardest tier and **0.5** at the easiest, driven; and the round comes round every 2.0 to
+        2.6 s against 1.5 to 2.0 before.
+
+        ⚠️ **AND THE OTHER READING OF *spaced out* WAS CONSIDERED AND REFUSED**: the fan's own `spread`,
+        widening the three void balls away from each other. It is not what the sentence pairs with *between
+        the acid sprays*, and a wider fan is a harder volley — the ask is for room, and room is time here.
       */
       {
-        upTo: 0.66,
-        fireEvery: 60,
+        upTo: 0.55,
+        fireEvery: 66,
         shots: 3,
         spread: 0.8,
         patrolScale: 1.3,
@@ -2161,18 +2244,41 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid' },
+            // ⚠️ **24 STEPS OF QUIET AFTER THE ACID STOPS — 0322**, so the void arrives in a lane the spray
+            // has left rather than on its last globe. On the acid's head and not on the void's: it is the
+            // pause after the spray, and the spray is the thing whose hold was swallowing it.
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid', gap: 24 },
             { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },
           ],
         },
       },
-      // The last third: the acid spray, void and the lightning in turn, three columns a strike. The
-      // cadence is the quickest of the three so the lightning still falls about every two seconds,
-      // which is what it did alone at 54 with a warning of 45 — *"superb, don't change it."* The spray
-      // is phase two's, carried on as every head here is (0261, and 0304 asked which).
+      /*
+        The last third: the ball and the lightning in turn (0311), three columns a strike.
+
+        ⚠️ **THE PARAGRAPH THAT WAS HERE SAID *the cadence is the quickest of the three so the lightning
+        still falls about every two seconds*, AND IT HAD BEEN FALSE FOR A COMMIT — 0322.** The round was
+        three heads at 36 steps, which is 108 between strikes; 0311 took a head out and left the number,
+        so the lightning came every **72** and the player was handed a ball every 72 as well — *"superb,
+        don't change it"* changed by arithmetic nobody re-did. **36 → 60** puts the strike back on exactly
+        the two seconds that verdict was about, and it is the *"fire rate [that] is too fast"* the report
+        names. `docs/decisions/0322-the-ball-is-worth-shooting.md` has the driven table.
+
+        ⚠️ **AND THE BALL GETS ROOM OF ITS OWN ON TOP OF IT — 42 STEPS ON THE LOB'S HEAD.** A ball is a
+        thing to **shoot** and a bolt is a thing to **stand away from**; the two asks are opposite, and the
+        gap is what stops the player being handed both at once. Driven with a pilot that flies onto the
+        ball's lane and the opening gun: **every ball killed at `legendary` and no ring on the screen at
+        all**, against twelve of seventeen and a ring up a seventh of the time at 18 steps. The decision
+        has the sweep over both numbers, and says plainly what `burn` is still like.
+
+        ⚠️ **THE STRIKE COMES EVERY 2.7 s AT `legendary` NOW, AND THAT IS A COST WORTH NAMING.** It was
+        1.8 s when the round had three heads, 1.2 s after 0311 took one out, and the *"superb, don't change
+        it"* verdict was given on the attack — the column, the warning line and the strike, all untouched
+        since 0248 — rather than on a period that has now moved three times underneath it. A round with a
+        thing to shoot in it cannot also strike every two seconds; this is the trade the report asked for.
+      */
       {
         upTo: 0.33,
-        fireEvery: 36,
+        fireEvery: 60,
         shots: 3,
         spread: 0.9,
         patrolScale: 1.6,
@@ -2255,7 +2361,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
               apart, out of cues that already exist, and `burstMaw` in `src/app/frame.ts` names the
               second.
             */
-            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid' },
+            { shot: 'maw', attack: { kind: 'lob' }, cue: 'bossVoid', gap: 42 },
             /*
               ⚠️ UNTOUCHED, AND SAID TWICE TWO PLAYS APART: *"don't change the lightning attack it's
               really good."* It is the one attack on this boss with a verdict already in.

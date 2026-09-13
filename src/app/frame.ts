@@ -2454,9 +2454,7 @@ function fireArc(w: World): void {
       const blast = w.enemyShots.at(eater);
       spawnLink(w, row, fromAlong, fromAcross, blast.along, blast.across);
       if (!struck) w.onCue('zap', blast.across);
-      blast.health -= w.weapon.damage;
-      blast.swell *= VOID_SWELL;
-      blast.radius *= VOID_SWELL;
+      bite(blast, SHOT_ROWS[blast.kind]!, w.weapon.damage);
       if (blast.health <= 0) spendVoid(w, eater);
       break;
     }
@@ -3323,12 +3321,37 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
 const VOID_JITTER = 0.2;
 
 /**
- * How much a void blast grows with every point of the player’s fire it swallows — 0291.
+ * One bite taken out of a swallowing blast, and the growth that says it was taken — 0291, made one
+ * description and made a share of the appetite by
+ * `docs/decisions/0322-the-ball-is-worth-shooting.md`.
  *
- * A tenth a bite, so a full appetite of six leaves it about three quarters again as wide as it was
- * thrown: unmistakable beside an unfed one, and still inside the lane it is flying down.
+ * ── IT WAS `blast.swell *= VOID_SWELL` AT FOUR CALL SITES, AND THE CONSTANT WAS THE DEFECT ───────
+ *
+ * ⚠️ **A TENTH A BITE IS NOT A SIZE, IT IS A SIZE PER SHOT — and a bullet's size is not the player's
+ * to choose.** 0291 measured *"a full appetite of six leaves it about three quarters again as wide"*
+ * on the one-damage pulse; the same line gives a two-damage shot 1.33 and a thirty-point ball fed by
+ * the pulse **fifteen times its own hurtbox**, which is what shipped. Two faults out of one constant:
+ * the growth depended on the shooter's rate rather than on what was eaten, so **the weakest gun in the
+ * game made the biggest wall**, and it compounded with an appetite the constant had never seen.
+ *
+ * ⚠️ **SO THE ROW SAYS THE SIZE AND THIS SPENDS IT PER POINT**: `swell ^ (damage / appetite)`, which
+ * multiplies out to exactly the row's number when the whole appetite has gone however it was divided.
+ * Local, so a shard born with a third of the appetite grows by a third of the swell over its own life
+ * without anything having to remember what it was thrown with (0299's children take `shardAppetite`).
+ *
+ * ⚠️ **THE DRAWING AND THE HURTBOX MOVE TOGETHER OR NEITHER DOES** — 0036, and it is the reason this
+ * is one function rather than a number four call sites multiply by: `swell` scales the blit and
+ * `radius` is what the ship's collision and `feedVoids` measure, and the four mouths that feed a blast
+ * (the guns, the missiles, the bomb and the arc) each had their own copy of the pair to get wrong.
+ *
+ * ⚠️ **Nothing allocates** — `tests/budget.test.ts` scans this file, and `**` is arithmetic.
  */
-const VOID_SWELL = 1.1;
+function bite(blast: Entity, row: ShotRow, damage: number): void {
+  blast.health -= damage;
+  const swell = row.swallows!.swell ** (damage / row.health);
+  blast.swell *= swell;
+  blast.radius *= swell;
+}
 
 /**
  * The player's fire, fed to anything with an appetite for it — 0291.
@@ -3351,7 +3374,7 @@ function feedVoids(w: World): void {
   for (let i = w.enemyShots.size - 1; i >= 0; i--) {
     const blast = w.enemyShots.at(i);
     const row = SHOT_ROWS[blast.kind]!;
-    if (row.swallows !== true) continue;
+    if (row.swallows === undefined) continue;
     /*
       ── A SHARD USED TO BE SKIPPED HERE ENTIRELY, AND 0299 SPLIT THE TWO THINGS THAT CONFLATED ─────
 
@@ -3377,7 +3400,7 @@ function feedVoids(w: World): void {
         caught it reported the fire going straight through, which is what it was doing.
       */
       if (!overlaps(shot, blast, 1)) continue;
-      blast.health -= shot.damage;
+      bite(blast, row, shot.damage);
       w.playerShots.releaseAt(s);
       /*
         ⚠️ **IT SWELLS AS IT FEEDS, AND THAT IS THE ONLY THING THAT SAYS IT IS EATING.** A blast that
@@ -3394,9 +3417,11 @@ function feedVoids(w: World): void {
         ⚠️ **THE DRAWING AND THE HURTBOX GROW TOGETHER**, for the same reason the roll at the muzzle
         moves both: a blast drawn bigger than it collides as is a blast that hits from a place the
         picture calls empty.
+
+        ⚠️ **AND THE GROWTH IS A SHARE OF THE APPETITE RATHER THAN A STEP PER BITE — 0322.** `bite`
+        above has the whole argument: a step per bite is a size the player's own rate of fire chooses,
+        and it took a thirty-point ball to fifty-two units of a hundred-unit lane.
       */
-      blast.swell *= VOID_SWELL;
-      blast.radius *= VOID_SWELL;
       if (blast.health <= 0) break;
     }
     /*
@@ -3415,10 +3440,8 @@ function feedVoids(w: World): void {
       for (let m = w.missiles.size - 1; m >= 0; m--) {
         const missile = w.missiles.at(m);
         if (!overlaps(missile, blast, 1)) continue;
-        blast.health -= missile.damage;
+        bite(blast, row, missile.damage);
         w.missiles.releaseAt(m);
-        blast.swell *= VOID_SWELL;
-        blast.radius *= VOID_SWELL;
         if (blast.health <= 0) break;
       }
     }
@@ -3439,10 +3462,8 @@ function feedVoids(w: World): void {
         const bomb = w.blasts.at(b);
         if (bomb.damage <= 0) continue;
         if (!overlaps(bomb, blast, 1)) continue;
-        blast.health -= bomb.damage;
+        bite(blast, row, bomb.damage);
         blast.landIn = IMPACT_FLASH_STEPS;
-        blast.swell *= VOID_SWELL;
-        blast.radius *= VOID_SWELL;
         break;
       }
     }
@@ -3654,7 +3675,7 @@ function voidOnPath(w: World, fromAlong: number, fromAcross: number, toAlong: nu
   let first = Number.POSITIVE_INFINITY;
   for (let i = 0; i < w.enemyShots.size; i++) {
     const blast = w.enemyShots.at(i);
-    if (SHOT_ROWS[blast.kind]!.swallows !== true) continue;
+    if (SHOT_ROWS[blast.kind]!.swallows === undefined) continue;
     // ⚠️ The stage skip was here too and 0299 took it out: a shard is a thing the lightning is drawn
     // into like any other void, which is what *"it sucks in the lightning"* meant. It cannot burst.
     if (blast.along + blast.radius > edge) continue;
@@ -5552,7 +5573,7 @@ function driveBoss(w: World): void {
   */
   for (let i = beforeVolley; i < w.enemyShots.size; i++) {
     const thrown = w.enemyShots.at(i);
-    if (SHOT_ROWS[thrown.kind]!.swallows !== true) continue;
+    if (SHOT_ROWS[thrown.kind]!.swallows === undefined) continue;
     const roll = 1 + w.voidRng.range(-VOID_JITTER, VOID_JITTER);
     thrown.swell = roll;
     thrown.radius *= roll;

@@ -80,7 +80,8 @@ export const PROBES = [
     guard: 'flown at the cap on the tuned tier',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 1000,',
+      // ⚠️ Re-anchored by 0322, which put the health at 1100 to pay for the ball's smaller appetite.
+      find: '    health: 1100,',
       replace: '    health: 540,',
     },
   },

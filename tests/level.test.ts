@@ -15,10 +15,10 @@ import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
 import { BOSSES, BOSS_KINDS, chainReach } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
-import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
+import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
 import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
-import { SHOTS, type ShotKind } from '../src/content/shots.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import {
   ACROSS_CULL_MAX,
@@ -505,45 +505,14 @@ describe('every level has a boss of its own, and no two of them are the same obj
   });
 });
 
-/**
- * The most one volley of `phase` throws — 0304. `shots` for every arm that spends it, the attack's
- * own count for the one that carries its own, and a round's biggest head.
- *
- * ⚠️ **ONLY `sweep` CARRIES ITS OWN COUNT**, and it is named rather than defaulted: every other arm
- * either spends `shots` or carries it unused for exactly this rule to read (`bare`, `summon`, `beam`),
- * which `src/content/bosses.ts` says in each of their comments.
- */
-function largestVolley(
-  row: BossRow,
-  phase: BossPhase,
-  attack: BossAttack = phase.attack ?? row.attack,
-  shot: ShotKind = phase.shot ?? row.shot,
-): number {
-  /*
-    ⚠️ **A BULLET THE PLAYER HAS TO SHOOT DOWN COUNTS AS WHAT IT COSTS THEM — 0311.** This counted
-    OBJECTS, and 0311's ball is one object carrying thirty points of appetite: counted as one, the
-    serpent's last third read as a RELIEF after a spray of twenty-one and this guard said so. It was right
-    to — *a later phase is never a relief* is the claim — and wrong about the quantity, which is the same
-    fault 0304 fixed here once already. **What a volley asks of the player** is things to dodge plus
-    damage to spend, so a swallowing shot is worth its appetite and everything else is worth one. The
-    serpent's last third is 30 against its second's 21.
-  */
-  /*
-    ⚠️ **A SHOT THE PLAYER MAY DODGE IS WORTH ONE, HOWEVER MUCH IT EATS — AND THE FIRST VERSION READ
-    `swallows`.** That counted the void's appetite of six as well, so the serpent's hurt phase measured
-    **18** rather than 21 and 0304's own probe — the spray cut to three globes — went STILL GREEN. A void
-    may simply be flown around; it is `swallow` that makes dealing with a bullet compulsory, because what
-    it does otherwise is burst in the lane the player is flying in.
-  */
-  const each = SHOTS[shot].swallow !== undefined ? SHOTS[shot].health : 1;
-  if (attack.kind === 'sweep') return attack.globes * each;
-  // One shot, whatever the phase's fan says — the arm 0311 added for exactly that reason.
-  if (attack.kind === 'lob') return each;
-  if (attack.kind === 'heads') {
-    return Math.max(...attack.heads.map((head) => largestVolley(row, phase, head.attack, head.shot)));
-  }
-  return phase.shots * each;
-}
+/*
+  ── `largestVolley` MOVED TO `tests/authored.test.ts` WITH THE CLAIM IT SERVED — 0322 ─────────────
+
+  It existed for the one assertion below that has been demoted to a taste (`0322-volley`), and a
+  measure kept beside a guard that no longer reads it is the shape a dead helper takes. The whole of
+  its history — 0304's widening, 0311's appetite conversion, and why the third re-fit was refused —
+  is in the note on the assertion and in `docs/decisions/0322-the-ball-is-worth-shooting.md`.
+*/
 
 describe('a boss fight can reach all of its phases', () => {
   it('starts in a phase, whatever its health', () => {
@@ -583,16 +552,28 @@ describe('a boss fight can reach all of its phases', () => {
           before.fireEvery,
         );
         /*
-          ⚠️ **THE BIGGEST VOLLEY A PHASE THROWS, WHICH IS `shots` FOR EVERY ARM THAT SPENDS IT — 0304.**
-          This compared `shots` alone, and `shots` is not what a phase throws when its attack carries a
-          count of its own: the serpent's spray is twenty-one globes in a phase whose `shots` is three,
-          because that three is handed to every head of the round and one of them is the lightning.
-          The correct change that reddened it was a phase-one arc of five ahead of a phase-two spray of
-          twenty-one — the opposite of a relief. So the claim is unchanged and the quantity is fixed.
+          ── ⚠️ AND *THE BIGGEST VOLLEY NEVER SHRINKS* IS A TASTE NOW — 0322 ─────────────────────────
+
+          ⚠️ **IT WAS HERE, IT WAS HARD, AND IT HAD BEEN RE-FITTED TWICE TO KEEP ONE TABLE GREEN.** 0304
+          widened its quantity from `shots` to *the attack's own count*; 0311 widened it again, to *a
+          swallowing bullet is worth its appetite*, because a ball that replaced twenty-four bullets read
+          as a relief. 0322 is the third correct change to redden it — the ball's appetite came down from
+          thirty to twelve, so the same conversion now says twelve against a spray's twenty-one — and a
+          quantity that has to be redefined every time the content moves is not measuring the claim.
+
+          ⚠️ **THE CLAIM IS RIGHT AND THE NUMBER CANNOT HOLD IT.** *A later phase is never a relief* is
+          about what the fight ASKS, and the serpent's last third asks the player to destroy a thing and
+          then stand out of a column of lightning — fewer objects and more to do, which is the shape 0311
+          set out to build and the report asked for more of. Bullets on the screen and difficulty stopped
+          being the same axis the moment a bullet had to be shot down;
+          `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md` is the standing rule and this is
+          a second table arriving at it. **The two lines that stay are invariants** — phases ordered from
+          full to empty, and a cadence that never slows — and the count is printed every run as
+          `0322-volley` in `tests/authored.ts`, where a regression is visible and blocks nothing.
+
+          ⚠️ **DEMOTED RATHER THAN DELETED, WHICH IS 0192's OWN ASYMMETRY**: *demoting a guard takes one
+          edit and a reason; promoting one takes a decision.*
         */
-        expect(largestVolley(row, after), `${kind}'s phase ${i} throws less than the one before it`).toBeGreaterThanOrEqual(
-          largestVolley(row, before),
-        );
       }
     }
   });

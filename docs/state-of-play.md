@@ -179,6 +179,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the serpent is ARMOURED: a chain's `hurt` is the share of a hit its body passes to the head, and the serpent's is nothing — a shot stops and sparks; a void takes only the bolt it is IN THE WAY of; a boss fight is measured flown, by `scripts/weigh-boss.mjs`, and an armoured boss's forty seconds are held there** | [0307](decisions/0307-the-serpent-is-armoured.md) — amends [0283](decisions/0283-the-serpent-is-a-chain.md), [0292](decisions/0292-the-void-eats-everything.md), [0260](decisions/0260-a-boss-is-fought-to-the-end.md) |
 | **the attacks are HEARD: a boss's attack names its own cue and shared code holds the fallback; a cue ducks the bed only when it is an outcome rather than a thing being fired; `weigh-cue --loud` and `spectrum.ts`'s `loudest` are the absolute pair** | [0308](decisions/0308-the-attacks-are-heard.md) — amends [0114](decisions/0114-the-fight-is-a-different-piece.md), [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **the serpent REARS BACK: a phase may carry a `Rear` — stand further off, scale 0289's lunge, and bow the neck over the body that is actually on screen; the skull's turn is derived from the bow's own slope, so it cannot open a gap behind it** | [0309](decisions/0309-the-serpent-rears-back.md) — amends [0289](decisions/0289-a-bob-can-rear.md) |
+| **the ball is worth SHOOTING: a swallowing bullet's row says how big it gets when its appetite is spent, and the frame spends that per POINT of damage — a step per bite made the weakest gun the biggest wall; a head may hold the round with a `gap` a cadence cannot buy; the serpent's opening is two phases and its last third throws half as often** | [0322](decisions/0322-the-ball-is-worth-shooting.md) — amends [0291](decisions/0291-the-void-has-an-appetite.md), [0311](decisions/0311-the-acid-and-the-void-come-as-one-ball.md), [0304](decisions/0304-the-serpent-sprays.md), [0307](decisions/0307-the-serpent-is-armoured.md) |
 | **the STORM runs the whole body and the horns fire it: the lightning phase's aura crackles on five frames of six at two thirds the weight, the horns reach three times their drawn length, and the crown discharges for the half-second before a strike — read off the bolt already in the air** | [0310](decisions/0310-the-storm-runs-the-whole-body.md) — amends [0305](decisions/0305-the-serpent-darkens.md) |
 | **the EAGLE was always a fish: Ember Nebula's end boss is `volans`, the flying fish — the name, the fiction and every sentence that describes the animal as it is today; the hull deliberately not repainted; and a probe must still name a test that EXISTS, which renaming a test file is what broke** | [0312](decisions/0312-the-eagle-was-always-a-fish.md), [`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) |
 | **the fish BREACHES: an entrance is a closed union of kinds, and the second one is a leap — up through the near edge of the lane, three ballistic arcs that each crest higher than the last, and back down out of sight, with the hull nosed into its own path and a spray of embers at every crossing** | [0313](decisions/0313-the-fish-breaches.md) — amends [0306](decisions/0306-the-serpent-coils-in.md) |
@@ -913,9 +914,16 @@ attacks heard ([0308](decisions/0308-the-attacks-are-heard.md)), the rear
 ([0309](decisions/0309-the-serpent-rears-back.md)), the storm over the whole body and the crown's
 discharge ([0310](decisions/0310-the-storm-runs-the-whole-body.md)), and the acid and the void as one
 ball ([0311](decisions/0311-the-acid-and-the-void-come-as-one-ball.md)). **Owed from the play:** how
-the three attack cues sit over the bed — *"it's probably a case of we'll ship and see"* — the reared
-posture and the horn flare photographed in situ rather than off the sheet, and
-`scripts/weigh-boss.mjs` flown against the ball's appetite of 30.
+the three attack cues sit over the bed — *"it's probably a case of we'll ship and see"* — and the reared
+posture and the horn flare photographed in situ rather than off the sheet.
+
+⚠️ **AND THE THIRD SERPENT BRIEF ANSWERED THE BALL'S APPETITE, WHICH 0311 OWED AND THE PLAY FOUND
+FIRST** — [0322](decisions/0322-the-ball-is-worth-shooting.md). *"You can't kill the combined balls fast
+enough at all and still damage the serpent and avoid everything."* The fight's cadences, its phase bands,
+the ball's appetite and the swell every swallowing bullet grows by all moved; a head may hold the round;
+and `tests/level.test.ts`'s *a later phase throws at least as much* is a taste now. **Owed from the
+play:** whether the last third reads as *shoot the thing, then dodge the bolt*; whether a fed ball reads
+as eating at half again its size; and `burn`, which the decision measures and does not fix.
 
 ### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
 
