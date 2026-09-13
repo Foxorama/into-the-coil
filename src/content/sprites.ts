@@ -352,6 +352,42 @@ export const SPRITE_KINDS = [
   'boss9GapeHit',
   'boss9Shut',
   'boss9ShutHit',
+  /*
+    ── AND IT KINDLES AS IT IS FOUGHT — 0320 ─────────────────────────────────────────────────────
+
+    `docs/decisions/0320-the-fish-kindles.md`. Asked: *"We need the boss to change/morph between
+    phases."* [0305](../../docs/decisions/0305-the-serpent-darkens.md) answered the same sentence for
+    the serpent with grown horns and an aura; this is the fish's own version of it, and the fish's
+    version is FIRE — it is a creature made of the Ember Nebula, and at half health it starts throwing
+    flame ([0248](../../docs/decisions/0248-the-serpent-strikes.md)'s per-phase shot) rather
+    than spines.
+
+    ⚠️ **A SECOND BODY AND NOT A SECOND ANIMAL.** The barbed set is the same hull with its wings
+    serrated and its tail drawn out — the fish the player has been fighting, with something risen on
+    it. `VOLANS_BODY` and `VOLANS_BARBED` are two lists and the three snouts are shared between them,
+    so the mouth cannot drift between looks.
+  */
+  'boss9Barbed',
+  'boss9BarbedHit',
+  'boss9BarbedUp',
+  'boss9BarbedDown',
+  'boss9BarbedGape',
+  'boss9BarbedGapeHit',
+  'boss9BarbedShut',
+  'boss9BarbedShutHit',
+  /*
+    ⚠️ **AND SIX FRAMES OF EMBER, WHICH ARE THE FISH'S OWN AND NOT THE SERPENT'S.** `Aura` is read off
+    the phase's `look` and `layAura` already works on a boss with no chain — one flame, on the head, at
+    the girth the row names — so what this needs is frames in the fish's own fire rather than the
+    serpent's blue and violet. [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md):
+    borrowing `serpentAura*` would make the two animals burn with one flame.
+  */
+  'volansEmber0',
+  'volansEmber1',
+  'volansEmber2',
+  'volansEmber3',
+  'volansEmber4',
+  'volansEmber5',
   'boss10',
   'boss10Hit',
   'boss11',
@@ -1111,6 +1147,29 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss9GapeHit: 42,
   boss9Shut: 42,
   boss9ShutHit: 42,
+  // The kindled fish is the same animal in the same box — 0320. What grew are fins, which is drawing
+  // inside the tile the hull already had; a boss that changed EXTENT mid-fight would move its own
+  // hurtbox, and `tests/combat.test.ts` measures that against one number per kind.
+  boss9Barbed: 42,
+  boss9BarbedHit: 42,
+  boss9BarbedUp: 42,
+  boss9BarbedDown: 42,
+  boss9BarbedGape: 42,
+  boss9BarbedGapeHit: 42,
+  boss9BarbedShut: 42,
+  boss9BarbedShutHit: 42,
+  /*
+    ⚠️ **THE EMBER TILE IS THE FISH'S GIRTH AND NOT THE SERPENT'S.** `layAura` draws one flame on the
+    head at `aura.head / SERPENT_BODY_DIAMETER` of this tile, so the tile has to be big enough for the
+    fish's own to be a crown rather than a spark — the serpent's is 44 for a 6-unit body, and the fish
+    is 42 across.
+  */
+  volansEmber0: 46,
+  volansEmber1: 46,
+  volansEmber2: 46,
+  volansEmber3: 46,
+  volansEmber4: 46,
+  volansEmber5: 46,
   boss10: 44,
   boss10Hit: 44,
   boss11: 36,

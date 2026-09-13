@@ -1296,6 +1296,74 @@ export function chainReach(chain: Chain): number {
   return along;
 }
 
+/**
+ * The fish's own faces, worn on its own body — 0319, and named here because 0320 needs them twice.
+ *
+ * ⚠️ **THE ROW POINTS AT THIS AND SO DOES THE FIRST STAGE OF THE MORPH**, which is the whole economy
+ * of `Look`: a phase that changes only what burns AROUND the animal names the animal's own face and
+ * spends nothing. Written out twice instead, the two would drift the first time a mouth moved.
+ */
+const VOLANS_FACE: Face = {
+  rest: SPRITE.boss9,
+  restHit: SPRITE.boss9Hit,
+  up: SPRITE.boss9Up,
+  down: SPRITE.boss9Down,
+  gape: SPRITE.boss9Gape,
+  gapeHit: SPRITE.boss9GapeHit,
+  shut: SPRITE.boss9Shut,
+  shutHit: SPRITE.boss9ShutHit,
+};
+
+/** Six frames of the fish's own fire — 0320. Its inks are the nebula's, not the serpent's violet. */
+const EMBER: readonly number[] = [
+  SPRITE.volansEmber0,
+  SPRITE.volansEmber1,
+  SPRITE.volansEmber2,
+  SPRITE.volansEmber3,
+  SPRITE.volansEmber4,
+  SPRITE.volansEmber5,
+];
+
+/**
+ * ── THE FISH KINDLES — 0320 ────────────────────────────────────────────────────────────────────
+ *
+ * Asked: *"We need the boss to change/morph between phases."*
+ * [0305](../../docs/decisions/0305-the-serpent-darkens.md) answered that for the serpent with grown
+ * horns and a dark aura. This is the same sentence answered in the fish's own terms — it is a
+ * creature of the Ember Nebula, and what escalation looks like on it is **fire**.
+ *
+ * ⚠️ **TWO STAGES, AND THE FIRST ONE IS FREE.** `KINDLED` is the row's own face with an aura behind
+ * it: no new drawing of the animal at all. `ABLAZE` is the one that costs, and it costs once.
+ *
+ * ⚠️ **`stride` IS 1 AND MEANS NOTHING HERE, WHICH IS NOT A DEFECT.** It is how far the flicker walks
+ * from one node of a chain to the next, and the fish has no chain — `layAura` gives a chainless boss
+ * exactly one flame. A field that does nothing on one instance is what a shared type looks like when
+ * [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md) is
+ * being followed; the alternative is two `Aura` types that drift.
+ */
+const KINDLED: Look = {
+  face: VOLANS_FACE,
+  // A frame every four steps: slower than the serpent's three, because one flame flickering alone
+  // reads as a lamp with a loose bulb where twenty-seven read as weather.
+  aura: { frames: EMBER, hold: 4, stride: 1, head: 16.5 },
+};
+
+const ABLAZE: Look = {
+  face: {
+    rest: SPRITE.boss9Barbed,
+    restHit: SPRITE.boss9BarbedHit,
+    up: SPRITE.boss9BarbedUp,
+    down: SPRITE.boss9BarbedDown,
+    gape: SPRITE.boss9BarbedGape,
+    gapeHit: SPRITE.boss9BarbedGapeHit,
+    shut: SPRITE.boss9BarbedShut,
+    shutHit: SPRITE.boss9BarbedShutHit,
+  },
+  // Bigger and quicker, and the same six frames: what changed is the row's numbers, which is where a
+  // difference between two instances of one mechanism belongs.
+  aura: { frames: EMBER, hold: 3, stride: 1, head: 21 },
+};
+
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
    * The first thing in the game that is bigger than the lane's patience.
@@ -2264,16 +2332,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       stare. *"It still feels like a non-interactive wall object"* is 0285's own report, and nothing
       about it was specific to a serpent.
     */
-    face: {
-      rest: SPRITE.boss9,
-      restHit: SPRITE.boss9Hit,
-      up: SPRITE.boss9Up,
-      down: SPRITE.boss9Down,
-      gape: SPRITE.boss9Gape,
-      gapeHit: SPRITE.boss9GapeHit,
-      shut: SPRITE.boss9Shut,
-      shutHit: SPRITE.boss9ShutHit,
-    },
+    face: VOLANS_FACE,
     /*
       A BREACH — 0313. `from` 176 is inside the leading edge of the NARROWEST view any device gets
       (177.8), so all three crests are on the screen everywhere — 0023, and the guard reads the view
@@ -2329,10 +2388,23 @@ export const BOSSES: Record<BossKind, BossRow> = {
         something in the way and the shoal was wallpaper. Here there is nothing on the field but the
         whip and the fish, and what makes the shoal read when it comes back is that it went away.
       */
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 1.1, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },
+      /*
+        ⚠️ **AND IT CATCHES FIRE HERE — 0320, and this is the phase for it rather than a phase near
+        it.** Asked: *"We need the boss to change/morph between phases."* This is the rung where the
+        fish stops throwing spines and starts throwing **flame** (0248's per-phase shot, already on
+        this row before the art existed), so the morph is the animal agreeing with its own weapon
+        instead of a costume change on a timer.
+
+        ⚠️ **THE FACE IS THE ROW'S OWN, AND THAT IS THE CHEAP HALF ON PURPOSE.** `Look` carries a face
+        AND an aura, and nothing says the face has to be a new one: the first stage of this morph is
+        six frames of ember behind an unchanged animal, for **zero new drawings of the fish**. What it
+        costs is the thing that reads — a creature that was cold and is now burning.
+      */
+      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 1.1, patrolScale: 1.5, stance: { kind: 'volley' }, look: KINDLED, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },
       // And the kites come back, diving from the sides in turn while it rakes — 0262's horde on 0314's
-      // clock, in the slot the breaker used to have (0317).
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: null, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
+      // clock, in the slot the breaker used to have (0317). It goes on burning: a look that switched
+      // off between two phases would read as the fire going OUT, which is the opposite of escalation.
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
       /*
         ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
         RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the
@@ -2340,7 +2412,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
         The raptor that used to be called here is the Saurian Belt's animal and is not missed: what the
         fish sends now is its own.
       */
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'lead', standing: 5, every: 108 } },
+      /*
+        ⚠️ **AND THE SECOND STAGE IS THE ONE THAT COSTS DRAWINGS — 0320.** The fish's fins have risen:
+        each pectoral's trailing edge serrated into three swept barbs, the pelvics longer, the tail
+        lobes drawn out. Eight faces on a second body, and the ember behind it half again as big. The
+        serpent buys its own escalation the same way and at twice the price (0305: sixteen faces and
+        six frames) — what makes this two stages rather than one is that the FIRST is free.
+      */
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'lead', standing: 5, every: 108 } },
     ],
   },
   /**
