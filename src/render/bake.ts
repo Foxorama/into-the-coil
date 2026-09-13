@@ -446,6 +446,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss9Down: 'enemy',
   boss9Gape: 'enemy',
   boss9Shut: 'enemy',
+  boss9Barbed: 'enemy',
+  boss9BarbedUp: 'enemy',
+  boss9BarbedDown: 'enemy',
+  boss9BarbedGape: 'enemy',
+  boss9BarbedShut: 'enemy',
+  // The ember is energy in the place's own fire, on the serpent's aura's terms — `glass`, which means
+  // nothing the player reads anywhere else.
+  volansEmber0: 'glass',
+  volansEmber1: 'glass',
+  volansEmber2: 'glass',
+  volansEmber3: 'glass',
+  volansEmber4: 'glass',
+  volansEmber5: 'glass',
   boss10: 'enemy',
   boss11: 'enemy',
   boss12: 'enemy',
@@ -690,6 +703,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss9Hit: 'impact',
   boss9GapeHit: 'impact',
   boss9ShutHit: 'impact',
+  boss9BarbedHit: 'impact',
+  boss9BarbedGapeHit: 'impact',
+  boss9BarbedShutHit: 'impact',
   boss10Hit: 'impact',
   boss11Hit: 'impact',
   boss12Hit: 'impact',
@@ -4181,6 +4197,114 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
 }
 
 /**
+ * The fish's own fire — 0320: the ember the nebula is named for, rather than the serpent's violet.
+ *
+ * ⚠️ **THE FISH'S OWN INKS, AND THAT IS 0282 AND NOT DECORATION.** Borrowing `AURA_INKS` would make
+ * two animals in two levels burn with one flame, which is the shape *a mechanism for every instance
+ * makes them one instance* is named for. Deep coal, ember, gold and a white heart: the Ember Nebula's
+ * own fire, which the fish is made of and has been throwing since 0301's whip.
+ */
+const EMBER_INKS = { coal: '#7a1a06', ember: '#ff5a1e', gold: '#ffb03a', core: '#fff1cf' } as const;
+
+/** A unit circle in twelve samples, for `curveLoop` to round off — the oval the ember's haze is built of. */
+const OVAL: readonly Pt[] = Array.from({ length: 12 }, (_, i) => {
+  const at = (i / 12) * Math.PI * 2;
+  return [Math.cos(at), Math.sin(at)] as const;
+});
+
+/**
+ * One flame of the fish's aura — 0320. No hull and no outline: energy, on the exhaust's terms.
+ *
+ * ⚠️ **IT STREAMS AFT AND DOES NOT RISE, WHICH IS THE WHOLE DIFFERENCE FROM THE SERPENT'S.** The
+ * serpent is drawn in profile and its energy goes UP, because that is where energy goes when you are
+ * looking at something from the side. Every hull here is drawn from overhead
+ * ([0023](../../docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)), so up-screen is *forward*
+ * — tongues rising off this animal would read as fire blowing INTO its own face. A burning thing
+ * moving down a lane trails behind it, so the tongues sweep aft and the haze is dragged aft with them.
+ *
+ * ⚠️ **AND THE HAZE IS AN ELLIPSE, BECAUSE THE THING INSIDE IT IS A WING SPAN.** The serpent's node is
+ * a disc and a round haze crowns it; the fish is as wide as it is long with two enormous pectorals, so
+ * a round haze the size of the wings leaves the nose and tail bare and one the size of the animal is a
+ * ball. Three ellipses, each wider than tall and each dragged further aft than the one inside it.
+ */
+function paintVolansEmber(ctx: Pen, f: Frame, frame: number): void {
+  const rng = makeRng('aura').stream(`volans/${frame}`);
+  /*
+    ⚠️ **A STACK OF SHRINKING OVALS AND NOT A GRADIENT, BECAUSE `Pen` HAS NO TRANSFORM AND MUST NOT.**
+    `glow`'s falloff is radial, so an elliptical one wants the canvas squeezed under it — and `save`,
+    `restore`, `translate` and `scale` are exactly the four members `Pen` leaves out. Putting them in
+    would make every coordinate `tests/paths.ts` records a coordinate in some other frame, and every
+    containment claim in the repository is measured off those numbers: the harness would go on
+    reporting, quietly, about the wrong space. So the falloff is built the way the halo's is
+    ([0277](../../docs/decisions/0277-the-serpent-has-menace.md), 0318) — rings, each laid over the
+    last, so the alpha accumulates toward the middle.
+  */
+  /*
+    ⚠️ **SIXTEEN RINGS AND NOT FIVE, WHICH IS THE DIFFERENCE BETWEEN A FALLOFF AND A TARGET.** Five
+    ovals at a sixth alpha photographed as five hard concentric bands — every edge was visible,
+    because a step is only invisible when it is smaller than what the eye resolves. The accumulated
+    alpha at the middle is `1 − (1 − a)ⁿ`, so sixteen at 0.045 reach about half and no single edge is
+    worth more than a twentieth.
+  */
+  const haze = (colour: string, at: number, rx: number, ry: number, alpha: number): void => {
+    ctx.fillStyle = colour;
+    ctx.globalAlpha = alpha;
+    for (let k = 16; k >= 1; k--) {
+      const s = k / 16;
+      ctx.beginPath();
+      curveLoop(ctx, f, OVAL.map(([x, y]) => [at + x * rx * s, y * ry * s] as const));
+      ctx.fill('evenodd');
+    }
+    ctx.globalAlpha = 1;
+  };
+  haze(EMBER_INKS.coal, 0.14, 1.02, 0.74, 0.045);
+  haze(EMBER_INKS.ember, 0.09, 0.72, 0.52, 0.04);
+  haze(EMBER_INKS.gold, 0.02, 0.4, 0.3, 0.035);
+  /*
+    ⚠️ **THE TONGUES LEAVE THE FLANKS AND GO AFT, WHATEVER THE FLANK'S ANGLE.** Rooted inside the
+    flesh so the animal covers the foot, tip a doubled point on `curveLoop`'s own terms, and each one
+    a stack of four fading layers so its edge is a falloff rather than a line — which is the finding
+    `paintSerpentAura` carries about hard-cornered tongues baking as a sawtooth.
+  */
+  const lick = (colour: string, points: readonly Pt[], alpha: number): void => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    curveLoop(ctx, f, points);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+  for (let i = 0; i < 7; i++) {
+    const across = (i - 3) * 0.21 + rng.range(-0.07, 0.07);
+    const root = -0.16 + rng.range(-0.14, 0.14);
+    // Aft to 1.12 of `r` at most, inside the 1.16 where the next bitmap in the atlas begins.
+    const long = rng.range(0.55, 1.26);
+    const drift = rng.range(-0.2, 0.2);
+    const fat = rng.range(0.05, 0.1);
+    /*
+      ⚠️ **THE LAYERS TAPER IN WIDTH AND BARELY IN LENGTH, AND THE FIRST DRAFT SCALED BOTH.** One
+      `scale` on a teardrop shrinks it toward its own root, so the inner layers piled up into a pale
+      **bulb** at the base and the whole flame photographed as a slug with a highlight on its nose. A
+      flame's core is nearly as long as the flame and much thinner, which is these two numbers.
+    */
+    const tongue = (wide: number, far: number): Pt[] => [
+      [root - fat * 0.3, across - fat * 0.7 * wide],
+      [root + long * 0.3 * far, across - fat * wide + drift * 0.1],
+      [root + long * 0.68 * far, across - fat * 0.45 * wide + drift * 0.55],
+      [root + long * far, across + drift * far],
+      [root + long * far, across + drift * far],
+      [root + long * 0.62 * far, across + fat * 0.4 * wide + drift * 0.6],
+      [root + long * 0.26 * far, across + fat * 0.9 * wide + drift * 0.12],
+      [root - fat * 0.3, across + fat * 0.7 * wide],
+    ];
+    lick(EMBER_INKS.coal, tongue(1.3, 1.05), 0.3);
+    lick(EMBER_INKS.ember, tongue(1, 0.95), 0.36);
+    lick(EMBER_INKS.gold, tongue(0.62, 0.82), 0.36);
+    lick(EMBER_INKS.core, tongue(0.3, 0.62), 0.4);
+  }
+}
+
+/**
  * How much bigger than its own tile the head's aura flame is blitted — 0310.
  *
  * ⚠️ **A CONSTANT HERE AND A NUMBER ON THE ROW, WITH A GUARD BETWEEN THEM.** `layAura` blits the head's
@@ -4683,6 +4807,105 @@ const VOLANS_BODY: readonly Pt[] = [
 ];
 
 /**
+ * The same body with something risen on it — 0320, worn from the last sixth of the fight.
+ *
+ * ── WHAT GROWS ON A FISH, WHICH IS NOT WHAT GROWS ON A SERPENT ──────────────────────────────────
+ *
+ * ⚠️ **ASKED**: *"We need the boss to change/morph between phases."*
+ * [0305](../../docs/decisions/0305-the-serpent-darkens.md) answered that sentence with **longer
+ * horns**, because a skull in profile has a crown to grow them on. A flying fish seen from above has
+ * no crown and two enormous wings, so what rises on it is **fin**: the pectorals' trailing edges
+ * serrate into three swept barbs a side, the pelvics lengthen, and the caudal lobes draw out.
+ *
+ * ⚠️ **AFT, BECAUSE AFT IS WHERE THE ROOM IS.** The leading edge already reaches 1.0 across at the
+ * wing tip and the sprite's own box begins at 1.19 — barbs on the LEADING edge would have to grow
+ * into the next bitmap of the atlas or not grow at all. Everything here grows into the empty quarter
+ * behind each wing, which is also the direction a fin that is streaming would grow.
+ *
+ * ⚠️ **AND THE EXTENT DOES NOT MOVE.** `SPRITE_EXTENT.boss9Barbed` is 42, the same as the fish's, so
+ * the hurtbox the player is dodging is the hurtbox they learned in the first phase. A boss that grew
+ * its own collision at a health threshold would be teaching the player something and then taking it
+ * back — and `tests/combat.test.ts` holds every hurtbox against one number per kind.
+ */
+const VOLANS_BARBED: readonly Pt[] = [
+  [-0.82, -0.15],
+  [-0.66, -0.19],
+  [-0.52, -0.21],
+  [-0.42, -0.46],
+  [-0.26, -0.74],
+  [-0.06, -0.95],
+  [0.02, -1],
+  [0.02, -1],
+  /*
+    ⚠️ **THREE LONG RAYS OFF THE TRAILING EDGE, AND THE FIRST DRAFT WAS A SAWTOOTH.** Cut as shallow
+    teeth — 0.1 deep and as wide as they were long — they photographed as a fin that had been **torn**
+    rather than one that had grown something: `curveLoop` rounds a lone sample, so every notch came
+    back a bump and every point a hook, and the wing read as damage. A ray is three times longer than
+    it is wide, which is what makes it a ray; the notches between them are deep and narrow.
+
+    ⚠️ **AND THEY SIT AT THE HEIGHTS THE STREAMERS ALREADY LEAVE FROM**, so what the player sees is
+    the filaments 0318 paints rooted on something rather than two sets of aft-pointing marks that
+    disagree about where the fin ends.
+  */
+  [0.06, -0.9],
+  [0.42, -0.88],
+  [0.42, -0.88],
+  [0.1, -0.82],
+  [0.44, -0.77],
+  [0.44, -0.77],
+  [0.14, -0.7],
+  [0.4, -0.62],
+  [0.4, -0.62],
+  [0.19, -0.5],
+  [0.24, -0.3],
+  // The pelvic, longer and raked.
+  [0.36, -0.27],
+  [0.47, -0.49],
+  [0.55, -0.51],
+  [0.55, -0.51],
+  [0.58, -0.25],
+  [0.7, -0.17],
+  [0.74, -0.16],
+  // The caudal lobes drawn out — and no further, or the streamer painted off the lobe sits inside it.
+  [0.93, -0.4],
+  [1.05, -0.58],
+  [1.05, -0.58],
+  [0.97, -0.3],
+  [0.86, -0.05],
+  [0.86, 0.05],
+  [0.97, 0.3],
+  [1.05, 0.58],
+  [1.05, 0.58],
+  [0.93, 0.4],
+  [0.74, 0.16],
+  [0.7, 0.17],
+  [0.58, 0.25],
+  [0.55, 0.51],
+  [0.55, 0.51],
+  [0.47, 0.49],
+  [0.36, 0.27],
+  [0.24, 0.3],
+  [0.19, 0.5],
+  [0.4, 0.62],
+  [0.4, 0.62],
+  [0.14, 0.7],
+  [0.44, 0.77],
+  [0.44, 0.77],
+  [0.1, 0.82],
+  [0.42, 0.88],
+  [0.42, 0.88],
+  [0.06, 0.9],
+  [0.02, 1],
+  [0.02, 1],
+  [-0.06, 0.95],
+  [-0.26, 0.74],
+  [-0.42, 0.46],
+  [-0.52, 0.21],
+  [-0.66, 0.19],
+  [-0.82, 0.15],
+];
+
+/**
  * The three mouths, each listed lower cheek → tip → upper cheek — 0319.
  *
  * ── A MOUTH SEEN FROM ABOVE OPENS ACROSS, NOT DOWN ──────────────────────────────────────────────
@@ -4738,9 +4961,9 @@ const VOLANS_SNOUTS: Record<VolansJaw, readonly Pt[]> = {
   ],
 };
 
-/** The fish's whole outline wearing one of its three mouths. */
-function volansHull(jaw: VolansJaw): readonly Pt[] {
-  return [...VOLANS_BODY, ...VOLANS_SNOUTS[jaw]];
+/** The fish's whole outline: one of its two bodies wearing one of its three mouths. */
+function volansHull(jaw: VolansJaw, barbed: boolean): readonly Pt[] {
+  return [...(barbed ? VOLANS_BARBED : VOLANS_BODY), ...VOLANS_SNOUTS[jaw]];
 }
 
 /**
@@ -4751,13 +4974,16 @@ function volansHull(jaw: VolansJaw): readonly Pt[] {
  * of them gains a mark the others do not is the day the animal flickers — which is exactly what
  * `paintSerpentHead` says about writing a jaw out three times.
  */
-function volansFace(kind: SpriteKind): { jaw: VolansJaw; gaze: number } {
-  if (kind === 'boss9Gape' || kind === 'boss9GapeHit') return { jaw: 'gape', gaze: 0 };
-  if (kind === 'boss9Shut' || kind === 'boss9ShutHit') return { jaw: 'shut', gaze: 0 };
+function volansFace(kind: SpriteKind): { jaw: VolansJaw; gaze: number; barbed: boolean } {
+  // 0320: `boss9Barbed…` wears the same six faces on the grown body, so the suffix says the mouth.
+  const barbed = kind.startsWith('boss9Barbed');
+  const worn = barbed ? kind.slice('boss9Barbed'.length) : kind.slice('boss9'.length);
+  if (worn === 'Gape' || worn === 'GapeHit') return { jaw: 'gape', gaze: 0, barbed };
+  if (worn === 'Shut' || worn === 'ShutHit') return { jaw: 'shut', gaze: 0, barbed };
   // Seen from above, the ship being up-lane of the fish puts it to one side across the lane — 0023.
-  if (kind === 'boss9Up') return { jaw: 'rest', gaze: -1 };
-  if (kind === 'boss9Down') return { jaw: 'rest', gaze: 1 };
-  return { jaw: 'rest', gaze: 0 };
+  if (worn === 'Up') return { jaw: 'rest', gaze: -1, barbed };
+  if (worn === 'Down') return { jaw: 'rest', gaze: 1, barbed };
+  return { jaw: 'rest', gaze: 0, barbed };
 }
 
 /**
@@ -4860,9 +5086,24 @@ const VOLANS_SNOUT_PAINT: Record<VolansJaw, VolansSnoutPaint> = {
  * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` makes about the predecessor's serpent before
  * 0276 lifted the kit.
  */
-function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: VolansJaw, gaze: number): void {
-  const hull = volansHull(jaw);
+function paintBoss9(
+  ctx: Pen,
+  f: Frame,
+  skin: FoeSkin,
+  theme: ThemeKind,
+  jaw: VolansJaw,
+  gaze: number,
+  barbed: boolean,
+): void {
+  const hull = volansHull(jaw, barbed);
   const snout = VOLANS_SNOUT_PAINT[jaw];
+  /*
+    ⚠️ **THE KINDLED FISH IS LIT HARDER FROM WITHIN, AND IT IS ONE NUMBER — 0320.** The aura behind it
+    is a layer of its own that `layAura` draws; what the HULL does is burn brighter, which is this
+    multiplier over every light on it. A second set of authored alphas would be the same drawing
+    written twice, and 0282 is why that is refused rather than tidied later.
+  */
+  const lit = barbed ? 1.55 : 1;
   /*
     ⚠️ **THE ASTRAL HALO, BEHIND THE HULL** — asked for: *"give it overall a more nebulous astral
     look."* `destination-over`, **brightest ring first**, so each new fill goes further back and the
@@ -4874,13 +5115,21 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: Vo
     bleed into the next bitmap in the atlas — `tests/accents.test.ts` holds every translucent mark at
     1.16 of the drawing radius, and the serpent's own halo sits at 1.14 over a hull that reaches 1.06.
   */
+  /*
+    ⚠️ **AND THE OUTERMOST RING IS CAPPED IN ABSOLUTE TERMS, NOT IN SWELL — 0320.** A fixed 1.12 swell
+    was right for one hull and wrong for two: the kindled body's tail reaches 1.05, so the same
+    multiplier put the faintest ring at **1.19 of the drawing radius** and into the next bitmap of the
+    atlas. The cap is read off the hull the arm was handed, so a third body cannot reintroduce this.
+  */
+  const skirt = Math.max(...hull.map(([x, y]) => Math.max(Math.abs(x), Math.abs(y))));
   ctx.globalCompositeOperation = 'destination-over';
-  for (const [swell, alpha] of [
-    [1.02, 0.2],
-    [1.06, 0.11],
-    [1.12, 0.05],
+  for (const [gap, alpha] of [
+    [0.02, 0.2],
+    [0.06, 0.11],
+    [0.12, 0.05],
   ] as const) {
-    ctx.globalAlpha = alpha;
+    const swell = Math.min(1 + gap, 1.13 / skirt);
+    ctx.globalAlpha = alpha * lit;
     ctx.fillStyle = skin.lit;
     ctx.beginPath();
     curveLoop(ctx, f, hull.map(([x, y]) => [x * swell, y * swell] as const));
@@ -4894,7 +5143,7 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: Vo
     stain, and nothing joined them to the animal. The halo is what lights the space around this body;
     a glow only works where there is hull on both sides of it to pick it up.
   */
-  glow(ctx, f, skin.lit, 0.86, 0, 0.26, 0.3);
+  glow(ctx, f, skin.lit, 0.86, 0, 0.26, 0.3 * lit);
   ctx.globalCompositeOperation = 'source-over';
   /*
     ⚠️ **THE FORM-SHADE, ACROSS THE WHOLE ANIMAL AND UNDER EVERYTHING ELSE.** A gradient from the lit
@@ -4914,8 +5163,8 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: Vo
     (0287); the halo above is what light OUTSIDE the hull is for.
   */
   ctx.globalCompositeOperation = 'source-atop';
-  glow(ctx, f, skin.lit, -0.34, 0, 0.42, 0.16);
-  glow(ctx, f, skin.lit, 0.3, 0, 0.3, 0.1);
+  glow(ctx, f, skin.lit, -0.34, 0, 0.42, 0.16 * lit);
+  glow(ctx, f, skin.lit, 0.3, 0, 0.3, 0.1 * lit);
   ctx.globalCompositeOperation = 'source-over';
   for (const side of [-1, 1]) {
     /*
@@ -5064,7 +5313,7 @@ function paintBoss9(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, jaw: Vo
       [-0.12, 0.14, 0.085],
       [0.26, 0.1, 0.07],
     ] as const)
-      glow(ctx, f, skin.lit, x, y * side, radius, 0.24);
+      glow(ctx, f, skin.lit, x, y * side, radius, 0.24 * lit);
   }
   /*
     ⚠️ **THE LATERAL LINE, WHICH IS THE ONE MARK ON A FISH EVERYBODY KNOWS AND NOBODY NAMES.** A seam
@@ -6513,6 +6762,20 @@ export function drawKind(
       */
       if (skin !== null) paintSerpentFlare(ctx, f, Number(kind.slice(-1)));
       return;
+    case 'volansEmber0':
+    case 'volansEmber1':
+    case 'volansEmber2':
+    case 'volansEmber3':
+    case 'volansEmber4':
+    case 'volansEmber5':
+      /*
+        ONE FLAME OF THE FISH'S AURA — 0320. No hull and no outline: it is energy, on the exhaust's
+        and the serpent's aura's terms, and the animal it rises off is drawn over it. It streams AFT
+        rather than up, because this hull is seen from overhead and up-screen is forward. Nothing at
+        all in a palette with no skins, which is the high-contrast one.
+      */
+      if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)));
+      return;
     case 'boss9':
     case 'boss9Hit':
     case 'boss9Up':
@@ -6520,7 +6783,15 @@ export function drawKind(
     case 'boss9Gape':
     case 'boss9GapeHit':
     case 'boss9Shut':
-    case 'boss9ShutHit': {
+    case 'boss9ShutHit':
+    case 'boss9Barbed':
+    case 'boss9BarbedHit':
+    case 'boss9BarbedUp':
+    case 'boss9BarbedDown':
+    case 'boss9BarbedGape':
+    case 'boss9BarbedGapeHit':
+    case 'boss9BarbedShut':
+    case 'boss9BarbedShutHit': {
       /*
         THE FLYING FISH — 0264's slot, renamed by 0312, REDRAWN by 0318 and given faces by 0319. Seen
         from above, as every hull in this game is: a spindle with two enormous pectorals thrown wide
@@ -6531,16 +6802,18 @@ export function drawKind(
         shapes they are rather than the corners their samples would be. The serpent's skull says the
         same thing about itself, and for the same reason.
 
-        ⚠️ **ONE BODY AND THREE MOUTHS, READ OFF THE NAME — the skull's own arrangement.** `boss9`
+        ⚠️ **TWO BODIES AND THREE MOUTHS, READ OFF THE NAME — the skull's own arrangement.** `boss9`
         rests; `boss9Up` and `boss9Down` are that silhouette with the pupil swung to the side the ship
         is on; `boss9Gape` splays the mandibles before a volley leaves; `boss9Shut` packs the cheeks
-        out on a ship crossing in front of it. The mouth is the only part of the hull that moves.
+        out on a ship crossing in front of it. `boss9Barbed…` is all six of those again on the kindled
+        body — 0320, worn from the last sixth of the fight, with its wings serrated and its lights up
+        by half. The mouths are shared between the two bodies, so they cannot drift apart.
       */
       const worn = volansFace(kind);
-      curveLoop(ctx, f, volansHull(worn.jaw));
+      curveLoop(ctx, f, volansHull(worn.jaw, worn.barbed));
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintBoss9(ctx, f, skin, theme, worn.jaw, worn.gaze);
+      if (skin !== null) paintBoss9(ctx, f, skin, theme, worn.jaw, worn.gaze, worn.barbed);
       return;
     }
     case 'boss10':

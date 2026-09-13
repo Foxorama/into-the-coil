@@ -1125,3 +1125,152 @@ describe('0319 — the fish has a face', () => {
     expect(share, `the fish is agape for ${(share * 100).toFixed(0)}% of the fight`).toBeLessThan(0.4);
   });
 });
+
+/**
+ * ── THE FISH KINDLES — 0320 ────────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0320-the-fish-kindles.md`. Asked: *"We need the boss to change/morph between
+ * phases."* [0305](../docs/decisions/0305-the-serpent-darkens.md) answered that sentence for the
+ * serpent with grown horns and a dark aura; this is the same sentence in the fish's own terms, and
+ * the fish is a creature of the Ember Nebula.
+ *
+ * ⚠️ **WHAT IS HELD IS THAT THE CHANGE HAPPENS, THAT IT HAPPENS IN STAGES, AND THAT IT IS STILL THE
+ * SAME ANIMAL TO DODGE.** How pretty the fire is belongs in `tests/authored.ts`
+ * ([0192](../docs/decisions/0192-a-guard-holds-an-invariant.md)); that a player who has learned where
+ * this hull ends still knows after it morphs does not.
+ */
+describe('0320 — the fish kindles', () => {
+  /** The fish on station, with its health where the caller puts it. */
+  function standing(): ReturnType<typeof playableWorld>['world'] & { step: (at: number) => void } {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the fish never arrived').toBe(1);
+    /*
+      ⚠️ **THE HEALTH IS WALKED DOWN RATHER THAN SHOT OFF, AND THAT IS THE FIXTURE'S WHOLE POINT.** What
+      is under test is *does the look change with the PHASE*, so the phase is the thing that has to
+      move; a fixture that fought the boss honestly would take minutes and would also be measuring the
+      player's weapon rather than the boss's ladder.
+    */
+    return Object.assign(world, {
+      step: (at: number): void => {
+        world.bossPool.at(0).health = Math.max(1, world.bossFullHealth * at);
+        world.ship.health = world.shipRow.health;
+        frame.step();
+      },
+    });
+  }
+
+  it('THE ASKED-FOR ONE: it is drawn three different ways down its own health bar, and it never goes back', () => {
+    /*
+      ⚠️ **THREE, AND IN ORDER.** A boss that changes once is a boss with a second costume; a boss that
+      changes back is a boss on a clock. What the ask wanted is an ESCALATION the picture keeps saying —
+      0036's own complaint, which 0111 answered for the burst and 0305 answered for the serpent: a burst
+      says the phase changed once, and fire says it for as long as the phase lasts.
+
+      ⚠️ **AND A *LOOK* IS THE PAIR AND NOT THE FACE.** The first stage of this morph changes only what
+      burns AROUND the animal, so a guard that watched `spriteBase` alone would see two states and call
+      the middle one missing. What the player sees is the body and the fire together.
+    */
+    const world = standing();
+    const seen: string[] = [];
+    for (let i = 0; i <= 40; i++) {
+      world.step(1 - i / 40);
+      if (world.bossPool.size === 0) break;
+      const boss = world.bossPool.at(0);
+      const burning = world.bossAura.size > 0 ? SPRITE_KINDS[world.bossAura.at(0).sprite]! : 'cold';
+      const body = SPRITE_KINDS[boss.spriteBase]!.startsWith('boss9Barbed') ? 'grown' : 'calm';
+      // The ember cycles six frames, so what identifies a LOOK is that it is burning rather than which.
+      const worn = `${body}/${burning === 'cold' ? 'cold' : 'lit'}`;
+      if (seen[seen.length - 1] !== worn) seen.push(worn);
+    }
+    expect(
+      seen.join(' → '),
+      `the fish was drawn ${seen.length} ways down its bar: ${seen.join(' → ')}`,
+    ).toBe('calm/cold → calm/lit → grown/lit');
+  });
+
+  it('and the fire is OFF for the first half, in the fish’s own inks and never the serpent’s', () => {
+    /*
+      ⚠️ **OFF FIRST IS HALF THE CLAIM AND IT IS THE HALF THAT FAILS QUIETLY.** An aura authored on every
+      phase is a boss that is always burning, which says nothing about how hurt it is — the wallpaper
+      0317 spent a whole decision taking out of the adds. The fish opens cold, and it catches at the
+      rung where it starts throwing flame rather than at a rung near it.
+    */
+    const world = standing();
+    const burning = (at: number): boolean => {
+      world.step(at);
+      return world.bossAura.size > 0;
+    };
+    expect(burning(0.95), 'the fish is already on fire at full health, so the fire says nothing about the fight').toBe(false);
+    expect(burning(0.8), 'the fish is burning in its second phase, which is before it throws any flame').toBe(false);
+    expect(burning(0.45), 'the fish is not burning at the phase where its shot becomes FLAME').toBe(true);
+    expect(burning(0.1), 'the fish is not burning at its last phase').toBe(true);
+    /*
+      ⚠️ **AND THE FRAMES ARE ITS OWN** — 0282. Sharing the serpent's would make two animals in two
+      levels burn with one flame, and it is the kind of sharing nobody sees until somebody changes the
+      serpent's aura and the fish's changes with it.
+    */
+    const full = BOSSES.volans.health;
+    const serpent = SPRITE_KINDS.filter((k) => k.startsWith('serpentAura') || k.startsWith('serpentStorm'));
+    for (const at of [0.45, 0.1]) {
+      const aura = phaseFor(BOSSES.volans, full * at, full).look?.aura;
+      expect(aura, `the phase at ${at} of the bar authors no aura`).toBeTruthy();
+      for (const frame of aura!.frames) {
+        expect(serpent.includes(SPRITE_KINDS[frame]!), `the fish burns with ${SPRITE_KINDS[frame]}, which is the serpent's fire`).toBe(false);
+      }
+    }
+  });
+
+  it('and the grown body is the same animal to DODGE: it rose aft, and the edge a player flies into never moved', () => {
+    /*
+      ⚠️ **A BOSS THAT GREW ITS OWN HURTBOX AT A HEALTH THRESHOLD WOULD TEACH THE PLAYER SOMETHING AND
+      THEN TAKE IT BACK.** Four phases of learning where 42 units of fish ends, and then it ends
+      somewhere else. So what rose on this one is FIN, drawn into the quarter behind each wing that was
+      already inside the tile, and the leading edge has not moved by a pixel.
+    */
+    const face = BOSSES.volans.face;
+    const ablaze = phaseFor(BOSSES.volans, BOSSES.volans.health * 0.1, BOSSES.volans.health).look;
+    if (face === null || ablaze === null) throw new Error('the fish has no kindled look');
+    expect(SPRITE_EXTENT[SPRITE_KINDS[ablaze.face.rest]!], 'the kindled fish is drawn in a different box').toBe(
+      SPRITE_EXTENT[SPRITE_KINDS[face.rest]!],
+    );
+    /** One face's outline, in fractions of the drawing radius. */
+    const hullOf = (index: number): readonly (readonly [number, number])[] => {
+      const kind = SPRITE_KINDS[index]!;
+      const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'nebula');
+      return trace.passes[0]!.subpaths[0]!.map(
+        ([x, y]) => [(x - size / 2) / (size * 0.42), (y - size / 2) / (size * 0.42)] as const,
+      );
+    };
+    const calm = hullOf(face.rest);
+    const grown = hullOf(ablaze.face.rest);
+    /** How far across the hull reaches on a line drawn at `at` along it. */
+    const spanAt = (hull: readonly (readonly [number, number])[], at: number): number => {
+      let widest = 0;
+      for (let i = 0; i < hull.length; i++) {
+        const [ax, ay] = hull[i]!;
+        const [bx, by] = hull[(i + 1) % hull.length]!;
+        if (ax <= at === bx <= at) continue;
+        widest = Math.max(widest, Math.abs(ay + ((at - ax) / (bx - ax)) * (by - ay)));
+      }
+      return widest;
+    };
+    // Twenty stations from the snout to the wing tip: the whole of the edge a player meets head-on.
+    for (let i = 0; i <= 20; i++) {
+      const at = -0.99 + (i / 20) * 1.0;
+      expect(
+        spanAt(grown, at),
+        `the kindled fish is a different width at ${at.toFixed(2)} along, so the part of it a player flies INTO moved`,
+      ).toBeCloseTo(spanAt(calm, at), 2);
+    }
+    // And something did rise: further aft than the fish it grew from, or nothing grew at all.
+    const back = (hull: readonly (readonly [number, number])[]): number => Math.max(...hull.map(([x]) => x));
+    expect(back(grown), 'the kindled fish reaches no further aft than the calm one').toBeGreaterThan(back(calm));
+  });
+});

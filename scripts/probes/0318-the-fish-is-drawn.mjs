@@ -46,8 +46,10 @@ export const PROBES = [
     guard: 'the astral light is BEHIND the animal, brightest ring first',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    [1.02, 0.2],\n    [1.06, 0.11],\n    [1.12, 0.05],\n',
-      replace: '    [1.12, 0.05],\n    [1.06, 0.11],\n    [1.02, 0.2],\n',
+      // ⚠️ Re-anchored by 0320, which turned the swells into GAPS so the outer ring could be capped in
+      // absolute terms once a second body reached further aft. The break is the same break.
+      find: '    [0.02, 0.2],\n    [0.06, 0.11],\n    [0.12, 0.05],\n',
+      replace: '    [0.12, 0.05],\n    [0.06, 0.11],\n    [0.02, 0.2],\n',
     },
   },
   {
@@ -63,8 +65,9 @@ export const PROBES = [
     guard: 'the astral light is BEHIND the animal, brightest ring first',
     edit: {
       path: 'src/render/bake.ts',
-      find: "  ctx.globalCompositeOperation = 'destination-over';\n  for (const [swell, alpha] of [\n    [1.02, 0.2],",
-      replace: "  ctx.globalCompositeOperation = 'source-over';\n  for (const [swell, alpha] of [\n    [1.02, 0.2],",
+      // ⚠️ Re-anchored by 0320, on the same line the loop header moved. The break is the same word.
+      find: "  ctx.globalCompositeOperation = 'destination-over';\n  for (const [gap, alpha] of [\n    [0.02, 0.2],",
+      replace: "  ctx.globalCompositeOperation = 'source-over';\n  for (const [gap, alpha] of [\n    [0.02, 0.2],",
     },
   },
 ];

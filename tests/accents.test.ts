@@ -102,6 +102,13 @@ const HULLLESS: readonly SpriteKind[] = [
   'serpentFlare0',
   'serpentFlare1',
   'serpentFlare2',
+  // The fish's aura is the same thing in the fish's own fire, streaming aft rather than up — 0320.
+  'volansEmber0',
+  'volansEmber1',
+  'volansEmber2',
+  'volansEmber3',
+  'volansEmber4',
+  'volansEmber5',
   'skyFar',
   'skyNear',
   'skyRush',
