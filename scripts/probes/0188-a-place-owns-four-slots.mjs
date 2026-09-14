@@ -71,9 +71,24 @@ export const PROBES = [
         ⚠️ SO IT TAKES THE WHOLE TABLE AWAY RATHER THAN ONE SLOT, which is the only edit that still
         makes the sentence false — and it is a plausible one: a place's `voices` line is one
         identifier, and dropping it is how a place goes back to the base composition by accident.
+
+        ── ⚠️ AND IT HAPPENED A SECOND TIME, TO THE SAME PROBE, FOR THE SAME REASON — 0325 ────────────
+
+        ⚠️ **`docs/decisions/0325-the-fight-sounds-like-the-fight.md` GAVE LEVEL ONE AN `ownA`** — the
+        maracas in the serpent's fight — so emptying Saurian Belt's `voices` left The Approach filling a
+        slot, the claim TRUE, this guard GREEN, and `npm run prove` reported the break landing on six
+        other people's assertions. **Two places state own slots now, and no single edit to CONTENT can
+        empty them both** — which is what the paragraph above was relying on, and was never going to
+        survive a second place.
+
+        ⚠️ **SO THE BREAK MOVES TO THE READER, WHICH IS THE OTHER SIDE OF THE SAME SENTENCE.** With the
+        place's own table never consulted, `voicesOf` answers the base composition for every layer of
+        every place — and `MUSIC.ownA` through `ownD` are empty arrays, so *no place fills a slot* is
+        exactly what the game becomes. It is a plausible regression as well: that `??` is the whole of
+        a place's material lookup, and a refactor that lost it would look like this.
       */
-      find: '    voices: SAURIAN_VOICES,',
-      replace: '    voices: {},',
+      find: '  return THEMES[theme].voices?.[layer] ?? MUSIC[layer];',
+      replace: '  return MUSIC[layer];',
     },
   },
 ];

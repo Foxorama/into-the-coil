@@ -186,6 +186,15 @@ a fourth report.
 ⚠️ **THE FOURTH IS THE ONE WORTH READING TWICE.** It is the guard that would have caught this decision
 being careless, and it is red because the lift is in the ladder rather than in a list of exceptions.
 
+⚠️ **AND ONE OF 0188's OWN PROBES WAS STRANDED BY THIS DECISION, WHICH ONLY THE WHOLE PROOF FOUND.**
+*No place filling a slot* was staged by emptying Saurian Belt's `voices`, and with level one filling
+`ownA` as well that claim stayed **true**, its guard stayed **green**, and the break landed on six
+other people's assertions — reported by `npm run prove` as *went red, but on the wrong test*. **Two
+places state own slots now and no single edit to CONTENT can empty them both**, so the break moves to
+the reader: `voicesOf` returning the base composition, where `ownA` through `ownD` are empty arrays.
+[0019](0019-a-probe-must-be-seen-to-apply.md) reached from a third side, for the second time on the
+same probe — 0189 stranded it once already, and its own comment says so.
+
 ## What is owed
 
 - **A HAND, and it is the only thing that can answer the report.** `npm run dash` has every cue on a
