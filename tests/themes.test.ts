@@ -1937,7 +1937,20 @@ describe('0172 — a place opens with its own four', () => {
       excluded by name — `docs/decisions/0128-a-place-plays-its-own-material.md`'s *"the theme that
       changes nothing, so that the six below are read against something"*.
     */
-    expect(THEMES.approach.ladder, 'level one states a ladder, so there is nothing to read the six against').toBeUndefined();
+    /*
+      ⚠️ **IT READ `THEMES.approach.ladder` IS UNDEFINED, AND 0325 GAVE LEVEL ONE A FIGHT OF ITS OWN.**
+      Asked for: *"for the boss music for this level we need to work some maraca's into the boss music
+      for that rattlesnake effect type."* Level one now states a ladder at `boss` and `bossPeak` — and
+      **this guard is about an OPENING**, which is what 0172 is: *"a place opens with its own four"*,
+      measured at `run`. What has to stay true for the six to be read against something is that level
+      one opens on the shared ladder, and it still does.
+      `docs/decisions/0192-a-guard-holds-an-invariant.md` — change the guard and say why.
+
+      ⚠️ **THE NARROWER CLAIM IS ALSO THE ONE THAT CANNOT ROT.** *States no ladder at all* has to be
+      deleted outright the first time any rung of level one differs from the shared one; *opens on the
+      shared ladder* is the property the sentence beside it actually names.
+    */
+    expect(THEMES.approach.ladder?.run, 'level one states a `run` of its own, so there is nothing to read the six against').toBeUndefined();
     for (const theme of THEME_KINDS) {
       if (theme === 'approach') continue;
       expect(THEMES[theme].ladder?.run, `${theme} opens on the shared ladder like everything else`).toBeDefined();

@@ -40,7 +40,7 @@ import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { BOSSES, BOSS_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { CUES, type CueKind } from '../src/content/cues.ts';
-import { loudest } from './spectrum.ts';
+import { keyFit, loudest } from './spectrum.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { bakeSize, cloudCover, drawKind } from '../src/render/bake.ts';
@@ -372,6 +372,43 @@ function measureStruck(): void {
   observe('0323-struck', same.length === 0 && thrown.size > 0, thrown.size === 0 ? ['no boss throws a cue at all'] : same);
 }
 
+/** How far a cue's loudest scale tone must stand over the quarter-tone beside it to be a NOTE. */
+const NOTE_STANDS_DB = 6;
+
+/**
+ * 0325 — every attack a boss throws states a note of the key. Advisory.
+ *
+ * ⚠️ **THE SAME WALK AS `measureStruck`, AND THE RENDER RATHER THAN THE ROW.** `tests/sound.test.ts`'s
+ * 0099 guard asks whether the NUMBERS in a row are scale tones, and every one of them was while every
+ * cue in the game measured as unpitched: a layer that names `inKey(9)` and glides away from it in 40 ms
+ * has stated no note. `keyFit` reads the samples — `tests/spectrum.ts` has the comb and the argument.
+ *
+ * ⚠️ **SIX DECIBELS IS A HAND'S NUMBER, MARKED AS ONE**, on `ROLE_MARGIN_DB`'s terms. What is
+ * defensible is the gap it sits in: measured against the bed at level one's fight, a cue with no note
+ * in it reads **0.0 to +0.8** and a music layer that holds one reads **+17 to +50**. The claim is only
+ * that there is a note, not how loud it is.
+ */
+function measureNote(): void {
+  const thrown = new Set<CueKind>();
+  for (const kind of BOSS_KINDS) {
+    const row = BOSSES[kind];
+    for (const phase of row.phases) {
+      if (phase.stance.kind === 'bare') continue;
+      const attack = phase.attack ?? row.attack;
+      if (attack.kind === 'heads') for (const head of attack.heads) thrown.add(head.cue ?? 'bossShot');
+      else thrown.add(phase.cue ?? 'bossShot');
+    }
+  }
+  const mute: string[] = [];
+  for (const kind of thrown) {
+    const fit = keyFit(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind)), SAMPLE_RATE);
+    if (fit.stands < NOTE_STANDS_DB) {
+      mute.push(`${kind} states no note — its loudest scale tone stands ${fit.stands.toFixed(1)} dB over the quarter-tone beside it`);
+    }
+  }
+  observe('0325-note', mute.length === 0 && thrown.size > 0, thrown.size === 0 ? ['no boss throws a cue at all'] : mute);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -386,6 +423,7 @@ function measureAll(): void {
   measureLoud();
   measureVolley();
   measureStruck();
+  measureNote();
 }
 
 /**

@@ -188,6 +188,8 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the quill is a SPINE: the fish's own bullet redrawn as a barbed fin-spine, point first, where 0262 drew a feather for an animal that was then an eagle — every number of 0262's kept, and the mark settled by three photographs and the two guards that refused the first two** | [0316](decisions/0316-the-quill-is-a-spine.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md) |
 | **the PRESSURE comes forward: `scripts/weigh-threat.mjs` is the other half of `weigh-boss` — how hard a boss is to STAND IN FRONT OF, and whether its adds ever arrive; a rake may bound its sweep, because `firePhase` accumulated and the fish's fan walked a whole circle every thirteen volleys; a feeding horde comes in from the LEAD, past the boss, because from the sides it swam up the player's own firing line and none of nineteen ever arrived** | [0317](decisions/0317-the-pressure-comes-forward.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md), [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
 | **a sound is made for the HUNDREDTH time: 0104's rule — a cue finishes before its own next volley — asked about a boss for the first time, over the table and in the flown fight; the serpent's acid a third of its length with its weight out of the 2–5 kHz band; four boss cues struck at four weights; and the ship's death landing on the root, which reverses the one thing 0099 was proudest of** | [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0099](decisions/0099-the-cues-are-in-the-key.md), [0104](decisions/0104-the-gun-plays-a-figure.md) |
+| **the void comes every SECOND spray: a round of three heads whose first and third are the same attack puts the odd one on every second turn — the serpent's hurt phase reads spray, void, spray; the combined ball's appetite is 13.2, and a tenth of it buys a whole extra bite from the opening gun; a round's cue claim is one sound per ATTACK, held as a bijection, where it was one per head** | [0324](decisions/0324-the-void-comes-every-second-spray.md) — amends [0261](decisions/0261-the-serpent-throws-together.md), [0322](decisions/0322-the-ball-is-worth-shooting.md), [0308](decisions/0308-the-attacks-are-heard.md) |
+| **the fight SOUNDS like the fight: `scripts/weigh-fit.mjs` measures a cue against the music it plays over — and found that NO cue in the game states a note, every one of them measuring as percussion over a piece that measures +24.5 dB; the serpent's three attacks hold scale tones its bed is holding; and level one owns an `ownA` for the first time, a maraca and a rattle at its two fight rungs** | [0325](decisions/0325-the-fight-sounds-like-the-fight.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md), [0172](decisions/0172-a-place-opens-with-its-own-four.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -934,6 +936,24 @@ fight and the mix together:
   verdict:** a hand on `node scripts/hear.mjs`, because nothing in a suite can hear —
   [0027](decisions/0027-measure-the-picture-not-the-model.md). *"It's probably a case of we'll ship and
   see"* was said of the cues 0308 shipped, and it is still the position.
+
+⚠️ **AND THE FOURTH BRIEF IS TWO DECISIONS AS WELL, ARRIVING THE SAME WAY — THE FIGHT AND THE MIX IN
+ONE MESSAGE.**
+
+- **the fight** — [0324](decisions/0324-the-void-comes-every-second-spray.md). *"The void blasts
+  probably need to be every second firing… they make that wave take a bit too long"*, and *"the combined
+  poison/void bubbles need about 10% more health."* A third head that is the spray again, so the hurt
+  phase reads spray-void-spray; the ball at 13.2. **Owed from the play:** whether two sprays in three
+  turns is now the thing that is too much — the decision names the sweep's twenty-one globes as the next
+  lever if it is.
+- **the sound** — [0325](decisions/0325-the-fight-sounds-like-the-fight.md). *"They don't fit into the
+  music… they're in their own little area of sound"*, and *"work some maraca's into the boss music for
+  that rattlesnake effect type."* `scripts/weigh-fit.mjs` is the instrument the first sentence needed,
+  and its first run found that **no cue in the game states a note at all**; the serpent's three attacks
+  now hold scale tones the fight's bed is holding, and level one owns an `ownA` for the first time.
+  **Owed from the play, and it is the whole verdict again:** a hand on `npm run dash`. The decision says
+  plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
+  `tests/authored.ts` names the cues that still have no note, on every run.
 
 ### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
 
