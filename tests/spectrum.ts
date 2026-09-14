@@ -23,6 +23,8 @@
  * with nothing to look at.
  */
 
+import { MUSIC_ROOT, SCALE } from '../src/content/cues.ts';
+
 /** The bands, low to high. Named, because a failure message that says `4` helps nobody. */
 export const BANDS: readonly [number, number, string][] = [
   [25, 60, 'sub'],
@@ -192,6 +194,105 @@ export function centroid(samples: Float32Array, from: number, to: number, rate: 
  * they were. It is what a broadcast short-term meter does, for the same reason.
  */
 export const LOUD_WINDOW = 0.4;
+
+// ── AND THE QUESTION NOTHING ABOVE CAN ASK: IS THERE A NOTE IN IT? ──────────────────────────────
+
+/**
+ * The power at one frequency, over the whole signal — one Goertzel probe, which is what `bandEnergy`
+ * runs six of per band.
+ */
+export function atFreq(samples: Float32Array, f: number, rate: number): number {
+  const c = 2 * Math.cos((2 * Math.PI * f) / rate);
+  let s1 = 0;
+  let s2 = 0;
+  for (let i = 0; i < samples.length; i++) {
+    const s0 = samples[i]! + c * s1 - s2;
+    s2 = s1;
+    s1 = s0;
+  }
+  return (s1 * s1 + s2 * s2 - c * s1 * s2) / (samples.length * samples.length);
+}
+
+/**
+ * Every frequency the key allows, from half the root up to 5 kHz — the lattice a note lands on.
+ *
+ * ⚠️ **THE SAME SET `tests/sound.test.ts`'s 0099 GUARD CALLS `allowed`**, at a narrower span: that one
+ * asks whether a NUMBER IN A ROW is a scale tone, and this asks where the ENERGY is. 0099's own note
+ * says why both exist — a row that says `inKey(9)` and glides away from it in 40 ms has stated no
+ * note, and reading the row would report that it had.
+ */
+export const KEY_LATTICE: readonly number[] = ((): number[] => {
+  const out: number[] = [];
+  for (let octave = -1; octave < 8; octave++) {
+    for (const semitone of SCALE) {
+      const f = MUSIC_ROOT * Math.pow(2, octave + semitone / 12);
+      if (f >= MUSIC_ROOT / 2 && f <= 5000) out.push(f);
+    }
+  }
+  return out;
+})();
+
+/** What `keyFit` found: whether this sound lands on the key's notes, and which one it lands on hardest. */
+export interface KeyFit {
+  /** dB by which the whole signal prefers the key's frequencies to the quarter-tones between them. */
+  melody: number;
+  /** The same ratio at ONE frequency: the loudest scale tone in it, against the quarter-tone beside it. */
+  stands: number;
+  /** That tone, in Hz. */
+  note: number;
+  /** The lowest scale tone carrying a quarter of the loudest one's power — how deep the note goes. */
+  deepest: number;
+}
+
+/**
+ * Whether a sound states a note of the key — the quantity `scripts/weigh-fit.mjs` prints and
+ * `tests/authored.ts` records.
+ *
+ * ── WHY A COMB AND NOT A PITCH DETECTOR ─────────────────────────────────────────────────────────
+ *
+ * ⚠️ **A SCALE TONE AND THE QUARTER-TONE ABOVE IT ARE THE SAME DISTANCE FROM EVERY OTHER NOTE**, so a
+ * signal with no pitch in it — noise, a sweep, a click — puts the same energy either side and reads
+ * **0 dB**. What reads is a voice that HOLDS a note the music also holds. 0099's own note explains why
+ * asking for *the* pitch is the wrong question: two defensible models of the death cue's pitch
+ * disagreed by four semitones, and a fast chirp does not have one.
+ *
+ * ⚠️ **`melody` AND `stands` ARE BOTH NEEDED AND THE PAIR IS THE POINT.** A cue is mostly noise by
+ * design, so a note added under a wash moves the broadband ratio by a decibel or two however clearly
+ * it is heard; `stands` asks the narrow question — is there a note AT ALL, and how far over the wash
+ * at its own pitch. Measured over the music: every pitched layer of the bed reads +14 to +30 on
+ * `melody`, a ride cymbal reads −0.3, and before
+ * `docs/decisions/0325-the-fight-sounds-like-the-fight.md` **every cue in the game read between −0.4
+ * and +0.8 on both**.
+ */
+export function keyFit(samples: Float32Array, rate: number): KeyFit {
+  let onKey = 0;
+  let offKey = 0;
+  let note = 0;
+  let power = 0;
+  let beside = 0;
+  for (const f of KEY_LATTICE) {
+    const on = atFreq(samples, f, rate) * aWeight(f) ** 2;
+    const off = atFreq(samples, f * Math.pow(2, 1 / 24), rate) * aWeight(f) ** 2;
+    onKey += on;
+    offKey += off;
+    if (on > power) {
+      note = f;
+      power = on;
+      beside = off;
+    }
+  }
+  let deepest = 0;
+  for (const f of KEY_LATTICE) {
+    if (deepest > 0 && f >= deepest) continue;
+    if (atFreq(samples, f, rate) * aWeight(f) ** 2 >= power * 0.25) deepest = f;
+  }
+  return {
+    melody: 10 * Math.log10((onKey + 1e-18) / (offKey + 1e-18)),
+    stands: 10 * Math.log10((power + 1e-18) / (beside + 1e-18)),
+    note,
+    deepest,
+  };
+}
 
 /**
  * How loud a buffer IS — the A-weighted level of its loudest `LOUD_WINDOW`, as a linear amplitude.

@@ -44,6 +44,7 @@ export const AUTHORED_IDS = [
   '0308-loud',
   '0322-volley',
   '0323-struck',
+  '0325-note',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -200,6 +201,18 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'every cue a boss throws is struck at more than one weight, so no two soundings are identical',
     correctly: 'a boss that IS a machine, where a sound repeating itself exactly is the character',
     decision: '0323-a-sound-is-made-for-the-hundredth-time',
+  },
+  /*
+    ⚠️ **A TASTE AND NOT A GUARD, AND THE ADMISSION TEST IS WHY.** *Name a change to the content that
+    would redden this and be correct* has an easy answer here: a boss whose attack is a mechanism — a
+    shutter, a click, a rail — is right to have no pitch in it at all, and a hard guard would refuse
+    that boss. What this catches is the state 0325 found, where **every cue in the game** measured
+    between −0.4 and +0.8 dB and nothing in the repository could say so.
+  */
+  '0325-note': {
+    claim: 'every attack a boss throws states a note of the key, rather than gliding past one — 6 dB of `stands`',
+    correctly: 'a boss whose attacks are a machine, where a pitch would be a lie about what the thing is',
+    decision: '0325-the-fight-sounds-like-the-fight',
   },
 };
 

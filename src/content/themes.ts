@@ -81,6 +81,7 @@ import {
   type MusicVoice,
   type PanTrack,
 } from './music.ts';
+import { APPROACH_VOICES } from './approach.ts';
 import { NEBULA_PAN, NEBULA_VOICES } from './nebula.ts';
 import type { Palette, PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
@@ -610,6 +611,37 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       drive: 0.9,
       groove: 1.65,
       perc: 0.9,
+    },
+    /*
+      ── THE ONE THING LEVEL ONE OWNS — 0325 ─────────────────────────────────────────────────────
+
+      ⚠️ **ASKED FOR**: *"for the boss music for this level we need to work some maraca's into the boss
+      music for that rattlesnake effect type, it should be subtle but interwoven."* `src/content/approach.ts`
+      is the instrument and has the argument; this is the slot being opened, at the two fight rungs and
+      nowhere else, which is the half `perc` could not have done — that layer is open from `run`.
+
+      ⚠️ **THE HEADER ABOVE STILL READS *the theme that changes nothing* AND IS NOW ONE LAYER OUT OF
+      DATE.** Left standing on purpose: it is true of everything the player hears before the serpent
+      arrives, which is what the sentence was ever about — level one is still the reference the six
+      places are read against.
+    */
+    voices: APPROACH_VOICES,
+    ladder: {
+      // The fight only. A rung this table does not name falls through to `MUSIC_LADDER`'s own number.
+      boss: { ownA: 0.9 },
+      /*
+        ⚠️ **AND `wraith` IS LIFTED WHERE THE MARACAS COST IT ITS ROLE — 0325.** Driven by
+        `scripts/weigh-adrift.mjs`: the rattle's best band is the `hi`, which is where `wraith` answers
+        from, and adding it took that layer from 5 dB under its `counter` role to 5.5 — over
+        `ROLE_FLOOR_DB` and into a guard that lists what is allowed to be adrift by name. **0.92 → 1.04
+        is the 0.6 dB the new layer took, handed back to the layer it took it from**, and 0164 is green
+        without `bossPeak/wraith` being added to that list.
+
+        ⚠️ **IN THE LADDER AND NOT IN `mix`, ON 0185's OWN TERMS** — `mix` is one number for the whole
+        place and the cost is at one rung. `boss/wraith` is left where it is: it is already on the
+        allowed list and a lift there would be a mix pass nobody asked for.
+      */
+      bossPeak: { ownA: 0.9, wraith: 1.04 },
     },
   },
   /**
@@ -1721,9 +1753,16 @@ export function auraCeilingOf(theme: ThemeKind): number {
  * rung; `run` is the reference and is 1 by construction.
  */
 export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> = {
-  // Re-solved by `node scripts/solve-hold.mjs` after `mix.hook` came down — the rung holds its
-  // loudness, so a layer taken out of it is a layer the rest of the rung has to make up.
-  approach: { push: 0.8353, surge: 0.7668, approach: 0.7161, boss: 0.6191, bossPeak: 0.6191 },
+  /*
+    Re-solved by `node scripts/solve-hold.mjs` after `mix.hook` came down — the rung holds its
+    loudness, so a layer taken out of it is a layer the rest of the rung has to make up.
+
+    ⚠️ **AND RE-SOLVED AGAIN FOR THE MARACAS — 0325, WHICH MOVED ONE OF THE FIVE.** `boss` came back
+    the same number to four places and `bossPeak` went 0.6191 → **0.6138**, which is 0.07 dB: a layer
+    the solver can barely see is what *"subtle"* measures as, and the rung that also lifts `wraith` is
+    the one that moved. The other four rungs do not open the slot at all.
+  */
+  approach: { push: 0.8353, surge: 0.7668, approach: 0.7161, boss: 0.6191, bossPeak: 0.6138 },
   // Re-solved after `chords` came down at `push` and the vent became a triangle — 2026-09-07.
   nebula: { push: 0.9336, surge: 0.8282, approach: 0.7603, boss: 0.7039, bossPeak: 0.6920 },
   saurian: { push: 0.9579, surge: 0.8644, approach: 0.8793, boss: 0.8072, bossPeak: 0.7867 },

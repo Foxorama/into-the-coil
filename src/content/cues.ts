@@ -1267,9 +1267,48 @@ export const CUES: Record<CueKind, CueRow> = {
         recipe measures, and it darkens by a factor of five.
       */
       { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.6, attack: 0.002, curve: 5, lowFrom: 1100, lowTo: 200, highFrom: 55, q: 2.9, drive: 0.4 },
-      // THE WEIGHT — a fifth of the key falling to the root, and over early: a mouthful leaving, not a
-      // bomb landing. The one thing in here 0089's *something low under it* is satisfied by.
-      { wave: 'sine', from: inKey(9), to: inKey(2), seconds: 0.24, gain: 0.5, attack: 0.003, curve: 3.8, drive: 0.3 },
+      /*
+        ── THE WEIGHT IS TWO NOTES NOW, AND THEY ARE THE ONLY THING IN THIS CUE THAT IS A NOTE — 0325 ─
+
+        ⚠️ **IT WAS A GLIDE FROM C3 TO C2, AND A GLIDE STATES NOTHING.** Measured by
+        `scripts/weigh-fit.mjs`, this cue preferred the key's own frequencies to the quarter-tones
+        between them by **0.2 dB** — the bed at this rung does it by 24.5, `dread` by 29.5, and a ride
+        cymbal by −0.3. A sweep spends as long beside a note as on it, so the one pitched layer in here
+        was, to the ear's pitch sense, a cymbal. *"They don't fit into the music… we need to blend with
+        them a bit more melody."*
+
+        ⚠️ **C3 THEN A1: THE MINOR THIRD FALLING TO THE ROOT, BOTH HELD.** Two notes in sequence is the
+        smallest thing that is a melody rather than a chord; the interval is the one the old glide
+        already spanned; and the landing is **A, the note this fight's bed holds in four layers at
+        once** — `drone`, `sub`, `dread` and `frenzy` all sound the root. Held, because `to` equal to
+        `from` is what states a pitch: the field's own note says so.
+
+        ⚠️ **AND THE LANDING IS DEEPER THAN THE OLD ONE, WHICH IS THE OTHER HALF OF THE ASK.** C2 is
+        65.4 Hz and A1 is 55 — three semitones down, *"a slightly deeper bass"*, and it lands on the
+        root rather than beside it.
+
+        ⚠️ **THE WET LAYERS ABOVE ARE 0323's AND ARE NOT TOUCHED.** That decision cut the sizzle by an
+        octave and to a third of its length because 2–5 kHz was the fatigue; nothing here puts anything
+        back up there, and the cue's `hi` share is measured in the decision to prove it.
+      */
+      { wave: 'sine', from: inKey(9), to: inKey(9), seconds: 0.14, gain: 0.42, attack: 0.003, curve: 4.4, drive: 0.3 },
+      /*
+        ⚠️ **THE SECOND NOTE DECAYS HARDER THAN A NOTE WOULD LIKE TO, AND A GUARD CHOSE THE NUMBER.**
+        *Starts and ends at zero* holds that a cue's last quarter is quieter than its first: at
+        `curve` 2.4 over 0.34 s this note was still ringing at the end of the cue and the whole thing
+        measured **0.0873 against 0.0801** — louder at its end than at its start, which is a cue that
+        does not finish. 3.6 over 0.3 s is the same note landing in the same place and gone before the
+        cue is.
+      */
+      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.78, attack: 0.005, curve: 3.6, drive: 0.42 },
+      /*
+        AND THE OCTAVE OVER THE LANDING, SHORT — the void's own argument
+        (`docs/decisions/0140-no-layer-is-inaudible.md`, one bus over): `MASTER_GAIN` is 0.4 and a
+        laptop reproduces nothing at 55 Hz, so a note living in the floor is a note half the machines
+        play as silence. At 110 Hz this sits under the bubbles and carries the second note to a speaker
+        with no bottom.
+      */
+      { wave: 'tri', from: inKey(7), to: inKey(7), at: 0.13, seconds: 0.18, gain: 0.15, attack: 0.005, curve: 3.4, lowFrom: 900, lowTo: 420, q: 1.4 },
       // AND A SECOND SPATTER. Acid does not arrive once: the irregularity is the only thing here that
       // cannot be got from an envelope, and one extra layer buys it.
       // ⚠️ 0323: at 0.18 rather than 0.26, and darker — it has to land inside a cue a third as long.
@@ -1356,6 +1395,25 @@ export const CUES: Record<CueKind, CueRow> = {
         no grain and no edge.
       */
       { wave: 'noise', from: 0, to: 0, seconds: 0.9, gain: 0.34, attack: 0.02, curve: 2.4, lowFrom: 300, lowTo: 75, highFrom: 34, q: 1, drive: 0.35 },
+      /*
+        ── AND THE HOLE IS IN A KEY NOW: THE ROOT AND THE FIFTH, HELD UNDER THE THREE — 0325 ──────────
+
+        ⚠️ **THE WUMMS ARE THREE GLIDES AND GLIDES STATE NOTHING**, so this cue measured **+0.2 dB** on
+        `scripts/weigh-fit.mjs` against a bed that measures +24.5 — *"they're in their own little area
+        of sound."* The three pulses are the character and are untouched (0323 measured them healthy and
+        the player named them in their own words); what is added is the thing they fall INTO.
+
+        ⚠️ **A AND E RATHER THAN A MELODY, BECAUSE THIS CUE'S SHAPE IS ALREADY A FIGURE.** Three pulses
+        a quarter of a second apart is the tune here; what it had no version of is a pitch to be a tune
+        IN. The two notes are the ones `drone` holds through every rung of this fight — the root and its
+        fifth — so the sustain agrees with the one layer 0095 never closes.
+
+        ⚠️ **SLOW IN AND LONGER THAN THE WASH, SO IT IS A DRONE AND NOT A FOURTH PULSE.** 60 ms of
+        attack is past the point an onset reads as an event, and the null's own noise is what it hides
+        behind: a sub that arrived would be the *"one collapse"* the row's note refuses.
+      */
+      { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 0.88, gain: 0.46, attack: 0.06, curve: 1.5, drive: 0.28, lowFrom: 300, lowTo: 190, q: 1 },
+      { wave: 'tri', from: inKey(4), to: inKey(4), at: 0.08, seconds: 0.62, gain: 0.15, attack: 0.09, curve: 1.8, lowFrom: 520, lowTo: 260, q: 1.2 },
     ],
   },
   /**
@@ -1429,6 +1487,25 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.42, gain: 0.84, attack: 0.004, curve: 2.8, lowFrom: 1400, lowTo: 125, highFrom: 68, q: 0.85, drive: 0.5 },
       // THE FLOOR — the fifth of the key falling below the root, under the clap and over before the ticks.
       { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.42, at: 0.05, gain: 1, attack: 0.003, curve: 3, drive: 0.35 },
+      /*
+        ── AND THE ROOM IT LANDS IN IS A NOTE — 0325 ───────────────────────────────────────────────────
+
+        ⚠️ **NOTHING IN THIS CUE STATED A PITCH AND ONE LAYER OF IT IS PITCHED.** The floor above is a
+        glide of nineteen semitones in under half a second, which the ear reads as a fall and not as a
+        note; measured, the whole cue prefers the key's frequencies to the quarter-tones between them by
+        **0.8 dB**, where the bed it plays over does it by 24.5. *"They sound discordant because they're
+        in their own little area of sound."*
+
+        ⚠️ **A HELD ROOT UNDER THE CLAP, AND THE CRACKLE IS NOT TOUCHED.** *"Don't change the lightning
+        attack it's really good"* has been said twice and 0323 left the timbre alone for the third time;
+        every grain layer above is still 0248's. What this adds is underneath all of them — the strike
+        ringing a room, at 55 Hz, in the key the room is in.
+
+        ⚠️ **IT ENDS BEFORE THE TICKS DO, SO THE CUE IS THE SAME LENGTH IT WAS.** 0.62 s against the
+        ticks' 0.66: the guard that matters here is 0104's — a cue finishes before its own next volley —
+        and this spends none of that margin.
+      */
+      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.06, seconds: 0.56, gain: 0.42, attack: 0.02, curve: 1.9, drive: 0.3, lowFrom: 320, lowTo: 180, q: 1 },
     ],
   },
   /**

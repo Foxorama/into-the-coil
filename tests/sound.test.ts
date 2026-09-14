@@ -811,33 +811,24 @@ describe('the cue table', () => {
         }
       }, 30_000);
 
-      it('a place that states nothing hands the base set straight back, so it is a no-op', () => {
-        /*
-          `setLoops` then finds every array identical and does not make a single buffer.
+      /*
+        ── *a place that states nothing hands the base set straight back* — GONE, 0325 ──────────────
 
-          ⚠️ **THE PLACE IS FOUND RATHER THAN NAMED, AND IT USED TO BE `rime`** —
-          `docs/decisions/0146-three-more-places-and-two-after-them.md`. Six of the seven stated no
-          material when this was written and one line picked one of them by hand; five of those six
-          now state a whole composition, and the baseline went red before a probe could run. A guard
-          written over the PROPERTY — *whichever place has no voices* —
-          (`docs/decisions/0108-the-bed-is-felt-and-the-boss-arrives.md`'s own rule about layers)
-          survives the next place being written, and a name does not.
+        ⚠️ **THE DAY ITS OWN NOTE PREDICTED ARRIVED, AND IT DID NOT SKIP LOUDLY — IT WENT RED.** What
+        stood here found *whichever place has no voices* and asserted the whole handed set was the
+        prewarmed one, array for array. Its paragraph read: *"`approach` is the last one and it is
+        unlikely to move… but the day it does state material, this skips loudly rather than asserting
+        nothing."* `docs/decisions/0325-the-fight-sounds-like-the-fight.md` gave level one a maraca in
+        its fight, so **no place states nothing any more** and the claim has no content left to be true
+        of.
 
-          ⚠️ **`approach` is the last one and it is unlikely to move**, because
-          `tests/themes.test.ts` requires level one to be the neutral place everything else is read
-          against — but the day it does state material, this skips loudly rather than asserting
-          nothing.
-        */
-        const silent = THEME_KINDS.find((theme) => revoicedBy(theme).length === 0);
-        expect(silent, 'every place states its own material now, so this can assert nothing').toBeDefined();
-        warm();
-        const base = takePrewarmed()!.loops;
-        let handed: Record<MusicLayer, Float32Array> | null = null;
-        bakePlace(silent!, ({ loops }) => {
-          handed = loops;
-        }, (run) => run());
-        for (const layer of MUSIC_LAYERS) expect(handed![layer]).toBe(base[layer]);
-      }, 30_000);
+        ⚠️ **DELETED RATHER THAN POINTED AT `approach`**, which would have been THE COST MODEL above
+        with one layer excluded — and that is the guard the mechanism actually needs, is the one
+        `scripts/probes/0133-boundary-bake.mjs` breaks, and is now exercised by level one as well as by
+        Ember Nebula: twenty-two of level one's twenty-three layers are shared and one is its own.
+        `docs/decisions/0192-a-guard-holds-an-invariant.md`: demoting takes one edit and a reason. If a
+        place ever states nothing again, this comes back as it was.
+      */
 
       it('and a run that leaves the place before its material arrives never hears it', () => {
         /*

@@ -341,7 +341,16 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
  * `docs/decisions/0187-the-kick-is-the-pulse.md` undone in a table nobody reads.
  */
 export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Record<MusicLayer, MusicRole>>>>> = {
-  approach: {},
+  /*
+    ⚠️ **THE MARACAS ARE A `pulse` AT BOTH FIGHT RUNGS — 0325.** Asked for: *"it should be subtle but
+    interwoven into the boss music."* `ROLE_MARGIN_DB` above reads `pulse` as *a pulse you can pick out
+    when you attend to it*, which is that sentence in the vocabulary this table already has — `air` is
+    *you never notice*, and choosing it would be authorising the layer to be inaudible.
+
+    ⚠️ **AND THE ROLE IS WHAT MAKES 0164 ASK ABOUT IT AT ALL.** A slot opened with no role is a layer
+    whose audibility nothing checks. `src/content/approach.ts` is the instrument and has the argument.
+  */
+  approach: { boss: { ownA: 'pulse' }, bossPeak: { ownA: 'pulse' } },
   nebula: {},
   /*
     ⚠️ **THE RAPTOR CALL IS A COUNTER-LINE AND NOT A PART**, which is the arithmetic and the music
