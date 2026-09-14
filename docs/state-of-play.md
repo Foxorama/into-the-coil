@@ -889,6 +889,21 @@ rather than paint), and that a place's `shot` is held to no floor where its `hul
 all are generic types"*, so the shape is a base that attacks style, on the two lightnings' own model —
 then the minibosses' tiny bullets, then per-level backgrounds.
 
+⚠️ **AND THE FIRST THREE LEVELS ARE A QUEUE OF THEIR OWN, SINCE 2026-09-14** —
+[`the-first-three-levels-asked`](../reports/the-first-three-levels-asked-2026-09-14.md): *"1,2,3 have
+sparse shooting enemies… almost all the shooting is straight patterns… the game overall is a bit
+boring."* The report measures the three against the four and holds the order: seven PRs, the two
+pieces of vocabulary (a shot with a path, a body on an arc) in the middle and one PR per level spending
+them at the end. **The first is landed** —
+[0326](decisions/0326-an-enemy-is-seen-before-it-fires.md), and it is not the PR the report planned:
+*"enemies need to appear, be recognisable, then fire"* reversed 0259's entry volley into a half-second
+window from either edge, and the groups in levels one to three are bigger. `scripts/weigh-presence.mjs`
+is the instrument, beside `weigh-bullets`. **Owed from its play:** whether half a second reads as
+recognisable, and whether eight read as a group. **Standing answers for the rest of the queue:** the
+flank cap stays, curves are patterns and never homing, and *"make sure that we still have some straight
+firing bullets — if everything curves or weaves we've over corrected."* The two place-only bodies in
+items six and seven still want names from the player.
+
 ⚠️ **THE SERPENT BRIEF IS LANDED, ALL THREE OF IT, AND WAITS ON A PLAY** —
 [`the-serpent-asked`](../reports/the-serpent-asked-2026-09-11.md), with the answers to the four
 questions it was sent back with: the attacks — [0304](decisions/0304-the-serpent-sprays.md); the

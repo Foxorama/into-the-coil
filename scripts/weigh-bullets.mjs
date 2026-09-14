@@ -59,7 +59,9 @@ export function weighLevel(kind, options = {}) {
   const sweepSeconds = options.sweepSeconds ?? 8;
   const windowSeconds = options.windowSeconds ?? 2;
   const level = LEVELS[kind];
-  const { world } = playableWorld(level);
+  // The fixture's default tier unless asked — the gentlest, which is the fewest bullets and so the
+  // conservative side of every budget read off this walk.
+  const { world } = options.tier === undefined ? playableWorld(level) : playableWorld(level, options.tier);
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < weaponTier; i++) carried.push('weapon');
@@ -163,6 +165,10 @@ if (isMain) {
     missileTier: flag('missiles', 2),
     sweepSeconds: flag('sweep', 8),
     windowSeconds: flag('seconds', 2),
+    tier: (() => {
+      const found = args.find((a) => a.startsWith('--tier='));
+      return found === undefined ? undefined : found.slice('--tier='.length);
+    })(),
   };
   let failed = false;
   for (const kind of only ? [only] : LEVEL_KINDS) {

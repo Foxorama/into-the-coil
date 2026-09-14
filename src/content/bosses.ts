@@ -1563,7 +1563,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // and 0269 solved it to its level's seconds. ⚠️ **The lowest health of the seven and it was the
     // LONGEST fight in the game at 340** — the lattice patrols at 0.5, so most of what is fired at it
     // arrives where it was. Health was never what made this one hard.
-    health: 38,
+    // 48 from 38 — re-solved after 0326, on this file's own rule that the number is the solver's: with
+    // the seen window in, the shoal's waves around the fight fire later and absorb less of the ship's
+    // fire on its way to the hull, and the fight came in at 16 s against the 20 its level asks.
+    health: 48,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The

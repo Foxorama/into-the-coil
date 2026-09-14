@@ -85,8 +85,46 @@ export const FIRE_GRID = VOLLEY_CYCLE / 4;
  *
  * ⚠️ **It never adds a volley to a body that was about to fire anyway**: the entry gap is a ceiling
  * on the count, not a second clock.
+ *
+ * ⚠️ **AND SINCE 0326 IT SITS BEHIND `SEEN_BEFORE_VOLLEY`, AND THE COUNT IS SET BOTH WAYS.** The gap
+ * is still where the first volley lands relative to the grid; what changed is that a window of being
+ * seen comes first, and a body about to fire anyway waits for it. `SEEN_BEFORE_VOLLEY` below.
  */
 export const ENTRY_VOLLEY = FIRE_GRID * 2;
+
+/**
+ * How long a body is on the screen before its first volley may leave, in sim steps — 0326.
+ *
+ * ── A BODY IS SEEN, THEN IT FIRES ───────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0326-an-enemy-is-seen-before-it-fires.md`. Reported against 0259's entry volley,
+ * eight days after it landed: *"enemies shoot too fast when they appear and die too fast without
+ * firing → sounds like an oxymoron but it's how the game feels. Enemies need to appear, be
+ * recognisable, then fire."* 0259 put the first volley seven to twelve steps after the hull crossed
+ * the edge — an eighth to a fifth of a second, which is under a reaction — because a capped ship was
+ * killing what fired before it fired. The report says both halves are true and the answer is not to
+ * fire sooner: it is to be seen, and to be enough of a group that some are still there when the
+ * window closes.
+ *
+ * ⚠️ **HALF A SECOND, AND THE PLAY OWNS IT.** 0197 measured four tenths of a second as *"the shortest
+ * gap the eleventh play-test called readable for a body arriving across the lane"*
+ * (`FLANK_CLEAR_AIR` in `src/sim/camera.ts`); this is a little over that, so a body that appears at
+ * the edge has been a shape on the screen for longer than the shortest gap a player has ever called
+ * readable before anything leaves it. `THE SEEN WINDOW` in `tests/bullets.test.ts` holds it in
+ * seconds, from either edge.
+ *
+ * ⚠️ **A MULTIPLE OF `FIRE_GRID`, AND THE GRID GUARD IS WHAT HOLDS THAT.** The window is added to the
+ * entry count in `fireEnemies`, and `nextOnGrid` has already put that count on the grid; a window that
+ * is not a whole number of grid units would take every entry volley in the game off the beat
+ * (0096). `tests/spawns.test.ts`'s `THE PICTURE` reddens on any other value.
+ *
+ * ⚠️ **IT IS A FLOOR ON THE COUNT AS WELL AS A CEILING, WHICH IS THE HALF 0259 DID NOT HAVE.** 0259's
+ * window *"never adds a volley to a body that was about to fire anyway"* — a body entering mid-count
+ * with a shot due kept its count. That is the *"shoot too fast when they appear"* half of the report:
+ * the first shot a player sees from a body is the one with no warning. The entry count is now set on
+ * the entry step in both directions, so nothing fires inside the window however its reload stood.
+ */
+export const SEEN_BEFORE_VOLLEY = FIRE_GRID * 5;
 
 /**
  * How many grid slots a wave's members are dealt across, behind their entry window — 0259.

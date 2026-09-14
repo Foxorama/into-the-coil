@@ -8,13 +8,16 @@ export const PROBES = [
   {
     decision: '0259',
     suite: 'tests/bullets.test.ts',
-    // The entry volley removed: what shipped, and the shoal goes sixteen seconds dry.
+    // The entry volley removed: what shipped, and a body enters the view with whatever count it had.
+    // ⚠️ Re-aimed by 0326: the count is set on the entry step in both directions now, and the fixture
+    // carries a body forced to a one-step reload on the way in — so with the set removed it fires the
+    // step it appears, and it is the seen window that goes red rather than the dry budget.
     broke: 'the entry volley removed, so a body enters the view with its whole reload ahead of it',
-    guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
+    guard: 'THE SEEN WINDOW: a body is on the screen for half a second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (entry < e.fireIn) e.fireIn = entry;\n',
-      replace: '      void entry;\n',
+      find: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;\n',
+      replace: '      void e;\n',
     },
   },
   {
@@ -22,7 +25,8 @@ export const PROBES = [
     suite: 'tests/bullets.test.ts',
     // One slot: every member of a formation fires on the step it enters — 0098's own report.
     broke: 'the entry gap cut to one grid slot, so a formation fires in unison',
-    guard: 'THE ENTRY VOLLEY: a body fires inside a third of a second',
+    // The guard's name moved when 0326 put the seen window in front of the deal; its subject did not.
+    guard: 'THE ENTRY VOLLEY: a formation still opens as a figure',
     edit: {
       path: 'src/content/cadence.ts',
       find: 'export const ENTRY_VOLLEY = FIRE_GRID * 2;',
@@ -32,13 +36,17 @@ export const PROBES = [
   {
     decision: '0259',
     suite: 'tests/bullets.test.ts',
-    // The shoal's converted wave put back: three non-firing waves in a row at the end, nine seconds dry.
-    broke: 'the shoal’s sower put back to a charger, so its last stretch runs past the budget',
+    // The shoal's converted wave put back: the level's last stretch runs past the budget.
+    // ⚠️ Re-aimed by 0326, which re-authored the shoal's end again: 0259's sower at 3405 now enters
+    // from the side, and the wave that holds the stretch under eight seconds is the turret line at
+    // 3865 — a station-holder, because with the seen window in a body that closes dies at the edge
+    // before it fires. Reverting THAT wave to the charger column it was is the break.
+    broke: 'the shoal’s turret line put back to a charger column, so its last stretch runs past the budget',
     guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 3405, enemy: 'sower', formation: 'column', count: 6, lane: 55 },",
-      replace: "  { at: 3405, enemy: 'charger', formation: 'column', count: 6, lane: 55 },",
+      find: "  { at: 3865, enemy: 'turret', formation: 'line', count: 5, lane: 55 },",
+      replace: "  { at: 3865, enemy: 'charger', formation: 'column', count: 6, lane: 55 },",
     },
   },
   {
@@ -53,8 +61,10 @@ export const PROBES = [
       // ⚠️ Re-anchored when the fold became a deal — the slot is `e.entrySlot` now rather than
       // `fireIn` folded into the window. The break is unchanged in kind: the `+ 1` is the step the
       // count is decremented on, and without it the volley lands a step early and off the grid.
-      find: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;',
-      replace: '      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;',
+      // ⚠️ Re-anchored again by 0326, which set the count in place rather than through `entry` and put
+      // the seen window in front of it; the `+ 1` is still the step the count is decremented on.
+      find: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;',
+      replace: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;',
     },
   },
   {
