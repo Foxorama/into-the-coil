@@ -2179,7 +2179,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // quicker, so the phase is a change in what the animal does and not only in what it throws.
       { upTo: 0.78, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
       /*
-        Hurt: the acid spray and a fan of three void in turn — two heads (0254), one a volley.
+        Hurt: the acid spray and a fan of three void in turn — heads (0254), one a volley. **Three of
+        them since 0324**, the third a second spray, so the void lands on every second round rather than
+        on every one; the head list below is where that is said and the paragraph beside it has the ask.
 
         ⚠️ **THE SPRAY — 0304.** *"Starting from 60 degrees (so it will be shooting down behind it)
         then arcing around and finishing at 30 degrees (so it will be shooting up behind it)."* A
@@ -2249,6 +2251,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
             // pause after the spray, and the spray is the thing whose hold was swallowing it.
             { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid', gap: 24 },
             { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },
+            /*
+              ⚠️ **A THIRD HEAD, AND IT IS THE SAME SPRAY AGAIN — 0324.** Reported: *"the void blasts
+              probably need to be every second firing, not every firing like they are now, they make that
+              wave take a bit too long."* Three heads taking turns is **spray, void, spray | spray, void,
+              spray**, which the ear hears as alternate rounds: a spray with a void behind it, then a spray
+              on its own. The void's own period goes from one round in every one to one in every two, which
+              is the ask read literally, and no new mechanism — 0254's heads, one more member.
+
+              ⚠️ **IDENTICAL TO THE FIRST, GAP AND ALL, BECAUSE THE PAUSE BELONGS TO THE SPRAY.** 0322 put
+              those 24 steps on the acid's head rather than the void's and said why: *"it is the pause after
+              the spray, and the spray is the thing whose hold was swallowing it."* A second spray that did
+              not pause would be a different attack wearing the same name.
+            */
+            { shot: 'acid', attack: { kind: 'sweep', from: Math.PI / 3, to: (11 * Math.PI) / 6, globes: 21, every: 3 }, cue: 'bossAcid', gap: 24 },
           ],
         },
       },

@@ -21,8 +21,13 @@ export const PROBES = [
         fan this breaks is the HURT phase's now, and the comment it used to be told apart from is gone
         with the head it introduced. What it breaks is unchanged: two heads of ONE round sharing a cue.
       */
-      find: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },\n          ],",
-      replace: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossAcid' },\n          ],",
+      /*
+        ⚠️ And re-anchored again by 0324, which put a THIRD head under the void one — so the list's
+        closing bracket is no longer the line after it. The void head's own line is unique in the file,
+        which is what the anchor is now; what it breaks is unchanged.
+      */
+      find: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },",
+      replace: "            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossAcid' },",
     },
   },
   {

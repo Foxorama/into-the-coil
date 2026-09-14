@@ -50,7 +50,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: the OPENING gun clears a ball before it reaches the ship',
     edit: {
       path: 'src/content/shots.ts',
-      find: '    radius: 3.6,\n    health: 12,',
+      // ⚠️ Re-anchored by 0324, which took the appetite to 13.2 — *"about 10% more health."*
+      find: '    radius: 3.6,\n    health: 13.2,',
       replace: '    radius: 3.6,\n    health: 30,',
     },
   },
@@ -79,8 +80,13 @@ export const PROBES = [
     guard: 'and the void gets a lane the spray has LEFT',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "globes: 21, every: 3 }, cue: 'bossAcid', gap: 24 },",
-      replace: "globes: 21, every: 3 }, cue: 'bossAcid' },",
+      /*
+        ⚠️ Re-anchored by 0324: the hurt phase has TWO acid heads now and they are the same line, so the
+        line alone appears twice. The void head below it is what makes the first one — the one this
+        guard's own fixture measures, at `headAt` 0 — the unique half of the pair.
+      */
+      find: "globes: 21, every: 3 }, cue: 'bossAcid', gap: 24 },\n            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },",
+      replace: "globes: 21, every: 3 }, cue: 'bossAcid' },\n            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },",
     },
   },
   {
