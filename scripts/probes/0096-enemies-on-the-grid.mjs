@@ -74,25 +74,12 @@ export const PROBES = [
       replace: '  const base = gap + (FIRE_GRID - (steps % FIRE_GRID));',
     },
   },
-  {
-    decision: '0096',
-    suite: 'tests/spawns.test.ts',
-    /*
-      ⚠️ THE FIRST SHOT LEFT UNALIGNED, so a body keeps a musical PERIOD at whatever phase the step it
-      spawned on happens to give it. This is the defect this decision is most likely to be shipped
-      with, because it looks finished: every cadence is on the grid, every multiplier is snapped, and
-      not one shot lands on a beat.
-
-      It is caught in `tests/spawns.test.ts` and not in the content suite on purpose —
-      docs/decisions/0027-measure-the-picture-not-the-model.md. The tables would all still agree with
-      each other.
-    */
-    broke: 'the first shot left unaligned, so a correct period lands at an arbitrary phase',
-    guard: 'THE PICTURE: every enemy bullet appears on a step the grid allows',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);',
-      replace: '    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);',
-    },
-  },
 ];
+
+// ⚠️ THE THIRD ONE THAT IS NOT HERE ANY MORE is "the first shot left unaligned, so a correct period
+// lands at an arbitrary phase" — the spawn alignment replaced by a bare reload. 0326 subsumed it the
+// way 0259 subsumed the frozen clock: a body's count is now set on the step its hull enters the view
+// or the lane, in BOTH directions, so what the spawn dealt is overwritten before a single shot leaves
+// for every body a wave sends. `npm run prove` reported the probe applied and STILL GREEN, and the
+// spawn line is the bare reload now with the reason beside it in `spawnWave`. THE PICTURE keeps its
+// probes — 0259's over the `+ 1`, and 0326's over a window that is not a whole number of grid units.

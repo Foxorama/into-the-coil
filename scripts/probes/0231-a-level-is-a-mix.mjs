@@ -20,7 +20,9 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       find:
         "  { at: 407, enemy: 'spinner', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },\n" +
-        "  { at: 461, enemy: 'sower', formation: 'line', count: 5, lane: 53 },",
+        // ⚠️ Re-anchored by 0326, which made this wave a turret line: a station-holder, so the eye's
+        // opening keeps a bullet on the screen behind the seen window. The break is unchanged.
+        "  { at: 461, enemy: 'turret', formation: 'line', count: 5, lane: 53 },",
       replace:
         "  { at: 407, enemy: 'charger', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },\n" +
         "  { at: 461, enemy: 'charger', formation: 'line', count: 5, lane: 53 },",

@@ -65,8 +65,9 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // ⚠️ RE-ANCHORED by `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, which took the turret
       // out of the third of these lines, and by 0256, which moved the run-up band up the level and
-      // put the teeth here. The break is unchanged — three consecutive waves thinned to one body each.
-      find: "  { at: 1652, enemy: 'lancer', formation: 'line', count: 5, lane: 60 },\n  { at: 1710, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
+      // put the teeth here; and by 0326, which made the lancer wave eight. The break is unchanged —
+      // three consecutive waves thinned to one body each.
+      find: "  { at: 1652, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },\n  { at: 1710, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
       replace: "  { at: 2400, enemy: 'lancer', formation: 'line', count: 1, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 1, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 1, lane: 50 },",
     },
   },

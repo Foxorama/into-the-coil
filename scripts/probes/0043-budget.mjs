@@ -104,7 +104,8 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       find:
         "  { at: 1052, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },\n" +
-        "  { at: 1079, enemy: 'turret', formation: 'line', count: 3, lane: 55 },\n" +
+        // ⚠️ Re-anchored by 0326, which made this turret line six; the break is the same four waves.
+        "  { at: 1079, enemy: 'turret', formation: 'line', count: 6, lane: 55 },\n" +
         "  { at: 1134, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },\n" +
         "  { at: 1190, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },\n",
       replace: '',

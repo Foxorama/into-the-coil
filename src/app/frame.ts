@@ -72,7 +72,7 @@ import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../cont
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, chainReach } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
-import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, nextOnGrid } from '../content/cadence.ts';
+import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
@@ -2984,7 +2984,9 @@ function fireEnemies(w: World): void {
       `docs/decisions/0259-the-bullets-stay-on-the-screen.md`. On the step a body's hull crosses the
       leading edge of the view — out of it a step ago, inside it now — its first volley is pulled
       inside `ENTRY_VOLLEY`, on the body's own grid slot; a body that was about to fire anyway keeps
-      its count. `scripts/weigh-bullets.mjs` is why: a firing kind spent most of its reload beyond
+      its count. ⚠️ **Both halves of that last sentence are amended by 0326, below**: the window
+      `SEEN_BEFORE_VOLLEY` now sits in front of the entry gap, and the count is set on the entry
+      step whether it was shorter or longer. `scripts/weigh-bullets.mjs` is why: a firing kind spent most of its reload beyond
       the view (0096's clock keeps running) and a capped ship killed it before the rest ran out, so
       most of what could fire never fired on the screen — *"30secs of no bullet to be seen at all."*
 
@@ -3000,15 +3002,50 @@ function fireEnemies(w: World): void {
       comparison is its previous edge against the previous view and its current edge against the
       current one, which is true on exactly one step.
     */
-    if (
+    /*
+      ── AND IT IS SEEN BEFORE IT DOES, FROM EITHER EDGE — 0326 ───────────────────────────────────
+
+      `docs/decisions/0326-an-enemy-is-seen-before-it-fires.md`. Reported against the window above:
+      *"enemies shoot too fast when they appear and die too fast without firing… enemies need to
+      appear, be recognisable, then fire."* Two things were wrong with the entry above, and the
+      report names the first in as many words:
+
+      ⚠️ **THE VOLLEY LEFT INSIDE A REACTION.** Seven to twelve steps is under a fifth of a second,
+      and a body *"about to fire anyway"* kept a count shorter still. `SEEN_BEFORE_VOLLEY` is added to
+      the entry count, and the count is set in BOTH directions — a body due to fire inside the window
+      waits for it, a body with its whole reload ahead is pulled to it — so the first shot a player
+      sees from any body is one they have watched the body arrive before. 0259's *"never adds a
+      volley to a body that was about to fire anyway"* is gone with that report; the reload after it
+      is still the row's, on the grid.
+
+      ⚠️ **A FLANKER NEVER HAD AN ENTRY AT ALL.** The test above is the leading edge along, and a body
+      arriving across the lane (0048) either never crosses it — it is placed inside the view — or
+      crosses it while still outside the lane, where the across gate below skips the volley. Its
+      first shot was wherever its spawn-quantised count landed: `scripts/weigh-presence.mjs` measured
+      level three's seventy side-entering lancers at 0.57 volleys a body with half of them never
+      firing while they could be seen, which is *"enter 1/2 to 3/4s of the way into the screen and
+      barely shoot at all."* The second edge is the lane's, for a body still steering in
+      (`steerAcross` is the marker `steerEnemies` uses for exactly that), on the same window and the
+      same deal.
+
+      ⚠️ **The positions are a step stale here for the across edge too** — `stepEntities` runs after
+      this — so it is the previous edge against the lane and the current one against it, true on
+      exactly one step, as the along test already is.
+    */
+    const enteredAlong =
       e.along - e.radius <= w.cameraAlong + w.view.alongSpan &&
-      e.prevAlong - e.radius > w.prevCameraAlong + w.view.alongSpan
-    ) {
+      e.prevAlong - e.radius > w.prevCameraAlong + w.view.alongSpan;
+    const enteredAcross =
+      e.steerAcross !== 0 &&
+      e.across + e.radius >= 0 &&
+      e.across - e.radius <= ACROSS_SPAN &&
+      (e.prevAcross + e.radius < 0 || e.prevAcross - e.radius > ACROSS_SPAN);
+    if (enteredAlong || enteredAcross) {
       // Plus one, because the count is decremented on this very step below — a spawn's count is set
       // after this loop and takes its first decrement a step later. `tests/spawns.test.ts` holds
-      // that every volley lands on the grid, and this is the step that was off it.
-      const entry = nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;
-      if (entry < e.fireIn) e.fireIn = entry;
+      // that every volley lands on the grid, and this is the step that was off it. The window is a
+      // whole number of grid units, so adding it keeps the volley where `nextOnGrid` put it.
+      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;
     }
     /*
       ⚠️ **A THREAT THE PLAYER CANNOT SEE DOES NOT SHOOT**, and this line arrives with the roam that
@@ -4160,8 +4197,21 @@ function spawnWave(w: World, index: number): void {
       row do not play the same figure at the same offset. Both are AUTHORED rather than rolled, for
       the reason this function opens with: a level that rolled its rhythm would play differently
       every run and could not be tuned by a hand.
+
+      ── AND BOTH OF THOSE ARE DEALT AT THE ENTRY NOW, NOT HERE — 0326 ─────────────────────────────
+
+      ⚠️ **THE TWO PARAGRAPHS ABOVE DESCRIBE A LINE THAT NO LONGER DECIDES ANYTHING, AND `npm run
+      prove` IS WHAT SAID SO.** `docs/decisions/0326-an-enemy-is-seen-before-it-fires.md` sets a
+      body's count on the step its hull enters the view or the lane, in both directions — so whatever
+      this line dealt is overwritten before a single shot leaves, for every body a wave sends: a lead
+      wave is placed beyond the horizon and always crosses the edge, and a flanker always enters the
+      lane. 0096's probe *the first shot left unaligned* applied and STAYED GREEN, which is
+      `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` working. The phase is `nextOnGrid` at
+      the entry and the figure is `entrySlot` below; what a body carries from here to the edge is a
+      count that only has to be positive, and a full reload is the honest one — a body a step from
+      the edge with a count of one would fire on the entry step under any rule that only shortened.
     */
-    e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), (i + index) / wave.count);
+    e.fireIn = fireGapFor(row.fireEvery, w.difficulty);
     /*
       ⚠️ **AND ITS PLACE IN THE ENTRY WINDOW, WHICH THE LINE ABOVE CANNOT ANSWER FOR A RANK** —
       0259, amended. The spread above is across the body's OWN cadence, and a wave whose members
