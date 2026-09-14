@@ -188,7 +188,20 @@ describe('0248 — the serpent strikes', () => {
     expect(filled.shots, 'the arc does not fill in to five once the serpent is a fifth down').toBe(5);
     expect(filled.shots, 'the opening arc does not grow').toBeGreaterThan(whole.shots);
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
-    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw the acid spray and void in turn').toEqual(['acid/sweep', 'void/spray']);
+    /*
+      ⚠️ **THREE HEADS SINCE 0324, AND THIS IS THE GUARD MOVING RATHER THAN BENDING.** It read
+      `['acid/sweep', 'void/spray']`. Reported: *"the void blasts probably need to be every second firing,
+      not every firing like they are now, they make that wave take a bit too long."* A third head that is
+      the spray again puts the void on one round in two instead of one in one. **0261's own claim is
+      untouched** — that the weapons come TOGETHER in one round rather than as *"three separate fire
+      fields"* — and a round of three is still a round.
+      `docs/decisions/0192-a-guard-holds-an-invariant.md`: change the guard and say why.
+    */
+    expect(hurtHeads.map((h) => `${h.shot}/${h.attack.kind}`), 'once hurt the serpent does not throw the acid spray and void in turn').toEqual([
+      'acid/sweep',
+      'void/spray',
+      'acid/sweep',
+    ]);
     const lastHeads = (last.attack ?? row.attack).kind === 'heads' ? (last.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
     /*
       ⚠️ **THE LAST THIRD IS TWO HEADS SINCE 0311, AND THIS IS THE GUARD MOVING RATHER THAN BENDING.** It
@@ -1331,12 +1344,35 @@ describe('0308 — the attacks are heard', () => {
       const attack = phase.attack ?? row.attack;
       if (attack.kind !== 'heads') continue;
       rounds++;
+      /*
+        ⚠️ **ONE SOUND PER ATTACK RATHER THAN ONE PER HEAD — 0324 MOVED IT, AND THE CLAIM IS THE SAME
+        ONE.** It read `new Set(cues).size === cues.length`, which is *every head sounds differently* —
+        true while no round threw the same attack twice, and the serpent's hurt phase throws the spray
+        on two of its three heads now. The thing the player is asked to tell apart is an ATTACK, not a
+        turn of the round: two sprays that sounded different would be the defect, not the fix.
+        `docs/decisions/0192-a-guard-holds-an-invariant.md` — change the guard and say why.
+
+        ⚠️ **AND A BIJECTION RATHER THAN TWO COUNTS.** Equal set sizes would pass a round that named one
+        attack two ways and two attacks one way, which is the exact fault 0308 was written for wearing a
+        different arithmetic — so what is held is both halves: an attack always sounds the same, and no
+        two attacks sound alike.
+      */
       const cues = attack.heads.map((head) => head.cue ?? 'bossShot');
+      const sounds = new Map<string, string>();
+      for (const head of attack.heads) {
+        const what = `${head.shot}/${head.attack.kind}`;
+        const cue = head.cue ?? 'bossShot';
+        expect(
+          sounds.get(what) ?? cue,
+          `a round throws ${what} twice and sounds it two ways — ${sounds.get(what)} and ${cue}`,
+        ).toBe(cue);
+        sounds.set(what, cue);
+      }
       expect(
-        new Set(cues).size,
-        `a round of ${cues.length} attacks sounds ${new Set(cues).size} ways: ${cues.join(', ')} — the heads of ` +
-          'one round are what the player is being asked to tell apart',
-      ).toBe(cues.length);
+        new Set(sounds.values()).size,
+        `a round of ${sounds.size} attacks sounds ${new Set(sounds.values()).size} ways: ${cues.join(', ')} — the ` +
+          'attacks of one round are what the player is being asked to tell apart',
+      ).toBe(sounds.size);
     }
     expect(rounds, 'the serpent grows no heads at all, so no round was measured').toBeGreaterThan(1);
     expect(
@@ -2613,6 +2649,70 @@ describe('0322 — the ball is worth shooting', () => {
         `on ${tier} the void arrived ${firstVoid - lastGlobe} steps after the spray's last globe`,
       ).toBeGreaterThanOrEqual(18);
     }
+  });
+});
+
+/*
+  ── 0324: THE VOID COMES EVERY SECOND SPRAY ─────────────────────────────────────────────────────
+
+  `docs/decisions/0324-the-void-comes-every-second-spray.md`. Reported:
+
+  > *"the void blasts probably need to be every second firing, not every firing like they are now, they
+  > make that wave take a bit too long."*
+*/
+describe('0324 — the void comes every second spray', () => {
+  it('THE REPORTED ONE: once hurt, the void lands on every SECOND spray and not on every one', () => {
+    /*
+      ⚠️ **DRIVEN, AND IN THE ORDER THE PLAYER MEETS IT — 0027.** The head list is held one test up, in
+      the table; what is held here is the round the frame actually plays, over two full turns of it, so
+      that a head added to the row and never reached would still be caught.
+
+      ⚠️ **COUNTED IN CUES BECAUSE A VOLLEY IS ONE CUE AND A SPRAY IS TWENTY-ONE GLOBES.** `throwAttack`
+      sounds a head's cue once per volley (0308), so the cue stream IS the round; counting bullets would
+      have to collapse a sweep's globes back into the one attack they are, which is the thing being
+      counted, assumed.
+
+      ⚠️ **AT THE TUNED TIER ALONE, BECAUSE THE ORDER IS NOT A TIER'S BUSINESS.** `fireGap` scales how
+      long a round takes and `headAt` is what chooses the head; the tiers are driven by 0323's guard,
+      which is the one that cares how much silence is in between.
+    */
+    const { world, frame } = serpentAt(0.5);
+    const boss = world.bossPool.at(0);
+    boss.headAt = 0;
+    boss.fireIn = 1;
+    const heard: { kind: string; step: number }[] = [];
+    world.onCue = (kind): void => {
+      if (kind === 'bossAcid' || kind === 'bossVoid') heard.push({ kind, step: world.steps });
+    };
+    for (let i = 0; i < 1200 && heard.length < 6; i++) {
+      // The player's own gun and seekers silenced, and the serpent held in the phase being measured.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      boss.health = world.bossFullHealth * 0.5;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      frame.step();
+    }
+    const order = heard.map((h) => h.kind);
+    expect(
+      order,
+      `the hurt phase's first six volleys sounded ${order.join(', ')}, where the void is meant to arrive on one spray in two`,
+    ).toEqual(['bossAcid', 'bossVoid', 'bossAcid', 'bossAcid', 'bossVoid', 'bossAcid']);
+    /*
+      ⚠️ **AND IN SECONDS, WHICH IS THE UNIT THE REPORT IS WRITTEN IN — 0027.** *"They make that wave take
+      a bit too long"*: the spray with no void behind it has to come round QUICKER than the one that has,
+      or the third head has bought the player nothing and only moved the noise about. Driven at the tuned
+      tier this is 1.40 s against 2.30 s; what is held is the inequality, because the two seconds are the
+      cadence's and the cadence is a number 0322 owns.
+    */
+    const sprays = heard.filter((h) => h.kind === 'bossAcid').map((h) => h.step);
+    const behindTheVoid = (sprays[1]! - sprays[0]!) / STEPS_PER_SECOND;
+    const onItsOwn = (sprays[2]! - sprays[1]!) / STEPS_PER_SECOND;
+    expect(
+      onItsOwn,
+      `a spray with a void behind it comes round in ${behindTheVoid.toFixed(2)}s and one on its own in ` +
+        `${onItsOwn.toFixed(2)}s — the round with the void taken out of it is no quicker, so the wave is as long as it was`,
+    ).toBeLessThan(behindTheVoid);
   });
 });
 

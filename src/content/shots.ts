@@ -473,11 +473,33 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * else the player may shoot at needs more than one hit. What made thirty wrong was not that it was big, it
    * was that the number was chosen against a gun nobody measured.
    */
+  /*
+    ⚠️ **12 → 13.2, AND IT IS THE ONE NUMBER 0324 MOVES** — *"the combined poison/void bubbles need about
+    10% more health, they need to last just a bit longer."* Driven on the rig 0322's own guard flies, the
+    opening gun empties a ball in **1.20 s of a 2.82 s flight** at twelve and **1.42 s** at 13.2, so the
+    spare falls from 1.62 s to 1.40 s and the ball still dies with **half its flight to go, at every
+    tier**. The bar 0311 set and 0322 met is untouched: the gun the animal is met with clears it.
+
+    ⚠️ **A TENTH BUYS A WHOLE EXTRA BITE, WHICH IS WHY THE CLEAR IS 18% SLOWER AND NOT 10%.** Damage is
+    quantised: the opening pulse bites one point at a time, so twelve is twelve bites and 13.2 is
+    fourteen. *Last just a bit longer* is a question about bites and the appetite is the only dial that
+    moves them; **no fractional value between 13 and 14 behaves differently from this one** at that gun,
+    and against a four-damage shot 13 and 13.2 are the same four bites as well. The literal tenth is
+    therefore the honest way to write what was asked rather than a false precision.
+
+    ⚠️ **THIS CHANGE LENGTHENS THE FIGHT AND THE OTHER HALF OF 0324 SHORTENS IT, WHICH IS WHY THE PAIR IS
+    MEASURED TOGETHER.** 0322's arithmetic is that a maw eats player fire the animal would otherwise take,
+    so a bigger appetite is a longer fight; a void blast has an appetite of six and the same decision
+    throws **half as many of them**, which is more fire reaching the hull. Flown, the net is the arc's
+    quickest fight at **43 s → 42 s** against 0260's forty-second floor —
+    `docs/decisions/0324-the-void-comes-every-second-spray.md` has the table and says plainly that the
+    second of margin was spent by the head and not by the ball.
+  */
   maw: {
     sprite: SPRITE.maw,
     spriteHit: SPRITE.mawHit,
     radius: 3.6,
-    health: 12,
+    health: 13.2,
     damage: 3,
     speed: 0.55,
     fission: SPENT_BY_ARRIVING,
