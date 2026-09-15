@@ -27,8 +27,10 @@ export const PROBES = [
     guard: 'and every signature reacts',
     edit: {
       path: 'src/content/enemies.ts',
-      find: "    attack: { kind: 'spray', shots: 2, spread: 0.55 },\n    motion: { kind: 'hunt', agility: 0.35 },",
-      replace: "    attack: { kind: 'spray', shots: 2, spread: 0.55 },\n    motion: { kind: 'drift', roam: 0.2 },",
+      // ⚠️ Re-anchored by 0327, which took the picket's spread to zero (its pair braids on the path
+      // instead of fanning); the break — the picket drifting rather than hunting — is unchanged.
+      find: "    attack: { kind: 'spray', shots: 2, spread: 0 },\n    motion: { kind: 'hunt', agility: 0.35 },",
+      replace: "    attack: { kind: 'spray', shots: 2, spread: 0 },\n    motion: { kind: 'drift', roam: 0.2 },",
     },
   },
   {

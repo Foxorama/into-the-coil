@@ -43,6 +43,9 @@ export type ShotKind =
   | 'rock'
   | 'frost'
   | 'spine'
+  // The two that do not fly straight — 0327. A ripple snakes across the lane; a curl bends.
+  | 'ripple'
+  | 'curl'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -88,6 +91,40 @@ export interface ShotRow extends Body {
    * that ladder at more than five pixels a rung — 0262 spent the last easy room on it.
    */
   fission: readonly Fission[];
+  /**
+   * How the shot flies after it leaves the muzzle, if not straight — 0327. Absent is straight, which
+   * is every shot in the game until this field existed.
+   *
+   * ── EVERY ENEMY BULLET IN THE GAME FLEW A STRAIGHT LINE AT CONSTANT SPEED ────────────────────────
+   *
+   * ⚠️ **REPORTED**: *"almost all the shooting is straight patterns as well, there's no curving
+   * bullets, no patterns, no waves etc."* — and it was exact: `spray`, `wall`, `spiral` and `aimed`
+   * differ only in where the straight lines point, the one shot with a life after the muzzle is the
+   * frost (0263), and nothing an author could write on a row made a hostile bullet bend.
+   * `docs/decisions/0327-a-shot-has-a-path.md`.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's DEFAULT SHAPE, AND ON THE SAME ANSWER GIVEN THE SAME DAY: *"make sure that
+   * we still have some straight firing bullets — if everything curves or weaves we've over
+   * corrected."*** A row says what its path is; the fallback is straight, and it is the common case
+   * on purpose.
+   *
+   * ⚠️ **A PATH IS THE SHOT'S OWN AND READS NOTHING ABOUT THE SHIP.** *Patterns only, never homing* —
+   * the answer recorded for this item. An arc is a constant turn per step; a wave is a swing across as
+   * a function of `along`, the weaver's own arm (`src/content/enemies.ts`) applied to a bullet, so two
+   * shots fired a second apart trace the same curve through the same piece of world and the pattern
+   * can be drawn on a map. `bendShots` in `src/app/frame.ts` steps both, allocating nothing.
+   *
+   * ⚠️ **A WAVE REPLACES THE ACROSS COMPONENT THE MUZZLE GAVE THE SHOT**, exactly as a weaver's weave
+   * replaces its roam: the swing IS the shot's across motion. A fan of ripples would lose its fan, so a
+   * row that wants a spread and a swing has not decided which it is — the picket's pair is a spray of
+   * spread zero, and what tells its two shots apart is `spin`, the arm's own handedness.
+   *
+   * ⚠️ **A CURVING BULLET IS ITS OWN ROW AND NEVER A FIELD ON A ROW THAT ALSO FLIES STRAIGHT** —
+   * 0258's rejection, a kind that does one thing in one level and another in the next is two kinds
+   * with one name. Each row says its own `turn` or its own swing, so a fast tight arc and a slow lazy
+   * one are two rows and not one constant.
+   */
+  path?: ShotPath;
   /**
    * How much of the player's fire this bullet SWALLOWS before it bursts — 0291. Absent is none, and
    * none is *the player cannot touch it*, which is every shot in the game but one.
@@ -202,6 +239,31 @@ export type Fission =
 /** A shot that is spent by arriving and by nothing else — every shot but the frost. */
 const SPENT_BY_ARRIVING: readonly Fission[] = [];
 
+/** Every way a shot can fly that is not straight. Closed. */
+export const SHOT_PATH_KINDS = ['arc', 'wave'] as const;
+
+/** Derived from the list, so a path cannot exist in the union and be missing from the switch. */
+export type ShotPathKind = (typeof SHOT_PATH_KINDS)[number];
+
+/**
+ * How a shot bends — 0327. One arm of a closed union, and the arm carries its own numbers.
+ *
+ * ⚠️ **AN ARC IS BOUNDED BY `sweep`, OR IT NEVER LEAVES.** A constant turn is a circle, and a circle
+ * inside the view is a bullet that orbits for ever and holds its pool slot for ever — `src/sim/pool.ts`
+ * refuses the volley after it. After `sweep` radians the shot flies straight on whatever heading it
+ * has, and leaves the world like anything else. The radius of the circle is `speed / turn`, in world
+ * units, which is the reach a row should be argued against (`scripts/threat-sheet.mjs`).
+ *
+ * ⚠️ **THE TURN'S SIGN IS THE SHOT'S `spin`**, dealt by the attack arm that threw it — a wall's two
+ * sides mirror, a spray alternates, a spiral curls one way — so which way a bullet bends is the
+ * volley's shape and not a second number on the row.
+ */
+export type ShotPath =
+  /** A constant turn of `turn` radians a step, for `sweep` radians in total, then straight. */
+  | { kind: 'arc'; turn: number; sweep: number }
+  /** A swing of ±`amplitude` across, one full wave every `wavelength` units along — the weaver's arm. */
+  | { kind: 'wave'; amplitude: number; wavelength: number };
+
 /**
  * The most shards of a SHATTERING shot one volley may open with, before the tier's `crowd`.
  *
@@ -248,6 +310,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'rock',
   'frost',
   'spine',
+  'ripple',
+  'curl',
   'missile',
   'seeker',
   'bomb',
@@ -412,6 +476,58 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * what 0098's other half is about.
    */
   flak: { sprite: SPRITE.flak, spriteHit: SPRITE.flak, radius: 0.9, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
+  /*
+    ── THE RIPPLE: THE PICKET'S, AND THE FIRST BULLET IN THE GAME THAT DOES NOT FLY STRAIGHT — 0327 ──
+
+    The Approach's own body throws a pair that snake down the lane in opposite phase — a braid, in
+    the serpent's place. The spit's speed and the spit's hurtbox: what changes is the path, and the
+    path is the whole of what it asks of the player, which is *where will it be*, the weaver's own
+    question asked of a bullet.
+
+    ⚠️ **SIX BY FORTY, AND BOTH ARE ARGUED AGAINST THE SCREEN.** A shot swings twelve units side to
+    side, and the PAIR reaches up to twenty-four — a quarter of the lane — because the path is
+    `across₀ + A·(sin k·along − sin k·along₀)` and the spawn phase displaces each shot's centre by up
+    to another A (the weaver's own algebra, one row up in `src/content/enemies.ts`). Measured at
+    23.2 on the drive. Forty units is a quarter of the narrowest view, so a shot draws a whole wave
+    and a bit on its way across and the swing is seen as a swing rather than as a wobble. The
+    lateral rate peaks at `amplitude × 2π / wavelength × |velocity|`, 0.75 a step at the spit's
+    speed against the ship's 1.7 — a shot the player can walk away from, on 0034's terms.
+    `tests/shot-path.test.ts` holds the swing and the pair's reach in the player's units.
+  */
+  ripple: {
+    sprite: SPRITE.ripple,
+    spriteHit: SPRITE.ripple,
+    radius: 0.9,
+    health: 1,
+    damage: 1,
+    speed: 1.4,
+    fission: SPENT_BY_ARRIVING,
+    path: { kind: 'wave', amplitude: 6, wavelength: 40 },
+  },
+  /*
+    ── THE CURL: THE SPINNER'S RING, BENT — 0327 ────────────────────────────────────────────────────
+
+    The flak's speed and hurtbox on a turn: the spinner's three shots leave as a ring and curl the
+    same way, so a volley is a pinwheel and ten volleys are a spiral galaxy walking round the body.
+    0110 made the spinner *the first body whose threat is a SHAPE*; this is the shape drawn in the
+    air rather than only in the timing.
+
+    ⚠️ **A RADIUS OF TWENTY AND HALF A TURN.** `speed / turn` is 1 / 0.05 = 20 world units, so a shot
+    sweeps a circle forty across before it straightens — under half the lane, which is the room a
+    player has to be somewhere else in. Half a turn (π) is 63 steps, a second: a shot thrown at the
+    player ends up flying up-lane, and one thrown up-lane comes back down. Longer and the ring's arms
+    cross their own tails; shorter and it reads as a kink rather than a curve. The play owns both.
+  */
+  curl: {
+    sprite: SPRITE.curl,
+    spriteHit: SPRITE.curl,
+    radius: 0.9,
+    health: 1,
+    damage: 1,
+    speed: 1,
+    fission: SPENT_BY_ARRIVING,
+    path: { kind: 'arc', turn: 0.05, sweep: Math.PI },
+  },
   /**
    * The serpent's acid blast — `docs/decisions/0248-the-serpent-strikes.md`. The fattest and
    * slowest bullet in the game: a wall of these across the lane is a thing to walk through, and

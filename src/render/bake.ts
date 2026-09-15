@@ -516,6 +516,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   frost: 'frost',
   // The fish's spine in the enemy's ink — 0262: a spine is told from a slab by its shape.
   spine: 'enemy',
+  // The ripple and the curl in their place's ink — 0327, on 0296's rule that a raider's bullet takes
+  // its place's colour. What tells them from the spit and the slab is the shape and the path.
+  ripple: 'enemy',
+  curl: 'enemy',
   // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
   // number beside it is drawn in the player's own colour and the icon has to sit with it.
   lifeIcon: 'pickup',
@@ -7367,6 +7371,76 @@ export function drawKind(
       // wide end of its vane, and the same offset on a needle is a halo round the tip that fills the
       // taper back in. Photographed twice.
       glow(ctx, f, ink, -0.1, 0, 0.5, 0.35);
+      return;
+    case 'ripple':
+      /*
+        A LOZENGE lying ACROSS the lane — 0327: the axis it is long on is the axis it swings on, so
+        the silhouette points the way the path goes. Twice as wide as deep, which is what keeps it
+        from the drifter's diamond (square, and a hull) and from the spit's square beside it on the
+        ladder; painted on the spit's own terms, a halo in the place's ink and a hot heart.
+      */
+      trace(ctx, f, [
+        [0.5, 0],
+        [0, -1],
+        [-0.5, 0],
+        [0, 1],
+      ]);
+      seal(ctx);
+      glow(ctx, f, ink, 0, 0, 1.1, 0.5);
+      poly(ctx, f, shade(ink, 0.7), [
+        [0.22, 0],
+        [0, -0.46],
+        [-0.22, 0],
+        [0, 0.46],
+      ]);
+      return;
+    case 'curl':
+      /*
+        A CRESCENT, open the way it bends — 0327: the one bullet whose silhouette says what its path
+        is. Bent from the flak, so it keeps the slab's mass in its back and gives up the bevel for a
+        horn at each tip; the dark bevel goes on the outer back, where a slab's went on its lower half,
+        and the hot core sits in the thick of it.
+      */
+      trace(ctx, f, [
+        [0.64, 0.77],
+        [0.24, 0.97],
+        [-0.21, 0.98],
+        [-0.62, 0.79],
+        [-0.9, 0.44],
+        [-1, 0],
+        [-0.9, -0.44],
+        [-0.62, -0.79],
+        [-0.21, -0.98],
+        [0.24, -0.97],
+        [0.64, -0.77],
+        [0.73, -0.64],
+        [0.36, -0.74],
+        [-0.01, -0.64],
+        [-0.28, -0.37],
+        [-0.38, 0],
+        [-0.28, 0.37],
+        [-0.01, 0.64],
+        [0.36, 0.74],
+        [0.73, 0.64],
+      ]);
+      seal(ctx);
+      // ⚠️ Inside the outline by a tenth rather than on it, and the halo a shade under the slab's:
+      // `tests/accents.test.ts` refused a bevel drawn on the hull's own edge and a glow reaching
+      // past the box the next bitmap begins in, and both were read off the guard rather than guessed.
+      poly(ctx, f, shade(ink, -0.35), [
+        [-0.53, 0.68],
+        [-0.77, 0.38],
+        [-0.86, 0],
+        [-0.77, -0.38],
+        [-0.53, -0.68],
+        [-0.45, -0.42],
+        [-0.55, 0],
+        [-0.45, 0.42],
+      ]);
+      glow(ctx, f, ink, -0.1, 0, 1.0, 0.45);
+      // In the thick of the back, clear of the mouth: the hollow's edge is at −0.38, and a core at
+      // −0.55 with a radius of 0.26 poked into it by a tenth — the same guard, read again.
+      disc(ctx, f, shade(ink, 0.7), -0.66, 0, 0.22);
       return;
     case 'kite':
     case 'kiteHit':

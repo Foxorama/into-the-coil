@@ -86,7 +86,15 @@ export const PROBES = [
       back on the spit still left three kinds in circulation. A guard over a TOTAL cannot be reached
       by a one-file regression, which is the shape of every regression there has ever been here.
     */
-    broke: 'the lancer put back on the spit, so two of the three shooting kinds send one bullet',
+    /*
+      ⚠️ **RE-AIMED BY 0327, WHICH TOOK THE PAIR THIS BROKE AWAY.** The break was the lancer on the
+      SPIT: it collided with the picket's `spit/spray`, and the signatures assertion went red. 0327
+      put the picket on its own ripple, so a lancer on the spit collides with nobody and `npm run
+      prove` reported this STILL GREEN — docs/decisions/0019-a-probe-must-be-seen-to-apply.md. The
+      picket's pair is `ripple/spray` now, and the lancer put on the RIPPLE is the same break: two
+      shooting kinds sending one bullet in one pattern.
+    */
+    broke: 'the lancer put on the picket’s ripple, so two shooting kinds send one bullet in one pattern',
     guard: '0098 — THE REPORTED ONE: what shoots back is not all one bullet',
     edit: {
       path: 'src/content/enemies.ts',
@@ -97,7 +105,7 @@ export const PROBES = [
       */
       // ⚠️ Re-anchored by 0258, which rewrote the lancer's comment when it put it on a pattern.
       find: "    shot: 'lance',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
-      replace: "    shot: 'spit',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
+      replace: "    shot: 'ripple',\n    /*\n      ── IT CAME TO YOU FROM 0073 TO 0258,",
     },
   },
   /*
