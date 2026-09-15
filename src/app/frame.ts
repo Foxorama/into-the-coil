@@ -1512,6 +1512,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bolts, w.cameraAlong);
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
+    // Before the shots move, so a bent velocity is the one this step integrates — 0327.
+    bendShots(w);
     stepEntities(w.enemyShots, w.cameraAlong);
     // After the shots have moved, so a mote is dropped where the ball actually is this step — 0301.
     dropTrails(w);
@@ -3195,6 +3197,9 @@ function fireEnemies(w: World): void {
           reset(shot, e.along, e.across, bullet, bulletKind);
           shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
           shot.velAcross = Math.sin(angle) * speed;
+          // Its handedness, alternating down the fan — 0327: a pair of ripples braids, a wider fan of
+          // curls fans both ways. Read by `bendShots` and by nothing else, so a straight shot is unmoved.
+          shot.spin = s % 2 === 0 ? 1 : -1;
         }
         break;
       }
@@ -3219,6 +3224,9 @@ function fireEnemies(w: World): void {
             reset(shot, e.along, across, bullet, bulletKind);
             shot.velAlong = -speed + w.scrollPerStep;
             shot.velAcross = 0;
+            // The side it stands on is its handedness — 0327 — so a wall of bending shots mirrors
+            // about the hole: both sides curl in, or both curl out, and the hole moves as one.
+            shot.spin = side;
           }
         }
         break;
@@ -3754,6 +3762,65 @@ const VOID_SHARDS = 7;
  *
  * ⚠️ **Nothing allocates**, on `fireEnemies`'s own terms — `tests/budget.test.ts` scans this file.
  */
+/**
+ * Bend every hostile shot whose row says it does not fly straight — 0327.
+ *
+ * ── A SHOT HAS A PATH, AND THE PATH IS THE SHOT'S OWN ─────────────────────────────────────────────
+ *
+ * `docs/decisions/0327-a-shot-has-a-path.md`. Reported: *"there's no curving bullets, no patterns, no
+ * waves etc."* Every hostile bullet flew the straight line its muzzle gave it; this reads the row's
+ * `path` and writes the velocity `stepEntities` integrates next, and it reads nothing about the ship —
+ * *patterns only, never homing*, the answer recorded for the item.
+ *
+ * ⚠️ **AN ARC IS A ROTATION OF THE CAMERA-FRAME VELOCITY**, on 0023's rule that every speed is in the
+ * camera's frame: the scroll is taken off, the vector turned, the scroll put back. Turning the world
+ * velocity instead would bend the scroll into the shot and a straight-down-the-lane shot would drift
+ * up it. `firePhase` carries how far it has turned — zeroed by `reset`, read by nothing else on a
+ * shot — and past `sweep` the shot flies straight and leaves, so the pool is a pace and not a total.
+ *
+ * ⚠️ **A WAVE IS THE WEAVER'S ARM ON A BULLET**: the swing is a function of `along`, so two shots
+ * fired a second apart trace one curve through one piece of world, and the across velocity is
+ * REPLACED rather than added to — `src/content/shots.ts` says why a fan and a wave do not combine.
+ * `spin` is the shot's handedness, dealt by the arm that threw it; zero — a shot nobody dealt — bends
+ * the way the row says, which is 0282's default and not a constant.
+ *
+ * ⚠️ **Nothing allocates**, on `fissionShots`'s own terms — `tests/budget.test.ts` scans this file.
+ * Two trigonometric calls per bending shot per step, and only the rows that bend pay them.
+ */
+function bendShots(w: World): void {
+  const pool = w.enemyShots;
+  for (let i = pool.size - 1; i >= 0; i--) {
+    const shot = pool.at(i);
+    const path = SHOT_ROWS[shot.kind]!.path;
+    if (path === undefined) continue;
+    const hand = shot.spin === 0 ? 1 : shot.spin;
+    switch (path.kind) {
+      case 'wave': {
+        const k = TAU / path.wavelength;
+        shot.velAcross = hand * path.amplitude * k * Math.cos(shot.along * k) * shot.velAlong;
+        break;
+      }
+      case 'arc': {
+        if (shot.firePhase >= path.sweep) break;
+        const along = shot.velAlong - w.scrollPerStep;
+        const across = shot.velAcross;
+        const c = Math.cos(path.turn * hand);
+        const s = Math.sin(path.turn * hand);
+        shot.velAlong = along * c - across * s + w.scrollPerStep;
+        shot.velAcross = along * s + across * c;
+        shot.firePhase += path.turn;
+        break;
+      }
+      default: {
+        // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
+        const never: never = path;
+        void never;
+        break;
+      }
+    }
+  }
+}
+
 function fissionShots(w: World): void {
   const pool = w.enemyShots;
   for (let i = pool.size - 1; i >= 0; i--) {

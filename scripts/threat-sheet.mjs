@@ -46,7 +46,8 @@ const themes = process.argv.includes('--all') ? [...THEME_KINDS] : [arg('theme',
   half of the same question.
 */
 const ROWS = [
-  { title: 'WHAT A RAIDER SHOOTS  — these take the place’s colour (0296)', kinds: ['lance', 'spit', 'flak', 'spine'] },
+  // The ripple and the curl since 0327 — the two that do not fly straight, in the place's ink like the rest.
+  { title: 'WHAT A RAIDER SHOOTS  — these take the place’s colour (0296)', kinds: ['lance', 'spit', 'ripple', 'flak', 'curl', 'spine'] },
   { title: 'WHAT A BOSS SHOOTS  — their inks are what they ARE, and do not move', kinds: ['flame', 'void', 'acid', 'frost', 'rock'] },
   { title: 'THE HULLS  — same scale, same ground', kinds: ['weaver', 'drifter', 'charger', 'kite', 'lancer'] },
   { title: 'WHAT THE PLAYER FIRES', kinds: ['bullet', 'arcNode', 'shuriken', 'missile', 'seeker', 'bomb'] },

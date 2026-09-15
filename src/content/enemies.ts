@@ -696,8 +696,12 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       ⚠️ **The slow fat one, for the turret's own reason and more so.** 0098: *"a slow wide one is a
       pattern to move through… a figure is only readable if the shots are slow enough to be seen
       arriving."* A ring of fast darts is a hit or a miss decided before the player can read it.
+
+      ⚠️ **AND IT CURLS — 0327.** The flak bent on a twenty-unit radius for half a turn, so the ring
+      is a pinwheel and the volleys walk round the body as a spiral drawn in the air. The slab's
+      speed and hurtbox; what changed is the path, and `curl/spiral` is this row's own pair.
     */
-    shot: 'flak',
+    shot: 'curl',
     /*
       ⚠️ **Three shots and a fifth of a turn, so the ring closes over about ten volleys.** Any two
       consecutive volleys leave a gap wide enough to sit in, and the gap walks — which is the whole
@@ -772,7 +776,14 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     closing: 0.2,
     shatter: null,
     fireEvery: 108,
-    shot: 'spit',
+    /*
+      ⚠️ **A RIPPLE, FROM A SPIT — 0327: the first bullet in the game that does not fly straight, on
+      the Approach's own body.** *"No curving bullets, no patterns, no waves."* The pair leaves as two
+      shots on one heading and snakes down the lane in opposite phase — a braid, in the serpent's
+      place — so the spread this row used to throw is in the PATH now rather than in the fan.
+      `ripple/spray` is its own pair (`tests/signature.test.ts`).
+    */
+    shot: 'ripple',
     /*
       THE APPROACH'S OWN: a three-bladed picket that steers into your lane and throws a two-shot
       spread. The first thing in the run that fires more than one bullet at once, at the slowest
@@ -781,8 +792,13 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       ⚠️ **THE APPROACH'S ONE PILOT — 0258.** A signature is the one kind in its place that reacts
       to the player; the lancer's hunt (0073) is this row's now, at a lancer's agility, and every
       shared kind the Approach sends is on a pattern. `tests/pilot.test.ts` holds it per place.
+
+      ⚠️ **SPREAD ZERO SINCE 0327, AND THE TWO ARE STILL TOLD APART.** A wave replaces the across
+      component the muzzle gave a shot (`src/content/shots.ts`), so a fan of ripples would lose its
+      fan; what separates the pair is the `spin` the spray arm deals — the first swings one way and
+      the second the other, which is the braid.
     */
-    attack: { kind: 'spray', shots: 2, spread: 0.55 },
+    attack: { kind: 'spray', shots: 2, spread: 0 },
     motion: { kind: 'hunt', agility: 0.35 },
   },
   moth: {

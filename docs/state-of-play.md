@@ -899,7 +899,12 @@ them at the end. **The first is landed** —
 *"enemies need to appear, be recognisable, then fire"* reversed 0259's entry volley into a half-second
 window from either edge, and the groups in levels one to three are bigger. `scripts/weigh-presence.mjs`
 is the instrument, beside `weigh-bullets`. **Owed from its play:** whether half a second reads as
-recognisable, and whether eight read as a group. **Standing answers for the rest of the queue:** the
+recognisable, and whether eight read as a group. **The third is landed** —
+[0327](decisions/0327-a-shot-has-a-path.md): a shot row may carry a path, an arc or a wave, read by
+`bendShots` and nothing about the ship; the picket throws a braided pair and the spinner's ring
+curls, and most of what the levels send still flies straight, by guard. **Owed from its play:**
+whether a braid reads at the spit's size and whether the pinwheel reads as a pattern to time. The
+fourth — a body on an arc — is the same rotation on a hull. **Standing answers for the rest of the queue:** the
 flank cap stays, curves are patterns and never homing, and *"make sure that we still have some straight
 firing bullets — if everything curves or weaves we've over corrected."* The two place-only bodies in
 items six and seven still want names from the player.

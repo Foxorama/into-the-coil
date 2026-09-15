@@ -40,6 +40,10 @@ before it fires, from either edge, with the groups the answer names. Its figures
 below where they overlap. Two of the four questions are answered above (the cap stays; patterns only);
 the two place-only bodies still want names, and the pool stayed at 40 without needing more.
 
+The third item landed the next day as [0327](../docs/decisions/0327-a-shot-has-a-path.md), with the
+two path arms on rows the levels send — the picket's ripple and the spinner's curl — because a guard
+refuses an arm nothing flies. The second item was folded into 0326.
+
 ## What is there today, measured
 
 Three instruments, all driving the real frame at the tier `tests/world.ts` defaults to (the

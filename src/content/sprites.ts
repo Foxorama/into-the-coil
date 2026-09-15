@@ -467,6 +467,15 @@ export const SPRITE_KINDS = [
   // point first, between the slab and the ring. The size and the place on the ladder are 0262's.
   'spine',
   /*
+    The two that do not fly straight — 0327. A LOZENGE lying across the lane for the ripple, its long
+    axis the axis it swings on, twice as wide as deep so it is not the drifter's diamond (which is
+    square, and a hull); a CRESCENT for the curl, open the way it bends, which is the one bullet whose
+    silhouette says what its path is. Neither is the square, the dash, the slab, the gobbet, the ring,
+    the star or the spine, and `tests/legibility.test.ts` holds every shot to its own silhouette.
+  */
+  'ripple',
+  'curl',
+  /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
     by size before colour is involved at all — which matters more here than anywhere else, because
@@ -1269,6 +1278,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A spine between the flak's slab and the void's ring — 0262's size, 0316's shape. The hurtbox is
   // 0.26 of it, which is the band `tests/combat.test.ts` holds and is why the number did not move.
   spine: 4.2,
+  // The ripple between the spit and the slab, and the curl a shade under the slab it is bent from —
+  // 0327. Both keep the 0.9 hurtbox, so the band `tests/combat.test.ts` holds is what bounds them.
+  ripple: 2.9,
+  curl: 3.2,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.
