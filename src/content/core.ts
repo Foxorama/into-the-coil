@@ -232,6 +232,29 @@ const BALLAD: readonly (number | null)[] = [
 ];
 
 /**
+ * THE SLOW FLUTE — long notes answering the piano, from the first bar.
+ *
+ * ⚠️ **0331's eighth listen**: *"more flute work in there… from the start as well, it's missing that
+ * high touch of sadness that a flute brings."* It speaks in the piano's rests and holds over its
+ * long notes, an octave and more above it, 880–1320 Hz, so the two are a conversation rather than a
+ * doubling. The acceptance brings it back with the lament.
+ */
+const FLUTE_SLOW: readonly (number | null)[] = [
+  _, _, _, _, _, _, 19, _, 15, _, _, _, _, _, _, _,
+  _, _, 12, _, 19, _, _, _, _, _, 17, _, 14, _, _, _,
+  _, _, _, _, _, _, 17, _, 15, _, _, _, _, _, 12, _,
+  _, _, 14, _, _, _, _, _, _, _, 15, _, 14, _, 12, _,
+];
+
+/**
+ * THE METAL IN THE BALLAD — power chords on `B_ROOT`: the root and fifth an octave up, two hits a bar,
+ * and a palm-muted root in eighths under them.
+ */
+const POWER_ROOT: readonly (number | null)[] = turned(B_ROOT.flatMap((root) => [root + 12, root + 12]));
+const POWER_FIFTH: readonly (number | null)[] = turned(B_ROOT.flatMap((_root, bar) => [B_FIFTH[bar]! + 12, B_FIFTH[bar]! + 12]));
+const CHUG: readonly (number | null)[] = turned(B_ROOT.flatMap((root) => [root, root, root, root, root, root, root, root]));
+
+/**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
  *
  * ⚠️ **ONE INSTRUMENT, TWO LAYERS** — `ownB` holds whole notes from the opening and `hook` moves in
@@ -600,6 +623,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 2,
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.045, attack: 0.004, curve: 1.9, lowFrom: 1800, lowTo: 600, q: 0.7 },
     },
+    // The slow flute, answering the piano — 0331's eighth listen.
+    ...pipeVoices(FLUTE_SLOW, 1, 3.4, 0.75, 0.14),
   ],
 
   /*
@@ -763,6 +788,59 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 1,
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9 },
     },
+    /*
+      ⚠️ **AND THE METAL — 0331's eighth listen**: *"the 1.10 to 1.43 section needs more orchestral
+      metal in it — it feels like filler atm instead of the high point of the track."* Symphonic metal is
+      the orchestra with a band inside it, so the band is here, on the ballad's chords: two power-chord
+      guitars a few cents apart striking twice a bar, a palm-muted root chugging eighths under them, and
+      a choir holding the third and fifth over the strings. The drums are in `ownD`.
+    */
+    {
+      steps: POWER_ROOT,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 1 + 8 / 1200,
+      accents: [1, 0.84],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.07, attack: 0.004, curve: 1.3, lowFrom: 2600, lowTo: 1500, q: 1.2, drive: 0.55 },
+    },
+    {
+      steps: POWER_FIFTH,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 1 - 8 / 1200,
+      accents: [1, 0.84],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.06, attack: 0.004, curve: 1.3, lowFrom: 2500, lowTo: 1400, q: 1.2, drive: 0.55 },
+    },
+    {
+      steps: CHUG,
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      accents: [1, 0.62, 0.8, 0.62, 0.92, 0.62, 0.8, 0.7],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.07, attack: 0.002, curve: 3.6, lowFrom: 1500, lowTo: 600, q: 1.4, drive: 0.6 },
+    },
+    {
+      // The choir: an "aah" is a round tone with its upper partials soft — triangles and sines, slow.
+      steps: turned(B_THIRD.map((third) => third + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.6, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6 },
+    },
+    {
+      steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.7, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6 },
+    },
+    {
+      steps: turned(B_ROOT.map((root) => root + 24)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.04, attack: 0.8, curve: 0.8 },
+    },
   ],
 
   /*
@@ -870,6 +948,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 2,
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.06, attack: 0.12, curve: 0.8 },
     },
+    // The flute an octave over the violins — 0331's eighth listen, the high touch of sadness at the top.
+    ...pipeVoices(turned(BALLAD), 1, 2.6, 0.55, 0.06),
   ],
 
   /*
@@ -1187,6 +1267,51 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.06, attack: 0.002, curve: 3.2, lowFrom: 3200, lowTo: 1300, highFrom: 220 },
+    },
+    /*
+      ⚠️ **THE BAND'S KIT — 0331's eighth listen**, *"more orchestral metal."* A kick doubling the heart —
+      the lub and the dub on one and three — with a double-kick run through the last two beats of every
+      fourth bar, and a snare cracking on two and four. Still no cymbal.
+    */
+    {
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.9, 0.6, 0.8, 0.6, 0.86, 0.64, 0.9, 0.7,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 160, to: 52, seconds: 0.2, gain: 0.34, attack: 0.001, curve: 3.2, drive: 0.3 },
+    },
+    {
+      // The beater on the head, which is what lets a kick cut through guitars.
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.7, _, _, _, _, _, 0.9, 0.6, 0.8, 0.6, 0.86, 0.64, 0.9, 0.7,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.04, attack: 0.0005, curve: 6, lowFrom: 5000, highFrom: 1500 },
+    },
+    {
+      // The snare on two and four: wires and a body.
+      steps: [_, 1, _, 0.94, _, 1, _, 0.96, _, 1, _, 0.94, _, 1, _, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.08, attack: 0.001, curve: 3.6, lowFrom: 6000, lowTo: 2400, highFrom: 700 },
+    },
+    {
+      steps: [_, 1, _, 0.94, _, 1, _, 0.96, _, 1, _, 0.94, _, 1, _, 1],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 230, to: 150, seconds: 0.16, gain: 0.32, attack: 0.001, curve: 4, drive: 0.25 },
     },
   ],
 

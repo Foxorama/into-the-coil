@@ -1309,7 +1309,10 @@ export function levelWrites(
     // at a section change only: a piece starting from silence starts at the shared speed.
     if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target) * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;
     if (!aura && target > 0 && was === 0) opening.push(write);
-    if (!aura && target === 0 && was > 0) closing.push(write);
+    // 0331: a layer the place says lingers leaves in one long fade rather than in the arrivals' steps.
+    const linger = standing && target === 0 && was > 0 ? THEMES[theme].linger?.[layer] : undefined;
+    if (linger !== undefined) write.tau *= linger;
+    else if (!aura && target === 0 && was > 0) closing.push(write);
     /*
       ── A CARRIED LAYER MAKING ROOM IS PACED LIKE A DEPARTURE — 0226 ─────────────────────────────
 
