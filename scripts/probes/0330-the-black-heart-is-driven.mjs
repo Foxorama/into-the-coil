@@ -11,6 +11,18 @@
 // docs/decisions/0189-a-place-is-what-it-does-not-play.md names and `LEADS`' own header records twice.
 // It is the cheap half of a drive to forget — a ladder is edited, a lead is not, and nothing about the
 // arrangement looks wrong until somebody measures whether the part is a part.
+//
+// ⚠️ AND TWO BREAKS ARE DELIBERATELY ABSENT, WHICH 0019 ASKS TO BE WRITTEN DOWN RATHER THAN LEFT.
+//
+// `nudge` back on `waitForTimeout(120)` — the wall-clock wait this decision replaced with a frame
+// count — CANNOT be probed here, because the fault only appears when the machine is saturated. Under
+// `prove-guard.mjs`'s own filtered run the suite is idle, 120 ms is seven frames, and the break would
+// report STILL GREEN. That is the honest state: the fix is right, the load that exposes it is the
+// whole suite, and a probe pointed at it would be theatre. `tests/frames.ts` carries the measurement.
+//
+// `NOT_STEADIER` emptied of one of its two places would redden 0166's second assertion — but the
+// break it would prove is that a known-bad list is held in both directions, which is already 0164's
+// probe with a different list under it. A second copy of one proof is not a second proof.
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {

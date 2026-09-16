@@ -170,6 +170,24 @@ both with their numbers, held in both directions on `STILL_ADRIFT`'s terms. The 
 explains them: *"the layers left free are the ones changing role, and a 5 dB change of target is an
 18 dB change of gain."*
 
+## ⚠️ And a third thing was measuring wall clock where it meant frames
+
+`tests/menu.browser.test.ts`'s *still steps a column when the layout has no answer for the axis* went
+red under `npm run check` on this branch, and **passed alone on this branch and on `main`**.
+[0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md): *a rerun is not evidence.*
+
+`nudge` pressed a gamepad button, waited **120 ms of wall clock**, released it and waited again. **A
+gamepad is read once per frame.** 120 ms is seven frames on an idle machine and can be one or none on
+a saturated one, so under the suite's own load the press and the release land between two polls and
+the menu never sees the edge. `tests/frames.ts` already exists for exactly this class one file over —
+its header is about the canvas and says *"wall-clock time is not frames"* — so `afterFrames` joins it
+and `nudge` counts eight, which is what 120 ms bought when it worked.
+
+⚠️ **AND IT GETS NO PROBE, WHICH [0019](0019-a-probe-must-be-seen-to-apply.md) ASKS TO BE WRITTEN
+DOWN.** Putting the wall-clock wait back reports STILL GREEN under `prove-guard.mjs`, because that
+harness runs one filtered suite on an idle machine — the load that exposes the fault is the whole
+suite. The probe file says so rather than aiming a break until something reddens.
+
 ## ⚠️ What this widens and does not close: eleven layer-rungs with no role at all
 
 The hole above is not only the guard's. **`ARRANGEMENT` is global, and a place that opens a layer at a

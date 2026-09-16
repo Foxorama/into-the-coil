@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
+import { afterFrames } from './frames.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
@@ -338,12 +339,20 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
       '.' + prefixFor('music') + 'action-cursor',
     );
 
-  /** Push the D-pad for a moment and let go — one edge, which is what the reader hears. */
+  /**
+   * Push the D-pad for a moment and let go — one edge, which is what the reader hears.
+   *
+   * ⚠️ **IN FRAMES, BECAUSE A GAMEPAD IS READ ONCE A FRAME** — 0330, and
+   * `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`. This held the button
+   * for 120 ms of WALL CLOCK, which is seven frames on an idle machine and can be none on a saturated
+   * one; the press and the release then land between two polls and the menu never sees the edge.
+   * `tests/frames.ts` has the measurement and why eight.
+   */
   async function nudge(page: Page, button: number): Promise<void> {
     await setPad(page, [0, 0], [button]);
-    await page.waitForTimeout(120);
+    await afterFrames(page, 8);
     await setPad(page, [0, 0], []);
-    await page.waitForTimeout(120);
+    await afterFrames(page, 8);
   }
 
   it('moves DOWN a column and RIGHT along a row, rather than one step either way', async () => {
