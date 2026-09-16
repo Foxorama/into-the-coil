@@ -232,19 +232,37 @@ const BALLAD: readonly (number | null)[] = [
 ];
 
 /**
- * THE SLOW FLUTE — long notes answering the piano, from the first bar.
+ * THE SLOW FLUTE — a melody answering the piano, from the first bar.
  *
- * ⚠️ **0331's eighth listen**: *"more flute work in there… from the start as well, it's missing that
- * high touch of sadness that a flute brings."* It speaks in the piano's rests and holds over its
- * long notes, an octave and more above it, 880–1320 Hz, so the two are a conversation rather than a
- * doubling. The acceptance brings it back with the lament.
+ * ⚠️ **0331's eighth listen asked for it and the ninth said what it was not**: *"it's just a sharp
+ * flute note, it's not a melody that blends into the music, there's no tail, the note just ends."*
+ * The first pass was single notes dropped into the piano's rests. This is a line: every phrase starts
+ * where the piano holds, climbs or falls by step through the chord, and lands on a long note that
+ * rings until the piano speaks again — so the two instruments hand the song back and forth.
  */
 const FLUTE_SLOW: readonly (number | null)[] = [
-  _, _, _, _, _, _, 19, _, 15, _, _, _, _, _, _, _,
-  _, _, 12, _, 19, _, _, _, _, _, 17, _, 14, _, _, _,
-  _, _, _, _, _, _, 17, _, 15, _, _, _, _, _, 12, _,
-  _, _, 14, _, _, _, _, _, _, _, 15, _, 14, _, 12, _,
+  _, _, _, _, _, 12, 14, 15, 17, _, _, 15, 12, _, _, _,
+  _, 10, 12, 14, 15, _, _, _, _, 14, 12, 10, 7, _, _, _,
+  _, _, _, _, _, 17, 15, 14, 12, _, _, _, _, 12, 14, 15,
+  17, _, _, 19, 17, _, _, _, _, 19, 17, 15, 14, _, 12, _,
 ];
+
+/**
+ * A line split by how long each note has before the next — the ones followed by three beats or more of
+ * rest, and the rest. A voice has one length, and a flute holds its landing notes and moves through
+ * its passing ones, so the two halves are played as two voices of one instrument.
+ */
+const splitByRoom = (line: readonly (number | null)[], room: number): [(number | null)[], (number | null)[]] => {
+  const roomAt = (i: number): number => {
+    let gap = 1;
+    while (gap < line.length && line[(i + gap) % line.length] === null) gap++;
+    return gap;
+  };
+  const passing = line.map((note, i) => (note !== null && roomAt(i) < room ? note : _));
+  const landing = line.map((note, i) => (note !== null && roomAt(i) >= room ? note : _));
+  return [passing, landing];
+};
+const [FLUTE_PASSING, FLUTE_LANDING] = splitByRoom(FLUTE_SLOW, 3);
 
 /**
  * THE METAL IN THE BALLAD — power chords on `B_ROOT`: the root and fifth an octave up, two hits a bar,
@@ -257,14 +275,15 @@ const CHUG: readonly (number | null)[] = turned(B_ROOT.flatMap((root) => [root, 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
  *
- * ⚠️ **ONE INSTRUMENT, TWO LAYERS** — `ownB` holds whole notes from the opening and `hook` moves in
- * half notes from `surge` — so the voice is written once and the two lines cannot drift into two
- * different pipes. `level` scales every voice together; `attack` is the breath before the note speaks.
+ * ⚠️ **ONE INSTRUMENT, THREE LINES** — the slow flute under the lament, the running flute of the second
+ * movement and the descant over the ballad's violins — so the voice is written once and cannot drift
+ * into three different pipes. `level` scales every voice together; `attack` is the breath before the
+ * note speaks; `chiff` scales the consonant the note is blown with, which a slow line wants soft.
  *
- * ⚠️ **A PAN PIPE FROM A SYNTHESISER WITH NO VIBRATO**, built from what a pipe is: a triangle, whose
- * odd harmonics fall away fast, with its filter open for the edge asked for — *"a higher tone with a
- * bit more piercing note"*; a thin square under it for the reedy bite of a pipe blown hard; a sine for
- * body; a chiff of noise on the onset; breath under the note. Octave 3 on `HARMONY` is 880–1760 Hz.
+ * ⚠️ **AND IT DIES NOW, INSTEAD OF STOPPING** — 0331's ninth listen: *"there's no tail, the note just
+ * ends."* The decay curve left every held note near half its level when its time ran out, and the
+ * six-millisecond guard cut it there. The tone sustains, then spends its last 45% dying away, with a
+ * flautist's vibrato easing in as it is held.
  */
 const pipeVoices = (
   line: readonly (number | null)[],
@@ -272,27 +291,28 @@ const pipeVoices = (
   beats: number,
   level: number,
   attack: number,
+  chiff = 1,
 ): MusicVoice[] => [
   {
     steps: line,
     pitched: true,
     perBeat,
     octave: 3,
-    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.17 * level, attack, curve: 0.9, lowFrom: 8000, lowTo: 5200, q: 0.8 },
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.17 * level, attack, curve: 0.4, lowFrom: 7000, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
   },
   {
     steps: line,
     pitched: true,
     perBeat,
     octave: 3,
-    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.03 * level, attack: attack * 1.3, curve: 1.2, lowFrom: 6000, lowTo: 3800, q: 0.8 },
+    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.025 * level, attack: attack * 1.3, curve: 0.8, lowFrom: 5000, lowTo: 3000, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
   },
   {
     steps: line,
     pitched: true,
     perBeat,
     octave: 3,
-    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.05 * level, attack: attack * 1.5, curve: 0.9 },
+    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.06 * level, attack: attack * 1.5, curve: 0.4, release: BEAT_SECONDS * beats * 0.5, vibrato: 11 },
   },
   {
     // The chiff: the consonant the note is blown with.
@@ -300,7 +320,7 @@ const pipeVoices = (
     pitched: false,
     perBeat,
     octave: 0,
-    note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.05 * level, attack: 0.002, curve: 4.5, lowFrom: 11000, lowTo: 5000, highFrom: 3000 },
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.04 * level * chiff, attack: 0.006, curve: 4, lowFrom: 8000, lowTo: 4000, highFrom: 2500 },
   },
   {
     // The breath under the held note, which is what stops a pure tone reading as a synthesiser.
@@ -308,7 +328,7 @@ const pipeVoices = (
     pitched: false,
     perBeat,
     octave: 0,
-    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.018 * level, attack: attack * 3, curve: 1.3, lowFrom: 9000, lowTo: 6000, highFrom: 3500, q: 0.6 },
+    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.016 * level, attack: attack * 3, curve: 0.8, lowFrom: 8000, lowTo: 5000, highFrom: 3500, q: 0.6, release: BEAT_SECONDS * beats * 0.4 },
   },
 ];
 
@@ -624,7 +644,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.045, attack: 0.004, curve: 1.9, lowFrom: 1800, lowTo: 600, q: 0.7 },
     },
     // The slow flute, answering the piano — 0331's eighth listen.
-    ...pipeVoices(FLUTE_SLOW, 1, 3.4, 0.75, 0.14),
+    ...pipeVoices(FLUTE_PASSING, 1, 1.6, 0.75, 0.06, 0.3),
+    ...pipeVoices(FLUTE_LANDING, 1, 4.6, 0.8, 0.08, 0.3),
   ],
 
   /*
@@ -634,7 +655,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     liked, playing `FLUTE` — the piano's song an octave up and in eighths — with each note held just
     past the next, so the eighths are a line rather than a pattern.
   */
-  hook: pipeVoices(FLUTE, 2, 1.3, 1, 0.02),
+  hook: pipeVoices(FLUTE, 2, 1.4, 1, 0.02, 0.7),
 
   /*
     ── THE HIGH STRINGS: an E and an A, held — the second movement and the last ────────────────────
@@ -729,21 +750,21 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.3, curve: 0.8, lowFrom: 1800, lowTo: 1300, q: 0.8 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.3, curve: 0.8, lowFrom: 1800, lowTo: 1300, q: 0.8, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_THIRD.map((third) => third + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.045, attack: 0.36, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.045, attack: 0.36, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.04, attack: 0.42, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.04, attack: 0.42, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8, release: BEAT_SECONDS * 1.5 },
     },
     {
       // The violas' warmth under the section: the third and fifth again, as triangles, an octave up.
@@ -751,7 +772,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.4, curve: 0.8, lowFrom: 2400, lowTo: 1800, q: 0.7 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.4, curve: 0.8, lowFrom: 2400, lowTo: 1800, q: 0.7, release: BEAT_SECONDS * 1.5 },
     },
     {
       // The cellos and basses, spiccato: root, fifth and octave in eighths, accented on the beat.
@@ -771,7 +792,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.1, attack: 0.08, curve: 1 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.1, attack: 0.08, curve: 1, release: BEAT_SECONDS * 1.5 },
     },
     {
       // The horn: the ballad's melody an octave under the violins, round and a little late to speak.
@@ -779,14 +800,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 1,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.06, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.06, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
     },
     /*
       ⚠️ **AND THE METAL — 0331's eighth listen**: *"the 1.10 to 1.43 section needs more orchestral
@@ -825,21 +846,56 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.6, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.6, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.7, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.7, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_ROOT.map((root) => root + 24)),
       pitched: true,
       perBeat: 0.25,
       octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.04, attack: 0.8, curve: 0.8 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.04, attack: 0.8, curve: 0.8, release: BEAT_SECONDS * 1.5 },
+    },
+    /*
+      ⚠️ **THE BRASS — 0331's ninth listen**: *"it needs a bit of brass."* Trombones and horns swelling
+      into each chord — a saw whose lowpass OPENS across the note, which is what a brass player leaning
+      into a held note sounds like — and trumpets joining the melody for its second half, where it climbs
+      to its top A.
+    */
+    {
+      steps: turned(B_ROOT.map((root) => root + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.06, attack: 0.16, curve: 0.3, lowFrom: 420, lowTo: 2200, q: 1.1, drive: 0.2, release: BEAT_SECONDS * 1.4 },
+    },
+    {
+      steps: turned(B_THIRD.map((third) => third + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.2, curve: 0.3, lowFrom: 450, lowTo: 2000, q: 1.1, drive: 0.15, release: BEAT_SECONDS * 1.4 },
+    },
+    {
+      steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.22, curve: 0.3, lowFrom: 450, lowTo: 2000, q: 1.1, drive: 0.15, release: BEAT_SECONDS * 1.4 },
+    },
+    {
+      // The trumpets, on the melody's second half only.
+      steps: turned(BALLAD.map((note, i) => (i >= 32 ? note : _))),
+      pitched: true,
+      perBeat: 1,
+      octave: 2,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1200, lowTo: 3600, q: 1, drive: 0.25, release: BEAT_SECONDS * 1.1, vibrato: 6 },
     },
   ],
 
@@ -932,24 +988,42 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 1,
       octave: 2 + 6 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.07, attack: 0.1, curve: 0.75, lowFrom: 3400, lowTo: 2400, q: 0.9 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.1, curve: 0.4, lowFrom: 3400, lowTo: 2400, q: 0.9, release: BEAT_SECONDS * 1.6, vibrato: 14 },
     },
     {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
       octave: 2 - 6 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.07, attack: 0.13, curve: 0.75, lowFrom: 3300, lowTo: 2300, q: 0.9 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.13, curve: 0.4, lowFrom: 3300, lowTo: 2300, q: 0.9, release: BEAT_SECONDS * 1.6, vibrato: 12 },
     },
     {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
       octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.06, attack: 0.12, curve: 0.8 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.06, attack: 0.12, curve: 0.4, release: BEAT_SECONDS * 1.6, vibrato: 13 },
+    },
+    /*
+      ⚠️ **AND THE FIRST VIOLINS AN OCTAVE HIGHER** — 0331's ninth listen: *"a slightly higher high pitch
+      at the top."* The same line at 880–1760 Hz, thin and bright, so the climb reaches over everything.
+    */
+    {
+      steps: turned(BALLAD),
+      pitched: true,
+      perBeat: 1,
+      octave: 3 + 4 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.034, attack: 0.14, curve: 0.4, lowFrom: 6000, lowTo: 4400, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
+    },
+    {
+      steps: turned(BALLAD),
+      pitched: true,
+      perBeat: 1,
+      octave: 3 - 4 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.03, attack: 0.17, curve: 0.4, lowFrom: 5800, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
     },
     // The flute an octave over the violins — 0331's eighth listen, the high touch of sadness at the top.
-    ...pipeVoices(turned(BALLAD), 1, 2.6, 0.55, 0.06),
+    ...pipeVoices(turned(BALLAD), 1, 2.8, 0.5, 0.06, 0.4),
   ],
 
   /*

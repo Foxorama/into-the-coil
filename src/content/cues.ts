@@ -319,6 +319,18 @@ export interface CueLayer {
   q?: number;
   /** Soft saturation, `[0, 1]`. What *meaty* is made of — harmonics from squashing, not from notes. */
   drive?: number;
+  /**
+   * Seconds at the END of the note over which it dies away to silence — 0331's ninth listen: *"just a
+   * sharp flute note… there's no tail, the note just ends."* The decay `curve` leaves a held note at
+   * 40% or more when its `seconds` run out, and the six-millisecond guard then cuts it. A sustained
+   * instrument states how long it takes to die. Absent, a note ends as it always has.
+   */
+  release?: number;
+  /**
+   * Vibrato depth in cents, at about five and a half cycles a second, easing in over the first third of
+   * the note — what a held flute or bowed string does and a synthesised one does not. Absent is none.
+   */
+  vibrato?: number;
 }
 
 /**

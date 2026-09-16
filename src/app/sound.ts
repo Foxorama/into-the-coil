@@ -202,6 +202,9 @@ const DECAY = 5;
  */
 const RELEASE_SECONDS = 0.006;
 
+/** How fast a stated `vibrato` wavers — a flautist's or a violinist's, about five and a half a second. */
+const VIBRATO_HZ = 5.4;
+
 /**
  * The resonance a lowpass gets when a layer does not name one, and the one a highpass always gets.
  *
@@ -429,6 +432,8 @@ export function sampleLayerInto(
   const curve = layer.curve ?? DECAY;
   // 0331: the last six milliseconds of every note fall to silence instead of stopping — see `RELEASE_SECONDS`.
   const release = Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2)));
+  // 0331's ninth listen: a note that states a release dies away over it, on a curve the ear hears as even.
+  const tail = layer.release ? Math.min(length - 1, Math.round(layer.release * rate)) : 0;
   const low = makeFilter();
   const high = makeFilter();
   /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
@@ -443,7 +448,9 @@ export function sampleLayerInto(
     if (!wrap && at >= out.length) break;
     const u = i / length;
     // Exponential in the frequency, which is what makes it linear to the ear.
-    const step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
+    let step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
+    // 0331's ninth listen: a vibrato that eases in over the first third of the note.
+    if (layer.vibrato) step *= Math.pow(2, (layer.vibrato * Math.min(1, u * 3) * Math.sin((i / rate) * VIBRATO_HZ * Math.PI * 2)) / 1200);
     phase += step;
     if (phase >= 1) phase -= 1;
     let value: number;
@@ -470,6 +477,10 @@ export function sampleLayerInto(
     let envelope = Math.exp(-curve * u);
     if (i < attack) envelope *= i / attack;
     if (length - i <= release) envelope *= (length - 1 - i) / release;
+    if (length - i <= tail) {
+      const left = (length - i) / tail;
+      envelope *= left * left;
+    }
     out[at] = (out[at] ?? 0) + value * envelope * layer.gain;
   }
 }

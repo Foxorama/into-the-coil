@@ -1541,10 +1541,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         swell over the heart there — *"that fade out for 30 secs and then strong kick back in is
         actually pretty good"* — is the aura doing exactly its job.
       */
-      run: { drone: 0.1607, chords: 0.1083, call: 0.1006, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.1042, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0776, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0.6455, ownC: 0.0984, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4952, counter: 0.3554, toll: 0, ownA: 0.1425, ownB: 0, ownC: 0, ownD: 0.1885, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1083, call: 0.1129, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0.1132, ownB: 0.7243, ownC: 0, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.1042, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0.6455, ownC: 0.0984, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4675, counter: 0.3355, toll: 0, ownA: 0.1425, ownB: 0, ownC: 0, ownD: 0.1885, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1083, call: 0.0971, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0.1132, ownB: 0.7243, ownC: 0, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 1.634 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 1.774 },
     },
@@ -1579,7 +1579,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // 0331's fifth listen: "the transitions are also too sharp" — every section change here takes twice as long.
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
-    linger: { hook: 2 },
+    linger: { hook: 2, counter: 2.5, groove: 1.6 },
     /*
       ⚠️ **AND 0331 TURNS THE CONTOUR UPSIDE DOWN, WHICH 0329 REFUSES.** *"A rising crescendo as we get
       to the end of the surge, that then tapers off very slightly as it leads into the boss music."* So
