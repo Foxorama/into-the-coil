@@ -290,7 +290,7 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
     resident budget together, and the guard measuring that is owed its re-reading when this ships.
   */
   ownB: 8,
-  ownC: 16,
+  ownC: 18,
   ownD: 8,
 };
 

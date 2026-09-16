@@ -104,8 +104,8 @@ const HELD_ROOT: readonly number[] = ROOT.map((root) => (root < 0 ? root + 12 : 
 const HEART_QUICK: readonly (number | null)[] = (() => {
   const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
   for (let i = 0; i < 8; i++) {
-    steps[i * 8] = i % 2 === 0 ? 1 : 0.94;
-    steps[i * 8 + 2] = i % 2 === 0 ? 0.7 : 0.66;
+    steps[i * 8 + 4] = i % 2 === 0 ? 1 : 0.94;
+    steps[i * 8 + 6] = i % 2 === 0 ? 0.7 : 0.66;
   }
   return steps;
 })();
@@ -270,10 +270,26 @@ const heartAt = (length: number, lubs: readonly number[], dub: number): (number 
 };
 // 0331's twelfth listen: *"about .5 sec faster in the earlier sections and .5 sec slower around the
 // 1.44 – 2.04 min mark."* 3.66 s, 2.56 s, 1.6 s (on every downbeat, with the timpani) and 1.42 s.
-const HEART_DISTANT = heartAt(256, [0, 37, 73, 110, 146, 183, 219], 3);
-const HEART_PUSH = heartAt(128, [0, 26, 51, 77, 102], 3);
-const HEART_BALLAD = heartAt(64, [0, 16, 32, 48], 2);
-const HEART_ACCEPT = heartAt(128, [0, 14, 28, 42, 57, 71, 85, 99, 114], 2);
+/*
+  ⚠️ **ONE HEART ACROSS THE WHOLE LEVEL, PLACED SO NO TWO BEATS CROWD AND NO SECTION OPENS ON ONE** —
+  0331's thirteenth listen: *"a heartbeat at 28 sec and a heartbeat at 29 sec which sounds out of place… at
+  the start of the track I want the heartbeat noise, but not at the start of each transition."* Every
+  loop runs from the file's first sample, so each pattern is placed in ABSOLUTE time, and each hand-over
+  leaves a gap between the old speed and the new:
+
+  - the opening (`ownC`, eighteen bars): 0.0, 3.8 … 22.8 s — the first sound, and silent from 25.6
+  - the second movement (`ownD`, eight bars): first at 26.0, every 2.56 s, last at 56.7 — a 3.2 s gap in
+  - the ballad (`beat`, two bars): on beat three of every bar, 58.4 … 95.2 — a 1.7 s gap in
+  - the acceptance (`ownB`, eight bars, which begins its loop at bar 56): first at 96.7, every 1.42 s — 1.5
+  - the fight (`stomp`, and `sub`'s kick): on two and four, 0.8 s apart
+
+  The hearts leave and arrive in a fraction of a second on the downbeat (`linger`, `swell` and `onBeat` on
+  the place's row), so the one before has stopped before the one after has beaten.
+*/
+const HEART_DISTANT = heartAt(288, [0, 38, 76, 114, 152, 190, 228], 3);
+const HEART_PUSH = heartAt(128, [4, 30, 55, 81, 106], 3);
+const HEART_BALLAD = heartAt(32, [8, 24], 2);
+const HEART_ACCEPT = heartAt(128, [0, 14, 28, 43, 57, 71, 85, 100, 114], 2);
 
 /**
  * The heart's three voices on `steps` — the chest, its upper body and the knock — scaled by `level`.
@@ -1527,8 +1543,6 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'sine', from: 196, to: 184, seconds: 0.1, gain: 0.1, attack: 0.001, curve: 5 },
     },
-    // The ballad's heart, once a bar — 0331's twelfth listen.
-    ...heartVoices(HEART_BALLAD, 0.37),
   ],
 
   /*
@@ -1540,6 +1554,15 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     row is what lets it be heard as struck.
   */
   ownC: heartVoices(HEART_DISTANT, 1),
+
+  /*
+    ── THE BALLAD'S HEART: beat three of every bar, 1.6 s apart ─────────────────────────────────────
+
+    ⚠️ **0331's thirteenth listen.** It lived inside the ballad's drums, which fade out slowly into the
+    acceptance, so it went on beating under the next heart. `beat` is the title's layer, closed in every
+    level and never voiced here: two bars, centred, and free to leave on its own fader.
+  */
+  beat: heartVoices(HEART_BALLAD, 1),
 
   /*
     ── THE SECOND HEART: every 2.56 s, under the flute and the guitar ────────────────────────────

@@ -1359,7 +1359,8 @@ export function levelWrites(
   const bars = entryBars(theme, level, opening);
   for (const write of opening) {
     const late = bars[write.layer] ?? 0;
-    if (late > 0) write.at = bar + late * BAR_SECONDS;
+    // 0331's thirteenth listen: a layer the place puts on the beat arrives on the downbeat itself.
+    if (late > 0 && !(THEMES[theme].onBeat ?? []).includes(write.layer)) write.at = bar + late * BAR_SECONDS;
   }
   /*
     ── A DEPARTURE USED TO FADE ACROSS THE BUILD — 0215, SUPERSEDED BELOW ─────────────────────────
