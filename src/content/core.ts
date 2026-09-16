@@ -70,6 +70,67 @@ const THIRD: readonly number[] = [3, 3, 0, 2, 3, 3, 8, -2, 0, 2, 3, 3, 8, 0, -2,
 const FIFTH: readonly number[] = [7, 7, 3, 5, 7, 7, 12, 2, 3, 5, 7, 7, 12, 3, 2, 5];
 
 /**
+ * THE ROOT, FOLDED SO IT NEVER SITS UNDER THE DRONE — what `sub`'s held note plays.
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Reported of the driven level: *"at 13,
+ * 14, 15 seconds there's some heavy bass that just makes the speakers pulse without sound and it
+ * sounds like something isn't tuned correctly."* Measured on the render, the 35–45 Hz band rises about
+ * **13 dB** over its own floor in exactly the bars where `ROOT` goes below the tonic — E and F, 41 and
+ * 44 Hz at octave 0 — and nowhere else. That is two faults in one note: a sustained sine at 41 Hz moves
+ * a desktop speaker's cone without much sound coming out of it, and against the drone's A at 55 Hz it
+ * beats at 11 to 14 Hz, which is what out of tune sounds like when there is no pitch to hear.
+ *
+ * ⚠️ **SO A ROOT BELOW THE TONIC GOES UP AN OCTAVE, AND ONLY IN THE HELD NOTE.** The chord is the same
+ * chord — an octave is the same pitch class, and every voice that spells the progression still spells
+ * it — and the floor of this place is the drone's A, which is what the place is about. The chug keeps
+ * `ROOT` because a palm mute a sixteenth long is a thud rather than a tone, and the driven saw above it
+ * is what a speaker actually plays.
+ */
+const HELD_ROOT: readonly number[] = ROOT.map((root) => (root < 0 ? root + 12 : root));
+
+/**
+ * THE PIPES' LINE — sixteen bars of eighths, one entry per bar as `[eighth, note, held]`.
+ *
+ * ⚠️ **SPLIT INTO HELD AND PASSING NOTES BECAUSE A VOICE HAS ONE LENGTH.** A pipe player holds the top
+ * of a phrase and moves through the notes on the way there; one `seconds` for both would either smear
+ * every passing note into the next or cut every held one short. Written as bars so the chord each note
+ * sits on can be read beside it.
+ *
+ * ⚠️ **EVERY FIRST AND THIRD BEAT IS A TONE OF THE BAR'S CHORD** — `ROOT`, `THIRD`, `FIFTH` above —
+ * and every note is a tone of A natural minor, on 0099's terms.
+ */
+const PIPE_BARS: readonly (readonly (readonly [number, number, boolean])[])[] = [
+  // Am Am F G — from A4 up to F5.
+  [[0, 12, true], [4, 15, false], [6, 19, false]],
+  [[0, 19, true], [6, 17, false], [7, 15, false]],
+  [[0, 15, true], [4, 20, true]],
+  [[0, 17, true], [4, 14, false], [6, 17, false]],
+  // Am Am Dm Em — up to A5.
+  [[0, 19, false], [2, 24, true]],
+  [[4, 22, false], [6, 19, false]],
+  [[0, 20, true], [4, 24, true]],
+  [[0, 22, true], [4, 19, true]],
+  // F G Am Am — the top of it, C6.
+  [[0, 24, false], [2, 27, true]],
+  [[0, 26, true], [4, 22, true]],
+  [[0, 24, true]],
+  [[0, 19, false], [2, 24, false], [4, 27, true]],
+  // Dm F Em G — settling, and lifting back into the loop.
+  [[0, 24, true], [4, 20, true]],
+  [[0, 27, false], [2, 24, false], [4, 20, true]],
+  [[0, 19, true], [4, 22, false], [6, 26, false]],
+  [[0, 26, true], [4, 22, false], [6, 17, false]],
+];
+const pipeLine = (held: boolean): (number | null)[] =>
+  PIPE_BARS.flatMap((bar) => {
+    const eighths: (number | null)[] = [_, _, _, _, _, _, _, _];
+    for (const [at, note, long] of bar) if (long === held) eighths[at] = note;
+    return eighths;
+  });
+const PIPE_LONG: readonly (number | null)[] = pipeLine(true);
+const PIPE_SHORT: readonly (number | null)[] = pipeLine(false);
+
+/**
  * THE THEME — `call`'s tune, and it is the melody the whole level is a setting of.
  *
  * ⚠️ **IT IS WRITTEN TO BE HARMONISED, WHICH IS A CONSTRAINT ON THE NOTES AND NOT ON THE RHYTHM.**
@@ -216,7 +277,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   sub: [
     {
-      steps: ROOT,
+      steps: HELD_ROOT,
       pitched: true,
       perBeat: 0.25,
       octave: 0,
@@ -295,8 +356,24 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.036, attack: 0.0005, curve: 6, lowFrom: 12000, highFrom: 5200 },
     },
+    /*
+      ⚠️ **THE CHINA STOOD HERE AND IT IS `ownC` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`,
+      for the same reason the heart left `stomp`: *"in the first section I want the cymbal crash
+      louder and more prominent"* is a question about one sound in one section, and inside `engine`
+      it could only get louder with the snare and the ride.
+    */
+  ],
+
+  /*
+    ── THE CHINA: once every four bars, and the opening's punctuation ─────────────────────────────
+
+    ⚠️ **THE VOICE IS `engine`'s, MOVED UNCHANGED** — 0331. It is four bars, like `engine` and like an
+    own slot, so it lands on the same beats it always did. The only cymbal sounding at `run` — the
+    `crash` layer is held closed there by the drive — which is how *"the cymbal crash"* in the first
+    section was identified. Every rung but `run` plays it at exactly the level `engine` gave it.
+  */
+  ownC: [
     {
-      // A china, once every four bars: the punctuation the genre uses instead of a fill.
       steps: [1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.78],
       pitched: false,
       perBeat: 1,
@@ -500,34 +577,77 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     `arp` states. Out of it: **−27.1 rms / −13.6 peak at `surge`, `margin` −12.0 → −4.1**, and the
     solve asks 2.12× there and 2.62× at `push` where it asked 6.01.
   */
+  /*
+    ── THE PIPES: what `surge` lifts into, and the riff is gone from this slot ────────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Asked for at the second boundary: *"I
+    want the music to kick into more of a higher pitch with the heart beat still going as the core. The
+    melody needs to shift and change… maybe even going into a flute, or mouth pipes… something that's
+    higher and lifting and distinctly different from the first 1 min, but that complements the
+    heartbeat."* **The riff this slot held was whispered to 0.17 at `push` by the drive and was the part
+    at `surge`**, so the slot was already the surge's and nothing before it needs the material.
+
+    ⚠️ **A PAN PIPE OUT OF A SYNTHESISER WITH NO VIBRATO, SO IT IS BUILT FROM WHAT A PIPE IS.** A
+    stopped pipe is nearly a sine with its odd harmonics faint, a quick breathy onset and air in the
+    tone. So: a triangle — odd harmonics only, falling as 1/n² — softened by a lowpass, with a sine on
+    the same note for body; a *chiff* of filtered noise on every onset, which is the consonant a player
+    blows the note with; and a quieter breath under every held note. The room is `air.hook` on the
+    place's row, and it is what makes one line of notes sound like it is being played somewhere.
+
+    ⚠️ **A4 TO C6, WHICH IS AN OCTAVE ABOVE THE TUNE.** `call` plays `THEME` at 352–698 Hz; this sits
+    at 440–1047 Hz, so *higher* is true of the register as well as of the instrument.
+
+    ⚠️ **A NEW LINE OVER THE SAME SIXTEEN CHORDS, AND NOT `THEME` AGAIN.** *"The melody needs to shift
+    and change rather than keeping the same tune."* Every strong beat is a tone of the bar's chord, so
+    it sits on the chug, the power chords and the sub without a clash, and each four-bar phrase climbs
+    higher than the one before — E5, A5, C6 — before the last one settles and lifts back into the loop.
+    **It is 16 bars because the phase a section lands on is not fixed**: each phrase has to be a good
+    place to enter, because the build brings this layer in wherever the loop happens to be.
+  */
   hook: [
     {
-      steps: ROOT.flatMap((root, bar) => {
-        const third = THIRD[bar]!;
-        const fifth = FIFTH[bar]!;
-        return bar % 2 === 0
-          ? [root + 12, _, third + 12, root + 12, _, fifth, _, third + 12]
-          : [root + 12, third + 12, _, fifth, _, root + 12, _, third + 12];
-      }),
-      pitched: true,
-      perBeat: 2,
-      octave: 1,
-      accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.62, gain: 0.205, attack: 0.004, curve: 1.35, lowFrom: 2600, lowTo: 1500, q: 1.7, drive: 0.4 },
-    },
-    {
-      steps: ROOT.flatMap((root, bar) => {
-        const third = THIRD[bar]!;
-        const fifth = FIFTH[bar]!;
-        return bar % 2 === 0
-          ? [root + 12, _, third + 12, root + 12, _, fifth, _, third + 12]
-          : [root + 12, third + 12, _, fifth, _, root + 12, _, third + 12];
-      }),
+      steps: PIPE_LONG,
       pitched: true,
       perBeat: 2,
       octave: 2,
-      accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.52, gain: 0.098, attack: 0.005, curve: 1.6, lowFrom: 4600, lowTo: 2700, q: 1.4, drive: 0.28 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.15, attack: 0.035, curve: 1.1, lowFrom: 3400, lowTo: 2200, q: 0.7 },
+    },
+    {
+      steps: PIPE_LONG,
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.1, attack: 0.05, curve: 1 },
+    },
+    {
+      steps: PIPE_SHORT,
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.13, attack: 0.025, curve: 1.6, lowFrom: 3600, lowTo: 2600, q: 0.7 },
+    },
+    {
+      steps: PIPE_SHORT,
+      pitched: true,
+      perBeat: 2,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.08, attack: 0.03, curve: 1.5 },
+    },
+    {
+      // The chiff: the consonant the note is blown with. Full on a held note, lighter on a passing one.
+      steps: PIPE_LONG.map((note, i) => (note !== null ? 1 : PIPE_SHORT[i] !== null ? 0.75 : _)),
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.045, attack: 0.003, curve: 4, lowFrom: 7000, lowTo: 3000, highFrom: 1800 },
+    },
+    {
+      // The breath under a held note, which is what stops a pure tone reading as a synthesiser.
+      steps: PIPE_LONG.map((note) => (note === null ? _ : 1)),
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 1.6, gain: 0.018, attack: 0.12, curve: 1.3, lowFrom: 6000, lowTo: 4000, highFrom: 2400, q: 0.6 },
     },
   ],
 
@@ -837,32 +957,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.085, attack: 0.0005, curve: 6.5, lowFrom: 7600, lowTo: 2600, highFrom: 1100 },
     },
-    {
-      /*
-        THE HEART, AND IT IS THE THING THE LEVEL IS NAMED AFTER — asked for by name, 2026-08-14:
-        *"needs kind of a pulsing heartbeat rhythm for the boss if we're calling the level the black
-        heart."*
-
-        ⚠️ **TWO THUMPS AND A GAP, WHICH IS THE ONE FIGURE EVERY LISTENER ALREADY KNOWS.** The second
-        of the pair is softer and closer than the first, because that is what a heart does and it is
-        why the figure reads as a body rather than as a drum pattern. It replaces a floor tom that was
-        playing on the half-bar and saying nothing the blast beat was not already saying.
-
-        ⚠️ **IT IS LOWER AND LONGER THAN ANYTHING ELSE IN THE FIGHT** — 96 Hz down to 24 over half a
-        second — so it sits under the blast rather than competing with it, and the two together are a
-        very fast machine with a very slow pulse inside it. The Labyrinth uses the same figure in
-        `sub` for the opposite picture: there it is the player's own fear, and here it is the thing
-        the player is inside.
-      */
-      steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-      ],
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 96, to: 24, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
-    },
+    /*
+      ⚠️ **THE HEART STOOD HERE, AND IT IS `ownA` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+      A layer has one fader, so while the heart lived in `stomp` it could only rise and fall with the
+      blast beat — and the ask is a heart that is faint for the opening, arrives with `push`, and
+      climbs through every section after, while the blast beat does what it was driven to do.
+    */
     {
       steps: [
         0.4, _, 0.32, _, 0.36, _, 0.3, _, 0.4, _, 0.32, _, 0.36, _, 0.32, 0.34,
@@ -872,6 +972,48 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.05, attack: 0.0004, curve: 8.5, lowFrom: 14000, highFrom: 7200 },
+    },
+  ],
+
+  /*
+    ── THE HEART: the thing the level is named after, and the backing for all four sections ───────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Asked for, of the driven level: *"I want
+    the heartbeat to be clearly heard, but to be the background backing for the track… fainter for the
+    first 25 seconds, then kick in where it does, then get slightly louder throughout the following
+    sections… That heart beat and its pacing is the very core of what makes this the sound track for
+    the 'black heart' level."* It was the second voice of `stomp`, which is one fader shared with the
+    blast beat; an own slot is the one layer that can climb on a curve of its own — 0188's mechanism,
+    and the first time a place has opened one in every rung.
+
+    ⚠️ **THE VOICE IS MOVED, NOT REWRITTEN.** 2026-08-14 asked for *"a pulsing heartbeat rhythm for the
+    boss if we're calling the level the black heart"*, and this is that figure note for note: two
+    thumps and a gap, the second softer and closer, because that is what a heart does and why it reads
+    as a body rather than as a drum. **What was liked is left alone**; the ladder is what changes.
+
+    ⚠️ **FOUR BARS, WRITTEN OUT TWICE, BECAUSE A PATTERN SHORTER THAN ITS LAYER DOES NOT REPEAT.**
+    `layerNotes` in `src/app/music.ts` renders `steps` once and stops; the figure was two bars in
+    `stomp`'s two-bar loop and an own slot is four. Copied with the pickup on the last sixteenth of
+    each pair, so the loop point and the half-way point breathe the same way.
+
+    ⚠️ **96 Hz TO 24, AND THAT IS WATCHED RATHER THAN CHANGED.** The same report flagged a sustained
+    root at 41 Hz as *"heavy bass that just makes the speakers pulse without sound"*, and this thump
+    ends below that. It is kept because the energy of a half-second note under `curve: 2` is spent at
+    the top of its sweep: the decision records the 35–45 Hz band of the rendered level before and after
+    the heart was turned up.
+  */
+  ownA: [
+    {
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 96, to: 24, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
     },
   ],
 

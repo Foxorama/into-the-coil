@@ -183,6 +183,22 @@ const DECAY = 5;
  * find 0072's argument does not delete it a second time.
  *
  * ⚠️ **Six milliseconds: long enough to remove a step, short enough that nothing can hear it end.**
+ *
+ * ── AND IT ONLY EVER FADED A CUE'S BUFFER, SO EVERY NOTE OF THE MUSIC STOPPED DEAD ─────────────
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** This fade went on the end of `sampleCue`'s
+ * SUM, on the reasoning written beside it: *"a layer that ends early is already silent, and the only
+ * edge that can click is the end of the buffer itself."* True of a cue, and not of the music, which
+ * renders every note straight into a loop through `sampleLayerInto` — **so no note in the score has
+ * ever been faded.** The score is not written at `DECAY`'s 5: a held pad at `curve: 0.9` stops at 41%
+ * of its peak, mid-cycle, and a step that size is a click.
+ *
+ * ⚠️ **REPORTED FOUR TIMES, IN FOUR PLACES, AS SOMETHING ELSE.** *"A weird sound similar to the
+ * distortion… very common up to about the one minute mark… at 1:25 and onwards as well, not as
+ * frequent"* — then The Approach, Batteries *"right at the start"*, and the Gauntlet. The bus measured
+ * clean and no material is shared between those places, because the defect was in none of them: it
+ * was in how a note ends, so it lived wherever sustained notes do. So the same six milliseconds now
+ * end every LAYER as well, capped at half its length.
  */
 const RELEASE_SECONDS = 0.006;
 
@@ -411,6 +427,8 @@ export function sampleLayerInto(
   const length = Math.max(1, Math.round(layer.seconds * rate));
   const attack = Math.max(1, Math.round((layer.attack ?? ATTACK_SECONDS) * rate));
   const curve = layer.curve ?? DECAY;
+  // 0331: the last six milliseconds of every note fall to silence instead of stopping — see `RELEASE_SECONDS`.
+  const release = Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2)));
   const low = makeFilter();
   const high = makeFilter();
   /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
@@ -451,6 +469,7 @@ export function sampleLayerInto(
     if (layer.drive) value = saturate(value, layer.drive);
     let envelope = Math.exp(-curve * u);
     if (i < attack) envelope *= i / attack;
+    if (length - i <= release) envelope *= (length - 1 - i) / release;
     out[at] = (out[at] ?? 0) + value * envelope * layer.gain;
   }
 }

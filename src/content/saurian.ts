@@ -544,53 +544,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       octave: 0,
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.34, attack: 0.1, curve: 0.95 },
     },
-    {
-      /*
-        THE FOUR-ON-THE-FLOOR. Every beat, hard, with the fourth bar of each phrase carrying a
-        sixteenth pickup — which is what stops sixty-four identical kicks reading as a metronome, and
-        is 0102's finding applied to the one drum that genuinely is on every beat.
+    /*
+      ⚠️ **THE FOUR-ON-THE-FLOOR STOOD HERE AND IS `beat` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+      Heard in a render of the level: *"coilward sounds slightly out of beat and needs the drums to
+      have the focus of the sound."* Measured, nothing was off the grid — the worst hit landed 6 ms
+      late — but this kick was **11.7 dB under its role**, masked by the bass in the one band it
+      lived in, so what the ear counted instead was the base kit's syncopation and the hand drum's
+      pickups, both loudest on the sixteenth BEFORE the beat. The weakest downbeat sat 10.2 dB under the
+      loudest offbeat, which reads as rushing. `beat` has the kick on every beat now, on its own fader.
 
-        ⚠️ **IT IS ON A SIXTEENTH GRID SO THAT IT CAN AVOID THE STAB, AND THAT IS A FIX RATHER THAN A
-        REFINEMENT.** The first version wrote this at eighths and put its pickup on the last *and* of
-        the bar — which is exactly where `OFFBEAT` plays, so the two loudest low transients in the
-        place landed on the same sample sixteen times a phrase. It read as *the kick is uneven* and it
-        measured as **the boss mix clipping at 1.004 of full scale**, which is what
-        `tests/themes.test.ts` caught. The paragraph above this layer had already said *the kick has
-        the downbeat to itself*; the pattern did not.
-
-        ⚠️ **The pickup is now a SIXTEENTH before the bar line** — position 15, where the stab's
-        eighth grid has nothing — so it is still the same gesture and it no longer stacks.
-
-        ── AND THE SIXTEENTH BAR IS A BREAK, WHICH IS THE ONE GESTURE THIS GAME HAS NEVER MADE ──────
-
-        ⚠️ **THE KICK STOPS FOR A BAR AND NOTHING ELSE DOES.** The offbeat stab, the bass, the hats
-        and the pad all carry on, so the floor does not fall out — what goes is the thing the listener
-        has been counting, and it goes on the bar the progression cadences on.
-        `docs/decisions/0114-the-fight-is-a-different-piece.md` says the only mechanism that has ever
-        read as a boundary in this game is **something stopping**, and it says it about the rungs;
-        this is the same finding spent inside a loop, where it costs no mechanism at all.
-
-        ⚠️ **IT IS ALSO THE GENRE'S OWN PUNCTUATION.** A eurobeat track breaks every sixteen bars and
-        slams back in — the two sixteenths at the end of the bar are the run-up, and the downbeat they
-        land on is bar one of the loop, where `HANDS` has just resolved its G# onto an A.
-      */
-      steps: ROOT.flatMap((_root, bar) =>
-        bar === 15
-          ? [1, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.7, 0.86]
-          : bar % 4 === 3
-            ? [1, _, _, _, 0.9, _, _, 0.6, 0.98, _, _, 0.64, 0.92, _, _, 0.72]
-            : [1, _, _, _, 0.9, _, _, _, 0.98, _, _, 0.62, 0.92, _, _, _],
-      ),
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      /*
-        ⚠️ **BIGGER AND DEEPER BECAUSE THE PAD MOVED OFF IT** — 0185. 0.4 → 0.5, 32 → 30 Hz, 0.42 →
-        0.46 s. Every one of those was available before and none of them would have been heard:
-        `sub` measured **17 dB down** at `push` with the pad over it.
-      */
-      note: { wave: 'sine', from: 132, to: 30, seconds: 0.46, gain: 0.46, attack: 0.006, curve: 2.4, drive: 0.5 },
-    },
+      ⚠️ **WHAT IS LOST IS THE BAR-SIXTEEN BREAK.** `beat` is two bars and this pattern was sixteen, so
+      the kick no longer stops for the cadence bar. It was 0114's *something stopping* spent inside a
+      loop, and the ear decides whether the floor wanted it more than it wanted to be heard.
+    */
     {
       // THE OFFBEAT STAB — the half of the floor that is a hole rather than a note. `OFFBEAT` has it.
       steps: OFFBEAT,
@@ -734,6 +700,47 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
   ],
 
   /*
+    ── THE KIT: a kick on every beat, a snare on two and four, and the base's hats ──────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** *"Needs the drums to have the focus of the
+    sound, they aren't quite the highlight at the moment."* This place played the base composition's
+    kit — the title screen's, syncopated three-three-two with nothing on beat three — at 1.62, over a
+    four-on-the-floor in `sub` measured 11.7 dB under its role. **So the kick this place is built on was
+    the one drum nobody could hear, and the one they could hear was the title's.**
+
+    ⚠️ **THE BASE'S OWN SOUNDS ON EUROBEAT'S OWN PATTERN.** The kick, the snare and the hats are
+    `MUSIC.beat`'s voices note for note; what changes is where they land — every beat, hard, with a
+    sixteenth pickup at the end of the second bar, and the snare doubling the kick on two and four the
+    way a hi-NRG kit does. Measured with the ladder in `THEMES.saurian`: **the kit has the largest
+    margin in the place at `run`, `push`, `surge` and `approach`**, the bus peaks under 0.99 and stays
+    under −17.8 dB dirty.
+  */
+  beat: [
+    {
+      steps: [1, _, _, _, 0.9, _, _, _, 0.96, _, _, _, 0.9, _, _, _, 1, _, _, _, 0.9, _, _, _, 0.96, _, _, _, 0.9, _, _, 0.62],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 45, seconds: 0.26, gain: 0.75, attack: 0.001, curve: 4.5, drive: 0.2 },
+    },
+    {
+      steps: [_, _, _, _, 1, _, _, _, _, _, _, _, 1, _, _, _, _, _, _, _, 1, _, _, _, _, _, _, _, 1, _, 0.3, _],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.3, attack: 0.001, curve: 6, lowFrom: 4200, lowTo: 1600, highFrom: 400 },
+    },
+    {
+      // The base composition's hats, unchanged: strong, weak, medium, weak.
+      steps: Array.from({ length: 32 }, (_unused, i) => [1, 0.42, 0.66, 0.38][i % 4]!),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.05, attack: 0.0005, curve: 9, lowFrom: 13000, highFrom: 6000 },
+    },
+  ],
+
+  /*
     ── THE SMALL THINGS: seed rattles, claves, and something with teeth ─────────────────────────────
 
     ⚠️ **`perc` sits at −0.45 and therefore may not be low**, which is a constraint and not a taste:
@@ -792,12 +799,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
         left in it, and a hand drum belongs on the *e* and the *a* anyway — the floor keeps time and
         the skin answers it. **The probe for the clamp points at the envelope, because that is the
         line that moves the number.**
+
+        ⚠️ **AND THE HITS JUST BEFORE THE BEAT ARE HALF WHAT THEY WERE** — 0331. *"Slightly out of
+        beat."* Measured per sixteenth, the loudest low hits in the place were this voice's strokes one
+        sixteenth ahead of beats 2, 3, 4 and 1 — and at full weight on those slots, over a kick nobody
+        could hear, the bar reads as rushing. Halved there and left alone on the *e* and the *a*, and
+        with `beat`'s kick now on every beat, **the weakest downbeat sits 4.0 dB over any offbeat**
+        where it sat 10.2 under the loudest.
       */
       steps: [
-        _, _, _, 1, _, 0.6, _, _, _, _, _, 0.72, _, _, _, 0.66,
-        _, _, _, 0.88, _, _, _, 0.64, _, 0.58, _, _, _, _, _, 0.7,
-        _, _, _, 0.94, _, 0.62, _, _, _, _, _, 0.68, _, _, _, 0.6,
-        _, _, _, 0.9, _, _, _, 0.66, _, 0.6, _, 0.72, _, _, _, 0.74,
+        _, _, _, 0.5, _, 0.6, _, _, _, _, _, 0.36, _, _, _, 0.33,
+        _, _, _, 0.44, _, _, _, 0.32, _, 0.58, _, _, _, _, _, 0.35,
+        _, _, _, 0.47, _, 0.62, _, _, _, _, _, 0.34, _, _, _, 0.3,
+        _, _, _, 0.45, _, _, _, 0.33, _, 0.6, _, 0.36, _, _, _, 0.37,
       ],
       pitched: false,
       perBeat: 4,

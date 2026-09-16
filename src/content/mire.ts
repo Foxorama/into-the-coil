@@ -563,6 +563,16 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE REED: what `push` opens, and it is the only edge in the place until the fight ───────────
+
+    ⚠️ **AND THE EDGE WAS STATIC, SO IT IS DULLER BY SEVEN DECIBELS ABOVE 3 kHz** —
+    `docs/decisions/0331-the-heart-beats-under-it.md`. Heard in a render of the level: *"what sounds
+    like a bit of static kicking in around 40 secs, it's not static, but that's a bit how it sounds."*
+    `push` opens at 36.6 s and this layer lands in its build at 39.8; measured, it carries **43%** of
+    the 3 kHz+ band at `push` and takes that band up 5.4 dB on its own. The square's `drive` does most
+    of it — `sampleLayerInto` saturates AFTER the lowpass, so a driven square puts back every harmonic
+    its filter took out — and the two saws' cutoffs the rest. Undriven and darker, the top band is
+    **7.7 dB down and the body under 1 kHz is unchanged** (−29.8 → −29.3 dB), so the reed is the same
+    riff with the fizz taken off it.
   */
   hook: [
     {
@@ -571,7 +581,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 1,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.135, attack: 0.012, curve: 2.6, lowFrom: 1500, lowTo: 700, q: 2, drive: 0.24 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.135, attack: 0.012, curve: 2.6, lowFrom: 1500, lowTo: 700, q: 2 },
     },
     {
       steps: REED,
@@ -579,7 +589,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 2,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.07, attack: 0.014, curve: 3, lowFrom: 3200, lowTo: 1700, q: 1.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.07, attack: 0.014, curve: 3, lowFrom: 2200, lowTo: 1300, q: 1.6 },
     },
     {
       // The top of every fourth bar — the one place the reeds all move at once.
@@ -589,7 +599,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.075, attack: 0.006, curve: 2.2, lowFrom: 5200, lowTo: 2600, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.075, attack: 0.006, curve: 2.2, lowFrom: 2800, lowTo: 1600, q: 1.5 },
     },
   ],
 

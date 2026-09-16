@@ -2672,7 +2672,18 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // reads as a beat rather than as three numbers.
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.16, attack: 0.002, curve: 2.0, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
+      /*
+        ⚠️ **`drive` 0.7 → 0.15, AND ITS FIFTH 0.6 → 0.12** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+        Heard in a render of The Approach, after the same report of the Descent: *"approach has similar
+        issues"* — *"a weird sound similar to the distortion."* Measured on `push`'s mix, this riff made
+        **26.8 of 34.1 impulsive events a second** on its own, and the attack is not why: 2 → 8 ms moved
+        it by 0.3. The drive is. A saw squashed that hard turns every onset into a corner, and a gallop of
+        sixteenths is a lot of onsets. At 0.15 the riff adds 1.8 a second over the rest of the mix and is
+        1.8 dB quieter, which the level hold gives back; **0.25 keeps more of the grit** at 7 a second,
+        and is the value to try if the riff has lost its bite. No other place plays this — every one of
+        the six re-voices `hook`.
+      */
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.16, attack: 0.002, curve: 2.0, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.15 },
     },
     {
       // The fifth over it. Two notes and no third is a power chord; adding the third is what would
@@ -2699,7 +2710,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.115, attack: 0.002, curve: 2.2, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.115, attack: 0.002, curve: 2.2, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.12 },
     },
   ],
 

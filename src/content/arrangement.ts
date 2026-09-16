@@ -288,8 +288,12 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     ⚠️ **`run` IS UNCHANGED AND THE MATERIAL UNDER IT IS NOT.** `groove` is the jungle bass now
     rather than the octave bass, which is the same sentence about the level — *what you follow first
     here is the bottom* — with a different instrument saying it.
+
+    ⚠️ **AND THEN THE DRUMS, AT EVERY RUNG BEFORE THE FIGHT — 0331.** *"Needs the drums to have the
+    focus of the sound."* That is this row's own vocabulary: the thing a place asks you to follow. The
+    kit is `beat`, re-voiced as a floor, and it measures as the largest margin in the place at all four.
   */
-  saurian: { run: 'bass', push: 'arp', surge: 'hook', approach: 'drive', boss: 'frenzy', bossPeak: 'frenzy' },
+  saurian: { run: 'beat', push: 'beat', surge: 'beat', approach: 'beat', boss: 'frenzy', bossPeak: 'frenzy' },
   // *"A corridor, and something breathing in it… the hound"* — footsteps, then the thing running.
   labyrinth: { run: 'perc', push: 'ride', approach: 'toll', boss: 'stomp' },
   // *"It rings… it cracks… the blizzard"* — glass, then the lead, then the weather.
@@ -326,12 +330,13 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     of"*. **No other place follows `call` at `push`** — four of the six follow `arp` there, which is
     the copy this level was asked not to be.
 
-    ⚠️ **`surge` IS DELIBERATELY LEFT AT `lead`, AND THE DRIVE COULD HAVE ARGUED FOR `hook`.** It is
-    3.4 dB up on `lead` in gain — but by MARGIN, which is what *can you pick it out* actually measures,
-    `hook` −2.7, `counter` −2.8 and `lead` −3.0 are the same three-tenths of a decibel. **A tie is not
-    a displacement**, and the twin lead is what this place IS at `surge`.
+    ⚠️ **`surge` WAS LEFT AT `lead` BY 0330, AND 0331 MOVES IT TO `hook` BECAUSE `hook` IS NOW THE
+    PIPES.** 0330's reason was a tie — the riff, the twin lead and the first guitar within three
+    tenths of a decibel of one another. What was asked for next is a section that *"kicks into more of
+    a higher pitch… something higher and lifting and distinctly different from the first 1 min"*, and
+    the instrument that says so is the one to follow. `lead` steps down to a line under it.
   */
-  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'frenzy' },
+  core: { run: 'beat', push: 'call', surge: 'hook', approach: 'counter', boss: 'frenzy' },
 };
 
 /*
@@ -400,7 +405,29 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
   labyrinth: {},
   rime: {},
   mire: {},
-  core: {},
+  /*
+    ⚠️ **THE HEART IS A `bed` AT THE OPENING AND A `pulse` FROM `push` ON — 0331.** *"Clearly heard, but
+    the background backing for the track… fainter for the first 25 seconds, then kick in where it
+    does."* `bed` is *hear this under it* and `pulse` is *a pulse you can pick out when you attend to
+    it*, which is that sentence in this table's own words; `counter` would be a line to follow, which
+    is exactly what the ask says it must not become. 0164 then holds the heart to being heard in every
+    rung, which is what makes *"clearly heard"* a claim rather than a hope.
+
+    ⚠️ **THE CHINA IS A `counter` AT THE OPENING AND `air` EVERYWHERE ELSE.** *"Louder and more
+    prominent"* at `run` is a cymbal the ear can pick out over the kit, and it measures there at −1.0
+    against a counter's −2. Everywhere else it is exactly what it was inside `engine`, and measured on
+    its own it sits 15 to 20 dB under the rung: one strike every four bars is a moment, and a band
+    measure averages a moment away. `air` — *you never notice it* — is what the level it was always
+    played at already said.
+  */
+  core: {
+    run: { ownA: 'bed', ownC: 'counter' },
+    push: { ownA: 'pulse', ownC: 'air' },
+    surge: { ownA: 'pulse', ownC: 'air' },
+    approach: { ownA: 'pulse', ownC: 'air' },
+    boss: { ownA: 'pulse', ownC: 'air' },
+    bossPeak: { ownA: 'pulse', ownC: 'air' },
+  },
 };
 
 export const PROMOTES: Record<ThemeKind, Partial<Record<MusicLayer, Exclude<MusicRole, 'part'>>>> = {

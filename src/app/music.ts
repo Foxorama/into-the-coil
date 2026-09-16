@@ -1017,6 +1017,38 @@ export function nextBarFrom(anchor: number, now: number): number {
 }
 
 /**
+ * The loop start a pan horizon is written from: the last one at or before `now`, on the anchor's grid.
+ *
+ * ── THE HORIZON WAS COUNTED FROM THE ANCHOR, SO IT RAN OUT UNDER A PLAYER WHO STAYED ────────────
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Reported of the Descent: *"the 3 piece
+ * high note… isn't bouncing between left and right ears anymore."* `schedulePan` wrote
+ * `PAN_HORIZON_SECONDS` of moves from the moment the loops STARTED, and re-wrote them only on a change
+ * of place — and a retry of the same level, or the music room looping it, is not a change of place. So
+ * fifteen minutes after the Descent's music first loaded there were no moves left, and the stabs sat
+ * at `+0.55` for good. `PAN_HORIZON_SECONDS`' own note says *"written once at the start and never
+ * thought about again"*; the player listening for a quarter of an hour is what thought about it.
+ *
+ * ⚠️ **ON THE ANCHOR'S GRID, NOT FROM NOW**, for the reason `schedulePan` already gives: the track is
+ * a position in the layer's loop, and starting it at `now` would slide the gesture off its notes.
+ */
+export function panWindowFrom(anchor: number, now: number, loop: number): number {
+  if (now <= anchor || !(loop > 0)) return anchor;
+  return anchor + Math.floor((now - anchor) / loop) * loop;
+}
+
+/**
+ * Whether the pan horizon written until `until` should be re-written at `now` — half of it gone.
+ *
+ * ⚠️ **ONE COMPARISON A FRAME, WHICH IS WHAT KEEPS THIS OFF THE FRAME BUDGET** — 0022. The re-write
+ * itself is the same few hundred native events it always was, now once every seven and a half minutes
+ * of a place that is still playing rather than once ever.
+ */
+export function panNeedsRearm(now: number, until: number): boolean {
+  return now > until - PAN_HORIZON_SECONDS / 2;
+}
+
+/**
  * When a new PLACE's loops go on the air — the next bar that is far enough ahead to schedule.
  *
  * ── IT WAS THE NEXT PHRASE, AND A LEVEL OPENED ON THE PREVIOUS PLACE'S MUSIC ────────────────────
@@ -1403,6 +1435,8 @@ export function makeMusicOut(
   let shape: ThemeLadder | undefined;
   /** Audio time at which loop position zero last began. Bar zero of the piece — 0117's grid. */
   let anchorAudio = 0;
+  /** Audio time the pan moves written last run out at — 0331's re-arm reads it once a frame. */
+  let panUntil = 0;
   /*
     ⚠️ **What each layer was last TOLD to head for, which is not what its gain currently reads** —
     0117. `setLevel` runs every frame and a quantised ramp takes a bar to arrive, so comparing against
@@ -1546,6 +1580,7 @@ export function makeMusicOut(
    * fader wants smoothing, and this is the opposite gesture.
    */
   const schedulePan = (when: number, theme: ThemeKind): void => {
+    panUntil = ctx.currentTime + PAN_HORIZON_SECONDS;
     for (const layer of MUSIC_LAYERS) {
       const param = pans[layer].pan;
       param.cancelScheduledValues(0);
@@ -1566,7 +1601,8 @@ export function makeMusicOut(
         arrive as one burst.
       */
       const from = ctx.currentTime;
-      for (let start = when; start < when + PAN_HORIZON_SECONDS; start += loop) {
+      // 0331: from the loop playing NOW, for a horizon from now — `panWindowFrom` has the report.
+      for (let start = panWindowFrom(when, from, loop); start < from + PAN_HORIZON_SECONDS; start += loop) {
         for (let i = 0; i < track.steps.length; i++) {
           const to = track.steps[i];
           if (to === null || to === undefined) continue;
@@ -1632,7 +1668,8 @@ export function makeMusicOut(
       place = theme;
       shape = ladder;
       if (!on) return;
-      if (moved && started) schedulePan(anchorAudio, theme);
+      // 0331: and when half the horizon has gone, because staying in one place is not a change of place.
+      if (started && (moved || panNeedsRearm(ctx.currentTime, panUntil))) schedulePan(anchorAudio, theme);
       /*
         ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
         the ramp starts and whether a layer moves at all are one piece of arithmetic, and it is

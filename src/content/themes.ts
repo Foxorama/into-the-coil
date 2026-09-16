@@ -655,6 +655,16 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     voices: APPROACH_VOICES,
     ladder: {
+      /*
+        ⚠️ **`chords` AT `surge` IS UP 2.1 dB, AND IT IS THE ONLY NUMBER BEFORE THE FIGHT** — 0331.
+        Heard in a render of the level: *"the chords are slightly muted in the approach, the third section
+        kicking needs the chords to be a bit punchier."* Measured, the hold takes them from 0.708 at
+        `run` to 0.543 at `surge` while `lead` arrives over them, and their margin falls 6.5 dB across
+        the same stretch. **A level and not a voice**, because the base composition's `chords` is what
+        the title screen plays and every guard's fixture measures; if *punchier* turns out to mean the
+        attack rather than the level, the 60–120 ms onsets in `src/content/music.ts` are the next lever.
+      */
+      surge: { chords: 1.1 },
       // The fight only. A rung this table does not name falls through to `MUSIC_LADDER`'s own number.
       boss: { ownA: 0.9 },
       /*
@@ -755,8 +765,16 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         .42."* The organ is this place's `run` lead (`LEADS.nebula.run`) and stops being the subject
         the moment `arp` takes `push` — it was still playing at 1.51 there, second only to the two
         layers that had taken over from it. `run`, `surge` and `approach` keep their own entries.
+
+        ⚠️ **AND `hook` AT `push` IS UP 2 dB, BECAUSE THE STABS WERE UNDER THE ARP** — 0331. *"The 3
+        piece high note seems slightly muted and isn't bouncing between left and right ears anymore."*
+        Measured on the render, at `push` the `arp` — panned hard left at −0.55 — carries nearly all
+        of the band above 4 kHz and the stabs sit 8 dB under it there, so their right-left-right swing
+        reads as left-centre-left. At `surge`, with the arp closed, the same stabs swing 6 to 7 dB each
+        way. The ladder's shared 0.52 becomes 0.65; the in-game half of *"anymore"* was the pan horizon
+        running out, which `panWindowFrom` in `src/app/music.ts` has.
       */
-      push: { perc: 0.42, groove: 1.02, chords: 0, call: 0.74, arp: 0.72 },
+      push: { perc: 0.42, groove: 1.02, chords: 0, call: 0.74, arp: 0.72, hook: 0.65 },
       surge: { perc: 0.6, chords: 0.94, hook: 0.82, crash: 1.35 },
       /*
         ⚠️ **THIS ROW BRIEFLY CLOSED `crash` AT `approach`, `boss` AND `bossPeak`, AND THE REASON IS
@@ -855,8 +873,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       and bass are open here at 1.62 where the title screen plays them at 0.5, over a floor that
       already has its own kick. **The ratios are the player's and are untouched**; what moved is where
       the place sits, which is the one change that costs nothing musically.
+
+      ⚠️ **0.85 → 0.78 — 0331**, for the same reason: the kit is up about 4 dB so the drums lead, and
+      the whole place comes down 0.7 dB so the bus does not pay for it. Measured, the peak stays under
+      0.99 at every rung and the dirtiest rung is −17.8 dB against the −16 the guard allows.
     */
-    trim: 0.85,
+    trim: 0.78,
     mix: {
       groove: 2.2,
       /*
@@ -909,13 +931,23 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       ⚠️ **THIS IS 0162's HEADLINE CASE.** `ride` at `run` is a layer the shared ladder does not open
       at all, in the one place whose brief is a dancefloor.
     */
+    /*
+      ⚠️ **AND THE DRUMS LEAD, AND THE CYMBAL AND THE HISS ARE GONE — 0331.** Heard in a render:
+      *"needs the drums to have the focus of the sound… also needs the cymbal or hissing noise removed
+      as it doesn't quite fit."* The cymbal is `crash`, from `push` on; the hiss is `ride`, sixteenths
+      with tails that overlap into a continuous wash, at every rung. **Both closed here and not deleted
+      from `src/content/saurian.ts`**, because a place that states no voices for a layer falls back to
+      the base composition's and would go on playing a cymbal. `beat` is up to lead (2.6, and 2.3 at
+      `surge`), and what it had to get over is halved: `arp` at `push`, `surge` and `approach`,
+      `ownA`'s raptor call at `surge` and `approach`, and `hook` down by 3 dB where it opens.
+    */
     ladder: {
-      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25 },
-      push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.832, hook: 0.105, crash: 0.62 },
-      surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.832, hook: 0.954, ownA: 1 },
-      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },
-      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },
-      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },
+      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25 },
+      push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.074, crash: 0 },
+      surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.3, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.668, ownA: 0.5, crash: 0 },
+      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 0.5, arp: 0.45, toll: 1.6, dread: 1.7, crash: 0 },
+      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95, crash: 0 },
+      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1, crash: 0 },
     },
     /*
       ── THE THREE RUNGS ABOVE `surge` ARE 0185's, AND THEY ARE THE JURASSIC HALF ───────────────────
@@ -1426,14 +1458,36 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       layer is
       `docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md`'s *a quantity that rejects an
       option is checked in the case it is applied to*, and checked here it rejects itself.
+
+      ── AND THEN THE HEART WAS PUT UNDER ALL OF IT — 0331 ─────────────────────────────────────────
+
+      ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Every number below that is not in the
+      rows 0330 wrote is one of four things, and nothing else in the drive moved:
+
+      **`ownA` is the heart**, out of `stomp` and on a curve of its own — faint at `run`, arriving
+      with `push` at the level it already had there, and climbing a little through every section after
+      it, including the `approach` it was never in. `stomp` keeps its driven numbers and is the blast
+      beat and the hat and nothing else.
+
+      **`ownC` is the china**, out of `engine`: louder at `run`, where it was asked for, and at every
+      other rung exactly what `engine` gave it — `rungIn(engine) × mixOf(engine)`.
+
+      **`hook` is the pipes**, closed at `push`, where the riff it replaced had been whispered to
+      0.17, so they arrive as an OPENING at `surge` — in the build, last, as the part.
+
+      **`surge` stops jumping.** Measured with `weigh-arc --writes=surge`, the push → surge downbeat
+      raised four carried layers at once — `engine` +9.8 dB, the riff +10.5, `chords` +6.6, `sub` +6.2
+      — on one ramp, and 0171's build only staggers what ARRIVES. *"A pretty rough transition"* was
+      that. `engine`, `sub` and `chords` now sit at or under their `push` level, so they step down with
+      the arrivals as 0226 paces a fall, and the kit making room is what lets the register go up.
     */
     ladder: {
-      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283 },
-      push: { chords: 0.36, drive: 0.7, hook: 0.17, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 1.108 },
-      surge: { sub: 8.106, drone: 0, bass: 0.335, engine: 3.328, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.641, drive: 0.143, toll: 1.612, crash: 1.574, dread: 0.614, counter: 0.803, stomp: 0.679, frenzy: 1.078, wraith: 0.382 },
-      approach: { sub: 1.45 },
-      boss: { sub: 2.668 },
-      bossPeak: { sub: 2.773 },
+      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283, ownA: 0.312, ownC: 1.811 },
+      push: { chords: 0.36, drive: 0.7, hook: 0, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 1.108, ownA: 1.655, ownC: 0.891 },
+      surge: { sub: 3.5, drone: 0, bass: 0.335, engine: 1.08, chords: 0.36, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.38, lead: 0.5, drive: 0.143, toll: 1.612, crash: 1.574, dread: 0.614, counter: 0.803, stomp: 0.679, frenzy: 1.078, wraith: 0.382, ownA: 1.56, ownC: 1.002 },
+      approach: { sub: 1.45, ownA: 1.51, ownC: 0.947 },
+      boss: { sub: 2.668, ownA: 2.115, ownC: 1.04 },
+      bossPeak: { sub: 2.773, ownA: 2.297, ownC: 1.021 },
     },
     /*
       ⚠️ **THE SHAPE THE DESK WAS DRIVEN INTO, AND THE FIRST CONTOUR ANY PLACE STATES** — 0329. In LU
@@ -1461,11 +1515,18 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       and the thing that makes it enormous is the density rather than the space. What gets a room is
       the drone, the bell and the crash — the three sounds that are supposed to be coming from the
       hole rather than from the band.
+
+      ⚠️ **AND THE PIPES, WHICH ARE NOT THE BAND** — 0331. `hook` stopped being a guitar riff and is a
+      pan pipe the `surge` lifts into, and a single breathed line with no room around it is a
+      synthesiser playing notes. 0.5 is Rime Shelf's open sky rather than Ember Nebula's cathedral,
+      which is the *"attributes of all previous levels"* half of the brief made concrete.
+      `ownA` and `ownC` keep the room of the layers they were moved out of, so they sound as they did.
     */
     air: {
       drone: 0.8,
       toll: 0.7,
       crash: 0.55,
+      hook: 0.5,
       auraSlow: 0.45,
       call: 0.35,
       dread: 0.3,
@@ -1475,14 +1536,15 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       wraith: 0.16,
       auraFast: 0.12,
       ride: 0.1,
-      hook: 0.08,
       arp: 0.08,
       perc: 0.08,
       drive: 0.06,
       engine: 0.05,
+      ownC: 0.05,
       frenzy: 0.05,
       groove: 0.04,
       stomp: 0.03,
+      ownA: 0.03,
       sub: 0.03,
     },
   },
@@ -1856,13 +1918,22 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     the solver can barely see is what *"subtle"* measures as, and the rung that also lifts `wraith` is
     the one that moved. The other four rungs do not open the slot at all.
   */
-  approach: { push: 0.8353, surge: 0.7668, approach: 0.7161, boss: 0.6191, bossPeak: 0.6138 },
-  // Re-solved after `chords` came down at `push` and the vent became a triangle — 2026-09-07.
-  nebula: { push: 0.9336, surge: 0.8282, approach: 0.7603, boss: 0.7039, bossPeak: 0.6920 },
-  saurian: { push: 0.9579, surge: 0.8644, approach: 0.8793, boss: 0.8072, bossPeak: 0.7867 },
-  labyrinth: { push: 0.5399, surge: 0.3386, approach: 0.3149, boss: 0.3565, bossPeak: 0.3017 },
+  /*
+    ⚠️ **EVERY ROW BELOW WAS RE-SOLVED FOR 0331**, because every note in the score now ends in a
+    six-millisecond release and that is a change to every bake. Most rows moved by a thousandth or not at
+    all. The ones that moved for a reason of their own: The Approach, whose riff lost most of its drive
+    and whose chords are up at `surge`; the Descent, whose arp saw became a triangle, whose cymbal went
+    and whose stabs are up at `push`; the Labyrinth, whose music box became a plucked string with a
+    violin under it, which raised its own `run` 0.6 LU and so everything held against it; the Gauntlet,
+    whose reeds are darker; and The Black Heart, which is 0331's subject.
+  */
+  approach: { push: 0.8497, surge: 0.7603, approach: 0.7161, boss: 0.6191, bossPeak: 0.6138 },
+  nebula: { push: 0.91, surge: 0.8353, approach: 0.7668, boss: 0.71, bossPeak: 0.6979 },
+  // 0331: re-solved once the kit took the floor and the crash and the ride closed — nearly level now.
+  saurian: { push: 0.9913, surge: 1.0084, approach: 0.9336, boss: 1, bossPeak: 0.9828 },
+  labyrinth: { push: 0.5422, surge: 0.3657, approach: 0.3401, boss: 0.385, bossPeak: 0.3258 },
   rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8107, bossPeak: 0.8003 },
-  mire: { push: 0.6244, surge: 0.4511, approach: 0.5085, boss: 0.4789, bossPeak: 0.4789 },
+  mire: { push: 0.6244, surge: 0.4491, approach: 0.5085, boss: 0.4769, bossPeak: 0.4789 },
   /*
     ⚠️ **THE ONLY ROW HERE SOLVED AGAINST A CONTOUR RATHER THAN AGAINST ITS `run`** — 0329, re-solved
     over the driven ladder — 0330. `run` is the reference and is 1 by construction.
@@ -1872,8 +1943,14 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     at the loudness they already had — measured, −18.23 against a shipped −18.27 — so the numbers that
     deliver them barely move. **The whole change is at the front of the level**: what moved is that the
     opening is now 3.6 LU over the end of the level instead of level with it.
+
+    ⚠️ **AND THEN THE HEART WENT UNDER IT, AND THE ROW MOVED FOR THE FIRST TIME** — 0331. `approach`
+    and both fight rungs are 2 dB lower than they were because the heart is louder there than it has
+    ever been and the contour holds the rung's loudness; `surge` is 3.3 dB higher because the kit, the
+    sub and the power chords stepped down to let the pipes through and the contour holds that too.
+    **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 0.4728, surge: 0.4212, approach: 0.4491, boss: 0.4266, bossPeak: 0.4141 },
+  core: { push: 0.483, surge: 0.6191, approach: 0.3834, boss: 0.358, bossPeak: 0.3401 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */
