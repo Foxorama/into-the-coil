@@ -1490,10 +1490,27 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       the arrivals as 0226 paces a fall, and the kit making room is what lets the register go up.
     */
     ladder: {
-      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283, ownA: 0.281 },
-      push: { chords: 0.36, drive: 0.7, hook: 0.123, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 0.4, ownA: 1.489 },
-      surge: { sub: 3.5, drone: 0, bass: 0.335, engine: 1.08, chords: 0.36, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.319, lead: 0.5, drive: 0.143, toll: 1.612, crash: 0, dread: 0.614, counter: 0.803, stomp: 0.3, frenzy: 1.078, wraith: 0.382, ownA: 1.363 },
-      approach: { sub: 1.45, crash: 0, ownA: 1.341 },
+      /*
+        ⚠️ **THE LEVEL IS NO LONGER A METAL TRACK, AND THE FIGHT STILL IS** — 0331's third listen:
+        *"a somber melancholic song with high harmonies, low deep heartbeat and a rising crescendo as
+        we get to the end of the surge, that then tapers off very slightly as it leads into the boss
+        music."* Every drum and guitar layer is closed from `run` to `approach` — the kit, the chug,
+        the tremolo, the double kick, the blast beat, the driven lead — and what is open is a pad, the
+        drone, the tune, the pipes, the strings and the heart. The rows below `approach` are the fight
+        and are untouched, so the boss arrives as the one loud thing in the place.
+      */
+      /*
+        ⚠️ **SOLVED TO ROLES, NOT TYPED.** The pad leads the opening (+3), the tune the `push` (+3),
+        the pipes the `surge` (+4) and the strings the `approach` (+3); the heart a `pulse` two to four
+        decibels over its role everywhere; the drone held at the back (−9 to −12) where it had been the
+        loudest thing in the opening. Two numbers are set by matching rather than by role, because the
+        shared arrangement names neither layer at that rung: the tune under the pipes at `surge`, three
+        decibels under where it led at `push`, and the pipes at `approach`, level with the `surge`.
+      */
+      run: { drone: 0.0994, chords: 0.07273, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.04965, ownB: 0.008883 },
+      push: { drone: 0.1066, chords: 0.04321, call: 0.1321, arp: 0, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.07536, ownB: 0.03552 },
+      surge: { drone: 0.3232, chords: 0.1311, call: 0.149, hook: 0.07593, counter: 0.2651, lead: 0, arp: 0, ride: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.1034, ownB: 0.2265 },
+      approach: { drone: 0.6, chords: 0.194, call: 0.55, hook: 0.28, counter: 1.59, lead: 0, ride: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 0.9204, dread: 0.6, ownA: 0.3476, ownB: 0.6 },
       boss: { sub: 2.668, crash: 0, ownA: 1.898 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 2.061 },
     },
@@ -1516,7 +1533,25 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       it was heard at and the drop shrinks by what the opening lost. Holding the shape instead would
       have dragged the untouched end of the level 1.5 LU below where it has ever been.
     */
-    contour: { push: -1.9, surge: -0.8, approach: -3.6, boss: -3.6, bossPeak: -3.6 },
+    /*
+      ⚠️ **WHERE THE PLACE SITS, SO THE CRESCENDO'S PEAK LANDS WHERE THE OPENING PLAYS TODAY** — 0331.
+      The level was re-solved to roles with no thought for its absolute level, and a somber opening is
+      sparse, so it came out quiet. This lifts every rung together until the `run` sits at −19.6 LUFS,
+      five under the −14.6 the opening shipped at; the contour puts the surge at that −14.6. Measured
+      there, the opening peaks at 0.254 of full scale and is −38.9 dB dirty — nowhere near the bus.
+    */
+    trim: 3.355,
+    /*
+      ⚠️ **AND 0331 TURNS THE CONTOUR UPSIDE DOWN, WHICH 0329 REFUSES.** *"A rising crescendo as we get
+      to the end of the surge, that then tapers off very slightly as it leads into the boss music."* So
+      the quiet somber opening is the reference, the surge is the top, and the `approach` and the fight
+      sit a little under it. **0329's guard holds that no rung is authored over its `run`**, on 0226's
+      report that music climbing over the cues drowns them; this is the first ask for exactly that
+      climb. The bound it ships under is `trim`: the peak lands at the loudness this level's opening
+      already plays at, so nothing asks more of the cue bus than it does today and the opening gets
+      quieter to make the room. The guard's amendment is owed with the decision.
+    */
+    contour: { push: 2, surge: 5, approach: 4, boss: 4, bossPeak: 4 },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
@@ -1957,7 +1992,7 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 0.4998, surge: 0.6462, approach: 0.3883, boss: 0.3689, bossPeak: 0.3489 },
+  core: { push: 1.0171, surge: 1.0615, approach: 0.2915, boss: 0.1629, bossPeak: 0.1541 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

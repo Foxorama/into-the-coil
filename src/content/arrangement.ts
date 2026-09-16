@@ -336,7 +336,8 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     a higher pitch… something higher and lifting and distinctly different from the first 1 min"*, and
     the instrument that says so is the one to follow. `lead` steps down to a line under it.
   */
-  core: { run: 'beat', push: 'call', surge: 'hook', approach: 'counter', boss: 'frenzy' },
+  // 0331's third listen: the pad opens it, the tune takes it, the pipes lead it, the strings carry it in.
+  core: { run: 'chords', push: 'call', surge: 'hook', approach: 'counter', boss: 'frenzy' },
 };
 
 /*
@@ -413,11 +414,17 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     is exactly what the ask says it must not become. 0164 then holds the heart to being heard in every
     rung, which is what makes *"clearly heard"* a claim rather than a hope.
   */
+  /*
+    ⚠️ **AND THE HELD PIPES ARE `ownB`** — 0331's third listen. A `bed` where they are a distant pad
+    under something else, and a `counter` at `push`, where they are the high harmony answering the tune
+    before `hook` takes the melody over. The heart is a `pulse` throughout now: *"low deep heartbeat"*
+    is the core of the piece from the opening.
+  */
   core: {
-    run: { ownA: 'bed' },
-    push: { ownA: 'pulse' },
-    surge: { ownA: 'pulse' },
-    approach: { ownA: 'pulse' },
+    run: { ownA: 'pulse', ownB: 'bed' },
+    push: { ownA: 'pulse', ownB: 'counter' },
+    surge: { ownA: 'pulse', ownB: 'bed' },
+    approach: { ownA: 'pulse', ownB: 'bed' },
     boss: { ownA: 'pulse' },
     bossPeak: { ownA: 'pulse' },
   },

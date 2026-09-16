@@ -88,47 +88,6 @@ const FIFTH: readonly number[] = [7, 7, 3, 5, 7, 7, 12, 2, 3, 5, 7, 7, 12, 3, 2,
  */
 const HELD_ROOT: readonly number[] = ROOT.map((root) => (root < 0 ? root + 12 : root));
 
-/**
- * THE PIPES' LINE — sixteen bars of eighths, one entry per bar as `[eighth, note, held]`.
- *
- * ⚠️ **SPLIT INTO HELD AND PASSING NOTES BECAUSE A VOICE HAS ONE LENGTH.** A pipe player holds the top
- * of a phrase and moves through the notes on the way there; one `seconds` for both would either smear
- * every passing note into the next or cut every held one short. Written as bars so the chord each note
- * sits on can be read beside it.
- *
- * ⚠️ **EVERY FIRST AND THIRD BEAT IS A TONE OF THE BAR'S CHORD** — `ROOT`, `THIRD`, `FIFTH` above —
- * and every note is a tone of A natural minor, on 0099's terms.
- */
-const PIPE_BARS: readonly (readonly (readonly [number, number, boolean])[])[] = [
-  // Am Am F G — from A4 up to F5.
-  [[0, 12, true], [4, 15, false], [6, 19, false]],
-  [[0, 19, true], [6, 17, false], [7, 15, false]],
-  [[0, 15, true], [4, 20, true]],
-  [[0, 17, true], [4, 14, false], [6, 17, false]],
-  // Am Am Dm Em — up to A5.
-  [[0, 19, false], [2, 24, true]],
-  [[4, 22, false], [6, 19, false]],
-  [[0, 20, true], [4, 24, true]],
-  [[0, 22, true], [4, 19, true]],
-  // F G Am Am — the top of it, C6.
-  [[0, 24, false], [2, 27, true]],
-  [[0, 26, true], [4, 22, true]],
-  [[0, 24, true]],
-  [[0, 19, false], [2, 24, false], [4, 27, true]],
-  // Dm F Em G — settling, and lifting back into the loop.
-  [[0, 24, true], [4, 20, true]],
-  [[0, 27, false], [2, 24, false], [4, 20, true]],
-  [[0, 19, true], [4, 22, false], [6, 26, false]],
-  [[0, 26, true], [4, 22, false], [6, 17, false]],
-];
-const pipeLine = (held: boolean): (number | null)[] =>
-  PIPE_BARS.flatMap((bar) => {
-    const eighths: (number | null)[] = [_, _, _, _, _, _, _, _];
-    for (const [at, note, long] of bar) if (long === held) eighths[at] = note;
-    return eighths;
-  });
-const PIPE_LONG: readonly (number | null)[] = pipeLine(true);
-const PIPE_SHORT: readonly (number | null)[] = pipeLine(false);
 
 /**
  * THE THEME — `call`'s tune, and it is the melody the whole level is a setting of.
@@ -184,6 +143,90 @@ const aThirdUp = (note: number): number => {
 const HARMONY: readonly (number | null)[] = THEME.map((note) => (note === null ? _ : aThirdUp(note)));
 
 /**
+ * THE PIPES' LINES — `HARMONY`, held: a whole note a bar, and a half note every two beats.
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, and the second pass replaced a line of their
+ * own.** *"The flute music is good, but needs to be stronger and there needs to be longer notes at the
+ * start and it doesn't quite mesh very well with the lead."* The pipes played sixteen bars of their own
+ * over the tune, so every note agreed with the chord and hardly any agreed with the melody. **Derived
+ * from `HARMONY`, they are a third above whatever the tune is on**, which is what *high harmonies*
+ * means and cannot fail to mesh — and holding the note sounding at each bar or half bar is what makes
+ * them long.
+ *
+ * ⚠️ **Every bar of `THEME` opens with a note**, so the whole-note line has no rests to fill; a half
+ * bar that starts in a rest holds the note struck before it in that bar.
+ */
+const soundingAt = (line: readonly (number | null)[], bar: number, beat: number): number | null => {
+  for (let at = beat; at >= 0; at--) {
+    const note = line[bar * 4 + at];
+    if (note !== null && note !== undefined) return note;
+  }
+  return _;
+};
+const HARM_WHOLE: readonly (number | null)[] = Array.from({ length: 16 }, (_u, bar) => soundingAt(HARMONY, bar, 0));
+const HARM_HALF: readonly (number | null)[] = Array.from({ length: 32 }, (_u, i) =>
+  soundingAt(HARMONY, Math.floor(i / 2), (i % 2) * 2),
+);
+
+/**
+ * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
+ *
+ * ⚠️ **ONE INSTRUMENT, TWO LAYERS** — `ownB` holds whole notes from the opening and `hook` moves in
+ * half notes from `surge` — so the voice is written once and the two lines cannot drift into two
+ * different pipes. `level` scales every voice together; `attack` is the breath before the note speaks.
+ *
+ * ⚠️ **A PAN PIPE FROM A SYNTHESISER WITH NO VIBRATO**, built from what a pipe is: a triangle, whose
+ * odd harmonics fall away fast, with its filter open for the edge asked for — *"a higher tone with a
+ * bit more piercing note"*; a thin square under it for the reedy bite of a pipe blown hard; a sine for
+ * body; a chiff of noise on the onset; breath under the note. Octave 3 on `HARMONY` is 880–1760 Hz.
+ */
+const pipeVoices = (
+  line: readonly (number | null)[],
+  perBeat: number,
+  beats: number,
+  level: number,
+  attack: number,
+): MusicVoice[] => [
+  {
+    steps: line,
+    pitched: true,
+    perBeat,
+    octave: 3,
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.17 * level, attack, curve: 0.9, lowFrom: 8000, lowTo: 5200, q: 0.8 },
+  },
+  {
+    steps: line,
+    pitched: true,
+    perBeat,
+    octave: 3,
+    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.03 * level, attack: attack * 1.3, curve: 1.2, lowFrom: 6000, lowTo: 3800, q: 0.8 },
+  },
+  {
+    steps: line,
+    pitched: true,
+    perBeat,
+    octave: 3,
+    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.05 * level, attack: attack * 1.5, curve: 0.9 },
+  },
+  {
+    // The chiff: the consonant the note is blown with.
+    steps: line.map((note) => (note === null ? _ : 1)),
+    pitched: false,
+    perBeat,
+    octave: 0,
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.05 * level, attack: 0.002, curve: 4.5, lowFrom: 11000, lowTo: 5000, highFrom: 3000 },
+  },
+  {
+    // The breath under the held note, which is what stops a pure tone reading as a synthesiser.
+    steps: line.map((note) => (note === null ? _ : 1)),
+    pitched: false,
+    perBeat,
+    octave: 0,
+    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.018 * level, attack: attack * 3, curve: 1.3, lowFrom: 9000, lowTo: 6000, highFrom: 3500, q: 0.6 },
+  },
+];
+
+/**
  * THE CHUG — the palm mute: sixteenths on the root, dead, with the open string answering.
  *
  * ⚠️ **THE PITCH BARELY MOVES AND THE RHYTHM IS EVERYTHING.** A chug is not a bass line — it is a
@@ -213,13 +256,6 @@ const TREMOLO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
   return [...four(root + 12), ...four(third + 12), ...four(fifth), ...four(third + 12)];
 });
 
-/** The open chord: root and fifth, no third, eight to a bar. A power chord is a missing note. */
-const POWER: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
-  const fifth = FIFTH[bar]!;
-  return bar % 2 === 0
-    ? [root, _, _, fifth, _, root, _, _]
-    : [root, _, fifth, _, _, root, _, fifth];
-});
 
 /**
  * Everything The Black Heart plays instead of the base composition.
@@ -237,12 +273,28 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     is to have something at the bottom of it that never resolves and never stops.
   */
   drone: [
+    /*
+      ⚠️ **THE 55 Hz SINE IS A QUARTER OF WHAT IT WAS, AND ITS BODY MOVED UP AN OCTAVE** — 0331.
+      *"This new version has the basic subsonic beat right from the start, I feel the speakers vibrate
+      in my earbuds, but there's no actual music."* Measured on the render, the first minute carried 5–6
+      dB more energy under 60 Hz than between 200 Hz and 5 kHz, and **64–70% of what sat under 45 Hz
+      was this sine** — swelling once a bar, at a pitch earbuds reproduce as pressure rather than note.
+      The desk had driven the drone to nearly three times its old level, which is what made it the
+      opening. The weight stays, quietly; what an earbud can play is the octave above it.
+    */
     {
       steps: [0, 0],
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.3, attack: 0.4, curve: 0.86 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.07, attack: 0.4, curve: 0.86 },
+    },
+    {
+      steps: [0, 0],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.18, attack: 0.5, curve: 0.86 },
     },
     {
       steps: [0, 0],
@@ -427,21 +479,18 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     melody. The third is on `THIRD` up in `arp` and `lead`, and never down here.
   */
   chords: [
+    /*
+      ⚠️ **THE POWER CHORDS STOOD HERE, AND A MELANCHOLY PAD HAS ITS THIRD** — 0331. A power chord is a
+      root and a fifth with the third left out on purpose, which is what makes it neither major nor
+      minor and why it drives. *"A somber melancholic song"* is the minor third being heard, so the pad
+      below plays the whole triad, held, and nothing in this layer is struck any more.
+    */
     {
-      steps: POWER,
+      steps: THIRD,
       pitched: true,
-      perBeat: 2,
-      octave: 1,
-      accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.1, gain: 0.19, attack: 0.004, curve: 1.6, lowFrom: 1300, lowTo: 620, q: 1.6, drive: 0.4 },
-    },
-    {
-      steps: POWER,
-      pitched: true,
-      perBeat: 2,
+      perBeat: 0.25,
       octave: 2,
-      accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.06, attack: 0.005, curve: 2.2, lowFrom: 3400, lowTo: 1600, q: 1.4, drive: 0.3 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.15, attack: 0.5, curve: 1, lowFrom: 1400, lowTo: 900, q: 0.8 },
     },
     {
       // The pad behind the wall: held, slow, and it is the only thing in the level that is not being
@@ -583,67 +632,25 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     the tone is less round, a quiet square under the held notes for the reedy bite a stopped pipe has
     when it is blown hard, and a brighter chiff.
 
-    ⚠️ **A NEW LINE OVER THE SAME SIXTEEN CHORDS, AND NOT `THEME` AGAIN.** *"The melody needs to shift
-    and change rather than keeping the same tune."* Every strong beat is a tone of the bar's chord, so
-    it sits on the chug, the power chords and the sub without a clash, and each four-bar phrase climbs
-    higher than the one before — E5, A5, C6 — before the last one settles and lifts back into the loop.
-    **It is 16 bars because the phase a section lands on is not fixed**: each phrase has to be a good
-    place to enter, because the build brings this layer in wherever the loop happens to be.
+    ⚠️ **AND THEN THE BRIEF MOVED, AND THE PIPES STOPPED PLAYING A LINE OF THEIR OWN.** Second listen:
+    *"the flute music is good, but needs to be stronger and there needs to be longer notes at the start
+    and it doesn't quite mesh very well with the lead"*, and then the whole shape: *"a somber
+    melancholic song with high harmonies, low deep heartbeat and a rising crescendo as we get to the end
+    of the surge, that then tapers off very slightly as it leads into the boss music."* The pipes are
+    the high harmonies now — `HARM_HALF`, a third above the tune and held — and `ownB` below carries
+    the same pipe in whole notes from the opening, so they arrive long before they lead.
   */
-  hook: [
-    {
-      steps: PIPE_LONG,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.16, attack: 0.03, curve: 1.1, lowFrom: 8000, lowTo: 5000, q: 0.8 },
-    },
-    {
-      steps: PIPE_LONG,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.05, attack: 0.05, curve: 1 },
-    },
-    {
-      // The bite: a quiet square under the held notes, which is the edge of a pipe blown hard.
-      steps: PIPE_LONG,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 2, gain: 0.03, attack: 0.04, curve: 1.3, lowFrom: 6000, lowTo: 3800, q: 0.8 },
-    },
-    {
-      steps: PIPE_SHORT,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.14, attack: 0.02, curve: 1.6, lowFrom: 8000, lowTo: 5500, q: 0.8 },
-    },
-    {
-      steps: PIPE_SHORT,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.04, attack: 0.03, curve: 1.5 },
-    },
-    {
-      // The chiff: the consonant the note is blown with. Full on a held note, lighter on a passing one.
-      steps: PIPE_LONG.map((note, i) => (note !== null ? 1 : PIPE_SHORT[i] !== null ? 0.75 : _)),
-      pitched: false,
-      perBeat: 2,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.05, attack: 0.002, curve: 4.5, lowFrom: 11000, lowTo: 5000, highFrom: 3000 },
-    },
-    {
-      // The breath under a held note, which is what stops a pure tone reading as a synthesiser.
-      steps: PIPE_LONG.map((note) => (note === null ? _ : 1)),
-      pitched: false,
-      perBeat: 2,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 1.6, gain: 0.018, attack: 0.12, curve: 1.3, lowFrom: 9000, lowTo: 6000, highFrom: 3500, q: 0.6 },
-    },
-  ],
+  hook: pipeVoices(HARM_HALF, 0.5, 2.3, 1, 0.04),
+
+  /*
+    ── THE PIPES, HELD: a whole note a bar, from the opening ───────────────────────────────────────
+
+    ⚠️ **0331.** *"We need to fit in some pipes earlier in the piece… so that they don't just suddenly
+    start for no reason"*, and *"longer notes at the start."* One note a bar, the third above the bar's
+    first tune note, blown slowly. Faint at `run`, a counter-line under the tune at `push`, and a high
+    pad under the moving pipes once `hook` takes over.
+  */
+  ownB: pipeVoices(HARM_WHOLE, 0.25, 4.4, 0.9, 0.18),
 
   /*
     ── THE TREMOLO: the picking hand, and it is the sound the brief is named for ───────────────────
@@ -775,31 +782,27 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     `call` away in the same breath (`src/content/music.ts`), so what the ear loses is the clean
     statement of the tune and what it gains is both guitars playing it.
   */
+  /*
+    ⚠️ **THE TWIN GUITARS STOOD HERE AND THE SAME NOTES ARE STRINGS NOW** — 0331. The harmony is the
+    same third above the tune; what changed is how it is played. Two bowed saws a few cents apart,
+    slow to speak and held past the next note, no drive — the voice a somber piece harmonises in, where
+    a driven twin lead is the voice a metal one does. It sits an octave under the pipes, which play the
+    same line.
+  */
   counter: [
     {
       steps: HARMONY,
       pitched: true,
       perBeat: 1,
-      octave: 2,
-      accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.18, attack: 0.01, curve: 2, lowFrom: 3400, lowTo: 1600, q: 1.7, drive: 0.36 },
+      octave: 2 + 5 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.08, attack: 0.14, curve: 0.7, lowFrom: 2400, lowTo: 1700, q: 1 },
     },
     {
-      steps: THEME,
-      pitched: true,
-      perBeat: 1,
-      octave: 2,
-      accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.15, attack: 0.012, curve: 2, lowFrom: 3000, lowTo: 1400, q: 1.7, drive: 0.34 },
-    },
-    {
-      // Both guitars an octave down, quietly, which is how a twin lead stays legible over a wall.
       steps: HARMONY,
       pitched: true,
       perBeat: 1,
-      octave: 1,
-      accents: [1, 0.74, 0.9, 0.72],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.075, attack: 0.02, curve: 1.9, lowFrom: 1600, lowTo: 800, q: 1.4 },
+      octave: 2 - 5 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.08, attack: 0.17, curve: 0.7, lowFrom: 2300, lowTo: 1600, q: 1 },
     },
   ],
 
@@ -1013,6 +1016,37 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         off that band and leaves 45–150 Hz, where a thump is actually heard, where it was.
       */
       note: { wave: 'sine', from: 110, to: 48, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
+    },
+    /*
+      ⚠️ **AND WHAT AN EARBUD CAN HEAR OF IT** — 0331's third listen: *"then the speaker bit kicks in
+      around 1:55 again."* From the `approach` on the heart is the largest thing under 45 Hz, and a
+      sine that falls to 48 Hz is felt on a small driver rather than heard. A heart through a chest is
+      heard as its upper body and its knock, so both are here — the same beats, an octave up and short,
+      and a muffled thud — and the low sine stays for a speaker that can play it.
+    */
+    {
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.2, attack: 0.002, curve: 3, drive: 0.3 },
+    },
+    {
+      steps: [
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
+        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.08, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
     },
   ],
 
