@@ -303,8 +303,35 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     with this table — the same class as the four no-op promotions it caught on its last.
   */
   mire: { run: 'sub', push: 'groove', surge: 'drive', approach: 'toll', boss: 'toll' },
-  // *"The riff"*, *"the twin lead"*, *"inside it"* — the one place that follows what it is named for.
-  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'frenzy' },
+  /*
+    *"The riff"*, *"the twin lead"*, *"inside it"* — the one place that follows what it is named for.
+
+    ⚠️ **`run` AND `push` ARE WHAT THE DESK MADE THEM, AND THE OTHER THREE ARE UNTOUCHED** — 0330.
+    This is 0189's rule arriving one table over: a place is what it OPENS, and a `LEADS` row that goes
+    on naming a layer the place has buried is the failure this table already records twice —
+    *"a lead the ladder never opens is a place following silence"*, one notch quieter.
+
+    ⚠️ **`run` FOLLOWS THE TITLE'S KIT, WHICH NO PLACE HAS EVER DONE.** The drive opens `bass` and
+    `beat` — `TITLE_ONLY` layers (0095) — and as the hand drove it the kit sat **8 dB over `engine`**,
+    the lead this row named, and 20 over `groove`. 0330 brings it down 8 dB for the bus, and the
+    appointment survives that on its own measurement: at the shipped 1.28 `beat` clears a `part`'s
+    margin at **+3.2 against +3**, while `engine` sits 2.9 dB clear of the `pulse` it actually is. As a
+    `part`, `engine` was 12.0 dB under one. **Each of them is now doing the job it is named for**,
+    which is the test — not which number the fader happened to be at.
+
+    ⚠️ **`push` FOLLOWS THE TUNE, BECAUSE THE DRIVE WHISPERED THE RIFF.** `ARRANGEMENT.push` appoints
+    `hook`, and the desk took it to **0.17** of a rung where `call` is 0.68 — the riff is 7.9 dB under
+    `lead` in its own band. Something has to be the part, and `call` is the loudest layer in the rung
+    by gain and is the tune `src/content/core.ts` calls *"the melody the whole level is a setting
+    of"*. **No other place follows `call` at `push`** — four of the six follow `arp` there, which is
+    the copy this level was asked not to be.
+
+    ⚠️ **`surge` IS DELIBERATELY LEFT AT `lead`, AND THE DRIVE COULD HAVE ARGUED FOR `hook`.** It is
+    3.4 dB up on `lead` in gain — but by MARGIN, which is what *can you pick it out* actually measures,
+    `hook` −2.7, `counter` −2.8 and `lead` −3.0 are the same three-tenths of a decibel. **A tie is not
+    a displacement**, and the twin lead is what this place IS at `surge`.
+  */
+  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'frenzy' },
 };
 
 /*

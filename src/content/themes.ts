@@ -378,6 +378,34 @@ export interface ThemeRow {
    */
   trim?: number;
   /**
+   * How far below its own `run` each rung of this place sits, in LU. Absent, and every rung is level.
+   *
+   * ── 0226 HELD BOTH HALVES AND ONLY ONE OF THEM WAS EVER REPORTED ────────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0329-a-level-may-fall.md`.** `LEVEL_HOLD` brings every rung of every place
+   * back to its `run` loudness, and the report behind it is entirely about the upper half: *"the music
+   * track volume increases so much that it drowns out the bullets and game SFX… it's like someone
+   * turns up the volume knob."* **A rung that sits BELOW its opening cannot do any of that** — it
+   * drowns out nothing, and the cue bus it was competing with is unmoved. The floor came free with a
+   * solve that equalised rather than capped, and nothing has ever argued for it.
+   *
+   * ⚠️ **IT IS IN LU AND NOT A GAIN, WHICH IS THE WHOLE REASON IT CAN BE AUTHORED.** 0226's own
+   * finding is that the compressor halves every move, so a place stating *four decibels of gain* is
+   * stating a number whose effect it cannot predict; this is the quantity the listener reported in and
+   * the quantity `scripts/solve-hold.mjs` already bisects on. A hand writes what it heard and the
+   * solver finds the gain.
+   *
+   * ⚠️ **AT OR BELOW ZERO, AND `tests/themes.test.ts` REFUSES A RISE.** That is 0226 left intact: a
+   * place may fall away from its opening and may never climb above it. The one rung a rise could be
+   * argued for is the fight, and *"then stays at that high level"* is what the sixth report called the
+   * fight.
+   *
+   * ⚠️ **ABSENT MEANS LEVEL, so six places are byte-identical** — the same shape `ladder`, `air` and
+   * `voices` all have, and the reason this is a field on the row rather than a column on `LEVEL_HOLD`:
+   * what a hand states lives here, and what a solver produces lives there.
+   */
+  contour?: Partial<Record<MusicLevel, number>>;
+  /**
    * How much room this place has, per layer. `0` is none and `1` is a cathedral.
    *
    * ── SPACE IS NOT SUSTAIN, AND THIS PROJECT HAD ONLY EVER HAD SUSTAIN ────────────────────────────
@@ -1352,15 +1380,81 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
 
       ⚠️ **AND `drive` ARRIVES AT `run`, WHERE THE SHARED LADDER HOLDS IT TO `surge`.** Guitars in
       the third minute is not a metal track; it is a metal track's bridge.
+
+      ── AND THEN IT WAS DRIVEN, WHICH IS THE ROW BELOW AND IS ALMOST NONE OF THE ROW ABOVE ─────────
+
+      ⚠️ **`docs/decisions/0330-the-black-heart-is-driven.md`.** Three *copy this moment* pastes of
+      `eye` — `run`, `push` and `surge`, the `approach` left alone — transcribed back through the
+      arithmetic the dashboard prints its target with, which is
+      `docs/decisions/0163-the-script-is-edited-here.md`'s loop closing on a ladder rather than on a
+      script. **Every number that is not in the three shipped rows above is a fader a hand moved.**
+
+      ⚠️ **`bass` AND `beat` OPEN HERE, AND THEY ARE `TITLE_ONLY`** — 0095 closed them in every level
+      because *"an A-rooted riff is a wrong note over three chords in four"*, and over these sixteen
+      bars it is: the title's A is the ninth of G and the fourth of E minor. It is the ask. Saurian
+      Belt has opened both since 0189 and the guards that hold the closure read the SHARED ladder, so
+      a place opening them has always been a sentence a place may say.
+
+      ⚠️ **AND THE OPENING HAS TWO KICK DRUMS** — the title's syncopated eighths under `sub`'s double
+      kick — which is the one thing in here that only an ear can rule on.
+
+      ⚠️ **`beat` IS THE ONE NUMBER HERE THAT IS NOT THE HAND'S, AND IT IS 8 dB UNDER WHAT WAS DRIVEN.**
+      At the driven **3.19** this rung alone peaks at **1.482** of full scale into the shaper and
+      measures **−12.4 dB dirty** against a ceiling of −16; the same rung with the kit taken out
+      entirely peaks at 0.518 and measures −27.3, so the whole of that saturation is this one layer.
+      **A bus shaper distorts everything on the bus**, so a kit driven this hot is not a colour on the
+      kit — it is the guitars, the drone and the tune all being saturated by a kick drum, which is
+      what `docs/decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md` was reported as. At **1.28**
+      the rung measures −20.5, level with the dirtiest thing the game already ships (Saurian Belt's
+      `surge`, −20.3), and the kit is still the loudest thing in the opening by 3 dB — it leads the
+      rung, which is what `LEADS` says about it. **1.59 is the value that keeps more of the drive** and
+      clears the guard by 2.6 dB, at the cost of making this the dirtiest rung in the game; that is an
+      ear's call and both numbers are here so that it is one edit.
+
+      ⚠️ **AND `ride` IS CLOSED AT `surge` WHERE THE DESK HELD IT AT 0.01.** That is a fader position
+      the hand could reach, so it is read as an intention rather than as a stray — and 0.01 against a
+      rung whose loudest layer is 1.30 is **42 dB down**, which is nine decibels under
+      `AUDIBLE_FLOOR_DB` and is silence by the only measure this repository has for it. `0` is how
+      silence is written. **`beat` 0.06 at `push` and `drive` 0.06 at `surge` are NOT that** — 24.7 and
+      26.6 dB under their rungs, inside the floor — so they are transcribed as driven and are two of
+      the questions for an ear.
+
+      ⚠️ **AND A `trim` WAS BUILT FOR THIS AND MEASURED WRONG** — 0191's whole-place lever, which is
+      what Saurian Belt uses. It needs 3.1 dB off the entire place to fix a rung that is the only dirty
+      one in it: `push`, `surge`, `approach` and both fight rungs measure **−28 dB or cleaner** and
+      peak under **0.56**, against a `run` at −20.5 and 0.791. Charging five clean rungs for one hot
+      layer is
+      `docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md`'s *a quantity that rejects an
+      option is checked in the case it is applied to*, and checked here it rejects itself.
     */
     ladder: {
-      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0.7, groove: 0.6 },
-      push: { chords: 0.36, drive: 0.7, hook: 0.78 },
-      surge: { sub: 1.235 },
+      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283 },
+      push: { chords: 0.36, drive: 0.7, hook: 0.17, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 1.108 },
+      surge: { sub: 8.106, drone: 0, bass: 0.335, engine: 3.328, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.641, drive: 0.143, toll: 1.612, crash: 1.574, dread: 0.614, counter: 0.803, stomp: 0.679, frenzy: 1.078, wraith: 0.382 },
       approach: { sub: 1.45 },
       boss: { sub: 2.668 },
       bossPeak: { sub: 2.773 },
     },
+    /*
+      ⚠️ **THE SHAPE THE DESK WAS DRIVEN INTO, AND THE FIRST CONTOUR ANY PLACE STATES** — 0329. In LU
+      against this place's own `run`: the opening is the loudest thing in the level, `push` falls away
+      from it, `surge` comes back up without reaching it, and the `approach` and the whole fight sit
+      together at the bottom. Four arcs that are not each other, which is the ask —
+      *"a sense of discordance between the four arcs"*.
+
+      ⚠️ **THE LAST THREE NUMBERS PUT THE `approach` AND THE FIGHT EXACTLY WHERE THEY ALREADY WERE**,
+      which is what *"then heading into the approach as is"* asks for in the most literal way
+      available: measured, this place's `approach` ships at **−18.27 LUFS** and lands at −18.2 here.
+      Nothing about the end of this level moves; what changed is that the opening is now 3.6 LU over
+      it instead of level with it.
+
+      ⚠️ **AND THEY ARE SMALLER THAN THE DESK'S OWN BY 1.5 LU, BECAUSE THE OPENING CAME DOWN AND
+      NOTHING ELSE DID.** The drive's shape was −3.4 / −2.3 / −5.1 against a `run` that saturated the
+      bus (see `beat` above); the fix is one layer in one rung, so every OTHER rung keeps the loudness
+      it was heard at and the drop shrinks by what the opening lost. Holding the shape instead would
+      have dragged the untouched end of the level 1.5 LU below where it has ever been.
+    */
+    contour: { push: -1.9, surge: -0.8, approach: -3.6, boss: -3.6, bossPeak: -3.6 },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
@@ -1769,12 +1863,37 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
   labyrinth: { push: 0.5399, surge: 0.3386, approach: 0.3149, boss: 0.3565, bossPeak: 0.3017 },
   rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8107, bossPeak: 0.8003 },
   mire: { push: 0.6244, surge: 0.4511, approach: 0.5085, boss: 0.4789, bossPeak: 0.4789 },
-  core: { push: 0.4688, surge: 0.4176, approach: 0.4472, boss: 0.423, bossPeak: 0.4105 },
+  /*
+    ⚠️ **THE ONLY ROW HERE SOLVED AGAINST A CONTOUR RATHER THAN AGAINST ITS `run`** — 0329, re-solved
+    over the driven ladder — 0330. `run` is the reference and is 1 by construction.
+
+    ⚠️ **AND IT CAME BACK ALMOST UNCHANGED, WHICH IS THE CHECK RATHER THAN A COINCIDENCE.** It was
+    `0.4688, 0.4176, 0.4472, 0.423, 0.4105`. The contour puts the `approach` and both fight rungs back
+    at the loudness they already had — measured, −18.23 against a shipped −18.27 — so the numbers that
+    deliver them barely move. **The whole change is at the front of the level**: what moved is that the
+    opening is now 3.6 LU over the end of the level instead of level with it.
+  */
+  core: { push: 0.4728, surge: 0.4212, approach: 0.4491, boss: 0.4266, bossPeak: 0.4141 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */
 export function holdOf(theme: ThemeKind, rung: MusicLevel): number {
   return LEVEL_HOLD[theme][rung] ?? 1;
+}
+
+/**
+ * How far below its `run` `rung` is authored to sit in `theme`, in LU — `0` where nothing is stated.
+ *
+ * ⚠️ **THE TARGET `scripts/solve-hold.mjs` SOLVES TO, AND THE ONE `tests/themes.test.ts` ASSERTS** —
+ * 0329. Both read this rather than assuming zero, which is what makes `LEVEL_HOLD` above the answer
+ * to a stated question instead of a table with one place's exception buried in it.
+ *
+ * ⚠️ **`run` IS THE REFERENCE AND IS ALWAYS 0**, by construction rather than by a check: it is what
+ * every other rung is measured against, so a contour stated for it would be a number relative to
+ * itself. `tests/themes.test.ts` refuses one.
+ */
+export function contourOf(theme: ThemeKind, rung: MusicLevel): number {
+  return THEMES[theme].contour?.[rung] ?? 0;
 }
 
 export function mixOf(theme: ThemeKind, layer: MusicLayer): number {

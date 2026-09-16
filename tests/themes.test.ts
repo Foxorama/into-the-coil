@@ -21,6 +21,7 @@ import {
   type ThemeKind,
   REBASE,
   holdOf,
+  contourOf,
 } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
@@ -45,9 +46,9 @@ import { driveAt } from './clean.ts';
 import { kWeighting } from './loudness.ts';
 import {
   AUDIBLE_FLOOR_DB,
-  DUCK_FLOOR_DB,
+  // `DUCK_FLOOR_DB` and `carriedThrough` were imported here for 0167's second copy of the duck
+  // floor, which 0330 deleted — `tests/authored.ts`'s `0167-duck` reads both and is the one record.
   ROLE_FLOOR_DB,
-  carriedThrough,
   adriftAt,
   layerLevels,
   profileOf,
@@ -66,7 +67,7 @@ import { roleOf, OWN_ROLES, SOLVED_BY } from '../src/content/arrangement.ts';
 import {
   HOLD_WEIGHT,
   profileOfLoops,
-  rebasedLevel,
+  // `rebasedLevel` was imported here for the same deleted guard — 0330.
   rmsOfLoops,
   solveLevel,
 } from '../scripts/solve-mix.mjs';
@@ -458,6 +459,47 @@ const HOLD_BAND_DB = 0.25;
 /** The rate the through-shaper measurements run at — 0215 measured a quarter rate at 0.05 dB. */
 const ARC_RATE = 22050;
 
+  it('0329 — A CONTOUR ONLY EVER FALLS, so no rung of any place is authored over its own opening', () => {
+    /*
+      `docs/decisions/0329-a-level-may-fall.md`. 0226 held every rung EQUAL to its `run` and the report
+      behind it is entirely about the upper half — *"the music track volume increases so much that it
+      drowns out the bullets and game SFX… it's like someone turns up the volume knob"*. A rung below
+      its opening drowns out nothing, so the floor is the half that goes; the ceiling is the half that
+      was reported and it stays exactly where it was.
+
+      ⚠️ **THIS IS THE INVARIANT AND THE ONE BELOW IS THE AGREEMENT.** This holds what a hand may
+      STATE; the loudness guard holds that `LEVEL_HOLD` still DELIVERS it. A place could otherwise
+      author +3 at the fight, re-solve, and pass the second one while playing the thing six reports
+      were about — which is 0182's wall-that-says-nothing arriving as a missing assertion instead.
+
+      ⚠️ **AND NEITHER `run` NOR `calm` MAY BE STATED AT ALL, WHICH IS THE SAME FAILURE TWICE.**
+      `scripts/solve-hold.mjs` solves `MUSIC_LEVELS` less those two — `run` is the reference every
+      other rung is measured against, and `calm` is the title's rung and not a level's (0095). A
+      contour on either is **a number nothing reads**: it would sit in the table looking authored
+      while the solver ignored it, which is 0162's *a mechanism no data reaches* pointed the other
+      way round. The type cannot say it, because both are `MusicLevel`.
+    */
+    const offenders: string[] = [];
+    for (const theme of THEME_KINDS) {
+      const contour = THEMES[theme].contour ?? {};
+      for (const [rung, lu] of Object.entries(contour)) {
+        expect(MUSIC_LEVELS, `${theme} contours a rung "${rung}" that is not in MUSIC_LEVELS`).toContain(rung);
+        if (rung === 'run' || rung === 'calm') {
+          offenders.push(
+            `${theme} contours \`${rung}\`, which solve-hold.mjs does not solve — run is what the ` +
+              `others are measured from and calm is the title's, so the number would be read by nothing`,
+          );
+        } else if (!(lu <= 0)) {
+          offenders.push(`${theme}'s ${rung} is authored ${lu.toFixed(2)} LU OVER its run`);
+        }
+      }
+    }
+    expect(
+      offenders,
+      'a place may fall away from its opening and may never climb above it — 0226 is intact in that direction',
+    ).toEqual([]);
+  });
+
   it('every rung of a place holds its run loudness, in the listener’s unit, through the shipped bus', () => {
     /*
       ⚠️ **EVERY PLACE AND EVERY RUNG, BECAUSE THE RULE IS NOT ABOUT ONE LEVEL ANY MORE.** 0218 and
@@ -474,6 +516,13 @@ const ARC_RATE = 22050;
       ⚠️ **THE FIGHT RUNGS ARE HELD TOO.** *"Then stays at that high level"* is the fight; 0108's *the
       boss arrives* is kept in the half that opens new things, below in `tests/music.test.ts`, and
       not in the half that made it louder.
+
+      ⚠️ **AGAINST THE PLACE'S CONTOUR AND NOT AGAINST ZERO, SINCE 0329.** What is asserted is
+      unchanged in substance — the solved table still describes the tree, and a ladder row, a mix
+      multiplier or a bus constant edited under it reddens this until the hold is re-solved. What
+      moved is where the target comes from: `contourOf` rather than a literal `run`, so a place that
+      authors a fall is held to the fall it authored instead of being exempted from the guard. Six
+      places state nothing and are held to `run` exactly as before.
     */
     const offenders: string[] = [];
     const said: string[] = [];
@@ -481,15 +530,18 @@ const ARC_RATE = 22050;
       const run = driveAt(theme, 'run', ARC_RATE).loud;
       for (const rung of MUSIC_LEVELS) {
         if (rung === 'calm' || rung === 'run') continue;
+        const want = contourOf(theme, rung);
         const over = driveAt(theme, rung, ARC_RATE).loud - run;
-        said.push(`${theme}/${rung} ${over >= 0 ? '+' : ''}${over.toFixed(2)}`);
-        if (Math.abs(over) > HOLD_BAND_DB) offenders.push(`${theme} ${rung} sits ${over.toFixed(2)} LU from its run`);
+        said.push(`${theme}/${rung} ${over >= 0 ? '+' : ''}${over.toFixed(2)} of ${want.toFixed(2)}`);
+        if (Math.abs(over - want) > HOLD_BAND_DB) {
+          offenders.push(`${theme} ${rung} sits ${over.toFixed(2)} LU from its run and is authored at ${want.toFixed(2)}`);
+        }
       }
     }
     expect(
       offenders,
-      `a level's loudness moves with its rung — reported six times as the volume going up at 41 ` +
-        `seconds. node scripts/solve-hold.mjs re-solves LEVEL_HOLD. ${said.join(', ')}`,
+      `a level's loudness is not where its contour puts it — the climb was reported six times as the ` +
+        `volume going up at 41 seconds. node scripts/solve-hold.mjs re-solves LEVEL_HOLD. ${said.join(', ')}`,
     ).toEqual([]);
   }, 600_000);
 
@@ -1185,7 +1237,35 @@ describe('0128 — a place plays its own material, and shares everything it does
     labyrinth: ['approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
     mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],
-    core: ['approach/toll', 'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll', 'bossPeak/dread', 'bossPeak/drone', 'bossPeak/toll'],
+    /*
+      ── EIGHT, THEN NINETEEN, AND ELEVEN OF THE NINETEEN ARE FADERS A HAND PULLED DOWN ────────────
+
+      ⚠️ **`docs/decisions/0330-the-black-heart-is-driven.md`**, on the terms `saurian` above was
+      written in. This place was driven on the desk across `run`, `push` and `surge` and the drive is
+      subtractive: `perc` to 0.10 and 0.15, `beat` to 0.06, `drive` to 0.06, `hook` to 0.28, `bass`
+      faded out across the level. **Nine of the eleven new entries are layers the hand deliberately
+      whispered**, and a layer being under its role is the definition of whispering it.
+
+      ⚠️ **TWO ARE CONSEQUENCES RATHER THAN INTENTIONS, AND THEY ARE THE ONES TO DELETE FIRST.**
+      `run/groove` is the palm mute — the technique `src/content/core.ts` names as a third of what
+      makes this genre this genre — sitting 14 dB under `sub` in the low band because the opening is
+      two kick drums; and `surge/lead` is the `part` at 3.0 dB under a part's margin, in a
+      three-tenths-of-a-decibel tie with `hook` and `counter` that `LEADS` records. Neither was
+      chosen. If the chug or the twin lead is ever reported, those are the two lines to go at.
+
+      ⚠️ **AND `push/hook` IS THE RIFF, WHICH IS ON PURPOSE AND IS WORTH SAYING OUT LOUD**: the desk
+      took the layer this place is named after to a whisper and `LEADS` now follows the tune instead.
+      That is an authoring statement, not a mix fault, and 0164 will not ask about it again here —
+      which is what a list costs.
+    */
+    core: [
+      'approach/toll',
+      'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll',
+      'bossPeak/dread', 'bossPeak/drone', 'bossPeak/toll',
+      'push/bass', 'push/beat', 'push/groove', 'push/hook', 'push/perc',
+      'run/groove',
+      'surge/bass', 'surge/drive', 'surge/groove', 'surge/lead', 'surge/perc',
+    ],
   };
 
   it('0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT', () => {
@@ -1323,7 +1403,7 @@ describe('0128 — a place plays its own material, and shares everything it does
       previous report leaves *"whether approach→boss's lurches should be kept"* deliberately open. A
       guard that flattened an event nobody complained about would be answering the wrong report.
     */
-    const worstInLevel = (byRung: Record<MusicLevel, Record<MusicLayer, number>>): number => {
+    const worstInLevel = (theme: ThemeKind, byRung: Record<MusicLevel, Record<MusicLayer, number>>): number => {
       let worst = 0;
       for (const [from, to] of [
         ['run', 'push'],
@@ -1332,6 +1412,26 @@ describe('0128 — a place plays its own material, and shares everything it does
       ] as const) {
         for (const layer of MUSIC_LAYERS) {
           if (!SOLVED_BY(layer)) continue;
+          /*
+            ⚠️ **A LAYER THE SOLVE HAS NO TARGET FOR IS DRIFT, AND IT WAS DOMINATING THIS NUMBER** —
+            0330. `solveLevel` skips a layer `roleOf` answers `null` for — *"if (role === null)
+            continue"* — but `renormalise` scales every gain on every one of its four hundred steps,
+            so a roleless layer is carried wherever the rest of the solve goes. Measured, that is not
+            a small effect: The Black Heart's `drive` and `stomp` land on **4.46e-6** at `push`, which
+            this read as a 101.6 dB boundary move, and Saurian Belt's `arp` has been reporting
+            **158.8 dB** at `surge → approach` for as long as it has opened `arp` where the shared
+            arrangement names no role for it.
+
+            ⚠️ **AND THE GUARD WAS GREEN OVER BOTH.** 158.8 against 134.5 is one drift beating another,
+            which satisfies *the trajectory moves a boundary less* while measuring nothing about a
+            boundary — `docs/decisions/0027-measure-the-picture-not-the-model.md`'s *a guard that
+            fires on the wrong quantity*, sitting green rather than red. The fix is the predicate the
+            solver already uses, so it costs no number anybody has to defend.
+
+            ⚠️ **IT IS A NARROWING AND IT IS STILL THE SAME CLAIM.** Every layer the solve has an
+            opinion about is still measured at every in-level boundary in every place.
+          */
+          if (roleOf(theme, from, layer) === null || roleOf(theme, to, layer) === null) continue;
           const a = byRung[from][layer];
           const b = byRung[to][layer];
           if (!(a > 0) || !(b > 0)) continue;
@@ -1346,63 +1446,68 @@ describe('0128 — a place plays its own material, and shares everything it does
         Record<MusicLayer, number>
       >;
 
-    for (const theme of THEME_KINDS) {
-      const perRung = worstInLevel(gainsOf(levelAt(theme, 0)));
-      const held = worstInLevel(gainsOf(levelAt(theme, HOLD_WEIGHT)));
-      expect(
-        held,
-        `${theme}: the trajectory lurches ${held.toFixed(1)} dB where the per-rung solve lurches ` +
-          `${perRung.toFixed(1)} — holding gain continuous is not buying a steadier boundary`,
-      ).toBeLessThan(perRung);
-    }
-  }, DSP_MS);
-
-
-  it('0167 — AND THE RE-BASED MIX IS ADDITIVE TOO, which is the only reason it exists', () => {
     /*
-      `docs/decisions/0167-a-build-does-not-duck.md`. The third mix on the desk keeps the shipped
-      ladder's per-layer rung RATIOS and re-bases the balance onto the solve at one rung, so a boundary
-      moves exactly as the shipped ladder's does. **Additive by construction** — and *by construction*
-      is a claim, not a proof: the re-base multiplies each layer by a per-layer constant, which
-      preserves ratios only while that constant is the same on both sides of the boundary. Anything
-      that made it rung-dependent — a per-rung renormalise, most obviously, which is the first thing
-      anybody reaches for when they see the summed peak — silently puts the ducking back.
+      ── TWO PLACES DO NOT MEET THIS, AND THE DRIFT ABOVE IS WHY NOBODY KNEW ────────────────────────
 
-      ⚠️ **AND THAT EXACT MISTAKE WAS MEASURED BEFORE THIS SHIPPED.** Holding each rung to the shipped
-      ladder's summed level costs 11 carried layers at `push`-based and 25 at `surge`-based, because
-      the scale factors differ either side of a change. The version on the desk deliberately does not
-      renormalise, and this is what keeps it that way.
+      ⚠️ **0330.** With roleless drift excluded the numbers become the ones this guard's own header is
+      written about — 5 to 18 dB — and the claim turns out to be false in two of the seven. **The
+      header already explains why**: *"the layers left free are the ones changing role, and a 5 dB
+      change of target is an 18 dB change of gain."* A place whose arrangement moves a layer between
+      roles across a boundary is a place the trajectory cannot smooth, and both of these do it.
+
+      ⚠️ **NAMED RATHER THAN FORGIVEN, ON `STILL_ADRIFT`'s OWN TERMS** — and held in both directions,
+      so nothing new joins quietly and an entry that starts passing has to be deleted. **The Labyrinth
+      is on this list and has nothing to do with the change that found it**, which is the part worth
+      keeping: it has been failing this claim for as long as it has opened `ride` where the shared
+      arrangement gives it a different role either side, and a 158.8 dB drift was sitting on top of
+      the number that would have said so.
     */
+    const NOT_STEADIER: Partial<Record<ThemeKind, string>> = {
+      labyrinth: 'push→surge `ride` 10.2 → 11.0: the pulse this place follows changes role under it',
+      core: 'surge→approach `drive` 12.1 → 18.1: the blast changes role as the fight’s own layers leave',
+    };
     const offenders: string[] = [];
     for (const theme of THEME_KINDS) {
-      const loops = placeLoops(theme);
-      const { profile, rms } = inputsFor(theme);
-      const level = rebasedLevel(theme, loops, profile, rms, HOLD_WEIGHT) as Solved;
-      for (const [from, to] of [
-        ['run', 'push'],
-        ['push', 'surge'],
-        ['surge', 'approach'],
-      ] as const) {
-        /*
-          ⚠️ **MEASURED AGAINST THE RUNG'S OWN HOLD** — 0226. `LEVEL_HOLD` lowers a whole rung by one
-          number, so every carried layer falls by exactly that at a boundary that opens parts. What
-          0167 forbids is a layer paying for the arrivals — falling RELATIVE to the rung it is in —
-          and that is what is left once the hold is divided out. A per-layer renormalise would still
-          show up here, which is the mistake this guard was written against.
-        */
-        const held = 20 * Math.log10(holdOf(theme, to) / holdOf(theme, from));
-        for (const { layer, move } of carriedThrough(level[from].gains, level[to].gains)) {
-          if (move - held <= DUCK_FLOOR_DB) {
-            offenders.push(`${theme} ${from}→${to}: ${layer} ${(move - held).toFixed(1)} dB under its rung`);
-          }
-        }
+      const perRung = worstInLevel(theme, gainsOf(levelAt(theme, 0)));
+      const held = worstInLevel(theme, gainsOf(levelAt(theme, HOLD_WEIGHT)));
+      if (!(held < perRung)) {
+        offenders.push(
+          `${theme}: the trajectory lurches ${held.toFixed(1)} dB where the per-rung solve lurches ` +
+            `${perRung.toFixed(1)} — holding gain continuous is not buying a steadier boundary`,
+        );
       }
     }
+    const named = Object.keys(NOT_STEADIER);
     expect(
-      offenders,
-      'the re-based mix ducks a carried layer, which is the one thing it is for not doing',
+      offenders.filter((o) => !named.some((t) => o.startsWith(`${t}:`))).sort(),
+      'a place stopped buying a steadier boundary and is not on the known list',
+    ).toEqual([]);
+    expect(
+      named.filter((t) => !offenders.some((o) => o.startsWith(`${t}:`))).sort(),
+      'these are on the known list and now buy a steadier boundary — delete them from NOT_STEADIER',
     ).toEqual([]);
   }, DSP_MS);
+
+
+  /*
+    ── `0167 — AND THE RE-BASED MIX IS ADDITIVE TOO` STOOD HERE AND 0330 DELETED IT ────────────────
+
+    ⚠️ **IT WAS THE DUCK FLOOR A SECOND TIME, UNDER A NAME THAT HID IT.**
+    `docs/decisions/0192-a-guard-holds-an-invariant.md` demoted 0167's floor to the taste `0167-duck`
+    in `tests/authored.ts`, because *name a change to the content that would redden this and be
+    correct* has an easy answer — a breakdown before a drop, *"the genre move Saurian Belt has now
+    asked for twice"*. **This one survived the demotion because its subject read as something else**:
+    the desk's third mix, an object a player could audition and not ship.
+
+    ⚠️ **`docs/decisions/0176-the-re-based-mix-is-the-mix.md` FOLDED THAT OBJECT INTO THE SHIPPED
+    ONE**, and `rebasedLevel` has been a description of the game ever since. So this walked the same
+    boundaries, over the same carried layers, against the same `DUCK_FLOOR_DB`, and reddened on
+    exactly what the taste prints — measured on The Black Heart's drive, both name the same ten.
+
+    ⚠️ **DELETED AND NOT DEMOTED, BECAUSE THE CLAIM IS ALREADY REGISTERED.** A second copy in
+    `tests/authored.ts` would be two ids for one measurement and `tests/authored.test.ts` would print
+    it twice; 0029's *a summary is a second copy* arriving in a suite. `0167-duck` is the record.
+  */
 
   it('0168 — THE DESK’S PACE IS THE GUARD’S PACE, layer for layer and rung for rung', () => {
     /*

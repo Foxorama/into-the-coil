@@ -54,3 +54,40 @@ export function framesInARow(page: Page, count: number): Promise<string[]> {
 export function moved(frames: readonly string[]): boolean {
   return frames.some((f) => f !== frames[0]);
 }
+
+/**
+ * Let `count` animation frames go by — the wait for anything the frame loop SAMPLES.
+ *
+ * ── THE SAME FAULT AS ABOVE, ONE FILE OVER, AND FOUND THE SAME WAY ──────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0330-the-black-heart-is-driven.md`.** `tests/menu.browser.test.ts`'s `nudge`
+ * pressed a gamepad button, waited **120 ms of wall clock**, released it and waited 120 ms again —
+ * and *still steps a column when the layout has no answer for the axis* went red under `npm run
+ * check` while passing alone in this tree and on `main`. A gamepad is read once per frame, so 120 ms
+ * is *seven frames* on an idle machine and can be one or none on a saturated one: the press is
+ * delivered and released between two polls, and the menu never sees it.
+ *
+ * ⚠️ **THIS FILE'S HEADER ALREADY SAID SO, ABOUT THE CANVAS**, and the fix is the same one — count
+ * the thing the code actually responds to. `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`
+ * is the rule, and *"a rerun is not evidence"* is why this was established rather than retried.
+ *
+ * ⚠️ **EIGHT, BECAUSE SEVEN IS WHAT 120 ms BOUGHT WHEN IT WORKED.** The same intention in the right
+ * unit, one frame of slack, and under load it simply takes longer rather than failing.
+ *
+ * ⚠️ **NOT EVERY `waitForTimeout` IS THIS**, which is why this is a helper and not a sweep. A wait
+ * for a CSS transition, a fade or an audio prewarm is in wall-clock time because the thing it waits
+ * for is. Only an input the loop polls is counted in frames.
+ */
+export function afterFrames(page: Page, count: number): Promise<void> {
+  return page.evaluate((n: number) => {
+    return new Promise<void>((done) => {
+      let left = n;
+      const tick = (): void => {
+        left -= 1;
+        if (left <= 0) done();
+        else requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+  }, count);
+}

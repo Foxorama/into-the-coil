@@ -32,8 +32,11 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: "  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'frenzy' },",
-      replace: "  core: { run: 'engine', surge: 'lead', approach: 'counter', boss: 'drive' },",
+      // ⚠️ RE-ANCHORED BY 0330, which drove this place and re-read its `LEADS` row: `run` follows the
+      // title's kit and `push` the tune now. The break is unchanged — the fight follows `drive`, a
+      // layer that is loud in all seven places — and so is what it proves.
+      find: "  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'frenzy' },",
+      replace: "  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'drive' },",
     },
   },
 ];

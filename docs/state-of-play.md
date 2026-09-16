@@ -979,6 +979,52 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE BOSSES ARE A PLAN NOW, AND IT IS WRITTEN FOR THE NEXT SESSION — 2026-09-16
+
+⚠️ **[`the-bosses-planned`](../reports/the-bosses-planned-2026-09-16.md) HOLDS THE ORDER, SO THIS
+FILE DOES NOT.** The fish was played for the first time since its brief and four things came back:
+the breaker rises where the fish is and never where the ship is; the adds are meaningless; the fish
+dies in ten seconds to the shuriken; and the hit flash hides it exactly as it hid the serpent. The
+report diagnoses each against the code and the flown tables, queues the fish's four as five PRs (the
+flash and boss-health-on-screen are cross-boss), and lists every other boss's open items with the
+decision that owns each. **Read it before touching any boss.** Nothing in it is built.
+
+### ⚠️ THE BLACK HEART IS DRIVEN, AND WHAT IS OWED IS AN EAR — 2026-09-16
+
+⚠️ **[0330](decisions/0330-the-black-heart-is-driven.md) IS THE CHANGE AND
+[0329](decisions/0329-a-level-may-fall.md) IS THE MECHANISM IT NEEDED.** Three desk moments of `eye`
+transcribed into `THEMES.core.ladder`, with the first contour any place states:
+[0226](decisions/0226-the-level-holds-one-loudness.md) held every rung EQUAL to its `run` and only the
+upper half of that was ever reported, so a place may now fall away from its opening and may still
+never climb above it.
+
+⚠️ **ONE NUMBER IN IT IS NOT THE HAND'S, AND IT IS THE TRANSFERABLE HALF.** The kit at the driven 3.19
+saturates the music bus on a kick drum — that rung at −12.4 dB dirty against a ceiling of −16, where
+the same rung without it measures −27.3. **A desk fader reads its own `GainNode` and cannot show what
+the sum does to the shaper**, so a mix driven by ear needs the bus measured after it.
+
+⚠️ **AND THE LEVEL IS 3.7 LU LOUDER THAN IT SHIPPED, DRIVEN WITH THE CUES OFF.** Second quietest
+opening in the game to second loudest. 0330 states why that is acceptable — Saurian Belt already sits
+0.9 LU above it — and names `trim` as the one lever if the gun gets lost in it.
+
+⚠️ **WHAT IS OWED IS AN EAR ON THE BRANCH PREVIEW**, and 0330's last section is the list in order.
+The first item is the largest claim in the drive: **the fight's own `stomp`, `frenzy` and `wraith`
+open two rungs early at `surge`, leave again for the `approach`, and come back for the boss** — the
+level previews the fight and withdraws it, which nothing in the game does anywhere else. Then the two
+kick drums at `run`, the drone dropping out of the place it is the subject of, `beat` at 1.28 or 1.59,
+and two layers that may be ghosts or zeros. Every one is one number and a re-solve.
+[`the-black-heart-driven`](../reports/the-black-heart-driven-2026-09-16.md) is the plan it was built
+from, and records where its own costings moved when they were measured in the case they applied to.
+
+⚠️ **AND `OWN_ROLES.core` IS OWED, WHICH IS 0172's HOLE GONE FROM SEVEN LAYER-RUNGS TO EIGHTEEN.** A
+place that opens a layer where the shared `ARRANGEMENT` names no role for it sounds something 0164
+cannot see; the drive opens eleven such, listed in 0330. It also found what that hole does to a guard:
+`solveLevel` skips a roleless layer and `renormalise` drags it anyway, so its solved gain is drift —
+and `0166 — THE TRAJECTORY MOVES A BOUNDARY LESS` had been reading Saurian Belt's drift as a **158.8
+dB boundary** and passing. Narrowed to the layers the solve has an opinion about, the claim is false in
+two places and `NOT_STEADIER` names both. **A guard can sit green on the wrong quantity as easily as
+it can go red on one** — 0027, and 0019's probes cannot see it.
+
 ### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
 
 ⚠️ **[`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) IS THE RECORD AND HOLDS THE ORDER**,
