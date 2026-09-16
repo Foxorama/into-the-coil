@@ -57,12 +57,15 @@ And the brief over them: *"it'll probably need a bit of tweaking to get the open
 loudness correct, but I want a sense of discordance between the four arcs to have attributes of all
 previous levels, but be copies of none."*
 
-A layer not held in a paste plays the shipped target and is left alone below. Two held values are
-read as zero: `ride` 0.01 at `run` and `surge` is not a fader position — the desk's first notch is
-0.022 — but a hold of 0 caught on the node's exponential tail, so the ride is **closed** at `surge`
-where the shipped ladder opens it at 0.64. `beat` 0.06 at `push` and `drive` 0.06 at `surge` are real
-notches (51 dB under the desk ceiling) and are transcribed as driven; both are inaudible under the
-rung they sit in and the ear should decide whether they are ghosts or zeros.
+A layer not held in a paste plays the shipped target and is left alone below.
+
+⚠️ **`ride` AT 0.01 IS READ AS CLOSED, AND THE REASON IS AUDIBILITY RATHER THAN THE FADER.** 0.01 is a
+position the fader can express, so it is an intention and not a stray — but against a `surge` whose
+loudest layer is 1.30 it is **42 dB down**, nine decibels under `AUDIBLE_FLOOR_DB`, which is silence
+by the only measure this repository has for it. So the ride is **closed** at `surge`, where the
+shipped ladder opens it at 0.64. **`beat` 0.06 at `push` and `drive` 0.06 at `surge` are a different
+case** — 24.7 and 26.6 dB under their own rungs, inside that floor — so they are transcribed as driven
+and an ear decides whether they are ghosts or zeros.
 
 ## What the desk values are, as a ladder
 

@@ -1003,9 +1003,16 @@ saturates the music bus on a kick drum — that rung at −12.4 dB dirty against
 the same rung without it measures −27.3. **A desk fader reads its own `GainNode` and cannot show what
 the sum does to the shaper**, so a mix driven by ear needs the bus measured after it.
 
-⚠️ **WHAT IS OWED IS AN EAR ON THE BRANCH PREVIEW**, and 0330's last section is the list: the two kick
-drums at `run`, `beat` at 1.28 or 1.59, two layers that may be ghosts or zeros, and whether the boss
-still arrives after a `surge` that already has its blast beat. Every one is one number and a re-solve.
+⚠️ **AND THE LEVEL IS 3.7 LU LOUDER THAN IT SHIPPED, DRIVEN WITH THE CUES OFF.** Second quietest
+opening in the game to second loudest. 0330 states why that is acceptable — Saurian Belt already sits
+0.9 LU above it — and names `trim` as the one lever if the gun gets lost in it.
+
+⚠️ **WHAT IS OWED IS AN EAR ON THE BRANCH PREVIEW**, and 0330's last section is the list in order.
+The first item is the largest claim in the drive: **the fight's own `stomp`, `frenzy` and `wraith`
+open two rungs early at `surge`, leave again for the `approach`, and come back for the boss** — the
+level previews the fight and withdraws it, which nothing in the game does anywhere else. Then the two
+kick drums at `run`, the drone dropping out of the place it is the subject of, `beat` at 1.28 or 1.59,
+and two layers that may be ghosts or zeros. Every one is one number and a re-solve.
 [`the-black-heart-driven`](../reports/the-black-heart-driven-2026-09-16.md) is the plan it was built
 from, and records where its own costings moved when they were measured in the case they applied to.
 

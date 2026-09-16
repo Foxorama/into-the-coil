@@ -312,9 +312,12 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     *"a lead the ladder never opens is a place following silence"*, one notch quieter.
 
     ⚠️ **`run` FOLLOWS THE TITLE'S KIT, WHICH NO PLACE HAS EVER DONE.** The drive opens `bass` and
-    `beat` — `TITLE_ONLY` layers (0095) — and puts the kit **8 dB over `engine`**, the lead this row
-    named, and 20 over `groove`. Measured, `engine` was a `part` sitting 12.0 dB under one; it is a
-    `pulse` at −3.0 now, which is what it actually does here.
+    `beat` — `TITLE_ONLY` layers (0095) — and as the hand drove it the kit sat **8 dB over `engine`**,
+    the lead this row named, and 20 over `groove`. 0330 brings it down 8 dB for the bus, and the
+    appointment survives that on its own measurement: at the shipped 1.28 `beat` clears a `part`'s
+    margin at **+3.2 against +3**, while `engine` sits 2.9 dB clear of the `pulse` it actually is. As a
+    `part`, `engine` was 12.0 dB under one. **Each of them is now doing the job it is named for**,
+    which is the test — not which number the fader happened to be at.
 
     ⚠️ **`push` FOLLOWS THE TUNE, BECAUSE THE DRIVE WHISPERED THE RIFF.** `ARRANGEMENT.push` appoints
     `hook`, and the desk took it to **0.17** of a rung where `call` is 0.68 — the riff is 7.9 dB under

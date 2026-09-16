@@ -1404,18 +1404,26 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       entirely peaks at 0.518 and measures −27.3, so the whole of that saturation is this one layer.
       **A bus shaper distorts everything on the bus**, so a kit driven this hot is not a colour on the
       kit — it is the guitars, the drone and the tune all being saturated by a kick drum, which is
-      what `docs/decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md` was reported as. At
-      **1.28** the rung measures
-      −20.5, level with the dirtiest thing the game already ships (Saurian Belt's `surge`, −20.3), and
-      the kit is still the loudest thing in the opening by 3 dB — it leads the rung, which is what
-      `LEADS` says about it. **1.59 is the value that keeps more of the drive** and clears the guard
-      by 2.6 dB, at the cost of making this the dirtiest rung in the game; that is an ear's call and
-      the two numbers are here so it is one edit.
+      what `docs/decisions/0217-the-bus-is-a-colour-and-it-was-too-thick.md` was reported as. At **1.28**
+      the rung measures −20.5, level with the dirtiest thing the game already ships (Saurian Belt's
+      `surge`, −20.3), and the kit is still the loudest thing in the opening by 3 dB — it leads the
+      rung, which is what `LEADS` says about it. **1.59 is the value that keeps more of the drive** and
+      clears the guard by 2.6 dB, at the cost of making this the dirtiest rung in the game; that is an
+      ear's call and both numbers are here so that it is one edit.
+
+      ⚠️ **AND `ride` IS CLOSED AT `surge` WHERE THE DESK HELD IT AT 0.01.** That is a fader position
+      the hand could reach, so it is read as an intention rather than as a stray — and 0.01 against a
+      rung whose loudest layer is 1.30 is **42 dB down**, which is nine decibels under
+      `AUDIBLE_FLOOR_DB` and is silence by the only measure this repository has for it. `0` is how
+      silence is written. **`beat` 0.06 at `push` and `drive` 0.06 at `surge` are NOT that** — 24.7 and
+      26.6 dB under their rungs, inside the floor — so they are transcribed as driven and are two of
+      the questions for an ear.
 
       ⚠️ **AND A `trim` WAS BUILT FOR THIS AND MEASURED WRONG** — 0191's whole-place lever, which is
       what Saurian Belt uses. It needs 3.1 dB off the entire place to fix a rung that is the only dirty
-      one in it: `push`, `surge`, `approach` and both fight rungs measure −30 dB or cleaner and peak
-      under 0.46. Charging five clean rungs for one hot layer is
+      one in it: `push`, `surge`, `approach` and both fight rungs measure **−28 dB or cleaner** and
+      peak under **0.56**, against a `run` at −20.5 and 0.791. Charging five clean rungs for one hot
+      layer is
       `docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md`'s *a quantity that rejects an
       option is checked in the case it is applied to*, and checked here it rejects itself.
     */

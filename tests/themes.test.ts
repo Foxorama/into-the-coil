@@ -472,16 +472,26 @@ const ARC_RATE = 22050;
       author +3 at the fight, re-solve, and pass the second one while playing the thing six reports
       were about — which is 0182's wall-that-says-nothing arriving as a missing assertion instead.
 
-      ⚠️ **AND `run` MAY NOT BE STATED AT ALL**, because every number here is measured against it. A
-      contour on the reference is a distance from itself, and the solver would silently ignore it.
+      ⚠️ **AND NEITHER `run` NOR `calm` MAY BE STATED AT ALL, WHICH IS THE SAME FAILURE TWICE.**
+      `scripts/solve-hold.mjs` solves `MUSIC_LEVELS` less those two — `run` is the reference every
+      other rung is measured against, and `calm` is the title's rung and not a level's (0095). A
+      contour on either is **a number nothing reads**: it would sit in the table looking authored
+      while the solver ignored it, which is 0162's *a mechanism no data reaches* pointed the other
+      way round. The type cannot say it, because both are `MusicLevel`.
     */
     const offenders: string[] = [];
     for (const theme of THEME_KINDS) {
       const contour = THEMES[theme].contour ?? {};
       for (const [rung, lu] of Object.entries(contour)) {
         expect(MUSIC_LEVELS, `${theme} contours a rung "${rung}" that is not in MUSIC_LEVELS`).toContain(rung);
-        if (rung === 'run') offenders.push(`${theme} contours its own run, which is what the others are measured from`);
-        else if (!(lu <= 0)) offenders.push(`${theme}'s ${rung} is authored ${lu.toFixed(2)} LU OVER its run`);
+        if (rung === 'run' || rung === 'calm') {
+          offenders.push(
+            `${theme} contours \`${rung}\`, which solve-hold.mjs does not solve — run is what the ` +
+              `others are measured from and calm is the title's, so the number would be read by nothing`,
+          );
+        } else if (!(lu <= 0)) {
+          offenders.push(`${theme}'s ${rung} is authored ${lu.toFixed(2)} LU OVER its run`);
+        }
       }
     }
     expect(

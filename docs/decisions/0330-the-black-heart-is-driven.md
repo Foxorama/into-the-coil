@@ -36,10 +36,10 @@ through the chain `tests/clean.ts` describes:
 |---|---|---|
 | as driven, `beat` 3.19 | **1.482** | **−12.4** |
 | with no kit in it at all | 0.518 | −27.3 |
-| shipped here, `beat` 1.28 | 0.790 | **−20.5** |
+| shipped here, `beat` 1.28 | 0.791 | **−20.5** |
 
-**The entire saturation is one layer.** `push`, `surge`, `approach` and both fight rungs measure −30 dB
-or cleaner and peak under 0.46; nothing else in the level is near the bus.
+**The entire saturation is one layer.** `push`, `surge`, `approach` and both fight rungs measure
+**−28 dB or cleaner** and peak under **0.56**; nothing else in the level is anywhere near the bus.
 
 ⚠️ **AND A BUS SHAPER DISTORTS EVERYTHING ON THE BUS**, which is why this is a fault and not a colour.
 A kit driven this hot is not a distorted kit — it is the guitars, the drone and the tune being
@@ -58,6 +58,32 @@ against `ROLE_MARGIN_DB`, `beat` at 1.28 sits at **+3.2 where a `part` wants +3*
 loudest role in the arrangement by two tenths of a decibel. At 3.19 it was at +11.1, which is not a
 part, it is a layer flattening a mix. The value chosen for the bus is the value at which the kit leads
 the rung.
+
+## ⚠️ The level is 3.7 LU louder than it shipped, and the drive was made with the cues off
+
+All three pastes say **`cues` off**. So the one thing the hand could not hear is the thing six reports
+were about: music against a cue bus that does not move. Stated rather than left to be found:
+
+| at `run`, LUFS through the shipped bus | |
+|---|---|
+| saurian | **−13.74** |
+| **core, here** | **−14.62** |
+| nebula | −14.97 |
+| approach | −15.78 |
+| rime | −16.02 |
+| mire | −17.36 |
+| labyrinth | −20.64 |
+| *core, before this* | *−18.29* |
+
+⚠️ **IT IS THE SECOND LOUDEST OPENING IN THE GAME AND IT WAS THE SECOND QUIETEST**, for the level
+`src/content/core.ts` opens by calling the loudest thing the game contains. **Nothing here asks more
+of the cue bus than the game already asks somewhere else** — Saurian Belt sits 0.9 LU above this and
+ships — which is the whole of why this is acceptable without a fresh mix pass against the gun.
+
+⚠️ **AND IF THE GUN DOES GET LOST IN IT, THE LEVER IS `trim` AND NOT THE LADDER.**
+[0191](0191-a-place-sits-somewhere.md) is one number that moves the place without touching a ratio the
+hand set or the contour it drove. That is the correct fix for *the music is over the gun here*, and it
+is the wrong fix for the saturation below, which is the distinction the next section is about.
 
 ## ⚠️ A `trim` was built for exactly this and measured wrong
 
@@ -90,6 +116,36 @@ land within 0.06 LU of where they already ship, and `LEVEL_HOLD.core` comes back
 **The whole change is at the front of the level.** Holding the drive's shape instead would have dragged
 the untouched end of the level below anything it has ever been, to preserve a drop whose top had moved.
 
+## ⚠️ Five layers now close and reopen, which is the half of the ask a table can show
+
+The ask names three things to tweak — *"the opening, closing and loudness"* — and the first two are
+the dashboard's own verbs for a layer arriving and leaving. Transcribed, this is what the level does:
+
+| layer | `run` | `push` | `surge` | `approach` | `boss` | `bossPeak` |
+|---|---|---|---|---|---|---|
+| `drone` | ● | ● | — | ● | ● | ● |
+| `ride` | — | ● | — | ● | ● | ● |
+| `stomp` | ● | ● | ● | — | ● | ● |
+| `frenzy` | — | — | ● | — | ● | ● |
+| `wraith` | — | — | ● | — | ● | ● |
+
+⚠️ **THE FIGHT'S OWN THREE ARRIVE AT `surge`, LEAVE FOR THE `approach`, AND COME BACK FOR THE BOSS.**
+`stomp`, `frenzy` and `wraith` sound nowhere in the game before the fight, in any place; here the hand
+opened all three two rungs early and then left the `approach` alone, so the level previews the boss
+and withdraws it. **That is either the best thing in this drive or the one mistake in it**, and no
+measurement decides which — it is the first thing to listen for after the two kick drums.
+
+⚠️ **AND THE DRONE — THE THING THIS PLACE IS ABOUT — GOES OUT FOR THE `surge`.** `src/content/core.ts`
+opens by calling it the subject: *"everything falls towards the bottom of this piece and nothing comes
+back out."* For forty-five seconds it does come back out. Again the hand's, again unmeasurable, and
+again worth an ear.
+
+⚠️ **NOTHING GUARDS ANY OF THIS AND NOTHING SHOULD** — [0161](0161-the-shape-of-a-level-is-not-guarded.md).
+`RUNG_CLOSES` holds the SHARED ladder's closures; a place closing and reopening a layer is the
+authoring judgement [0120](0120-a-rung-may-close-a-layer.md) and
+[0162](0162-a-place-has-its-own-ladder.md) between them made available, and this is the first place to
+use it three times in one level.
+
 ## ⚠️ `bass` and `beat` open in a level, and that is the ask rather than an oversight
 
 [0095](0095-the-level-has-its-own-music.md) made them `TITLE_ONLY` because *"an A-rooted riff is a
@@ -110,7 +166,7 @@ silence"*. This is that one notch quieter: a lead the ladder has **buried**.
 
 | rung | was | now | why |
 |---|---|---|---|
-| `run` | `engine` | **`beat`** | the kit is 8 dB over `engine` and 20 over `groove`; `engine` was a `part` sitting 12.0 dB under one and is a `pulse` at 2.9 clear of one |
+| `run` | `engine` | **`beat`** | as driven the kit sat 8 dB over `engine` and 20 over `groove`; at the shipped 1.28 it clears a `part`'s margin at **+3.2 against +3** while `engine` — a `part` sitting 12.0 dB under one — is a `pulse` 2.9 clear of one |
 | `push` | *(the arrangement's `hook`)* | **`call`** | the desk took `hook` to 0.17 of a rung where `call` is 0.68; no other place follows `call` at `push`, and four of the six follow `arp` |
 | `surge` | `lead` | **`lead`** | `hook` is 3.4 dB up in gain and by MARGIN `hook` −2.7, `counter` −2.8 and `lead` −3.0 are the same three tenths — a tie is not a displacement |
 
@@ -225,7 +281,15 @@ owed as its own change with its own ear.
 
 ## What is owed
 
-**An ear, on the branch preview, with the dashboard open on `eye`.** The two kicks at `run`; `beat` at
-1.28 or 1.59; whether `beat` 0.06 at `push` and `drive` 0.06 at `surge` are ghosts or zeros; and
-whether the boss still arrives after a `surge` that already has its blast beat. Every one of those is
-one number in `THEMES.core` and a re-solve.
+**An ear, on the branch preview, with the dashboard open on `eye`**, in this order:
+
+1. **The fight's three previewed at `surge` and withdrawn for the `approach`** — the biggest single
+   claim in the drive, and the table above is everything a measurement can say about it.
+2. **The two kick drums at `run`** — the title's syncopated eighths under `sub`'s double kick.
+3. **The drone out for the `surge`**, in the one place the drone is the subject of.
+4. **`beat` at 1.28 or 1.59** — the one number here that is not the hand's, and the measurement that
+   chose it is in the row beside it.
+5. **`beat` 0.06 at `push` and `drive` 0.06 at `surge`** — both inside the audible floor, so *ghost or
+   zero* is a choice rather than a rounding.
+
+Every one is one number in `THEMES.core` followed by `node scripts/solve-hold.mjs core`.
