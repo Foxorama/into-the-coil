@@ -331,6 +331,12 @@ export interface CueLayer {
    * the note — what a held flute or bowed string does and a synthesised one does not. Absent is none.
    */
   vibrato?: number;
+  /**
+   * Cents the note starts away from its pitch and slides into over its first 90 ms — negative is from
+   * below. The scoop a sax or a blues singer leans into a note with (0331's eleventh listen). Absent is
+   * none.
+   */
+  scoop?: number;
 }
 
 /**

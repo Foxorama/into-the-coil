@@ -205,6 +205,9 @@ const RELEASE_SECONDS = 0.006;
 /** How fast a stated `vibrato` wavers — a flautist's or a violinist's, about five and a half a second. */
 const VIBRATO_HZ = 5.4;
 
+/** How long a stated `scoop` takes to reach the note. */
+const SCOOP_SECONDS = 0.09;
+
 /**
  * The resonance a lowpass gets when a layer does not name one, and the one a highpass always gets.
  *
@@ -451,6 +454,11 @@ export function sampleLayerInto(
     let step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
     // 0331's ninth listen: a vibrato that eases in over the first third of the note.
     if (layer.vibrato) step *= Math.pow(2, (layer.vibrato * Math.min(1, u * 3) * Math.sin((i / rate) * VIBRATO_HZ * Math.PI * 2)) / 1200);
+    // 0331's eleventh listen: a scoop, easing into the pitch over the first 90 ms.
+    if (layer.scoop && i < SCOOP_SECONDS * rate) {
+      const left = 1 - i / (SCOOP_SECONDS * rate);
+      step *= Math.pow(2, (layer.scoop * left * left) / 1200);
+    }
     phase += step;
     if (phase >= 1) phase -= 1;
     let value: number;

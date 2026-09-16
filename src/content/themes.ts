@@ -1541,10 +1541,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         swell over the heart there — *"that fade out for 30 secs and then strong kick back in is
         actually pretty good"* — is the aura doing exactly its job.
       */
-      run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.1042, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0.6455, ownC: 0.0984, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4413, counter: 0.3167, toll: 0, ownA: 0.1425, ownB: 0.46, ownC: 0, ownD: 0.447, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1083, call: 0.0971, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0.1132, ownB: 0.7243, ownC: 0, ownD: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, lead: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07452, ownD: 0, lead: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0.1148, ownC: 0, ownD: 0, lead: 0.3245, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4076, counter: 0.3072, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.3826, lead: 0.2298, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1083, call: 0.0971, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0.1703, ownB: 0, ownC: 0, ownD: 0, lead: 0.3641, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },

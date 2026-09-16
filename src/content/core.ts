@@ -87,24 +87,6 @@ const FIFTH: readonly number[] = [7, 7, 3, 5, 7, 7, 12, 2, 3, 5, 7, 7, 12, 3, 2,
  */
 const HELD_ROOT: readonly number[] = ROOT.map((root) => (root < 0 ? root + 12 : root));
 
-/**
- * THE HEART'S RHYTHM — four bars of sixteenths, a beat about every 1.07 seconds.
- *
- * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, and slower on the fifth listen.** *"Heartbeat
- * needs to be slightly slower."* It beat every two beats of the level's 150 — 0.8 s, 75 a minute. The
- * sixteenth grid cannot divide four bars into equal slower beats short of a full bar (37.5 a minute),
- * so the gaps alternate between eleven and ten sixteenths: **56 a minute on average, drifting by one
- * sixteenth**, which is what a resting heart does rather than a thing to hide. Lub, then dub a
- * sixteenth-and-a-bit later, the second pair a touch softer than the first.
- */
-const HEART: readonly (number | null)[] = (() => {
-  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
-  [0, 11, 21, 32, 43, 53].forEach((at, i) => {
-    steps[at] = i % 2 === 0 ? 1 : 0.94;
-    steps[at + 2] = i % 2 === 0 ? 0.7 : 0.66;
-  });
-  return steps;
-})();
 
 
 /**
@@ -284,12 +266,121 @@ const splitByRoom = (line: readonly (number | null)[], room: number): [(number |
 const [FLUTE_PASSING, FLUTE_LANDING] = splitByRoom(FLUTE_SLOW, 3);
 
 /**
- * THE METAL IN THE BALLAD — power chords on `B_ROOT`: the root and fifth an octave up, two hits a bar,
- * and a palm-muted root in eighths under them.
+ * THE HEART, MOVEMENT BY MOVEMENT — 0331's eleventh listen.
+ *
+ * > *"The heartbeat is too fast at the start still, needs to be something like every 4 seconds for the
+ * > first segment, then every 3 secs for the next segment, then every 2, then the pace it has now for
+ * > the last segment. It needs to be subtle at first and then be a noticeable heartbeat at the end."*
+ *
+ * ⚠️ **A HEART THAT SPEEDS UP ACROSS THE LEVEL IS THE STORY TOLD IN ONE SOUND**, and each rate is a
+ * pattern of its own because a layer plays one rhythm. On the sixteenth grid: six beats in sixteen bars
+ * (4.27 s, `ownC`), two in four (3.2 s, `ownB`), three in four (2.13 s, inside the ballad's drums in
+ * `ownD`), then `HEART_SLOWED` (0.91 s, `ownA`) for the acceptance and `HEART_QUICK` for the fight.
+ * The slower the heart, the later its second sound, as a resting one's is.
  */
-const POWER_ROOT: readonly (number | null)[] = turned(B_ROOT.flatMap((root) => [root + 12, root + 12]));
-const POWER_FIFTH: readonly (number | null)[] = turned(B_ROOT.flatMap((_root, bar) => [B_FIFTH[bar]! + 12, B_FIFTH[bar]! + 12]));
-const CHUG: readonly (number | null)[] = turned(B_ROOT.flatMap((root) => [root, root, root, root, root, root, root, root]));
+const heartAt = (length: number, lubs: readonly number[], dub: number): (number | null)[] => {
+  const steps: (number | null)[] = Array.from({ length }, () => _);
+  lubs.forEach((at, i) => {
+    steps[at] = i % 2 === 0 ? 1 : 0.94;
+    steps[at + dub] = i % 2 === 0 ? 0.7 : 0.66;
+  });
+  return steps;
+};
+const HEART_DISTANT = heartAt(256, [0, 43, 86, 128, 171, 214], 3);
+const HEART_PUSH = heartAt(64, [0, 32], 3);
+const HEART_BALLAD = heartAt(64, [0, 21, 42], 2);
+
+/**
+ * The heart's three voices on `steps` — the chest, its upper body and the knock — scaled by `level`.
+ * Written once, because five layers now beat it at five speeds and they must stay one heart.
+ */
+const heartVoices = (steps: readonly (number | null)[], level: number): MusicVoice[] => [
+  {
+    steps,
+    pitched: false,
+    perBeat: 4,
+    octave: 0,
+    note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5 * level, attack: 0.002, curve: 2, drive: 0.4 },
+  },
+  {
+    steps,
+    pitched: false,
+    perBeat: 4,
+    octave: 0,
+    note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1 * level, attack: 0.002, curve: 3, drive: 0.3 },
+  },
+  {
+    steps,
+    pitched: false,
+    perBeat: 4,
+    octave: 0,
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05 * level, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
+  },
+];
+
+/**
+ * THE SAX — the ballad's soul, answering the violins. 0331's eleventh listen: *"it's good at the moment,
+ * but just a bit soulless… sax? does it need a bit of the good ole sax blues… maybe it needs to be
+ * symphonic orchestral blues instead of symphonic orchestral metal."*
+ *
+ * ⚠️ **IT SPEAKS WHERE THE VIOLINS HOLD**, in eighths on the minor pentatonic — A, C, D, E, G, the blues
+ * scale's five notes that A minor already owns, so the player's gun stays in key — and lands on long
+ * notes the violins climb over. The blue note itself is the scoop: every note leans up into its pitch.
+ */
+const SAX: readonly (number | null)[] = turned([
+  _, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 10,
+  12, _, 15, 17, 15, _, 12, _, _, _, _, _, _, _, _, _,
+  _, _, _, _, _, _, 17, 15, 12, _, _, _, _, _, _, _,
+  19, _, 17, 15, _, 12, 15, _, 19, _, _, _, _, _, _, _,
+  _, _, _, _, _, _, 17, 19, _, _, _, _, 22, _, 19, 17,
+  15, _, _, _, _, _, _, _, 15, _, 17, 19, _, 22, 19, _,
+  17, _, _, _, _, _, _, _, _, _, _, _, _, _, 12, 15,
+  17, _, 15, _, 12, _, _, _, _, _, _, _, 10, _, 12, _,
+]);
+
+/**
+ * A tenor sax on `line`, in eighths, each note held `beats`: a reedy saw and a hollow square, a body, and
+ * breath — scooped into every note from below, with a wide vibrato as it is held.
+ */
+const saxVoices = (line: readonly (number | null)[], beats: number, level: number): MusicVoice[] => [
+  {
+    steps: line,
+    pitched: true,
+    perBeat: 2,
+    octave: 1,
+    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.055 * level, attack: 0.025, curve: 0.45, lowFrom: 2600, lowTo: 1700, q: 0.7, highFrom: 160, drive: 0.22, release: BEAT_SECONDS * beats * 0.35, vibrato: 18, scoop: -90 },
+  },
+  {
+    steps: line,
+    pitched: true,
+    perBeat: 2,
+    octave: 1,
+    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.022 * level, attack: 0.03, curve: 0.45, lowFrom: 1600, lowTo: 1200, q: 0.6, release: BEAT_SECONDS * beats * 0.35, vibrato: 18, scoop: -90 },
+  },
+  {
+    steps: line,
+    pitched: true,
+    perBeat: 2,
+    octave: 1,
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.05 * level, attack: 0.03, curve: 0.45, release: BEAT_SECONDS * beats * 0.4, vibrato: 18, scoop: -90 },
+  },
+  {
+    steps: line.map((note) => (note === null ? _ : 1)),
+    pitched: false,
+    perBeat: 2,
+    octave: 0,
+    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.012 * level, attack: 0.02, curve: 1, lowFrom: 4500, lowTo: 3000, highFrom: 1100, release: BEAT_SECONDS * beats * 0.3 },
+  },
+];
+
+/**
+ * THE BASS AND THE ORGAN — 0331's eleventh listen: *"it also needs something with a bit more bass,
+ * it's not quite hitting me in the feels."* A soul ballad's bottom is a bass player leaning on the root
+ * and an organ holding the chord under everything; both on `B_*`. The bass plays the root on one and
+ * three and walks to the fifth on four, 73–196 Hz — above the heart's thump rather than on it.
+ */
+const BASS_LINE: readonly (number | null)[] = turned(B_ROOT.flatMap((root, bar) => [root, _, root, B_FIFTH[bar]!]));
+const [SAX_PASSING, SAX_LANDING] = splitByRoom(SAX, 4);
 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
@@ -677,42 +768,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   hook: pipeVoices(FLUTE, 2, 1.4, 1, 0.02, 0.7),
 
   /*
-    ── THE HIGH STRINGS: an E and an A, held — the second movement and the last ────────────────────
+    ── THE SECOND HEART, AND THE HIGH STRINGS THAT STOOD HERE ARE `lead` NOW ───────────────────────
 
     ⚠️ **0331.** *"High harmonies."* Two notes that belong to every chord of the lament or sit a step
     off it — the fifth and the root over A minor, the major seventh and third over F — held over four
     bars by two bows a few cents apart, 660 and 880 Hz with a faint octave above.
   */
-  ownB: [
-    {
-      steps: [7, 7, 12, 12],
-      pitched: true,
-      perBeat: 0.25,
-      octave: 3 + 7 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.1, curve: 0.8, lowFrom: 3000, lowTo: 2200, q: 0.7 },
-    },
-    {
-      steps: [7, 7, 12, 12],
-      pitched: true,
-      perBeat: 0.25,
-      octave: 3 - 7 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.3, curve: 0.8, lowFrom: 2900, lowTo: 2100, q: 0.7 },
-    },
-    {
-      steps: [7, 7, 12, 12],
-      pitched: true,
-      perBeat: 0.25,
-      octave: 3,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.05, attack: 1.2, curve: 0.8 },
-    },
-    {
-      steps: [7, 7, 12, 12],
-      pitched: true,
-      perBeat: 0.25,
-      octave: 4,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.015, attack: 1.5, curve: 0.8 },
-    },
-  ],
+  ownB: heartVoices(HEART_PUSH, 1),
 
   /*
     ── THE GUITAR: fingerpicked eighths, the second movement's motor ────────────────────────────────
@@ -829,36 +891,68 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
     },
     /*
-      ⚠️ **AND THE METAL — 0331's eighth listen**: *"the 1.10 to 1.43 section needs more orchestral
-      metal in it — it feels like filler atm instead of the high point of the track."* Symphonic metal is
-      the orchestra with a band inside it, so the band is here, on the ballad's chords: two power-chord
-      guitars a few cents apart striking twice a bar, a palm-muted root chugging eighths under them, and
-      a choir holding the third and fifth over the strings. The drums are in `ownD`.
+      ⚠️ **THE METAL GUITARS STOOD HERE, AND THE BAND IS A SOUL BAND NOW** — 0331's eleventh listen:
+      *"maybe it needs to be symphonic orchestral blues instead of symphonic orchestral metal."* Two
+      power-chord guitars and a palm-muted chug went; what replaced them is the three things a soul
+      ballad stands on — a bass, an organ, and a tenor sax singing over the strings.
     */
     {
-      steps: POWER_ROOT,
+      // The bass: a round plucked tone, the finger on the string and the body under it.
+      steps: BASS_LINE,
       pitched: true,
-      perBeat: 0.5,
-      octave: 1 + 8 / 1200,
-      accents: [1, 0.84],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.045, attack: 0.004, curve: 1.3, lowFrom: 2000, lowTo: 1200, q: 0.6, drive: 0.5 },
-    },
-    {
-      steps: POWER_FIFTH,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 1 - 8 / 1200,
-      accents: [1, 0.84],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.04, attack: 0.004, curve: 1.3, lowFrom: 1900, lowTo: 1150, q: 0.6, drive: 0.5 },
-    },
-    {
-      steps: CHUG,
-      pitched: true,
-      perBeat: 2,
+      perBeat: 1,
       octave: 1,
-      accents: [1, 0.62, 0.8, 0.62, 0.92, 0.62, 0.8, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.05, attack: 0.002, curve: 3.6, lowFrom: 1200, lowTo: 500, q: 0.6, drive: 0.5 },
+      accents: [1, 0.8, 0.9, 0.78],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.2, attack: 0.006, curve: 1.2, lowFrom: 900, lowTo: 500, q: 0.6, release: BEAT_SECONDS * 0.6 },
     },
+    {
+      steps: BASS_LINE,
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [1, 0.8, 0.9, 0.78],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.7, gain: 0.05, attack: 0.006, curve: 1.6, lowFrom: 1400, lowTo: 380, q: 0.6, release: BEAT_SECONDS * 0.5 },
+    },
+    {
+      // The organ's drawbars: the root an octave down, the chord, and the root an octave up — sines, held,
+      // with the slow waver of a rotating speaker.
+      steps: turned(B_ROOT.map((root) => root + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 0,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.09, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 5 },
+    },
+    {
+      steps: turned(B_ROOT.map((root) => root + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.07, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 6 },
+    },
+    {
+      steps: turned(B_THIRD.map((third) => third + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.06, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 6 },
+    },
+    {
+      steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.06, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 6 },
+    },
+    {
+      steps: turned(B_ROOT.map((root) => root + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.03, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 7 },
+    },
+    // The sax: its running notes, and the notes it lands on and holds.
+    ...saxVoices(SAX_PASSING, 1, 1),
+    ...saxVoices(SAX_LANDING, 3.2, 1.1),
     {
       // The choir: an "aah" is a round tone with its upper partials soft — triangles and sines, slow.
       steps: turned(B_THIRD.map((third) => third + 12)),
@@ -987,32 +1081,37 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE LEAD: the first guitar, and `counter` is the second one ─────────────────────────────────
+    ── THE HIGH STRINGS: an E and an A, held — 0331's high harmonies, moved from `ownB` so that slot
+    could beat the second movement's heart ─────────────────────────────────────────────────────────
   */
   lead: [
     {
-      steps: [
-        12, _, 14, _, 15, _, 14, _,
-        12, _, 10, _, 8, _, _, _,
-        15, _, 17, _, 19, _, 17, _,
-        15, _, 14, _, 12, _, _, _,
-      ],
+      steps: [7, 7, 12, 12],
       pitched: true,
-      perBeat: 2,
-      octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.13, attack: 0.015, curve: 1.6, lowFrom: 3400, lowTo: 1700, q: 1.6, drive: 0.36 },
+      perBeat: 0.25,
+      octave: 3 + 7 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.1, curve: 0.8, lowFrom: 3000, lowTo: 2200, q: 0.7 },
     },
     {
-      steps: [
-        12, _, 14, _, 15, _, 14, _,
-        12, _, 10, _, 8, _, _, _,
-        15, _, 17, _, 19, _, 17, _,
-        15, _, 14, _, 12, _, _, _,
-      ],
+      steps: [7, 7, 12, 12],
       pitched: true,
-      perBeat: 2,
-      octave: 1,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.07, attack: 0.02, curve: 1.7, lowFrom: 1700, lowTo: 900, q: 1.4 },
+      perBeat: 0.25,
+      octave: 3 - 7 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.3, curve: 0.8, lowFrom: 2900, lowTo: 2100, q: 0.7 },
+    },
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 3,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.05, attack: 1.2, curve: 0.8 },
+    },
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 4,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.015, attack: 1.5, curve: 0.8 },
     },
   ],
 
@@ -1336,29 +1435,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     ⚠️ **0331's seventh listen.** `ownA`'s voice on `HEART`, at 56 a minute: *"the v6 heartbeat at the
     start was better as it was a bit more subdued."* It hands over to `ownA`, quickened, at the twist.
   */
-  ownC: [
-    {
-      steps: HEART,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5, attack: 0.002, curve: 2, drive: 0.4 },
-    },
-    {
-      steps: HEART,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1, attack: 0.002, curve: 3, drive: 0.3 },
-    },
-    {
-      steps: HEART,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
-    },
-  ],
+  ownC: heartVoices(HEART_DISTANT, 1),
 
   /*
     ── THE BALLAD'S DRUMS: timpani on the one, a deep half-time drum on the three ──────────────────
@@ -1421,7 +1498,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
-        1, _, _, _, _, _, _, _, 0.86, 0.58, 0.74, 0.58, 0.8, 0.62, 0.86, 0.68,
+        1, _, _, _, _, _, _, _, 0.86, _, 0.6, _, _, _, _, _,
       ],
       pitched: false,
       perBeat: 4,
@@ -1434,7 +1511,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
         1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
-        1, _, _, _, _, _, _, _, 0.86, 0.58, 0.74, 0.58, 0.8, 0.62, 0.86, 0.68,
+        1, _, _, _, _, _, _, _, 0.86, _, 0.6, _, _, _, _, _,
       ],
       pitched: false,
       perBeat: 4,
@@ -1447,7 +1524,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.24, gain: 0.1, attack: 0.001, curve: 4.2, lowFrom: 7000, lowTo: 3200, highFrom: 350 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.075, attack: 0.004, curve: 4, lowFrom: 5200, lowTo: 2400, highFrom: 300 },
     },
     {
       steps: [_, 1, _, 0.92, _, 1, _, 0.94, _, 1, _, 0.92, _, 1, _, 0.98],
@@ -1456,6 +1533,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'sine', from: 196, to: 184, seconds: 0.1, gain: 0.1, attack: 0.001, curve: 5 },
     },
+    // The ballad's heart, every 2.13 s — 0331's eleventh listen.
+    ...heartVoices(HEART_BALLAD, 0.37),
   ],
 
   frenzy: [

@@ -282,7 +282,14 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
   */
   ownA: 4,
   ownB: 4,
-  ownC: 4,
+  /*
+    ⚠️ **SIXTEEN, FOR ONE HEARTBEAT EVERY FOUR SECONDS** — 0331's eleventh listen: *"the heartbeat is too
+    fast at the start still, needs to be something like every 4 seconds for the first segment."* Four
+    bars is 6.4 seconds and cannot hold an even beat every four; sixteen holds six, 4.27 s apart. Only
+    The Black Heart sounds this slot, and it costs about 3.4 MB of 0188's resident budget — the guard
+    measuring that is owed its re-reading when this ships.
+  */
+  ownC: 16,
   ownD: 4,
 };
 
