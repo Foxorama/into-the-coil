@@ -88,6 +88,25 @@ const FIFTH: readonly number[] = [7, 7, 3, 5, 7, 7, 12, 2, 3, 5, 7, 7, 12, 3, 2,
  */
 const HELD_ROOT: readonly number[] = ROOT.map((root) => (root < 0 ? root + 12 : root));
 
+/**
+ * THE HEART'S RHYTHM — four bars of sixteenths, a beat about every 1.07 seconds.
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, and slower on the fifth listen.** *"Heartbeat
+ * needs to be slightly slower."* It beat every two beats of the level's 150 — 0.8 s, 75 a minute. The
+ * sixteenth grid cannot divide four bars into equal slower beats short of a full bar (37.5 a minute),
+ * so the gaps alternate between eleven and ten sixteenths: **56 a minute on average, drifting by one
+ * sixteenth**, which is what a resting heart does rather than a thing to hide. Lub, then dub a
+ * sixteenth-and-a-bit later, the second pair a touch softer than the first.
+ */
+const HEART: readonly (number | null)[] = (() => {
+  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
+  [0, 11, 21, 32, 43, 53].forEach((at, i) => {
+    steps[at] = i % 2 === 0 ? 1 : 0.94;
+    steps[at + 2] = i % 2 === 0 ? 0.7 : 0.66;
+  });
+  return steps;
+})();
+
 
 /**
  * THE THEME — `call`'s tune, and it is the melody the whole level is a setting of.
@@ -533,11 +552,17 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     the note, a sine under it for the body, and a short knock on the bass note. Never driven.
   */
   groove: [
+    /*
+      ⚠️ **THE LEFT HAND IS AN OCTAVE UP, OUT OF THE HEART'S WAY** — 0331's fifth listen: *"we lose the
+      heartbeat sound now around the 45 sec transition."* At octave 1 the piano's bass sat at 62–147 Hz,
+      exactly where the heart's thump is heard, and arrived at 42 s. At octave 2 it is 124–294 Hz, still
+      under the chords, and the body sine under it is half what it was.
+    */
     {
       steps: PIANO_BASS,
       pitched: true,
       perBeat: 0.5,
-      octave: 1,
+      octave: 2,
       accents: [1, 0.74],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.1, attack: 0.002, curve: 2.4, lowFrom: 2200, lowTo: 500, q: 0.8 },
     },
@@ -545,9 +570,9 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: PIANO_BASS,
       pitched: true,
       perBeat: 0.5,
-      octave: 1,
+      octave: 2,
       accents: [1, 0.74],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.12, attack: 0.002, curve: 2 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.06, attack: 0.002, curve: 2 },
     },
     {
       steps: PIANO_LOW,
@@ -1038,12 +1063,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   ownA: [
     {
-      steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-      ],
+      steps: HEART,
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -1052,8 +1072,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         distortion noise, most noticeable 2.10 onwards."* The fight is where this heart is loudest, and
         measured there it made **84% of everything under 45 Hz** in the rung. The new floor takes 8.7 dB
         off that band and leaves 45–150 Hz, where a thump is actually heard, where it was.
+
+        ⚠️ **AND BACK DOWN TO 100 → 40, LONGER AND FULLER, ON THE FIFTH** — *"just a bit deeper at the
+        start… it's not deep enough now so it might just be my headphones causing drama there."* The
+        listener's own playback was part of the earlier report. 40 Hz keeps the floor clear of the 24
+        that was measured doing the damage, and the upper body and knock below it are quieter, since
+        they were what made the heart read as a knock rather than a chest.
       */
-      note: { wave: 'sine', from: 110, to: 48, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
+      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5, attack: 0.002, curve: 2, drive: 0.4 },
     },
     /*
       ⚠️ **AND WHAT AN EARBUD CAN HEAR OF IT** — 0331's third listen: *"then the speaker bit kicks in
@@ -1063,28 +1089,18 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       and a muffled thud — and the low sine stays for a speaker that can play it.
     */
     {
-      steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-      ],
+      steps: HEART,
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.2, attack: 0.002, curve: 3, drive: 0.3 },
+      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1, attack: 0.002, curve: 3, drive: 0.3 },
     },
     {
-      steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.72, _, _, _, _, _, 0.96, _, 0.68, _, _, _, _, 0.58,
-      ],
+      steps: HEART,
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.08, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
     },
   ],
 

@@ -1305,7 +1305,9 @@ export function levelWrites(
       order. A layer doubling its own contribution is such a part. What still moves on the downbeat is
       what 0171 always meant by *the boundary* — a nudge, not an entry.
     */
-    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;
+    // 0331: a place may ask for every move to take longer — `glide` on its row, 1 where it says nothing —
+    // at a section change only: a piece starting from silence starts at the shared speed.
+    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target) * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;
     if (!aura && target > 0 && was === 0) opening.push(write);
     if (!aura && target === 0 && was > 0) closing.push(write);
     /*

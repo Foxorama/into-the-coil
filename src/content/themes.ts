@@ -378,6 +378,21 @@ export interface ThemeRow {
    */
   trim?: number;
   /**
+   * How much longer than the shared ramp every move at a section change takes here. Absent is 1.
+   *
+   * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** *"The transitions are also too sharp,
+   * they need to be a bit smoother volume wise."* Each layer's move is an exponential approach over
+   * `RAMP_SECONDS`, scaled by how far it travels, so a part arriving from silence is most of the way
+   * there inside a second and a half. That suits a place whose sections are meant to land; a somber
+   * piece that swells wants the same moves taken slowly. It scales the time constant of every write
+   * `levelWrites` makes except the aura's, which tracks a distance the player steers — so when parts
+   * arrive, and in what order, is unchanged; only how long each takes to get there moves.
+   *
+   * ⚠️ **ABSENT IS 1, so six places are byte-identical**, and it is per place rather than a new shared
+   * constant because the other six were tuned by ear at the shared speed.
+   */
+  glide?: number;
+  /**
    * How far below its own `run` each rung of this place sits, in LU. Absent, and every rung is level.
    *
    * ── 0226 HELD BOTH HALVES AND ONLY ONE OF THEM WAS EVER REPORTED ────────────────────────────────
@@ -1507,10 +1522,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         shared arrangement names neither layer at that rung: the tune under the pipes at `surge`, three
         decibels under where it led at `push`, and the pipes at `approach`, level with the `surge`.
       */
-      run: { drone: 0.06591, chords: 0.0239, arp: 0.03753, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.04249, ownB: 0 },
-      push: { drone: 0.1049, chords: 0.03886, arp: 0.05634, call: 0.1352, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.07517, ownB: 0.0339 },
-      surge: { drone: 0.2242, chords: 0.08362, arp: 0.2228, call: 0.3231, groove: 1.339, hook: 0, counter: 0.2319, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.1278, ownB: 0.1385 },
-      approach: { drone: 0.7999, chords: 0.3012, arp: 0.9653, call: 1.012, groove: 6.045, hook: 0.3008, counter: 1.607, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 1.349, dread: 0, ownA: 0.4455, ownB: 0.9801 },
+      run: { drone: 0.06995, chords: 0.02449, arp: 0.04521, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.05814, ownB: 0 },
+      push: { drone: 0.1049, chords: 0.0389, arp: 0.06865, call: 0.1381, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.09154, ownB: 0.03495 },
+      surge: { drone: 0.31, chords: 0.1158, arp: 0.4631, call: 0.582, groove: 2.186, hook: 0, counter: 0.4006, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.123, ownB: 0.2503 },
+      approach: { drone: 0.2011, chords: 0.0758, arp: 0.3155, call: 0.3325, groove: 2.006, hook: 0.101, counter: 0.5045, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 0.3725, dread: 0, ownA: 0.03955, ownB: 0.322, auraSlow: 0.088, auraFast: 0.072 },
       boss: { sub: 2.668, crash: 0, ownA: 1.898 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 2.061 },
     },
@@ -1541,7 +1556,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       opening, −17.1, −15.6, −14.6 from 1:06, −15.6 in the fight; the loudest rung peaks at 0.79 of full
       scale and is −26 dB dirty against the −16 the guard allows.
     */
-    trim: 3.745,
+    trim: 3.663,
+    // 0331's fifth listen: "the transitions are also too sharp" — every section change here takes six times as long.
+    glide: 6,
     /*
       ⚠️ **AND 0331 TURNS THE CONTOUR UPSIDE DOWN, WHICH 0329 REFUSES.** *"A rising crescendo as we get
       to the end of the surge, that then tapers off very slightly as it leads into the boss music."* So
@@ -1998,7 +2015,7 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 0.9744, surge: 0.713, approach: 0.2124, boss: 0.1457, bossPeak: 0.1384 },
+  core: { push: 0.9744, surge: 0.5041, approach: 0.713, boss: 0.1502, bossPeak: 0.1433 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */
