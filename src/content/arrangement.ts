@@ -427,14 +427,12 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     is the core of the piece from the opening.
   */
   core: {
-    // 0331's seventh listen: the slow heart for the first two movements, the quickened one and the
-    // ballad's drums after the twist, and the high strings a bed wherever they hold.
+    // 0331's twelfth listen: a heart per movement — `ownC`, `ownD`, the ballad's drums and heart in
+    // `ownA`, and `ownB` — each a pulse. The fight's heart is in `stomp`.
     run: { ownC: 'pulse' },
-    push: { ownC: 'pulse', ownB: 'bed' },
-    surge: { ownA: 'pulse', ownD: 'pulse' },
-    approach: { ownA: 'pulse', ownB: 'bed' },
-    boss: { ownA: 'pulse' },
-    bossPeak: { ownA: 'pulse' },
+    push: { ownD: 'pulse' },
+    surge: { ownA: 'pulse' },
+    approach: { ownB: 'pulse' },
   },
 };
 

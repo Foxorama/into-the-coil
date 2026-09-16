@@ -281,16 +281,17 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
     than the base, so a sixteen-bar own layer fails there and the argument gets made.
   */
   ownA: 4,
-  ownB: 4,
   /*
-    ⚠️ **SIXTEEN, FOR ONE HEARTBEAT EVERY FOUR SECONDS** — 0331's eleventh listen: *"the heartbeat is too
-    fast at the start still, needs to be something like every 4 seconds for the first segment."* Four
-    bars is 6.4 seconds and cannot hold an even beat every four; sixteen holds six, 4.27 s apart. Only
-    The Black Heart sounds this slot, and it costs about 3.4 MB of 0188's resident budget — the guard
-    measuring that is owed its re-reading when this ships.
+    ⚠️ **LONGER, SO A HEART CAN BEAT AT THE SPEED ASKED RATHER THAN THE SPEED FOUR BARS DIVIDE INTO** —
+    0331's eleventh and twelfth listens: every ~3.7 s at the opening (seven beats in sixteen bars), every
+    ~2.6 s in the second movement (five in eight), every ~1.4 s in the acceptance (nine in eight). Four
+    bars is 6.4 seconds and holds none of those evenly. Only The Black Heart sounds these three slots
+    (`ownA` is Saurian Belt's and The Approach's too, and stays four); they cost about 5.7 MB of 0188's
+    resident budget together, and the guard measuring that is owed its re-reading when this ships.
   */
+  ownB: 8,
   ownC: 16,
-  ownD: 4,
+  ownD: 8,
 };
 
 /**

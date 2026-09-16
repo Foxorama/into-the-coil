@@ -1308,6 +1308,12 @@ export function levelWrites(
     // 0331: a place may ask for every move to take longer — `glide` on its row, 1 where it says nothing —
     // at a section change only: a piece starting from silence starts at the shared speed.
     if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target) * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;
+    // 0331's twelfth listen: a place may start from silence at once, so its first note is heard as struck.
+    const fromSilence = THEMES[theme].fromSilence;
+    if (!aura && !standing && fromSilence !== undefined) write.tau = fromSilence;
+    // …and may ask a named layer to arrive more slowly, or more quickly, than the rung's own pace.
+    const swell = standing && target > 0 && was === 0 ? THEMES[theme].swell?.[layer] : undefined;
+    if (!aura && swell !== undefined) write.tau *= swell;
     if (!aura && target > 0 && was === 0) opening.push(write);
     // 0331: a layer the place says lingers leaves in one long fade rather than in the arrivals' steps.
     const linger = standing && target === 0 && was > 0 ? THEMES[theme].linger?.[layer] : undefined;

@@ -110,24 +110,6 @@ const HEART_QUICK: readonly (number | null)[] = (() => {
   return steps;
 })();
 
-/**
- * THE HEART AFTER THE TWIST — seven beats in four bars, about 66 a minute.
- *
- * ⚠️ **0331's tenth listen**: *"the heartbeat needs to be just a touch slower, it's slightly too fast
- * for the music now — it's good speed around 2 mins+ into the boss music, but earlier it needs to be
- * just a shade lower between beats."* So `HEART_QUICK` stays the fight's, where it was liked, and the
- * ballad and the acceptance beat between it and the opening's 56: gaps of nine sixteenths and one of
- * ten, which is as even as seven beats can sit on this grid. It no longer lands on the drums, and the
- * ballad's kick stopped imitating it.
- */
-const HEART_SLOWED: readonly (number | null)[] = (() => {
-  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
-  [0, 9, 18, 27, 37, 46, 55].forEach((at, i) => {
-    steps[at] = i % 2 === 0 ? 1 : 0.94;
-    steps[at + 2] = i % 2 === 0 ? 0.7 : 0.66;
-  });
-  return steps;
-})();
 
 /**
  * THE FOUR MOVEMENTS — 0331's seventh listen, which is a story and not a mix note.
@@ -242,7 +224,7 @@ const BALLAD: readonly (number | null)[] = [
  * rings until the piano speaks again — so the two instruments hand the song back and forth.
  */
 const FLUTE_SLOW: readonly (number | null)[] = [
-  _, _, _, _, _, 12, 14, 15, 17, _, _, 15, 12, _, _, _,
+  12, _, _, _, _, 12, 14, 15, 17, _, _, 15, 12, _, _, _,
   _, 10, 12, 14, 15, _, _, _, _, 14, 12, 10, 7, _, _, _,
   _, _, _, _, _, 17, 15, 14, 12, _, _, _, _, 12, 14, 15,
   17, _, _, 19, 17, _, _, _, _, 19, 17, 15, 14, _, 12, _,
@@ -273,9 +255,9 @@ const [FLUTE_PASSING, FLUTE_LANDING] = splitByRoom(FLUTE_SLOW, 3);
  * > the last segment. It needs to be subtle at first and then be a noticeable heartbeat at the end."*
  *
  * ⚠️ **A HEART THAT SPEEDS UP ACROSS THE LEVEL IS THE STORY TOLD IN ONE SOUND**, and each rate is a
- * pattern of its own because a layer plays one rhythm. On the sixteenth grid: six beats in sixteen bars
- * (4.27 s, `ownC`), two in four (3.2 s, `ownB`), three in four (2.13 s, inside the ballad's drums in
- * `ownD`), then `HEART_SLOWED` (0.91 s, `ownA`) for the acceptance and `HEART_QUICK` for the fight.
+ * pattern of its own because a layer plays one rhythm. On the sixteenth grid, at the twelfth listen's
+ * speeds: seven beats in sixteen bars (3.66 s, `ownC`), five in eight (2.56 s, `ownD`), one a bar (1.6 s,
+ * with the ballad's drums in `ownA`), nine in eight (1.42 s, `ownB`), and `HEART_QUICK` for the fight.
  * The slower the heart, the later its second sound, as a resting one's is.
  */
 const heartAt = (length: number, lubs: readonly number[], dub: number): (number | null)[] => {
@@ -286,9 +268,12 @@ const heartAt = (length: number, lubs: readonly number[], dub: number): (number 
   });
   return steps;
 };
-const HEART_DISTANT = heartAt(256, [0, 43, 86, 128, 171, 214], 3);
-const HEART_PUSH = heartAt(64, [0, 32], 3);
-const HEART_BALLAD = heartAt(64, [0, 21, 42], 2);
+// 0331's twelfth listen: *"about .5 sec faster in the earlier sections and .5 sec slower around the
+// 1.44 – 2.04 min mark."* 3.66 s, 2.56 s, 1.6 s (on every downbeat, with the timpani) and 1.42 s.
+const HEART_DISTANT = heartAt(256, [0, 37, 73, 110, 146, 183, 219], 3);
+const HEART_PUSH = heartAt(128, [0, 26, 51, 77, 102], 3);
+const HEART_BALLAD = heartAt(64, [0, 16, 32, 48], 2);
+const HEART_ACCEPT = heartAt(128, [0, 14, 28, 42, 57, 71, 85, 99, 114], 2);
 
 /**
  * The heart's three voices on `steps` — the chest, its upper body and the knock — scaled by `level`.
@@ -768,13 +753,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   hook: pipeVoices(FLUTE, 2, 1.4, 1, 0.02, 0.7),
 
   /*
-    ── THE SECOND HEART, AND THE HIGH STRINGS THAT STOOD HERE ARE `lead` NOW ───────────────────────
+    ── THE LAST HEART BEFORE THE FIGHT: every 1.42 s, and heard ────────────────────────────────────
 
-    ⚠️ **0331.** *"High harmonies."* Two notes that belong to every chord of the lament or sit a step
-    off it — the fifth and the root over A minor, the major seventh and third over F — held over four
-    bars by two bows a few cents apart, 660 and 880 Hz with a faint octave above.
+    ⚠️ **0331's twelfth listen**: *".5 sec slower around the 1.44 – 2.04 min mark."* The high strings that
+    stood in this slot are `lead` now.
   */
-  ownB: heartVoices(HEART_PUSH, 1),
+  ownB: heartVoices(HEART_ACCEPT, 1),
 
   /*
     ── THE GUITAR: fingerpicked eighths, the second movement's motor ────────────────────────────────
@@ -951,8 +935,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.03, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 7 },
     },
     // The sax: its running notes, and the notes it lands on and holds.
-    ...saxVoices(SAX_PASSING, 1, 1),
-    ...saxVoices(SAX_LANDING, 3.2, 1.1),
+    ...saxVoices(SAX_PASSING, 1, 2.2),
+    ...saxVoices(SAX_LANDING, 3.2, 2.4),
     {
       // The choir: an "aah" is a round tone with its upper partials soft — triangles and sines, slow.
       steps: turned(B_THIRD.map((third) => third + 12)),
@@ -1361,91 +1345,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE HEART: the thing the level is named after, and the backing for all four sections ───────
+    ── THE BALLAD'S DRUMS, AND ITS HEART ON EVERY DOWNBEAT ─────────────────────────────────────────
 
-    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Asked for, of the driven level: *"I want
-    the heartbeat to be clearly heard, but to be the background backing for the track… fainter for the
-    first 25 seconds, then kick in where it does, then get slightly louder throughout the following
-    sections… That heart beat and its pacing is the very core of what makes this the sound track for
-    the 'black heart' level."* It was the second voice of `stomp`, which is one fader shared with the
-    blast beat; an own slot is the one layer that can climb on a curve of its own — 0188's mechanism,
-    and the first time a place has opened one in every rung.
-
-    ⚠️ **THE VOICE IS MOVED, NOT REWRITTEN.** 2026-08-14 asked for *"a pulsing heartbeat rhythm for the
-    boss if we're calling the level the black heart"*, and this is that figure note for note: two
-    thumps and a gap, the second softer and closer, because that is what a heart does and why it reads
-    as a body rather than as a drum. **What was liked is left alone**; the ladder is what changes.
-
-    ⚠️ **FOUR BARS, WRITTEN OUT TWICE, BECAUSE A PATTERN SHORTER THAN ITS LAYER DOES NOT REPEAT.**
-    `layerNotes` in `src/app/music.ts` renders `steps` once and stops; the figure was two bars in
-    `stomp`'s two-bar loop and an own slot is four. Copied with the pickup on the last sixteenth of
-    each pair, so the loop point and the half-way point breathe the same way.
-
-    ⚠️ **THE FIRST PASS KEPT ITS 96 → 24 Hz SWEEP ON THE ARGUMENT THAT A THUMP SPENDS ITS ENERGY HIGH,
-    AND THE EAR SAID OTHERWISE.** Turned up through the fight, it made 84% of that rung's energy under
-    45 Hz and was reported as *"speaker distortion… most noticeable 2.10 onwards"*. The figure and the
-    envelope are untouched; only the sweep's floor moved — see the voice.
+    ⚠️ **0331's seventh to twelfth listens.** Timpani on the one with a roll into every fourth bar, a kick
+    on one and three, a snare on two and four — no cymbal — and the heart once a bar, 1.6 s apart, landing
+    with the timpani. Four bars, and `ownA` because it is the one own slot other places share: it has to
+    stay four, and this is the one heart here that four bars divide evenly.
   */
   ownA: [
-    {
-      steps: HEART_SLOWED,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      /*
-        ⚠️ **110 → 48 Hz, WHERE IT WAS 96 → 24** — 0331's second listen: *"there's still speaker
-        distortion noise, most noticeable 2.10 onwards."* The fight is where this heart is loudest, and
-        measured there it made **84% of everything under 45 Hz** in the rung. The new floor takes 8.7 dB
-        off that band and leaves 45–150 Hz, where a thump is actually heard, where it was.
-
-        ⚠️ **AND BACK DOWN TO 100 → 40, LONGER AND FULLER, ON THE FIFTH** — *"just a bit deeper at the
-        start… it's not deep enough now so it might just be my headphones causing drama there."* The
-        listener's own playback was part of the earlier report. 40 Hz keeps the floor clear of the 24
-        that was measured doing the damage, and the upper body and knock below it are quieter, since
-        they were what made the heart read as a knock rather than a chest.
-      */
-      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5, attack: 0.002, curve: 2, drive: 0.4 },
-    },
-    /*
-      ⚠️ **AND WHAT AN EARBUD CAN HEAR OF IT** — 0331's third listen: *"then the speaker bit kicks in
-      around 1:55 again."* From the `approach` on the heart is the largest thing under 45 Hz, and a
-      sine that falls to 48 Hz is felt on a small driver rather than heard. A heart through a chest is
-      heard as its upper body and its knock, so both are here — the same beats, an octave up and short,
-      and a muffled thud — and the low sine stays for a speaker that can play it.
-    */
-    {
-      steps: HEART_SLOWED,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1, attack: 0.002, curve: 3, drive: 0.3 },
-    },
-    {
-      steps: HEART_SLOWED,
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
-    },
-  ],
-
-  /*
-    ── THE SLOW HEART: the first two movements ─────────────────────────────────────────────────────
-
-    ⚠️ **0331's seventh listen.** `ownA`'s voice on `HEART`, at 56 a minute: *"the v6 heartbeat at the
-    start was better as it was a bit more subdued."* It hands over to `ownA`, quickened, at the twist.
-  */
-  ownC: heartVoices(HEART_DISTANT, 1),
-
-  /*
-    ── THE BALLAD'S DRUMS: timpani on the one, a deep half-time drum on the three ──────────────────
-
-    ⚠️ **0331's seventh listen.** A power ballad's beat is half-time — the backbeat on three — and an
-    orchestra plays it on timpani and a bass drum. Both land where the quickened heart does, so the heart
-    is inside the beat rather than beside it; a timpani roll in the last beat of every fourth bar pulls
-    each phrase into the next. **No cymbal**, which two listens asked to be taken out of this place.
-  */
-  ownD: [
     /*
       ⚠️ **0331's tenth listen**: *"some part of the orchestral section sounds a bit too synthy and not
       instrumentally… not sure if it's the drums/bass."* It was: four drums built as falling sine sweeps
@@ -1533,9 +1440,24 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'sine', from: 196, to: 184, seconds: 0.1, gain: 0.1, attack: 0.001, curve: 5 },
     },
-    // The ballad's heart, every 2.13 s — 0331's eleventh listen.
+    // The ballad's heart, once a bar — 0331's twelfth listen.
     ...heartVoices(HEART_BALLAD, 0.37),
   ],
+
+  /*
+    ── THE FIRST HEART: every 3.66 s, faint, from the first note ─────────────────────────────────
+
+    ⚠️ **0331's eleventh and twelfth listens.** *"We also need the first sound to be the heartbeat, it
+    needs to start with the first notes so you hear the flutes and heartbeat, then hear the following
+    beats a few seconds later."* Its first beat is the loop's first step; `fromSilence` on the place's
+    row is what lets it be heard as struck.
+  */
+  ownC: heartVoices(HEART_DISTANT, 1),
+
+  /*
+    ── THE SECOND HEART: every 2.56 s, under the flute and the guitar ────────────────────────────
+  */
+  ownD: heartVoices(HEART_PUSH, 1),
 
   frenzy: [
     {

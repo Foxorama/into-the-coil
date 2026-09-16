@@ -401,6 +401,18 @@ export interface ThemeRow {
    */
   linger?: Partial<Record<MusicLayer, number>>;
   /**
+   * How many times longer (or, under 1, shorter) a named layer takes to ARRIVE at a section change —
+   * 0331's twelfth listen: *"the volume rise and transition for the 1.10 change is a bit too severe"*,
+   * and the acceptance's piano arriving late under a departing ballad was the hole at 1:44. Absent is 1.
+   */
+  swell?: Partial<Record<MusicLayer, number>>;
+  /**
+   * The ramp's time constant, in seconds, when the music starts from silence — 0331's twelfth listen:
+   * *"we also need the first sound to be the heartbeat."* The shared start fades every layer up over a
+   * couple of seconds, which swallows a first beat. Absent, a start from silence ramps as before.
+   */
+  fromSilence?: number;
+  /**
    * How far below its own `run` each rung of this place sits, in LU. Absent, and every rung is level.
    *
    * ── 0226 HELD BOTH HALVES AND ONLY ONE OF THEM WAS EVER REPORTED ────────────────────────────────
@@ -1541,10 +1553,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         swell over the heart there — *"that fade out for 30 secs and then strong kick back in is
         actually pretty good"* — is the aura doing exactly its job.
       */
-      run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07452, ownD: 0, lead: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0.1148, ownC: 0, ownD: 0, lead: 0.3245, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4076, counter: 0.3072, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.3826, lead: 0.2298, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1083, call: 0.0971, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0.1703, ownB: 0, ownC: 0, ownD: 0, lead: 0.3641, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07276, ownD: 0, lead: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3987, counter: 0.3072, toll: 0, ownA: 0.3684, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, ride: 0, crash: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },
@@ -1579,7 +1591,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // 0331's fifth listen: "the transitions are also too sharp" — every section change here takes twice as long.
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
-    linger: { hook: 2, counter: 2.5, groove: 1.6 },
+    // …and the ballad dies away into the acceptance over ten seconds and more — 0331's twelfth.
+    linger: { hook: 2, counter: 3.5, groove: 3, ownA: 1.4 },
+    // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
+    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6 },
+    // 0331's twelfth: the first sound is the heart and the flute, struck rather than faded up.
+    fromSilence: 0.01,
     /*
       ⚠️ **AND 0331 TURNS THE CONTOUR UPSIDE DOWN, WHICH 0329 REFUSES.** *"A rising crescendo as we get
       to the end of the surge, that then tapers off very slightly as it leads into the boss music."* So

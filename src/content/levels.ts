@@ -1510,11 +1510,17 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       1:10."* The lament's sixteen bars; the same song faster from bar 16 (25.6 s); the ballad from bar
       40 (64 s), so it has landed by 1:10; the acceptance from bar 60 (96 s). Each boundary is a few
       units short of its bar, so the rung has turned before that downbeat rather than after it.
+
+      ⚠️ **AND THE BALLAD OPENS FOUR BARS SOONER, ON ITS OWN LEAD-IN** — 0331's twelfth listen: *"the
+      volume rise and transition for the 1.10 change is a bit too severe, we need to increase the
+      instruments and volume slightly earlier to bridge that transition."* `surge` turns at bar 36
+      (57.6 s), and the ballad — still turned so its first bar lands on bar 40 — enters on its own last
+      four, `Dm · Em · F · G`, climbing into the top of the song while it swells in (`swell` on the row).
     */
     sections: [
       { at: 0, section: 'run' },
       { at: 918, section: 'push' },
-      { at: 2298, section: 'surge' },
+      { at: 2070, section: 'surge' },
       { at: 3450, section: 'approach' },
     ],
     boss: 'medusa',
@@ -1531,7 +1537,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       beat at 70 would read as a strobe. `SCROLL_PER_STEP * STEPS_PER_SECOND` is the conversion and it
       is the same one `rig/bench.ts` prints its readout in.
     */
-    landmarks: [{ at: 2298, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
+    landmarks: [{ at: 2070, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
     theme: 'core',
   },
 };
