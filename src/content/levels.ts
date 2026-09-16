@@ -1491,10 +1491,15 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       ⚠️ **THE OPENING IS HALVED AND THE MIDDLE TAKES IT.** 40.0s → 20.7s of `run`, with `push` and
       `surge` going 35.7 → 44.9 and 30.4 → 45.2. `bossAt` does not move, so the level is the same
       length and only where it turns has changed.
+
+      ⚠️ **AND `push` OPENS 6.3 SECONDS SOONER, ON A BAR** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+      *"Black heart needs the heartbeat a bit earlier, the beginning drums need to fade into the
+      heartbeat at 15 secs or so."* 744 → 518 units is 20.7 s → 14.4 s, which is a downbeat, so the
+      fade starts where it was asked for rather than on the next bar after it. Nothing else moves.
     */
     sections: [
       { at: 0, section: 'run' },
-      { at: 744, section: 'push' },
+      { at: 518, section: 'push' },
       { at: 2360, section: 'surge' },
       { at: 3986, section: 'approach' },
     ],

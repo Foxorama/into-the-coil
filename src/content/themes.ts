@@ -1469,11 +1469,19 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       it, including the `approach` it was never in. `stomp` keeps its driven numbers and is the blast
       beat and the hat and nothing else.
 
-      **`ownC` is the china**, out of `engine`: louder at `run`, where it was asked for, and at every
-      other rung exactly what `engine` gave it — `rungIn(engine) × mixOf(engine)`.
+      **No cymbal.** The china was moved out of `engine` and raised at `run` on the first listen, and
+      the second said *"the cymbal crash needs to be removed"* — so it is gone from the place, and
+      `crash` is closed at every rung here where the shared ladder opens it.
 
-      **`hook` is the pipes**, closed at `push`, where the riff it replaced had been whispered to
-      0.17, so they arrive as an OPENING at `surge` — in the build, last, as the part.
+      **`hook` is the pipes, and they arrive at `push` as an answer to the tune** — *"we need to fit
+      in some pipes earlier in the piece as well… so that they don't just suddenly start for no
+      reason."* A `counter` there, under `call`; the `part` at `surge`, louder than on the first pass.
+
+      **`push` opens at 14.4 s, and the drums fade into the heart there** — *"black heart needs the
+      heartbeat a bit earlier, the beginning drums need to fade into the heartbeat at 15 secs or so."*
+      The boundary is `src/content/levels.ts`'s; what makes it a fade is that every drum carried out of
+      `run` falls at it — `beat` to a ghost, `engine`, `sub`, `drive`, and `stomp`, which no longer
+      rises there now that the heart is not inside it — while the heart climbs over the same bars.
 
       **`surge` stops jumping.** Measured with `weigh-arc --writes=surge`, the push → surge downbeat
       raised four carried layers at once — `engine` +9.8 dB, the riff +10.5, `chords` +6.6, `sub` +6.2
@@ -1482,12 +1490,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       the arrivals as 0226 paces a fall, and the kit making room is what lets the register go up.
     */
     ladder: {
-      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283, ownA: 0.312, ownC: 1.811 },
-      push: { chords: 0.36, drive: 0.7, hook: 0, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 1.108, ownA: 1.655, ownC: 0.891 },
-      surge: { sub: 3.5, drone: 0, bass: 0.335, engine: 1.08, chords: 0.36, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.38, lead: 0.5, drive: 0.143, toll: 1.612, crash: 1.574, dread: 0.614, counter: 0.803, stomp: 0.679, frenzy: 1.078, wraith: 0.382, ownA: 1.56, ownC: 1.002 },
-      approach: { sub: 1.45, ownA: 1.51, ownC: 0.947 },
-      boss: { sub: 2.668, ownA: 2.115, ownC: 1.04 },
-      bossPeak: { sub: 2.773, ownA: 2.297, ownC: 1.021 },
+      run: { chords: 0, call: 0, drive: 0.55, engine: 1, perc: 0, groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28, sub: 3.385, stomp: 0.283, ownA: 0.281 },
+      push: { chords: 0.36, drive: 0.7, hook: 0.123, drone: 1.498, bass: 0.725, beat: 0.128, sub: 3.553, perc: 0.144, stomp: 0.4, ownA: 1.489 },
+      surge: { sub: 3.5, drone: 0, bass: 0.335, engine: 1.08, chords: 0.36, perc: 0.243, groove: 0.401, arp: 0.72, ride: 0, call: 0.309, hook: 0.319, lead: 0.5, drive: 0.143, toll: 1.612, crash: 0, dread: 0.614, counter: 0.803, stomp: 0.3, frenzy: 1.078, wraith: 0.382, ownA: 1.363 },
+      approach: { sub: 1.45, crash: 0, ownA: 1.341 },
+      boss: { sub: 2.668, crash: 0, ownA: 1.898 },
+      bossPeak: { sub: 2.773, crash: 0, ownA: 2.061 },
     },
     /*
       ⚠️ **THE SHAPE THE DESK WAS DRIVEN INTO, AND THE FIRST CONTOUR ANY PLACE STATES** — 0329. In LU
@@ -1520,7 +1528,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       pan pipe the `surge` lifts into, and a single breathed line with no room around it is a
       synthesiser playing notes. 0.5 is Rime Shelf's open sky rather than Ember Nebula's cathedral,
       which is the *"attributes of all previous levels"* half of the brief made concrete.
-      `ownA` and `ownC` keep the room of the layers they were moved out of, so they sound as they did.
+      `ownA` keeps the room of the layer it was moved out of, so it sounds as it did.
     */
     air: {
       drone: 0.8,
@@ -1540,7 +1548,6 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       perc: 0.08,
       drive: 0.06,
       engine: 0.05,
-      ownC: 0.05,
       frenzy: 0.05,
       groove: 0.04,
       stomp: 0.03,
@@ -1950,7 +1957,7 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 0.483, surge: 0.6191, approach: 0.3834, boss: 0.358, bossPeak: 0.3401 },
+  core: { push: 0.4998, surge: 0.6462, approach: 0.3883, boss: 0.3689, bossPeak: 0.3489 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

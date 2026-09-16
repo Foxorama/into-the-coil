@@ -357,29 +357,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.036, attack: 0.0005, curve: 6, lowFrom: 12000, highFrom: 5200 },
     },
     /*
-      ⚠️ **THE CHINA STOOD HERE AND IT IS `ownC` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`,
-      for the same reason the heart left `stomp`: *"in the first section I want the cymbal crash
-      louder and more prominent"* is a question about one sound in one section, and inside `engine`
-      it could only get louder with the snare and the ride.
+      ⚠️ **A CHINA STOOD HERE, ONCE EVERY FOUR BARS, AND IT IS GONE** —
+      `docs/decisions/0331-the-heart-beats-under-it.md`. The first listen asked for *"the cymbal crash
+      louder and more prominent"* in the opening, and it was moved to a slot of its own and raised; the
+      second listen, having heard it: *"the cymbal crash needs to be removed."* The `crash` layer is
+      closed at every rung in `THEMES.core.ladder` for the same sentence, so no cymbal of either kind is
+      left in this place.
     */
-  ],
-
-  /*
-    ── THE CHINA: once every four bars, and the opening's punctuation ─────────────────────────────
-
-    ⚠️ **THE VOICE IS `engine`'s, MOVED UNCHANGED** — 0331. It is four bars, like `engine` and like an
-    own slot, so it lands on the same beats it always did. The only cymbal sounding at `run` — the
-    `crash` layer is held closed there by the drive — which is how *"the cymbal crash"* in the first
-    section was identified. Every rung but `run` plays it at exactly the level `engine` gave it.
-  */
-  ownC: [
-    {
-      steps: [1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.78],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.6, gain: 0.055, attack: 0.0008, curve: 2.8, lowFrom: 14000, lowTo: 4600, highFrom: 2600 },
-    },
   ],
 
   /*
@@ -426,14 +410,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'sine', from: 196, to: 112, seconds: 0.2, gain: 0.3, attack: 0.001, curve: 4.2, drive: 0.24 },
     },
-    {
-      // The bell of the ride, four times a phrase: the one sound in the kit with a pitch to it.
-      steps: [_, _, 0.9, _, _, _, _, 0.74, _, _, 0.86, _, _, _, 0.7, _],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'tri', from: 3200, to: 2600, seconds: 0.2, gain: 0.085, attack: 0.0006, curve: 4, highFrom: 1600 },
-    },
+    /*
+      ⚠️ **THE BELL OF THE RIDE STOOD HERE AND WAS THE SEAGULL** — 0331. *"The 'seagull' percussion
+      noise doesn't fit."* It was the one pitched thing in the kit: a triangle falling 3200 → 2600 Hz
+      over a fifth of a second, struck four times a phrase off the beat — which is the shape of a gull's
+      cry more than of a bell. Every other pitched glide in this place is under 220 Hz.
+    */
   ],
 
   /*
@@ -594,8 +576,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     blows the note with; and a quieter breath under every held note. The room is `air.hook` on the
     place's row, and it is what makes one line of notes sound like it is being played somewhere.
 
-    ⚠️ **A4 TO C6, WHICH IS AN OCTAVE ABOVE THE TUNE.** `call` plays `THEME` at 352–698 Hz; this sits
-    at 440–1047 Hz, so *higher* is true of the register as well as of the instrument.
+    ⚠️ **A5 TO C7 NOW, TWO OCTAVES ABOVE THE TUNE, AND WITH AN EDGE.** The first pass sat at 440–1047
+    Hz, and the second listen asked for more: *"the pipes need to be a higher tone with a bit more
+    piercing note to them."* So an octave up — 880–2093 Hz, the register a piccolo and a high pan pipe
+    share — the triangle's filter opened so its upper partials come through, the sine body halved so
+    the tone is less round, a quiet square under the held notes for the reedy bite a stopped pipe has
+    when it is blown hard, and a brighter chiff.
 
     ⚠️ **A NEW LINE OVER THE SAME SIXTEEN CHORDS, AND NOT `THEME` AGAIN.** *"The melody needs to shift
     and change rather than keeping the same tune."* Every strong beat is a tone of the bar's chord, so
@@ -609,29 +595,37 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: PIPE_LONG,
       pitched: true,
       perBeat: 2,
-      octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.15, attack: 0.035, curve: 1.1, lowFrom: 3400, lowTo: 2200, q: 0.7 },
+      octave: 3,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.16, attack: 0.03, curve: 1.1, lowFrom: 8000, lowTo: 5000, q: 0.8 },
     },
     {
       steps: PIPE_LONG,
       pitched: true,
       perBeat: 2,
-      octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.1, attack: 0.05, curve: 1 },
+      octave: 3,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.3, gain: 0.05, attack: 0.05, curve: 1 },
+    },
+    {
+      // The bite: a quiet square under the held notes, which is the edge of a pipe blown hard.
+      steps: PIPE_LONG,
+      pitched: true,
+      perBeat: 2,
+      octave: 3,
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 2, gain: 0.03, attack: 0.04, curve: 1.3, lowFrom: 6000, lowTo: 3800, q: 0.8 },
     },
     {
       steps: PIPE_SHORT,
       pitched: true,
       perBeat: 2,
-      octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.13, attack: 0.025, curve: 1.6, lowFrom: 3600, lowTo: 2600, q: 0.7 },
+      octave: 3,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.14, attack: 0.02, curve: 1.6, lowFrom: 8000, lowTo: 5500, q: 0.8 },
     },
     {
       steps: PIPE_SHORT,
       pitched: true,
       perBeat: 2,
-      octave: 2,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.08, attack: 0.03, curve: 1.5 },
+      octave: 3,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.95, gain: 0.04, attack: 0.03, curve: 1.5 },
     },
     {
       // The chiff: the consonant the note is blown with. Full on a held note, lighter on a passing one.
@@ -639,7 +633,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.045, attack: 0.003, curve: 4, lowFrom: 7000, lowTo: 3000, highFrom: 1800 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.05, attack: 0.002, curve: 4.5, lowFrom: 11000, lowTo: 5000, highFrom: 3000 },
     },
     {
       // The breath under a held note, which is what stops a pure tone reading as a synthesiser.
@@ -647,7 +641,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 1.6, gain: 0.018, attack: 0.12, curve: 1.3, lowFrom: 6000, lowTo: 4000, highFrom: 2400, q: 0.6 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 1.6, gain: 0.018, attack: 0.12, curve: 1.3, lowFrom: 9000, lowTo: 6000, highFrom: 3500, q: 0.6 },
     },
   ],
 
@@ -996,11 +990,10 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     `stomp`'s two-bar loop and an own slot is four. Copied with the pickup on the last sixteenth of
     each pair, so the loop point and the half-way point breathe the same way.
 
-    ⚠️ **96 Hz TO 24, AND THAT IS WATCHED RATHER THAN CHANGED.** The same report flagged a sustained
-    root at 41 Hz as *"heavy bass that just makes the speakers pulse without sound"*, and this thump
-    ends below that. It is kept because the energy of a half-second note under `curve: 2` is spent at
-    the top of its sweep: the decision records the 35–45 Hz band of the rendered level before and after
-    the heart was turned up.
+    ⚠️ **THE FIRST PASS KEPT ITS 96 → 24 Hz SWEEP ON THE ARGUMENT THAT A THUMP SPENDS ITS ENERGY HIGH,
+    AND THE EAR SAID OTHERWISE.** Turned up through the fight, it made 84% of that rung's energy under
+    45 Hz and was reported as *"speaker distortion… most noticeable 2.10 onwards"*. The figure and the
+    envelope are untouched; only the sweep's floor moved — see the voice.
   */
   ownA: [
     {
@@ -1013,7 +1006,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 96, to: 24, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
+      /*
+        ⚠️ **110 → 48 Hz, WHERE IT WAS 96 → 24** — 0331's second listen: *"there's still speaker
+        distortion noise, most noticeable 2.10 onwards."* The fight is where this heart is loudest, and
+        measured there it made **84% of everything under 45 Hz** in the rung. The new floor takes 8.7 dB
+        off that band and leaves 45–150 Hz, where a thump is actually heard, where it was.
+      */
+      note: { wave: 'sine', from: 110, to: 48, seconds: 0.52, gain: 0.44, attack: 0.002, curve: 2, drive: 0.4 },
     },
   ],
 

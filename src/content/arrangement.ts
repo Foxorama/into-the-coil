@@ -412,21 +412,14 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     it*, which is that sentence in this table's own words; `counter` would be a line to follow, which
     is exactly what the ask says it must not become. 0164 then holds the heart to being heard in every
     rung, which is what makes *"clearly heard"* a claim rather than a hope.
-
-    ⚠️ **THE CHINA IS A `counter` AT THE OPENING AND `air` EVERYWHERE ELSE.** *"Louder and more
-    prominent"* at `run` is a cymbal the ear can pick out over the kit, and it measures there at −1.0
-    against a counter's −2. Everywhere else it is exactly what it was inside `engine`, and measured on
-    its own it sits 15 to 20 dB under the rung: one strike every four bars is a moment, and a band
-    measure averages a moment away. `air` — *you never notice it* — is what the level it was always
-    played at already said.
   */
   core: {
-    run: { ownA: 'bed', ownC: 'counter' },
-    push: { ownA: 'pulse', ownC: 'air' },
-    surge: { ownA: 'pulse', ownC: 'air' },
-    approach: { ownA: 'pulse', ownC: 'air' },
-    boss: { ownA: 'pulse', ownC: 'air' },
-    bossPeak: { ownA: 'pulse', ownC: 'air' },
+    run: { ownA: 'bed' },
+    push: { ownA: 'pulse' },
+    surge: { ownA: 'pulse' },
+    approach: { ownA: 'pulse' },
+    boss: { ownA: 'pulse' },
+    bossPeak: { ownA: 'pulse' },
   },
 };
 
