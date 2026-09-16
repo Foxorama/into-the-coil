@@ -1522,10 +1522,21 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         shared arrangement names neither layer at that rung: the tune under the pipes at `surge`, three
         decibels under where it led at `push`, and the pipes at `approach`, level with the `surge`.
       */
-      run: { drone: 0.06995, chords: 0.02449, arp: 0.04521, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.05814, ownB: 0 },
-      push: { drone: 0.1049, chords: 0.0389, arp: 0.06865, call: 0.1381, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.09154, ownB: 0.03495 },
-      surge: { drone: 0.31, chords: 0.1158, arp: 0.4631, call: 0.582, groove: 2.186, hook: 0, counter: 0.4006, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.123, ownB: 0.2503 },
-      approach: { drone: 0.2011, chords: 0.0758, arp: 0.3155, call: 0.3325, groove: 2.006, hook: 0.101, counter: 0.5045, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 0.3725, dread: 0, ownA: 0.03955, ownB: 0.322, auraSlow: 0.088, auraFast: 0.072 },
+      /*
+        ⚠️ **THE AURA IS ZERO IN THE FIRST THREE ROWS, BECAUSE THAT IS WHAT IT PLAYS AT THERE** — 0331's
+        sixth listen, *"it starts getting a bit too loud around 55s… it feels like I need to adjust the
+        volume down."* `tests/clean.ts`'s `gainsAt` measures every non-fight rung with the aura at its
+        ceiling, and in play the aura follows `auraBuild`, which is silent until the last stretch before
+        the boss. Measured, the model credited this level's opening with **9.1 LU** of aura and `push`
+        with 5.4 that the player never hears — so a contour authored at +2 LU climbed about 11. Closing
+        the aura where it is silent makes the solve describe the music; the `approach` keeps it, and the
+        swell over the heart there — *"that fade out for 30 secs and then strong kick back in is
+        actually pretty good"* — is the aura doing exactly its job.
+      */
+      run: { drone: 0.2544, chords: 0.07617, arp: 0.1403, call: 0, hook: 0.01137, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraSlow: 0, auraFast: 0, ownA: 0.1784, ownB: 0 },
+      push: { drone: 0.3243, chords: 0.1201, arp: 0.223, call: 0.4324, ride: 0, hook: 0.03336, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraSlow: 0, auraFast: 0, ownA: 0.2798, ownB: 0.1318 },
+      surge: { drone: 0.9936, chords: 0.3741, arp: 1.669, call: 1.978, groove: 8.955, hook: 0.1707, counter: 1.436, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraSlow: 0, auraFast: 0, ownA: 0.335, ownB: 1.018 },
+      approach: { drone: 0.6132, chords: 0.2311, arp: 0.9593, call: 1.016, groove: 6.14, hook: 0.31, counter: 1.543, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 1.132, dread: 0, ownA: 0.1144, ownB: 0.9869, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 1.898 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 2.061 },
     },
@@ -1556,7 +1567,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       opening, −17.1, −15.6, −14.6 from 1:06, −15.6 in the fight; the loudest rung peaks at 0.79 of full
       scale and is −26 dB dirty against the −16 the guard allows.
     */
-    trim: 3.663,
+    trim: 4.163,
     // 0331's fifth listen: "the transitions are also too sharp" — every section change here takes six times as long.
     glide: 6,
     /*
@@ -1574,7 +1585,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       is too steep, the first 66 need to be slightly louder overall."* The step into the peak is 1 LU
       where it was 3, the section before it 2 LU higher, and the opening half a unit up.
     */
-    contour: { push: 2, surge: 3.5, approach: 4.5, boss: 3.5, bossPeak: 3.5 },
+    /*
+      ⚠️ **AND NEARLY FLAT BY THE SIXTH** — *"it starts getting a bit too loud around 55s and gets too
+      loud from there compared to the start… it feels like I need to adjust the volume down after the
+      first 55s or so."* Which is 0226's report arriving from the other direction, in this level's own
+      words: the whole climb is two units now, the peak a unit and a half under where it was, and the
+      build is carried by what arrives rather than by how loud it gets.
+    */
+    contour: { push: 1, surge: 1.5, approach: 2, boss: 2, bossPeak: 2 },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
@@ -2015,7 +2033,7 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 0.9744, surge: 0.5041, approach: 0.713, boss: 0.1502, bossPeak: 0.1433 },
+  core: { push: 0.5468, surge: 0.1152, approach: 0.1622, boss: 0.126, bossPeak: 0.1197 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

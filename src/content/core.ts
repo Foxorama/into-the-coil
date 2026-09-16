@@ -361,16 +361,20 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         phrase filling in. It is the one drum figure in this game that is genuinely a technique rather
         than a pattern, and it is what makes the bottom of this place feel like it is being driven
         rather than laid down.
+
+        ⚠️ **AND IT WAS A SECOND HEARTBEAT, AT 150 A MINUTE, SO IT PLAYS THE HEART'S NOW** — 0331's sixth
+        listen: *"the boss music part needs the slightly slower heartbeat though as it's now out of sync
+        with the music level heartbeat."* A hit and a softer hit a sixteenth later, on every beat, is a
+        lub-dub; under a heart beating 56 a minute it read as the same heart running at three times the
+        speed. `sub` sounds only in the fight here, so this kick now lands on `HEART`'s own beats and the
+        fight's heaviest low pulse IS the heart. The blast beat above it keeps the fight fast. The sweep
+        stops at 45 Hz rather than 30, for the same reason the heart's does.
       */
-      steps: ROOT.flatMap((_root, bar) =>
-        bar % 4 === 3
-          ? [1, 0.62, _, 0.66, 0.9, 0.6, _, 0.64, 0.96, 0.62, _, 0.68, 0.92, 0.64, 0.7, 0.72]
-          : [1, 0.6, _, _, 0.9, 0.58, _, _, 0.94, 0.6, _, _, 0.9, 0.6, _, 0.64],
-      ),
+      steps: [...HEART, ...HEART, ...HEART, ...HEART],
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 128, to: 30, seconds: 0.34, gain: 0.38, attack: 0.001, curve: 2.4, drive: 0.34 },
+      note: { wave: 'sine', from: 120, to: 45, seconds: 0.34, gain: 0.38, attack: 0.001, curve: 2.4, drive: 0.34 },
     },
     {
       // The mass: the fifth under the root, held, so the bottom is a chord and not a pedal.
@@ -922,8 +926,9 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.16, gain: 0.07, attack: 0.002, curve: 4.6, lowFrom: 2400, lowTo: 1100, q: 1.8, drive: 0.44 },
     },
     {
-      // The mass under it, so `approach` still has a floor when `groove` closes.
-      steps: [1, _, 0.7, _, 0.88, _, 0.68, 0.64, 1, _, 0.72, _, 0.86, _, 0.7, 0.8],
+      // The mass under it, on every other beat — 0331: a thud on the beat with a softer one an eighth
+      // after it was a third lub-dub at 150 a minute, against the heart's 56.
+      steps: [1, _, _, _, 0.88, _, _, _, 1, _, _, _, 0.86, _, _, _],
       pitched: false,
       perBeat: 2,
       octave: 0,
