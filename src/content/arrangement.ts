@@ -336,8 +336,13 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     a higher pitch… something higher and lifting and distinctly different from the first 1 min"*, and
     the instrument that says so is the one to follow. `lead` steps down to a line under it.
   */
-  // 0331's third listen: the pad opens it, the tune takes it, the pipes lead it, the strings carry it in.
-  core: { run: 'chords', push: 'call', surge: 'hook', approach: 'counter', boss: 'frenzy' },
+  /*
+    0331's fourth listen: the tune takes the heartbeat's section and the piano the one at 42 s. The
+    guitar opens the level and the pipes lead the peak, but the shared `ARRANGEMENT` names neither layer
+    at those rungs, so neither can be appointed here — the pad and the strings stand in, and both are
+    held under what they stand in for.
+  */
+  core: { run: 'chords', push: 'call', surge: 'groove', approach: 'counter', boss: 'frenzy' },
 };
 
 /*
@@ -421,9 +426,9 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     is the core of the piece from the opening.
   */
   core: {
-    run: { ownA: 'pulse', ownB: 'bed' },
+    run: { ownA: 'pulse' },
     push: { ownA: 'pulse', ownB: 'counter' },
-    surge: { ownA: 'pulse', ownB: 'bed' },
+    surge: { ownA: 'pulse', ownB: 'counter' },
     approach: { ownA: 'pulse', ownB: 'bed' },
     boss: { ownA: 'pulse' },
     bossPeak: { ownA: 'pulse' },

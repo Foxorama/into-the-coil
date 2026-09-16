@@ -23,7 +23,13 @@
 // person can run. docs/decisions/0184-the-measurement-reads-the-place.md is the record of what an
 // instrument reading the wrong table costs: six mix decisions made against a phantom.
 //                               [--music] [--play] [--solo [--rung=run]]
-//                               [--level=approach [--fight=45] [--gap-units=85] [--solved]]
+//                               [--level=approach [--fight=45] [--gap-units=85] [--solved] [--cold]]
+//
+// --cold starts a level from silence rather than from the title screen's gains. Only level one is
+// entered from the title; every other level is entered from the end of the one before, so a render of
+// level seven that opens on the title's bass and kit fading out is a file the game never plays — and
+// it was heard exactly that way: "it feels like we've got the backend section of another song that
+// stops and then this song starts around 10-11 seconds" (docs/decisions/0331-the-heart-beats-under-it.md).
 //
 // --level writes A WHOLE LEVEL — start to boss death, at the rungs a distance decides, the ramps the
 // mixer actually uses and the theme the level is in. It is the only mode that writes the SHAPE of a
@@ -531,7 +537,7 @@ if (args.has('level')) {
   const cleared = new Set();
   const headingFor = {};
   for (const layer of MUSIC_LAYERS) {
-    held[layer] = targetGain(theme, 'calm', layer, 0);
+    held[layer] = args.has('cold') ? 0 : targetGain(theme, 'calm', layer, 0);
     ramp[layer] = { at: 0, target: held[layer], tau: RAMP_SECONDS / 3 };
     queue[layer] = [];
   }

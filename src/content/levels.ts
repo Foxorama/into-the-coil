@@ -1495,13 +1495,20 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       ⚠️ **AND `push` OPENS 6.3 SECONDS SOONER, ON A BAR** — `docs/decisions/0331-the-heart-beats-under-it.md`.
       *"Black heart needs the heartbeat a bit earlier, the beginning drums need to fade into the
       heartbeat at 15 secs or so."* 744 → 518 units is 20.7 s → 14.4 s, which is a downbeat, so the
-      fade starts where it was asked for rather than on the next bar after it. Nothing else moves.
+      fade starts where it was asked for rather than on the next bar after it.
+
+      ⚠️ **AND THE LAST TWO SLIDE UP A SECTION, SO THE CLIMB HAS A STEP AT 42 s** — 0331's fourth
+      listen: *"we also need a mid-range tone kick in around the 42s mark, because the jump around 1.06
+      in volume is too steep."* A level has four rungs before its fight and this one now needs four
+      turns before 1:06, so `surge` opens at 41.6 s — a downbeat — for the piano, and `approach` takes
+      the 2360 `surge` had, which is still where the heart landmark below goes past. The piece's peak
+      now runs from 1:06 to the boss.
     */
     sections: [
       { at: 0, section: 'run' },
       { at: 518, section: 'push' },
-      { at: 2360, section: 'surge' },
-      { at: 3986, section: 'approach' },
+      { at: 1498, section: 'surge' },
+      { at: 2360, section: 'approach' },
     ],
     boss: 'medusa',
     midBoss: { kind: 'axis', at: 1044 },

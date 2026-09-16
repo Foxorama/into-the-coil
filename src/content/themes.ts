@@ -1507,10 +1507,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         shared arrangement names neither layer at that rung: the tune under the pipes at `surge`, three
         decibels under where it led at `push`, and the pipes at `approach`, level with the `surge`.
       */
-      run: { drone: 0.0994, chords: 0.07273, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.04965, ownB: 0.008883 },
-      push: { drone: 0.1066, chords: 0.04321, call: 0.1321, arp: 0, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.07536, ownB: 0.03552 },
-      surge: { drone: 0.3232, chords: 0.1311, call: 0.149, hook: 0.07593, counter: 0.2651, lead: 0, arp: 0, ride: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.1034, ownB: 0.2265 },
-      approach: { drone: 0.6, chords: 0.194, call: 0.55, hook: 0.28, counter: 1.59, lead: 0, ride: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 0.9204, dread: 0.6, ownA: 0.3476, ownB: 0.6 },
+      run: { drone: 0.06591, chords: 0.0239, arp: 0.03753, call: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.04249, ownB: 0 },
+      push: { drone: 0.1049, chords: 0.03886, arp: 0.05634, call: 0.1352, ride: 0, hook: 0, lead: 0, groove: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, auraFast: 0, ownA: 0.07517, ownB: 0.0339 },
+      surge: { drone: 0.2242, chords: 0.08362, arp: 0.2228, call: 0.3231, groove: 1.339, hook: 0, counter: 0.2319, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, beat: 0, stomp: 0, frenzy: 0, wraith: 0, toll: 0, crash: 0, dread: 0, auraFast: 0, ownA: 0.1278, ownB: 0.1385 },
+      approach: { drone: 0.7999, chords: 0.3012, arp: 0.9653, call: 1.012, groove: 6.045, hook: 0.3008, counter: 1.607, lead: 0, ride: 0, engine: 0, perc: 0, sub: 0, drive: 0, crash: 0, toll: 1.349, dread: 0, ownA: 0.4455, ownB: 0.9801 },
       boss: { sub: 2.668, crash: 0, ownA: 1.898 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 2.061 },
     },
@@ -1536,11 +1536,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     /*
       ⚠️ **WHERE THE PLACE SITS, SO THE CRESCENDO'S PEAK LANDS WHERE THE OPENING PLAYS TODAY** — 0331.
       The level was re-solved to roles with no thought for its absolute level, and a somber opening is
-      sparse, so it came out quiet. This lifts every rung together until the `run` sits at −19.6 LUFS,
-      five under the −14.6 the opening shipped at; the contour puts the surge at that −14.6. Measured
-      there, the opening peaks at 0.254 of full scale and is −38.9 dB dirty — nowhere near the bus.
+      sparse, so it came out quiet. This lifts every rung together until the peak of the contour sits at
+      −14.6 LUFS, where the opening shipped. Measured at the fourth listen's arrangement: −19.1 at the
+      opening, −17.1, −15.6, −14.6 from 1:06, −15.6 in the fight; the loudest rung peaks at 0.79 of full
+      scale and is −26 dB dirty against the −16 the guard allows.
     */
-    trim: 3.355,
+    trim: 3.745,
     /*
       ⚠️ **AND 0331 TURNS THE CONTOUR UPSIDE DOWN, WHICH 0329 REFUSES.** *"A rising crescendo as we get
       to the end of the surge, that then tapers off very slightly as it leads into the boss music."* So
@@ -1551,7 +1552,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       already plays at, so nothing asks more of the cue bus than it does today and the opening gets
       quieter to make the room. The guard's amendment is owed with the decision.
     */
-    contour: { push: 2, surge: 5, approach: 4, boss: 4, bossPeak: 4 },
+    /*
+      ⚠️ **FLATTER BY THE FOURTH LISTEN, AND THE PEAK MOVED TO 1:06** — *"the jump around 1.06 in volume
+      is too steep, the first 66 need to be slightly louder overall."* The step into the peak is 1 LU
+      where it was 3, the section before it 2 LU higher, and the opening half a unit up.
+    */
+    contour: { push: 2, surge: 3.5, approach: 4.5, boss: 3.5, bossPeak: 3.5 },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
@@ -1992,7 +1998,7 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { push: 1.0171, surge: 1.0615, approach: 0.2915, boss: 0.1629, bossPeak: 0.1541 },
+  core: { push: 0.9744, surge: 0.713, approach: 0.2124, boss: 0.1457, bossPeak: 0.1384 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

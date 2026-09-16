@@ -227,34 +227,35 @@ const pipeVoices = (
 ];
 
 /**
- * THE CHUG — the palm mute: sixteenths on the root, dead, with the open string answering.
+ * THE FINGERPICKING — a clean guitar walking each bar's chord in eighths.
  *
- * ⚠️ **THE PITCH BARELY MOVES AND THE RHYTHM IS EVERYTHING.** A chug is not a bass line — it is a
- * pulse with a note attached, and what makes it a riff is the gallop: two sixteenths and an eighth,
- * over and over, with the fifth arriving where the phrase turns. Writing it as a melody would be the
- * mistake.
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** It replaces the chug and the tremolo, which
+ * were the two techniques the death-metal brief was built on. The fourth listen: *"I think it needs a
+ * piano and guitar section at the start, or guitar at the start and then piano kicks in as well
+ * around the 42 sec mark."* Root, fifth, the octave, the third above it — the pattern every
+ * fingerpicked ballad walks — with the order turning on alternate bars so two bars of one chord are not
+ * the same bar twice. **165 to 880 Hz**, which is the gap between the heart and the pipes that the same
+ * listen asked something to bridge.
  */
-const CHUG: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+const PICKING: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
+  const third = THIRD[bar]!;
   const fifth = FIFTH[bar]!;
-  return bar % 4 === 3
-    ? [root, root, root, _, root, root, root, _, fifth, fifth, fifth, _, root, root, fifth, root]
-    : [root, root, root, _, root, root, root, _, root, root, root, _, root, fifth, root, _];
+  return bar % 2 === 0
+    ? [root, fifth, root + 12, third + 12, fifth + 12, third + 12, root + 12, fifth]
+    : [root, fifth, third + 12, root + 12, fifth, third + 12, root + 12, fifth];
 });
 
 /**
- * THE TREMOLO — the same note on every sixteenth, and it changes once a beat.
+ * THE PIANO — a held chord on the first and third beat of every bar.
  *
- * ⚠️ **THIS IS THE SOUND THE BRIEF NAMES AND IT IS THE ONE THING A LISTENER WILL RECOGNISE INSTANTLY.**
- * Four repetitions of a note and then the next note, walking the chord — so what moves is the LINE
- * and what is fast is the picking. Every other place in this game uses a sixteenth layer to walk
- * through a chord; this one uses it to stand still four times as loudly.
+ * ⚠️ **0331, and chordal on purpose rather than a second arpeggio.** The guitar already moves in
+ * eighths; a piano doing the same would be two instruments saying one thing. So it plays blocks the
+ * guitar walks through: the bass on the beat, the third and fifth over it, the second chord of the bar
+ * softer and inverted so the top note moves.
  */
-const TREMOLO: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
-  const third = THIRD[bar]!;
-  const fifth = FIFTH[bar]!;
-  const four = (note: number): number[] => [note, note, note, note];
-  return [...four(root + 12), ...four(third + 12), ...four(fifth), ...four(third + 12)];
-});
+const PIANO_BASS: readonly (number | null)[] = ROOT.flatMap((root, bar) => [root, FIFTH[bar]! - 12]);
+const PIANO_LOW: readonly (number | null)[] = THIRD.flatMap((third) => [third, third]);
+const PIANO_HIGH: readonly (number | null)[] = ROOT.flatMap((root, bar) => [FIFTH[bar]!, root + 12]);
 
 
 /**
@@ -523,32 +524,70 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE CHUG: the palm mute, sixteenths, from the opening ───────────────────────────────────────
+    ── THE PIANO: from 42 s, the middle of the sound ─────────────────────────────────────────────────
+
+    ⚠️ **0331's fourth listen**: *"we also need a mid-range tone kick in around the 42s mark"*, and *"we
+    need something interwoven with the pipe and higher melodies to bridge the heartbeat and pipes."*
+    The chug stood in this slot; it is sixteen bars and centred, which a piano's bass wants. A piano out
+    of a synthesiser is a hammer and a string that darkens as it rings: a saw whose lowpass closes over
+    the note, a sine under it for the body, and a short knock on the bass note. Never driven.
   */
   groove: [
     {
-      steps: CHUG,
+      steps: PIANO_BASS,
       pitched: true,
-      perBeat: 4,
-      octave: 0,
-      accents: [1, 0.68, 0.86, 0.66],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.26, gain: 0.54, attack: 0.002, curve: 3.2 },
-    },
-    {
-      steps: CHUG,
-      pitched: true,
-      perBeat: 4,
-      octave: 0,
-      accents: [1, 0.68, 0.86, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.26, attack: 0.002, curve: 4.6, lowFrom: 700, lowTo: 300, q: 1.8, drive: 0.44 },
-    },
-    {
-      steps: CHUG,
-      pitched: true,
-      perBeat: 4,
+      perBeat: 0.5,
       octave: 1,
-      accents: [1, 0.64, 0.82, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.12, gain: 0.055, attack: 0.002, curve: 6, lowFrom: 1600, lowTo: 700, q: 1.6, drive: 0.3 },
+      accents: [1, 0.74],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.1, attack: 0.002, curve: 2.4, lowFrom: 2200, lowTo: 500, q: 0.8 },
+    },
+    {
+      steps: PIANO_BASS,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 1,
+      accents: [1, 0.74],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.12, attack: 0.002, curve: 2 },
+    },
+    {
+      steps: PIANO_LOW,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 2,
+      accents: [1, 0.7],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.07, attack: 0.002, curve: 2.6, lowFrom: 3200, lowTo: 800, q: 0.8 },
+    },
+    {
+      steps: PIANO_LOW,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 2,
+      accents: [1, 0.7],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.07, attack: 0.002, curve: 2.2 },
+    },
+    {
+      steps: PIANO_HIGH,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 2,
+      accents: [1, 0.72],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.002, curve: 2.8, lowFrom: 4000, lowTo: 1000, q: 0.8 },
+    },
+    {
+      steps: PIANO_HIGH,
+      pitched: true,
+      perBeat: 0.5,
+      octave: 2,
+      accents: [1, 0.72],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.002, curve: 2.4 },
+    },
+    {
+      // The hammer: a short muffled knock on the bass note, which is what makes it a struck string.
+      steps: PIANO_BASS.map((note) => (note === null ? _ : 1)),
+      pitched: false,
+      perBeat: 0.5,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.03, attack: 0.001, curve: 6, lowFrom: 2400, lowTo: 900, highFrom: 300 },
     },
   ],
 
@@ -653,47 +692,46 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ownB: pipeVoices(HARM_WHOLE, 0.25, 4.4, 0.9, 0.18),
 
   /*
-    ── THE TREMOLO: the picking hand, and it is the sound the brief is named for ───────────────────
+    ── THE GUITAR: fingerpicked, clean, from the first bar ─────────────────────────────────────────
 
-    ⚠️ **A TREMOLO IS THE MOST SUSTAINED THING THIS GENRE HAS, AND THIS ONE WAS WRITTEN AS A CLICK.**
-    The sixteenth is 100 ms and the note was `seconds 0.17 × BEAT` under `curve: 4.4` — about 15 ms of
-    real sound, a 15% duty cycle. What identifies tremolo picking is that each pick rings into the
-    next so the *line* moves through a continuous wall; a hand playing sixteenths of silence is a
-    muted stab, which is `groove`'s job three layers up and not this one's. It measured **−41.5 dBFS
-    rms at `push`, 12.7 dB under everything else in its own band** — the one rung it sounds at, which
-    `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` calls never heard at all.
-
-    ⚠️ **THE ENVELOPE FIRST AND THE GAIN SECOND, WHICH IS 0152's WHOLE LESSON.** Decay energy goes as
-    `seconds / curve`, so 0.168 s at 1.9 is **5.7× the material** the old 0.068 s at 4.4 had for +7.6
-    dB that costs the clipping ceiling nothing at all — the peak does not move. The gain then carries
-    the last ~2 dB rather than all ten of them. 0152 found a ride that had been *fixed* twice by
-    multiplying a tick; a layer that is 15% present cannot be raised into audibility, only into
-    loudness.
-
-    ⚠️ **AND `lowTo` COMES UP WITH THE LENGTH, because a longer note spends longer at the dark end of
-    its own sweep.** `heardAt` puts this layer's window in `hi`; ringing for 89 ms into a 1300 Hz
-    cutoff would have handed back in the band what the envelope won broadband. A distorted string
-    keeps its bite as it sustains, so the sweep now lands at 1500 and the octave above it at 2900.
-
-    ⚠️ **Out of it: −31.5 rms / −19.1 peak, `margin` −12.7 → −2.2, and a solve that asked 6.64×
-    asks 2.06×.** The layer that had *only one somewhere* now has it.
+    ⚠️ **0331's fourth listen.** *"The first 10 seconds feels weird… it feels like we've got the backend
+    section of another song that stops and then this song starts around 10-11 seconds"*, and *"guitar at
+    the start."* The tremolo stood in this slot; it is sixteen bars and panned left, which suits one
+    guitar in a room. A clean plucked string: two saws a few cents apart whose lowpass closes fast after
+    the pick, a triangle body, and the pick itself — each note left ringing into the next, never driven.
   */
   arp: [
     {
-      steps: TREMOLO,
+      steps: PICKING,
       pitched: true,
-      perBeat: 4,
-      octave: 1,
-      accents: [1, 0.7, 0.86, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.105, attack: 0.002, curve: 1.9, lowFrom: 2600, lowTo: 1500, q: 1.7, drive: 0.4 },
+      perBeat: 2,
+      octave: 2 + 6 / 1200,
+      accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.07, attack: 0.008, curve: 2.2, lowFrom: 3200, lowTo: 1000, q: 0.9 },
     },
     {
-      steps: TREMOLO,
+      steps: PICKING,
       pitched: true,
-      perBeat: 4,
+      perBeat: 2,
+      octave: 2 - 6 / 1200,
+      accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.05, attack: 0.009, curve: 2.4, lowFrom: 3000, lowTo: 950, q: 0.9 },
+    },
+    {
+      steps: PICKING,
+      pitched: true,
+      perBeat: 2,
       octave: 2,
-      accents: [1, 0.68, 0.84, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.36, gain: 0.055, attack: 0.002, curve: 2.2, lowFrom: 5200, lowTo: 2900, q: 1.4 },
+      accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.08, attack: 0.008, curve: 2, lowFrom: 2000, lowTo: 900, q: 0.7 },
+    },
+    {
+      // The pick — soft, because a clean guitar under a somber pad is picked with the flesh of a finger.
+      steps: PICKING.map((note) => (note === null ? _ : 1)),
+      pitched: false,
+      perBeat: 2,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.012, attack: 0.003, curve: 6, lowFrom: 4000, highFrom: 1500 },
     },
   ],
 
