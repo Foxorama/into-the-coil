@@ -1025,6 +1025,24 @@ dB boundary** and passing. Narrowed to the layers the solve has an opinion about
 two places and `NOT_STEADIER` names both. **A guard can sit green on the wrong quantity as easily as
 it can go red on one** — 0027, and 0019's probes cannot see it.
 
+### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
+
+⚠️ **[`the-album-plan`](../reports/the-album-plan-2026-09-07.md) HOLDS THE ORDER AND
+[`the-fight-is-one-piece`](../reports/the-fight-is-one-piece-2026-09-16.md) IS ITS STEP 1.** The plan
+is the tenth alpha item — *"the music as an album"* — worked out into seven PRs, and it had never
+landed; it ships here with the measurement it asked for.
+
+⚠️ **WHICH QUANTITY IS GENERIC IS NOW A MEASUREMENT AND IT IS NOT TIMBRE.** Every place re-voices all
+fourteen layers it opens at the fight — that is the part the work went into and it is the one thing
+NOT shared. What is shared is **the harmonic move**: `dread`, the layer the arrangement makes the
+`part` at the fight, sounds the **identical two pitch classes in six of seven places**. And **no
+place's fight quotes its own level's tune**, by pitch or by rhythm, anywhere. The report reorders the
+plan's step 4 against that and takes the voicing pass off it.
+
+⚠️ **WHAT IS OWED IS A LISTEN**, which is the half of step 1 nothing here replaces — seven final
+movements back to back. `node scripts/weigh-gesture.mjs --all --rung=boss` is the instrument the plan
+asked for and is what section 4 is produced by.
+
 ### ⚠️ AND THEN THE FISH, WHICH IS THE LEVEL TWO BRIEF AND IS A QUEUE
 
 ⚠️ **[`the-fish-asked`](../reports/the-fish-asked-2026-09-12.md) IS THE RECORD AND HOLDS THE ORDER**,
