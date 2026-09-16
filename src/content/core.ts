@@ -129,6 +129,25 @@ const HEART_QUICK: readonly (number | null)[] = (() => {
 })();
 
 /**
+ * THE HEART AFTER THE TWIST — seven beats in four bars, about 66 a minute.
+ *
+ * ⚠️ **0331's tenth listen**: *"the heartbeat needs to be just a touch slower, it's slightly too fast
+ * for the music now — it's good speed around 2 mins+ into the boss music, but earlier it needs to be
+ * just a shade lower between beats."* So `HEART_QUICK` stays the fight's, where it was liked, and the
+ * ballad and the acceptance beat between it and the opening's 56: gaps of nine sixteenths and one of
+ * ten, which is as even as seven beats can sit on this grid. It no longer lands on the drums, and the
+ * ballad's kick stopped imitating it.
+ */
+const HEART_SLOWED: readonly (number | null)[] = (() => {
+  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
+  [0, 9, 18, 27, 37, 46, 55].forEach((at, i) => {
+    steps[at] = i % 2 === 0 ? 1 : 0.94;
+    steps[at + 2] = i % 2 === 0 ? 0.7 : 0.66;
+  });
+  return steps;
+})();
+
+/**
  * THE FOUR MOVEMENTS — 0331's seventh listen, which is a story and not a mix note.
  *
  * > *"Instead of being 4 separate sections that work together, it's mostly the same music throughout
@@ -750,21 +769,21 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.3, curve: 0.8, lowFrom: 1800, lowTo: 1300, q: 0.8, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.3, curve: 0.8, lowFrom: 1800, lowTo: 1300, q: 0.6, release: BEAT_SECONDS * 1.5, vibrato: 9 },
     },
     {
       steps: turned(B_THIRD.map((third) => third + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.045, attack: 0.36, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.045, attack: 0.36, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.6, release: BEAT_SECONDS * 1.5, vibrato: 8 },
     },
     {
       steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.04, attack: 0.42, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.04, attack: 0.42, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.6, release: BEAT_SECONDS * 1.5, vibrato: 8 },
     },
     {
       // The violas' warmth under the section: the third and fifth again, as triangles, an octave up.
@@ -784,7 +803,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 1,
       accents: [1, 0.66, 0.84, 0.66, 0.94, 0.66, 0.84, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.075, attack: 0.006, curve: 2.4, lowFrom: 2200, lowTo: 800, q: 0.9 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.065, attack: 0.01, curve: 2.4, lowFrom: 1800, lowTo: 700, q: 0.6 },
     },
     {
       // The double bass: the root, held, at 73–131 Hz — above the heart's floor and under everything else.
@@ -792,7 +811,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.1, attack: 0.08, curve: 1, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.055, attack: 0.12, curve: 0.6, lowFrom: 520, lowTo: 420, q: 0.6, release: BEAT_SECONDS * 1.5, vibrato: 7 },
     },
     {
       // The horn: the ballad's melody an octave under the violins, round and a little late to speak.
@@ -822,7 +841,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 0.5,
       octave: 1 + 8 / 1200,
       accents: [1, 0.84],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.07, attack: 0.004, curve: 1.3, lowFrom: 2600, lowTo: 1500, q: 1.2, drive: 0.55 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.045, attack: 0.004, curve: 1.3, lowFrom: 2000, lowTo: 1200, q: 0.6, drive: 0.5 },
     },
     {
       steps: POWER_FIFTH,
@@ -830,7 +849,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 0.5,
       octave: 1 - 8 / 1200,
       accents: [1, 0.84],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.06, attack: 0.004, curve: 1.3, lowFrom: 2500, lowTo: 1400, q: 1.2, drive: 0.55 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.04, attack: 0.004, curve: 1.3, lowFrom: 1900, lowTo: 1150, q: 0.6, drive: 0.5 },
     },
     {
       steps: CHUG,
@@ -838,7 +857,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 1,
       accents: [1, 0.62, 0.8, 0.62, 0.92, 0.62, 0.8, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.07, attack: 0.002, curve: 3.6, lowFrom: 1500, lowTo: 600, q: 1.4, drive: 0.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.05, attack: 0.002, curve: 3.6, lowFrom: 1200, lowTo: 500, q: 0.6, drive: 0.5 },
     },
     {
       // The choir: an "aah" is a round tone with its upper partials soft — triangles and sines, slow.
@@ -873,21 +892,21 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.06, attack: 0.16, curve: 0.3, lowFrom: 420, lowTo: 2200, q: 1.1, drive: 0.2, release: BEAT_SECONDS * 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.06, attack: 0.16, curve: 0.3, lowFrom: 400, lowTo: 1700, q: 0.7, release: BEAT_SECONDS * 1.4, vibrato: 4 },
     },
     {
       steps: turned(B_THIRD.map((third) => third + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.2, curve: 0.3, lowFrom: 450, lowTo: 2000, q: 1.1, drive: 0.15, release: BEAT_SECONDS * 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.2, curve: 0.3, lowFrom: 420, lowTo: 1600, q: 0.7, release: BEAT_SECONDS * 1.4, vibrato: 4 },
     },
     {
       steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.22, curve: 0.3, lowFrom: 450, lowTo: 2000, q: 1.1, drive: 0.15, release: BEAT_SECONDS * 1.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.9, gain: 0.045, attack: 0.22, curve: 0.3, lowFrom: 420, lowTo: 1600, q: 0.7, release: BEAT_SECONDS * 1.4, vibrato: 4 },
     },
     {
       // The trumpets, on the melody's second half only.
@@ -895,7 +914,29 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 1,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1200, lowTo: 3600, q: 1, drive: 0.25, release: BEAT_SECONDS * 1.1, vibrato: 6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1100, lowTo: 2600, q: 0.7, release: BEAT_SECONDS * 1.1, vibrato: 6 },
+    },
+    /*
+      ⚠️ **AND THE PIANO FROM THE OPENING, INSIDE IT** — 0331's tenth listen: *"feels like a copy paste
+      fit in, rather than properly being part of the track."* The ballad shared no instrument with the
+      movements either side of it. The lament's piano walks each of its chords in quarter notes, so the
+      instrument the story began on is still playing when it swells.
+    */
+    {
+      steps: turned(B_ROOT.flatMap((root, bar) => [root + 12, B_FIFTH[bar]! + 12, B_THIRD[bar]! + 24, B_FIFTH[bar]! + 12])),
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [1, 0.72, 0.84, 0.7],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.1, attack: 0.002, curve: 2.2, lowFrom: 3000, lowTo: 1200, q: 0.7 },
+    },
+    {
+      steps: turned(B_ROOT.flatMap((root, bar) => [root + 12, B_FIFTH[bar]! + 12, B_THIRD[bar]! + 24, B_FIFTH[bar]! + 12])),
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      accents: [1, 0.72, 0.84, 0.7],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.04, attack: 0.002, curve: 2.6, lowFrom: 2600, lowTo: 600, q: 0.7 },
     },
   ],
 
@@ -988,14 +1029,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 1,
       octave: 2 + 6 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.1, curve: 0.4, lowFrom: 3400, lowTo: 2400, q: 0.9, release: BEAT_SECONDS * 1.6, vibrato: 14 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.1, curve: 0.4, lowFrom: 3200, lowTo: 2300, q: 0.6, release: BEAT_SECONDS * 1.6, vibrato: 14 },
     },
     {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
       octave: 2 - 6 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.13, curve: 0.4, lowFrom: 3300, lowTo: 2300, q: 0.9, release: BEAT_SECONDS * 1.6, vibrato: 12 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.13, curve: 0.4, lowFrom: 3100, lowTo: 2200, q: 0.6, release: BEAT_SECONDS * 1.6, vibrato: 12 },
     },
     {
       steps: turned(BALLAD),
@@ -1191,6 +1232,33 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.05, attack: 0.0004, curve: 8.5, lowFrom: 14000, highFrom: 7200 },
     },
+    /*
+      ⚠️ **AND THE FIGHT'S HEART IS BACK HERE, AT 75** — 0331's tenth listen. `ownA` slowed for the level
+      and the fight's speed was the one liked, so the fight plays the quick heart in its own layer: the
+      same three voices, the first two bars of `HEART_QUICK` (which repeats every two), with their gains
+      scaled by the 1.2 between this layer's fader and `ownA`'s in the fight.
+    */
+    {
+      steps: HEART_QUICK.slice(0, 32),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.6, attack: 0.002, curve: 2, drive: 0.4 },
+    },
+    {
+      steps: HEART_QUICK.slice(0, 32),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.12, attack: 0.002, curve: 3, drive: 0.3 },
+    },
+    {
+      steps: HEART_QUICK.slice(0, 32),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.06, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
+    },
   ],
 
   /*
@@ -1221,7 +1289,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   ownA: [
     {
-      steps: HEART_QUICK,
+      steps: HEART_SLOWED,
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -1247,14 +1315,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       and a muffled thud — and the low sine stays for a speaker that can play it.
     */
     {
-      steps: HEART_QUICK,
+      steps: HEART_SLOWED,
       pitched: false,
       perBeat: 4,
       octave: 0,
       note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1, attack: 0.002, curve: 3, drive: 0.3 },
     },
     {
-      steps: HEART_QUICK,
+      steps: HEART_SLOWED,
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -1301,91 +1369,92 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     each phrase into the next. **No cymbal**, which two listens asked to be taken out of this place.
   */
   ownD: [
-    {
-      // The timpani.
-      steps: [
-        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.9, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.96, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.9, _, _, _, _, _, _, _, _, _, _, _, 0.42, 0.52, 0.64, 0.8,
-      ],
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 118, to: 86, seconds: 1.1, gain: 0.36, attack: 0.002, curve: 2.2, drive: 0.12 },
-    },
-    {
-      // The skin of the timpani, which is what makes it a drum rather than a tone.
-      steps: [
-        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.9, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.96, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-        0.9, _, _, _, _, _, _, _, _, _, _, _, 0.42, 0.52, 0.64, 0.8,
-      ],
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.05, attack: 0.001, curve: 4, lowFrom: 1400, lowTo: 500, highFrom: 90 },
-    },
-    {
-      // The bass drum on three, dark and wide, with a little of the snare's rattle in it.
-      steps: [_, _, 1, _, _, _, 0.92, _, _, _, 1, _, _, _, 0.96, _],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'sine', from: 150, to: 62, seconds: 0.5, gain: 0.34, attack: 0.002, curve: 2.6, drive: 0.2 },
-    },
-    {
-      steps: [_, _, 1, _, _, _, 0.92, _, _, _, 1, _, _, _, 0.96, _],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.06, attack: 0.002, curve: 3.2, lowFrom: 3200, lowTo: 1300, highFrom: 220 },
-    },
     /*
-      ⚠️ **THE BAND'S KIT — 0331's eighth listen**, *"more orchestral metal."* A kick doubling the heart —
-      the lub and the dub on one and three — with a double-kick run through the last two beats of every
-      fourth bar, and a snare cracking on two and four. Still no cymbal.
+      ⚠️ **0331's tenth listen**: *"some part of the orchestral section sounds a bit too synthy and not
+      instrumentally… not sure if it's the drums/bass."* It was: four drums built as falling sine sweeps
+      with drive on them — a timpani gliding a fourth, a bass drum on three, a kick sweeping from 160 and
+      a snare body from 230 — which is the recipe for an electronic kit, stacked on a sine double bass and
+      the heart. An acoustic drum rings near ONE pitch and lets the skin and the shell carry the attack,
+      so each drum below is a short, barely-moving tone under a louder noise, and the bass drum on three
+      is gone: the snare on two and four is the backbeat.
     */
     {
+      // The timpani: a tuned drum rings at its pitch and an overtone, and the stick is the noise.
       steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.9, 0.6, 0.8, 0.6, 0.86, 0.64, 0.9, 0.7,
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.94, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, 0.4, 0.5, 0.62, 0.78,
       ],
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 160, to: 52, seconds: 0.2, gain: 0.34, attack: 0.001, curve: 3.2, drive: 0.3 },
+      note: { wave: 'sine', from: 104, to: 98, seconds: 0.9, gain: 0.22, attack: 0.004, curve: 3.4 },
     },
     {
-      // The beater on the head, which is what lets a kick cut through guitars.
       steps: [
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.94, _, 0.66, _, _, _, _, _,
-        1, _, 0.7, _, _, _, _, _, 0.9, 0.6, 0.8, 0.6, 0.86, 0.64, 0.9, 0.7,
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.94, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, 0.4, 0.5, 0.62, 0.78,
       ],
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.04, attack: 0.0005, curve: 6, lowFrom: 5000, highFrom: 1500 },
+      note: { wave: 'sine', from: 158, to: 155, seconds: 0.5, gain: 0.07, attack: 0.004, curve: 4 },
     },
     {
-      // The snare on two and four: wires and a body.
-      steps: [_, 1, _, 0.94, _, 1, _, 0.96, _, 1, _, 0.94, _, 1, _, 1],
+      steps: [
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.94, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.86, _, _, _, _, _, _, _, _, _, _, _, 0.4, 0.5, 0.62, 0.78,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.06, attack: 0.002, curve: 5, lowFrom: 1800, lowTo: 600, highFrom: 80 },
+    },
+    {
+      // The kick: one and three, a push after three, a double-kick run to close every fourth bar.
+      steps: [
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.86, 0.58, 0.74, 0.58, 0.8, 0.62, 0.86, 0.68,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 88, to: 56, seconds: 0.16, gain: 0.3, attack: 0.001, curve: 5 },
+    },
+    {
+      // The beater and the shell, which is most of what a kick through a band actually is.
+      steps: [
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.9, _, 0.62, _, _, _, _, _,
+        1, _, _, _, _, _, _, _, 0.86, 0.58, 0.74, 0.58, 0.8, 0.62, 0.86, 0.68,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.07, attack: 0.0005, curve: 5, lowFrom: 3000, lowTo: 900, highFrom: 60 },
+    },
+    {
+      // The snare on two and four: the wires are the sound, the shell only a little under them.
+      steps: [_, 1, _, 0.92, _, 1, _, 0.94, _, 1, _, 0.92, _, 1, _, 0.98],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.08, attack: 0.001, curve: 3.6, lowFrom: 6000, lowTo: 2400, highFrom: 700 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.24, gain: 0.1, attack: 0.001, curve: 4.2, lowFrom: 7000, lowTo: 3200, highFrom: 350 },
     },
     {
-      steps: [_, 1, _, 0.94, _, 1, _, 0.96, _, 1, _, 0.94, _, 1, _, 1],
+      steps: [_, 1, _, 0.92, _, 1, _, 0.94, _, 1, _, 0.92, _, 1, _, 0.98],
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'sine', from: 230, to: 150, seconds: 0.16, gain: 0.32, attack: 0.001, curve: 4, drive: 0.25 },
+      note: { wave: 'sine', from: 196, to: 184, seconds: 0.1, gain: 0.1, attack: 0.001, curve: 5 },
     },
   ],
 
