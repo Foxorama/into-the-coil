@@ -667,6 +667,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   moonJelly: 'enemy',
   moonJellyHit: 'impact',
   kiteHit: 'impact',
+  // The swift — 0328. A shared body, in the place's ink like the other eight.
+  swift: 'enemy',
+  swiftHit: 'impact',
   sentry: 'enemy',
   sentryHit: 'impact',
   shard: 'enemy',
@@ -5939,6 +5942,40 @@ function nimbus(ctx: Pen, f: Frame, colour: string, hull: readonly Pt[], smooth 
  * or wider than 0.13 of the drawing radius, which is where a solid mark on THIS body stops being
  * drawn at all — and the arithmetic is in `KITE_HULL`'s own note rather than discovered again here.
  */
+/**
+ * The swift's hull — 0328: a swept chevron, nose forward, two wings raked back, open at the back.
+ * Not the drifter's diamond (closed), not the kite's delta (a body with streamers), not the lancer's
+ * triangle (broad and blunt): a V is the one primitive on the sheet that points.
+ */
+const SWIFT_HULL: readonly Pt[] = [
+  [0.95, 0],
+  [0.1, -0.34],
+  [-0.72, -0.74],
+  [-0.95, -0.66],
+  [-0.4, 0],
+  [-0.95, 0.66],
+  [-0.72, 0.74],
+  [0.1, 0.34],
+];
+
+/**
+ * The swift's paint — 0328, on the kite's pattern and cut to the same size: a nimbus, the form-shade
+ * across the body, and the two leading edges lit as seams. No motif, for the kite's reason — on a
+ * body this size the place's motif survives as one speck the size of an eye.
+ */
+function paintSwift(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  nimbus(ctx, f, skin.lit, SWIFT_HULL);
+  shaded(ctx, f, [0, -0.74], [0, 0.74], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), SWIFT_HULL, 1, false);
+  // Inboard of the leading edge by the seam's own half-width all the way to the nose, where the hull
+  // is a tenth wide — `tests/accents.test.ts` refused a seam that started at 0.7 and poked past it.
+  for (const side of [-1, 1]) {
+    seam(ctx, f, rgba(skin.lit, 0.85), 0.11, [
+      [0.5, 0.08 * side],
+      [-0.45, 0.42 * side],
+    ]);
+  }
+}
+
 function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
   nimbus(ctx, f, skin.lit, KITE_HULL);
   // The form-shade: lit along one edge, shadowed at the other, across the whole animal. It is what
@@ -7454,6 +7491,15 @@ export function drawKind(
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintKite(ctx, f, skin);
+      return;
+    case 'swift':
+    case 'swiftHit':
+      // A SWEPT CHEVRON — 0328: nose forward, wings raked back, open at the back. `SWIFT_HULL` has why
+      // it is none of the diamond, the delta or the triangle it shares a sky with.
+      trace(ctx, f, SWIFT_HULL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintSwift(ctx, f, skin);
       return;
     case 'minnow':
     case 'minnowHit':

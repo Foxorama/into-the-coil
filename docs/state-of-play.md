@@ -903,8 +903,12 @@ recognisable, and whether eight read as a group. **The third is landed** —
 [0327](decisions/0327-a-shot-has-a-path.md): a shot row may carry a path, an arc or a wave, read by
 `bendShots` and nothing about the ship; the picket throws a braided pair and the spinner's ring
 curls, and most of what the levels send still flies straight, by guard. **Owed from its play:**
-whether a braid reads at the spit's size and whether the pinwheel reads as a pattern to time. The
-fourth — a body on an arc — is the same rotation on a hull. **Standing answers for the rest of the queue:** the
+whether a braid reads at the spit's size and whether the pinwheel reads as a pattern to time. **The
+fourth is landed** — [0328](decisions/0328-a-body-flies-an-arc.md): the motion union gains `arc`, and
+the swift — a ninth shared kind, a swept chevron with one straight spit — flies it in levels one to
+three, in by an edge and out by it, or across the lane's centre in an X. **Owed from its play:** whether
+the U reads as *it came back*, and whether the swift's name and hull hold. **Next are items five to
+seven**, one PR per level, and the two place-only bodies still want names. **Standing answers for the rest of the queue:** the
 flank cap stays, curves are patterns and never homing, and *"make sure that we still have some straight
 firing bullets — if everything curves or weaves we've over corrected."* The two place-only bodies in
 items six and seven still want names from the player.

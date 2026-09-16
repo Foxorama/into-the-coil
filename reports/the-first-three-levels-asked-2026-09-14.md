@@ -42,7 +42,9 @@ the two place-only bodies still want names, and the pool stayed at 40 without ne
 
 The third item landed the next day as [0327](../docs/decisions/0327-a-shot-has-a-path.md), with the
 two path arms on rows the levels send — the picket's ripple and the spinner's curl — because a guard
-refuses an arm nothing flies. The second item was folded into 0326.
+refuses an arm nothing flies. The second item was folded into 0326. The fourth landed on 2026-09-16
+as [0328](../docs/decisions/0328-a-body-flies-an-arc.md), with a ninth shared kind, the swift, to fly
+the arc; the plan's *spend the loop on other kinds* was refused there, on 0258's own terms.
 
 ## What is there today, measured
 
