@@ -471,6 +471,9 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 812, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
   { at: 841, enemy: 'weaver', formation: 'vee', count: 4, lane: 62 },
+  // The swift — 0328: the first body in the run that flies a curve, met before the sentinel with the
+  // one gun the level has handed over, and clamped to one hit here like everything before 1,000.
+  { at: 870, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
   { at: 899, enemy: 'lancer', formation: 'column', count: 8, lane: 40 },
   { at: 956, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
   /*
@@ -519,7 +522,15 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
   { at: 1826, enemy: 'turret', formation: 'line', count: 6, lane: 55 },
   { at: 1884, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
-  { at: 1941, enemy: 'lancer', formation: 'vee', count: 8, lane: 65 },
+  /*
+    ⚠️ **THREE LANCER WAVES ARE SWIFTS — 0328 — AND THEY REPLACE RATHER THAN JOIN.** At the one-rung
+    loadout `tests/fight.test.ts` walks this level with, the sentinel's fight runs most of the way to
+    the serpent, so a firing wave ADDED anywhere past 1,549 lands on the fight and 0267's guard
+    reddens: *the fight is the busiest part of the level.* A swift wave in a lancer wave's place
+    sends five two-hit bodies where eight stood, so the fight gets no busier and the level gets a
+    body that curves. A vee astride the centre crosses itself in an X.
+  */
+  { at: 1941, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
   { at: 2000, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
   { at: 2073, enemy: 'drifter', formation: 'column', count: 5, lane: 40 },
   { at: 2115, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
@@ -533,7 +544,8 @@ const APPROACH: readonly WaveEntry[] = [
   // ── Chargers. Faster than a reaction, so they have to be seen coming. ───────────────────────────
   { at: 2521, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
   { at: 2579, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
-  { at: 2637, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },
+  // From the side, and back out by it — 0328: level one's first U, in a lancer vee's place.
+  { at: 2637, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
   { at: 2695, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
   { at: 2753, enemy: 'charger', formation: 'column', count: 4, lane: 55, origin: 'acrossPlus' },
   { at: 2811, enemy: 'turret', formation: 'line', count: 6, lane: 40 },
@@ -551,7 +563,7 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 3390, enemy: 'turret', formation: 'column', count: 6, lane: 25 },
   { at: 3442, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
   { at: 3494, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 3545, enemy: 'lancer', formation: 'line', count: 8, lane: 35 },
+  { at: 3545, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
   { at: 3596, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   { at: 3648, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
   { at: 3700, enemy: 'turret', formation: 'line', count: 6, lane: 45 },
@@ -697,6 +709,8 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 1300, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
   { at: 1354, enemy: 'lancer', formation: 'line', count: 8, lane: 68 },
   { at: 1410, enemy: 'charger', formation: 'line', count: 5, lane: 45 },
+  // The swift — 0328: a line astride the centre, half sweeping each way, through the chargers.
+  { at: 1437, enemy: 'swift', formation: 'line', count: 5, lane: 45 },
   { at: 1464, enemy: 'moth', formation: 'column', count: 5, lane: 35 },
 
   // ── Chargers at density, through standing fire. The stretch that punishes standing still. ───────
@@ -728,6 +742,7 @@ const DESCENT: readonly WaveEntry[] = [
   { at: 2784, enemy: 'moth', formation: 'line', count: 5, lane: 58 },
   { at: 2839, enemy: 'lancer', formation: 'line', count: 8, lane: 50 },
   { at: 2894, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 2921, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
   { at: 2949, enemy: 'turret', formation: 'column', count: 6, lane: 70 },
   { at: 3004, enemy: 'lancer', formation: 'vee', count: 8, lane: 38 },
   { at: 3059, enemy: 'charger', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
@@ -803,6 +818,9 @@ const COILWARD: readonly WaveEntry[] = [
   { at: 1008, enemy: 'charger', formation: 'column', count: 5, lane: 55 },
   { at: 1067, enemy: 'lancer', formation: 'column', count: 8, lane: 42, origin: 'acrossPlus' },
   { at: 1126, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  // The swift from the side — 0328: the Belt's idea, *where things come from*, used twice by one body
+  // that comes in by an edge and goes out by it.
+  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
   { at: 1185, enemy: 'raptor', formation: 'column', count: 5, lane: 49 },
   { at: 1244, enemy: 'lancer', formation: 'column', count: 8, lane: 50, origin: 'acrossMinus' },
   { at: 1303, enemy: 'sower', formation: 'column', count: 6, lane: 44 },
@@ -827,6 +845,7 @@ const COILWARD: readonly WaveEntry[] = [
   { at: 2424, enemy: 'turret', formation: 'vee', count: 6, lane: 44 },
   { at: 2483, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
   { at: 2542, enemy: 'raptor', formation: 'line', count: 5, lane: 56 },
+  { at: 2571, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
   { at: 2600, enemy: 'lancer', formation: 'line', count: 8, lane: 55 },
   { at: 2659, enemy: 'charger', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
   { at: 2718, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
@@ -842,6 +861,7 @@ const COILWARD: readonly WaveEntry[] = [
   { at: 3308, enemy: 'lancer', formation: 'column', count: 8, lane: 53, origin: 'acrossPlus' },
   { at: 3368, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
   { at: 3426, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 3455, enemy: 'swift', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
   { at: 3485, enemy: 'turret', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
   { at: 3544, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
   { at: 3603, enemy: 'raptor', formation: 'column', count: 5, lane: 50 },

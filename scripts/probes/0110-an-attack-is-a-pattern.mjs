@@ -20,13 +20,18 @@ export const PROBES = [
       ⚠️ Re-aimed by 0258: with one pilot a level, two of ten shooters aim (the moth and the gaze)
       and eight send a pattern, so the old break — four kinds off the roster — left five patterned
       against one aimed and the guard green.
+
+      ⚠️ Re-aimed by 0328, which added the swift — a ninth shared kind that sends a spray. Six off
+      the roster left three patterned (the picket, the shard, the swift) against two aimed, the
+      majority held, and `npm run prove` reported the break red on the wrong guards. Seven off,
+      the swift among them, is two and two again.
     */
-    broke: 'six of the eight patterned shooters dropped from the roster, so half of what shoots points at the player',
+    broke: 'seven of the nine patterned shooters dropped from the roster, so half of what shoots points at the player',
     guard: 'THE REPORTED ONE: most of what shoots is not aimed at the player',
     edit: {
       path: 'src/content/enemies.ts',
-      find: "  'lancer',\n  'weaver',\n  'turret',\n  'charger',\n  'warden',\n  'spinner',\n  'sower',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'sentry',\n",
-      replace: "  'weaver',\n  'charger',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n",
+      find: "  'lancer',\n  'weaver',\n  'turret',\n  'charger',\n  'warden',\n  'spinner',\n  'sower',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'sentry',\n  'shard',\n  'spore',\n  'gaze',\n  'minnow',\n  'swift',\n",
+      replace: "  'weaver',\n  'charger',\n  'picket',\n  'moth',\n  'raptor',\n  'kite',\n  'moonJelly',\n  'shard',\n  'spore',\n  'gaze',\n  'minnow',\n",
     },
   },
   {

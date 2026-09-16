@@ -37,7 +37,9 @@ export type EnemyKind =
   | 'spore'
   | 'gaze'
   // The flying fish's shoal — 0314. Sent by no level and by no summons: an escort's, and its own.
-  | 'minnow';
+  | 'minnow'
+  // The swooper — 0328: a shared kind that flies an arc, in from an edge and out the way it came.
+  | 'swift';
 
 /**
  * Every way a body can SHOOT. Closed.
@@ -182,7 +184,7 @@ export function shotsPerVolley(attack: Attack): number {
  * the affordance* at the top and calls it the only tier that reliably works; that guard is deleted
  * with this change, and its reason is recorded rather than its assertion.
  */
-export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop', 'feed'] as const;
+export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop', 'feed', 'arc'] as const;
 
 /** Derived from the list, so a motion cannot exist in the union and be missing from the switch. */
 export type MotionKind = (typeof MOTION_KINDS)[number];
@@ -299,7 +301,46 @@ export type Motion =
     asserted is that a feed moves the boss's health up and that the ceiling holds; how big a bite is
     worth is a play number, and `tests/volans.test.ts` prints what it comes to against the fight.
   */
-  | { kind: 'feed'; agility: number; feeds: number };
+  | { kind: 'feed'; agility: number; feeds: number }
+  /**
+   * Flies a circle segment across the lane, on the screen, then straight on — 0328.
+   *
+   * ── A BODY THAT SWINGS IN, CROSSES THE LANE AND LEAVES ─────────────────────────────────────────
+   *
+   * `docs/decisions/0328-a-body-flies-an-arc.md`. Reported: *"more interesting flight paths for the
+   * enemy waves for the player to engage with, where they can curve back and come onto the screen
+   * again."* Every motion here either holds its line, swings about it, chases the ship, orbits it,
+   * runs the box's length or swims for a boss; none of them turns through the lane. This is the
+   * curl's rotation (0327) on a hull: the camera-frame velocity turned by `speed / radius` a step
+   * until it has turned through `sweep`, then held.
+   *
+   * ⚠️ **`radius` IS THE PICTURE, AND IT IS AUTHORED RATHER THAN A TURN RATE, BECAUSE A TIER SCALES
+   * THE SPEED.** The turn a step is `speed / radius`, so a harder tier flies the same circle faster
+   * rather than a wider one — the lane check in `tests/level.test.ts` reads `2 × radius` off the
+   * row and is true at every tier because of it.
+   *
+   * ⚠️ **ON THE SCREEN AND NOT BEFORE, AND `after` UNITS INTO IT.** A lead wave is placed beyond the
+   * horizon, and a body that began its arc there would have turned half of it before it was seen.
+   * Driven with the turn beginning at the edge, a swift's half circle sat AGAINST the leading edge —
+   * twenty-five units in and gone in a second and a half — which is a body that barely enters, not
+   * one that swings across in front of the player. `after` is how far past the leading edge the hull
+   * flies straight before the turn begins, read off its depth into the view rather than carried; a
+   * flanker is placed mid-screen (0048) and is past it the moment it has straightened.
+   *
+   * ⚠️ **AT MOST A HALF TURN, AND THE PROGRESS IS READ OFF THE HEADING RATHER THAN CARRIED.** A body
+   * arrives flying down the lane, so how far it has turned is the angle between its heading and
+   * down-lane — no field on the entity, nothing to zero. Past π that angle folds back, which is why
+   * `sweep` is held to π: a body that turns further than a U is coming round for another pass, and
+   * that is the loop's job, not this arm's.
+   *
+   * ⚠️ **WHICH WAY IT TURNS IS `spin`, DEALT AT THE SPAWN AND NOT ROLLED.** A flanker turns back
+   * toward the edge it came in by — a U — and a lead body turns toward the lane's centre, so a vee
+   * of them crosses in an X. Both are the parity idiom `spawnWave` already uses; a level is authored.
+   *
+   * ⚠️ **IT DOES NOT REACT.** Nothing here reads the ship — `tests/pilot.test.ts` counts it as a
+   * pattern, and 0258's one pilot a level is untouched.
+   */
+  | { kind: 'arc'; radius: number; sweep: number; after: number };
 
 export interface EnemyRow extends Body {
   /**
@@ -382,6 +423,7 @@ export const ENEMY_KINDS: readonly EnemyKind[] = [
   'spore',
   'gaze',
   'minnow',
+  'swift',
 ];
 
 /**
@@ -905,6 +947,43 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       and the first play-test is what settles it.
     */
     motion: { kind: 'feed', agility: 0.62, feeds: 14 },
+  },
+  /**
+   * The swift — 0328: a shared kind that swoops. A swept chevron that flies in, turns through a half
+   * circle across the lane on the screen, and leaves the way it came — and throws one straight spit
+   * down the lane as it goes.
+   *
+   * ⚠️ **THE FIRST SHARED KIND SINCE THE EIGHT, AND IT IS A FLIGHT PATH WITH A HULL ON IT.** The
+   * report asked for *"more interesting flight paths… where they can curve back and come onto the
+   * screen again"*; the arc is the arm and this is the body that flies it, because the guards refuse
+   * an arm nothing flies and every one of the eight shared kinds has an identity 0258 settled.
+   *
+   * ⚠️ **TWO HITS, THREE TENTHS, AND A GUN THAT FIRES STRAIGHT.** Two hits, so a swoop is a thing
+   * to lead and not a thing to erase; closing 0.3, a little over the weaver's, so the half circle
+   * takes about a second and a half at a radius of 25 and the body is on the screen for the whole of
+   * it; a spit at the picket's old cadence, straight down the lane — *"make sure that we still have
+   * some straight firing bullets"* — so the thing that curves is the body and not the bullet.
+   * `spit/spray` is its own pair (`tests/signature.test.ts`).
+   *
+   * ⚠️ **RADIUS 25, WHICH IS A HALF-LANE CIRCLE, AND EIGHTY UNITS IN BEFORE IT TURNS.** In from the
+   * side at lane 50 and back out by the same edge, it reaches across 0 at the bottom of its U; from
+   * the lead at lane 30 it sweeps to 80. Eighty units is a little under half the narrowest view, so
+   * the U's bottom is a hundred and five units in — thirty-three in front of a ship on its usual
+   * station — and the body is on the screen for about five seconds, in, round and out.
+   * `tests/level.test.ts` reads the reach off the row and refuses a lane it would leave the band from.
+   */
+  swift: {
+    sprite: SPRITE.swift,
+    spriteHit: SPRITE.swiftHit,
+    radius: 2.8,
+    health: 2,
+    damage: 2,
+    closing: 0.3,
+    shatter: null,
+    fireEvery: 108,
+    shot: 'spit',
+    attack: { kind: 'spray', shots: 1, spread: 0 },
+    motion: { kind: 'arc', radius: 25, sweep: Math.PI, after: 80 },
   },
   /**
    * The moon jelly — `docs/decisions/0255-the-jellyfish-opens.md`: the Black Heart's rain.

@@ -185,6 +185,10 @@ export const SPRITE_KINDS = [
   // fish in hordes and sent by nothing else.
   'kite',
   'kiteHit',
+  // The swift — 0328: a swept chevron, open at the back, so the one shared body that swoops is told
+  // from the drifter's diamond, the kite's delta and the lancer's triangle by a shape that points.
+  'swift',
+  'swiftHit',
   // The minnow — 0314: the flying fish's shoal, a small fish with a forked tail and a pale eye, which
   // swims for the boss rather than for the player and is eaten when it arrives.
   'minnow',
@@ -1001,6 +1005,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Smaller than the moth it flies beside and than the raptor it is summoned with — 0249.
   kite: 6.5,
   kiteHit: 6.5,
+  // The swift — 0328: the weaver's size, and a 2.8 hurtbox inside the band `tests/combat.test.ts` holds.
+  swift: 6,
+  swiftHit: 6,
   // ⚠️ **THE SMALLEST BODY IN THE GAME, AND SMALLER THAN THE KITE ON PURPOSE** — 0314. A minnow is not
   // coming for the player, so it must not read as a thing that is: the kite it shares a sky with is a
   // third bigger, and a shoal of these reads as a shoal rather than as a wave.

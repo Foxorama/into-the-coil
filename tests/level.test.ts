@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
+import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import {
   ENGAGE_RANGE,
@@ -144,6 +144,21 @@ describe('an authored level is a script the spawner can actually run', () => {
         for (const member of membersOf(wave)) {
           if (member.across - margin < ROAM_MIN || member.across + margin > ROAM_MAX) {
             offences.push(`${kind} ${wave.enemy} at ${wave.at} reaches ${member.across.toFixed(1)} ± ${margin}`);
+          }
+          /*
+            ⚠️ **AN ARC HAS A BOUND TOO, AND IT IS ONE-SIDED** — 0328. A half circle of `radius`
+            carries the body `2 × radius` across from where it began, toward the side its hand turns
+            it: a flanker back toward the edge it entered by, a lead body toward the lane's centre —
+            `spawnWave` deals the hand by exactly this rule. The far end of the sweep is the point
+            that can leave the band.
+          */
+          if (row.motion.kind === 'arc') {
+            const origin = wave.origin ?? DEFAULT_ORIGIN;
+            const toward = origin === 'acrossMinus' ? -1 : origin === 'acrossPlus' ? 1 : member.across > ACROSS_SPAN / 2 ? -1 : 1;
+            const far = member.across + toward * 2 * row.motion.radius;
+            if (far - row.radius < ROAM_MIN || far + row.radius > ROAM_MAX) {
+              offences.push(`${kind} ${wave.enemy} at ${wave.at} sweeps to ${far.toFixed(1)} from ${member.across.toFixed(1)}`);
+            }
           }
         }
       }

@@ -4210,6 +4210,14 @@ function spawnWave(w: World, index: number): void {
     if (row.motion.kind === 'circle') e.spin = (index + i) % 2 === 0 ? 1 : -1;
     else if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
     /*
+      ⚠️ **WHICH WAY AN ARC TURNS, AND IT IS THE LANE'S GEOMETRY RATHER THAN A ROLL** — 0328. A
+      positive hand turns the heading toward across zero. A flanker turns back toward the edge it
+      came in by, which is a U; a lead body turns toward the lane's centre, so a formation astride
+      the centre crosses itself. `tests/level.test.ts` reads the same rule to bound where the arc
+      can reach, which is why it is written as plainly as this.
+    */
+    else if (row.motion.kind === 'arc') e.spin = flanking ? -side : target > ACROSS_SPAN / 2 ? 1 : -1;
+    /*
       ⚠️ **WHERE A TURNING PATTERN STARTS POINTING, on exactly the terms above** — 0110. It is set
       from the member's index rather than rolled, for the reason this function has already given
       twice: a level is authored.
@@ -4526,6 +4534,46 @@ function steerEnemies(w: World): void {
         }
         const rate = (row.closing * w.difficulty.closing + w.scrollPerStep) * aggression;
         e.velAlong = w.scrollPerStep + (e.spin > 0 ? rate : -rate);
+        break;
+      }
+      /*
+        Fly a circle segment across the lane, on the screen, then straight on — 0328.
+
+        ⚠️ **THE CURL'S ROTATION ON A HULL** (`bendShots`, 0327): the camera-frame velocity turned by
+        `speed / radius` a step, so the picture is the authored radius at every tier and a harder
+        tier flies it faster rather than wider. `src/content/enemies.ts` has the argument for each
+        number; what is here is only the arithmetic.
+
+        ⚠️ **NOT BEFORE THE HULL IS `after` UNITS INTO THE SCREEN.** A lead wave is placed beyond the
+        horizon; a body that turned there would have flown half its arc unseen, and one that turned
+        at the edge swings against it and barely enters — `src/content/enemies.ts` has the drive.
+        Its depth into the view is read off its position, so nothing is carried; once the turn has
+        begun the depth is not asked again, because the U carries the body back out past it.
+
+        ⚠️ **PROGRESS IS THE ANGLE BETWEEN ITS HEADING AND DOWN-LANE**, read off the velocity every
+        step rather than carried on the entity — nothing to zero, nothing to forget. Past the sweep
+        the velocity is left exactly where it is, so the exit is a straight line at the speed it
+        arrived at, as the loop's is.
+
+        ⚠️ **AND IT FACES THE WAY IT FLIES**, as the minnow does and for the minnow's reason: a hull
+        is baked facing down the lane, and a chevron flying back up it nose-last is the sprite sheet
+        photographed wrong.
+      */
+      case 'arc': {
+        const speed = row.closing * w.difficulty.closing + w.scrollPerStep;
+        const along = e.velAlong - w.scrollPerStep;
+        const across = e.velAcross;
+        const turned = Math.PI - Math.abs(Math.atan2(across, along));
+        const depth = w.cameraAlong + w.view.alongSpan - (e.along - e.radius);
+        if (turned < m.sweep && (turned > 0 || depth >= m.after)) {
+          const step = Math.min(speed / m.radius, m.sweep - turned);
+          const hand = e.spin === 0 ? 1 : e.spin;
+          const c = Math.cos(step * hand);
+          const s = Math.sin(step * hand);
+          e.velAlong = along * c - across * s + w.scrollPerStep;
+          e.velAcross = along * s + across * c;
+        }
+        e.turn = turnFor(Math.atan2(e.velAcross, e.velAlong - w.scrollPerStep));
         break;
       }
       default: {
