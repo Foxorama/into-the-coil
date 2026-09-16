@@ -1633,6 +1633,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       which is the *"attributes of all previous levels"* half of the brief made concrete.
       `ownA` keeps the room of the layer it was moved out of, so it sounds as it did.
     */
+    // 0331's take two: the ballad's orchestra had almost no room (0.04) beside the flutes' 0.5, and a dry
+    // orchestra is what a synthesised one sounds like. A hall for the strings, the band and the drums.
     air: {
       drone: 0.8,
       toll: 0.7,
@@ -1641,8 +1643,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       auraSlow: 0.45,
       call: 0.35,
       dread: 0.3,
-      lead: 0.22,
-      counter: 0.2,
+      lead: 0.35,
+      counter: 0.4,
       chords: 0.18,
       wraith: 0.16,
       auraFast: 0.12,
@@ -1652,9 +1654,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       drive: 0.06,
       engine: 0.05,
       frenzy: 0.05,
-      groove: 0.04,
+      groove: 0.28,
       stomp: 0.03,
-      ownA: 0.03,
+      ownA: 0.12,
       sub: 0.03,
     },
   },

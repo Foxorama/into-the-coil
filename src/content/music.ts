@@ -1072,6 +1072,13 @@ export interface MusicVoice {
    * to the beat it lands on. This indexes the grid.
    */
   accents?: readonly number[];
+  /**
+   * How far a player drifts from the grid — 0331's take two. Each note lands up to `loose` seconds late
+   * and up to twice that fraction softer, by a fixed hash of where it sits, so the loop is the same every
+   * time it plays and no two notes in it are placed identically. What a perfectly quantised line lacks
+   * and a person playing it does not. Absent is on the grid.
+   */
+  loose?: number;
   /** How many steps there are to a beat. 1 is quarters, 2 eighths, 4 sixteenths. */
   perBeat: number;
   /** Octaves above `MUSIC_ROOT`. Only read by a pitched voice. */

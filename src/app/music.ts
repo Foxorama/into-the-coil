@@ -198,6 +198,12 @@ export function bakeLayer(layer: MusicLayer, rate: number, theme?: ThemeKind): F
  * the order they are returned reproduces `bakeLayer` exactly, and `tests/sound.test.ts` holds that
  * the two paths agree sample for sample.
  */
+/** A fixed number in `[0, 1)` for a place in a pattern — the same every bake, and unrelated between places. */
+function hashOf(step: number, perBeat: number, length: number, salt: number): number {
+  const x = Math.sin(step * 12.9898 + perBeat * 78.233 + length * 37.719 + salt * 4.1414) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 export function layerNotes(
   layer: MusicLayer,
   rate: number,
@@ -212,9 +218,17 @@ export function layerNotes(
     for (let i = 0; i < voice.steps.length; i++) {
       const value = voice.steps[i];
       if (value === null || value === undefined) continue;
-      const at = i * step;
+      const loose = voice.loose ?? 0;
+      /*
+        0331's take two: a player's drift, from a hash of where the note sits rather than the noise
+        stream, so the drums' noise is unchanged and every voice of one instrument — which share a
+        line, a rate and so a hash — drifts together instead of flamming against itself.
+      */
+      const late = loose > 0 ? loose * hashOf(i, voice.perBeat, voice.steps.length, 1) : 0;
+      const at = i * step + late;
       if (at >= seconds) break;
-      notes.push(() => renderNote(voice, value, i, at, rate, rng, buffer));
+      const played = loose > 0 ? { ...voice, note: { ...voice.note, gain: voice.note.gain * (1 - Math.min(0.25, loose * 10) * hashOf(i, voice.perBeat, voice.steps.length, 2)) } } : voice;
+      notes.push(() => renderNote(played, value, i, at, rate, rng, buffer));
     }
   }
   /*
