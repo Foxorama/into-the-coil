@@ -66,7 +66,6 @@ const _ = null;
  * terms.
  */
 const ROOT: readonly number[] = [0, 0, -4, -2, 0, 0, 5, -5, -4, -2, 0, 0, 5, -4, -5, -2];
-const THIRD: readonly number[] = [3, 3, 0, 2, 3, 3, 8, -2, 0, 2, 3, 3, 8, 0, -2, 2];
 const FIFTH: readonly number[] = [7, 7, 3, 5, 7, 7, 12, 2, 3, 5, 7, 7, 12, 3, 2, 5];
 
 /**
@@ -109,83 +108,128 @@ const HEART: readonly (number | null)[] = (() => {
 
 
 /**
- * THE THEME — `call`'s tune, and it is the melody the whole level is a setting of.
+ * THE HEART, QUICKENED — a beat every two beats of the level, 75 a minute.
  *
- * ⚠️ **IT IS WRITTEN TO BE HARMONISED, WHICH IS A CONSTRAINT ON THE NOTES AND NOT ON THE RHYTHM.**
- * `HARMONY` below is this line a diatonic third up; that only sounds like a twin lead if the original
- * moves mostly by step, because parallel thirds over a leap read as two separate parts. So the line
- * steps, and the one leap in it is at the top of the third phrase where it is meant to be heard.
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, the seventh listen.** The story asked for:
+ * *"this is the end so there's sadness → then higher bpm → shifting into a fast past tense trying to
+ * power through it → and then the sombre acceptance, underscored with the heart beat."* The heart is
+ * the one thing that plays through all four, so it is the one thing that can carry the story's pulse:
+ * `HEART` above for the first two, and this from the twist on — through the ballad, the acceptance and
+ * the fight. **It lands on the first and third beat of every bar**, which is where the ballad's drums
+ * strike, so from 1:04 the heart IS the kick; and the fight's double kick plays it, so the fight is in
+ * step with the heart the level ended on.
  */
-const THEME: readonly (number | null)[] = [
-  12, _, 10, 12,
-  15, _, 14, _,
-  12, _, 10, _,
-  8, _, _, _,
-  12, _, 14, 15,
-  17, _, 15, _,
-  14, _, 12, _,
-  10, _, _, _,
-  15, _, 17, 19,
-  20, _, 19, _,
-  17, _, 15, _,
-  14, _, _, _,
-  12, _, 14, 15,
-  17, _, 15, 14,
-  12, _, 10, _,
-  12, _, _, _,
+const HEART_QUICK: readonly (number | null)[] = (() => {
+  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
+  for (let i = 0; i < 8; i++) {
+    steps[i * 8] = i % 2 === 0 ? 1 : 0.94;
+    steps[i * 8 + 2] = i % 2 === 0 ? 0.7 : 0.66;
+  }
+  return steps;
+})();
+
+/**
+ * THE FOUR MOVEMENTS — 0331's seventh listen, which is a story and not a mix note.
+ *
+ * > *"Instead of being 4 separate sections that work together, it's mostly the same music throughout
+ * > the entire track so it's not giving a sense of scale and story… slow, sombre, melancholy intro →
+ * > higher faster but similar tone → almost power ballad tale of loss, but with the focus on the
+ * > symphonic orchestral parts → fading back into the sombre melancholy with a faster beat."*
+ *
+ * ⚠️ **IT WAS THE SAME MUSIC BECAUSE IT WAS ONE TUNE.** Every section was `THEME`, its harmony, or the
+ * harmony held, over one progression — re-orchestrated four times, which a listener hears as one piece
+ * getting louder. Each movement now has material of its own, in layers of its own, because a layer
+ * plays the same notes at every rung it is open:
+ *
+ * | movement | rung | what plays | layers |
+ * |---|---|---|---|
+ * | the end | `run`, 0:00 | a piano lament in half and whole notes, a pad, the slow heart | `call`, `chords`, `drone`, `ownC` |
+ * | higher, faster | `push`, 0:26 | the lament's shape on a flute in eighths an octave up, the guitar picking eighths, high strings | `hook`, `arp`, `ownB`, `chords`, `ownC` |
+ * | the tale of loss | `surge`, 1:04 | a new progression, a string-and-horn melody, driving low strings, timpani and a half-time drum | `counter`, `groove`, `ownD`, `ownA` |
+ * | acceptance | `approach`, 1:36 | the piano lament again, a bell, the heart quickened | `call`, `chords`, `ownB`, `toll`, `ownA` |
+ *
+ * ⚠️ **"HIGHER BPM" IS NOTE RATE, AND THE GRID IS WHY.** The tempo is 150 and the player's gun is on it
+ * (`docs/decisions/0093-the-gun-is-on-the-grid.md`), so the lament moves in halves and wholes — 37 to
+ * 75 a minute to the ear — the second movement in eighths, and the ballad in eighths under a half-time
+ * drum, which is what a power ballad is.
+ */
+
+/**
+ * THE LAMENT'S PROGRESSION — a chord every two bars, which is what makes the opening slow before a note
+ * is played. `Am · F · C · Em · Dm · F · G · Am`. The first and second movements and the acceptance
+ * stand on it, so the flute is recognisably the piano's song sped up, and the end is the beginning.
+ */
+const L_ROOT: readonly number[] = [0, 0, -4, -4, 3, 3, -5, -5, 5, 5, -4, -4, -2, -2, 0, 0];
+const L_THIRD: readonly number[] = [3, 3, 0, 0, 7, 7, -2, -2, 8, 8, 0, 0, 2, 2, 3, 3];
+const L_FIFTH: readonly number[] = [7, 7, 3, 3, 10, 10, 2, 2, 12, 12, 3, 3, 5, 5, 7, 7];
+
+/**
+ * THE LAMENT — the piano's song, one note a beat at most, and mostly falling.
+ *
+ * ⚠️ **FOUR PHRASES OF FOUR BARS, AND THE LAST ONE RESOLVES.** The acceptance enters on the last of them
+ * (`approach` opens on the sixtieth bar, the twelfth of the loop), so the first thing heard of the song
+ * coming back is its cadence, and then the song from its top.
+ */
+const LAMENT: readonly (number | null)[] = [
+  19, _, _, 17, 15, _, _, _, 12, _, 15, _, 20, _, 19, _,
+  19, _, _, _, 17, _, 15, _, 14, _, _, _, _, _, 12, 14,
+  15, _, 17, _, 20, _, _, _, 19, _, 17, _, 15, _, _, _,
+  14, _, _, _, 17, _, 15, 14, 12, _, _, _, _, _, _, _,
 ];
 
 /**
- * THE HARMONY — `THEME`, a diatonic third above it.
- *
- * ⚠️ **THE ONE THING THIS GENRE IS FOR, AND IT IS A LOOKUP RATHER THAN A TRANSPOSITION.** A third is
- * three or four semitones depending on where in the scale it starts, so `note + 4` gives an F♯ over a
- * D and a D♯ over a B — notes A minor does not contain, which `tests/themes.test.ts` refuses and
- * which would put the player's own gun out of tune with the level. The table is the seven scale
- * degrees and the step is *two degrees up*, which is what a third actually is.
- *
- * ⚠️ **DERIVED AND NOT WRITTEN TWICE**, so the two guitars cannot drift apart when one of them is
- * retuned — the same argument the progression above makes about being hoisted, and the same failure
- * this repository keeps finding in its own tables.
+ * THE FLUTE — the lament's shape an octave up and in eighths: *"higher faster but similar tone."*
+ * Every phrase opens where the piano's did and runs where the piano held.
  */
-const DEGREES: readonly number[] = [0, 2, 3, 5, 7, 8, 10];
-const aThirdUp = (note: number): number => {
-  const octave = Math.floor(note / 12);
-  const inside = note - octave * 12;
-  const degree = DEGREES.indexOf(inside);
-  // Every note in this file is a scale tone, so the lookup cannot miss — but a hand editing `THEME`
-  // could make it, and a silent semitone is a worse outcome than a loud one.
-  if (degree < 0) throw new Error(`core: ${note} is not a tone of the key and cannot be harmonised`);
-  const up = degree + 2;
-  return octave * 12 + DEGREES[up % 7]! + (up >= 7 ? 12 : 0);
-};
-const HARMONY: readonly (number | null)[] = THEME.map((note) => (note === null ? _ : aThirdUp(note)));
+const FLUTE: readonly (number | null)[] = [
+  7, _, 8, 7, 5, _, 3, _, 3, _, 2, _, 0, _, _, _,
+  0, _, 3, _, 5, _, 8, _, 7, _, 5, _, 3, _, 0, _,
+  7, _, _, _, 5, 7, 10, _, 12, _, 10, _, 7, _, 5, _,
+  2, _, _, _, 3, 2, 0, _, 2, _, _, _, _, _, 5, 7,
+  8, _, 7, 5, 8, _, 12, _, 10, _, 8, _, 5, _, _, _,
+  12, _, 10, 8, 7, _, 8, _, 12, _, _, _, 15, _, 12, _,
+  14, _, 12, 10, _, _, 7, _, 5, _, 7, _, 10, _, 14, _,
+  12, _, _, _, 7, _, 3, _, 0, _, _, _, _, _, _, _,
+];
+
+/** The guitar, walking the lament's chords in eighths — the second movement's motor. */
+const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
+  const third = L_THIRD[bar]!;
+  const fifth = L_FIFTH[bar]!;
+  return bar % 2 === 0
+    ? [root, fifth, root + 12, third + 12, fifth + 12, third + 12, root + 12, fifth]
+    : [root, fifth, third + 12, root + 12, fifth, third + 12, root + 12, fifth];
+});
 
 /**
- * THE PIPES' LINES — `HARMONY`, held: a whole note a bar, and a half note every two beats.
+ * THE TWIST — the ballad's progression, and it opens on the one chord the lament never starts on.
  *
- * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, and the second pass replaced a line of their
- * own.** *"The flute music is good, but needs to be stronger and there needs to be longer notes at the
- * start and it doesn't quite mesh very well with the lead."* The pipes played sixteen bars of their own
- * over the tune, so every note agreed with the chord and hardly any agreed with the melody. **Derived
- * from `HARMONY`, they are a third above whatever the tune is on**, which is what *high harmonies*
- * means and cannot fail to mesh — and holding the note sounding at each bar or half bar is what makes
- * them long.
+ * ⚠️ **`F · G · Am · Am · F · G · C · Em · Dm · Em · F · C · Dm · Em · F · G`.** The rise of a sixth and
+ * seventh into the tonic is the minor key's most heroic cadence, and it is major chords doing the
+ * climbing — the sound of trying to power through it. It never settles: the last bar is G, which
+ * leans back into F at the top of the loop and into the lament's A minor when the acceptance comes.
  *
- * ⚠️ **Every bar of `THEME` opens with a note**, so the whole-note line has no rests to fill; a half
- * bar that starts in a rest holds the note struck before it in that bar.
+ * ⚠️ **WRITTEN FROM ITS OWN FIRST BAR AND TURNED A HALF LOOP**, because `surge` opens on the fortieth bar
+ * — the eighth of a sixteen-bar loop that has been running since the level started — and a ballad heard
+ * from its ninth bar is a ballad joined halfway.
  */
-const soundingAt = (line: readonly (number | null)[], bar: number, beat: number): number | null => {
-  for (let at = beat; at >= 0; at--) {
-    const note = line[bar * 4 + at];
-    if (note !== null && note !== undefined) return note;
-  }
-  return _;
-};
-const HARM_WHOLE: readonly (number | null)[] = Array.from({ length: 16 }, (_u, bar) => soundingAt(HARMONY, bar, 0));
-const HARM_HALF: readonly (number | null)[] = Array.from({ length: 32 }, (_u, i) =>
-  soundingAt(HARMONY, Math.floor(i / 2), (i % 2) * 2),
-);
+const B_ROOT: readonly number[] = [-4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, -7, -5, -4, -2];
+const B_THIRD: readonly number[] = [0, 2, 3, 3, 0, 2, 7, -2, -4, -2, 0, 7, -4, -2, 0, 2];
+const B_FIFTH: readonly number[] = [3, 5, 7, 7, 3, 5, 10, 2, 0, 2, 3, 10, 0, 2, 3, 5];
+
+/** A sixteen-bar line turned by half a loop, so its first bar plays at the loop's ninth. */
+const turned = <T>(line: readonly T[]): T[] => [...line.slice(line.length / 2), ...line.slice(0, line.length / 2)];
+
+/**
+ * THE TALE OF LOSS — the ballad's melody, for strings with a horn under them. It climbs for twelve bars
+ * to the A an octave over where it began, and falls back without resolving.
+ */
+const BALLAD: readonly (number | null)[] = [
+  12, _, _, 15, 14, _, _, 12, 15, _, _, _, 15, 17, 19, _,
+  20, _, _, 19, 17, _, _, 14, 19, _, _, _, 19, _, 22, _,
+  24, _, _, 22, 22, _, _, 19, 20, _, 19, 17, 19, _, _, _,
+  17, _, _, 20, 19, _, _, 22, 24, _, 22, 20, 19, _, 17, 14,
+];
 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
@@ -244,37 +288,6 @@ const pipeVoices = (
     note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.018 * level, attack: attack * 3, curve: 1.3, lowFrom: 9000, lowTo: 6000, highFrom: 3500, q: 0.6 },
   },
 ];
-
-/**
- * THE FINGERPICKING — a clean guitar walking each bar's chord in eighths.
- *
- * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** It replaces the chug and the tremolo, which
- * were the two techniques the death-metal brief was built on. The fourth listen: *"I think it needs a
- * piano and guitar section at the start, or guitar at the start and then piano kicks in as well
- * around the 42 sec mark."* Root, fifth, the octave, the third above it — the pattern every
- * fingerpicked ballad walks — with the order turning on alternate bars so two bars of one chord are not
- * the same bar twice. **165 to 880 Hz**, which is the gap between the heart and the pipes that the same
- * listen asked something to bridge.
- */
-const PICKING: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
-  const third = THIRD[bar]!;
-  const fifth = FIFTH[bar]!;
-  return bar % 2 === 0
-    ? [root, fifth, root + 12, third + 12, fifth + 12, third + 12, root + 12, fifth]
-    : [root, fifth, third + 12, root + 12, fifth, third + 12, root + 12, fifth];
-});
-
-/**
- * THE PIANO — a held chord on the first and third beat of every bar.
- *
- * ⚠️ **0331, and chordal on purpose rather than a second arpeggio.** The guitar already moves in
- * eighths; a piano doing the same would be two instruments saying one thing. So it plays blocks the
- * guitar walks through: the bass on the beat, the third and fifth over it, the second chord of the bar
- * softer and inverted so the top note moves.
- */
-const PIANO_BASS: readonly (number | null)[] = ROOT.flatMap((root, bar) => [root, FIFTH[bar]! - 12]);
-const PIANO_LOW: readonly (number | null)[] = THIRD.flatMap((third) => [third, third]);
-const PIANO_HIGH: readonly (number | null)[] = ROOT.flatMap((root, bar) => [FIFTH[bar]!, root + 12]);
 
 
 /**
@@ -370,7 +383,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         fight's heaviest low pulse IS the heart. The blast beat above it keeps the fight fast. The sweep
         stops at 45 Hz rather than 30, for the same reason the heart's does.
       */
-      steps: [...HEART, ...HEART, ...HEART, ...HEART],
+      steps: [...HEART_QUICK, ...HEART_QUICK, ...HEART_QUICK, ...HEART_QUICK],
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -495,50 +508,37 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE WALL: power chords, and the pad that makes them a place rather than a guitar ─────────────
+    ── THE PAD: the lament's chords, held, under the first, second and last movements ─────────────
 
-    ⚠️ **NO THIRD IN THE STACK, WHICH IS WHY IT SOUNDS ENORMOUS RATHER THAN SAD.** A distorted third
-    is the one interval that turns to mud — the harmonics of the two notes beat against each other —
-    and the genre's answer, for forty years, has been to leave it out of the guitars and put it in the
-    melody. The third is on `THIRD` up in `arp` and `lead`, and never down here.
+    ⚠️ **0331.** The whole minor triad, a chord every two bars, nothing struck. It closes for the ballad,
+    whose chords are not these, and comes back with the acceptance.
   */
   chords: [
-    /*
-      ⚠️ **THE POWER CHORDS STOOD HERE, AND A MELANCHOLY PAD HAS ITS THIRD** — 0331. A power chord is a
-      root and a fifth with the third left out on purpose, which is what makes it neither major nor
-      minor and why it drives. *"A somber melancholic song"* is the minor third being heard, so the pad
-      below plays the whole triad, held, and nothing in this layer is struck any more.
-    */
     {
-      steps: THIRD,
+      steps: L_THIRD,
       pitched: true,
       perBeat: 0.25,
       octave: 2,
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.15, attack: 0.5, curve: 1, lowFrom: 1400, lowTo: 900, q: 0.8 },
     },
     {
-      // The pad behind the wall: held, slow, and it is the only thing in the level that is not being
-      // played by a person. A black hole has no hands.
-      steps: ROOT,
+      steps: L_ROOT,
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
+      accents: [1, 0.86],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.09, attack: 0.55, curve: 1.2, lowFrom: 700, lowTo: 460, q: 1.3 },
     },
     {
-      steps: FIFTH,
+      steps: L_FIFTH,
       pitched: true,
       perBeat: 0.25,
       octave: 1,
-      accents: [1, 0.86, 0.92, 0.84, 0.96, 0.88, 1, 0.82],
+      accents: [1, 0.86],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.06, attack: 0.7, curve: 1.2, lowFrom: 660, lowTo: 430, q: 1.4 },
     },
     {
-      // The bottom of the wall, at 220 Hz — `chords` sits at +0.2 and may not carry its weight under
-      // 130, and `MUSIC_ROOT` is 55, so octave 0 and octave 1 are both under it. `sub`, `groove` and
-      // `drone` are the three centred layers that hold this places deep.
-      steps: ROOT,
+      steps: L_ROOT,
       pitched: true,
       perBeat: 0.25,
       octave: 2,
@@ -547,187 +547,113 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE PIANO: from 42 s, the middle of the sound ─────────────────────────────────────────────────
+    ── THE LAMENT: a piano, alone with the pad — *"this is the end, so there's sadness"* ──────────────
 
-    ⚠️ **0331's fourth listen**: *"we also need a mid-range tone kick in around the 42s mark"*, and *"we
-    need something interwoven with the pipe and higher melodies to bridge the heartbeat and pipes."*
-    The chug stood in this slot; it is sixteen bars and centred, which a piano's bass wants. A piano out
-    of a synthesiser is a hammer and a string that darkens as it rings: a saw whose lowpass closes over
-    the note, a sine under it for the body, and a short knock on the bass note. Never driven.
-  */
-  groove: [
-    /*
-      ⚠️ **THE LEFT HAND IS AN OCTAVE UP, OUT OF THE HEART'S WAY** — 0331's fifth listen: *"we lose the
-      heartbeat sound now around the 45 sec transition."* At octave 1 the piano's bass sat at 62–147 Hz,
-      exactly where the heart's thump is heard, and arrived at 42 s. At octave 2 it is 124–294 Hz, still
-      under the chords, and the body sine under it is half what it was.
-    */
-    {
-      steps: PIANO_BASS,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.74],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.1, attack: 0.002, curve: 2.4, lowFrom: 2200, lowTo: 500, q: 0.8 },
-    },
-    {
-      steps: PIANO_BASS,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.74],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.06, attack: 0.002, curve: 2 },
-    },
-    {
-      steps: PIANO_LOW,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.07, attack: 0.002, curve: 2.6, lowFrom: 3200, lowTo: 800, q: 0.8 },
-    },
-    {
-      steps: PIANO_LOW,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.7],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.07, attack: 0.002, curve: 2.2 },
-    },
-    {
-      steps: PIANO_HIGH,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.72],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.002, curve: 2.8, lowFrom: 4000, lowTo: 1000, q: 0.8 },
-    },
-    {
-      steps: PIANO_HIGH,
-      pitched: true,
-      perBeat: 0.5,
-      octave: 2,
-      accents: [1, 0.72],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.002, curve: 2.4 },
-    },
-    {
-      // The hammer: a short muffled knock on the bass note, which is what makes it a struck string.
-      steps: PIANO_BASS.map((note) => (note === null ? _ : 1)),
-      pitched: false,
-      perBeat: 0.5,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.03, attack: 0.001, curve: 6, lowFrom: 2400, lowTo: 900, highFrom: 300 },
-    },
-  ],
-
-  /*
-    ── THE THEME: the tune, played clean, and it is the only thing here that is not distorted ──────
+    ⚠️ **0331's seventh listen.** The first movement and the last. A struck string out of a synthesiser:
+    a saw whose lowpass closes as the note rings and a triangle body, a faint octave over the strike,
+    the hammer, and a left hand that sounds each chord's root once a bar. Every note rings three
+    beats and more, so the line is held together by its own decay rather than by anything under it.
   */
   call: [
     {
-      steps: THEME,
+      steps: LAMENT,
       pitched: true,
       perBeat: 1,
       octave: 2,
-      accents: [1, 0.76, 0.9, 0.74],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.125, attack: 0.01, curve: 1.9, lowFrom: 2600, lowTo: 1400, q: 1.3 },
+      accents: [1, 0.8, 0.88, 0.8],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.06, attack: 0.002, curve: 2.4, lowFrom: 2800, lowTo: 600, q: 0.7 },
     },
     {
-      steps: THEME,
+      steps: LAMENT,
       pitched: true,
       perBeat: 1,
-      octave: 1,
-      accents: [1, 0.76, 0.9, 0.74],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.5, gain: 0.075, attack: 0.02, curve: 1.6 },
+      octave: 2,
+      accents: [1, 0.8, 0.88, 0.8],
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 3.8, gain: 0.15, attack: 0.002, curve: 2, lowFrom: 3200, lowTo: 1300, q: 0.7 },
     },
     {
-      // The pick on the string: a click before every note, which is what makes it an instrument
-      // somebody is holding.
-      steps: THEME.map((note) => (note === null ? _ : 1)),
+      steps: LAMENT,
+      pitched: true,
+      perBeat: 1,
+      octave: 3,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.025, attack: 0.002, curve: 3 },
+    },
+    {
+      steps: LAMENT.map((note) => (note === null ? _ : 1)),
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.018, gain: 0.05, attack: 0.0004, curve: 9, lowFrom: 9000, highFrom: 3400 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.018, attack: 0.001, curve: 6, lowFrom: 2600, lowTo: 1000, highFrom: 400 },
+    },
+    {
+      // The left hand: the chord's root and fifth, low and soft, once a bar.
+      steps: L_ROOT,
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.08, attack: 0.002, curve: 1.8, lowFrom: 1600, lowTo: 500, q: 0.7 },
+    },
+    {
+      steps: L_FIFTH,
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.045, attack: 0.004, curve: 1.9, lowFrom: 1800, lowTo: 600, q: 0.7 },
     },
   ],
 
   /*
-    ── THE RIFF: what `push` opens, and it is the same chug an octave up with the third in it ──────
+    ── THE FLUTE: the lament, higher and faster — the second movement ─────────────────────────────
 
-    ⚠️ **THIS IS THE PLACE'S IDENTITY AND ONLY A DRONE, AN AURA AND THE RIDE MEASURED BELOW IT.** The
-    header above names `push` *the riff* and `surge` *the twin lead*; `heardAt` had it at **−34.8
-    dBFS rms / −18.5 peak at `surge`, 12.0 dB under the rest of its own band**, and
-    `docs/decisions/0154-the-mix-is-authored-as-intent.md`'s solve asked for **6.0× gain** to make it
-    the part it is authored as. A gain that large is the measurement saying the material is wrong, not
-    that the fader is.
-
-    ⚠️ **THE RIFF IS THE OPEN STRING AND `groove` IS THE MUTED ONE, AND BOTH WERE WRITTEN DEAD.** The
-    palm mute two layers up rings 32 ms of a 100 ms sixteenth, which is exactly right and is what a
-    palm mute *is*; this rang 57 ms of a 200 ms eighth — a 29% duty cycle on the one figure in the
-    piece that is supposed to sustain. The contrast the header describes, *a chugging low string
-    against a wide open chord above it*, needs the open one to be open. At 0.248 s under `curve: 1.35`
-    each note is still at a third when the next arrives, so the riff's own rests fill with ring the
-    way a distorted guitar's do, and the accents keep the articulation.
-
-    ⚠️ **THE ENVELOPE CARRIES 5.1 dB OF IT AND THE GAIN 2.7, WHICH IS THE ORDER THE CEILING FORCES.**
-    `scripts/weigh-mix.mjs` had this place at 93% of the clipping ceiling at `surge` and has it at 96%
-    now; decay length is the one lever that raises what a layer puts out without touching what it
-    peaks at, and there was a 3.2× of it available here. `lowTo` rises with the length for the reason
-    `arp` states. Out of it: **−27.1 rms / −13.6 peak at `surge`, `margin` −12.0 → −4.1**, and the
-    solve asks 2.12× there and 2.62× at `push` where it asked 6.01.
+    ⚠️ **0331's seventh listen**: *"higher faster but similar tone."* The pan pipe the earlier listens
+    liked, playing `FLUTE` — the piano's song an octave up and in eighths — with each note held just
+    past the next, so the eighths are a line rather than a pattern.
   */
-  /*
-    ── THE PIPES: what `surge` lifts into, and the riff is gone from this slot ────────────────────
-
-    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Asked for at the second boundary: *"I
-    want the music to kick into more of a higher pitch with the heart beat still going as the core. The
-    melody needs to shift and change… maybe even going into a flute, or mouth pipes… something that's
-    higher and lifting and distinctly different from the first 1 min, but that complements the
-    heartbeat."* **The riff this slot held was whispered to 0.17 at `push` by the drive and was the part
-    at `surge`**, so the slot was already the surge's and nothing before it needs the material.
-
-    ⚠️ **A PAN PIPE OUT OF A SYNTHESISER WITH NO VIBRATO, SO IT IS BUILT FROM WHAT A PIPE IS.** A
-    stopped pipe is nearly a sine with its odd harmonics faint, a quick breathy onset and air in the
-    tone. So: a triangle — odd harmonics only, falling as 1/n² — softened by a lowpass, with a sine on
-    the same note for body; a *chiff* of filtered noise on every onset, which is the consonant a player
-    blows the note with; and a quieter breath under every held note. The room is `air.hook` on the
-    place's row, and it is what makes one line of notes sound like it is being played somewhere.
-
-    ⚠️ **A5 TO C7 NOW, TWO OCTAVES ABOVE THE TUNE, AND WITH AN EDGE.** The first pass sat at 440–1047
-    Hz, and the second listen asked for more: *"the pipes need to be a higher tone with a bit more
-    piercing note to them."* So an octave up — 880–2093 Hz, the register a piccolo and a high pan pipe
-    share — the triangle's filter opened so its upper partials come through, the sine body halved so
-    the tone is less round, a quiet square under the held notes for the reedy bite a stopped pipe has
-    when it is blown hard, and a brighter chiff.
-
-    ⚠️ **AND THEN THE BRIEF MOVED, AND THE PIPES STOPPED PLAYING A LINE OF THEIR OWN.** Second listen:
-    *"the flute music is good, but needs to be stronger and there needs to be longer notes at the start
-    and it doesn't quite mesh very well with the lead"*, and then the whole shape: *"a somber
-    melancholic song with high harmonies, low deep heartbeat and a rising crescendo as we get to the end
-    of the surge, that then tapers off very slightly as it leads into the boss music."* The pipes are
-    the high harmonies now — `HARM_HALF`, a third above the tune and held — and `ownB` below carries
-    the same pipe in whole notes from the opening, so they arrive long before they lead.
-  */
-  hook: pipeVoices(HARM_HALF, 0.5, 2.3, 1, 0.04),
+  hook: pipeVoices(FLUTE, 2, 1.3, 1, 0.02),
 
   /*
-    ── THE PIPES, HELD: a whole note a bar, from the opening ───────────────────────────────────────
+    ── THE HIGH STRINGS: an E and an A, held — the second movement and the last ────────────────────
 
-    ⚠️ **0331.** *"We need to fit in some pipes earlier in the piece… so that they don't just suddenly
-    start for no reason"*, and *"longer notes at the start."* One note a bar, the third above the bar's
-    first tune note, blown slowly. Faint at `run`, a counter-line under the tune at `push`, and a high
-    pad under the moving pipes once `hook` takes over.
+    ⚠️ **0331.** *"High harmonies."* Two notes that belong to every chord of the lament or sit a step
+    off it — the fifth and the root over A minor, the major seventh and third over F — held over four
+    bars by two bows a few cents apart, 660 and 880 Hz with a faint octave above.
   */
-  ownB: pipeVoices(HARM_WHOLE, 0.25, 4.4, 0.9, 0.18),
+  ownB: [
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 3 + 7 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.1, curve: 0.8, lowFrom: 3000, lowTo: 2200, q: 0.7 },
+    },
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 3 - 7 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.3, curve: 0.8, lowFrom: 2900, lowTo: 2100, q: 0.7 },
+    },
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 3,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.05, attack: 1.2, curve: 0.8 },
+    },
+    {
+      steps: [7, 7, 12, 12],
+      pitched: true,
+      perBeat: 0.25,
+      octave: 4,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.015, attack: 1.5, curve: 0.8 },
+    },
+  ],
 
   /*
-    ── THE GUITAR: fingerpicked, clean, from the first bar ─────────────────────────────────────────
+    ── THE GUITAR: fingerpicked eighths, the second movement's motor ────────────────────────────────
 
-    ⚠️ **0331's fourth listen.** *"The first 10 seconds feels weird… it feels like we've got the backend
-    section of another song that stops and then this song starts around 10-11 seconds"*, and *"guitar at
-    the start."* The tremolo stood in this slot; it is sixteen bars and panned left, which suits one
-    guitar in a room. A clean plucked string: two saws a few cents apart whose lowpass closes fast after
-    the pick, a triangle body, and the pick itself — each note left ringing into the next, never driven.
+    ⚠️ **0331.** The clean guitar of the fourth listen on the lament's chords. It is what turns the
+    opening's half notes into eighths while the harmony stays where it was — the same song, faster.
   */
   arp: [
     {
@@ -755,12 +681,87 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.08, attack: 0.008, curve: 2, lowFrom: 2000, lowTo: 900, q: 0.7 },
     },
     {
-      // The pick — soft, because a clean guitar under a somber pad is picked with the flesh of a finger.
       steps: PICKING.map((note) => (note === null ? _ : 1)),
       pitched: false,
       perBeat: 2,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.012, attack: 0.003, curve: 6, lowFrom: 4000, highFrom: 1500 },
+    },
+  ],
+
+  /*
+    ── THE ORCHESTRA: the ballad's body — *"trying to power through it"* ─────────────────────────────
+
+    ⚠️ **0331's seventh listen**: *"almost power ballad tale of loss, but with the focus on the symphonic
+    orchestral parts."* Centred, because it carries the ballad's bottom: a string section holding each
+    chord, the cellos and basses driving eighths under it — the fast past tense — a double bass on the
+    root, and a horn on the melody an octave under the violins in `counter`. All of it on `B_*`, turned
+    half a loop so the ballad's first bar lands on the bar `surge` opens.
+  */
+  groove: [
+    {
+      steps: turned(B_ROOT.map((root) => root + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.3, curve: 0.8, lowFrom: 1800, lowTo: 1300, q: 0.8 },
+    },
+    {
+      steps: turned(B_THIRD.map((third) => third + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.045, attack: 0.36, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8 },
+    },
+    {
+      steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.04, attack: 0.42, curve: 0.8, lowFrom: 2000, lowTo: 1500, q: 0.8 },
+    },
+    {
+      // The violas' warmth under the section: the third and fifth again, as triangles, an octave up.
+      steps: turned(B_THIRD.map((third) => third + 12)),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 2,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.4, curve: 0.8, lowFrom: 2400, lowTo: 1800, q: 0.7 },
+    },
+    {
+      // The cellos and basses, spiccato: root, fifth and octave in eighths, accented on the beat.
+      steps: turned(B_ROOT.flatMap((root, bar) => {
+        const fifth = B_FIFTH[bar]!;
+        return [root, fifth, root + 12, fifth, root, fifth, root + 12, fifth + 12];
+      })),
+      pitched: true,
+      perBeat: 2,
+      octave: 1,
+      accents: [1, 0.66, 0.84, 0.66, 0.94, 0.66, 0.84, 0.72],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.075, attack: 0.006, curve: 2.4, lowFrom: 2200, lowTo: 800, q: 0.9 },
+    },
+    {
+      // The double bass: the root, held, at 73–131 Hz — above the heart's floor and under everything else.
+      steps: turned(B_ROOT),
+      pitched: true,
+      perBeat: 0.25,
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.1, attack: 0.08, curve: 1 },
+    },
+    {
+      // The horn: the ballad's melody an octave under the violins, round and a little late to speak.
+      steps: turned(BALLAD),
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.06, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7 },
+    },
+    {
+      steps: turned(BALLAD),
+      pitched: true,
+      perBeat: 1,
+      octave: 1,
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9 },
     },
   ],
 
@@ -841,35 +842,33 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
-    ── THE TWIN LEAD: `surge`, and it is the whole reason this place is in this genre ──────────────
+    ── THE VIOLINS: the tale of loss ────────────────────────────────────────────────────────────────
 
-    ⚠️ **THE HARMONY IS DERIVED FROM `THEME`, NOT WRITTEN AGAINST IT.** `aThirdUp` walks the scale by
-    two degrees, so a third is three semitones over some roots and four over others — which is what
-    makes it sound like a second guitarist rather than like a chorus effect. `RUNG_CLOSES` takes
-    `call` away in the same breath (`src/content/music.ts`), so what the ear loses is the clean
-    statement of the tune and what it gains is both guitars playing it.
-  */
-  /*
-    ⚠️ **THE TWIN GUITARS STOOD HERE AND THE SAME NOTES ARE STRINGS NOW** — 0331. The harmony is the
-    same third above the tune; what changed is how it is played. Two bowed saws a few cents apart,
-    slow to speak and held past the next note, no drive — the voice a somber piece harmonises in, where
-    a driven twin lead is the voice a metal one does. It sits an octave under the pipes, which play the
-    same line.
+    ⚠️ **0331's seventh listen.** The ballad's melody, the thing the third movement is: two bowed saws a
+    few cents apart and a sine for the section's body, slow to speak and held past the next note, so
+    the line swells rather than steps. The horn in `groove` doubles it an octave down.
   */
   counter: [
     {
-      steps: HARMONY,
+      steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      octave: 2 + 5 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.08, attack: 0.14, curve: 0.7, lowFrom: 2400, lowTo: 1700, q: 1 },
+      octave: 2 + 6 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.07, attack: 0.1, curve: 0.75, lowFrom: 3400, lowTo: 2400, q: 0.9 },
     },
     {
-      steps: HARMONY,
+      steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      octave: 2 - 5 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.08, attack: 0.17, curve: 0.7, lowFrom: 2300, lowTo: 1600, q: 1 },
+      octave: 2 - 6 / 1200,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.07, attack: 0.13, curve: 0.75, lowFrom: 3300, lowTo: 2300, q: 0.9 },
+    },
+    {
+      steps: turned(BALLAD),
+      pitched: true,
+      perBeat: 1,
+      octave: 2,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.8, gain: 0.06, attack: 0.12, curve: 0.8 },
     },
   ],
 
@@ -1068,7 +1067,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   ownA: [
     {
-      steps: HEART,
+      steps: HEART_QUICK,
       pitched: false,
       perBeat: 4,
       octave: 0,
@@ -1094,6 +1093,36 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       and a muffled thud — and the low sine stays for a speaker that can play it.
     */
     {
+      steps: HEART_QUICK,
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.1, attack: 0.002, curve: 3, drive: 0.3 },
+    },
+    {
+      steps: HEART_QUICK,
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
+    },
+  ],
+
+  /*
+    ── THE SLOW HEART: the first two movements ─────────────────────────────────────────────────────
+
+    ⚠️ **0331's seventh listen.** `ownA`'s voice on `HEART`, at 56 a minute: *"the v6 heartbeat at the
+    start was better as it was a bit more subdued."* It hands over to `ownA`, quickened, at the twist.
+  */
+  ownC: [
+    {
+      steps: HEART,
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5, attack: 0.002, curve: 2, drive: 0.4 },
+    },
+    {
       steps: HEART,
       pitched: false,
       perBeat: 4,
@@ -1106,6 +1135,58 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 0,
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 },
+    },
+  ],
+
+  /*
+    ── THE BALLAD'S DRUMS: timpani on the one, a deep half-time drum on the three ──────────────────
+
+    ⚠️ **0331's seventh listen.** A power ballad's beat is half-time — the backbeat on three — and an
+    orchestra plays it on timpani and a bass drum. Both land where the quickened heart does, so the heart
+    is inside the beat rather than beside it; a timpani roll in the last beat of every fourth bar pulls
+    each phrase into the next. **No cymbal**, which two listens asked to be taken out of this place.
+  */
+  ownD: [
+    {
+      // The timpani.
+      steps: [
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.9, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.96, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.9, _, _, _, _, _, _, _, _, _, _, _, 0.42, 0.52, 0.64, 0.8,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 118, to: 86, seconds: 1.1, gain: 0.36, attack: 0.002, curve: 2.2, drive: 0.12 },
+    },
+    {
+      // The skin of the timpani, which is what makes it a drum rather than a tone.
+      steps: [
+        1, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.9, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.96, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+        0.9, _, _, _, _, _, _, _, _, _, _, _, 0.42, 0.52, 0.64, 0.8,
+      ],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.05, attack: 0.001, curve: 4, lowFrom: 1400, lowTo: 500, highFrom: 90 },
+    },
+    {
+      // The bass drum on three, dark and wide, with a little of the snare's rattle in it.
+      steps: [_, _, 1, _, _, _, 0.92, _, _, _, 1, _, _, _, 0.96, _],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 62, seconds: 0.5, gain: 0.34, attack: 0.002, curve: 2.6, drive: 0.2 },
+    },
+    {
+      steps: [_, _, 1, _, _, _, 0.92, _, _, _, 1, _, _, _, 0.96, _],
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.06, attack: 0.002, curve: 3.2, lowFrom: 3200, lowTo: 1300, highFrom: 220 },
     },
   ],
 

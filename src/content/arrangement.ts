@@ -342,7 +342,8 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     at those rungs, so neither can be appointed here — the pad and the strings stand in, and both are
     held under what they stand in for.
   */
-  core: { run: 'chords', push: 'call', surge: 'groove', approach: 'counter', boss: 'frenzy' },
+  // 0331's seventh listen: the piano's lament, the flute, the ballad's violins, and the lament again.
+  core: { run: 'call', push: 'hook', surge: 'counter', approach: 'call', boss: 'frenzy' },
 };
 
 /*
@@ -426,9 +427,11 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     is the core of the piece from the opening.
   */
   core: {
-    run: { ownA: 'pulse' },
-    push: { ownA: 'pulse', ownB: 'counter' },
-    surge: { ownA: 'pulse', ownB: 'counter' },
+    // 0331's seventh listen: the slow heart for the first two movements, the quickened one and the
+    // ballad's drums after the twist, and the high strings a bed wherever they hold.
+    run: { ownC: 'pulse' },
+    push: { ownC: 'pulse', ownB: 'bed' },
+    surge: { ownA: 'pulse', ownD: 'pulse' },
     approach: { ownA: 'pulse', ownB: 'bed' },
     boss: { ownA: 'pulse' },
     bossPeak: { ownA: 'pulse' },
