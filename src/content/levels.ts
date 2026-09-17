@@ -1521,7 +1521,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       { at: 0, section: 'run' },
       { at: 918, section: 'push' },
       { at: 2070, section: 'surge' },
-      { at: 3450, section: 'approach' },
+      // 0331's fifteenth: the ballad's refrain and descent run to 1:55, so the acceptance opens at bar 72.
+      { at: 4145, section: 'approach' },
     ],
     boss: 'medusa',
     midBoss: { kind: 'axis', at: 1044 },

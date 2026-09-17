@@ -24,7 +24,6 @@
 import {
   BEAT_SECONDS,
   BAR_SECONDS,
-  secondsOfLayer,
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_COMPRESSOR,
@@ -48,6 +47,7 @@ import {
 import { sampleLayerInto, saturate } from './sound.ts';
 import {
   THEMES,
+  barsOf,
   airOf,
   auraCeilingOf,
   panTrackOf,
@@ -209,7 +209,8 @@ export function layerNotes(
   rate: number,
   theme?: ThemeKind,
 ): { buffer: Float32Array; notes: (() => void)[] } {
-  const seconds = secondsOfLayer(layer);
+  // 0331's fifteenth: a place may loop a layer over more bars than the shared length.
+  const seconds = BAR_SECONDS * barsOf(theme, layer);
   const buffer = new Float32Array(Math.round(seconds * rate));
   const rng = makeRng('music').stream(layer);
   const notes: (() => void)[] = [];

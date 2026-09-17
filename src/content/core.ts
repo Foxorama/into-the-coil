@@ -185,33 +185,48 @@ const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
 });
 
 /**
- * THE TWIST — the ballad's progression, and it opens on the one chord the lament never starts on.
+ * THE BALLAD, THROUGH-COMPOSED — thirty-six bars from bar 36 (57.6 s) to bar 72 (115.2 s).
  *
- * ⚠️ **`F · G · Am · Am · F · G · C · Em · Dm · Em · F · C · Dm · Em · F · G`.** The rise of a sixth and
- * seventh into the tonic is the minor key's most heroic cadence, and it is major chords doing the
- * climbing — the sound of trying to power through it. It never settles: the last bar is G, which
- * leans back into F at the top of the loop and into the lament's A minor when the acceptance comes.
+ * ⚠️ **0331's fifteenth listen**: *"we need a slightly more soaring refrain to lift the music from 1.24
+ * through to about 1.38 then start to come down from a higher peak to around 1.56"*, and *"then it toned
+ * down slightly instead of lifting up further to really hit those feels from 1.24 to 1.30."* It toned
+ * down because a sixteen-bar loop was replaying bars it had already played, from its softer half. No
+ * gain could fix that; the music after 1:23 had to be music that had not been heard yet. So `groove` and
+ * `counter` are thirty-six bars here (`bars` on the place's row) — the loop starts on bar 36, so the
+ * song is heard once, start to end, exactly while `surge` holds:
  *
- * ⚠️ **WRITTEN FROM ITS OWN FIRST BAR AND TURNED A HALF LOOP**, because `surge` opens on the fortieth bar
- * — the eighth of a sixteen-bar loop that has been running since the level started — and a ballad heard
- * from its ninth bar is a ballad joined halfway.
+ * | bars | seconds | what | chords |
+ * |---|---|---|---|
+ * | 0–3 | 57.6 | the lead-in, swelling in | `Dm Em F G` |
+ * | 4–15 | 64.0 | the ballad | `F G Am Am · F G C Em · Dm Em F C` |
+ * | 16–25 | 83.2 | the refrain: I–V–vi–IV in C, climbing to a top A at 1:36 | `C G Am F · C G F G · Am F` |
+ * | 26–35 | 99.2 | the descent, back towards the lament's A minor | `Dm Dm C C · F F Em Em · Am Am` |
  */
-const B_ROOT: readonly number[] = [-4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, -7, -5, -4, -2];
-const B_THIRD: readonly number[] = [0, 2, 3, 3, 0, 2, 7, -2, -4, -2, 0, 7, -4, -2, 0, 2];
-const B_FIFTH: readonly number[] = [3, 5, 7, 7, 3, 5, 10, 2, 0, 2, 3, 10, 0, 2, 3, 5];
+const B_ROOT: readonly number[] = [-7, -5, -4, -2, -4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, 3, -2, 0, -4, 3, -2, -4, -2, 0, -4, -7, -7, 3, 3, -4, -4, -5, -5, 0, 0];
+/** The third and fifth over each root, as the ballad voices them — just above it. */
+const CHORD_OVER: Readonly<Record<number, readonly [number, number]>> = { [-7]: [-4, 0], [-5]: [-2, 2], [-4]: [0, 3], [-2]: [2, 5], 0: [3, 7], 3: [7, 10] };
+const B_THIRD: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![0]);
+const B_FIFTH: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![1]);
 
-/** A sixteen-bar line turned by half a loop, so its first bar plays at the loop's ninth. */
-const turned = <T>(line: readonly T[]): T[] => [...line.slice(line.length / 2), ...line.slice(0, line.length / 2)];
+/** The ballad is written from its own first bar now, which is the loop's; this is what it used to turn. */
+const turned = <T>(line: readonly T[]): T[] => [...line];
 
 /**
- * THE TALE OF LOSS — the ballad's melody, for strings with a horn under them. It climbs for twelve bars
- * to the A an octave over where it began, and falls back without resolving.
+ * THE TALE OF LOSS — the violins' line, all thirty-six bars. The ballad climbs to its A an octave up; the
+ * refrain goes past it, to the E and the A above (1319 and 1760 Hz), and the descent walks back down to
+ * the A two octaves under that peak.
  */
 const BALLAD: readonly (number | null)[] = [
+  17, _, _, 20, 19, _, _, 22, 24, _, 22, 20, 19, _, 17, 14,
   12, _, _, 15, 14, _, _, 12, 15, _, _, _, 15, 17, 19, _,
   20, _, _, 19, 17, _, _, 14, 19, _, _, _, 19, _, 22, _,
   24, _, _, 22, 22, _, _, 19, 20, _, 19, 17, 19, _, _, _,
-  17, _, _, 20, 19, _, _, 22, 24, _, 22, 20, 19, _, 17, 14,
+  22, _, 24, 27, 26, _, _, 22, 24, _, _, _, 24, _, 27, _,
+  31, _, _, 29, 26, _, _, 22, 29, _, 27, 24, 26, _, 29, 31,
+  36, _, _, _, 36, _, 34, 31,
+  29, _, _, _, 29, 27, 24, _, 27, _, _, 24, 22, _, _, _,
+  24, _, _, 20, 19, _, _, _, 22, _, _, 19, 17, _, _, 14,
+  12, _, _, _, _, _, _, _,
 ];
 
 /**
@@ -288,8 +303,10 @@ const heartAt = (length: number, lubs: readonly number[], dub: number): (number 
 */
 const HEART_DISTANT = heartAt(288, [0, 38, 76, 114, 152, 190, 228], 3);
 const HEART_PUSH = heartAt(128, [4, 30, 55, 81, 106], 3);
-const HEART_BALLAD = heartAt(32, [8, 24], 2);
-const HEART_ACCEPT = heartAt(128, [0, 14, 28, 43, 57, 71, 85, 100, 114], 2);
+// 0331's fifteenth: the ballad's heart slower, 2.13 s — three in four bars, first at 59.0 s, last at 114.4.
+const HEART_BALLAD = heartAt(64, [14, 35, 56], 2);
+// 0331's fifteenth: the acceptance opens at 115.2 s now — first at 116.2, last at 123.3, then the fight's.
+const HEART_ACCEPT = heartAt(128, [10, 24, 38, 52, 67, 81], 2);
 
 /**
  * The heart's three voices on `steps` — the chest, its upper body and the knock — scaled by `level`.
@@ -328,16 +345,21 @@ const heartVoices = (steps: readonly (number | null)[], level: number): MusicVoi
  * scale's five notes that A minor already owns, so the player's gun stays in key — and lands on long
  * notes the violins climb over. The blue note itself is the scoop: every note leans up into its pitch.
  */
-const SAX: readonly (number | null)[] = turned([
+const SAX: readonly (number | null)[] = [
+  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
   _, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 10,
   12, _, 15, 17, 15, _, 12, _, _, _, _, _, _, _, _, _,
   _, _, _, _, _, _, 17, 15, 12, _, _, _, _, _, _, _,
   19, _, 17, 15, _, 12, 15, _, 19, _, _, _, _, _, _, _,
   _, _, _, _, _, _, 17, 19, _, _, _, _, 22, _, 19, 17,
   15, _, _, _, _, _, _, _, 15, _, 17, 19, _, 22, 19, _,
-  17, _, _, _, _, _, _, _, _, _, _, _, _, _, 12, 15,
-  17, _, 15, _, 12, _, _, _, _, _, _, _, 10, _, 12, _,
-]);
+  19, _, _, _, _, _, _, _, 17, _, _, _, _, _, _, _, 19, _, _, _, _, _, _, _, 20, _, _, _, _, _, _, _,
+  22, _, _, _, _, _, _, _, 22, _, _, _, _, _, _, _, 24, _, _, _, _, _, _, _, 26, _, _, _, 24, _, 26, _,
+  27, _, _, _, _, _, _, _, 24, _, _, _, 20, _, 17, _,
+  _, _, _, _, 17, _, 15, 12, 12, _, _, _, _, _, _, _, _, _, 15, 17, 19, _, 15, _, 12, _, _, _, _, _, _, _,
+  _, _, _, _, 12, _, 15, 17, 15, _, _, _, _, _, _, _, _, _, 19, _, 17, _, 14, _, 12, _, _, _, 10, _, _, _,
+  12, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+];
 
 /**
  * A tenor sax on `line`, in eighths, each note held `beats`: a reedy saw and a hollow square, a body, and
@@ -392,8 +414,10 @@ const [SAX_PASSING, SAX_LANDING] = splitByRoom(SAX, 4);
  * A, is played harder than the first: a line of weights over the loop, which is turned, so the second
  * half of the song is the loop's first half. Near level in energy over the whole loop.
  */
-const CLIMB_BEATS: readonly number[] = Array.from({ length: 64 }, (_u, i) => (i < 32 ? 1.1 : 0.88));
-const CLIMB_BARS: readonly number[] = Array.from({ length: 16 }, (_u, i) => (i < 8 ? 1.1 : 0.88));
+// 0331's fifteenth: swelling through the lead-in, level through the ballad, rising through the refrain to
+// its peak at bar 24, and falling away through the descent.
+const CLIMB_BARS: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.12, 1.14, 1.17, 1.2, 1.22, 1.25, 1.28, 1.3, 1.34, 1.3, 1.2, 1.12, 1.06, 1, 0.94, 0.88, 0.84, 0.8, 0.76, 0.72];
+const CLIMB_BEATS: readonly number[] = CLIMB_BARS.flatMap((weight) => [weight, weight, weight, weight]);
 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
@@ -1070,7 +1094,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     {
       // The trumpets, on the melody's second half only.
-      steps: turned(BALLAD.map((note, i) => (i >= 32 ? note : _))),
+      steps: BALLAD.map((note, i) => (i >= 64 && i < 112 ? note : _)),
       pitched: true,
       perBeat: 1,
       accents: CLIMB_BEATS,
@@ -1244,27 +1268,6 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     // The flute an octave over the violins — 0331's eighth listen, the high touch of sadness at the top.
     ...pipeVoices(turned(BALLAD), 1, 2.8, 0.5, 0.06, 0.4),
-  ],
-
-  /*
-    ── THE CRASH ────────────────────────────────────────────────────────────────────────────────────
-  */
-  crash: [
-    {
-      steps: [1, _, _, _, _, _, _, _, 0.86, _, _, _, _, _, _, _],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 1.2, gain: 0.16, attack: 0.001, curve: 2.6, lowFrom: 15000, lowTo: 4200, highFrom: 2200 },
-    },
-    {
-      // The gong under it: a black hole's crash is not a cymbal, it is a mass being struck.
-      steps: [0, _, _, _, _, _, _, _, -5, _, _, _, _, _, _, _],
-      pitched: true,
-      perBeat: 1,
-      octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.15, attack: 0.02, curve: 1.3, lowFrom: 900, lowTo: 400, q: 2.2, drive: 0.4 },
-    },
   ],
 
   /*
@@ -1556,13 +1559,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ownC: heartVoices(HEART_DISTANT, 1),
 
   /*
-    ── THE BALLAD'S HEART: beat three of every bar, 1.6 s apart ─────────────────────────────────────
+    ── THE BALLAD'S HEART: every 2.13 s, in `crash`, which this place never sounds ──────────────────
 
     ⚠️ **0331's thirteenth listen.** It lived inside the ballad's drums, which fade out slowly into the
     acceptance, so it went on beating under the next heart. `beat` is the title's layer, closed in every
     level and never voiced here: two bars, centred, and free to leave on its own fader.
   */
-  beat: heartVoices(HEART_BALLAD, 1),
+  crash: heartVoices(HEART_BALLAD, 1),
 
   /*
     ── THE SECOND HEART: every 2.56 s, under the flute and the guitar ────────────────────────────
