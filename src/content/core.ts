@@ -373,6 +373,42 @@ const CELLO: readonly (number | null)[] = [
 const [CELLO_MOVING, CELLO_HELD] = splitByRoom(turned(CELLO), 2);
 
 /**
+ * THE FLUTE, CARRIED ON — a third voice through the ballad, in eighths. 0331's seventeenth listen: *"the
+ * flute trails off around 1.05/1.06, can we have it pick it up and intertwine with the melody going
+ * ahead?"*
+ *
+ * ⚠️ **IT PICKS UP WHERE THE SECOND MOVEMENT'S FLUTE DIES AWAY** — its first phrase is at bar 2 (60.8 s),
+ * inside that flute's tail — and it is written against both the violins and the cello: it runs where
+ * both of them hold, holds where either runs, and never doubles the violins at the unison. It replaces
+ * the flute that only doubled the violins an octave up, which was part of *"really high sounds"*: this
+ * one lives mostly at 520–1320 Hz, the flute's warm register, and reaches the E above only at the refrain.
+ */
+const FLUTE_BALLAD: readonly (number | null)[] = [
+  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+  _, _, _, _, 0, _, 3, 5, 7, _, _, _, 5, _, 2, _,
+  8, _, _, _, _, _, 7, 5, 10, _, _, _, _, _, _, _,
+  _, _, 7, 8, 10, _, 12, _, 12, _, _, _, _, _, _, _,
+  _, _, _, _, 12, _, 10, 8, 10, _, _, _, _, _, _, _,
+  _, _, 10, 12, 15, _, 12, _, 14, _, _, _, 12, _, 10, _,
+  5, _, _, _, 8, _, 5, _, 7, _, _, _, _, _, 10, _,
+  12, _, _, _, _, _, _, _, _, _, 12, 14, 15, _, 17, 19,
+  19, _, _, _, _, _, _, _, _, _, 17, _, 14, _, 17, _,
+  15, _, 17, _, 19, _, 15, _, 12, _, _, _, _, _, _, _,
+  7, _, _, _, 10, _, 12, _, 14, _, _, _, _, _, _, _,
+  8, _, _, _, _, _, _, _, 10, _, 12, _, 14, _, 17, _,
+  19, _, _, _, _, _, _, _, 15, _, 12, _, 8, _, 12, _,
+  _, _, 17, 15, 12, _, 8, _, 5, _, _, _, _, _, _, _,
+  7, _, _, _, 10, _, 7, _, 3, _, 5, 7, 10, _, 12, _,
+  8, _, _, _, _, _, _, _, _, _, 8, 10, 12, _, 10, 8,
+  14, _, _, _, _, _, 12, 10, 7, _, _, _, _, _, _, _,
+  _, _, 3, 5, 7, _, 12, _, 12, _, _, _, _, _, _, _,
+  _, _, 12, _, 10, _, 8, _, 5, _, _, _, _, _, _, _,
+  8, _, _, _, 12, _, _, _, 15, _, _, _, 17, _, _, _,
+  19, _, _, _, _, _, 17, _, 22, _, _, _, 19, _, 17, 14,
+];
+const [FLUTE_BALLAD_MOVING, FLUTE_BALLAD_HELD] = splitByRoom(turned(FLUTE_BALLAD), 4);
+
+/**
  * A solo cello on `line`, in quarters, each note held `beats`: two bows a few cents apart, a body, and the
  * rosin — with a singer's vibrato easing in as the note is held.
  */
@@ -926,7 +962,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BARS,
       loose: 0.01,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.05, attack: 0.4, curve: 0.8, lowFrom: 2400, lowTo: 1800, q: 0.7, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.3, gain: 0.085, attack: 0.4, curve: 0.8, lowFrom: 2400, lowTo: 1800, q: 0.7, release: BEAT_SECONDS * 1.5 },
     },
     {
       // The cellos and basses, spiccato: root, fifth and octave in eighths, accented on the beat.
@@ -959,7 +995,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.01,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.06, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.085, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(BALLAD),
@@ -968,7 +1004,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.01,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.08, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.115, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
     },
     /*
       ⚠️ **THE METAL GUITARS STOOD HERE, AND THE BAND IS A SOUL BAND NOW** — 0331's eleventh listen:
@@ -1054,7 +1090,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BARS,
       loose: 0.01,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.6, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.1, attack: 0.6, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_FIFTH.map((fifth) => fifth + 12)),
@@ -1063,7 +1099,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BARS,
       loose: 0.01,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.7, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.09, attack: 0.7, curve: 0.8, lowFrom: 1600, lowTo: 1400, q: 0.6, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(B_ROOT.map((root) => root + 24)),
@@ -1115,7 +1151,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.01,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1100, lowTo: 2600, q: 0.7, release: BEAT_SECONDS * 1.1, vibrato: 6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1000, lowTo: 2000, q: 0.7, release: BEAT_SECONDS * 1.1, vibrato: 6 },
     },
     /*
       ⚠️ **AND THE PIANO FROM THE OPENING, INSIDE IT** — 0331's tenth listen: *"feels like a copy paste
@@ -1130,7 +1166,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       loose: 0.01,
       octave: 1,
       accents: [1, 0.72, 0.84, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.1, attack: 0.002, curve: 2.2, lowFrom: 3000, lowTo: 1200, q: 0.7 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.14, attack: 0.002, curve: 2.2, lowFrom: 3000, lowTo: 1200, q: 0.7 },
     },
     {
       steps: turned(B_ROOT.flatMap((root, bar) => [root + 12, B_FIFTH[bar]! + 12, B_THIRD[bar]! + 24, B_FIFTH[bar]! + 12])),
@@ -1139,7 +1175,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       loose: 0.01,
       octave: 1,
       accents: [1, 0.72, 0.84, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.04, attack: 0.002, curve: 2.6, lowFrom: 2600, lowTo: 600, q: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.2, gain: 0.055, attack: 0.002, curve: 2.6, lowFrom: 2600, lowTo: 600, q: 0.7 },
     },
   ],
 
@@ -1270,7 +1306,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 + 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.034, attack: 0.14, curve: 0.4, lowFrom: 6000, lowTo: 4400, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.02, attack: 0.14, curve: 0.4, lowFrom: 4500, lowTo: 3400, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
     },
     {
       steps: turned(BALLAD),
@@ -1279,10 +1315,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 - 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.03, attack: 0.17, curve: 0.4, lowFrom: 5800, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.018, attack: 0.17, curve: 0.4, lowFrom: 4300, lowTo: 3200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
     },
     // The flute an octave over the violins — 0331's eighth listen, the high touch of sadness at the top.
-    ...pipeVoices(turned(BALLAD), 1, 2.8, 0.5, 0.06, 0.4),
+    // The flute's own line, carried on from the second movement — 0331's seventeenth listen.
+    ...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6),
+    ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5),
   ],
 
   /*
@@ -1551,7 +1589,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       loose: 0.005,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.075, attack: 0.004, curve: 4, lowFrom: 5200, lowTo: 2400, highFrom: 300 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.075, attack: 0.004, curve: 4, lowFrom: 3600, lowTo: 1800, highFrom: 300 },
     },
     {
       steps: [_, 1, _, 0.92, _, 1, _, 0.94, _, 1, _, 0.92, _, 1, _, 0.98],
