@@ -215,8 +215,8 @@ function saurianCoda(): CodaPart[] {
   const floor = punch.find((v) => v.note.wave === 'sine' && v.note.to < 90);
   const crack = punch.find((v) => v.note.wave === 'noise' && v.note.seconds > 0.08);
   const last: MusicVoice[] = [];
-  if (floor !== undefined) last.push(struck(floor, { [LAST]: 0.7 }, { seconds: 0.9, curve: 3 }));
-  if (crack !== undefined) last.push(struck(crack, { [LAST]: 0.65 }, { seconds: 0.45, curve: 4 }));
+  if (floor !== undefined) last.push(struck(floor, { [LAST]: 0.6 }, { seconds: 0.9, curve: 3 }));
+  if (crack !== undefined) last.push(struck(crack, { [LAST]: 0.5 }, { seconds: 0.45, curve: 4 }));
   parts.push({ layer: 'ownC', pan: 0, voices: last });
 
   // And the bass's A under it, once.
