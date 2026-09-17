@@ -1566,9 +1566,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         actually pretty good"* — is the aura doing exactly its job.
       */
       run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07276, ownD: 0, lead: 0, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.3624, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0.447, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.304, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0.398, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0889, arp: 0.1894, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.3048, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0.5628, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.2557, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0.4732, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },
@@ -1618,8 +1618,22 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // 0331's fifteenth: the ballad is one piece of thirty-six bars, bar 36 to bar 72.
     // 0331's sixteenth: forty-two, so the ballad runs on under the acceptance into the fight.
     bars: { groove: 42, counter: 42, beat: 42 },
-    // 0331's fifteenth: the ballad's heart lives in `crash`, which this place never sounds — held centred.
-    pan: { crash: { perBeat: 0.25, steps: [0] } },
+    /*
+      0331's fifteenth: the ballad's heart lives in `crash`, which this place never sounds — held centred.
+      0331's twentieth: *"left ear slightly overpowers the right ear at 30 secs, the flute is playing second
+      fiddle to the left ear's notes… from 1.27 the dominant sound is the violin, and violin and flute should
+      be equal and interwoven."* Measured, the left channel was 1.5–2 dB up from the opening to the fight:
+      the guitar at −0.55 level with the flute, the violins at −0.4 two decibels over a centred flute, the
+      piano and its flute at −0.3. Each pair now sits either side of the middle, and closer to it.
+    */
+    pan: {
+      crash: { perBeat: 0.25, steps: [0] },
+      call: { perBeat: 0.25, steps: [-0.12] },
+      arp: { perBeat: 0.25, steps: [-0.35] },
+      hook: { perBeat: 0.25, steps: [0.12] },
+      counter: { perBeat: 0.25, steps: [-0.28] },
+      beat: { perBeat: 0.25, steps: [0.18] },
+    },
     // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
     swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 0.25, ownB: 0.25, stomp: 0.05, beat: 0.2 },
     // 0331's twelfth: the first sound is the heart and the flute, struck rather than faded up.
