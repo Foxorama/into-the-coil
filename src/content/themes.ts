@@ -1648,7 +1648,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       counter: { perBeat: 0.25, steps: [-0.28] },
       beat: { perBeat: 0.25, steps: [0.18] },
       // 0331's twenty-fourth: the fight's flute, a little right of centre as the ballad's was.
-      bass: { perBeat: 0.25, steps: [0.2] },
+      /*
+        0331: *"left ear distortion and flute only in the right ear and no balance for the boss music."* The energy
+        was even; what was not was the kind of sound on each side — the growl, the kit and the bell left, the
+        flute, the tremolo and the drive right. The flute and the growl are in the middle now, and everything
+        else sits nearer it.
+      */
+      bass: { perBeat: 0.25, steps: [0] },
+      wraith: { perBeat: 0.25, steps: [0] },
+      frenzy: { perBeat: 0.25, steps: [0.2] },
+      drive: { perBeat: 0.25, steps: [0.1] },
+      perc: { perBeat: 0.25, steps: [-0.2] },
+      toll: { perBeat: 0.25, steps: [-0.2] },
+      auraSlow: { perBeat: 0.25, steps: [-0.25] },
+      auraFast: { perBeat: 0.25, steps: [0.25] },
     },
     // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
     swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 0.25, ownB: 0.25, stomp: 0.05, beat: 0.2 },

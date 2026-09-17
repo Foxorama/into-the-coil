@@ -1564,11 +1564,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         1, 0.42, 0.66, 0.46, 0.9, 0.44, 0.64, 0.42, 0.96, 0.44, 0.68, 0.46, 0.88, 0.48, 0.68, 0.54,
         1, 0.42, 0.68, 0.44, 0.9, 0.42, 0.66, 0.44, 0.96, 0.42, 0.66, 0.46, 0.88, 0.46, 0.66, 0.5,
         1, 0.44, 0.68, 0.46, 0.92, 0.44, 0.66, 0.46, 0.98, 0.46, 0.7, 0.48, 0.92, 0.52, 0.74, 0.62,
-      ],
+      ].filter((_v, i) => i % 2 === 0),
       pitched: false,
-      perBeat: 8,
+      perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.085, attack: 0.0005, curve: 6.5, lowFrom: 7600, lowTo: 2600, highFrom: 1100 },
+      // 0331: *"a weird flickering noise kicking in at 2.05"* — a snare on every thirty-second is twenty strokes a second,
+      // which reads as a flicker rather than a beat. Sixteenths, darker, and a little quieter.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.07, attack: 0.001, curve: 6, lowFrom: 4800, lowTo: 1900, highFrom: 700 },
     },
     /*
       ⚠️ **THE HEART STOOD HERE, AND IT IS `ownA` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`.
@@ -1584,7 +1586,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.022, gain: 0.05, attack: 0.0004, curve: 8.5, lowFrom: 14000, highFrom: 7200 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.04, attack: 0.001, curve: 8, lowFrom: 8000, highFrom: 4200 },
     },
     /*
       ⚠️ **AND THE FIGHT'S HEART IS BACK HERE, AT 75** — 0331's tenth listen. `ownA` slowed for the level
@@ -1820,7 +1822,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.2, attack: 0.02, curve: 1.9, lowFrom: 1000, lowTo: 420, q: 1.3, drive: 0.42 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.2, attack: 0.02, curve: 1.9, lowFrom: 900, lowTo: 400, q: 1.1, drive: 0.25 },
     },
     {
       steps: [
