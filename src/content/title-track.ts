@@ -4,8 +4,7 @@
  * ⚠️ **The album plan's step 5, asked for with the album**: *"title music plus run music — we'll need to make
  * the title music expand out though as it's currently a pretty short recurring sound and not a full track."*
  * The title screen plays two bars — `drone`, `bass` and `beat` from `src/content/music.ts` — and the first two are the
- * floor of this piece, unchanged; the kit is replaced by a heart (see `heart`). What is added is written over their harmony, which is two bars of A minor
- * and G: a pad that spells it, a sixteenth arpeggio, a lead that states a theme for the game, and a flute —
+ * instruments of this piece's floor, walked through a longer harmony; the kit is replaced by a heart (see `heart`). What is added is written over a harmony of its own, A minor, F, C and G (see `TITLE_ROOT`): a pad that spells it, a sixteenth arpeggio, a lead that states a theme for the game, and a flute —
  * the instrument the whole album keeps coming back to — for the breakdown.
  *
  * ⚠️ **A SCORE OF SECTIONS ON A CLOCK, NOT A CAMERA** — the title has no scroll, so each section names how many
@@ -17,10 +16,31 @@ import { BEAT_SECONDS, MUSIC, type MusicVoice } from './music.ts';
 
 const _ = null;
 
-/** A minor, then G, a bar each — the drone's own two bars. */
-const TITLE_ROOT = [0, -2];
-const TITLE_THIRD = [3, 2];
-const TITLE_FIFTH = [7, 5];
+/**
+ * The harmony: A minor, F, C and G, two bars each — eight bars before anything repeats.
+ *
+ * ⚠️ **IT WAS A MINOR AND G, A BAR EACH, FOR THE WHOLE TRACK** — heard on the album: *"it's the first two notes
+ * right at the start that bounce back and forth and continue through the entire track."* The title screen's
+ * two bars were this piece's floor, so the drone, the pad, the bass and the arpeggio all swung A, G, A, G every
+ * 1.6 seconds for two minutes, and the theme had nowhere to go but back. The same instruments now walk a
+ * progression that leaves home and comes back to it: i, VI, III, VII.
+ */
+const TITLE_ROOT = [0, 0, -4, -4, 3, 3, -2, -2];
+const TITLE_THIRD = [3, 3, 0, 0, 7, 7, 2, 2];
+const TITLE_FIFTH = [7, 7, 3, 3, 10, 10, 5, 5];
+/** The note between each chord's third and fifth, for the bass's walk — always inside A natural minor. */
+const TITLE_PASSING = [5, 5, 2, 2, 8, 8, 3, 3];
+
+/** A two-bar bass riff written on A (0, 3, 5, 7 = root, third, passing, fifth), walked through the harmony. */
+const walked = (steps: readonly (number | null)[]): (number | null)[] =>
+  TITLE_ROOT.flatMap((_root, bar) =>
+    steps.slice((bar % 2) * 8, (bar % 2) * 8 + 8).map((n) => {
+      if (n === null) return _;
+      const chord = [TITLE_ROOT[bar]!, TITLE_THIRD[bar]!, TITLE_PASSING[bar]!, TITLE_FIFTH[bar]!];
+      const at = [0, 3, 5, 7].indexOf(n);
+      return at < 0 ? n + TITLE_ROOT[bar]! : chord[at]!;
+    }),
+  );
 
 /** A part of the title track: its voices, how many bars its loop is, how much room, and where it sits. */
 export interface TitlePart {
@@ -32,7 +52,7 @@ export interface TitlePart {
 
 /** The theme: eight bars that rise and fall back to B, then eight that climb higher and come home. */
 const THEME: readonly (number | null)[] = [
-  12, _, _, 15, 14, _, 10, _, 12, _, 7, _, 10, _, _, _,
+  12, _, _, 15, 14, _, 10, _, 12, _, 5, _, 10, _, _, _,
   12, _, _, 15, 17, _, 15, 14, 15, _, 12, _, 14, _, _, _,
   19, _, _, 17, 19, _, 22, _, 24, _, 22, 19, 17, _, _, _,
   15, _, 17, 19, 22, _, 19, 17, 15, _, 14, 12, 14, _, _, _,
@@ -57,13 +77,13 @@ const TITLE_HEART: readonly (number | null)[] = (() => {
 
 /** The flute's breakdown line: long notes, a bar or two each. */
 const FLUTE_LINE: readonly (number | null)[] = [
-  7, _, _, _, 5, _, _, _, 3, _, _, _, 2, _, _, _,
+  7, _, _, _, 5, _, _, _, 3, _, _, _, 0, _, _, _,
   7, _, _, _, 10, _, _, _, 12, _, _, _, 14, _, 12, _,
 ];
 
 export const TITLE_PARTS = {
-  drone: { voices: MUSIC.drone, bars: 2, air: 0.6, pan: 0 },
-  bass: { voices: MUSIC.bass, bars: 2, air: 0.05, pan: 0 },
+  drone: { voices: MUSIC.drone.map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0 },
+  bass: { voices: MUSIC.bass.map((v) => (v.pitched ? { ...v, steps: walked(v.steps) } : v)), bars: 8, air: 0.05, pan: 0 },
   /*
     ⚠️ **THE TITLE'S KIT STOOD HERE, AND IT WAS THE METRONOME** — heard on the album: *"there's a back and forth
     sound which is overpowering the rest of the music, I was calling it the metronome previously… can we replace
@@ -87,7 +107,7 @@ export const TITLE_PARTS = {
       { steps: TITLE_THIRD, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.45, curve: 0.6, lowFrom: 1900, lowTo: 1400, q: 0.7, release: BEAT_SECONDS * 1.5, vibrato: 7 } },
       { steps: TITLE_FIFTH, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.07, attack: 0.5, curve: 0.6, lowFrom: 2200, lowTo: 1600, q: 0.7, release: BEAT_SECONDS * 1.5 } },
     ],
-    bars: 2,
+    bars: 8,
     air: 0.35,
     pan: -0.15,
   },
@@ -96,7 +116,7 @@ export const TITLE_PARTS = {
       { steps: ARPEGGIO, pitched: true, perBeat: 4, octave: 3, accents: [1, 0.6, 0.75, 0.65], note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.03, attack: 0.004, curve: 4, lowFrom: 3600, lowTo: 1800, q: 0.9 } },
       { steps: ARPEGGIO, pitched: true, perBeat: 4, octave: 3, accents: [1, 0.6, 0.75, 0.65], note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.05, attack: 0.004, curve: 3.6, lowFrom: 4200, lowTo: 2200, q: 0.8 } },
     ],
-    bars: 2,
+    bars: 8,
     air: 0.3,
     pan: 0.35,
   },
