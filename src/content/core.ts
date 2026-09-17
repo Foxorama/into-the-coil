@@ -394,28 +394,32 @@ const [CELLO_MOVING, CELLO_HELD] = splitByRoom(turned(CELLO), 2);
  * the flute that only doubled the violins an octave up, which was part of *"really high sounds"*: this
  * one lives mostly at 520–1320 Hz, the flute's warm register, and reaches the E above only at the refrain.
  */
+// 0331's twenty-first: *"the flute has lovely notes, but short bursts… they're not playing together, they need to
+// twine in through each and complement each consistently… lots of flute silence."* Rewritten bar by bar against
+// the violins: wherever they hold, the flute moves around the held note; wherever they move, it holds — above
+// them, then below, crossing — so between the two there is always a line going somewhere and no bar is empty.
 const FLUTE_BALLAD: readonly (number | null)[] = [
   7, _, _, _, 5, _, 3, _, 5, _, _, _, _, _, _, _,
   7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
-  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 3, _,
-  8, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 5,
-  8, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-  _, _, _, _, 10, _, 12, _, 10, _, _, _, _, _, _, _,
-  _, _, _, _, 8, _, 7, _, 5, _, _, _, _, _, _, _,
-  _, _, _, _, 7, _, 5, _, 7, _, _, _, _, _, _, _,
-  7, _, _, _, _, _, 8, _, 14, _, _, _, _, _, 12, _,
-  12, _, _, _, _, _, _, _, _, _, _, _, 14, _, 12, _,
-  12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 7, _,
-  8, _, _, _, _, _, _, _, 7, _, 10, _, 12, _, 14, _,
-  20, _, _, _, _, _, _, _, 19, _, _, _, _, _, 17, _,
-  17, _, _, _, _, _, _, _, _, _, _, _, 12, _, 8, _,
-  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
-  3, _, _, _, _, _, _, _, _, _, _, _, 5, _, 3, _,
-  10, _, _, _, _, _, _, _, _, _, _, _, 7, _, 5, _,
-  3, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-  5, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
-  12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 8, _,
-  14, _, _, _, _, _, _, _, _, _, _, _, 12, _, 10, _,
+  7, _, _, _, 8, _, 7, _, 7, _, _, _, _, _, _, _,
+  8, _, 7, _, 5, _, 3, _, 3, _, _, _, _, _, _, _,
+  8, _, 7, _, 5, _, 7, _, 12, _, _, _, _, _, _, _,
+  10, _, 12, _, 14, _, 12, _, 10, _, _, _, _, _, _, _,
+  8, _, _, _, 7, _, 8, _, 10, _, _, _, _, _, 12, _,
+  12, _, 10, _, 8, _, 7, _, 7, _, _, _, 12, _, 15, _,
+  19, _, _, 17, 15, _, 17, _, 14, _, _, _, 15, _, 14, 12,
+  12, _, 15, _, 17, _, 15, _, 14, _, 12, _, 10, _, 12, 14,
+  12, _, _, _, 10, _, 8, _, 5, _, 7, _, 10, _, 14, _,
+  12, _, 14, _, 15, _, 14, _, 7, _, 10, _, 12, _, 14, _,
+  20, _, _, _, 19, _, 17, _, 15, _, _, _, 17, _, 19, _,
+  15, _, _, _, 14, _, 12, _, 8, _, 10, _, 12, _, 15, _,
+  12, _, _, _, 10, _, 7, _, 7, _, 10, _, 12, _, 10, _,
+  8, _, _, _, 7, _, 5, _, 12, _, _, _, _, _, 10, _,
+  10, _, _, _, 12, _, 10, _, 7, _, _, _, 5, _, 3, _,
+  3, _, _, _, _, _, 5, _, 7, _, _, _, _, _, _, _,
+  12, _, _, _, 10, _, 8, _, 5, _, _, _, 3, _, 5, _,
+  8, _, 7, _, 8, _, 10, _, 12, _, _, _, 10, _, 12, _,
+  10, _, 12, _, 14, _, 12, _, 15, _, _, _, 14, _, 17, _,
 ];
 const [FLUTE_BALLAD_MOVING, FLUTE_BALLAD_HELD] = splitByRoom(turned(FLUTE_BALLAD), 4);
 
@@ -507,7 +511,7 @@ const pipeVoices = (
     perBeat,
     loose: 0.01,
     octave: 3,
-    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.17 * level, attack, curve: 0.4, lowFrom: 7000, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.15 * level, attack, curve: 0.4, lowFrom: 4600, lowTo: 3400, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
   },
   {
     steps: line,
@@ -515,7 +519,7 @@ const pipeVoices = (
     perBeat,
     loose: 0.01,
     octave: 3,
-    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.025 * level, attack: attack * 1.3, curve: 0.8, lowFrom: 5000, lowTo: 3000, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
+    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.018 * level, attack: attack * 1.3, curve: 0.8, lowFrom: 3400, lowTo: 2600, q: 0.8, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
   },
   {
     steps: line,
@@ -523,7 +527,7 @@ const pipeVoices = (
     perBeat,
     loose: 0.01,
     octave: 3,
-    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.06 * level, attack: attack * 1.5, curve: 0.4, release: BEAT_SECONDS * beats * 0.5, vibrato: 11 },
+    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.085 * level, attack: attack * 1.5, curve: 0.4, release: BEAT_SECONDS * beats * 0.5, vibrato: 11 },
   },
   {
     // The chiff: the consonant the note is blown with.
@@ -875,7 +879,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     liked, playing `FLUTE` — the piano's song an octave up and in eighths — with each note held just
     past the next, so the eighths are a line rather than a pattern.
   */
-  hook: pipeVoices(FLUTE, 2, 1.4, 1, 0.02, 0.7),
+  hook: pipeVoices(FLUTE, 2, 1.4, 1, 0.02, 0.4),
 
   /*
     ── THE LAST HEART BEFORE THE FIGHT: every 1.42 s, and heard ────────────────────────────────────
