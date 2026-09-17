@@ -2094,7 +2094,8 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  core: { boss: 0.126, bossPeak: 0.1197 },
+  // 0331's eighteenth: +1.5 dB, for the low end taken off the speaker in the fight.
+  core: { boss: 0.1497, bossPeak: 0.1422 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */
