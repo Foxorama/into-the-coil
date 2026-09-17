@@ -29,6 +29,8 @@ export interface CodaPart {
   /** The layer whose instruments, level, room and place in the field the part borrows. */
   readonly layer: MusicLayer;
   readonly voices: readonly MusicVoice[];
+  /** Where in the field the part sits, when not where its layer does. */
+  readonly pan?: number;
 }
 
 /** How long the coda lasts from its downbeat, rings included. */
@@ -40,6 +42,9 @@ export interface CodaPart {
  * `scripts/hear.mjs --album`'s reprise.
  */
 export const CODA_SECONDS = BAR_SECONDS * 6 + 2;
+
+/** How long `theme`'s coda lasts — a drum ending is over when its last hit has rung, not when a chord has. */
+export const codaSecondsOf = (theme: ThemeKind): number => (theme === 'saurian' ? BAR_SECONDS * 2 + 1.4 : CODA_SECONDS);
 
 const pitchedHeld = (voice: MusicVoice): boolean => voice.pitched && voice.note.seconds >= BEAT_SECONDS * 1.5;
 
@@ -87,6 +92,7 @@ const soundingOf = (theme: ThemeKind, layers: readonly MusicLayer[]): MusicLayer
 
 /** Every part of `theme`'s coda, on the place's own instruments. */
 export function codaOf(theme: ThemeKind): CodaPart[] {
+  if (theme === 'saurian') return saurianCoda();
   const drone = soundingOf(theme, ['drone', 'toll']);
   const pad = soundingOf(theme, ['chords', 'counter', 'hook', 'arp', 'lead', 'groove']);
   const low = soundingOf(theme, ['sub', 'bass', 'groove']);
@@ -150,6 +156,71 @@ export function codaOn(instruments: CodaInstruments): CodaPart[] {
   // One last deep hit, on the place's kit.
   const hit = instruments.kit.find((v) => !v.pitched && v.note.wave === 'sine') ?? instruments.kit.find((v) => !v.pitched);
   if (hit !== undefined) parts.push({ layer: instruments.from?.kit ?? 'engine', voices: [{ ...hit, steps: [1], perBeat: 0.25, accents: undefined, loose: undefined }] });
+
+  return parts;
+}
+
+/**
+ * Saurian Belt's coda: the kit, and nothing else.
+ *
+ * ⚠️ **0331, heard on the album**: *"ending of the saurian belt is still a bit discordant and doesn't fit the
+ * ending of the track, it needs like a closing drumbeat or something instead of the sounds we have now."* The
+ * shared cadence voiced here as a held supersaw chord, a toll and a falling riff — three things this piece only
+ * ever plays moving. Its identity is its drums, so it ends the way a drummer ends a set: one bar of the groove as
+ * everything else lets go, the toms run down across the field left to right, and every drum at once on the last
+ * downbeat with the bass's A under it.
+ */
+function saurianCoda(): CodaPart[] {
+  const beat = voicesOf('saurian', 'beat');
+  const punch = voicesOf('saurian', 'ownC');
+  const fill = voicesOf('saurian', 'ownD');
+  const sub = voicesOf('saurian', 'sub').find((v) => v.pitched);
+  const LAST = 16;
+  const at = (hits: Record<number, number>): (number | null)[] => Array.from({ length: LAST + 1 }, (_u, i) => hits[i] ?? _);
+  const struck = (voice: MusicVoice, hits: Record<number, number>, note: Partial<MusicVoice['note']> = {}): MusicVoice => ({
+    ...voice,
+    steps: at(hits),
+    perBeat: 4,
+    accents: undefined,
+    loose: undefined,
+    note: { ...voice.note, ...note },
+  });
+  const parts: CodaPart[] = [];
+
+  // The groove's last bar: kick on the first three beats and the last hit, the snare on two, the hats to halfway.
+  const [kick, snare, hats] = beat;
+  const kit: MusicVoice[] = [];
+  if (kick !== undefined) kit.push(struck(kick, { 0: 1, 4: 0.9, 8: 0.96 }), struck(kick, { [LAST]: 0.75 }, { seconds: 0.6, curve: 3 }));
+  if (snare !== undefined) kit.push(struck(snare, { 4: 1 }));
+  if (hats !== undefined) kit.push(struck(hats, { 0: 1, 1: 0.42, 2: 0.66, 3: 0.38, 4: 1, 5: 0.42, 6: 0.66, 7: 0.38 }));
+  parts.push({ layer: 'beat', voices: kit });
+
+  // The run down the toms, a pair of strokes to each, cascading left to right as the fill in the piece does.
+  const velocity = (i: number): number => 0.72 + (i - 8) * 0.04;
+  const stick = fill.find((v) => v.note.wave === 'noise');
+  const toms = fill.filter((v) => v.note.wave === 'sine');
+  const high = toms[0] === undefined ? undefined : { ...toms[0], note: { ...toms[0].note, from: 240, to: 172, seconds: 0.22 } };
+  [high, ...toms].forEach((tom, n) => {
+    if (tom === undefined) return;
+    const a = 8 + n * 2;
+    const hits = { [a]: velocity(a), [a + 1]: velocity(a + 1) };
+    parts.push({
+      layer: 'ownD',
+      pan: [-0.65, -0.22, 0.22, 0.65][n],
+      voices: [struck(tom, hits), ...(stick === undefined ? [] : [struck(stick, hits)])],
+    });
+  });
+
+  // The last downbeat: floor tom and snare crack together, let ring, dead centre.
+  const floor = punch.find((v) => v.note.wave === 'sine' && v.note.to < 90);
+  const crack = punch.find((v) => v.note.wave === 'noise' && v.note.seconds > 0.08);
+  const last: MusicVoice[] = [];
+  if (floor !== undefined) last.push(struck(floor, { [LAST]: 0.7 }, { seconds: 0.9, curve: 3 }));
+  if (crack !== undefined) last.push(struck(crack, { [LAST]: 0.65 }, { seconds: 0.45, curve: 4 }));
+  parts.push({ layer: 'ownC', pan: 0, voices: last });
+
+  // And the bass's A under it, once.
+  if (sub !== undefined) parts.push({ layer: 'sub', voices: [played(sub, at({ [LAST]: 0 }), 4, BAR_SECONDS * 1.1, BAR_SECONDS * 0.9)] });
 
   return parts;
 }

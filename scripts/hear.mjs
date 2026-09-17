@@ -101,7 +101,7 @@ import {
   addRoom,
   panGains,
 } from '../src/app/music.ts';
-import { CODA_SECONDS, codaOf } from '../src/content/codas.ts';
+import { codaSecondsOf, codaOf } from '../src/content/codas.ts';
 import { airOf } from '../src/content/themes.ts';
 import { MUSIC_ROOT } from '../src/content/cues.ts';
 import { sampleLayerInto } from '../src/app/sound.ts';
@@ -498,7 +498,7 @@ if (args.has('level')) {
   const REPRISE_BARS = 8;
   const repriseAt = album ? nextBarFrom(0, toBoss + fightSeconds) : Number.POSITIVE_INFINITY;
   const codaAt = album ? repriseAt + REPRISE_BARS * BAR_SECONDS : Number.POSITIVE_INFINITY;
-  const total = Math.round((album ? codaAt + CODA_SECONDS : totalSeconds) * SAMPLE_RATE);
+  const total = Math.round((album ? codaAt + codaSecondsOf(theme) : totalSeconds) * SAMPLE_RATE);
   /*
     The coda, rendered once into its own stereo buffer at `codaAt` and summed into the bus with the loops,
     so it goes through the same shaper. Each part is at the loudest its borrowed layer ever sounds in the
@@ -513,7 +513,7 @@ if (args.has('level')) {
     for (const part of codaOf(theme)) {
       const gain = Math.max(...rungs.map((r) => targetGain(theme, r, part.layer, 1)));
       if (!(gain > 0)) continue;
-      const buf = new Float32Array(Math.round(CODA_SECONDS * SAMPLE_RATE));
+      const buf = new Float32Array(Math.round(codaSecondsOf(theme) * SAMPLE_RATE));
       for (const voice of part.voices) {
         const step = BEAT_SECONDS / voice.perBeat;
         voice.steps.forEach((value, k) => {
@@ -525,7 +525,7 @@ if (args.has('level')) {
       }
       addRoom(buf, SAMPLE_RATE, airOf(theme, part.layer));
       const track = panTrackOf(theme, part.layer);
-      const p = panGains(track?.steps.find((s) => s !== null && s !== undefined) ?? LAYER_PAN[part.layer]);
+      const p = panGains(part.pan ?? track?.steps.find((s) => s !== null && s !== undefined) ?? LAYER_PAN[part.layer]);
       for (let k = 0; k < buf.length && start + k < total; k++) {
         codaLeft[start + k] += buf[k] * gain * p.left;
         codaRight[start + k] += buf[k] * gain * p.right;
