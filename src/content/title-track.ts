@@ -145,19 +145,27 @@ export type TitlePartName = keyof typeof TITLE_PARTS;
 
 /**
  * The score: how many bars each section lasts and how loud each part is in it (1 is the part's own level).
- * A part moves to its new level across the first bar of a section.
+ * A part moves to its new level across the first bar of a section; one falling away takes `glide` bars when the section says so.
  */
-export const TITLE_SCORE: readonly { bars: number; parts: Partial<Record<TitlePartName, number>> }[] = [
+export const TITLE_SCORE: readonly { bars: number; glide?: number; parts: Partial<Record<TitlePartName, number>> }[] = [
   // The floor wakes: the drone and the pad.
   { bars: 8, parts: { drone: 1, pad: 0.7 } },
-  // The riff.
-  { bars: 8, parts: { drone: 1, pad: 0.8, bass: 0.85 } },
+  /*
+    The riff — and the floor lets go under it, over all eight bars, gone before the heart.
+
+    ⚠️ **THE DRONE AND THE PAD PLAYED TO THE LAST BAR** — heard on the album: *"that's better but it's still too
+    prominent throughout the whole track and it covers up the heart, it needs to fade away and stop as soon as
+    the rest of the music starts."* The drone's saws sit at 87–131 Hz, on top of the heart's own body, and the
+    two of them were the loudest held sound in every section. They are the opening and only the opening now; the
+    bass, the arpeggio and the lead carry the harmony from here.
+  */
+  { bars: 8, glide: 8, parts: { bass: 0.85 } },
   // The groove: the heart and the arpeggio.
-  { bars: 16, parts: { drone: 0.9, pad: 0.8, bass: 1, heart: 1, arp: 0.8 } },
+  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.8 } },
   // The theme.
-  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, heart: 1, arp: 0.7, lead: 1 } },
-  // The breakdown: the flute over the floor.
-  { bars: 8, parts: { drone: 1, pad: 1, bass: 0.5, flute: 1, heart: 0.7 } },
+  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.7, lead: 1 } },
+  // The breakdown: the flute over the heart, the bass and a quiet arpeggio.
+  { bars: 8, parts: { bass: 0.6, flute: 1, heart: 0.8, arp: 0.35 } },
   // Everything, the theme climbing.
-  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
+  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
 ];

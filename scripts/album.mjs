@@ -79,7 +79,8 @@ const levelAt = (name, t) => {
     const end = (startBar + section.bars) * BAR_SECONDS;
     const level = section.parts[name] ?? 0;
     if (t < end) {
-      const into = (t - start) / BAR_SECONDS;
+      // A part falling away takes the section's glide; one arriving still takes a bar.
+      const into = (t - start) / (BAR_SECONDS * (level < before ? section.glide ?? 1 : 1));
       return into >= 1 ? level : before + (level - before) * into;
     }
     before = level;
@@ -93,7 +94,8 @@ const levelAt = (name, t) => {
 const coda = { left: new Float32Array(total), right: new Float32Array(total) };
 const borrowed = { drone: 'drone', chords: 'pad', sub: 'bass', call: 'lead', engine: 'heart' };
 for (const part of codaOn({
-  drone: TITLE_PARTS.drone.voices,
+  // The drone opened the piece and let go of it; the ending is not where it comes back.
+  drone: [],
   pad: TITLE_PARTS.pad.voices,
   low: TITLE_PARTS.bass.voices.filter((v) => v.octave === 0),
   lead: TITLE_PARTS.lead.voices,
