@@ -19,7 +19,7 @@
  */
 
 import { BAR_SECONDS, BEAT_SECONDS, type MusicLayer, type MusicVoice } from './music.ts';
-import { voicesOf, type ThemeKind } from './themes.ts';
+import { mixOf, rungOf, voicesOf, type ThemeKind } from './themes.ts';
 
 /** A rest. */
 const _ = null;
@@ -32,7 +32,14 @@ export interface CodaPart {
 }
 
 /** How long the coda lasts from its downbeat, rings included. */
-export const CODA_SECONDS = BAR_SECONDS * 4 + 3;
+/**
+ * How long the coda lasts from its downbeat, rings included.
+ *
+ * ⚠️ **SIX BARS, WHERE IT WAS FOUR** — heard: *"an abrupt shift from boss music → 4 bars → end."* The chord
+ * rings longer and the last phrase is slower, arriving on its A a bar later; the walk-down into it is
+ * `scripts/hear.mjs --album`'s reprise.
+ */
+export const CODA_SECONDS = BAR_SECONDS * 6 + 2;
 
 const pitchedHeld = (voice: MusicVoice): boolean => voice.pitched && voice.note.seconds >= BEAT_SECONDS * 1.5;
 
@@ -60,16 +67,39 @@ export interface CodaInstruments {
   readonly low: readonly MusicVoice[];
   readonly lead: readonly MusicVoice[];
   readonly kit: readonly MusicVoice[];
+  /** Which layer each role was taken from — the level, room and field it borrows. Absent is the usual one. */
+  readonly from?: Partial<Record<'drone' | 'pad' | 'low' | 'lead' | 'kit', MusicLayer>>;
 }
+
+/** The rungs a place's piece sounds on, for asking whether it ever plays a layer. */
+const SOUNDING_RUNGS = ['run', 'push', 'surge', 'approach', 'boss', 'bossPeak'] as const;
+
+/**
+ * The first of `layers` that `theme` ever sounds.
+ *
+ * ⚠️ **0331, heard on the album**: *"saurian belt just abruptly ends and then has about 8 seconds of silence."*
+ * Saurian Belt never opens `drone`, `chords` or `call` — its floor is its own kit, bass and supersaw riff — so a
+ * coda that took its pad, drone and lead from those three layers had nothing to play but one low note and one
+ * drum, and then rang out an empty room. Every role now takes the first layer in its list the place plays.
+ */
+const soundingOf = (theme: ThemeKind, layers: readonly MusicLayer[]): MusicLayer | undefined =>
+  layers.find((layer) => SOUNDING_RUNGS.some((rung) => rungOf(theme, rung, layer) * mixOf(theme, layer) > 0));
 
 /** Every part of `theme`'s coda, on the place's own instruments. */
 export function codaOf(theme: ThemeKind): CodaPart[] {
+  const drone = soundingOf(theme, ['drone', 'toll']);
+  const pad = soundingOf(theme, ['chords', 'counter', 'hook', 'arp', 'lead', 'groove']);
+  const low = soundingOf(theme, ['sub', 'bass', 'groove']);
+  const lead = soundingOf(theme, ['call', 'hook', 'lead', 'counter', 'arp'].filter((l) => l !== pad || l === 'hook') as MusicLayer[]);
+  const kit = soundingOf(theme, ['engine', 'perc', 'beat']);
+  const of = (layer: MusicLayer | undefined): readonly MusicVoice[] => (layer === undefined ? [] : voicesOf(theme, layer));
   const parts = codaOn({
-    drone: voicesOf(theme, 'drone'),
-    pad: voicesOf(theme, 'chords'),
-    low: voicesOf(theme, 'sub'),
-    lead: voicesOf(theme, 'call'),
-    kit: [...voicesOf(theme, 'engine'), ...voicesOf(theme, 'perc')],
+    drone: of(drone),
+    pad: of(pad),
+    low: of(low),
+    lead: of(lead),
+    kit: of(kit),
+    from: { drone, pad, low, lead, kit },
   });
   // The Black Heart's heart: two last beats, the second never followed.
   if (theme === 'core') {
@@ -87,36 +117,39 @@ export function codaOf(theme: ThemeKind): CodaPart[] {
 /** The coda on any set of instruments. The parts are named by the layer each one borrows its level from. */
 export function codaOn(instruments: CodaInstruments): CodaPart[] {
   const parts: CodaPart[] = [];
-  const ring = BAR_SECONDS * 4.4;
+  const ring = BAR_SECONDS * 7.2;
 
   // The drone, held under everything.
   const drone = instruments.drone.filter((v) => v.pitched);
-  if (drone.length > 0) parts.push({ layer: 'drone', voices: drone.map((v) => played(v, [0], 0.25, ring, BAR_SECONDS * 2)) });
+  if (drone.length > 0) parts.push({ layer: instruments.from?.drone ?? 'drone', voices: drone.map((v) => played(v, [0], 0.25, ring, BAR_SECONDS * 3.2)) });
 
   // The tonic chord, struck on the place's own pad: root, third and fifth on every held voice.
-  const pad = instruments.pad.filter(pitchedHeld);
+  // A place whose pad is a struck riff rather than a held chord lets that riff ring instead.
+  const pitchedPad = instruments.pad.filter((v) => v.pitched);
+  const held = pitchedPad.filter(pitchedHeld);
+  const pad = held.length > 0 ? held : pitchedPad;
   if (pad.length > 0) {
-    parts.push({ layer: 'chords', voices: pad.flatMap((v) => [0, 3, 7].map((tone) => played(v, [tone], 0.25, ring, BAR_SECONDS * 2.2, 0.55))) });
+    parts.push({ layer: instruments.from?.pad ?? 'chords', voices: pad.flatMap((v) => [0, 3, 7].map((tone) => played(v, [tone], 0.25, ring, BAR_SECONDS * 3.4, 0.55))) });
   }
 
   // The lowest note, once.
   const sub = instruments.low.find((v) => v.pitched);
-  if (sub !== undefined) parts.push({ layer: 'sub', voices: [played(sub, [0], 0.25, BAR_SECONDS * 2.2, BAR_SECONDS)] });
+  if (sub !== undefined) parts.push({ layer: instruments.from?.low ?? 'sub', voices: [played(sub, [0], 0.25, BAR_SECONDS * 2.2, BAR_SECONDS)] });
 
   // The lead's last phrase: E, D, C, B in half notes onto a long A.
   const lead = instruments.lead;
   const up = (v: MusicVoice): number => (v.octave < 2 ? 12 : 0);
-  const phrase = (v: MusicVoice): (number | null)[] => [7, _, 5, _, 3, _, _, 2].map((n) => (n === null || !v.pitched ? (n === null ? _ : 1) : n + up(v)));
-  const last = (v: MusicVoice): (number | null)[] => [_, _, _, _, _, _, _, _, v.pitched ? 0 + up(v) : 1];
+  const phrase = (v: MusicVoice): (number | null)[] => [7, _, 5, _, 3, _, _, _, 2, _, _, _].map((n) => (n === null || !v.pitched ? (n === null ? _ : 1) : n + up(v)));
+  const last = (v: MusicVoice): (number | null)[] => [_, _, _, _, _, _, _, _, _, _, _, _, v.pitched ? 0 + up(v) : 1];
   const leadVoices = lead.flatMap((v) => [
-    played(v, phrase(v), 1, v.pitched ? BEAT_SECONDS * 2.4 : v.note.seconds, v.pitched ? BEAT_SECONDS : v.note.seconds / 3),
-    played(v, last(v), 1, v.pitched ? BAR_SECONDS * 2.6 : v.note.seconds, v.pitched ? BAR_SECONDS * 1.6 : v.note.seconds / 3),
+    played(v, phrase(v), 1, v.pitched ? BEAT_SECONDS * 3.4 : v.note.seconds, v.pitched ? BEAT_SECONDS : v.note.seconds / 3),
+    played(v, last(v), 1, v.pitched ? BAR_SECONDS * 4 : v.note.seconds, v.pitched ? BAR_SECONDS * 2.8 : v.note.seconds / 3),
   ]);
-  if (leadVoices.length > 0) parts.push({ layer: 'call', voices: leadVoices });
+  if (leadVoices.length > 0) parts.push({ layer: instruments.from?.lead ?? 'call', voices: leadVoices });
 
   // One last deep hit, on the place's kit.
   const hit = instruments.kit.find((v) => !v.pitched && v.note.wave === 'sine') ?? instruments.kit.find((v) => !v.pitched);
-  if (hit !== undefined) parts.push({ layer: 'engine', voices: [{ ...hit, steps: [1], perBeat: 0.25, accents: undefined, loose: undefined }] });
+  if (hit !== undefined) parts.push({ layer: instruments.from?.kit ?? 'engine', voices: [{ ...hit, steps: [1], perBeat: 0.25, accents: undefined, loose: undefined }] });
 
   return parts;
 }

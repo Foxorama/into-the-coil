@@ -490,7 +490,14 @@ if (args.has('level')) {
   const gapUnits = Number(args.get('gap-units') ?? (AURA_NEAR_UNITS + AURA_FAR_UNITS) / 2);
   const nearnessInFight = auraNearness(gapUnits);
 
-  const codaAt = album ? nextBarFrom(0, toBoss + fightSeconds) : Number.POSITIVE_INFINITY;
+  /*
+    --album's walk down — heard: *"an abrupt shift from boss music → 4 bars → end."* After the fight the level's
+    opening returns for eight bars, reached by the same section change the level uses everywhere else, and the
+    coda is struck under it as it lets go.
+  */
+  const REPRISE_BARS = 8;
+  const repriseAt = album ? nextBarFrom(0, toBoss + fightSeconds) : Number.POSITIVE_INFINITY;
+  const codaAt = album ? repriseAt + REPRISE_BARS * BAR_SECONDS : Number.POSITIVE_INFINITY;
   const total = Math.round((album ? codaAt + CODA_SECONDS : totalSeconds) * SAMPLE_RATE);
   /*
     The coda, rendered once into its own stereo buffer at `codaAt` and summed into the bus with the loops,
@@ -604,14 +611,14 @@ if (args.has('level')) {
 
   for (let i = 0; i < total; i += BLOCK) {
     const second = i / SAMPLE_RATE;
-    const rung = rungAt(kind, second, fightSeconds);
-    const aura = auraAt(kind, second, nearnessInFight);
+    const rung = second >= repriseAt ? 'run' : rungAt(kind, second, fightSeconds);
+    const aura = second >= repriseAt ? 0 : auraAt(kind, second, nearnessInFight);
     // --album: on the coda's downbeat every loop lets go, over about a third of a second.
     if (second + BLOCK / SAMPLE_RATE >= codaAt && !codaStruck) {
       codaStruck = true;
       for (const layer of MUSIC_LAYERS) {
         queue[layer].length = 0;
-        queue[layer].push({ at: codaAt, target: 0, tau: 0.12 });
+        queue[layer].push({ at: codaAt, target: 0, tau: 0.6 });
       }
     }
     // The loops begin at t = 0 here, so the anchor is zero and bar zero is the file's own start.
