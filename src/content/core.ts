@@ -576,6 +576,8 @@ const pipeVoices = (
 ): MusicVoice[] => {
   const eased = line.map((note) => (note === null ? 1 : 10 ** (-0.35 * Math.max(0, note - 7) / 20)));
   const struck = line.map((note, i) => (note === null ? _ : eased[i]!));
+  // The octave overtone fades out over the top of the range, where a real flute is nearly a pure tone: whole to E5, gone by E6.
+  const overtone = line.map((note, i) => (note === null ? 1 : eased[i]! * Math.min(1, Math.max(0, (19 - note) / 12))));
   return [
   {
     steps: line,
@@ -594,6 +596,21 @@ const pipeVoices = (
     loose: 0.01,
     octave: 3,
     note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.15 * level, attack: attack * 1.5, curve: 0.4, release: BEAT_SECONDS * beats * 0.5, vibrato: 11 },
+  },
+  {
+    /*
+      The octave: a flute's strongest overtone, as a pure tone. *"Much nicer and crisper now, but the flute is
+      getting lost a bit in the other instruments from around 30 seconds onwards"* — darkened, the flute had
+      nothing between 1 and 3 kHz, which is where an ear picks a melody out of a guitar and strings; this puts
+      its definition back there with no edge above it.
+    */
+    steps: line,
+    pitched: true,
+    perBeat,
+    accents: overtone,
+    loose: 0.01,
+    octave: 4,
+    note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.9, gain: 0.04 * level, attack: attack * 1.2, curve: 0.5, release: BEAT_SECONDS * beats * 0.45, vibrato: 11 },
   },
   {
     // The chiff: the consonant the note is blown with.
@@ -975,7 +992,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       loose: 0.008,
       octave: 2 + 6 / 1200,
       accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.07, attack: 0.008, curve: 2.2, lowFrom: 3200, lowTo: 1000, q: 0.9 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.07, attack: 0.008, curve: 2.2, lowFrom: 2400, lowTo: 900, q: 0.8 },
     },
     {
       steps: PICKING,
@@ -984,7 +1001,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       loose: 0.008,
       octave: 2 - 6 / 1200,
       accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.05, attack: 0.009, curve: 2.4, lowFrom: 3000, lowTo: 950, q: 0.9 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.05, attack: 0.009, curve: 2.4, lowFrom: 2300, lowTo: 850, q: 0.8 },
     },
     {
       steps: PICKING,
@@ -1323,14 +1340,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 3 + 7 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.1, curve: 0.8, lowFrom: 3000, lowTo: 2200, q: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.1, curve: 0.8, lowFrom: 2300, lowTo: 1700, q: 0.7 },
     },
     {
       steps: [7, 7, 12, 12],
       pitched: true,
       perBeat: 0.25,
       octave: 3 - 7 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.3, curve: 0.8, lowFrom: 2900, lowTo: 2100, q: 0.7 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.03, attack: 1.3, curve: 0.8, lowFrom: 2200, lowTo: 1650, q: 0.7 },
     },
     {
       steps: [7, 7, 12, 12],
