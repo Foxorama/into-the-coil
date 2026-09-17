@@ -424,6 +424,64 @@ const FLUTE_BALLAD: readonly (number | null)[] = [
 const [FLUTE_BALLAD_MOVING, FLUTE_BALLAD_HELD] = splitByRoom(turned(FLUTE_BALLAD), 4);
 
 /**
+ * THE GUITAR, CARRIED ON — the second movement's fingerpicking, on the ballad's chords.
+ *
+ * ⚠️ **0331's twenty-second listen**: *"the section where it comes down just kind of comes to an abrupt stop…
+ * I'm not sure if the guitar kicking in again to smooth that out would help"*, and *"carry them forward as a
+ * background on the high refrain as well."* Measured, the level fell to −28 dB at 1:00–1:02, under both sides
+ * of it: the guitar stopped on the downbeat and the ballad had not yet swelled in. So the same guitar picks
+ * straight on through that downbeat for eight bars, and comes back underneath the refrain and the descent.
+ */
+const BALLAD_PICKING: readonly (number | null)[] = B_ROOT.flatMap((root, bar) => {
+  const third = B_THIRD[bar]!;
+  const fifth = B_FIFTH[bar]!;
+  return bar % 2 === 0
+    ? [root, fifth, root + 12, third + 12, fifth + 12, third + 12, root + 12, fifth]
+    : [root, fifth, third + 12, root + 12, fifth, third + 12, root + 12, fifth];
+});
+/** The picking over bars `from` to `to` of the ballad, silent elsewhere, turned into the loop. */
+const pickingOver = (from: number, to: number): (number | null)[] =>
+  turned(BALLAD_PICKING.map((note, i) => (i >= from * 8 && i < to * 8 ? note : _)));
+/** The guitar of `arp`, note for note, at `level`. */
+const guitarVoices = (steps: readonly (number | null)[], level: number): MusicVoice[] => [
+  {
+    steps,
+    pitched: true,
+    perBeat: 2,
+    loose: 0.008,
+    octave: 2 + 6 / 1200,
+    accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.07 * level, attack: 0.008, curve: 2.2, lowFrom: 3200, lowTo: 1000, q: 0.9 },
+  },
+  {
+    steps,
+    pitched: true,
+    perBeat: 2,
+    loose: 0.008,
+    octave: 2 - 6 / 1200,
+    accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.05 * level, attack: 0.009, curve: 2.4, lowFrom: 3000, lowTo: 950, q: 0.9 },
+  },
+  {
+    steps,
+    pitched: true,
+    perBeat: 2,
+    loose: 0.008,
+    octave: 2,
+    accents: [1, 0.72, 0.84, 0.7, 0.9, 0.7, 0.82, 0.68],
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.08 * level, attack: 0.008, curve: 2, lowFrom: 2000, lowTo: 900, q: 0.7 },
+  },
+  {
+    steps: steps.map((note) => (note === null ? _ : 1)),
+    pitched: false,
+    perBeat: 2,
+    loose: 0.008,
+    octave: 0,
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.012 * level, attack: 0.003, curve: 6, lowFrom: 4000, highFrom: 1500 },
+  },
+];
+
+/**
  * A solo cello on `line`, in quarters, each note held `beats`: two bows a few cents apart, a body, and the
  * rosin — with a singer's vibrato easing in as the note is held.
  */
@@ -1349,7 +1407,13 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     `beat` is the title's layer and never sounded here; forty-two bars on this place's row, on the downbeat,
     fast in, with its first phrase on the ballad's first bar.
   */
-  beat: [...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6), ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5)],
+  beat: [
+    ...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6),
+    ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5),
+    // The guitar carried on — 0331's twenty-second listen: through the hand-over, then under the refrain.
+    ...guitarVoices(pickingOver(0, 8), 0.8),
+    ...guitarVoices(pickingOver(16, 36), 0.7),
+  ],
 
   /*
     ── THE DRIVE: two bars, and it is the blast the boss will take over ───────────────────────────
