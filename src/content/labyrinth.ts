@@ -697,7 +697,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 2,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.142, attack: 0.013, curve: 2.4, lowFrom: 2000, lowTo: 820, q: 1.8, drive: 0.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.142, attack: 0.013, curve: 2.4, lowFrom: 2000, lowTo: 820, q: 1.2, drive: 0.25 },
     },
     {
       steps: PURSUIT,
@@ -715,7 +715,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.0915, attack: 0.002, curve: 2, highFrom: 2200 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.08, attack: 0.006, curve: 2, lowFrom: 3200, lowTo: 2400 }, // 0331: a highpass at 2.2 kHz left a low triangle as nothing but its corners — a click every cycle.
     },
   ],
 
@@ -758,7 +758,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       // ⚠️ 17 ms of decay where `curve: 8.5` over 0.026 s gave 3, and the gain comes down as the note
       // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
       // the attack and the band do not move. Six places carried this one line.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.07, attack: 0.001, curve: 4, lowFrom: 6500, highFrom: 3000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.045, attack: 0.003, curve: 4, lowFrom: 5000, highFrom: 2600 },
     },
   ],
 

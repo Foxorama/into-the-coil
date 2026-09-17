@@ -1769,7 +1769,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'tri', from: 940, to: 610, seconds: 0.05, gain: 0.28, attack: 0.0008, curve: 8, highFrom: 420 },
+      note: { wave: 'tri', from: 940, to: 610, seconds: 0.05, gain: 0.28, attack: 0.002, curve: 8, highFrom: 420 },
     },
     {
       /*
@@ -1783,7 +1783,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 3,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.024, gain: 0.06, attack: 0.0006, curve: 8, lowFrom: 12500, highFrom: 5200 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.028, gain: 0.05, attack: 0.002, curve: 8, lowFrom: 8500, highFrom: 3800 },
     },
     {
       /*
@@ -1808,7 +1808,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.075, attack: 0.0008, curve: 4, lowFrom: 9500, highFrom: 3800 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.07, attack: 0.002, curve: 4, lowFrom: 7500, highFrom: 3200 },
     },
   ],
 
