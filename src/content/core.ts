@@ -211,7 +211,11 @@ const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
 // film that wants grief to sound large), and a descent through D minor and E minor home.
 //   lead-in Dm Dm Em Em · ballad Am Am F F Dm Dm Em Em F G Am Am · refrain Am G F Em Am G F Em Dm Em
 //   · descent F F Em Em Dm Dm Em Em Am Am · into the fight Dm Dm F F G G
-const B_ROOT: readonly number[] = [-7, -7, -5, -5, 0, 0, -4, -4, -7, -7, -5, -5, -4, -2, 0, 0, 0, -2, -4, -5, 0, -2, -4, -5, -7, -5, -4, -4, -5, -5, -7, -7, -5, -5, 0, 0, -7, -7, -4, -4, -2, -2];
+// 0331's nineteenth: *"there's a high peak, but it doesn't sound like the high peak… I should feel like I'm at
+// the top of the mountain, but instead it feels like we're still climbing."* The top A landed on D minor for one
+// bar and fell. It now arrives on F — the one major chord under it that makes an A sound like a summit — and
+// holds two bars: refrain `Am G F Em · Am G Dm Em · F F`, descent `Dm Dm Em Em F Dm Em Em Am Am`.
+const B_ROOT: readonly number[] = [-7, -7, -5, -5, 0, 0, -4, -4, -7, -7, -5, -5, -4, -2, 0, 0, 0, -2, -4, -5, 0, -2, -7, -5, -4, -4, -7, -7, -5, -5, -4, -7, -5, -5, 0, 0, -7, -7, -4, -4, -2, -2];
 /** The third and fifth over each root, as the ballad voices them — just above it. */
 const CHORD_OVER: Readonly<Record<number, readonly [number, number]>> = { [-7]: [-4, 0], [-5]: [-2, 2], [-4]: [0, 3], [-2]: [2, 5], 0: [3, 7], 3: [7, 10] };
 const B_THIRD: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![0]);
@@ -237,10 +241,10 @@ const BALLAD: readonly (number | null)[] = [
   17, _, _, _, 20, _, 19, 17, 19, _, _, _, 19, _, 17, 14,
   15, _, _, 17, 19, _, _, 17, 15, _, _, _, 12, _, 14, 15,
   24, _, _, _, 22, _, 24, 22, 20, _, _, 19, 19, _, _, _,
-  27, _, _, 26, 26, _, 24, 22, 29, _, 27, 24, 26, _, 27, 31,
-  36, _, _, _, 34, _, 31, _,
-  29, _, _, 27, 24, _, _, _, 26, _, 24, 22, 19, _, _, _,
-  20, _, _, 19, 17, _, _, _, 19, _, 17, 14, 14, _, _, _,
+  27, _, _, 26, 26, _, 24, 22, 29, _, _, 27, 26, _, 29, 31,
+  36, _, _, _, 36, _, _, _,
+  34, _, 32, 29, 29, _, _, _, 31, _, 29, 26, 26, _, _, _,
+  24, _, _, 20, 20, _, 19, 17, 19, _, 17, 14, 14, _, _, _,
   12, _, _, _, _, _, 12, 15,
   17, _, _, 20, 24, _, 22, 20, 24, _, _, 27, 29, _, 27, 24,
   26, _, 29, _, 31, _, 29, 26,
@@ -369,10 +373,10 @@ const CELLO: readonly (number | null)[] = [
   5, _, 8, 12, 12, _, _, _, 10, _, 7, _, 7, _, _, _,
   8, _, _, _, 10, _, 14, _, 12, _, 10, 7, 7, _, _, _,
   12, _, 15, 19, 17, _, _, _, 15, _, 12, 8, 14, _, 12, 10,
-  12, _, _, _, 14, _, _, _, 12, _, _, _, 14, _, 17, 19,
-  17, _, 20, 24, 19, _, _, _,
-  20, _, _, _, 17, _, 15, 12, 14, _, _, _, 10, _, 12, 14,
-  12, _, _, _, 8, _, 5, _, 7, _, _, _, 10, _, 7, _,
+  12, _, _, _, 14, _, _, _, 17, _, 12, _, 14, _, 17, 19,
+  20, _, 24, _, 24, _, 20, 17,
+  17, _, _, _, 15, _, 12, _, 14, _, _, _, 10, _, 12, 14,
+  12, _, _, _, 5, _, _, _, 7, _, _, _, 10, _, 7, _,
   0, _, 3, 7, 12, _, _, _,
   5, _, _, _, 8, _, 5, 3, 8, _, _, _, 12, _, 8, 5,
   10, _, _, _, 14, _, 10, 7,
@@ -391,7 +395,7 @@ const [CELLO_MOVING, CELLO_HELD] = splitByRoom(turned(CELLO), 2);
  * one lives mostly at 520–1320 Hz, the flute's warm register, and reaches the E above only at the refrain.
  */
 const FLUTE_BALLAD: readonly (number | null)[] = [
-  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+  7, _, _, _, 5, _, 3, _, 5, _, _, _, _, _, _, _,
   7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
   7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 3, _,
   8, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 5,
@@ -402,12 +406,12 @@ const FLUTE_BALLAD: readonly (number | null)[] = [
   7, _, _, _, _, _, 8, _, 14, _, _, _, _, _, 12, _,
   12, _, _, _, _, _, _, _, _, _, _, _, 14, _, 12, _,
   12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 7, _,
-  8, _, _, _, _, _, _, _, 7, _, _, _, _, _, _, _,
-  17, _, _, _, _, _, _, _, _, _, _, _, 14, _, 12, _,
-  12, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
+  8, _, _, _, _, _, _, _, 7, _, 10, _, 12, _, 14, _,
+  20, _, _, _, _, _, _, _, 19, _, _, _, _, _, 17, _,
+  17, _, _, _, _, _, _, _, _, _, _, _, 12, _, 8, _,
   7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
-  5, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
-  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
+  3, _, _, _, _, _, _, _, _, _, _, _, 5, _, 3, _,
+  10, _, _, _, _, _, _, _, _, _, _, _, 7, _, 5, _,
   3, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
   5, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
   12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 8, _,
@@ -472,7 +476,7 @@ const BASS_LINE: readonly (number | null)[] = turned(B_ROOT.flatMap((root, bar) 
 // its peak at bar 24, and falling away through the descent.
 // 0331's sixteenth: the descent eases to 0.95 rather than 0.72 — *"it trails off too far instead of flowing
 // down into the boss music"* — and the six bars under the acceptance build again into the fight.
-const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.12, 1.14, 1.17, 1.2, 1.22, 1.25, 1.28, 1.3, 1.34, 1.3, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 1, 1.04, 1.08, 1.12, 1.16, 1.2];
+const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.2, 1.24, 1.28, 1.42, 1.4, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 1, 1.04, 1.08, 1.12, 1.16, 1.2];
 const CLIMB_BARS: readonly number[] = turned(CLIMB_WRITTEN);
 const CLIMB_BEATS: readonly number[] = turned(CLIMB_WRITTEN.flatMap((weight) => [weight, weight, weight, weight]));
 
@@ -528,7 +532,7 @@ const pipeVoices = (
     perBeat,
     loose: 0.01,
     octave: 0,
-    note: { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.04 * level * chiff, attack: 0.006, curve: 4, lowFrom: 8000, lowTo: 4000, highFrom: 2500 },
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.025 * level * chiff, attack: 0.006, curve: 4, lowFrom: 5000, lowTo: 2500, highFrom: 1500 },
   },
   {
     // The breath under the held note, which is what stops a pure tone reading as a synthesiser.
@@ -537,7 +541,7 @@ const pipeVoices = (
     perBeat,
     loose: 0.01,
     octave: 0,
-    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.016 * level, attack: attack * 3, curve: 0.8, lowFrom: 8000, lowTo: 5000, highFrom: 3500, q: 0.6, release: BEAT_SECONDS * beats * 0.4 },
+    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.005 * level, attack: attack * 3, curve: 0.8, lowFrom: 3200, lowTo: 2400, highFrom: 900, q: 0.6, release: BEAT_SECONDS * beats * 0.4 },
   },
 ];
 
@@ -1154,12 +1158,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     {
       // The trumpets, on the melody's second half only.
-      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 100) || i >= 144 ? note : _))),
+      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 104) || i >= 144 ? note : _))),
       pitched: true,
       perBeat: 1,
       accents: CLIMB_BEATS,
       loose: 0.01,
-      octave: 2,
+      octave: 1,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.045, attack: 0.05, curve: 0.5, lowFrom: 1000, lowTo: 2000, q: 0.7, release: BEAT_SECONDS * 1.1, vibrato: 6 },
     },
     /*
@@ -1315,7 +1319,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 + 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.02, attack: 0.14, curve: 0.4, lowFrom: 4500, lowTo: 3400, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.026, attack: 0.14, curve: 0.4, lowFrom: 5600, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
     },
     {
       steps: turned(BALLAD),
@@ -1324,13 +1328,20 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 - 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.018, attack: 0.17, curve: 0.4, lowFrom: 4300, lowTo: 3200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.024, attack: 0.17, curve: 0.4, lowFrom: 5400, lowTo: 4000, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
     },
-    // The flute an octave over the violins — 0331's eighth listen, the high touch of sadness at the top.
-    // The flute's own line, carried on from the second movement — 0331's seventeenth listen.
-    ...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6),
-    ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5),
   ],
+
+  /*
+    ── THE BALLAD'S FLUTE: its own layer, so it can take the phrase the moment the last one lets go ──
+
+    ⚠️ **0331's nineteenth listen**: *"the transition at 1.05 isn't quite right, the flute fades out to
+    silence, but the notes don't get picked up by another wave."* It lived in `counter`, which swells in
+    over eight seconds with the violins, so it was still silent when the second movement's flute had gone.
+    `beat` is the title's layer and never sounded here; forty-two bars on this place's row, on the downbeat,
+    fast in, with its first phrase on the ballad's first bar.
+  */
+  beat: [...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6), ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5)],
 
   /*
     ── THE DRIVE: two bars, and it is the blast the boss will take over ───────────────────────────

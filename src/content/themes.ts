@@ -1567,8 +1567,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       */
       run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07276, ownD: 0, lead: 0, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
       push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.302, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.2535, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.3624, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0.447, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.304, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0.398, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },
@@ -1604,7 +1604,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
     // …and the ballad dies away into the acceptance over ten seconds and more — 0331's twelfth.
-    linger: { hook: 2, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06 },
+    linger: { hook: 1.4, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06 },
     /*
       0331's thirteenth and fourteenth listens: *"a heartbeat at 28 sec and a heartbeat at 29 sec… sounded
       like a bug"*, and *"if the start/stop of the beat is too harsh, it can still come in and fade out
@@ -1614,14 +1614,14 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       `linger` number is: `ownC` gone before 28.8 s, `ownD` before 59.3, the ballad's before 96.8 (a tenth
       of a second from the acceptance's first beat, hence the shortest), `ownB` before 126.6.
     */
-    onBeat: ['ownD', 'crash', 'ownB', 'stomp'],
+    onBeat: ['ownD', 'crash', 'ownB', 'stomp', 'beat'],
     // 0331's fifteenth: the ballad is one piece of thirty-six bars, bar 36 to bar 72.
     // 0331's sixteenth: forty-two, so the ballad runs on under the acceptance into the fight.
-    bars: { groove: 42, counter: 42 },
+    bars: { groove: 42, counter: 42, beat: 42 },
     // 0331's fifteenth: the ballad's heart lives in `crash`, which this place never sounds — held centred.
     pan: { crash: { perBeat: 0.25, steps: [0] } },
     // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
-    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 0.25, ownB: 0.25, stomp: 0.05 },
+    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 0.25, ownB: 0.25, stomp: 0.05, beat: 0.2 },
     // 0331's twelfth: the first sound is the heart and the flute, struck rather than faded up.
     fromSilence: 0.01,
     /*
@@ -1684,6 +1684,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       groove: 0.28,
       stomp: 0.03,
       ownA: 0.12,
+      // 0331's nineteenth: the ballad's flute, in the flute's own room.
+      beat: 0.45,
       sub: 0.03,
     },
   },
