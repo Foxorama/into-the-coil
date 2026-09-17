@@ -85,7 +85,7 @@ import { APPROACH_VOICES } from './approach.ts';
 import { NEBULA_PAN, NEBULA_VOICES } from './nebula.ts';
 import type { Palette, PaletteName } from './palette.ts';
 import { RIME_VOICES } from './rime.ts';
-import { SAURIAN_CUES, SAURIAN_VOICES } from './saurian.ts';
+import { SAURIAN_CUES, SAURIAN_VOICES, cascadeOver } from './saurian.ts';
 
 /**
  * Every theme, in the order the run meets them. Closed —
@@ -933,7 +933,12 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     trim: 0.78,
     // 0331: the tom fill's own slot, sixteen bars so it lands on the fourth bar of every phrase.
-    bars: { ownD: 16 },
+    bars: { ownD: 16, ownC: 16 },
+    // 0331: the fills cascade across the ears — the run two strokes left, two centre, two right; the punch one of each.
+    pan: {
+      ownD: { perBeat: 4, steps: cascadeOver([10, 12, 14], [-0.65, 0, 0.65]) },
+      ownC: { perBeat: 4, steps: cascadeOver([13, 14, 15], [-0.65, 0, 0.65]) },
+    },
     mix: {
       groove: 2.2,
       /*
@@ -999,7 +1004,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     ladder: {
       run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownD: 0 },
       push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.074, crash: 0, ownD: 2.07 },
-      surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.3, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.668, ownA: 0.5, crash: 0 },
+      surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.3, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.668, ownA: 0.5, crash: 0, ownC: 2.03 },
       approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 0.5, arp: 0.45, toll: 1.6, dread: 1.7, crash: 0 },
       boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95, crash: 0 },
       bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1, crash: 0 },

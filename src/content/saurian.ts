@@ -316,6 +316,18 @@ const GATE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
  * that), so its phrase turn is a drummer's: eight sixteenths falling from the high tom to the floor tom,
  * getting harder as they fall.
  */
+/**
+ * A pan track that sweeps the phrase-turn bar's `strokes` across the ears — `positions[i]` goes to `pans[i]` —
+ * and returns to the middle on the next downbeat. Sixteen bars of sixteenths, the fill's own grid.
+ */
+export const cascadeOver = (positions: readonly number[], pans: readonly number[]): (number | null)[] => {
+  const steps: (number | null)[] = Array.from({ length: 256 }, () => null);
+  for (let bar = 3; bar < 16; bar += 4) {
+    positions.forEach((p, i) => (steps[bar * 16 + p] = pans[i]!));
+    steps[((bar + 1) % 16) * 16] = 0;
+  }
+  return steps;
+};
 const FILL_AT = (positions: readonly number[]): (number | null)[] =>
   ROOT.flatMap((_root, bar) =>
     Array.from({ length: 16 }, (_u, i) => (bar % 4 === 3 && positions.includes(i) ? 0.72 + (i - 8) * 0.04 : _)),
@@ -1051,6 +1063,16 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       accents: [1, 0.74, 0.9, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.07, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
     },
+  ],
+
+  /*
+    ── THE PUNCH: three strokes into every phrase turn at `surge`, left, centre, right ────────────────
+
+    ⚠️ **ITS OWN SLOT SO IT CAN MOVE** — 0331: *"for the drumbeats we added to coilward, any chance we can have
+    them run left ear to right ear in a cascade?… one left, center, right depending on how many beats."* A
+    pan moves a whole layer, and in `hook` it would have swung the riff with it.
+  */
+  ownC: [
     /*
       ⚠️ **THE PUNCH, WHERE THE FILL STOOD** — 0331, the fill heard: *"that drumbeat needs to kick in in the
       earlier section… and the section where it was needs something slightly shorter and punchier, it just
@@ -1089,7 +1111,6 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.066, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
     },
   ],
-
   /*
     ── THE FILL: a run down the toms on every phrase turn, in the second section ───────────────────
 

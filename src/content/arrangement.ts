@@ -409,7 +409,7 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     `docs/state-of-play.md` has been flagging since; 0189 does not widen it.
   */
   // 0331: the tom fill is a pulse in the second section.
-  saurian: { push: { ownD: 'pulse' }, surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
+  saurian: { push: { ownD: 'pulse' }, surge: { ownA: 'counter', ownC: 'pulse' }, approach: { ownA: 'counter' } },
   labyrinth: {},
   rime: {},
   mire: {},

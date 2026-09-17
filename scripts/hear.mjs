@@ -97,8 +97,14 @@ import {
   auraFor,
   auraNearness,
   levelWrites,
+  nextBarFrom,
+  addRoom,
   panGains,
 } from '../src/app/music.ts';
+import { CODA_SECONDS, codaOf } from '../src/content/codas.ts';
+import { airOf } from '../src/content/themes.ts';
+import { MUSIC_ROOT } from '../src/content/cues.ts';
+import { sampleLayerInto } from '../src/app/sound.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 
@@ -437,7 +443,14 @@ if (args.has('level')) {
     console.error(`unknown --level=${kind}. Known: ${LEVEL_KINDS.join(', ')}`);
     process.exit(1);
   }
-  const fightSeconds = Number(args.get('fight') ?? 45);
+  /*
+    --album — 0331: *"turn these into proper music tracks with a closing end, and not have the boss music
+    going on for so long."* The level as the game plays it, a fight of fifteen seconds unless `--fight`
+    says otherwise, and then the place's coda (`src/content/codas.ts`) struck on the next downbeat while
+    every loop lets go; the file ends when the coda has rung out.
+  */
+  const album = args.has('album');
+  const fightSeconds = Number(args.get('fight') ?? (album ? 15 : 45));
   const { bossAt, theme, toBoss, total: totalSeconds, marks } = levelTimeline(kind, fightSeconds);
   /*
     ⚠️ **THE PLACE'S OWN MATERIAL, AND THIS MODE IS THE ONLY ONE THAT KNOWS THE PLACE** — 0128. Baking
@@ -477,7 +490,42 @@ if (args.has('level')) {
   const gapUnits = Number(args.get('gap-units') ?? (AURA_NEAR_UNITS + AURA_FAR_UNITS) / 2);
   const nearnessInFight = auraNearness(gapUnits);
 
-  const total = Math.round(totalSeconds * SAMPLE_RATE);
+  const codaAt = album ? nextBarFrom(0, toBoss + fightSeconds) : Number.POSITIVE_INFINITY;
+  const total = Math.round((album ? codaAt + CODA_SECONDS : totalSeconds) * SAMPLE_RATE);
+  /*
+    The coda, rendered once into its own stereo buffer at `codaAt` and summed into the bus with the loops,
+    so it goes through the same shaper. Each part is at the loudest its borrowed layer ever sounds in the
+    level, in that layer's room and place in the field.
+  */
+  const codaLeft = new Float32Array(album ? total : 0);
+  const codaRight = new Float32Array(album ? total : 0);
+  if (album) {
+    const rungs = ['run', 'push', 'surge', 'approach', 'boss', 'bossPeak'];
+    const start = Math.round(codaAt * SAMPLE_RATE);
+    const rng = makeRng('coda').stream(theme);
+    for (const part of codaOf(theme)) {
+      const gain = Math.max(...rungs.map((r) => targetGain(theme, r, part.layer, 1)));
+      if (!(gain > 0)) continue;
+      const buf = new Float32Array(Math.round(CODA_SECONDS * SAMPLE_RATE));
+      for (const voice of part.voices) {
+        const step = BEAT_SECONDS / voice.perBeat;
+        voice.steps.forEach((value, k) => {
+          if (value === null || value === undefined) return;
+          const pitch = voice.pitched ? MUSIC_ROOT * Math.pow(2, voice.octave + value / 12) : 0;
+          const note = voice.pitched ? { ...voice.note, from: pitch, to: pitch } : { ...voice.note, gain: voice.note.gain * value };
+          sampleLayerInto(note, SAMPLE_RATE, rng, buf, Math.round(k * step * SAMPLE_RATE), false);
+        });
+      }
+      addRoom(buf, SAMPLE_RATE, airOf(theme, part.layer));
+      const track = panTrackOf(theme, part.layer);
+      const p = panGains(track?.steps.find((s) => s !== null && s !== undefined) ?? LAYER_PAN[part.layer]);
+      for (let k = 0; k < buf.length && start + k < total; k++) {
+        codaLeft[start + k] += buf[k] * gain * p.left;
+        codaRight[start + k] += buf[k] * gain * p.right;
+      }
+    }
+  }
+  let codaStruck = false;
   /*
     ⚠️ **INTERLEAVED STEREO — 0118, and the mode had to grow it or it could not show the change.** The
     pan law is `panGains`, exported from the mixer for exactly this: the game's field is made by a
@@ -558,8 +606,16 @@ if (args.has('level')) {
     const second = i / SAMPLE_RATE;
     const rung = rungAt(kind, second, fightSeconds);
     const aura = auraAt(kind, second, nearnessInFight);
+    // --album: on the coda's downbeat every loop lets go, over about a third of a second.
+    if (second + BLOCK / SAMPLE_RATE >= codaAt && !codaStruck) {
+      codaStruck = true;
+      for (const layer of MUSIC_LAYERS) {
+        queue[layer].length = 0;
+        queue[layer].push({ at: codaAt, target: 0, tau: 0.12 });
+      }
+    }
     // The loops begin at t = 0 here, so the anchor is zero and bar zero is the file's own start.
-    for (const w of levelWrites(rung, theme, aura, 0, second, headingFor)) {
+    for (const w of codaStruck ? [] : levelWrites(rung, theme, aura, 0, second, headingFor)) {
       /*
         ⚠️ **`--solved` SWAPS THE TARGET AND NOTHING ELSE** —
         `docs/decisions/0154-the-mix-is-authored-as-intent.md`. The ramps, the bar-line quantisation
@@ -612,6 +668,10 @@ if (args.has('level')) {
         left += v * p.left;
         right += v * p.right;
       }
+      if (album) {
+        left += codaLeft[i + n];
+        right += codaRight[i + n];
+      }
       /*
         ⚠️ **The shaper is PER CHANNEL, which is what a `WaveShaperNode` on a stereo bus does.** One
         curve applied to a mono sum and then split would be a different sound — and it is the shape of
@@ -623,7 +683,16 @@ if (args.has('level')) {
   }
 
   const base = out.replace(/\.wav$/, '');
-  writeFileSync(`${base}-level-${kind}.wav`, wavOf(track, SAMPLE_RATE, 2));
+  if (album) {
+    // The last second and a half falls to silence, so the file ends on nothing rather than on a sample.
+    const fade = Math.round(1.5 * SAMPLE_RATE);
+    for (let k = 0; k < fade; k++) {
+      const g = 1 - k / fade;
+      track[(total - fade + k) * 2] *= g;
+      track[(total - fade + k) * 2 + 1] *= g;
+    }
+  }
+  writeFileSync(`${base}-${album ? 'album' : 'level'}-${kind}.wav`, wavOf(track, SAMPLE_RATE, 2));
 
   /*
     ⚠️ **WHERE IN THE BAR EACH BOUNDARY LANDS, WHICH IS THE ONE THING A LISTENER CANNOT COUNT AND A

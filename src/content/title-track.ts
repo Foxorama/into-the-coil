@@ -1,0 +1,117 @@
+/**
+ * THE TITLE TRACK — the title screen's groove, grown into a piece with a beginning, a middle and an end.
+ *
+ * ⚠️ **The album plan's step 5, asked for with the album**: *"title music plus run music — we'll need to make
+ * the title music expand out though as it's currently a pretty short recurring sound and not a full track."*
+ * The title screen plays two bars — `drone`, `bass` and `beat` from `src/content/music.ts` — and they are the
+ * floor of this piece, unchanged. What is added is written over their harmony, which is two bars of A minor
+ * and G: a pad that spells it, a sixteenth arpeggio, a lead that states a theme for the game, and a flute —
+ * the instrument the whole album keeps coming back to — for the breakdown.
+ *
+ * ⚠️ **A SCORE OF SECTIONS ON A CLOCK, NOT A CAMERA** — the title has no scroll, so each section names how many
+ * bars it lasts and how loud each part is in it. `scripts/album.mjs` plays it; the title screen in the game
+ * still loops its two bars, and walking this score there is its own change.
+ */
+
+import { BEAT_SECONDS, MUSIC, type MusicVoice } from './music.ts';
+
+const _ = null;
+
+/** A minor, then G, a bar each — the drone's own two bars. */
+const TITLE_ROOT = [0, -2];
+const TITLE_THIRD = [3, 2];
+const TITLE_FIFTH = [7, 5];
+
+/** A part of the title track: its voices, how many bars its loop is, how much room, and where it sits. */
+export interface TitlePart {
+  readonly voices: readonly MusicVoice[];
+  readonly bars: number;
+  readonly air: number;
+  readonly pan: number;
+}
+
+/** The theme: eight bars that rise and fall back to B, then eight that climb higher and come home. */
+const THEME: readonly (number | null)[] = [
+  12, _, _, 15, 14, _, 10, _, 12, _, 7, _, 10, _, _, _,
+  12, _, _, 15, 17, _, 15, 14, 15, _, 12, _, 14, _, _, _,
+  19, _, _, 17, 19, _, 22, _, 24, _, 22, 19, 17, _, _, _,
+  15, _, 17, 19, 22, _, 19, 17, 15, _, 14, 12, 14, _, _, _,
+];
+
+/** The arpeggio: the chord's notes in sixteenths, up and back. */
+const ARPEGGIO: readonly (number | null)[] = TITLE_ROOT.flatMap((root, bar) => {
+  const third = TITLE_THIRD[bar]!;
+  const fifth = TITLE_FIFTH[bar]!;
+  return [root, third, fifth, root + 12, fifth, third, root + 12, fifth, root, third, fifth, root + 12, third + 12, root + 12, fifth, third];
+});
+
+/** The flute's breakdown line: long notes, a bar or two each. */
+const FLUTE_LINE: readonly (number | null)[] = [
+  7, _, _, _, 5, _, _, _, 3, _, _, _, 2, _, _, _,
+  7, _, _, _, 10, _, _, _, 12, _, _, _, 14, _, 12, _,
+];
+
+export const TITLE_PARTS = {
+  drone: { voices: MUSIC.drone, bars: 2, air: 0.6, pan: 0 },
+  bass: { voices: MUSIC.bass, bars: 2, air: 0.05, pan: 0 },
+  beat: { voices: MUSIC.beat, bars: 2, air: 0.06, pan: 0 },
+  pad: {
+    voices: [
+      { steps: TITLE_ROOT, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.4, curve: 0.6, lowFrom: 1800, lowTo: 1300, q: 0.7, release: BEAT_SECONDS * 1.5, vibrato: 6 } },
+      { steps: TITLE_THIRD, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.045, attack: 0.45, curve: 0.6, lowFrom: 1900, lowTo: 1400, q: 0.7, release: BEAT_SECONDS * 1.5, vibrato: 7 } },
+      { steps: TITLE_FIFTH, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.07, attack: 0.5, curve: 0.6, lowFrom: 2200, lowTo: 1600, q: 0.7, release: BEAT_SECONDS * 1.5 } },
+    ],
+    bars: 2,
+    air: 0.35,
+    pan: -0.15,
+  },
+  arp: {
+    voices: [
+      { steps: ARPEGGIO, pitched: true, perBeat: 4, octave: 3, accents: [1, 0.6, 0.75, 0.65], note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.3, gain: 0.03, attack: 0.004, curve: 4, lowFrom: 3600, lowTo: 1800, q: 0.9 } },
+      { steps: ARPEGGIO, pitched: true, perBeat: 4, octave: 3, accents: [1, 0.6, 0.75, 0.65], note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.05, attack: 0.004, curve: 3.6, lowFrom: 4200, lowTo: 2200, q: 0.8 } },
+    ],
+    bars: 2,
+    air: 0.3,
+    pan: 0.35,
+  },
+  lead: {
+    voices: [
+      { steps: THEME, pitched: true, perBeat: 1, octave: 2 + 7 / 1200, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.02, curve: 0.8, lowFrom: 3000, lowTo: 1900, q: 0.8, release: BEAT_SECONDS * 0.7, vibrato: 12 } },
+      { steps: THEME, pitched: true, perBeat: 1, octave: 2 - 7 / 1200, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.06, attack: 0.025, curve: 0.8, lowFrom: 2900, lowTo: 1800, q: 0.8, release: BEAT_SECONDS * 0.7, vibrato: 11 } },
+      { steps: THEME, pitched: true, perBeat: 1, octave: 1, note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.07, attack: 0.02, curve: 0.8, release: BEAT_SECONDS * 0.7 } },
+    ],
+    bars: 16,
+    air: 0.3,
+    pan: -0.1,
+  },
+  flute: {
+    voices: [
+      { steps: FLUTE_LINE, pitched: true, perBeat: 1, octave: 3, note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.15, attack: 0.14, curve: 0.4, lowFrom: 4600, lowTo: 3400, q: 0.8, release: BEAT_SECONDS * 1.8, vibrato: 11 } },
+      { steps: FLUTE_LINE, pitched: true, perBeat: 1, octave: 3, note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.085, attack: 0.2, curve: 0.4, release: BEAT_SECONDS * 2, vibrato: 11 } },
+    ],
+    bars: 8,
+    air: 0.5,
+    pan: 0.15,
+  },
+} satisfies Record<string, TitlePart>;
+
+export type TitlePartName = keyof typeof TITLE_PARTS;
+
+/**
+ * The score: how many bars each section lasts and how loud each part is in it (1 is the part's own level).
+ * A part moves to its new level across the first bar of a section.
+ */
+export const TITLE_SCORE: readonly { bars: number; parts: Partial<Record<TitlePartName, number>> }[] = [
+  // The floor wakes: the drone and the pad.
+  { bars: 8, parts: { drone: 1, pad: 0.7 } },
+  // The riff.
+  { bars: 8, parts: { drone: 1, pad: 0.8, bass: 0.85 } },
+  // The groove: the kit and the arpeggio.
+  { bars: 16, parts: { drone: 0.9, pad: 0.8, bass: 1, beat: 1, arp: 0.8 } },
+  // The theme.
+  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, beat: 1, arp: 0.7, lead: 1 } },
+  // The breakdown: the flute over the floor.
+  { bars: 8, parts: { drone: 1, pad: 1, bass: 0.5, flute: 1 } },
+  // Everything, the theme climbing.
+  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, beat: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
+];
