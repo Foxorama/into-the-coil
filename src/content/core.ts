@@ -1526,7 +1526,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   dread: [
     {
-      steps: [2, 8, 2, 8],
+      // 0331: A, A, F, E where it held a tritone — see `wraith`.
+      steps: [0, 0, 8, 7],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
@@ -1534,7 +1535,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.2, gain: 0.11, attack: 0.5, curve: 1.05, lowFrom: 300, lowTo: 800, q: 2.6 },
     },
     {
-      steps: [8, 2, 8, 2],
+      steps: [7, 7, 3, 2],
       pitched: true,
       perBeat: 0.25,
       octave: 1,
@@ -1768,7 +1769,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.64, 0.86, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.27, attack: 0.002, curve: 4.4, lowFrom: 2600, lowTo: 1000, q: 2, drive: 0.55 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.25, attack: 0.002, curve: 4.4, lowFrom: 2200, lowTo: 900, q: 1.2, drive: 0.32 },
     },
     {
       // The octave over it, thinner and brighter, which is how two guitars playing one riff sound.
@@ -1786,7 +1787,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.62, 0.84, 0.6],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.15, attack: 0.002, curve: 5, lowFrom: 5200, lowTo: 2400, q: 1.6, drive: 0.4 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.12, attack: 0.002, curve: 5, lowFrom: 3800, lowTo: 1900, q: 1.1, drive: 0.2 },
     },
   ],
 
@@ -1802,30 +1803,37 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         growl rather than a shriek, and it is the reason this layer carries the fight's whole bottom
         register when `groove` and `chords` have closed.
       */
+      /*
+        ⚠️ **AND IT IS A POWER CHORD NOW** — 0331, heard in the album track: *"the boss music for the dark heart
+        doesn't quite fit with the track, the non-flute music feels a bit harsh and discordant and not in a good
+        way."* The piece it ends is a lament in A minor with a flute; two voices a semitone apart on every beat,
+        driven to pieces, was the death-metal brief's growl. It plays the roots the tremolo riff walks — A, F,
+        A, F, A, G, A, E, two strokes a bar — with the fifth above in the voice below, at half the drive.
+      */
       steps: [
-        8, _, 7, _, 8, _, 7, _,
-        3, _, 2, _, 3, _, 2, _,
-        8, _, 7, _, 8, _, 7, 8,
-        2, _, 3, _, 2, _, 3, _,
+        0, _, 0, _, 8, _, 8, _,
+        0, _, 0, _, 8, _, 8, _,
+        0, _, 0, _, 10, _, 10, _,
+        0, _, 0, _, 7, _, 7, _,
       ],
       pitched: true,
       perBeat: 1,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1, gain: 0.23, attack: 0.03, curve: 1.9, lowFrom: 1100, lowTo: 420, q: 2.4, drive: 0.85 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.2, attack: 0.02, curve: 1.9, lowFrom: 1000, lowTo: 420, q: 1.3, drive: 0.42 },
     },
     {
       steps: [
-        7, _, 8, _, 7, _, 8, _,
-        2, _, 3, _, 2, _, 3, _,
-        7, _, 8, _, 7, _, 8, 7,
-        3, _, 2, _, 3, _, 2, _,
+        7, _, 7, _, 3, _, 3, _,
+        7, _, 7, _, 3, _, 3, _,
+        7, _, 7, _, 5, _, 5, _,
+        7, _, 7, _, 2, _, 2, _,
       ],
       pitched: true,
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.05, gain: 0.17, attack: 0.04, curve: 1.8, lowFrom: 1800, lowTo: 700, q: 2.2, drive: 0.75 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.13, attack: 0.03, curve: 1.8, lowFrom: 1500, lowTo: 650, q: 1.2, drive: 0.35 },
     },
   ],
 
@@ -1838,7 +1846,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   auraSlow: [
     {
-      steps: [2, _, 8, _, 2, _, 8, _],
+      // 0331: the root and the fifth where the tritone was — see `wraith`.
+      steps: [0, _, 7, _, 0, _, 7, _],
       pitched: true,
       perBeat: 1,
       // 0331's eighteenth: an octave up, out of the band a small speaker shakes at rather than plays.
@@ -1846,7 +1855,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.24, attack: 0.3, curve: 1.5, lowFrom: 400, lowTo: 900, q: 1.2 },
     },
     {
-      steps: [8, _, 2, _, 8, _, 2, _],
+      steps: [7, _, 0, _, 7, _, 0, _],
       pitched: true,
       perBeat: 1,
       octave: 1,
@@ -1863,14 +1872,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   auraFast: [
     {
-      steps: [8, 8, 8, 8, 8, 8, 8, 8, 2, 2, 2, 2, 2, 2, 2, 2],
+      steps: [7, 7, 7, 7, 7, 7, 7, 7, 3, 3, 3, 3, 3, 3, 3, 3],
       pitched: true,
       perBeat: 2,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.16, attack: 0.004, curve: 5, lowFrom: 2200, lowTo: 700, q: 2, drive: 0.4 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.14, attack: 0.004, curve: 5, lowFrom: 1900, lowTo: 650, q: 1.3, drive: 0.2 },
     },
     {
-      steps: [_, 2, _, 2, _, 2, _, 2, _, 8, _, 8, _, 8, _, 8],
+      steps: [_, 3, _, 3, _, 3, _, 3, _, 7, _, 7, _, 7, _, 7],
       pitched: true,
       perBeat: 2,
       octave: 2,
