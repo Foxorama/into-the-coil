@@ -934,9 +934,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     trim: 0.78,
     // 0331: the tom fill's own slot, sixteen bars so it lands on the fourth bar of every phrase.
     bars: { ownD: 16, ownC: 16 },
-    // 0331: the fills cascade across the ears — the run two strokes left, two centre, two right; the punch one of each.
+    // 0331: the fills cascade across the ears — the run one stroke left, two centre, three right; the punch one of each.
+    // Heard: *"they need to start 1 beat less left and end 1 beat more right"* — it was two, two and two.
     pan: {
-      ownD: { perBeat: 4, steps: cascadeOver([10, 12, 14], [-0.65, 0, 0.65]) },
+      ownD: { perBeat: 4, steps: cascadeOver([10, 11, 13], [-0.65, 0, 0.65]) },
       ownC: { perBeat: 4, steps: cascadeOver([13, 14, 15], [-0.65, 0, 0.65]) },
     },
     mix: {

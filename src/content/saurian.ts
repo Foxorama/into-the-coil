@@ -1079,28 +1079,33 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       doesn't quite fit the space."* Eight strokes crowded the riff at `surge`, where every beat is already
       full. Three: the low tom, then the floor tom with a kick and a snare crack together on the last
       sixteenth, short and hard, straight into the next phrase. The run down the toms moved to `ownD`.
+
+      ⚠️ **AND THEN LOUDER, WITH A CRACK ON EVERY STROKE** — heard: *"the following drumbeat set we added to surge
+      isn't really noticeable at all."* Measured on the render's stems, the three strokes sat 4–6 dB under the
+      mix around them, two low sines in the bass and sub's own band, and the last one landed on the kit's closing
+      kick. The toms are harder and a little higher, each stroke has the snare's crack on it, and the stick is up.
     */
     {
       steps: FILL_AT([13, 14]),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 170, to: 112, seconds: 0.14, gain: 0.45, attack: 0.001, curve: 5, drive: 0.2 },
+      note: { wave: 'sine', from: 200, to: 128, seconds: 0.16, gain: 0.72, attack: 0.001, curve: 4.5, drive: 0.3 },
     },
     {
       steps: FILL_AT([15]),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 125, to: 62, seconds: 0.18, gain: 0.58, attack: 0.001, curve: 5, drive: 0.25 },
+      note: { wave: 'sine', from: 150, to: 70, seconds: 0.2, gain: 0.85, attack: 0.001, curve: 4.5, drive: 0.35 },
     },
     {
-      // The snare crack on the last stroke.
-      steps: FILL_AT([15]),
+      // The snare crack on every stroke, hardest on the last.
+      steps: FILL_AT([13, 14, 15]),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.13, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.24, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
     },
     {
       // The stick.
@@ -1108,7 +1113,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.066, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.11, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
     },
   ],
   /*
