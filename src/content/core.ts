@@ -1387,7 +1387,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 + 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.026, attack: 0.14, curve: 0.4, lowFrom: 5600, lowTo: 4200, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.016, attack: 0.14, curve: 0.4, lowFrom: 5000, lowTo: 3800, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 16 },
     },
     {
       steps: turned(BALLAD),
@@ -1396,7 +1396,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       accents: CLIMB_BEATS,
       loose: 0.012,
       octave: 3 - 4 / 1200,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.024, attack: 0.17, curve: 0.4, lowFrom: 5400, lowTo: 4000, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.014, attack: 0.17, curve: 0.4, lowFrom: 4800, lowTo: 3600, q: 0.8, release: BEAT_SECONDS * 1.6, vibrato: 15 },
     },
   ],
 
