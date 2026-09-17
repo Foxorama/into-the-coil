@@ -1063,14 +1063,14 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 170, to: 112, seconds: 0.14, gain: 0.34, attack: 0.001, curve: 5, drive: 0.2 },
+      note: { wave: 'sine', from: 170, to: 112, seconds: 0.14, gain: 0.45, attack: 0.001, curve: 5, drive: 0.2 },
     },
     {
       steps: FILL_AT([15]),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 125, to: 62, seconds: 0.18, gain: 0.44, attack: 0.001, curve: 5, drive: 0.25 },
+      note: { wave: 'sine', from: 125, to: 62, seconds: 0.18, gain: 0.58, attack: 0.001, curve: 5, drive: 0.25 },
     },
     {
       // The snare crack on the last stroke.
@@ -1078,7 +1078,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.1, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.13, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
     },
     {
       // The stick.
@@ -1086,27 +1086,24 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.05, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.066, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
     },
   ],
 
   /*
-    ── THE FILL: a run down the toms on every phrase turn, in the first two sections ────────────────
+    ── THE FILL: a run down the toms on every phrase turn, in the second section ───────────────────
 
     ⚠️ **0331**: *"the drumbeat replacement is good in coilward, but that drumbeat needs to kick in in the
     earlier section on the same downbeat part."* It lived in `hook`, which is silent at `run` and a whisper
-    at `push`. An own slot is the one layer this place can open at exactly the rungs it wants — `run` and
-    `push` — and close where the punch above takes over. Sixteen bars here (`bars` on the place's row), so
-    `FILL_AT` lands on the fourth bar of every phrase as it did.
+    at `push`. An own slot is the one layer this place can open at exactly the rungs it wants, and close
+    where the punch above takes over. Sixteen bars here (`bars` on the place's row), so `FILL_AT` lands on
+    the fourth bar of every phrase as it did.
+
+    ⚠️ **AND THEN NOT AT `run`, AND HALF A BEAT SHORTER** — heard: *"drop that added drumbeat from the
+    first 39 secs, it doesn't fit in properly there; from 40 secs onward it's good, but needs maybe just the
+    first beat or half beat dropped."* The high tom's two strokes are gone; the run starts on the rack tom.
   */
   ownD: [
-    {
-      steps: FILL_AT([8, 9]),
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      note: { wave: 'sine', from: 250, to: 185, seconds: 0.24, gain: 0.3, attack: 0.001, curve: 4, drive: 0.15 },
-    },
     {
       steps: FILL_AT([10, 11]),
       pitched: false,
@@ -1130,7 +1127,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
     },
     {
       // The stick on every stroke, which is what makes a tom a drum and not a falling tone.
-      steps: FILL_AT([8, 9, 10, 11, 12, 13, 14, 15]),
+      steps: FILL_AT([10, 11, 12, 13, 14, 15]),
       pitched: false,
       perBeat: 4,
       octave: 0,

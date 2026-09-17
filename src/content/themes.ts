@@ -997,7 +997,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       `ownA`'s raptor call at `surge` and `approach`, and `hook` down by 3 dB where it opens.
     */
     ladder: {
-      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownD: 2.05 },
+      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownD: 0 },
       push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.074, crash: 0, ownD: 2.07 },
       surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.3, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.668, ownA: 0.5, crash: 0 },
       approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 0.5, arp: 0.45, toll: 1.6, dread: 1.7, crash: 0 },
