@@ -1568,7 +1568,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07276, ownD: 0, lead: 0, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
       push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
       surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.4159, counter: 0.3213, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0.3138, ownA: 0, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.2185, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },
@@ -1604,7 +1604,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
     // …and the ballad dies away into the acceptance over ten seconds and more — 0331's twelfth.
-    linger: { hook: 2, counter: 3.5, groove: 3, ownA: 1.4, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06 },
+    linger: { hook: 2, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06 },
     /*
       0331's thirteenth and fourteenth listens: *"a heartbeat at 28 sec and a heartbeat at 29 sec… sounded
       like a bug"*, and *"if the start/stop of the beat is too harsh, it can still come in and fade out
@@ -1616,7 +1616,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     */
     onBeat: ['ownD', 'crash', 'ownB', 'stomp'],
     // 0331's fifteenth: the ballad is one piece of thirty-six bars, bar 36 to bar 72.
-    bars: { groove: 36, counter: 36 },
+    // 0331's sixteenth: forty-two, so the ballad runs on under the acceptance into the fight.
+    bars: { groove: 42, counter: 42 },
     // 0331's fifteenth: the ballad's heart lives in `crash`, which this place never sounds — held centred.
     pan: { crash: { perBeat: 0.25, steps: [0] } },
     // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.

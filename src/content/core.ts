@@ -202,14 +202,22 @@ const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
  * | 16–25 | 83.2 | the refrain: I–V–vi–IV in C, climbing to a top A at 1:36 | `C G Am F · C G F G · Am F` |
  * | 26–35 | 99.2 | the descent, back towards the lament's A minor | `Dm Dm C C · F F Em Em · Am Am` |
  */
-const B_ROOT: readonly number[] = [-7, -5, -4, -2, -4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, 3, -2, 0, -4, 3, -2, -4, -2, 0, -4, -7, -7, 3, 3, -4, -4, -5, -5, 0, 0];
+// 0331's sixteenth: bars 36–41 (115.2–124.8 s) run under the acceptance on the lament's chords there —
+// `Dm Dm F F G G` — so the ballad does not stop at 1:55; it carries into the fight.
+const B_ROOT: readonly number[] = [-7, -5, -4, -2, -4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, 3, -2, 0, -4, 3, -2, -4, -2, 0, -4, -7, -7, 3, 3, -4, -4, -5, -5, 0, 0, -7, -7, -4, -4, -2, -2];
 /** The third and fifth over each root, as the ballad voices them — just above it. */
 const CHORD_OVER: Readonly<Record<number, readonly [number, number]>> = { [-7]: [-4, 0], [-5]: [-2, 2], [-4]: [0, 3], [-2]: [2, 5], 0: [3, 7], 3: [7, 10] };
 const B_THIRD: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![0]);
 const B_FIFTH: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![1]);
 
-/** The ballad is written from its own first bar now, which is the loop's; this is what it used to turn. */
-const turned = <T>(line: readonly T[]): T[] => [...line];
+/**
+ * A ballad line written from its own first bar, turned so that bar lands on bar 36 of a loop of the
+ * ballad's own length — 0331's sixteenth listen made the piece forty-two bars, which no longer divides 36.
+ */
+const turned = <T>(line: readonly T[]): T[] => {
+  const offset = (line.length / B_ROOT.length) * 36;
+  return line.map((_u, i) => line[(i - (offset % line.length) + line.length) % line.length]!);
+};
 
 /**
  * THE TALE OF LOSS — the violins' line, all thirty-six bars. The ballad climbs to its A an octave up; the
@@ -226,7 +234,9 @@ const BALLAD: readonly (number | null)[] = [
   36, _, _, _, 36, _, 34, 31,
   29, _, _, _, 29, 27, 24, _, 27, _, _, 24, 22, _, _, _,
   24, _, _, 20, 19, _, _, _, 22, _, _, 19, 17, _, _, 14,
-  12, _, _, _, _, _, _, _,
+  12, _, _, _, _, _, 12, 15,
+  17, _, _, 20, 24, _, 22, 20, 24, _, _, 27, 29, _, 27, 24,
+  26, _, 29, _, 31, _, 29, 26,
 ];
 
 /**
@@ -337,66 +347,68 @@ const heartVoices = (steps: readonly (number | null)[], level: number): MusicVoi
 ];
 
 /**
- * THE SAX — the ballad's soul, answering the violins. 0331's eleventh listen: *"it's good at the moment,
- * but just a bit soulless… sax? does it need a bit of the good ole sax blues… maybe it needs to be
- * symphonic orchestral blues instead of symphonic orchestral metal."*
+ * THE CELLO — the counterpoint, from the ballad's first bar (1:04). 0331's sixteenth listen: *"the sax
+ * isn't working — and it definitely needs something as an interwoven melody counterpoint though from about
+ * 1.05."*
  *
- * ⚠️ **IT SPEAKS WHERE THE VIOLINS HOLD**, in eighths on the minor pentatonic — A, C, D, E, G, the blues
- * scale's five notes that A minor already owns, so the player's gun stays in key — and lands on long
- * notes the violins climb over. The blue note itself is the scoop: every note leans up into its pitch.
+ * ⚠️ **A SECOND MELODY, NOT A HARMONY.** It is written against the violins note for note: where they
+ * climb it falls, where they hold it moves, and it lands on a chord tone whenever they leave one — so the
+ * two lines are heard as two voices talking rather than as one line thickened. 131–440 Hz, under the
+ * violins and over the bass, where a cello sings. Silent through the lead-in.
  */
-const SAX: readonly (number | null)[] = [
-  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-  _, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 10,
-  12, _, 15, 17, 15, _, 12, _, _, _, _, _, _, _, _, _,
-  _, _, _, _, _, _, 17, 15, 12, _, _, _, _, _, _, _,
-  19, _, 17, 15, _, 12, 15, _, 19, _, _, _, _, _, _, _,
-  _, _, _, _, _, _, 17, 19, _, _, _, _, 22, _, 19, 17,
-  15, _, _, _, _, _, _, _, 15, _, 17, 19, _, 22, 19, _,
-  19, _, _, _, _, _, _, _, 17, _, _, _, _, _, _, _, 19, _, _, _, _, _, _, _, 20, _, _, _, _, _, _, _,
-  22, _, _, _, _, _, _, _, 22, _, _, _, _, _, _, _, 24, _, _, _, _, _, _, _, 26, _, _, _, 24, _, 26, _,
-  27, _, _, _, _, _, _, _, 24, _, _, _, 20, _, 17, _,
-  _, _, _, _, 17, _, 15, 12, 12, _, _, _, _, _, _, _, _, _, 15, 17, 19, _, 15, _, 12, _, _, _, _, _, _, _,
-  _, _, _, _, 12, _, 15, 17, 15, _, _, _, _, _, _, _, _, _, 19, _, 17, _, 14, _, 12, _, _, _, 10, _, _, _,
-  12, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+const CELLO: readonly (number | null)[] = [
+  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+  12, _, 10, 8, 5, _, _, 7, 7, _, 12, 10, 7, _, _, _,
+  12, _, _, 8, 10, _, 14, _, 15, _, 14, 12, 10, _, _, _,
+  8, _, 5, _, 7, _, _, 10, 12, _, _, _, 10, _, 12, 15,
+  19, _, _, _, 17, _, 14, _, 12, _, 15, 19, 20, _, _, _,
+  19, _, 17, 15, 14, _, _, 17, 20, _, _, _, 17, _, 19, 22,
+  24, _, _, _, 20, _, 24, _,
+  17, _, 15, 12, 8, _, _, _, 7, _, 10, 12, 15, _, _, _,
+  12, _, 10, 8, 8, _, 10, 12, 7, _, _, _, 10, _, 7, _,
+  12, _, 7, 3, 0, _, 3, 7,
+  5, _, _, _, 8, _, 5, 3, 8, _, _, _, 12, _, 8, 5,
+  10, _, _, _, 14, _, 10, 7,
 ];
+const [CELLO_MOVING, CELLO_HELD] = splitByRoom(turned(CELLO), 2);
 
 /**
- * A tenor sax on `line`, in eighths, each note held `beats`: a reedy saw and a hollow square, a body, and
- * breath — scooped into every note from below, with a wide vibrato as it is held.
+ * A solo cello on `line`, in quarters, each note held `beats`: two bows a few cents apart, a body, and the
+ * rosin — with a singer's vibrato easing in as the note is held.
  */
-const saxVoices = (line: readonly (number | null)[], beats: number, level: number): MusicVoice[] => [
+const celloVoices = (line: readonly (number | null)[], beats: number, level: number): MusicVoice[] => [
   {
     steps: line,
     pitched: true,
-    perBeat: 2,
-    loose: 0.018,
-    octave: 1,
-    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.055 * level, attack: 0.025, curve: 0.45, lowFrom: 2600, lowTo: 1700, q: 0.7, highFrom: 160, drive: 0.22, release: BEAT_SECONDS * beats * 0.35, vibrato: 18, scoop: -90 },
+    perBeat: 1,
+    loose: 0.012,
+    octave: 1 + 4 / 1200,
+    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.07 * level, attack: 0.08, curve: 0.35, lowFrom: 1700, lowTo: 1200, q: 0.6, release: BEAT_SECONDS * beats * 0.4, vibrato: 16 },
   },
   {
     steps: line,
     pitched: true,
-    perBeat: 2,
-    loose: 0.018,
-    octave: 1,
-    note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.022 * level, attack: 0.03, curve: 0.45, lowFrom: 1600, lowTo: 1200, q: 0.6, release: BEAT_SECONDS * beats * 0.35, vibrato: 18, scoop: -90 },
+    perBeat: 1,
+    loose: 0.012,
+    octave: 1 - 4 / 1200,
+    note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.06 * level, attack: 0.1, curve: 0.35, lowFrom: 1600, lowTo: 1100, q: 0.6, release: BEAT_SECONDS * beats * 0.4, vibrato: 14 },
   },
   {
     steps: line,
     pitched: true,
-    perBeat: 2,
-    loose: 0.018,
+    perBeat: 1,
+    loose: 0.012,
     octave: 1,
-    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.05 * level, attack: 0.03, curve: 0.45, release: BEAT_SECONDS * beats * 0.4, vibrato: 18, scoop: -90 },
+    note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * beats, gain: 0.08 * level, attack: 0.08, curve: 0.35, release: BEAT_SECONDS * beats * 0.45, vibrato: 15 },
   },
   {
+    // The rosin on the string as the bow bites.
     steps: line.map((note) => (note === null ? _ : 1)),
     pitched: false,
-    perBeat: 2,
-    loose: 0.018,
+    perBeat: 1,
+    loose: 0.012,
     octave: 0,
-    note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * beats * 0.8, gain: 0.012 * level, attack: 0.02, curve: 1, lowFrom: 4500, lowTo: 3000, highFrom: 1100, release: BEAT_SECONDS * beats * 0.3 },
+    note: { wave: 'noise', from: 0, to: 0, seconds: 0.09, gain: 0.012 * level, attack: 0.02, curve: 3, lowFrom: 3500, lowTo: 2000, highFrom: 600 },
   },
 ];
 
@@ -407,7 +419,6 @@ const saxVoices = (line: readonly (number | null)[], beats: number, level: numbe
  * three and walks to the fifth on four, 73–196 Hz — above the heart's thump rather than on it.
  */
 const BASS_LINE: readonly (number | null)[] = turned(B_ROOT.flatMap((root, bar) => [root, _, root, B_FIFTH[bar]!]));
-const [SAX_PASSING, SAX_LANDING] = splitByRoom(SAX, 4);
 
 /**
  * THE BALLAD'S CLIMB — 0331's take two. The second half of the ballad, where the melody reaches its top
@@ -416,8 +427,11 @@ const [SAX_PASSING, SAX_LANDING] = splitByRoom(SAX, 4);
  */
 // 0331's fifteenth: swelling through the lead-in, level through the ballad, rising through the refrain to
 // its peak at bar 24, and falling away through the descent.
-const CLIMB_BARS: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.12, 1.14, 1.17, 1.2, 1.22, 1.25, 1.28, 1.3, 1.34, 1.3, 1.2, 1.12, 1.06, 1, 0.94, 0.88, 0.84, 0.8, 0.76, 0.72];
-const CLIMB_BEATS: readonly number[] = CLIMB_BARS.flatMap((weight) => [weight, weight, weight, weight]);
+// 0331's sixteenth: the descent eases to 0.95 rather than 0.72 — *"it trails off too far instead of flowing
+// down into the boss music"* — and the six bars under the acceptance build again into the fight.
+const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.12, 1.14, 1.17, 1.2, 1.22, 1.25, 1.28, 1.3, 1.34, 1.3, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 1, 1.04, 1.08, 1.12, 1.16, 1.2];
+const CLIMB_BARS: readonly number[] = turned(CLIMB_WRITTEN);
+const CLIMB_BEATS: readonly number[] = turned(CLIMB_WRITTEN.flatMap((weight) => [weight, weight, weight, weight]));
 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
@@ -1029,8 +1043,9 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.03, attack: 0.03, curve: 0.15, release: BEAT_SECONDS * 0.7, vibrato: 7 },
     },
     // The sax: its running notes, and the notes it lands on and holds.
-    ...saxVoices(SAX_PASSING, 1, 2.2),
-    ...saxVoices(SAX_LANDING, 3.2, 2.4),
+    // The cello's counterpoint — 0331's sixteenth listen.
+    ...celloVoices(CELLO_MOVING, 1.6, 1),
+    ...celloVoices(CELLO_HELD, 4, 1.05),
     {
       // The choir: an "aah" is a round tone with its upper partials soft — triangles and sines, slow.
       steps: turned(B_THIRD.map((third) => third + 12)),
@@ -1094,7 +1109,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     {
       // The trumpets, on the melody's second half only.
-      steps: BALLAD.map((note, i) => (i >= 64 && i < 112 ? note : _)),
+      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 112) || i >= 144 ? note : _))),
       pitched: true,
       perBeat: 1,
       accents: CLIMB_BEATS,
