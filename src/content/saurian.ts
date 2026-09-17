@@ -1051,7 +1051,55 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       accents: [1, 0.74, 0.9, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.07, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
     },
-    // The fill, where the Descent's stabs stood: high tom, rack tom, low tom, floor tom, two strokes each.
+    /*
+      ⚠️ **THE PUNCH, WHERE THE FILL STOOD** — 0331, the fill heard: *"that drumbeat needs to kick in in the
+      earlier section… and the section where it was needs something slightly shorter and punchier, it just
+      doesn't quite fit the space."* Eight strokes crowded the riff at `surge`, where every beat is already
+      full. Three: the low tom, then the floor tom with a kick and a snare crack together on the last
+      sixteenth, short and hard, straight into the next phrase. The run down the toms moved to `ownD`.
+    */
+    {
+      steps: FILL_AT([13, 14]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 170, to: 112, seconds: 0.14, gain: 0.34, attack: 0.001, curve: 5, drive: 0.2 },
+    },
+    {
+      steps: FILL_AT([15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 125, to: 62, seconds: 0.18, gain: 0.44, attack: 0.001, curve: 5, drive: 0.25 },
+    },
+    {
+      // The snare crack on the last stroke.
+      steps: FILL_AT([15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.1, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
+    },
+    {
+      // The stick.
+      steps: FILL_AT([13, 14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.05, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
+    },
+  ],
+
+  /*
+    ── THE FILL: a run down the toms on every phrase turn, in the first two sections ────────────────
+
+    ⚠️ **0331**: *"the drumbeat replacement is good in coilward, but that drumbeat needs to kick in in the
+    earlier section on the same downbeat part."* It lived in `hook`, which is silent at `run` and a whisper
+    at `push`. An own slot is the one layer this place can open at exactly the rungs it wants — `run` and
+    `push` — and close where the punch above takes over. Sixteen bars here (`bars` on the place's row), so
+    `FILL_AT` lands on the fourth bar of every phrase as it did.
+  */
+  ownD: [
     {
       steps: FILL_AT([8, 9]),
       pitched: false,

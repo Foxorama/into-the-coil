@@ -408,7 +408,8 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     hole `docs/decisions/0172-a-place-opens-with-its-own-four.md` left in seven layer-rungs and
     `docs/state-of-play.md` has been flagging since; 0189 does not widen it.
   */
-  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
+  // 0331: the tom fill is a pulse in the first two sections.
+  saurian: { run: { ownD: 'pulse' }, push: { ownD: 'pulse' }, surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
   labyrinth: {},
   rime: {},
   mire: {},

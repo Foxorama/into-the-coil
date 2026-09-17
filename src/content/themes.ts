@@ -932,6 +932,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       0.99 at every rung and the dirtiest rung is −17.8 dB against the −16 the guard allows.
     */
     trim: 0.78,
+    // 0331: the tom fill's own slot, sixteen bars so it lands on the fourth bar of every phrase.
+    bars: { ownD: 16 },
     mix: {
       groove: 2.2,
       /*
@@ -995,8 +997,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       `ownA`'s raptor call at `surge` and `approach`, and `hook` down by 3 dB where it opens.
     */
     ladder: {
-      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25 },
-      push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.074, crash: 0 },
+      run: { drone: 0, chords: 0, call: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownD: 2.05 },
+      push: { drone: 0, chords: 0, call: 0, lead: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.074, crash: 0, ownD: 2.07 },
       surge: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.3, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, arp: 0.416, hook: 0.668, ownA: 0.5, crash: 0 },
       approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 0.5, arp: 0.45, toll: 1.6, dread: 1.7, crash: 0 },
       boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95, crash: 0 },
