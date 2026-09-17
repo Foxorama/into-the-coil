@@ -146,9 +146,10 @@ export type TitlePartName = keyof typeof TITLE_PARTS;
 
 /**
  * The score: how many bars each section lasts and how loud each part is in it (1 is the part's own level).
- * A part moves to its new level across the first bar of a section; one falling away takes `glide` bars when the section says so.
+ * A part moves to its new level across the first bar of a section; one falling away takes `glide` bars and one arriving
+ * `rise` bars when the section says so.
  */
-export const TITLE_SCORE: readonly { bars: number; glide?: number; parts: Partial<Record<TitlePartName, number>> }[] = [
+export const TITLE_SCORE: readonly { bars: number; glide?: number; rise?: number; parts: Partial<Record<TitlePartName, number>> }[] = [
   // The floor wakes: the drone and the pad.
   { bars: 8, parts: { drone: 1, pad: 0.7 } },
   /*
@@ -171,6 +172,12 @@ export const TITLE_SCORE: readonly { bars: number; glide?: number; parts: Partia
   { bars: 16, parts: { drone: 0.32, bass: 1, heart: 1, arp: 0.7, lead: 1 } },
   // The breakdown: the flute over the heart, the bass and a quiet arpeggio.
   { bars: 8, parts: { drone: 0.4, bass: 0.6, flute: 1, heart: 0.8, arp: 0.35 } },
-  // Everything, the theme climbing.
-  { bars: 16, parts: { drone: 0.32, bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
+  /*
+    Everything, the theme climbing — rising back in over four bars, at the theme's own level.
+
+    ⚠️ **IT CAME BACK OVER ONE BAR, A DECIBEL AND A HALF OVER THE THEME** — heard: *"it's pretty loud at 1.33 and
+    onwards."* Out of the breakdown's quiet, the lead, the arpeggio, the full heart and the bass all returned in 1.6
+    seconds and the momentary level rose eight decibels.
+  */
+  { bars: 16, rise: 4, glide: 4, parts: { drone: 0.32, bass: 0.9, heart: 1, arp: 0.65, lead: 0.85, flute: 0.45 } },
 ];

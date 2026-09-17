@@ -81,8 +81,8 @@ const levelAt = (name, t) => {
     const end = (startBar + section.bars) * BAR_SECONDS;
     const level = section.parts[name] ?? 0;
     if (t < end) {
-      // A part falling away takes the section's glide; one arriving still takes a bar.
-      const into = (t - start) / (BAR_SECONDS * (level < before ? section.glide ?? 1 : 1));
+      // A part falling away takes the section's glide; one arriving takes its rise, or a bar.
+      const into = (t - start) / (BAR_SECONDS * (level < before ? section.glide ?? 1 : section.rise ?? 1));
       return into >= 1 ? level : before + (level - before) * into;
     }
     before = level;
@@ -118,15 +118,70 @@ for (const part of codaOn({
   }
 }
 
-const track = new Float32Array(total * 2);
 const pans = Object.fromEntries(names.map((n) => [n, panGains(TITLE_PARTS[n].pan)]));
+
+/*
+  ⚠️ **THE CODA IS SET A DECIBEL AND A HALF UNDER WHAT IT FOLLOWS, MEASURED THE WAY `hear.mjs --album` MEASURES
+  EVERY LEVEL TRACK'S** — heard: *"a big jump at 1.55."* Each coda part took its loop's own level, and a chord
+  struck on every part at once, with nothing moving out of its way, came in at the loudest moment of the track.
+*/
+const loopsOver = (from, to) => {
+  const l = new Float32Array(to - from), r = new Float32Array(to - from);
+  for (let i = from; i < to; i++) {
+    const tt = i / R;
+    for (const n of names) {
+      const level = levelAt(n, tt);
+      if (level <= 0) continue;
+      const v = loops[n][i % loops[n].length] * level;
+      l[i - from] += v * pans[n].left;
+      r[i - from] += v * pans[n].right;
+    }
+  }
+  return [l, r];
+};
+const kWeighted = (x, from, to) => {
+  // BS.1770 stage 1 (high shelf, +4 dB above ~1.7 kHz) and stage 2 (high-pass at ~38 Hz), designed for this rate.
+  const biquad = (b0, b1, b2, a0, a1, a2) => (input) => {
+    const out = new Float32Array(input.length);
+    let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+    for (let k = 0; k < input.length; k++) {
+      const y = (b0 * input[k] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+      x2 = x1; x1 = input[k]; y2 = y1; y1 = y; out[k] = y;
+    }
+    return out;
+  };
+  const w1 = (2 * Math.PI * 1681.974450955533) / R, A = 10 ** (3.999843853973347 / 40);
+  const al1 = Math.sin(w1) / (2 * 0.7071752369554196), c1 = Math.cos(w1), sA = Math.sqrt(A);
+  const shelf = biquad(A * (A + 1 + (A - 1) * c1 + 2 * sA * al1), -2 * A * (A - 1 + (A + 1) * c1), A * (A + 1 + (A - 1) * c1 - 2 * sA * al1), A + 1 - (A - 1) * c1 + 2 * sA * al1, 2 * (A - 1 - (A + 1) * c1), A + 1 - (A - 1) * c1 - 2 * sA * al1);
+  const w2 = (2 * Math.PI * 38.13547087602444) / R, al2 = Math.sin(w2) / (2 * 0.5003270373238773), c2 = Math.cos(w2);
+  const highpass = biquad((1 + c2) / 2, -(1 + c2), (1 + c2) / 2, 1 + al2, -2 * c2, 1 - al2);
+  // …and a high-pass at 200 Hz, because what a listener compares across that seam is the music, not the kick under it.
+  const w3 = (2 * Math.PI * 200) / R, al3 = Math.sin(w3) / (2 * 0.7071), c3 = Math.cos(w3);
+  const body = biquad((1 + c3) / 2, -(1 + c3), (1 + c3) / 2, 1 + al3, -2 * c3, 1 - al3);
+  return body(highpass(shelf(x.subarray(from, to))));
+};
+const rmsDbOver = (l, r, from, to) => {
+  const kl = kWeighted(l, from, to);
+  const kr = kWeighted(r, from, to);
+  let e = 0;
+  for (let k = 0; k < kl.length; k++) e += kl[k] * kl[k] + kr[k] * kr[k];
+  return 10 * Math.log10(e / (2 * Math.max(1, kl.length)) + 1e-20);
+};
+const strike = Math.round(codaAt * R);
+const [beforeL, beforeR] = loopsOver(strike - Math.round(4 * BAR_SECONDS * R), strike);
+const before = rmsDbOver(beforeL, beforeR, 0, beforeL.length);
+const struck = rmsDbOver(coda.left, coda.right, strike, strike + Math.round(2 * BAR_SECONDS * R));
+const codaScale = 10 ** ((before - 1.5 - struck) / 20);
+console.log(`coda: before ${before.toFixed(1)} dB, as written ${struck.toFixed(1)} dB, scaled ${(20 * Math.log10(codaScale)).toFixed(1)} dB`);
+
+const track = new Float32Array(total * 2);
 const BLOCK = 64;
 for (let i = 0; i < total; i += BLOCK) {
   const t = i / R;
   const levels = Object.fromEntries(names.map((n) => [n, levelAt(n, t)]));
   for (let k = 0; k < BLOCK && i + k < total; k++) {
-    let left = coda.left[i + k];
-    let right = coda.right[i + k];
+    let left = coda.left[i + k] * codaScale;
+    let right = coda.right[i + k] * codaScale;
     for (const n of names) {
       if (levels[n] <= 0) continue;
       const v = loops[n][(i + k) % loops[n].length] * levels[n];
