@@ -36,7 +36,7 @@
  * rather than left white.
  */
 
-import { type MusicLayer, type MusicVoice } from './music.ts';
+import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
 const _ = null;
@@ -49,6 +49,18 @@ const _ = null;
  * file that grew to match the others would be changing level one without being asked to.
  */
 export const APPROACH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
+  /*
+    ── THE CHORDS, STRUCK — the base composition's own, with a faster attack ──────────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, the second time this was asked.** The first
+    listen: *"the chords are slightly muted in the approach, the third section kicking needs the chords
+    to be a bit punchier"*, answered with a level. The next: *"approach needs the chords at 1st and 2nd
+    transition to pop a bit more, it's slightly muted."* The ladder note beside the first answer named
+    the next lever — *the 60–120 ms onsets* — and a chord that takes a tenth of a second to speak swells
+    rather than pops. So this place plays the same notes with every slow onset brought to 12 ms; the
+    title screen, which is the base composition, is untouched.
+  */
+  chords: MUSIC.chords.map((voice) => (voice.note.attack !== undefined && voice.note.attack > 0.03 ? { ...voice, note: { ...voice.note, attack: 0.012 } } : voice)),
   ownA: [
     /*
       ── THE HAND — a maraca on the offbeat sixteenths, four bars of it ─────────────────────────────

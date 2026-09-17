@@ -431,7 +431,9 @@ export function sampleLayerInto(
 ): void {
   rateCeiling = rate;
   const length = Math.max(1, Math.round(layer.seconds * rate));
-  const attack = Math.max(1, Math.round((layer.attack ?? ATTACK_SECONDS) * rate));
+  // 0331: a music square wave has no zero to start on, so it is given three milliseconds to arrive — see `phase`.
+  const floorSeconds = wrap && layer.wave === 'square' ? 0.003 : 0;
+  const attack = Math.max(1, Math.round(Math.max(layer.attack ?? ATTACK_SECONDS, floorSeconds) * rate));
   const curve = layer.curve ?? DECAY;
   // 0331: the last six milliseconds of every note fall to silence instead of stopping — see `RELEASE_SECONDS`.
   const release = Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2)));
@@ -439,8 +441,17 @@ export function sampleLayerInto(
   const tail = layer.release ? Math.min(length - 1, Math.round(layer.release * rate)) : 0;
   const low = makeFilter();
   const high = makeFilter();
-  /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
-  let phase = 0;
+  /**
+   * Where in the waveform we are, in cycles. Fractional part is the position within one.
+   *
+   * ⚠️ **A MUSIC NOTE STARTS WHERE ITS WAVE CROSSES ZERO** — 0331, reported of every level's render: *"the
+   * other tracks have a bit of static and pop throughout them."* At phase 0 a triangle is at +1, a saw at
+   * −1 and a square at +1, so a note with a 0.4–2 ms attack began with a jump of the whole waveform, and
+   * forty-five voices across the seven places are written that way. A triangle crosses zero a quarter
+   * in and a saw half-way; a square never does, so a square gets three milliseconds to arrive. A cue is
+   * left as it was (`wrap` is only true for music), because a sound effect's hard edge is often its point.
+   */
+  let phase = wrap ? (layer.wave === 'tri' ? 0.25 : layer.wave === 'saw' ? 0.5 : 0) : 0;
   /** The value sample-and-hold noise is currently holding. */
   let held = rng.range(-1, 1);
   let heldPhase = 0;

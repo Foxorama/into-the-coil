@@ -38,6 +38,7 @@ import {
   AURA_CURVE,
   AURA_BUILD_UNITS,
   PAN_HORIZON_SECONDS,
+  PAN_GLIDE_SECONDS,
   PHRASE_SECONDS,
   type MusicLayer,
   type MusicLevel,
@@ -1634,7 +1635,8 @@ export function makeMusicOut(
           const to = track.steps[i];
           if (to === null || to === undefined) continue;
           const at = start + i * step;
-          if (at > from) param.setValueAtTime(to, at);
+          // 0331: glides over about 20 ms instead of jumping — a pan that jumps under a held note is a click.
+          if (at > from) param.setTargetAtTime(to, at, PAN_GLIDE_SECONDS / 3);
         }
       }
     }

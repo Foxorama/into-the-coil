@@ -1302,7 +1302,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         is 28%. Broadband noise in the widest band there is buys margin cheaply and spends the band
         balance dearly; this layer had the most room of the three to give back, so it gave it.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.125, attack: 0.0004, curve: 2.8, lowFrom: 11000, highFrom: 4800 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.09, attack: 0.001, curve: 2.8, lowFrom: 7000, highFrom: 3200 },
     },
   ],
 

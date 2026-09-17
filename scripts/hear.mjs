@@ -65,7 +65,7 @@ import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS, cueRowOf, panTrackOf, rungOf } from '../src/content/themes.ts';
 import { SOLVED_BY } from '../src/content/arrangement.ts';
 import { profileOfLoops, solveLevel } from './solve-mix.mjs';
-import { PHRASE_SECONDS, BAR_SECONDS, BEAT_SECONDS, LAYER_BARS, LAYER_PAN, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
+import { PHRASE_SECONDS, BAR_SECONDS, BEAT_SECONDS, LAYER_BARS, LAYER_PAN, PAN_GLIDE_SECONDS, MUSIC_LADDER, MUSIC_LAYERS, MUSIC_DRIVE, MUSIC_GAIN, AURA_LAYERS, AURA_NEAR_UNITS, AURA_FAR_UNITS } from '../src/content/music.ts';
 
 /*
   ⚠️ **THE MUSIC BUS AS IT ACTUALLY LEAVES, AND THE RIG DID NOT HAVE IT FOR ONE COMMIT** —
@@ -512,11 +512,23 @@ if (args.has('level')) {
     }
     moving[layer] = { step, loop: step * t.steps.length, held };
   }
+  /*
+    0331: a pan track glides to each position over `PAN_GLIDE_SECONDS` (as a time constant of a third of
+    it, exactly as the mixer's `setTargetAtTime` does) rather than jumping — a jump under a held note is a
+    click in both ears. Smoothed per sample, in gain, per moving layer.
+  */
+  const glide = 1 - Math.exp(-1 / (SAMPLE_RATE * (PAN_GLIDE_SECONDS / 3)));
+  const glided = {};
   const panAt = (layer, second) => {
     const m = moving[layer];
     if (m === undefined) return pan[layer];
     const into = ((second % m.loop) + m.loop) % m.loop;
-    return m.held[Math.floor(into / m.step)] ?? pan[layer];
+    const target = m.held[Math.floor(into / m.step)] ?? pan[layer];
+    const now = glided[layer] ?? { left: target.left, right: target.right };
+    now.left += (target.left - now.left) * glide;
+    now.right += (target.right - now.right) * glide;
+    glided[layer] = now;
+    return now;
   };
   /*
     ⚠️ **The gains are smoothed in BLOCKS and the audio is not.** A rung is a step function of a

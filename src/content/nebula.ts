@@ -821,7 +821,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
         click at the front of a section — the defect 0136 removed. The material is what was quiet,
         exactly as the note above says; 0140 found the right sentence and changed the wrong number.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 11000, highFrom: 5600 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.07, attack: 0.001, curve: 4, lowFrom: 7000, highFrom: 3400 },
     },
   ],
 

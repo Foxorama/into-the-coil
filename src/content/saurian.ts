@@ -303,14 +303,23 @@ const GATE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
 });
 
 /**
- * THE STABS — the top of the chord, four times in sixteen bars, on the bar each phrase turns on.
+ * THE FILL — a run down the toms across the last two beats of the bar each phrase turns on.
  *
- * ⚠️ **Rare and high rather than frequent and loud**, on `src/content/nebula.ts`'s own terms: a hit
- * that happens every bar is a part, and a hit that happens once a phrase is an event.
+ * ⚠️ **Rare, on `src/content/nebula.ts`'s own terms**: a hit that happens every bar is a part, and a hit
+ * that happens once a phrase is an event.
+ *
+ * ⚠️ **IT WAS THREE HIGH STABS, AND THOSE WERE THE DESCENT'S** — `docs/decisions/0331-the-heart-beats-under-it.md`,
+ * reported of the renders: *"coilward has the same 3 note pop in the later transitions that makes it sound
+ * too similar to the descent, we need to do something different there."* It was the same figure — root,
+ * fifth, the root above, on the fourth bar of every phrase — in the same square wave at the same octave as
+ * the cathedral's organ stabs. This place is the one whose drums lead (the first listen asked for exactly
+ * that), so its phrase turn is a drummer's: eight sixteenths falling from the high tom to the floor tom,
+ * getting harder as they fall.
  */
-const STABS: readonly (number | null)[] = ROOT.flatMap((root, bar) =>
-  bar % 4 === 3 ? [root + 12, _, FIFTH[bar]! + 12, _, root + 24, _, _, _] : [_, _, _, _, _, _, _, _],
-);
+const FILL_AT = (positions: readonly number[]): (number | null)[] =>
+  ROOT.flatMap((_root, bar) =>
+    Array.from({ length: 16 }, (_u, i) => (bar % 4 === 3 && positions.includes(i) ? 0.72 + (i - 8) * 0.04 : _)),
+  );
 
 /**
  * THE TREMOLO — the string-and-saw scrub `surge` runs underneath the hands-up line.
@@ -1042,13 +1051,42 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       accents: [1, 0.74, 0.9, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.07, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
     },
+    // The fill, where the Descent's stabs stood: high tom, rack tom, low tom, floor tom, two strokes each.
     {
-      // The high stab, four in sixteen bars: the top of the whole piece before the lasers.
-      steps: STABS,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.07, attack: 0.003, curve: 2.4, lowFrom: 7200, lowTo: 4000, q: 1.4 },
+      steps: FILL_AT([8, 9]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 250, to: 185, seconds: 0.24, gain: 0.3, attack: 0.001, curve: 4, drive: 0.15 },
+    },
+    {
+      steps: FILL_AT([10, 11]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 196, to: 142, seconds: 0.26, gain: 0.32, attack: 0.001, curve: 4, drive: 0.15 },
+    },
+    {
+      steps: FILL_AT([12, 13]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 158, to: 110, seconds: 0.28, gain: 0.34, attack: 0.001, curve: 3.8, drive: 0.15 },
+    },
+    {
+      steps: FILL_AT([14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 128, to: 84, seconds: 0.32, gain: 0.36, attack: 0.001, curve: 3.6, drive: 0.15 },
+    },
+    {
+      // The stick on every stroke, which is what makes a tom a drum and not a falling tone.
+      steps: FILL_AT([8, 9, 10, 11, 12, 13, 14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
     },
   ],
 
@@ -1115,7 +1153,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
         separately: RMS counts the silence between hits and libels a transient by twenty decibels —
         this layer reads −44.6 dBFS rms against −26.2 peak, and only one of those is what an ear gets.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.095, attack: 0.0004, curve: 3.4, lowFrom: 11000, highFrom: 5600 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.067, attack: 0.001, curve: 3.4, lowFrom: 7000, highFrom: 3400 },
     },
   ],
 

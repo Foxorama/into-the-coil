@@ -420,6 +420,14 @@ export interface PanTrack {
 export const PAN_HORIZON_SECONDS = 900;
 
 /**
+ * How long a pan track takes to move to its next position — 0331, reported of every level's render: *"a
+ * bit of static and pop throughout."* A pan written as a jump moves a held note's energy from one ear to
+ * the other in one sample, which is a click in both. Twenty milliseconds is under a sixteenth's tenth, so
+ * the three bouncing notes still land where they were written.
+ */
+export const PAN_GLIDE_SECONDS = 0.02;
+
+/**
  * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
  *
  * ── WHY THE AURA IS MUSIC AND NOT A CUE ─────────────────────────────────────────────────────────
@@ -2336,8 +2344,15 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
 
         ⚠️ **IT MOVES ALL SEVEN PLACES**, because six of them share this voice — which is why it is
         called out here rather than folded in quietly. Reverting it is this number and nothing else.
+
+        ⚠️ **AND EVERY PLACE'S RIDE IS DARKER AND QUIETER NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`,
+        reported of the renders: *"the other tracks have a bit of static and pop throughout them."* Measured
+        per layer, the ride was the loudest thing above the top of every other part in five places — noise
+        from 5 to 11 kHz on every sixteenth, which is what static is — by as much as 16 dB in The Shoal. Every
+        ride now reaches down to 2.5–4 kHz and stops at 5.5–8, about 3 dB quieter, with a millisecond to
+        speak: a tick rather than a hiss, on the same rhythm.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.13, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.09, attack: 0.001, curve: 2.6, lowFrom: 7000, lowTo: 4500, highFrom: 3200, q: 0.7 },
     },
     {
       // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
@@ -2348,7 +2363,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       octave: 0,
       // ⚠️ Raised with the wash above it and by the same factor — 0140. The bell is what gives the
       // pattern a centre; lifting only the hiss would change the ride's shape, not its level.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.09, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.065, attack: 0.001, curve: 3.4, lowFrom: 5500, lowTo: 3200, highFrom: 2600, q: 1.2 },
     },
   ],
 

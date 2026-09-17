@@ -686,6 +686,9 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       drive: 0.9,
       groove: 1.65,
       perc: 0.9,
+      // 0331: the struck chords (`APPROACH_VOICES`) carry 3.6 dB more for the same fader, so the fader gives it back
+      // — the opening is where it was, and the lifts at `push` and `surge` are what is new.
+      chords: 0.66,
     },
     /*
       ── THE ONE THING LEVEL ONE OWNS — 0325 ─────────────────────────────────────────────────────
@@ -711,7 +714,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
         the title screen plays and every guard's fixture measures; if *punchier* turns out to mean the
         attack rather than the level, the 60–120 ms onsets in `src/content/music.ts` are the next lever.
       */
-      surge: { chords: 1.1 },
+      // 0331, again: *"the chords at 1st and 2nd transition to pop a bit more."* Measured 1.4 dB under `run` at `push`
+      // and level at `surge`; +3 and +2.5 dB, so each boundary lifts them.
+      push: { chords: 1.23 },
+      surge: { chords: 1.45 },
       // The fight only. A rung this table does not name falls through to `MUSIC_LADDER`'s own number.
       boss: { ownA: 0.9 },
       /*
