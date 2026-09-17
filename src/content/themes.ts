@@ -1598,13 +1598,19 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
     // …and the ballad dies away into the acceptance over ten seconds and more — 0331's twelfth.
-    linger: { hook: 2, counter: 3.5, groove: 3, ownA: 1.4, ownC: 0.05, ownD: 0.05, beat: 0.05, ownB: 0.05 },
-    // 0331's thirteenth: *"a heartbeat at 28 sec and a heartbeat at 29 sec… too close together."* The heart
-    // leaving a movement was still beating as it faded under the next one. Each heart now leaves and
-    // arrives in a fraction of a second, on the downbeat, so only one heart is ever beating.
+    linger: { hook: 2, counter: 3.5, groove: 3, ownA: 1.4, ownC: 0.15, ownD: 0.1, beat: 0.05, ownB: 0.12 },
+    /*
+      0331's thirteenth and fourteenth listens: *"a heartbeat at 28 sec and a heartbeat at 29 sec… sounded
+      like a bug"*, and *"if the start/stop of the beat is too harsh, it can still come in and fade out
+      properly."* The heart leaving a movement was still beating as it faded under the next one. A fade is
+      only heard while a beat sounds, so each heart swells in over its first beat or two (`swell`), and
+      leaves as slowly as it can while still being silent by its own next beat — which is what each
+      `linger` number is: `ownC` gone before 28.8 s, `ownD` before 59.3, the ballad's before 96.8 (a tenth
+      of a second from the acceptance's first beat, hence the shortest), `ownB` before 126.6.
+    */
     onBeat: ['ownD', 'beat', 'ownB', 'stomp'],
     // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
-    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.05, beat: 0.05, ownB: 0.05, stomp: 0.05 },
+    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, beat: 0.25, ownB: 0.25, stomp: 0.05 },
     // 0331's twelfth: the first sound is the heart and the flute, struck rather than faded up.
     fromSilence: 0.01,
     /*
