@@ -2120,7 +2120,8 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
   // 0331's eighteenth: +1.5 dB, for the low end taken off the speaker in the fight.
-  core: { boss: 0.1497, bossPeak: 0.1422 },
+  // …and +2 dB more on the twenty-fifth, for the fight's heart and mass taken out of its bass.
+  core: { boss: 0.1886, bossPeak: 0.1791 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

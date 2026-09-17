@@ -1479,7 +1479,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 2,
       octave: 0,
-      note: { wave: 'sine', from: 148, to: 50, seconds: 0.34, gain: 0.66, attack: 0.001, curve: 3.2, drive: 0.28 },
+      note: { wave: 'sine', from: 148, to: 50, seconds: 0.3, gain: 0.5, attack: 0.001, curve: 3.6, drive: 0.22 },
     },
   ],
 
@@ -1599,14 +1599,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       // 0331's eighteenth: *"around 2.00 to 2.10 there's a heavy bass… that just makes the speaker vibrate."*
       // This voice was 63% of everything under 45 Hz in the fight. Its floor is 58 Hz and it is quieter; the
       // upper body below carries more of the beat, which is the part a small speaker can play.
-      note: { wave: 'sine', from: 115, to: 58, seconds: 0.5, gain: 0.5, attack: 0.002, curve: 2.2, drive: 0.3 },
+      note: { wave: 'sine', from: 115, to: 58, seconds: 0.42, gain: 0.34, attack: 0.002, curve: 2.6, drive: 0.2 }, // 0331's twenty-fifth: *"the bass in the boss music is now a bit strong… doesn't mesh."* This was 55% of 45–250 Hz in the fight.
     },
     {
       steps: HEART_QUICK.slice(0, 32),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 230, to: 110, seconds: 0.26, gain: 0.26, attack: 0.002, curve: 3, drive: 0.3 },
+      note: { wave: 'sine', from: 230, to: 110, seconds: 0.22, gain: 0.17, attack: 0.002, curve: 3.4, drive: 0.2 },
     },
     {
       steps: HEART_QUICK.slice(0, 32),
