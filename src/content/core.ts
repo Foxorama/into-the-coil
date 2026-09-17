@@ -607,11 +607,15 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     {
       // The accretion disc: broadband, very slow, and it is the only thing in the piece that is
       // brighter at its end than at its start.
+      //
+      // ⚠️ 0331's twenty-first listen: *"bit of hiss at 14, 16, 18 secs and a bit before and at like 26."* A
+      // filter opening to 2.6 kHz once a bar is a *shhh* every 1.6 seconds, under a piano and a flute with
+      // nothing else in that band. A third of the level and closed to 1.1 kHz: a breath of air, not a hiss.
       steps: [1, 1],
       pitched: false,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.06, attack: 1.25, curve: 1.2, lowFrom: 600, lowTo: 2600, highFrom: 200, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.02, attack: 1.25, curve: 1.2, lowFrom: 500, lowTo: 1100, highFrom: 200, q: 0.7 },
     },
   ],
 
