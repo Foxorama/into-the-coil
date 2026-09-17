@@ -1604,7 +1604,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glide: 2,
     // 0331's seventh: the flute dies off into the ballad rather than stopping.
     // …and the ballad dies away into the acceptance over ten seconds and more — 0331's twelfth.
-    linger: { hook: 1.4, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06 },
+    // 0331's twenty-third: the ballad's strings, band, flute and guitar fade under the fight's first bars.
+    linger: { hook: 1.4, ownC: 0.15, ownD: 0.1, crash: 0.07, ownB: 0.06, groove: 0.8, counter: 1, beat: 0.8 },
     /*
       0331's thirteenth and fourteenth listens: *"a heartbeat at 28 sec and a heartbeat at 29 sec… sounded
       like a bug"*, and *"if the start/stop of the beat is too harsh, it can still come in and fade out

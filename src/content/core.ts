@@ -203,7 +203,9 @@ const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
  * | 26–35 | 99.2 | the descent, back towards the lament's A minor | `Dm Dm C C · F F Em Em · Am Am` |
  */
 // 0331's sixteenth: bars 36–41 (115.2–124.8 s) run under the acceptance on the lament's chords there —
-// `Dm Dm F F G G` — so the ballad does not stop at 1:55; it carries into the fight.
+// `Dm Dm F F G G` — so the ballad does not stop at 1:55; it carries into the fight. And 0331's twenty-third:
+// *"it comes down and abruptly transitions to boss music, it doesn't walk the listener down the mountain into
+// the boss music."* Those bars climbed; they walk down now, and the ballad fades under the fight's first bars.
 // 0331's eighteenth: *"very uplifting instead of the sombre, overall melancholy tone… the middle section feels
 // like a different song."* It climbed through F, G and C — major chords, and the refrain was I–V–vi–IV in
 // C, the brightest progression the key has. Now it stays in A minor: the lament's own chords two bars
@@ -246,8 +248,8 @@ const BALLAD: readonly (number | null)[] = [
   34, _, 32, 29, 29, _, _, _, 31, _, 29, 26, 26, _, _, _,
   24, _, _, 20, 20, _, 19, 17, 19, _, 17, 14, 14, _, _, _,
   12, _, _, _, _, _, 12, 15,
-  17, _, _, 20, 24, _, 22, 20, 24, _, _, 27, 29, _, 27, 24,
-  26, _, 29, _, 31, _, 29, 26,
+  29, _, _, 27, 24, _, 22, 20, 24, _, _, 20, 19, _, 17, 15,
+  14, _, _, _, 14, _, 12, 10,
 ];
 
 /**
@@ -417,9 +419,9 @@ const FLUTE_BALLAD: readonly (number | null)[] = [
   8, _, _, _, 7, _, 5, _, 12, _, _, _, _, _, 10, _,
   10, _, _, _, 12, _, 10, _, 7, _, _, _, 5, _, 3, _,
   3, _, _, _, _, _, 5, _, 7, _, _, _, _, _, _, _,
-  12, _, _, _, 10, _, 8, _, 5, _, _, _, 3, _, 5, _,
-  8, _, 7, _, 8, _, 10, _, 12, _, _, _, 10, _, 12, _,
-  10, _, 12, _, 14, _, 12, _, 15, _, _, _, 14, _, 17, _,
+  15, _, _, _, 12, _, 10, _, 8, _, _, _, 7, _, 5, _,
+  7, _, 8, _, 10, _, 8, _, 8, _, _, _, 7, _, 5, _,
+  7, _, 5, _, 3, _, 2, _, 2, _, _, _, _, _, _, _,
 ];
 const [FLUTE_BALLAD_MOVING, FLUTE_BALLAD_HELD] = splitByRoom(turned(FLUTE_BALLAD), 4);
 
@@ -538,7 +540,7 @@ const BASS_LINE: readonly (number | null)[] = turned(B_ROOT.flatMap((root, bar) 
 // its peak at bar 24, and falling away through the descent.
 // 0331's sixteenth: the descent eases to 0.95 rather than 0.72 — *"it trails off too far instead of flowing
 // down into the boss music"* — and the six bars under the acceptance build again into the fight.
-const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.2, 1.24, 1.28, 1.42, 1.4, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 1, 1.04, 1.08, 1.12, 1.16, 1.2];
+const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.2, 1.24, 1.28, 1.42, 1.4, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 0.98, 0.95, 0.92, 0.9, 0.88, 0.86];
 const CLIMB_BARS: readonly number[] = turned(CLIMB_WRITTEN);
 const CLIMB_BEATS: readonly number[] = turned(CLIMB_WRITTEN.flatMap((weight) => [weight, weight, weight, weight]));
 
@@ -1224,7 +1226,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     {
       // The trumpets, on the melody's second half only.
-      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 104) || i >= 144 ? note : _))),
+      steps: turned(BALLAD.map((note, i) => (i >= 64 && i < 104 ? note : _))),
       pitched: true,
       perBeat: 1,
       accents: CLIMB_BEATS,
