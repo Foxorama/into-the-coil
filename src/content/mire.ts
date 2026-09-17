@@ -266,7 +266,8 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   sub: [
     {
-      steps: ROOT,
+      // 0331: the held root above 45 Hz too — see `groove`.
+      steps: ROOT.map((root) => (root < 0 ? root + 12 : root)),
       pitched: true,
       perBeat: 0.25,
       octave: 0,
@@ -286,7 +287,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 96, to: 30, seconds: 0.58, gain: 0.42, attack: 0.008, curve: 1.9, drive: 0.2 },
+      note: { wave: 'sine', from: 100, to: 45, seconds: 0.5, gain: 0.36, attack: 0.008, curve: 1.9, drive: 0.2 },
     },
     {
       // The fifth under the root, held long enough to blur into it — the layer that makes the bottom
@@ -504,13 +505,30 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     fit and should be argued for against these two numbers.
   */
   groove: [
+    /*
+      ⚠️ **THE SINE UNDER THE SLUDGE IS HALF WHAT IT WAS, AND ITS E AND F ARE AN OCTAVE UP** —
+      `docs/decisions/0331-the-heart-beats-under-it.md`, heard on the album: *"the toxic mire is now pretty heavy on the
+      deep sub bass as well, it almost feels like I'm on an airplane, it's overpowering the rest of the music and ends
+      around 1.46 — it can be there, but just not as strong."* Measured, this voice was 81–93% of everything under
+      45 Hz at `push` and `surge`: sixteenths of a pure sine at 41–73 Hz, the bottom two notes below what a small
+      speaker plays as pitch. Mastered to the album's level it became pressure. The line is the same line; the body
+      is quieter, folded above 45 Hz, and a quiet octave over it keeps it heard.
+    */
     {
-      steps: SLUDGE,
+      steps: SLUDGE.map((note) => (note !== null && note < 0 ? note + 12 : note)),
       pitched: true,
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.5, attack: 0.03, curve: 1.9 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.26, attack: 0.03, curve: 1.9 },
+    },
+    {
+      steps: SLUDGE,
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      accents: [1, 0.7, 0.88, 0.68],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.12, attack: 0.03, curve: 2 },
     },
     {
       steps: SLUDGE,
