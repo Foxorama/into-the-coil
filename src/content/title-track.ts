@@ -82,7 +82,8 @@ const FLUTE_LINE: readonly (number | null)[] = [
 ];
 
 export const TITLE_PARTS = {
-  drone: { voices: MUSIC.drone.map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0 },
+  // The drone's saws only: its sine an octave under them sat at 55–65 Hz, on the heart's own body (see TITLE_SCORE).
+  drone: { voices: MUSIC.drone.filter((v) => v.octave > 0).map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0 },
   bass: { voices: MUSIC.bass.map((v) => (v.pitched ? { ...v, steps: walked(v.steps) } : v)), bars: 8, air: 0.05, pan: 0 },
   /*
     ⚠️ **THE TITLE'S KIT STOOD HERE, AND IT WAS THE METRONOME** — heard on the album: *"there's a back and forth
@@ -151,21 +152,25 @@ export const TITLE_SCORE: readonly { bars: number; glide?: number; parts: Partia
   // The floor wakes: the drone and the pad.
   { bars: 8, parts: { drone: 1, pad: 0.7 } },
   /*
-    The riff — and the floor lets go under it, over all eight bars, gone before the heart.
+    The riff — and the floor lets go under it, over all eight bars: the pad gone before the heart, the drone to a third.
 
     ⚠️ **THE DRONE AND THE PAD PLAYED TO THE LAST BAR** — heard on the album: *"that's better but it's still too
     prominent throughout the whole track and it covers up the heart, it needs to fade away and stop as soon as
     the rest of the music starts."* The drone's saws sit at 87–131 Hz, on top of the heart's own body, and the
     two of them were the loudest held sound in every section. They are the opening and only the opening now; the
     bass, the arpeggio and the lead carry the harmony from here.
+
+    ⚠️ **AND THEN THE DRONE KEPT, A THIRD AS LOUD** — *"I think we still need a bit of the drone in the title, but
+    quieter and either replacing or mixing in well with the heart."* Ten decibels down, and without its sub
+    octave, so it fills the room over the heart instead of standing on it.
   */
-  { bars: 8, glide: 8, parts: { bass: 0.85 } },
+  { bars: 8, glide: 8, parts: { drone: 0.32, bass: 0.85 } },
   // The groove: the heart and the arpeggio.
-  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.8 } },
+  { bars: 16, parts: { drone: 0.32, bass: 1, heart: 1, arp: 0.8 } },
   // The theme.
-  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.7, lead: 1 } },
+  { bars: 16, parts: { drone: 0.32, bass: 1, heart: 1, arp: 0.7, lead: 1 } },
   // The breakdown: the flute over the heart, the bass and a quiet arpeggio.
-  { bars: 8, parts: { bass: 0.6, flute: 1, heart: 0.8, arp: 0.35 } },
+  { bars: 8, parts: { drone: 0.4, bass: 0.6, flute: 1, heart: 0.8, arp: 0.35 } },
   // Everything, the theme climbing.
-  { bars: 16, parts: { bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
+  { bars: 16, parts: { drone: 0.32, bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
 ];
