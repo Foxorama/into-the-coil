@@ -1401,6 +1401,30 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   ],
 
   /*
+    ── THE FLUTE IN THE FIGHT: a quiet descant on the fight's own chords ─────────────────────────────
+
+    ⚠️ **0331's twenty-fourth listen**: *"can we also carry some flute, subtly through into the boss music
+    as well."* The piece is led by the flute from its first bar, and the fight dropped it. The ballad's
+    flute cannot simply stay open — its loop is the ballad's chords and the fight plays `ROOT`'s — so this
+    is a line of its own over `ROOT`: one or two long notes a bar, 880–1400 Hz, above the guitars and under
+    nothing, and quiet. `bass` is the title's layer and this place never sounded it; sixteen bars on the
+    place's row, open only in the fight.
+  */
+  bass: pipeVoices(
+    [
+      12, _, _, _, 15, _, 14, 12, 12, _, _, _, 14, _, _, _,
+      15, _, _, _, 19, _, 17, 15, 17, _, _, _, 19, _, _, _,
+      20, _, _, _, 19, _, 17, _, 15, _, _, _, 12, _, _, _,
+      17, _, _, _, 15, _, 12, _, 14, _, _, _, 14, _, _, 10,
+    ],
+    1,
+    3.6,
+    1,
+    0.1,
+    0.35,
+  ),
+
+  /*
     ── THE BALLAD'S FLUTE: its own layer, so it can take the phrase the moment the last one lets go ──
 
     ⚠️ **0331's nineteenth listen**: *"the transition at 1.05 isn't quite right, the flute fades out to
