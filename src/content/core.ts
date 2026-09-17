@@ -204,7 +204,14 @@ const PICKING: readonly (number | null)[] = L_ROOT.flatMap((root, bar) => {
  */
 // 0331's sixteenth: bars 36–41 (115.2–124.8 s) run under the acceptance on the lament's chords there —
 // `Dm Dm F F G G` — so the ballad does not stop at 1:55; it carries into the fight.
-const B_ROOT: readonly number[] = [-7, -5, -4, -2, -4, -2, 0, 0, -4, -2, 3, -5, -7, -5, -4, 3, 3, -2, 0, -4, 3, -2, -4, -2, 0, -4, -7, -7, 3, 3, -4, -4, -5, -5, 0, 0, -7, -7, -4, -4, -2, -2];
+// 0331's eighteenth: *"very uplifting instead of the sombre, overall melancholy tone… the middle section feels
+// like a different song."* It climbed through F, G and C — major chords, and the refrain was I–V–vi–IV in
+// C, the brightest progression the key has. Now it stays in A minor: the lament's own chords two bars
+// at a time, a refrain that soars OVER a falling bass (Am G F Em, the lament of flamenco and of every
+// film that wants grief to sound large), and a descent through D minor and E minor home.
+//   lead-in Dm Dm Em Em · ballad Am Am F F Dm Dm Em Em F G Am Am · refrain Am G F Em Am G F Em Dm Em
+//   · descent F F Em Em Dm Dm Em Em Am Am · into the fight Dm Dm F F G G
+const B_ROOT: readonly number[] = [-7, -7, -5, -5, 0, 0, -4, -4, -7, -7, -5, -5, -4, -2, 0, 0, 0, -2, -4, -5, 0, -2, -4, -5, -7, -5, -4, -4, -5, -5, -7, -7, -5, -5, 0, 0, -7, -7, -4, -4, -2, -2];
 /** The third and fifth over each root, as the ballad voices them — just above it. */
 const CHORD_OVER: Readonly<Record<number, readonly [number, number]>> = { [-7]: [-4, 0], [-5]: [-2, 2], [-4]: [0, 3], [-2]: [2, 5], 0: [3, 7], 3: [7, 10] };
 const B_THIRD: readonly number[] = B_ROOT.map((root) => CHORD_OVER[root]![0]);
@@ -225,15 +232,15 @@ const turned = <T>(line: readonly T[]): T[] => {
  * the A two octaves under that peak.
  */
 const BALLAD: readonly (number | null)[] = [
-  17, _, _, 20, 19, _, _, 22, 24, _, 22, 20, 19, _, 17, 14,
-  12, _, _, 15, 14, _, _, 12, 15, _, _, _, 15, 17, 19, _,
-  20, _, _, 19, 17, _, _, 14, 19, _, _, _, 19, _, 22, _,
-  24, _, _, 22, 22, _, _, 19, 20, _, 19, 17, 19, _, _, _,
-  22, _, 24, 27, 26, _, _, 22, 24, _, _, _, 24, _, 27, _,
-  31, _, _, 29, 26, _, _, 22, 29, _, 27, 24, 26, _, 29, 31,
-  36, _, _, _, 36, _, 34, 31,
-  29, _, _, _, 29, 27, 24, _, 27, _, _, 24, 22, _, _, _,
-  24, _, _, 20, 19, _, _, _, 22, _, _, 19, 17, _, _, 14,
+  _, _, _, _, 17, _, _, 15, 14, _, _, _, 14, _, 12, 14,
+  15, _, _, _, 15, _, 14, 12, 12, _, _, _, 20, _, 19, 17,
+  17, _, _, _, 20, _, 19, 17, 19, _, _, _, 19, _, 17, 14,
+  15, _, _, 17, 19, _, _, 17, 15, _, _, _, 12, _, 14, 15,
+  24, _, _, _, 22, _, 24, 22, 20, _, _, 19, 19, _, _, _,
+  27, _, _, 26, 26, _, 24, 22, 29, _, 27, 24, 26, _, 27, 31,
+  36, _, _, _, 34, _, 31, _,
+  29, _, _, 27, 24, _, _, _, 26, _, 24, 22, 19, _, _, _,
+  20, _, _, 19, 17, _, _, _, 19, _, 17, 14, 14, _, _, _,
   12, _, _, _, _, _, 12, 15,
   17, _, _, 20, 24, _, 22, 20, 24, _, _, 27, 29, _, 27, 24,
   26, _, 29, _, 31, _, 29, 26,
@@ -322,13 +329,13 @@ const HEART_ACCEPT = heartAt(128, [10, 24, 38, 52, 67, 81], 2);
  * The heart's three voices on `steps` — the chest, its upper body and the knock — scaled by `level`.
  * Written once, because five layers now beat it at five speeds and they must stay one heart.
  */
-const heartVoices = (steps: readonly (number | null)[], level: number): MusicVoice[] => [
+const heartVoices = (steps: readonly (number | null)[], level: number, floor = 40): MusicVoice[] => [
   {
     steps,
     pitched: false,
     perBeat: 4,
     octave: 0,
-    note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.5 * level, attack: 0.002, curve: 2, drive: 0.4 },
+    note: { wave: 'sine', from: 100, to: floor, seconds: 0.6, gain: 0.5 * level, attack: 0.002, curve: 2, drive: 0.4 },
   },
   {
     steps,
@@ -357,16 +364,16 @@ const heartVoices = (steps: readonly (number | null)[], level: number): MusicVoi
  * violins and over the bass, where a cello sings. Silent through the lead-in.
  */
 const CELLO: readonly (number | null)[] = [
-  _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-  12, _, 10, 8, 5, _, _, 7, 7, _, 12, 10, 7, _, _, _,
-  12, _, _, 8, 10, _, 14, _, 15, _, 14, 12, 10, _, _, _,
-  8, _, 5, _, 7, _, _, 10, 12, _, _, _, 10, _, 12, 15,
-  19, _, _, _, 17, _, 14, _, 12, _, 15, 19, 20, _, _, _,
-  19, _, 17, 15, 14, _, _, 17, 20, _, _, _, 17, _, 19, 22,
-  24, _, _, _, 20, _, 24, _,
-  17, _, 15, 12, 8, _, _, _, 7, _, 10, 12, 15, _, _, _,
-  12, _, 10, 8, 8, _, 10, 12, 7, _, _, _, 10, _, 7, _,
-  12, _, 7, 3, 0, _, 3, 7,
+  _, _, _, _, _, _, _, _, 7, _, _, _, 10, _, 7, _,
+  12, _, 10, _, 7, _, _, _, 8, _, 5, 3, 3, _, _, _,
+  5, _, 8, 12, 12, _, _, _, 10, _, 7, _, 7, _, _, _,
+  8, _, _, _, 10, _, 14, _, 12, _, 10, 7, 7, _, _, _,
+  12, _, 15, 19, 17, _, _, _, 15, _, 12, 8, 14, _, 12, 10,
+  12, _, _, _, 14, _, _, _, 12, _, _, _, 14, _, 17, 19,
+  17, _, 20, 24, 19, _, _, _,
+  20, _, _, _, 17, _, 15, 12, 14, _, _, _, 10, _, 12, 14,
+  12, _, _, _, 8, _, 5, _, 7, _, _, _, 10, _, 7, _,
+  0, _, 3, 7, 12, _, _, _,
   5, _, _, _, 8, _, 5, 3, 8, _, _, _, 12, _, 8, 5,
   10, _, _, _, 14, _, 10, 7,
 ];
@@ -385,26 +392,26 @@ const [CELLO_MOVING, CELLO_HELD] = splitByRoom(turned(CELLO), 2);
  */
 const FLUTE_BALLAD: readonly (number | null)[] = [
   _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
-  _, _, _, _, 0, _, 3, 5, 7, _, _, _, 5, _, 2, _,
-  8, _, _, _, _, _, 7, 5, 10, _, _, _, _, _, _, _,
-  _, _, 7, 8, 10, _, 12, _, 12, _, _, _, _, _, _, _,
-  _, _, _, _, 12, _, 10, 8, 10, _, _, _, _, _, _, _,
-  _, _, 10, 12, 15, _, 12, _, 14, _, _, _, 12, _, 10, _,
-  5, _, _, _, 8, _, 5, _, 7, _, _, _, _, _, 10, _,
-  12, _, _, _, _, _, _, _, _, _, 12, 14, 15, _, 17, 19,
-  19, _, _, _, _, _, _, _, _, _, 17, _, 14, _, 17, _,
-  15, _, 17, _, 19, _, 15, _, 12, _, _, _, _, _, _, _,
-  7, _, _, _, 10, _, 12, _, 14, _, _, _, _, _, _, _,
-  8, _, _, _, _, _, _, _, 10, _, 12, _, 14, _, 17, _,
-  19, _, _, _, _, _, _, _, 15, _, 12, _, 8, _, 12, _,
-  _, _, 17, 15, 12, _, 8, _, 5, _, _, _, _, _, _, _,
-  7, _, _, _, 10, _, 7, _, 3, _, 5, 7, 10, _, 12, _,
-  8, _, _, _, _, _, _, _, _, _, 8, 10, 12, _, 10, 8,
-  14, _, _, _, _, _, 12, 10, 7, _, _, _, _, _, _, _,
-  _, _, 3, 5, 7, _, 12, _, 12, _, _, _, _, _, _, _,
-  _, _, 12, _, 10, _, 8, _, 5, _, _, _, _, _, _, _,
-  8, _, _, _, 12, _, _, _, 15, _, _, _, 17, _, _, _,
-  19, _, _, _, _, _, 17, _, 22, _, _, _, 19, _, 17, 14,
+  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
+  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 3, _,
+  8, _, _, _, _, _, _, _, _, _, _, _, _, _, 7, 5,
+  8, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+  _, _, _, _, 10, _, 12, _, 10, _, _, _, _, _, _, _,
+  _, _, _, _, 8, _, 7, _, 5, _, _, _, _, _, _, _,
+  _, _, _, _, 7, _, 5, _, 7, _, _, _, _, _, _, _,
+  7, _, _, _, _, _, 8, _, 14, _, _, _, _, _, 12, _,
+  12, _, _, _, _, _, _, _, _, _, _, _, 14, _, 12, _,
+  12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 7, _,
+  8, _, _, _, _, _, _, _, 7, _, _, _, _, _, _, _,
+  17, _, _, _, _, _, _, _, _, _, _, _, 14, _, 12, _,
+  12, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
+  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
+  5, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
+  7, _, _, _, _, _, _, _, _, _, _, _, 5, _, 2, _,
+  3, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+  5, _, _, _, _, _, _, _, _, _, _, _, 8, _, 7, _,
+  12, _, _, _, _, _, _, _, _, _, _, _, 10, _, 8, _,
+  14, _, _, _, _, _, _, _, _, _, _, _, 12, _, 10, _,
 ];
 const [FLUTE_BALLAD_MOVING, FLUTE_BALLAD_HELD] = splitByRoom(turned(FLUTE_BALLAD), 4);
 
@@ -565,7 +572,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 0.25,
       octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.07, attack: 0.4, curve: 0.86 },
+      // 0331's eighteenth: two thirds of what sat under 45 Hz before the fight was this sine, so it is lower again.
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.6, gain: 0.04, attack: 0.4, curve: 0.86 },
     },
     {
       steps: [0, 0],
@@ -871,7 +879,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     ⚠️ **0331's twelfth listen**: *".5 sec slower around the 1.44 – 2.04 min mark."* The high strings that
     stood in this slot are `lead` now.
   */
-  ownB: heartVoices(HEART_ACCEPT, 1),
+  // 0331's eighteenth: its sweep stops at 52 Hz, not 40 — the speaker shake reported at 2:00 sat under this heart and the aura.
+  ownB: heartVoices(HEART_ACCEPT, 1, 52),
 
   /*
     ── THE GUITAR: fingerpicked eighths, the second movement's motor ────────────────────────────────
@@ -1145,7 +1154,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     },
     {
       // The trumpets, on the melody's second half only.
-      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 112) || i >= 144 ? note : _))),
+      steps: turned(BALLAD.map((note, i) => ((i >= 64 && i < 100) || i >= 144 ? note : _))),
       pitched: true,
       perBeat: 1,
       accents: CLIMB_BEATS,
@@ -1419,8 +1428,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: [8, 2, 8, 2],
       pitched: true,
       perBeat: 0.25,
-      octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.3, attack: 0.46, curve: 1 },
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.2, attack: 0.46, curve: 1 }, // 0331's eighteenth: an octave up, off the speaker-shaking band.
     },
   ],
 
@@ -1478,14 +1487,17 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 100, to: 40, seconds: 0.6, gain: 0.6, attack: 0.002, curve: 2, drive: 0.4 },
+      // 0331's eighteenth: *"around 2.00 to 2.10 there's a heavy bass… that just makes the speaker vibrate."*
+      // This voice was 63% of everything under 45 Hz in the fight. Its floor is 58 Hz and it is quieter; the
+      // upper body below carries more of the beat, which is the part a small speaker can play.
+      note: { wave: 'sine', from: 115, to: 58, seconds: 0.5, gain: 0.5, attack: 0.002, curve: 2.2, drive: 0.3 },
     },
     {
       steps: HEART_QUICK.slice(0, 32),
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 220, to: 100, seconds: 0.24, gain: 0.12, attack: 0.002, curve: 3, drive: 0.3 },
+      note: { wave: 'sine', from: 230, to: 110, seconds: 0.26, gain: 0.26, attack: 0.002, curve: 3, drive: 0.3 },
     },
     {
       steps: HEART_QUICK.slice(0, 32),
@@ -1720,15 +1732,16 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: [2, _, 8, _, 2, _, 8, _],
       pitched: true,
       perBeat: 1,
-      octave: 0,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.3, attack: 0.3, curve: 1.5, lowFrom: 260, lowTo: 640, q: 1.7 },
+      // 0331's eighteenth: an octave up, out of the band a small speaker shakes at rather than plays.
+      octave: 1,
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.4, gain: 0.24, attack: 0.3, curve: 1.5, lowFrom: 400, lowTo: 900, q: 1.2 },
     },
     {
       steps: [8, _, 2, _, 8, _, 2, _],
       pitched: true,
       perBeat: 1,
-      octave: 0,
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.27, attack: 0.34, curve: 1.35 },
+      octave: 1,
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 2.5, gain: 0.2, attack: 0.34, curve: 1.35 },
     },
     {
       steps: [1, _, 1, _, 1, _, 1, _],

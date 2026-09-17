@@ -1567,8 +1567,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       */
       run: { drone: 0.1607, chords: 0.1083, call: 0.0865, hook: 0, arp: 0, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0.07276, ownD: 0, lead: 0, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
       push: { drone: 0.1276, chords: 0.09649, call: 0, hook: 0.0706, arp: 0.2386, groove: 0, counter: 0, toll: 0, ownA: 0, ownB: 0, ownC: 0, ownD: 0.1081, lead: 0.3245, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.2603, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
-      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.2185, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
+      surge: { drone: 0, chords: 0, call: 0, hook: 0, arp: 0, groove: 0.3494, counter: 0.302, toll: 0, ownA: 0.4679, ownB: 0, ownC: 0, ownD: 0, lead: 0.2298, beat: 0, crash: 0.2294, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0, auraFast: 0 },
+      approach: { drone: 0.1607, chords: 0.1147, call: 0.1023, hook: 0, arp: 0, groove: 0.2828, counter: 0.2535, toll: 0.3138, ownA: 0.3182, ownB: 0.2132, ownC: 0, ownD: 0, lead: 0.3641, beat: 0, crash: 0, engine: 0, perc: 0, sub: 0, drive: 0, bass: 0, stomp: 0, ride: 0, dread: 0, frenzy: 0, wraith: 0, auraSlow: 0.341, auraFast: 0.279 },
       boss: { sub: 2.668, crash: 0, ownA: 0 },
       bossPeak: { sub: 2.773, crash: 0, ownA: 0 },
     },
