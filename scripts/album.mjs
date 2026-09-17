@@ -26,7 +26,7 @@ const out = resolve(args.get('out') ?? 'title.wav');
 const R = SAMPLE_RATE;
 
 /** Where each part sits at its own level of 1, in dBFS RMS on the bus before the shaper. */
-const TARGET_DB = { drone: -31, pad: -31, bass: -26, beat: -24.5, arp: -31, lead: -25, flute: -25.5 };
+const TARGET_DB = { drone: -31, pad: -31, bass: -26, heart: -31, arp: -31, lead: -25, flute: -25.5 };
 
 const render = (voices, seconds, wrap, rng) => {
   const buf = new Float32Array(Math.round(seconds * R));
@@ -91,13 +91,13 @@ const levelAt = (name, t) => {
 
 // The coda, on the title's own instruments.
 const coda = { left: new Float32Array(total), right: new Float32Array(total) };
-const borrowed = { drone: 'drone', chords: 'pad', sub: 'bass', call: 'lead', engine: 'beat' };
+const borrowed = { drone: 'drone', chords: 'pad', sub: 'bass', call: 'lead', engine: 'heart' };
 for (const part of codaOn({
   drone: TITLE_PARTS.drone.voices,
   pad: TITLE_PARTS.pad.voices,
   low: TITLE_PARTS.bass.voices.filter((v) => v.octave === 0),
   lead: TITLE_PARTS.lead.voices,
-  kit: TITLE_PARTS.beat.voices,
+  kit: TITLE_PARTS.heart.voices,
 })) {
   const name = borrowed[part.layer];
   const buf = render(part.voices, CODA_SECONDS, false, makeRng('coda').stream(`title-${name}`));

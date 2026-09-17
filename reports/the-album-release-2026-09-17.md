@@ -25,7 +25,7 @@ again is at the end.
 
 | # | title | file | length | what it is |
 |---|---|---|---|---|
-| 1 | Into the Coil | `01 Into the Coil.wav` | 2:06 | The title screen's groove grown into a piece: the drone wakes, the riff and the kit arrive, a lead states the game's theme, a flute breakdown, everything back, and an ending. |
+| 1 | Into the Coil | `01 Into the Coil.wav` | 2:07 | The title screen's groove grown into a piece: the drone wakes, the riff and a distant heartbeat arrive, a lead states the game's theme, a flute breakdown, everything back, and an ending. |
 | 2 | The Approach | `02 The Approach.wav` | 2:38 | Level one: the base composition the whole game grows out of, its climb to the first fight, and a coda. |
 | 3 | Ember Nebula | `03 Ember Nebula.wav` | 2:40 | A cathedral in a furnace — choir and organ first, the fire under them after, the organ's three high notes bouncing between the ears. |
 | 4 | Saurian Belt | `04 Saurian Belt.wav` | 2:38 | The floor-filler: a kit that leads, a supersaw riff, a raptor's call, tom fills that cascade from the left ear to the right. |

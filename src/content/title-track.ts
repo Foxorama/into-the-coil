@@ -3,8 +3,8 @@
  *
  * ⚠️ **The album plan's step 5, asked for with the album**: *"title music plus run music — we'll need to make
  * the title music expand out though as it's currently a pretty short recurring sound and not a full track."*
- * The title screen plays two bars — `drone`, `bass` and `beat` from `src/content/music.ts` — and they are the
- * floor of this piece, unchanged. What is added is written over their harmony, which is two bars of A minor
+ * The title screen plays two bars — `drone`, `bass` and `beat` from `src/content/music.ts` — and the first two are the
+ * floor of this piece, unchanged; the kit is replaced by a heart (see `heart`). What is added is written over their harmony, which is two bars of A minor
  * and G: a pad that spells it, a sixteenth arpeggio, a lead that states a theme for the game, and a flute —
  * the instrument the whole album keeps coming back to — for the breakdown.
  *
@@ -45,6 +45,16 @@ const ARPEGGIO: readonly (number | null)[] = TITLE_ROOT.flatMap((root, bar) => {
   return [root, third, fifth, root + 12, fifth, third, root + 12, fifth, root, third, fifth, root + 12, third + 12, root + 12, fifth, third];
 });
 
+/** The heart under the groove: five beats in four bars, about 1.3 seconds apart, the second sound a little late. */
+const TITLE_HEART: readonly (number | null)[] = (() => {
+  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
+  [0, 13, 26, 38, 51].forEach((at, i) => {
+    steps[at] = i % 2 === 0 ? 1 : 0.92;
+    steps[at + 3] = i % 2 === 0 ? 0.68 : 0.62;
+  });
+  return steps;
+})();
+
 /** The flute's breakdown line: long notes, a bar or two each. */
 const FLUTE_LINE: readonly (number | null)[] = [
   7, _, _, _, 5, _, _, _, 3, _, _, _, 2, _, _, _,
@@ -54,7 +64,23 @@ const FLUTE_LINE: readonly (number | null)[] = [
 export const TITLE_PARTS = {
   drone: { voices: MUSIC.drone, bars: 2, air: 0.6, pan: 0 },
   bass: { voices: MUSIC.bass, bars: 2, air: 0.05, pan: 0 },
-  beat: { voices: MUSIC.beat, bars: 2, air: 0.06, pan: 0 },
+  /*
+    ⚠️ **THE TITLE'S KIT STOOD HERE, AND IT WAS THE METRONOME** — heard on the album: *"there's a back and forth
+    sound which is overpowering the rest of the music, I was calling it the metronome previously… can we replace
+    it with a quieter background heartbeat."* `MUSIC.beat` is two bars of kick and clap, which is *two beats back
+    and forth* by construction (0108 fixed that in `engine` and never in the title's own drums). What is under
+    the groove now is a heart, far back, about 47 a minute — the album's first sound of the thing it ends on.
+  */
+  heart: {
+    voices: [
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 100, to: 50, seconds: 0.5, gain: 0.5, attack: 0.002, curve: 2.2, drive: 0.3 } },
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 220, to: 105, seconds: 0.22, gain: 0.14, attack: 0.002, curve: 3, drive: 0.2 } },
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 } },
+    ],
+    bars: 4,
+    air: 0.08,
+    pan: 0,
+  },
   pad: {
     voices: [
       { steps: TITLE_ROOT, pitched: true, perBeat: 0.25, octave: 2, note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 4.4, gain: 0.05, attack: 0.4, curve: 0.6, lowFrom: 1800, lowTo: 1300, q: 0.7, release: BEAT_SECONDS * 1.5, vibrato: 6 } },
@@ -106,12 +132,12 @@ export const TITLE_SCORE: readonly { bars: number; parts: Partial<Record<TitlePa
   { bars: 8, parts: { drone: 1, pad: 0.7 } },
   // The riff.
   { bars: 8, parts: { drone: 1, pad: 0.8, bass: 0.85 } },
-  // The groove: the kit and the arpeggio.
-  { bars: 16, parts: { drone: 0.9, pad: 0.8, bass: 1, beat: 1, arp: 0.8 } },
+  // The groove: the heart and the arpeggio.
+  { bars: 16, parts: { drone: 0.9, pad: 0.8, bass: 1, heart: 1, arp: 0.8 } },
   // The theme.
-  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, beat: 1, arp: 0.7, lead: 1 } },
+  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, heart: 1, arp: 0.7, lead: 1 } },
   // The breakdown: the flute over the floor.
-  { bars: 8, parts: { drone: 1, pad: 1, bass: 0.5, flute: 1 } },
+  { bars: 8, parts: { drone: 1, pad: 1, bass: 0.5, flute: 1, heart: 0.7 } },
   // Everything, the theme climbing.
-  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, beat: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
+  { bars: 16, parts: { drone: 0.9, pad: 0.9, bass: 1, heart: 1, arp: 0.8, lead: 1.05, flute: 0.5 } },
 ];
