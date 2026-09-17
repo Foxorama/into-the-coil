@@ -65,15 +65,18 @@ const ARPEGGIO: readonly (number | null)[] = TITLE_ROOT.flatMap((root, bar) => {
   return [root, third, fifth, root + 12, fifth, third, root + 12, fifth, root, third, fifth, root + 12, third + 12, root + 12, fifth, third];
 });
 
-/** The heart under the groove: five beats in four bars, about 1.3 seconds apart, the second sound a little late. */
-const TITLE_HEART: readonly (number | null)[] = (() => {
-  const steps: (number | null)[] = Array.from({ length: 64 }, () => _);
-  [0, 13, 26, 38, 51].forEach((at, i) => {
-    steps[at] = i % 2 === 0 ? 1 : 0.92;
-    steps[at + 3] = i % 2 === 0 ? 0.68 : 0.62;
-  });
-  return steps;
-})();
+/**
+ * The heart under the groove: a lub on beats one and three and its dub three sixteenths after — 75 a minute, a resting
+ * heart, on the groove's own grid.
+ *
+ * ⚠️ **IT BEAT EVERY THIRTEEN SIXTEENTHS, AND READ AS A STRAY SOUND** — heard: *"heartbeat is a bit too prominent in the
+ * into the coil title, it doesn't read as a heartbeat, but more just a sound out of place and not cleaned up."* Thirteen
+ * against the arpeggio's sixteen landed somewhere new in every bar, driven into grit. It is on the grid now, clean, and
+ * three decibels further back (`scripts/album.mjs`).
+ */
+const TITLE_HEART: readonly (number | null)[] = Array.from({ length: 64 }, (_u, i) =>
+  i % 8 === 0 ? (i % 16 === 0 ? 1 : 0.88) : i % 8 === 3 ? (i % 16 === 3 ? 0.6 : 0.54) : _,
+);
 
 /** The flute's breakdown line: long notes, a bar or two each. */
 const FLUTE_LINE: readonly (number | null)[] = [
@@ -94,9 +97,9 @@ export const TITLE_PARTS = {
   */
   heart: {
     voices: [
-      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 100, to: 50, seconds: 0.5, gain: 0.5, attack: 0.002, curve: 2.2, drive: 0.3 } },
-      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 220, to: 105, seconds: 0.22, gain: 0.14, attack: 0.002, curve: 3, drive: 0.2 } },
-      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 900, lowTo: 400, highFrom: 120 } },
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 95, to: 48, seconds: 0.42, gain: 0.5, attack: 0.004, curve: 2.4, drive: 0.08 } },
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'sine', from: 190, to: 95, seconds: 0.18, gain: 0.09, attack: 0.004, curve: 3.2 } },
+      { steps: TITLE_HEART, pitched: false, perBeat: 4, octave: 0, note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.02, attack: 0.002, curve: 5, lowFrom: 500, lowTo: 250, highFrom: 80 } },
     ],
     bars: 4,
     air: 0.08,

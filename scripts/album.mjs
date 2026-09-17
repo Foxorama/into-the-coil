@@ -28,7 +28,7 @@ const R = SAMPLE_RATE;
 /** Where each part sits at its own level of 1, in dBFS RMS on the bus before the shaper. */
 // The lead at −28.5, where it was −25: heard, *"into the coil title at 53 — wham, suddenly loud."* It arrived over one bar
 // six decibels over every other part, and the track rose four decibels in two seconds.
-const TARGET_DB = { drone: -31, pad: -31, bass: -26, heart: -31, arp: -31, lead: -28.5, flute: -25.5 };
+const TARGET_DB = { drone: -31, pad: -31, bass: -26, heart: -34, arp: -31, lead: -28.5, flute: -25.5 };
 
 const render = (voices, seconds, wrap, rng) => {
   const buf = new Float32Array(Math.round(seconds * R));
