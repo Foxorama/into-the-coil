@@ -1613,7 +1613,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       octave: 0,
       // 0331: *"a weird flickering noise kicking in at 2.05"* — a snare on every thirty-second is twenty strokes a second,
       // which reads as a flicker rather than a beat. Sixteenths, darker, and a little quieter.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.07, attack: 0.001, curve: 6, lowFrom: 4800, lowTo: 1900, highFrom: 700 },
+      // …and a snare roll under an orchestra, not a blast over it.
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.04, attack: 0.001, curve: 6, lowFrom: 4000, lowTo: 1700, highFrom: 700 },
     },
     /*
       ⚠️ **THE HEART STOOD HERE, AND IT IS `ownA` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`.
@@ -1795,6 +1796,12 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   frenzy: [
     {
       /*
+  ⚠️ **THE FIGHT IS PLAYED BY THE BALLAD'S ORCHESTRA NOW** — 0331, heard on the album: *"the boss music segment on the
+  dark heart still doesn't fit well — it completely takes you out of the rest of the melody with the abrupt and short
+  change in tone."* The notes were already the piece's (A minor, the lament's roots, the flute's descant); the
+  instruments were the death-metal brief's — driven guitars, a hammered ride, a blast. The riff is a string section's
+  tremolo now, the power chord is cellos and a horn, the kit is the ballad's timpani and snare, and the flute leads.
+
         THE TREMOLO, AT THE FIGHT'S OWN SPEED. Two repetitions per note instead of four, so the LINE
         moves twice as fast while the picking rate is unchanged — which is exactly what the genre does
         going into a chorus, and is a real escalation rather than a louder one. Eight bars, so the
@@ -1814,10 +1821,11 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 1,
       accents: [1, 0.64, 0.86, 0.62],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.18, gain: 0.25, attack: 0.002, curve: 4.4, lowFrom: 2200, lowTo: 900, q: 1.2, drive: 0.32 },
+      // The cellos and violas, bowed in tremolo.
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.2, attack: 0.012, curve: 2.6, lowFrom: 1900, lowTo: 1200, q: 0.7, vibrato: 8 },
     },
     {
-      // The octave over it, thinner and brighter, which is how two guitars playing one riff sound.
+      // The violins, an octave over it.
       steps: [
         0, 0, 3, 3, 2, 2, 3, 3, 0, 0, 3, 3, 5, 5, 3, 3,
         8, 8, 7, 7, 8, 8, 7, 7, 3, 3, 2, 2, 3, 3, 2, 2,
@@ -1832,7 +1840,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 4,
       octave: 2,
       accents: [1, 0.62, 0.84, 0.6],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.15, gain: 0.12, attack: 0.002, curve: 5, lowFrom: 3800, lowTo: 1900, q: 1.1, drive: 0.2 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.22, gain: 0.08, attack: 0.012, curve: 2.8, lowFrom: 2400, lowTo: 1600, q: 0.7, vibrato: 10 },
     },
   ],
 
@@ -1865,7 +1873,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.2, attack: 0.02, curve: 1.9, lowFrom: 900, lowTo: 400, q: 1.1, drive: 0.25 },
+      // The cellos and basses, swelling on each stroke.
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.16, attack: 0.06, curve: 1.4, lowFrom: 800, lowTo: 520, q: 0.7, vibrato: 6 },
     },
     {
       steps: [
@@ -1878,7 +1887,8 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 1,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.66],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.13, attack: 0.03, curve: 1.8, lowFrom: 1500, lowTo: 650, q: 1.2, drive: 0.35 },
+      // The horn on the fifth.
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.4, gain: 0.2, attack: 0.05, curve: 1.3, lowFrom: 1400, lowTo: 900, q: 0.7 },
     },
   ],
 
@@ -1921,14 +1931,14 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 2,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.14, attack: 0.004, curve: 5, lowFrom: 1900, lowTo: 650, q: 1.3, drive: 0.2 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.28, gain: 0.12, attack: 0.008, curve: 4, lowFrom: 1600, lowTo: 800, q: 0.8 },
     },
     {
       steps: [_, 3, _, 3, _, 3, _, 3, _, 7, _, 7, _, 7, _, 7],
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.115, attack: 0.003, curve: 5.5, lowFrom: 4200, lowTo: 1600, q: 1.7 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.24, gain: 0.11, attack: 0.006, curve: 4.5, lowFrom: 2600, lowTo: 1400, q: 0.8 },
     },
     {
       // The disc: sample-and-hold noise rising in period, which is matter being torn rather than
