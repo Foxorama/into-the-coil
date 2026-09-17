@@ -161,6 +161,8 @@ const root = fileURLToPath(new URL('..', import.meta.url));
 const out = resolve(root, args.get('out') ?? 'cues.wav');
 const gap = Number(args.get('gap') ?? 0.35);
 const only = args.get('only')?.split(',').filter(Boolean);
+// --stem=a,b: a --level render with every other layer silent, on the same timeline — for asking which layer is loudest where.
+const stem = args.get('stem')?.split(',').filter(Boolean);
 
 const kinds = only ? CUE_KINDS.filter((k) => only.includes(k)) : [...CUE_KINDS];
 if (kinds.length === 0) {
@@ -672,7 +674,7 @@ if (args.has('level')) {
           this file has to draw honestly or the fix cannot be judged by ear.
         */
         if (t >= r.at) held[layer] += (r.target - held[layer]) * (1 - Math.exp(-1 / (SAMPLE_RATE * r.tau)));
-        const v = at(layer, i + n) * held[layer];
+        const v = stem !== undefined && !stem.includes(layer) ? 0 : at(layer, i + n) * held[layer];
         const p = panAt(layer, t);
         left += v * p.left;
         right += v * p.right;

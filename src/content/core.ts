@@ -543,6 +543,17 @@ const BASS_LINE: readonly (number | null)[] = turned(B_ROOT.flatMap((root, bar) 
 const CLIMB_WRITTEN: readonly number[] = [0.8, 0.85, 0.9, 0.95, 1, 1, 1, 1, 1, 1, 1, 1, 1.02, 1.04, 1.06, 1.08, 1.1, 1.12, 1.14, 1.16, 1.18, 1.2, 1.24, 1.28, 1.42, 1.4, 1.26, 1.2, 1.15, 1.1, 1.05, 1, 0.97, 0.95, 0.95, 0.97, 0.98, 0.95, 0.92, 0.9, 0.88, 0.86];
 const CLIMB_BARS: readonly number[] = turned(CLIMB_WRITTEN);
 const CLIMB_BEATS: readonly number[] = turned(CLIMB_WRITTEN.flatMap((weight) => [weight, weight, weight, weight]));
+/*
+  ⚠️ **THE FLUTE CLIMBS HARDEST, AND THE MELODY UNDER IT HALF AS HARD** — heard on the album: *"from 1.30ish to
+  2.00ish the loudest notes are the violin, the peak should still be the flute, but the violin and other
+  instruments climb above it and take focus."* Measured on the render's own stems, the orchestra — the horn
+  doubling the violins' melody most of all — was level with the flute or over it from 1:28 to 1:38, because
+  every voice of the ballad swelled with `CLIMB_WRITTEN` except the flute, and the flute had just been eased
+  at the top of its range, which is where the refrain's peak is. The violins and the horn now swell by the
+  square root of the climb (half its decibels), and the flute by its power of one and a half going up — and not down at all, so it holds while they fall away under it.
+*/
+const CLIMB_UNDER: readonly number[] = CLIMB_BEATS.map((weight) => Math.sqrt(weight));
+const CLIMB_FLUTE: readonly number[] = turned(CLIMB_WRITTEN.flatMap((weight) => Array.from({ length: 8 }, () => Math.max(1, weight) ** 1.5)));
 
 /**
  * A pan pipe on `line`, one step every `1 / perBeat` beats, each note held `beats` long.
@@ -573,8 +584,10 @@ const pipeVoices = (
   level: number,
   attack: number,
   chiff = 1,
+  /** A weight on every step (the ballad's climb), and how many decibels a semitone above E5 is eased by. */
+  shape: { readonly swell?: readonly number[]; readonly ease?: number } = {},
 ): MusicVoice[] => {
-  const eased = line.map((note) => (note === null ? 1 : 10 ** (-0.35 * Math.max(0, note - 7) / 20)));
+  const eased = line.map((note, i) => (note === null ? 1 : 10 ** (-(shape.ease ?? 0.35) * Math.max(0, note - 7) / 20) * (shape.swell?.[i % shape.swell.length] ?? 1)));
   const struck = line.map((note, i) => (note === null ? _ : eased[i]!));
   // The octave overtone fades out over the top of the range, where a real flute is nearly a pure tone: whole to E5, gone by E6.
   const overtone = line.map((note, i) => (note === null ? 1 : eased[i]! * Math.min(1, Math.max(0, (19 - note) / 12))));
@@ -1097,19 +1110,19 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.01,
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.085, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.068, attack: 0.06, curve: 0.9, lowFrom: 1100, lowTo: 800, q: 0.7, release: BEAT_SECONDS * 1.5 },
     },
     {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.01,
       octave: 1,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.115, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 2.6, gain: 0.092, attack: 0.05, curve: 0.9, release: BEAT_SECONDS * 1.5 },
     },
     /*
       ⚠️ **THE METAL GUITARS STOOD HERE, AND THE BAND IS A SOUL BAND NOW** — 0331's eleventh listen:
@@ -1377,7 +1390,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.012,
       octave: 2 + 6 / 1200,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.1, curve: 0.4, lowFrom: 2300, lowTo: 1700, q: 0.6, release: BEAT_SECONDS * 1.6, vibrato: 14 },
@@ -1386,7 +1399,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.012,
       octave: 2 - 6 / 1200,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.07, attack: 0.13, curve: 0.4, lowFrom: 2200, lowTo: 1650, q: 0.6, release: BEAT_SECONDS * 1.6, vibrato: 12 },
@@ -1395,7 +1408,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.012,
       octave: 2,
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 3.4, gain: 0.06, attack: 0.12, curve: 0.4, release: BEAT_SECONDS * 1.6, vibrato: 13 },
@@ -1413,7 +1426,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.012,
       octave: 3 + 4 / 1200,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.012, attack: 0.14, curve: 0.4, lowFrom: 3000, lowTo: 2400, q: 0.7, release: BEAT_SECONDS * 1.6, vibrato: 16 },
@@ -1422,7 +1435,7 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       steps: turned(BALLAD),
       pitched: true,
       perBeat: 1,
-      accents: CLIMB_BEATS,
+      accents: CLIMB_UNDER,
       loose: 0.012,
       octave: 3 - 4 / 1200,
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 3.2, gain: 0.0105, attack: 0.17, curve: 0.4, lowFrom: 2900, lowTo: 2300, q: 0.7, release: BEAT_SECONDS * 1.6, vibrato: 15 },
@@ -1463,8 +1476,9 @@ export const CORE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     fast in, with its first phrase on the ballad's first bar.
   */
   beat: [
-    ...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6),
-    ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5),
+    // The refrain's peak is the flute's: it climbs with the ballad, harder than the orchestra, and its top is barely eased.
+    ...pipeVoices(FLUTE_BALLAD_MOVING, 2, 1.2, 0.85, 0.02, 0.6, { swell: CLIMB_FLUTE, ease: 0.12 }),
+    ...pipeVoices(FLUTE_BALLAD_HELD, 2, 3.4, 0.9, 0.05, 0.5, { swell: CLIMB_FLUTE, ease: 0.12 }),
     // The guitar carried on — 0331's twenty-second listen: through the hand-over, then under the refrain.
     ...guitarVoices(pickingOver(0, 8), 0.8),
     ...guitarVoices(pickingOver(16, 36), 0.7),
