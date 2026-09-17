@@ -700,11 +700,40 @@ if (args.has('level')) {
       the level, and The Black Heart's loudest piano, flute and pad are the ballad's, struck eleven decibels over
       the quiet lament the walk down returns to. So the level is read off the render: the last four bars of the
       reprise against the first two of the coda, alone, before the bus.
+
+      ⚠️ **AND IN THE UNIT AN EAR HEARS, NOT IN RMS** — heard again: *"saurian belt still has a super loud closing
+      coda."* By RMS it sat 2.4 dB under its reprise; but Saurian Belt's reprise is a kick and a bass, and its
+      coda is a held supersaw chord carrying 7 to 12 dB more between 500 Hz and 4 kHz, where hearing is most
+      sensitive. Both are now measured K-weighted — ITU-R BS.1770's pre-filter, the weighting LUFS is built on
+      and the one the album is mastered by.
     */
+    const kWeighted = (x, from, to) => {
+      // BS.1770 stage 1 (high shelf, +4 dB above ~1.7 kHz) and stage 2 (high-pass at ~38 Hz), designed for this rate.
+      const biquad = (b0, b1, b2, a0, a1, a2) => (input) => {
+        const out = new Float32Array(input.length);
+        let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+        for (let k = 0; k < input.length; k++) {
+          const y = (b0 * input[k] + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+          x2 = x1; x1 = input[k]; y2 = y1; y1 = y; out[k] = y;
+        }
+        return out;
+      };
+      const w1 = (2 * Math.PI * 1681.974450955533) / SAMPLE_RATE, A = 10 ** (3.999843853973347 / 40);
+      const al1 = Math.sin(w1) / (2 * 0.7071752369554196), c1 = Math.cos(w1), sA = Math.sqrt(A);
+      const shelf = biquad(A * (A + 1 + (A - 1) * c1 + 2 * sA * al1), -2 * A * (A - 1 + (A + 1) * c1), A * (A + 1 + (A - 1) * c1 - 2 * sA * al1), A + 1 - (A - 1) * c1 + 2 * sA * al1, 2 * (A - 1 - (A + 1) * c1), A + 1 - (A - 1) * c1 - 2 * sA * al1);
+      const w2 = (2 * Math.PI * 38.13547087602444) / SAMPLE_RATE, al2 = Math.sin(w2) / (2 * 0.5003270373238773), c2 = Math.cos(w2);
+      const highpass = biquad((1 + c2) / 2, -(1 + c2), (1 + c2) / 2, 1 + al2, -2 * c2, 1 - al2);
+      // …and a high-pass at 200 Hz, because what a listener compares across that seam is the music, not the kick under it.
+      const w3 = (2 * Math.PI * 200) / SAMPLE_RATE, al3 = Math.sin(w3) / (2 * 0.7071), c3 = Math.cos(w3);
+      const body = biquad((1 + c3) / 2, -(1 + c3), (1 + c3) / 2, 1 + al3, -2 * c3, 1 - al3);
+      return body(highpass(shelf(x.subarray(from, to))));
+    };
     const rmsDbOver = (l, r, from, to) => {
+      const kl = kWeighted(l, from, to);
+      const kr = kWeighted(r, from, to);
       let e = 0;
-      for (let k = from; k < to; k++) e += l[k] * l[k] + r[k] * r[k];
-      return 10 * Math.log10(e / (2 * Math.max(1, to - from)) + 1e-20);
+      for (let k = 0; k < kl.length; k++) e += kl[k] * kl[k] + kr[k] * kr[k];
+      return 10 * Math.log10(e / (2 * Math.max(1, kl.length)) + 1e-20);
     };
     const strike = Math.round(codaAt * SAMPLE_RATE);
     const before = rmsDbOver(loopsLeft, loopsRight, strike - Math.round(4 * BAR_SECONDS * SAMPLE_RATE), strike);
