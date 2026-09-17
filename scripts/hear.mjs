@@ -533,6 +533,8 @@ if (args.has('level')) {
     }
   }
   let codaStruck = false;
+  const loopsLeft = new Float32Array(album ? total : 0);
+  const loopsRight = new Float32Array(album ? total : 0);
   /*
     ⚠️ **INTERLEAVED STEREO — 0118, and the mode had to grow it or it could not show the change.** The
     pan law is `panGains`, exported from the mixer for exactly this: the game's field is made by a
@@ -676,8 +678,9 @@ if (args.has('level')) {
         right += v * p.right;
       }
       if (album) {
-        left += codaLeft[i + n];
-        right += codaRight[i + n];
+        // The loops alone, before the bus — the coda is mixed in after its level has been measured against them.
+        loopsLeft[i + n] = left;
+        loopsRight[i + n] = right;
       }
       /*
         ⚠️ **The shaper is PER CHANNEL, which is what a `WaveShaperNode` on a stereo bus does.** One
@@ -691,6 +694,27 @@ if (args.has('level')) {
 
   const base = out.replace(/\.wav$/, '');
   if (album) {
+    /*
+      ⚠️ **THE CODA SITS A DECIBEL AND A HALF UNDER WHAT IT FOLLOWS, MEASURED — ITS STRIKE CARRIES IT OVER** — heard: *"the volume was way off, there was
+      a hard jump in the black heart for the ending coda."* Each part took the loudest its layer is anywhere in
+      the level, and The Black Heart's loudest piano, flute and pad are the ballad's, struck eleven decibels over
+      the quiet lament the walk down returns to. So the level is read off the render: the last four bars of the
+      reprise against the first two of the coda, alone, before the bus.
+    */
+    const rmsDbOver = (l, r, from, to) => {
+      let e = 0;
+      for (let k = from; k < to; k++) e += l[k] * l[k] + r[k] * r[k];
+      return 10 * Math.log10(e / (2 * Math.max(1, to - from)) + 1e-20);
+    };
+    const strike = Math.round(codaAt * SAMPLE_RATE);
+    const before = rmsDbOver(loopsLeft, loopsRight, strike - Math.round(4 * BAR_SECONDS * SAMPLE_RATE), strike);
+    const struck = rmsDbOver(codaLeft, codaRight, strike, strike + Math.round(2 * BAR_SECONDS * SAMPLE_RATE));
+    const codaScale = 10 ** ((before - 1.5 - struck) / 20);
+    console.log(`coda: reprise ${before.toFixed(1)} dB, coda as written ${struck.toFixed(1)} dB, scaled ${(20 * Math.log10(codaScale)).toFixed(1)} dB`);
+    for (let k = 0; k < total; k++) {
+      track[k * 2] = Math.max(-1, Math.min(1, busOf(loopsLeft[k] + codaLeft[k] * codaScale)));
+      track[k * 2 + 1] = Math.max(-1, Math.min(1, busOf(loopsRight[k] + codaRight[k] * codaScale)));
+    }
     // The last second and a half falls to silence, so the file ends on nothing rather than on a sample.
     const fade = Math.round(1.5 * SAMPLE_RATE);
     for (let k = 0; k < fade; k++) {
