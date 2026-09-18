@@ -6651,12 +6651,6 @@ function layAura(w: World): void {
   */
   const move = w.bossRow.move;
   if (head !== null && move.kind === 'socket') {
-    if (w.bossAura.size === 0) {
-      const seat = w.bossAura.spawn();
-      // `AURA_FLAME` and then the bitmap, exactly as the flames are written every step: the sprite is
-      // a number on a content row, and a second `Body` per boss would be a table to keep in step.
-      if (seat !== null) reset(seat, head.along, head.across, AURA_FLAME);
-    }
     /*
       ── AND THE FIRE IT HAS CAUGHT — 0336 ────────────────────────────────────────────────────────
 
@@ -6676,7 +6670,20 @@ function layAura(w: World): void {
       const through = burn.from > 0 ? (burn.from - left) / burn.from : 1;
       flames = Math.min(burn.most, burn.least + Math.floor(through * (burn.most - burn.least)));
     }
-    // One for the seat, and then one per flame.
+    /*
+      One for the seat, and then one per flame.
+
+      ⚠️ **AND THIS IS THE ONLY PLACE THE SEAT IS SPAWNED, WHICH IT WAS NOT UNTIL A PROBE SAID SO.**
+      0332 laid the housing in a block of its own — `if (size === 0) spawn` — and 0336's flame loop
+      subsumed it the moment it was written, because `flames + 1` is never less than one. The old
+      block was dead code, and the way that was found is that **0332's probe for *the housing never
+      laid* stayed GREEN**: breaking the line it named changed nothing, because the line below did the
+      work. `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` is the only thing that looks here.
+
+      ⚠️ **`AURA_FLAME` and then the bitmap**, exactly as the flames are written every step: the
+      sprite is a number on a content row, and a second `Body` per boss would be a table to keep in
+      step.
+    */
     while (w.bossAura.size < flames + 1) {
       const flame = w.bossAura.spawn();
       if (flame === null) break;
