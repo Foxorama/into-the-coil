@@ -396,6 +396,24 @@ export const SPRITE_KINDS = [
   'boss10Hit',
   'boss11',
   'boss11Hit',
+  /*
+    ⚠️ **THE COG, CHIPPED AND THEN BROKEN — 0332.** *"Upscale the graphics and have it change as it
+    gets more damaged."* One body a phase: whole, then teeth gone and the rim cracked, then half the
+    teeth gone, the rim split and the core burning through. **The same 52-unit box all three**, on
+    0320's finding: a boss that grew its own extent at a health threshold would hand back what the
+    first phase taught about where its edge is.
+  */
+  'boss11Chipped',
+  'boss11ChippedHit',
+  'boss11Broken',
+  'boss11BrokenHit',
+  /*
+    ⚠️ **THE HOUSING IT IS SET INTO — 0332.** *"Locked into the background like a cog set into an
+    image."* Drawn behind the hull, in the layer the serpent's aura already occupies, and bigger than
+    the cog so the mounting shows round it. It is scenery and not a body: nothing collides with it
+    and it has no hurt twin, because nothing ever hits it.
+  */
+  'boss11Seat',
   'boss12',
   'boss12Hit',
   'boss13',
@@ -1188,8 +1206,32 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   volansEmber5: 46,
   boss10: 44,
   boss10Hit: 44,
-  boss11: 36,
-  boss11Hit: 36,
+  /*
+    ⚠️ **36 UNTIL 0332, AND THE ASK WAS *UPSCALE THE GRAPHICS*.** 52 across, with the hurtbox at 20 —
+    0.385 of its own extent against the 0.389 it had at 36 and 14, so what changed is the size on
+    screen and not how forgiving it is. It is the biggest hull in the game bar none: the jellyfish is
+    46 and the widest before this was the fish's 42, and it is comfortably under `EDGE_MARGIN`'s
+    ceiling of 80.
+
+    ⚠️ **AND THE NEAR END OF ITS SWING BARELY MOVED**, which is the number 0101 holds: the gyre is
+    set into the place now and does not drift, so `station − drift − radius` is 130 − 0 − 20 = 110
+    against the 130 − 5 − 14 = 111 it was — 62% of the narrowest screen, where the floor is 55%. A
+    six-unit hull grew into the room its own drift used to spend.
+  */
+  boss11: 52,
+  boss11Hit: 52,
+  // The same box, on 0320's rule: what breaks is drawn inside the extent the whole one taught.
+  boss11Chipped: 52,
+  boss11ChippedHit: 52,
+  boss11Broken: 52,
+  boss11BrokenHit: 52,
+  /*
+    ⚠️ **BIGGER THAN THE COG, BECAUSE A HOUSING THAT DID NOT SHOW WOULD NOT BE ONE.** 68 against 52
+    leaves eight units of mounting all the way round — enough for the ring and its lugs to read at
+    the camera the game ships, and still sixteen inside `EDGE_MARGIN`'s ceiling, which matters
+    because the seat sits at the lane's centre and reaches 34 units either way of it.
+  */
+  boss11Seat: 68,
   boss12: 33,
   boss12Hit: 33,
   boss13: 41,

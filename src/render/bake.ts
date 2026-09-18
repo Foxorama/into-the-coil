@@ -461,6 +461,16 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   volansEmber5: 'glass',
   boss10: 'enemy',
   boss11: 'enemy',
+  boss11Chipped: 'enemy',
+  boss11Broken: 'enemy',
+  /*
+    ⚠️ **THE HOUSING IS BACKGROUND, SO IT IS IN THE BACKGROUND'S INK — 0332.** `sky` is the one ink
+    that must not stand out, and a landmark already takes it for the same reason: the seat is the
+    wall the cog is set into, not a thing the player has to find. Drawing the mounting in `enemy`
+    would put a ring of *this can kill you* round a hull the player is trying to read, which is
+    0081's whole subject.
+  */
+  boss11Seat: 'sky',
   boss12: 'enemy',
   boss13: 'enemy',
   boss14: 'enemy',
@@ -715,6 +725,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss9BarbedShutHit: 'impact',
   boss10Hit: 'impact',
   boss11Hit: 'impact',
+  boss11ChippedHit: 'impact',
+  boss11BrokenHit: 'impact',
   boss12Hit: 'impact',
   boss13Hit: 'impact',
   boss14Hit: 'impact',
@@ -3492,7 +3504,18 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
     aura's frames are this lord's too, and they are named on a phase rather than on the row. An
     `Aura`'s other fields are numbers that are not sprites, so its frames are named and it is not walked.
   */
+  /*
+    ⚠️ **AND WHAT EVERY PHASE'S HULL NAMES — 0332**, which is the third time this list has had to
+    grow and the reason it is walked rather than written: a worn body is a bitmap named on a phase,
+    exactly as a horned face is, and a chipped gyre baked in the generic foe skin would be a dusty
+    pink cog in a teal place — the same photograph 0283 and 0285 each produced once.
+
+    ⚠️ **The SEAT is deliberately not here.** `socket.seat` is background rather than body: it is
+    painted straight out of the palette in the `sky` ink and never sees a skin at all, so a lord's
+    livery has nothing to say about it.
+  */
   for (const phase of row.phases) {
+    if (phase.hull !== undefined) named.push(phase.hull.rest, phase.hull.hit);
     if (phase.look === null) continue;
     named.push(...Object.values(phase.look.face));
     if (phase.look.aura !== null) named.push(...phase.look.aura.frames);
@@ -5450,12 +5473,270 @@ function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
   disc(ctx, f, shade(skin.plate, -0.5), -0.52, -0.06, 0.05);
   disc(ctx, f, skin.eye, -0.53, -0.06, 0.032);
 }
-function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The gyre: the lower half of the rim in shadow, the upper lit, teeth as a motif.
-  plate(ctx, f, skin, sector(0.4, 0.66, 0.5, 2.6, 10));
-  lit(ctx, f, skin, sector(0.4, 0.66, -2.6, -0.5, 10));
-  motif(ctx, f, skin, theme, sector(0.4, 0.66, -0.4, 0.4, 6), 'boss11');
-  disc(ctx, f, skin.eye, -0.52, 0, 0.06);
+/*
+  ── THE GYRE, UPSCALED AND WORN — 0332 ─────────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR**: *"upscale the graphics and have it change as it gets more damaged"*, and *"the
+  section of it that looks pointed"* — which is the thing the whole fight is read off, so it is
+  drawn as one unmistakable SPIKE rather than as the longest of sixteen equal teeth.
+
+  **Sixteen teeth, eight of them points.** The cog's edge alternates a point and a valley all the way
+  round, which is the silhouette 0264 gave it; what is new is that the point at the sprite's own
+  `+x` — the leading edge, which is `curtainStance` 0 — reaches further, narrows to a tip, and is
+  painted in the lit ink with a bright cap. Every other point is 0.86 and this one is 1.0.
+
+  ⚠️ **IT IS BAKED POINTING AT THE LEADING EDGE, AND THAT IS WHAT MAKES `turn` READ AS A COMPASS.**
+  `src/sim/entity.ts`'s `turnFor` says every sprite is baked facing `π` — down the lane, at the
+  player — so a mark at `+x` is at heading 0, the leading edge, and a turn of `k × τ/8` swings it
+  round to the k-th stance's own edge. `tests/gyre.test.ts` holds the pairing rather than this
+  comment.
+
+  ⚠️ **THREE BODIES, ONE BOX.** `wear` is 0, 1 or 2 — whole, chipped, broken — and every one of them
+  is drawn inside the same 52-unit tile, on 0320's finding: a boss that grew its own extent at a
+  health threshold hands back what the first phase taught about where its edge is.
+
+  ⚠️ **AND THE SPIKE SURVIVES ALL THREE.** Teeth come off, the rim splits and the core burns
+  through; the one mark the player is steering by is the one mark the damage does not take, because
+  a tell that goes missing in the last phase is a tell that fails where it is needed most.
+*/
+
+/** How many teeth run round the rim. The spike stands where the first one would. */
+const GYRE_TEETH = 16;
+/** The root circle the teeth stand on, and the tip circle they reach. */
+const GYRE_ROOT = 0.78;
+const GYRE_TIP = 0.88;
+/** The marker spike: a quarter of a tooth further out than any of them, and a third as wide. */
+const GYRE_SPIKE = 1;
+
+/**
+ * Which teeth have been knocked off at each wear — never the first, which is the spike.
+ *
+ * ⚠️ **SPREAD RATHER THAN CLUSTERED**, so a broken cog reads as one that has been running too long
+ * rather than as one something took a bite out of.
+ */
+const GYRE_LOST: readonly (readonly number[])[] = [[], [3, 9, 13], [2, 3, 6, 9, 10, 13, 14]];
+
+/*
+  ⚠️ **AND THE HUB IS SOLID NOW, WHERE 0264's COG HAD A HOLE THROUGH IT.** A hole is a hole in the
+  SILHOUETTE — `tests/accents.test.ts` holds that nothing solid may be painted over one, and rightly:
+  a mark inside the bore is a mark on the sky. *"It changes as it gets more damaged"* wants a core
+  that burns brighter as the body goes, and a core is a thing you can see. So what used to be a bore
+  is a lit heart in a dark collar, and the widening the broken body does is the heart's rather than
+  the hole's.
+*/
+
+/**
+ * The cog's outline at a given wear, as one closed path.
+ *
+ * ⚠️ **A TOOTH IS FLAT-TOPPED AND SHALLOW, AND THE FIRST DRAFT'S WAS NEITHER.** Sixteen samples
+ * alternating 0.86 and 0.66 photographed as an **eight-pointed star**: a fifth of the radius deep
+ * with no flat on top, so the teeth WERE the silhouette and the ring they stand on was invisible.
+ * Four samples a tooth over a tenth of the radius is a cog — and it is also the difference between
+ * the spike reading as *the* point and reading as one of nine.
+ */
+function traceGyre(ctx: Pen, f: Frame, wear: number): void {
+  const lost = GYRE_LOST[wear] ?? [];
+  const pitch = (Math.PI * 2) / GYRE_TEETH;
+  let started = false;
+  const at = (a: number, reach: number): void => {
+    const x = f.half + Math.cos(a) * reach * f.r;
+    const y = f.half + Math.sin(a) * reach * f.r;
+    if (started) ctx.lineTo(x, y);
+    else ctx.moveTo(x, y);
+    started = true;
+  };
+  for (let i = 0; i < GYRE_TEETH; i++) {
+    const a = i * pitch;
+    if (i === 0) {
+      // The spike, off the root circle, to a point further out than any tooth reaches.
+      at(a - pitch * 0.2, GYRE_ROOT);
+      at(a, GYRE_SPIKE);
+      at(a + pitch * 0.2, GYRE_ROOT);
+      continue;
+    }
+    // A tooth that has come off leaves the root circle it stood on.
+    at(a - pitch * 0.3, GYRE_ROOT);
+    if (!lost.includes(i)) {
+      at(a - pitch * 0.18, GYRE_TIP);
+      at(a + pitch * 0.18, GYRE_TIP);
+    }
+    at(a + pitch * 0.3, GYRE_ROOT);
+  }
+  ctx.closePath();
+}
+
+/*
+  ── THE COG IS DRAWN IN RINGS, AND THE FIRST DRAFT DREW IT IN WEDGES ──────────────────────────
+
+  ⚠️ **PHOTOGRAPHED AT 4× ON THE SHEET (0193), THE FIRST PASS CAME BACK AS A STAR WITH BARS ON IT.**
+  Two 120° arcs of shading laid across the middle of the body, four spokes on top of them and the
+  place's circuitry over that, all in the same band: at 52 units across nothing read as a part of a
+  machine, because nothing was BOUNDED by anything. The fix is not fewer marks, it is rings — the
+  drawing is a rim band, a web between the rim and the hub, and a hub — and every mark belongs to
+  exactly one of them. `docs/decisions/0027-measure-the-picture-not-the-model.md`: the guards were
+  green for both drawings.
+*/
+
+/** Where the rim band ends and the web behind it begins. */
+const GYRE_RIM = 0.6;
+/** Where the web ends and the hub begins. */
+const GYRE_HUB = 0.3;
+
+function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, wear: number): void {
+  /*
+    THE RIM BAND: lit above, in shadow below, so a flat disc reads as a wheel lit from up-lane. It
+    stops short of the root circle, which is what leaves the teeth their own colour and makes them
+    teeth rather than a scalloped edge.
+  */
+  plate(ctx, f, skin, sector(GYRE_RIM, GYRE_ROOT - 0.03, 0.12, Math.PI - 0.12, 18));
+  /*
+    ⚠️ **THE LIT HALF IS A STRIP AND THE SHADOWED HALF IS THE WHOLE BAND, WHICH IS NOT SYMMETRY AND
+    IS NOT MEANT TO BE.** Shadow is the hull's own colour gone dark and reads as depth at any size;
+    `lit` is the place's hot pink, and a 120° arc of it eight units deep photographed as a pink blob
+    with a cog behind it. A light catches an EDGE.
+  */
+  lit(ctx, f, skin, sector(GYRE_ROOT - 0.13, GYRE_ROOT - 0.03, -Math.PI + 0.12, -0.12, 18));
+  /*
+    THE WEB: four spokes between the hub and the rim, each a shadowed bar with a lit leading edge.
+    A broken cog keeps two of them.
+
+    ⚠️ **THE SPOKES ARE WHAT THE UPSCALE IS FOR.** At 36 units across there was nothing between the
+    hub and the teeth but a band; at 52 that band is eight world units deep, and eight units of flat
+    colour is the thing a bigger sprite makes worse rather than better.
+  */
+  const spokes = wear === 2 ? 2 : 4;
+  for (let s = 0; s < spokes; s++) {
+    const a = 0.55 + (s / 4) * Math.PI * 2;
+    const c = Math.cos(a);
+    const n = Math.sin(a);
+    const w = 0.07;
+    plate(ctx, f, skin, [
+      [c * GYRE_HUB - n * w, n * GYRE_HUB + c * w],
+      [c * GYRE_RIM - n * w, n * GYRE_RIM + c * w],
+      [c * GYRE_RIM + n * w, n * GYRE_RIM - c * w],
+      [c * GYRE_HUB + n * w, n * GYRE_HUB - c * w],
+    ]);
+    lit(ctx, f, skin, [
+      [c * (GYRE_HUB + 0.02) - n * w, n * (GYRE_HUB + 0.02) + c * w],
+      [c * (GYRE_RIM - 0.02) - n * w, n * (GYRE_RIM - 0.02) + c * w],
+      [c * (GYRE_RIM - 0.02) - n * w * 0.35, n * (GYRE_RIM - 0.02) + c * w * 0.35],
+      [c * (GYRE_HUB + 0.02) - n * w * 0.35, n * (GYRE_HUB + 0.02) + c * w * 0.35],
+    ]);
+  }
+  /*
+    ⚠️ **AND THERE IS NO `motif` ON THIS HULL ANY MORE, WHICH IS A DECISION AND NOT AN OMISSION.**
+    Every other body in the game carries the place's own marks on a belly; a wheel has no belly, it
+    has a ring — and `motif` steps a 0.24 grid over the belly's BOUNDING BOX and drops any mark that
+    does not fit inside it, so on an annulus it lands wherever the grid happens to intersect. At 36
+    units across the old wedge held two rivets; at 52 the ring came back from the sheet with three
+    labyrinth pads stuck to the top-left and top-right of it and nothing anywhere else, which reads
+    as damage rather than as livery. **What says which place this is on this hull is the skin** —
+    0228's teal, 0223's hot pink on the rim and the spokes, the red core — and that is on every mark
+    here. A motif that has to be hand-placed per hull is a different mechanism from the one that
+    exists, and it is not owed by one boss.
+  */
+  /*
+    ⚠️ **THE SPIKE IS LIT, WHICH IS THE ONE THING THIS DRAWING OWES THE FIGHT.** Every other mark
+    here is decoration; this is the sentence *the next wall comes in over there*, and it has to
+    survive being read at a glance, at speed, in a place whose whole palette is teal. It runs from
+    the hub out along the spike, so what the eye follows is a line through the middle of the wheel
+    and out of it rather than a mark on the edge.
+
+    ⚠️ **AND IT STOPS WELL INSIDE THE SPIKE'S OWN TAPER, WHICH A GUARD HAD TO SAY TWICE.** A first
+    draft ran to the tip and capped it with a disc at 0.9; `tests/accents.test.ts` measured that disc
+    3.1 px outside the silhouette at the shipped camera — the spike narrows to nothing, so a mark
+    nearly as wide as its base is outside the hull long before it is outside the tile.
+
+    ⚠️ **AND IT IS DRAWN AFTER THE CRACKS, WHICH IS THE ORDER AND NOT AN ACCIDENT.** The broken body
+    came off the sheet with a split running through the middle of the spike's highlight: correct for
+    every other mark here and wrong for this one, because a tell that goes missing in the last phase
+    goes missing at the rung the player can least afford it.
+  */
+  /*
+    ⚠️ **THE DAMAGE IS CRACKS AND A CORE THAT GETS THROUGH — 0332.** A crack is the shadow that is
+    already under everything, showing through: two splits across the web on the chipped body, four
+    on the broken one, each running from the hub out to the rim where a tooth has gone.
+  */
+  for (let c = 0; c < wear * 2; c++) {
+    const a = 1.1 + c * 1.7;
+    const cs = Math.cos(a);
+    const sn = Math.sin(a);
+    const jag = 0.05;
+    plate(ctx, f, skin, [
+      [cs * GYRE_HUB, sn * GYRE_HUB],
+      [cs * 0.45 - sn * jag, sn * 0.45 + cs * jag],
+      [cs * (GYRE_ROOT - 0.04), sn * (GYRE_ROOT - 0.04)],
+      [cs * 0.45 + sn * jag * 0.4, sn * 0.45 - cs * jag * 0.4],
+    ]);
+  }
+  /*
+    ⚠️ **AND THE CORE BURNS BRIGHTER AS THE BODY GOES**, which is the half of *it changes as it gets
+    more damaged* that reads from across the screen. A dark collar, the eye inside it, and a white
+    heart in that — and all three open up as the cog breaks.
+  */
+  const core = wear === 0 ? GYRE_HUB : wear === 1 ? GYRE_HUB + 0.04 : GYRE_HUB + 0.08;
+  disc(ctx, f, shade(skin.plate, -0.4), 0, 0, core);
+  disc(ctx, f, skin.eye, 0, 0, core * (wear === 0 ? 0.6 : wear === 1 ? 0.7 : 0.8));
+  disc(ctx, f, skin.lit, 0, 0, core * (wear === 0 ? 0.22 : wear === 1 ? 0.34 : 0.46));
+  // Last of all, so nothing this body does to itself can take it — see above.
+  lit(ctx, f, skin, [
+    [GYRE_HUB, -0.06],
+    [0.92, 0],
+    [GYRE_HUB, 0.06],
+  ]);
+}
+
+/*
+  ── THE HOUSING THE COG IS SET INTO — 0332 ─────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR**: *"when it appears on screen I want it 'locked' into the background like a cog
+  set into an image."* Stopping the hull moving is half of that and the cheaper half; what says SET
+  INTO SOMETHING is the something. A ring bigger than the cog, with four mounting lugs on the
+  diagonals, drawn behind the hull in the layer the serpent's aura occupies.
+
+  ⚠️ **IT IS IN THE `sky` INK AND IT IS THE PLACE RATHER THAN THE CREATURE.** A mounting drawn in
+  `enemy` would be a ring of *this can kill you* round the one hull the player is trying to read —
+  0081. What the player must never do is shoot at the housing, and the way that is said is the way
+  the game already says it about every landmark: it is background-coloured, and nothing in the
+  background has ever hurt anybody.
+*/
+/**
+ * The housing's outline: a ring with four lugs on the diagonals, sampled once at load.
+ *
+ * ⚠️ **ONE SEALED SILHOUETTE, BECAUSE IT IS AN OBJECT.** `tests/accents.test.ts` holds that every
+ * body in the atlas is outlined exactly once on its own path, and it is right to: a shape assembled
+ * out of bands and discs has no silhouette for a mark to be held inside. The hole through the middle
+ * is the second sub-path, filled `evenodd`, which is how a recess is drawn everywhere else here.
+ */
+const GYRE_SEAT_RIM: readonly Pt[] = (() => {
+  const out: Pt[] = [];
+  const steps = 96;
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    let lug = false;
+    for (let s = 0; s < 4; s++) {
+      let d = a - (Math.PI / 4 + (s / 4) * Math.PI * 2);
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      if (Math.abs(d) < 0.16) lug = true;
+    }
+    const reach = lug ? 1 : 0.88;
+    out.push([Math.cos(a) * reach, Math.sin(a) * reach]);
+  }
+  return out;
+})();
+
+/** How far in the housing's bore goes — the hole the cog sits in, wider than the cog's own tile. */
+const GYRE_SEAT_BORE = 0.72;
+
+function paintBoss11Seat(ctx: Pen, f: Frame, palette: Palette): void {
+  // A lighter bead round the inside edge, so the recess has a lip and the ring has a thickness.
+  band(ctx, f, palette.space, 0, 0, GYRE_SEAT_BORE + 0.06, GYRE_SEAT_BORE, 0.6);
+  // A bolt in each lug, in the void's own colour: a hole rather than a stud.
+  for (let s = 0; s < 4; s++) {
+    const a = Math.PI / 4 + (s / 4) * Math.PI * 2;
+    disc(ctx, f, palette.space, Math.cos(a) * 0.93, Math.sin(a) * 0.93, 0.04);
+  }
 }
 /*
   THE FROST SHIP. A long crystal, its point to the front, with two great ice-spires swept back
@@ -6999,25 +7280,39 @@ export function drawKind(
       if (skin !== null) paintBoss10(ctx, f, skin, theme);
       return;
     case 'boss11':
-    case 'boss11Hit': {
-      // THE GYRE: a cog — sixteen teeth about a hub with a hole in it. Round like the axis and not the
-      // axis: its edge goes in and out sixteen times.
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * Math.PI * 2;
-        const reach = i % 2 === 0 ? 1 : 0.76;
-        const x = half + Math.cos(a) * reach * r;
-        const y = half + Math.sin(a) * reach * r;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-      ctx.moveTo(half + r * 0.28, half);
-      ctx.arc(half, half, r * 0.28, 0, Math.PI * 2);
+    case 'boss11Hit':
+    case 'boss11Chipped':
+    case 'boss11ChippedHit':
+    case 'boss11Broken':
+    case 'boss11BrokenHit': {
+      /*
+        THE GYRE: a cog — sixteen teeth about a hub with a hole in it. Round like the axis and not
+        the axis: its edge goes in and out sixteen times.
+
+        ⚠️ **AND SINCE 0332 IT IS THREE BODIES AND A SPIKE.** `traceGyre` reads the wear off the
+        name, exactly as the fish's faces do: whole, chipped at two thirds, broken at two fifths —
+        and the point at the sprite's `+x` is the one the player steers by, which is why it is the
+        one thing all three keep.
+      */
+      const wear = kind.startsWith('boss11Broken') ? 2 : kind.startsWith('boss11Chipped') ? 1 : 0;
+      traceGyre(ctx, f, wear);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintBoss11(ctx, f, skin, theme);
+      if (skin !== null) paintBoss11(ctx, f, skin, wear);
       return;
     }
+    case 'boss11Seat':
+      /*
+        THE HOUSING THE GYRE IS SET INTO — 0332. A ring with four lugs and a bore through it. It has
+        no hurt twin because nothing ever hits it, and it is sealed in the place's own `sky` rather
+        than in a foe's skin: it is the wall, not the creature.
+      */
+      trace(ctx, f, GYRE_SEAT_RIM);
+      ring(ctx, f, 0, 0, GYRE_SEAT_BORE);
+      ctx.fillStyle = palette.sky;
+      seal(ctx);
+      paintBoss11Seat(ctx, f, palette);
+      return;
     case 'boss12':
     case 'boss12Hit':
       // THE FROST SHIP — 0264: a long crystal, its point to the front, two great ice-spires swept

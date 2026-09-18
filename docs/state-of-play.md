@@ -135,7 +135,7 @@ current number is whatever `gh run list` says — not whatever this file last sa
 | **the eagle summons: a whip of flames that bows as it flies, and volleys that put kites and raptors on the field — the kite is a new body, the eagle's to call** | [0249](decisions/0249-the-eagle-summons.md) |
 | **the quetzal screams: a laser is a beam that warns, is held, and hurts for as long as it is on; two from the wings, one wide from the mouth, and the hull braces to fire** | [0250](decisions/0250-the-quetzal-screams.md) |
 | **the volcanoes belch: a fall on the boss's row rains rock from the top of the screen through every phase — the rock the biggest and slowest bullet, hot, retiring below the lane** | [0251](decisions/0251-the-volcanoes-belch.md) |
-| **the gyre spins: a curtain has four stances and a spinning wall takes them in turn — across the lane, slanted corner to corner, along the lane falling from the top edge, slanted back — one hole at the same share of every line, never from behind** | [0252](decisions/0252-the-gyre-spins.md) |
+| ~~the gyre spins: a curtain has four stances and a spinning wall takes them in turn, never from behind~~ — **amended by 0332 below: eight stances, and one of them comes from behind** | [0252](decisions/0252-the-gyre-spins.md) |
 | **the frost ship chills: a hull's cold on the row scales the stick's ask inside its radius and freezes a ship that stays; the frost shard in its own cold ink, in the one rung the ladder had left; shards as adds** | [0253](decisions/0253-the-frost-ship-chills.md) |
 | **the hydra grows heads: a head is a shot and an attack, a phase grows one and keeps the rest, and the heads take turns a volley — acid, flame, a laser, frost, void** | [0254](decisions/0254-the-hydra-grows-heads.md) |
 | **the jellyfish opens: tendrils are pulsing beams from the bell; a fall is a shot or a body and starts at a share of the health — moon jellies, a new body no level sends, sink across the lane; a third stance opens and keeps throwing void** | [0255](decisions/0255-the-jellyfish-opens.md) |
@@ -1024,6 +1024,22 @@ and `0166 — THE TRAJECTORY MOVES A BOUNDARY LESS` had been reading Saurian Bel
 dB boundary** and passing. Narrowed to the layers the solve has an opinion about, the claim is false in
 two places and `NOT_STEADIER` names both. **A guard can sit green on the wrong quantity as easily as
 it can go red on one** — 0027, and 0019's probes cannot see it.
+
+### ⚠️ THE GYRE IS A COG IN A WALL NOW, AND WHAT IS OWED IS THE PLAY — 2026-09-18
+
+⚠️ **[0332](decisions/0332-the-gyre-is-set-into-the-wall.md) AMENDS
+[0252](decisions/0252-the-gyre-spins.md) AND [0151](decisions/0151-the-gap-you-have-to-reach.md).**
+Four asks on the Labyrinth's boss: upscale it and let it wear its damage, lock it into the place,
+point the walls where the cog's spike points, and quicken them as it is hurt. The decision has the
+numbers and, more usefully, the three things the instruments sent back that no guard could — the
+sheet calling the first upscale a star, the motif reading as noise on a wheel, and a probe finding
+the reach guard driving the one difficulty tier where its number does not matter.
+
+⚠️ **AND IT IS THE FIRST BOSS IN THE GAME WHOSE FIGHT IS ITS ATTACK RATHER THAN ITS FLIGHT.** A
+socketed hull does not dodge, so seventeen walls and a rake are the whole of it. **Whether that is a
+better fight or a stationary target is a PLAY question and nothing here answers it** — it is the
+first thing to look for on the branch preview, ahead of every other item on the gyre's list in
+[`the-bosses-planned`](../reports/the-bosses-planned-2026-09-16.md).
 
 ### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
 

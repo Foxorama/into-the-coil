@@ -29,8 +29,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 4 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 4, spin: false, quicken: null },',
     },
   },
   {
@@ -47,8 +47,8 @@ export const PROBES = [
     guard: 'and it can be REACHED from the far wall, which is where a static hole may sit',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 84, hole: 12, spin: false },',
+      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null },',
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 84, hole: 12, spin: false, quicken: null },',
     },
   },
   {
@@ -83,8 +83,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14, spin: false },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14, spin: false, quicken: null },',
     },
   },
   {
@@ -131,8 +131,8 @@ export const PROBES = [
     guard: 'and it is thrown again and again, which is the half a phase could not say',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
-      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14, spin: false },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },',
+      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },',
     },
   },
   {
@@ -153,8 +153,8 @@ export const PROBES = [
     guard: 'and the whole hole is inside the lane',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14, spin: false },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14, spin: false, quicken: null },',
     },
   },
 ];

@@ -86,7 +86,7 @@ import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { belch, curtainStance, openBy, phaseFor, stepBoss, throwCurtain, uncoilsBy } from './boss.ts';
+import { COG_TICK, belch, cogTurn, curtainStance, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
@@ -5865,6 +5865,22 @@ function driveBoss(w: World): void {
       is a notch spent.
     */
     if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
+    /*
+      ── AND THE HULL TICKS ROUND TO SHOW WHICH WALL IS NEXT — 0332 ──────────────────────────────
+
+      ⚠️ **ASKED FOR**: *"when it fires a wall, it ticks around like a cog to point in the next
+      direction… and the wall comes from that direction it's pointing when it next comes."*
+
+      ⚠️ **IT IS AIMED AT `bossUncoilAt` AND NOT AT `notch − 1`, WHICH IS THE WHOLE POINT.** The
+      stance thrown a moment ago is `notch − 1`; the count the world now holds is the index of the
+      wall that has NOT been thrown. So the spike spends the entire gap between two walls aimed at
+      the edge the next one comes in over — and a wall from astern is announced for seconds rather
+      than discovered at the trailing edge.
+
+      ⚠️ **ONLY A ROW THAT SPINS TURNS**, or thirteen hulls baked facing down the lane would start
+      rotating because a boss somewhere else grew a spike.
+    */
+    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);
   }
 
   /*
@@ -6067,12 +6083,28 @@ const BITE_STEPS = 7;
  * is where it is LOOKING.
  */
 function wearFace(w: World, boss: Entity): void {
+  const phase = phaseFor(w.bossRow, boss.health, w.bossFullHealth);
+  /*
+    ⚠️ **AND THE PHASE'S OWN BODY WHERE IT AUTHORS ONE — 0332**: *"have it change as it gets more
+    damaged."* A hull that fills its own box has no jaw to move, so what a phase changes on one is
+    the single bitmap it has — the gyre chipped and then broken. Asked of the phase every step for
+    the same reason the faces are, so the damage appears on the step the phase does.
+
+    ⚠️ **BEFORE THE FACE AND NOT INSIDE IT**, because the two are different facts about different
+    animals: thirteen bosses have no face at all and the line below sends them home. A body that
+    wore its damage inside the face branch would wear it on nothing.
+  */
+  const worn = phase.hull;
+  if (worn !== undefined) {
+    boss.spriteBase = worn.rest;
+    boss.spriteHit = worn.hit;
+  }
   /*
     ⚠️ **THE PHASE'S FACES WHERE IT AUTHORS A LOOK — 0305**: the same seven faces with the horns
     grown. Asked of the phase every step rather than remembered, on `openBy`'s terms, so the horns
     change on the step the phase does and there is no second answer to go stale.
   */
-  const face = phaseFor(w.bossRow, boss.health, w.bossFullHealth).look?.face ?? w.bossRow.face;
+  const face = phase.look?.face ?? w.bossRow.face;
   if (face === null) return;
   const gaze = w.ship.across - boss.across;
   /*
@@ -6317,6 +6349,39 @@ function layChain(w: World): void {
  */
 function layAura(w: World): void {
   const head = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+  /*
+    ── AND THE SAME LAYER CARRIES THE HOUSING A BOSS IS SET INTO — 0332 ───────────────────────────
+
+    ⚠️ **ASKED FOR**: *"locked into the background like a cog set into an image."* What is drawn
+    BEHIND the hull is exactly this pool — a serpent's flames and a gyre's mounting are the same
+    question asked twice — so the seat is one entity in it, at the hull's place, taking the hull's
+    previous place so it interpolates with the thing it holds rather than a step behind it.
+
+    ⚠️ **A BOSS HAS AN AURA OR A SEAT AND NEVER BOTH**, which is an invariant over the content table
+    rather than an arrangement in the code: one pool, one thing in it per boss. `tests/gyre.test.ts`
+    holds it, because a row that authored both would silently lose one of them here and the picture
+    is the only place that would say so.
+  */
+  const move = w.bossRow.move;
+  if (head !== null && move.kind === 'socket') {
+    if (w.bossAura.size === 0) {
+      const seat = w.bossAura.spawn();
+      // `AURA_FLAME` and then the bitmap, exactly as the flames are written every step: the sprite is
+      // a number on a content row, and a second `Body` per boss would be a table to keep in step.
+      if (seat !== null) reset(seat, head.along, head.across, AURA_FLAME);
+    }
+    for (let i = 0; i < w.bossAura.size; i++) {
+      const seat = w.bossAura.at(i);
+      seat.along = head.along;
+      seat.across = head.across;
+      seat.prevAlong = head.prevAlong;
+      seat.prevAcross = head.prevAcross;
+      seat.sprite = move.seat;
+      seat.spriteBase = move.seat;
+      seat.spriteHit = move.seat;
+    }
+    return;
+  }
   const aura = head === null ? null : (phaseFor(w.bossRow, head.health, w.bossFullHealth).look?.aura ?? null);
   if (head === null || aura === null) {
     w.bossAura.clear();

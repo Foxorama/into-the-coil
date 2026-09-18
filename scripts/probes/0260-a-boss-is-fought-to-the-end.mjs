@@ -31,8 +31,9 @@ export const PROBES = [
     guard: '0260 — the gyre throws its first wall inside six seconds',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },',
-      replace: '    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },',
+      // ⚠️ Re-anchored by 0332, which gave the gyre's wall a quickening ladder.
+      find: '    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 } },',
+      replace: '    uncoil: { from: 0.5, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 } },',
     },
   },
 ];
