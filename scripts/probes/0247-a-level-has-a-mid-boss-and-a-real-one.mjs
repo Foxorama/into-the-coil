@@ -11,9 +11,13 @@ export const PROBES = [
     guard: 'THE TWO FIGHTS: the mid-boss arrives',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0256, which throws the mid-boss's drop between the radius and `nextFight`.
-      find: '        nextFight(w);\n      } else {',
-      replace: '        nextFight(w);\n        w.clearedIn = BOSS_DEATH_STEPS;\n      } else {',
+      /*
+        ⚠️ Re-anchored by 0256, which throws the mid-boss's drop between the radius and `nextFight`,
+        and again by 0337, which puts a wreck arm between `nextFight` and the plain clear — so the
+        `} else {` this used to reach past is no longer the next line.
+      */
+      find: '        nextFight(w);\n      } else if (w.bossRow.wreck !== null) {',
+      replace: '        nextFight(w);\n        w.clearedIn = BOSS_DEATH_STEPS;\n      } else if (w.bossRow.wreck !== null) {',
     },
   },
   {

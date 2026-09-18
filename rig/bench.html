@@ -64,7 +64,13 @@
       <label><input id="hold" type="checkbox" /> hold</label>
       <label>
         boss
-        <input id="bosshp" type="range" min="5" max="100" step="5" value="100" />
+        <!--
+          ⚠️ **ZERO AND NOT FIVE — 0337.** The bench jumps to where the thing is (0205), and a boss's
+          DEATH is a thing: the gyre falls out of its wall, crashes into the floor and opens the room,
+          and none of that could be looked at because the scrub's floor kept it alive. At zero the
+          next hit takes it, which is the fight's own ending rather than a second way of ending it.
+        -->
+        <input id="bosshp" type="range" min="0" max="100" step="5" value="100" />
       </label>
       <span id="where">—</span>
     </header>

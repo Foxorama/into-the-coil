@@ -1245,6 +1245,35 @@ export interface Wheel {
  * `from`, and the count runs between them as the bar falls — so the fire is something the player
  * watches take hold rather than a state that switches on.
  */
+/**
+ * A wreck: a hull that comes out of its wall and falls instead of exploding —
+ * `docs/decisions/0337-the-gyre-falls-out-of-the-wall.md`.
+ *
+ * ⚠️ **ASKED FOR**: *"when it dies, instead of exploding, have it fall out of the wall and crash down
+ * into the floor, and then the far right wall opens so the player can fly onwards."*
+ *
+ * ⚠️ **DOWN IS `across`, WHICH IS THE ONLY DOWN A TOP-DOWN GAME HAS.** The room has a floor — the
+ * wall along the far edge of the lane — and the cog falls to it, accelerating and tumbling, and stops
+ * where its own rim meets it. Nothing else in the game accelerates: every speed in this file is a
+ * rate a row states, because a fight has to be the same fight on every machine. **A death is the one
+ * place that does not matter**, and a thing falling is the one picture that needs it.
+ *
+ * ⚠️ **AND IT IS STILL IN THE BOSS'S POOL, WHICH IS WHY `driveBoss` HAD TO LEARN THE WORD *BEATEN*.**
+ * A wreck is the hull, not a replacement for it — the same bitmap, the same size, the fire it caught
+ * still burning on it. What it is not is a target: nothing may shoot a thing that is already dead,
+ * and the gate that says so is one line.
+ */
+export interface Wreck {
+  /** Across units per step per step it falls, once it is out of its seat. */
+  gravity: number;
+  /** Radians a step it tumbles as it goes. */
+  tumble: number;
+  /** The bitmap it wears once it has come to rest on the floor. */
+  wreckage: number;
+  /** Steps it lies there before the room begins to open. */
+  settle: number;
+}
+
 export interface Burn {
   /** The health share at or below which it catches. */
   from: number;
@@ -1448,6 +1477,11 @@ export interface BossRow extends Body {
    * The fire it catches as it is hurt, or `null` — 0336. Required, on `uncoil`'s and `room`'s terms.
    */
   burn: Burn | null;
+  /**
+   * What it does instead of exploding, or `null` for the burst every other boss dies in — 0337.
+   * Required, on `uncoil`'s and `room`'s terms.
+   */
+  wreck: Wreck | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -1493,6 +1527,14 @@ export interface Room {
   mouth: number;
   /** The bitmap the walls are tiled from. */
   wall: number;
+  /**
+   * Steps the far wall takes to part once the fight is over — 0337.
+   *
+   * ⚠️ **ASKED FOR**: *"and then the far right wall opens so the player can fly onwards."* It parts
+   * from the middle outward, and the camera comes back up on the same number — so the room lets go
+   * of the player and the level starts moving in one gesture rather than two.
+   */
+  opens: number;
 }
 
 /**
@@ -1708,6 +1750,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -1785,6 +1828,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -1850,6 +1894,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -1911,6 +1956,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -1957,6 +2003,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -2024,6 +2071,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -2100,6 +2148,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -2302,6 +2351,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
     room: null,
     burn: null,
+    wreck: null,
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -2777,6 +2827,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -2883,6 +2934,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -2975,7 +3027,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       level at its halfway point is a different decision and nobody has asked for one. 0282 — a row
       says whether it is fought in a room, and twelve of the fourteen say no.
     */
-    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall },
+    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall, opens: 90 },
     /*
       ⚠️ **IT CATCHES AT THREE QUARTERS AND IS AN INFERNO BY THE END — 0336.** *"Updated damage
       graphics for it as it gets hurt and set on fire."* Two flames when the first phase turns over
@@ -2984,6 +3036,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
       the licking past its rim.
     */
     burn: { from: 0.75, frames: [SPRITE.gyreFire0, SPRITE.gyreFire1, SPRITE.gyreFire2, SPRITE.gyreFire3], hold: 5, least: 2, most: 7, radius: 22 },
+    /*
+      ⚠️ **IT FALLS OUT OF THE WALL RATHER THAN EXPLODING — 0337.** *"When it dies, instead of
+      exploding, have it fall out of the wall and crash down into the floor."*
+
+      ⚠️ **THE GRAVITY IS SIZED AGAINST THE DROP AND NOT PICKED.** Its seat is at the lane's middle
+      and the floor is 44 units below the hull's rim; at 0.022 a step that is **about two seconds**
+      of falling, which is long enough to watch and short enough not to be a wait. It tumbles a
+      fifteenth of a radian a step — half a turn on the way down, so it is visibly out of control
+      rather than sliding.
+
+      ⚠️ **AND A SECOND LYING THERE BEFORE THE WALL MOVES**, because the crash and the way out are two
+      beats and running them together makes the first one a transition.
+    */
+    wreck: { gravity: 0.022, tumble: 0.065, wreckage: SPRITE.boss11Wreck, settle: 60 },
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -3075,6 +3141,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -3125,6 +3192,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -3236,6 +3304,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     room: null,
     burn: null,
+    wreck: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

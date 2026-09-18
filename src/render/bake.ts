@@ -464,6 +464,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11Chipped: 'enemy',
   boss11Broken: 'enemy',
   boss11Burnt: 'enemy',
+  // Dead metal is still the creature it was — 0337.
+  boss11Wreck: 'enemy',
   /*
     ⚠️ **THE FLAMES MEAN NOTHING, SO THEY WEAR AN INK THAT MEANS NOTHING — 0305's ARGUMENT, REUSED.**
     A decoration ink (0194) is the promise that nothing the player must find is drawn in it, and a
@@ -5535,6 +5537,13 @@ const GYRE_LOST: readonly (readonly number[])[] = [
   [2, 3, 6, 9, 10, 13, 14],
   // The fourth body — 0336: half the teeth gone, and none of them next to the spike.
   [2, 3, 5, 6, 7, 9, 10, 11, 13, 14],
+  /*
+    ⚠️ **AND THE WRECK, WHICH IS THE ONLY ONE THAT LOSES TEETH ON ONE SIDE — 0337.** It landed on its
+    lower edge, so what is gone is what hit the floor: the bottom half of the rim. Spread damage says
+    *worn out*; damage all on one side says *this fell*, and that is the whole difference between a
+    body that stopped working and a body that came out of a wall.
+  */
+  [4, 5, 6, 7, 8, 9, 10, 11, 12],
 ];
 
 /*
@@ -5713,12 +5722,24 @@ function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, wear: number): void {
       [cs * 0.32 + sn * 0.11, sn * 0.32 - cs * 0.11],
     ]);
   }
-  const core = GYRE_HUB + wear * 0.04;
+  /*
+    ⚠️ **AND THE WRECK'S CORE HAS GONE OUT, WHICH IS THE ONE THING THAT SEPARATES IT FROM THE BODY IT
+    WAS — 0337.** Every stage before it burns brighter as it breaks; this one is the shadow ink all
+    the way through. A cog lying on the floor with a white heart still in it has not finished dying.
+  */
+  const dead = wear >= 4;
+  const core = GYRE_HUB + Math.min(wear, 3) * 0.04;
   disc(ctx, f, shade(skin.plate, -0.4), 0, 0, core);
-  disc(ctx, f, skin.eye, 0, 0, core * (0.6 + wear * 0.08));
-  disc(ctx, f, skin.lit, 0, 0, core * (0.22 + wear * 0.11));
-  // Last of all, so nothing this body does to itself can take it — see above.
-  lit(ctx, f, skin, [
+  disc(ctx, f, dead ? shade(skin.plate, -0.6) : skin.eye, 0, 0, core * (0.6 + Math.min(wear, 3) * 0.08));
+  if (!dead) disc(ctx, f, skin.lit, 0, 0, core * (0.22 + wear * 0.11));
+  /*
+    The spike, last of all so nothing this body does to itself can take it — see above.
+
+    ⚠️ **THE WRECK'S IS DARK, BECAUSE IT IS NOT A TELL ANY MORE.** For the whole fight this mark
+    means *the next wall comes in over there*; on a hull lying on the floor it means nothing, and a
+    mark that goes on shouting after it has stopped meaning anything is the thing 0081 is about.
+  */
+  poly(ctx, f, dead ? shade(skin.plate, -0.25) : skin.lit, [
     [GYRE_HUB, -0.06],
     [0.92, 0],
     [GYRE_HUB, 0.06],
@@ -7381,7 +7402,8 @@ export function drawKind(
     case 'boss11Broken':
     case 'boss11BrokenHit':
     case 'boss11Burnt':
-    case 'boss11BurntHit': {
+    case 'boss11BurntHit':
+    case 'boss11Wreck': {
       /*
         THE GYRE: a cog — sixteen teeth about a hub with a hole in it. Round like the axis and not
         the axis: its edge goes in and out sixteen times.
@@ -7391,13 +7413,20 @@ export function drawKind(
         broken at a half, burnt at a quarter — and the point at the sprite's `+x` is the one the
         player steers by, which is why it is the one thing all four keep.
       */
-      const wear = kind.startsWith('boss11Burnt')
-        ? 3
-        : kind.startsWith('boss11Broken')
-          ? 2
-          : kind.startsWith('boss11Chipped')
-            ? 1
-            : 0;
+      /*
+        ⚠️ **AND A FIFTH WEAR THAT IS NOT A PHASE — 0337.** `boss11Wreck` is what is left after it
+        falls out of the wall: the burnt body with its rim stove in on one side, its spokes down and
+        its core gone out. It wears no phase and takes no hit, because nothing hits it.
+      */
+      const wear = kind === 'boss11Wreck'
+        ? 4
+        : kind.startsWith('boss11Burnt')
+          ? 3
+          : kind.startsWith('boss11Broken')
+            ? 2
+            : kind.startsWith('boss11Chipped')
+              ? 1
+              : 0;
       traceGyre(ctx, f, wear);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
