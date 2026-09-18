@@ -84,7 +84,10 @@ const FLUTE_LINE: readonly (number | null)[] = [
   7, _, _, _, 10, _, _, _, 12, _, _, _, 14, _, 12, _,
 ];
 
-export const TITLE_PARTS = {
+/** The parts of the title's piece: a closed set of names, as every content table is keyed by one (0016). */
+export type TitlePartName = 'drone' | 'bass' | 'heart' | 'pad' | 'arp' | 'lead' | 'flute';
+
+export const TITLE_PARTS: Record<TitlePartName, TitlePart> = {
   // The drone's saws only: its sine an octave under them sat at 55–65 Hz, on the heart's own body (see TITLE_SCORE).
   drone: { voices: MUSIC.drone.filter((v) => v.octave > 0).map((v) => ({ ...v, steps: v.steps[0] === 7 ? TITLE_FIFTH : TITLE_ROOT })), bars: 8, air: 0.6, pan: 0 },
   bass: { voices: MUSIC.bass.map((v) => (v.pitched ? { ...v, steps: walked(v.steps) } : v)), bars: 8, air: 0.05, pan: 0 },
@@ -93,7 +96,7 @@ export const TITLE_PARTS = {
     sound which is overpowering the rest of the music, I was calling it the metronome previously… can we replace
     it with a quieter background heartbeat."* `MUSIC.beat` is two bars of kick and clap, which is *two beats back
     and forth* by construction (0108 fixed that in `engine` and never in the title's own drums). What is under
-    the groove now is a heart, far back, about 47 a minute — the album's first sound of the thing it ends on.
+    the groove now is a heart, far back, 75 a minute — the album's first sound of the thing it ends on.
   */
   heart: {
     voices: [
@@ -143,9 +146,7 @@ export const TITLE_PARTS = {
     air: 0.5,
     pan: 0.15,
   },
-} satisfies Record<string, TitlePart>;
-
-export type TitlePartName = keyof typeof TITLE_PARTS;
+};
 
 /**
  * The score: how many bars each section lasts and how loud each part is in it (1 is the part's own level).

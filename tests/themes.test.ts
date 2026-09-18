@@ -22,6 +22,7 @@ import {
   REBASE,
   holdOf,
   contourOf,
+  barsOf,
 } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
@@ -35,7 +36,7 @@ import {
   MUSIC_GAIN,
   type MusicLayer,
   MUSIC_DRIVE,
-  secondsOfLayer,
+  BAR_SECONDS,
 } from '../src/content/music.ts';
 import { AURA_LAYERS, LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
@@ -705,8 +706,14 @@ describe('0128 — a place plays its own material, and shares everything it does
         for (const layer of own) {
           const base = baseLoops[layer];
           const mine = here[layer];
+          /*
+        ⚠️ **A PLACE MAY SAY HOW MANY BARS ITS OWN LAYER LOOPS OVER** — 0331, and `barsOf` is that answer. Saurian
+        Belt's fills land on the fourth bar of every phrase, which is a sixteen-bar question in a slot whose shared
+        length is eighteen. The rule is unchanged and is asked of the place's own number.
+          */
+          const bars = barsOf(theme, layer);
           expect(mine.length, `${theme}/${layer} changed the LENGTH of a layer, which breaks the phrase`).toBe(
-            base.length,
+            bars === LAYER_BARS[layer] ? base.length : Math.round((base.length * bars) / LAYER_BARS[layer]),
           );
           let moved = 0;
           for (let i = 0; i < base.length; i++) if (Math.abs(base[i]! - mine[i]!) > 1e-6) moved++;
@@ -734,11 +741,13 @@ describe('0128 — a place plays its own material, and shares everything it does
       for (const layer of revoicedBy(theme)) {
         for (const [i, voice] of voicesOf(theme, layer).entries()) {
           const spans = voice.steps.length * (BEAT_SECONDS / voice.perBeat);
+          // 0331: against the PLACE's own loop length — see `barsOf`.
+          const seconds = BAR_SECONDS * barsOf(theme, layer);
           expect(
             spans,
-            `${theme}/${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer)}s layer — ` +
-              (spans > secondsOfLayer(layer) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
-          ).toBeCloseTo(secondsOfLayer(layer), 6);
+            `${theme}/${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${seconds}s layer — ` +
+              (spans > seconds ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
+          ).toBeCloseTo(seconds, 6);
         }
       }
     }

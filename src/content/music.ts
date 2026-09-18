@@ -285,13 +285,14 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
     ⚠️ **LONGER, SO A HEART CAN BEAT AT THE SPEED ASKED RATHER THAN THE SPEED FOUR BARS DIVIDE INTO** —
     0331's eleventh and twelfth listens: every ~3.7 s at the opening (seven beats in sixteen bars), every
     ~2.6 s in the second movement (five in eight), every ~1.4 s in the acceptance (nine in eight). Four
-    bars is 6.4 seconds and holds none of those evenly. Only The Black Heart sounds these three slots
+    bars is 6.4 seconds and holds none of those evenly. ⚠️ **AND THE LENGTH IS THE PLACE'S, NOT THE SHARED SET'S** — it is stated on `THEMES.core.bars`, because a
+    number here is resident for every place and 0188's budget is the shared set. Only The Black Heart sounds these three slots
     (`ownA` is Saurian Belt's and The Approach's too, and stays four); they cost about 5.7 MB of 0188's
     resident budget together, and the guard measuring that is owed its re-reading when this ships.
   */
-  ownB: 8,
-  ownC: 18,
-  ownD: 8,
+  ownB: 4,
+  ownC: 4,
+  ownD: 4,
 };
 
 /**
@@ -2349,10 +2350,10 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
         reported of the renders: *"the other tracks have a bit of static and pop throughout them."* Measured
         per layer, the ride was the loudest thing above the top of every other part in five places — noise
         from 5 to 11 kHz on every sixteenth, which is what static is — by as much as 16 dB in The Shoal. Every
-        ride now reaches down to 2.5–4 kHz and stops at 5.5–8, about 3 dB quieter, with a millisecond to
+        ride now reaches down to 2.5–4 kHz and stops at 5.5–8, with a millisecond to
         speak: a tick rather than a hiss, on the same rhythm.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.09, attack: 0.001, curve: 2.6, lowFrom: 7000, lowTo: 4500, highFrom: 3200, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.125, attack: 0.001, curve: 2.6, lowFrom: 7000, lowTo: 4500, highFrom: 3200, q: 0.7 },
     },
     {
       // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
@@ -2363,7 +2364,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       octave: 0,
       // ⚠️ Raised with the wash above it and by the same factor — 0140. The bell is what gives the
       // pattern a centre; lifting only the hiss would change the ride's shape, not its level.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.065, attack: 0.001, curve: 3.4, lowFrom: 5500, lowTo: 3200, highFrom: 2600, q: 1.2 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.088, attack: 0.001, curve: 3.4, lowFrom: 5500, lowTo: 3200, highFrom: 2600, q: 1.2 },
     },
   ],
 

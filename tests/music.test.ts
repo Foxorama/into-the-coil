@@ -52,7 +52,7 @@ import {
   auditionRung,
   levelOfPlace,
 } from '../src/app/music.ts';
-import { auraCeilingOf, panTrackOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { auraCeilingOf, barsOf, panTrackOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
 import { readFileSync } from 'node:fs';
@@ -556,7 +556,9 @@ describe('how far up the ladder a run is', () => {
       gauntlet: [['run', 0.0], ['push', 36.64], ['surge', 72.33], ['approach', 102.69]],
       // ⚠️ 0180 — driven on the desk. 39.97 → 20.67, and `push` and `surge` take what the opening
       // gave up. This is the number this guard printed, pasted back, which is what its note says to do.
-      eye: [['run', 0.0], ['push', 20.67], ['surge', 65.56], ['approach', 110.72]],
+      // ⚠️ AND THEN FOUR MOVEMENTS, EACH ON A PHRASE — 0331. The lament to bar 16, the same song faster to bar 36,
+      // the ballad to bar 72, the acceptance into the fight; `LEVELS.eye.sections` is where those bars are written.
+      eye: [['run', 0.0], ['push', 25.5], ['surge', 57.5], ['approach', 115.14]],
     };
 
     for (const kind of LEVEL_KINDS) {
@@ -2049,13 +2051,15 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
         if (track === undefined) continue;
         tracks++;
         const bars = track.steps.length / (track.perBeat * 4);
+        // 0331: against the place's own loop length, which a row may state (`barsOf`).
+        const loop = barsOf(theme, layer);
         expect(
           bars,
-          `${theme}/${layer} moves over ${bars} bars, which is not a whole number of ${LAYER_BARS[layer]}-bar loops`,
+          `${theme}/${layer} moves over ${bars} bars, which is not a whole number of ${loop}-bar loops`,
         ).toBe(Math.round(bars));
         expect(
-          LAYER_BARS[layer] % bars,
-          `${theme}/${layer}'s track is ${bars} bars against a ${LAYER_BARS[layer]}-bar loop, so it walks`,
+          loop % bars,
+          `${theme}/${layer}'s track is ${bars} bars against a ${loop}-bar loop, so it walks`,
         ).toBe(0);
         for (const to of track.steps) {
           if (to === null || to === undefined) continue;

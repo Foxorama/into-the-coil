@@ -678,7 +678,8 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       // ⚠️ 17 ms of decay where `curve: 6` over 0.04 s gave 7 — the least sick of the six and the same
       // line — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`. The gain comes down by the same
       // fifth; the attack and the band, which are this place's own, do not move.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.001, curve: 4, lowFrom: 6000, highFrom: 2500 },
+      // 0331: and back to its own level — the click was the attack, not the gain, and a fifth off left it inaudible under the sludge (0140).
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.145, attack: 0.001, curve: 4, lowFrom: 6000, highFrom: 2500 },
     },
   ],
 

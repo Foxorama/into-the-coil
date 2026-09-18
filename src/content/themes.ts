@@ -1633,7 +1633,8 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     onBeat: ['ownD', 'crash', 'ownB', 'stomp', 'beat'],
     // 0331's fifteenth: the ballad is one piece of thirty-six bars, bar 36 to bar 72.
     // 0331's sixteenth: forty-two, so the ballad runs on under the acceptance into the fight.
-    bars: { groove: 42, counter: 42, beat: 42, bass: 16 },
+    // 0331: and the three hearts’ own slots, which are this place’s alone — the shared set stays at four bars (0188’s budget).
+    bars: { groove: 42, counter: 42, beat: 42, bass: 16, ownB: 8, ownC: 18, ownD: 8 },
     /*
       0331's fifteenth: the ballad's heart lives in `crash`, which this place never sounds — held centred.
       0331's twentieth: *"left ear slightly overpowers the right ear at 30 secs, the flute is playing second
