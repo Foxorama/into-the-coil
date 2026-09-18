@@ -1333,8 +1333,75 @@ export interface BossRow extends Body {
    * `docs/decisions/0306-the-serpent-coils-in.md`. Required, on `uncoil`'s terms.
    */
   entrance: Entrance | null;
+  /**
+   * The room this fight happens in, or `null` for a fight the level scrolls straight through —
+   * `docs/decisions/0335-the-fight-happens-in-a-room.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"I want the cog to be part of the wall and stationary on arrival, and the
+   * background map to have walls on the top, bottom and right side to represent labyrinth walls, and
+   * the background map to stop moving — you've found the boss and are fighting it in a specific
+   * room."*
+   *
+   * ⚠️ **THE CAMERA COMES TO REST, WHICH IS THE WHOLE MECHANISM AND THE REST IS PICTURE.** Everything
+   * in this game holds station in the camera's frame (0034), so a camera that stops is a world that
+   * stops: the sky stops, the landmarks stop, the hull that was tracking `camera + station` stops
+   * with them, and the ship goes on flying its box because its box is the camera's too. Nothing has
+   * to be told to stand still.
+   *
+   * ⚠️ **AND NOTHING THAT KEEPS TIME IS THE CAMERA.** `w.steps` is the sim's own clock and
+   * `src/app/frame.ts` says in as many words that the camera *is a distance that equals a time, not a
+   * time* — the gun's phase, the music's beat and the fight's own rungs are all on `steps`, and
+   * `musicLevelFor` answers `boss` off the hull being on the field rather than off any distance. That
+   * was the risk in this and it was checked before a line was written.
+   *
+   * ⚠️ **REQUIRED, ON `uncoil`'s TERMS**: a boss the level scrolls past is a decision somebody made.
+   */
+  room: Room | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
+}
+
+/**
+ * A room: the place a fight happens, and the camera stopping in it — 0335.
+ *
+ * ── THE CAMERA COMES TO REST AT AN AUTHORED DISTANCE, AND THE HULL FOLLOWS IT ────────────────────
+ *
+ * ⚠️ **`stand` IS WHERE THE CAMERA STOPS, MEASURED BACK FROM THE FIGHT'S OWN DISTANCE.** The level
+ * places the fight at a camera distance (`bossAt`, or the mid-boss's `at`); this says how far short
+ * of it the camera comes to rest. Everything else falls out: the hull is pulled to `camera +
+ * station` and the camera has stopped, so the hull stops; the ship's box is measured from the camera,
+ * so the room is exactly the box the player can fly in.
+ *
+ * ⚠️ **AND IT DECELERATES OVER `settle` RATHER THAN STOPPING DEAD** —
+ * `docs/decisions/0215-a-transition-is-a-shape-not-an-instant.md`, which is about a mix and is the
+ * same claim about a camera: the biggest arrival in the game landing as a step is the defect that
+ * decision is named for. A half-cosine over `settle` world units is the shape, and it runs the other
+ * way when the fight ends, so the room is something the player leaves rather than something that is
+ * taken away.
+ *
+ * ⚠️ **THE WALLS ARE A PLACE AND NOT AN OVERLAY.** They stand at world positions and arrive by
+ * scrolling in, like everything else the level places — so there is no moment at which a wall appears
+ * on a screen it was not already approaching. `mouth` is how far behind the resting camera the room's
+ * open side is; the far wall is the forward edge of the player's own box, which is why the ship
+ * cannot reach it.
+ */
+export interface Room {
+  /** World units short of the fight's own distance the camera comes to rest. */
+  stand: number;
+  /**
+   * Steps the deceleration into that rest takes, and the acceleration out of it.
+   *
+   * ⚠️ **STEPS AND NOT WORLD UNITS, WHICH A DRIVE HAD TO SAY.** A ramp written against the distance
+   * REMAINING is a first-order approach: the rate goes to zero as the gap does and the camera
+   * converges without ever landing. Measured, it crept at three ten-thousandths of a unit a step and
+   * never arrived — and `scripts/weigh-bullets.mjs`, which walks a level until the camera reaches the
+   * fight, stood still for its whole six-minute cap. A ramp over steps ends.
+   */
+  settle: number;
+  /** How far behind the resting camera the room's open side sits, in world units. */
+  mouth: number;
+  /** The bitmap the walls are tiled from. */
+  wall: number;
 }
 
 /**
@@ -1548,6 +1615,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -1623,6 +1691,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -1686,6 +1755,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -1745,6 +1815,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -1789,6 +1860,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -1854,6 +1926,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -1928,6 +2001,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -2128,6 +2202,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       every boss has.
     */
     entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
+    room: null,
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -2601,6 +2676,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       `tests/volans.test.ts` parks a live ship in it for the whole flight.
     */
     entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
+    room: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -2705,6 +2781,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -2785,6 +2862,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    /*
+      ⚠️ **THE ONE ROOM IN THE GAME — 0335.** *"The cog is part of the wall and stationary on arrival
+      … the background map stops moving — you've found the boss and are fighting it in a specific
+      room."* The camera comes to rest sixty units short of the fight's authored distance, which puts
+      the cog on its station and stops it there with everything else; the mouth is forty behind the
+      resting camera, so the room's open side — the way the player came in — is just off the trailing
+      edge and the two side walls run the whole screen.
+
+      ⚠️ **AND IT IS THE END BOSS'S AND NOT THE LATTICE'S**, which shares this level: stopping the
+      level at its halfway point is a different decision and nobody has asked for one. 0282 — a row
+      says whether it is fought in a room, and twelve of the fourteen say no.
+    */
+    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall },
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -2834,6 +2924,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -2882,6 +2973,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -2991,6 +3083,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    room: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

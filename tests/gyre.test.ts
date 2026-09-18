@@ -636,6 +636,107 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     }
   });
 
+  it('THE ROOM: the world comes to rest for the fight, and starts again when it is won', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"I want the cog to be part of the wall and stationary on arrival, and the
+      background map to have walls on the top, bottom and right side to represent labyrinth walls, and
+      the background map to stop moving — you've found the boss and are fighting it in a specific
+      room."* — `docs/decisions/0335-the-fight-happens-in-a-room.md`.
+
+      ⚠️ **HELD AS *THE CAMERA*, BECAUSE THE CAMERA IS THE WORLD.** Everything the player watches
+      holds station in the camera's frame (0034), so *the background map stops moving* and *the camera
+      comes to rest* are one claim — and the camera is the one of the two a guard can read. What is
+      driven is a real fight from a real level, not a fixture: the walk in, the stop, the whole fight,
+      and the start again.
+    */
+    const room = BOSSES.gyre.room;
+    if (room === null) throw new Error('the gyre is not fought in a room');
+    /*
+      ⚠️ **THE FILE'S OWN LEVEL AND NOT `LEVELS.shoal`, WHICH IS A COST RATHER THAN A CHOICE.** The
+      shoal puts its fight four thousand units in — two minutes of scrolling before the first
+      assertion could be made, and a mid-boss to get past first. `GYRE_ONLY` is the same frame, the
+      same spawner and the same row, with the fight a few seconds in.
+    */
+    const { world } = playableWorld(GYRE_ONLY);
+    const frame = new GameFrame(world);
+    const rest = GYRE_ONLY.bossAt - room.stand;
+    let moving = 0;
+    let stopped = 0;
+    let stoppedAt = -1;
+    let restarted = -1;
+    let killedAt = -1;
+    // Where it came to rest, caught on the step it stopped — the camera moves again afterwards.
+    let restedAt = Number.NaN;
+    for (let step = 0; step < 60 * STEPS_PER_SECOND; step++) {
+      world.ship.health = 1e6;
+      world.ship.invulnFor = 999;
+      // The mid-boss is not what this is about; it is put down so the fight under test arrives.
+      if (world.bossPool.size > 0 && world.fight === 0) world.bossPool.at(0).health = 1;
+      // And the gyre is killed once the world has been still for a while, so the other half is driven.
+      if (stopped > 4 * STEPS_PER_SECOND && world.fight === 1 && world.bossPool.size > 0 && killedAt < 0) {
+        world.bossPool.at(0).health = 1;
+        killedAt = step;
+      }
+      frame.step();
+      if (world.scrollPerStep > 0) moving++;
+      else {
+        stopped++;
+        if (stoppedAt < 0) {
+          stoppedAt = step;
+          restedAt = world.cameraAlong - world.levelOrigin;
+        }
+      }
+      if (killedAt >= 0 && world.scrollPerStep > 0 && restarted < 0 && step > killedAt + 2) restarted = step;
+    }
+    expect(stoppedAt, 'the world never came to rest').toBeGreaterThan(0);
+    /*
+      ⚠️ **AND IT RESTS WHERE THE ROW SAYS, WITHIN A STEP OF IT.** `stand` is the whole of what the
+      author controls, so a room that stopped somewhere else would be a number that means nothing. The
+      tolerance is one step of the ramp's own arithmetic: a half-cosine summed over whole steps lands
+      a fraction short of the distance the integral gives.
+    */
+    expect(
+      Math.abs(restedAt - rest),
+      `the camera came to rest ${restedAt.toFixed(1)} into the level and the row puts the room at ${rest}`,
+    ).toBeLessThan(1);
+    expect(stopped / STEPS_PER_SECOND, 'the world barely stopped').toBeGreaterThan(3);
+    expect(moving, 'the world never moved, so this measured a level that never started').toBeGreaterThan(60);
+    // The hull is in the room with it: stationary along the lane as well as across it.
+    expect(world.bossPool.size > 0 || killedAt >= 0, 'the gyre never arrived').toBe(true);
+    /*
+      ⚠️ **AND THE ROOM IS SOMETHING THE PLAYER LEAVES.** A camera that stayed stopped after the
+      fight would hold the level at its boss for ever; one that snapped back to full rate would move
+      the whole sky a step in a frame. `restarted` is the step it began again, which must exist.
+    */
+    expect(killedAt, 'the gyre was never put down, so the second half of this is undriven').toBeGreaterThan(0);
+    expect(restarted, 'the world never started again after the fight was won').toBeGreaterThan(killedAt);
+  });
+
+  it('and the room has walls on three sides, outside everywhere the ship can fly', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"walls on the top, bottom and right side to represent labyrinth walls."*
+
+      ⚠️ **HELD AGAINST THE BOX THE SHIP FLIES IN, WHICH IS WHY THE PLAYER CANNOT REACH THEM.** A wall
+      the ship could touch would be a second rule about where the player may go, and it would disagree
+      with `src/sim/flight.ts`'s somewhere. What this checks is that the three walls stand outside the
+      three edges of that box — so the room is the picture of a bound that has been there since 0074.
+    */
+    const room = BOSSES.gyre.room;
+    if (room === null) throw new Error('the gyre is not fought in a room');
+    const { world } = playableWorld(GYRE_ONLY);
+    expect(world.room, 'the level laid no room').not.toBeNull();
+    const laid = world.room!;
+    const rest = world.levelOrigin + GYRE_ONLY.bossAt - room.stand;
+    // The far wall is the forward edge of the player's box, so the ship stops exactly short of it.
+    expect(laid.to - rest, 'the far wall is not the forward edge of the box the ship flies in').toBeCloseTo(PLAYER_LEAD, 6);
+    // And the mouth is behind the resting camera, so the way in is off the trailing edge.
+    expect(laid.from, 'the room’s open side is not behind the camera that rests in it').toBeLessThan(rest);
+    // The sides: outside the lane, and the lane is already outside the player's box by its margin.
+    expect(PLAYER_MARGIN, 'the ship can reach the lane’s own edge, so it can reach a wall on it').toBeGreaterThan(0);
+    expect(laid.extent, 'the wall has no tiling period, so nothing is drawn').toBeGreaterThan(0);
+    expect(SPRITE_KINDS[laid.sprite], 'the room is not tiled from the wall the row names').toBe(SPRITE_KINDS[room.wall]);
+  });
+
   it('and it wears its damage: a body a phase, every one of them the same size', () => {
     /*
       ⚠️ **ASKED FOR**: *"upscale the graphics and have it change as it gets more damaged."* Driven

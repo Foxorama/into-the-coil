@@ -471,6 +471,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     0081's whole subject.
   */
   boss11Seat: 'sky',
+  // The room's wall is the place, on the seat's own terms — 0335. `sky` is the ink nothing the
+  // player must find is drawn in, and a wall is the thing they are found against.
+  roomWall: 'sky',
   boss12: 'enemy',
   boss13: 'enemy',
   boss14: 'enemy',
@@ -7299,6 +7302,39 @@ export function drawKind(
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss11(ctx, f, skin, wear);
+      return;
+    }
+    case 'roomWall': {
+      /*
+        THE LABYRINTH'S WALL — 0335. A block of masonry that tiles in both axes: a slab in the
+        place's own `sky`, a darker course line across it, and a lighter chamfer along one edge so a
+        run of them reads as a wall face rather than as a bar.
+
+        ⚠️ **IT TILES, SO EVERY MARK STOPS SHORT OF THE EDGES.** A mark that ran to the boundary
+        would join its neighbour's and the course lines would become one long stripe, which is the
+        seam `docs/decisions/0206-the-tile-wraps-round.md` is about at the other end of the atlas.
+      */
+      ctx.rect(half - r, half - r, r * 2, r * 2);
+      ctx.fillStyle = palette.sky;
+      seal(ctx);
+      poly(ctx, f, shade(palette.sky, -0.45), [
+        [-1, -0.12],
+        [1, -0.12],
+        [1, 0.04],
+        [-1, 0.04],
+      ]);
+      poly(ctx, f, shade(palette.sky, 0.3), [
+        [-0.86, -0.96],
+        [0.86, -0.96],
+        [0.86, -0.82],
+        [-0.86, -0.82],
+      ]);
+      poly(ctx, f, shade(palette.sky, -0.45), [
+        [-0.1, 0.12],
+        [0.06, 0.12],
+        [0.06, 0.96],
+        [-0.1, 0.96],
+      ]);
       return;
     }
     case 'boss11Seat':

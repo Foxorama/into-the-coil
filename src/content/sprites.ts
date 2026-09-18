@@ -414,6 +414,13 @@ export const SPRITE_KINDS = [
     and it has no hurt twin, because nothing ever hits it.
   */
   'boss11Seat',
+  /*
+    ⚠️ **THE LABYRINTH'S OWN WALL — 0335.** *"Walls on the top, bottom and right side to represent
+    labyrinth walls."* One block, tiled: down the lane for the two sides and across it for the far
+    one. It is the place rather than a body — nothing collides with it, and what stops the ship is
+    the box it was always flying in.
+  */
+  'roomWall',
   'boss12',
   'boss12Hit',
   'boss13',
@@ -1232,6 +1239,19 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     because the seat sits at the lane's centre and reaches 34 units either way of it.
   */
   boss11Seat: 68,
+  /*
+    ⚠️ **TWELVE, AND IT IS TWICE WHAT THE SCREEN SHOWS OF IT — 0335.** The wall's face stands at the
+    edge of the player's box, which is `PLAYER_MARGIN` — six units — inside the lane, so exactly half
+    of every tile is on the screen and the other half is in the gutter. A tile of twelve therefore
+    shows six units of masonry, which is the whole of the room the game has between where the ship is
+    stopped and where the world ends.
+
+    ⚠️ **AND IT IS A TILING PERIOD RATHER THAN A SIZE**, so what the number really decides is what a
+    room costs: two sides the length of the view and one across the lane, about forty blits against a
+    frame that already draws five hundred. A finer wall is prettier and is bought with blits
+    `tests/budget.test.ts` counts.
+  */
+  roomWall: 12,
   boss12: 33,
   boss12Hit: 33,
   boss13: 41,

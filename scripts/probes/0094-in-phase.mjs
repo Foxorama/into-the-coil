@@ -58,8 +58,9 @@ export const PROBES = [
     guard: 'and the clock counts the steps the GAME ran, which is not the same as the steps called',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    w.steps++;\n    w.prevCameraAlong = w.cameraAlong;',
-      replace: '    w.prevCameraAlong = w.cameraAlong;',
+      // ⚠️ Re-anchored by 0335, which put the room's own rate between these two lines.
+      find: '    w.steps++;\n    /*\n      ── AND THE CAMERA MAY COME TO REST — 0335',
+      replace: '    /*\n      ── AND THE CAMERA MAY COME TO REST — 0335',
     },
   },
   /*

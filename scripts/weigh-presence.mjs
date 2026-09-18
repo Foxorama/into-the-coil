@@ -36,6 +36,7 @@
 // terms: an instrument that produces nothing must not report success.
 
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { BOSSES } from '../src/content/bosses.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
@@ -91,7 +92,14 @@ export function weighPresence(kind, options = {}) {
       body.across - body.radius <= ACROSS_SPAN
     );
   };
-  while (world.cameraAlong - world.levelOrigin < level.bossAt && step < cap) {
+  // The place the fight is fought — 0335: a room brings the camera to rest short of `bossAt`, so a
+  // walk that waited for `bossAt` waited forever with the world standing still.
+  const fought = level.bossAt - (BOSSES[level.boss].room?.stand ?? 0);
+  // ⚠️ **OR UNTIL THE CAMERA STOPS, WHICH IS WHAT A ROOM DOES TO A WALK.** The settle is a sum of
+  // discrete steps and lands a fraction of a unit short of its own target, so a walk that waited for
+  // the exact number waited forever. A camera that has come to rest has arrived wherever it arrived.
+  let atRest = false;
+  while (world.cameraAlong - world.levelOrigin < fought && !atRest && step < cap) {
     world.ship.health = world.shipRow.health;
     if (sweepSeconds > 0) {
       const phase = (step / (sweepSeconds * STEPS_PER_SECOND)) * Math.PI * 2;
@@ -101,6 +109,7 @@ export function weighPresence(kind, options = {}) {
     if (world.bossPool.size > 0 && world.fight === 0) world.bossPool.at(0).health = 1;
     frame.step();
     step++;
+    if (world.scrollPerStep === 0) atRest = true;
     const boss = world.bossPool.size > 0;
     if (world.enemies.size > peak) peak = world.enemies.size;
     const live = new Set();
@@ -170,7 +179,8 @@ export function weighPresence(kind, options = {}) {
     if (r.volleysVisible === 0) row.silent++;
     row.firstSeen += r.firstSeenAt;
   }
-  return { kind, rows, peak, sawBody, reachedBoss: world.cameraAlong - world.levelOrigin >= level.bossAt };
+  // The place the fight is fought, not `bossAt` — 0335; `scripts/weigh-bullets.mjs` has the reason.
+  return { kind, rows, peak, sawBody, reachedBoss: atRest || world.cameraAlong - world.levelOrigin >= fought };
 }
 
 const isMain = process.argv[1] !== undefined && /weigh-presence\.mjs$/.test(process.argv[1].replace(/\\/g, '/'));

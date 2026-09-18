@@ -1066,6 +1066,23 @@ twice on one body, so the gap broke the arc within the hour. The chain has its o
 meanings on one field agree until one of them moves** — 0334 records it beside `spriteBase`'s own
 note about the same thing.
 
+### ⚠️ THE FIGHT MAY HAPPEN IN A ROOM, AND THE CAMERA IS THE WHOLE MECHANISM — 2026-09-18
+
+⚠️ **[0335](decisions/0335-the-fight-happens-in-a-room.md).** Asked: *"the cog is part of the wall
+and stationary on arrival … the background map stops moving — you've found the boss and are fighting
+it in a specific room."* A boss row may name a room, and a room is **a camera that comes to rest**:
+0034 puts everything in the camera's frame, so one number stops the sky, the landmarks, the hull and
+nothing else had to be told. **Read it before touching the scroll rate or the camera.**
+
+⚠️ **AND WHAT KEEPS TIME IS `w.steps` RATHER THAN THE CAMERA**, which is the fact that made this
+possible and was checked before a line was written — the gun's phase, the music's beat and the
+fight's rungs are all on the sim clock.
+
+⚠️ **THREE THINGS IT BROKE WERE THE SAME THING: A CONSTANT STANDING IN FOR A QUANTITY.**
+`scrollPerStep` was an input and a derived value at once; a crowding guard scored how fast a threat
+closes with `SCROLL_PER_STEP`; two level-walking instruments waited for a `bossAt` the camera no
+longer reaches. 0335 has each one and what it cost to find.
+
 ### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
 
 ⚠️ **[`the-album-plan`](../reports/the-album-plan-2026-09-07.md) HOLDS THE ORDER AND

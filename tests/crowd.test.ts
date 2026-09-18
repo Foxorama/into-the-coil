@@ -37,7 +37,7 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, crowdFor } from '../src/content/difficu
 import { SHARD_VOLLEY, SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
-import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
+import { SHIP_SPEED } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -83,7 +83,16 @@ function widestReachableRun(w: World, speed: number): { run: number; middle: num
   for (const pool of [w.enemyShots, w.enemies, w.bossPool]) {
     for (let i = 0; i < pool.size; i++) {
       const e = pool.at(i);
-      const closing = SCROLL_PER_STEP - e.velAlong;
+      /*
+        ⚠️ **THE CAMERA'S RATE THIS STEP, AND IT WAS THE CONSTANT — 0335.** The ship holds station in
+        the camera's frame (0034), so what a threat closes at is the camera's rate less its own. That
+        was `SCROLL_PER_STEP` and it was right only because the scroll never varied; a fight in a room
+        brings the camera to rest, and with the constant still here every threat was scored as closing
+        0.6 a step faster than it is — which moved which of them fell inside the horizon and how far
+        each had drifted across by the time it got there. The gyre's third phase came back as 2.5
+        units of room on the gentlest tier, about a field that had not changed at all.
+      */
+      const closing = w.scrollPerStep - e.velAlong;
       if (closing <= 0) continue;
       const steps = (e.along - w.ship.along) / closing;
       if (steps < 0 || steps > HORIZON) continue;

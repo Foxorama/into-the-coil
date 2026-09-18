@@ -794,6 +794,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // of the playfield rather than of a screen, and a boundary that appeared only while playing
     // would be a thing the player first meets at the moment it is already stopping them.
     bound: BOUND,
+    // No room until a level's script has one — 0335. `beginScript` lays it, and a title screen has
+    // no level and therefore no room.
+    room: null,
+    roomHold: 0,
     shipPool,
     shieldOrbs,
     exhaust,
@@ -831,6 +835,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
+    scrollRate: SCROLL_PER_STEP,
     /*
       ⚠️ **Read off the resolved WEAPON rather than off the row** — 0093 took the two cadence numbers
       off `ShipRow`, because a rung is a note value on a ladder now and a base is just its first
