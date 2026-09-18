@@ -44,6 +44,7 @@ import {
   resetPrewarm,
   sampleCue,
   sampleLayerInto,
+  releasedLayers,
   takePrewarmed,
   variantAt,
   velocitiesOf,
@@ -51,10 +52,11 @@ import {
 } from '../src/app/sound.ts';
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
-import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
+import { AURA_LAYERS, BAR_SECONDS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
 import {
   THEMES,
   THEME_KINDS,
+  barsOf,
   bakedBy,
   cueLayersOf,
   cueRowOf,
@@ -700,6 +702,50 @@ describe('the cue table', () => {
         if (takePrewarmed() === null) prewarmAudio((run) => run());
       };
 
+      it('0331 — and the shared copy of what it re-voices is let go, and baked again when it is wanted', () => {
+        /*
+          ⚠️ **THE HALF OF 0133 THAT WAS NEVER BUILT.** The place's own material was baked at the boundary
+          and the shared buffer of the same layer was kept for the life of the process — so The Black Heart,
+          which re-voices twenty-one layers and holds three forty-two-bar loops, sat on 141 MB of audio of
+          which 52 MB could not be heard from anywhere. Asked for by the hand that owns the number:
+          *"free the shared copy, I think we'll need to do loading screens in between levels anyway so we may
+          as well force the issue now."*
+
+          ⚠️ **AND THE RE-BAKE IS THE PART THAT CAN GO WRONG SILENTLY.** A place that shares a layer the last
+          place replaced needs the base version back, and getting it wrong sounds like the previous level's
+          instrument playing under this one — which is exactly what a swap at the phrase would hide. So this
+          asks for the audio, sample for sample, after a release has happened.
+        */
+        warm();
+        const mine = bakedBy('core');
+        const base = takePrewarmed()!.loops;
+        bakePlace('core', () => {}, (run) => run());
+        for (const layer of mine) {
+          expect(releasedLayers().has(layer), `core re-voices ${layer} and the shared copy was kept`).toBe(true);
+          expect(base[layer].length, `${layer}: the shared buffer is still resident`).toBe(0);
+        }
+        expect(mine.length, 'the place this is written against no longer re-voices anything').toBeGreaterThan(8);
+
+        // …and the place after it, which shares most of them, gets the base audio back.
+        let handed: Record<MusicLayer, Float32Array> | null = null;
+        bakePlace('nebula', ({ loops }) => {
+          handed = loops;
+        }, (run) => run());
+        expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
+        const whole = bakeLoops(SAMPLE_RATE, 'nebula');
+        const shared = mine.filter((layer) => !bakedBy('nebula').includes(layer));
+        expect(shared.length, 'the two places re-voice the same set, so nothing here is re-baked').toBeGreaterThan(4);
+        for (const layer of shared) {
+          expect(releasedLayers().has(layer), `${layer} was not baked again for the place that shares it`).toBe(false);
+          const a = handed![layer];
+          const b = whole[layer];
+          expect(a.length, `${layer} came back a different length`).toBe(b.length);
+          for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) throw new Error(`${layer} differs at sample ${i} after a release: ${a[i]} vs ${b[i]}`);
+          }
+        }
+      }, 120_000);
+
       it('hands over exactly what a whole bake of that place would produce', () => {
         /*
           ⚠️ **THE SAME PROPERTY THE PREWARM HAS TO HAVE, ARRIVING ONE LEVEL UP.** A place walked one
@@ -949,6 +995,47 @@ describe('the cue table', () => {
           'so this is not a phone argument; and the third raise must not be a number). What a change wanting ' +
           'more should buy is the boundary bake — docs/decisions/0133-the-place-is-baked-at-the-boundary.md.',
       ).toBeLessThan(56);
+    });
+
+    it('0331 — AND WHAT A PLACE HOLDS WHILE IT PLAYS, WHICH IS THE NUMBER NOBODY WAS MEASURING', () => {
+      /*
+        ⚠️ **THE BUDGET ABOVE COUNTS THE SHARED SET AND THE GAME DOES NOT PLAY THE SHARED SET.** A place
+        re-voices layers of its own and `bakePlace` bakes them at the boundary
+        (`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`), so what is resident while a level
+        runs is the place's own buffers plus the shared ones it did not replace. The Black Heart re-voices
+        twenty-one layers and three of them are the ballad's forty-two bars — it went past the 56 MB line
+        by half again while the guard above stayed green, because the quantity it measures is not the
+        quantity the machine holds.
+
+        ⚠️ **AND UNTIL 0331 BOTH COPIES WERE HELD.** The shared buffer of a layer the place re-voices was
+        kept beside the place's own for the life of the process: 141 MB for The Black Heart, of which 52
+        was audible nowhere. `released` in `src/app/sound.ts` drops it at the hand-over and bakes it again
+        at the next boundary that shares it, which is what this guard is here to keep true.
+
+        ⚠️ **89 MB, AND IT IS THE BALLAD** — measured per place, at 44.1 kHz, four bytes a sample:
+
+        | place | bars resident | MB |
+        |---|---|---|
+        | The Approach, Ember Nebula, Shoal, Batteries, Toxic Mire | 186 | 52.5 |
+        | Saurian Belt | 210 | 59.3 |
+        | The Black Heart | 314 | 88.6 |
+
+        The Black Heart's own three — `groove`, `counter` and `beat` at forty-two bars — are 35.6 MB of
+        that, and forty-two bars is the ballad's own harmony rather than a repeat that could be shortened.
+        **The owner of this number is whoever is willing to shorten that section**, and nobody has been.
+        0153 makes desktop the target and this spends that permission a second time, deliberately.
+      */
+      const resident = (theme: ThemeKind): number =>
+        MUSIC_LAYERS.reduce((sum, layer) => sum + barsOf(theme, layer) * BAR_SECONDS * SAMPLE_RATE * 4, 0) / 1e6;
+      for (const theme of THEME_KINDS) {
+        const mb = resident(theme);
+        expect(
+          mb,
+          `${theme} holds ${mb.toFixed(1)} MB of loops while it plays, against a BUDGET of 92 MB — a limit ` +
+            `somebody chose, and the way to buy room is a shorter section rather than a bigger number ` +
+            `(0188's own note, one measurement over).`,
+        ).toBeLessThan(92);
+      }
     });
   });
 

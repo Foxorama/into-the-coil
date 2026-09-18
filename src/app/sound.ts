@@ -60,7 +60,7 @@ import {
   type CueRow,
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, type MusicOut } from './music.ts';
 import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 /*
@@ -1038,6 +1038,21 @@ export interface WebAudioOut extends AudioOut {
 let prewarmed: { cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null = null;
 
 /**
+ * The shared layers whose buffer has been let go, because the place that is loaded re-voices them.
+ *
+ * ⚠️ **`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`, finished** — 0331. A place's own
+ * material was baked at the boundary and the shared copy of the same layer was kept beside it for ever, so
+ * The Black Heart — which re-voices twenty-one layers, three of them forty-two bars long — held its own
+ * set AND a base set it could not hear: 141 MB where one set is 89. The base copy of a layer the place
+ * re-voices is dropped once the place's own has been handed over, and baked again at the next boundary
+ * that needs it, which is a job walk like any other.
+ */
+const released = new Set<MusicLayer>();
+
+/** An empty buffer, which is what a released layer's slot holds until it is baked again. */
+const RELEASED = new Float32Array(0);
+
+/**
  * Synthesise everything, spread across frames, and keep it for the first gesture.
  *
  * ⚠️ **Idempotent and cheap to call twice** — a second call while one is in flight does nothing, and
@@ -1240,10 +1255,28 @@ export function bakePlace(
   }
   // ⚠️  and not  — a place may state a ROOM for a layer it shares the notes of,
   // and that layer's buffer is different too (0136). Sharing the dry array would drop the room.
-  for (const layer of bakedBy(theme)) {
+  const mine = bakedBy(theme);
+  for (const layer of mine) {
     jobs.push(() => {
       const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, theme);
       own[layer] = buffer;
+      for (const note of notes) jobs.push(note);
+    });
+  }
+  /*
+    ⚠️ **AND THE SHARED LAYERS THE PLACE BEFORE THIS ONE LET GO ARE BAKED AGAIN HERE** — 0331, and it is
+    the other half of `released`. This place shares them, so it needs the base version: the same job walk,
+    one note at a time, finished before the boundary like everything else in this list. Nothing is baked
+    that the incoming place does not play, which is why leaving a place costs nothing and arriving at one
+    costs only what it did not already have.
+  */
+  for (const layer of MUSIC_LAYERS) {
+    if (mine.includes(layer) || !released.has(layer)) continue;
+    jobs.push(() => {
+      const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
+      base[layer] = buffer;
+      own[layer] = buffer;
+      released.delete(layer);
       for (const note of notes) jobs.push(note);
     });
   }
@@ -1263,6 +1296,17 @@ export function bakePlace(
     next = sliceOf(jobs, next);
     if (next >= jobs.length) {
       ready({ loops: own, cues: ownCues });
+      /*
+        ⚠️ **AND THE SHARED COPY OF EVERYTHING THIS PLACE RE-VOICES IS LET GO** — 0331. It is dropped
+        AFTER the hand-over and not before, so a walk that is cancelled half way leaves the base set whole
+        and the mixer keeps playing what it has. What the player hears is the place's own buffer; the base
+        one underneath it was audible nowhere.
+      */
+      for (const layer of mine) {
+        if (own[layer] === base[layer]) continue;
+        base[layer] = RELEASED;
+        released.add(layer);
+      }
       return;
     }
     schedule(step);
@@ -1311,6 +1355,22 @@ function sliceOf(jobs: (() => void)[], at: number): number {
 export const PREWARM_SLICE_JOBS = 4;
 
 /**
+ * The base set, whole — with anything a place let go baked again here.
+ *
+ * ⚠️ **THE ONE PATH THAT CANNOT TAKE A JOB WALK** — 0331. A context built inside a gesture needs every
+ * layer at once, and `released` can only be non-empty if a run had already reached a boundary, which
+ * means the player is deep in a level and not at the title. It is the cold path's own cost, paid where
+ * the cold path already pays it.
+ */
+function wholeLoops(): Record<MusicLayer, Float32Array> {
+  const base = prewarmed?.loops;
+  if (base === undefined) return bakeLoops(SAMPLE_RATE);
+  for (const layer of released) base[layer] = bakeLayer(layer, SAMPLE_RATE);
+  released.clear();
+  return base;
+}
+
+/**
  * The prewarmed set, or `null` if there is not one. **For `tests/sound.test.ts` and nothing else.**
  *
  * ⚠️ **Exported because the property that matters cannot be checked from outside**: the prewarmed
@@ -1321,9 +1381,15 @@ export function takePrewarmed(): { cues: Float32Array[][]; loops: Record<MusicLa
   return prewarmed;
 }
 
+/** Every layer a loaded place has let go of the shared copy of — for `tests/sound.test.ts`. */
+export function releasedLayers(): ReadonlySet<MusicLayer> {
+  return released;
+}
+
 /** Throw away the prewarmed set, so a test can drive both paths. For `tests/sound.test.ts` only. */
 export function resetPrewarm(): void {
   prewarmed = null;
+  released.clear();
   warming = false;
   // ⚠️ The half-filled set goes too, or a drain after a reset completes the set the reset threw away.
   pending = null;
@@ -1485,7 +1551,7 @@ export function makeAudioOut(): WebAudioOut {
           because the four loops have to START together, and a layer created later starts wherever
           the bar happens to be.
         */
-        music = makeMusicOut(ctx, master, prewarmed?.loops ?? bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
+        music = makeMusicOut(ctx, master, wholeLoops(), SAMPLE_RATE);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
