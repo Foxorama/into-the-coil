@@ -1170,6 +1170,93 @@ export interface BossPhase {
    * probe that `find`s a whole phase line, which is six of them for nothing.
    */
   hull?: { rest: number; hit: number };
+  /**
+   * The pinwheel this phase opens with, or absent — `docs/decisions/0336-the-wheel-comes-off-its-post.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"at 75%, 50%, 25% health the cog pops out and spins in a circle like the
+   * fireworks on fence posts, spraying fire in a pinwheel style over 360° for a second or two."*
+   *
+   * ⚠️ **ON THE PHASE AND NOT ON THE ROW, WHICH IS WHAT THE ASK'S OWN NUMBERS DECIDED.** Three
+   * health shares and three phase boundaries are the same three numbers or they are two ladders that
+   * will drift; this row's phases were moved to 0.75, 0.5 and 0.25 so that **a wheel IS a phase
+   * turning over**. What comes back after the spray is a body more broken and more alight, which is
+   * the thing 0111 has wanted a phase change to say since it was written.
+   *
+   * ⚠️ **OPTIONAL, ON `rear`'s AND `escort`'s ARGUMENT** — a required field here would re-anchor
+   * every probe that `find`s a whole phase line.
+   */
+  wheel?: Wheel;
+}
+
+/**
+ * A pinwheel: the hull rising out of its seat, spraying a turning spoke of fire, and sinking back —
+ * `docs/decisions/0336-the-wheel-comes-off-its-post.md`.
+ *
+ * ⚠️ **IT RISES TOWARD THE CAMERA AND NOT DOWN THE LANE.** *"A turret popping up"* is a move on the
+ * axis the game does not have, and `swell` is how this one says it: the hull is drawn bigger and
+ * **collides bigger by exactly the same factor**, because a body drawn a fifth larger than it hurts
+ * is 0036's own defect. It costs no lane room, so nothing 0101 holds about how much screen a boss
+ * leaves is spent on it — and a lunge down the lane would have spent all of it.
+ *
+ * ⚠️ **THE SPRAY IS A SPOKE THAT TURNS, NOT A RING THAT EXPANDS.** A ring is `BossAttack`'s own arm
+ * and the jellyfish throws one; what a Catherine wheel does is emit from a point that is going round,
+ * so the shots lie on a spiral and the gaps between the arms are the way through. `arms` is how many
+ * spokes, `turns` how far round they go over the `spray`, and `every` how often a shot leaves each.
+ *
+ * ⚠️ **AND THE HULL SPINS WITH IT, WHICH COSTS THE TELL FOR A SECOND AND IS WORTH IT.** 0332's spike
+ * names the edge the next wall comes in over; while the wheel runs there is no reading it, because
+ * the player is not reading it — they are dodging. It swings back to the right point afterwards, which
+ * gives the tell a beat of its own to arrive on.
+ */
+export interface Wheel {
+  /** Steps it takes to rise out of the seat, spray, and sink back. */
+  rise: number;
+  spray: number;
+  sink: number;
+  /** How much bigger it is at full rise — drawn AND collided. */
+  swell: number;
+  /** Radians a step the hull spins while the wheel is up. */
+  spin: number;
+  /** How many spokes the spray leaves from. */
+  arms: number;
+  /** Steps between one shot leaving each spoke and the next. */
+  every: number;
+  /** Full turns the spokes sweep over `spray`. */
+  turns: number;
+  /** What it throws. */
+  shot: ShotKind;
+}
+
+/**
+ * The fire a hull carries once it is hurt — `docs/decisions/0336-the-wheel-comes-off-its-post.md`.
+ *
+ * ⚠️ **ASKED FOR**: *"updated damage graphics for it as it gets hurt and set on fire."*
+ *
+ * ⚠️ **IT IS THE SEAT'S OWN LAYER, WHICH 0335 SAID HELD ONE THING.** *A boss has an aura or a seat
+ * and never both* was true when it was written and is the thing this changes: a cog burning in a
+ * socket needs the housing AND the flames, and they are both *what is drawn behind the hull*. The
+ * seat takes the first slot and the flames follow it, which is the order they are drawn in.
+ *
+ * ⚠️ **AND BEHIND IS WHERE FIRE ON A DISC BELONGS.** The cog is opaque and fifty-two units across, so
+ * flames behind it show exactly at the rim — licking out from the edges of something burning from the
+ * inside, which is what a machine on fire looks like from above.
+ *
+ * ⚠️ **HOW MANY OF THEM IS THE ESCALATION.** `most` stand round the hull at the end and `least` at
+ * `from`, and the count runs between them as the bar falls — so the fire is something the player
+ * watches take hold rather than a state that switches on.
+ */
+export interface Burn {
+  /** The health share at or below which it catches. */
+  from: number;
+  /** The bitmaps it flickers through, in order. */
+  frames: readonly number[];
+  /** Steps each frame is held. */
+  hold: number;
+  /** How many flames at `from`, and how many when the bar is empty. */
+  least: number;
+  most: number;
+  /** How far from the hull's centre they stand, in world units. */
+  radius: number;
 }
 
 /**
@@ -1357,6 +1444,10 @@ export interface BossRow extends Body {
    * ⚠️ **REQUIRED, ON `uncoil`'s TERMS**: a boss the level scrolls past is a decision somebody made.
    */
   room: Room | null;
+  /**
+   * The fire it catches as it is hurt, or `null` — 0336. Required, on `uncoil`'s and `room`'s terms.
+   */
+  burn: Burn | null;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
 }
@@ -1616,6 +1707,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -1692,6 +1784,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -1756,6 +1849,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -1816,6 +1910,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -1861,6 +1956,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -1927,6 +2023,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -2002,6 +2099,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -2203,6 +2301,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
     room: null,
+    burn: null,
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -2677,6 +2776,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
     room: null,
+    burn: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     radius: 15,
@@ -2782,6 +2882,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -2875,6 +2976,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
       says whether it is fought in a room, and twelve of the fourteen say no.
     */
     room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall },
+    /*
+      ⚠️ **IT CATCHES AT THREE QUARTERS AND IS AN INFERNO BY THE END — 0336.** *"Updated damage
+      graphics for it as it gets hurt and set on fire."* Two flames when the first phase turns over
+      and seven when the bar is empty, so the fire is something the player watches take hold. They
+      stand at 22 units, which is the cog's own tooth circle, in the layer behind it — what shows is
+      the licking past its rim.
+    */
+    burn: { from: 0.75, frames: [SPRITE.gyreFire0, SPRITE.gyreFire1, SPRITE.gyreFire2, SPRITE.gyreFire3], hold: 5, least: 2, most: 7, radius: 22 },
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -2894,13 +3003,53 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'flak',
     /*
       ⚠️ **AND EACH PHASE WEARS ITS OWN DAMAGE — 0332**: *"have it change as it gets more damaged."*
-      Whole while it is over seven tenths, chipped from there, broken from two fifths — the same
-      rungs the fan already escalates on, so the body says what the volley is about to do.
+      Whole, then chipped, then broken, then burnt — the same rungs the fan escalates on, so the body
+      says what the volley is about to do.
+
+      ⚠️ **AND THE RUNGS ARE 0.75, 0.5 AND 0.25 BECAUSE THE PINWHEEL ASKED FOR THOSE NUMBERS — 0336.**
+      *"At 75%, 50%, 25% health the cog pops out and spins."* Three health shares and three phase
+      boundaries are one ladder or they are two that drift, so the phases moved to meet the ask and
+      **the wheel is what a phase turning over LOOKS like**: the cog rises out of its seat, sprays a
+      turning spoke of fire, sinks back — and comes back a body more broken and more alight. The old
+      0.7 and 0.4 were never argued for beyond *three phases*; these three are.
     */
     phases: [
       { upTo: 1, fireEvery: 78, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Chipped, hit: SPRITE.boss11ChippedHit } },
-      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Broken, hit: SPRITE.boss11BrokenHit } },
+      /*
+        ⚠️ **THE WHEEL, AND EVERY NUMBER ON IT IS ARGUED FROM THE SCREEN — 0295.** Three tenths of a
+        second up, **a second of spray and then a second and three quarters at the last one**
+        (*"for a second or two"*), three tenths back down. It grows by a quarter, which reads as
+        coming at the player and keeps `station − radius` at 105 against 0101's floor of 98. It spins
+        at 0.16 a step — two and a half turns while it is up — so the wheel is visibly a wheel.
+
+        ⚠️ **AND THE LENGTH IS SIZED AGAINST THE WALLS RATHER THAN AGAINST THE PICTURE, WHICH A
+        MEASUREMENT DECIDED.** No wall may be thrown while the hull is free-spinning (0336), so every
+        step of a wheel is a step of the fight the walls do not get. At two and a half seconds each,
+        three wheels filled **eight of the nine seconds** a shuriken at four rungs takes, and the
+        gyre threw ONE wall in its whole fight; `scripts/weigh-walls.mjs` is where that is read. At
+        these lengths it throws four. **A nine-second fight still cannot hold both** — see the
+        decision — but it is a fight rather than a cutscene.
+      */
+      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Chipped, hit: SPRITE.boss11ChippedHit }, wheel: { rise: 18, spray: 66, sink: 18, swell: 1.25, spin: 0.16, arms: 2, every: 4, turns: 1.5, shot: 'flame' } },
+      { upTo: 0.5, fireEvery: 60, shots: 7, spread: 1.3, patrolScale: 1.7, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Broken, hit: SPRITE.boss11BrokenHit }, wheel: { rise: 18, spray: 84, sink: 18, swell: 1.3, spin: 0.18, arms: 3, every: 5, turns: 1.75, shot: 'flame' } },
+      /*
+        ⚠️ **THE FAN HERE IS THE THIRD PHASE'S AND NOT A HARDER ONE, AND `tests/crowd.test.ts` IS
+        WHY.** A fourth phase wanted a fourth rung of fan, so this row first carried 48 steps, seven
+        shots and a spread of 1.6 — and at `savior` there was **a step with nowhere on the lane both
+        safe and reachable** (0270's fairness floor, which is not a taste and not a tier's business).
+
+        ⚠️ **AND THE WHEEL WAS NOT THE CULPRIT, WHICH TAKING IT APART IS THE ONLY WAY TO KNOW.** The
+        spokes were thinned from three to two first and the floor stayed broken; the fan put back to
+        54/7/1.4 cleared it with three spokes intact. **What escalates over these three wheels is the
+        spray's length, the spin and how far it comes out of the wall** — the fan had run out of room
+        two phases ago and nobody had measured it.
+
+        ⚠️ **SO THE THIRD PHASE'S FAN EASED BACK TO MAKE ROOM FOR THIS ONE**, because the ladder still
+        has to escalate: `tests/level.test.ts` holds that every phase fires faster than the last, and
+        with both of these at 54 it does not. 78, 66, 60, 54 is the ladder, and the fourth rung is the
+        fastest fan this fight has ever had rather than a new one on top of it.
+      */
+      { upTo: 0.25, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Burnt, hit: SPRITE.boss11BurntHit }, wheel: { rise: 18, spray: 102, sink: 18, swell: 1.35, spin: 0.2, arms: 3, every: 5, turns: 2, shot: 'flame' } },
     ],
   },
   /**
@@ -2925,6 +3074,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
@@ -2974,6 +3124,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 16,
@@ -3084,6 +3235,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     room: null,
+    burn: null,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

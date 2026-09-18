@@ -152,6 +152,7 @@ export function inertLevel(): {
   bound: null;
   room: null;
   roomHold: number;
+  bossWheelIn: number;
 } {
   return {
     /*
@@ -163,6 +164,7 @@ export function inertLevel(): {
     bound: null,
     room: null,
     roomHold: 0,
+    bossWheelIn: 0,
     // A collision fixture has no ears. `playableWorld` is the one that records cues, because it is
     // the one that drives whole levels — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
     onCue: (): void => {},
@@ -347,6 +349,7 @@ export function playableWorld(
     bound: null,
     room: null,
     roomHold: 0,
+    bossWheelIn: 0,
     shipPool,
     shieldOrbs,
     exhaust,

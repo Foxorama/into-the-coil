@@ -27,7 +27,7 @@ export const PROBES = [
     guard: 'and the wall comes from the edge the spike is aimed at',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);',
+      find: '    if (uncoil.spin && w.bossWheelIn <= 0) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);',
       replace: '    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt - 1), COG_TICK);',
     },
   },
@@ -112,8 +112,20 @@ export const PROBES = [
     guard: 'SET INTO THE WALL',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (seat !== null) reset(seat, head.along, head.across, AURA_FLAME);',
-      replace: '      if (seat !== null) w.bossAura.clear();',
+      /*
+        ⚠️ Re-anchored by 0336, and re-anchored because it had gone VACUOUS rather than stranded. It
+        used to break the seat's own `spawn`, and 0336's flame loop subsumed that line — so the break
+        applied cleanly, changed nothing, and the suite stayed green. What it names now is the step
+        that makes slot zero the housing rather than another flame.
+      */
+      /*
+        ⚠️ **AND IT BREAKS THE BITMAP RATHER THAN THE BRANCH, WHICH THE FIRST ATTEMPT DID NOT.**
+        Taking out the `i === 0` test sends the housing's own slot down the flame path, where the
+        angle is divided by a flame count of zero — so the entity lands on NaN and the suite grinds
+        rather than failing. A probe has to produce the DEFECT, not a different one.
+      */
+      find: '        seat.sprite = move.seat;\n        seat.spriteBase = move.seat;',
+      replace: '        seat.spriteBase = move.seat;',
     },
   },
   {

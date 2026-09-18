@@ -23,7 +23,7 @@ export const PROBES = [
     guard: 'EVERY WALL ARRIVES WHOLE',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0) {',
+      find: '    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0 && w.bossWheelIn <= 0 && onPoint(w, boss, uncoil)) {',
       replace: '    } else if (notch > w.bossUncoilAt) {',
     },
   },

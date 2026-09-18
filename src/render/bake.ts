@@ -463,6 +463,17 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11: 'enemy',
   boss11Chipped: 'enemy',
   boss11Broken: 'enemy',
+  boss11Burnt: 'enemy',
+  /*
+    ⚠️ **THE FLAMES MEAN NOTHING, SO THEY WEAR AN INK THAT MEANS NOTHING — 0305's ARGUMENT, REUSED.**
+    A decoration ink (0194) is the promise that nothing the player must find is drawn in it, and a
+    fire round a hull is exactly that: it is in no pairing, it has no reach, and the thing that can
+    kill you is the hull it is burning on. `flame` is the one of the three that is already a fire.
+  */
+  gyreFire0: 'flame',
+  gyreFire1: 'flame',
+  gyreFire2: 'flame',
+  gyreFire3: 'flame',
   /*
     ⚠️ **THE HOUSING IS BACKGROUND, SO IT IS IN THE BACKGROUND'S INK — 0332.** `sky` is the one ink
     that must not stand out, and a landmark already takes it for the same reason: the seat is the
@@ -730,6 +741,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11Hit: 'impact',
   boss11ChippedHit: 'impact',
   boss11BrokenHit: 'impact',
+  boss11BurntHit: 'impact',
   boss12Hit: 'impact',
   boss13Hit: 'impact',
   boss14Hit: 'impact',
@@ -5517,7 +5529,13 @@ const GYRE_SPIKE = 1;
  * ⚠️ **SPREAD RATHER THAN CLUSTERED**, so a broken cog reads as one that has been running too long
  * rather than as one something took a bite out of.
  */
-const GYRE_LOST: readonly (readonly number[])[] = [[], [3, 9, 13], [2, 3, 6, 9, 10, 13, 14]];
+const GYRE_LOST: readonly (readonly number[])[] = [
+  [],
+  [3, 9, 13],
+  [2, 3, 6, 9, 10, 13, 14],
+  // The fourth body — 0336: half the teeth gone, and none of them next to the spike.
+  [2, 3, 5, 6, 7, 9, 10, 11, 13, 14],
+];
 
 /*
   ⚠️ **AND THE HUB IS SOLID NOW, WHERE 0264's COG HAD A HOLE THROUGH IT.** A hole is a hole in the
@@ -5607,7 +5625,7 @@ function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, wear: number): void {
     hub and the teeth but a band; at 52 that band is eight world units deep, and eight units of flat
     colour is the thing a bigger sprite makes worse rather than better.
   */
-  const spokes = wear === 2 ? 2 : 4;
+  const spokes = wear >= 2 ? 2 : 4;
   for (let s = 0; s < spokes; s++) {
     const a = 0.55 + (s / 4) * Math.PI * 2;
     const c = Math.cos(a);
@@ -5677,10 +5695,28 @@ function paintBoss11(ctx: Pen, f: Frame, skin: FoeSkin, wear: number): void {
     more damaged* that reads from across the screen. A dark collar, the eye inside it, and a white
     heart in that — and all three open up as the cog breaks.
   */
-  const core = wear === 0 ? GYRE_HUB : wear === 1 ? GYRE_HUB + 0.04 : GYRE_HUB + 0.08;
+  /*
+    ⚠️ **AND THE SCORCHING IS WHAT SAYS *ON FIRE* ON THE BODY ITSELF — 0336.** The flames behind the
+    hull lick at its rim and say the machine is burning; these say it has BEEN burning. Dark patches
+    in the shadow ink over the web, one more with every stage, laid before the core so the core still
+    reads through them.
+  */
+  for (let b = 0; b < wear; b++) {
+    const a = 2.4 + b * 2.1;
+    const cs = Math.cos(a);
+    const sn = Math.sin(a);
+    poly(ctx, f, shade(skin.plate, -0.55), [
+      [cs * 0.32 - sn * 0.13, sn * 0.32 + cs * 0.13],
+      [cs * 0.56 - sn * 0.19, sn * 0.56 + cs * 0.19],
+      [cs * (GYRE_ROOT - 0.06), sn * (GYRE_ROOT - 0.06)],
+      [cs * 0.56 + sn * 0.17, sn * 0.56 - cs * 0.17],
+      [cs * 0.32 + sn * 0.11, sn * 0.32 - cs * 0.11],
+    ]);
+  }
+  const core = GYRE_HUB + wear * 0.04;
   disc(ctx, f, shade(skin.plate, -0.4), 0, 0, core);
-  disc(ctx, f, skin.eye, 0, 0, core * (wear === 0 ? 0.6 : wear === 1 ? 0.7 : 0.8));
-  disc(ctx, f, skin.lit, 0, 0, core * (wear === 0 ? 0.22 : wear === 1 ? 0.34 : 0.46));
+  disc(ctx, f, skin.eye, 0, 0, core * (0.6 + wear * 0.08));
+  disc(ctx, f, skin.lit, 0, 0, core * (0.22 + wear * 0.11));
   // Last of all, so nothing this body does to itself can take it — see above.
   lit(ctx, f, skin, [
     [GYRE_HUB, -0.06],
@@ -5731,6 +5767,62 @@ const GYRE_SEAT_RIM: readonly Pt[] = (() => {
 
 /** How far in the housing's bore goes — the hole the cog sits in, wider than the cog's own tile. */
 const GYRE_SEAT_BORE = 0.72;
+
+/**
+ * The inks a burning machine goes up in — 0336.
+ *
+ * ⚠️ **HOT AND NOT THE PLACE'S.** Everything else on this hull is the Labyrinth's teal and hot pink;
+ * fire is fire, which is
+ * `docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md`'s own example of a rule that earns
+ * its hardness from its subject — *a hostile bullet takes its place's colour and a flame is the same
+ * red everywhere, and both are correct in the same change.*
+ */
+const GYRE_FIRE_INKS = { deep: '#7a1400', mid: '#ff6a10', core: '#ffd66b' } as const;
+
+/**
+ * One frame of the fire a hurt cog burns with — 0336.
+ *
+ * ⚠️ **IT IS DRAWN BEHIND THE HULL, SO WHAT SHOWS IS ITS OUTER HALF.** The flames stand at the rim
+ * and the cog covers everything inside it, which is why the tongues lean OUTWARD from the tile's
+ * centre rather than rising from a root: what the player sees is fire getting out past the edge of
+ * something, and a flame drawn to rise would show only its own foot.
+ *
+ * ⚠️ **No hull and no outline: it is energy**, on `paintSerpentAura`'s own terms, and it draws
+ * nothing at all in a palette with no skins — which is the high-contrast one.
+ */
+function paintGyreFire(ctx: Pen, f: Frame, frame: number): void {
+  const rng = makeRng('aura').stream(`gyre/${frame}`);
+  glow(ctx, f, GYRE_FIRE_INKS.deep, 0, 0, 0.95, 0.6);
+  glow(ctx, f, GYRE_FIRE_INKS.mid, 0, 0, 0.62, 0.65);
+  const lick = (colour: string, points: readonly Pt[], alpha: number): void => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    curveLoop(ctx, f, points);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+  };
+  for (let i = 0; i < 5; i++) {
+    // Spread over the outward half of the tile, so every tongue clears the hull it is burning on.
+    const at = (i - 2) * 0.55 + rng.range(-0.18, 0.18);
+    const cs = Math.cos(at);
+    const sn = Math.sin(at);
+    const high = rng.range(0.55, 1.05);
+    const wide = rng.range(0.12, 0.2);
+    const lean = rng.range(-0.22, 0.22);
+    const tongue = (scale: number): Pt[] => [
+      [cs * 0.12 - sn * wide * scale, sn * 0.12 + cs * wide * scale],
+      [cs * (high * 0.45) - sn * wide * 1.15 * scale, sn * (high * 0.45) + cs * wide * 1.15 * scale],
+      [cs * high - sn * lean, sn * high + cs * lean],
+      [cs * high - sn * lean, sn * high + cs * lean],
+      [cs * (high * 0.45) + sn * wide * 1.15 * scale, sn * (high * 0.45) - cs * wide * 1.15 * scale],
+      [cs * 0.12 + sn * wide * scale, sn * 0.12 - cs * wide * scale],
+    ];
+    lick(GYRE_FIRE_INKS.deep, tongue(1.5), 0.4);
+    lick(GYRE_FIRE_INKS.mid, tongue(1), 0.75);
+    lick(GYRE_FIRE_INKS.core, tongue(0.42), 0.85);
+  }
+}
 
 function paintBoss11Seat(ctx: Pen, f: Frame, palette: Palette): void {
   // A lighter bead round the inside edge, so the recess has a lip and the ring has a thickness.
@@ -7287,23 +7379,39 @@ export function drawKind(
     case 'boss11Chipped':
     case 'boss11ChippedHit':
     case 'boss11Broken':
-    case 'boss11BrokenHit': {
+    case 'boss11BrokenHit':
+    case 'boss11Burnt':
+    case 'boss11BurntHit': {
       /*
         THE GYRE: a cog — sixteen teeth about a hub with a hole in it. Round like the axis and not
         the axis: its edge goes in and out sixteen times.
 
-        ⚠️ **AND SINCE 0332 IT IS THREE BODIES AND A SPIKE.** `traceGyre` reads the wear off the
-        name, exactly as the fish's faces do: whole, chipped at two thirds, broken at two fifths —
-        and the point at the sprite's `+x` is the one the player steers by, which is why it is the
-        one thing all three keep.
+        ⚠️ **AND SINCE 0332 IT IS BODIES AND A SPIKE, FOUR OF THEM SINCE 0336.** `traceGyre` reads
+        the wear off the name, exactly as the fish's faces do: whole, chipped at three quarters,
+        broken at a half, burnt at a quarter — and the point at the sprite's `+x` is the one the
+        player steers by, which is why it is the one thing all four keep.
       */
-      const wear = kind.startsWith('boss11Broken') ? 2 : kind.startsWith('boss11Chipped') ? 1 : 0;
+      const wear = kind.startsWith('boss11Burnt')
+        ? 3
+        : kind.startsWith('boss11Broken')
+          ? 2
+          : kind.startsWith('boss11Chipped')
+            ? 1
+            : 0;
       traceGyre(ctx, f, wear);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss11(ctx, f, skin, wear);
       return;
     }
+    case 'gyreFire0':
+    case 'gyreFire1':
+    case 'gyreFire2':
+    case 'gyreFire3':
+      // ONE FRAME OF THE COG'S FIRE — 0336, on `serpentAura`'s own terms: energy, no hull, nothing
+      // in a palette with no skins.
+      if (skin !== null) paintGyreFire(ctx, f, Number(kind.slice(-1)));
+      return;
     case 'roomWall': {
       /*
         THE LABYRINTH'S WALL — 0335. A block of masonry that tiles in both axes: a slab in the

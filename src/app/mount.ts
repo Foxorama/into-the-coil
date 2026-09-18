@@ -798,6 +798,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // no level and therefore no room.
     room: null,
     roomHold: 0,
+    bossWheelIn: 0,
     shipPool,
     shieldOrbs,
     exhaust,

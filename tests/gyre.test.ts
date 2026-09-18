@@ -737,6 +737,171 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(SPRITE_KINDS[laid.sprite], 'the room is not tiled from the wall the row names').toBe(SPRITE_KINDS[room.wall]);
   });
 
+  it('THE WHEEL: it rises out of its seat at each of the asked health shares, sprays all the way round, and sits back down', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"at 75%, 50%, 25% health the cog pops out and spins in a circle like the
+      fireworks on fence posts spraying fire in a pinwheel style over 360° for a second or two"*, and
+      the pop is *"the cog coming out of the screen towards the actual player as a turret popping up,
+      spraying, sitting back down again."* — `docs/decisions/0336-the-wheel-comes-off-its-post.md`.
+
+      ⚠️ **THE THREE SHARES ARE HELD AS THE ROW'S OWN PHASE BOUNDARIES**, because that is what the ask
+      was turned into: three health shares and three phase rungs are one ladder or they are two that
+      drift. If a phase moves and nobody moves the wheel with it, this is what says so.
+    */
+    const wheels = BOSSES.gyre.phases.map((p) => p.wheel);
+    expect(
+      BOSSES.gyre.phases.map((p) => p.upTo),
+      'the gyre’s phases are not the health shares the pinwheel was asked for',
+    ).toEqual([1, 0.75, 0.5, 0.25]);
+    expect(wheels[0], 'the fight opens with a pinwheel, which is the boss’s loudest thing before the player has read anything').toBeUndefined();
+    for (let i = 1; i < wheels.length; i++) expect(wheels[i], `the phase at ${BOSSES.gyre.phases[i]!.upTo} opens with no pinwheel`).toBeDefined();
+
+    const d = gyreOnStation();
+    const { world, frame } = d;
+    const boss = world.bossPool.at(0);
+    const wheel = wheels[1]!;
+    // Into the second phase, which is the step the first wheel is set off.
+    let rose = 0;
+    let peakSwell = 1;
+    let peakRadius = 0;
+    const headings: number[] = [];
+    let spun = 0;
+    let before = boss.turn;
+    world.enemyShots.clear();
+    for (let step = 0; step < wheel.rise + wheel.spray + wheel.sink + 30; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      boss.fireIn = 999;
+      boss.health = world.bossFullHealth * (wheel === wheels[1] ? 0.74 : 0.49);
+      const was = world.enemyShots.size;
+      frame.step();
+      if (world.bossWheelIn > 0) rose++;
+      peakSwell = Math.max(peakSwell, boss.swell);
+      peakRadius = Math.max(peakRadius, boss.radius);
+      let turned = boss.turn - before;
+      if (turned > Math.PI) turned -= Math.PI * 2;
+      else if (turned < -Math.PI) turned += Math.PI * 2;
+      spun += Math.abs(turned);
+      before = boss.turn;
+      for (let i = was; i < world.enemyShots.size; i++) {
+        const s = world.enemyShots.at(i);
+        headings.push(Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep));
+      }
+    }
+    expect(rose, 'the gyre never rose out of its seat').toBeGreaterThan(wheel.spray);
+    /*
+      ⚠️ **IT COMES OUT OF THE SCREEN, AND THE HURTBOX COMES WITH IT.** A body drawn a quarter larger
+      than it collides is 0036's own defect, so the two are held as ONE claim: whatever `swell` the
+      picture reached, the radius reached the row's own radius times exactly that.
+    */
+    expect(peakSwell, `the hull only ever reached ${peakSwell.toFixed(2)} of its size against the ${wheel.swell} authored`).toBeCloseTo(wheel.swell, 6);
+    expect(
+      peakRadius,
+      `the hull was drawn ${peakSwell.toFixed(2)} times its size and collided as ${(peakRadius / BOSSES.gyre.radius).toFixed(2)} — a body ` +
+        'bigger in the picture than in the model hits the player from a place the picture calls empty',
+    ).toBeCloseTo(BOSSES.gyre.radius * wheel.swell, 6);
+    // And it goes back: nothing carries a swell out of the wheel and into the rest of the fight.
+    expect(boss.swell, 'the hull stayed swollen after the wheel finished').toBe(1);
+    expect(boss.radius, 'the hurtbox stayed swollen after the wheel finished').toBe(BOSSES.gyre.radius);
+    // It spins: at least the turns the row authors, which is what makes it a wheel rather than a ring.
+    expect(spun / (Math.PI * 2), `the hull turned ${(spun / (Math.PI * 2)).toFixed(2)} times while the wheel was up`).toBeGreaterThan(1);
+    /*
+      ⚠️ **AND THE SPRAY COVERS THE WHOLE CIRCLE — *over 360°*, held in the player's own terms.** The
+      headings the shots left on are bucketed into twelve sectors of the compass and every one of them
+      has to be used: a spoke that swept less than a full turn, or a ring that went out all at once,
+      both fail this and they fail it differently.
+    */
+    expect(headings.length, 'the wheel threw nothing').toBeGreaterThan(20);
+    const sectors = new Set(headings.map((h) => Math.floor((((h / (Math.PI * 2)) % 1) + 1) % 1 * 12)));
+    expect(sectors.size, `the spray covered ${sectors.size} of the twelve sectors of the compass`).toBe(12);
+  });
+
+  it('and no wall leaves while the hull is spinning, because for that second the spike names nothing', () => {
+    /*
+      ⚠️ **THE CLAIM A PROBE FOUND NOBODY WAS MAKING.** 0332's compass is the fight's spine: the spike
+      names the edge the next wall comes in over, and a wall that arrived while the hull was
+      free-spinning would come from an edge the player had never been told about. `and the wall comes
+      from the edge the spike is aimed at` cannot catch it — it collects the first eight walls off a
+      steady bleed, and whether one of them happens to land inside a hundred-step wheel is luck. **It
+      stayed GREEN with the gate broken**, which is the guard that cannot fail
+      (`docs/decisions/0005-a-guard-must-be-seen-to-fail.md`).
+
+      ⚠️ **SO IT IS DRIVEN AS AN INVARIANT OVER A WHOLE FIGHT**: bleed the hull from full to empty,
+      and on no step does the wall count move while the wheel is up. Both halves have to happen for
+      this to mean anything, so both are asserted.
+    */
+    const { world, frame } = gyreOnStation();
+    const boss = world.bossPool.at(0);
+    const bleed = world.bossFullHealth / 2200;
+    let last = world.bossUncoilAt;
+    let spinning = 0;
+    let walls = 0;
+    let duringWheel = 0;
+    for (let step = 0; step < 4000 && world.bossPool.size > 0; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      boss.fireIn = 999;
+      boss.health = Math.max(1, boss.health - bleed);
+      const up = world.bossWheelIn > 0;
+      frame.step();
+      if (world.bossPool.size === 0) break;
+      if (up) spinning++;
+      if (world.bossUncoilAt > last) {
+        walls++;
+        if (up) duringWheel++;
+        last = world.bossUncoilAt;
+      }
+    }
+    expect(spinning, 'the wheel never ran, so this measured nothing').toBeGreaterThan(100);
+    expect(walls, 'no wall was ever thrown, so this measured nothing').toBeGreaterThan(2);
+    expect(
+      duringWheel,
+      `${duringWheel} walls left while the hull was spinning — each one came in over an edge the spike had not named`,
+    ).toBe(0);
+  });
+
+  it('and it catches fire as it is hurt, behind the hull and beside the housing', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"updated damage graphics for it as it gets hurt and set on fire."*
+
+      ⚠️ **THE COUNT IS THE ESCALATION, WHICH IS WHAT *AS IT GETS HURT* MEANS** — a fire that switched
+      on at a threshold would be a state, and what was asked for is something taking hold. Held as:
+      nothing while it is whole, some when it catches, more when the bar is nearly out.
+
+      ⚠️ **AND THE HOUSING IS STILL THERE.** 0335 said a boss has an aura or a seat and never both;
+      this is the row that needs both, and the seat keeps the first slot so the mounting is drawn
+      under the flames and the flames under the cog.
+    */
+    const burn = BOSSES.gyre.burn;
+    if (burn === null) throw new Error('the gyre does not burn');
+    const move = BOSSES.gyre.move;
+    if (move.kind !== 'socket') throw new Error('the gyre is not set into anything');
+    const at = (share: number): number => {
+      const { world, frame } = gyreOnStation();
+      const boss = world.bossPool.at(0);
+      for (let i = 0; i < 4; i++) {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 999;
+        boss.fireIn = 999;
+        boss.health = world.bossFullHealth * share;
+        frame.step();
+      }
+      // The seat is always the first slot; everything after it is fire.
+      expect(world.bossAura.at(0).sprite, 'the housing lost its place to the fire').toBe(move.seat);
+      for (let i = 1; i < world.bossAura.size; i++) {
+        expect(
+          burn.frames.includes(world.bossAura.at(i).sprite),
+          'something that is not a flame is standing in the fire’s slots',
+        ).toBe(true);
+      }
+      return world.bossAura.size - 1;
+    };
+    expect(at(1), 'the gyre is on fire while it is whole').toBe(0);
+    expect(at(burn.from - 0.01), `the gyre is not alight at ${burn.from} of its health`).toBeGreaterThanOrEqual(burn.least);
+    expect(at(0.02), 'the fire never grows, so it is a state rather than something taking hold').toBeGreaterThan(at(burn.from - 0.01));
+    expect(at(0.02), 'the fire grew past what the row authors').toBeLessThanOrEqual(burn.most);
+  });
+
   it('and it wears its damage: a body a phase, every one of them the same size', () => {
     /*
       ⚠️ **ASKED FOR**: *"upscale the graphics and have it change as it gets more damaged."* Driven

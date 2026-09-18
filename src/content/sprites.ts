@@ -408,6 +408,24 @@ export const SPRITE_KINDS = [
   'boss11Broken',
   'boss11BrokenHit',
   /*
+    ⚠️ **THE FOURTH BODY, AND THE PHASES MOVED TO MEET IT — 0336.** *"Updated damage graphics for it
+    as it gets hurt and set on fire."* Three bodies were three phases; the ask put a pinwheel at 75,
+    50 and 25 per cent, so the phases are those numbers now and there is a body a phase. This is the
+    last one: half its teeth gone, the web split to the hub, and the core burning through the front of
+    it.
+  */
+  'boss11Burnt',
+  'boss11BurntHit',
+  /*
+    ⚠️ **THE FIRE, IN FOUR FRAMES — 0336.** Flames stand round the hull in the layer BEHIND it, so
+    what shows is the licking at its rim; they flicker through these, and how many of them there are
+    is the escalation.
+  */
+  'gyreFire0',
+  'gyreFire1',
+  'gyreFire2',
+  'gyreFire3',
+  /*
     ⚠️ **THE HOUSING IT IS SET INTO — 0332.** *"Locked into the background like a cog set into an
     image."* Drawn behind the hull, in the layer the serpent's aura already occupies, and bigger than
     the cog so the mounting shows round it. It is scenery and not a body: nothing collides with it
@@ -1232,6 +1250,19 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss11ChippedHit: 52,
   boss11Broken: 52,
   boss11BrokenHit: 52,
+  // The same box again — 0320's rule, on the fourth body as on the second and third.
+  boss11Burnt: 52,
+  boss11BurntHit: 52,
+  /*
+    ⚠️ **TWENTY-SIX, WHICH IS HALF THE COG — 0336.** A flame stands at 22 units from the hull's centre
+    and the cog's own teeth reach 22, so a tile of 26 puts the flame's root under the rim and its tip
+    about eleven units past it. Bigger and the fire is a bonfire the hull is sitting in; smaller and
+    nothing shows, because all of it would be behind an opaque disc.
+  */
+  gyreFire0: 26,
+  gyreFire1: 26,
+  gyreFire2: 26,
+  gyreFire3: 26,
   /*
     ⚠️ **BIGGER THAN THE COG, BECAUSE A HOUSING THAT DID NOT SHOW WOULD NOT BE ONE.** 68 against 52
     leaves eight units of mounting all the way round — enough for the ring and its lugs to read at
