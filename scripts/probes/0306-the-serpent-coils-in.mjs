@@ -79,7 +79,8 @@ export const PROBES = [
     guard: 'and nothing it throws, and nothing that hits it, until the fight begins',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const shootable = w.bossEntering < 0;',
+      // ⚠️ Re-anchored by 0337, which adds `&& !w.bossBeaten` so nothing may shoot a wreck either.
+      find: '    const shootable = w.bossEntering < 0 && !w.bossBeaten;',
       replace: '    const shootable = true;',
     },
   },

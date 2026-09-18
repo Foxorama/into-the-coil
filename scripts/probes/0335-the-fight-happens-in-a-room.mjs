@@ -11,7 +11,8 @@ export const PROBES = [
     guard: 'THE ROOM: the world comes to rest for the fight',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall },",
+      // ⚠️ Re-anchored by 0337, which adds `opens` — how long the far wall takes to part after the wreck.
+      find: "    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.roomWall, opens: 90 },",
       replace: '    room: null,',
     },
   },

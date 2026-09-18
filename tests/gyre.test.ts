@@ -38,6 +38,9 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../src/cont
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { reset } from '../src/sim/entity.ts';
+import { SPRITE } from '../src/content/sprites.ts';
+import { bodyOf } from './bodies.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** The gyre alone, a short way in, with no mid-boss in front of it. */
@@ -900,6 +903,145 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(at(burn.from - 0.01), `the gyre is not alight at ${burn.from} of its health`).toBeGreaterThanOrEqual(burn.least);
     expect(at(0.02), 'the fire never grows, so it is a state rather than something taking hold').toBeGreaterThan(at(burn.from - 0.01));
     expect(at(0.02), 'the fire grew past what the row authors').toBeLessThanOrEqual(burn.most);
+  });
+
+  it('THE WRECK: it falls out of the wall, crashes into the floor, and the way on opens after it', () => {
+    /*
+      ⚠️ **ASKED FOR**: *"when it dies, instead of exploding, have it fall out of the wall and crash
+      down into the floor, and then the far right wall opens so the player can fly onwards."* —
+      `docs/decisions/0337-the-gyre-falls-out-of-the-wall.md`.
+
+      ⚠️ **DRIVEN AS FOUR BEATS IN THE ORDER THEY HAPPEN**, because the order is the whole of it: a
+      wall that opened while the hull was still falling would carry the player away from the thing
+      they had just killed, and a level that cleared before the wall moved would never let them
+      through it. Each beat is held against the one before.
+    */
+    const wreck = BOSSES.gyre.wreck;
+    const room = BOSSES.gyre.room;
+    if (wreck === null || room === null) throw new Error('the gyre has no wreck or no room');
+    const { world, frame } = gyreOnStation();
+    world.bossPool.at(0).health = 1;
+    let fell = 0;
+    let landedAt = -1;
+    let openedAt = -1;
+    let clearedAt = -1;
+    let lowest = -1;
+    let scrollWhileFalling = 0;
+    let turnedWhileFalling = 0;
+    let before = world.bossPool.at(0).turn;
+    for (let step = 0; step < 20 * STEPS_PER_SECOND; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      frame.step();
+      if (world.bossPool.size > 0) {
+        const body = world.bossPool.at(0);
+        lowest = Math.max(lowest, body.across);
+        if (world.bossBeaten && !world.wreckDown) {
+          fell++;
+          scrollWhileFalling = Math.max(scrollWhileFalling, world.scrollPerStep);
+          let turned = body.turn - before;
+          if (turned > Math.PI) turned -= Math.PI * 2;
+          else if (turned < -Math.PI) turned += Math.PI * 2;
+          turnedWhileFalling += Math.abs(turned);
+        }
+        before = body.turn;
+      }
+      if (world.wreckDown && landedAt < 0) landedAt = step;
+      if (world.roomOpen > 0 && openedAt < 0) openedAt = step;
+      if (world.clearedIn > 0 && clearedAt < 0) clearedAt = step;
+    }
+    // It did not vanish: the hull is still there after it died, which is what *instead of exploding* means.
+    expect(fell, 'the gyre never fell — it went the way every other boss goes').toBeGreaterThan(30);
+    expect(landedAt, 'the wreck never reached the floor').toBeGreaterThan(0);
+    /*
+      ⚠️ **THE FLOOR IS THE FAR WALL'S OWN FACE**, which is the number 0335 stands the wall on. A
+      wreck resting anywhere else is lying in the air or inside the masonry, and both are visible.
+    */
+    expect(
+      lowest + BOSSES.gyre.radius,
+      `the wreck came to rest with its rim at ${(lowest + BOSSES.gyre.radius).toFixed(1)} and the room's floor is at ${ACROSS_SPAN - PLAYER_MARGIN}`,
+    ).toBeCloseTo(ACROSS_SPAN - PLAYER_MARGIN, 6);
+    // It tumbles on the way down: half a turn or more, so it is out of control rather than sliding.
+    expect(turnedWhileFalling, `the wreck turned ${turnedWhileFalling.toFixed(2)} radians on its way down`).toBeGreaterThan(Math.PI / 2);
+    // And the world holds still to watch it: nothing carries the player away mid-fall.
+    expect(scrollWhileFalling, 'the world started moving again while the wreck was still falling').toBe(0);
+    // Then, in order: the wall parts, and only then is the level cleared.
+    expect(openedAt, 'the room never opened, so the player is sealed in with a corpse').toBeGreaterThan(landedAt);
+    expect(openedAt - landedAt, 'the wall began to part on the step it landed, so the crash has no beat of its own').toBeGreaterThanOrEqual(wreck.settle);
+    expect(clearedAt, 'the level cleared before the way out was open').toBeGreaterThanOrEqual(openedAt);
+    // And the way out is a gap in the middle of the far wall, wide enough to be one.
+    expect(world.room?.open, 'the far wall never finished opening').toBe(1);
+    expect(world.scrollPerStep, 'the world never started again, so the player cannot fly onwards').toBeGreaterThan(0);
+  });
+
+  it('and nothing may shoot a wreck, because it is a corpse and not a target', () => {
+    /*
+      ⚠️ **FOUND BY PHOTOGRAPHING IT — 0337, and 0027 is the rule.** The wreck is the same hull in the
+      same pool, so `playerShots` × `bossPool` went on pairing all the way down: the player's fire was
+      swallowed by a dead thing, which flashed white for each one and cued `hit`. On the bench, where
+      the scrub pins the boss's health, it was worse than untidy — the pairing killed the wreck a
+      second time and it vanished mid-fall. `shootable` is gated on `bossBeaten` now.
+
+      Driven by parking a shot on the wreck every step of the fall: if the pairing is live the pool
+      eats them, and if it is not they fly through.
+    */
+    const { world, frame } = gyreOnStation();
+    world.bossPool.at(0).health = 1;
+    let parked = 0;
+    let eaten = 0;
+    let flashed = 0;
+    for (let step = 0; step < 20 * STEPS_PER_SECOND && !world.wreckDown; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      if (world.bossBeaten && world.bossPool.size > 0) {
+        const body = world.bossPool.at(0);
+        world.playerShots.clear();
+        const shot = world.playerShots.spawn();
+        if (shot !== null) {
+          reset(shot, body.along, body.across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+          parked++;
+        }
+      }
+      frame.step();
+      if (world.bossBeaten && world.bossPool.size > 0) {
+        if (world.playerShots.size === 0 && parked > 0) eaten++;
+        if (world.bossPool.at(0).flashFor > 0) flashed++;
+      }
+    }
+    expect(parked, 'no shot was ever parked on the wreck, so this guard drove nothing').toBeGreaterThan(20);
+    expect(eaten, `${eaten} of ${parked} shots were swallowed by the wreck`).toBe(0);
+    expect(flashed, 'the wreck flashed as though it had been hit').toBe(0);
+    expect(world.bossPool.size, 'the wreck was shot out of existence on its way down').toBe(1);
+  });
+
+  it('and the room opens even if the wreck is gone, because a sealed room is a dead run', () => {
+    /*
+      ⚠️ **THE ROOM OPENING IS THE INVARIANT AND THE FALL IS THE DECORATION — 0337.** The way out is
+      spent by the wreck landing, so for as long as `stepWreck` needed a body in the pool, ANY path
+      that emptied it left the player sealed in a finished room with no wall that would ever part and
+      no way to lose either. The gate above closes the one path that was real; this holds the floor
+      under every path, which is what `docs/decisions/0192-a-guard-holds-an-invariant.md` asks of a
+      guard that could be answered with a second gate instead.
+    */
+    const room = BOSSES.gyre.room;
+    if (room === null) throw new Error('the gyre has no room');
+    const { world, frame } = gyreOnStation();
+    world.bossPool.at(0).health = 1;
+    let robbed = false;
+    for (let step = 0; step < 25 * STEPS_PER_SECOND; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      // The moment it is a wreck, take it away — the case no gate is allowed to be the only answer to.
+      if (world.bossBeaten && world.bossPool.size > 0 && !robbed) {
+        world.bossPool.clear();
+        robbed = true;
+      }
+      frame.step();
+    }
+    expect(robbed, 'the gyre never died, so nothing was taken away').toBe(true);
+    expect(world.roomOpen, 'the wreck was taken away and the room never opened — the run is sealed').toBeGreaterThanOrEqual(room.opens);
+    expect(world.clearedIn, 'the way out opened and the level still never cleared').toBeGreaterThan(0);
+    expect(world.scrollPerStep, 'the world never started again, so the player cannot fly onwards').toBeGreaterThan(0);
   });
 
   it('and it wears its damage: a body a phase, every one of them the same size', () => {

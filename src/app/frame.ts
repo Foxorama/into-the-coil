@@ -53,7 +53,7 @@ import { type Body, type Entity, reset, stepEntities, turnFor } from '../sim/ent
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, flyShip, holdStation } from '../sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, flyShip, holdStation } from '../sim/flight.ts';
 import { BURN_ASK, EASE_ASK, EXHAUST, LEAN_AT, PULSE_STEPS, THRUST } from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
@@ -1205,6 +1205,26 @@ export interface World {
    */
   bossWheelIn: number;
   /**
+   * The turn the hull was wearing on the last step it was alive — 0337.
+   *
+   * ⚠️ **SO THE WRECK STARTS WHERE THE HULL STOPPED.** A cog that snapped back to zero on the step it
+   * died would be a different object appearing where the first one went, which is the whole of what
+   * this sequence exists not to be. `bossOffset` and `bossAcross` are captured beside it and for the
+   * same reason.
+   */
+  bossWreckTurn: number;
+  /** Whether the wreck has reached the floor — 0337. `false` while it is falling and before it is. */
+  wreckDown: boolean;
+  /** Steps the wreck lies on the floor before the room begins to open — 0337. */
+  wreckIn: number;
+  /**
+   * How far the room's far wall has parted, in steps of the row's `opens` — 0337.
+   *
+   * ⚠️ **THE SCROLL READS IT TOO.** The camera comes back up on exactly the number the wall opens
+   * on, so the way out and the level starting again are one gesture rather than two.
+   */
+  roomOpen: number;
+  /**
    * Steps until the boss's fall next belches — 0251. Set to the fall's gap when the boss arrives
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
@@ -1652,7 +1672,13 @@ export class GameFrame implements Frame {
       ship's own contact with it, further down, is untouched — that is the *fully live*. The arc and
       the seekers are held off it by the same field where they choose a target.
     */
-    const shootable = w.bossEntering < 0;
+    /*
+      ⚠️ **AND NOTHING MAY SHOOT A WRECK — 0337.** A hull that falls out of its wall instead of
+      exploding is still in this pool, so without `bossBeaten` here the player's own fire takes it
+      on the way down and it vanishes mid-fall. **It also soft-locked the level**: the room opens
+      when the wreck lands, and a wreck that was shot never landed. Found by photographing it.
+    */
+    const shootable = w.bossEntering < 0 && !w.bossBeaten;
     if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
@@ -1999,10 +2025,19 @@ export class GameFrame implements Frame {
         */
         dropPickups(w, w.cameraAlong + w.bossOffset, w.bossAcross, MID_BOSS_DROP);
         nextFight(w);
+      } else if (w.bossRow.wreck !== null) {
+        /*
+          ⚠️ **A WRECK INSTEAD OF A CLEAR — 0337.** *"Instead of exploding, have it fall out of the
+          wall and crash down into the floor, and then the far right wall opens."* The level is not
+          cleared here: it is cleared when the room has opened, which is three beats later. What
+          starts now is the fall.
+        */
+        layWreck(w);
       } else {
         w.clearedIn = BOSS_DEATH_STEPS;
       }
     }
+    stepWreck(w);
     stepBossDeath(w);
     stepShipDeath(w);
   }
@@ -2212,6 +2247,8 @@ export function layRoom(w: World): void {
     extent: SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
     from: rest - room.mouth,
     to: rest + PLAYER_LEAD,
+    // Shut. `stepWreck` opens it once the thing that was in the wall is on the floor — 0337.
+    open: 0,
   };
 }
 
@@ -2246,7 +2283,14 @@ function scrollFor(w: World): number {
     what it says.
   */
   const rolls = (w.scrollRate * room.settle) / 2;
-  const closing = w.bossSpawned && !w.bossBeaten && w.cameraAlong >= rest - rolls;
+  /*
+    ⚠️ **AND IT STAYS SHUT THROUGH THE WRECK — 0337.** A room that opened on the step the hull's
+    health ran out would carry the player away from the thing falling out of its wall. What lets go
+    is the wall parting, so the hold runs until `roomOpen` moves — the camera and the way out come up
+    on the same number.
+  */
+  const beaten = w.bossBeaten && (w.bossRow.wreck === null || w.roomOpen > 0);
+  const closing = w.bossSpawned && !beaten && w.cameraAlong >= rest - rolls;
   if (closing) {
     if (w.roomHold < room.settle) w.roomHold++;
   } else if (w.roomHold > 0) w.roomHold--;
@@ -2283,6 +2327,10 @@ function nextFight(w: World): void {
   w.bossWallIn = 0;
   // No wheel half-run into a new fight — 0336.
   w.bossWheelIn = 0;
+  w.bossWreckTurn = 0;
+  w.wreckDown = false;
+  w.wreckIn = 0;
+  w.roomOpen = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
@@ -5843,9 +5891,106 @@ function crossingsBy(e: Entrance & { kind: 'breach' }, u: number): number {
   return u < 0 ? 0 : Math.min(Math.floor(u / e.span) + 1, e.leaps + 1);
 }
 
+/**
+ * Put the hull back on the field as a wreck, on the step it died — 0337.
+ *
+ * ⚠️ **THE SAME POOL AND THE SAME BITMAP, BECAUSE IT IS THE SAME OBJECT.** A wreck drawn out of a
+ * different pool would be a second thing appearing where the first one vanished; what the player has
+ * to see is the cog they were fighting coming out of the wall. `driveBoss` and every pairing that
+ * shoots at the boss are gated on `bossBeaten` so nothing may hit it and it does nothing back.
+ *
+ * ⚠️ **AND IT KEEPS THE FIRE IT CAUGHT**, because `layAura` reads the pool it is in.
+ */
+function layWreck(w: World): void {
+  const body = w.bossPool.spawn();
+  if (body === null) return;
+  reset(body, w.cameraAlong + w.bossOffset, w.bossAcross, w.bossRow);
+  // What it was wearing when it died — the last phase's body, not the row's whole one.
+  const worn = w.bossRow.phases[w.bossRow.phases.length - 1]!.hull;
+  if (worn !== undefined) {
+    body.sprite = worn.rest;
+    body.spriteBase = worn.rest;
+    body.spriteHit = worn.rest;
+  }
+  body.turn = w.bossWreckTurn;
+  body.prevTurn = body.turn;
+  w.wreckDown = false;
+  w.wreckIn = 0;
+  w.roomOpen = 0;
+}
+
+/**
+ * The wreck: falling out of its wall, crashing into the floor, and the room opening after it — 0337.
+ *
+ * ⚠️ **THE FLOOR IS THE FAR WALL'S OWN FACE**, which is the edge of the box the ship flies in — the
+ * same number 0335 stands the wall on. A wreck that stopped anywhere else would be lying in the air
+ * or inside the masonry, and both are visible.
+ *
+ * ⚠️ **THE ROOM STAYS SHUT UNTIL THE WALL BEGINS TO PART**, which is `scrollFor`'s business and reads
+ * `roomOpen`: the camera comes back up on exactly the number the wall opens on, so the way out and
+ * the level starting again are one gesture.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function stepWreck(w: World): void {
+  const wreck = w.bossRow.wreck;
+  const room = w.bossRow.room;
+  if (wreck === null || !w.bossBeaten) return;
+  /*
+    ⚠️ **AN EMPTY POOL OPENS THE ROOM ANYWAY**, and this line is the difference between a wreck and a
+    soft-lock. The way out is spent by the wreck LANDING, so every path that ends with no wreck on the
+    field — anything at all that releases it — used to leave the player sealed in a room with nothing
+    alive in it and no wall that would ever part. `shootable` is gated on `bossBeaten` so the player's
+    own fire can no longer be that path (it was, and it was found by photographing the death), but a
+    level that cannot be finished is not a defect to hold off with one gate: *the room opens* is the
+    invariant, and the fall is the decoration on it.
+  */
+  if (w.bossPool.size === 0) w.wreckDown = true;
+  const body = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+  if (!w.wreckDown && body !== null) {
+    body.velAcross += wreck.gravity;
+    body.turn = foldTurn(body.turn + wreck.tumble);
+    // The floor: the face of the wall along the far edge of the box.
+    const floor = ACROSS_SPAN - PLAYER_MARGIN - body.radius;
+    if (body.across >= floor) {
+      body.across = floor;
+      body.prevAcross = floor;
+      body.velAcross = 0;
+      w.wreckDown = true;
+      w.wreckIn = wreck.settle;
+      body.sprite = wreck.wreckage;
+      body.spriteBase = wreck.wreckage;
+      body.spriteHit = wreck.wreckage;
+      /*
+        ⚠️ **THE CRASH IS WHERE THE BURST WENT.** 0062 gives a boss's death its own beat and its own
+        cue; this row spends both HERE rather than on the step its health ran out, because the thing
+        the player is watching is the landing. `BURST.boss` at the hull's own radius, on the floor.
+      */
+      burst(w, body.along, body.across, BURST.boss);
+      w.onCue('bossDown', body.across);
+    }
+    return;
+  }
+  if (w.wreckIn > 0) {
+    w.wreckIn--;
+    return;
+  }
+  if (room === null) return;
+  if (w.roomOpen < room.opens) w.roomOpen++;
+  // The painter's own copy, as a share: it holds world positions and no arithmetic — 0335.
+  if (w.room !== null) w.room.open = room.opens > 0 ? w.roomOpen / room.opens : 1;
+  // And the level is cleared once the way out is open — never before it.
+  if (w.roomOpen >= room.opens && w.clearedIn <= 0) w.clearedIn = BOSS_DEATH_STEPS;
+}
+
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
 function driveBoss(w: World): void {
-  if (w.bossPool.size === 0) return;
+  /*
+    ⚠️ **AND NOTHING WHILE IT IS BEATEN — 0337.** A wreck sits in this pool and is the hull it was, so
+    without this line it would fly back to its station, throw walls and turn its spike. *Beaten* is
+    the one word that separates the two, and it is latched exactly once.
+  */
+  if (w.bossPool.size === 0 || w.bossBeaten) return;
   const boss = w.bossPool.at(0);
   // Flying its entrance, which is the whole of what it does until the fight begins — 0306.
   if (w.bossEntering >= 0) {
@@ -5923,6 +6068,8 @@ function driveBoss(w: World): void {
   }
   w.bossOffset = boss.along - w.cameraAlong;
   w.bossAcross = boss.across;
+  // And the angle it is wearing, so a wreck starts where the hull stopped — 0337.
+  w.bossWreckTurn = boss.turn;
   wearFace(w, boss);
   /*
     ⚠️ **THE ADDS A SUMMONS ASKED FOR — 0249.** `stepBoss` has no enemy pool; a `summon` volley
@@ -6854,6 +7001,10 @@ function spawnBoss(w: World): void {
   w.bossWallIn = 0;
   // No wheel half-run into a new fight — 0336.
   w.bossWheelIn = 0;
+  w.bossWreckTurn = 0;
+  w.wreckDown = false;
+  w.wreckIn = 0;
+  w.roomOpen = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
   /*
@@ -7189,6 +7340,10 @@ function beginScript(w: World): void {
   w.bossWallIn = 0;
   // No wheel half-run into a new fight — 0336.
   w.bossWheelIn = 0;
+  w.bossWreckTurn = 0;
+  w.wreckDown = false;
+  w.wreckIn = 0;
+  w.roomOpen = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;

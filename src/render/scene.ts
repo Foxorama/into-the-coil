@@ -172,6 +172,13 @@ export interface Room {
   from: number;
   /** Where its far wall is, in world units along. */
   to: number;
+  /**
+   * How far the far wall has parted, `0` shut and `1` open — 0337.
+   *
+   * ⚠️ **IT PARTS FROM THE MIDDLE OUTWARD**, which is what makes it a way THROUGH rather than a wall
+   * that got shorter: the gap opens where the ship is already flying and grows past it.
+   */
+  open: number;
 }
 
 export interface Bound {
@@ -516,8 +523,17 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
   const endInView = room.to - cameraAlong + half;
   if (endInView > view.alongSpan + room.extent || endInView < -room.extent) return;
   const down = Math.ceil((ACROSS_SPAN + room.extent) / room.extent);
+  /*
+    ⚠️ **AND IT PARTS FROM THE MIDDLE OUTWARD — 0337.** The gap is centred on the lane and grows to
+    the whole of it, so what the player sees is a way through opening where they are already flying.
+    A tile is dropped once the gap has reached it, which is the cheapest possible retraction and the
+    only one that costs no extra blits: an opening wall draws FEWER of them, not more.
+  */
+  const gap = (room.open * (ACROSS_SPAN + room.extent)) / 2;
+  const middle = ACROSS_SPAN / 2;
   for (let i = 0; i <= down; i++) {
     const across = near + i * room.extent;
+    if (gap > 0 && Math.abs(across - middle) < gap) continue;
     surface.blit(room.sprite, screenX(view, endInView, across), screenY(view, endInView, across), view.scale);
   }
 }

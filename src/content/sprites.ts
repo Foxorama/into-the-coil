@@ -421,6 +421,13 @@ export const SPRITE_KINDS = [
     what shows is the licking at its rim; they flicker through these, and how many of them there are
     is the escalation.
   */
+  /*
+    ⚠️ **WHAT IS LEFT OF IT ON THE FLOOR — 0337.** *"Instead of exploding, have it fall out of the
+    wall and crash down into the floor."* The burnt body again with its rim stove in on the side it
+    landed on, its spokes collapsed and its core gone out — the same box, so the thing that fell and
+    the thing lying there are one object.
+  */
+  'boss11Wreck',
   'gyreFire0',
   'gyreFire1',
   'gyreFire2',
@@ -1259,6 +1266,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     about eleven units past it. Bigger and the fire is a bonfire the hull is sitting in; smaller and
     nothing shows, because all of it would be behind an opaque disc.
   */
+  // The same box as every other body of it — 0320s rule, on the fifth.
+  boss11Wreck: 52,
   gyreFire0: 26,
   gyreFire1: 26,
   gyreFire2: 26,

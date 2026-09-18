@@ -1083,6 +1083,29 @@ fight's rungs are all on the sim clock.
 closes with `SCROLL_PER_STEP`; two level-walking instruments waited for a `bossAt` the camera no
 longer reaches. 0335 has each one and what it cost to find.
 
+### ⚠️ THE GYRE FALLS OUT OF THE WALL — 2026-09-18
+
+⚠️ **[0337](decisions/0337-the-gyre-falls-out-of-the-wall.md).** *"When it dies, instead of exploding,
+have it fall out of the wall and crash down into the floor, and then the far right wall opens so the
+player can fly onwards."* A boss may author a `wreck` instead of a clear — thirteen rows say `null`.
+It is the same hull in the same pool, wearing what it died in and keeping the fire it caught; it
+tumbles down, lands on the room's own floor, bursts and cues there, lies for a second, and then the
+far wall parts from the middle outward and the camera comes back up on the number it parts on. This
+finishes the gyre's list.
+
+⚠️ **THE PHOTOGRAPH FOUND TWO THINGS THE MODEL AGREED WITH.** `playerShots` was still paired over a
+beaten boss — 42 of the next 47 shots swallowed by a corpse — and `stepWreck` needed a body in the
+pool to reach the opening, which made **any** path that emptied that pool a sealed room. The gate
+closes the one real path; the empty pool now skips to the opening, because *the room opens* is the
+invariant and the fall is the decoration on it.
+
+⚠️ **AND THE BENCH COULD NOT PHOTOGRAPH A BOSS DEATH AT ALL** until this PR: `#bosshp`'s floor was 5.
+The instrument had a hole exactly where the thing being built lived.
+
+⚠️ **OWED: A PLAY.** The tumble rate and the gravity are the two numbers most likely to move on a
+verdict, and the two and a half seconds between the last shot and flying again is an eye-and-ear call
+that has not been made.
+
 ### ⚠️ THE GYRE HAS A PINWHEEL AND CATCHES FIRE — 2026-09-18
 
 ⚠️ **[0336](decisions/0336-the-wheel-comes-off-its-post.md).** *"At 75%, 50%, 25% health the cog pops
