@@ -16,7 +16,7 @@ import { BOSSES, BOSS_KINDS, chainReach } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
 import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
-import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn } from '../src/app/frame.ts';
+import { BOSS_DEATH_STEPS, GameFrame, SHIP_START_ALONG, advanceLevel, resetScene, respawn, wearHull } from '../src/app/frame.ts';
 import { ASSIST_LADDER, DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -1887,6 +1887,116 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       expect(uncoilsBy(uncoil, full, full), `${kind} uncoils at full health`).toBe(0);
       expect(uncoilsBy(uncoil, full * uncoil.from + 1, full), `${kind} uncoils above its own threshold`).toBe(0);
     }
+  });
+
+  it('EVERY WALL ARRIVES WHOLE: under the fastest gun in the game, every curtain the fight throws has exactly one hole in it', () => {
+    /*
+      ⚠️ **`docs/decisions/0333-a-wall-arrives-whole.md`, AND IT IS THE HOLE EVERY OTHER GUARD IN THIS
+      FAMILY WAS ALREADY ABOUT.** *One hole, wide enough, in the same place every time* is 0151's
+      claim and it was driven into an EMPTY POOL, one throw at a time. In a real fight the pool is not
+      empty: `throwCurtain` drops the shots a full one cannot hold — deliberately, per
+      `src/sim/pool.ts` — and after 0332 quickened the ladder, **53% of all the gyre's wall shots
+      never reached the field under a shuriken at four rungs and thirteen of seventeen walls arrived
+      broken.** A wall missing half its shots is not a wall with the hole the player learned; it is
+      the fan 0151 exists to refuse. Every guard in this file was green for it.
+
+      ⚠️ **DRIVEN THROUGH A WHOLE FIGHT AT THE GUN THAT KILLS FASTEST**, because the defect is a
+      function of how fast the health bar falls and of nothing else. `scripts/weigh-walls.mjs` is the
+      matrix over every gun, tier and boss; this is the corner of it that was worst.
+
+      ⚠️ **THE HOLES ARE COUNTED IN THE SHOTS ON THE FIELD**, not in what `throwCurtain` intended: a
+      curtain is read off `enemyShots` after it is thrown and its gaps measured against the spacing
+      the row implies. That is the picture — `docs/decisions/0027-measure-the-picture-not-the-model.md`
+      — and it is the only form in which a dropped shot is visible at all.
+
+      ⚠️ **THE FAN IS HELD OFF, AND THE FIRST FORM OF THIS COULD NOT FAIL WITHOUT IT.** With the
+      volley running there is no way to tell a curtain's shots from a fan's, so the first draft took
+      *the pool grew by more than a fan can put in it* as the test for a throw — which skipped every
+      wall that arrived with fewer than ten shots in it, **which is exactly the walls the defect
+      produces**. The probe caught it: the floor authored away and the suite stayed green. With the
+      fan held, every shot in the pool is a curtain's and a throw is any growth at all.
+    */
+    for (const kind of uncoilers) {
+      const uncoil = BOSSES[kind].uncoil!;
+      const spacing = curtainSpacing(uncoil.gap);
+      const { world } = playableWorld(solo(kind));
+      const frame = new GameFrame(world);
+      // The shuriken at four rungs: the gun that took the fish from forty seconds to ten.
+      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+      wearHull(world);
+      world.fireIn = 1;
+      for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
+      expect(world.bossPool.size, `${kind} never arrived`).toBe(1);
+      let thrown = 0;
+      let last = world.bossUncoilAt;
+      for (let step = 0; step < 120 * STEPS_PER_SECOND && world.bossPool.size > 0; step++) {
+        world.ship.health = 1e6;
+        world.ship.invulnFor = 999;
+        // Held, so the pool holds curtains and nothing else — see above.
+        world.bossPool.at(0).fireIn = 999;
+        const before = world.enemyShots.size;
+        frame.step();
+        if (world.bossPool.size === 0) break;
+        const grew = world.enemyShots.size - before;
+        if (world.bossUncoilAt === last) continue;
+        last = world.bossUncoilAt;
+        /*
+          ⚠️ **A COUNT THAT MOVED IS NOT ALWAYS A WALL THAT WAS THROWN.** 0150's bared window eats
+          notches without throwing anything (0151), and that is the one case where the count moves and
+          nothing arrives.
+        */
+        if (grew === 0) continue;
+        thrown++;
+        // The curtain alone: the shots that arrived on this step, measured along their own line.
+        const laid: { along: number; across: number }[] = [];
+        for (let i = world.enemyShots.size - grew; i < world.enemyShots.size; i++) {
+          const s = world.enemyShots.at(i);
+          laid.push({ along: s.along - s.velAlong, across: s.across - s.velAcross });
+        }
+        const foot = laid.reduce((a, b) => (a.along < b.along || (a.along === b.along && a.across < b.across) ? a : b));
+        const at = laid.map((p) => Math.hypot(p.along - foot.along, p.across - foot.across)).sort((a, b) => a - b);
+        let holes = 0;
+        for (let i = 1; i < at.length; i++) if (at[i]! - at[i - 1]! > spacing + 0.001) holes++;
+        expect(
+          holes,
+          `${kind}'s wall ${thrown} arrived with ${holes} holes in it and ${laid.length} shots — a wall the pool ` +
+            'truncated is a fan, and the hole the player learned is not the only way through it',
+        ).toBe(1);
+      }
+      expect(thrown, `${kind} threw no walls at all, so nothing above this line was checked`).toBeGreaterThan(0);
+    }
+  });
+
+  it('and a wall the health has earned is owed rather than lost, so the order never skips', () => {
+    /*
+      ⚠️ **THE OTHER HALF OF 0333, AND THE HALF THAT PROTECTS 0332's TELL.** A floor between walls
+      could have been spent by SKIPPING the walls a fast gun outruns — and the gyre's hull is aimed
+      at the next wall's own edge, so a skipped wall is a cog that jumps three points and a spike that
+      lies. What the floor does instead is delay: `bossUncoilAt` counts walls THROWN and rises by
+      exactly one each time, so the k-th wall of every fight is the k-th stance whatever the gun.
+    */
+    const { world } = playableWorld(solo('gyre'));
+    const frame = new GameFrame(world);
+    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+    wearHull(world);
+    world.fireIn = 1;
+    for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
+    let last = world.bossUncoilAt;
+    let biggest = 0;
+    for (let step = 0; step < 120 * STEPS_PER_SECOND && world.bossPool.size > 0; step++) {
+      world.ship.health = 1e6;
+      world.ship.invulnFor = 999;
+      frame.step();
+      if (world.bossPool.size === 0) break;
+      biggest = Math.max(biggest, world.bossUncoilAt - last);
+      last = world.bossUncoilAt;
+    }
+    expect(last, 'the gyre threw nothing, so this measured nothing').toBeGreaterThan(1);
+    expect(
+      biggest,
+      `the gyre's wall count jumped by ${biggest} in one step, so a stance was skipped and the hull's spike now names ` +
+        'a wall that never came',
+    ).toBe(1);
   });
 
   it('and the whole hole is inside the lane', () => {

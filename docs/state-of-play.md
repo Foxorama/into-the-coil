@@ -1041,6 +1041,31 @@ better fight or a stationary target is a PLAY question and nothing here answers 
 first thing to look for on the branch preview, ahead of every other item on the gyre's list in
 [`the-bosses-planned`](../reports/the-bosses-planned-2026-09-16.md).
 
+### ⚠️ THE FIGHT IS LEGIBLE AGAIN, AND BOTH HALVES WERE FOUND BY MEASURING — 2026-09-18
+
+⚠️ **[0333](decisions/0333-a-wall-arrives-whole.md) AND
+[0334](decisions/0334-a-hit-is-an-event-again.md), FROM ONE QUESTION**: *"how's the hit register on
+the boss? does the boss still show or is the hit register too opaque with lots of bullets?"* Both
+answers were **no**, and neither was visible to any guard in the repository.
+
+⚠️ **THE WALLS WERE ARRIVING BROKEN — 53% OF THE GYRE'S WALL SHOTS NEVER REACHED THE FIELD.**
+`scripts/weigh-walls.mjs` is the instrument and 0333 has the table. `enemyShots` holds 150, the
+gyre's longest wall is 45, and 0332's quickened ladder put three in the air at once; `throwCurtain`
+drops what will not fit, so a wall came in as a fan with openings nobody authored. **A row now states
+the fewest steps between two of its walls, and a wall the health has earned is owed rather than
+lost.**
+
+⚠️ **AND THE HULL WAS DRAWN AS ITS HURT TWIN FOR 97% OF A FIGHT.** `scripts/weigh-flash.mjs`, and
+[`the-bosses-planned`](../reports/the-bosses-planned-2026-09-16.md) item 1 had already diagnosed it
+across every boss. 0278 fixed the wash's STRENGTH and left its DUTY. **Every art verdict that was
+waiting on this is now a play question rather than a blocked one** — 0318–0320's fish and 0332's cog
+have never been seen in a fight.
+
+⚠️ **AND `flashFor` WAS DOING TWO JOBS**: the arc's chain skipped *what is flashing* to avoid landing
+twice on one body, so the gap broke the arc within the hour. The chain has its own field now. **Two
+meanings on one field agree until one of them moves** — 0334 records it beside `spriteBase`'s own
+note about the same thing.
+
 ### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
 
 ⚠️ **[`the-album-plan`](../reports/the-album-plan-2026-09-07.md) HOLDS THE ORDER AND

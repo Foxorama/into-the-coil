@@ -60,6 +60,38 @@ import type { Pool } from './pool.ts';
  * ⚠️ Squared distances on both sides. A `Math.sqrt` per pair, several thousand times a step, buys
  * nothing — the comparison is the same one.
  */
+/**
+ * How long a body may not flash again, as a multiple of the flash itself — 0334.
+ *
+ * ⚠️ **A RATIO AND NOT A SECOND CONSTANT, BECAUSE WHAT IS WANTED IS A DUTY.** *Seen two thirds of
+ * the time under any gun* is a statement about the flash's own length: two gaps for every flash, so
+ * four steps on becomes four on and eight off whatever `flashSteps` a caller passes. A second
+ * absolute number here would have to be kept in step with the first by hand, and seventeen call
+ * sites pass the first.
+ *
+ * ⚠️ **SHARED CODE HOLDS IT AND NO ROW OVERRIDES IT** — `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s
+ * default shape. A body that wanted its own duty would say so on its row; none does, and *no row can
+ * forget it* is an argument for a default rather than for a constant.
+ */
+const FLASH_GAP_DUTY = 2;
+
+/**
+ * Arm a body's hit flash, if it is allowed to flash — 0334.
+ *
+ * ⚠️ **ONE DESCRIPTION, AND IT USED TO BE FOUR ASSIGNMENTS.** Every landing wrote `flashFor` itself,
+ * so *the twin is re-armed by every hit* was true in four places at once and could not be changed
+ * anywhere. The ship's own `wound` is deliberately NOT routed through here: it carries `invulnFor`,
+ * which already stops it being hit again, and its recovery blink is a different signal (0035).
+ */
+function flash(target: Entity, flashSteps: number): void {
+  // ⚠️ **ALWAYS, INCLUDING WHEN THE FLASH IS REFUSED.** The chain reads this and not the flash; the
+  // two used to be one field and `src/sim/entity.ts` records what that cost.
+  target.struckIn = flashSteps;
+  if (target.flashGap > 0) return;
+  target.flashFor = flashSteps;
+  target.flashGap = flashSteps * (1 + FLASH_GAP_DUTY);
+}
+
 export function overlaps(a: Entity, b: Entity, radiusScaleB: number): boolean {
   const reach = a.radius + b.radius * radiusScaleB;
   // Where they were relative to each other when the step began, and how that moved during it.
@@ -204,8 +236,12 @@ export function collideInto(
 
         On the survivor only. A target that died is already gone from the screen, which is its own
         feedback and a louder one.
+
+        ⚠️ **AND THROUGH `flash`, WHICH MAY REFUSE IT — 0334.** A landing inside the last flash's gap
+        takes health and leaves the picture alone, so a gun that lands every step still shows the
+        body it is hitting.
       */
-      target.flashFor = flashSteps;
+      flash(target, flashSteps);
     }
   }
   return destroyed;
@@ -245,7 +281,8 @@ export function blastInto(
         destroyed++;
         break;
       }
-      target.flashFor = flashSteps;
+      // Through `flash`, which may refuse it — 0334.
+      flash(target, flashSteps);
     }
   }
   return destroyed;
@@ -312,11 +349,16 @@ export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusS
  * EDGE rather than its centre, so a big body close by is nearer than a small one whose centre
  * happens to be closer — which is what *nearest* means to a player looking at the screen.
  *
- * ⚠️ **A body still flashing from a hit is skipped when `skipFlashing` is set**, and that is how a
- * chain avoids landing twice on one body: `strike` below writes the flash, so the next link's search
- * cannot find what the last link hit. It is the same field the picture reads (0035), which makes
- * *already hit this volley* and *drawn as just hit* one fact. A caller that wants to land on the same
- * body again — a bolt jumping around a single boss — passes `false`.
+ * ⚠️ **A body something has just landed on is skipped when `skipStruck` is set**, and that is how a
+ * chain avoids landing twice on one body: the next link's search cannot find what the last link hit.
+ * A caller that wants to land on the same body again — a bolt jumping around a single boss — passes
+ * `false`.
+ *
+ * ⚠️ **IT READS `struckIn` AND IT USED TO READ `flashFor` — 0334.** *Already hit this volley* and
+ * *drawn as just hit* were one fact for three hundred decisions, because a landing always armed the
+ * flash. The moment a landing stopped always arming it, the chain started finding the body it had
+ * just struck: **three links stroked as one**, two of them zero-length, caught by
+ * `tests/weapons.test.ts` inside the hour. Two meanings on one field agree until one of them moves.
  *
  * ⚠️ **AND ONLY A BODY WHOSE WHOLE HULL IS ON THE SCREEN — 0257.** `edge` is the leading edge of the
  * view, and a body whose far side is past it is not a target however near it is. Reported from the
@@ -334,7 +376,7 @@ export function nearestFrom(
   along: number,
   across: number,
   reach: number,
-  skipFlashing: boolean,
+  skipStruck: boolean,
   edge: number,
 ): number {
   let best = -1;
@@ -342,7 +384,7 @@ export function nearestFrom(
   for (let i = targets.size - 1; i >= 0; i--) {
     const target = targets.at(i);
     if (target.invulnFor > 0) continue;
-    if (skipFlashing && target.flashFor > 0) continue;
+    if (skipStruck && target.struckIn > 0) continue;
     if (target.along + target.radius > edge) continue;
     const dAlong = target.along - along;
     const dAcross = target.across - across;
@@ -406,7 +448,8 @@ export function strike(targets: Pool<Entity>, index: number, damage: number, fla
     killed(targets, index, deaths);
     return true;
   }
-  target.flashFor = flashSteps;
+  // Through `flash`, which may refuse it — 0334. The arc lands every few steps on one body.
+  flash(target, flashSteps);
   return false;
 }
 

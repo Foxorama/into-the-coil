@@ -647,6 +647,27 @@ export interface Uncoil {
    */
   quicken: { by: number; least: number } | null;
   /**
+   * The fewest steps that may stand between one curtain and the next —
+   * `docs/decisions/0333-a-wall-arrives-whole.md`.
+   *
+   * ⚠️ **THE HEALTH LADDER SAYS *WHICH* WALL AND THIS SAYS *NOT YET*.** 0151's count is keyed to
+   * health and stays keyed to health: a notch the damage has reached is a wall the boss OWES, and it
+   * is thrown on the first step this gap allows. Nothing is skipped and nothing is re-ordered, so the
+   * spinning hull still ticks one point per wall (0332) — what changes is that a gun fast enough to
+   * cross four notches in a second no longer puts four walls in the air at once.
+   *
+   * ⚠️ **AND THE REASON IS THE POOL, MEASURED RATHER THAN FEARED.** `enemyShots` holds 150 and the
+   * gyre's longest wall is 45 shots; three walls and a fan do not fit, so `throwCurtain`'s *a curtain
+   * that will not fit is dropped rather than grown* fired — and a wall missing half its shots is not
+   * a wall with the hole the player learned, it is a fan. Driven over every gun at every tier before
+   * this field existed, **53% of all wall shots never reached the field** under a shuriken at four
+   * rungs and thirteen of seventeen walls arrived broken. The decision has the table.
+   *
+   * ⚠️ **IT IS A FLOOR AND NEVER A CADENCE.** A boss whose health is not falling throws nothing,
+   * however long it waits — which is the difference between this and the `fireEvery` 0151 refused.
+   */
+  apart: number;
+  /**
    * Maximum spacing between neighbouring shots, in world units.
    *
    * ⚠️ **A CEILING on the spacing and not the spacing.** The curtain spans the whole lane, so the
@@ -1823,7 +1844,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     // ⚠️ From 0.7 rather than 0.5 since 0247: at half the health the eye opens at 0.36, and a
     // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
-    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },
+    // ⚠️ **NO FLOOR, AND THAT IS A MEASUREMENT** — 0333. Driven over every gun at every tier, the
+    // chorus's four walls arrive whole with none; a floor of two seconds costs it three of them
+    // against a fast gun and buys nothing. `scripts/weigh-walls.mjs` is where that is read.
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
@@ -1896,7 +1920,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **It is still the harder of the two and the numbers say why**: the player has 19 fewer steps
       to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
     */
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null },
+    // No floor, on the chorus's own measurement — 0333. Two walls, both whole, under every gun.
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
@@ -2744,7 +2769,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       half to reach a ship at the back of its box — so the tightest pair the ladder can produce still
       clears the screen before the next one is thrown.
     */
-    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 } },
+    /*
+      ⚠️ **AND TWO AND A HALF SECONDS BETWEEN WALLS, WHICH IS THE ONLY ROW THAT NEEDS ONE — 0333.**
+      0332's ladder bills the walls in health, and a shuriken at four rungs crosses four notches a
+      second: seventeen walls tried to stand in a ten-second fight and **thirteen of them arrived
+      broken**, because `enemyShots` holds 150 and this row's longest wall is 45. 150 steps is the
+      value that comes back with **zero walls short in all ten gun-by-tier cells**
+      (`scripts/weigh-walls.mjs`); 120 leaves one and 90 leaves three. What a fast gun sees now is
+      fewer walls and all of them whole, which is the trade 0040 already makes about a short fight.
+    */
+    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
     fall: null,
     chill: null,
     muzzle: null,
