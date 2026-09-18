@@ -70,7 +70,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../co
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, chainReach } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Uncoil, chainReach } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -86,7 +86,7 @@ import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { COG_TICK, belch, cogTurn, curtainStance, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
+import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
@@ -1196,6 +1196,15 @@ export interface World {
    */
   roomHold: number;
   /**
+   * Steps left of the pinwheel the boss is in the middle of, or `0` — 0336.
+   *
+   * ⚠️ **ONE COUNTER FOR THE WHOLE THING — the rise, the spray and the sink are read off it** rather
+   * than kept as a state somewhere. A phase turning over sets it to the three added together, and
+   * where in them the wheel is is arithmetic; there is no second answer to go stale, which is
+   * `bossUncoilAt`'s own argument one field up.
+   */
+  bossWheelIn: number;
+  /**
    * Steps until the boss's fall next belches — 0251. Set to the fall's gap when the boss arrives
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
@@ -2158,6 +2167,23 @@ function fightAt(w: World): number {
  * settles at `camera + station` because that is what it always does, and the player's box is the
  * camera's, so the room is exactly the space the ship could already fly in.
  */
+/**
+ * Whether a spinning hull's spike has arrived at the point its next wall comes in over — 0336.
+ *
+ * ⚠️ **`true` FOR A WALL THAT DOES NOT SPIN**, because a hull with no spike names its edge by the
+ * stance alone and has nothing to wait for. `curtainStance` says the same thing one layer down.
+ */
+function onPoint(w: World, boss: Entity, uncoil: Uncoil): boolean {
+  if (!uncoil.spin) return true;
+  /*
+    ⚠️ **ON THE POINT AND NOT NEAR IT.** `swingTo` clamps its step to whatever is left, so the step
+    after the hull comes within one tick lands it exactly — waiting for that costs a single frame and
+    buys a wall that leaves from precisely the edge the spike is naming. A tolerance of a tick instead
+    let one out five hundredths of a radian early, which is what `tests/gyre.test.ts` measured.
+  */
+  return Math.abs(foldTurn(boss.turn - cogTurn(w.bossUncoilAt))) < 1e-6;
+}
+
 function roomRestFor(w: World): number {
   const room = w.bossRow.room;
   if (room === null) return Number.POSITIVE_INFINITY;
@@ -2255,6 +2281,8 @@ function nextFight(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossWallIn = 0;
+  // No wheel half-run into a new fight — 0336.
+  w.bossWheelIn = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
@@ -5959,6 +5987,18 @@ function driveBoss(w: World): void {
     if (w.bossPhaseAt >= 0) {
       burst(w, boss.along, boss.across, BURST.phase);
       w.onCue('bossPhase', boss.across);
+      /*
+        ⚠️ **AND THE WHEEL COMES OFF ITS POST — 0336.** *"At 75%, 50%, 25% health the cog pops out and
+        spins in a circle like the fireworks on fence posts."* The phase's own event, because the ask's
+        three health shares ARE this row's three phase boundaries — `src/content/bosses.ts` has why
+        those two ladders were made one rather than left to drift apart.
+
+        ⚠️ **NOT ON THE FIRST PHASE, WHICH IS WHAT `bossPhaseAt >= 0` ALREADY SAYS.** A boss arriving
+        is not a phase turning over, and a pinwheel on the step the fight opened would be the fight's
+        loudest thing happening before the player had been shown anything to read.
+      */
+      const opening = w.bossRow.phases[phase]!.wheel;
+      if (opening !== undefined) w.bossWheelIn = opening.rise + opening.spray + opening.sink;
     }
     w.bossPhaseAt = phase;
   }
@@ -6007,7 +6047,21 @@ function driveBoss(w: World): void {
     */
     if (stance.kind === 'bare') {
       if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
-    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0) {
+      /*
+        ⚠️ **AND NOT WHILE THE WHEEL IS UP — 0336.** The hull free-spins through a pinwheel, so for
+        that second and a half its spike names nothing; a wall thrown into it would arrive over an
+        edge the player had not been told about, which is the one thing 0332's whole compass exists
+        to prevent. **The wall is OWED rather than lost** — 0333's queue is already the answer, and
+        this is a second reason for it.
+      */
+      /*
+        ⚠️ **AND NOT UNTIL THE SPIKE HAS GOT BACK TO ITS POINT.** A wheel leaves the hull wherever its
+        free spin ended, and `swingTo` takes up to forty steps to index it round — so a wall thrown on
+        the step the wheel finished would come from an edge the spike was still travelling towards.
+        What the player sees instead is the cog clicking back onto its next point and THEN throwing,
+        which is the tell arriving on a beat of its own.
+      */
+    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0 && w.bossWheelIn <= 0 && onPoint(w, boss, uncoil)) {
       const bullet = SHOTS[w.bossRow.shot];
       throwCurtain(
         boss,
@@ -6045,7 +6099,75 @@ function driveBoss(w: World): void {
       ⚠️ **ONLY A ROW THAT SPINS TURNS**, or thirteen hulls baked facing down the lane would start
       rotating because a boss somewhere else grew a spike.
     */
-    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);
+    if (uncoil.spin && w.bossWheelIn <= 0) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);
+  }
+
+  /*
+    ── THE PINWHEEL — 0336 ────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **ASKED FOR**: *"the cog pops out and spins in a circle like the fireworks on fence posts,
+    spraying fire in a pinwheel style over 360° for a second or two"*, and the pop is *"the cog coming
+    out of the screen towards the actual player as a turret popping up, spraying, sitting back down
+    again."*
+
+    ⚠️ **THE POP IS A SCALE AND THE SCALE IS ALSO THE HURTBOX.** There is no axis out of the screen,
+    so `swell` is how a top-down game says *toward you* — and a body drawn a quarter larger than it
+    collides is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`'s own
+    defect, so the radius moves with it and back again. Nothing about the lane is spent: a lunge down
+    it would have cost every unit 0101 holds.
+
+    ⚠️ **AND THE HULL FREE-SPINS WHILE IT IS UP**, which is the one second in the fight when 0332's
+    spike is not a tell. The player is not reading it then; they are reading the spokes. It swings
+    back to the right point on its own afterwards, because the line above simply stops being skipped.
+  */
+  const wheel = w.bossRow.phases[w.bossPhaseAt]?.wheel;
+  if (w.bossWheelIn > 0 && wheel !== undefined) {
+    const total = wheel.rise + wheel.spray + wheel.sink;
+    const done = total - w.bossWheelIn;
+    w.bossWheelIn--;
+    /*
+      ⚠️ **A HALF-COSINE UP AND DOWN, WHICH IS 0215's RULE ON A THIRD CHANNEL.** A linear rise is a
+      thing being dragged; what *popping up* looks like is fast in the middle and still at both ends.
+      Held at full height for the whole spray, because a turret that is firing is a turret that is up.
+    */
+    const risen =
+      done < wheel.rise
+        ? roomEase(done / wheel.rise)
+        : done < wheel.rise + wheel.spray
+          ? 1
+          : roomEase(Math.max(0, total - done) / wheel.sink);
+    boss.swell = 1 + (wheel.swell - 1) * risen;
+    boss.radius = w.bossRow.radius * boss.swell;
+    boss.turn = foldTurn(boss.turn + wheel.spin);
+    /*
+      ⚠️ **THE SPOKES TURN WITH THE HULL AND THE SHOTS LIE ON A SPIRAL.** A ring is `BossAttack`'s own
+      arm and the jellyfish throws one; a Catherine wheel emits from a point that is going round, so
+      the gaps BETWEEN the arms are the way through and they move. `turns` is how far the spokes get
+      round over the spray, which is the number that decides how tight that spiral is.
+
+      ⚠️ **ONLY WHILE IT IS UP.** Nothing leaves during the rise or the sink: those are the tell that
+      it is coming and the beat that says it is over, and a shot in either would blur both.
+    */
+    const into = done - wheel.rise;
+    if (into >= 0 && into < wheel.spray && into % wheel.every === 0) {
+      const bullet = SHOTS[wheel.shot];
+      const speed = bullet.speed * w.difficulty.shotSpeed;
+      const at = (into / wheel.spray) * wheel.turns * Math.PI * 2;
+      for (let arm = 0; arm < wheel.arms; arm++) {
+        const angle = at + (arm / wheel.arms) * Math.PI * 2;
+        const shot = w.enemyShots.spawn();
+        if (shot === null) break;
+        reset(shot, boss.along, boss.across, bullet, SHOT_INDEX[wheel.shot]);
+        shot.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
+        shot.velAcross = Math.sin(angle) * speed;
+      }
+      w.onCue('bossShot', boss.across);
+    }
+    // And back to the body's own size the step it finishes, so nothing carries a swell into the fight.
+    if (w.bossWheelIn <= 0) {
+      boss.swell = 1;
+      boss.radius = w.bossRow.radius;
+    }
   }
 
   /*
@@ -6522,10 +6644,10 @@ function layAura(w: World): void {
     question asked twice — so the seat is one entity in it, at the hull's place, taking the hull's
     previous place so it interpolates with the thing it holds rather than a step behind it.
 
-    ⚠️ **A BOSS HAS AN AURA OR A SEAT AND NEVER BOTH**, which is an invariant over the content table
-    rather than an arrangement in the code: one pool, one thing in it per boss. `tests/gyre.test.ts`
-    holds it, because a row that authored both would silently lose one of them here and the picture
-    is the only place that would say so.
+    ⚠️ **A BOSS HAD AN AURA OR A SEAT AND NEVER BOTH, AND 0336 IS WHY THAT STOPPED BEING TRUE.** *"Set
+    on fire"* on a hull that is set into a wall needs the housing AND the flames, and they are both
+    *what is drawn behind the hull*. The seat takes the FIRST slot and the fire follows it, which is
+    also the order they are drawn in: the mounting under the flames, the flames under the cog.
   */
   const move = w.bossRow.move;
   if (head !== null && move.kind === 'socket') {
@@ -6535,15 +6657,63 @@ function layAura(w: World): void {
       // a number on a content row, and a second `Body` per boss would be a table to keep in step.
       if (seat !== null) reset(seat, head.along, head.across, AURA_FLAME);
     }
+    /*
+      ── AND THE FIRE IT HAS CAUGHT — 0336 ────────────────────────────────────────────────────────
+
+      ⚠️ **HOW MANY FLAMES IS THE ESCALATION, WHICH IS WHAT *AS IT GETS HURT* MEANS.** The count runs
+      from `least` at `from` to `most` at an empty bar, so the fire takes hold over the fight rather
+      than switching on at a threshold. They stand round the hull at `radius`, spaced evenly and set
+      half a step off the spacing so a ring of them never lines up with the cog's own teeth.
+
+      ⚠️ **THE FLICKER IS ON `w.steps`**, the same clock the serpent's aura reads, so it needs no
+      state to reset when a boss dies — and each flame is `k` frames on from its neighbour, so the
+      fire crawls round the rim instead of the whole ring blinking at once.
+    */
+    const burn = w.bossRow.burn;
+    const left = w.bossFullHealth > 0 ? head.health / w.bossFullHealth : 1;
+    let flames = 0;
+    if (burn !== null && left <= burn.from) {
+      const through = burn.from > 0 ? (burn.from - left) / burn.from : 1;
+      flames = Math.min(burn.most, burn.least + Math.floor(through * (burn.most - burn.least)));
+    }
+    // One for the seat, and then one per flame.
+    while (w.bossAura.size < flames + 1) {
+      const flame = w.bossAura.spawn();
+      if (flame === null) break;
+      reset(flame, head.along, head.across, AURA_FLAME);
+    }
+    while (w.bossAura.size > flames + 1) w.bossAura.releaseAt(w.bossAura.size - 1);
     for (let i = 0; i < w.bossAura.size; i++) {
       const seat = w.bossAura.at(i);
-      seat.along = head.along;
-      seat.across = head.across;
       seat.prevAlong = head.prevAlong;
       seat.prevAcross = head.prevAcross;
-      seat.sprite = move.seat;
-      seat.spriteBase = move.seat;
-      seat.spriteHit = move.seat;
+      if (i === 0) {
+        seat.along = head.along;
+        seat.across = head.across;
+        seat.sprite = move.seat;
+        seat.spriteBase = move.seat;
+        seat.spriteHit = move.seat;
+        continue;
+      }
+      if (burn === null) continue;
+      const at = ((i - 0.5) / flames) * Math.PI * 2;
+      seat.along = head.along + Math.cos(at) * burn.radius;
+      seat.across = head.across + Math.sin(at) * burn.radius;
+      seat.prevAlong = seat.along;
+      seat.prevAcross = seat.across;
+      /*
+        ⚠️ **EACH FLAME IS TURNED TO POINT AWAY FROM THE HULL — 0336, and 0306 is what makes that
+        one argument.** The tile's tongues lean toward its own `+x`, which is heading zero; a ring of
+        them drawn unturned all leaned the same way and read as a comb. Turned, every one of them
+        licks outward from the thing it is burning on, which is the only direction fire can go when
+        the thing is opaque and fifty-two units across.
+      */
+      seat.turn = foldTurn(at);
+      seat.prevTurn = seat.turn;
+      const frame = burn.frames[(Math.floor(w.steps / burn.hold) + i) % burn.frames.length]!;
+      seat.sprite = frame;
+      seat.spriteBase = frame;
+      seat.spriteHit = frame;
     }
     return;
   }
@@ -6675,6 +6845,8 @@ function spawnBoss(w: World): void {
   // Zero, so the first wall the health earns is thrown on the step it earns it — 0333. The gap is a
   // floor between two walls and never a wait in front of the first.
   w.bossWallIn = 0;
+  // No wheel half-run into a new fight — 0336.
+  w.bossWheelIn = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
   /*
@@ -7008,6 +7180,8 @@ function beginScript(w: World): void {
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
   w.bossWallIn = 0;
+  // No wheel half-run into a new fight — 0336.
+  w.bossWheelIn = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;

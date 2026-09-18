@@ -27,7 +27,7 @@ export const PROBES = [
     guard: 'and the wall comes from the edge the spike is aimed at',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);',
+      find: '    if (uncoil.spin && w.bossWheelIn <= 0) swingTo(boss, cogTurn(w.bossUncoilAt), COG_TICK);',
       replace: '    if (uncoil.spin) swingTo(boss, cogTurn(w.bossUncoilAt - 1), COG_TICK);',
     },
   },

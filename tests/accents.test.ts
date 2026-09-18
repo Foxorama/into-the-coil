@@ -85,6 +85,11 @@ const HULLLESS: readonly SpriteKind[] = [
   'thrustBurn1Dive',
   'thrustEaseClimb',
   'thrustEaseDive',
+  // The cog's fire is energy with no hull, on the serpent aura's own terms — 0336.
+  'gyreFire0',
+  'gyreFire1',
+  'gyreFire2',
+  'gyreFire3',
   // The serpent's aura is energy with no hull, on the exhaust's terms — 0305.
   'serpentAura0',
   'serpentAura1',

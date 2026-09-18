@@ -1083,6 +1083,23 @@ fight's rungs are all on the sim clock.
 closes with `SCROLL_PER_STEP`; two level-walking instruments waited for a `bossAt` the camera no
 longer reaches. 0335 has each one and what it cost to find.
 
+### ⚠️ THE GYRE HAS A PINWHEEL AND CATCHES FIRE — 2026-09-18
+
+⚠️ **[0336](decisions/0336-the-wheel-comes-off-its-post.md).** *"At 75%, 50%, 25% health the cog pops
+out and spins in a circle like the fireworks on fence posts"*, and *"updated damage graphics for it
+as it gets hurt and set on fire."* A phase may open with a pinwheel; the gyre's phases are those
+three shares now, so **a wheel is what a phase turning over looks like** and the body that comes back
+is more broken and more alight. Four bodies, seven flames at the end.
+
+⚠️ **AND NO WALL LEAVES WHILE THE HULL IS SPINNING** — 0332's spike names nothing for that second, so
+0333's owed-wall queue is what makes the pinwheel safe. **A nine-second fight at the cap cannot hold
+both**: the decision names that rather than hiding it, and it is a play question.
+
+⚠️ **THE MEASUREMENT MOVED THREE THINGS.** The first wheels were 2.5 s each and left the gyre
+throwing **one wall in a whole fight**; the fourth phase's own FAN broke 0270's fairness floor and
+taking the wheel apart is the only way that was established; and a probe found that *no wall leaves
+while the hull spins* had no guard at all.
+
 ### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
 
 ⚠️ **[`the-album-plan`](../reports/the-album-plan-2026-09-07.md) HOLDS THE ORDER AND

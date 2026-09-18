@@ -1921,8 +1921,15 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       const spacing = curtainSpacing(uncoil.gap);
       const { world } = playableWorld(solo(kind));
       const frame = new GameFrame(world);
-      // The shuriken at four rungs: the gun that took the fish from forty seconds to ten.
-      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+      /*
+        ⚠️ **THE PULSE AT FOUR RUNGS, AND IT WAS THE SHURIKEN UNTIL 0336.** What this guard needs is a
+        gun that puts the most walls in the air at once, which is the one that crosses the most
+        notches while the fight is still long enough to throw them: the pulse owes seventeen and
+        throws nine over thirty seconds (`scripts/weigh-walls.mjs`), so the queue is carrying a
+        backlog the whole way. The shuriken at four rungs kills in nine seconds and the gyre's three
+        pinwheels fill most of it, so it now throws ONE wall — a fixture that measured almost nothing.
+      */
+      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
       wearHull(world);
       world.fireIn = 1;
       for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
@@ -1977,7 +1984,8 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
     */
     const { world } = playableWorld(solo('gyre'));
     const frame = new GameFrame(world);
-    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+    // The pulse at four rungs, on the guard above's own reasoning — 0336.
+    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
     wearHull(world);
     world.fireIn = 1;
     for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();

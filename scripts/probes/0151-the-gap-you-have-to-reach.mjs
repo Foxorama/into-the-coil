@@ -100,7 +100,7 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0333, which put a floor between two walls and made the gate a queue.
-      find: '    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0) {',
+      find: '    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0 && w.bossWheelIn <= 0 && onPoint(w, boss, uncoil)) {',
       replace: '    } else if (false) {',
     },
   },

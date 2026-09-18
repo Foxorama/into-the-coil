@@ -475,10 +475,22 @@ export function swingTo(body: Entity, want: number, rate: number): void {
   if (delta > Math.PI) delta -= TAU;
   else if (delta < -Math.PI) delta += TAU;
   const step = delta > rate ? rate : delta < -rate ? -rate : delta;
-  let turn = body.turn + step;
-  if (turn > Math.PI) turn -= TAU;
-  else if (turn <= -Math.PI) turn += TAU;
-  body.turn = turn;
+  body.turn = foldTurn(body.turn + step);
+}
+
+/**
+ * A turn folded back into the `(−π, π]` the painter interpolates over — 0336.
+ *
+ * ⚠️ **ONE DESCRIPTION, AND IT WAS TWO LINES INSIDE `swingTo` UNTIL SOMETHING ELSE TURNED.** The
+ * pinwheel free-spins the hull rather than swinging it toward a want, and an angle that is not folded
+ * grows without bound — which `src/render/scene.ts` reads as a head going the long way round, once
+ * per revolution, for ever.
+ */
+export function foldTurn(turn: number): number {
+  let folded = turn;
+  while (folded > Math.PI) folded -= TAU;
+  while (folded <= -Math.PI) folded += TAU;
+  return folded;
 }
 
 /**
