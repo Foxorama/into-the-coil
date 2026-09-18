@@ -11,7 +11,10 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import type { View } from '../sim/camera.ts';
+import { ACROSS_SPAN, type View } from '../sim/camera.ts';
+// The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
+// makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
+import { PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
@@ -149,6 +152,28 @@ const NO_LANDMARKS: Landmarks = [];
  *
  * `null` for a scene that has no box to draw, which is every fixture and every menu.
  */
+/**
+ * The room a fight happens in, as a place to draw — `docs/decisions/0335-the-fight-happens-in-a-room.md`.
+ *
+ * ⚠️ **WORLD POSITIONS, NOT SCREEN ONES, WHICH IS WHY THERE IS NOTHING TO FADE.** The walls stand
+ * where the level put them and arrive by scrolling in, exactly as a landmark does — so there is no
+ * moment at which a wall appears on a screen that was not already approaching it, and none at which
+ * one is taken away. When the camera comes to rest they stop with it, and when it starts again they
+ * leave.
+ *
+ * `null` for a fight with no room, which is every fight but one.
+ */
+export interface Room {
+  /** The bitmap the walls are tiled from. */
+  sprite: number;
+  /** Its tiling period, in world units — the same number in both axes. */
+  extent: number;
+  /** Where the room's open side is, in world units along. */
+  from: number;
+  /** Where its far wall is, in world units along. */
+  to: number;
+}
+
 export interface Bound {
   /** The baked dash, as an index into the atlas. */
   sprite: number;
@@ -168,6 +193,7 @@ export function paintScene(
   bound: Bound | null = null,
   landmarks: Landmarks = NO_LANDMARKS,
   levelOrigin = 0,
+  room: Room | null = null,
 ): void {
   surface.clear();
   /*
@@ -179,6 +205,13 @@ export function paintScene(
   */
   paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin);
   paintSky(surface, view, cameraAlong, sky);
+  /*
+    ⚠️ **AFTER THE SKY AND BEFORE EVERY BODY — 0335.** A room is architecture: it stands in FRONT of
+    the starfield, because a wall you can see stars through is not one, and BEHIND everything that
+    can kill the player, because this file's one absolute is that nothing is ever lost behind
+    scenery.
+  */
+  paintRoom(surface, view, room, cameraAlong);
   /*
     ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
     rather than a thing in the world, and the one absolute in this file's draw order is that the
@@ -437,6 +470,58 @@ const BEAM_STROKE = 0.5;
  *
  * ⚠️ **Nothing allocates.** A divide, a ceiling, and a loop over numbers.
  */
+/**
+ * The room's three walls: the two lane edges and the far one — 0335.
+ *
+ * ⚠️ **ONLY WHAT IS ON THE SCREEN, AND THAT IS WHAT MAKES THE COUNT FIXED.** The side walls are
+ * clipped to the view before they are tiled, so a room a thousand units long costs the same as one
+ * exactly a screen wide — the same property `paintSky` has and the one `tests/budget.test.ts` holds
+ * every background to. What it costs at rest is about thirty blits.
+ *
+ * ⚠️ **THE WALLS STAND JUST OUTSIDE THE LANE AND JUST BEYOND THE BOX**, so nothing the player must
+ * see is ever behind one: the ship is clamped inside `PLAYER_MARGIN` of the lane and inside
+ * `PLAYER_LEAD` along it, which is exactly why it cannot reach them. They are the picture of a bound
+ * that already existed — 0074 — rather than a new rule.
+ *
+ * ⚠️ **Nothing allocates.** Two divides, two ceilings and a loop over numbers.
+ */
+function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong: number): void {
+  if (room === null || room.extent <= 0) return;
+  const half = room.extent / 2;
+  /*
+    ⚠️ **THE WALL'S FACE IS THE EDGE OF THE PLAYER'S BOX, AND THE REST OF IT IS OFF THE SCREEN.** A
+    first pass centred the sides a half-tile OUTSIDE the lane — which is outside the viewport, because
+    the view shows `across` 0 to 100 exactly and the gutters are not world. They were drawn every
+    frame and no pixel of them ever landed; the bench photograph is the only thing that said so
+    (`docs/decisions/0027-measure-the-picture-not-the-model.md`).
+
+    ⚠️ **AND THE BOX'S EDGE IS THE RIGHT PLACE RATHER THAN THE LANE'S.** `src/sim/flight.ts` clamps
+    the ship `PLAYER_MARGIN` inside the lane, so the boundary the player can actually feel is there —
+    0074's own rule that a line drawn NEAR the wall rather than AT it teaches something false. What
+    shows is the six units between the two, which is the room the game has to give.
+  */
+  const near = PLAYER_MARGIN - half;
+  const far = ACROSS_SPAN - PLAYER_MARGIN + half;
+  // Clipped to the view: from the trailing edge to whichever comes first, the far wall or the lead.
+  const start = Math.max(room.from, cameraAlong - room.extent);
+  const stop = Math.min(room.to, cameraAlong + view.alongSpan + room.extent);
+  const runs = Math.ceil((stop - start) / room.extent);
+  for (let i = 0; i < runs; i++) {
+    const along = start + i * room.extent + half;
+    const inView = along - cameraAlong;
+    surface.blit(room.sprite, screenX(view, inView, near), screenY(view, inView, near), view.scale);
+    surface.blit(room.sprite, screenX(view, inView, far), screenY(view, inView, far), view.scale);
+  }
+  // And the far wall across the lane, its own face at the forward edge of the box, corner to corner.
+  const endInView = room.to - cameraAlong + half;
+  if (endInView > view.alongSpan + room.extent || endInView < -room.extent) return;
+  const down = Math.ceil((ACROSS_SPAN + room.extent) / room.extent);
+  for (let i = 0; i <= down; i++) {
+    const across = near + i * room.extent;
+    surface.blit(room.sprite, screenX(view, endInView, across), screenY(view, endInView, across), view.scale);
+  }
+}
+
 function paintBound(surface: Surface, view: View, bound: Bound | null): void {
   if (bound === null || bound.extent <= 0) return;
   const count = Math.ceil(view.acrossSpan / bound.extent);

@@ -36,7 +36,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, layRoom, respawn, type World } from '../src/app/frame.ts';
 import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -150,6 +150,8 @@ export function inertLevel(): {
   onHealth: (health: number) => void;
   onCue: (kind: CueKind) => void;
   bound: null;
+  room: null;
+  roomHold: number;
 } {
   return {
     /*
@@ -159,6 +161,8 @@ export function inertLevel(): {
       blits to a scene whose subject is one entity's position.
     */
     bound: null,
+    room: null,
+    roomHold: 0,
     // A collision fixture has no ears. `playableWorld` is the one that records cues, because it is
     // the one that drives whole levels — `docs/decisions/0072-a-cue-is-baked-and-played.md`.
     onCue: (): void => {},
@@ -341,6 +345,8 @@ export function playableWorld(
     sky: [],
     landmarks: [],
     bound: null,
+    room: null,
+    roomHold: 0,
     shipPool,
     shieldOrbs,
     exhaust,
@@ -371,6 +377,7 @@ export function playableWorld(
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
+    scrollRate: SCROLL_PER_STEP,
     // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
     fireIn: weaponFor(shipRow, []).fireEvery,
     missileIn: weaponFor(shipRow, []).missileEvery,
@@ -473,5 +480,13 @@ export function playableWorld(
       cues.push(kind);
     },
   };
+  /*
+    ⚠️ **THE GAME'S OWN DESCRIPTION OF THE ROOM, CALLED RATHER THAN COPIED — 0335.** `beginScript`
+    lays a fight's room when a level starts and this fixture mirrors `beginRun` by hand; writing the
+    room's arithmetic out here again would be the second copy
+    `docs/decisions/0027-measure-the-picture-not-the-model.md` is about, and it would drift the first
+    time `stand` meant anything different.
+  */
+  layRoom(world);
   return { world, stick, deaths, wrecks, cleared, taken, faces, cues };
 }

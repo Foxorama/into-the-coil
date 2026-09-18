@@ -90,9 +90,10 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0233, which added the bolt painter and its lifetime to this import, by
       // 0243, which added the stack painter, by 0256, which took it away again, and by 0266, which
       // brought it back with the scatter.
-      find: "import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';",
+      // ⚠️ Re-anchored by 0335, which added the room to this import.
+      find: "import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';",
       replace:
-        "import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';\n" +
+        "import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';\n" +
         "import { bakeAtlas } from '../render/bake.ts';",
     },
   },

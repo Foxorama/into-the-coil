@@ -29,6 +29,7 @@
 // scripts/trace-frame.mjs: an instrument that produces nothing must not report success.
 
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { BOSSES } from '../src/content/bosses.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -89,7 +90,14 @@ export function weighLevel(kind, options = {}) {
   // Six minutes is more than any level plus its mid-boss at the base tier; the cap is for a fight
   // the immortal ship cannot win, which is not a thing this measures.
   const cap = STEPS_PER_SECOND * 60 * 6;
-  while (world.cameraAlong - world.levelOrigin < level.bossAt && step < cap) {
+  // The place the fight is fought — 0335: a room brings the camera to rest short of `bossAt`, so a
+  // walk that waited for `bossAt` waited forever with the world standing still.
+  const fought = level.bossAt - (BOSSES[level.boss].room?.stand ?? 0);
+  // ⚠️ **OR UNTIL THE CAMERA STOPS, WHICH IS WHAT A ROOM DOES TO A WALK.** The settle is a sum of
+  // discrete steps and lands a fraction of a unit short of its own target, so a walk that waited for
+  // the exact number waited forever. A camera that has come to rest has arrived wherever it arrived.
+  let atRest = false;
+  while (world.cameraAlong - world.levelOrigin < fought && !atRest && step < cap) {
     world.ship.health = world.shipRow.health;
     // The ship sweeps the lane, so its guns cover what a player's would; parked, it kills one line.
     if (sweepSeconds > 0) {
@@ -103,6 +111,7 @@ export function weighLevel(kind, options = {}) {
     if (world.bossPool.size > 0 && world.fight === 0) world.bossPool.at(0).health = 1;
     frame.step();
     step++;
+    if (world.scrollPerStep === 0) atRest = true;
     const boss = world.bossPool.size > 0;
     const on = bulletOnScreen(world);
     const slot = Math.floor(step / windowSteps);
@@ -148,7 +157,14 @@ export function weighLevel(kind, options = {}) {
     timeline: glyphs.join(''),
     sawBullet,
     sawBoss,
-    reachedBoss: world.cameraAlong - world.levelOrigin >= level.bossAt,
+    /*
+      ⚠️ **THE PLACE THE FIGHT IS FOUGHT, NOT `bossAt` — 0335.** A fight in a room brings the camera
+      to rest short of its own authored distance, so a level with one never reaches `bossAt`. The walk
+      above waited for it and stood still for its whole six-minute cap; this reported *never driven to
+      its boss* about a level it had driven all of, and the coverage figure it printed was five
+      minutes of a stopped world.
+    */
+    reachedBoss: atRest || world.cameraAlong - world.levelOrigin >= fought,
   };
 }
 

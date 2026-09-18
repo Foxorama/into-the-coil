@@ -59,7 +59,7 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Sky } from '../render/scene.ts';
+import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -852,8 +852,28 @@ export interface World {
    * `docs/decisions/0027-measure-the-picture-not-the-model.md`'s whole subject, in miniature.
    */
   prevCameraAlong: number;
-  /** World units the camera advances per fixed step. */
+  /**
+   * World units the camera advances per fixed step, **this step**.
+   *
+   * ⚠️ **DERIVED SINCE 0335 AND AN INPUT BEFORE IT, AND THE TWO ARE `scrollRate` AND THIS.** A fight
+   * may be fought in a room, which is a camera that comes to rest — so *how fast the level moves* and
+   * *how far the camera goes this step* stopped being one number. They were one field for three
+   * hundred decisions and `src/sim/entity.ts`'s note beside `struckIn` says what that costs: two
+   * meanings on one field agree until one of them moves. `tests/shields.test.ts` held the world
+   * still by writing this, and the frame started overwriting it the same day.
+   *
+   * ⚠️ **Everything downstream reads THIS**, which is why nothing had to be told the room exists: the
+   * ship's baseline, every shot's, the sky's parallax and the culls are all already written against
+   * it.
+   */
   scrollPerStep: number;
+  /**
+   * World units the camera advances per fixed step when nothing is holding it — 0335.
+   *
+   * ⚠️ **THE LEVEL'S OWN RATE, AND AN INPUT.** A fixture that wants a world standing still writes
+   * this; the frame multiplies it by the room's own shape and writes the answer to `scrollPerStep`.
+   */
+  scrollRate: number;
   /**
    * The level being played — its wave script, and what waits at the end of it.
    *
@@ -1158,6 +1178,24 @@ export interface World {
    */
   bossWallIn: number;
   /**
+   * The room this fight is being fought in, as a place to draw — 0335, or `null`.
+   *
+   * ⚠️ **BUILT WHEN THE FIGHT IS SET UP AND NOT PER FRAME**, because it is world positions and a
+   * painter may not allocate. It outlives the boss on purpose: the walls go on standing while the
+   * hull comes apart and while the camera carries the player back out of them, which is the whole of
+   * what *leaving a room* looks like.
+   */
+  room: Room | null;
+  /**
+   * Steps of the room's settle that have run, `0` open and `settle` at rest — 0335.
+   *
+   * ⚠️ **A COUNTER AND NOT A DISTANCE, AND A DRIVE IS WHY.** See `scrollFor`: a ramp eased on the
+   * gap that is left converges without ever closing it. This rises while the room is closing and
+   * falls while it opens, so the same shape runs both ways off one number and a fight that ended
+   * half way into the deceleration accelerates back out of exactly where it had got to.
+   */
+  roomHold: number;
+  /**
    * Steps until the boss's fall next belches — 0251. Set to the fall's gap when the boss arrives
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
@@ -1421,6 +1459,15 @@ export class GameFrame implements Frame {
       agree with.
     */
     w.steps++;
+    /*
+      ── AND THE CAMERA MAY COME TO REST — 0335 ─────────────────────────────────────────────────
+
+      ⚠️ **BEFORE IT ADVANCES, SO THE STEP THE ROOM CLOSES IS A STEP THAT DID NOT MOVE.** The rate
+      is a term of the fight rather than a constant, and everything downstream of it — the ship's
+      baseline, every shot's, the sky's parallax, the culls — reads `w.scrollPerStep` and needs to
+      be told nothing.
+    */
+    w.scrollPerStep = scrollFor(w);
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
@@ -1956,7 +2003,7 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -2103,6 +2150,96 @@ function fightAt(w: World): number {
 }
 
 /**
+ * Where the camera comes to rest for a fight in a room, in world units — 0335, or `Infinity`.
+ *
+ * ⚠️ **THE ROW'S `stand` BACK FROM THE FIGHT'S OWN AUTHORED DISTANCE, IN LEVEL COORDINATES.** The
+ * level says where the fight is (0076's origin plus `bossAt`, or the mid-boss's `at` — 0247); the
+ * row says how far short of it the camera stops. Nothing else in the room is a position: the hull
+ * settles at `camera + station` because that is what it always does, and the player's box is the
+ * camera's, so the room is exactly the space the ship could already fly in.
+ */
+function roomRestFor(w: World): number {
+  const room = w.bossRow.room;
+  if (room === null) return Number.POSITIVE_INFINITY;
+  return w.levelOrigin + fightAt(w) - room.stand;
+}
+
+/**
+ * Build the room this fight is fought in, or clear it — 0335.
+ *
+ * ⚠️ **ITS FAR WALL IS THE FORWARD EDGE OF THE PLAYER'S BOX, WHICH IS WHY THE SHIP CANNOT REACH IT.**
+ * `PLAYER_LEAD` is measured from the camera and the camera is about to stop, so the wall lands
+ * exactly where the ship was always being stopped — the room is the picture of a rule that has been
+ * there since 0074 rather than a new one. A wall the ship could touch would be a second rule, and it
+ * would disagree with the first one somewhere.
+ *
+ * ⚠️ **Called when a fight is set up, never in a frame.** `w.room` is world positions; the painter
+ * may not allocate and this file may.
+ */
+export function layRoom(w: World): void {
+  const room = w.bossRow.room;
+  const rest = roomRestFor(w);
+  // A new fight's room opens from nothing, or the last one's rest would carry into it.
+  w.roomHold = 0;
+  w.room = room === null || !Number.isFinite(rest) ? null : {
+    sprite: room.wall,
+    extent: SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
+    from: rest - room.mouth,
+    to: rest + PLAYER_LEAD,
+  };
+}
+
+/**
+ * How far the camera advances this step — 0335.
+ *
+ * ⚠️ **A HALF-COSINE INTO REST AND OUT OF IT, WHICH IS 0215's RULE ABOUT A DIFFERENT CHANNEL.** *A
+ * transition is a shape, not an instant*: the biggest arrival the game has, landing as a step, is the
+ * defect that decision is named for. The share is how much of the row's `settle` is left to run, and
+ * the cosine is what turns a ramp into a deceleration.
+ *
+ * ⚠️ **AND IT OPENS AGAIN THE MOMENT THE FIGHT ENDS.** The boss's death is 1.6 seconds of the level
+ * carrying on while the hull comes apart (0062), and a still frame is not that. So the room is a
+ * place the player LEAVES rather than one that is taken away — the same shape, run backwards, on the
+ * same number.
+ *
+ * ⚠️ **Nothing allocates**, on this file's own terms.
+ */
+function scrollFor(w: World): number {
+  const room = w.bossRow.room;
+  const rest = roomRestFor(w);
+  if (room === null || !Number.isFinite(rest)) return w.scrollRate;
+  /*
+    ⚠️ **THE RAMP IS A COUNTER, AND THAT IS WHAT MAKES THE CAMERA ARRIVE.** A rate eased on the
+    distance REMAINING converges without landing — the first draft crept at three ten-thousandths of
+    a unit a step forever, and the level walk that waits for the camera to reach the fight stood
+    still for six minutes. Counted in steps, the ramp ends: at `settle` the rate is zero exactly.
+
+    ⚠️ **AND THE TRIGGER IS BACK FROM THE REST BY WHAT THE RAMP ITSELF TRAVELS.** A half-cosine over
+    `settle` steps covers half of what the full rate would, so starting there lands the camera on
+    `rest` rather than short of it or past it. One line of arithmetic, and it is why `stand` means
+    what it says.
+  */
+  const rolls = (w.scrollRate * room.settle) / 2;
+  const closing = w.bossSpawned && !w.bossBeaten && w.cameraAlong >= rest - rolls;
+  if (closing) {
+    if (w.roomHold < room.settle) w.roomHold++;
+  } else if (w.roomHold > 0) w.roomHold--;
+  return w.scrollRate * roomEase(1 - w.roomHold / room.settle);
+}
+
+/**
+ * The shape of a camera coming to rest: `0` at rest, `1` at full rate, half a cosine between.
+ *
+ * ⚠️ **HALF A COSINE AND NOT A LINE.** A linear ramp still arrives at rest with its full deceleration
+ * on, so the last unit before the wall is the one the eye reads as a stop. The cosine leaves and
+ * arrives flat, which is what *coming to rest* looks like.
+ */
+function roomEase(share: number): number {
+  const s = share < 0 ? 0 : share > 1 ? 1 : share;
+  return 0.5 - Math.cos(s * Math.PI) / 2;
+}
+
+/**
  * The end boss's fight, set up on the step the mid-boss dies — 0247. The boss state is the current
  * fight's, so all of it starts again; the beat the mid-boss is coming apart on is `bossBurstIn`
  * and is left alone.
@@ -2112,6 +2249,8 @@ function nextFight(w: World): void {
   w.bossRow = BOSSES[w.level.boss];
   w.bossSpawned = false;
   w.bossBeaten = false;
+  // The end boss's room, which the mid-boss's fight did not have — 0335, after `bossRow` moved.
+  layRoom(w);
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
@@ -6857,6 +6996,9 @@ function beginScript(w: World): void {
   w.weaponsOffered = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
+  // The new level's own room, or none — 0335. Laid here rather than at the fight, because a room is a
+  // PLACE in the script and the camera has to be decelerating into it before the hull exists.
+  layRoom(w);
   // A mid-boss still coming apart at a level boundary would go on bursting into the next — 0247.
   w.bossBurstIn = 0;
   // ⚠️ Cleared as well as latched, or a level entered while the last one was still exploding would

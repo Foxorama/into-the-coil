@@ -459,6 +459,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
+    scrollRate: SCROLL_PER_STEP,
     ...inertLevel(),
     // 0093 took `fireEvery` off the row; the base cadence is what an empty upgrade list resolves to.
     // ⚠️ This fixture is *"how many shots does this take"* and its gun MUST fire — see `aimedAtTheShip`
@@ -572,6 +573,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
+    scrollRate: SCROLL_PER_STEP,
     ...inertLevel(),
     fireIn: NEVER,
     ship,

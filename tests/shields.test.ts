@@ -284,7 +284,14 @@ describe('the shell is drawn where the player is looking', () => {
       simulation keeps running.
     */
     const held = Math.atan2(moved.across - world.ship.across, moved.along - world.ship.along);
-    world.scrollPerStep = 0;
+    /*
+      ⚠️ **THE LEVEL'S RATE AND NOT THE STEP'S — 0335.** `scrollPerStep` is what the camera moved
+      THIS step and the frame writes it every step now, because a fight may be fought in a room and a
+      room is a camera coming to rest. What a fixture holding the world still wants is the input, and
+      that is `scrollRate`; writing the derived one was overwritten on the next step and this guard
+      said so within the hour of the split.
+    */
+    world.scrollRate = 0;
     for (let i = 0; i < A_WHILE; i++) frame.step();
     const stillHeld = world.shieldOrbs.at(0);
     expect(
