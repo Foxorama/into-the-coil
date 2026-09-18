@@ -101,7 +101,7 @@ export type BossKind = (typeof BOSS_KINDS)[number];
  * from the player would either break them or force them to be loosened. *"Up/down motion"* is what
  * was asked for and it is the axis those guards do not hold.
  */
-export const BOSS_MOVE_KINDS = ['patrol', 'bob', 'stalk'] as const;
+export const BOSS_MOVE_KINDS = ['patrol', 'bob', 'stalk', 'socket'] as const;
 
 /** Derived from the list, so a movement cannot exist in the union and be missing from the switch. */
 export type BossMoveKind = (typeof BOSS_MOVE_KINDS)[number];
@@ -154,7 +154,29 @@ export type BossMove =
    * the phase's own scale — so a fight against this one is a fight to get out from in front of it,
    * where a patrol is a fight to be somewhere it is not going.
    */
-  | { kind: 'stalk'; agility: number };
+  | { kind: 'stalk'; agility: number }
+  /**
+   * Set into the place and held there — `docs/decisions/0332-the-gyre-is-set-into-the-wall.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"when it appears on screen I want it 'locked' into the background like a cog
+   * set into an image."* It closes on `at` across the lane at the row's `patrol`, and once it is
+   * there it stops: no slide, no reversal, and the row's `drift` is zero beside it so it does not
+   * move along the lane either. A boss that holds one place is the one arrangement in which the
+   * PLACE can be what moves, which is what a cog set into a wall looks like when the wall scrolls.
+   *
+   * ⚠️ **`seat` IS THE HOUSING IT IS SET INTO**, drawn behind the hull in the layer the serpent's
+   * aura already uses. Without it the hull is a boss that stopped moving; with it the hull is
+   * mounted in something — and the difference between those two is the whole of the ask.
+   *
+   * ⚠️ **IT IS STILL AN ARM ON `across` AND IT STILL DOES NOT TOUCH `along`**, which is what keeps
+   * 0061's and 0101's six station assertions meaning what they say. What makes this one hold station
+   * along the lane too is a `drift` of zero on its row, which is the field that already says so.
+   *
+   * ⚠️ **AND A HULL THAT DOES NOT MOVE IS A HULL THE PLAYER CAN ALWAYS HIT.** That is the trade
+   * taken rather than an oversight: what this fight asks of the player is the wall, and `tests/level.test.ts`'s
+   * *a boss swings across the lane* is scoped to the arms that claim to.
+   */
+  | { kind: 'socket'; at: number; seat: number };
 
 /**
  * Every way a boss's volley can be shaped. Closed.
@@ -549,15 +571,53 @@ export type BossStance =
  * `tests/level.test.ts` drives from both edges at the real inertia rather than computing.
  */
 /**
- * Every way a curtain can stand — 0252. Closed, and in the order a spinning wall takes them.
+ * Every way a curtain can stand — 0252, and **eight of them since
+ * `docs/decisions/0332-the-gyre-is-set-into-the-wall.md`.** Closed, and in the order a spinning wall
+ * takes them: one eighth of a turn apart, going round from the leading edge toward the far one.
  *
- * `across` is every curtain before 0252: a line across the lane, thrown from the hull down it.
- * `slant` is that line leaning corner to corner — its far end a lane's width ahead — still thrown
- * down the lane, so it sweeps the lane one row at a time; `along` lies along the lane at the top
- * edge, from the camera's trailing edge to the hull, and falls across it; `backslant` leans the
- * other way. The k-th curtain of a spinning fight takes the k-th of these, round and round.
+ * ── THE ORDER IS A COMPASS, AND THAT IS THE WHOLE OF WHAT THE PLAYER READS ──────────────────────
+ *
+ * ⚠️ **ASKED FOR**: *"it currently has 8 points so it'll turn 1/8th every fire and the wall comes
+ * from that direction it's pointing when it next comes."* So the k-th stance is an EDGE of the
+ * screen — the one the cog's spike is aimed at — and the wall comes in over it:
+ *
+ * | k | the spike points at | the wall |
+ * |---|---|---|
+ * | 0 | the leading edge | `across` — a line across the lane at the hull, thrown down it |
+ * | 1 | leading + far corner | `backslant` — that line leaning, its far-edge end at the hull |
+ * | 2 | the far edge | `alongFar` — a line along the lane outside it, falling toward the near edge |
+ * | 3 | trailing + far corner | `rakeFar` — that line raked, so it crosses from the trailing end first |
+ * | 4 | the trailing edge | `astern` — a line across the lane behind the camera, coming up it |
+ * | 5 | trailing + near corner | `rakeNear` — the near-edge line raked, crossing from the trailing end |
+ * | 6 | the near edge | `alongNear` — a line along the lane outside it, falling toward the far edge |
+ * | 7 | leading + near corner | `slant` — the across line leaning, its near-edge end at the hull |
+ *
+ * `across`, `slant` and `backslant` are 0252's, unchanged; `alongNear` is 0252's `along`, renamed
+ * now that there is one at each edge.
+ *
+ * ⚠️ **THE FOUR CORNERS LEAN OR RAKE, AND NONE OF THEM TRAVELS CORNER TO CORNER.** A wall that
+ * arrives everywhere at once along a 45° line has to start outside the field at both ends, and the
+ * lane's cull is forty units past its edge — 0252 measured that and it has not moved. What a corner
+ * gets instead is the adjacent edge's own wall, tilted toward the corner named, so that the corner
+ * is where its crossing BEGINS. Every one of the eight still spans an entire axis of the field, so
+ * there is no corner of the lane any of them leaves standing.
+ *
+ * ⚠️ **AND THE LEAN IS 100 UNITS WHERE THERE IS ROOM AND 30 WHERE THERE IS NOT.** `slant` and
+ * `backslant` lean a whole lane's width because they are thrown down the lane and the leading cull
+ * is 280 units out; the rakes tilt thirty units into the margin because `EDGE_MARGIN` is forty and
+ * the shots would otherwise be culled on the step they were thrown. The numbers differ because the
+ * field's two axes do.
  */
-export const CURTAIN_STANCES = ['across', 'slant', 'along', 'backslant'] as const;
+export const CURTAIN_STANCES = [
+  'across',
+  'backslant',
+  'alongFar',
+  'rakeFar',
+  'astern',
+  'rakeNear',
+  'alongNear',
+  'slant',
+] as const;
 
 /** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
 export type CurtainStance = (typeof CURTAIN_STANCES)[number];
@@ -567,6 +627,25 @@ export interface Uncoil {
   from: number;
   /** Health lost between one curtain and the next, as a fraction of full health. */
   every: number;
+  /**
+   * How the gap between curtains SHRINKS as the fight goes on, or `null` for a wall that keeps one
+   * cadence — `docs/decisions/0332-the-gyre-is-set-into-the-wall.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"the walls and turns come faster as it gets more hurt."*
+   *
+   * ⚠️ **AND IT IS STILL COUNTED IN HEALTH RATHER THAN IN STEPS, WHICH IS 0151's WHOLE ARGUMENT.**
+   * *"Fire off at every 10% damage reduction"* bills every arsenal the same; a `fireEvery` would bill
+   * a base-weapon player three times what it bills one at the design loadout, because they stand
+   * inside each phase three times as long. A gap that shrinks in health shrinks in SECONDS too, for
+   * anyone whose damage is roughly steady — which is what *faster* means to the player — without
+   * charging the slower gun for being slow.
+   *
+   * ⚠️ **`least` IS WHAT MAKES IT TERMINATE.** A gap multiplied by `by` every curtain converges, and
+   * a converging series that never reaches the health bar's end throws an unbounded number of walls
+   * at it. The floor is the closest together two curtains may ever stand, and `uncoilsBy` walks the
+   * ladder rather than inverting it, so the two numbers can be read straight off the row.
+   */
+  quicken: { by: number; least: number } | null;
   /**
    * Maximum spacing between neighbouring shots, in world units.
    *
@@ -593,20 +672,25 @@ export interface Uncoil {
    */
   at: number;
   /**
-   * Whether the curtain turns an eighth between one throw and the next — 0252. `false` for a wall
-   * that always stands across the lane.
+   * Whether the curtain turns an eighth between one throw and the next — 0252, **and the hull turns
+   * with it since 0332.** `false` for a wall that always stands across the lane.
    *
    * ⚠️ **THE SPIN IS THE GYRE'S UPGRADE, WORD FOR WORD** — `docs/decisions/0252-the-gyre-spins.md`:
    * *"it'll spin and create diagonal, vertical and horizontal gaps to fly through."* The k-th
-   * curtain of a fight takes the k-th of `CURTAIN_STANCES`, round and round: across the lane,
-   * slanted corner to corner, along the lane at the top edge, slanted the other way. `at` and
-   * `hole` are read along the line wherever it stands, so the hole is still one place, learned once.
+   * curtain of a fight takes the k-th of `CURTAIN_STANCES`, round and round. `at` and `hole` are
+   * read along the line wherever it stands, so the hole is still one place, learned once.
    *
-   * ⚠️ **FOUR STANCES AND NOT AN ANGLE, BECAUSE THE LANE HAS EDGES.** A wall at an arbitrary angle
+   * ⚠️ **AND IT IS EIGHT STANCES AND A HULL THAT SHOWS WHICH — 0332.** *"When it fires a wall, it
+   * ticks around like a cog to point in the next direction."* The cog's spike is aimed at the edge
+   * the NEXT wall comes in over, all the way through the gap between two walls, which is what makes
+   * a wall from behind something the player was told about rather than something that happened to
+   * them. 0252 refused *the hull drawn turning* on the grounds that `blit` cannot rotate; it can
+   * since [0306](0306-the-serpent-coils-in.md), so the refusal's reason is gone.
+   *
+   * ⚠️ **EIGHT STANCES AND NOT AN ANGLE, BECAUSE THE LANE HAS EDGES.** A wall at an arbitrary angle
    * that arrives everywhere at once must start as far above the lane as it is slanted, and the
    * across cull is forty units out — the first draft was an angle, and its diagonal lost its top
-   * third on the step it was thrown. A slanted wall that travels down the lane starts inside the
-   * lane's width and sweeps every row of it in turn, which is the picture anyway.
+   * third on the step it was thrown. `CURTAIN_STANCES` has what the eight do instead.
    *
    * ⚠️ **The FIRST curtain always stands across the lane**, whatever this says, which is what keeps
    * every guard in `tests/level.test.ts` that reads a curtain by its `across` honest: they all drive
@@ -1040,6 +1124,31 @@ export interface BossPhase {
    * `find`s a whole phase line, which is six of them for nothing.
    */
   escort?: Escort;
+  /**
+   * The bitmaps the HULL wears in this phase instead of the row's, or absent for the row's —
+   * `docs/decisions/0332-the-gyre-is-set-into-the-wall.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"upscale the graphics and have it change as it gets more damaged."* A body
+   * that breaks up as its health falls, which is the thing this file's opening note says a phase does
+   * NOT do — and that note is about a different thing, exactly as 0305's `look` is. Three silhouettes
+   * were refused as a way of saying *how much boss is left* while they cost a second art pass and
+   * said nothing a rate and a spread do not; **this is the player asking for the damage itself**, and
+   * 0036 has wanted the phase change to be something the picture keeps saying since 0111.
+   *
+   * ⚠️ **`look` BESIDE IT CANNOT CARRY THIS AND THAT IS NOT AN OVERSIGHT.** A `Look` is a `Face` and
+   * an `Aura` — a jaw that moves and a fire that burns — which is what a creature with a head has.
+   * A hull that fills its own box has `face: null` on its row and no jaw to wear, so what it changes
+   * is the one bitmap it has. Two fields because they are two facts, per
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`.
+   *
+   * ⚠️ **THE EXTENT MAY NOT CHANGE BETWEEN THEM**, which `tests/gyre.test.ts` holds: a boss that grew
+   * or shrank its own box at a health threshold would hand back what four phases had taught about
+   * where its edge is, at the rung the player can least afford it — 0320's own finding on the fish.
+   *
+   * ⚠️ **OPTIONAL, ON `rear`'s AND `escort`'s ARGUMENT** — a required field here would re-anchor every
+   * probe that `find`s a whole phase line, which is six of them for nothing.
+   */
+  hull?: { rest: number; hit: number };
 }
 
 /**
@@ -1714,7 +1823,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     // ⚠️ From 0.7 rather than 0.5 since 0247: at half the health the eye opens at 0.36, and a
     // curtain is not thrown to a bared boss, so the four notches the fight throws sit above it.
-    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false },
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null },
     fall: null,
     chill: null,
     muzzle: null,
@@ -1787,7 +1896,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **It is still the harder of the two and the numbers say why**: the player has 19 fewer steps
       to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
     */
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false },
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null },
     fall: null,
     chill: null,
     muzzle: null,
@@ -2604,14 +2713,38 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * diagonal, vertical and horizontal in turn — is owed, and the rake is its stand-in.
    */
   gyre: {
-    move: { kind: 'patrol' },
+    /*
+      ⚠️ **SET INTO THE PLACE SINCE 0332** — *"when it appears on screen I want it 'locked' into the
+      background like a cog set into an image."* It closes on the lane's centre and stops there, and
+      its `drift` below is zero to match: a cog in a wall does not slide along the wall either.
+
+      ⚠️ **AND THE FIGHT IS THE WALLS NOW, WHICH IS THE TRADE THIS TAKES.** A hull that holds still
+      is a hull the player can always hit, so what makes this fight is the eight walls and the rate
+      they quicken at — which is what the brief asked to see in the first place. The rake still
+      sweeps its fan across the lane over the top of them.
+    */
+    move: { kind: 'socket', at: ACROSS_SPAN / 2, seat: SPRITE.boss11Seat },
     attack: { kind: 'rake', turn: 0.4 },
-    // An eighth of a turn a throw — 0252: across the lane, slanted corner to corner, along the lane
-    // from the top edge, slanted the other way, across again.
-    // From nine tenths since 0260 — *"the walls were really good but started too late in the
-    // sequence, they need to start sooner"* — so the first wall is the first notch of the fight
-    // rather than its second half, and there are nine of them over a fight twice as long.
-    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true },
+    /*
+      An eighth of a turn a throw — 0252, and eight stances since 0332: the cog's spike is aimed at
+      the edge the next wall comes in over, and it ticks round one point every time it throws.
+
+      From nine tenths since 0260 — *"the walls were really good but started too late in the
+      sequence, they need to start sooner"* — so the first wall is the first notch of the fight
+      rather than its second half.
+
+      ⚠️ **AND THEY QUICKEN — 0332**: *"the walls and turns come faster as it gets more hurt."* A
+      tenth of the bar between the first two, 0.88 of that between the next two, and so on down to a
+      floor of a twenty-fifth. Over the nine tenths this row spends that is **seventeen walls** where
+      0260's flat tenth gave nine, and the last of them stand two and a half times closer together
+      than the first — so the cog goes round twice and finishes faster than it started.
+
+      ⚠️ **THE FLOOR IS SIZED AGAINST THE WALL, NOT PICKED.** 0.04 of 1760 health at the gyre's own
+      damage rate is about four seconds between walls, and a wall across the lane takes two and a
+      half to reach a ship at the back of its box — so the tightest pair the ladder can produce still
+      clears the screen before the next one is thrown.
+    */
+    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 } },
     fall: null,
     chill: null,
     muzzle: null,
@@ -2620,19 +2753,30 @@ export const BOSSES: Record<BossKind, BossRow> = {
     entrance: null,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
-    radius: 14,
+    // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
+    // what 0101 says about the near end of a swing that no longer swings.
+    radius: 20,
     // Doubled by 0260, from 880.
     health: 1760,
     damage: 3,
     station: 130,
-    drift: 5,
+    // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
+    // across the lane and slides along it is not set into anything. 0061's *a boss keeps flying* is
+    // answered here by the walls rather than by the hull — there are seventeen of them.
+    drift: 0,
     driftWavelength: 220,
+    // What it closes on its seat at, and nothing after that: the `socket` arm stops at `at`.
     patrol: 0.45,
     shot: 'flak',
+    /*
+      ⚠️ **AND EACH PHASE WEARS ITS OWN DAMAGE — 0332**: *"have it change as it gets more damaged."*
+      Whole while it is over seven tenths, chipped from there, broken from two fifths — the same
+      rungs the fan already escalates on, so the body says what the volley is about to do.
+    */
     phases: [
       { upTo: 1, fireEvery: 78, shots: 3, spread: 0.7, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.7, fireEvery: 66, shots: 5, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Chipped, hit: SPRITE.boss11ChippedHit } },
+      { upTo: 0.4, fireEvery: 54, shots: 7, spread: 1.4, patrolScale: 1.7, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss11Broken, hit: SPRITE.boss11BrokenHit } },
     ],
   },
   /**

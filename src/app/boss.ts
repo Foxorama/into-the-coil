@@ -152,8 +152,39 @@ export function uncoilsBy(uncoil: Uncoil, health: number, full: number): number 
   if (full <= 0 || uncoil.every <= 0) return 0;
   const fallen = uncoil.from - health / full;
   if (fallen < 0) return 0;
-  return Math.floor(fallen / uncoil.every) + 1;
+  const quicken = uncoil.quicken;
+  if (quicken === null || quicken.least <= 0) return Math.floor(fallen / uncoil.every) + 1;
+  /*
+    ── AND A QUICKENING LADDER IS WALKED RATHER THAN INVERTED — 0332 ────────────────────────────
+
+    ⚠️ **ASKED FOR**: *"the walls and turns come faster as it gets more hurt."* Each gap is the last
+    one times `by`, floored at `least`, so the notches are the partial sums of a geometric series
+    with a floor under it. That has a closed form in two pieces and neither of them is readable;
+    what is readable is the ladder itself, and the loop is what the row says, run.
+
+    ⚠️ **IT TERMINATES ON THE FLOOR, WHICH IS WHY THE FLOOR EXISTS.** Without one the gaps converge
+    and the series has an asymptote — for the gyre's own numbers, 0.1/(1 − 0.88) = 0.83 of a bar,
+    inside the 0.9 it spends — so the count would run away exactly where the fight ends. `least` is
+    the closest two walls may ever stand and it is what bounds this at `from / least` turns.
+
+    ⚠️ **AND `UNCOIL_CEILING` IS A BACKSTOP AND NOT THE BOUND.** At the gyre's floor a whole bar is
+    twenty-five walls; the ceiling is there so a row authored with a silly floor cannot spin the
+    frame loop, which is a thing a content table must not be able to do.
+  */
+  let gap = uncoil.every;
+  let spent = 0;
+  let notch = 0;
+  while (spent + gap <= fallen && notch < UNCOIL_CEILING) {
+    spent += gap;
+    notch++;
+    const next = gap * quicken.by;
+    gap = next < quicken.least ? quicken.least : next;
+  }
+  return notch + 1;
 }
+
+/** The most curtains one fight may throw. A backstop on the ladder above, never its bound. */
+const UNCOIL_CEILING = 64;
 
 /**
  * The uncoil: one row of shots right across the lane with a single hole in it, at `uncoil.at`.
@@ -197,16 +228,25 @@ export function throwCurtain(
 ): void {
   const spacing = curtainSpacing(uncoil.gap);
   /*
-    ── HOW THE CURTAIN STANDS — 0252 ─────────────────────────────────────────────────────────────
+    ── HOW THE CURTAIN STANDS — 0252, AND EIGHT WAYS SINCE 0332 ──────────────────────────────────
 
     A line of shots `spacing` apart along its length, with one hole `hole` wide at the same share
     of that length that `at` is of the lane. `across` is the line every curtain was before 0252,
-    exactly. `slant` and `backslant` lean it corner to corner — a lane's width of lean, so the
-    line is √2 lanes long — and still throw it down the lane, so every row of the lane is swept in
-    turn as the leaning line passes; a leaning wall that arrived everywhere at once would have to
-    start as far above the lane as it leans, and the across cull is forty units out. `along` lies
-    along the lane just over the top edge, from the camera's trailing edge to the hull, and falls
-    across it. Nothing allocates, and the `never` arm is what makes the union closed (0016).
+    exactly. `slant` and `backslant` lean it corner to corner — a lane's width of lean, so the line
+    is √2 lanes long — and still throw it down the lane, so every row of the lane is swept in turn
+    as the leaning line passes; a leaning wall that arrived everywhere at once would have to start
+    as far above the lane as it leans, and the across cull is forty units out. `alongNear` and
+    `alongFar` lie along the lane just outside one edge, from the camera's trailing edge to the
+    hull, and fall across it. `rakeNear` and `rakeFar` are those two tilted into the margin, so the
+    trailing end of the line crosses the lane's edge first and the wall sweeps up the lane as it
+    falls. `astern` is the wall across the lane again, laid behind the camera and coming up it.
+
+    ⚠️ **EVERY ONE OF THEM SPANS A WHOLE AXIS OF THE FIELD, AND THAT IS THE RULE THE SET IS BUILT
+    ON.** A wall that covers only part of an axis leaves a corner of the lane standing, which is a
+    second hole nobody authored — 0252 found that with a true diagonal and this is the same finding
+    read forwards: the lean goes into the axis the wall TRAVELS along, never into the axis it spans.
+
+    Nothing allocates, and the `never` arm is what makes the union closed (0016).
   */
   // The line: its foot, its direction per unit of length, and how every shot on it travels.
   let length: number;
@@ -216,6 +256,10 @@ export function throwCurtain(
   let runAcross: number;
   let velAlong: number;
   let velAcross: number;
+  // The along the two edge walls and their rakes span: the camera's trailing edge to the hull.
+  const span = boss.along - cameraAlong;
+  // The rake's hypotenuse, so a raked line's own length is what the hole is measured along.
+  const raked = Math.sqrt(span * span + RAKE_DEPTH * RAKE_DEPTH);
   switch (stance) {
     case 'across':
       length = ACROSS_SPAN;
@@ -247,14 +291,72 @@ export function throwCurtain(
       velAlong = -speed + scrollPerStep;
       velAcross = 0;
       break;
-    case 'along':
-      length = boss.along - cameraAlong;
+    case 'alongNear':
+      length = span;
       footAlong = cameraAlong;
       footAcross = -bullet.radius;
       runAlong = 1;
       runAcross = 0;
       velAlong = scrollPerStep;
       velAcross = speed;
+      break;
+    case 'alongFar':
+      // The same wall at the other edge, falling the other way — 0332.
+      length = span;
+      footAlong = cameraAlong;
+      footAcross = ACROSS_SPAN + bullet.radius;
+      runAlong = 1;
+      runAcross = 0;
+      velAlong = scrollPerStep;
+      velAcross = -speed;
+      break;
+    case 'rakeNear':
+      /*
+        The near edge's wall, tilted `RAKE_DEPTH` further out at the HULL end — 0332. Every shot
+        falls at the same rate, so the shallow end crosses into the lane first and the wall sweeps
+        from the camera's trailing edge toward the hull: it comes in over the trailing-near corner,
+        which is the point the cog is aimed at when this one is thrown.
+      */
+      length = raked;
+      footAlong = cameraAlong;
+      footAcross = -bullet.radius;
+      runAlong = span / raked;
+      runAcross = -RAKE_DEPTH / raked;
+      velAlong = scrollPerStep;
+      velAcross = speed;
+      break;
+    case 'rakeFar':
+      // The same rake at the far edge — 0332.
+      length = raked;
+      footAlong = cameraAlong;
+      footAcross = ACROSS_SPAN + bullet.radius;
+      runAlong = span / raked;
+      runAcross = RAKE_DEPTH / raked;
+      velAlong = scrollPerStep;
+      velAcross = -speed;
+      break;
+    case 'astern':
+      /*
+        The wall across the lane, laid behind the camera and coming UP it — 0332, and the one wall
+        in the game that arrives from behind. 0252 refused it as *a curtain arriving from the
+        trailing edge, where nothing has ever come from*; what makes it fair now is that the cog has
+        been aimed at that edge since the previous wall left, so it is announced for the whole gap
+        rather than discovered when it appears.
+
+        ⚠️ **IT IS LAID AS DEEP AS THE CULL ALLOWS AND COMES ON SLOWER THAN ANY OTHER WALL.** The
+        field has forty units behind the camera and `ACROSS_CULL`'s sibling retires anything past
+        them, so the room a wall from behind can use is fixed and small. What buys the player time
+        instead is the rate: at `ASTERN_SHARE` of the bullet's own speed it takes over a second to
+        reach the back of the player's box, which is what `tests/gyre.test.ts` drives with a live
+        ship starting in the worst corner of it.
+      */
+      length = ACROSS_SPAN;
+      footAlong = cameraAlong - ASTERN_BEHIND;
+      footAcross = 0;
+      runAlong = 0;
+      runAcross = 1;
+      velAlong = scrollPerStep + speed * ASTERN_SHARE;
+      velAcross = 0;
       break;
     default: {
       const never: never = stance;
@@ -292,6 +394,91 @@ export function throwCurtain(
 export function curtainStance(spin: boolean, k: number): CurtainStance {
   if (!spin) return 'across';
   return CURTAIN_STANCES[((k % CURTAIN_STANCES.length) + CURTAIN_STANCES.length) % CURTAIN_STANCES.length]!;
+}
+
+/**
+ * How far into the lane's margin a raked edge wall's hull end lies, in world units — 0332.
+ *
+ * ⚠️ **THIRTY AGAINST AN `EDGE_MARGIN` OF FORTY, AND THE TEN IS THE BULLET AND THE STEP.** A shot
+ * laid outside `ACROSS_CULL_MIN`/`MAX` is retired on the step it is thrown, so the raked end has to
+ * clear the cull by its own radius and by the distance it covers before anything looks at it. Thirty
+ * leaves nine units of that and still tilts the line by about fourteen degrees at the shipped view,
+ * which is a wall the player can see is crooked.
+ */
+const RAKE_DEPTH = 30;
+
+/**
+ * How far behind the camera's trailing edge the wall from astern is laid, in world units — 0332.
+ *
+ * ⚠️ **AS DEEP AS THE FIELD HAS**, which is `EDGE_MARGIN` less the room a shot needs not to be
+ * retired on the step it is thrown. It is the only number that buys warning for a wall that comes
+ * from a place the player is not looking, and there are six units of it left.
+ */
+const ASTERN_BEHIND = 34;
+
+/**
+ * What share of its own speed a wall from astern travels at, in the camera's frame — 0332.
+ *
+ * ⚠️ **SLOWER THAN ANY OTHER WALL, AND THE REASON IS GEOMETRY RATHER THAN MERCY.** Every other
+ * curtain gets the whole field to cross before it reaches the ship; this one gets the thirty-four
+ * units `ASTERN_BEHIND` could find, which the bullet covers in half a second.
+ *
+ * ⚠️ **AND IT IS SIZED AT `burn` RATHER THAN AT THE TIER THE CONTENT IS AUTHORED ON, WHICH IS WHERE
+ * A FIRST DRAFT WENT WRONG.** At `legendary` the ship crosses the lane to the hole in about
+ * three quarters of a second and the wall takes forty-three hundredths at full speed: tight, and
+ * beatable, so the guard driven there stayed GREEN with this number set to 1 and the probe had
+ * nothing to catch. `burn` scales `shotSpeed` by 1.3 and scales nothing the ship does — so it is the
+ * tier where this is load-bearing, and it is the tier `tests/gyre.test.ts` drives it at. A fairness
+ * floor that only holds on the easy tier is not one.
+ */
+const ASTERN_SHARE = 0.45;
+
+/**
+ * Where the cog's spike is aimed for the k-th curtain of a fight — 0332, in `turnFor`'s units.
+ *
+ * ⚠️ **ASKED FOR**: *"when it fires a wall, it ticks around like a cog to point in the next
+ * direction… and the wall comes from that direction it's pointing when it next comes."* So the
+ * spike shows the NEXT wall, all the way through the gap before it: the hull is the warning, which
+ * is what makes a wall from astern something the player was told about.
+ *
+ * ⚠️ **AN EIGHTH OF A TURN A STANCE, AND THE SPRITE IS BAKED TO AGREE WITH IT.**
+ * `src/render/bake.ts` puts the spike at the sprite's `+x`, which `src/sim/entity.ts`'s `turnFor`
+ * makes heading 0 — the leading edge — at a turn of zero. `CURTAIN_STANCES[0]` is the wall that
+ * comes in over the leading edge, so stance 0 and turn 0 are the same fact stated twice, and
+ * `tests/gyre.test.ts` holds the pairing for all eight rather than trusting either statement.
+ */
+export function cogTurn(k: number): number {
+  const at = ((k % CURTAIN_STANCES.length) + CURTAIN_STANCES.length) % CURTAIN_STANCES.length;
+  return turnFor((at * TAU) / CURTAIN_STANCES.length + Math.PI);
+}
+
+/**
+ * How fast the cog swings to its next point, in radians a step — 0332.
+ *
+ * ⚠️ **A TICK RATHER THAN A SNAP OR A SPIN.** An eighth of a turn is 0.785 radians; at this rate it
+ * takes about a third of a second, which reads as a mechanism indexing round one tooth. Assigning
+ * the angle outright would make the tell teleport, and the renderer interpolates between two steps
+ * (0306) — so it would teleport in a single frame and the player would never see which way it went.
+ */
+export const COG_TICK = 0.075;
+
+/**
+ * Swing a hull toward the turn it should be wearing, the short way round — 0332.
+ *
+ * ⚠️ **THE SHORT WAY, BECAUSE A COG THAT GOES THE LONG WAY ROUND IS GOING BACKWARDS.** Seven of the
+ * eight ticks are an eighth forward; the eighth is the wrap from the last point to the first, and
+ * folding the difference is what makes that one look like the seven before it rather than like the
+ * cog unwinding all the way round. `src/render/scene.ts` folds the same way for the same reason.
+ */
+export function swingTo(body: Entity, want: number, rate: number): void {
+  let delta = want - body.turn;
+  if (delta > Math.PI) delta -= TAU;
+  else if (delta < -Math.PI) delta += TAU;
+  const step = delta > rate ? rate : delta < -rate ? -rate : delta;
+  let turn = body.turn + step;
+  if (turn > Math.PI) turn -= TAU;
+  else if (turn <= -Math.PI) turn += TAU;
+  body.turn = turn;
 }
 
 /**
@@ -490,6 +677,27 @@ export function stepBoss(
       */
       const want = ship.across - boss.across;
       const cap = row.patrol * phase.patrolScale * (move.agility / row.patrol);
+      boss.velAcross = want > cap ? cap : want < -cap ? -cap : want;
+      break;
+    }
+    case 'socket': {
+      /*
+        ── SET INTO THE PLACE, AND THEN STILL — 0332 ────────────────────────────────────────────
+
+        ⚠️ **ASKED FOR**: *"when it appears on screen I want it 'locked' into the background like a
+        cog set into an image."* It closes on its seat at the row's own `patrol` and stops there:
+        the rate is capped by how far it has left to go, so the last step lands exactly on `at`
+        rather than overshooting and hunting either side of it forever.
+
+        ⚠️ **THE PHASE DOES NOT SCALE IT, WHICH IS THE ONE ARM THAT SAYS SO.** `patrolScale` is how
+        much harder a hull flies as it is hurt, and a hull that is bolted to the wall does not fly
+        harder. What escalates on this one is the wall it throws and the rate it throws them at.
+
+        ⚠️ **AND THE HULL ITSELF IS WHAT SAYS WHICH WALL IS NEXT**, so *still* is not *inert*: the
+        cog turns where it stands. That is in `src/app/frame.ts` beside the notch it reads.
+      */
+      const want = move.at - boss.across;
+      const cap = row.patrol;
       boss.velAcross = want > cap ? cap : want < -cap ? -cap : want;
       break;
     }

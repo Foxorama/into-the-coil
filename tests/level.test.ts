@@ -1727,10 +1727,22 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       number, and the curtain still leaves one opening. What tells the two designs apart is whether
       the opening is in the same place when the ship is not.
     */
+    /*
+      ⚠️ **DRIVEN ACROSS EACH ROW'S OWN FIRST NOTCH SINCE 0332, AND IT USED TO BE 0.52 → 0.49.** That
+      pair crossed the first notch of the two flat walls by arithmetic and the FIFTH of the gyre's,
+      which was `CURTAIN_STANCES[4]` once the gyre grew eight stances — a wall lying along the lane,
+      whose shots all share one `across` and have no hole in that axis at all. The guard reported
+      *threw no curtain* about a curtain it had thrown and could not read.
+
+      ⚠️ **THE CLAIM IS UNCHANGED AND THE DRIVE IS NARROWER.** The first curtain of every fight
+      stands across the lane whatever the row spins (0252), so reading the hole off `across` is only
+      honest on the first notch — which is the notch this now crosses, for every uncoiler.
+    */
     for (const kind of uncoilers) {
       const holes: number[] = [];
+      const from = BOSSES[kind].uncoil!.from;
       for (const park of [12, 82]) {
-        const { world, frame } = fightAt(kind, 0.52);
+        const { world, frame } = fightAt(kind, from + 0.02);
         // Fly the ship to one end of the lane and leave it there.
         world.input = {
           contribute: (intent) => {
@@ -1747,7 +1759,7 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
             the player's own fire crosses it during the journey and the curtain under test is spent
             before the measurement starts. The axis died to exactly that and reported *no curtain*.
           */
-          world.bossPool.at(0).health = world.bossFullHealth * 0.52;
+          world.bossPool.at(0).health = world.bossFullHealth * (from + 0.02);
           world.bossPool.at(0).fireIn = 9999;
           frame.step();
         }
@@ -1755,7 +1767,7 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
         // Cross the first notch, with the ordinary fan held off so the pool holds the curtain alone.
         for (let i = 0; i < 3; i++) {
           world.ship.health = 1e6;
-          world.bossPool.at(0).health = world.bossFullHealth * 0.49;
+          world.bossPool.at(0).health = world.bossFullHealth * (from - 0.001);
           world.bossPool.at(0).fireIn = 9999;
           frame.step();
         }
