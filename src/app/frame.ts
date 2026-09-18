@@ -1148,6 +1148,16 @@ export interface World {
    */
   bossUncoilAt: number;
   /**
+   * Steps until the boss's next curtain may be thrown — `docs/decisions/0333-a-wall-arrives-whole.md`.
+   *
+   * ⚠️ **A FLOOR ON THE GAP AND NOT A CADENCE, WHICH IS WHAT KEEPS 0151 INTACT.** It never causes a
+   * wall; it only refuses one that health has already earned until the last one has had room. A boss
+   * whose health is not falling throws nothing however long this sits at zero.
+   *
+   * ⚠️ **Zero for a boss with no uncoil, which nothing reads** — `bossFallIn`'s own convention.
+   */
+  bossWallIn: number;
+  /**
    * Steps until the boss's fall next belches — 0251. Set to the fall's gap when the boss arrives
    * and again after every belch; zero for a boss with no fall, which nothing reads.
    */
@@ -2105,6 +2115,7 @@ function nextFight(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  w.bossWallIn = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
@@ -5838,7 +5849,26 @@ function driveBoss(w: World): void {
   const uncoil = w.bossRow.uncoil;
   if (uncoil !== null) {
     const notch = uncoilsBy(uncoil, boss.health, w.bossFullHealth);
-    if (notch > w.bossUncoilAt && stance.kind !== 'bare') {
+    if (w.bossWallIn > 0) w.bossWallIn--;
+    /*
+      ── ONE WALL AT A TIME, AND THE COUNT IS STILL HEALTH'S — 0333 ──────────────────────────────
+
+      ⚠️ **`bossUncoilAt` ADVANCES BY ONE PER WALL THROWN AND NOT TO THE NOTCH.** 0151 counts notches
+      off the health bar and 0332 quickened the ladder; a gun that crosses four notches in a second
+      then put four walls in the air at once, and `throwCurtain` dropped whatever the pool could not
+      hold. **Measured: 53% of all wall shots never reached the field under a shuriken at four rungs,
+      and thirteen of seventeen walls arrived with holes nobody authored.** So a notch the damage has
+      reached is a wall the boss OWES, thrown on the first step `apart` allows — nothing skipped,
+      nothing re-ordered, and the hull goes on ticking one point per wall.
+
+      ⚠️ **THE BARE WINDOW STILL EATS NOTCHES, WHICH IS 0151's RULE AND NOT AN ACCIDENT OF THIS ONE.**
+      A boss standing open owes nothing when it closes: the count jumps to the notch and the walls
+      those notches would have been are spent. A queue that survived the window would empty itself
+      into the player on the step the hull shut, which is the opposite of what the window is for.
+    */
+    if (stance.kind === 'bare') {
+      if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
+    } else if (notch > w.bossUncoilAt && w.bossWallIn <= 0) {
       const bullet = SHOTS[w.bossRow.shot];
       throwCurtain(
         boss,
@@ -5851,20 +5881,16 @@ function driveBoss(w: World): void {
         w.scrollPerStep,
         w.cameraAlong,
         // The k-th curtain of the fight takes the k-th stance if the row spins — 0252; the first across.
-        curtainStance(uncoil.spin, notch - 1),
+        curtainStance(uncoil.spin, w.bossUncoilAt),
       );
+      w.bossUncoilAt++;
+      w.bossWallIn = uncoil.apart;
       // Its own count and not `phase`'s, because the two are different events and
       // `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md` says
       // so: a phase change is the fight getting harder, and this is one attack arriving.
       burst(w, boss.along, boss.across, BURST.uncoil);
       w.onCue('bossShot', boss.across);
     }
-    /*
-      ⚠️ **Advanced even on the step it was skipped**, or a boss that reached its window with a notch
-      owing would throw that curtain the moment anything else moved the count. A notch the window ate
-      is a notch spent.
-    */
-    if (notch > w.bossUncoilAt) w.bossUncoilAt = notch;
     /*
       ── AND THE HULL TICKS ROUND TO SHOW WHICH WALL IS NEXT — 0332 ──────────────────────────────
 
@@ -6507,6 +6533,9 @@ function spawnBoss(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  // Zero, so the first wall the health earns is thrown on the step it earns it — 0333. The gap is a
+  // floor between two walls and never a wait in front of the first.
+  w.bossWallIn = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
   w.bossFallIn = w.bossRow.fall === null ? 0 : fireGapFor(w.bossRow.fall.every, w.difficulty);
   /*
@@ -6836,6 +6865,7 @@ function beginScript(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  w.bossWallIn = 0;
   w.bossFallIn = 0;
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;

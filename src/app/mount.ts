@@ -877,6 +877,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossWallIn: 0,
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,

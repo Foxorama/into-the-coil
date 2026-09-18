@@ -128,6 +128,7 @@ export function inertLevel(): {
   bossPatrol: number;
   bossPhaseAt: number;
   bossUncoilAt: number;
+  bossWallIn: number;
   bossFallIn: number;
   bossEscortIn: number;
   bossEscortSide: number;
@@ -205,6 +206,7 @@ export function inertLevel(): {
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossWallIn: 0,
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,
@@ -442,6 +444,7 @@ export function playableWorld(
     bossPatrol: 1,
     bossPhaseAt: -1,
     bossUncoilAt: 0,
+    bossWallIn: 0,
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,

@@ -15,8 +15,9 @@ export const PROBES = [
     guard: 'THE EIGHT WALLS, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        curtainStance(uncoil.spin, notch - 1),',
-      replace: '        curtainStance(false, notch - 1),',
+      // ⚠️ Re-anchored by 0333, which throws the wall the count OWES rather than the one it reached.
+      find: '        curtainStance(uncoil.spin, w.bossUncoilAt),',
+      replace: '        curtainStance(false, w.bossUncoilAt),',
     },
   },
   {
@@ -76,8 +77,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0260, which starts the curtain at nine tenths, and by 0332, which quickens it.
-      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 } },",
-      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 } },",
+      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
+      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
     },
   },
 ];

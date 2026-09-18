@@ -948,6 +948,80 @@ describe('damage is legible on the body that took it', () => {
     expect(shots.size, 'the shot was not spent, which is a different bug').toBe(0);
   });
 
+  it('A HIT IS AN EVENT AGAIN: a body shot every single step is drawn as ITSELF most of the time', () => {
+    /*
+      ⚠️ **`docs/decisions/0334-a-hit-is-an-event-again.md`.** 0278 fixed how STRONG the wash is and
+      left how OFTEN it is on: every landing re-armed the twin, so a gun landing more often than every
+      fifteenth of a second held it on for good — and every gun in the game does.
+      **Measured on the gyre before this: the hull was drawn as its hurt twin for 97% of a fight under
+      the pulse at four rungs, in one unbroken 28-second wash** (`scripts/weigh-flash.mjs`). That is
+      not a flash, it is a repaint, and it is why *"you can't see the boss"* has been reported three
+      times about three different bosses.
+
+      ⚠️ **DRIVEN AT THE WORST CASE THERE IS — a landing on every single step** — because the claim is
+      about duty and a slower gun cannot test it. What is asserted is the share of steps the body is
+      drawn as ITSELF, which is the quantity the reports are about, in the units a player has.
+    */
+    const shots = new Pool<Entity>(1, makeEntity);
+    const targets = new Pool<Entity>(1, makeEntity);
+    const target = targets.spawn()!;
+    reset(target, 100, 50, bodyOf(SPRITE.lancer, 3.2, 100000, 2, SPRITE.lancerHit));
+    let seen = 0;
+    let starts = 0;
+    let lit = false;
+    const steps = 240;
+    for (let step = 0; step < steps; step++) {
+      // A shot on the body every step: nothing in the game lands harder than this.
+      if (shots.size === 0) reset(shots.spawn()!, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+      collideInto(shots, targets, 1, 1, FLASH, null);
+      stepEntities(targets, 0);
+      if (target.sprite === target.spriteBase) seen++;
+      else {
+        if (!lit) starts++;
+        lit = true;
+      }
+      if (target.sprite === target.spriteBase) lit = false;
+    }
+    expect(target.health, 'the target died, so this measured a corpse').toBeGreaterThan(0);
+    expect(
+      seen / steps,
+      `a body under a gun that lands every step is drawn as itself ${((seen / steps) * 100).toFixed(0)}% of the time — ` +
+        'under half is a body the player never sees, which is the defect and not the flash',
+    ).toBeGreaterThan(0.5);
+    /*
+      ⚠️ **AND IT GOES ON FLASHING, WHICH IS THE OTHER WAY A GAP CAN BE WRONG.** A refractory that
+      never expires reads exactly like this one from the duty side — the body is seen 99% of the time
+      — and it is 0035's defect restored: the player cannot count hits because only the first one
+      ever showed. A probe found this: the countdown broken and the suite stayed green.
+    */
+    expect(
+      starts,
+      `the body lit ${starts} times over ${steps} steps of being hit every step — a hit that only ever shows once is ` +
+        'a body the player cannot count hits on, which is what the flash is for',
+    ).toBeGreaterThan(steps / (FLASH * 6));
+  });
+
+  it('and a single hit still flashes for its whole window, so the gap costs nothing a hit was saying', () => {
+    /*
+      ⚠️ **THE OTHER END OF 0334, AND THE ONE A LOWER `FLASH_WASH` WOULD HAVE BROKEN.** A refractory
+      gap is only honest while a hit that arrives on its own is unchanged: 0035's *damage is legible on
+      the body that took it* is what the flash is for, and the fix must not buy its duty by making one
+      hit quieter.
+    */
+    const shots = new Pool<Entity>(1, makeEntity);
+    const targets = new Pool<Entity>(1, makeEntity);
+    const target = targets.spawn()!;
+    reset(target, 100, 50, bodyOf(SPRITE.lancer, 3.2, 100, 2, SPRITE.lancerHit));
+    reset(shots.spawn()!, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+    collideInto(shots, targets, 1, 1, FLASH, null);
+    let lit = 0;
+    for (let step = 0; step < FLASH * 4; step++) {
+      stepEntities(targets, 0);
+      if (target.sprite === target.spriteHit) lit++;
+    }
+    expect(lit, `one hit lit the body for ${lit} steps against the ${FLASH} it was given`).toBe(FLASH - 1);
+  });
+
   it('and a mid-flash shot can kill, so the flash cannot make anything immortal', () => {
     const shots = new Pool<Entity>(1, makeEntity);
     const targets = new Pool<Entity>(1, makeEntity);

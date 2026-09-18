@@ -116,6 +116,46 @@ export interface Entity extends Body {
    */
   flashFor: number;
   /**
+   * Steps before this body may flash AGAIN — `docs/decisions/0334-a-hit-is-an-event-again.md`.
+   *
+   * ⚠️ **0278 FIXED THE FLASH'S STRENGTH AND LEFT ITS DUTY.** The twin was re-armed by every landing,
+   * so a gun that lands more often than every fifteenth of a second held it on continuously — and
+   * every gun in the game now does. **Measured on the gyre: the hull is drawn as its hurt twin for
+   * 97% of a fight under the pulse at four rungs, in one unbroken 28-second wash.** That is not a
+   * flash, it is a repaint, and the art underneath it is a thing nobody has seen in a fight.
+   *
+   * ⚠️ **A COUNTER AND NOT A LOWER `FLASH_WASH`.** 0278 measured a quarter as the strength at which a
+   * hit stops registering at all, so there is no strength that is both visible and survivable at this
+   * duty. What a hit needs is a GAP after it — and a gap is a second number, which is this.
+   *
+   * ⚠️ **IT GATES THE PICTURE AND NEVER THE DAMAGE.** Every landing inside the gap takes health
+   * exactly as it did; what it does not do is re-arm the wash. `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`
+   * wants a hit to be legible, and a body that is white for a whole fight is the one state in which
+   * it is not.
+   *
+   * ⚠️ **Counted down beside `flashFor` here**, which is the one place a body's clocks tick.
+   */
+  flashGap: number;
+  /**
+   * Steps since something last landed on this body, counted down — 0334.
+   *
+   * ⚠️ **IT EXISTS BECAUSE `flashFor` WAS DOING TWO JOBS AND ONE OF THEM WAS INVISIBLE.** The arc's
+   * chain searches for its next link from the body it just struck, which is the nearest thing to
+   * itself — so without a *skip what I have already hit* it lands every link on one enemy.
+   * `nearestFrom` expressed that as *skip what is FLASHING*, which was true only because a landing
+   * always armed the flash. 0334's refractory gap made it false, and `tests/weapons.test.ts` caught
+   * it within the hour: three links stroked as one, because two of them were zero-length.
+   *
+   * ⚠️ **SO THE CHAIN'S RULE IS NOW THE CHAIN'S RULE.** *Do not land twice on the same body* is about
+   * damage; *do not repaint a body that is already white* is about the picture. They agreed for three
+   * hundred decisions and a change to one of them was always going to move the other —
+   * `src/sim/entity.ts`'s own line about `spriteBase`: a third number is cheaper than an invariant two
+   * call sites have to remember.
+   *
+   * ⚠️ **Set on EVERY landing, including the ones the flash refuses**, which is the whole difference.
+   */
+  struckIn: number;
+  /**
    * Steps before a shot that survives its arrivals may land again — 0242. Written by the arrival
    * (`src/sim/collide.ts`) and counted down here beside `flashFor`; zero for every shot that is
    * spent by arriving, which never reads it.
@@ -425,6 +465,8 @@ export function makeEntity(): Entity {
     spriteHit: 0,
     invulnFor: 0,
     flashFor: 0,
+    flashGap: 0,
+    struckIn: 0,
     landIn: 0,
     kind: 0,
     fireIn: 0,
@@ -480,6 +522,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.spriteHit = body.spriteHit;
   e.invulnFor = 0;
   e.flashFor = 0;
+  e.flashGap = 0;
+  e.struckIn = 0;
   e.landIn = 0;
   e.kind = kind;
   e.fireIn = 0;
@@ -565,6 +609,12 @@ export function stepEntities(
     e.across += e.velAcross;
     if (e.invulnFor > 0) e.invulnFor--;
     if (e.flashFor > 0) e.flashFor--;
+    // The wash's refractory gap — 0334. It outlives `flashFor` and is what stops the next landing
+    // re-arming the twin before the body underneath has been seen.
+    if (e.flashGap > 0) e.flashGap--;
+    // And what the arc's chain reads instead of the flash — 0334, beside it because it is the same
+    // event counted for a different reason.
+    if (e.struckIn > 0) e.struckIn--;
     if (e.landIn > 0) e.landIn--;
     /*
       The one place a body's sprite is decided, and it answers TWO signals rather than one.
