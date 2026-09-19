@@ -1101,6 +1101,22 @@ export interface World {
    * on (0247).
    */
   clearedIn: number;
+  /**
+   * Whether this level has already been reported cleared — 0339.
+   *
+   * ⚠️ **`bossBeaten` WAS THE LATCH AND STOPPED BEING ONE WHEN A FIGHT GAINED A ROOM.** The line that
+   * fires `onCleared` carries the note *"`bossBeaten` already latched, so this happens once"*, and it
+   * was true while the only thing arming `clearedIn` was the death — which happens once, because
+   * `bossBeaten` latches. [0335](../../docs/decisions/0335-the-fight-happens-in-a-room.md) added a
+   * second armer that fires on a CONDITION rather than on an event: *the way out is open and the
+   * countdown is not running*, which is true again one step after every countdown ends.
+   *
+   * ⚠️ **SO THE LATCH IS ITS OWN FIELD RATHER THAN A SECOND READING OF `bossBeaten`.** *Has this level
+   * been reported* and *is the boss dead* are two facts; 0334 paid for storing two meanings on one
+   * field eight days ago, on `flashFor`, and recorded it beside `spriteBase`'s own note about the same
+   * thing.
+   */
+  clearedReported: boolean;
   /** Steps left of a MID-boss coming apart, or `0`. The beat without the clear — 0247. */
   bossBurstIn: number;
   /** Where the boss is, ahead of the camera — remembered every step, read on the step it dies. */
@@ -5547,8 +5563,18 @@ function stepBossDeath(w: World): void {
       'burst',
     );
   }
-  // The one report, at the end of the beat. `bossBeaten` already latched, so this happens once.
-  if (w.clearedIn === 0) w.onCleared();
+  /*
+    The one report, at the end of the beat.
+
+    ⚠️ **THE NOTE HERE USED TO SAY *`bossBeaten` already latched, so this happens once* — AND IT WAS
+    THE SENTENCE THAT LET 0339 THROUGH.** It was true of the path that arms `clearedIn` on the death,
+    and 0335 added one that arms it on a CONDITION. The latch is explicit now, so the claim this line
+    makes is about a fact it can see rather than about one held somewhere else.
+  */
+  if (w.clearedIn === 0) {
+    w.clearedReported = true;
+    w.onCleared();
+  }
 }
 
 /**
@@ -6021,8 +6047,17 @@ function stepWreck(w: World): void {
   if (w.roomOpen < room.opens) w.roomOpen++;
   // The painter's own copy, as a share: it holds world positions and no arithmetic — 0335.
   if (w.room !== null) w.room.open = room.opens > 0 ? w.roomOpen / room.opens : 1;
-  // And the level is cleared once the way out is open — never before it.
-  if (w.roomOpen >= room.opens && w.clearedIn <= 0) w.clearedIn = BOSS_DEATH_STEPS;
+  /*
+    And the level is cleared once the way out is open — never before it, and **never twice** (0339).
+
+    ⚠️ **THIS ARMS ON A CONDITION WHERE EVERY OTHER PATH ARMS ON AN EVENT, WHICH IS THE WHOLE BUG.**
+    *The way out is open and the countdown is not running* is true again one step after every
+    countdown ends, so `onCleared` fired every `BOSS_DEATH_STEPS` for as long as the banner was up —
+    measured at nine times before a fixture stopped looking. `SCREENS.cleared` steps the world, and
+    `mount.ts` adds one to the level per report, so the run skipped a level for every extra firing:
+    reported as *"we've somehow lost the ice level."*
+  */
+  if (w.roomOpen >= room.opens && w.clearedIn <= 0 && !w.clearedReported) w.clearedIn = BOSS_DEATH_STEPS;
 }
 
 /** The boss, if there is one on the field. Its whole behaviour lives in `src/app/boss.ts`. */
@@ -7376,6 +7411,9 @@ function beginScript(w: World): void {
   // ⚠️ Cleared as well as latched, or a level entered while the last one was still exploding would
   // report itself cleared a second and a half in, with its own boss still ahead of the player.
   w.clearedIn = 0;
+  // And the report latch with it — 0339. A level that kept the last one's would never clear at all,
+  // which is the same bug with its sign flipped and is why the reset lives beside `clearedIn`'s.
+  w.clearedReported = false;
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;

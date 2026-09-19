@@ -880,6 +880,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    clearedReported: false,
     bossBurstIn: 0,
     bossBurstRadius: 0,
     bossOffset: 0,

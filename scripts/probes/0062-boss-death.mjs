@@ -82,7 +82,13 @@ export const PROBES = [
     // second and a half in, with its own boss still ahead of the player.
     broke: 'the beat left counting into the next level, which then clears itself',
     guard: 'does not carry the beat into the next level',
-    edit: { path: 'src/app/frame.ts', find: '  w.clearedIn = 0;\n  w.bossPatrol = 1;', replace: '  w.bossPatrol = 1;' },
+    // ⚠️ Re-anchored by 0339, which put the report latch's own reset on the line after this one. The
+    // break is unchanged: the beat's counter left set across a level boundary.
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '  w.clearedIn = 0;\n  // And the report latch with it — 0339.',
+      replace: '  // And the report latch with it — 0339.',
+    },
   },
   {
     decision: '0062',
