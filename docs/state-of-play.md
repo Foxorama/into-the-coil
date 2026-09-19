@@ -1040,6 +1040,17 @@ dB boundary** and passing. Narrowed to the layers the solve has an opinion about
 two places and `NOT_STEADIER` names both. **A guard can sit green on the wrong quantity as easily as
 it can go red on one** — 0027, and 0019's probes cannot see it.
 
+### ⚠️ THE ICE LEVEL WAS BEING SKIPPED, AND IT WAS THE ROOM CLEARING ITS LEVEL NINE TIMES — 2026-09-19
+
+⚠️ **[0339](decisions/0339-a-level-is-cleared-once.md).** *"We've somehow lost the ice level, game goes
+from labyrinth to toxic mire to black heart now, no rime shelf."* `LEVEL_KINDS` was intact: the level
+was **skipped**, because 0335's room arms the clear on a CONDITION — *the way out is open and the
+countdown is not running* — which is true again one step after every countdown ends. Measured at nine
+`onCleared` reports in twenty seconds, one added level each.
+
+⚠️ **AND IT WAS ALSO HANDING OUT NINE FREE CHARGES**, because `levelCleared` grants every owned special
+one. That is the half nobody could see, and it is 0027's *ask what the bug was also doing.*
+
 ### ⚠️ THE GYRE IS A COG IN A WALL NOW, AND WHAT IS OWED IS THE PLAY — 2026-09-18
 
 ⚠️ **[0332](decisions/0332-the-gyre-is-set-into-the-wall.md) AMENDS

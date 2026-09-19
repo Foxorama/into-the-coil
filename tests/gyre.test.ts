@@ -27,7 +27,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame } from '../src/app/frame.ts';
+import { advanceLevel, BOSS_DEATH_STEPS, GameFrame } from '../src/app/frame.ts';
 import { cogTurn, curtainSpacing, curtainStance, uncoilsBy } from '../src/app/boss.ts';
 import { BOSSES, BOSS_KINDS, CURTAIN_STANCES } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
@@ -55,11 +55,16 @@ const GYRE_ONLY: LevelRow = {
   theme: 'labyrinth',
 };
 
-type Driven = { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame };
+type Driven = {
+  world: ReturnType<typeof playableWorld>['world'];
+  frame: GameFrame;
+  /** How many times the level reported itself cleared — 0339. A fixture that never looks counts nothing. */
+  cleared: { count: number };
+};
 
 /** The gyre on station and whole, its fan held, and an untouchable ship out of the way. */
 function gyreOnStation(tier: DifficultyKind = DIFFICULTY_KINDS[0]!): Driven {
-  const { world } = playableWorld(GYRE_ONLY, tier);
+  const { world, cleared } = playableWorld(GYRE_ONLY, tier);
   const frame = new GameFrame(world);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
@@ -68,7 +73,7 @@ function gyreOnStation(tier: DifficultyKind = DIFFICULTY_KINDS[0]!): Driven {
   }
   expect(world.bossPool.size, 'the gyre never arrived').toBe(1);
   world.enemyShots.clear();
-  return { world, frame };
+  return { world, frame, cleared };
 }
 
 interface Shot {
@@ -1025,7 +1030,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     */
     const room = BOSSES.gyre.room;
     if (room === null) throw new Error('the gyre has no room');
-    const { world, frame } = gyreOnStation();
+    const { world, frame, cleared } = gyreOnStation();
     world.bossPool.at(0).health = 1;
     let robbed = false;
     for (let step = 0; step < 25 * STEPS_PER_SECOND; step++) {
@@ -1040,7 +1045,14 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     }
     expect(robbed, 'the gyre never died, so nothing was taken away').toBe(true);
     expect(world.roomOpen, 'the wreck was taken away and the room never opened — the run is sealed').toBeGreaterThanOrEqual(room.opens);
-    expect(world.clearedIn, 'the way out opened and the level still never cleared').toBeGreaterThan(0);
+    /*
+      ⚠️ **THIS READ `clearedIn > 0` AND THAT WAS A SYMPTOM OF 0339 RATHER THAN THE CLAIM — 0192.** A
+      countdown is *running* twenty-five seconds after the room opened only because the room path was
+      re-arming it every ninety-six steps, which is the defect. What the guard means is **the level
+      reported itself cleared**, and with the latch in, `clearedIn` is back at zero by then and always
+      will be. Asking the counter asks the thing the sentence says.
+    */
+    expect(cleared.count, 'the way out opened and the level still never cleared').toBe(1);
     expect(world.scrollPerStep, 'the world never started again, so the player cannot fly onwards').toBeGreaterThan(0);
   });
 
@@ -1084,5 +1096,93 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
         SPRITE_EXTENT[SPRITE_KINDS[row.sprite]!],
       );
     }
+  });
+});
+
+/**
+ * ── A LEVEL IS CLEARED ONCE — 0339 ─────────────────────────────────────────────────────────────
+ *
+ * Reported: *"we've somehow lost the ice level, game goes from labyrinth to toxic mire to black heart
+ * now, no rime shelf."*
+ *
+ * ⚠️ **`LEVEL_KINDS` IS INTACT AND THE LEVEL IS NOT MISSING — IT IS SKIPPED, ONE RUNG AT A TIME.**
+ * `stepBossDeath` fires `onCleared` when `clearedIn` counts down to zero; the room path added by
+ * [0335](../docs/decisions/0335-the-fight-happens-in-a-room.md) re-arms `clearedIn` **every time it is
+ * at or below zero while the way out is open**, so the countdown runs again and `onCleared` fires
+ * again. `SCREENS.cleared` has `steps: true`, so the world goes on stepping under the banner and
+ * `mount.ts` dispatches `levelCleared` once per firing — and the reducer adds one to the level each
+ * time. Only a boss with a `room` does it, which is the **gyre**, which is Shoal's: so Shoal hands the
+ * run to Gauntlet and the Rime Shelf is never played.
+ *
+ * ⚠️ **AND THE NO-ROOM PATH HAS ALWAYS LATCHED**, on `bossBeaten`, with its own note saying so. This
+ * is one path missing the latch the other one has.
+ */
+describe('0339 — a level is cleared once', () => {
+  it('THE REPORTED ONE: a boss with a room clears its level exactly once, however long the banner is left up', () => {
+    /*
+      ⚠️ **THE WINDOW IS TWELVE DEATH-LENGTHS AND THE FIRST DRAFT USED FOUR, WHICH PASSED.** Measured:
+      the wreck settles (60), the room opens (90) and the clear counts down (96), so the FIRST
+      `onCleared` lands at step **295** — and the re-arm puts the second at **391**. Four death-lengths
+      is 384, so the fixture stopped six steps short of the bug and reported a green game. `SCREENS.cleared`
+      steps the world while the banner is up, so this is what the real screen does; the only question is
+      how long the player looks at it, and the answer is *longer than that*.
+    */
+    const { world, cleared } = playableWorld(GYRE_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the gyre never arrived').toBe(1);
+    // Killed outright rather than fought, so this measures the CLEAR and not the fight.
+    world.bossPool.at(0).health = 0;
+    for (let i = 0; i < BOSS_DEATH_STEPS * 12; i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(cleared.count, 'the level never cleared at all, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      cleared.count,
+      `the gyre cleared its level ${cleared.count} times — every one past the first is a level the run ` +
+        'skips, and the one after Shoal is the Rime Shelf',
+    ).toBe(1);
+  });
+
+  it('and the NEXT level can still be cleared, which is the same bug with its sign flipped', () => {
+    /*
+      ⚠️ **A LATCH THAT IS NEVER LET GO IS THE OTHER HALF OF THIS DEFECT AND IT IS WORSE.** One level
+      ships and the run is sealed in the second: the room opens, the arming condition is true, and the
+      latch says the clear has already been reported. The reset sits beside `clearedIn`'s own for
+      exactly that reason, and this is the guard that makes it load-bearing rather than tidy.
+
+      ⚠️ **TWO LEVELS THROUGH THE REAL FRAME, BECAUSE ONE CANNOT SEE IT.** The first guard above plays
+      a single level and is perfectly happy with a latch that is never cleared — `npm run prove` said
+      so, reporting STILL GREEN on the probe that removes the reset.
+    */
+    const { world, frame, cleared } = gyreOnStation();
+    world.bossPool.at(0).health = 0;
+    for (let i = 0; i < BOSS_DEATH_STEPS * 6; i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+    }
+    expect(cleared.count, 'the first level never cleared, so this measures nothing').toBe(1);
+    // The level boundary, as the shell takes it.
+    advanceLevel(world, GYRE_ONLY, 1);
+    const second = new GameFrame(world);
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      second.step();
+    }
+    expect(world.bossPool.size, 'the gyre never arrived in the second level').toBe(1);
+    world.bossPool.at(0).health = 0;
+    for (let i = 0; i < BOSS_DEATH_STEPS * 6; i++) {
+      world.ship.health = world.shipRow.health;
+      second.step();
+    }
+    expect(
+      cleared.count,
+      'the second level never reported itself cleared — the run is sealed in it, which is what a latch ' +
+        'that is never let go does',
+    ).toBe(2);
   });
 });

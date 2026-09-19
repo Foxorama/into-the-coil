@@ -121,6 +121,8 @@ export function inertLevel(): {
   bossSpawned: boolean;
   bossBeaten: boolean;
   clearedIn: number;
+  // The report latch — 0339. A fixture that cleared twice was how the ice level went missing.
+  clearedReported: boolean;
   bossBurstIn: number;
   bossBurstRadius: number;
   bossOffset: number;
@@ -213,6 +215,7 @@ export function inertLevel(): {
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    clearedReported: false,
     bossBurstIn: 0,
     bossBurstRadius: 0,
     bossOffset: 0,
@@ -459,6 +462,7 @@ export function playableWorld(
     bossSpawned: false,
     bossBeaten: false,
     clearedIn: 0,
+    clearedReported: false,
     bossBurstIn: 0,
     bossBurstRadius: 0,
     bossOffset: 0,
