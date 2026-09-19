@@ -123,6 +123,33 @@ async function open(): Promise<Page> {
 const tally = (page: Page): Promise<AudioTally> =>
   page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [] });
 
+/**
+ * Wait until nothing more is being created, then tally.
+ *
+ * ── A COUNT OVER A WINDOW IS A RACE UNLESS THE WINDOW IS QUIET ──────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.** A place's bake
+ * hands its loops over whenever it finishes and `setLoops` then rebuilds one source per layer — so a
+ * handover landing between two tallies adds a whole set of voices to a difference that is meant to be
+ * *what that press did*. Measured, it is exactly `MUSIC_LAYERS.length` of surprise (55 where 28 was
+ * expected), and which side of the press it falls on depends on how long the prewarm took that run.
+ *
+ * ⚠️ **A LONGER `waitForTimeout` CANNOT FIX IT, WHICH IS WHY THIS IS A POLL.** The press that opens the
+ * title screen pays for the music prewarm and costs seconds rather than milliseconds, so any constant
+ * long enough today is one somebody shortens when the suite gets slow. What the guard needs is not
+ * *later*, it is *quiet* — two reads agreeing that the count has stopped moving.
+ */
+const settled = async (page: Page): Promise<AudioTally> => {
+  let last = await tally(page);
+  for (let i = 0; i < 40; i++) {
+    await page.waitForTimeout(250);
+    const now = await tally(page);
+    if (now.voices === last.voices && now.buffers === last.buffers) return now;
+    last = now;
+  }
+  return last;
+};
+
 const soundOption = (kind: (typeof SOUND_KINDS)[number]): string =>
   `[${SETTING_ATTR}="sound"] .${prefixFor('title')}option >> nth=${SOUND_KINDS.indexOf(kind)}`;
 
@@ -280,15 +307,20 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       sequence every time. The race is gone from the guard and the bug it was half-seeing is fixed in
       `src/app/music.ts`.
     */
+    /*
+      ⚠️ **AND THE FIRST PRESS IS WAITED OUT RATHER THAN TIMED OUT** — see `settled`. That press pays
+      for the prewarm AND for the title screen's own place bake, and the bake's handover rebuilds one
+      source per layer whenever it lands. This read the tally 300 ms later, so the handover fell on
+      whichever side of the `off`/`on` pair the machine put it: **55 voices where 28 was expected**, one
+      whole set of loops, from a guard whose subject is a single press.
+    */
     const page = await open();
     await page.click(soundOption('on'));
-    await page.waitForTimeout(300);
+    await settled(page);
     await page.click(soundOption('off'));
-    await page.waitForTimeout(300);
-    const quiet = await tally(page);
+    const quiet = await settled(page);
     await page.click(soundOption('on'));
-    await page.waitForTimeout(300);
-    const loud = await tally(page);
+    const loud = await settled(page);
     expect(
       loud.voices - quiet.voices,
       'switching sound on made no sound, on the one press that is about sound',

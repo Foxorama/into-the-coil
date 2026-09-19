@@ -59,4 +59,32 @@ export const PROBES = [
       replace: '      steps: HYMN,\n      pitched: true,\n      perBeat: 1,\n      octave: 5,',
     },
   },
+  /*
+    ⚠️ THE SET ARITHMETIC, WHICH HAD ONLY EVER BEEN GREEN. `bakedBy` is `revoicedBy` plus the two ways
+    a place's buffer differs without its notes doing — a room, and an onset. Drop either and the place
+    shares the base's DRY array, so the change never arrives: no crash, no red, just a room nobody
+    hears or a chord that still swells. It reads as obviously correct, which is the kind 0005 is about.
+  */
+  {
+    decision: '0136',
+    suite: 'tests/themes.test.ts',
+    broke: 'a place with a room baking the base’s dry layer, so the reverb it states never arrives',
+    guard: '0136 — a place BAKES every layer it changes, and a room is a change',
+    edit: {
+      path: 'src/content/themes.ts',
+      find: '  return [...new Set([...revoicedBy(theme), ...withAir, ...withOnset])];',
+      replace: '  return [...new Set([...revoicedBy(theme), ...withOnset])];',
+    },
+  },
+  {
+    decision: '0136',
+    suite: 'tests/themes.test.ts',
+    broke: 'a place that strikes a layer baking the base’s dry one, so the chords still swell',
+    guard: '0136 — a place BAKES every layer it changes, and a room is a change',
+    edit: {
+      path: 'src/content/themes.ts',
+      find: '  return [...new Set([...revoicedBy(theme), ...withAir, ...withOnset])];',
+      replace: '  return [...new Set([...revoicedBy(theme), ...withAir])];',
+    },
+  },
 ];

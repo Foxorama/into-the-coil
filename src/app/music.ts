@@ -54,6 +54,7 @@ import {
   panTrackOf,
   mixOf,
   rungOf,
+  struckOf,
   voicesOf,
   type ThemeKind,
   type ThemeLadder,
@@ -215,7 +216,18 @@ export function layerNotes(
   const buffer = new Float32Array(Math.round(seconds * rate));
   const rng = makeRng('music').stream(layer);
   const notes: (() => void)[] = [];
-  for (const voice of voicesOf(theme, layer)) {
+  /*
+    ⚠️ **THE PLACE'S OWN ONSET, OVER THE BASE'S NOTES** — `ThemeRow.struck`. It is a row field rather
+    than a `voices` entry because an envelope is not a note: a place that copied the tune into its own
+    table to change one field would be claiming notes it never wrote, and 0148 would then hold that
+    copy to a scale the place never chose. A voice that already speaks faster than the place asks for
+    keeps its own attack, so *strike this layer* cannot accidentally SLOW anything down.
+  */
+  const onset = struckOf(theme, layer);
+  for (const raw of voicesOf(theme, layer)) {
+    const stated = raw.note.attack;
+    const voice =
+      onset > 0 && stated !== undefined && stated > onset ? { ...raw, note: { ...raw.note, attack: onset } } : raw;
     const step = BEAT_SECONDS / voice.perBeat;
     for (let i = 0; i < voice.steps.length; i++) {
       const value = voice.steps[i];
@@ -1215,12 +1227,30 @@ export function entryBars(
   arriving: readonly Pick<RampWrite, 'layer' | 'target'>[],
 ): Partial<Record<MusicLayer, number>> {
   const rank = (layer: MusicLayer): number => MUSIC_ROLES.indexOf(roleOf(theme, level, layer) ?? 'air');
-  const order = [...arriving].sort(
-    (a, b) =>
-      rank(a.layer) - rank(b.layer) ||
-      a.target - b.target ||
-      MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer),
-  );
+  /*
+    ⚠️ **A LAYER THE PLACE PINS TO THE DOWNBEAT IS NOT PART OF THE STAGGER, SO IT DOES NOT SPEND A
+    BAR** — `ThemeRow.onBeat`, 0331's thirteenth listen. It used to be ranked with the rest and then
+    have its time overwritten at the call site, which left its bar occupied and nothing in it. The
+    Black Heart's `approach` is what that looks like: `drone`, `chords`, `ownB` and `toll` all land on
+    the downbeat, bars one and two hold nothing at all, and `call` — the piano lament, the `part` — is
+    pushed out to bar three. **Four point eight seconds of build for a single staggered arrival**, in
+    a section that is eight and three-quarters long, which is 0171's *a build fits inside the section
+    it opens* going red over a build that was never authored.
+
+    ⚠️ **THE CAP IS WHY THIS IS A DEFECT AND NOT A TASTE.** `shared` counts back from the LAST arrival
+    so that the thing the place asks you to follow lands on the final bar; a pinned layer in that count
+    is a phantom part the cap is making room for. The build is now as wide as the number of things that
+    actually move in it, which is what the comment below has always said it was.
+  */
+  const onBeat = THEMES[theme].onBeat ?? [];
+  const order = arriving
+    .filter((a) => !onBeat.includes(a.layer))
+    .sort(
+      (a, b) =>
+        rank(a.layer) - rank(b.layer) ||
+        a.target - b.target ||
+        MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer),
+    );
   const bars: Partial<Record<MusicLayer, number>> = {};
   // Counted back from the last arrival, so the cap eats into the FRONT of the build and the thing
   // the place asks you to follow always lands on the last bar of it.
@@ -1403,14 +1433,30 @@ export function levelWrites(
     let power = was * was;
     const drop = power - end;
     const staged: RampWrite[] = [];
+    /*
+      ⚠️ **A SHARED DOWNBEAT TAKES THE SLOWEST OF ITS ARRIVALS AND IT USED TO TAKE THE LAST ONE.**
+      Several arrivals on one downbeat collapse into one step, and that step's ramp was whichever of
+      them happened to sort last — which is an ordering, not a quantity. The Black Heart's `run → push`
+      is what that costs: `arp` opens at 1.29 with a ramp of 4.267 s and `ownD` at 0.36 with 1.707,
+      both on the downbeat, so the bed gave up room for BOTH at the small one's pace while the big one
+      was still four seconds from arriving. Measured, a **−1.11 dB** hole where the guard allows −1.
+
+      ⚠️ **THE ROOM IS NOT FILLED UNTIL THE SLOWEST THING FILLING IT HAS ARRIVED**, which is the same
+      sentence as *the bed gives up what each part brings, as it brings it* — it was simply not true of
+      a step that stands for more than one part. Taking the maximum is what makes the share and the
+      pace describe the same group.
+    */
+    let together = 0;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]!;
       power -= (drop * step.target * step.target) / arriving;
+      if (step.tau > together) together = step.tau;
       const next = steps[i + 1];
       // Arrivals on one downbeat are one step; the last step lands on the target itself.
       if (next !== undefined && next.at === step.at) continue;
       const target = next === undefined ? write.target : Math.sqrt(power > 0 ? power : 0);
-      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });
+      staged.push({ layer: write.layer, target, at: step.at, tau: together });
+      together = 0;
     }
     writes.splice(writes.indexOf(write), 1, ...staged);
   }

@@ -478,6 +478,31 @@ export interface ThemeRow {
    */
   air?: Partial<Record<MusicLayer, number>>;
   /**
+   * The onset this place strikes a layer with, in seconds. A note that already speaks faster than
+   * this keeps its own attack; every slower one is brought forward to it.
+   *
+   * ── AND IT IS HERE BECAUSE AN ENVELOPE IS NOT A NOTE ──────────────────────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, asked twice.** *"The chords are slightly
+   * muted in the approach, the third section kicking needs the chords to be a bit punchier"*, and then
+   * *"approach needs the chords at 1st and 2nd transition to pop a bit more, it's slightly muted."*
+   * A chord that takes a tenth of a second to speak swells rather than pops, so The Approach strikes
+   * the base composition's chords at 12 ms and the title screen, which is the base composition, is
+   * untouched.
+   *
+   * ⚠️ **THE FIRST ANSWER PUT IT IN `voices` AND THAT MADE THE PLACE CLAIM NOTES IT HAD NOT WRITTEN.**
+   * `chords: MUSIC.chords.map(…)` is the base's own notes with one field changed, and `revoicedBy`
+   * reads the KEYS of `voices` — so The Approach was suddenly re-voicing a layer, its G♯ went through
+   * 0148's *a re-voiced tune stays in the notes its own place states*, and the guard went red over a
+   * note the place never chose. Everything else that asks *what does this place play* — the rig, the
+   * dashboard, two measuring scripts — would have been told the same untruth without going red at all.
+   *
+   * ⚠️ **IT IS `air` ONE CHANNEL OVER, AND 0136 ALREADY ARGUED THIS SHAPE.** *Plays its own notes* and
+   * *sounds different from the base* stopped being one sentence there; this is the same distinction
+   * arriving from the other side, so it joins `bakedBy` the same way and the same guard holds it.
+   */
+  struck?: Partial<Record<MusicLayer, number>>;
+  /**
    * The notes this place may sound, as pitch classes over the root. Absent is `SCALE`.
    *
    * ── SEVEN PLACES SOUNDED ALIKE AND SIX OF THEM WERE PLAYING THE IDENTICAL SEVEN NOTES ───────────
@@ -704,6 +729,22 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       places are read against.
     */
     voices: APPROACH_VOICES,
+    /*
+      ⚠️ **THE CHORDS ARE STRUCK HERE, AND THE TITLE SCREEN'S ARE NOT** — 0331, asked twice: *"the
+      chords are slightly muted in the approach"*, then *"approach needs the chords at 1st and 2nd
+      transition to pop a bit more."* The first answer was a level, and the note beside it named the
+      next lever — *the 60–120 ms onsets in `src/content/music.ts`*. A chord taking a tenth of a second
+      to speak swells rather than pops, so this place brings every slow onset in the layer to 12 ms and
+      plays the base composition's notes otherwise. `src/content/approach.ts` records why it is not a
+      `voices` entry.
+
+      ⚠️ **AND THE SOUND IS UNCHANGED BY THE MOVE, WHICH WAS CHECKED RATHER THAN ASSUMED.** The entry
+      it replaces brought forward anything slower than **30 ms** and this brings forward anything
+      slower than the 12 ms it asks for — two different rules, which agree here only because the six
+      chord voices are 0.06, 0.07, 0.008, 0.12, 0.005 and 0.004 and none of them lands between. A
+      voice added at, say, 20 ms would be struck by this and was not by that.
+    */
+    struck: { chords: 0.012 },
     ladder: {
       /*
         ⚠️ **`chords` AT `surge` IS UP 2.1 dB, AND IT IS THE ONLY NUMBER BEFORE THE FIGHT** — 0331.
@@ -927,11 +968,36 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       already has its own kick. **The ratios are the player's and are untouched**; what moved is where
       the place sits, which is the one change that costs nothing musically.
 
-      ⚠️ **0.85 → 0.78 — 0331**, for the same reason: the kit is up about 4 dB so the drums lead, and
-      the whole place comes down 0.7 dB so the bus does not pay for it. Measured, the peak stays under
-      0.99 at every rung and the dirtiest rung is −17.8 dB against the −16 the guard allows.
+      ⚠️ **0.85 → 0.78 → 0.549 — 0331**, for the same reason twice. The kit went up about 4 dB so the
+      drums lead, the place came down 0.7 dB, and **that measurement was taken before the tom fills
+      were written**: `ownC` at 2.03 and `ownD` at 2.07 are two more percussive layers at the top of
+      the mix, and nothing re-read the bus after them. The comment said *the peak stays under 0.99 at
+      every rung* and it had stopped being true.
+
+      ⚠️ **AND THE SAME RELATIONSHIP HAD BEEN BOUGHT TWICE.** *"beat up to lead"* was paid for once by
+      raising `beat` 1.62 → 2.6 and again by halving everything it competes with — `arp`, `hook`,
+      `ownA` — and closing `ride` and `crash` outright. Either alone puts the kit in front; both put
+      3.8 dB of peak into a bus that was already the hottest in the game.
+
+      ⚠️ **MEASURED ACROSS ALL SEVEN RUNGS AND NOT JUST THE ONE THE GUARD NAMES.** `expect` throws on
+      the first, so the failure read `run is −15.9 dB` and the place was over at four:
+
+      | rung | peak | dirty | clamped |
+      |---|---|---|---|
+      | `run` | 1.027 | −15.87 dB | 0.0011% |
+      | `push` | 1.099 | −15.59 dB | 0.0297% |
+      | `surge` | **1.384** | **−15.22 dB** | **0.0712%** |
+      | `approach` | 1.034 | −16.50 dB | 0.0048% |
+
+      ⚠️ **THE TARGET IS WHAT THIS PLACE ALREADY SHIPPED, NOT WHAT SILENCES THE GUARD.** On `main` its
+      `surge` peaks at 0.9737, the loudest rung of the loudest place in the game, and 0.549 is the trim
+      that puts it back there exactly — every ratio the thirty listens tuned is untouched, and the
+      guard's −16 is cleared by margin rather than by a tenth. Sizing it to the threshold instead is
+      `docs/decisions/0140-no-layer-is-inaudible.md`'s second probe: the number moved until it went
+      quiet. **The place is 3.1 dB quieter than the renders the ear approved, so the ear is owed a
+      listen** — `reports/the-night-of-2026-09-19.md`.
     */
-    trim: 0.78,
+    trim: 0.549,
     // 0331: the tom fill's own slot, sixteen bars so it lands on the fourth bar of every phrase.
     bars: { ownD: 16, ownC: 16 },
     // 0331: the fills cascade across the ears — the run one stroke left, two centre, three right; the punch one of each.
@@ -1630,7 +1696,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       `linger` number is: `ownC` gone before 28.8 s, `ownD` before 59.3, the ballad's before 96.8 (a tenth
       of a second from the acceptance's first beat, hence the shortest), `ownB` before 126.6.
     */
-    onBeat: ['ownD', 'crash', 'ownB', 'stomp', 'beat'],
+    /*
+      ⚠️ **AND `toll` JOINS THEM, WHICH IS THE ACCEPTANCE'S BELL AND NOT A HEART.** The acceptance is
+      *"the piano lament again, a bell, the heart quickened"*, and the bell was the LAST of five staged
+      arrivals — four bars into a build inside a section only 8.8 seconds long, so the build took 4.80s
+      of it against 0215's *a build fits inside the section it opens, with the whole of that section
+      left to play*. With the bell on the downbeat the build is **2.40s**, and the piano and the strings
+      still stage up behind it.
+
+      ⚠️ **IT IS THE LAST ARRIVAL THAT HAD TO MOVE AND NOTHING ELSE WOULD DO.** `entryBars` counts a
+      build back from its last arrival, so putting any of the quieter parts on the beat leaves the bell
+      exactly where it was. ⚠️ **AND THE USER HAS NOT HEARD THIS** — a bell that marked the section four
+      bars in now marks its downbeat. Before and after are in `C:\itc-renders\overnight\`.
+    */
+    onBeat: ['ownD', 'crash', 'ownB', 'stomp', 'beat', 'toll'],
     // 0331's fifteenth: the ballad is one piece of thirty-six bars, bar 36 to bar 72.
     // 0331's sixteenth: forty-two, so the ballad runs on under the acceptance into the fight.
     // 0331: and the three hearts’ own slots, which are this place’s alone — the shared set stays at four bars (0188’s budget).
@@ -1666,8 +1745,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       auraSlow: { perBeat: 0.25, steps: [-0.25] },
       auraFast: { perBeat: 0.25, steps: [0.25] },
     },
-    // 0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
-    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 0.25, ownB: 0.25, stomp: 0.05, beat: 0.2 },
+    /*
+      0331's twelfth: the ballad swells in over its lead-in, and the acceptance arrives under its tail.
+
+      ⚠️ **`beat` AND `crash` RISE OVER A BAR NOW RATHER THAN A FIFTH OF ONE.** Measured on the summed
+      mix, `push → surge` climbed **3.1 dB inside one bar** against 0215's ceiling of 2 — the spike
+      that decision is named for, on the place that was reported for it a second time. The two of them
+      are the whole of it: at `surge` the heart arrives at 0.49 and the crash at 0.23, both `onBeat`
+      and both at a quarter of the normal arrival time, so they land together and land instantly.
+
+      ⚠️ **THEY STAY IN `onBeat`, WHICH IS THE HALF THAT MUST NOT MOVE.** *"A heart that arrived three
+      bars into the build left a hole where the beat should be"* — so WHEN they start is the user's and
+      is unchanged. What moves is how long each takes to get up, which is the quantity 0215 is about.
+    */
+    swell: { groove: 2, counter: 2, ownA: 1.6, call: 0.5, chords: 0.5, drone: 0.5, toll: 0.6, ownD: 0.4, crash: 1, ownB: 0.25, stomp: 0.05, beat: 1 },
     // 0331's twelfth: the first sound is the heart and the flute, struck rather than faded up.
     fromSilence: 0.01,
     /*
@@ -1692,7 +1783,20 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       words: the whole climb is two units now, the peak a unit and a half under where it was, and the
       build is carried by what arrives rather than by how loud it gets.
     */
-    contour: { push: 1, surge: 1.5, approach: 2, boss: 2, bossPeak: 2 },
+    /*
+      ⚠️ **THE FIGHT'S TWO RUNGS SAY 4 AND NOT 2, AND WHAT CHANGED IS WHERE THE NUMBER LIVES.**
+      `LEVEL_HOLD.core` carried two lifts a hand made by ear — *"+1.5 dB, for the low end taken off the
+      speaker in the fight"* and *"+2 dB more on the twenty-fifth, for the fight's heart and mass taken
+      out of its bass"* — sitting on top of a solved row. Measured through the bus they deliver the
+      fight at **+4.09 and +4.02 LU** over this level's opening, against a contour that says 2.
+
+      ⚠️ **A HAND LIFT INSIDE A DERIVED TABLE IS 0184's DRIFT.** `LEVEL_HOLD` is `solve-hold.mjs`'s
+      output and this is the authored intent, so re-solving would have silently undone an ear's decision
+      and pasting over it would have kept a number the solver disowns. The intent is stated here, the
+      hold is re-solved to deliver it, and the two tables agree again. **What the player hears is
+      unchanged to within 0.09 LU**, which is the whole of the move.
+    */
+    contour: { push: 1, surge: 1.5, approach: 2, boss: 4, bossPeak: 4 },
     /*
       ⚠️ **ALMOST NONE, AND IT IS THE ONLY PLACE THAT EARNS THAT BY BEING LOUD RATHER THAN BY BEING
       SMALL.** This genre is recorded close and dry on purpose: reverb on a wall of guitars is mud,
@@ -1857,6 +1961,16 @@ export function airOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
 }
 
 /**
+ * The onset `theme` strikes `layer` with, or `0` for *whatever the voice itself says* — which is the
+ * base composition and every place that has not asked. `ThemeRow.struck` has the argument.
+ */
+export function struckOf(theme: ThemeKind | undefined, layer: MusicLayer): number {
+  if (theme === undefined) return 0;
+  const want = THEMES[theme].struck?.[layer] ?? 0;
+  return want > 0 ? want : 0;
+}
+
+/**
  * The most room a layer may have — `1` is as much room as direct sound.
  *
  * ⚠️ **IT IS A MIX BOUND AND NOT A STABILITY ONE, WHICH IT WAS FOR ONE DRAFT.** The first room wrote
@@ -1912,7 +2026,11 @@ export function revoicedBy(theme: ThemeKind): MusicLayer[] {
 export function bakedBy(theme: ThemeKind): MusicLayer[] {
   const air = THEMES[theme].air ?? {};
   const withAir = (Object.keys(air) as MusicLayer[]).filter((layer) => (air[layer] ?? 0) > 0);
-  return [...new Set([...revoicedBy(theme), ...withAir])];
+  // ⚠️ AND AN ONSET IS THE THIRD WAY, for the reason 0136 gives about the second: the notes are the
+  // base's and the buffer is not, so a place that shared the dry array would never strike anything.
+  const struck = THEMES[theme].struck ?? {};
+  const withOnset = (Object.keys(struck) as MusicLayer[]).filter((layer) => (struck[layer] ?? 0) > 0);
+  return [...new Set([...revoicedBy(theme), ...withAir, ...withOnset])];
 }
 
 /**
@@ -2119,13 +2237,20 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     violin under it, which raised its own `run` 0.6 LU and so everything held against it; the Gauntlet,
     whose reeds are darker; and The Black Heart, which is 0331's subject.
   */
-  approach: { push: 0.8497, surge: 0.7603, approach: 0.7161, boss: 0.6191, bossPeak: 0.6138 },
+  /*
+    ⚠️ **AND RE-SOLVED ONCE MORE AT THE END OF 0331's PASS, WHICH IS THE POINT OF RE-SOLVING LAST.**
+    Every row above was produced before the last of the mix changes landed — Saurian Belt's `trim`, The
+    Approach's struck chords, the known-adrift pruning — and a hold is only true of the mix it was
+    solved against. Six rows moved by 0.1 to 0.9 dB; The Toxic Mire's `push` moved most, 0.6244 →
+    0.7069, which is the 0.90 LU it was delivering under its own contour of zero.
+  */
+  approach: { push: 0.8211, surge: 0.7474, approach: 0.7009, boss: 0.5906, bossPeak: 0.5881 },
   nebula: { push: 0.91, surge: 0.8353, approach: 0.7668, boss: 0.71, bossPeak: 0.6979 },
   // 0331: re-solved once the kit took the floor and the crash and the ride closed — nearly level now.
-  saurian: { push: 0.9913, surge: 1.0084, approach: 0.9336, boss: 1, bossPeak: 0.9828 },
-  labyrinth: { push: 0.5422, surge: 0.3657, approach: 0.3401, boss: 0.385, bossPeak: 0.3258 },
-  rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8107, bossPeak: 0.8003 },
-  mire: { push: 0.6244, surge: 0.4491, approach: 0.5085, boss: 0.4769, bossPeak: 0.4789 },
+  saurian: { push: 0.9744, surge: 0.9744, approach: 0.9417, boss: 0.9913, bossPeak: 0.9661 },
+  labyrinth: { push: 0.5492, surge: 0.3595, approach: 0.3315, boss: 0.3801, bossPeak: 0.3203 },
+  rime: { push: 0.692, surge: 0.5881, approach: 0.6034, boss: 0.8072, bossPeak: 0.7969 },
+  mire: { push: 0.7069, surge: 0.5587, approach: 0.4998, boss: 0.4588, bossPeak: 0.4588 },
   /*
     ⚠️ **THE ONLY ROW HERE SOLVED AGAINST A CONTOUR RATHER THAN AGAINST ITS `run`** — 0329, re-solved
     over the driven ladder — 0330. `run` is the reference and is 1 by construction.
@@ -2142,9 +2267,21 @@ export const LEVEL_HOLD: Record<ThemeKind, Partial<Record<MusicLevel, number>>> 
     sub and the power chords stepped down to let the pipes through and the contour holds that too.
     **The contour did not move**, so what the player heard as the shape of the level is where it was.
   */
-  // 0331's eighteenth: +1.5 dB, for the low end taken off the speaker in the fight.
-  // …and +2 dB more on the twenty-fifth, for the fight's heart and mass taken out of its bass.
-  core: { boss: 0.1886, bossPeak: 0.1791 },
+  /*
+    ⚠️ **THE TWO HAND LIFTS ARE GONE FROM THIS ROW AND ARE IN THE CONTOUR NOW** — *"+1.5 dB, for the low
+    end taken off the speaker in the fight"* and *"+2 dB more on the twenty-fifth"*. They were an ear's
+    decision living inside a solver's output; `contour.boss` and `contour.bossPeak` say 4 LU and this row
+    is what delivers it. **The check is that the solve came back where the hand had put it**: 0.1852
+    against 0.1886 and 0.1790 against 0.1791 — 0.16 dB and 0.005 dB. The lifts were right and were
+    written in the wrong table.
+
+    ⚠️ **AND `push`, `surge` AND `approach` ARE STATED AT ALL FOR THE FIRST TIME.** This row named only
+    the fight, so the other three rungs held at 1 and delivered **+2.67, +5.88 and +5.93 LU** against a
+    contour of +1.00, +1.50 and +2.00. Three to four decibels of this level's climb were nobody's
+    intention — an unsolved hold, not a composition — and that is the *"volume knob"* 0226 is named for,
+    sitting in the one place that authors a climb on purpose.
+  */
+  core: { push: 0.8003, surge: 0.4748, approach: 0.5041, boss: 0.1852, bossPeak: 0.179 },
 };
 
 /** The hold on `rung` in `theme` — `1` where the table says nothing. */

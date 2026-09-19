@@ -146,7 +146,14 @@ export const ARRANGEMENT: Record<Exclude<MusicLevel, 'calm' | 'bossPeak'>, Reado
   push: {
     part: ['hook'],
     counter: ['arp', 'lead', 'call', 'bass'],
-    pulse: ['sub', 'engine', 'perc', 'ride', 'beat', 'crash'],
+    /*
+      ⚠️ **`crash` LEFT THIS RUNG WITH 0331, AND THE TABLE HAD NOT BEEN TOLD.** No place opens a crash
+      at `push` any more: Ember Nebula opens it at `surge` and above, and The Black Heart's is the
+      ballad's own heart, which is `surge` only. A role named for a layer nothing sounds is the shape
+      `0154`'s *names every layer the rung actually sounds, exactly once* exists to catch — it is the
+      solve given a part to balance that is not there, and every other place's share moves with it.
+    */
+    pulse: ['sub', 'engine', 'perc', 'ride', 'beat'],
     bed: ['chords', 'groove'],
     air: ['drone'],
   },
@@ -433,7 +440,17 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     run: { ownC: 'pulse' },
     push: { ownD: 'pulse' },
     surge: { ownA: 'pulse' },
-    approach: { ownB: 'pulse' },
+    /*
+      ⚠️ **`ownA` IS THE BALLAD'S KIT AND IT DOES NOT STOP AT `surge`.** The place opens it at
+      `approach` (0.32), `boss` (0.45) and `bossPeak` (0.47) as well, and said nothing at any of them —
+      three of the seven layer-rungs 0172 left silent to 0164. The slot is timpani, kick, snare and the
+      heart on the downbeat, so `pulse` is the role it already carries one rung down: *a pulse you can
+      pick out when you attend to it*. `counter` would make the kit a line to follow against the piano
+      lament it is under, which is what `approach`'s own row says it must not become.
+    */
+    approach: { ownA: 'pulse', ownB: 'pulse' },
+    boss: { ownA: 'pulse' },
+    bossPeak: { ownA: 'pulse' },
   },
 };
 
@@ -509,19 +526,28 @@ export function roleOf(theme: ThemeKind | undefined, rung: MusicLevel, layer: Mu
   if (at === null) return null;
   let base: MusicRole | null = null;
   for (const role of MUSIC_ROLES) if (at[role].includes(layer)) base = role;
-  if (base === null) return null;
 
   /*
     ⚠️ **THE PLACE'S OWN LEAD DISPLACES THE ARRANGEMENT'S, AND THE DISPLACED ONE STEPS DOWN.** One
     part per rung is the invariant that makes the solve satisfiable at all — so appointing a new one
     has to demote the old one in the same breath, or the place would be over-determined exactly the
     way the first arrangement was.
+
+    ⚠️ **AND IT IS ANSWERED BEFORE THE SHARED TABLE GETS TO SAY `null`, BECAUSE A PLACE'S LADDER IS THE
+    AUTHORITY ON WHAT IT OPENS** — `docs/decisions/0162-a-place-has-its-own-ladder.md`. The Black Heart
+    reprises the piano lament at `approach`, which is `call`, and 0120 closed `call` at `surge` for
+    every place that has no opinion. Read in the old order the lead of that rung came back `null`: a
+    place following a layer nothing in the mix has a target for, with 0164 unable to ask whether the
+    thing the listener is meant to TRACK can be heard at all. `tests/arrangement.test.ts` argues this
+    in its own words one assertion up — asking the shared row here *"would refuse a place the right to
+    follow the very layer that makes it different."*
   */
   const lead = theme === undefined ? undefined : LEADS[theme][rung];
   if (lead !== undefined) {
     if (lead === layer) return 'part';
     if (base === 'part') return 'counter';
   }
+  if (base === null) return null;
 
   const lifted = theme === undefined ? undefined : PROMOTES[theme][layer];
   if (lifted === undefined) return base;

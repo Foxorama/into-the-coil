@@ -2483,7 +2483,21 @@ describe('0171 — a section change is a build rather than a step', () => {
       downbeat and that bar therefore holds mixed roles by construction. What has to hold is that no
       LATER bar carries a quieter role than an earlier one — the build only ever goes up.
     */
+    /*
+      ⚠️ **AND A LAYER THE PLACE PUTS ON THE BEAT IS NOT PART OF THE ASCENT — 0331's THIRTEENTH.**
+      `entryBars` already sorts every arrival by role, so the build goes up by construction; the only
+      way a louder role can land early is `onBeat`, which pins a layer to the downbeat *because the
+      place said to*. The Black Heart's `ownB` is `heartVoices(HEART_ACCEPT, …)` — it is a HEART, and
+      the field exists because *"a heart that arrived three bars into the build left a hole where the
+      beat should be."* Counting it as the bar's high-water mark made every quieter part behind it a
+      failure, which is the authored exception being read as the defect.
+
+      ⚠️ **THE CLAIM IS UNCHANGED FOR EVERYTHING ELSE, INCLUDING THE LEAD.** *What a place asks you to
+      follow lands last* is about `LEADS`, and no lead is on the beat; what is exempted is only a layer
+      whose own place states that it does not wait for the build.
+    */
     for (const theme of THEME_KINDS) {
+      const onBeat = THEMES[theme].onBeat ?? [];
       for (const build of buildsOf(theme)) {
         let landed = -1;
         let bar = -1;
@@ -2493,6 +2507,7 @@ describe('0171 — a section change is a build rather than a step', () => {
             bar = arrival.second;
             landed = highest;
           }
+          if (onBeat.includes(arrival.layer)) continue;
           const at = arrival.role === null ? 0 : MUSIC_ROLES.indexOf(arrival.role);
           expect(
             at,

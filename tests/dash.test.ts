@@ -173,11 +173,33 @@ describe('the dashboard answers the game’s questions', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md` inside a test rather than inside a
       tuning pass.
     */
-    const one = momentOf('approach', 60, FIGHT, 0).layers;
-    const seven = momentOf('eye', 60, FIGHT, 0).layers;
-    expect(one.find((l) => l.layer === 'sub')!.move, 'the two are not even on the same rung').toBe(
-      seven.find((l) => l.layer === 'sub')!.move,
+    /*
+      ⚠️ **THE SECOND IS TAKEN FROM EACH LEVEL'S OWN SECTIONS, AND THE FIXED SIXTY WAS NEVER THE SAME
+      RUNG IN BOTH.** This compared the two places at `t = 60` and checked they matched by reading
+      `sub`'s `move` in each — a proxy that holds only while every place sounds `sub` there. It went
+      red when The Black Heart closed every drum and guitar from `run` to `approach` (0331: *"a real
+      somber sad and slow ballad… that then tapers off very slightly as it leads into the boss
+      music"*), so its `sub` is `silent` where level one's is `quieter`.
+
+      ⚠️ **AND ASKING `Moment.rung` INSTEAD SHOWED THE PROXY HAD BEEN COVERING FOR A FALSE PREMISE ALL
+      ALONG**: at sixty seconds level one is at `push` and The Black Heart is at `surge`, and has been
+      since long before this branch. The guard was comparing two places at two different rungs and
+      calling the difference *the theme* — `docs/decisions/0027-measure-the-picture-not-the-model.md`
+      inside a test, which the paragraph above already caught this same assertion doing once. Each
+      place is now asked where ITS OWN `surge` starts, so what is left between them is the place.
+    */
+    const inSurge = (kind: 'approach' | 'eye'): number => {
+      const mark = marksOf(kind, FIGHT).find((m) => m.rung === 'surge');
+      expect(mark, `${kind} never reaches surge, so there is no rung to compare on`).toBeDefined();
+      return mark!.second + 1;
+    };
+    const here = momentOf('approach', inSurge('approach'), FIGHT, 0);
+    const there = momentOf('eye', inSurge('eye'), FIGHT, 0);
+    expect(here.rung, 'the two are not even on the same rung, so the comparison below is not about the theme').toBe(
+      there.rung,
     );
+    const one = here.layers;
+    const seven = there.layers;
     const differ = MUSIC_LAYERS.filter((layer) => AURA_LAYERS.includes(layer) === false).filter((layer) => {
       const a = one.find((l) => l.layer === layer)!.target;
       const b = seven.find((l) => l.layer === layer)!.target;

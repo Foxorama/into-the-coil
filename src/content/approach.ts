@@ -36,7 +36,7 @@
  * rather than left white.
  */
 
-import { MUSIC, type MusicLayer, type MusicVoice } from './music.ts';
+import { type MusicLayer, type MusicVoice } from './music.ts';
 
 /** A rest, written out so a pattern reads as a rhythm rather than as a list of nulls. */
 const _ = null;
@@ -50,17 +50,12 @@ const _ = null;
  */
 export const APPROACH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   /*
-    ── THE CHORDS, STRUCK — the base composition's own, with a faster attack ──────────────────────
-
-    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`, the second time this was asked.** The first
-    listen: *"the chords are slightly muted in the approach, the third section kicking needs the chords
-    to be a bit punchier"*, answered with a level. The next: *"approach needs the chords at 1st and 2nd
-    transition to pop a bit more, it's slightly muted."* The ladder note beside the first answer named
-    the next lever — *the 60–120 ms onsets* — and a chord that takes a tenth of a second to speak swells
-    rather than pops. So this place plays the same notes with every slow onset brought to 12 ms; the
-    title screen, which is the base composition, is untouched.
+    ⚠️ **THE STRUCK CHORDS ARE NOT HERE, AND THAT IS THE POINT** — `THEMES.approach.struck`. They were:
+    `chords: MUSIC.chords.map(…)`, the base composition's own notes with every slow onset brought to
+    12 ms. It sounded right and it said the wrong thing — a key in `voices` is what `revoicedBy` reads,
+    so the place claimed a tune it had not written and 0148 held its G♯ to a scale nobody chose. The
+    onset is a property of how this place strikes a layer, and it is stated as one.
   */
-  chords: MUSIC.chords.map((voice) => (voice.note.attack !== undefined && voice.note.attack > 0.03 ? { ...voice, note: { ...voice.note, attack: 0.012 } } : voice)),
   ownA: [
     /*
       ── THE HAND — a maraca on the offbeat sixteenths, four bars of it ─────────────────────────────
