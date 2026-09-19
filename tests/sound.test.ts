@@ -2817,7 +2817,10 @@ describe('0173 — a cue happens somewhere', () => {
     */
     // And the arc's two, since 0233: the discharge rides the arc's cadence and the strike lands on
     // the same step, so both are the gun's rate again.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'throw'];
+    // ⚠️ `throw` LEFT THIS LIST — asked for of the shuriken: *"need reverb."* Its fastest cadence is 0.2 s, three
+    // times the pulse's 0.067, and its send is the smallest in the table; the rule is about a tail under a
+    // REPEAT, and what it protects is the gun that never stops.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

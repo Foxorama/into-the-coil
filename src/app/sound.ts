@@ -371,7 +371,33 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
   rateCeiling = rate;
   const length = Math.max(1, Math.round(cueSeconds(row) * rate));
   const out = new Float32Array(length);
-  for (const layer of row.layers) sampleLayer(layer, rate, rng, out);
+  /*
+    ⚠️ **THE SIDE: what is on the left and not the right** — see `pan` on `CueLayer`. A row in which no
+    layer states a pan never allocates it, draws the same noise in the same order and returns the same
+    samples it always did. A panned layer is rendered alone so that its own travel can be applied, then
+    summed into the middle exactly as it would have been.
+  */
+  const wide = row.layers.some((layer) => (layer.pan ?? 0) !== 0 || (layer.panTo ?? layer.pan ?? 0) !== 0);
+  const side = wide ? new Float32Array(length) : null;
+  for (const layer of row.layers) {
+    const from = layer.pan ?? 0;
+    const to = layer.panTo ?? from;
+    if (side === null || (from === 0 && to === 0)) {
+      sampleLayer(layer, rate, rng, out);
+      continue;
+    }
+    const alone = new Float32Array(length);
+    sampleLayer(layer, rate, rng, alone);
+    const start = Math.round((layer.at ?? 0) * rate);
+    const span = Math.max(1, Math.round(layer.seconds * rate));
+    for (let i = 0; i < length; i++) {
+      const v = alone[i]!;
+      if (v === 0) continue;
+      const u = Math.min(1, Math.max(0, (i - start) / span));
+      out[i] = out[i]! + v;
+      side[i] = side[i]! - v * (from + (to - from) * u);
+    }
+  }
   /*
     THE GLUE — `docs/decisions/0089-a-cue-has-a-body.md`.
 
@@ -381,6 +407,7 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
     bottom rather than being absent.
   */
   const release = Math.max(1, Math.round(RELEASE_SECONDS * rate));
+  const right = side === null ? null : new Float32Array(length);
   for (let i = 0; i < length; i++) {
     // The release, applied to the SUM: a layer that ends early is already silent, and the only edge
     // that can click is the end of the buffer itself.
@@ -392,9 +419,52 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
       weight and the four would stop being one sound played four ways. That is the same reason the
       glue is over the sum in the first place.
     */
-    out[i] = saturate(out[i]!, row.glue) * row.gain * fade * velocity;
+    const scale = row.gain * fade * velocity;
+    if (side !== null && right !== null) {
+      // The glue over each SIDE's own sum, so neither channel can pass the rails the middle is held to.
+      const s = side[i]!;
+      side[i] = saturate(out[i]! + s, row.glue) * scale;
+      right[i] = saturate(out[i]! - s, row.glue) * scale;
+    }
+    out[i] = saturate(out[i]!, row.glue) * scale;
   }
+  if (side !== null && right !== null) WIDTHS.set(out, [side, right]);
   return out;
+}
+
+/**
+ * The two channels of a cue that has a width, keyed by the mono buffer every other part of this file
+ * already passes around.
+ *
+ * ⚠️ **A SIDE TABLE AND NOT A NEW RETURN TYPE, AND THE REASON IS IDENTITY.** `bakeCues`, the prewarm,
+ * `bakePlace` and `setCues` all hand a cue on as one `Float32Array` and compare them BY IDENTITY to
+ * know what a place re-voiced (0190). A pair would break every one of those comparisons to serve two
+ * call sites — the two that build an `AudioBuffer`. They ask here; a cue with no width is not in the
+ * table and is one channel, as it has always been. Weak, so a released set takes its channels with it.
+ */
+const WIDTHS = new WeakMap<Float32Array, readonly [Float32Array, Float32Array]>();
+
+/**
+ * A cue as the context plays it: two channels if its row gave it a width, one if not.
+ *
+ * ⚠️ **THE EVENT'S OWN PLACE IS STILL THE PANNER'S.** A `StereoPannerNode` takes a stereo input and leans
+ * it, so a wide cue keeps its width wherever in the field it happens.
+ */
+function bufferOf(ctx: AudioContext, data: Float32Array): AudioBuffer {
+  const wide = widthOf(data);
+  const buffer = ctx.createBuffer(wide === null ? 1 : 2, data.length, SAMPLE_RATE);
+  if (wide === null) {
+    buffer.getChannelData(0).set(data);
+  } else {
+    buffer.getChannelData(0).set(wide[0]);
+    buffer.getChannelData(1).set(wide[1]);
+  }
+  return buffer;
+}
+
+/** The left and right of `cue`, if its row gave it a width — and `null` if it is one channel. */
+export function widthOf(cue: Float32Array): readonly [Float32Array, Float32Array] | null {
+  return WIDTHS.get(cue) ?? null;
 }
 
 /**
@@ -694,7 +764,7 @@ export const PAN_BUCKETS = 9;
  * its tail has to be gone before the next one matters. `FASTEST_FIRE` is 0.067 s, and the pulse
  * states no room at all for that reason.
  */
-export const CUE_ROOM_SECONDS = 1.1;
+export const CUE_ROOM_SECONDS = 2;
 
 /**
  * How dark the tail gets, as the lowpass the impulse is drawn behind, in Hz at the head and the end.
@@ -1538,11 +1608,9 @@ export function makeAudioOut(): WebAudioOut {
         cueSamples = samples;
         buffers = samples.map((variants) =>
           variants.map((data) => {
-            const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
             // `getChannelData().set` rather than `copyToChannel`, which types its argument as a
             // `Float32Array<ArrayBuffer>` specifically and rejects the plain one `sampleCue` returns.
-            buffer.getChannelData(0).set(data);
-            return buffer;
+            return bufferOf(ctx!, data);
           }),
         );
         /*
@@ -1597,10 +1665,7 @@ export function makeAudioOut(): WebAudioOut {
         const variants = samples[index]!;
         if (variants === cueSamples[index]) continue;
         buffers[index] = variants.map((data) => {
-          const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
-          // `getChannelData().set` rather than `copyToChannel`, on the unlock path's own terms.
-          buffer.getChannelData(0).set(data);
-          return buffer;
+          return bufferOf(ctx!, data);
         });
       }
       cueSamples = samples;

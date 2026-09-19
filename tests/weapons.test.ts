@@ -151,7 +151,11 @@ describe('0233 — a weapon is a kind', () => {
    * nothing stayed green until this was written.
    */
   function gunOf(w: ReturnType<typeof weaponFor>): string {
-    return JSON.stringify([w.fireEvery, w.shots, w.spread, w.damage, w.links, w.reach, w.flight]);
+    // ⚠️ AND THE COIL, which this could not see: the size of the spiral is what the shuriken's own brief says an
+    // upgrade buys (*"upgrades make the shuriken's arc last longer"*), and it climbs on every rung. While the
+    // cadence also changed on every rung nothing noticed; the cadence went onto beat divisions, two rungs share
+    // one as two of the pulse's do, and the rung that buys only a bigger spiral is a rung that buys something.
+    return JSON.stringify([w.fireEvery, w.shots, w.spread, w.damage, w.links, w.reach, w.flight, w.coil]);
   }
   function tubesOf(w: ReturnType<typeof weaponFor>): string {
     return JSON.stringify([w.missileEvery, w.launchers, w.missileDamage, w.guidance]);

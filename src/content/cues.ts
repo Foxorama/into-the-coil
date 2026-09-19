@@ -288,6 +288,25 @@ export interface CueLayer {
    * a noise.** It is the only field here that is about arrangement rather than about timbre.
    */
   at?: number;
+  /**
+   * Where in the field this layer sits, −1 (left) to 1 (right). Absent is the middle.
+   *
+   * ── A CUE WAS ONE CHANNEL, PLACED — AND NEVER A SOUND WITH A WIDTH OF ITS OWN ──────────────────────
+   *
+   * ⚠️ **Asked for, of the bomb, the death and the shuriken**: *"need reverb, stereo, last rolling effects
+   * on the bomb and player death."* Every cue was a mono buffer sent to one of nine fixed panners, so an
+   * explosion could be somewhere and could not be BIG: its crack, its body and its debris all came from
+   * the same point. A roll of thunder is a thing that travels, and a layer that can say where it is — and
+   * where it ends up (`panTo`) — is how a row writes one. The event's own place in the field is still the
+   * panner's; this is the width around it.
+   *
+   * ⚠️ **THE MONO SUM IS UNCHANGED BY IT**, by construction: a layer at `pan` p goes to the left at
+   * `1 − p` and the right at `1 + p`, so left plus right is what it always was. Every guard in
+   * `tests/sound.test.ts` that renders a cue hears the fold-down, which is what a mono listener gets.
+   */
+  pan?: number;
+  /** Where the layer has moved to by the time it ends — a linear travel from `pan`. Absent is no travel. */
+  panTo?: number;
   /** Peak amplitude of this layer before the row's own gain. */
   gain: number;
   /** Seconds to reach full amplitude. Short enough to read as an attack; defaulted in `sound.ts`. */
@@ -860,6 +879,14 @@ export const CUES: Record<CueKind, CueRow> = {
    */
   throw: {
     twin: 'blade-appears',
+    /*
+      ⚠️ **A SMALL ROOM, WHICH NO OTHER GUN HAS** — *"need reverb."* The pulse is dry because it repeats every
+      0.067 s and a tail under that is a wash (0173). The blade leaves every 0.2 to 0.4 s: slow enough that a
+      quiet tail is the space the blades are flying through and not a smear.
+    */
+    air: 0.14,
+    // Struck by where in the beat it lands — 0104, as the pulse is: the downbeat hardest.
+    figure: [1, 0.72, 0.86, 0.74],
     hold: 3,
     gain: 0.25,
     glue: 0.1,
@@ -872,15 +899,15 @@ export const CUES: Record<CueKind, CueRow> = {
       struck metal does.
     */
     layers: [
-      // The launcher: the guns' shared bottom, harder than it was.
-      { wave: 'sine', from: inKey(5), to: inKey(-4), seconds: 0.11, gain: 0.874, attack: 0.001, curve: 3.4, drive: 0.35 },
-      // The shing: bright air that CLOSES, so the top leaves first.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.09, gain: 0.38, attack: 0.001, curve: 5, lowFrom: 11000, lowTo: 3200, highFrom: 2400, highTo: 1200, q: 1.4 },
-      // The steel: two partials a fifth apart, struck together and sagging a degree each.
-      { wave: 'tri', from: inKey(29), to: inKey(28), seconds: 0.12, gain: 0.228, attack: 0.0008, curve: 3.2 },
-      { wave: 'tri', from: inKey(33), to: inKey(32), seconds: 0.1, gain: 0.152, attack: 0.0008, curve: 3.8 },
+      // The launcher: the guns' shared bottom, in the middle, where a bottom belongs.
+      { wave: 'sine', from: inKey(5), to: inKey(-4), seconds: 0.11, gain: 0.87, attack: 0.001, curve: 3.4, drive: 0.35 },
+      // The shing: bright air that CLOSES, and it crosses the field as the blade spins out.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.1, gain: 0.4, attack: 0.001, curve: 4.5, lowFrom: 11000, lowTo: 3200, highFrom: 2400, highTo: 1200, q: 1.4, pan: -0.6, panTo: 0.6 },
+      // The steel: two partials a fifth apart, one each side, sagging a degree each as struck metal does.
+      { wave: 'tri', from: inKey(29), to: inKey(28), seconds: 0.12, gain: 0.24, attack: 0.0008, curve: 3, pan: -0.45 },
+      { wave: 'tri', from: inKey(33), to: inKey(32), seconds: 0.11, gain: 0.17, attack: 0.0008, curve: 3.4, pan: 0.45 },
       // The edge on the front of it: a tick of steel on steel.
-      { wave: 'square', from: inKey(39), to: inKey(35), seconds: 0.025, gain: 0.122, attack: 0.0005, curve: 7, highFrom: 2500 },
+      { wave: 'square', from: inKey(39), to: inKey(35), seconds: 0.025, gain: 0.12, attack: 0.0005, curve: 7, highFrom: 2500 },
     ],
   },
   threat: {
@@ -1686,11 +1713,12 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.16, gain: 1, attack: 0.001, curve: 3.2, drive: 0.35 },
       // The breech: a clack on the front.
       { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.4, attack: 0.0005, curve: 7, lowFrom: 5200, lowTo: 1800, highFrom: 500 },
-      // The charge leaving: a burst of air that closes.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.45, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3 },
-      // The whistle: a fifth up to the fourth, quiet, and late — the bomb already in the air.
-      { wave: 'sine', from: inKey(17), to: inKey(24), at: 0.04, seconds: 0.18, gain: 0.32, attack: 0.02, curve: 2.4 },
-      { wave: 'tri', from: inKey(10), to: inKey(17), at: 0.04, seconds: 0.18, gain: 0.22, attack: 0.02, curve: 2.6, lowFrom: 2400, lowTo: 3800 },
+      // The charge leaving: a burst of air that closes, opening outward to both sides.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.32, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3, pan: -0.2, panTo: -0.7 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.32, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3, pan: 0.2, panTo: 0.7 },
+      // The whistle: an octave up to the fourth, quiet, and late — the bomb already in the air, and leaving.
+      { wave: 'sine', from: inKey(17), to: inKey(24), at: 0.04, seconds: 0.18, gain: 0.3, attack: 0.02, curve: 2.4, pan: 0, panTo: 0.5 },
+      { wave: 'tri', from: inKey(10), to: inKey(17), at: 0.04, seconds: 0.18, gain: 0.2, attack: 0.02, curve: 2.6, lowFrom: 2400, lowTo: 3800, pan: 0, panTo: 0.5 },
     ],
   },
   /**
@@ -1704,7 +1732,7 @@ export const CUES: Record<CueKind, CueRow> = {
     twin: 'blast-ring',
     // The player paid a charge for this; the room is part of what they bought.
     // 0.62 → 0.75 with the blast that hits and rolls: a shorter, harder dry sound leaves the room more to say.
-    air: 0.75,
+    air: 0.95,
     // +10.7 dB, and the player paid a charge for it — 0053.
     duck: 0.34,
     /*
@@ -1724,18 +1752,26 @@ export const CUES: Record<CueKind, CueRow> = {
       tail is the ROOM's (0173) and not a longer brick.
     */
     layers: [
-      // The crack.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.408, attack: 0.0003, curve: 7, lowFrom: 7000, lowTo: 2400, highFrom: 700 },
-      // The slam: the body, shorter and harder than it was.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.55, gain: 0.374, attack: 0.014, curve: 3.2, lowFrom: 2600, lowTo: 320, highFrom: 100, highTo: 36, q: 0.7, drive: 0.6 },
-      // The roll: a second, darker body, late.
-      { wave: 'noise', from: 0, to: 0, at: 0.16, seconds: 0.46, gain: 0.17, attack: 0.06, curve: 2.4, lowFrom: 900, lowTo: 160, highFrom: 60, highTo: 30, q: 0.7, drive: 0.4 },
-      // The debris: the only top left after the crack.
-      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.55, gain: 0.024, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
+      // The crack, in the middle.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.42, attack: 0.0003, curve: 7, lowFrom: 7000, lowTo: 2400, highFrom: 700 },
+      // The slam: the pressure, in the middle.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.38, attack: 0.014, curve: 3.2, lowFrom: 2600, lowTo: 320, highFrom: 100, highTo: 36, q: 0.7, drive: 0.6 },
+      /*
+        THE ROLL — three of them, each later, darker and quieter than the last, and each somewhere else: left,
+        then right, then travelling from one side to the other. The noise is HELD rather than white (`from`
+        falling from a few hundred a second to under a hundred), which is what turns a wash into something that
+        crumbles and tumbles. *"Last rolling effects on the bomb."*
+      */
+      { wave: 'noise', from: 700, to: 160, at: 0.16, seconds: 0.6, gain: 0.36, attack: 0.05, curve: 2.2, lowFrom: 1100, lowTo: 200, highFrom: 60, highTo: 32, q: 0.7, drive: 0.4, pan: -0.65, panTo: -0.25 },
+      { wave: 'noise', from: 520, to: 110, at: 0.46, seconds: 0.75, gain: 0.32, attack: 0.08, curve: 2, lowFrom: 800, lowTo: 160, highFrom: 50, highTo: 30, q: 0.7, drive: 0.4, pan: 0.7, panTo: 0.3 },
+      { wave: 'noise', from: 380, to: 70, at: 0.8, seconds: 0.85, gain: 0.27, attack: 0.12, curve: 2.1, lowFrom: 600, lowTo: 120, highFrom: 40, highTo: 28, q: 0.7, drive: 0.35, pan: -0.55, panTo: 0.55 },
+      // The debris: the only top left after the crack, scattering outward.
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 1.1, gain: 0.05, attack: 0.02, curve: 2, lowFrom: 6200, highFrom: 1200, highTo: 650, pan: -0.3, panTo: -0.8 },
+      { wave: 'noise', from: 0, to: 0, at: 0.09, seconds: 1.05, gain: 0.05, attack: 0.02, curve: 2.1, lowFrom: 5600, highFrom: 1300, highTo: 700, pan: 0.3, panTo: 0.8 },
       // F3 → A1, and F2 → A0 under it. It RESOLVES to the root, like the boss does — the two events
-      // in the game the player caused on purpose and paid for are the two that land home.
-      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.62, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },
-      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.62, gain: 0.289, attack: 0.015, curve: 2, drive: 0.15 },
+      // in the game the player caused on purpose and paid for are the two that land home. In the middle.
+      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.8, gain: 0.289, attack: 0.015, curve: 2.2, drive: 0.15 },
     ],
   },
   /**
@@ -1812,22 +1848,26 @@ export const CUES: Record<CueKind, CueRow> = {
       times.
     */
     layers: [
-      // THE HIT — harder than it was; what has to be sharp here is the timing.
+      // THE HIT.
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.34, attack: 0.0004, curve: 6.5, lowFrom: 5200, lowTo: 1600, highFrom: 600 },
       // THE BODY.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.7, gain: 0.34, attack: 0.014, curve: 2.8, lowFrom: 1900, lowTo: 280, highFrom: 95, highTo: 40, q: 0.7, drive: 0.5 },
-      // THE SECOND BURST, a third of a second in — the one that finishes it.
-      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.8, gain: 0.255, attack: 0.004, curve: 2.3, lowFrom: 1400, lowTo: 200, highFrom: 70, highTo: 34, q: 0.7, drive: 0.45 },
-      // F3 → A1, F2 → A0: it resolves to the root, which is 0323's whole change and is kept.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.6, gain: 0.34, attack: 0.014, curve: 2.8, lowFrom: 1900, lowTo: 280, highFrom: 95, highTo: 40, q: 0.7, drive: 0.5 },
+      // THE SECOND BURST, a third of a second in and off to the right — the one that finishes it.
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.7, gain: 0.34, attack: 0.004, curve: 2.4, lowFrom: 1500, lowTo: 200, highFrom: 70, highTo: 34, q: 0.7, drive: 0.45, pan: 0.45, panTo: 0.2 },
+      // F3 → A1: it resolves to the root, which is 0323's whole change and is kept. `tests/sound.test.ts` names this layer.
       { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.2, gain: 0.459, attack: 0.001, curve: 1.9, drive: 0.35 },
-      { wave: 'sine', from: inKey(5), to: inKey(-7), at: 0.34, seconds: 1.2, gain: 0.289, attack: 0.01, curve: 1.6 },
-      // THE REACTOR RUNNING DOWN — two octaves, E5 to E3, through a filter that closes with it.
-      { wave: 'saw', from: inKey(25), to: inKey(11), at: 0.04, seconds: 0.55, gain: 0.054, attack: 0.01, curve: 1.6, lowFrom: 3200, lowTo: 500, q: 1.2, drive: 0.3 },
-      // THE DEBRIS.
-      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 1.1, gain: 0.02, attack: 0.03, curve: 2, lowFrom: 5200, highFrom: 1100, highTo: 580 },
-      // THE BELL — 0323's, a minor third, struck after the second burst now and left to ring.
-      { wave: 'tri', from: inKey(14), to: inKey(13), at: 0.42, seconds: 0.95, gain: 0.109, attack: 0.004, curve: 1.2, release: 0.5 },
-      { wave: 'tri', from: inKey(16), to: inKey(15), at: 0.46, seconds: 0.9, gain: 0.075, attack: 0.005, curve: 1.3, release: 0.5 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), at: 0.34, seconds: 1, gain: 0.289, attack: 0.01, curve: 2 },
+      // THE REACTOR RUNNING DOWN — two octaves, E5 to E3, through a filter that closes with it, drifting across.
+      { wave: 'saw', from: inKey(25), to: inKey(11), at: 0.04, seconds: 0.6, gain: 0.07, attack: 0.01, curve: 1.5, lowFrom: 3200, lowTo: 500, q: 1.2, drive: 0.3, pan: -0.5, panTo: 0.4 },
+      // THE THIRD, smaller and to the left, and then the wreck ROLLING away — held noise, tumbling, side to side.
+      { wave: 'noise', from: 0, to: 0, at: 0.68, seconds: 0.55, gain: 0.28, attack: 0.004, curve: 2.6, lowFrom: 1200, lowTo: 180, highFrom: 60, highTo: 32, q: 0.7, drive: 0.4, pan: -0.55, panTo: -0.3 },
+      { wave: 'noise', from: 460, to: 70, at: 0.85, seconds: 1.1, gain: 0.27, attack: 0.1, curve: 1.8, lowFrom: 700, lowTo: 120, highFrom: 40, highTo: 28, q: 0.7, drive: 0.35, pan: 0.6, panTo: -0.6 },
+      // THE DEBRIS, scattering outward.
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 1.4, gain: 0.045, attack: 0.03, curve: 1.9, lowFrom: 5200, highFrom: 1100, highTo: 580, pan: -0.3, panTo: -0.85 },
+      { wave: 'noise', from: 0, to: 0, at: 0.4, seconds: 1.3, gain: 0.045, attack: 0.03, curve: 2, lowFrom: 4800, highFrom: 1200, highTo: 620, pan: 0.3, panTo: 0.85 },
+      // THE BELL — 0323's, a minor third, one note each side now, struck after the second burst and left to ring.
+      { wave: 'tri', from: inKey(14), to: inKey(13), at: 0.42, seconds: 0.95, gain: 0.11, attack: 0.004, curve: 1.2, release: 0.5, pan: -0.4 },
+      { wave: 'tri', from: inKey(16), to: inKey(15), at: 0.46, seconds: 0.9, gain: 0.075, attack: 0.005, curve: 1.3, release: 0.5, pan: 0.4 },
     ],
   },
   /**
