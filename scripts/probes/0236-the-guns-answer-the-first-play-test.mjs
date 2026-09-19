@@ -50,8 +50,9 @@ export const PROBES = [
     guard: 'THE STRIKE: a bolt landing is an explosion',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.7, attack: 0.003, curve: 4.5, lowFrom: 1800, lowTo: 160, highFrom: 120, highTo: 50, q: 0.8, drive: 0.25 },",
-      replace: "      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.7, attack: 0.003, curve: 4.5, lowFrom: 1800, lowTo: 160, highFrom: 120, highTo: 50, q: 0.8, drive: 0.25 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.7 → 0.42); the break is the LENGTH.
+      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.19,",
+      replace: "      { wave: 'noise', from: 0, to: 0, seconds: 0.03,",
     },
   },
   {
@@ -86,7 +87,9 @@ export const PROBES = [
     guard: 'the PLAYER’S OWN WEAPONS have a bottom',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.6, attack: 0.004, curve: 4, lowFrom: 260, lowTo: 90, highFrom: 40, q: 0.8, drive: 0.3 },\n      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.09, gain: 1, attack: 0.002, curve: 3.5, drive: 0.3 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance, which moved both gains (0.6 → 0.372 and 1 → 0.62).
+      // The break is unchanged: the thunder taken out from under the coil and one thin sine left.
+      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.11, gain: 0.372, attack: 0.004, curve: 4, lowFrom: 260, lowTo: 90, highFrom: 40, q: 0.8, drive: 0.3 },\n      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.09, gain: 0.62, attack: 0.002, curve: 3.5, drive: 0.3 },",
       replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.06, gain: 0.3, attack: 0.002, curve: 4, drive: 0.2 },",
     },
   },

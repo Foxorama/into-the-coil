@@ -41,11 +41,13 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every pitched cue glides between two notes of the key',
     edit: {
       path: 'src/content/cues.ts',
-      // ⚠️ Re-anchored by 0323, which landed the death on the ROOT instead of the seventh. The break is
-      // the same one — a semitone off whatever note the fall is authored to end on, so both ends still
-      // look musical and only the in-the-key assertion fires.
-      find: "{ wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.15",
-      replace: "{ wave: 'sine', from: inKey(12), to: inKey(0) * Math.pow(2, -1 / 12), seconds: 1.15",
+      // ⚠️ Re-anchored by 0323, which landed the death on the ROOT instead of the seventh, and again by
+      // 0331, which lengthened this fall from 1.15 s to 1.2 — `blast` now carries the same two notes over
+      // 0.7 s, so the seconds are the only thing telling them apart and the anchor has to keep them. The
+      // break is unchanged: a semitone off whatever note the fall is authored to end on, so both ends
+      // still look musical and only the in-the-key assertion fires.
+      find: "{ wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.2,",
+      replace: "{ wave: 'sine', from: inKey(12), to: inKey(0) * Math.pow(2, -1 / 12), seconds: 1.2,",
     },
   },
   {
@@ -62,8 +64,11 @@ export const PROBES = [
     guard: 'THE SAMPLES: what a layer puts in the room lies inside the interval its row names',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    const step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;',
-      replace: '    const step = layer.from / rate;',
+      // ⚠️ Re-anchored by 0331, which made this `let` so a vibrato and a scoop can bend it — the break
+      // is unchanged, and the two lines that bend it below are left in place deliberately: they multiply
+      // a step that no longer moves, which is exactly the shape a hand's optimisation would have.
+      find: '    let step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;',
+      replace: '    let step = layer.from / rate;',
     },
   },
   {

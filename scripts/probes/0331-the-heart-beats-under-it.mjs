@@ -14,12 +14,16 @@ export const PROBES = [
     guard: '0331 — and the shared copy of what it re-voices is let go, and baked again when it is wanted',
     edit: {
       path: 'src/app/sound.ts',
-      find: `      for (const layer of mine) {
-        if (own[layer] === base[layer]) continue;
-        base[layer] = RELEASED;
-        released.add(layer);
-      }`,
-      replace: `      // The place's own is playing; the shared one underneath it stays, as it did until 0331.`,
+      // ⚠️ Anchored at the indentation the block actually has — four spaces, not six. This was written
+      // from the shape of the change rather than from the file, which is the one way a probe can be
+      // stranded on the day it is authored. `for (const layer of mine) {` appears twice in `bakePlace`,
+      // so the whole block is what makes it unambiguous.
+      find: `    for (const layer of mine) {
+      if (own[layer] === base[layer]) continue;
+      base[layer] = RELEASED;
+      released.add(layer);
+    }`,
+      replace: `    // The place's own is playing; the shared one underneath it stays, as it did until 0331.`,
     },
   },
   {

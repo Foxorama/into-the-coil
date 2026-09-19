@@ -62,7 +62,7 @@ lament arriving at 4.80 s in a section 8.75 s long.
 authority on what it opens — [0162](0162-a-place-has-its-own-ladder.md) — and
 [0120](0120-a-rung-may-close-a-layer.md) closes `call` at `surge` for every place with no opinion.
 The Black Heart reprises the piano lament at `approach`, and `roleOf` answered `null` for it: a place
-following a layer the mix has no target for, with [0164](0164-no-layer-is-inaudible.md) unable to ask
+following a layer the mix has no target for, with [0164](0164-a-role-is-a-promise-the-mix-has-to-keep.md) unable to ask
 whether the thing the listener is meant to TRACK can be heard at all.
 
 **A place BAKES every layer it changes, and an onset is a change** — the third way into `bakedBy`
@@ -85,7 +85,7 @@ the total, so released it reads higher still.
 
 ## ⚠️ And a report about hiss moved the kick by five decibels in a place nobody was mixing
 
-Every Saurian Belt `sub` entry came off [0164](0164-no-layer-is-inaudible.md)'s known-adrift list.
+Every Saurian Belt `sub` entry came off [0164](0164-a-role-is-a-promise-the-mix-has-to-keep.md)'s known-adrift list.
 All five measured 5.1–6.6 dB under a `pulse` and now measure −0.14 to −2.33. **The lift the player
 refused** — *"lifting `sub` about 4 dB so the kick reads under the bassline"*, offered and declined in
 [0191](0191-a-place-sits-somewhere.md) — arrived without being applied, and the refusal stands.

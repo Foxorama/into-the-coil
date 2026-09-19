@@ -20,8 +20,11 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: an auto-weapon’s cue finishes before its own next volley',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },",
-      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.58 → 0.348). The anchor stops before the gain
+      // now: the break is a LENGTH and the gain was never part of it, so carrying one made this probe
+      // stale on a change that had nothing to do with what it breaks.
+      find: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.064,",
+      replace: "      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.11,",
     },
   },
   {
@@ -33,8 +36,10 @@ export const PROBES = [
     guard: '0104 — THE REPORTED ONE: an auto-weapon’s cue finishes before its own next volley',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.26, gain: 1, attack: 0.001, curve: 3 },",
-      replace: "      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.4, gain: 1, attack: 0.001, curve: 3 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 1 → 0.6), on the same terms as the probe above:
+      // the break is the LENGTH and the anchor now stops before the gain.
+      find: "      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.26,",
+      replace: "      { wave: 'sine', from: inKey(14), to: inKey(2), seconds: 0.4,",
     },
   },
   {

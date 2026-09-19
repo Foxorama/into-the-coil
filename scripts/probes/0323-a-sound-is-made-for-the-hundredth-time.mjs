@@ -33,8 +33,11 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, DRIVEN: no attack of this animal is still sounding when it sounds again',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'noise', from: 4200, to: 1400, seconds: 0.24, gain: 0.44,",
-      replace: "{ wave: 'noise', from: 4200, to: 1400, seconds: 0.95, gain: 0.44,",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.44 → 0.273). The break is the LENGTH — this is
+      // the same break as the probe above, measured in the flown fight instead of in the table — so the
+      // anchor stops where that one does and the gain is no longer carried by either.
+      find: "{ wave: 'noise', from: 4200, to: 1400, seconds: 0.24,",
+      replace: "{ wave: 'noise', from: 4200, to: 1400, seconds: 0.95,",
     },
   },
   {
@@ -49,8 +52,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: and a BOSS’s attack finishes before its own next volley',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.28, gain: 0.62,",
-      replace: "{ wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.38, gain: 0.62,",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.62 → 0.372); the break is the LENGTH.
+      find: "{ wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.28,",
+      replace: "{ wave: 'tri', from: inKey(7), to: inKey(0), seconds: 0.38,",
     },
   },
   {
@@ -65,8 +69,11 @@ export const PROBES = [
     guard: '0323 — the death RESOLVES',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.15,",
-      replace: "{ wave: 'sine', from: inKey(12), to: inKey(-1), seconds: 1.15,",
+      // ⚠️ Re-anchored by 0331, which lengthened the death's fall from 1.15 s to 1.2. The seconds stay
+      // in the anchor because `blast` now carries the same two notes over 0.7 s and nothing else
+      // separates them; the break is the DESTINATION, which is the seventh instead of the root.
+      find: "{ wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.2,",
+      replace: "{ wave: 'sine', from: inKey(12), to: inKey(-1), seconds: 1.2,",
     },
   },
 ];

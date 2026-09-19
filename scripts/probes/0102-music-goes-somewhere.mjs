@@ -132,8 +132,13 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0104, which SHORTENED this layer from 0.11s to 0.064 rather than removing
       // it: the sub is what stops the pulse being tinny and its LENGTH is what made the gun a drone.
       // The break is still the whole layer going away, which is what 0102 put here.
-      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.064, gain: 0.58, attack: 0.002, curve: 4, drive: 0.2 },',
-      replace: '',
+      // ⚠️ And re-anchored again by 0331, which re-balanced this cue's gain 0.58 → 0.348. The anchor
+      // stops at the SECONDS now: they are what makes this the pulse's sub rather than one of the two
+      // other layers that glide the same two notes, and they are the quantity 0104's break is about.
+      // A millisecond rather than nothing: the row stays structurally valid and a 1 ms sine at the
+      // pulse's bottom note puts no energy in the low band at all, which is the defect as reported.
+      find: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.064,',
+      replace: '      { wave: \'sine\', from: inKey(2), to: inKey(-7), seconds: 0.001,',
     },
   },
 ];

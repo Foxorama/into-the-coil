@@ -61,8 +61,11 @@ export const PROBES = [
     guard: '0157 — AND THE BOUNDARY BAKE TAKES THE SAME SLICE, because it is the one on a deadline',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    next = sliceOf(jobs, next);\n    if (next >= jobs.length) {\n      ready({ loops: own, cues: ownCues });',
-      replace: '    if (next < jobs.length) jobs[next++]!();\n    if (next >= jobs.length) {\n      ready(own);',
+      // ⚠️ Re-anchored by 0331, which moved the hand-over out of this branch and behind `finish()` so a
+      // worker's layer and a walked one land the same way. The break is untouched — one note per
+      // timeout instead of a slice — and it now needs only the line that takes the slice.
+      find: '    next = sliceOf(jobs, next);\n    if (next >= jobs.length) {\n      walked = true;',
+      replace: '    if (next < jobs.length) jobs[next++]!();\n    if (next >= jobs.length) {\n      walked = true;',
     },
   },
 ];

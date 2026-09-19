@@ -35,8 +35,11 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0330, which drove this place and re-read its `LEADS` row: `run` follows the
       // title's kit and `push` the tune now. The break is unchanged — the fight follows `drive`, a
       // layer that is loud in all seven places — and so is what it proves.
-      find: "  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'frenzy' },",
-      replace: "  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'drive' },",
+      // ⚠️ AND RE-ANCHORED AGAIN BY 0331, which re-read the whole row for the ballad. Anchored on the
+      // FIGHT alone now — `boss: 'frenzy'` is the only part of this row the break touches, and carrying
+      // the four rungs before it made the probe stale every time the level was re-driven.
+      find: "approach: 'call', boss: 'frenzy' },",
+      replace: "approach: 'call', boss: 'drive' },",
     },
   },
 ];

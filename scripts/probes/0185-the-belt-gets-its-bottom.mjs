@@ -49,9 +49,12 @@ export const PROBES = [
         // Re-anchored a third time by 0191, which put the player's own desk state back into every
         // row. The break has survived all four: the rungs above `surge` taken away, so the shared
         // row answers for `toll`, `dread` and `drive`.
-        "      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 1, arp: 0.9, toll: 1.6, dread: 1.7 },\n" +
-        "      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95 },\n" +
-        "      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },",
+        // ⚠️ And a FIFTH time by 0331, which closed this place's `ride` and `crash` and lifted its kit.
+        // Spelled out rather than shortened for the reason 0189's own probe file records: a short anchor
+        // on a `bossPeak:` row matched Ember Nebula's and reddened the right guard for the wrong reason.
+        "      approach: { drone: 0, chords: 0, lead: 0, counter: 0, groove: 0, bass: 1.62, beat: 2.6, ride: 0, sub: 1.13, engine: 1.68, perc: 2.21, drive: 1.25, ownA: 0.5, arp: 0.45, toll: 1.6, dread: 1.7, crash: 0 },\n" +
+        "      boss: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.5, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.6, frenzy: 1.1, wraith: 1.2, stomp: 0.95, crash: 0 },\n" +
+        "      bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1, crash: 0 },",
       replace: '',
     },
   },

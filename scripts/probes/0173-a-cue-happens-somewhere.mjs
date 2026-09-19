@@ -18,7 +18,10 @@ export const PROBES = [
     guard: 'THE ONE IN UNITS THE PLAYER HEARS: the blast rings for at least a third of a second longer',
     edit: {
       path: 'src/content/cues.ts',
-      find: '    air: 0.62,',
+      // ⚠️ Re-anchored by 0331's cue pass, which took the blast's room from 0.62 to 0.95. It is the
+      // blast's own `air` and the guard measures the blast's ring, so the value has to be carried —
+      // there is nothing else on the line to hold on to.
+      find: '    air: 0.95,',
       replace: '    air: 0,',
     },
   },

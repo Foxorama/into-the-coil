@@ -35,8 +35,11 @@ export const PROBES = [
     guard: 'and a punctuation mark is shorter than the beat it lands on, so two of them are two events',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.9, attack: 0.001, curve: 3.4 },",
-      replace: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.46, gain: 0.6, attack: 0.002, curve: 3.2 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.9 → 0.397). The break is the LENGTH — 0.46 s is
+      // 1.15 beats — so the anchor stops before the gain, and the replacement no longer drags the old
+      // gain, attack and curve along with it: they were never part of what this probe breaks.
+      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3,",
+      replace: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.46,",
     },
   },
   {
@@ -48,8 +51,11 @@ export const PROBES = [
     guard: 'and it is struck at more than one weight, which is the field 0104 gave the gun and not this',
     edit: {
       path: 'src/content/cues.ts',
-      find: '    figure: [1, 0.72, 0.86, 0.74],',
-      replace: '',
+      // ⚠️ Re-anchored because `throw` was given the SAME four weights — *the downbeat hardest* is one
+      // pattern and two cues run it now, so the figure alone matches twice. `hold` is what tells them
+      // apart: the kill's is 2 and the throw's is 3, and this probe is about the kill.
+      find: '    figure: [1, 0.72, 0.86, 0.74],\n    hold: 2,',
+      replace: '    hold: 2,',
     },
   },
   {

@@ -19,8 +19,11 @@ export const PROBES = [
     guard: 'every rung of a place holds its run loudness',
     edit: {
       path: 'src/content/themes.ts',
-      find: '  approach: { push: 0.8353, surge: 0.7668,',
-      replace: '  approach: { push: 1, surge: 0.7668,',
+      // ⚠️ Re-anchored twice now, and both times by a re-solve of the table it reads — 0331 last, to
+      // `push: 0.8211`. A hold value IS the thing this break lets off, so the anchor cannot avoid
+      // carrying one; what it can avoid is carrying the four beside it, so it stops after `push`.
+      find: '  approach: { push: 0.8211,',
+      replace: '  approach: { push: 1,',
     },
   },
   {

@@ -19,8 +19,17 @@ export const PROBES = [
     guard: '0179 — THE REPORTED ONE: an explosion ENDS LOWER THAN IT STARTED, which none of the above sees',
     edit: {
       path: 'src/content/cues.ts',
-      find: "seconds: 0.36, gain: 0.15, attack: 0.012, curve: 3, lowFrom: 7000, lowTo: 2400, highFrom: 1500, highTo: 800",
-      replace: "seconds: 0.36, gain: 0.15, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800",
+      /*
+        ⚠️ Re-anchored by 0331, which re-balanced this layer (gain 0.15 → 0.041) AND split it into a
+        LEFT and a RIGHT that travel outwards. Both lines are named, because undarkening one side is
+        half a break: the fall this guard measures is the cue's, not one channel's.
+      */
+      find:
+        "      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.041, attack: 0.012, curve: 3, lowFrom: 7000, lowTo: 2400, highFrom: 1500, highTo: 800, pan: -0.3, panTo: -0.85 },\n" +
+        "      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.041, attack: 0.012, curve: 3, lowFrom: 7000, lowTo: 2400, highFrom: 1500, highTo: 800, pan: 0.3, panTo: 0.85 },",
+      replace:
+        "      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.041, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800, pan: -0.3, panTo: -0.85 },\n" +
+        "      { wave: 'noise', from: 0, to: 0, seconds: 0.36, gain: 0.041, attack: 0.012, curve: 3, lowFrom: 7000, highFrom: 1500, highTo: 800, pan: 0.3, panTo: 0.85 },",
     },
   },
   {
@@ -30,8 +39,9 @@ export const PROBES = [
     guard: '0179 — THE REPORTED ONE: an explosion ENDS LOWER THAN IT STARTED, which none of the above sees',
     edit: {
       path: 'src/content/cues.ts',
-      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3, gain: 0.9, attack: 0.001, curve: 3.4 }",
-      replace: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.17, gain: 0.9, attack: 0.001, curve: 3.4 }",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.9 → 0.397); the break is the LENGTH.
+      find: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.3,",
+      replace: "{ wave: 'sine', from: inKey(6), to: inKey(1), seconds: 0.17,",
     },
   },
 ];

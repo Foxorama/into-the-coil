@@ -26,10 +26,11 @@ ear over it. The two marked ⚠️ are the ones I would play first.
 | what changed | play | against | the number |
 |---|---|---|---|
 | ⚠️ **Saurian Belt is 3.1 dB quieter** | `C:\itc-renders\overnight\coilward-AFTER-trim-level-coilward.wav` | `C:\itc-renders\v31\coilward.wav` | −23.3 vs −20.7 dBFS RMS. It was **clipping** — see §3.1 |
-| ⚠️ **The Black Heart's lament may not be the part** | not yet rendered | — | `call` at `approach` is 6.6 dB under what a `part` needs — see §4.1 |
+| ⚠️ **The Black Heart, whole level** | `C:\itc-renders\overnight\eye-AFTER-night-level-eye.wav` | `C:\itc-renders\v31\black-heart.wav` | −27.1 vs −24.5 dBFS RMS. It **inverts**: 4.5 LU quieter at the opening, 3.1 louder at the fight — see §3.8 and §4 |
 | The Approach's swell and bell | `overnight\eye-AFTER-swell-…`, `…-AFTER-bell-…` | `…-BEFORE-swell-…` | differences at **0:58–1:04** and **1:58–1:59**; 0:55–1:10 went −22.4 → −23.5 LUFS, LRA 2.6 → 2.9 |
 | Ember Nebula's ride at `push` | not yet rendered | — | +0.65 → **−5.90 dB** against its role, from 0331's ride darkening |
-| The Black Heart's `approach` build | not yet rendered | — | four staged arrivals over 4.80 s became three over **3.20 s** — see §3.4 |
+| The Black Heart's `approach` build | in the render above, at **1:36** | — | four staged arrivals over 4.80 s became three over **3.20 s** — see §3.4 |
+| The lament as the part | in the render above, `surge` and `approach` | — | 6.4 and 6.6 dB under what a `part` needs — **§4.1 is the question** |
 
 Standing items still owed the ear from before tonight, unchanged: all 21 cues
 (`C:\itc-renders\cues\*-new.wav` against `*-before.wav`), `throw-over-music-new.wav`, the title track's
@@ -170,6 +171,90 @@ climb is nobody's intention**, and re-solving removes it. What is left is a 2 LU
 The Labyrinth sits at −20.4 for its entire length and nobody has reported it as quiet, which is the
 evidence that the game's floor is not where 0329 assumes.
 
-## 5. What is not done
+**After the re-solve, this level reads −19.1 → −18.1 → −17.6 → −17.1 → −15.1.** Its loudest rung is
+quieter than two entire places. `tests/themes.test.ts` names `core` as the one exception to 0329
+pending your answer; if it is *no rise*, the contour goes to zeros, the fight comes down four decibels,
+and that is one table and no music.
 
-Written plainly rather than left to be discovered.
+**One thing moved while this was being written and is worth knowing.** The fight's hold carried two
+lifts a hand made by ear — *"+1.5 dB, for the low end taken off the speaker in the fight"* and *"+2 dB
+more on the twenty-fifth"* — sitting on top of a solved row. Re-solving would have silently undone
+them. They are stated in the contour now, and the solver came back **0.1852 against the hand's 0.1886**
+and **0.1790 against 0.1791** — 0.16 dB and 0.005 dB. The lifts were right and were written in the
+wrong table.
+
+## 5. What is not done, and what it would cost
+
+- **Phases C to F have not started** — the travel screen, the album in game, the intro and victory
+  movies. The plan forbids starting them on top of an unmerged Phase B, and Phase B is this branch.
+- **An equal-power crossfade.** The Black Heart's `run → push` still dips 1.01 dB below both its ends
+  and is named as the one exception in `tests/transition.test.ts`. An exponential fall to a lower target
+  and an exponential rise from silence at the same `tau` do not add to a constant; it shows only on the
+  biggest exchange in the game, and every other boundary of the thirty-five is inside −0.67 dB. Two
+  things were fixed on the way to that number — a shared downbeat taking its last arrival's ramp instead
+  of its slowest, worth 0.10 dB — and the last 0.06 dB is `linger`, which is an ear's decision.
+- **A standing instrument for *is a fill heard in the bar it sounds in*.** 0164 reads a whole loop, so
+  Saurian Belt's tom cascade — six strokes in two hundred and fifty-six steps — is measured mostly
+  against its own silence. In the 250 ms it actually sounds it sits 2.4 to 8.4 dB under the rest of
+  `push`, which is a present accent rather than a whisper. The script that measured it was written for
+  the night and is not a tool anybody can run again.
+- **The Black Heart's `calm`** — see §3.5. Recorded rather than fixed.
+- **The renders for six of the seven levels.** Only Saurian Belt was re-rendered as a file. §3.8 measures
+  all seven through the same chain a render goes through, and five of them moved by less than a third of
+  a decibel; The Black Heart moved a great deal and is owed a render before anything else is decided
+  about it.
+
+### 3.8 What the whole game's loudness did, place by place
+
+The plan asks for a section that moved more than 1 dB to be a finding. Measured K-weighted through the
+shipped bus, `main` against this branch, after the hold re-solve — **every place now sits flat at its
+own contour**, which it did not before:
+
+| place | `main` | now | moved |
+|---|---|---|---|
+| The Approach | −15.8 | −16.1 | −0.3 |
+| Ember Nebula | −15.0 | −15.0 | — |
+| **Saurian Belt** | −13.7 | **−14.8** | **−1.1** |
+| The Labyrinth | −20.6 | −20.4 | +0.2 |
+| Rime Vault | −16.0 | −16.0 | — |
+| Toxic Mire | −17.4 | −17.5 | −0.1 |
+| **The Black Heart**, `run` | −14.6 | **−19.1** | **−4.5** |
+| **The Black Heart**, `approach` | −18.2 | **−17.1** | **+1.1** |
+| **The Black Heart**, fight | −18.2 | **−15.1** | **+3.1** |
+
+**Two places moved, and only one of them moved tonight.** Saurian Belt's −1.1 is §3.1's trim and is the
+line to play first. The Black Heart's is 0330 and 0331's own authoring arriving: **on `main` this level
+FALLS from its opening to its fight and now it climbs** — 4.5 LU quieter at the start, 3.1 louder at the
+end. That inversion is the piece you asked for, and it is also why §4.2 is a question rather than a
+number.
+
+The other five are inside a third of a decibel, which is the hold doing its job over a base composition
+that changed under every one of them.
+
+## 6. Two findings about guards, which are the transferable half
+
+### A guard that had only ever been green was measuring a collapse
+
+0166 went red on Saurian Belt at **21.5 dB against a per-rung 2.0**. One layer, one boundary, and the
+number is not a mix: `drive` is roleless at `push` — this place opens it a rung before the shared
+arrangement first names it — and the solve carries a roleless layer to **1.37e-7**. That rung is
+skipped, and the hold then drags the rung next to it down to 2.90e-2.
+
+That is 0330's own finding one step further on. It narrowed the skip to the boundary's two ends; a hold
+does not respect pairs. Widened to the whole level, **`NOT_STEADIER` emptied entirely** — both entries
+it carried were this same case — and all seven places now buy a steadier boundary.
+
+### The same race, in three shapes, in one file
+
+`and turning it back on says so` counted **55 voices where 28 was expected**: a place bake hands its
+buffers over whenever it finishes and rebuilds one source per layer, so a handover landing between two
+tallies lands inside a difference meant to be *what that press did*.
+
+**The first fix was the same mistake in a second shape.** Waiting for the count to stop moving passed
+the file alone and failed it inside `npm run check`, because under load the gap between two bake steps
+grows past the gap between two polls. **A quiet window is still a window.**
+
+What closes it now is arithmetic rather than time — the gesture makes a known number of buffers, so the
+bake is finished when they exist, at any speed on any machine — and it fails loudly if they never
+arrive instead of handing a still-climbing number to the assertion below. All **three** tests in that
+file that assert a bake total were waiting 1200 ms and counting; all three now wait for the number.

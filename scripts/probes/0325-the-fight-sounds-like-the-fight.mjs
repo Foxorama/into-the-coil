@@ -40,8 +40,10 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: a slot a place OPENS has voices and a role at that rung',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    voices: APPROACH_VOICES,\n    ladder: {',
-      replace: '    voices: {},\n    ladder: {',
+      // ⚠️ Re-anchored by 0331, which put `struck` between this row's voices and its ladder. The anchor
+      // is the voices alone now: emptying them is the whole break and the line after it never was.
+      find: '    voices: APPROACH_VOICES,',
+      replace: '    voices: {},',
     },
   },
   {
@@ -92,8 +94,11 @@ export const PROBES = [
     guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/content/cues.ts',
-      find: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.78, attack: 0.005, curve: 3.6, drive: 0.42 },',
-      replace: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.34, gain: 0.78, attack: 0.005, curve: 2.4, drive: 0.42 },',
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.78 → 0.484). The break is the note ringing PAST
+      // the end of the cue — a length and a curve — so the anchor stops before the gain and the two
+      // fields it changes are spelled out after it.
+      find: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.484, attack: 0.005, curve: 3.6,',
+      replace: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.34, gain: 0.484, attack: 0.005, curve: 2.4,',
     },
   },
 ];

@@ -35,8 +35,14 @@ export const PROBES = [
         still matches but whose break no longer breaks is the failure 0019 cannot see**, and the only
         thing that catches it is running the suite and watching the colour.
       */
-      find: "seconds: 0.07, gain: 0.1, attack: 0.0004",
-      replace: "seconds: 0.07, gain: 0.006, attack: 0.0004",
+      /*
+        ⚠️ **AND IT MOVED AGAIN WITH 0331, WHICH IS THIS PARAGRAPH HAPPENING A SECOND TIME.** The voice
+        is `gain: 0.07, attack: 0.001` now — quieter and softer-edged than the 0.1 and 0.4 ms it was —
+        so the replacement is scaled by the same **1/16.7** the old pair used rather than kept at a
+        number that was chosen against a different envelope. 0.07 / 16.7 is 0.0042.
+      */
+      find: "seconds: 0.07, gain: 0.07, attack: 0.001",
+      replace: "seconds: 0.07, gain: 0.0042, attack: 0.001",
     },
   },
   {

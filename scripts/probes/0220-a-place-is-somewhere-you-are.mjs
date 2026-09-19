@@ -89,8 +89,11 @@ export const PROBES = [
     guard: 'The Black Heart’s landmark changes size',
     edit: {
       path: 'src/content/levels.ts',
-      find: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96, variant: 0 }],',
-      replace: '    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 0, variant: 0 }],',
+      // ⚠️ Re-anchored by 0331, which moved this landmark up the level with the rest of the script
+      // (2360 → 2070). The anchor drops the distance for that reason: `beat: 96` is what this break is
+      // about, and where in the level the heart hangs is not.
+      find: 'lane: 46, depth: 0.07, beat: 96, variant: 0 }],',
+      replace: 'lane: 46, depth: 0.07, beat: 0, variant: 0 }],',
     },
   },
   {

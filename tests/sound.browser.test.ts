@@ -123,31 +123,46 @@ async function open(): Promise<Page> {
 const tally = (page: Page): Promise<AudioTally> =>
   page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [] });
 
+/** The cue bus's impulse response — one buffer, built on the same gesture. `THE WHOLE CHAIN` argues it. */
+const ROOM_IMPULSE = 1;
+
+/** Every buffer a first gesture produces: the cues, the base loops, the place's own, and the room. */
+const BAKED_TOTAL = BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE;
+
 /**
- * Wait until nothing more is being created, then tally.
+ * Wait until the bake has finished, by COUNTING what it makes rather than by waiting for quiet.
  *
- * ── A COUNT OVER A WINDOW IS A RACE UNLESS THE WINDOW IS QUIET ──────────────────────────────────
+ * ── A COUNT OVER A WINDOW IS A RACE UNLESS THE WINDOW IS CLOSED BY SOMETHING REAL ────────────────
  *
  * ⚠️ **`docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`.** A place's bake
  * hands its loops over whenever it finishes and `setLoops` then rebuilds one source per layer — so a
  * handover landing between two tallies adds a whole set of voices to a difference that is meant to be
- * *what that press did*. Measured, it is exactly `MUSIC_LAYERS.length` of surprise (55 where 28 was
- * expected), and which side of the press it falls on depends on how long the prewarm took that run.
+ * *what that press did*. Measured, it is exactly `MUSIC_LAYERS.length` of surprise: 55 voices where 28
+ * was expected, and which side of the press it falls on depends on how long the prewarm took that run.
  *
- * ⚠️ **A LONGER `waitForTimeout` CANNOT FIX IT, WHICH IS WHY THIS IS A POLL.** The press that opens the
- * title screen pays for the music prewarm and costs seconds rather than milliseconds, so any constant
- * long enough today is one somebody shortens when the suite gets slow. What the guard needs is not
- * *later*, it is *quiet* — two reads agreeing that the count has stopped moving.
+ * ⚠️ **AND WAITING FOR *QUIET* WAS THE SECOND VERSION OF THE SAME MISTAKE.** Two reads agreeing that
+ * nothing had moved passed this file on its own and failed it inside `npm run check`, because under the
+ * suite's load the gap between two bake steps grows past the gap between two polls. **A quiet window is
+ * still a window.** What closes this one is arithmetic: the gesture makes one buffer per cue weight, one
+ * per music layer, one per layer again for the place, and one for the room — so the bake is done when
+ * `BAKED_TOTAL` buffers exist, at any speed, on any machine.
+ *
+ * ⚠️ **AND IT FAILS LOUDLY RATHER THAN RETURNING A MOVING NUMBER**, which is what the poll did: it ran
+ * out of patience and handed back a count that was still climbing, so the assertion downstream reported
+ * a wrong total instead of a bake that had not finished.
  */
 const settled = async (page: Page): Promise<AudioTally> => {
-  let last = await tally(page);
-  for (let i = 0; i < 40; i++) {
+  let now = await tally(page);
+  for (let i = 0; i < 240 && now.buffers < BAKED_TOTAL; i++) {
     await page.waitForTimeout(250);
-    const now = await tally(page);
-    if (now.voices === last.voices && now.buffers === last.buffers) return now;
-    last = now;
+    now = await tally(page);
   }
-  return last;
+  expect(
+    now.buffers,
+    `the bake never finished: ${now.buffers} of ${BAKED_TOTAL} buffers after a minute — this is not the ` +
+      'guard below failing, it is the page still working',
+  ).toBeGreaterThanOrEqual(BAKED_TOTAL);
+  return now;
 };
 
 const soundOption = (kind: (typeof SOUND_KINDS)[number]): string =>
@@ -173,10 +188,16 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
   });
 
   it('THE WHOLE CHAIN: a press unlocks it, the cues bake once, and a run makes voices', async () => {
+    /*
+      ⚠️ **1200 ms WAS A GUESS AND THE BAKE IS NOT ON A CLOCK** — see `settled`, and 0044. Every one of
+      the three tests in this file that asserts a bake TOTAL used to wait a second and a fifth and then
+      count, which is fine on a quiet machine and a coin flip inside `npm run check`: measured there,
+      one of them read 55 voices where 28 was expected and another read a total that was still climbing.
+      `settled` waits for the number these assertions are about, so they are no longer racing it.
+    */
     const page = await open();
     await page.click(startButton);
-    await page.waitForTimeout(1200);
-    const after = await tally(page);
+    const after = await settled(page);
     /*
       ⚠️ **Exactly one buffer per cue WEIGHT and one per music layer, which is the bake being a
       BAKE.** More than that is a synthesiser running during play, which is the audio spelling of
@@ -213,8 +234,12 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       bus's impulse response is a buffer like any other and is built on the same gesture, once, out
       of the same context. **It is the +1 and it is written as one rather than folded into a
       constant**, because the whole value of this assertion is that every term in it names something.
+
+      ⚠️ **`ROOM_IMPULSE` MOVED TO THE TOP OF THE FILE AND THE SUM DID NOT MOVE WITH IT.** `settled`
+      needs the same total to know when a bake has finished, and two copies of *the room is one buffer*
+      would be the drift this file is careful about everywhere else. The terms are still spelled out
+      here, which is what the paragraph above is asking for.
     */
-    const ROOM_IMPULSE = 1;
     expect(after.buffers, 'the cues, the music and the level’s own place did not each bake once').toBe(
       BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE,
     );
@@ -241,8 +266,15 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       look at**, and the same shape as counting ink on the canvas: the only honest end of the chain
       is the platform call.
     */
+    /*
+      ⚠️ **THE BAKE IS WAITED OUT AND THE PLAY IS TIMED, BECAUSE THEY ARE DIFFERENT QUANTITIES.** This
+      assertion is about where a cue is CONNECTED, which needs the run to have sounded one — there is no
+      count to wait for, so the wait stays. What `settled` removes is the part that was a race: a
+      thousand milliseconds that had to cover the bake AND the first cue, on whatever machine.
+    */
     const page = await open();
     await page.click(startButton);
+    await settled(page);
     await page.waitForTimeout(1200);
     const after = await tally(page);
     expect(after.into.length, 'no cue sounded at all, so this guard measured nothing').toBeGreaterThan(0);
@@ -266,11 +298,12 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       it could not do while the prewarm was still walking. **Off does not skip the bake**, which is
       the point of this test: silence is a gain, never an absence of material.
     */
+    // ⚠️ `settled` rather than a fixed wait, on the terms the chain test above states: this assertion
+    // is about a bake TOTAL, so waiting for that total is waiting for the thing it measures.
     const page = await open();
     await page.click(soundOption('off'));
     await page.click(startButton);
-    await page.waitForTimeout(1200);
-    const after = await tally(page);
+    const after = await settled(page);
     expect(
       after.buffers,
       'pressing a setting did not unlock the context, so silence proves nothing',

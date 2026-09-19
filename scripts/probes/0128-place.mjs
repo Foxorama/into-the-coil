@@ -37,8 +37,11 @@ export const PROBES = [
     guard: 'AND WHAT IT STATES ACTUALLY SOUNDS DIFFERENT, while everything else is untouched',
     edit: {
       path: 'src/app/music.ts',
-      find: '  for (const voice of voicesOf(theme, layer)) {',
-      replace: '  for (const voice of voicesOf(undefined, layer)) {',
+      // ⚠️ Re-anchored by 0331, which renamed the loop variable so a place's own onset can be applied
+      // over the base's note — `raw` is what the table hands back and `voice` is what gets baked. The
+      // break is unchanged: the place is not asked for, so every level bakes one composition again.
+      find: '  for (const raw of voicesOf(theme, layer)) {',
+      replace: '  for (const raw of voicesOf(undefined, layer)) {',
     },
   },
   {

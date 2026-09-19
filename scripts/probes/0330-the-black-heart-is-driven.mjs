@@ -32,8 +32,11 @@ export const PROBES = [
     guard: 'and no theme at any rung drives the bus past full scale',
     edit: {
       path: 'src/content/themes.ts',
-      find: 'groove: 0.6, drone: 0.943, bass: 0.63, beat: 1.28,',
-      replace: 'groove: 0.6, drone: 0.943, bass: 0.63, beat: 3.19,',
+      // ⚠️ Re-anchored by 0331, which replaced this opening with a ballad and CLOSED the kit in it —
+      // `beat` is 0 at `run` now rather than 1.28. The break is the same one: the kit back at the 3.19
+      // the desk drove it to. `ownC`'s 0.07276 is what makes this row this place's `run` and no other.
+      find: 'ownC: 0.07276, ownD: 0, lead: 0, beat: 0,',
+      replace: 'ownC: 0.07276, ownD: 0, lead: 0, beat: 3.19,',
     },
   },
   {
@@ -48,8 +51,10 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/arrangement.ts',
-      find: "  core: { run: 'beat', push: 'call',",
-      replace: "  core: { run: 'engine', push: 'call',",
+      // ⚠️ Re-anchored by 0331: the ballad follows its own piano at `run` now rather than the title's
+      // kit. `engine` is still the layer this place's drive buried, and following it is still the break.
+      find: "  core: { run: 'call',",
+      replace: "  core: { run: 'engine',",
     },
   },
 ];
