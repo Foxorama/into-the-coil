@@ -863,15 +863,24 @@ export const CUES: Record<CueKind, CueRow> = {
     hold: 3,
     gain: 0.25,
     glue: 0.1,
+    /*
+      ⚠️ **A BLADE, WHERE IT WAS A BREATH** — asked for with the album: *"we also need to make a lot better…
+      shuriken fire noise."* Measured (`scripts/weigh-cue.mjs`), the old one had 6% of its weight in the sub and
+      13% in the low band, and its centroid ROSE ten decibels from onset to tail — which is a whoosh, the one
+      thing a thrown blade is not. A shuriken is struck steel leaving a launcher: the launcher's thump under it,
+      a short bright *shing* that falls rather than rises, and two ringing partials a fifth apart, sagging as
+      struck metal does.
+    */
     layers: [
-      // The swing: air through a band that opens and closes over a tenth of a second.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.7, attack: 0.02, curve: 3.5, lowFrom: 2600, lowTo: 900, highFrom: 380, highTo: 220, q: 1.1 },
-      // The edge: a brighter, shorter hiss on the front of it.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.4, attack: 0.001, curve: 7, highFrom: 3000, lowFrom: 9000, lowTo: 4000 },
-      // The ring: metal, falling a tone.
-      { wave: 'tri', from: inKey(22), to: inKey(21), seconds: 0.09, gain: 0.32, attack: 0.001, curve: 5 },
-      // The sub — the pulse's own, so the three guns share a bottom.
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.06, gain: 0.5, attack: 0.002, curve: 4, drive: 0.2 },
+      // The launcher: the guns' shared bottom, harder than it was.
+      { wave: 'sine', from: inKey(5), to: inKey(-4), seconds: 0.11, gain: 0.874, attack: 0.001, curve: 3.4, drive: 0.35 },
+      // The shing: bright air that CLOSES, so the top leaves first.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.09, gain: 0.38, attack: 0.001, curve: 5, lowFrom: 11000, lowTo: 3200, highFrom: 2400, highTo: 1200, q: 1.4 },
+      // The steel: two partials a fifth apart, struck together and sagging a degree each.
+      { wave: 'tri', from: inKey(29), to: inKey(28), seconds: 0.12, gain: 0.228, attack: 0.0008, curve: 3.2 },
+      { wave: 'tri', from: inKey(33), to: inKey(32), seconds: 0.1, gain: 0.152, attack: 0.0008, curve: 3.8 },
+      // The edge on the front of it: a tick of steel on steel.
+      { wave: 'square', from: inKey(39), to: inKey(35), seconds: 0.025, gain: 0.122, attack: 0.0005, curve: 7, highFrom: 2500 },
     ],
   },
   threat: {
@@ -1637,7 +1646,7 @@ export const CUES: Record<CueKind, CueRow> = {
   bossDown: {
     twin: 'boss-burst',
     // The wettest in the game. The fight is over and the place is what is left.
-    air: 0.75,
+    air: 0.9,
     // +11.4 dB, once a level, and the loudest thing the game ever does. The deepest duck there is.
     duck: 0.42,
     // The loudest event in the game, so the one it costs most to have land off the grid — 0104.
@@ -1664,16 +1673,24 @@ export const CUES: Record<CueKind, CueRow> = {
     // A press and its consequence — 0104. Only the consequence gets the room.
     air: 0.25,
     hold: 6,
-    gain: 0.310,
+    gain: 0.25,
     glue: 0.08,
+    /*
+      ⚠️ **A LAUNCH, WHERE IT WAS A SLIDE WHISTLE** — *"we also need to make a lot better… bomb noise."* Two
+      octaves of pure sine rising over a fifth of a second is a cartoon's sound for going up. What the hand does
+      is fire a heavy thing out of a tube: a thump, the clack of the breech, and a short whistle that still
+      rises to the fourth — the degree that wants to go somewhere — because that is what a bomb in the air is.
+    */
     layers: [
-      // D3 → D5, and everything else in the row is the same two octaves of D. The FOURTH, held all
-      // the way up: the one degree in the scale that wants to go somewhere and has not yet, which is
-      // what a thrown bomb is.
-      { wave: 'sine', from: inKey(10), to: inKey(24), seconds: 0.2, gain: 0.75, attack: 0.004, curve: 3.5 },
-      { wave: 'saw', from: inKey(3), to: inKey(17), seconds: 0.2, gain: 0.3, attack: 0.004, curve: 3.5, lowFrom: 1400, lowTo: 5000, highFrom: 120, drive: 0.25 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.22, attack: 0.01, curve: 3, lowFrom: 10000, highFrom: 1100, highTo: 3200 },
-      { wave: 'sine', from: inKey(3), to: inKey(10), seconds: 0.22, gain: 0.42, attack: 0.006, curve: 3 },
+      // The tube: a low thump, falling a fifth.
+      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.16, gain: 1, attack: 0.001, curve: 3.2, drive: 0.35 },
+      // The breech: a clack on the front.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.4, attack: 0.0005, curve: 7, lowFrom: 5200, lowTo: 1800, highFrom: 500 },
+      // The charge leaving: a burst of air that closes.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.45, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3 },
+      // The whistle: a fifth up to the fourth, quiet, and late — the bomb already in the air.
+      { wave: 'sine', from: inKey(17), to: inKey(24), at: 0.04, seconds: 0.18, gain: 0.32, attack: 0.02, curve: 2.4 },
+      { wave: 'tri', from: inKey(10), to: inKey(17), at: 0.04, seconds: 0.18, gain: 0.22, attack: 0.02, curve: 2.6, lowFrom: 2400, lowTo: 3800 },
     ],
   },
   /**
@@ -1686,7 +1703,8 @@ export const CUES: Record<CueKind, CueRow> = {
   blast: {
     twin: 'blast-ring',
     // The player paid a charge for this; the room is part of what they bought.
-    air: 0.62,
+    // 0.62 → 0.75 with the blast that hits and rolls: a shorter, harder dry sound leaves the room more to say.
+    air: 0.75,
     // +10.7 dB, and the player paid a charge for it — 0053.
     duck: 0.34,
     /*
@@ -1696,16 +1714,28 @@ export const CUES: Record<CueKind, CueRow> = {
     */
     onGrid: true,
     hold: 6,
-    gain: 0.432,
+    gain: 0.535,
     glue: 0.14,
+    /*
+      ⚠️ **IT HITS, THEN IT ROLLS** — the other half of *"bomb noise."* Measured, the old blast's front edge was
+      4.5 dB over its body: no impact, one long wash. An explosion heard from inside it is a crack, a slam of
+      pressure, and then the roll of it coming back — so the crack is harder, the sub drops further and is
+      driven, and a second, darker body arrives a sixth of a second in. The dry sound is over in six tenths of a second, so the
+      tail is the ROOM's (0173) and not a longer brick.
+    */
     layers: [
-      { wave: 'noise', from: 0, to: 0, seconds: 0.035, gain: 0.33, attack: 0.0004, curve: 7, lowFrom: 5800, lowTo: 2100, highFrom: 650 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.8, gain: 1.05, attack: 0.004, curve: 2.5, lowFrom: 2000, lowTo: 300, highFrom: 100, highTo: 34, q: 0.7, drive: 0.52 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 0.06, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
+      // The crack.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.045, gain: 0.408, attack: 0.0003, curve: 7, lowFrom: 7000, lowTo: 2400, highFrom: 700 },
+      // The slam: the body, shorter and harder than it was.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.55, gain: 0.374, attack: 0.014, curve: 3.2, lowFrom: 2600, lowTo: 320, highFrom: 100, highTo: 36, q: 0.7, drive: 0.6 },
+      // The roll: a second, darker body, late.
+      { wave: 'noise', from: 0, to: 0, at: 0.16, seconds: 0.46, gain: 0.17, attack: 0.06, curve: 2.4, lowFrom: 900, lowTo: 160, highFrom: 60, highTo: 30, q: 0.7, drive: 0.4 },
+      // The debris: the only top left after the crack.
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.55, gain: 0.024, attack: 0.02, curve: 2.2, lowFrom: 6200, highFrom: 1200, highTo: 650 },
       // F3 → A1, and F2 → A0 under it. It RESOLVES to the root, like the boss does — the two events
       // in the game the player caused on purpose and paid for are the two that land home.
-      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },
-      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },
+      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.62, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.62, gain: 0.289, attack: 0.015, curve: 2, drive: 0.15 },
     ],
   },
   /**
@@ -1772,41 +1802,32 @@ export const CUES: Record<CueKind, CueRow> = {
     */
     onGrid: true,
     hold: 30,
-    gain: 0.45,
+    gain: 0.535,
     glue: 0.14,
+    /*
+      ⚠️ **THE SHIP DIES IN THREE BEATS, WHERE IT WENT OFF ONCE** — *"we also need to make a lot better… player
+      death noise."* The picture comes apart over 48 steps (0079) and the sound was one event at step zero with a
+      tail. It is the hit, the reactor running down, and the second burst that finishes it — and then 0323's
+      bell, because that decision's whole point stands: it resolves, and it is a sound you can hear two hundred
+      times.
+    */
     layers: [
-      // THE IMPACT — the ship coming apart. Softer at the top than it was: 4.2 kHz rather than 5.6, because
-      // what has to be sharp here is the timing and not the brightness.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.28, attack: 0.0006, curve: 6, lowFrom: 4200, lowTo: 1400, highFrom: 600 },
-      // THE BODY — 1.15 → 0.95 s and darker, so it is the thud under a figure rather than the figure.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 1, attack: 0.005, curve: 2.5, lowFrom: 1500, lowTo: 260, highFrom: 95, highTo: 40, q: 0.7, drive: 0.45 },
-      // THE DEBRIS — quiet, long, and the only thing here with any top left in it.
-      { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.05, attack: 0.03, curve: 2, lowFrom: 5200, highFrom: 1100, highTo: 580 },
-      /*
-        F3 → A1, F2 → A0. **IT RESOLVES, AND THAT IS 0323's WHOLE CHANGE.** It fell onto the seventh —
-        a step UP in the scale under a falling pitch, so the ear was left waiting for a note that never
-        came, which the note above this row argued for at length. *"A sound you want to hear over and
-        over"* is the opposite instruction, and the root is where a thing that finishes lands. The blast
-        and the boss coming apart already do it; what made the death different was an idea about the
-        FIRST hearing.
-      */
-      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.15, gain: 1.3, attack: 0.001, curve: 1.9, drive: 0.28 },
-      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 1.25, gain: 0.8, attack: 0.02, curve: 1.6 },
-      /*
-        THE BELL — two `tri` voices a minor third apart, struck a tenth of a second in and left to ring:
-        A3 sagging a tone to G3, and C4 sagging a semitone to B3. `tri` is the wave this file's own note
-        calls *"the ones that have to be pleasant"*, and it is the only pleasant thing in a cue that is
-        otherwise a hull failing.
-
-        ⚠️ **A MINOR THIRD BECAUSE THE KEY IS MINOR** — the two notes of the scale that say which key this
-        is — and it replaces a saw that was doing the opposite job: 0.85 s of filtered buzz whose only
-        contribution was weight the two sines already had.
-
-        ⚠️ **AND IT SAGS RATHER THAN HOLDING, because a struck body drops in pitch as it decays.** One
-        degree each, which is the smallest interval this table has ever authored bar the shield's own lean.
-      */
-      { wave: 'tri', from: inKey(14), to: inKey(13), at: 0.1, seconds: 0.9, gain: 0.3, attack: 0.004, curve: 1.3 },
-      { wave: 'tri', from: inKey(16), to: inKey(15), at: 0.14, seconds: 0.8, gain: 0.2, attack: 0.005, curve: 1.4 },
+      // THE HIT — harder than it was; what has to be sharp here is the timing.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.34, attack: 0.0004, curve: 6.5, lowFrom: 5200, lowTo: 1600, highFrom: 600 },
+      // THE BODY.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.7, gain: 0.34, attack: 0.014, curve: 2.8, lowFrom: 1900, lowTo: 280, highFrom: 95, highTo: 40, q: 0.7, drive: 0.5 },
+      // THE SECOND BURST, a third of a second in — the one that finishes it.
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.8, gain: 0.255, attack: 0.004, curve: 2.3, lowFrom: 1400, lowTo: 200, highFrom: 70, highTo: 34, q: 0.7, drive: 0.45 },
+      // F3 → A1, F2 → A0: it resolves to the root, which is 0323's whole change and is kept.
+      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 1.2, gain: 0.459, attack: 0.001, curve: 1.9, drive: 0.35 },
+      { wave: 'sine', from: inKey(5), to: inKey(-7), at: 0.34, seconds: 1.2, gain: 0.289, attack: 0.01, curve: 1.6 },
+      // THE REACTOR RUNNING DOWN — two octaves, E5 to E3, through a filter that closes with it.
+      { wave: 'saw', from: inKey(25), to: inKey(11), at: 0.04, seconds: 0.55, gain: 0.054, attack: 0.01, curve: 1.6, lowFrom: 3200, lowTo: 500, q: 1.2, drive: 0.3 },
+      // THE DEBRIS.
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 1.1, gain: 0.02, attack: 0.03, curve: 2, lowFrom: 5200, highFrom: 1100, highTo: 580 },
+      // THE BELL — 0323's, a minor third, struck after the second burst now and left to ring.
+      { wave: 'tri', from: inKey(14), to: inKey(13), at: 0.42, seconds: 0.95, gain: 0.109, attack: 0.004, curve: 1.2, release: 0.5 },
+      { wave: 'tri', from: inKey(16), to: inKey(15), at: 0.46, seconds: 0.9, gain: 0.075, attack: 0.005, curve: 1.3, release: 0.5 },
     ],
   },
   /**
