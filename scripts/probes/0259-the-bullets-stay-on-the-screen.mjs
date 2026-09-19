@@ -41,12 +41,23 @@ export const PROBES = [
     // from the side, and the wave that holds the stretch under eight seconds is the turret line at
     // 3865 — a station-holder, because with the seen window in a body that closes dies at the edge
     // before it fires. Reverting THAT wave to the charger column it was is the break.
-    broke: 'the shoal’s turret line put back to a charger column, so its last stretch runs past the budget',
+    /*
+      ⚠️ **RE-AIMED A SECOND TIME BY 0338, FOR THE SAME CLASS OF REASON AS 0326's RE-AIM ABOVE.** The
+      flanker's entry moved to the front of the screen, which moved this level's own baseline from 6.1s
+      to 8.4s — and the turret line at 3865 now makes no difference to the worst stretch at all: **8.4s
+      with the break in and 8.4s without it.** A break that reproduces the baseline proves nothing,
+      which is what `npm run prove` said when it reported this probe STILL GREEN.
+
+      It is aimed at the sower at 3232 now — one of 0259's OWN conversions, and the one inside the
+      stretch that is actually the worst. Measured with the break in: **13.9s**, against a budget of
+      nine.
+    */
+    broke: 'the shoal’s sower at 3232 put back to a charger, so its worst stretch runs past the budget',
     guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 3865, enemy: 'turret', formation: 'line', count: 5, lane: 55 },",
-      replace: "  { at: 3865, enemy: 'charger', formation: 'column', count: 6, lane: 55 },",
+      find: "  { at: 3232, enemy: 'sower', formation: 'column', count: 5, lane: 44 },",
+      replace: "  { at: 3232, enemy: 'charger', formation: 'column', count: 5, lane: 44 },",
     },
   },
   {

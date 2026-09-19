@@ -782,12 +782,27 @@ describe('0197 — a wave arrives as a wave', () => {
     /*
       ⚠️ **THE REFUSAL THIS CHANGE HAD TO ARGUE WITH, HELD RATHER THAN DROPPED.**
       `docs/decisions/0048-a-threat-may-arrive-from-the-side.md` measures the entry from the CAMERA so
-      that a ship standing forward cannot drag its own ambushes in front of it. What 0197 changes is
-      only the upper end: `FLANK_ALONG` is a FLOOR now, so a player at the back sees exactly what they
-      saw before.
+      that a ship standing forward cannot drag its own ambushes in front of it.
+
+      ⚠️ **AND IT ASSERTED THE CONSTANT RATHER THAN THE PROMISE, WHICH IS WHY IT WENT RED AT 0338 AND
+      WHY IT IS THIS SHAPE NOW.** It read `=== FLANK_ALONG` — and `FLANK_ALONG` is `MAX_ALONG_SPAN / 2`,
+      half of the WIDEST view and **68% of the reference one**, which is the defect 0338 measured. A
+      guard written against the number could only ever hold the number; 0048's promise is that the
+      entry does not FOLLOW a ship that drops back, and that is what is asked here instead. 0192: a red
+      guard is answered by fixing the defect or by changing the guard and saying why, never by changing
+      the work to suit it.
     */
     const view = viewOf(1920, 1080);
-    expect(flankAlongFor(PLAYER_ALONG_MARGIN, 0, view.alongSpan), 'the floor moved').toBe(FLANK_ALONG);
+    const atTheBack = flankAlongFor(PLAYER_ALONG_MARGIN, 0, view.alongSpan);
+    expect(
+      atTheBack,
+      'the entry followed the ship backwards, so a player at the back drags their ambushes with them',
+    ).toBe(flankAlongFor(view.alongSpan / 2, 0, view.alongSpan));
+    // And the floor is the leading edge of the view now, never a fraction of a device nobody is on.
+    expect(atTheBack, 'a flanker arrives short of the leading edge of the screen').toBeGreaterThanOrEqual(
+      view.alongSpan,
+    );
+    expect(FLANK_ALONG, 'the floor that keeps a player at the back honest is gone').toBeLessThanOrEqual(atTheBack);
   });
 
   it('and a flanker still arrives from beyond the leading edge rather than on top of it', () => {
@@ -799,5 +814,133 @@ describe('0197 — a wave arrives as a wave', () => {
         MAX_ALONG_SPAN,
       );
     }
+  });
+});
+
+/**
+ * ── THE ARRIVAL IS SEEN WHERE IT IS PLACED — 0338 ──────────────────────────────────────────────
+ *
+ * `docs/decisions/0338-the-arrival-is-seen.md`. Reported for the THIRD time, having survived 0048 and
+ * 0197: *"I keep reporting the enemies enter the screen halfway through or more and then barely get
+ * player interaction and it keeps happening."*
+ *
+ * ⚠️ **WHAT IS HELD IS THE SIGHTING AND NOT THE PLACEMENT, WHICH IS THE WHOLE OF WHY IT SURVIVED
+ * TWICE.** A flanker is placed outside the lane and is therefore not on the screen; it becomes
+ * visible only after crossing in, and the camera runs out from under it while it does. Every previous
+ * fix moved the placement and every previous guard asserted the placement.
+ * [0027](../docs/decisions/0027-measure-the-picture-not-the-model.md) is the rule: the model quantity
+ * and the picture quantity were different numbers, and nothing ever measured the second.
+ */
+describe('0338 — the arrival is seen where it is placed', () => {
+  /**
+   * Fly a level and report, for every body that arrived from an `across` edge, how far ahead of the
+   * camera it was when its hull was first inside the view — as a fraction of that view.
+   *
+   * ⚠️ **IT IS A FRACTION OF THE VIEW AND NOT A NUMBER OF UNITS**, because the complaint is *halfway
+   * through the screen* and a screen is 177.8 units on the aspect the game is authored to and 240 on
+   * the widest. A guard in units would hold on one device and mean nothing on the other — which is
+   * exactly the mistake `FLANK_ALONG` encodes.
+   */
+  function sightings(kind: (typeof LEVEL_KINDS)[number]): number[] {
+    const { world } = playableWorld(LEVELS[kind]);
+    const frame = new GameFrame(world);
+    const at: number[] = [];
+    /*
+      ⚠️ **KEYED ON THE BODY ITSELF AND EMPTIED THE MOMENT IT IS SEEN, BECAUSE A POOL REUSES ITS
+      SLOTS.** An `Entity` has no id — it is a slot in a `Pool` that is reset and handed out again — so
+      a set of *ones already counted* would silently skip every body that landed on a slot some earlier
+      flanker had used. Holding only the ones still WAITING to be seen makes reuse harmless: the next
+      body to come in on that slot is outside the lane again and is picked up again.
+    */
+    const waiting = new Set<Entity>();
+    for (let step = 0; step < 60 * 90 && world.bossPool.size === 0; step++) {
+      world.ship.health = world.shipRow.health;
+      for (let i = 0; i < world.enemies.size; i++) {
+        const e = world.enemies.at(i);
+        // Still crossing in from an across edge is `steerAcross` — `steerEnemies`' own marker (0197).
+        if (e.steerAcross !== 0 && (e.across < 0 || e.across > ACROSS_SPAN)) waiting.add(e);
+        if (!waiting.has(e)) continue;
+        const ahead = e.along - world.cameraAlong;
+        const onScreen =
+          ahead - e.radius <= world.view.alongSpan &&
+          ahead + e.radius >= 0 &&
+          e.across + e.radius >= 0 &&
+          e.across - e.radius <= ACROSS_SPAN;
+        if (!onScreen) continue;
+        at.push(ahead / world.view.alongSpan);
+        waiting.delete(e);
+      }
+      frame.step();
+    }
+    return at;
+  }
+
+  it('THE REPORTED ONE, FOR THE THIRD TIME: a body arriving from the side is first SEEN at the front of the screen, not halfway down it', () => {
+    /*
+      ⚠️ **MEASURED BEFORE THE FIX, ON THE SHIPPED SPAWNER**: a charger was first seen at 90 units of a
+      177.8-unit view — **51%** — a weaver at 101, a swift at 104, a sower at 110, a turret at 124.
+      *"Halfway through or more"* is the report and 51% is the measurement. `scripts/weigh-presence.mjs`
+      prints the whole table per level and is the instrument this claim is an assertion of.
+
+      ⚠️ **0.8 AND NOT 1.0.** A body is *seen* the moment any of its hull is inside the view, and it
+      still has to cross `FLANK_MARGIN` to get there; a handful of the widest bodies in the game lose a
+      little of that to their own radius. What the report is about is the difference between the front
+      of the screen and the middle of it, and four fifths is on the right side of that by a distance
+      nothing can drift across.
+    */
+    for (const kind of LEVEL_KINDS) {
+      const at = sightings(kind);
+      if (at.length === 0) continue;
+      const worst = Math.min(...at);
+      expect(
+        worst,
+        `in ${kind} a flanker was first seen ${(worst * 100).toFixed(0)}% of the way into the screen — the report is ` +
+          '"they enter the screen halfway through or more and then barely get player interaction"',
+      ).toBeGreaterThanOrEqual(0.8);
+    }
+  });
+
+  it('and it lets go of the screen once it is in the lane, so a flanker is something that arrives rather than something that stays', () => {
+    /*
+      ⚠️ **THE HOLD AND ITS RELEASE ARE ONE MECHANISM AND NEITHER IS CORRECT ALONE.** A flanker keeps
+      pace with the camera while it crosses in, so that it is SEEN where it was placed; holding for
+      ever would make it a body that never drifts back and never leaves — the opposite defect, and one
+      a guard on the sighting alone would be perfectly happy with.
+
+      ⚠️ **AND THE FIRST DRAFT OF THIS GUARD DID NOT FIRE ON IT, WHICH THE PROBE SAID AND NOTHING ELSE
+      WOULD HAVE.** It watched ONE flanker fall back over half a second and the one it happened to
+      catch was a charger — whose `closing` is larger than the camera's own rate, so it falls back
+      whether the hold is released or not. `npm run prove` reported **STILL GREEN**. The quantity that
+      actually separates the two cases is the sign of `velAlong`: released it is `-closing`, which is
+      never positive; stuck it is `-closing + SCROLL_PER_STEP`, which is positive for every body in the
+      game whose closing speed is under the camera's — and that is most of them.
+    */
+    const forward: string[] = [];
+    let arrived = 0;
+    for (const kind of LEVEL_KINDS) {
+      const { world } = playableWorld(LEVELS[kind]);
+      const frame = new GameFrame(world);
+      const crossing = new Set<Entity>();
+      for (let step = 0; step < 60 * 90 && world.bossPool.size === 0; step++) {
+        world.ship.health = world.shipRow.health;
+        for (let i = 0; i < world.enemies.size; i++) {
+          const e = world.enemies.at(i);
+          if (e.steerAcross !== 0 && (e.across < 0 || e.across > ACROSS_SPAN)) crossing.add(e);
+          if (!crossing.has(e) || e.steerAcross !== 0) continue;
+          arrived += 1;
+          crossing.delete(e);
+          // Forward is towards the leading edge. A body that has arrived and is still going that way
+          // is chasing the camera, and the player never meets it again.
+          if (e.velAlong > 0) forward.push(`${kind} #${e.kind} at ${e.velAlong.toFixed(2)}`);
+        }
+        frame.step();
+      }
+    }
+    expect(arrived, 'no flanker anywhere finished arriving, so this measured nothing').toBeGreaterThan(0);
+    expect(
+      forward.slice(0, 4).join(', '),
+      `${forward.length} of ${arrived} flankers were still travelling FORWARD after arriving, so they hang at the ` +
+        'front of the screen instead of coming back to the player',
+    ).toBe('');
   });
 });

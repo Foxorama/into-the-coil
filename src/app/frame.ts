@@ -4290,6 +4290,20 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     if (flanking) {
       e.velAcross = -side * FLANK_ENTRY_SPEED;
       e.steerAcross = target;
+      /*
+        ⚠️ **IT KEEPS PACE WITH THE SCREEN UNTIL IT IS IN THE LANE — 0338, AND IT IS THE HALF NO
+        PREVIOUS FIX TOUCHED.** A flanker is placed outside the lane, so it is not on the screen yet;
+        it becomes visible only once it has crossed `FLANK_MARGIN`. With `velAlong` at zero it holds
+        its WORLD position while it crosses, and the camera runs out from under it at 36 units a
+        second — so it is first SEEN some thirty units behind where it was placed. Measured, on the
+        shipped spawner: a charger placed at 120 is first seen at **90**.
+
+        ⚠️ **THAT GAP IS WHY THE REPORT SURVIVED TWO FIXES.** 0048 and 0197 both moved the placement,
+        and the player sees the SIGHTING; the two are different numbers and nothing ever measured the
+        second. `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule, and this is it
+        on the spawner rather than on the paint. `scripts/weigh-presence.mjs` prints the sighting.
+      */
+      e.velAlong += w.scrollPerStep;
     } else e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
     // The same two facts a wave's member is given, in the other order so 0073's probe over the
     // wave's line stays the one line it names.
@@ -4482,6 +4496,19 @@ function spawnWave(w: World, index: number): void {
     // typo produces a slow enemy rather than one that silently flees off the leading edge.
     e.velAlong = -row.closing * w.difficulty.closing;
     /*
+      ⚠️ **AND A FLANKER HOLDS THE SCREEN UNTIL IT IS IN THE LANE — 0338.** It is placed OUTSIDE the
+      lane and so is not on the screen yet; the camera runs out from under it at 36 units a second
+      while it crosses, and its own `closing` pulls it back on top of that. Measured on the shipped
+      spawner: a charger placed at 120 was first SEEN at 90 — and a charger closes, which is why it
+      lost the most. It resumes its `closing` the moment it arrives (`steerEnemies`).
+
+      ⚠️ **IT IS WRITTEN AFTER THE LINE ABOVE AND THAT IS THE WHOLE OF WHY IT WORKS.** The first draft
+      of this put it at the `velAcross` block thirty lines up, where `closing` overwrote it; the
+      instrument reported the entry moving 90 → 149 instead of 90 → 178 and that nine-tenths of a fix
+      is what a guard over the PLACEMENT would have called done.
+    */
+    if (flanking) e.velAlong += w.scrollPerStep;
+    /*
       ⚠️ **QUANTISED ONCE, HERE, AND NEVER AGAIN** — 0096. A cadence on the grid keeps a musical
       tempo; where the shots LAND still depends on the step this body happened to spawn on, and a
       dozen bodies at correct periods and arbitrary offsets is a smear rather than a rhythm. One
@@ -4578,6 +4605,21 @@ function steerEnemies(w: World): void {
       if (e.velAcross > 0 ? e.across < e.steerAcross : e.across > e.steerAcross) continue;
       e.across = e.steerAcross;
       e.steerAcross = 0;
+      /*
+        ⚠️ **AND IT LETS GO OF THE SCREEN HERE — 0338.** It held station against the camera while it
+        was crossing, so that it is SEEN where it was placed rather than thirty units behind; from the
+        moment it is in the lane it drifts back like everything else, and the player has the whole
+        width of the screen to meet it in. The two lines are one mechanism and neither is correct
+        alone: holding for ever would make a flanker a thing that never leaves.
+
+        ⚠️ **IT SUBTRACTS THE HOLD RATHER THAN ASSIGNING ANYTHING, AND THAT IS THE ONLY VERSION THAT
+        IS RIGHT ON BOTH SPAWNERS.** A wave's flanker arrives carrying its row's `closing`; a summoned
+        one carries nothing, because that path never writes one. An assignment here has to pick, and
+        either pick is wrong somewhere: zero deletes a charger's closing speed, and `-closing` hands a
+        boss's adds a speed they have never had. Adding the hold on and taking it off again restores
+        whatever the body actually had, and neither spawner has to be consulted.
+      */
+      e.velAlong -= w.scrollPerStep;
       /*
         ⚠️ **It slows to its roam rather than stopping, and keeps the way it was going.** 0048's turn
         was *cross, then straighten and close like anything else*; what *anything else* does has

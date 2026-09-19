@@ -30,8 +30,37 @@ import { NO_SECTIONS, playableWorld } from './world.ts';
  * ⚠️ **A BUDGET, AND THE REPORT OWNS THE NUMBER** — 0192. *"30secs of no bullet"* is the complaint;
  * eight is what every level measures under after 0259, with the shoal — the level authored from
  * chargers and drifters for speed — the one that sets it, and the one whose stretch was converted.
+ *
+ * ── ⚠️ 8 → 9 AT 0338, AND THE BASIS MOVED RATHER THAN THE NUMBER GOING QUIET ────────────────────
+ *
+ * ⚠️ **THE EIGHT WAS FITTED TO A MEASUREMENT TAKEN WITH A BROKEN SPAWNER.** A flanker was first SEEN
+ * two thirds of the way into the screen, so a gun-carrier authored to arrive somewhere arrived next
+ * to the player and fired at once. 0338 puts the entry at the front of the screen, and the cost is
+ * measured rather than argued:
+ *
+ * | level | worst held dry, before | after |
+ * |---|---|---|
+ * | coilward | 3.5s | 5.0s |
+ * | **shoal** | **6.1s** | **8.4s** |
+ * | gauntlet | 4.3s | 4.8s |
+ * | approach, descent, batteries, eye | 13.5 / 5.7 / 3.0 / 5.6 | 13.5 / 5.7 / 2.8 / 5.3 |
+ *
+ * ⚠️ **AND THE PROOF REFUSED THE FIRST ATTEMPT AT THIS, WHICH IS WHY THE PROBE MOVED WITH IT.** At
+ * nine, 0259's own probe stopped firing: its break — the turret line at 3865 back to a charger column
+ * — now measures **8.4s**, which is the baseline, because 0338 moved what the baseline is. A budget
+ * whose probe can no longer redden it is not a budget
+ * (`docs/decisions/0019-a-probe-must-be-seen-to-apply.md`). The probe is **re-aimed** at the sower at
+ * 3232, one of 0259's own conversions, which measures **13.9s** — and re-aiming is what that probe has
+ * already had done to it once, by 0326, for the same reason.
+ *
+ * ⚠️ **THE AUTHORING WAY OUT WAS TRIED TWICE AND BOTH ATTEMPTS BROKE SOMETHING ELSE.** Flipping the
+ * flanking sower at 3405 to lead moved the measurement by **nothing**; putting station-holders in the
+ * two dry stretches closed them and made the shoal's mid-boss fight busier than the stretch before it,
+ * which is `0267`'s guard. The level's coverage genuinely leans on flankers arriving close, and
+ * re-authoring it is *"when it comes to bullets and enemies, stop assuming, present a plan"* —
+ * **offered to the player, not taken here.** Nine, not fifteen: the next regression still argues.
  */
-const DRY_BUDGET_SECONDS = 8;
+const DRY_BUDGET_SECONDS = 9;
 
 /**
  * The share of the waves' time with a bullet on the screen a level must reach, at the capped
