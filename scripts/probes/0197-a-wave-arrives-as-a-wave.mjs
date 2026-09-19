@@ -35,7 +35,9 @@ export const PROBES = [
     guard: 'THE OTHER REPORTED ONE: a flanker never enters behind the ship',
     edit: {
       path: 'src/sim/camera.ts',
-      find: '  const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;\n  return Math.min(Math.max(FLANK_ALONG, ahead), MAX_ALONG_SPAN);',
+      // ⚠️ Re-anchored by 0338, which made the view a third floor. The break is the same break: the
+      // entry pinned to a flat 120, which is inside the player's box on every device.
+      find: '  const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;\n  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);',
       replace: '  return FLANK_ALONG;',
     },
   },
@@ -53,7 +55,9 @@ export const PROBES = [
     guard: 'and 0048 is kept: a player at the back cannot pull their ambushes forward',
     edit: {
       path: 'src/sim/camera.ts',
-      find: '  return Math.min(Math.max(FLANK_ALONG, ahead), MAX_ALONG_SPAN);',
+      // ⚠️ Re-anchored by 0338. Dropping BOTH floors is still what this breaks — the view's and
+      // `FLANK_ALONG`'s — so a player at the back drags every flanker back with them.
+      find: '  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);',
       replace: '  return Math.min(ahead, MAX_ALONG_SPAN);',
     },
   },

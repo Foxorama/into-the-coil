@@ -337,8 +337,26 @@ export const FLANK_CLEAR_AIR = 24;
  * `docs/decisions/0059-the-lane-is-the-players-box.md` already stops a body that is entirely off screen
  * from firing. **The thing that must not happen is being SHOT at from off screen, not arriving from
  * there.**
+ *
+ * ── ⚠️ AND THE VIEW IS A FLOOR NOW, BECAUSE THE REPORT CAME BACK A THIRD TIME — 0338 ────────────
+ *
+ * ⚠️ **THE ARGUMENT WAS NAMED `_alongSpan` AND THE BODY IGNORED IT.** Three bounds were described
+ * above and only two were computed: *never past what this device can show* was written as a ceiling
+ * of `MAX_ALONG_SPAN`, which is what the WIDEST device can show. On the reference aspect — 16:9, the
+ * aspect levels are authored to and the commonest monitor there is — that is 240 against a view of
+ * 177.8, so the sentence held for a screen nobody was playing on.
+ *
+ * ⚠️ **`FLANK_ALONG` IS HALF OF THE WIDEST VIEW AND TWO THIRDS OF THE NARROWEST.** 120 of 240 is the
+ * halfway line; 120 of 177.8 is **68%**. The note on `FLANK_ALONG` says *"80% of the way across on the
+ * narrowest"* and treats that as the promise being kept — it is the promise being broken, and the
+ * arithmetic is wrong as well.
+ *
+ * ⚠️ **SO THE VIEW IS A FLOOR AND NOT A CEILING.** A flanker arrives at the leading edge of the
+ * screen the player actually has, and `MAX_ALONG_SPAN` goes on being the ceiling so nothing is placed
+ * beyond the widest device's reach. On 16:9 that moves the entry from 120 to 177.8; on 21:9, from 120
+ * to 237. **Both are the same sentence — *at the front edge of your screen* — for the first time.**
  */
-export function flankAlongFor(shipAlong: number, cameraAlong: number, _alongSpan: number): number {
+export function flankAlongFor(shipAlong: number, cameraAlong: number, alongSpan: number): number {
   const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;
-  return Math.min(Math.max(FLANK_ALONG, ahead), MAX_ALONG_SPAN);
+  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);
 }

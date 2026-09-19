@@ -979,6 +979,21 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE ENTRY REPORT IS ANSWERED ON ITS FOURTH TELLING, AND THE DIAGNOSIS WAS WHAT WAS WRONG — 2026-09-19
+
+⚠️ **[0338](decisions/0338-the-arrival-is-seen.md).** *"I keep reporting the enemies enter the screen
+halfway through or more and then barely get player interaction and it keeps happening, so I think
+there's a discordant issue somewhere there blocking things."* There was, in two halves that 0048, 0197
+and 0326 each moved past: **every arrival rule is written against the widest device and the play
+happens on the narrowest**, and **the placement is not the sighting** — a flanker is put outside the
+lane, so it is not on screen when it is placed, and the camera runs out from under it while it crosses
+in. Measured at 51–70% of the screen; 94–102% now.
+
+⚠️ **THE COST IS MEASURED AND ONE BUDGET MOVED.** Three levels go drier and `DRY_BUDGET_SECONDS` is 9
+rather than 8 — its basis moved rather than it going quiet. **The re-authoring that would close the
+shoal's gap properly is the player's**, under the 2026-09-10 standing instruction, and 0338 names it
+rather than doing it.
+
 ### ⚠️ THE BOSSES ARE A PLAN NOW, AND IT IS WRITTEN FOR THE NEXT SESSION — 2026-09-16
 
 ⚠️ **[`the-bosses-planned`](../reports/the-bosses-planned-2026-09-16.md) HOLDS THE ORDER, SO THIS
