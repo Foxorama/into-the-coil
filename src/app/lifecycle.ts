@@ -9,7 +9,15 @@
  * |---|---|---|---|
  * | `begin`  | back to level one, a full complement | emptied, camera to zero | dropped |
  * | `onward` | carried forward untouched | **left exactly as it was** — 0076 | kept |
+ * | `arrive` | untouched | untouched | kept |
  * | `resume` | back to a full complement, level UNTOUCHED | left exactly as it was | dropped |
+ *
+ * ⚠️ **`arrive` IS THE FOURTH AND IT CHANGES NEITHER COLUMN, WHICH IS WHY IT IS A ROW AT ALL** —
+ * [0340](../../docs/decisions/0340-the-coil-is-a-route.md). `onward` used to end on the playing
+ * screen; the crossing goes between the two halves of it, so what was one verb is now *enter the
+ * level* and *lift the curtain on it*. A row that resets nothing is exactly what wants to be visible
+ * in this table: it is the proof that a crossing cannot quietly become a second `onward` and advance
+ * the level twice, which is the bug 0339 had just finished fixing one screen away.
  *
  * ⚠️ **`onward`'s middle column changed, and it is the whole of
  * [0076](../../docs/decisions/0076-a-level-has-an-origin.md).** It used to read *emptied, camera to
@@ -46,8 +54,15 @@ import { advanceLevel, respawn, startLevel, type World } from './frame.ts';
 export interface Lifecycle {
   /** A run at a chosen tier, from the top: level one, an empty field, a full complement of lives. */
   begin(difficulty: DifficultyKind): void;
-  /** The next level. Everything the run is carrying comes with it — the shell too; the field does not. */
+  /**
+   * The next level, behind the chart. Everything the run is carrying comes with it — the shell too;
+   * the field does not.
+   *
+   * ⚠️ **It no longer ends on the playing screen, and `arrive` below is the other half** — 0340.
+   */
   onward(): void;
+  /** The crossing is over: the curtain lifts on the level `onward` already entered — 0340. */
+  arrive(): void;
   /** The run picked up where it ran out. A new ship, a full complement, and the same field. */
   resume(): void;
 }
@@ -129,6 +144,34 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       // changes — 0076. The shell crosses because the ship never leaves, which is 0058 by construction.
       enterLevel(true);
       world.rng = makeRng('proof-scene').stream('spawns');
+      /*
+        ⚠️ **`travel` AND NOT `playing`, AND THE TWO LINES ABOVE ARE WHY THAT IS SAFE** — 0340. The
+        level has already been entered: the script, the dial and the spawn stream are the next
+        level's before the crossing is drawn, which is what lets the place's bake and its backdrop
+        start UNDER the crossing instead of at the far end of it.
+
+        ⚠️ **`travel` does not step the world** (`src/state/screens.ts`), so nothing of that level
+        runs while the curtain is down — 0076's *the ship never leaves* is untouched, because the ship
+        is exactly where the player left it when it lifts.
+
+        ⚠️ **AND THE VICTORY PATH DOES NOT COME THROUGH HERE.** `src/state/root.ts` turns a `cleared`
+        past the end of the roster into `victory` as a cross-slice agreement, so a finished run never
+        presses *Onward* and never crosses to an eighth place that does not exist.
+      */
+      dispatch({ slice: 'screen', type: 'show', screen: 'travel' });
+    },
+
+    arrive(): void {
+      /*
+        ⚠️ **IT DISPATCHES ONE SCREEN AND NOTHING ELSE, WHICH IS THE WHOLE OF WHY IT IS HERE** — 0340.
+        Every other verb on this interface is a pair of statements, one to the reducer about the run
+        and one to the world about the field; this one is the second half of `onward`, which the
+        crossing was inserted into the middle of. It is on this interface rather than a bare dispatch
+        in `src/app/mount.ts` so that the table at the top of this file goes on being the one
+        description of how a run moves — and so that `tests/travel.test.ts` can drive `onward` then
+        `arrive` against a fixture world and ask the question 0340 exists to be sure of: *does a
+        crossing advance the level exactly once?*
+      */
       dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     },
 

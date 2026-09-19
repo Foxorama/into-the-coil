@@ -12,6 +12,9 @@
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
+// 0340: the chart's curve. `src/content/sprites.ts` has why the geometry lives in `content/` — the
+// frame may not reach the baker (0022), and the baker draws the same curve this puts the ship on.
+import { chartTileX, chartTileY } from '../content/sprites.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
 import { PLAYER_MARGIN } from '../sim/flight.ts';
@@ -677,4 +680,76 @@ export function paintStacks(
     const across = e.prevAcross + (e.across - e.prevAcross) * alpha + STACK_OFFSET;
     surface.blit(badges[at]!, screenX(view, inView, across), screenY(view, inView, across), view.scale);
   }
+}
+
+/**
+ * How far either side of the ship the route is sampled to find which way it is pointing.
+ *
+ * ⚠️ **A CENTRED DIFFERENCE, so the nose points along the curve rather than at where it is going
+ * next.** A forward difference lags by half the sample on a bend, which on the innermost leg — where
+ * the spiral turns hardest — is visible as the ship flying slightly sideways for the whole crossing.
+ */
+const TRAVEL_HEADING_STEP = 0.004;
+
+/**
+ * How much bigger than itself the ship is drawn on the chart.
+ *
+ * ⚠️ **NOTHING ON THIS PICTURE IS TO SCALE, AND THE SHIP IS THE ONE THING THAT WOULD BE.** A place is
+ * drawn as a disc about three and a half lane units across, which is not the size of a place; the ship
+ * is seven, which IS the size of the ship — so at its own scale the one thing the player is looking
+ * for is a fifth the size of the things it is flying between. Looked at on the bench, it disappeared
+ * behind the place name for the middle of a crossing.
+ *
+ * ⚠️ **IT IS A MARKER ON A CHART, WHICH IS WHY THIS IS NOT A LIE.** The same argument every map makes
+ * about the dot that means *you are here*, and the reason it is safe here in particular is that there
+ * is no simulation on this screen: nothing collides with it, nothing is dodged, and no distance on it
+ * means anything the player has to judge — 0340, and it is what `steps: false` buys.
+ */
+const TRAVEL_SHIP_SCALE = 1.6;
+
+/**
+ * The crossing: the chart, and the ship somewhere on it. The other thing this file can draw.
+ *
+ * `docs/decisions/0340-the-coil-is-a-route.md`. `u` is how far along the WHOLE route the ship is — 0
+ * at the first place, 1 at the last — and `src/content/sprites.ts` holds the curve that turns it into
+ * a position. `chart` and `ship` are atlas indices, so this file still names no sprite kind: model and
+ * state in, pixels out, exactly as this file's opening note says.
+ *
+ * ⚠️ **IT CLEARS AND DRAWS, WHICH MAKES IT THE SECOND THING THAT OWNS A WHOLE FRAME.** `paintScene`
+ * is the other. The crossing is not chrome over the game — `src/state/screens.ts`'s `travel` row has
+ * why it is the only screen with `dims: false` and no world behind it — so it cannot be a pass layered
+ * onto a scene that is still being painted. Two blits and a clear is the whole frame.
+ *
+ * ⚠️ **NO INTERPOLATION ARGUMENT, AND THAT IS NOT AN OVERSIGHT.** Everything else here interpolates
+ * between two simulation steps because the thing it draws is stepped by the simulation; nothing on
+ * this screen is. `u` is computed from a step counter the shell spends in `onTick`
+ * (`docs/decisions/0063-a-level-break-is-a-respite.md`'s callback, which fires on both sides of the
+ * stepping branch), so the ship moves at 60Hz on a display drawing faster and is exactly where the
+ * count says on one drawing slower. A crossing is four seconds of one object moving slowly; the
+ * judder 0022 interpolates away is not reachable from here.
+ */
+export function paintTravel(surface: Surface, view: View, chart: number, ship: number, u: number): void {
+  surface.clear();
+  const midAlong = view.alongSpan / 2;
+  const midAcross = ACROSS_SPAN / 2;
+  /*
+    ⚠️ **CENTRED IN THE VIEW AND BLITTED AT THE VIEW'S OWN SCALE**, so the chart is exactly as tall as
+    the lane on every device and the place's backdrop shows down both sides of it. `SPRITE_EXTENT.chart`
+    is `ACROSS_SPAN`, which is what makes that true without this file knowing the number —
+    `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` fixes `across` at 100 and lets only the
+    lookahead vary, so a chart sized off the across axis is the one thing here that cannot change
+    shape between two players' screens.
+  */
+  surface.blit(chart, screenX(view, midAlong, midAcross), screenY(view, midAlong, midAcross), view.scale);
+  const along = midAlong + (chartTileX(u) - 0.5) * ACROSS_SPAN;
+  const across = midAcross + (chartTileY(u) - 0.5) * ACROSS_SPAN;
+  /*
+    ⚠️ **THE HEADING IS READ OFF THE CURVE, NOT OFF THE TWO STOPS EITHER SIDE.** The route between two
+    places is an arc, so a nose aimed at the next dot is wrong everywhere except the ends of a leg —
+    and wrong by most where the spiral bends hardest, which is the last leg into the centre.
+  */
+  const back = u - TRAVEL_HEADING_STEP;
+  const on = u + TRAVEL_HEADING_STEP;
+  const turn = Math.atan2(chartTileY(on) - chartTileY(back), chartTileX(on) - chartTileX(back));
+  surface.blit(ship, screenX(view, along, across), screenY(view, along, across), view.scale * TRAVEL_SHIP_SCALE, turn);
 }

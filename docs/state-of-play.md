@@ -979,6 +979,25 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THERE IS A CHART BETWEEN LEVELS NOW, AND ONE NUMBER ON IT HAS NOT BEEN PLAYED — 2026-09-19
+
+⚠️ **[0340](decisions/0340-the-coil-is-a-route.md).** *"We'll need loading screens anyway for
+transitions and to represent moving through the galaxy"* — a `travel` screen after 0063's respite,
+which is untouched: the Coil as a spiral of seven places, the ship crossing the leg the run is on, the
+next place's name and its own line. It answers `SCREENS.cleared`'s six-week-old note and
+`docs/game.md`'s open question about the chart's shape, and it is a straight line with no choice on
+it, which is what the play-test 0063 recorded asked for.
+
+⚠️ **IT HOLDS FOR FOUR SECONDS AND UNTIL THE NEXT PLACE'S MUSIC IS IN THE MIXER'S HANDS**, which is
+what 0331's bake-ahead was for. The decision names the tension with 0063 and 0076 and answers it
+rather than leaving it to be rediscovered. **The four seconds have not been played, and neither has
+*Brief*** — the knob, and the third setting on the title screen. That is the first thing to take to a
+hand.
+
+⚠️ **THE PICTURE WAS LOOKED AT, AND TWO OF THE FOUR DEFECTS ONLY A PICTURE COULD FIND.**
+`rig/bench.ts` takes `?cross=N` and `scripts/shot-travel.mjs` photographs three moments of a crossing
+without winning a boss fight — 0205 and 0027.
+
 ### ⚠️ THE ENTRY REPORT IS ANSWERED ON ITS FOURTH TELLING, AND THE DIAGNOSIS WAS WHAT WAS WRONG — 2026-09-19
 
 ⚠️ **[0338](decisions/0338-the-arrival-is-seen.md).** *"I keep reporting the enemies enter the screen

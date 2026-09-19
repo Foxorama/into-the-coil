@@ -123,6 +123,19 @@ const HULLLESS: readonly SpriteKind[] = [
   'landmarkB',
   'landmarkC',
   'bound',
+  /*
+    ⚠️ **A WHOLE SCREEN IN ONE BITMAP, AND THE LEAST BODY-LIKE THING IN THE ATLAS — 0340.** The chart
+    is the route between two levels: a stroked spiral with seven discs on it, each in its own place's
+    colour. It has no silhouette to seal, its first mark is a stroke rather than a fill, and it is not
+    a thing in the world at all — nothing collides with it and nothing is drawn on top of it. It is on
+    this list for the reason the header gives for the sky tiles and the box edge, and it is listed by
+    name rather than matched on a prefix for the reason 0203 gave.
+
+    ⚠️ **WHAT HOLDS THIS PICTURE INSTEAD IS `tests/travel.test.ts`**, which traces the same pen and
+    asks the questions this file's rules would not: one disc per level, each where the curve says, and
+    the whole route inside its own tile.
+  */
+  'chart',
   'burst0',
   'burst1',
   'burst2',

@@ -907,6 +907,25 @@ export const SPRITE_KINDS = [
     rather than as a wall the enemies are ignoring.
   */
   'bound',
+  /*
+    ── THE CHART, WHICH IS A WHOLE SCREEN IN ONE BITMAP ───────────────────────────────────────────
+
+    `docs/decisions/0340-the-coil-is-a-route.md`. The crossing between two levels draws the Coil as a
+    route of seven places, and every one of them is in its OWN colour — which is the one thing a blit
+    cannot do, because `Surface.blit` takes an index and not an ink.
+
+    ⚠️ **SO THE WHOLE ROUTE IS ONE SPRITE: the spiral, the seven places on it, and which legs have
+    been flown.** Seven sprites, one per place, would be seven entries here differing only by a
+    colour looked up from the same table — the mechanism whose output is the same shape for every kind
+    that `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md` is about —
+    and they would still need a line drawn between them. Baked whole, it is ONE blit for the entire
+    backdrop of the screen, and nothing in the frame loop knows how many places there are.
+
+    ⚠️ **It is re-baked when the run reaches a new place, exactly as the weather is** — 0133, and
+    `bakeNebula`'s note. What changes between two bakes is which legs are drawn as flown, so progress
+    costs nothing per frame and is a property of the picture rather than of a counter drawn over it.
+  */
+  'chart',
 ] as const;
 
 /**
@@ -1626,6 +1645,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     slightly wrong rather than as the lane being a hundred units.
   */
   bound: 10,
+  /*
+    ⚠️ **THE WHOLE LANE ACROSS, WHICH MAKES IT THE SECOND-BIGGEST BITMAP IN THE GAME** — the sky's
+    nebula tile is `ACROSS_SPAN * 2` and this is half of that. 0340. It is square and it is centred,
+    so the chart occupies the full height of any landscape view and leaves the place's own backdrop
+    showing down both sides of it — which is right rather than merely cheap: the Coil is a thing in
+    space, and a route bled to the edges of the screen would be a diagram of one.
+
+    ⚠️ **IT IS EXEMPT FROM 0203's FORBIDDEN BAND for the reason a sky tile is, and `tests/sky.test.ts`
+    holds that rather than this number**: the band exists so nothing in a level can be confused with
+    something that kills the player, and there is no level on the screen while this is up.
+  */
+  chart: ACROSS_SPAN,
 };
 
 /**
@@ -1642,3 +1673,111 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
  * the bitmap's own box — 0277's halo ran off its tile and bled into the next sprite in the atlas.
  */
 export const SERPENT_BODY_DIAMETER = 15.7;
+
+/*
+  ── WHERE THE PLACES SIT ON THE CHART — 0340 ──────────────────────────────────────────────────────
+
+  ⚠️ **HERE FOR `SERPENT_BODY_DIAMETER`'S REASON, WHICH IS THE ONE STATED DIRECTLY ABOVE.** The route
+  is needed by two layers that may not see each other: `src/render/bake.ts` draws the spiral and the
+  seven stops on it, and `src/render/scene.ts` puts the ship at a point along the same curve — and
+  `tests/budget.test.ts`'s *the frame cannot reach the baker* (0022) is what stops the painter
+  importing the geometry from the file that drew it. Two descriptions of one curve would put the ship
+  beside the route rather than on it, which is exactly the class of bug 0036 is about.
+
+  ⚠️ **IT IS NOT IN `src/content/travel.ts` WITH THE REST OF THE CROSSING, AND THAT IS 0024's BAN
+  HOLDING.** That file carries the comfort knob, so `src/app/frame.ts` must never be able to reach
+  it — and `frame.ts` imports the painter. A curve is not a setting; this file is one the frame
+  already reads.
+
+  ⚠️ **`docs/game.md`'s one stated constraint on the chart is answered by the shape rather than by a
+  label**: *"it must read as descent toward the centre, and must not be a copy of the star map."* So
+  the route is a spiral that loses radius as it goes, ending at the middle of the screen — which is
+  where The Black Heart is, in the fiction and now in the picture.
+*/
+
+/**
+ * How far round the chart's spiral the whole route goes, in turns.
+ *
+ * ⚠️ **OVER ONE TURN ON PURPOSE.** At exactly one the first and last stops sit on the same bearing
+ * and the route reads as a ring with a dot in the middle; over it, the curve visibly passes inside
+ * where it has already been, which is the only thing that makes a flat picture read as a coil.
+ */
+export const CHART_TURNS = 1.15;
+
+/**
+ * The radius the route starts at, as a fraction of the chart's own tile. It ends at exactly nothing.
+ *
+ * ⚠️ **ENDING AT ZERO IS THE FICTION RATHER THAN A ROUNDING.** `docs/game.md` puts the black hole at
+ * the heart of the galaxy and the run at *the centre of the galaxy*; the last place on the roster is
+ * The Black Heart, so the last stop on the route is the middle of the picture. Any other number would
+ * be a coil that stops just short of the thing it is a coil around.
+ *
+ * ⚠️ **AND THIS ONE LEAVES ROOM FOR THE WIDEST MARK A STOP CAN WEAR, WHICH IS NOT ITS DISC.** The
+ * destination wears a second ring at 2.1 stop radii (`drawChart` has why), so the first place reaches
+ * `CHART_OUTER + CHART_STOP * 2.1` — and that has to stay inside the half-tile or the top of the route
+ * is clipped by the bitmap's own edge. **It was 0.44 and that sum came to 0.5135**, caught by
+ * `tests/travel.test.ts` rather than by looking, which is the bug 0277 shipped with a serpent's halo
+ * running off its tile and bleeding into the next sprite in the atlas.
+ */
+export const CHART_OUTER = 0.42;
+
+/**
+ * How the radius falls as the route goes: `(1 - u)` raised to this.
+ *
+ * ⚠️ **BELOW ONE, AND A STRAIGHT LINE WAS TRIED FIRST AND WAS WRONG.** With the radius falling
+ * linearly, each turn of the coil is the same distance narrower than the last — and because the ANGLE
+ * advances at a constant rate, the inner legs get shorter and shorter until they are nothing. Measured:
+ * the last two places came out **exactly 7 lane units apart, which is exactly a stop's own diameter**,
+ * so the final two discs were tangent and the destination's ring cut straight through the one before
+ * it. Caught by `tests/travel.test.ts` in lane units — 0027 — and not by reading the curve.
+ *
+ * ⚠️ **0.6 GIVES THE LAST LEG ABOUT FOURTEEN LANE UNITS, WHICH IS TWICE A DISC.** It holds radius for
+ * longer and spends it all near the middle, which is also what a coil looks like: the turns crowd
+ * towards the eye rather than dying out before it.
+ */
+export const CHART_TIGHTEN = 0.6;
+
+/**
+ * A stop's mark on the chart, as a fraction of the tile — the disc a place is drawn as.
+ *
+ * ⚠️ **The ship is drawn at its own `SPRITE_EXTENT`, so this is not a size relationship to keep.**
+ * What it has to clear is legibility at the smallest viewport: three quarters of a percent of the
+ * tile is about four CSS pixels on a 540-pixel-tall window, which is a dot, so it is well over that.
+ */
+export const CHART_STOP = 0.035;
+
+/**
+ * Where a point `u` of the way along the whole route falls, as a fraction of the chart's tile.
+ *
+ * `u` is 0 at the first place and 1 at the last, and a run crossing from level `i` to level `i + 1`
+ * is at `(i + t) / (stops - 1)` — so the ship follows the curve rather than a straight line between
+ * two dots. The number of stops is the CALLER's, because neither of the two layers that use this
+ * should have to agree with the other about it; `LEVEL_KINDS` is the one list and both read it.
+ *
+ * ⚠️ **TWO FUNCTIONS RETURNING NUMBERS RATHER THAN ONE RETURNING A POINT**, for the reason
+ * `src/render/surface.ts`'s `screenX` and `screenY` give in as many words: the painter calls this
+ * inside a frame, and an object per call is the allocation 0022 bans.
+ */
+export function chartTileX(u: number): number {
+  return 0.5 + Math.cos(chartAngle(u)) * chartRadius(u);
+}
+
+export function chartTileY(u: number): number {
+  return 0.5 + Math.sin(chartAngle(u)) * chartRadius(u);
+}
+
+/**
+ * The bearing and the radius the two above are made of, exported because the bake strokes the curve
+ * and a stroke wants to sample it much more finely than seven stops.
+ *
+ * ⚠️ **Straight up at `u = 0`**, so the outermost place is at the top of the screen and the descent
+ * reads downward as well as inward. A route that started at the right-hand side would read as a
+ * clock face.
+ */
+export function chartAngle(u: number): number {
+  return -Math.PI / 2 + u * CHART_TURNS * Math.PI * 2;
+}
+
+export function chartRadius(u: number): number {
+  return CHART_OUTER * Math.pow(1 - u, CHART_TIGHTEN);
+}

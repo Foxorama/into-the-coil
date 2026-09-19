@@ -337,9 +337,22 @@ describe('a screen that expires presses its own control, and says how long it wa
       opened it to hear. It is the same argument `title` makes one line up, which is why it belongs in
       this list rather than needing a new one.
     */
+    /*
+      ⚠️ **`travel` JOINS THEM AND IS THE FIRST ENTRY THAT IS NOT WAITING FOR A HAND — 0340.** Its row
+      carries no `timeout` because a timeout is *n steps, then press something*, and the crossing ends
+      on a floor AND on the next place's material being in the mixer's hands. Two facts do not fit in a
+      `{ steps, then }`, so `src/content/travel.ts` holds the rule and `src/app/mount.ts` spends the
+      steps in `onTick`, beside the countdown this test is about.
+
+      ⚠️ **WHICH MAKES THIS TEST'S TITLE HALF TRUE, AND SAYING SO IS WORTH MORE THAN A RENAME.** What it
+      still holds is *no screen expires by a countdown except the two that say so*, which is the rule
+      0063 wanted. What it no longer holds is that everything else waits for a hand.
+      `tests/travel.test.ts` is where *the crossing ends by itself* is asserted, and it has to be,
+      because nothing on the row can say it.
+    */
     const waiting = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout === null);
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['music', 'playing', 'title', 'victory'].sort(),
+      ['music', 'playing', 'title', 'travel', 'victory'].sort(),
     );
   });
 
@@ -412,6 +425,17 @@ describe('a screen says whether it stops the world and whether it hides it', () 
   const SHOWS_THE_SCENE: Partial<Record<Screen, string>> = {
     cleared: 'a banner over a run that is still flying — 0063',
     music: 'a window onto the place being auditioned, walking past — 0212',
+    /*
+      ⚠️ **AND `travel` IS THE ENTRY THAT BREAKS THE LIST'S OWN NAME — 0340.** The other two show the
+      SCENE through them. This one does not: the canvas underneath is not the game at all, because
+      `src/app/mount.ts` paints the chart instead of the world for the frames it is up. It opts out of
+      the dim for the opposite reason to the two above — not *let the scene through* but *there is no
+      scene, and the dim would paint out the picture that replaced it*.
+
+      ⚠️ **WHICH IS WHY THE ENTRY IS STILL CORRECT AND THE GUARD STILL WORKS.** What this asserts is
+      that a screen not painting over its canvas has said what is on that canvas, and this one has.
+    */
+    travel: 'the chart, painted instead of the world — 0340',
   };
 
   it('and the screens that show the scene through them are the two that say so', () => {
@@ -448,6 +472,20 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     expect(
       /\.itc-music-panel\s*\{[^}]*background:/.test(STYLE),
       'the music room does not dim and its panel has no background — the readout is on the star field',
+    ).toBe(true);
+  });
+
+  /*
+    ⚠️ **THE SAME ASSERTION FOR THE CROSSING, AND IT IS NOT THE SAME PICTURE — 0340.** The room's words
+    are over a star field; these are over the chart, which is a stroked spiral of coloured discs in the
+    middle of the screen — busier where it matters, and the one thing on the screen the words are about.
+    A backing deleted here reads as a place's name written across its own route.
+  */
+  it('the crossing, which does not dim either, gives its panel a backing of its own', () => {
+    expect(SCREENS.travel.dims, 'the crossing started dimming and this guard is now vacuous').toBe(false);
+    expect(
+      /\.itc-travel-panel\s*\{[^}]*background:/.test(STYLE),
+      'the crossing does not dim and its panel has no background — the place name is on the chart',
     ).toBe(true);
   });
 

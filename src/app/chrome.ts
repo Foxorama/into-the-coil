@@ -288,6 +288,71 @@ ${each('-choices')} {
   max-width: min(100%, 66ch);
 }
 /*
+  ── AND THE CROSSING IS THE SECOND SCREEN THAT DOES NOT DIM — 0340 ──────────────────────────────
+
+  ⚠️ **THE MUSIC ROOM'S ARGUMENT, WORD FOR WORD, FOR A DIFFERENT PICTURE.** The chart is painted on the
+  canvas underneath and a dim would paint it out, so the words need a backing of their own; a solid box
+  would be the dim back with extra steps. What is different is which way the reading goes — the room
+  shows a place and names it, the crossing names a place and shows where it is.
+
+  ⚠️ **NARROWER THAN THE ROOM'S, AND THE CHART IS WHY.** The route is a circle in the middle of the
+  screen; a 66ch plate across it would cover the middle of the coil, which is the part that has to read
+  as a descent. 40ch is the widest voyage line plus its padding, so the plate is as wide as the words
+  and no wider.
+*/
+.itc-travel-panel {
+  background: color-mix(in srgb, var(--itc-void) 72%, transparent);
+  border-radius: 0.6em;
+  max-width: min(100%, 40ch);
+  /*
+    ⚠️ **AT THE BOTTOM AND NOT IN THE MIDDLE, BECAUSE THE MIDDLE IS WHERE THE BLACK HEART IS.** The
+    route spirals into the exact centre of the chart — the innermost stop is the last place on the
+    roster — so a panel centred by the shared auto margins sits on top of the one mark the picture is
+    built around. A caption under a chart is also simply the right reading order: the picture, then
+    what it is of.
+
+    ⚠️ **NO STOP FALLS IN THE BOTTOM QUARTER**, which is what makes this strip free rather than merely
+    preferable: the lowest place on the route sits at about three quarters of the way down.
+
+    ⚠️ **IT IS ONE LINE, AND THE SECOND ONE WAS DELETED FOR THE REASON THE SHELL'S OWN SCREEN GATE
+    STATES.** This rule said auto on top as well, which reads like the whole fix and is a no-op: the
+    shared rule two blocks up is already auto on every side, so what actually moves the panel is the
+    bottom margin being SMALL. The proof is what found it — the probe that removed the top margin came
+    back STILL GREEN, because nothing had changed. One guarantee, one mechanism: a
+    redundant line does not make a rule safer, it makes the real one untestable, which is exactly what
+    that probe reported.
+
+    ⚠️ **AND AUTO ON TOP IS WHAT THE SHARED RULE IS FOR.** Auto margins distribute POSITIVE free space,
+    so a panel too tall for its box falls back to the top and scrolls rather than being cut off at the
+    start edge. (No backticks and no dotted paths in this block: the string is a template literal, and
+    the prefix guard reads every dotted token here as a class name.)
+  */
+  margin-bottom: min(1.25rem, 4cqh);
+}
+.itc-travel-crossing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: min(0.35rem, 1.2cqh);
+}
+.itc-travel-crossing-place {
+  font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
+  margin: 0;
+}
+/*
+  ⚠️ **LIGHTER THAN THE NAME AND NOT SMALLER THAN THE BUTTON.** It is one sentence read once, so weight
+  is the channel that separates it from the name the player is looking for; type has a floor (the panel
+  rule says why) and a voyage line below it would be the one piece of prose in the game set smaller
+  than the controls.
+*/
+.itc-travel-crossing-voyage { font-weight: 400; margin: 0; }
+/*
+  The wait, which is almost never shown — the travel content hub has when. Dimmed, because it is the
+  one line on this screen that is about the game rather than about the place.
+*/
+.itc-travel-crossing-waiting { font-weight: 400; margin: 0; opacity: 0.6; }
+.itc-travel-crossing-waiting[hidden] { display: none; }
+/*
   The place, the section it has reached, and how far through it is. One block so the gap rules above
   space it like any other part of the panel.
 */
@@ -803,6 +868,48 @@ interface Panel {
   options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
   /** The music room's readout — 0212. `null` on every other screen, which is all of them. */
   now: NowPlayingParts | null;
+  /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
+  crossing: CrossingParts | null;
+}
+
+/**
+ * The elements the crossing's words are written into, held so `setCrossing` never queries the DOM.
+ *
+ * ⚠️ **Looked up once at boot, exactly as `NowPlayingParts` is** — and for one reason less: this is
+ * written a handful of times per crossing rather than six times a second. It is held anyway, because a
+ * `querySelector` here and a held reference there would be two answers to one question in one file.
+ */
+interface CrossingParts {
+  root: HTMLElement;
+  place: HTMLElement;
+  voyage: HTMLElement;
+  /** Shown only while the place is still being synthesised — `src/content/travel.ts` has when. */
+  waiting: HTMLElement;
+}
+
+/**
+ * Where the run is crossing to, and whether the crossing is waiting for it —
+ * `docs/decisions/0340-the-coil-is-a-route.md`.
+ *
+ * ⚠️ **PUSHED, LIKE EVERY OTHER READOUT ON THIS INTERFACE.** The chrome holds no opinion about which
+ * place is next or how a bake is going; `src/app/mount.ts` owns both and hands over what to say, on
+ * the terms `setHud`, `setChoice` and `setNowPlaying` already state.
+ */
+export interface Crossing {
+  /** The place being crossed to, in `src/content/themes.ts`'s own words. */
+  place: string;
+  /** The one line that place says about itself, off the same row. */
+  voyage: string;
+  /**
+   * Whether the crossing is being held open by the music rather than by its own floor.
+   *
+   * ⚠️ **A BOOLEAN AND NOT A FRACTION, and that is `docs/game.md`'s voice rule rather than a saving.**
+   * A progress bar over a bake would be a number the player can do nothing with, changing at a rate
+   * nothing on the screen explains; what they need to know is *this is taking a moment*, which is one
+   * fact. `src/content/travel.ts`'s `travelIsWaiting` is what decides it, and says why it is almost
+   * always false.
+   */
+  waiting: boolean;
 }
 
 /**
@@ -975,6 +1082,13 @@ export interface Chrome {
    * caller decides the resolution, and today that is a thousandth of a walk.
    */
   setNowPlaying(now: NowPlaying | null): void;
+  /**
+   * Say where the run is crossing to — 0340. `null` empties the words and hides the wait.
+   *
+   * Called on a change of what it displays rather than per step, on `setNowPlaying`'s own terms: the
+   * caller decides the resolution, and there are two things here that can change in a whole crossing.
+   */
+  setCrossing(crossing: Crossing | null): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -1111,6 +1225,46 @@ const SEEK_STEP = 0.05;
  * a ring of controls to press; a slider in that ring would answer a stick with a seek. Every place on
  * this screen is reachable by a button, so the seek is the convenience rather than the way through.
  */
+/**
+ * The crossing's three lines: the place, what it is, and — rarely — that it is not ready yet.
+ *
+ * `docs/decisions/0340-the-coil-is-a-route.md`. It is words only: the chart itself is painted on the
+ * canvas by `src/render/scene.ts`, because it is art baked to a bitmap and blitted (0022) and this
+ * file draws no pictures.
+ *
+ * ⚠️ **AN `aria-live` REGION, WHICH IS THE ONE THING THE CHART CANNOT DO FOR A SCREEN READER.** The
+ * picture says where the run is going; a player who cannot see it gets the same fact only if the name
+ * is announced when it changes. It is `polite` rather than `assertive` because nothing here is urgent —
+ * the crossing waits for the reader rather than the other way round.
+ *
+ * ⚠️ **AND `waiting` IS HIDDEN RATHER THAN EMPTY.** An empty element in a live region is still a
+ * change to announce, so a crossing that was never held up would say the place's name and then say
+ * nothing, twice.
+ */
+function buildCrossing(prefix: string): CrossingParts {
+  const make = (part: string, tag = 'div'): HTMLElement => {
+    const el = document.createElement(tag);
+    el.className = prefix + part;
+    return el;
+  };
+  const root = make('crossing');
+  root.setAttribute('aria-live', 'polite');
+  const place = make('crossing-place', 'h1');
+  const voyage = make('crossing-voyage', 'p');
+  const waiting = make('crossing-waiting', 'p');
+  waiting.hidden = true;
+  /*
+    ⚠️ **THE WORDS THE WAIT USES ARE ABOUT THE PLACE AND NOT ABOUT THE MACHINE.** *Loading* and
+    *Synthesising* are both true and both put the engine on the screen; `docs/game.md`'s voice rule is
+    what it is, never why it is good, and the fiction already has a reason for a ship to hold off.
+  */
+  waiting.textContent = 'Holding for a way in…';
+  root.appendChild(place);
+  root.appendChild(voyage);
+  root.appendChild(waiting);
+  return { root, place, voyage, waiting };
+}
+
 function buildNowPlaying(
   prefix: string,
   onSeek: (through: number) => void,
@@ -1336,6 +1490,8 @@ export function makeChrome(
 
     // 0212: the music room's readout, and `null` on every other screen.
     const nowPlaying = screen === 'music' ? buildNowPlaying(prefix, onSeek, listeners) : null;
+    // 0340: the crossing's words, on the line above's exact terms.
+    const crossing = screen === 'travel' ? buildCrossing(prefix) : null;
 
     /*
       ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
@@ -1407,6 +1563,13 @@ export function makeChrome(
         Every other panelled screen gets `now: null` and never learns this exists.
       */
       if (nowPlaying !== null) panel.appendChild(nowPlaying.root);
+      /*
+        ⚠️ **ABOVE THE BUTTON, FOR THE REASON THE READOUT IS ABOVE ITS OWN** — 0340. The crossing has
+        one control and the player is not looking for it: what they are reading is the name of the
+        place they are arriving in, and *Onward* is the thing they press when they have finished
+        reading it. Below the name is where a button that means *I have read this* belongs.
+      */
+      if (crossing !== null) panel.appendChild(crossing.root);
       panel.appendChild(choices);
       panel.appendChild(settingsBox);
     }
@@ -1519,7 +1682,7 @@ export function makeChrome(
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer, options, now: nowPlaying };
+    panels[screen] = { root, controls, timer, options, now: nowPlaying, crossing };
     elements.push(root);
   }
 
@@ -1754,6 +1917,19 @@ export function makeChrome(
       }
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       strip.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+    },
+    setCrossing(crossing: Crossing | null): void {
+      const parts = panels.travel?.crossing;
+      if (parts === undefined || parts === null) return;
+      if (crossing === null) {
+        parts.place.textContent = '';
+        parts.voyage.textContent = '';
+        parts.waiting.hidden = true;
+        return;
+      }
+      parts.place.textContent = crossing.place;
+      parts.voyage.textContent = crossing.voyage;
+      parts.waiting.hidden = !crossing.waiting;
     },
     setNowPlaying(now: NowPlaying | null): void {
       const parts = panels.music?.now;

@@ -20,11 +20,13 @@ import { GAME_TITLE } from '../brand.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { STYLES, STYLE_KINDS } from '../content/styles.ts';
+// 0340: the crossing's knob, on the two lines above's exact terms.
+import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory', 'music'] as const;
+export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -52,7 +54,7 @@ export interface ScreenAction {
  * `slices/` and is the sanctioned place for a shape two of them must agree on. `settings` keys its
  * state by it and `screen` rows name it, and neither imports the other.
  */
-export type SettingName = 'style' | 'sound';
+export type SettingName = 'style' | 'sound' | 'travel';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -245,6 +247,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Sound',
         options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
       },
+      /*
+        ⚠️ **THE THIRD SETTING, AND IT IS THE ROW 0072 PREDICTED RATHER THAN THE MECHANISM IT
+        NEEDED** — `docs/decisions/0340-the-coil-is-a-route.md`. 0070 said the queue behind the style
+        was *"already the same shape"* and 0072 was the first entry to test that claim; this is the
+        second, and it cost this row, one line in the shell's router and a field on the slice.
+
+        ⚠️ **A comfort knob over the crossing and NOT over the sim** — 0024. `src/content/travel.ts`
+        holds what it changes: one number, the shortest the chart is up for. Nothing behind this
+        screen can see that table, and `tests/travel.test.ts` is what makes that a fact rather than
+        an intention.
+      */
+      {
+        name: 'travel',
+        label: 'Travel',
+        options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
+      },
     ],
     steps: false,
     dims: true,
@@ -297,10 +315,15 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * The boss is dead and there is another level behind it.
    *
    * ⚠️ **"Onward" now, and it said "Again" when there was one level** — a screen that offered to
-   * continue when there was nowhere to go would have been a promise the build could not keep. This is
-   * where the chart will eventually go: `docs/game.md` puts a branching map of destinations between
-   * levels, and a button is what a straight line looks like —
-   * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`.
+   * continue when there was nowhere to go would have been a promise the build could not keep.
+   *
+   * ⚠️ **THE CHART NO LONGER GOES HERE, AND THAT IS A CHANGE OF ANSWER RATHER THAN OF PLAN** —
+   * `docs/decisions/0340-the-coil-is-a-route.md`. This note read *"this is where the chart will
+   * eventually go"* from 0042 until 0340, and the chart went one screen further on: the respite
+   * stayed exactly what 0063 made it — three seconds of a world that never stopped — and `travel`
+   * below is the full-screen scene that comes after it. A branching map of destinations is still
+   * what `docs/game.md` describes and still not what is built; the straight line 0042 recorded as a
+   * deliberate first step is now a straight line somebody can look at.
    */
   /*
     ⚠️ **THE ONE SCREEN THAT KEEPS THE WORLD RUNNING.** Reported from play: *"the current pause/level
@@ -322,6 +345,56 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
     // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
     timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
+  },
+  /**
+   * The crossing: the respite is over, and the ship is somewhere between two places on the chart.
+   *
+   * ⚠️ **`docs/decisions/0340-the-coil-is-a-route.md`, AND IT IS THE NOTE ON `cleared` ABOVE COMING
+   * TRUE.** *"This is where the chart will eventually go"* has been written there since
+   * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`, and `docs/game.md` still carries *the
+   * chart's shape* as an open question. This is that chart, as a straight line: seven places in
+   * `LEVEL_KINDS` order and no choice on it, because
+   * `docs/decisions/0063-a-level-break-is-a-respite.md` recorded the play-test that scrapped the
+   * choice — *"a flowing continuation to the next run with a brief respite will feel better than the
+   * hard pause interruption now."*
+   *
+   * ⚠️ **`steps: false` AND `dims: false`, WHICH NO OTHER SCREEN DOES, AND IT IS NOT A CONTRADICTION.**
+   * Every other row uses `dims` to mean *paint the space colour over the scene*, because every other
+   * screen is chrome over a scene the player should still be able to see —
+   * `docs/decisions/0063-a-level-break-is-a-respite.md` split the two fields apart for exactly that.
+   * This screen is not over the scene: it REPLACES it. `src/app/mount.ts` paints the chart instead
+   * of the world for the frames this is up, so a dim here would be a second lid over a picture that
+   * is already not the game, and would paint out the chart it was meant to protect.
+   *
+   * ⚠️ **AND THE WORLD BEHIND IT DOES NOT MOVE, WHICH IS WHAT KEEPS
+   * `docs/decisions/0076-a-level-has-an-origin.md` TRUE.** 0076 made a level boundary seamless after
+   * *"a background scene reset between levels that's disjointing because it moves the player's
+   * ship"* — and a crossing that stepped the world would be flying the ship through a level nobody
+   * can see. `steps: false` is what makes this a curtain rather than a reset: the ship is where the
+   * player left it when the curtain lifts, and the only thing that changed behind it is the script.
+   *
+   * ⚠️ **`timeout: null`, AND IT IS THE ONE SCREEN THAT LEAVES ON SOMETHING OTHER THAN A CLOCK.** A
+   * timeout is *n steps, then press something*; this leaves on a floor AND on the next place's music
+   * being in the mixer's hands, which is two facts a `{ steps, then }` cannot carry.
+   * `src/content/travel.ts` holds the rule and `src/app/mount.ts` spends the steps.
+   */
+  travel: {
+    // ⚠️ **Empty, because the heading is the PLACE and the place is not known until the crossing
+    // starts.** The music room already has a pushed readout for the same reason — the chrome holds
+    // no opinion about where a walk has got to, and `setCrossing` is this screen's version of that.
+    heading: '',
+    /*
+      ⚠️ **"Onward" again, the same word the respite uses, because it does the same thing** — the
+      label is the promise (0068), and a press here carries the run into the level the ship is
+      crossing to. What it CANNOT do is make the music arrive, so a press on a place that is not
+      ready takes the floor away and leaves the moment it is ready — `src/content/travel.ts`'s
+      `skipped`, which is what stops this being a dead control.
+    */
+    actions: [{ label: 'Onward', hint: '' }],
+    choices: [],
+    steps: false,
+    dims: false,
+    timeout: null,
   },
   /**
    * Every level in the run is behind the player.
