@@ -9,6 +9,7 @@ it is the listening list, and nothing in §3 onwards is settled until an ear has
 |---|---|
 | **Merged** | [#380](https://github.com/Foxorama/into-the-coil/pull/380) (0338, the arrival is seen) and [#381](https://github.com/Foxorama/into-the-coil/pull/381) (0339, a level is cleared once) |
 | **Open** | [#382](https://github.com/Foxorama/into-the-coil/pull/382), auto-merge armed — Phase B, the music |
+| **Proven** | `npm run check` green (1499 tests, typecheck, build) and `npm run prove` green (**1224 of 1224**) |
 | **Play it** | <https://the-heart-beats-under-it.into-the-coil.pages.dev/> — checked, 200 |
 | **Working branch** | `the-heart-beats-under-it`, in `C:\into-the-coil-beat`, rebased onto `main` |
 
@@ -232,12 +233,13 @@ number.
 The other five are inside a third of a decibel, which is the hold doing its job over a base composition
 that changed under every one of them.
 
-## 5b. The proof found eight breaks that no longer break, and seven are repaired
+## 5b. The proof found eight problems and is now green — 1224 of 1224
 
-**This section was written when five were unresolved and is kept as the record of what each one turned
-out to be.** Seven are now fixed and one is left; the table below marks which. **Not one of the eight is
-a guard that is wrong** — every one is a BREAK whose mechanism moved under it, which is 0019's whole
-subject arriving at once because this branch had never been proven.
+**`npm run prove` exits 0.** Every probe applies, breaks, and reddens the guard it names. This section is
+kept as the record of what the eight turned out to be, written as I found them, including the one I got
+wrong twice. **Not one was a guard that is wrong** — seven were BREAKS whose mechanism had moved under
+them, which is 0019's whole subject arriving at once because this branch had never been proven, and the
+eighth was a budget.
 
 ### The one that is a real engine fix, and it repaired two probes at once
 
