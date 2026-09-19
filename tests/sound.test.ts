@@ -620,7 +620,11 @@ describe('the cue table', () => {
       ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
       // Two minutes: measured 30–35 s under the whole suite, and a budget is three times the worst
       // loaded cost — `docs/decisions/0245-a-budget-is-sized-under-load.md`.
-    }, 120_000);
+      // ⚠️ 120 → 400 s, AND THE NUMBER IS A FINDING — 0331. The Black Heart's boundary bake is 35 s of synthesis where
+      // it was 5 (6,342 notes against 2,647; three forty-two-bar loops), and this walks all of it: 127 s measured
+      // beside one other suite, three times that under load (0245). What the game does about a 35-second bake is a
+      // loading screen, and is not this guard's to say.
+    }, 400_000);
 
     it('0157 — AND A PRESS FINISHES THE PREWARM RATHER THAN STARTING AGAIN', () => {
       /*
@@ -744,7 +748,9 @@ describe('the cue table', () => {
             if (a[i] !== b[i]) throw new Error(`${layer} differs at sample ${i} after a release: ${a[i]} vs ${b[i]}`);
           }
         }
-      }, 120_000);
+        // 360 s: two places walked and one baked whole. 135 s measured beside one other suite, and three times the
+        // worst cost under load is the rule (0245).
+      }, 360_000);
 
       it('hands over exactly what a whole bake of that place would produce', () => {
         /*
@@ -2802,7 +2808,7 @@ describe('0173 — a cue happens somewhere', () => {
     // ⚠️ Both sides thinned, or the comparison is between two different clocks.
     const added = ringsFor(wet) - ringsFor(thin(dry));
     expect(added, `the room adds only ${(added * 1000).toFixed(0)} ms to the blast`).toBeGreaterThan(0.33);
-  }, 30_000);
+  }, 120_000); // 0331: the two-second room doubles the convolution — see the note on the reverb guard below.
 
   it('and the cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat', () => {
     /*
@@ -2931,7 +2937,9 @@ describe('0174 — a send has to mean something', () => {
       const over = 10 * Math.log10(energyOf(wet) / energyOf(thin(dry)));
       expect(over, `${kind}'s room carries ${over.toFixed(1)} dB against the cue itself`).toBeLessThan(-6);
     }
-  }, 30_000);
+    // ⚠️ 30 → 120 s with the room at two seconds (0331): the convolution is twice the arithmetic. 34 s measured beside
+    // one other suite; three times the worst cost under load is the rule (0245), and this is a hang detector, not a budget.
+  }, 120_000);
 
   it('and the impulse carries unit energy, which is what makes `air` a share of the dry', () => {
     /*

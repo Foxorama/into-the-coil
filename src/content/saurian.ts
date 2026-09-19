@@ -409,7 +409,7 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
   */
   kill: [
     // THE SNAP — bone, not spark. Milliseconds, and it is over before the throat opens.
-    { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.42, attack: 0.00015, curve: 13, lowFrom: 3000, lowTo: 900, highFrom: 700 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.315, attack: 0.00015, curve: 13, lowFrom: 3000, lowTo: 900, highFrom: 700 },
     /*
       THE BODY — and it is NOISE, which the first draft of this cue got wrong.
 
@@ -425,13 +425,14 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
       meat coming apart is a thump and a roar, not a roar alone. This is the thump: darkening,
       high-passed off the box, saturated, and the loudest thing in the cue.
     */
-    { wave: 'noise', from: 0, to: 0, seconds: 0.155, gain: 0.92, attack: 0.002, curve: 4.8, lowFrom: 2100, lowTo: 380, highFrom: 140, highTo: 58, q: 0.8, drive: 0.36 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.155, gain: 0.69, attack: 0.002, curve: 4.8, lowFrom: 2100, lowTo: 380, highFrom: 140, highTo: 58, q: 0.8, drive: 0.36 },
     // THE THROAT — the roar, cut off. A ninth down in 190 ms with the filter closing behind it.
-    { wave: 'saw', from: inKey(19), to: inKey(5), seconds: 0.19, gain: 0.5, attack: 0.004, curve: 4.2, lowFrom: 1900, lowTo: 320, q: 2.2, drive: 0.42 },
+    { wave: 'saw', from: inKey(19), to: inKey(5), seconds: 0.19, gain: 0.375, attack: 0.004, curve: 4.2, lowFrom: 1900, lowTo: 320, q: 2.2, drive: 0.42, pan: -0.3, panTo: 0.3 },
     // THE RATTLE — the debris, dry and low. 0144's overlap, an octave under 0144's cymbal.
-    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.18, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.084, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02, pan: -0.3, panTo: -0.8 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.084, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02, pan: 0.3, panTo: 0.8 },
     // THE THUMP — 0179's fall, and the one layer that is the base's argument rather than this file's.
-    { wave: 'sine', from: 150, to: 34, seconds: 0.28, gain: 0.66, attack: 0.002, curve: 3.4, drive: 0.3 },
+    { wave: 'sine', from: 150, to: 34, seconds: 0.28, gain: 0.495, attack: 0.002, curve: 3.4, drive: 0.3 },
   ],
   /*
     ── THE THREAT: a spit, where the base has a laser ───────────────────────────────────────────────
@@ -448,7 +449,7 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
     // THE HISS — the spit itself, a band falling fast.
     { wave: 'noise', from: 0, to: 0, seconds: 0.075, gain: 0.5, attack: 0.0008, curve: 6, lowFrom: 5200, lowTo: 1500, highFrom: 900 },
     // THE THROAT UNDER IT — in key, so a field full of them is still in the music.
-    { wave: 'saw', from: inKey(22), to: inKey(9), seconds: 0.085, gain: 0.4, attack: 0.001, curve: 5.5, lowFrom: 2200, lowTo: 620, q: 2.4, drive: 0.25 },
+    { wave: 'saw', from: inKey(22), to: inKey(9), seconds: 0.085, gain: 0.4, attack: 0.001, curve: 5.5, lowFrom: 2200, lowTo: 620, q: 2.4, drive: 0.25, pan: -0.3, panTo: 0.3 },
   ],
 };
 
