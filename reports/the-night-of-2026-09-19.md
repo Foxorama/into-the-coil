@@ -8,8 +8,9 @@ it is the listening list, and nothing in §3 onwards is settled until an ear has
 | | |
 |---|---|
 | **Merged** | [#380](https://github.com/Foxorama/into-the-coil/pull/380) (0338, the arrival is seen) and [#381](https://github.com/Foxorama/into-the-coil/pull/381) (0339, a level is cleared once) |
-| **Working branch** | `the-heart-beats-under-it`, in `C:\into-the-coil-beat` |
-| **Phase** | B — shipping the music |
+| **Open** | [#382](https://github.com/Foxorama/into-the-coil/pull/382), auto-merge armed — Phase B, the music |
+| **Play it** | <https://the-heart-beats-under-it.into-the-coil.pages.dev/> — checked, 200 |
+| **Working branch** | `the-heart-beats-under-it`, in `C:\into-the-coil-beat`, rebased onto `main` |
 
 ### A rule I broke before I had read it
 
@@ -230,6 +231,44 @@ number.
 
 The other five are inside a third of a decibel, which is the hold doing its job over a base composition
 that changed under every one of them.
+
+## 5b. ⚠️ The proof is red on five probes, and four of them are 0331's own engine work
+
+`npm run prove` ran all **1225** probes and reported eight problems. Three are fixed; **five are not**,
+and they are the honest cost of shipping this branch. **None of them is a guard that is wrong — every
+one is a BREAK that no longer breaks**, which is 0019's whole subject arriving at once.
+
+**Fixed:**
+
+- `0330` — *the place goes on following the layer its own drive buried*. It made The Black Heart follow
+  `engine` at `run`, and 0331's ballad **closes** `engine` there, so the break became *following a layer
+  the place does not open* — a different defect, caught by a different guard in a different file. Now
+  aimed at the pad at `push`: a layer the place does open, whose displacement disturbs nothing on the
+  known-adrift list, and which measures more than a whole role under a `part`. Checked.
+- `0072` — *the unlock never wired up*. **My own fault, made tonight.** `settled` asserted when the bake
+  never finished, and a bake that never happens is what half the probes in that file BREAK — so the
+  helper threw before the guard could. A helper that asserts takes the failure away from the test. It
+  returns a count now and gives up early when nothing has started at all.
+- `0136`'s new `air` probe — **deleted, because it provably cannot fire.** Every layer with a room is
+  also re-voiced, so the set arithmetic reaches it either way; breaking it needs two edits and a probe
+  is one. The probe file says so now rather than carrying one that passes.
+
+**Not fixed, and why each is left rather than guessed at:**
+
+| probe | what it breaks | why it no longer breaks |
+|---|---|---|
+| `0089` | the cue release taken back out | **Two mechanisms satisfy the guard and neither is load-bearing.** Measured: with `RELEASE_SECONDS` at 0 the guard still passes, and so does a decay curve of 0.04 — the envelope alone ends at zero. The guard's own comment records this happening once before and resolving it by deleting the redundant mechanism; 0331 added one back for MUSIC notes, where it *is* load-bearing. |
+| `0104` | the music bus driven at nothing | The guard compares the bed against the gun. 0331's cue re-balance brought the cues down, so removing the mastering no longer makes the bed the quieter of the two. |
+| `0133` | a bake that cannot be cancelled | 0331 routes layers through workers and reads `stopped` again when a layer LANDS, so cutting the check in the walk leaves the other one. |
+| `0325` | the acid's root note ringing past the end | Same family as `0089` — the per-layer release now covers an overrun the row's own fade used to be needed for. |
+| `0166` | the hold applied only where the role is unchanged | **Caused by tonight's fix, and the fix is right.** Widening 0166's skip to *roleless at ANY rung* removes exactly the layers whose role changes between rungs, which is what this break manipulates. The guard got stricter and the probe got weaker. |
+
+**Why they are left:** a probe re-aimed until it goes red proves whatever it happens to hit.
+`0330`'s second attempt did precisely that — it reddened the right guard for the wrong reason, by
+displacing a layer off the known-adrift list — and it was only visible because the assertion message
+named which of the two fired. Four of these need a break invented against a mechanism that has moved,
+and inventing one at the end of a night is how `0189`'s file came to carry a warning about an anchor
+that matched Ember Nebula's row and proved nothing.
 
 ## 6. Two findings about guards, which are the transferable half
 

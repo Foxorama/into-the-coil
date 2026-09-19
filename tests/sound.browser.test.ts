@@ -147,21 +147,25 @@ const BAKED_TOTAL = BAKED_BUFFERS + MUSIC_LAYERS.length + ROOM_IMPULSE;
  * per music layer, one per layer again for the place, and one for the room — so the bake is done when
  * `BAKED_TOTAL` buffers exist, at any speed, on any machine.
  *
- * ⚠️ **AND IT FAILS LOUDLY RATHER THAN RETURNING A MOVING NUMBER**, which is what the poll did: it ran
- * out of patience and handed back a count that was still climbing, so the assertion downstream reported
- * a wrong total instead of a bake that had not finished.
+ * ⚠️ **AND IT ASSERTS NOTHING, WHICH COST A PROOF TO LEARN.** The first version failed loudly when the
+ * count never arrived — which reads well and is wrong here, because **a bake that never happens is what
+ * half the probes in this file BREAK**. `npm run prove` reported 0072 as *NOTHING WAS PROVEN*: the
+ * unlock was cut, no buffer was ever made, and this helper threw its own message before the guard could
+ * throw the one the probe is watching for. A helper that asserts takes the failure away from the test.
+ *
+ * ⚠️ **SO IT GIVES UP EARLY WHEN NOTHING HAS STARTED AT ALL.** Five seconds with a count still at zero
+ * is not a slow machine, it is a page that never unlocked — the guard below says so in its own words,
+ * and waiting the full minute for it would only make every such probe a minute slower.
  */
 const settled = async (page: Page): Promise<AudioTally> => {
   let now = await tally(page);
   for (let i = 0; i < 240 && now.buffers < BAKED_TOTAL; i++) {
+    // Nothing at all after five seconds: the context never unlocked, which is a thing a guard here
+    // asserts about. Hand back what there is and let it.
+    if (i >= 20 && now.buffers <= 0) return now;
     await page.waitForTimeout(250);
     now = await tally(page);
   }
-  expect(
-    now.buffers,
-    `the bake never finished: ${now.buffers} of ${BAKED_TOTAL} buffers after a minute — this is not the ` +
-      'guard below failing, it is the page still working',
-  ).toBeGreaterThanOrEqual(BAKED_TOTAL);
   return now;
 };
 

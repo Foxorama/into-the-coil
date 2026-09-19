@@ -51,10 +51,26 @@ export const PROBES = [
     guard: '0164 — NO LAYER SITS A WHOLE ROLE UNDER THE ONE THE ARRANGEMENT GAVE IT',
     edit: {
       path: 'src/content/arrangement.ts',
-      // ⚠️ Re-anchored by 0331: the ballad follows its own piano at `run` now rather than the title's
-      // kit. `engine` is still the layer this place's drive buried, and following it is still the break.
-      find: "  core: { run: 'call',",
-      replace: "  core: { run: 'engine',",
+      /*
+        ⚠️ RE-AIMED BY 0331, BECAUSE THE BREAK'S SUBJECT STOPPED EXISTING. This made the place follow
+        `engine` at `run`, and the ballad CLOSES `engine` there — every drum and guitar layer is shut
+        from `run` to `approach` now. Following a layer a place does not open is a different defect
+        with its own guard: `tests/arrangement.test.ts`'s 0155 caught it first and 0164 never fired, so
+        `npm run prove` reported NOTHING WAS PROVEN. **A re-anchor that keeps the text and loses the
+        claim is the failure this file's own header is about.**
+
+        ⚠️ AND THE SECOND ATTEMPT REDDENED THE RIGHT GUARD FOR THE WRONG REASON — following `groove` at
+        `surge` fires 0164's OTHER assertion, because displacing `counter` makes that layer clear the
+        floor and it is on the known-adrift list. It proves the list is stale, not that a place follows
+        something buried.
+
+        ⚠️ SO IT IS THE PAD AT `push`: a layer this place OPENS (0.1276), whose displacement disturbs
+        nothing on the list, and which measures **more than a whole role under** what a `part` asks —
+        checked, and it is the first assertion that fires. 0330's claim is intact: the place goes on
+        following the layer its own drive buried.
+      */
+      find: "  core: { run: 'call', push: 'hook',",
+      replace: "  core: { run: 'call', push: 'drone',",
     },
   },
 ];
