@@ -1018,30 +1018,40 @@ describe('the cue table', () => {
         was audible nowhere. `released` in `src/app/sound.ts` drops it at the hand-over and bakes it again
         at the next boundary that shares it, which is what this guard is here to keep true.
 
-        ⚠️ **89 MB, AND IT IS THE BALLAD** — measured per place, at 44.1 kHz, four bytes a sample:
+        ⚠️ **AND THE PLACE AFTER IT IS HELD WHILE THE BOSS IS FOUGHT**, because a place baked on arrival is music
+        that arrives late (`ahead` in `src/app/mount.ts`). So the number the machine holds is a PAIR — this
+        place's whole set and the next place's own layers — from the approach to the boundary, and one set the
+        rest of the time. Measured, at 44.1 kHz and four bytes a sample:
 
-        | place | bars resident | MB |
-        |---|---|---|
-        | The Approach, Ember Nebula, Shoal, Batteries, Toxic Mire | 186 | 52.5 |
-        | Saurian Belt | 210 | 59.3 |
-        | The Black Heart | 314 | 88.6 |
+        | the level | its set | + the next, held | peak |
+        |---|---|---|---|
+        | The Approach | 52.5 | Ember Nebula 46.9 | 99.3 |
+        | Ember Nebula | 52.5 | Saurian Belt 57.6 | 110.1 |
+        | Saurian Belt | 59.3 | Shoal 46.9 | 106.1 |
+        | Shoal, Batteries | 52.5 | 46.9 | 99.3 |
+        | Toxic Mire | 52.5 | The Black Heart 88.6 | **141.1** |
+        | The Black Heart | 88.6 | — | 88.6 |
 
-        The Black Heart's own three — `groove`, `counter` and `beat` at forty-two bars — are 35.6 MB of
-        that, and forty-two bars is the ballad's own harmony rather than a repeat that could be shortened.
-        **The owner of this number is whoever is willing to shorten that section**, and nobody has been.
-        0153 makes desktop the target and this spends that permission a second time, deliberately.
+        ⚠️ **141 MB, FOR ABOUT A MINUTE, ONCE A RUN — AND IT IS THE BALLAD.** `groove`, `counter` and `beat` at
+        forty-two bars are 35.6 MB of The Black Heart, and forty-two bars is the ballad's own harmony rather
+        than a repeat that could be shortened. **The owner of this number is whoever is willing to shorten
+        that section or to make the player wait for it**, and the second is what a loading screen is. 0153
+        makes desktop the target and this spends that permission deliberately.
       */
-      const resident = (theme: ThemeKind): number =>
-        MUSIC_LAYERS.reduce((sum, layer) => sum + barsOf(theme, layer) * BAR_SECONDS * SAMPLE_RATE * 4, 0) / 1e6;
-      for (const theme of THEME_KINDS) {
-        const mb = resident(theme);
+      const MB = (bars: number): number => (bars * BAR_SECONDS * SAMPLE_RATE * 4) / 1e6;
+      const places = LEVEL_KINDS.map((kind) => LEVELS[kind].theme);
+      places.forEach((place, i) => {
+        const set = MUSIC_LAYERS.reduce((sum, layer) => sum + barsOf(place, layer), 0);
+        const next = places[i + 1];
+        const held = next === undefined ? 0 : bakedBy(next).reduce((sum, layer) => sum + barsOf(next, layer), 0);
+        const mb = MB(set + held);
         expect(
           mb,
-          `${theme} holds ${mb.toFixed(1)} MB of loops while it plays, against a BUDGET of 92 MB — a limit ` +
-            `somebody chose, and the way to buy room is a shorter section rather than a bigger number ` +
-            `(0188's own note, one measurement over).`,
-        ).toBeLessThan(92);
-      }
+          `${place} holds ${mb.toFixed(1)} MB of loops at its peak, against a BUDGET of 145 MB — a limit ` +
+            `somebody chose, and the way to buy room is a shorter section or a longer wait rather than a ` +
+            `bigger number (0188's own note, one measurement over).`,
+        ).toBeLessThan(145);
+      });
     });
   });
 

@@ -28,7 +28,7 @@ import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
-import { LEVELS, type LevelRow } from '../content/levels.ts';
+import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import {
   PICKUPS,
@@ -58,7 +58,7 @@ import {
   UNITS_PER_SECOND,
 } from './music.ts';
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
-import { MUSIC_LEVEL_LABEL } from '../content/music.ts';
+import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
@@ -1396,6 +1396,34 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   let bakingTheme: ThemeKind | null = null;
   let stopBaking: (() => void) | null = null;
+  /*
+    ── THE NEXT PLACE, BAKED WHILE THIS ONE IS FLOWN ────────────────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** A place was baked when the run reached it, so
+    its music arrived however long the bake took AFTER the level had begun — five seconds, and then the
+    wait for a phrase. The Black Heart's own material is thirty-five seconds of synthesis, and its first
+    movement is twenty-five seconds long: baked on arrival, the lament the whole piece is built on would
+    be over before it could be played. So the place after this one is baked during this one, held, and
+    handed over on the step the run gets there.
+
+    ⚠️ **FROM THE APPROACH, NOT FROM THE FIRST BAR.** Nearly every place re-voices nearly every layer, so a
+    held place is about 47 MB and The Black Heart's is 89: started as the level began, that would sit
+    beside this place's own set for three minutes. On four workers the longest bake is about thirteen
+    seconds (one forty-two bar layer bounds it), and the approach and the fight are never less than
+    forty-five — so it starts when `applyMusicLevel` first sees the boss coming.
+
+    ⚠️ **HELD, NOT HANDED** — `setLoops` swaps at the next phrase, so a set handed over early is the next
+    level's music arriving in this one. `ahead` is where it waits.
+
+    ⚠️ **AND IT COSTS MEMORY FOR AS LONG AS IT WAITS**: the next place's own layers are resident beside
+    this place's whole set. `tests/sound.test.ts` measures that pair rather than a place alone, because
+    that is the number the machine holds.
+  */
+  let ahead: { theme: ThemeKind; loops: Record<MusicLayer, Float32Array>; cues: Float32Array[][] } | null = null;
+  let aheadTheme: ThemeKind | null = null;
+  let stopAhead: (() => void) | null = null;
+  /** The run reached the place while its bake was still in flight, so it is handed over as it lands. */
+  let aheadIsWanted = false;
 
   /** The backdrop the surface was last given, so a place is applied once rather than every step. */
   let shownSpace = colours.space;
@@ -1542,9 +1570,69 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     the wrong one for a listener. Everything else about the bake — stopping the one in flight, the
     guard against re-baking what is already loaded — is unchanged and now serves both callers.
   */
+  const handOverPlace = (loops: Record<MusicLayer, Float32Array>, cues: Float32Array[][]): void => {
+    /*
+      ⚠️ **Asked for again at the moment it is handed over, not captured.** The context can be built
+      or torn down while a bake walks, and a `MusicOut` closed over here would be one the player is
+      no longer listening to.
+    */
+    audioOut.music()?.setLoops(loops);
+    /*
+      ⚠️ **AND THE CUES ARRIVE ON THE SAME BAKE** — 0190. They are handed over together because they
+      were baked together: a boundary that swapped the music and left the enemy deaths behind would
+      be a place half arriving, and the two lists come out of one job walk in `bakePlace`.
+
+      ⚠️ **ON `audioOut` RATHER THAN THROUGH `music()`**, because a cue is not the music — the same
+      line `duck` is drawn on, one direction over.
+    */
+    audioOut.setCues(cues);
+  };
+
+  /** Start on the place after the run's own, if there is one and nobody is auditioning. */
+  const bakePlaceAhead = (): void => {
+    if (audition !== null) return;
+    const next = state.run.level + 1;
+    if (next > LEVEL_KINDS.length - 1) return;
+    const theme = placeFor(next);
+    if (theme === bakingTheme || theme === aheadTheme) return;
+    stopAhead?.();
+    ahead = null;
+    aheadTheme = theme;
+    aheadIsWanted = false;
+    stopAhead = bakePlace(theme, ({ loops, cues }) => {
+      if (aheadIsWanted) {
+        aheadIsWanted = false;
+        aheadTheme = null;
+        handOverPlace(loops, cues);
+        return;
+      }
+      ahead = { theme, loops, cues };
+    });
+  };
+
   const bakeIncomingPlace = (want?: ThemeKind): void => {
     const theme = want ?? placeFor(state.run.level);
     if (theme === bakingTheme) return;
+    // 0331: the place was baked on the way here — handed over now, and the one after it is started.
+    if (ahead !== null && ahead.theme === theme) {
+      stopBaking?.();
+      bakingTheme = theme;
+      const held = ahead;
+      ahead = null;
+      aheadTheme = null;
+      handOverPlace(held.loops, held.cues);
+      return;
+    }
+    // …or it is still in flight, and lands in the run's hands rather than in `ahead`.
+    if (aheadTheme === theme) {
+      stopBaking?.();
+      bakingTheme = theme;
+      aheadIsWanted = true;
+      return;
+    }
+    stopAhead?.();
+    ahead = null;
+    aheadTheme = null;
     /*
       ⚠️ **The one in flight is stopped rather than left to finish.** A run that clears two levels
       while a bake is walking would otherwise hand the mixer the material for a place it has already
@@ -1554,21 +1642,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     stopBaking?.();
     bakingTheme = theme;
     stopBaking = bakePlace(theme, ({ loops, cues }) => {
-      /*
-        ⚠️ **Asked for again at the moment it is handed over, not captured.** The context can be built
-        or torn down while a bake walks, and a `MusicOut` closed over here would be one the player is
-        no longer listening to.
-      */
-      audioOut.music()?.setLoops(loops);
-      /*
-        ⚠️ **AND THE CUES ARRIVE ON THE SAME BAKE** — 0190. They are handed over together because they
-        were baked together: a boundary that swapped the music and left the enemy deaths behind would
-        be a place half arriving, and the two lists come out of one job walk in `bakePlace`.
-
-        ⚠️ **ON `audioOut` RATHER THAN THROUGH `music()`**, because a cue is not the music — the same
-        line `duck` is drawn on, one direction over.
-      */
-      audioOut.setCues(cues);
+      handOverPlace(loops, cues);
     });
   };
 
@@ -2016,6 +2090,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
           auditionLevel !== null
           ? auditionRung(auditionLevel, auditionAlong)
           : 'calm';
+    // 0331: the boss is coming, so the place after this one starts baking — see `ahead`. One comparison a step.
+    if (state.screen.current === 'playing' && (level === 'approach' || level === 'boss' || level === 'bossPeak')) bakePlaceAhead();
     /*
       THE AURA — `docs/decisions/0091-the-boss-has-an-aura.md`, and it is the one thing here that
       changes every step rather than at a boundary.

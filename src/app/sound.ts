@@ -1107,6 +1107,27 @@ export interface WebAudioOut extends AudioOut {
  */
 let prewarmed: { cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null = null;
 
+/** Something that synthesises one layer somewhere other than here — a worker pool, in a browser. */
+export type LayerBaker = (layer: MusicLayer, theme: ThemeKind | undefined) => Promise<Float32Array>;
+
+/**
+ * Who bakes a place's layers, if not this thread.
+ *
+ * ⚠️ **THE BLACK HEART'S OWN MATERIAL IS THIRTY-FIVE SECONDS OF SYNTHESIS** — 0331; it was five. Walked on
+ * the main thread that is four notes and eight milliseconds a slice, each slice a dropped frame, for as
+ * long as the bake lasts: a level that opens on the last level's music and stutters until its own arrives.
+ * `src/main.ts` hands a worker pool here (`src/app/bake-pool.ts`), and `bakePlace` sends every layer to
+ * it. The cues stay on the walk — a place re-voices two or three and they are milliseconds.
+ *
+ * ⚠️ **`null` IS THE WALK, AND EVERY TEST THAT IS NOT A BROWSER RUNS IT.** Node has no `Worker` of this
+ * kind and a bundler's import means nothing there, so the job walk is not a fallback that rots: it is the
+ * path the whole suite exercises, and the one a browser without workers still gets.
+ */
+let layerBaker: LayerBaker | null = null;
+export function useLayerBaker(baker: LayerBaker | null): void {
+  layerBaker = baker;
+}
+
 /**
  * The shared layers whose buffer has been let go, because the place that is loaded re-voices them.
  *
@@ -1326,7 +1347,27 @@ export function bakePlace(
   // ⚠️  and not  — a place may state a ROOM for a layer it shares the notes of,
   // and that layer's buffer is different too (0136). Sharing the dry array would drop the room.
   const mine = bakedBy(theme);
+  /*
+    ⚠️ **A LAYER GOES TO A WORKER WHERE THERE IS ONE, AND ONTO THE WALK WHERE THERE IS NOT** — 0331, and
+    `useLayerBaker` has the argument. The two routes run the same `bakeLayer` and produce the same samples;
+    what differs is whose frames pay for it. `stopped` is read when a layer LANDS, because a worker cannot be
+    called back: a bake that was cancelled finishes anyway and its buffers are dropped on the floor.
+  */
+  const baker = layerBaker;
+  let stopped = false;
+  let walked = false;
+  let waitingOn = 0;
   for (const layer of mine) {
+    if (baker !== null) {
+      waitingOn++;
+      void baker(layer, theme).then((buffer) => {
+        if (stopped) return;
+        own[layer] = buffer;
+        waitingOn--;
+        finish();
+      });
+      continue;
+    }
     jobs.push(() => {
       const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, theme);
       own[layer] = buffer;
@@ -1342,6 +1383,18 @@ export function bakePlace(
   */
   for (const layer of MUSIC_LAYERS) {
     if (mine.includes(layer) || !released.has(layer)) continue;
+    if (baker !== null) {
+      waitingOn++;
+      void baker(layer, undefined).then((buffer) => {
+        if (stopped) return;
+        base[layer] = buffer;
+        own[layer] = buffer;
+        released.delete(layer);
+        waitingOn--;
+        finish();
+      });
+      continue;
+    }
     jobs.push(() => {
       const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
       base[layer] = buffer;
@@ -1350,8 +1403,24 @@ export function bakePlace(
       for (const note of notes) jobs.push(note);
     });
   }
+  /** Hand the place over once the walk is done AND every layer sent to a worker has come back. */
+  const finish = (): void => {
+    if (stopped || !walked || waitingOn > 0) return;
+    stopped = true;
+    ready({ loops: own, cues: ownCues });
+    /*
+      ⚠️ **AND THE SHARED COPY OF EVERYTHING THIS PLACE RE-VOICES IS LET GO** — 0331. It is dropped
+      AFTER the hand-over and not before, so a walk that is cancelled half way leaves the base set whole
+      and the mixer keeps playing what it has. What the player hears is the place's own buffer; the base
+      one underneath it was audible nowhere.
+    */
+    for (const layer of mine) {
+      if (own[layer] === base[layer]) continue;
+      base[layer] = RELEASED;
+      released.add(layer);
+    }
+  };
   let next = 0;
-  let stopped = false;
   const step = (): void => {
     if (stopped) return;
     /*
@@ -1365,18 +1434,8 @@ export function bakePlace(
     */
     next = sliceOf(jobs, next);
     if (next >= jobs.length) {
-      ready({ loops: own, cues: ownCues });
-      /*
-        ⚠️ **AND THE SHARED COPY OF EVERYTHING THIS PLACE RE-VOICES IS LET GO** — 0331. It is dropped
-        AFTER the hand-over and not before, so a walk that is cancelled half way leaves the base set whole
-        and the mixer keeps playing what it has. What the player hears is the place's own buffer; the base
-        one underneath it was audible nowhere.
-      */
-      for (const layer of mine) {
-        if (own[layer] === base[layer]) continue;
-        base[layer] = RELEASED;
-        released.add(layer);
-      }
+      walked = true;
+      finish();
       return;
     }
     schedule(step);
