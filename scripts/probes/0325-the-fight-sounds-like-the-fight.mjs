@@ -40,8 +40,10 @@ export const PROBES = [
     guard: 'THE ONE THAT CANNOT BE RECOVERED FROM: a slot a place OPENS has voices and a role at that rung',
     edit: {
       path: 'src/content/themes.ts',
-      find: '    voices: APPROACH_VOICES,\n    ladder: {',
-      replace: '    voices: {},\n    ladder: {',
+      // ⚠️ Re-anchored by 0331, which put `struck` between this row's voices and its ladder. The anchor
+      // is the voices alone now: emptying them is the whole break and the line after it never was.
+      find: '    voices: APPROACH_VOICES,',
+      replace: '    voices: {},',
     },
   },
   {
@@ -92,8 +94,20 @@ export const PROBES = [
     guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/content/cues.ts',
-      find: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.78, attack: 0.005, curve: 3.6, drive: 0.42 },',
-      replace: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.34, gain: 0.78, attack: 0.005, curve: 2.4, drive: 0.42 },',
+      /*
+        ⚠️ RE-AIMED BY 0331, BECAUSE LENGTHENING THIS LAYER DEFEATED THE BREAK WITH IT. The old edit
+        took `seconds` 0.3 → 0.34 to make the root note ring past the end of the cue — and this layer
+        is the LONGEST in the row, so its own length is what sets the buffer's. Lengthening it moved
+        the end along with the note and the note fitted again; `npm run prove` reported STILL GREEN.
+
+        ⚠️ AND THE LAST SAMPLE CANNOT BE THE TARGET EITHER: `sampleCue` fades the summed row to zero
+        over its final six milliseconds, so *ends at zero* is true of any content whatsoever. What is
+        left to break is the assertion that does the work — **the energy of the last quarter against
+        the first** — and the honest break for *the sound never finishes* is a decay that does not.
+        Checked: it fires as `bossAcid is as loud at its end as at its start — nothing is decaying`.
+      */
+      find: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.484, attack: 0.005, curve: 3.6,',
+      replace: '      { wave: \'sine\', from: inKey(0), to: inKey(0), at: 0.13, seconds: 0.3, gain: 0.484, attack: 0.005, curve: 0.25,',
     },
   },
 ];

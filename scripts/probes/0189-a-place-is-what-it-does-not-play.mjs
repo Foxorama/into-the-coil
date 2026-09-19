@@ -93,7 +93,14 @@ export const PROBES = [
         proves nothing. That is the failure this decision's own text describes about 0089 firing on
         the wrong layer, committed while repairing an anchor.
       */
-      find: 'bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0.42, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1 },',
+      /*
+        ⚠️ AND RE-ANCHORED BY 0331, WHICH CLOSED THIS PLACE'S `ride` AND `crash`. The row is spelled out
+        because the warning above is the reason it has to be — a short anchor here matched Ember Nebula's
+        `bossPeak` and proved nothing. `bass: 1.62, beat: 1.62, ride: 0` is the part of it that is this
+        place and no other: nowhere else opens the base composition's riff and kit at 1.62 with the
+        cymbal shut. The break is unchanged — the boss bed lifted over `surge`.
+      */
+      find: 'bossPeak: { drone: 0, bass: 1.62, beat: 1.62, ride: 0, sub: 1.6, engine: 1.68, perc: 2.21, drive: 1.25, toll: 1.35, dread: 1.85, frenzy: 1.2, wraith: 1.3, stomp: 1, crash: 0 },',
       replace: '      bossPeak: { drone: 0, ride: 0, sub: 2.3, engine: 1.72, perc: 2.26, drive: 1.62, ownB: 1.76, toll: 1.5, dread: 4.2, frenzy: 1.6, wraith: 1.7, stomp: 2 },',
     },
   },

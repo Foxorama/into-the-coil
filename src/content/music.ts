@@ -281,6 +281,15 @@ export const LAYER_BARS: Record<MusicLayer, number> = {
     than the base, so a sixteen-bar own layer fails there and the argument gets made.
   */
   ownA: 4,
+  /*
+    ⚠️ **LONGER, SO A HEART CAN BEAT AT THE SPEED ASKED RATHER THAN THE SPEED FOUR BARS DIVIDE INTO** —
+    0331's eleventh and twelfth listens: every ~3.7 s at the opening (seven beats in sixteen bars), every
+    ~2.6 s in the second movement (five in eight), every ~1.4 s in the acceptance (nine in eight). Four
+    bars is 6.4 seconds and holds none of those evenly. ⚠️ **AND THE LENGTH IS THE PLACE'S, NOT THE SHARED SET'S** — it is stated on `THEMES.core.bars`, because a
+    number here is resident for every place and 0188's budget is the shared set. Only The Black Heart sounds these three slots
+    (`ownA` is Saurian Belt's and The Approach's too, and stays four); they cost about 5.7 MB of 0188's
+    resident budget together, and the guard measuring that is owed its re-reading when this ships.
+  */
   ownB: 4,
   ownC: 4,
   ownD: 4,
@@ -410,6 +419,14 @@ export interface PanTrack {
  * at the same instant the sources start.
  */
 export const PAN_HORIZON_SECONDS = 900;
+
+/**
+ * How long a pan track takes to move to its next position — 0331, reported of every level's render: *"a
+ * bit of static and pop throughout."* A pan written as a jump moves a held note's energy from one ear to
+ * the other in one sample, which is a click in both. Twenty milliseconds is under a sixteenth's tenth, so
+ * the three bouncing notes still land where they were written.
+ */
+export const PAN_GLIDE_SECONDS = 0.02;
 
 /**
  * The two the boss brings with it, and they are the only layers driven by a DISTANCE.
@@ -1064,6 +1081,13 @@ export interface MusicVoice {
    * to the beat it lands on. This indexes the grid.
    */
   accents?: readonly number[];
+  /**
+   * How far a player drifts from the grid — 0331's take two. Each note lands up to `loose` seconds late
+   * and up to twice that fraction softer, by a fixed hash of where it sits, so the loop is the same every
+   * time it plays and no two notes in it are placed identically. What a perfectly quantised line lacks
+   * and a person playing it does not. Absent is on the grid.
+   */
+  loose?: number;
   /** How many steps there are to a beat. 1 is quarters, 2 eighths, 4 sixteenths. */
   perBeat: number;
   /** Octaves above `MUSIC_ROOT`. Only read by a pitched voice. */
@@ -1746,7 +1770,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'tri', from: 940, to: 610, seconds: 0.05, gain: 0.28, attack: 0.0008, curve: 8, highFrom: 420 },
+      note: { wave: 'tri', from: 940, to: 610, seconds: 0.05, gain: 0.28, attack: 0.002, curve: 8, highFrom: 420 },
     },
     {
       /*
@@ -1760,7 +1784,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 3,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.024, gain: 0.06, attack: 0.0006, curve: 8, lowFrom: 12500, highFrom: 5200 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.028, gain: 0.05, attack: 0.002, curve: 8, lowFrom: 8500, highFrom: 3800 },
     },
     {
       /*
@@ -1785,7 +1809,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.075, attack: 0.0008, curve: 4, lowFrom: 9500, highFrom: 3800 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.07, attack: 0.002, curve: 4, lowFrom: 7500, highFrom: 3200 },
     },
   ],
 
@@ -2321,8 +2345,15 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
 
         ⚠️ **IT MOVES ALL SEVEN PLACES**, because six of them share this voice — which is why it is
         called out here rather than folded in quietly. Reverting it is this number and nothing else.
+
+        ⚠️ **AND EVERY PLACE'S RIDE IS DARKER AND QUIETER NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`,
+        reported of the renders: *"the other tracks have a bit of static and pop throughout them."* Measured
+        per layer, the ride was the loudest thing above the top of every other part in five places — noise
+        from 5 to 11 kHz on every sixteenth, which is what static is — by as much as 16 dB in The Shoal. Every
+        ride now reaches down to 2.5–4 kHz and stops at 5.5–8, with a millisecond to
+        speak: a tick rather than a hiss, on the same rhythm.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.13, attack: 0.0006, curve: 2.6, lowFrom: 11000, lowTo: 6500, highFrom: 5200, q: 0.7 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.125, attack: 0.001, curve: 2.6, lowFrom: 7000, lowTo: 4500, highFrom: 3200, q: 0.7 },
     },
     {
       // The bell of the ride — a narrow band an octave under the wash, struck on the downbeat only,
@@ -2333,7 +2364,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       octave: 0,
       // ⚠️ Raised with the wash above it and by the same factor — 0140. The bell is what gives the
       // pattern a centre; lifting only the hiss would change the ride's shape, not its level.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.09, attack: 0.0005, curve: 3.4, lowFrom: 7200, lowTo: 4200, highFrom: 3000, q: 1.6 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.088, attack: 0.001, curve: 3.4, lowFrom: 5500, lowTo: 3200, highFrom: 2600, q: 1.2 },
     },
   ],
 
@@ -2672,7 +2703,18 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       // reads as a beat rather than as three numbers.
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.16, attack: 0.002, curve: 2.0, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.7 },
+      /*
+        ⚠️ **`drive` 0.7 → 0.15, AND ITS FIFTH 0.6 → 0.12** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+        Heard in a render of The Approach, after the same report of the Descent: *"approach has similar
+        issues"* — *"a weird sound similar to the distortion."* Measured on `push`'s mix, this riff made
+        **26.8 of 34.1 impulsive events a second** on its own, and the attack is not why: 2 → 8 ms moved
+        it by 0.3. The drive is. A saw squashed that hard turns every onset into a corner, and a gallop of
+        sixteenths is a lot of onsets. At 0.15 the riff adds 1.8 a second over the rest of the mix and is
+        1.8 dB quieter, which the level hold gives back; **0.25 keeps more of the grit** at 7 a second,
+        and is the value to try if the riff has lost its bite. No other place plays this — every one of
+        the six re-voices `hook`.
+      */
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.55, gain: 0.16, attack: 0.002, curve: 2.0, lowFrom: 2600, lowTo: 780, q: 1.7, drive: 0.15 },
     },
     {
       // The fifth over it. Two notes and no third is a power chord; adding the third is what would
@@ -2699,7 +2741,7 @@ export const MUSIC: Record<MusicLayer, readonly MusicVoice[]> = {
       perBeat: 4,
       accents: [1, 1, 0.76, 0.82],
       octave: 1,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.115, attack: 0.002, curve: 2.2, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.115, attack: 0.002, curve: 2.2, lowFrom: 2400, lowTo: 860, q: 1.6, drive: 0.12 },
     },
   ],
 

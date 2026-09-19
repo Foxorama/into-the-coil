@@ -52,7 +52,7 @@ import {
   auditionRung,
   levelOfPlace,
 } from '../src/app/music.ts';
-import { auraCeilingOf, panTrackOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { auraCeilingOf, barsOf, panTrackOf, rungIn, THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { loopsAt } from './bakes.ts';
 import { buildsOf } from './pace.ts';
 import { readFileSync } from 'node:fs';
@@ -556,7 +556,9 @@ describe('how far up the ladder a run is', () => {
       gauntlet: [['run', 0.0], ['push', 36.64], ['surge', 72.33], ['approach', 102.69]],
       // ⚠️ 0180 — driven on the desk. 39.97 → 20.67, and `push` and `surge` take what the opening
       // gave up. This is the number this guard printed, pasted back, which is what its note says to do.
-      eye: [['run', 0.0], ['push', 20.67], ['surge', 65.56], ['approach', 110.72]],
+      // ⚠️ AND THEN FOUR MOVEMENTS, EACH ON A PHRASE — 0331. The lament to bar 16, the same song faster to bar 36,
+      // the ballad to bar 72, the acceptance into the fight; `LEVELS.eye.sections` is where those bars are written.
+      eye: [['run', 0.0], ['push', 25.5], ['surge', 57.5], ['approach', 115.14]],
     };
 
     for (const kind of LEVEL_KINDS) {
@@ -969,6 +971,21 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
       reported **STILL GREEN** with the mastering removed entirely, which is
       `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over the
       headline mechanism of its own decision.
+
+      ── AND THE WHOLE TABLE MOVED UP FIVE DECIBELS WHEN THE CUES CAME DOWN — 0331 ──────────────────
+
+      ⚠️ **RE-MEASURED ON THIS TREE: `run` reads +12.02 dB mastered and +6.90 unmastered.** 0331
+      re-balanced every cue and the gun came down with them, so the comparison this guard makes is
+      between a quieter gun and much the same bed. **The mastering is still worth 5.1 dB of the 12.0**
+      — it has not stopped working — but removing it no longer takes the mix under the bound, and
+      `npm run prove` says so: 0104's own drive probe came back STILL GREEN and has been retired with
+      these numbers beside it.
+
+      ⚠️ **THE BOUND STAYS AT 6, AND THAT IS THE PARAGRAPH ABOVE MEANING WHAT IT SAYS.** Raising it to
+      sit above 6.90 would be *a number chosen to sit under the current measurement*, which is the one
+      thing that paragraph rules out. What has actually changed is that the reported state is no longer
+      reachable by deleting one constant — it would now take the gun back to the level it was reported
+      at, which is several numbers and not a probe.
 
       ⚠️ **Twice the amplitude is the smallest bound that is also a statable rule**, rather than a
       number chosen to sit under the current measurement. There is 1.5 dB of margin at 0.15, which is
@@ -2049,13 +2066,15 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
         if (track === undefined) continue;
         tracks++;
         const bars = track.steps.length / (track.perBeat * 4);
+        // 0331: against the place's own loop length, which a row may state (`barsOf`).
+        const loop = barsOf(theme, layer);
         expect(
           bars,
-          `${theme}/${layer} moves over ${bars} bars, which is not a whole number of ${LAYER_BARS[layer]}-bar loops`,
+          `${theme}/${layer} moves over ${bars} bars, which is not a whole number of ${loop}-bar loops`,
         ).toBe(Math.round(bars));
         expect(
-          LAYER_BARS[layer] % bars,
-          `${theme}/${layer}'s track is ${bars} bars against a ${LAYER_BARS[layer]}-bar loop, so it walks`,
+          loop % bars,
+          `${theme}/${layer}'s track is ${bars} bars against a ${loop}-bar loop, so it walks`,
         ).toBe(0);
         for (const to of track.steps) {
           if (to === null || to === undefined) continue;
@@ -2479,7 +2498,21 @@ describe('0171 — a section change is a build rather than a step', () => {
       downbeat and that bar therefore holds mixed roles by construction. What has to hold is that no
       LATER bar carries a quieter role than an earlier one — the build only ever goes up.
     */
+    /*
+      ⚠️ **AND A LAYER THE PLACE PUTS ON THE BEAT IS NOT PART OF THE ASCENT — 0331's THIRTEENTH.**
+      `entryBars` already sorts every arrival by role, so the build goes up by construction; the only
+      way a louder role can land early is `onBeat`, which pins a layer to the downbeat *because the
+      place said to*. The Black Heart's `ownB` is `heartVoices(HEART_ACCEPT, …)` — it is a HEART, and
+      the field exists because *"a heart that arrived three bars into the build left a hole where the
+      beat should be."* Counting it as the bar's high-water mark made every quieter part behind it a
+      failure, which is the authored exception being read as the defect.
+
+      ⚠️ **THE CLAIM IS UNCHANGED FOR EVERYTHING ELSE, INCLUDING THE LEAD.** *What a place asks you to
+      follow lands last* is about `LEADS`, and no lead is on the beat; what is exempted is only a layer
+      whose own place states that it does not wait for the build.
+    */
     for (const theme of THEME_KINDS) {
+      const onBeat = THEMES[theme].onBeat ?? [];
       for (const build of buildsOf(theme)) {
         let landed = -1;
         let bar = -1;
@@ -2489,6 +2522,7 @@ describe('0171 — a section change is a build rather than a step', () => {
             bar = arrival.second;
             landed = highest;
           }
+          if (onBeat.includes(arrival.layer)) continue;
           const at = arrival.role === null ? 0 : MUSIC_ROLES.indexOf(arrival.role);
           expect(
             at,

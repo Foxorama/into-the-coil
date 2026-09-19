@@ -49,8 +49,11 @@ export const PROBES = [
       // ⚠️ RE-ANCHORED BY 0176: the re-based mix took the list from 88 entries to 54, so the row this
       // planted a stale line into is a different row. The break is unchanged — a layer comfortably
       // OVER its role, listed as though it were under one.
-      find: "    approach: ['approach/dread',",
-      replace: "    approach: ['run/chords', 'approach/dread',",
+      // ⚠️ AND RE-ANCHORED AGAIN BY 0331, which broke this row across several lines as the fight's
+      // entries joined it. The anchor is the opening bracket now, so the row's CONTENTS can move
+      // without stranding a probe whose subject is the row having a stale line in it at all.
+      find: "    approach: [\n      'approach/dread',",
+      replace: "    approach: [\n      'run/chords', 'approach/dread',",
     },
   },
   {

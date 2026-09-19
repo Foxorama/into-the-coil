@@ -128,10 +128,13 @@ export const PROBES = [
     guard: 'starts and ends at zero, because a buffer that stops mid-waveform clicks',
     edit: {
       path: 'src/content/cues.ts',
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.75 → 0.6). This break IS a gain and a curve, so
+      // it cannot avoid carrying one; the replacement keeps the ratio the old pair had — 1.8× — rather
+      // than a number the table has since moved past.
       find:
-        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 0.75, attack: 0.012, curve: 2.9, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
+        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 0.6, attack: 0.012, curve: 2.9, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
       replace:
-        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 1.35, attack: 0.012, curve: 1.2, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
+        "      { wave: 'sine', from: inKey(2), to: inKey(-7), at: 0.5, seconds: 0.46, gain: 1.08, attack: 0.012, curve: 1.2, drive: 0.5, lowFrom: 620, lowTo: 80, q: 2.7 },",
     },
   },
 ];

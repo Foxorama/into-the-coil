@@ -303,14 +303,35 @@ const GATE: readonly (number | null)[] = ROOT.flatMap((root, bar) => {
 });
 
 /**
- * THE STABS — the top of the chord, four times in sixteen bars, on the bar each phrase turns on.
+ * THE FILL — a run down the toms across the last two beats of the bar each phrase turns on.
  *
- * ⚠️ **Rare and high rather than frequent and loud**, on `src/content/nebula.ts`'s own terms: a hit
- * that happens every bar is a part, and a hit that happens once a phrase is an event.
+ * ⚠️ **Rare, on `src/content/nebula.ts`'s own terms**: a hit that happens every bar is a part, and a hit
+ * that happens once a phrase is an event.
+ *
+ * ⚠️ **IT WAS THREE HIGH STABS, AND THOSE WERE THE DESCENT'S** — `docs/decisions/0331-the-heart-beats-under-it.md`,
+ * reported of the renders: *"coilward has the same 3 note pop in the later transitions that makes it sound
+ * too similar to the descent, we need to do something different there."* It was the same figure — root,
+ * fifth, the root above, on the fourth bar of every phrase — in the same square wave at the same octave as
+ * the cathedral's organ stabs. This place is the one whose drums lead (the first listen asked for exactly
+ * that), so its phrase turn is a drummer's: eight sixteenths falling from the high tom to the floor tom,
+ * getting harder as they fall.
  */
-const STABS: readonly (number | null)[] = ROOT.flatMap((root, bar) =>
-  bar % 4 === 3 ? [root + 12, _, FIFTH[bar]! + 12, _, root + 24, _, _, _] : [_, _, _, _, _, _, _, _],
-);
+/**
+ * A pan track that sweeps the phrase-turn bar's `strokes` across the ears — `positions[i]` goes to `pans[i]` —
+ * and returns to the middle on the next downbeat. Sixteen bars of sixteenths, the fill's own grid.
+ */
+export const cascadeOver = (positions: readonly number[], pans: readonly number[]): (number | null)[] => {
+  const steps: (number | null)[] = Array.from({ length: 256 }, () => null);
+  for (let bar = 3; bar < 16; bar += 4) {
+    positions.forEach((p, i) => (steps[bar * 16 + p] = pans[i]!));
+    steps[((bar + 1) % 16) * 16] = 0;
+  }
+  return steps;
+};
+const FILL_AT = (positions: readonly number[]): (number | null)[] =>
+  ROOT.flatMap((_root, bar) =>
+    Array.from({ length: 16 }, (_u, i) => (bar % 4 === 3 && positions.includes(i) ? 0.72 + (i - 8) * 0.04 : _)),
+  );
 
 /**
  * THE TREMOLO — the string-and-saw scrub `surge` runs underneath the hands-up line.
@@ -388,7 +409,7 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
   */
   kill: [
     // THE SNAP — bone, not spark. Milliseconds, and it is over before the throat opens.
-    { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.42, attack: 0.00015, curve: 13, lowFrom: 3000, lowTo: 900, highFrom: 700 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.02, gain: 0.315, attack: 0.00015, curve: 13, lowFrom: 3000, lowTo: 900, highFrom: 700 },
     /*
       THE BODY — and it is NOISE, which the first draft of this cue got wrong.
 
@@ -404,13 +425,14 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
       meat coming apart is a thump and a roar, not a roar alone. This is the thump: darkening,
       high-passed off the box, saturated, and the loudest thing in the cue.
     */
-    { wave: 'noise', from: 0, to: 0, seconds: 0.155, gain: 0.92, attack: 0.002, curve: 4.8, lowFrom: 2100, lowTo: 380, highFrom: 140, highTo: 58, q: 0.8, drive: 0.36 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.155, gain: 0.69, attack: 0.002, curve: 4.8, lowFrom: 2100, lowTo: 380, highFrom: 140, highTo: 58, q: 0.8, drive: 0.36 },
     // THE THROAT — the roar, cut off. A ninth down in 190 ms with the filter closing behind it.
-    { wave: 'saw', from: inKey(19), to: inKey(5), seconds: 0.19, gain: 0.5, attack: 0.004, curve: 4.2, lowFrom: 1900, lowTo: 320, q: 2.2, drive: 0.42 },
+    { wave: 'saw', from: inKey(19), to: inKey(5), seconds: 0.19, gain: 0.375, attack: 0.004, curve: 4.2, lowFrom: 1900, lowTo: 320, q: 2.2, drive: 0.42, pan: -0.3, panTo: 0.3 },
     // THE RATTLE — the debris, dry and low. 0144's overlap, an octave under 0144's cymbal.
-    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.18, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.084, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02, pan: -0.3, panTo: -0.8 },
+    { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.084, attack: 0.001, curve: 5, lowFrom: 4200, lowTo: 1400, highFrom: 800, at: 0.02, pan: 0.3, panTo: 0.8 },
     // THE THUMP — 0179's fall, and the one layer that is the base's argument rather than this file's.
-    { wave: 'sine', from: 150, to: 34, seconds: 0.28, gain: 0.66, attack: 0.002, curve: 3.4, drive: 0.3 },
+    { wave: 'sine', from: 150, to: 34, seconds: 0.28, gain: 0.495, attack: 0.002, curve: 3.4, drive: 0.3 },
   ],
   /*
     ── THE THREAT: a spit, where the base has a laser ───────────────────────────────────────────────
@@ -427,7 +449,7 @@ export const SAURIAN_CUES: Partial<Record<CueKind, readonly CueLayer[]>> = {
     // THE HISS — the spit itself, a band falling fast.
     { wave: 'noise', from: 0, to: 0, seconds: 0.075, gain: 0.5, attack: 0.0008, curve: 6, lowFrom: 5200, lowTo: 1500, highFrom: 900 },
     // THE THROAT UNDER IT — in key, so a field full of them is still in the music.
-    { wave: 'saw', from: inKey(22), to: inKey(9), seconds: 0.085, gain: 0.4, attack: 0.001, curve: 5.5, lowFrom: 2200, lowTo: 620, q: 2.4, drive: 0.25 },
+    { wave: 'saw', from: inKey(22), to: inKey(9), seconds: 0.085, gain: 0.4, attack: 0.001, curve: 5.5, lowFrom: 2200, lowTo: 620, q: 2.4, drive: 0.25, pan: -0.3, panTo: 0.3 },
   ],
 };
 
@@ -544,53 +566,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       octave: 0,
       note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 4.1, gain: 0.34, attack: 0.1, curve: 0.95 },
     },
-    {
-      /*
-        THE FOUR-ON-THE-FLOOR. Every beat, hard, with the fourth bar of each phrase carrying a
-        sixteenth pickup — which is what stops sixty-four identical kicks reading as a metronome, and
-        is 0102's finding applied to the one drum that genuinely is on every beat.
+    /*
+      ⚠️ **THE FOUR-ON-THE-FLOOR STOOD HERE AND IS `beat` NOW** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+      Heard in a render of the level: *"coilward sounds slightly out of beat and needs the drums to
+      have the focus of the sound."* Measured, nothing was off the grid — the worst hit landed 6 ms
+      late — but this kick was **11.7 dB under its role**, masked by the bass in the one band it
+      lived in, so what the ear counted instead was the base kit's syncopation and the hand drum's
+      pickups, both loudest on the sixteenth BEFORE the beat. The weakest downbeat sat 10.2 dB under the
+      loudest offbeat, which reads as rushing. `beat` has the kick on every beat now, on its own fader.
 
-        ⚠️ **IT IS ON A SIXTEENTH GRID SO THAT IT CAN AVOID THE STAB, AND THAT IS A FIX RATHER THAN A
-        REFINEMENT.** The first version wrote this at eighths and put its pickup on the last *and* of
-        the bar — which is exactly where `OFFBEAT` plays, so the two loudest low transients in the
-        place landed on the same sample sixteen times a phrase. It read as *the kick is uneven* and it
-        measured as **the boss mix clipping at 1.004 of full scale**, which is what
-        `tests/themes.test.ts` caught. The paragraph above this layer had already said *the kick has
-        the downbeat to itself*; the pattern did not.
-
-        ⚠️ **The pickup is now a SIXTEENTH before the bar line** — position 15, where the stab's
-        eighth grid has nothing — so it is still the same gesture and it no longer stacks.
-
-        ── AND THE SIXTEENTH BAR IS A BREAK, WHICH IS THE ONE GESTURE THIS GAME HAS NEVER MADE ──────
-
-        ⚠️ **THE KICK STOPS FOR A BAR AND NOTHING ELSE DOES.** The offbeat stab, the bass, the hats
-        and the pad all carry on, so the floor does not fall out — what goes is the thing the listener
-        has been counting, and it goes on the bar the progression cadences on.
-        `docs/decisions/0114-the-fight-is-a-different-piece.md` says the only mechanism that has ever
-        read as a boundary in this game is **something stopping**, and it says it about the rungs;
-        this is the same finding spent inside a loop, where it costs no mechanism at all.
-
-        ⚠️ **IT IS ALSO THE GENRE'S OWN PUNCTUATION.** A eurobeat track breaks every sixteen bars and
-        slams back in — the two sixteenths at the end of the bar are the run-up, and the downbeat they
-        land on is bar one of the loop, where `HANDS` has just resolved its G# onto an A.
-      */
-      steps: ROOT.flatMap((_root, bar) =>
-        bar === 15
-          ? [1, _, _, _, _, _, _, _, _, _, _, _, _, _, 0.7, 0.86]
-          : bar % 4 === 3
-            ? [1, _, _, _, 0.9, _, _, 0.6, 0.98, _, _, 0.64, 0.92, _, _, 0.72]
-            : [1, _, _, _, 0.9, _, _, _, 0.98, _, _, 0.62, 0.92, _, _, _],
-      ),
-      pitched: false,
-      perBeat: 4,
-      octave: 0,
-      /*
-        ⚠️ **BIGGER AND DEEPER BECAUSE THE PAD MOVED OFF IT** — 0185. 0.4 → 0.5, 32 → 30 Hz, 0.42 →
-        0.46 s. Every one of those was available before and none of them would have been heard:
-        `sub` measured **17 dB down** at `push` with the pad over it.
-      */
-      note: { wave: 'sine', from: 132, to: 30, seconds: 0.46, gain: 0.46, attack: 0.006, curve: 2.4, drive: 0.5 },
-    },
+      ⚠️ **WHAT IS LOST IS THE BAR-SIXTEEN BREAK.** `beat` is two bars and this pattern was sixteen, so
+      the kick no longer stops for the cadence bar. It was 0114's *something stopping* spent inside a
+      loop, and the ear decides whether the floor wanted it more than it wanted to be heard.
+    */
     {
       // THE OFFBEAT STAB — the half of the floor that is a hole rather than a note. `OFFBEAT` has it.
       steps: OFFBEAT,
@@ -734,6 +722,47 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
   ],
 
   /*
+    ── THE KIT: a kick on every beat, a snare on two and four, and the base's hats ──────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** *"Needs the drums to have the focus of the
+    sound, they aren't quite the highlight at the moment."* This place played the base composition's
+    kit — the title screen's, syncopated three-three-two with nothing on beat three — at 1.62, over a
+    four-on-the-floor in `sub` measured 11.7 dB under its role. **So the kick this place is built on was
+    the one drum nobody could hear, and the one they could hear was the title's.**
+
+    ⚠️ **THE BASE'S OWN SOUNDS ON EUROBEAT'S OWN PATTERN.** The kick, the snare and the hats are
+    `MUSIC.beat`'s voices note for note; what changes is where they land — every beat, hard, with a
+    sixteenth pickup at the end of the second bar, and the snare doubling the kick on two and four the
+    way a hi-NRG kit does. Measured with the ladder in `THEMES.saurian`: **the kit has the largest
+    margin in the place at `run`, `push`, `surge` and `approach`**, the bus peaks under 0.99 and stays
+    under −17.8 dB dirty.
+  */
+  beat: [
+    {
+      steps: [1, _, _, _, 0.9, _, _, _, 0.96, _, _, _, 0.9, _, _, _, 1, _, _, _, 0.9, _, _, _, 0.96, _, _, _, 0.9, _, _, 0.62],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 45, seconds: 0.26, gain: 0.75, attack: 0.001, curve: 4.5, drive: 0.2 },
+    },
+    {
+      steps: [_, _, _, _, 1, _, _, _, _, _, _, _, 1, _, _, _, _, _, _, _, 1, _, _, _, _, _, _, _, 1, _, 0.3, _],
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.3, attack: 0.001, curve: 6, lowFrom: 4200, lowTo: 1600, highFrom: 400 },
+    },
+    {
+      // The base composition's hats, unchanged: strong, weak, medium, weak.
+      steps: Array.from({ length: 32 }, (_unused, i) => [1, 0.42, 0.66, 0.38][i % 4]!),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.05, attack: 0.0005, curve: 9, lowFrom: 13000, highFrom: 6000 },
+    },
+  ],
+
+  /*
     ── THE SMALL THINGS: seed rattles, claves, and something with teeth ─────────────────────────────
 
     ⚠️ **`perc` sits at −0.45 and therefore may not be low**, which is a constraint and not a taste:
@@ -792,12 +821,19 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
         left in it, and a hand drum belongs on the *e* and the *a* anyway — the floor keeps time and
         the skin answers it. **The probe for the clamp points at the envelope, because that is the
         line that moves the number.**
+
+        ⚠️ **AND THE HITS JUST BEFORE THE BEAT ARE HALF WHAT THEY WERE** — 0331. *"Slightly out of
+        beat."* Measured per sixteenth, the loudest low hits in the place were this voice's strokes one
+        sixteenth ahead of beats 2, 3, 4 and 1 — and at full weight on those slots, over a kick nobody
+        could hear, the bar reads as rushing. Halved there and left alone on the *e* and the *a*, and
+        with `beat`'s kick now on every beat, **the weakest downbeat sits 4.0 dB over any offbeat**
+        where it sat 10.2 under the loudest.
       */
       steps: [
-        _, _, _, 1, _, 0.6, _, _, _, _, _, 0.72, _, _, _, 0.66,
-        _, _, _, 0.88, _, _, _, 0.64, _, 0.58, _, _, _, _, _, 0.7,
-        _, _, _, 0.94, _, 0.62, _, _, _, _, _, 0.68, _, _, _, 0.6,
-        _, _, _, 0.9, _, _, _, 0.66, _, 0.6, _, 0.72, _, _, _, 0.74,
+        _, _, _, 0.5, _, 0.6, _, _, _, _, _, 0.36, _, _, _, 0.33,
+        _, _, _, 0.44, _, _, _, 0.32, _, 0.58, _, _, _, _, _, 0.35,
+        _, _, _, 0.47, _, 0.62, _, _, _, _, _, 0.34, _, _, _, 0.3,
+        _, _, _, 0.45, _, _, _, 0.33, _, 0.6, _, 0.36, _, _, _, 0.37,
       ],
       pitched: false,
       perBeat: 4,
@@ -1028,13 +1064,101 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
       accents: [1, 0.74, 0.9, 0.72],
       note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.38, gain: 0.07, attack: 0.008, curve: 3, lowFrom: 4600, lowTo: 2200, q: 1.4 },
     },
+  ],
+
+  /*
+    ── THE PUNCH: three strokes into every phrase turn at `surge`, left, centre, right ────────────────
+
+    ⚠️ **ITS OWN SLOT SO IT CAN MOVE** — 0331: *"for the drumbeats we added to coilward, any chance we can have
+    them run left ear to right ear in a cascade?… one left, center, right depending on how many beats."* A
+    pan moves a whole layer, and in `hook` it would have swung the riff with it.
+  */
+  ownC: [
+    /*
+      ⚠️ **THE PUNCH, WHERE THE FILL STOOD** — 0331, the fill heard: *"that drumbeat needs to kick in in the
+      earlier section… and the section where it was needs something slightly shorter and punchier, it just
+      doesn't quite fit the space."* Eight strokes crowded the riff at `surge`, where every beat is already
+      full. Three: the low tom, then the floor tom with a kick and a snare crack together on the last
+      sixteenth, short and hard, straight into the next phrase. The run down the toms moved to `ownD`.
+
+      ⚠️ **AND THEN LOUDER, WITH A CRACK ON EVERY STROKE** — heard: *"the following drumbeat set we added to surge
+      isn't really noticeable at all."* Measured on the render's stems, the three strokes sat 4–6 dB under the
+      mix around them, two low sines in the bass and sub's own band, and the last one landed on the kit's closing
+      kick. The toms are harder and a little higher, each stroke has the snare's crack on it, and the stick is up.
+    */
     {
-      // The high stab, four in sixteen bars: the top of the whole piece before the lasers.
-      steps: STABS,
-      pitched: true,
-      perBeat: 2,
-      octave: 3,
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.07, attack: 0.003, curve: 2.4, lowFrom: 7200, lowTo: 4000, q: 1.4 },
+      steps: FILL_AT([13, 14]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 200, to: 128, seconds: 0.16, gain: 0.72, attack: 0.001, curve: 4.5, drive: 0.3 },
+    },
+    {
+      steps: FILL_AT([15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 150, to: 70, seconds: 0.2, gain: 0.85, attack: 0.001, curve: 4.5, drive: 0.35 },
+    },
+    {
+      // The snare crack on every stroke, hardest on the last.
+      steps: FILL_AT([13, 14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.24, attack: 0.001, curve: 5, lowFrom: 5500, lowTo: 2200, highFrom: 500 },
+    },
+    {
+      // The stick.
+      steps: FILL_AT([13, 14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.11, attack: 0.001, curve: 6, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
+    },
+  ],
+  /*
+    ── THE FILL: a run down the toms on every phrase turn, in the second section ───────────────────
+
+    ⚠️ **0331**: *"the drumbeat replacement is good in coilward, but that drumbeat needs to kick in in the
+    earlier section on the same downbeat part."* It lived in `hook`, which is silent at `run` and a whisper
+    at `push`. An own slot is the one layer this place can open at exactly the rungs it wants, and close
+    where the punch above takes over. Sixteen bars here (`bars` on the place's row), so `FILL_AT` lands on
+    the fourth bar of every phrase as it did.
+
+    ⚠️ **AND THEN NOT AT `run`, AND HALF A BEAT SHORTER** — heard: *"drop that added drumbeat from the
+    first 39 secs, it doesn't fit in properly there; from 40 secs onward it's good, but needs maybe just the
+    first beat or half beat dropped."* The high tom's two strokes are gone; the run starts on the rack tom.
+  */
+  ownD: [
+    {
+      steps: FILL_AT([10, 11]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 196, to: 142, seconds: 0.26, gain: 0.32, attack: 0.001, curve: 4, drive: 0.15 },
+    },
+    {
+      steps: FILL_AT([12, 13]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 158, to: 110, seconds: 0.28, gain: 0.34, attack: 0.001, curve: 3.8, drive: 0.15 },
+    },
+    {
+      steps: FILL_AT([14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'sine', from: 128, to: 84, seconds: 0.32, gain: 0.36, attack: 0.001, curve: 3.6, drive: 0.15 },
+    },
+    {
+      // The stick on every stroke, which is what makes a tom a drum and not a falling tone.
+      steps: FILL_AT([10, 11, 12, 13, 14, 15]),
+      pitched: false,
+      perBeat: 4,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.05, attack: 0.001, curve: 5, lowFrom: 3200, lowTo: 1200, highFrom: 300 },
     },
   ],
 
@@ -1101,7 +1225,7 @@ export const SAURIAN_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> 
         separately: RMS counts the silence between hits and libels a transient by twenty decibels —
         this layer reads −44.6 dBFS rms against −26.2 peak, and only one of those is what an ear gets.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.095, attack: 0.0004, curve: 3.4, lowFrom: 11000, highFrom: 5600 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.19, gain: 0.067, attack: 0.001, curve: 3.4, lowFrom: 7000, highFrom: 3400 },
     },
   ],
 

@@ -1149,6 +1149,31 @@ throwing **one wall in a whole fight**; the fourth phase's own FAN broke 0270's 
 taking the wheel apart is the only way that was established; and a probe found that *no wall leaves
 while the hull spins* had no guard at all.
 
+### ⚠️ THE LISTEN IS LANDED AS 0331, AND TWO OF ITS QUESTIONS ARE THE PLAYER'S — 2026-09-19
+
+⚠️ **[0331](decisions/0331-the-heart-beats-under-it.md) IS TWENTY-FIVE LISTENS, AND ONE OF THEM WAS
+ABOUT EVERY LEVEL AT ONCE.** *"The other tracks have a bit of static and pop throughout them"* was a
+note stopping dead at its envelope's end, in a score where no music note had ever been released. The
+heart, the struck chords, the ride that became a tick and the onset that is not a note are all in the
+decision; what the night of shipping it measured is in
+[`the-night-of`](../reports/the-night-of-2026-09-19.md).
+
+⚠️ **`OWN_ROLES.core` IS NO LONGER OWED, AND FILLING IT IS WHAT RAISED THE TWO QUESTIONS.** Giving The
+Black Heart's leads their roles made them measurable for the first time, and the first measurement says
+the lament is not the loudest thing in its own section. **The report's §4 carries both, each with a
+recommendation**: whether this place follows the right layers, and whether a level may CLIMB at all —
+[0329](decisions/0329-a-level-may-fall.md) refuses a rise, and the rule as written makes a lament that
+builds to an orchestral fight impossible. `tests/themes.test.ts` names `core` as the one exception
+pending an answer, in either direction.
+
+⚠️ **AND `NOT_STEADIER` IS EMPTY NOW.** Both entries above were the same defect one step further on: a
+hold couples every rung of a layer, so a layer the arrangement has no opinion about at ANY rung cannot
+be measured through it. Widened, all seven places buy a steadier boundary.
+
+⚠️ **NOTHING IN 0331 HAS BEEN HEARD**, and one change is louder than the rest: Saurian Belt is **3.1 dB
+quieter**, because it was clipping at four rungs and the guard could only name one. The report's §2 is
+the listening list and §3.1 carries the measured alternative, which is one line.
+
 ### ⚠️ THE ALBUM IS A SEVEN-STEP PLAN AND STEP 1 IS MEASURED — 2026-09-16
 
 ⚠️ **[`the-album-plan`](../reports/the-album-plan-2026-09-07.md) HOLDS THE ORDER AND

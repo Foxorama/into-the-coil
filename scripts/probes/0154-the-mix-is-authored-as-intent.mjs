@@ -62,8 +62,12 @@ export const PROBES = [
       // The break is unchanged: a layer the ladder opens with nothing in the arrangement saying what
       // it is for.
       // Re-anchored by 0191 — `beat` and `crash` joined this row for the same reason.
+      // ⚠️ AND BY 0331, which took `crash` OUT of `push`: no place opens a crash there any more, so a
+      // role naming it was the same defect pointing the other way. The anchor no longer spells the
+      // pulse list out — the comment that follows the rung is what makes this `push` and not another,
+      // and it has survived every change to the row's contents.
       find:
-        "    pulse: ['sub', 'engine', 'perc', 'ride', 'beat', 'crash'],\n" +
+        "    pulse: ['sub', 'engine', 'perc', 'ride', 'beat'],\n" +
         "    bed: ['chords', 'groove'],\n" +
         "    air: ['drone'],\n" +
         "  },\n" +

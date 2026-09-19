@@ -146,7 +146,14 @@ export const ARRANGEMENT: Record<Exclude<MusicLevel, 'calm' | 'bossPeak'>, Reado
   push: {
     part: ['hook'],
     counter: ['arp', 'lead', 'call', 'bass'],
-    pulse: ['sub', 'engine', 'perc', 'ride', 'beat', 'crash'],
+    /*
+      ⚠️ **`crash` LEFT THIS RUNG WITH 0331, AND THE TABLE HAD NOT BEEN TOLD.** No place opens a crash
+      at `push` any more: Ember Nebula opens it at `surge` and above, and The Black Heart's is the
+      ballad's own heart, which is `surge` only. A role named for a layer nothing sounds is the shape
+      `0154`'s *names every layer the rung actually sounds, exactly once* exists to catch — it is the
+      solve given a part to balance that is not there, and every other place's share moves with it.
+    */
+    pulse: ['sub', 'engine', 'perc', 'ride', 'beat'],
     bed: ['chords', 'groove'],
     air: ['drone'],
   },
@@ -288,8 +295,12 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     ⚠️ **`run` IS UNCHANGED AND THE MATERIAL UNDER IT IS NOT.** `groove` is the jungle bass now
     rather than the octave bass, which is the same sentence about the level — *what you follow first
     here is the bottom* — with a different instrument saying it.
+
+    ⚠️ **AND THEN THE DRUMS, AT EVERY RUNG BEFORE THE FIGHT — 0331.** *"Needs the drums to have the
+    focus of the sound."* That is this row's own vocabulary: the thing a place asks you to follow. The
+    kit is `beat`, re-voiced as a floor, and it measures as the largest margin in the place at all four.
   */
-  saurian: { run: 'bass', push: 'arp', surge: 'hook', approach: 'drive', boss: 'frenzy', bossPeak: 'frenzy' },
+  saurian: { run: 'beat', push: 'beat', surge: 'beat', approach: 'beat', boss: 'frenzy', bossPeak: 'frenzy' },
   // *"A corridor, and something breathing in it… the hound"* — footsteps, then the thing running.
   labyrinth: { run: 'perc', push: 'ride', approach: 'toll', boss: 'stomp' },
   // *"It rings… it cracks… the blizzard"* — glass, then the lead, then the weather.
@@ -326,12 +337,20 @@ export const LEADS: Record<ThemeKind, Partial<Record<MusicLevel, MusicLayer>>> =
     of"*. **No other place follows `call` at `push`** — four of the six follow `arp` there, which is
     the copy this level was asked not to be.
 
-    ⚠️ **`surge` IS DELIBERATELY LEFT AT `lead`, AND THE DRIVE COULD HAVE ARGUED FOR `hook`.** It is
-    3.4 dB up on `lead` in gain — but by MARGIN, which is what *can you pick it out* actually measures,
-    `hook` −2.7, `counter` −2.8 and `lead` −3.0 are the same three-tenths of a decibel. **A tie is not
-    a displacement**, and the twin lead is what this place IS at `surge`.
+    ⚠️ **`surge` WAS LEFT AT `lead` BY 0330, AND 0331 MOVES IT TO `hook` BECAUSE `hook` IS NOW THE
+    PIPES.** 0330's reason was a tie — the riff, the twin lead and the first guitar within three
+    tenths of a decibel of one another. What was asked for next is a section that *"kicks into more of
+    a higher pitch… something higher and lifting and distinctly different from the first 1 min"*, and
+    the instrument that says so is the one to follow. `lead` steps down to a line under it.
   */
-  core: { run: 'beat', push: 'call', surge: 'lead', approach: 'counter', boss: 'frenzy' },
+  /*
+    0331's fourth listen: the tune takes the heartbeat's section and the piano the one at 42 s. The
+    guitar opens the level and the pipes lead the peak, but the shared `ARRANGEMENT` names neither layer
+    at those rungs, so neither can be appointed here — the pad and the strings stand in, and both are
+    held under what they stand in for.
+  */
+  // 0331's seventh listen: the piano's lament, the flute, the ballad's violins, and the lament again.
+  core: { run: 'call', push: 'hook', surge: 'counter', approach: 'call', boss: 'frenzy' },
 };
 
 /*
@@ -396,11 +415,43 @@ export const OWN_ROLES: Record<ThemeKind, Partial<Record<MusicLevel, Partial<Rec
     hole `docs/decisions/0172-a-place-opens-with-its-own-four.md` left in seven layer-rungs and
     `docs/state-of-play.md` has been flagging since; 0189 does not widen it.
   */
-  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },
+  // 0331: the tom fill is a pulse in the second section.
+  saurian: { push: { ownD: 'pulse' }, surge: { ownA: 'counter', ownC: 'pulse' }, approach: { ownA: 'counter' } },
   labyrinth: {},
   rime: {},
   mire: {},
-  core: {},
+  /*
+    ⚠️ **THE HEART IS A `bed` AT THE OPENING AND A `pulse` FROM `push` ON — 0331.** *"Clearly heard, but
+    the background backing for the track… fainter for the first 25 seconds, then kick in where it
+    does."* `bed` is *hear this under it* and `pulse` is *a pulse you can pick out when you attend to
+    it*, which is that sentence in this table's own words; `counter` would be a line to follow, which
+    is exactly what the ask says it must not become. 0164 then holds the heart to being heard in every
+    rung, which is what makes *"clearly heard"* a claim rather than a hope.
+  */
+  /*
+    ⚠️ **AND THE HELD PIPES ARE `ownB`** — 0331's third listen. A `bed` where they are a distant pad
+    under something else, and a `counter` at `push`, where they are the high harmony answering the tune
+    before `hook` takes the melody over. The heart is a `pulse` throughout now: *"low deep heartbeat"*
+    is the core of the piece from the opening.
+  */
+  core: {
+    // 0331's twelfth listen: a heart per movement — `ownC`, `ownD`, the ballad's drums and heart in
+    // `ownA`, and `ownB` — each a pulse. The fight's heart is in `stomp`.
+    run: { ownC: 'pulse' },
+    push: { ownD: 'pulse' },
+    surge: { ownA: 'pulse' },
+    /*
+      ⚠️ **`ownA` IS THE BALLAD'S KIT AND IT DOES NOT STOP AT `surge`.** The place opens it at
+      `approach` (0.32), `boss` (0.45) and `bossPeak` (0.47) as well, and said nothing at any of them —
+      three of the seven layer-rungs 0172 left silent to 0164. The slot is timpani, kick, snare and the
+      heart on the downbeat, so `pulse` is the role it already carries one rung down: *a pulse you can
+      pick out when you attend to it*. `counter` would make the kit a line to follow against the piano
+      lament it is under, which is what `approach`'s own row says it must not become.
+    */
+    approach: { ownA: 'pulse', ownB: 'pulse' },
+    boss: { ownA: 'pulse' },
+    bossPeak: { ownA: 'pulse' },
+  },
 };
 
 export const PROMOTES: Record<ThemeKind, Partial<Record<MusicLayer, Exclude<MusicRole, 'part'>>>> = {
@@ -475,19 +526,28 @@ export function roleOf(theme: ThemeKind | undefined, rung: MusicLevel, layer: Mu
   if (at === null) return null;
   let base: MusicRole | null = null;
   for (const role of MUSIC_ROLES) if (at[role].includes(layer)) base = role;
-  if (base === null) return null;
 
   /*
     ⚠️ **THE PLACE'S OWN LEAD DISPLACES THE ARRANGEMENT'S, AND THE DISPLACED ONE STEPS DOWN.** One
     part per rung is the invariant that makes the solve satisfiable at all — so appointing a new one
     has to demote the old one in the same breath, or the place would be over-determined exactly the
     way the first arrangement was.
+
+    ⚠️ **AND IT IS ANSWERED BEFORE THE SHARED TABLE GETS TO SAY `null`, BECAUSE A PLACE'S LADDER IS THE
+    AUTHORITY ON WHAT IT OPENS** — `docs/decisions/0162-a-place-has-its-own-ladder.md`. The Black Heart
+    reprises the piano lament at `approach`, which is `call`, and 0120 closed `call` at `surge` for
+    every place that has no opinion. Read in the old order the lead of that rung came back `null`: a
+    place following a layer nothing in the mix has a target for, with 0164 unable to ask whether the
+    thing the listener is meant to TRACK can be heard at all. `tests/arrangement.test.ts` argues this
+    in its own words one assertion up — asking the shared row here *"would refuse a place the right to
+    follow the very layer that makes it different."*
   */
   const lead = theme === undefined ? undefined : LEADS[theme][rung];
   if (lead !== undefined) {
     if (lead === layer) return 'part';
     if (base === 'part') return 'counter';
   }
+  if (base === null) return null;
 
   const lifted = theme === undefined ? undefined : PROMOTES[theme][layer];
   if (lifted === undefined) return base;

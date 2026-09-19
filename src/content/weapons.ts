@@ -315,7 +315,17 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     hint: 'Blades helix ahead',
     shot: 'shuriken',
     flight: 'coil',
-    fireEvery: [24, 21, 18, 15, 12],
+    /*
+      ⚠️ **EVERY RUNG DIVIDES THE BEAT NOW, WHERE TWO OF THEM DID NOT** — asked for with the sounds: *"shurikens
+      need to be on the beat to fit in with the music and background tracks."* A beat is 24 steps and the gun
+      fires on the step grid (`stepsToGrid`), so a cadence is a rhythm: 24 is a quarter note and 12 an eighth,
+      but **21 and 15 are seven and five thirty-seconds** — figures that walk round the bar and land on a
+      different part of the beat every time, which is what *not fitting the music* is. The pulse's own ladder
+      (8, 8, 6, 6, 4) has always divided the beat. This one is a quarter, a quarter, a dotted eighth, a
+      quarter-note triplet and an eighth; the two ends are unchanged, the second rung waits for the third to
+      get faster (as the pulse's does), and the fourth is a sixteenth of a second slower than it was.
+    */
+    fireEvery: [24, 24, 18, 16, 12],
     barrels: [1, 1, 1, 1, 1],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],

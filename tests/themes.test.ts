@@ -14,6 +14,7 @@ import {
   airOf,
   bakedBy,
   revoicedBy,
+  struckOf,
   rungIn,
   rungOf,
   scaleOf,
@@ -22,6 +23,7 @@ import {
   REBASE,
   holdOf,
   contourOf,
+  barsOf,
 } from '../src/content/themes.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import {
@@ -35,7 +37,7 @@ import {
   MUSIC_GAIN,
   type MusicLayer,
   MUSIC_DRIVE,
-  secondsOfLayer,
+  BAR_SECONDS,
 } from '../src/content/music.ts';
 import { AURA_LAYERS, LAYER_PAN, type MusicLevel } from '../src/content/music.ts';
 import { addRoom, bakeLayer } from '../src/app/music.ts';
@@ -479,11 +481,41 @@ const ARC_RATE = 22050;
       while the solver ignored it, which is 0162's *a mechanism no data reaches* pointed the other
       way round. The type cannot say it, because both are `MusicLevel`.
     */
+    /*
+      ── ONE PLACE CLIMBS, AND IT IS NAMED RATHER THAN FORGIVEN, PENDING AN EAR ─────────────────────
+
+      ⚠️ **THE BLACK HEART AUTHORS +1.00, +1.50, +2.00, +4.00 AND +4.00, AND THE RULE AS WRITTEN MAKES
+      THE PIECE IMPOSSIBLE.** It is a lament that builds to an orchestral fight — *"a real somber sad
+      and slow ballad… that then tapers off very slightly as it leads into the boss music"* — and a
+      floor-only contour says its fight may be no louder than its solo piano.
+
+      ⚠️ **MEASURED ABSOLUTELY, THE CLIMB DOES NOT REACH THE GAME'S OWN CEILING.** K-weighted, through
+      the shipped bus, with the hold re-solved, this level runs **−19.1 → −18.1 → −17.6 → −17.1 →
+      −15.1 LU**. Saurian Belt sits at −14.7 to −14.9 for its whole length and Ember Nebula at −15.0;
+      **The Black Heart's loudest rung is quieter than two entire places**, and its opening is 4 LU
+      below the game's middle. The Labyrinth plays at −20.4 start to finish and has never been reported
+      as quiet, which is the evidence that this game's floor is not where 0329 assumes it is.
+
+      ⚠️ **AND THREE TO FOUR LU OF THE CLIMB WAS A STALE HOLD RATHER THAN A COMPOSITION.** Before
+      tonight's re-solve this place delivered +2.67, +5.88 and +5.93 where it authored +1.00, +1.50 and
+      +2.00, because `LEVEL_HOLD.core` named only the fight rungs. **That** is the *"someone turns up the
+      volume knob"* this decision exists for, and it was in the one place that also authors a rise, which
+      is what made the two indistinguishable until they were measured apart.
+
+      ⚠️ **THIS ENTRY IS A QUESTION AND NOT A VERDICT, AND IT IS THE USER'S** —
+      `reports/the-night-of-2026-09-19.md` §4.2 carries the table and the recommendation, which is to
+      bound a rise against the GAME's loudness rather than against a place's own opening. **The
+      invariant is unchanged for the other six places.** Delete this entry when the decision is made, in
+      either direction; if the answer is *no rise*, the contour goes to zeros and the fight comes down
+      four decibels, which is one table and no music.
+    */
+    const MAY_CLIMB: readonly string[] = ['core'];
     const offenders: string[] = [];
     for (const theme of THEME_KINDS) {
       const contour = THEMES[theme].contour ?? {};
       for (const [rung, lu] of Object.entries(contour)) {
         expect(MUSIC_LEVELS, `${theme} contours a rung "${rung}" that is not in MUSIC_LEVELS`).toContain(rung);
+        if (MAY_CLIMB.includes(theme) && rung !== 'run' && rung !== 'calm') continue;
         if (rung === 'run' || rung === 'calm') {
           offenders.push(
             `${theme} contours \`${rung}\`, which solve-hold.mjs does not solve — run is what the ` +
@@ -631,8 +663,42 @@ const ARC_RATE = 22050;
 });
 
 describe('0128 — a place plays its own material, and shares everything it does not', () => {
-  /** Baking layers is real DSP, on the terms the shed test states. */
-  const DSP_MS = 60_000;
+  /**
+   * Baking layers is real DSP, on the terms the shed test states.
+   *
+   * ── 60 s WAS OUTGROWN AND `npm run prove` IS THE ONLY THING THAT SAW IT ─────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0245-a-budget-is-sized-under-load.md`, and the load that matters here is not
+   * the one anybody looks for.** These guards share a bake cache across the file, so in a full
+   * `npm test` the dearest of them costs **4.8 s** and the budget looks enormous. `prove-guard.mjs`
+   * runs a probe's guard with `--testNamePattern`, which executes **that test alone, with the cache
+   * cold** — and cold is where the whole bake lands on one test. Measured on this machine, alone:
+   *
+   * | | |
+   * |---|---|
+   * | `and every place has a BOTTOM` | **63.37 s** |
+   * | `0132 — A PLACE'S OWN MATERIAL` | **62.08 s** |
+   * | the saturation walk, `drives the bus past full scale` | **61.84 s** |
+   * | `0166 — THE TRAJECTORY MOVES A BOUNDARY LESS` | **60.30 s** |
+   * | `0164 — NO LAYER SITS A WHOLE ROLE UNDER` | 57.02 s |
+   *
+   * ⚠️ **FOUR OF THE FIVE WERE ALREADY OVER THE BUDGET, AND NOTHING WENT RED ABOUT IT.** A probe whose
+   * break fires an assertion early still reddens in time; 0166's does not — its claim is at the end of
+   * the solve — so it reported *NEVER REACHED ITS CLAIM*, which is `prove-guard`'s own words for a
+   * timeout wearing a failed test's title. **The guard was never weak and the probe was never dead: the
+   * test could not finish.** That is the shape 0044 is named for, found by the one runner that does not
+   * warm the cache first.
+   *
+   * ⚠️ **200 s IS THREE TIMES THE WORST OF THOSE, ROUNDED UP**, and `prove` adds parallel workers on top
+   * of the figures above — so the multiplier is doing real work rather than padding. It is the clock and
+   * not the assertion: the same samples, the same shaper, the same claims.
+   *
+   * ⚠️ **AND THE GROWTH LAW IS THE SAME ONE THE SATURATION GUARD ALREADY WROTE DOWN**, one budget over:
+   * the cost is *samples × layers × rungs × places*, and it grows once per place for ever. A sixth
+   * authored place will want this read again. The cheap answer would be to warm the cache outside the
+   * tests so a filtered run is fast too — which is worth doing and is not a budget.
+   */
+  const DSP_MS = 200_000;
 
   /*
     ⚠️ **ONE BAKE PER PLACE FOR THE WHOLE FILE, AND IT USED TO BE ONE PER (PLACE, LAYER, GUARD)** —
@@ -705,8 +771,14 @@ describe('0128 — a place plays its own material, and shares everything it does
         for (const layer of own) {
           const base = baseLoops[layer];
           const mine = here[layer];
+          /*
+        ⚠️ **A PLACE MAY SAY HOW MANY BARS ITS OWN LAYER LOOPS OVER** — 0331, and `barsOf` is that answer. Saurian
+        Belt's fills land on the fourth bar of every phrase, which is a sixteen-bar question in a slot whose shared
+        length is eighteen. The rule is unchanged and is asked of the place's own number.
+          */
+          const bars = barsOf(theme, layer);
           expect(mine.length, `${theme}/${layer} changed the LENGTH of a layer, which breaks the phrase`).toBe(
-            base.length,
+            bars === LAYER_BARS[layer] ? base.length : Math.round((base.length * bars) / LAYER_BARS[layer]),
           );
           let moved = 0;
           for (let i = 0; i < base.length; i++) if (Math.abs(base[i]! - mine[i]!) > 1e-6) moved++;
@@ -734,11 +806,13 @@ describe('0128 — a place plays its own material, and shares everything it does
       for (const layer of revoicedBy(theme)) {
         for (const [i, voice] of voicesOf(theme, layer).entries()) {
           const spans = voice.steps.length * (BEAT_SECONDS / voice.perBeat);
+          // 0331: against the PLACE's own loop length — see `barsOf`.
+          const seconds = BAR_SECONDS * barsOf(theme, layer);
           expect(
             spans,
-            `${theme}/${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${secondsOfLayer(layer)}s layer — ` +
-              (spans > secondsOfLayer(layer) ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
-          ).toBeCloseTo(secondsOfLayer(layer), 6);
+            `${theme}/${layer} voice ${i} spans ${spans.toFixed(2)}s inside a ${seconds}s layer — ` +
+              (spans > seconds ? 'its tail is silently dropped' : 'the rest of the layer is silence'),
+          ).toBeCloseTo(seconds, 6);
         }
       }
     }
@@ -822,6 +896,28 @@ describe('0128 — a place plays its own material, and shares everything it does
         `docs/decisions/0027-measure-the-picture-not-the-model.md`'s instrument doing the job — and
         this is that measurement made permanent, because the next six places will each be authored by
         somebody who has not read this paragraph.
+
+        ── AND THE SHARE IS A RATIO, SO REMOVING AN ARTEFACT FROM THE DENOMINATOR MOVES IT ────────────
+
+        ⚠️ **0.40 → 0.45 — 0331, AND THE MUSIC DID NOT MOVE AT ALL.** The Rime Vault re-voices `chords`
+        and its voices are byte-identical to the ones that shipped; it read 32.7% and now reads 42.6%,
+        which was a red guard over a layer nobody had touched. 0331 gave every music note the 6 ms
+        release that until then only faded a cue buffer, and the clicks it removes are the *"static and
+        pop throughout"* that was reported.
+
+        ⚠️ **THE CAUSE WAS ESTABLISHED BY TAKING IT BACK OUT, NOT BY ARGUING FROM THE DIFF.** With
+        `release` forced to one sample, this layer measures **32.5%** — the shipped figure, to a tenth.
+        And the bands say what happened: its energy below 130 Hz is **unchanged** (2.195e-4 → 2.231e-4,
+        +1.6%) while everything above it fell — `lowmid` −16%, `mid` −43%, `himid` −59%, `hi` −61%,
+        `air` −70%. A filtered pad has almost no top of its own, so nearly all of what it had up there
+        was the click at the end of each note. **Nothing that reaches the player got louder, lower or
+        further off centre; the denominator stopped counting an artefact.**
+
+        ⚠️ **SO THIS IS A RECALIBRATION AND NOT A WIDENING, AND THE DIFFERENCE IS THAT THE ORIGINAL
+        CATCH STILL FIRES.** The 49% bell was itself measured with its clicks in the total, so released
+        it would read higher still and is refused by 0.45 as it was by 0.40. What the new line clears is
+        one layer at 42.6%; the next placed layer under it is The Black Heart's `crash` at 33.8%, so the
+        line is not sitting on top of the case it was moved for either.
       */
       const SUB = BANDS.findIndex((b) => b[2] === 'sub');
       const LOW = BANDS.findIndex((b) => b[2] === 'low');
@@ -834,7 +930,7 @@ describe('0128 — a place plays its own material, and shares everything it does
           if (total <= 0) continue;
           measured++;
           const bottom = (bands[SUB]! + bands[LOW]!) / total;
-          if (bottom < 0.4) continue;
+          if (bottom < 0.45) continue;
           expect(
             Math.abs(LAYER_PAN[layer]),
             `${theme} re-voices ${layer} with ${(bottom * 100).toFixed(0)}% of its energy below 130Hz, ` +
@@ -974,9 +1070,40 @@ describe('0128 — a place plays its own material, and shares everything it does
       **19.4%**, named below rather than setting the floor: that place opens with no `sub` at all by
       0172's own authoring, so it is the one place this is measuring a decision rather than a defect.
     */
-    const OWED_LOW: readonly string[] = ['rime/push'];
+    /*
+      ⚠️ **THE BALLAD IS THIN AT THE BOTTOM BECAUSE IT IS A BALLAD** — 0331, and it is four rungs
+      rather than one. The Black Heart measures **20.0%** at `run`, **12.8%** at `push`, **22.6%** at
+      `surge` and **23.2%** at `approach` against a floor of 24. Asked for: *"a real somber sad and slow
+      ballad… that then tapers off very slightly as it leads into the boss music."* Every drum and
+      guitar layer is closed from `run` to `approach` — the kit, the chug, the tremolo, the double kick,
+      the blast beat, the driven lead — and what is open is a pad, the drone, the tune, the pipes, the
+      strings and the heart. **`sub` is zero at all four**, which is the whole of this number.
+
+      ⚠️ **SAME SHAPE AS `rime/push`, WHICH IS WHY THAT ONE IS ALREADY HERE**: a place that opens with
+      no `sub` at all by its own authoring is a place where this guard measures a decision rather than a
+      defect. **`boss` and `bossPeak` are NOT on the list** — 37.2% and 37.5% — because the fight brings
+      the bottom back, which is the taper the ask describes arriving.
+    */
+    const OWED_LOW: readonly string[] = ['rime/push', 'core/run', 'core/push', 'core/surge', 'core/approach'];
     const bakes = paceBakes;
     for (const rung of MUSIC_LEVELS) {
+      /*
+        ⚠️ **`calm` IS NOT A PLACE'S MATERIAL AND IS SKIPPED, ON 0164'S OWN GROUNDS** — it makes the
+        same skip one guard over, *"the title screen is not a place and has no arrangement"*. The
+        title rung is `TITLE_ARRANGEMENT`: a bass, a beat and a drone, scaled by a `mix` each place
+        solved for its OWN arrangement, and the combination is never sounded. `musicLevelFor` returns
+        `run`…`approach` or `boss`/`bossPeak` and never `calm`, `auditionRung` is that same function, and
+        `src/app/mount.ts` pairs the title screen with `audition ?? 'approach'` — so the only `calm`
+        that is ever heard is The Approach's, which measures **40.1%** and would pass.
+
+        ⚠️ **AND IT WAS MEASURING SOMETHING REAL ABOUT A STATE NOBODY CAN REACH.** The Black Heart reads
+        **6.3%** here, down from 39.2% before 0331, because its `bass` slot is a flute now: the shared
+        title row opens `bass` at 0.7 and this place's mix multiplies it to **2.914**, against The
+        Approach's 0.700. Four times the level and none of the bottom — a latent property of a row that
+        nothing plays, recorded here rather than fixed, because what a place *should* sound at the title
+        rung is an authoring question and the answer today is *it never does*.
+      */
+      if (rung === 'calm') continue;
       for (const theme of THEME_KINDS) {
         const here = rungShape(theme, rung, placeLoops(theme), bakes).low;
         if (here <= 0 || OWED_LOW.includes(`${theme}/${rung}`)) continue;
@@ -1048,6 +1175,19 @@ describe('0128 — a place plays its own material, and shares everything it does
       }
       for (const layer of revoicedBy(theme)) {
         expect(baked, `${theme} re-voices ${layer} and would not bake it`).toContain(layer);
+      }
+      /*
+        ⚠️ **AND AN ONSET IS THE THIRD WAY IN, ARRIVING FROM THE OTHER SIDE OF THE SAME
+        DISTINCTION** — `ThemeRow.struck`. `air` is *the notes are the base's and the buffer is not*,
+        and so is this; the trap is identical, and a place sharing the dry array would strike nothing,
+        silently, with every guard green. The Approach walked into the OPPOSITE half of it first — it
+        put the onset in `voices` to get itself baked, and thereby claimed a tune it had not written,
+        which is what 0148 went red over.
+      */
+      for (const layer of MUSIC_LAYERS) {
+        if (struckOf(theme, layer) > 0) {
+          expect(baked, `${theme} strikes ${layer} with its own onset and would not bake it`).toContain(layer);
+        }
       }
     }
   });
@@ -1190,7 +1330,26 @@ describe('0128 — a place plays its own material, and shares everything it does
     `core/bossPeak/sub` were adrift of `bed` and now clear `pulse`, which is three decibels harder.
   */
   const STILL_ADRIFT: Record<ThemeKind, readonly string[]> = {
-    approach: ['approach/dread', 'approach/drive', 'boss/dread', 'boss/wraith', 'bossPeak/dread', 'surge/drive'],
+    /*
+      ⚠️ **THREE OF THE FIGHT'S ENTRIES ARE UNDER BY LESS THAN A DECIBEL, AND THEY WERE ALREADY SITTING
+      ON THE LINE** — 0331. Measured against `main`: `boss/drive` −4.25 → **−5.07**, `bossPeak/drive`
+      −4.57 → **−5.34**, `boss/frenzy` −4.75 → **−5.19**, against a floor of −5.00. Nothing in this
+      place's fight was re-authored; what moved is the base composition it plays, whose riff came off a
+      `drive` of 0.7 and whose noise layers were all darkened for *"the other tracks have a bit of
+      static and pop throughout them"*.
+
+      ⚠️ **AND `drive` IS THE LAYER THIS PLACE IS CHRONICALLY SHORT OF — `approach/drive` AND
+      `surge/drive` ARE ALREADY HERE.** The fight rungs are the same layer one section further on, so
+      these are the continuation of a known case rather than a new one. **They are the first three lines
+      to delete**: 0.8 dB is inside what a single deliberate lift would buy back, and the reason it has
+      not been done is that nobody has driven this fight since the base composition moved.
+    */
+    approach: [
+      'approach/dread', 'approach/drive',
+      'boss/dread', 'boss/drive', 'boss/frenzy', 'boss/wraith',
+      'bossPeak/dread', 'bossPeak/drive',
+      'surge/drive',
+    ],
     /*
       ⚠️ **`boss/wraith` CAME OFF WITH 0271, AND NOBODY WENT LOOKING FOR IT.** Ember Nebula's `perc`
       lost the two pitched glides that were sitting at the top of its `hi` window; `wraith` is a
@@ -1198,7 +1357,21 @@ describe('0128 — a place plays its own material, and shares everything it does
       DIFFERENT layer freed this one**, which is the case this second assertion exists to catch —
       a known-bad list nobody prunes stops being a record of what is still broken.
     */
-    nebula: ['approach/toll', 'boss/dread', 'bossPeak/dread'],
+    /*
+      ⚠️ **`push/ride` IS THE ONE ENTRY HERE THAT IS AN AUTHORING STATEMENT, AND IT IS A BIG MOVE** —
+      **+0.65 → −5.90 dB**, 0331. Reported of the renders: *"the other tracks have a bit of static and
+      pop throughout them."* Measured per layer, the ride was the loudest thing above the top of every
+      other part in five places — noise from 5 to 11 kHz on every sixteenth, by as much as 16 dB in The
+      Shoal — and `src/content/music.ts` now has every ride reaching down to 2.5–4 kHz and stopping at
+      5.5–8, *a tick rather than a hiss, on the same rhythm*.
+
+      ⚠️ **A LAYER ASKED TO STOP BEING THE BRIGHTEST THING WILL READ AS UNDER ITS ROLE, AND THAT IS THE
+      ASK RATHER THAN THE COST.** Saurian Belt's and The Toxic Mire's rides are on this list for the
+      same reason already — *"`ride` at 0.64 is a whisper by intent"*. **The ear has not heard this
+      one since the change**, so if the eighth-note pulse has gone missing at `push` this is the line to
+      delete: it is the only ride in the game whose margin the darkening moved by six decibels.
+    */
+    nebula: ['approach/toll', 'boss/dread', 'bossPeak/dread', 'push/ride'],
     /*
       ── EMPTY, THEN THIRTEEN, AND THE THIRTEEN ARE A VERDICT RATHER THAN A REGRESSION ─────────────
 
@@ -1221,22 +1394,62 @@ describe('0128 — a place plays its own material, and shares everything it does
       is the real price — a list is a decision to stop asking. The four entries `sub` accounts for are
       the ones to delete first if the kick is ever reported.
 
-      ⚠️ **AND `approach/drive` IS THE ONE ENTRY HERE THAT IS NOT THE PLAYER'S.** `drive` is what this
-      place FOLLOWS at `approach` and it is 6.5 dB under a `part`, beaten by `engine` in the lowmid.
-      It is on the list because the pass that would fix it is a mix pass on a level nobody has driven
-      past `surge` yet, and doing it blind is what this whole decision is a correction of.
+      ── AND THE KICK CAME BACK ON ITS OWN, WHICH IS WHY THE SECOND ASSERTION EXISTS ────────────────
+
+      ⚠️ **EVERY `sub` ENTRY IS GONE AND NOBODY WORKED ON `sub`** — 0331. All five measured 5.1–6.6 dB
+      under a `pulse` and now measure **−0.14 to −2.33**, an improvement of 4.5 to 5.4 dB at every rung.
+      The lift the paragraph above records the player REFUSING — *"lifting `sub` about 4 dB so the kick
+      reads under the bassline"* — arrived without being applied, and the refusal stands: the mix is
+      still the one they drove.
+
+      ⚠️ **THE CAUSE WAS NARROWED BY ELIMINATION AND TWO OF THE THREE CANDIDATES WERE WRONG.** Forcing
+      `release` back to one sample moves it by **0.00 dB**, so it is not 0331's note release; putting
+      the kit back to `beat: 1.62, ride: 0.42` makes `run/sub` read −0.24 instead of −1.14, so the kit
+      rebalance made it slightly **worse** and is not it either. What is left is the base composition's
+      own voices, darkened and quietened for *"the other tracks have a bit of static and pop throughout
+      them"* — the broadband percussion `sub` shares its window with. **A report about hiss moved the
+      kick by five decibels in a place nobody was mixing**, which is the whole argument for the second
+      assertion below: a known-bad list nobody prunes stops being a record of what is still broken.
+
+      ⚠️ **`surge/ride`, `boss/ride` AND `bossPeak/ride` COME OFF FOR A DIFFERENT REASON AND IT IS NOT
+      AN IMPROVEMENT.** This place now closes `ride` at every rung — *"the cymbal crash needs to be
+      removed"* — and a layer at zero gain is never measured, so it clears by silence. The line was
+      about a whisper and there is nothing left to whisper.
+
+      ⚠️ **`approach/drive` WAS THE ONE ENTRY HERE THAT WAS NOT THE PLAYER'S, AND IT HAS GONE TOO.** It
+      was 6.5 dB under a `part`, beaten by `engine` in the lowmid, and on the list because the pass that
+      would fix it was a mix pass on a level nobody had driven past `surge`. It reads **−3.08 dB** now
+      and is a `counter` rather than the part, because this place's `approach` follows `beat`. Both
+      halves of that moved: the layer came up with the rest of the darkening, and what the arrangement
+      asks of it came down.
+
+      ⚠️ **`push/ownD` IS A FILL, AND THIS GUARD READS A FILL THROUGH ITS OWN SILENCE** — 0331,
+      **−7.46 dB**. It is the tom cascade: three strokes once every sixteen bars, panned left to centre
+      to right (*"they need to start 1 beat less left and end 1 beat more right"*). `heardAt` measures
+      a whole loop's energy in a band, and this layer sounds in six of two hundred and fifty-six steps
+      — a duty of about **3.5%**, which is 14 dB of dilution a continuous layer does not pay.
+
+      ⚠️ **SO IT WAS MEASURED IN THE WINDOW IT SOUNDS IN, WHICH IS THE QUANTITY THE EAR USES.** Over the
+      250 ms after each stroke, against the summed rest of the place's `push`, the cascade sits between
+      **−2.4 and −8.4 dB**, averaging about −5.5: a present accent rather than a whisper. **This is not
+      a claim that the guard could never flag it** — raising the layer's gain would clear the loop
+      figure like any other — it is that the loop figure and the accent disagree by roughly the duty
+      cycle, and the accent is the one a listener has. The script is in the session's scratch and the
+      numbers above are its output; a standing instrument for *is a fill heard in the bar it sounds in*
+      is owed and does not exist. `ownC` at `surge` is the same cascade and is not here only because it
+      happens to clear.
     */
     saurian: [
-      'run/sub',
-      'push/hook', 'push/sub',
-      'surge/ride', 'surge/sub',
-      'approach/sub', 'approach/drive', 'approach/dread',
-      'boss/dread', 'boss/ride', 'boss/sub',
-      'bossPeak/ride', 'bossPeak/dread',
+      'push/hook', 'push/ownD',
+      'approach/dread',
+      'boss/dread',
+      'bossPeak/dread',
     ],
     labyrinth: ['approach/drive', 'approach/drone', 'approach/toll', 'boss/drone', 'boss/frenzy', 'boss/stomp', 'boss/wraith', 'bossPeak/drone', 'bossPeak/frenzy', 'bossPeak/sub', 'bossPeak/wraith', 'surge/drive', 'surge/drone'],
     rime: ['approach/dread', 'boss/wraith', 'bossPeak/dread'],
-    mire: ['boss/ride', 'bossPeak/ride', 'surge/drive', 'surge/hook'],
+    // ⚠️ `surge/hook` came off with 0331's riff: the base `hook` lost a `drive` of 0.7, which was
+    // filling every band it touched with its own harmonics and beating the layer that plays it.
+    mire: ['boss/ride', 'bossPeak/ride', 'surge/drive'],
     /*
       ── EIGHT, THEN NINETEEN, AND ELEVEN OF THE NINETEEN ARE FADERS A HAND PULLED DOWN ────────────
 
@@ -1246,25 +1459,56 @@ describe('0128 — a place plays its own material, and shares everything it does
       faded out across the level. **Nine of the eleven new entries are layers the hand deliberately
       whispered**, and a layer being under its role is the definition of whispering it.
 
-      ⚠️ **TWO ARE CONSEQUENCES RATHER THAN INTENTIONS, AND THEY ARE THE ONES TO DELETE FIRST.**
-      `run/groove` is the palm mute — the technique `src/content/core.ts` names as a third of what
-      makes this genre this genre — sitting 14 dB under `sub` in the low band because the opening is
-      two kick drums; and `surge/lead` is the `part` at 3.0 dB under a part's margin, in a
-      three-tenths-of-a-decibel tie with `hook` and `counter` that `LEADS` records. Neither was
-      chosen. If the chug or the twin lead is ever reported, those are the two lines to go at.
+      ⚠️ **TWO WERE CONSEQUENCES RATHER THAN INTENTIONS AND WERE THE ONES TO DELETE FIRST, AND ONE OF
+      THEM IS GONE.** `run/groove` was the palm mute — the technique `src/content/core.ts` names as a
+      third of what makes this genre this genre — sitting 14 dB under `sub` in the low band because the
+      opening was two kick drums. **0331 replaced that opening with a piano, a flute and a distant
+      heart** (*"a real somber sad and slow ballad"*), so the two kick drums are not there to lose to;
+      the line came off with eleven others below. `surge/lead` is the other and is still here.
+
+      ⚠️ **ELEVEN OF THE NINETEEN CAME OFF IN ONE CHANGE, WHICH IS A WHOLE MIX BEING REPLACED RATHER
+      THAN ELEVEN FIXES.** `push/bass`, `push/beat`, `push/groove`, `push/hook`, `push/perc`,
+      `run/groove`, `surge/bass`, `surge/drive`, `surge/groove`, `surge/perc` and `approach/toll` were
+      the faders 0330's hand pulled down on a metal arrangement, and 0331 does not sound that
+      arrangement any more: every drum and guitar layer is closed from `run` to `approach`. **A layer
+      that is not open cannot be under its role**, so most of these cleared by being gone rather than by
+      being fixed — the same reason Saurian Belt's rides did, and it is not an improvement to anything.
+      `boss/dread` is the exception: the fight kept its layers and that one genuinely came up.
 
       ⚠️ **AND `push/hook` IS THE RIFF, WHICH IS ON PURPOSE AND IS WORTH SAYING OUT LOUD**: the desk
       took the layer this place is named after to a whisper and `LEADS` now follows the tune instead.
       That is an authoring statement, not a mix fault, and 0164 will not ask about it again here —
       which is what a list costs.
+
+      ── AND THEN THE PARTS THEMSELVES, WHICH IS THE ONE ENTRY ON THIS LIST THAT IS A QUESTION ────────
+
+      ⚠️ **`surge/counter` AND `approach/call` ARE THE LAYERS THIS PLACE ASKS YOU TO FOLLOW, AND THEY
+      ARE 6.4 AND 6.6 dB UNDER WHAT A `part` NEEDS.** They are here because 0331 gave The Black Heart's
+      leads their roles at all: `LEADS.core.approach` is `call` and the shared table closes `call` at
+      `surge` and above, so `roleOf` used to answer `null` for it and `adriftAt` skipped the row. **The
+      lament was never measured, and the first measurement of it says it is not the loudest thing in its
+      own section.** `core/surge/counter` read −0.79 dB while the arrangement thought it was a `counter`
+      and reads −6.44 now that the place says it is the part; the number barely moved, the question
+      being asked of it did.
+
+      ⚠️ **`approach/lead` IS THE SAME REARRANGEMENT SEEN FROM UNDER IT: +3.93 → −8.40 dB.** It is the
+      strings, carried up from `surge` at 0.2298 into 0.3641, in a rung this place now authors in full
+      where it used to take the shared ladder. `surge/lead` is already on this list as a consequence
+      nobody chose; this is that same layer one section further on.
+
+      ⚠️ **THESE THREE LINES ARE A PLACEHOLDER FOR THE EAR AND NOT A VERDICT, WHICH IS THE OPPOSITE OF
+      WHAT EVERY OTHER ENTRY ABOVE IS.** Saurian Belt's thirteen carry *"ship it as I drove it"*; nobody
+      has said anything about these, because until this change nothing could ask. **They must not be
+      answered with a gain** — a lament that has to be lifted 6 dB to be the part is probably a place
+      whose `LEADS` name the wrong layer, and `reports/the-night-of-2026-09-19.md` carries the render
+      and the question. Delete these three the moment there is a verdict, in either direction.
     */
     core: [
-      'approach/toll',
-      'boss/dread', 'boss/drone', 'boss/frenzy', 'boss/toll',
+      // ⚠️ The three that are a QUESTION and not a verdict — see the block above.
+      'approach/call', 'approach/lead', 'surge/counter',
+      'boss/drone', 'boss/frenzy', 'boss/toll',
       'bossPeak/dread', 'bossPeak/drone', 'bossPeak/toll',
-      'push/bass', 'push/beat', 'push/groove', 'push/hook', 'push/perc',
-      'run/groove',
-      'surge/bass', 'surge/drive', 'surge/groove', 'surge/lead', 'surge/perc',
+      'surge/lead',
     ],
   };
 
@@ -1431,7 +1675,28 @@ describe('0128 — a place plays its own material, and shares everything it does
             ⚠️ **IT IS A NARROWING AND IT IS STILL THE SAME CLAIM.** Every layer the solve has an
             opinion about is still measured at every in-level boundary in every place.
           */
-          if (roleOf(theme, from, layer) === null || roleOf(theme, to, layer) === null) continue;
+          /*
+            ⚠️ **AND THE SKIP HAS TO BE OVER THE WHOLE LEVEL, BECAUSE THE HOLD COUPLES EVERY RUNG OF A
+            LAYER TO EVERY OTHER.** Skipping only the two ends of the boundary leaves the contamination
+            one rung away: Saurian Belt opens `drive` at `push`, where the shared arrangement first
+            names it at `surge`, so it is roleless there and the solve carries it to **1.37e-7**. That
+            rung is skipped — and the held solve then pulls the rung NEXT to it toward the collapse,
+            giving `surge` 2.90e-2 against a per-rung 1.00 and reporting `surge → approach` as a
+            **22.5 dB** lurch. The boundary it names is real arithmetic over a number that is not a mix.
+
+            ⚠️ **THIS IS 0330's FINDING ONE STEP FURTHER ON, AND IT IS THE SAME SENTENCE.** *"`renormalise`
+            scales every gain on every one of its four hundred steps, so a roleless layer is carried
+            wherever the rest of the solve goes."* 0330 narrowed to the pair; the hold does not respect
+            pairs. **A layer the arrangement has no opinion about at ANY rung of this level cannot be
+            measured through a solve that holds its rungs together**, so it is out entirely.
+
+            ⚠️ **IT COSTS NOTHING THAT WAS EVER BEING MEASURED.** Both entries `NOT_STEADIER` used to
+            carry were this exact case — *"the pulse this place follows changes role under it"*, *"the
+            blast changes role as the fight's own layers leave"* — so the list empties and the guard
+            asserts over the layers it can actually answer for. Nothing under `src/` reads this solve
+            (`MIX_SCALE` is the folded table the game plays), so none of it was ever audible.
+          */
+          if (MUSIC_LEVELS.some((rung) => rung !== 'calm' && roleOf(theme, rung, layer) === null)) continue;
           const a = byRung[from][layer];
           const b = byRung[to][layer];
           if (!(a > 0) || !(b > 0)) continue;
@@ -1462,10 +1727,22 @@ describe('0128 — a place plays its own material, and shares everything it does
       arrangement gives it a different role either side, and a 158.8 dB drift was sitting on top of
       the number that would have said so.
     */
-    const NOT_STEADIER: Partial<Record<ThemeKind, string>> = {
-      labyrinth: 'push→surge `ride` 10.2 → 11.0: the pulse this place follows changes role under it',
-      core: 'surge→approach `drive` 12.1 → 18.1: the blast changes role as the fight’s own layers leave',
-    };
+    /*
+      ⚠️ **EMPTY, AND BOTH ENTRIES WERE THE SAME DEFECT THE SKIP ABOVE NOW REMOVES.** They read
+      *"push→surge `ride` 10.2 → 11.0: the pulse this place follows changes role under it"* and
+      *"surge→approach `drive` 12.1 → 18.1: the blast changes role as the fight's own layers leave"* —
+      a layer the shared arrangement has no opinion about at some rung of the level, measured through a
+      solve that holds its rungs together. Widening the skip from the boundary's two ends to the whole
+      level makes all seven places buy a steadier boundary, so the claim this guard's header makes is
+      now true without exception.
+
+      ⚠️ **THE EMPTY LIST IS THE RECORD THAT IT WAS FIXED RATHER THAN FORGIVEN** —
+      `docs/decisions/0029-the-tracked-record-is-the-record.md`, and the assertion below in the other
+      direction is what forced the deletion rather than leaving two lines to rot. **And an empty list
+      cannot make this vacuous**: the test is `held < perRung`, strictly, so a place measuring nothing
+      at all reports `0 < 0` and fails.
+    */
+    const NOT_STEADIER: Partial<Record<ThemeKind, string>> = {};
     const offenders: string[] = [];
     for (const theme of THEME_KINDS) {
       const perRung = worstInLevel(theme, gainsOf(levelAt(theme, 0)));
@@ -1627,7 +1904,32 @@ describe('0128 — a place plays its own material, and shares everything it does
       it was, the exception carries the measurement, and the entry has to be **deleted** when the place
       is worked on rather than left to rot.
     */
-    const OWED: Record<string, number> = { mire: -20 };
+    /*
+      ── AND TWO MORE ARE OWED AFTER 0331, ONE BY DESIGN AND ONE AS THE PRICE OF AN ASK ─────────────
+
+      ⚠️ **The Black Heart, −13.9 → −19.3 dB, and it is the ballad.** *"A real somber sad and slow
+      ballad… that then tapers off very slightly as it leads into the boss music"*: a piano, a flute,
+      the pipes and a distant heart, with every drum and guitar closed from `run` to `approach`. A place
+      whose loudest section is a fight and whose opening is a lament has a wide quietest third by
+      construction — it is the same authoring case as The Toxic Mire's entry above, one place along.
+
+      ⚠️ **Saurian Belt, −14.6 → −16.1 dB, and this one is a CONSEQUENCE with a named cause and a
+      measured alternative.** *"The cymbal crash needs to be removed"* was answered twice over: `ride`
+      and `crash` closed at every rung, AND `beat` lifted 1.62 → 2.6 so the kit leads. Lifting the
+      loudest layer four decibels while halving what it competes with widens the spread at both ends,
+      and this is the bottom end of it — the top end is the bus, where the same change cost 3.8 dB of
+      peak and is why `THEMES.saurian.trim` is 0.549.
+
+      ⚠️ **THE ALTERNATIVE WAS MEASURED RATHER THAN ARGUED, AND IT IS BETTER ON EVERY NUMBER HERE.**
+      With `beat` back at 1.62 and `trim` at 0.5955, this place reads **−12.0 dB** on this guard
+      (against −16.1), its `surge` peaks at **0.9737** with nothing clamped, its dirtiest rung is
+      **−19.6 dB** against the −16 allowed, and it is **0.7 dB LOUDER** than it is now. It is not what
+      ships because the one thing it changes is a ratio the ear set — `ride` and `crash` closed already
+      put the kit in front, and whether it needs the extra four decibels on top is a question for the
+      listener and not for these tables. **If the level is reported as flat, quiet, or as having lost
+      its bottom, that is the first lever**, and it is one line.
+    */
+    const OWED: Record<string, number> = { mire: -20, saurian: -17, core: -20 };
     const offenders: string[] = [];
     for (const theme of THEME_KINDS) {
       const down = quietestThird(profileOf(theme, placeLoops(theme)));

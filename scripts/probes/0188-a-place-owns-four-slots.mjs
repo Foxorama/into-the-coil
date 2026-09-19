@@ -26,8 +26,13 @@ export const PROBES = [
       path: 'src/content/arrangement.ts',
       // Re-anchored by 0189 and again by 0191, which deleted the break `ownB` held and left this
       // place with the one own slot it started with.
-      find: "  saurian: { surge: { ownA: 'counter' }, approach: { ownA: 'counter' } },",
-      replace: '  saurian: {},',
+      // ⚠️ AND AGAIN BY 0331, which gave this place two tom fills — so the row names three rungs now.
+      // The anchor is the row's FIRST RUNG KEY, because the break is *these roles reach no rung* whatever
+      // they are, and every previous re-anchoring here was a new slot being added to a list this probe
+      // never needed to know. Renaming the rung leaves the roles stated and reaching nothing, which is
+      // the defect exactly: the slots sound, and `roleOf` answers `null` for every one of them.
+      find: '  saurian: { push: {',
+      replace: '  saurian: { neverARung: {',
     },
   },
   {

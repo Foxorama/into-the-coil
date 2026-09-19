@@ -29,8 +29,12 @@ export const PROBES = [
     guard: 'never shortens a departure to fit a short build',
     edit: {
       path: 'src/app/music.ts',
-      find: '    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;',
-      replace: '',
+      // ⚠️ Re-anchored by 0331, which multiplied this by the place's own `glide`. Deleting the line
+      // outright would now also delete that, breaking two rules with one edit and leaving the verdict
+      // ambiguous — so the break is stated as the assignment it used to be: one ramp length for every
+      // move, `glide` and all, which is exactly *the size of a move decides nothing about its timing*.
+      find: '    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target) * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;',
+      replace: '    if (!aura) write.tau = (RAMP_SECONDS * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;',
     },
   },
   {
@@ -47,7 +51,13 @@ export const PROBES = [
       path: 'src/app/music.ts',
       // 0226 replaced the fade with one step per arrival; the same defect is every step landing on
       // the downbeat, so what leaves is gone before what replaces it has begun.
-      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });',
+      // ⚠️ Re-anchored by 0331: a step standing for several arrivals sharing a downbeat takes the
+      // SLOWEST of their ramps now rather than whichever sorted last, so the field is `together`.
+      // ⚠️ AND ITS GUARD NOW HAS ONE NAMED EXCEPTION — The Black Heart's `run → push`, which 0331
+      // measured at −1.01 dB. This break puts every departure on the downbeat in all seven places, so
+      // it reddens the other thirty-four boundaries and not only the exempted one; `npm run prove`
+      // reporting STILL GREEN here would mean that assumption is wrong and the exception is too wide.
+      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: together });',
       replace: '      staged.push({ layer: write.layer, target, at: bar, tau: RAMP_SECONDS / 3 });',
     },
   },
@@ -66,7 +76,8 @@ export const PROBES = [
       path: 'src/app/music.ts',
       // 0226: a departure's steps take each arrival's own ramp; a step on a short ramp is the same
       // defect — the fade shortened to something other than the build it is making room for.
-      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });',
+      // ⚠️ Re-anchored by 0331, on the same terms as the probe above: the field is `together`.
+      find: '      staged.push({ layer: write.layer, target, at: step.at, tau: together });',
       replace: '      staged.push({ layer: write.layer, target, at: step.at, tau: RAMP_SECONDS / 3 });',
     },
   },

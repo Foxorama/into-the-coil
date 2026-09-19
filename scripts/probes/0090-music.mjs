@@ -51,8 +51,10 @@ export const PROBES = [
       // docs/decisions/0128-a-place-plays-its-own-material.md, which made the source of a layer's
       // voices a function of the place. The break is unchanged both times — one layer left out of the
       // bake — and it is still expressed where the notes are gathered.
-      find: '  for (const voice of voicesOf(theme, layer)) {',
-      replace: "  for (const voice of (layer === 'chords' ? [] : voicesOf(theme, layer))) {",
+      // …and a third time by 0331, which renamed the loop variable so a place's own onset can be laid
+      // over the base's note — `raw` from the table, `voice` into the bake. The break is unchanged.
+      find: '  for (const raw of voicesOf(theme, layer)) {',
+      replace: "  for (const raw of (layer === 'chords' ? [] : voicesOf(theme, layer))) {",
     },
   },
   {
@@ -148,7 +150,9 @@ export const PROBES = [
         the pre-flight reports before a tree is copied, which is the trade 0079 argued for.
       */
       path: 'src/content/levels.ts',
-      find: "      { at: 3986, section: 'approach' },",
+      // …and again with 0331, exactly as the paragraph above predicted: 3986 → 4145, because the desk
+      // said so. The break is unchanged — 4420 of 4460 leaves 40 units, 1.1 s, under the 1.6 s ramp.
+      find: "      { at: 4145, section: 'approach' },",
       replace: "      { at: 4420, section: 'approach' },",
     },
   },

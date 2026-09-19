@@ -123,6 +123,42 @@ const TURN: readonly (number | null)[] = [
   0, _, _, _,
 ];
 
+/** A detune, in octaves — the unit `octave` is in — from cents. Saurian Belt's helper, for the strings. */
+const cents = (n: number): number => n / 1200;
+
+/**
+ * THE VIOLIN — `TURN`'s answer, on the beats the tune leaves empty.
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Heard in a render of the Shoal: *"the tune
+ * is fine but it needs to be more instrumental and needs I think some violin music as an interwoven
+ * melody, it's just a bit basic atm."* `TURN` sounds on beats one and three of every bar and nothing
+ * else does, so a line on two and four is interwoven by construction: each of its notes enters in a
+ * gap and is still sounding when the tune's next note lands on it.
+ *
+ * ⚠️ **UNDER THE TUNE, E4 TO D5, AND MOSTLY MOVING THE OTHER WAY.** The music box sits at 392–880 Hz,
+ * so the strings take the range below it where a violin is warmest, and where the tune climbs the
+ * line tends to fall — two parts rather than one part doubled. **Every note is a tone of its bar's
+ * chord**, `ROOT`/`THIRD`/`FIFTH` above, so where it holds under the tune's next note the rub passes.
+ */
+const VIOLIN: readonly (number | null)[] = [
+  _, 12, _, 15, // Am
+  _, 17, _, 12, // Dm
+  _, 15, _, 12, // Am
+  _, 14, _, 10, // Em
+  _, 12, _, 15, // Am
+  _, 15, _, 12, // F
+  _, 7, _, 12, // Am
+  _, 14, _, 17, // B°
+  _, 12, _, 17, // Dm
+  _, 15, _, 12, // Am
+  _, 14, _, 10, // Em
+  _, 12, _, 7, // Am
+  _, 8, _, 12, // F
+  _, 10, _, 14, // Em
+  _, 17, _, 14, // B°
+  _, 12, _, 15, // Am
+];
+
 /**
  * THE THING BEHIND YOU — `TURN`, four bars late.
  *
@@ -556,6 +592,27 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
     material, solved **3.08 → 2.01**, and it is affordable because `call` closes at `surge`: the two
     rungs it plays sit at 53% and 70% of the clipping ceiling where the four that follow sit at 93–98.
   */
+  /*
+    ── THE TUNE, PLUCKED, AND THE STRINGS ANSWERING IT — 0331 ──────────────────────────────────────
+
+    ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** *"The prominent notes in the first section
+    of the shoal don't sound like music as such, more just like a computer beeping."* Measured on single
+    rendered notes, the music box was a triangle ping thinned by a highpass **above its own fundamental**
+    and a sine body with every harmonic under −52 dB, both struck with a two-millisecond attack, with
+    nothing moving inside either note. That is what a beep is, rather than a mixing fault.
+
+    ⚠️ **SO THE NOTES ARE `TURN`'s AND THE INSTRUMENT IS A PLUCKED STRING.** A saw whose lowpass closes
+    over the length of the note — bright at the pick, dark as it rings — which is the one thing every
+    plucked instrument does and neither old voice could; a second saw seven cents sharp, because two
+    strings a hair apart is what makes a note sound played rather than generated; and a triangle body
+    under them that has harmonics to lose. The comb's click stays, quieter, as the pick.
+
+    ⚠️ **AND THE STRINGS ARE `VIOLIN` ABOVE, IN THIS LAYER BECAUSE IT IS SIXTEEN BARS.** An own slot is
+    four (0188), and a countermelody that changes chord every bar cannot live in four. So the violin
+    shares the tune's fader, its room and its close at `surge` — which is also what *interwoven* means.
+    **It is a string section and not a solo violin**: this synthesiser has no vibrato and no slide, so a
+    pair twelve cents apart beating against itself is standing in for both.
+  */
   call: [
     {
       steps: TURN,
@@ -563,26 +620,56 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 1,
       octave: 3,
       accents: [1, 0.72, 0.88, 0.7],
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.158, attack: 0.002, curve: 3.2, highFrom: 900 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.3, gain: 0.1, attack: 0.004, curve: 2.4, lowFrom: 3600, lowTo: 900, q: 0.9 },
     },
     {
-      // The octave under it, softer and slower to die: the part of a music box you feel in the box.
-      // ⚠️ It is no longer softer — it is the body, and a box you can only hear the strike of is the
-      // bell the voice below exists to prevent.
+      // The second string, seven cents sharp — the difference between a note played and a note generated.
+      steps: TURN,
+      pitched: true,
+      perBeat: 1,
+      octave: 3 + cents(7),
+      accents: [1, 0.72, 0.88, 0.7],
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.06, attack: 0.004, curve: 2.6, lowFrom: 3200, lowTo: 800, q: 0.9 },
+    },
+    {
+      // The body: an octave under, a triangle so it has something to lose as the filter closes.
       steps: TURN,
       pitched: true,
       perBeat: 1,
       octave: 2,
       accents: [1, 0.72, 0.88, 0.7],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.155, attack: 0.006, curve: 1.9 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 1.8, gain: 0.12, attack: 0.008, curve: 1.9, lowFrom: 1400, lowTo: 700, q: 0.7 },
     },
     {
-      // The mechanism: the click of the comb before the note. Take it away and it is a bell.
+      // The pick: what the comb's click was, softer, because a plucked string is not a mechanism.
       steps: TURN.map((note) => (note === null ? _ : 1)),
       pitched: false,
       perBeat: 1,
       octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.028, gain: 0.072, attack: 0.0004, curve: 7, lowFrom: 8000, highFrom: 3000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.024, gain: 0.04, attack: 0.0006, curve: 7, lowFrom: 6000, highFrom: 2400 },
+    },
+    {
+      // The violins: two bows six cents either side, slow to speak and held into the tune's next note.
+      steps: VIOLIN,
+      pitched: true,
+      perBeat: 1,
+      octave: 2 + cents(6),
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.07, attack: 0.12, curve: 0.55, lowFrom: 2400, lowTo: 1800, q: 1.1, drive: 0.1 },
+    },
+    {
+      steps: VIOLIN,
+      pitched: true,
+      perBeat: 1,
+      octave: 2 - cents(6),
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 1.9, gain: 0.07, attack: 0.14, curve: 0.55, lowFrom: 2300, lowTo: 1700, q: 1.1, drive: 0.1 },
+    },
+    {
+      // The bow on the string: rosin, faint, speaking with the note rather than ahead of it.
+      steps: VIOLIN.map((note) => (note === null ? _ : 1)),
+      pitched: false,
+      perBeat: 1,
+      octave: 0,
+      note: { wave: 'noise', from: 0, to: 0, seconds: BEAT_SECONDS * 1.2, gain: 0.012, attack: 0.09, curve: 1.1, lowFrom: 7000, lowTo: 5000, highFrom: 2600 },
     },
   ],
 
@@ -610,7 +697,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       perBeat: 2,
       octave: 1,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.142, attack: 0.013, curve: 2.4, lowFrom: 2000, lowTo: 820, q: 1.8, drive: 0.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.5, gain: 0.142, attack: 0.013, curve: 2.4, lowFrom: 2000, lowTo: 820, q: 1.2, drive: 0.25 },
     },
     {
       steps: PURSUIT,
@@ -628,7 +715,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.0915, attack: 0.002, curve: 2, highFrom: 2200 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.9, gain: 0.08, attack: 0.006, curve: 2, lowFrom: 3200, lowTo: 2400 }, // 0331: a highpass at 2.2 kHz left a low triangle as nothing but its corners — a click every cycle.
     },
   ],
 
@@ -671,7 +758,7 @@ export const LABYRINTH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>
       // ⚠️ 17 ms of decay where `curve: 8.5` over 0.026 s gave 3, and the gain comes down as the note
       // grows — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md` has the argument and the reason
       // the attack and the band do not move. Six places carried this one line.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 10000, highFrom: 4800 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.045, attack: 0.003, curve: 4, lowFrom: 5000, highFrom: 2600 },
     },
   ],
 

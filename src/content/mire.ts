@@ -266,7 +266,8 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
   */
   sub: [
     {
-      steps: ROOT,
+      // 0331: the held root above 45 Hz too — see `groove`.
+      steps: ROOT.map((root) => (root < 0 ? root + 12 : root)),
       pitched: true,
       perBeat: 0.25,
       octave: 0,
@@ -286,7 +287,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: false,
       perBeat: 4,
       octave: 0,
-      note: { wave: 'sine', from: 96, to: 30, seconds: 0.58, gain: 0.42, attack: 0.008, curve: 1.9, drive: 0.2 },
+      note: { wave: 'sine', from: 100, to: 45, seconds: 0.5, gain: 0.36, attack: 0.008, curve: 1.9, drive: 0.2 },
     },
     {
       // The fifth under the root, held long enough to blur into it — the layer that makes the bottom
@@ -504,13 +505,30 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
     fit and should be argued for against these two numbers.
   */
   groove: [
+    /*
+      ⚠️ **THE SINE UNDER THE SLUDGE IS HALF WHAT IT WAS, AND ITS E AND F ARE AN OCTAVE UP** —
+      `docs/decisions/0331-the-heart-beats-under-it.md`, heard on the album: *"the toxic mire is now pretty heavy on the
+      deep sub bass as well, it almost feels like I'm on an airplane, it's overpowering the rest of the music and ends
+      around 1.46 — it can be there, but just not as strong."* Measured, this voice was 81–93% of everything under
+      45 Hz at `push` and `surge`: sixteenths of a pure sine at 41–73 Hz, the bottom two notes below what a small
+      speaker plays as pitch. Mastered to the album's level it became pressure. The line is the same line; the body
+      is quieter, folded above 45 Hz, and a quiet octave over it keeps it heard.
+    */
     {
-      steps: SLUDGE,
+      steps: SLUDGE.map((note) => (note !== null && note < 0 ? note + 12 : note)),
       pitched: true,
       perBeat: 4,
       octave: 0,
       accents: [1, 0.7, 0.88, 0.68],
-      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.5, attack: 0.03, curve: 1.9 },
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.42, gain: 0.26, attack: 0.03, curve: 1.9 },
+    },
+    {
+      steps: SLUDGE,
+      pitched: true,
+      perBeat: 4,
+      octave: 1,
+      accents: [1, 0.7, 0.88, 0.68],
+      note: { wave: 'sine', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.12, attack: 0.03, curve: 2 },
     },
     {
       steps: SLUDGE,
@@ -563,6 +581,16 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
 
   /*
     ── THE REED: what `push` opens, and it is the only edge in the place until the fight ───────────
+
+    ⚠️ **AND THE EDGE WAS STATIC, SO IT IS DULLER BY SEVEN DECIBELS ABOVE 3 kHz** —
+    `docs/decisions/0331-the-heart-beats-under-it.md`. Heard in a render of the level: *"what sounds
+    like a bit of static kicking in around 40 secs, it's not static, but that's a bit how it sounds."*
+    `push` opens at 36.6 s and this layer lands in its build at 39.8; measured, it carries **43%** of
+    the 3 kHz+ band at `push` and takes that band up 5.4 dB on its own. The square's `drive` does most
+    of it — `sampleLayerInto` saturates AFTER the lowpass, so a driven square puts back every harmonic
+    its filter took out — and the two saws' cutoffs the rest. Undriven and darker, the top band is
+    **7.7 dB down and the body under 1 kHz is unchanged** (−29.8 → −29.3 dB), so the reed is the same
+    riff with the fizz taken off it.
   */
   hook: [
     {
@@ -571,7 +599,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 1,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.135, attack: 0.012, curve: 2.6, lowFrom: 1500, lowTo: 700, q: 2, drive: 0.24 },
+      note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.46, gain: 0.135, attack: 0.012, curve: 2.6, lowFrom: 1500, lowTo: 700, q: 2 },
     },
     {
       steps: REED,
@@ -579,7 +607,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       perBeat: 2,
       octave: 2,
       accents: [1, 0.72, 0.9, 0.7],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.07, attack: 0.014, curve: 3, lowFrom: 3200, lowTo: 1700, q: 1.6 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.4, gain: 0.07, attack: 0.014, curve: 3, lowFrom: 2200, lowTo: 1300, q: 1.6 },
     },
     {
       // The top of every fourth bar — the one place the reeds all move at once.
@@ -589,7 +617,7 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       pitched: true,
       perBeat: 2,
       octave: 2,
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.075, attack: 0.006, curve: 2.2, lowFrom: 5200, lowTo: 2600, q: 1.5 },
+      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.8, gain: 0.075, attack: 0.006, curve: 2.2, lowFrom: 2800, lowTo: 1600, q: 1.5 },
     },
   ],
 
@@ -650,7 +678,8 @@ export const MIRE_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
       // ⚠️ 17 ms of decay where `curve: 6` over 0.04 s gave 7 — the least sick of the six and the same
       // line — `docs/decisions/0152-a-layer-is-heard-in-the-sum.md`. The gain comes down by the same
       // fifth; the attack and the band, which are this place's own, do not move.
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.135, attack: 0.001, curve: 4, lowFrom: 8000, highFrom: 3000 },
+      // 0331: and back to its own level — the click was the attack, not the gain, and a fifth off left it inaudible under the sludge (0140).
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.145, attack: 0.001, curve: 4, lowFrom: 6000, highFrom: 2500 },
     },
   ],
 

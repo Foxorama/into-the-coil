@@ -59,4 +59,30 @@ export const PROBES = [
       replace: '      steps: HYMN,\n      pitched: true,\n      perBeat: 1,\n      octave: 5,',
     },
   },
+  /*
+    ⚠️ THE SET ARITHMETIC, WHICH HAD ONLY EVER BEEN GREEN. `bakedBy` is `revoicedBy` plus the two ways
+    a place's buffer differs without its notes doing — a room, and an onset. Drop either and the place
+    shares the base's DRY array, so the change never arrives: no crash, no red, just a room nobody
+    hears or a chord that still swells. It reads as obviously correct, which is the kind 0005 is about.
+
+    ⚠️ **AND ONLY THE ONSET HALF CAN BE BROKEN TODAY, WHICH `npm run prove` SAID AND THE GUARD'S OWN
+    COMMENT ALREADY KNEW.** A probe dropping `withAir` was written here and came back STILL GREEN,
+    because *"Ember Nebula gives air only to layers it also re-voices"* — every layer with a room is in
+    the set through `revoicedBy` regardless, so removing its other route changes nothing. Breaking it
+    needs TWO edits: a place given air on a layer it does not re-voice, AND the term removed. A probe
+    is one edit, so the air half stays unproven and this says so rather than carrying a probe that
+    passes. **It becomes breakable the day a place states `air` for a layer of the base composition**,
+    which is the case 0136 wrote the term for.
+  */
+  {
+    decision: '0136',
+    suite: 'tests/themes.test.ts',
+    broke: 'a place that strikes a layer baking the base’s dry one, so the chords still swell',
+    guard: '0136 — a place BAKES every layer it changes, and a room is a change',
+    edit: {
+      path: 'src/content/themes.ts',
+      find: '  return [...new Set([...revoicedBy(theme), ...withAir, ...withOnset])];',
+      replace: '  return [...new Set([...revoicedBy(theme), ...withAir])];',
+    },
+  },
 ];

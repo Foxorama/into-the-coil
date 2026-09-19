@@ -49,6 +49,13 @@ const _ = null;
  * file that grew to match the others would be changing level one without being asked to.
  */
 export const APPROACH_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
+  /*
+    ⚠️ **THE STRUCK CHORDS ARE NOT HERE, AND THAT IS THE POINT** — `THEMES.approach.struck`. They were:
+    `chords: MUSIC.chords.map(…)`, the base composition's own notes with every slow onset brought to
+    12 ms. It sounded right and it said the wrong thing — a key in `voices` is what `revoicedBy` reads,
+    so the place claimed a tune it had not written and 0148 held its G♯ to a scale nobody chose. The
+    onset is a property of how this place strikes a layer, and it is stated as one.
+  */
   ownA: [
     /*
       ── THE HAND — a maraca on the offbeat sixteenths, four bars of it ─────────────────────────────

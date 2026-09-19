@@ -1491,12 +1491,38 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       ⚠️ **THE OPENING IS HALVED AND THE MIDDLE TAKES IT.** 40.0s → 20.7s of `run`, with `push` and
       `surge` going 35.7 → 44.9 and 30.4 → 45.2. `bossAt` does not move, so the level is the same
       length and only where it turns has changed.
+
+      ⚠️ **AND `push` OPENS 6.3 SECONDS SOONER, ON A BAR** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+      *"Black heart needs the heartbeat a bit earlier, the beginning drums need to fade into the
+      heartbeat at 15 secs or so."* 744 → 518 units is 20.7 s → 14.4 s, which is a downbeat, so the
+      fade starts where it was asked for rather than on the next bar after it.
+
+      ⚠️ **AND THE LAST TWO SLIDE UP A SECTION, SO THE CLIMB HAS A STEP AT 42 s** — 0331's fourth
+      listen: *"we also need a mid-range tone kick in around the 42s mark, because the jump around 1.06
+      in volume is too steep."* A level has four rungs before its fight and this one now needs four
+      turns before 1:06, so `surge` opens at 41.6 s — a downbeat — for the piano, and `approach` takes
+      the 2360 `surge` had, which is still where the heart landmark below goes past. The piece's peak
+      now runs from 1:06 to the boss.
+
+      ⚠️ **AND THEN THEY BECAME FOUR MOVEMENTS, EACH ON A PHRASE** — 0331's seventh listen: *"slow,
+      sombre, melancholy intro → higher faster but similar tone → almost power ballad tale of loss →
+      fading back into the sombre melancholy with a faster beat"*, with *"a bit of a twist around the
+      1:10."* The lament's sixteen bars; the same song faster from bar 16 (25.6 s); the ballad from bar
+      40 (64 s), so it has landed by 1:10; the acceptance from bar 60 (96 s). Each boundary is a few
+      units short of its bar, so the rung has turned before that downbeat rather than after it.
+
+      ⚠️ **AND THE BALLAD OPENS FOUR BARS SOONER, ON ITS OWN LEAD-IN** — 0331's twelfth listen: *"the
+      volume rise and transition for the 1.10 change is a bit too severe, we need to increase the
+      instruments and volume slightly earlier to bridge that transition."* `surge` turns at bar 36
+      (57.6 s), and the ballad — still turned so its first bar lands on bar 40 — enters on its own last
+      four, `Dm · Em · F · G`, climbing into the top of the song while it swells in (`swell` on the row).
     */
     sections: [
       { at: 0, section: 'run' },
-      { at: 744, section: 'push' },
-      { at: 2360, section: 'surge' },
-      { at: 3986, section: 'approach' },
+      { at: 918, section: 'push' },
+      { at: 2070, section: 'surge' },
+      // 0331's fifteenth: the ballad's refrain and descent run to 1:55, so the acceptance opens at bar 72.
+      { at: 4145, section: 'approach' },
     ],
     boss: 'medusa',
     midBoss: { kind: 'axis', at: 1044 },
@@ -1512,7 +1538,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       beat at 70 would read as a strobe. `SCROLL_PER_STEP * STEPS_PER_SECOND` is the conversion and it
       is the same one `rig/bench.ts` prints its readout in.
     */
-    landmarks: [{ at: 2360, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
+    landmarks: [{ at: 2070, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
     theme: 'core',
   },
 };

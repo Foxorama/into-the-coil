@@ -34,11 +34,24 @@ export const PROBES = [
     guard: 'and a run that leaves the place before its material arrives never hears it',
     edit: {
       path: 'src/app/sound.ts',
-      // ⚠️ RE-ANCHORED BY 0157, which put a slice between `stopped` and the end check. The break is
-      // unchanged — the cancel flag stops being read — and `npm run prove` refused the stale anchor
-      // rather than reporting green, which is the whole of what 0019 is for.
-      find: '  const step = (): void => {\n    if (stopped) return;\n    /*',
-      replace: '  const step = (): void => {\n    /*',
+      /*
+        ⚠️ RE-ANCHORED BY 0157, which put a slice between `stopped` and the end check. The break was
+        the walk's own `if (stopped) return;` and `npm run prove` refused the stale anchor rather than
+        reporting green, which is the whole of what 0019 is for.
+
+        ⚠️ AND RE-AIMED BY 0331, WHICH READS THE FLAG IN TWO PLACES NOW. The walk checks it before each
+        slice and `finish` checks it before handing over, so the two are in SERIES: cutting the walk's
+        leaves `finish` refusing, and cutting `finish`'s means the walk never sets `walked` for it to
+        refuse. Measured, each one alone reports STILL GREEN — the guard is double-protected, which for
+        a hazard this real is reasonable rather than accidental.
+
+        ⚠️ SO THE BREAK IS THE CANCEL ITSELF, WHICH IS WHAT THIS PROBE HAS ALWAYS SAID IT IS: the
+        returned function stops setting the flag, both readers go on seeing `false`, and *a bake that
+        cannot be cancelled* is exactly the sentence above. Checked: it fires as `a cancelled bake
+        still handed its material over`.
+      */
+      find: '  return () => {\n    stopped = true;\n  };',
+      replace: '  return () => {\n    // The caller asked to stop and nothing here is listening.\n  };',
     },
   },
 ];

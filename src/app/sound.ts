@@ -60,7 +60,7 @@ import {
   type CueRow,
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { makeMusicOut, bakeLoops, layerNotes, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, type MusicOut } from './music.ts';
 import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 /*
@@ -183,8 +183,30 @@ const DECAY = 5;
  * find 0072's argument does not delete it a second time.
  *
  * ⚠️ **Six milliseconds: long enough to remove a step, short enough that nothing can hear it end.**
+ *
+ * ── AND IT ONLY EVER FADED A CUE'S BUFFER, SO EVERY NOTE OF THE MUSIC STOPPED DEAD ─────────────
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** This fade went on the end of `sampleCue`'s
+ * SUM, on the reasoning written beside it: *"a layer that ends early is already silent, and the only
+ * edge that can click is the end of the buffer itself."* True of a cue, and not of the music, which
+ * renders every note straight into a loop through `sampleLayerInto` — **so no note in the score has
+ * ever been faded.** The score is not written at `DECAY`'s 5: a held pad at `curve: 0.9` stops at 41%
+ * of its peak, mid-cycle, and a step that size is a click.
+ *
+ * ⚠️ **REPORTED FOUR TIMES, IN FOUR PLACES, AS SOMETHING ELSE.** *"A weird sound similar to the
+ * distortion… very common up to about the one minute mark… at 1:25 and onwards as well, not as
+ * frequent"* — then The Approach, Batteries *"right at the start"*, and the Gauntlet. The bus measured
+ * clean and no material is shared between those places, because the defect was in none of them: it
+ * was in how a note ends, so it lived wherever sustained notes do. So the same six milliseconds now
+ * end every LAYER as well, capped at half its length.
  */
 const RELEASE_SECONDS = 0.006;
+
+/** How fast a stated `vibrato` wavers — a flautist's or a violinist's, about five and a half a second. */
+const VIBRATO_HZ = 5.4;
+
+/** How long a stated `scoop` takes to reach the note. */
+const SCOOP_SECONDS = 0.09;
 
 /**
  * The resonance a lowpass gets when a layer does not name one, and the one a highpass always gets.
@@ -349,7 +371,33 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
   rateCeiling = rate;
   const length = Math.max(1, Math.round(cueSeconds(row) * rate));
   const out = new Float32Array(length);
-  for (const layer of row.layers) sampleLayer(layer, rate, rng, out);
+  /*
+    ⚠️ **THE SIDE: what is on the left and not the right** — see `pan` on `CueLayer`. A row in which no
+    layer states a pan never allocates it, draws the same noise in the same order and returns the same
+    samples it always did. A panned layer is rendered alone so that its own travel can be applied, then
+    summed into the middle exactly as it would have been.
+  */
+  const wide = row.layers.some((layer) => (layer.pan ?? 0) !== 0 || (layer.panTo ?? layer.pan ?? 0) !== 0);
+  const side = wide ? new Float32Array(length) : null;
+  for (const layer of row.layers) {
+    const from = layer.pan ?? 0;
+    const to = layer.panTo ?? from;
+    if (side === null || (from === 0 && to === 0)) {
+      sampleLayer(layer, rate, rng, out);
+      continue;
+    }
+    const alone = new Float32Array(length);
+    sampleLayer(layer, rate, rng, alone);
+    const start = Math.round((layer.at ?? 0) * rate);
+    const span = Math.max(1, Math.round(layer.seconds * rate));
+    for (let i = 0; i < length; i++) {
+      const v = alone[i]!;
+      if (v === 0) continue;
+      const u = Math.min(1, Math.max(0, (i - start) / span));
+      out[i] = out[i]! + v;
+      side[i] = side[i]! - v * (from + (to - from) * u);
+    }
+  }
   /*
     THE GLUE — `docs/decisions/0089-a-cue-has-a-body.md`.
 
@@ -359,6 +407,7 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
     bottom rather than being absent.
   */
   const release = Math.max(1, Math.round(RELEASE_SECONDS * rate));
+  const right = side === null ? null : new Float32Array(length);
   for (let i = 0; i < length; i++) {
     // The release, applied to the SUM: a layer that ends early is already silent, and the only edge
     // that can click is the end of the buffer itself.
@@ -370,9 +419,52 @@ export function sampleCue(row: CueRow, rate: number, rng: Rng, velocity = 1): Fl
       weight and the four would stop being one sound played four ways. That is the same reason the
       glue is over the sum in the first place.
     */
-    out[i] = saturate(out[i]!, row.glue) * row.gain * fade * velocity;
+    const scale = row.gain * fade * velocity;
+    if (side !== null && right !== null) {
+      // The glue over each SIDE's own sum, so neither channel can pass the rails the middle is held to.
+      const s = side[i]!;
+      side[i] = saturate(out[i]! + s, row.glue) * scale;
+      right[i] = saturate(out[i]! - s, row.glue) * scale;
+    }
+    out[i] = saturate(out[i]!, row.glue) * scale;
   }
+  if (side !== null && right !== null) WIDTHS.set(out, [side, right]);
   return out;
+}
+
+/**
+ * The two channels of a cue that has a width, keyed by the mono buffer every other part of this file
+ * already passes around.
+ *
+ * ⚠️ **A SIDE TABLE AND NOT A NEW RETURN TYPE, AND THE REASON IS IDENTITY.** `bakeCues`, the prewarm,
+ * `bakePlace` and `setCues` all hand a cue on as one `Float32Array` and compare them BY IDENTITY to
+ * know what a place re-voiced (0190). A pair would break every one of those comparisons to serve two
+ * call sites — the two that build an `AudioBuffer`. They ask here; a cue with no width is not in the
+ * table and is one channel, as it has always been. Weak, so a released set takes its channels with it.
+ */
+const WIDTHS = new WeakMap<Float32Array, readonly [Float32Array, Float32Array]>();
+
+/**
+ * A cue as the context plays it: two channels if its row gave it a width, one if not.
+ *
+ * ⚠️ **THE EVENT'S OWN PLACE IS STILL THE PANNER'S.** A `StereoPannerNode` takes a stereo input and leans
+ * it, so a wide cue keeps its width wherever in the field it happens.
+ */
+function bufferOf(ctx: AudioContext, data: Float32Array): AudioBuffer {
+  const wide = widthOf(data);
+  const buffer = ctx.createBuffer(wide === null ? 1 : 2, data.length, SAMPLE_RATE);
+  if (wide === null) {
+    buffer.getChannelData(0).set(data);
+  } else {
+    buffer.getChannelData(0).set(wide[0]);
+    buffer.getChannelData(1).set(wide[1]);
+  }
+  return buffer;
+}
+
+/** The left and right of `cue`, if its row gave it a width — and `null` if it is one channel. */
+export function widthOf(cue: Float32Array): readonly [Float32Array, Float32Array] | null {
+  return WIDTHS.get(cue) ?? null;
 }
 
 /**
@@ -409,8 +501,38 @@ export function sampleLayerInto(
 ): void {
   rateCeiling = rate;
   const length = Math.max(1, Math.round(layer.seconds * rate));
-  const attack = Math.max(1, Math.round((layer.attack ?? ATTACK_SECONDS) * rate));
+  /*
+    ⚠️ **A MUSIC NOTE ON A TRIANGLE, SAW OR SQUARE TAKES AT LEAST THREE MILLISECONDS TO ARRIVE** — 0331,
+    reported of every level's render: *"the other tracks have a bit of static and pop throughout them."* At
+    phase 0 a triangle is at +1, a saw at −1 and a square at +1, so a note with a 0.4–2 ms attack began
+    with a jump of the whole waveform; forty-five voices across the seven places are written that way.
+
+    ⚠️ **THE FIRST ANSWER STARTED EACH WAVE ON ITS ZERO CROSSING, AND IT MOVED EVERY PLACE'S BALANCE.** A
+    shifted triangle or saw is no longer in phase with the sine an instrument stacks on the same note: The
+    Black Heart's flute fell 11 dB as its triangle cancelled its sine, and its drone rose 6 as a saw that
+    had been cancelling one began to add. The phase is left where every mix was tuned; the edge is softened
+    instead. A cue is untouched (`wrap` is only true for music), because a sound effect's hard edge is often
+    its point.
+  */
+  const floorSeconds = wrap && (layer.wave === 'tri' || layer.wave === 'saw' || layer.wave === 'square') ? 0.003 : 0;
+  const attack = Math.max(1, Math.round(Math.max(layer.attack ?? ATTACK_SECONDS, floorSeconds) * rate));
   const curve = layer.curve ?? DECAY;
+  /*
+    ⚠️ **THE LAST SIX MILLISECONDS OF EVERY MUSIC NOTE FALL TO SILENCE INSTEAD OF STOPPING** — 0331,
+    and `RELEASE_SECONDS` has the report. **`wrap` gates it, for the same reason the attack floor above
+    is gated**: 0331's rule is *every music NOTE*, and a cue already ends at zero twice over — its own
+    envelope decays there, and `sampleCue` fades the summed row.
+
+    ⚠️ **UNGATED, IT MADE TWO GUARDS UNBREAKABLE, WHICH `npm run prove` IS THE ONLY THING THAT SEES.**
+    A third mechanism satisfying *a buffer that stops mid-waveform clicks* meant 0089's break — the row
+    fade taken back out — left two others standing, and 0325's overrunning note was covered as well.
+    `tests/sound.test.ts` says this in its own words about the FIRST time it happened: *"a guard
+    measuring a quantity that two mechanisms both satisfy cannot tell you which one is missing."* This
+    would have been the third, added by a decision whose text does not claim it.
+  */
+  const release = wrap ? Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2))) : 0;
+  // 0331's ninth listen: a note that states a release dies away over it, on a curve the ear hears as even.
+  const tail = layer.release ? Math.min(length - 1, Math.round(layer.release * rate)) : 0;
   const low = makeFilter();
   const high = makeFilter();
   /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
@@ -425,7 +547,14 @@ export function sampleLayerInto(
     if (!wrap && at >= out.length) break;
     const u = i / length;
     // Exponential in the frequency, which is what makes it linear to the ear.
-    const step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
+    let step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;
+    // 0331's ninth listen: a vibrato that eases in over the first third of the note.
+    if (layer.vibrato) step *= Math.pow(2, (layer.vibrato * Math.min(1, u * 3) * Math.sin((i / rate) * VIBRATO_HZ * Math.PI * 2)) / 1200);
+    // 0331's eleventh listen: a scoop, easing into the pitch over the first 90 ms.
+    if (layer.scoop && i < SCOOP_SECONDS * rate) {
+      const left = 1 - i / (SCOOP_SECONDS * rate);
+      step *= Math.pow(2, (layer.scoop * left * left) / 1200);
+    }
     phase += step;
     if (phase >= 1) phase -= 1;
     let value: number;
@@ -451,6 +580,11 @@ export function sampleLayerInto(
     if (layer.drive) value = saturate(value, layer.drive);
     let envelope = Math.exp(-curve * u);
     if (i < attack) envelope *= i / attack;
+    if (length - i <= release) envelope *= (length - 1 - i) / release;
+    if (length - i <= tail) {
+      const left = (length - i) / tail;
+      envelope *= left * left;
+    }
     out[at] = (out[at] ?? 0) + value * envelope * layer.gain;
   }
 }
@@ -642,7 +776,7 @@ export const PAN_BUCKETS = 9;
  * its tail has to be gone before the next one matters. `FASTEST_FIRE` is 0.067 s, and the pulse
  * states no room at all for that reason.
  */
-export const CUE_ROOM_SECONDS = 1.1;
+export const CUE_ROOM_SECONDS = 2;
 
 /**
  * How dark the tail gets, as the lowpass the impulse is drawn behind, in Hz at the head and the end.
@@ -985,6 +1119,42 @@ export interface WebAudioOut extends AudioOut {
  */
 let prewarmed: { cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null = null;
 
+/** Something that synthesises one layer somewhere other than here — a worker pool, in a browser. */
+export type LayerBaker = (layer: MusicLayer, theme: ThemeKind | undefined) => Promise<Float32Array>;
+
+/**
+ * Who bakes a place's layers, if not this thread.
+ *
+ * ⚠️ **THE BLACK HEART'S OWN MATERIAL IS THIRTY-FIVE SECONDS OF SYNTHESIS** — 0331; it was five. Walked on
+ * the main thread that is four notes and eight milliseconds a slice, each slice a dropped frame, for as
+ * long as the bake lasts: a level that opens on the last level's music and stutters until its own arrives.
+ * `src/main.ts` hands a worker pool here (`src/app/bake-pool.ts`), and `bakePlace` sends every layer to
+ * it. The cues stay on the walk — a place re-voices two or three and they are milliseconds.
+ *
+ * ⚠️ **`null` IS THE WALK, AND EVERY TEST THAT IS NOT A BROWSER RUNS IT.** Node has no `Worker` of this
+ * kind and a bundler's import means nothing there, so the job walk is not a fallback that rots: it is the
+ * path the whole suite exercises, and the one a browser without workers still gets.
+ */
+let layerBaker: LayerBaker | null = null;
+export function useLayerBaker(baker: LayerBaker | null): void {
+  layerBaker = baker;
+}
+
+/**
+ * The shared layers whose buffer has been let go, because the place that is loaded re-voices them.
+ *
+ * ⚠️ **`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`, finished** — 0331. A place's own
+ * material was baked at the boundary and the shared copy of the same layer was kept beside it for ever, so
+ * The Black Heart — which re-voices twenty-one layers, three of them forty-two bars long — held its own
+ * set AND a base set it could not hear: 141 MB where one set is 89. The base copy of a layer the place
+ * re-voices is dropped once the place's own has been handed over, and baked again at the next boundary
+ * that needs it, which is a job walk like any other.
+ */
+const released = new Set<MusicLayer>();
+
+/** An empty buffer, which is what a released layer's slot holds until it is baked again. */
+const RELEASED = new Float32Array(0);
+
 /**
  * Synthesise everything, spread across frames, and keep it for the first gesture.
  *
@@ -1188,15 +1358,81 @@ export function bakePlace(
   }
   // ⚠️  and not  — a place may state a ROOM for a layer it shares the notes of,
   // and that layer's buffer is different too (0136). Sharing the dry array would drop the room.
-  for (const layer of bakedBy(theme)) {
+  const mine = bakedBy(theme);
+  /*
+    ⚠️ **A LAYER GOES TO A WORKER WHERE THERE IS ONE, AND ONTO THE WALK WHERE THERE IS NOT** — 0331, and
+    `useLayerBaker` has the argument. The two routes run the same `bakeLayer` and produce the same samples;
+    what differs is whose frames pay for it. `stopped` is read when a layer LANDS, because a worker cannot be
+    called back: a bake that was cancelled finishes anyway and its buffers are dropped on the floor.
+  */
+  const baker = layerBaker;
+  let stopped = false;
+  let walked = false;
+  let waitingOn = 0;
+  for (const layer of mine) {
+    if (baker !== null) {
+      waitingOn++;
+      void baker(layer, theme).then((buffer) => {
+        if (stopped) return;
+        own[layer] = buffer;
+        waitingOn--;
+        finish();
+      });
+      continue;
+    }
     jobs.push(() => {
       const { buffer, notes } = layerNotes(layer, SAMPLE_RATE, theme);
       own[layer] = buffer;
       for (const note of notes) jobs.push(note);
     });
   }
+  /*
+    ⚠️ **AND THE SHARED LAYERS THE PLACE BEFORE THIS ONE LET GO ARE BAKED AGAIN HERE** — 0331, and it is
+    the other half of `released`. This place shares them, so it needs the base version: the same job walk,
+    one note at a time, finished before the boundary like everything else in this list. Nothing is baked
+    that the incoming place does not play, which is why leaving a place costs nothing and arriving at one
+    costs only what it did not already have.
+  */
+  for (const layer of MUSIC_LAYERS) {
+    if (mine.includes(layer) || !released.has(layer)) continue;
+    if (baker !== null) {
+      waitingOn++;
+      void baker(layer, undefined).then((buffer) => {
+        if (stopped) return;
+        base[layer] = buffer;
+        own[layer] = buffer;
+        released.delete(layer);
+        waitingOn--;
+        finish();
+      });
+      continue;
+    }
+    jobs.push(() => {
+      const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
+      base[layer] = buffer;
+      own[layer] = buffer;
+      released.delete(layer);
+      for (const note of notes) jobs.push(note);
+    });
+  }
+  /** Hand the place over once the walk is done AND every layer sent to a worker has come back. */
+  const finish = (): void => {
+    if (stopped || !walked || waitingOn > 0) return;
+    stopped = true;
+    ready({ loops: own, cues: ownCues });
+    /*
+      ⚠️ **AND THE SHARED COPY OF EVERYTHING THIS PLACE RE-VOICES IS LET GO** — 0331. It is dropped
+      AFTER the hand-over and not before, so a walk that is cancelled half way leaves the base set whole
+      and the mixer keeps playing what it has. What the player hears is the place's own buffer; the base
+      one underneath it was audible nowhere.
+    */
+    for (const layer of mine) {
+      if (own[layer] === base[layer]) continue;
+      base[layer] = RELEASED;
+      released.add(layer);
+    }
+  };
   let next = 0;
-  let stopped = false;
   const step = (): void => {
     if (stopped) return;
     /*
@@ -1210,7 +1446,8 @@ export function bakePlace(
     */
     next = sliceOf(jobs, next);
     if (next >= jobs.length) {
-      ready({ loops: own, cues: ownCues });
+      walked = true;
+      finish();
       return;
     }
     schedule(step);
@@ -1259,6 +1496,22 @@ function sliceOf(jobs: (() => void)[], at: number): number {
 export const PREWARM_SLICE_JOBS = 4;
 
 /**
+ * The base set, whole — with anything a place let go baked again here.
+ *
+ * ⚠️ **THE ONE PATH THAT CANNOT TAKE A JOB WALK** — 0331. A context built inside a gesture needs every
+ * layer at once, and `released` can only be non-empty if a run had already reached a boundary, which
+ * means the player is deep in a level and not at the title. It is the cold path's own cost, paid where
+ * the cold path already pays it.
+ */
+function wholeLoops(): Record<MusicLayer, Float32Array> {
+  const base = prewarmed?.loops;
+  if (base === undefined) return bakeLoops(SAMPLE_RATE);
+  for (const layer of released) base[layer] = bakeLayer(layer, SAMPLE_RATE);
+  released.clear();
+  return base;
+}
+
+/**
  * The prewarmed set, or `null` if there is not one. **For `tests/sound.test.ts` and nothing else.**
  *
  * ⚠️ **Exported because the property that matters cannot be checked from outside**: the prewarmed
@@ -1269,9 +1522,15 @@ export function takePrewarmed(): { cues: Float32Array[][]; loops: Record<MusicLa
   return prewarmed;
 }
 
+/** Every layer a loaded place has let go of the shared copy of — for `tests/sound.test.ts`. */
+export function releasedLayers(): ReadonlySet<MusicLayer> {
+  return released;
+}
+
 /** Throw away the prewarmed set, so a test can drive both paths. For `tests/sound.test.ts` only. */
 export function resetPrewarm(): void {
   prewarmed = null;
+  released.clear();
   warming = false;
   // ⚠️ The half-filled set goes too, or a drain after a reset completes the set the reset threw away.
   pending = null;
@@ -1420,11 +1679,9 @@ export function makeAudioOut(): WebAudioOut {
         cueSamples = samples;
         buffers = samples.map((variants) =>
           variants.map((data) => {
-            const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
             // `getChannelData().set` rather than `copyToChannel`, which types its argument as a
             // `Float32Array<ArrayBuffer>` specifically and rejects the plain one `sampleCue` returns.
-            buffer.getChannelData(0).set(data);
-            return buffer;
+            return bufferOf(ctx!, data);
           }),
         );
         /*
@@ -1433,7 +1690,7 @@ export function makeAudioOut(): WebAudioOut {
           because the four loops have to START together, and a layer created later starts wherever
           the bar happens to be.
         */
-        music = makeMusicOut(ctx, master, prewarmed?.loops ?? bakeLoops(SAMPLE_RATE), SAMPLE_RATE);
+        music = makeMusicOut(ctx, master, wholeLoops(), SAMPLE_RATE);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
@@ -1479,10 +1736,7 @@ export function makeAudioOut(): WebAudioOut {
         const variants = samples[index]!;
         if (variants === cueSamples[index]) continue;
         buffers[index] = variants.map((data) => {
-          const buffer = ctx!.createBuffer(1, data.length, SAMPLE_RATE);
-          // `getChannelData().set` rather than `copyToChannel`, on the unlock path's own terms.
-          buffer.getChannelData(0).set(data);
-          return buffer;
+          return bufferOf(ctx!, data);
         });
       }
       cueSamples = samples;

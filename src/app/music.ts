@@ -24,7 +24,6 @@
 import {
   BEAT_SECONDS,
   BAR_SECONDS,
-  secondsOfLayer,
   MUSIC_DRIVE,
   MUSIC_GAIN,
   MUSIC_COMPRESSOR,
@@ -39,6 +38,7 @@ import {
   AURA_CURVE,
   AURA_BUILD_UNITS,
   PAN_HORIZON_SECONDS,
+  PAN_GLIDE_SECONDS,
   PHRASE_SECONDS,
   type MusicLayer,
   type MusicLevel,
@@ -48,11 +48,13 @@ import {
 import { sampleLayerInto, saturate } from './sound.ts';
 import {
   THEMES,
+  barsOf,
   airOf,
   auraCeilingOf,
   panTrackOf,
   mixOf,
   rungOf,
+  struckOf,
   voicesOf,
   type ThemeKind,
   type ThemeLadder,
@@ -198,23 +200,49 @@ export function bakeLayer(layer: MusicLayer, rate: number, theme?: ThemeKind): F
  * the order they are returned reproduces `bakeLayer` exactly, and `tests/sound.test.ts` holds that
  * the two paths agree sample for sample.
  */
+/** A fixed number in `[0, 1)` for a place in a pattern — the same every bake, and unrelated between places. */
+function hashOf(step: number, perBeat: number, length: number, salt: number): number {
+  const x = Math.sin(step * 12.9898 + perBeat * 78.233 + length * 37.719 + salt * 4.1414) * 43758.5453;
+  return x - Math.floor(x);
+}
+
 export function layerNotes(
   layer: MusicLayer,
   rate: number,
   theme?: ThemeKind,
 ): { buffer: Float32Array; notes: (() => void)[] } {
-  const seconds = secondsOfLayer(layer);
+  // 0331's fifteenth: a place may loop a layer over more bars than the shared length.
+  const seconds = BAR_SECONDS * barsOf(theme, layer);
   const buffer = new Float32Array(Math.round(seconds * rate));
   const rng = makeRng('music').stream(layer);
   const notes: (() => void)[] = [];
-  for (const voice of voicesOf(theme, layer)) {
+  /*
+    ⚠️ **THE PLACE'S OWN ONSET, OVER THE BASE'S NOTES** — `ThemeRow.struck`. It is a row field rather
+    than a `voices` entry because an envelope is not a note: a place that copied the tune into its own
+    table to change one field would be claiming notes it never wrote, and 0148 would then hold that
+    copy to a scale the place never chose. A voice that already speaks faster than the place asks for
+    keeps its own attack, so *strike this layer* cannot accidentally SLOW anything down.
+  */
+  const onset = struckOf(theme, layer);
+  for (const raw of voicesOf(theme, layer)) {
+    const stated = raw.note.attack;
+    const voice =
+      onset > 0 && stated !== undefined && stated > onset ? { ...raw, note: { ...raw.note, attack: onset } } : raw;
     const step = BEAT_SECONDS / voice.perBeat;
     for (let i = 0; i < voice.steps.length; i++) {
       const value = voice.steps[i];
       if (value === null || value === undefined) continue;
-      const at = i * step;
+      const loose = voice.loose ?? 0;
+      /*
+        0331's take two: a player's drift, from a hash of where the note sits rather than the noise
+        stream, so the drums' noise is unchanged and every voice of one instrument — which share a
+        line, a rate and so a hash — drifts together instead of flamming against itself.
+      */
+      const late = loose > 0 ? loose * hashOf(i, voice.perBeat, voice.steps.length, 1) : 0;
+      const at = i * step + late;
       if (at >= seconds) break;
-      notes.push(() => renderNote(voice, value, i, at, rate, rng, buffer));
+      const played = loose > 0 ? { ...voice, note: { ...voice.note, gain: voice.note.gain * (1 - Math.min(0.25, loose * 10) * hashOf(i, voice.perBeat, voice.steps.length, 2)) } } : voice;
+      notes.push(() => renderNote(played, value, i, at, rate, rng, buffer));
     }
   }
   /*
@@ -1017,6 +1045,38 @@ export function nextBarFrom(anchor: number, now: number): number {
 }
 
 /**
+ * The loop start a pan horizon is written from: the last one at or before `now`, on the anchor's grid.
+ *
+ * ── THE HORIZON WAS COUNTED FROM THE ANCHOR, SO IT RAN OUT UNDER A PLAYER WHO STAYED ────────────
+ *
+ * ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Reported of the Descent: *"the 3 piece
+ * high note… isn't bouncing between left and right ears anymore."* `schedulePan` wrote
+ * `PAN_HORIZON_SECONDS` of moves from the moment the loops STARTED, and re-wrote them only on a change
+ * of place — and a retry of the same level, or the music room looping it, is not a change of place. So
+ * fifteen minutes after the Descent's music first loaded there were no moves left, and the stabs sat
+ * at `+0.55` for good. `PAN_HORIZON_SECONDS`' own note says *"written once at the start and never
+ * thought about again"*; the player listening for a quarter of an hour is what thought about it.
+ *
+ * ⚠️ **ON THE ANCHOR'S GRID, NOT FROM NOW**, for the reason `schedulePan` already gives: the track is
+ * a position in the layer's loop, and starting it at `now` would slide the gesture off its notes.
+ */
+export function panWindowFrom(anchor: number, now: number, loop: number): number {
+  if (now <= anchor || !(loop > 0)) return anchor;
+  return anchor + Math.floor((now - anchor) / loop) * loop;
+}
+
+/**
+ * Whether the pan horizon written until `until` should be re-written at `now` — half of it gone.
+ *
+ * ⚠️ **ONE COMPARISON A FRAME, WHICH IS WHAT KEEPS THIS OFF THE FRAME BUDGET** — 0022. The re-write
+ * itself is the same few hundred native events it always was, now once every seven and a half minutes
+ * of a place that is still playing rather than once ever.
+ */
+export function panNeedsRearm(now: number, until: number): boolean {
+  return now > until - PAN_HORIZON_SECONDS / 2;
+}
+
+/**
  * When a new PLACE's loops go on the air — the next bar that is far enough ahead to schedule.
  *
  * ── IT WAS THE NEXT PHRASE, AND A LEVEL OPENED ON THE PREVIOUS PLACE'S MUSIC ────────────────────
@@ -1167,12 +1227,30 @@ export function entryBars(
   arriving: readonly Pick<RampWrite, 'layer' | 'target'>[],
 ): Partial<Record<MusicLayer, number>> {
   const rank = (layer: MusicLayer): number => MUSIC_ROLES.indexOf(roleOf(theme, level, layer) ?? 'air');
-  const order = [...arriving].sort(
-    (a, b) =>
-      rank(a.layer) - rank(b.layer) ||
-      a.target - b.target ||
-      MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer),
-  );
+  /*
+    ⚠️ **A LAYER THE PLACE PINS TO THE DOWNBEAT IS NOT PART OF THE STAGGER, SO IT DOES NOT SPEND A
+    BAR** — `ThemeRow.onBeat`, 0331's thirteenth listen. It used to be ranked with the rest and then
+    have its time overwritten at the call site, which left its bar occupied and nothing in it. The
+    Black Heart's `approach` is what that looks like: `drone`, `chords`, `ownB` and `toll` all land on
+    the downbeat, bars one and two hold nothing at all, and `call` — the piano lament, the `part` — is
+    pushed out to bar three. **Four point eight seconds of build for a single staggered arrival**, in
+    a section that is eight and three-quarters long, which is 0171's *a build fits inside the section
+    it opens* going red over a build that was never authored.
+
+    ⚠️ **THE CAP IS WHY THIS IS A DEFECT AND NOT A TASTE.** `shared` counts back from the LAST arrival
+    so that the thing the place asks you to follow lands on the final bar; a pinned layer in that count
+    is a phantom part the cap is making room for. The build is now as wide as the number of things that
+    actually move in it, which is what the comment below has always said it was.
+  */
+  const onBeat = THEMES[theme].onBeat ?? [];
+  const order = arriving
+    .filter((a) => !onBeat.includes(a.layer))
+    .sort(
+      (a, b) =>
+        rank(a.layer) - rank(b.layer) ||
+        a.target - b.target ||
+        MUSIC_LAYERS.indexOf(a.layer) - MUSIC_LAYERS.indexOf(b.layer),
+    );
   const bars: Partial<Record<MusicLayer, number>> = {};
   // Counted back from the last arrival, so the cap eats into the FRONT of the build and the thing
   // the place asks you to follow always lands on the last bar of it.
@@ -1273,9 +1351,20 @@ export function levelWrites(
       order. A layer doubling its own contribution is such a part. What still moves on the downbeat is
       what 0171 always meant by *the boundary* — a nudge, not an entry.
     */
-    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target)) / 3;
+    // 0331: a place may ask for every move to take longer — `glide` on its row, 1 where it says nothing —
+    // at a section change only: a piece starting from silence starts at the shared speed.
+    if (!aura) write.tau = (RAMP_SECONDS * rampScaleOf(was, target) * (standing ? (THEMES[theme].glide ?? 1) : 1)) / 3;
+    // 0331's twelfth listen: a place may start from silence at once, so its first note is heard as struck.
+    const fromSilence = THEMES[theme].fromSilence;
+    if (!aura && !standing && fromSilence !== undefined) write.tau = fromSilence;
+    // …and may ask a named layer to arrive more slowly, or more quickly, than the rung's own pace.
+    const swell = standing && target > 0 && was === 0 ? THEMES[theme].swell?.[layer] : undefined;
+    if (!aura && swell !== undefined) write.tau *= swell;
     if (!aura && target > 0 && was === 0) opening.push(write);
-    if (!aura && target === 0 && was > 0) closing.push(write);
+    // 0331: a layer the place says lingers leaves in one long fade rather than in the arrivals' steps.
+    const linger = standing && target === 0 && was > 0 ? THEMES[theme].linger?.[layer] : undefined;
+    if (linger !== undefined) write.tau *= linger;
+    else if (!aura && target === 0 && was > 0) closing.push(write);
     /*
       ── A CARRIED LAYER MAKING ROOM IS PACED LIKE A DEPARTURE — 0226 ─────────────────────────────
 
@@ -1302,7 +1391,8 @@ export function levelWrites(
   const bars = entryBars(theme, level, opening);
   for (const write of opening) {
     const late = bars[write.layer] ?? 0;
-    if (late > 0) write.at = bar + late * BAR_SECONDS;
+    // 0331's thirteenth listen: a layer the place puts on the beat arrives on the downbeat itself.
+    if (late > 0 && !(THEMES[theme].onBeat ?? []).includes(write.layer)) write.at = bar + late * BAR_SECONDS;
   }
   /*
     ── A DEPARTURE USED TO FADE ACROSS THE BUILD — 0215, SUPERSEDED BELOW ─────────────────────────
@@ -1343,14 +1433,30 @@ export function levelWrites(
     let power = was * was;
     const drop = power - end;
     const staged: RampWrite[] = [];
+    /*
+      ⚠️ **A SHARED DOWNBEAT TAKES THE SLOWEST OF ITS ARRIVALS AND IT USED TO TAKE THE LAST ONE.**
+      Several arrivals on one downbeat collapse into one step, and that step's ramp was whichever of
+      them happened to sort last — which is an ordering, not a quantity. The Black Heart's `run → push`
+      is what that costs: `arp` opens at 1.29 with a ramp of 4.267 s and `ownD` at 0.36 with 1.707,
+      both on the downbeat, so the bed gave up room for BOTH at the small one's pace while the big one
+      was still four seconds from arriving. Measured, a **−1.11 dB** hole where the guard allows −1.
+
+      ⚠️ **THE ROOM IS NOT FILLED UNTIL THE SLOWEST THING FILLING IT HAS ARRIVED**, which is the same
+      sentence as *the bed gives up what each part brings, as it brings it* — it was simply not true of
+      a step that stands for more than one part. Taking the maximum is what makes the share and the
+      pace describe the same group.
+    */
+    let together = 0;
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]!;
       power -= (drop * step.target * step.target) / arriving;
+      if (step.tau > together) together = step.tau;
       const next = steps[i + 1];
       // Arrivals on one downbeat are one step; the last step lands on the target itself.
       if (next !== undefined && next.at === step.at) continue;
       const target = next === undefined ? write.target : Math.sqrt(power > 0 ? power : 0);
-      staged.push({ layer: write.layer, target, at: step.at, tau: step.tau });
+      staged.push({ layer: write.layer, target, at: step.at, tau: together });
+      together = 0;
     }
     writes.splice(writes.indexOf(write), 1, ...staged);
   }
@@ -1403,6 +1509,8 @@ export function makeMusicOut(
   let shape: ThemeLadder | undefined;
   /** Audio time at which loop position zero last began. Bar zero of the piece — 0117's grid. */
   let anchorAudio = 0;
+  /** Audio time the pan moves written last run out at — 0331's re-arm reads it once a frame. */
+  let panUntil = 0;
   /*
     ⚠️ **What each layer was last TOLD to head for, which is not what its gain currently reads** —
     0117. `setLevel` runs every frame and a quantised ramp takes a bar to arrive, so comparing against
@@ -1546,6 +1654,7 @@ export function makeMusicOut(
    * fader wants smoothing, and this is the opposite gesture.
    */
   const schedulePan = (when: number, theme: ThemeKind): void => {
+    panUntil = ctx.currentTime + PAN_HORIZON_SECONDS;
     for (const layer of MUSIC_LAYERS) {
       const param = pans[layer].pan;
       param.cancelScheduledValues(0);
@@ -1566,12 +1675,14 @@ export function makeMusicOut(
         arrive as one burst.
       */
       const from = ctx.currentTime;
-      for (let start = when; start < when + PAN_HORIZON_SECONDS; start += loop) {
+      // 0331: from the loop playing NOW, for a horizon from now — `panWindowFrom` has the report.
+      for (let start = panWindowFrom(when, from, loop); start < from + PAN_HORIZON_SECONDS; start += loop) {
         for (let i = 0; i < track.steps.length; i++) {
           const to = track.steps[i];
           if (to === null || to === undefined) continue;
           const at = start + i * step;
-          if (at > from) param.setValueAtTime(to, at);
+          // 0331: glides over about 20 ms instead of jumping — a pan that jumps under a held note is a click.
+          if (at > from) param.setTargetAtTime(to, at, PAN_GLIDE_SECONDS / 3);
         }
       }
     }
@@ -1632,7 +1743,8 @@ export function makeMusicOut(
       place = theme;
       shape = ladder;
       if (!on) return;
-      if (moved && started) schedulePan(anchorAudio, theme);
+      // 0331: and when half the horizon has gone, because staying in one place is not a change of place.
+      if (started && (moved || panNeedsRearm(ctx.currentTime, panUntil))) schedulePan(anchorAudio, theme);
       /*
         ⚠️ **THE WHOLE DECISION IS `levelWrites` AND NONE OF IT IS HERE** — 0117. What to write, when
         the ramp starts and whether a layer moves at all are one piece of arithmetic, and it is

@@ -698,7 +698,7 @@ export const RIME_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> = {
         **What the table above is for now is the opposite of what it was for** — it said *do not touch
         this*, and it says *this is no longer the pinned number in the place*.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.096, attack: 0.0004, curve: 4, lowFrom: 14000, highFrom: 7000 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.068, attack: 0.001, curve: 4, lowFrom: 8000, highFrom: 4000 },
     },
   ],
 

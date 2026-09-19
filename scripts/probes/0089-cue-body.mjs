@@ -26,8 +26,10 @@ export const PROBES = [
     guard: 'THE SHED: an explosion is spread across the spectrum rather than humped in the middle',
     edit: {
       path: 'src/app/sound.ts',
-      find: '  for (const layer of row.layers) sampleLayer(layer, rate, rng, out);',
-      replace: '  for (const layer of row.layers.slice(0, 1)) sampleLayer(layer, rate, rng, out);',
+      // ⚠️ Re-anchored by 0331, which opened this loop into a block so a panned layer can be rendered
+      // alone and summed into the middle. The break is unchanged: only the first layer is rendered.
+      find: '  for (const layer of row.layers) {\n',
+      replace: '  for (const layer of row.layers.slice(0, 1)) {\n',
     },
   },
   {
@@ -61,8 +63,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: everything that explodes has a body, and not just a hiss',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.98, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 430, highFrom: 150, highTo: 62, q: 0.8, drive: 0.34 },",
-      replace: "      { wave: 'noise', from: 0, to: 0, seconds: 0.17, gain: 0.98, attack: 0.002, curve: 4.5, lowFrom: 2400, lowTo: 430, q: 0.8, drive: 0.34 },",
+      // ⚠️ Re-anchored by 0331's cue re-balance (gain 0.98 → 0.432). The break is the HIGHPASS coming
+      // off, so the anchor starts at the filters and carries no gain to be stranded by.
+      find: "curve: 4.5, lowFrom: 2400, lowTo: 430, highFrom: 150, highTo: 62, q: 0.8, drive: 0.34 },",
+      replace: "curve: 4.5, lowFrom: 2400, lowTo: 430, q: 0.8, drive: 0.34 },",
     },
   },
   {
@@ -101,10 +105,13 @@ export const PROBES = [
       // endpoint on a scale degree. 0089's claim is untouched — what a boom is made of is a low sine
       // and not a filtered saw — and the replacement stays deliberately OFF the key, because a hand
       // reaching for a saw here would not be thinking about the key either.
+      // ⚠️ And re-anchored again by 0331, which shortened and re-balanced both sines. The claim is
+      // untouched — what a boom is made of is a low sine and not a filtered saw — and the replacement
+      // stays deliberately off the key for the same reason as before.
       find:
-        "      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },\n" +
-        "      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.95, gain: 0.75, attack: 0.02, curve: 1.8 },",
-      replace: "      { wave: 'saw', from: 900, to: 580, seconds: 0.85, gain: 1.3, attack: 0.001, curve: 2.1, drive: 0.28 },",
+        "      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },\n" +
+        "      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.8, gain: 0.289, attack: 0.015, curve: 2.2, drive: 0.15 },",
+      replace: "      { wave: 'saw', from: 900, to: 580, seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },",
     },
   },
 ];

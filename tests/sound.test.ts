@@ -44,6 +44,7 @@ import {
   resetPrewarm,
   sampleCue,
   sampleLayerInto,
+  releasedLayers,
   takePrewarmed,
   variantAt,
   velocitiesOf,
@@ -51,10 +52,11 @@ import {
 } from '../src/app/sound.ts';
 import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
-import { AURA_LAYERS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
+import { AURA_LAYERS, BAR_SECONDS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
 import {
   THEMES,
   THEME_KINDS,
+  barsOf,
   bakedBy,
   cueLayersOf,
   cueRowOf,
@@ -618,7 +620,11 @@ describe('the cue table', () => {
       ).toBeLessThanOrEqual(Math.ceil(jobs / PREWARM_SLICE_JOBS));
       // Two minutes: measured 30–35 s under the whole suite, and a budget is three times the worst
       // loaded cost — `docs/decisions/0245-a-budget-is-sized-under-load.md`.
-    }, 120_000);
+      // ⚠️ 120 → 400 s, AND THE NUMBER IS A FINDING — 0331. The Black Heart's boundary bake is 35 s of synthesis where
+      // it was 5 (6,342 notes against 2,647; three forty-two-bar loops), and this walks all of it: 127 s measured
+      // beside one other suite, three times that under load (0245). What the game does about a 35-second bake is a
+      // loading screen, and is not this guard's to say.
+    }, 400_000);
 
     it('0157 — AND A PRESS FINISHES THE PREWARM RATHER THAN STARTING AGAIN', () => {
       /*
@@ -699,6 +705,52 @@ describe('the cue table', () => {
       const warm = (): void => {
         if (takePrewarmed() === null) prewarmAudio((run) => run());
       };
+
+      it('0331 — and the shared copy of what it re-voices is let go, and baked again when it is wanted', () => {
+        /*
+          ⚠️ **THE HALF OF 0133 THAT WAS NEVER BUILT.** The place's own material was baked at the boundary
+          and the shared buffer of the same layer was kept for the life of the process — so The Black Heart,
+          which re-voices twenty-one layers and holds three forty-two-bar loops, sat on 141 MB of audio of
+          which 52 MB could not be heard from anywhere. Asked for by the hand that owns the number:
+          *"free the shared copy, I think we'll need to do loading screens in between levels anyway so we may
+          as well force the issue now."*
+
+          ⚠️ **AND THE RE-BAKE IS THE PART THAT CAN GO WRONG SILENTLY.** A place that shares a layer the last
+          place replaced needs the base version back, and getting it wrong sounds like the previous level's
+          instrument playing under this one — which is exactly what a swap at the phrase would hide. So this
+          asks for the audio, sample for sample, after a release has happened.
+        */
+        warm();
+        const mine = bakedBy('core');
+        const base = takePrewarmed()!.loops;
+        bakePlace('core', () => {}, (run) => run());
+        for (const layer of mine) {
+          expect(releasedLayers().has(layer), `core re-voices ${layer} and the shared copy was kept`).toBe(true);
+          expect(base[layer].length, `${layer}: the shared buffer is still resident`).toBe(0);
+        }
+        expect(mine.length, 'the place this is written against no longer re-voices anything').toBeGreaterThan(8);
+
+        // …and the place after it, which shares most of them, gets the base audio back.
+        let handed: Record<MusicLayer, Float32Array> | null = null;
+        bakePlace('nebula', ({ loops }) => {
+          handed = loops;
+        }, (run) => run());
+        expect(handed, 'the place never finished, so this measured nothing').not.toBeNull();
+        const whole = bakeLoops(SAMPLE_RATE, 'nebula');
+        const shared = mine.filter((layer) => !bakedBy('nebula').includes(layer));
+        expect(shared.length, 'the two places re-voice the same set, so nothing here is re-baked').toBeGreaterThan(4);
+        for (const layer of shared) {
+          expect(releasedLayers().has(layer), `${layer} was not baked again for the place that shares it`).toBe(false);
+          const a = handed![layer];
+          const b = whole[layer];
+          expect(a.length, `${layer} came back a different length`).toBe(b.length);
+          for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) throw new Error(`${layer} differs at sample ${i} after a release: ${a[i]} vs ${b[i]}`);
+          }
+        }
+        // 360 s: two places walked and one baked whole. 135 s measured beside one other suite, and three times the
+        // worst cost under load is the rule (0245).
+      }, 360_000);
 
       it('hands over exactly what a whole bake of that place would produce', () => {
         /*
@@ -949,6 +1001,57 @@ describe('the cue table', () => {
           'so this is not a phone argument; and the third raise must not be a number). What a change wanting ' +
           'more should buy is the boundary bake — docs/decisions/0133-the-place-is-baked-at-the-boundary.md.',
       ).toBeLessThan(56);
+    });
+
+    it('0331 — AND WHAT A PLACE HOLDS WHILE IT PLAYS, WHICH IS THE NUMBER NOBODY WAS MEASURING', () => {
+      /*
+        ⚠️ **THE BUDGET ABOVE COUNTS THE SHARED SET AND THE GAME DOES NOT PLAY THE SHARED SET.** A place
+        re-voices layers of its own and `bakePlace` bakes them at the boundary
+        (`docs/decisions/0133-the-place-is-baked-at-the-boundary.md`), so what is resident while a level
+        runs is the place's own buffers plus the shared ones it did not replace. The Black Heart re-voices
+        twenty-one layers and three of them are the ballad's forty-two bars — it went past the 56 MB line
+        by half again while the guard above stayed green, because the quantity it measures is not the
+        quantity the machine holds.
+
+        ⚠️ **AND UNTIL 0331 BOTH COPIES WERE HELD.** The shared buffer of a layer the place re-voices was
+        kept beside the place's own for the life of the process: 141 MB for The Black Heart, of which 52
+        was audible nowhere. `released` in `src/app/sound.ts` drops it at the hand-over and bakes it again
+        at the next boundary that shares it, which is what this guard is here to keep true.
+
+        ⚠️ **AND THE PLACE AFTER IT IS HELD WHILE THE BOSS IS FOUGHT**, because a place baked on arrival is music
+        that arrives late (`ahead` in `src/app/mount.ts`). So the number the machine holds is a PAIR — this
+        place's whole set and the next place's own layers — from the approach to the boundary, and one set the
+        rest of the time. Measured, at 44.1 kHz and four bytes a sample:
+
+        | the level | its set | + the next, held | peak |
+        |---|---|---|---|
+        | The Approach | 52.5 | Ember Nebula 46.9 | 99.3 |
+        | Ember Nebula | 52.5 | Saurian Belt 57.6 | 110.1 |
+        | Saurian Belt | 59.3 | Shoal 46.9 | 106.1 |
+        | Shoal, Batteries | 52.5 | 46.9 | 99.3 |
+        | Toxic Mire | 52.5 | The Black Heart 88.6 | **141.1** |
+        | The Black Heart | 88.6 | — | 88.6 |
+
+        ⚠️ **141 MB, FOR ABOUT A MINUTE, ONCE A RUN — AND IT IS THE BALLAD.** `groove`, `counter` and `beat` at
+        forty-two bars are 35.6 MB of The Black Heart, and forty-two bars is the ballad's own harmony rather
+        than a repeat that could be shortened. **The owner of this number is whoever is willing to shorten
+        that section or to make the player wait for it**, and the second is what a loading screen is. 0153
+        makes desktop the target and this spends that permission deliberately.
+      */
+      const MB = (bars: number): number => (bars * BAR_SECONDS * SAMPLE_RATE * 4) / 1e6;
+      const places = LEVEL_KINDS.map((kind) => LEVELS[kind].theme);
+      places.forEach((place, i) => {
+        const set = MUSIC_LAYERS.reduce((sum, layer) => sum + barsOf(place, layer), 0);
+        const next = places[i + 1];
+        const held = next === undefined ? 0 : bakedBy(next).reduce((sum, layer) => sum + barsOf(next, layer), 0);
+        const mb = MB(set + held);
+        expect(
+          mb,
+          `${place} holds ${mb.toFixed(1)} MB of loops at its peak, against a BUDGET of 145 MB — a limit ` +
+            `somebody chose, and the way to buy room is a shorter section or a longer wait rather than a ` +
+            `bigger number (0188's own note, one measurement over).`,
+        ).toBeLessThan(145);
+      });
     });
   });
 
@@ -2715,7 +2818,7 @@ describe('0173 — a cue happens somewhere', () => {
     // ⚠️ Both sides thinned, or the comparison is between two different clocks.
     const added = ringsFor(wet) - ringsFor(thin(dry));
     expect(added, `the room adds only ${(added * 1000).toFixed(0)} ms to the blast`).toBeGreaterThan(0.33);
-  }, 30_000);
+  }, 120_000); // 0331: the two-second room doubles the convolution — see the note on the reverb guard below.
 
   it('and the cues on the weapon cadence are DRY, because a tail cannot outlast its own repeat', () => {
     /*
@@ -2730,7 +2833,10 @@ describe('0173 — a cue happens somewhere', () => {
     */
     // And the arc's two, since 0233: the discharge rides the arc's cadence and the strike lands on
     // the same step, so both are the gun's rate again.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'throw'];
+    // ⚠️ `throw` LEFT THIS LIST — asked for of the shuriken: *"need reverb."* Its fastest cadence is 0.2 s, three
+    // times the pulse's 0.067, and its send is the smallest in the table; the rule is about a tail under a
+    // REPEAT, and what it protects is the gun that never stops.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }
@@ -2841,7 +2947,9 @@ describe('0174 — a send has to mean something', () => {
       const over = 10 * Math.log10(energyOf(wet) / energyOf(thin(dry)));
       expect(over, `${kind}'s room carries ${over.toFixed(1)} dB against the cue itself`).toBeLessThan(-6);
     }
-  }, 30_000);
+    // ⚠️ 30 → 120 s with the room at two seconds (0331): the convolution is twice the arithmetic. 34 s measured beside
+    // one other suite; three times the worst cost under load is the rule (0245), and this is a hang detector, not a budget.
+  }, 120_000);
 
   it('and the impulse carries unit energy, which is what makes `air` a share of the dry', () => {
     /*

@@ -736,12 +736,21 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       note: { wave: 'square', from: 0, to: 0, seconds: BEAT_SECONDS * 0.34, gain: 0.072, attack: 0.004, curve: 1.2, lowFrom: 3400, lowTo: 2400, q: 1.2 },
     },
     {
+      /*
+        ⚠️ **A TRIANGLE AN OCTAVE UP, WHERE A SAW WAS** — `docs/decisions/0331-the-heart-beats-under-it.md`.
+        Heard in a render of the whole level: *"a weird sound similar to the distortion… very common up
+        to about the one minute mark."* This layer is open from the first bar until `surge` closes it at
+        1:12, and measured on `run`'s mix, **this one voice made every impulsive event in it** — 3.4 a
+        second with it, none with it gone. A saw at 880–1760 Hz struck sixteen times a second puts a
+        sharp edge on every onset. As a triangle it makes none, the arp is the same loudness to a tenth
+        of a decibel, and the top band moves 1.2 dB — the mixture stop is still a mixture stop.
+      */
       steps: MIXTURE,
       pitched: true,
       perBeat: 4,
       octave: 3,
       accents: [1, 0.7, 0.84, 0.68],
-      note: { wave: 'saw', from: 0, to: 0, seconds: BEAT_SECONDS * 0.32, gain: 0.034, attack: 0.005, curve: 1.3, lowFrom: 5400, lowTo: 3600, q: 1 },
+      note: { wave: 'tri', from: 0, to: 0, seconds: BEAT_SECONDS * 0.32, gain: 0.034, attack: 0.005, curve: 1.3, lowFrom: 5400, lowTo: 3600, q: 1 },
     },
   ],
 
@@ -812,7 +821,7 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
         click at the front of a section — the defect 0136 removed. The material is what was quiet,
         exactly as the note above says; 0140 found the right sentence and changed the wrong number.
       */
-      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.1, attack: 0.0004, curve: 4, lowFrom: 11000, highFrom: 5600 },
+      note: { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.07, attack: 0.001, curve: 4, lowFrom: 7000, highFrom: 3400 },
     },
   ],
 
@@ -907,14 +916,17 @@ export const NEBULA_VOICES: Partial<Record<MusicLayer, readonly MusicVoice[]>> =
       ⚠️ **SO: 1 ms of attack, 13 kHz down to 4 kHz, on the two strikes the vent used.** Bright,
       struck, and decaying — the base's own cymbal at this place's cadence rather than a third
       invention. The choir shout stays on top of it, which is where it was always going.
+
+      ── AND THE CYMBAL WENT, AND THE SHOUT IS WHAT IS LEFT — 0331 ────────────────────────────────
+
+      ⚠️ **`docs/decisions/0331-the-heart-beats-under-it.md`.** Heard in a render of the whole level:
+      *"we also need to take the cymbal sound out of the descent because it doesn't fit."* The fourth
+      thing in this slot to be taken out by ear, and the paragraph above is why that is not a failure
+      of any of them: **the slot did not want a percussive introduction, and nothing written for it was
+      going to find that out without being played.** The choir shout stays — it was never the complaint
+      — and whether this place still brightens into `surge` without the strike is what
+      `tests/themes.test.ts`'s climb guard was written to say, so it is asked rather than assumed.
     */
-    {
-      steps: [0.95, _, _, _, _, _, _, _, 0.8, _, _, _, _, _, _, _],
-      pitched: false,
-      perBeat: 1,
-      octave: 0,
-      note: { wave: 'noise', from: 0, to: 0, seconds: 1.1, gain: 0.06, attack: 0.001, curve: 1.5, lowFrom: 13000, lowTo: 4000, highFrom: 2600, q: 0.5 },
-    },
     {
       // The choir shouting over the strike — the one place in the hymn anybody raises their voice.
       steps: [0, _, _, _, _, _, _, _, 7, _, _, _, _, _, _, _],
