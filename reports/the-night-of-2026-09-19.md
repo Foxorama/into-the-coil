@@ -232,7 +232,32 @@ number.
 The other five are inside a third of a decibel, which is the hold doing its job over a base composition
 that changed under every one of them.
 
-## 5b. ⚠️ The proof is red on five probes, and four of them are 0331's own engine work
+## 5b. The proof found eight breaks that no longer break, and seven are repaired
+
+**This section was written when five were unresolved and is kept as the record of what each one turned
+out to be.** Seven are now fixed and one is left; the table below marks which. **Not one of the eight is
+a guard that is wrong** — every one is a BREAK whose mechanism moved under it, which is 0019's whole
+subject arriving at once because this branch had never been proven.
+
+### The one that is a real engine fix, and it repaired two probes at once
+
+⚠️ **0331 applied its six-millisecond release to EVERY layer, and its own rule says *every music
+note*.** A cue already ends at zero twice over — its envelope decays there and `sampleCue` fades the
+summed row — so the third mechanism made two guards unbreakable. `tests/sound.test.ts` says this in its
+own words about the first time it happened: *"a guard measuring a quantity that two mechanisms both
+satisfy cannot tell you which one is missing."* The release is gated on music now, exactly as the attack
+floor beside it already was. 91 sound tests pass, and **0089's break fires again**.
+
+⚠️ **AND IT WAS CHECKED FOR THE OBVIOUS WAY IT COULD BE WRONG, BECAUSE THAT WOULD HAVE BEEN CHANGING
+THE WORK TO SUIT A GUARD.** Many cue layers end *inside* the row, so a per-layer release is what stops
+them ending abruptly there — gating it could have put back the clicks 0331 removed, and no guard would
+have seen it, because the click test reads only the row's first and last sample. Measured both ways:
+**the largest sample-to-sample jump in every one of the twenty-one cues is identical**, and each falls
+at its own attack (`bossBolt`'s 0.49 is a lightning crack's onset, by design). The worst RMS difference
+across all of them is **0.0047 dB**. A cue layer's envelope has already decayed by its own end, which
+is the same reason it was never load-bearing for the guard.
+
+### 5b, as first written
 
 `npm run prove` ran all **1225** probes and reported eight problems. Three are fixed; **five are not**,
 and they are the honest cost of shipping this branch. **None of them is a guard that is wrong — every
@@ -255,20 +280,19 @@ one is a BREAK that no longer breaks**, which is 0019's whole subject arriving a
 
 **Not fixed, and why each is left rather than guessed at:**
 
-| probe | what it breaks | why it no longer breaks |
-|---|---|---|
-| `0089` | the cue release taken back out | **Two mechanisms satisfy the guard and neither is load-bearing.** Measured: with `RELEASE_SECONDS` at 0 the guard still passes, and so does a decay curve of 0.04 — the envelope alone ends at zero. The guard's own comment records this happening once before and resolving it by deleting the redundant mechanism; 0331 added one back for MUSIC notes, where it *is* load-bearing. |
-| `0104` | the music bus driven at nothing | The guard compares the bed against the gun. 0331's cue re-balance brought the cues down, so removing the mastering no longer makes the bed the quieter of the two. |
-| `0133` | a bake that cannot be cancelled | 0331 routes layers through workers and reads `stopped` again when a layer LANDS, so cutting the check in the walk leaves the other one. |
-| `0325` | the acid's root note ringing past the end | Same family as `0089` — the per-layer release now covers an overrun the row's own fade used to be needed for. |
-| `0166` | the hold applied only where the role is unchanged | **Caused by tonight's fix, and the fix is right.** Widening 0166's skip to *roleless at ANY rung* removes exactly the layers whose role changes between rungs, which is what this break manipulates. The guard got stricter and the probe got weaker. |
+| probe | what it breaks | what it turned out to be | now |
+|---|---|---|---|
+| `0089` | the cue release taken back out | **Three mechanisms satisfied the guard.** With `RELEASE_SECONDS` at 0 it still passed, and so did a decay curve of 0.04. | **fixed** by the engine gate above |
+| `0325` | the acid's root note ringing past the end | **The break defeated itself**: that layer is the LONGEST in the row, so lengthening it moved the buffer's end along with the note. And the row's fade forces the last sample to zero for any content at all. | **re-aimed** at the assertion that does the work — the energy of the last quarter against the first — with a decay that does not decay |
+| `0133` | a bake that cannot be cancelled | **Two checks in series.** The walk reads the flag before each slice and `finish` reads it before handing over; cutting either leaves the other. | **re-aimed** at the cancel ITSELF, which is what the probe always said it broke |
+| `0104` | the music bus driven at nothing | The bed reads **+12.02 dB** over the gun mastered and **+6.90** unmastered, against a bound of 6 — the guard's table says +7.5 and +2.0. 0331's cue re-balance moved the comparison up five decibels. | **retired**, with the measurement, and the guard's stale table corrected. The mastering still does 5.1 dB of work; what stopped being true is that deleting it alone reaches the reported state |
+| `0166` | the hold applied only where the role is unchanged | **Caused by tonight's fix, and the fix is right.** Widening the skip to *roleless at ANY rung* removes exactly the layers whose role changes between rungs, which is what this break manipulates. | **left.** The guard got stricter and the probe got weaker; inventing a new break for it at the end of a night is the thing below |
 
-**Why they are left:** a probe re-aimed until it goes red proves whatever it happens to hit.
-`0330`'s second attempt did precisely that — it reddened the right guard for the wrong reason, by
-displacing a layer off the known-adrift list — and it was only visible because the assertion message
-named which of the two fired. Four of these need a break invented against a mechanism that has moved,
-and inventing one at the end of a night is how `0189`'s file came to carry a warning about an anchor
-that matched Ember Nebula's row and proved nothing.
+**On re-aiming, because it is the trap here:** a probe re-aimed until it goes red proves whatever it
+happens to hit. `0330`'s second attempt did exactly that — it reddened the right guard for the wrong
+reason by displacing a layer off the known-adrift list — and it was only visible because the assertion
+message named which of the two fired. **Every re-aim above was checked by reading which assertion
+spoke**, and the two that could not be re-aimed honestly were retired or left rather than fitted.
 
 ## 6. Two findings about guards, which are the transferable half
 

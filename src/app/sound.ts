@@ -517,8 +517,20 @@ export function sampleLayerInto(
   const floorSeconds = wrap && (layer.wave === 'tri' || layer.wave === 'saw' || layer.wave === 'square') ? 0.003 : 0;
   const attack = Math.max(1, Math.round(Math.max(layer.attack ?? ATTACK_SECONDS, floorSeconds) * rate));
   const curve = layer.curve ?? DECAY;
-  // 0331: the last six milliseconds of every note fall to silence instead of stopping — see `RELEASE_SECONDS`.
-  const release = Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2)));
+  /*
+    ⚠️ **THE LAST SIX MILLISECONDS OF EVERY MUSIC NOTE FALL TO SILENCE INSTEAD OF STOPPING** — 0331,
+    and `RELEASE_SECONDS` has the report. **`wrap` gates it, for the same reason the attack floor above
+    is gated**: 0331's rule is *every music NOTE*, and a cue already ends at zero twice over — its own
+    envelope decays there, and `sampleCue` fades the summed row.
+
+    ⚠️ **UNGATED, IT MADE TWO GUARDS UNBREAKABLE, WHICH `npm run prove` IS THE ONLY THING THAT SEES.**
+    A third mechanism satisfying *a buffer that stops mid-waveform clicks* meant 0089's break — the row
+    fade taken back out — left two others standing, and 0325's overrunning note was covered as well.
+    `tests/sound.test.ts` says this in its own words about the FIRST time it happened: *"a guard
+    measuring a quantity that two mechanisms both satisfy cannot tell you which one is missing."* This
+    would have been the third, added by a decision whose text does not claim it.
+  */
+  const release = wrap ? Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2))) : 0;
   // 0331's ninth listen: a note that states a release dies away over it, on a curve the ear hears as even.
   const tail = layer.release ? Math.min(length - 1, Math.round(layer.release * rate)) : 0;
   const low = makeFilter();

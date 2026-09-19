@@ -152,29 +152,30 @@ export const PROBES = [
       replace: '    figure: [1, 0.62, 0.82, 0.62],\n    duck: 0.2,',
     },
   },
-  {
-    decision: '0104',
-    suite: 'tests/music.test.ts',
-    /*
-      ⚠️ THE MASTERING TAKEN OFF, which is the state the bus was in for four mix passes: a 12–14 dB
-      crest factor and no compressor, limiter or soft clip anywhere, while every cue had `glue`. The
-      music then sits 2–5 dB UNDER the effects playing over it, which is *"background too quiet"*.
+  /*
+    ── THE MASTERING PROBE IS RETIRED, AND THE MEASUREMENT IS WHY ───────────────────────────────────
 
-      ⚠️ **It is caught by the LOUDNESS guard and by nothing else, which is the whole finding.** This
-      probe was first pointed at the clipping assertion and reported STILL GREEN — obviously, in
-      hindsight: every music guard in the file was a CEILING, so removing the thing that makes the
-      music loud enough broke none of them. The lower bound had to be written before this probe had
-      anything to redden.
-    */
-    broke: 'the music bus driven at nothing, so the mastering that answers "background too quiet" is gone',
-    guard: '0104 — THE REPORTED ONE: the bed is not quieter than the gun playing over it',
-    edit: {
-      path: 'src/content/music.ts',
-      // 0217 took the drive to 0.15; the break is unchanged and only the anchor moved.
-      find: 'export const MUSIC_DRIVE = 0.15;',
-      replace: 'export const MUSIC_DRIVE = 0;',
-    },
-  },
+    ⚠️ **IT TOOK `MUSIC_DRIVE` TO 0 — the state the bus was in for four mix passes, with the music
+    2–5 dB UNDER the effects playing over it, which is *"background too quiet"*.** The paragraph it
+    carried is worth keeping: it was first pointed at the clipping assertion and reported STILL GREEN,
+    because every music guard in the file was a CEILING, so removing the thing that makes the music
+    loud enough broke none of them. The lower bound had to be written before this probe had anything
+    to redden.
+
+    ⚠️ **AND `npm run prove` REPORTED STILL GREEN AGAIN AFTER 0331, FOR A DIFFERENT REASON.** Measured
+    on this tree, the bed reads **+12.02 dB** over the gun mastered and **+6.90 dB** unmastered,
+    against a bound of 6 — where the guard's own table records +7.5 and +2.0. 0331 re-balanced every
+    cue and the gun came down with them, so the whole comparison moved up about five decibels. **The
+    mastering still does 5.1 dB of work**; what stopped being true is that deleting it alone reaches
+    the reported state.
+
+    ⚠️ **RETIRED RATHER THAN RE-AIMED, AND THE BOUND IS NOT MOVED.** Raising 6 to sit above 6.90 is
+    exactly *a number chosen to sit under the current measurement*, which `tests/music.test.ts` rules
+    out in its own words. Reaching the reported state now means putting the gun back to the level it
+    was reported at — several numbers across `CUES.pulse`'s layers, which is a mix change and not one
+    edit. **The guard is not weakened and its other two probes still break it**; what is gone is a
+    break whose mechanism no longer carries the claim.
+  */
   {
     decision: '0104',
     suite: 'tests/music.test.ts',

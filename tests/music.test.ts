@@ -972,6 +972,21 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
       `docs/decisions/0019-a-probe-must-be-seen-to-apply.md` catching a guard standing over the
       headline mechanism of its own decision.
 
+      ── AND THE WHOLE TABLE MOVED UP FIVE DECIBELS WHEN THE CUES CAME DOWN — 0331 ──────────────────
+
+      ⚠️ **RE-MEASURED ON THIS TREE: `run` reads +12.02 dB mastered and +6.90 unmastered.** 0331
+      re-balanced every cue and the gun came down with them, so the comparison this guard makes is
+      between a quieter gun and much the same bed. **The mastering is still worth 5.1 dB of the 12.0**
+      — it has not stopped working — but removing it no longer takes the mix under the bound, and
+      `npm run prove` says so: 0104's own drive probe came back STILL GREEN and has been retired with
+      these numbers beside it.
+
+      ⚠️ **THE BOUND STAYS AT 6, AND THAT IS THE PARAGRAPH ABOVE MEANING WHAT IT SAYS.** Raising it to
+      sit above 6.90 would be *a number chosen to sit under the current measurement*, which is the one
+      thing that paragraph rules out. What has actually changed is that the reported state is no longer
+      reachable by deleting one constant — it would now take the gun back to the level it was reported
+      at, which is several numbers and not a probe.
+
       ⚠️ **Twice the amplitude is the smallest bound that is also a statable rule**, rather than a
       number chosen to sit under the current measurement. There is 1.5 dB of margin at 0.15, which is
       deliberately thin: this is a floor the mix has to keep clearing, not a description of where it

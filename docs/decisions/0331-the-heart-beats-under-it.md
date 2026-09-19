@@ -31,6 +31,14 @@ bars is 6.4 seconds and holds none of those evenly.
 so every note in the score stopped dead at its envelope's end — which is a click, and *"static and
 pop throughout"* is what a score full of them sounds like.
 
+**And it is a MUSIC note, which the code had to be told.** The first version released every layer,
+cue and music alike, and `sampleCue` already fades the summed row — so a cue had three mechanisms
+ending it at zero and two guards became unbreakable. `npm run prove` is the only thing that sees that:
+0089's break (the row fade taken back out) left two others standing, and 0325's overrunning note was
+covered as well. **It costs nothing to gate**, because a cue layer's envelope has already decayed by
+its own end: measured across all twenty-one cues, the worst RMS difference is **0.0047 dB** and the
+largest sample-to-sample jump in every one is identical to four decimal places, at its own attack.
+
 **A music note on a triangle, saw or square takes at least three milliseconds to arrive.** At phase 0
 a triangle is at +1, a saw at −1 and a square at +1, so a 0.4–2 ms attack began with a jump of the
 whole waveform; forty-five voices across seven places are written that way. **Starting each wave on
