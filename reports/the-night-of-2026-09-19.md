@@ -7,11 +7,15 @@ it is the listening list, and nothing in §3 onwards is settled until an ear has
 
 | | |
 |---|---|
-| **Merged** | [#380](https://github.com/Foxorama/into-the-coil/pull/380) (0338, the arrival is seen) and [#381](https://github.com/Foxorama/into-the-coil/pull/381) (0339, a level is cleared once) |
-| **Open** | [#382](https://github.com/Foxorama/into-the-coil/pull/382), auto-merge armed — Phase B, the music |
+| **Merged** | [#380](https://github.com/Foxorama/into-the-coil/pull/380) (0338, the arrival is seen), [#381](https://github.com/Foxorama/into-the-coil/pull/381) (0339, a level is cleared once) and [#382](https://github.com/Foxorama/into-the-coil/pull/382) (0331, Phase B — the music) |
 | **Proven** | `npm run check` green (1499 tests, typecheck, build) and `npm run prove` green (**1224 of 1224**) |
-| **Play it** | <https://the-heart-beats-under-it.into-the-coil.pages.dev/> — checked, 200 |
-| **Working branch** | `the-heart-beats-under-it`, in `C:\into-the-coil-beat`, rebased onto `main` |
+| **Play it** | **staging**, <https://next.intothecoil.vulpecula.games/> — it carries this build: `trim` 0.549 and the re-solved hold's 0.1852, 0.8003 and 0.4748 are all in the bytes it serves |
+| **Phases C–F** | not started. The plan forbids beginning them on an unmerged Phase B; Phase B is merged now, so they are next |
+
+⚠️ **Staging is `main` only** — [0011](../docs/decisions/0011-three-environments-and-a-separate-origin-for-staging.md).
+The branch preview `the-heart-beats-under-it.into-the-coil.pages.dev` still answers 200 because
+Cloudflare keeps a deployment after the branch is deleted, but it is a frozen snapshot now and staging
+is the build to judge.
 
 ### A rule I broke before I had read it
 
