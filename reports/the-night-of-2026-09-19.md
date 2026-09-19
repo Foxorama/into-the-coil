@@ -286,7 +286,42 @@ one is a BREAK that no longer breaks**, which is 0019's whole subject arriving a
 | `0325` | the acid's root note ringing past the end | **The break defeated itself**: that layer is the LONGEST in the row, so lengthening it moved the buffer's end along with the note. And the row's fade forces the last sample to zero for any content at all. | **re-aimed** at the assertion that does the work — the energy of the last quarter against the first — with a decay that does not decay |
 | `0133` | a bake that cannot be cancelled | **Two checks in series.** The walk reads the flag before each slice and `finish` reads it before handing over; cutting either leaves the other. | **re-aimed** at the cancel ITSELF, which is what the probe always said it broke |
 | `0104` | the music bus driven at nothing | The bed reads **+12.02 dB** over the gun mastered and **+6.90** unmastered, against a bound of 6 — the guard's table says +7.5 and +2.0. 0331's cue re-balance moved the comparison up five decibels. | **retired**, with the measurement, and the guard's stale table corrected. The mastering still does 5.1 dB of work; what stopped being true is that deleting it alone reaches the reported state |
-| `0166` | the hold applied only where the role is unchanged | **Caused by tonight's fix, and the fix is right.** Widening the skip to *roleless at ANY rung* removes exactly the layers whose role changes between rungs, which is what this break manipulates. | **left.** The guard got stricter and the probe got weaker; inventing a new break for it at the end of a night is the thing below |
+| `0166` | the hold applied only where the role is unchanged | **A TIMEOUT, and I diagnosed it wrong twice before measuring it.** See below. | **fixed** by sizing the budget |
+
+### ⚠️ 0166 was a TIMEOUT, and I got it wrong twice before measuring it
+
+**This is the mistake of the night and it is worth more than the fix.** I called 0166 *a break that no
+longer breaks* and wrote a paragraph explaining why tonight's narrowing of that guard had weakened its
+probe. Then I rewrote the probe on the strength of that. **Both readings were wrong.**
+
+`prove-guard.mjs` runs a probe's guard with `--testNamePattern`, so the named test executes **alone,
+with the bake cache cold**. In a full `npm test` these guards share one bake and the dearest costs
+**4.8 s**; alone, the whole bake lands on one test. Measured on this machine:
+
+| | alone | budget |
+|---|---|---|
+| `and every place has a BOTTOM` | **63.37 s** | 60 s |
+| `0132 — A PLACE'S OWN MATERIAL` | **62.08 s** | 60 s |
+| the saturation walk | **61.84 s** | 60 s |
+| `0166 — THE TRAJECTORY` | **60.30 s** | 60 s |
+| `0164 — NO LAYER SITS A WHOLE ROLE` | 57.02 s | 60 s |
+
+**Four of the five were already over.** Nothing went red about it, because a probe whose break fires an
+assertion early still reddens in time — and 0166's claim is at the *end* of the solve, so it reported
+*NEVER REACHED ITS CLAIM*, which is `prove-guard`'s own phrase for a timeout wearing a failed test's
+title. It says as much in the message I read four times: *a timeout or a crash reports the same failed
+title an assertion does*.
+
+`DSP_MS` is 200 s now — three times the worst, rounded up, with that table beside it (0245). **The guard
+was never weak and the probe was never dead; the test could not finish.** This is the plan's own item
+#16, which I had recorded as not reproducing because it never timed out in a full-suite run — the one
+way of running it that hides the cost.
+
+**What stands from the wrong diagnosis:** the coverage measurement is real and worth keeping — after the
+narrowing, 0166 measures six layers a place, and only The Labyrinth's `perc` and The Toxic Mire's `sub`
+change role across a measured boundary at all. And the rewritten probe — a hold that anchors nothing —
+is a faithful statement of 0166's claim and was verified to fire on the guard's first assertion, so it
+stays on its own merits. It simply was not needed.
 
 **On re-aiming, because it is the trap here:** a probe re-aimed until it goes red proves whatever it
 happens to hit. `0330`'s second attempt did exactly that — it reddened the right guard for the wrong

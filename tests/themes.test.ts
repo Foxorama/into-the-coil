@@ -663,8 +663,42 @@ const ARC_RATE = 22050;
 });
 
 describe('0128 — a place plays its own material, and shares everything it does not', () => {
-  /** Baking layers is real DSP, on the terms the shed test states. */
-  const DSP_MS = 60_000;
+  /**
+   * Baking layers is real DSP, on the terms the shed test states.
+   *
+   * ── 60 s WAS OUTGROWN AND `npm run prove` IS THE ONLY THING THAT SAW IT ─────────────────────────
+   *
+   * ⚠️ **`docs/decisions/0245-a-budget-is-sized-under-load.md`, and the load that matters here is not
+   * the one anybody looks for.** These guards share a bake cache across the file, so in a full
+   * `npm test` the dearest of them costs **4.8 s** and the budget looks enormous. `prove-guard.mjs`
+   * runs a probe's guard with `--testNamePattern`, which executes **that test alone, with the cache
+   * cold** — and cold is where the whole bake lands on one test. Measured on this machine, alone:
+   *
+   * | | |
+   * |---|---|
+   * | `and every place has a BOTTOM` | **63.37 s** |
+   * | `0132 — A PLACE'S OWN MATERIAL` | **62.08 s** |
+   * | the saturation walk, `drives the bus past full scale` | **61.84 s** |
+   * | `0166 — THE TRAJECTORY MOVES A BOUNDARY LESS` | **60.30 s** |
+   * | `0164 — NO LAYER SITS A WHOLE ROLE UNDER` | 57.02 s |
+   *
+   * ⚠️ **FOUR OF THE FIVE WERE ALREADY OVER THE BUDGET, AND NOTHING WENT RED ABOUT IT.** A probe whose
+   * break fires an assertion early still reddens in time; 0166's does not — its claim is at the end of
+   * the solve — so it reported *NEVER REACHED ITS CLAIM*, which is `prove-guard`'s own words for a
+   * timeout wearing a failed test's title. **The guard was never weak and the probe was never dead: the
+   * test could not finish.** That is the shape 0044 is named for, found by the one runner that does not
+   * warm the cache first.
+   *
+   * ⚠️ **200 s IS THREE TIMES THE WORST OF THOSE, ROUNDED UP**, and `prove` adds parallel workers on top
+   * of the figures above — so the multiplier is doing real work rather than padding. It is the clock and
+   * not the assertion: the same samples, the same shaper, the same claims.
+   *
+   * ⚠️ **AND THE GROWTH LAW IS THE SAME ONE THE SATURATION GUARD ALREADY WROTE DOWN**, one budget over:
+   * the cost is *samples × layers × rungs × places*, and it grows once per place for ever. A sixth
+   * authored place will want this read again. The cheap answer would be to warm the cache outside the
+   * tests so a filtered run is fast too — which is worth doing and is not a budget.
+   */
+  const DSP_MS = 200_000;
 
   /*
     ⚠️ **ONE BAKE PER PLACE FOR THE WHOLE FILE, AND IT USED TO BE ONE PER (PLACE, LAYER, GUARD)** —
