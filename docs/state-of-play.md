@@ -979,6 +979,25 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE SHIP BURNS BETWEEN PLACES NOW, AND NONE OF ITS NUMBERS HAVE BEEN PLAYED — 2026-09-20
+
+⚠️ **[0340](decisions/0340-the-coil-is-a-route.md).** *"We'll need loading screens anyway for
+transitions and to represent moving through the galaxy."* Built first as a full-screen chart with a
+button, and played: *"it takes the player out of the game… the player's engines do a full jet burn and
+the ship hyper-speeds through galaxy for the loading screen and then the hyper burn trails off as they
+arrive."* So `travel` is `cleared`'s pair — the world runs, the player keeps the ship, there is no
+button — and the chart is an inset in its banner. 0063's respite is untouched.
+
+⚠️ **IT HOLDS UNTIL THE NEXT PLACE'S MUSIC IS IN THE MIXER'S HANDS**, which is what 0331's bake-ahead
+was for, and the place swaps under the streaks at full burn. **What is owed is a hand**: four seconds,
+*Brief*'s three, twelve times the scroll rate and the flame's size are all unplayed, and the decision
+says why the first build passing every test it had is the most transferable thing in it.
+
+⚠️ **TWO DEFECTS IT FOUND THAT WERE NOT ITS OWN** are in the decision rather than here: the backdrop
+popping to the title's void for the whole of every level break, and the ship being left behind by any
+camera that changes speed. `rig/bench.ts` takes `?cross=N` and `scripts/shot-travel.mjs` photographs
+four moments of a burn.
+
 ### ⚠️ THE ENTRY REPORT IS ANSWERED ON ITS FOURTH TELLING, AND THE DIAGNOSIS WAS WHAT WAS WRONG — 2026-09-19
 
 ⚠️ **[0338](decisions/0338-the-arrival-is-seen.md).** *"I keep reporting the enemies enter the screen

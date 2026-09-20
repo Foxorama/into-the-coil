@@ -30,10 +30,10 @@
  */
 
 import { SCREENS, type Screen, type SettingName } from '../state/screens.ts';
-import type { Palette } from '../content/palette.ts';
+import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
-import { bakeAtlas } from '../render/bake.ts';
+import { bakeAtlas, drawChart } from '../render/bake.ts';
 // The strip's width, from the file that hit-tests it. One number, or the picture and the hit region
 // disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
 import { TAP_STRIP } from './touch.ts';
@@ -81,9 +81,9 @@ export const SETTING_ATTR = 'data-itc-setting';
  * `playing` is the one screen with no heading and no controls — it IS the game — so the predicate is
  * what a panel is rather than a list of which screens have one.
  */
-const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(
-  (screen) => SCREENS[screen].heading !== '' || SCREENS[screen].actions.length > 0,
-);
+// ⚠️ `hasChrome` and not the condition written out again: it was, and 0340 had to change it in two
+// places in one file. The function is a declaration further down, so it is hoisted to here.
+const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(hasChrome);
 
 /**
  * `.itc-title-action, .itc-gameover-action, …` — one selector list, for any part of a panel.
@@ -287,6 +287,100 @@ ${each('-choices')} {
   */
   max-width: min(100%, 66ch);
 }
+/*
+  ── THE CROSSING IS A CAPTION OVER A GAME THAT IS STILL BEING FLOWN — 0340 ─────────────────────
+
+  ⚠️ **THE LEVEL BREAK'S RULES, FOR THE LEVEL BREAK'S REASON.** The first build of this screen
+  stopped the world and drew a chart in place of it, and was played as: it takes the player out of the
+  game. It is a burn the ship makes now, with the player's hands still on it — so the overlay paints
+  nothing and takes no pointer, exactly as the break one rule up does, and a full-bleed box here would
+  swallow the thumb that is still steering.
+
+  ⚠️ **AND THERE IS NO CONTROL TO HAND THE POINTER BACK TO.** The break gives its one button pointer
+  events again; this has no button, on purpose, so the whole tree is inert.
+*/
+.itc-travel, .itc-travel * { pointer-events: none; }
+/*
+  ⚠️ **AT THE TOP, WHERE THE BREAK'S BANNER WAS A MOMENT AGO, AND NOT IN THE MIDDLE.** The middle of
+  the screen is where the ship is, and decision 0063 moved the break's own banner off it for that
+  reason after measuring where it had actually landed. Auto on the bottom only: the shared panel rule
+  is auto on every side, so what moves this is the top margin being SMALL — the same one-line
+  mechanism the first build's probe found by coming back green against the redundant second line.
+
+  ⚠️ **A TRANSLUCENT BACKING, BECAUSE THE SKY BEHIND IT IS FORTY-FOUR BRIGHT LINES.** The music room
+  makes the same argument over a star field; this is over streaks at full burn, which is the busiest
+  the backdrop ever gets.
+*/
+.itc-travel-panel {
+  margin-top: min(1.25rem, 4cqh);
+  margin-bottom: auto;
+  background: color-mix(in srgb, var(--itc-void) 66%, transparent);
+  border-radius: 0.6em;
+  max-width: min(100%, 60ch);
+  /*
+    ⚠️ **TIGHTER THAN THE SHARED PANEL PADDING, BECAUSE THIS PANEL IS OVER A GAME.** Every other one
+    is over a dim, where padding costs nothing. Measured in a browser, the first version of this banner
+    reached 34.8 percent of the way down the screen and the ship rests at fifty: its own guard holds it
+    to the top third, and what gave was the banner rather than the line.
+  */
+  padding: min(1rem, 2.5cqh) min(1.5rem, 3cqw);
+  animation: itc-travel-in 0.7s ease-out both;
+  transition: opacity 1.2s ease-in;
+}
+/*
+  ⚠️ **IT ARRIVES WITH THE BURN AND LEAVES WITH IT, AND NEITHER IS A CUT.** Asked for as a much
+  smoother transition. A keyframe on the way in, because the overlay goes from display none and a
+  transition cannot start from that; a transition on the way out, because the shell marks the banner
+  as leaving on the step the burn starts to trail off, and it is gone before the level is entered.
+*/
+@keyframes itc-travel-in { from { opacity: 0; } to { opacity: 1; } }
+.itc-travel-leaving .itc-travel-panel { opacity: 0; }
+/* The chart beside the words, not above them: the long axis is where a list goes (decision 0049). */
+.itc-travel-crossing {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: min(1.25rem, 3cqw);
+  text-align: left;
+}
+/*
+  ⚠️ **SIZED OFF THE SHORT AXIS, AND SQUARE.** The canvas is drawn at a fixed pixel size and shown at
+  a fraction of the container's height, so it is the same share of every screen and the browser does
+  the scaling once. No flex shrink: a chart squeezed by a long place name is an ellipse.
+*/
+.itc-travel-crossing-chart {
+  width: clamp(4.5rem, 19cqh, 9rem);
+  height: clamp(4.5rem, 19cqh, 9rem);
+  flex: none;
+}
+.itc-travel-crossing-words {
+  display: flex;
+  flex-direction: column;
+  gap: min(0.35rem, 1.2cqh);
+}
+.itc-travel-crossing-place {
+  font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.5rem);
+  margin: 0;
+}
+/*
+  ⚠️ **LIGHTER THAN THE NAME AND NOT SMALLER THAN THE REST OF THE CHROME.** It is one sentence read
+  once, so weight is the channel that separates it from the name; type has a floor (the panel rule
+  says why).
+*/
+.itc-travel-crossing-voyage { font-weight: 400; margin: 0; }
+/*
+  The wait, which is almost never shown — the travel content hub has when. Dimmed, because it is the
+  one line here that is about the game rather than about the place.
+*/
+.itc-travel-crossing-waiting { font-weight: 400; margin: 0; opacity: 0.6; }
+.itc-travel-crossing-waiting[hidden] { display: none; }
+/*
+  ⚠️ **THE TWO BOXES EVERY PANEL IS BUILT WITH ARE EMPTY HERE, AND AN EMPTY FLEX CHILD STILL TAKES A
+  GAP.** The builder appends a choices box and a settings box to every panel so that a row gaining a
+  setting needs no new code; this row has neither, and measured on the bench they padded a banner 173
+  pixels tall out to 278 — a hundred pixels of backing over the sky for nothing.
+*/
+.itc-travel-choices, .itc-travel-settings-box { display: none; }
 /*
   The place, the section it has reached, and how far through it is. One block so the gap rules above
   space it like any other part of the panel.
@@ -803,6 +897,81 @@ interface Panel {
   options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
   /** The music room's readout — 0212. `null` on every other screen, which is all of them. */
   now: NowPlayingParts | null;
+  /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
+  crossing: CrossingParts | null;
+}
+
+/**
+ * The elements the crossing's words are written into, held so `setCrossing` never queries the DOM.
+ *
+ * ⚠️ **Looked up once at boot, exactly as `NowPlayingParts` is** — and for one reason less: this is
+ * written a handful of times per crossing rather than six times a second. It is held anyway, because a
+ * `querySelector` here and a held reference there would be two answers to one question in one file.
+ */
+interface CrossingParts {
+  root: HTMLElement;
+  place: HTMLElement;
+  voyage: HTMLElement;
+  /** Shown only while the place is still being synthesised — `src/content/travel.ts` has when. */
+  waiting: HTMLElement;
+  /**
+   * The chart, as a canvas of the chrome's own — and how many legs it was last drawn with, so it is
+   * redrawn when the run has moved and not otherwise. `−1` is *never*, because nought is a real answer.
+   */
+  chart: HTMLCanvasElement;
+  drawnFlown: number;
+}
+
+/**
+ * Where the run is crossing to, and whether the crossing is waiting for it —
+ * `docs/decisions/0340-the-coil-is-a-route.md`.
+ *
+ * ⚠️ **PUSHED, LIKE EVERY OTHER READOUT ON THIS INTERFACE.** The chrome holds no opinion about which
+ * place is next or how a bake is going; `src/app/mount.ts` owns both and hands over what to say, on
+ * the terms `setHud`, `setChoice` and `setNowPlaying` already state.
+ */
+export interface Crossing {
+  /** The place being crossed to, in `src/content/themes.ts`'s own words. */
+  place: string;
+  /**
+   * How many legs of the route are behind the run — the index of the place it is burning towards.
+   *
+   * ⚠️ **A NUMBER AND NOT A PICTURE, SO THE SHELL STILL HANDS OVER WHAT TO SAY AND NOT HOW.** The
+   * chrome draws the chart itself, through `src/render/bake.ts`'s `drawChart`, into a canvas of its
+   * own — exactly as the title screen's pickup key is the real art at a fixed size rather than the
+   * live atlas (`ICON_PIXELS_PER_UNIT`'s note has why the atlas's own bitmaps cannot be put in the DOM).
+   */
+  flown: number;
+  /**
+   * Which palette the places' colours are read in.
+   *
+   * ⚠️ **THE NAME, BECAUSE A PLACE'S COLOUR IS PER PALETTE NAME AND THE CHROME IS HANDED A RESOLVED
+   * ONE.** `THEMES[kind].glow` is a `Record<PaletteName, string>` — that is what keeps 0024 whole, a
+   * high-contrast player gets each place's high-contrast colours — and `makeChrome` takes the inks,
+   * not which set they are. The shell knows, so the shell says.
+   */
+  palette: PaletteName;
+  /**
+   * Whether the ship has started coming out of the burn, so the banner should be on its way out too.
+   *
+   * ⚠️ **A FACT ABOUT THE BURN, AND THE FADE IS THE STYLESHEET'S.** The shell says *it is trailing
+   * off* on the step that becomes true; how long a banner takes to go, and that it goes by opacity, is
+   * CSS and is nothing the shell has an opinion about. It is gone before the level is entered, so the
+   * level arrives under a clear screen rather than under a caption that is then cut.
+   */
+  leaving: boolean;
+  /** The one line that place says about itself, off the same row. */
+  voyage: string;
+  /**
+   * Whether the crossing is being held open by the music rather than by its own floor.
+   *
+   * ⚠️ **A BOOLEAN AND NOT A FRACTION, and that is `docs/game.md`'s voice rule rather than a saving.**
+   * A progress bar over a bake would be a number the player can do nothing with, changing at a rate
+   * nothing on the screen explains; what they need to know is *this is taking a moment*, which is one
+   * fact. `src/content/travel.ts`'s `travelIsWaiting` is what decides it, and says why it is almost
+   * always false.
+   */
+  waiting: boolean;
 }
 
 /**
@@ -975,6 +1144,13 @@ export interface Chrome {
    * caller decides the resolution, and today that is a thousandth of a walk.
    */
   setNowPlaying(now: NowPlaying | null): void;
+  /**
+   * Say where the run is crossing to — 0340. `null` empties the words and hides the wait.
+   *
+   * Called on a change of what it displays rather than per step, on `setNowPlaying`'s own terms: the
+   * caller decides the resolution, and there are two things here that can change in a whole crossing.
+   */
+  setCrossing(crossing: Crossing | null): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -985,10 +1161,14 @@ export interface Chrome {
  * ⚠️ **Derived from the table, never listed again here.** A screen with no heading and no action has
  * nothing to draw — that is `playing`, and it is decided by `src/state/screens.ts` rather than by a
  * second list in the shell that would have to be kept in step with it.
+ *
+ * ⚠️ **OR WORDS THE SHELL PUSHES AT IT — 0340.** The crossing has no heading, because the place is
+ * not known until it starts, and no action on purpose; `ScreenRow.pushed` is the row saying so, and
+ * has the story of the last screen that was shown correctly and was invisible.
  */
 function hasChrome(screen: Screen): boolean {
   const row = SCREENS[screen];
-  return row.heading.length > 0 || row.actions.length > 0;
+  return row.heading.length > 0 || row.actions.length > 0 || row.pushed;
 }
 
 /**
@@ -1098,6 +1278,65 @@ function clockOf(seconds: number): string {
  * SECONDS would move a different distance per place, and a walk is a position rather than a clock.
  */
 const SEEK_STEP = 0.05;
+
+/**
+ * How many pixels square the banner's chart is drawn at.
+ *
+ * ⚠️ **ITS OWN FIXED SIZE, ON `ICON_PIXELS_PER_UNIT`'s TERMS**: it is shown at roughly a fifth of the
+ * screen's height — about 150 CSS pixels on the 720-tall screen every play-test here was given on —
+ * so 320 is a little over twice that, which is what a 2× display wants and what keeps a 0.8%-of-tile
+ * route line from being a single smeared pixel.
+ */
+const CHART_PIXELS = 320;
+
+/**
+ * The crossing's banner: the chart, the place, what it is, and — rarely — that it is not ready yet.
+ *
+ * `docs/decisions/0340-the-coil-is-a-route.md`. The first build painted the chart over the whole
+ * canvas in place of the game and was reported as *"it takes the player out of the game"*; the
+ * crossing is a burn the ship makes in the world now, and this is a caption over it — the chart as an
+ * inset beside the name, drawn into a canvas of the chrome's own exactly as the pickup key is.
+ *
+ * ⚠️ **AN `aria-live` REGION, WHICH IS THE ONE THING THE CHART CANNOT DO FOR A SCREEN READER.** The
+ * picture says where the run is going; a player who cannot see it gets the same fact only if the name
+ * is announced when it changes. It is `polite` rather than `assertive` because nothing here is urgent.
+ *
+ * ⚠️ **AND `waiting` IS HIDDEN RATHER THAN EMPTY.** An empty element in a live region is still a
+ * change to announce, so a crossing that was never held up would say the place's name and then say
+ * nothing, twice.
+ */
+function buildCrossing(prefix: string): CrossingParts {
+  const make = (part: string, tag = 'div'): HTMLElement => {
+    const el = document.createElement(tag);
+    el.className = prefix + part;
+    return el;
+  };
+  const root = make('crossing');
+  root.setAttribute('aria-live', 'polite');
+  const chart = document.createElement('canvas');
+  chart.className = prefix + 'crossing-chart';
+  chart.width = CHART_PIXELS;
+  chart.height = CHART_PIXELS;
+  // The name beside it says everything the picture does, so a reader is told once rather than twice.
+  chart.setAttribute('aria-hidden', 'true');
+  const words = make('crossing-words');
+  const place = make('crossing-place', 'h1');
+  const voyage = make('crossing-voyage', 'p');
+  const waiting = make('crossing-waiting', 'p');
+  waiting.hidden = true;
+  /*
+    ⚠️ **THE WORDS THE WAIT USES ARE ABOUT THE PLACE AND NOT ABOUT THE MACHINE.** *Loading* and
+    *Synthesising* are both true and both put the engine on the screen; `docs/game.md`'s voice rule is
+    what it is, never why it is good, and the fiction already has a reason for a ship to hold off.
+  */
+  waiting.textContent = 'Holding for a way in…';
+  words.appendChild(place);
+  words.appendChild(voyage);
+  words.appendChild(waiting);
+  root.appendChild(chart);
+  root.appendChild(words);
+  return { root, place, voyage, waiting, chart, drawnFlown: -1 };
+}
 
 /**
  * The music room's readout — 0212.
@@ -1308,10 +1547,18 @@ export function makeChrome(
     panel.className = prefix + 'panel';
     root.appendChild(panel);
 
-    const heading = document.createElement('h1');
-    heading.className = prefix + 'heading';
-    heading.textContent = row.heading;
-    panel.appendChild(heading);
+    /*
+      ⚠️ **NOT BUILT FOR A ROW WITHOUT ONE — 0340.** Every panelled row had a heading until the
+      crossing, whose heading is the place and is pushed. An empty `<h1>` is a flex child: it takes a
+      gap above the words it was supposed to be, and a screen reader announces a heading with nothing
+      in it.
+    */
+    if (row.heading.length > 0) {
+      const heading = document.createElement('h1');
+      heading.className = prefix + 'heading';
+      heading.textContent = row.heading;
+      panel.appendChild(heading);
+    }
 
     /*
       The controls' own box. On the title screen it is a column BESIDE the key rather than under it —
@@ -1336,6 +1583,8 @@ export function makeChrome(
 
     // 0212: the music room's readout, and `null` on every other screen.
     const nowPlaying = screen === 'music' ? buildNowPlaying(prefix, onSeek, listeners) : null;
+    // 0340: the crossing's words, on the line above's exact terms.
+    const crossing = screen === 'travel' ? buildCrossing(prefix) : null;
 
     /*
       ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
@@ -1407,6 +1656,13 @@ export function makeChrome(
         Every other panelled screen gets `now: null` and never learns this exists.
       */
       if (nowPlaying !== null) panel.appendChild(nowPlaying.root);
+      /*
+        ⚠️ **ABOVE THE BUTTON, FOR THE REASON THE READOUT IS ABOVE ITS OWN** — 0340. The crossing has
+        one control and the player is not looking for it: what they are reading is the name of the
+        place they are arriving in, and *Onward* is the thing they press when they have finished
+        reading it. Below the name is where a button that means *I have read this* belongs.
+      */
+      if (crossing !== null) panel.appendChild(crossing.root);
       panel.appendChild(choices);
       panel.appendChild(settingsBox);
     }
@@ -1519,7 +1775,7 @@ export function makeChrome(
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer, options, now: nowPlaying };
+    panels[screen] = { root, controls, timer, options, now: nowPlaying, crossing };
     elements.push(root);
   }
 
@@ -1754,6 +2010,32 @@ export function makeChrome(
       }
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       strip.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+    },
+    setCrossing(crossing: Crossing | null): void {
+      const parts = panels.travel?.crossing;
+      if (parts === undefined || parts === null) return;
+      if (crossing === null) {
+        parts.place.textContent = '';
+        parts.voyage.textContent = '';
+        parts.waiting.hidden = true;
+        return;
+      }
+      parts.place.textContent = crossing.place;
+      parts.voyage.textContent = crossing.voyage;
+      parts.waiting.hidden = !crossing.waiting;
+      panels.travel?.root.classList.toggle(prefixFor('travel') + 'leaving', crossing.leaving);
+      /*
+        ⚠️ **REDRAWN WHEN THE RUN HAS MOVED A LEG AND NOT OTHERWISE** — once per crossing, which is
+        once per level. This is called again when the wait line appears, and a chart redrawn for that
+        would be forty strokes to change nothing.
+      */
+      if (parts.drawnFlown === crossing.flown) return;
+      const ctx = parts.chart.getContext('2d');
+      if (ctx === null) return;
+      parts.drawnFlown = crossing.flown;
+      ctx.clearRect(0, 0, parts.chart.width, parts.chart.height);
+      // The palette's own sky ink for a leg not yet flown: the one colour here that means *scenery*.
+      drawChart(ctx, parts.chart.width, crossing.palette, crossing.flown, colours.sky);
     },
     setNowPlaying(now: NowPlaying | null): void {
       const parts = panels.music?.now;

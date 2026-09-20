@@ -201,6 +201,7 @@ export function paintScene(
   landmarks: Landmarks = NO_LANDMARKS,
   levelOrigin = 0,
   room: Room | null = null,
+  warp = 0,
 ): void {
   surface.clear();
   /*
@@ -212,6 +213,13 @@ export function paintScene(
   */
   paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin);
   paintSky(surface, view, cameraAlong, sky);
+  /*
+    ⚠️ **OVER THE SKY AND UNDER EVERY BODY — 0340**, on the room's own terms one paragraph down: the
+    streaks are what the sky does at speed, so they belong to it, and the one absolute in this file is
+    that the player never loses their own ship behind something. A no-op on every frame of every
+    level, because `warp` is nought outside a crossing.
+  */
+  paintWarp(surface, view, cameraAlong, warp);
   /*
     ⚠️ **AFTER THE SKY AND BEFORE EVERY BODY — 0335.** A room is architecture: it stands in FRONT of
     the starfield, because a wall you can see stars through is not one, and BEHIND everything that
@@ -676,5 +684,82 @@ export function paintStacks(
     const inView = e.prevAlong + (e.along - e.prevAlong) * alpha - cameraAlong + STACK_OFFSET;
     const across = e.prevAcross + (e.across - e.prevAcross) * alpha + STACK_OFFSET;
     surface.blit(badges[at]!, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+  }
+}
+
+/*
+  ── THE SKY AT SPEED — `docs/decisions/0340-the-coil-is-a-route.md` ─────────────────────────────
+
+  Asked for: *"the ship hyper-speeds through galaxy for the loading screen and then the hyper burn
+  trails off as they arrive at the new level."*
+
+  ⚠️ **A STREAK IS A BOLT, AND THAT IS THE SECOND THING THE VERB HAS EVER BEEN FOR.** 0233 put `bolt`
+  on the surface for *"a shape not known until the frame it is drawn on, which is the one thing a bake
+  cannot hold"* — and a streak's length IS the ship's speed on this frame. Baked, it would be a tile of
+  lines at one length, arriving and leaving as a swap; stroked, it grows out of a point as the engines
+  build and shrinks back into one as they trail off, which is the whole of what *trails off* means.
+  It is counted as a bolt (0025) and hides nothing behind a blit's count.
+
+  ⚠️ **AND IT COSTS NOTHING ON ANY FRAME OF ANY LEVEL.** `warp` is nought outside a crossing and the
+  function returns on its first line; inside one the field is empty by construction — the boss is dead
+  and the next level is not entered until the burn is over — so the streaks are spending a budget
+  nothing else is using.
+*/
+
+/** How many streaks cross the screen at once. Few enough to be lines rather than a hatch. */
+const WARP_STREAKS = 44;
+
+/**
+ * A streak's length at full burn, in world units, for one at the front of the sky. The lane is 100
+ * tall, so the longest is a little over half a lane — long enough to read as a line from the moment
+ * the eye lands on it, short enough that two in a row still have a gap between them.
+ */
+const WARP_STREAK_UNITS = 56;
+
+/** The two ends of the one streak being drawn. Read by `bolt` before it returns, never kept. */
+// @setup: four floats for the module's lifetime, written in place forty-four times a frame.
+const STREAK = new Float32Array(4);
+
+/**
+ * A number in [0, 1) that is always the same for the same `n` — the streaks' places.
+ *
+ * ⚠️ **A HASH AND NOT AN `Rng`, BECAUSE NOTHING HERE MAY BE REMEMBERED.** A seeded stream would be a
+ * field to hold and a draw order to keep; this is arithmetic on the streak's own index, so the sky at
+ * speed is the same sky on every crossing, allocates nothing, and is not on any stream a level's
+ * spawns could be coupled to — `docs/decisions/0021-one-stream-per-concern.md`.
+ */
+function streakHash(n: number): number {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function paintWarp(surface: Surface, view: View, cameraAlong: number, warp: number): void {
+  if (warp <= 0) return;
+  for (let i = 0; i < WARP_STREAKS; i++) {
+    /*
+      ⚠️ **EACH STREAK HAS A DEPTH, AND LENGTH, SPEED, WIDTH AND BRIGHTNESS ALL RIDE IT.** That is
+      what makes forty-four lines read as a volume the ship is going through rather than as a pattern
+      on the glass: the near ones are long, fast, thick and bright, and the far ones are none of those.
+      Strictly below one, for `SkyLayer.depth`'s reason — at one a streak moves with the world and
+      becomes a thing in the lane.
+    */
+    const depth = 0.3 + 0.65 * streakHash(i + 0.5);
+    const length = WARP_STREAK_UNITS * depth * warp;
+    // It wraps over the view plus its own longest self, so one never pops in or out at full length.
+    const period = view.alongSpan + WARP_STREAK_UNITS;
+    const travelled = (cameraAlong * depth + streakHash(i + 17.25) * period) % period;
+    const head = view.alongSpan - travelled;
+    const across = streakHash(i + 101.75) * ACROSS_SPAN;
+    STREAK[0] = screenX(view, head, across);
+    STREAK[1] = screenY(view, head, across);
+    STREAK[2] = screenX(view, head + length, across);
+    STREAK[3] = screenY(view, head + length, across);
+    /*
+      ⚠️ **THIN, AND THE FIRST WIDTH WAS LOOKED AT AND WAS WRONG.** A bolt is four strokes of one line
+      and its widest — the flash, 0238 — is fourteen times the core. At a core of two pixels that is a
+      capsule twenty-eight pixels fat with round ends, and the sky at speed was a screen of pills. A
+      streak is a line; under a pixel of core, the flash is a soft edge to it rather than a shape.
+    */
+    surface.bolt(STREAK, 2, 0.3 + 0.7 * depth, warp * (0.3 + 0.6 * depth), false);
   }
 }

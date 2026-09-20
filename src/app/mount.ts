@@ -21,6 +21,15 @@ import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, vie
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks } from '../render/scene.ts';
+// 0340: the crossing's own rule, and the one knob over it.
+import {
+  DEFAULT_TRAVEL,
+  TRAVEL_KINDS,
+  travelArrived,
+  travelIsWaiting,
+  travelMayLand,
+  warpAt,
+} from '../content/travel.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
 import { MOTE_BAND, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
@@ -841,6 +850,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     scrollRate: SCROLL_PER_STEP,
+    // Not burning — 0340. `stepCrossing` is the one writer, and it writes nought on the way out.
+    warp: 0,
     /*
       ⚠️ **Read off the resolved WEAPON rather than off the row** — 0093 took the two cadence numbers
       off `ShipRow`, because a rung is a note value on a ladder now and a base is just its first
@@ -991,6 +1002,44 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let timeoutLeft = 0;
   /** The whole seconds the chrome is currently showing, or `−1` for *no countdown*. */
   let shownSeconds = -1;
+  /*
+    ── THE CROSSING — `docs/decisions/0340-the-coil-is-a-route.md` ────────────────────────────────
+
+    ⚠️ **LOCALS AND NOT A SLICE, ON `audition`'s EXACT TERMS** (0017, and the note beside that one
+    further down). How far through a burn the ship is, and the step it started coming out of it, are
+    gone the moment it arrives: they are no part of the run, no save has to survive them, and no
+    seeded test compares them. The SCREEN is state and is in the screen slice, which is where the line
+    between the two falls.
+
+    ⚠️ **HERE RATHER THAN BESIDE THE BAKE THEY WAIT FOR, because `applyScreen` arms them** — the same
+    reason `timeoutLeft` and `shownSeconds` are on the two lines above rather than beside the chrome
+    they are written to.
+
+    ⚠️ **COUNTED IN FIXED STEPS AND NEVER IN WALL CLOCK**, in `world.onTick`. A burn timed off
+    `performance.now()` would run at a different speed from the music it is waiting for, and from the
+    camera it is driving.
+  */
+  let travelSteps = 0;
+  /** The step the ship started coming out of the burn, or `−1` while it is still building or held. */
+  let travelLandingAt = -1;
+  /**
+   * Whether the backdrop has been swapped to the place the ship is burning towards.
+   *
+   * ⚠️ **AT FULL BURN AND NOT BEFORE, BECAUSE THE STREAKS ARE WHAT HIDE IT.** A place change re-bakes
+   * the atlas — fifty-eight bitmaps, `applyPlace` has the count — and repaints the void. At the start
+   * of a level that is a hitch the player sits through with nothing moving; at twelve times the scroll
+   * rate, under forty-four bright lines, it is a change of colour behind a sky nobody can follow.
+   */
+  let travelSwapped = false;
+  /**
+   * What the crossing's words currently say, so they are written when they change and not every step.
+   *
+   * ⚠️ **ONE STRING RATHER THAN A HELD OBJECT, on `shownSeconds`'s exact terms**: the comparison is one
+   * value against one value, and the alternative is an object built per step to be thrown away — which
+   * this file is allowed to do (`tests/budget.test.ts` calls it deliberately cold) and should not,
+   * because the only reason it is cold is that nothing in it runs per frame.
+   */
+  let shownCrossing = '';
 
   /**
    * Push the current screen at the two things that care: the chrome, and whether the sim steps.
@@ -1010,6 +1059,26 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const applyScreen = (): void => {
     const screen = state.screen.current;
     world.stepping = SCREENS[screen].steps;
+    /*
+      ⚠️ **THE CROSSING IS ARMED HERE AND ON NO OTHER PATH, WHICH IS WHAT MAKES IT ONCE PER LEVEL** —
+      0340. This runs only on a real transition (`moved` at the call site), so arming it is the same
+      shape as arming a countdown two lines down, and it is armed for every screen rather than for
+      `travel` alone: a count left running when the crossing ends would be spent against the NEXT
+      crossing, which is the class of bug 0339 had just finished fixing — a thing that should happen
+      once per level happening twice because nothing reset between them.
+    */
+    travelSteps = 0;
+    travelLandingAt = -1;
+    travelSwapped = false;
+    /*
+      ⚠️ **AND THE ENGINES ARE PUT OUT HERE AS WELL AS WHERE THE BURN ENDS.** A run that dies or is
+      abandoned mid-burn leaves `travel` by a path `stepCrossing` never sees, and a `warp` left above
+      nought would be every later level flown at twelve times its speed.
+    */
+    world.warp = 0;
+    // And the words are forgotten with it, so the next crossing writes its own rather than comparing
+    // against a place the run has already left.
+    shownCrossing = '';
     /*
       Arm the screen's own countdown, if it has one.
 
@@ -1130,6 +1199,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const styleChanged = next.settings.style !== state.settings.style;
     const soundChanged = next.settings.sound !== state.settings.sound;
+    // 0340, on the two lines above's terms: per FIELD, so a travel change re-marks one chooser and
+    // does not re-bake an atlas or touch the speaker.
+    const travelChanged = next.settings.travel !== state.settings.travel;
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -1180,6 +1252,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       applySound();
       if (state.settings.sound === 'on') speaker.play('chime');
     }
+    if (travelChanged) applyTravel();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -1232,6 +1305,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
     if (screen === 'cleared') lifecycle.onward();
+    // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
     // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
     // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
@@ -1270,6 +1344,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The second setting, and it is one more line here because 0070 built the mechanism rather than
     // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
     else if (name === 'sound') dispatch({ slice: 'settings', type: 'sound', sound: SOUND_KINDS[index] ?? DEFAULT_SOUND });
+    // The third, and it is the line 0072 predicted: *"the queue behind the style was already the same
+    // shape."* `TRAVEL_KINDS` IS the order `src/state/screens.ts` built the options in — 0340.
+    else if (name === 'travel') dispatch({ slice: 'settings', type: 'travel', travel: TRAVEL_KINDS[index] ?? DEFAULT_TRAVEL });
   },
   /*
     THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
@@ -1345,6 +1422,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('sound', SOUND_KINDS.indexOf(state.settings.sound));
   };
   applySound();
+
+  /*
+    WHAT THE TRAVEL SETTING CHANGES, in one place — and it is NOTHING but the mark on its own chooser.
+
+    ⚠️ **AND THAT IS THE STRONGEST THING 0024 SAYS ABOUT IT** — 0340. `applyStyle` re-bakes an atlas
+    and `applySound` reaches the speaker; this reaches a button. What the setting is FOR is read where
+    the crossing is spent (`TRAVELS[state.settings.travel].floorSteps`), which is a number consulted on
+    one screen — so there is no state anywhere that a comfort knob has put out of step, and nothing to
+    apply at boot but the mark.
+  */
+  const applyTravel = (): void => {
+    chrome.setChoice('travel', TRAVEL_KINDS.indexOf(state.settings.travel));
+  };
+  applyTravel();
 
   /*
     HOW FAR UP THE MUSIC'S LADDER THE RUN IS — `docs/decisions/0090-the-music-is-four-loops.md`.
@@ -1424,6 +1515,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let stopAhead: (() => void) | null = null;
   /** The run reached the place while its bake was still in flight, so it is handed over as it lands. */
   let aheadIsWanted = false;
+  /**
+   * The place whose material the mixer is actually holding — 0340. `null` until the first hand-over.
+   *
+   * ⚠️ **THE CROSSING WAITS ON THIS AND ON NOTHING ELSE**, and `handOverPlace` is the one line that
+   * writes it, so all three of 0331's routes report through it. See there for why `bakingTheme` and
+   * `aheadTheme` are the wrong question: they say what has been asked for.
+   */
+  let loadedTheme: ThemeKind | null = null;
 
   /** The backdrop the surface was last given, so a place is applied once rather than every step. */
   let shownSpace = colours.space;
@@ -1570,7 +1669,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     the wrong one for a listener. Everything else about the bake — stopping the one in flight, the
     guard against re-baking what is already loaded — is unchanged and now serves both callers.
   */
-  const handOverPlace = (loops: Record<MusicLayer, Float32Array>, cues: Float32Array[][]): void => {
+  const handOverPlace = (theme: ThemeKind, loops: Record<MusicLayer, Float32Array>, cues: Float32Array[][]): void => {
+    /*
+      ⚠️ **THE THEME IS AN ARGUMENT SO THAT *WHICH PLACE IS LOADED* IS A QUESTION WITH AN ANSWER** —
+      0340. The crossing waits for the place it is crossing to, and post-0331 there are three ways
+      that place can arrive: held in `ahead` and handed over on the step the run gets there, landing
+      from a bake that was still in flight, or baked from scratch because the run outran its own
+      lookahead. `bakingTheme` and `aheadTheme` between them say what has been ASKED for, which is a
+      different question and is true several seconds too early. This is the one line all three routes
+      go through, so it is the only honest place to record what the mixer is actually holding.
+    */
+    loadedTheme = theme;
     /*
       ⚠️ **Asked for again at the moment it is handed over, not captured.** The context can be built
       or torn down while a bake walks, and a `MusicOut` closed over here would be one the player is
@@ -1603,7 +1712,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (aheadIsWanted) {
         aheadIsWanted = false;
         aheadTheme = null;
-        handOverPlace(loops, cues);
+        handOverPlace(theme, loops, cues);
         return;
       }
       ahead = { theme, loops, cues };
@@ -1620,7 +1729,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const held = ahead;
       ahead = null;
       aheadTheme = null;
-      handOverPlace(held.loops, held.cues);
+      handOverPlace(theme, held.loops, held.cues);
       return;
     }
     // …or it is still in flight, and lands in the run's hands rather than in `ahead`.
@@ -1642,8 +1751,82 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     stopBaking?.();
     bakingTheme = theme;
     stopBaking = bakePlace(theme, ({ loops, cues }) => {
-      handOverPlace(loops, cues);
+      handOverPlace(theme, loops, cues);
     });
+  };
+
+  /*
+    ── THE CROSSING'S ONE QUESTION, AND ITS STEP — 0340 ────────────────────────────────────────────
+
+    The rule is in `src/content/travel.ts` and is pure. What is here is the one fact the shell owns —
+    whether there is anything left to wait for — and the step that reads the rule and writes the one
+    number the frame burns by.
+  */
+
+  /**
+   * Whether the crossing has nothing left to wait for.
+   *
+   * ⚠️ **TRUE WHEN NOBODY IS LISTENING, AND THAT IS NOT AN OPTIMISATION.** `applyMusicLevel` returns
+   * immediately when there is no `AudioContext` — a player who has never pressed anything, or who
+   * chose silence on the title screen — so no bake is ever started for them and `loadedTheme` would
+   * never move. Waiting on it would hold the burn for twenty seconds for exactly the players who
+   * cannot be told why, and `TRAVEL_MAX_STEPS` is a backstop rather than a schedule.
+   *
+   * ⚠️ **AND THE SOUND SETTING COUNTS AS *NOBODY*, WHICH IS ONE STEP BEYOND THE CONTEXT.** A player
+   * who chose *Off* has an `AudioContext` — `src/app/sound.ts` mutes the speaker rather than tearing
+   * it down — so the bake does run and would be waited on. Nothing they can hear is arriving, so
+   * there is nothing for them to wait for.
+   */
+  const crossingIsReady = (): boolean => {
+    if (state.settings.sound !== 'on') return true;
+    if (audioOut.music() === null) return true;
+    return loadedTheme === placeFor(state.run.level);
+  };
+
+  /**
+   * Spend one step of the burn: build, hold, trail off, arrive.
+   *
+   * ⚠️ **IT IS NOT A `timeout`, AND THE ROW SAYS WHY.** What it borrows from the countdown is the
+   * shape: one screen's clock, spent in `onTick`, doing nothing on every other screen.
+   *
+   * ⚠️ **THE FRAME IS HANDED A NUMBER AND NOTHING ELSE.** `world.warp` is the whole of what crosses
+   * into `src/app/frame.ts`, which may not see the travel table (0024): the scroll rate, the flame and
+   * the streaks are that number being read, so the three cannot disagree about whether the ship is at
+   * speed.
+   *
+   * ⚠️ **`lifecycle.arrive()` AND NOT A `show playing` DISPATCH.** The table at the top of
+   * `src/app/lifecycle.ts` is the one description of how a run moves, and `arrive` is what enters the
+   * level — a shell that showed the playing screen by itself would arrive nowhere.
+   */
+  const stepCrossing = (): void => {
+    if (state.screen.current !== 'travel') return;
+    travelSteps += 1;
+    const ready = crossingIsReady();
+    if (travelLandingAt < 0 && travelMayLand(state.settings.travel, travelSteps, ready)) travelLandingAt = travelSteps;
+    world.warp = warpAt(travelSteps, travelLandingAt);
+    // At full burn, once: the streaks are what hide it. `travelSwapped`'s own note has the argument,
+    // and `placeOnScreen` is what reads it.
+    if (!travelSwapped && world.warp >= 1) travelSwapped = true;
+    const place = placeFor(state.run.level);
+    const waiting = travelIsWaiting(state.settings.travel, travelSteps, ready);
+    const leaving = travelLandingAt >= 0;
+    const key = `${place}:${waiting ? 'wait' : ''}:${leaving ? 'leave' : ''}`;
+    if (key !== shownCrossing) {
+      shownCrossing = key;
+      chrome.setCrossing({
+        place: THEMES[place].title,
+        voyage: THEMES[place].voyage,
+        // How many legs are behind the run, which is the index of the place it is burning towards.
+        flown: Math.min(Math.max(state.run.level, 0), LEVEL_KINDS.length - 1),
+        palette,
+        waiting,
+        leaving,
+      });
+    }
+    if (travelArrived(travelSteps, travelLandingAt)) {
+      world.warp = 0;
+      lifecycle.arrive();
+    }
   };
 
   /*
@@ -1714,9 +1897,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **ONE QUESTION, ASKED BY THE BACKDROP, THE ATLAS, THE WEATHER, THE MIX AND THE READOUT** —
    * 0212. It was `state.screen.current === 'playing'` written out five times, which was fine while a
    * place could only be somewhere a run was.
+   *
+   * ⚠️ **AND *IN A RUN* IS NOT *ON THE PLAYING SCREEN*, WHICH THIS SAID FOR SIX WEEKS — 0340.** The
+   * level break keeps the world running and does not paint over it (0063), and this returned `null`
+   * for it: so on the step a boss died the backdrop went to the title's void and the atlas re-baked
+   * to The Approach's sky, for exactly the three seconds the break exists to let the player look at
+   * where they are — and then both changed again. It was reported without being located, as one beat
+   * of a list: *"boss death → **starfield** → animation → button click."* 0076 says a level boundary
+   * keeps the scene; this was the scene being swapped twice at every one.
+   *
+   * ⚠️ **AND THE BURN SWAPS IT ONCE, AT FULL SPEED** — `travelSwapped`'s own note has why. Before that
+   * the ship is still leaving the place it was in; after it, it is arriving in `placeFor(run.level)`,
+   * which is the same place `arrive` is about to enter, so nothing changes on the step it lands.
    */
   function placeOnScreen(): ThemeKind | null {
-    return state.screen.current === 'playing' ? world.level.theme : audition;
+    const screen = state.screen.current;
+    if (screen === 'playing' || screen === 'cleared') return world.level.theme;
+    if (screen === 'travel') return travelSwapped ? placeFor(state.run.level) : world.level.theme;
+    return audition;
   }
 
   /** Put the run's camera back exactly as the room found it. A no-op unless the room borrowed it. */
@@ -2270,6 +2468,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     applyPlace();
     applyMusicLevel();
     showNowPlaying();
+    /*
+      ⚠️ **AFTER ALL FOUR, BECAUSE IT READS WHAT THEY WRITE** — 0340, on `stepAudition`'s own terms one
+      line up. `applyMusicLevel` is what starts the bake the crossing is waiting for and what hands a
+      held place over, so a crossing spent before it would ask *is the place loaded* one step earlier
+      than the step it became loaded on — and `applyPlace` is what re-bakes the atlas the chart is
+      drawn into.
+    */
+    stepCrossing();
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();

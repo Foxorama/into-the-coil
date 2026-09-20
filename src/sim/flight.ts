@@ -209,6 +209,12 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
     so `s + lag(v − s → T)` and `lag(v → s + T)` are identical to floating-point noise, and a test
     written to guard the difference passed under both. The real hazard it was reaching for is
     `holdStation` below, which is about the velocity a ship STARTS at, not about how it is decomposed.
+
+    ⚠️ **THAT IS TRUE OF A CONSTANT `s`, AND `s` STOPPED BEING CONSTANT — 0335, THEN 0340.** The two
+    forms differ by exactly the lag applied to a CHANGE in the scroll, which was nought when this was
+    written. `src/app/frame.ts` hands the ship the change in rate while it is burning between places,
+    where the lag would otherwise drag it twenty-six units down its box; the note there has the
+    arithmetic, and says why a closing room's couple of units of drift is deliberately left alone.
   */
   ship.velAlong += (scrollPerStep + ax * scale - ship.velAlong) * FLIGHT_RESPONSE;
   ship.velAcross += (ay * scale - ship.velAcross) * FLIGHT_RESPONSE;

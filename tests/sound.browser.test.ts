@@ -315,7 +315,34 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       // is a gain here, and material that only existed when sound was ON is material that has to be
       // synthesised on the press that turns it back on. That is the whole subject of this test.
     ).toBe(BAKED_BUFFERS + MUSIC_LAYERS.length + 1);
-    expect(after.voices, 'sound is off and the game played anyway').toBe(0);
+    /*
+      ── THIS ASSERTED `voices === 0`, AND THAT WAS THE WRONG QUANTITY — FOUND INTERMITTENT ON CI, 0340 ──
+
+      ⚠️ **IT FAILED ONCE ON A RUNNER WITH `expected 27 to be +0`, AND 27 IS EXACTLY ONE SET OF MUSIC
+      LAYERS.** `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md`: a rerun is
+      not evidence, so it was reproduced instead. Audio unlocks on `pointerdown` and builds the music
+      with `on = true`; *Off* is not chosen until the `click`. If ONE frame lands between the two, that
+      frame's tick starts the music — correctly, because at that instant sound IS on — and the click
+      mutes it a few milliseconds later. Measured on the same build, same button, same outcome (*Off*
+      ends up marked): `page.click` → **0** sources; down, one frame, up → **27**. `page.click` puts
+      both events inside one frame on an idle machine and does not under the load of `npm run prove`.
+
+      ⚠️ **SO *WAS A SOURCE EVER CREATED* IS A FACT ABOUT THE RACE AND NOT ABOUT THE SETTING.** What
+      *"sound is off and the game played anyway"* means is that the GAME made a sound: a gun, a death, a
+      pickup. Those are cues, they go through the speaker, and the speaker is what `setOn(false)` stops
+      — so that is what is counted, and `into` already tells a cue from a loop by length (the note on
+      `CUE_CEILING` has why that is exact). Any other source is a music loop, which is silenced at its
+      master GAIN — *silence is a gain, never an absence of material*, this test's own opening — and a
+      count of nodes cannot see a gain in either direction. It never could: `0` said nothing about the
+      music's gain either, only that the race had not happened.
+
+      ⚠️ **AND WHOLE SETS ONLY**, so a stray source that is neither a cue nor a layer is still caught.
+    */
+    expect(after.into, 'sound is off and the game played a cue anyway').toEqual([]);
+    expect(
+      after.voices % MUSIC_LAYERS.length,
+      `sound is off and ${after.voices} sources exist, which is not a whole number of music sets — something else sounded`,
+    ).toBe(0);
     await page.context().close();
   });
 

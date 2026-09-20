@@ -396,6 +396,7 @@ export function playableWorld(
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     scrollRate: SCROLL_PER_STEP,
+    warp: 0,
     // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
     fireIn: weaponFor(shipRow, []).fireEvery,
     missileIn: weaponFor(shipRow, []).missileEvery,

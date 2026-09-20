@@ -54,7 +54,17 @@ import { type Body, type Entity, reset, stepEntities, turnFor } from '../sim/ent
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, flyShip, holdStation } from '../sim/flight.ts';
-import { BURN_ASK, EASE_ASK, EXHAUST, LEAN_AT, PULSE_STEPS, THRUST } from '../content/exhaust.ts';
+import {
+  BURN_ASK,
+  BURN_HALF,
+  EASE_ASK,
+  EXHAUST,
+  LEAN_AT,
+  PULSE_STEPS,
+  THRUST,
+  WARP_FLAME,
+  WARP_SCROLL,
+} from '../content/exhaust.ts';
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
@@ -875,6 +885,23 @@ export interface World {
    */
   scrollRate: number;
   /**
+   * How hard the ship is burning between two places, nought to one —
+   * `docs/decisions/0340-the-coil-is-a-route.md`. Nought at every other time.
+   *
+   * ⚠️ **AN INPUT, EXACTLY AS `scrollRate` IS, AND THE FRAME NEVER LEARNS WHERE IT CAME FROM.** The
+   * shell writes it while the crossing is up; what it is a function of — a settings row, whether the
+   * next place's music has landed — lives in `src/content/travel.ts`, which this file may not import
+   * (0024, and `tests/travel.test.ts` scans for it). What the frame does with it is two reads: the
+   * scroll rate is multiplied, and the engine's flame is swollen.
+   *
+   * ⚠️ **AND IT IS SAFE TO MULTIPLY THE SCROLL BECAUSE EVERY SPEED IS IN THE CAMERA'S FRAME** —
+   * 0023, 0034. The ship's baseline, every shot's and the sky's parallax all read `scrollPerStep`, so
+   * a camera at twelve times its rate carries the ship with it and nothing in the player's hands
+   * changes. The field is empty by construction: the boss is dead and the next level's script is not
+   * entered until the burn is over.
+   */
+  warp: number;
+  /**
    * The level being played — its wave script, and what waits at the end of it.
    *
    * ⚠️ **The camera is the clock.** A wave carries the camera distance it spawns at, so the level
@@ -1512,7 +1539,32 @@ export class GameFrame implements Frame {
       baseline, every shot's, the sky's parallax, the culls — reads `w.scrollPerStep` and needs to
       be told nothing.
     */
+    const scrolledAt = w.scrollPerStep;
     w.scrollPerStep = scrollFor(w);
+    /*
+      ⚠️ **EXCEPT THE SHIP'S OWN VELOCITY, WHICH IS TOLD THE CHANGE — 0340, AND A TEST FOUND IT.**
+      `flyShip` lags the ship's velocity towards `scroll + ask` with its mass (0037), and its own note
+      says lagging only the departure is *"algebraically the same expression"* — which is true of a
+      scroll that is CONSTANT, and was written when it was. A scroll that accelerates is a camera
+      leaving the ship behind by the change in rate times the lag: `(1 − r) / r` is four steps, and a
+      burn is six and a half units a step of change, so the ship slid twenty-six units down the screen
+      as the engines built — out of the player's hands, backwards, to the rear wall of its box — and
+      lurched the same distance forward on arrival. `tests/travel.test.ts` measured 13.6 against 40.
+
+      ⚠️ **THE CAMERA'S ACCELERATION BELONGS TO EVERYTHING IN ITS FRAME**, which is the whole of
+      *every speed is in the camera's frame* (0023, 0034). Handing the ship the change, exactly, leaves
+      the mass acting on the one thing it was ever about: the player's ask.
+
+      ⚠️ **ONLY WHILE THE SHIP IS BURNING, AND THE FIRST VERSION WAS UNCONDITIONAL AND WAS WRONG TO
+      BE.** A room closing (0335) is the other changing scroll and drifts the ship a couple of units for
+      the same reason — and that drift is part of seven boss fights that have been played and tuned.
+      Correcting it here moved the ship in the gyre's fight far enough that 0333's probe came back
+      STILL GREEN in the full proof: a *fix* nobody asked for, in a fight this change is not about,
+      found only because the proof runs every decision's probes and not just its own. If the room's
+      drift is wanted gone, that is a boss decision with a play-test behind it. During a burn the room
+      is already open and its ease is at one, so the whole change in rate IS the burn's.
+    */
+    if (w.warp > 0) w.ship.velAlong += w.scrollPerStep - scrolledAt;
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
@@ -2063,7 +2115,8 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room);
+    // `w.warp` last — 0340: the sky at speed. Nought on every frame that is not a crossing.
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -2286,7 +2339,15 @@ export function layRoom(w: World): void {
 function scrollFor(w: World): number {
   const room = w.bossRow.room;
   const rest = roomRestFor(w);
-  if (room === null || !Number.isFinite(rest)) return w.scrollRate;
+  /*
+    ⚠️ **THE BURN MULTIPLIES THE RATE, ON BOTH WAYS OUT OF THIS FUNCTION — 0340.** At `warp` nought
+    this is `× 1` and nothing anywhere moves, which is every step of every level. A room's hold is
+    multiplied too rather than bypassed, because a burn only happens after the way out has opened and
+    the ease has already run back up to one; bypassing it would be a second description of *is the
+    camera free* beside the one forty lines down.
+  */
+  const burn = 1 + w.warp * (WARP_SCROLL - 1);
+  if (room === null || !Number.isFinite(rest)) return w.scrollRate * burn;
   /*
     ⚠️ **THE RAMP IS A COUNTER, AND THAT IS WHAT MAKES THE CAMERA ARRIVE.** A rate eased on the
     distance REMAINING converges without landing — the first draft crept at three ten-thousandths of
@@ -2310,7 +2371,7 @@ function scrollFor(w: World): number {
   if (closing) {
     if (w.roomHold < room.settle) w.roomHold++;
   } else if (w.roomHold > 0) w.roomHold--;
-  return w.scrollRate * roomEase(1 - w.roomHold / room.settle);
+  return w.scrollRate * roomEase(1 - w.roomHold / room.settle) * burn;
 }
 
 /**
@@ -3172,7 +3233,14 @@ function stepExhaust(w: World): void {
     flame = lit;
   }
   const ask = w.intent.along;
-  const row = ask > BURN_ASK ? THRUST.burn : ask < EASE_ASK ? THRUST.ease : THRUST.idle;
+  /*
+    ⚠️ **A SHIP BETWEEN TWO PLACES IS BURNING WHATEVER THE STICK SAYS — 0340.** *"The player's engines
+    do a full jet burn."* The state is normally the intent (the paragraph above), and this is the one
+    time it is not: the burn is the ship's and not the hand's, and a flame that dropped to idle
+    because the player let go of the stick at twelve times the speed of the level would be the
+    picture contradicting the sky behind it.
+  */
+  const row = w.warp > 0 || ask > BURN_ASK ? THRUST.burn : ask < EASE_ASK ? THRUST.ease : THRUST.idle;
   /*
     ⚠️ **THE LEAN IS THE VELOCITY, AND IT PICKS A BITMAP RATHER THAN MOVING ONE — 0241.** 0230 slid
     the flame across the tail against the across velocity, and it played as *"they move up and down
@@ -3186,9 +3254,23 @@ function stepExhaust(w: World): void {
   flame.spriteBase = sprite;
   flame.spriteHit = sprite;
   flame.sprite = sprite;
+  /*
+    ⚠️ **AND THE FLAME SWELLS WITH THE BURN, WHICH IS WHAT MAKES IT TRAIL OFF RATHER THAN SWITCH OFF.**
+    *"The hyper burn trails off as they arrive at the new level."* `swell` is the painter's one size
+    channel (`src/render/scene.ts`, 0283) and is `1` for everything but a chain's body, so a flame at
+    `warp` nought is drawn exactly as it always was.
+
+    ⚠️ **THE ROOT STAYS ON THE TAIL, SO THE OFFSET IS NOT A MULTIPLE OF ITSELF.** `trail` is to the
+    sprite's CENTRE and the flame's root is at its forward edge, half an extent on. A blit scales about
+    the centre, so a swollen flame on the old offset would start inside the hull, and one on `trail ×
+    swell` would leave a gap behind it that widens as the burn builds. What is held still is the root:
+    the centre goes back by half the extent times how much it grew. At `swell` one this is `trail`.
+  */
+  const swell = 1 + w.warp * (WARP_FLAME - 1);
+  flame.swell = swell;
   flame.prevAlong = flame.along;
   flame.prevAcross = flame.across;
-  flame.along = w.ship.along - row.trail;
+  flame.along = w.ship.along - row.trail - BURN_HALF * (swell - 1);
   flame.across = w.ship.across;
 }
 

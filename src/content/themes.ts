@@ -133,6 +133,21 @@ export interface ThemeRow {
    */
   title: string;
   /**
+   * The one line the chart says about the place while the ship is crossing to it —
+   * `docs/decisions/0340-the-coil-is-a-route.md`.
+   *
+   * ⚠️ **ON THE ROW, WHICH IS THE WHOLE OF WHY THE TRAVEL SCREEN IS NOT SEVEN SCREENS.** A screen
+   * switching on which place it was flying to would be a mechanism whose output is the same shape
+   * for every kind with the differences buried inside it — 0282. The screen walks `LEVEL_KINDS` and
+   * prints this, so a place added to the table arrives on the chart with its own sentence and
+   * nothing else is edited.
+   *
+   * ⚠️ **`docs/game.md`'s voice rule, exactly as `title` above states it: what it is, never why it
+   * is good.** *"Ice, and what the ice is keeping"* is the place. *"A tough one"* would be a
+   * difficulty rating wearing a description — and the tier is already something the player chose.
+   */
+  voyage: string;
+  /**
    * The backdrop everything is found against, per palette.
    *
    * ⚠️ **PER PALETTE, and that is what keeps 0024 whole.** High contrast is a setting a player chose
@@ -623,6 +638,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   approach: {
     title: 'The Approach',
+    // ⚠️ **NEVER PRINTED TODAY, AND STATED ANYWAY** — 0340. The chart is crossed BETWEEN levels, so
+    // the run is already in this place before there is a crossing to show; a row left with a hole in
+    // it is a table waiting for the day a prologue puts a leg in front of level one.
+    voyage: 'The void as it has always been, and the way in.',
     space: { vivid: '#0b0b14', 'high-contrast': '#000000' },
     nebula: { vivid: '#2b3352', 'high-contrast': '#1c1c28' },
     // ⚠️ A COLD BLUE BODY AND A WARM TEAL EDGE. The Approach is the baseline every other place
@@ -790,6 +809,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   nebula: {
     title: 'Ember Nebula',
+    voyage: 'A cathedral in a furnace. The dust is still burning.',
     space: { vivid: '#140b16', 'high-contrast': '#050008' },
     nebula: { vivid: '#5c2a4a', 'high-contrast': '#2a1626' },
     // ⚠️ MAROON GAS AND AN EMBER EDGE, WHICH IS THE PLACE'S OWN NAME. The widest step of the seven:
@@ -932,6 +952,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   saurian: {
     title: 'Saurian Belt',
+    voyage: 'Hot-blooded rock, and something the size of a building over it.',
     /*
       ⚠️ **A SKY, AND IT IS THE BLUEST ONE THE FLOOR ALLOWS.** Asked for: *"saurian needs blue
       skies."* `space` is the colour every ink's contrast is measured against
@@ -1155,6 +1176,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   labyrinth: {
     title: 'The Labyrinth',
+    voyage: 'A corridor with no end in sight, and something already down it.',
     space: { vivid: '#0e0a14', 'high-contrast': '#030006' },
     nebula: { vivid: '#3a2a52', 'high-contrast': '#1d1428' },
     // ⚠️ VIOLET STONE AND A COLD CYAN LIGHT IN THE CORRIDOR. The lit edges here are the walls' inner
@@ -1260,6 +1282,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   rime: {
     title: 'Rime Shelf',
+    voyage: 'Ice under an open sky, and whatever the ice is keeping.',
     /*
       ⚠️ **AUSTERE IS THE WORD, AND IT IS A COLOUR DECISION BEFORE IT IS A COUNT.** Asked for: *"rime
       shelf needs to be icy and austere."* A flat colourless steel-blue with nothing warm anywhere in
@@ -1370,6 +1393,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
    */
   mire: {
     title: 'The Toxic Mire',
+    voyage: 'Standing water, and a great deal of it standing up.',
     /*
       ⚠️ **THE DIMMEST OF THE THREE PLANETS, AND ON PURPOSE.** Asked for: *"toxic mire is also a
       planet, but needs an overhanging canopy so that it feels like you're flying through a tight
@@ -1485,6 +1509,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
   /** Level seven. The black hole at the heart of the galaxy, and the drone is what is left of it. */
   core: {
     title: 'The Black Heart',
+    voyage: 'The centre. It has been beating the whole way down.',
     space: { vivid: '#10050f', 'high-contrast': '#040003' },
     nebula: { vivid: '#5a1e3c', 'high-contrast': '#2c0c1c' },
     // ⚠️ DEEP RED AND A HOT WHITE-PINK RIM. The last place is nearly empty, so what little is lit has

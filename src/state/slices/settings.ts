@@ -21,6 +21,7 @@
 
 import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
 import { DEFAULT_STYLE, type StyleKind } from '../../content/styles.ts';
+import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { type SettingName } from '../screens.ts';
 
 /**
@@ -42,6 +43,18 @@ interface SettingValue {
    * `docs/decisions/0072-a-cue-is-baked-and-played.md`.
    */
   sound: SoundKind;
+  /**
+   * How much of the crossing between two places the player sits through.
+   * `src/content/travel.ts` is the table.
+   *
+   * ⚠️ **It reaches `src/app/mount.ts` and nothing else, on the field above's exact terms** — 0024,
+   * and `docs/decisions/0340-the-coil-is-a-route.md`. What it changes is one number: the shortest
+   * the chart is up for. The screen it shortens does not step the world, so there is no arithmetic
+   * behind it for a comfort setting to move — and `tests/travel.test.ts` holds that
+   * `src/app/frame.ts` cannot see the table, which is the same ban `sound` carries and the same way
+   * of holding it.
+   */
+  travel: TravelKind;
 }
 
 /**
@@ -61,10 +74,11 @@ export type SettingsState = { readonly [K in SettingName]: SettingValue[K] };
  */
 export type SettingsAction =
   | { slice: 'settings'; type: 'style'; style: StyleKind }
-  | { slice: 'settings'; type: 'sound'; sound: SoundKind };
+  | { slice: 'settings'; type: 'sound'; sound: SoundKind }
+  | { slice: 'settings'; type: 'travel'; travel: TravelKind };
 
 /** What a player who has chosen nothing has. The default IS the game — 0024. */
-export const initialSettings: SettingsState = { style: DEFAULT_STYLE, sound: DEFAULT_SOUND };
+export const initialSettings: SettingsState = { style: DEFAULT_STYLE, sound: DEFAULT_SOUND, travel: DEFAULT_TRAVEL };
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
@@ -76,6 +90,11 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // chime, so a rebuilt slice would blip on every unrelated press of the option already chosen.
     case 'sound':
       return state.sound === action.sound ? state : { ...state, sound: action.sound };
+    // Same shape again. The identity rule buys nothing here — nothing re-bakes or sounds on a
+    // travel change — and it is kept because a slice where one arm answers a repeat differently
+    // from its neighbours is a slice somebody has to read three times.
+    case 'travel':
+      return state.travel === action.travel ? state : { ...state, travel: action.travel };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per

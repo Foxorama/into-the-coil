@@ -161,7 +161,14 @@ describe('a new run opens on an empty field', () => {
     const built = shell();
     built.lifecycle.begin(TIER);
     intoAFight(built);
+    /*
+      ⚠️ **`onward` THEN `arrive`, AND THE INVARIANT DID NOT MOVE — 0340.** The next level used to be
+      entered by `onward`; the burn between two places went into the middle of that verb, so `onward`
+      raises the burn and `arrive` is what enters the level, and the sweep with it. What this asserts
+      is what it always asserted — *level two opens on an empty field* — at the moment level two opens.
+    */
     built.lifecycle.onward();
+    built.lifecycle.arrive();
     expect(built.world.enemies.size, 'level two opened on level one’s field').toBe(0);
     expect(built.world.enemyShots.size, 'level two opened under level one’s bullets').toBe(0);
   });

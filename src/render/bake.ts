@@ -19,8 +19,8 @@
  * frame, and it cannot reach this.
  */
 
-import type { Palette } from '../content/palette.ts';
-import { foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
+import type { Palette, PaletteName } from '../content/palette.ts';
+import { THEMES, foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
@@ -10386,6 +10386,182 @@ export function bakeLandmark(
     drawLandmark(ctx, gas, glow, space, size, theme, seed);
     (atlas.bitmaps as CanvasImageSource[])[LANDMARK_SLOTS[seed]!] = canvas;
   }
+}
+
+/*
+  ── THE CHART: THE COIL AS A ROUTE — `docs/decisions/0340-the-coil-is-a-route.md` ────────────────
+
+  ⚠️ **A DRAWING AND NOT A SPRITE, AND IT WAS A SPRITE FOR ONE BUILD.** The first version of the
+  crossing replaced the game with a full-screen chart blitted from the atlas, and the play-test said
+  what that was: *"it takes the player out of the game."* The crossing is a burn the ship makes in the
+  world now, and the chart is a small inset in the banner that names the place — so it is drawn into a
+  canvas of the chrome's own, exactly as the title screen's pickup key is, and the atlas never hears of
+  it. That took a sprite kind, a re-bake with a staleness memo, a second painter and a shared-geometry
+  argument out of the game, all of which existed to serve a picture that was in the wrong place.
+
+  ⚠️ **`docs/game.md`'s one stated constraint on the chart is answered by the shape rather than by a
+  label**: *"it must read as descent toward the centre, and must not be a copy of the star map."* So
+  the route is a spiral that loses radius as it goes and ends at the exact middle — which is where The
+  Black Heart is, in the fiction and in the picture.
+*/
+
+/**
+ * How far round the chart's spiral the whole route goes, in turns.
+ *
+ * ⚠️ **OVER ONE TURN ON PURPOSE.** At exactly one the first and last stops sit on the same bearing
+ * and the route reads as a ring with a dot in the middle; over it, the curve visibly passes inside
+ * where it has already been, which is the only thing that makes a flat picture read as a coil.
+ */
+export const CHART_TURNS = 1.15;
+
+/**
+ * The radius the route starts at, as a fraction of the chart's own tile. It ends at exactly nothing.
+ *
+ * ⚠️ **ENDING AT ZERO IS THE FICTION RATHER THAN A ROUNDING.** `docs/game.md` puts the black hole at
+ * the heart of the galaxy; the last place on the roster is The Black Heart, so the last stop on the
+ * route is the middle of the picture. Any other number would be a coil that stops just short of the
+ * thing it is a coil around.
+ *
+ * ⚠️ **AND IT LEAVES ROOM FOR THE WIDEST MARK A STOP CAN WEAR, WHICH IS NOT ITS DISC.** The
+ * destination wears a second ring at `CHART_RING` stop radii, so the first place reaches
+ * `CHART_OUTER + CHART_STOP × CHART_RING` — and that has to stay inside the half-tile or the top of
+ * the route is clipped by the canvas's own edge. **It was 0.44 and that sum came to 0.5135**, caught
+ * by `tests/travel.test.ts` rather than by looking.
+ */
+export const CHART_OUTER = 0.42;
+
+/**
+ * How the radius falls as the route goes: `(1 - u)` raised to this.
+ *
+ * ⚠️ **BELOW ONE, AND A STRAIGHT LINE WAS TRIED FIRST AND WAS WRONG.** With the radius falling
+ * linearly while the ANGLE advances at a constant rate, the inner legs get shorter and shorter until
+ * they are nothing. Measured: the last two places came out **exactly 7% of the tile apart, which is
+ * exactly a stop's own diameter**, so the final two discs were tangent and the destination's ring cut
+ * straight through the one before it. 0.6 holds radius for longer and spends it near the middle,
+ * which is also what a coil looks like: the turns crowd towards the eye rather than dying out before
+ * it.
+ */
+export const CHART_TIGHTEN = 0.6;
+
+/** A stop's disc, as a fraction of the tile; and how many of its radii out the destination's ring is. */
+export const CHART_STOP = 0.035;
+export const CHART_RING = 2.1;
+
+/**
+ * Where a point `u` of the way along the whole route falls, as a fraction of the chart's tile — `u`
+ * is 0 at the first place and 1 at the last.
+ *
+ * ⚠️ **Straight up at `u = 0`**, so the outermost place is at the top and the descent reads downward
+ * as well as inward. A route that started at the right-hand side would read as a clock face.
+ */
+export function chartTileX(u: number): number {
+  return 0.5 + Math.cos(chartAngle(u)) * chartRadius(u);
+}
+
+export function chartTileY(u: number): number {
+  return 0.5 + Math.sin(chartAngle(u)) * chartRadius(u);
+}
+
+function chartAngle(u: number): number {
+  return -Math.PI / 2 + u * CHART_TURNS * Math.PI * 2;
+}
+
+export function chartRadius(u: number): number {
+  return CHART_OUTER * Math.pow(1 - u, CHART_TIGHTEN);
+}
+
+/**
+ * How finely the spiral is sampled per leg when it is stroked.
+ *
+ * ⚠️ **A COUNT PER LEG RATHER THAN OVER THE WHOLE ROUTE, SO THE INNER LEGS ARE NOT COARSER.** The
+ * route loses radius as it goes, so a fixed total would put the same number of samples on a long
+ * outer arc as on a short inner one — the visible corner
+ * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` measures on the serpent's spine. Forty
+ * straight segments across a sixth of a turn is under half a degree each, which no edge shows.
+ */
+const CHART_SAMPLES = 40;
+
+/**
+ * The Coil as a route, drawn whole: the spiral, the stops on it, and which legs have been flown.
+ *
+ * `flown` is how many legs are behind the run, which is the index of the place it is crossing TO.
+ * `faint` is what a leg not yet flown is drawn in.
+ *
+ * ⚠️ **A LEG IS DRAWN IN THE COLOUR OF THE PLACE IT LEADS TO, WHICH IS WHY THIS TAKES NO EXTRA INK.**
+ * The first version stroked the flown route in the player's cyan, which said *you* rather than
+ * *where* — and made the chart a progress bar with dots on it. Coloured by destination, the route IS
+ * the list of places, and the one thing the picture has to say — *these are behind you and that one
+ * is not* — is said by whether a leg has a colour at all.
+ *
+ * ⚠️ **AND THE STOPS ARE `LEVEL_KINDS` WALKED, NEVER A LIST OF SEVEN.** `LEVELS[kind].theme` is the
+ * one ordering — `src/content/levels.ts` refuses a second — so a place added to the roster appears
+ * on the chart in its own colours with nothing here edited: 0016, and 0282's *a change is finished
+ * when the thing it added can differ per instance*.
+ *
+ * ⚠️ **NOTHING IS PAINTED OVER THE WHOLE TILE**, so the canvas is transparent wherever the route is
+ * not and whatever is behind the banner shows through it.
+ */
+export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: number, faint: string): void {
+  const legs = LEVEL_KINDS.length - 1;
+  if (legs < 1) return;
+  const glowOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].glow[palette];
+  const bodyOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].nebula[palette];
+  ctx.lineCap = 'round';
+  for (let leg = 0; leg < legs; leg += 1) {
+    const done = leg < flown;
+    ctx.lineWidth = Math.max(1, size * 0.008);
+    ctx.globalAlpha = done ? 0.9 : 0.3;
+    ctx.strokeStyle = done ? glowOf(leg + 1) : faint;
+    ctx.beginPath();
+    for (let s = 0; s <= CHART_SAMPLES; s += 1) {
+      const u = (leg + s / CHART_SAMPLES) / legs;
+      const x = chartTileX(u) * size;
+      const y = chartTileY(u) * size;
+      if (s === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  /*
+    ⚠️ **THE STOPS AFTER THE LEGS, so a disc is never cut in half by the line arriving at it.** The
+    route is stroked THROUGH the middle of every stop rather than stopping short of one, which is what
+    makes it read as one continuous coil with places on it rather than as six separate hops.
+  */
+  for (let stop = 0; stop <= legs; stop += 1) {
+    const u = stop / legs;
+    const x = chartTileX(u) * size;
+    const y = chartTileY(u) * size;
+    const r = size * CHART_STOP;
+    /*
+      ⚠️ **THE ONES AHEAD ARE DIMMER AND NOT SMALLER, because size on this chart would mean the
+      place's own size and a place does not have one.** A route whose dots grew as the run went would
+      be saying something about the places rather than about the run.
+    */
+    const ahead = stop > flown;
+    ctx.globalAlpha = ahead ? 0.35 : 1;
+    ctx.fillStyle = bodyOf(stop);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = ahead ? 0.4 : 0.95;
+    ctx.strokeStyle = glowOf(stop);
+    ctx.lineWidth = Math.max(1, size * 0.006);
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.stroke();
+    /*
+      ⚠️ **AND THE DESTINATION WEARS A SECOND RING, WHICH IS THE ONE MARK HERE THAT IS ABOUT THE RUN.**
+      The name beside the chart says where the ship is going; this says which dot that is, and without
+      it the player has to count round a spiral to find out.
+    */
+    if (stop === flown) {
+      ctx.globalAlpha = 0.7;
+      ctx.beginPath();
+      ctx.arc(x, y, r * CHART_RING, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
 }
 
 /**

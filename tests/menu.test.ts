@@ -337,9 +337,22 @@ describe('a screen that expires presses its own control, and says how long it wa
       opened it to hear. It is the same argument `title` makes one line up, which is why it belongs in
       this list rather than needing a new one.
     */
+    /*
+      ⚠️ **`travel` JOINS THEM AND IS THE FIRST ENTRY THAT IS NOT WAITING FOR A HAND — 0340.** Its row
+      carries no `timeout` because a timeout is *n steps, then press something*, and the crossing ends
+      on a floor AND on the next place's material being in the mixer's hands. Two facts do not fit in a
+      `{ steps, then }`, so `src/content/travel.ts` holds the rule and `src/app/mount.ts` spends the
+      steps in `onTick`, beside the countdown this test is about.
+
+      ⚠️ **WHICH MAKES THIS TEST'S TITLE HALF TRUE, AND SAYING SO IS WORTH MORE THAN A RENAME.** What it
+      still holds is *no screen expires by a countdown except the two that say so*, which is the rule
+      0063 wanted. What it no longer holds is that everything else waits for a hand.
+      `tests/travel.test.ts` is where *the crossing ends by itself* is asserted, and it has to be,
+      because nothing on the row can say it.
+    */
     const waiting = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout === null);
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['music', 'playing', 'title', 'victory'].sort(),
+      ['music', 'playing', 'title', 'travel', 'victory'].sort(),
     );
   });
 
@@ -412,12 +425,37 @@ describe('a screen says whether it stops the world and whether it hides it', () 
   const SHOWS_THE_SCENE: Partial<Record<Screen, string>> = {
     cleared: 'a banner over a run that is still flying — 0063',
     music: 'a window onto the place being auditioned, walking past — 0212',
+    /*
+      ⚠️ **`travel` IS `cleared`'S PAIR, AND ITS FIRST BUILD WAS THE OPPOSITE — 0340.** That one
+      stopped the world and painted a chart in place of it, and was played as *"it takes the player out
+      of the game."* It is a burn the ship makes in the world now, with the player still flying, so
+      what is behind it is the game — at twelve times its scroll rate.
+    */
+    travel: 'a caption over a ship that is burning between two places, and still being flown — 0340',
+  };
+
+  /*
+    ⚠️ **AND THE ROWS THAT KEEP THE SIMULATION RUNNING UNDER CHROME ARE A LIST TOO, FOR THE SAME REASON.**
+    It was `if (screen === 'cleared') continue`, which was the list with one entry and no way to read
+    it. A screen that steps the world under words is a screen the player can die behind: each one says
+    why that is what it wants.
+  */
+  const FLIES_ON: Partial<Record<Screen, string>> = {
+    cleared: 'the respite is a world that never stopped — 0063',
+    travel: 'the burn is a thing the ship does, in the world, in the player’s hands — 0340',
   };
 
   it('and the screens that show the scene through them are the two that say so', () => {
     for (const screen of SCREEN_KINDS) {
       const row = SCREENS[screen];
-      const hasChrome = row.heading.length > 0 || row.actions.length > 0;
+      /*
+        ⚠️ **`pushed` IS PART OF WHAT CHROME IS, AND THIS LINE NOT KNOWING THAT HID A WHOLE SCREEN FROM
+        THIS GUARD — 0340.** The crossing has no heading and no action, so the old predicate skipped it
+        and the file went green over a row it had not looked at. `src/app/chrome.ts`'s `hasChrome` is
+        the other copy of this condition and was changed in the same commit; this one was found only
+        because a test that should have gone red did not.
+      */
+      const hasChrome = row.heading.length > 0 || row.actions.length > 0 || row.pushed;
       if (!hasChrome) continue;
       const shows = SHOWS_THE_SCENE[screen];
       expect(
@@ -426,10 +464,15 @@ describe('a screen says whether it stops the world and whether it hides it', () 
           ? `${screen} has chrome on it and does not hide the scene — say what is behind it in SHOWS_THE_SCENE, or dim it`
           : `${screen} is meant to show the scene through it (${shows}) and is painting over it`,
       ).toBe(shows === undefined);
-      // `cleared` is still the only one that leaves the SIMULATION running: 0212 moved a camera, and
-      // the music room's own header is explicit that those are not the same claim.
-      if (screen === 'cleared') continue;
-      expect(row.steps, `${screen} has chrome on it and leaves the world running`).toBe(false);
+      // 0212 moved a CAMERA behind the music room, and its own header is explicit that that is not
+      // the simulation running — so it is not on this list, and must not step.
+      const flies = FLIES_ON[screen];
+      expect(
+        row.steps,
+        flies === undefined
+          ? `${screen} has chrome on it and leaves the world running — say why in FLIES_ON, or stop it`
+          : `${screen} is meant to keep the world running (${flies}) and has stopped it`,
+      ).toBe(flies !== undefined);
     }
   });
 
@@ -448,6 +491,20 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     expect(
       /\.itc-music-panel\s*\{[^}]*background:/.test(STYLE),
       'the music room does not dim and its panel has no background — the readout is on the star field',
+    ).toBe(true);
+  });
+
+  /*
+    ⚠️ **THE SAME ASSERTION FOR THE CROSSING, AND IT IS NOT THE SAME PICTURE — 0340.** The room's words
+    are over a star field; these are over the chart, which is a stroked spiral of coloured discs in the
+    middle of the screen — busier where it matters, and the one thing on the screen the words are about.
+    A backing deleted here reads as a place's name written across its own route.
+  */
+  it('the crossing, which does not dim either, gives its panel a backing of its own', () => {
+    expect(SCREENS.travel.dims, 'the crossing started dimming and this guard is now vacuous').toBe(false);
+    expect(
+      /\.itc-travel-panel\s*\{[^}]*background:/.test(STYLE),
+      'the crossing does not dim and its panel has no background — the place name is on the chart',
     ).toBe(true);
   });
 
