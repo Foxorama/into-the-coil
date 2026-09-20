@@ -172,6 +172,22 @@ export interface ScreenRow {
    * `src/content/ships.ts` counts `INVULN_STEPS` the same way, for the same reason.
    */
   timeout: { steps: number; then: Screen | null } | null;
+  /**
+   * Whether the screen's words are PUSHED by the shell rather than written on this row — 0340.
+   *
+   * ⚠️ **IT EXISTS BECAUSE *WHAT A PANEL IS* WAS BEING INFERRED, AND THE INFERENCE RAN OUT.**
+   * `src/app/chrome.ts` builds a panel for any row with a heading or an action, which was a true
+   * description of every screen until one had neither: the crossing names a place that is not known
+   * until it starts, and has no button on purpose. Without this it would be the second screen in the
+   * project's history to be shown correctly and be completely invisible — 0210's was the first, and
+   * that file's header has the story.
+   *
+   * ⚠️ **A FACT ABOUT THE ROW AND NOT A SWITCH ON ITS NAME.** `|| screen === 'travel'` in the chrome
+   * would be the hub enumerating an instance, which `docs/decisions/0016-a-hub-enumerates-kinds.md`
+   * is about. The music room's readout is pushed too and says so; it has a heading as well, so the
+   * answer there changes nothing, and is stated because it is true.
+   */
+  pushed: boolean;
 }
 
 /**
@@ -267,8 +283,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     steps: false,
     dims: true,
     timeout: null,
+    pushed: false,
   },
-  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null },
+  // `pushed: false` — the HUD is pushed at it, and the HUD is not a panel: `src/app/chrome.ts` builds
+  // it apart and shows it on every row that steps, which is why this row still has no panel.
+  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
@@ -310,6 +329,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // pressed it would hand the walked-away player their run back, which is the one thing seven
     // seconds of silence is evidence against. The offer expires — that is what gives it its cost.
     timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
+    pushed: false,
   },
   /**
    * The boss is dead and there is another level behind it.
@@ -319,11 +339,11 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    *
    * ⚠️ **THE CHART NO LONGER GOES HERE, AND THAT IS A CHANGE OF ANSWER RATHER THAN OF PLAN** —
    * `docs/decisions/0340-the-coil-is-a-route.md`. This note read *"this is where the chart will
-   * eventually go"* from 0042 until 0340, and the chart went one screen further on: the respite
-   * stayed exactly what 0063 made it — three seconds of a world that never stopped — and `travel`
-   * below is the full-screen scene that comes after it. A branching map of destinations is still
-   * what `docs/game.md` describes and still not what is built; the straight line 0042 recorded as a
-   * deliberate first step is now a straight line somebody can look at.
+   * eventually go"* from 0042 until 0340, and the chart went one row further on: the respite stayed
+   * exactly what 0063 made it — three seconds of a world that never stopped — and `travel` below is
+   * the burn that follows it, with the chart as an inset in its banner. A branching map of
+   * destinations is still what `docs/game.md` describes and still not what is built; the straight
+   * line 0042 recorded as a deliberate first step is now a straight line somebody can look at.
    */
   /*
     ⚠️ **THE ONE SCREEN THAT KEEPS THE WORLD RUNNING.** Reported from play: *"the current pause/level
@@ -345,56 +365,49 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
     // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
     timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
+    pushed: false,
   },
   /**
-   * The crossing: the respite is over, and the ship is somewhere between two places on the chart.
+   * The crossing: the respite is over, and the ship is burning its way to the next place.
    *
-   * ⚠️ **`docs/decisions/0340-the-coil-is-a-route.md`, AND IT IS THE NOTE ON `cleared` ABOVE COMING
-   * TRUE.** *"This is where the chart will eventually go"* has been written there since
-   * `docs/decisions/0042-a-run-is-a-sequence-of-levels.md`, and `docs/game.md` still carries *the
-   * chart's shape* as an open question. This is that chart, as a straight line: seven places in
-   * `LEVEL_KINDS` order and no choice on it, because
-   * `docs/decisions/0063-a-level-break-is-a-respite.md` recorded the play-test that scrapped the
-   * choice — *"a flowing continuation to the next run with a brief respite will feel better than the
-   * hard pause interruption now."*
+   * ⚠️ **`docs/decisions/0340-the-coil-is-a-route.md`.** Asked for as *"loading screens anyway for
+   * transitions and to represent moving through the galaxy"*; built first as a full-screen chart with
+   * a button on it; and played: *"it takes the player out of the game… completely out of place when
+   * the fight goes boss death → starfield → animation → button click."* So it is not a screen in the
+   * sense the title is one. It is the second row in this table that is the GAME with words over it,
+   * and it is `cleared`'s pair for `cleared`'s reason.
    *
-   * ⚠️ **`steps: false` AND `dims: false`, WHICH NO OTHER SCREEN DOES, AND IT IS NOT A CONTRADICTION.**
-   * Every other row uses `dims` to mean *paint the space colour over the scene*, because every other
-   * screen is chrome over a scene the player should still be able to see —
-   * `docs/decisions/0063-a-level-break-is-a-respite.md` split the two fields apart for exactly that.
-   * This screen is not over the scene: it REPLACES it. `src/app/mount.ts` paints the chart instead
-   * of the world for the frames this is up, so a dim here would be a second lid over a picture that
-   * is already not the game, and would paint out the chart it was meant to protect.
+   * ⚠️ **`steps: true` AND `dims: false`, WHICH IS EXACTLY WHAT `cleared` IS, AND THAT IS THE DESIGN.**
+   * `docs/decisions/0063-a-level-break-is-a-respite.md` was written because a screen between two
+   * levels that stopped the world *"interrupts the flow"*, and
+   * `docs/decisions/0076-a-level-has-an-origin.md` because one that moved the ship was *"disjointing"*.
+   * The first build of this row stopped the world and painted a chart in place of it, and was reported
+   * in the same words eleven weeks later. The world keeps stepping, the player keeps flying, the HUD
+   * stays up (`src/app/chrome.ts` shows it while the simulation runs), and what happens is a thing the
+   * ship does: `src/app/mount.ts` writes `World.warp` while this row is current, and the scroll rate,
+   * the engine's flame and the streaks in the sky are all that one number being read.
    *
-   * ⚠️ **AND THE WORLD BEHIND IT DOES NOT MOVE, WHICH IS WHAT KEEPS
-   * `docs/decisions/0076-a-level-has-an-origin.md` TRUE.** 0076 made a level boundary seamless after
-   * *"a background scene reset between levels that's disjointing because it moves the player's
-   * ship"* — and a crossing that stepped the world would be flying the ship through a level nobody
-   * can see. `steps: false` is what makes this a curtain rather than a reset: the ship is where the
-   * player left it when the curtain lifts, and the only thing that changed behind it is the script.
+   * ⚠️ **NO ACTIONS, AND THE FIRST BUILD HAD ONE.** It auto-forwarded and did not need its *Onward*
+   * pressed — and: *"it felt like a button click was needed, which is the same thing."* A control on a
+   * held screen is an instruction whether or not it is one. Every input the player has already means
+   * something here, because they are flying.
    *
-   * ⚠️ **`timeout: null`, AND IT IS THE ONE SCREEN THAT LEAVES ON SOMETHING OTHER THAN A CLOCK.** A
-   * timeout is *n steps, then press something*; this leaves on a floor AND on the next place's music
-   * being in the mixer's hands, which is two facts a `{ steps, then }` cannot carry.
-   * `src/content/travel.ts` holds the rule and `src/app/mount.ts` spends the steps.
+   * ⚠️ **`timeout: null`, AND IT IS THE ONE ROW THAT LEAVES ON SOMETHING OTHER THAN A CLOCK OR A
+   * HAND.** A timeout is *n steps, then press something*; this holds for a floor AND for the next
+   * place's music being in the mixer's hands, and then takes a second and a half to trail off. That is
+   * three facts a `{ steps, then }` cannot carry, so `src/content/travel.ts` holds the rule and
+   * `src/app/mount.ts` spends the steps.
    */
   travel: {
     // ⚠️ **Empty, because the heading is the PLACE and the place is not known until the crossing
-    // starts.** The music room already has a pushed readout for the same reason — the chrome holds
-    // no opinion about where a walk has got to, and `setCrossing` is this screen's version of that.
+    // starts.** `pushed` below is what says so, and is why this row has a panel at all.
     heading: '',
-    /*
-      ⚠️ **"Onward" again, the same word the respite uses, because it does the same thing** — the
-      label is the promise (0068), and a press here carries the run into the level the ship is
-      crossing to. What it CANNOT do is make the music arrive, so a press on a place that is not
-      ready takes the floor away and leaves the moment it is ready — `src/content/travel.ts`'s
-      `skipped`, which is what stops this being a dead control.
-    */
-    actions: [{ label: 'Onward', hint: '' }],
+    actions: [],
     choices: [],
-    steps: false,
+    steps: true,
     dims: false,
     timeout: null,
+    pushed: true,
   },
   /**
    * Every level in the run is behind the player.
@@ -404,7 +417,15 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * final boss at the end of a run; two of them exist, so this is the end of what has been authored
    * rather than the end of the game — and the wording says only what is true.
    */
-  victory: { heading: 'Coil cleared', actions: [{ label: 'Again', hint: '' }], choices: [], steps: false, dims: true, timeout: null },
+  victory: {
+    heading: 'Coil cleared',
+    actions: [{ label: 'Again', hint: '' }],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+  },
   /*
     ── THE MUSIC ROOM — `docs/decisions/0210-the-title-plays-the-music.md` ──────────────────────────
 
@@ -445,5 +466,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     */
     dims: false,
     timeout: null,
+    // The now-playing readout is `setNowPlaying`'s — 0212. True, and changes nothing: it has a heading.
+    pushed: true,
   },
 };

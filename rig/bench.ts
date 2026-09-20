@@ -138,25 +138,35 @@ goTo(LEVEL_KINDS[0]!, 0);
 /*
   ── THE CROSSING, FROM THE QUERY — 0340 ─────────────────────────────────────────────────────────
 
-  `?cross=4` puts the run on the fifth place and raises the chart on the way into it, through the same
-  two calls a real level boundary makes: `levelCleared` for each leg behind it, and `lifecycle.onward`,
-  which is what the respite's *Onward* presses. This is the bench jumping to where the thing is, one
-  axis over — the sentence `?weapon=` is justified by, for a sharper reason: the crossing into the
-  SEVENTH place cannot otherwise be looked at without winning six boss fights.
+  `?cross=4` stands the ship at the end of the fourth place and burns it to the fifth, through the
+  same calls a real level boundary makes: `levelCleared` for each leg behind it, and
+  `lifecycle.onward`, which is what the respite's *Onward* presses. This is the bench jumping to where
+  the thing is, one axis over — the sentence `?weapon=` is justified by, for a sharper reason: the burn
+  into the SEVENTH place cannot otherwise be looked at without winning six boss fights.
 
-  ⚠️ **IT IS THE GAME'S OWN VERBS AND NOT A SCREEN DISPATCH.** `dispatch({ show: 'travel' })` would
-  raise the chart over a run that had not moved, so the route would draw the wrong leg and the ship
-  would sit on the wrong dot — a picture of the rig rather than of the game
+  ⚠️ **IT IS THE GAME'S OWN VERBS AND NOT A SCREEN DISPATCH, AND THE FIELD IS PUT ON THE PLACE BEING
+  LEFT.** The backdrop changes under the streaks at full burn, from the place the ship was in to the
+  one it is going to; a bench that burned out of level one every time would photograph a swap the game
+  never makes — a picture of the rig rather than of the game
   (`docs/decisions/0116-the-rig-plays-the-level.md`).
 
-  ⚠️ **AND IT DOES NOT HOLD THE CROSSING OPEN.** It lasts exactly as long as it lasts in the game, so a
-  shot of it has to be taken inside that — `scripts/shot-travel.mjs` takes three. A rig that froze it
-  would be reviewing a duration no player ever sees, which is the thing `hold` below is careful not to
-  do to the camera.
+  ⚠️ **AND IT DOES NOT HOLD THE BURN OPEN.** It lasts exactly as long as it lasts in the game, so a shot
+  of it has to be taken inside that — `scripts/shot-travel.mjs` reads its moments off the rule. A rig
+  that froze it would be reviewing a duration no player ever sees, which is the thing `hold` below is
+  careful not to do to the camera.
 */
 const crossTo = query.get('cross');
 if (crossTo !== null) {
   const leg = Math.min(Math.max(Number(crossTo), 1), LEVEL_KINDS.length - 1);
+  const leaving = LEVEL_KINDS[leg - 1]!;
+  /*
+    Past the end of the place being left, with its boss marked as beaten: that is the state a real burn
+    starts from. The script is spent, so nothing spawns into it; `bossBeaten` is set because `goTo`
+    past `bossAt` latches `bossSpawned` over an empty pool, which the frame would otherwise read as a
+    boss that has just come apart — and clear the level a second time on the bench's behalf.
+  */
+  goTo(leaving, LEVELS[leaving].bossAt + 1);
+  world.bossBeaten = true;
   for (let i = 0; i < leg; i++) dispatch({ slice: 'run', type: 'levelCleared' });
   lifecycle.onward();
 }

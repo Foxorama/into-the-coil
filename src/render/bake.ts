@@ -24,17 +24,7 @@ import { THEMES, foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/
 import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
-import {
-  CHART_STOP,
-  LANDMARK_SLOTS,
-  SERPENT_BODY_DIAMETER,
-  SPRITE,
-  SPRITE_EXTENT,
-  SPRITE_KINDS,
-  chartTileX,
-  chartTileY,
-  type SpriteKind,
-} from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
@@ -838,18 +828,6 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     true is *your limit*. `docs/decisions/0074-the-box-is-drawn.md`.
   */
   bound: 'player',
-  /*
-    ⚠️ **`sky`, WHICH IS THE ONE INK IN THE PALETTE THAT MEANS *SCENERY*** — it is what a landmark and
-    the weather are drawn in before a place says otherwise, three rows up. 0340.
-
-    ⚠️ **AND IT IS THE INK OF THE ROUTE AHEAD ONLY, WHICH IS WHY THIS TABLE IS ALMOST WRONG ABOUT IT.**
-    A chart drawn by `bakeChart` takes its colours from `THEMES` — one pair per place — and the palette
-    supplies only the legs that have not been flown. This row is what the ATLAS bake uses, which is the
-    route with nothing behind the player; `tests/legibility.test.ts` asks this table which things share
-    a channel, and *the same ink as the sky* is the true answer for the only version of the picture this
-    entry describes.
-  */
-  chart: 'sky',
 };
 
 /**
@@ -8828,16 +8806,6 @@ export function drawKind(
       compete with the bullets it exists to help them dodge, and `docs/game.md`'s voice rule about not
       over-explaining applies to pictures too.
     */
-    /*
-      ⚠️ **Baked with NO leg flown and in the palette's own inks, and a run replaces it** — 0340, on
-      `skyNebula`'s exact terms one case up. `bakeChart` writes the seven places' own colours and the
-      run's progress over this bitmap before the crossing is ever looked at; what is here is the route
-      with nothing behind the player, which is what a run that has not left level one would see and is
-      therefore a placeholder that is true rather than a hole in the atlas.
-    */
-    case 'chart':
-      drawChart(ctx, size, plainChartStops(palette), 0, palette.sky);
-      return;
     case 'bound': {
       const dash = size * BOUND_DASH;
       ctx.globalAlpha = BOUND_ALPHA;
@@ -10420,12 +10388,86 @@ export function bakeLandmark(
   }
 }
 
-/** One stop on the chart: the place's own two colours, resolved against the palette in use. */
-export interface ChartStop {
-  /** The body of the disc — the place's `nebula`, which is the colour of the weather hanging in it. */
-  body: string;
-  /** Its rim, and the ink the leg leading to it is drawn in — the place's `glow`. */
-  glow: string;
+/*
+  ── THE CHART: THE COIL AS A ROUTE — `docs/decisions/0340-the-coil-is-a-route.md` ────────────────
+
+  ⚠️ **A DRAWING AND NOT A SPRITE, AND IT WAS A SPRITE FOR ONE BUILD.** The first version of the
+  crossing replaced the game with a full-screen chart blitted from the atlas, and the play-test said
+  what that was: *"it takes the player out of the game."* The crossing is a burn the ship makes in the
+  world now, and the chart is a small inset in the banner that names the place — so it is drawn into a
+  canvas of the chrome's own, exactly as the title screen's pickup key is, and the atlas never hears of
+  it. That took a sprite kind, a re-bake with a staleness memo, a second painter and a shared-geometry
+  argument out of the game, all of which existed to serve a picture that was in the wrong place.
+
+  ⚠️ **`docs/game.md`'s one stated constraint on the chart is answered by the shape rather than by a
+  label**: *"it must read as descent toward the centre, and must not be a copy of the star map."* So
+  the route is a spiral that loses radius as it goes and ends at the exact middle — which is where The
+  Black Heart is, in the fiction and in the picture.
+*/
+
+/**
+ * How far round the chart's spiral the whole route goes, in turns.
+ *
+ * ⚠️ **OVER ONE TURN ON PURPOSE.** At exactly one the first and last stops sit on the same bearing
+ * and the route reads as a ring with a dot in the middle; over it, the curve visibly passes inside
+ * where it has already been, which is the only thing that makes a flat picture read as a coil.
+ */
+export const CHART_TURNS = 1.15;
+
+/**
+ * The radius the route starts at, as a fraction of the chart's own tile. It ends at exactly nothing.
+ *
+ * ⚠️ **ENDING AT ZERO IS THE FICTION RATHER THAN A ROUNDING.** `docs/game.md` puts the black hole at
+ * the heart of the galaxy; the last place on the roster is The Black Heart, so the last stop on the
+ * route is the middle of the picture. Any other number would be a coil that stops just short of the
+ * thing it is a coil around.
+ *
+ * ⚠️ **AND IT LEAVES ROOM FOR THE WIDEST MARK A STOP CAN WEAR, WHICH IS NOT ITS DISC.** The
+ * destination wears a second ring at `CHART_RING` stop radii, so the first place reaches
+ * `CHART_OUTER + CHART_STOP × CHART_RING` — and that has to stay inside the half-tile or the top of
+ * the route is clipped by the canvas's own edge. **It was 0.44 and that sum came to 0.5135**, caught
+ * by `tests/travel.test.ts` rather than by looking.
+ */
+export const CHART_OUTER = 0.42;
+
+/**
+ * How the radius falls as the route goes: `(1 - u)` raised to this.
+ *
+ * ⚠️ **BELOW ONE, AND A STRAIGHT LINE WAS TRIED FIRST AND WAS WRONG.** With the radius falling
+ * linearly while the ANGLE advances at a constant rate, the inner legs get shorter and shorter until
+ * they are nothing. Measured: the last two places came out **exactly 7% of the tile apart, which is
+ * exactly a stop's own diameter**, so the final two discs were tangent and the destination's ring cut
+ * straight through the one before it. 0.6 holds radius for longer and spends it near the middle,
+ * which is also what a coil looks like: the turns crowd towards the eye rather than dying out before
+ * it.
+ */
+export const CHART_TIGHTEN = 0.6;
+
+/** A stop's disc, as a fraction of the tile; and how many of its radii out the destination's ring is. */
+export const CHART_STOP = 0.035;
+export const CHART_RING = 2.1;
+
+/**
+ * Where a point `u` of the way along the whole route falls, as a fraction of the chart's tile — `u`
+ * is 0 at the first place and 1 at the last.
+ *
+ * ⚠️ **Straight up at `u = 0`**, so the outermost place is at the top and the descent reads downward
+ * as well as inward. A route that started at the right-hand side would read as a clock face.
+ */
+export function chartTileX(u: number): number {
+  return 0.5 + Math.cos(chartAngle(u)) * chartRadius(u);
+}
+
+export function chartTileY(u: number): number {
+  return 0.5 + Math.sin(chartAngle(u)) * chartRadius(u);
+}
+
+function chartAngle(u: number): number {
+  return -Math.PI / 2 + u * CHART_TURNS * Math.PI * 2;
+}
+
+export function chartRadius(u: number): number {
+  return CHART_OUTER * Math.pow(1 - u, CHART_TIGHTEN);
 }
 
 /**
@@ -10434,17 +10476,16 @@ export interface ChartStop {
  * ⚠️ **A COUNT PER LEG RATHER THAN OVER THE WHOLE ROUTE, SO THE INNER LEGS ARE NOT COARSER.** The
  * route loses radius as it goes, so a fixed total would put the same number of samples on a long
  * outer arc as on a short inner one — the visible corner
- * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` measures on the serpent's spine, which is
- * what put `bezierCurveTo` on the `Pen` in the first place. Forty straight segments across a sixth of
- * a turn is under half a degree each, which no edge shows.
+ * `reports/the-vocabulary-is-the-ceiling-2026-09-08.md` measures on the serpent's spine. Forty
+ * straight segments across a sixth of a turn is under half a degree each, which no edge shows.
  */
 const CHART_SAMPLES = 40;
 
 /**
  * The Coil as a route, drawn whole: the spiral, the stops on it, and which legs have been flown.
  *
- * `docs/decisions/0340-the-coil-is-a-route.md`, and `src/content/sprites.ts` holds the curve — see
- * there for why the geometry is in `content/` rather than beside the drawing that uses it.
+ * `flown` is how many legs are behind the run, which is the index of the place it is crossing TO.
+ * `faint` is what a leg not yet flown is drawn in.
  *
  * ⚠️ **A LEG IS DRAWN IN THE COLOUR OF THE PLACE IT LEADS TO, WHICH IS WHY THIS TAKES NO EXTRA INK.**
  * The first version stroked the flown route in the player's cyan, which said *you* rather than
@@ -10452,20 +10493,25 @@ const CHART_SAMPLES = 40;
  * the list of places, and the one thing the picture has to say — *these are behind you and that one
  * is not* — is said by whether a leg has a colour at all.
  *
- * ⚠️ **NOTHING IS PAINTED OVER THE WHOLE TILE.** The place's own backdrop is already the canvas's
- * clear colour (`src/render/canvas.ts`'s `setSpace`), so a chart with a background of its own would
- * be a panel on the screen rather than a thing in the sky — and would paint out the place the run is
- * arriving in, which is the one thing on this screen that is not a picture of the chart.
+ * ⚠️ **AND THE STOPS ARE `LEVEL_KINDS` WALKED, NEVER A LIST OF SEVEN.** `LEVELS[kind].theme` is the
+ * one ordering — `src/content/levels.ts` refuses a second — so a place added to the roster appears
+ * on the chart in its own colours with nothing here edited: 0016, and 0282's *a change is finished
+ * when the thing it added can differ per instance*.
+ *
+ * ⚠️ **NOTHING IS PAINTED OVER THE WHOLE TILE**, so the canvas is transparent wherever the route is
+ * not and whatever is behind the banner shows through it.
  */
-function drawChart(ctx: Pen, size: number, stops: readonly ChartStop[], flown: number, faint: string): void {
-  const legs = stops.length - 1;
+export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: number, faint: string): void {
+  const legs = LEVEL_KINDS.length - 1;
   if (legs < 1) return;
+  const glowOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].glow[palette];
+  const bodyOf = (stop: number): string => THEMES[LEVELS[LEVEL_KINDS[stop]!].theme].nebula[palette];
   ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(1, size * 0.005);
   for (let leg = 0; leg < legs; leg += 1) {
     const done = leg < flown;
-    ctx.globalAlpha = done ? 0.85 : 0.22;
-    ctx.strokeStyle = done ? stops[leg + 1]!.glow : faint;
+    ctx.lineWidth = Math.max(1, size * 0.008);
+    ctx.globalAlpha = done ? 0.9 : 0.3;
+    ctx.strokeStyle = done ? glowOf(leg + 1) : faint;
     ctx.beginPath();
     for (let s = 0; s <= CHART_SAMPLES; s += 1) {
       const u = (leg + s / CHART_SAMPLES) / legs;
@@ -10481,7 +10527,7 @@ function drawChart(ctx: Pen, size: number, stops: readonly ChartStop[], flown: n
     route is stroked THROUGH the middle of every stop rather than stopping short of one, which is what
     makes it read as one continuous coil with places on it rather than as six separate hops.
   */
-  for (let stop = 0; stop < stops.length; stop += 1) {
+  for (let stop = 0; stop <= legs; stop += 1) {
     const u = stop / legs;
     const x = chartTileX(u) * size;
     const y = chartTileY(u) * size;
@@ -10492,90 +10538,30 @@ function drawChart(ctx: Pen, size: number, stops: readonly ChartStop[], flown: n
       be saying something about the places rather than about the run.
     */
     const ahead = stop > flown;
-    ctx.globalAlpha = ahead ? 0.3 : 1;
-    ctx.fillStyle = stops[stop]!.body;
+    ctx.globalAlpha = ahead ? 0.35 : 1;
+    ctx.fillStyle = bodyOf(stop);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = ahead ? 0.35 : 0.9;
-    ctx.strokeStyle = stops[stop]!.glow;
-    ctx.lineWidth = Math.max(1, size * 0.004);
+    ctx.globalAlpha = ahead ? 0.4 : 0.95;
+    ctx.strokeStyle = glowOf(stop);
+    ctx.lineWidth = Math.max(1, size * 0.006);
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.stroke();
     /*
-      ⚠️ **AND THE DESTINATION WEARS A SECOND RING, WHICH IS THE ONE MARK ON THIS PICTURE THAT IS
-      ABOUT THE RUN.** The ship says where it is; this says where it is going, and without it a player
-      halfway along a leg has to work out which of the two dots either side is the one whose name is
-      written under the chart. `docs/game.md`'s ban is on restating what the screen already shows —
-      the screen shows a name and a curve, and neither of them says *that dot*.
+      ⚠️ **AND THE DESTINATION WEARS A SECOND RING, WHICH IS THE ONE MARK HERE THAT IS ABOUT THE RUN.**
+      The name beside the chart says where the ship is going; this says which dot that is, and without
+      it the player has to count round a spiral to find out.
     */
     if (stop === flown) {
-      ctx.globalAlpha = 0.55;
+      ctx.globalAlpha = 0.7;
       ctx.beginPath();
-      ctx.arc(x, y, r * 2.1, 0, Math.PI * 2);
+      ctx.arc(x, y, r * CHART_RING, 0, Math.PI * 2);
       ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
-}
-
-/**
- * The route's stops, in the order a run meets them, in each place's own colours.
- *
- * ⚠️ **`LEVELS[kind].theme` AND NOT A SECOND ORDERING TABLE** — `src/content/levels.ts` refuses one,
- * and `src/app/music.ts`'s `placeFor` is the same walk for the same reason. It is not called from
- * there because `docs/decisions/0015-the-layer-ladder.md` puts `app` above `render`.
- */
-/**
- * The same route with no place's colours on it — one stop per level in the palette's own sky ink.
- *
- * ⚠️ **`drawKind` is handed a resolved `Palette` and not the NAME of one**, and a place's colour is
- * per palette name (`THEMES[kind].nebula` is a `Record<PaletteName, string>`), so the atlas bake
- * genuinely cannot know which column to read. This is the same shape `landmark` and `skyNebula` are
- * in, and `bakeChart` is the same answer: the real thing is written over it at the boundary.
- */
-function plainChartStops(palette: Palette): ChartStop[] {
-  return LEVEL_KINDS.map(() => ({ body: palette.sky, glow: palette.sky }));
-}
-
-function chartStops(palette: PaletteName): ChartStop[] {
-  return LEVEL_KINDS.map((kind) => {
-    const theme = LEVELS[kind].theme;
-    return { body: THEMES[theme].nebula[palette], glow: THEMES[theme].glow[palette] };
-  });
-}
-
-/**
- * Re-bake the chart with the run's own progress on it — 0340, on `bakeNebula`'s exact terms.
- *
- * `flown` is how many legs are behind the run, which is the index of the place it is crossing TO.
- *
- * ⚠️ **THE ONE RE-BAKE THAT DEPENDS ON THE RUN AND NOT ONLY ON THE PLACE**, which is why it takes a
- * number where the three above take a `ThemeKind`. `src/app/mount.ts` answers *is this bitmap stale*
- * with the pair `(flown, resolution)`, exactly as `atlasIsStale` answers it with `(view,
- * pixelsPerUnit, theme)` — a bitmap whose staleness is not a question with an answer is one that goes
- * on showing the last level's progress.
- *
- * ⚠️ **AND THE STOPS ARE `LEVEL_KINDS` WALKED, NEVER A LIST OF SEVEN.** A place added to the roster
- * appears on the chart in its own colours with nothing here edited — 0016, and 0282's *a change is
- * finished when the thing it added can differ per instance*.
- */
-export function bakeChart(
-  atlas: Atlas,
-  palette: PaletteName,
-  faint: string,
-  flown: number,
-  pixelsPerUnit: number,
-): void {
-  const size = bakeSize(SPRITE_EXTENT.chart, pixelsPerUnit);
-  const canvas = document.createElement('canvas');
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext('2d');
-  if (ctx === null) return;
-  drawChart(ctx, size, chartStops(palette), flown, faint);
-  (atlas.bitmaps as CanvasImageSource[])[SPRITE.chart] = canvas;
 }
 
 /**

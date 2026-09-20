@@ -64,8 +64,10 @@ export const PROBES = [
     guard: 'the screens that show the scene through them are the two that say so',
     edit: {
       path: 'src/state/screens.ts',
-      find: "    dims: false,\n    timeout: null,\n  },\n};",
-      replace: "    dims: true,\n    timeout: null,\n  },\n};",
+      // ⚠️ The row gained `pushed` after its `timeout` — 0340 — so the anchor is the row's own comment,
+      // which no other row carries. Same break: the one field, flipped.
+      find: '    dims: false,\n    timeout: null,\n    // The now-playing readout is',
+      replace: '    dims: true,\n    timeout: null,\n    // The now-playing readout is',
     },
   },
   {

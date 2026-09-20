@@ -17,27 +17,18 @@ import { type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import {
-  atlasIsStale,
-  bakeAtlas,
-  bakeChart,
-  bakeGround,
-  bakeLandmark,
-  bakeNebula,
-  mix,
-  viewFor,
-  type Atlas,
-} from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
-import { paintTravel, type Landmarks } from '../render/scene.ts';
+import type { Landmarks } from '../render/scene.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
   DEFAULT_TRAVEL,
-  TRAVELS,
   TRAVEL_KINDS,
-  travelDone,
+  travelArrived,
   travelIsWaiting,
+  travelMayLand,
+  warpAt,
 } from '../content/travel.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
 import { MOTE_BAND, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
@@ -103,7 +94,7 @@ import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
 import { attachTouch, bandCount } from './touch.ts';
-import { runLoop, type Frame } from './loop.ts';
+import { runLoop } from './loop.ts';
 
 /**
  * The entity ceiling, per pool.
@@ -859,6 +850,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
     scrollRate: SCROLL_PER_STEP,
+    // Not burning — 0340. `stepCrossing` is the one writer, and it writes nought on the way out.
+    warp: 0,
     /*
       ⚠️ **Read off the resolved WEAPON rather than off the row** — 0093 took the two cadence numbers
       off `ShipRow`, because a rung is a note value on a ladder now and a base is just its first
@@ -1013,23 +1006,31 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ── THE CROSSING — `docs/decisions/0340-the-coil-is-a-route.md` ────────────────────────────────
 
     ⚠️ **LOCALS AND NOT A SLICE, ON `audition`'s EXACT TERMS** (0017, and the note beside that one
-    further down). How far through a crossing the ship is, and whether the player has pressed *Onward*
-    on it, are gone the moment the curtain lifts: they are no part of the run, no save has to survive
-    them, and no seeded test compares them. The SCREEN is state and is in the screen slice, which is
-    where the line between the two falls.
+    further down). How far through a burn the ship is, and the step it started coming out of it, are
+    gone the moment it arrives: they are no part of the run, no save has to survive them, and no
+    seeded test compares them. The SCREEN is state and is in the screen slice, which is where the line
+    between the two falls.
 
     ⚠️ **HERE RATHER THAN BESIDE THE BAKE THEY WAIT FOR, because `applyScreen` arms them** — the same
     reason `timeoutLeft` and `shownSeconds` are on the two lines above rather than beside the chrome
     they are written to.
 
-    ⚠️ **COUNTED IN FIXED STEPS AND NEVER IN WALL CLOCK.** `world.onTick` fires on every step whether
-    or not the simulation took it — 0063 split it out for exactly that — so a screen with
-    `steps: false` still has a clock, and it is the clock the rest of the game is on. A crossing timed
-    off `performance.now()` would run at a different speed from the music it is waiting for.
+    ⚠️ **COUNTED IN FIXED STEPS AND NEVER IN WALL CLOCK**, in `world.onTick`. A burn timed off
+    `performance.now()` would run at a different speed from the music it is waiting for, and from the
+    camera it is driving.
   */
   let travelSteps = 0;
-  /** The player pressed *Onward* on the crossing: the floor goes, the wait for the place does not. */
-  let travelSkipped = false;
+  /** The step the ship started coming out of the burn, or `−1` while it is still building or held. */
+  let travelLandingAt = -1;
+  /**
+   * Whether the backdrop has been swapped to the place the ship is burning towards.
+   *
+   * ⚠️ **AT FULL BURN AND NOT BEFORE, BECAUSE THE STREAKS ARE WHAT HIDE IT.** A place change re-bakes
+   * the atlas — fifty-eight bitmaps, `applyPlace` has the count — and repaints the void. At the start
+   * of a level that is a hitch the player sits through with nothing moving; at twelve times the scroll
+   * rate, under forty-four bright lines, it is a change of colour behind a sky nobody can follow.
+   */
+  let travelSwapped = false;
   /**
    * What the crossing's words currently say, so they are written when they change and not every step.
    *
@@ -1067,7 +1068,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       once per level happening twice because nothing reset between them.
     */
     travelSteps = 0;
-    travelSkipped = false;
+    travelLandingAt = -1;
+    travelSwapped = false;
+    /*
+      ⚠️ **AND THE ENGINES ARE PUT OUT HERE AS WELL AS WHERE THE BURN ENDS.** A run that dies or is
+      abandoned mid-burn leaves `travel` by a path `stepCrossing` never sees, and a `warp` left above
+      nought would be every later level flown at twelve times its speed.
+    */
+    world.warp = 0;
     // And the words are forgotten with it, so the next crossing writes its own rather than comparing
     // against a place the run has already left.
     shownCrossing = '';
@@ -1297,17 +1305,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const chrome = makeChrome(colours, (screen: Screen, index: number): void => {
     if (screen === 'cleared') lifecycle.onward();
-    /*
-      ⚠️ **A PRESS ON THE CROSSING TAKES THE FLOOR AWAY AND DOES NOT END IT** — 0340. It cannot end
-      it: the place may still be being synthesised, and `src/content/travel.ts` has why a control that
-      pretended otherwise would be a lie rather than a shortcut. `stepCrossing` reads this on the next
-      step and leaves the moment there is nothing left to wait for, which for six of the seven places
-      is that step.
-
-      ⚠️ **AND IT IS NOT `lifecycle.arrive()` HERE.** Two ways out of one screen is two places the
-      *has the place arrived* question is asked, and the second one is always the one that forgets.
-    */
-    else if (screen === 'travel') travelSkipped = true;
+    // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
     // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
     // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
@@ -1525,34 +1523,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * `aheadTheme` are the wrong question: they say what has been asked for.
    */
   let loadedTheme: ThemeKind | null = null;
-
-  /*
-    ── AND WHAT THE CHART DRAWN OF IT WAS DRAWN FROM — 0340 ──────────────────────────────────────
-
-    The crossing's own two counters are up beside `timeoutLeft`, because `applyScreen` arms them. These
-    two are here because they are about the BAKE: they answer *is the picture in the atlas this run's*,
-    and they are read by `ensureChart` below and by nothing else.
-  */
-  /**
-   * How many legs the chart in the atlas was drawn with, so staleness is a question with an answer —
-   * exactly as `atlasIsStale` and `shownSpace` make it one.
-   *
-   * ⚠️ **`-1` RATHER THAN `0`, BECAUSE ZERO LEGS FLOWN IS A REAL ANSWER**: the atlas's own placeholder
-   * is drawn with none, and a memo initialised to a value the thing it remembers can legitimately take
-   * is a memo that reports fresh when it is not.
-   */
-  let chartFlown = -1;
-  /**
-   * WHICH atlas that drawing is in, which is the half of the question a resolution would only half
-   * answer.
-   *
-   * ⚠️ **AN IDENTITY AND NOT A NUMBER, AND THE ALTERNATIVE IS A STALE CHART AT EVERY BOUNDARY.**
-   * `bakeChart` writes into a slot of the atlas that exists when it runs, and `bakeAtlas` builds a NEW
-   * one — for a rotation, for a DPI change, and for a place change, which is the same moment the
-   * crossing happens. Comparing resolutions would report fresh across a same-resolution re-bake and
-   * leave the placeholder route on screen; comparing the object cannot.
-   */
-  let chartIn: Atlas | null = null;
 
   /** The backdrop the surface was last given, so a place is applied once rather than every step. */
   let shownSpace = colours.space;
@@ -1786,11 +1756,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
 
   /*
-    ── THE CROSSING'S THREE QUESTIONS — 0340 ───────────────────────────────────────────────────────
+    ── THE CROSSING'S ONE QUESTION, AND ITS STEP — 0340 ────────────────────────────────────────────
 
-    The rule itself is in `src/content/travel.ts` and is a pure function of four facts. These are the
-    two facts the shell owns, and the re-bake the picture needs; everything else about the crossing is
-    content and is testable without a canvas.
+    The rule is in `src/content/travel.ts` and is pure. What is here is the one fact the shell owns —
+    whether there is anything left to wait for — and the step that reads the rule and writes the one
+    number the frame burns by.
   */
 
   /**
@@ -1799,8 +1769,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **TRUE WHEN NOBODY IS LISTENING, AND THAT IS NOT AN OPTIMISATION.** `applyMusicLevel` returns
    * immediately when there is no `AudioContext` — a player who has never pressed anything, or who
    * chose silence on the title screen — so no bake is ever started for them and `loadedTheme` would
-   * never move. Waiting on it would make the crossing a twenty-second pause for exactly the players
-   * who cannot be told why, and `TRAVEL_MAX_STEPS` is a backstop rather than a schedule.
+   * never move. Waiting on it would hold the burn for twenty seconds for exactly the players who
+   * cannot be told why, and `TRAVEL_MAX_STEPS` is a backstop rather than a schedule.
    *
    * ⚠️ **AND THE SOUND SETTING COUNTS AS *NOBODY*, WHICH IS ONE STEP BEYOND THE CONTEXT.** A player
    * who chose *Off* has an `AudioContext` — `src/app/sound.ts` mutes the speaker rather than tearing
@@ -1814,75 +1784,49 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
 
   /**
-   * Where the ship is on the whole route, 0 at the first place and 1 at the last.
+   * Spend one step of the burn: build, hold, trail off, arrive.
    *
-   * ⚠️ **THE LEG IS THE ONE BEING FLOWN, WHICH IS THE LEVEL THE RUN HAS ALREADY BEEN ADVANCED TO
-   * MINUS ONE.** `levelCleared` increments `run.level` when the boss dies — several seconds before
-   * this screen is up (`src/app/music.ts`'s `placeFor` says so at length) — so the run is crossing
-   * INTO `run.level` and out of the one before it.
+   * ⚠️ **IT IS NOT A `timeout`, AND THE ROW SAYS WHY.** What it borrows from the countdown is the
+   * shape: one screen's clock, spent in `onTick`, doing nothing on every other screen.
    *
-   * ⚠️ **EASED AT BOTH ENDS, because a ship that starts at full speed has not left anywhere.** A
-   * crossing is one object moving for four seconds and it is the only motion on the screen; linear,
-   * it reads as a sprite being dragged. `docs/decisions/0037-the-ship-has-mass.md` is the same
-   * argument about the thing the player is holding.
-   */
-  const crossingAt = (): number => {
-    const legs = LEVEL_KINDS.length - 1;
-    const from = Math.min(Math.max(state.run.level - 1, 0), legs - 1);
-    const floor = TRAVELS[state.settings.travel].floorSteps;
-    const through = floor <= 0 ? 1 : Math.min(travelSteps / floor, 1);
-    // Smoothstep: nought and one at the ends, and no discontinuity in speed at either of them.
-    const eased = through * through * (3 - 2 * through);
-    return (from + eased) / legs;
-  };
-
-  /**
-   * Re-draw the chart if the one in the atlas is not this run's.
-   *
-   * ⚠️ **CALLED FROM `onTick` WHILE THE CROSSING IS UP AND NOWHERE ELSE, WHICH IS ONE COMPARISON A
-   * STEP ON ONE SCREEN.** `applyPlace` and `applyMusicLevel` both state the same argument for
-   * themselves; the difference is that the chart is looked at on exactly one screen, so asking on
-   * every step of a run would be a question with a known answer six hundred times a level.
-   */
-  const ensureChart = (): void => {
-    const flown = Math.min(Math.max(state.run.level, 0), LEVEL_KINDS.length - 1);
-    if (chartIn === atlas && chartFlown === flown) return;
-    chartIn = atlas;
-    chartFlown = flown;
-    /*
-      ⚠️ **THE PALETTE'S SKY INK FOR A LEG NOT YET FLOWN**, which is the one colour in the game that
-      means *scenery*: it is what a landmark and the weather are drawn in before a place says
-      otherwise. A route ahead of the player drawn in a place's own colour would be the chart telling
-      them what is coming, which is a thing the game does not otherwise do.
-    */
-    bakeChart(atlas, palette, colours.sky, flown, view.scale * dpr);
-  };
-
-  /**
-   * Spend one step of the crossing, and end it when `src/content/travel.ts` says it is over.
-   *
-   * ⚠️ **IT IS NOT A `timeout`, AND THE ROW SAYS WHY.** A timeout is *n steps, then press something*;
-   * this ends on a floor AND on the next place's material being in the mixer's hands, which is two
-   * facts a `{ steps, then }` cannot carry. What it borrows from the countdown is the shape: one
-   * screen's clock, spent in `onTick`, doing nothing on every other screen.
+   * ⚠️ **THE FRAME IS HANDED A NUMBER AND NOTHING ELSE.** `world.warp` is the whole of what crosses
+   * into `src/app/frame.ts`, which may not see the travel table (0024): the scroll rate, the flame and
+   * the streaks are that number being read, so the three cannot disagree about whether the ship is at
+   * speed.
    *
    * ⚠️ **`lifecycle.arrive()` AND NOT A `show playing` DISPATCH.** The table at the top of
-   * `src/app/lifecycle.ts` is the one description of how a run moves, and a shell that moved a run
-   * without going through it is how the middle column of that table went wrong before 0076.
+   * `src/app/lifecycle.ts` is the one description of how a run moves, and `arrive` is what enters the
+   * level — a shell that showed the playing screen by itself would arrive nowhere.
    */
   const stepCrossing = (): void => {
     if (state.screen.current !== 'travel') return;
     travelSteps += 1;
-    ensureChart();
     const ready = crossingIsReady();
+    if (travelLandingAt < 0 && travelMayLand(state.settings.travel, travelSteps, ready)) travelLandingAt = travelSteps;
+    world.warp = warpAt(travelSteps, travelLandingAt);
+    // At full burn, once: the streaks are what hide it. `travelSwapped`'s own note has the argument,
+    // and `placeOnScreen` is what reads it.
+    if (!travelSwapped && world.warp >= 1) travelSwapped = true;
     const place = placeFor(state.run.level);
-    const waiting = travelIsWaiting(state.settings.travel, travelSteps, ready, travelSkipped);
-    const key = `${place}:${waiting ? 'wait' : ''}`;
+    const waiting = travelIsWaiting(state.settings.travel, travelSteps, ready);
+    const leaving = travelLandingAt >= 0;
+    const key = `${place}:${waiting ? 'wait' : ''}:${leaving ? 'leave' : ''}`;
     if (key !== shownCrossing) {
       shownCrossing = key;
-      chrome.setCrossing({ place: THEMES[place].title, voyage: THEMES[place].voyage, waiting });
+      chrome.setCrossing({
+        place: THEMES[place].title,
+        voyage: THEMES[place].voyage,
+        // How many legs are behind the run, which is the index of the place it is burning towards.
+        flown: Math.min(Math.max(state.run.level, 0), LEVEL_KINDS.length - 1),
+        palette,
+        waiting,
+        leaving,
+      });
     }
-    if (travelDone(state.settings.travel, travelSteps, ready, travelSkipped)) lifecycle.arrive();
+    if (travelArrived(travelSteps, travelLandingAt)) {
+      world.warp = 0;
+      lifecycle.arrive();
+    }
   };
 
   /*
@@ -1953,9 +1897,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **ONE QUESTION, ASKED BY THE BACKDROP, THE ATLAS, THE WEATHER, THE MIX AND THE READOUT** —
    * 0212. It was `state.screen.current === 'playing'` written out five times, which was fine while a
    * place could only be somewhere a run was.
+   *
+   * ⚠️ **AND *IN A RUN* IS NOT *ON THE PLAYING SCREEN*, WHICH THIS SAID FOR SIX WEEKS — 0340.** The
+   * level break keeps the world running and does not paint over it (0063), and this returned `null`
+   * for it: so on the step a boss died the backdrop went to the title's void and the atlas re-baked
+   * to The Approach's sky, for exactly the three seconds the break exists to let the player look at
+   * where they are — and then both changed again. It was reported without being located, as one beat
+   * of a list: *"boss death → **starfield** → animation → button click."* 0076 says a level boundary
+   * keeps the scene; this was the scene being swapped twice at every one.
+   *
+   * ⚠️ **AND THE BURN SWAPS IT ONCE, AT FULL SPEED** — `travelSwapped`'s own note has why. Before that
+   * the ship is still leaving the place it was in; after it, it is arriving in `placeFor(run.level)`,
+   * which is the same place `arrive` is about to enter, so nothing changes on the step it lands.
    */
   function placeOnScreen(): ThemeKind | null {
-    return state.screen.current === 'playing' ? world.level.theme : audition;
+    const screen = state.screen.current;
+    if (screen === 'playing' || screen === 'cleared') return world.level.theme;
+    if (screen === 'travel') return travelSwapped ? placeFor(state.run.level) : world.level.theme;
+    return audition;
   }
 
   /** Put the run's camera back exactly as the room found it. A no-op unless the room borrowed it. */
@@ -2710,49 +2669,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   host.appendChild(gate);
   let stopLoop: (() => void) | null = null;
 
-  /**
-   * The game's frame, with the crossing drawn instead of the world on the frames the chart is up.
-   *
-   * ⚠️ **A WRAPPER RATHER THAN A BRANCH INSIDE `GameFrame.draw`** — 0340. `src/app/frame.ts` is on
-   * `tests/budget.test.ts`'s hot list and knows nothing about screens; a crossing drawn from there
-   * would put the chart, the run's level and a settings row inside the file 0024 exists to keep them
-   * out of. The step half is untouched and still the world's: `travel` has `steps: false`, so what
-   * `GameFrame.step` does on these frames is fire `onTick` and return — which is where the crossing is
-   * spent.
-   *
-   * ⚠️ **BUILT ONCE PER LOOP START, WHICH IS A RESIZE AND NOT A FRAME.** The object and both closures
-   * are allocated where `GameFrame` already was; the comment three lines below is the rule, and this
-   * is inside it.
-   *
-   * ⚠️ **AND THE BRANCH IS ONE COMPARISON A FRAME IN A FILE THAT IS DELIBERATELY COLD.** The work the
-   * scan actually protects — the drawing — is in `src/render/scene.ts`, which IS on the hot list, so
-   * `paintTravel` is held to the same rule every other painter is.
-   */
-  const crossingOr = (game: Frame): Frame => {
-    // @setup: one object and two closures, built where the loop starts — a resize, never a frame.
-    return {
-      step: (): void => {
-        game.step();
-      },
-      draw: (alpha: number): void => {
-        if (state.screen.current !== 'travel') {
-          game.draw(alpha);
-          return;
-        }
-        /*
-          ⚠️ **THE HULL THE RUN IS ACTUALLY FLYING, read off the world rather than named here** — 0081
-          puts three hulls behind the upgrade ladder, and a chart that always drew the bare wedge would
-          be the one picture in the game that forgets what the player has picked up.
-          `world.ship.spriteBase` is what `wearHull` writes and what the frame blits, so the two
-          cannot drift — and it is the BASE rather than `sprite`, because `sprite` may be the hit twin
-          on the step the curtain came down and a ship flashing white for a whole crossing would be
-          reporting damage it is not taking.
-        */
-        paintTravel(world.surface, world.view, SPRITE.chart, world.ship.spriteBase, crossingAt());
-      },
-    };
-  };
-
   const setPlayable = (next: boolean): void => {
     playable = next;
     gate.style.display = playable ? 'none' : 'flex';
@@ -2763,7 +2679,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // A resize is not a frame, so building a frame here is affordable — the rule this file opens
       // with. Restarting also drops the accumulated step debt, which is right: time spent looking at
       // a rotate prompt is not time the world should catch up on.
-      stopLoop = runLoop(crossingOr(new GameFrame(world)));
+      stopLoop = runLoop(new GameFrame(world));
     } else if (!playable && stopLoop !== null) {
       stopLoop();
       stopLoop = null;

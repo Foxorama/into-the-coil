@@ -3,46 +3,47 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
-import { drawKind } from '../src/render/bake.ts';
-import { PALETTES } from '../src/content/palette.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { GameFrame } from '../src/app/frame.ts';
+import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { BURN_HALF, THRUST, WARP_FLAME, WARP_SCROLL } from '../src/content/exhaust.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
-import {
-  CHART_OUTER,
-  CHART_STOP,
-  SPRITE_EXTENT,
-  chartRadius,
-  chartTileX,
-  chartTileY,
-} from '../src/content/sprites.ts';
 import {
   DEFAULT_TRAVEL,
   TRAVELS,
   TRAVEL_KINDS,
   TRAVEL_MAX_STEPS,
-  travelDone,
+  TRAVEL_SPOOL_STEPS,
+  TRAVEL_TRAIL_STEPS,
+  travelArrived,
   travelIsWaiting,
+  travelMayLand,
+  warpAt,
 } from '../src/content/travel.ts';
-import { makeLifecycle } from '../src/app/lifecycle.ts';
+import { CHART_OUTER, CHART_RING, CHART_STOP, chartRadius, chartTileX, chartTileY, drawChart } from '../src/render/bake.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { tracingPen } from './paths.ts';
-import { playableWorld } from './world.ts';
+import { NO_LEVEL, playableWorld } from './world.ts';
 
 /**
- * THE COIL IS A ROUTE, AND THE SHIP CROSSES IT.
+ * THE COIL IS A ROUTE, AND THE SHIP BURNS ALONG IT.
  *
  * `docs/decisions/0340-the-coil-is-a-route.md`. Asked for: *"we'll need loading screens anyway for
- * transitions and to represent moving through the galaxy"*, and explicitly as **a full-screen scene**
- * rather than a banner over the sky.
+ * transitions and to represent moving through the galaxy."* Built first as a full-screen chart with a
+ * button on it, and played:
  *
- * ⚠️ **THE SUBJECT OF THE FIRST HALF IS `src/content/travel.ts`, WHICH EXISTS SO THAT THIS FILE CAN.**
- * *Does the crossing leave before the music is ready?* and *does a press skip the floor?* are the two
- * questions the feature is, and while they were `if`s inside `src/app/mount.ts` the only way to ask
- * either was to boot a canvas — which `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` cannot
- * break on purpose. `src/app/lifecycle.ts` and `tests/continue.test.ts` are the same pair.
+ * > *"It takes the player out of the game. We need a much smoother transition where the player's
+ * > engines do a full jet burn and the ship hyper-speeds through galaxy for the loading screen and
+ * > then the hyper burn trails off as they arrive at the new level."*
+ *
+ * ⚠️ **THAT FIRST BUILD PASSED EVERY TEST THIS FILE HAD, AND THAT IS WORTH MORE THAN ANY OF THEM.**
+ * Thirteen assertions and ten probes held a screen that was correct and was the wrong thing: nothing
+ * here can tell a cut from a continuation, and nothing should pretend to. What this file holds is what
+ * a test CAN hold — that the burn waits for the music and no longer than a ceiling, that the one number
+ * it is made of has the shape that was asked for, that the frame does with that number what the picture
+ * needs, and that a level is never skipped. Whether it FEELS like flying is the play-test's.
  */
 
 const root = fileURLToPath(new URL('..', import.meta.url));
@@ -62,12 +63,7 @@ const read = (file: string): string => readFileSync(resolve(root, file), 'utf8')
 
 /**
  * Comments out, so a ban cannot fire on the sentence explaining it — `tests/sound.test.ts`'s helper
- * and its argument.
- *
- * ⚠️ **IT CAUGHT THIS FILE'S OWN GUARD BEFORE THIS FILE WAS COMMITTED.** `src/content/sprites.ts` says
- * in prose why the curve is NOT in `src/content/travel.ts`, which is a citation the documentation
- * convention requires and a raw scan reads as an import. What a ban is about is the import graph, and
- * an import cannot hide in a comment.
+ * and its argument. What a ban is about is the import graph, and an import cannot hide in a comment.
  */
 function stripComments(src: string): string {
   return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(?<!:)\/\/.*$/gm, ' ');
@@ -76,36 +72,24 @@ function stripComments(src: string): string {
 /** The row the rest of the file measures against, so *the default* is asserted once and then used. */
 const FLOOR = TRAVELS[DEFAULT_TRAVEL].floorSteps;
 
-describe('the crossing ends on a floor and on the place being ready, and on nothing else', () => {
+describe('the burn holds for a floor and for the place, and for nothing else', () => {
   it('holds through its floor even when the place is already loaded', () => {
     /*
       ⚠️ **THE HALF THAT IS ALMOST ALWAYS THE LIVE CASE.** Six of the seven places state little or no
       material of their own, and 0331 bakes the next place from the APPROACH — so by the time the boss
-      is dead the place has usually been in the mixer's hands for a minute. If readiness alone ended
-      the crossing, the chart would appear and vanish inside one frame for most of a run, which is a
-      flicker between two levels rather than a crossing.
+      is dead the place has usually been in the mixer's hands for a minute. If readiness alone let the
+      ship land, the engines would start trailing off before they had finished building.
     */
-    expect(travelDone(DEFAULT_TRAVEL, 0, true, false), 'the crossing ended on its first step').toBe(false);
-    expect(travelDone(DEFAULT_TRAVEL, FLOOR - 1, true, false), 'the crossing ended a step early').toBe(false);
-    expect(travelDone(DEFAULT_TRAVEL, FLOOR, true, false), 'the crossing outstayed its floor').toBe(true);
+    expect(travelMayLand(DEFAULT_TRAVEL, 1, true), 'the burn ended on its first step').toBe(false);
+    expect(travelMayLand(DEFAULT_TRAVEL, FLOOR - 1, true), 'the burn ended a step early').toBe(false);
+    expect(travelMayLand(DEFAULT_TRAVEL, FLOOR, true), 'the burn outstayed its floor').toBe(true);
   });
 
   it('and holds past its floor while the place is still being made', () => {
     // The case 0331 is about: The Black Heart is thirty-five seconds of synthesis, and its first
     // movement is twenty-five seconds long. Arriving without it is arriving without the piece.
-    expect(travelDone(DEFAULT_TRAVEL, FLOOR, false, false), 'the run arrived before its music').toBe(false);
-    expect(travelDone(DEFAULT_TRAVEL, FLOOR * 3, false, false), 'the run arrived before its music').toBe(false);
-  });
-
-  it('and a press takes the floor away and NOT the wait', () => {
-    /*
-      ⚠️ **THE TWO HALVES OF WHY THE CONTROL IS NEITHER DEAD NOR A LIE.** A press cannot make a bake
-      land, so a crossing that ended on one would arrive in silence; a press that did nothing at all
-      on a place still baking would be a button the player has to be told about. It leaves the moment
-      there is nothing left to wait for, which for most places is the next step.
-    */
-    expect(travelDone(DEFAULT_TRAVEL, 1, true, true), 'a press on a ready place did not end the crossing').toBe(true);
-    expect(travelDone(DEFAULT_TRAVEL, 1, false, true), 'a press made the music arrive').toBe(false);
+    expect(travelMayLand(DEFAULT_TRAVEL, FLOOR, false), 'the ship arrived before its music').toBe(false);
+    expect(travelMayLand(DEFAULT_TRAVEL, FLOOR * 3, false), 'the ship arrived before its music').toBe(false);
   });
 
   it('and the ceiling ends it whatever the music is doing', () => {
@@ -114,12 +98,11 @@ describe('the crossing ends on a floor and on the place being ready, and on noth
       lands — a browser or a machine nobody here has — must not be a run that never continues. Past
       the ceiling the music arrives when it arrives, which is what every level did before 0331.
     */
-    expect(travelDone(DEFAULT_TRAVEL, TRAVEL_MAX_STEPS, false, false), 'the crossing waited forever').toBe(true);
     for (const kind of TRAVEL_KINDS) {
-      expect(travelDone(kind, TRAVEL_MAX_STEPS, false, false), `${kind} waited past the ceiling`).toBe(true);
+      expect(travelMayLand(kind, TRAVEL_MAX_STEPS, false), `${kind} is held past the ceiling for ever`).toBe(true);
       expect(
         TRAVELS[kind].floorSteps,
-        `${kind} has a floor above the ceiling, so the ceiling is what ends every crossing`,
+        `${kind} has a floor above the ceiling, so the ceiling is what ends every burn`,
       ).toBeLessThan(TRAVEL_MAX_STEPS);
     }
   });
@@ -127,53 +110,156 @@ describe('the crossing ends on a floor and on the place being ready, and on noth
   it('and the wait is only ever SAID while the place is what is holding it up', () => {
     /*
       `docs/game.md` bans restating what the screen already shows, and 0063 makes the same point about
-      a countdown over a screen that has not stopped the world: a progress line under a crossing that
-      is simply being a crossing is the game apologising for four seconds of its own art.
+      a countdown over a screen that has not stopped the world: a line about waiting under a burn that
+      is simply being a burn is the game apologising for its own art.
     */
-    expect(travelIsWaiting(DEFAULT_TRAVEL, 1, true, false), 'a ready crossing said it was waiting').toBe(false);
-    expect(travelIsWaiting(DEFAULT_TRAVEL, 1, false, false), 'the crossing apologised inside its own floor').toBe(
-      false,
-    );
-    expect(travelIsWaiting(DEFAULT_TRAVEL, FLOOR, false, false), 'the crossing waited in silence').toBe(true);
-    // A press is the player asking now, so the answer is owed from the next step rather than from the
-    // floor they have just given up.
-    expect(travelIsWaiting(DEFAULT_TRAVEL, 1, false, true), 'a pressed crossing waited in silence').toBe(true);
+    expect(travelIsWaiting(DEFAULT_TRAVEL, FLOOR * 2, true), 'a ready burn said it was waiting').toBe(false);
+    expect(travelIsWaiting(DEFAULT_TRAVEL, 1, false), 'the burn apologised inside its own floor').toBe(false);
+    expect(travelIsWaiting(DEFAULT_TRAVEL, FLOOR, false), 'the burn was held in silence').toBe(true);
   });
 
-  it('and neither knob is zero, and the default is the longer one', () => {
+  it('and the knob shortens the default, and neither end of it is shorter than the engines take to build', () => {
     /*
-      ⚠️ **0024: there is one game and it is the loud one, and a knob is a knob over that default.** A
-      default of *Brief* would make the chart a thing nobody finds — `src/content/styles.ts`'s argument
-      for defaulting to the newer look. And neither row may be zero, because a crossing shortened to
-      nothing is not a shorter crossing: it is the flicker the first test in this file is about.
+      ⚠️ **0024: there is one game and it is the loud one, and a knob is a knob over that default.**
+
+      ⚠️ **AND THE FLOOR MAY NOT BE INSIDE THE SPOOL**, which is a claim about the PICTURE rather than
+      about a number: the place is swapped under the streaks at full burn, because that is where
+      forty-four bright lines hide a re-bake of fifty-eight bitmaps. A burn allowed to start trailing
+      off before it had finished building would never get there, and the swap would happen — if at all
+      — on the step the ship arrived, in plain view, which is the hitch this design exists to bury.
     */
     for (const kind of TRAVEL_KINDS) {
-      expect(TRAVELS[kind].floorSteps, `${kind} is a flicker rather than a crossing`).toBeGreaterThan(0);
+      expect(TRAVELS[kind].floorSteps, `${kind} trails off before it reaches full burn`).toBeGreaterThanOrEqual(
+        TRAVEL_SPOOL_STEPS,
+      );
       expect(TRAVELS[kind].title.length, `${kind} has no name on the chooser`).toBeGreaterThan(0);
       expect(TRAVELS[kind].hint.length, `${kind} has nothing said about it`).toBeGreaterThan(0);
-    }
-    for (const kind of TRAVEL_KINDS) {
       if (kind === DEFAULT_TRAVEL) continue;
       expect(
         TRAVELS[kind].floorSteps,
-        'the default is not the longest crossing — a comfort knob that lengthens the default is 0024 backwards',
+        'the default is not the longest burn — a comfort knob that lengthens the default is 0024 backwards',
       ).toBeLessThan(FLOOR);
     }
   });
 
-  it('and the floor is stated in seconds a player would recognise', () => {
+  it('and the whole of it is stated in seconds a player would recognise', () => {
     /*
-      ⚠️ **IN SECONDS, WHICH IS THE UNIT THE NUMBER WAS CHOSEN IN** — 0027's rule that at least one
-      assertion is written in units the player experiences. `STEPS_PER_SECOND` is the one description
-      of the conversion, so a change to the step rate cannot silently make this a two-second crossing.
+      ⚠️ **IN SECONDS, WHICH IS THE UNIT THE NUMBERS WERE CHOSEN IN** — 0027's rule that at least one
+      assertion is written in units the player experiences. What a player sits through is the floor
+      AND the tail, so that is what is added up.
 
       ⚠️ **AND IT IS THE NUMBER MOST LIKELY TO BE WRONG.** 0063 says the same of its own three seconds,
-      in the same words: too short and the crossing is a flicker, too long and it is the hard pause
-      between levels the respite exists to have removed. It has not been played.
+      in the same words. It has not been played.
     */
-    expect(FLOOR / STEPS_PER_SECOND).toBe(4);
-    expect(TRAVELS.brief.floorSteps / STEPS_PER_SECOND).toBe(1);
+    const seconds = (kind: (typeof TRAVEL_KINDS)[number]): number =>
+      (TRAVELS[kind].floorSteps + TRAVEL_TRAIL_STEPS) / STEPS_PER_SECOND;
+    expect(seconds('scene')).toBe(4);
+    expect(seconds('brief')).toBe(3);
     expect(TRAVEL_MAX_STEPS / STEPS_PER_SECOND).toBe(20);
+  });
+});
+
+describe('the burn is one number, and it has the shape that was asked for', () => {
+  it('builds from nothing, holds at full, and trails off to nothing — with no step in it anywhere', () => {
+    /*
+      *"The player's engines do a full jet burn… and then the hyper burn trails off as they arrive."*
+      Builds, holds, trails off. Walked one step at a time through a burn held a second past its floor,
+      which is the shape every real one has.
+
+      ⚠️ **THE LARGEST SINGLE STEP IS ASSERTED, AND THAT IS THE WORD *SMOOTHER* AS ARITHMETIC.** Every
+      star on the screen moves at this number times a constant, so a jump in it is a jolt in all of
+      them at once. A linear ramp over the spool would step by a sixtieth; smoothstep peaks at one and
+      a half times that in the middle and is NOUGHT at both ends, which is the property that matters —
+      the burn does not start or stop with a corner.
+    */
+    const landingAt = FLOOR + 60;
+    const end = landingAt + TRAVEL_TRAIL_STEPS;
+    let biggest = 0;
+    let peak = 0;
+    for (let step = 1; step <= end; step += 1) {
+      const now = warpAt(step, step >= landingAt ? landingAt : -1);
+      const before = warpAt(step - 1, step - 1 >= landingAt ? landingAt : -1);
+      biggest = Math.max(biggest, Math.abs(now - before));
+      peak = Math.max(peak, now);
+      if (step < TRAVEL_SPOOL_STEPS) expect(now, `the burn fell back while building, at step ${step}`).toBeGreaterThanOrEqual(before);
+      if (step > landingAt) expect(now, `the burn surged while trailing off, at step ${step}`).toBeLessThanOrEqual(before);
+      if (step >= TRAVEL_SPOOL_STEPS && step <= landingAt) expect(now, `the burn sagged while held, at step ${step}`).toBe(1);
+    }
+    expect(warpAt(0, -1), 'the burn starts already burning').toBe(0);
+    expect(peak, 'the burn never reaches full').toBe(1);
+    expect(warpAt(end, landingAt), 'the ship arrives still burning').toBe(0);
+    expect(biggest, 'the burn has a step in it — every star on the screen jolts at once').toBeLessThan(
+      1.6 / Math.min(TRAVEL_SPOOL_STEPS, TRAVEL_TRAIL_STEPS),
+    );
+    // And the tail is the longer half, which is the asked-for emphasis: it TRAILS off.
+    expect(TRAVEL_TRAIL_STEPS, 'the burn ends more abruptly than it began').toBeGreaterThan(TRAVEL_SPOOL_STEPS);
+  });
+
+  it('and the ship has arrived exactly when the tail is spent, and not while it is held', () => {
+    expect(travelArrived(FLOOR * 4, -1), 'a burn still being held reported the ship as arrived').toBe(false);
+    expect(travelArrived(FLOOR + TRAVEL_TRAIL_STEPS - 1, FLOOR), 'the ship arrived a step early').toBe(false);
+    expect(travelArrived(FLOOR + TRAVEL_TRAIL_STEPS, FLOOR), 'the ship never arrives').toBe(true);
+  });
+});
+
+describe('the frame burns by that number, and the player keeps the ship', () => {
+  /** A world with nothing in it, flown for a few steps at a given burn. */
+  function flown(warp: number, steps = 30) {
+    const { world } = playableWorld(NO_LEVEL);
+    const frame = new GameFrame(world);
+    world.warp = warp;
+    for (let i = 0; i < steps; i += 1) frame.step();
+    return world;
+  }
+
+  it('the camera runs at the engine’s own multiple, and the ship goes with it', () => {
+    /*
+      ⚠️ **THE SECOND HALF IS THE ONE THAT MATTERS, AND IT IS IN SCREEN UNITS.** 0023 and 0034: every
+      speed is in the camera's frame, so a camera at twelve times its rate has to carry the ship with
+      it. If it did not, the ship would slide off the back of the screen in a quarter of a second — the
+      burn would take the player out of the game in the most literal way available. Where the ship is
+      ON THE SCREEN is `along − cameraAlong`, and it must not care how fast the camera is going.
+    */
+    const still = flown(0);
+    const burning = flown(1);
+    expect(still.scrollPerStep, 'a world that is not burning is not at its own rate').toBeCloseTo(still.scrollRate, 9);
+    expect(burning.scrollPerStep / burning.scrollRate, 'full burn is not the engine’s multiple').toBeCloseTo(
+      WARP_SCROLL,
+      9,
+    );
+    expect(
+      burning.ship.along - burning.cameraAlong,
+      'the ship is somewhere else on the screen because the camera sped up',
+    ).toBeCloseTo(still.ship.along - still.cameraAlong, 6);
+  });
+
+  it('and the flame swells with the burn while its ROOT stays on the tail', () => {
+    /*
+      ⚠️ **THE ROOT, IN WORLD UNITS BEHIND THE SHIP, AT NOUGHT AND AT FULL.** The flame's sprite is
+      scaled about its centre and its root is at its forward edge, so the two naive offsets are both
+      wrong: the old one starts a swollen flame inside the hull, and a multiple of it opens a gap
+      behind the ship that widens as the engines build. Looked at, either is the flame coming off the
+      ship. What is held still is where the flame BEGINS.
+    */
+    const rootBehind = (warp: number): number => {
+      const world = flown(warp);
+      const flame = world.exhaust.at(0);
+      // The sprite's forward edge: its centre, plus half its extent at the size it is drawn.
+      return world.ship.along - (flame.along + BURN_HALF * flame.swell);
+    };
+    const swellAt = (warp: number): number => flown(warp).exhaust.at(0).swell;
+    expect(swellAt(1), 'the flame is not at its full size at full burn').toBeCloseTo(WARP_FLAME, 9);
+    expect(swellAt(0.5), 'the flame does not grow WITH the burn, so it cannot trail off').toBeCloseTo(
+      1 + (WARP_FLAME - 1) / 2,
+      9,
+    );
+    // Burning at nought is the ordinary hard-forward flame, which a parked fixture is not asking for;
+    // a whisker of burn forces the same row at the same size, so the two compare like with like.
+    expect(rootBehind(1), 'the flame’s root left the tail as it grew').toBeCloseTo(rootBehind(1e-9), 6);
+    expect(rootBehind(1e-9), 'the burn’s root is not where the burn row puts it').toBeCloseTo(
+      THRUST.burn.trail - BURN_HALF,
+      6,
+    );
   });
 });
 
@@ -184,8 +270,8 @@ describe('a crossing carries the run forward exactly once', () => {
    *
    * ⚠️ **The real `reduce`, never a stub.** Half of what the last crossing does is a cross-slice
    * agreement in `src/state/root.ts` — *a level cleared past the end of the run is the run finished* —
-   * and a fixture that dispatched into a fake would be the one thing that could not see a crossing
-   * being offered to a run that has already ended.
+   * and a fixture that dispatched into a fake would be the one thing that could not see a burn being
+   * offered to a run that has already ended.
    */
   function shell() {
     const built = playableWorld(LEVELS[LEVEL_KINDS[0]!], DIFFICULTY_KINDS[0]!);
@@ -193,7 +279,9 @@ describe('a crossing carries the run forward exactly once', () => {
     const dispatch = (action: Action): void => {
       current = reduce(current, action);
     };
+    dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]! });
     return {
+      world: built.world,
       state: (): State => current,
       dispatch,
       lifecycle: makeLifecycle(built.world, dispatch, () => current.run),
@@ -206,69 +294,75 @@ describe('a crossing carries the run forward exactly once', () => {
     s.dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
   };
 
-  it('Onward goes to the chart, and the chart goes to the level', () => {
+  it('Onward starts the burn and touches nothing, and arriving is what enters the level', () => {
+    /*
+      ⚠️ **THE ORDER IS THE DESIGN.** A level entered at the START of several seconds at twelve times
+      the scroll rate has its opening waves — which `src/content/levels.ts` places inside the spawn
+      horizon on purpose — flown past before anybody could see them. So the field during a burn is
+      empty by construction, and the script changes on the step the ship arrives.
+    */
     const s = shell();
-    s.dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]! });
-    expect(s.state().run.level, 'a run did not begin on the first level').toBe(0);
+    const leaving = s.world.level;
     clearLevel(s);
-    expect(s.state().screen.current).toBe('cleared');
     s.lifecycle.onward();
-    expect(s.state().screen.current, 'Onward went straight to the level and skipped the chart').toBe('travel');
+    expect(s.state().screen.current, 'Onward went straight to the level and skipped the burn').toBe('travel');
+    expect(s.world.level, 'the next level was entered at the start of the burn, and will be flown past').toBe(leaving);
     s.lifecycle.arrive();
-    expect(s.state().screen.current, 'the crossing did not hand the run back').toBe('playing');
+    expect(s.state().screen.current, 'the burn did not hand the run back').toBe('playing');
+    expect(s.world.level, 'the ship arrived in the level it left').toBe(LEVELS[LEVEL_KINDS[1]!]);
   });
 
   it('THE BUG NEXT DOOR: crossing a level advances it exactly once', () => {
     /*
       ⚠️ **0339 HAD JUST FINISHED FIXING THIS ONE SCREEN AWAY.** A re-armed countdown fired
-      `onCleared` twice and a run went from The Labyrinth to The Toxic Mire with Rime Shelf never
-      played — *"we've somehow lost the ice level."* The crossing is a second screen between two
-      levels, spending its own clock, with its own way out; it is exactly the shape that bug had, so
-      the assertion is written here rather than assumed from there.
+      `onCleared` nine times and a run went from The Labyrinth to The Toxic Mire with Rime Shelf never
+      played — *"we've somehow lost the ice level."* The burn is a second thing between two levels,
+      spending its own clock, with its own way out; it is exactly the shape that bug had, so the
+      assertion is written here rather than assumed from there.
 
-      ⚠️ **AND IT IS ASSERTED THROUGH THE REAL VERBS.** `onward` is what enters the level and `arrive`
-      is what lifts the curtain; a test that dispatched the screens itself would be asking whether the
-      test advances the level.
+      ⚠️ **AND IT IS ASSERTED THROUGH THE REAL VERBS.** A test that dispatched the screens itself would
+      be asking whether the test advances the level.
     */
     const s = shell();
-    s.dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]! });
     clearLevel(s);
     s.lifecycle.onward();
-    expect(s.state().run.level, 'the crossing is on the wrong leg').toBe(1);
+    expect(s.state().run.level, 'the burn is towards the wrong place').toBe(1);
     s.lifecycle.arrive();
     expect(s.state().run.level, 'arriving advanced the level a second time').toBe(1);
+    expect(s.world.levelIndex, 'the field is not on the level the run says').toBe(1);
     // And a second crossing moves it exactly one more, so nothing accumulated on the first.
     clearLevel(s);
     s.lifecycle.onward();
     s.lifecycle.arrive();
     expect(s.state().run.level, 'two crossings did not advance two levels').toBe(2);
+    expect(s.world.levelIndex, 'the field is not on the level the run says').toBe(2);
   });
 
   it('and a run that has finished is never offered a crossing', () => {
     /*
       ⚠️ **THE CROSS-SLICE AGREEMENT IS WHAT MAKES THIS TRUE, AND IT IS NOT IN THE SHELL.**
       `src/state/root.ts` turns a `cleared` past the end of the roster into `victory`, so the control
-      the crossing hangs off is never pressed — which is why `travel` needs no *is there an eighth
-      place* branch of its own. The day somebody moves that agreement into `mount`, this goes red.
+      the burn hangs off is never pressed — which is why `travel` needs no *is there an eighth place*
+      branch of its own. The day somebody moves that agreement into `mount`, this goes red.
     */
     const s = shell();
-    s.dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]! });
     for (let i = 0; i < LEVEL_KINDS.length; i += 1) clearLevel(s);
     expect(s.state().run.level, 'the roster did not run out').toBeGreaterThanOrEqual(LEVEL_KINDS.length);
     expect(s.state().screen.current, 'a finished run was offered another place to fly to').toBe('victory');
   });
 
-  it('and the row it lands on stops the world and does not paint over it', () => {
+  it('and the row it is on is the game with words over it, exactly as the level break is', () => {
     /*
-      ⚠️ **BOTH HALVES, AND THE SECOND IS THE UNUSUAL ONE.** `steps: false` is what keeps 0076 true —
-      a crossing that flew the world on would be flying the ship through a level nobody can see, and
-      0076 exists because *"a background scene reset between levels"* was reported as disjointing.
-      `dims: false` is because the canvas underneath is the chart rather than the game, so the dim
-      would paint out the picture it was meant to protect.
+      ⚠️ **ALL FOUR, AND EACH ONE IS A SENTENCE OF THE PLAY REPORT.** `steps` and `dims` are *"it takes
+      the player out of the game"*: the first build stopped the world and drew over it. No actions is
+      *"it felt like a button click was needed, which is the same thing."* `pushed` is what keeps a row
+      with no heading and no button from being the second screen in this project to be shown correctly
+      and be invisible (0210 was the first).
     */
-    expect(SCREENS.travel.steps, 'the crossing flies the level nobody can see').toBe(false);
-    expect(SCREENS.travel.dims, 'the crossing paints over its own chart').toBe(false);
-    expect(SCREENS.travel.actions.length, 'the crossing cannot be skipped by a hand').toBe(1);
+    expect(SCREENS.travel.steps, 'the burn stops the world — the player is taken out of the game').toBe(true);
+    expect(SCREENS.travel.dims, 'the burn paints over the game it is happening in').toBe(false);
+    expect(SCREENS.travel.actions, 'the burn has a button on it, which reads as *press me*').toEqual([]);
+    expect(SCREENS.travel.pushed, 'the burn has no words and no way to be given any').toBe(true);
     // And the respite in front of it is untouched: 0063's screen is still a banner over a flying run.
     expect(SCREENS.cleared.steps, '0063 lost its respite to the crossing').toBe(true);
     expect(SCREENS.cleared.dims, '0063 lost its respite to the crossing').toBe(false);
@@ -302,83 +396,77 @@ describe('the chart is the roster, drawn as a descent', () => {
     expect(THEMES[LEVELS[LEVEL_KINDS[STOPS - 1]!].theme].title).toBe('The Black Heart');
   });
 
-  it('and every stop is inside its own bitmap, halo and all', () => {
-    // 0277 shipped a serpent whose halo ran off its tile and bled into the next sprite in the atlas.
-    // The destination's outer ring is the widest mark here, at 2.1 stop radii — `drawChart` has it.
-    const reach = CHART_OUTER + CHART_STOP * 2.1;
-    expect(reach, 'the chart draws outside its own tile and will bleed into the next sprite').toBeLessThan(0.5);
+  it('and every stop is inside the canvas, ring and all', () => {
+    // 0277 shipped a serpent whose halo ran off its tile. The destination's ring is the widest mark.
+    expect(CHART_OUTER + CHART_STOP * CHART_RING, 'the chart draws outside its own canvas').toBeLessThan(0.5);
     expect(chartRadius(0), 'the route no longer starts at the outside of the chart').toBe(CHART_OUTER);
     expect(chartRadius(1), 'the innermost stop is not the centre').toBe(0);
   });
 
-  it('and no two places land on top of each other, measured in lane units', () => {
+  it('and no two places land on top of each other, measured in their own discs', () => {
     /*
-      ⚠️ **IN WORLD UNITS ACROSS THE LANE, WHICH IS A SIZE A PLAYER HAS A FEEL FOR** — 0027. The chart
-      is blitted at `SPRITE_EXTENT.chart`, which is `ACROSS_SPAN`, so a tile fraction IS a fraction of
-      the lane: the ship is 7 units across and the box it flies in is 100 tall. A pair of stops closer
-      together than a stop's own diameter would read as one place with two names.
+      ⚠️ **IN STOP DIAMETERS, WHICH IS THE UNIT THE EYE USES ON THIS PICTURE** — 0027. A pair of stops
+      closer together than one disc reads as one place with two names, at any size the chart is shown.
 
-      ⚠️ **THE TIGHTEST PAIR IS THE LAST ONE, because the spiral loses radius as it goes.** That is the
-      pair this is really about, and it is the reason `CHART_TURNS` is barely over one: more turns
-      would put the inner legs on top of each other.
+      ⚠️ **THE TIGHTEST PAIR IS THE LAST ONE, because the spiral loses radius as it goes**, and a
+      straight-line radius put it at EXACTLY one diameter: two tangent discs, with the destination's
+      ring cutting through the one before it. That is the defect `CHART_TIGHTEN` exists for.
     */
-    const diameter = CHART_STOP * 2 * ACROSS_SPAN;
-    expect(SPRITE_EXTENT.chart, 'the chart is no longer a lane across, so these units are not lane units').toBe(
-      ACROSS_SPAN,
-    );
     let tightest = Infinity;
     for (let stop = 1; stop < STOPS; stop += 1) {
       const [x, y] = at(stop);
       const [px, py] = at(stop - 1);
-      const apart = Math.hypot(x - px, y - py) * ACROSS_SPAN;
-      tightest = Math.min(tightest, apart);
+      tightest = Math.min(tightest, Math.hypot(x - px, y - py) / (CHART_STOP * 2));
     }
-    expect(tightest, `two places on the chart are within ${diameter.toFixed(1)} lane units of each other`).
-      toBeGreaterThan(diameter);
+    expect(tightest, 'two places on the chart are within a disc and a half of each other').toBeGreaterThan(1.5);
   });
 
-  it('and the drawing is one disc per level, at the positions the geometry says', () => {
+  it('and the drawing is one disc per level where the curve says, with the legs behind it in their places’ colours', () => {
     /*
       ⚠️ **THE PICTURE AND NOT THE MODEL** — 0027. Everything above is arithmetic over the curve; this
       traces what the pen actually did, so a `drawChart` that drew six stops, or drew them somewhere
       else, is caught by the thing the player looks at rather than by the thing it was computed from.
-
-      ⚠️ **THROUGH `drawKind`, WHICH IS THE ATLAS'S OWN ENTRY POINT.** `bakeChart` writes the places'
-      real colours over this bitmap at a boundary and needs a `document` to do it; what `drawKind`
-      draws is the same geometry in the palette's own ink, which is the half a headless test can see.
     */
     const size = 512;
+    const flownLegs = 3;
+    const faint = '#123456';
     const { pen, trace } = tracingPen();
-    drawKind(pen, 'chart', PALETTES.vivid, size);
+    drawChart(pen, size, 'vivid', flownLegs, faint);
     expect(trace.passes.length, 'the chart drew one disc per place and this is not that many').toBe(STOPS);
-    expect(trace.inks.length, 'the chart drew a leg per pair of places, plus one ring on the destination').toBe(
+    expect(trace.inks.length, 'a leg per pair of places, a rim per place, and one ring on the destination').toBe(
       LEGS + STOPS + 1,
     );
     for (let stop = 0; stop < STOPS; stop += 1) {
       const [fx, fy] = at(stop);
       const points = trace.passes[stop]!.subpaths[0]!;
-      /*
-        A disc is flattened to a polygon by the tracing pen, so its centre is the mean of its points —
-        which is exact for a regular polygon and is what the guard wants to know about.
-      */
+      // A disc is flattened to a regular polygon by the tracing pen, so its centre is its points' mean.
       const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length;
       const cy = points.reduce((sum, [, y]) => sum + y, 0) / points.length;
       expect(cx / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fx, 3);
       expect(cy / size, `stop ${stop} is drawn away from where the route puts it`).toBeCloseTo(fy, 3);
+    }
+    /*
+      ⚠️ **A LEG BEHIND THE RUN IS ITS DESTINATION'S COLOUR AND A LEG AHEAD IS NOT ANY PLACE'S.** That
+      is the whole of how this picture says *these are behind you*, so it is the claim most worth
+      holding — and it is per place, read off `THEMES`, which is 0282's *can the thing differ per
+      instance* asked of the chart.
+    */
+    for (let leg = 0; leg < LEGS; leg += 1) {
+      const want = leg < flownLegs ? THEMES[LEVELS[LEVEL_KINDS[leg + 1]!].theme].glow.vivid : faint;
+      expect(trace.inks[leg]!.colour, `leg ${leg} is drawn in the wrong colour`).toBe(want);
     }
   });
 });
 
 describe('a comfort knob over the crossing cannot reach the game', () => {
   /**
-   * ⚠️ **`src/app/frame.ts` IS THE INTERESTING ENTRY, EXACTLY AS IT IS IN THE OTHER TWO.**
-   * `tests/style.test.ts` and `tests/sound.test.ts` hold the same ban over their own tables, and the
-   * frame is where somebody would reach: it is the file that already knows about screens' worth of
-   * sprites, and it is also the file that decides what hits what.
+   * ⚠️ **`src/app/frame.ts` IS THE INTERESTING ENTRY, AND HERE IT IS MORE THAN USUALLY SO.** The frame
+   * is what the burn happens IN: it multiplies the scroll and swells the flame. It does both off a
+   * number it is handed (`World.warp`), and must never learn that the number came from a row with a
+   * comfort setting on it — a step that could read *Brief* is a step that could branch on it.
    *
-   * ⚠️ **AND `src/render/scene.ts` IS ON IT, WHICH THE OTHER TWO DO NOT NEED.** The painter draws the
-   * crossing, so it is one import away from the table that says how long the crossing lasts — and the
-   * frame imports the painter. A transitive route to a comfort setting is a route.
+   * ⚠️ **AND `src/render/scene.ts` IS ON IT**, which the style and sound bans do not need: the painter
+   * draws the streaks, and the frame imports the painter. A transitive route to a setting is a route.
    */
   const FORBIDDEN = [...filesUnder('src/sim'), 'src/app/frame.ts', 'src/app/boss.ts', 'src/render/scene.ts'];
 
@@ -400,25 +488,5 @@ describe('a comfort knob over the crossing cannot reach the game', () => {
       `these decide what happens and can see the travel setting: ${offenders.join(', ')}\n` +
         'A step that can read how long a loading screen lasts is a step that can branch on it.',
     ).toEqual([]);
-  });
-
-  it('and the curve is reachable from both sides of the bake, which is why it is not in that table', () => {
-    /*
-      ⚠️ **THE COMPANION CLAIM, AND IT IS WHAT KEEPS THE BAN ABOVE HONEST.** The route's geometry is
-      needed by `src/render/bake.ts`, which strokes it, and by `src/render/scene.ts`, which puts the
-      ship on it — and `tests/budget.test.ts` forbids the painter importing the baker (0022). So the
-      curve lives in `src/content/sprites.ts`, a file the frame already reads, and NOT beside the
-      setting. Two descriptions of one curve would put the ship beside the route rather than on it.
-    */
-    expect(stripComments(read('src/render/scene.ts')).includes('content/sprites.ts'), 'the painter lost the curve').toBe(
-      true,
-    );
-    expect(stripComments(read('src/render/bake.ts')).includes('content/sprites.ts'), 'the baker lost the curve').toBe(
-      true,
-    );
-    expect(
-      stripComments(read('src/content/sprites.ts')).includes('content/travel.ts'),
-      'the curve now reaches the comfort setting, so the frame does too',
-    ).toBe(false);
   });
 });

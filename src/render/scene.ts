@@ -12,9 +12,6 @@
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
-// 0340: the chart's curve. `src/content/sprites.ts` has why the geometry lives in `content/` — the
-// frame may not reach the baker (0022), and the baker draws the same curve this puts the ship on.
-import { chartTileX, chartTileY } from '../content/sprites.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
 import { PLAYER_MARGIN } from '../sim/flight.ts';
@@ -204,6 +201,7 @@ export function paintScene(
   landmarks: Landmarks = NO_LANDMARKS,
   levelOrigin = 0,
   room: Room | null = null,
+  warp = 0,
 ): void {
   surface.clear();
   /*
@@ -215,6 +213,13 @@ export function paintScene(
   */
   paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin);
   paintSky(surface, view, cameraAlong, sky);
+  /*
+    ⚠️ **OVER THE SKY AND UNDER EVERY BODY — 0340**, on the room's own terms one paragraph down: the
+    streaks are what the sky does at speed, so they belong to it, and the one absolute in this file is
+    that the player never loses their own ship behind something. A no-op on every frame of every
+    level, because `warp` is nought outside a crossing.
+  */
+  paintWarp(surface, view, cameraAlong, warp);
   /*
     ⚠️ **AFTER THE SKY AND BEFORE EVERY BODY — 0335.** A room is architecture: it stands in FRONT of
     the starfield, because a wall you can see stars through is not one, and BEHIND everything that
@@ -682,74 +687,79 @@ export function paintStacks(
   }
 }
 
-/**
- * How far either side of the ship the route is sampled to find which way it is pointing.
- *
- * ⚠️ **A CENTRED DIFFERENCE, so the nose points along the curve rather than at where it is going
- * next.** A forward difference lags by half the sample on a bend, which on the innermost leg — where
- * the spiral turns hardest — is visible as the ship flying slightly sideways for the whole crossing.
- */
-const TRAVEL_HEADING_STEP = 0.004;
+/*
+  ── THE SKY AT SPEED — `docs/decisions/0340-the-coil-is-a-route.md` ─────────────────────────────
+
+  Asked for: *"the ship hyper-speeds through galaxy for the loading screen and then the hyper burn
+  trails off as they arrive at the new level."*
+
+  ⚠️ **A STREAK IS A BOLT, AND THAT IS THE SECOND THING THE VERB HAS EVER BEEN FOR.** 0233 put `bolt`
+  on the surface for *"a shape not known until the frame it is drawn on, which is the one thing a bake
+  cannot hold"* — and a streak's length IS the ship's speed on this frame. Baked, it would be a tile of
+  lines at one length, arriving and leaving as a swap; stroked, it grows out of a point as the engines
+  build and shrinks back into one as they trail off, which is the whole of what *trails off* means.
+  It is counted as a bolt (0025) and hides nothing behind a blit's count.
+
+  ⚠️ **AND IT COSTS NOTHING ON ANY FRAME OF ANY LEVEL.** `warp` is nought outside a crossing and the
+  function returns on its first line; inside one the field is empty by construction — the boss is dead
+  and the next level is not entered until the burn is over — so the streaks are spending a budget
+  nothing else is using.
+*/
+
+/** How many streaks cross the screen at once. Few enough to be lines rather than a hatch. */
+const WARP_STREAKS = 44;
 
 /**
- * How much bigger than itself the ship is drawn on the chart.
- *
- * ⚠️ **NOTHING ON THIS PICTURE IS TO SCALE, AND THE SHIP IS THE ONE THING THAT WOULD BE.** A place is
- * drawn as a disc about three and a half lane units across, which is not the size of a place; the ship
- * is seven, which IS the size of the ship — so at its own scale the one thing the player is looking
- * for is a fifth the size of the things it is flying between. Looked at on the bench, it disappeared
- * behind the place name for the middle of a crossing.
- *
- * ⚠️ **IT IS A MARKER ON A CHART, WHICH IS WHY THIS IS NOT A LIE.** The same argument every map makes
- * about the dot that means *you are here*, and the reason it is safe here in particular is that there
- * is no simulation on this screen: nothing collides with it, nothing is dodged, and no distance on it
- * means anything the player has to judge — 0340, and it is what `steps: false` buys.
+ * A streak's length at full burn, in world units, for one at the front of the sky. The lane is 100
+ * tall, so the longest is a little over half a lane — long enough to read as a line from the moment
+ * the eye lands on it, short enough that two in a row still have a gap between them.
  */
-const TRAVEL_SHIP_SCALE = 1.6;
+const WARP_STREAK_UNITS = 56;
+
+/** The two ends of the one streak being drawn. Read by `bolt` before it returns, never kept. */
+// @setup: four floats for the module's lifetime, written in place forty-four times a frame.
+const STREAK = new Float32Array(4);
 
 /**
- * The crossing: the chart, and the ship somewhere on it. The other thing this file can draw.
+ * A number in [0, 1) that is always the same for the same `n` — the streaks' places.
  *
- * `docs/decisions/0340-the-coil-is-a-route.md`. `u` is how far along the WHOLE route the ship is — 0
- * at the first place, 1 at the last — and `src/content/sprites.ts` holds the curve that turns it into
- * a position. `chart` and `ship` are atlas indices, so this file still names no sprite kind: model and
- * state in, pixels out, exactly as this file's opening note says.
- *
- * ⚠️ **IT CLEARS AND DRAWS, WHICH MAKES IT THE SECOND THING THAT OWNS A WHOLE FRAME.** `paintScene`
- * is the other. The crossing is not chrome over the game — `src/state/screens.ts`'s `travel` row has
- * why it is the only screen with `dims: false` and no world behind it — so it cannot be a pass layered
- * onto a scene that is still being painted. Two blits and a clear is the whole frame.
- *
- * ⚠️ **NO INTERPOLATION ARGUMENT, AND THAT IS NOT AN OVERSIGHT.** Everything else here interpolates
- * between two simulation steps because the thing it draws is stepped by the simulation; nothing on
- * this screen is. `u` is computed from a step counter the shell spends in `onTick`
- * (`docs/decisions/0063-a-level-break-is-a-respite.md`'s callback, which fires on both sides of the
- * stepping branch), so the ship moves at 60Hz on a display drawing faster and is exactly where the
- * count says on one drawing slower. A crossing is four seconds of one object moving slowly; the
- * judder 0022 interpolates away is not reachable from here.
+ * ⚠️ **A HASH AND NOT AN `Rng`, BECAUSE NOTHING HERE MAY BE REMEMBERED.** A seeded stream would be a
+ * field to hold and a draw order to keep; this is arithmetic on the streak's own index, so the sky at
+ * speed is the same sky on every crossing, allocates nothing, and is not on any stream a level's
+ * spawns could be coupled to — `docs/decisions/0021-one-stream-per-concern.md`.
  */
-export function paintTravel(surface: Surface, view: View, chart: number, ship: number, u: number): void {
-  surface.clear();
-  const midAlong = view.alongSpan / 2;
-  const midAcross = ACROSS_SPAN / 2;
-  /*
-    ⚠️ **CENTRED IN THE VIEW AND BLITTED AT THE VIEW'S OWN SCALE**, so the chart is exactly as tall as
-    the lane on every device and the place's backdrop shows down both sides of it. `SPRITE_EXTENT.chart`
-    is `ACROSS_SPAN`, which is what makes that true without this file knowing the number —
-    `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` fixes `across` at 100 and lets only the
-    lookahead vary, so a chart sized off the across axis is the one thing here that cannot change
-    shape between two players' screens.
-  */
-  surface.blit(chart, screenX(view, midAlong, midAcross), screenY(view, midAlong, midAcross), view.scale);
-  const along = midAlong + (chartTileX(u) - 0.5) * ACROSS_SPAN;
-  const across = midAcross + (chartTileY(u) - 0.5) * ACROSS_SPAN;
-  /*
-    ⚠️ **THE HEADING IS READ OFF THE CURVE, NOT OFF THE TWO STOPS EITHER SIDE.** The route between two
-    places is an arc, so a nose aimed at the next dot is wrong everywhere except the ends of a leg —
-    and wrong by most where the spiral bends hardest, which is the last leg into the centre.
-  */
-  const back = u - TRAVEL_HEADING_STEP;
-  const on = u + TRAVEL_HEADING_STEP;
-  const turn = Math.atan2(chartTileY(on) - chartTileY(back), chartTileX(on) - chartTileX(back));
-  surface.blit(ship, screenX(view, along, across), screenY(view, along, across), view.scale * TRAVEL_SHIP_SCALE, turn);
+function streakHash(n: number): number {
+  const x = Math.sin(n * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+function paintWarp(surface: Surface, view: View, cameraAlong: number, warp: number): void {
+  if (warp <= 0) return;
+  for (let i = 0; i < WARP_STREAKS; i++) {
+    /*
+      ⚠️ **EACH STREAK HAS A DEPTH, AND LENGTH, SPEED, WIDTH AND BRIGHTNESS ALL RIDE IT.** That is
+      what makes forty-four lines read as a volume the ship is going through rather than as a pattern
+      on the glass: the near ones are long, fast, thick and bright, and the far ones are none of those.
+      Strictly below one, for `SkyLayer.depth`'s reason — at one a streak moves with the world and
+      becomes a thing in the lane.
+    */
+    const depth = 0.3 + 0.65 * streakHash(i + 0.5);
+    const length = WARP_STREAK_UNITS * depth * warp;
+    // It wraps over the view plus its own longest self, so one never pops in or out at full length.
+    const period = view.alongSpan + WARP_STREAK_UNITS;
+    const travelled = (cameraAlong * depth + streakHash(i + 17.25) * period) % period;
+    const head = view.alongSpan - travelled;
+    const across = streakHash(i + 101.75) * ACROSS_SPAN;
+    STREAK[0] = screenX(view, head, across);
+    STREAK[1] = screenY(view, head, across);
+    STREAK[2] = screenX(view, head + length, across);
+    STREAK[3] = screenY(view, head + length, across);
+    /*
+      ⚠️ **THIN, AND THE FIRST WIDTH WAS LOOKED AT AND WAS WRONG.** A bolt is four strokes of one line
+      and its widest — the flash, 0238 — is fourteen times the core. At a core of two pixels that is a
+      capsule twenty-eight pixels fat with round ends, and the sky at speed was a screen of pills. A
+      streak is a line; under a pixel of core, the flash is a soft edge to it rather than a shape.
+    */
+    surface.bolt(STREAK, 2, 0.3 + 0.7 * depth, warp * (0.3 + 0.6 * depth), false);
+  }
 }

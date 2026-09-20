@@ -1,197 +1,241 @@
-# 0340 — The Coil is a route, and the ship crosses it
+# 0340 — The Coil is a route, and the ship burns along it
 
-**Accepted 2026-09-19.** **Answers [0042](0042-a-run-is-a-sequence-of-levels.md)**'s deferred chart
-and `SCREENS.cleared`'s six-week-old note *"this is where the chart will eventually go"* — one screen
-further on than that note expected. **Extends [0063](0063-a-level-break-is-a-respite.md)**, which is
-untouched: the respite is still three seconds of a world that never stopped, and the crossing comes
-after it. **Extends [0331](0331-the-heart-beats-under-it.md)** — the bake it starts is the thing the
-crossing waits for. **Third entry under [0070](0070-a-style-is-a-setting-and-the-first-one.md)**'s
-settings mechanism.
+**Accepted 2026-09-20.** **Answers [0042](0042-a-run-is-a-sequence-of-levels.md)**'s deferred chart
+and `SCREENS.cleared`'s six-week-old note *"this is where the chart will eventually go"*. **Extends
+[0063](0063-a-level-break-is-a-respite.md)**, which is untouched: the respite is still three seconds of
+a world that never stopped, and the crossing comes after it **on 0063's own terms**. **Extends
+[0331](0331-the-heart-beats-under-it.md)** — the bake it starts is the thing the burn holds for.
+**Third entry under [0070](0070-a-style-is-a-setting-and-the-first-one.md)**'s settings mechanism.
+**Fixes a defect in [0107](0107-a-level-is-a-place.md)**'s backdrop that had been reported without
+being located.
 
-## The ask
+## The ask, and then the ask again
 
 > *"We'll need loading screens anyway for transitions and to represent moving through the galaxy."*
 
-And, when it was described as a banner: **a full-screen scene**, not a line of text over the sky.
+Built first as **a full-screen chart**: the world stopped, the Coil drawn over the whole canvas in
+place of it, the ship as a marker on the route, the next place's name, and an *Onward* button. It
+passed thirteen assertions and ten probes, was photographed, and was played:
 
-## What was built
+> *"Alright we have a level transition screen, but it takes the player out of the game. We need a much
+> smoother transition where the player's engines do a full jet burn and the ship hyper-speeds through
+> galaxy for the loading screen and then the hyper burn trails off as they arrive at the new level.
+> The built loading screen is fine, but it's completely out of place when the fight goes → boss death
+> → starfield → animation → button click required to move onward."*
 
-A `travel` screen between two levels. The boss dies, the existing *Level clear* respite plays exactly
-as 0063 made it, and then the chart: the Coil drawn as a spiral of seven places, the ship crossing the
-leg the run is on, the next place's name, one line about it, and its backdrop already behind
-everything.
+And of the button, which auto-forwarded and did not need pressing: *"it felt like a button click was
+needed, which is the same thing."*
+
+## What that first build got wrong, and it was written down before it was built
+
+⚠️ **THIS DECISION'S FIRST DRAFT NAMED THE TENSION AND THEN ARGUED ITS WAY PAST IT.** It said, in as
+many words, that [0063](0063-a-level-break-is-a-respite.md) exists because a screen between two levels
+that stops the world *"interrupts the flow"*, and [0076](0076-a-level-has-an-origin.md) because one
+that resets the scene is *"disjointing"* — and then answered both with *it is a curtain, not a reset*:
+`steps: false`, so nothing behind it moves and the ship is where the player left it when it lifts.
+
+That was true and was not an answer. **0063 was never about where the ship ended up. It was about the
+player being taken out of the game**, and a curtain is that by construction. The play-test said so in
+the same words the original report used, eleven weeks apart.
+
+⚠️ **THE TRANSFERABLE HALF: A TENSION WITH A LANDED PLAY REPORT IS NOT DISCHARGED BY AN ARGUMENT.** An
+argument shows the new thing differs from the old thing in some respect; the report was about a
+different respect. What discharges it is the design having the property the report asked for — here,
+that the world keeps running and the player keeps the ship — and the row now states exactly that.
+
+## What is built
+
+**The crossing is a thing the ship does, in the world it was already flying in.** `travel` is
+`steps: true`, `dims: false` and has no actions: it is `cleared`'s pair, the game with words over it.
 
 | | |
 |---|---|
-| the picture | one baked bitmap and one blit — the spiral, the seven stops in their own colours, which legs are flown — plus the ship, blitted on the curve and turned along it |
-| how long | at least four seconds, **and** until the next place's material is in the mixer's hands |
-| the ceiling | twenty seconds, after which the run goes on and the music arrives when it arrives |
-| a press | takes the floor away and not the wait |
+| the burn | one number, `World.warp`, nought to one and back: a second to build, held, a second and a half to trail off |
+| what reads it | the camera's scroll rate (×12 at full), the engine's flame (×2.8, root held on the tail), the streaks in the sky |
+| how long | 2.5 s before it may trail off **and** until the next place's material is in the mixer's hands — 4 s in all when nothing is waited for |
+| the ceiling | twenty seconds, after which the ship arrives and the music does when it does |
+| the place | swapped at full burn, under the streaks |
+| the level | entered on **arrival**, not at the start |
+| the words | a banner at the top: the chart as an inset, the place, its own line; fades in with the burn and out with it; takes no pointer |
 | the knob | *Travel: Scene / Brief* — one number, the floor |
 
-## The tension, named: this is the interruption two decisions were written to remove
+## One number, read three times
 
-⚠️ **[0063](0063-a-level-break-is-a-respite.md) EXISTS BECAUSE A HARD PAUSE BETWEEN LEVELS WAS
-REPORTED AS BAD.** *"The current pause/level screen interrupts the flow"* — and, in the same breath,
-*"a flowing continuation to the next run with a brief respite will feel better than the hard pause
-interruption now."*
+`warpAt(steps, landingAt)` in `src/content/travel.ts` is the whole of the burn, and everything the
+player sees is it being read by something that already existed. So the three cannot disagree about
+whether the ship is at speed — which is
+[0036](0036-an-event-the-model-knows-about-the-picture-mentions.md) prevented by there being nothing
+to keep in step.
 
-⚠️ **AND [0076](0076-a-level-has-an-origin.md) MADE THE BOUNDARY SEAMLESS FOR THE SAME REASON.** *"A
-background scene reset between levels that's disjointing because it moves the player's ship."*
+⚠️ **AND THE FRAME IS HANDED THE NUMBER AND NEVER LEARNS WHERE IT CAME FROM.** How long the burn lasts
+is a row with a comfort setting on it, which `src/app/frame.ts` may never see
+([0024](0024-the-accessibility-floor-is-settings.md)). What the engine DOES at full burn is no
+setting, so `WARP_SCROLL` and `WARP_FLAME` live in `src/content/exhaust.ts`, which the frame already
+reads. `tests/travel.test.ts` holds the ban over the import graph, with `src/render/scene.ts` on the
+list — the painter draws the streaks and the frame imports the painter, and a transitive route to a
+setting is a route.
 
-A full-screen scene between two levels is, on its face, both of those things coming back. Three
-answers, in the order they matter:
+## A streak is a bolt
 
-1. **It is a CURTAIN, not a reset.** `steps: false`, so nothing behind it moves. The field, the camera
-   and the ship are exactly where the player left them when it lifts; the only thing that changed is
-   the script. 0076's complaint was about the ship being MOVED, and nothing here moves it — which is
-   why `lifecycle.onward` still enters the level and the crossing goes between its two halves rather
-   than in front of it.
-2. **It is doing work.** 0331 bakes the next place from the approach precisely because The Black
-   Heart's first movement is twenty-five seconds long and its material is thirty-five seconds of
-   synthesis. Before this screen, a place whose bake had not landed simply started without its music.
-   The crossing is where that wait goes.
-3. **There is no choice on it.** 0063 recorded the play-test that scrapped the branching chart's
-   *player choice*; what is left is a straight line, which is what 0042 said the chart would be until
-   somebody had played the levels. A scene with nothing to decide is not the hard pause that was
-   reported — the thing being interrupted by was a decision, not a picture.
+[0233](0233-a-weapon-is-a-kind-and-a-pickup-cycles.md) put `bolt` on the surface for *"a shape not
+known until the frame it is drawn on, which is the one thing a bake cannot hold"* — and a streak's
+length IS the ship's speed on this frame. Baked, it would be a tile of lines at one length, arriving
+and leaving as a swap; stroked, it grows out of a point as the engines build and shrinks back into one
+as they trail off, which is the whole of what *trails off* means.
 
-⚠️ **AND IT IS FOUR SECONDS, WHICH HAS NOT BEEN PLAYED.** 0063 says the same of its own three, in the
-same words and for the same reason: too short and the crossing is a flicker, too long and it is the
-pause wearing a different coat. It is the number in this change most likely to be wrong and the first
-one to take to a play-test.
+It costs nothing on any frame of any level: `warp` is nought outside a crossing and `paintWarp`
+returns on its first line. Inside one the field is empty by construction.
 
-## The shape: the chart answers the one thing the product definition asks of it
+⚠️ **THE FIRST WIDTH WAS LOOKED AT AND WAS WRONG.** A bolt is four strokes and its widest — the flash,
+[0238](0238-the-picture-answers-the-second-play-test.md) — is fourteen times its core, so a two-pixel
+core is a capsule twenty-eight pixels fat and the sky at speed was a screen of pills. Under a pixel of
+core, the flash is a soft edge to a line.
 
-`docs/game.md`, under *Open*: *"The chart's shape. It must read as descent toward the centre, and must
-not be a copy of the star map."*
+## The flame swells, and its root stays on the tail
 
-So the route is a **spiral that loses radius as it goes and ends at the exact centre of the picture** —
-where The Black Heart is, in the fiction and now in the drawing. `tests/travel.test.ts` holds the
-first half as arithmetic over the curve; the second half is a judgement and is not a thing a test can
-hold.
+A `warp` row in `THRUST` would be six more bitmaps differing from `burn`'s only in length, arriving
+and leaving as a switch. `Entity.swell` is the painter's one size channel
+([0283](0283-the-serpent-is-a-chain.md)) and is continuous, so the flame builds with the burn and trails
+off with it.
 
-⚠️ **A STRAIGHT-LINE RADIUS WAS TRIED FIRST AND WAS WRONG, AND THE GUARD FOUND IT IN LANE UNITS.** With
-the radius falling linearly while the angle advances at a constant rate, each turn of the coil is the
-same distance narrower than the last and the inner legs die out: the last two places came out
-**exactly seven lane units apart, which is exactly a stop's own diameter** — two tangent discs, with
-the destination's ring cutting through the one before it. `CHART_TIGHTEN` is 0.6, which holds radius
-longer and spends it near the middle, and gives the last leg about fourteen lane units.
-[0027](0027-measure-the-picture-not-the-model.md)'s rule that an assertion be written in units the
-player experiences is what made that visible; the curve itself was perfectly self-consistent.
+⚠️ **THE OFFSET IS NOT A MULTIPLE OF ITSELF.** `trail` is to the sprite's centre and the flame's root
+is at its forward edge. A blit scales about the centre, so a swollen flame on the old offset starts
+inside the hull, and one on `trail × swell` opens a gap that widens as the burn builds. What is held
+still is the root: the centre goes back by half the extent times how much it grew.
 
-## One bitmap, because a blit takes an index and not an ink
+## The ship was being left behind by its own camera, and a guard found it
 
-`Surface.blit` cannot tint, and every place on the chart is in its own colour. Seven sprites, one per
-place, would be seven entries in `SPRITE_KINDS` differing only by a colour looked up from the same
-table — [0282](0282-a-mechanism-for-every-instance-makes-them-one-instance.md)'s mechanism whose
-output is the same shape for every kind — and they would still need a line drawn between them.
+⚠️ **AT FULL BURN THE SHIP SLID TWENTY-SIX UNITS DOWN THE SCREEN, TO THE REAR WALL OF ITS BOX, AND
+LURCHED THE SAME DISTANCE FORWARD ON ARRIVAL.** Measured by `tests/travel.test.ts` at 13.6 against 40,
+in the one assertion in the file written in screen units — *where the ship is on the screen must not
+care how fast the camera is going* ([0027](0027-measure-the-picture-not-the-model.md)).
 
-So the whole route is **one sprite**, re-baked when the run reaches a new place exactly as the weather
-is ([0133](0133-the-place-is-baked-at-the-boundary.md)). Progress is a property of the picture rather
-than of a counter drawn over it: what changes between two bakes is which legs are drawn as flown, and
-the frame loop is one blit either way and does not know how many places there are.
+`flyShip` lags the ship's velocity towards `scroll + ask` with its mass
+([0037](0037-the-ship-has-mass.md)), and its own note says lagging only the departure is
+*"algebraically the same expression… written and reverted."* **That is true of a constant scroll, and
+was written when the scroll was one.** A scroll that accelerates is a camera leaving the ship behind by
+the change in rate times the lag — `(1 − r) / r` is four steps, and a burn is 6.6 units a step of
+change.
 
-⚠️ **THE CURVE ITSELF LIVES IN `src/content/sprites.ts`, WHICH IS NOT WHERE IT LOOKS LIKE IT BELONGS.**
-Two layers need it — the baker strokes the spiral, the painter puts the ship on it — and
-`tests/budget.test.ts`'s *the frame cannot reach the baker* — which cites
-[0022](0022-frame-rate-is-a-feature.md), *art is drawn once at load and blitted thereafter* — forbids
-the second importing the first. `SERPENT_BODY_DIAMETER` is in that file for the identical
-reason and says so. Two descriptions of one curve would put the ship beside the route rather than on
-it.
+**The camera's acceleration belongs to everything in its frame**, which is the whole of *every speed
+is in the camera's frame* ([0023](0023-the-long-axis-is-the-scroll-axis.md),
+[0034](0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)). The frame hands the ship the change in
+rate on the step it happens, so the mass acts on the one thing it was ever about: the player's ask.
+⚠️ A room closing ([0335](0335-the-fight-happens-in-a-room.md)) is the other changing scroll and
+drifted the ship a couple of units for the same reason; that goes too.
 
-## What the crossing waits on, and why it is not `bakingTheme`
+## The level is entered on arrival
+
+`lifecycle.onward` used to enter the next level and end on the playing screen. It raises the burn and
+touches nothing now, and `arrive` enters the level — because a script entered at the START of several
+seconds at twelve times the scroll rate has its opening waves, which `src/content/levels.ts` places
+inside the spawn horizon on purpose, flown past before anybody could see them.
+
+⚠️ **NEITHER VERB ADVANCES THE RUN'S LEVEL** — the boss's death did that — so a crossing cannot skip
+one, which is [0339](0339-a-level-is-cleared-once.md), fixed one screen away four commits before this.
+`tests/travel.test.ts` asserts it through the real verbs rather than assuming it from there.
+
+## The place swaps at full burn, and the *starfield* was a bug
+
+A place change re-bakes the atlas — fifty-eight bitmaps — and repaints the void. At the start of a
+level that is a hitch the player sits through with nothing moving; at twelve times the scroll rate,
+under forty-four bright lines, it is a change of colour behind a sky nobody can follow. So
+`placeOnScreen` returns the old place until `warp` first reaches one, and the new one after — which is
+the place `arrive` is about to enter, so nothing changes on the step the ship lands.
+
+⚠️ **AND THAT FUNCTION HAD BEEN WRONG FOR SIX WEEKS.** It returned the place only on the `playing`
+screen. The level break keeps the world running and does not paint over it (0063) — so on the step a
+boss died, the backdrop went to the title's void and the atlas re-baked to The Approach's sky, for
+exactly the three seconds the break exists to let the player look at where they are, and then both
+changed again. **It was reported without being located, as one beat of a list: *"boss death →
+starfield → animation."*** [0076](0076-a-level-has-an-origin.md) says a level boundary keeps the scene;
+this was the scene being swapped twice at every one. `cleared` keeps its place now.
+
+## What the burn holds for, and why it is not `bakingTheme`
 
 0331 left three ways the next place's material can arrive: held in `ahead` and handed over on the step
-the run gets there, landing from a bake that was still in flight, or baked from scratch because the
-run outran its own lookahead. `bakingTheme` and `aheadTheme` between them say what has been **asked
-for**, which is a different question and is true several seconds too early.
+the run gets there, landing from a bake still in flight, or baked from scratch because the run outran
+its lookahead. `bakingTheme` and `aheadTheme` say what has been **asked for**, which is true several
+seconds too early. ⚠️ **So `handOverPlace` takes the theme and writes `loadedTheme`** — the one line
+all three routes pass through.
 
-⚠️ **SO `handOverPlace` TAKES THE THEME AS AN ARGUMENT AND WRITES `loadedTheme`.** It is the one line
-all three routes pass through, so it is the only honest answer to *what is the mixer actually
-holding*.
+⚠️ **AND *READY* IS TRUE WHEN NOBODY IS LISTENING.** `applyMusicLevel` returns immediately with no
+`AudioContext`, so no bake is ever started for a player who has not pressed anything — waiting on it
+would hold the burn twenty seconds for exactly the players who cannot be told why. The sound setting
+counts as nobody too: *Off* keeps the context and mutes the speaker, so the bake runs and nothing they
+can hear is arriving.
 
-⚠️ **AND *READY* IS TRUE WHEN NOBODY IS LISTENING.** `applyMusicLevel` returns immediately when there
-is no `AudioContext`, so no bake is ever started for a player who has not pressed anything — waiting
-on it would make the crossing a twenty-second pause for exactly the players who cannot be told why.
-The sound setting counts as nobody too: *Off* keeps the context and mutes the speaker, so the bake
-runs and there is still nothing arriving for them to wait for.
+## There is no press
 
-## The press is neither a dead control nor a lie
+The first build's *Onward* took the floor away and left the wait. There is no control now: the player
+is flying, so every input they have already means something, and a loading screen that can be skipped
+by firing the guns is one that is skipped by accident. *Brief* is the answer for a player who wants
+less of it.
 
-A press cannot make a bake land. A crossing that ended on one would arrive in silence; one where the
-button did nothing on a place still baking would be a control the player has to be told about. So
-*Onward* **takes the floor away and leaves the wait alone** — which for six of the seven places is the
-next step, and for The Black Heart on a cold start is as soon as there is something to arrive to.
+## The chart is an inset, and it stopped being a sprite
 
-## The row that is two firsts
+*"The built loading screen is fine"* — so the chart stays, as a small canvas in the banner beside the
+place's name, drawn by `src/render/bake.ts`'s `drawChart` into a canvas of the chrome's own exactly as
+the title screen's pickup key is. That took a sprite kind, a re-bake with a staleness memo, a second
+painter, a frame wrapper and a shared-geometry argument back out of the game — all of which existed to
+serve a picture that was in the wrong place.
 
-`travel` is the first screen with **`steps: false` and `dims: false` together**, and the first with no
-`timeout` that is not waiting for a hand.
+`docs/game.md`, under *Open*: *"The chart's shape. It must read as descent toward the centre, and must
+not be a copy of the star map."* The route is **a spiral that loses radius as it goes and ends at the
+exact centre**, where The Black Heart is. A leg behind the run is drawn in the colour of the place it
+leads to, and a leg ahead in no place's colour, which is the whole of how the picture says *these are
+behind you*.
 
-⚠️ **THE DIM IS REFUSED FOR THE OPPOSITE REASON TO `cleared`'S AND `music`'S.** Those two let the scene
-show through. This one has no scene: `src/app/mount.ts` paints the chart **instead of** the world for
-the frames it is up, so a dim would paint out the picture that replaced it. `tests/menu.test.ts` holds
-a list with a reason per entry and stopped this change until the reason was written, which is the
-guard working.
+⚠️ **A STRAIGHT-LINE RADIUS WAS TRIED FIRST AND WAS WRONG.** With the angle advancing at a constant
+rate the inner legs die out: the last two places came out **exactly one disc apart** — tangent, with
+the destination's ring cutting through the one before it. `CHART_TIGHTEN` is 0.6.
 
-⚠️ **AND A TIMEOUT IS *n STEPS, THEN PRESS SOMETHING*.** This ends on a floor **and** on the place
-being ready, which is two facts a `{ steps, then }` cannot carry. The rule is in `src/content/travel.ts`
-as a pure function of four, so *does it leave before the music is ready* and *does a press skip the
-floor* are answerable without booting a canvas — `src/app/lifecycle.ts` and `tests/continue.test.ts`
-are the same pair for the same reason.
+## A row that says its words are pushed
 
-## A fourth way a run moves
+`src/app/chrome.ts` built a panel for any row with a heading or an action, which described every screen
+until one had neither: the crossing's heading is a place not known until it starts, and it has no
+button on purpose. `ScreenRow.pushed` is the row saying so — a fact about the row, not a switch on its
+name ([0016](0016-a-hub-enumerates-kinds.md)).
 
-`onward` used to end on the playing screen. The crossing goes between its two halves, so what was one
-verb is now *enter the level* and *lift the curtain on it* — `arrive`.
-
-⚠️ **IT IS A ROW IN `src/app/lifecycle.ts`'s TABLE THAT RESETS NOTHING, AND THAT IS WHY IT IS A ROW.**
-It is the visible proof that a crossing cannot quietly become a second `onward` and advance the level
-twice — which is [0339](0339-a-level-is-cleared-once.md), fixed one screen away four commits ago, and
-the reason `tests/travel.test.ts` asserts *a crossing advances the level exactly once* through the real
-verbs rather than assuming it from there.
-
-## The knob, and why it is the smallest one 0024 allows
-
-*Travel: Scene / Brief.* Both rows wait for the place; one waits for less of its own art.
-
-⚠️ **A KNOB THAT ALSO DROPPED THE WAIT WOULD DECIDE WHETHER THE NEXT PLACE'S FIRST MOVEMENT IS HEARD**,
-which is a content difference wearing a comfort setting's clothes —
-[0024](0024-the-accessibility-floor-is-settings.md) forbids exactly that. And neither row is zero: a
-crossing shortened to nothing is not a shorter crossing, it is a flicker between two levels. Only a
-press takes the floor to zero, because a press is a player saying *now*.
-
-⚠️ **THE BAN IS HELD OVER THE IMPORT GRAPH, AND `src/render/scene.ts` IS ON THE LIST**, which neither
-`tests/style.test.ts` nor `tests/sound.test.ts` needs. The painter draws the crossing, so it is one
-import away from the table that says how long the crossing lasts — and `src/app/frame.ts` imports the
-painter. A transitive route to a comfort setting is a route.
+⚠️ **AND THE GUARD'S OWN COPY OF THAT CONDITION HID THE SCREEN FROM THE GUARD.** `tests/menu.test.ts`
+lists which rows may show the scene through them, with a reason per entry; its predicate for *what
+chrome is* did not know about `pushed`, skipped the row, and the file went green over a screen it had
+not looked at. Found only because a test that should have gone red did not. It now holds a second
+list, `FLIES_ON`, for the rows that keep the simulation running under words — which had been
+`if (screen === 'cleared') continue`, the list with one entry and no way to read it.
 
 ## Confirmed, not assumed
 
-Probes in `scripts/probes/0340-the-coil-is-a-route.mjs`.
+Probes in `scripts/probes/0340-the-coil-is-a-route.mjs` — **sixteen, all seen red.**
 
-⚠️ **AND THE PICTURE WAS LOOKED AT, WHICH IS WHERE TWO OF THE FOUR DEFECTS CAME FROM** — 0027.
-`rig/bench.ts` takes `?cross=N`, which raises the chart through the game's own two verbs, and
-`scripts/shot-travel.mjs` photographs three moments of it. Of the four things wrong with the first
-version: the tangent stops and the destination ring running off the tile were found by guards in this
-change's own test file; **the ship being a fifth the size of the things it flies between, and
-therefore invisible behind the place name for the middle of a crossing, was found by looking at it**.
-The fourth — that the crossing ends by itself and hands back to the game — was confirmed end to end in
-the real shell rather than argued from the rule.
+⚠️ **ONE CAME BACK STILL GREEN AND WAS RIGHT TO.** It removed a `margin-top: auto` from the banner's
+rule, which the shared panel rule already implies on every side — so the break broke nothing, and the
+line that actually moves the panel was untouched. The redundant line was deleted and the probe
+re-pointed. `src/app/mount.ts`'s screen gate states the general form: *one guarantee, one mechanism; a
+redundant safety net makes the original mechanism untestable.*
+
+⚠️ **AND ADDING `pushed` STRANDED TWO OTHER DECISIONS' PROBES** — 0063's and 0212's — whose anchors
+ended on a row's last field. The harness refused to run anything until they were re-anchored, which is
+what it is for.
+
+⚠️ **THE PICTURE WAS LOOKED AT, AND A STILL CANNOT SEE A CUT.** `rig/bench.ts` takes `?cross=N` and
+`scripts/shot-travel.mjs` photographs four moments of a burn read off the rule. That instrument passed
+the first build. What it is good for is what a still CAN see — is the flame on the tail, do the streaks
+read as depth, did the place change under them, is the banner clear of the ship — and it found the
+streaks were pills. Whether the crossing feels like flying is the play-test's, and only the
+play-test's.
 
 ## What this leaves owed
 
-**Four seconds has not been played**, and neither has *Brief*. The first play-test of this feature is
-about one number.
+**None of the numbers have been played**: four seconds, *Brief*'s three, twelve times the scroll, the
+flame at 2.8. 0063 says the same of its own three seconds in the same words.
 
-**The crossing is silent apart from whatever rung the music is on.** Everything outside a run plays
-`calm`, so what a player hears is the next place's own bed arriving under its own chart — which is
-right by construction rather than by design, and nobody has listened to it.
+**The burn is silent.** Everything outside a run plays `calm`, so what is heard is the next place's own
+bed arriving under it, which is right by construction and has not been listened to. An engine cue for
+the burn is the obvious missing half, and belongs to the channel the user's ear is already owed on.
 
-**The chart draws no sky.** The place's backdrop colour is behind it and nothing else is, which reads
-as space and was chosen for that; a star field behind the route is the obvious next thing to try and
-costs a sky argument the painter does not currently take.
+**`gameOver` still returns no place**, so the atlas re-bakes to The Approach's sky behind a dim nobody
+can see through and re-bakes back on *Continue*. It is the same line as the *starfield* defect and
+costs a hitch rather than a picture; it was left because nothing here was looking at it.
 
-**A branching chart is still not built**, and `docs/game.md` still describes one. What is here is the
-straight line 0042 recorded as a deliberate first step, made into something a player can look at.
+**A branching chart is still not built**, and `docs/game.md` still describes one.

@@ -14,7 +14,7 @@
  */
 
 import type { Body } from '../sim/entity.ts';
-import { SPRITE } from './sprites.ts';
+import { SPRITE, SPRITE_EXTENT } from './sprites.ts';
 
 /** What the engines are doing. Closed, per 0016. */
 export const THRUST_KINDS = ['idle', 'burn', 'ease'] as const;
@@ -108,3 +108,44 @@ export const PULSE_STEPS = 3;
  * The flame's centre sits on the tail now on every step; what the velocity chooses is the bitmap.
  */
 export const LEAN_AT = 0.12;
+
+/*
+  ── THE BURN BETWEEN TWO PLACES — `docs/decisions/0340-the-coil-is-a-route.md` ────────────────────
+
+  Asked for: *"the player's engines do a full jet burn and the ship hyper-speeds through galaxy for the
+  loading screen and then the hyper burn trails off as they arrive at the new level."*
+
+  ⚠️ **HERE BECAUSE THEY ARE FACTS ABOUT THE ENGINE, AND BECAUSE `src/app/frame.ts` MAY READ THIS
+  FILE.** How long the burn lasts and what it waits for are in `src/content/travel.ts`, which carries
+  a comfort setting and which the frame may therefore never see (0024). What the engine DOES at full
+  burn is no setting: it is the same for every player, and the frame is what does it.
+*/
+
+/**
+ * How many times the level's own scroll rate the camera runs at, at full burn.
+ *
+ * ⚠️ **TWELVE, AND IT WAS CHOSEN AGAINST THE SCREEN RATHER THAN AGAINST A FEELING OF FAST.** A level
+ * scrolls at 0.6 units a step, which crosses a 16:9 view in about five seconds; twelve times that
+ * crosses it in under half of one. That is fast enough that a star is not followed by the eye and
+ * slow enough that the far layer, at a quarter of the rate, still visibly moves rather than flickering
+ * — the difference between a sky going past and a sky strobing.
+ */
+export const WARP_SCROLL = 12;
+
+/**
+ * How many times its own size the burning flame is drawn at, at full burn.
+ *
+ * ⚠️ **A SIZE THROUGH THE PAINTER'S ONE SIZE CHANNEL, NOT A FOURTH THRUST STATE.** A `warp` row in
+ * `THRUST` would be six more bitmaps — two pulse frames, three leans — that differ from `burn`'s only
+ * in length, and it would arrive and leave as a switch. `Entity.swell` is continuous, so the flame
+ * builds with the burn and trails off with it, which is the half of the ask a bitmap swap cannot do.
+ */
+export const WARP_FLAME = 2.8;
+
+/**
+ * Half the burning flame's extent, in world units — how far its root is from its centre.
+ *
+ * ⚠️ **DERIVED FROM THE SPRITE TABLE, SO A REDRAWN FLAME MOVES IT.** `src/app/frame.ts` holds the
+ * root on the tail while the flame swells, and needs this to know where the root is.
+ */
+export const BURN_HALF = SPRITE_EXTENT.thrustBurn0 / 2;

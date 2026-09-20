@@ -979,24 +979,24 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THERE IS A CHART BETWEEN LEVELS NOW, AND ONE NUMBER ON IT HAS NOT BEEN PLAYED — 2026-09-19
+### ⚠️ THE SHIP BURNS BETWEEN PLACES NOW, AND NONE OF ITS NUMBERS HAVE BEEN PLAYED — 2026-09-20
 
 ⚠️ **[0340](decisions/0340-the-coil-is-a-route.md).** *"We'll need loading screens anyway for
-transitions and to represent moving through the galaxy"* — a `travel` screen after 0063's respite,
-which is untouched: the Coil as a spiral of seven places, the ship crossing the leg the run is on, the
-next place's name and its own line. It answers `SCREENS.cleared`'s six-week-old note and
-`docs/game.md`'s open question about the chart's shape, and it is a straight line with no choice on
-it, which is what the play-test 0063 recorded asked for.
+transitions and to represent moving through the galaxy."* Built first as a full-screen chart with a
+button, and played: *"it takes the player out of the game… the player's engines do a full jet burn and
+the ship hyper-speeds through galaxy for the loading screen and then the hyper burn trails off as they
+arrive."* So `travel` is `cleared`'s pair — the world runs, the player keeps the ship, there is no
+button — and the chart is an inset in its banner. 0063's respite is untouched.
 
-⚠️ **IT HOLDS FOR FOUR SECONDS AND UNTIL THE NEXT PLACE'S MUSIC IS IN THE MIXER'S HANDS**, which is
-what 0331's bake-ahead was for. The decision names the tension with 0063 and 0076 and answers it
-rather than leaving it to be rediscovered. **The four seconds have not been played, and neither has
-*Brief*** — the knob, and the third setting on the title screen. That is the first thing to take to a
-hand.
+⚠️ **IT HOLDS UNTIL THE NEXT PLACE'S MUSIC IS IN THE MIXER'S HANDS**, which is what 0331's bake-ahead
+was for, and the place swaps under the streaks at full burn. **What is owed is a hand**: four seconds,
+*Brief*'s three, twelve times the scroll rate and the flame's size are all unplayed, and the decision
+says why the first build passing every test it had is the most transferable thing in it.
 
-⚠️ **THE PICTURE WAS LOOKED AT, AND TWO OF THE FOUR DEFECTS ONLY A PICTURE COULD FIND.**
-`rig/bench.ts` takes `?cross=N` and `scripts/shot-travel.mjs` photographs three moments of a crossing
-without winning a boss fight — 0205 and 0027.
+⚠️ **TWO DEFECTS IT FOUND THAT WERE NOT ITS OWN** are in the decision rather than here: the backdrop
+popping to the title's void for the whole of every level break, and the ship being left behind by any
+camera that changes speed. `rig/bench.ts` takes `?cross=N` and `scripts/shot-travel.mjs` photographs
+four moments of a burn.
 
 ### ⚠️ THE ENTRY REPORT IS ANSWERED ON ITS FOURTH TELLING, AND THE DIAGNOSIS WAS WHAT WAS WRONG — 2026-09-19
 

@@ -426,22 +426,36 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     cleared: 'a banner over a run that is still flying — 0063',
     music: 'a window onto the place being auditioned, walking past — 0212',
     /*
-      ⚠️ **AND `travel` IS THE ENTRY THAT BREAKS THE LIST'S OWN NAME — 0340.** The other two show the
-      SCENE through them. This one does not: the canvas underneath is not the game at all, because
-      `src/app/mount.ts` paints the chart instead of the world for the frames it is up. It opts out of
-      the dim for the opposite reason to the two above — not *let the scene through* but *there is no
-      scene, and the dim would paint out the picture that replaced it*.
-
-      ⚠️ **WHICH IS WHY THE ENTRY IS STILL CORRECT AND THE GUARD STILL WORKS.** What this asserts is
-      that a screen not painting over its canvas has said what is on that canvas, and this one has.
+      ⚠️ **`travel` IS `cleared`'S PAIR, AND ITS FIRST BUILD WAS THE OPPOSITE — 0340.** That one
+      stopped the world and painted a chart in place of it, and was played as *"it takes the player out
+      of the game."* It is a burn the ship makes in the world now, with the player still flying, so
+      what is behind it is the game — at twelve times its scroll rate.
     */
-    travel: 'the chart, painted instead of the world — 0340',
+    travel: 'a caption over a ship that is burning between two places, and still being flown — 0340',
+  };
+
+  /*
+    ⚠️ **AND THE ROWS THAT KEEP THE SIMULATION RUNNING UNDER CHROME ARE A LIST TOO, FOR THE SAME REASON.**
+    It was `if (screen === 'cleared') continue`, which was the list with one entry and no way to read
+    it. A screen that steps the world under words is a screen the player can die behind: each one says
+    why that is what it wants.
+  */
+  const FLIES_ON: Partial<Record<Screen, string>> = {
+    cleared: 'the respite is a world that never stopped — 0063',
+    travel: 'the burn is a thing the ship does, in the world, in the player’s hands — 0340',
   };
 
   it('and the screens that show the scene through them are the two that say so', () => {
     for (const screen of SCREEN_KINDS) {
       const row = SCREENS[screen];
-      const hasChrome = row.heading.length > 0 || row.actions.length > 0;
+      /*
+        ⚠️ **`pushed` IS PART OF WHAT CHROME IS, AND THIS LINE NOT KNOWING THAT HID A WHOLE SCREEN FROM
+        THIS GUARD — 0340.** The crossing has no heading and no action, so the old predicate skipped it
+        and the file went green over a row it had not looked at. `src/app/chrome.ts`'s `hasChrome` is
+        the other copy of this condition and was changed in the same commit; this one was found only
+        because a test that should have gone red did not.
+      */
+      const hasChrome = row.heading.length > 0 || row.actions.length > 0 || row.pushed;
       if (!hasChrome) continue;
       const shows = SHOWS_THE_SCENE[screen];
       expect(
@@ -450,10 +464,15 @@ describe('a screen says whether it stops the world and whether it hides it', () 
           ? `${screen} has chrome on it and does not hide the scene — say what is behind it in SHOWS_THE_SCENE, or dim it`
           : `${screen} is meant to show the scene through it (${shows}) and is painting over it`,
       ).toBe(shows === undefined);
-      // `cleared` is still the only one that leaves the SIMULATION running: 0212 moved a camera, and
-      // the music room's own header is explicit that those are not the same claim.
-      if (screen === 'cleared') continue;
-      expect(row.steps, `${screen} has chrome on it and leaves the world running`).toBe(false);
+      // 0212 moved a CAMERA behind the music room, and its own header is explicit that that is not
+      // the simulation running — so it is not on this list, and must not step.
+      const flies = FLIES_ON[screen];
+      expect(
+        row.steps,
+        flies === undefined
+          ? `${screen} has chrome on it and leaves the world running — say why in FLIES_ON, or stop it`
+          : `${screen} is meant to keep the world running (${flies}) and has stopped it`,
+      ).toBe(flies !== undefined);
     }
   });
 

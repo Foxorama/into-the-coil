@@ -128,6 +128,7 @@ function stationKeepingWorld(surface: Surface): World {
     prevCameraAlong: 0,
     scrollPerStep: 0.6,
     scrollRate: 0.6,
+    warp: 0,
     ...inertLevel(),
     fireIn: NEVER,
     ship,
