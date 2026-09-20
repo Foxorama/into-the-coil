@@ -86,7 +86,7 @@ export const PROBES = [
     guard: 'the camera runs at the engine’s own multiple, and the ship goes with it',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    w.ship.velAlong += w.scrollPerStep - scrolledAt;\n',
+      find: '    if (w.warp > 0) w.ship.velAlong += w.scrollPerStep - scrolledAt;\n',
       replace: '',
     },
   },

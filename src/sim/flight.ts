@@ -212,9 +212,9 @@ export function flyShip(ship: Entity, intent: Intent, cameraAlong: number, scrol
 
     ⚠️ **THAT IS TRUE OF A CONSTANT `s`, AND `s` STOPPED BEING CONSTANT — 0335, THEN 0340.** The two
     forms differ by exactly the lag applied to a CHANGE in the scroll, which was nought when this was
-    written. `src/app/frame.ts` hands the ship the change in rate on the step it happens, so this
-    expression still only ever lags the ask; without that, a burn between places drags the ship
-    twenty-six units down its box. The note there has the arithmetic.
+    written. `src/app/frame.ts` hands the ship the change in rate while it is burning between places,
+    where the lag would otherwise drag it twenty-six units down its box; the note there has the
+    arithmetic, and says why a closing room's couple of units of drift is deliberately left alone.
   */
   ship.velAlong += (scrollPerStep + ax * scale - ship.velAlong) * FLIGHT_RESPONSE;
   ship.velAcross += (ay * scale - ship.velAcross) * FLIGHT_RESPONSE;

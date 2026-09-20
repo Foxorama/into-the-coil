@@ -121,8 +121,18 @@ change.
 is in the camera's frame* ([0023](0023-the-long-axis-is-the-scroll-axis.md),
 [0034](0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)). The frame hands the ship the change in
 rate on the step it happens, so the mass acts on the one thing it was ever about: the player's ask.
-⚠️ A room closing ([0335](0335-the-fight-happens-in-a-room.md)) is the other changing scroll and
-drifted the ship a couple of units for the same reason; that goes too.
+
+⚠️ **ONLY WHILE THE SHIP IS BURNING, AND THE FIRST VERSION WAS UNCONDITIONAL AND THE FULL PROOF SAID
+NO.** A room closing ([0335](0335-the-fight-happens-in-a-room.md)) is the other changing scroll and
+drifts the ship a couple of units for the same reason. Correcting that too looked like a free
+consistency win and was written up as one — and it moved the ship in the gyre's fight far enough that
+**[0333](0333-a-wall-arrives-whole.md)'s probe came back STILL GREEN**, one of 1240, in a fight this
+change is not about. That drift is part of seven boss fights that have been played and tuned; if it is
+wanted gone, that is a boss decision with a play-test behind it. During a burn the room is already
+open, so the whole change in rate is the burn's and the condition costs nothing.
+
+The transferable half: **a fix widened past its report is a change nobody asked for**, and the only
+thing that caught it was the proof running every decision's probes rather than this one's.
 
 ## The level is entered on arrival
 

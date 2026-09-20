@@ -1553,10 +1553,18 @@ export class GameFrame implements Frame {
 
       ⚠️ **THE CAMERA'S ACCELERATION BELONGS TO EVERYTHING IN ITS FRAME**, which is the whole of
       *every speed is in the camera's frame* (0023, 0034). Handing the ship the change, exactly, leaves
-      the mass acting on the one thing it was ever about: the player's ask. A room closing (0335) is
-      the other changing scroll, and drifted the ship a couple of units for the same reason.
+      the mass acting on the one thing it was ever about: the player's ask.
+
+      ⚠️ **ONLY WHILE THE SHIP IS BURNING, AND THE FIRST VERSION WAS UNCONDITIONAL AND WAS WRONG TO
+      BE.** A room closing (0335) is the other changing scroll and drifts the ship a couple of units for
+      the same reason — and that drift is part of seven boss fights that have been played and tuned.
+      Correcting it here moved the ship in the gyre's fight far enough that 0333's probe came back
+      STILL GREEN in the full proof: a *fix* nobody asked for, in a fight this change is not about,
+      found only because the proof runs every decision's probes and not just its own. If the room's
+      drift is wanted gone, that is a boss decision with a play-test behind it. During a burn the room
+      is already open and its ease is at one, so the whole change in rate IS the burn's.
     */
-    w.ship.velAlong += w.scrollPerStep - scrolledAt;
+    if (w.warp > 0) w.ship.velAlong += w.scrollPerStep - scrolledAt;
     w.prevCameraAlong = w.cameraAlong;
     w.cameraAlong += w.scrollPerStep;
 
