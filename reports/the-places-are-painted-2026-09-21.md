@@ -84,8 +84,18 @@ the biggest star is a twelve-pixel disc on a 1080p screen; and every star is fil
 one `sky` ink. A smaller screen bakes at fewer pixels a unit, which is the likely reason it passes on
 a phone — likely, because no phone has been photographed for this.
 [0153](../docs/decisions/0153-desktop-is-the-target.md) says which of those two screens the sky is
-authored for. **Smaller is the direction 0069 and 0203 already allow**, so no guard should need to
-move; the star colours are new inks and `tests/sky.test.ts`'s cover arithmetic has to count them.
+authored for. `fieldOf` draws every radius from the top half of that range, so there is no small star
+in the field at all: `tests/budget.test.ts` records the far layer at 8.5 CSS pixels on a 1280×720
+screen and the near one at 4.0.
+
+⚠️ **Two budget guards bear on this and neither has been run against a new field yet.**
+[0106](../docs/decisions/0106-a-mark-thinner-than-a-pixel-is-not-drawn.md) holds a layer's **thickest**
+mark above 2.5 CSS pixels — written for the speed streaks, and read as written it permits a field of
+pinpoints with a few bright stars in it, which is the picture being asked for. The `ink` band beside
+it holds a floor on a layer's total drawn area, and a field of pinpoints may fall under that; if it
+does, the floor's reason is argued in that PR against the photograph
+([0192](../docs/decisions/0192-a-guard-holds-an-invariant.md)), not met by fattening the stars again.
+The star colours are new inks and `tests/sky.test.ts`'s cover arithmetic has to count them.
 **To look at in the same pass:** the `skyRush` streaks read as horizontal scratches in a still
 photograph. They are a speed cue and may be fine in motion — that is a question for the preview, not
 for this file.
