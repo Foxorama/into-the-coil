@@ -8750,7 +8750,7 @@ export function drawKind(
     case 'skyFar':
     case 'skyNear':
     case 'skyRush':
-      drawSky(ctx, kind, size, theme);
+      drawSky(ctx, kind, size, theme, palette.glass === palette.space && palette.trim === palette.space);
       return;
     case 'landmark':
       /*
@@ -8858,6 +8858,79 @@ export interface SkyStar {
    * against. What it buys is depth: a field where every mark is the same brightness is a texture.
    */
   dim: number;
+  /**
+   * Which of the place's star colours this mark is drawn in, or `null` for the palette's `sky` ink.
+   *
+   * ⚠️ **A COLOUR AND NOT AN INDEX, so the painter holds no table** — the row that authored the field
+   * authored the colour, and `drawSky` does what the mark says.
+   */
+  tint: string | null;
+  /**
+   * How much of the radius is soft, 0 (a hard disc, which is what every mark was) to 1.
+   *
+   * ⚠️ **A BRIGHT STAR IS A POINT WITH LIGHT ROUND IT, NOT A BIG DISC.** A mark at the layer's ceiling
+   * drawn hard is a twelve-pixel coin on a desktop; drawn as a small core inside a gradient to nothing
+   * it is a star, and it has no edge at any scale a bullet has one — 0112's own test.
+   */
+  halo: number;
+}
+
+/**
+ * A place's own star field, for a place that authors one — absent, and the field is the shared one.
+ *
+ * ⚠️ **ON THE ROW, PER 0282**: *no row can forget it* argues for a default and never for a constant,
+ * so shared code holds the old field as the fallback and a place states what its stars are.
+ */
+export interface StarStyle {
+  /** How many marks the back layer carries, against the shared count. */
+  readonly far: number;
+  /** And the middle one. */
+  readonly near: number;
+  /**
+   * How hard the sizes lean small. `1` is the old even spread across the top half of the range; higher
+   * puts nearly every star at a pinpoint and leaves a handful at the ceiling.
+   */
+  readonly lean: number;
+  /** The smallest radius, as a share of the layer's ceiling. */
+  readonly floor: number;
+  /** Above this share of the ceiling a star is drawn with a halo rather than as a disc. */
+  readonly bright: number;
+  /** The colours, with how often each is drawn. Weights need not sum to one. */
+  readonly tints: readonly (readonly [string, number])[];
+  /**
+   * A band of far light across the back layer: where it sits across the tile (0 to 1), how deep it is,
+   * and what share of the back layer's stars are gathered into it. They are the faintest in the field.
+   */
+  readonly band: { readonly at: number; readonly depth: number; readonly share: number };
+}
+
+/** The widest hard-edged core a tinted star may have, as a radius in world units. The rest is light. */
+export const STAR_CORE_UNITS = 0.11;
+
+/** How strong a star's light is at its centre: the few hero stars, and everything else with a radius. */
+export const STAR_LIGHT = { hero: 0.75, other: 0.4 } as const;
+
+/**
+ * How much of a tile a place's TINTED stars light, as a share of its area, alpha counted.
+ *
+ * ⚠️ **`skyCover` HAS NEVER COUNTED A STAR, AND UNTIL 0343 IT DID NOT NEED TO**: every star was the
+ * palette's `sky` ink, which is darker than anything the player has to find. A tinted star is bright,
+ * so it is light in the sky on `skyCover`'s own terms — and this is the number that says how much. A
+ * cone falling linearly to nothing holds a third of its disc, which is the same falloff arithmetic
+ * `cloudCover` rests on.
+ */
+export function starLight(kind: SkyKind, size: number, theme: ThemeKind): number {
+  const field = skyField(kind, size, theme);
+  const perUnit = size / SPRITE_EXTENT[kind];
+  let lit = 0;
+  for (const star of field.stars) {
+    if (star.tint === null) continue;
+    const r = star.r / perUnit;
+    const core = Math.min(r, STAR_CORE_UNITS * (star.halo > 0 ? 1.2 : 1));
+    const peak = star.halo > 0 ? STAR_LIGHT.hero : STAR_LIGHT.other;
+    lit += field.alpha * star.dim * Math.PI * (core * core + (r * r - core * core) * (peak / 3));
+  }
+  return lit / (SPRITE_EXTENT[kind] * SPRITE_EXTENT[kind]);
 }
 
 /** Every layer the sky is made of, and the only kinds `skyField` will answer for. */
@@ -8950,6 +9023,8 @@ export interface SkyStyle {
   /** How big they are, and how strongly they read. */
   readonly cloudSize: number;
   readonly cloudAlpha: number;
+  /** The place's own stars. Absent is the shared field, exactly as it was. */
+  readonly stars?: StarStyle;
 }
 
 /**
@@ -8963,7 +9038,34 @@ export interface SkyStyle {
  */
 export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
   // Open space, evenly scattered, weather with no direction to it. The one every other place deviates from.
-  approach: { density: 1, size: 1, tilt: 0, length: 1, clump: 0, dim: 0.15, drift: 0, clouds: 1, cloudSize: 1, cloudAlpha: 1 },
+  approach: {
+    density: 1,
+    size: 1,
+    tilt: 0,
+    length: 1,
+    clump: 0,
+    dim: 0.15,
+    drift: 0,
+    clouds: 1,
+    cloudSize: 1,
+    cloudAlpha: 1,
+    stars: {
+      far: 9,
+      near: 1.6,
+      lean: 5,
+      floor: 0.07,
+      bright: 0.8,
+      tints: [
+        ['#cdd9ff', 9],
+        ['#ffffff', 5],
+        ['#fff0d2', 4],
+        ['#ffc58f', 2],
+        ['#ff9d8c', 1],
+        ['#9fc4ff', 3],
+      ],
+      band: { at: 0.4, depth: 0.2, share: 0.45 },
+    },
+  },
   // Cloud and little else, piled up and lit from one side.
   nebula: { density: 0.5, size: 0.95, tilt: 0, length: 0.65, clump: 0.35, dim: 0.5, drift: 0.55, clouds: 2, cloudSize: 1.4, cloudAlpha: 1.7 },
   // Tumbling rock: knots of debris with clear lanes between them.
@@ -9015,7 +9117,16 @@ export function fieldOf(
   */
   // @setup: one generator per bake, and its own stream so a star cannot move a spawn.
   const rng = makeRng('sky').stream(`${theme}/${kind}`);
-  const margin = size * 0.06;
+  /*
+    ⚠️ **AN AUTHORED FIELD KEEPS ONLY THE MARGIN A DOT NEEDS — 0343.** Six hundredths of the tile a side
+    is a twelve-unit strip with nothing in it at every join, which ninety marks never showed and eight
+    hundred would: a bare stripe crossing the screen on a schedule. The margin exists so no mark is
+    cut by the seam (0065), and what a dot needs for that is its own radius.
+  */
+  const dotsOnly = kind !== 'skyRush' && style.stars !== undefined;
+  const margin = dotsOnly
+    ? (size / SPRITE_EXTENT[kind]) * SKY_MAX_STAR_UNITS[kind] * 1.1
+    : size * 0.06;
   const span = size - margin * 2;
   /*
     ⚠️ **World units converted to tile pixels HERE, and the constant stays a world quantity.** The
@@ -9031,7 +9142,11 @@ export function fieldOf(
   */
   const streak = kind === 'skyRush';
   const stars: SkyStar[] = [];
-  const count = Math.max(1, Math.round(SKY_STARS[kind] * style.density));
+  // A place's own stars are the two DOT layers' business; the streaks are a speed cue and stay shared.
+  const own = streak ? undefined : style.stars;
+  const more = own === undefined ? 1 : kind === 'skyFar' ? own.far : own.near;
+  const count = Math.max(1, Math.round(SKY_STARS[kind] * style.density * more));
+  const weight = own === undefined ? 0 : own.tints.reduce((sum, [, w]) => sum + w, 0);
   /*
     ── THE KNOTS A CLUMPED FIELD IS DRAWN AROUND — 0196 ──────────────────────────────────────────
 
@@ -9086,13 +9201,52 @@ export function fieldOf(
         y = Math.max(0, Math.min(spanY, y + (knot.y - y) * style.clump));
       }
     }
+    if (own === undefined) {
+      stars.push({
+        x: margin + x,
+        y: margin + y,
+        r: biggest * rng.range(0.5, 1),
+        len,
+        angle: style.tilt,
+        dim: 1 - rng.range(0, Math.max(0, Math.min(1, style.dim))),
+        tint: null,
+        halo: 0,
+      });
+      continue;
+    }
+    /*
+      ⚠️ **NEARLY EVERY STAR IS A PINPOINT AND A HANDFUL ARE NOT, WHICH IS WHAT A SKY IS.** A uniform
+      draw raised to `lean` piles the field up against `floor`; the few that land near the ceiling are
+      the bright ones, and they are drawn as a core in a halo rather than as a disc that size.
+    */
+    let share = own.floor + (1 - own.floor) * Math.pow(rng.range(0, 1), own.lean);
+    /*
+      The band: a share of the back layer gathered about one line across the tile, all of them at the
+      floor. Three uniforms averaged is a soft-shouldered spread with no edge to it, and the band runs
+      ALONG the scroll axis, so it is periodic by construction and owes the seam nothing.
+    */
+    if (kind === 'skyFar' && rng.range(0, 1) < own.band.share) {
+      const spread = (rng.range(-1, 1) + rng.range(-1, 1) + rng.range(-1, 1)) / 3;
+      y = Math.max(0, Math.min(spanY, (own.band.at + spread * own.band.depth) * span));
+      share = own.floor;
+    }
+    let pick = rng.range(0, weight);
+    let tint: string | null = null;
+    for (const [colour, w] of own.tints) {
+      tint = colour;
+      pick -= w;
+      if (pick <= 0) break;
+    }
     stars.push({
       x: margin + x,
       y: margin + y,
-      r: biggest * rng.range(0.5, 1),
+      r: biggest * share,
       len,
       angle: style.tilt,
-      dim: 1 - rng.range(0, Math.max(0, Math.min(1, style.dim))),
+      // Faint ones are the far ones: brightness runs with size, with the place's own spread over it.
+      dim: Math.min(1, 0.35 + 0.65 * Math.sqrt(share)) * (1 - rng.range(0, Math.max(0, Math.min(1, style.dim)))),
+      tint,
+      halo: share > own.bright ? 0.78 : 0,
     });
   }
   return { alpha: SKY_ALPHA[kind], stars };
@@ -9393,25 +9547,67 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     it. A single arc says *somewhere* without saying *strange*.
   */
   approach: (size) => {
-    const points: number[][] = [];
-    // A shallow arc across the bottom of the tile: a horizon far enough away to be nearly flat.
     /*
-      ⚠️ **TILE y 0.25 TO 0.75 IS THE LANE, AND THE FIRST DRAFT PUT THIS AT 0.86.** The weather tile is
-      twice the lane across and blitted centred, so its y runs from lane −50 to lane 150 — and 0.86 of
-      it is lane 122, well below anything the player can see. The horizon was drawn correctly, every
-      guard passed, and the screen was unchanged. Found in the bench, which is the third time in this
-      arc a number that was right in the model was off the picture.
+      ── THE LIMB IS GONE, AND WHAT IS HERE IS THE LIGHT THE STARS ARE GATHERED ALONG — 0343 ────────
+
+      ⚠️ **THE LIMB COULD NOT BE MADE GOOD AS A TILE, SO IT IS NOT ONE.** 0211 drew *"a limb of the
+      world behind you"* as a cosine arc, highest at the tile's two edges — so every join was a CUSP,
+      and what crossed the screen was a grey hill with a point on it, in one flat fill. Reported:
+      *"fix the grey up the bottom as well, it's going to look weird and out of place."* A planet's
+      edge is one curve seen once; a repeating tile can only ever draw it as a row of humps. The seam
+      guard could not see it — it holds the heights a crossing mark leaves and arrives at, and a cusp
+      agrees about height and disagrees about slope.
+
+      ⚠️ **TILE y 0.25 TO 0.75 IS THE LANE** — kept from the limb's own note, because it is the trap
+      this table keeps falling into: the weather tile is twice the lane across and blitted centred,
+      so lane 40, where `SKY_STYLE_OF.approach.stars.band` gathers the back layer, is tile 0.45.
+
+      The band is drawn as light with no edge: eight filled ribbons about one centreline, each a little
+      narrower than the last and each nearly nothing, so the sum rises to the middle. **Sines whose
+      periods divide the tile**, The Labyrinth's own answer — periodic in height AND in slope, which is
+      the half the limb did not have.
     */
-    for (let i = 0; i <= 24; i += 1) {
-      const t = i / 24;
-      points.push([t * size, size * (0.68 + 0.05 * Math.cos((t - 0.5) * Math.PI))]);
+    const rng = makeRng('sky').stream('approach/band');
+    const phase = [rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2)];
+    const SAMPLES = 48;
+    const centre = (t: number): number =>
+      0.45 + 0.022 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.009 * Math.sin(Math.PI * 4 * t + phase[1]!);
+    // It swells and narrows along its length, which is what stops it reading as a stripe.
+    const swell = (t: number): number => 1 + 0.3 * Math.sin(Math.PI * 4 * t + phase[2]!);
+    const out: StructureMark[] = [];
+    const RIBBONS = 8;
+    for (let k = 0; k < RIBBONS; k += 1) {
+      const half = 0.075 * Math.pow(1 - k / RIBBONS, 1.6) + 0.004;
+      const upper: number[][] = [];
+      const lower: number[][] = [];
+      for (let s = 0; s <= SAMPLES; s += 1) {
+        const t = s / SAMPLES;
+        upper.push([t * size, (centre(t) - half * swell(t)) * size]);
+        lower.push([t * size, (centre(t) + half * swell(t)) * size]);
+      }
+      out.push({ points: [...upper, ...lower.reverse()], width: 0, alpha: 0.065, crosses: true, taper: false, lit: true });
     }
-    // Closed just past the lane's far edge so it fills as a body rather than stroking as a wire.
-    points.push([size, size * 0.8], [0, size * 0.8]);
-    // ⚠️ LIT, not dark — The Approach's gas is the thinnest of the seven, so a silhouette here has
-    // nothing to be a silhouette against. Its headroom is what pays for that.
-    // One mark again — 0342 took the two hulks 0222 added here out with every other place's.
-    return [{ points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true }];
+    /*
+      And dust in front of it: two dark rifts wandering along the band, which is what makes a band of
+      far light read as a galaxy seen edge-on rather than as a smear. Dark, so they cost nothing.
+    */
+    /*
+      ⚠️ **SINES AGAIN, AND NOT `crossing`, BECAUSE THE PHOTOGRAPH SHOWED THE DIFFERENCE.** `crossing`
+      is a random walk in straight segments, which is right for a corridor wall and drew these as
+      zigzags with a kink in the middle of the screen. Dust along a band of light is a slow curve.
+    */
+    for (let r = 0; r < 2; r += 1) {
+      const off = rng.range(-0.012, 0.012);
+      const sway = rng.range(0.006, 0.012);
+      const turn = rng.range(0, Math.PI * 2);
+      const points: number[][] = [];
+      for (let s = 0; s <= SAMPLES; s += 1) {
+        const t = s / SAMPLES;
+        points.push([t * size, (centre(t) + off + sway * Math.sin(Math.PI * 2 * (2 + r) * t + turn)) * size]);
+      }
+      out.push({ points, width: rng.range(0.008, 0.014) * size, alpha: 0.42, crosses: true, taper: false, lit: false });
+    }
+    return out;
   },
 
   /*
@@ -10439,8 +10635,11 @@ export function drawChart(ctx: Pen, size: number, palette: PaletteName, flown: n
  * nothing and cannot be forgotten. Size alone put the stars below a bullet; the alpha is what puts
  * them behind the game.
  */
-function drawSky(ctx: Pen, kind: SkyKind, size: number, theme: ThemeKind): void {
+function drawSky(ctx: Pen, kind: SkyKind, size: number, theme: ThemeKind, plain: boolean): void {
   const field = skyField(kind, size, theme);
+  // The palette's own sky ink, which `drawKind` set: what an untinted mark is drawn in, and what every
+  // mark is drawn in on a palette whose decoration is the void — 0024, on `foeOf`'s own test.
+  const ink = ctx.fillStyle;
   ctx.globalAlpha = field.alpha;
   /*
     ⚠️ **A capped line and a filled disc are the same mark at two lengths** — 0097. `lineCap: 'round'`
@@ -10455,9 +10654,41 @@ function drawSky(ctx: Pen, kind: SkyKind, size: number, theme: ThemeKind): void 
   for (const star of field.stars) {
     // 0196 — the layer's alpha is the ceiling and a mark may only sit under it.
     ctx.globalAlpha = field.alpha * star.dim;
-    if (star.len <= 0) {
+    const colour = plain || star.tint === null ? ink : star.tint;
+    ctx.fillStyle = colour;
+    ctx.strokeStyle = colour;
+    /*
+      ⚠️ **NO TINTED STAR HAS A HARD EDGE WIDER THAN A POINT, WHATEVER ITS RADIUS.** The first draft
+      gave a halo only to the few above `bright`, and the 1080p photograph showed everything between a
+      pinpoint and a hero star as an eight-pixel coin — the reported picture, in colour. The core is
+      capped in WORLD units and the rest of the radius is light.
+    */
+    const core = Math.min(star.r, (size / SPRITE_EXTENT[kind]) * STAR_CORE_UNITS);
+    if (star.len <= 0 && star.tint !== null && star.r > core && !plain) {
+      /*
+        A bright star: light falling away to nothing over the whole radius, and a small hard core.
+        ⚠️ Two stops at 0 and 1 — the same edgeless falloff `drawNebula` uses, so nothing here has a
+        boundary at the radius the field says it has.
+      */
+      const light = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, star.r);
+      // A hero star's light is stronger than a middling one's; `halo` is where the field says which.
+      light.addColorStop(0, rgba(star.tint, star.halo > 0 ? STAR_LIGHT.hero : STAR_LIGHT.other));
+      light.addColorStop(1, rgba(star.tint, 0));
+      ctx.fillStyle = light;
       ctx.beginPath();
       ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = colour;
+      ctx.beginPath();
+      // A hero's core is a little heavier, and still a point: 2.9 CSS pixels at 1080p, held in pixels.
+      ctx.arc(star.x, star.y, Math.max(0.6, core * (star.halo > 0 ? 1.2 : 1)), 0, Math.PI * 2);
+      ctx.fill();
+      continue;
+    }
+    if (star.len <= 0) {
+      ctx.beginPath();
+      // Never under about a pixel across, or the smallest stars anti-alias away to nothing.
+      ctx.arc(star.x, star.y, Math.max(0.6, star.r), 0, Math.PI * 2);
       ctx.fill();
       continue;
     }

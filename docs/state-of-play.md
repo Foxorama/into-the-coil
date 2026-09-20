@@ -806,7 +806,11 @@ for.
 [`the-places-are-painted`](../reports/the-places-are-painted-2026-09-21.md): all seven places, one PR
 each, in level order, and the report holds the order and what each owes. Item 0 is landed —
 [0342](decisions/0342-the-hulks-come-out.md) — and **every place is emptier than it was until its own
-item lands**, which 0342 says on purpose. The next is The Approach's star field.
+item lands**, which 0342 says on purpose. Item 1 is landed too —
+[0343](decisions/0343-the-stars-are-drawn-for-a-desk.md), The Approach's star field, **owed an eye in
+motion** — and `scripts/weigh-stars.mjs` reads any place's stars in desktop pixels. The next is Ember
+Nebula. The Labyrinth's flank question is answered and a second Labyrinth item (4b, the corridor turns
+and forks) is in the report with the three sim questions it owes.
 
 ⚠️ **THE WORK IS THE ALPHA LIST, SINCE 2026-09-06** —
 [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md), given after the first play with the

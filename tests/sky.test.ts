@@ -281,7 +281,14 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       option.
     */
     const src = readFileSync(resolve(root, 'src/render/bake.ts'), 'utf8');
-    const body = src.slice(src.indexOf('function drawNebula'), src.indexOf('function bakeOne'));
+    /*
+      ⚠️ **TO THE END OF `drawNebula`, AND IT RAN ON TO `bakeOne` UNTIL 0343.** The claim is about the
+      cloud painter and the slice took in every function after it, which was harmless while none of
+      them drew a gradient. The star painter now does — a halo, which `cloudCover` does not model and
+      does not need to — and the scan reddened on an edit that left the clouds alone. A scan wider
+      than its claim is 0192's second half, one paragraph down, arriving a second time.
+    */
+    const body = src.slice(src.indexOf('function drawNebula'), src.indexOf('function cloudsAt'));
     const stops = [...body.matchAll(/addColorStop\(([^,]+),/g)].map((m) => m[1]!.trim());
     expect(
       stops,

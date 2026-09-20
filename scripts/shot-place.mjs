@@ -48,7 +48,9 @@ const pointsFor = (kind) => {
 };
 
 const browser = await launchChromium({ headless: true });
-const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+// `--view=1920x1080` for the screen the sky is authored against (0153); 1280×720 is what the guards name.
+const [viewWidth, viewHeight] = (arg('view') ?? '1280x720').split('x').map(Number);
+const context = await browser.newContext({ viewport: { width: viewWidth, height: viewHeight }, deviceScaleFactor: 1 });
 const page = await context.newPage();
 page.on('pageerror', (e) => console.log('PAGE ERROR:', String(e).slice(0, 200)));
 
