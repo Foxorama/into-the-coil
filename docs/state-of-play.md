@@ -802,6 +802,12 @@ this heading when it stops being true rather than adding another one below it.**
 moved. **The work is ART AND GAME now.** The music is not finished and is not the thing being asked
 for.
 
+⚠️ **AND THE BACKDROPS ARE A QUEUE OF THEIR OWN, SINCE 2026-09-21** —
+[`the-places-are-painted`](../reports/the-places-are-painted-2026-09-21.md): all seven places, one PR
+each, in level order, and the report holds the order and what each owes. Item 0 is landed —
+[0342](decisions/0342-the-hulks-come-out.md) — and **every place is emptier than it was until its own
+item lands**, which 0342 says on purpose. The next is The Approach's star field.
+
 ⚠️ **THE WORK IS THE ALPHA LIST, SINCE 2026-09-06** —
 [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md), given after the first play with the
 mid-bosses and the seven real bosses in: *"I think we're actually at an alpha game state."* It is

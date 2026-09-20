@@ -9318,82 +9318,15 @@ interface Crossing {
   steps?: number;
 }
 
-/**
- * A run of large tumbling bodies, well above the size anything in the game can be.
- *
- * `docs/decisions/0222-the-background-is-not-black.md`. Reported: *"all the space levels need more
- * 'depth' to them, like the music setting screen how we added the debris… a plain black background is
- * a plain boring game."*
- *
- * ⚠️ **THE BAND SAYS DEBRIS IS EITHER A SPECK OR A HULK, AND NOTHING IN BETWEEN.** 0203 forbids the
- * sky anything between a bullet (1.8 units) and twice the largest body (16) — a compact shape in there
- * is confusable with a threat. The music room's motes sit squarely in that gap, which is free there
- * because no game is running and is not available in one. So the mid-sized chunk that would be the
- * obvious answer is the one thing that cannot be drawn, and the depth has to come from the two ends:
- * **specks under 1.8, and hulks over 16.**
- *
- * ⚠️ **AND THE HULKS ARE WHAT MAKE THE FAR END OF THE BAND MEAN ANYTHING.** Until this, every place
- * satisfied 0203 by drawing nothing large at all — which is 0069's old one-sided ceiling wearing a
- * band's clothes, and *"a plain black background"* is the report that produces.
- *
- * ⚠️ **DARK, ALWAYS, WHICH IS WHY THEY ARE FREE.** A hulk is a hole in the light: it darkens the
- * ground the bright inks are read against, so it costs nothing against the accessibility floor and
- * `skyCover` does not count it. Twenty of these are cheaper than one lit crest.
- */
-function hulks(
-  size: number,
-  spec: { stream: string; count: number; from: number; to: number; sides: number; rough: number; alpha: number },
-): StructureMark[] {
-  const rng = makeRng('sky').stream(spec.stream);
-  const out: StructureMark[] = [];
-  /*
-    ⚠️ **THE SMALLEST ONE HAS TO CLEAR THE BAND, AND A RADIUS IS NOT A WIDTH.** The first set were
-    authored as radii and the guard caught The Approach's at **15.6 units against a floor of 16** —
-    because a hulk is squashed to 0.72 on one axis and every vertex is pulled in by up to `rough`, so
-    its box is `2r(1 − rough)(0.72)` at worst rather than `2r`. That is three multiplications between
-    the number in the table and the number a player sees, which is `docs/decisions/0027`'s subject in
-    miniature. **`from` is raised until the worst case clears**, per place, because `rough` differs.
-  */
-  for (let i = 0; i < spec.count; i += 1) {
-    const r = rng.range(spec.from, spec.to) * size;
-    // Kept a radius clear of the tile edge: a hulk is a LOCAL mark, and 0208's wrap can only carry it
-    // if it fits — a shape wider than half its own tile is a crossing structure in a local one's coat.
-    const x = rng.range(r / size, 1 - r / size) * size;
-    const y = rng.range(0.12, 0.88) * size;
-    const lean = rng.range(0, Math.PI);
-    const points: number[][] = [];
-    for (let s = 0; s < spec.sides; s += 1) {
-      const a = (s / spec.sides) * Math.PI * 2 + rng.range(-spec.rough, spec.rough);
-      const rr = r * rng.range(1 - spec.rough, 1);
-      // Leaned, so a place's hulks are not all the same object at the same angle.
-      const dx = Math.cos(a) * rr;
-      const dy = Math.sin(a) * rr * 0.72;
-      points.push([x + dx * Math.cos(lean) - dy * Math.sin(lean), y + dx * Math.sin(lean) + dy * Math.cos(lean)]);
-    }
-    out.push({ points, width: 0, alpha: spec.alpha, crosses: false, taper: false, lit: false });
-    /*
-      ⚠️ **AND A LIT RIM, WITHOUT WHICH A HULK IS NOTHING AT ALL.** A dark mark is a hole in the gas,
-      and The Approach's gas is thin — so the first set of these were drawn perfectly, in the right
-      places, at the right sizes, and were **invisible** against a near-black backdrop. That is
-      0220's finding about The Labyrinth's corridor walls arriving in a second place, and the answer
-      is the same one the Pillars use: a dark body with one bright edge.
+/*
+  ── THERE WERE HULKS HERE, AND THEY ARE GONE — 0342 ──────────────────────────────────────────────
 
-      ⚠️ **A HAIRLINE, BECAUSE THIS IS THE HALF THAT COSTS CONTRAST.** The body is free — it darkens
-      the ground the bright inks are read against — and the rim is gas, which is the only thing
-      `skyCover` counts. A closed outline four thousandths of a tile wide spends almost nothing and is
-      the whole difference between an object and an absence.
-    */
-    out.push({
-      points: [...points, points[0]!],
-      width: Math.max(1, size * 0.004),
-      alpha: spec.alpha * 0.55,
-      crosses: false,
-      taper: false,
-      lit: true,
-    });
-  }
-  return out;
-}
+  ⚠️ **`docs/decisions/0342-the-hulks-come-out.md`.** 0222 answered *"a plain black background is a
+  plain boring game"* with one generator — a dark polygon with a hairline rim — called from five
+  places. Reported 2026-09-21: *"it's just a really bad layer that shows up on every level."* That is
+  0282's tell exactly: a mechanism whose output is the same for every place made five places one
+  place. What a place puts at that scale is its own drawing on its own row, or nothing.
+*/
 
 /**
  * A wandering line across the whole tile, ending where it began.
@@ -9477,17 +9410,8 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     points.push([size, size * 0.8], [0, size * 0.8]);
     // ⚠️ LIT, not dark — The Approach's gas is the thinnest of the seven, so a silhouette here has
     // nothing to be a silhouette against. Its headroom is what pays for that.
-    /*
-      ⚠️ **TWO HULKS, AND THE PLACE IS STILL THE SPARSEST OF THE SEVEN** — 0222. 0211 gave this one
-      mark on purpose: *"a busy sky here would spend the contrast between ordinary space and everywhere
-      after it."* That argument is about BUSYNESS and it survives — two dark bodies is not busy, and
-      *"a plain black background is a plain boring game"* was reported about all four places in space
-      including this one. It keeps the fewest of anything and it is no longer empty.
-    */
-    return [
-      { points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true },
-      ...hulks(size, { stream: 'approach/hulks', count: 2, from: 0.072, to: 0.105, sides: 9, rough: 0.2, alpha: 0.4 }),
-    ];
+    // One mark again — 0342 took the two hulks 0222 added here out with every other place's.
+    return [{ points, width: 0, alpha: 0.34, crosses: true, taper: false, lit: true }];
   },
 
   /*
@@ -9584,21 +9508,8 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         knots.push({ points, width: 0, alpha: 0.55, crosses: false, taper: false, lit: false });
       }
     }
-    /*
-      ⚠️ **AND THREE HULKS, WHICH IS THE ONLY LARGE THING THE RULES ALLOW** — 0222. Dark bodies in the
-      gas, twenty-odd units across, at the slowest rate in the place: what reads as depth is having
-      something at a scale nothing else on the screen is at. Ember Nebula can carry the most of them
-      because it has the most gas for them to be silhouettes against.
-    */
-    return [...filaments, ...knots, ...lanes, ...hulks(size, {
-      stream: 'nebula/hulks',
-      count: 3,
-      from: 0.074,
-      to: 0.11,
-      sides: 11,
-      rough: 0.22,
-      alpha: 0.55,
-    })];
+    // The three hulks 0222 hung in the gas are gone — 0342. The Pillars are this place's large thing.
+    return [...filaments, ...knots, ...lanes];
   },
 
   /*
@@ -9632,27 +9543,16 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       shape to the copy one tile over.
     */
     /*
-      ⚠️ **THE BELT IS FOUR HULKS AND A DRIFT OF SPECKS NOW, AND IT USED TO BE THE THING 0203 FORBIDS**
-      — 0222. These were five-to-seven-sided rocks at `0.012` to `0.04` of a 200-unit tile: **2.4 to 8
-      world units across, against a bullet at 1.8 and a body at up to 8.** Their own comment claimed
-      the polygon was *"deliberately not a disc — a disc at this size is a bullet's silhouette, which
-      0203's band is about"*, and the band is about SIZE. Nothing had ever checked `STRUCTURE_OF`
-      against it, so a place has been drawing body-sized debris in the sky since 0211.
+      ⚠️ **THE BELT IS A DRIFT OF SPECKS, AND IT USED TO BE THE THING 0203 FORBIDS** — 0222. These
+      were five-to-seven-sided rocks at `0.012` to `0.04` of a 200-unit tile: **2.4 to 8 world units
+      across, against a bullet at 1.8 and a body at up to 8.** Their own comment claimed the polygon
+      was *"deliberately not a disc — a disc at this size is a bullet's silhouette, which 0203's band
+      is about"*, and the band is about SIZE. Nothing had ever checked `STRUCTURE_OF` against it, so a
+      place had been drawing body-sized debris in the sky since 0211.
 
-      A belt is better for the fix, too. Real ones are a few big bodies and a great deal of dust, and
-      the two ends of the band are exactly those.
+      ⚠️ **0222 ALSO HUNG FOUR HULKS UP HERE AND 0342 TOOK THEM DOWN** — dark heptagons in a daytime
+      sky, which is the picture the report called *"a really bad layer"*.
     */
-    for (const hulk of hulks(size, {
-      stream: 'saurian/belt',
-      count: 4,
-      from: 0.087,
-      to: 0.128,
-      sides: 7,
-      rough: 0.34,
-      alpha: 0.62,
-    })) {
-      out.push(hulk);
-    }
     const rng = makeRng('sky').stream('saurian/dust');
     for (let knot = 0; knot < 3; knot += 1) {
       const cx = rng.range(0.1, 0.9) * size;
@@ -9819,25 +9719,7 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       out.push({ points: pass, width: WALL * size * 0.5, alpha: 0.5, crosses: false, taper: false, lit: false });
       out.push(rim(pass, -side * 0.5, 0.34, false));
     }
-    /*
-      ⚠️ **AND WHAT THE CORRIDOR IS BUILT OUT OF, WHICH IS THE PLACE'S OWN VERSION OF A HULK** — 0222.
-      Not tumbling rock: blocks, squarer and more regular than anywhere else's, because a labyrinth is
-      a made thing. Seven sides at low roughness against Saurian Belt's five at high is the difference
-      between masonry and a boulder, and 0211's guard compares coordinates rather than intentions —
-      two places with the same generator and different streams still draw different marks, and these
-      draw a different SHAPE as well.
-    */
-    for (const block of hulks(size, {
-      stream: 'labyrinth/blocks',
-      count: 3,
-      from: 0.063,
-      to: 0.095,
-      sides: 7,
-      rough: 0.08,
-      alpha: 0.6,
-    })) {
-      out.push(block);
-    }
+    // 0222's three "blocks" stood here — the shared hulk at low roughness — and 0342 took them out.
     return out;
   },
 
@@ -9974,23 +9856,7 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         lit: false,
       });
     }
-    /*
-      ⚠️ **AND TWO THINGS BIG ENOUGH TO BE GOING IN, WHICH IS THE PLACE'S WHOLE SUBJECT** — 0222.
-      *"Everything drawn one way"* is a direction and nothing was ever being drawn — the streaks are
-      the motion of an absence. Two hulks give the infall something to be happening TO, and they are
-      the faintest in the game because this place's character is that there is nearly nothing left.
-    */
-    for (const falling of hulks(size, {
-      stream: 'core/falling',
-      count: 2,
-      from: 0.082,
-      to: 0.115,
-      sides: 8,
-      rough: 0.3,
-      alpha: 0.42,
-    })) {
-      out.push(falling);
-    }
+    // 0222's two falling hulks are gone with the rest — 0342.
     return out;
   },
 };

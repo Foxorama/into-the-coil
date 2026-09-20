@@ -868,53 +868,14 @@ describe('0222 — the forbidden band applies to STRUCTURE, which it never did',
     return along <= mark.width * 3;
   }
 
-  it('and something is actually IN the far half of it, or the band is only a ceiling again', () => {
-    /*
-      ⚠️ **THE HALF THAT MAKES THIS A BAND RATHER THAN 0069's OLD ONE-SIDED RULE.** Every mark could
-      satisfy the guard above by being tiny, which is what the sky was before 0203 — and *"a plain
-      black background is a plain boring game"* is a report about exactly that. A hulk over twice the
-      largest body is the only large shape the rules permit, so at least one place has to draw one or
-      the far end of the band is decoration.
-    */
-    const hulks = THEME_KINDS.flatMap((theme) =>
-      STRUCTURE_OF[theme](size).filter((mark) => compact(mark) && units(extentOf(mark)) > largestThreat * 2),
-    );
-    expect(
-      hulks.length,
-      'no place draws anything above the band — the sky is all dust and no objects, which is the ' +
-        'plain background that was reported',
-    ).toBeGreaterThan(0);
-  });
-
-  it('a hulk has an edge, or it is a hole in a light that is not there', () => {
-    /*
-      ⚠️ **THE FAILURE NO SIZE, POSITION OR COUNT GUARD CAN CATCH.** A dark structure mark is a hole in
-      the gas, and The Approach's gas is the thinnest of the seven — the first hulks were the right
-      shapes, in the right places, at the right sizes, and were **invisible**. 0220 found the same thing
-      about The Labyrinth's corridor walls and answered it the same way: a dark body with one lit edge,
-      which is the Pillars' own language.
-
-      Held as a pairing: every dark mark above the band shares its outline with a lit one. That is what
-      *has an edge* means in a table of marks.
-    */
-    for (const theme of THEME_KINDS) {
-      const marks = STRUCTURE_OF[theme](size);
-      const rims = marks.filter((mark) => mark.lit && !mark.crosses).map((mark) => key(mark.points));
-      for (const mark of marks) {
-        if (mark.lit || !compact(mark) || units(extentOf(mark)) <= largestThreat * 2) continue;
-        expect(
-          rims.some((rim) => rim.startsWith(key(mark.points))),
-          `${theme} draws a body above the band with no lit edge on it — in a place with thin gas that ` +
-            'is a hole in a light that is not there, and it draws as nothing at all',
-        ).toBe(true);
-      }
-    }
-  });
-
-  /** A mark's outline as a string, so a body and its rim can be compared by what they trace. */
-  function key(points: readonly number[][]): string {
-    return points.map((p) => `${p[0]!.toFixed(1)},${p[1]!.toFixed(1)}`).join('|');
-  }
+  /*
+    ⚠️ **TWO GUARDS STOOD HERE AND 0342 DELETED BOTH, ON 0192's OWN QUESTION.** *"Name a change to the
+    content that would redden this and be CORRECT"*: taking the hulks out, because the player looked
+    at them and called them *"a really bad layer"*. The first demanded that some place draw a compact
+    shape above the band — a guard REQUIRING content is a content decision wearing a guard's clothes.
+    The second held that every such shape had a rim, and with none left to find it could not fail.
+    `docs/decisions/0342-the-hulks-come-out.md`.
+  */
 });
 
 describe('0220 — a mark that does not taper is one path', () => {

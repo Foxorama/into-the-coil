@@ -31,30 +31,11 @@ export const PROBES = [
       replace: '        const r = rng.range(0.012, 0.04) * size;',
     },
   },
-  {
-    decision: '0222',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ AND THE FAR HALF OF THE BAND, WHICH IS THE HALF THAT WAS DECORATION UNTIL NOW. Every place
-      satisfied 0203 by drawing nothing large at all — which is 0069's old one-sided ceiling in a
-      band's clothes, and *"a plain black background is a plain boring game"* is the report that
-      produces. Taking the hulks out passes every size rule in the repository.
-    */
-    /*
-      ⚠️ AND IT HAS TO TAKE THEM OUT EVERYWHERE, WHICH THE FIRST VERSION DID NOT. It emptied Ember
-      Nebula's row alone and came back **STILL GREEN** — correctly, because four other places still
-      draw hulks and the claim is that SOMETHING in the game is above the band. Breaking one place's
-      content cannot disprove a claim about the game, and the shared generator is where the claim
-      actually lives.
-    */
-    broke: 'the hulks taken out, so the sky is all dust and no objects again',
-    guard: 'something is actually IN the far half of it',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '  const rng = makeRng(\'sky\').stream(spec.stream);\n  const out: StructureMark[] = [];\n  /*\n    ⚠️ **THE SMALLEST ONE HAS TO CLEAR THE BAND',
-      replace: '  return [];\n  const rng = makeRng(\'sky\').stream(spec.stream);\n  const out: StructureMark[] = [];\n  /*\n    ⚠️ **THE SMALLEST ONE HAS TO CLEAR THE BAND',
-    },
-  },
+  /*
+    ⚠️ TWO PROBES LEFT WITH THEIR GUARDS — docs/decisions/0342-the-hulks-come-out.md. One broke
+    *"something is actually IN the far half of it"* by taking the hulks out, which is now simply what
+    the game does on purpose; the other dropped a hulk's rim, and there is no hulk to drop it from.
+  */
   {
     decision: '0222',
     suite: 'tests/sky.test.ts',
@@ -86,24 +67,6 @@ export const PROBES = [
       path: 'src/render/bake.ts',
       find: '          width: rng.range(0.004, 0.008) * size,\n          alpha: 0.28,',
       replace: '          width: rng.range(0.012, 0.03) * size,\n          alpha: 0.8,',
-    },
-  },
-  {
-    decision: '0222',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ A HULK WITH NO RIM, WHICH IS DRAWN PERFECTLY AND CANNOT BE SEEN. A dark mark is a hole in the
-      gas, and The Approach's gas is the thinnest of the seven — the first set of these were the right
-      shapes in the right places at the right sizes and were **invisible**. That is 0220's finding
-      about The Labyrinth's corridor walls arriving in a second place, and it is the failure mode that
-      no size, position or count guard can catch.
-    */
-    broke: 'the hulks’ lit rim dropped, so they are holes in a light that is not there',
-    guard: 'a hulk has an edge, or it is a hole in a light that is not there',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '      alpha: spec.alpha * 0.55,\n      crosses: false,\n      taper: false,\n      lit: true,',
-      replace: '      alpha: spec.alpha * 0.55,\n      crosses: false,\n      taper: false,\n      lit: false,',
     },
   },
 ];
