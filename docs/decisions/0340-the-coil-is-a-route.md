@@ -235,6 +235,27 @@ read as depth, did the place change under them, is the banner clear of the ship 
 streaks were pills. Whether the crossing feels like flying is the play-test's, and only the
 play-test's.
 
+## CI found an intermittent guard, and it was not measuring the setting
+
+⚠️ **`tests/sound.browser.test.ts`'s *choosing Off makes it silent* FAILED ONCE ON A RUNNER, WITH
+`expected 27 to be +0`.** [0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md): a rerun
+is not evidence, so it was reproduced. 27 is exactly one set of music layers. Audio unlocks on
+`pointerdown` and builds the music with `on = true`; *Off* is not chosen until the `click`. If one
+frame lands between the two, that frame's tick starts the music — correctly, because at that instant
+sound IS on — and the click mutes it a few milliseconds later. Same build, same button, same outcome:
+`page.click` → **0** sources; down, one frame, up → **27**. It is on `main` and is nothing to do with
+the burn; this change's CI run lost the race.
+
+The guard asserted *no source was ever created*, which is a fact about the race. What *"the game
+played anyway"* means is that the GAME made a sound — a cue, through the speaker, which is what
+`setOn(false)` stops — so that is what it counts now, plus *whole music sets only*.
+[0072](0072-a-cue-is-baked-and-played.md)'s probe for it is red on the new quantity.
+
+⚠️ **AND THE RACE IS REAL FOR PLAYERS, WHICH IS OWED RATHER THAN FIXED.** Every human click is slower
+than a frame, so a player whose FIRST gesture is choosing *Off* has the title's music started and then
+muted. It is a blip under an 80 ms fade; it is also not nothing, and the unlock path is 0072's and
+0090's rather than this decision's.
+
 ## What this leaves owed
 
 **None of the numbers have been played**: four seconds, *Brief*'s three, twelve times the scroll, the
