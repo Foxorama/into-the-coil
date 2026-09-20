@@ -33,7 +33,7 @@ import { SCREENS, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
-import { bakeAtlas, drawChart } from '../render/bake.ts';
+import { bakeAtlas, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
 // The strip's width, from the file that hit-tests it. One number, or the picture and the hit region
 // disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
 import { TAP_STRIP } from './touch.ts';
@@ -301,79 +301,215 @@ ${each('-choices')} {
 */
 .itc-travel, .itc-travel * { pointer-events: none; }
 /*
+  ── THE PLATE — decision 0341 ───────────────────────────────────────────────────────────────────
+
+  The burn was played and called great; this was called pretty basic, graphically. It was a dark
+  rounded box with a heading in it. It is a nav plate now: cut corners, a hairline frame, scanlines,
+  and ALL of it lit in the colour of the place the ship is burning towards, so six crossings are six
+  plates rather than one box with six names in it.
+
   ⚠️ **AT THE TOP, WHERE THE BREAK'S BANNER WAS A MOMENT AGO, AND NOT IN THE MIDDLE.** The middle of
   the screen is where the ship is, and decision 0063 moved the break's own banner off it for that
   reason after measuring where it had actually landed. Auto on the bottom only: the shared panel rule
-  is auto on every side, so what moves this is the top margin being SMALL — the same one-line
-  mechanism the first build's probe found by coming back green against the redundant second line.
+  is auto on every side, so what moves this is the top margin being SMALL — the one-line mechanism
+  decision 0340's probe found by coming back green against a redundant second line.
 
-  ⚠️ **A TRANSLUCENT BACKING, BECAUSE THE SKY BEHIND IT IS FORTY-FOUR BRIGHT LINES.** The music room
-  makes the same argument over a star field; this is over streaks at full burn, which is the busiest
-  the backdrop ever gets.
+  ⚠️ **THE ACCENT ARRIVES AS A CUSTOM PROPERTY AND FALLS BACK TO THE INK.** The shell pushes the
+  place's colour with the words; until it has, or if it never does, every rule here resolves to the
+  player's own ink and the plate is merely cyan rather than broken.
+
+  ⚠️ **THE FRAME IS A BORDER PLUS TWO DIAGONAL HAIRLINES, BECAUSE A CLIPPED CORNER HAS NO BORDER.**
+  The clip path cuts two corners off, and takes the border with them — the cut edges would be the
+  backing simply stopping. Each cut is a square the size of the cut with one diagonal line through it,
+  drawn as a background layer in the corner it belongs to, so the frame goes all the way round.
+
+  ⚠️ **NO BLUR BEHIND IT, ON PURPOSE.** A backdrop filter over a canvas repainting sixty times a
+  second at full burn is a full-screen effect per frame to soften a caption. The backing is a colour.
 */
 .itc-travel-panel {
   margin-top: min(1.25rem, 4cqh);
   margin-bottom: auto;
-  background: color-mix(in srgb, var(--itc-void) 66%, transparent);
-  border-radius: 0.6em;
-  max-width: min(100%, 60ch);
+  --itc-cut: 0.9em;
+  --itc-edge: color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 72%, transparent);
+  --itc-hairline: linear-gradient(
+    135deg,
+    transparent calc(50% - 1px),
+    var(--itc-edge) calc(50% - 1px),
+    var(--itc-edge) calc(50% + 1px),
+    transparent calc(50% + 1px)
+  );
+  background:
+    var(--itc-hairline) top left / var(--itc-cut) var(--itc-cut) no-repeat,
+    var(--itc-hairline) bottom right / var(--itc-cut) var(--itc-cut) no-repeat,
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 3px),
+    linear-gradient(180deg, color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 16%, transparent), transparent 60%),
+    color-mix(in srgb, var(--itc-void) 80%, transparent);
+  border: 1px solid var(--itc-edge);
+  border-radius: 0;
+  clip-path: polygon(
+    var(--itc-cut) 0,
+    100% 0,
+    100% calc(100% - var(--itc-cut)),
+    calc(100% - var(--itc-cut)) 100%,
+    0 100%,
+    0 var(--itc-cut)
+  );
+  max-width: min(100%, 62ch);
   /*
     ⚠️ **TIGHTER THAN THE SHARED PANEL PADDING, BECAUSE THIS PANEL IS OVER A GAME.** Every other one
     is over a dim, where padding costs nothing. Measured in a browser, the first version of this banner
     reached 34.8 percent of the way down the screen and the ship rests at fifty: its own guard holds it
     to the top third, and what gave was the banner rather than the line.
   */
-  padding: min(1rem, 2.5cqh) min(1.5rem, 3cqw);
-  animation: itc-travel-in 0.7s ease-out both;
-  transition: opacity 1.2s ease-in;
+  padding: min(1rem, 2.5cqh) min(1.6rem, 3cqw);
+  text-align: left;
+  animation: itc-travel-in 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transition: opacity 1.1s ease-in, transform 1.1s ease-in;
 }
 /*
-  ⚠️ **IT ARRIVES WITH THE BURN AND LEAVES WITH IT, AND NEITHER IS A CUT.** Asked for as a much
-  smoother transition. A keyframe on the way in, because the overlay goes from display none and a
-  transition cannot start from that; a transition on the way out, because the shell marks the banner
-  as leaving on the step the burn starts to trail off, and it is gone before the level is entered.
+  ⚠️ **IT ARRIVES WITH THE BURN AND LEAVES WITH IT, AND NEITHER IS A CUT.** A keyframe on the way in,
+  because the overlay goes from display none and a transition cannot start from that; a transition on
+  the way out, because the shell marks the banner as leaving on the step the burn starts to trail off,
+  and it is gone before the level is entered. It comes DOWN from the top edge and goes back up to it,
+  which is the direction the screen edge it belongs to is in.
 */
-@keyframes itc-travel-in { from { opacity: 0; } to { opacity: 1; } }
-.itc-travel-leaving .itc-travel-panel { opacity: 0; }
+@keyframes itc-travel-in { from { opacity: 0; transform: translateY(-0.9em); } to { opacity: 1; transform: none; } }
+@keyframes itc-travel-rise { from { opacity: 0; transform: translateY(0.45em); } to { opacity: 1; transform: none; } }
+@keyframes itc-travel-draw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes itc-travel-pulse { from { opacity: 0.9; transform: scale(1); } to { opacity: 0; transform: scale(2.8); } }
+.itc-travel-leaving .itc-travel-panel { opacity: 0; transform: translateY(-0.6em); }
 /* The chart beside the words, not above them: the long axis is where a list goes (decision 0049). */
 .itc-travel-crossing {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: min(1.25rem, 3cqw);
-  text-align: left;
+  gap: min(1.4rem, 3cqw);
 }
 /*
   ⚠️ **SIZED OFF THE SHORT AXIS, AND SQUARE.** The canvas is drawn at a fixed pixel size and shown at
   a fraction of the container's height, so it is the same share of every screen and the browser does
   the scaling once. No flex shrink: a chart squeezed by a long place name is an ellipse.
+
+  ⚠️ **A DISC OF THE PLACE'S OWN LIGHT BEHIND IT, AND A RING ROUND THAT**, so the route sits in an
+  instrument rather than floating on the plate. The canvas and the overlay both fill the box exactly,
+  one over the other, which is what puts the ship's marker on the stroked line.
 */
-.itc-travel-crossing-chart {
+.itc-travel-crossing-chartbox {
+  position: relative;
   width: clamp(4.5rem, 19cqh, 9rem);
   height: clamp(4.5rem, 19cqh, 9rem);
   flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 20%, transparent), transparent 72%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 38%, transparent);
+}
+.itc-travel-crossing-chart, .itc-travel-crossing-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/*
+  ⚠️ **THE SHIP IS THE PLAYER'S INK ON A CHART OF PLACES' COLOURS, AND OUTLINED IN THE VOID.** It is
+  the one thing on the route that is not somewhere, so it is the one thing not in a place's colour;
+  the dark outline is what keeps it readable as it crosses a leg drawn in something bright.
+*/
+.itc-travel-crossing-marker {
+  fill: color-mix(in srgb, var(--itc-ink) 70%, white);
+  stroke: var(--itc-void);
+  stroke-width: 0.9;
+  paint-order: stroke;
+}
+/*
+  ⚠️ **SCALED ABOUT ITS OWN BOX, WHICH AN SVG ELEMENT DOES NOT DO UNLESS TOLD.** A transform on an SVG
+  shape is about the viewport's origin by default, so an untold pulse grows away towards the bottom
+  right of the chart instead of out from the stop it is on.
+*/
+.itc-travel-crossing-pulse {
+  fill: none;
+  stroke: var(--itc-accent, var(--itc-ink));
+  stroke-width: 0.9;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: itc-travel-pulse 1.5s ease-out infinite;
 }
 .itc-travel-crossing-words {
   display: flex;
   flex-direction: column;
-  gap: min(0.35rem, 1.2cqh);
+  align-items: flex-start;
+  gap: min(0.3rem, 1cqh);
+  min-width: 0;
 }
-.itc-travel-crossing-place {
-  font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.5rem);
+/*
+  ⚠️ **EACH LINE RISES IN TURN, A FEW HUNDREDTHS APART.** The plate arriving as one slab is what read
+  as basic; the same five elements arriving in reading order is a readout coming up. The delays are
+  short enough that the whole of it is there well inside the second the engines take to build.
+*/
+.itc-travel-crossing-kicker, .itc-travel-crossing-place, .itc-travel-crossing-voyage {
+  animation: itc-travel-rise 0.5s ease-out both;
+}
+.itc-travel-crossing-kicker {
   margin: 0;
+  font-size: 0.62em;
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 60%, white);
+  animation-delay: 0.12s;
+}
+.itc-travel-crossing-kicker::before {
+  content: '';
+  display: inline-block;
+  width: 0.6em;
+  height: 0.6em;
+  margin-right: 0.7em;
+  background: var(--itc-accent, var(--itc-ink));
+}
+/*
+  ⚠️ **MIXED TOWARDS WHITE, BECAUSE A PLACE'S COLOUR IS NOT PROMISED TO BE LEGIBLE.** The Black
+  Heart's accent is a deep maroon and The Approach's is a dim teal; set in them raw, two of the seven
+  names are dark type on a dark plate. Half way to white keeps the hue and clears the backing on every
+  one, and the glow behind the letters is where the raw colour goes.
+*/
+.itc-travel-crossing-place {
+  margin: 0;
+  font-size: clamp(1.1rem, min(4.4cqw, 7cqh), 2.3rem);
+  line-height: 1.1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 45%, white);
+  text-shadow: 0 0 0.7em color-mix(in srgb, var(--itc-accent, var(--itc-ink)) 70%, transparent);
+  animation-delay: 0.2s;
+}
+.itc-travel-crossing-rule {
+  align-self: stretch;
+  height: 1px;
+  background: linear-gradient(90deg, var(--itc-edge), transparent);
+  transform-origin: left center;
+  animation: itc-travel-draw 0.6s 0.3s ease-out both;
 }
 /*
   ⚠️ **LIGHTER THAN THE NAME AND NOT SMALLER THAN THE REST OF THE CHROME.** It is one sentence read
   once, so weight is the channel that separates it from the name; type has a floor (the panel rule
   says why).
 */
-.itc-travel-crossing-voyage { font-weight: 400; margin: 0; }
+.itc-travel-crossing-voyage { font-weight: 400; margin: 0; opacity: 0.92; max-width: 40ch; animation-delay: 0.36s; }
 /*
   The wait, which is almost never shown — the travel content hub has when. Dimmed, because it is the
   one line here that is about the game rather than about the place.
 */
 .itc-travel-crossing-waiting { font-weight: 400; margin: 0; opacity: 0.6; }
 .itc-travel-crossing-waiting[hidden] { display: none; }
+/*
+  ⚠️ **AND A PLAYER WHO ASKED THE PLATFORM FOR LESS MOTION GETS THE PLATE WITHOUT THE CHOREOGRAPHY.**
+  The burn itself is the game; this is chrome over it, and the stagger, the drawn rule and the pulse are
+  decoration that says nothing the still plate does not. The shell parks the marker on its stop for the
+  same player.
+*/
+@media (prefers-reduced-motion: reduce) {
+  .itc-travel-panel, .itc-travel-crossing-kicker, .itc-travel-crossing-place, .itc-travel-crossing-voyage,
+  .itc-travel-crossing-rule, .itc-travel-crossing-pulse { animation: none; }
+}
 /*
   ⚠️ **THE TWO BOXES EVERY PANEL IS BUILT WITH ARE EMPTY HERE, AND AN EMPTY FLEX CHILD STILL TAKES A
   GAP.** The builder appends a choices box and a settings box to every panel so that a row gaining a
@@ -724,6 +860,7 @@ ${each('-action-cursor')} {
 .itc-gameover-face-pixel,
 .itc-cleared-face-pixel,
 .itc-victory-face-pixel,
+.itc-travel-face-pixel,
 .itc-playing-face-pixel {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   letter-spacing: 0.06em;
@@ -910,6 +1047,12 @@ interface Panel {
  */
 interface CrossingParts {
   root: HTMLElement;
+  /** Which leg of how many — 0341. The one line on the plate that is about the RUN, above the place. */
+  kicker: HTMLElement;
+  /** The destination's pulse, the ship's marker, and the animation that flies it down the leg — 0341. */
+  pulse: SVGElement;
+  marker: SVGElement;
+  motion: SVGAnimationElement;
   place: HTMLElement;
   voyage: HTMLElement;
   /** Shown only while the place is still being synthesised — `src/content/travel.ts` has when. */
@@ -960,6 +1103,30 @@ export interface Crossing {
    * level arrives under a clear screen rather than under a caption that is then cut.
    */
   leaving: boolean;
+  /**
+   * How many legs the whole route has — so the plate can say *leg 4 of 6* — 0341.
+   *
+   * ⚠️ **PUSHED BESIDE `flown` RATHER THAN COUNTED HERE**, on this interface's own terms: the chrome
+   * holds no opinion about how long a run is. `LEVEL_KINDS` is the shell's to read.
+   */
+  legs: number;
+  /**
+   * The destination's own accent, resolved — the colour the plate is framed and lit in. 0341.
+   *
+   * ⚠️ **A PLACE'S COLOUR AND NOT THE CHROME'S INK, WHICH IS WHAT MAKES SIX CROSSINGS SIX PLATES.**
+   * Every other panel is drawn in `--itc-ink`, the player's cyan, because every other panel is about
+   * the player. This one is about somewhere, and 0282's test — *can the thing differ per instance* —
+   * is answered by the row: it is `THEMES[kind].glow`, per palette, so a high-contrast player gets the
+   * high-contrast colour (0024). The stylesheet never uses it for anything a reader must tell apart
+   * by hue alone — it frames and it glows; the words are words.
+   */
+  accent: string;
+  /**
+   * How long the ship's marker takes to fly its leg on the chart, in seconds — the burn's own length
+   * when nothing is waited for. If the burn is held past it, the marker has arrived and waits on its
+   * stop, which is also what the ship is doing.
+   */
+  seconds: number;
   /** The one line that place says about itself, off the same row. */
   voyage: string;
   /**
@@ -1290,12 +1457,20 @@ const SEEK_STEP = 0.05;
 const CHART_PIXELS = 320;
 
 /**
- * The crossing's banner: the chart, the place, what it is, and — rarely — that it is not ready yet.
+ * How finely the ship's leg is sampled into the path its marker flies — 0341. The bake strokes a leg
+ * in forty; the marker is a few pixels long at the size the chart is shown, so twenty-four straight
+ * pieces across a sixth of a turn put it within a fraction of a pixel of the stroked line everywhere.
+ */
+const CROSSING_PATH_SAMPLES = 24;
+
+/**
+ * The crossing's banner: a nav plate — the chart with the ship on it, which leg this is, the place,
+ * what it is, and, rarely, that it is not ready yet.
  *
- * `docs/decisions/0340-the-coil-is-a-route.md`. The first build painted the chart over the whole
- * canvas in place of the game and was reported as *"it takes the player out of the game"*; the
- * crossing is a burn the ship makes in the world now, and this is a caption over it — the chart as an
- * inset beside the name, drawn into a canvas of the chrome's own exactly as the pickup key is.
+ * `docs/decisions/0340-the-coil-is-a-route.md` put it here as a caption over a game still being
+ * flown, and `docs/decisions/0341-the-crossing-reads-as-a-nav-plate.md` is why it looks like anything:
+ * the burn was played and called great, and this was called *"pretty basic at the moment graphically
+ * wise"* — a dark rounded box with a heading in it, which is what it was.
  *
  * ⚠️ **AN `aria-live` REGION, WHICH IS THE ONE THING THE CHART CANNOT DO FOR A SCREEN READER.** The
  * picture says where the run is going; a player who cannot see it gets the same fact only if the name
@@ -1313,14 +1488,56 @@ function buildCrossing(prefix: string): CrossingParts {
   };
   const root = make('crossing');
   root.setAttribute('aria-live', 'polite');
+  const chartBox = make('crossing-chartbox');
+  // The name beside it says everything the picture does, so a reader is told once rather than twice.
+  chartBox.setAttribute('aria-hidden', 'true');
   const chart = document.createElement('canvas');
   chart.className = prefix + 'crossing-chart';
   chart.width = CHART_PIXELS;
   chart.height = CHART_PIXELS;
-  // The name beside it says everything the picture does, so a reader is told once rather than twice.
-  chart.setAttribute('aria-hidden', 'true');
+  /*
+    ── THE SHIP ON THE CHART, AND THE PLACE IT IS GOING, AS AN SVG OVER THE CANVAS ─────────────────
+
+    ⚠️ **THE ROUTE IS A DRAWING AND THESE TWO ARE MOTION, WHICH IS WHY THEY ARE NOT ON THE CANVAS.**
+    The canvas is painted once per crossing (`setCrossing` has the memo); a marker flying the leg on it
+    would be a repaint every frame from a file that is cold on purpose. An SVG `animateMotion` is the
+    browser's own clock moving one element along one path — nothing here runs per frame, and a
+    `viewBox` of 0–100 scales with the chart at whatever size the stylesheet shows it.
+
+    ⚠️ **`begin="indefinite"`, SO THE SHIP LEAVES WHEN THE BURN DOES.** A SMIL animation's default
+    clock starts when the document loads, which would have the marker at the far end of its leg
+    minutes before the first boss died. `setCrossing` calls `beginElement()` on the step the run has
+    moved a leg.
+  */
+  const SVG = 'http://www.w3.org/2000/svg';
+  const overlay = document.createElementNS(SVG, 'svg');
+  overlay.setAttribute('class', prefix + 'crossing-overlay');
+  overlay.setAttribute('viewBox', '0 0 100 100');
+  const pulse = document.createElementNS(SVG, 'circle');
+  pulse.setAttribute('class', prefix + 'crossing-pulse');
+  pulse.setAttribute('r', '4');
+  const marker = document.createElementNS(SVG, 'path');
+  marker.setAttribute('class', prefix + 'crossing-marker');
+  // A dart, nose along +x, which is the way `rotate="auto"` points it down the path.
+  marker.setAttribute('d', 'M 4.2 0 L -3 2.6 L -1.4 0 L -3 -2.6 Z');
+  const motion = document.createElementNS(SVG, 'animateMotion') as SVGAnimationElement;
+  motion.setAttribute('begin', 'indefinite');
+  motion.setAttribute('fill', 'freeze');
+  motion.setAttribute('rotate', 'auto');
+  // Eased at both ends, as the burn is: `calcMode` spline over the whole path.
+  motion.setAttribute('calcMode', 'spline');
+  motion.setAttribute('keyTimes', '0;1');
+  motion.setAttribute('keySplines', '0.4 0 0.2 1');
+  marker.appendChild(motion);
+  overlay.appendChild(pulse);
+  overlay.appendChild(marker);
+  chartBox.appendChild(chart);
+  chartBox.appendChild(overlay);
+
   const words = make('crossing-words');
+  const kicker = make('crossing-kicker', 'p');
   const place = make('crossing-place', 'h1');
+  const rule = make('crossing-rule');
   const voyage = make('crossing-voyage', 'p');
   const waiting = make('crossing-waiting', 'p');
   waiting.hidden = true;
@@ -1330,12 +1547,14 @@ function buildCrossing(prefix: string): CrossingParts {
     what it is, never why it is good, and the fiction already has a reason for a ship to hold off.
   */
   waiting.textContent = 'Holding for a way in…';
+  words.appendChild(kicker);
   words.appendChild(place);
+  words.appendChild(rule);
   words.appendChild(voyage);
   words.appendChild(waiting);
-  root.appendChild(chart);
+  root.appendChild(chartBox);
   root.appendChild(words);
-  return { root, place, voyage, waiting, chart, drawnFlown: -1 };
+  return { root, kicker, place, voyage, waiting, chart, pulse, marker, motion, drawnFlown: -1 };
 }
 
 /**
@@ -1938,6 +2157,14 @@ export function makeChrome(
         if (panel === undefined) continue;
         const shown = name === screen;
         panel.root.classList.toggle(prefixFor(name) + 'shown', shown);
+        /*
+          ⚠️ **A RAISED CROSSING FORGETS WHICH LEG IT LAST DREW — 0341.** The memo in `setCrossing`
+          is what stops the wait line restarting the marker, and it is keyed on the leg — so a SECOND
+          run crossing the same leg would find it fresh, skip, and leave the ship parked on its stop
+          from last time. A crossing is raised exactly once per leg flown, which makes this the one
+          honest moment to say *this is a new one*.
+        */
+        if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
       }
       shownScreen = screen;
       paintStrip();
@@ -2023,11 +2250,18 @@ export function makeChrome(
       parts.place.textContent = crossing.place;
       parts.voyage.textContent = crossing.voyage;
       parts.waiting.hidden = !crossing.waiting;
-      panels.travel?.root.classList.toggle(prefixFor('travel') + 'leaving', crossing.leaving);
+      parts.kicker.textContent = `Leg ${crossing.flown} of ${crossing.legs}`;
+      const travel = panels.travel?.root;
+      travel?.classList.toggle(prefixFor('travel') + 'leaving', crossing.leaving);
+      // The place's own colour, as a custom property, so the stylesheet frames and lights the plate
+      // in it without this file knowing what any rule does with it — 0341.
+      travel?.style.setProperty('--itc-accent', crossing.accent);
       /*
         ⚠️ **REDRAWN WHEN THE RUN HAS MOVED A LEG AND NOT OTHERWISE** — once per crossing, which is
         once per level. This is called again when the wait line appears, and a chart redrawn for that
-        would be forty strokes to change nothing.
+        would be forty strokes to change nothing — and a marker restarted for it would fly its leg
+        twice. `show` forgets the memo as the crossing is raised, so a second RUN over the same leg
+        still draws and still flies.
       */
       if (parts.drawnFlown === crossing.flown) return;
       const ctx = parts.chart.getContext('2d');
@@ -2036,6 +2270,34 @@ export function makeChrome(
       ctx.clearRect(0, 0, parts.chart.width, parts.chart.height);
       // The palette's own sky ink for a leg not yet flown: the one colour here that means *scenery*.
       drawChart(ctx, parts.chart.width, crossing.palette, crossing.flown, colours.sky);
+      /*
+        ── AND THE SHIP FLIES THE LEG IT IS ON, ALONG THE CURVE THE BAKE STROKED — 0341 ──────────────
+
+        The path is sampled off `chartTileX` and `chartTileY`, which are the functions `drawChart`
+        strokes the route with, so the marker is ON the line by construction rather than by two
+        descriptions of a spiral agreeing — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+        In the overlay's own 0–100 units, which its `viewBox` scales to whatever size the chart is shown.
+      */
+      const legs = Math.max(1, crossing.legs);
+      const from = Math.max(0, crossing.flown - 1);
+      let path = '';
+      for (let s = 0; s <= CROSSING_PATH_SAMPLES; s += 1) {
+        const u = (from + s / CROSSING_PATH_SAMPLES) / legs;
+        path += `${s === 0 ? 'M' : 'L'} ${(chartTileX(u) * 100).toFixed(2)} ${(chartTileY(u) * 100).toFixed(2)} `;
+      }
+      const end = crossing.flown / legs;
+      parts.pulse.setAttribute('cx', (chartTileX(end) * 100).toFixed(2));
+      parts.pulse.setAttribute('cy', (chartTileY(end) * 100).toFixed(2));
+      parts.motion.setAttribute('path', path);
+      /*
+        ⚠️ **A PLAYER WHO ASKED FOR LESS MOTION GETS THE SHIP ALREADY ON ITS STOP.** A duration of
+        nothing with `fill="freeze"` is the end of the path, held — so the chart still says where the
+        run is going, and nothing on it moves. The burn itself is the game and is 0024's *one game,
+        and it is the loud one*; this is chrome, and the platform's own setting is the knob over it.
+      */
+      const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      parts.motion.setAttribute('dur', still ? '0.001s' : `${Math.max(0.1, crossing.seconds).toFixed(2)}s`);
+      parts.motion.beginElement();
     },
     setNowPlaying(now: NowPlaying | null): void {
       const parts = panels.music?.now;

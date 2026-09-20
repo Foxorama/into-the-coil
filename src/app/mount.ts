@@ -24,7 +24,9 @@ import type { Landmarks } from '../render/scene.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
   DEFAULT_TRAVEL,
+  TRAVELS,
   TRAVEL_KINDS,
+  TRAVEL_TRAIL_STEPS,
   travelArrived,
   travelIsWaiting,
   travelMayLand,
@@ -1818,7 +1820,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         voyage: THEMES[place].voyage,
         // How many legs are behind the run, which is the index of the place it is burning towards.
         flown: Math.min(Math.max(state.run.level, 0), LEVEL_KINDS.length - 1),
+        legs: LEVEL_KINDS.length - 1,
         palette,
+        // The plate is lit in the colour of the place it names — 0341. Per palette, which is 0024.
+        accent: THEMES[place].glow[palette],
+        /*
+          How long the marker takes to fly its leg on the chart: the burn's own length when nothing is
+          waited for — the floor and the tail — so it arrives as the ship does. A burn held for the
+          music outlasts it, and the marker waits on its stop, which is what the ship is doing too.
+        */
+        seconds: (TRAVELS[state.settings.travel].floorSteps + TRAVEL_TRAIL_STEPS) / STEPS_PER_SECOND,
         waiting,
         leaving,
       });

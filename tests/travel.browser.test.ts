@@ -107,4 +107,54 @@ describe.runIf(chromePath)('the crossing is a caption over a game that is still 
     expect(m.chartRatio, 'the chart is squeezed into an ellipse').toBeCloseTo(1, 2);
     expect(m.chartShare, 'the chart is too small to read as a route').toBeGreaterThan(0.12);
   });
+
+  it('is framed and lit in the colour it is handed, and says what its parts are', async () => {
+    /*
+      `docs/decisions/0341-the-crossing-reads-as-a-nav-plate.md`. *"The popup explaining things could
+      use an awful lot of love… it's pretty basic at the moment graphically wise."* What it became is
+      a plate lit in the colour of the place it names, so six crossings are six plates.
+
+      ⚠️ **COMPUTED, BECAUSE A CUSTOM PROPERTY THAT IS NOT PICKED UP FAILS BY LOOKING FINE.** Every rule
+      on the plate reads the accent with the player's ink as its fallback, which is right — and means a
+      typo in the property's name, or a rule that forgot to use it, is a plate that is simply cyan on
+      every crossing. Nothing errors and no screenshot of ONE crossing looks wrong. So the plate is
+      handed a red no place has, and asked what colour its frame and its name came out.
+    */
+    const prefix = prefixFor('travel');
+    const page = await open();
+    const lit = await page.evaluate((p: string) => {
+      const root = document.querySelector(`.${p.slice(0, -1)}`);
+      const panel = document.querySelector(`.${p}panel`);
+      const place = document.querySelector(`.${p}crossing-place`);
+      if (!(root instanceof HTMLElement) || !(panel instanceof HTMLElement) || !(place instanceof HTMLElement)) return null;
+      root.classList.add(`${p}shown`);
+      const channels = (css: string): number[] => (css.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+      const read = (): { frame: number[]; name: number[] } => ({
+        frame: channels(getComputedStyle(panel).borderTopColor),
+        name: channels(getComputedStyle(place).color),
+      });
+      const unlit = read();
+      root.style.setProperty('--itc-accent', 'rgb(255, 0, 0)');
+      const red = read();
+      return {
+        unlit,
+        red,
+        parts: ['crossing-kicker', 'crossing-rule', 'crossing-chartbox', 'crossing-marker', 'crossing-pulse'].filter(
+          (part) => root.querySelector(`.${p}${part}`) === null,
+        ),
+        moves: root.querySelector(`.${p}crossing-marker animateMotion`) !== null,
+      };
+    }, prefix);
+
+    expect(lit, 'there is no crossing overlay to measure').not.toBeNull();
+    const l = lit!;
+    // `color(srgb r g b)` is 0–1 and `rgb()` is 0–255, and which one a browser serialises a
+    // `color-mix` as is its own business; what is asserted is the ORDER of the channels, which is not.
+    const isRed = ([r, g, b]: number[]): boolean => r! > g! * 1.5 && r! > b! * 1.5;
+    expect(isRed(l.unlit.frame), 'the frame was already red before it was handed a colour — this measured nothing').toBe(false);
+    expect(isRed(l.red.frame), `the frame ignores the place’s colour: ${l.red.frame.join(', ')}`).toBe(true);
+    expect(isRed(l.red.name), `the place’s name ignores the place’s colour: ${l.red.name.join(', ')}`).toBe(true);
+    expect(l.parts, 'the plate is missing parts it is built from').toEqual([]);
+    expect(l.moves, 'the ship’s marker has nothing to fly it down its leg').toBe(true);
+  });
 });

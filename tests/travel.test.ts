@@ -21,7 +21,19 @@ import {
   travelMayLand,
   warpAt,
 } from '../src/content/travel.ts';
-import { CHART_OUTER, CHART_RING, CHART_STOP, chartRadius, chartTileX, chartTileY, drawChart } from '../src/render/bake.ts';
+import { STYLE } from '../src/app/chrome.ts';
+import { PALETTES, type PaletteName } from '../src/content/palette.ts';
+import {
+  CHART_OUTER,
+  CHART_RING,
+  CHART_STOP,
+  chartRadius,
+  chartTileX,
+  chartTileY,
+  drawChart,
+  mix,
+} from '../src/render/bake.ts';
+import { AA_FLOOR, contrast } from './contrast.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { tracingPen } from './paths.ts';
@@ -148,12 +160,13 @@ describe('the burn holds for a floor and for the place, and for nothing else', (
       assertion is written in units the player experiences. What a player sits through is the floor
       AND the tail, so that is what is added up.
 
-      ⚠️ **AND IT IS THE NUMBER MOST LIKELY TO BE WRONG.** 0063 says the same of its own three seconds,
-      in the same words. It has not been played.
+      ⚠️ **AND IT HAS BEEN PLAYED ONCE: FOUR SECONDS, AND *"if anything could be slightly longer."***
+      0341. Five now, with the whole second spent at full burn. Still the number most likely to be
+      wrong — 0063 says the same of its own three, in the same words — but it moved on a report.
     */
     const seconds = (kind: (typeof TRAVEL_KINDS)[number]): number =>
       (TRAVELS[kind].floorSteps + TRAVEL_TRAIL_STEPS) / STEPS_PER_SECOND;
-    expect(seconds('scene')).toBe(4);
+    expect(seconds('scene')).toBe(5);
     expect(seconds('brief')).toBe(3);
     expect(TRAVEL_MAX_STEPS / STEPS_PER_SECOND).toBe(20);
   });
@@ -455,6 +468,55 @@ describe('the chart is the roster, drawn as a descent', () => {
       const want = leg < flownLegs ? THEMES[LEVELS[LEVEL_KINDS[leg + 1]!].theme].glow.vivid : faint;
       expect(trace.inks[leg]!.colour, `leg ${leg} is drawn in the wrong colour`).toBe(want);
     }
+  });
+});
+
+describe('the plate is lit in its place’s colour, and every place’s name can still be read on it', () => {
+  /*
+    `docs/decisions/0341-the-crossing-reads-as-a-nav-plate.md`. The banner was played as *"pretty basic
+    at the moment graphically wise"*, and what it became is a plate framed and lit in the colour of the
+    place it names — which is a per-instance quantity, and 0282 says a quantity solved from one case is
+    checked in every case it runs in. It was designed against Rime Shelf's teal. The Black Heart's
+    accent and The Approach's are both dim, and the two HIGH-CONTRAST columns are dimmer still.
+
+    ⚠️ **THE MIX IS READ OUT OF THE STYLESHEET, NOT RETYPED HERE.** A test that carried its own copy
+    of *45% towards white* would go on passing the day somebody set the name in the raw accent because
+    it looked richer — which is exactly the edit this exists to stop. 0029: cite the line.
+  */
+  const share = (part: string): number => {
+    const rule = new RegExp(`\\.itc-travel-crossing-${part} \\{[^}]*?\\bcolor: color-mix\\(in srgb, var\\(--itc-accent, var\\(--itc-ink\\)\\) (\\d+)%, white\\)`);
+    const found = rule.exec(STYLE);
+    expect(found, `the ${part} is no longer set in its place’s colour mixed towards white`).not.toBeNull();
+    return Number(found![1]) / 100;
+  };
+
+  it('for all seven places, in both palettes, against the plate it is actually on', () => {
+    const name = share('place');
+    const kicker = share('kicker');
+    const failures: string[] = [];
+    for (const palette of Object.keys(PALETTES) as PaletteName[]) {
+      for (const kind of LEVEL_KINDS) {
+        const theme = THEMES[LEVELS[kind].theme];
+        const accent = theme.glow[palette];
+        /*
+          ⚠️ **THE WORST THE PLATE CAN BE, WHICH IS ITS LIGHTEST.** The backing is the void at four
+          fifths over the place's own backdrop, with a wash of the accent down from the top — so the
+          name, which is near the top, is over backing with the full wash in it. Pale type is weakest
+          on a light ground, and that is the lightest ground this plate has.
+        */
+        const plate = mix(mix(theme.space[palette], PALETTES[palette].space, 0.8), accent, 0.16);
+        for (const [what, by] of [['name', name], ['kicker', kicker]] as const) {
+          const ink = mix('#ffffff', accent, by);
+          const ratio = contrast(ink, plate);
+          if (ratio < AA_FLOOR) failures.push(`${theme.title} (${palette}) ${what}: ${ratio.toFixed(2)}:1`);
+        }
+      }
+    }
+    expect(
+      failures,
+      'these cannot be read on their own plate — WCAG AA is 4.5:1, and the accent is a place’s colour, ' +
+        'which nothing promises is a legible one',
+    ).toEqual([]);
   });
 });
 

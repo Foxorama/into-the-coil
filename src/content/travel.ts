@@ -91,13 +91,17 @@ export const TRAVEL_TRAIL_STEPS = 90;
 
 export const TRAVELS: Record<TravelKind, TravelRow> = {
   /*
-    ⚠️ **TWO AND A HALF SECONDS BEFORE THE TAIL, SO FOUR IN ALL — AND IT HAS NOT BEEN PLAYED.** The
-    same thing `docs/decisions/0063-a-level-break-is-a-respite.md` says of its own three seconds, in
-    the same words and for the same reason: too short and the crossing is a flicker, too long and it
-    is the pause between levels that the respite exists to have removed. It is the number in this
-    change most likely to be wrong and the first one to take to a play-test.
+    ⚠️ **THREE AND A HALF SECONDS BEFORE THE TAIL, SO FIVE IN ALL — AND THE FOUR IT REPLACES WAS
+    PLAYED.** *"Level transition is great now, if anything could be slightly longer."*
+    `docs/decisions/0341-the-crossing-reads-as-a-nav-plate.md`. The whole second goes on the time at
+    FULL burn — two and a half seconds of it rather than one and a half — because the build and the
+    tail are the parts that were asked for by shape and are not what *longer* is about.
+
+    ⚠️ **AND IT IS STILL A PLAY-TEST NUMBER, NOW WITH ONE DATUM.** 0063 says of its own three seconds
+    that too short is a flicker and too long is the pause the respite exists to have removed; *slightly*
+    is the player's word, and a second is a quarter of what it was.
   */
-  scene: { title: 'Scene', hint: 'The full burn between places.', floorSteps: 150 },
+  scene: { title: 'Scene', hint: 'The full burn between places.', floorSteps: 210 },
   /*
     ⚠️ **THE SPOOL AND HALF A SECOND, WHICH IS THE SHORTEST BURN THAT IS STILL ONE.** This is the row
     for a player who has made the crossing six times and wants the run back. It is not a row for

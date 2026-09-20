@@ -222,8 +222,10 @@ export const PROBES = [
     guard: 'the crossing, which does not dim either, gives its panel a backing of its own',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  background: color-mix(in srgb, var(--itc-void) 66%, transparent);\n',
-      replace: '',
+      // ⚠️ The backing became five layers — 0341's plate. Same break: the declaration stops being one,
+      // so every layer of it goes and the words are on the sky. A custom property nothing reads.
+      find: '  background:\n    var(--itc-hairline) top left / var(--itc-cut) var(--itc-cut) no-repeat,',
+      replace: '  --itc-unread:\n    var(--itc-hairline) top left / var(--itc-cut) var(--itc-cut) no-repeat,',
     },
   },
   {
