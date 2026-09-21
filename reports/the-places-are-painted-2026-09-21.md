@@ -214,6 +214,10 @@ sky with something moving in it.
 0221 made this place *austere* on a report that asked for it; this report asks for the opposite, and
 the newer one wins. Rime Shelf has the most contrast headroom of the seven, which is what pays.
 
+*Landed as [0351](../docs/decisions/0351-rime-shelf-is-ice.md).* ⚠️ **The sentence above was wrong**:
+measured, Rime Shelf had the *least* room of the seven (1.09×), and the floor puts a ceiling on the
+ice's palest colour far below white — 0351 has the numbers and what they leave to the player.
+
 ### 6 — The Toxic Mire: a ceiling, a swamp and acid
 
 > *"Overgrowth ceiling needs to be raised and to be an actual ceiling, the background needs to be

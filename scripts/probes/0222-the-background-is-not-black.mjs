@@ -73,7 +73,7 @@ export const PROBES = [
     guard: 'every ink clears the floor against the backdrop WITH EVERYTHING THE SKY DRAWS ON IT',
     edit: {
       path: 'src/render/bake.ts',
-      find: '          width: rng.range(0.004, 0.008) * size,\n          alpha: 0.28,',
+      find: '          width: rng.range(0.002, 0.004) * size,\n          alpha: 0.28,',
       replace: '          width: rng.range(0.012, 0.03) * size,\n          alpha: 0.8,',
     },
   },
