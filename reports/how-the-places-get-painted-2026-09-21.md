@@ -8,8 +8,10 @@ handing the rest to another, and chat evaporates
 
 Done: 0 ([0342](../docs/decisions/0342-the-hulks-come-out.md)), 1
 ([0343](../docs/decisions/0343-the-stars-are-drawn-for-a-desk.md)), 2
-([0345](../docs/decisions/0345-ember-nebula-is-in-colour.md)). Left: 3 Saurian Belt, 4 and 4b The
-Labyrinth, 5 Rime Shelf, 6 The Toxic Mire, 7 The Black Heart.
+([0345](../docs/decisions/0345-ember-nebula-is-in-colour.md)), 3
+([0347](../docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md) — mechanism 2 is built
+there: `LandmarkEntry.erupts`, `paintEruption`, and the seam fix for every opaque layer). Left: 4 and
+4b The Labyrinth, 5 Rime Shelf, 6 The Toxic Mire, 7 The Black Heart.
 
 ## The loop, per place
 
@@ -116,6 +118,10 @@ it is banded *because `Pen` has no linear gradient*, which is no longer true. `t
 *The Toxic Mire's corridor is tight* — is 0221's ask and this ask reverses it: change the guard and say
 why. Bubbles are mechanism 2's second use with **its own** sprite and motion (rise, wobble, pop).
 Headroom 1.48×, but glowing pools are lit area low in the lane, exactly where shots are read.
+⚠️ **0347 hung mechanism 2 on a landmark's vent** (`paintEruption`, called from `paintLandmarks`), and
+the Mire's pools are ground, not landmarks — so its bubbles need the pure-function-of-steps loop
+lifted off the landmark rather than a pool faked as one. The ground scrolls at 0.45, so a bubble's
+position rides that layer's offset.
 
 ### 7 — The Black Heart
 

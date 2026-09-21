@@ -20,8 +20,9 @@ export const PROBES = [
     guard: 'a volcano arrives on each of the level’s own section boundaries',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      { at: 2534, lane: 74, depth: 0.075, beat: 190, variant: 1 },',
-      replace: '      { at: 2500, lane: 74, depth: 0.075, beat: 190, variant: 1 },',
+      // Re-anchored by 0347, which re-placed and scaled the three and gave each an eruption.
+      find: '      { at: 2534, lane: 48,',
+      replace: '      { at: 2500, lane: 48,',
     },
   },
   {
@@ -37,8 +38,10 @@ export const PROBES = [
     guard: 'a landmark on a planet has its feet IN the ground',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      { at: 1249, lane: 56, depth: 0.07, beat: 190, variant: 0 },',
-      replace: '      { at: 1249, lane: 18, depth: 0.07, beat: 190, variant: 0 },',
+      // Re-anchored by 0347: drawn 1.4 times its bitmap and standing behind a far range whose peaks
+      // reach lane 44, so hanging in the air is a lane far above the screen's top.
+      find: '      { at: 1249, lane: 46,',
+      replace: '      { at: 1249, lane: -20,',
     },
   },
   {
@@ -54,7 +57,8 @@ export const PROBES = [
     guard: 'no level places a landmark in a place that draws none',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  saurian: (ctx, _ink, glow, space, size, seed) => drawVolcano(ctx, glow, space, size, seed),',
+      // Re-anchored by 0347, which passed the palette's plainness through.
+      find: '  saurian: (ctx, _ink, glow, space, size, seed, plain = false) => drawVolcano(ctx, glow, space, size, seed, plain),',
       replace: '  saurian: null,',
     },
   },

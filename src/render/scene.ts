@@ -11,6 +11,8 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
+import { SPRITE } from '../content/sprites.ts';
+import type { Eruption } from '../content/volcano.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
@@ -67,6 +69,12 @@ export interface SkyLayer {
    * things that can kill them.
    */
   depth: number;
+  /**
+   * Whether nothing shows through it — land. Absent is a translucent layer — 0347. An opaque tile
+   * overlaps its neighbour by a pixel so the join cannot show what is behind it; a translucent one
+   * must not, or the overlap draws a column of itself twice.
+   */
+  opaque?: boolean;
 }
 
 /** The sky, back to front. Empty for a scene with none, which is what a fixture has. */
@@ -121,7 +129,24 @@ export interface Landmark {
    * arrival and cull arithmetic needs no change to be right about a scaled mark.
    */
   scale: number;
+  /**
+   * Where it throws rock from, in world units from its own centre at its drawn size — and what it
+   * throws. Absent for a landmark that is still, which is every one but Saurian Belt's — 0347.
+   */
+  vent?: { along: number; lane: number; erupts: Eruption };
 }
+
+/**
+ * How small a rock has got by the end of its flight, against its size leaving the crater — it cools
+ * as it falls, and a shrinking mark is the one fade `blit` can do without a state change (0025).
+ */
+const EMBER_COOL = 0.5;
+
+/**
+ * Where a throw peaks, as a fraction of its flight, between these two. Under a half, so every rock
+ * comes down further than it went up — below the crater and down the flank, behind the range.
+ */
+const EMBER_APEX = { from: 0.3, to: 0.44 };
 
 /** How much bigger a landmark gets at the top of its beat. */
 const BEAT_SWELL = 0.055;
@@ -210,6 +235,7 @@ export function paintScene(
   levelOrigin = 0,
   room: Room | null = null,
   warp = 0,
+  time = 0,
 ): void {
   surface.clear();
   /*
@@ -219,7 +245,7 @@ export function paintScene(
     parallax inversion and reads as the object being stuck to the glass. Behind everything, moving
     least, is the one arrangement that says *far away* twice.
   */
-  paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin);
+  paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin, time);
   paintSky(surface, view, cameraAlong, sky);
   /*
     ⚠️ **OVER THE SKY AND UNDER EVERY BODY — 0340**, on the room's own terms one paragraph down: the
@@ -593,6 +619,7 @@ function paintLandmarks(
   cameraAlong: number,
   landmarks: Landmarks,
   levelOrigin: number,
+  time: number,
 ): void {
   for (let i = 0; i < landmarks.length; i++) {
     const mark = landmarks[i]!;
@@ -635,8 +662,66 @@ function paintLandmarks(
     const swell =
       mark.beat > 0 ? 1 + BEAT_SWELL * beatAt(((((local - mark.at) / mark.beat) % 1) + 1) % 1) : 1;
     surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale * swell * mark.scale);
+    if (mark.vent !== undefined) paintEruption(surface, view, inView, mark, mark.vent, i, time);
   }
 }
+
+/**
+ * The rock a landmark is throwing, this frame — 0347.
+ *
+ * ⚠️ **A PURE FUNCTION OF THE SIM'S CLOCK AND AN INDEX, AND THAT IS THE WHOLE MECHANISM.** Rock `k`
+ * is `k / count` of a flight behind rock 0, so `count` are always in the air at even spacing; which
+ * throw it is on is the whole number of flights it has made, and that is hashed into its side, its
+ * reach, its height and where it peaks. Nothing is pooled, nothing is remembered, no stream is drawn
+ * (0021), and a paused game is a frozen volcano because the sim's step count is what stopped.
+ *
+ * ⚠️ **THE SIM'S STEPS, NOT THE CAMERA — the one clock in this file that is not `cameraAlong`.** A
+ * landmark's arrival and its old swell ride the camera (0034), which is right for position; a rock
+ * rides TIME, because the camera stops for a fight and a volcano does not.
+ *
+ * ⚠️ **ONE BLIT PER ROCK AND NO STATE CHANGE** — 0025. The comet is turned to its own heading by the
+ * angle `blit` already takes (0306), and it cools by shrinking, which is the only fade a blit has.
+ */
+function paintEruption(
+  surface: Surface,
+  view: View,
+  inView: number,
+  mark: Landmark,
+  vent: { along: number; lane: number; erupts: Eruption },
+  index: number,
+  time: number,
+): void {
+  const { count, period, rise, reach } = vent.erupts;
+  for (let k = 0; k < count; k++) {
+    const flights = time / period + k / count;
+    const throwN = Math.floor(flights);
+    const t = flights - throwN;
+    // Every number about this throw, from its landmark, its rock and which throw it is.
+    const seed = index * 977 + k * 131 + throwN * 17;
+    const side = streakHash(seed + 0.5) < 0.5 ? -1 : 1;
+    const out = reach * (0.25 + 0.75 * streakHash(seed + 1.5)) * mark.scale;
+    const high = rise * (0.35 + 0.65 * streakHash(seed + 2.5)) * mark.scale;
+    const apex = EMBER_APEX.from + (EMBER_APEX.to - EMBER_APEX.from) * streakHash(seed + 3.5);
+    // Up is DOWN the lane. A parabola through the vent at t = 0 that tops out `high` over it at `apex`.
+    const along = inView + vent.along + side * out * t;
+    const lane = vent.lane + mark.lane - high * ((2 * t) / apex - (t * t) / (apex * apex));
+    // Its heading, taken in SCREEN space so a view that turns the axes turns the comet with them.
+    const aheadAlong = along + side * out * 0.01;
+    const aheadLane = lane - high * (2 / apex - (2 * t) / (apex * apex)) * 0.01;
+    const x = screenX(view, along, lane);
+    const y = screenY(view, along, lane);
+    surface.blit(
+      SPRITE.ember,
+      x,
+      y,
+      view.scale * (1 - EMBER_COOL * t),
+      Math.atan2(screenY(view, aheadAlong, aheadLane) - y, screenX(view, aheadAlong, aheadLane) - x),
+    );
+  }
+}
+
+/** How many screen pixels a sky tile overlaps its neighbour by, in total across its width — 0347. */
+const SEAM_BLEED_PX = 2;
 
 function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): void {
   for (let i = 0; i < sky.length; i++) {
@@ -651,11 +736,23 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): 
     */
     const offset = (((cameraAlong * layer.depth) % span) + span) % span;
     const count = Math.ceil(view.alongSpan / span) + 1;
+    /*
+      ⚠️ **EACH TILE A PIXEL WIDER ON EVERY SIDE, SO TWO NEIGHBOURS OVERLAP RATHER THAN MEET — 0347.**
+      A tile lands on a fractional pixel, and a canvas covers the pixel it shares with its neighbour
+      partly from each side: two partial coverages composite to less than one, and an OPAQUE layer
+      shows a hairline of whatever is behind it at every join. The 1080p photograph of Saurian Belt had
+      two of them standing up through the ridges.
+
+      ⚠️ **AND ONLY AN OPAQUE ONE, WHICH THE FIRST DRAFT GOT WRONG.** Applied to every layer, the
+      weather's deepened sky drew its overlap twice and the photograph had a dark line from the top of
+      the screen to the horizon instead. A translucent join's shortfall is a fraction of a faint layer.
+    */
+    const bleed = layer.opaque === true ? 1 + SEAM_BLEED_PX / (span * view.scale) : 1;
     for (let t = 0; t < count; t++) {
       // Centred, because `blit` centres — `src/render/surface.ts`. Half a tile on from its edge.
       const inView = t * span - offset + span / 2;
       const across = view.acrossSpan / 2;
-      surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+      surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
     }
   }
 }

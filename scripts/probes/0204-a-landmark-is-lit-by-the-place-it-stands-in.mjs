@@ -22,9 +22,10 @@ export const PROBES = [
         question a run is no longer the only answer to; and the call grew the place's ACCENT and its
         SILHOUETTE colour with 0224, because two colours were enough while every landmark was made of
         gas and a volcano is rock under a blue sky. **The break is unchanged through both**: the
-        landmark is never re-coloured, so it wears the palette rather than the place.
+        landmark is never re-coloured, so it wears the palette rather than the place. Re-anchored by
+        0347, which added the palette's plainness and the sharpest scale to the call.
       */
-      find: '    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);',
+      find: '    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop, plain, sharpest);',
       replace: '',
     },
   },

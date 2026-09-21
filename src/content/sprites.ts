@@ -849,6 +849,20 @@ export const SPRITE_KINDS = [
   */
   'skyGround',
   /*
+    ── AND A SECOND LAND, FURTHER OFF, FOR A PLACE THAT HAS A DISTANCE IN IT ───────────────────────
+
+    `docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`. Asked for: *"the closer layers
+    and sky layers are a monotone blue with no detail to them."* One opaque layer at one rate is one
+    distance, and a jungle under mountains is three: the range at the horizon, the canopy, and the
+    leaves going past. The range moves at its own slower rate here; the canopy and the near leaves
+    stay in `skyGround`, which is drawn after it.
+
+    ⚠️ **OPTIONAL PER PLACE, ON `skyGround`'s OWN TERMS.** A planet that states no range never blits
+    this slot — `skyFor` builds each place's sky from what it states — so Rime Shelf and The Toxic
+    Mire are byte-identical and pay only the bake of an empty tile at a boundary.
+  */
+  'skyRange',
+  /*
     ── AND A SIXTH THAT IS NOT A FIELD AT ALL, BUT ONE OBJECT AT ONE PLACE ─────────────────────────
 
     `docs/decisions/0203-the-rule-was-never-about-size.md`. Reported from play: *"visually there's
@@ -893,6 +907,18 @@ export const SPRITE_KINDS = [
   */
   'landmarkB',
   'landmarkC',
+  /*
+    ── A ROCK THROWN OUT OF A LANDMARK, AND THE FIRST THING IN THE BACKDROP THAT MOVES ON ITS OWN ──
+
+    `docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`. Reported: the volcano *"isn't
+    actually firing any rocks or anything."* A baked comet — a hot head and a tail — blitted along a
+    parabola out of the crater, turned to its own heading. Its place is a pure function of the sim's
+    step count and its index (`paintLandmarks`), so nothing is pooled, allocated or remembered.
+
+    ⚠️ **LAVA IS THE SAME COLOUR EVERYWHERE**, which is `CLAUDE.md`'s *a flame is the same red
+    everywhere*: baked once with the atlas, in fixed inks, never per place.
+  */
+  'ember',
   /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
@@ -951,6 +977,12 @@ export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
  * shortcut rather than a table in the wrong file.
  */
 export const LANDMARK_SLOTS = [SPRITE.landmark, SPRITE.landmarkB, SPRITE.landmarkC] as const;
+
+/**
+ * An ejected rock's solid head, as a fraction of `SPRITE_EXTENT.ember` across: the rest of the bitmap
+ * is tail and light. `drawEmber` draws to it and `tests/sky.test.ts` holds it under a bullet — 0347.
+ */
+export const EMBER_HEAD = 0.34;
 
 /**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
@@ -1602,6 +1634,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     three times: the tile is twice the lane and blitted centred, so half of it is off the screen.
   */
   skyGround: ACROSS_SPAN * 2,
+  // The ground's own width and for the ground's own reason: a range that repeats is a wallpaper — 0347.
+  skyRange: ACROSS_SPAN * 2,
   /*
     ⚠️ **THREE QUARTERS OF THE LANE, AND THE NUMBER IS A LEGIBILITY FLOOR RATHER THAN A TASTE** —
     `docs/decisions/0203-the-rule-was-never-about-size.md`. That decision replaces 0069's ceiling
@@ -1616,6 +1650,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // 0225. A variant that was a different size would be a different KIND, which is what the theme is.
   landmarkB: ACROSS_SPAN * 0.75,
   landmarkC: ACROSS_SPAN * 0.75,
+  /*
+    ⚠️ **THE HEAD IS UNDER A BULLET AND THE TAIL IS LIGHT — 0347.** The extent is the comet with its
+    tail; the solid head is `EMBER_HEAD` of it, and `tests/sky.test.ts` holds THAT under the smallest
+    thing that can kill the player, which is 0069's band applied to the first sky mark that moves.
+  */
+  ember: 4,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and

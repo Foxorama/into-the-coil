@@ -20,8 +20,13 @@ export const PROBES = [
     guard: 'every casting of a landmark is a different drawing',
     edit: {
       path: 'src/render/bake.ts',
-      find: "  const rng = makeRng('sky').stream(`saurian/volcano${seed}`);",
-      replace: "  const rng = makeRng('sky').stream('saurian/volcano0');",
+      /*
+        ⚠️ Re-anchored by 0347, which moved the cone into `coneOf` so the frame can throw rock out of
+        the same crater — after which un-seeding the painter's stream alone left three different cones
+        and the guard green over the break it names. The break is the seed not reaching the drawing.
+      */
+      find: '=> drawVolcano(ctx, glow, space, size, seed, plain),',
+      replace: '=> drawVolcano(ctx, glow, space, size, 0, plain),',
     },
   },
   {
@@ -55,8 +60,9 @@ export const PROBES = [
     guard: 'a level that places more than one uses more than one of them',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      { at: 2534, lane: 74, depth: 0.075, beat: 190, variant: 1 },',
-      replace: '      { at: 2534, lane: 74, depth: 0.075, beat: 190, variant: 0 },',
+      // Re-anchored by 0347, which re-placed and scaled the three.
+      find: 'beat: 0, variant: 1, scale: 1.4,',
+      replace: 'beat: 0, variant: 0, scale: 1.4,',
     },
   },
 ];

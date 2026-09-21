@@ -124,6 +124,16 @@ export type ThemeKind = (typeof THEME_KINDS)[number];
  */
 export type ThemeLadder = Partial<Record<MusicLevel, Partial<Record<MusicLayer, number>>>>;
 
+/** The lit colours of a planet's land, back to front — `ThemeRow.land`, 0347. */
+export interface LandLight {
+  /** The far range at its haziest, which is its lightest. */
+  readonly far: string;
+  /** The body of the canopy. */
+  readonly canopy: string;
+  /** The sun on the tops of the trees — the lightest thing the land is ever painted in. */
+  readonly lit: string;
+}
+
 export interface ThemeRow {
   /**
    * What the level break calls it — `docs/game.md`'s voice rule: what it is, never why it is good.
@@ -244,6 +254,22 @@ export interface ThemeRow {
    * down there than up here.
    */
   ground: Record<PaletteName, string> | null;
+  /**
+   * The colours a planet's land is LIT in, per palette — and absent for land that is one silhouette.
+   *
+   * ⚠️ **`docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`.** *"The closer layers …
+   * are a monotone blue with no detail to them, it doesn't scream jungle world at all."* `ground`
+   * above is the one colour a horizon needs and stays the darkest thing on the screen; these are what
+   * the far range, the canopy and the sun on it are painted in over that.
+   *
+   * ⚠️ **EVERY ONE IS HELD TO THE GAMEPLAY FLOOR, BECAUSE THE FIGHT HAPPENS OVER IT.** The bottom
+   * third of the lane is land on a planet, so a lit canopy is a backdrop like the sky is —
+   * `tests/places.test.ts` measures every gameplay ink against every colour stated here. That is why a
+   * jungle in this game is a deep one: green is the channel luminance weighs most.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's TERMS**: a planet that states none is drawn exactly as it was.
+   */
+  land?: Record<PaletteName, LandLight>;
   /**
    * What the place's enemies and its boss are painted in — 0228.
    *
@@ -988,14 +1014,25 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       void, which is what was actually reported.
     */
     space: { vivid: '#16305a', 'high-contrast': '#050b16' },
-    // Cloud in a sky rather than gas in a void: warmer and lighter than the blue it hangs in.
-    nebula: { vivid: '#5a6478', 'high-contrast': '#2a2e34' },
+    // Cloud in a sky rather than gas in a void, and the haze at the horizon (0347): a soft blue lighter
+    // than the sky, and under `glow` in luminance so the loudest colour the floor counts is unchanged.
+    nebula: { vivid: '#4f6f98', 'high-contrast': '#2a2e34' },
     // ⚠️ THE ONE THE REPORT NAMED: *"saurian is green"*. Olive dust under a blue sky, with a warm
     // sunlit edge on every crest and rock — so the place is a blue sky, an olive haze and a gold rim
     // rather than one green.
     glow: { vivid: '#a87c2e', 'high-contrast': '#4a3a18' },
     // Rock in shadow, well under its own sky — a horizon is a silhouette or it is not a horizon.
     ground: { vivid: '#0a1220', 'high-contrast': '#000208' },
+    /*
+      ⚠️ **A DEEP JUNGLE, AND THE FLOOR IS WHY IT IS DEEP — 0347.** `void` is the worst ink on this
+      land and it needs the backdrop under luminance 0.083; the sunlit crowns sit at 0.065 (1.15× the
+      floor), the canopy's body at 0.033 and the far range at 0.040. Saturation is what makes them
+      green rather than grey, and it is free.
+    */
+    land: {
+      vivid: { far: '#1e3a56', canopy: '#163a24', lit: '#26521e' },
+      'high-contrast': { far: '#0c1a26', canopy: '#081a0e', lit: '#10280c' },
+    },
     // Reptiles: olive hide, bone along the edges, an amber eye, and scales for the motif.
     // Olive hulls on the one BLUE sky in the game, which is where a warm shot has the most room.
     foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4d2e' },

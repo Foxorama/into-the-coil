@@ -35,7 +35,7 @@ import { bakeSize, nebulaField, skyField, type SkyKind } from '../src/render/bak
 import { THEME_KINDS } from '../src/content/themes.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { sprite } from './bodies.ts';
-import { CAPACITY, SKY, SKY_ON_A_PLANET } from '../src/app/mount.ts';
+import { CAPACITY, SKY, SKY_ON_A_PLANET, SKY_UNDER_A_RANGE } from '../src/app/mount.ts';
 
 /**
  * Every sky a place can have — 0221.
@@ -46,7 +46,8 @@ import { CAPACITY, SKY, SKY_ON_A_PLANET } from '../src/app/mount.ts';
  * *nothing crosses in front of the game but the streaks*, 0065's fixed blit count, and the tiling
  * coverage; the ones about the two star FIELDS stay on `SKY`, because a planet does not have them.
  */
-const SKIES = [SKY, SKY_ON_A_PLANET];
+// And a third since 0347: a planet with a far range behind its ground.
+const SKIES = [SKY, SKY_ON_A_PLANET, SKY_UNDER_A_RANGE];
 import { BURST } from '../src/content/debris.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';

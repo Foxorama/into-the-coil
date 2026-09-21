@@ -42,6 +42,7 @@ import type { BossKind } from './bosses.ts';
 import type { PickupKind } from './pickups.ts';
 import type { ThemeKind } from './themes.ts';
 import type { LevelSections } from './music.ts';
+import type { Eruption } from './volcano.ts';
 
 /**
  * Every level, **in the order a run plays them**.
@@ -307,6 +308,12 @@ export interface LandmarkEntry {
    * the painter already takes is free, and a volcano or a heart that says nothing is unchanged.
    */
   scale?: number;
+  /**
+   * What this landmark throws, and absent for one that throws nothing —
+   * `docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`. Only a place with a vent in
+   * `VENT_OF` may state it; `tests/places.test.ts` holds that.
+   */
+  erupts?: Eruption;
 }
 
 export interface LevelRow {
@@ -1421,20 +1428,24 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       way the Pillars are tied to Ember Nebula's organ. Each arrives a little before its boundary,
       because `at` is when a landmark's leading edge ENTERS and it takes most of a minute to cross.
 
-      ⚠️ **`lane: 68` PUTS THE FEET ON THE NEAR RIDGE.** The sprite is 75 units and centred, so it spans
-      lane 30 to 105; the cone's base sits at 0.78 of it — lane 89 — which is between Saurian Belt's
-      middle and near ridgelines (81 and 93). A volcano floating above its own horizon is the defect
-      0203 found with the Pillars' feet, and the number comes off the shot rig rather than a calculation.
+      ⚠️ **THE SMOKE LEAVES THE TOP OF THE SCREEN, AND THAT IS WHAT `scale` AND `lane` ARE FOR — 0347.**
+      Played: *"the volcano is one pulsing graphic that doesn't touch the sky."* The plume is drawn to
+      the top of the bitmap, so the bitmap's top edge has to be above the lane or the column ends on a
+      ruled line in mid-air, which is what shipped. At `scale: 1.4` the sprite is 105 units tall;
+      centred at lane 46 it runs from −6.5 to 98.5, the crater lands between lane 23 and 31, and the
+      foot is behind the far range. `tests/places.test.ts` holds both ends against the drawings.
 
-      ⚠️ **`beat: 190` IS A SLOW SWELL, NOT A HEARTBEAT.** About five seconds of camera travel — the
-      same machinery The Black Heart uses (0220), at a period long enough that it reads as a mountain
-      breathing rather than as one pulsing. `depth: 0.07` keeps it under the slowest field, which is
-      0203's *a landmark is the slowest thing on screen*.
+      ⚠️ **`beat: 0`, BECAUSE A MOUNTAIN DOES NOT BREATHE.** It was a slow scale-swell — the heart's
+      machinery at a long period — and it was the *"one pulsing graphic"* of the report. What moves now
+      is what a volcano does: rock.
+
+      ⚠️ **AND EACH ERUPTS HARDER THAN THE ONE BEFORE, WITH THE MUSIC.** `push` throws a few, `surge`
+      more and higher, and the one that arrives with `approach` is going off.
     */
     landmarks: [
-      { at: 1249, lane: 56, depth: 0.07, beat: 190, variant: 0 },
-      { at: 2534, lane: 74, depth: 0.075, beat: 190, variant: 1 },
-      { at: 3627, lane: 50, depth: 0.065, beat: 190, variant: 2 },
+      { at: 1249, lane: 46, depth: 0.07, beat: 0, variant: 0, scale: 1.4, erupts: { count: 5, period: 170, rise: 18, reach: 20 } },
+      { at: 2534, lane: 48, depth: 0.075, beat: 0, variant: 1, scale: 1.4, erupts: { count: 8, period: 150, rise: 24, reach: 26 } },
+      { at: 3627, lane: 45, depth: 0.065, beat: 0, variant: 2, scale: 1.45, erupts: { count: 11, period: 135, rise: 30, reach: 32 } },
     ],
     theme: 'saurian',
   },
