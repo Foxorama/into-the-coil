@@ -25,7 +25,7 @@ import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
-import { EMBER_HEAD } from '../content/sprites.ts';
+import { EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import type { WeaponKind } from '../content/weapons.ts';
@@ -489,6 +489,20 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // The room's wall is the place, on the seat's own terms — 0335. `sky` is the ink nothing the
   // player must find is drawn in, and a wall is the thing they are found against.
   roomWall: 'sky',
+  // The wall's caps are the wall — 0350.
+  wallRise0: 'sky',
+  wallRise1: 'sky',
+  wallRise2: 'sky',
+  wallRise3: 'sky',
+  wallRise4: 'sky',
+  wallRise5: 'sky',
+  wallRise6: 'sky',
+  wallRise7: 'sky',
+  wallRise8: 'sky',
+  wallRise9: 'sky',
+  wallRise10: 'sky',
+  wallRise11: 'sky',
+  wallRise12: 'sky',
   boss12: 'enemy',
   boss13: 'enemy',
   boss14: 'enemy',
@@ -2440,6 +2454,62 @@ function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: n
     }
   }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * A wall's cap where its face rises `rise` lane units across one twelve-unit tile — 0350.
+ *
+ * The stone below the face (larger `across`), which is the far wall's side; the near wall draws the
+ * same cap turned half a circle, which keeps the slope and puts the stone on the other side of it.
+ * Courses run parallel to the face — a sloped wall is laid along its slope — with mortar between them
+ * and the coping lit along the face itself, as `roomWall`'s is.
+ *
+ * ⚠️ **THE FACE PASSES THROUGH THE TILE'S CENTRE**, so the painter places a cap at the midpoint of the
+ * face across its tile and the two ends land on the knots either side. Every rise the tiers allow is
+ * inside the tile: six units over twelve, against a half-tile of six.
+ *
+ * @param edge the tile's half-width in frame units — the tile runs from −edge to +edge.
+ */
+function paintWallCap(ctx: Pen, f: Frame, stone: string, edge: number, rise: number): void {
+  const lift = (rise / 12) * edge;
+  // The face at `x`, in frame units: through the centre, rising `rise` units across the tile.
+  const faceY = (x: number): number => (x / edge) * lift;
+  const under = (offset: number, depth: number, colour: string, alpha = 1): void =>
+    poly(
+      ctx,
+      f,
+      colour,
+      [
+        [-edge, faceY(-edge) + offset],
+        [edge, faceY(edge) + offset],
+        [edge, Math.min(edge, faceY(edge) + offset + depth)],
+        [-edge, Math.min(edge, faceY(-edge) + offset + depth)],
+      ],
+      alpha,
+    );
+  const mortar = shade(stone, -0.55);
+  // The stone, from the face to the bottom of the tile.
+  under(0, edge * 2, stone);
+  // Courses parallel to the face, each lit along its top and shaded along its bottom.
+  const course = (edge * 2) / 3;
+  for (let c = 0; c < 3; c++) {
+    const top = c * course;
+    under(top + 0.06, 0.1, shade(stone, 0.2), 0.8);
+    under(top + course - 0.14, 0.14, shade(stone, -0.28), 0.7);
+    if (c > 0) under(top, 0.06, mortar);
+    // Head joints, staggered course by course, standing square to the lane.
+    for (const x of c % 2 === 0 ? [-edge / 2, edge / 2] : [0]) {
+      const y0 = faceY(x) + top;
+      poly(ctx, f, mortar, [
+        [x - 0.035, y0],
+        [x + 0.035, y0],
+        [x + 0.035, Math.min(edge, y0 + course)],
+        [x - 0.035, Math.min(edge, y0 + course)],
+      ]);
+    }
+  }
+  // The coping: the face itself, lit.
+  under(0, 0.07, shade(stone, 0.5));
 }
 
 /**
@@ -7935,6 +8005,21 @@ export function drawKind(
       band(edge - 0.07, edge, shade(stone, 0.5));
       return;
     }
+    case 'wallRise0':
+    case 'wallRise1':
+    case 'wallRise2':
+    case 'wallRise3':
+    case 'wallRise4':
+    case 'wallRise5':
+    case 'wallRise6':
+    case 'wallRise7':
+    case 'wallRise8':
+    case 'wallRise9':
+    case 'wallRise10':
+    case 'wallRise11':
+    case 'wallRise12':
+      paintWallCap(ctx, f, palette.sky, half / r, Number(kind.slice('wallRise'.length)) - WALL_RISE_MAX);
+      return;
     case 'boss11Seat':
       /*
         THE HOUSING THE GYRE IS SET INTO — 0332. A ring with four lugs and a bore through it. It has

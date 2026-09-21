@@ -823,8 +823,9 @@ first moves — **owed a play**, above all on whether a thrown rock can be taken
 landed — [0348](decisions/0348-the-labyrinth-is-walled.md), The Labyrinth walled the whole way —
 **owed a play** too. 4b is planned and answered —
 [`the-labyrinth-turns-and-forks`](../reports/the-labyrinth-turns-and-forks-2026-09-21.md) — and its
-first step is landed: [0349](decisions/0349-the-stone-bites.md), the stone is solid. Next the corridor
-turns, per difficulty, then it forks. **How the places
+first step is landed: [0349](decisions/0349-the-stone-bites.md), the stone is solid. So is its second:
+[0350](decisions/0350-the-corridor-turns.md), the corridor turns, per difficulty — **owed a play on
+each tier**, since the player's three numbers are the whole of the shape. Next it forks. **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.

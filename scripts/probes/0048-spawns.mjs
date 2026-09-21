@@ -92,8 +92,8 @@ export const PROBES = [
         approaching just turns. Cutting the dispatch off at the `if` removes both, which is this
         probe's sentence: nothing turns at the lane edge and the pickup wanders out.
       */
-      find: '    const arrived = item.spin !== 0;\n    if (item.across - item.radius <= 0) {',
-      replace: '    const arrived = item.spin !== 0;\n    void arrived;\n    if (false) {',
+      find: '    const stone = stoneAt(w.corridor, item.along, item.across + item.velAcross, item.radius);\n    if (item.across - item.radius <= 0 || stone < 0) {',
+      replace: '    const stone = 0;\n    void arrived;\n    void stone;\n    if (false) {',
     },
   },
 ];

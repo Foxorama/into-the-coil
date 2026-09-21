@@ -109,7 +109,8 @@ curve stair-step at 12 units. The first PR is a spike on this before anything el
    corridor narrower than the Labyrinth's, because the Labyrinth's faces stand on the ship's clamp.
 2. **The corridor turns** — with the curved-wall art as its first step, photographed at 1080p and
    counted, since a spike cannot be played without a corridor that turns. Control points, waves read
-   against it, the level re-authored, per tier.
+   against it, the level re-authored, per tier —
+   [0350](../docs/decisions/0350-the-corridor-turns.md).
 3. **The corridor forks.** Islands, branches, waves into one or both.
 
 *Reordered 2026-09-21, building overnight:* the rules went first because they are playable on their

@@ -31,6 +31,7 @@ import { WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 
 const stage = document.querySelector('#stage');
 const levelPick = document.querySelector<HTMLSelectElement>('#level');
@@ -109,7 +110,12 @@ along.addEventListener('input', () => {
   message, which is the failure mode `docs/decisions/0199-a-verdict-is-an-exit-code.md` is about
   wearing a different hat.
 */
-lifecycle.begin('savior');
+/*
+  `?difficulty=burn` begins at that tier instead — 0350, whose corridor is a different shape on each
+  one, so a bench that could only stand on Savior could photograph a third of it.
+*/
+const askedTier = new URLSearchParams(location.search).get('difficulty');
+lifecycle.begin((DIFFICULTY_KINDS as readonly string[]).includes(askedTier ?? '') ? (askedTier as DifficultyKind) : 'savior');
 dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 
 /*

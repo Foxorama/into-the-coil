@@ -510,6 +510,6 @@ export function playableWorld(
   */
   layRoom(world);
   // And the corridor, on the same terms: the game's own function, from the level's origin — 0348.
-  world.corridor = corridorFor(level, world.levelOrigin);
+  world.corridor = corridorFor(level, world.levelOrigin, world.difficulty);
   return { world, stick, deaths, wrecks, cleared, taken, faces, cues };
 }
