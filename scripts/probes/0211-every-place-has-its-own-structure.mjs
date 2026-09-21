@@ -63,10 +63,18 @@ export const PROBES = [
         So the theft runs the other way: The Labyrinth is handed Ember Nebula's three lanes, by that
         place's own stream and numbers, and the two rows then emit byte-identical marks.
       */
+      /*
+        ⚠️ AND RE-WRITTEN BY 0345, WHICH FOUND IT RED FOR THE WRONG REASON. That decision deleted
+        `crossing`, and this replacement CALLED it — so the break became a `ReferenceError`, the named
+        test failed by crashing, and the harness reported `red` over a full proof with exit 0. It was
+        read in the log, not caught: a crash inside the guard's own test has the guard's title on it.
+        The theft is the same one — The Labyrinth handed Ember Nebula's marks, byte for byte — taken
+        from that place's own row, which cannot go stale the way a copy of its arguments did.
+      */
       find: "    const rng = makeRng('sky').stream('labyrinth/paths');\n    const out: StructureMark[] = [];",
       replace:
         "    const rng = makeRng('sky').stream('labyrinth/paths');\n" +
-        "    const out: StructureMark[] = crossing(size, { stream: 'nebula/lanes', count: 3, wander: 0.05, from: 0.05, to: 0.11 });",
+        '    const out: StructureMark[] = [...STRUCTURE_OF.nebula(size)];',
     },
   },
 ];

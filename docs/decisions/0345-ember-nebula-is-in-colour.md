@@ -104,6 +104,14 @@ for ever, so it now breaks a lane's period instead; 0196's third-stop break had 
 *above* the one it breaks and has been stranded by it twice, so it carries only the stop now; 0343's
 budget break anchored on `lean: 5`, which a second place now also says.
 
+⚠️ **AND A FOURTH WAS RED FOR THE WRONG REASON, WITH THE PROOF AT EXIT 0.** 0211's *two places given
+the same structure* had a replacement that **called** `crossing`. With the function gone the break was
+a `ReferenceError`, the guard's test failed by crashing, and the harness counted a failure carrying the
+guard's title as the guard firing. **Nothing caught it; it was read in the log.** It takes Ember
+Nebula's marks from that place's own row now and reddens on the assertion. Six other probes on `main`
+are red the same way — 0053 twice, 0072, 0111, 0135, 0230 — which is a defect in what the harness
+accepts as a verdict, not in this decision, and is handed on as its own task rather than fixed here.
+
 ## What is owed
 
 **An eye, in motion.** Whether five hues drifting at the weather's rate read as a nebula or as a
