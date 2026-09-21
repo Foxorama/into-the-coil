@@ -130,6 +130,30 @@ describe('0349 — the stone bites', () => {
     expect(logged, 'a wall kill reached the kill log, so it scores and drops like a shot one').toBe(0);
   });
 
+  it('A DRIFTER TURNS AT THE WALL RATHER THAN DYING ON IT — 0348, the player’s answer', () => {
+    /*
+      *Turn at the wall* was the answer, and until 0349 the only way to see a drifter that did not was
+      0348's guard catching it drawn over stone. **The stone destroys it now**, so that guard went
+      green over both of its breaks — `npm run prove` said STILL GREEN — and the rule is held here as
+      what it is: a drifter heading for a wall is still there afterwards, and never inside it.
+    */
+    const { world, frame } = walled();
+    const drifter = world.enemies.spawn()!;
+    reset(drifter, world.ship.along + 60, 24, { ...ENEMIES.drifter, health: 999 }, ENEMY_KINDS.indexOf('drifter'));
+    // Heading for the near wall at its own roaming speed.
+    drifter.velAcross = -0.3;
+    drifter.fireIn = 1e9;
+    let inStone = 0;
+    for (let step = 0; step < 60; step++) {
+      frame.step();
+      if (world.enemies.size === 0) break;
+      const e = world.enemies.at(0);
+      if (stoneAt(world.corridor, e.along, e.across, e.radius) !== 0) inStone++;
+    }
+    expect(world.enemies.size, 'a drifter flew into the wall and the stone destroyed it').toBe(1);
+    expect(inStone, 'a drifter was in stone').toBe(0);
+  });
+
   it('a body that steers slides along the face rather than into it', () => {
     const { world, frame, stick } = walled();
     // The subject is the hunter: a ship that died against the wall would respawn and take it elsewhere.

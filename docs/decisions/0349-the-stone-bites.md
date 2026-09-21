@@ -77,4 +77,11 @@ at walls, so the first *destroyed* test watched one bounce. Each guard now says 
 **Re-anchored:** 0053 (two — the blast's pairing takes the corridor, and a line-of-sight test stands
 between its overlap and its damage) and 0233 (the chain's search takes the corridor).
 
+⚠️ **AND TWO OF 0348'S PROBES WENT STILL GREEN, WHICH ONLY THE FULL PROOF COULD SAY.** Both break the
+drifter's turn at the wall, and 0348's guard caught them by seeing a drifter drawn over stone. With
+the stone solid, a drifter that fails to turn is destroyed on it instead — nothing is drawn over stone,
+so the guard stays green over the break. The player's rule is *turn at the wall*, so it is guarded as
+that now: `A DRIFTER TURNS AT THE WALL RATHER THAN DYING ON IT`, in `tests/stone.test.ts`, and both
+probes point at it and go red.
+
 No rollback note: no storage key, save schema, cache prefix or origin is touched.
