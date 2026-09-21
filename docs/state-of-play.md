@@ -825,7 +825,11 @@ landed — [0348](decisions/0348-the-labyrinth-is-walled.md), The Labyrinth wall
 [`the-labyrinth-turns-and-forks`](../reports/the-labyrinth-turns-and-forks-2026-09-21.md) — and its
 first step is landed: [0349](decisions/0349-the-stone-bites.md), the stone is solid. So is its second:
 [0350](decisions/0350-the-corridor-turns.md), the corridor turns, per difficulty — **owed a play on
-each tier**, since the player's three numbers are the whole of the shape. Next it forks. **How the places
+each tier**, since the player's three numbers are the whole of the shape. **Forks wait on the player**:
+what a tier's *narrowest* means at a fork is a question in
+[`the-night-of-2026-09-21`](../reports/the-night-of-2026-09-21.md), with a recommendation. Item 5 is
+landed meanwhile — [0351](decisions/0351-rime-shelf-is-ice.md), Rime Shelf — **owed a play, and the
+player's word on white**, which the floor holds far below it. Next, item 6, The Toxic Mire. **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.
