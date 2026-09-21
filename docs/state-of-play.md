@@ -829,7 +829,9 @@ each tier**, since the player's three numbers are the whole of the shape. **Fork
 what a tier's *narrowest* means at a fork is a question in
 [`the-night-of-2026-09-21`](../reports/the-night-of-2026-09-21.md), with a recommendation. Item 5 is
 landed meanwhile — [0351](decisions/0351-rime-shelf-is-ice.md), Rime Shelf — **owed a play, and the
-player's word on white**, which the floor holds far below it. Next, item 6, The Toxic Mire. **How the places
+player's word on white**, which the floor holds far below it. Item 6 is landed in part —
+[0352](decisions/0352-the-mire-is-a-swamp.md), The Toxic Mire's ceiling, swamp and pools, **owed a
+play** — and its bubbles are next: mechanism 2 lifted off the landmark, then the pools spit. **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.
