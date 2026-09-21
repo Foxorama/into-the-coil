@@ -19,8 +19,9 @@ export const PROBES = [
     guard: 'hurts the player, and costs exactly what any other hit costs',
     edit: {
       path: 'src/app/frame.ts',
+      // Re-anchored by 0349, which gave the pairing the corridor: a blast does not reach through stone.
       find:
-        '    collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);',
+        '    collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false, w.corridor);',
       replace: '    void w.blasts;',
     },
   },
@@ -46,8 +47,11 @@ export const PROBES = [
     guard: 'takes six pulses off everything inside it',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '      if (!overlaps(blast, target, 1)) continue;\n      target.health -= blast.damage * damageScale;',
-      replace: '      if (!overlaps(blast, target, 1)) continue;\n      target.health -= blast.damage * damageScale;\n      blast.damage = 0;',
+      // Re-anchored by 0349, which put a line-of-sight test between the overlap and the damage.
+      find: '      if (!clearLine(corridor, blast.along, blast.across, target.along, target.across)) continue;\n      target.health -= blast.damage * damageScale;',
+      replace:
+        '      if (!clearLine(corridor, blast.along, blast.across, target.along, target.across)) continue;\n' +
+        '      target.health -= blast.damage * damageScale;\n      blast.damage = 0;',
     },
   },
   {
