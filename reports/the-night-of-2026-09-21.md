@@ -68,5 +68,5 @@ place's picture), or the floor. 0351 has the numbers.
 
 ## The machine
 
-Worktrees left for the morning: `C:\into-the-coil-turn` (0350, merged) and
-`C:\into-the-coil-rime` (0351). The earlier ones kept yesterday are untouched.
+Worktrees left for the morning: `C:\into-the-coil-turn` (0350, merged), `C:\into-the-coil-rime`
+(0351, merged) and `C:\into-the-coil-mire` (0352). The earlier ones kept yesterday are untouched.
