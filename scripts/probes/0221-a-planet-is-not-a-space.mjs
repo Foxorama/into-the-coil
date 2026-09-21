@@ -137,23 +137,12 @@ export const PROBES = [
       replace: '  rime: null,',
     },
   },
-  {
-    decision: '0221',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ THE CORRIDOR OPENED UNTIL IT IS A SKY WITH A FLOOR. *"A tight narrow corridor above the toxic
-      pools below and beneath the overhanging canopy above."* Raising the canopy is what anybody does
-      when they think the backdrop is crowding the game — and the lane is a fixed 100 units that the
-      ship uses all of, so it is a real tension rather than a silly edit.
-    */
-    broke: 'the canopy lifted out of the way, so the mire stops being an enclosure',
-    guard: 'The Toxic Mire’s corridor is tight',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: "  const canopy = skyline(size, 'mire/canopy', 0.4, 0.075, 24, 'down');",
-      replace: "  const canopy = skyline(size, 'mire/canopy', 0.27, 0.075, 24, 'down');",
-    },
-  },
+  /*
+    ⚠️ **THE PROBE THAT LIFTED THE CANOPY IS GONE — 0352.** It broke *the corridor is tight*, and the
+    player then asked for exactly that break: *"overgrowth ceiling needs to be raised and to be an
+    actual ceiling."* The guard now holds the roof near the top, and its probe — the canopy put back at
+    the line that was reported — is 0352's.
+  */
   {
     decision: '0221',
     suite: 'tests/budget.test.ts',

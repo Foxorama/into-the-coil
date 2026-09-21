@@ -34,7 +34,8 @@ export const PROBES = [
       path: 'src/render/bake.ts',
       // ⚠️ RE-ANCHORED BY 0221: the mire's fronds hang from a canopy now and were retuned with it.
       // The break is the same one — a local mark wandering wider than the wrap that draws it.
-      find: '        sway += rng.range(-0.04, 0.04) * size;',
+      // Re-anchored again by 0352, which hung them from a higher roof and shortened their sway.
+      find: '        sway += rng.range(-0.012, 0.012) * size;',
       replace: '        sway += rng.range(-0.5, 0.5) * size;',
     },
   },

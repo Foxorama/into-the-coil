@@ -1,4 +1,4 @@
-# The night of 2026-09-21 — the corridor turns, Rime Shelf is ice, and a question about forks
+# The night of 2026-09-21 — the corridor turns, Rime Shelf is ice, the Mire is a swamp, and a question about forks
 
 **For the morning.** Asked at the end of the day: *"go full auto and get as much done overnight as you
 can"*, on 4b's order — the rules, then the corridor turns per tier, then forks. What landed, what is
@@ -10,7 +10,8 @@ owed, and the one question that stopped the third step.
 |---|---|---|---|
 | [0349](../docs/decisions/0349-the-stone-bites.md) | the stone is solid: a wall hit is one hit and pushes out; shots and blasts stop at stone; bodies burst on it and score nothing | #393, merged | a play |
 | [0350](../docs/decisions/0350-the-corridor-turns.md) | the Labyrinth's corridor turns, per tier — 56 / 44 / 34 at its narrowest | #394, merged — on staging | **a play on each tier** |
-| [0351](../docs/decisions/0351-rime-shelf-is-ice.md) | Rime Shelf is ice: faceted bergs, a serac cliff in aqua and slate, snow where it rained | the PR carrying this report — its preview is on the PR | **a play, and a decision about white** |
+| [0351](../docs/decisions/0351-rime-shelf-is-ice.md) | Rime Shelf is ice: faceted bergs, a serac cliff in aqua and slate, snow where it rained | #395, merged — on staging | **a play, and a decision about white** |
+| [0352](../docs/decisions/0352-the-mire-is-a-swamp.md) | The Toxic Mire is a swamp: the canopy raised to a ceiling, drowned trees in murk, acid pools lit from within — **not the bubbles yet** | the PR carrying this line — its preview is on the PR | **a play**, above all the pools and the shoreline |
 
 ## The question that stops forks
 
@@ -67,5 +68,5 @@ place's picture), or the floor. 0351 has the numbers.
 
 ## The machine
 
-Worktrees left for the morning: `C:\into-the-coil-turn` (0350, merged) and
-`C:\into-the-coil-rime` (0351). The earlier ones kept yesterday are untouched.
+Worktrees left for the morning: `C:\into-the-coil-turn` (0350, merged), `C:\into-the-coil-rime`
+(0351, merged) and `C:\into-the-coil-mire` (0352). The earlier ones kept yesterday are untouched.
