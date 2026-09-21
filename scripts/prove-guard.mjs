@@ -43,13 +43,14 @@
 //   node scripts/prove-guard.mjs            every probe
 //   node scripts/prove-guard.mjs 0015       one decision's probes
 //   PROVE_WORKERS=1 node scripts/prove-guard.mjs    one at a time, for a confusing failure
+//   PROVE_WARM=0 node scripts/prove-guard.mjs       a new vitest per probe, as it was before 0343
 //
 // It exits non-zero if any probe fails to apply, fails to go red, reddens the WRONG test, or leaves
 // its tree changed — and it prints the markdown table a decision's "Confirmed, not assumed" wants.
 
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { spawn, spawnSync } from 'node:child_process';
+import { fork, spawn, spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -364,6 +365,11 @@ const NOT_COPIED = ['node_modules', 'dist'];
 function makeTree(work) {
   const skip = new Set(NOT_COPIED.map((d) => resolve(root, d)));
   cpSync(root, work, { recursive: true, filter: (src) => !skip.has(resolve(src)) });
+  linkModules(work);
+}
+
+/** This repository's `node_modules`, linked into `work`. Exported for `tests/prove-worker.test.ts`'s fixture. */
+export function linkModules(work) {
   // A junction on Windows and a symlink elsewhere. Windows is where this repo is developed and
   // Linux is where CI runs it, so both are real paths rather than one being defensive tidiness.
   const link =
@@ -519,6 +525,107 @@ function runSuite(suites, cwd, report, only) {
   });
 }
 
+// ── The warm instance ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Whether a warm run's verdict is the probe's verdict. Only `red` is.
+ *
+ * ⚠️ **A WARM RUN CAN PASS A PROBE AND CAN NEVER FAIL ONE** —
+ * `docs/decisions/0343-a-probe-runs-warm.md`. The instance was configured once, built `dist/` once
+ * and cannot rebuild it, so there are breaks it is blind to: an edit to `vite.config.ts`, a suite
+ * that reads the built page. Every one of those reads as *the guard did not fire*. So anything that
+ * is not `red` is asked again of a new vitest, exactly as every probe was before, and only that
+ * answer can fail. What the warm path can get wrong therefore costs time and never a verdict.
+ *
+ * ⚠️ **THE OTHER DIRECTION — red for a stale reason — IS NOT THIS FUNCTION'S**, and is held where it
+ * can happen: `scripts/prove-worker.mjs` reads the module graph back after every flush.
+ *
+ * @param {ReturnType<typeof verdictOf>} verdict
+ */
+export function warmSettles(verdict) {
+  return verdict === 'red';
+}
+
+/**
+ * A live vitest over one tree. `run` flushes `touched` and runs the named guard; `flush` is for the
+ * restore, which has to be seen before the next probe and has no run of its own to ride on.
+ *
+ * @param {string} tree
+ * @returns {Promise<{run: (suite: string, pattern: string, touched: string[]) => Promise<{failed: Failure[], ran: number}>, kill: () => void, flush: (touched: string[]) => Promise<void>, close: () => Promise<void>}>}
+ */
+export function startWarm(tree) {
+  return new Promise((ready, refuse) => {
+    // stdout is dropped and stderr is kept short: a test that logs must not fill a pipe nobody drains.
+    const child = fork(fileURLToPath(new URL('prove-worker.mjs', import.meta.url)), [], {
+      cwd: tree,
+      stdio: ['ignore', 'ignore', 'pipe', 'ipc'],
+    });
+    let err = '';
+    child.stderr.on('data', (d) => (err = (err + d).slice(-4000)));
+    const waiting = new Map();
+    let next = 0;
+    const gone = (why) => {
+      const e = new Error(`the warm vitest in ${tree} ${why}.\n${err}`);
+      for (const { fail } of waiting.values()) fail(e);
+      waiting.clear();
+      refuse(e);
+    };
+    child.on('error', (e) => gone(`could not be started: ${e.message}`));
+    child.on('exit', (code) => gone(`exited with ${code}`));
+    const ask = (msg) =>
+      new Promise((done, fail) => {
+        const id = next++;
+        waiting.set(id, { done, fail });
+        child.send({ id, ...msg });
+      });
+    child.on('message', (msg) => {
+      if (msg.ready) {
+        return ready({
+          run: (suite, pattern, touched) => ask({ op: 'run', suite, pattern, touched }),
+          kill: () => {
+            child.removeAllListeners('exit');
+            child.kill();
+          },
+          flush: async (touched) => void (await ask({ op: 'flush', touched })),
+          close: () =>
+            new Promise((closed) => {
+              child.removeAllListeners('exit');
+              child.once('exit', closed);
+              child.send({ op: 'close' });
+            }),
+        });
+      }
+      const pending = waiting.get(msg.id);
+      waiting.delete(msg.id);
+      if (msg.ok) pending?.done({ failed: msg.failed, ran: msg.ran });
+      else pending?.fail(new Error(msg.error));
+    });
+  });
+}
+
+/**
+ * `dist/` as the restored tree builds it.
+ *
+ * ⚠️ **A COLD RUN BUILDS `dist/` WITH THE BREAK STILL IN** — `tests/globalSetup.ts` runs before the
+ * suite, and the undo runs after it. That was harmless while every run rebuilt it first. A warm run
+ * builds nothing, so the next one in this tree would read a page with the last probe's break in it,
+ * and `manifest` cannot see that: `dist` is in `NOT_COPIED`.
+ */
+function rebuild(tree) {
+  return new Promise((done, fail) => {
+    const child = spawn(process.execPath, [resolve(tree, 'node_modules/vite/bin/vite.js'), 'build'], {
+      cwd: tree,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      env: { ...process.env, NODE_ENV: 'production' },
+    });
+    let out = '';
+    child.stdout.on('data', (d) => (out += d));
+    child.stderr.on('data', (d) => (out += d));
+    child.on('error', fail);
+    child.on('close', (code) => (code === 0 ? done() : fail(new Error(`the restored tree does not build:\n${out}`))));
+  });
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -600,25 +707,52 @@ async function main(filter) {
     const trees = fingerprintTrees(paths);
     console.log(`done (${trees[0]?.pristine.size ?? 0} files each)`);
 
+    // 0343: a warm run builds nothing, so every tree starts with the page the pristine tree builds.
+    const warmly = process.env.PROVE_WARM !== '0';
+    if (warmly) await Promise.all(paths.map(rebuild));
+
     const rows = [];
     const failures = [];
     const queue = [...probes].sort(longestFirst);
     let taken = 0;
     let finished = 0;
+    let settledWarm = 0;
 
     await Promise.all(
       trees.map(async ({ path: tree }, w) => {
         const report = join(base, `w${w}.json`);
+        let warm = null;
         while (true) {
           const probe = queue[taken++];
-          if (probe === undefined) return;
+          if (probe === undefined) {
+            await warm?.close();
+            return;
+          }
           const label = `${probe.decision}  ${probe.broke}`;
+          const touched = [probe.edit?.path ?? probe.plant.path];
           let undo = null;
           let verdict = 'red';
           let said = '';
+          let cold = false;
           try {
             undo = apply(probe, tree);
-            const named = await runSuite([probe.suite], tree, report, asPattern(probe.guard));
+            let named = null;
+            // A browser suite drives the built page, and a warm run cannot build one.
+            if (warmly && !probe.suite.includes('.browser.')) {
+              try {
+                warm ??= await startWarm(tree);
+                const first = await warm.run(probe.suite, asPattern(probe.guard), touched);
+                if (warmSettles(verdictOf(first, probe.guard))) named = first;
+              } catch {
+                // An instance that threw is not one to ask again. The new vitest below is the answer.
+                warm?.kill();
+                warm = null;
+              }
+            }
+            if (named === null) {
+              cold = true;
+              named = await runSuite([probe.suite], tree, report, asPattern(probe.guard));
+            } else settledWarm++;
             verdict = verdictOf(named, probe.guard);
             const mine = named.failed.filter((f) => f.title.includes(probe.guard));
             if (verdict === 'red') {
@@ -670,13 +804,24 @@ async function main(filter) {
           } finally {
             try {
               undo?.();
+              if (warmly && cold) await rebuild(tree);
             } catch (e) {
               failures.push(`${label}\n    RESTORE FAILED — ${String(e.message ?? e)}`);
               verdict = 'RESTORE FAILED';
             }
+            /*
+              ⚠️ **THE RESTORE IS FLUSHED TOO, AND IT IS THE HALF THAT MATTERS** — 0343. An instance that
+              cannot show it let go of this probe's break is not asked about the next one.
+            */
+            try {
+              await warm?.flush(touched);
+            } catch {
+              warm?.kill();
+              warm = null;
+            }
           }
           const n = String(++finished).padStart(String(probes.length).length);
-          console.log(`[${n}/${probes.length}] ${label} ... ${verdict}${said}`);
+          console.log(`[${n}/${probes.length}] ${label} ... ${verdict}${cold && warmly ? ' [new vitest]' : ''}${said}`);
         }
       }),
     );
@@ -700,7 +845,9 @@ async function main(filter) {
       return 1;
     }
 
-    console.log(`\n${rows.length} guards seen failing, and every tree back to what it was copied as.\n`);
+    console.log(`\n${rows.length} guards seen failing, and every tree back to what it was copied as.`);
+    if (warmly) console.log(`${settledWarm} settled in a live vitest; ${rows.length - settledWarm} were asked of a new one.`);
+    console.log('');
     console.log('| broken on purpose | went red |');
     console.log('|---|---|');
     for (const row of rows) console.log(row);

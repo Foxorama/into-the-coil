@@ -73,6 +73,10 @@ report `tail`'s status, which is zero for any input including none. Read the num
 `npm run prove` is slow — start it at commit time in the background. The failure it most often
 catches is a probe anchor stranded by an unrelated edit.
 
+**One proof at a time on a machine.** A second session's proof makes this one's baseline time out
+before a probe has run — [0343](../../../docs/decisions/0343-a-probe-runs-warm.md) has the
+measurement. `PROVE_WARM=0` is the harness as it was, for asking whether a verdict is the instance's.
+
 ## 5. Commit, then re-run the link guard
 
 ```bash
