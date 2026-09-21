@@ -214,6 +214,35 @@ export interface Room {
   open: number;
 }
 
+/**
+ * The corridor a level is flown down — `docs/decisions/0348-the-labyrinth-is-walled.md`. Masonry at
+ * both edges of the player's box from the level's start to where its room begins, broken by passages.
+ *
+ * ⚠️ **A CENTRELINE AND A WIDTH, SO A CORRIDOR THAT TURNS IS A CHANGE OF NUMBER.** Here the two are
+ * constants and the faces stand exactly where the ship's clamp already is (0074), so nothing new
+ * collides; 4b of the backdrop queue makes them functions of `along`.
+ */
+export interface Corridor {
+  /** The bitmap the walls are tiled from, and its tiling period in world units. */
+  sprite: number;
+  extent: number;
+  /** World along where the walls begin and end. */
+  from: number;
+  to: number;
+  /** The across position of the near wall's tile centres and the far wall's. */
+  near: number;
+  far: number;
+  /**
+   * Openings in the walls, three numbers each: world `from`, world `to`, and the side — −1 for the
+   * near wall, +1 for the far one. Written in place and never grown, so the frame allocates nothing:
+   * the authored openings first, then a ring of the ones a flanking wave opens as it arrives.
+   */
+  passages: Float64Array;
+  /** How many of `passages` are authored, and which runtime slot a flank writes next. */
+  fixed: number;
+  next: number;
+}
+
 export interface Bound {
   /** The baked dash, as an index into the atlas. */
   sprite: number;
@@ -236,6 +265,7 @@ export function paintScene(
   room: Room | null = null,
   warp = 0,
   time = 0,
+  corridor: Corridor | null = null,
 ): void {
   surface.clear();
   /*
@@ -260,6 +290,8 @@ export function paintScene(
     can kill the player, because this file's one absolute is that nothing is ever lost behind
     scenery.
   */
+  // The corridor that arrives at it, in the same stone and on the room's own terms — 0348.
+  paintCorridor(surface, view, corridor, cameraAlong);
   paintRoom(surface, view, room, cameraAlong);
   /*
     ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
@@ -551,16 +583,7 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
   */
   const near = PLAYER_MARGIN - half;
   const far = ACROSS_SPAN - PLAYER_MARGIN + half;
-  // Clipped to the view: from the trailing edge to whichever comes first, the far wall or the lead.
-  const start = Math.max(room.from, cameraAlong - room.extent);
-  const stop = Math.min(room.to, cameraAlong + view.alongSpan + room.extent);
-  const runs = Math.ceil((stop - start) / room.extent);
-  for (let i = 0; i < runs; i++) {
-    const along = start + i * room.extent + half;
-    const inView = along - cameraAlong;
-    surface.blit(room.sprite, screenX(view, inView, near), screenY(view, inView, near), view.scale);
-    surface.blit(room.sprite, screenX(view, inView, far), screenY(view, inView, far), view.scale);
-  }
+  paintWalls(surface, view, room.sprite, room.extent, room.from, room.to, near, far, cameraAlong, NO_PASSAGES);
   // And the far wall across the lane, its own face at the forward edge of the box, corner to corner.
   const endInView = room.to - cameraAlong + half;
   if (endInView > view.alongSpan + room.extent || endInView < -room.extent) return;
@@ -578,6 +601,75 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
     if (gap > 0 && Math.abs(across - middle) < gap) continue;
     surface.blit(room.sprite, screenX(view, endInView, across), screenY(view, endInView, across), view.scale);
   }
+}
+
+/** A corridor with no openings. Module-level, so a room allocates nothing to say so. */
+// @setup: one empty array for the lifetime of the module.
+const NO_PASSAGES = new Float64Array(0);
+
+/**
+ * Two runs of wall tiles along the lane, from `from` to `to`, on the WORLD's grid — 0348.
+ *
+ * ⚠️ **ON THE WORLD'S GRID, AND THE ROOM'S WERE NOT.** 0335 started the run at `camera − extent` once
+ * the camera was past the room's open side, which put every tile a fixed distance from the CAMERA: a
+ * band that did not scroll. At rest nobody could tell; a corridor arriving at the room in the same
+ * stone would have slid against it at the joint. The first tile is now the first whole period of the
+ * run that reaches the view, counted from `from`.
+ *
+ * ⚠️ **AN OPENING DROPS A TILE, AND ONLY ON ITS OWN SIDE** — so a passage costs fewer blits, never
+ * more, and the count on a frame is bounded by the view exactly as it was. Nothing allocates.
+ */
+function paintWalls(
+  surface: Surface,
+  view: View,
+  sprite: number,
+  extent: number,
+  from: number,
+  to: number,
+  near: number,
+  far: number,
+  cameraAlong: number,
+  passages: Float64Array,
+): void {
+  const skip = Math.max(0, Math.floor((cameraAlong - extent - from) / extent));
+  const stop = Math.min(to, cameraAlong + view.alongSpan + extent);
+  for (let start = from + skip * extent; start < stop; start += extent) {
+    const along = start + extent / 2;
+    const inView = along - cameraAlong;
+    if (!opened(passages, start, start + extent, -1)) {
+      surface.blit(sprite, screenX(view, inView, near), screenY(view, inView, near), view.scale);
+    }
+    if (!opened(passages, start, start + extent, 1)) {
+      surface.blit(sprite, screenX(view, inView, far), screenY(view, inView, far), view.scale);
+    }
+  }
+}
+
+/** Whether a wall tile spanning `a` to `b` on `side` falls in any opening. */
+function opened(passages: Float64Array, a: number, b: number, side: number): boolean {
+  for (let i = 0; i + 2 < passages.length; i += 3) {
+    if (passages[i + 2] === side && a < passages[i + 1]! && b > passages[i]!) return true;
+  }
+  return false;
+}
+
+/**
+ * The corridor's two walls — 0348. `null` for a level flown in the open, which is six of the seven.
+ */
+function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, cameraAlong: number): void {
+  if (corridor === null || corridor.extent <= 0) return;
+  paintWalls(
+    surface,
+    view,
+    corridor.sprite,
+    corridor.extent,
+    corridor.from,
+    corridor.to,
+    corridor.near,
+    corridor.far,
+    cameraAlong,
+    corridor.passages,
+  );
 }
 
 function paintBound(surface: Surface, view: View, bound: Bound | null): void {

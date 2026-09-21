@@ -30,40 +30,14 @@ export const PROBES = [
     than about a crest line. `docs/decisions/0192-a-guard-holds-an-invariant.md`: **demoting a guard
     takes one edit and a reason.**
   */
-  {
-    decision: '0220',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ THE CORRIDOR TURNED INSIDE OUT. Both walls come off one `widthAt`, so a swing wider than the
-      gap it modulates puts the upper wall below the lower one — the channel closes and reopens with
-      its sides swapped. It draws as a bow tie, and the number that does it looks like a tuning knob.
-    */
-    broke: 'the channel’s breathing widened past its own gap, so the two walls cross',
-    guard: 'the corridor never closes',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '      widthAt: (t: number): number => gap * (1 + 0.22 * Math.sin(Math.PI * 2 * t + phase)),',
-      replace: '      widthAt: (t: number): number => gap * (1 + 1.6 * Math.sin(Math.PI * 2 * t + phase)),',
-    },
-  },
-  {
-    decision: '0220',
-    suite: 'tests/places.test.ts',
-    /*
-      ⚠️ THE FORK REMOVED, LEAVING A TUNNEL. A single twisting channel satisfies *a path the player is
-      flying through* and says nothing at all about *branching*, which was the other word in the
-      report — and a corridor with nothing coming off it looks entirely finished.
-    */
-    broke: 'the island taken out, so the path stops splitting and is only a tunnel',
-    guard: 'it BRANCHES',
-    edit: {
-      path: 'src/render/bake.ts',
-      find:
-        '    out.push({ points: island, width: WALL * size * 0.55, alpha: 0.55, crosses: false, taper: true, lit: false });\n' +
-        '    out.push(rim(island, lift > 0 ? -0.55 : 0.55, 0.42, false));',
-      replace: '',
-    },
-  },
+  /*
+    ⚠️ AND TWO MORE STOOD HERE UNTIL 0348, ON THE SAME TERMS. They broke The Labyrinth's backdrop
+    channel — *the corridor turned inside out* and *the fork removed* — and 0348 put the corridor
+    where the player is, as masonry at the box's edges held in pixels by `tests/corridor.test.ts`, and
+    made the backdrop the maze going on below. The guards went with the channel, with their reason in
+    `tests/places.test.ts`; a probe re-pointed at the maze would be the look-alike re-anchor the
+    paragraph above warns about.
+  */
   {
     decision: '0220',
     suite: 'tests/places.test.ts',

@@ -39,8 +39,9 @@ export const PROBES = [
     guard: 'takes something that holds station clear off the edge of the screen',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
-      replace: '        if (e.across <= 0) e.velAcross = m.roam;\n        else if (e.across >= ACROSS_SPAN) e.velAcross = -m.roam;',
+      // Re-anchored by 0348, which put these two lines inside the branch for a level with no corridor.
+      find: '          if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n          else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
+      replace: '          if (e.across <= 0) e.velAcross = m.roam;\n          else if (e.across >= ACROSS_SPAN) e.velAcross = -m.roam;',
     },
   },
   {
@@ -52,8 +53,9 @@ export const PROBES = [
     guard: 'never leaves the roam band, so nothing that wandered off is culled',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
-      replace: '        void ROAM_MIN;\n        void ROAM_MAX;',
+      // Re-anchored by 0348, on the same terms as the probe above.
+      find: '          if (e.across <= ROAM_MIN) e.velAcross = m.roam;\n          else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;',
+      replace: '          void ROAM_MIN;\n          void ROAM_MAX;',
     },
   },
   {

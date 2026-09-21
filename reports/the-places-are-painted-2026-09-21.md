@@ -154,7 +154,11 @@ First use of mechanism 2. The scale-swell on the volcano goes — a mountain doe
 over it: a green canopy in daylight may not be, and that guard's reason (the bottom of the screen
 stays the darkest thing on it) has to be re-argued against the picture rather than worked around.
 
-### 4 — The Labyrinth: walls the whole way
+### 4 — The Labyrinth: walls the whole way ✅
+
+[0348](../docs/decisions/0348-the-labyrinth-is-walled.md) — every flank answered with a gap it opens
+as it arrives; drifters turn at the wall (the player's answer mid-build); the backdrop became the maze
+going on below, and the room's stone was rebuilt as masonry.
 
 > *"The end boss has some walls around it, but otherwise there's no labyrinth that the player is
 > actually flying through."*

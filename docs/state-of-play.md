@@ -819,8 +819,10 @@ good"***, and the Pillars were then made larger and brighter in
 [0346](decisions/0346-the-pillars-fill-the-sky.md), which also closes 0345's open question: the stars
 stay in front of landmarks. Item 3 is landed —
 [0347](decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md), Saurian Belt, where the backdrop
-first moves — **owed a play**, above all on whether a thrown rock can be taken for a shot. The next
-is The Labyrinth, item 4, and 4b is a plan brought to the player before any geometry. **How the places
+first moves — **owed a play**, above all on whether a thrown rock can be taken for a shot. Item 4 is
+landed — [0348](decisions/0348-the-labyrinth-is-walled.md), The Labyrinth walled the whole way —
+**owed a play** too. The next is 4b, and it is a plan brought to the player before any geometry: walls
+that kill, stop shots, and a corridor that turns and forks. **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.
