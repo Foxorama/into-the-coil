@@ -98,9 +98,10 @@ function sharedRun(a: string[], b: string[]): number {
  * everything built on it.
  */
 function loudest(theme: ThemeKind, name: PaletteName): string {
-  const body = THEMES[theme].nebula[name];
-  const accent = THEMES[theme].glow[name];
-  return luminance(accent) > luminance(body) ? accent : body;
+  // ⚠️ AND EVERY FURTHER GAS THE PLACE STATES — 0345. A third colour the floor never heard of is the
+  // same hole 0223 closed for the second one: a measurement that understates is invisible.
+  const stated = [THEMES[theme].nebula[name], THEMES[theme].glow[name], ...(THEMES[theme].gases?.[name] ?? [])];
+  return stated.reduce((loud, colour) => (luminance(colour) > luminance(loud) ? colour : loud));
 }
 
 /** sRGB blend of two hexes, which is what a gradient over a backdrop actually produces. */

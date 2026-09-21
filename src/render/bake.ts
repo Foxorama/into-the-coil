@@ -2088,10 +2088,26 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: n
       windward.push([mid - spanAt(t) - knob + drift * t, foot - rise * t]);
     }
 
+    /*
+      ⚠️ **A CURVE THROUGH THE KNOBS, AND IT WAS A STRAIGHT LINE BETWEEN THEM UNTIL 0345.** Eight
+      segments a side is a column cut out with scissors once it is three hundred pixels of a desktop:
+      the rim, which is the brightest line on it, zigzagged. Each knob is now the control point of a
+      quadratic that runs from the midpoint before it to the midpoint after — so the edge still goes
+      where the seed put it and has no corner anywhere. `Pen` has had the verb since 0276.
+    */
+    const through = (points: readonly (readonly [number, number])[]): void => {
+      for (let i = 1; i < points.length - 1; i++) {
+        const [x, y] = points[i]!;
+        const [nx, ny] = points[i + 1]!;
+        ctx.quadraticCurveTo(x, y, (x + nx) / 2, (y + ny) / 2);
+      }
+      const last = points[points.length - 1]!;
+      ctx.lineTo(last[0], last[1]);
+    };
     const trace = (): void => {
       ctx.beginPath();
       ctx.moveTo(windward[0]![0], windward[0]![1]);
-      for (let i = 1; i < windward.length; i++) ctx.lineTo(windward[i]![0], windward[i]![1]);
+      through(windward);
     };
 
     // A hole in the gas, not a shape on top of it — and a PARTIAL hole for the two standing behind.
@@ -2105,11 +2121,15 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: n
       tapered, which is the one part of the silhouette a viewer already has a picture of.
     */
     const reach = tipHalf * 1.4;
-    ctx.lineTo(mid - tipHalf * 0.75 + drift, tip - reach);
-    ctx.lineTo(mid - tipHalf * 0.15 + drift, tip - reach * 0.85);
-    ctx.lineTo(mid + tipHalf * 0.05 + drift, tip + reach * 0.35);
-    ctx.lineTo(mid + tipHalf * 0.6 + drift, tip - reach * 0.7);
-    ctx.lineTo(mid + tipHalf + drift, tip + reach * 0.1);
+    // Blunt, which is the word above: the same five points, rounded over rather than joined up.
+    through([
+      windward[windward.length - 1]!,
+      [mid - tipHalf * 0.75 + drift, tip - reach],
+      [mid - tipHalf * 0.15 + drift, tip - reach * 0.85],
+      [mid + tipHalf * 0.05 + drift, tip + reach * 0.35],
+      [mid + tipHalf * 0.6 + drift, tip - reach * 0.7],
+      [mid + tipHalf + drift, tip + reach * 0.1],
+    ]);
     // And back down the lee side, which is smoother — the columns are lit from one side.
     for (let s = EDGE_STEPS; s >= 0; s -= 1) {
       const t = s / EDGE_STEPS;
@@ -2131,13 +2151,10 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: n
     ctx.globalAlpha = column.far ? 0.07 : 0.18;
     ctx.strokeStyle = ink;
     ctx.lineWidth = halfWidth * 0.55;
+    const face: [number, number][] = windward.map(([x, y], s) => [x + spanAt(s / EDGE_STEPS) * 0.45, y]);
     ctx.beginPath();
-    for (let s = 0; s <= EDGE_STEPS; s += 1) {
-      const t = s / EDGE_STEPS;
-      const x = windward[s]![0]! + spanAt(t) * 0.45;
-      if (s === 0) ctx.moveTo(x, windward[s]![1]!);
-      else ctx.lineTo(x, windward[s]![1]!);
-    }
+    ctx.moveTo(face[0]![0], face[0]![1]);
+    through(face);
     ctx.stroke();
 
     // A rim on the windward edge — the gas lit up where it meets the dust. It is the brightest thing
@@ -9023,6 +9040,16 @@ export interface SkyStyle {
   /** How big they are, and how strongly they read. */
   readonly cloudSize: number;
   readonly cloudAlpha: number;
+  /**
+   * How solid this place's boldest cloud may be. Absent is `NEBULA_ALPHA.to`, which six places keep.
+   *
+   * ⚠️ **THE SHARED CEILING IS STILL SHARED, AND IT IS NOT THIS NUMBER** — 0345. What every place is
+   * held under is *fainter than the faintest field of marks* (`tests/budget.test.ts`), which shared
+   * code and a guard own. 0.22 sat well inside that for all seven because one constant had to suit
+   * the thinnest sky and the thickest; a place whose whole subject is gas states its own, and the
+   * contrast floor counts what that costs, pile and all.
+   */
+  readonly cloudCeiling?: number;
   /** The place's own stars. Absent is the shared field, exactly as it was. */
   readonly stars?: StarStyle;
 }
@@ -9067,7 +9094,35 @@ export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
     },
   },
   // Cloud and little else, piled up and lit from one side.
-  nebula: { density: 0.5, size: 0.95, tilt: 0, length: 0.65, clump: 0.35, dim: 0.5, drift: 0.55, clouds: 2, cloudSize: 1.4, cloudAlpha: 1.7 },
+  nebula: {
+    density: 0.5,
+    size: 0.95,
+    tilt: 0,
+    length: 0.65,
+    clump: 0.35,
+    dim: 0.5,
+    drift: 0.55,
+    clouds: 3,
+    cloudSize: 1.4,
+    cloudAlpha: 1.7,
+    cloudCeiling: 0.31,
+    // Seen THROUGH gas — 0345: fewer than open space, warm, gathered where the gas is thin, no band.
+    stars: {
+      far: 7,
+      near: 1.4,
+      lean: 5,
+      floor: 0.07,
+      bright: 0.78,
+      tints: [
+        ['#ffe2c0', 6],
+        ['#ffffff', 3],
+        ['#ffb98a', 4],
+        ['#ff8f7a', 2],
+        ['#e8c8ff', 2],
+      ],
+      band: { at: 0.5, depth: 0.2, share: 0 },
+    },
+  },
   // Tumbling rock: knots of debris with clear lanes between them.
   saurian: { density: 0.75, size: 1, tilt: 0.45, length: 0.3, clump: 0.8, dim: 0.55, drift: 0.35, clouds: 0.7, cloudSize: 0.95, cloudAlpha: 0.9 },
   // Long structure going past. Almost nothing clumps in a corridor.
@@ -9197,7 +9252,22 @@ export function fieldOf(
           edge would otherwise drag marks over the tile seam — the hard-cut line 0065's margin exists
           to prevent, arriving on a schedule at the fastest depth in the game.
         */
-        x = Math.max(0, Math.min(spanX, x + (knot.x - x) * style.clump));
+        if (dotsOnly && spanX > 0) {
+          /*
+            ⚠️ **ALONG THE SCROLL AXIS AN AUTHORED FIELD CLUMPS ROUND THE TILE, NOT INSIDE IT — 0345.**
+            A pull towards a knot and a clamp drags every mark off the two edges, and 0343's own seam
+            guard measured what that leaves: **a bare strip 17.7 units wide at every join** in Ember
+            Nebula, the first dense field that also clumps. The tile repeats, so the nearest copy of
+            a knot may be the one over the edge; pulled the short way round and wrapped, a drift can
+            straddle the join like anything else in a sky that tiles.
+          */
+          let pull = knot.x - x;
+          if (pull > spanX / 2) pull -= spanX;
+          if (pull < -spanX / 2) pull += spanX;
+          x = (((x + pull * style.clump) % spanX) + spanX) % spanX;
+        } else {
+          x = Math.max(0, Math.min(spanX, x + (knot.x - x) * style.clump));
+        }
         y = Math.max(0, Math.min(spanY, y + (knot.y - y) * style.clump));
       }
     }
@@ -9331,6 +9401,13 @@ export interface NebulaCloud {
    * what a real nebula is, and it costs one boolean.
    */
   glow: boolean;
+  /**
+   * Which of the place's further `gases` this cloud is, or `null` for the body or the accent — 0345.
+   *
+   * ⚠️ **AN INDEX AND NOT A COLOUR, because the field knows nothing about a palette** and a gas is
+   * stated per palette. `null` for every cloud of a place that states none, which is six of seven.
+   */
+  gas: number | null;
 }
 
 /**
@@ -9348,6 +9425,8 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
   const perUnit = size / SPRITE_EXTENT.skyNebula;
   const clouds: NebulaCloud[] = [];
   const clouds_ = Math.max(1, Math.round(NEBULA_CLOUDS * style.clouds));
+  // How many further gases the place states — the vivid row's count, and both palettes agree (0345).
+  const gases = THEMES[theme].gases?.vivid.length ?? 0;
   for (let i = 0; i < clouds_; i++) {
     /*
       ⚠️ **A cloud may hang off the tile's edge, and `drawNebula` WRAPS IT ROUND — 0206.**
@@ -9380,7 +9459,7 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
         scaled the alpha past that would be a wall of colour the game is played on, which
         `tests/themes.test.ts`'s *a backdrop is a dark* refuses one layer down.
       */
-      alpha: Math.min(NEBULA_ALPHA.to, rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to) * style.cloudAlpha),
+      alpha: Math.min(style.cloudCeiling ?? NEBULA_ALPHA.to, rng.range(NEBULA_ALPHA.from, NEBULA_ALPHA.to) * style.cloudAlpha),
       /*
         ⚠️ **A THIRD, AND NOT A HALF.** An even split makes two colours of equal weight, which reads as
         *this place cannot decide* rather than as a place with an accent — the body colour has to stay
@@ -9393,6 +9472,13 @@ export function nebulaField(size: number, theme: ThemeKind = 'approach'): Nebula
         seven, and no place can be unlucky. `makeMotes` walks its index for the same reason.
       */
       glow: i % 3 === 1,
+      /*
+        ⚠️ **WALKED, ON THE ACCENT'S OWN ARGUMENT ONE FIELD UP** — 0345. Of every three clouds one is
+        the accent, one stays the body the place is recognised by, and the third takes the next gas in
+        turn: so every gas a place states is on the screen, none can be rolled out of existence, and
+        the body still has the largest single share.
+      */
+      gas: gases > 0 && i % 3 === 2 ? Math.floor(i / 3) % gases : null,
     });
   }
   return clouds;
@@ -9448,30 +9534,6 @@ export interface StructureMark {
 }
 
 
-/**
- * What a run of crossing lines is: how many, how much they wander, and how heavy they sit.
- *
- * ⚠️ **AN OBJECT RATHER THAN SEVEN POSITIONAL ARGUMENTS, WHICH IS WHAT ASKING FOR MORE DETAIL COST.**
- * The first version took `(size, stream, count, wander, from, to)` and every call site read as six
- * bare numbers. Ember Nebula now draws two runs — heavy lanes and fine filaments — that differ in
- * `alpha` and `steps` as well, and `crossing(size, 'nebula/filaments', 9, 0.08, 0.006, 0.02, 0.4, 14)`
- * is a line nobody can check by reading.
- */
-interface Crossing {
-  /** The RNG stream. Two runs that share one draw the same lines, which 0211's guard calls a defect. */
-  stream: string;
-  count: number;
-  /** How far a step may wander from the last, as a fraction of the tile. */
-  wander: number;
-  /** The narrowest and the widest stroke, as fractions of the tile. */
-  from: number;
-  to: number;
-  /** How dark it sits over the gas. Defaults to the weight the heavy lanes were written at. */
-  alpha?: number;
-  /** How many segments the line is drawn in — more segments is a finer, more restless wander. */
-  steps?: number;
-}
-
 /*
   ── THERE WERE HULKS HERE, AND THEY ARE GONE — 0342 ──────────────────────────────────────────────
 
@@ -9482,36 +9544,15 @@ interface Crossing {
   place. What a place puts at that scale is its own drawing on its own row, or nothing.
 */
 
-/**
- * A wandering line across the whole tile, ending where it began.
- *
- * The shared shape behind Ember Nebula's dust and The Labyrinth's corridor walls — one crosses in
- * dark dust and the other in long structure, and both are *a line that must arrive where it left*.
- */
-function crossing(size: number, spec: Crossing): StructureMark[] {
-  const rng = makeRng('sky').stream(spec.stream);
-  const steps = spec.steps ?? 8;
-  const out: StructureMark[] = [];
-  for (let i = 0; i < spec.count; i += 1) {
-    const start = rng.range(0.12, 0.88) * size;
-    const points: number[][] = [];
-    let y = start;
-    for (let s = 0; s <= steps; s += 1) {
-      // ⚠️ The last point is forced back to `start`, which is the whole of 0207.
-      points.push([(s / steps) * size, s === steps ? start : y]);
-      y += rng.range(-spec.wander, spec.wander) * size;
-    }
-    out.push({
-      points,
-      width: rng.range(spec.from, spec.to) * size,
-      alpha: spec.alpha ?? 0.55,
-      crosses: true,
-      taper: false,
-      lit: false,
-    });
-  }
-  return out;
-}
+/*
+  ── AND THERE WAS A RANDOM WALK HERE, `crossing`, WHICH NOTHING CALLS ANY MORE — 0345 ────────────
+
+  It walked a line across the tile in straight segments and forced the last point home, which made it
+  periodic in height (0207) and never in slope: every line it drew kinks at the join, and at a
+  desktop's size every line it drew is visibly made of straight pieces. The Labyrinth left it in 0220
+  for sums of sines, The Approach's rifts in 0343, and Ember Nebula's dust in 0345 — a sine whose
+  period divides the tile is periodic in both by construction.
+*/
 
 /**
  * Every place's own structure, and what makes it that place rather than gas.
@@ -9629,21 +9670,63 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     (0.55 → 0.40 → 0.70) rather than from light.
   */
   nebula: (size) => {
-    // The lanes 0207 authored, untouched: the same stream, the same numbers, the same three lines.
-    const lanes = crossing(size, { stream: 'nebula/lanes', count: 3, wander: 0.05, from: 0.05, to: 0.11 });
     /*
-      Fine dust threaded between them — thinner, fainter, and far more restless (14 segments against
-      the lanes' 8), so it reads as the same material at a smaller scale rather than as more lanes.
+      ── THE DUST FLOWS NOW, AND IT USED TO BE THREE SLABS AND NINE ZIGZAGS — 0345 ───────────────────
+
+      ⚠️ **THE 1080p PHOTOGRAPH, NOT THE REPORT, FOUND THIS.** The lanes were `crossing` random walks in
+      eight straight segments, ten to twenty-two units thick at one flat alpha: on a desktop they are
+      angular slabs with hard corners, and between them they darkened most of the lane — which is a
+      large part of why the gas behind them read as mud. The filaments were the same walk at fourteen
+      segments: zigzags.
+
+      ⚠️ **A LANE IS A RIBBON THAT SWELLS AND THINS, DRAWN THREE TIMES SO ITS EDGE IS SOFT.** Sums of
+      sines whose periods divide the tile — periodic in height and in slope, which a walk forced home
+      in its last segment never is. Narrower than the slabs on purpose: the dust is in front of the
+      light and must leave most of it showing.
+
+      ⚠️ **STILL DARK, ALL OF IT**, which is the measurement the header above records and is unchanged.
     */
-    const filaments = crossing(size, {
-      stream: 'nebula/filaments',
-      count: 9,
-      wander: 0.028,
-      from: 0.002,
-      to: 0.007,
-      alpha: 0.32,
-      steps: 14,
-    });
+    const flow = makeRng('sky').stream('nebula/flow');
+    // 128, because at 64 the busiest filament turned 13.4° at one vertex and the guard reads 12 as a kink.
+    const SAMPLES = 128;
+    const lanes: StructureMark[] = [];
+    for (let lane = 0; lane < 3; lane += 1) {
+      const at = 0.3 + lane * 0.2 + flow.range(-0.04, 0.04);
+      const bend = [flow.range(0.025, 0.05), flow.range(0.01, 0.02)];
+      const turn = [flow.range(0, Math.PI * 2), flow.range(0, Math.PI * 2), flow.range(0, Math.PI * 2)];
+      const body = flow.range(0.016, 0.03);
+      const centre = (t: number): number =>
+        at + bend[0]! * Math.sin(Math.PI * 2 * t + turn[0]!) + bend[1]! * Math.sin(Math.PI * 6 * t + turn[1]!);
+      // Pinches nearly shut and opens out again, twice a tile: a lane of dust is not a pipe.
+      const half = (t: number): number => body * (0.55 + 0.45 * Math.sin(Math.PI * 4 * t + turn[2]!));
+      for (const [grow, alpha] of [[1.7, 0.16], [1.25, 0.2], [0.8, 0.3]] as const) {
+        const upper: number[][] = [];
+        const lower: number[][] = [];
+        for (let s = 0; s <= SAMPLES; s += 1) {
+          const t = s / SAMPLES;
+          upper.push([t * size, (centre(t) - half(t) * grow) * size]);
+          lower.push([t * size, (centre(t) + half(t) * grow) * size]);
+        }
+        lanes.push({ points: [...upper, ...lower.reverse()], width: 0, alpha, crosses: true, taper: false, lit: false });
+      }
+    }
+    // Fine dust threaded between them: the same material at a smaller scale, and restless.
+    const filaments: StructureMark[] = [];
+    for (let i = 0; i < 9; i += 1) {
+      const at = flow.range(0.14, 0.86);
+      const sway = [flow.range(0.012, 0.03), flow.range(0.004, 0.01)];
+      const turn = [flow.range(0, Math.PI * 2), flow.range(0, Math.PI * 2)];
+      const waves = 2 + Math.floor(flow.range(0, 3));
+      const points: number[][] = [];
+      for (let s = 0; s <= SAMPLES; s += 1) {
+        const t = s / SAMPLES;
+        points.push([
+          t * size,
+          (at + sway[0]! * Math.sin(Math.PI * 2 * waves * t + turn[0]!) + sway[1]! * Math.sin(Math.PI * 2 * (waves + 3) * t + turn[1]!)) * size,
+        ]);
+      }
+      filaments.push({ points, width: flow.range(0.002, 0.006) * size, alpha: 0.3, crosses: true, taper: false, lit: false });
+    }
     /*
       ── THE GLOBULES ────────────────────────────────────────────────────────────────────────────
 
@@ -9701,7 +9784,18 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           const dy = Math.sin(a) * rr;
           points.push([x + dx - dy * lean, y + dy + dx * lean]);
         }
-        knots.push({ points, width: 0, alpha: 0.55, crosses: false, taper: false, lit: false });
+        // Three times about its own centre, so a knot of dust has a soft edge like the lanes it sits in
+        // — 0345. Scaled evenly, so its proportions (and 0203's band, which reads them) are unchanged.
+        for (const [grow, alpha] of [[1.5, 0.14], [1.2, 0.2], [0.85, 0.3]] as const) {
+          knots.push({
+            points: points.map((p) => [x + (p[0]! - x) * grow, y + (p[1]! - y) * grow]),
+            width: 0,
+            alpha,
+            crosses: false,
+            taper: false,
+            lit: false,
+          });
+        }
       }
     }
     // The three hulks 0222 hung in the gas are gone — 0342. The Pillars are this place's large thing.
@@ -10134,7 +10228,15 @@ export function paintStructure(ctx: Pen, glow: string, space: string, size: numb
   ctx.globalAlpha = 1;
 }
 
-function drawNebula(ctx: Pen, colour: string, glow: string, space: string, size: number, theme: ThemeKind): void {
+function drawNebula(
+  ctx: Pen,
+  colour: string,
+  glow: string,
+  space: string,
+  size: number,
+  theme: ThemeKind,
+  gases: readonly string[] = [],
+): void {
   for (const cloud of nebulaField(size, theme)) {
     /*
       ⚠️ **THE INNER CIRCLE IS OFFSET AND ITS RADIUS IS STILL ZERO** — 0196. A zero-radius inner circle
@@ -10168,7 +10270,7 @@ function drawNebula(ctx: Pen, colour: string, glow: string, space: string, size:
         // ⚠️ **STILL EXACTLY TWO STOPS, AT 0 AND 1** — 0196's cover arithmetic models the falloff as
         // linear between them and `tests/sky.test.ts` scans this function for it. What 0223 changed is
         // WHICH colour sits at stop 0, never how many there are.
-        fill.addColorStop(0, cloud.glow ? glow : colour);
+        fill.addColorStop(0, cloud.gas !== null && gases[cloud.gas] !== undefined ? gases[cloud.gas]! : cloud.glow ? glow : colour);
         fill.addColorStop(1, 'transparent');
         ctx.globalAlpha = cloud.alpha;
         ctx.fillStyle = fill;
@@ -10369,6 +10471,7 @@ export function bakeNebula(
   space: string,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
+  gases: readonly string[] = [],
 ): void {
   const size = bakeSize(SPRITE_EXTENT.skyNebula, pixelsPerUnit);
   const canvas = document.createElement('canvas');
@@ -10376,7 +10479,7 @@ export function bakeNebula(
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx === null) return;
-  drawNebula(ctx, colour, glow, space, size, theme);
+  drawNebula(ctx, colour, glow, space, size, theme, gases);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
 }
 

@@ -40,9 +40,9 @@ for (const theme of THEME_KINDS) {
   for (const name of Object.keys(PALETTES)) {
     // ⚠️ THE LOUDER OF THE PLACE'S TWO GAS COLOURS — 0223. Blending against the body alone measures
     // the half of the sky that is cheaper, which is 0222's own finding about `cloudCover` repeated.
-    const body = THEMES[theme].nebula[name];
-    const accent = THEMES[theme].glow[name];
-    const loud = luminance(accent) > luminance(body) ? accent : body;
+    // And every further gas the place states — 0345, on `tests/sky.test.ts`'s `loudest`'s own terms.
+    const stated = [THEMES[theme].nebula[name], THEMES[theme].glow[name], ...(THEMES[theme].gases?.[name] ?? [])];
+    const loud = stated.reduce((a, b) => (luminance(b) > luminance(a) ? b : a));
     const backdrop = over(THEMES[theme].space[name], loud, all);
     let worst = { ink: '', ratio: Infinity };
     for (const ink of counted) {

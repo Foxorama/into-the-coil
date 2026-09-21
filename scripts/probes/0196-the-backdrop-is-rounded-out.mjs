@@ -73,10 +73,12 @@ export const PROBES = [
       // break is the same one it has always been: a third stop the cover arithmetic cannot model.
       // ⚠️ Re-anchored by 0223: which colour sits at stop 0 is now a choice between the place's two
       // gas colours. **How many stops there are is untouched**, which is the whole of this break.
-      find: "        fill.addColorStop(0, cloud.glow ? glow : colour);\n        fill.addColorStop(1, 'transparent');",
-      replace:
-        "        fill.addColorStop(0, cloud.glow ? glow : colour);\n        fill.addColorStop(0.7, colour);\n" +
-        "        fill.addColorStop(1, 'transparent');",
+      // ⚠️ Re-anchored a THIRD time by 0345, and for the last: stop 0 now chooses among a place's gases
+      // too, and this anchor had been carrying that line for no reason — the break is a third stop,
+      // so the anchor is the second one and nothing else. It has been stranded twice by edits to a
+      // line it never broke.
+      find: "        fill.addColorStop(1, 'transparent');",
+      replace: "        fill.addColorStop(0.7, colour);\n        fill.addColorStop(1, 'transparent');",
     },
   },
   {

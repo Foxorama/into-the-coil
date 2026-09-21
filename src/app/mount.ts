@@ -1622,7 +1622,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       them is a third colour neither table contains.
     */
     const accent = place === null ? PALETTES[palette].sky : THEMES[place].glow[palette];
-    bakeNebula(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);
+    // The place's further gases in this palette's own version of them — 0345. None for six of seven.
+    const gases = place === null ? [] : (THEMES[place].gases?.[palette] ?? []);
+    bakeNebula(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop, gases);
     /*
       The landmark takes the same gas colour as the weather — 0203. One place, one colour, so the
       pillars are lit by the nebula they stand in rather than by a palette that never heard of it.
