@@ -51,13 +51,20 @@ export const PROBES = [
       It is aimed at the sower at 3232 now — one of 0259's OWN conversions, and the one inside the
       stretch that is actually the worst. Measured with the break in: **13.9s**, against a budget of
       nine.
+
+      ⚠️ **AND A THIRD TIME BY 0350, WHEN THE CORRIDOR TURNED.** The level measured the same with the
+      sower at 3232 or a charger in its place — 5.9s at 3168, STILL GREEN under `npm run prove` — so in
+      the capped walk that sower no longer puts a bullet on the screen; why was not traced. Every other
+      firing wave from 1737 to 3463 was tried alone; the one whose loss runs a stretch past nine is the
+      sentry column at 3003 — **11.3s** ending at 3168. Nothing between 1737 and 2312 does: the worst
+      stretch there stays at 8.3s or under with any one of them gone.
     */
-    broke: 'the shoal’s sower at 3232 put back to a charger, so its worst stretch runs past the budget',
+    broke: 'the shoal’s sentry column at 3003 made a charger, so the stretch to 3168 runs past the budget',
     guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 3232, enemy: 'sower', formation: 'column', count: 5, lane: 44 },",
-      replace: "  { at: 3232, enemy: 'charger', formation: 'column', count: 5, lane: 44 },",
+      find: "  { at: 3003, enemy: 'sentry', formation: 'line', count: 5, lane: 44 },",
+      replace: "  { at: 3003, enemy: 'charger', formation: 'line', count: 5, lane: 44 },",
     },
   },
   {

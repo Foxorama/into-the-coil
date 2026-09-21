@@ -119,9 +119,15 @@ column of weavers at lane 40 — leaves the box with no corridor at all. Every w
 in an open level at its own place, and the turret flank that leaves the box there is kept because it
 drifts, and a drift turns at a face.
 
-⚠️ **AND FOUR PROBES ELSEWHERE MOVED.** 0348's clamp guard became *the box is the limit*; 0348's flank
+⚠️ **AND FIVE PROBES ELSEWHERE MOVED.** 0348's clamp guard became *the box is the limit*; 0348's flank
 opening now makes a kill rather than a sighting, so it points at *a turn is not a massacre*; 0349's
-push-out and 0048's pickup bounce were re-anchored on the lines they break.
+push-out and 0048's pickup bounce were re-anchored on the lines they break. **And 0259's went STILL
+GREEN, which only the full proof found**: its break turns the shoal's sower at 3232 into a charger,
+and with the corridor turning the capped walk measures the same either way — that sower no longer
+puts a bullet on the screen there, and why was not traced. Every firing wave from 1737 to 3463 was
+removed in turn; the probe is re-aimed at the one whose loss runs a stretch past the nine-second
+budget, the sentry column at 3003 (**11.3s**). The shoal's worst held stretch is 7.3s, as it was
+measured on this branch.
 
 The bench takes `?difficulty=` so each tier's corridor can be stood in.
 
