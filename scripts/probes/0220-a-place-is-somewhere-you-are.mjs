@@ -143,7 +143,8 @@ export const PROBES = [
     guard: 'no level places a landmark in a place that draws none',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  nebula: (ctx, ink, _glow, space, size, seed) => drawPillars(ctx, ink, space, size, seed),',
+      // Re-anchored by 0346: the Pillars take the place's accent now, so the row passes `glow` on.
+      find: '  nebula: (ctx, ink, glow, space, size, seed) => drawPillars(ctx, ink, glow, space, size, seed),',
       replace: '  nebula: null,',
     },
   },

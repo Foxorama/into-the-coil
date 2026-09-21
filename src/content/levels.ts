@@ -297,6 +297,16 @@ export interface LandmarkEntry {
    * seven completely different drawings, chosen by the place rather than by the sprite table.
    */
   variant: 0 | 1 | 2;
+  /**
+   * How much bigger than its bitmap this entry is drawn. Absent is 1 —
+   * `docs/decisions/0346-the-pillars-fill-the-sky.md`.
+   *
+   * ⚠️ **ON THE ENTRY, PER 0282**: played, *"the pillars could be more prominent, they only take up
+   * part of the screen and level, we can make them larger."* A bitmap is `SPRITE_EXTENT.landmark`
+   * for every place, and a taller one for all seven is memory six of them have no use for; a number
+   * the painter already takes is free, and a volcano or a heart that says nothing is unchanged.
+   */
+  scale?: number;
 }
 
 export interface LevelRow {
@@ -1351,7 +1361,31 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     */
     // ⚠️ `beat: 0` — the Pillars are rock and the only moving thing in them is the streamers off the
     // tips, which are baked. A landmark beats only where the place is named after something alive.
-    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0, variant: 0 }],
+    /*
+      ── THREE STANDS OF THEM, AND THEY FILL THE SKY — 0346 ────────────────────────────────────────
+
+      Played: *"the pillars could be more prominent, they only take up part of the screen and level,
+      we can make them larger and more interesting."* One casting at the bitmap's own 75 units was a
+      thing in the lower right for a minute. The three castings 0225 bakes were always there and the
+      level placed one; it places all three now, scaled so the tallest column runs from under the
+      bottom of the lane to its top, at three rates so the stands slide against each other.
+
+      ⚠️ **THE MIDDLE ONE IS STILL AT 1299 AND IS STILL THE BIGGEST**, because that is where the organ
+      opens and `tests/sky.test.ts` holds it there. The first is on screen from the opening; the last
+      arrives as the first is leaving, so the level is never without them and the fight has them behind it.
+
+      ⚠️ **`lane` MOVED WITH THE SCALE, FOR 0204's OWN REASON**: the feet have to run off the bottom of
+      the frame or they are cut off in mid-air, and a bigger sprite centred where the small one was
+      puts them further down than they need to be and the tips off the top.
+    */
+    landmarks: [
+      // ⚠️ NEGATIVE ON PURPOSE: `at` is where a stand ENTERS, and at this depth one entering at the
+      // start has crept a fifth of the way in by the first section — photographed, and the opening was
+      // empty. It entered fourteen hundred units before the level began, so it is standing there.
+      { at: -1400, lane: 66, depth: 0.07, beat: 0, variant: 1, scale: 1.35 },
+      { at: 1299, lane: 58, depth: 0.08, beat: 0, variant: 0, scale: 1.7 },
+      { at: 2650, lane: 62, depth: 0.075, beat: 0, variant: 2, scale: 1.5 },
+    ],
     theme: 'nebula',
   },
   /**
