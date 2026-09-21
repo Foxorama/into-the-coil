@@ -10,15 +10,17 @@ export const PROBES = [
   {
     decision: '0211',
     suite: 'tests/sky.test.ts',
-    // The line that makes every crossing mark periodic, for every place at once. It reads like a
-    // special case somebody left in — which is exactly what it looked like in 0207, where removing it
-    // was the probe. One table means one edit now reaches Ember Nebula AND The Labyrinth.
+    // ⚠️ RE-POINTED BY 0345, WHICH DELETED THE THING THIS BROKE. It removed the line in `crossing` that
+    // forced a random walk home — and nothing calls `crossing` any more, so the same edit would have
+    // come back STILL GREEN for ever. A crossing mark is a sum of sines now, and what makes one
+    // periodic is that every period divides the tile: half a turn across it does not, so Ember
+    // Nebula's lanes leave at one height and arrive at another.
     broke: 'a crossing mark no longer ending where it started, so every spanning structure steps at the join',
     guard: 'every mark takes the seam rule it declares',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      points.push([(s / steps) * size, s === steps ? start : y]);',
-      replace: '      points.push([(s / steps) * size, y]);',
+      find: '        at + bend[0]! * Math.sin(Math.PI * 2 * t + turn[0]!) + bend[1]! * Math.sin(Math.PI * 6 * t + turn[1]!);',
+      replace: '        at + bend[0]! * Math.sin(Math.PI * 1 * t + turn[0]!) + bend[1]! * Math.sin(Math.PI * 6 * t + turn[1]!);',
     },
   },
   {
@@ -61,10 +63,18 @@ export const PROBES = [
         So the theft runs the other way: The Labyrinth is handed Ember Nebula's three lanes, by that
         place's own stream and numbers, and the two rows then emit byte-identical marks.
       */
+      /*
+        ⚠️ AND RE-WRITTEN BY 0345, WHICH FOUND IT RED FOR THE WRONG REASON. That decision deleted
+        `crossing`, and this replacement CALLED it — so the break became a `ReferenceError`, the named
+        test failed by crashing, and the harness reported `red` over a full proof with exit 0. It was
+        read in the log, not caught: a crash inside the guard's own test has the guard's title on it.
+        The theft is the same one — The Labyrinth handed Ember Nebula's marks, byte for byte — taken
+        from that place's own row, which cannot go stale the way a copy of its arguments did.
+      */
       find: "    const rng = makeRng('sky').stream('labyrinth/paths');\n    const out: StructureMark[] = [];",
       replace:
         "    const rng = makeRng('sky').stream('labyrinth/paths');\n" +
-        "    const out: StructureMark[] = crossing(size, { stream: 'nebula/lanes', count: 3, wander: 0.05, from: 0.05, to: 0.11 });",
+        '    const out: StructureMark[] = [...STRUCTURE_OF.nebula(size)];',
     },
   },
 ];

@@ -117,7 +117,10 @@ The star colours are new inks and `tests/sky.test.ts`'s cover arithmetic has to 
 photograph. They are a speed cue and may be fine in motion — that is a question for the preview, not
 for this file.
 
-### 2 — Ember Nebula: the same nebula, in colour
+### 2 — Ember Nebula: the same nebula, in colour ✅
+
+[0345](../docs/decisions/0345-ember-nebula-is-in-colour.md) — which also found the dust was slabs and
+zigzags, smoothed the Pillars, and spent 0.24 of the place's contrast room on purpose.
 
 > *"The nebula background is decent now, but it needs to be a more vibrant beautiful backdrop."*
 

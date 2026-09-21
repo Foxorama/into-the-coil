@@ -52,8 +52,9 @@ export const PROBES = [
     guard: 'THE BUDGET: the light a place’s stars put in the sky stays under what `skyCover` can see',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      lean: 5,\n      floor: 0.07,',
-      replace: '      lean: 0.4,\n      floor: 0.9,',
+      // Anchored on The Approach's own count since 0345, when a second place authored a `lean: 5`.
+      find: '      far: 9,\n      near: 1.6,\n      lean: 5,\n      floor: 0.07,',
+      replace: '      far: 9,\n      near: 1.6,\n      lean: 0.4,\n      floor: 0.9,',
     },
   },
   {

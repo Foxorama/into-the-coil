@@ -200,6 +200,23 @@ export interface ThemeRow {
    */
   glow: Record<PaletteName, string>;
   /**
+   * Further colours the place's gas comes in, per palette — and absent for a place with two.
+   *
+   * ⚠️ **TWO COLOURS IS A PLACE WITH AN ACCENT; A NEBULA IS NOT THAT** —
+   * `docs/decisions/0345-ember-nebula-is-in-colour.md`. Reported: *"it needs to be a more vibrant
+   * beautiful backdrop."* `nebula` and `glow` stay what they are — the body the place is recognised
+   * by and the colour every lit edge takes — and these are what the clouds between them are.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's TERMS**: a place that says nothing has the two colours it always had,
+   * cloud for cloud. Both palettes state the same NUMBER of them, because the field that chooses one
+   * for a cloud knows nothing about a palette, and `tests/places.test.ts` holds that.
+   *
+   * ⚠️ **VIVID IS SATURATION, NOT LIGHT.** What the contrast floor counts is luminance, so a gas may
+   * be as saturated as it likes and costs only what it is bright; the floor is checked against the
+   * LOUDEST colour a place states, these included.
+   */
+  gases?: Record<PaletteName, readonly string[]>;
+  /**
    * The colour of the land, per palette — and `null` for a place that is in space.
    *
    * ⚠️ **THIS FIELD IS WHAT MAKES A PLACE A PLANET, AND IT DECIDES THREE THINGS AT ONCE.**
@@ -815,6 +832,13 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // ⚠️ MAROON GAS AND AN EMBER EDGE, WHICH IS THE PLACE'S OWN NAME. The widest step of the seven:
     // a furnace is the one place where two colours at once is the literal subject.
     glow: { vivid: '#c25a2a', 'high-contrast': '#5c2a12' },
+    // ⚠️ AND WHAT THE GAS BETWEEN THEM IS — 0345. Magenta, violet, a cold thread and a red heat: every
+    // one as saturated as it will go and none brighter than the ember, so the floor's loudest colour
+    // is still `glow` and the colour is bought with hue rather than with light.
+    gases: {
+      vivid: ['#b0246e', '#5a2ab0', '#1f7a80', '#c8403a'],
+      'high-contrast': ['#3a1030', '#22124a', '#0e3034', '#4a1814'],
+    },
     ground: null, // In space, and the Pillars are the proof: they are a thing you fly PAST.
     // Moths in an ember cloud: the ember's own orange, scorched dark underneath, a black eye, embers.
     // The hulls are ORANGE here, so orange fire would be a raider shooting itself — rose instead.
