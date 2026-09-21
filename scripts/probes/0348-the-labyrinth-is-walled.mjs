@@ -58,10 +58,15 @@ export const PROBES = [
   },
   {
     decision: '0348',
-    suite: 'tests/corridor.test.ts',
+    /*
+      ⚠️ Re-pointed by 0349. Since the stone destroys what meets it, a drifter that fails to turn is
+      no longer drawn over the stone — it bursts on it — and `THE REPORTED RISK` went STILL GREEN over
+      both of these. The rule the player chose is *turn at the wall*, and that is guarded directly now.
+    */
+    suite: 'tests/stone.test.ts',
     // What the player chose against: drifters turning outside the lane, over the stone and back.
     broke: 'the corridor’s bound on a drifter taken away, so it turns beyond the lane edge over the stone',
-    guard: 'THE REPORTED RISK, IN PIXELS',
+    guard: 'A DRIFTER TURNS AT THE WALL RATHER THAN DYING ON IT',
     edit: {
       path: 'src/app/frame.ts',
       find: '        if (corridor === null) {\n          if (e.across <= ROAM_MIN) e.velAcross = m.roam;',
@@ -70,10 +75,11 @@ export const PROBES = [
   },
   {
     decision: '0348',
-    suite: 'tests/corridor.test.ts',
+    // Re-pointed by 0349, on the same terms as the probe above.
+    suite: 'tests/stone.test.ts',
     // The second draft, exactly: turning on where the body is, a step after it has crossed the face.
     broke: 'a drifter turned on where it is rather than where the step takes it, so it enters the stone first',
-    guard: 'THE REPORTED RISK, IN PIXELS',
+    guard: 'A DRIFTER TURNS AT THE WALL RATHER THAN DYING ON IT',
     edit: {
       path: 'src/app/frame.ts',
       find: '        const next = e.across + e.velAcross;',

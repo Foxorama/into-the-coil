@@ -146,9 +146,10 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0257, which bounds the search by the screen's edge as well, and by 0302,
-      // which hands each link its own decayed reach rather than the row's.
-      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);',
-      replace: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, 1e9, true, edge);',
+      // which hands each link its own decayed reach rather than the row's — and by 0349, which hands
+      // the search the corridor so a link cannot jump through stone.
+      find: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge, w.corridor);',
+      replace: '    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, 1e9, true, edge, w.corridor);',
     },
   },
   {

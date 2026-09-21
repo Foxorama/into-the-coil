@@ -30,6 +30,7 @@
 
 import type { Entity } from './entity.ts';
 import type { Pool } from './pool.ts';
+import { clearLine, type Corridor } from './corridor.ts';
 
 /**
  * Whether two circles touched at any point during the step just taken, with `b`'s radius scaled.
@@ -266,6 +267,7 @@ export function blastInto(
   damageScale: number,
   flashSteps: number,
   deaths: Deaths | null,
+  corridor: Corridor | null = null,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
@@ -275,6 +277,12 @@ export function blastInto(
       const blast = blasts.at(b);
       if (blast.damage <= 0) continue;
       if (!overlaps(blast, target, 1)) continue;
+      /*
+        ⚠️ **A BLAST HURTS ONLY WHAT IT CAN SEE — 0349**, and that was the player's answer against the
+        plan's recommendation: *stone stops blasts.* So the far side of a wall, and the other way round
+        an island, is safe from a bomb. A no-op without a corridor.
+      */
+      if (!clearLine(corridor, blast.along, blast.across, target.along, target.across)) continue;
       target.health -= blast.damage * damageScale;
       if (target.health <= 0) {
         killed(targets, t, deaths);
@@ -378,6 +386,7 @@ export function nearestFrom(
   reach: number,
   skipStruck: boolean,
   edge: number,
+  corridor: Corridor | null = null,
 ): number {
   let best = -1;
   let bestGap = reach;
@@ -390,6 +399,8 @@ export function nearestFrom(
     const dAcross = target.across - across;
     const gap = Math.sqrt(dAlong * dAlong + dAcross * dAcross) - target.radius;
     if (gap > bestGap) continue;
+    // Lightning does not jump through stone — 0349. Tested last, because it is the dearest test.
+    if (!clearLine(corridor, along, across, target.along, target.across)) continue;
     bestGap = gap;
     best = i;
   }
@@ -482,12 +493,15 @@ export function collideIntoOne(
   invulnSteps: number,
   flashSteps: number,
   consume: boolean,
+  corridor: Corridor | null = null,
 ): number {
   if (target.invulnFor > 0) return 0;
   let worst = 0;
   for (let i = threats.size - 1; i >= 0; i--) {
     const threat = threats.at(i);
     if (!overlaps(threat, target, targetRadiusScale)) continue;
+    // Nothing reaches through stone — 0349. Only a blast is ever wide enough for this to matter.
+    if (!clearLine(corridor, threat.along, threat.across, target.along, target.across)) continue;
     if (threat.damage > worst) worst = threat.damage;
     if (consume) threats.releaseAt(i);
   }

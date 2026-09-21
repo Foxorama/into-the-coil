@@ -13,6 +13,7 @@
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { SPRITE } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
+import { opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
@@ -214,34 +215,10 @@ export interface Room {
   open: number;
 }
 
-/**
- * The corridor a level is flown down — `docs/decisions/0348-the-labyrinth-is-walled.md`. Masonry at
- * both edges of the player's box from the level's start to where its room begins, broken by passages.
- *
- * ⚠️ **A CENTRELINE AND A WIDTH, SO A CORRIDOR THAT TURNS IS A CHANGE OF NUMBER.** Here the two are
- * constants and the faces stand exactly where the ship's clamp already is (0074), so nothing new
- * collides; 4b of the backdrop queue makes them functions of `along`.
- */
-export interface Corridor {
-  /** The bitmap the walls are tiled from, and its tiling period in world units. */
-  sprite: number;
-  extent: number;
-  /** World along where the walls begin and end. */
-  from: number;
-  to: number;
-  /** The across position of the near wall's tile centres and the far wall's. */
-  near: number;
-  far: number;
-  /**
-   * Openings in the walls, three numbers each: world `from`, world `to`, and the side — −1 for the
-   * near wall, +1 for the far one. Written in place and never grown, so the frame allocates nothing:
-   * the authored openings first, then a ring of the ones a flanking wave opens as it arrives.
-   */
-  passages: Float64Array;
-  /** How many of `passages` are authored, and which runtime slot a flank writes next. */
-  fixed: number;
-  next: number;
-}
+/*
+  The corridor a level is flown down — 0348 — is `src/sim/corridor.ts`'s since 0349, because the stone
+  is a rule the simulation asks questions of and the painter only draws it.
+*/
 
 export interface Bound {
   /** The baked dash, as an index into the atlas. */
@@ -645,13 +622,6 @@ function paintWalls(
   }
 }
 
-/** Whether a wall tile spanning `a` to `b` on `side` falls in any opening. */
-function opened(passages: Float64Array, a: number, b: number, side: number): boolean {
-  for (let i = 0; i + 2 < passages.length; i += 3) {
-    if (passages[i + 2] === side && a < passages[i + 1]! && b > passages[i]!) return true;
-  }
-  return false;
-}
 
 /**
  * The corridor's two walls — 0348. `null` for a level flown in the open, which is six of the seven.

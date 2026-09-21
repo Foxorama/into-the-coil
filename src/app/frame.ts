@@ -70,7 +70,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
-import type { Corridor } from '../render/scene.ts';
+import { faceAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import type { Surface } from '../render/surface.ts';
@@ -1697,6 +1697,8 @@ export class GameFrame implements Frame {
     */
     w.deaths.count = 0;
     w.bossDeaths.count = 0;
+    // The stone first, so nothing it stopped goes on to land — 0349.
+    stoneStops(w);
     /*
       ⚠️ **The two numbers below exist so a SURVIVED hit can be heard, and there is no third way to
       know about one.** `collideInto` returns what it destroyed and logs where; a hit that was
@@ -1787,10 +1789,11 @@ export class GameFrame implements Frame {
       collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
     }
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
-    blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths);
+    // Only what it can see — 0349: stone stops a blast.
+    blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths, w.corridor);
     if (shootable) {
-      blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths);
-      blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null);
+      blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.corridor);
+      blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null, w.corridor);
     }
     /*
       ⚠️ **AND THE SWEEP SITS HERE, WITH THE PAIRINGS, RATHER THAN AT THE END OF THE STEP** — 0283. A
@@ -1887,7 +1890,9 @@ export class GameFrame implements Frame {
         shield, or the life, with the same invulnerable window afterwards. A separate path would be a
         second description of what a hit is, and the two would disagree the first time either moved.
       */
-      collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      collideIntoOne(w.blasts, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false, w.corridor);
+      // And the stone, inside the same one-hit cap as everything above — 0349.
+      stoneStrikesShip(w);
       if (w.ship.health < healthBefore) w.ship.health = healthBefore - ONE_HIT;
       /*
         ⚠️ **A hit the ship SURVIVED, which is exactly the case that has a shield in it.** The hull is
@@ -2173,6 +2178,85 @@ function bossJustDied(w: World): boolean {
  * its far end and the hull, is hurt. The invulnerable window a hit opens is what makes a held beam
  * one hit and not thirty — the same window every other threat gets, and no other rule.
  */
+/*
+  ── THE STONE IS SOLID — `docs/decisions/0349-the-stone-bites.md` ────────────────────────────────
+
+  Asked for: *"a wall will kill the ship and block shots, waves need to spawn in the corridors and
+  also explode if they hit a wall."* And answered, on the plan: a wall is one hit and the ship is put
+  back out; a body the stone destroys scores nothing and drops nothing; and **nothing reaches through
+  stone — not a shot, not a chain of lightning, not a blast.**
+
+  ⚠️ **A NO-OP ON EVERY LEVEL WITHOUT A CORRIDOR**, which is six of the seven: `stoneAt` answers nought
+  for a `null` corridor on its first line.
+*/
+
+/**
+ * Everything that flies stops at the face, and every body that meets the stone is destroyed — 0349.
+ *
+ * ⚠️ **BEFORE THE PAIRINGS**, so a shot that reached stone this step never goes on to hit anything
+ * behind it, and a body destroyed by a wall is never also counted as shot.
+ *
+ * ⚠️ **A WALL KILL IS NOT A KILL.** It bursts where it was, exactly as a shot-down body does, and it
+ * never reaches `w.deaths` — so nothing is scored for it and nothing drops. The player did not kill it.
+ */
+function stoneStops(w: World): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  breakInStone(w, corridor, w.playerShots);
+  breakInStone(w, corridor, w.missiles);
+  breakInStone(w, corridor, w.enemyShots);
+  // A bomb that meets stone goes off at the face — a blast inside the wall would see nothing (0349).
+  for (let i = 0; i < w.bombs.size; i++) {
+    const bomb = w.bombs.at(i);
+    const side = stoneAt(corridor, bomb.along, bomb.across, 0);
+    if (side === 0) continue;
+    bomb.across = faceAt(corridor, bomb.along, side) - side * 0.5;
+    bomb.lifeFor = Math.min(bomb.lifeFor, 1);
+  }
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const e = w.enemies.at(i);
+    if (stoneAt(corridor, e.along, e.across, e.radius) === 0) continue;
+    burst(w, e.along, e.across, BURST.enemy);
+    flare(w, e.along, e.across, 'burst');
+    w.enemies.releaseAt(i);
+  }
+}
+
+/** Every shot in `pool` whose centre has reached stone ends there, with a spark — 0349. */
+function breakInStone(w: World, corridor: Corridor, pool: Pool<Entity>): void {
+  for (let i = pool.size - 1; i >= 0; i--) {
+    const shot = pool.at(i);
+    // The centre, not the rim: a shot breaks when it arrives at the face, not as it grazes it.
+    if (stoneAt(corridor, shot.along, shot.across, 0) === 0) continue;
+    flare(w, shot.along, shot.across, 'spark');
+    pool.releaseAt(i);
+  }
+}
+
+/**
+ * The ship against the stone — 0349: one hit, and put back on the corridor's side of the face.
+ *
+ * ⚠️ **PUT BACK WHETHER OR NOT IT IS HURT.** A ship still blinking from the last hit would otherwise
+ * sit inside the wall for the whole of its invulnerable window, which is a ship in stone on screen —
+ * 0348's own guard, from the other side.
+ *
+ * ⚠️ **SCALED BY `terrainDamage`**, which `src/sim/assist.ts` has carried since 0024 and nothing read
+ * until now: at `solid` the wall only pushes. The cost is `wound`'s, so a shield takes it first and
+ * the window after it is every other hit's.
+ */
+function stoneStrikesShip(w: World): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  const ship = w.ship;
+  const reach = ship.radius * w.tuning.hurtbox;
+  const side = stoneAt(corridor, ship.along, ship.across, reach);
+  if (side === 0) return;
+  ship.across = faceAt(corridor, ship.along, side) - side * reach;
+  if (side * ship.velAcross > 0) ship.velAcross = 0;
+  if (ship.invulnFor > 0 || w.tuning.terrainDamage <= 0) return;
+  wound(ship, w.tuning.terrainDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
+}
+
 function strikeShip(w: World): void {
   if (w.ship.invulnFor > 0) return;
   for (let i = 0; i < w.bolts.size; i++) {
@@ -2701,9 +2785,10 @@ function fireArc(w: World): void {
   for (let link = 0; link < w.weapon.links; link++) {
     let toAlong: number;
     let toAcross: number;
-    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge);
+    // Only what the link can see — 0349: lightning does not jump through stone.
+    const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge, w.corridor);
     // Not a boss that is still making its entrance — 0306: *"not-shootable"* is the arc's too.
-    const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge) : -1;
+    const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge, w.corridor) : -1;
     // Where this link is going, decided before anything is struck — a void on the way takes it first.
     const onEnemy = enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross));
     if (onEnemy) {
@@ -5038,7 +5123,26 @@ function steerEnemies(w: World): void {
         break;
       }
     }
+    /*
+      ⚠️ **A BODY THAT STEERS, STEERS CLEAR OF STONE — 0349.** A hunter leans after the ship and a
+      circler orbits it, and the ship is in the corridor — so a turn of the ship's near a wall would
+      otherwise walk them into it and hand the player a kill for standing there. They slide along the
+      face instead, on where the step would take them, as a drifter turns (0348). What meets the stone
+      is what cannot help it: a charger on its run, an arc on its turn, a weave on its path.
+    */
+    if ((m.kind === 'hunt' || m.kind === 'circle') && e.steerAcross === 0) keepInside(w.corridor, e);
   }
+}
+
+/** Trim a body's step across so its hull ends it on the corridor's side of both faces — 0349. */
+function keepInside(corridor: Corridor | null, e: Entity): void {
+  if (corridor === null) return;
+  const low = faceAt(corridor, e.along, -1) + e.radius;
+  const high = faceAt(corridor, e.along, 1) - e.radius;
+  const next = e.across + e.velAcross;
+  // Exactly to the face: short of it would stop the body in the air, past it would put it in stone.
+  if (next < low) e.velAcross = low - e.across;
+  else if (next > high) e.velAcross = high - e.across;
 }
 
 /**
@@ -7520,6 +7624,14 @@ export function corridorFor(level: LevelRow, origin: number): Corridor | null {
     passages[i * 3] = 0;
     passages[i * 3 + 1] = -1;
   }
+  // The faces at every knot, one per tile — 0349. The same two numbers the whole way, for now.
+  const knots = Math.ceil((to - origin) / extent) + 1;
+  // @setup: a level boundary — the corridor's shape, one array for the level.
+  const faces = new Float64Array(knots * 2);
+  for (let k = 0; k < knots; k++) {
+    faces[k * 2] = row.centre - row.width / 2;
+    faces[k * 2 + 1] = row.centre + row.width / 2;
+  }
   return {
     sprite,
     extent,
@@ -7527,6 +7639,7 @@ export function corridorFor(level: LevelRow, origin: number): Corridor | null {
     to,
     near: row.centre - row.width / 2 - extent / 2,
     far: row.centre + row.width / 2 + extent / 2,
+    faces,
     passages,
     fixed: row.passages.length,
     next: 0,
