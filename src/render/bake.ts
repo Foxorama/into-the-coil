@@ -2803,7 +2803,7 @@ export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
   saurian: (ctx, land, sky, glow, size, light) => drawJungle(ctx, land, sky, glow, size, light),
   labyrinth: null,
   rime: (ctx, land, sky, glow, size, light) => drawIce(ctx, land, sky, glow, size, light),
-  mire: (ctx, land, sky, glow, size) => drawEnclosure(ctx, land, sky, glow, size),
+  mire: (ctx, land, sky, glow, size, light) => drawEnclosure(ctx, land, sky, glow, size, light),
   core: null,
 };
 
@@ -2822,7 +2822,7 @@ export const RANGE_OF: Record<ThemeKind, GroundArt | null> = {
   saurian: (ctx, land, sky, glow, size, light) => drawRange(ctx, land, sky, glow, size, light),
   labyrinth: null,
   rime: (ctx, land, sky, glow, size, light) => drawBergs(ctx, land, sky, glow, size, light),
-  mire: null,
+  mire: (ctx, land, sky, glow, size, light) => drawSwamp(ctx, land, sky, glow, size, light),
   core: null,
 };
 
@@ -3387,7 +3387,7 @@ function drawIce(ctx: Pen, land: string, _sky: string, _glow: string, size: numb
  * it. *"Tight"* is a feeling and *"a passage the ship cannot fly down"* is a bug, and only one of
  * those two has a number.
  */
-function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
+function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: number, light?: LandLight): void {
   /*
     ⚠️ **BOTH EDGES SIT WELL INSIDE THE LANE**, which is what makes this place feel enclosed at all.
     The canopy hangs to tile 0.4 — lane 30 — and the pools rise to 0.66, lane 82. Everything the game
@@ -3399,11 +3399,49 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
     nowhere in it. `hang` biases every sample downward and squares it, so the edge sits near its base
     most of the way across and drops a long way in a few places: a roof with things coming off it.
   */
-  const canopy = skyline(size, 'mire/canopy', 0.4, 0.075, 24, 'down');
+  /*
+    ⚠️ **RAISED TO A CEILING — 0352.** Asked for: *"overgrowth ceiling needs to be raised and to be an
+    actual ceiling."* The roof's line sits at tile 0.3 — lane 10 — and hangs from there, so the fight
+    has most of the screen and the canopy is a roof over it rather than a wall a third of the way down.
+  */
+  const canopy = skyline(size, 'mire/canopy', 0.3, 0.06, 28, 'down');
   const pools = skyline(size, 'mire/pools', 0.66, 0.022, 14);
 
   fillTo(ctx, land, canopy, size, false);
   fillTo(ctx, land, pools, size, true);
+
+  /*
+    The underside of the roof: clumps of leaf along its edge in a murk green, so it is foliage with a
+    depth to it and not a cut-out — and vines and moss hanging off it, thin, so they read as growth
+    and never as a body (0222's band holds compact marks; these are long).
+  */
+  const leaf = light?.canopy ?? mix(land, sky, 0.6);
+  const rng0 = makeRng('sky').stream('mire/underside');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = leaf;
+  for (let i = 0; i + 1 < canopy.length; i += 1) {
+    const [x0, y0] = canopy[i]!;
+    const [x1, y1] = canopy[i + 1]!;
+    for (let j = 0; j < 3; j += 1) {
+      const t = rng0.range(0, 1);
+      const r = size * rng0.range(0.006, 0.012);
+      ctx.beginPath();
+      ctx.arc(x0! + (x1! - x0!) * t, y0! + (y1! - y0!) * t - r * 0.3, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.strokeStyle = leaf;
+  ctx.lineCap = 'round';
+  for (let i = 1; i < canopy.length - 1; i += 1) {
+    const [x, y] = canopy[i]!;
+    const hang = size * rng0.range(0.02, 0.075);
+    const lean = size * rng0.range(-0.008, 0.008);
+    ctx.lineWidth = Math.max(1, size * rng0.range(0.0015, 0.003));
+    ctx.beginPath();
+    ctx.moveTo(x!, y!);
+    ctx.quadraticCurveTo(x! + lean, y! + hang * 0.5, x! + lean * 0.3, y! + hang);
+    ctx.stroke();
+  }
 
   /*
     ── THE SHADOW UNDER THE ROOF ───────────────────────────────────────────────────────────────────
@@ -3421,7 +3459,7 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
   ctx.fillStyle = land;
   for (let i = 0; i < 6; i += 1) {
     ctx.globalAlpha = 0.42 * (1 - i / 6);
-    const from = (0.4 + i * 0.04) * size;
+    const from = (0.3 + i * 0.04) * size;
     ctx.fillRect(0, from, size, 0.041 * size);
   }
 
@@ -3437,20 +3475,42 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
     The pools themselves, and they are the light source. **Drawn before the shoreline**, so the
     shoreline closes over their far edge and they sit IN the ground rather than on it.
   */
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = glow;
-  for (let i = 0; i < 6; i += 1) {
+  /*
+    ⚠️ **LIT FROM WITHIN, AND AS BRIGHT ACROSS THEIR AREA AS THE FLOOR ALLOWS — 0352.** *"Vibrant
+    glowing acid pools"* is a lit area low in the lane, where shots are read. The surface of each pool
+    is the place's `lit` — a saturated acid green at the floor's ceiling, the brightest colour the land
+    states — falling away with depth into the ground. The vibrance is in the saturation, and in the
+    thin bright lines on the surface, which are strokes and not an area.
+  */
+  const surface = light?.lit ?? mix(land, glow, 0.36);
+  const depth = mix(surface, land, 0.6);
+  for (let i = 0; i < 8; i += 1) {
     const at = rng.range(0.02, 0.84) * size;
-    const wide = rng.range(0.07, 0.15) * size;
-    const deep = rng.range(0.018, 0.042) * size;
-    const top = (0.665 + rng.range(0.005, 0.045)) * size;
+    const wide = rng.range(0.08, 0.17) * size;
+    const deep = rng.range(0.03, 0.06) * size;
+    const top = (0.665 + rng.range(0.004, 0.04)) * size;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = vertical(ctx, size, top / size, surface, (top + deep) / size, depth);
+    // A shallow lens rather than a box: a pool is a hollow the acid has filled.
     ctx.beginPath();
     ctx.moveTo(at, top);
-    ctx.lineTo(at + wide, top);
-    ctx.lineTo(at + wide * 0.8, top + deep);
-    ctx.lineTo(at + wide * 0.15, top + deep);
+    ctx.quadraticCurveTo(at + wide / 2, top - deep * 0.15, at + wide, top);
+    ctx.quadraticCurveTo(at + wide / 2, top + deep * 0.9, at, top);
     ctx.closePath();
     ctx.fill();
+    // Ripples on the surface: thin, bright, a few to a pool.
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = glow;
+    ctx.lineWidth = Math.max(1, size * 0.0015);
+    for (let r = 0; r < 3; r += 1) {
+      // Inside the lens, whose floor is under half its depth: ripples below it would float in the ground.
+      const y = top + deep * (0.07 + r * 0.1);
+      const inset = wide * (0.14 + r * 0.1);
+      ctx.beginPath();
+      ctx.moveTo(at + inset, y);
+      ctx.lineTo(at + wide - inset, y);
+      ctx.stroke();
+    }
   }
 
   ctx.globalAlpha = 0.85;
@@ -3475,8 +3535,66 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
   for (let i = 1; i < canopy.length; i += 1) ctx.lineTo(canopy[i]![0]!, canopy[i]![1]!);
   ctx.stroke();
   ctx.globalAlpha = 1;
-  // Unused here, and named rather than dropped: the mire's murk is the AIR, not a thing to draw with.
-  void sky;
+}
+
+/**
+ * The swamp behind the fight — 0352: *"the background needs to be swampy trees and murk."* Two rows
+ * of drowned trunks standing out of dark water, the far row paler with murk, the near one darker, with
+ * mist lying between them; in its own slower layer (0347's `RANGE_OF`), so they pass behind the pools.
+ * Their tops run up behind the canopy, which is drawn in front of them. Every colour here is the land
+ * or the air mixed with a little of the murk, darker than anything the fight is read by.
+ */
+function drawSwamp(ctx: Pen, land: string, sky: string, _glow: string, size: number, light?: LandLight): void {
+  const murk = mix(sky, land, 0.2);
+  const far = light?.far ?? mix(sky, land, 0.5);
+  const rows = [
+    { seed: 'mire/farTrees', count: 11, colour: far, wide: 0.018, water: 0.62 },
+    { seed: 'mire/nearTrees', count: 7, colour: mix(far, land, 0.6), wide: 0.03, water: 0.66 },
+  ];
+  for (const row of rows) {
+    const rng = makeRng('sky').stream(row.seed);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = row.colour;
+    ctx.strokeStyle = row.colour;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < row.count; i += 1) {
+      const at = ((i + rng.range(0.1, 0.9)) / row.count) * size;
+      const base = row.wide * size * rng.range(0.7, 1.3);
+      const top = rng.range(0.12, 0.26) * size;
+      const foot = row.water * size;
+      const lean = size * rng.range(-0.02, 0.02);
+      for (const dx of [-size, 0, size]) {
+        const x = at + dx;
+        if (x + base * 2 < 0 || x - base * 2 > size) continue;
+        // The trunk, tapering, with its roots flaring into the water.
+        ctx.beginPath();
+        ctx.moveTo(x - base * 1.6, foot);
+        ctx.lineTo(x - base * 0.5, foot - base * 1.2);
+        ctx.lineTo(x - base * 0.2 + lean, top);
+        ctx.lineTo(x + base * 0.2 + lean, top);
+        ctx.lineTo(x + base * 0.5, foot - base * 1.2);
+        ctx.lineTo(x + base * 1.6, foot);
+        ctx.closePath();
+        ctx.fill();
+        // Two bare branches, reaching.
+        ctx.lineWidth = Math.max(1, base * 0.3);
+        for (const side of [-1, 1]) {
+          const from = top + (foot - top) * rng.range(0.15, 0.45);
+          ctx.beginPath();
+          ctx.moveTo(x + lean * 0.6, from);
+          ctx.quadraticCurveTo(x + side * base * 3, from - base * 1.5, x + side * base * 4.5, from - base * 3.5);
+          ctx.stroke();
+        }
+      }
+    }
+    // Mist lying on the water at this row's feet.
+    ctx.fillStyle = vertical(ctx, size, row.water - 0.05, rgba(murk, 0), row.water, rgba(murk, 0.7));
+    ctx.fillRect(0, (row.water - 0.05) * size, size, 0.05 * size);
+  }
+  // The water: the mass the layer stands on, crossing the tile and running off the bottom of the world.
+  const water = (x: number): number => 0.668 + waves(x, size, [[3, 0.003, 0.4], [7, 0.002, 1.9]]);
+  fillUnder(ctx, murk, crestOf(size, water), size);
+  ctx.globalAlpha = 1;
 }
 
 /**
@@ -10742,13 +10860,15 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     const out: StructureMark[] = [];
     for (let i = 0; i < 12; i += 1) {
       const x = rng.range(0, 1) * size;
-      const reach = rng.range(0.1, 0.26) * size;
+      // ⚠️ Shorter and straighter at 0352: hung from a roof at 0.3, the old reach and sway put them
+      // across the swamp's trunks as a second tangle of branches in mid-air.
+      const reach = rng.range(0.05, 0.12) * size;
       const points: number[][] = [];
       let sway = 0;
       for (let s = 0; s <= 6; s += 1) {
         // A random WALK rather than a per-step offset: a frond leans and keeps leaning, which is what
         // hangs in a current instead of zigzagging.
-        sway += rng.range(-0.04, 0.04) * size;
+        sway += rng.range(-0.012, 0.012) * size;
         /*
           ⚠️ **HUNG FROM THE CANOPY, WHICH DID NOT EXIST WHEN THIS WAS WRITTEN — 0221.** They started
           at tile 0.12 and reached down to 0.67, which is a curtain across most of the lane hanging
@@ -10757,7 +10877,8 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           reach a little way past it into the corridor — which is the same *"reaches you before you
           reach it"* the place has always been about, with something to reach from.
         */
-        points.push([x + sway, 0.4 * size + (s / 6) * reach]);
+        // From the roof's line, which 0352 raised to 0.3.
+        points.push([x + sway, 0.3 * size + (s / 6) * reach]);
       }
       out.push({ points, width: rng.range(0.01, 0.026) * size, alpha: 0.6, crosses: false, taper: true, lit: false });
     }

@@ -232,6 +232,9 @@ space, confirmed in the photograph. **`tests/places.test.ts` holds *the corridor
 ask in lane units**; this ask reverses it, so that guard changes in this PR and says why. Second use
 of mechanism 2, with its own sprite and its own motion — a bubble rises and pops, it does not arc.
 
+*The ceiling, the swamp and the pools landed as [0352](../docs/decisions/0352-the-mire-is-a-swamp.md);
+the bubbles did not, and are the next piece of work — mechanism 2 has to come off the landmark first.*
+
 ### 7 — The Black Heart: veins, and stars behind them
 
 > *"Needs veins pulsing throughout the level and a beautiful starry backdrop."*

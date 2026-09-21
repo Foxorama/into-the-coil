@@ -1490,6 +1490,15 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // ⚠️ **ONE COLOUR FOR BOTH THE CANOPY AND THE POOLS**, because they are one enclosure and the
     // corridor between them is the subject. Two tones would read as a floor and a separate ceiling.
     ground: { vivid: '#080f04', 'high-contrast': '#000200' },
+    /*
+      ⚠️ **THE SWAMP'S COLOURS, AND THE ACID IS THE BRIGHTEST OF THEM — 0352.** `lit` is the surface
+      of the pools, a saturated acid green as bright as the floor lets an area low in the lane be: the
+      worst ink keeps 3.12:1 over it on vivid. `canopy` is the roof's leaf and `far` the drowned trees.
+    */
+    land: {
+      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#0c5c16' },
+      'high-contrast': { far: '#0a2a08', canopy: '#102008', lit: '#083008' },
+    },
     // Grown, not built: bruise-purple, toxic yellow where it leaks, a blank white eye, and spores.
     /*
       ⚠️ **THE TIGHTEST PAIRING IN THE SET, AND IT IS AUTHORED AS BAKED RATHER THAN ADJUSTED FIRST.**

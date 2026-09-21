@@ -225,16 +225,16 @@ describe('0221 — a planet is not a space', () => {
     }
   });
 
-  it('THE ASK, IN LANE UNITS: The Toxic Mire’s corridor is tight and the ship fits down it', () => {
+  it('THE ASK, IN LANE UNITS: The Toxic Mire’s canopy is a ceiling, and the ship fits under it', () => {
     /*
-      *"needs an overhanging canopy so that it feels like you're flying through a tight narrow corridor
-      above the toxic pools below and beneath the overhanging canopy above."*
+      *"Overgrowth ceiling needs to be raised and to be an actual ceiling"* — 0352, which reverses the
+      ask this guard was first written for (0221: *"a tight narrow corridor… beneath the overhanging
+      canopy"*). The newer report wins, so the claim changed rather than the work being made to suit it:
+      the roof is held NEAR THE TOP OF THE LANE now, where it used to be held low enough to feel tight.
 
-      ⚠️ **TWO CLAIMS THAT PULL AGAINST EACH OTHER, WHICH IS WHY BOTH ARE HERE.** *Tight* is what was
-      asked for and *the player cannot fly down it* is a bug — and the lane is a fixed 100 units that
-      the ship uses all of (`docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`), so the corridor
-      cannot actually be narrow in the way a wall is. It is measured against the ship at both ends:
-      wide enough to fly, narrow enough that the place is an enclosure rather than a sky.
+      ⚠️ **STILL MEASURED AGAINST THE SHIP AT THE OTHER END**, because *the player cannot fly under it*
+      is a bug whatever the ask: the gap between the roof's lowest point and the pools' highest is more
+      than three ships.
     */
     const size = 240;
     const { pen, trace } = tracingPen();
@@ -259,17 +259,15 @@ describe('0221 — a planet is not a space', () => {
         'a passage the player cannot be inside is not a corridor, it is a wall',
     ).toBeGreaterThan(ship * 3);
     /*
-      ⚠️ **0.55 AND NOT 0.72, BECAUSE `npm run prove` SAID SO.** The first ceiling was three quarters
-      of the lane and the probe for it — the canopy lifted to tile 0.27 — came back **STILL GREEN**:
-      the gap only reached 59 of a permitted 72, so a canopy raised half way out of the frame was
-      inside the bound. The corridor measures 33 today, so 55 leaves it two thirds of its own width to
-      move in and still catches a roof that has stopped being one.
+      ⚠️ **THE ROOF NEVER HANGS PAST LANE 30, WHICH IS WHERE THE OLD ONE STOOD.** 0221's canopy line was
+      at tile 0.4 — lane 30 — and it was reported as too low to be a ceiling. 0352's hangs from lane 10
+      and reaches lane 24 at its deepest; a roof that came back down to the old line is the report again.
     */
     expect(
-      gap,
-      `the mire's corridor is ${gap.toFixed(0)} of ${ACROSS_SPAN} lane units — nothing is overhanging ` +
-        'anything, which is a sky with a floor rather than the enclosure that was asked for',
-    ).toBeLessThan(ACROSS_SPAN * 0.55);
+      hangsTo,
+      `the mire's canopy hangs to lane ${hangsTo.toFixed(0)} — as low as the roof that was reported as not ` +
+        'being a ceiling',
+    ).toBeLessThan(30);
   });
 });
 
