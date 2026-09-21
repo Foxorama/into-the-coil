@@ -61,6 +61,9 @@ owed a count in that PR rather than this sentence.
 
 ## The queue
 
+**How the first three were built, what bit, and starting notes for each place that is left:**
+[`how-the-places-get-painted`](how-the-places-get-painted-2026-09-21.md). Read it before item 3.
+
 ⚠️ **AN ITEM IS THE WHOLE PLACE, NOT THE PARTS OF IT THAT WERE NAMED.** Added 2026-09-21, after item 1
 was handed over with The Approach's grey limb left alone because *the ask was the stars*:
 

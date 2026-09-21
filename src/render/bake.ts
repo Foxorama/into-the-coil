@@ -1928,7 +1928,7 @@ export const LANDMARK_OF: Record<
   ((ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number) => void) | null
 > = {
   approach: null,
-  nebula: (ctx, ink, _glow, space, size, seed) => drawPillars(ctx, ink, space, size, seed),
+  nebula: (ctx, ink, glow, space, size, seed) => drawPillars(ctx, ink, glow, space, size, seed),
   saurian: (ctx, _ink, glow, space, size, seed) => drawVolcano(ctx, glow, space, size, seed),
   labyrinth: null,
   rime: null,
@@ -1936,7 +1936,7 @@ export const LANDMARK_OF: Record<
   core: (ctx, ink, _glow, space, size, seed) => drawHeart(ctx, ink, space, size, seed),
 };
 
-function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: number): void {
+function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number): void {
   /*
     ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
 
@@ -2110,6 +2110,32 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: n
       through(windward);
     };
 
+    /*
+      ⚠️ **A CROWN OF EMBER LIGHT BEHIND EACH COLUMN'S HEAD, DRAWN FIRST SO THE COLUMN CUTS INTO IT —
+      0346.** Played: *"pillars could be more vibrant."* They were lit in the gas's BODY colour only —
+      `LANDMARK_OF.nebula` threw the accent away — so the brightest thing on them was a dull mauve
+      line. The place's own ember, as light with no edge (two stops, to nothing), is what the real
+      ones are: dust with a star being born behind its tip.
+    */
+    /*
+      ⚠️ **FITTED INSIDE THE BITMAP, BECAUSE THE FIRST ONE WAS NOT AND THE PHOTOGRAPH SHOWED A RULED
+      LINE ACROSS THE SKY.** The tallest column's tip is a twentieth of the tile from its top edge, so
+      a crown centred on it was cut off flat — 0204's *rectangle clipped around the gas*, again. It
+      sits a little below the tip, behind the head, and is no bigger than its own distance to any edge.
+    */
+    const wanted = halfWidth * (column.far ? 2.6 : 3.4);
+    const crownX = mid + drift;
+    const crownY = tip + wanted * 0.45;
+    const reachOf = Math.min(wanted, crownY, crownX, size - crownX);
+    const crown = ctx.createRadialGradient(crownX, crownY, 0, crownX, crownY, reachOf);
+    crown.addColorStop(0, rgba(glow, column.far ? 0.3 : 0.55));
+    crown.addColorStop(1, rgba(glow, 0));
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = crown;
+    ctx.beginPath();
+    ctx.arc(crownX, crownY, reachOf, 0, Math.PI * 2);
+    ctx.fill();
+
     // A hole in the gas, not a shape on top of it — and a PARTIAL hole for the two standing behind.
     ctx.globalAlpha = column.far ? 0.6 : 1;
     ctx.fillStyle = space;
@@ -2161,8 +2187,12 @@ function drawPillars(ctx: Pen, ink: string, space: string, size: number, seed: n
     // on the column and is what stops the silhouette reading as a flat cut-out.
     ctx.globalAlpha = column.far ? 0.4 : 0.85;
     ctx.lineWidth = Math.max(1, size * (column.far ? 0.005 : 0.01));
+    // The rim is the ember and the face behind it is the gas — 0346, and 0223's rule that every lit
+    // EDGE in a place takes its accent, which this one edge had been missing since it was written.
+    ctx.strokeStyle = glow;
     trace();
     ctx.stroke();
+    ctx.strokeStyle = ink;
 
     /*
       ── THE STREAMERS ────────────────────────────────────────────────────────────────────────────

@@ -386,6 +386,7 @@ describe('0220 — the heart beats', () => {
       lane: entry!.lane,
       depth: entry!.depth,
       beat: entry!.beat,
+      scale: entry!.scale ?? 1,
     };
     /*
       Sampled across one whole beat from a camera position where the landmark is on screen. `at` is
@@ -417,6 +418,7 @@ describe('0220 — the heart beats', () => {
       lane: entry.lane,
       depth: entry.depth,
       beat: entry.beat,
+      scale: entry.scale ?? 1,
     };
     const from = mark.at + 400;
     const STEPS = 240;
@@ -465,6 +467,7 @@ describe('0220 — the heart beats', () => {
       lane: entry.lane,
       depth: entry.depth,
       beat: entry.beat,
+      scale: entry.scale ?? 1,
     };
     const STEP = 0.6;
     const widths: number[] = [];

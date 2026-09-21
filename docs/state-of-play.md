@@ -814,10 +814,13 @@ each, in level order, and the report holds the order and what each owes. Item 0 
 item lands**, which 0342 says on purpose. Item 1 is landed too —
 [0343](decisions/0343-the-stars-are-drawn-for-a-desk.md), The Approach's star field, **owed an eye in
 motion** — and `scripts/weigh-stars.mjs` reads any place's stars in desktop pixels. Item 2 is landed —
-[0345](decisions/0345-ember-nebula-is-in-colour.md), Ember Nebula, **owed the same eye and one open
-question it names: whether a landmark should be painted in front of the stars.** The next is Saurian
-Belt, which is the first place that needs a backdrop that moves. The Labyrinth's flank question is answered and a second Labyrinth item (4b, the corridor turns
-and forks) is in the report with the three sim questions it owes.
+[0345](decisions/0345-ember-nebula-is-in-colour.md), Ember Nebula — **played, *"pillars and ember look
+good"***, and the Pillars were then made larger and brighter in
+[0346](decisions/0346-the-pillars-fill-the-sky.md), which also closes 0345's open question: the stars
+stay in front of landmarks. The next is Saurian Belt, the first place that needs a backdrop that
+moves. **How the first three were built, and the player's answers on Rime Shelf and the walled
+Labyrinth, are in** [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md)
+— read it before item 3.
 
 ⚠️ **THE WORK IS THE ALPHA LIST, SINCE 2026-09-06** —
 [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md), given after the first play with the

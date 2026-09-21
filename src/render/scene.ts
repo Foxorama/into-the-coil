@@ -113,6 +113,14 @@ export interface Landmark {
    * against.
    */
   beat: number;
+  /**
+   * How much bigger than its bitmap this entry is drawn — 0346. `1` for every landmark but the Pillars.
+   *
+   * ⚠️ **THE SAME ONE NUMBER `blit` ALREADY TAKES, which is `beat`'s own argument one field up**: no
+   * second bitmap, no slot, no allocation. `extent` is already the drawn width, so the painter's
+   * arrival and cull arithmetic needs no change to be right about a scaled mark.
+   */
+  scale: number;
 }
 
 /** How much bigger a landmark gets at the top of its beat. */
@@ -626,7 +634,7 @@ function paintLandmarks(
     */
     const swell =
       mark.beat > 0 ? 1 + BEAT_SWELL * beatAt(((((local - mark.at) / mark.beat) % 1) + 1) % 1) : 1;
-    surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale * swell);
+    surface.blit(mark.sprite, screenX(view, inView, mark.lane), screenY(view, inView, mark.lane), view.scale * swell * mark.scale);
   }
 }
 

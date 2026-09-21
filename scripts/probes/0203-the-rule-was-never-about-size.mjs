@@ -46,8 +46,10 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // Re-anchored when the entry gained `beat` — 0220. The invariant is unchanged; the line it
       // lives on grew a field.
-      find: '    landmarks: [{ at: 1299, lane: 72, depth: 0.08, beat: 0, variant: 0 }],',
-      replace: '    landmarks: [{ at: 1299, lane: 72, depth: 0.2, beat: 0, variant: 0 }],',
+      // ⚠️ And again by 0346, which placed three stands and gave the entry a `scale`. Anchored on
+      // the entry's position and the one field this breaks, so the next field does not strand it.
+      find: '{ at: 1299, lane: 58, depth: 0.08,',
+      replace: '{ at: 1299, lane: 58, depth: 0.2,',
     },
   },
 ];

@@ -7351,7 +7351,10 @@ export function landmarksFor(level: LevelRow): Landmarks {
     // are baked from three seeds at the boundary; an entry names one, and everything downstream of
     // here is a sprite index like any other.
     sprite: LANDMARK_SLOTS[entry.variant],
-    extent: SPRITE_EXTENT.landmark,
+    // The extent the PAINTER culls and places by is the drawn one, so a scaled entry arrives and
+    // leaves where its edge actually is — 0346.
+    extent: SPRITE_EXTENT.landmark * (entry.scale ?? 1),
+    scale: entry.scale ?? 1,
     at: entry.at,
     lane: entry.lane,
     depth: entry.depth,
