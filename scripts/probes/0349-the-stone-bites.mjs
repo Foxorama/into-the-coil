@@ -25,7 +25,7 @@ export const PROBES = [
     guard: 'THE SHIP, IN LANE UNITS',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  ship.across = faceAt(corridor, ship.along, side) - side * reach;',
+      find: '  ship.across = outOfStone(corridor, ship.along, ship.across, reach, side);',
       replace: '',
     },
   },

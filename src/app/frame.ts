@@ -70,7 +70,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
-import { faceAt, stoneAt, type Corridor } from '../sim/corridor.ts';
+import { bandAt, deepestFace, faceAt, laneIn, layFaces, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import type { Surface } from '../render/surface.ts';
@@ -1630,6 +1630,8 @@ export class GameFrame implements Frame {
     // speed and nothing else, which is what makes the world appear to move past it.
     stepEntities(w.shipPool, w.cameraAlong);
     stepEntities(w.pickups, w.cameraAlong);
+    rideCorridor(w, w.pickups);
+    stoneHoldsPickups(w);
     // Not culled while it makes its entrance, which flies it off the bottom of the screen and past the
     // leading edge's margin on purpose — a released head is the boss dying on its entrance (0306).
     stepEntities(w.bossPool, w.cameraAlong, w.bossEntering >= 0 ? Number.POSITIVE_INFINITY : undefined, w.bossEntering < 0);
@@ -1658,6 +1660,8 @@ export class GameFrame implements Frame {
     // After the body is laid, so every flame is where its node is this step — 0305.
     layAura(w);
     stepEntities(w.enemies, w.cameraAlong);
+    // And carried with the corridor as it bends — 0350.
+    rideCorridor(w, w.enemies);
     // ⚠️ The one pool with its own leading cull, and it is the player's REACH rather than content —
     // `src/sim/camera.ts` has the play report that argues it.
     stepEntities(w.playerShots, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
@@ -2219,6 +2223,7 @@ function stoneStops(w: World): void {
     burst(w, e.along, e.across, BURST.enemy);
     flare(w, e.along, e.across, 'burst');
     w.enemies.releaseAt(i);
+    corridor.kills += 1;
   }
 }
 
@@ -2251,7 +2256,7 @@ function stoneStrikesShip(w: World): void {
   const reach = ship.radius * w.tuning.hurtbox;
   const side = stoneAt(corridor, ship.along, ship.across, reach);
   if (side === 0) return;
-  ship.across = faceAt(corridor, ship.along, side) - side * reach;
+  ship.across = outOfStone(corridor, ship.along, ship.across, reach, side);
   if (side * ship.velAcross > 0) ship.velAcross = 0;
   if (ship.invulnFor > 0 || w.tuning.terrainDamage <= 0) return;
   wound(ship, w.tuning.terrainDamage, INVULN_STEPS, IMPACT_FLASH_STEPS);
@@ -3630,12 +3635,18 @@ function fireEnemies(w: World): void {
           two bullets on the lane edge into one thicker one, which is a wall with a lie in it; a
           skipped slot is a wall that is simply narrower near the edges, and the body's own roam is
           bounded so this is rare.
+
+          ⚠️ **AND IN A CORRIDOR THE LANE ENDS AT THE STONE — 0350.** A slot past the face was put
+          down inside the wall and broke there on the step it was born (0349), so every sentry that
+          fired near a face lit two rows of sparks in the masonry: photographed on the Labyrinth at
+          burn, where the corridor is thirty-four wide and a wall of four gaps either side does not
+          fit in it. It is skipped by the same argument as the edge of the box.
         */
         w.onCue('threat', e.across);
         for (let s = 1; s <= attack.shots; s++) {
           for (let side = -1; side <= 1; side += 2) {
             const across = e.across + side * s * attack.gap;
-            if (across < 0 || across > ACROSS_SPAN) continue;
+            if (across < 0 || across > ACROSS_SPAN || stoneAt(w.corridor, e.along, across, 0) !== 0) continue;
             const shot = w.enemyShots.spawn();
             if (shot === null) break;
             reset(shot, e.along, across, bullet, bulletKind);
@@ -4450,6 +4461,78 @@ function feedTheLord(w: World): void {
 }
 
 /**
+ * Where authored lane `lane` falls in the corridor at `along`, kept a hull's width off both faces —
+ * `docs/decisions/0350-the-corridor-turns.md`. The identity where there is no corridor.
+ *
+ * ⚠️ **A WAVE IS AUTHORED AGAINST THE BOX AND ARRIVES IN THE CORRIDOR**, and the answer asked for was
+ * *"waves need to spawn in the corridors"*: its lane is read against the corridor where it arrives,
+ * squeezed in proportion, and a member a squeezed formation would still push into stone is stopped a
+ * hull short of it.
+ */
+function inCorridor(w: World, along: number, lane: number, radius: number): number {
+  const corridor = w.corridor;
+  if (corridor === null) return lane;
+  const across = laneIn(corridor, along, lane, radius);
+  // Beyond the corridor's span the band is infinite and the clamp does nothing, as it should.
+  return Math.min(bandAt(corridor, along, radius, 1), Math.max(bandAt(corridor, along, radius, -1), across));
+}
+
+/**
+ * Every body in `pool` carried with the corridor as it bends — 0350.
+ *
+ * ⚠️ **WITHOUT THIS A TURN IS A MASSACRE.** A wave spawns inside the corridor where it arrives, two
+ * hundred units ahead, and flies along the lane; by the time it reaches the ship the corridor has
+ * swung twenty units, and every body in it flies straight into the stone at the bend. So a body keeps
+ * its place ACROSS THE CORRIDOR from one step to the next — the share of the way from the near face
+ * to the far one — and only its own steering moves it within that. What meets the stone is then only
+ * what steers into it (0349's *what cannot help it*).
+ *
+ * ⚠️ **A BODY STILL OUTSIDE THE CORRIDOR — A FLANKER COMING THROUGH ITS PASSAGE — IS LEFT WHERE IT IS**,
+ * and only the lane it is steering for rides, so it arrives where its wave was meant to be.
+ */
+function rideCorridor(w: World, pool: Pool<Entity>): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  for (let i = 0; i < pool.size; i++) {
+    const e = pool.at(i);
+    /*
+      ⚠️ **ITS PLACE BETWEEN WHERE ITS HULL CAN BE, NOT BETWEEN THE FACES** — `bandAt`, the band
+      `laneIn` puts it down in. Scaled face to face, a body a hull's width off a narrowing wall is
+      carried closer to it than its own radius, and the stone takes it for standing still.
+    */
+    const lowBefore = bandAt(corridor, e.prevAlong, e.radius, -1);
+    const highBefore = bandAt(corridor, e.prevAlong, e.radius, 1);
+    const lowNow = bandAt(corridor, e.along, e.radius, -1);
+    const highNow = bandAt(corridor, e.along, e.radius, 1);
+    // Outside the corridor's span either side of the step: nothing to ride.
+    if (!Number.isFinite(lowBefore + highBefore + lowNow + highNow)) continue;
+    const band = highBefore - lowBefore;
+    if (band <= 0) continue;
+    const scale = (highNow - lowNow) / band;
+    if (e.across >= lowBefore && e.across <= highBefore) e.across = lowNow + (e.across - lowBefore) * scale;
+    if (e.steerAcross !== 0) e.steerAcross = lowNow + (e.steerAcross - lowBefore) * scale;
+  }
+}
+
+/**
+ * Every pickup the stone has come in on is put back beside it — 0350.
+ *
+ * ⚠️ **AFTER THE MOVE, BECAUSE THE WALL MOVES TOO.** `driftPickups` turns a pickup before it floats
+ * into a face, but in a narrowing the face comes in at up to the tier's slope times the scroll — 0.35
+ * lane units a step at burn, against a float's whole 0.28 — and rides over whatever is beside it. Put back rather than destroyed: a pickup is
+ * the player's, and 0349's *what meets the stone is destroyed* is written about what cannot help it.
+ */
+function stoneHoldsPickups(w: World): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  for (let i = 0; i < w.pickups.size; i++) {
+    const item = w.pickups.at(i);
+    const side = stoneAt(corridor, item.along, item.across, item.radius);
+    if (side !== 0) item.across = outOfStone(corridor, item.along, item.across, item.radius, side);
+  }
+}
+
+/**
  * Open the corridor where a flanking wave will cross its wall — 0348.
  *
  * Asked for: *"For the flankers have the walls open with gaps."* A flanker enters outside the lane at
@@ -4471,14 +4554,33 @@ function feedTheLord(w: World): void {
  * member to a full pool opens no more than it needs. A ring of slots written in place: nothing
  * allocates, and the oldest opening — long behind the screen — is the one overwritten.
  */
-function openPassage(w: World, first: number, last: number, radius: number, side: number): void {
+function openPassage(w: World, first: number, last: number, radius: number, side: number, travel: number): void {
   const corridor = w.corridor;
   if (corridor === null) return;
-  // The camera's travel while the body crosses from outside the lane to clear of the wall's face.
-  const drift = (w.scrollPerStep * (FLANK_MARGIN + PLAYER_MARGIN + radius * 2)) / FLANK_ENTRY_SPEED;
+  /*
+    How far along the world the body goes while it crosses from outside the lane to clear of the
+    wall's face — `travel` a step, which is the velocity its spawner gave it.
+
+    ⚠️ **EITHER WAY ALONG, AT THE BODY'S OWN SPEED — 0350.** 0348 wrote this as the camera's travel,
+    forward, which is what a summoned flanker does (it holds the screen, 0338). A wave's flanker holds
+    the screen ON TOP OF its row's closing, so a charger crosses going BACKWARDS through the world and
+    left its passage by the near end: flying burn, whole flanking columns burst on the jamb.
+
+    ⚠️ **AND AS DEEP AS THE WALL IS WHERE IT CROSSES.** 0348's wall stood on the box's edge, so the
+    crossing was always `PLAYER_MARGIN` of stone; a turned corridor's face can stand thirty units in.
+    The depth is read over the stretch the crossing covers, which depends on the depth — so it is read
+    twice more, each time over the stretch the last answer covers.
+  */
+  let depth = deepestFace(corridor, first, last, side, ACROSS_SPAN);
+  let drift = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    drift = (travel * (FLANK_MARGIN + depth + radius * 2)) / FLANK_ENTRY_SPEED;
+    depth = Math.max(depth, deepestFace(corridor, first + Math.min(0, drift), last + Math.max(0, drift), side, ACROSS_SPAN));
+  }
+  drift = (travel * (FLANK_MARGIN + depth + radius * 2)) / FLANK_ENTRY_SPEED;
   const slot = (corridor.fixed + corridor.next) * 3;
-  corridor.passages[slot] = first - radius - PASSAGE_CLEARANCE;
-  corridor.passages[slot + 1] = last + drift + radius + PASSAGE_CLEARANCE;
+  corridor.passages[slot] = first + Math.min(0, drift) - radius - PASSAGE_CLEARANCE;
+  corridor.passages[slot + 1] = last + Math.max(0, drift) + radius + PASSAGE_CLEARANCE;
   corridor.passages[slot + 2] = side;
   corridor.next = (corridor.next + 1) % ((corridor.passages.length / 3) - corridor.fixed);
 }
@@ -4510,7 +4612,7 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
   if (flanking) {
     const a = streamOffset(0, row.radius);
     const b = streamOffset(count - 1, row.radius);
-    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side < 0 ? -1 : 1);
+    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side < 0 ? -1 : 1, w.scrollPerStep);
   }
   const gap = gapAcross(row.radius);
   for (let i = 0; i < count; i++) {
@@ -4610,7 +4712,7 @@ function spawnWave(w: World, index: number): void {
   if (flanking) {
     const a = streamOffset(0, row.radius);
     const b = streamOffset(wave.count - 1, row.radius);
-    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side);
+    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);
   }
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   for (let i = 0; i < wave.count; i++) {
@@ -4624,7 +4726,17 @@ function spawnWave(w: World, index: number): void {
       `docs/decisions/0022-frame-rate-is-a-feature.md` bans anything else on the spawn path.
     */
     const gap = gapAcross(row.radius);
-    const target = wave.lane + formation.acrossOffset(i, wave.count, gap);
+    // How far along the lane this member stands from the wave's own point — the stream is argued below.
+    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, wave.count, gap);
+    /*
+      Read against the corridor where THIS MEMBER arrives, and never into its stone — 0350.
+
+      ⚠️ **AT ITS OWN ALONG, NOT THE WAVE'S.** A column is spaced along the lane; read at the head's
+      along, its tail was put down against a corridor that had turned under it — on a fixture flown at
+      burn, a column of five weavers at lane 50 put its members down at 0.50, 0.39, 0.25, 0.10 and
+      −0.04 of the band, and the stone took the last.
+    */
+    const target = inCorridor(w, along + stream, wave.lane + formation.acrossOffset(i, wave.count, gap), row.radius);
     /*
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane
@@ -4652,7 +4764,6 @@ function spawnWave(w: World, index: number): void {
       `target`, which is what they steer to once they are in. What it stops deciding is the entry
       spacing, which it was never able to express.
     */
-    const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, wave.count, gap);
     reset(e, along + stream, across, row, kind);
     if (flanking) {
       // The turn: cross at a fixed rate until the authored lane, then slow to the roam and carry on.
@@ -4932,8 +5043,13 @@ function steerEnemies(w: World): void {
           four sightings of a hull in the stone, traced to the step. Outside a corridor that overshoot
           is past the edge of the screen and harmless, which is why the line above keeps its old test.
         */
-        const low = corridor.near + corridor.extent / 2 + e.radius;
-        const high = corridor.far - corridor.extent / 2 - e.radius;
+        // The hull's band where the body is — 0350: the corridor turns, and the face beside the hull's
+        // nose is not the face beside its middle (`bandAt`). Past the corridor's ends there is no face,
+        // and the open level's band is the bound again.
+        const nearBand = bandAt(corridor, e.along, e.radius, -1);
+        const farBand = bandAt(corridor, e.along, e.radius, 1);
+        const low = Number.isFinite(nearBand) ? nearBand : ROAM_MIN;
+        const high = Number.isFinite(farBand) ? farBand : ROAM_MAX;
         const next = e.across + e.velAcross;
         if (next <= low) {
           e.across = Math.max(e.across, low);
@@ -4945,8 +5061,15 @@ function steerEnemies(w: World): void {
         break;
       }
       case 'weave': {
+        /*
+          ⚠️ **SQUEEZED WITH THE CORRIDOR, AS ITS LANE IS — 0350.** The amplitude is the row's and is
+          authored across the box; a wave's lane is read into the corridor in proportion (`laneIn`)
+          and a weave about it that kept the box's swing ran into the stone either side wherever the
+          corridor pinched. Flying burn, the stone destroyed thirty-seven weavers and thirteen sowers
+          in one level.
+        */
         const k = TAU / m.wavelength;
-        e.velAcross = m.amplitude * k * Math.cos(e.along * k) * e.velAlong;
+        e.velAcross = m.amplitude * k * Math.cos(e.along * k) * e.velAlong * squeezeAt(w.corridor, e.along, e.radius);
         break;
       }
       /*
@@ -5194,11 +5317,19 @@ function driftPickups(w: World): void {
       it: 0048's probe removes these lines and the suite stayed **STILL GREEN**, because the second
       mechanism was covering for the first.
     */
+    /*
+      ⚠️ **AND IN A CORRIDOR THE STONE IS THE LANE'S WALL — 0350**, or a pickup floats into the
+      masonry, where it is on the screen and out of reach: 0100's bug again, in the across axis. Asked
+      of the stone and not of the face, so an opening lets it drift through as it lets a flanker —
+      and asked of where this step would take it, so it turns before it arrives rather than after, as
+      a drifter does (0349). The wall moves as well, which a turn cannot answer: `stoneHoldsPickups`.
+    */
     const arrived = item.spin !== 0;
-    if (item.across - item.radius <= 0) {
+    const stone = stoneAt(w.corridor, item.along, item.across + item.velAcross, item.radius);
+    if (item.across - item.radius <= 0 || stone < 0) {
       if (arrived) bounceFloat(w, item, 0, 1);
       else item.velAcross = Math.abs(item.velAcross);
-    } else if (item.across + item.radius >= ACROSS_SPAN) {
+    } else if (item.across + item.radius >= ACROSS_SPAN || stone > 0) {
       if (arrived) bounceFloat(w, item, 0, -1);
       else item.velAcross = -Math.abs(item.velAcross);
     }
@@ -5714,6 +5845,8 @@ function spawnPickup(w: World, index: number): void {
     difficulty defect as much as a pickup one.
   */
   reset(item, entry.at + w.levelOrigin, entry.lane, row, kind);
+  // Read against the corridor where it lies, as a wave is — 0350. The identity where there is none.
+  item.across = inCorridor(w, item.along, entry.lane, item.radius);
   /*
     ⚠️ **Which way it starts drifting alternates by INDEX rather than being rolled.** The spawn
     stream exists and is deliberately not consulted here for the reason `spawnWave` gives: a level is
@@ -7584,7 +7717,7 @@ export function startLevel(w: World, level: LevelRow): void {
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
   // The corridor, from the origin `resetScene` is about to put the level at, which is nought — 0348.
-  w.corridor = corridorFor(level, 0);
+  w.corridor = corridorFor(level, 0, w.difficulty);
   w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   resetScene(w);
 }
@@ -7604,7 +7737,7 @@ const RUNTIME_PASSAGES = 8;
  * level's origin, `bossAt` and the room's `stand` and `mouth` — so the room's side walls pick the
  * corridor up in the same stone on the same grid, and nothing is drawn twice at the joint.
  */
-export function corridorFor(level: LevelRow, origin: number): Corridor | null {
+export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow): Corridor | null {
   const row = level.corridor;
   if (row === undefined) return null;
   const sprite = SPRITE[row.wall];
@@ -7624,14 +7757,11 @@ export function corridorFor(level: LevelRow, origin: number): Corridor | null {
     passages[i * 3] = 0;
     passages[i * 3 + 1] = -1;
   }
-  // The faces at every knot, one per tile — 0349. The same two numbers the whole way, for now.
+  // The faces at every knot, one per tile — 0349 — laid from the level's shape at this tier (0350).
   const knots = Math.ceil((to - origin) / extent) + 1;
   // @setup: a level boundary — the corridor's shape, one array for the level.
   const faces = new Float64Array(knots * 2);
-  for (let k = 0; k < knots; k++) {
-    faces[k * 2] = row.centre - row.width / 2;
-    faces[k * 2 + 1] = row.centre + row.width / 2;
-  }
+  layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);
   return {
     sprite,
     extent,
@@ -7639,10 +7769,13 @@ export function corridorFor(level: LevelRow, origin: number): Corridor | null {
     to,
     near: row.centre - row.width / 2 - extent / 2,
     far: row.centre + row.width / 2 + extent / 2,
+    centre: row.centre,
+    width: row.width,
     faces,
     passages,
     fixed: row.passages.length,
     next: 0,
+    kills: 0,
   };
 }
 
@@ -7697,7 +7830,7 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
   // The corridor, from where the level is about to begin — the camera, two lines down — 0348.
-  w.corridor = corridorFor(level, w.cameraAlong);
+  w.corridor = corridorFor(level, w.cameraAlong, w.difficulty);
   w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   /*
     ⚠️ **The one line that makes the rest of it possible.** The script is authored from the level's

@@ -158,6 +158,21 @@ export interface DifficultyRow {
    * multiplying nothing.
    */
   crowd: number;
+  /**
+   * How tight and how twisting a walled corridor is flown at this tier —
+   * `docs/decisions/0350-the-corridor-turns.md`.
+   *
+   * ⚠️ **THE PLAYER'S OWN NUMBERS, AND THE FIRST TIME A TIER REACHES THE LEVEL'S SHAPE.** Asked, of the
+   * plan's three: *"do all 3 but per difficulty, saviour is 44, burn is 34, legend is 56."* A level
+   * authors its corridor's turns once, as a shape; `narrowest` is how close its walls come at the
+   * shape's tightest, in lane units, and `slope` is the steepest a wall may run, across per along — a
+   * ceiling applied as the corridor is laid, so it holds by construction rather than by care.
+   *
+   * ⚠️ **IT CHANGES WHAT THE PLAYER SEES, WHICH THE HEADER SAYS A TIER DOES NOT** — and it is the
+   * player's call rather than a slip: the turns are in the same places on every tier, and only how
+   * hard they are moves.
+   */
+  corridor: { narrowest: number; slope: number };
 }
 
 export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
@@ -181,6 +196,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // should get: the reactive motions run at exactly the rate `src/content/enemies.ts` authors.
     aggression: 1,
     crowd: 1,
+    // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
+    corridor: { narrowest: 56, slope: 0.25 },
   },
   /**
    * The tier the game is tuned for.
@@ -206,6 +223,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       this tier leans on; this is what stops the middle tier being the easy one's twin.
     */
     crowd: 1.15,
+    // Never narrower than 44, turns at about 19° — 0350, the player's number.
+    corridor: { narrowest: 44, slope: 0.35 },
   },
   /**
    * The tier that is supposed to end runs.
@@ -253,6 +272,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       which is a different decision about how much of an axis is left.
     */
     crowd: 1.2,
+    // Never narrower than 34, turns at about 30° — 0350, the player's number.
+    corridor: { narrowest: 34, slope: 0.58 },
   },
 };
 

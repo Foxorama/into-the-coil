@@ -343,6 +343,19 @@ export interface CorridorRow {
    * far), and how long it is. Dressing — a flanking wave opens its own as it arrives (`frame.ts`).
    */
   passages: readonly { at: number; side: -1 | 1; length: number }[];
+  /**
+   * How it turns — `docs/decisions/0350-the-corridor-turns.md`. Absent is straight, as 0348 laid it.
+   *
+   * Points in level coordinates. `narrow` is 0 at the full `width` and 1 at the tier's narrowest
+   * (`DifficultyRow.corridor`); `swing` is −1 to 1, how far towards the near or the far side the
+   * corridor is pushed, as a share of the room its narrowing leaves inside the box — so a corridor at
+   * full width cannot swing, and the walls never leave the box whatever the numbers. Between points
+   * it eases along a half-cosine; before the first and after the last it holds.
+   *
+   * ⚠️ **ONE SHAPE, AND THE TIER DECIDES HOW HARD IT IS** — the player's answer. The turns are in the
+   * same places on every tier; how narrow they get and how steeply their walls may run is the tier's.
+   */
+  shape?: readonly { at: number; swing: number; narrow: number }[];
 }
 
 export interface LevelRow {
@@ -1529,6 +1542,35 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
         { at: 2700, side: -1, length: 30 },
         { at: 3120, side: 1, length: 48 },
         { at: 3560, side: -1, length: 36 },
+      ],
+      /*
+        ⚠️ **TWO TURNING STRETCHES, AND THE THREE STRAIGHT ONES ARE WHERE A FIGHT IS — 0350.** Straight
+        and full width for the opening 300, for the lattice's fight (it arrives at 1519, and the
+        stretch is held from 1270 to 1770), and for the last 400 before the room — the plan's rule
+        that a fight in a corridor that is also turning is two difficulties at once. Between them the
+        corridor swings from side to side and pinches, a point every 180 units or so: far enough
+        apart that the half-cosine between them sets the shape, and the tier's slope only caps it.
+      */
+      shape: [
+        { at: 300, swing: 0, narrow: 0 },
+        { at: 450, swing: -0.8, narrow: 0.6 },
+        { at: 620, swing: 0.7, narrow: 0.9 },
+        { at: 800, swing: 0.9, narrow: 0.4 },
+        { at: 980, swing: -0.6, narrow: 1 },
+        { at: 1150, swing: 0, narrow: 0.5 },
+        { at: 1270, swing: 0, narrow: 0 },
+        { at: 1770, swing: 0, narrow: 0 },
+        { at: 1900, swing: 0.8, narrow: 0.7 },
+        { at: 2080, swing: -0.7, narrow: 1 },
+        { at: 2260, swing: -0.9, narrow: 0.5 },
+        { at: 2440, swing: 0.5, narrow: 0.8 },
+        { at: 2620, swing: 0.9, narrow: 1 },
+        { at: 2800, swing: 0, narrow: 0.6 },
+        { at: 2980, swing: -0.8, narrow: 0.9 },
+        { at: 3160, swing: 0.6, narrow: 1 },
+        { at: 3340, swing: 0.9, narrow: 0.4 },
+        { at: 3520, swing: -0.3, narrow: 0.8 },
+        { at: 3740, swing: 0, narrow: 0 },
       ],
     },
   },

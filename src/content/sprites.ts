@@ -446,6 +446,28 @@ export const SPRITE_KINDS = [
     the box it was always flying in.
   */
   'roomWall',
+  /*
+    ── AND ITS COPING WHERE THE WALL TURNS — 0350 ───────────────────────────────────────────────────
+
+    A corridor that turns has faces that rise or fall across each tile, and a square tile of masonry
+    stair-steps at twelve units on a curve. The faces are whole lane units at every knot (`layFaces`),
+    so a face's rise across one tile is a whole number, and one baked cap per whole number — the stone
+    under a sloped face, with the coping along it — draws any turn the tiers allow. `wallRise6` is the
+    level one; `wallRise0` falls six across the tile and `wallRise12` rises six.
+  */
+  'wallRise0',
+  'wallRise1',
+  'wallRise2',
+  'wallRise3',
+  'wallRise4',
+  'wallRise5',
+  'wallRise6',
+  'wallRise7',
+  'wallRise8',
+  'wallRise9',
+  'wallRise10',
+  'wallRise11',
+  'wallRise12',
   'boss12',
   'boss12Hit',
   'boss13',
@@ -979,6 +1001,30 @@ export const SPRITE: Record<SpriteKind, number> = blitIndices(SPRITE_KINDS);
 export const LANDMARK_SLOTS = [SPRITE.landmark, SPRITE.landmarkB, SPRITE.landmarkC] as const;
 
 /**
+ * The steepest rise across one wall tile a cap is baked for, in lane units — 0350. The steepest tier
+ * (`burn`, slope 0.58) steps `floor(0.58 × 12)` = 6 a tile, and `tests/corridor.test.ts` holds every
+ * laid corridor inside it.
+ */
+export const WALL_RISE_MAX = 6;
+
+/** The cap for each rise from −`WALL_RISE_MAX` to +`WALL_RISE_MAX`, by `rise + WALL_RISE_MAX`. */
+export const WALL_RISES = [
+  SPRITE.wallRise0,
+  SPRITE.wallRise1,
+  SPRITE.wallRise2,
+  SPRITE.wallRise3,
+  SPRITE.wallRise4,
+  SPRITE.wallRise5,
+  SPRITE.wallRise6,
+  SPRITE.wallRise7,
+  SPRITE.wallRise8,
+  SPRITE.wallRise9,
+  SPRITE.wallRise10,
+  SPRITE.wallRise11,
+  SPRITE.wallRise12,
+] as const;
+
+/**
  * An ejected rock's solid head, as a fraction of `SPRITE_EXTENT.ember` across: the rest of the bitmap
  * is tail and light. `drawEmber` draws to it and `tests/sky.test.ts` holds it under a bullet — 0347.
  */
@@ -1324,6 +1370,20 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     `tests/budget.test.ts` counts.
   */
   roomWall: 12,
+  // The caps are the wall's own tile, so a cap and the masonry under it meet edge to edge — 0350.
+  wallRise0: 12,
+  wallRise1: 12,
+  wallRise2: 12,
+  wallRise3: 12,
+  wallRise4: 12,
+  wallRise5: 12,
+  wallRise6: 12,
+  wallRise7: 12,
+  wallRise8: 12,
+  wallRise9: 12,
+  wallRise10: 12,
+  wallRise11: 12,
+  wallRise12: 12,
   boss12: 33,
   boss12Hit: 33,
   boss13: 41,

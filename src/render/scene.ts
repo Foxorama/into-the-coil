@@ -11,7 +11,7 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import { SPRITE } from '../content/sprites.ts';
+import { SPRITE, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import { opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
@@ -626,20 +626,41 @@ function paintWalls(
 /**
  * The corridor's two walls — 0348. `null` for a level flown in the open, which is six of the seven.
  */
+/*
+  ⚠️ **A CAP AT THE FACE AND MASONRY BEHIND IT, A COLUMN AT A TIME — 0350.** The corridor turns, so a
+  wall is no longer a row of tiles at one height: across each twelve-unit column its face runs from
+  one knot to the next, a whole number of lane units up or down (`layFaces`). The cap baked for that
+  rise is placed with its face on the knots, and the room's own masonry stacks behind it out past the
+  lane's edge. Straight, the cap is `wallRise6` and the picture is 0348's.
+
+  ⚠️ **THE COUNT IS BOUNDED BY THE VIEW, AS EVERY BACKGROUND'S IS.** A column is one cap and as many
+  tiles as there is stone between the face and the lane's edge — at the narrowest tier's tightest
+  squeeze, about three a side. An opening skips the whole column on its side. Nothing allocates.
+*/
 function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, cameraAlong: number): void {
   if (corridor === null || corridor.extent <= 0) return;
-  paintWalls(
-    surface,
-    view,
-    corridor.sprite,
-    corridor.extent,
-    corridor.from,
-    corridor.to,
-    corridor.near,
-    corridor.far,
-    cameraAlong,
-    corridor.passages,
-  );
+  const extent = corridor.extent;
+  const knots = corridor.faces.length / 2;
+  const first = Math.max(0, Math.floor((cameraAlong - extent - corridor.from) / extent));
+  const stop = Math.min(corridor.to, cameraAlong + view.alongSpan + extent);
+  for (let k = first; k + 1 < knots; k++) {
+    const start = corridor.from + k * extent;
+    if (start >= stop) break;
+    const inView = start + extent / 2 - cameraAlong;
+    for (let side = -1; side <= 1; side += 2) {
+      if (opened(corridor.passages, start, start + extent, side)) continue;
+      const slot = side < 0 ? 0 : 1;
+      const a = corridor.faces[k * 2 + slot]!;
+      const b = corridor.faces[(k + 1) * 2 + slot]!;
+      const rise = Math.max(-WALL_RISE_MAX, Math.min(WALL_RISE_MAX, b - a));
+      const middle = (a + b) / 2;
+      // The cap's stone is below its face; the near wall's is above, so it is the same cap turned over.
+      surface.blit(WALL_RISES[rise + WALL_RISE_MAX]!, screenX(view, inView, middle), screenY(view, inView, middle), view.scale, side < 0 ? Math.PI : 0);
+      for (let across = middle + side * extent; side < 0 ? across + extent / 2 > 0 : across - extent / 2 < ACROSS_SPAN; across += side * extent) {
+        surface.blit(corridor.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+      }
+    }
+  }
 }
 
 function paintBound(surface: Surface, view: View, bound: Bound | null): void {

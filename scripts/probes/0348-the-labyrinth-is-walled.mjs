@@ -10,7 +10,7 @@ export const PROBES = [
     suite: 'tests/corridor.test.ts',
     // Narrowing the corridor is the obvious way to make it feel tighter, and it puts stone inside the box.
     broke: 'the corridor drawn narrower than the box, so its walls stand where the ship can fly',
-    guard: 'THE CLAMP IS THE WALL, IN LANE UNITS',
+    guard: 'THE BOX IS THE LIMIT, IN LANE UNITS',
     edit: {
       path: 'src/content/levels.ts',
       find: '      width: ACROSS_SPAN - PLAYER_MARGIN * 2,',
@@ -47,12 +47,16 @@ export const PROBES = [
       The first draft, exactly: the whole opening moved on by the drift, so the spawn point was stone.
       (A first version of this probe shrank the drift instead and came back STILL GREEN — which is how
       it was found that the near end was the fix, and the drift's length only the model's honesty.)
+
+      ⚠️ **HELD BY 0350's GUARD SINCE 0349.** A flanker that meets the stone is destroyed by it now
+      rather than drawn crossing it, so the break stopped being a sighting and became a kill — and
+      `A TURN IS NOT A MASSACRE` is the guard that counts those.
     */
     broke: 'a flank’s opening started past where the flanker is put down, so it comes through stone',
-    guard: 'THE REPORTED RISK, IN PIXELS',
+    guard: 'A TURN IS NOT A MASSACRE',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  corridor.passages[slot] = first - radius - PASSAGE_CLEARANCE;',
+      find: '  corridor.passages[slot] = first + Math.min(0, drift) - radius - PASSAGE_CLEARANCE;',
       replace: '  corridor.passages[slot] = first + drift - radius - PASSAGE_CLEARANCE;',
     },
   },
