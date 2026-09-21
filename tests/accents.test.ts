@@ -344,7 +344,17 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
         });
       }
     }
-  });
+    /*
+      ⚠️ **ITS OWN BUDGET, SIZED BY 0245's RULE, AND THE MEASUREMENT IS 113.9 s UNDER THE WHOLE SUITE.**
+      It had none, so it ran on the config's 180 s — which 0245 sized as three times the slowest
+      budget-less test OF THE DAY, about 53 s. This one traces every body in every place and the bodies
+      have been drawn in curves since 0276: 26.7 s alone, 113.9 s in a clean whole-suite run on the
+      development box (`vitest run --reporter=json`, 2026-09-21), so the default was 1.6× where the
+      rule is 3×. It timed out in two of three `npm run prove` baselines while 0342 and 0343 were being
+      proven, with no assertion message — and passed every `npm run check`, which is what made it
+      look like load. 0044: it was wall clock read where the subject is arithmetic that cannot hang.
+    */
+  }, 345_000);
 
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
     for (const theme of THEME_KINDS) {

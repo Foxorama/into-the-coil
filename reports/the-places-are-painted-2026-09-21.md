@@ -61,6 +61,20 @@ owed a count in that PR rather than this sentence.
 
 ## The queue
 
+⚠️ **AN ITEM IS THE WHOLE PLACE, NOT THE PARTS OF IT THAT WERE NAMED.** Added 2026-09-21, after item 1
+was handed over with The Approach's grey limb left alone because *the ask was the stars*:
+
+> *"Fix the grey up the bottom as well … same for the other levels, if there's an aspect that's not
+> going to be good quality that I haven't mentioned, make sure it's picked up and updated to be good
+> quality or removed if it doesn't fit."*
+
+So every item below starts from the photographs of its place and accounts for **everything in them**:
+each thing on screen is made good, or removed, or left with a reason written in that item's decision.
+*Removed* is a real answer — 0343 removed the limb rather than polish something a tile cannot draw.
+
+**A candidate, not owed:** a world to leave behind in The Approach, as a **landmark**. It needs a
+decision about draw order first — 0343 says why.
+
 Each item leads with **what the player will see differently, in a sentence, with no number in it** —
 [state-of-play](../docs/state-of-play.md)'s own rule after 0196 — and that sentence is what the
 photograph is checked against afterwards.
@@ -69,7 +83,10 @@ photograph is checked against afterwards.
 
 [0342](../docs/decisions/0342-the-hulks-come-out.md).
 
-### 1 — The Approach: a star field drawn for a desktop
+### 1 — The Approach: a star field drawn for a desktop ✅
+
+[0343](../docs/decisions/0343-the-stars-are-drawn-for-a-desk.md) — and the two collisions this item
+predicted below did not happen; the decision says why, and what was unguarded instead.
 
 > *"I want a starfield optimised for desktop, it looks passable on mobile, but drawn out, big, chunky
 > and just monocoloured on desktop."*
@@ -142,6 +159,34 @@ known:** flanking waves enter across the lane's edge (`flankAlongFor`, `src/sim/
 a walled corridor is *through the masonry*. Either the walls open where a flank arrives, or this
 level's flanks move — the second is a level-design change and is the player's call, so this item
 starts with that question and a picture of each answer, not with geometry.
+
+**Answered, 2026-09-21:** *"For the flankers have the walls open with gaps, and/or move the flankers
+so they come down the corridor."* Both are allowed, so the choice is per wave and is made against the
+picture: a gap where a flank reads well coming out of a side passage, down the corridor where it does
+not.
+
+### 4b — The Labyrinth: the corridor turns, and it forks
+
+> *"Next phase of the labyrinth is to have the background move up/down with branching paths so it
+> feels like a labyrinth as well anyway — the straight corridor to the boss is not a labyrinth, it's a
+> boring corridor."*
+
+**Will see:** the corridor climbing and dropping across the screen as it goes, splitting around
+islands of stone into an upper and a lower way that rejoin further on.
+
+⚠️ **This is a game change and not a backdrop, and it is its own item for that reason.** 4 works
+because its walls stand where the ship's clamp already is, so nothing new collides. A corridor that
+moves is walls that are **inside** the lane, and three things the sim has never had to answer come
+with that — each is owed an answer in 4b's own decision, before geometry:
+
+| the question | why it cannot be skipped |
+|---|---|
+| what a wall does to the ship | the clamp would have to follow the corridor along the level — a wall that pushes, which is 0074's rule moving; or a wall that hurts, which is a new way to lose a life |
+| what a wall does to a shot | if a wall stops bullets, a fork is cover and the level is a different level; if it does not, shots cross solid stone on screen and [0036](../docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md) says that gets reported as a collision bug |
+| where waves may be placed | every spawn in the level is authored across the full hundred of `across` ([0023](../docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)), and a wave has to arrive inside the way the player can be in — at a fork, inside *both* |
+
+4 lands first and is built so 4b can move it: the walls are authored as a centreline and a gap along
+the level, which for 4 is a constant and for 4b is a curve.
 
 ### 5 — Rime Shelf: far more ice
 
