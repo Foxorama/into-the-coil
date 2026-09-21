@@ -2802,7 +2802,7 @@ export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
   */
   saurian: (ctx, land, sky, glow, size, light) => drawJungle(ctx, land, sky, glow, size, light),
   labyrinth: null,
-  rime: (ctx, land, sky, glow, size) => drawShelf(ctx, land, sky, glow, size),
+  rime: (ctx, land, sky, glow, size, light) => drawIce(ctx, land, sky, glow, size, light),
   mire: (ctx, land, sky, glow, size) => drawEnclosure(ctx, land, sky, glow, size),
   core: null,
 };
@@ -2821,7 +2821,7 @@ export const RANGE_OF: Record<ThemeKind, GroundArt | null> = {
   nebula: null,
   saurian: (ctx, land, sky, glow, size, light) => drawRange(ctx, land, sky, glow, size, light),
   labyrinth: null,
-  rime: null,
+  rime: (ctx, land, sky, glow, size, light) => drawBergs(ctx, land, sky, glow, size, light),
   mire: null,
   core: null,
 };
@@ -3221,69 +3221,154 @@ function drawJungle(ctx: Pen, land: string, _sky: string, glow: string, size: nu
 }
 
 /**
- * ── RIME SHELF: AUSTERE ───────────────────────────────────────────────────────────────────────────
+ * ── RIME SHELF: FAR MORE ICE ──────────────────────────────────────────────────────────────────────
  *
- * Asked for: *"rime shelf needs to be icy and austere."*
+ * Asked for: *"needs to be far far more icy — different whites and blues and aquas and teals etc."*
+ * Answered on the handover: *"an off-white balanced colour… I'll see how it plays out"*, with the
+ * floor and the foe inks left where they are.
  *
- * ⚠️ **AUSTERE IS A COUNT BEFORE IT IS A SHAPE, AND THE COUNT GOES DOWN.** 0220 gave this place three
- * terraces of stepped tables and it came out BUSY — a skyline with a corner every twentieth of a tile
- * reads as a city. An ice shelf is one long flat line with almost nothing happening on it, and what
- * makes it cold is the emptiness rather than a feature that says *ice*.
+ * ⚠️ **THE PALEST ICE IS AS PALE AS THE FLOOR ALLOWS, AND THAT IS NOT WHITE.** Every colour the land
+ * is lit in is held against every gameplay ink (0347), and the darkest of them — `void`, a magenta at
+ * luminance 0.35 — needs whatever it crosses under 0.083 to keep 3:1. A white is about 0.8. So the
+ * ice's whites are its *palest* tones rather than white ones: `lit`, a desaturated slate at 0.076,
+ * the lightest thing on the land, set against much darker blues so it reads as the light on the ice.
+ * Everything else here is mixed DOWN from the three stated colours, and a mix of colours under the
+ * ceiling is under it — so the guard over the three holds every pixel of the land.
  *
- * So: **two** terraces, not three; long runs, not short ones; and the only relief is the occasional
- * pressure ridge where the sheet has buckled.
+ * ⚠️ **FACETED, BECAUSE THAT IS WHAT MAKES ICE READ AS ICE.** Crests are sampled at a fixed number of
+ * knots and drawn as straight facets between them, and each facet takes the light by which way it
+ * leans: the rising ones are lit, the falling ones in shadow. Every profile is a sum of whole cycles
+ * per tile, so it meets itself at the seam in height and in slope.
  */
-function drawShelf(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
-  const TERRACES = [
-    { base: 0.62, run: 0.34, drop: 0.014, haze: 0.42, lit: 0.4 },
-    { base: 0.7, run: 0.26, drop: 0.02, haze: 0, lit: 0.62 },
-  ];
-  for (const terrace of TERRACES) {
-    const rng = makeRng('sky').stream(`rime/shelf${Math.round(terrace.run * 100)}`);
-    const edges: number[] = [0];
-    while (edges[edges.length - 1]! < 1) {
-      edges.push(Math.min(1, edges[edges.length - 1]! + rng.range(terrace.run * 0.7, terrace.run * 1.5)));
-    }
-    const heights = edges.slice(0, -1).map(() => terrace.base + rng.range(-terrace.drop, terrace.drop));
-    const last = heights.length - 1;
-    // The first table starts level with the seam and the last ends there — 0207, in a stepped profile.
-    heights[0] = terrace.base;
-    heights[last] = terrace.base;
-    const crest: number[][] = [];
-    for (let i = 0; i < heights.length; i += 1) {
-      // Two points per table and none between: the vertical between them is the cliff face.
-      crest.push([edges[i]! * size, heights[i]! * size], [edges[i + 1]! * size, heights[i]! * size]);
-    }
-    fillTo(ctx, mix(land, sky, terrace.haze), crest, size, true);
-    ctx.globalAlpha = terrace.lit;
-    ctx.strokeStyle = glow;
-    ctx.lineCap = 'butt';
-    ctx.lineWidth = Math.max(1, size * 0.004);
+
+/**
+ * A band of flat faces hanging from a crest: a quadrilateral under each segment, down to the crest
+ * shifted by a depth that varies knot to knot, so neighbours share their edges and the band reads as
+ * one faceted face rather than a row of teeth. Each takes the light by its lean — rising to the right
+ * is sunward, falling is in shadow, and nearly level is the face's own colour.
+ *
+ * ⚠️ The depth is a whole number of cycles over the knots, so the band's foot meets itself at the seam.
+ */
+function facets(ctx: Pen, crest: readonly number[][], depth: number, lit: string, level: string, shadow: string): void {
+  const knots = crest.length - 1;
+  const foot = (k: number): number => depth * (0.65 + 0.35 * Math.sin((2 * Math.PI * 5 * k) / knots + 0.8));
+  ctx.globalAlpha = 1;
+  for (let k = 0; k < knots; k += 1) {
+    const a = crest[k]!;
+    const b = crest[k + 1]!;
+    // Up the screen is a smaller y.
+    const rise = (a[1]! - b[1]!) / (b[0]! - a[0]!);
+    ctx.fillStyle = rise > 0.12 ? lit : rise < -0.12 ? shadow : level;
     ctx.beginPath();
-    ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
-    for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
-    ctx.stroke();
-    /*
-      The one thing that happens on an ice sheet: a pressure ridge, where two plates have met and
-      buckled. **Two of them per terrace**, because three would be a feature and one would be a
-      mistake.
-    */
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = mix(land, sky, terrace.haze);
-    for (let i = 0; i < 2; i += 1) {
-      const at = rng.range(0.1, 0.85) * size;
-      const wide = rng.range(0.05, 0.1) * size;
-      const tall = rng.range(0.02, 0.038) * size;
-      const foot = terrace.base * size;
+    ctx.moveTo(a[0]!, a[1]!);
+    ctx.lineTo(b[0]!, b[1]!);
+    ctx.lineTo(b[0]!, b[1]! + foot(k + 1));
+    ctx.lineTo(a[0]!, a[1]! + foot(k));
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+/** A crest as straight segments between `knots` evenly spaced samples — angular, and periodic. */
+function knotted(size: number, height: (x: number) => number, knots: number): number[][] {
+  const out: number[][] = [];
+  for (let k = 0; k <= knots; k += 1) out.push([(k / knots) * size, height((k / knots) * size) * size]);
+  return out;
+}
+
+/**
+ * The far bergs, in their own slower layer (0347's `RANGE_OF`): a line of peaks and tables standing
+ * out of the haze, their sunward faces in a paler ice than their bodies.
+ */
+function drawBergs(ctx: Pen, land: string, _sky: string, _glow: string, size: number, light?: LandLight): void {
+  const far = light?.far ?? land;
+  const lit = light?.lit ?? land;
+  const back = (x: number): number =>
+    0.592 - summits(x, size, [[2, 0.05, 0.3], [5, 0.028, 1.9], [9, 0.012, 0.8]]) + waves(x, size, [[3, 0.004, 1.1]]);
+  const crest = knotted(size, back, 36);
+  fillUnder(ctx, vertical(ctx, size, 0.54, far, 0.66, mix(far, land, 0.35)), crest, size);
+  facets(ctx, crest, size * 0.03, mix(far, lit, 0.45), far, mix(far, land, 0.3));
+  // Haze lying at the bergs' feet, so the near shelf stands in front of distance rather than a wall.
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = vertical(ctx, size, 0.6, rgba(far, 0), 0.64, far);
+  ctx.fillRect(0, 0.6 * size, size, 0.04 * size);
+  ctx.fillStyle = far;
+  ctx.fillRect(0, 0.64 * size, size, size - 0.64 * size);
+}
+
+/**
+ * The shelf: an ice cliff of seracs along the bottom of the screen, aqua faces over a deep blue body,
+ * its crest coped in the palest ice, split by crevasses with light down in them; and below it a
+ * lower, darker shelf of broken floes.
+ */
+function drawIce(ctx: Pen, land: string, _sky: string, _glow: string, size: number, light?: LandLight): void {
+  const face = light?.canopy ?? land;
+  const lit = light?.lit ?? land;
+  const deep = mix(face, land, 0.6);
+  const shadow = mix(face, land, 0.35);
+
+  const cliff = (x: number): number =>
+    0.668 - summits(x, size, [[3, 0.042, 0.7], [7, 0.024, 2.1], [13, 0.011, 0.4]]) + waves(x, size, [[2, 0.007, 1.7], [5, 0.004, 0.3]]);
+  const KNOTS = 48;
+  const crest = knotted(size, cliff, KNOTS);
+  fillUnder(ctx, vertical(ctx, size, 0.62, face, 0.76, deep), crest, size);
+  // Two bands of faces: the serac tops in the light, and the cliff below them in the aqua.
+  facets(ctx, crest, size * 0.05, mix(face, deep, 0.15), mix(face, deep, 0.35), deep);
+  facets(ctx, crest, size * 0.022, lit, mix(face, lit, 0.3), shadow);
+
+  /** The drawn crest's height at `x` — the knotted line, not the smooth profile under it. */
+  const crestAt = (x: number): number => {
+    const t = ((((x % size) + size) % size) / size) * KNOTS;
+    const k = Math.min(KNOTS - 1, Math.floor(t));
+    return crest[k]![1]! + (crest[k + 1]![1]! - crest[k]![1]!) * (t - k);
+  };
+
+  /*
+    Crevasses: deep blue wedges down from the crest, each with a thread of aqua light at its heart —
+    *"deep blue crevasses with light in them"*. Drawn a tile to either side as well, so one that
+    straddles the seam is whole on both.
+  */
+  const rng = makeRng('sky').stream('rime/crevasses');
+  for (let i = 0; i < 7; i += 1) {
+    const at = rng.range(0, 1) * size;
+    const wide = rng.range(0.0025, 0.005) * size;
+    const long = rng.range(0.035, 0.07) * size;
+    for (const dx of [-size, 0, size]) {
+      const x = at + dx;
+      if (x + wide < 0 || x - wide > size) continue;
+      const top = Math.max(crestAt(x - wide), crestAt(x + wide)) + size * 0.004;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = mix(deep, land, 0.55);
       ctx.beginPath();
-      ctx.moveTo(at - wide, foot);
-      ctx.lineTo(at - wide * 0.25, foot - tall);
-      ctx.lineTo(at + wide * 0.2, foot - tall * 0.72);
-      ctx.lineTo(at + wide, foot);
+      ctx.moveTo(x - wide, top);
+      ctx.lineTo(x + wide, top);
+      ctx.lineTo(x + wide * 0.15, top + long);
       ctx.closePath();
       ctx.fill();
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = face;
+      ctx.lineWidth = Math.max(1, size * 0.0012);
+      ctx.beginPath();
+      ctx.moveTo(x, top + long * 0.15);
+      ctx.lineTo(x + wide * 0.08, top + long * 0.8);
+      ctx.stroke();
     }
   }
+
+  // The coping: the palest ice along the whole crest, thin, the brightest line on the land.
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = lit;
+  ctx.lineWidth = Math.max(1, size * 0.0022);
+  ctx.beginPath();
+  ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
+  for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
+  ctx.stroke();
+
+  // The lower shelf: broken floes, darker and flatter, at the very bottom of the lane.
+  const floes = (x: number): number => 0.735 - summits(x, size, [[4, 0.012, 1.3], [11, 0.007, 0.2]]) + waves(x, size, [[6, 0.003, 2.4]]);
+  const low = knotted(size, floes, 60);
+  fillUnder(ctx, vertical(ctx, size, 0.72, deep, 0.8, mix(deep, land, 0.6)), low, size);
+  facets(ctx, low, size * 0.014, mix(face, deep, 0.3), mix(face, deep, 0.6), mix(deep, land, 0.4));
   ctx.globalAlpha = 1;
 }
 
@@ -9700,7 +9785,24 @@ export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
   // Long structure going past. Almost nothing clumps in a corridor.
   labyrinth: { density: 0.55, size: 0.8, tilt: 0, length: 2.1, clump: 0.1, dim: 0.65, drift: 0.2, clouds: 0.35, cloudSize: 0.65, cloudAlpha: 0.6 },
   // A shelf of ice: shards in drifts, all lying the same way, and very little variation in them.
-  rime: { density: 1.2, size: 1, tilt: -0.85, length: 0.55, clump: 0.6, dim: 0.2, drift: 0.15, clouds: 0.6, cloudSize: 1.1, cloudAlpha: 0.75 },
+  /*
+    ⚠️ `length` 0.55 → 0.18 — 0351: over ice the fast streaks at full length read as rain; short, as
+    spindrift. And **a sky that grades**, 0347's mechanism: deep overhead and a cold haze thickening
+    down to the bergs — the *paler, colder sky* of the ask, paid for by the room the snow gave back.
+  */
+  rime: {
+    density: 1.2,
+    size: 1,
+    tilt: -0.85,
+    length: 0.18,
+    clump: 0.6,
+    dim: 0.2,
+    drift: 0.15,
+    clouds: 0.6,
+    cloudSize: 1.1,
+    cloudAlpha: 0.75,
+    daylight: { mid: 0.4, deep: 0.5, horizon: 0.6, haze: 0.15 },
+  },
   // Dense fine motes, evenly suspended, in thick banks of haze.
   mire: { density: 1.7, size: 0.55, tilt: 0.2, length: 0.2, clump: 0.25, dim: 0.7, drift: 0.7, clouds: 1.5, cloudSize: 0.8, cloudAlpha: 1.35 },
   // Nearly empty, and what is left is being drawn one way.
@@ -10575,15 +10677,21 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     // ⚠️ ONE lean for every shard in the place, drawn once outside the loop. Drawing it per shard
     // would be a field of splinters, which is what a shelf of ice is not.
     const lean = -0.72;
-    for (let drift = 0; drift < 5; drift += 1) {
+    /*
+      ⚠️ **SNOW, NOT STREAKS — 0351.** Photographed at 1080p these were long parallel strokes a fifth
+      of the screen across, and read as rain; shortened to a fifth they still read as rain, because a
+      field of parallel dashes is rain at any length, and crossed they read as hash marks. Each is a
+      speck now — barely longer than it is wide — twice as many to a drift and more drifts.
+    */
+    for (let drift = 0; drift < 8; drift += 1) {
       const cx = rng.range(0.05, 0.95) * size;
       // Blowing above the shelf rather than scattered through the whole tile — the shelf is the ground
       // now, and a shard drawn below its skyline is buried in it.
       const cy = rng.range(0.28, 0.53) * size;
-      for (let i = 0; i < 6; i += 1) {
+      for (let i = 0; i < 10; i += 1) {
         const x = cx + rng.range(-0.11, 0.11) * size;
         const y = cy + rng.range(-0.06, 0.06) * size;
-        const len = rng.range(0.05, 0.12) * size;
+        const len = rng.range(0.002, 0.004) * size;
         out.push({
           points: [
             [x, y],
@@ -10600,8 +10708,12 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
             `cloudCover` could not see it: it counts clouds, and 0220 and 0221 both wrote down that
             structure goes uncounted. **This is the pass that spends that headroom, so it is the pass
             that had to measure it.**
+
+            ⚠️ **AND THINNER AGAIN AT 0351**, because a speck is compact and 0222's band holds
+            compact marks: at 0.004–0.008 wide the specks came to 1.9 units across against a bullet's
+            1.8. Length and width both under 0.004 of the tile keeps every one under it.
           */
-          width: rng.range(0.004, 0.008) * size,
+          width: rng.range(0.002, 0.004) * size,
           alpha: 0.28,
           crosses: false,
           taper: true,

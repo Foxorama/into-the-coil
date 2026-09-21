@@ -1360,6 +1360,16 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     glow: { vivid: '#3d8f78', 'high-contrast': '#2a5a4a' },
     // The shelf: blue-white shadow. Nearly the darkest ground of the three, under the palest sky.
     ground: { vivid: '#0b1a26', 'high-contrast': '#000308' },
+    /*
+      ⚠️ **THE ICE, AS PALE AS THE FLOOR LETS IT BE — 0351.** `lit` is the palest ice and the
+      nearest thing to white this place may hold: every gameplay ink keeps 3:1 over it, and `void`,
+      the darkest ink, is what sets it — 3.17:1 on vivid. `canopy` is the aqua of the cliff faces and
+      `far` the bergs in the haze. Everything the shelf and the bergs draw is mixed down from these.
+    */
+    land: {
+      vivid: { far: '#1c4a60', canopy: '#0d5462', lit: '#3c5062' },
+      'high-contrast': { far: '#082634', canopy: '#0a2c36', lit: '#1e2a36' },
+    },
     // Cut ice: blue through the block, frost on the facets, a warm eye in a cold thing.
     // Everything in this place is cold — hulls, sky and all — so an ember is the loudest thing that
     // can happen on it. The tightest sky in the game (`scripts/weigh-sky.mjs`) and the biggest win.

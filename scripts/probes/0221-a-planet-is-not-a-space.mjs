@@ -133,7 +133,7 @@ export const PROBES = [
     guard: 'a place has land in `THEMES` exactly when it draws land',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  rime: (ctx, land, sky, glow, size) => drawShelf(ctx, land, sky, glow, size),',
+      find: '  rime: (ctx, land, sky, glow, size, light) => drawIce(ctx, land, sky, glow, size, light),',
       replace: '  rime: null,',
     },
   },
