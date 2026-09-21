@@ -36,7 +36,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, layRoom, respawn, type World } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type World } from '../src/app/frame.ts';
 import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -359,6 +359,7 @@ export function playableWorld(
     landmarks: [],
     bound: null,
     room: null,
+    corridor: null,
     roomHold: 0,
     bossWheelIn: 0,
     bossWreckTurn: 0,
@@ -508,5 +509,7 @@ export function playableWorld(
     time `stand` meant anything different.
   */
   layRoom(world);
+  // And the corridor, on the same terms: the game's own function, from the level's origin — 0348.
+  world.corridor = corridorFor(level, world.levelOrigin);
   return { world, stick, deaths, wrecks, cleared, taken, faces, cues };
 }

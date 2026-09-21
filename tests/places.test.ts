@@ -47,16 +47,11 @@ import { tracingPen } from './paths.ts';
  * (`docs/decisions/0027-measure-the-picture-not-the-model.md`).
  */
 
-/**
- * Tile fraction to lane, so every number a guard prints is one the player could point at.
- *
- * ⚠️ **`laneAt` AND `LANE_TOP` COME FROM `src/render/bake.ts` SINCE 0221**, where they were already
- * written down. This file carried its own `0.25` and its own arithmetic — a second copy of the one
- * number that has caught this repository four times, which is the drift
- * `docs/decisions/0029-the-tracked-record-is-the-record.md` is about arriving in the guard that exists
- * to catch it.
- */
-const lane = laneAt;
+/*
+  Tile fraction to lane is `laneAt`, from `src/render/bake.ts` since 0221 — the one copy of the number
+  that has caught this repository four times. The alias this file kept for it went with 0220's corridor
+  guards (0348), which were its last readers.
+*/
 
 const tileSize = (): number => bakeSize(SPRITE_EXTENT.skyNebula, 6);
 
@@ -278,65 +273,17 @@ describe('0221 — a planet is not a space', () => {
   });
 });
 
-describe('0220 — The Labyrinth is a path you are inside', () => {
-  it('THE ASK, IN LANE UNITS: the corridor never closes, and the ship fits down it everywhere', () => {
-    /*
-      *"a branching twisting path the player is flying through."*
+/*
+  ── 0220's *THE LABYRINTH IS A PATH YOU ARE INSIDE* STOOD HERE, AND 0348 DELETED IT ────────────────
 
-      ⚠️ **A CHANNEL IS A CENTRELINE AND A GAP, AND A GAP IS A NUMBER THAT CAN GO NEGATIVE.** The two
-      walls are generated from the same pair of functions, so a `widthAt` that swung further than its
-      own base would put the upper wall below the lower one — the corridor turning inside out, which
-      draws as a bow tie and is never correct.
-
-      ⚠️ **MEASURED AGAINST THE SHIP AND NOT AGAINST ITSELF** — 0027. A guard reading *the gap is at
-      least `gap * 0.5`* proves only that the arithmetic below matches the arithmetic above. The
-      quantity that matters is whether the thing the player flies fits, so that is the comparison, and
-      the number comes off the sprite table rather than out of this file.
-    */
-    const size = tileSize();
-    const walls = STRUCTURE_OF.labyrinth(size).filter((mark) => mark.crosses && !mark.lit);
-    expect(walls.length, 'The Labyrinth draws no crossing walls at all').toBe(2);
-    const [first, second] = walls as [(typeof walls)[number], (typeof walls)[number]];
-    expect(
-      first.points.length,
-      'the two walls are sampled differently, so they cannot be compared point for point',
-    ).toBe(second.points.length);
-
-    const ship = SPRITE_EXTENT.ship;
-    let narrowest = Infinity;
-    for (let i = 0; i < first.points.length; i += 1) {
-      const top = Math.min(first.points[i]![1]!, second.points[i]![1]!) / size;
-      const bottom = Math.max(first.points[i]![1]!, second.points[i]![1]!) / size;
-      narrowest = Math.min(narrowest, lane(bottom) - lane(top));
-    }
-    expect(
-      narrowest,
-      `The Labyrinth's corridor pinches to ${narrowest.toFixed(1)} lane units against a ship ${ship} across — ` +
-        'a passage the player cannot be inside is scenery beside them, which is what this place already was',
-    ).toBeGreaterThan(ship * 3);
-  });
-
-  it('and it BRANCHES, which is the half a single corridor cannot say', () => {
-    /*
-      Local marks that are not the two walls and not their rims: the island and the two side passages.
-      **Three of them**, and the claim is that they exist and leave the centre — a corridor with
-      nothing coming off it is a tunnel, and the word in the report was *branching*.
-    */
-    const size = tileSize();
-    // Bodies, not rims — filtering on `lit` would redden if a branch were ever drawn as a lit shape,
-    // which is a change to the art rather than to the claim. A rim is a hairline; a branch is not.
-    const branches = STRUCTURE_OF.labyrinth(size).filter((mark) => !mark.crosses && mark.width > size * 0.01);
-    expect(
-      branches.length,
-      'The Labyrinth has no local structure — every mark spans the tile, so nothing branches off anything',
-    ).toBeGreaterThanOrEqual(3);
-    for (const branch of branches) {
-      const xs = branch.points.map((p) => p[0]!);
-      const spread = Math.max(...xs) - Math.min(...xs);
-      expect(spread, 'a branch that goes nowhere along the lane is a dot').toBeGreaterThan(size * 0.05);
-    }
-  });
-});
+  Two guards held the backdrop's wavy channel as the path the player was inside — *it never closes*
+  and *it branches*. That was the only way to say *inside* while the corridor was sky. 0348 put the
+  corridor where the player is: masonry at the box's edges, the whole level, held in pixels by
+  `tests/corridor.test.ts`. Under real walls the channel read as walls through the lane, so the
+  backdrop became the maze going on far below, and a claim about the channel's width no longer has a
+  channel to be about. Deleted with this reason, per 0192 — not moved, because the corridor's own
+  guards say something stronger than these did.
+*/
 
 describe('0220 — the heart beats', () => {
   /** A surface that remembers the scale it was asked to draw at. */

@@ -70,6 +70,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
+import type { Corridor } from '../render/scene.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import type { Surface } from '../render/surface.ts';
@@ -1231,6 +1232,11 @@ export interface World {
    */
   room: Room | null;
   /**
+   * The corridor this level is flown down, or `null` for one flown in the open — 0348. Laid at a
+   * level boundary; its passages array is written in place as flanking waves arrive, never grown.
+   */
+  corridor: Corridor | null;
+  /**
    * Steps of the room's settle that have run, `0` open and `settle` at rest — 0335.
    *
    * ⚠️ **A COUNTER AND NOT A DISTANCE, AND A DRIVE IS WHY.** See `scrollFor`: a ramp eased on the
@@ -2118,7 +2124,7 @@ export class GameFrame implements Frame {
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
     // `w.warp` — 0340: the sky at speed. Nought on every frame that is not a crossing. And the sim's own
     // clock, interpolated like everything else, for the rock a volcano throws — 0347.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha, w.corridor);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -4358,6 +4364,46 @@ function feedTheLord(w: World): void {
   }
 }
 
+/**
+ * Open the corridor where a flanking wave will cross its wall — 0348.
+ *
+ * Asked for: *"For the flankers have the walls open with gaps."* A flanker enters outside the lane at
+ * the screen's leading edge and keeps pace with the screen until it reaches its own lane (0338,
+ * `steerEnemies`) — so it crosses the whole of the wall's band standing at the same place on the
+ * screen while the world runs under it. The stretch of wall it comes through runs from where it was
+ * put down to that place moved on by everything the camera covers while it crosses the band.
+ *
+ * ⚠️ **THE FIRST DRAFT STARTED THE OPENING PAST WHERE THE FLANKER IS PUT DOWN** — the whole range
+ * moved on by the drift, so the stretch at the spawn point itself was still stone, and
+ * `tests/corridor.test.ts` flew the level and counted a hundred and forty sightings of a charger drawn
+ * across it. The near end is the spawn point now; the far end takes the whole crossing, since what ends
+ * the pacing is arriving (`steerEnemies`) and a flanker arrives well inside the wall's face.
+ *
+ * ⚠️ **ITS NEAR END IS AT THE SCREEN'S LEADING EDGE**, where the flanker is put down — so at most the
+ * last sliver of one tile goes as the wave arrives, and everything after it scrolls in already open.
+ *
+ * ⚠️ **COMPUTED FROM THE BODIES THE WAVE ACTUALLY PUT DOWN**, first and last, so a wave that lost a
+ * member to a full pool opens no more than it needs. A ring of slots written in place: nothing
+ * allocates, and the oldest opening — long behind the screen — is the one overwritten.
+ */
+function openPassage(w: World, first: number, last: number, radius: number, side: number): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  // The camera's travel while the body crosses from outside the lane to clear of the wall's face.
+  const drift = (w.scrollPerStep * (FLANK_MARGIN + PLAYER_MARGIN + radius * 2)) / FLANK_ENTRY_SPEED;
+  const slot = (corridor.fixed + corridor.next) * 3;
+  corridor.passages[slot] = first - radius - PASSAGE_CLEARANCE;
+  corridor.passages[slot + 1] = last + drift + radius + PASSAGE_CLEARANCE;
+  corridor.passages[slot + 2] = side;
+  corridor.next = (corridor.next + 1) % ((corridor.passages.length / 3) - corridor.fixed);
+}
+
+/**
+ * World units of wall left open beyond a flanker's own edge, either side. A hull that grazed the
+ * jamb would be drawn over the stone — the thing the opening exists to prevent.
+ */
+const PASSAGE_CLEARANCE = 2;
+
 function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: FormationKind, from: SummonFrom, side: number): void {
   const kind = w.enemyKinds[enemy];
   const row = w.enemyRows[kind];
@@ -4375,6 +4421,12 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
   */
   const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
+  // A summoned flank comes through the corridor's wall as an authored one does — 0348.
+  if (flanking) {
+    const a = streamOffset(0, row.radius);
+    const b = streamOffset(count - 1, row.radius);
+    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side < 0 ? -1 : 1);
+  }
   const gap = gapAcross(row.radius);
   for (let i = 0; i < count; i++) {
     const e = w.enemies.spawn();
@@ -4469,6 +4521,12 @@ function spawnWave(w: World, index: number): void {
     : wave.at + w.levelOrigin;
   // Which side it comes in from, as a sign on `across`. −1 enters from the acrossMinus edge.
   const side = origin === 'acrossPlus' ? 1 : -1;
+  // And where it comes through the corridor's wall, if the level has one — 0348.
+  if (flanking) {
+    const a = streamOffset(0, row.radius);
+    const b = streamOffset(wave.count - 1, row.radius);
+    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side);
+  }
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   for (let i = 0; i < wave.count; i++) {
     const e = w.enemies.spawn();
@@ -4768,8 +4826,37 @@ function steerEnemies(w: World): void {
       */
       case 'drift': {
         if (m.roam <= 0) break;
-        if (e.across <= ROAM_MIN) e.velAcross = m.roam;
-        else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;
+        /*
+          ⚠️ **IN A CORRIDOR IT TURNS AT THE WALL, ON ITS HULL — 0348.** Asked, and answered: *turn at
+          the wall.* A drifter turning outside the lane drifted over the stone and back, and
+          `tests/corridor.test.ts` counted it a thousand times a level. So on a walled level the bound
+          is the face of the stone less the body's own radius — the hull's edge, the boss patrol's rule
+          rather than this one's, because stone is solid and a body half inside it is the defect.
+          What it gives up is the band past the lane edge where a drifter could not be reached; in a
+          corridor there is no such band.
+        */
+        const corridor = w.corridor;
+        if (corridor === null) {
+          if (e.across <= ROAM_MIN) e.velAcross = m.roam;
+          else if (e.across >= ROAM_MAX) e.velAcross = -m.roam;
+          break;
+        }
+        /*
+          ⚠️ **AND IT TURNS ON WHERE THIS STEP WOULD TAKE IT.** This runs before the step's movement,
+          so a turn on where the body IS let it travel a step past the face first — 0.2 of a unit,
+          four sightings of a hull in the stone, traced to the step. Outside a corridor that overshoot
+          is past the edge of the screen and harmless, which is why the line above keeps its old test.
+        */
+        const low = corridor.near + corridor.extent / 2 + e.radius;
+        const high = corridor.far - corridor.extent / 2 - e.radius;
+        const next = e.across + e.velAcross;
+        if (next <= low) {
+          e.across = Math.max(e.across, low);
+          e.velAcross = m.roam;
+        } else if (next >= high) {
+          e.across = Math.min(e.across, high);
+          e.velAcross = -m.roam;
+        }
         break;
       }
       case 'weave': {
@@ -7392,8 +7479,58 @@ export function startLevel(w: World, level: LevelRow): void {
   w.levelIndex = 0;
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
+  // The corridor, from the origin `resetScene` is about to put the level at, which is nought — 0348.
+  w.corridor = corridorFor(level, 0);
   w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   resetScene(w);
+}
+
+/**
+ * How many openings a flanking wave may have open in the corridor at once, beyond the authored ones.
+ * A flank's opening is behind the screen within about six seconds of it arriving, and the level's
+ * flanks are fifty units and more apart, so eight is several screens of them.
+ */
+const RUNTIME_PASSAGES = 8;
+
+/**
+ * The corridor a level is flown down, in world positions, or `null` — 0348. A level boundary, never a
+ * frame: this allocates the passages array once, and the frame writes into it.
+ *
+ * ⚠️ **IT ENDS WHERE THE ROOM BEGINS**, computed from the same three numbers `layRoom` will use — the
+ * level's origin, `bossAt` and the room's `stand` and `mouth` — so the room's side walls pick the
+ * corridor up in the same stone on the same grid, and nothing is drawn twice at the joint.
+ */
+export function corridorFor(level: LevelRow, origin: number): Corridor | null {
+  const row = level.corridor;
+  if (row === undefined) return null;
+  const sprite = SPRITE[row.wall];
+  const extent = SPRITE_EXTENT[row.wall];
+  const room = BOSSES[level.boss].room;
+  const to = room === null ? origin + level.bossAt + PLAYER_LEAD : origin + level.bossAt - room.stand - room.mouth;
+  // @setup: a level boundary — one array for the level, written in place from here on.
+  const passages = new Float64Array((row.passages.length + RUNTIME_PASSAGES) * 3);
+  for (let i = 0; i < row.passages.length; i++) {
+    const p = row.passages[i]!;
+    passages[i * 3] = origin + p.at;
+    passages[i * 3 + 1] = origin + p.at + p.length;
+    passages[i * 3 + 2] = p.side;
+  }
+  // The runtime slots start empty: an opening that ends before it begins matches no tile.
+  for (let i = row.passages.length; i < row.passages.length + RUNTIME_PASSAGES; i++) {
+    passages[i * 3] = 0;
+    passages[i * 3 + 1] = -1;
+  }
+  return {
+    sprite,
+    extent,
+    from: origin,
+    to,
+    near: row.centre - row.width / 2 - extent / 2,
+    far: row.centre + row.width / 2 + extent / 2,
+    passages,
+    fixed: row.passages.length,
+    next: 0,
+  };
 }
 
 /**
@@ -7446,6 +7583,8 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
   w.levelIndex = levelIndex;
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
+  // The corridor, from where the level is about to begin — the camera, two lines down — 0348.
+  w.corridor = corridorFor(level, w.cameraAlong);
   w.bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
   /*
     ⚠️ **The one line that makes the rest of it possible.** The script is authored from the level's

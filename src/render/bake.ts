@@ -7892,35 +7892,47 @@ export function drawKind(
       return;
     case 'roomWall': {
       /*
-        THE LABYRINTH'S WALL — 0335. A block of masonry that tiles in both axes: a slab in the
-        place's own `sky`, a darker course line across it, and a lighter chamfer along one edge so a
-        run of them reads as a wall face rather than as a bar.
+        THE LABYRINTH'S WALL — 0335, rebuilt by 0348. Masonry that tiles in both axes: three courses
+        of stone in running bond, dark mortar between them, each course lit along its top, and a lit
+        coping on the tile's two edges — whichever of them faces the flying space is the wall's face.
 
-        ⚠️ **IT TILES, SO EVERY MARK STOPS SHORT OF THE EDGES.** A mark that ran to the boundary
-        would join its neighbour's and the course lines would become one long stripe, which is the
-        seam `docs/decisions/0206-the-tile-wraps-round.md` is about at the other end of the atlas.
+        ⚠️ **IT FILLS THE WHOLE TILE NOW, AND THE MARGIN WAS THE DEFECT.** 0335's block was 84% of its
+        tile with an outline round it, so a run of them came out of the 1080p photograph as a film
+        strip — slabs with black between them — and a corridor of it read as sprocket holes rather
+        than as a wall. A wall is a surface, not a row of objects: the courses run on into the next
+        tile, and a head joint that falls on the edge is drawn half on each side so the pair meet.
+
+        ⚠️ **SYMMETRIC TOP AND BOTTOM, BECAUSE EACH WALL SHOWS A DIFFERENT HALF.** Tiles are centred on
+        the lane's edge, so the near wall shows the bottom half and the far one the top; the coping on
+        both edges is what makes each of them face inward.
       */
-      ctx.rect(half - r, half - r, r * 2, r * 2);
-      ctx.fillStyle = palette.sky;
-      seal(ctx);
-      poly(ctx, f, shade(palette.sky, -0.45), [
-        [-1, -0.12],
-        [1, -0.12],
-        [1, 0.04],
-        [-1, 0.04],
-      ]);
-      poly(ctx, f, shade(palette.sky, 0.3), [
-        [-0.86, -0.96],
-        [0.86, -0.96],
-        [0.86, -0.82],
-        [-0.86, -0.82],
-      ]);
-      poly(ctx, f, shade(palette.sky, -0.45), [
-        [-0.1, 0.12],
-        [0.06, 0.12],
-        [0.06, 0.96],
-        [-0.1, 0.96],
-      ]);
+      const edge = half / r;
+      const stone = palette.sky;
+      const mortar = shade(stone, -0.55);
+      const course = (edge * 2) / 3;
+      const bed = 0.06;
+      const head = 0.035;
+      const band = (y0: number, y1: number, colour: string, alpha = 1): void =>
+        poly(ctx, f, colour, [[-edge, y0], [edge, y0], [edge, y1], [-edge, y1]], alpha);
+      band(-edge, edge, stone);
+      for (let c = 0; c < 3; c++) {
+        const y0 = -edge + c * course;
+        const y1 = y0 + course;
+        // The course: lit along its top, falling into shadow along its bottom.
+        band(y0 + bed, y0 + bed + 0.1, shade(stone, 0.2), 0.8);
+        band(y1 - 0.14, y1, shade(stone, -0.28), 0.7);
+        band(y0, y0 + bed, mortar);
+        // Running bond: joints at the middle and the edges, then at the quarters, then again.
+        const joints = c % 2 === 0 ? [-edge, 0, edge] : [-edge / 2, edge / 2];
+        for (const x of joints) {
+          const a = Math.max(-edge, x - head);
+          const b = Math.min(edge, x + head);
+          poly(ctx, f, mortar, [[a, y0], [b, y0], [b, y1], [a, y1]]);
+        }
+      }
+      // The coping, on both edges: whichever faces the lane is the wall's face.
+      band(-edge, -edge + 0.07, shade(stone, 0.5));
+      band(edge - 0.07, edge, shade(stone, 0.5));
       return;
     }
     case 'boss11Seat':
@@ -10328,149 +10340,130 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   },
 
   /*
-    ── THE LABYRINTH: LONG STRUCTURE GOING PAST ───────────────────────────────────────────────────
+    ── THE LABYRINTH: THE MAZE GOES ON BELOW — 0348 ────────────────────────────────────────────────
 
-    *"Long structure going past. Almost nothing clumps in a corridor."* Walls, then — running the way
-    the player is running, which is the one direction a corridor has. They cross the tile, so they
-    take 0207's rule: heavy, straight-ish, and periodic.
+    *"There's no labyrinth that the player is actually flying through."* The corridor the player is
+    in is walls at the edges of the box now (`paintCorridor`), and the backdrop is what a corridor with
+    an open top looks down on: **more of the maze, far below** — passages at right angles, junctions,
+    dead ends and loops, going past at the weather's slow rate.
+
+    ⚠️ **THIS WAS A WAVY CHANNEL THROUGH THE MIDDLE OF THE LANE, AND UNDER REAL WALLS IT LIED.** 0220
+    drew the path the player was inside as backdrop, because there was no other way to say *inside*.
+    With masonry at the box's edges, two curving walls sweeping through the lane read as walls the
+    ship flies straight through — 0036's report, waiting to be filed.
+
+    ⚠️ **A MAZE, GENERATED, AND PERIODIC BECAUSE IT IS GENERATED ON A RING.** A grid whose columns wrap,
+    carved by a depth-first walk and then braided — a share of dead ends knocked through — so it has
+    loops and junctions rather than one long thread. Every wall is a straight run on the grid, merged
+    with its neighbours in line so a corridor wall is one mark rather than eight.
+
+    ⚠️ **THE LANGUAGE IS 0220's, UNCHANGED:** a dark body, a faint lit top face so the body is on
+    screen at all in the thinnest gas of the seven, and a hairline rim on one side for the light.
   */
   labyrinth: (size) => {
-    /*
-      ⚠️ **A DARK BODY WITH A LIT EDGE, WHICH IS THE PILLARS' OWN LANGUAGE — 0204.** 0211's first
-      version was dark alone and came out INVISIBLE in the bench: The Labyrinth has the thinnest gas of
-      the seven (`SKY_STYLE_OF.labyrinth` is `clouds: 0.35, cloudAlpha: 0.6`), so a silhouette had
-      nothing to be a silhouette against. A rim rather than a lit body, because a lit body would spend
-      headroom across its whole area where a one-line edge spends almost none — and because that is
-      what a corridor wall looks like with a light on it.
-
-      ── A CHANNEL, NOT FOUR LOOSE LINES ─────────────────────────────────────────────────────────
-
-      *"the labyrinth needs to be a branching twisting path the player is flying through."*
-
-      ⚠️ **THE WORD THAT CHANGED THE GEOMETRY IS *THROUGH*.** 0211 read this place as *"long structure
-      going past"* and drew four independent walls, which is scenery beside the player. A path you fly
-      THROUGH has two sides, and the two have to agree — so a channel is authored as a **centreline
-      and a gap**, and the walls are what that pair implies. Their lit rims then face inward, because
-      the light in a corridor is in the corridor.
-
-      ⚠️ **AND THE CENTRELINE IS A SUM OF SINES RATHER THAN A RANDOM WALK, WHICH IS WHAT MAKES IT
-      TWIST AT ALL.** `crossing` walks and then forces its last point back to the first, so every unit
-      of drift is repaid in one final segment: the wander that reads as a twist is exactly the wander
-      that reads as a diagonal at the tile join. Raising it to 0.032 was tried and the bench showed
-      zigzag ridgelines with a kink at the seam. Sines whose periods divide the tile are periodic **by
-      construction** — 0207 discharged by arithmetic instead of by a correction — so the amplitude can
-      be whatever the picture wants.
-    */
-    const rng = makeRng('sky').stream('labyrinth/paths');
+    const rng = makeRng('sky').stream('labyrinth/maze');
     const out: StructureMark[] = [];
-    const SAMPLES = 32;
-    const WALL = 0.055;
-    const rim = (points: number[][], toward: number, alpha: number, crosses: boolean): StructureMark => ({
-      points: points.map((p) => [p[0]!, p[1]! + toward * WALL * size * 0.5]),
-      width: Math.max(1, size * 0.004),
-      alpha,
-      crosses,
-      taper: false,
-      lit: true,
-    });
-
     /*
-      ⚠️ **ONE CHANNEL, CENTRED ON THE LANE, AND TWO OF THEM WAS THE FIRST DRAFT'S MISTAKE.** Tile y
-      0.25 to 0.75 is the lane, so a pair of narrow channels at 0.36 and 0.63 put their walls at lanes
-      22 and 76 — and the ship, which flies in the middle, was **between** them rather than in either.
-      The bench showed four wavy lines and a player in open space, which is *going past* again.
-
-      Centred at 0.5 with a gap of about a quarter of the tile, the walls sit at roughly lane 24 and
-      76 and the player is inside. That is what *through* means.
+      ⚠️ **SMALL AND DIM, BECAUSE IT IS FAR BELOW — AND AT SIXTEEN COLUMNS IT WAS NOT.** The first
+      draft's passages were about the corridor's own width and its rims as bright as 0220's, and the
+      1080p photograph read them as walls standing in the lane: the exact complaint this replaced the
+      wavy channel for. Scale and light are the two depth cues left to a flat mark, so the maze is a
+      quarter-size of the corridor per passage and its light a third of what it was.
     */
-    const swing = rng.range(0.03, 0.05);
-    const ripple = rng.range(0.012, 0.024);
-    const phase = rng.range(0, Math.PI * 2);
-    const turns = 1 + Math.floor(rng.range(0, 2));
-    const gap = 0.26;
-    const channel = {
-      gap,
-      at: (t: number): number =>
-        0.5 + swing * Math.sin(Math.PI * 2 * turns * t + phase) + ripple * Math.sin(Math.PI * 2 * (turns + 2) * t),
-      // The channel breathes: it pinches and opens out, which is what stops it reading as a pipe.
-      widthAt: (t: number): number => gap * (1 + 0.22 * Math.sin(Math.PI * 2 * t + phase)),
-    };
-
-    for (const side of [-1, 1]) {
-      const wall: number[][] = [];
-      for (let s = 0; s <= SAMPLES; s += 1) {
-        const t = s / SAMPLES;
-        wall.push([t * size, (channel.at(t) + (side * channel.widthAt(t)) / 2) * size]);
+    const COLS = 30;
+    const cell = 1 / COLS;
+    const top = 0.21;
+    const ROWS = 17;
+    const WALL = 0.008;
+    // `open[c][r]` — which of a cell's right and lower sides have been carved through.
+    const right: boolean[][] = [];
+    const down: boolean[][] = [];
+    const seen: boolean[][] = [];
+    for (let c = 0; c < COLS; c += 1) {
+      right.push(new Array<boolean>(ROWS).fill(false));
+      down.push(new Array<boolean>(ROWS).fill(false));
+      seen.push(new Array<boolean>(ROWS).fill(false));
+    }
+    const stack: [number, number][] = [[0, Math.floor(ROWS / 2)]];
+    seen[0]![Math.floor(ROWS / 2)] = true;
+    while (stack.length > 0) {
+      const [c, r] = stack[stack.length - 1]!;
+      const ways: [number, number, number, number][] = [];
+      const east = (c + 1) % COLS;
+      const west = (c + COLS - 1) % COLS;
+      if (!seen[east]![r]) ways.push([east, r, 0, 1]);
+      if (!seen[west]![r]) ways.push([west, r, 0, -1]);
+      if (r + 1 < ROWS && !seen[c]![r + 1]) ways.push([c, r + 1, 1, 1]);
+      if (r > 0 && !seen[c]![r - 1]) ways.push([c, r - 1, 1, -1]);
+      if (ways.length === 0) {
+        stack.pop();
+        continue;
       }
-      /*
-        ⚠️ **THE WALL IS DRAWN TWICE, DARK AND THEN FAINTLY LIT, BECAUSE HERE THE DARK ONE IS
-        INVISIBLE.** A structure mark's body is the SPACE colour — a hole in the gas — and The
-        Labyrinth's gas is the thinnest of the seven, so there is nothing for that hole to be a hole
-        in: every version of this place from 0211 onward has been read entirely off its rims. That is
-        why 0211's walls looked like wires, and it is why a wall's THICKNESS has never once been on
-        screen.
+      const [nc, nr, axis, dir] = ways[Math.floor(rng.range(0, ways.length))]!;
+      if (axis === 0) right[dir > 0 ? c : nc]![r] = true;
+      else down[c]![dir > 0 ? r : nr] = true;
+      seen[nc]![nr] = true;
+      stack.push([nc, nr]);
+    }
+    // Braid: knock through a share of the walls that are still standing, which is what makes loops.
+    for (let c = 0; c < COLS; c += 1) {
+      for (let r = 0; r < ROWS; r += 1) {
+        if (!right[c]![r] && rng.range(0, 1) < 0.18) right[c]![r] = true;
+        if (r + 1 < ROWS && !down[c]![r] && rng.range(0, 1) < 0.18) down[c]![r] = true;
+      }
+    }
 
-        A tenth of the gas colour over the body puts it there. It is the same headroom argument the
-        rim already won — this place has room where Ember Nebula does not — spent on the face of the
-        wall instead of only on its edge.
+    const wall = (points: number[][]): void => {
+      /*
+        The body, dark; a faint lit face along its top; and a hairline on its lower side. 0220's three
+        passes, for 0220's reasons — the body alone is invisible in this gas.
       */
-      out.push({ points: wall, width: WALL * size, alpha: 0.62, crosses: true, taper: false, lit: false });
+      out.push({ points, width: WALL * size, alpha: 0.62, crosses: false, taper: false, lit: false });
       out.push({
-        points: wall.map((p) => [p[0]!, p[1]! + side * WALL * size * 0.28]),
-        width: WALL * size * 0.9,
-        alpha: 0.1,
-        crosses: true,
+        points: points.map((p) => [p[0]!, p[1]! - WALL * size * 0.15]),
+        width: WALL * size * 0.5,
+        alpha: 0.07,
+        crosses: false,
         taper: false,
         lit: true,
       });
-      // ⚠️ `-side` — the rim is on the face that looks INTO the channel. Both rims on the same side
-      // reads as two pipes lying next to each other, which is what the first draft of this drew.
-      out.push(rim(wall, -side, 0.55, true));
-    }
+      out.push({
+        points: points.map((p) => [p[0]!, p[1]! + WALL * size * 0.5]),
+        width: Math.max(1, size * 0.002),
+        alpha: 0.18,
+        crosses: false,
+        taper: false,
+        lit: true,
+      });
+    };
+    const x = (c: number): number => c * cell * size;
+    const y = (r: number): number => (top + r * cell) * size;
 
-    /*
-      ── THE BRANCHES ────────────────────────────────────────────────────────────────────────────
-
-      Two kinds, because *branching* means two different things in a corridor and only one of them is
-      a fork:
-
-        · an **island** — a spine down the middle that the channel parts around and closes over
-        · a **side passage** — a way out through a wall, running off past the top or the bottom
-
-      ⚠️ **LOCAL MARKS, AND THEY HAVE TO BE.** A branch that spanned the tile would be another wall;
-      one spanning more than half of it cannot be covered by the wrap `paintStructure` draws local
-      marks with, which is 0208's rule and the thing its guard measures. Both below are about a fifth
-      of a tile, which on this screen is already a long way to fly.
-    */
-    const from = rng.range(0.08, 0.5);
-    const run = rng.range(0.15, 0.22);
-    const lift = rng.range(0.3, 0.45) * gap * (rng.range(0, 1) < 0.5 ? -1 : 1);
-    const island: number[][] = [];
-    for (let s = 0; s <= 10; s += 1) {
-      const t = from + (s / 10) * run;
-      // A lens rather than a half-sine: it comes to a point at both ends, which is what a splitter is.
-      island.push([t * size, (channel.at(t) + Math.sin((s / 10) * Math.PI) * lift) * size]);
-    }
-    out.push({ points: island, width: WALL * size * 0.55, alpha: 0.55, crosses: false, taper: true, lit: false });
-    out.push(rim(island, lift > 0 ? -0.55 : 0.55, 0.42, false));
-
-    /*
-      And two ways out of it, one through each wall, leaning off towards wherever else this place goes.
-      **They leave and do not come back**, which is the half of *branching* an island cannot say.
-    */
-    for (const side of [-1, 1]) {
-      const mouth = rng.range(0.15, 0.7);
-      const pass: number[][] = [];
-      for (let s = 0; s <= 8; s += 1) {
-        const t = mouth + (s / 8) * 0.13;
-        const wall = channel.at(t) + (side * channel.widthAt(t)) / 2;
-        // Away from the channel, steepening — a passage seen edge-on from inside the one you are in.
-        pass.push([t * size, (wall + side * 0.13 * (s / 8) * (s / 8)) * size]);
+    // Horizontal walls: along each grid line, runs of uncarved lower sides merged into one mark.
+    for (let r = 0; r < ROWS - 1; r += 1) {
+      let from = -1;
+      for (let c = 0; c <= COLS; c += 1) {
+        const standing = c < COLS && !down[c]![r];
+        if (standing && from < 0) from = c;
+        if (!standing && from >= 0) {
+          wall([[x(from), y(r + 1)], [x(c), y(r + 1)]]);
+          from = -1;
+        }
       }
-      out.push({ points: pass, width: WALL * size * 0.5, alpha: 0.5, crosses: false, taper: false, lit: false });
-      out.push(rim(pass, -side * 0.5, 0.34, false));
     }
-    // 0222's three "blocks" stood here — the shared hulk at low roughness — and 0342 took them out.
+    // Vertical walls: along each column line, runs of uncarved right sides.
+    for (let c = 0; c < COLS; c += 1) {
+      let from = -1;
+      for (let r = 0; r <= ROWS; r += 1) {
+        const standing = r < ROWS && !right[c]![r];
+        if (standing && from < 0) from = r;
+        if (!standing && from >= 0) {
+          wall([[x(c + 1), y(from)], [x(c + 1), y(r)]]);
+          from = -1;
+        }
+      }
+    }
+    // 0222's three "blocks" stood in this place's sky — the shared hulk — and 0342 took them out.
     return out;
   },
 

@@ -95,6 +95,7 @@ function stationKeepingWorld(surface: Surface): World {
     layers: [enemies, enemyShots, playerShots, shipPool],
     sky: [],
     landmarks: [],
+    corridor: null,
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     exhaust: new Pool<Entity>(1, makeEntity),

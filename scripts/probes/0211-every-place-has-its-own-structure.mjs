@@ -71,9 +71,10 @@ export const PROBES = [
         The theft is the same one — The Labyrinth handed Ember Nebula's marks, byte for byte — taken
         from that place's own row, which cannot go stale the way a copy of its arguments did.
       */
-      find: "    const rng = makeRng('sky').stream('labyrinth/paths');\n    const out: StructureMark[] = [];",
+      // Re-anchored by 0348, which replaced the channel with the maze below; the theft is unchanged.
+      find: "    const rng = makeRng('sky').stream('labyrinth/maze');\n    const out: StructureMark[] = [];",
       replace:
-        "    const rng = makeRng('sky').stream('labyrinth/paths');\n" +
+        "    const rng = makeRng('sky').stream('labyrinth/maze');\n" +
         '    const out: StructureMark[] = [...STRUCTURE_OF.nebula(size)];',
     },
   },

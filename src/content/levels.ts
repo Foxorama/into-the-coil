@@ -43,6 +43,9 @@ import type { PickupKind } from './pickups.ts';
 import type { ThemeKind } from './themes.ts';
 import type { LevelSections } from './music.ts';
 import type { Eruption } from './volcano.ts';
+import type { SpriteKind } from './sprites.ts';
+import { PLAYER_MARGIN } from '../sim/flight.ts';
+import { ACROSS_SPAN } from '../sim/camera.ts';
 
 /**
  * Every level, **in the order a run plays them**.
@@ -316,6 +319,32 @@ export interface LandmarkEntry {
   erupts?: Eruption;
 }
 
+/**
+ * A level flown down a walled corridor — `docs/decisions/0348-the-labyrinth-is-walled.md`.
+ *
+ * Played: *"The end boss has some walls around it, but otherwise there's no labyrinth that the player
+ * is actually flying through."*
+ *
+ * ⚠️ **A CENTRELINE AND A WIDTH, AND FOR NOW BOTH ARE THE BOX.** The faces stand exactly where
+ * `src/sim/flight.ts` already clamps the ship, so the corridor is the picture of a rule that has been
+ * in the game since 0074 and nothing new collides — `tests/corridor.test.ts` holds that in lane units.
+ * Authored as two numbers rather than as *the box* so that 4b, where the corridor turns and forks,
+ * changes a number into a curve instead of inventing the shape.
+ */
+export interface CorridorRow {
+  /** Where the corridor's middle is, across the lane. */
+  centre: number;
+  /** How far apart its two wall faces are, across the lane. */
+  width: number;
+  /** What its walls are built of — the room's own stone, so the room is where the corridor arrives. */
+  wall: SpriteKind;
+  /**
+   * Side passages opening off it, in level coordinates: where one starts, which wall (−1 near, +1
+   * far), and how long it is. Dressing — a flanking wave opens its own as it arrives (`frame.ts`).
+   */
+  passages: readonly { at: number; side: -1 | 1; length: number }[];
+}
+
 export interface LevelRow {
   /** In order of `at`, ascending. `tests/level.test.ts` holds that, because the spawner assumes it. */
   waves: readonly WaveEntry[];
@@ -400,6 +429,11 @@ export interface LevelRow {
    * theme is a thing a run may want and this shape allows it.
    */
   theme: ThemeKind;
+  /**
+   * The corridor the level is flown down, and absent for one flown in the open — 0348, on 0282's
+   * terms: one level states one, and six are drawn exactly as they were.
+   */
+  corridor?: CorridorRow;
 }
 
 /*
@@ -1472,6 +1506,31 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     midBoss: { kind: 'lattice', at: 1519 },
     landmarks: [],
     theme: 'labyrinth',
+    /*
+      ⚠️ **WALLED THE WHOLE WAY, AND THE ROOM IS WHERE IT ARRIVES — 0348.** The faces stand at the
+      box's edges, where the ship is already clamped, and run from the level's first step to the gyre
+      room's open side, which takes over in the same stone.
+
+      ⚠️ **THE PASSAGES HERE ARE THE ONES NOTHING COMES OUT OF.** Every flanking wave opens its own
+      as it arrives, at the screen's leading edge where a flanker enters — so the player learns that a
+      gap in the wall is where things come from, and these few are the ones that stay empty. Spaced
+      away from the level's sixteen flanks rather than on top of them.
+    */
+    corridor: {
+      centre: ACROSS_SPAN / 2,
+      width: ACROSS_SPAN - PLAYER_MARGIN * 2,
+      wall: 'roomWall',
+      passages: [
+        { at: 150, side: 1, length: 36 },
+        { at: 620, side: -1, length: 48 },
+        { at: 1260, side: 1, length: 30 },
+        { at: 1640, side: -1, length: 42 },
+        { at: 2150, side: 1, length: 36 },
+        { at: 2700, side: -1, length: 30 },
+        { at: 3120, side: 1, length: 48 },
+        { at: 3560, side: -1, length: 36 },
+      ],
+    },
   },
   /**
    * Level five. Its idea is written above its script.

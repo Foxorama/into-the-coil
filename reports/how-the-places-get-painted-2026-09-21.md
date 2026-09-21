@@ -10,8 +10,9 @@ Done: 0 ([0342](../docs/decisions/0342-the-hulks-come-out.md)), 1
 ([0343](../docs/decisions/0343-the-stars-are-drawn-for-a-desk.md)), 2
 ([0345](../docs/decisions/0345-ember-nebula-is-in-colour.md)), 3
 ([0347](../docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md) — mechanism 2 is built
-there: `LandmarkEntry.erupts`, `paintEruption`, and the seam fix for every opaque layer). Left: 4 and
-4b The Labyrinth, 5 Rime Shelf, 6 The Toxic Mire, 7 The Black Heart.
+there: `LandmarkEntry.erupts`, `paintEruption`, and the seam fix for every opaque layer), 4
+([0348](../docs/decisions/0348-the-labyrinth-is-walled.md)). Left: 4b The Labyrinth, 5 Rime Shelf, 6
+The Toxic Mire, 7 The Black Heart.
 
 ## The loop, per place
 
@@ -101,6 +102,14 @@ the corridor as **a centreline and a gap along the level** so 4b only changes a 
 Contrast room is **1.12×**, the second tightest: masonry should be dark with lit edges, which is what
 is there now. **4b is a game change** — bring the plan's three questions to the player with a
 recommendation before any geometry.
+
+⚠️ **4 LANDED AS 0348, AND WHAT 4b INHERITS:** `LevelRow.corridor` (centre and width, both the box for
+now), `corridorFor`, runtime passages a flank opens (`openPassage`, eight slots), and drifters that
+turn at the wall's face on a walled level. **Enemies roam past the ship's clamp**, so *walls where the
+clamp is, so nothing collides* was only ever true of the ship — the player chose *turn at the wall* for
+drifters mid-build, and 4b's *explode on contact* would replace that. `tests/corridor.test.ts` flies
+the level and holds *no body drawn over stone*; a corridor that turns needs that guard's wall
+positions to follow the curve.
 
 ### 5 — Rime Shelf
 

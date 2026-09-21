@@ -827,6 +827,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // No room until a level's script has one — 0335. `beginScript` lays it, and a title screen has
     // no level and therefore no room.
     room: null,
+    // No corridor until a level has one — 0348, on the room's terms one line up.
+    corridor: null,
     roomHold: 0,
     bossWheelIn: 0,
     bossWreckTurn: 0,
