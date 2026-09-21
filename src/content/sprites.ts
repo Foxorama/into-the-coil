@@ -942,6 +942,16 @@ export const SPRITE_KINDS = [
   */
   'ember',
   /*
+    ── A BUBBLE ON THE ACID, AND THE POP IT ENDS IN — 0353 ──────────────────────────────────────────
+
+    Asked for: *"little popping bubbles on the ground for the mire at the moment, we'll add them as
+    obstacles later."* The second thing in the backdrop that moves on its own, on the ember's terms: a
+    baked bitmap blitted where a pure function of the sim's steps and an index says (`paintSky`), in
+    fixed acid inks, because only the Mire's pools bubble.
+  */
+  'bubble',
+  'bubblePop',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -1716,6 +1726,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     thing that can kill the player, which is 0069's band applied to the first sky mark that moves.
   */
   ember: 4,
+  /*
+    ⚠️ **BOTH UNDER THE SMALLEST THING THAT CAN KILL THE PLAYER — 0353**, which is 0069's band: a round
+    mark a bullet's size, low in the lane where shots are read, is the one shape the backdrop may never
+    draw. The ring fills most of its bitmap, so the extent is the size.
+  */
+  bubble: 1.5,
+  bubblePop: 1.7,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and
