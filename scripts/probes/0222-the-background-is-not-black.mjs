@@ -27,8 +27,16 @@ export const PROBES = [
     guard: 'no compact structure mark is the size of something that can kill you',
     edit: {
       path: 'src/render/bake.ts',
-      find: '        const r = rng.range(0.002, 0.004) * size;',
-      replace: '        const r = rng.range(0.012, 0.04) * size;',
+      /*
+        ⚠️ Re-anchored by 0347, which took Saurian Belt's specks down — the only compact marks in the
+        game, so there is no size left to turn up. The break is the debris itself coming back: one
+        rock four units square in the belt's sky, squarely inside the band.
+      */
+      find: '  saurian: () => {\n    const out: StructureMark[] = [];',
+      replace:
+        '  saurian: (size) => {\n    const out: StructureMark[] = [\n' +
+        '      { points: [[0, 0], [size * 0.02, 0], [size * 0.02, size * 0.02], [0, size * 0.02]], width: 0, alpha: 0.6, crosses: false, taper: false, lit: false },\n' +
+        '    ];',
     },
   },
   /*

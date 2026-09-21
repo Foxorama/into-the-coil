@@ -17,6 +17,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  RANGE_OF,
   SKY_MAX_STAR_UNITS,
   SKY_STYLE_OF,
   atlasIsStale,
@@ -661,6 +662,14 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
     const shapes = new Map<string, ThemeKind[]>();
     for (const theme of THEME_KINDS) {
       const marks = STRUCTURE_OF[theme](size);
+      /*
+        ⚠️ **OR ITS OWN LAND — changed by 0347.** Saurian Belt's weather structure was a drift of dark
+        specks, and at 1080p they read as dirt on the glass; what the place is made of now is a far
+        range, a canopy and a volcano, in layers of their own, over a sky that grades. A planet whose
+        structure is its land is not a smooth wash, and the claim this guard exists for — every place
+        crafted, none sharing another's marks — is still held below for every mark any place draws.
+      */
+      if (marks.length === 0 && RANGE_OF[theme] !== null) continue;
       expect(marks.length, `${theme} draws no structure of its own — its weather is a smooth wash`).toBeGreaterThan(0);
       /*
         ⚠️ **PER MARK, BY ITS ACTUAL COORDINATES, AND THE FIRST VERSION COUNTED SHAPES INSTEAD.** It

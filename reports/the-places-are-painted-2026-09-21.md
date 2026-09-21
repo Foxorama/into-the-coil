@@ -134,7 +134,12 @@ Keep the composition (lanes, filaments, globules, Pillars); change what the gas 
 collision named above is sharpest here**: this is the place 0196 measured at a third of the others'
 headroom, and every structure mark in it is dark for that reason. Measure first.
 
-### 3 — Saurian Belt: a jungle under a live volcano
+### 3 — Saurian Belt: a jungle under a live volcano ✅
+
+[0347](../docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md) — mechanism 2 built
+(rock on the sim's clock, per entry); the land is lit rather than made brighter than the sky, so
+0221's guard stood and a floor on the lit colours joined it; and a tile seam on every planet was found
+and fixed on the way.
 
 > *"The volcano is one pulsing graphic that doesn't touch the sky and isn't actually firing any rocks
 > or anything, the closer layers and sky layers are a monotone blue with no detail to them, it doesn't

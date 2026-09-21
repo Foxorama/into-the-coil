@@ -20,12 +20,14 @@
  */
 
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { THEMES, foeOf, lordOf, type FoeSkin, type ThemeKind } from '../content/themes.ts';
+import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
 import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { EMBER_HEAD } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
+import { coneOf } from '../content/volcano.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
 
@@ -816,11 +818,15 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     is what it looks like before a level has spoken.
   */
   skyGround: 'space',
+  // The far land is the ground's own placeholder colour, for the ground's own reason — 0347.
+  skyRange: 'space',
   // A landmark is sky ink like every other backdrop mark — 0069's *the sky is behind the game* is
   // untouched by 0203, which moved only what may be drawn, never what it is drawn in.
   landmark: 'sky',
   landmarkB: 'sky',
   landmarkC: 'sky',
+  // A rock thrown from a landmark is part of it — 0347. `drawEmber` paints lava's own inks over this.
+  ember: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -1893,8 +1899,9 @@ function drawLandmark(
   size: number,
   theme: ThemeKind,
   seed: number,
+  plain = false,
 ): void {
-  LANDMARK_OF[theme]?.(ctx, ink, glow, space, size, seed);
+  LANDMARK_OF[theme]?.(ctx, ink, glow, space, size, seed, plain);
 }
 
 
@@ -1925,11 +1932,11 @@ function drawLandmark(
  */
 export const LANDMARK_OF: Record<
   ThemeKind,
-  ((ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number) => void) | null
+  ((ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number, plain?: boolean) => void) | null
 > = {
   approach: null,
   nebula: (ctx, ink, glow, space, size, seed) => drawPillars(ctx, ink, glow, space, size, seed),
-  saurian: (ctx, _ink, glow, space, size, seed) => drawVolcano(ctx, glow, space, size, seed),
+  saurian: (ctx, _ink, glow, space, size, seed, plain = false) => drawVolcano(ctx, glow, space, size, seed, plain),
   labyrinth: null,
   rime: null,
   mire: null,
@@ -2250,146 +2257,242 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
  * `docs/decisions/0203-the-rule-was-never-about-size.md` made a landmark the one thing in the sky that
  * can be somewhere; Saurian Belt places **three**, which is the first level to place more than one.
  */
-function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: number): void {
+function drawVolcano(ctx: Pen, glow: string, dark: string, size: number, seed: number, plain: boolean): void {
   /*
-    ⚠️ **THE BASE SITS LOW IN THE SPRITE AND THE PLUME FILLS THE TOP TWO THIRDS.** A mountain is
-    mostly the thing above it: a cone drawn to fill the tile is a triangle, and a cone in the bottom
-    third with a column of ash over it is an eruption. `at: 0.78` of the sprite, which at `lane: 68`
-    puts the feet on the near ridge and the plume across the sky above it.
-  */
-  /*
-    ⚠️ **THE FOOT IS BELOW THE TILE'S LANE ON PURPOSE, BECAUSE THE GROUND IS DRAWN OVER IT.** On a
-    planet the ground layer is painted LAST (0221), so a volcano whose base stops short of the
-    ridgelines is a mountain hanging in the air — the bench showed exactly that. At `0.92` the cone
-    runs off the bottom of its own sprite and the near ridge closes over it, which is what *standing
-    on something* looks like when the something is drawn in front.
+    ⚠️ **THE CONE RUNS TO THE BOTTOM OF THE BITMAP, BECAUSE THE LAND IS DRAWN OVER IT.** On a planet
+    the land is painted after every landmark (0221), so a foot that stopped short of the far range
+    would be a mountain hanging in the air — 0224's bench showed exactly that. The range closes over
+    the lower half; what shows is the upper cone standing behind it.
   */
   /*
     ⚠️ **THE SEED SHAPES THE MOUNTAIN AND NOT ONLY ITS SMOKE, WHICH IS THE DIFFERENCE BETWEEN THREE
-    CASTINGS AND ONE** — 0225. The first version keyed only the RNG-driven details on it: the plume's
-    jitter, where the lava wandered, where the bombs went. Two of them on screen together read as **the
-    same mountain venting differently**, which is the report with an extra step in it. Height, width,
-    crater and flank all move now, so the three are three mountains.
-
-    ⚠️ **AND THE FLANK EXPONENT IS THE ONE THAT MATTERS MOST.** It is what makes a cone a cone rather
-    than a pyramid or a funnel — 1.05 is nearly straight-sided and 1.3 is a steep-shouldered stratocone,
-    and the eye reads the difference as two mountains long before it reads a change in height.
+    CASTINGS AND ONE** — 0225. Height, width, crater and flank all move, so the three are three
+    mountains. The cone is `coneOf`'s since 0347, because the frame has to throw rock out of the same
+    crater this draws.
+  */
+  /*
+    ⚠️ **`plain` IS A PALETTE WHOSE DECORATION IS THE VOID** — high contrast. There the fire is the
+    place's own dim accent rather than lava, on `drawSky`'s terms for the stars.
   */
   const rng = makeRng('sky').stream(`saurian/volcano${seed}`);
-  const foot = size * 0.92;
-  const peak = size * rng.range(0.26, 0.36);
+  const cone = coneOf(seed);
+  const foot = size;
+  const peak = size * cone.peak;
   const mid = size * 0.5;
-  const half = size * rng.range(0.28, 0.38);
-  const crater = size * rng.range(0.038, 0.062);
-  const flank = rng.range(1.05, 1.3);
+  const half = size * cone.half;
+  const crater = size * cone.crater;
+  const lava = plain ? glow : mix(glow, EMBER_INKS.ember, 0.7);
+  const hot = plain ? glow : EMBER_INKS.core;
+  // The sun is up and to the left, which is the side the smoke and the flanks are lit on.
+  const sun = plain ? dark : mix(dark, glow, 0.32);
+  const ash = mix(dark, '#000000', 0.25);
+
+  /** A point on one flank, `u` of the way from the crater's lip (0) to the foot (1). */
+  const flankAt = (side: number, u: number, spread = 1): [number, number] => [
+    mid + side * (crater + (half - crater) * u ** cone.flank * spread),
+    peak + u * (foot - peak),
+  ];
 
   /*
-    ── THE ASH, FIRST AND FURTHEST BACK ────────────────────────────────────────────────────────────
+    ── THE SMOKE, FIRST AND FURTHEST BACK, AND IT LEAVES THE PICTURE — 0347 ────────────────────────
 
-    ⚠️ **PUFFS AND NOT A POLYGON, AND THE POLYGON WAS THE FIRST DRAFT.** A column that widens as it
-    rises is what a plume DOES, and drawn as one filled shape it came out of the bench as an **anvil
-    with a flat top** — because a path up one side and down the other joins its two ends with a
-    straight line, and the one edge nobody authored is the one at the top where the eye goes. Ash
-    billows; nine overlapping discs of falling opacity billow and a trapezoid cannot.
+    ⚠️ **TO THE TOP OF THE BITMAP AND PAST IT, BECAUSE A PLUME THAT ENDS IS A PLUME THAT WAS DRAWN.**
+    Played: *"doesn't touch the sky."* The old column stopped a quarter of a tile over the crater, and
+    since the bitmap's edge was on the screen it stopped on a ruled line. It now climbs until it is
+    wider than it is tall and runs off the top of the bitmap, and the entry's `scale` and `lane` put
+    that edge above the lane (`tests/places.test.ts`).
 
-    Drawn in the dark before the cone, so the cone closes over their roots and the two are one object.
+    ⚠️ **PUFFS AND NOT A POLYGON** — 0224's finding, kept: a path up one side and down the other joins
+    its ends with a straight line at the top. Each puff is a soft body (drawn three times about its
+    centre, 0345's edge technique), a sunlit cap up and to the left, and — low down — the underside
+    lit orange by the crater it came out of.
   */
-  ctx.fillStyle = dark;
-  for (let s = 0; s < 9; s += 1) {
-    const t = s / 8;
-    // Squared, so the column is still tight just above the crater and wide by the top of the tile.
-    const spread = t * t;
-    ctx.globalAlpha = 0.62 * (1 - t * 0.55);
+  const PUFFS = 30;
+  const lean = rng.range(-0.08, 0.08);
+  const puffs: { x: number; y: number; r: number; s: number }[] = [];
+  for (let i = 0; i < PUFFS; i += 1) {
+    const s = i / (PUFFS - 1);
+    const y = peak - s * (peak + size * 0.06);
+    // Tight over the crater and billowing by the top of the tile — squared, as it was.
+    const r = size * (0.028 + 0.15 * s ** 1.4) * rng.range(0.8, 1.15);
+    const x = mid + lean * s * size + rng.range(-0.5, 0.5) * r;
+    puffs.push({ x, y, r, s });
+  }
+  for (const p of puffs) {
+    for (const [grow, alpha] of [
+      [1.25, 0.25],
+      [1.1, 0.45],
+      [1, 0.95],
+    ] as const) {
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = ash;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r * grow, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  for (const p of puffs) {
+    // The sunlit cap: light with no edge, off-centre towards the sun.
+    const cx = p.x - p.r * 0.35;
+    const cy = p.y - p.r * 0.35;
+    const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, p.r * 0.9);
+    light.addColorStop(0, rgba(sun, 0.55));
+    light.addColorStop(1, rgba(sun, 0));
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = light;
     ctx.beginPath();
-    ctx.arc(
-      mid + rng.range(-0.05, 0.05) * size * (0.3 + spread),
-      peak - t * size * 0.27,
-      size * (0.045 + spread * 0.15),
-      0,
-      Math.PI * 2,
-    );
+    ctx.arc(cx, cy, p.r * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.s > 0.3) continue;
+    // And the crater's light on the underside of the lowest billows, dying out as they climb.
+    const bx = p.x;
+    const by = p.y + p.r * 0.45;
+    const under = ctx.createRadialGradient(bx, by, 0, bx, by, p.r);
+    under.addColorStop(0, rgba(lava, 0.6 * (1 - p.s / 0.3)));
+    under.addColorStop(1, rgba(lava, 0));
+    ctx.fillStyle = under;
+    ctx.beginPath();
+    ctx.arc(bx, by, p.r, 0, Math.PI * 2);
     ctx.fill();
   }
 
   /*
     ── THE CONE ────────────────────────────────────────────────────────────────────────────────────
 
-    ⚠️ **CONCAVE FLANKS, WHICH IS THE ONE THING THAT MAKES IT A VOLCANO AND NOT A HILL.** A straight
-    line from foot to crater is a pyramid; a real cone is steep at the top and flares out at the
-    bottom, and the eye knows the difference without being able to say why. `t ** 1.6` is that flare.
+    ⚠️ **CONCAVE FLANKS, WHICH IS THE ONE THING THAT MAKES IT A VOLCANO AND NOT A HILL.** Steep at the
+    top, flaring at the foot — `u ** flank`. Traced through twenty points a side now rather than eight,
+    because at the size 0347 draws it the eight showed as corners.
+
+    ⚠️ **LIT FROM THE SUN'S SIDE, AND IN SHADOW ON THE OTHER**, across its width: one flat fill was the
+    *"one graphic"* half of the report as much as the swell was.
   */
+  const FLANK_STEPS = 20;
+  const shade = ctx.createLinearGradient(mid - half * 0.6, 0, mid + half * 0.6, 0);
+  shade.addColorStop(0, sun);
+  shade.addColorStop(1, dark);
   ctx.globalAlpha = 1;
+  ctx.fillStyle = shade;
   ctx.beginPath();
-  ctx.moveTo(mid - half, foot);
-  for (let s = 1; s <= 8; s += 1) {
-    const t = s / 8;
-    ctx.lineTo(mid - crater - (half - crater) * (1 - t) ** flank, foot - t * (foot - peak));
-  }
-  ctx.lineTo(mid + crater, peak);
-  for (let s = 8; s >= 1; s -= 1) {
-    const t = s / 8;
-    ctx.lineTo(mid + crater + (half - crater) * (1 - t) ** flank, foot - t * (foot - peak));
-  }
-  ctx.lineTo(mid + half, foot);
+  ctx.moveTo(...flankAt(-1, 1));
+  for (let s = FLANK_STEPS - 1; s >= 0; s -= 1) ctx.lineTo(...flankAt(-1, s / FLANK_STEPS));
+  for (let s = 0; s <= FLANK_STEPS; s += 1) ctx.lineTo(...flankAt(1, s / FLANK_STEPS));
   ctx.closePath();
   ctx.fill();
+
+  // Gullies: dark creases down the sunlit flank and pale ridges between them, each following the cone.
+  ctx.lineCap = 'round';
+  for (let g = 0; g < 7; g += 1) {
+    const side = g % 2 === 0 ? -1 : 1;
+    const spread = rng.range(0.15, 0.95);
+    const from = rng.range(0.04, 0.2);
+    ctx.globalAlpha = side < 0 ? 0.45 : 0.3;
+    ctx.strokeStyle = side < 0 ? ash : sun;
+    ctx.lineWidth = Math.max(1, size * 0.004);
+    ctx.beginPath();
+    ctx.moveTo(...flankAt(side, from, spread));
+    for (let s = 1; s <= 10; s += 1) ctx.lineTo(...flankAt(side, from + (1 - from) * (s / 10), spread));
+    ctx.stroke();
+  }
 
   /*
     ── AND THE LIGHT, WHICH IS THE WHOLE SUBJECT ───────────────────────────────────────────────────
 
-    The crater first, then what is running down the flanks from it. **Lava is drawn thin and tapering
-    and never as a wash**: a glowing area on a mountainside reads as a lit slope, and a glowing LINE
-    reads as something moving.
+    ⚠️ **LAVA IS A LINE THAT GLOWS, DRAWN THREE TIMES** — a wide faint bloom, a body, and a hot core —
+    so it lights the rock beside it rather than sitting on it as a stroke. Thin and tapering, never a
+    wash: a glowing area on a mountainside reads as a lit slope, a glowing line as something moving.
   */
-  ctx.strokeStyle = glow;
-  ctx.lineCap = 'round';
-  ctx.globalAlpha = 0.9;
-  ctx.fillStyle = glow;
+  const glowAt = ctx.createRadialGradient(mid, peak, 0, mid, peak, crater * 4);
+  glowAt.addColorStop(0, rgba(hot, 0.95));
+  glowAt.addColorStop(1, rgba(lava, 0));
+  ctx.fillStyle = glowAt;
   ctx.beginPath();
-  ctx.moveTo(mid - crater, peak);
-  ctx.lineTo(mid + crater, peak);
-  ctx.lineTo(mid + crater * 0.55, peak + size * 0.035);
-  ctx.lineTo(mid - crater * 0.55, peak + size * 0.035);
-  ctx.closePath();
+  ctx.arc(mid, peak, crater * 4, 0, Math.PI * 2);
   ctx.fill();
 
-  for (let i = 0; i < 4; i += 1) {
+  const FLOWS = 5;
+  for (let i = 0; i < FLOWS; i += 1) {
     const side = i % 2 === 0 ? -1 : 1;
-    const wander = rng.range(0.2, 0.9);
-    ctx.globalAlpha = 0.75;
-    for (let s = 1; s <= 5; s += 1) {
-      const a = (s - 1) / 5;
-      const b = s / 5;
-      const at = (u: number): number[] => [
-        mid + side * (crater + (half - crater) * u ** flank * wander),
-        peak + u * (foot - peak),
-      ];
-      ctx.lineWidth = Math.max(1, size * 0.012 * (1 - a * 0.7));
-      ctx.beginPath();
-      ctx.moveTo(at(a)[0]!, at(a)[1]!);
-      ctx.lineTo(at(b)[0]!, at(b)[1]!);
-      ctx.stroke();
+    const spread = rng.range(0.1, 0.75);
+    const reach = rng.range(0.35, 0.75);
+    const kink = rng.range(-0.04, 0.04) * size;
+    for (const [width, alpha, colour] of [
+      [0.022, 0.16, lava],
+      [0.009, 0.7, lava],
+      [0.0035, 0.95, hot],
+    ] as const) {
+      const SEGMENTS = 12;
+      for (let s = 1; s <= SEGMENTS; s += 1) {
+        const a = ((s - 1) / SEGMENTS) * reach;
+        const b = (s / SEGMENTS) * reach;
+        const [ax, ay] = flankAt(side, a, spread);
+        const [bx, by] = flankAt(side, b, spread);
+        // A sideways wander that is nothing at the lip and most of `kink` halfway down.
+        const wa = Math.sin((a / reach) * Math.PI) * kink;
+        const wb = Math.sin((b / reach) * Math.PI) * kink;
+        ctx.globalAlpha = alpha * (1 - (a / reach) * 0.6);
+        ctx.strokeStyle = colour;
+        ctx.lineWidth = Math.max(1, size * width * (1 - (a / reach) * 0.75));
+        ctx.beginPath();
+        ctx.moveTo(ax + wa, ay);
+        ctx.lineTo(bx + wb, by);
+        ctx.stroke();
+      }
     }
   }
-
-  /*
-    ⚠️ **AND SOMETHING THROWN CLEAR, BECAUSE *EXPLODING* IS A WORD IN THE REPORT.** A plume and a lit
-    crater are a mountain venting; bombs arcing away from it are a mountain going off. They are drawn
-    in the glow and small — well under a bullet, which is the band 0203 puts on anything the sky
-    draws and which this object is otherwise far above.
-  */
-  ctx.globalAlpha = 0.8;
-  for (let i = 0; i < 7; i += 1) {
-    const side = rng.range(0, 1) < 0.5 ? -1 : 1;
-    const out = rng.range(0.12, 0.4);
-    const x = mid + side * out * size;
-    const y = peak - rng.range(0.02, 0.3) * size + out * out * size * 0.6;
-    const r = rng.range(0.004, 0.008) * size;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * A rock thrown out of a crater: a hot head leading, a tail of light behind it — 0347.
+ *
+ * ⚠️ **POINTING ALONG +x, BECAUSE `blit`'S TURN IS MEASURED FROM THERE** (0306): the painter turns it
+ * to its own heading, so the tail always trails the way it came.
+ *
+ * ⚠️ **THE HEAD IS `EMBER_HEAD` OF THE BITMAP ACROSS AND NO MORE**; the tail and the halo are light
+ * falling to nothing, which is what keeps a moving mark in the sky from reading as a shot.
+ *
+ * @param plain the palette's sky ink where decoration is the void — high contrast — else `null`.
+ */
+function drawEmber(ctx: Pen, size: number, plain: string | null): void {
+  const r = (EMBER_HEAD * size) / 2;
+  const hx = size - r * 2.2;
+  const hy = size / 2;
+  /*
+    ⚠️ **A COOLING ROCK AND NOT A SHOT, WHICH IS WHY IT IS DULLER THAN LAVA.** It shares the lane with
+    the player's orange shots and the foes' red ones; what separates it is a tail, an arc, a slow
+    drift and a size under both — and a body a third of the way to coal, so the brightest thing about
+    it is a small core rather than the whole mark. The boss-fight photograph is what asked for this.
+  */
+  const body = plain ?? mix(EMBER_INKS.ember, EMBER_INKS.coal, 0.35);
+  const core = plain ?? EMBER_INKS.gold;
+  // The tail: a thin wedge from the head back towards the far edge, fading to nothing.
+  const tail = ctx.createLinearGradient(hx, hy, size * 0.04, hy);
+  tail.addColorStop(0, rgba(plain ?? EMBER_INKS.gold, 0.45));
+  tail.addColorStop(1, rgba(body, 0));
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = tail;
+  ctx.beginPath();
+  ctx.moveTo(hx, hy - r * 0.8);
+  ctx.quadraticCurveTo(size * 0.4, hy - r * 0.25, size * 0.04, hy);
+  ctx.quadraticCurveTo(size * 0.4, hy + r * 0.25, hx, hy + r * 0.8);
+  ctx.closePath();
+  ctx.fill();
+  // A halo around the head, then the head, then its white-hot heart.
+  const halo = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 2.1);
+  halo.addColorStop(0, rgba(body, 0.55));
+  halo.addColorStop(1, rgba(body, 0));
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(hx, hy, r * 2.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = body;
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = core;
+  ctx.beginPath();
+  ctx.arc(hx + r * 0.2, hy, r * 0.4, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**
@@ -2615,7 +2718,7 @@ function drawHeart(ctx: Pen, ink: string, space: string, size: number, seed: num
  * it has, and the one its haze is already made of, so the pools and the air over them are lit by one
  * thing rather than by two.
  */
-export type GroundArt = (ctx: Pen, land: string, sky: string, glow: string, size: number) => void;
+export type GroundArt = (ctx: Pen, land: string, sky: string, glow: string, size: number, light?: LandLight) => void;
 
 export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
   approach: null,
@@ -2627,15 +2730,34 @@ export const GROUND_OF: Record<ThemeKind, GroundArt | null> = {
     *"they're still a solo colour"* is exactly that. Lit in the accent, a ridge is the sun on it and the
     place has three colours on screen at once — sky, rock, and the light.
   */
-  saurian: (ctx, land, sky, glow, size) => drawRidges(ctx, land, sky, glow, size),
+  saurian: (ctx, land, sky, glow, size, light) => drawJungle(ctx, land, sky, glow, size, light),
   labyrinth: null,
   rime: (ctx, land, sky, glow, size) => drawShelf(ctx, land, sky, glow, size),
   mire: (ctx, land, sky, glow, size) => drawEnclosure(ctx, land, sky, glow, size),
   core: null,
 };
 
-function drawGround(ctx: Pen, land: string, sky: string, glow: string, size: number, theme: ThemeKind): void {
-  GROUND_OF[theme]?.(ctx, land, sky, glow, size);
+/**
+ * A planet's far land, in its own layer behind the ground and moving slower — or `null` for a planet
+ * whose land is one distance — `docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`.
+ *
+ * ⚠️ **OPAQUE ON `GROUND_OF`'s TERMS AND HELD BY THE SAME GUARDS**: a mass that crosses the tile and
+ * runs off the bottom of the world, with an edge on the lane. What is behind it is the weather and
+ * the landmark, which is exactly what should show over a range — and a volcano standing behind it
+ * has its foot hidden by it, which is what `tests/places.test.ts` checks the landmark against now.
+ */
+export const RANGE_OF: Record<ThemeKind, GroundArt | null> = {
+  approach: null,
+  nebula: null,
+  saurian: (ctx, land, sky, glow, size, light) => drawRange(ctx, land, sky, glow, size, light),
+  labyrinth: null,
+  rime: null,
+  mire: null,
+  core: null,
+};
+
+function drawGround(ctx: Pen, land: string, sky: string, glow: string, size: number, theme: ThemeKind, light?: LandLight): void {
+  GROUND_OF[theme]?.(ctx, land, sky, glow, size, light);
 }
 
 /**
@@ -2714,36 +2836,316 @@ function skyline(
   return out;
 }
 
+/*
+  ── SAURIAN BELT: A JUNGLE UNDER A RANGE — 0347 ────────────────────────────────────────────────────
+
+  Played: *"the closer layers and sky layers are a monotone blue with no detail to them, it doesn't
+  scream jungle world at all."* What shipped was three ridgelines as random walks in three tones of
+  one blue-black — straight segments, one hex each, and at 1080p the photograph showed the tile seam.
+
+  ⚠️ **TWO LAYERS NOW, AT TWO RATES, BECAUSE A JUNGLE UNDER MOUNTAINS IS THREE DISTANCES.** The range
+  is `RANGE_OF.saurian`, drawn after the weather and moving at its own slower rate; the canopy and the
+  leaves going past are `GROUND_OF.saurian`, drawn last and fastest.
+
+  ⚠️ **EVERY EDGE IS A SUM OF SINES WHOSE PERIODS DIVIDE THE TILE** — the handover's technique table,
+  and the reason there is no seam: periodic in height and in slope, so the tile joins without a kink.
+  Every crown and frond near an edge is drawn again one tile over, on 0206's terms.
+
+  ⚠️ **NOTHING HERE IS LIGHTER THAN THE PLACE'S STATED `land` COLOURS**, which `tests/places.test.ts`
+  holds to the gameplay floor. A gradient runs between a stated colour and something darker; mist is
+  the far colour laid over something darker. The one exception is a hairline rim in the place's
+  accent, which is `skyCover`'s own argument about lines a few pixels wide.
+*/
+
+/** A sum of sines over the tile: `[cycles, amplitude, phase]`, every `cycles` a whole number. */
+function waves(x: number, size: number, terms: readonly (readonly [number, number, number])[]): number {
+  let y = 0;
+  for (const [cycles, amp, phase] of terms) y += amp * Math.sin((2 * Math.PI * cycles * x) / size + phase);
+  return y;
+}
+
 /**
- * ── SAURIAN BELT: A RANGE UNDER A BLUE SKY ────────────────────────────────────────────────────────
- *
- * Three ridgelines, opaque, each nearer and lower and lighter-edged than the one behind it. 0220 drew
- * these as structure marks and this is the same silhouette with the light taken out from behind it.
- *
- * ⚠️ **THE FAR RANGE IS DRAWN IN A COLOUR MIXED TOWARDS THE SKY, WHICH IS THE ONLY REAL DEPTH CUE
- * THERE IS HERE.** Air between you and a mountain is what makes a distant one pale — and it is the
- * one cue that survives everything being opaque, since alpha is no longer available to say *far*.
- * Three flat silhouettes in one colour is a stencil; three in three tones is a landscape.
+ * Sharp peaks over broad valleys: `1 − |sin|` has a cusp where the sine crosses zero, and a power
+ * well over 1 narrows it, which is what a summit is. At 1.6 the first photograph read as scallops —
+ * round valleys between cusps, a row of clouds rather than a range.
  */
-function drawRidges(ctx: Pen, land: string, sky: string, glow: string, size: number): void {
-  const RANGES = [
-    { base: 0.6, jag: 0.026, haze: 0.55, steps: 26, lit: 0.3 },
-    { base: 0.655, jag: 0.04, haze: 0.28, steps: 19, lit: 0.45 },
-    { base: 0.715, jag: 0.055, haze: 0, steps: 14, lit: 0.6 },
-  ];
-  for (const range of RANGES) {
-    const crest = skyline(size, `saurian/range${range.steps}`, range.base, range.jag, range.steps);
-    fillTo(ctx, mix(land, sky, range.haze), crest, size, true);
-    // The sun catching the tops. Drawn in the sky's own colour, which is where the light is coming
-    // from — the crest is literally the sky showing over the edge of the rock.
-    ctx.globalAlpha = range.lit;
-    ctx.strokeStyle = glow;
+function summits(x: number, size: number, terms: readonly (readonly [number, number, number])[]): number {
+  let y = 0;
+  for (const [cycles, amp, phase] of terms) y += amp * (1 - Math.abs(Math.sin((Math.PI * cycles * x) / size + phase))) ** 3;
+  return y;
+}
+
+/** A crest as points across the tile, from a height function in tile fractions. */
+function crestOf(size: number, height: (x: number) => number, samples = 160): number[][] {
+  const out: number[][] = [];
+  for (let i = 0; i <= samples; i += 1) {
+    const x = (i / samples) * size;
+    out.push([x, height(x) * size]);
+  }
+  return out;
+}
+
+/** Fill under a crest to the bottom of the tile in `fill` — a colour or a gradient — at full alpha. */
+function fillUnder(ctx: Pen, fill: string | CanvasGradient, crest: readonly number[][], size: number): void {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
+  for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
+  ctx.lineTo(size, size);
+  ctx.lineTo(0, size);
+  ctx.closePath();
+  ctx.fill();
+}
+
+/** A vertical two-stop gradient between tile heights `from` and `to`. */
+function vertical(ctx: Pen, size: number, from: number, top: string, to: number, bottom: string): CanvasGradient {
+  const g = ctx.createLinearGradient(0, from * size, 0, to * size);
+  g.addColorStop(0, top);
+  g.addColorStop(1, bottom);
+  return g;
+}
+
+/**
+ * The far range: two ridges of peaks, the back one hazier, with mist lying in the valley between.
+ *
+ * ⚠️ **AIR IS WHAT MAKES A MOUNTAIN FAR, AND AIR IS LIGHTEST LOW DOWN.** So each ridge is darkest at
+ * its summits and pales towards its foot, and the back ridge is paler than the front one — the two
+ * cues that survive everything being opaque.
+ */
+function drawRange(ctx: Pen, land: string, _sky: string, glow: string, size: number, light?: LandLight): void {
+  const far = light?.far ?? land;
+  const back = (x: number): number =>
+    0.578 -
+    summits(x, size, [[2, 0.05, 0.4], [5, 0.035, 1.3], [11, 0.014, 2.2], [23, 0.005, 0.7]]) +
+    waves(x, size, [[1, 0.008, 0.9], [3, 0.006, 2.3]]);
+  const front = (x: number): number =>
+    0.612 -
+    summits(x, size, [[3, 0.032, 2.6], [7, 0.02, 0.2], [17, 0.007, 1.1]]) +
+    waves(x, size, [[2, 0.006, 2.9], [5, 0.004, 0.6]]);
+
+  const backCrest = crestOf(size, back);
+  fillUnder(ctx, vertical(ctx, size, 0.5, mix(far, land, 0.3), 0.6, far), backCrest, size);
+  // The sun on the summits, as a line — the place's accent, faint, on the far rock.
+  ctx.globalAlpha = 0.22;
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = Math.max(1, size * 0.0016);
+  ctx.beginPath();
+  ctx.moveTo(backCrest[0]![0]!, backCrest[0]![1]!);
+  for (let i = 1; i < backCrest.length; i += 1) ctx.lineTo(backCrest[i]![0]!, backCrest[i]![1]!);
+  ctx.stroke();
+  // Mist lying in the valley behind the near ridge: the far colour, thickening downwards.
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = vertical(ctx, size, 0.545, rgba(far, 0), 0.59, rgba(far, 0.9));
+  ctx.fillRect(0, 0.545 * size, size, 0.045 * size);
+  ctx.fillStyle = rgba(far, 0.9);
+  ctx.fillRect(0, 0.59 * size, size, size - 0.59 * size);
+
+  const frontCrest = crestOf(size, front);
+  const near = mix(far, land, 0.55);
+  fillUnder(ctx, vertical(ctx, size, 0.56, near, 0.7, mix(near, far, 0.5)), frontCrest, size);
+  /*
+    Forest on the near ridge: small crowns riding its crest, so it is a wooded ridge and not a cut-out.
+    ⚠️ Under 0.9 of a world unit across at their largest (`0.0045` of a 200-unit tile), which is 0069's
+    band for anything the sky draws — a speck on a ridge is never read as a shot.
+  */
+  const rng = makeRng('sky').stream('saurian/rangeTrees');
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = near;
+  for (let x = 0; x < size; x += size * rng.range(0.004, 0.008)) {
+    const r = size * rng.range(0.0022, 0.0045);
+    for (const dx of [-size, 0, size]) {
+      const cx = x + dx;
+      if (cx + r < 0 || cx - r > size) continue;
+      ctx.beginPath();
+      ctx.arc(cx, front(x) * size + r * 0.4, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  // Mist in the valley: the far colour lying over the foot of the near ridge.
+  ctx.fillStyle = vertical(ctx, size, 0.6, rgba(far, 0), 0.66, rgba(far, 0.85));
+  ctx.fillRect(0, 0.6 * size, size, 0.06 * size);
+  ctx.fillStyle = far;
+  ctx.fillRect(0, 0.66 * size, size, size - 0.66 * size);
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The jungle: a canopy of crowns catching the sun, a nearer and darker row below it, and fronds
+ * sliding past along the bottom of the screen.
+ */
+function drawJungle(ctx: Pen, land: string, _sky: string, glow: string, size: number, light?: LandLight): void {
+  const canopy = light?.canopy ?? land;
+  const lit = light?.lit ?? land;
+  const rng = makeRng('sky').stream('saurian/jungle');
+
+  /**
+   * One row of trees: a rolling crest, a crown every few units along it, each crown lit on its sun
+   * side, and the body filled to the bottom of the tile.
+   */
+  const row = (
+    crest: (x: number) => number,
+    body: string,
+    sunlit: string,
+    radius: readonly [number, number],
+    emergent: number,
+    rim: number,
+  ): void => {
+    fillUnder(ctx, vertical(ctx, size, 0.62, body, 0.76, mix(body, land, 0.7)), crestOf(size, (x) => crest(x) + radius[1] * 0.6), size);
+    /*
+      ⚠️ **A CROWN IS A CLUSTER OF LOBES, NOT A DISC.** One circle per tree came out of the first
+      photograph as a row of green balls, and the tall ones as lollipops. Three to five lobes of
+      unequal size, the upper ones smaller, read as foliage; a tall tree stands on a visible trunk.
+    */
+    const lobes: { x: number; y: number; r: number }[] = [];
+    const trunks: { x: number; top: number; foot: number; width: number }[] = [];
+    for (let x = 0; x < size; ) {
+      const tall = rng.range(0, 1) < emergent;
+      const r = size * rng.range(radius[0], radius[1]) * (tall ? 1.5 : 1);
+      const base = crest(x) * size + r * 0.3;
+      /*
+        A tall tree is an emergent: a short trunk above the canopy and a crown wider than it is tall —
+        an umbrella. The second photograph's was a round crown on a long stick, which is a lollipop.
+      */
+      const cy = base - (tall ? r * 1.3 : 0);
+      if (tall) trunks.push({ x, top: cy, foot: base + r * 0.5, width: r * 0.16 });
+      const count = tall ? 6 : 3 + Math.floor(rng.range(0, 2));
+      for (let l = 0; l < count; l += 1) {
+        const a = Math.PI * (1.1 + (0.8 * l) / Math.max(1, count - 1)) + rng.range(-0.2, 0.2);
+        const d = l === 0 ? 0 : r * rng.range(0.45, 0.7) * (tall ? 1.5 : 1);
+        const flat = tall ? 0.35 : 0.8;
+        lobes.push({ x: x + Math.cos(a) * d, y: cy + Math.sin(a) * d * flat, r: r * (l === 0 ? (tall ? 0.8 : 1) : rng.range(0.55, 0.75)) });
+      }
+      x += r * rng.range(1.1, 1.7);
+    }
     ctx.lineCap = 'round';
-    ctx.lineWidth = Math.max(1, size * 0.0035);
-    ctx.beginPath();
-    ctx.moveTo(crest[0]![0]!, crest[0]![1]!);
-    for (let i = 1; i < crest.length; i += 1) ctx.lineTo(crest[i]![0]!, crest[i]![1]!);
-    ctx.stroke();
+    for (const t of trunks) {
+      for (const dx of [-size, 0, size]) {
+        if (t.x + dx < -t.width || t.x + dx > size + t.width) continue;
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = mix(body, land, 0.6);
+        ctx.lineWidth = Math.max(1, t.width);
+        ctx.beginPath();
+        ctx.moveTo(t.x + dx, t.foot);
+        ctx.quadraticCurveTo(t.x + dx + t.width * 2, (t.top + t.foot) / 2, t.x + dx, t.top);
+        ctx.stroke();
+      }
+    }
+    for (const c of lobes) {
+      for (const dx of [-size, 0, size]) {
+        const cx = c.x + dx;
+        if (cx + c.r * 1.2 < 0 || cx - c.r * 1.2 > size) continue;
+        // The lobe, then the sun on its upper-left as light with no edge — kept INSIDE the lobe, since
+        // the first draft's spilled past it as a glowing fringe — then a rim of the accent.
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.arc(cx, c.y, c.r, 0, Math.PI * 2);
+        ctx.fill();
+        const sx = cx - c.r * 0.25;
+        const sy = c.y - c.r * 0.3;
+        const sun = ctx.createRadialGradient(sx, sy, 0, sx, sy, c.r * 0.6);
+        sun.addColorStop(0, sunlit);
+        sun.addColorStop(1, rgba(sunlit, 0));
+        ctx.fillStyle = sun;
+        ctx.beginPath();
+        ctx.arc(sx, sy, c.r * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = rim;
+        ctx.strokeStyle = glow;
+        ctx.lineWidth = Math.max(1, size * 0.0012);
+        ctx.beginPath();
+        ctx.arc(cx, c.y, c.r * 0.96, Math.PI * 1.1, Math.PI * 1.5);
+        ctx.stroke();
+      }
+    }
+  };
+
+  // The canopy, lane 72 to 80 or so, and a nearer, darker row under it around lane 88.
+  row(
+    (x) => 0.617 + waves(x, size, [[2, 0.01, 0.7], [5, 0.006, 2.1], [11, 0.003, 0.3]]),
+    canopy,
+    lit,
+    [0.009, 0.017],
+    0.07,
+    0.3,
+  );
+  row(
+    (x) => 0.682 + waves(x, size, [[3, 0.008, 1.9], [7, 0.005, 0.4]]),
+    mix(canopy, land, 0.45),
+    mix(lit, land, 0.35),
+    [0.016, 0.026],
+    0,
+    0.22,
+  );
+
+  /*
+    ── THE NEAR LEAVES, WHICH ARE WHAT GOES PAST FASTEST ─────────────────────────────────────────
+
+    Clumps of fronds standing up out of the bottom of the screen, in the land's own darkest colour
+    with a thread of sun along each spine. ⚠️ **ROOTED BELOW THE LANE (tile 0.78) AND NOT AT THE TILE'S
+    EDGE**, so they are features standing on the land rather than a second mass claiming to run off
+    the world — `tests/places.test.ts`'s masses are the fills that reach an edge, and these do not.
+  */
+  const leaf = mix(land, canopy, 0.12);
+  const CLUMPS = 9;
+  for (let k = 0; k < CLUMPS; k += 1) {
+    const base = ((k + rng.range(0.1, 0.9)) / CLUMPS) * size;
+    const fronds = 4 + Math.floor(rng.range(0, 4));
+    // Tall enough to stand up against the canopy's lit crowns, which is the only thing a silhouette
+    // this dark can be seen against — the first draft stopped below them and was invisible.
+    const height = size * rng.range(0.1, 0.15);
+    for (let f = 0; f < fronds; f += 1) {
+      // Every draw before the wrap, so the copy one tile over is the same frond — 0206.
+      const lean = rng.range(-1, 1);
+      const reach = height * rng.range(0.7, 1);
+      const droop = rng.range(0.55, 0.8);
+      for (const dx of [-size, 0, size]) {
+        const bx = base + dx;
+        if (bx + reach * 1.6 < 0 || bx - reach * 1.6 > size) continue;
+        const by = size * 0.78;
+        // A spine that rises and arcs over: control point above the base, tip out to the side and down.
+        const cx = bx + lean * reach * 0.5;
+        const cy = by - reach * 1.15;
+        const tx = bx + lean * reach * 1.3;
+        const ty = by - reach * droop;
+        const at = (t: number): [number, number] => [
+          (1 - t) * (1 - t) * bx + 2 * (1 - t) * t * cx + t * t * tx,
+          (1 - t) * (1 - t) * by + 2 * (1 - t) * t * cy + t * t * ty,
+        ];
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = leaf;
+        const LEAFLETS = 16;
+        for (let i = 2; i < LEAFLETS; i += 1) {
+          const t = i / LEAFLETS;
+          const [px, py] = at(t);
+          const [qx, qy] = at(t + 0.02);
+          const heading = Math.atan2(qy - py, qx - px);
+          const long = reach * 0.34 * Math.sin(Math.PI * t) + reach * 0.04;
+          for (const side of [-1, 1]) {
+            // Each leaflet droops: out from the spine at about sixty degrees, then down, a thin blade.
+            const a = heading + side * 1.05;
+            const ex = px + Math.cos(a) * long;
+            const ey = py + Math.sin(a) * long + long * 0.35;
+            ctx.beginPath();
+            ctx.moveTo(px - Math.cos(heading) * long * 0.08, py - Math.sin(heading) * long * 0.08);
+            ctx.quadraticCurveTo(px + Math.cos(a) * long * 0.5, py + Math.sin(a) * long * 0.5 - long * 0.08, ex, ey);
+            ctx.lineTo(px + Math.cos(heading) * long * 0.1, py + Math.sin(heading) * long * 0.1);
+            ctx.closePath();
+            ctx.fill();
+          }
+        }
+        // The sun along the middle of the spine only: drawn base to tip, the second photograph showed
+        // every frond as a pale arch standing over its own leaves — wire, not a plant.
+        ctx.globalAlpha = 0.12;
+        ctx.strokeStyle = glow;
+        ctx.lineWidth = Math.max(1, size * 0.0012);
+        ctx.beginPath();
+        ctx.moveTo(...at(0.2));
+        for (let i = 1; i <= 8; i += 1) ctx.lineTo(...at(0.2 + (0.6 * i) / 8));
+        ctx.stroke();
+      }
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -8836,6 +9238,14 @@ export function drawKind(
       */
       drawGround(ctx, palette.space, palette.space, palette.sky, size, theme);
       return;
+    // The far land's placeholder, on `skyGround`'s terms exactly — 0347. `bakeGround` replaces it.
+    case 'skyRange':
+      RANGE_OF[theme]?.(ctx, palette.space, palette.space, palette.sky, size);
+      return;
+    // Rock thrown from a crater — 0347. Lava's own inks, or the sky's where decoration is the void.
+    case 'ember':
+      drawEmber(ctx, size, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
 
@@ -9082,6 +9492,26 @@ export interface SkyStyle {
   readonly cloudCeiling?: number;
   /** The place's own stars. Absent is the shared field, exactly as it was. */
   readonly stars?: StarStyle;
+  /**
+   * A sky that grades — deep overhead and hazed at the horizon. Absent is one flat colour, which six
+   * places keep — `docs/decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md`.
+   *
+   * ⚠️ **THE TWO HALVES COST DIFFERENT THINGS AND ARE COUNTED DIFFERENTLY.** Deepening the top takes
+   * the sky towards the land colour, which is darker, so every ink's ratio goes UP and nothing counts
+   * it — `skyCover`'s own argument about dark marks. The haze is light, and `skyCover` counts it at
+   * every row of the tile exactly as a canvas draws a two-stop linear gradient.
+   *
+   * Every position is a fraction of the weather tile, so 0.25 to 0.75 is the lane (`LANE_TOP`).
+   */
+  readonly daylight?: {
+    /** Where the sky is its own colour: above, it deepens; below, it hazes. */
+    readonly mid: number;
+    /** How far towards the land colour the top of the lane is taken. */
+    readonly deep: number;
+    /** Where the haze is thickest — the horizon — and how thick. Flat below it, under the land. */
+    readonly horizon: number;
+    readonly haze: number;
+  };
 }
 
 /**
@@ -9153,8 +9583,23 @@ export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
       band: { at: 0.5, depth: 0.2, share: 0 },
     },
   },
-  // Tumbling rock: knots of debris with clear lanes between them.
-  saurian: { density: 0.75, size: 1, tilt: 0.45, length: 0.3, clump: 0.8, dim: 0.55, drift: 0.35, clouds: 0.7, cloudSize: 0.95, cloudAlpha: 0.9 },
+  /*
+    A jungle's sky — 0347: deep blue overhead, hazing towards the far range, with a few banks of
+    weather. The star-field numbers are unread here, since a planet draws no star field (0221).
+  */
+  saurian: {
+    density: 0.75,
+    size: 1,
+    tilt: 0.45,
+    length: 0.3,
+    clump: 0.8,
+    dim: 0.55,
+    drift: 0.35,
+    clouds: 0.7,
+    cloudSize: 0.95,
+    cloudAlpha: 0.9,
+    daylight: { mid: 0.43, deep: 0.6, horizon: 0.58, haze: 0.2 },
+  },
   // Long structure going past. Almost nothing clumps in a corridor.
   labyrinth: { density: 0.55, size: 0.8, tilt: 0, length: 2.1, clump: 0.1, dim: 0.65, drift: 0.2, clouds: 0.35, cloudSize: 0.65, cloudAlpha: 0.6 },
   // A shelf of ice: shards in drifts, all lying the same way, and very little variation in them.
@@ -9849,7 +10294,7 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     screen. The three crests sit at 0.60, 0.655 and 0.715: lane 70, 81 and 93, which is the bottom
     quarter of what the player can see.
   */
-  saurian: (size) => {
+  saurian: () => {
     const out: StructureMark[] = [];
     /*
       ⚠️ **THE RIDGES USED TO BE HERE AND THEY ARE `GROUND_OF.saurian` NOW — 0221.** They were three
@@ -9873,26 +10318,12 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       ⚠️ **0222 ALSO HUNG FOUR HULKS UP HERE AND 0342 TOOK THEM DOWN** — dark heptagons in a daytime
       sky, which is the picture the report called *"a really bad layer"*.
     */
-    const rng = makeRng('sky').stream('saurian/dust');
-    for (let knot = 0; knot < 3; knot += 1) {
-      const cx = rng.range(0.1, 0.9) * size;
-      // Above the skyline, and by enough that a speck never reads as sitting on the ground.
-      const cy = rng.range(0.28, 0.5) * size;
-      for (let i = 0; i < 7; i += 1) {
-        const x = cx + rng.range(-0.09, 0.09) * size;
-        const y = cy + rng.range(-0.07, 0.07) * size;
-        // Under a bullet at 1.8 units — `0.004` of a 200-unit tile is 0.8, and the widest is 1.6.
-        const r = rng.range(0.002, 0.004) * size;
-        const points: number[][] = [];
-        const sides = 5 + Math.floor(rng.range(0, 3));
-        for (let s = 0; s < sides; s += 1) {
-          const a = (s / sides) * Math.PI * 2 + rng.range(-0.3, 0.3);
-          const rr = r * rng.range(0.6, 1);
-          points.push([x + Math.cos(a) * rr, y + Math.sin(a) * rr]);
-        }
-        out.push({ points, width: 0, alpha: 0.62, crosses: false, taper: false, lit: false });
-      }
-    }
+    /*
+      ⚠️ **AND 0347 TOOK THE SPECKS DOWN TOO.** Twenty-one dark flecks in a daytime sky, photographed
+      at 1080p: they read as dirt on the glass rather than as a belt overhead, and nothing else on the
+      screen said *belt*. The sky has weather, a haze and a volcano's smoke in it now, and rock that
+      is actually flying — which is what a speck in the sky was standing in for.
+    */
     return out;
   },
 
@@ -10267,6 +10698,8 @@ function drawNebula(
   theme: ThemeKind,
   gases: readonly string[] = [],
 ): void {
+  // Under the weather, because the weather is IN the sky — 0347. A no-op for six places.
+  drawDaylight(ctx, colour, space, size, theme);
   for (const cloud of nebulaField(size, theme)) {
     /*
       ⚠️ **THE INNER CIRCLE IS OFFSET AND ITS RADIUS IS STILL ZERO** — 0196. A zero-radius inner circle
@@ -10384,6 +10817,49 @@ function cloudsAt(clouds: readonly { x: number; y: number; r: number; alpha: num
   return cover;
 }
 
+/**
+ * A sky that grades: taken towards the land colour overhead, and hazed in the weather's own colour at
+ * the horizon — `SkyStyle.daylight`, 0347. Absent, nothing is drawn.
+ *
+ * ⚠️ **OUT HERE AND NOT INSIDE `drawNebula`, WHICH IS WHERE `tests/sky.test.ts` SCANS.** That scan
+ * holds the CLOUDS to two stops because `cloudsAt` models their falloff; these are two linear
+ * gradients with a model of their own (`hazeAt`), and inside the slice they would redden a claim
+ * that is about something else.
+ *
+ * ⚠️ **TWO STOPS EACH, AT 0 AND 1, FOR THE SAME REASON THE CLOUDS HAVE TWO.** `hazeAt` models the haze
+ * as linear in tile height, which is exactly what a canvas interpolates between two stops.
+ */
+function drawDaylight(ctx: Pen, haze: string, deep: string, size: number, theme: ThemeKind): void {
+  const day = SKY_STYLE_OF[theme].daylight;
+  if (day === undefined) return;
+  ctx.globalAlpha = 1;
+  // Overhead: from the land colour at the top of the lane to nothing at `mid`. Only ever darker.
+  const over = ctx.createLinearGradient(0, LANE_TOP * size, 0, day.mid * size);
+  over.addColorStop(0, rgba(deep, day.deep));
+  over.addColorStop(1, rgba(deep, 0));
+  ctx.fillStyle = over;
+  ctx.fillRect(0, 0, size, day.mid * size);
+  // And everything above the lane at the full depth, so the tile has no edge where the gradient starts.
+  ctx.fillStyle = rgba(deep, day.deep);
+  ctx.fillRect(0, 0, size, LANE_TOP * size);
+  // The haze: nothing at `mid`, thickest at the horizon, and flat below it where the land stands.
+  const low = ctx.createLinearGradient(0, day.mid * size, 0, day.horizon * size);
+  low.addColorStop(0, rgba(haze, 0));
+  low.addColorStop(1, rgba(haze, day.haze));
+  ctx.fillStyle = low;
+  ctx.fillRect(0, day.mid * size, size, (day.horizon - day.mid) * size);
+  ctx.fillStyle = rgba(haze, day.haze);
+  ctx.fillRect(0, day.horizon * size, size, size - day.horizon * size);
+}
+
+/** How much haze `drawDaylight` lays at tile height `y` — the model `skyCover` counts it by. */
+function hazeAt(theme: ThemeKind, y: number, size: number): number {
+  const day = SKY_STYLE_OF[theme].daylight;
+  if (day === undefined) return 0;
+  const t = (y / size - day.mid) / (day.horizon - day.mid);
+  return day.haze * Math.max(0, Math.min(1, t));
+}
+
 export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
   const clouds = nebulaField(size, theme);
   const at = (x: number, y: number): number => cloudsAt(clouds, x, y);
@@ -10447,7 +10923,8 @@ export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4
   };
 
   const at = (x: number, y: number): number => {
-    let cover = cloudsAt(clouds, x, y);
+    // The haze under the clouds, composited the way a canvas does — 0347. Nought for six places.
+    let cover = 1 - (1 - hazeAt(theme, y, size)) * (1 - cloudsAt(clouds, x, y));
     for (const mark of marks) {
       const a = markAt(mark, x, y);
       if (a > 0) cover = 1 - (1 - cover) * (1 - a);
@@ -10529,6 +11006,7 @@ export function bakeGround(
   glow: string,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
+  light?: LandLight,
 ): void {
   if (GROUND_OF[theme] === null) return;
   const size = bakeSize(SPRITE_EXTENT.skyGround, pixelsPerUnit);
@@ -10537,8 +11015,21 @@ export function bakeGround(
   canvas.height = size;
   const ctx = canvas.getContext('2d');
   if (ctx === null) return;
-  drawGround(ctx, land, sky, glow, size, theme);
+  drawGround(ctx, land, sky, glow, size, theme, light);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyGround] = canvas;
+  /*
+    ⚠️ **AND THE FAR LAND, FOR A PLACE THAT HAS ONE — 0347**, on exactly these terms: a place without
+    one leaves the slot stale and never blits it, because `skyFor` builds its sky from what it states.
+  */
+  const range = RANGE_OF[theme];
+  if (range === null) return;
+  const far = document.createElement('canvas');
+  far.width = size;
+  far.height = size;
+  const pen = far.getContext('2d');
+  if (pen === null) return;
+  range(pen, land, sky, glow, size, light);
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyRange] = far;
 }
 
 /**
@@ -10560,8 +11051,16 @@ export function bakeLandmark(
   space: string,
   pixelsPerUnit: number,
   theme: ThemeKind = 'approach',
+  plain = false,
+  scale = 1,
 ): void {
-  const size = bakeSize(SPRITE_EXTENT.landmark, pixelsPerUnit);
+  /*
+    ⚠️ **AT THE RESOLUTION IT IS DRAWN AT — 0347.** 0346 let an entry draw a landmark bigger than its
+    bitmap, and a bitmap baked for scale 1 and blitted at 1.4 is a mountain 40% softer than every
+    other edge on the screen. `scale` is the largest any entry in the level asks for; the drawing
+    takes `size` in pixels, so it is the same drawing with more of them.
+  */
+  const size = bakeSize(SPRITE_EXTENT.landmark * scale, pixelsPerUnit);
   /*
     ⚠️ **ALL THREE CASTINGS, AT A LEVEL BOUNDARY** — 0225. One canvas each, drawn from one seed each,
     and it is the same 2.25MB bitmap three times over rather than a different object three times: what
@@ -10578,7 +11077,7 @@ export function bakeLandmark(
     canvas.height = size;
     const ctx = canvas.getContext('2d');
     if (ctx === null) return;
-    drawLandmark(ctx, gas, glow, space, size, theme, seed);
+    drawLandmark(ctx, gas, glow, space, size, theme, seed, plain);
     (atlas.bitmaps as CanvasImageSource[])[LANDMARK_SLOTS[seed]!] = canvas;
   }
 }

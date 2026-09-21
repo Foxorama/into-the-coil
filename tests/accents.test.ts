@@ -119,9 +119,12 @@ const HULLLESS: readonly SpriteKind[] = [
   'skyRush',
   'skyNebula',
   'skyGround',
+  // The far land is the ground's own kind of thing, and a thrown rock is light with no edge — 0347.
+  'skyRange',
   'landmark',
   'landmarkB',
   'landmarkC',
+  'ember',
   'bound',
   'burst0',
   'burst1',

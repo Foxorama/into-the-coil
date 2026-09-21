@@ -71,6 +71,7 @@ import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
+import { VENT_OF } from '../content/volcano.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -2115,8 +2116,9 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    // `w.warp` last — 0340: the sky at speed. Nought on every frame that is not a crossing.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp);
+    // `w.warp` — 0340: the sky at speed. Nought on every frame that is not a crossing. And the sim's own
+    // clock, interpolated like everything else, for the rock a volcano throws — 0347.
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -7359,7 +7361,22 @@ export function landmarksFor(level: LevelRow): Landmarks {
     lane: entry.lane,
     depth: entry.depth,
     beat: entry.beat,
+    vent: ventFor(level, entry),
   }));
+}
+
+/**
+ * Where an entry throws its rock from, in world units off its centre at its drawn size — 0347. The
+ * crater is `VENT_OF`'s, which is the same cone `drawVolcano` bakes, so the rock leaves the crater
+ * the player can see rather than one this file worked out.
+ */
+function ventFor(level: LevelRow, entry: LevelRow['landmarks'][number]): Landmarks[number]['vent'] {
+  const vent = VENT_OF[level.theme];
+  if (entry.erupts === undefined || vent === null) return undefined;
+  const at = vent(entry.variant);
+  const extent = SPRITE_EXTENT.landmark * (entry.scale ?? 1);
+  // @setup: a level boundary, once per entry — the same call `landmarksFor` is.
+  return { along: (at.x - 0.5) * extent, lane: (at.y - 0.5) * extent, erupts: entry.erupts };
 }
 
 export function startLevel(w: World, level: LevelRow): void {

@@ -817,10 +817,13 @@ motion** — and `scripts/weigh-stars.mjs` reads any place's stars in desktop pi
 [0345](decisions/0345-ember-nebula-is-in-colour.md), Ember Nebula — **played, *"pillars and ember look
 good"***, and the Pillars were then made larger and brighter in
 [0346](decisions/0346-the-pillars-fill-the-sky.md), which also closes 0345's open question: the stars
-stay in front of landmarks. The next is Saurian Belt, the first place that needs a backdrop that
-moves. **How the first three were built, and the player's answers on Rime Shelf and the walled
-Labyrinth, are in** [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md)
-— read it before item 3.
+stay in front of landmarks. Item 3 is landed —
+[0347](decisions/0347-the-belt-is-a-jungle-under-a-live-volcano.md), Saurian Belt, where the backdrop
+first moves — **owed a play**, above all on whether a thrown rock can be taken for a shot. The next
+is The Labyrinth, item 4, and 4b is a plan brought to the player before any geometry. **How the places
+are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
+[`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
+the next item.
 
 ⚠️ **THE WORK IS THE ALPHA LIST, SINCE 2026-09-06** —
 [`the-alpha-list`](../reports/the-alpha-list-2026-09-06.md), given after the first play with the

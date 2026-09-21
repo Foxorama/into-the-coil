@@ -18,6 +18,7 @@ import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
+import { RANGE_OF } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks } from '../render/scene.ts';
@@ -450,7 +451,23 @@ export const SKY = [
 export const SKY_ON_A_PLANET = [
   { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },
   { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
-  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45 },
+  // Opaque, so its tiles overlap rather than meet and no join shows the sky through the land — 0347.
+  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45, opaque: true },
+];
+
+/**
+ * The sky of a planet with a far range behind its ground — 0347: the planet's own sky with one layer
+ * put in after the weather, built from it so the two cannot drift.
+ *
+ * ⚠️ **THE FAR LAND, AT ITS OWN RATE.** Between the weather and the ground in both senses: drawn after
+ * the one and before the other, and moving at 0.2 against their 0.09 and 0.45 — so the range slides
+ * past slower than the jungle in front of it, which is the parallax the report asked for when it
+ * called the near layers *"a monotone blue with no detail"*.
+ */
+export const SKY_UNDER_A_RANGE = [
+  SKY_ON_A_PLANET[0]!,
+  { sprite: SPRITE.skyRange, extent: SPRITE_EXTENT.skyRange, depth: 0.2, opaque: true },
+  ...SKY_ON_A_PLANET.slice(1),
 ];
 
 /**
@@ -462,7 +479,9 @@ export const SKY_ON_A_PLANET = [
  * same answer or a level boundary silently reinstates the star fields a planet just removed.
  */
 export function skyFor(place: ThemeKind | null): typeof SKY {
-  return place !== null && THEMES[place].ground !== null ? SKY_ON_A_PLANET : SKY;
+  if (place === null || THEMES[place].ground === null) return SKY;
+  // A planet with a far range states one in `RANGE_OF`; one without is the sky 0221 shipped — 0347.
+  return RANGE_OF[place] !== null ? SKY_UNDER_A_RANGE : SKY_ON_A_PLANET;
 }
 
 /**
@@ -1635,7 +1654,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       out of it; with only `clouds` and the palette's void to draw with it is a maroon smudge in
       daylight. `silhouette` is already the place's own land where it has any (0221).
     */
-    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop);
+    /*
+      ⚠️ **AND AT THE LARGEST SCALE ANY OF THIS PLACE'S ENTRIES IS DRAWN AT — 0347**, so a volcano
+      drawn half as big again is not half as soft again; and plain where the palette's decoration is
+      the void, so high contrast gets the place's dim accent where the vivid palette gets lava.
+    */
+    const sharpest = Math.max(
+      1,
+      ...LEVEL_KINDS.filter((kind) => LEVELS[kind].theme === backdrop).flatMap((kind) => LEVELS[kind].landmarks.map((e) => e.scale ?? 1)),
+    );
+    const plain = colours.glass === colours.space && colours.trim === colours.space;
+    bakeLandmark(atlas, clouds, accent, silhouette, view.scale * dpr, backdrop, plain, sharpest);
     /*
       ⚠️ **THE LAND IS LIT BY ITS OWN SKY, WHICH IS 0204's RULE WITH THE SECOND COLOUR CHANGED** —
       0221. A landmark is punched out of the GAS because it stands in gas; ground is a silhouette
@@ -1649,7 +1678,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const land = place === null ? null : THEMES[place].ground;
     // `clouds` is the place's gas, which is the brightest colour it has and the one its haze is made
     // of — so a pool and the air over it are lit by one thing rather than by two.
-    if (land !== null) bakeGround(atlas, land[palette], want, clouds, view.scale * dpr, backdrop);
+    // And the colours it is lit in, for a place that states them — 0347.
+    const lit = place === null ? undefined : THEMES[place].land?.[palette];
+    if (land !== null) bakeGround(atlas, land[palette], want, clouds, view.scale * dpr, backdrop, lit);
     // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
     // Routed through `applySky` so the style chooser's Retro-off and this cannot disagree.
     applySky();

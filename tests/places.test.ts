@@ -10,6 +10,7 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import {
   GROUND_OF,
   LANDMARK_OF,
+  RANGE_OF,
   STRUCTURE_OF,
   bakeSize,
   laneAt,
@@ -146,9 +147,10 @@ describe('0221 — a planet is not a space', () => {
       planet lays down at least one fill at full alpha that spans the whole tile.
     */
     const size = 240;
-    for (const theme of planets) {
+    // Every layer of land a planet draws: its ground, and its far range where it has one — 0347.
+    for (const [theme, art] of planets.flatMap((t) => [GROUND_OF[t], RANGE_OF[t]].flatMap((a) => (a === null ? [] : [[t, a] as const])))) {
       const { pen, trace } = tracingPen();
-      GROUND_OF[theme]!(pen, '#101010', '#405060', '#80a040', size);
+      art(pen, '#101010', '#405060', '#80a040', size);
       /*
         ⚠️ **THE MASSES, WHICH ARE THE OPAQUE FILLS THAT REACH A TILE EDGE.** The first draft asserted
         that EVERY opaque fill spans the tile and reddened on Rime Shelf's pressure ridges — which are
@@ -186,9 +188,10 @@ describe('0221 — a planet is not a space', () => {
       structure-table version, which now measures a table these places no longer use.
     */
     const size = 240;
-    for (const theme of planets) {
+    // Every layer of land a planet draws, the far range included — 0347.
+    for (const [theme, art] of planets.flatMap((t) => [GROUND_OF[t], RANGE_OF[t]].flatMap((a) => (a === null ? [] : [[t, a] as const])))) {
       const { pen, trace } = tracingPen();
-      GROUND_OF[theme]!(pen, '#101010', '#405060', '#80a040', size);
+      art(pen, '#101010', '#405060', '#80a040', size);
       const edges = trace.passes
         .filter((pass) => {
           if (pass.alpha < 1) return false;
@@ -564,15 +567,26 @@ describe('0224 — the mountain is awake', () => {
       rather than out of the constants behind them: the foot from tracing the landmark, the skyline from
       tracing the ground. A guard comparing the two literals would prove they had been typed to agree.
     */
+    /*
+      ⚠️ **AGAINST ALL THE LAND DRAWN OVER IT, AND AT THE SIZE IT IS DRAWN — changed by 0347.** A far
+      range is land too, painted after the landmark, and it is what a volcano now stands behind; and
+      0346 let an entry draw a landmark bigger than its bitmap, which this arithmetic did not know, so a
+      scaled entry's foot was being placed as if it were not. And `Math.min(...points)` overflowed the
+      stack on a canopy of several thousand points, so the lowest and highest are folded instead.
+    */
+    const highest = (points: readonly (readonly number[])[]): number => points.reduce((m, p) => Math.min(m, p[1]!), Infinity);
+    const lowest = (points: readonly (readonly number[])[]): number => points.reduce((m, p) => Math.max(m, p[1]!), -Infinity);
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
       if (level.landmarks.length === 0 || THEMES[level.theme].ground === null) continue;
       const size = 240;
-      const land = tracingPen();
-      GROUND_OF[level.theme]!(land.pen, '#101010', '#405060', '#80a040', size);
-      const skyline = Math.min(
-        ...land.trace.passes.filter((pass) => pass.alpha >= 1).flatMap((pass) => pass.subpaths.flat().map((p) => p[1])),
-      );
+      let skyline = Infinity;
+      for (const art of [GROUND_OF[level.theme], RANGE_OF[level.theme]]) {
+        if (art === null) continue;
+        const land = tracingPen();
+        art(land.pen, '#101010', '#405060', '#80a040', size);
+        skyline = Math.min(skyline, highest(land.trace.passes.filter((pass) => pass.alpha >= 1).flatMap((pass) => pass.subpaths.flat())));
+      }
 
       for (const mark of level.landmarks) {
         /*
@@ -584,9 +598,10 @@ describe('0224 — the mountain is awake', () => {
         */
         const shape = tracingPen();
         LANDMARK_OF[level.theme]!(shape.pen, '#404040', '#c0a040', '#101010', size, mark.variant);
-        const lowest = Math.max(...shape.trace.passes.flatMap((pass) => pass.subpaths.flat().map((p) => p[1])));
-        // The sprite is `SPRITE_EXTENT.landmark` across and blitted CENTRED on its lane.
-        const foot = mark.lane - SPRITE_EXTENT.landmark / 2 + (lowest / size) * SPRITE_EXTENT.landmark;
+        const bottom = lowest(shape.trace.passes.flatMap((pass) => pass.subpaths.flat()));
+        // The sprite is `SPRITE_EXTENT.landmark` across at scale 1, drawn `scale` times that, CENTRED.
+        const drawn = SPRITE_EXTENT.landmark * (mark.scale ?? 1);
+        const foot = mark.lane - drawn / 2 + (bottom / size) * drawn;
         const ground = laneAt(skyline / size);
         expect(
           foot,

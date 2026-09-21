@@ -44,9 +44,13 @@ export const PROBES = [
     guard: 'the ground is drawn LAST',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },\n  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45 },',
+      // Re-anchored by 0347, which marked the ground opaque and said why on the line above it.
+      find:
+        '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },\n' +
+        '  // Opaque, so its tiles overlap rather than meet and no join shows the sky through the land — 0347.\n' +
+        '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45, opaque: true },',
       replace:
-        '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45 },\n' +
+        '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45, opaque: true },\n' +
         '  { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },',
     },
   },
@@ -81,11 +85,22 @@ export const PROBES = [
     guard: 'a planet’s skyline is on the lane',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    { base: 0.6, jag: 0.026, haze: 0.55, steps: 26, lit: 0.3 },\n    { base: 0.655, jag: 0.04, haze: 0.28, steps: 19, lit: 0.45 },\n    { base: 0.715, jag: 0.055, haze: 0, steps: 14, lit: 0.6 },',
-      replace:
-        '    { base: 0.95, jag: 0.026, haze: 0.55, steps: 26, lit: 0.3 },\n' +
-        '    { base: 0.96, jag: 0.04, haze: 0.28, steps: 19, lit: 0.45 },\n' +
-        '    { base: 0.97, jag: 0.055, haze: 0, steps: 14, lit: 0.6 },',
+      // Re-anchored by 0347, which replaced the three ridges with a canopy in two rows: both rows
+      // authored low in the tile, where a horizon goes and the player is not.
+      find: '    (x) => 0.617 + waves(',
+      replace: '    (x) => 0.95 + waves(',
+    },
+  },
+  {
+    decision: '0221',
+    suite: 'tests/places.test.ts',
+    // And the same trap in the far range, which 0347 put in a layer of its own under the same guard.
+    broke: 'a planet’s far range authored below the lane, where the tile is but the player is not',
+    guard: 'a planet’s skyline is on the lane',
+    edit: {
+      path: 'src/render/bake.ts',
+      find: '    0.578 -\n',
+      replace: '    0.95 -\n',
     },
   },
   {
@@ -152,8 +167,9 @@ export const PROBES = [
     guard: 'only the streak layer may be in FRONT of the game',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45 },',
-      replace: '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 1.2 },',
+      // Re-anchored by 0347, which marked the ground opaque.
+      find: '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45, opaque: true },',
+      replace: '  { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 1.2, opaque: true },',
     },
   },
 ];

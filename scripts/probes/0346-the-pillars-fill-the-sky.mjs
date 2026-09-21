@@ -30,12 +30,14 @@ export const PROBES = [
   {
     decision: '0346',
     suite: 'tests/pillars.test.ts',
-    broke: 'a volcano scaled up because the field exists, which is one place’s ask in another’s sky',
+    // Re-pointed by 0347, which gave the volcano a scale of its own asking: the guard is the frame's
+    // fallback now, so the break is the fallback — every unscaled landmark drawn bigger.
+    broke: 'an entry that states no scale drawn bigger anyway, which is one place’s ask in every sky',
     guard: '0282 — a landmark that states no scale is drawn at its own size',
     edit: {
-      path: 'src/content/levels.ts',
-      find: '      { at: 1249, lane: 56, depth: 0.07, beat: 190, variant: 0 },',
-      replace: '      { at: 1249, lane: 56, depth: 0.07, beat: 190, variant: 0, scale: 2 },',
+      path: 'src/app/frame.ts',
+      find: '    scale: entry.scale ?? 1,',
+      replace: '    scale: entry.scale ?? 1.4,',
     },
   },
   {

@@ -13,6 +13,7 @@ import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { bakeSize, drawKind } from '../src/render/bake.ts';
+import { landmarksFor } from '../src/app/frame.ts';
 import { tracingPen } from './paths.ts';
 
 const nebula = LEVEL_KINDS.map((kind) => LEVELS[kind]).find((level) => level.theme === 'nebula')!;
@@ -54,12 +55,27 @@ describe('0346 — the Pillars fill the sky', () => {
   });
 
   it('0282 — a landmark that states no scale is drawn at its own size', () => {
+    /*
+      ⚠️ **THE MECHANISM, AND IT USED TO BE A LIST OF WHO MAY USE IT — changed by 0347.** This read
+      *every place but Ember Nebula states no scale*, which was true for a day: Saurian Belt's volcano
+      was then asked to touch the sky, and a bitmap 75 units tall cannot reach the top of a 100-unit
+      lane from a foot behind the range. A guard naming which places may state a field is 0295's
+      content limiter one table over. What 0282 claims is that an entry saying NOTHING is drawn exactly
+      as before — which is a property of the frame, and is held there.
+    */
+    let unscaled = 0;
     for (const kind of LEVEL_KINDS) {
-      if (LEVELS[kind].theme === 'nebula') continue;
-      for (const entry of LEVELS[kind].landmarks) {
-        expect(entry.scale ?? 1, `${LEVELS[kind].theme} scales a landmark nobody asked to be bigger`).toBe(1);
-      }
+      const drawn = landmarksFor(LEVELS[kind]);
+      LEVELS[kind].landmarks.forEach((entry, i) => {
+        if (entry.scale !== undefined) return;
+        unscaled += 1;
+        expect(drawn[i]!.scale, `${kind}'s landmark at ${entry.at} states no scale and is drawn scaled`).toBe(1);
+        expect(drawn[i]!.extent, `${kind}'s landmark at ${entry.at} states no scale and is culled as a bigger one`).toBe(
+          SPRITE_EXTENT.landmark,
+        );
+      });
     }
+    expect(unscaled, 'every landmark in the game states a scale, so this holds nothing').toBeGreaterThan(0);
   });
 
   it('THE ONE THE PHOTOGRAPH FOUND: no light in the Pillars is cut off by the edge of their own bitmap', () => {
