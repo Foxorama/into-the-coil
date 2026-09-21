@@ -1,4 +1,4 @@
-# 0343 — A probe runs warm
+# 0344 — A probe runs warm
 
 **Accepted 2026-09-21.** Extends [0115](0115-a-probe-runs-its-own-guard.md) and
 [0054](0054-the-proof-runs-beside-the-work-not-on-it.md); neither is superseded, and **0115's refusal
@@ -99,6 +99,10 @@ Same machine, same 21 probes (`0032`: four suites, two of them browser), back to
 | a new vitest per probe (`PROVE_WARM=0`) | **4 min 06 s** |
 | warm | **1 min 24 s** — 19 settled warm, 2 asked of a new vitest, same 21 verdicts |
 
+The whole proof, on the development box **once no other session was running one**: **23 min 50 s**,
+exit 0 — 1,245 probes red, 1,192 settled warm, 53 asked of a new vitest, every tree restored. The
+before on that box was never taken quiet; *"two hours"* is what it was called with neighbours.
+
 ⚠️ **THE WHOLE-PROOF NUMBER IS CI's AND BELONGS ON THE PR**, for 0115's reason: the before is **47 to
 61 minutes over the five green runs before this one — 9 in `check` and 53 in `prove` on the last of
 them**, and the after is
@@ -136,7 +140,7 @@ suites that do not exist yet. Browser suites are skipped only because the answer
 
 ## Confirmed, not assumed
 
-Probes in `scripts/probes/0343-a-probe-runs-warm.mjs`; the guards are in `tests/prove-worker.test.ts`.
+Probes in `scripts/probes/0344-a-probe-runs-warm.mjs`; the guards are in `tests/prove-worker.test.ts`.
 
 | broken on purpose | went red |
 |---|---|

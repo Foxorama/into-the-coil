@@ -87,7 +87,7 @@ un-thought-of. **The measured before-and-after is on
 [PR #150](https://github.com/Foxorama/into-the-coil/pull/150#issuecomment-5252326846)**, and the
 current number is whatever `gh run list` says — not whatever this file last said.
 
-⚠️ **AND THEN READ [0343](decisions/0343-a-probe-runs-warm.md)**, which is where it went next: a
+⚠️ **AND THEN READ [0344](decisions/0344-a-probe-runs-warm.md)**, which is where it went next: a
 worker keeps one vitest alive. It also holds the measurement that refused *proving the diff* a second
 time, and names the two things still owed — the seventy slow guards, and a rule about what a test may
 cost, which does not exist yet.

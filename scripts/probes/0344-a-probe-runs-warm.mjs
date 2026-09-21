@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0343-a-probe-runs-warm.md.
+// The breaks behind docs/decisions/0344-a-probe-runs-warm.md.
 //
 // ⚠️ LIKE 0115's, THESE BREAK THE HARNESS THAT RUNS THEM. Each is applied to a disposable copy, and
 // the copy's `scripts/prove-worker.mjs` is what `tests/prove-worker.test.ts` forks — the harness
@@ -11,7 +11,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0343',
+    decision: '0344',
     suite: 'tests/prove-worker.test.ts',
     // The spike's own bug, restored: `path.resolve` hands back backslashes and the graph is keyed on `/`.
     broke: 'a path handed to the module graph as Windows spelled it, so the lookup misses and nothing is invalidated',
@@ -23,7 +23,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0343',
+    decision: '0344',
     suite: 'tests/prove-worker.test.ts',
     broke: 'the read-back answering that nothing is held, whatever the graph holds',
     guard: 'THE READ-BACK: a module still holding a transform is named, however its path is spelled',
@@ -34,7 +34,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0343',
+    decision: '0344',
     suite: 'tests/prove-worker.test.ts',
     // The one that would turn every blindness of the instance into a STILL GREEN nobody can explain.
     broke: 'a live instance allowed to settle a probe it did not see go red',
@@ -46,7 +46,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0343',
+    decision: '0344',
     suite: 'tests/prove-worker.test.ts',
     /*
       ⚠️ THE ONE ABOUT THE INSTANCE RATHER THAN A MODEL OF IT. With the invalidation gone the live vitest

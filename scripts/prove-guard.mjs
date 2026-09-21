@@ -43,7 +43,7 @@
 //   node scripts/prove-guard.mjs            every probe
 //   node scripts/prove-guard.mjs 0015       one decision's probes
 //   PROVE_WORKERS=1 node scripts/prove-guard.mjs    one at a time, for a confusing failure
-//   PROVE_WARM=0 node scripts/prove-guard.mjs       a new vitest per probe, as it was before 0343
+//   PROVE_WARM=0 node scripts/prove-guard.mjs       a new vitest per probe, as it was before 0344
 //
 // It exits non-zero if any probe fails to apply, fails to go red, reddens the WRONG test, or leaves
 // its tree changed — and it prints the markdown table a decision's "Confirmed, not assumed" wants.
@@ -531,7 +531,7 @@ function runSuite(suites, cwd, report, only) {
  * Whether a warm run's verdict is the probe's verdict. Only `red` is.
  *
  * ⚠️ **A WARM RUN CAN PASS A PROBE AND CAN NEVER FAIL ONE** —
- * `docs/decisions/0343-a-probe-runs-warm.md`. The instance was configured once, built `dist/` once
+ * `docs/decisions/0344-a-probe-runs-warm.md`. The instance was configured once, built `dist/` once
  * and cannot rebuild it, so there are breaks it is blind to: an edit to `vite.config.ts`, a suite
  * that reads the built page. Every one of those reads as *the guard did not fire*. So anything that
  * is not `red` is asked again of a new vitest, exactly as every probe was before, and only that
@@ -707,7 +707,7 @@ async function main(filter) {
     const trees = fingerprintTrees(paths);
     console.log(`done (${trees[0]?.pristine.size ?? 0} files each)`);
 
-    // 0343: a warm run builds nothing, so every tree starts with the page the pristine tree builds.
+    // 0344: a warm run builds nothing, so every tree starts with the page the pristine tree builds.
     const warmly = process.env.PROVE_WARM !== '0';
     if (warmly) await Promise.all(paths.map(rebuild));
 
@@ -810,7 +810,7 @@ async function main(filter) {
               verdict = 'RESTORE FAILED';
             }
             /*
-              ⚠️ **THE RESTORE IS FLUSHED TOO, AND IT IS THE HALF THAT MATTERS** — 0343. An instance that
+              ⚠️ **THE RESTORE IS FLUSHED TOO, AND IT IS THE HALF THAT MATTERS** — 0344. An instance that
               cannot show it let go of this probe's break is not asked about the next one.
             */
             try {

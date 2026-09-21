@@ -6,9 +6,9 @@ import { isAVerdict, linkModules, startWarm, verdictOf, warmSettles } from '../s
 import { asModulePath, unflushed } from '../scripts/prove-worker.mjs';
 
 /**
- * 0343 — A PROBE RUNS IN A VITEST THAT IS ALREADY UP, AND THE ONLY NEW WAY TO BE WRONG IS A STALE MODULE.
+ * 0344 — A PROBE RUNS IN A VITEST THAT IS ALREADY UP, AND THE ONLY NEW WAY TO BE WRONG IS A STALE MODULE.
  *
- * See `docs/decisions/0343-a-probe-runs-warm.md`. What is held here is the two directions a live
+ * See `docs/decisions/0344-a-probe-runs-warm.md`. What is held here is the two directions a live
  * instance can lie in — an edit it did not see, a restore it did not see — and the rule that makes
  * everything else it cannot see cost time rather than a verdict.
  *
@@ -16,7 +16,7 @@ import { asModulePath, unflushed } from '../scripts/prove-worker.mjs';
  * probe would report every probe correctly and merely take two hours. The clock is in the decision.
  */
 
-describe('0343 — a live vitest is asked, and is not trusted to have let go', () => {
+describe('0344 — a live vitest is asked, and is not trusted to have let go', () => {
   it('THE ONE THAT WAS FOUND BY IT HAPPENING: a Windows path is spelled the way the module graph spells it', () => {
     expect(asModulePath('C:\\work\\w0\\src\\app\\frame.ts')).toBe('C:/work/w0/src/app/frame.ts');
     expect(asModulePath('/tmp/w0/src/app/frame.ts')).toBe('/tmp/w0/src/app/frame.ts');
@@ -45,7 +45,7 @@ describe('0343 — a live vitest is asked, and is not trusted to have let go', (
   });
 });
 
-describe('0343 — and the instance itself, because the three above are about a model of it', () => {
+describe('0344 — and the instance itself, because the three above are about a model of it', () => {
   /*
     ⚠️ **A REAL INSTANCE OVER A REAL TREE, WHICH IS `docs/decisions/0027-measure-the-picture-not-the-model.md`.**
     The functions above agree with their author about what vite's module graph looks like. This asks

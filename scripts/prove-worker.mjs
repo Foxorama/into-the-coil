@@ -1,4 +1,4 @@
-// ONE vitest, kept alive for the life of a worker tree — docs/decisions/0343-a-probe-runs-warm.md.
+// ONE vitest, kept alive for the life of a worker tree — docs/decisions/0344-a-probe-runs-warm.md.
 //
 // `scripts/prove-guard.mjs` used to start a new vitest for every probe. The median guard's own test
 // takes a hundredth of a second and the process around it takes 4.7, so at 1,216 probes the proof was
