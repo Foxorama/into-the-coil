@@ -16,15 +16,21 @@
  * device, and its whole purpose is to be harder. The two are orthogonal and both have to exist:
  * `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md`.
  *
- * ── WHY THE EASIEST TIER IS ALL ONES ────────────────────────────────────────────────────────────
+ * ── ONE TUNED ROW, AND THE OTHER TWO ARE A MARGIN FROM IT ───────────────────────────────────────
  *
- * ⚠️ **`legendary` multiplies nothing, and that is a rule rather than a coincidence.** Asked for in
- * play: *"keep the current flow as Easy."* It means a level author, a play-test report and every
- * number in `src/content/levels.ts` are all read against one baseline — the content as authored — and
- * the two harder tiers are stated as departures from it. A middle tier that was also the baseline
- * would make *"the level is too thin"* a sentence with three possible meanings.
+ * ⚠️ **`SAVIOR` is the only multiplier row anyone edits** —
+ * `docs/decisions/0356-the-tuned-tier-is-savior.md`, which supersedes 0047's *the easiest tier
+ * multiplies nothing*. Asked: *"Saviour difficulty should be the difficulty saviour is now and that's
+ * the optimised difficulty. Burn … way harder than saviour by about the same margin that legend is
+ * easier than saviour"*, and *"so that I don't have to go through and rejig it with every change I
+ * make to saviour difficulty."* So Legend is `SAVIOR ÷ MARGIN` and Burn is `SAVIOR × MARGIN`, axis by
+ * axis (`fireGap` the other way, being a gap), and a change to Savior moves both.
  *
- * `tests/difficulty.test.ts` holds it, and holds the ordering. It holds none of the values.
+ * ⚠️ **The content is still authored at one, and still the baseline** — `AUTHORED` below, which every
+ * fixture and instrument stands on. What 0047 protected survives: one baseline, every tier a stated
+ * departure from it. What changed is that the baseline is no longer a tier anybody plays.
+ *
+ * `tests/difficulty.test.ts` holds the derivation and the ordering. It holds none of the values.
  *
  * ── WHAT IS AND IS NOT SCALED ───────────────────────────────────────────────────────────────────
  *
@@ -54,7 +60,7 @@ export const DIFFICULTY_KINDS = ['legendary', 'savior', 'burn'] as const;
 /** Derived from the list, so a tier cannot exist in the union and be missing from the table. */
 export type DifficultyKind = (typeof DIFFICULTY_KINDS)[number];
 
-export interface DifficultyRow {
+export interface DifficultyRow extends Multipliers, CorridorLimit {
   /**
    * What the player picks, and what they would be called for finishing it.
    *
@@ -102,6 +108,17 @@ export interface DifficultyRow {
    * carry is withheld rather than thrown — 0355.
    */
   shellCap: number;
+}
+
+/**
+ * The six things a tier MULTIPLIES — everything on the row that `SAVIOR` states and `MARGIN` moves.
+ *
+ * ⚠️ **Its own interface so that `MultiplierAxis` is its keys** — 0356. A seventh axis added here
+ * without a margin, a direction and a derivation is a compile error rather than a tier that quietly
+ * forgot to scale; the counts (`lives`, the shell) and the corridor are per-row literals and are
+ * deliberately not in it.
+ */
+export interface Multipliers {
   /**
    * Multiplier on the health of everything that can be shot. Rounded up, never below one.
    *
@@ -175,12 +192,15 @@ export interface DifficultyRow {
    * field stands on the right side of: what a level SENDS is authored (0047), and every count this
    * scales belongs to a boss's volley or to a summons' ceiling — the fight, not the level.
    *
-   * ⚠️ **Higher is harder, and it is 1 at the easiest tier like everything but `fireGap`.** So the
-   * authored counts in `src/content/bosses.ts` ARE the Legendary ones, and the two harder tiers are
-   * departures from them — which is the whole reason the file header gives for `legendary`
-   * multiplying nothing.
+   * ⚠️ **Higher is harder, like everything but `fireGap`.** Its margin is Savior's own departure from
+   * one, so the authored counts in `src/content/bosses.ts` are still the Legendary ones — 0356 — and
+   * Burn's is pinned below the derivation, with the measurement, in `PINNED`.
    */
   crowd: number;
+}
+
+/** A tier's corridor — a per-row literal, not a multiplier, so it rides no margin. */
+export interface CorridorLimit {
   /**
    * How tight and how twisting a walled corridor is flown at this tier —
    * `docs/decisions/0350-the-corridor-turns.md`.
@@ -198,88 +218,110 @@ export interface DifficultyRow {
   corridor: { narrowest: number; slope: number };
 }
 
-export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
-  /**
-   * The content as authored, with a life in hand.
-   *
-   * ⚠️ **Every multiplier is exactly 1 and that is load-bearing** — see the file header. Asked for:
-   * *"this should provide me no challenge, but still require concentration."* The extra lives are
-   * where the *no challenge* half lives, because they are the one thing that can be given without
-   * changing what the player is looking at.
-   */
-  legendary: {
-    title: 'Legendary Pilot',
-    hint: 'The gentlest way in',
-    lives: 5,
-    // Every life opens on a full shell and every level renews it — 0355, the player's words.
-    shellOpen: 3,
-    shellCap: 3,
-    toughness: 1,
-    fireGap: 1,
-    closing: 1,
-    shotSpeed: 1,
-    // Straightforward dog-fighting, which is the play report's own phrase for what the easy tier
-    // should get: the reactive motions run at exactly the rate `src/content/enemies.ts` authors.
-    aggression: 1,
-    crowd: 1,
-    // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
-    corridor: { narrowest: 56, slope: 0.25 },
-  },
-  /**
-   * The tier the game is tuned for.
-   *
-   * ⚠️ **PLAY-TEST NUMBERS, every one**, on the same terms as `SHIP_SPEED` and `STARTING_LIVES`.
-   * The target is stated and the numbers are a first guess at it: *"this should be hard for me, I
-   * should be able to get to level 4 with challenge."* Nothing asserts on any value below.
-   */
-  savior: {
-    title: 'Savior of the Galaxy',
-    hint: 'What the game is tuned for',
-    lives: 3,
-    // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
-    shellOpen: 0,
-    shellCap: 3,
-    toughness: 1.6,
-    fireGap: 0.78,
-    closing: 1.2,
-    shotSpeed: 1.15,
-    aggression: 1.3,
-    /*
-      ⚠️ **The gentlest multiplier on the row, and that is deliberate rather than timid.** A count
-      does not cost the player linearly once a shot shatters — one frost shard is twelve flakes
-      (0263) — so a fifth more shards is a fifth more of TWELVE, and the pool guard in
-      `tests/frost.test.ts` is what says how much room is left to spend. The three above are what
-      this tier leans on; this is what stops the middle tier being the easy one's twin.
-    */
-    crowd: 1.15,
-    // Never narrower than 44, turns at about 19° — 0350, the player's number.
-    corridor: { narrowest: 44, slope: 0.35 },
-  },
-  /**
-   * The tier that is supposed to end runs.
-   *
-   * ⚠️ Also a guess, against a stated target: *"I should be able to get to maybe the end boss of
-   * level 2."* Two lives rather than three is deliberate — a tier that only made things tougher
-   * would lengthen every fight without changing what a mistake costs, and length is not difficulty.
-   */
+/** Every multiplier axis — the keys of `Multipliers`, so a new axis is a compile error until it has a margin. */
+export type MultiplierAxis = keyof Multipliers;
+
+/** The tier the game is tuned for, and the one every other tier is derived from — 0356. */
+export const TUNED: DifficultyKind = 'savior';
+
+/**
+ * The tuned tier's multipliers — **the only multiplier row anyone edits.** Change one and Legend and
+ * Burn move with it; change the content and all three move, as they always did.
+ *
+ * ⚠️ **PLAY-TEST NUMBERS, every one**, on the same terms as `SHIP_SPEED` and `STARTING_LIVES`. The
+ * target is stated: *"this should be hard for me, I should be able to get to level 4 with challenge"*,
+ * and since 2026-09-22 *"that's the optimised difficulty."* Nothing asserts on any value here.
+ */
+export const SAVIOR: Multipliers = {
+  toughness: 1.6,
+  fireGap: 0.78,
+  closing: 1.2,
+  shotSpeed: 1.15,
+  aggression: 1.3,
+  /*
+    ⚠️ **The gentlest multiplier on the row, and that is deliberate rather than timid.** A count does
+    not cost the player linearly once a shot shatters — one frost shard is twelve flakes (0263) — so a
+    fifth more shards is a fifth more of TWELVE, and the pool guard in `tests/frost.test.ts` is what
+    says how much room is left to spend. The three above are what this tier leans on.
+  */
+  crowd: 1.15,
+};
+
+/**
+ * How far one tier sits from the next, per axis: Legend is `SAVIOR ÷ MARGIN`, Burn `SAVIOR × MARGIN`.
+ *
+ * ⚠️ **ONE COLUMN, AND IT IS WHERE THE PLAYS TUNE** — *"burn … way harder than saviour by about the
+ * same margin that legend is easier than saviour."* Every value is a hand's first guess against that
+ * target, placed in `reports/the-tiers-planned-2026-09-22.md` with what checks each; nothing asserts
+ * on any of them.
+ *
+ * ⚠️ **Per axis rather than one number**, because one scalar fails twice: a `toughness` margin under
+ * Savior's own departure from one moves only bosses (`Math.ceil` leaves every small body where it
+ * is), and `crowd` has a measured ceiling on Burn — see `PINNED`.
+ *
+ * - `toughness` 1.6 is Savior's own departure, so Legend is the content's health exactly — *"length
+ *   is not difficulty"*, and below one it would shorten bosses and nothing else.
+ * - `crowd` 1.15 likewise, so Legend's volleys are the authored counts.
+ * - the four the player feels as TIME — `fireGap`, `closing`, `shotSpeed`, `aggression` — sit
+ *   further out than Savior's own departure, so Legend is gentler than the content on each: *"we also
+ *   need to make the bullets, enemies etc easier on legend on top of the shield changes."*
+ */
+export const MARGIN: Record<MultiplierAxis, number> = {
+  toughness: 1.6,
+  fireGap: 1.4,
+  /*
+    ⚠️ **1.25, AND THE PLAN'S GUESS WAS 1.3, WHICH A PLAY REPORT REFUSES.** 0105 holds nothing on
+    screen for less than 1.8 seconds at the hardest tier — the charger was reported too fast at 1.38 —
+    and Savior × 1.3 put Burn at 1.56, where the charger has 1.78. At 1.25 Burn is 1.5 and Legend 0.96.
+    `tests/pilots.test.ts` is the ceiling on this number, and it is checked on Burn, where it binds.
+  */
+  closing: 1.25,
+  shotSpeed: 1.25,
+  aggression: 1.5,
+  crowd: 1.15,
+};
+
+/**
+ * Which way is harder, per axis: `1` where a bigger multiplier is harder, `-1` where it is easier.
+ *
+ * ⚠️ **`fireGap` is the one inverted axis**, named for being a gap (0047), and a derivation that
+ * forgot it would give the hardest tier the slowest guns. Stated per axis rather than as an exception
+ * so a seventh axis has to say which way it runs.
+ */
+export const HARDER: Record<MultiplierAxis, 1 | -1> = {
+  toughness: 1,
+  fireGap: -1,
+  closing: 1,
+  shotSpeed: 1,
+  aggression: 1,
+  crowd: 1,
+};
+
+/**
+ * An axis a tier states rather than derives, with the measurement beside it.
+ *
+ * ⚠️ **A DEFAULT AND NOT A CONSTANT** — `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`:
+ * the derivation is the fallback, and a row may override an axis where something was measured. A pin
+ * does not move when Savior does, which is its cost, and why each one says what it is holding.
+ */
+export const PINNED: Record<DifficultyKind, Partial<Multipliers>> = {
+  legendary: {},
+  savior: {},
   burn: {
-    title: 'Let the Galaxy Burn',
-    hint: 'It is not meant to be survived',
-    lives: 2,
-    // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
-    shellOpen: 0,
-    shellCap: 0,
-    toughness: 2.2,
-    fireGap: 0.5,
-    closing: 1.4,
-    shotSpeed: 1.3,
     /*
-      ⚠️ **Raised further than `closing` is, and that is deliberate.** A faster body is less time to
-      decide; a body that STAYS ON YOU is a different problem, and it is the one this tier is named
-      for. At 1.7 a hunting lancer crosses the lane in about five seconds rather than nine.
+      ⚠️ **PINNED AT 1.8, AND THE DERIVATION SAYS 1.95 — AT WHICH A FIGHT NEVER ENDS.** Measured with
+      `scripts/weigh-boss.mjs volans --difficulty=burn`, the arc, ship parked: aggression 1.7 (the old
+      Burn) 132 s median; 1.8, 158 s; 1.87, 307 s; 1.95, **never** — the summons' adds hunt hard
+      enough to stand between the arc and the boss for all ten minutes, 2,094 of them called. That
+      is 0260's *a boss is fought to the end* broken on one gun, and it is a cliff rather than a slope,
+      so the pin sits short of it. Legend keeps the whole margin.
     */
-    aggression: 1.7,
+    aggression: 1.8,
     /*
+      ⚠️ **PINNED AT 1.2, AND THE DERIVATION SAYS 1.32.** Every paragraph below was measured, and 1.3
+      took room from ten fights of fourteen — so the margin that serves every other axis is refused
+      here, on the one axis with a measured ceiling (`reports/the-tiers-planned-2026-09-22.md`).
+
       ⚠️ **A FIFTH MORE, AND IT WAS HALF AGAIN FOR ONE MEASUREMENT.** At 1.5 the frost ship's opening
       volley — authored at ONE shard, because one shard is twelve flakes — rounded to two, and the
       widest run of lane both safe and reachable at this tier fell to **1.5 units for a ship that is
@@ -304,6 +346,93 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
       which is a different decision about how much of an axis is left.
     */
     crowd: 1.2,
+  },
+};
+
+/**
+ * One tier's value on one axis, before any pin: Savior's, moved a margin per step away from Savior.
+ *
+ * ⚠️ **Steps are read off `DIFFICULTY_KINDS`**, so a fourth tier past Burn is a margin squared with
+ * nothing else written, and a tier's place in the list is the only thing that says how hard it is.
+ *
+ * ⚠️ **Rounded to four places, because `toughnessFor` rounds UP.** Savior × margin in floating point
+ * is 2.5600000000000005 on Burn's toughness, and `Math.ceil` of a body whose health × 2.56 is a whole
+ * number would then add a hit nobody chose. Four places is finer than any number a hand places here.
+ */
+export function derivedFor(kind: DifficultyKind, axis: MultiplierAxis): number {
+  const steps = DIFFICULTY_KINDS.indexOf(kind) - DIFFICULTY_KINDS.indexOf(TUNED);
+  return Math.round(SAVIOR[axis] * MARGIN[axis] ** (steps * HARDER[axis]) * 1e4) / 1e4;
+}
+
+/** A tier's six multipliers: derived from Savior, except where the tier pins one. */
+function multipliersFor(kind: DifficultyKind): Multipliers {
+  const pin = PINNED[kind];
+  return {
+    toughness: pin.toughness ?? derivedFor(kind, 'toughness'),
+    fireGap: pin.fireGap ?? derivedFor(kind, 'fireGap'),
+    closing: pin.closing ?? derivedFor(kind, 'closing'),
+    shotSpeed: pin.shotSpeed ?? derivedFor(kind, 'shotSpeed'),
+    aggression: pin.aggression ?? derivedFor(kind, 'aggression'),
+    crowd: pin.crowd ?? derivedFor(kind, 'crowd'),
+  };
+}
+
+export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
+  /**
+   * The gentlest tier: Savior a margin down on every axis, and a life in hand.
+   *
+   * Asked for, first: *"this should provide me no challenge, but still require concentration"*; and
+   * on 2026-09-22 *"playable by anyone and they should be able to have fun."* Since 0356 it is gentler
+   * than the content on the four axes the player feels as time, and exactly the content on health and
+   * on how much a volley holds.
+   */
+  legendary: {
+    title: 'Legendary Pilot',
+    hint: 'The gentlest way in',
+    lives: 5,
+    // Every life opens on a full shell and every level renews it — 0355, the player's words.
+    shellOpen: 3,
+    shellCap: 3,
+    ...multipliersFor('legendary'),
+    // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
+    corridor: { narrowest: 56, slope: 0.25 },
+  },
+  /**
+   * The tier the game is tuned for — `SAVIOR` is its multipliers, and the other two are derived.
+   */
+  savior: {
+    title: 'Savior of the Galaxy',
+    hint: 'What the game is tuned for',
+    lives: 3,
+    // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
+    shellOpen: 0,
+    shellCap: 3,
+    ...multipliersFor('savior'),
+    // Never narrower than 44, turns at about 19° — 0350, the player's number.
+    corridor: { narrowest: 44, slope: 0.35 },
+  },
+  /**
+   * The tier that is supposed to end runs: Savior a margin up on every axis but `aggression` and
+   * `crowd`, which are pinned short of the derivation where a measurement refused it — `PINNED`.
+   *
+   * ⚠️ Against a stated target: *"I should be able to get to maybe the end boss of level 2"*, and since
+   * 2026-09-22 *"way harder than saviour."* Two lives rather than three is deliberate — a tier that only
+   * made things tougher would lengthen every fight without changing what a mistake costs, and length is
+   * not difficulty.
+   *
+   * ⚠️ **THE SPIT, SAID BEFORE IT IS PLAYED.** `SHOTS.spit` flies at 1.4 and the ship at 1.7, and
+   * `src/content/shots.ts` says the whole of what makes spit dodgeable is being slower than the ship.
+   * At `shotSpeed` 1.4375 it flies at about 2.0 — faster than the ship, as it already was at 1.3.
+   * Whether a shot you cannot outrun is unfair or learnable is the play's question, not this file's.
+   */
+  burn: {
+    title: 'Let the Galaxy Burn',
+    hint: 'It is not meant to be survived',
+    lives: 2,
+    // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
+    shellOpen: 0,
+    shellCap: 0,
+    ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
   },
@@ -319,8 +448,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
  * default that moved with it would have silently armoured the ship under every guard in the suite —
  * a hull that is one hit (0050) tested against a ship that takes four.
  *
- * ⚠️ **Written out rather than spread from `legendary`**, because the day the easiest tier moves off
- * the content the baseline must not move with it — `reports/the-tiers-planned-2026-09-22.md`.
+ * ⚠️ **Written out rather than spread from `legendary`**, because the easiest tier has since moved off
+ * the content — `docs/decisions/0356-the-tuned-tier-is-savior.md` — and the baseline did not move
+ * with it. It is also what the instruments mean by `--difficulty=authored`.
  * `tests/tier-shell.test.ts` holds that it multiplies nothing and opens on no shell.
  */
 export const AUTHORED: DifficultyRow = {

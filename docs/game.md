@@ -263,7 +263,10 @@ Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each lev
 enemies, upgrade flavour and bosses.
 
 **Difficulty has two axes.** A **tier** is chosen before a run and fixed for its length
-([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)). A **dial** moves
+([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)). *Savior of the
+Galaxy* is the tier the game is tuned for, and the other two are **a margin either side of it, axis by
+axis**, so a change to Savior moves both —
+[0356](decisions/0356-the-tuned-tier-is-savior.md). A **dial** moves
 during one: it is `1 + 4/3 × the level's index + the weapon pickups that level has already offered`
 — the mid-boss's dropped weapon counts — so it climbs through a level, drops back at a boundary
 without losing the run's progress, and reaches **11 at the last boss** —

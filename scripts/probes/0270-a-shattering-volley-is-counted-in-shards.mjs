@@ -63,20 +63,24 @@ export const PROBES = [
     guard: 'on every axis at once, and never softer on any of them',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    crowd: 1.15,',
-      replace: '    crowd: 0.9,',
+      // ⚠️ Re-anchored by 0356: Legend is derived from Savior now, so lowering Savior's crowd lowers
+      // Legend's with it and nothing runs backwards. A margin under one is the break that does.
+      find: '  aggression: 1.5,\n  crowd: 1.15,',
+      replace: '  aggression: 1.5,\n  crowd: 0.9,',
     },
   },
   {
     decision: '0270',
-    suite: 'tests/difficulty.test.ts',
-    // The easiest tier no longer the content as authored, which is the file header's own rule.
-    broke: 'the easiest tier scaling what arrives, so the boss table is nobody’s fight',
-    guard: 'multiplies nothing at all',
+    suite: 'tests/tier-shell.test.ts',
+    // The content no longer the counts as authored — re-pointed by 0356 from the easiest tier, which
+    // is a margin under Savior now, to `AUTHORED`, which is where the boss table is still read.
+    broke: 'the baseline scaling what arrives, so the boss table is nobody’s fight',
+    guard: 'THE BASELINE',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: '    aggression: 1,\n    crowd: 1,',
-      replace: '    aggression: 1,\n    crowd: 1.4,',
+      // `HARDER` reads the same two lines, so the corridor comment after them is what makes it `AUTHORED`.
+      find: '  aggression: 1,\n  crowd: 1,\n  // The widest',
+      replace: '  aggression: 1,\n  crowd: 1.4,\n  // The widest',
     },
   },
   /*

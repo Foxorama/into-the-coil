@@ -4,6 +4,11 @@
 flow as Easy"*; the middle one hard enough that an average player reaches level four and no further;
 the hardest one ending most runs at level two's boss.
 
+⚠️ **Superseded in part by [0356](0356-the-tuned-tier-is-savior.md)**: *why the easiest tier multiplies
+nothing*. Savior is the tuned tier and the other two are a margin from it; the content as authored is
+still the one baseline, as `AUTHORED`, and is no longer a tier. The rest of this decision stands, and
+[0355](0355-a-tier-opens-on-a-shell.md) amends its *it does not touch the SCRIPT* by one sentence.
+
 ## The rule
 
 | | |

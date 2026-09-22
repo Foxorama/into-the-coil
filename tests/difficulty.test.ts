@@ -4,10 +4,17 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import {
+  AUTHORED,
   DIFFICULTIES,
   DIFFICULTY_KINDS,
+  HARDER,
+  MARGIN,
   MULTI_HIT_DIAL,
+  PINNED,
+  SAVIOR,
+  TUNED,
   type DifficultyKind,
+  type MultiplierAxis,
   fireGapFor,
   toughnessFor,
 } from '../src/content/difficulty.ts';
@@ -207,7 +214,7 @@ describe('0096 — everything that shoots at the player plays along', () => {
       a phase that fires SLOWER than the one before it, which would be an escalation running backwards.
     */
     for (const kind of BOSS_KINDS) {
-      const base = BOSSES[kind].phases.map((p) => fireGapFor(p.fireEvery, DIFFICULTIES[DIFFICULTY_KINDS[0]!]));
+      const base = BOSSES[kind].phases.map((p) => fireGapFor(p.fireEvery, AUTHORED));
       for (let i = 1; i < base.length; i++) {
         expect(base[i], `${kind} phase ${i} does not fire faster than phase ${i - 1} at the base tier`).toBeLessThan(
           base[i - 1]!,
@@ -226,33 +233,68 @@ describe('0096 — everything that shoots at the player plays along', () => {
   });
 });
 
-describe('the easiest tier is the content, exactly as authored', () => {
-  it('multiplies nothing at all', () => {
-    /*
-      Asked for in play: *"keep the current flow as Easy."*
+describe('0356 — the tuned tier is Savior, and the outer tiers are a margin from it', () => {
+  /*
+    `docs/decisions/0356-the-tuned-tier-is-savior.md`. Asked: *"the difficulty plan needs to encompass
+    future difficulty increases/changes as well so that I don't have to go through and rejig it with
+    every change I make to saviour difficulty."* These hold that property, and none of the values.
+  */
+  const AXES = Object.keys(MARGIN) as MultiplierAxis[];
 
-      ⚠️ **This is why it is a rule and not a coincidence.** A level author, a play-test report and
-      every number in `src/content/levels.ts` are read against one baseline, and the two harder tiers
-      are stated as departures from it. If the baseline were the middle tier, *"the level is too
-      thin"* would be a sentence with three possible meanings and no way to tell them apart.
-    */
-    const easiest = DIFFICULTIES[DIFFICULTY_KINDS[0]!];
-    expect(easiest.toughness, 'the easiest tier changes how much killing things take').toBe(1);
-    expect(easiest.fireGap, 'the easiest tier changes how often things shoot').toBe(1);
-    expect(easiest.closing, 'the easiest tier changes how fast things arrive').toBe(1);
-    expect(easiest.shotSpeed, 'the easiest tier changes how fast bullets travel').toBe(1);
-    // 0073: 'straightforward dog-fighting depending on difficulty' is the play report's own phrase for
-    // what the easiest tier gets — the reactive motions at exactly the rate the enemy table authors.
-    expect(easiest.aggression, 'the easiest tier changes how hard things chase').toBe(1);
-    // 0270: what arrives in one volley, and the horde a summons keeps standing, are the counts the
-    // content authors — so `src/content/bosses.ts` reads as the Legendary fight and nothing else.
-    expect(easiest.crowd, 'the easiest tier changes how much arrives').toBe(1);
+  it('the tuned tier is exactly SAVIOR, so SAVIOR is the row anybody edits', () => {
+    for (const axis of AXES) expect(DIFFICULTIES[TUNED][axis], `${TUNED}'s ${axis} is not SAVIOR's`).toBe(SAVIOR[axis]);
   });
 
+  it('on every axis not pinned, each tier is the one before it moved by one margin, the harder way', () => {
+    /*
+      ⚠️ **Stated between neighbours in the list, not against the formula that built them**, so this
+      is the property the ask paid for rather than the code agreeing with itself: Legend × margin is
+      Savior and Savior × margin is Burn, and a change to Savior carries both. `fireGap` runs the
+      other way because it is a gap.
+    */
+    let compared = 0;
+    for (const [easier, harder] of PAIRS) {
+      for (const axis of AXES) {
+        if (PINNED[easier][axis] !== undefined || PINNED[harder][axis] !== undefined) continue;
+        const step = HARDER[axis] > 0 ? MARGIN[axis] : 1 / MARGIN[axis];
+        expect(
+          DIFFICULTIES[harder][axis],
+          `${harder}'s ${axis} is not ${easier}'s moved by one margin`,
+        ).toBeCloseTo(DIFFICULTIES[easier][axis] * step, 3);
+        compared++;
+      }
+    }
+    expect(compared, 'every axis is pinned, so nothing is derived at all').toBeGreaterThan(AXES.length);
+  });
+
+  it('and every pin is what the row says, with the tuned tier pinned nowhere', () => {
+    expect(Object.keys(PINNED[TUNED]), 'the tuned tier pins an axis, so SAVIOR is not its row').toEqual([]);
+    for (const kind of DIFFICULTY_KINDS) {
+      for (const [axis, value] of Object.entries(PINNED[kind]) as [MultiplierAxis, number][]) {
+        expect(DIFFICULTIES[kind][axis], `${kind} pins ${axis} and the row ignores the pin`).toBe(value);
+      }
+    }
+  });
+
+  it('every margin moves its axis, the harder way', () => {
+    // A margin of one would make the outer tiers Savior on that axis, and one below would swap them.
+    for (const axis of AXES) expect(MARGIN[axis], `${axis}'s margin does not separate the tiers`).toBeGreaterThan(1);
+  });
+});
+
+describe('the content is the baseline, and it is not a tier', () => {
+  /*
+    ⚠️ **`multiplies nothing at all` was here, over the easiest tier, and 0356 deleted it** —
+    `docs/decisions/0356-the-tuned-tier-is-savior.md`, one edit and a reason (0192): the ask made
+    Savior the tuned tier and Legend a margin under it, so the easiest tier multiplies on purpose now.
+    What that guard protected — one baseline, the content as authored — is `AUTHORED`, held in
+    `tests/tier-shell.test.ts`, and the two below keep proving the helpers and the spawner add nothing
+    to it.
+  */
   it('and leaves every body it touches at the numbers its own row states', () => {
-    // The identity above, seen through the two helpers rather than through the fields — so a helper
-    // that quietly added a constant would fail here even with the table untouched.
-    const easiest = DIFFICULTIES[DIFFICULTY_KINDS[0]!];
+    // Through the two helpers rather than through the fields — so a helper that quietly added a
+    // constant would fail here even with the table untouched.
+    const easiest = AUTHORED;
     for (const kind of ENEMY_KINDS) {
       const row = ENEMIES[kind];
       expect(toughnessFor(row.health, easiest), `${kind} is not its own health on the easiest tier`).toBe(row.health);
@@ -479,8 +521,8 @@ describe('the tier reaches the field, and not only the table', () => {
     theme: 'approach',
   };
 
-  /** Drive until the wave is on the field, then report what actually arrived. */
-  function firstWave(tier: DifficultyKind): { health: number; closing: number; shotSpeed: number } {
+  /** Drive until the wave is on the field, then report what actually arrived — at the baseline if no tier. */
+  function firstWave(tier?: DifficultyKind): { health: number; closing: number; shotSpeed: number } {
     const { world } = playableWorld(ONE_WAVE, tier);
     /*
       ⚠️ **PAST THE OPENING CLAMP, and this fixture went red the day the dial landed.**
@@ -523,10 +565,11 @@ describe('the tier reaches the field, and not only the table', () => {
     }
   });
 
-  it('and the easiest tier puts exactly the authored row on the field', () => {
-    // The identity, seen through the whole spawner rather than through the helper.
-    const easiest = firstWave(DIFFICULTY_KINDS[0]!);
-    expect(easiest.health, 'the easiest tier changed the turret the level authored').toBe(ENEMIES.turret.health);
+  it('and the baseline puts exactly the authored row on the field', () => {
+    // The identity, seen through the whole spawner rather than through the helper — re-pointed at
+    // `AUTHORED` by 0356, when the easiest tier stopped being the content.
+    const easiest = firstWave();
+    expect(easiest.health, 'the baseline changed the turret the level authored').toBe(ENEMIES.turret.health);
     expect(easiest.shotSpeed).toBeCloseTo(SHOTS[ENEMIES.turret.shot].speed, 5);
   });
 
