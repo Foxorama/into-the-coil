@@ -37,17 +37,27 @@ const rows = [];
 for (const theme of THEME_KINDS) {
   const clouds = cloudCover(size, theme);
   const all = skyCover(size, theme);
+  // Marks lit in the gas's own body colour, charged at that colour over the rest — 0354, on
+  // `tests/sky.test.ts`'s own terms: every ink is read against both, and the worse is the one shown.
+  const gasLit = skyCover(size, theme, undefined, undefined, 'gas');
   for (const name of Object.keys(PALETTES)) {
     // ⚠️ THE LOUDER OF THE PLACE'S TWO GAS COLOURS — 0223. Blending against the body alone measures
     // the half of the sky that is cheaper, which is 0222's own finding about `cloudCover` repeated.
     // And every further gas the place states — 0345, on `tests/sky.test.ts`'s `loudest`'s own terms.
     const stated = [THEMES[theme].nebula[name], THEMES[theme].glow[name], ...(THEMES[theme].gases?.[name] ?? [])];
     const loud = stated.reduce((a, b) => (luminance(b) > luminance(a) ? b : a));
-    const backdrop = over(THEMES[theme].space[name], loud, all);
+    const glowBackdrop = over(THEMES[theme].space[name], loud, all);
+    const gasBackdrop = over(glowBackdrop, THEMES[theme].nebula[name], gasLit);
     let worst = { ink: '', ratio: Infinity };
+    let backdrop = glowBackdrop;
     for (const ink of counted) {
-      const ratio = contrast(PALETTES[name][ink], backdrop);
-      if (ratio < worst.ratio) worst = { ink, ratio };
+      for (const under of [glowBackdrop, gasBackdrop]) {
+        const ratio = contrast(PALETTES[name][ink], under);
+        if (ratio < worst.ratio) {
+          worst = { ink, ratio };
+          backdrop = under;
+        }
+      }
     }
     const room = worst.ratio / GAMEPLAY_FLOOR;
     rows.push({ theme, name, clouds, all, worst, room });

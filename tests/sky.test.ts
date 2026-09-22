@@ -179,23 +179,34 @@ describe('0196 — the clouds are counted against the accessibility floor', () =
       as many words: *"a guard that cannot be satisfied by correct content is a guard that gets
       switched off."*
     */
+    /*
+      ⚠️ **AND A MARK IS CHARGED AT THE COLOUR IT IS DRAWN IN — 0354.** Marks lit in the gas's body
+      colour (`StructureMark.gas`) are read separately and composited over the glow backdrop in that
+      colour, and every ink is held against both: the brighter of the two is the worse, whichever it is.
+      Charged at the glow, The Black Heart's wine vessels read as a sky of ice-blue light no pixel of the
+      place is.
+    */
     const size = bakeSize(SPRITE_EXTENT.skyNebula, 6);
     let checked = 0;
     for (const theme of THEME_KINDS) {
       const cover = skyCover(size, theme);
+      const gas = skyCover(size, theme, undefined, undefined, 'gas');
       for (const name of Object.keys(PALETTES) as PaletteName[]) {
-        const backdrop = over(THEMES[theme].space[name], loudest(theme, name), cover);
+        const glowBackdrop = over(THEMES[theme].space[name], loudest(theme, name), cover);
+        const backdrops = [glowBackdrop, over(glowBackdrop, THEMES[theme].nebula[name], gas)];
         for (const [ink, colour] of Object.entries(PALETTES[name])) {
           if (ink === 'space' || ink === 'sky') continue;
           if ((DECOR_INKS as readonly string[]).includes(ink)) continue;
-          checked += 1;
-          const ratio = contrast(colour, backdrop);
-          expect(
-            ratio,
-            `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop once EVERYTHING the sky ` +
-              `draws is counted (cover ${cover.toFixed(3)}, blended ${backdrop}) — the clouds guard above ` +
-              'reads this place as clear, which is how Rime Shelf shipped under the floor',
-          ).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+          for (const backdrop of backdrops) {
+            checked += 1;
+            const ratio = contrast(colour, backdrop);
+            expect(
+              ratio,
+              `${ink} sits at ${ratio.toFixed(2)}:1 on ${theme}'s ${name} backdrop once EVERYTHING the sky ` +
+                `draws is counted (cover ${cover.toFixed(3)}, gas-lit ${gas.toFixed(3)}, blended ${backdrop}) — the ` +
+                'clouds guard above reads this place as clear, which is how Rime Shelf shipped under the floor',
+            ).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+          }
         }
       }
     }

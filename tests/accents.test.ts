@@ -128,6 +128,8 @@ const HULLLESS: readonly SpriteKind[] = [
   // A bubble on the acid is scenery drawn over the ground, a ring of light with no hull — 0353.
   'bubble',
   'bubblePop',
+  // The heart's pulse is light travelling in a vein, with no hull — 0354.
+  'veinBead',
   'bound',
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.

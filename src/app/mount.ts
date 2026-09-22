@@ -23,6 +23,7 @@ import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
 import { POOLS_OF } from '../content/pools.ts';
+import { VEINS_OF } from '../content/veins.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
   DEFAULT_TRAVEL,
@@ -480,7 +481,8 @@ export const SKY_UNDER_A_RANGE = [
  * same answer or a level boundary silently reinstates the star fields a planet just removed.
  */
 export function skyFor(place: ThemeKind | null): Sky {
-  if (place === null || THEMES[place].ground === null) return SKY;
+  if (place === null) return SKY;
+  if (THEMES[place].ground === null) return SPACE_SKY_OF[place];
   return PLANET_SKY_OF[place];
 }
 
@@ -507,6 +509,28 @@ const PLANET_SKY_OF: Record<ThemeKind, Sky> = {
   rime: planetSky('rime'),
   mire: planetSky('mire'),
   core: planetSky('core'),
+};
+
+/**
+ * A place in space's sky: `SKY`, with its weather layer carrying the place's veins where `VEINS_OF`
+ * states some (0354), so the pulse is blitted over the very tiles whose vessels it runs along.
+ *
+ * ⚠️ **BUILT ONCE, WHEN THE MODULE LOADS**, because `skyFor` runs at every level boundary and the
+ * layers are shared; one per place is the whole of what varies.
+ */
+function spaceSky(place: ThemeKind): Sky {
+  const veins = VEINS_OF[place];
+  return veins === null ? SKY : SKY.map((layer) => (layer.sprite === SPRITE.skyNebula ? { ...layer, veins } : layer));
+}
+
+const SPACE_SKY_OF: Record<ThemeKind, Sky> = {
+  approach: spaceSky('approach'),
+  nebula: spaceSky('nebula'),
+  saurian: spaceSky('saurian'),
+  labyrinth: spaceSky('labyrinth'),
+  rime: spaceSky('rime'),
+  mire: spaceSky('mire'),
+  core: spaceSky('core'),
 };
 
 /**
