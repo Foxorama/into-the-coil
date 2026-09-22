@@ -807,6 +807,13 @@ this heading when it stops being true rather than adding another one below it.**
 moved. **The work is ART AND GAME now.** The music is not finished and is not the thing being asked
 for.
 
+⚠️ **AND THE TIERS ARE A PLAN, SINCE 2026-09-22, AND NOTHING IN IT IS BUILT** —
+[`the-tiers-planned`](../reports/the-tiers-planned-2026-09-22.md): Savior stays as it is and is the
+tuned tier; Legend and Burn are derived from it by a margin per axis so a change to Savior never
+needs a rejig; the shell becomes two counts on the row. Two PRs in the order the report gives, then a
+play per tier. The two questions the first draft put back were answered the same day and are in the
+report: every Legend life opens on a full shell, and Burn's mid-boss throws no shield.
+
 ⚠️ **AND THE BACKDROPS ARE A QUEUE OF THEIR OWN, SINCE 2026-09-21** —
 [`the-places-are-painted`](../reports/the-places-are-painted-2026-09-21.md): all seven places, one PR
 each, in level order, and the report holds the order and what each owes. Item 0 is landed —
