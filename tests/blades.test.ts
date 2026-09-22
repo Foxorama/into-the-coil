@@ -19,7 +19,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, wearHull, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
-import { SHOTS } from '../src/content/shots.ts';
+import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
@@ -28,9 +28,26 @@ import { reset, type Entity } from '../src/sim/entity.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { INK_OF } from '../src/render/bake.ts';
-import { NO_LEVEL, playableWorld } from './world.ts';
+import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
+import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Medusa on station at the end of a short level in its own place, and nothing else — the arena
+ * `scripts/weigh-boss.mjs` flies, written here rather than imported so a test does not depend on an
+ * instrument's shape.
+ */
+const MEDUSA_ALONE: LevelRow = {
+  waves: [],
+  pickups: [],
+  landmarks: [],
+  bossAt: 200,
+  midBoss: null,
+  sections: NO_SECTIONS,
+  boss: 'medusa',
+  theme: LEVELS[LEVEL_KINDS.find((kind) => LEVELS[kind].boss === 'medusa')!]!.theme,
+};
 
 /**
  * Longer than any blade lives. A blade that is still in the air after this has not found the edge
@@ -147,6 +164,143 @@ function swings(places: readonly Place[]): number[] {
   }
   return out;
 }
+
+/**
+ * A VOID BLUNTS A BLADE RATHER THAN EATING IT — `docs/decisions/0357-a-void-blunts-a-blade.md`.
+ *
+ * A void blast eats the player's fire (0291), and it released whatever it bit whole — right for every
+ * shot that has one health and wrong for the only one that has more. What is held here is that a bite
+ * costs a blade one of its `BLADE_EDGE` arrivals, that a pulse is still spent by one, and that the
+ * boss whose last phase rains void does not turn the blade off.
+ */
+describe('0357 — a void blunts a blade rather than eating it', () => {
+  /** A void blast planted where `shot` is, riding the camera so it stays in the blade's way. */
+  function voidOn(world: World, shot: Entity): Entity {
+    const blast = world.enemyShots.spawn();
+    if (blast === null) throw new Error('the enemy shot pool is full');
+    reset(blast, shot.along, shot.across, SHOTS.void, SHOT_INDEX.void);
+    blast.velAlong = world.scrollPerStep;
+    return blast;
+  }
+
+  it('THE BITE: a blade goes on with one less edge, and the blast has eaten its damage', () => {
+    const { world, frame } = armed(2);
+    frame.step();
+    world.fireIn = NEVER;
+    const blade = world.playerShots.at(0);
+    expect(blade.health, 'a blade does not carry an edge to lose').toBe(SHOTS.shuriken.health);
+    const blast = voidOn(world, blade);
+    const appetite = blast.health;
+    frame.step();
+    expect(alive(world, blade), 'the void ate the whole blade').toBe(true);
+    expect(blade.health, 'the bite cost the blade more than one arrival').toBe(SHOTS.shuriken.health - 1);
+    expect(blast.health, 'the blast bit and ate nothing').toBe(appetite - SHOTS.shuriken.damage);
+  });
+
+  it('and a pulse is still spent by one, because one is all it has', () => {
+    // The rule is unchanged for every other shot in the game: `src/sim/collide.ts` spends a shot one
+    // health per arrival, and a shot with one is gone. This is that same sentence, at the void.
+    const built = playableWorld(NO_LEVEL);
+    const world = built.world;
+    world.weapon = weaponFor(world.shipRow, [], 'pulse');
+    wearHull(world);
+    world.fireIn = 1;
+    world.missileIn = NEVER;
+    const frame = new GameFrame(world);
+    frame.step();
+    expect(world.playerShots.size, 'nothing was fired').toBeGreaterThan(0);
+    const shot = world.playerShots.at(0);
+    expect(shot.health, 'a pulse carries more than one arrival').toBe(1);
+    world.fireIn = NEVER;
+    const blast = voidOn(world, shot);
+    const appetite = blast.health;
+    frame.step();
+    expect(alive(world, shot), 'the void bit a pulse and left it flying').toBe(false);
+    expect(blast.health, 'the blast did not eat the pulse it took').toBe(appetite - SHOTS.pulse.damage);
+  });
+
+  it('and it feeds once per flash rather than every step it is inside one', () => {
+    /*
+      ⚠️ **The half a `health -= 1` alone would get wrong.** A blade that bit on every step it
+      overlapped would empty a six-point appetite in three steps and the swell nobody saw would be the
+      only warning there was — which is the argument the bomb's own loop in `feedVoids` already makes.
+      `landIn` is the same field, so the rule is stated once and read twice.
+    */
+    const { world, frame } = armed(2);
+    frame.step();
+    world.fireIn = NEVER;
+    const blade = world.playerShots.at(0);
+    const blast = voidOn(world, blade);
+    let last = blast.health;
+    let bitOn: number[] = [];
+    for (let step = 0; step < 24 && alive(world, blade) && blast.health > 0; step++) {
+      // Held on the blade, so the overlap never lapses and the only thing spacing the bites is the flash.
+      blast.along = blade.along;
+      blast.across = blade.across;
+      frame.step();
+      if (blast.health < last) bitOn.push(step);
+      last = blast.health;
+    }
+    expect(bitOn.length, 'the blade never bit, so the spacing is not being measured').toBeGreaterThan(1);
+    for (let i = 1; i < bitOn.length; i++) {
+      expect(bitOn[i]! - bitOn[i - 1]!, `two bites ${bitOn[i]! - bitOn[i - 1]!} steps apart, which is inside one flash`).toBeGreaterThan(1);
+    }
+  });
+
+  it('THE PICTURE: a boss that rains void still takes the blade’s damage, at the tier the game is tuned for', () => {
+    /*
+      ⚠️ **THE ONE IN UNITS THE PLAYER WATCHES** — 0027: health coming off the boss per second of
+      flying, rather than a number this file could check against itself. Medusa's last phase throws a
+      ring of ten void every sixth of a second (0255), so it is the case the fix is about, and it is
+      driven at Savior — the tuned tier — through the real frame.
+
+      ⚠️ **A SHARE OF THE SAME FIGHT WITH THE RAIN SWEPT, so nothing here pins a rate.** What is
+      refused is the blade being turned OFF by a wall of mouths: before the fix the same ten seconds
+      read 2 a second against 100 with the rain swept, a fortieth. Nothing says what the fight should
+      cost, which is `scripts/weigh-boss.mjs`'s to report and a play's to settle.
+    */
+    const fought = (sweep: boolean): number => {
+      const built = playableWorld(MEDUSA_ALONE, 'savior');
+      const world = built.world;
+      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+      wearHull(world);
+      const frame = new GameFrame(world);
+      let taken = 0;
+      let last: number | null = null;
+      let fighting = 0;
+      for (let step = 0; step < 90 * STEPS_PER_SECOND && fighting < 10 * STEPS_PER_SECOND; step++) {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = NEVER;
+        world.missileIn = NEVER;
+        if (world.bossPool.size > 0 && world.bossEntering < 0) {
+          const boss = world.bossPool.at(0);
+          // Straight into the last phase, which is the one that rains — and the only one this is about.
+          if (last === null) boss.health = world.bossFullHealth * 0.19;
+          world.ship.prevAcross = world.ship.across;
+          world.ship.across = boss.across;
+          world.ship.prevAlong = world.ship.along;
+          world.ship.along = boss.along - boss.radius - 45;
+          if (last !== null && boss.health < last) taken += last - boss.health;
+          last = boss.health;
+          fighting++;
+        }
+        // The same fight with nothing in the way, which is what the share is against.
+        if (sweep) world.enemyShots.clear();
+        frame.step();
+        if (last !== null && world.bossPool.size === 0) break;
+      }
+      expect(fighting, 'the fight never started, so this measured nothing').toBeGreaterThan(0);
+      return taken / (fighting / STEPS_PER_SECOND);
+    };
+    const swept = fought(true);
+    const rained = fought(false);
+    expect(swept, 'the blade did nothing even with the rain swept, so the share means nothing').toBeGreaterThan(10);
+    expect(
+      rained,
+      `the blade takes ${rained.toFixed(1)} a second off medusa through its own void rain against ${swept.toFixed(1)} with the rain swept`,
+    ).toBeGreaterThan(swept / 3);
+  });
+});
 
 describe('0234 — a blade rides a helix ahead of the ship', () => {
   it('THE HELIX: a blade leaves the wingtip, never loses ground up the lane, and swings across the ship’s line again and again at one width', () => {
