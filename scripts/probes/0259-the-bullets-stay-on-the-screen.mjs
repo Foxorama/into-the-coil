@@ -88,14 +88,17 @@ export const PROBES = [
   {
     decision: '0259',
     suite: 'tests/pilots.test.ts',
-    // The sentry's reload back to 90: with the entry volley counted, its wall puts thirty bullets on
-    // the screen while it is visible, which 0110's guard refuses.
-    broke: 'the sentry reloading at 90 again, so its wall goes over the on-screen bullet budget',
+    // The sentry's reload shortened until its wall puts more than thirty bullets on the screen while
+    // it is visible, which 0110's guard refuses.
+    // ⚠️ Was 90, and 0356 left it STILL GREEN: Burn's derived fire gap is 0.557 against the old 0.5,
+    // so at 90 the sentry puts under thirty up at the hardest tier. Measured with the guard: 84 stays
+    // green, 78 puts 31 up and goes red. The rule did not move; the tier that binds it got gentler.
+    broke: 'the sentry reloading at 78, so its wall goes over the on-screen bullet budget',
     guard: 'and nothing gets more volleys away at the player than a player can read',
     edit: {
       path: 'src/content/enemies.ts',
       find: '    fireEvery: 108,\n    shot: \'flak\',\n    // THE LABYRINTH\'S OWN',
-      replace: '    fireEvery: 90,\n    shot: \'flak\',\n    // THE LABYRINTH\'S OWN',
+      replace: '    fireEvery: 78,\n    shot: \'flak\',\n    // THE LABYRINTH\'S OWN',
     },
   },
 ];

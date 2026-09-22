@@ -4,6 +4,8 @@
 //   node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-boss.mjs
 //        [bossKind …] [--difficulty=savior] [--tier=4] [--health=N]
 //
+// `--difficulty=authored` flies the content multiplied by nothing, which no tier is since 0356.
+//
 // ⚠️ IT WAS OWED BY TWO DECISIONS BEFORE IT EXISTED. docs/decisions/0288-the-skull-is-longer.md
 // drove the serpent's fight with a scratch script and wrote *"if the next change to this animal moves
 // the fight again, the second thing to build is `scripts/weigh-boss.mjs`"*; 0298 said *"a boss figure
@@ -75,7 +77,8 @@ function arena(kind) {
  * @returns {{ seconds: number | null, phaseAt: { phase: number, at: number }[] }}
  */
 export function flyFight(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
-  const { world, wrecks } = playableWorld(arena(kind), difficulty);
+  // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
+  const { world, wrecks } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < tier; i++) carried.push('weapon');

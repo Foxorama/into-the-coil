@@ -75,7 +75,8 @@ function touching(world) {
  * @returns hits a second on the parked ship, how many adds were called, and how many reached the boss.
  */
 export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
-  const { world, cues } = playableWorld(arena(kind), difficulty);
+  // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
+  const { world, cues } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < tier; i++) carried.push('weapon');

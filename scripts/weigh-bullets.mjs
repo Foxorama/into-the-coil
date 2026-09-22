@@ -60,8 +60,8 @@ export function weighLevel(kind, options = {}) {
   const sweepSeconds = options.sweepSeconds ?? 8;
   const windowSeconds = options.windowSeconds ?? 2;
   const level = LEVELS[kind];
-  // The fixture's default tier unless asked — the gentlest, which is the fewest bullets and so the
-  // conservative side of every budget read off this walk.
+  // The fixture's default unless asked — the content as authored (0355), which since 0356 is no
+  // longer the gentlest tier: Legend fires less often, so ask for `--tier=legendary` to read its end.
   const { world } = options.tier === undefined ? playableWorld(level) : playableWorld(level, options.tier);
   const frame = new GameFrame(world);
   const carried = [];

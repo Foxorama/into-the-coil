@@ -57,16 +57,17 @@ export const PROBES = [
   },
   {
     decision: '0047',
-    suite: 'tests/difficulty.test.ts',
-    // The easiest tier stops being the content. Every play-test report and every number in
+    suite: 'tests/tier-shell.test.ts',
+    // The baseline stops being the content. Every play-test report and every number in
     // src/content/levels.ts is then read against a baseline nothing states.
-    broke: 'the easiest tier given a multiplier, so the authored content is no tier at all',
-    guard: 'multiplies nothing at all',
+    // ⚠️ Re-pointed by 0356, which made the easiest tier a margin under Savior on purpose and deleted
+    // `multiplies nothing at all`: what 0047 protected is `AUTHORED` now, so that is what is broken.
+    broke: 'the baseline given a multiplier, so the authored content is stated nowhere',
+    guard: 'THE BASELINE',
     edit: {
       path: 'src/content/difficulty.ts',
-      // ⚠️ Re-anchored by 0355, which put the row's two shell counts between `lives` and `toughness`.
-      find: "    shellOpen: 3,\n    shellCap: 3,\n    toughness: 1,",
-      replace: "    shellOpen: 3,\n    shellCap: 3,\n    toughness: 0.9,",
+      find: "  shellCap: 3,\n  toughness: 1,\n  fireGap: 1,",
+      replace: "  shellCap: 3,\n  toughness: 0.9,\n  fireGap: 1,",
     },
   },
   {
