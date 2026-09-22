@@ -97,7 +97,7 @@ export interface DifficultyRow {
    * ⚠️ **The CHARACTER, and `MAX_SHIELDS` in `src/content/ships.ts` is the CEILING** —
    * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`. The ceiling is the
    * shell pool's size and the most pips the readout can draw; this is what a tier lets the pilot
-   * wear under it. `tests/difficulty.test.ts` holds `shellOpen ≤ shellCap ≤ MAX_SHIELDS` as a budget
+   * wear under it. `tests/tier-shell.test.ts` holds `shellOpen ≤ shellCap ≤ MAX_SHIELDS` as a budget
    * whose owner is the pool. At zero the tier is also never OFFERED a shield: a pickup the ship cannot
    * carry is withheld rather than thrown — 0355.
    */
@@ -321,7 +321,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
  *
  * ⚠️ **Written out rather than spread from `legendary`**, because the day the easiest tier moves off
  * the content the baseline must not move with it — `reports/the-tiers-planned-2026-09-22.md`.
- * `tests/difficulty.test.ts` holds that it multiplies nothing and opens on no shell.
+ * `tests/tier-shell.test.ts` holds that it multiplies nothing and opens on no shell.
  */
 export const AUTHORED: DifficultyRow = {
   title: 'As authored',
