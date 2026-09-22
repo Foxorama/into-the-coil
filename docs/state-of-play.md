@@ -833,8 +833,9 @@ play**; the floor holds its white far below white, and the player chose to keep 
 from play. Item 6 is landed in part —
 [0352](decisions/0352-the-mire-is-a-swamp.md), The Toxic Mire's ceiling, swamp and pools, **owed a
 play** — and its bubbles, [0353](decisions/0353-the-acid-bubbles.md), scenery until the player makes
-them obstacles. **Forks are answered** (a fork's own thirty a way, every tier) and wait behind item 7,
-The Black Heart, which is next. **How the places
+them obstacles. Item 7 is landed — [0354](decisions/0354-the-heart-has-veins.md), The Black Heart's
+veins and stars, **owed a play** — and with it **all seven places are painted**. **Next: 4b's forks**,
+answered (a fork's own thirty a way, every tier). **How the places
 are built, and the player's answers on Rime Shelf and the walled Labyrinth, are in**
 [`how-the-places-get-painted`](../reports/how-the-places-get-painted-2026-09-21.md) — read it before
 the next item.
