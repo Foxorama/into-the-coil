@@ -4,7 +4,7 @@ import { GameFrame, SHIP_START_ALONG, respawn } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
-import { INVULN_STEPS } from '../src/content/ships.ts';
+import { INVULN_STEPS, openingHealthFor } from '../src/content/ships.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -269,7 +269,10 @@ describe('a run over is a continue', () => {
     expect(built.world.ship.health, 'the fixture’s ship is not dead, so being handed one back is not visible').toBe(0);
 
     built.lifecycle.resume();
-    expect(built.world.ship.health, 'the continue handed back the wreck').toBe(built.world.shipRow.health);
+    // What a life opens with, which since 0355 is the hull plus the tier's opening shell.
+    expect(built.world.ship.health, 'the continue handed back the wreck').toBe(
+      openingHealthFor(built.world.shipRow, built.world.difficulty),
+    );
     expect(built.world.ship.along - camera, 'the continue left the ship where it fell').toBeCloseTo(
       SHIP_START_ALONG,
       5,

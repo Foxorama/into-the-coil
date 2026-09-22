@@ -8,7 +8,7 @@ import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, openingHealthFor } from '../src/content/ships.ts';
 import { PYRES, pyreFor } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -532,7 +532,10 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     killShip(built.world, built.frame);
     for (let i = 0; i < A_WHILE; i++) built.frame.step();
     expect(built.state().run.lives, 'the respawned ship was killed by its own pyre').toBe(lives - 1);
-    expect(built.world.ship.health, 'the respawned ship came back already hurt').toBe(built.world.shipRow.health);
+    // Whole means what a life opens with — the hull plus the tier's opening shell since 0355.
+    expect(built.world.ship.health, 'the respawned ship came back already hurt').toBe(
+      openingHealthFor(built.world.shipRow, built.world.difficulty),
+    );
   });
 
   it('is the only thing that lights one — a bomb still leaves a bomb’s blast', () => {
