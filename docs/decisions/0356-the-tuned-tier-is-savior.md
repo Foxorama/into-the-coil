@@ -132,6 +132,12 @@ multiplier* now breaks `AUTHORED`; 0270's *the middle tier sending less* now bre
 because Legend is derived from Savior and lowering Savior lowers Legend with it; 0270's *easiest tier
 scaling what arrives* now breaks `AUTHORED`.
 
+⚠️ **AND THE FULL PROOF FOUND ONE STILL GREEN IN ANOTHER DECISION'S FILE, which only it could.**
+0259's *the sentry reloading at 90 again* stopped reddening 0110's thirty-bullet guard, because that
+guard reads the hardest tier's fire gap and Burn's derived 0.557 is gentler than the old 0.5 — at 90
+the sentry now puts under thirty up. The rule did not move; the tier that binds it did. Measured
+against the guard, 84 stays green and 78 puts 31 up, so the probe breaks at 78 now and says why.
+
 ⚠️ **No probe for *a seventh axis with no margin*.** That break fails `tsc`, and the proof harness runs
 vitest, which strips types unchecked — a probe would report STILL GREEN over a real guard that lives
 in `npm run check`.
