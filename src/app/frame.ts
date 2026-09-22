@@ -3873,8 +3873,20 @@ function feedVoids(w: World): void {
         caught it reported the fire going straight through, which is what it was doing.
       */
       if (!overlaps(shot, blast, 1)) continue;
+      /*
+        ⚠️ **A BITE COSTS A SHOT ONE HEALTH, EXACTLY AS AN ARRIVAL DOES — 0357.** This released the
+        shot whatever its health, which is right for every shot that has one and wrong for the only
+        one that does not: a blade carries `BLADE_EDGE` arrivals and a void ate the whole twelve. The
+        rule is `src/sim/collide.ts`'s and it is written the same way here, `landIn` and all — the
+        bomb's own loop below already lands on a void once per flash, and for the same reason.
+      */
+      if (shot.health > 1) {
+        if (shot.landIn > 0) continue;
+        shot.landIn = IMPACT_FLASH_STEPS;
+      }
       bite(blast, row, shot.damage);
-      w.playerShots.releaseAt(s);
+      shot.health -= 1;
+      if (shot.health <= 0) w.playerShots.releaseAt(s);
       /*
         ⚠️ **IT SWELLS AS IT FEEDS, AND THAT IS THE ONLY THING THAT SAYS IT IS EATING.** A blast that
         swallowed a pulse and showed nothing would read as a shot passing through it — 0036's own
