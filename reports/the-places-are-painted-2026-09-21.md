@@ -250,6 +250,8 @@ not inherited. The pulse is mechanism 2's third use: beads of light following th
 the beat `tests/places.test.ts` already holds for the landmark. 0211 made this place *nearly empty* on
 purpose; the player has now seen that and asked for the opposite.
 
+*Landed as [0354](../docs/decisions/0354-the-heart-has-veins.md) — and with it all seven places.*
+
 ## What is not in the queue
 
 **The boss arenas**, except where a place's own item changes what is behind them. **The high-contrast

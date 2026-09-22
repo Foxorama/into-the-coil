@@ -25,10 +25,11 @@ import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
-import { EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { BEAD_HEAD, EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
+import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
 
@@ -844,6 +845,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   ember: 'sky',
   bubble: 'sky',
   bubblePop: 'sky',
+  veinBead: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -2560,6 +2562,48 @@ function drawBubble(ctx: Pen, size: number, popped: boolean, plain: string | nul
     ctx.arc(c + Math.cos(a) * r * 1.05, c + Math.sin(a) * r * 1.05, size * 0.06, 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+/**
+ * A bead of the heart's pulse — 0354: a bright head leading along the vessel, a tail of red light
+ * behind it falling to nothing.
+ *
+ * ⚠️ **POINTING ALONG +x, BECAUSE `blit`'S TURN IS MEASURED FROM THERE** (0306): `paintPulse` turns
+ * it to the vein's own heading, so the light flows down the vessel.
+ *
+ * ⚠️ **THE HEAD IS `BEAD_HEAD` OF THE BITMAP ACROSS AND NO MORE** — under a shot's size — and the
+ * rest is light. A round glow alone read as one more star; a head with a tail reads as something
+ * moving through the vein.
+ *
+ * @param plain the palette's sky ink where decoration is the void — high contrast — else `null`.
+ */
+function drawBead(ctx: Pen, size: number, plain: string | null): void {
+  const r = (BEAD_HEAD * size) / 2;
+  const hx = size - r * 2.2;
+  const hy = size / 2;
+  const red = plain ?? '#ff5c7a';
+  const tail = ctx.createLinearGradient(hx, hy, size * 0.02, hy);
+  tail.addColorStop(0, rgba(red, 0.6));
+  tail.addColorStop(1, rgba(red, 0));
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = tail;
+  ctx.beginPath();
+  ctx.moveTo(hx, hy - r * 0.9);
+  ctx.quadraticCurveTo(size * 0.4, hy - r * 0.3, size * 0.02, hy);
+  ctx.quadraticCurveTo(size * 0.4, hy + r * 0.3, hx, hy + r * 0.9);
+  ctx.closePath();
+  ctx.fill();
+  const halo = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 2.2);
+  halo.addColorStop(0, rgba(red, 0.65));
+  halo.addColorStop(1, rgba(red, 0));
+  ctx.fillStyle = halo;
+  ctx.beginPath();
+  ctx.arc(hx, hy, r * 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = plain ?? '#ffd6e2';
+  ctx.beginPath();
+  ctx.arc(hx, hy, r, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**
@@ -9600,6 +9644,9 @@ export function drawKind(
     case 'bubblePop':
       drawBubble(ctx, size, kind === 'bubblePop', palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
       return;
+    case 'veinBead':
+      drawBead(ctx, size, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
 
@@ -9977,8 +10024,40 @@ export const SKY_STYLE_OF: Record<ThemeKind, SkyStyle> = {
   },
   // Dense fine motes, evenly suspended, in thick banks of haze.
   mire: { density: 1.7, size: 0.55, tilt: 0.2, length: 0.2, clump: 0.25, dim: 0.7, drift: 0.7, clouds: 1.5, cloudSize: 0.8, cloudAlpha: 1.35 },
-  // Nearly empty, and what is left is being drawn one way.
-  core: { density: 0.3, size: 0.85, tilt: 0, length: 1.5, clump: 0.45, dim: 0.4, drift: 0.85, clouds: 0.5, cloudSize: 1.6, cloudAlpha: 1.15 },
+  /*
+    ⚠️ **A STAR FIELD LIKE NOWHERE ELSE IN THE RUN — 0354.** It was *nearly empty* (0211, density
+    0.3); asked for: *"a beautiful starry backdrop."* Its own row on 0343's machinery: denser than The
+    Approach's, in the heart's colours — rose, crimson and violet, with the ice blue of its glow and
+    a few white — and a band of far light across it.
+  */
+  core: {
+    density: 1,
+    size: 0.85,
+    tilt: 0,
+    length: 1.5,
+    clump: 0.45,
+    dim: 0.4,
+    drift: 0.85,
+    clouds: 0.5,
+    cloudSize: 1.6,
+    cloudAlpha: 1.15,
+    stars: {
+      far: 12,
+      near: 2.2,
+      lean: 5,
+      floor: 0.07,
+      bright: 0.78,
+      tints: [
+        ['#ffd6e2', 6],
+        ['#ffffff', 3],
+        ['#ff7a8c', 4],
+        ['#d2a8ff', 4],
+        ['#a8d4ff', 3],
+        ['#ffdcae', 1],
+      ],
+      band: { at: 0.45, depth: 0.2, share: 0.5 },
+    },
+  },
 };
 
 export function skyField(
@@ -10377,6 +10456,13 @@ export interface StructureMark {
    * measurement making the opposite call rather than an exception to it.
    */
   lit: boolean;
+  /**
+   * A lit mark drawn in the gas's own BODY colour rather than its glow — 0354. Absent is the glow, as
+   * every lit mark has been since 0223. The Black Heart's vessels are wine and its glow is ice blue:
+   * drawn in the glow they came out of the photograph as blue pipes. `skyCover` still charges every
+   * lit mark at the glow, the brighter of the two, which over-counts — the direction a floor may err.
+   */
+  gas?: boolean;
 }
 
 
@@ -10940,39 +11026,46 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
   },
 
   /*
-    ── THE BLACK HEART: EVERYTHING DRAWN ONE WAY ──────────────────────────────────────────────────
+    ── THE BLACK HEART: VESSELS — 0354 ──────────────────────────────────────────────────────────────
 
-    *"Nearly empty, and what is left is being drawn one way."* So the structure is not an object at
-    all — it is the DIRECTION. Streaks of what is left, tapering as they are pulled towards a point
-    off the lane, and nearly nothing of them.
+    Asked for: *"Needs veins pulsing throughout the level."* 0211 made this place nearly empty on
+    purpose, a few streaks drawn one way; the player has seen that and asked for the opposite, and the
+    newer report wins. So: dark vessels crossing the whole tile, each with branches reaching off it —
+    and the light that runs along them is `paintPulse`'s, which reads the same table.
 
-    ⚠️ **THE SPARSEST OF THE SEVEN ON PURPOSE.** It is the last place and its character is absence;
-    a busy sky here would say *another nebula*. What tells the player where they are is that the few
-    marks left all agree about where they are going.
+    ⚠️ **LIT, IN THE PLACE'S OWN GAS, BECAUSE A SILHOUETTE ON THIS SKY IS NOTHING.** Drawn dark first,
+    they were black lines on a sky nearly black and could not be found in the photograph. Lit, they
+    are wine-dark vessels, and the sky's cover counts them: this place had the second most room of the
+    seven (`scripts/weigh-sky.mjs`), and 0351's *lit is a contrast measurement, not a house style*
+    is what spends it.
   */
   core: (size) => {
-    const rng = makeRng('sky').stream('core/infall');
+    const veins = VEINS_OF.core;
     const out: StructureMark[] = [];
-    // The point everything is drawn towards, off the tile so the convergence never resolves on screen.
-    const toX = size * 1.35;
-    const toY = size * 0.5;
-    for (let i = 0; i < 9; i += 1) {
-      const x = rng.range(0, 0.8) * size;
-      const y = rng.range(0.05, 0.95) * size;
-      const pull = rng.range(0.1, 0.26);
-      out.push({
-        points: [
-          [x, y],
-          [x + (toX - x) * pull, y + (toY - y) * pull],
-        ],
-        width: rng.range(0.008, 0.022) * size,
-        alpha: 0.55,
-        crosses: false,
-        taper: true,
-        lit: false,
-      });
+    if (veins === null) return out;
+    const SAMPLES = 96;
+    for (const trunk of veins.trunks) {
+      const points: number[][] = [];
+      for (let s = 0; s <= SAMPLES; s += 1) points.push([(s / SAMPLES) * size, trunkAt(trunk, s / SAMPLES) * size]);
+      out.push({ points, width: trunk.width * 0.7 * size, alpha: 0.85, crosses: true, taper: false, lit: true, gas: true });
     }
-    // 0222's two falling hulks are gone with the rest — 0342.
+    for (const branch of veins.branches) {
+      const trunk = veins.trunks[branch.trunk]!;
+      // Leave along the trunk's own direction at that point, turned by `angle`, curling as it goes.
+      const dx = 0.001;
+      const heading = Math.atan2(trunkAt(trunk, branch.at + dx) - trunkAt(trunk, branch.at), dx) + branch.angle;
+      const points: number[][] = [];
+      let x = branch.at;
+      let y = trunkAt(trunk, branch.at);
+      const STEPS = 8;
+      for (let s = 0; s <= STEPS; s += 1) {
+        points.push([x * size, y * size]);
+        const a = heading + (branch.curl * s) / STEPS;
+        x += (Math.cos(a) * branch.reach) / STEPS;
+        y += (Math.sin(a) * branch.reach) / STEPS;
+      }
+      out.push({ points, width: trunk.width * 0.5 * size, alpha: 0.7, crosses: false, taper: true, lit: true, gas: true });
+    }
     return out;
   },
 };
@@ -10996,7 +11089,7 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
 // OVERSIGHT** — 0223. A mark here is either a hole in the gas (`space`) or an edge lit by the place
 // (`glow`); the body colour is what the CLOUDS are, and no mark in this function was ever drawn in it
 // once the accent existed. A parameter kept for symmetry would be a colour nobody uses.
-export function paintStructure(ctx: Pen, glow: string, space: string, size: number, theme: ThemeKind): void {
+export function paintStructure(ctx: Pen, glow: string, space: string, size: number, theme: ThemeKind, body: string = glow): void {
   const marks = STRUCTURE_OF[theme](size);
   ctx.lineCap = 'round';
   for (const mark of marks) {
@@ -11009,7 +11102,7 @@ export function paintStructure(ctx: Pen, glow: string, space: string, size: numb
       place is made of. A cloud in the accent colour is a patch of hue somewhere; an edge in it is hue
       wherever the eye is already looking, which is what *"vibrant"* actually asks for.
     */
-    const ink = mark.lit ? glow : space;
+    const ink = mark.lit ? (mark.gas === true ? body : glow) : space;
     ctx.fillStyle = ink;
     ctx.strokeStyle = ink;
     ctx.globalAlpha = mark.alpha;
@@ -11117,7 +11210,7 @@ function drawNebula(
      is the one painter for all seven, and the rule each mark takes is a field on the
     mark rather than a paragraph above the loop.
   */
-  paintStructure(ctx, glow, space, size, theme);
+  paintStructure(ctx, glow, space, size, theme, colour);
   ctx.globalAlpha = 1;
 }
 
@@ -11272,10 +11365,18 @@ export function cloudCover(size: number, theme: ThemeKind, step = 4): number {
  * it REPLACES it, opaquely — so where there is ground the contrast is against `THEMES[].ground`
  * outright, and 0221 already holds that darker than the sky in every palette. Two separate backdrops,
  * each held where it applies, rather than one blend that is true of neither.
+ *
+ * ⚠️ **TWO READINGS, BY THE COLOUR A MARK IS DRAWN IN — 0354.** `which = 'glow'` — the default, and
+ * every reading before 0354 — is the gas, the haze and every lit mark drawn in the glow, all charged
+ * at the place's loudest colour. `which = 'gas'` is the lit marks drawn in the gas's BODY colour
+ * (`StructureMark.gas`) and nothing else, to be charged at that colour. The Black Heart's vessels are
+ * wine, and charged as its ice-blue glow they read as a sky of light at 0.85 cover and put `player`
+ * at 1.85:1 over a backdrop no pixel of the place is. A guard charging the wrong colour measures the
+ * wrong quantity; the consumer composites the two (`tests/sky.test.ts`).
  */
-export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4): number {
-  const clouds = nebulaField(size, theme);
-  const marks = STRUCTURE_OF[theme](size).filter((mark) => mark.lit);
+export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4, which: 'glow' | 'gas' = 'glow'): number {
+  const clouds = which === 'glow' ? nebulaField(size, theme) : [];
+  const marks = STRUCTURE_OF[theme](size).filter((mark) => mark.lit && (mark.gas === true) === (which === 'gas'));
 
   /** How much gas one lit mark lays on a point: its own alpha inside it, nothing outside. */
   const markAt = (mark: StructureMark, x: number, y: number): number => {
@@ -11289,7 +11390,7 @@ export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4
 
   const at = (x: number, y: number): number => {
     // The haze under the clouds, composited the way a canvas does — 0347. Nought for six places.
-    let cover = 1 - (1 - hazeAt(theme, y, size)) * (1 - cloudsAt(clouds, x, y));
+    let cover = which === 'glow' ? 1 - (1 - hazeAt(theme, y, size)) * (1 - cloudsAt(clouds, x, y)) : 0;
     for (const mark of marks) {
       const a = markAt(mark, x, y);
       if (a > 0) cover = 1 - (1 - cover) * (1 - a);

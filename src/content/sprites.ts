@@ -952,6 +952,14 @@ export const SPRITE_KINDS = [
   'bubble',
   'bubblePop',
   /*
+    ── A BEAD OF LIGHT IN A VEIN — 0354 ─────────────────────────────────────────────────────────────
+
+    Asked for: *"Needs veins pulsing throughout the level."* The heart's pulse, travelling along the
+    vessels its sky carries: blitted where a pure function of the sim's steps and an index says
+    (`paintPulse`), sized by the beat, in fixed inks, because only The Black Heart has veins.
+  */
+  'veinBead',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -1039,6 +1047,13 @@ export const WALL_RISES = [
  * is tail and light. `drawEmber` draws to it and `tests/sky.test.ts` holds it under a bullet — 0347.
  */
 export const EMBER_HEAD = 0.34;
+
+/**
+ * A pulse bead's solid head, as a fraction of `SPRITE_EXTENT.veinBead` across: the rest is its tail
+ * of light along the vessel. `drawBead` draws to it and `tests/heart.test.ts` holds it under a
+ * bullet — 0354.
+ */
+export const BEAD_HEAD = 0.28;
 
 /**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
@@ -1733,6 +1748,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   bubble: 1.5,
   bubblePop: 1.7,
+  /*
+    ⚠️ **THE HEAD IS UNDER A BULLET AND THE TAIL IS LIGHT — 0354**, the ember's own terms. The first
+    bead was a round glow 1.4 units across and at 1080p it was a star among the stars: a point does not
+    flow. The extent is the bead with its tail along the vessel; the solid head is `BEAD_HEAD` of it,
+    held under the smallest thing that can kill the player.
+  */
+  veinBead: 4,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and

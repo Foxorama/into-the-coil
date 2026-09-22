@@ -102,8 +102,9 @@ export const PROBES = [
     guard: 'and the haze at the horizon is counted, because it is light',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    let cover = 1 - (1 - hazeAt(theme, y, size)) * (1 - cloudsAt(clouds, x, y));',
-      replace: '    let cover = cloudsAt(clouds, x, y);',
+      // Re-anchored by 0354, which reads gas-lit marks apart and so gave the line a condition.
+      find: "    let cover = which === 'glow' ? 1 - (1 - hazeAt(theme, y, size)) * (1 - cloudsAt(clouds, x, y)) : 0;",
+      replace: "    let cover = which === 'glow' ? cloudsAt(clouds, x, y) : 0;",
     },
   },
   {

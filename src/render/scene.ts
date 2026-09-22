@@ -14,6 +14,7 @@ import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { SPRITE, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
+import { trunkAt, type Veins } from '../content/veins.ts';
 import { opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
@@ -82,6 +83,12 @@ export interface SkyLayer {
    * every layer but the Mire's ground. The spots are the ones the baker drew (`POOLS_OF`).
    */
   pools?: Pools;
+  /**
+   * The veins this layer's tile carries and the pulse along them — 0354. Absent is a layer with none,
+   * which is every layer but The Black Heart's weather. The trunks are the ones the baker drew
+   * (`VEINS_OF`).
+   */
+  veins?: Veins;
 }
 
 /** The sky, back to front. Empty for a scene with none, which is what a fixture has. */
@@ -846,6 +853,9 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, t
     if (layer.pools !== undefined) {
       for (let t = 0; t < count; t++) paintBubbles(surface, view, t * span - offset, span, layer.pools, time);
     }
+    if (layer.veins !== undefined) {
+      for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time);
+    }
   }
 }
 
@@ -883,6 +893,49 @@ function paintBubbles(surface: Surface, view: View, left: number, span: number, 
       const across = surfaceAcross - up;
       const swell = popping ? 1 : 0.45 + 0.55 * (t / (1 - POP_SHARE));
       surface.blit(popping ? SPRITE.bubblePop : SPRITE.bubble, screenX(view, along, across), screenY(view, along, across), view.scale * swell);
+    }
+  }
+}
+
+/** How much of a bead's size is the beat: at rest it is the rest of it. */
+const PULSE_SWELL = 0.35;
+
+/**
+ * The light running along one tile's veins, this frame — 0354. `left` is where the tile starts, in
+ * world units in view, and a tile is `span` units along and across, centred on the lane.
+ *
+ * ⚠️ **A PURE FUNCTION OF THE SIM'S CLOCK AND AN INDEX**, as the ember is: bead `k` of a trunk is
+ * `k / beads` of a crossing ahead of bead 0, and nothing is pooled or remembered. It rides the steps
+ * and not the camera, so the heart goes on beating while the camera stops for a fight.
+ *
+ * ⚠️ **THE BEAT IS THE LANDMARK'S OWN SHAPE** (`beatAt` — two thumps and a rest), and it TRAVELS: a
+ * bead further along its vessel is later in the beat, so the thump runs down the vein rather than
+ * every bead swelling at once. One blit a bead.
+ */
+function paintPulse(surface: Surface, view: View, left: number, span: number, veins: Veins, time: number): void {
+  const { beads, period, beat } = veins.pulse;
+  for (let i = 0; i < veins.trunks.length; i++) {
+    const trunk = veins.trunks[i]!;
+    for (let k = 0; k < beads; k++) {
+      const travelled = time / period + k / beads + streakHash(i * 5.7 + 0.5);
+      const x = travelled - Math.floor(travelled);
+      const along = left + x * span;
+      if (along < -2 || along > view.alongSpan + 2) continue;
+      const across = view.acrossSpan / 2 + (trunkAt(trunk, x) - 0.5) * span;
+      const phase = time / beat - x * 0.8;
+      const swell = 1 - PULSE_SWELL + PULSE_SWELL * Math.min(1, beatAt(phase - Math.floor(phase)));
+      // Its heading, taken in SCREEN space as the ember's is, so the tail trails down the vessel.
+      const aheadAlong = along + span * 0.002;
+      const aheadAcross = view.acrossSpan / 2 + (trunkAt(trunk, x + 0.002) - 0.5) * span;
+      const sx = screenX(view, along, across);
+      const sy = screenY(view, along, across);
+      surface.blit(
+        SPRITE.veinBead,
+        sx,
+        sy,
+        view.scale * swell,
+        Math.atan2(screenY(view, aheadAlong, aheadAcross) - sy, screenX(view, aheadAlong, aheadAcross) - sx),
+      );
     }
   }
 }
