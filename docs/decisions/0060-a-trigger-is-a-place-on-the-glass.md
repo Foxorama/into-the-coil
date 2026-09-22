@@ -1,5 +1,10 @@
 # 0060 — A trigger is a place on the glass
 
+> ⚠️ **AMENDED 2026-09-23 by [0357](0357-a-trigger-is-a-button.md).** The place is a BUTTON now — a
+> disc under the thumb in the leading-low corner — and no longer the leading quarter of the glass.
+> Everything else here holds: the count is what the ship owns, the picture is drawn from the hit
+> test's own numbers, it takes no pointer events, and it is shown on a capability.
+
 **Accepted 2026-08-07.** Amends the tap strip in `src/app/touch.ts` and adds a picture of it to
 `src/app/chrome.ts`. Does not touch
 [0030](0030-input-is-actions-and-needs-no-new-layer.md)'s binding table or

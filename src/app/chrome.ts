@@ -34,9 +34,12 @@ import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
-// The strip's width, from the file that hit-tests it. One number, or the picture and the hit region
-// disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
-import { TAP_STRIP } from './touch.ts';
+// The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
+// hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
+// that replaced the strip is `docs/decisions/0357-a-trigger-is-a-button.md`.
+import { TRIGGER_BUTTON } from './touch.ts';
+// The boss's phase table, so the bar can mark where the fight turns — 0359.
+import type { BossRow } from '../content/bosses.ts';
 
 /**
  * The class prefix a screen's chrome owns.
@@ -715,15 +718,65 @@ ${each('-action-cursor')} {
   top: 0;
   left: 0;
   display: none;
-  gap: 1.2em;
+  gap: 1.5em;
   align-items: center;
-  padding: 0.7em 1em;
-  font: 600 clamp(0.8rem, 2vw, 1.05rem)/1 system-ui, sans-serif;
+  padding: 0.8em 1.1em;
+  /*
+    Read at arm's length rather than leaned into — 0360. The readout was two thirds of this and the
+    smallest text in the game while a fight is on; it is the one piece of chrome the player reads
+    without looking away from the ship.
+  */
+  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  /* A halo of the void, so the ink stays legible over a bright place's land. */
+  text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000);
   pointer-events: none;
 }
 .itc-playing-hud-shown { display: flex; }
-.itc-playing-hud-group { display: flex; gap: 0.35em; align-items: center; }
-.itc-playing-hud-icon { display: block; width: 1.4em; height: 1.4em; }
+.itc-playing-hud-group { display: flex; gap: 0.4em; align-items: center; }
+.itc-playing-hud-icon { display: block; width: 1.7em; height: 1.7em; filter: drop-shadow(0 0 0.15em var(--itc-void, #000)); }
+/*
+  ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
+
+  Decision 0359. Top centre, over the six units of lane the ship can never enter, in the ENEMY's ink
+  because the thing it measures is the enemy's — the same argument that put the wall in the player's.
+  A hollow frame and a fill, so full and empty differ in shape and not only in colour (0024). The
+  notches are the row's own phase thresholds: where the fight turns.
+
+  pointer-events: none, like everything over the playfield that is not a control.
+*/
+.itc-playing-boss {
+  position: absolute;
+  top: 0.9em;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 38%;
+  height: 0.6em;
+  display: none;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-radius: 0.4em;
+  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  filter: drop-shadow(0 0 0.2em var(--itc-void, #000));
+  pointer-events: none;
+}
+.itc-playing-boss-shown { display: block; }
+.itc-playing-boss-fill {
+  position: absolute;
+  inset: 1px;
+  border-radius: 0.3em;
+  background: currentColor;
+  transform-origin: left center;
+  opacity: 0.85;
+}
+.itc-playing-boss-notch {
+  position: absolute;
+  top: -0.45em;
+  width: 2px;
+  height: 0.35em;
+  margin-left: -1px;
+  background: currentColor;
+  opacity: 0.8;
+}
 /*
   ⚠️ A filled disc against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and a shield readout is the most tempting place in the
@@ -866,51 +919,61 @@ ${each('-action-cursor')} {
   letter-spacing: 0.06em;
 }
 /*
-  ── THE TAP STRIP, DRAWN ────────────────────────────────────────────────────────────────────────
+  ── THE TRIGGER BUTTONS, DRAWN ──────────────────────────────────────────────────────────────────
 
-  Decision 0060. Reported from play: *"how do you fire bombs on mobile? I can do one and then can't
-  fire any more."* Half of that was a dead band; this is the other half — the live one was never
-  drawn, so where to press was a guess.
+  Decision 0060, and 0357 for the shape. Reported from play: *"how do you fire bombs on mobile? I can
+  do one and then can't fire any more."* Half of that was a dead band; this is the other half — the
+  live one was never drawn, so where to press was a guess. Then: *"on mobile add a bomb button"*, and
+  the quarter-screen strip with its dashed edge became a disc under the thumb.
 
-  ⚠️ **pointer-events: none, on every part of it.** The bands are a PICTURE of where the canvas is
-  listening, not controls of their own. A real button here would take the tap away from the touch
-  source, which is also what owns not-stealing-the-drag — and the two would then disagree about what
-  a second finger means.
+  ⚠️ **pointer-events: none, on every part of it.** The buttons are a PICTURE of where the canvas is
+  listening, not controls of their own. A real button element here would take the tap away from the
+  touch source, which is also what owns not-stealing-the-drag — and the two would then disagree about
+  what a second finger means.
 
-  ⚠️ **The geometry is the tap zone's, read from the same two numbers.** TAP_STRIP is the width and
-  the band count comes from bandCount, so the picture cannot drift from the hit test.
+  ⚠️ **The geometry is the hit test's, read from the same table.** TRIGGER_BUTTON gives the disc's
+  size and its insets as fractions of the short edge, and the count comes from bandCount, so the
+  picture cannot drift from the hit test.
 
   ⚠️ No file paths anywhere in this stylesheet: the prefix guard reads every dotted token in it as a
   CSS class, so an extension fails as an unprefixed class name. Hit again while writing this block.
 */
-.itc-playing-strip {
+.itc-playing-trigger {
   position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
+  inset: 0;
   display: none;
-  flex-direction: column;
   pointer-events: none;
-  font: 600 clamp(0.7rem, 2vw, 1rem)/1 system-ui, sans-serif;
+  /*
+    ⚠️ Its own container, exactly the host's size, so cqmin below is the SHORT EDGE OF THE GLASS —
+    the same number the hit test in the touch source measures its discs against. Decision 0357.
+  */
+  container-type: size;
+  font: 600 clamp(0.8rem, 2.2vw, 1.1rem)/1 system-ui, sans-serif;
 }
-.itc-playing-strip-shown { display: flex; }
+.itc-playing-trigger-shown { display: block; }
 /*
-  A dashed edge, because a solid one reads as a wall in a game whose whole subject is where the walls
-  are. Only the leading edge is drawn: the strip's outer three sides are the screen.
+  A disc with a rim and a faint fill: the shape of a thing to press, in the player's own ink, sat
+  where a right thumb rests. Its size and its insets are the touch source's table, interpolated —
+  one description of where the button is. Its vertical place is set per button, because the buttons
+  stack up the leading edge.
 */
-.itc-playing-strip-band {
-  flex: 1 1 0;
+.itc-playing-trigger-button {
+  position: absolute;
+  right: ${TRIGGER_BUTTON.inset * 100}cqmin;
+  width: ${TRIGGER_BUTTON.size * 100}cqmin;
+  height: ${TRIGGER_BUTTON.size * 100}cqmin;
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.3em;
-  border-left: 2px dashed currentColor;
-  border-bottom: 2px dashed currentColor;
-  opacity: 0.45;
+  gap: 0.1em;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  opacity: 0.85;
 }
-.itc-playing-strip-band:last-child { border-bottom: none; }
-.itc-playing-strip-icon { display: block; width: 1.6em; height: 1.6em; }
+.itc-playing-trigger-icon { display: block; width: 1.8em; height: 1.8em; }
 @container (max-height: 460px) {
   /*
     Two columns for four controls, on the same argument the music room's three make below: a wrap
@@ -1270,17 +1333,29 @@ export interface Chrome {
   /** Press the focused control, exactly as a click would. */
   activate(): void;
   /**
-   * Draw the tap strip: one band per trigger that has a weapon behind it, in trigger order.
+   * Draw the trigger buttons: one per trigger that has a weapon behind it, in trigger order, stacked
+   * up the leading edge from the low corner.
    *
-   * ⚠️ **A PICTURE OF WHERE `src/app/touch.ts` IS LISTENING**, and nothing more — the bands take no
+   * ⚠️ **A PICTURE OF WHERE `src/app/touch.ts` IS LISTENING**, and nothing more — the buttons take no
    * pointer events, so the canvas underneath still hears every tap. Two answers to *where is the
    * bomb* would be worse than one wrong one, and a real `<button>` here would take the tap away from
    * the file that also owns not-stealing-the-drag.
    *
-   * An empty list hides it, which is what a device with no touch gets —
-   * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`.
+   * An empty list hides them, which is what a device with no touch gets —
+   * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`,
+   * `docs/decisions/0357-a-trigger-is-a-button.md`.
    */
   setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void;
+  /**
+   * Say what the end boss has left, as a fraction of what it arrived with, or a negative number for
+   * no boss on the field — `docs/decisions/0359-the-boss-has-a-health-bar.md`.
+   *
+   * Called on a change of the displayed fraction, never per frame: `src/app/frame.ts` quantises the
+   * fraction and fires only when the quantum moves, on `onHealth`'s terms. `row` is the boss whose
+   * bar it is, so the phase thresholds can be marked on it — rebuilt when the row changes, not per
+   * call.
+   */
+  setBoss(fraction: number, row: BossRow): void;
   /**
    * Say how long the shown screen has left, in whole seconds, or `null` for a screen that waits.
    *
@@ -2016,6 +2091,8 @@ export function makeChrome(
   const hud = document.createElement('div');
   hud.className = 'itc-playing-hud';
   hud.style.color = colours.player;
+  // The halo behind the ink — 0360 — in the palette's own void, so a high-contrast palette gets its own.
+  hud.style.setProperty('--itc-void', colours.space);
 
   const livesGroup = document.createElement('div');
   livesGroup.className = 'itc-playing-hud-group';
@@ -2052,16 +2129,43 @@ export function makeChrome(
     written again here — the picture and the hit test are one number, or the player presses what they
     can see and something else happens.
   */
-  const strip = document.createElement('div');
-  strip.className = 'itc-playing-strip';
-  strip.style.color = colours.player;
-  strip.style.width = String(TAP_STRIP * 100) + '%';
+  const trigger = document.createElement('div');
+  trigger.className = 'itc-playing-trigger';
+  trigger.style.color = colours.player;
   // Decorative twice over: it is a picture of a hit region, and the HUD already announces the
-  // charges. A screen reader user is not tapping a band they cannot see the edges of.
-  strip.setAttribute('aria-hidden', 'true');
-  /** One band per trigger, grown once and reused — `setHud`'s argument about churning layout. */
+  // charges. A screen reader user is not tapping a disc they cannot see the rim of.
+  trigger.setAttribute('aria-hidden', 'true');
+  /** One button per trigger, grown once and reused — `setHud`'s argument about churning layout. */
   const bands: { root: HTMLElement; icon: HTMLElement; count: HTMLElement }[] = [];
-  elements.push(strip);
+  elements.push(trigger);
+
+  /*
+    ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
+
+    Decision 0359. Asked for in play: *"add end boss health bars"*, and owed since the first boss
+    play-test — the fish's feed, the phase turns, and the forty seconds 0260 sizes a fight to were all
+    events the model resolved and the picture never mentioned (0036).
+
+    ⚠️ **In the ENEMY's ink**, on 0074's own argument about the wall: the colour says whose number it
+    is. A bar in the player's ink beside the player's shield would read as a second thing they own.
+
+    ⚠️ **Built once and mutated, never rebuilt** — the fill is a transform, which is the one property
+    that costs no layout, and the notches are rebuilt only when the row changes, which is once a fight.
+  */
+  const bossBar = document.createElement('div');
+  bossBar.className = 'itc-playing-boss';
+  bossBar.style.color = colours.enemy;
+  bossBar.style.setProperty('--itc-void', colours.space);
+  bossBar.setAttribute('role', 'progressbar');
+  bossBar.setAttribute('aria-label', 'Boss');
+  bossBar.setAttribute('aria-valuemin', '0');
+  bossBar.setAttribute('aria-valuemax', '100');
+  const bossFill = document.createElement('div');
+  bossFill.className = 'itc-playing-boss-fill';
+  bossBar.appendChild(bossFill);
+  /** The notches, grown once per row and reused. */
+  const bossNotches: HTMLElement[] = [];
+  elements.push(bossBar);
 
   /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
@@ -2075,12 +2179,27 @@ export function makeChrome(
   */
   let shownScreen: Screen | null = null;
   let focused = 0;
-  /** The faces the strip is currently built from, so it is rebuilt on a change and not per call. */
+  /** The faces the buttons are currently built from, so they are rebuilt on a change and not per call. */
   let bandFaces: number[] = [];
+  /** What the bar last said: a fraction, or negative for no boss. */
+  let bossFraction = -1;
+  /** Whose phase table the notches were cut for. */
+  let bossRowShown: BossRow | null = null;
 
-  /** Show the strip only where it is true: on the playing screen, with something behind a trigger. */
-  const paintStrip = (): void => {
-    strip.classList.toggle('itc-playing-strip-shown', shownScreen === 'playing' && bands.length > 0);
+  /** Show the buttons only where they are true: on the playing screen, with something behind a trigger. */
+  const paintTriggers = (): void => {
+    trigger.classList.toggle('itc-playing-trigger-shown', shownScreen === 'playing' && bands.length > 0);
+  };
+
+  /**
+   * Show the bar only while the simulation runs and a boss is on the field.
+   *
+   * ⚠️ **On `show`'s own terms** — the level break steps the world, so a bar that vanished for it
+   * would vanish for the beat the boss is coming apart in; and by then the frame has already said
+   * *no boss*, so what is really being held here is the bar not outliving the screen it was drawn on.
+   */
+  const paintBoss = (): void => {
+    bossBar.classList.toggle('itc-playing-boss-shown', shownScreen !== null && SCREENS[shownScreen].steps && bossFraction >= 0);
   };
 
   const paintFocus = (): void => {
@@ -2131,16 +2250,23 @@ export function makeChrome(
       */
       const same = triggers.length === bandFaces.length && triggers.every((t, i) => t.sprite === bandFaces[i]);
       if (!same) {
-        strip.replaceChildren();
+        trigger.replaceChildren();
         bands.length = 0;
-        for (const trigger of triggers) {
+        for (let i = 0; i < triggers.length; i++) {
+          const row = triggers[i]!;
           const band = document.createElement('div');
-          band.className = 'itc-playing-strip-band';
-          const icon = iconOf(trigger.sprite);
-          icon.className = 'itc-playing-strip-icon';
+          band.className = 'itc-playing-trigger-button';
+          /*
+            Stacked up the leading edge from the low corner: the first trigger — the bomb, on every
+            run — is the one under the resting thumb. The same arithmetic the hit test does, in the
+            container's own short-edge units.
+          */
+          band.style.bottom = String((TRIGGER_BUTTON.inset + i * (TRIGGER_BUTTON.size + TRIGGER_BUTTON.gap)) * 100) + 'cqmin';
+          const icon = iconOf(row.sprite);
+          icon.className = 'itc-playing-trigger-icon';
           const count = document.createElement('span');
           band.append(icon, count);
-          strip.appendChild(band);
+          trigger.appendChild(band);
           bands.push({ root: band, icon, count });
         }
         bandFaces = triggers.map((t) => t.sprite);
@@ -2150,7 +2276,36 @@ export function makeChrome(
       for (let i = 0; i < bands.length; i++) {
         bands[i]!.count.textContent = '×' + String(Math.max(0, triggers[i]?.charges ?? 0));
       }
-      paintStrip();
+      paintTriggers();
+    },
+    setBoss(fraction: number, row: BossRow): void {
+      bossFraction = fraction;
+      if (fraction >= 0) {
+        const shown = Math.min(1, fraction);
+        // A transform, so a hit costs no layout — the fill is the one thing here that moves in a fight.
+        bossFill.style.transform = 'scaleX(' + String(shown) + ')';
+        bossBar.setAttribute('aria-valuenow', String(Math.round(shown * 100)));
+        /*
+          ⚠️ **The notches are the row's phase thresholds, and they are cut once per row.** Every
+          `upTo` below one is a place the fight turns — the boss fires wider, flies differently, and
+          since 0111 sheds pieces — so the bar says where those are before they happen. The first
+          row's `upTo` is 1 and is the bar's own end, so it gets no mark.
+        */
+        if (row !== bossRowShown) {
+          bossRowShown = row;
+          for (const notch of bossNotches) notch.remove();
+          bossNotches.length = 0;
+          for (const phase of row.phases) {
+            if (phase.upTo >= 1 || phase.upTo <= 0) continue;
+            const notch = document.createElement('div');
+            notch.className = 'itc-playing-boss-notch';
+            notch.style.left = String(phase.upTo * 100) + '%';
+            bossBar.appendChild(notch);
+            bossNotches.push(notch);
+          }
+        }
+      }
+      paintBoss();
     },
     show(screen: Screen | null): void {
       /*
@@ -2175,7 +2330,8 @@ export function makeChrome(
         if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
       }
       shownScreen = screen;
-      paintStrip();
+      paintTriggers();
+      paintBoss();
       // Back to the first control every time a screen appears. A remembered position on a screen the
       // player has left is a cursor sitting somewhere nobody put it.
       focused = 0;
@@ -2244,7 +2400,8 @@ export function makeChrome(
         panels[screen]?.root.classList.toggle(prefixFor(screen) + 'face-pixel', face === 'pixel');
       }
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
-      strip.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
     },
     setCrossing(crossing: Crossing | null): void {
       const parts = panels.travel?.crossing;

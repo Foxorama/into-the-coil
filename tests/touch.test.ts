@@ -10,7 +10,10 @@ import {
   DRAG_GAIN,
   STICK_RADIUS_PX,
   STICK_DEADZONE_PX,
-  TAP_STRIP,
+  TRIGGER_BUTTON,
+  triggerRadius,
+  triggerX,
+  triggerY,
 } from '../src/app/touch.js';
 import { SHIP_SPEED } from '../src/sim/flight.js';
 
@@ -107,7 +110,7 @@ class FakeGlass {
 
 const glassAs = (g: FakeGlass): HTMLElement => g as unknown as HTMLElement;
 
-/** A point comfortably inside the steering area — the leading edge is where the tap strip is. */
+/** A point comfortably inside the steering area — the leading-low corner is where the buttons are. */
 const STEER_X = 100;
 const STEER_Y = 200;
 
@@ -285,20 +288,26 @@ describe('stick: displacement from where the finger landed', () => {
   });
 });
 
-describe('the tap strip is generated from the binding budget', () => {
-  const tapAt = (glass: FakeGlass, band: number): void => {
-    const x = glass.width * (1 - TAP_STRIP / 2);
-    const y = glass.height * ((band + 0.5) / SPECIAL_BINDINGS);
-    glass.down(x, y, 10 + band);
+/**
+ * A TRIGGER IS A BUTTON — `docs/decisions/0357-a-trigger-is-a-button.md`.
+ *
+ * Played: *"get rid of the shitty dotted line on the right hand side of the screen for the no fly
+ * zone"*, and *"on mobile add a bomb button"*. 0060's strip was the leading quarter of the glass;
+ * the trigger is a disc under the thumb now, and everything else steers.
+ */
+describe('a trigger is a button under the thumb', () => {
+  /** Tap the centre of button `band`. */
+  const tapAt = (glass: FakeGlass, band: number, id = 10 + band): void => {
+    glass.down(triggerX(glass.width, glass.height), triggerY(glass.width, glass.height, band), id);
   };
 
-  it('fires the special whose band was tapped', () => {
+  it('fires the special whose button was tapped', () => {
     const { glass, step } = rig();
     tapAt(glass, 0);
     expect(step().specials[0]).toBe(1);
   });
 
-  it('has exactly one band per binding, so a third special needs no code here', () => {
+  it('has exactly one band per binding, so a third special needs no code here — a button per band, at the ceiling', () => {
     const { glass, step } = rig();
     for (let band = 0; band < SPECIAL_BINDINGS; band++) tapAt(glass, band);
     const intent = step();
@@ -308,7 +317,7 @@ describe('the tap strip is generated from the binding budget', () => {
   it('counts two taps between steps as two, the same rule the keyboard follows', () => {
     const { glass, step } = rig();
     tapAt(glass, 0);
-    tapAt(glass, 0);
+    tapAt(glass, 0, 11);
     expect(step().specials[0]).toBe(2);
   });
 
@@ -319,13 +328,48 @@ describe('the tap strip is generated from the binding budget', () => {
     expect(step().specials[0]).toBe(0);
   });
 
-  it('a tap in the strip does not steer, and steering does not fire', () => {
+  it('a tap on the button does not steer, and steering does not fire', () => {
     const { glass, step } = rig();
     tapAt(glass, 0);
-    glass.move(glass.width * (1 - TAP_STRIP / 2) + STEP_PX, 200, 10);
+    glass.move(triggerX(glass.width, glass.height) + STEP_PX, triggerY(glass.width, glass.height, 0), 10);
     const intent = step();
     expect(intent.along).toBeCloseTo(0, 9);
     expect(intent.specials[0]).toBe(1);
+  });
+
+  it('and a tap just past the drawn rim still counts, because a thumb lands on the edge of what it aims at', () => {
+    // Outside the disc, inside `reach`. A button that heard only its own disc would be 0060's dead
+    // half again: a tap the player watched land, answered with silence.
+    const { glass, step } = rig();
+    const r = triggerRadius(glass.width, glass.height);
+    expect(TRIGGER_BUTTON.reach, 'the hit circle is no bigger than the disc, so this measures nothing').toBeGreaterThan(1.1);
+    glass.down(triggerX(glass.width, glass.height) - r * 1.1, triggerY(glass.width, glass.height, 0), 12);
+    expect(step().specials[0]).toBe(1);
+  });
+
+  it('THE ASK: where the strip was is steering now — a drag in the leading quarter, off the button, flies the ship', () => {
+    /*
+      0060 gave the leading quarter of the glass to the trigger. Played, that was a quarter of the
+      only surface the player also steers with that could not steer, with a dashed edge down it that
+      read as a wall. Sampled up the old strip's centre line, clear of the button's own reach — the
+      reach is the button's, rightly; the claim is about everything else.
+    */
+    const { glass, step } = rig();
+    const x = glass.width * (1 - 0.25 / 2);
+    const reach = triggerRadius(glass.width, glass.height) * TRIGGER_BUTTON.reach;
+    let sampled = 0;
+    for (let i = 0; i < 8; i++) {
+      const y = glass.height * ((i + 0.5) / 8);
+      if (Math.hypot(x - triggerX(glass.width, glass.height), y - triggerY(glass.width, glass.height, 0)) <= reach) continue;
+      glass.down(x, y, 50 + i);
+      glass.move(x + STEP_PX, y, 50 + i);
+      glass.up(x + STEP_PX, y, 50 + i);
+      const intent = step();
+      expect(intent.specials[0], `a tap at ${(y / glass.height).toFixed(2)} of the short edge fired a special`).toBe(0);
+      expect(intent.along, `a drag at ${(y / glass.height).toFixed(2)} of the short edge did not steer`).toBeGreaterThan(0);
+      sampled++;
+    }
+    expect(sampled, 'every sample fell on the button, so nothing was measured').toBeGreaterThan(4);
   });
 });
 
@@ -340,37 +384,45 @@ describe('the tap strip is generated from the binding budget', () => {
  * silence — a piece of the screen that swallows taps, invisibly. On a keyboard a key nobody has
  * bound costs the player nothing; on the surface they also steer with, it costs a quarter of it.
  */
-describe('the strip is divided by what the ship owns, not by what the table budgets for', () => {
-  /** Tap the middle of band `band`, on a strip split into `bands`. */
-  const tapBand = (glass: FakeGlass, band: number, bands: number): void => {
-    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * ((band + 0.5) / bands), 20 + band);
+describe('the buttons are as many as the ship owns, not as many as the table budgets for', () => {
+  /** Tap the centre of button `band`. */
+  const tapBand = (glass: FakeGlass, band: number, id: number): void => {
+    glass.down(triggerX(glass.width, glass.height), triggerY(glass.width, glass.height, band), id);
   };
 
-  it('THE REPORTED ONE: with one special owned, every tap in the strip fires it', () => {
+  it('THE REPORTED ONE: with one special owned, the one button fires it and a second button’s place steers', () => {
     /*
-      The whole strip, sampled top to bottom. At two bands and one owned special the lower half
-      reported nothing at all, which is what *"I can do one and then can't fire any more"* is.
+      At two bands and one owned special the second band reported nothing at all, which is what
+      *"I can do one and then can't fire any more"* is. On a button the same defect is a disc drawn
+      nowhere that swallows a drag started where it would be.
     */
     const glass = new FakeGlass(800, 400);
     const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => 1 })]);
     const intent = makeIntent(SPECIAL_BINDINGS);
-    for (let i = 0; i < 8; i++) {
-      glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * ((i + 0.5) / 8), 30 + i);
-    }
+    tapBand(glass, 0, 30);
     src.contribute(intent);
-    expect(intent.specials[0], 'part of the strip did nothing').toBe(8);
+    expect(intent.specials[0], 'the one button did nothing').toBe(1);
     expect(intent.specials[1], 'a slot nobody owns was asked for').toBe(0);
+
+    const x = triggerX(glass.width, glass.height);
+    const y = triggerY(glass.width, glass.height, 1);
+    glass.down(x, y, 31);
+    glass.move(x + STEP_PX, y, 31);
+    const next = makeIntent(SPECIAL_BINDINGS);
+    src.contribute(next);
+    expect(next.specials[1], 'a button nothing is behind swallowed the tap').toBe(0);
+    expect(next.along, 'the place a second button would be did not steer').toBeGreaterThan(0);
   });
 
-  it('splits into as many bands as there are triggers, and each one reaches its own', () => {
+  it('one button per trigger, and each one reaches its own', () => {
     for (let bands = 1; bands <= SPECIAL_BINDINGS; bands++) {
       const glass = new FakeGlass(800, 400);
       const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => bands })]);
       const intent = makeIntent(SPECIAL_BINDINGS);
-      for (let band = 0; band < bands; band++) tapBand(glass, band, bands);
+      for (let band = 0; band < bands; band++) tapBand(glass, band, 20 + band);
       src.contribute(intent);
       for (let band = 0; band < bands; band++) {
-        expect(intent.specials[band], `band ${band} of ${bands} did not reach its own trigger`).toBe(1);
+        expect(intent.specials[band], `button ${band} of ${bands} did not reach its own trigger`).toBe(1);
       }
     }
   });
@@ -379,28 +431,28 @@ describe('the strip is divided by what the ship owns, not by what the table budg
     // 0030: a special past the budget is owned, saved, and currently unreachable. That is a content
     // problem and it must not become an index off the end of the intent.
     expect(bandCount(SPECIAL_BINDINGS + 5)).toBe(SPECIAL_BINDINGS);
-    expect(bandCount(0), 'zero bands would divide the strip by zero').toBe(1);
+    expect(bandCount(0), 'zero buttons would leave the bomb with no place to press').toBe(1);
     expect(bandCount(-3)).toBe(1);
     expect(bandCount(Number.NaN)).toBe(1);
   });
 
   it('and asks for the count on every tap, because the arsenal grows during a run', () => {
-    // Captured once, the strip would keep the shape it had when the device was attached — which is
+    // Captured once, the glass would keep the shape it had when the device was attached — which is
     // before the run exists, so it would be the shape of an empty arsenal forever.
     const glass = new FakeGlass(800, 400);
     let owned = 1;
     const src = combineDevices([attachTouch(glassAs(glass), { scale: () => SCALE, bands: () => owned })]);
     const first = makeIntent(SPECIAL_BINDINGS);
-    // The bottom of the strip: one band means trigger 0; two means trigger 1.
-    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * 0.9, 40);
+    // The second button's place: steering with one owned, the second trigger with two.
+    tapBand(glass, 1, 40);
     src.contribute(first);
-    expect(first.specials[0]).toBe(1);
+    expect(first.specials[1], 'a button nothing is behind fired').toBe(0);
 
     owned = 2;
     const second = makeIntent(SPECIAL_BINDINGS);
-    glass.down(glass.width * (1 - TAP_STRIP / 2), glass.height * 0.9, 41);
+    tapBand(glass, 1, 41);
     src.contribute(second);
-    expect(second.specials[1], 'the strip kept the shape it had when it was attached').toBe(1);
+    expect(second.specials[1], 'the glass kept the shape it had when it was attached').toBe(1);
   });
 });
 

@@ -563,6 +563,29 @@ const BLAST_STEPS = 12;
 export const BOSS_DEATH_STEPS = 96;
 
 /**
+ * How near its forward wall, in world units, the ship has to be before the wall is drawn — 0358.
+ *
+ * ⚠️ **The mark is met, not shown.** 0074 drew the wall at all times and the player asked for it to
+ * go: *"get rid of the shitty dotted line on the right hand side of the screen for the no fly zone."*
+ * What 0074 answered — *"there was no indication of it, and I got shot a couple of times because I
+ * tried to fly forward"* — still has to be answered, so the line is drawn from the moment the ship
+ * comes within this of the wall: the player sees it arrive as they push into it, rather than either
+ * always or never. Four hulls, so it is there a few frames before the stop and not at the stop.
+ */
+export const BOUND_NEAR = 8;
+/**
+ * How long the wall stays drawn after the ship leaves it, in steps — half a second, so a dodge that
+ * brushes the wall twice in a second does not blink it.
+ */
+export const BOUND_HOLD = 30;
+/**
+ * The boss bar's resolution: the fraction is rounded UP to one part in this many, and the chrome is
+ * written only when that quantum moves — 0359. Two hundred is finer than any bar the screen can draw
+ * and coarser than a hit, so a volley of hits is one write.
+ */
+export const BOSS_BAR_STEPS = 200;
+
+/**
  * Steps between one pulse of the boss's explosion and the next.
  *
  * ⚠️ **It is what turns `BURST.boss` from a number of fragments into a number ON SCREEN**, and the
@@ -1017,6 +1040,27 @@ export interface World {
    * DOM code rather than as something that has to be cheap.
    */
   onHealth: (health: number) => void;
+  /**
+   * Steps left of the wall being drawn — 0358. Set to `BOUND_HOLD` on every step the ship is within
+   * `BOUND_NEAR` of its forward wall, counted down otherwise, and the painter is handed the mark
+   * only while it is above zero.
+   *
+   * ⚠️ **The mark and not the rule.** `src/sim/flight.ts` clamps the ship whether or not anything is
+   * drawn; this decides when the picture of that clamp is on the screen, which is 0074's *a rule
+   * the player can hit is a rule the player can see* narrowed to *while they are hitting it*.
+   */
+  boundPress: number;
+  /**
+   * What the boss's bar last said — a fraction of `bossFullHealth`, quantised to `BOSS_BAR_STEPS`,
+   * or a negative number for no end boss on the field. `shownHealth`'s argument: remembered so the
+   * chrome is written to on a change and never per frame — 0359.
+   */
+  shownBoss: number;
+  /**
+   * The boss's bar moved — a new quantum, or the bar coming or going. Fired on a change only, a few
+   * times a second at the worst, so the chrome behind it may be ordinary DOM code.
+   */
+  onBoss: (fraction: number) => void;
   /**
    * The resolved auto-fire, recomputed by the shell whenever the run's upgrade list changes.
    *
@@ -1605,6 +1649,14 @@ export class GameFrame implements Frame {
     // The cold scales the stick's ask before the ship flies on it — 0253.
     if (flying) chillShip(w);
     if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
+    /*
+      ⚠️ **THE WALL IS DRAWN WHILE IT IS MET — 0358.** The clamp above is the rule; this is when its
+      picture is on the screen. Within `BOUND_NEAR` of the wall the hold is refilled every step, and
+      away from it the hold runs down, so the mark arrives as the ship pushes in and leaves half a
+      second after it pulls back. A wreck presses nothing.
+    */
+    if (flying && PLAYER_LEAD - (w.ship.along - w.cameraAlong) <= BOUND_NEAR) w.boundPress = BOUND_HOLD;
+    else if (w.boundPress > 0) w.boundPress--;
 
     /*
       ⚠️ **A wreck does not fire and does not throw.** `askSpecials` is gated with the two weapons
@@ -1995,6 +2047,23 @@ export class GameFrame implements Frame {
       w.shownHealth = w.ship.health;
       w.onHealth(w.ship.health);
     }
+    /*
+      ⚠️ **AND THE BOSS'S BAR, ON THE SAME TERMS — 0359.** After the collisions, so the hit that
+      killed it is seen to land and the bar goes with the body in the same step. The END boss only:
+      `bossOnField` is `fight === 1`, and a mid-boss is 0247's beat inside the level rather than the
+      fight the level is. Not while it is still flying its entrance — the fight has not started and
+      the animal is untouchable (0306). Rounded UP, so a boss on its last point of health shows a
+      sliver and never an empty bar; clamped, because a fed fish (0314) can stand above what it
+      arrived with.
+    */
+    const bossShown =
+      bossOnField(w) && w.bossEntering < 0 && w.bossFullHealth > 0
+        ? Math.min(1, Math.ceil((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS) / BOSS_BAR_STEPS)
+        : -1;
+    if (bossShown !== w.shownBoss) {
+      w.shownBoss = bossShown;
+      w.onBoss(bossShown);
+    }
 
     // ⚠️ `flying &&`, or the wreck reports its own death again on every step of the beat. Nothing
     // takes health off a released ship any more, so this is the belt to that gate's braces — and it
@@ -2133,7 +2202,8 @@ export class GameFrame implements Frame {
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
     // `w.warp` — 0340: the sky at speed. Nought on every frame that is not a crossing. And the sim's own
     // clock, interpolated like everything else, for the rock a volcano throws — 0347.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.bound, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha, w.corridor);
+    // The wall only while it is met — 0358; `boundPress` is the step's answer to *is it*.
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha, w.corridor);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);

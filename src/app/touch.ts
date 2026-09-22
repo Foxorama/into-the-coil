@@ -138,7 +138,7 @@ export interface TouchOptions {
    */
   scale?: () => number;
   /**
-   * How many bands the strip is divided into — how many triggers currently have a weapon behind them.
+   * How many trigger buttons there are — how many triggers currently have a weapon behind them.
    *
    * ⚠️ **THE BUG THIS REPLACED, and it is the whole of the reported one.** The strip used to be
    * `SPECIAL_BINDINGS` bands wide unconditionally, which is a budget rather than a fact about the
@@ -326,23 +326,73 @@ function clamp1(n: number): number {
 }
 
 /**
- * The fraction of the long edge given over to tap zones, at the leading end.
+ * The trigger buttons: where a thumb fires a special, as fractions of the SHORT edge of the glass.
  *
- * The steering thumb takes the rest. In landscape that is the right-hand strip under a right thumb,
- * which is where the hand already is on a phone held in two hands.
+ * ── A BUTTON, NOT A STRIP ───────────────────────────────────────────────────────────────────────
+ *
+ * ⚠️ **`docs/decisions/0357-a-trigger-is-a-button.md`.** 0060 made the leading quarter of the glass
+ * the trigger — one band per special, a dashed edge drawn down it — and it was the honest picture of
+ * a hit region that big. Played: *"get rid of the shitty dotted line on the right hand side of the
+ * screen"*, and *"on mobile add a bomb button"*. A quarter of the only surface the player also
+ * steers with was a place the ship could not be flown from, and the edge that advertised it read as
+ * a wall. The button is a disc the size of a thumb in the leading-low corner — where a right thumb
+ * already rests on a phone held in two hands — stacked up the edge when the ship carries more than
+ * one special. Everything else on the glass steers.
+ *
+ * ⚠️ **Fractions of the SHORT edge**, because a thumb is the same size on every phone and the short
+ * edge is the one a landscape phone is short of —
+ * `docs/decisions/0049-the-chrome-is-authored-against-the-short-axis.md`. Sized against a 390px
+ * short edge: a 66px disc, an 86px hit circle, 20px in from each edge.
+ *
+ * ⚠️ **`reach` is how far past the drawn rim a tap still counts.** A thumb lands on the edge of the
+ * thing it aims at as often as on its middle, and a button that heard only its own disc would be
+ * 0060's dead half again — a tap the player watched land, answered with silence.
  */
-export const TAP_STRIP = 0.25;
+export const TRIGGER_BUTTON = {
+  /** The drawn disc's diameter. */
+  size: 0.17,
+  /** From the leading edge, and from the low edge, to the first disc's rim. */
+  inset: 0.05,
+  /** Between one disc's rim and the next one's, up the leading edge. */
+  gap: 0.05,
+  /** The hit radius, as a multiple of the drawn one. */
+  reach: 1.3,
+} as const;
 
 /**
- * How many bands the strip really has, given what the caller asked for.
+ * The drawn radius of a trigger button on a glass `width` by `height` CSS pixels, in the same pixels.
  *
- * ⚠️ **Exported, because `src/app/chrome.ts` draws exactly these bands** and two answers to *how
- * wide is a band* would be a strip whose picture and whose hit-testing disagree — which is
+ * ⚠️ **Exported with the two below, because `src/app/chrome.ts` draws exactly this disc** — one
+ * description of where the button is, or the player presses what they can see and something else
+ * happens, which is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`
+ * with the sign reversed. Three numbers rather than one object, so the hit test allocates nothing
+ * beyond the `DOMRect` the header already declares.
+ */
+export function triggerRadius(width: number, height: number): number {
+  return (TRIGGER_BUTTON.size * Math.min(width, height)) / 2;
+}
+
+/** The centre of every trigger button along the glass's long edge, from its left, in CSS pixels. */
+export function triggerX(width: number, height: number): number {
+  return width - TRIGGER_BUTTON.inset * Math.min(width, height) - triggerRadius(width, height);
+}
+
+/** The centre of trigger `band` down the glass's short edge, from its top, in CSS pixels. */
+export function triggerY(width: number, height: number, band: number): number {
+  const short = Math.min(width, height);
+  return height - TRIGGER_BUTTON.inset * short - triggerRadius(width, height) - band * (TRIGGER_BUTTON.size + TRIGGER_BUTTON.gap) * short;
+}
+
+/**
+ * How many buttons there really are, given what the caller asked for.
+ *
+ * ⚠️ **Exported, because `src/app/chrome.ts` draws exactly these buttons** and two answers to *how
+ * many are there* would be a picture and a hit test that disagree — which is
  * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with the sign
  * reversed: the player presses what they can see and something else happens.
  *
  * ⚠️ **`SPECIAL_BINDINGS` is the CEILING and no longer the answer.** That number is derived from
- * `ACTIONS` in `src/content/actions.ts` and is a budget — how many triggers exist — where the strip
+ * `ACTIONS` in `src/content/actions.ts` and is a budget — how many triggers exist — where the glass
  * needs a fact about the ship: how many of them have a weapon behind them.
  * `docs/decisions/0030-input-is-actions-and-needs-no-new-layer.md` promises a third special is one
  * table row, and that is still true: the ceiling moves and this file is not touched.
@@ -352,18 +402,30 @@ export function bandCount(want: number): number {
   return Math.max(1, Math.min(SPECIAL_BINDINGS, Math.floor(want)));
 }
 
-/** Which tap zone a pointer landed in, or −1 for the steering area. */
+/**
+ * Which trigger button a pointer landed on, or −1 for the steering area — which is everything else.
+ *
+ * The NEAREST disc within reach, so a tap between two stacked buttons goes to one of them and never
+ * to both. Nothing here allocates but the `DOMRect`.
+ */
 function tapZone(target: HTMLElement, e: PointerEvent, bands: number): number {
   if (SPECIAL_BINDINGS < 1) return -1;
   const box = target.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return -1;
 
-  // The long edge is the one the strip is measured from; the bands run across the short edge.
-  const horizontal = box.width >= box.height;
-  const alongFraction = horizontal ? (e.clientX - box.left) / box.width : (e.clientY - box.top) / box.height;
-  if (alongFraction < 1 - TAP_STRIP) return -1;
-
-  const acrossFraction = horizontal ? (e.clientY - box.top) / box.height : (e.clientX - box.left) / box.width;
-  const band = Math.floor(acrossFraction * bands);
-  return band < 0 ? 0 : band >= bands ? bands - 1 : band;
+  const px = e.clientX - box.left;
+  const py = e.clientY - box.top;
+  const dx = px - triggerX(box.width, box.height);
+  const reach = triggerRadius(box.width, box.height) * TRIGGER_BUTTON.reach;
+  let hit = -1;
+  let best = reach * reach;
+  for (let band = 0; band < bands; band++) {
+    const dy = py - triggerY(box.width, box.height, band);
+    const d = dx * dx + dy * dy;
+    if (d <= best) {
+      best = d;
+      hit = band;
+    }
+  }
+  return hit;
 }

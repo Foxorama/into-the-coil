@@ -150,6 +150,9 @@ export function inertLevel(): {
   weapon: ReturnType<typeof weaponFor>;
   shownHealth: number;
   onHealth: (health: number) => void;
+  boundPress: number;
+  shownBoss: number;
+  onBoss: (fraction: number) => void;
   onCue: (kind: CueKind) => void;
   bound: null;
   room: null;
@@ -182,6 +185,10 @@ export function inertLevel(): {
     // the frame does not report a change on its very first step.
     shownHealth: SHIPS.proof.health,
     onHealth: (): void => {},
+    // The wall is not pressed, and no boss is on the bar, until a fixture flies there — 0358, 0359.
+    boundPress: 0,
+    shownBoss: -1,
+    onBoss: (): void => {},
     // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
     // different one would say so; none does, and none should have to restate the base.
     weapon: weaponFor(SHIPS.proof, []),
@@ -499,6 +506,10 @@ export function playableWorld(
     weapon: weaponFor(shipRow, []),
     shownHealth: shipRow.health,
     onHealth: (): void => {},
+    // The wall is not pressed, and no boss is on the bar, until a test flies there — 0358, 0359.
+    boundPress: 0,
+    shownBoss: -1,
+    onBoss: (): void => {},
     onPickup: (kind: PickupKind, face: number): void => {
       taken.push(kind);
       faces.push(face);

@@ -228,7 +228,7 @@ cost, which does not exist yet.
 | **the missile is earned; a pickup reaches 6% of the lane** | [0056](decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md) |
 | **a death takes the ship, and the level carries on** | [0057](decisions/0057-a-death-does-not-rewind-the-level.md) |
 | **a boss dies loudly, and the level ends after it** | [0062](decisions/0062-a-boss-dies-loudly.md) |
-| **a trigger is a place on the glass, and it is drawn** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md) |
+| **a trigger is a place on the glass, and it is drawn — and since 0357 the place is a BUTTON under the thumb, not the leading quarter** | [0060](decisions/0060-a-trigger-is-a-place-on-the-glass.md), [0357](decisions/0357-a-trigger-is-a-button.md) |
 | **a level boundary keeps the shell; a death and a new run do not** | [0058](decisions/0058-a-level-boundary-keeps-the-shell.md) |
 | **a boss's station drifts, so a fight is still flight** | [0061](decisions/0061-a-boss-keeps-flying.md) |
 | **a level break is a respite: a screen says whether it stops the world AND whether it hides it** | [0063](decisions/0063-a-level-break-is-a-respite.md) |
@@ -245,7 +245,8 @@ cost, which does not exist yet.
 | **a style is a setting, a choice is not an action, and neither may touch the sim** | [0070](decisions/0070-a-style-is-a-setting-and-the-first-one.md) |
 | **a cue is baked and played, and it names the picture it is the twin of** | [0072](decisions/0072-a-cue-is-baked-and-played.md) |
 | **an enemy is a pilot: motion is a closed union and three of them react to the player** | [0073](decisions/0073-an-enemy-is-a-pilot.md) |
-| **the edge of the player's box is drawn, and the clamp and the mark are one number** | [0074](decisions/0074-the-box-is-drawn.md) |
+| **the edge of the player's box is drawn, and the clamp and the mark are one number — and since 0358 it is drawn only WHILE THE SHIP IS ON IT** | [0074](decisions/0074-the-box-is-drawn.md), [0358](decisions/0358-the-wall-is-drawn-while-it-is-met.md) |
+| **the end boss has a health bar, notched at its phase thresholds; the readout is sized to be read at arm's length** | [0359](decisions/0359-the-boss-has-a-health-bar.md), [0360](decisions/0360-the-readout-is-read-at-arms-length.md) |
 | **a level boundary is a change of script, not a change of scene** | [0076](decisions/0076-a-level-has-an-origin.md) |
 | **a branch starts at `main` AND the next one waits — both halves checked** | [0033](decisions/0033-a-branch-starts-at-main.md), [0075](decisions/0075-the-serialisation-is-checked.md) |
 | an intermittent guard is measuring the wrong thing | [0044](decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md) |
@@ -1025,6 +1026,27 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE INTERFACE ANSWERED FOUR ASKS IN ONE PR, AND ALL FOUR ARE OWED A PLAY — 2026-09-23
+
+⚠️ **Four decisions, one branch, on the player's own list:** *"make the interface better, add end
+boss health bars, on mobile add a bomb button, and get rid of the shitty dotted line on the right hand
+side of the screen for the no fly zone."*
+
+- [0357](decisions/0357-a-trigger-is-a-button.md) — the bomb is a disc under the thumb; the
+  quarter-screen tap strip and its dashed edge are gone, and everything else on the glass steers.
+- [0358](decisions/0358-the-wall-is-drawn-while-it-is-met.md) — 0074's wall is drawn only while the
+  ship is within four hulls of it, and for half a second after. **Not deleted**, and the decision
+  says why: 0074's own report still stands. If the reveal reads badly, the decision names the fade as
+  the next step.
+- [0359](decisions/0359-the-boss-has-a-health-bar.md) — the end boss's bar, notched at its phase
+  thresholds, in the enemy's ink. Item 4 of the boss plan, landed out of order.
+- [0360](decisions/0360-the-readout-is-read-at-arms-length.md) — the readout is a third larger with a
+  halo of the void behind it. A taste, unguarded.
+
+**What is owed is a play of each on the branch preview** — the button's size under a moving thumb, the
+wall's reveal against the *"no indication"* report, the bar over a bright place, the readout on a
+phone. Each decision's *what this leaves owed* names its own question.
+
 ### ⚠️ THE SHIP BURNS BETWEEN PLACES NOW, AND THE BURN HAS BEEN PLAYED ONCE — 2026-09-20
 
 ⚠️ **PLAYED, AND ANSWERED IN [0341](decisions/0341-the-crossing-reads-as-a-nav-plate.md):** *"level
@@ -1072,7 +1094,11 @@ the breaker rises where the fish is and never where the ship is; the adds are me
 dies in ten seconds to the shuriken; and the hit flash hides it exactly as it hid the serpent. The
 report diagnoses each against the code and the flown tables, queues the fish's four as five PRs (the
 flash and boss-health-on-screen are cross-boss), and lists every other boss's open items with the
-decision that owns each. **Read it before touching any boss.** Nothing in it is built.
+decision that owns each. **Read it before touching any boss.** Of the fish's five, the flash
+([0278](decisions/0278-the-flash-is-a-wash.md)), the breaker
+([0315](decisions/0315-the-fish-throws-a-breaker.md)) and the bar
+([0359](decisions/0359-the-boss-has-a-health-bar.md), landed out of order on the player's ask) are
+built; the fight length and the adds are not.
 
 ### ⚠️ THE BLACK HEART IS DRIVEN, AND WHAT IS OWED IS AN EAR — 2026-09-16
 
