@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0358-the-wall-is-drawn-while-it-is-met.md.
+// The breaks behind docs/decisions/0359-the-wall-is-drawn-while-it-is-met.md.
 //
 // ⚠️ Three ways for the WHEN to be wrong while the WHERE stays right: always (the line the player
 // asked to be rid of), only at the stop (the report 0074 answered), and never gone once met. 0074's
@@ -7,7 +7,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0358',
+    decision: '0359',
     suite: 'tests/bound.test.ts',
     // The mark handed to the painter on every frame again. Every other test in the suite passes,
     // because a wall drawn always is drawn while it is met.
@@ -20,7 +20,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0358',
+    decision: '0359',
     suite: 'tests/bound.test.ts',
     /*
       ⚠️ THE REPORT 0074 ANSWERED, RESTORED IN A SMALLER SHAPE: the mark shown only once the clamp is
@@ -36,7 +36,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0358',
+    decision: '0359',
     suite: 'tests/bound.test.ts',
     // The hold never run down. Met once, the wall is drawn for the rest of the level.
     broke: 'the hold never run down, so the wall once met stays drawn for the rest of the run',

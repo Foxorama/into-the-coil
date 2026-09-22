@@ -185,7 +185,7 @@ export function inertLevel(): {
     // the frame does not report a change on its very first step.
     shownHealth: SHIPS.proof.health,
     onHealth: (): void => {},
-    // The wall is not pressed, and no boss is on the bar, until a fixture flies there — 0358, 0359.
+    // The wall is not pressed, and no boss is on the bar, until a fixture flies there — 0359, 0360.
     boundPress: 0,
     shownBoss: -1,
     onBoss: (): void => {},
@@ -506,7 +506,7 @@ export function playableWorld(
     weapon: weaponFor(shipRow, []),
     shownHealth: shipRow.health,
     onHealth: (): void => {},
-    // The wall is not pressed, and no boss is on the bar, until a test flies there — 0358, 0359.
+    // The wall is not pressed, and no boss is on the bar, until a test flies there — 0359, 0360.
     boundPress: 0,
     shownBoss: -1,
     onBoss: (): void => {},

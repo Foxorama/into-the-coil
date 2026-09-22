@@ -289,7 +289,7 @@ describe('stick: displacement from where the finger landed', () => {
 });
 
 /**
- * A TRIGGER IS A BUTTON — `docs/decisions/0357-a-trigger-is-a-button.md`.
+ * A TRIGGER IS A BUTTON — `docs/decisions/0358-a-trigger-is-a-button.md`.
  *
  * Played: *"get rid of the shitty dotted line on the right hand side of the screen for the no fly
  * zone"*, and *"on mobile add a bomb button"*. 0060's strip was the leading quarter of the glass;

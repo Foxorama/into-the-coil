@@ -12,7 +12,7 @@ import { playableWorld } from './world.ts';
 
 /**
  * THE EDGE OF THE PLAYER'S BOX, DRAWN — `docs/decisions/0074-the-box-is-drawn.md` — AND DRAWN ONLY
- * WHILE IT IS MET — `docs/decisions/0358-the-wall-is-drawn-while-it-is-met.md`.
+ * WHILE IT IS MET — `docs/decisions/0359-the-wall-is-drawn-while-it-is-met.md`.
  *
  * Reported from play: *"the hard block on the player movement was a problem because there was no
  * indication of it, and I got shot a couple of times because I tried to fly forward on the screen to
@@ -126,7 +126,7 @@ describe('the wall the ship meets is the line that is drawn', () => {
 });
 
 /**
- * THE WALL IS DRAWN WHILE IT IS MET — `docs/decisions/0358-the-wall-is-drawn-while-it-is-met.md`.
+ * THE WALL IS DRAWN WHILE IT IS MET — `docs/decisions/0359-the-wall-is-drawn-while-it-is-met.md`.
  *
  * 0074 drew the wall at all times, and the player asked for the line to go. What 0074 answered still
  * has to be answered: the wall is invisible until the ship is nearly on it, then drawn from a few
@@ -248,7 +248,7 @@ describe('what the boundary costs the frame', () => {
       tiles across the lane, and `alongSpan` in place of `acrossSpan` makes the line a different
       length on a phone and an ultrawide with nothing looking broken on either.
 
-      Counted with the ship pressed against the wall, because since 0358 that is the only time there
+      Counted with the ship pressed against the wall, because since 0359 that is the only time there
       is anything to count. The camera positions are belt and braces rather than the subject.
     */
     const counts = new Set<number>();

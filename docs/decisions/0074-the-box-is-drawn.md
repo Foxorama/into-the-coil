@@ -1,6 +1,6 @@
 # 0074 — The box is drawn
 
-> ⚠️ **AMENDED 2026-09-23 by [0358](0358-the-wall-is-drawn-while-it-is-met.md).** The mark is drawn
+> ⚠️ **AMENDED 2026-09-23 by [0359](0359-the-wall-is-drawn-while-it-is-met.md).** The mark is drawn
 > only while the ship is within a few hulls of the wall, and for half a second after it leaves, and
 > no longer at all times. The rule below holds — *a rule the player can hit is a rule the player can
 > see* — narrowed to *while they are hitting it*; the mark, its ink, its dash, its place behind every

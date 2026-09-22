@@ -330,7 +330,7 @@ function clamp1(n: number): number {
  *
  * ── A BUTTON, NOT A STRIP ───────────────────────────────────────────────────────────────────────
  *
- * ⚠️ **`docs/decisions/0357-a-trigger-is-a-button.md`.** 0060 made the leading quarter of the glass
+ * ⚠️ **`docs/decisions/0358-a-trigger-is-a-button.md`.** 0060 made the leading quarter of the glass
  * the trigger — one band per special, a dashed edge drawn down it — and it was the honest picture of
  * a hit region that big. Played: *"get rid of the shitty dotted line on the right hand side of the
  * screen"*, and *"on mobile add a bomb button"*. A quarter of the only surface the player also

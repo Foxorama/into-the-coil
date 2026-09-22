@@ -1,4 +1,4 @@
-# 0357 — A trigger is a button
+# 0358 — A trigger is a button
 
 **Accepted 2026-09-23.** **Amends [0060](0060-a-trigger-is-a-place-on-the-glass.md)** by one shape:
 the place on the glass is a disc under the thumb, not the leading quarter of the screen. Everything
@@ -13,7 +13,7 @@ own numbers, it takes no pointer events, and it is shown on a capability.
 > zone?"*
 
 The second sentence is two lines at once. On every device it is the wall 0074 drew —
-[0358](0358-the-wall-is-drawn-while-it-is-met.md) answers that. On a device with touch it is also the
+[0359](0359-the-wall-is-drawn-while-it-is-met.md) answers that. On a device with touch it is also the
 dashed edge 0060 drew down the tap strip, a quarter of the screen in, and a quarter of the glass the
 ship could not be flown from. This decision answers that one.
 
@@ -74,7 +74,7 @@ the disc is wider than a fingertip, 44px, on the glass it is drawn on.
 
 ## Confirmed, not assumed
 
-Probes in `scripts/probes/0357-button.mjs`, and 0060's six re-anchored on the button.
+Probes in `scripts/probes/0358-button.mjs`, and 0060's six re-anchored on the button.
 
 | broken on purpose | went red |
 |---|---|

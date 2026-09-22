@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0359-the-boss-has-a-health-bar.md.
+// The breaks behind docs/decisions/0360-the-boss-has-a-health-bar.md.
 //
 // ⚠️ The bar is a seam — a remembered fraction, fired on a change — and every way it goes wrong is
 // a way `onHealth` could have gone wrong too: the wrong body, an event that never fires, a rounding
@@ -7,7 +7,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0359',
+    decision: '0360',
     suite: 'tests/boss-bar.test.ts',
     /*
       ⚠️ THE MID-BOSS GIVEN THE BAR. `bossPool.size > 0` is the obvious test for *a boss is on the
@@ -23,7 +23,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0359',
+    decision: '0360',
     suite: 'tests/boss-bar.test.ts',
     // The going never said. The bar stands over an empty field until the next fight overwrites it.
     broke: 'the bar left standing when the boss died, until the next fight overwrote it',
@@ -35,7 +35,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0359',
+    decision: '0360',
     suite: 'tests/boss-bar.test.ts',
     // Rounded down: a boss on its last point of health shows an empty bar and goes on firing.
     broke: 'rounded down, so a boss on its last point of health shows an empty bar',
@@ -47,7 +47,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0359',
+    decision: '0360',
     suite: 'tests/boss-bar.test.ts',
     /*
       ⚠️ THE DOM IN THE HOT PATH. Written whenever a boss is on the field rather than when the

@@ -36,9 +36,9 @@ import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
-// that replaced the strip is `docs/decisions/0357-a-trigger-is-a-button.md`.
+// that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
 import { TRIGGER_BUTTON } from './touch.ts';
-// The boss's phase table, so the bar can mark where the fight turns — 0359.
+// The boss's phase table, so the bar can mark where the fight turns — 0360.
 import type { BossRow } from '../content/bosses.ts';
 
 /**
@@ -722,7 +722,7 @@ ${each('-action-cursor')} {
   align-items: center;
   padding: 0.8em 1.1em;
   /*
-    Read at arm's length rather than leaned into — 0360. The readout was two thirds of this and the
+    Read at arm's length rather than leaned into — 0361. The readout was two thirds of this and the
     smallest text in the game while a fight is on; it is the one piece of chrome the player reads
     without looking away from the ship.
   */
@@ -737,7 +737,7 @@ ${each('-action-cursor')} {
 /*
   ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
 
-  Decision 0359. Top centre, over the six units of lane the ship can never enter, in the ENEMY's ink
+  Decision 0360. Top centre, over the six units of lane the ship can never enter, in the ENEMY's ink
   because the thing it measures is the enemy's — the same argument that put the wall in the player's.
   A hollow frame and a fill, so full and empty differ in shape and not only in colour (0024). The
   notches are the row's own phase thresholds: where the fight turns.
@@ -921,7 +921,7 @@ ${each('-action-cursor')} {
 /*
   ── THE TRIGGER BUTTONS, DRAWN ──────────────────────────────────────────────────────────────────
 
-  Decision 0060, and 0357 for the shape. Reported from play: *"how do you fire bombs on mobile? I can
+  Decision 0060, and 0358 for the shape. Reported from play: *"how do you fire bombs on mobile? I can
   do one and then can't fire any more."* Half of that was a dead band; this is the other half — the
   live one was never drawn, so where to press was a guess. Then: *"on mobile add a bomb button"*, and
   the quarter-screen strip with its dashed edge became a disc under the thumb.
@@ -945,7 +945,7 @@ ${each('-action-cursor')} {
   pointer-events: none;
   /*
     ⚠️ Its own container, exactly the host's size, so cqmin below is the SHORT EDGE OF THE GLASS —
-    the same number the hit test in the touch source measures its discs against. Decision 0357.
+    the same number the hit test in the touch source measures its discs against. Decision 0358.
   */
   container-type: size;
   font: 600 clamp(0.8rem, 2.2vw, 1.1rem)/1 system-ui, sans-serif;
@@ -1343,12 +1343,12 @@ export interface Chrome {
    *
    * An empty list hides them, which is what a device with no touch gets —
    * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`,
-   * `docs/decisions/0357-a-trigger-is-a-button.md`.
+   * `docs/decisions/0358-a-trigger-is-a-button.md`.
    */
   setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void;
   /**
    * Say what the end boss has left, as a fraction of what it arrived with, or a negative number for
-   * no boss on the field — `docs/decisions/0359-the-boss-has-a-health-bar.md`.
+   * no boss on the field — `docs/decisions/0360-the-boss-has-a-health-bar.md`.
    *
    * Called on a change of the displayed fraction, never per frame: `src/app/frame.ts` quantises the
    * fraction and fires only when the quantum moves, on `onHealth`'s terms. `row` is the boss whose
@@ -2091,7 +2091,7 @@ export function makeChrome(
   const hud = document.createElement('div');
   hud.className = 'itc-playing-hud';
   hud.style.color = colours.player;
-  // The halo behind the ink — 0360 — in the palette's own void, so a high-contrast palette gets its own.
+  // The halo behind the ink — 0361 — in the palette's own void, so a high-contrast palette gets its own.
   hud.style.setProperty('--itc-void', colours.space);
 
   const livesGroup = document.createElement('div');
@@ -2142,7 +2142,7 @@ export function makeChrome(
   /*
     ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
 
-    Decision 0359. Asked for in play: *"add end boss health bars"*, and owed since the first boss
+    Decision 0360. Asked for in play: *"add end boss health bars"*, and owed since the first boss
     play-test — the fish's feed, the phase turns, and the forty seconds 0260 sizes a fight to were all
     events the model resolved and the picture never mentioned (0036).
 

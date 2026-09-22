@@ -1,4 +1,4 @@
-# 0358 — The wall is drawn while it is met
+# 0359 — The wall is drawn while it is met
 
 **Accepted 2026-09-23.** **Amends [0074](0074-the-box-is-drawn.md)** by one word: the mark of the
 player's forward wall is drawn *while the ship is against it*, and no longer at all times. The mark,
@@ -57,7 +57,7 @@ can move without the guard becoming a copy of it.
 
 ## Confirmed, not assumed
 
-Probes in `scripts/probes/0358-bound-met.mjs`; 0074's four still hold the WHERE and still fire.
+Probes in `scripts/probes/0359-bound-met.mjs`; 0074's four still hold the WHERE and still fire.
 
 | broken on purpose | went red |
 |---|---|

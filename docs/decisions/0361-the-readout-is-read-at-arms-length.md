@@ -1,4 +1,4 @@
-# 0360 — The readout is read at arm's length
+# 0361 — The readout is read at arm's length
 
 **Accepted 2026-09-23.** A taste, on [0192](0192-a-guard-holds-an-invariant.md)'s terms: no guard,
 because there is no change to the content that would redden one and be wrong. **Extends
@@ -50,7 +50,7 @@ its numbers in words, and draws one pip per shell the tier allows
 over the playfield; the halo does the same job for legibility and hides nothing.
 
 **It does not move the readout.** Top left is 0045's row and the boss bar
-([0359](0359-the-boss-has-a-health-bar.md)) now sits at the top centre beside it, so the whole top edge
+([0360](0360-the-boss-has-a-health-bar.md)) now sits at the top centre beside it, so the whole top edge
 reads as one line of chrome.
 
 ## What this leaves owed

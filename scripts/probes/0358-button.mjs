@@ -1,4 +1,4 @@
-// The breaks behind docs/decisions/0357-a-trigger-is-a-button.md.
+// The breaks behind docs/decisions/0358-a-trigger-is-a-button.md.
 //
 // ⚠️ The strip and the button are the same mechanism with a different shape, so what can go wrong
 // is the SHAPE: the hit region growing back into the quarter it used to be, the hit circle shrinking
@@ -8,7 +8,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0357',
+    decision: '0358',
     suite: 'tests/touch.test.ts',
     /*
       ⚠️ THE ASK, REVERSED: the leading quarter of the glass made the trigger again. Every drag that
@@ -24,7 +24,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0357',
+    decision: '0358',
     suite: 'tests/touch.test.ts',
     // The hit circle shrunk to the drawn disc. A thumb on the rim is answered with silence, which is
     // 0060's dead half in a smaller shape.
@@ -37,7 +37,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0357',
+    decision: '0358',
     suite: 'tests/hud.browser.test.ts',
     /*
       ⚠️ THE PICTURE BESIDE THE HIT TEST, which is the drift one description exists to prevent: the

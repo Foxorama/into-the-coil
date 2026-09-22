@@ -1,4 +1,4 @@
-# 0359 — The boss has a health bar
+# 0360 — The boss has a health bar
 
 **Accepted 2026-09-23.** Item 4 of
 [`the-bosses-planned`](../../reports/the-bosses-planned-2026-09-16.md), *"boss health on the screen —
@@ -71,7 +71,7 @@ which is the one absolute the painter holds and the chrome inherits.
 
 ## Confirmed, not assumed
 
-Probes in `scripts/probes/0359-boss-bar.mjs`, driven through the real frame with the real fights.
+Probes in `scripts/probes/0360-boss-bar.mjs`, driven through the real frame with the real fights.
 
 | broken on purpose | went red |
 |---|---|

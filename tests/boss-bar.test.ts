@@ -4,7 +4,7 @@ import type { LevelRow } from '../src/content/levels.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /**
- * THE BOSS HAS A HEALTH BAR — `docs/decisions/0359-the-boss-has-a-health-bar.md`.
+ * THE BOSS HAS A HEALTH BAR — `docs/decisions/0360-the-boss-has-a-health-bar.md`.
  *
  * Asked for in play: *"add end boss health bars."* Owed since the first boss play-test
  * (`reports/the-bosses-planned-2026-09-16.md`, item 4): the fish's feed, the phase turns and the forty
@@ -62,7 +62,7 @@ function untilTheEndBossArrives(world: Fixture, frame: GameFrame, said: number[]
   expect(world.fight === 1 && world.bossPool.size > 0 && world.bossEntering < 0, 'the end boss never arrived').toBe(true);
 }
 
-describe('0359 — the boss has a health bar', () => {
+describe('0360 — the boss has a health bar', () => {
   it('THE ASK: the bar comes up full when the end boss has arrived, follows it down, and goes with the body', () => {
     const { world } = playableWorld(TWO_FIGHTS);
     const frame = new GameFrame(world);

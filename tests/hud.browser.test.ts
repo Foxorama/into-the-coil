@@ -134,7 +134,7 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
  *
  * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. Reported from play: *"how do you fire
  * bombs on mobile? I can do one and then can't fire any more."* Then
- * `docs/decisions/0357-a-trigger-is-a-button.md`: *"on mobile add a bomb button"*, and the strip
+ * `docs/decisions/0358-a-trigger-is-a-button.md`: *"on mobile add a bomb button"*, and the strip
  * that was the leading quarter of the glass became a disc under the thumb.
  *
  * ⚠️ **The half that has to be a browser test is that the button is DRAWN WHERE THE TAP IS HEARD.**
@@ -205,7 +205,7 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
     expect(Math.abs(b.cy - triggerY(g.canvas.width, g.canvas.height, 0)), 'the button is not drawn where the tap is heard, across the glass').toBeLessThan(2);
     expect(Math.abs(b.width - 2 * r), 'the disc is not the size the hit test listens on').toBeLessThan(2);
     expect(Math.abs(b.height - 2 * r), 'the disc is not round').toBeLessThan(2);
-    // And it is a thumb's size in the player's own pixels, not a sliver: 0357's claim, as the player has it.
+    // And it is a thumb's size in the player's own pixels, not a sliver: 0358's claim, as the player has it.
     expect(b.width, 'the button is smaller than a fingertip').toBeGreaterThan(44);
     await page.context().close();
   });

@@ -871,7 +871,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     landmarks: [],
     // The picture of the wall the ship meets going forward — 0074. Drawn only while the ship is
-    // against it since 0358: the frame holds `boundPress` and hands the painter `null` the rest of
+    // against it since 0359: the frame holds `boundPress` and hands the painter `null` the rest of
     // the time, so what is fixed here is WHAT the mark is and the frame says WHEN.
     bound: BOUND,
     // No room until a level's script has one — 0335. `beginScript` lays it, and a title screen has
@@ -1051,9 +1051,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownHealth: shipRow.health,
     // Replaced below, once the chrome exists.
     onHealth: (): void => {},
-    // The wall is not being pressed at mount — 0358.
+    // The wall is not being pressed at mount — 0359.
     boundPress: 0,
-    // No boss on the field at mount, and replaced below with the chrome — 0359.
+    // No boss on the field at mount, and replaced below with the chrome — 0360.
     shownBoss: -1,
     onBoss: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
@@ -1221,7 +1221,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const touchable = navigator.maxTouchPoints > 0;
 
   /**
-   * What the trigger buttons draw: one per trigger that has a weapon behind it — 0060, and 0357 for
+   * What the trigger buttons draw: one per trigger that has a weapon behind it — 0060, and 0358 for
    * the shape.
    *
    * ⚠️ **The same count the hit test uses**, through `bandCount`, so the picture cannot claim a band
@@ -2488,7 +2488,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onHealth = syncHud;
   /*
-    The boss's bar — 0359. The frame hands over a quantised fraction, on a change only; the ROW is
+    The boss's bar — 0360. The frame hands over a quantised fraction, on a change only; the ROW is
     read here rather than passed, because the frame may not allocate and the chrome wants the phase
     table once per fight, not a number per step. `bossRow` is the current fight's by the time the
     end boss is on the field, which is the only time the fraction is not negative.
