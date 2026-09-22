@@ -284,6 +284,9 @@ describe('every tier is harder than the one before it', () => {
       // holds: `round(base × crowd)` cannot fall as long as `crowd` cannot.
       expect(b.crowd, `${harder} sends less than ${easier}`).toBeGreaterThanOrEqual(a.crowd);
       expect(b.lives, `${harder} is more forgiving than ${easier}`).toBeLessThanOrEqual(a.lives);
+      // 0355: the shell is two counts on the run, and a harder tier opens on no more and carries no more.
+      expect(b.shellOpen, `${harder} opens a life on more shields than ${easier}`).toBeLessThanOrEqual(a.shellOpen);
+      expect(b.shellCap, `${harder} may carry more shields than ${easier}`).toBeLessThanOrEqual(a.shellCap);
     }
   });
 
@@ -301,7 +304,9 @@ describe('every tier is harder than the one before it', () => {
         b.shotSpeed !== a.shotSpeed ||
         b.aggression !== a.aggression ||
         b.crowd !== a.crowd ||
-        b.lives !== a.lives;
+        b.lives !== a.lives ||
+        b.shellOpen !== a.shellOpen ||
+        b.shellCap !== a.shellCap;
       expect(moved, `${harder} plays exactly like ${easier}`).toBe(true);
     }
   });

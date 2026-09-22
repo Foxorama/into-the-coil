@@ -10,6 +10,7 @@ import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { SPECIALS } from '../src/content/specials.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 
 /**
  * A PAD DRIVING THE REAL PAGE, AND A SCREEN THAT EXPIRES BY ITSELF.
@@ -240,7 +241,15 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
       hook beside it is the shape of thing that later turns out to be the only tested path.
     */
     const page = await open();
-    await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
+    /*
+      ⚠️ **The tier with the fewest lives, chosen by the count** — `tests/continue.browser.test.ts`'s
+      own argument. This pressed the first tier until 0355 opened every Legendary life on three
+      shields, which made its five lives twenty hits and ran past the wait.
+    */
+    const quickest = DIFFICULTY_KINDS.reduce((fewest, kind) =>
+      DIFFICULTIES[kind].lives < DIFFICULTIES[fewest].lives ? kind : fewest,
+    );
+    await page.locator('.' + prefixFor('title') + 'action').nth(DIFFICULTY_KINDS.indexOf(quickest)).click();
     await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
     // Full forward on the stick: the ship flies up-lane into everything the level sends, which
     // spends its lives on contact damage without needing to aim at anything.

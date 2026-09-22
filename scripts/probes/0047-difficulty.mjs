@@ -64,8 +64,9 @@ export const PROBES = [
     guard: 'multiplies nothing at all',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: "    title: 'Legendary Pilot',\n    hint: 'The gentlest way in',\n    lives: 5,\n    toughness: 1,",
-      replace: "    title: 'Legendary Pilot',\n    hint: 'The gentlest way in',\n    lives: 5,\n    toughness: 0.9,",
+      // ⚠️ Re-anchored by 0355, which put the row's two shell counts between `lives` and `toughness`.
+      find: "    shellOpen: 3,\n    shellCap: 3,\n    toughness: 1,",
+      replace: "    shellOpen: 3,\n    shellCap: 3,\n    toughness: 0.9,",
     },
   },
   {

@@ -163,8 +163,9 @@ export const PROBES = [
     guard: 'draws one pip per shield the ship can carry',
     edit: {
       path: 'src/app/mount.ts',
+      // ⚠️ Re-anchored by 0355, which sizes the row by the tier's cap rather than by `MAX_SHIELDS`.
       find:
-        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));',
+        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, chargesOf(state.run.arsenal));',
       replace:
         '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health, chargesOf(state.run.arsenal));',
     },

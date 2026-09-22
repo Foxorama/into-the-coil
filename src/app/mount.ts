@@ -54,7 +54,7 @@ import {
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { AUTHORED, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
@@ -76,7 +76,7 @@ import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../content/ships.ts';
+import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -87,6 +87,7 @@ import {
   launchSpecial,
   respawn,
   scatterUpgrades,
+  takeShield,
   wearHull,
   type World,
 } from './frame.ts';
@@ -1005,8 +1006,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       exactly one thing: the still field behind the title screen. It is scenery — nothing on it can
       hurt anybody, because the simulation is not stepping — and scaling scenery by a tier the player
       has not chosen yet would be the game answering a question before it was asked.
+
+      ⚠️ **`AUTHORED` and not the easiest tier, since 0355**, which is the same argument finishing
+      itself: the easiest tier now opens a life on three shields, and the ship behind the title would
+      have worn a shell the player had not chosen either.
     */
-    difficulty: DIFFICULTIES[DIFFICULTY_KINDS[0]!],
+    difficulty: AUTHORED,
     bossFullHealth: bossRow.health,
     /*
       ⚠️ The KEYBOARD listens on `window`, not on the canvas. A canvas is not focusable, so a keydown
@@ -1187,9 +1192,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **The pips are SHIELDS now, not health**, and the two stopped being the same number when the
    * hull became one hit (0050). The conversion is `shieldsOf`, which is also what the shell around
    * the ship is built from — so the row of pips and the ring of marks cannot disagree.
+   *
+   * ⚠️ **As many sockets as the TIER lets the ship carry, since 0355** — three on the gentle two and
+   * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(state.run.arsenal));
+    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, chargesOf(state.run.arsenal));
     chrome.setTriggers(triggers());
   };
 
@@ -2704,9 +2712,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ship's `health`, which is the field the collision already moves. A copy in the reducer would be
       a second answer that only the pickup ever updated.
 
-      ⚠️ **Capped here.** `MAX_SHIELDS` is the shell the player can read at a glance, and a fourth
-      mark would have nowhere to be drawn — `src/content/ships.ts`.
-    */ else if (effect === 'shield') world.ship.health = Math.min(world.ship.health + 1, fullHealthFor(shipRow));
+      ⚠️ **Capped by the TIER, in `takeShield`, since 0355.** `MAX_SHIELDS` is the most the readout
+      can draw and the tier's `shellCap` is what the pilot may wear under it — none on Burn.
+    */ else if (effect === 'shield') takeShield(world);
     /*
       ⚠️ **ONE ARM PER UPGRADE KIND, since 0233, because each names its own kind of face.** This
       was one `isUpgrade(kind)` arm dispatching the pickup's name; an `upgraded` action now says

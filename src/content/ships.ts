@@ -161,6 +161,11 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
  * `src/content/ships.ts` keeps one row: a second ship that carried four shields would be a
  * difference the player can feel, and authoring it before there is a second ship is inventing a
  * roster to satisfy a shape. Moving it to the row later changes no caller.
+ *
+ * ⚠️ **THE CEILING, SINCE 0355, AND NOT THE CAP.** What a pilot may carry is the tier's —
+ * `shellCap` on `src/content/difficulty.ts`'s row, three on the gentle two and none on Burn — and this
+ * is the most any tier may ask for: the size of the shell pool in `src/app/mount.ts` and the most
+ * pips the readout grows. `docs/decisions/0355-a-tier-opens-on-a-shell.md`.
  */
 export const MAX_SHIELDS = 3;
 
@@ -177,9 +182,20 @@ export function shieldsOf(ship: ShipRow, health: number): number {
   return Math.max(0, health - ship.health);
 }
 
-/** The most health a ship may reach: its hull, plus a full shell. */
-export function fullHealthFor(ship: ShipRow): number {
-  return ship.health + MAX_SHIELDS;
+/**
+ * The most health a ship may reach on a tier: its hull, plus the full shell that tier lets it carry.
+ *
+ * ⚠️ **The tier is an argument rather than read off `MAX_SHIELDS`** — 0355. On Burn the full shell is
+ * none, so a shield that somehow reached the ship there adds nothing, which is the belt beside the
+ * mid-boss withholding it.
+ */
+export function fullHealthFor(ship: ShipRow, tier: { readonly shellCap: number }): number {
+  return ship.health + tier.shellCap;
+}
+
+/** The health a life opens with on a tier: its hull, plus the shell that tier opens every life on. */
+export function openingHealthFor(ship: ShipRow, tier: { readonly shellOpen: number }): number {
+  return ship.health + tier.shellOpen;
 }
 
 /**

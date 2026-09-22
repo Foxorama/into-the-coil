@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { TAP_STRIP } from '../src/app/touch.ts';
 
 /**
@@ -259,23 +260,34 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.context().close();
   });
 
-  it('draws one pip per shield the ship can carry, and a fresh life carries none', async () => {
+  it('draws one pip per shield the ship can carry on its tier, and a fresh life lights the tier’s shell', async () => {
     /*
       ⚠️ **THE PIPS CHANGED MEANING AND THE COUNT CHANGED WITH THEM.** They were one per point of the
       ship's health, when a ship had five; the hull is one hit now and the row is the SHELL — see
-      decision 0050. A life therefore opens with three EMPTY sockets rather than a full bar, which is
-      the honest picture: nothing stands between this ship and the next thing that touches it until
-      the player has flown for a shield.
+      decision 0050.
+
+      ⚠️ **AND SINCE 0355 THE ROW IS THE TIER'S.** Pressed on every tier's own button, in the order
+      `src/state/screens.ts` builds them: the sockets SEEN are the ones the tier lets the ship carry —
+      three and three and none — and the ones LIT are what its life opens with, so a Legendary life
+      opens full and a Savior one opens on three empty sockets, as every life did before. Counted as
+      the player sees them: a socket hidden by the stylesheet is not a socket.
     */
-    const page = await open();
-    await page.click('.' + prefixFor('title') + 'action');
-    await page.waitForTimeout(200);
-    const pips = await page.evaluate(() =>
-      [...document.querySelectorAll('.itc-playing-hud-pip')].map((el) => el.classList.contains('itc-playing-hud-spent')),
-    );
-    expect(pips.length, 'the pip row is not the shell the ship can carry').toBe(MAX_SHIELDS);
-    expect(pips.every((spent) => spent), 'a fresh life opens already shielded').toBe(true);
-    await page.context().close();
+    for (const [index, tier] of DIFFICULTY_KINDS.entries()) {
+      const row = DIFFICULTIES[tier];
+      const page = await open();
+      await page.locator('.' + prefixFor('title') + 'action').nth(index).click();
+      await page.waitForTimeout(200);
+      const pips = await page.evaluate(() =>
+        [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-pip')]
+          .filter((el) => el.offsetParent !== null)
+          .map((el) => el.classList.contains('itc-playing-hud-spent')),
+      );
+      expect(pips.length, `the pip row on ${tier} is not the shell the tier lets the ship carry`).toBe(row.shellCap);
+      expect(pips.filter((spent) => !spent).length, `a fresh ${tier} life does not light the shell it opens with`).toBe(
+        row.shellOpen,
+      );
+      await page.context().close();
+    }
   });
 
   it('follows the run down as it is spent, and shows a spent pip as EMPTY', async () => {
@@ -298,7 +310,10 @@ describe.runIf(chromePath)('the in-game readout', () => {
       is what makes the difference survive a palette swap.
     */
     const page = await open();
-    await page.click('.' + prefixFor('title') + 'action');
+    // ⚠️ The first tier whose life opens on EMPTY sockets, by the row rather than by name — since 0355
+    // a Legendary life opens full, so nothing on it would be spent to compare against.
+    const empty = DIFFICULTY_KINDS.findIndex((k) => DIFFICULTIES[k].shellOpen === 0 && DIFFICULTIES[k].shellCap > 0);
+    await page.locator('.' + prefixFor('title') + 'action').nth(empty).click();
     await page.waitForTimeout(200);
     /*
       ⚠️ **BOTH PIP STATES ARE PUT ON SCREEN BY THE CHROME'S OWN CLASS, and that is deliberate.** A

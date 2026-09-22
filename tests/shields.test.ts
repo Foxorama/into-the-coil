@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
-import { GameFrame, advanceLevel, respawn, startLevel, type World } from '../src/app/frame.ts';
+import { GameFrame, advanceLevel, respawn, startLevel, takeShield, type World } from '../src/app/frame.ts';
 import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import {
   PICKUPS,
@@ -113,11 +113,12 @@ describe('the hull is one hit', () => {
 
   it('cannot be handed a fourth shield', () => {
     // The cap is the readout's, not the balance's: the HUD draws a pip per shield and the ship wears
-    // a mark per shield, so a fourth would have nowhere to be — `src/content/ships.ts`.
-    const cap = fullHealthFor(SHIPS.proof);
-    let health = SHIPS.proof.health;
-    for (let i = 0; i < MAX_SHIELDS + 3; i++) health = Math.min(health + 1, cap);
-    expect(shieldsOf(SHIPS.proof, health), 'the cap let a fourth shield on').toBe(MAX_SHIELDS);
+    // a mark per shield, so a fourth would have nowhere to be — `src/content/ships.ts`. Taken the way
+    // the pickup takes it since 0355, which moved the cap onto the tier; `tests/tier-shell.test.ts`
+    // walks every tier, and this is the baseline's full three.
+    const { world } = quietWorld();
+    for (let i = 0; i < MAX_SHIELDS + 3; i++) takeShield(world);
+    expect(shieldsOf(SHIPS.proof, world.ship.health), 'the cap let a fourth shield on').toBe(MAX_SHIELDS);
   });
 });
 
@@ -404,7 +405,7 @@ describe('a level boundary keeps the shell, and a death does not', () => {
     giveShields(world, MAX_SHIELDS);
     advanceLevel(world, NO_LEVEL, 1);
     expect(world.ship.health, 'the boundary handed the ship more health than it has room for').toBeLessThanOrEqual(
-      fullHealthFor(world.shipRow),
+      fullHealthFor(world.shipRow, world.difficulty),
     );
   });
 });
