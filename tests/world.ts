@@ -13,7 +13,7 @@
  */
 
 import type { CueKind } from '../src/content/cues.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
+import { AUTHORED, DIFFICULTIES, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { BOSSES } from '../src/content/bosses.ts';
@@ -285,10 +285,16 @@ class NullSurface implements Surface {
  * `src/app/sound.ts`, and a fixture that made a noise would be a fixture that needed a browser. This
  * is how `tests/sound.test.ts` asks the real frame *what did the player hear* —
  * `docs/decisions/0072-a-cue-is-baked-and-played.md`.
+ *
+ * ⚠️ **With no tier named it stands on `AUTHORED`, the content multiplied by nothing, and it used to
+ * stand on the easiest tier** — the same numbers until
+ * `docs/decisions/0355-a-tier-opens-on-a-shell.md` opened a Legendary life on three shields. A default
+ * that moved with the button would have armoured the ship under every guard in the suite that names
+ * no tier. A fixture that means a TIER names it.
  */
 export function playableWorld(
   level: LevelRow,
-  difficulty: DifficultyKind = DIFFICULTY_KINDS[0]!,
+  difficulty?: DifficultyKind,
 ): {
   world: World;
   /**
@@ -419,7 +425,7 @@ export function playableWorld(
     },
     intent: makeIntent(SPECIAL_BINDINGS),
     stepping: true,
-    difficulty: DIFFICULTIES[difficulty],
+    difficulty: difficulty === undefined ? AUTHORED : DIFFICULTIES[difficulty],
     bossFullHealth: BOSSES.sentinel.health,
     onIdle: (): void => {},
     onTick: (): void => {},

@@ -80,6 +80,29 @@ export interface DifficultyRow {
    */
   lives: number;
   /**
+   * Shields a life opens with — at the start of a run, after a death, and after a continue — and the
+   * least a level boundary leaves the ship carrying.
+   *
+   * ⚠️ **A count and not a multiplier, like `lives`, and for the same reason: it is about the RUN.**
+   * Asked for by tier: *"saviour — no change to behaviour; burn — no shields; legend — start with 3
+   * shields and you start each level with 3 shields fully renewed"*, and *"start with full"* of a
+   * death. `docs/decisions/0355-a-tier-opens-on-a-shell.md`. Zero is today's game exactly — a life
+   * opens on the hull (0050) and a boundary carries what it had (0058) — so a tier at zero is not a
+   * branch anywhere, it is arithmetic that adds nothing.
+   */
+  shellOpen: number;
+  /**
+   * The most shields a ship may carry on this tier.
+   *
+   * ⚠️ **The CHARACTER, and `MAX_SHIELDS` in `src/content/ships.ts` is the CEILING** —
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`. The ceiling is the
+   * shell pool's size and the most pips the readout can draw; this is what a tier lets the pilot
+   * wear under it. `tests/difficulty.test.ts` holds `shellOpen ≤ shellCap ≤ MAX_SHIELDS` as a budget
+   * whose owner is the pool. At zero the tier is also never OFFERED a shield: a pickup the ship cannot
+   * carry is withheld rather than thrown — 0355.
+   */
+  shellCap: number;
+  /**
    * Multiplier on the health of everything that can be shot. Rounded up, never below one.
    *
    * Rounded UP so a tier can never make something take fewer shots than the tier below it — at 1.6 a
@@ -188,6 +211,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Legendary Pilot',
     hint: 'The gentlest way in',
     lives: 5,
+    // Every life opens on a full shell and every level renews it — 0355, the player's words.
+    shellOpen: 3,
+    shellCap: 3,
     toughness: 1,
     fireGap: 1,
     closing: 1,
@@ -210,6 +236,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Savior of the Galaxy',
     hint: 'What the game is tuned for',
     lives: 3,
+    // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
+    shellOpen: 0,
+    shellCap: 3,
     toughness: 1.6,
     fireGap: 0.78,
     closing: 1.2,
@@ -237,6 +266,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Let the Galaxy Burn',
     hint: 'It is not meant to be survived',
     lives: 2,
+    // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
+    shellOpen: 0,
+    shellCap: 0,
     toughness: 2.2,
     fireGap: 0.5,
     closing: 1.4,
@@ -275,6 +307,37 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
   },
+};
+
+/**
+ * The content exactly as authored: every multiplier 1, and a life that opens on the hull.
+ *
+ * ⚠️ **NOT A TIER, and it is not in `DIFFICULTY_KINDS`, so it gets no button.** It is the baseline
+ * the fixtures and the instruments stand on — `tests/world.ts`'s `playableWorld` and the title
+ * field before a run is chosen. Those used to stand on `legendary`, which was the same numbers; since
+ * `docs/decisions/0355-a-tier-opens-on-a-shell.md` a Legendary life opens on three shields, and a
+ * default that moved with it would have silently armoured the ship under every guard in the suite —
+ * a hull that is one hit (0050) tested against a ship that takes four.
+ *
+ * ⚠️ **Written out rather than spread from `legendary`**, because the day the easiest tier moves off
+ * the content the baseline must not move with it — `reports/the-tiers-planned-2026-09-22.md`.
+ * `tests/difficulty.test.ts` holds that it multiplies nothing and opens on no shell.
+ */
+export const AUTHORED: DifficultyRow = {
+  title: 'As authored',
+  hint: 'The content, multiplied by nothing',
+  // Read by nothing: a fixture has no run, and this row never begins one.
+  lives: 5,
+  shellOpen: 0,
+  shellCap: 3,
+  toughness: 1,
+  fireGap: 1,
+  closing: 1,
+  shotSpeed: 1,
+  aggression: 1,
+  crowd: 1,
+  // The widest corridor any tier flies — the player's own number for `legendary`, 0350.
+  corridor: { narrowest: 56, slope: 0.25 },
 };
 
 /*

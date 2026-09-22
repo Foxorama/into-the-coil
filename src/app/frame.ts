@@ -77,7 +77,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS, SHIELD_MARK, hullFor, shieldsOf } from '../content/ships.ts';
+import { INVULN_STEPS, SHIELD_MARK, fullHealthFor, hullFor, openingHealthFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
@@ -5641,9 +5641,53 @@ function bounceFloat(w: World, item: Entity, nAlong: number, nAcross: number): v
  * cycle, and `Pool` already knows how big it is.
  */
 export function dropPickups(w: World, along: number, across: number, kinds: readonly PickupKind[]): void {
+  /*
+    ⚠️ **A PIECE THE TIER CANNOT CARRY IS NOT THROWN, AND THE RING IS SPACED OVER WHAT IS** —
+    `docs/decisions/0355-a-tier-opens-on-a-shell.md`. Asked of Burn: *"remove the shield pickups from
+    burn, no replacement pickups, just remove them."* Counted first and thrown second, so the pieces
+    that remain are an even ring of two rather than three with a gap where the shield was — the
+    divisor argument `throwPiece` makes, one step earlier.
+  */
+  let carried = 0;
+  for (let i = 0; i < kinds.length; i++) if (carries(w, kinds[i]!)) carried++;
   const room = w.pickups.capacity - w.pickups.size;
-  const pieces = kinds.length < room ? kinds.length : room;
-  for (let i = 0; i < pieces; i++) throwPiece(w, along, across, kinds[i]!, i, pieces);
+  const pieces = carried < room ? carried : room;
+  let thrown = 0;
+  for (let i = 0; i < kinds.length && thrown < pieces; i++) {
+    const kind = kinds[i]!;
+    if (!carries(w, kind)) continue;
+    throwPiece(w, along, across, kind, thrown, pieces);
+    thrown++;
+  }
+}
+
+/**
+ * Whether the ship on this tier can use a pickup of `kind` at all — false for a shield where the tier
+ * lets it carry none.
+ *
+ * ⚠️ **Read off the pickup's EFFECT and the tier's ROW, never a name on either** — 0016's *behaviour
+ * rides the row*. So a fourth tier with a cap of zero is withheld its shields without anything being
+ * switched on, and a second pickup that shields would be withheld with them.
+ *
+ * ⚠️ **Withholding is the one thing a tier may do to what a level sends**, and 0355 amends 0047 by
+ * exactly that sentence: a pickup the ship cannot carry is not an offer. Nothing a tier CAN use is
+ * ever withheld, so the lane, ordering and pacing guards over the script are untouched, and the
+ * dial is unmoved because it counts weapons only.
+ */
+function carries(w: World, kind: PickupKind): boolean {
+  const row = w.pickupRows[w.pickupKinds[kind]];
+  return row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0;
+}
+
+/**
+ * The ship takes a shield — one more hit above its hull, never past the full shell its tier allows.
+ *
+ * ⚠️ **Here rather than in `src/app/mount.ts`, where it lived as a `Math.min` beside the pickup's
+ * dispatch** — 0355. A shield is armour on the SHIP and the ship is this file's, and the cap is now
+ * the tier's (`fullHealthFor`), which a guard has to be able to drive on every tier without a DOM.
+ */
+export function takeShield(w: World): void {
+  w.ship.health = Math.min(w.ship.health + 1, fullHealthFor(w.shipRow, w.difficulty));
 }
 
 /**
@@ -5806,6 +5850,8 @@ function spawnPickup(w: World, index: number): void {
   const kind = w.pickupKinds[entry.kind];
   const row = w.pickupRows[kind];
   if (row === undefined) return;
+  // No level authors a shield today; one that did would be withheld on Burn as the drop's is — 0355.
+  if (!carries(w, entry.kind)) return;
   const item = w.pickups.spawn();
   if (item === null) return;
   /*
@@ -7598,6 +7644,10 @@ export function respawn(w: World): void {
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place
     the new ship is sitting, one step after it arrived. A player who had just lost a life would be
     shown three shields popping off a ship that never carried them.
+
+    ⚠️ **Since 0355 the ship may come back WITH a shell — the tier's, below — and it is still cleared
+    here**, so the new life's marks are spawned fresh by `stepShields` rather than carried over from a
+    ship that died wearing some of them.
   */
   w.shieldOrbs.clear();
   /*
@@ -7623,6 +7673,15 @@ export function respawn(w: World): void {
     if (back !== null) w.ship = back;
   }
   reset(w.ship, w.cameraAlong + SHIP_START_ALONG, ACROSS_SPAN / 2, w.shipRow);
+  /*
+    ⚠️ **A LIFE OPENS ON THE TIER'S SHELL, AFTER `reset` PUT THE HULL BACK** —
+    `docs/decisions/0355-a-tier-opens-on-a-shell.md`. One site for three events: a run's start (through
+    `resetScene`), a death the run survives, and a continue. Asked: *"start with full"*, so on Legend
+    every one of them opens on three shields. 0058's *a death takes the shell* still holds — the old
+    marks were cleared above without a burst — and what a life opens with is the tier's. At zero this
+    is the hull, which is 0050 exactly.
+  */
+  w.ship.health = openingHealthFor(w.shipRow, w.difficulty);
   holdStation(w.ship, w.scrollPerStep);
   /*
     ⚠️ **A RESPAWN'S INVULNERABILITY IS NOT A HIT'S, and it stopped being the same number the moment
@@ -7839,6 +7898,16 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
   */
   w.levelOrigin = w.cameraAlong;
   beginScript(w);
+  /*
+    ⚠️ **THE SHELL IS KEPT AND TOPPED UP TO THE TIER'S OPENING, NEVER LOWERED** —
+    `docs/decisions/0355-a-tier-opens-on-a-shell.md`, on 0058. Asked of Legend: *"you start each level
+    with 3 shields fully renewed."* A raise to the opening shell rather than a set, so a ship carrying
+    more keeps it; on a tier that opens on nothing this line moves nothing, which is *"no change to
+    behaviour"* by arithmetic rather than by a branch. A wreck is left a wreck: a boundary that
+    handed health to a ship in its death beat would un-kill it.
+  */
+  const opens = openingHealthFor(w.shipRow, w.difficulty);
+  if (w.ship.health > 0 && w.ship.health < opens) w.ship.health = opens;
 }
 
 /**

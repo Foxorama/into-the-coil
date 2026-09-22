@@ -196,7 +196,7 @@ level authors is what the player gets.
 |---|---|---|---|---|---|
 | **`weapon`** | a barrel **and** a fire-rate step | 4 | 1 near the start; level one a second before its mid-boss | 1 | — |
 | **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
-| **`shield`** | one hit that never reaches the hull, capped at 3 | — | — | 1 | — |
+| **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn | — | — | 1, not on Burn | — |
 | **`bomb`** | charges for the arsenal, uncapped — the only pickup the player decides when to use | — | — | 1 | the clear's charge |
 
 **The guns cap across the run rather than inside a level**, because a ladder is only ever one rung
@@ -269,6 +269,11 @@ during one: it is `1 + 4/3 × the level's index + the weapon pickups that level 
 without losing the run's progress, and reaches **11 at the last boss** —
 [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md),
 [0256](decisions/0256-a-pickup-keeps-the-count.md). The two multiply; neither replaces the other.
+
+**A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
+Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* a
+life opens on the hull and a shield is flown for, as it always was; on *Let the Galaxy Burn* the ship
+carries none, and the mid-boss throws none.
 
 ⚠️ **What the dial spends today is one rule**: nothing takes more than one hit until the first level
 has offered two weapon pickups. That is the reported spike at the start of the game, and the dial was

@@ -2110,9 +2110,17 @@ export function makeChrome(
         pips.push(pip);
         shieldGroup.appendChild(pip);
       }
+      /*
+        ⚠️ **Grown but never shrunk, so a socket past the tier's cap is HIDDEN rather than removed** —
+        0355. A Legendary run followed by a Burn one in the same session would otherwise keep three
+        sockets for a ship that may carry none, and on Burn the whole readout goes, because a row of
+        nothing is a promise of something the tier withholds.
+      */
       for (let i = 0; i < pips.length; i++) {
         pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);
+        pips[i]!.style.display = i < maxHealth ? '' : 'none';
       }
+      shieldGroup.style.display = maxHealth > 0 ? '' : 'none';
       shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
     },
     setTriggers(triggers: readonly { label: string; sprite: number; charges: number }[]): void {
