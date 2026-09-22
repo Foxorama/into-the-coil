@@ -13,6 +13,7 @@
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { SPRITE, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
+import type { Pools } from '../content/pools.ts';
 import { opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
@@ -76,6 +77,11 @@ export interface SkyLayer {
    * must not, or the overlap draws a column of itself twice.
    */
   opaque?: boolean;
+  /**
+   * The pools this layer's tile holds and how they bubble — 0353. Absent is a layer with none, which is
+   * every layer but the Mire's ground. The spots are the ones the baker drew (`POOLS_OF`).
+   */
+  pools?: Pools;
 }
 
 /** The sky, back to front. Empty for a scene with none, which is what a fixture has. */
@@ -253,7 +259,7 @@ export function paintScene(
     least, is the one arrangement that says *far away* twice.
   */
   paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin, time);
-  paintSky(surface, view, cameraAlong, sky);
+  paintSky(surface, view, cameraAlong, sky, time);
   /*
     ⚠️ **OVER THE SKY AND UNDER EVERY BODY — 0340**, on the room's own terms one paragraph down: the
     streaks are what the sky does at speed, so they belong to it, and the one absolute in this file is
@@ -806,7 +812,7 @@ function paintEruption(
 /** How many screen pixels a sky tile overlaps its neighbour by, in total across its width — 0347. */
 const SEAM_BLEED_PX = 2;
 
-function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): void {
+function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, time = 0): void {
   for (let i = 0; i < sky.length; i++) {
     const layer = sky[i]!;
     const span = layer.extent;
@@ -836,6 +842,47 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky): 
       const inView = t * span - offset + span / 2;
       const across = view.acrossSpan / 2;
       surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
+    }
+    if (layer.pools !== undefined) {
+      for (let t = 0; t < count; t++) paintBubbles(surface, view, t * span - offset, span, layer.pools, time);
+    }
+  }
+}
+
+/** The share of a bubble's life it spends as a pop, at the end — 0353. */
+const POP_SHARE = 0.14;
+
+/**
+ * The bubbles on one tile's pools, this frame — 0353. `left` is where the tile starts, in world
+ * units in view, and a tile is `span` units along and across, centred on the lane.
+ *
+ * ⚠️ **A PURE FUNCTION OF THE SIM'S CLOCK AND AN INDEX**, exactly as the ember is (`paintEruption`):
+ * bubble `k` of a pool is `k / count` of a life behind bubble 0, which life it is on is hashed into
+ * where on the surface it forms, and nothing is pooled, remembered or drawn from a stream. **It
+ * rides the steps and not the camera**, so a pool keeps bubbling while the camera stops for a fight.
+ *
+ * ⚠️ **ONE BLIT A BUBBLE.** It forms on the surface, swells as it rises `rise` lane units, and ends as
+ * a pop for the last `POP_SHARE` of its life.
+ */
+function paintBubbles(surface: Surface, view: View, left: number, span: number, pools: Pools, time: number): void {
+  const { count, period, rise } = pools.bubbles;
+  for (let p = 0; p < pools.spots.length; p++) {
+    const spot = pools.spots[p]!;
+    const start = left + spot.at * span;
+    // Off the screen along: nothing of this pool is drawn.
+    if (start > view.alongSpan || start + spot.wide * span < 0) continue;
+    const surfaceAcross = view.acrossSpan / 2 + (spot.top - 0.5) * span;
+    for (let k = 0; k < count; k++) {
+      const lives = time / period + k / count + streakHash(p * 7.3 + 0.5);
+      const life = Math.floor(lives);
+      const t = lives - life;
+      const u = 0.2 + 0.6 * streakHash(p * 131 + k * 17 + life * 0.37);
+      const along = start + spot.wide * span * u;
+      const popping = t > 1 - POP_SHARE;
+      const up = rise * Math.min(1, t / (1 - POP_SHARE));
+      const across = surfaceAcross - up;
+      const swell = popping ? 1 : 0.45 + 0.55 * (t / (1 - POP_SHARE));
+      surface.blit(popping ? SPRITE.bubblePop : SPRITE.bubble, screenX(view, along, across), screenY(view, along, across), view.scale * swell);
     }
   }
 }

@@ -21,7 +21,8 @@ import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, vie
 import { RANGE_OF } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
-import type { Landmarks } from '../render/scene.ts';
+import type { Landmarks, Sky } from '../render/scene.ts';
+import { POOLS_OF } from '../content/pools.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
   DEFAULT_TRAVEL,
@@ -478,11 +479,35 @@ export const SKY_UNDER_A_RANGE = [
  * `world.sky` — because there was only one sky. A second array means both have to route through the
  * same answer or a level boundary silently reinstates the star fields a planet just removed.
  */
-export function skyFor(place: ThemeKind | null): typeof SKY {
+export function skyFor(place: ThemeKind | null): Sky {
   if (place === null || THEMES[place].ground === null) return SKY;
-  // A planet with a far range states one in `RANGE_OF`; one without is the sky 0221 shipped — 0347.
-  return RANGE_OF[place] !== null ? SKY_UNDER_A_RANGE : SKY_ON_A_PLANET;
+  return PLANET_SKY_OF[place];
 }
+
+/**
+ * A planet's sky: with a far range where it states one in `RANGE_OF`, the sky 0221 shipped where it
+ * does not (0347) — and its ground layer carrying the place's pools where `POOLS_OF` states some
+ * (0353), so the bubbles are blitted over the very tiles whose pools they rise from.
+ *
+ * ⚠️ **BUILT ONCE, WHEN THE MODULE LOADS**, because `skyFor` runs at every level boundary and the
+ * layers are shared: a copy of the ground layer per call would be a new sky object per level for no
+ * reason, and one per place is the whole of what varies.
+ */
+function planetSky(place: ThemeKind): Sky {
+  const base: Sky = RANGE_OF[place] !== null ? SKY_UNDER_A_RANGE : SKY_ON_A_PLANET;
+  const pools = POOLS_OF[place];
+  return pools === null ? base : base.map((layer) => (layer.sprite === SPRITE.skyGround ? { ...layer, pools } : layer));
+}
+
+const PLANET_SKY_OF: Record<ThemeKind, Sky> = {
+  approach: planetSky('approach'),
+  nebula: planetSky('nebula'),
+  saurian: planetSky('saurian'),
+  labyrinth: planetSky('labyrinth'),
+  rime: planetSky('rime'),
+  mire: planetSky('mire'),
+  core: planetSky('core'),
+};
 
 /**
  * How many bodies the opening field is seeded with, so the first frame is not empty.

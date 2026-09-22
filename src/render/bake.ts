@@ -28,6 +28,7 @@ import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KI
 import { EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
+import { POOLS_OF } from '../content/pools.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
 
@@ -841,6 +842,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   landmarkC: 'sky',
   // A rock thrown from a landmark is part of it — 0347. `drawEmber` paints lava's own inks over this.
   ember: 'sky',
+  bubble: 'sky',
+  bubblePop: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -2513,6 +2516,53 @@ function paintWallCap(ctx: Pen, f: Frame, stone: string, edge: number, rise: num
 }
 
 /**
+ * The acid a bubble is made of — 0353. Fixed, on the ember's terms: only the Mire's pools bubble.
+ */
+const ACID = { rim: '#8ff08a', skin: '#4ad85a' } as const;
+
+/**
+ * A bubble on the acid — 0353: a thin bright rim round a faint skin, and a glint. Or the pop it ends
+ * in: the rim broken into droplets flying off, and nothing in the middle.
+ *
+ * ⚠️ **HOLLOW, BECAUSE A SHOT IS SOLID.** It sits low in the lane where shots are read and it is
+ * under a shot's size (`SPRITE_EXTENT`); a filled disc that size would be a bullet with no owner. A
+ * ring with light through it is the one round thing a shot never looks like.
+ *
+ * @param plain the palette's sky ink where decoration is the void — high contrast — else `null`.
+ */
+function drawBubble(ctx: Pen, size: number, popped: boolean, plain: string | null): void {
+  const c = size / 2;
+  const r = size * 0.36;
+  const rim = plain ?? ACID.rim;
+  ctx.globalAlpha = 1;
+  if (!popped) {
+    ctx.fillStyle = rgba(plain ?? ACID.skin, 0.18);
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(rim, 0.85);
+    ctx.lineWidth = Math.max(1, size * 0.09);
+    ctx.beginPath();
+    ctx.arc(c, c, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // The glint, up and to the left, where the light over the swamp catches it.
+    ctx.fillStyle = rgba(rim, 0.9);
+    ctx.beginPath();
+    ctx.arc(c - r * 0.4, c - r * 0.4, size * 0.07, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+  // Six droplets thrown out round where the rim was.
+  ctx.fillStyle = rgba(rim, 0.8);
+  for (let i = 0; i < 6; i += 1) {
+    const a = (i / 6) * Math.PI * 2 + 0.3;
+    ctx.beginPath();
+    ctx.arc(c + Math.cos(a) * r * 1.05, c + Math.sin(a) * r * 1.05, size * 0.06, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+/**
  * A rock thrown out of a crater: a hot head leading, a tail of light behind it — 0347.
  *
  * ⚠️ **POINTING ALONG +x, BECAUSE `blit`'S TURN IS MEASURED FROM THERE** (0306): the painter turns it
@@ -3470,7 +3520,6 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
     not be glowing, and the roof over it is a silhouette. It is also the only way two surfaces of one
     colour tell each other apart at a glance.
   */
-  const rng = makeRng('sky').stream('mire/slicks');
   /*
     The pools themselves, and they are the light source. **Drawn before the shoreline**, so the
     shoreline closes over their far edge and they sit IN the ground rather than on it.
@@ -3484,11 +3533,12 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
   */
   const surface = light?.lit ?? mix(land, glow, 0.36);
   const depth = mix(surface, land, 0.6);
-  for (let i = 0; i < 8; i += 1) {
-    const at = rng.range(0.02, 0.84) * size;
-    const wide = rng.range(0.08, 0.17) * size;
-    const deep = rng.range(0.03, 0.06) * size;
-    const top = (0.665 + rng.range(0.004, 0.04)) * size;
+  // Authored in `POOLS_OF`, which the bubbles read too, so the two are the same pools — 0353.
+  for (const spot of POOLS_OF.mire?.spots ?? []) {
+    const at = spot.at * size;
+    const wide = spot.wide * size;
+    const deep = spot.deep * size;
+    const top = spot.top * size;
     ctx.globalAlpha = 1;
     ctx.fillStyle = vertical(ctx, size, top / size, surface, (top + deep) / size, depth);
     // A shallow lens rather than a box: a pool is a hollow the acid has filled.
@@ -9545,6 +9595,10 @@ export function drawKind(
     // Rock thrown from a crater — 0347. Lava's own inks, or the sky's where decoration is the void.
     case 'ember':
       drawEmber(ctx, size, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
+    case 'bubble':
+    case 'bubblePop':
+      drawBubble(ctx, size, kind === 'bubblePop', palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
       return;
     /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────

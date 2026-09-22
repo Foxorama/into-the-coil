@@ -234,6 +234,8 @@ of mechanism 2, with its own sprite and its own motion — a bubble rises and po
 
 *The ceiling, the swamp and the pools landed as [0352](../docs/decisions/0352-the-mire-is-a-swamp.md);
 the bubbles did not, and are the next piece of work — mechanism 2 has to come off the landmark first.*
+*The bubbles landed as [0353](../docs/decisions/0353-the-acid-bubbles.md) — scenery for now, as asked;
+obstacles are a later decision.*
 
 ### 7 — The Black Heart: veins, and stars behind them
 
