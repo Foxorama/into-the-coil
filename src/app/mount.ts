@@ -870,9 +870,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       only honest value here is none. A title screen has no level and therefore no landmarks.
     */
     landmarks: [],
-    // The picture of the wall the ship meets going forward — 0074. Always drawn: it is a property
-    // of the playfield rather than of a screen, and a boundary that appeared only while playing
-    // would be a thing the player first meets at the moment it is already stopping them.
+    // The picture of the wall the ship meets going forward — 0074. Drawn only while the ship is
+    // against it since 0359: the frame holds `boundPress` and hands the painter `null` the rest of
+    // the time, so what is fixed here is WHAT the mark is and the frame says WHEN.
     bound: BOUND,
     // No room until a level's script has one — 0335. `beginScript` lays it, and a title screen has
     // no level and therefore no room.
@@ -1051,6 +1051,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownHealth: shipRow.health,
     // Replaced below, once the chrome exists.
     onHealth: (): void => {},
+    // The wall is not being pressed at mount — 0359.
+    boundPress: 0,
+    // No boss on the field at mount, and replaced below with the chrome — 0360.
+    shownBoss: -1,
+    onBoss: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
@@ -1216,7 +1221,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const touchable = navigator.maxTouchPoints > 0;
 
   /**
-   * What the tap strip draws: one band per trigger that has a weapon behind it.
+   * What the trigger buttons draw: one per trigger that has a weapon behind it — 0060, and 0358 for
+   * the shape.
    *
    * ⚠️ **The same count the hit test uses**, through `bandCount`, so the picture cannot claim a band
    * the canvas is not listening on. An arsenal longer than the binding budget is 0030's *owned,
@@ -2481,6 +2487,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     check below reads the state AFTER the reducer has run rather than predicting what it will say.
   */
   world.onHealth = syncHud;
+  /*
+    The boss's bar — 0360. The frame hands over a quantised fraction, on a change only; the ROW is
+    read here rather than passed, because the frame may not allocate and the chrome wants the phase
+    table once per fight, not a number per step. `bossRow` is the current fight's by the time the
+    end boss is on the field, which is the only time the fraction is not negative.
+  */
+  world.onBoss = (fraction: number): void => {
+    chrome.setBoss(fraction, world.bossRow);
+  };
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────

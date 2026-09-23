@@ -7,7 +7,7 @@ import { prefixFor } from '../src/app/chrome.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
-import { TAP_STRIP } from '../src/app/touch.ts';
+import { triggerRadius, triggerX, triggerY } from '../src/app/touch.ts';
 
 /**
  * WHAT THE PLAYER CAN SEE ABOUT THEIR OWN RUN.
@@ -130,92 +130,95 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
 });
 
 /**
- * A TRIGGER IS A PLACE ON THE GLASS.
+ * A TRIGGER IS A PLACE ON THE GLASS, AND THE PLACE IS A BUTTON.
  *
  * `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. Reported from play: *"how do you fire
- * bombs on mobile? I can do one and then can't fire any more."*
+ * bombs on mobile? I can do one and then can't fire any more."* Then
+ * `docs/decisions/0358-a-trigger-is-a-button.md`: *"on mobile add a bomb button"*, and the strip
+ * that was the leading quarter of the glass became a disc under the thumb.
  *
- * ⚠️ **The half that has to be a browser test is that the strip is DRAWN WHERE THE TAP IS HEARD.**
- * `tests/touch.test.ts` holds the hit test and can hold nothing about pixels; a strip whose picture
+ * ⚠️ **The half that has to be a browser test is that the button is DRAWN WHERE THE TAP IS HEARD.**
+ * `tests/touch.test.ts` holds the hit test and can hold nothing about pixels; a button whose picture
  * and whose hit region disagree is a player pressing what they can see and something else happening,
  * which is `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with the sign
  * reversed.
  */
-describe.runIf(chromePath)('the tap strip says where the bomb is', () => {
-  const STRIP = '.itc-playing-strip';
+describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
+  const TRIGGER = '.itc-playing-trigger';
 
   it('is not drawn on a device with nothing to tap it with', async () => {
     const page = await open(false);
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
-    expect(await shown(page, STRIP), 'a desktop was shown a place to put a finger').toBe(false);
+    expect(await shown(page, TRIGGER), 'a desktop was shown a place to put a finger').toBe(false);
     await page.context().close();
   });
 
   it('is drawn on a touch device, once a run is running and never before it', async () => {
     const page = await open(true);
-    expect(await shown(page, STRIP), 'the strip was up before there was a run to fire in').toBe(false);
+    expect(await shown(page, TRIGGER), 'the button was up before there was a run to fire in').toBe(false);
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
-    expect(await shown(page, STRIP), 'a phone was shown no place to press').toBe(true);
+    expect(await shown(page, TRIGGER), 'a phone was shown no place to press').toBe(true);
     await page.context().close();
   });
 
-  it('draws one band per owned trigger, and each band covers the part of the glass that fires it', async () => {
+  it('draws one button per owned trigger, where the hit test listens, in pixels of the canvas', async () => {
     /*
       ⚠️ **THE ONE THAT MATTERS, and it is measured in pixels against the canvas.** The reported bug
       was a strip split into the binding BUDGET rather than into what the ship owns, so half of it was
-      bound to a slot the shell answers with silence — a quarter of the screen that swallows taps and
-      is drawn nowhere. This asserts the picture covers the hit region exactly: the same right-hand
-      `TAP_STRIP` of the canvas, divided into the same bands.
+      bound to a slot the shell answers with silence — a piece of the screen that swallows taps and
+      is drawn nowhere. This asserts the picture IS the hit region: the disc's centre and its size on
+      the canvas are what the touch source's own arithmetic says for the canvas's own box.
+
+      ⚠️ **Against the functions and not against the constants**, because the CSS is the constants
+      interpolated and a test that read the same constants back would prove the code agrees with
+      itself (0027). The functions are the other reader — the hit test's.
     */
     const page = await open(true);
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
     const geometry = await page.evaluate(() => {
       const canvas = document.querySelector('#app canvas');
-      const strip = document.querySelector('.itc-playing-strip');
-      const bands = [...document.querySelectorAll('.itc-playing-strip-band')];
-      if (!(canvas instanceof HTMLElement) || !(strip instanceof HTMLElement)) return null;
+      const trigger = document.querySelector('.itc-playing-trigger');
+      const buttons = [...document.querySelectorAll('.itc-playing-trigger-button')];
+      if (!(canvas instanceof HTMLElement) || !(trigger instanceof HTMLElement)) return null;
       const c = canvas.getBoundingClientRect();
-      const s = strip.getBoundingClientRect();
       return {
-        canvas: { left: c.left, right: c.right, top: c.top, bottom: c.bottom },
-        strip: { left: s.left, right: s.right, top: s.top, bottom: s.bottom },
-        bands: bands.map((b) => {
+        canvas: { width: c.width, height: c.height },
+        buttons: buttons.map((b) => {
           const r = b.getBoundingClientRect();
-          return { top: r.top, bottom: r.bottom };
+          return { cx: r.left + r.width / 2 - c.left, cy: r.top + r.height / 2 - c.top, width: r.width, height: r.height };
         }),
         // Not a control, and it must never become one: the canvas underneath is what hears the tap.
-        events: getComputedStyle(strip).pointerEvents,
+        events: getComputedStyle(trigger).pointerEvents,
       };
     });
-    expect(geometry, 'there is no strip to measure').not.toBeNull();
+    expect(geometry, 'there is no button to measure').not.toBeNull();
     const g = geometry!;
-    // A run opens carrying exactly one special — the bomb — so the strip is one band.
-    expect(g.bands.length, 'the strip is not split by what the ship owns').toBe(1);
-    expect(g.events, 'the strip would swallow the tap it exists to advertise').toBe('none');
-    // The leading edge, and `TAP_STRIP` of the canvas wide. Within a pixel of rounding.
-    expect(Math.abs(g.strip.right - g.canvas.right), 'the strip is not on the leading edge').toBeLessThan(2);
-    const width = g.canvas.right - g.canvas.left;
-    expect(Math.abs((g.strip.right - g.strip.left) / width - TAP_STRIP), 'the strip is not the tap zone').toBeLessThan(
-      0.01,
-    );
-    // And it covers the whole short axis, which is where the bands are divided.
-    expect(Math.abs(g.bands[0]!.top - g.canvas.top)).toBeLessThan(2);
-    expect(Math.abs(g.bands[0]!.bottom - g.canvas.bottom)).toBeLessThan(2);
+    // A run opens carrying exactly one special — the bomb — so there is one button.
+    expect(g.buttons.length, 'the buttons are not one per owned trigger').toBe(1);
+    expect(g.events, 'the button would swallow the tap it exists to advertise').toBe('none');
+    const b = g.buttons[0]!;
+    const r = triggerRadius(g.canvas.width, g.canvas.height);
+    expect(Math.abs(b.cx - triggerX(g.canvas.width, g.canvas.height)), 'the button is not drawn where the tap is heard, along the glass').toBeLessThan(2);
+    expect(Math.abs(b.cy - triggerY(g.canvas.width, g.canvas.height, 0)), 'the button is not drawn where the tap is heard, across the glass').toBeLessThan(2);
+    expect(Math.abs(b.width - 2 * r), 'the disc is not the size the hit test listens on').toBeLessThan(2);
+    expect(Math.abs(b.height - 2 * r), 'the disc is not round').toBeLessThan(2);
+    // And it is a thumb's size in the player's own pixels, not a sliver: 0358's claim, as the player has it.
+    expect(b.width, 'the button is smaller than a fingertip').toBeGreaterThan(44);
     await page.context().close();
   });
 
-  it('shows the real baked sprite of the special the band fires, and how many are left', async () => {
+  it('shows the real baked sprite of the special the button fires, and how many are left', async () => {
     // The same rule as the title screen's key: the real art, never a drawing of it. A glyph here
     // would be a second description of the bomb's silhouette.
     const page = await open(true);
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(200);
     const band = await page.evaluate(() => {
-      const el = document.querySelector('.itc-playing-strip-band');
-      const icon = document.querySelector('.itc-playing-strip-icon');
+      const el = document.querySelector('.itc-playing-trigger-button');
+      const icon = document.querySelector('.itc-playing-trigger-icon');
       let inked = 0;
       if (icon instanceof HTMLCanvasElement) {
         const ctx = icon.getContext('2d');

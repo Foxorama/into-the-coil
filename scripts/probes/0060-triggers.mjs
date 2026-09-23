@@ -15,8 +15,8 @@ export const PROBES = [
       strip was built from, it is derived from the action table rather than written by hand, and it is
       correct for every device that has keys. On glass it makes a quarter of the screen inert.
     */
-    broke: 'the strip split by the binding budget again, so half of it fires nothing',
-    guard: 'THE REPORTED ONE: with one special owned, every tap in the strip fires it',
+    broke: 'the buttons counted from the binding budget again, so a second one fires nothing',
+    guard: 'THE REPORTED ONE: with one special owned, the one button fires it',
     edit: {
       path: 'src/app/touch.ts',
       find: '    const zone = tapZone(target, e, bandCount(bandsOf()));',
@@ -57,8 +57,8 @@ export const PROBES = [
       the binding budget its picture claims a band the canvas is not listening on — the player presses
       what they can see and nothing happens, which is the thing they actually described.
     */
-    broke: 'the strip drawn with a band per binding rather than per owned trigger',
-    guard: 'draws one band per owned trigger',
+    broke: 'the buttons drawn one per binding rather than one per owned trigger',
+    guard: 'draws one button per owned trigger',
     edit: {
       path: 'src/app/mount.ts',
       find: '    const count = Math.min(state.run.arsenal.length, bandCount(state.run.arsenal.length));',
@@ -68,11 +68,15 @@ export const PROBES = [
   {
     decision: '0060',
     suite: 'tests/hud.browser.test.ts',
-    // The strip made a control. It would then take the tap it exists to advertise, and the file that
-    // owns not-stealing-the-drag would never hear it.
-    broke: 'the strip given pointer events, so it swallows the tap it advertises',
-    guard: 'draws one band per owned trigger',
-    edit: { path: 'src/app/chrome.ts', find: '  pointer-events: none;\n  font: 600 clamp(0.7rem', replace: '  font: 600 clamp(0.7rem' },
+    // The buttons made a control. They would then take the tap they exist to advertise, and the file
+    // that owns not-stealing-the-drag would never hear it.
+    broke: 'the buttons given pointer events, so they swallow the tap they advertise',
+    guard: 'draws one button per owned trigger',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '  display: none;\n  pointer-events: none;\n  /*\n    ⚠️ Its own container',
+      replace: '  display: none;\n  /*\n    ⚠️ Its own container',
+    },
   },
   {
     decision: '0060',
