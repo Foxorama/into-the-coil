@@ -11,7 +11,7 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import { SPRITE, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
 import { trunkAt, type Veins } from '../content/veins.ts';
@@ -152,15 +152,10 @@ export interface Landmark {
 
 /**
  * How small a rock has got by the end of its flight, against its size leaving the crater — it cools
- * as it falls, and a shrinking mark is the one fade `blit` can do without a state change (0025).
+ * as it climbs, and a shrinking mark is the one fade `blit` can do without a state change (0025).
  */
 const EMBER_COOL = 0.5;
 
-/**
- * Where a throw peaks, as a fraction of its flight, between these two. Under a half, so every rock
- * comes down further than it went up — below the crater and down the flank, behind the range.
- */
-const EMBER_APEX = { from: 0.3, to: 0.44 };
 
 /** How much bigger a landmark gets at the top of its beat. */
 const BEAT_SWELL = 0.055;
@@ -777,6 +772,14 @@ function paintLandmarks(
  *
  * ⚠️ **ONE BLIT PER ROCK AND NO STATE CHANGE** — 0025. The comet is turned to its own heading by the
  * angle `blit` already takes (0306), and it cools by shrinking, which is the only fade a blit has.
+ *
+ * ⚠️ **EVERY ROCK GOES UP AND OFF THE TOP OF THE SCREEN, AND NONE COMES DOWN — 0363.** Asked for:
+ * rock that *"fire[s] up into the air and off the screen, but [doesn't] fall down as it's
+ * distracting"* — and the symbolism is that the rock starts falling when the player reaches the
+ * boss, which the quetzal's `fall` already is. So a flight is the RISING part of a throw only: it
+ * leaves the crater, slows as it climbs, and is wholly past lane 0 by the end of it, still
+ * climbing towards an apex that is never on the screen. That apex is solved per rock from its own
+ * crater, so no row can state a throw that turns over in sight.
  */
 function paintEruption(
   surface: Surface,
@@ -787,7 +790,15 @@ function paintEruption(
   index: number,
   time: number,
 ): void {
-  const { count, period, rise, reach } = vent.erupts;
+  const { count, period, overshoot, reach } = vent.erupts;
+  const crater = vent.lane + mark.lane;
+  const gone = (period - 1) / period;
+  /*
+    How far a rock climbs by `gone`: from the crater to wholly off the top of the screen, which is lane
+    0 on every device because the view shows `across` 0 to 100 exactly — past it by half the comet at
+    the size it has cooled to by then.
+  */
+  const climb = crater + (SPRITE_EXTENT.ember / 2) * (1 - EMBER_COOL * gone);
   for (let k = 0; k < count; k++) {
     const flights = time / period + k / count;
     const throwN = Math.floor(flights);
@@ -796,14 +807,26 @@ function paintEruption(
     const seed = index * 977 + k * 131 + throwN * 17;
     const side = streakHash(seed + 0.5) < 0.5 ? -1 : 1;
     const out = reach * (0.25 + 0.75 * streakHash(seed + 1.5)) * mark.scale;
-    const high = rise * (0.35 + 0.65 * streakHash(seed + 2.5)) * mark.scale;
-    const apex = EMBER_APEX.from + (EMBER_APEX.to - EMBER_APEX.from) * streakHash(seed + 3.5);
-    // Up is DOWN the lane. A parabola through the vent at t = 0 that tops out `high` over it at `apex`.
+    const over = overshoot * (0.35 + 0.65 * streakHash(seed + 2.5)) * mark.scale;
+    /*
+      Up is DOWN the lane. A parabola through the crater at t = 0 whose apex is `climb + over` above
+      it, at t = 1 / u — past the end of the flight, because u is solved so that the rock has climbed
+      exactly `climb` by `gone`: `(climb + over)(2s − s²) = climb` at `s = u · gone` gives
+      `s = 1 − √(over / (climb + over))`. A harder throw overshoots further and so is still moving
+      faster when it leaves.
+
+      ⚠️ **GONE BY THE LAST WHOLE STEP OF THE FLIGHT, NOT BY ITS END.** The clock is steps, so the last
+      place a rock is drawn before it is thrown again is one step short of t = 1 — and solved to clear
+      at t = 1, the first cut sat 3px on the screen there and then jumped back to the crater, which
+      `tests/jungle.test.ts` caught on its first run. Past `gone` it only climbs further out.
+    */
+    const high = climb + over;
+    const u = (1 - Math.sqrt(over / high)) / gone;
     const along = inView + vent.along + side * out * t;
-    const lane = vent.lane + mark.lane - high * ((2 * t) / apex - (t * t) / (apex * apex));
+    const lane = crater - high * (2 * u * t - u * u * t * t);
     // Its heading, taken in SCREEN space so a view that turns the axes turns the comet with them.
     const aheadAlong = along + side * out * 0.01;
-    const aheadLane = lane - high * (2 / apex - (2 * t) / (apex * apex)) * 0.01;
+    const aheadLane = lane - high * (2 * u - 2 * u * u * t) * 0.01;
     const x = screenX(view, along, lane);
     const y = screenY(view, along, lane);
     surface.blit(

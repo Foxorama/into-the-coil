@@ -7,9 +7,9 @@
  *
  * ⚠️ **WHETHER IT SCREAMS JUNGLE IS THE PLAYER'S, NOT THIS FILE'S** — 0192. What is held is each claim
  * in the report that is true or false in player units: the smoke leaves the top of the screen, rock
- * climbs out of the crater and falls behind the land, it keeps flying while the camera is stopped, it
- * is smaller than anything that can kill the player, the land it all happens over keeps the inks
- * findable, and what it costs to draw.
+ * climbs out of the crater and off the top of the screen and never falls (0363), it keeps flying
+ * while the camera is stopped, it is smaller than anything that can kill the player, the land it all
+ * happens over keeps the inks findable, and what it costs to draw.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -31,9 +31,6 @@ import { tracingPen } from './paths.ts';
 
 const saurian = LEVEL_KINDS.map((kind) => LEVELS[kind]).find((level) => level.theme === 'saurian')!;
 const VIEW = viewOf(1920, 1080);
-
-/** A screen y, in CSS pixels, as a position across the lane — what the player would point at. */
-const laneOfY = (view: View, y: number): number => (y - screenY(view, 0, 0)) / view.scale;
 
 interface Blit {
   sprite: number;
@@ -57,16 +54,20 @@ function centred(mark: Landmark, view: View): number {
   return mark.at + (view.alongSpan / 2 + mark.extent / 2) / mark.depth;
 }
 
-/** Where every rock of one landmark is, across a whole flight, in lane units. */
-function flight(mark: Landmark, steps: number): number[] {
-  const lanes: number[] = [];
+/**
+ * Every rock of one landmark, step by step: `rocks[k][step]` is rock `k`'s blit on that step. The
+ * painter blits a landmark's rocks in order, so the k-th rock blitted is the same rock every step.
+ */
+function flight(mark: Landmark, steps: number): Blit[][] {
+  const rocks: Blit[][] = [];
   const camera = centred(mark, VIEW);
   for (let step = 0; step < steps; step += 1) {
     const surface = new Recorder();
     paintScene(surface, VIEW, [], camera, 0, [], null, [mark], 0, null, 0, step);
-    for (const b of surface.blits) if (b.sprite === SPRITE.ember) lanes.push(laneOfY(VIEW, b.y));
+    const embers = surface.blits.filter((b) => b.sprite === SPRITE.ember);
+    embers.forEach((b, k) => (rocks[k] ??= []).push(b));
   }
-  return lanes;
+  return rocks;
 }
 
 describe('0347 — the belt is a jungle under a live volcano', () => {
@@ -115,27 +116,47 @@ describe('0347 — the belt is a jungle under a live volcano', () => {
     }
   });
 
-  it('THE REPORTED ONE, IN LANE UNITS: rock climbs out of the crater and comes down behind the land', () => {
+  it('THE REPORTED ONE, IN PIXELS: rock climbs out of the crater and off the top of the screen, and none comes down', () => {
     /*
-      *"Isn't actually firing any rocks or anything."* Every volcano that erupts is stood in the middle of
-      a 1080p screen and walked through two whole flights of the sim's clock, and where its rocks were
-      blitted is read back in lane units against its own crater.
+      *"Isn't actually firing any rocks or anything"* (0347), and then *"fire up into the air and off
+      the screen, but they don't fall down as it's distracting"* (0363). Every volcano that erupts is
+      stood in the middle of a 1080p screen and walked through three whole flights of the sim's clock,
+      and each rock is followed blit by blit in screen pixels.
+
+      ⚠️ **A ROCK MAY ONLY GO DOWN THE SCREEN BY BEING THROWN AGAIN**, and a throw starts at the crater
+      only once the last one is WHOLLY above the top edge — half the comet's drawn size past it, which
+      is read off the blit's own scale and the sprite's extent, never off the painter's constant.
     */
+    const top = screenY(VIEW, 0, 0);
     const marks = landmarksFor(saurian);
     const erupting = marks.filter((mark) => mark.vent !== undefined);
     expect(erupting.length, 'no volcano in Saurian Belt throws anything').toBe(saurian.landmarks.length);
     for (const mark of erupting) {
       const vent = mark.vent!;
-      const crater = mark.lane + vent.lane;
-      const lanes = flight(mark, vent.erupts.period * 2);
-      expect(lanes.length, 'the volcano threw nothing across two flights').toBe(vent.erupts.count * vent.erupts.period * 2);
-      const highest = Math.min(...lanes);
-      const lowest = Math.max(...lanes);
-      // A third of the highest throw at the least — the lowest throws are a third of it, by design.
-      expect(highest, `the rock at ${mark.at} never climbs above lane ${highest.toFixed(1)}`).toBeLessThan(
-        crater - vent.erupts.rise * mark.scale * 0.3,
-      );
-      expect(lowest, `the rock at ${mark.at} never falls below its own crater at lane ${crater.toFixed(1)}`).toBeGreaterThan(crater);
+      const crater = screenY(VIEW, 0, mark.lane + vent.lane);
+      const rocks = flight(mark, vent.erupts.period * 3);
+      expect(rocks.length, `the volcano at ${mark.at} has not got its rocks in the air`).toBe(vent.erupts.count);
+      let throws = 0;
+      for (const [k, path] of rocks.entries()) {
+        expect(path.length, `rock ${k} of the volcano at ${mark.at} was not drawn every step`).toBe(vent.erupts.period * 3);
+        for (let step = 1; step < path.length; step += 1) {
+          const was = path[step - 1]!;
+          const now = path[step]!;
+          if (now.y <= was.y) continue;
+          // It went down the screen: that is only allowed as a new throw, out of the crater, after the
+          // last one has left.
+          throws += 1;
+          // Touching the edge covers no pixel; the millionth of one is floating point, not picture.
+          const bottom = was.y + (SPRITE_EXTENT.ember * was.scale) / 2;
+          expect(bottom, `rock ${k} of the volcano at ${mark.at} turned over ${(bottom - top).toFixed(1)}px below the top of the screen`).toBeLessThanOrEqual(
+            top + 1e-6,
+          );
+          expect(Math.abs(now.y - crater), `rock ${k} of the volcano at ${mark.at} started a throw away from its crater`).toBeLessThan(
+            VIEW.scale * 2,
+          );
+        }
+      }
+      expect(throws, `the volcano at ${mark.at} threw nothing clear of the screen in three flights`).toBeGreaterThanOrEqual(vent.erupts.count * 2);
     }
   });
 
@@ -248,7 +269,9 @@ describe('0347 — the land the fight happens over', () => {
  * ⚠️ **A BUDGET, OWNED BY 0347** — `docs/decisions/0192-a-guard-holds-an-invariant.md`. Measured when
  * this was written: the worst frame of Saurian Belt, walked five units at a time from the opening to
  * past the fight, is **all three volcanoes and their 24 rocks** — 27 blits, at camera 3630, the same on
- * a 1920×1080, a 2400×1000 and a 1500×1000 view. The frame's whole worst case is 542
+ * a 1920×1080, a 2400×1000 and a 1500×1000 view. **Re-measured by 0363**, whose flights are only the
+ * climb: all three and their 9 rocks, 12 blits, at the same camera on the same three views. The
+ * number stays at 40 — nothing asked for it to shrink. The frame's whole worst case is 542
  * (`tests/budget.test.ts`) and desktop is the target (0153), so this is not tight; it exists so that
  * rock stays a handful rather than growing a pool by the back door. Raising it is an edit to this
  * number with the new measurement beside it.

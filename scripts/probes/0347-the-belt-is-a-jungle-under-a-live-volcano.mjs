@@ -39,12 +39,13 @@ export const PROBES = [
     decision: '0347',
     suite: 'tests/jungle.test.ts',
     // Rock that sits at the crater and is blitted every frame — present in the count, going nowhere.
+    // Re-anchored by 0363, which made a flight only the climb.
     broke: 'the rock pinned to the crater, so the volcano glows and throws nothing',
-    guard: 'THE REPORTED ONE, IN LANE UNITS: rock climbs out of the crater and comes down behind the land',
+    guard: 'THE REPORTED ONE, IN PIXELS: rock climbs out of the crater and off the top of the screen, and none comes down',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    const lane = vent.lane + mark.lane - high * ((2 * t) / apex - (t * t) / (apex * apex));',
-      replace: '    const lane = vent.lane + mark.lane;',
+      find: '    const lane = crater - high * (2 * u * t - u * u * t * t);',
+      replace: '    const lane = crater;',
     },
   },
   {
@@ -138,8 +139,9 @@ export const PROBES = [
     guard: 'a landmark is one blit and a rock is one more',
     edit: {
       path: 'src/content/levels.ts',
-      find: 'count: 11, period: 135,',
-      replace: 'count: 40, period: 135,',
+      // Re-anchored by 0363, which kept each volcano's throws a second over a shorter flight.
+      find: 'count: 4, period: 52,',
+      replace: 'count: 40, period: 52,',
     },
   },
 ];

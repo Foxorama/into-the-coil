@@ -53,11 +53,18 @@ export function coneOf(seed: number): Cone {
 export interface Eruption {
   /** Rocks in the air at once. Each is one blit — `tests/budget.test.ts` holds the total. */
   readonly count: number;
-  /** Steps one rock takes from the crater to where it falls out of the picture. */
+  /**
+   * Steps one rock takes from the crater to off the top of the screen — 0363. Shorter is a harder
+   * throw: every rock of one volcano climbs the same distance, and this is how long it takes.
+   */
   readonly period: number;
-  /** How high the highest throw climbs over the crater, in world units at the landmark's own scale. */
-  readonly rise: number;
-  /** How far sideways the furthest throw lands, in the same units. */
+  /**
+   * How far past the top of the screen the hardest throw would go on climbing, were the screen taller,
+   * in world units at the landmark's own scale — 0363. It sets how fast a rock is still going when it
+   * leaves; no throw turns over in sight, because the turn is always past the edge.
+   */
+  readonly overshoot: number;
+  /** How far sideways the furthest throw drifts by the time it leaves, in the same units. */
   readonly reach: number;
 }
 
