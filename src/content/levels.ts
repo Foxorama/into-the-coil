@@ -1487,12 +1487,18 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       is what a volcano does: rock.
 
       ⚠️ **AND EACH ERUPTS HARDER THAN THE ONE BEFORE, WITH THE MUSIC.** `push` throws a few, `surge`
-      more and higher, and the one that arrives with `approach` is going off.
+      more and faster, and the one that arrives with `approach` is going off.
+
+      ⚠️ **AND NOTHING THEY THROW COMES DOWN UNTIL THE FIGHT — 0363.** *"Fire up into the air and off
+      the screen, but they don't fall down as it's distracting."* Every rock leaves the top of the
+      screen; the first rock that falls is the quetzal's `fall`, on the lane. Each volcano keeps about
+      the throws a second it had when rock came back down — 0347's 5/170, 8/150 and 11/135 — so fewer are
+      in the air at once, because a flight is now only the climb.
     */
     landmarks: [
-      { at: 1249, lane: 46, depth: 0.07, beat: 0, variant: 0, scale: 1.4, erupts: { count: 5, period: 170, rise: 18, reach: 20 } },
-      { at: 2534, lane: 48, depth: 0.075, beat: 0, variant: 1, scale: 1.4, erupts: { count: 8, period: 150, rise: 24, reach: 26 } },
-      { at: 3627, lane: 45, depth: 0.065, beat: 0, variant: 2, scale: 1.45, erupts: { count: 11, period: 135, rise: 30, reach: 32 } },
+      { at: 1249, lane: 46, depth: 0.07, beat: 0, variant: 0, scale: 1.4, erupts: { count: 2, period: 72, overshoot: 14, reach: 10 } },
+      { at: 2534, lane: 48, depth: 0.075, beat: 0, variant: 1, scale: 1.4, erupts: { count: 3, period: 62, overshoot: 20, reach: 13 } },
+      { at: 3627, lane: 45, depth: 0.065, beat: 0, variant: 2, scale: 1.45, erupts: { count: 4, period: 52, overshoot: 28, reach: 16 } },
     ],
     theme: 'saurian',
   },
