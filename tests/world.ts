@@ -406,6 +406,8 @@ export function playableWorld(
     surface: new NullSurface(),
     rng: makeRng('test').stream('spawns'),
     steps: 0,
+    // 0362: the sim's own clock, as a run has it.
+    pictureSteps: null,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,

@@ -125,6 +125,8 @@ function stationKeepingWorld(surface: Surface): World {
     surface,
     rng: makeRng('interp').stream('spawns'),
     steps: 0,
+    // 0362: the sim's own clock, as a run has it.
+    pictureSteps: null,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: 0.6,

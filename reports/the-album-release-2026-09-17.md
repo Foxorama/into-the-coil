@@ -11,13 +11,13 @@ again is at the end.
 |---|---|
 | artist | Vulpecula Games |
 | album title | Into the Coil (Original Soundtrack) |
-| release type | Album — eight tracks, 20:59 |
+| release type | Album — eight tracks, 20:36 (corrected 2026-09-23: the eight files total 1236.2 s, and 20:59 was never measured) |
 | primary genre | Soundtrack |
 | secondary genre | Electronic |
 | language | Instrumental (no lyrics) |
 | explicit | No |
 | label / copyright line | Vulpecula Games (the ℗ and © lines take the release year) |
-| cover | `cover.jpg`, 3000 × 3000 px, JPEG — the seven places of the game in the order you fly them, with the title; no URLs, handles or prices, which every store refuses |
+| cover | `cover.jpg`, 3000 × 3000 px, JPEG — the seven places of the game in the order you fly them, with the title; no URLs, handles or prices, which every store refuses. **Re-shot 2026-09-23** against the painted places; the 2026-09-17 one is four places out of date |
 | audio | WAV, 44.1 kHz, 16-bit stereo, one file per track |
 | loudness | every track −14.0 LUFS integrated, true peak −1.7 dBTP or lower (Saurian Belt −2.8) — the level Spotify plays at, so nothing is turned down or squashed on the way out |
 
@@ -60,9 +60,43 @@ fade that ends the file. No sound effect, gun, death or cue is in any file.
 - **Artist profile image** (for Spotify for Artists, after release) — any of the place frames in
   `C:\itc-renders\art\` at 3000 × 3000 would do, or the cover.
 
-## Not done, and why
+## The videos — added 2026-09-23
 
-- **Canvas videos** — declined for this release.
+Declined on 2026-09-17 *"because I still had to do the background level improvements"*; asked for once the
+seven places were painted (#389–#398). **Every one of them is the music room's own flythrough of that place,
+recorded from the shipped page** — the game's art, not a mock-up of it — and they live outside the repository
+at `C:\itc-renders\video\`.
+
+| what | where | the file |
+|---|---|---|
+| a video per track | `youtube\` | 3840 × 2160 at 60 fps, the mastered WAV as AAC 320k, the track's own length. A title card — number, name, album, artist — fades in at 1.5 s and is gone by 10 s, clear of the lane the ship weaves in; the picture fades in over a second and out over the last four |
+| the whole album | `Into the Coil (Original Soundtrack) - Full Album.mp4` | the eight joined without re-encoding, 20:36. `chapters.txt` is the description's chapter list |
+| a Canvas per track | `canvas\` | 1080 × 1920, **8.0 s**, silent, 1.4–3.5 MB. Its last second dissolves into its first, so it loops |
+| the long vertical | `vertical\` | the whole title tour at 1080 × 1920, silent — **not a Canvas**, see below |
+
+**A Canvas is three to eight seconds and both ends are hard**, which is why the tour that blends the places
+could not be one. Spotify's own upload panel states only the ratio, the height and the format, so the length is
+worth re-reading before the upload rather than trusted from here.
+
+**A Canvas is a CROP of the widescreen picture and not the picture turned on its side.** The game refuses a
+portrait window ([0031](../docs/decisions/0031-landscape-is-the-shipped-orientation.md), over
+[0023](../docs/decisions/0023-the-long-axis-is-the-scroll-axis.md)'s long axis), and some of the art has an up — Ember Nebula's spires, Saurian Belt's volcanoes
+— so a rotated frame would lay them on their side. Each Canvas is a 9:16 slice of the 4K frame, its moment and
+its crop chosen off a contact sheet of the master: the volcano erupting, the heart passing, the ship crossing
+the Labyrinth's walls. The picks are in `picks.txt` beside the files.
+
+**Track 1 has no level, so its picture is a tour of the seven**, in flying order, blending **on the title
+track's own section changes** — `TITLE_SCORE` is 8, 8, 16, 16, 8 and 16 bars at `BAR_SECONDS`, which is six
+sections for seven places, so the sixteen-bar groove is halved at its own eight-bar mark. The Black Heart takes
+the last section and the ending with it.
+
+⚠️ **THE FIRST CUT OF THESE WAS MADE FROM A FROZEN ROOM.** The music room is a screen that does not step, so
+the volcano's rock, the Mire's bubbles and the Heart's vein beads stood still in every recording of it —
+[0362](../docs/decisions/0362-the-room-has-a-clock.md) is the fix and the report that found it. The masters
+made before it are kept at `video\master\frozen-room\`; **a recording of the room made against anything older
+than 0362 shows a volcano that does not throw.**
+
+## Not done, and why
 - **The coda in the game.** The album renders it; the game still loops the fight until the boss dies and has no
   ending rung. `src/content/codas.ts` is written so the game can read the same table when the coda rung lands
   (the plan's step 3).
@@ -84,5 +118,24 @@ node scripts/album-art.mjs --out=C:/itc-renders/art --size=1500 --scale=2
 The level renders take one command per level kind (`approach`, `descent`, `coilward`, `shoal`, `batteries`,
 `gauntlet`, `eye`). Mastering is ffmpeg: measure with `ebur128=peak=true`, apply the gain to −14 LUFS, then
 `alimiter=limit=0.82:attack=4:release=60:level=false`, and write `pcm_s16le` at 44.1 kHz with triangular
-dither; re-measure and repeat until within 0.15 LU. The cover is `C:\itc-renders\art\cover.html` photographed at
-3000 × 3000 by Chromium.
+dither; re-measure and repeat until within 0.15 LU.
+
+**The videos** are one command per place, at the track's own length, and then ffmpeg:
+
+```bash
+node scripts/album-video.mjs --place="Ember Nebula" --seconds=160.4 --out=C:/itc-renders/video/master/"03 Ember Nebula".mp4
+```
+
+Every frame it records is exactly one 60 Hz step, so the picture walks the level at the same 36 units a second
+`scripts/timeline.mjs` renders the audio at and the two stay together with no sync mark. The cutting — the title
+card, the fades, the audio, the 9:16 crop and its loop, the join and the chapter list — is four shell scripts
+beside the files: `cut.sh`, `card.mjs`, `tour.sh`, `album.sh`. **A master takes about 45 minutes and three run at
+once comfortably**; the whole album is an afternoon.
+
+**The cover** is `C:\itc-renders\art\cover.html` photographed at 3000 × 3000 by Chromium, over seven place frames
+from `scripts/album-art.mjs`. Re-shot 2026-09-23 against the painted places (#389–#398), at **90 s of each walk**
+rather than 12 s, because that is where a place is doing what it is for — the belt's volcanoes erupting, the heart
+in frame (112 s for that one, which is where it reaches the middle). Two things a band must not show, both found by
+looking: **the dashed lane marker**, which is the game's furniture and not its art — the bands are drawn at 3300 px
+so it falls outside — and **the ship in more than one band**, which reads as a repeat rather than a journey, so
+every band but the first is placed off the ship's lane.

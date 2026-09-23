@@ -36,7 +36,7 @@ import {
   warpAt,
 } from '../content/travel.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
-import { MOTE_BAND, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
+import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -919,6 +919,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // here can never move a draw that matters.
     rng: makeRng('proof-scene').stream('spawns'),
     steps: 0,
+    // 0362: a run's picture runs on the sim's own clock, and only the music room says otherwise.
+    pictureSteps: null,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -2033,6 +2035,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     world.prevCameraAlong = borrowed.prev;
     world.levelOrigin = borrowed.origin;
     world.landmarks = borrowed.landmarks;
+    // 0362: and the picture goes back on the sim's own clock, which is the one the run it is resuming
+    // has been counting all along. A walk's step count left behind here would put the run's volcano on
+    // the phase of a place the player was only listening to.
+    world.pictureSteps = null;
     borrowed = null;
     if (borrowedShip !== null) {
       world.ship.along = borrowedShip.along;
@@ -2099,6 +2105,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * would be wrong.
    */
   const placeFlythrough = (camera: number, prevCamera: number): void => {
+    /*
+      ⚠️ **THE PICTURE'S CLOCK IS THE WALK'S POSITION — 0362, AND IT IS WRITTEN HERE FOR 0213'S REASON.**
+      The rock a volcano throws (0347), a pool's bubbles (0353) and a vein's beads (0354) are functions
+      of a step count, and the sim's count does not move on a screen `src/state/screens.ts` marks
+      `steps: false` — so in this room all three hung still while the place walked past them. This is
+      the one function every one of the room's camera writes passes through, which is why the clock is
+      written here rather than three times over: a walk that moved the camera and not the clock is the
+      defect coming back.
+
+      The arithmetic is `flythroughSteps`, beside the weave and the motes, because it is the same kind
+      of thing they are: a pure function of where this camera is (0213).
+    */
+    world.pictureSteps = flythroughSteps(camera);
     if (motes === null) return;
     const ship = world.ship;
     ship.prevAlong = prevCamera + SHIP_START_ALONG;
