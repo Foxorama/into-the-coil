@@ -35,7 +35,33 @@
  */
 
 import { ACROSS_SPAN, MAX_ALONG_SPAN } from '../sim/camera.ts';
+import { SCROLL_PER_STEP } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
+
+/**
+ * How many steps of picture the walk has shown, at a given camera position —
+ * [0362](../../docs/decisions/0362-the-room-has-a-clock.md).
+ *
+ * ⚠️ **THREE THINGS IN THE PICTURE ARE FUNCTIONS OF A STEP COUNT RATHER THAN OF THE CAMERA**: the
+ * rock a volcano throws (0347), a pool's bubbles (0353) and a vein's beads (0354), each because *the
+ * camera stops for a fight and a volcano does not*. This room is a screen `src/state/screens.ts`
+ * marks `steps: false`, so the sim's count stands still while this camera walks — and all three hung
+ * motionless in the air, which is what was reported of it.
+ *
+ * ⚠️ **SO THE CLOCK LIVES HERE, WITH THE WEAVE AND THE MOTES, AND FOR THEIR REASON.** The room has a
+ * seek bar, so everything in its picture is a pure function of where the walk is (0213) — and a clock
+ * is the one thing anybody would reach for an accumulator to write instead. The walk advances by
+ * `SCROLL_PER_STEP` a step and by nothing else, so its position IS a count of steps; dividing says so,
+ * and a seek then lands on the picture the walk would have arrived at rather than on a number that
+ * remembers the route it took.
+ *
+ * ⚠️ **THE CONSTANT AND NOT `world.scrollPerStep`, WHICH IS A TERM OF THE FIGHT** (0335). A walk has
+ * no fight in it and never comes to rest, and reading the run's rate here would put the room's clock
+ * on a number nothing in the room sets.
+ */
+export function flythroughSteps(cameraAlong: number): number {
+  return cameraAlong / SCROLL_PER_STEP;
+}
 
 /**
  * How far the ship may stray from the middle of the lane, in world units.

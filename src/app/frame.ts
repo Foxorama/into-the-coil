@@ -1373,6 +1373,31 @@ export interface World {
    * rather than a change of scene — the music does not stop there and neither does the beat.
    */
   steps: number;
+  /**
+   * Steps of PICTURE the screen has shown, when the sim's own clock is not what the picture runs on
+   * — `docs/decisions/0362-the-room-has-a-clock.md`. `null` whenever it is, which is every screen a
+   * run is played on.
+   *
+   * ── WHY THE PICTURE NEEDS A SECOND CLOCK AT ALL ────────────────────────────────────────────────
+   *
+   * Three things in `src/render/scene.ts` are functions of a step count rather than of the camera —
+   * the rock a volcano throws (0347), a pool's bubbles (0353), a vein's beads (0354) — and each
+   * rides the steps for the same stated reason: *the camera stops for a fight and a volcano does
+   * not*. The music room is a screen `src/state/screens.ts` marks `steps: false`, so `steps` above
+   * does not advance there while the room's camera walks the level (0212). Rock hung motionless in
+   * the air, bubbles never rose, and the heart beat over dead veins — one report, three places.
+   *
+   * ⚠️ **AND WHY IT IS NOT `steps` ITSELF, WHICH THE ROOM COULD SIMPLY HAVE DRIVEN.** `steps` is the
+   * phase the gun and the music are measured from (0094, just above). A screen with no gun on it does
+   * not get to say where the beat is.
+   *
+   * ⚠️ **AND WHY IT IS NOT AN ACCUMULATOR.** 0213: the room has a seek bar, so its picture is a pure
+   * function of where the walk is — *a place looks the same at 1:46 however you reached 1:46*. The
+   * room writes this from its own position, which advances by exactly one `SCROLL_PER_STEP` per step,
+   * so the number IS the steps that walk has taken and a seek lands on the picture it would have
+   * arrived at.
+   */
+  pictureSteps: number | null;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
@@ -2200,10 +2225,16 @@ export class GameFrame implements Frame {
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;
-    // `w.warp` — 0340: the sky at speed. Nought on every frame that is not a crossing. And the sim's own
-    // clock, interpolated like everything else, for the rock a volcano throws — 0347.
+    // `w.warp` — 0340: the sky at speed. Nought on every frame that is not a crossing. And the clock the
+    // picture runs on, interpolated like everything else, for the rock a volcano throws — 0347.
+    //
+    // ⚠️ **THE SIM'S OWN CLOCK UNLESS A SCREEN SAYS OTHERWISE — 0362.** `pictureSteps` is null on every
+    // screen a run is played on, and the music room writes it from its walk, because the sim is stopped
+    // there and the picture is not. One `??` rather than a branch per painter: what changes is which
+    // count of steps has passed, never what is drawn from it.
+    const time = (w.pictureSteps ?? w.steps) + alpha;
     // The wall only while it is met — 0359; `boundPress` is the step's answer to *is it*.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, w.steps + alpha, w.corridor);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);

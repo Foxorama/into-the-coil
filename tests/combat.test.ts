@@ -457,6 +457,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
     steps: 0,
+    // 0362: the sim's own clock, as a run has it.
+    pictureSteps: null,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -573,6 +575,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     surface: BLIND,
     rng: makeRng('combat').stream('spawns'),
     steps: 0,
+    // 0362: the sim's own clock, as a run has it.
+    pictureSteps: null,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
