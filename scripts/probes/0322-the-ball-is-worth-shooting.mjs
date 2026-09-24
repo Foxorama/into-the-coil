@@ -95,21 +95,10 @@ export const PROBES = [
       replace: "globes: 21, every: 3 }, cue: 'bossAcid' },\n            { shot: 'void', attack: { kind: 'spray' }, cue: 'bossVoid' },",
     },
   },
-  {
-    decision: '0322',
-    suite: 'tests/serpent.test.ts',
-    /*
-      ⚠️ **AND THE OPENING'S OWN COUNT, BOTH WAYS ROUND.** The ask is *"slightly fewer acid balls, then
-      increase them"*, so what is held is the PAIR: five while whole is the state that was reported, and the
-      guard has to see it.
-    */
-    broke: 'the opening phase back at five globes, so the arc no longer grows as the animal is hurt',
-    guard: 'THE REPORTED ONE: whole, it throws a forward arc',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // ⚠️ The spread is in the anchor because another boss opens at 78 with three shots as well.
-      find: "{ upTo: 1, fireEvery: 78, shots: 3, spread: 0.9,",
-      replace: "{ upTo: 1, fireEvery: 78, shots: 5, spread: 0.9,",
-    },
-  },
+  /*
+    ⚠️ **THE OPENING'S OWN COUNT, BOTH WAYS ROUND, WAS HERE — AND 0365 TOOK IT OUT.** It broke the
+    three-globe opening back to five, so the arc no longer grew. 0365 removed that phase at the same
+    player's asking, so *five while whole* is now the content rather than a break of it; 0304's probe
+    still breaks the five from the other side.
+  */
 ];

@@ -23,8 +23,8 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
       // And by 0307, which armoured the serpent's body and brought it to 1000. And by 0322, which put it
-      // at 1100 to pay for the ball's smaller appetite.
-      find: '    health: 1100,',
+      // at 1100 to pay for the ball's smaller appetite. And by 0365, which took a tenth off each phase.
+      find: '    health: 770,',
       replace: '    health: 150,',
     },
   },
@@ -46,11 +46,12 @@ export const PROBES = [
       // the one line of its table still on one line: a sliver of a phase cut off the top of it.
       // And by 0304, which made that phase five globes in a wider arc. And by 0308, which gave it a cue.
       // And by 0322, which split the opening in two — three globes while whole, five a fifth down — so
-      // the sliver is cut off the top of the FIRST of those two and the cadence is 78.
-      find: "      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      // the sliver is cut off the top of the FIRST of those two and the cadence is 78. And by 0365, which
+      // took the three-globe opening back out, so the first line is the five-globe arc at 72.
+      find: "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
       replace:
-        "      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },\n" +
-        "      { upTo: 0.98, fireEvery: 78, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+        "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },\n" +
+        "      { upTo: 0.98, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
     },
   },
   {

@@ -18,9 +18,12 @@ export const PROBES = [
         now — three globes while whole and five a fifth down — so *the arc of five* is the row below the
         one this used to name. 0322's own probe breaks the other half, the three; between them the pair
         the report asked for is held from both ends.
+
+        ⚠️ **AND BY 0365, BACK ONTO THE FIRST LINE**, which took the three-globe opening out: the five is
+        the opening again, and 0322's probe of the three went with the phase it broke.
       */
-      find: "      { upTo: 0.78, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
-      replace: "      { upTo: 0.78, fireEvery: 72, shots: 3, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      find: "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
+      replace: "      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },",
     },
   },
   {

@@ -86,6 +86,10 @@ function serpentAt(fraction: number, difficulty?: DifficultyKind): {
  * phase, and a rake advances `firePhase` by an ANGLE — so the count the heads indexed by was 5.4 by
  * the time the fight reached its second phase, and `heads[1.4]` is `undefined`. `src/sim/entity.ts`
  * carries the argument for the second field.
+ *
+ * ⚠️ **ABOVE 0.3 OF THE BAR, WHERE THE ROUND IS STILL THE TWO HEADS IT IS WRITTEN AS — 0365.** Below that
+ * the round grows a ball at every tenth, and the lightning's slot moves along with it; the fixtures that
+ * arm the rain stand the animal at 0.35 for that reason.
  */
 function armRain(boss: { headAt: number }): void {
   const last = BOSSES.jormungandr.phases[BOSSES.jormungandr.phases.length - 1]!.attack;
@@ -172,7 +176,8 @@ describe('0248 — the serpent strikes', () => {
     const whole = phaseFor(row, row.health);
     // ⚠️ Half rather than 0.6: the hurt phase runs from 0.55 of the bar since 0322 split the opening.
     const hurt = phaseFor(row, row.health * 0.5);
-    const last = phaseFor(row, row.health * 0.3);
+    // ⚠️ 0.35 rather than 0.3 since 0365: the last phase starts at 0.4 and its round grows a ball at 0.3.
+    const last = phaseFor(row, row.health * 0.35);
     expect(whole.shot ?? row.shot, 'the serpent does not open with acid').toBe('acid');
     const fan = whole.attack ?? row.attack;
     expect(fan.kind, 'the serpent’s opening acid is not a plain fan straight down the lane').toBe('spray');
@@ -183,10 +188,13 @@ describe('0248 — the serpent strikes', () => {
       the pair rather than either number — an opening that grows — because a count alone is a taste
       (`tests/authored.ts` prints it) and the growth is the ask.
     */
-    expect(whole.shots, 'the opening arc is not three globes').toBe(3);
-    const filled = phaseFor(row, row.health * 0.7);
-    expect(filled.shots, 'the arc does not fill in to five once the serpent is a fifth down').toBe(5);
-    expect(filled.shots, 'the opening arc does not grow').toBeGreaterThan(whole.shots);
+    /*
+      ⚠️ **AND FIVE WHILE WHOLE AGAIN — 0365, THE GUARD MOVING WITH THE TABLE A SECOND TIME.** Asked:
+      *"remove the first set of attacks, the shorter full health wave."* The three-globe opening is gone
+      and the fight opens on the five, so the growth the paragraph above held is gone with it — on
+      purpose, and by the same player who asked for it.
+    */
+    expect(whole.shots, 'the opening arc is not five globes').toBe(5);
     const hurtHeads = (hurt.attack ?? row.attack).kind === 'heads' ? (hurt.attack as { heads: readonly { shot: string; attack: { kind: string } }[] }).heads : [];
     /*
       ⚠️ **THREE HEADS SINCE 0324, AND THIS IS THE GUARD MOVING RATHER THAN BENDING.** It read
@@ -222,7 +230,7 @@ describe('0248 — the serpent strikes', () => {
       take, in the frame. **Four volleys rather than three since 0311**, so the round is seen to come
       back round to where it started rather than merely to have two members.
     */
-    const { world, frame } = serpentAt(0.3);
+    const { world, frame } = serpentAt(0.35);
     const boss = world.bossPool.at(0);
     const seen: string[] = [];
     for (let volley = 0; volley < 4; volley++) {
@@ -242,7 +250,7 @@ describe('0248 — the serpent strikes', () => {
     ]);
   });
 
-  it('0304 — THE REPORTED ONE: whole, it throws a forward arc — THREE globes, then FIVE (0322) — and every volley points the same way', () => {
+  it('0304 — THE REPORTED ONE: whole, it throws a forward arc of FIVE globes (0365 took the three back out) — and every volley points the same way', () => {
     /*
       ⚠️ **ASKED FOR**: *"for phase 1 can we have it shoot a forward arc of 5 globes."* Three halves,
       each in something the player sees: how many, that the arc faces them, and that it holds still —
@@ -255,13 +263,16 @@ describe('0248 — the serpent strikes', () => {
       table whatever the table said, which is
       `docs/decisions/0027-measure-the-picture-not-the-model.md`'s own subject.
 
+      ⚠️ **AND IT IS FIVE AT BOTH PLACES SINCE 0365**, which took the three-globe opening out: the arc is
+      the whole first phase now, so it is driven at full health and near its far end, still as literals.
+
       ⚠️ **MEASURED OFF THE VELOCITIES IN THE CAMERA'S FRAME**, which is where the aim is: every globe
       leaves the mouth on the same step, so the arc is in where they point. The scroll is taken out,
       because it is in every velocity and is not the animal aiming anywhere.
     */
     for (const [at, globes] of [
-      [1, 3],
-      [0.7, 5],
+      [1, 5],
+      [0.75, 5],
     ] as const) {
       const opening = serpentAt(at);
       const centres: number[] = [];
@@ -780,7 +791,7 @@ describe('0248 — the serpent strikes', () => {
       hurt for as long as the row's warning says — in seconds, at least half a one — and IS hurt on
       the step the line becomes lightning.
     */
-    const { world, frame } = serpentAt(0.3);
+    const { world, frame } = serpentAt(0.35);
     const boss = world.bossPool.at(0);
     armRain(boss);
     boss.fireIn = 1;
@@ -818,7 +829,7 @@ describe('0248 — the serpent strikes', () => {
   });
 
   it('and a ship elsewhere on the lane is not touched by it, however close across', () => {
-    const { world, frame } = serpentAt(0.3);
+    const { world, frame } = serpentAt(0.35);
     const boss = world.bossPool.at(0);
     armRain(boss);
     boss.fireIn = 1;
@@ -860,7 +871,7 @@ describe('0248 — the serpent strikes', () => {
       0036: the model resolves a strike, and the picture must mention both halves of it — the line,
       then the bolt. The surface is asked whose ink it stroked in and how loud.
     */
-    const { world, frame } = serpentAt(0.3);
+    const { world, frame } = serpentAt(0.35);
     const recorder = new Recorder();
     world.surface = recorder;
     armRain(world.bossPool.at(0));
@@ -2170,7 +2181,7 @@ describe('0306 — the serpent coils in', () => {
 });
 
 describe('0307 — the serpent is armoured', () => {
-  it('flown at the cap on the tuned tier, no gun kills the serpent inside forty seconds from any place, and every phase gets eight volleys away', () => {
+  it('flown at the cap on the tuned tier, no gun kills the serpent inside its floor from any place, and every phase gets eight volleys away', () => {
     /*
       ⚠️ **0260's FLOOR, IN THE FIGHT RATHER THAN IN THE ARITHMETIC.** *"I think I only saw about 50%
       of their attacks before they died"* — so a real boss lasts forty seconds at max weapons on the
@@ -2189,7 +2200,16 @@ describe('0307 — the serpent is armoured', () => {
       ⚠️ **CAPPED AT FOUR MINUTES, WHICH NO QUICKEST FIGHT COMES NEAR.** A place the gun cannot reach
       from never ends, and ten minutes of it three times over is the cost of this test and none of
       its claim.
+
+      ⚠️ **AND IT IS TWENTY-EIGHT NOW, BECAUSE A LATER REPORT OWNS THIS BOSS'S NUMBER — 0365.** 0260's
+      floor is a budget whose number the report owns (0192), and the report on this animal has since
+      said the other thing: *"they take slightly too long now, especially with the void balls eating
+      attacks."* 0365 took the opening phase out and about a tenth off each phase left, and the arc's
+      quickest fight flew to **30 s**. Set just under that, on 0260's own pattern, so a hand tuning
+      further down reddens it before it has cut another tenth. The eight volleys a phase are 0260's
+      still, and untouched.
     */
+    const FLOOR_SECONDS = 28;
     const row = BOSSES.jormungandr;
     const tuned = DIFFICULTIES.savior;
     for (const gun of WEAPON_KINDS) {
@@ -2201,7 +2221,7 @@ describe('0307 — the serpent is armoured', () => {
         }
       }
       expect(quickest, `the ${gun} never killed the serpent from any place, so this measured nothing`).not.toBeNull();
-      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at the cap on the tuned tier`).toBeGreaterThanOrEqual(40);
+      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at the cap on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
       expect(
         quickest!.phaseAt.map((p) => p.phase),
         `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,
@@ -2214,6 +2234,45 @@ describe('0307 — the serpent is armoured', () => {
           `against the ${gun}, the serpent's phase ${entered.phase + 1} lasts ${(ends - entered.at).toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
         ).toBeGreaterThanOrEqual(8);
       });
+    }
+  });
+});
+
+describe('0365 — the serpent is shorter, and the ball comes round more often as it dies', () => {
+  it('THE REPORTED ONE: below 0.4 the round is a ball and a strike, and every tenth under that adds one more ball', () => {
+    /*
+      ⚠️ **ASKED**: *"for the final phase with the combined orbs, add additional orb fire at every 10% of
+      health"* — read, when asked, as the ball coming round more often. Driven rather than read off the
+      row, and in what the player sees leave the animal: at each tenth, two whole rounds of volleys, and
+      how many balls are thrown for every strike. A guard that counted `grow` against the table would
+      agree with the table whatever it said — 0027.
+
+      ⚠️ **AND THE STRIKE IS STILL THERE AT THE BOTTOM**, because a round that grew until it held no
+      lightning would be the *"don't change it"* attack removed by arithmetic, which 0322 already caught
+      happening once.
+    */
+    for (const [at, balls] of [
+      [0.35, 1],
+      [0.25, 2],
+      [0.15, 3],
+      [0.05, 4],
+    ] as const) {
+      const { world, frame } = serpentAt(at);
+      const boss = world.bossPool.at(0);
+      boss.headAt = 0;
+      const seen: string[] = [];
+      for (let volley = 0; volley < (balls + 1) * 2; volley++) {
+        world.enemyShots.clear();
+        world.bolts.clear();
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        boss.health = world.bossFullHealth * at;
+        boss.fireIn = 1;
+        frame.step();
+        seen.push(world.bolts.size > 0 ? 'lightning' : world.enemyShots.size > 0 && world.enemyShots.at(0).sprite === SHOTS.maw.sprite ? 'ball' : 'nothing');
+      }
+      const round = [...Array<string>(balls).fill('ball'), 'lightning'];
+      expect(seen, `at ${at} of the bar the serpent threw ${seen.join(', ')}`).toEqual([...round, ...round]);
     }
   });
 });

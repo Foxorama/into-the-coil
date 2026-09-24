@@ -805,7 +805,9 @@ export function stepBoss(
   if (ship.along === boss.along && ship.across === boss.across) return direction;
   // The phase's own attack where it names one — 0248: the serpent throws a wall, then a spray, then
   // lightning, and the row's `attack` is the first of those.
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, phase.cue);
+  // The fraction on `phaseFor`'s terms, zero-guard and all, so a round that grows reads the bar the phase did.
+  const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, phase.cue);
   return direction;
 }
 
@@ -830,6 +832,8 @@ function throwAttack(
   */
   row: BossRow,
   phase: BossPhase,
+  /** How much of the bar is left, `0..1` — for a round that grows (0365) and nothing else. */
+  fraction: number,
   tier: DifficultyRow,
   ship: Entity,
   shots: Pool<Entity>,
@@ -1192,12 +1196,23 @@ function throwAttack(
         `src/sim/entity.ts` carries the whole of it — and since 0304 a head may SPRAY, which keeps
         its own five fields for the same reason and touches neither count.
       */
-      const n = attack.heads.length;
-      const head = attack.heads[((boss.headAt % n) + n) % n]!;
+      /*
+        ⚠️ **AND A ROUND THAT GROWS — 0365.** Every `grow.every` of the bar below the phase's `upTo`, the
+        head at `grow.head` takes one more slot, right after its own: a round of `n` heads is `n + extra`
+        slots, and a slot past that head's reads back `extra` places. Arithmetic on the index rather than
+        a longer array, so nothing allocates and the table still says the round once. `headAt` runs on
+        through a mark, so the round picks up wherever the count has got to — as it does at a phase.
+      */
+      const grow = attack.grow;
+      const extra = grow === undefined ? 0 : Math.max(0, Math.floor((phase.upTo - fraction) / grow.every));
+      const n = attack.heads.length + extra;
+      const slot = ((boss.headAt % n) + n) % n;
+      const at = grow === undefined || slot <= grow.head ? slot : slot <= grow.head + extra ? grow.head : slot - extra;
+      const head = attack.heads[at]!;
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets

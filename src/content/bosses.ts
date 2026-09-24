@@ -425,7 +425,33 @@ export type BossAttack =
    * ⚠️ **A head is any attack but `heads` or `rake`**, by type: the first would be a round inside a
    * round, and the second shares `firePhase`, the field the round counts on.
    */
-  | { kind: 'heads'; heads: readonly Head[] };
+  | { kind: 'heads'; heads: readonly Head[]; grow?: Grow };
+
+/**
+ * A round that throws one head more often as the bar falls — `docs/decisions/0365-the-serpent-is-shorter.md`.
+ *
+ * ⚠️ **ASKED**: *"for the final phase with the combined orbs, add additional orb fire at every 10% of
+ * health"* — read, when asked, as the ball coming round more often at each mark. Every `every` of the
+ * bar below the phase's own `upTo`, the head at `head` is thrown one more time in the round, next to
+ * itself: the serpent's ball and strike go ball, strike → ball, ball, strike → and so on.
+ *
+ * ⚠️ **ON THE ROUND AND NOT FOUR PHASES, AND FOUR PHASES WERE BUILT FIRST.** The hydra grows its heads
+ * with phases (0254), and that works because its bands are a fifth of the bar. A tenth of the serpent's
+ * is **2.4 s at the quickest gun**, and a phase in this table means *a change the player sees*: three
+ * guards that hold that — a phase is seen for three seconds, fires quicker than the one before, and
+ * throws a mark of its own — went red at once, which is what a thing that is not a phase looks like
+ * when it is written as one. `Uncoil` (0151) is the same answer to the same shape: *a thing that happens
+ * at fixed fractions of a health bar is not a thing a phase can say.*
+ *
+ * ⚠️ **OPTIONAL, ON 0282's TERMS**: absent is a round that does not grow, which is every round but one
+ * today, and shared code holds that fallback rather than every row spelling `null`.
+ */
+export interface Grow {
+  /** How much of the bar between one more throw and the next, from the phase's own `upTo` down. */
+  every: number;
+  /** Which head is thrown once more at each mark — an index into the round's `heads`. */
+  head: number;
+}
 
 /** Where a summons puts its adds — 0262: the leading edge, or the across edges in turn. */
 export type SummonFrom = 'lead' | 'sides';
@@ -2504,7 +2530,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       every phase now gets ten volleys away or more where the floor is eight. Measured by
       `scripts/weigh-boss.mjs`, not divided.
     */
-    health: 1100,
+    /*
+      ⚠️ **1100 → 770, AND IT IS A TENTH OFF EACH PHASE RATHER THAN A TENTH OFF THE BAR — 0365.** Asked:
+      *"reduce its health by about 10% at each phase as they take slightly too long now, especially with
+      the void balls eating attacks."* The same change took the three-globe opening out and shared its
+      band among the three left, so every band got WIDER — and a tenth off the bar (990) would have made
+      each phase longer than it was, 297 points where it had 253. What the sentence asks for is each
+      phase's own share: 253, 242 and 363 before, **231, 231 and 308** now, which is 9, 5 and 15 per
+      cent off. The last phase gives up the most, and it is the one with the ball eating the fire.
+    */
+    health: 770,
     damage: 3,
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
@@ -2553,13 +2588,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **THE OPENING IS SIX STEPS QUICKER AND THROWS TWO FEWER**, which is a cut in what arrives and
         not a swap: at the tuned tier it was five globes a 1.1 s and is three a second — **4.5 bullets a
         second down to 3.0.** *"Slightly fewer"* is the count; the cadence moved because the band did.
+
+        ── ⚠️ AND 0365 TOOK THE THREE-GLOBE OPENING BACK OUT ────────────────────────────────────────
+
+        Asked: *"remove the first set of attacks, the shorter full health wave, then space the rest of the
+        attack waves out to balance out the gap."* So the fight opens on the five-globe arc again, and the
+        removed band's 0.22 is shared among the three phases left: **0.3, 0.3 and 0.4** of the bar, where
+        they had 0.23, 0.22 and 0.33. The cadences stay 72, 66 and 60, so the ladder
+        `tests/difficulty.test.ts` holds is the same ladder with its first rung gone. Everything above is
+        why the table read as it did for a while; the three-globe arc it describes is no longer thrown.
       */
-      // Whole: three acid globes in an arc straight down the lane — the row's own attack and shot (0304),
-      // and the wet burst 0308 gave it in place of the crash every boss shared.
-      { upTo: 1, fireEvery: 78, shots: 3, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
-      // A fifth down: the same arc with five in it — *"then increase them"* — and the patrol a shade
-      // quicker, so the phase is a change in what the animal does and not only in what it throws.
-      { upTo: 0.78, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1.15, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
+      // Whole: five acid globes in an arc straight down the lane — the row's own attack and shot (0304),
+      // and the wet burst 0308 gave it in place of the crash every boss shared. The patrol is the
+      // opening's own 1 rather than the 1.15 this arc flew at as a second phase — 0365: the arc moved up a
+      // rung and the flight did not, so the animal still quickens 1, 1.3, 1.6 across the fight.
+      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null, cue: 'bossAcid' },
       /*
         Hurt: the acid spray and a fan of three void in turn — heads (0254), one a volley. **Three of
         them since 0324**, the third a second spray, so the void lands on every second round rather than
@@ -2593,7 +2636,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         the acid sprays*, and a wider fan is a harder volley — the ask is for room, and room is time here.
       */
       {
-        upTo: 0.55,
+        upTo: 0.7,
         fireEvery: 66,
         shots: 3,
         spread: 0.8,
@@ -2651,7 +2694,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
         },
       },
       /*
-        The last third: the ball and the lightning in turn (0311), three columns a strike.
+        The last two fifths since 0365, and the last third before it: the ball and the lightning in turn
+        (0311), three columns a strike.
 
         ⚠️ **THE PARAGRAPH THAT WAS HERE SAID *the cadence is the quickest of the three so the lightning
         still falls about every two seconds*, AND IT HAD BEEN FALSE FOR A COMMIT — 0322.** The round was
@@ -2675,7 +2719,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         thing to shoot in it cannot also strike every two seconds; this is the trade the report asked for.
       */
       {
-        upTo: 0.33,
+        upTo: 0.4,
         fireEvery: 60,
         shots: 3,
         spread: 0.9,
@@ -2770,6 +2814,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
             */
             { shot: 'void', attack: { kind: 'rain', warning: 45, halfWidth: 4 }, cue: 'bossBolt' },
           ],
+          /*
+            ⚠️ **AND AT EVERY TENTH BELOW 0.4, ONE MORE BALL IN THE ROUND — 0365.** *"For the final phase
+            with the combined orbs, add additional orb fire at every 10% of health."* Ball, strike above
+            0.3; ball, ball, strike under it; three balls under 0.2 and four under 0.1 — the ball's share
+            of the volleys goes a half, two thirds, three quarters, four fifths. `Grow` has why it is
+            this and not four phases.
+
+            ⚠️ **THE LIGHTNING COMES ROUND LESS OFTEN FOR IT, AND THAT IS THE PRICE OF THE ASK.** Each
+            extra ball is one volley and its own 42 steps of room between strikes. The strike itself —
+            the column, the warning line, the *"don't change it"* attack — is untouched.
+          */
+          grow: { every: 0.1, head: 0 },
         },
       },
     ],
