@@ -130,4 +130,19 @@ export const PROBES = [
       replace: '  if (w.bossPool.size === 0) return;',
     },
   },
+  {
+    decision: '0337',
+    suite: 'tests/gyre.test.ts',
+    /*
+      ⚠️ THE SHIP × BOSS PAIRING UNGATED, which is what shipped: *"the 4th floor boss will kill you
+      with its corpse."* The wreck is the hull in the same pool, so it hurt on contact where it lay.
+    */
+    broke: 'the ship left colliding with the wreck, so the corpse kills on contact',
+    guard: 'and a wreck does nothing back: flying into the corpse costs nothing',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '      if (!w.bossBeaten) collideIntoOne(w.bossPool, w.ship,',
+      replace: '      collideIntoOne(w.bossPool, w.ship,',
+    },
+  },
 ];

@@ -1960,7 +1960,13 @@ export class GameFrame implements Frame {
       // Not consumed: an enemy the player flew into is still there afterwards, or ramming would be
       // the cheapest way to clear the screen.
       collideIntoOne(w.enemies, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
-      collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
+      /*
+        ⚠️ **NOT ONCE IT IS BEATEN.** The only boss still in the pool after its death is the gyre's
+        wreck — 0337 — and `layWreck` promises it does nothing back. Played: *"the 4th floor boss will
+        kill you with its corpse."* It fell onto the edge of the box and killed on contact, and then
+        slid back through the box when the room opened.
+      */
+      if (!w.bossBeaten) collideIntoOne(w.bossPool, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
       // Flying into a serpent's flank is flying into the serpent — 0283. Not consumed, as the hull
       // is not: a body the player rammed is still there afterwards.
       collideIntoOne(w.bossBody, w.ship, w.tuning.hurtbox, w.tuning.playerDamage, INVULN_STEPS, IMPACT_FLASH_STEPS, false);
@@ -2181,6 +2187,16 @@ export class GameFrame implements Frame {
       // Where the boss was: it is already out of its pool by now, and its death is the entry the
       // collision logged this step — 0127.
       w.onCue('bossDown', w.bossDeaths.across[0]);
+      /*
+        ⚠️ **THE END BOSS'S DEATH PUTS OUT THE FIRE — 0366.** Played: *"sometimes after you kill the
+        boss on level 4 … there's a bullet wall generated before the boss dies, but it doesn't fire
+        forward. The transition then rockets you forward into the stationary wall."* A shot's speed is
+        fixed in the world when it is thrown, and the gyre throws in a room where the camera stands
+        still — so a wall on the field when the room opened stood still in the world, and the camera
+        and then the burn drove the ship into it. The fight is over, so its fire is too. Not the
+        mid-boss's: the level goes on after it at the rate its fire was thrown at.
+      */
+      if (w.fight === 1) cancelFire(w);
       /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
@@ -6527,6 +6543,24 @@ function crossingsBy(e: Entrance & { kind: 'breach' }, u: number): number {
 }
 
 /**
+ * Every hostile shot on the field, put out — the end boss has died and the fight's fire goes with it.
+ *
+ * ⚠️ **A BURST EACH, BECAUSE A BULLET THAT VANISHES IS WHAT 0036 IS NAMED FOR.** One fragment, not an
+ * enemy's eight: a wall is forty shots, and what the player should see is the fire going out, not a
+ * field of deaths. The debris pool is smaller than the shot pool, so the last of a crowded field go
+ * without one — `burst` drops what will not fit, and `src/sim/pool.ts` says that is the rule.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function cancelFire(w: World): void {
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const shot = w.enemyShots.at(i);
+    burst(w, shot.along, shot.across, BURST.cancelled);
+    w.enemyShots.releaseAt(i);
+  }
+}
+
+/**
  * Put the hull back on the field as a wreck, on the step it died — 0337.
  *
  * ⚠️ **THE SAME POOL AND THE SAME BITMAP, BECAUSE IT IS THE SAME OBJECT.** A wreck drawn out of a
@@ -7988,6 +8022,8 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
  * ⚠️ **Debris is left alone**, because it retires itself and because the thing most likely to still
  * be on screen at this moment is the boss coming apart — which 0062 went to some trouble to make
  * visible. The player's own shots stay too: the ship did not leave, so neither did what it fired.
+ * **And the pickups stay**, for the same reason — what a death threw back is still the player's to
+ * catch in the next level; only a new run sweeps them (`resetScene`).
  */
 export function advanceLevel(w: World, level: LevelRow, levelIndex: number): void {
   w.level = level;
@@ -8053,7 +8089,6 @@ function beginScript(w: World): void {
   w.enemies.clear();
   w.enemyShots.clear();
   w.bossPool.clear();
-  w.pickups.clear();
   w.nextWave = 0;
   // The fight's own count of firing waves offered — 0267, and it is the level's fight, so it goes
   // back with the level's script.
@@ -8109,5 +8144,13 @@ export function resetScene(w: World): void {
   // ⚠️ The one sweep a level boundary does not do: a new run opens on nothing at all, including the
   // fragments of whatever ended the last one.
   w.debris.clear();
+  /*
+    ⚠️ **AND THE PICKUPS, which a boundary used to sweep and must not.** Played: *"if you die and the
+    power ups are floating when the new level loads they'll disappear."* What floats at a boundary is
+    mostly what a death threw back — 0266, *"nothing it takes is lost"* — and the mid-boss's drop, and
+    a sweep there spent both. They are the player's to catch, on 0076's own terms for the shots: the
+    ship did not leave, so neither did what it dropped. A new RUN still opens on nothing — 0067.
+  */
+  w.pickups.clear();
   respawn(w);
 }

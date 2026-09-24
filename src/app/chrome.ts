@@ -712,11 +712,30 @@ ${each('-action-cursor')} {
   ⚠️ The HUD is NOT inside a screen's overlay. Those are absolutely positioned over the whole page
   and would swallow every pointer event on the playfield; this sits in a corner and takes no pointer
   events at all, because nothing on it is a control.
+
+  ⚠️ **THE READOUT AND THE BOSS BAR SHARE ONE ROW, AND THE ROW IS A GRID SO THEY CANNOT MEET.** Played
+  on a phone: *"the boss bars overlap the bomb numbers on mobile."* Both were placed absolutely — the
+  bar from 31% of the width, the readout about fourteen of its own em wide — and on a phone the em is
+  2.4vw, so the readout is a third of the width and ran under the bar at every phone size. A width
+  written for one screen is wrong on the next pip, digit or face, so the columns do it: the bar is
+  38% and centred while there is room, and when there is not the readout keeps its width and the bar
+  is what gives.
 */
-.itc-playing-hud {
+.itc-playing-top {
   position: absolute;
   top: 0;
   left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(0, 38%) 1fr;
+  column-gap: 0.6em;
+  align-items: start;
+  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  pointer-events: none;
+}
+.itc-playing-hud {
+  grid-column: 1;
+  justify-self: start;
   display: none;
   gap: 1.5em;
   align-items: center;
@@ -745,11 +764,9 @@ ${each('-action-cursor')} {
   pointer-events: none, like everything over the playfield that is not a control.
 */
 .itc-playing-boss {
-  position: absolute;
-  top: 0.9em;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 38%;
+  position: relative;
+  grid-column: 2;
+  margin-top: 0.9em;
   height: 0.6em;
   display: none;
   box-sizing: border-box;
@@ -2120,7 +2137,11 @@ export function makeChrome(
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
   hud.append(livesGroup, shieldGroup, bombGroup);
-  elements.push(hud);
+  // The row the readout shares with the boss bar — a grid, so the two cannot overlap on any width.
+  const top = document.createElement('div');
+  top.className = 'itc-playing-top';
+  top.appendChild(hud);
+  elements.push(top);
 
   /*
     ── WHERE TO PRESS, ON A DEVICE WHERE THAT IS A PLACE RATHER THAN A KEY ─────────────────────────
@@ -2165,7 +2186,7 @@ export function makeChrome(
   bossBar.appendChild(bossFill);
   /** The notches, grown once per row and reused. */
   const bossNotches: HTMLElement[] = [];
-  elements.push(bossBar);
+  top.appendChild(bossBar);
 
   /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────

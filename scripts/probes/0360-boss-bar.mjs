@@ -62,4 +62,20 @@ export const PROBES = [
       replace: '    if (bossShown >= 0 || bossShown !== w.shownBoss) {\n      w.shownBoss = bossShown;',
     },
   },
+  {
+    decision: '0360',
+    suite: 'tests/hud.browser.test.ts',
+    /*
+      ⚠️ THE BAR TAKEN OUT OF THE ROW AND PLACED BY A NUMBER AGAIN — what shipped first, and what a
+      phone reported: *"the boss bars overlap the bomb numbers on mobile."* At 31% of the width it
+      clears the readout on a monitor and runs over the bomb count on every phone.
+    */
+    broke: 'the bar placed absolutely at 31% of the width again, over the readout on a phone',
+    guard: 'THE REPORTED ONE: the bar never lies over the readout, on a phone or a monitor',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '.itc-playing-boss {\n  position: relative;\n  grid-column: 2;\n  margin-top: 0.9em;',
+      replace: '.itc-playing-boss {\n  position: absolute;\n  left: 31%;\n  width: 38%;\n  top: 0.9em;',
+    },
+  },
 ];

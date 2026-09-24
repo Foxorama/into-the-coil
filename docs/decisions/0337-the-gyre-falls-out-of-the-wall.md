@@ -94,3 +94,15 @@ rate and the gravity are the two numbers most likely to move on a verdict.
 **Whether the pause is the right length.** A second on the floor and a second and a half of wall is
 two and a half seconds between the last shot of a fight and flying again. That is an ear-and-eye call,
 not a measured one.
+
+## Amended 2026-09-25 — the wreck does nothing back
+
+Played: *"the 4th floor boss will kill you with its corpse."* `layWreck` said the wreck does nothing
+back, and the player's fire at it was gated on `bossBeaten`; the ship's contact with `bossPool` was
+not. The wreck kept its hull's damage, killed on touch where it landed on the edge of the box, and
+killed again as the room opened and it slid back through the box.
+
+**The ship × `bossPool` pairing is gated on `bossBeaten`**, like every pairing that shoots at it. The
+wreck is the only boss left in the pool after its death, so the gate touches nothing else. Held by
+`tests/gyre.test.ts` — *a wreck does nothing back*, which parks the ship on the wreck every step from
+the death until the room is open. Probe: *the ship left colliding with the wreck*.

@@ -270,6 +270,12 @@ export const BURST = {
    */
   melt: 2,
   /**
+   * The burst where a hostile shot is cancelled by its end boss dying. One each, because a wall is
+   * forty of them at once and the field should read as the fire going out, not as forty deaths — and
+   * one rather than none, because a bullet that vanishes is what 0036 is named for.
+   */
+  cancelled: 1,
+  /**
    * Fragments per PULSE while a boss is BARE — and it stays bare until the fight ends.
    *
    * ⚠️ **`docs/decisions/0150-the-uncoil-and-the-eye.md`, and it is
