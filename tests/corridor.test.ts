@@ -26,7 +26,7 @@ import { GameFrame, layRoom } from '../src/app/frame.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
-import { bandAt, faceAt, stoneAt } from '../src/sim/corridor.ts';
+import { bandAt, stoneAt } from '../src/sim/corridor.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
@@ -326,6 +326,62 @@ describe('0348 — the labyrinth is walled', () => {
     }
   }, 600_000);
 
+  it('THE REPORTED ONE, IN PIXELS, ON EVERY TIER: stone the player has seen does not vanish while it is on the screen', () => {
+    /*
+      Played: *"the labyrinth walls spawn and show and then disappear on screen to make the gaps."* A
+      flanking wave cut its way through the wall on the step it was put down, at the screen's leading
+      edge, and the painter drops every tile the opening touches — so one to four tiles of stone the
+      player had already watched scroll in went on one frame.
+
+      ⚠️ **HELD ON WHAT WAS DRAWN.** Each step the corridor is painted into a recorder and every tile is
+      keyed by where it stands in the world and which wall it is in. A tile drawn whole on the screen on
+      one step, and still whole on it on the next, must be drawn on the next.
+    */
+    for (const kind of walled) {
+      for (const tier of DIFFICULTY_KINDS) {
+        const { world } = playableWorld(LEVELS[kind], tier);
+        const frame = new GameFrame(world);
+        const view = world.view;
+        expect(view.alongAxis, 'this reads a tile’s place off screen x, so the view has to scroll along it').toBe('x');
+        const vanished: string[] = [];
+        let seen = 0;
+        let reached = 0;
+        let before = new Set<string>();
+        for (let step = 0; step < 60 * 240; step++) {
+          if (world.fight === 1 && world.bossPool.size > 0) break;
+          world.ship.health = world.shipRow.health;
+          frame.step();
+          reached = world.cameraAlong - world.levelOrigin;
+          const corridor = world.corridor!;
+          const surface = new Recorder();
+          paintScene(surface, view, [], world.cameraAlong, 0, [], null, [], world.levelOrigin, null, 0, 0, corridor);
+          const half = SPRITE_EXTENT[SPRITE_KINDS[corridor.sprite]!] / 2;
+          const mid = screenY(view, 0, ACROSS_SPAN / 2);
+          const now = new Set<string>();
+          const whole = new Set<string>();
+          for (const b of surface.blits) {
+            const ahead = (b.x - view.gutterAlong) / view.scale;
+            const key = `${Math.round((world.cameraAlong + ahead) * 4)}:${b.y < mid ? -1 : 1}`;
+            now.add(key);
+            if (ahead - half >= 0 && ahead + half <= view.alongSpan) whole.add(key);
+          }
+          seen += now.size;
+          for (const key of before) {
+            if (now.has(key)) continue;
+            // Only a tile that is still whole on the screen: one leaving by the trailing edge goes.
+            const ahead = Number(key.split(':')[0]) / 4 - world.cameraAlong;
+            if (ahead - half < 0 || ahead + half > view.alongSpan) continue;
+            vanished.push(`${tier} step ${step}: a tile at ${(ahead + world.cameraAlong - world.levelOrigin).toFixed(0)} went ${ahead.toFixed(0)} units into the screen`);
+          }
+          before = whole;
+        }
+        expect(reached, `${kind}/${tier}: the flight stopped at ${reached.toFixed(0)}, short of the room`).toBeGreaterThan(LEVELS[kind].bossAt - 600);
+        expect(seen, `${kind}/${tier}: no stone was ever drawn, so this measured nothing`).toBeGreaterThan(0);
+        expect(vanished.slice(0, 5).join('\n'), `${kind}/${tier}: ${vanished.length} tiles of stone vanished on the screen`).toBe('');
+      }
+    }
+  }, 600_000);
+
   it('A TURN IS NOT A MASSACRE: waves flown through a hard bend at burn are never destroyed by the stone', () => {
     /*
       The stone removes what meets it before it can be drawn there (0349), so a corridor that dashes
@@ -436,10 +492,14 @@ describe('0348 — the labyrinth is walled', () => {
       those off the box, so the ones past a face were born inside the stone and broke there (0349) on
       the step they appeared.
 
-      ⚠️ **HELD IN LANE UNITS, BY WHERE THE SPARKS ARE.** A shot that flies into the stone breaks
-      within one step of the face; one born in it breaks wherever it was born. So no spark may stand
-      further past the face than a shot travels in a step — and the sentry has to have fired, and to
-      have had a slot in the stone to skip, or this measured nothing.
+      ⚠️ **HELD BY WHETHER THERE ARE SPARKS AT ALL — and it was held by how DEEP they were until 0367.**
+      A shot born in the stone broke wherever it was born, so the depth told a skipped slot from one
+      that was laid. Since 0367 every shot of a wall is born on the hull and fans out, so a slot in the
+      stone is a shot that flies into the face and breaks on it: the depth is a step whether the slot
+      was skipped or not, and the old measure went green over the break. What the skip promises is
+      that no shot of the wall meets the stone at all — so none may, from the volley until the wall has
+      formed. The sentry has to have fired, and to have had a slot in the stone to skip, or this
+      measured nothing.
     */
     const { world } = playableWorld({ ...LEVELS[walled[0]!], waves: [], pickups: [], corridor: { centre: 50, width: 60, wall: 'roomWall', passages: [] } });
     const frame = new GameFrame(world);
@@ -451,23 +511,27 @@ describe('0348 — the labyrinth is walled', () => {
     expect(attack.kind, 'the sentry no longer fires a wall; point this at one that does').toBe('wall');
     const gap = attack.kind === 'wall' ? attack.gap : 0;
     expect(24 - gap, 'the sentry\'s nearest slot is not in the stone, so nothing here can be skipped').toBeLessThan(20);
-    const speed = SHOTS[row.shot].speed * world.difficulty.shotSpeed + 1;
+    // Long enough for the widest slot to be reached: its offset at the shot's own sideways speed.
+    const forms = Math.ceil((gap * (attack.kind === 'wall' ? attack.shots : 0)) / (SHOTS[row.shot].speed * world.difficulty.shotSpeed)) + 10;
     let fired = 0;
-    let deepest = 0;
-    for (let step = 0; step < 600 && fired === 0; step++) {
+    let firedAt = -1;
+    let sparks = 0;
+    for (let step = 0; step < 600 && (firedAt < 0 || step <= firedAt + forms); step++) {
       world.ship.health = world.shipRow.health;
       // Held against the near face, so the slot beside it is in the stone every time it fires.
       sentry.across = 24;
       frame.step();
-      fired = world.enemyShots.size;
+      if (firedAt < 0 && world.enemyShots.size > 0) {
+        fired = world.enemyShots.size;
+        firedAt = step;
+      }
       for (let i = 0; i < world.debris.size; i++) {
         const spark = world.debris.at(i);
-        if (spark.kind !== DEBRIS_KIND.spark) continue;
-        const side = stoneAt(corridor, spark.along, spark.across, 0);
-        if (side !== 0) deepest = Math.max(deepest, side * (spark.across - faceAt(corridor, spark.along, side)));
+        if (spark.kind !== DEBRIS_KIND.spark || spark.lifeFor <= 0) continue;
+        if (stoneAt(corridor, spark.along, spark.across, 0) !== 0) sparks++;
       }
     }
     expect(fired, 'the sentry never fired, so no wall was laid').toBeGreaterThan(0);
-    expect(deepest, `a shot broke ${deepest.toFixed(1)} lane units inside the stone, where it was born`).toBeLessThanOrEqual(speed + 1e-9);
+    expect(sparks, `${sparks} spark-steps in the stone: a shot of the wall met it`).toBe(0);
   });
 });

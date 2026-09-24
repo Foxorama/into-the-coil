@@ -98,6 +98,7 @@ export function inertLevel(): {
   levelIndex: number;
   weaponsOffered: number;
   nextWave: number;
+  nextFlank: number;
   // The fight's count of firing waves offered — 0267. A fixture with no level never advances it.
   fightFiring: number;
   bossRow: typeof BOSSES.sentinel;
@@ -204,6 +205,7 @@ export function inertLevel(): {
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
+    nextFlank: 0,
     fightFiring: 0,
     bossRow: BOSSES.sentinel,
     fight: 1,
@@ -460,6 +462,7 @@ export function playableWorld(
     levelIndex: 0,
     weaponsOffered: 0,
     nextWave: 0,
+    nextFlank: 0,
     fightFiring: 0,
     // The mid-boss's fight first where the level has one — 0247, exactly as `beginRun` sets it.
     bossRow: BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind],

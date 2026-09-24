@@ -86,8 +86,9 @@ export const PROBES = [
     guard: 'A TURN IS NOT A MASSACRE',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);',
-      replace: '    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side, w.scrollPerStep);',
+      // Re-anchored by 0368, which moved a wave's cut into `cutFlank`, ahead of the screen.
+      find: '  openPassage(w, near + Math.min(a, b), far + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);',
+      replace: '  openPassage(w, near + Math.min(a, b), far + Math.max(a, b), row.radius, side, w.scrollPerStep);',
     },
   },
   {
