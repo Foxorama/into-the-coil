@@ -29,12 +29,13 @@ export const PROBES = [
       /*
         ⚠️ Re-anchored by 0263, which put a shot's kind on the shot — and again by 0277, which threads
         the row through for `row.muzzle`, and again by 0308, which threads the head's own cue. What it
-        breaks is unchanged: a head throwing the ROW's shot.
+        breaks is unchanged: a head throwing the ROW's shot. And by 0365, which threads the bar's
+        fraction for a round that grows.
       */
       find:
-        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
+        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
       replace:
-        '      throwAttack(head.attack, bullet, kind, boss, row, phase, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
+        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
     },
   },
   {
@@ -45,8 +46,9 @@ export const PROBES = [
     guard: 'THE HEADS TAKE TURNS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      const head = attack.heads[((boss.headAt % n) + n) % n]!;',
-      replace: '      const head = attack.heads[Math.min(boss.headAt, n - 1)]!;',
+      // Re-anchored by 0365, which counts a slot before it picks a head, so a round can grow.
+      find: '      const slot = ((boss.headAt % n) + n) % n;',
+      replace: '      const slot = Math.min(boss.headAt, n - 1);',
     },
   },
   {

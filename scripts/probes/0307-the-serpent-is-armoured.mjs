@@ -80,8 +80,9 @@ export const PROBES = [
     guard: 'flown at the cap on the tuned tier',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0322, which put the health at 1100 to pay for the ball's smaller appetite.
-      find: '    health: 1100,',
+      // ⚠️ Re-anchored by 0322, which put the health at 1100 to pay for the ball's smaller appetite. And
+      // by 0365, which took a tenth off each phase: 540 is still under the floor it set, at twenty-eight.
+      find: '    health: 770,',
       replace: '    health: 540,',
     },
   },
