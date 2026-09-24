@@ -1019,6 +1019,48 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(world.bossPool.size, 'the wreck was shot out of existence on its way down').toBe(1);
   });
 
+  it('THE REPORTED ONE: a wall still on the field when the gyre dies does not wait for the ship', () => {
+    /*
+      Played: *"sometimes after you kill the boss on level 4 … there's a bullet wall generated before
+      the boss dies, but it doesn't fire forward. The transition then rockets you forward into the
+      stationary wall … and you just can't avoid it."* The gyre throws in a room where the camera is
+      still, so a shot's speed in the world carries none of the scroll; once the room opens the
+      camera moves and the wall, standing still in the world, comes at the ship.
+
+      Driven with a wall planted across the whole lane ahead of the ship, standing still in the world,
+      on the step before the gyre dies — then flown until the camera has been moving for four seconds,
+      with the ship parked in mid-lane and able to be hit.
+    */
+    const { world, frame } = gyreOnStation();
+    world.ship.invulnFor = 0;
+    const ahead = world.ship.along + 60;
+    for (let across = 1; across < ACROSS_SPAN; across += 2) {
+      const shot = world.enemyShots.spawn();
+      if (shot === null) break;
+      reset(shot, ahead, across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+      shot.velAlong = 0;
+      shot.velAcross = 0;
+    }
+    const planted = world.enemyShots.size;
+    expect(planted, 'no wall was planted, so this guard drove nothing').toBeGreaterThan(40);
+    world.bossPool.at(0).health = 1;
+    const full = world.ship.health;
+    let moving = 0;
+    let hurt = 0;
+    let beatenWith = -1;
+    for (let step = 0; step < 30 * STEPS_PER_SECOND && moving < 4 * STEPS_PER_SECOND; step++) {
+      world.ship.across = ACROSS_SPAN / 2;
+      frame.step();
+      if (world.bossBeaten && beatenWith < 0) beatenWith = world.enemyShots.size;
+      if (world.scrollPerStep > 0) moving++;
+      if (world.ship.health < full) hurt++;
+    }
+    expect(beatenWith, 'the gyre never died, so this guard drove nothing').toBeGreaterThanOrEqual(0);
+    expect(moving, 'the camera never moved again, so the wall was never met').toBeGreaterThan(0);
+    expect(beatenWith, `${beatenWith} of the ${planted} shots outlived the boss that threw them`).toBe(0);
+    expect(hurt, 'the ship was flown into the fire of a boss that was already dead').toBe(0);
+  });
+
   it('and a wreck does nothing back: flying into the corpse costs nothing', () => {
     /*
       Played: *"the 4th floor boss will kill you with its corpse."* `layWreck` put the hull back in

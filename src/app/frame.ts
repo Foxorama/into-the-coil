@@ -2188,6 +2188,16 @@ export class GameFrame implements Frame {
       // collision logged this step — 0127.
       w.onCue('bossDown', w.bossDeaths.across[0]);
       /*
+        ⚠️ **THE END BOSS'S DEATH PUTS OUT THE FIRE — 0366.** Played: *"sometimes after you kill the
+        boss on level 4 … there's a bullet wall generated before the boss dies, but it doesn't fire
+        forward. The transition then rockets you forward into the stationary wall."* A shot's speed is
+        fixed in the world when it is thrown, and the gyre throws in a room where the camera stands
+        still — so a wall on the field when the room opened stood still in the world, and the camera
+        and then the burn drove the ship into it. The fight is over, so its fire is too. Not the
+        mid-boss's: the level goes on after it at the rate its fire was thrown at.
+      */
+      if (w.fight === 1) cancelFire(w);
+      /*
         ⚠️ **THE LEVEL DOES NOT END HERE ANY MORE.** Reported from play: *"bosses need a real
         explosion and an end-of-level beat — currently the level just ends."* It did: the same step
         that emptied the pool raised a screen over the frame, so the loudest event in the game was a
@@ -6530,6 +6540,24 @@ function breakSurface(w: World, e: Entrance, startAlong: number, s: number): voi
 /** How many times a breach has been through the edge, `u` along units after its first leap — 0313. */
 function crossingsBy(e: Entrance & { kind: 'breach' }, u: number): number {
   return u < 0 ? 0 : Math.min(Math.floor(u / e.span) + 1, e.leaps + 1);
+}
+
+/**
+ * Every hostile shot on the field, put out — the end boss has died and the fight's fire goes with it.
+ *
+ * ⚠️ **A BURST EACH, BECAUSE A BULLET THAT VANISHES IS WHAT 0036 IS NAMED FOR.** One fragment, not an
+ * enemy's eight: a wall is forty shots, and what the player should see is the fire going out, not a
+ * field of deaths. The debris pool is smaller than the shot pool, so the last of a crowded field go
+ * without one — `burst` drops what will not fit, and `src/sim/pool.ts` says that is the rule.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function cancelFire(w: World): void {
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const shot = w.enemyShots.at(i);
+    burst(w, shot.along, shot.across, BURST.cancelled);
+    w.enemyShots.releaseAt(i);
+  }
 }
 
 /**
