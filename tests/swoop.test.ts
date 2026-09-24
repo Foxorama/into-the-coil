@@ -15,8 +15,8 @@ import { describe, expect, it } from 'vitest';
 
 import { GameFrame } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { LEVELS, LEVEL_KINDS, laneAcross, type WaveEntry } from '../src/content/levels.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import type { Entity } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -94,6 +94,12 @@ function turnedOver(heading: readonly number[], from: number, to: number): numbe
 const arc = ENEMIES.swift.motion;
 if (arc.kind !== 'arc') throw new Error('the swift does not fly an arc');
 
+/**
+ * How far along the fixture's screen reaches — `playableWorld`'s 1280×720, which is 213 units since
+ * 0364's zoom and was the 178 written into these tests before it.
+ */
+const VIEW = viewOf(1280, 720).alongSpan;
+
 describe('0328 — a body flies an arc', () => {
   it('the swift is sent by more than one level and flies the arc, so the arm is a vocabulary and the body a shared kind', () => {
     const senders = LEVEL_KINDS.filter((kind) => LEVELS[kind].waves.some((w) => w.enemy === 'swift'));
@@ -120,9 +126,9 @@ describe('0328 — a body flies an arc', () => {
     expect(firstTurn, 'the swift never turned').toBeGreaterThan(firstSeen);
     // Measured to the hull's centre here where the arm reads its leading edge, so a hull radius less.
     const hull = ENEMIES.swift.radius;
-    const depthAtTurn = 178 - f!.along[firstTurn]!;
-    expect(depthAtTurn, `the swift began its turn ${depthAtTurn.toFixed(0)} units into a 178-unit view`).toBeGreaterThanOrEqual(arc.after - hull - 2);
-    const deepest = 178 - Math.min(...f!.along.slice(firstSeen));
+    const depthAtTurn = VIEW - f!.along[firstTurn]!;
+    expect(depthAtTurn, `the swift began its turn ${depthAtTurn.toFixed(0)} units into a ${VIEW.toFixed(0)}-unit view`).toBeGreaterThanOrEqual(arc.after - hull - 2);
+    const deepest = VIEW - Math.min(...f!.along.slice(firstSeen));
     expect(deepest, `the swift came ${deepest.toFixed(0)} units into the view and no further`).toBeGreaterThanOrEqual(arc.after + arc.radius - hull - 2);
     // Then through its sweep, and no further.
     const turned = turnedOver(f!.heading, firstSeen, f!.heading.length);
@@ -134,7 +140,7 @@ describe('0328 — a body flies an arc', () => {
     expect(Math.max(...f!.across), 'a lead swift at lane 30 turned away from the centre').toBeGreaterThan(ACROSS_SPAN / 2);
     // And out: its last known place is beyond the view's leading edge, flying up-lane.
     const last = f!.along[f!.along.length - 1]!;
-    expect(last, 'the swift never left by the leading edge').toBeGreaterThan(178);
+    expect(last, 'the swift never left by the leading edge').toBeGreaterThan(VIEW);
     expect(f!.heading[f!.heading.length - 1]!, 'the swift did not leave flying up-lane').toBeCloseTo(0, 1);
   });
 
@@ -148,14 +154,16 @@ describe('0328 — a body flies an arc', () => {
     expect(f, 'the swift never spawned').toBeDefined();
     const entered = f!.across.findIndex((a) => a <= ACROSS_SPAN);
     expect(entered, 'the swift never entered the lane').toBeGreaterThan(0);
+    // Lane 50 is a share of the lane since 0364, so the place it heads for is `laneAcross` of it.
+    const lane = laneAcross(50);
     const deepest = Math.min(...f!.across);
-    expect(deepest, `the swift came in to ${deepest.toFixed(1)} and never reached its lane`).toBeLessThanOrEqual(50 + 1);
+    expect(deepest, `the swift came in to ${deepest.toFixed(1)} and never reached its lane`).toBeLessThanOrEqual(lane + 1);
     // Back out by the edge it came in by: after its deepest point it climbs past its lane again.
     const at = f!.across.indexOf(deepest);
     const back = Math.max(...f!.across.slice(at));
-    expect(back, `after turning the swift only got back to ${back.toFixed(1)} — it turned the wrong way`).toBeGreaterThan(50 + arc.radius);
+    expect(back, `after turning the swift only got back to ${back.toFixed(1)} — it turned the wrong way`).toBeGreaterThan(lane + arc.radius);
     const last = f!.along[f!.along.length - 1]!;
-    expect(last, 'the swift never left by the leading edge').toBeGreaterThan(178);
+    expect(last, 'the swift never left by the leading edge').toBeGreaterThan(VIEW);
   });
 
   it('and it faces the way it flies, so a chevron leaving up-lane is not drawn nose-last', () => {

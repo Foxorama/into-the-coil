@@ -91,13 +91,16 @@ function pushFrom(d: Driven, dAlong: number, dAcross: number, steps: number): nu
   world.ship.velAlong = world.scrollPerStep;
   world.ship.velAcross = 0;
   const from = world.ship.across;
+  // Towards the side with room, so the measure is the cold's and not the wall's — the boss sits in a
+  // different place in 0364's wider lane, and a push towards the near wall stopped on it.
+  const toward = from < ACROSS_SPAN / 2 ? 1 : -1;
   for (let i = 0; i < steps; i++) {
-    pushAcross(d, 1);
+    pushAcross(d, toward);
     // Along is pinned so the distance is the test's and not the boss's drift.
     world.ship.along = boss.along + dAlong;
     frame.step();
   }
-  return world.ship.across - from;
+  return Math.abs(world.ship.across - from);
 }
 
 describe('0253 — the frost ship chills', () => {

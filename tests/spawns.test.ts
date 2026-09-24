@@ -18,7 +18,7 @@ import { makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import type { Entity } from '../src/sim/entity.ts';
 import { FIRE_GRID } from '../src/content/cadence.ts';
-import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
+import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, laneAcross, type LevelRow } from '../src/content/levels.ts';
 // The enemy table's own guards moved to `tests/pilots.test.ts` with 0073, which is where the motion
 // union and everything that reacts to the player is held.
 import { PLAYER_SHOT_LIFE } from '../src/content/pickups.ts';
@@ -221,11 +221,13 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
     enemy kind off the beat.
   */
   it('THE PICTURE: every enemy bullet appears on a step the grid allows', () => {
+    // ⚠️ Each `at` × 1.2 since 0364: at 200 the first wave sat inside the zoomed 213-unit view on the
+    // first step, so it was never seen ARRIVING, and arriving is when its fire is put on the grid.
     const { world } = playableWorld({
       waves: [
-        { at: 200, enemy: 'turret', formation: 'column', count: 3, lane: 40 },
-        { at: 260, enemy: 'lancer', formation: 'line', count: 2, lane: 60 },
-        { at: 330, enemy: 'warden', formation: 'column', count: 2, lane: 50 },
+        { at: 240, enemy: 'turret', formation: 'column', count: 3, lane: 40 },
+        { at: 312, enemy: 'lancer', formation: 'line', count: 2, lane: 60 },
+        { at: 396, enemy: 'warden', formation: 'column', count: 2, lane: 50 },
       ],
       pickups: [],
       landmarks: [],
@@ -291,8 +293,9 @@ describe('0096 — enemy fire lands on the grid in the real frame, not only in t
       *"the enemies all fire at exactly the same time **when they appear**"* is the report, so
       abreast is the fixture it was always about.
     */
+    // 240 and not 200 since 0364, for the reason the test above gives: it has to arrive to be seen.
     const { world } = playableWorld({
-      waves: [{ at: 200, enemy: 'turret', formation: 'line', count: 5, lane: 40 }],
+      waves: [{ at: 240, enemy: 'turret', formation: 'line', count: 5, lane: 40 }],
       pickups: [],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
@@ -440,7 +443,8 @@ describe('a wave may arrive from the side, and never behind the player', () => {
         if (world.enemies.size === 0) break;
         const e = world.enemies.at(0);
         if (e.velAcross === 0) {
-          expect(e.across, `a flanker straightened out at ${e.across} rather than at its lane`).toBe(lane);
+          // The lane is a share of the lane since 0364, so it lands at `laneAcross` of it.
+          expect(e.across, `a flanker straightened out at ${e.across} rather than at its lane`).toBe(laneAcross(lane));
           settled = true;
           break;
         }

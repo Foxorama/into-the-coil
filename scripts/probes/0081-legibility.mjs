@@ -45,7 +45,8 @@ export const PROBES = [
     */
     broke: 'the enemy’s shot drawn at the pulse’s size, so only shape and ink separate them',
     guard: 'THE REPORTED ONE: they differ in shape, in size and in ink',
-    edit: { path: 'src/content/sprites.ts', find: '  spit: 2.6,', replace: '  spit: 1.8,' },
+    // ⚠️ Re-anchored by 0364, which grew the spit to 2.7 to keep its five pixels after the zoom.
+    edit: { path: 'src/content/sprites.ts', find: '  spit: 2.7,', replace: '  spit: 1.8,' },
   },
   {
     decision: '0081',

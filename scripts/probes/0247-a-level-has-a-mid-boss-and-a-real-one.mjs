@@ -74,8 +74,9 @@ export const PROBES = [
     guard: 'and the old end bosses are the mid-bosses now',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length.
-      find: '    health: 208,',
+      // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length,
+      // and by 0364, which re-solved them after the zoom.
+      find: '    health: 164,',
       replace: '    health: 1500,',
     },
   },

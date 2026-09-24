@@ -81,7 +81,7 @@ import { INVULN_STEPS, SHIELD_MARK, fullHealthFor, hullFor, openingHealthFor, sh
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Uncoil, chainReach } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
@@ -4849,7 +4849,7 @@ function spawnWave(w: World, index: number): void {
       burn, a column of five weavers at lane 50 put its members down at 0.50, 0.39, 0.25, 0.10 and
       −0.04 of the band, and the stone took the last.
     */
-    const target = inCorridor(w, along + stream, wave.lane + formation.acrossOffset(i, wave.count, gap), row.radius);
+    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);
     /*
       ⚠️ **A flanker's formation offset is applied ALONG rather than across at the entry point.** The
       members leave the edge in a stream at their own target lanes; spreading them across the lane
@@ -6003,9 +6003,9 @@ function spawnPickup(w: World, index: number): void {
     game raised its own difficulty on schedule for weapons the player was never shown. It is a
     difficulty defect as much as a pickup one.
   */
-  reset(item, entry.at + w.levelOrigin, entry.lane, row, kind);
+  reset(item, entry.at + w.levelOrigin, laneAcross(entry.lane), row, kind);
   // Read against the corridor where it lies, as a wave is — 0350. The identity where there is none.
-  item.across = inCorridor(w, item.along, entry.lane, item.radius);
+  item.across = inCorridor(w, item.along, laneAcross(entry.lane), item.radius);
   /*
     ⚠️ **Which way it starts drifting alternates by INDEX rather than being rolled.** The spawn
     stream exists and is deliberately not consulted here for the reason `spawnWave` gives: a level is
@@ -7854,7 +7854,7 @@ export function landmarksFor(level: LevelRow): Landmarks {
     extent: SPRITE_EXTENT.landmark * (entry.scale ?? 1),
     scale: entry.scale ?? 1,
     at: entry.at,
-    lane: entry.lane,
+    lane: laneAcross(entry.lane),
     depth: entry.depth,
     beat: entry.beat,
     vent: ventFor(level, entry),

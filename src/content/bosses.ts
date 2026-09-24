@@ -1346,6 +1346,12 @@ export interface BossRow extends Body {
    * With a floor at 55% and the leading edge still on the narrowest screen, the room a station may
    * live in is about fifteen units wide. What makes a boss unique is its drift, its wavelength, its
    * patrol, its hull, its phases and — since 0098 — its bullet. It was never this number.
+   *
+   * ⚠️ **AND EVERY ONE WAS MULTIPLIED BY 1.2 — `docs/decisions/0364-the-view-zooms-out.md` — SO THE
+   * SAME MISTAKE WAS NOT MADE TWICE.** The zoom took the narrowest view from 177.8 to 213.3; left
+   * where they were, the stations would have slid towards the player on the glass exactly as they did
+   * after 0080, and the sentinel's near end fell to 53% of the screen on the first run. Scaled, each
+   * boss sits where it sat on the screen, and its fire has a fifth further to come.
    */
   station: number;
   /**
@@ -1756,11 +1762,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 11,
     // A mid-boss since 0247, which halved 480 to 240; solved to its level's seconds by
     // `scripts/solve-mid-health.mjs` against `MID_BOSS_SECONDS` since 0269.
-    health: 83,
+    // 42 from 83 — re-solved after 0364's zoom put it a fifth further off (`scripts/solve-mid-health.mjs`,
+    // which overshoots both ways here, so the last step is read between its two passes).
+    health: 42,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
-    station: 138,
+    station: 166,
     /*
       ⚠️ **14, which is the most the narrowest view leaves room for.** `120 + 14 + 11` is 145 against
       a 150-unit view — the whole hull stays on screen on a 3:2 laptop at the forward end of every
@@ -1833,11 +1841,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
     // A mid-boss since 0247, which halved 580 to 290; solved to its level's seconds since 0269.
-    health: 65,
+    // 66 from 65 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
+    health: 66,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
-    station: 136,
+    station: 163,
     /*
       Wider than the sentinel's and it still clears the narrowest view by a comfortable margin —
       `100 + 20 + 12.5` is 132.5 against 150 — because standing closer buys the room the sentinel
@@ -1905,7 +1914,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 48 from 38 — re-solved after 0326, on this file's own rule that the number is the solver's: with
     // the seen window in, the shoal's waves around the fight fire later and absorb less of the ship's
     // fire on its way to the hull, and the fight came in at 16 s against the 20 its level asks.
-    health: 48,
+    // 32 from 48 — re-solved after 0364: a fifth further off and patrolling a lane a fifth wider, so
+    // less of what is fired at it lands, and at 48 the fight ran 52 s against 20. See `patrol`.
+    health: 32,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -1915,10 +1926,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
       station is not a number anybody gets to pick by feel.
       `docs/decisions/0061-a-boss-keeps-flying.md` holds that assertion.
     */
-    station: 140,
+    station: 168,
     drift: 15,
     driftWavelength: 260,
-    patrol: 0.5,
+    // 0.6 from 0.5 — 0364. It patrols the whole lane, and the lane grew by a fifth, so at 0.5 each
+    // crossing took a fifth longer and the fight became a count of crossings: 23 health fought for
+    // 15 s and 24 for 26, with nothing between. A fifth faster is the crossing it had.
+    patrol: 0.6,
     shot: 'flak',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
@@ -1962,9 +1976,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 13,
     // The saurian belt's mid-boss since 0247, moved from the labyrinth's end; 0247 halved 780 to 390
     // and 0269 solved it to its level's seconds.
-    health: 61,
+    // 50 from 61 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
+    health: 50,
     damage: 3,
-    station: 136,
+    station: 163,
     drift: 18,
     driftWavelength: 120,
     patrol: 0.62,
@@ -2010,9 +2025,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // A mid-boss since 0247, which halved 880 to 440; solved to its level's seconds since 0269.
     // ⚠️ **It keeps the most of any mid-boss, by six times the lattice's** — the redoubt patrols at
     // 0.16, so nearly everything fired at it lands and the health is the whole of the fight.
-    health: 210,
+    // 158 from 210 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
+    health: 158,
     damage: 3,
-    station: 142,
+    station: 170,
     drift: 8,
     driftWavelength: 300,
     patrol: 0.16,
@@ -2076,9 +2092,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
     // A mid-boss since 0247, which halved 980 to 490; solved to its level's seconds since 0269.
-    health: 94,
+    // 97 from 94 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
+    health: 97,
     damage: 3,
-    station: 138,
+    station: 166,
     drift: 15,
     driftWavelength: 180,
     patrol: 0.45,
@@ -2154,11 +2171,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 16,
     // The black heart's mid-boss since 0247, which halved 1140 to 570; solved to its level's seconds
     // since 0269, and the toughest of the seven in both.
-    health: 208,
+    // 164 from 208 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
+    health: 164,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.
-    station: 134,
+    station: 161,
     drift: 14,
     driftWavelength: 200,
     patrol: 0.4,
@@ -2348,7 +2366,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       than closing on a station: about six and a half seconds in, round and off, and then the arrival
       every boss has.
     */
-    entrance: { kind: 'coil', centre: { along: 95, across: 50 }, radius: 24, turns: 1.25, speed: 1.5 },
+    // The middle of the screen after 0364's zoom — 107 of a 16:9 view of 213, and half the lane across.
+    entrance: { kind: 'coil', centre: { along: 107, across: ACROSS_SPAN / 2 }, radius: 24, turns: 1.25, speed: 1.5 },
     room: null,
     burn: null,
     wreck: null,
@@ -2496,7 +2515,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       animal now holds off at 130 and closes to 103 when it strikes, instead of sitting at 114 and
       doing nothing. Both ends are further from the player than the one place it used to sit.
     */
-    station: 130,
+    station: 156,
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
@@ -2834,7 +2853,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 760.
     health: 1520,
     damage: 3,
-    station: 129,
+    station: 155,
     drift: 5,
     driftWavelength: 180,
     patrol: 0.4,
@@ -2941,7 +2960,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 820.
     health: 1640,
     damage: 3,
-    station: 128,
+    station: 154,
     drift: 6,
     driftWavelength: 160,
     patrol: 0.55,
@@ -3058,7 +3077,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 880.
     health: 1760,
     damage: 3,
-    station: 130,
+    station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
     // across the lane and slides along it is not set into anything. 0061's *a boss keeps flying* is
     // answered here by the walls rather than by the hull — there are seventeen of them.
@@ -3148,7 +3167,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 940.
     health: 1880,
     damage: 3,
-    station: 131,
+    station: 157,
     drift: 5,
     driftWavelength: 260,
     patrol: 0.3,
@@ -3199,7 +3218,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 1000.
     health: 2000,
     damage: 3,
-    station: 128,
+    station: 154,
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,
@@ -3311,7 +3330,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 1100.
     health: 2200,
     damage: 3,
-    station: 127,
+    station: 152,
     drift: 5,
     driftWavelength: 300,
     patrol: 0.24,

@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 
 import { SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { VIEWPORTS, covered, rows, scaleFor, twinOf } from '../rig/sheet.ts';
-import { viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MAX_ALONG_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
 
 describe('0193 — the sheet shows the whole atlas, and it cannot quietly show less', () => {
   it('THE ONE THAT CANNOT BE RECOVERED FROM: every sprite kind appears exactly once', () => {
@@ -92,14 +92,15 @@ describe('0193 — the sheet shows the whole atlas, and it cannot quietly show l
     */
     const alongs = VIEWPORTS.map((v) => viewOf(v.w, v.h).alongSpan);
     const scales = VIEWPORTS.map((v) => viewOf(v.w, v.h).scale);
+    // The clamp's two ends, read off the camera rather than written as 178 and 240 — 0364 moved both.
     expect(
       Math.min(...alongs),
       'no offered viewport is narrow enough to be clamped, so the smallest bake is unreachable',
-    ).toBeLessThanOrEqual(178);
+    ).toBeLessThanOrEqual(ACROSS_SPAN * MIN_ASPECT + 1e-9);
     expect(
       Math.max(...alongs),
       'no offered viewport reaches the wide end of the clamp',
-    ).toBeGreaterThan(230);
+    ).toBeGreaterThan(MAX_ALONG_SPAN * 0.95);
     expect(
       Math.min(...scales),
       'the narrowest viewport does not bake smallest, so the clamp is not being exercised',

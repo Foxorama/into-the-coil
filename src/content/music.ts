@@ -499,9 +499,19 @@ export const AURA_LAYERS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
   boundary the player cannot feel"* is not a boundary. At 145 the aura is at **0.041** of its ceiling
   at the furthest the player can get — present, nearly gone, and never actually off. A boss you can
   still just hear from the very back of your own box is the thing the report asked for.
+
+  ── AND 178 SINCE 0364, BECAUSE THE STATIONS MOVED A THIRD TIME ────────────────────────────────
+
+  ⚠️ **`docs/decisions/0364-the-view-zooms-out.md` scaled every station by 1.2 with the view**, so the
+  widest gap went from about 131 to **158.8** and the same guard went red again. 145 × 1.2 is 174,
+  and 174 left the sentinel at **0.099** from the back of the box: the stations grew by a fifth and
+  the back of the box did not move, so that gap grew by a little more. Solved rather than nudged:
+  the widest back-of-the-box gap is the lattice's 144, and `((FAR − 144) / (FAR − 26))^1.5 > 0.1`
+  needs `FAR > 176.4`. The midpoint bound is the exponent's alone and does not move.
+  `NEAR` stays: the hulls are the sizes they were, so they still touch at about fifteen units.
 */
 export const AURA_NEAR_UNITS = 26;
-export const AURA_FAR_UNITS = 145;
+export const AURA_FAR_UNITS = 178;
 
 /**
  * How far into a level the boss starts being audible, and how much of the aura the LEVEL can raise

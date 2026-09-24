@@ -262,6 +262,9 @@ const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 10 };
  * not a dot. It is the narrowest thing the sky draws by a factor of two and a half, which is the
  * whole of why a layer moving at 0.85 is still a background: `tests/budget.test.ts` holds both that
  * ladder and the aspect ratio that stops a streak degenerating into a dot.
+ *
+ * ⚠️ **0.24 → 0.27 when the view zoomed out (0364)**, because a streak 0.24 thick was 2.31 CSS pixels
+ * across on 1280×720 and 0106's floor there is 2.5; 0.27 is about 2.6.
  */
 /*
   ⚠️ **EXPORTED BY 0195, so the clamp on a place's `size` can be stated as the claim it actually is.**
@@ -270,7 +273,7 @@ const SKY_STARS = { skyFar: 90, skyNear: 90, skyRush: 10 };
   constant — it is that no place's field draws past it, whatever `SKY_STYLE_OF` says, which is a claim
   about the clamp and reddens when the clamp goes.
 */
-export const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };
+export const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.27 };
 
 /**
  * How long a `skyRush` streak is, in world units — the range one is drawn between.
@@ -1414,10 +1417,10 @@ const SHIP_CANARD: readonly Pt[] = [
 ];
 
 /*
-  ⚠️ **NO MARK BELOW 0.12 OF `r`.** The ship is 7 units, which at the 1280×720 the play-tests are given
-  on is a hull radius of about 21 CSS pixels; 0106's floor of 2.5 pixels is therefore an eighth of the
-  radius, and `tests/accents.test.ts` measures every opaque mark below against it. The engine core is
-  0.13 wide for exactly that reason.
+  ⚠️ **NO MARK BELOW 0.145 OF `r`.** The ship is 7 units, which at the 1280×720 the play-tests are
+  given on is a hull radius of about 17.6 CSS pixels since the view zoomed out (0364); 0106's floor of
+  2.5 pixels is therefore a seventh of the radius, and `tests/accents.test.ts` measures every opaque
+  mark below against it. The engine core is 0.15 wide for exactly that reason.
 */
 
 /** The wing's inboard panel, in the hull's own shadow. */
@@ -1448,18 +1451,18 @@ const SHIP_CANOPY_LIGHT: readonly Pt[] = [
 
 /** The engine housing either side of the notch, in the exhaust's own colour. */
 const SHIP_NACELLE: readonly Pt[] = [
-  [-0.74, -0.28],
-  [-0.52, -0.28],
-  [-0.52, -0.14],
-  [-0.74, -0.14],
+  [-0.74, -0.29],
+  [-0.52, -0.29],
+  [-0.52, -0.13],
+  [-0.74, -0.13],
 ];
 
 /** The hot core in the housing. */
 const SHIP_CORE: readonly Pt[] = [
-  [-0.77, -0.27],
-  [-0.64, -0.27],
-  [-0.64, -0.15],
-  [-0.77, -0.15],
+  [-0.77, -0.285],
+  [-0.62, -0.285],
+  [-0.62, -0.135],
+  [-0.77, -0.135],
 ];
 
 /**
@@ -1499,7 +1502,7 @@ const SHIP_SPARK: readonly Pt[] = [
   [0.96, 0.2],
   [0.91, 0.19],
   [0.97, 0.11],
-  [0.89, 0.02],
+  [0.87, 0.02],
   [0.95, -0.08],
   [0.91, -0.19],
 ];
@@ -1580,16 +1583,16 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
     poly(ctx, f, palette.hazard, [
       [-0.45, -0.93 * side],
       [-0.69, -0.93 * side],
-      [-0.65, -0.79 * side],
-      [-0.47, -0.79 * side],
+      [-0.65, -0.78 * side],
+      [-0.47, -0.78 * side],
     ]);
   }
   // The keel, behind the canopy, in the trim ink — the seam down the hull.
   poly(ctx, f, palette.trim, [
-    [-0.34, -0.07],
-    [-0.1, -0.07],
-    [-0.1, 0.07],
-    [-0.34, 0.07],
+    [-0.34, -0.075],
+    [-0.1, -0.075],
+    [-0.1, 0.075],
+    [-0.34, 0.075],
   ]);
   if (weapon === 'arc') {
     // The coil: a glass core at the nose where the light was, a dark band down each prong so it
@@ -1633,11 +1636,13 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
     ctx.beginPath();
     traceStar(ctx, { half: f.half - 0.26 * f.r, r: f.r }, 0.2, Math.PI / 4);
     ctx.fill('evenodd');
-    disc(ctx, f, shade(palette.glass, 0.5), -0.26, 0, 0.07);
+    disc(ctx, f, shade(palette.glass, 0.5), -0.26, 0, 0.075);
     const fin = tier >= 2 ? SHIP_FIN_MK3 : tier >= 1 ? SHIP_FIN_MK2 : SHIP_FIN;
     for (const side of [1, -1] as const) {
+      // The edge's root steps 0.03 into the host, because a pod's fin is only 0.12 tall and 0106's
+      // floor is 0.145 of this radius since the view zoomed out (0364).
       poly(ctx, f, dark, [
-        [fin[1]![0], fin[1]![1] * side],
+        [fin[1]![0] + 0.03, (fin[1]![1] + 0.03) * side],
         [fin[2]![0], fin[2]![1] * side],
         [fin[3]![0], fin[3]![1] * side],
         [fin[3]![0] - 0.1, (fin[3]![1] + 0.08) * side],
@@ -1696,7 +1701,7 @@ function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: W
         [0.45, -0.26 * side],
       ]);
       poly(ctx, f, palette.trim, [
-        [0.4, -0.3 * side],
+        [0.42, -0.3 * side],
         [0.34, -0.62 * side],
         [0.27, -0.62 * side],
         [0.36, -0.3 * side],
@@ -3719,8 +3724,8 @@ export function mix(from: string, to: string, by: number): string {
   `clip()`.** Each kind names a BELLY — a polygon well inside its own hull — and a motif's marks are
   scattered on a seeded grid and kept only where every corner is inside it. `ctx.clip()` cannot be
   broken on purpose, so a guard over it could never be seen to fail (0005); a mark kept by a test is
-  a mark `tests/accents.test.ts` can measure. Every motif mark is at least 0.16 of the radius across,
-  which is 0106's floor on the smallest enemy.
+  a mark `tests/accents.test.ts` can measure. Every motif mark is at least 0.2 of the radius across,
+  which is 0106's floor on the smallest enemy since the view zoomed out (0364).
 */
 
 /** A polygon well inside a hull, that a motif may be scattered over. In fractions of `r`. */
@@ -3784,6 +3789,8 @@ function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly
   const { x0, y0, x1, y1 } = boundsOfBelly(belly);
   // Close enough that a five-unit belly carries a few marks, far enough that two never touch.
   const pitch = 0.24;
+  // A speck's half-width: 0.205 across is 0106's floor on the weaver since the view zoomed out (0364).
+  const speck = 0.1025;
   for (let gy = y0; gy <= y1; gy += pitch) {
     for (let gx = x0; gx <= x1; gx += pitch) {
       const x = gx + rng.range(-0.06, 0.06);
@@ -3791,15 +3798,15 @@ function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly
       switch (theme) {
         case 'approach': {
           // Rivets: a dark stud on every panel.
-          if (!fits(belly, square(x, y, 0.09))) break;
-          disc(ctx, f, skin.plate, x, y, 0.09);
+          if (!fits(belly, square(x, y, speck))) break;
+          disc(ctx, f, skin.plate, x, y, speck);
           break;
         }
         case 'nebula': {
           // Embers: lit specks, as if the hull were still cooling.
           if (rng.range(0, 1) < 0.35) break;
-          if (!fits(belly, square(x, y, 0.09))) break;
-          disc(ctx, f, skin.lit, x, y, 0.09);
+          if (!fits(belly, square(x, y, speck))) break;
+          disc(ctx, f, skin.lit, x, y, speck);
           break;
         }
         case 'saurian': {
@@ -3818,11 +3825,11 @@ function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly
         }
         case 'labyrinth': {
           // Circuitry: a lit trace and a pad, on alternate cells.
-          const trace: Pt[] = rng.range(0, 1) < 0.5 ? square(x, y, 0.09) : [
-            [x - 0.16, y - 0.08],
-            [x + 0.16, y - 0.08],
-            [x + 0.16, y + 0.08],
-            [x - 0.16, y + 0.08],
+          const trace: Pt[] = rng.range(0, 1) < 0.5 ? square(x, y, speck) : [
+            [x - 0.16, y - speck],
+            [x + 0.16, y - speck],
+            [x + 0.16, y + speck],
+            [x - 0.16, y + speck],
           ];
           if (!fits(belly, trace)) break;
           poly(ctx, f, skin.lit, trace);
@@ -3842,9 +3849,9 @@ function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly
         case 'mire': {
           // Spots: a dark ring with a lit centre, which is what a spore sac looks like.
           if (rng.range(0, 1) < 0.3) break;
-          if (!fits(belly, square(x, y, 0.14))) break;
-          disc(ctx, f, skin.plate, x, y, 0.14);
-          disc(ctx, f, skin.lit, x, y, 0.085);
+          if (!fits(belly, square(x, y, 0.155))) break;
+          disc(ctx, f, skin.plate, x, y, 0.155);
+          disc(ctx, f, skin.lit, x, y, speck);
           break;
         }
         case 'core': {
@@ -3885,8 +3892,8 @@ function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: nu
 
   Every number is a fraction of `r`, inside the hull the same arm draws, and `tests/accents.test.ts`
   measures each one against the trace on a 1280×720 screen. The smallest enemy is the weaver at 5
-  units, whose radius is 15 CSS pixels there; 0106's 2.5 px is therefore 0.17 of its radius, and
-  nothing painted on it is thinner.
+  units, whose radius is 12.6 CSS pixels there since the view zoomed out (0364); 0106's 2.5 px is
+  therefore 0.2 of its radius, and nothing painted on it is thinner than 0.205.
 */
 
 const DRIFTER_BELLY: Belly = [
@@ -3936,30 +3943,30 @@ function paintLancer(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
 
 function paintWeaver(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   plate(ctx, f, skin, [
-    [0.02, -0.92],
-    [0.19, -0.92],
-    [0.19, 0.92],
-    [0.02, 0.92],
+    [0.005, -0.92],
+    [0.21, -0.92],
+    [0.21, 0.92],
+    [0.005, 0.92],
   ]);
   lit(ctx, f, skin, [
-    [-0.19, -0.9],
-    [-0.02, -0.9],
-    [-0.02, -0.4],
-    [-0.19, -0.4],
+    [-0.21, -0.9],
+    [-0.005, -0.9],
+    [-0.005, -0.4],
+    [-0.21, -0.4],
   ]);
   lit(ctx, f, skin, [
-    [-0.19, 0.4],
-    [-0.02, 0.4],
-    [-0.02, 0.9],
-    [-0.19, 0.9],
+    [-0.21, 0.4],
+    [-0.005, 0.4],
+    [-0.005, 0.9],
+    [-0.21, 0.9],
   ]);
   motif(ctx, f, skin, theme, [
-    [-0.14, -0.7],
-    [0.14, -0.7],
-    [0.14, 0.7],
-    [-0.14, 0.7],
+    [-0.16, -0.7],
+    [0.16, -0.7],
+    [0.16, 0.7],
+    [-0.16, 0.7],
   ], 'weaver');
-  eye(ctx, f, skin, 0, 0, 0.16);
+  eye(ctx, f, skin, 0, 0, 0.165);
 }
 
 const TURRET_BELLY: Belly = [
@@ -7235,13 +7242,14 @@ function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
     ]);
   }
   /*
-    ⚠️ **0.115 IS A FLOOR AND NOT A TASTE, AND `eye`'s PUPIL IS WHAT SETS IT.** A pupil is 0.62 of its
-    eye, so on a body whose drawing radius is 19.7 CSS pixels an eye smaller than **0.102** has a pupil
-    under 0106's 2.5px and is drawn as a plain dark disc with nothing in it. Written at 0.1 first, and
-    `tests/accents.test.ts` reported 2.44px — six hundredths of a pixel, which is the whole of the
-    difference between a creature that is looking at you and a hole in its face.
+    ⚠️ **0.127 IS A FLOOR AND NOT A TASTE, AND `eye`'s PUPIL IS WHAT SETS IT.** A pupil is 0.62 of its
+    eye, so on a body whose drawing radius is 16.4 CSS pixels since the view zoomed out (0364) an eye
+    smaller than **0.123** has a pupil under 0106's 2.5px and is drawn as a plain dark disc with nothing
+    in it. Written at 0.1 first, and `tests/accents.test.ts` reported 2.44px — six hundredths of a
+    pixel, which is the whole of the difference between a creature that is looking at you and a hole in
+    its face.
   */
-  eye(ctx, f, skin, -0.66, 0, 0.115);
+  eye(ctx, f, skin, -0.66, 0, 0.127);
 }
 
 /*
@@ -7314,11 +7322,12 @@ function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin): void {
     [-0.04, -0.22],
   ], 1, true);
   /*
-    ⚠️ **0.14 IS THE EYE'S FLOOR ON A FIVE-UNIT BODY**, by the same arithmetic the kite's 0.115 comes
-    from: a pupil is 0.62 of its eye, the radius here is 15 CSS pixels, and below 0.134 the pupil is
-    thinner than 0106's 2.5px. The old drawing was a flat `disc` at 0.1 with no pupil at all.
+    ⚠️ **0.165 IS THE EYE'S FLOOR ON A FIVE-UNIT BODY**, by the same arithmetic the kite's 0.127 comes
+    from: a pupil is 0.62 of its eye, the radius here is 12.6 CSS pixels since the view zoomed out
+    (0364), and below 0.16 the pupil is thinner than 0106's 2.5px. The old drawing was a flat `disc` at
+    0.1 with no pupil at all.
   */
-  eye(ctx, f, skin, -0.68, -0.04, 0.14);
+  eye(ctx, f, skin, -0.68, -0.04, 0.165);
 }
 
 const RAPTOR_HULL: readonly Pt[] = [
@@ -8407,12 +8416,13 @@ export function drawKind(
       seal(ctx);
       // A hot core down the dash and a halo trailing off its back: the fast one, lit along its path.
       glow(ctx, f, ink, 0, 0, 1.1, 0.5);
-      // At 1.9 units the dash is six pixels deep on a 1280×720 screen, so its core is most of it.
+      // At 1.9 units the dash is about three pixels deep on a 1280×720 screen since the view zoomed
+      // out (0364), so its core is most of it: 0.54 deep, which is 0106's floor.
       poly(ctx, f, shade(ink, 0.7), [
-        [-0.5, -0.23],
-        [0.85, -0.23],
-        [0.85, 0.23],
-        [-0.5, 0.23],
+        [-0.5, -0.27],
+        [0.85, -0.27],
+        [0.85, 0.27],
+        [-0.5, 0.27],
       ]);
       return;
     case 'flak':
@@ -8708,12 +8718,13 @@ export function drawKind(
         fixed the picture and `tests/accents.test.ts` refused it at **2.03 px against a floor of 2.5**:
         a mark too thin to be drawn is not a mark. So it keeps its width and gives up its front half
         instead — it now runs only where the hull is thick, and the needle is bare ink to the point.
+        0.21 became 0.244 when the view zoomed out (0364), which is where the floor sits now.
       */
       poly(ctx, f, shade(ink, 0.55), [
-        [-0.86, -0.105],
-        [-0.06, -0.105],
-        [-0.06, 0.105],
-        [-0.86, 0.105],
+        [-0.86, -0.122],
+        [-0.06, -0.122],
+        [-0.06, 0.122],
+        [-0.86, 0.122],
       ]);
       // ⚠️ On the BODY rather than ahead of the point, where 0262 put it: a feather's glow sat over the
       // wide end of its vane, and the same offset on a needle is a halo round the tip that fills the
@@ -9118,7 +9129,7 @@ export function drawKind(
         [-0.08, 0.085],
       ]);
       disc(ctx, fg, palette.glass, 0.14, 0, 0.18);
-      disc(ctx, fg, shade(palette.glass, 0.5), 0.18, -0.04, 0.08);
+      disc(ctx, fg, shade(palette.glass, 0.5), 0.18, -0.04, 0.085);
       return;
     }
     case 'pickupShuriken': {
@@ -9218,11 +9229,15 @@ export function drawKind(
           the sentence three lines above this one, arriving as a failure rather than as advice. The
           leading point sits on the star's own edge; there is nowhere for it to go but off. **Only the
           trailing side has room**, and that is not a preference.
+
+          ⚠️ **AND AGAIN WHEN THE VIEW ZOOMED OUT (0364)**, which brought it to 2.33 px: the trailing
+          corner went from 0.52 at +0.29 to 0.49 at +0.36 — further round, and in along the trailing
+          edge so it keeps its margin to it.
         */
         poly(ctx, fg, shade(palette.blade, 0.45), [
           [Math.cos(a) * 0.86, Math.sin(a) * 0.86],
           [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],
-          [Math.cos(a + 0.29) * 0.52, Math.sin(a + 0.29) * 0.52],
+          [Math.cos(a + 0.36) * 0.49, Math.sin(a + 0.36) * 0.49],
         ]);
       }
       disc(ctx, fg, shade(palette.blade, -0.55), 0, 0, 0.16);
@@ -9317,10 +9332,10 @@ export function drawKind(
         const c = Math.cos(a);
         const s = Math.sin(a);
         poly(ctx, fg, shade(palette.ally, 0.35), [
-          [c * 0.4 - s * 0.09, s * 0.4 + c * 0.09],
-          [c * 0.9 - s * 0.09, s * 0.9 + c * 0.09],
-          [c * 0.9 + s * 0.09, s * 0.9 - c * 0.09],
-          [c * 0.4 + s * 0.09, s * 0.4 - c * 0.09],
+          [c * 0.4 - s * 0.093, s * 0.4 + c * 0.093],
+          [c * 0.9 - s * 0.093, s * 0.9 + c * 0.093],
+          [c * 0.9 + s * 0.093, s * 0.9 - c * 0.093],
+          [c * 0.4 + s * 0.093, s * 0.4 - c * 0.093],
         ]);
       }
       return;
@@ -9360,7 +9375,7 @@ export function drawKind(
       ]);
       // Back from the nose, where the dart is deep enough to hold an eye this size.
       disc(ctx, fg, palette.glass, 0.3, 0, 0.2);
-      disc(ctx, fg, shade(palette.glass, 0.6), 0.34, -0.03, 0.12);
+      disc(ctx, fg, shade(palette.glass, 0.6), 0.34, -0.03, 0.145);
       return;
     case 'pickupMissile': {
       /*
@@ -9397,10 +9412,10 @@ export function drawKind(
         [-0.1, 0.14],
       ]);
       poly(ctx, fg, palette.trim, [
-        [-0.09, -0.5],
-        [0.09, -0.5],
-        [0.09, 0.05],
-        [-0.09, 0.05],
+        [-0.093, -0.5],
+        [0.093, -0.5],
+        [0.093, 0.05],
+        [-0.093, 0.05],
       ]);
       disc(ctx, fg, palette.glass, 0, -0.28, 0.17);
       disc(ctx, fg, shade(palette.glass, 0.5), -0.04, -0.32, 0.1);
@@ -9553,10 +9568,10 @@ export function drawKind(
         [0.04, 0.88],
       ]);
       poly(ctx, fg, palette.trim, [
-        [-0.5, -0.34],
-        [0.5, -0.34],
-        [0.5, -0.155],
-        [-0.5, -0.155],
+        [-0.5, -0.345],
+        [0.5, -0.345],
+        [0.5, -0.14],
+        [-0.5, -0.14],
       ]);
       disc(ctx, fg, palette.glass, 0, 0.1, 0.22);
       disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);

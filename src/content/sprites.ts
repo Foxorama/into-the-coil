@@ -1422,8 +1422,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     so: shape (a square against a disc), size (2.6 against 1.8) and role (`enemy` against `bullet`).
     Its HURTBOX is unchanged at 0.9, so this is a legibility change and not a difficulty one — the
     band `tests/combat.test.ts` holds puts it at 0.35 of its own extent, well inside.
+
+    ⚠️ **2.7 SINCE 0364, AND IT WAS 2.6.** The zoom put a world unit at six pixels of a 1280×720
+    screen rather than 7.2, so the 0.8 units between this and the pulse became 4.8 pixels — under the
+    five `tests/legibility.test.ts` holds. The enemy's grew rather than the player's shrinking, because
+    a smaller picture is the one where what must not be touched most needs to read.
   */
-  spit: 2.6,
+  spit: 2.7,
   /*
     ⚠️ **The three enemy bullets were a SIZE LADDER as well as three silhouettes** — 0098. 1.9, 2.6
     and 3.4, thin-fast to fat-slow, each step 0.7 units because that was the five screen pixels 0081

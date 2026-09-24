@@ -38,8 +38,9 @@ export const PROBES = [
     guard: 'no solid mark on a body is too thin to be drawn at all',
     edit: {
       path: 'src/render/bake.ts',
-      find: '          [Math.cos(a + 0.29) * 0.52, Math.sin(a + 0.29) * 0.52],',
-      replace: '          [Math.cos(a + 0.17) * 0.52, Math.sin(a + 0.17) * 0.52],',
+      // ⚠️ Re-anchored by 0364, which moved the trailing corner to keep the wedge over the floor.
+      find: '          [Math.cos(a + 0.36) * 0.49, Math.sin(a + 0.36) * 0.49],',
+      replace: '          [Math.cos(a + 0.17) * 0.49, Math.sin(a + 0.17) * 0.49],',
     },
   },
   {
@@ -55,8 +56,9 @@ export const PROBES = [
     guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: '          [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],\n          [Math.cos(a + 0.29) * 0.52',
-      replace: '          [Math.cos(a - 0.28) * 0.36, Math.sin(a - 0.28) * 0.36],\n          [Math.cos(a + 0.29) * 0.52',
+      // ⚠️ Re-anchored by 0364, on the same corner as the probe above.
+      find: '          [Math.cos(a - 0.16) * 0.36, Math.sin(a - 0.16) * 0.36],\n          [Math.cos(a + 0.36) * 0.49',
+      replace: '          [Math.cos(a - 0.28) * 0.36, Math.sin(a - 0.28) * 0.36],\n          [Math.cos(a + 0.36) * 0.49',
     },
   },
 ];

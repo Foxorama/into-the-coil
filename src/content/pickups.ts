@@ -759,9 +759,10 @@ export const MAX_BARRELS = 4;
  * untestable, and an untested mechanism is the one that gets refactored away. So the lifetime is
  * gone and this is the number that remains: what the pool arithmetic is checked against.
  *
- * `(MAX_ALONG_SPAN − SHIP_START_ALONG) / pulse speed` — 77 steps, rounded up.
+ * `(MAX_ALONG_SPAN − SHIP_START_ALONG) / pulse speed` — 96 steps, rounded up, since
+ * `docs/decisions/0364-the-view-zooms-out.md` took the widest view from 240 units to 288. It was 80.
  */
-export const PLAYER_SHOT_LIFE = 80;
+export const PLAYER_SHOT_LIFE = 96;
 
 /**
  * The ship's auto-fire, given what it is carrying.

@@ -108,8 +108,14 @@ export const PLAYER_ALONG_SPAN = ACROSS_SPAN * MIN_ASPECT;
  * ⚠️ **It is a fraction rather than two constants, because two would drift.** The whole complaint was
  * that the two axes disagreed about how much of the screen the player owns; a pair of hand-kept
  * numbers is the shape that lets them disagree again.
+ *
+ * ⚠️ **0.05 SINCE 0364, AND THE MARGINS DID NOT MOVE.** The zoom widened the lane to 120 and left the
+ * ship its size in world units, so *half a ship* is still 6 — and 0.05 of 120 is 6, and 0.05 of a
+ * 16:9 view of 213 is 10.7, both exactly what they were. Kept at 0.06 the across margin would have
+ * become 7.2: a wider wall for the same ship, and not a whole unit, which is what the corridor's
+ * faces are laid in (`layFaces` in `src/sim/corridor.ts`).
  */
-const PLAYER_INSET = 0.06;
+const PLAYER_INSET = 0.05;
 
 /**
  * How close the ship may get to the edge of its box ACROSS the lane, in world units.

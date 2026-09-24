@@ -60,8 +60,9 @@ export const PROBES = [
     guard: 'THE 0149 ONE: every solid mark on a body is inside its hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    [-0.34, -0.07],\n    [-0.1, -0.07],\n    [-0.1, 0.07],\n    [-0.34, 0.07],',
-      replace: '    [-0.34, -0.07],\n    [1.1, -0.07],\n    [1.1, 0.07],\n    [-0.34, 0.07],',
+      // ⚠️ Re-anchored by 0364, which widened the keel to ±0.075 to clear the pixel floor.
+      find: '    [-0.34, -0.075],\n    [-0.1, -0.075],\n    [-0.1, 0.075],\n    [-0.34, 0.075],',
+      replace: '    [-0.34, -0.075],\n    [1.1, -0.075],\n    [1.1, 0.075],\n    [-0.34, 0.075],',
     },
   },
   {

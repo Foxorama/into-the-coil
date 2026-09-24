@@ -423,7 +423,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     twenty seconds on. The ladder stays on the table as the thing to do if this reads too strong
     early.
   */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **`speed` 1 → 1.2 — 0364, AND THE PACE THE PLAYER ASKED FOR IS WHAT WAS KEPT.** The zoom made
+    a 16:9 screen 213 units rather than 178, so at 1 a blade took 2.88 s to cross it — the 2.9 s that
+    *"slightly faster"* was said about. A fifth faster crosses the wider screen in the seconds 0244
+    settled on, and the helix's pitch grows with it, so on the glass it is the same helix.
+  */
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1.2, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

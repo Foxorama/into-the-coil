@@ -85,8 +85,9 @@ export const PROBES = [
     guard: '0101 — and it leaves the player more than half the screen, at the NEAR end of the swing',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    station: 134,',
-      replace: '    station: 95,',
+      // ⚠️ Re-anchored by 0364, which scaled every station by 1.2 with the zoom — both numbers.
+      find: '    station: 161,',
+      replace: '    station: 114,',
     },
   },
   {
@@ -107,8 +108,9 @@ export const PROBES = [
     guard: '0092 — THE DEFECT: a player who backs off to dodge is still inside the aura',
     edit: {
       path: 'src/content/music.ts',
-      find: 'export const AURA_FAR_UNITS = 145;',
-      replace: 'export const AURA_FAR_UNITS = 124;',
+      // ⚠️ Re-anchored by 0364, which scaled the range with the stations — both numbers, by 1.2.
+      find: 'export const AURA_FAR_UNITS = 178;',
+      replace: 'export const AURA_FAR_UNITS = 149;',
     },
   },
 ];

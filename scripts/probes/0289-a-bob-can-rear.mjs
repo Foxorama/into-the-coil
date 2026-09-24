@@ -56,9 +56,10 @@ export const PROBES = [
     guard: 'and it leaves the player more than half the screen, at the NEAR end of the swing',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Two bosses stand at 130; the driftWavelength is what tells this one from the other.
-      find: '    station: 130,\n    drift: 5,\n    driftWavelength: 240,',
-      replace: '    station: 114,\n    drift: 5,\n    driftWavelength: 240,',
+      // ⚠️ Two bosses stand at 156; the driftWavelength is what tells this one from the other.
+      // Both numbers scaled by 1.2 with 0364's zoom.
+      find: '    station: 156,\n    drift: 5,\n    driftWavelength: 240,',
+      replace: '    station: 137,\n    drift: 5,\n    driftWavelength: 240,',
     },
   },
 ];

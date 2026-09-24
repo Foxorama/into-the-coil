@@ -160,6 +160,19 @@ export const MID_BOSS_SECONDS: Record<LevelKind, number> = {
   eye: 23,
 };
 
+/**
+ * Where an authored `lane` lands across the lane, in world units.
+ *
+ * ⚠️ **A `lane` IS A SHARE OF THE LANE, 0 TO 100, AND NOT A POSITION** —
+ * `docs/decisions/0364-the-view-zooms-out.md`. The numbers were written when the lane was 100 units
+ * and the two readings agreed; widening the lane to zoom the picture out would otherwise have pushed
+ * every wave, pickup and landmark towards the near edge. Five hundred rows keep the number they were
+ * written with, and the one conversion lives here rather than at each of the places that read them.
+ */
+export function laneAcross(lane: number): number {
+  return (lane * ACROSS_SPAN) / 100;
+}
+
 export interface WaveEntry {
   /** Camera distance, in world units from the level's start, at which this wave spawns. */
   at: number;
@@ -168,7 +181,7 @@ export interface WaveEntry {
   /** How many. The formation decides where each of them goes. */
   count: number;
   /**
-   * Where the formation is centred across the lane, 0 to 100.
+   * Where the formation is centred across the lane, as a share of it, 0 to 100 — `laneAcross`.
    *
    * ⚠️ For a wave that arrives from an `across` edge this is where it is HEADING, not where it
    * starts — it enters from outside the lane and straightens out here. `tests/level.test.ts` checks
@@ -203,7 +216,7 @@ export interface PickupEntry {
   /** World units from the level's start. A place, exactly as a wave's `at` is. */
   at: number;
   kind: PickupKind;
-  /** Where across the lane it sits, 0 to 100. */
+  /** Where across the lane it sits, as a share of it, 0 to 100 — `laneAcross`. */
   lane: number;
 }
 
@@ -264,7 +277,7 @@ export interface MidBoss {
 export interface LandmarkEntry {
   /** World units from the level's start, exactly as a wave's `at` is. */
   at: number;
-  /** Where across the lane its centre sits, 0 to 100. */
+  /** Where across the lane its centre sits, as a share of it, 0 to 100 — `laneAcross`. */
   lane: number;
   /**
    * How far it moves per unit of camera travel — below every field's, so it is furthest away.
