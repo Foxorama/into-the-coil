@@ -52,13 +52,20 @@ export const PROBES = [
       ⚠️ **AND IT REDDENS NOTHING AT ELEVEN NODES**, which is why no guard had ever asked: the body
       was 46 units long and the margin is deeper than that.
     */
-    broke: 'the body culled at the leading edge like traffic, so its tail is lost during the arrival',
+    /*
+      ⚠️ **RE-AIMED BY 0364 AT THE VIEW'S EDGE, BECAUSE THE DEFAULT CULL CAN NO LONGER REACH IT.** The
+      default leading cull is the widest view plus two margins, and the zoom moved it 48 units out while
+      the arrival moved less: measured over a whole fight, the furthest node stays 34 units short of it.
+      The mistake is the same — the body culled like traffic — at the edge the game already culls the
+      player's shots at, which is one the body is built to cross.
+    */
+    broke: 'the body culled at the edge of the view like the player’s shots, so its tail is lost during the arrival',
     guard: 'and it keeps every segment it was authored with, through the ARRIVAL',
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0306, which took the `across` cull off the body too; the break is the leading one.
       find: '    stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY, false);',
-      replace: '    stepEntities(w.bossBody, w.cameraAlong, undefined, false);',
+      replace: '    stepEntities(w.bossBody, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan), false);',
     },
   },
   {

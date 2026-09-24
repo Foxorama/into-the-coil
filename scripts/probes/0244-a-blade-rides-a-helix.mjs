@@ -59,7 +59,9 @@ export const PROBES = [
         that moved only this one would redden that instead and say so.
       */
       find: '  shurikenTurn: 5.6,',
-      replace: '  shurikenTurn: 10,',
+      // ⚠️ Re-anchored by 0364: what was called too big was a tenth of the lane, which is a tenth of
+      // the screen; the lane is 120 now, so that size is 12 units rather than 10.
+      replace: '  shurikenTurn: 12,',
     },
   },
 ];

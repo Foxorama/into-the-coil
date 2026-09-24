@@ -682,11 +682,18 @@ describe('a pickup wanders', () => {
       ceiling `docs/decisions/0041-a-pickup-is-the-answer-to-what-a-death-costs.md` guards into a
       promise the level cannot keep.
     */
+    /*
+      ⚠️ **The spawns and the run are ×1.2, since `docs/decisions/0364-the-view-zooms-out.md`.** The
+      lane and the view grew and the drift and the float did not, so at 200/260 and 900 steps a
+      pickup that never turns only reached the wall as the run ended (1.0 unit out, against 21.9
+      before the zoom) — and at 200 the first one spawned inside the box. 240/312 and 1080 steps
+      carry it 24 units out again, the old margin.
+    */
     const level: LevelRow = {
       waves: [],
       pickups: [
-        { at: 200, kind: 'weapon', lane: 6 },
-        { at: 260, kind: 'weapon', lane: 94 },
+        { at: 240, kind: 'weapon', lane: 6 },
+        { at: 312, kind: 'weapon', lane: 94 },
       ],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
@@ -697,7 +704,7 @@ describe('a pickup wanders', () => {
     };
     const { world } = playableWorld(level);
     const frame = new GameFrame(world);
-    for (let step = 0; step < 900; step++) {
+    for (let step = 0; step < 1080; step++) {
       frame.step();
       for (let i = 0; i < world.pickups.size; i++) {
         const item = world.pickups.at(i);

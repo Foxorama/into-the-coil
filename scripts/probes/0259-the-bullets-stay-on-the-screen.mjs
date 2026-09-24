@@ -58,13 +58,18 @@ export const PROBES = [
       firing wave from 1737 to 3463 was tried alone; the one whose loss runs a stretch past nine is the
       sentry column at 3003 — **11.3s** ending at 3168. Nothing between 1737 and 2312 does: the worst
       stretch there stays at 8.3s or under with any one of them gone.
+
+      ⚠️ Re-anchored by 0364: a body is on the wider screen a fifth longer, so the 3003 break measures
+      6.9s and went STILL GREEN. Every firing wave past 400 was tried alone again; the sower at 1048 sits
+      inside the level's worst stretch (8.2s at 1191) and takes it to **15.7s**. Also past nine: the sower
+      at 760 (21.2s, but ending at 763 it runs back into the opening's own quiet) and the turret at 3692 (10.3s, too close).
     */
-    broke: 'the shoal’s sentry column at 3003 made a charger, so the stretch to 3168 runs past the budget',
+    broke: 'the shoal’s flanking sower at 1048 made a charger, so the stretch to 1191 runs past the budget',
     guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 3003, enemy: 'sentry', formation: 'line', count: 5, lane: 44 },",
-      replace: "  { at: 3003, enemy: 'charger', formation: 'line', count: 5, lane: 44 },",
+      find: "  { at: 1048, enemy: 'sower', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
+      replace: "  { at: 1048, enemy: 'charger', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
     },
   },
   {

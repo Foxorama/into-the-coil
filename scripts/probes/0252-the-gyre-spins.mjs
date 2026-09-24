@@ -76,9 +76,10 @@ export const PROBES = [
     guard: 'THE SPIN: eight stances',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0260, which starts the curtain at nine tenths, and by 0332, which quickens it.
-      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
-      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
+      // ⚠️ Re-anchored by 0260, which starts the curtain at nine tenths, by 0332, which quickens it, and
+      // by 0364, which moved the hole 26 → 31 with the zoom.
+      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
+      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
     },
   },
 ];

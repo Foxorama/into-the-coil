@@ -121,7 +121,8 @@ export const PROBES = [
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0233: the wait begins at the front wall of the box now.
       find: 'const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;',
-      replace: 'const PICKUP_SLOW_AT = 200;',
+      // ⚠️ Re-anchored by 0364: 200 was past a 171.8 reach and is inside a 207.3 one; ×1.2 is 240.
+      replace: 'const PICKUP_SLOW_AT = 240;',
     },
   },
   {

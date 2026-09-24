@@ -2078,7 +2078,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // ⚠️ **NO FLOOR, AND THAT IS A MEASUREMENT** — 0333. Driven over every gun at every tier, the
     // chorus's four walls arrive whole with none; a floor of two seconds costs it three of them
     // against a fast gun and buys nothing. `scripts/weigh-walls.mjs` is where that is read.
-    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },
+    // `at` 26 → 31 with 0364's zoom, so the hole is where it was on the screen; `hole` is a ship's room and stays.
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
@@ -2156,7 +2157,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       to read the curtain and cross to it, through a denser wall, from a hull that is chasing them.
     */
     // No floor, on the chorus's own measurement — 0333. Two walls, both whole, under every gun.
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null, apart: 0 },
+    // `at` 58 → 70 with 0364's zoom: at 58 of a 120 lane the hole had crossed to the chorus's side.
+    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 70, hole: 12, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
@@ -3027,7 +3029,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       (`scripts/weigh-walls.mjs`); 120 leaves one and 90 leaves three. What a fast gun sees now is
       fewer walls and all of them whole, which is the trade 0040 already makes about a short fight.
     */
-    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 26, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
+    // `at` 26 → 31 with 0364's zoom, on the chorus's terms.
+    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
     fall: null,
     chill: null,
     muzzle: null,

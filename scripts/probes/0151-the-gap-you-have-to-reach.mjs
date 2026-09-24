@@ -29,8 +29,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 4, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 4, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -47,8 +48,10 @@ export const PROBES = [
     guard: 'and it can be REACHED from the far wall, which is where a static hole may sit',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 58, hole: 12, spin: false, quicken: null, apart: 0 },',
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 84, hole: 12, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 70, hole: 12, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ Re-anchored by 0364: the lane is 120 and the boss stands a fifth further off, so the curtain
+      // is in the air a fifth longer and 84 is now inside the ship's reach; 84 → 101 is the same 0.84 share.
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 101, hole: 12, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -83,8 +86,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: an uncoil has exactly one hole, and the ship fits through it',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
-      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -132,8 +136,9 @@ export const PROBES = [
     guard: 'and it is thrown again and again, which is the half a phase could not say',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
-      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -154,7 +159,8 @@ export const PROBES = [
     guard: 'and the whole hole is inside the lane',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 26, hole: 14, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
       replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },

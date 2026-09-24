@@ -40,8 +40,10 @@ export const PROBES = [
     guard: 'keeps the ship inside the lane for every position of every walk',
     edit: {
       path: 'src/app/attract.ts',
-      find: 'const WEAVE_REACH = 35;',
-      replace: 'const WEAVE_REACH = 52;',
+      find: 'const WEAVE_REACH = 42;',
+      // ⚠️ Re-anchored by 0364: the lane is 120, so the wall at eight units off it is 52 from the
+      // middle rather than 42, and the break is scaled with it (52 → 63, the same 24% past the wall).
+      replace: 'const WEAVE_REACH = 63;',
     },
   },
   {

@@ -73,8 +73,9 @@ export const PROBES = [
     guard: 'and if it is NOT killed it bursts where the row says, into acid and void together',
     edit: {
       path: 'src/content/shots.ts',
-      find: "    swallow: { at: 35.6, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },",
-      replace: "    swallow: { at: 35.6, into: ['void'], droplets: 16, speed: 0.85 },",
+      // ⚠️ Re-anchored by 0364, which wrote the burst point as the fifth of the screen it was asked as.
+      find: "    swallow: { at: (ACROSS_SPAN * MIN_ASPECT) / 5, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },",
+      replace: "    swallow: { at: (ACROSS_SPAN * MIN_ASPECT) / 5, into: ['void'], droplets: 16, speed: 0.85 },",
     },
   },
   {

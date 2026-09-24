@@ -55,40 +55,13 @@ export const PROBES = [
       replace: 'export const SEEN_BEFORE_VOLLEY = FIRE_GRID * 5 + 3;',
     },
   },
-  {
-    decision: '0326',
-    suite: 'tests/bullets.test.ts',
-    // Level one judged at the capped loadout before its second weapon — a loadout it cannot carry
-    // there — goes eleven seconds dry at 716 with the window in.
-    broke: 'level one’s first half judged on the capped walk it cannot carry there',
-    guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
-    edit: {
-      path: 'tests/bullets.test.ts',
-      find: '        : [...levelOneEarly.dryStretches.filter((s) => s.endsAt < lifts), ...r.dryStretches.filter((s) => s.endsAt >= lifts)];',
-      replace: '        : r.dryStretches;',
-    },
-  },
-  {
-    decision: '0326',
-    suite: 'tests/bullets.test.ts',
-    // The gauntlet's opening as it was before 0326's repair: a sower line at 355 and a weaver line at
-    // 519, both lead-edge closers, and with the window in both died at the edge — seventeen seconds
-    // dry ending at 612. ⚠️ BOTH, because `npm run prove` showed one alone STILL GREEN: either
-    // station-holder on its own keeps the stretch at 7.4 s, under the budget by six tenths.
-    broke: 'the gauntlet’s opening station-holders put back to the closers they were, so its opening runs seventeen seconds dry',
-    guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
-    edit: {
-      path: 'src/content/levels.ts',
-      find:
-        "  { at: 355, enemy: 'turret', formation: 'line', count: 5, lane: 44 },\n" +
-        "  { at: 410, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },\n" +
-        "  { at: 465, enemy: 'lancer', formation: 'line', count: 8, lane: 45, origin: 'acrossMinus' },\n" +
-        "  { at: 519, enemy: 'warden', formation: 'line', count: 5, lane: 55 },",
-      replace:
-        "  { at: 355, enemy: 'sower', formation: 'line', count: 5, lane: 44 },\n" +
-        "  { at: 410, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },\n" +
-        "  { at: 465, enemy: 'lancer', formation: 'line', count: 8, lane: 45, origin: 'acrossMinus' },\n" +
-        "  { at: 519, enemy: 'weaver', formation: 'line', count: 5, lane: 55 },",
-    },
-  },
+  /*
+    ⚠️ TWO PROBES WERE HERE AND 0364 DELETED THEM — level one judged on the capped walk, and the
+    gauntlet's opening station-holders put back to closers. Both broke a stretch that ran dry because
+    bodies died at the leading edge of a 178-unit view before they fired. On the zoomed 213-unit view
+    they live long enough to fire either way: level one's worst capped stretch is 7.5 s, and the
+    gauntlet with its closers back runs 2.3 s. Neither break can produce the defect any more, so each
+    probe could only ever report STILL GREEN. The guard they named is still proven to fire by 0259's
+    probe. `docs/decisions/0364-the-view-zooms-out.md`.
+  */
 ];

@@ -26,6 +26,7 @@
 import type { Body } from '../sim/entity.ts';
 import type { DebrisKind } from './debris.ts';
 import { SPRITE } from './sprites.ts';
+import { ACROSS_SPAN, MIN_ASPECT } from '../sim/camera.ts';
 
 /** Every shot in the game. Closed. */
 export type ShotKind =
@@ -639,8 +640,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
       literal share of the CURRENT view would put the burst twelve units further from the player on a 2.4:1
       monitor than on a 16:9 one. The ship's own box runs from 10.7 to 167, so this bursts inside the room the
       player flies in — which is what makes it a thing to deal with rather than a thing to watch.
+
+      ⚠️ **AND IT IS THAT EXPRESSION NOW, NOT ITS VALUE — 0364.** The zoom took the narrowest view to 213.3,
+      and the literal would have left the burst at a sixth of the screen rather than the fifth that was asked
+      for. It is 42.7 at the new scale.
     */
-    swallow: { at: 35.6, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },
+    swallow: { at: (ACROSS_SPAN * MIN_ASPECT) / 5, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },
   },
   /**
    * One drop of what a maw was carrying — 0311. The acid half of the burst; the void half is `void` itself.

@@ -60,6 +60,8 @@ number that was a share of the screen had been written as a world distance.
 | lattice `patrol` | 0.5 → 0.6 | it patrols the whole lane, so its crossing grew by a fifth and its fight became a count of crossings — 15 s or 26 s, nothing between |
 | shuriken `speed` | 1 → 1.2 | the player's pace, in seconds across the screen: at 1 it was back to the 2.9 s that *"slightly faster"* was said about |
 | `PLAYER_SHOT_LIFE`, `playerShots`, `WORST_CASE` | 80 → 96, 88 → 106, 542 → 560 | the widest view went 240 → 288, so a shot on a 21:9 monitor flies a fifth longer; the pool keeps its headroom and the ceiling moves on [0153](0153-desktop-is-the-target.md)'s terms |
+| the maw's swallow point | 35.6 → `ACROSS_SPAN × MIN_ASPECT / 5` | asked as *"20% away from the left screen"* and written as that fifth's value; the value would have been a sixth of the new screen. Written as the expression now, so it follows the next zoom |
+| the three uncoil holes' `at`, the title's weave | × 1.2 | positions across the lane, so the axis's hole stays on the far side from the chorus's and the title flies the same share of the screen; the holes' widths are a ship's room and stay |
 | `spit` extent | 2.6 → 2.7 | a world unit is 6 px of a 1280×720 screen now, not 7.2, so the five pixels between it and the pulse fell to 4.8 |
 | fifteen sprites' marks, the fast sky layer | thickened | [0106](0106-a-mark-thinner-than-a-pixel-is-not-drawn.md)'s 2.5 px floor on the screen the game is judged on; marks sized to sit just over it fell under it at 83% |
 
@@ -71,6 +73,12 @@ have multiplied them too and changed nothing the player sees.
 **Fixtures that read a world distance as a screen fact** were corrected and say so where they are:
 waves placed at 200 that now start on screen, lanes read back as positions, a pushed ship that met a
 wall the wider lane had moved, a death fixture that assumed the enemy pool held only its own shot.
+
+**The proof found seventeen probes the zoom had silenced**, almost all breaks or fixtures sized in the
+old units, and each is re-sized with a note where it lives. **Two of 0326's were deleted instead**:
+they restored closers that used to die at the edge of a 178-unit view before firing, and on the wider
+view those bodies live long enough to fire, so the dry stretch they broke towards cannot happen. The
+guard they named is still seen to fire by 0259's probe.
 
 ## What was rejected
 

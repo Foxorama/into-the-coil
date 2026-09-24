@@ -566,7 +566,14 @@ describe('collecting one, in the real frame', () => {
   function onePickup(kind: PickupKind): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
-      pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
+      /*
+        ⚠️ **240, not 200, since `docs/decisions/0364-the-view-zooms-out.md`.** 200 was a spawn just
+        past a 16:9 view of 177.8; at 213.3 it pops into view INSIDE the box, so a pickup never
+        approached at all and every guard on where its wait begins read the spawn point instead — 0064's
+        and 0087's probes both came back STILL GREEN. ×1.2 puts it back beyond the view.
+      */
+      // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
+      pickups: [{ at: 240, kind, lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -1284,7 +1291,8 @@ describe('collecting one, in the real frame', () => {
       */
       const { world } = playableWorld({
         waves: [],
-        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
+        // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
+        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: 50 })),
         landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
