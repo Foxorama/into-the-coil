@@ -93,4 +93,20 @@ export const PROBES = [
       replace: '  throwArc(w, item, row, index, pieces, w.dropRng);',
     },
   },
+  {
+    decision: '0266',
+    suite: 'tests/continue.test.ts',
+    /*
+      ⚠️ THE LEVEL BOUNDARY SWEEPING THE PICKUPS AGAIN, which is what shipped: *"if you die and the
+      power ups are floating when the new level loads they'll disappear."* Nothing a death takes is
+      lost — unless the level ends while it is still in the air.
+    */
+    broke: 'the level boundary sweeping the pickups, so what a death threw back is lost when the next level loads',
+    guard: 'but what a death threw back crosses the boundary, and only a new run sweeps it',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '  w.bossPool.clear();\n  w.nextWave = 0;',
+      replace: '  w.bossPool.clear();\n  w.pickups.clear();\n  w.nextWave = 0;',
+    },
+  },
 ];

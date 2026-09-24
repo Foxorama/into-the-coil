@@ -1019,6 +1019,41 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(world.bossPool.size, 'the wreck was shot out of existence on its way down').toBe(1);
   });
 
+  it('and a wreck does nothing back: flying into the corpse costs nothing', () => {
+    /*
+      Played: *"the 4th floor boss will kill you with its corpse."* `layWreck` put the hull back in
+      the pool the ship collides with and promised it did nothing back; the ship × `bossPool` pairing
+      was not gated, so the wreck killed on contact where it landed on the box's edge and again as the
+      room opened and it slid back through the box.
+
+      Driven by parking the ship on the wreck every step from the death until the room is open.
+    */
+    const { world, frame } = gyreOnStation();
+    world.bossPool.at(0).health = 1;
+    const full = world.ship.health;
+    let parked = 0;
+    let hurt = 0;
+    for (let step = 0; step < 25 * STEPS_PER_SECOND && (world.room?.open ?? 0) < 1; step++) {
+      world.enemyShots.clear();
+      world.ship.invulnFor = 0;
+      if (world.bossBeaten && world.bossPool.size > 0) {
+        const body = world.bossPool.at(0);
+        world.ship.along = body.along;
+        world.ship.across = body.across;
+        world.ship.prevAlong = body.along;
+        world.ship.prevAcross = body.across;
+        parked++;
+      }
+      frame.step();
+      if (world.ship.health < full) {
+        hurt++;
+        world.ship.health = full;
+      }
+    }
+    expect(parked, 'the ship was never parked on the wreck, so this guard drove nothing').toBeGreaterThan(60);
+    expect(hurt, `the wreck hurt the ship on ${hurt} of ${parked} steps`).toBe(0);
+  });
+
   it('and the room opens even if the wreck is gone, because a sealed room is a dead run', () => {
     /*
       ⚠️ **THE ROOM OPENING IS THE INVARIANT AND THE FALL IS THE DECORATION — 0337.** The way out is

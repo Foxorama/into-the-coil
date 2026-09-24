@@ -234,6 +234,58 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
   });
 });
 
+describe.runIf(chromePath)('the readout and the boss bar share the top of the screen', () => {
+  it('THE REPORTED ONE: the bar never lies over the readout, on a phone or a monitor', async () => {
+    /*
+      Played on a phone: *"the boss bars overlap the bomb numbers on mobile."* The bar stood at 31% of
+      the width and the readout is about fourteen of its own em, which on a phone is 2.4vw — a third
+      of the width. Asserted in pixels on the glass, at the widest readout the game can show: every
+      shield pip, two-digit counts and the retro face, whose monospace is the widest of the two.
+
+      The bar is raised by its class rather than by flying to a boss: what is in question is where the
+      two are laid out, and a boss fight is two minutes of a browser test that says nothing more.
+
+      ⚠️ **ONE PAGE, RESIZED, rather than a page per size.** Four page loads each waiting on a run to
+      start took twenty seconds alone and timed out under `npm run check`; the layout is CSS, and a
+      resize reflows it exactly as a different phone would.
+    */
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 15_000 });
+    for (const [width, height] of [
+      [667, 375],
+      [844, 390],
+      [915, 412],
+      [1280, 720],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      // Raised after the resize, because a resize repaints the chrome and takes a forced class down.
+      const laid = await page.evaluate((shields: number) => {
+        const hud = document.querySelector<HTMLElement>('.itc-playing-hud')!;
+        const bar = document.querySelector<HTMLElement>('.itc-playing-boss')!;
+        hud.classList.add('itc-playing-face-pixel');
+        bar.classList.add('itc-playing-boss-shown');
+        const shield = hud.querySelector<HTMLElement>('[role="img"]')!;
+        const pips = shield.querySelectorAll<HTMLElement>('.itc-playing-hud-pip');
+        for (const pip of pips) pip.style.display = '';
+        for (let i = pips.length; i < shields; i++) shield.appendChild(pips[0]!.cloneNode(true));
+        for (const count of hud.querySelectorAll('.itc-playing-hud-group > span')) count.textContent = '×99';
+        const readout = hud.getBoundingClientRect();
+        const box = bar.getBoundingClientRect();
+        return { readoutRight: readout.right, barLeft: box.left, barRight: box.right, barWidth: box.width };
+      }, MAX_SHIELDS);
+      const at = `${width}×${height}`;
+      expect(laid.barWidth, `at ${at} the bar was laid out with no width at all`).toBeGreaterThan(0);
+      expect(
+        laid.barLeft,
+        `at ${at} the bar starts at ${laid.barLeft.toFixed(0)} px and the readout runs to ${laid.readoutRight.toFixed(0)} px`,
+      ).toBeGreaterThanOrEqual(laid.readoutRight);
+      expect(laid.barRight, `at ${at} the bar runs off the screen`).toBeLessThanOrEqual(width);
+    }
+    await page.context().close();
+  });
+});
+
 describe.runIf(chromePath)('the in-game readout', () => {
   it('is hidden until a run starts, and shows while playing', async () => {
     const page = await open();

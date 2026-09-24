@@ -106,3 +106,20 @@ schema — `upgrades` was always a list and is a list.
 death putting the base gun back on the ship* — are what the code does now, and a probe cannot break
 a thing into what it already is. 0243's four come back with `tests/stack.test.ts`, and its row in
 `WITHOUT_PROBES` is deleted by the guard that refuses an exemption outliving its probes.
+
+## Amended 2026-09-25 — what a death threw back crosses a level boundary
+
+Played: *"if you die and the power ups are floating when the new level loads they'll disappear."*
+`beginScript` swept the pickup pool with the enemies, so a scatter still in the air when the next
+level began was lost — and with it this decision's whole claim, *nothing it takes is lost*. The
+mid-boss's drop went the same way.
+
+**The pickups are swept by a new run, never by a boundary** — `resetScene`, beside the debris. A
+pickup is the player's to catch rather than the level's, on 0076's own terms for the player's shots:
+the ship did not leave, so neither did what it dropped.
+[0067](0067-a-new-run-opens-on-an-empty-field.md)'s *a new run opens on an empty field* is unchanged,
+and so is [0043](0043-a-weapon-is-a-budget-and-a-level-opens-empty.md)'s empty opening, which is
+about what shoots.
+
+Held by `tests/continue.test.ts` — *what a death threw back crosses the boundary, and only a new run
+sweeps it*. Probe: *the level boundary sweeping the pickups*.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, SHIP_START_ALONG, respawn } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, respawn, scatterUpgrades } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -171,6 +171,27 @@ describe('a new run opens on an empty field', () => {
     built.lifecycle.arrive();
     expect(built.world.enemies.size, 'level two opened on level one’s field').toBe(0);
     expect(built.world.enemyShots.size, 'level two opened under level one’s bullets').toBe(0);
+  });
+
+  it('but what a death threw back crosses the boundary, and only a new run sweeps it', () => {
+    /*
+      Played: *"if you die and the power ups are floating when the new level loads they'll
+      disappear."* 0266 says nothing a death takes is lost, and the boundary was spending it. A pickup
+      is the player's to catch, not the level's — so `arrive` keeps it and `begin` does not.
+    */
+    const built = shell();
+    built.lifecycle.begin(TIER);
+    intoAFight(built);
+    scatterUpgrades(built.world, ['weapon', 'weapon', 'missile']);
+    const thrown = built.world.pickups.size;
+    expect(thrown, 'the scatter threw nothing, so this asserts nothing').toBeGreaterThan(0);
+
+    built.lifecycle.onward();
+    built.lifecycle.arrive();
+    expect(built.world.pickups.size, 'level two opened with what the death threw back swept away').toBe(thrown);
+
+    built.lifecycle.begin(TIER);
+    expect(built.world.pickups.size, 'a new run opened on the last one’s pickups').toBe(0);
   });
 });
 

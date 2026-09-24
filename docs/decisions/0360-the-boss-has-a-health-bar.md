@@ -88,3 +88,21 @@ read as *coming turns* or as decoration, is the fish's play (the plan's item 6).
 
 **A name on the bar.** No boss has a player-facing name and `docs/game.md`'s voice rule says the
 readout is terse; if a play asks *what am I fighting*, the name is a row field and one more span.
+
+## Amended 2026-09-25 — the bar and the readout share a row
+
+Played on a phone: *"the boss bars overlap the bomb numbers on mobile."* The bar was placed
+absolutely from 31% of the width, and the readout is about fourteen of its own em wide — an em that
+is `2.4vw` on a phone since [0361](0361-the-readout-is-read-at-arms-length.md), so the readout is a
+third of the width and ran under the bar at every phone size. The monitor this was photographed on
+has a capped em and 100 px to spare, which is why it was not seen.
+
+**The readout and the bar are now one grid row, `1fr minmax(0, 38%) 1fr`.** The bar is 38% and
+centred wherever there is room; where there is not, the readout's column keeps its width and the bar
+starts after it, a little right of centre. No width is written for the readout, because any number
+would be wrong on the next pip, digit or face.
+
+Held in pixels, by `tests/hud.browser.test.ts` — *the bar never lies over the readout, on a phone or
+a monitor* — at 667×375, 844×390, 915×412 and 1280×720, with every shield pip, two-digit counts and
+the retro face. Seen red on the old placement: at 667×375 the bar started at 207 px and the readout
+ran to 267. Probe: *the bar placed absolutely at 31% of the width again*.
