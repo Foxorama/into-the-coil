@@ -28,10 +28,23 @@
  * World units across the scroll axis, always fully visible, on every device, in both orientations.
  *
  * This is the dodge lane, and it is the difficulty axis of a shooter — how much room there is to get
- * out of the way. It is a constant for exactly that reason. `across` runs 0 to 100 and the centreline
- * is 50.
+ * out of the way. It is a constant for exactly that reason. `across` runs 0 to `ACROSS_SPAN` and the
+ * centreline is half of it.
+ *
+ * ── ⚠️ 120 AND NOT 100, WHICH IS A ZOOM: THE SAME THINGS AT THE SAME SIZE, AND MORE OF THE WORLD ──
+ *
+ * Played, on a phone and then on a monitor: *"the enemy wave's screen space time and enemy bullet
+ * screen space time is way better"* on the phone, and on desktop *"the enemies just immediately
+ * die."* The difference was never tuning — a 19.5:9 phone showed 217 units along against a 16:9
+ * monitor's 177.8, at the same speeds. `docs/decisions/0364-the-view-zooms-out.md`.
+ *
+ * ⚠️ **Every size and every speed stays in world units, so raising this is the whole zoom.** The view
+ * is always `ACROSS_SPAN` tall, so everything draws 1/1.2 the size it did; every along span is an
+ * aspect times this, so a 16:9 monitor now shows 213 units — the phone's old picture, on the desk.
+ * What was authored as a position across the lane is a SHARE of it (`laneAcross` in
+ * `src/content/levels.ts`), so a wave at lane 30 is still three tenths of the way across.
  */
-export const ACROSS_SPAN = 100;
+export const ACROSS_SPAN = 120;
 
 /**
  * The aspect the levels are authored against — 16:9, so the reference view is 177.8 × 100 units.
@@ -91,7 +104,7 @@ export const EDGE_MARGIN = 40;
 export type ScrollAxis = 'x' | 'y';
 
 export interface View {
-  /** World units visible along the scroll axis: 177.8 to 240, per the clamp. */
+  /** World units visible along the scroll axis: `ACROSS_SPAN` times 1.78 to 2.4, per the clamp. */
   alongSpan: number;
   /** World units visible across it. Always `ACROSS_SPAN`. */
   acrossSpan: number;

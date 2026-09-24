@@ -566,7 +566,14 @@ describe('collecting one, in the real frame', () => {
   function onePickup(kind: PickupKind): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
-      pickups: [{ at: 200, kind, lane: ACROSS_SPAN / 2 }],
+      /*
+        ⚠️ **240, not 200, since `docs/decisions/0364-the-view-zooms-out.md`.** 200 was a spawn just
+        past a 16:9 view of 177.8; at 213.3 it pops into view INSIDE the box, so a pickup never
+        approached at all and every guard on where its wait begins read the spawn point instead — 0064's
+        and 0087's probes both came back STILL GREEN. ×1.2 puts it back beyond the view.
+      */
+      // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
+      pickups: [{ at: 240, kind, lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -687,9 +694,13 @@ describe('collecting one, in the real frame', () => {
       ⚠️ **The number the report is about.** Before this the reach was 4.4% of the lane and a pass
       that felt like a hit was a miss. The assertion is deliberately INSIDE the new reach and OUTSIDE
       the old one, so it fails if the change is reverted and it does not merely restate the constant.
+
+      ⚠️ **FIVE UNITS, WHICH WAS 5% OF THE LANE THE REPORT WAS MADE ON.** 0364 widened the lane and left
+      the ship and the pickup their sizes, so half a ship-width is still five units and a reach
+      measured in lane shares would have asked for six.
     */
-    expect(grabbableFrom(ACROSS_SPAN * 0.05), 'a pickup half a ship-width off the lane was missed').toBe(true);
-    expect(grabbableFrom(-ACROSS_SPAN * 0.05), 'the reach is not symmetric across the lane').toBe(true);
+    expect(grabbableFrom(5), 'a pickup half a ship-width off the lane was missed').toBe(true);
+    expect(grabbableFrom(-5), 'the reach is not symmetric across the lane').toBe(true);
   });
 
   it('and is still MISSED from far enough away, so this is a reach and not a magnet', () => {
@@ -698,7 +709,8 @@ describe('collecting one, in the real frame', () => {
       more forgiving game — it takes away the choice 0052 built the whole cycling pickup around, which
       is *which* of the two faces the player flies for.
     */
-    expect(grabbableFrom(ACROSS_SPAN * 0.12), 'a pickup an eighth of the lane away collected itself').toBe(false);
+    // Twelve units — an eighth of the lane it was written against, before 0364 widened it.
+    expect(grabbableFrom(12), 'a pickup twelve units away collected itself').toBe(false);
   });
 
   it('leaves the field once taken, so it cannot be collected twice', () => {
@@ -1279,7 +1291,8 @@ describe('collecting one, in the real frame', () => {
       */
       const { world } = playableWorld({
         waves: [],
-        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: ACROSS_SPAN / 2 })),
+        // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
+        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: 50 })),
         landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,

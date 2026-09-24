@@ -26,6 +26,7 @@
 import type { Body } from '../sim/entity.ts';
 import type { DebrisKind } from './debris.ts';
 import { SPRITE } from './sprites.ts';
+import { ACROSS_SPAN, MIN_ASPECT } from '../sim/camera.ts';
 
 /** Every shot in the game. Closed. */
 export type ShotKind =
@@ -423,7 +424,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     twenty seconds on. The ladder stays on the table as the thing to do if this reads too strong
     early.
   */
-  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1, fission: SPENT_BY_ARRIVING },
+  /*
+    ⚠️ **`speed` 1 → 1.2 — 0364, AND THE PACE THE PLAYER ASKED FOR IS WHAT WAS KEPT.** The zoom made
+    a 16:9 screen 213 units rather than 178, so at 1 a blade took 2.88 s to cross it — the 2.9 s that
+    *"slightly faster"* was said about. A fifth faster crosses the wider screen in the seconds 0244
+    settled on, and the helix's pitch grows with it, so on the glass it is the same helix.
+  */
+  shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1.2, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.
@@ -633,8 +640,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
       literal share of the CURRENT view would put the burst twelve units further from the player on a 2.4:1
       monitor than on a 16:9 one. The ship's own box runs from 10.7 to 167, so this bursts inside the room the
       player flies in — which is what makes it a thing to deal with rather than a thing to watch.
+
+      ⚠️ **AND IT IS THAT EXPRESSION NOW, NOT ITS VALUE — 0364.** The zoom took the narrowest view to 213.3,
+      and the literal would have left the burst at a sixth of the screen rather than the fifth that was asked
+      for. It is 42.7 at the new scale.
     */
-    swallow: { at: 35.6, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },
+    swallow: { at: (ACROSS_SPAN * MIN_ASPECT) / 5, into: ['droplet', 'void'], droplets: 16, speed: 0.85 },
   },
   /**
    * One drop of what a maw was carrying — 0311. The acid half of the burst; the void half is `void` itself.

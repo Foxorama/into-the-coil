@@ -98,8 +98,9 @@ export const PROBES = [
     guard: 'A COLUMN ARRIVES AS A COLUMN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const target = inCorridor(w, along + stream, wave.lane + formation.acrossOffset(i, wave.count, gap), row.radius);',
-      replace: '    const target = inCorridor(w, along, wave.lane + formation.acrossOffset(i, wave.count, gap), row.radius);',
+      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it.
+      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
+      replace: '    const target = inCorridor(w, along, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
     },
   },
   {
@@ -122,8 +123,9 @@ export const PROBES = [
     guard: 'A TURN IS NOT A MASSACRE',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const target = inCorridor(w, along + stream, wave.lane + formation.acrossOffset(i, wave.count, gap), row.radius);',
-      replace: '    const target = wave.lane + formation.acrossOffset(i, wave.count, gap);',
+      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it.
+      find: '    const target = inCorridor(w, along + stream, laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap), row.radius);',
+      replace: '    const target = laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap);',
     },
   },
   {

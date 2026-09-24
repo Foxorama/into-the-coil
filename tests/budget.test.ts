@@ -81,8 +81,12 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * entities of the one category 0286 added — a boss that is many — and twenty-seven more blits of a
  * baked bitmap on a target that is desktop. The line on the list now reads *one boss that is
  * fifty-three entities*.
+ *
+ * ⚠️ **AND 560 SINCE 0364, ON THE PLAYER-PROJECTILE LINE.** The view zoomed out and the widest one
+ * went from 240 units to 288, so a shot on a 21:9 monitor is in flight a fifth longer and the pool
+ * that holds a fully loaded gun grew 88 → 106 to keep its headroom. Nothing else was re-sliced.
  */
-const WORST_CASE = 542;
+const WORST_CASE = 560;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

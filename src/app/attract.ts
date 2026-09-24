@@ -66,12 +66,15 @@ export function flythroughSteps(cameraAlong: number): number {
 /**
  * How far the ship may stray from the middle of the lane, in world units.
  *
- * ⚠️ **A HAND'S NUMBER, ARGUED AGAINST THE LANE RATHER THAN CHOSEN.** The lane is a fixed hundred
- * (0023) and the ship is about seven across, so ±35 from the middle leaves it a clear eight units
+ * ⚠️ **A HAND'S NUMBER, ARGUED AGAINST THE LANE RATHER THAN CHOSEN.** The lane was a fixed hundred
+ * (0023) and the ship is about seven across, so ±35 from the middle left it a clear eight units
  * off either wall at full deflection — visibly flying the lane rather than skimming it, and never
  * touching the box `docs/decisions/0074-the-box-is-drawn.md` draws.
+ *
+ * ⚠️ **42 SINCE 0364**, which widened the lane to 120: the same share of it, so the title's weave
+ * crosses the same part of the screen it did.
  */
-const WEAVE_REACH = 35;
+const WEAVE_REACH = 42;
 
 /**
  * The two wavelengths the weave is built from, in world units.

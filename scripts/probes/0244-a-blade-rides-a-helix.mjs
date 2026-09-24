@@ -27,8 +27,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0294, which took the hurtbox down with the drawing: 3.2 to 2.24.
       // ⚠️ Re-anchored by 0298, which doubled the blade's damage. The break is unchanged and is
       // about SPEED — the pace the play-test called slow, restored.
-      find: 'radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1, fission: SPENT_BY_ARRIVING },',
-      replace: 'radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 0.8, fission: SPENT_BY_ARRIVING },',
+      // ⚠️ Re-anchored by 0364, which scaled the pace with the view — both numbers, by 1.2.
+      find: 'radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1.2, fission: SPENT_BY_ARRIVING },',
+      replace: 'radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 0.96, fission: SPENT_BY_ARRIVING },',
     },
   },
   {
@@ -58,7 +59,9 @@ export const PROBES = [
         that moved only this one would redden that instead and say so.
       */
       find: '  shurikenTurn: 5.6,',
-      replace: '  shurikenTurn: 10,',
+      // ⚠️ Re-anchored by 0364: what was called too big was a tenth of the lane, which is a tenth of
+      // the screen; the lane is 120 now, so that size is 12 units rather than 10.
+      replace: '  shurikenTurn: 12,',
     },
   },
 ];

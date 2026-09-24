@@ -92,7 +92,8 @@ export const PROBES = [
     guard: 'never fills with blades',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  playerShots: 88,',
+      // ⚠️ Re-anchored by 0364, which grew the pool with the widest view.
+      find: '  playerShots: 106,',
       replace: '  playerShots: 8,',
     },
   },

@@ -14,7 +14,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { EMBER_HEAD, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -89,7 +89,8 @@ describe('0347 — the belt is a jungle under a live volcano', () => {
       LANDMARK_OF.saurian!(pen, '#404040', '#c0a040', '#101010', size, entry.variant);
       const top = Math.max(0, trace.passes.flatMap((pass) => pass.subpaths.flat()).reduce((m, p) => Math.min(m, p[1]!), Infinity));
       const drawn = SPRITE_EXTENT.landmark * (entry.scale ?? 1);
-      const lane = entry.lane - drawn / 2 + (top / size) * drawn;
+      // An authored `lane` is a share of the lane since 0364, so it is placed as `landmarksFor` places it.
+      const lane = laneAcross(entry.lane) - drawn / 2 + (top / size) * drawn;
       expect(lane, `the volcano at ${entry.at} stops its smoke at lane ${lane.toFixed(1)}, on the screen`).toBeLessThan(0);
     }
   });
@@ -108,7 +109,8 @@ describe('0347 — the belt is a jungle under a live volcano', () => {
     expect(skyline, 'Saurian Belt draws no far range').toBeLessThan(ACROSS_SPAN);
     for (const entry of saurian.landmarks) {
       const drawn = SPRITE_EXTENT.landmark * (entry.scale ?? 1);
-      const crater = entry.lane - drawn / 2 + coneOf(entry.variant).peak * drawn;
+      // A share of the lane since 0364, as above.
+      const crater = laneAcross(entry.lane) - drawn / 2 + coneOf(entry.variant).peak * drawn;
       expect(crater, `the crater at ${entry.at} is above the top of the screen`).toBeGreaterThan(0);
       expect(crater, `the crater at ${entry.at} is at lane ${crater.toFixed(0)}, behind the range at ${skyline.toFixed(0)}`).toBeLessThan(
         skyline,

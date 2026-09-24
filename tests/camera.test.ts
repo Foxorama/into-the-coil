@@ -129,6 +129,34 @@ describe('the fit is a letterbox, never a crop and never a stretch', () => {
       expect(v.alongSpan * v.scale + 2 * v.gutterAlong).toBeCloseTo(Math.max(d.w, d.h), 6);
       expect(v.acrossSpan * v.scale + 2 * v.gutterAcross).toBeCloseTo(Math.min(d.w, d.h), 6);
     }
+    /*
+      ⚠️ **AND OVER A SWEEP, because the rounding the floor exists for is a coincidence of the
+      constants** — `docs/decisions/0364-the-view-zooms-out.md`. At an `ACROSS_SPAN` of 100 the 16:10
+      laptop above landed below zero; at 120 it divides out exactly and no device in the table does,
+      so the named devices alone went STILL GREEN over an unfloored gutter. Every height from 600 to
+      1600 at every ratio the table names, both ways up, finds hundreds at any span measured (80–150),
+      so the guard no longer depends on which screen happens to round.
+    */
+    const ratios = [...new Set(DEVICES.map((d) => d.w / d.h))];
+    let worst = 0;
+    let worstAt = '';
+    for (let h = 600; h <= 1600; h++) {
+      for (const r of ratios) {
+        const w = Math.round(h * r);
+        for (const [a, b] of [
+          [w, h],
+          [h, w],
+        ]) {
+          const v = viewOf(a!, b!);
+          const lowest = Math.min(v.gutterAlong, v.gutterAcross);
+          if (lowest < worst) {
+            worst = lowest;
+            worstAt = `${a}×${b}`;
+          }
+        }
+      }
+    }
+    expect(worst, `${worstAt} crops the view by ${worst}`).toBeGreaterThanOrEqual(0);
   });
 
   it('puts no bars on a device inside the clamp', () => {

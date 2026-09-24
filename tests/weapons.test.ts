@@ -300,7 +300,8 @@ describe('0233 — a pickup cycles', () => {
   function oneWeaponPickup(): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
-      pickups: [{ at: 200, kind: 'weapon', lane: ACROSS_SPAN / 2 }],
+      // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
+      pickups: [{ at: 200, kind: 'weapon', lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,

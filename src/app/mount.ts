@@ -160,8 +160,14 @@ export const CAPACITY = {
     `tests/pickups.test.ts` drives the strongest loadout for fifteen seconds to see the pool never
     fill. The particle share was the other candidate and cannot pay: `tests/flares.test.ts` has a
     boss and a ship dying in the same second spending it to within a fragment.
+
+    ⚠️ **A HUNDRED AND SIX SINCE 0364, AND THE CEILING MOVED RATHER THAN ANOTHER POOL SHRINKING.**
+    The zoom took the widest view from 240 units to 288, so a shot on a 21:9 monitor is in flight a
+    fifth longer and `PLAYER_SHOT_LIFE` went 80 → 96. The same headroom over it as before — 96
+    against 106 — paid out of 0286's worst case on 0153's terms: a target that is desktop, and
+    eighteen more blits of a baked bitmap.
   */
-  playerShots: 88,
+  playerShots: 106,
   missiles: 24,
   bombs: 4,
   blasts: 4,

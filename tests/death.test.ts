@@ -75,14 +75,22 @@ function quietWorld(): ReturnType<typeof playableWorld> & { frame: GameFrame } {
  * ⚠️ **Through the real collision rather than by writing zero into `health`.** What is under test is
  * a branch in the step, and a fixture that reached past the pairings could not see a gate that had
  * been left off one of them.
+ *
+ * ⚠️ **PLANTED WHEN THE SHIP CAN BE HIT, AND NOT WHEN THE POOL IS EMPTY — 0364.** It used to wait for
+ * the enemy-shot pool to drain, which assumed the only enemy shot in the world was this one. The zoom
+ * brought the first level's opening wave on screen sooner, its fire filled the pool, and the fixture
+ * never planted again. Eight steps is the planted shot's six units at its closing speed, with room.
  */
 function killShip(world: World, frame: GameFrame): void {
+  let sincePlanted = Number.POSITIVE_INFINITY;
   for (let i = 0; i < A_WHILE; i++) {
-    if (world.enemyShots.size === 0) {
+    if (world.ship.invulnFor === 0 && sincePlanted > 8) {
       const shot = world.enemyShots.spawn()!;
       reset(shot, world.ship.along + 6, world.ship.across, SHOTS.spit);
       shot.velAlong = -SHOTS.spit.speed + world.scrollPerStep;
+      sincePlanted = 0;
     }
+    sincePlanted++;
     frame.step();
     if (world.shipPool.size === 0) return;
   }

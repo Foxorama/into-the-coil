@@ -1941,10 +1941,19 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
         world.ship.invulnFor = 999;
         // Held, so the pool holds curtains and nothing else — see above.
         world.bossPool.at(0).fireIn = 999;
-        const before = world.enemyShots.size;
+        /*
+          ⚠️ **THE NEW SHOTS BY IDENTITY, NOT THE LAST `grew` SLOTS — 0364.** The wall is thrown before
+          the pool steps, and a shot culled on the same step is released by a swap that moves the
+          wall's last-laid shots into the culled slots — so the tail of the pool was the wall minus its
+          far end, and the net growth was short by every cull. Harmless while the only question was the
+          gaps between shots; it is the whole answer to whether the wall reaches its end.
+        */
+        const before = new Set<object>();
+        for (let i = 0; i < world.enemyShots.size; i++) before.add(world.enemyShots.at(i));
         frame.step();
         if (world.bossPool.size === 0) break;
-        const grew = world.enemyShots.size - before;
+        const fresh: { along: number; across: number; velAlong: number; velAcross: number }[] = [];
+        for (let i = 0; i < world.enemyShots.size; i++) if (!before.has(world.enemyShots.at(i))) fresh.push(world.enemyShots.at(i));
         if (world.bossUncoilAt === last) continue;
         last = world.bossUncoilAt;
         /*
@@ -1952,14 +1961,11 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
           notches without throwing anything (0151), and that is the one case where the count moves and
           nothing arrives.
         */
-        if (grew === 0) continue;
+        if (fresh.length === 0) continue;
         thrown++;
         // The curtain alone: the shots that arrived on this step, measured along their own line.
         const laid: { along: number; across: number }[] = [];
-        for (let i = world.enemyShots.size - grew; i < world.enemyShots.size; i++) {
-          const s = world.enemyShots.at(i);
-          laid.push({ along: s.along - s.velAlong, across: s.across - s.velAcross });
-        }
+        for (const s of fresh) laid.push({ along: s.along - s.velAlong, across: s.across - s.velAcross });
         const foot = laid.reduce((a, b) => (a.along < b.along || (a.along === b.along && a.across < b.across) ? a : b));
         const at = laid.map((p) => Math.hypot(p.along - foot.along, p.across - foot.across)).sort((a, b) => a - b);
         let holes = 0;
@@ -1969,6 +1975,22 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
           `${kind}'s wall ${thrown} arrived with ${holes} holes in it and ${laid.length} shots — a wall the pool ` +
             'truncated is a fan, and the hole the player learned is not the only way through it',
         ).toBe(1);
+        /*
+          ⚠️ **AND IT REACHES THE END OF ITS LINE, BECAUSE A TRUNCATED WALL'S SECOND HOLE IS ITS END —
+          0364.** The pool drops the shots it cannot hold from the far end, so a wall cut short past its
+          hole still has one gap between its shots and a way round the end of it. At a lane of a
+          hundred the cut usually fell before the hole and the count above saw it; at 120 the floor
+          authored away truncated the gyre's sixteenth wall to 13 of its 50 shots and every gap above
+          was honest. Every line ends either across the lane from its foot or at the hull.
+        */
+        const far = laid.reduce((a, b) => (Math.hypot(a.along - foot.along, a.across - foot.across) > Math.hypot(b.along - foot.along, b.across - foot.across) ? a : b));
+        const reaches =
+          Math.abs(far.across - foot.across) >= ACROSS_SPAN - spacing - 0.001 || far.along >= world.bossPool.at(0).along - spacing - 0.001;
+        expect(
+          reaches,
+          `${kind}'s wall ${thrown} arrived with ${laid.length} shots and stops at ${far.along.toFixed(1)} along, ${far.across.toFixed(1)} ` +
+            'across, short of the end of its line — the pool truncated it, and the end is a second way through',
+        ).toBe(true);
       }
       expect(thrown, `${kind} threw no walls at all, so nothing above this line was checked`).toBeGreaterThan(0);
     }

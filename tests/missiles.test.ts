@@ -247,7 +247,13 @@ describe('a launcher is a position on the ship', () => {
     }
     expect(sides.length, 'no tube popped out at all').toBe(2);
 
-    for (let i = 0; i < 120; i++) frame.step();
+    /*
+      ⚠️ **FORTY STEPS, AND IT WAS A HUNDRED AND TWENTY — 0364.** The pop is done in ten; what the
+      wait has to stay short of is the missile leaving the screen, because the pool hands its slot to
+      the next volley and `sides` then holds a missile half-way through ITS pop. The zoom's longer view
+      moved that exit to the step the next volley fires, and the guard read the new missile.
+    */
+    for (let i = 0; i < 40; i++) frame.step();
     for (const missile of sides) {
       const out = Math.abs(missile.across - shipAcross);
       expect(out, 'a side missile straightened while it was still over the hull').toBeGreaterThan(

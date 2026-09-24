@@ -24,7 +24,8 @@ export const PROBES = [
     guard: '0106 — THE REPORTED ONE: every sky mark is at least a pixel thick on the screen it is judged on',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };',
+      // ⚠️ Re-anchored by 0364, which thickened the fast layer's streaks to 0.27.
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.27 };',
       replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.11 };',
     },
   },
@@ -54,7 +55,8 @@ export const PROBES = [
     guard: '0097 — and a streak stays a streak, because a short one is a fast dot',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };',
+      // ⚠️ Re-anchored by 0364, which thickened the fast layer's streaks to 0.27.
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.27 };',
       replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.56 };',
     },
   },

@@ -100,7 +100,8 @@ export const PROBES = [
     guard: '0097 — AND THE NEARER A LAYER IS, THE THINNER ITS MARKS ARE, WHICH IS WHAT BUYS THE SPEED',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.24 };',
+      // ⚠️ Re-anchored by 0364, which thickened the fast layer's streaks to 0.27.
+      find: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.27 };',
       replace: 'const SKY_MAX_STAR_UNITS = { skyFar: 0.6, skyNear: 0.28, skyRush: 0.35 };',
     },
   },

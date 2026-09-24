@@ -21,7 +21,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 83,',
+      // ⚠️ Re-anchored by 0364, which re-solved every mid-boss after the zoom.
+      find: '    health: 42,',
       replace: '    health: 240,',
     },
   },
@@ -39,8 +40,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 210,',
-      replace: '    health: 38,',
+      // ⚠️ Re-anchored by 0364 — the redoubt's re-solved health, given the lattice's re-solved one.
+      find: '    health: 158,',
+      replace: '    health: 32,',
     },
   },
   {
@@ -61,8 +63,9 @@ export const PROBES = [
     guard: 'and at a full loadout it is still a speed bump',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 208,',
-      replace: '    health: 576,',
+      // ⚠️ Re-anchored by 0364, which re-solved the axis to 164; three times it, as before.
+      find: '    health: 164,',
+      replace: '    health: 492,',
     },
   },
   {

@@ -24,8 +24,9 @@ export const PROBES = [
     guard: '0100 — THE REPORTED ONE: every authored pickup reaches the screen, at a non-zero origin',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  reset(item, entry.at + w.levelOrigin, entry.lane, row, kind);',
-      replace: '  reset(item, entry.at, entry.lane, row, kind);',
+      // ⚠️ Re-anchored by 0364, which reads the lane as a share of it.
+      find: '  reset(item, entry.at + w.levelOrigin, laneAcross(entry.lane), row, kind);',
+      replace: '  reset(item, entry.at, laneAcross(entry.lane), row, kind);',
     },
   },
   {

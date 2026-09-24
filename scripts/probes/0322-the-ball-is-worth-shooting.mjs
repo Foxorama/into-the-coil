@@ -45,14 +45,20 @@ export const PROBES = [
       ⚠️ **THE APPETITE PUT BACK TO WHAT SHIPPED.** Thirty points is four seconds of the opening gun against
       a flight of two and a half, so the ball reaches the ship with damage still in it — which is the report
       this decision is named for, and the bar 0311 wrote down for itself and never drove.
+
+      ⚠️ **Re-anchored by 0364, and THIRTY NO LONGER FAILS THE BAR.** The serpent's station moved out by a
+      fifth, so the ball flies 128.8 units to the ship: the opening gun empties a thirty at step 185 of a
+      202-step flight on every tier, and the named guard stayed green (the ATE guard went red instead, on
+      its own fixture: 15 is not a whole number of bites of 2 or 6). At 36 the ball reaches the ship full
+      on every tier, and 18 is whole in every bite the ATE guard feeds, so only the claim reddens.
     */
-    broke: 'the appetite back at thirty, so the opening gun cannot empty a ball before it arrives',
+    broke: 'the appetite at thirty-six, so the opening gun cannot empty a ball before it arrives',
     guard: 'THE REPORTED ONE: the OPENING gun clears a ball before it reaches the ship',
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0324, which took the appetite to 13.2 — *"about 10% more health."*
       find: '    radius: 3.6,\n    health: 13.2,',
-      replace: '    radius: 3.6,\n    health: 30,',
+      replace: '    radius: 3.6,\n    health: 36,',
     },
   },
   {
