@@ -117,6 +117,14 @@ turn its guard red under `npm run prove 0374`:
 | the whirlpool in no collision pairing | the same |
 | the whirlpool closed while part of it is on the screen | and is gone once none of it can be on the screen, and not before |
 
+**Two of these guards were first written so they could not fail, and the full proof said STILL
+GREEN.**
+- *Lands again and again* asked for more than two landings, which twenty-four blades landing once
+  each pass. It now asks for more landings than there are blades.
+- *Gone once none of it can be on the screen* compared the closing step with the last step a blade
+  was seen, and closing always comes after that. It now asks whether a blade was on the screen on
+  the step before it closed.
+
 Re-anchored where the lines they hang on moved: 0229, 0233, 0286, 0372 and 0373. The storm's leading
 edge is named `leading` and the whirlpool's cue is heard where it opens, so 0257's and 0234's anchors
 stay unique to the code they break.

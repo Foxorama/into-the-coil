@@ -147,28 +147,40 @@ describe('0374 — the whirlpool: turns, grows, lands again and again, and ends 
       world.ship.invulnFor = 2;
       frame.step();
     }
-    expect((999 - target.health) / WHIRL.damage, 'the whirlpool landed on one body only once').toBeGreaterThan(2);
+    /*
+      ⚠️ **MORE LANDINGS THAN THERE ARE BLADES, because that is what *again* means.** This first asked
+      for more than two, and a whirlpool whose blades each land once passed it — twenty-four blades
+      are twenty-four landings without one of them coming round. `npm run prove` said STILL GREEN.
+    */
+    const landings = (999 - target.health) / WHIRL.damage;
+    expect(landings, 'no blade landed on the body twice, so it does not come round').toBeGreaterThan(WHIRL.arms * WHIRL.blades);
   });
 
   it('and is gone once none of it can be on the screen, and not before', () => {
     const { world, frame } = quiet();
     launchSpecial(world, 'whirlpool');
-    let onScreen = 0;
-    let steps = 0;
-    for (; steps < 2000 && world.whirl.size > 0; steps++) {
-      world.ship.invulnFor = 2;
-      frame.step();
+    /*
+      ⚠️ **WHAT WAS ON THE SCREEN ON THE STEP BEFORE IT CLOSED.** This first compared the closing step
+      with the last step a blade was seen, and the closing step is always later — once it is closed
+      nothing is seen — so a whirlpool closed mid-screen passed it. `npm run prove` said STILL GREEN.
+      A blade's centre on the screen the step before it closed is the thing that must never be.
+    */
+    let seenBefore = false;
+    let everSeen = false;
+    for (let steps = 0; steps < 2000 && world.whirl.size > 0; steps++) {
       let seen = false;
       for (let i = 0; i < world.whirl.size; i++) {
         const b = world.whirl.at(i);
         const inView = b.along - world.cameraAlong;
         if (inView > 0 && inView < world.view.alongSpan && b.across > 0 && b.across < 100) seen = true;
       }
-      if (seen) onScreen = steps;
+      seenBefore = seen;
+      everSeen = everSeen || seen;
+      world.ship.invulnFor = 2;
+      frame.step();
     }
     expect(world.whirl.size, 'the whirlpool never closed').toBe(0);
-    expect(onScreen, 'the whirlpool was never on the screen, so its end proves nothing').toBeGreaterThan(0);
-    // It closes after the last step a blade was seen, never while one still was.
-    expect(steps, 'the whirlpool closed while part of it was still on the screen').toBeGreaterThan(onScreen);
+    expect(everSeen, 'the whirlpool was never on the screen, so its end proves nothing').toBe(true);
+    expect(seenBefore, 'the whirlpool closed while part of it was still on the screen').toBe(false);
   });
 });
