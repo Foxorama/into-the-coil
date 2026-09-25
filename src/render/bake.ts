@@ -629,9 +629,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   blastHalf: 'hazard',
   blastWide: 'hazard',
   blastWidest: 'hazard',
-  // The explosion's later frames are the blast's, so its ink — 0375.
+  // The fire is the blast's ink; the smoke is the sky's, lifted toward grey in the drawing — 0375.
   blastFire: 'hazard',
-  blastSmoke: 'hazard',
+  blastSmoke: 'sky',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
@@ -9513,30 +9513,34 @@ export function drawKind(
       // Half the stroke, because a stroke is centred on its path: the INK then ends exactly on the
       // extent, which is the radius the damage uses.
       const edge = half - ctx.lineWidth / 2;
-      const fire = palette.flame;
-      const heat = palette.hazard;
-      // The front: a thin solid rim at exactly the damage radius — where the edge was, in every frame.
+      /*
+        ⚠️ **THE BRIGHT INKS, AND THE FIRST BAKE WAS BROWN.** The flame ink is a deep red that reads as
+        mud over the void at under full alpha — photographed with `scripts/shot-sheet.mjs`, the burst
+        was a brown blob with a beige middle. Fire is the orange of the player's own bullets, then the
+        hazard gold, then white; smoke is the void lifted toward grey, so it is smoke in every palette.
+      */
+      const orange = palette.bullet;
+      const gold = palette.hazard;
+      // The hull is the whole disc now, sealed first: its outline IS the damage radius, and the fire
+      // is painted over it. (The rim-last first draw left the fireball over the hull's hole.)
       ctx.arc(half, half, edge, 0, Math.PI * 2);
-      ctx.moveTo(half + edge * 0.94, half);
-      ctx.arc(half, half, edge * 0.94, 0, Math.PI * 2);
       seal(ctx);
       if (kind === 'blastSmoke') {
-        // The smoke: dark, thinning, rolling out to the edge and going.
-        billow(ctx, half, edge * 0.94, 0.07, 5, 2.1, shade(fire, -0.62), 0.5);
-        billow(ctx, half, edge * 0.72, 0.1, 4, 0.7, shade(fire, -0.78), 0.4);
-        return;
+        // The smoke: grey, thinning, rolling out to the edge and going.
+        billow(ctx, half, edge * 0.97, 0.07, 5, 2.1, shade(palette.space, 0.42), 0.55);
+        billow(ctx, half, edge * 0.72, 0.1, 4, 0.7, shade(palette.space, 0.3), 0.45);
+        billow(ctx, half, edge * 0.4, 0.12, 3, 1.4, shade(orange, -0.35), 0.35);
+      } else if (kind === 'blastFire') {
+        // The fire rolling out: orange to the rim, a gold heart, no core left.
+        billow(ctx, half, edge * 0.97, 0.07, 6, 1.3, orange, 0.75);
+        billow(ctx, half, edge * 0.7, 0.1, 5, 0.4, shade(orange, -0.2), 0.7);
+        billow(ctx, half, edge * 0.45, 0.12, 4, 2.6, gold, 0.7);
+      } else {
+        // The burst: gold fire to the rim, a lit fireball inside it, and a white-hot core.
+        billow(ctx, half, edge * 0.97, 0.06, 7, 0.2, orange, 0.8);
+        billow(ctx, half, edge * 0.7, 0.1, 5, 1.9, gold, 0.85);
+        glow(ctx, f, '#ffffff', 0, 0, (edge * 0.45) / r, 0.85);
       }
-      if (kind === 'blastFire') {
-        // The fire rolling out: dimmer, redder, and filled to the rim.
-        billow(ctx, half, edge * 0.95, 0.07, 6, 1.3, fire, 0.62);
-        billow(ctx, half, edge * 0.72, 0.1, 5, 0.4, shade(fire, -0.25), 0.55);
-        billow(ctx, half, edge * 0.45, 0.12, 4, 2.6, shade(heat, 0.15), 0.45);
-        return;
-      }
-      // The burst: fire to the rim, a lit fireball inside it, and a white-hot core.
-      billow(ctx, half, edge * 0.92, 0.06, 7, 0.2, fire, 0.72);
-      billow(ctx, half, edge * 0.64, 0.1, 5, 1.9, shade(heat, 0.3), 0.78);
-      glow(ctx, f, '#ffffff', 0, 0, (edge * 0.38) / r, 0.85);
       return;
     }
     case 'pickupShield': {

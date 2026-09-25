@@ -108,9 +108,11 @@ export const PROBES = [
       // ⚠️ And re-anchored again by 0331, which shortened and re-balanced both sines. The claim is
       // untouched — what a boom is made of is a low sine and not a filtered saw — and the replacement
       // stays deliberately off the key for the same reason as before.
+      // ⚠️ And by 0375, which made the boom a kick's drop and two held roots: all three go.
       find:
-        "      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },\n" +
-        "      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.8, gain: 0.289, attack: 0.015, curve: 2.2, drive: 0.15 },",
+        "      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.12, gain: 0.6, attack: 0.001, curve: 2.6, drive: 0.6 },\n" +
+        "      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.02, seconds: 0.9, gain: 0.45, attack: 0.004, curve: 2.2, drive: 0.55 },\n" +
+        "      { wave: 'sine', from: inKey(-7), to: inKey(-7), at: 0.02, seconds: 1.2, gain: 0.34, attack: 0.01, curve: 1.9, drive: 0.25 },",
       replace: "      { wave: 'saw', from: 900, to: 580, seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },",
     },
   },

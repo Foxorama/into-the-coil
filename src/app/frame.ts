@@ -552,6 +552,22 @@ const EXPLOSION_STEPS = 30;
 /** The kind a thrown bomb's blast carries, so its frames can be told from the pyre's single one. */
 const EXPLOSION_KIND = 1;
 
+/**
+ * The fewest steps between two thrown specials — a third of a second — 0375.
+ *
+ * ⚠️ **0024's FLASH CAP, AND IT IS SAFETY RATHER THAN TASTE.** *"No more than three general flashes
+ * per second."* A filled explosion two thirds of the lane across is a general flash, and a stack of
+ * charges pressed as fast as a thumb can go would set off more than three a second. So a throw
+ * within this of the last is not made at all — the shell asks `canThrow` before it spends the charge,
+ * so a press that is refused costs nothing.
+ */
+export const THROW_GAP_STEPS = 20;
+
+/** Whether `kind` may leave the ship this step: a surge or a whirlpool always; a throw after its gap. */
+export function canThrow(w: World, kind: SpecialKind): boolean {
+  return SPECIALS[kind].shot === null || w.throwIn <= 0;
+}
+
 /** Step a thrown bomb's explosion through its three pictures, by how much of it is left. */
 function stepExplosions(w: World): void {
   for (let i = 0; i < w.blasts.size; i++) {
@@ -892,6 +908,8 @@ export interface World {
   whirlAge: number;
   whirlOffset: number;
   whirlAcross: number;
+  /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
+  throwIn: number;
   /**
    * Where the serpent's lightning falls — `docs/decisions/0248-the-serpent-strikes.md`, its own
    * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
@@ -3229,6 +3247,7 @@ function askSpecials(w: World): void {
  * missile with a bigger number, and choosing the PLACE is the whole of what makes it a skill.
  */
 function stepBombs(w: World): void {
+  if (w.throwIn > 0) w.throwIn--;
   for (let i = w.bombs.size - 1; i >= 0; i--) {
     const bomb = w.bombs.at(i);
     if (bomb.lifeFor > 1) continue;
@@ -3490,6 +3509,8 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     third number agreeing with them by hand is the drift this project keeps paying for.
   */
   thrown.lifeFor = Math.max(1, Math.round(row.reach / body.speed));
+  // And the next throw waits, so explosions stay under three a second — 0024, 0375.
+  w.throwIn = THROW_GAP_STEPS;
 }
 
 /**
