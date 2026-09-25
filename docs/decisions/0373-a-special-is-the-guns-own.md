@@ -119,5 +119,8 @@ Re-aimed rather than deleted:
 - 0053's *an empty special dropped* has no entries to drop from a stack. It now breaks the floor: a
   press on an empty stack that rebuilds the run.
 - 0060's *a button per binding* is now *a button per charge*.
+- 0085's *a death topping the arsenal up* is now an empty stack handed the starting kit. The full
+  proof caught it still writing the old entry shape, which crashed a neighbouring test instead of
+  breaking its own.
 
 Re-anchored where the lines they hang on moved: 0050, 0229, 0230 and 0355.
