@@ -81,11 +81,10 @@ export const PROBES = [
       path: 'src/state/screens.ts',
       // ⚠️ Re-anchored by 0210, which appended the music room after the tiers so the map is now one
       // entry in a list rather than the whole `actions` array. The break is the same one it has
-      // always been: the tiers in the wrong order, which reads hardest-first to a player. And by 0370,
-      // which gave each tier a line of facts.
-      find: '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint, detail: factsOf(DIFFICULTIES[kind]) })),',
+      // always been: the tiers in the wrong order, which reads hardest-first to a player.
+      find: '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),',
       replace:
-        '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint, detail: factsOf(DIFFICULTIES[kind]) })).reverse(),',
+        '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })).reverse(),',
     },
   },
   {

@@ -34,7 +34,7 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, TUNED as TUNED_KIND, fireGapFor } from '../src/content/difficulty.ts';
 
 /**
  * How far a boss's own lunge carries its hull along the lane, in world units — 0289.
@@ -2390,12 +2390,15 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
     expect(uncoilsBy(uncoil, row.health * row.phases[1]!.upTo, row.health), 'the first phase ends with no wall thrown').toBeGreaterThanOrEqual(1);
   });
 
-  it('AND THE TIER THE GAME IS TUNED FOR SAYS SO ABOUT ITSELF', () => {
+  it('AND THE TIER THESE BOUNDS READ IS THE ONE THE CONTENT IS TUNED FOR', () => {
     /*
-      ⚠️ **`savior`'s own `hint` is *"What the game is tuned for"***, and every number above is read
-      against it. If that ever moves to another tier, these bounds are being applied to a row that no
-      longer claims to be the reference — which is the quiet kind of wrong.
+      ⚠️ **Every number above is read against `savior`.** If the tuned tier ever moves, these bounds are
+      being applied to a row that is no longer the reference — which is the quiet kind of wrong.
+
+      ⚠️ **ASKED OF `TUNED`, AND IT WAS ASKED OF THE HINT UNTIL 0370.** Savior's hint said *"What the
+      game is tuned for"*, and this read the words. The hint is the button's voice now — *"Be the hero
+      you want to be"* — and the reference is the constant the derivation already stands on.
     */
-    expect(DIFFICULTIES.savior.hint.toLowerCase()).toContain('tuned for');
+    expect(TUNED_KIND, 'the tuned tier moved; the bounds above still read savior').toBe('savior');
   });
 });

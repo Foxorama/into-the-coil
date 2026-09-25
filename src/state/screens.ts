@@ -17,7 +17,7 @@
  */
 
 import { GAME_TITLE } from '../brand.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, factsOf } from '../content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 // 0340: the crossing's knob, on the two lines above's exact terms.
@@ -45,11 +45,6 @@ export type Screen = (typeof SCREEN_KINDS)[number];
 export interface ScreenAction {
   label: string;
   hint: string;
-  /**
-   * A second line of plain fact under the hint, or absent — the tiers' lives and shields, from
-   * `factsOf`. Absent rather than empty on every other control, because none of them has one.
-   */
-  detail?: string;
 }
 
 /**
@@ -236,7 +231,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       first would silently make it a difficulty.
     */
     actions: [
-      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint, detail: factsOf(DIFFICULTIES[kind]) })),
+      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
       { label: 'Music', hint: '' },
     ],
     /*

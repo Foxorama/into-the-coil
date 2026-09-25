@@ -8,6 +8,7 @@ import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 // 0212: the music room's readout is the one part of a screen that appears after the screen does.
 import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 
 /**
  * EVERY SCREEN FITS THE SCREEN IT IS DRAWN ON.
@@ -302,19 +303,19 @@ describe.runIf(chromePath)('every screen fits the screen it is drawn on', () => 
 });
 
 describe.runIf(chromePath)('0370 — the tiers explain themselves on every screen', () => {
-  it('THE REPORTED ONE: every tier shows what it is and what it gives, readably, on every device', async () => {
+  it('THE REPORTED ONE: every tier shows its line under its name, readably, on every device', async () => {
     /*
       Asked for from a phone: *"it's all squished in and has no explanations for the different
       difficulties."* The short-screen rule took the tiers' hints away to fit, so on every phone the
       choice was three names and nothing else. Held in pixels: on every device in the list, each tier's
-      hint and its facts line are drawn, whole on the display, and at eleven pixels or more — the
-      floor under a line a player reads to decide something.
+      hint is drawn, whole on the display, and at eleven pixels or more — the floor under a line a
+      player reads to decide something.
     */
     for (const viewport of VIEWPORTS) {
       const page = await open(viewport);
       const lines = await page.evaluate((p: string) => {
         return [...document.querySelectorAll<HTMLElement>('.' + p + 'action')].flatMap((control) =>
-          [...control.querySelectorAll<HTMLElement>('.' + p + 'action-hint, .' + p + 'action-detail')].map((line) => {
+          [...control.querySelectorAll<HTMLElement>('.' + p + 'action-hint')].map((line) => {
             const r = line.getBoundingClientRect();
             return {
               tier: control.firstChild?.textContent ?? '',
@@ -326,7 +327,7 @@ describe.runIf(chromePath)('0370 — the tiers explain themselves on every scree
           }),
         );
       }, prefixFor('title'));
-      expect(lines.length, `${viewport.what}: no tier carries a hint or a facts line`).toBeGreaterThanOrEqual(6);
+      expect(lines.length, `${viewport.what}: a tier carries no line under its name`).toBeGreaterThanOrEqual(DIFFICULTY_KINDS.length);
       for (const line of lines) {
         const at = `${viewport.what}, ${line.tier}: "${line.text}"`;
         expect(line.shown, `${at} is not drawn`).toBe(true);

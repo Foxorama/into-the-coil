@@ -1,10 +1,10 @@
 # 0370 — The title fits the hand
 
-**Accepted 2026-09-25.** Every tier says what it is and what it gives on every device, including a
-line of facts read off its row. On a short screen the title is laid out as three rows across the long
-axis rather than two columns down the short one. Extends [0049](0049-the-chrome-is-authored-against-the-short-axis.md)
-and [0210](0210-the-title-plays-the-music.md), which put the title into two columns and then a 2×2 grid
-to fit a phone.
+**Accepted 2026-09-25.** Every tier shows its line under its name on every device. On a short screen
+the title is laid out as three rows across the long axis rather than two columns down the short one.
+Extends [0049](0049-the-chrome-is-authored-against-the-short-axis.md) and
+[0210](0210-the-title-plays-the-music.md), which put the title into two columns and then a 2×2 grid to
+fit a phone.
 
 ## The ask
 
@@ -22,23 +22,27 @@ Photographed at 844×390 and 667×375 before the change:
 - **The pickup key took half the screen** as a seven-line column beside the buttons, and its hints
   wrapped.
 - **The settings were small text buttons** under everything, sized for a pointer rather than a thumb.
-- **Even where the hints showed, they did not explain.** *"The gentlest way in"* and *"It is not meant
-  to be survived"* are moods. What differs between tiers is lives, shields, how hard and fast the
-  enemies are, and how tight the corridors are.
 
-## The rule
+## The lines, in the player's words
 
-**A tier's button carries its name, a hint that says how it plays, and a facts line.**
+A first draft gave each tier a hint about how it plays, and a facts line read off the row (*5 lives · 3
+shields every level*). The player's answer was **to drop the facts line** and give each tier a line of
+voice instead:
 
-- **The facts are said by `factsOf`, from the row**: *5 lives · 3 shields every level*, *3 lives ·
-  shields to find*, *2 lives · no shields*. Typed beside `lives: 5`, the sentence would be a second
-  description of the number, and the day a tier gained a life the button would go on saying the old one.
-- **The hints were rewritten to say what is not a count**: *Slower enemies and bullets, wide
-  corridors*, *What the game is tuned for* (kept, and `tests/level.test.ts` holds it), *Tougher, faster
-  enemies, tight corridors*. Each follows the row's own multipliers and corridor numbers
-  ([0356](0356-the-tuned-tier-is-savior.md), [0350](0350-the-corridor-turns.md)).
-- **Both lines have a floor of `0.7rem`** (11.2 px). A card is a quarter of a phone's row, and at the
-  panel's own size the smallest phone set them at eight.
+| tier | line |
+|---|---|
+| Legendary Pilot | *Is that plot armour?* |
+| Savior of the Galaxy | *Be the hero you want to be* |
+| Let the Galaxy Burn | *Best of luck mate* |
+
+Each line has a floor of `0.7rem` (11.2 px). A card is a quarter of a phone's row, and at the panel's
+own size the smallest phone set it at eight.
+
+`tests/level.test.ts` had held *which tier is the reference* by reading *"tuned for"* in Savior's hint.
+The hint is the button's voice now, so that guard asks `TUNED`, the constant the derivation already
+stands on ([0356](0356-the-tuned-tier-is-savior.md)).
+
+## The layout
 
 **On a short screen (the existing `max-height: 460px` container query) the title is three rows:**
 
@@ -52,7 +56,7 @@ Photographed at 844×390 and 667×375 before the change:
 3. **The settings as a row of buttons tall enough for a thumb.** Their width shrinks with the screen
    rather than wrapping, because a second line is forty pixels of a 320-pixel phone.
 
-The desktop keeps its two columns, and gains the facts line.
+The desktop keeps its two columns and shows the new lines.
 
 ## What moved, and why each is not the work bending to a guard
 
@@ -62,8 +66,6 @@ phone layout puts the actions in the top row and the settings under everything, 
 the control that is actually lowest and asks the same question about it: is the far end of the screen
 one scroll away. Nothing it held was loosened.
 
-**0047's probe that reverses the tiers is re-anchored** on the line that now carries `detail`.
-
 **0049's probe that stacks the title down the short axis now expects the laptop's fit guard.** A short
 screen is one column by design now, so stacking the body only changes the screens that still have two
 columns. There it overflows the laptop and the tablet, and the fit guard on those devices is what
@@ -71,11 +73,10 @@ notices. The claim is the one it always made: the title stacked down the short a
 
 ## What is held
 
-`tests/layout.browser.test.ts` — *every tier shows what it is and what it gives, readably, on every
-device*. On all six devices the layout guard already checks (480×320 up to 1280×720), each tier's hint
-and facts line is drawn, whole on the display, at 11 px or more. Seen red on the old code: at 480×320
-only three lines existed and all three were hidden. Three probes: the lines hidden again, the floor
-taken off, and the facts said by nothing.
+`tests/layout.browser.test.ts` — *every tier shows its line under its name, readably, on every device*.
+On all six devices the layout guard already checks (480×320 up to 1280×720), each tier's line is drawn,
+whole on the display, at 11 px or more. Seen red on the old code, where at 480×320 all three were
+hidden. Two probes: the lines hidden on a short screen again, and the floor taken off.
 
 The existing layout guards still hold: every screen fits every device with no scrolling, and the
 0049 heading probe still fires.

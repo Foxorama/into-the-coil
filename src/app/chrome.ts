@@ -637,16 +637,14 @@ ${each('-action')} {
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 */
-.itc-title-action-hint, .itc-music-action-hint, .itc-title-action-detail {
+.itc-title-action-hint, .itc-music-action-hint {
   display: block;
-  /* A floor, so the smallest phone's card does not set its explanation at eight pixels — 0370. */
+  /* A floor, so the smallest phone's card does not set its hint at eight pixels — 0370. */
   font-size: max(0.62em, 0.7rem);
   font-weight: 400;
   opacity: 0.72;
   margin-top: 0.3em;
 }
-/* The facts line reads as the plainer of the two: the counts a player compares tiers by. 0370. */
-.itc-title-action-detail { font-weight: 600; opacity: 0.9; margin-top: 0.15em; }
 /*
   The tiers are a column and they are wider than a one-word button, so they get a shared width. The
   order is the table's order, which is easiest first — see decision 0047.
@@ -2065,13 +2063,6 @@ export function makeChrome(
         hint.className = prefix + 'action-hint';
         hint.textContent = action.hint;
         control.appendChild(hint);
-      }
-      // The facts line — a tier's lives and shields, 0370 — inside the button for the hint's reason.
-      if (action.detail !== undefined) {
-        const detail = document.createElement('span');
-        detail.className = prefix + 'action-detail';
-        detail.textContent = action.detail;
-        control.appendChild(detail);
       }
       const onClick = (): void => onAction(screen, index);
       control.addEventListener('click', onClick);
