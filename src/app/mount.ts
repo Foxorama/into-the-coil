@@ -641,6 +641,15 @@ function makeGate(ink: string, space: string): HTMLElement {
   return gate;
 }
 
+/**
+ * How long after an `orientationchange` the size is measured once more, in milliseconds.
+ *
+ * ⚠️ **A SHELL DELAY, NOT A SIM ONE** — nothing below the shell reads a clock (0015). WebKit on iOS
+ * can report a rotation's size before it has settled; a third of a second is past the rotation's own
+ * animation, and a measure of a size already fitted costs nothing, so a longer one only delays a fix.
+ */
+const ROTATION_SETTLE_MS = 350;
+
 /** Size the backing store for a viewport, honouring 0022's DPR cap, and draw in CSS pixels. */
 function fitCanvas(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, cssWidth: number, cssHeight: number): number {
   const dpr = renderScale(window.devicePixelRatio);
@@ -2768,6 +2777,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face), count: stack });
   };
 
+  /** The size the canvas was last fitted to, so a report of the same size does nothing. */
+  let fittedWidth = 0;
+  let fittedHeight = 0;
+  let fittedDpr = 0;
+
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
   const onResize = (): void => {
     const next = measure();
@@ -2779,7 +2793,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     const width = viewportWidth(host);
     const height = viewportHeight(host);
+    /*
+      ⚠️ **THE SAME SIZE AGAIN IS NOTHING.** Three sources report a size now (below), and a phone's
+      toolbar reports one on its own; each used to re-fit and re-apply the screen, which puts out a
+      burn and restarts a countdown mid-screen.
+    */
+    if (playable && width === fittedWidth && height === fittedHeight && renderScale(window.devicePixelRatio) === fittedDpr) return;
     const nextDpr = fitCanvas(canvas, ctx, width, height);
+    fittedWidth = width;
+    fittedHeight = height;
+    fittedDpr = nextDpr;
     const wantView = viewFor(next.alongAxis);
     const wantResolution = next.scale * nextDpr;
     if (atlasIsStale(atlas, wantView, wantResolution, atlas.theme)) {
@@ -2813,12 +2836,33 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   host.appendChild(gate);
   let stopLoop: (() => void) | null = null;
 
+  /** Whether the screen has been applied for the gate as it now stands — `null` before the first call. */
+  let appliedPlayable: boolean | null = null;
+
   const setPlayable = (next: boolean): void => {
     playable = next;
     gate.style.display = playable ? 'none' : 'flex';
     canvas.style.visibility = playable ? 'visible' : 'hidden';
-    // The chrome follows the gate, so a hidden game never leaves a focusable button behind it.
-    applyScreen();
+    /*
+      ⚠️ **AND OUT OF THE LAYOUT, NOT ONLY OUT OF SIGHT.** Reported from Chrome on iOS — which is
+      WebKit, as every browser there is: *"I turned the phone into portrait mode … then when I turned
+      it landscape, I couldn't move the plane all the way to the top."* A hidden canvas kept its
+      landscape size, 844 wide inside a 390-wide page, and WebKit zooms and scrolls a page to fit what
+      overflows it and does not always give that back on the turn home, so the top of the game sat off
+      the top of the glass. A canvas that takes no room cannot be fitted to.
+    */
+    canvas.style.display = playable ? 'block' : 'none';
+    /*
+      The chrome follows the gate, so a hidden game never leaves a focusable button behind it.
+
+      ⚠️ **ONLY WHEN THE GATE MOVES.** `applyScreen` arms countdowns and puts out a burn, and says it
+      runs on a real transition; every landscape resize was calling it, so a toolbar sliding in
+      mid-crossing dropped the ship out of the burn.
+    */
+    if (appliedPlayable !== playable) {
+      appliedPlayable = playable;
+      applyScreen();
+    }
     if (playable && stopLoop === null) {
       // A resize is not a frame, so building a frame here is affordable — the rule this file opens
       // with. Restarting also drops the accumulated step debt, which is right: time spent looking at
@@ -2830,7 +2874,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
   };
 
+  /*
+    ⚠️ **THREE REPORTS OF THE SIZE, BECAUSE ON iOS THE FIRST ONE CAN BE WRONG.** WebKit fires the
+    window's `resize` during a rotation, and can fire it before the new size has settled. The visual
+    viewport reports again when it has, and `orientationchange` is followed by one more measure a
+    beat later. `onResize` does nothing for a size it has already fitted, so the repeats are free.
+  */
+  let settling = 0;
+  const settle = (): void => {
+    window.clearTimeout(settling);
+    settling = window.setTimeout(onResize, ROTATION_SETTLE_MS);
+  };
   window.addEventListener('resize', onResize);
+  window.visualViewport?.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', settle);
   setPlayable(view.alongAxis === 'x');
 
   return {
@@ -2838,6 +2895,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     rig: { world, dispatch, stateOf: () => state, lifecycle },
     stop(): void {
       window.removeEventListener('resize', onResize);
+      window.visualViewport?.removeEventListener('resize', onResize);
+      window.removeEventListener('orientationchange', settle);
+      window.clearTimeout(settling);
       window.removeEventListener('pointerdown', unlock, { capture: true });
       window.removeEventListener('keydown', unlock, { capture: true });
       chrome.release();
