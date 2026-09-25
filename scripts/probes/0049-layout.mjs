@@ -27,9 +27,15 @@ export const PROBES = [
       ⚠️ It is re-anchored rather than made bigger on purpose. Widening the break until it reddened
       the original assertion again would be tuning the PROBE to the answer, which is the shape
       docs/decisions/0044 refuses.
+
+      ⚠️ **AND RE-ANCHORED AGAIN BY 0370, ON THE SAME TERMS.** A short screen is one column by design
+      now — its rows run across the long axis instead — so this break only reaches the screens that
+      still have the two columns, and there it overflows the laptop and the tablet. The fit guard on
+      those devices is what notices, and it is the claim the probe was always about: the title stacked
+      down the short axis does not fit.
     */
     broke: 'the title screen stacked down the short axis again, instead of across the long one',
-    guard: 'keeps its first line on the display and its last control one scroll away',
+    guard: 'draws all of every screen on a laptop',
     edit: {
       path: 'src/app/chrome.ts',
       find: '  grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);',

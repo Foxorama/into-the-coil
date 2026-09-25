@@ -388,7 +388,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   legendary: {
     title: 'Legendary Pilot',
-    hint: 'The gentlest way in',
+    // The button's voice, in the player's words — 0370.
+    hint: 'Is that plot armour?',
     lives: 5,
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
@@ -402,7 +403,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   savior: {
     title: 'Savior of the Galaxy',
-    hint: 'What the game is tuned for',
+    hint: 'Be the hero you want to be',
     lives: 3,
     // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
     shellOpen: 0,
@@ -427,7 +428,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   burn: {
     title: 'Let the Galaxy Burn',
-    hint: 'It is not meant to be survived',
+    hint: 'Best of luck mate',
     lives: 2,
     // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
     shellOpen: 0,
