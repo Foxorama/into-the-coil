@@ -54,28 +54,7 @@ export function livesFor(difficulty: DifficultyKind): number {
 }
 
 /**
- * One owned special, and how many uses are left of it.
- *
- * ⚠️ **A LIST OF ENTRIES rather than a list of kinds, and the difference is the binding table.**
- * `src/content/actions.ts` says `special1` and `special2` are POSITIONS in this list, one trigger
- * per owned weapon — so charges cannot be repeated entries, or a player carrying three bombs would
- * have the same weapon on three triggers and the third would be unreachable.
- *
- * ⚠️ **Plain data, because this is what `save/` serialises** (0039). Two fields, both numbers or
- * strings, no class and no `Map` — `tests/state-shape.test.ts` is the guard.
- */
-export interface ArsenalEntry {
-  kind: SpecialKind;
-  /** Uses left. An owned weapon at zero is still owned, and still holds its trigger. */
-  charges: number;
-}
-
-/**
- * What a run — or a life — begins with.
- *
- * ⚠️ **This is 0039's *"back to the ship's base weapon and starting special"* finally cashing.** The
- * reducer used to clear the arsenal to `[]` on a death, because there was no starting special for it
- * to go back to; there is one now, and the ask names its size: *"the player starts with 2."*
+ * What a run begins with: the bomb's charges on the stack, and nothing else — 0053, 0373.
  *
  * ⚠️ **ONE CALLER, `begin`.** A death stopped calling it in
  * `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` and a continue in
@@ -84,8 +63,10 @@ export interface ArsenalEntry {
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
  */
-export function startingArsenal(): readonly ArsenalEntry[] {
-  return [{ kind: 'bomb', charges: SPECIALS.bomb.charges }];
+export function startingArsenal(): readonly SpecialKind[] {
+  const out: SpecialKind[] = [];
+  for (let i = 0; i < SPECIALS.bomb.charges; i++) out.push('bomb');
+  return out;
 }
 
 export interface RunState {
@@ -106,16 +87,14 @@ export interface RunState {
   /** Which level, zero-based. */
   level: number;
   /**
-   * What the ship is carrying beyond its base weapon, in the order it was taken.
+   * What the trigger throws: one entry per charge, in the order earned, and the LAST is thrown next.
    *
-   * ⚠️ **A LIST, and empty until something authors a special worth picking up.** `docs/game.md`
-   * calls this a code constraint rather than a flourish: *"a ship modelled with one special field,
-   * an input layer with one special binding, or a save storing one special kind each independently
-   * make a second special a rewrite instead of a pickup."* The input half already refuses the
-   * mistake — `src/content/actions.ts` says `special1` and `special2` are POSITIONS in this list and
-   * not weapon kinds. This is the state half.
+   * ⚠️ **A STACK OF KINDS SINCE 0373**, where it was one entry per kind with a count. Asked: *"one
+   * trigger, fires the charges in descending order earnt from most recent pickup."* A count per kind
+   * cannot say which charge was earned last, and every trigger now fires the same stack, so the
+   * position-per-trigger shape it existed for is gone with it.
    */
-  arsenal: readonly ArsenalEntry[];
+  arsenal: readonly SpecialKind[];
   /**
    * Auto-fire upgrades, in the order they were taken.
    *
@@ -145,7 +124,7 @@ export type RunAction =
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
-  | { slice: 'run'; type: 'spent'; slot: number }
+  | { slice: 'run'; type: 'spent' }
   /*
     ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face of
     its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
@@ -240,17 +219,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             difficulty: state.difficulty,
           };
     case 'took': {
-      /*
-        ⚠️ **A special already owned gains CHARGES rather than a second trigger.** `docs/game.md`
-        says one trigger per owned weapon; a second entry of the same kind would put the same weapon
-        on two buttons and, past the binding budget, on none.
-      */
-      const owned = state.arsenal.findIndex((entry) => entry.kind === action.special);
-      const added = SPECIALS[action.special].charges;
-      const arsenal =
-        owned >= 0
-          ? state.arsenal.map((entry, i) => (i === owned ? { kind: entry.kind, charges: entry.charges + added } : entry))
-          : [...state.arsenal, { kind: action.special, charges: added }];
+      // Its charges go on TOP, so what was earned last is thrown first — 0373.
+      const arsenal = [...state.arsenal];
+      for (let i = 0; i < SPECIALS[action.special].charges; i++) arsenal.push(action.special);
       return {
         lives: state.lives,
         level: state.level,
@@ -263,20 +234,15 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
     }
     case 'spent': {
       /*
-        ⚠️ **An entry at zero is KEPT.** The weapon is still owned — it holds its trigger, it appears
-        in the readout, and the next thing that grants charges finds it. Removing it would shuffle
-        every trigger below it, so spending the last bomb would silently rebind the player's buttons.
-
-        ⚠️ **Clamped at zero, and a slot nobody owns is a no-op**, on the same terms `lifeLost` is
-        clamped: the reducer is not the place to find out whether the shell asked for something
-        impossible, and a negative charge count would reach the save and the readout.
+        ⚠️ **The top of the stack, and an empty stack is a no-op** — 0373. The shell reads the top
+        before it dispatches this, so the two agree on which special was thrown; the reducer is not
+        the place to find out whether the shell asked for something that was not there.
       */
-      const entry = state.arsenal[action.slot];
-      if (entry === undefined || entry.charges <= 0) return state;
+      if (state.arsenal.length === 0) return state;
       return {
         lives: state.lives,
         level: state.level,
-        arsenal: state.arsenal.map((e, i) => (i === action.slot ? { kind: e.kind, charges: e.charges - 1 } : e)),
+        arsenal: state.arsenal.slice(0, -1),
         upgrades: state.upgrades,
         weapon: state.weapon,
         missile: state.missile,

@@ -1,50 +1,35 @@
 /**
- * The arsenal's vocabulary — what a ship can be carrying beyond its base weapon.
+ * The arsenal's vocabulary — what the trigger throws.
  *
  * A `Record` over a closed union, per `docs/decisions/0016-a-hub-enumerates-kinds.md`.
  *
- * ── WHY THIS EXISTS BEFORE ANYTHING FIRES ONE ───────────────────────────────────────────────────
+ * ── A SPECIAL IS THE GUN'S OWN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────
  *
- * ⚠️ **Nothing triggers a special yet, and this table is not pretending otherwise.** No row carries
- * behaviour, `src/sim/` cannot see this file, and the arsenal is empty in every run that can
- * currently be played. What is real here is the *element type of a list*.
+ * Asked for: *"if you're at max power ups and you collect up a power up of the same type it
+ * increases your bomb count for that weapon/missile type … they'll all have their own unique
+ * effects."* Every gun and every tube names the special its overflow buys (`special` on its row),
+ * and a charge of it goes on the arsenal's stack, which the trigger throws newest first.
  *
- * `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md` says a death empties the
- * arsenal, and the guard over that rule has to be able to put something IN one first — a test that
- * empties a list which can never be non-empty passes forever and proves nothing, which is exactly
- * the shape `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` refuses. An uninhabitable type
- * would make the rule unfalsifiable; two rows make it testable.
- *
- * ⚠️ **The two names are `docs/game.md`'s, not inventions.** It names *"a shield · bombs"* as the
- * starting-special vocabulary and lists both among the upgrades. Choosing them here is reading the
- * product definition, not authoring content — and `src/content/actions.ts` already anticipates
- * exactly this pair: *"a bomb picked up into slot 2 uses `special2`, and so does a shield."*
- *
- * What they DO is the arsenal's own work — the fourth item in `docs/state-of-play.md`. When that
- * lands, `charges` gains a consumer and a `fire` behaviour joins the row. Nothing about this file's
- * shape changes then, which is the whole reason for landing the shape early.
+ * Two shapes live here and a row is one of them. A **thrown** special has a `shot` that flies to
+ * `reach` and `becomes` a blast. A **surge** has a `surge`: a timed aura on the ship that makes one
+ * of its own weapons stronger while it lasts. Neither is a default for the other, so a row says
+ * `null` for the one it is not.
  */
 
-import type { ShotKind } from './shots.ts';
+import { BLADE_EDGE, type ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
 /**
  * Every special, closed. A new one fails every `Record` over this union to BUILD until it has a row.
  *
- * ⚠️ **`shield` was here and has been RENAMED, which is the outcome
- * `docs/decisions/0045-the-player-can-see-what-they-are-carrying.md` wrote down in advance**: *"if
- * both ever exist at once it is the SPECIAL that gets renamed, because this is the word a player
- * already used for the thing that keeps them alive."* Both now exist — a shield is a pickup and a
- * shell around the ship, per
- * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md` — so the
- * special takes the other name `docs/game.md` already has for it: *"orbiting mines that are half
- * shield and half weapon."*
+ * ⚠️ **`mines` WAS HERE, and 0373 deleted it.** It was a name held so the arsenal could be shown
+ * holding two different things, and nothing ever fired it. The typed specials are that second thing.
  *
- * ⚠️ **A rename and not a deletion.** 0039's rule — a death empties the arsenal — needs a list that
- * can hold two different things to be testable at all, and `src/content/specials.ts` says so; one
- * row would make the guard unfalsifiable. Nothing fires either of them yet.
+ * ⚠️ **Three of six.** The arc's, the shuriken's and the shield's are the next two changes on the same
+ * ask (`reports/the-arsenal-planned-2026-09-26.md`); until they land, those rows' overflow buys a bomb
+ * and says so on the row.
  */
-export const SPECIAL_KINDS = ['mines', 'bomb'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -53,17 +38,36 @@ export const SPECIAL_KINDS = ['mines', 'bomb'] as const;
  */
 export type SpecialKind = (typeof SPECIAL_KINDS)[number];
 
+/**
+ * A surge: for `steps`, the ship wears `aura` and one of its weapons hits harder — 0373.
+ *
+ * ⚠️ **What it strengthens is the WEAPON, not the special's source.** A seeker surge taken and then a
+ * straight tube picked up leaves the surge on the tubes: the stack is what the player carries, and
+ * what they fire it through is whatever is fitted when it goes off.
+ */
+export interface Surge {
+  /** How long it lasts, in fixed steps (0022). */
+  steps: number;
+  /** The bitmap drawn round the ship while it lasts — the picture of the whole effect (0036). */
+  aura: number;
+  /**
+   * The straight gun, or `null`. `damage` multiplies a shot; `pierce` is how many landings it
+   * survives, gated as a blade's are (0357) — *"bullets penetrate like shurikens."* Only the pulse
+   * flies straight, so a switched gun simply does not take it.
+   */
+  gun: { damage: number; pierce: number } | null;
+  /** The tubes, or `null`. `damage` multiplies a missile; `fuse` multiplies a seeker's life. */
+  tubes: { damage: number; fuse: number } | null;
+}
+
 export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
   /**
-   * What leaves the ship when the player triggers it, or `null` for a special nothing fires yet.
+   * What leaves the ship when the player triggers it, or `null` for a surge, which throws nothing.
    *
-   * ⚠️ **NULLABLE, and that is honesty rather than a loophole.** `docs/decisions/0016-a-hub-enumerates-kinds.md`
-   * says behaviour rides the row and that a table forces every kind to answer — so the row answers,
-   * and `mines` answers *nothing fires me*. The alternative was inventing a weapon for it in the
-   * same commit as the bomb, which is exactly the *product to satisfy a shape* that
-   * `src/content/ships.ts` refuses for the character roster.
+   * ⚠️ **NULLABLE, and a row answers it.** 0016 says behaviour rides the row: a surge answers
+   * *nothing leaves the ship* here and *an aura* in `surge`, and a thrown special the other way round.
    */
   shot: ShotKind | null;
   /**
@@ -95,38 +99,31 @@ export interface SpecialRow {
    * are not spent: what the player chose to throw is what is worth a share of the fight.
    */
   bossShare: number;
+  /** The aura and what it strengthens, or `null` for a thrown special — 0373. */
+  surge: Surge | null;
   /**
-   * Uses granted each time `took` stocks it — an overflowing ladder, and the run's start.
+   * Charges pushed onto the stack each time `took` stocks it — an overflowing ladder, and the run's
+   * start. Each is one press of the trigger.
    */
   charges: number;
   /**
-   * Which baked bitmap says *this one*, wherever the player is shown their triggers.
-   *
-   * ⚠️ **On the ROW rather than derived from `shot`**, even though the bomb's face and the bomb's
-   * thrown body happen to be the same bitmap. `shot` is nullable — 0016's *a table forces every kind
-   * to answer*, and `mines` answers *nothing fires me* — so deriving it would leave exactly the kinds
-   * that have no weapon yet with no face either, and those are the ones a player most needs told
-   * apart. `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md` is what needed it.
+   * Which baked bitmap says *this one*, wherever the player is shown what the trigger throws next.
    *
    * ⚠️ **The real art, never a drawing of it** — the same argument `src/app/chrome.ts` makes for the
-   * pickup key: a hand-written glyph is a second description of a silhouette, and the day the art
-   * pass moves one the key goes on showing the old shape.
+   * pickup key: a hand-written glyph is a second description of a silhouette. A surge wears its
+   * source's pickup face, so the thing on the button is the thing the player overflowed to get it.
    *
    * An index rather than a name, exactly as `Body.sprite` is.
    */
   face: number;
 }
 
+/** Ten seconds of the sim's own clock — 0022. The seeker surge's length is the ask's. */
+const SURGE_STEPS = 600;
+
 export const SPECIALS: Record<SpecialKind, SpecialRow> = {
   /**
-   * `docs/game.md`'s *"orbiting mines that are half shield and half weapon"* — the example of a
-   * special that is not only a weapon, which is the role `shield` used to hold here.
-   */
-  // The orbiting mark is the closest thing the art has to *half shield and half weapon*, which is
-  // what `docs/game.md` calls this. It has no shot, so it could not have borrowed one.
-  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0, bossShare: 0, face: SPRITE.shieldOrb },
-  /**
-   * The one the whole arsenal rule is named after — spent, not held.
+   * The straight tube's — *"forward missiles - give you a bomb like the current bomb."*
    *
    * ⚠️ **`charges` is 2 and it was 3**, because the ask says so: *"the player starts with 2 and
    * gains one per level cleared."* It is the number a run BEGINS with; 0372 took away the clear's.
@@ -135,7 +132,37 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * damage."* The larger of that and the blast's own six, so a small mid-boss is not hit softer
    * than it was; a window (0255) still multiplies it, as it multiplies everything the player fires.
    */
-  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, bossShare: 0.05, face: SPRITE.bomb },
+  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, bossShare: 0.05, surge: null, face: SPRITE.bomb },
+  /**
+   * The seeker's — *"gives the ship a glowing purple aura and supercharges the homing missiles for
+   * 10secs. They travel twice as far and do 4x as much damage."* Twice as far is twice the fuse: a
+   * seeker flies until its fuse is out (0246), so its life IS its range.
+   */
+  hunt: {
+    label: 'Hunt',
+    charges: 1,
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, gun: null, tubes: { damage: 4, fuse: 2 } },
+    face: SPRITE.pickupSeeker,
+  },
+  /**
+   * The pulse's — *"supercharges the auto-gun, gives the ship a golden aura and the auto-guns damage
+   * is increased by 3x and bullets penetrate like shurikens."* No length was asked for; the seeker
+   * surge's ten seconds is the default until it is played.
+   */
+  overdrive: {
+    label: 'Overdrive',
+    charges: 1,
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, gun: { damage: 3, pierce: BLADE_EDGE }, tubes: null },
+    face: SPRITE.pickupWeapon,
+  },
 };
 
 /**
@@ -162,15 +189,12 @@ export const PYRES: readonly ShotKind[] = ['blastHalf', 'blast', 'blastWide', 'b
 /**
  * Which rung a death with `charges` unspent lights.
  *
- * ⚠️ **CLAMPED at the top, and the run goes past it.** The ask names four rungs; a bomb starts at two
- * charges and every level cleared adds one (`src/state/slices/run.ts`), so a player reaching level
- * four is carrying five. Letting the ladder keep growing would make the last levels' deaths clear the
- * whole screen twice over, and the widest rung already covers the lane — so the top of the ask is the
- * top of the ladder, and everything above it looks the same.
+ * ⚠️ **CLAMPED at the top.** The ask names four rungs, and a run that keeps overflowing its ladders
+ * carries more than that; the widest rung already covers the lane, so the top of the ask is the top
+ * of the ladder, and everything above it looks the same.
  *
- * ⚠️ **Counted over the WHOLE arsenal rather than over bombs**, on the same terms `levelCleared`
- * grants a charge to every special: what goes up with the ship is what the ship was carrying, and a
- * second special added later inherits that without anybody remembering to.
+ * ⚠️ **Counted over the WHOLE stack rather than over bombs**: what goes up with the ship is what the
+ * ship was carrying, surges included.
  */
 export function pyreFor(charges: number): ShotKind {
   const rung = charges < 0 ? 0 : charges > PYRES.length - 1 ? PYRES.length - 1 : Math.floor(charges);

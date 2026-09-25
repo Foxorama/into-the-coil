@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN, REFERENCE_ASPECT } from '../src/sim/camera.ts';
 import { GameFrame, launchSpecial, respawn, type World } from '../src/app/frame.ts';
-import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { SPECIALS, SPECIAL_KINDS, type SpecialKind } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
@@ -213,20 +213,34 @@ describe('what a run may spend', () => {
 
   it('starts with the ship’s own kit and no more', () => {
     expect(begin().run.arsenal).toEqual(startingArsenal());
-    expect(startingArsenal()[0]!.charges, 'a run does not start with what the ask says').toBe(SPECIALS.bomb.charges);
+    expect(startingArsenal(), 'a run does not start with what the ask says').toEqual(
+      Array<SpecialKind>(SPECIALS.bomb.charges).fill('bomb'),
+    );
   });
 
   it('spends one charge per press, and stops at empty', () => {
     let state = begin();
-    const charges = state.run.arsenal[0]!.charges;
-    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', slot: 0 });
-    expect(state.run.arsenal[0]!.charges, 'the arsenal went past empty').toBe(0);
+    const charges = state.run.arsenal.length;
+    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent' });
+    expect(state.run.arsenal, 'the stack went past empty').toEqual([]);
+    expect(reduce(state, { slice: 'run', type: 'spent' }), 'spending an empty stack changed the run').toBe(state);
+  });
 
-    const empty = reduce(state, { slice: 'run', type: 'spent', slot: 0 });
-    expect(empty, 'spending an empty slot changed the run').toBe(state);
-    expect(empty.run.arsenal.length, 'an empty weapon stopped being owned, so its trigger moved').toBe(
-      state.run.arsenal.length,
-    );
+  it('THE REPORTED ONE: a charge goes on top, and the trigger throws the newest first', () => {
+    /*
+      `docs/decisions/0373-a-special-is-the-guns-own.md`: *"one trigger, fires the charges in
+      descending order earnt from most recent pickup."* Two kinds taken in turn over the starting
+      bombs, then spent one press at a time: the order out is the reverse of the order in.
+    */
+    let state = begin();
+    state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
+    state = reduce(state, { slice: 'run', type: 'took', special: 'overdrive' });
+    const thrown: SpecialKind[] = [];
+    while (state.run.arsenal.length > 0) {
+      thrown.push(state.run.arsenal[state.run.arsenal.length - 1]!);
+      state = reduce(state, { slice: 'run', type: 'spent' });
+    }
+    expect(thrown, 'the stack did not throw the newest charge first').toEqual(['overdrive', 'hunt', 'bomb', 'bomb']);
   });
 
   it('a level clear pays nothing into the arsenal', () => {
@@ -244,17 +258,17 @@ describe('what a run may spend', () => {
       not on a death; `docs/decisions/0372-a-death-keeps-the-ladders.md` keeps them through both.
     */
     let state = begin();
-    state = reduce(state, { slice: 'run', type: 'took', special: 'bomb' });
-    const banked = state.run.arsenal[0]!.charges;
-    expect(banked, 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
-      startingArsenal()[0]!.charges,
+    state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
+    const banked = state.run.arsenal;
+    expect(banked.length, 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
+      startingArsenal().length,
     );
 
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(dead.run.arsenal[0]!.charges, 'a death spent the bombs the player had banked').toBe(banked);
+    expect(dead.run.arsenal, 'a death spent the charges the player had banked').toEqual(banked);
 
     const resumed = reduce(dead, { slice: 'run', type: 'continued' });
-    expect(resumed.run.arsenal[0]!.charges, 'a continue reset the charges the player had banked').toBe(banked);
+    expect(resumed.run.arsenal, 'a continue reset the charges the player had banked').toEqual(banked);
   });
 
   it('and a death does not TOP UP an arsenal the player has emptied', () => {
@@ -265,18 +279,20 @@ describe('what a run may spend', () => {
       the two, which would be the ask granted in one direction only.
     */
     let state = begin();
-    const charges = state.run.arsenal[0]!.charges;
-    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', slot: 0 });
-    expect(state.run.arsenal[0]!.charges, 'the fixture still has a charge, so a top-up would be invisible').toBe(0);
+    const charges = state.run.arsenal.length;
+    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent' });
+    expect(state.run.arsenal, 'the fixture still has a charge, so a top-up would be invisible').toEqual([]);
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(dead.run.arsenal[0]!.charges, 'a death handed back charges the player had already spent').toBe(0);
+    expect(dead.run.arsenal, 'a death handed back charges the player had already spent').toEqual([]);
   });
 
-  it('a special already owned gains charges rather than a second trigger', () => {
-    let state = begin();
-    state = reduce(state, { slice: 'run', type: 'took', special: 'bomb' });
-    expect(state.run.arsenal.length, 'the same weapon landed on two triggers').toBe(1);
-    expect(state.run.arsenal[0]!.charges).toBe(SPECIALS.bomb.charges * 2);
+  it('a taking pushes the row’s own charges, each one press', () => {
+    for (const kind of SPECIAL_KINDS) {
+      const state = reduce(begin(), { slice: 'run', type: 'took', special: kind });
+      expect(state.run.arsenal.length - startingArsenal().length, `${kind} pushed the wrong number of charges`).toBe(
+        SPECIALS[kind].charges,
+      );
+    }
   });
 });
 
@@ -306,21 +322,22 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     expect(asked).toBe(3);
   });
 
-  it('a special with nothing behind it throws nothing at all', () => {
+  it('a surge throws nothing at all, and every row is exactly one of the two shapes', () => {
     /*
-      `mines` is owned vocabulary with no weapon behind it, and its row says so with a null. The
-      alternative was inventing a second weapon in the same change as the first, which is the
-      *product to satisfy a shape* `src/content/ships.ts` refuses for the roster.
+      0373: a special is either thrown — a `shot` that `becomes` a blast — or worn, a `surge`. A row
+      with both would throw a bomb and light an aura on one press; a row with neither would be a
+      charge the trigger spends on nothing.
     */
     const { world } = quietWorld();
-    launchSpecial(world, 'mines');
-    expect(world.bombs.size, 'a special with no shot on its row threw something').toBe(0);
+    launchSpecial(world, 'hunt');
+    expect(world.bombs.size, 'a surge threw something').toBe(0);
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
       expect(
         (row.shot === null) === (row.becomes === null),
         `${kind} has half a weapon on its row — one of shot and becomes is null and the other is not`,
       ).toBe(true);
+      expect((row.shot === null) !== (row.surge === null), `${kind} is not exactly one of thrown and worn`).toBe(true);
     }
   });
 

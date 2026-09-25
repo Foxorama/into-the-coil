@@ -59,8 +59,9 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
+      // ⚠️ Re-aimed by 0373: the arsenal is a stack, so topping up is an empty stack handed the kit.
       replace:
-        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: state.upgrades,',
+        '            arsenal: state.arsenal.length > 0 ? state.arsenal : startingArsenal(),\n            upgrades: state.upgrades,',
     },
   },
 ];

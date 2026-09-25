@@ -90,6 +90,9 @@ const HULLLESS: readonly SpriteKind[] = [
   'gyreFire1',
   'gyreFire2',
   'gyreFire3',
+  // A surge's aura is a halo round the ship, not a body of its own — 0373.
+  'auraHunt',
+  'auraOverdrive',
   // The serpent's aura is energy with no hull, on the exhaust's terms — 0305.
   'serpentAura0',
   'serpentAura1',

@@ -340,8 +340,14 @@ export const UPGRADE_TIERS = 4;
  * ⚠️ **PER LADDER since 0083, which is what makes *"unlimited bombs"* true.** A fifth weapon pickup
  * becomes a charge even while the missiles are still climbing, and the other way round — so neither
  * ladder's cap can turn the other's pickups into dead ones.
+ *
+ * ⚠️ **AND THE FACE'S OWN SINCE 0373** — `docs/decisions/0373-a-special-is-the-guns-own.md`: *"it
+ * increases your bomb count for that weapon/missile type."* An overflow only happens on a face that
+ * matches what is fitted (`effectOf`), so the face's row and the fitted row are the same row.
  */
-export const WEAPON_OVERFLOW: SpecialKind = 'bomb';
+export function overflowOf(kind: UpgradeKind, face: number): SpecialKind {
+  return kind === 'weapon' ? WEAPONS[weaponFaceOf(face)].special : MISSILES[missileFaceOf(face)].special;
+}
 
 /**
  * How many tiers of `kind` a list of upgrades has bought, clamped at the top.
@@ -539,7 +545,7 @@ export interface Weapon {
    * ⚠️ **The rule it was serving is kept and paid for elsewhere**, which is why this is a deletion
    * rather than a cap: a weapon pickup with nowhere left to go becomes a **bomb charge**, so it still
    * changes the outcome and it does it in a currency the player spends rather than one that fires
-   * itself. `WEAPON_OVERFLOW` above, and
+   * itself. `overflowOf` above, and
    * `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
    */
   damage: number;

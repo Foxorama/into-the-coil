@@ -24,8 +24,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0283: a serpent's body draws under its head, so `bossBody` sits ahead of
       // `bossPool` in the order. The break below is unchanged in kind.
       // ⚠️ And by 0305: the serpent's aura draws under its body, so `bossAura` sits ahead of it.
-      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [debris, blasts, pickupPool, bossAura, bossPool, enemies, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ And by 0373: a surge's aura sits over the debris and under every shot.
+      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [debris, blasts, pickupPool, bossAura, bossPool, enemies, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {
@@ -45,8 +46,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0283: a serpent's body draws under its head, so `bossBody` sits ahead of
       // `bossPool` in the order. The break below is unchanged in kind.
       // ⚠️ And by 0305: the serpent's aura draws under its body, so `bossAura` sits ahead of it.
-      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [blasts, pickupPool, bossAura, bossPool, enemies, enemyShots, debris, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ And by 0373: a surge's aura sits over the debris and under every shot.
+      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [blasts, pickupPool, bossAura, bossPool, enemies, aura, enemyShots, debris, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {

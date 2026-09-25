@@ -630,6 +630,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
+  // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
+  // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
+  auraHunt: 'ally',
+  auraOverdrive: 'hazard',
   // Where a bolt lands: the impact ink, because a landing IS an impact and it is the brightest ink
   // there is — the bolt's core is stroked in the same one. 0233.
   arcNode: 'impact',
@@ -9481,6 +9485,29 @@ export function drawKind(
       seal(ctx);
       glow(ctx, f, palette.player, 0, 0, 0.5, 0.7);
       return;
+    /*
+      A surge's aura — 0373: a faint halo the ship sits in, and a thin rim that says where it ends.
+
+      ⚠️ **TRANSLUCENT ALL THROUGH, AND THE FIRST BAKE WAS A SOLID DISC.** The rim was laid on the path
+      the glow had left open and sealed with the ink, which filled the whole circle — photographed
+      with `scripts/shot-sheet.mjs` before anything was played. A disc that size round the ship would
+      hide every bullet beside it, so the rim is its own path at under full alpha, and nothing is
+      stroked.
+    */
+    case 'auraHunt':
+    case 'auraOverdrive': {
+      const ink = palette[INK_OF[kind]];
+      glow(ctx, f, ink, 0, 0, 1, 0.35);
+      ctx.beginPath();
+      ctx.arc(half, half, r, 0, Math.PI * 2);
+      ctx.moveTo(half + r * 0.9, half);
+      ctx.arc(half, half, r * 0.9, 0, Math.PI * 2);
+      ctx.globalAlpha = 0.7;
+      ctx.fillStyle = ink;
+      ctx.fill('evenodd');
+      ctx.globalAlpha = 1;
+      return;
+    }
     /*
       ── THE SKY, AND IT IS THE ONE DRAWING THAT RETURNS EARLY ───────────────────────────────────────
 

@@ -675,6 +675,16 @@ export const SPRITE_KINDS = [
   */
   'shieldOrb',
   /*
+    ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
+
+    *"gives the ship a glowing purple aura"* and *"gives the ship a golden aura."* A soft halo with a
+    rim, drawn behind the ship for as long as the surge lasts: the picture of an effect that is
+    otherwise only a number on the shots (0036). The seeker's in the seeker's own ink, the gun's in
+    the hazard gold.
+  */
+  'auraHunt',
+  'auraOverdrive',
+  /*
     ── WHERE A BOLT LANDS — 0233 ──────────────────────────────────────────────────────────────────
 
     The spark at the end of each link of chain lightning: a four-pointed star in the impact ink,
@@ -1566,6 +1576,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     model was correct at 2.2.
   */
   shieldOrb: 3,
+  // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
+  auraHunt: 12,
+  auraOverdrive: 12,
   // A landing spark: bigger than a bullet and smaller than the missile, so a chain of them reads
   // as hits rather than as a stream. Twice the `arc` row's hurtbox radius, like every shot.
   arcNode: 2.4,

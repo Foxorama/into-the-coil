@@ -211,7 +211,7 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     await page.waitForTimeout(1000);
 
     // Still down: the run is under way and the thumb has not moved.
-    const bombs = '.itc-playing-hud-group[aria-label*="bomb"]';
+    const bombs = '.itc-playing-hud-group[aria-label*="charge"]';
     await page.waitForSelector(bombs, { timeout: 5_000 });
     const carried = await page.getAttribute(bombs, 'aria-label');
     expect(
@@ -220,9 +220,9 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     ).toBe(false);
     await setPad(page, [0, 0], []);
 
-    expect(carried, 'the readout does not say how many bombs are carried').toMatch(/\d+ bombs/);
+    expect(carried, 'the readout does not say how many charges are carried').toMatch(/\d+ charges?/);
     expect(
-      Number(/(\d+) bombs/.exec(carried ?? '')?.[1]),
+      Number(/(\d+) charges?/.exec(carried ?? '')?.[1]),
       'the press that started the run was read a second time and spent a bomb',
     ).toBe(SPECIALS.bomb.charges);
     await page.context().close();
