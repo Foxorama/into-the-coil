@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
-import { DEFAULT_DIFFICULTY, livesFor, startingArsenal } from '../src/state/slices/run.ts';
+import { DEFAULT_DIFFICULTY, chargesIn, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
@@ -62,7 +62,7 @@ describe('a run is lives', () => {
     // Zero rather than a full complement, so `begin` is the only way into a run — a state that was
     // already stocked would let a stray dispatch drop the player into a half-run.
     expect(initialState.run.lives).toBe(0);
-    expect(initialState.run.arsenal).toEqual([]);
+    expect(chargesIn(initialState.run.arsenal)).toBe(0);
   });
 
   it('stocks a full complement on begin, whatever that complement is', () => {
@@ -84,17 +84,14 @@ describe('a run is lives', () => {
       decision does; the alternative is a guard loose enough to hold neither.
     */
     const before = armed();
-    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual([
-      'bomb',
-      'bomb',
-      'bomb',
-      'bomb',
-      'hunt',
-    ]);
+    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual({
+      gun: ['bomb', 'bomb', 'bomb', 'bomb'],
+      tubes: ['hunt'],
+    });
     expect(
-      before.run.arsenal.length,
+      chargesIn(before.run.arsenal),
       'the fixture never banked a charge, so a death cannot be seen to spare one',
-    ).toBeGreaterThan(startingArsenal().length);
+    ).toBeGreaterThan(chargesIn(startingArsenal()));
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'weapon',
       'weapon',

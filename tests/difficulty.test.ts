@@ -486,7 +486,7 @@ describe('a tier is a property of the run, and never an assist', () => {
       // ⚠️ `gainedLife` was here and 0082 deleted the action — nothing grants a life any more.
       // `src/state/slices/run.ts` has why, and what it leaves owed to 0039.
       { slice: 'run', type: 'took', special: 'bomb' },
-      { slice: 'run', type: 'spent' },
+      { slice: 'run', type: 'spent', side: 'gun' },
       { slice: 'run', type: 'levelCleared' },
       { slice: 'run', type: 'lifeLost' },
     ];

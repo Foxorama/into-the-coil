@@ -38,6 +38,18 @@ export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool']
 export type SpecialKind = (typeof SPECIAL_KINDS)[number];
 
 /**
+ * The two triggers, and which stack each one throws — `docs/decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md`.
+ *
+ * ⚠️ **THE ONE STACK 0373 BUILT WAS A FLAW, AND IT WAS RECORDED WHERE IT SHOULD HAVE BEEN RAISED.** One
+ * trigger throwing the newest charge let a charge go through a weapon it was not earned from. Played:
+ * *"having one bomb queue means that you might not even have the autofire gun equipped when you try to
+ * use that bomb."* The gun's specials are on the first trigger and the tubes' on the second, each its
+ * own newest-first stack. Order is the binding order: `special1` is the gun, `special2` the tubes.
+ */
+export const SIDES = ['gun', 'tubes'] as const;
+export type Side = (typeof SIDES)[number];
+
+/**
  * A surge: for `steps`, the ship wears `aura` and its tubes hit harder — 0373, and on the tubes
  * alone since 0375, which moved the golden one off the gun and onto the forward missiles.
  *
@@ -111,6 +123,8 @@ export interface Whirl {
 export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
+  /** Which trigger throws it — 0376. The gun's overflow buys a gun special, the tubes' a tube one. */
+  side: Side;
   /**
    * What leaves the ship when the player triggers it, or `null` for a surge, which throws nothing.
    *
@@ -187,6 +201,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   bomb: {
     label: 'Bomb',
+    side: 'gun',
     charges: 2,
     shot: 'bomb',
     becomes: 'blast',
@@ -204,6 +219,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   hunt: {
     label: 'Hunt',
+    side: 'tubes',
     charges: 1,
     shot: null,
     becomes: null,
@@ -221,6 +237,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   overdrive: {
     label: 'Overdrive',
+    side: 'tubes',
     charges: 1,
     shot: null,
     becomes: null,
@@ -243,6 +260,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   storm: {
     label: 'Storm',
+    side: 'gun',
     charges: 1,
     shot: 'stormBall',
     becomes: null,
@@ -263,6 +281,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   whirlpool: {
     label: 'Whirlpool',
+    side: 'gun',
     charges: 1,
     shot: null,
     becomes: null,

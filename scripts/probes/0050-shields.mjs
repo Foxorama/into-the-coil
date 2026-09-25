@@ -166,9 +166,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0355, which sizes the row by the tier's cap rather than by `MAX_SHIELDS`, and
       // by 0373, which counts the stack and names what it throws next.
       find:
-        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, state.run.arsenal.length, nextOf());',
+        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());',
       replace:
-        '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health, state.run.arsenal.length, nextOf());',
+        '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health, stacksOf());',
     },
   },
 ];

@@ -11,7 +11,7 @@
  * error anywhere.
  */
 
-import { SPECIALS, type SpecialKind } from '../../content/specials.ts';
+import { SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
 import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS } from '../../content/ships.ts';
@@ -54,7 +54,17 @@ export function livesFor(difficulty: DifficultyKind): number {
 }
 
 /**
- * What a run begins with: the bomb's charges on the stack, and nothing else — 0053, 0373.
+ * The arsenal: one newest-first stack per trigger — 0376. Plain data, a record over `SIDES`.
+ */
+export type Arsenal = Readonly<Record<Side, readonly SpecialKind[]>>;
+
+/** Every charge on both stacks — what goes up with the ship (0079) and what the readout totals. */
+export function chargesIn(arsenal: Arsenal): number {
+  return arsenal.gun.length + arsenal.tubes.length;
+}
+
+/**
+ * What a run begins with: the bomb's charges on the gun's stack, and nothing else — 0053, 0373, 0376.
  *
  * ⚠️ **ONE CALLER, `begin`.** A death stopped calling it in
  * `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` and a continue in
@@ -63,10 +73,10 @@ export function livesFor(difficulty: DifficultyKind): number {
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
  */
-export function startingArsenal(): readonly SpecialKind[] {
-  const out: SpecialKind[] = [];
-  for (let i = 0; i < SPECIALS.bomb.charges; i++) out.push('bomb');
-  return out;
+export function startingArsenal(): Arsenal {
+  const gun: SpecialKind[] = [];
+  for (let i = 0; i < SPECIALS.bomb.charges; i++) gun.push('bomb');
+  return { gun, tubes: [] };
 }
 
 export interface RunState {
@@ -87,14 +97,15 @@ export interface RunState {
   /** Which level, zero-based. */
   level: number;
   /**
-   * What the trigger throws: one entry per charge, in the order earned, and the LAST is thrown next.
+   * What the triggers throw: a stack per side, one entry per charge, and the LAST is thrown next.
    *
-   * ⚠️ **A STACK OF KINDS SINCE 0373**, where it was one entry per kind with a count. Asked: *"one
-   * trigger, fires the charges in descending order earnt from most recent pickup."* A count per kind
-   * cannot say which charge was earned last, and every trigger now fires the same stack, so the
-   * position-per-trigger shape it existed for is gone with it.
+   * ⚠️ **A STACK OF KINDS SINCE 0373, AND TWO OF THEM SINCE 0376.** 0373 put every charge on one stack
+   * behind one trigger — *"one trigger, fires the charges in descending order earnt from most recent
+   * pickup"* — and played, *"having one bomb queue means that you might not even have the autofire
+   * gun equipped when you try to use that bomb."* So the gun's specials and the tubes' are two stacks
+   * on two triggers, each still newest-first.
    */
-  arsenal: readonly SpecialKind[];
+  arsenal: Arsenal;
   /**
    * Auto-fire upgrades, in the order they were taken.
    *
@@ -124,7 +135,7 @@ export type RunAction =
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
-  | { slice: 'run'; type: 'spent' }
+  | { slice: 'run'; type: 'spent'; side: Side }
   /*
     ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face of
     its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
@@ -144,7 +155,7 @@ export type RunAction =
 export const initialRun: RunState = {
   lives: 0,
   level: 0,
-  arsenal: [],
+  arsenal: { gun: [], tubes: [] },
   upgrades: [],
   weapon: BASE_SHIP.weapon,
   missile: BASE_SHIP.missile,
@@ -219,9 +230,11 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             difficulty: state.difficulty,
           };
     case 'took': {
-      // Its charges go on TOP, so what was earned last is thrown first — 0373.
-      const arsenal = [...state.arsenal];
-      for (let i = 0; i < SPECIALS[action.special].charges; i++) arsenal.push(action.special);
+      // Its charges go on TOP of its own side's stack, so what was earned last is thrown first — 0373, 0376.
+      const side = SPECIALS[action.special].side;
+      const stack = [...state.arsenal[side]];
+      for (let i = 0; i < SPECIALS[action.special].charges; i++) stack.push(action.special);
+      const arsenal: Arsenal = side === 'gun' ? { gun: stack, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: stack };
       return {
         lives: state.lives,
         level: state.level,
@@ -234,15 +247,17 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
     }
     case 'spent': {
       /*
-        ⚠️ **The top of the stack, and an empty stack is a no-op** — 0373. The shell reads the top
-        before it dispatches this, so the two agree on which special was thrown; the reducer is not
-        the place to find out whether the shell asked for something that was not there.
+        ⚠️ **The top of that side's stack, and an empty stack is a no-op** — 0373, 0376. The shell
+        reads the top before it dispatches this, so the two agree on which special was thrown; the
+        reducer is not the place to find out whether the shell asked for something that was not there.
       */
-      if (state.arsenal.length === 0) return state;
+      const spentFrom = state.arsenal[action.side];
+      if (spentFrom.length === 0) return state;
+      const left = spentFrom.slice(0, -1);
       return {
         lives: state.lives,
         level: state.level,
-        arsenal: state.arsenal.slice(0, -1),
+        arsenal: action.side === 'gun' ? { gun: left, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: left },
         upgrades: state.upgrades,
         weapon: state.weapon,
         missile: state.missile,
