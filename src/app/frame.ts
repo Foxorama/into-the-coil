@@ -96,7 +96,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { SPECIALS, pyreFor, type SpecialKind, type Surge } from '../content/specials.ts';
+import { SPECIALS, SPECIAL_KINDS, pyreFor, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -849,6 +849,26 @@ export interface World {
    * every time it fired.
    */
   arcRng: Rng;
+  /**
+   * The storm's flicker — 0374, and its own stream on 0021's terms: where a cosmetic bolt goes must
+   * not move where the arc's next link lands.
+   */
+  stormRng: Rng;
+  /** Steps of flicker left, how many bolts each renewal throws, and where it went off in the camera. */
+  stormFor: number;
+  stormFlicker: number;
+  stormOffset: number;
+  stormAcross: number;
+  /**
+   * The whirlpool's blades — 0374. Its own pool, placed by hand and never culled, because a blade that
+   * swings off the screen swings back on.
+   */
+  whirl: Pool<Entity>;
+  /** Which special opened it, how many steps it has turned for, and its centre in the camera. */
+  whirlKind: SpecialKind | null;
+  whirlAge: number;
+  whirlOffset: number;
+  whirlAcross: number;
   /**
    * Where the serpent's lightning falls — `docs/decisions/0248-the-serpent-strikes.md`, its own
    * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
@@ -1757,6 +1777,9 @@ export class GameFrame implements Frame {
     stepBombs(w);
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
+    // The storm's flicker and the whirlpool, both placed by hand — 0374.
+    stepStorm(w);
+    stepWhirl(w);
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     // A link rides the camera and retires on its own lifetime; the cull is a formality it never reaches.
     stepEntities(w.bolts, w.cameraAlong);
@@ -1883,6 +1906,16 @@ export class GameFrame implements Frame {
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
       collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
+    }
+    /*
+      ⚠️ **THE WHIRLPOOL LANDS AS A BLADE DOES — 0374**: on everything it crosses, once per flash per
+      blade, and never spent. Logged for its sparks, and not counted in `killedByShots`, which is the
+      hit cue's reading of pools shrinking; a whirlpool blade never shrinks one.
+    */
+    collideInto(w.whirl, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
+    if (shootable) {
+      collideInto(w.whirl, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
+      collideInto(w.whirl, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
     }
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     // Only what it can see — 0349: stone stops a blast.
@@ -3184,7 +3217,14 @@ function stepBombs(w: World): void {
   for (let i = w.bombs.size - 1; i >= 0; i--) {
     const bomb = w.bombs.at(i);
     if (bomb.lifeFor > 1) continue;
-    const becomes = SPECIALS.bomb.becomes;
+    // Which special this was — `launchSpecial` put it on the body — 0374.
+    const row = SPECIALS[SPECIAL_KINDS[bomb.kind] ?? 'bomb'];
+    // A storm where a bomb has a blast: bolts, not a ring — 0374.
+    if (row.storm !== null) {
+      unleashStorm(w, bomb.along, bomb.across, row.storm);
+      continue;
+    }
+    const becomes = row.becomes;
     if (becomes === null) continue;
     const blast = w.blasts.spawn();
     if (blast !== null) {
@@ -3193,7 +3233,7 @@ function stepBombs(w: World): void {
       // place rather than a body. `speed` is 0 on the row; this is the same statement for the camera.
       blast.lifeFor = BLAST_STEPS;
       // What the player chose to throw is worth a share of the fight — 0372. The pyre's is not.
-      blast.bossShare = SPECIALS.bomb.bossShare;
+      blast.bossShare = row.bossShare;
     }
     /*
       ⚠️ **Outside the `blast !== null` branch, beside the burst rather than beside the ring.** The
@@ -3203,6 +3243,189 @@ function stepBombs(w: World): void {
     */
     w.onCue('blast', bomb.across);
     burst(w, bomb.along, bomb.across, BURST.ship);
+  }
+}
+
+/*
+  ── THE STORM — `docs/decisions/0374-the-storm-and-the-whirlpool.md` ────────────────────────────
+
+  *"Explodes into a massive lightning blast that sends lightning flickering all across the screen and
+  chains twice for each hit."* Where the ball's fuse runs out: `strikes` bolts to the nearest bodies
+  anywhere on the screen, each of those chaining on to `chains` more within `reach`, and a flicker of
+  bolts thrown to random places across the screen, renewed for `flickerSteps`. The strikes land on
+  the step it goes off; the flicker is the picture.
+
+  ⚠️ **ONE GENERATION OF CHAINS.** A chain that chained again would be a search of the whole field
+  from every body it reached, which is a screen-clear with no bound on it.
+
+  ⚠️ **THE ARC'S TARGETING, ALL OF IT** — `nearestFrom`: only a body whose whole hull is on the
+  screen, nothing through stone (0349), and a body struck this volley is not struck again. A boss is
+  struck once per storm, for the larger of the strike and its share of the boss's full health.
+*/
+
+/** Where the last strike landed, so its chains start there — module scratch, no allocation. */
+let struckAlong = 0;
+let struckAcross = 0;
+
+/**
+ * One strike from `(fromAlong, fromAcross)` to the nearest thing it may reach: `1` an enemy, `2` the
+ * boss, `0` nothing. The bolt is drawn and the damage landed here.
+ */
+function stormStrike(w: World, fromAlong: number, fromAcross: number, reach: number, edge: number, storm: Storm, allowBoss: boolean): number {
+  const enemy = nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge, w.corridor);
+  const boss = allowBoss ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge, w.corridor) : -1;
+  const onEnemy = enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(boss), fromAlong, fromAcross));
+  if (onEnemy) {
+    const target = w.enemies.at(enemy);
+    struckAlong = target.along;
+    struckAcross = target.across;
+    spawnLink(w, SHOTS.arc, fromAlong, fromAcross, struckAlong, struckAcross);
+    strike(w.enemies, enemy, storm.damage, IMPACT_FLASH_STEPS, w.deaths);
+    return 1;
+  }
+  if (boss >= 0) {
+    const target = w.bossPool.at(boss);
+    struckAlong = target.along;
+    struckAcross = target.across;
+    spawnLink(w, SHOTS.arc, fromAlong, fromAcross, struckAlong, struckAcross);
+    const open = openBy(phaseFor(w.bossRow, target.health, w.bossFullHealth));
+    const share = storm.bossShare * w.bossFullHealth;
+    strike(w.bossPool, boss, (share > storm.damage ? share : storm.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+    return 2;
+  }
+  return 0;
+}
+
+/** The storm going off at `(along, across)` — the strikes, their chains, and the first flicker. */
+function unleashStorm(w: World, along: number, across: number, storm: Storm): void {
+  w.onCue('zap', across);
+  burst(w, along, across, BURST.ship);
+  // The leading edge of the view this player has — the arc's own bound, 0257.
+  const leading = w.cameraAlong + w.view.alongSpan;
+  // The whole screen is in reach of the burst; a chain is not.
+  const anywhere = w.view.alongSpan + ACROSS_SPAN;
+  let bossOpen = w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten;
+  for (let s = 0; s < storm.strikes; s++) {
+    const hit = stormStrike(w, along, across, anywhere, leading, storm, bossOpen);
+    if (hit === 0) break;
+    if (hit === 2) bossOpen = false;
+    const fromAlong = struckAlong;
+    const fromAcross = struckAcross;
+    for (let c = 0; c < storm.chains; c++) {
+      const chained = stormStrike(w, fromAlong, fromAcross, storm.reach, leading, storm, bossOpen);
+      if (chained === 0) break;
+      if (chained === 2) bossOpen = false;
+    }
+  }
+  // The flicker is held where it went off, in the camera, and renewed by `stepStorm`.
+  w.stormFor = storm.flickerSteps;
+  w.stormFlicker = storm.flicker;
+  w.stormOffset = along - w.cameraAlong;
+  w.stormAcross = across;
+  flickerStorm(w);
+}
+
+/** A fresh flicker: bolts from the storm's centre to random places on the screen. Pure picture. */
+function flickerStorm(w: World): void {
+  const fromAlong = w.cameraAlong + w.stormOffset;
+  for (let i = 0; i < w.stormFlicker; i++) {
+    const toAlong = w.cameraAlong + w.stormRng.range(0, w.view.alongSpan);
+    const toAcross = w.stormRng.range(0, ACROSS_SPAN);
+    spawnLink(w, SHOTS.arc, fromAlong, w.stormAcross, toAlong, toAcross);
+  }
+}
+
+/** The flicker, renewed every bolt's lifetime until the storm is spent. */
+function stepStorm(w: World): void {
+  if (w.stormFor <= 0) return;
+  w.stormFor--;
+  if (w.stormFor > 0 && w.stormFor % BOLT_STEPS === 0) flickerStorm(w);
+}
+
+/*
+  ── THE WHIRLPOOL — 0374 ──────────────────────────────────────────────────────────────────────────
+
+  `arms × blades` blades on spiral arms about a centre `ahead` of the ship, held in the camera. Every
+  step it turns by `spin` and grows by `grow`, so it sweeps outward across the whole screen, and it is
+  gone when its innermost blade is past every corner of the view — *"until every part of the
+  whirlpool arc will no longer be on screen."*
+
+  ⚠️ **ITS OWN POOL, PLACED BY HAND, AND NOT CULLED.** A blade that swings off the edge swings back
+  on; `stepEntities`' cull would take it for good. So nothing else steps this pool, and the
+  whirlpool counts down each blade's landing gate itself — a blade lands once per flash, as the gun's
+  do (0357), and keeps landing as it turns over a boss: *"it can hit bosses multiple times."*
+
+  ⚠️ **NOTHING REACHES THROUGH STONE — 0349.** A blade whose centre is in stone lands on nothing
+  while it is there, and is not destroyed, because the arm it belongs to comes round again.
+*/
+
+/** A whirlpool blade's health: it is never spent by what it lands on. */
+const WHIRL_EDGE = 1_000_000;
+
+/** Put every blade where its arm and its place along it say, at the whirlpool's age. */
+function placeWhirl(w: World, whirl: Whirl, fresh: boolean): void {
+  const centreAlong = w.cameraAlong + w.whirlOffset;
+  const grown = w.whirlAge * whirl.grow;
+  const turned = w.whirlAge * whirl.spin;
+  for (let i = 0; i < w.whirl.size; i++) {
+    const blade = w.whirl.at(i);
+    const arm = blade.entrySlot % whirl.arms;
+    const along = Math.floor(blade.entrySlot / whirl.arms);
+    const radius = whirl.start + along * whirl.gap + grown;
+    const angle = turned + (arm * TAU) / whirl.arms + along * whirl.twist;
+    blade.prevAlong = blade.along;
+    blade.prevAcross = blade.across;
+    blade.along = centreAlong + Math.cos(angle) * radius;
+    blade.across = w.whirlAcross + Math.sin(angle) * radius;
+    if (fresh) {
+      blade.prevAlong = blade.along;
+      blade.prevAcross = blade.across;
+    }
+    // Each blade spins about itself as the whole thing turns.
+    blade.turn = turned * 6;
+    if (blade.landIn > 0) blade.landIn--;
+    if (w.corridor !== null && stoneAt(w.corridor, blade.along, blade.across, 0) !== 0) blade.landIn = 1;
+  }
+}
+
+/** Open a whirlpool ahead of the ship. A second one replaces the first. */
+function openWhirl(w: World, kind: SpecialKind, whirl: Whirl): void {
+  w.whirl.clear();
+  w.whirlKind = kind;
+  w.whirlAge = 0;
+  w.whirlOffset = w.ship.along + whirl.ahead - w.cameraAlong;
+  w.whirlAcross = w.ship.across;
+  const body = SHOTS.shuriken;
+  const count = whirl.arms * whirl.blades;
+  for (let i = 0; i < count; i++) {
+    const blade = w.whirl.spawn();
+    if (blade === null) break;
+    reset(blade, w.ship.along, w.ship.across, body);
+    blade.entrySlot = i;
+    blade.health = WHIRL_EDGE;
+    blade.damage = whirl.damage;
+    blade.radius = body.radius * whirl.swell;
+    blade.swell = whirl.swell;
+  }
+  placeWhirl(w, whirl, true);
+}
+
+/** Turn and grow the whirlpool, and close it once none of it can be on the screen. */
+function stepWhirl(w: World): void {
+  if (w.whirl.size === 0 || w.whirlKind === null) return;
+  const whirl = SPECIALS[w.whirlKind].whirl;
+  if (whirl === null) return;
+  w.whirlAge++;
+  placeWhirl(w, whirl, false);
+  // The farthest corner of the view from the centre, against the innermost blade's inside edge.
+  const inView = w.whirlOffset;
+  const nearAlong = inView > w.view.alongSpan - inView ? inView : w.view.alongSpan - inView;
+  const nearAcross = w.whirlAcross > ACROSS_SPAN - w.whirlAcross ? w.whirlAcross : ACROSS_SPAN - w.whirlAcross;
+  const corner = Math.sqrt(nearAlong * nearAlong + nearAcross * nearAcross);
+  const inner = whirl.start + w.whirlAge * whirl.grow - (SPRITE_EXTENT.shuriken / 2) * whirl.swell;
+  if (inner > corner) {
+    w.whirl.clear();
+    w.whirlKind = null;
   }
 }
 
@@ -3229,13 +3452,21 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     w.onCue('shield', w.ship.across);
     return;
   }
+  // A whirlpool opens ahead of the ship rather than being thrown there — 0374. On the blades' cue,
+  // heard where the whirlpool opens.
+  if (row.whirl !== null) {
+    openWhirl(w, kind, row.whirl);
+    w.onCue('throw', w.whirlAcross);
+    return;
+  }
   if (row.shot === null) return;
   const body = SHOTS[row.shot];
   const thrown = w.bombs.spawn();
   if (thrown === null) return;
   // Rising, because the thing it turns into has not happened yet — the fuse is the point of a bomb.
   w.onCue('bomb', w.ship.across);
-  reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body);
+  // Which special it is rides on the body, so its fuse knows whether it becomes a blast or a storm.
+  reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body, SPECIAL_KINDS.indexOf(kind));
   thrown.velAlong = body.speed + w.scrollPerStep;
   /*
     The fuse, in steps, from the reach the row states in world units. Computed here rather than

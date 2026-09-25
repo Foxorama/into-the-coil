@@ -25,11 +25,10 @@ import { SPRITE } from './sprites.ts';
  * ⚠️ **`mines` WAS HERE, and 0373 deleted it.** It was a name held so the arsenal could be shown
  * holding two different things, and nothing ever fired it. The typed specials are that second thing.
  *
- * ⚠️ **Three of six.** The arc's, the shuriken's and the shield's are the next two changes on the same
- * ask (`reports/the-arsenal-planned-2026-09-26.md`); until they land, those rows' overflow buys a bomb
- * and says so on the row.
+ * ⚠️ **Five of six.** The shield's void is the next change on the same ask
+ * (`reports/the-arsenal-planned-2026-09-26.md`).
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -58,6 +57,56 @@ export interface Surge {
   gun: { damage: number; pierce: number } | null;
   /** The tubes, or `null`. `damage` multiplies a missile; `fuse` multiplies a seeker's life. */
   tubes: { damage: number; fuse: number } | null;
+}
+
+/**
+ * A storm: what a thrown special does when its fuse runs out, instead of becoming a blast —
+ * `docs/decisions/0374-the-storm-and-the-whirlpool.md`. *"Explodes into a massive lightning blast
+ * that sends lightning flickering all across the screen and chains twice for each hit."*
+ */
+export interface Storm {
+  /** How many bodies the burst strikes first, nearest first, anywhere on the screen. */
+  strikes: number;
+  /** How many more each of those chains on to — *"chains twice for each hit."* One generation. */
+  chains: number;
+  /** How far a chain may jump from the body it came off, in world units. */
+  reach: number;
+  /** What a strike takes off a body. */
+  damage: number;
+  /** What a strike takes off a boss, as a share of its full health, when that is more — 0372's shape. */
+  bossShare: number;
+  /** Bolts thrown from the burst to random places on the screen, each time the flicker renews. */
+  flicker: number;
+  /** How long the flicker goes on renewing, in fixed steps. The picture of *"all across the screen."* */
+  flickerSteps: number;
+}
+
+/**
+ * A whirlpool: blades on spiral arms about a centre ahead of the ship, turning and growing until
+ * none of it is on the screen — 0374. *"A huge shuriken in a whirlpool shape that gets progressively
+ * bigger … it can hit bosses multiple times as it whirlpools around."*
+ */
+export interface Whirl {
+  /** Spiral arms, evenly spaced about the centre. */
+  arms: number;
+  /** Blades along each arm. */
+  blades: number;
+  /** How far ahead of the ship the centre is set, in world units; it holds there in the camera. */
+  ahead: number;
+  /** The innermost blade's radius when it opens. */
+  start: number;
+  /** How much further out each blade along an arm sits. */
+  gap: number;
+  /** How far round each blade along an arm sits from the one inside it, in radians — the spiral. */
+  twist: number;
+  /** World units the whole thing grows by, per step. */
+  grow: number;
+  /** Radians it turns by, per step. */
+  spin: number;
+  /** What a blade takes off a body each time it lands — once per flash, as a blade's does (0357). */
+  damage: number;
+  /** How much bigger than the gun's own blade each blade is drawn and lands — *"huge."* */
+  swell: number;
 }
 
 export interface SpecialRow {
@@ -101,6 +150,10 @@ export interface SpecialRow {
   bossShare: number;
   /** The aura and what it strengthens, or `null` for a thrown special — 0373. */
   surge: Surge | null;
+  /** What a thrown special does in place of becoming a blast, or `null` — 0374. */
+  storm: Storm | null;
+  /** The whirlpool it opens ahead of the ship, or `null` — 0374. */
+  whirl: Whirl | null;
   /**
    * Charges pushed onto the stack each time `took` stocks it — an overflowing ladder, and the run's
    * start. Each is one press of the trigger.
@@ -132,7 +185,18 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * damage."* The larger of that and the blast's own six, so a small mid-boss is not hit softer
    * than it was; a window (0255) still multiplies it, as it multiplies everything the player fires.
    */
-  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, bossShare: 0.05, surge: null, face: SPRITE.bomb },
+  bomb: {
+    label: 'Bomb',
+    charges: 2,
+    shot: 'bomb',
+    becomes: 'blast',
+    reach: 80,
+    bossShare: 0.05,
+    surge: null,
+    storm: null,
+    whirl: null,
+    face: SPRITE.bomb,
+  },
   /**
    * The seeker's — *"gives the ship a glowing purple aura and supercharges the homing missiles for
    * 10secs. They travel twice as far and do 4x as much damage."* Twice as far is twice the fuse: a
@@ -146,6 +210,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     reach: 0,
     bossShare: 0,
     surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, gun: null, tubes: { damage: 4, fuse: 2 } },
+    storm: null,
+    whirl: null,
     face: SPRITE.pickupSeeker,
   },
   /**
@@ -161,7 +227,56 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     reach: 0,
     bossShare: 0,
     surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, gun: { damage: 3, pierce: BLADE_EDGE }, tubes: null },
+    storm: null,
+    whirl: null,
     face: SPRITE.pickupWeapon,
+  },
+  /**
+   * The arc's — *"fires a glowing lightning flickering projectile forward that explodes into a
+   * massive lightning blast that sends lightning flickering all across the screen and chains twice
+   * for each hit."* Thrown like the bomb, to the bomb's reach, and a storm where the bomb has a blast.
+   *
+   * ⚠️ **A boss takes a twentieth, once, like the bomb** — 0372's share, because the ask gives the
+   * storm no number of its own and it is the bomb's place in the arc's hand. Everything else it
+   * reaches takes a strike that kills most bodies outright. Both are play numbers.
+   */
+  storm: {
+    label: 'Storm',
+    charges: 1,
+    shot: 'stormBall',
+    becomes: null,
+    reach: 80,
+    bossShare: 0,
+    surge: null,
+    storm: { strikes: 6, chains: 2, reach: 45, damage: 12, bossShare: 0.05, flicker: 8, flickerSteps: 32 },
+    whirl: null,
+    face: SPRITE.pickupArc,
+  },
+  /**
+   * The shuriken's — *"fires a huge shuriken in a whirlpool shape that gets progressively bigger, the
+   * radius needs to be large enough that it lasts until every part of the whirlpool arc will no
+   * longer be on screen, it can hit bosses multiple times as it whirlpools around."*
+   *
+   * ⚠️ **Three arms of eight, and the damage was measured, not asked for** —
+   * `docs/decisions/0374-the-storm-and-the-whirlpool.md` has what one whirlpool takes off each boss.
+   */
+  whirlpool: {
+    label: 'Whirlpool',
+    charges: 1,
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    /*
+      ⚠️ **AN ARM IS CONTINUOUS, AND THE FIRST ONE WAS NOT.** At a gap of 7 and a twist of 0.35 the
+      blades along an arm stood eleven units apart — wider than a blade — so a body between two was
+      never touched however often the arm swept it. Five and 0.25 at a blade swelled 2.2 leave no hole
+      a body fits through.
+    */
+    whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.7, spin: 0.05, damage: 4, swell: 2.2 },
+    face: SPRITE.pickupShuriken,
   },
 };
 

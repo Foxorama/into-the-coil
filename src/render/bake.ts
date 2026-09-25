@@ -606,6 +606,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   */
   seeker: 'ally',
   bomb: 'bullet',
+  // The arc's ink, which is the ship's (0241): the storm is the arc's special — 0374.
+  stormBall: 'player',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
     blast hurts the player as well as everything else in it, so it is the one thing the ship fires
@@ -9363,6 +9365,39 @@ export function drawKind(
         [0.45, 0.2],
       ]);
       return;
+    // The storm's ball — 0374: a round hull in the ship's ink, lit from inside, with a glow round it
+    // so it reads as charged rather than as a bigger pulse. Round where the bomb is notched, so the
+    // two thrown things are told apart by shape and not by ink alone (0024).
+    case 'stormBall': {
+      // ⚠️ A lit core, and it was glass first: the glass ink is dark, and the first photograph was a
+      // hollow ring — the one thing a charged ball must not look like (`scripts/shot-sheet.mjs`).
+      ctx.arc(half, half, r * 0.55, 0, Math.PI * 2);
+      seal(ctx);
+      const lit = shade(palette.player, 0.6);
+      // Four short forks off the hull, so it reads as lightning held in a ball — translucent, because
+      // they are light and not body: the silhouette stays the round hull (0227's paint-on-hull rule).
+      for (const [dx, dy] of [
+        [1, 0.3],
+        [-0.3, 1],
+        [-1, -0.3],
+        [0.3, -1],
+      ] as const) {
+        poly(
+          ctx,
+          f,
+          lit,
+          [
+            [dx * 0.45 - dy * 0.08, dy * 0.45 + dx * 0.08],
+            [dx * 0.95, dy * 0.95],
+            [dx * 0.45 + dy * 0.08, dy * 0.45 - dx * 0.08],
+          ],
+          0.8,
+        );
+      }
+      disc(ctx, f, lit, 0, 0, 0.3);
+      glow(ctx, f, '#ffffff', 0, 0, 0.3, 0.7);
+      return;
+    }
     // What leaves the ship. It shared this drawing with `pickupBomb` until 0372 removed the pickup.
     case 'bomb': {
       /*

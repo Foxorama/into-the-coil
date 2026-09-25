@@ -50,6 +50,7 @@ export type ShotKind =
   | 'missile'
   | 'seeker'
   | 'bomb'
+  | 'stormBall'
   | 'blast'
   | 'blastHalf'
   | 'blastWide'
@@ -350,6 +351,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'missile',
   'seeker',
   'bomb',
+  'stormBall',
   'blast',
   'blastHalf',
   'blastWide',
@@ -865,6 +867,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * missile with a bigger number, and the thing that makes it a skill is choosing the PLACE.
    */
   bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  /**
+   * The storm's ball — 0374: *"a glowing lightning flickering projectile."* The bomb's body in every
+   * number, because it is thrown the same way to the same place; it hurts nothing in flight either,
+   * and what it does is what it becomes when its fuse runs out.
+   */
+  stormBall: { sprite: SPRITE.stormBall, spriteHit: SPRITE.stormBall, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
   /**
    * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
    *

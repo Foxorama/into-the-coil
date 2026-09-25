@@ -331,13 +331,16 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     const { world } = quietWorld();
     launchSpecial(world, 'hunt');
     expect(world.bombs.size, 'a surge threw something').toBe(0);
+    // And since 0374 a thrown special may go off as a storm instead of a blast, and a whirlpool is
+    // opened rather than thrown: four shapes, and a row is exactly one of them.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge and a whirlpool`).toBe(1);
       expect(
-        (row.shot === null) === (row.becomes === null),
-        `${kind} has half a weapon on its row — one of shot and becomes is null and the other is not`,
-      ).toBe(true);
-      expect((row.shot === null) !== (row.surge === null), `${kind} is not exactly one of thrown and worn`).toBe(true);
+        row.shot !== null,
+        `${kind} throws something it does not go off as, or goes off as something it never throws`,
+      ).toBe(row.becomes !== null || row.storm !== null);
     }
   });
 

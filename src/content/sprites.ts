@@ -571,6 +571,8 @@ export const SPRITE_KINDS = [
     read as something LOBBED rather than as a bigger bullet — round at the front, notched behind.
   */
   'bomb',
+  // The storm's ball — 0374: a lit core in the ship's own ink with bolts flickering off it.
+  'stormBall',
   /*
     ⚠️ **A RING, drawn at exactly the radius that does the damage.** A blast whose picture is smaller
     than its reach kills things the player watched it miss; one whose picture is larger makes them
@@ -1501,6 +1503,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   seeker: 4.4,
   // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.
   bomb: 4.4,
+  // The same body as the bomb, so the same extent — 0374.
+  stormBall: 4.4,
   /*
     ⚠️ **Twice the blast's hurtbox radius, and `tests/bombs.test.ts` is what keeps it so.** It is the
     one extent in this table whose value is owed to another file — the number itself is on

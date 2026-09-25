@@ -234,12 +234,14 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 
 | special | whose | what it does |
 |---|---|---|
-| **bomb** | missiles (and, until their own land, the arc and the shuriken) | thrown up the lane; goes off as a blast that lands the larger of its own damage and a twentieth of a boss's full health, once however much of the animal it covers — [0372](decisions/0372-a-death-keeps-the-ladders.md) |
+| **bomb** | missiles | thrown up the lane; goes off as a blast that lands the larger of its own damage and a twentieth of a boss's full health, once however much of the animal it covers — [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **hunt** | seekers | ten seconds of a purple aura: missiles four times the damage, seekers burning twice as long — [0373](decisions/0373-a-special-is-the-guns-own.md) |
 | **overdrive** | pulse | ten seconds of a golden aura: the pulse three times the damage, and every shot pierces like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md) |
+| **storm** | arc | thrown like the bomb; goes off as six strikes to the nearest bodies on the screen, each chaining to two more, a twentieth of a boss once, and bolts flickering across the screen for half a second — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
+| **whirlpool** | shuriken | three spiral arms of eight big blades opened ahead of the ship, turning and growing, landing on a boss again and again, and gone once none of it is on the screen — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
 
-The arc's lightning blast, the shuriken's whirlpool and the shield's void are the next two changes on
-the same ask — [`the-arsenal-planned`](../reports/the-arsenal-planned-2026-09-26.md). Still unbuilt
+The shield's void is the last change on the same ask —
+[`the-arsenal-planned`](../reports/the-arsenal-planned-2026-09-26.md). Still unbuilt
 beyond them: multi-tag tracking specials, faster engines, orbiting mines.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the

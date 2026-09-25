@@ -123,7 +123,8 @@ export const PROBES = [
     guard: 'is armed with the share by the throw',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      blast.bossShare = SPECIALS.bomb.bossShare;\n',
+      // ⚠️ Re-anchored by 0374, which reads the thrown special's own row rather than the bomb's.
+      find: '      blast.bossShare = row.bossShare;\n',
       replace: '',
     },
   },

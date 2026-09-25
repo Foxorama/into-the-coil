@@ -235,8 +235,15 @@ export const CAPACITY = {
     overlap for exactly one step: eight links, and twelve leaves a margin the way the shell and the
     bombs have one. `tests/weapons.test.ts` fires the cap for fifteen seconds to see the pool never
     fill. See `playerShots` for why it is that share and not the particles'.
+
+    ⚠️ **FORTY-TWO SINCE 0374, AND THE THIRTY ARE THE STORM'S.** One storm is six strikes, twelve
+    chains and a flicker of eight, renewed every bolt's lifetime — so a renewal overlaps the last
+    flicker for a step: thirty-four, beside the arc's own eight if the gun is the arc. The ceiling
+    moved for them (`tests/budget.test.ts`), on 0364's terms: a desktop target and a stroke each.
   */
-  bolts: 12,
+  bolts: 42,
+  // The whirlpool's blades — 0374: three arms of eight. The ceiling moved for them too.
+  whirl: 24,
   boss: 1,
   /*
     ⚠️ **ELEVEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
@@ -707,6 +714,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
+  const whirl = new Pool<Entity>(CAPACITY.whirl, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -866,7 +874,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
     // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -905,6 +913,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     aura,
     surgeFor: 0,
     surgeKind: null,
+    whirl,
+    whirlKind: null,
+    whirlAge: 0,
+    whirlOffset: 0,
+    whirlAcross: 0,
+    stormFor: 0,
+    stormFlicker: 0,
+    stormOffset: 0,
+    stormAcross: 0,
     enemies,
     playerShots,
     missiles,
@@ -921,6 +938,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // What a mid-boss's death drops is its own concern, so its own stream — 0021, 0256.
     dropRng: makeRng('proof-scene').stream('drop'),
     arcRng: makeRng('proof-scene').stream('arc'),
+    stormRng: makeRng('proof-scene').stream('storm'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.

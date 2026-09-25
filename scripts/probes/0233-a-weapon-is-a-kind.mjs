@@ -198,7 +198,8 @@ export const PROBES = [
     guard: 'the bolt pool never fills',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  bolts: 12,',
+      // ⚠️ Re-anchored by 0374, which gave the storm thirty; two is still under one volley.
+      find: '  bolts: 42,',
       replace: '  bolts: 2,',
     },
   },

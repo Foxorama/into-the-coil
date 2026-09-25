@@ -341,6 +341,7 @@ export function playableWorld(
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
+  const whirl = new Pool<Entity>(CAPACITY.whirl, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -370,7 +371,7 @@ export function playableWorld(
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -388,6 +389,15 @@ export function playableWorld(
     aura,
     surgeFor: 0,
     surgeKind: null,
+    whirl,
+    whirlKind: null,
+    whirlAge: 0,
+    whirlOffset: 0,
+    whirlAcross: 0,
+    stormFor: 0,
+    stormFlicker: 0,
+    stormOffset: 0,
+    stormAcross: 0,
     enemies,
     playerShots,
     missiles,
@@ -403,6 +413,7 @@ export function playableWorld(
     burstRng: makeRng('test').stream('burst'),
     dropRng: makeRng('test').stream('drop'),
     arcRng: makeRng('test').stream('arc'),
+    stormRng: makeRng('test').stream('storm'),
     rainRng: makeRng('test').stream('rain'),
     rockRng: makeRng('test').stream('rock'),
     voidRng: makeRng('test').stream('void'),
