@@ -985,6 +985,11 @@ export interface World {
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
   /**
+   * Index of the next wave whose way through the corridor's wall has not been cut yet — `cutFlank`.
+   * The same script as `nextWave`, read `FLANK_CUT_LEAD` further ahead, so it is always at or past it.
+   */
+  nextFlank: number;
+  /**
    * How many firing waves the mid-boss's fight has been offered — 0267. One in `FIGHT_FIRING_IN`
    * of them is put on the field and the rest are skipped.
    *
@@ -1757,6 +1762,8 @@ export class GameFrame implements Frame {
     // Before the shots move, so a bent velocity is the one this step integrates — 0327.
     bendShots(w);
     stepEntities(w.enemyShots, w.cameraAlong);
+    // After the shots have moved, so a wall's shot that reached its slot this step stops on it.
+    spreadShots(w);
     // After the shots have moved, so a mote is dropped where the ball actually is this step — 0301.
     dropTrails(w);
     // After the shots have moved and before anything can hit them, so a shard that opens this step
@@ -2128,6 +2135,18 @@ export class GameFrame implements Frame {
       level did not begin at the beginning of the run.
     */
     const horizon = spawnAlong(w.cameraAlong) - w.levelOrigin;
+    /*
+      ⚠️ **A FLANKING WAVE'S WAY THROUGH THE WALL IS CUT `FLANK_CUT_LEAD` AHEAD OF IT.** Played: *"the
+      labyrinth walls spawn and show and then disappear on screen to make the gaps."* The passage was
+      cut on the step the wave was put down — at the screen's leading edge — so the stone already on
+      the screen there went, a tile or four at a time. A second cursor over the same script cuts it
+      while that stretch of wall is still beyond anything drawn, so it scrolls in already open.
+      Before the wave cursor, so a wave never arrives at a wall that has not been opened for it.
+    */
+    while (w.nextFlank < w.level.waves.length && w.level.waves[w.nextFlank]!.at - FLANK_CUT_LEAD <= horizon) {
+      cutFlank(w, w.nextFlank);
+      w.nextFlank++;
+    }
     while (w.nextWave < w.level.waves.length && w.level.waves[w.nextWave]!.at <= horizon) {
       /*
         ── A FIGHT THINS THE FIRING WAVES OVER IT — 0267 ──────────────────────────────────────────
@@ -3766,9 +3785,18 @@ function fireEnemies(w: World): void {
             if (across < 0 || across > ACROSS_SPAN || stoneAt(w.corridor, e.along, across, 0) !== 0) continue;
             const shot = w.enemyShots.spawn();
             if (shot === null) break;
-            reset(shot, e.along, across, bullet, bulletKind);
+            /*
+              ⚠️ **FROM THE HULL, AND OUT TO ITS SLOT — played:** *"the < shaped ships don't actually
+              fire from the graphical object, they just spawn bullets in mid air."* The slots are 10
+              to 30 units from a hull six across, so a wall put down in them appeared from nothing.
+              Every shot leaves the hull at the wall's own speed down the lane and as fast again
+              sideways, and `spreadShots` stops it on its slot — so the rank is flat the whole way and,
+              once formed, the wall and its hole are the ones authored.
+            */
+            reset(shot, e.along, e.across, bullet, bulletKind);
             shot.velAlong = -speed + w.scrollPerStep;
-            shot.velAcross = 0;
+            shot.velAcross = side * speed;
+            shot.steerAcross = across;
             // The side it stands on is its handedness — 0327 — so a wall of bending shots mirrors
             // about the hole: both sides curl in, or both curl out, and the hole moves as one.
             shot.spin = side;
@@ -4350,6 +4378,8 @@ function bendShots(w: World): void {
     const shot = pool.at(i);
     const path = SHOT_ROWS[shot.kind]!.path;
     if (path === undefined) continue;
+    // A wall's shot still on its way out to its slot is not on its path yet — `spreadShots`.
+    if (shot.steerAcross !== 0) continue;
     const hand = shot.spin === 0 ? 1 : shot.spin;
     switch (path.kind) {
       case 'wave': {
@@ -4375,6 +4405,29 @@ function bendShots(w: World): void {
         break;
       }
     }
+  }
+}
+
+/**
+ * Stop every wall's shot that has reached its slot, on it — the wall leaves the hull.
+ *
+ * ⚠️ **`steerAcross` IS THE SLOT, ON THE TERMS `src/sim/entity.ts` GIVES IT**: the `across` a body
+ * crossing the lane straightens out at, and nought for *not steering*. A missile and a flanker read it
+ * the same way; on a hostile shot only a wall sets it. Stopped exactly on the number rather than
+ * wherever the step left it, so the wall's hole is the authored width and not that give or take a
+ * step of sideways travel.
+ *
+ * ⚠️ **Nothing allocates** — `tests/budget.test.ts` scans this file.
+ */
+function spreadShots(w: World): void {
+  const pool = w.enemyShots;
+  for (let i = pool.size - 1; i >= 0; i--) {
+    const shot = pool.at(i);
+    if (shot.steerAcross === 0) continue;
+    if (shot.velAcross > 0 ? shot.across < shot.steerAcross : shot.across > shot.steerAcross) continue;
+    shot.across = shot.steerAcross;
+    shot.velAcross = 0;
+    shot.steerAcross = 0;
   }
 }
 
@@ -4662,6 +4715,52 @@ function stoneHoldsPickups(w: World): void {
 }
 
 /**
+ * How far ahead of its own `at` a flanking wave's way through the wall is cut, in level units.
+ *
+ * ⚠️ **SIZED AGAINST WHAT IT HAS TO BEAT, WITH ROOM.** The opening's near end is the leading edge of
+ * the screen less the flanker's own radius, `PASSAGE_CLEARANCE`, and the drift of a body that crosses
+ * the band going backwards through the world (0350) — about forty-five units for a charger in a turned
+ * stretch at the hardest tier — and the painter draws a whole `roomWall` tile, twelve, past the edge.
+ * Cut a hundred and twenty ahead, the nearest of it is more than fifty beyond anything drawn.
+ *
+ * ⚠️ **AND IT COSTS NOTHING TO CUT EARLY**: the opening is in the world and the wave comes out of it
+ * when the camera reaches the wave's `at`, wherever the cut was made. What it costs is a slot of the
+ * ring for longer, which is why `RUNTIME_PASSAGES` is sixteen.
+ */
+const FLANK_CUT_LEAD = 120;
+
+/**
+ * Cut a flanking wave's way through the corridor's wall, ahead of the screen — before `spawnWave`
+ * puts it down there.
+ *
+ * ⚠️ **WHERE IT WILL BE PUT DOWN IS KNOWN, UP TO THE SHIP.** The wave is put down on the first step
+ * its `at` is inside `spawnAlong`, so the camera then is this `at` back by `spawnAlong`'s reach, give
+ * or take one step of scroll; and `flankAlongFor` puts it at this screen's leading edge unless the
+ * ship is far enough forward to push it on. The ship is not known yet, so the opening runs from the
+ * leading edge to where a ship at the very front of its box would push it — nothing on a screen wider
+ * than 16:9, and thirteen units on one.
+ *
+ * ⚠️ **A WAVE THE FIGHT THINS STILL HAS ITS OPENING** — 0267 decides that when the wave is due, and
+ * this ran before. An empty passage is one the level already has eight of on purpose.
+ */
+function cutFlank(w: World, index: number): void {
+  if (w.corridor === null) return;
+  const wave = w.level.waves[index];
+  if (wave === undefined) return;
+  const origin = wave.origin ?? DEFAULT_ORIGIN;
+  if (origin === 'lead') return;
+  const row = w.enemyRows[w.enemyKinds[wave.enemy]];
+  if (row === undefined) return;
+  const side = origin === 'acrossPlus' ? 1 : -1;
+  const camera = wave.at + w.levelOrigin - spawnAlong(0);
+  const near = camera + flankAlongFor(camera, camera, w.view.alongSpan);
+  const far = camera + flankAlongFor(camera + PLAYER_LEAD, camera, w.view.alongSpan) + w.scrollPerStep;
+  const a = streamOffset(0, row.radius);
+  const b = streamOffset(wave.count - 1, row.radius);
+  openPassage(w, near + Math.min(a, b), far + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);
+}
+
+/**
  * Open the corridor where a flanking wave will cross its wall — 0348.
  *
  * Asked for: *"For the flankers have the walls open with gaps."* A flanker enters outside the lane at
@@ -4676,13 +4775,15 @@ function stoneHoldsPickups(w: World): void {
  * across it. The near end is the spawn point now; the far end takes the whole crossing, since what ends
  * the pacing is arriving (`steerEnemies`) and a flanker arrives well inside the wall's face.
  *
- * ⚠️ **ITS NEAR END IS AT THE SCREEN'S LEADING EDGE**, where the flanker is put down — so at most the
- * last sliver of one tile goes as the wave arrives, and everything after it scrolls in already open.
+ * ⚠️ **ITS NEAR END WAS AT THE SCREEN'S LEADING EDGE, AND THE NOTE HERE SAID THAT COST A SLIVER.**
+ * It cost whole tiles: the painter drops every tile the opening touches, and a charger's drift moves
+ * the near end back into the screen by up to forty-five units. So a wave's opening is cut ahead of the
+ * screen now, by `cutFlank`; a boss's summoned flankers (`summonAdds`) still cut theirs as they arrive.
  *
- * ⚠️ **COMPUTED FROM THE BODIES THE WAVE ACTUALLY PUT DOWN**, first and last, so a wave that lost a
- * member to a full pool opens no more than it needs. A ring of slots written in place: nothing
- * allocates, and the oldest opening — long behind the screen — is the one overwritten.
+ * ⚠️ **A ring of slots written in place**: nothing allocates, and the oldest opening — long behind the
+ * screen — is the one overwritten.
  */
+
 function openPassage(w: World, first: number, last: number, radius: number, side: number, travel: number): void {
   const corridor = w.corridor;
   if (corridor === null) return;
@@ -4837,12 +4938,7 @@ function spawnWave(w: World, index: number): void {
     : wave.at + w.levelOrigin;
   // Which side it comes in from, as a sign on `across`. −1 enters from the acrossMinus edge.
   const side = origin === 'acrossPlus' ? 1 : -1;
-  // And where it comes through the corridor's wall, if the level has one — 0348.
-  if (flanking) {
-    const a = streamOffset(0, row.radius);
-    const b = streamOffset(wave.count - 1, row.radius);
-    openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side, w.scrollPerStep - row.closing * w.difficulty.closing);
-  }
+  // Where it comes through the corridor's wall was cut already, ahead of the screen — `cutFlank`.
   const entryAcross = side < 0 ? -FLANK_MARGIN : ACROSS_SPAN + FLANK_MARGIN;
   for (let i = 0; i < wave.count; i++) {
     const e = w.enemies.spawn();
@@ -7931,9 +8027,13 @@ export function startLevel(w: World, level: LevelRow): void {
 /**
  * How many openings a flanking wave may have open in the corridor at once, beyond the authored ones.
  * A flank's opening is behind the screen within about six seconds of it arriving, and the level's
- * flanks are fifty units and more apart, so eight is several screens of them.
+ * flanks are fifty units and more apart, so eight was several screens of them.
+ *
+ * ⚠️ **SIXTEEN SINCE A WAVE'S OPENING IS CUT `FLANK_CUT_LEAD` AHEAD OF IT**, which holds each slot for
+ * two hundred steps longer. An overwritten slot is stone coming back on the screen, which is the defect
+ * the early cut exists to end, so the ring is doubled rather than measured to the edge.
  */
-const RUNTIME_PASSAGES = 8;
+const RUNTIME_PASSAGES = 16;
 
 /**
  * The corridor a level is flown down, in world positions, or `null` — 0348. A level boundary, never a
@@ -8090,6 +8190,7 @@ function beginScript(w: World): void {
   w.enemyShots.clear();
   w.bossPool.clear();
   w.nextWave = 0;
+  w.nextFlank = 0;
   // The fight's own count of firing waves offered — 0267, and it is the level's fight, so it goes
   // back with the level's script.
   w.fightFiring = 0;

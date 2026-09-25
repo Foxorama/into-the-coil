@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ATTACK_KINDS, ENEMIES, ENEMY_KINDS, MOTION_KINDS, shotsPerVolley, type EnemyKind } from '../src/content/enemies.ts';
 import { SHIPS } from '../src/content/ships.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { ACROSS_SPAN, cullAlong, spawnAlong, viewOf } from '../src/sim/camera.ts';
@@ -537,17 +538,28 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       const frame = new GameFrame(world);
       world.ship.health = 1e9;
       let firedAt = Number.NaN;
-      const lanes: number[] = [];
-      for (let i = 0; i < 900 && lanes.length === 0; i++) {
+      let fired = false;
+      for (let i = 0; i < 900 && !fired; i++) {
         world.fireIn = Number.MAX_SAFE_INTEGER;
         const before = world.enemyShots.size;
         const body = world.enemies.size > 0 ? world.enemies.at(0).across : Number.NaN;
         frame.step();
         if (world.enemyShots.size > before) {
           firedAt = body;
-          for (let s = 0; s < world.enemyShots.size; s++) lanes.push(world.enemyShots.at(s).across);
+          fired = true;
         }
       }
+      /*
+        ⚠️ **READ ONCE THE WALL HAS FORMED.** A wall's shots leave the hull and fan out to their slots
+        (the next test), so on the step it is fired the whole wall is at the hull and there is no hole
+        yet. What the player dodges is the formed rank, so that is what is measured.
+      */
+      for (let i = 0; i < 300 && fired && [...Array(world.enemyShots.size).keys()].some((s) => world.enemyShots.at(s).steerAcross !== 0); i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+      const lanes: number[] = [];
+      for (let s = 0; s < world.enemyShots.size; s++) lanes.push(world.enemyShots.at(s).across);
       expect(lanes.length, `a ${kind} never laid a wall, so this measured nothing`).toBeGreaterThan(1);
       const nearest = Math.min(...lanes.map((across) => Math.abs(across - firedAt)));
       /*
@@ -562,6 +574,67 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       // And the wall is actually a wall: shots on both sides of the body, not a lopsided fan.
       expect(lanes.some((a) => a < firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
       expect(lanes.some((a) => a > firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
+    }
+  });
+
+  it('THE REPORTED ONE: a wall leaves the hull that fired it, and fans out to its slots', () => {
+    /*
+      Played: *"the < shaped ships don't actually fire from the graphical object, they just spawn
+      bullets in mid air."* The sower's slots are 13 and 26 units either side of a hull 7.5 across, so
+      every shot of its wall appeared in empty space. Held in world units against the body's own
+      radius: on the step it is fired, every shot is within the hull plus one step of its own travel;
+      and once formed, the shots stand on the authored slots, so the wall is the one that was designed.
+    */
+    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'wall');
+    for (const kind of kinds) {
+      const attack = ENEMIES[kind].attack;
+      if (attack.kind !== 'wall') continue;
+      const { world } = playableWorld({
+        waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
+        pickups: [],
+        landmarks: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        midBoss: null,
+        sections: NO_SECTIONS,
+        boss: 'sentinel',
+        theme: 'approach',
+      });
+      const frame = new GameFrame(world);
+      world.ship.health = 1e9;
+      const reach = ENEMIES[kind].radius + SHOTS[ENEMIES[kind].shot].speed * world.difficulty.shotSpeed * Math.SQRT2 * 2;
+      let firedAt = Number.NaN;
+      let farthest = -1;
+      for (let i = 0; i < 900 && farthest < 0; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        const before = world.enemyShots.size;
+        const across = world.enemies.size > 0 ? world.enemies.at(0).across : Number.NaN;
+        frame.step();
+        if (world.enemyShots.size > before && world.enemies.size > 0) {
+          firedAt = across;
+          const hull = world.enemies.at(0);
+          farthest = 0;
+          for (let s = before; s < world.enemyShots.size; s++) {
+            const shot = world.enemyShots.at(s);
+            farthest = Math.max(farthest, Math.hypot(shot.along - hull.along, shot.across - hull.across));
+          }
+        }
+      }
+      expect(farthest, `a ${kind} never laid a wall, so this measured nothing`).toBeGreaterThanOrEqual(0);
+      expect(
+        farthest,
+        `a ${kind}'s wall appeared ${farthest.toFixed(1)} units from a hull of radius ${ENEMIES[kind].radius} — in mid air`,
+      ).toBeLessThanOrEqual(reach);
+      for (let i = 0; i < 300 && [...Array(world.enemyShots.size).keys()].some((s) => world.enemyShots.at(s).steerAcross !== 0); i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+      const slots: number[] = [];
+      for (let s = 1; s <= attack.shots; s++) slots.push(firedAt - s * attack.gap, firedAt + s * attack.gap);
+      for (let s = 0; s < world.enemyShots.size; s++) {
+        const across = world.enemyShots.at(s).across;
+        const off = Math.min(...slots.map((slot) => Math.abs(slot - across)));
+        expect(off, `a ${kind}'s shot stopped ${off.toFixed(2)} units off any slot of its wall`).toBeLessThan(1);
+      }
     }
   });
 
