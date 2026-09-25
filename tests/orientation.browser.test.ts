@@ -272,3 +272,78 @@ describe.runIf(chromePath)('the orientation gate', () => {
     await page.context().close();
   });
 });
+
+describe.runIf(chromePath)('a turn leaves nothing behind it', () => {
+  /*
+    Reported from Chrome on iOS — WebKit, as every browser there is: *"I turned the phone into portrait
+    mode … then when I turned it landscape, I couldn't move the plane all the way to the top."* Not
+    reproduced: the player could not, and Chromium does not zoom or scroll to fit what overflows the
+    way WebKit does. What is held here is each cause that fits the report, in the engine that can run
+    the suite: nothing overflows the page behind the gate, a turn is fitted even when the window's own
+    resize is lost, and a resize does not re-apply the screen.
+  */
+  it('THE REPORTED ONE: behind the gate the canvas takes no room, so there is nothing to zoom out to', async () => {
+    const page = await open(LANDSCAPE);
+    await start(page);
+    await page.setViewportSize(PORTRAIT);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-itc-rotate]')!).display !== 'none', null, { timeout: 5_000 });
+    const laid = await page.evaluate(() => {
+      const box = document.querySelector('#app canvas')!.getBoundingClientRect();
+      return { width: box.width, height: box.height, scrollWidth: document.documentElement.scrollWidth, innerWidth };
+    });
+    expect(laid.width, `behind the gate the canvas is still ${laid.width} px wide in a ${laid.innerWidth} px page`).toBe(0);
+    expect(laid.height, 'behind the gate the canvas still takes height').toBe(0);
+    expect(laid.scrollWidth, 'something still overflows the page behind the gate').toBeLessThanOrEqual(laid.innerWidth);
+    await page.context().close();
+  });
+
+  it('a turn the window’s own resize does not report is still fitted, from the visual viewport', async () => {
+    /*
+      ⚠️ **THE WINDOW'S `resize` IS SWALLOWED ON PURPOSE**, which is what WebKit's early, unsettled one
+      amounts to: a report the game cannot use. A capture listener on the window runs before the
+      game's own and stops it, so only the visual viewport is left to say the size moved.
+    */
+    browser ??= await launchChromium({ headless: true });
+    const context = await browser.newContext({ viewport: LANDSCAPE, deviceScaleFactor: 1 });
+    // Before the game mounts, because listeners on one target run in the order they were added.
+    await context.addInitScript(() => {
+      window.addEventListener('resize', (e) => e.stopImmediatePropagation(), { capture: true });
+    });
+    const page = await context.newPage();
+    await page.goto(dist);
+    await page.waitForSelector('#app canvas', { state: 'attached', timeout: 15_000 });
+    await start(page);
+    await page.setViewportSize(PORTRAIT);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-itc-rotate]')!).display !== 'none', null, { timeout: 5_000 });
+    const home = { width: 1100, height: 600 };
+    await page.setViewportSize(home);
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-itc-rotate]')!).display === 'none', null, { timeout: 5_000 });
+    const box = await page.evaluate(() => {
+      const r = document.querySelector('#app canvas')!.getBoundingClientRect();
+      return { width: r.width, height: r.height };
+    });
+    expect(box, 'the turn home was not fitted to the size it came back at').toEqual(home);
+    await page.context().close();
+  });
+
+  it('a resize while the game stays playable does not re-apply the screen', async () => {
+    /*
+      `applyScreen` arms countdowns, puts out a burn, and — the half a test can see — puts the focus
+      back on the screen's first control. Every landscape resize used to run it, so a phone's toolbar
+      sliding in was a screen change. Measured on the title: focus on the second control, then resize.
+    */
+    const page = await open(LANDSCAPE);
+    const actions = '.' + prefixFor('title') + 'action';
+    const second = await page.evaluate((selector: string) => {
+      const control = document.querySelectorAll<HTMLElement>(selector)[1];
+      control?.focus();
+      return document.activeElement === control && control !== undefined ? (control.textContent ?? '') : '';
+    }, actions);
+    expect(second, 'the title has no second control to stand on, so this measures nothing').not.toBe('');
+    await page.setViewportSize({ width: 1200, height: 700 });
+    await page.waitForFunction(() => document.querySelector('#app canvas')!.getBoundingClientRect().width === 1200, null, { timeout: 5_000 });
+    const after = await page.evaluate(() => document.activeElement?.textContent ?? '');
+    expect(after, 'a resize took the focus back to the first control, which is the screen being re-applied').toBe(second);
+    await page.context().close();
+  });
+});
