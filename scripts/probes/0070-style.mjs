@@ -19,10 +19,10 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0263, which made the frame read a shot's row by its index — and by 0311, which
-      // needs the row's TYPE as well, to hand one to `burstMaw`.
-      find: "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';",
+      // needs the row's TYPE as well, to hand one to `burstMaw` — and by 0369, which rolls a `Fuse`.
+      find: "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';",
       replace:
-        "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';\nimport { STYLES } from '../content/styles.ts';\nvoid STYLES;",
+        "import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';\nimport { STYLES } from '../content/styles.ts';\nvoid STYLES;",
     },
   },
   {

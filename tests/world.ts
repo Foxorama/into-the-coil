@@ -403,6 +403,7 @@ export function playableWorld(
     rainRng: makeRng('test').stream('rain'),
     rockRng: makeRng('test').stream('rock'),
     voidRng: makeRng('test').stream('void'),
+    fuseRng: makeRng('test').stream('fuse'),
     floatRng: makeRng('test').stream('float'),
     view: viewOf(1280, 720),
     surface: new NullSurface(),

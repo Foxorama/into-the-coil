@@ -15,13 +15,18 @@ export const PROBES = [
       What shipped: the ceiling removed, so a shattering shot spends the phase's count like any
       other bullet. The hydra's frost head goes back to four slots either side — eight shards, and
       ninety-six flakes — and the lane has no answer on it for a tenth of the phase.
+
+      ⚠️ **AND THE STAGGER TAKEN OFF WITH IT SINCE 0369, BECAUSE WHAT SHIPPED HAD NEITHER.** Eight
+      shards half a second apart is four seconds of one at a time, and the ceiling alone went STILL
+      GREEN: the stagger is a second thing in front of this guard. The guard holds the lane and the
+      lane is held; the break is the volley as it shipped, which the one line can say.
     */
-    broke: 'a shattering volley spending the phase’s count again, as it did before 0270',
+    broke: 'a shattering volley spending the phase’s count again, all on one step, as it did before 0270',
     guard: 'THE REPORTED ONE: in every phase of every fight in the game',
     edit: {
       path: 'src/app/boss.ts',
       find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
-      replace: '  const ceiling = Number.POSITIVE_INFINITY;',
+      replace: '  const ceiling = Number.POSITIVE_INFINITY;\n  bullet = { ...bullet, stagger: undefined };',
     },
   },
   {
@@ -46,13 +51,18 @@ export const PROBES = [
       The pool rule, which 0263 wrote and drove over one phase of one boss. Widening the ceiling to
       six shards puts the frost ship's last phase into a full pool at `burn` — the state where
       `src/sim/pool.ts` silently drops the next volley and the shatter of an add with it.
+
+      ⚠️ **MOVED TO THE CEILING'S ONE READER BY 0369, AND THE STAGGER TAKEN OFF THERE TOO.** Six
+      shards half a second apart never have enough alive at once to fill the pool, so widening the
+      constant alone went STILL GREEN. The same six, on one step, as the shard was thrown when this
+      was written — `src/app/boss.ts` is the one place both can be said in one edit.
     */
-    broke: 'a ceiling wide enough to fill the hostile pool, so the volley after it is not thrown',
+    broke: 'a ceiling wide enough to fill the hostile pool, thrown on one step, so the volley after it is not thrown',
     guard: 'and the pool always has room for the volley after this one',
     edit: {
-      path: 'src/content/shots.ts',
-      find: 'export const SHARD_VOLLEY = 3;',
-      replace: 'export const SHARD_VOLLEY = 6;',
+      path: 'src/app/boss.ts',
+      find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
+      replace: '  const ceiling = bullet.fission.length > 0 ? 6 : Number.POSITIVE_INFINITY;\n  bullet = { ...bullet, stagger: undefined };',
     },
   },
   {

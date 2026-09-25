@@ -36,7 +36,8 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  child.fireIn = stage < row.fission.length ? row.fission[stage]!.after : 0;\n',
+      // ⚠️ Re-anchored by 0369, which rolls the fuse rather than reading it.
+      find: '  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;\n',
       replace: '  child.fireIn = 0;\n',
     },
   },
@@ -60,7 +61,8 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      find: "    fission: [\n      { after: 45, into: 'fan', shots: 2, spread: 0.6 },\n      { after: 40, into: 'ring', shots: 6 },\n      { after: 90, into: 'nothing' },\n    ],",
+      // ⚠️ Re-anchored by 0369: the fuses are ranges.
+      find: "    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },\n      { after: { least: 90, most: 90 }, into: 'nothing' },\n    ],",
       replace: '    fission: SPENT_BY_ARRIVING,',
     },
   },
@@ -117,13 +119,20 @@ export const PROBES = [
       claim this probe always made (*a shard that becomes too much fills the pool*) expressed in the
       half of it 0270 does not stand in front of. Breaking the ceiling itself is 0270's probe to run,
       and two probes for one assertion is the second copy 0029 argues against.
+
+      ⚠️ **AND WIDENED BY 0369 TO TAKE THE STAGGER OFF WITH IT, WHICH IS WHAT THIS BREAK SHIPPED AGAINST.**
+      Half a second between shards is a second thing standing in front of the pool: the snowflake of
+      twelve alone went STILL GREEN, because a staggered volley never has enough shards alive at once
+      to fill it. The guard is not weaker for that — it holds the pool, and the pool is held. So the
+      break is the row as 0263 wrote it, unstaggered, with the snowflake doubled; the row keeps both
+      fields in one place, so it is one edit.
     */
-    broke: 'a snowflake of twelve rather than six, so one shard becomes twenty-four flakes',
+    broke: 'a snowflake of twelve on an unstaggered shard, so one volley becomes seventy-two flakes at once',
     guard: 'the frost never fills the pool',
     edit: {
       path: 'src/content/shots.ts',
-      find: "      { after: 40, into: 'ring', shots: 6 },",
-      replace: "      { after: 40, into: 'ring', shots: 12 },",
+      find: "    stagger: 30,\n    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },",
+      replace: "    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 12 },",
     },
   },
 ];

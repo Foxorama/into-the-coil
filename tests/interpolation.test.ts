@@ -117,6 +117,7 @@ function stationKeepingWorld(surface: Surface): World {
     rainRng: makeRng('interp').stream('rain'),
     rockRng: makeRng('interp').stream('rock'),
     voidRng: makeRng('interp').stream('void'),
+    fuseRng: makeRng('interp').stream('fuse'),
     floatRng: makeRng('interp').stream('float'),
     bolts: new Pool<Entity>(CAPACITY.bolts, makeEntity),
     dropRng: makeRng('interp').stream('drop'),

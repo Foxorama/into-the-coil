@@ -51,8 +51,8 @@ const solo = (boss: BossKind) =>
  *
  * ⚠️ **A REACTION TIME AND NOT A CONVENIENCE.** Shorter and the guard would be asserting that the
  * player can dodge on reflex; longer and it would be asserting that they can read the whole screen
- * and plan. 0.75 s is the fuse 0263 gives a shard before it opens, so it is the horizon the content
- * itself is authored on.
+ * and plan. 0.75 s is the fuse 0263 gave a shard before it opens, so it is the horizon the content
+ * itself is authored on — and since 0369 that fuse is rolled between 0.6 and 1 s, which it sits inside.
  */
 const HORIZON = Math.round(0.75 * STEPS_PER_SECOND);
 

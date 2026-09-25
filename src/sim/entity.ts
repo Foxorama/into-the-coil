@@ -353,12 +353,19 @@ export interface Entity extends Body {
    * round, so a spray that counted on either would be that defect a third time.
    *
    * Zero `sprayLeft` is *not spraying*, which is every body in the game but a boss mid-spray.
+   *
+   * ⚠️ **AND A STAGGERED VOLLEY IS A SPRAY — 0369**: a fan or a ring of a row that staggers is thrown
+   * one shot a `sprayEvery`, its angle turning as a sweep's does. A wall does not turn; it steps out a
+   * slot a shot, so it carries two more — `sprayGap`, the wall's spacing (zero for anything that is not
+   * a wall), and `sprayAt`, how many of its slots have been thrown.
    */
   sprayLeft: number;
   sprayEvery: number;
   sprayAngle: number;
   sprayTurn: number;
   sprayKind: number;
+  sprayGap: number;
+  sprayAt: number;
   /**
    * Which of its row's faces a cycling pickup is showing, and steps until it turns to the next —
    * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
@@ -484,6 +491,8 @@ export function makeEntity(): Entity {
     sprayAngle: 0,
     sprayTurn: 0,
     sprayKind: 0,
+    sprayGap: 0,
+    sprayAt: 0,
     face: 0,
     stack: 1,
     faceIn: 0,
@@ -541,6 +550,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.sprayAngle = 0;
   e.sprayTurn = 0;
   e.sprayKind = 0;
+  e.sprayGap = 0;
+  e.sprayAt = 0;
   e.face = 0;
   e.stack = 1;
   e.faceIn = 0;

@@ -964,6 +964,10 @@ function throwAttack(
         centre = Math.PI + (attack.arc === undefined ? boss.firePhase : (attack.arc / 2) * Math.sin(boss.firePhase));
       }
       const first = centre - (step * (count - 1)) / 2;
+      if (bullet.stagger !== undefined && count > 1) {
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, first, step, 0);
+        break;
+      }
       for (let i = 0; i < count; i++) {
         const shot = shots.spawn();
         // A volley that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
@@ -982,6 +986,10 @@ function throwAttack(
         that has no width.
       */
       const around = TAU / count;
+      if (bullet.stagger !== undefined && count > 1) {
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, 0, around, 0);
+        break;
+      }
       for (let i = 0; i < count; i++) {
         const shot = shots.spawn();
         if (shot === null) break;
@@ -1001,7 +1009,14 @@ function throwAttack(
         ⚠️ **A slot outside the lane is skipped rather than clamped**, exactly as the sower's is:
         clamping would stack two bullets on the edge into one thicker one, which is a wall with a lie
         in it.
+
+        ⚠️ **STAGGERED, IT IS THE SAME SLOTS IN THE SAME ORDER, ONE A STAGGER — 0369**, each from where
+        the muzzle is when it leaves; a slot outside the lane is still skipped, and costs its beat.
       */
+      if (bullet.stagger !== undefined) {
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, perSide * 2, bullet.stagger, Math.PI, 0, attack.gap);
+        break;
+      }
       for (let i = 1; i <= perSide; i++) {
         for (let side = -1; side <= 1; side += 2) {
           // The wall's own spacing rides the muzzle, so a hull with a face throws its wall from it.
@@ -1134,6 +1149,9 @@ function throwAttack(
       boss.sprayAngle = attack.from;
       boss.sprayTurn = steps > 0 ? (attack.to - attack.from) / steps : 0;
       boss.sprayKind = kind;
+      // Not a wall — 0369. A staggered wall's spacing left on the hull would push every globe sideways.
+      boss.sprayGap = 0;
+      boss.sprayAt = 0;
       const until = Math.ceil(steps / FIRE_GRID) * FIRE_GRID;
       if (boss.fireIn < until) boss.fireIn = until;
       throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots);
@@ -1254,12 +1272,62 @@ function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: Difficulty
  * the animal had already left, which is 0277's *the body coughing* in time rather than in space.
  */
 function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, speed: number, scrollPerStep: number, shots: Pool<Entity>): void {
+  let across = boss.across + (row.muzzle?.across ?? 0);
+  if (boss.sprayGap !== 0) {
+    // A staggered wall's next slot — 0369: the `wall` arm's own order, nearest pair first, the
+    // near side of each pair before the far, and a slot outside the lane skipped as it is there.
+    const k = boss.sprayAt++;
+    across += (k % 2 === 0 ? -1 : 1) * (Math.floor(k / 2) + 1) * boss.sprayGap;
+    if (across < 0 || across > ACROSS_SPAN) return;
+  }
   const shot = shots.spawn();
   // A globe that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
   if (shot === null) return;
-  reset(shot, boss.along + (row.muzzle?.along ?? 0), boss.across + (row.muzzle?.across ?? 0), bullet, kind);
+  reset(shot, boss.along + (row.muzzle?.along ?? 0), across, bullet, kind);
   shot.velAlong = Math.cos(boss.sprayAngle) * speed + scrollPerStep;
   shot.velAcross = Math.sin(boss.sprayAngle) * speed;
+}
+
+/**
+ * A volley of a row that staggers, begun — `docs/decisions/0369-the-ice-is-staggered.md`. `count`
+ * shots, one every `every` steps, the first from `angle` and each `turn` on from the last; a wall
+ * passes its `gap` and no turn. This step throws the first and `spray` throws the rest, on the five
+ * fields a `sweep` already keeps for exactly this, so a staggered volley IS a sweep.
+ *
+ * ⚠️ **THE NEXT VOLLEY WAITS ONE STAGGER PAST THE LAST SHOT, NOT UNTIL IT.** `spray` runs before the
+ * gate, so a volley timed to the last shot's step would throw its first beside it, and the two would
+ * leave together — the thing the stagger exists to stop. On the fire grid, as a sweep's is (0096).
+ * A tier whose cadence is shorter than that is slowed to one shot a stagger; that is the ask.
+ *
+ * ⚠️ **ONLY A FAN, A RING AND A WALL CALL THIS.** A whip's lash and a breaker's crest are shapes
+ * made by every shot leaving together, a lob is one shot, and rain, beams and summons throw nothing
+ * of this row into the shot pool.
+ */
+function staggerVolley(
+  boss: Entity,
+  row: BossRow,
+  bullet: ShotRow,
+  kind: number,
+  speed: number,
+  scrollPerStep: number,
+  shots: Pool<Entity>,
+  count: number,
+  every: number,
+  angle: number,
+  turn: number,
+  gap: number,
+): void {
+  const steps = (count - 1) * every;
+  boss.sprayLeft = steps;
+  boss.sprayEvery = every;
+  boss.sprayAngle = angle;
+  boss.sprayTurn = turn / every;
+  boss.sprayKind = kind;
+  boss.sprayGap = gap;
+  boss.sprayAt = 0;
+  const until = Math.ceil((steps + every) / FIRE_GRID) * FIRE_GRID;
+  if (boss.fireIn < until) boss.fireIn = until;
+  throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots);
 }
 
 /**
