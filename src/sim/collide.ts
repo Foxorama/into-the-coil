@@ -296,6 +296,58 @@ export function blastInto(
   return destroyed;
 }
 
+/**
+ * Blasts against one animal — a head, and the nodes that spend what lands on them on it — landing
+ * once each however much of the animal they cover. `docs/decisions/0372-a-death-keeps-the-ladders.md`.
+ *
+ * ⚠️ **ONCE PER ANIMAL, because a share of the whole is a statement about the whole.** `blastInto`
+ * over the head and then over the nodes billed every node a blast covered, which at a flat six was
+ * a long animal taking a little more for being long; at a share of its full health it would be a
+ * bomb on the coil taking a quarter of the fight. So a blast that reaches the head or any node lands
+ * once, on the head, for the larger of its own damage and `bossShare × fullHealth`, scaled by the
+ * window — and an armoured flank (0307) does not refuse it, because *"5% of max boss health"* is
+ * what was asked for and a bomb is not aimed at a scale.
+ *
+ * `heads` holds one entry or none; the pool is only how the boss is kept.
+ */
+export function blastBoss(
+  blasts: Pool<Entity>,
+  heads: Pool<Entity>,
+  nodes: Pool<Entity>,
+  damageScale: number,
+  fullHealth: number,
+  flashSteps: number,
+  deaths: Deaths | null,
+  corridor: Corridor | null = null,
+): number {
+  if (heads.size === 0) return 0;
+  const head = heads.at(0);
+  if (head.invulnFor > 0) return 0;
+  for (let b = blasts.size - 1; b >= 0; b--) {
+    const blast = blasts.at(b);
+    if (blast.damage <= 0) continue;
+    if (!blastReaches(blast, head, corridor) && !blastReachesAny(blast, nodes, corridor)) continue;
+    const share = blast.bossShare * fullHealth;
+    head.health -= (share > blast.damage ? share : blast.damage) * damageScale;
+    if (head.health <= 0) {
+      killed(heads, 0, deaths);
+      return 1;
+    }
+    flash(head, flashSteps);
+  }
+  return 0;
+}
+
+/** Whether `blast` covers `target` and can see it — 0349's stone stops a blast. */
+function blastReaches(blast: Entity, target: Entity, corridor: Corridor | null): boolean {
+  return overlaps(blast, target, 1) && clearLine(corridor, blast.along, blast.across, target.along, target.across);
+}
+
+function blastReachesAny(blast: Entity, targets: Pool<Entity>, corridor: Corridor | null): boolean {
+  for (let t = 0; t < targets.size; t++) if (blastReaches(blast, targets.at(t), corridor)) return true;
+  return false;
+}
+
 /** What was collected this step, so a caller can decide what each one is worth. */
 export interface Collected {
   /** How many entries of `kind` are meaningful. Reset by the caller, never here. */
@@ -308,15 +360,13 @@ export interface Collected {
    * shell the face rather than the row.
    */
   face: number[];
-  /** How many rungs each one was worth — 0243. One for an authored pickup; a scattered piece's stack. */
-  stack: number[];
 }
 
 /** A log big enough for `capacity` collections in one step. Built once, at boot. */
 export function makeCollected(capacity: number): Collected {
   // @setup: one log, built when the world is composed and reused every step forever.
-  // @setup: the kinds, faces and stacks of one step's collections, sized once with the log.
-  return { count: 0, kind: new Array<number>(capacity).fill(0), face: new Array<number>(capacity).fill(0), stack: new Array<number>(capacity).fill(1) };
+  // @setup: the kinds and faces of one step's collections, sized once with the log.
+  return { count: 0, kind: new Array<number>(capacity).fill(0), face: new Array<number>(capacity).fill(0) };
 }
 
 /**
@@ -339,7 +389,6 @@ export function collectInto(pickups: Pool<Entity>, target: Entity, targetRadiusS
     if (out.count < out.kind.length) {
       out.kind[out.count] = pickup.kind;
       out.face[out.count] = pickup.face;
-      out.stack[out.count] = pickup.stack;
       out.count++;
     }
     pickups.releaseAt(i);

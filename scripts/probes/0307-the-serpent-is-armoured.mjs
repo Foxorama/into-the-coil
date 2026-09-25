@@ -76,8 +76,11 @@ export const PROBES = [
       and the lightning at twenty-two seconds from its best place — under 0260's forty, which this
       guard holds in the fight itself now that the arithmetic cannot describe an armoured boss.
     */
-    broke: 'the serpent at 540, where the lightning kills it in twenty-two seconds from its best place',
-    guard: 'flown at the cap on the tuned tier',
+    // ⚠️ Renamed by 0372, which flies the guard at the gun a player can carry to the first level's
+    // end — tier three — rather than the cap. 540 is still a 26-second fight there
+    // (`scripts/weigh-boss.mjs jormungandr --tier=3 --health=540`), so the break is unchanged.
+    broke: 'the serpent at 540, where the lightning a player can carry to it kills it in twenty-six seconds',
+    guard: 'flown at the most a player can carry to it on the tuned tier',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0322, which put the health at 1100 to pay for the ball's smaller appetite. And

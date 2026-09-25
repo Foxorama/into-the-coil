@@ -168,6 +168,11 @@ export interface Entity extends Body {
    */
   landIn: number;
   /**
+   * The share of a boss's full health a blast lands on it, when that is more than `damage` — 0372.
+   * Zero for everything else, and for a blast that is only ever flat.
+   */
+  bossShare: number;
+  /**
    * Which row this was spawned from, as an index into a list the COMPOSER owns.
    *
    * ⚠️ **Opaque here, on purpose.** `sim/` may import `brand` and nothing else (0015), so nothing in
@@ -380,16 +385,6 @@ export interface Entity extends Body {
   face: number;
   faceIn: number;
   /**
-   * How many rungs a pickup is worth — 0243. One for every authored pickup; a piece a death throws
-   * back carries every rung of its kind the death took, and shows a badge for it.
-   *
-   * ⚠️ **ONE PIECE PER KIND, NOT ONE PER RUNG**, from the fifth play-test: *"it's too hard to grab
-   * all the different powerups with all the different sequencing in the middle of a hail of
-   * bullets."* Eight pieces cycling their faces were eight decisions under fire; two pieces that hold
-   * the face the player just lost and say ×N are one each.
-   */
-  stack: number;
-  /**
    * Where a bolt STARTS, as an offset from where it lands — 0233. A link of chain lightning is an
    * entity at its landing point, drawn as a stroke from `along + fromAlong, across + fromAcross` to
    * `along, across`; keeping the start as an offset means the whole link rides the camera and
@@ -469,6 +464,7 @@ export function makeEntity(): Entity {
     radius: 0,
     health: 0,
     damage: 0,
+    bossShare: 0,
     spriteHit: 0,
     invulnFor: 0,
     flashFor: 0,
@@ -494,7 +490,6 @@ export function makeEntity(): Entity {
     sprayGap: 0,
     sprayAt: 0,
     face: 0,
-    stack: 1,
     faceIn: 0,
     fromAlong: 0,
     fromAcross: 0,
@@ -528,6 +523,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.radius = body.radius;
   e.health = body.health;
   e.damage = body.damage;
+  e.bossShare = 0;
   e.spriteHit = body.spriteHit;
   e.invulnFor = 0;
   e.flashFor = 0;
@@ -553,7 +549,6 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.sprayGap = 0;
   e.sprayAt = 0;
   e.face = 0;
-  e.stack = 1;
   e.faceIn = 0;
   e.fromAlong = 0;
   e.fromAcross = 0;

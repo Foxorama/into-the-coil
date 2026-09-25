@@ -87,13 +87,16 @@ export interface SpecialRow {
    */
   reach: number;
   /**
-   * Uses before it is spent, per pickup.
+   * The share of a boss's FULL health what it `becomes` lands on the boss, when that is more than
+   * the blast's own damage — `docs/decisions/0372-a-death-keeps-the-ladders.md`. Zero for a special
+   * that is only ever flat.
    *
-   * ⚠️ **Read by nothing today.** `docs/game.md` says a special is *"limited capacity"* and
-   * *"manual"*, which makes a charge count the one number the row cannot avoid having; what spends
-   * one is the arsenal's work. It is here rather than deferred because a row with no fields at all
-   * would make `SpecialRow` a type nobody could get wrong, and the point of the table is that
-   * adding a kind is forced to answer something.
+   * ⚠️ **On the special and not on the blast row**, because the pyre's rungs are the same blast and
+   * are not spent: what the player chose to throw is what is worth a share of the fight.
+   */
+  bossShare: number;
+  /**
+   * Uses granted each time `took` stocks it — an overflowing ladder, and the run's start.
    */
   charges: number;
   /**
@@ -121,16 +124,18 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   // The orbiting mark is the closest thing the art has to *half shield and half weapon*, which is
   // what `docs/game.md` calls this. It has no shot, so it could not have borrowed one.
-  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0, face: SPRITE.shieldOrb },
+  mines: { label: 'Mines', charges: 1, shot: null, becomes: null, reach: 0, bossShare: 0, face: SPRITE.shieldOrb },
   /**
    * The one the whole arsenal rule is named after — spent, not held.
    *
    * ⚠️ **`charges` is 2 and it was 3**, because the ask says so: *"the player starts with 2 and
-   * gains one per level cleared."* It is the number a run BEGINS with and the number a death goes
-   * back to — 0039's *"back to the ship's base weapon and starting special"*, which had nothing to
-   * cash until now.
+   * gains one per level cleared."* It is the number a run BEGINS with; 0372 took away the clear's.
+   *
+   * ⚠️ **A TWENTIETH OF A BOSS — 0372**: *"increase its damage so it does 5% of max boss health
+   * damage."* The larger of that and the blast's own six, so a small mid-boss is not hit softer
+   * than it was; a window (0255) still multiplies it, as it multiplies everything the player fires.
    */
-  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, face: SPRITE.bomb },
+  bomb: { label: 'Bomb', charges: 2, shot: 'bomb', becomes: 'blast', reach: 80, bossShare: 0.05, face: SPRITE.bomb },
 };
 
 /**

@@ -109,13 +109,14 @@ export const PROBES = [
     // the line says and not what this probe is about: a death must not leave the player holding
     // nothing. The break is the same edit against the new right-hand side.
     broke: 'a death emptying the arsenal instead of leaving the player what they were carrying',
-    guard: 'a death costs no charges at all, and a continue costs the banked ones',
+    // ⚠️ And renamed by 0372, which keeps the charges through a continue as well.
+    guard: 'neither a death nor a continue costs a charge',
     edit: {
       path: 'src/state/slices/run.ts',
-      // ⚠️ Re-anchored by 0256 and again by 0266: the line under the arsenal is the emptied ladder
-      // a death takes, which is what it was before 0256 made it a rung.
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
-      replace: '            arsenal: [],\n            upgrades: [],',
+      // ⚠️ Re-anchored by 0256, 0266 and 0372: the line under the arsenal is the ladder a death keeps
+      // now. The twelve-space indent is the `lifeLost` arm; `continued` has the same pair at eight.
+      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
+      replace: '            arsenal: [],\n            upgrades: state.upgrades,',
     },
   },
   {
@@ -145,20 +146,11 @@ export const PROBES = [
       replace: '    if ((w.intent.specials[slot] ?? 0) > 0) w.onSpecial(slot);',
     },
   },
-  {
-    decision: '0053',
-    suite: 'tests/bombs.test.ts',
-    // A level clear paying only the bomb. It reads as correct today, because the bomb is the only
-    // special anybody owns — and the second one arrives owning nothing.
-    broke: 'a level clear paying one named special rather than the arsenal',
-    guard: 'gains one per level cleared, for every special owned',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: "        arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.charges + 1 })),",
-      replace:
-        "        arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.kind === 'mines' ? entry.charges + 1 : entry.charges })),",
-    },
-  },
+  /*
+    ⚠️ `a level clear paying one named special rather than the arsenal` WAS HERE. 0372 took the
+    clear's charge away altogether, so there is no payment left to misdirect; the break against the
+    new rule — a clear that pays again — is in `scripts/probes/0372-a-death-keeps-the-ladders.mjs`.
+  */
   {
     decision: '0053',
     suite: 'tests/hud.browser.test.ts',

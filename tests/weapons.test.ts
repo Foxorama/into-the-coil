@@ -37,7 +37,7 @@ import {
 } from '../src/content/pickups.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { BOSSES } from '../src/content/bosses.ts';
+import { BOSSES, gunWeightOn } from '../src/content/bosses.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -254,12 +254,8 @@ describe('0233 — a weapon is a kind', () => {
       `docs/decisions/0256-a-pickup-keeps-the-count.md` amends 0233: the switch is kept and the
       missile ladder is untouched.
 
-      ⚠️ **THE DEATH HALF IS 0266's AND IT IS THE OPPOSITE OF WHAT IT WAS.** 0256 had a death cost
-      one rung and keep the gun, because it had deleted the scatter and there was nothing on the
-      field to recover a gun from. The scatter is back: a death takes the ladders and the kinds and
-      throws them where the ship died, so what is asserted below is that the ship is on its base gun
-      with an empty ladder and that `scatterUpgrades` has the whole of it —
-      `a death throws back one piece per kind` in `tests/stack.test.ts`.
+      ⚠️ **THE DEATH HALF IS 0372's**: a death keeps the switched gun and its whole ladder, so the
+      switch is never undone by anything but another pickup.
     */
     const full: UpgradeKind[] = [];
     for (let i = 0; i < UPGRADE_TIERS; i++) full.push('weapon');
@@ -279,20 +275,8 @@ describe('0233 — a weapon is a kind', () => {
     expect(fitted.kind).toBe('arc');
     expect(fitted.links, 'the switched gun is not resolved at the rung the count says').toBe(WEAPONS.arc.links[UPGRADE_TIERS]);
     state = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(state.run.weapon, 'a death left the switched gun on the ship, with nothing thrown to recover it from').toBe(
-      SHIPS.proof.weapon,
-    );
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'a death left rungs on the ladder').toBe(0);
-    /*
-      ⚠️ **AND THE SWITCHED GUN COMES BACK WITH THE PIECE, which is the half that makes the line
-      above fair.** A ×N weapon piece taken after this death climbs the ladder again in one event
-      and re-fits the gun it was thrown holding — the reducer's own arithmetic, asserted here rather
-      than left to the scatter's guard, because *the gun is recoverable* is the reason a death may
-      take it at all.
-    */
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc', count: UPGRADE_TIERS });
-    expect(state.run.weapon, 'the thrown piece did not re-fit the gun it was holding').toBe('arc');
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'the thrown piece did not hand the whole ladder back').toBe(UPGRADE_TIERS);
+    expect(state.run.weapon, 'a death put the base gun back on the ship').toBe('arc');
+    expect(tiersOf(state.run.upgrades, 'weapon'), 'a death took rungs off the ladder').toBe(UPGRADE_TIERS);
   });
 });
 
@@ -596,7 +580,11 @@ describe('0233 — the arc is chain lightning', () => {
     world.bossFullHealth = 500;
     boss.fireIn = NEVER;
     frame.step();
-    expect(boss.health, 'the boss did not take one strike per link').toBe(500 - world.weapon.links * world.weapon.damage);
+    // Each strike weighed by what the gun is worth on the fight's boss — 0372.
+    expect(boss.health, 'the boss did not take one strike per link').toBeCloseTo(
+      500 - world.weapon.links * world.weapon.damage * gunWeightOn(world.bossRow, 'arc'),
+      9,
+    );
     expect(world.bolts.size).toBe(world.weapon.links);
     const ends: [number, number][] = [];
     for (let i = 0; i < world.bolts.size; i++) {

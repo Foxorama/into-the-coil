@@ -86,7 +86,6 @@ import {
   landmarksFor,
   launchSpecial,
   respawn,
-  scatterUpgrades,
   takeShield,
   wearHull,
   type World,
@@ -237,15 +236,10 @@ export const CAPACITY = {
   bolts: 12,
   boss: 1,
   /*
-    ⚠️ **TWELVE, AND IT WAS EIGHT.** A death now throws every upgrade it took back onto the field
-    (`docs/decisions/0066-a-death-scatters-what-it-took.md`), on top of whatever the level had already
-    placed there — and a scatter one pickup short is a pickup the player watched themselves lose and
-    was never offered back. The four come out of the particle share, on the same terms as the shell,
-    the missiles and the bomb: a pickup is the opposite of a cosmetic.
-
-    ⚠️ It is not the arsenal's whole size and cannot be. A player carrying twenty upgrades scatters
-    twelve; `src/sim/pool.ts` drops rather than grows, and a pool sized for a run nobody has had would
-    be spending 0022's budget on a hypothetical.
+    ⚠️ **TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
+    `docs/decisions/0372-a-death-keeps-the-ladders.md` deleted. Left at twelve rather than taken back
+    down in the same change: a pool drops rather than grows, so shrinking it is its own measurement
+    of what a level and a mid-boss put on the field at once, and nothing in 0372 made one.
   */
   pickups: 12,
 };
@@ -916,10 +910,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),
-    // Its own stream per 0021, and NOT `burst`'s: what a death costs is which pieces the player can
-    // reach, so a fragment's direction must not be able to deal a different scatter — 0077.
-    scatterRng: makeRng('proof-scene').stream('scatter'),
-    // And what a mid-boss's death drops is a second concern, so a second stream — 0021, 0256, 0266.
+    // What a mid-boss's death drops is its own concern, so its own stream — 0021, 0256.
     dropRng: makeRng('proof-scene').stream('drop'),
     arcRng: makeRng('proof-scene').stream('arc'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
@@ -2653,25 +2644,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
     ⚠️ **Every charge in the arsenal, not every bomb.** `chargesOf` already totals the list for the
     readout, and using it says *what the ship was carrying goes up with it* — a rule a second special
-    inherits without anybody remembering to, on the same terms `levelCleared` grants each of them one.
+    inherits without anybody remembering to.
   */
   world.onWreck = (): void => {
     detonateArsenal(world, chargesOf(state.run.arsenal));
   };
 
   world.onDeath = (): void => {
-    /*
-      ⚠️ **BEFORE the reducer, because the reducer is what empties the list.** `lifeLost` clears the
-      upgrades (0039), so a scatter dispatched after it would throw nothing —
-      `docs/decisions/0066-a-death-scatters-what-it-took.md`. The ordering is real and unstatable in
-      `src/app/frame.ts`, so `tests/pickups.test.ts` drives the shell rather than the frame.
-
-      ⚠️ **On EVERY death, including the last one**, on the same terms `src/state/slices/run.ts` gives
-      for clearing the arsenal at zero lives: a rule with a hidden condition is a rule nobody can
-      read, and the condition would be *did the caller intend to keep playing*. Nothing collects them
-      on a run that is over, and the wreck is on screen under the overlay either way (0036).
-    */
-    scatterUpgrades(world, state.run.upgrades);
+    // Nothing is thrown: a death keeps the ladders — `docs/decisions/0372-a-death-keeps-the-ladders.md`.
     dispatch({ slice: 'run', type: 'lifeLost' });
     if (state.run.lives > 0) respawn(world);
   };
@@ -2713,7 +2693,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     launchSpecial(world, entry.kind);
   };
 
-  world.onPickup = (kind: PickupKind, face: number, stack: number): void => {
+  world.onPickup = (kind: PickupKind, face: number): void => {
     /*
       ⚠️ **`effectOf` and not `PICKUPS[kind].effect`, and the difference is the max-speed nerf.** A
       weapon pickup taken by a ship whose weapon can no longer grow reports itself as a `special`, so
@@ -2746,14 +2726,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `SPECIALS[kind].charges`, and a special already owned gains charges rather than a second
       trigger — `src/state/slices/run.ts` has that rule and it is not restated here.
 
-      ⚠️ **`WEAPON_OVERFLOW` COVERS BOTH WAYS OF GETTING HERE, AND THAT IS TRUE RATHER THAN GENERAL.**
-      Two things report `special`: the bomb pickup, and a weapon pickup taken by a ship whose weapon
-      is full — and both grant a bomb, so one constant answers both. **A SECOND special pickup breaks
-      that**, because this line would hand out a bomb for it. Left as one constant rather than a
-      lookup because `src/content/pickups.ts`'s table is what would force the question: a new kind
-      cannot be added without answering `effect`, and the row that answers `special` is the row that
-      has to say which one. Writing the branch now would be inventing a shape for content that does
-      not exist, which is what `src/content/ships.ts` refuses for the character roster.
+      ⚠️ **One way of getting here since 0372 took the bomb pickup off the field**: an upgrade
+      pickup of the kind already fitted, taken by a ship whose ladder is full. It is still a bomb for
+      every kind until the arsenal is typed, which is the next change on the same ask.
     */
     if (effect === 'special') dispatch({ slice: 'run', type: 'took', special: WEAPON_OVERFLOW });
     /*
@@ -2774,9 +2749,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's `effect: 'upgrade'` rows,
       and the reducer's action union fails to compile for a kind added there and not here.
     */
-    // And every rung it was worth — 0243: a scattered piece is one event carrying the stack.
-    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face), count: stack });
-    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face), count: stack });
+    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face) });
+    else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
   };
 
   /** The size the canvas was last fitted to, so a report of the same size does nothing. */

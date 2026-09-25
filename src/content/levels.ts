@@ -228,16 +228,18 @@ export interface PickupEntry {
  * `docs/decisions/0256-a-pickup-keeps-the-count.md`. Asked for, after the first play with the
  * mid-bosses in: *"weapons → 1 near the start of the level, 1 from the miniboss death; shields → 1
  * from the miniboss death; bombs → 1 from the miniboss death, 1 from the boss death."* A level
- * authors its upgrades and nothing else; the shield and the charge are earned in the fight halfway,
- * and the end boss's charge is the clear's own (`levelCleared` in `src/state/slices/run.ts`, 0053) —
- * a piece thrown 1.6 seconds before the level ends is a piece nobody reaches.
+ * authors its upgrades and nothing else; the shield is earned in the fight halfway.
+ *
+ * ⚠️ **A MISSILE WHERE THE BOMB WAS — `docs/decisions/0372-a-death-keeps-the-ladders.md`.** The
+ * bomb pickup is gone and so is the clear's charge, so the fight still throws three and the third
+ * is the ladder the level authors least of. A charge comes from overflowing a ladder now.
  *
  * ⚠️ **ONE LIST FOR EVERY MID-BOSS**, on 0083's argument for one budget for every level: a fight
  * that quietly dropped a second shield would be authoring a difficulty curve in the one file that
  * must not. The weapon piece turns the dial exactly as an authored one does (`dropPickups` in
  * `src/app/frame.ts`), so `weaponsOfferedBy` counts it.
  */
-export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'bomb'];
+export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'missile'];
 
 /**
  * How many weapon pickups a level puts on the field, counting the mid-boss's drop — which is what

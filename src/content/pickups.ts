@@ -74,13 +74,11 @@ import { MISSILES, MISSILE_KINDS, type GuidanceKind, type MissileKind, type Miss
  * the replacement, and there are no findable ones. 0082 has why that is survivable today and what
  * makes it not.
  *
- * ⚠️ **`bomb` is the third, and it is what the merge freed room for.** `docs/game.md` has *"more
- * specials, found during the run"*; `src/state/slices/run.ts` has carried a `took` action since 0039
- * with nothing that dispatches it; and
- * `docs/decisions/0053-the-bomb-is-the-first-thing-the-player-spends.md` left *how a player gets more
- * bombs* to level clears alone. One row closes all three.
+ * ⚠️ **`bomb` was a fourth, and `docs/decisions/0372-a-death-keeps-the-ladders.md` took it off the
+ * field**: *"remove the bomb power up."* A charge is earned by taking an upgrade the ladder has no
+ * room for, which is the only way into the arsenal after the starting two.
  */
-export const PICKUP_KINDS = ['weapon', 'missile', 'shield', 'bomb'] as const;
+export const PICKUP_KINDS = ['weapon', 'missile', 'shield'] as const;
 
 /** Derived from the list, so a pickup cannot exist in the union and be missing from the table. */
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -92,7 +90,7 @@ export type PickupKind = (typeof PICKUP_KINDS)[number];
  * not: these are not the same effect with a different parameter. Each is a different FIELD, cleared
  * by a different event, and no value of one produces another.
  *
- *   **upgrade**  an entry in a list on the ship. Lost on a death — 0039
+ *   **upgrade**  an entry in a list on the run. Kept through a death and a continue — 0372
  *   **shield**   armour on the LIFE. Spent by being hit, and gone with the ship that wore it
  *   **special**  charges in the arsenal. Spent by the player, and the only one they choose to use
  *
@@ -251,32 +249,6 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'One hit absorbed',
     effect: 'shield',
     faces: [SPRITE.pickupShield],
-  },
-  /**
-   * CHARGES FOR THE ARSENAL — the first pickup the player has to decide when to use.
-   *
-   * ⚠️ **It cashes three things that had been left open in three different places.** `docs/game.md`
-   * wants *"more specials, found during the run"*; `src/state/slices/run.ts` has carried a `took`
-   * action since 0039 with nothing that dispatches it; and 0053 left *how a player gets more bombs*
-   * to level clears alone. `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md`.
-   *
-   * ⚠️ **How many charges it grants is `src/content/specials.ts`'s answer, not this row's** — `took`
-   * reads `SPECIALS[kind].charges`, which is 2. So a bomb pickup is worth a level clear twice over,
-   * which is a play-test number and is written down as one in 0082.
-   */
-  bomb: {
-    sprite: SPRITE.pickupBomb,
-    spriteHit: SPRITE.pickupBomb,
-    radius: 2.2,
-    health: 1,
-    damage: 0,
-    label: 'Bomb',
-    // ⚠️ **Not *"two more charges"*, which is what this said first.** How many a pickup grants is
-    // `SPECIALS.bomb.charges`, and a hint that spells the number out is a second description of it —
-    // the day that row is tuned, the title screen goes on telling the player the old one.
-    hint: 'Charges to spend',
-    effect: 'special',
-    faces: [SPRITE.pickupBomb],
   },
 };
 

@@ -53,34 +53,16 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0243: the appended half is `rungs`, the count the pickup was worth.
       // ⚠️ Re-anchored by 0256: one arm again — a switch keeps the count — clamped at the cap.
       // ⚠️ Re-anchored by 0266, which put 0243's count back: the appended half is `rungs` again.
-      find: '      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;',
-      replace: '      const upgrades = state.upgrades.includes(action.upgrade) ? state.upgrades : [...state.upgrades, ...rungs];',
+      // ⚠️ Re-anchored by 0372, which took the count away with the scatter: one rung a pickup.
+      find: '      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;',
+      replace: '      const upgrades = room > 0 && !state.upgrades.includes(action.upgrade) ? [...state.upgrades, action.upgrade] : state.upgrades;',
     },
   },
-  {
-    decision: '0041',
-    suite: 'tests/run.test.ts',
-    // 0039's rule, now that there is a second field for it to be forgotten in. The line above is the
-    // arsenal, which is what makes this the plausible miss.
-    //
-    // ⚠️ RENAMED GUARD TWICE, and `npm run prove` is the only thing that could have said so.
-    // `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` inverted the assertion this points at
-    // and retitled it with the rule; `anchorFailures` cannot see that, because the probe's own anchor
-    // still resolves perfectly. `docs/decisions/0256-a-pickup-keeps-the-count.md` did it again: a
-    // death costs a RUNG now, so the break is a death that costs nothing at all. And 0266 renamed it
-    // once more, restoring the scatter and taking the rung away — the break is unchanged in kind
-    // throughout: a death that leaves the whole ladder on the ship.
-    broke: 'a death that leaves the whole ladder on the ship',
-    guard: 'a death takes both ladders and the kinds, and leaves the arsenal exactly where it was',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      // ⚠️ Anchored on the UPGRADES line rather than on the whole returned literal, which is what it
-      // was and what went stale the day 0053 turned the arm into a multi-line object. The twelve-space
-      // indent is the `lifeLost` arm; `begin` has the same field at eight.
-      find: '            upgrades: [],\n            // The base kinds come back',
-      replace: '            upgrades: state.upgrades,\n            // The base kinds come back',
-    },
-  },
+  /*
+    ⚠️ `a death that leaves the whole ladder on the ship` WAS HERE, and it is the rule now —
+    `docs/decisions/0372-a-death-keeps-the-ladders.md`. Its inverse, a death that takes them, is
+    `scripts/probes/0372-a-death-keeps-the-ladders.mjs`.
+  */
   {
     decision: '0041',
     suite: 'tests/pickups.test.ts',
@@ -111,8 +93,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0082, which cut six pickups to three. The temptation is unchanged and the
       // stakes are higher: with only three faces left, giving two of them one silhouette makes a
       // third of the game's pickups unreadable rather than a sixth.
-      find: '    sprite: SPRITE.pickupBomb,\n    spriteHit: SPRITE.pickupBomb,',
-      replace: '    sprite: SPRITE.pickupShield,\n    spriteHit: SPRITE.pickupShield,',
+      // ⚠️ Re-anchored by 0372, which took the bomb pickup away: the shield wears the weapon's face.
+      find: '    sprite: SPRITE.pickupShield,\n    spriteHit: SPRITE.pickupShield,',
+      replace: '    sprite: SPRITE.pickupWeapon,\n    spriteHit: SPRITE.pickupWeapon,',
     },
   },
 ];

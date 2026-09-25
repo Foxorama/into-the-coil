@@ -21,9 +21,9 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from 
 import { CUES, type CueKind } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { LEVELS, type LevelRow } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, weaponsOfferedBy, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
-import { weaponFor } from '../src/content/pickups.ts';
+import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
@@ -2181,7 +2181,7 @@ describe('0306 — the serpent coils in', () => {
 });
 
 describe('0307 — the serpent is armoured', () => {
-  it('flown at the cap on the tuned tier, no gun kills the serpent inside its floor from any place, and every phase gets eight volleys away', () => {
+  it('flown at the most a player can carry to it on the tuned tier, no gun kills the serpent inside its floor from any place, and every phase gets eight volleys away', () => {
     /*
       ⚠️ **0260's FLOOR, IN THE FIGHT RATHER THAN IN THE ARITHMETIC.** *"I think I only saw about 50%
       of their attacks before they died"* — so a real boss lasts forty seconds at max weapons on the
@@ -2208,20 +2208,34 @@ describe('0307 — the serpent is armoured', () => {
       quickest fight flew to **30 s**. Set just under that, on 0260's own pattern, so a hand tuning
       further down reddens it before it has cut another tenth. The eight volleys a phase are 0260's
       still, and untouched.
+
+      ⚠️ **AND IT IS FLOWN AT THE GUN THE PLAYER CAN HAVE HERE, NOT AT THE CAP — 0372.** This flew
+      tier four, which nobody carries to the first level's end: that level offers three weapon
+      pickups, two authored and the mid-boss's, and since 0372 a death neither takes one nor throws
+      one back, so three is the most there is. CLAUDE.md's *a quantity that rejects an option is
+      checked in the case it is applied to*. Asked: *"you can't have max tier lightning gun for the
+      level 1 serpent so is that even a problem?"* — and at tier three it still was: the arc's 1.5
+      took the quickest fight to 24 s, which is why the serpent authors the arc at 1 on its own row.
     */
     const FLOOR_SECONDS = 28;
     const row = BOSSES.jormungandr;
     const tuned = DIFFICULTIES.savior;
+    // Every weapon the run can have been offered by the end of the serpent's level, clamped at the cap.
+    const home = LEVEL_KINDS.findIndex((kind) => LEVELS[kind].boss === 'jormungandr');
+    let offered = 0;
+    for (let i = 0; i <= home; i++) offered += weaponsOfferedBy(LEVELS[LEVEL_KINDS[i]!]);
+    const tier = Math.min(UPGRADE_TIERS, offered);
+    expect(tier, 'the serpent is met at the cap, so flying the reachable tier changes nothing').toBeLessThan(UPGRADE_TIERS);
     for (const gun of WEAPON_KINDS) {
       let quickest: ReturnType<typeof flyFight> | null = null;
       for (const lane of [...LANES, 'boss' as const]) {
         for (const short of DISTANCES) {
-          const fight = flyFight('jormungandr', gun, { lane, short, cap: 240 });
+          const fight = flyFight('jormungandr', gun, { tier, lane, short, cap: 240 });
           if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
         }
       }
       expect(quickest, `the ${gun} never killed the serpent from any place, so this measured nothing`).not.toBeNull();
-      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at the cap on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
+      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at gun tier ${tier} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
       expect(
         quickest!.phaseAt.map((p) => p.phase),
         `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,

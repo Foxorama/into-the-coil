@@ -661,37 +661,7 @@ export const SPRITE_KINDS = [
     point at the top where this has an edge.
   */
   'pickupShield',
-  /*
-    ── THE BOMB PICKUP WEARS THE BOMB'S OWN SILHOUETTE ─────────────────────────────────────────────
-
-    ⚠️ **The same drawing as `bomb`, in the pickup ink and at the pickup's extent** — `src/render/bake.ts`
-    shares the path between the two cases, which is the only place in this table two kinds do that
-    outside the pyre's rungs. It is deliberate and it is the point: a player learns the notched disc
-    from the trigger strip before they ever find one lying about, so *the thing on the ground is the
-    thing on the button* needs no teaching at all.
-
-    ⚠️ **The INK is what makes it a pickup rather than a thrown bomb**, and that is the one channel
-    `docs/decisions/0024-the-accessibility-floor-is-settings.md` allows to carry role while shape
-    carries identity. The two are never on screen in the same place: a thrown bomb is leaving the ship
-    at speed and this holds station in the lane.
-
-    ⚠️ **The four faces this replaces were a pair-with-inverted-fill scheme** — a holed square against
-    a solid one, a solid hexagon against a holed one — and it lost its subject when 0082 merged the
-    four upgrades into one. There is no *other face* of anything any more.
-  */
-  'pickupBomb',
-  /*
-    ── THE BADGE A SCATTERED PIECE WEARS — 0243 ──────────────────────────────────────────────────
-
-    *"a single missile power up bubble with an x2/3/4 etc if they had multiple powerups, and same
-    for weapons."* A death throws one piece per kind now, carrying every rung it took, and the
-    count is a small bitmap blitted over the piece's corner (`paintStacks` in `src/render/scene.ts`)
-    — a disc in the pickup ink with the numeral cut out of it, so it is legible against the void by
-    the same rule as the shuriken's hole. Three, because a ladder is four rungs.
-  */
-  'stackTwo',
-  'stackThree',
-  'stackFour',
+  // `pickupBomb` stood here until 0372 took the bomb pickup off the field.
   /*
     ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
     two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
@@ -1583,11 +1553,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,
-  pickupBomb: 5.87,
-  // A badge: a little over half a pickup, so the numeral is a dozen pixels on the shipped screen. 0243.
-  stackTwo: 4.4,
-  stackThree: 4.4,
-  stackFour: 4.4,
   /*
     ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
     7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player
