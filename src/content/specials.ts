@@ -25,10 +25,9 @@ import { SPRITE } from './sprites.ts';
  * ⚠️ **`mines` WAS HERE, and 0373 deleted it.** It was a name held so the arsenal could be shown
  * holding two different things, and nothing ever fired it. The typed specials are that second thing.
  *
- * ⚠️ **Five of six.** The shield's void is the next change on the same ask
- * (`reports/the-arsenal-planned-2026-09-26.md`).
+ * ⚠️ **All six** (`reports/the-arsenal-planned-2026-09-26.md`); the shield's void is the last, 0377.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -90,6 +89,21 @@ export interface Storm {
   flicker: number;
   /** How long the flicker goes on renewing, in fixed steps. The picture of *"all across the screen."* */
   flickerSteps: number;
+}
+
+/**
+ * A rift: what the void missile opens where its fuse runs out — `docs/decisions/0377-the-void.md`.
+ * *"Creates a massive void zone that negates everything but your ship and bosses (does 10% max boss
+ * health damage) will also negate bullets and chunks of the labyrinth wall, basically everything,
+ * lasers fired by enemies will disappear into."*
+ */
+export interface Rift {
+  /** Its radius in world units: everything inside it but the ship and the boss is negated. */
+  radius: number;
+  /** How long it stays open, in fixed steps — negating everything that enters, for all of it. */
+  steps: number;
+  /** What it lands on a boss it reaches, as a share of the boss's full health, once. */
+  bossShare: number;
 }
 
 /**
@@ -167,6 +181,8 @@ export interface SpecialRow {
   storm: Storm | null;
   /** The whirlpool it opens ahead of the ship, or `null` — 0374. */
   whirl: Whirl | null;
+  /** The rift a thrown special opens in place of a blast, or `null` — 0377. */
+  rift: Rift | null;
   /**
    * Charges pushed onto the stack each time `took` stocks it — an overflowing ladder, and the run's
    * start. Each is one press of the trigger.
@@ -210,6 +226,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: null,
     storm: null,
     whirl: null,
+    rift: null,
     face: SPRITE.bomb,
   },
   /**
@@ -228,6 +245,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, tubes: { damage: 4, fuse: 2, pierce: 1 } },
     storm: null,
     whirl: null,
+    rift: null,
     face: SPRITE.pickupSeeker,
   },
   /**
@@ -246,6 +264,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, tubes: { damage: 3, fuse: 1, pierce: BLADE_EDGE } },
     storm: null,
     whirl: null,
+    rift: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
   },
@@ -269,6 +288,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: null,
     storm: { strikes: 6, chains: 2, reach: 45, damage: 12, bossShare: 0.05, flicker: 8, flickerSteps: 32 },
     whirl: null,
+    rift: null,
     face: SPRITE.pickupArc,
   },
   /**
@@ -296,7 +316,28 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       a body fits through.
     */
     whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.7, spin: 0.05, damage: 4, swell: 2.2 },
+    rift: null,
     face: SPRITE.pickupShuriken,
+  },
+  /**
+   * The shields' — *"if you cap shields, you get a void missile -> it flies forward and creates a
+   * massive void zone that negates everything but your ship and bosses (does 10% max boss health
+   * damage)."* On the tubes' trigger, because it is a missile. Thrown to the bomb's reach; the rift is
+   * seventy-two units across — most of the lane — and open for a second and a half.
+   */
+  voidMissile: {
+    label: 'Void',
+    side: 'tubes',
+    charges: 1,
+    shot: 'voidBall',
+    becomes: null,
+    reach: 80,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: { radius: 36, steps: 90, bossShare: 0.1 },
+    face: SPRITE.pickupShield,
   },
 };
 

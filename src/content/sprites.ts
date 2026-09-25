@@ -573,6 +573,10 @@ export const SPRITE_KINDS = [
   'bomb',
   // The storm's ball — 0374: a lit core in the ship's own ink with bolts flickering off it.
   'stormBall',
+  // The void missile and the rift it opens — 0377: a dark ball with a lit rim, and a dark disc
+  // ringed in the void's own ink, drawn at exactly the radius that negates.
+  'voidBall',
+  'riftZone',
   /*
     ⚠️ **A RING, drawn at exactly the radius that does the damage.** A blast whose picture is smaller
     than its reach kills things the player watched it miss; one whose picture is larger makes them
@@ -1515,6 +1519,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   bomb: 9,
   // The same body as the bomb, so the same extent — 0374.
   stormBall: 4.4,
+  // The void missile flies as the storm's ball does — 0377.
+  voidBall: 4.4,
+  // The rift is drawn at its diameter, which is the reach that negates — 0377, the blast's rule.
+  riftZone: 72,
   /*
     ⚠️ **Twice the blast's hurtbox radius, and `tests/bombs.test.ts` is what keeps it so.** It is the
     one extent in this table whose value is owed to another file — the number itself is on

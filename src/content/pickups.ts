@@ -148,6 +148,14 @@ export interface PickupRow extends Body {
    * 0052 always allowed: a player watching the faces turn is choosing a gun, not gambling a shield.
    */
   faces: readonly number[];
+  /**
+   * The special it becomes when it has nowhere to go and its face does not say which — 0377.
+   *
+   * *"Shields — if you cap shields, you get a void missile."* A capped weapon or tube spills into its
+   * FACE's own special (`overflowOf`), so those rows say `null`; the shield has one face and no ladder,
+   * so its spill is named here, on its row, and `takeShield` reads it rather than a branch in the shell.
+   */
+  spills: SpecialKind | null;
 }
 
 /**
@@ -202,6 +210,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     effect: 'upgrade',
     // Every gun, in the guns' own order — 0233. The title screen's key lists each face by name.
     faces: WEAPON_KINDS.map((k) => WEAPONS[k].pickup),
+    spills: null,
   },
   /**
    * THE MISSILES, AND EVERY REPEAT RAISES TUBES AND RATE TOGETHER.
@@ -226,6 +235,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'Tubes up a tier',
     effect: 'upgrade',
     faces: MISSILE_KINDS.map((k) => MISSILES[k].pickup),
+    spills: null,
   },
   /**
    * One more hit that never reaches the hull.
@@ -249,6 +259,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     hint: 'One hit absorbed',
     effect: 'shield',
     faces: [SPRITE.pickupShield],
+    spills: 'voidMissile',
   },
 };
 

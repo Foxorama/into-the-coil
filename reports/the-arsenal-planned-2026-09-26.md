@@ -80,7 +80,8 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
    shield is one; on Burn there are no shields and so no void. The zone negates everything but the
    ship and the boss — enemies, shots, the serpent's lightning columns — lands a tenth of a boss, and
    carves the stone it covers for good. **On the tubes' trigger** — it is *"a void missile"*, and
-   the ask names it as one. Landed after the rework.
+   the ask names it as one. Landed after the rework, as
+   [0377](../docs/decisions/0377-the-void.md).
 5. **The rework: a trigger for the gun and a trigger for the tubes** —
    [0376](../docs/decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md), landed before the
    void so the void had a trigger to go on.
@@ -88,5 +89,6 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
 ## Owed
 
 - A play of each on its branch preview, before the next is built.
+- The specials' own cues: the surges, the storm, the whirlpool and the void still borrow the bomb's.
 - 4.3's *"max power ups"* read as per ladder, as the overflow always has been; flagged in case it
   meant both ladders full.

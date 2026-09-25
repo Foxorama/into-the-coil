@@ -38,7 +38,9 @@ export interface Corridor {
   /**
    * Openings in the walls, three numbers each: world `from`, world `to`, and the side — −1 for the
    * near wall, +1 for the far one. Written in place and never grown, so the frame allocates nothing:
-   * the authored openings first, then a ring of the ones a flanking wave opens as it arrives.
+   * the authored openings first, then a ring of the ones a flanking wave opens as it arrives, then
+   * the stone a rift has carved away (0377) — openings like any other, so every stone query and the
+   * painter treat a carve as open without knowing it is one.
    */
   passages: Float64Array;
   /** How many of `passages` are authored, and which runtime slot a flank writes next. */

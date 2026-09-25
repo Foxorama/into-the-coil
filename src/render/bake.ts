@@ -608,6 +608,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   bomb: 'bullet',
   // The arc's ink, which is the ship's (0241): the storm is the arc's special — 0374.
   stormBall: 'player',
+  // The void's own ink is the enemy's void — 0377 takes the ally purple instead, so the player's rift is
+  // never read as the thing that eats their shots (0291).
+  voidBall: 'ally',
+  riftZone: 'ally',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
     blast hurts the player as well as everything else in it, so it is the one thing the ship fires
@@ -9397,6 +9401,27 @@ export function drawKind(
     // The storm's ball — 0374: a round hull in the ship's ink, lit from inside, with a glow round it
     // so it reads as charged rather than as a bigger pulse. Round where the bomb is notched, so the
     // two thrown things are told apart by shape and not by ink alone (0024).
+    // The void missile — 0377: a purple hull with a dark heart, which is what it opens into.
+    case 'voidBall': {
+      ctx.arc(half, half, r * 0.6, 0, Math.PI * 2);
+      seal(ctx);
+      disc(ctx, f, palette.space, 0, 0, 0.36);
+      glow(ctx, f, shade(palette.ally, 0.4), 0, 0, 0.6, 0.5);
+      return;
+    }
+    /*
+      The rift — 0377. Its hull is the whole disc at exactly the radius that negates (drawn to the edge
+      of its box, on the blast's own rule), and the inside is the dark it swallows into, with a glow at
+      the rim so the edge reads over any sky.
+    */
+    case 'riftZone': {
+      const edge = half - ctx.lineWidth / 2;
+      ctx.arc(half, half, edge, 0, Math.PI * 2);
+      seal(ctx);
+      billow(ctx, half, edge * 0.93, 0.05, 6, 0.8, palette.space, 0.82);
+      billow(ctx, half, edge * 0.55, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
+      return;
+    }
     case 'stormBall': {
       // ⚠️ A lit core, and it was glass first: the glass ink is dark, and the first photograph was a
       // hollow ring — the one thing a charged ball must not look like (`scripts/shot-sheet.mjs`).

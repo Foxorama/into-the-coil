@@ -353,15 +353,16 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     launchSpecial(world, 'hunt');
     expect(world.bombs.size, 'a surge threw something').toBe(0);
     // And since 0374 a thrown special may go off as a storm instead of a blast, and a whirlpool is
-    // opened rather than thrown: four shapes, and a row is exactly one of them.
+    // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
+    // which is thrown and opens where it lands: five.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge and a whirlpool`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool and a rift`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,
-      ).toBe(row.becomes !== null || row.storm !== null);
+      ).toBe(row.becomes !== null || row.storm !== null || row.rift !== null);
     }
   });
 

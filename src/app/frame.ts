@@ -54,7 +54,8 @@ import { type Body, type Entity, reset, stepEntities, turnFor } from '../sim/ent
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, flyShip, holdStation } from '../sim/flight.ts';
+// `SCROLL_PER_STEP` also sizes the rift's carve slots, which are allocated before any world exists — 0377.
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
 import {
   BURN_ASK,
   BURN_HALF,
@@ -90,13 +91,14 @@ import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
   PICKUP_REPEATS,
+  PICKUPS,
   type PickupKind,
   type PickupRow,
   type Weapon,
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { SPECIALS, SPECIAL_KINDS, pyreFor, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { SPECIALS, SPECIAL_KINDS, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -1853,6 +1855,9 @@ export class GameFrame implements Frame {
     */
     w.deaths.count = 0;
     w.bossDeaths.count = 0;
+    // An open rift before anything else lands, so what it negates never gets there — 0377. Its kills
+    // are in the log the deaths below are read from.
+    stepRift(w);
     // The stone first, so nothing it stopped goes on to land — 0349.
     stoneStops(w);
     /*
@@ -3248,14 +3253,28 @@ function askSpecials(w: World): void {
  */
 function stepBombs(w: World): void {
   if (w.throwIn > 0) w.throwIn--;
+  /*
+    ⚠️ **AND A THROWN SPECIAL THAT REACHES THE EDGE OF THE SCREEN GOES OFF THERE — 0377.** The pool
+    rides the player's-shot cull, so one thrown from the top of the box whose fuse outlasted the screen
+    was released at the edge and went off nowhere: a charge spent on nothing, since 0053, found when a
+    void's rift failed to open. Its fuse is cut to this step, so it goes off where it is and the pool
+    releases it exactly as it releases one whose fuse ran out.
+  */
+  const edge = cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan);
   for (let i = w.bombs.size - 1; i >= 0; i--) {
     const bomb = w.bombs.at(i);
+    if (bomb.lifeFor > 1 && bomb.along + bomb.velAlong >= edge) bomb.lifeFor = 1;
     if (bomb.lifeFor > 1) continue;
     // Which special this was — `launchSpecial` put it on the body — 0374.
     const row = SPECIALS[SPECIAL_KINDS[bomb.kind] ?? 'bomb'];
     // A storm where a bomb has a blast: bolts, not a ring — 0374.
     if (row.storm !== null) {
       unleashStorm(w, bomb.along, bomb.across, row.storm);
+      continue;
+    }
+    // And a rift where a void missile's fuse runs out — 0377.
+    if (row.rift !== null) {
+      openRift(w, bomb.along, bomb.across, row.rift);
       continue;
     }
     const becomes = row.becomes;
@@ -3278,6 +3297,146 @@ function stepBombs(w: World): void {
     */
     w.onCue('blast', bomb.across);
     burst(w, bomb.along, bomb.across, BURST.ship);
+  }
+}
+
+/*
+  ── THE RIFT — `docs/decisions/0377-the-void.md` ────────────────────────────────────────────────
+
+  *"Creates a massive void zone that negates everything but your ship and bosses (does 10% max boss
+  health damage) will also negate bullets and chunks of the labyrinth wall, basically everything,
+  lasers fired by enemies will disappear into."* Where the void missile's fuse runs out, a disc of
+  `radius` opens in the WORLD, for `steps`:
+    - every hostile shot inside it is gone, every step it is open;
+    - every body inside it dies, through the death log, so it bursts and is heard as any kill is;
+    - a boss's lightning — the serpent's columns, the beams — that crosses it is gone;
+    - the stone it covers is carved away for good, as openings the painter already leaves undrawn;
+    - a boss it reaches loses `bossShare` of its full health, once, as it opens.
+  The ship, the boss and the player's own fire are untouched: the first two by the ask, the last
+  because a rift that ate the player's shots would be a charge spent against the player's own gun.
+
+  ⚠️ **A RIFT IS ITS PICTURE — one entity in the blast pool, and what it negates is read off it.** It
+  was first four fields on the world beside a picture in the pool, and a second void thrown inside a
+  second and a half moved the fields while the first picture stayed on the screen negating nothing —
+  a void the player could see and fly shots through, which is 0036's bug made on purpose. As one body
+  the rift is open exactly while it is drawn, several may be open at once, and a lost life clears it
+  with the pool. It hurts nothing through the blast pairings because its damage is zero.
+*/
+
+/** A rift's kind in the blast pool, beside a bomb's explosion — its kind keeps it apart. */
+export const RIFT_KIND = 2;
+// @setup: one body, read by `reset` whenever a rift opens; the radius is the row's, set after.
+const RIFT_BODY = { sprite: SPRITE.riftZone, spriteHit: SPRITE.riftZone, radius: 0, health: 1, damage: 0 };
+
+/** Carve the stone a disc covers, a stretch per wall, into the corridor's own carve slots. */
+function carveStone(w: World, along: number, across: number, radius: number): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  const extent = corridor.extent;
+  const firstTile = Math.floor((along - radius - corridor.from) / extent);
+  const lastTile = Math.floor((along + radius - corridor.from) / extent);
+  for (let side = -1; side <= 1; side += 2) {
+    let runFrom = 0;
+    let runTo = -1;
+    for (let t = firstTile; t <= lastTile; t++) {
+      const a = corridor.from + t * extent;
+      const b = a + extent;
+      // The part of the tile nearest the centre, and how far the disc reaches across there.
+      const at = along < a ? a : along > b ? b : along;
+      const off = at - along;
+      const chord = off * off < radius * radius ? Math.sqrt(radius * radius - off * off) : -1;
+      if (chord < 0) continue;
+      const face = faceAt(corridor, at, side);
+      const covers = side < 0 ? across - chord < face : across + chord > face;
+      if (!covers) continue;
+      if (runTo < runFrom) runFrom = a;
+      runTo = b;
+    }
+    if (runTo < runFrom) continue;
+    /*
+      ⚠️ **INTO THE SLOT WHOSE CARVE ENDS FURTHEST BACK, never round a ring.** A ring closes its
+      oldest carve whatever it is doing, and since 0372 keeps every charge a player can bank a salvo of
+      voids and throw it at one wall. The world only scrolls forward, so the carve that ends furthest
+      back is the one behind the camera first — an empty slot ends at −1 and goes before any of them.
+    */
+    let slot = 0;
+    let lowest = Number.POSITIVE_INFINITY;
+    for (let k = 0; k < CARVE_PASSAGES; k++) {
+      const s = (corridor.fixed + RUNTIME_PASSAGES + k) * 3;
+      if (corridor.passages[s + 1]! < lowest) {
+        lowest = corridor.passages[s + 1]!;
+        slot = s;
+      }
+    }
+    corridor.passages[slot] = runFrom;
+    corridor.passages[slot + 1] = runTo;
+    corridor.passages[slot + 2] = side;
+  }
+}
+
+/**
+ * A rift opening at `(along, across)`: the body that is both the rift and its picture, the boss's
+ * share, the stone. With no room in the pool it does not open at all, stone and share included —
+ * `CAPACITY.blasts` in `src/app/mount.ts` is sized so a salvo never meets that, and a guard holds it.
+ */
+function openRift(w: World, along: number, across: number, rift: Rift): void {
+  const body = w.blasts.spawn();
+  if (body === null) return;
+  reset(body, along, across, RIFT_BODY, RIFT_KIND);
+  body.radius = rift.radius;
+  body.lifeFor = rift.steps;
+  w.onCue('blast', across);
+  carveStone(w, along, across, rift.radius);
+  // The boss's share, once, if the rift reaches its head or any part of its body — 0372's shape.
+  if (w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
+    const head = w.bossPool.at(0);
+    let reaches = inRift(body, head, head.radius);
+    for (let i = 0; !reaches && i < w.bossBody.size; i++) reaches = inRift(body, w.bossBody.at(i), w.bossBody.at(i).radius);
+    if (reaches && head.invulnFor <= 0) {
+      const open = openBy(phaseFor(w.bossRow, head.health, w.bossFullHealth));
+      strike(w.bossPool, 0, rift.bossShare * w.bossFullHealth * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+    }
+  }
+}
+
+/** Whether a body of `reach` at its place overlaps `rift`. */
+function inRift(rift: Entity, e: Entity, reach: number): boolean {
+  const dAlong = e.along - rift.along;
+  const dAcross = e.across - rift.across;
+  const r = rift.radius + reach;
+  return dAlong * dAlong + dAcross * dAcross < r * r;
+}
+
+/** Every open rift negating what is inside it, every step it is open. */
+function stepRift(w: World): void {
+  for (let k = 0; k < w.blasts.size; k++) {
+    const rift = w.blasts.at(k);
+    if (rift.kind !== RIFT_KIND) continue;
+    for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+      const shot = w.enemyShots.at(i);
+      if (inRift(rift, shot, shot.radius)) w.enemyShots.releaseAt(i);
+    }
+    // Through the kill log, so a body the rift takes bursts and is heard like any other kill.
+    for (let i = w.enemies.size - 1; i >= 0; i--) {
+      const body = w.enemies.at(i);
+      if (inRift(rift, body, body.radius)) strike(w.enemies, i, body.health + 1, IMPACT_FLASH_STEPS, w.deaths);
+    }
+    // A boss's lightning that crosses it: a column spans the lane, so only its place along matters;
+    // a beam runs from its point back to the hull at one across. The player's own bolts are neither.
+    for (let i = w.bolts.size - 1; i >= 0; i--) {
+      const bolt = w.bolts.at(i);
+      if (bolt.kind === RAIN_BOLT_KIND) {
+        if (Math.abs(bolt.along - rift.along) <= rift.radius + bolt.radius) w.bolts.releaseAt(i);
+      } else if (bolt.kind === BEAM_BOLT_KIND) {
+        const lo = bolt.fromAlong < 0 ? bolt.along + bolt.fromAlong : bolt.along;
+        const hi = bolt.fromAlong < 0 ? bolt.along : bolt.along + bolt.fromAlong;
+        const nearest = rift.along < lo ? lo : rift.along > hi ? hi : rift.along;
+        const dAlong = nearest - rift.along;
+        const dAcross = bolt.across - rift.across;
+        const r = rift.radius + bolt.radius;
+        if (dAlong * dAlong + dAcross * dAcross < r * r) w.bolts.releaseAt(i);
+      }
+    }
   }
 }
 
@@ -5172,7 +5331,8 @@ function openPassage(w: World, first: number, last: number, radius: number, side
   corridor.passages[slot] = first + Math.min(0, drift) - radius - PASSAGE_CLEARANCE;
   corridor.passages[slot + 1] = last + Math.max(0, drift) + radius + PASSAGE_CLEARANCE;
   corridor.passages[slot + 2] = side;
-  corridor.next = (corridor.next + 1) % ((corridor.passages.length / 3) - corridor.fixed);
+  // Its own ring of `RUNTIME_PASSAGES`, and never the carves after it — 0377: a carve is for good.
+  corridor.next = (corridor.next + 1) % RUNTIME_PASSAGES;
 }
 
 /**
@@ -6270,9 +6430,16 @@ function carries(w: World, kind: PickupKind): boolean {
  * ⚠️ **Here rather than in `src/app/mount.ts`, where it lived as a `Math.min` beside the pickup's
  * dispatch** — 0355. A shield is armour on the SHIP and the ship is this file's, and the cap is now
  * the tier's (`fullHealthFor`), which a guard has to be able to drive on every tier without a DOM.
+ *
+ * ⚠️ **AND AT A FULL SHELL IT SPILLS — 0377.** *"If you cap shields, you get a void missile."* It
+ * returns the shield row's `spills` for the shell to hand to the run as a charge, and `null` when the
+ * shield went on the ship — the same routing a capped ladder's `overflowOf` gives the shell.
  */
-export function takeShield(w: World): void {
-  w.ship.health = Math.min(w.ship.health + 1, fullHealthFor(w.shipRow, w.difficulty));
+export function takeShield(w: World): SpecialKind | null {
+  const full = fullHealthFor(w.shipRow, w.difficulty);
+  if (w.ship.health >= full) return PICKUPS.shield.spills;
+  w.ship.health = Math.min(w.ship.health + 1, full);
+  return null;
 }
 
 /**
@@ -8315,6 +8482,32 @@ export function startLevel(w: World, level: LevelRow): void {
 const RUNTIME_PASSAGES = 16;
 
 /**
+ * Stone a rift has carved away, for good — 0377: *"will also negate … chunks of the labyrinth wall."*
+ * Slots after the flank ring, never written by it, so a carve stays open for the rest of the level.
+ * A rift carves at most one stretch per wall, and `carveStone` only ever reuses the slot whose carve
+ * ends furthest back — so a carve closes only once this many newer ones stand in front of it.
+ *
+ * ⚠️ **DERIVED FROM HOW LONG A CARVE IS ON THE SCREEN, and it was a guess twice.** Eight was *four
+ * rifts a level*, a level's pickups — but since 0372 a player banks every charge and can empty a
+ * salvo at one wall, and eight grows stone back on the screen. Twenty-four was the next guess and
+ * holds for a salvo at one wall; nothing measured it against a rift that carves both. The count
+ * here is the bound instead: a carve reaches at most `PLAYER_LEAD` + a rift's reach + its radius
+ * ahead of the camera, is on the screen until the camera passes that, and one throw lands per
+ * `THROW_GAP_STEPS` meanwhile — two walls each. `tests/void.test.ts` flies the one-wall salvo from
+ * both ends of the box on the widest screen.
+ */
+function carvesOnScreen(): number {
+  let deepest = 0;
+  // @setup: once, at load — the content's deepest rift.
+  for (const kind of SPECIAL_KINDS) {
+    const row = SPECIALS[kind];
+    if (row.rift !== null) deepest = Math.max(deepest, row.reach + row.rift.radius);
+  }
+  return 2 * Math.ceil((PLAYER_LEAD + deepest) / (SCROLL_PER_STEP * THROW_GAP_STEPS));
+}
+export const CARVE_PASSAGES = carvesOnScreen();
+
+/**
  * The corridor a level is flown down, in world positions, or `null` — 0348. A level boundary, never a
  * frame: this allocates the passages array once, and the frame writes into it.
  *
@@ -8330,15 +8523,15 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
   const room = BOSSES[level.boss].room;
   const to = room === null ? origin + level.bossAt + PLAYER_LEAD : origin + level.bossAt - room.stand - room.mouth;
   // @setup: a level boundary — one array for the level, written in place from here on.
-  const passages = new Float64Array((row.passages.length + RUNTIME_PASSAGES) * 3);
+  const passages = new Float64Array((row.passages.length + RUNTIME_PASSAGES + CARVE_PASSAGES) * 3);
   for (let i = 0; i < row.passages.length; i++) {
     const p = row.passages[i]!;
     passages[i * 3] = origin + p.at;
     passages[i * 3 + 1] = origin + p.at + p.length;
     passages[i * 3 + 2] = p.side;
   }
-  // The runtime slots start empty: an opening that ends before it begins matches no tile.
-  for (let i = row.passages.length; i < row.passages.length + RUNTIME_PASSAGES; i++) {
+  // The runtime slots and the carves start empty: an opening that ends before it begins matches no tile.
+  for (let i = row.passages.length; i < row.passages.length + RUNTIME_PASSAGES + CARVE_PASSAGES; i++) {
     passages[i * 3] = 0;
     passages[i * 3 + 1] = -1;
   }
