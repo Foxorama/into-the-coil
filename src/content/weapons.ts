@@ -97,8 +97,7 @@ export interface WeaponRow {
   bossWeight: number;
   /**
    * What a pickup of this gun buys once its ladder is full — `docs/decisions/0373-a-special-is-the-guns-own.md`.
-   * *"It increases your bomb count for that weapon/missile type."* Every row authors it; the arc's
-   * and the shuriken's are the bomb until their own specials land.
+   * *"It increases your bomb count for that weapon/missile type."* Every row authors it — 0373, 0374.
    */
   special: SpecialKind;
   /**
@@ -228,8 +227,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     weight: [1, 1, 1, 2, 2],
     // *"lightning needs to do a bit more damage on bosses, it's currently too slow"* — 0372.
     bossWeight: 1.5,
-    // The bomb until the lightning blast lands — the next change on 0373's ask.
-    special: 'bomb',
+    // The lightning blast — 0374.
+    special: 'storm',
     /*
       A sixth further at every rung — 0236's ladder. `tests/guns-played.test.ts` holds the CLIMB,
       never the numbers.
@@ -353,8 +352,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     bossWeight: 1,
-    // The bomb until the whirlpool lands — the next change on 0373's ask.
-    special: 'bomb',
+    // The whirlpool — 0374.
+    special: 'whirlpool',
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     /*

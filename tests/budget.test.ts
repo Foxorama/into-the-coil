@@ -85,8 +85,13 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * ⚠️ **AND 560 SINCE 0364, ON THE PLAYER-PROJECTILE LINE.** The view zoomed out and the widest one
  * went from 240 units to 288, so a shot on a 21:9 monitor is in flight a fifth longer and the pool
  * that holds a fully loaded gun grew 88 → 106 to keep its headroom. Nothing else was re-sliced.
+ *
+ * ⚠️ **AND 614 SINCE 0374, ON THE PLAYER-PROJECTILE LINE AGAIN.** Two specials the ask named: a
+ * storm's thirty bolts (six strikes, twelve chains and a renewing flicker) and a whirlpool's
+ * twenty-four blades. Both are the player's own fire on the one moment they spend a charge, on a
+ * desktop target — thirty strokes and twenty-four blits. The particle share was not touched.
  */
-const WORST_CASE = 560;
+const WORST_CASE = 614;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

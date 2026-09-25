@@ -120,8 +120,9 @@ export const PROBES = [
     guard: 'and is drawn under every shot',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust,',
-      replace: 'debris, enemyShots, playerShots, missiles, bombs, bolts, aura, exhaust,',
+      // ⚠️ Re-anchored by 0374, which put the whirlpool in the order beside the shots.
+      find: 'debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust,',
+      replace: 'debris, enemyShots, playerShots, whirl, missiles, bombs, bolts, aura, exhaust,',
     },
   },
   {
