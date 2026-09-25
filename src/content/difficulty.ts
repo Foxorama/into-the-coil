@@ -388,7 +388,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   legendary: {
     title: 'Legendary Pilot',
-    hint: 'The gentlest way in',
+    // What is different, in the player's words — *"no explanations for the different difficulties"*.
+    // The lives and the shields are said by `factsOf`, from the numbers below; this is the rest.
+    hint: 'Slower enemies and bullets, wide corridors',
     lives: 5,
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
@@ -427,7 +429,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    */
   burn: {
     title: 'Let the Galaxy Burn',
-    hint: 'It is not meant to be survived',
+    hint: 'Tougher, faster enemies, tight corridors',
     lives: 2,
     // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
     shellOpen: 0,
@@ -437,6 +439,25 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     corridor: { narrowest: 34, slope: 0.58 },
   },
 };
+
+/**
+ * What a tier gives the player, in a line — its lives and its shields, read off the row.
+ *
+ * ⚠️ **SAID FROM THE NUMBERS, NEVER WRITTEN BESIDE THEM.** Asked for: *"no explanations for the
+ * different difficulties."* A sentence typed next to `lives: 5` is a second description of it, and the
+ * day a tier gains a life the button would go on saying the old number. The row's `hint` carries what
+ * is not a count.
+ */
+export function factsOf(row: DifficultyRow): string {
+  const lives = `${row.lives} ${row.lives === 1 ? 'life' : 'lives'}`;
+  const shields =
+    row.shellOpen > 0
+      ? `${row.shellOpen} ${row.shellOpen === 1 ? 'shield' : 'shields'} every level`
+      : row.shellCap > 0
+        ? 'shields to find'
+        : 'no shields';
+  return `${lives} · ${shields}`;
+}
 
 /**
  * The content exactly as authored: every multiplier 1, and a life that opens on the hull.

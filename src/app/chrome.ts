@@ -637,13 +637,16 @@ ${each('-action')} {
   running on after it — three tiers whose names wrap into each other is a choice nobody can read at a
   glance, and the choice is the whole screen.
 */
-.itc-title-action-hint, .itc-music-action-hint {
+.itc-title-action-hint, .itc-music-action-hint, .itc-title-action-detail {
   display: block;
-  font-size: 0.62em;
+  /* A floor, so the smallest phone's card does not set its explanation at eight pixels — 0370. */
+  font-size: max(0.62em, 0.7rem);
   font-weight: 400;
   opacity: 0.72;
   margin-top: 0.3em;
 }
+/* The facts line reads as the plainer of the two: the counts a player compares tiers by. 0370. */
+.itc-title-action-detail { font-weight: 600; opacity: 0.9; margin-top: 0.15em; }
 /*
   The tiers are a column and they are wider than a one-word button, so they get a shared width. The
   order is the table's order, which is easiest first — see decision 0047.
@@ -993,36 +996,94 @@ ${each('-action-cursor')} {
 .itc-playing-trigger-icon { display: block; width: 1.8em; height: 1.8em; }
 @container (max-height: 460px) {
   /*
-    Two columns for four controls, on the same argument the music room's three make below: a wrap
-    decided by a ch width is decided by the runner's font, and this one only passed CI by luck.
+    ── THE TITLE ON A PHONE: THREE ROWS ACROSS THE LONG AXIS — 0370 ─────────────────────────────
+
+    Asked for: *"it's all squished in and has no explanations for the different difficulties … needs
+    to be completely redesigned for mobile devices so it's a good mobile menu."* The two columns put
+    the seven-line key beside four stacked buttons, so the short axis carried the taller of two lists
+    and the tiers lost their hints to fit. Here every list runs ACROSS instead, which is the axis a
+    landscape phone has to spare:
+
+    the tiers are three cards side by side with the music room beside them, each card saying what it
+    is and what it gives; the key is one row of seven, each pickup a column of its icon, its name and
+    what it does; the settings are a row of buttons big enough for a thumb.
+
+    ⚠️ **THE HINTS STAY ON EVERY DEVICE NOW**, and this block used to take them away: that was the
+    report. A card is wide and short, where a stacked button was narrow and tall, so the two lines
+    under a name cost width, which is what a phone has.
+
+    ⚠️ **Rows by grid-row and not by DOM order.** The body is built key-column, choices, settings, and
+    the desktop reads it that way; the phone wants the choices first, and a second DOM for one layout
+    would be a second description of the screen.
   */
-  .itc-title-choices {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: min(0.6rem, 2cqh) min(0.6rem, 1.5cqw);
-    max-width: min(100%, 64ch);
+  .itc-title-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: min(0.9rem, 3cqh);
   }
-  .itc-title-action { width: 100%; }
+  .itc-title-choices {
+    grid-row: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    align-items: stretch;
+    gap: min(0.6rem, 1.5cqw);
+    width: 100%;
+  }
   /*
-    The wrap alone left the settings row 8px off a 480x320 and 2px off a 667x375 — measured, not
-    guessed. The panel's own gap and the heading are the two things above it with any give, and both
-    are already authored against the short axis, so tightening them here is the same argument one
-    step further rather than a new one.
+    A card's lines start at its top, so the three names sit on one line across the row whatever each
+    card has under it — centred, the name moved with the length of its hint.
+  */
+  .itc-title-action {
+    width: 100%;
+    padding: 0.5em 0.6em;
+    line-height: 1.15;
+    /*
+      Sized by the WIDTH as well as the height, because a card is a quarter of the row: at the
+      panel's height-only size a 480-wide phone set *Let the Galaxy Burn* on three lines. The floor is
+      the panel's own, so no phone gets smaller type than the desktop's smallest.
+    */
+    font-size: clamp(0.8rem, min(2.9cqw, 5.4cqh), 1.25rem);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  /* The music room has no lines under its name, so its one word sits in the middle of its card. */
+  .itc-title-choices > :last-child { justify-content: center; }
+  .itc-title-column { grid-row: 2; }
+  .itc-title-settings-box { grid-row: 3; }
+  /*
+    The key as one row of seven: its icon, name and hint are siblings in the flat order the builder
+    writes them, so flowing the grid down three rows and then across puts each pickup in a column of
+    its own, with no change to the DOM the desktop reads as three columns.
+  */
+  .itc-title-key {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-template-rows: auto auto auto;
+    grid-auto-columns: minmax(0, 1fr);
+    justify-items: center;
+    align-items: start;
+    width: 100%;
+    gap: 0.15em 0.6em;
+    line-height: 1.2;
+    /* Quieter than the cards: it is the thing read once, and the cards are the thing chosen. */
+    font-size: clamp(0.65rem, min(1.9cqw, 3.4cqh), 0.85rem);
+  }
+  .itc-title-key-name, .itc-title-key-hint { text-align: center; }
+  /* A thumb's worth of button, where the desktop's are a pointer's. */
+  .itc-title-settings { font-size: clamp(0.75rem, min(2.4cqw, 4cqh), 0.95rem); }
+  /*
+    Tall for a thumb, and only as wide as the row allows: the width is what wrapped the three settings
+    onto two lines at 480 wide, and a second line is forty pixels of a 320-pixel screen.
+  */
+  .itc-title-option { padding: 0.4em min(0.9em, 1.4cqw); }
+  .itc-title-settings-box { gap: 0.35em min(1.2em, 2.5cqw); }
+  /*
+    The panel's own gap and the heading are the two things above the rows with any give, and both are
+    already authored against the short axis, so tightening them here is the same argument one step
+    further rather than a new one.
   */
   .itc-title-panel { gap: min(0.6rem, 1.6cqh); }
-  /*
-    ⚠️ **THE TIER HINTS GO, AND IT BUYS FORTY PIXELS WHERE FOURTEEN WERE NEEDED.** That margin is the
-    point: CI failed here by 14px while this machine passed, because the runner resolves a wider font
-    and the same layout comes out taller. Shaving exactly 14px would have been tuning to a font I
-    cannot see, and the next round would have been another 4-minute CI run to find out.
-
-    ⚠️ **The LABEL is the choice and the hint is elaboration**, which is what makes this a responsive
-    adaptation rather than a loss: *Legendary Pilot* still says which tier it is. The product definition's voice
-    rule — say the one thing and stop — points the same way on the one screen with no room for the
-    second thing. The hints are still in the table, still read by the tests that hold every tier says
-    what it is, and still shown on every device with the height for them.
-  */
-  .itc-title-action-hint { display: none; }
   /*
     ⚠️ **THE HEADING IS DELIBERATELY NOT OVERRIDDEN HERE, AND IT WAS AT FIRST.**
     docs/decisions/0049 has a probe that breaks the heading's own rule — typesetting it at a fixed
@@ -2004,6 +2065,13 @@ export function makeChrome(
         hint.className = prefix + 'action-hint';
         hint.textContent = action.hint;
         control.appendChild(hint);
+      }
+      // The facts line — a tier's lives and shields, 0370 — inside the button for the hint's reason.
+      if (action.detail !== undefined) {
+        const detail = document.createElement('span');
+        detail.className = prefix + 'action-detail';
+        detail.textContent = action.detail;
+        control.appendChild(detail);
       }
       const onClick = (): void => onAction(screen, index);
       control.addEventListener('click', onClick);

@@ -301,6 +301,43 @@ describe.runIf(chromePath)('every screen fits the screen it is drawn on', () => 
   });
 });
 
+describe.runIf(chromePath)('0370 — the tiers explain themselves on every screen', () => {
+  it('THE REPORTED ONE: every tier shows what it is and what it gives, readably, on every device', async () => {
+    /*
+      Asked for from a phone: *"it's all squished in and has no explanations for the different
+      difficulties."* The short-screen rule took the tiers' hints away to fit, so on every phone the
+      choice was three names and nothing else. Held in pixels: on every device in the list, each tier's
+      hint and its facts line are drawn, whole on the display, and at eleven pixels or more — the
+      floor under a line a player reads to decide something.
+    */
+    for (const viewport of VIEWPORTS) {
+      const page = await open(viewport);
+      const lines = await page.evaluate((p: string) => {
+        return [...document.querySelectorAll<HTMLElement>('.' + p + 'action')].flatMap((control) =>
+          [...control.querySelectorAll<HTMLElement>('.' + p + 'action-hint, .' + p + 'action-detail')].map((line) => {
+            const r = line.getBoundingClientRect();
+            return {
+              tier: control.firstChild?.textContent ?? '',
+              text: line.textContent ?? '',
+              shown: getComputedStyle(line).display !== 'none' && r.width > 0 && r.height > 0,
+              inside: r.left >= -0.5 && r.top >= -0.5 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5,
+              px: parseFloat(getComputedStyle(line).fontSize),
+            };
+          }),
+        );
+      }, prefixFor('title'));
+      expect(lines.length, `${viewport.what}: no tier carries a hint or a facts line`).toBeGreaterThanOrEqual(6);
+      for (const line of lines) {
+        const at = `${viewport.what}, ${line.tier}: "${line.text}"`;
+        expect(line.shown, `${at} is not drawn`).toBe(true);
+        expect(line.inside, `${at} is off the display`).toBe(true);
+        expect(line.px, `${at} is set at ${line.px}px`).toBeGreaterThanOrEqual(11);
+      }
+      await page.context().close();
+    }
+  });
+});
+
 describe.runIf(chromePath)('a screen that cannot fit stays reachable', () => {
   it('keeps its first line on the display and its last control one scroll away', async () => {
     /*
@@ -381,10 +418,21 @@ describe.runIf(chromePath)('a screen that cannot fit stays reachable', () => {
       )
       .catch(() => undefined);
 
+    /*
+      ⚠️ **THE LOWEST CONTROL ON THE PAGE, NOT THE LAST ONE IN THE LIST — and it was the last action
+      until 0370.** The claim is that the far end of the screen is one scroll away, and while the
+      tiers and the music room were a column that ended the panel, the last action was the lowest
+      thing on it. The phone layout lays the actions across the top row and puts the settings under
+      everything, so the last action is near the top and the far end is a setting: read by position,
+      the guard keeps asking about the far end whatever the layout puts there.
+    */
     const reached = await page.evaluate((p: string) => {
       const root = document.querySelector('.' + p.slice(0, -1));
-      const controls = [...document.querySelectorAll('.' + p + 'action')];
-      const last = controls[controls.length - 1];
+      const controls = [...document.querySelectorAll<HTMLElement>('.' + p + 'action, .' + p + 'option')];
+      const last = controls.reduce<HTMLElement | undefined>(
+        (low, c) => (low === undefined || c.getBoundingClientRect().bottom > low.getBoundingClientRect().bottom ? c : low),
+        undefined,
+      );
       if (!(root instanceof HTMLElement) || !(last instanceof HTMLElement)) return null;
       const r = last.getBoundingClientRect();
       const hit = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
