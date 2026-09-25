@@ -629,6 +629,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   blastHalf: 'hazard',
   blastWide: 'hazard',
   blastWidest: 'hazard',
+  // The explosion's later frames are the blast's, so its ink — 0375.
+  blastFire: 'hazard',
+  blastSmoke: 'hazard',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
   // the hull, and a shell drawn in the pickup ink would read as something to fly into.
   shieldOrb: 'player',
@@ -1023,6 +1026,32 @@ function glow(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: 
   ctx.beginPath();
   ring(ctx, f, x, y, radius);
   ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * A filled billow about the sprite's centre, in PIXELS: a circle whose edge rolls in and out by
+ * `wobble` of its radius over `lobes` lumps, never past `outer` — 0375's explosion. A sum of two sines
+ * rather than a jitter, so it needs no stream and is the same billow on every bake. Translucent,
+ * because fire is light and not body (0227).
+ */
+function billow(ctx: Pen, centre: number, outer: number, wobble: number, lobes: number, phase: number, colour: string, alpha: number): void {
+  const base = outer / (1 + wobble);
+  ctx.globalAlpha = Math.min(alpha, 0.85);
+  ctx.fillStyle = colour;
+  ctx.beginPath();
+  const points = 72;
+  for (let i = 0; i <= points; i++) {
+    const a = (i / points) * Math.PI * 2;
+    const roll = 0.6 * Math.sin(lobes * a + phase) + 0.4 * Math.sin((lobes * 2 + 1) * a + phase * 1.7);
+    const reach = base * (1 + wobble * roll);
+    const x = centre + Math.cos(a) * reach;
+    const y = centre + Math.sin(a) * reach;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
   ctx.globalAlpha = 1;
 }
 
@@ -9401,49 +9430,78 @@ export function drawKind(
     // What leaves the ship. It shared this drawing with `pickupBomb` until 0372 removed the pickup.
     case 'bomb': {
       /*
-        A disc with a spike at the TOP — a bomb with a fuse. The spike is what stops it reading as a
-        large pulse at twenty pixels: the lesson the lancer's silhouette cost, applied to the player's
-        own side of the screen.
+        ── A LARGE FORWARD-FIRING MISSILE — `docs/decisions/0375-the-bomb-is-a-missile.md` ─────────
 
-        ⚠️ **A quarter turn from where it was, and it moves the THROWN bomb as well as the pickup.**
-        The spike used to trail at -x, which is a fin on a projectile and reads as nothing at all on
-        an object holding station in a lane. Turning only the pickup would have split the one drawing
-        these two kinds share, and that sharing is deliberate — a player learns the shape from the
-        trigger strip before they ever find one, so *the thing on the ground is the thing on the
-        button* costs no teaching. A fuse reads on both; a fin read on neither.
+        *"It should be a large forward firing missile like a h-bomb style thing, not a hand held
+        thrown bomb, it doesn't make any sense for it to have the shape it does now."* It was a disc
+        with a fuse, drawn when the bomb was lobbed; it flies up the lane from the nose, so it is drawn
+        pointing +x like everything else that flies: an ogive warhead, a long body, four fins (two
+        seen), and the burn behind it. Twice the extent it was, because *"large"*.
 
-        ⚠️ **THE FUSE IS THREE TIMES THE STUB IT WAS, AND A SCREENSHOT IS WHY.** The rotation alone put
-        a 0.22r nub on top of a 0.78r disc, which at the title key's sixteen pixels is under two pixels
-        and simply is not there — the icon read as a plain green dot beside three shapes that read
-        fine. Turning the shape achieved nothing a player could see, which is
-        `docs/decisions/0027-measure-the-picture-not-the-model.md` exactly: the model had rotated and
-        the picture had not. The disc is now 0.6r and the spike reaches r over a narrower base, so it
-        is a fuse rather than a bump.
+        ⚠️ **TWO DARK BANDS ON A LIT CASING**, which is the H-bomb's own graphic language and what
+        keeps it from reading as a bigger missile at twenty pixels on the trigger button.
       */
-      const fg = f;
-      const g = fg.r;
-      ctx.arc(half, half, g * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
-      ctx.lineTo(half, half - g);
-      ctx.closePath();
+      trace(ctx, f, [
+        [1, 0],
+        [0.86, -0.14],
+        [0.66, -0.22],
+        [-0.55, -0.22],
+        [-0.8, -0.5],
+        [-0.97, -0.5],
+        [-0.86, -0.2],
+        [-0.9, -0.14],
+        [-0.9, 0.14],
+        [-0.86, 0.2],
+        [-0.97, 0.5],
+        [-0.8, 0.5],
+        [-0.55, 0.22],
+        [0.66, 0.22],
+        [0.86, 0.14],
+      ]);
       seal(ctx);
       const casing = palette[INK_OF[kind]];
-      // The casing's underside in shadow, then the lit core 0194 gave it, then the fuse burning.
-      disc(ctx, fg, shade(casing, -0.3), 0.08, 0.16, 0.42);
-      disc(ctx, fg, palette.glass, 0, 0.06, 0.3);
-      disc(ctx, fg, palette.flame, 0, 0.06, 0.14);
-      glow(ctx, fg, palette.hazard, 0, -0.9, 0.24, 0.8);
+      // The lit upper half of the casing, then the two bands, then the warhead's glass eye.
+      poly(ctx, f, shade(casing, 0.35), [
+        [0.66, -0.18],
+        [-0.52, -0.18],
+        [-0.52, -0.03],
+        [0.66, -0.03],
+      ]);
+      // A band an eighth of the drawing wide: the thinner first draw was under 2.5px at game size
+      // and `tests/accents.test.ts` refused it as not drawn at all.
+      for (const at of [0.46, 0.24]) {
+        poly(ctx, f, shade(casing, -0.45), [
+          [at, -0.2],
+          [at - 0.12, -0.2],
+          [at - 0.12, 0.2],
+          [at, 0.2],
+        ]);
+      }
+      disc(ctx, f, palette.glass, 0.76, 0, 0.09);
+      // The burn behind it — light, not body, so translucent (0227), and inside its own box.
+      glow(ctx, f, palette.flame, -0.84, 0, 0.28, 0.8);
       return;
     }
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
     case 'blastHalf':
     case 'blastWide':
     case 'blastWidest':
-    case 'blast': {
+    case 'blast':
+    case 'blastFire':
+    case 'blastSmoke': {
       /*
-        A ring: a wide circle with most of its middle taken out, so it reads as a shockwave rather
-        than as a solid disc the player cannot see through. The hole is what keeps the ship and the
-        enemies inside it visible while it is on screen — a filled blast at this size would hide the
-        thing the player is trying to fly away from.
+        ── A FILLED EXPLOSION, AND THE HOLE IS GONE — 0375 ─────────────────────────────────────────
+
+        It was a ring with most of its middle taken out, *"so it reads as a shockwave rather than as a
+        solid disc the player cannot see through."* Played: *"it's still just basically a yellow
+        circle"*, and of keeping the middle open, *"it just looks like that area should not be
+        affected"* — which it is, all of it. And the hole bought nothing: `blasts` is the FIRST layer
+        (`src/app/mount.ts`), so the ship, every body and every bullet are drawn over it already. A
+        filled explosion hides the sky and nothing the player has to see.
+
+        So it is fire to the edge: a solid rim at exactly the damage radius, and billowing layers
+        inside it, translucent, hottest at the middle. Three frames for a thrown bomb — the burst,
+        the fire rolling out, the smoke — and the pyre's rungs are the burst at their own sizes.
 
         ⚠️ **THE ONLY SPRITE DRAWN TO THE EDGE OF ITS OWN BOX, and the picture caught it.** Everything
         else here is drawn at `r`, which is 42% of the extent — a margin that keeps a silhouette off
@@ -9455,13 +9513,30 @@ export function drawKind(
       // Half the stroke, because a stroke is centred on its path: the INK then ends exactly on the
       // extent, which is the radius the damage uses.
       const edge = half - ctx.lineWidth / 2;
+      const fire = palette.flame;
+      const heat = palette.hazard;
+      // The front: a thin solid rim at exactly the damage radius — where the edge was, in every frame.
       ctx.arc(half, half, edge, 0, Math.PI * 2);
-      ctx.moveTo(half + edge * 0.74, half);
-      ctx.arc(half, half, edge * 0.74, 0, Math.PI * 2);
+      ctx.moveTo(half + edge * 0.94, half);
+      ctx.arc(half, half, edge * 0.94, 0, Math.PI * 2);
       seal(ctx);
-      // A hot inner rim, translucent, inside the hole — the shockwave has a front and a wake.
-      const inner = edge / r;
-      band(ctx, f, shade(palette.hazard, 0.45), 0, 0, inner * 0.74, inner * 0.64, 0.4);
+      if (kind === 'blastSmoke') {
+        // The smoke: dark, thinning, rolling out to the edge and going.
+        billow(ctx, half, edge * 0.94, 0.07, 5, 2.1, shade(fire, -0.62), 0.5);
+        billow(ctx, half, edge * 0.72, 0.1, 4, 0.7, shade(fire, -0.78), 0.4);
+        return;
+      }
+      if (kind === 'blastFire') {
+        // The fire rolling out: dimmer, redder, and filled to the rim.
+        billow(ctx, half, edge * 0.95, 0.07, 6, 1.3, fire, 0.62);
+        billow(ctx, half, edge * 0.72, 0.1, 5, 0.4, shade(fire, -0.25), 0.55);
+        billow(ctx, half, edge * 0.45, 0.12, 4, 2.6, shade(heat, 0.15), 0.45);
+        return;
+      }
+      // The burst: fire to the rim, a lit fireball inside it, and a white-hot core.
+      billow(ctx, half, edge * 0.92, 0.06, 7, 0.2, fire, 0.72);
+      billow(ctx, half, edge * 0.64, 0.1, 5, 1.9, shade(heat, 0.3), 0.78);
+      glow(ctx, f, '#ffffff', 0, 0, (edge * 0.38) / r, 0.85);
       return;
     }
     case 'pickupShield': {

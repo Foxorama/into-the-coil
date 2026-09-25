@@ -191,8 +191,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     bossWeight: 1,
-    // The golden aura — 0373.
-    special: 'overdrive',
+    // The bomb since 0375; it was the golden aura (0373).
+    special: 'bomb',
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     coil: [0, 0, 0, 0, 0],

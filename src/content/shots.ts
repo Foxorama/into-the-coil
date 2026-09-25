@@ -865,8 +865,12 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * arriving — it is in no collision pairing, exactly like debris, so it passes through whatever it
    * is aimed at and goes off where the player aimed it. A bomb that detonated on contact would be a
    * missile with a bigger number, and the thing that makes it a skill is choosing the PLACE.
+   *
+   * ⚠️ **Drawn as a large missile since 0375, and still spent by its fuse.** The radius follows the
+   * picture to 2.5 so the hurtbox stays inside what is drawn (`tests/combat.test.ts`'s band); it only
+   * matters where stone sets it off early (0349), because nothing else pairs with it.
    */
-  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2.5, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
   /**
    * The storm's ball — 0374: *"a glowing lightning flickering projectile."* The bomb's body in every
    * number, because it is thrown the same way to the same place; it hurts nothing in flight either,

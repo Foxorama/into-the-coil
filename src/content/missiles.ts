@@ -97,8 +97,9 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     seek: 0,
     fuse: 0,
     pickup: SPRITE.pickupMissile,
-    // *"forward missiles - give you a bomb like the current bomb"* — 0373.
-    special: 'bomb',
+    // The golden aura since 0375 — *"change the autogun supercharge effect over to the regular
+    // forward firing missiles."* It was the bomb (0373).
+    special: 'overdrive',
   },
   /**
    * Homing missiles — `docs/decisions/0235-a-seeker-hunts-the-nearest-body.md`. Asked for: *"do a
