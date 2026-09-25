@@ -354,7 +354,7 @@ export interface Entity extends Body {
    *
    * Zero `sprayLeft` is *not spraying*, which is every body in the game but a boss mid-spray.
    *
-   * ⚠️ **AND A STAGGERED VOLLEY IS A SPRAY — 0369**: a fan or a ring of a row that staggers is thrown
+   * ⚠️ **AND A STAGGERED VOLLEY IS A SPRAY — 0371**: a fan or a ring of a row that staggers is thrown
    * one shot a `sprayEvery`, its angle turning as a sweep's does. A wall does not turn; it steps out a
    * slot a shot, so it carries two more — `sprayGap`, the wall's spacing (zero for anything that is not
    * a wall), and `sprayAt`, how many of its slots have been thrown.

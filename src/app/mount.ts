@@ -927,7 +927,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
     rockRng: makeRng('proof-scene').stream('rock'),
     voidRng: makeRng('proof-scene').stream('void'),
-    // How long a shard's fuse burns — 0369, its own stream on the same terms.
+    // How long a shard's fuse burns — 0371, its own stream on the same terms.
     fuseRng: makeRng('proof-scene').stream('fuse'),
     floatRng: makeRng('proof-scene').stream('float'),
     view,

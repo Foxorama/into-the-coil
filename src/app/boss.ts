@@ -1010,7 +1010,7 @@ function throwAttack(
         clamping would stack two bullets on the edge into one thicker one, which is a wall with a lie
         in it.
 
-        ⚠️ **STAGGERED, IT IS THE SAME SLOTS IN THE SAME ORDER, ONE A STAGGER — 0369**, each from where
+        ⚠️ **STAGGERED, IT IS THE SAME SLOTS IN THE SAME ORDER, ONE A STAGGER — 0371**, each from where
         the muzzle is when it leaves; a slot outside the lane is still skipped, and costs its beat.
       */
       if (bullet.stagger !== undefined) {
@@ -1149,7 +1149,7 @@ function throwAttack(
       boss.sprayAngle = attack.from;
       boss.sprayTurn = steps > 0 ? (attack.to - attack.from) / steps : 0;
       boss.sprayKind = kind;
-      // Not a wall — 0369. A staggered wall's spacing left on the hull would push every globe sideways.
+      // Not a wall — 0371. A staggered wall's spacing left on the hull would push every globe sideways.
       boss.sprayGap = 0;
       boss.sprayAt = 0;
       const until = Math.ceil(steps / FIRE_GRID) * FIRE_GRID;
@@ -1274,7 +1274,7 @@ function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: Difficulty
 function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, speed: number, scrollPerStep: number, shots: Pool<Entity>): void {
   let across = boss.across + (row.muzzle?.across ?? 0);
   if (boss.sprayGap !== 0) {
-    // A staggered wall's next slot — 0369: the `wall` arm's own order, nearest pair first, the
+    // A staggered wall's next slot — 0371: the `wall` arm's own order, nearest pair first, the
     // near side of each pair before the far, and a slot outside the lane skipped as it is there.
     const k = boss.sprayAt++;
     across += (k % 2 === 0 ? -1 : 1) * (Math.floor(k / 2) + 1) * boss.sprayGap;
@@ -1289,7 +1289,7 @@ function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, s
 }
 
 /**
- * A volley of a row that staggers, begun — `docs/decisions/0369-the-ice-is-staggered.md`. `count`
+ * A volley of a row that staggers, begun — `docs/decisions/0371-the-ice-is-staggered.md`. `count`
  * shots, one every `every` steps, the first from `angle` and each `turn` on from the last; a wall
  * passes its `gap` and no turn. This step throws the first and `spray` throws the rest, on the five
  * fields a `sweep` already keeps for exactly this, so a staggered volley IS a sweep.

@@ -1,6 +1,6 @@
-// The ice is staggered — docs/decisions/0369-the-ice-is-staggered.md
+// The ice is staggered — docs/decisions/0371-the-ice-is-staggered.md
 //
-// Every guard 0369 adds, broken on purpose. `node scripts/prove-guard.mjs 0369`.
+// Every guard 0371 adds, broken on purpose. `node scripts/prove-guard.mjs 0371`.
 //
 // ⚠️ THE FIRST TWO RESTORE WHAT WAS REPORTED, one arm at a time: the Rime Shelf's sprays and both
 // fights' walls throwing every shard on one step, which is how every volley in the game left the hull.
@@ -8,7 +8,7 @@
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     // What was reported, in the spray: the Rime Shelf's second and last phases throw their shards together.
     broke: 'a fan of a staggering row thrown on one step, as every volley was',
@@ -20,7 +20,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     // What was reported, in the wall: the frost ship's opening and the hydra's frost head.
     broke: 'a wall of a staggering row thrown on one step, as every volley was',
@@ -32,7 +32,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     /*
       The next volley timed to the last shot rather than a stagger past it. `spray` runs before the
@@ -48,7 +48,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     // The other half of the ask: every shard burning the same fuse, which is what a fixed one was.
     broke: 'the fuse read at the short end of its range every time, so nothing is random',
@@ -60,7 +60,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     /*
       A first fuse wider than the stagger — more random, and exactly the trade the row's comment
@@ -75,7 +75,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     /*
       The stagger read flat rather than through the tier — the first version of this decision, and
@@ -92,7 +92,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     // A fuse rolled outside the row's range: the fission drive checks every one it lights.
     broke: 'a fuse rolled past the end of its range',
@@ -104,7 +104,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0369',
+    decision: '0371',
     suite: 'tests/frost.test.ts',
     // The ranges back at the old fuses' centres, which put the snowflake in the far half at the short end.
     broke: 'the second fuse back at the old centre, so the shortest pair opens the snowflake in the far half',

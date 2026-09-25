@@ -93,7 +93,7 @@ export interface ShotRow extends Body {
    */
   fission: readonly Fission[];
   /**
-   * Steps between the shots of one BOSS volley of this bullet, or absent for all on one step — 0369.
+   * Steps between the shots of one BOSS volley of this bullet, or absent for all on one step — 0371.
    *
    * ⚠️ **OPTIONAL, ON 0282's DEFAULT SHAPE.** Every volley in the game left on one step and most of them
    * should: a fan is read as one shape because it arrives as one. What made the frost's volley
@@ -257,7 +257,7 @@ export type Fission =
 
 /**
  * How long a stage burns, in steps: a length rolled between `least` and `most` inclusive, each time a
- * shot reaches the stage — `docs/decisions/0369-the-ice-is-staggered.md`.
+ * shot reaches the stage — `docs/decisions/0371-the-ice-is-staggered.md`.
  *
  * ⚠️ **A RANGE, AND IT WAS ONE NUMBER.** Reported: *"they get fired at the same time and explode at
  * the same time and fill the screen with a bunch of ice shards so heavily clustered you can't really
@@ -796,7 +796,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     outliving the volley after it — `tests/frost.test.ts` counts what is alive.
   */
   /*
-    ⚠️ **AND THE FIRST TWO ARE RANGES NOW, AND THE SHARDS LEAVE HALF A SECOND APART — 0369.** *"Firing multiple ice bullets has them staggered by a half second or so and they need
+    ⚠️ **AND THE FIRST TWO ARE RANGES NOW, AND THE SHARDS LEAVE HALF A SECOND APART — 0371.** *"Firing multiple ice bullets has them staggered by a half second or so and they need
     to have a random length before they explode."* Every shard of a volley left on one step and
     opened on one step: measured over thirty seconds of the Rime Shelf's last phase, **111 shards
     opened on 37 steps**, three at a time, every time.

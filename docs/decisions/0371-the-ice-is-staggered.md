@@ -1,4 +1,4 @@
-# 0369 — The ice is staggered
+# 0371 — The ice is staggered
 
 **Accepted 2026-09-25.** A boss volley of frost leaves the hull one shard at a time — half a second
 apart at Savior, closer at Burn — and each shard's fuse is rolled from a range rather than read as
@@ -102,7 +102,7 @@ units to 12.5 at Savior, and from 8.5 to 14.5 at Burn.
   end once it is lit and checked. It gains the other half of the snowflake's place: at the longest
   fuses, it still opens ahead of the ship's box.
 
-Probes: [`scripts/probes/0369-the-ice-is-staggered.mjs`](../../scripts/probes/0369-the-ice-is-staggered.mjs),
+Probes: [`scripts/probes/0371-the-ice-is-staggered.mjs`](../../scripts/probes/0371-the-ice-is-staggered.mjs),
 eight, all red on the guard they name.
 
 **Three older probes went STILL GREEN, and the guards were right to stay green.** 0263's *a snowflake

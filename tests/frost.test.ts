@@ -14,7 +14,7 @@
  * and counted in the player's units; that the adds come in from the sides and shatter into a
  * snowflake where they die; and that both are drawn.
  *
- * And since `docs/decisions/0369-the-ice-is-staggered.md`: that every fuse is rolled inside its row's
+ * And since `docs/decisions/0371-the-ice-is-staggered.md`: that every fuse is rolled inside its row's
  * range and the stages hold at both ends of it, and that in both frost fights, on every tier, no two
  * shards leave the hull on one step and no two open on one step.
  */
@@ -109,7 +109,7 @@ function pushFrom(d: Driven, dAlong: number, dAcross: number, steps: number): nu
 }
 
 /**
- * How many frost shots at `stage` have appeared since the last call — 0369. A shot is marked seen on
+ * How many frost shots at `stage` have appeared since the last call — 0371. A shot is marked seen on
  * its `entrySlot`, which only an enemy's entry reads and `reset` zeroes, so a recycled slot counts
  * again. Frost only: the Rime Shelf's adds spit, and a spit is at its first stage for ever.
  */
@@ -243,7 +243,7 @@ describe('0253 — the frost ship chills', () => {
     e.world.bossPool.at(0).fireIn = 1;
     e.world.ship.health = e.world.shipRow.health;
     e.frame.step();
-    // ⚠️ One shard a stagger since 0369, so the volley is counted over its whole length rather than
+    // ⚠️ One shard a stagger since 0371, so the volley is counted over its whole length rather than
     // on its first step; `THE STAGGER, DRIVEN` below holds the spacing.
     let thrown = freshShards(e.world);
     for (let s = 0; s < (SHARD_VOLLEY - 1) * fireGapFor(SHOTS.frost.stagger!, e.world.difficulty); s++) {
@@ -313,7 +313,7 @@ describe('0263 — the frost ship shatters', () => {
     d.world.ship.across = 3;
     d.world.ship.velAcross = 0;
     d.world.bossPool.at(0).fireIn = 999;
-    // And the rest of a staggered volley held too — 0369 — so one shard is followed through its life
+    // And the rest of a staggered volley held too — 0371 — so one shard is followed through its life
     // alone. The spacing is `THE STAGGER, DRIVEN`'s to hold.
     d.world.bossPool.at(0).sprayLeft = 0;
   }
@@ -358,7 +358,7 @@ describe('0263 — the frost ship shatters', () => {
     expect(SHOT_KINDS.filter((k) => SHOTS[k].fission.length > 0)).toEqual(['frost']);
 
     /*
-      ⚠️ **AT BOTH ENDS OF EVERY FUSE — 0369.** A fuse is a range now, and a stage that is right at its
+      ⚠️ **AT BOTH ENDS OF EVERY FUSE — 0371.** A fuse is a range now, and a stage that is right at its
       mean can be wrong at either end: the split behind the camera at the longest, the snowflake in the
       far half at the shortest. So the drive is run twice, and each fuse, once it is lit, is checked to
       be inside the row's range and then pinned to that end of it.
@@ -547,7 +547,7 @@ describe('0263 — the frost ship shatters', () => {
   });
 });
 
-describe('0369 — the ice is staggered', () => {
+describe('0371 — the ice is staggered', () => {
   /** Every boss that throws a staggering shot, from its row, any phase, or any head — derived. */
   const throwsStaggered = (kind: BossKind): boolean => {
     const row = BOSSES[kind];

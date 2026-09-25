@@ -16,7 +16,7 @@ export const PROBES = [
       other bullet. The hydra's frost head goes back to four slots either side — eight shards, and
       ninety-six flakes — and the lane has no answer on it for a tenth of the phase.
 
-      ⚠️ **AND THE STAGGER TAKEN OFF WITH IT SINCE 0369, BECAUSE WHAT SHIPPED HAD NEITHER.** Eight
+      ⚠️ **AND THE STAGGER TAKEN OFF WITH IT SINCE 0371, BECAUSE WHAT SHIPPED HAD NEITHER.** Eight
       shards half a second apart is four seconds of one at a time, and the ceiling alone went STILL
       GREEN: the stagger is a second thing in front of this guard. The guard holds the lane and the
       lane is held; the break is the volley as it shipped, which the one line can say.
@@ -52,7 +52,7 @@ export const PROBES = [
       six shards puts the frost ship's last phase into a full pool at `burn` — the state where
       `src/sim/pool.ts` silently drops the next volley and the shatter of an add with it.
 
-      ⚠️ **MOVED TO THE CEILING'S ONE READER BY 0369, AND THE STAGGER TAKEN OFF THERE TOO.** Six
+      ⚠️ **MOVED TO THE CEILING'S ONE READER BY 0371, AND THE STAGGER TAKEN OFF THERE TOO.** Six
       shards half a second apart never have enough alive at once to fill the pool, so widening the
       constant alone went STILL GREEN. The same six, on one step, as the shard was thrown when this
       was written — `src/app/boss.ts` is the one place both can be said in one edit.

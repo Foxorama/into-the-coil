@@ -869,7 +869,7 @@ export interface World {
    */
   voidRng: Rng;
   /**
-   * How long each stage of a shattering shot burns — 0369, on 0021's terms. Its own stream because a
+   * How long each stage of a shattering shot burns — 0371, on 0021's terms. Its own stream because a
    * shard's timing is what the player dodges, and it must neither move a wave nor be moved by a burst.
    */
   fuseRng: Rng;
@@ -3911,7 +3911,7 @@ function dropTrails(w: World): void {
  *
  * ⚠️ **The fuse is lit on the step the shot came to be** — here for a child, and in `fissionShots`
  * for a shot from a muzzle, which reaches it on the same step it was thrown — so every stage is
- * the length its `after` rolls whichever way the shot arrived (0369). A child is put above the live count
+ * the length its `after` rolls whichever way the shot arrived (0371). A child is put above the live count
  * while `fissionShots` is running downwards through it, so lighting it there would cost every
  * child a step its parent did not pay.
  */
@@ -4437,7 +4437,7 @@ function spreadShots(w: World): void {
 }
 
 /**
- * A stage's fuse, rolled — `docs/decisions/0369-the-ice-is-staggered.md`. Once per shot per stage, on
+ * A stage's fuse, rolled — `docs/decisions/0371-the-ice-is-staggered.md`. Once per shot per stage, on
  * the fuse stream, so shards thrown together do not open together. A fixed fuse still draws, and
  * that costs nothing: the stream is the fuse's alone.
  */

@@ -36,7 +36,7 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0369, which rolls the fuse rather than reading it.
+      // ⚠️ Re-anchored by 0371, which rolls the fuse rather than reading it.
       find: '  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;\n',
       replace: '  child.fireIn = 0;\n',
     },
@@ -61,7 +61,7 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      // ⚠️ Re-anchored by 0369: the fuses are ranges.
+      // ⚠️ Re-anchored by 0371: the fuses are ranges.
       find: "    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },\n      { after: { least: 90, most: 90 }, into: 'nothing' },\n    ],",
       replace: '    fission: SPENT_BY_ARRIVING,',
     },
@@ -120,7 +120,7 @@ export const PROBES = [
       half of it 0270 does not stand in front of. Breaking the ceiling itself is 0270's probe to run,
       and two probes for one assertion is the second copy 0029 argues against.
 
-      ⚠️ **AND WIDENED BY 0369 TO TAKE THE STAGGER OFF WITH IT, WHICH IS WHAT THIS BREAK SHIPPED AGAINST.**
+      ⚠️ **AND WIDENED BY 0371 TO TAKE THE STAGGER OFF WITH IT, WHICH IS WHAT THIS BREAK SHIPPED AGAINST.**
       Half a second between shards is a second thing standing in front of the pool: the snowflake of
       twelve alone went STILL GREEN, because a staggered volley never has enough shards alive at once
       to fill it. The guard is not weaker for that — it holds the pool, and the pool is held. So the
