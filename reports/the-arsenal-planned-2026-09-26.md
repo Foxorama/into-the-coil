@@ -50,6 +50,10 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
 | how does the void treat Labyrinth stone? | carve it permanently |
 | one PR or several? | four, in the order below |
 | the arc at 1.5 kills the serpent under its floor at the tier a player can carry there | the serpent authors the arc at 1 on its own row |
+| after 0373 was played | *"my implementation of this is trash and should have been rejected tbh — having one bomb queue means that you might not even have the autofire gun equipped when you try to use that bomb"* |
+| which way should the rework go? | the gun's specials on one trigger and the tubes' on the other |
+| the bomb, played | *"it should be a large forward firing missile like a h-bomb style thing"*; *"it's still just basically a yellow circle instead of a large explosion"*; the sound *"is not explosiony and it doesn't gel with the background music at all"* |
+| why keep the explosion's middle open? | *"it just looks like that area should not be affected"* — so it is filled |
 
 ## The queue
 
@@ -68,10 +72,19 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
      ([0022](../docs/decisions/0022-frame-rate-is-a-feature.md)).
    - Neither item names a damage figure, so both are measured with `scripts/weigh-boss.mjs` before a
      number is chosen.
+   **3b. The bomb is a missile** — [0375](../docs/decisions/0375-the-bomb-is-a-missile.md), inserted
+   on the play: the auto-gun buys the bomb and the forward missiles buy the golden surge; the bomb
+   drawn as a large forward-firing missile; a filled, three-picture explosion; a launch and a boom on
+   the root; and a third of a second between throws for 0024's flash cap.
 4. **The void missile (5.6)** — a shield taken at the tier's `shellCap`. On Legendary almost every
    shield is one; on Burn there are no shields and so no void. The zone negates everything but the
    ship and the boss — enemies, shots, the serpent's lightning columns — lands a tenth of a boss, and
-   carves the stone it covers for good.
+   carves the stone it covers for good. **Which trigger throws it is the rework's to answer**, because
+   a shield is neither the gun nor the tubes.
+5. **The rework: a trigger for the gun and a trigger for the tubes.** 0373's one stack behind one
+   trigger lets a charge be thrown through a weapon it was not earned from — a golden surge while the
+   seekers are fitted. Two stacks: the gun's specials on one trigger and the tubes' on the other, each
+   throwing only its own. Touch grows a second button. The void's place is decided here.
 
 ## Owed
 

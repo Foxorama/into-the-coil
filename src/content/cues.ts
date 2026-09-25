@@ -1716,22 +1716,19 @@ export const CUES: Record<CueKind, CueRow> = {
     gain: 0.25,
     glue: 0.08,
     /*
-      ⚠️ **A LAUNCH, WHERE IT WAS A SLIDE WHISTLE** — *"we also need to make a lot better… bomb noise."* Two
-      octaves of pure sine rising over a fifth of a second is a cartoon's sound for going up. What the hand does
-      is fire a heavy thing out of a tube: a thump, the clack of the breech, and a short whistle that still
-      rises to the fourth — the degree that wants to go somewhere — because that is what a bomb in the air is.
+      ⚠️ **A MISSILE LEAVING, WHERE IT WAS A TUBE AND A WHISTLE — 0375.** The bomb is *"a large forward
+      firing missile like a h-bomb style thing"* now, and its sound was a lobbed thing's: a thump and a
+      whistle rising to the fourth. The whistle was also the one pitched line in it that was not the root,
+      and *"it doesn't gel with the background music at all."* So: a kick's fast drop onto the ROOT — the
+      one note under every place's mode — an ignition roar that gets brighter as it goes, and the burn.
     */
     layers: [
-      // The tube: a low thump, falling a fifth.
-      { wave: 'sine', from: inKey(9), to: inKey(0), seconds: 0.16, gain: 1, attack: 0.001, curve: 3.2, drive: 0.35 },
-      // The breech: a clack on the front.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.03, gain: 0.4, attack: 0.0005, curve: 7, lowFrom: 5200, lowTo: 1800, highFrom: 500 },
-      // The charge leaving: a burst of air that closes, opening outward to both sides.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.32, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3, pan: -0.2, panTo: -0.7 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.14, gain: 0.32, attack: 0.004, curve: 3.5, lowFrom: 3400, lowTo: 700, highFrom: 180, q: 0.8, drive: 0.3, pan: 0.2, panTo: 0.7 },
-      // The whistle: an octave up to the fourth, quiet, and late — the bomb already in the air, and leaving.
-      { wave: 'sine', from: inKey(17), to: inKey(24), at: 0.04, seconds: 0.18, gain: 0.3, attack: 0.02, curve: 2.4, pan: 0, panTo: 0.5 },
-      { wave: 'tri', from: inKey(10), to: inKey(17), at: 0.04, seconds: 0.18, gain: 0.2, attack: 0.02, curve: 2.6, lowFrom: 2400, lowTo: 3800, pan: 0, panTo: 0.5 },
+      // The kick: a fast drop onto A, percussive rather than tonal.
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.2, gain: 1, attack: 0.001, curve: 3.4, drive: 0.45 },
+      // The ignition: a roar that opens upward as the missile leaves.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.46, attack: 0.012, curve: 1.8, lowFrom: 900, lowTo: 3600, highFrom: 140, q: 0.7, drive: 0.35, pan: 0, panTo: 0.25 },
+      // The burn: held noise, a crackle that thins as it goes.
+      { wave: 'noise', from: 110, to: 60, at: 0.05, seconds: 0.55, gain: 0.3, attack: 0.03, curve: 2, lowFrom: 700, lowTo: 380, highFrom: 50, q: 0.7, drive: 0.3, pan: 0, panTo: 0.35 },
     ],
   },
   /**
@@ -1781,10 +1778,16 @@ export const CUES: Record<CueKind, CueRow> = {
       // The debris: the only top left after the crack, scattering outward.
       { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 1.1, gain: 0.05, attack: 0.02, curve: 2, lowFrom: 6200, highFrom: 1200, highTo: 650, pan: -0.3, panTo: -0.8 },
       { wave: 'noise', from: 0, to: 0, at: 0.09, seconds: 1.05, gain: 0.05, attack: 0.02, curve: 2.1, lowFrom: 5600, highFrom: 1300, highTo: 700, pan: 0.3, panTo: 0.8 },
-      // F3 → A1, and F2 → A0 under it. It RESOLVES to the root, like the boss does — the two events
-      // in the game the player caused on purpose and paid for are the two that land home. In the middle.
-      { wave: 'sine', from: inKey(12), to: inKey(0), seconds: 0.7, gain: 0.476, attack: 0.001, curve: 2.4, drive: 0.4 },
-      { wave: 'sine', from: inKey(5), to: inKey(-7), seconds: 0.8, gain: 0.289, attack: 0.015, curve: 2.2, drive: 0.15 },
+      /*
+        ⚠️ **THE BOOM, ON THE ROOT AND NOTHING ELSE — 0375.** This was two sines gliding down from F to A
+        over most of a second: a pitched line sweeping through every note between, over a score that
+        holds its own mode, and the report was *"it's not explosiony and it doesn't gel with the
+        background music at all."* An explosion's weight is a kick's fast drop and a driven sub, not a
+        melody: a tenth of a second from A2 onto A1, and A0 held under it, both the root.
+      */
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.12, gain: 0.6, attack: 0.001, curve: 2.6, drive: 0.6 },
+      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.02, seconds: 0.9, gain: 0.45, attack: 0.004, curve: 2.2, drive: 0.55 },
+      { wave: 'sine', from: inKey(-7), to: inKey(-7), at: 0.02, seconds: 1.2, gain: 0.34, attack: 0.01, curve: 1.9, drive: 0.25 },
     ],
   },
   /**

@@ -78,8 +78,9 @@ export const PROBES = [
     guard: 'THE CUES: a throw sounds',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const bites = bladeHits === null ? 0 : w.hits.count;',
-      replace: '    const bites = 0 * (bladeHits === null ? 0 : w.hits.count);',
+      // ⚠️ Re-anchored by 0375, which lets a piercing missile add to it after: `let`, not `const`.
+      find: '    let bites = bladeHits === null ? 0 : w.hits.count;',
+      replace: '    let bites = 0 * (bladeHits === null ? 0 : w.hits.count);',
     },
   },
   {

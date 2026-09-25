@@ -38,11 +38,13 @@ export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool']
 export type SpecialKind = (typeof SPECIAL_KINDS)[number];
 
 /**
- * A surge: for `steps`, the ship wears `aura` and one of its weapons hits harder — 0373.
+ * A surge: for `steps`, the ship wears `aura` and its tubes hit harder — 0373, and on the tubes
+ * alone since 0375, which moved the golden one off the gun and onto the forward missiles.
  *
- * ⚠️ **What it strengthens is the WEAPON, not the special's source.** A seeker surge taken and then a
- * straight tube picked up leaves the surge on the tubes: the stack is what the player carries, and
- * what they fire it through is whatever is fitted when it goes off.
+ * ⚠️ **What it strengthens is whatever tubes are fitted when it goes off, not the special's source.**
+ * One stack behind one trigger means a surge can be thrown through tubes it was not earned from; the
+ * user named that a flaw, and splitting the trigger is queued in
+ * `reports/the-arsenal-planned-2026-09-26.md`.
  */
 export interface Surge {
   /** How long it lasts, in fixed steps (0022). */
@@ -50,13 +52,10 @@ export interface Surge {
   /** The bitmap drawn round the ship while it lasts — the picture of the whole effect (0036). */
   aura: number;
   /**
-   * The straight gun, or `null`. `damage` multiplies a shot; `pierce` is how many landings it
-   * survives, gated as a blade's are (0357) — *"bullets penetrate like shurikens."* Only the pulse
-   * flies straight, so a switched gun simply does not take it.
+   * The tubes: `damage` multiplies a missile, `fuse` multiplies a seeker's life, and `pierce` is how
+   * many landings a missile survives, gated as a blade's are (0357) — one is spent by arriving.
    */
-  gun: { damage: number; pierce: number } | null;
-  /** The tubes, or `null`. `damage` multiplies a missile; `fuse` multiplies a seeker's life. */
-  tubes: { damage: number; fuse: number } | null;
+  tubes: { damage: number; fuse: number; pierce: number };
 }
 
 /**
@@ -176,7 +175,8 @@ const SURGE_STEPS = 600;
 
 export const SPECIALS: Record<SpecialKind, SpecialRow> = {
   /**
-   * The straight tube's — *"forward missiles - give you a bomb like the current bomb."*
+   * The pulse's since 0375 — *"let's make the auto-gun pickup the regular bomb"* — and the straight
+   * tube's before it. A large forward-firing missile that goes off as the bomb's explosion.
    *
    * ⚠️ **`charges` is 2 and it was 3**, because the ask says so: *"the player starts with 2 and
    * gains one per level cleared."* It is the number a run BEGINS with; 0372 took away the clear's.
@@ -209,15 +209,15 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, gun: null, tubes: { damage: 4, fuse: 2 } },
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, tubes: { damage: 4, fuse: 2, pierce: 1 } },
     storm: null,
     whirl: null,
     face: SPRITE.pickupSeeker,
   },
   /**
-   * The pulse's — *"supercharges the auto-gun, gives the ship a golden aura and the auto-guns damage
-   * is increased by 3x and bullets penetrate like shurikens."* No length was asked for; the seeker
-   * surge's ten seconds is the default until it is played.
+   * The forward missiles' since 0375, and the pulse's before it — *"change the autogun supercharge
+   * effect over to the regular forward firing missiles."* The golden aura, three times the damage,
+   * and missiles that pierce like blades; ten seconds, the seeker surge's length, until it is played.
    */
   overdrive: {
     label: 'Overdrive',
@@ -226,10 +226,11 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, gun: { damage: 3, pierce: BLADE_EDGE }, tubes: null },
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, tubes: { damage: 3, fuse: 1, pierce: BLADE_EDGE } },
     storm: null,
     whirl: null,
-    face: SPRITE.pickupWeapon,
+    // The face of what it is earned from: the forward missiles' pickup.
+    face: SPRITE.pickupMissile,
   },
   /**
    * The arc's — *"fires a glowing lightning flickering projectile forward that explodes into a

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN, REFERENCE_ASPECT } from '../src/sim/camera.ts';
-import { GameFrame, launchSpecial, respawn, type World } from '../src/app/frame.ts';
+import { GameFrame, canThrow, launchSpecial, respawn, type World } from '../src/app/frame.ts';
 import { SPECIALS, SPECIAL_KINDS, type SpecialKind } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
@@ -352,5 +352,47 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     respawn(world);
     expect(world.bombs.size, 'a bomb outlived the ship that threw it').toBe(0);
     expect(world.blasts.size).toBe(0);
+  });
+});
+
+describe('0375 — the bomb is a missile, and it goes off as an explosion', () => {
+  it('burns, rolls and smokes: three pictures in order, for longer than the pyre’s one', () => {
+    // *"It's still just basically a yellow circle instead of a large explosion."*
+    const { world, frame } = quietWorld();
+    launchSpecial(world, 'bomb');
+    throwAndWaitFor(world, frame);
+    const seen: number[] = [];
+    let lived = 0;
+    for (let i = 0; i < 120 && world.blasts.size > 0; i++) {
+      const sprite = world.blasts.at(0).sprite;
+      if (seen[seen.length - 1] !== sprite) seen.push(sprite);
+      lived++;
+      world.ship.invulnFor = 2;
+      frame.step();
+    }
+    expect(seen, 'the explosion did not burn, roll and smoke in that order').toEqual([SPRITE.blast, SPRITE.blastFire, SPRITE.blastSmoke]);
+    expect(lived, 'the explosion is no longer on screen than the pyre’s ring').toBeGreaterThan(12);
+  });
+
+  it('and every picture of it is drawn at the radius that does the damage', () => {
+    for (const kind of ['blast', 'blastFire', 'blastSmoke'] as const) {
+      expect(SPRITE_EXTENT[kind], `the ${kind} is not drawn at the blast's reach`).toBe(SHOTS.blast.radius * 2);
+    }
+  });
+
+  it('never goes off more than three times a second, which is 0024’s flash cap', () => {
+    // A thumb on the trigger as fast as it will go: every step a press, a stack of charges behind it.
+    const { world, frame } = quietWorld();
+    let thrown = 0;
+    for (let i = 0; i < 60; i++) {
+      if (canThrow(world, 'bomb')) {
+        launchSpecial(world, 'bomb');
+        thrown++;
+      }
+      world.ship.invulnFor = 2;
+      frame.step();
+    }
+    expect(thrown, 'more than three thrown specials left the ship in a second').toBeLessThanOrEqual(3);
+    expect(thrown, 'the gap refused every throw, so this measured nothing').toBeGreaterThan(1);
   });
 });

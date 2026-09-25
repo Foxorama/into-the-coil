@@ -55,54 +55,58 @@ describe('0373 — a full ladder buys the face’s own special', () => {
     }
   });
 
-  it('and the three the ask names are the three it gets', () => {
-    // *"forward missiles - give you a bomb"*, *"homing missiles - … purple aura"*, *"auto-gun - … golden aura"*.
-    expect(MISSILES.straight.special).toBe('bomb');
+  it('and the ask’s own pairings, as 0375 swapped them', () => {
+    // *"let's make the auto-gun pickup the regular bomb and change the autogun supercharge effect over
+    // to the regular forward firing missiles"*, and 0373's *"homing missiles - … purple aura"*.
+    expect(WEAPONS.pulse.special).toBe('bomb');
+    expect(MISSILES.straight.special).toBe('overdrive');
     expect(MISSILES.homing.special).toBe('hunt');
-    expect(WEAPONS.pulse.special).toBe('overdrive');
   });
 });
 
-describe('0373 — the overdrive: the pulse three times over, and it pierces', () => {
-  it('a pulse fired in the surge carries the row’s damage and pierce, and one fired after it does not', () => {
+describe('0375 — the overdrive: forward missiles three times over, and they pierce', () => {
+  it('a missile launched in the surge carries the row’s damage and pierce, and one after it does not', () => {
     const { world, frame } = fitted('pulse', 'straight');
     const surge = SPECIALS.overdrive.surge!;
     launchSpecial(world, 'overdrive');
-    world.fireIn = 1;
+    world.missileIn = 1;
     frame.step();
-    expect(world.playerShots.size, 'the gun did not fire, so this measured nothing').toBeGreaterThan(0);
-    const shot = world.playerShots.at(0);
-    expect(shot.damage, 'the surge did not multiply the shot').toBe(world.weapon.damage * surge.gun!.damage);
-    expect(shot.health, 'the surge did not make the shot pierce').toBe(surge.gun!.pierce);
+    expect(world.missiles.size, 'the tubes did not fire, so this measured nothing').toBeGreaterThan(0);
+    const missile = world.missiles.at(0);
+    expect(missile.damage, 'the surge did not multiply the missile').toBe(world.weapon.missileDamage * surge.tubes.damage);
+    expect(missile.health, 'the surge did not make the missile pierce').toBe(surge.tubes.pierce);
 
     world.surgeFor = 0;
-    world.playerShots.clear();
-    world.fireIn = 1;
+    world.missiles.clear();
+    world.missileIn = 1;
     frame.step();
-    expect(world.playerShots.at(0).damage, 'the surge outlived its clock').toBe(world.weapon.damage);
-    expect(world.playerShots.at(0).health, 'a shot pierced with no surge on').toBe(1);
+    expect(world.missiles.at(0).damage, 'the surge outlived its clock').toBe(world.weapon.missileDamage);
+    expect(world.missiles.at(0).health, 'a missile pierced with no surge on').toBe(1);
   });
 
-  it('and a pierced body does not spend the shot, which goes on to the next', () => {
-    // The pierce in the picture: two bodies in a line up the lane, one volley, both hurt.
+  it('and a pierced body does not spend the missile, which goes on to the next', () => {
+    // The pierce in the picture: two bodies in a line up each tube's lane, one volley, both hurt.
     const { world, frame } = fitted('pulse', 'straight');
     launchSpecial(world, 'overdrive');
+    world.missileIn = 1;
+    frame.step();
+    world.missileIn = NEVER;
+    expect(world.missiles.size, 'the tubes did not fire, so this measured nothing').toBeGreaterThan(0);
+    const lane = world.missiles.at(0);
     const near = world.enemies.spawn()!;
-    reset(near, world.ship.along + 20, world.ship.across, { ...ENEMIES.turret, health: 999 }, world.enemyKinds.turret);
+    reset(near, lane.along + 20, lane.across, { ...ENEMIES.turret, health: 999 }, world.enemyKinds.turret);
     const far = world.enemies.spawn()!;
-    reset(far, world.ship.along + 45, world.ship.across, { ...ENEMIES.turret, health: 999 }, world.enemyKinds.turret);
+    reset(far, lane.along + 45, lane.across, { ...ENEMIES.turret, health: 999 }, world.enemyKinds.turret);
     for (const body of [near, far]) {
       body.fireIn = NEVER;
       body.velAlong = world.scrollPerStep;
     }
-    world.fireIn = 1;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 60; i++) {
       world.ship.invulnFor = 2;
       frame.step();
-      world.fireIn = NEVER;
     }
     expect(near.health, 'the first body was never hit').toBeLessThan(999);
-    expect(far.health, 'the shot stopped at the first body, so it did not pierce').toBeLessThan(999);
+    expect(far.health, 'the missile stopped at the first body, so it did not pierce').toBeLessThan(999);
   });
 });
 
@@ -115,10 +119,10 @@ describe('0373 — the hunt: missiles four times over, and a seeker flies twice 
     frame.step();
     expect(world.missiles.size, 'the tubes did not fire, so this measured nothing').toBeGreaterThan(0);
     const missile = world.missiles.at(0);
-    expect(missile.damage, 'the surge did not multiply the missile').toBe(world.weapon.missileDamage * surge.tubes!.damage);
+    expect(missile.damage, 'the surge did not multiply the missile').toBe(world.weapon.missileDamage * surge.tubes.damage);
     // One step of its fuse has burned by the time it is read.
     expect(missile.lifeFor, 'the surge did not lengthen the seeker’s fuse').toBeGreaterThanOrEqual(
-      world.weapon.fuse * surge.tubes!.fuse - 1,
+      world.weapon.fuse * surge.tubes.fuse - 1,
     );
     expect(world.weapon.fuse, 'the seeker has no fuse, so doubling it proves nothing').toBeGreaterThan(0);
   });

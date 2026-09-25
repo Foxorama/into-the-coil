@@ -85,6 +85,7 @@ import {
   bossOnField,
   detonateArsenal,
   landmarksFor,
+  canThrow,
   launchSpecial,
   respawn,
   takeShield,
@@ -918,6 +919,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     whirlAge: 0,
     whirlOffset: 0,
     whirlAcross: 0,
+    throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,
     stormOffset: 0,
@@ -2711,6 +2713,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onSpecial = (): void => {
     const next = state.run.arsenal[state.run.arsenal.length - 1];
     if (next === undefined) return;
+    // A throw inside the flash cap's gap is not made, and so costs nothing — 0375.
+    if (!canThrow(world, next)) return;
     dispatch({ slice: 'run', type: 'spent' });
     launchSpecial(world, next);
   };

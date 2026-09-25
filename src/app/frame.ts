@@ -542,6 +542,45 @@ const ONE_HIT = 1;
 const BLAST_STEPS = 12;
 
 /**
+ * How long a THROWN bomb's explosion is on screen — half a second, in three pictures — 0375.
+ *
+ * *"It's still just basically a yellow circle instead of a large explosion."* The pyre keeps
+ * `BLAST_STEPS` and its one picture; what the player spent a charge on burns, rolls and smokes.
+ * The damage still lands on the first step and nothing after it.
+ */
+const EXPLOSION_STEPS = 30;
+/** The kind a thrown bomb's blast carries, so its frames can be told from the pyre's single one. */
+const EXPLOSION_KIND = 1;
+
+/**
+ * The fewest steps between two thrown specials — a third of a second — 0375.
+ *
+ * ⚠️ **0024's FLASH CAP, AND IT IS SAFETY RATHER THAN TASTE.** *"No more than three general flashes
+ * per second."* A filled explosion two thirds of the lane across is a general flash, and a stack of
+ * charges pressed as fast as a thumb can go would set off more than three a second. So a throw
+ * within this of the last is not made at all — the shell asks `canThrow` before it spends the charge,
+ * so a press that is refused costs nothing.
+ */
+export const THROW_GAP_STEPS = 20;
+
+/** Whether `kind` may leave the ship this step: a surge or a whirlpool always; a throw after its gap. */
+export function canThrow(w: World, kind: SpecialKind): boolean {
+  return SPECIALS[kind].shot === null || w.throwIn <= 0;
+}
+
+/** Step a thrown bomb's explosion through its three pictures, by how much of it is left. */
+function stepExplosions(w: World): void {
+  for (let i = 0; i < w.blasts.size; i++) {
+    const blast = w.blasts.at(i);
+    if (blast.kind !== EXPLOSION_KIND) continue;
+    const sprite = blast.lifeFor > 22 ? SPRITE.blast : blast.lifeFor > 10 ? SPRITE.blastFire : SPRITE.blastSmoke;
+    blast.sprite = sprite;
+    blast.spriteBase = sprite;
+    blast.spriteHit = sprite;
+  }
+}
+
+/**
  * How long a boss takes to come apart, in steps — a second and a half.
  *
  * ⚠️ **The level is not over until it has finished.** Reported from play: *"bosses need a real
@@ -869,6 +908,8 @@ export interface World {
   whirlAge: number;
   whirlOffset: number;
   whirlAcross: number;
+  /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
+  throwIn: number;
   /**
    * Where the serpent's lightning falls — `docs/decisions/0248-the-serpent-strikes.md`, its own
    * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
@@ -1777,6 +1818,7 @@ export class GameFrame implements Frame {
     stepBombs(w);
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
+    stepExplosions(w);
     // The storm's flicker and the whirlpool, both placed by hand — 0374.
     stepStorm(w);
     stepWhirl(w);
@@ -1834,10 +1876,10 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    // And while a surge makes the pulse pierce, which is a blade's arrival on a straight shot — 0373.
+    const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
+    // A surge whose missiles pierce: a blade's arrival on a missile, so it is told by the log — 0375.
     const surging = surgeOf(w);
-    const piercing = w.weapon.flight === 'coil' || (surging !== null && surging.gun !== null);
-    const bladeHits = piercing ? w.hits : null;
+    const tubesPierce = surging !== null && surging.tubes.pierce > 1;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
@@ -1902,11 +1944,13 @@ export class GameFrame implements Frame {
     if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
-    const bites = bladeHits === null ? 0 : w.hits.count;
+    let bites = bladeHits === null ? 0 : w.hits.count;
     if (shootable) {
       killedByShots += collideInto(w.missiles, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
       collideInto(w.missiles, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
     }
+    // A piercing missile is not spent by arriving, so the pool shrinking cannot cue it — 0375.
+    if (tubesPierce) bites = w.hits.count;
     /*
       ⚠️ **THE WHIRLPOOL LANDS AS A BLADE DOES — 0374**: on everything it crosses, once per flash per
       blade, and never spent. Logged for its sparks, and not counted in `killedByShots`, which is the
@@ -3141,17 +3185,6 @@ function firePulse(w: World): void {
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
     /*
-      ⚠️ **AND A SURGE ON THE GUN — 0373**: *"damage is increased by 3x and bullets penetrate like
-      shurikens."* Per shot rather than on the row, so the row keeps the one health every straight
-      shot has, and the pierce is a blade's: `collideInto` lands a shot with more than one health
-      once per flash and takes one off it each time.
-    */
-    const surge = surgeOf(w);
-    if (surge !== null && surge.gun !== null) {
-      shot.damage *= surge.gun.damage;
-      shot.health = surge.gun.pierce;
-    }
-    /*
       ⚠️ **No lifetime, and there used to be one.** A volley that outlives the screen starves the
       next one — *"two streams continuous and the others stutter"* is how play reported it — and the
       answer was an 80-step timer on every bullet. The view cull
@@ -3214,6 +3247,7 @@ function askSpecials(w: World): void {
  * missile with a bigger number, and choosing the PLACE is the whole of what makes it a skill.
  */
 function stepBombs(w: World): void {
+  if (w.throwIn > 0) w.throwIn--;
   for (let i = w.bombs.size - 1; i >= 0; i--) {
     const bomb = w.bombs.at(i);
     if (bomb.lifeFor > 1) continue;
@@ -3228,10 +3262,11 @@ function stepBombs(w: World): void {
     if (becomes === null) continue;
     const blast = w.blasts.spawn();
     if (blast !== null) {
-      reset(blast, bomb.along, bomb.across, SHOTS[becomes]);
+      // Marked as a thrown bomb's, so `stepExplosions` gives it the three pictures — 0375.
+      reset(blast, bomb.along, bomb.across, SHOTS[becomes], EXPLOSION_KIND);
       // The blast holds station in the world while everything else moves past it — a shockwave is a
       // place rather than a body. `speed` is 0 on the row; this is the same statement for the camera.
-      blast.lifeFor = BLAST_STEPS;
+      blast.lifeFor = EXPLOSION_STEPS;
       // What the player chose to throw is worth a share of the fight — 0372. The pyre's is not.
       blast.bossShare = row.bossShare;
     }
@@ -3474,6 +3509,8 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     third number agreeing with them by hand is the drift this project keeps paying for.
   */
   thrown.lifeFor = Math.max(1, Math.round(row.reach / body.speed));
+  // And the next throw waits, so explosions stay under three a second — 0024, 0375.
+  w.throwIn = THROW_GAP_STEPS;
 }
 
 /**
@@ -3555,11 +3592,16 @@ function fireMissiles(w: World): void {
       ⚠️ **AND A SURGE ON THE TUBES — 0373**: *"they travel twice as far and do 4x as much damage."*
       A seeker flies until its fuse is out, so twice the fuse is twice as far; a straight missile's
       fuse is zero and stays zero, and it takes the damage alone.
+
+      ⚠️ **AND THE PIERCE, SINCE 0375** — the golden surge moved here from the gun: *"bullets
+      penetrate like shurikens."* Per missile rather than on the row, so the row keeps the one health
+      every missile has; `collideInto` lands one with more than that once per flash, one a landing.
     */
     const surge = surgeOf(w);
-    if (surge !== null && surge.tubes !== null) {
+    if (surge !== null) {
       missile.damage *= surge.tubes.damage;
       missile.lifeFor *= surge.tubes.fuse;
+      missile.health = surge.tubes.pierce;
     }
   }
 }

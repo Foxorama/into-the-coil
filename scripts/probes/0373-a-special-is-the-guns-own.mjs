@@ -42,26 +42,30 @@ export const PROBES = [
       replace: "    label: 'Hunt',\n    charges: 1,\n    shot: 'bomb',\n    becomes: 'blast',",
     },
   },
+  /*
+    ⚠️ The gun surge's two probes were here; 0375 moved the golden surge onto the forward missiles, and
+    its breaks moved with it.
+  */
   {
     decision: '0373',
     suite: 'tests/surge.test.ts',
-    broke: 'the gun surge that lights an aura and multiplies nothing',
-    guard: 'a pulse fired in the surge carries the row’s damage and pierce',
+    broke: 'the golden surge that lights an aura and multiplies nothing',
+    guard: 'a missile launched in the surge carries the row’s damage and pierce',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      shot.damage *= surge.gun.damage;\n',
+      find: '      missile.damage *= surge.tubes.damage;\n',
       replace: '',
     },
   },
   {
     decision: '0373',
     suite: 'tests/surge.test.ts',
-    // The pierce forgotten: the shot is three times the damage and still spent by the first body.
-    broke: 'the gun surge that never pierces',
-    guard: 'and a pierced body does not spend the shot',
+    // The pierce forgotten: the missile is three times the damage and still spent by the first body.
+    broke: 'the golden surge whose missiles never pierce',
+    guard: 'and a pierced body does not spend the missile',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      shot.health = surge.gun.pierce;\n',
+      find: '      missile.health = surge.tubes.pierce;\n',
       replace: '',
     },
   },

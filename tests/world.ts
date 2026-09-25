@@ -394,6 +394,7 @@ export function playableWorld(
     whirlAge: 0,
     whirlOffset: 0,
     whirlAcross: 0,
+    throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,
     stormOffset: 0,

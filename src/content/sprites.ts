@@ -601,6 +601,15 @@ export const SPRITE_KINDS = [
   'blastWide',
   'blastWidest',
   /*
+    ── A THROWN BOMB'S EXPLOSION IS THREE PICTURES — 0375 ────────────────────────────────────────
+
+    *"It's still just basically a yellow circle instead of a large explosion."* The burst is `blast`,
+    then the fire rolling out, then the smoke thinning, each drawn at exactly the damage radius and
+    each with its middle open, so the ship and what it is flying from stay in sight (0053).
+  */
+  'blastFire',
+  'blastSmoke',
+  /*
     ⚠️ **NOT A PICKUP ANY MORE, AND THE NAME SAYS SO** — `pickupLife` until
     `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` took the extra life off the field.
     The plus survives because the HUD still counts lives with it (`src/app/chrome.ts`), and a sprite
@@ -1501,8 +1510,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A size up on the missile since 0238, and the dart is drawn at `BLADE_GLYPH` of it with a glow
   // behind — *"need more visual distinction between actual missile types."*
   seeker: 4.4,
-  // Heavier than the missile: the biggest thing that leaves the ship, and the one that is spent.
-  bomb: 4.4,
+  // A LARGE missile since 0375 — *"a large forward firing missile like a h-bomb style thing"* — so
+  // twice the 4.4 it was as a lobbed disc. The biggest thing that leaves the ship by a distance.
+  bomb: 9,
   // The same body as the bomb, so the same extent — 0374.
   stormBall: 4.4,
   /*
@@ -1525,6 +1535,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   blastHalf: 34,
   blastWide: 102,
+  // The explosion's later frames — 0375: the bomb's own blast, so the bomb's own extent.
+  blastFire: 68,
+  blastSmoke: 68,
   blastWidest: 136,
   // The HUD's lives counter, and nothing on the field. It keeps the size the pickups had when it was
   // one of them, because the thing it has to be legible against is a line of text.
