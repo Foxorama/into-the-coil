@@ -141,3 +141,8 @@ turn its guard red under `npm run prove`:
 The probes of 0243 and 0266 are deleted with the code they broke, and `tests/prove-guard.test.ts`
 says so. Those in 0041, 0053 and 0085 that broke the code INTO this rule are deleted. The rest are
 re-anchored where the line they hang on moved.
+
+The full proof found two more that a shorter key had stranded. 0045's break filtered `bomb` out of
+the key, which removes nothing now, so it filters `shield`. 0049's break stacked the title into one
+column, and with one row fewer that fits on every device the guard flies, so it is deleted with the
+reason written where it stood.
