@@ -78,7 +78,7 @@ import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { INVULN_STEPS, SHIELD_MARK, fullHealthFor, hullFor, openingHealthFor, shieldsOf } from '../content/ships.ts';
-import { SHOTS, SHOT_INDEX, SHOT_ROWS, type ShotKind, type ShotRow } from '../content/shots.ts';
+import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
@@ -868,6 +868,11 @@ export interface World {
    * so a size jitter added to a bullet would rebuild every level that was ever seeded.
    */
   voidRng: Rng;
+  /**
+   * How long each stage of a shattering shot burns — 0371, on 0021's terms. Its own stream because a
+   * shard's timing is what the player dodges, and it must neither move a wave nor be moved by a burst.
+   */
+  fuseRng: Rng;
   view: View;
   surface: Surface;
   /** The spawn stream, named per 0021 — a cosmetic roll added later must not move a wave. */
@@ -3906,7 +3911,7 @@ function dropTrails(w: World): void {
  *
  * ⚠️ **The fuse is lit on the step the shot came to be** — here for a child, and in `fissionShots`
  * for a shot from a muzzle, which reaches it on the same step it was thrown — so every stage is
- * exactly its `after` long whichever way the shot arrived. A child is put above the live count
+ * the length its `after` rolls whichever way the shot arrived (0371). A child is put above the live count
  * while `fissionShots` is running downwards through it, so lighting it there would cost every
  * child a step its parent did not pay.
  */
@@ -3917,7 +3922,7 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
   const row = SHOT_ROWS[kind]!;
   reset(child, along, across, row, kind);
   child.turnsLeft = stage;
-  child.fireIn = stage < row.fission.length ? row.fission[stage]!.after : 0;
+  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;
   child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
   child.velAcross = Math.sin(angle) * speed;
   /*
@@ -4431,6 +4436,15 @@ function spreadShots(w: World): void {
   }
 }
 
+/**
+ * A stage's fuse, rolled — `docs/decisions/0371-the-ice-is-staggered.md`. Once per shot per stage, on
+ * the fuse stream, so shards thrown together do not open together. A fixed fuse still draws, and
+ * that costs nothing: the stream is the fuse's alone.
+ */
+function fuseFor(w: World, fuse: Fuse): number {
+  return fuse.least + w.fuseRng.int(0, fuse.most - fuse.least);
+}
+
 function fissionShots(w: World): void {
   const pool = w.enemyShots;
   for (let i = pool.size - 1; i >= 0; i--) {
@@ -4441,7 +4455,7 @@ function fissionShots(w: World): void {
     // Fresh from a muzzle: the fuse is lit on the step it was thrown, which is this one. A child
     // arrives with its fuse already lit — `throwChild` says why.
     if (shot.fireIn === 0) {
-      shot.fireIn = stage.after;
+      shot.fireIn = fuseFor(w, stage.after);
       continue;
     }
     if (--shot.fireIn > 0) continue;

@@ -93,6 +93,24 @@ export interface ShotRow extends Body {
    */
   fission: readonly Fission[];
   /**
+   * Steps between the shots of one BOSS volley of this bullet, or absent for all on one step — 0371.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's DEFAULT SHAPE.** Every volley in the game left on one step and most of them
+   * should: a fan is read as one shape because it arrives as one. What made the frost's volley
+   * unreadable is that each shard becomes twelve flakes, so a volley of three was thirty-six at once.
+   * A row that staggers says so; shared code holds *together*.
+   *
+   * ⚠️ **ON THE BULLET AND NOT ON THE BOSS**, because the reason is the bullet's: the Rime Shelf's ship
+   * and the hydra's frost head throw the same shard, and the report named both.
+   *
+   * ⚠️ **A fan, a ring and a wall stagger; the other arms do not**, and `staggerVolley` in
+   * `src/app/boss.ts` says why.
+   *
+   * ⚠️ **BEFORE THE TIER, LIKE A PHASE'S `fireEvery`.** The tier's `fireGap` scales it, so a harder tier
+   * sends the shards closer together — 0270's *"sending it twice as often"*, on the number that binds.
+   */
+  stagger?: number;
+  /**
    * How the shot flies after it leaves the muzzle, if not straight — 0327. Absent is straight, which
    * is every shot in the game until this field existed.
    *
@@ -227,15 +245,31 @@ export interface Swallow {
 }
 
 /**
- * One stage of a shot's life after the muzzle — 0263. `after` is the fuse in steps; the arm says
- * what it bursts into. A `fan` is `shots` about the heading the shot was flying on, `spread` wide in
- * total on the same arithmetic as an enemy's `spray`; a `ring` is `shots` evenly round, the first
- * on the heading; `nothing` is the melt.
+ * One stage of a shot's life after the muzzle — 0263. `after` is the fuse; the arm says what it
+ * bursts into. A `fan` is `shots` about the heading the shot was flying on, `spread` wide in total on
+ * the same arithmetic as an enemy's `spray`; a `ring` is `shots` evenly round, the first on the
+ * heading; `nothing` is the melt.
  */
 export type Fission =
-  | { after: number; into: 'fan'; shots: number; spread: number }
-  | { after: number; into: 'ring'; shots: number }
-  | { after: number; into: 'nothing' };
+  | { after: Fuse; into: 'fan'; shots: number; spread: number }
+  | { after: Fuse; into: 'ring'; shots: number }
+  | { after: Fuse; into: 'nothing' };
+
+/**
+ * How long a stage burns, in steps: a length rolled between `least` and `most` inclusive, each time a
+ * shot reaches the stage — `docs/decisions/0371-the-ice-is-staggered.md`.
+ *
+ * ⚠️ **A RANGE, AND IT WAS ONE NUMBER.** Reported: *"they get fired at the same time and explode at
+ * the same time and fill the screen with a bunch of ice shards so heavily clustered you can't really
+ * dodge them."* A fixed fuse makes every shard thrown on one step open on one step, so a volley of
+ * three was one burst of thirty-six flakes. `least` equal to `most` is a fixed fuse, said on the row.
+ *
+ * ⚠️ **Rolled on the frame's own fuse stream**, per 0021 — a burst's timing must not move a wave.
+ */
+export interface Fuse {
+  least: number;
+  most: number;
+}
 
 /** A shot that is spent by arriving and by nothing else — every shot but the frost. */
 const SPENT_BY_ARRIVING: readonly Fission[] = [];
@@ -761,6 +795,27 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     snowflake in the player's half of the lane; the third is what keeps a screen of flakes from
     outliving the volley after it — `tests/frost.test.ts` counts what is alive.
   */
+  /*
+    ⚠️ **AND THE FIRST TWO ARE RANGES NOW, AND THE SHARDS LEAVE HALF A SECOND APART — 0371.** *"Firing multiple ice bullets has them staggered by a half second or so and they need
+    to have a random length before they explode."* Every shard of a volley left on one step and
+    opened on one step: measured over thirty seconds of the Rime Shelf's last phase, **111 shards
+    opened on 37 steps**, three at a time, every time.
+
+    ⚠️ **THE FIRST FUSE IS NARROWER THAN THE STAGGER, AND THAT IS WHAT MAKES *NOT AT THE SAME TIME*
+    TRUE RATHER THAN LIKELY.** 38 to 56 is 18 steps wide and the shards leave at least 24 apart — the
+    stagger at Burn — so the next shard always opens at least six steps after the last one, in the
+    order they were thrown, and never two at once. A wider fuse would be more random and would put
+    pairs back. It is the tightest tier's stagger that the width answers to.
+
+    ⚠️ **40 IS THE STAGGER BEFORE THE TIER'S `fireGap`**: 30 steps at Savior, the *"half a second or
+    so"* that was asked for; 24 at Burn, asked for as *"make it harder on burn"*; 42 at Legend.
+    `tests/frost.test.ts` drives both frost fights and counts. The melt is fixed on purpose: flakes
+    going out together is nothing to dodge.
+
+    ⚠️ **BOTH RANGES SIT A LITTLE LATER THAN THE OLD FUSES, AND THAT WAS MEASURED.** Centred on 45 and
+    40, the shortest pair put the snowflake 2.7 units into the far half of the screen, which is the
+    thing the second fuse exists to prevent. The drive holds both ends of both ranges.
+  */
   frost: {
     sprite: SPRITE.frost,
     spriteHit: SPRITE.frost,
@@ -768,10 +823,11 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     health: 1,
     damage: 1,
     speed: 0.75,
+    stagger: 40,
     fission: [
-      { after: 45, into: 'fan', shots: 2, spread: 0.6 },
-      { after: 40, into: 'ring', shots: 6 },
-      { after: 90, into: 'nothing' },
+      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },
+      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },
+      { after: { least: 90, most: 90 }, into: 'nothing' },
     ],
   },
   /**

@@ -13,16 +13,21 @@
  * muzzle — two bolts about its heading, then a snowflake of six from each, then a melt — driven
  * and counted in the player's units; that the adds come in from the sides and shatter into a
  * snowflake where they die; and that both are drawn.
+ *
+ * And since `docs/decisions/0371-the-ice-is-staggered.md`: that every fuse is rolled inside its row's
+ * range and the stages hold at both ends of it, and that in both frost fights, on every tier, no two
+ * shards leave the hull on one step and no two open on one step.
  */
 
 import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, type BossAttack, type BossKind } from '../src/content/bosses.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SHARD_VOLLEY, SHOTS, SHOT_KINDS } from '../src/content/shots.ts';
+import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
+import { DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -102,6 +107,25 @@ function pushFrom(d: Driven, dAlong: number, dAcross: number, steps: number): nu
   }
   return Math.abs(world.ship.across - from);
 }
+
+/**
+ * How many frost shots at `stage` have appeared since the last call — 0371. A shot is marked seen on
+ * its `entrySlot`, which only an enemy's entry reads and `reset` zeroes, so a recycled slot counts
+ * again. Frost only: the Rime Shelf's adds spit, and a spit is at its first stage for ever.
+ */
+function freshAt(world: Driven['world'], stage: number): number {
+  let fresh = 0;
+  for (let i = 0; i < world.enemyShots.size; i++) {
+    const shot = world.enemyShots.at(i);
+    if (shot.kind !== SHOT_INDEX.frost || shot.turnsLeft !== stage || shot.entrySlot !== 0) continue;
+    shot.entrySlot = -1;
+    fresh++;
+  }
+  return fresh;
+}
+
+/** Shards the hull has thrown since the last call. */
+const freshShards = (world: Driven['world']): number => freshAt(world, 0);
 
 describe('0253 — the frost ship chills', () => {
   it('THE FROST: a shard between the acid and the rock in size and speed, in its own cold ink — and the Rime Shelf’s real boss is the one thing that throws it and the one hull that chills', () => {
@@ -219,6 +243,15 @@ describe('0253 — the frost ship chills', () => {
     e.world.bossPool.at(0).fireIn = 1;
     e.world.ship.health = e.world.shipRow.health;
     e.frame.step();
+    // ⚠️ One shard a stagger since 0371, so the volley is counted over its whole length rather than
+    // on its first step; `THE STAGGER, DRIVEN` below holds the spacing.
+    let thrown = freshShards(e.world);
+    for (let s = 0; s < (SHARD_VOLLEY - 1) * fireGapFor(SHOTS.frost.stagger!, e.world.difficulty); s++) {
+      e.world.ship.health = e.world.shipRow.health;
+      e.world.ship.invulnFor = 0;
+      e.frame.step();
+      thrown += freshShards(e.world);
+    }
     /*
       ⚠️ **UP TO THE SHARD CEILING SINCE 0270, AND THE CEILING IS WHY THIS LINE CHANGED.** It read
       `throwing.shots` flat, which was the whole truth while nothing capped a shattering volley —
@@ -231,12 +264,9 @@ describe('0253 — the frost ship chills', () => {
       ⚠️ **Changed rather than loosened, per 0192**: `min` is the rule now, and a volley that threw
       fewer than the rule says still fails here.
     */
-    expect(e.world.enemyShots.size, 'the spray threw fewer than its shots').toBeGreaterThanOrEqual(
-      Math.min(throwing.shots, SHARD_VOLLEY),
-    );
+    expect(thrown, 'the spray threw fewer than its shots').toBeGreaterThanOrEqual(Math.min(throwing.shots, SHARD_VOLLEY));
     for (let i = 0; i < e.world.enemyShots.size; i++) {
       expect(e.world.enemyShots.at(i).sprite, 'a blast is not frost').toBe(SHOTS.frost.sprite);
-      expect(e.world.enemyShots.at(i).turnsLeft, 'a shard from the hull is not at its first stage').toBe(0);
     }
   });
 
@@ -283,6 +313,9 @@ describe('0263 — the frost ship shatters', () => {
     d.world.ship.across = 3;
     d.world.ship.velAcross = 0;
     d.world.bossPool.at(0).fireIn = 999;
+    // And the rest of a staggered volley held too — 0371 — so one shard is followed through its life
+    // alone. The spacing is `THE STAGGER, DRIVEN`'s to hold.
+    d.world.bossPool.at(0).sprayLeft = 0;
   }
 
   /** Which way a shot is flying, in the camera's frame. */
@@ -324,6 +357,28 @@ describe('0263 — the frost ship shatters', () => {
     // The one shot with a life after the muzzle. Every other row is spent by arriving.
     expect(SHOT_KINDS.filter((k) => SHOTS[k].fission.length > 0)).toEqual(['frost']);
 
+    /*
+      ⚠️ **AT BOTH ENDS OF EVERY FUSE — 0371.** A fuse is a range now, and a stage that is right at its
+      mean can be wrong at either end: the split behind the camera at the longest, the snowflake in the
+      far half at the shortest. So the drive is run twice, and each fuse, once it is lit, is checked to
+      be inside the row's range and then pinned to that end of it.
+    */
+    for (const end of ['least', 'most'] as const) lifeOfOneShard(end);
+  });
+
+  /** Every shot at `stage` whose fuse was lit this step: inside the row's range, then pinned to `end`. */
+  function pinFuses(d: Driven, stage: number, end: 'least' | 'most'): void {
+    const fuse = stages[stage]!.after;
+    for (let i = 0; i < d.world.enemyShots.size; i++) {
+      const shot = d.world.enemyShots.at(i);
+      if (shot.turnsLeft !== stage) continue;
+      expect(shot.fireIn, `a stage ${stage} fuse was rolled outside the row's range`).toBeGreaterThanOrEqual(fuse.least);
+      expect(shot.fireIn).toBeLessThanOrEqual(fuse.most);
+      shot.fireIn = fuse[end];
+    }
+  }
+
+  function lifeOfOneShard(end: 'least' | 'most'): void {
     const d = frostAt(1);
     const { world, frame } = d;
     park(d);
@@ -332,15 +387,16 @@ describe('0263 — the frost ship shatters', () => {
     const shards = world.enemyShots.size;
     expect(shards, 'the wall threw nothing').toBeGreaterThanOrEqual(1);
     for (let i = 0; i < shards; i++) expect(between(headingOf(d, i), Math.PI), 'a shard from the wall is not flying down the lane').toBeLessThan(1e-6);
+    pinFuses(d, 0, end);
 
-    // The first fuse: nothing opens before it burns down. A stage is exactly `after` steps long,
+    // The first fuse: nothing opens before it burns down. A stage is exactly as long as its fuse,
     // counted from the step the shot came to be — the volley step above is the first of them.
     const fan = stages[0]!;
     if (fan.into !== 'fan') return;
-    for (let s = 1; s < fan.after; s++) {
+    for (let s = 1; s < fan.after[end]; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `a shard opened ${fan.after - s} steps early`).toBe(shards);
+      expect(world.enemyShots.size, `a shard opened ${fan.after[end] - s} steps early at the ${end} fuse`).toBe(shards);
     }
     const splitAlong: number[] = [];
     const splitAcross: number[] = [];
@@ -351,6 +407,7 @@ describe('0263 — the frost ship shatters', () => {
     park(d);
     frame.step();
     expect(world.enemyShots.size, 'the shard did not open into the fan').toBe(shards * fan.shots);
+    pinFuses(d, 1, end);
     for (let i = 0; i < world.enemyShots.size; i++) {
       const bolt = world.enemyShots.at(i);
       expect(bolt.turnsLeft, 'a bolt is not at the second stage').toBe(1);
@@ -359,8 +416,8 @@ describe('0263 — the frost ship shatters', () => {
       expect(off, 'a bolt is not inside the fan').toBeLessThanOrEqual(fan.spread / 2 + 1e-6);
       expect(off, 'a bolt flies exactly where the shard was going, so the fan is one line').toBeGreaterThan(0.1);
       // In the player's units: on the screen, and ahead of the ship's box's near edge.
-      expect(bolt.along, 'the split is off the far edge of the screen').toBeLessThan(world.cameraAlong + world.view.alongSpan);
-      expect(bolt.along, 'the split is behind the camera').toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN);
+      expect(bolt.along, `the split is off the far edge of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan);
+      expect(bolt.along, `the split is behind the camera at the ${end} fuse`).toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN);
     }
     expect(debrisNear(d, splitAlong, splitAcross, 5), 'the split was not drawn').toBeGreaterThanOrEqual(BURST.fission);
 
@@ -368,14 +425,15 @@ describe('0263 — the frost ship shatters', () => {
     const ring = stages[1]!;
     if (ring.into !== 'ring') return;
     const bolts = world.enemyShots.size;
-    for (let s = 1; s < ring.after; s++) {
+    for (let s = 1; s < ring.after[end]; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `a bolt opened ${ring.after - s} steps early`).toBe(bolts);
+      expect(world.enemyShots.size, `a bolt opened ${ring.after[end] - s} steps early at the ${end} fuse`).toBe(bolts);
     }
     park(d);
     frame.step();
     expect(world.enemyShots.size, 'the bolts did not open into snowflakes').toBe(bolts * ring.shots);
+    pinFuses(d, 2, end);
     let forward = 0;
     for (let i = 0; i < world.enemyShots.size; i++) {
       const flake = world.enemyShots.at(i);
@@ -383,7 +441,9 @@ describe('0263 — the frost ship shatters', () => {
       expect(flake.sprite, 'a flake is not frost').toBe(SHOTS.frost.sprite);
       if (flake.velAlong - world.scrollPerStep > 0.1) forward++;
       // In the player's units: the snowflake opens in the near half of the screen, where the ship is.
-      expect(flake.along, 'the snowflake opened in the far half of the screen').toBeLessThan(world.cameraAlong + world.view.alongSpan / 2);
+      expect(flake.along, `the snowflake opened in the far half of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan / 2);
+      // And the other end, which a fixed fuse never had: at the longest, still where the ship can be.
+      expect(flake.along, `the snowflake opened behind the ship's box at the ${end} fuse`).toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN);
     }
     // A snowflake is thrown every way, so some of it comes back up the lane at where the ship will be.
     expect(forward, 'no flake flies back up the lane').toBeGreaterThan(0);
@@ -392,10 +452,10 @@ describe('0263 — the frost ship shatters', () => {
     const melt = stages[2]!;
     // A flake that leaves the lane is the cull's before it is the melt's, so what is held for the
     // fuse's length is that the snowflake is still there, not that every flake of it is.
-    for (let s = 1; s < melt.after; s++) {
+    for (let s = 1; s < melt.after[end]; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `the snowflake melted ${melt.after - s} steps early`).toBeGreaterThan(0);
+      expect(world.enemyShots.size, `the snowflake melted ${melt.after[end] - s} steps early`).toBeGreaterThan(0);
     }
     const flakes = world.enemyShots.size;
     const meltAlong: number[] = [];
@@ -408,7 +468,7 @@ describe('0263 — the frost ship shatters', () => {
     frame.step();
     expect(world.enemyShots.size, 'a flake outlived its melt').toBe(0);
     expect(debrisNear(d, meltAlong, meltAcross, 5), 'the melt was not drawn').toBeGreaterThanOrEqual(BURST.melt * flakes);
-  });
+  }
 
   it('THE SHATTER, DRIVEN: the shard add is the one body that shatters, into a snowflake of frost at its last stage — so it melts and never opens again', () => {
     /*
@@ -452,7 +512,7 @@ describe('0263 — the frost ship shatters', () => {
     }
     // And it only melts: never six shards that open into seventy-two.
     const melt = stages[stages.length - 1]!;
-    for (let s = 1; s <= melt.after; s++) {
+    for (let s = 1; s <= melt.after.most; s++) {
       park(d);
       frame.step();
       expect(world.enemyShots.size, 'a piece of the shatter opened again').toBeLessThanOrEqual(6);
@@ -484,5 +544,100 @@ describe('0263 — the frost ship shatters', () => {
     }
     // Room for the widest volley's shards, their bolts, and a shattered add, on top of the most.
     expect(most, 'the frost fills the pool').toBeLessThan(world.enemyShots.capacity - 24);
+  });
+});
+
+describe('0371 — the ice is staggered', () => {
+  /** Every boss that throws a staggering shot, from its row, any phase, or any head — derived. */
+  const throwsStaggered = (kind: BossKind): boolean => {
+    const row = BOSSES[kind];
+    const staggers = (shot: ShotKind | null): boolean => shot !== null && SHOTS[shot].stagger !== undefined;
+    const fromAttack = (attack: BossAttack | null): boolean => attack?.kind === 'heads' && attack.heads.some((head) => staggers(head.shot));
+    return staggers(row.shot) || fromAttack(row.attack) || row.phases.some((phase) => staggers(phase.shot) || fromAttack(phase.attack));
+  };
+  const STAGGERERS = BOSS_KINDS.filter(throwsStaggered);
+
+  it('both frost fights throw the staggered shard, so the drive below measures both of them', () => {
+    // 0005: the drive walks `STAGGERERS`, and over an empty or half list it passes over what was reported.
+    expect(STAGGERERS, 'the report named the Rime Shelf’s ship and the hydra').toEqual(['hoarfrost', 'hydra']);
+  });
+
+  it('THE STAGGER, DRIVEN: in every phase of both frost fights, on every tier, no two shards leave the hull on one step and no two open on one step — and the fuses are rolled', () => {
+    /*
+      Reported: *"they get fired at the same time and explode at the same time and fill the screen with
+      a bunch of ice shards so heavily clustered you can't really dodge them."* Both halves are held in
+      the unit the report is in — the moment — and over the whole of both fights rather than one volley:
+      measured before this landed, every shard in both fights opened on a step with another, 111 of
+      them on 37 steps in thirty seconds of the Rime Shelf's last phase.
+
+      ⚠️ **AN INVARIANT OF THE ROW, NOT A LIMIT ON THE CONTENT.** It walks the bosses that throw a shot
+      whose row STAGGERS; a shattering row that authors no stagger is free to open as one burst, and
+      is not asked here.
+
+      A shard opening is counted by its bolts: a fan of `shots` children at the second stage appearing
+      on one step is one shard, and more than that is two.
+    */
+    const fan = SHOTS.frost.fission[0]!;
+    if (fan.into !== 'fan') throw new Error('the frost does not open into a fan');
+    const rolled = new Set<number>();
+    for (const kind of STAGGERERS) {
+      let thrown = 0;
+      // Shards thrown per phase per tier, for the tier ladder below.
+      const perPhase: Record<(typeof DIFFICULTY_KINDS)[number], number>[] = [];
+      for (let phase = 0; phase < BOSSES[kind].phases.length; phase++) {
+        perPhase.push({ legendary: 0, savior: 0, burn: 0 });
+        for (const tier of DIFFICULTY_KINDS) {
+          const { world } = playableWorld({ ...FROST_ONLY, boss: kind }, tier);
+          const frame = new GameFrame(world);
+          for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+            world.ship.health = world.shipRow.health;
+            frame.step();
+          }
+          expect(world.bossPool.size, `${kind} never arrived`).toBe(1);
+          const at = Math.max(0.02, BOSSES[kind].phases[phase]!.upTo - 0.01);
+          freshAt(world, 0);
+          freshAt(world, 1);
+          for (let s = 0; s < STEPS_PER_SECOND * 20; s++) {
+            world.bossPool.at(0).health = world.bossFullHealth * at;
+            world.ship.health = world.shipRow.health;
+            world.ship.invulnFor = 0;
+            frame.step();
+            // A shard's fuse is lit on the step it leaves, so the fresh ones carry their roll untouched.
+            for (let i = 0; i < world.enemyShots.size; i++) {
+              const shot = world.enemyShots.at(i);
+              if (shot.kind === SHOT_INDEX.frost && shot.turnsLeft === 0 && shot.entrySlot === 0) rolled.add(shot.fireIn);
+            }
+            const left = freshAt(world, 0);
+            const opened = freshAt(world, 1) / fan.shots;
+            thrown += left;
+            perPhase[phase]![tier] += left;
+            expect(left, `${kind} phase ${phase + 1} at ${tier}: ${left} shards left the hull on one step`).toBeLessThanOrEqual(1);
+            expect(opened, `${kind} phase ${phase + 1} at ${tier}: ${opened} shards opened on one step`).toBeLessThanOrEqual(1);
+          }
+        }
+      }
+      expect(thrown, `${kind} threw no shards, so nothing about it was measured`).toBeGreaterThan(0);
+      /*
+        ⚠️ **AND A HARDER TIER THROWS MORE OF IT, IN EVERY PHASE THAT THROWS ANY.** *"Make it harder on
+        burn"* — asked once a flat stagger had made the Rime Shelf's last phase the same fight at Burn
+        and at Savior, 60 shards and 59 in thirty seconds, because the stagger and not the cadence was
+        what bound it.
+
+        ⚠️ **EVERY PHASE AND NOT THE BUSIEST, AND THE PROBE IS WHY.** The first draft asked only the
+        phase with the most shards, and a flat spray went STILL GREEN under it: flattening the spray
+        thinned that phase until a wall phase was the busiest, and the wall still differed by tier.
+      */
+      perPhase.forEach((counts, phase) => {
+        if (counts.savior === 0) return;
+        expect(counts.burn, `${kind} phase ${phase + 1}: Burn threw ${counts.burn} shards against Savior's ${counts.savior}`).toBeGreaterThan(counts.savior);
+        expect(counts.savior, `${kind} phase ${phase + 1}: Savior threw ${counts.savior} shards against Legend's ${counts.legendary}`).toBeGreaterThan(counts.legendary);
+      });
+    }
+    // *"A random length before they explode"*: inside the row's range, and more than one length of it.
+    for (const fuse of rolled) {
+      expect(fuse).toBeGreaterThanOrEqual(fan.after.least);
+      expect(fuse).toBeLessThanOrEqual(fan.after.most);
+    }
+    expect(rolled.size, 'every shard burned the same fuse').toBeGreaterThan(1);
   });
 });
