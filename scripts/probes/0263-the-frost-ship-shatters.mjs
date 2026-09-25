@@ -62,7 +62,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0369: the fuses are ranges.
-      find: "    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },\n      { after: { least: 90, most: 90 }, into: 'nothing' },\n    ],",
+      find: "    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },\n      { after: { least: 90, most: 90 }, into: 'nothing' },\n    ],",
       replace: '    fission: SPENT_BY_ARRIVING,',
     },
   },
@@ -131,8 +131,8 @@ export const PROBES = [
     guard: 'the frost never fills the pool',
     edit: {
       path: 'src/content/shots.ts',
-      find: "    stagger: 30,\n    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },",
-      replace: "    fission: [\n      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 12 },",
+      find: "    stagger: 40,\n    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },",
+      replace: "    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 12 },",
     },
   },
 ];

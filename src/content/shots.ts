@@ -105,6 +105,9 @@ export interface ShotRow extends Body {
    *
    * ⚠️ **A fan, a ring and a wall stagger; the other arms do not**, and `staggerVolley` in
    * `src/app/boss.ts` says why.
+   *
+   * ⚠️ **BEFORE THE TIER, LIKE A PHASE'S `fireEvery`.** The tier's `fireGap` scales it, so a harder tier
+   * sends the shards closer together — 0270's *"sending it twice as often"*, on the number that binds.
    */
   stagger?: number;
   /**
@@ -799,9 +802,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     opened on 37 steps**, three at a time, every time.
 
     ⚠️ **THE FIRST FUSE IS NARROWER THAN THE STAGGER, AND THAT IS WHAT MAKES *NOT AT THE SAME TIME*
-    TRUE RATHER THAN LIKELY.** 36 to 60 is 24 steps wide and the shards leave 30 apart, so the next
-    shard always opens at least six steps after the last one — in the order they were thrown, and
-    never two at once. A wider fuse would be more random and would put pairs back.
+    TRUE RATHER THAN LIKELY.** 38 to 56 is 18 steps wide and the shards leave at least 24 apart — the
+    stagger at Burn — so the next shard always opens at least six steps after the last one, in the
+    order they were thrown, and never two at once. A wider fuse would be more random and would put
+    pairs back. It is the tightest tier's stagger that the width answers to.
+
+    ⚠️ **40 IS THE STAGGER BEFORE THE TIER'S `fireGap`**: 30 steps at Savior, the *"half a second or
+    so"* that was asked for; 24 at Burn, asked for as *"make it harder on burn"*; 42 at Legend.
     `tests/frost.test.ts` drives both frost fights and counts. The melt is fixed on purpose: flakes
     going out together is nothing to dodge.
 
@@ -816,9 +823,9 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     health: 1,
     damage: 1,
     speed: 0.75,
-    stagger: 30,
+    stagger: 40,
     fission: [
-      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },
+      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },
       { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },
       { after: { least: 90, most: 90 }, into: 'nothing' },
     ],

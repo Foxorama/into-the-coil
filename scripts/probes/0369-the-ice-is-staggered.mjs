@@ -15,8 +15,8 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      if (bullet.stagger !== undefined && count > 1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, first, step, 0);',
-      replace: '      if (bullet.stagger === -1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, first, step, 0);',
+      find: '      if (bullet.stagger !== undefined && count > 1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
+      replace: '      if (bullet.stagger === -1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
     },
   },
   {
@@ -70,8 +70,25 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      find: "      { after: { least: 36, most: 60 }, into: 'fan', shots: 2, spread: 0.6 },",
-      replace: "      { after: { least: 36, most: 96 }, into: 'fan', shots: 2, spread: 0.6 },",
+      find: "      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },",
+      replace: "      { after: { least: 38, most: 96 }, into: 'fan', shots: 2, spread: 0.6 },",
+    },
+  },
+  {
+    decision: '0369',
+    suite: 'tests/frost.test.ts',
+    /*
+      The stagger read flat rather than through the tier — the first version of this decision, and
+      what *"make it harder on burn"* was said about: the Rime Shelf's last phase was 59 shards at Burn
+      against Savior's 60, because the stagger and not the cadence bound it. One call site is enough:
+      the spray is where that phase lives.
+    */
+    broke: 'the spray’s stagger read flat, so Burn’s frost sprays are Savior’s',
+    guard: 'THE STAGGER, DRIVEN',
+    edit: {
+      path: 'src/app/boss.ts',
+      find: 'shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
+      replace: 'shots, count, bullet.stagger, first, step, 0);',
     },
   },
   {

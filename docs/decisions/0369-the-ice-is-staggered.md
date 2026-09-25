@@ -1,8 +1,8 @@
 # 0369 — The ice is staggered
 
-**Accepted 2026-09-25.** A boss volley of frost leaves the hull one shard every half second, and
-each shard's fuse is rolled from a range rather than read as one number. Both frost fights change:
-the Rime Shelf's ship and the hydra's frost head.
+**Accepted 2026-09-25.** A boss volley of frost leaves the hull one shard at a time — half a second
+apart at Savior, closer at Burn — and each shard's fuse is rolled from a range rather than read as
+one number. Both frost fights change: the Rime Shelf's ship and the hydra's frost head.
 
 ## The ask
 
@@ -37,37 +37,44 @@ says what its version is, and shared code holds the fallback.
 - **A whip, a breaker and a lob do not stagger.** A lash and a crest are shapes made by every shot
   leaving together, and a lob is one shot.
 
+**The stagger is authored before the tier and scaled by its `fireGap`**, exactly as a phase's
+`fireEvery` is. The frost authors 40: **30 steps at Savior** (the half second asked for), **24 at
+Burn** and 42 at Legend. The first version held it flat, and the table below is what that cost; the
+answer was *"make it harder on burn."* Where the stagger is what binds the rate, it is the number a
+tier has to move.
+
 **A stage's `after` is a `Fuse`, `{ least, most }`, rolled once per shot per stage** on a new
-`fuseRng` stream ([0021](0021-one-stream-per-concern.md)). The frost's first fuse is 36–60 steps and
+`fuseRng` stream ([0021](0021-one-stream-per-concern.md)). The frost's first fuse is 38–56 steps and
 its second is 36–48. The melt stays fixed at 90: flakes going out together are nothing to dodge.
 
-**The first fuse is narrower than the stagger (24 steps against 30).** That width is what makes
-*"not at the same time"* certain rather than likely. The next shard always opens at least six steps
-after the one before it, so shards open in the order they were thrown. A wider fuse would be more
-random, and a probe shows it puts pairs back.
+**The first fuse is narrower than the tightest tier's stagger (18 steps against Burn's 24).** That
+width is what makes *"not at the same time"* certain rather than likely. The next shard always opens
+at least six steps after the one before it, so shards open in the order they were thrown. A wider
+fuse would be more random, and a probe shows it puts pairs back. It was 24 wide while the stagger
+was a flat 30, and scaling the stagger by tier is what narrowed it.
 
 **Both ranges sit a little later than the old fixed fuses, and that was measured.** Centred on the
 old 45 and 40, the shortest pair put the snowflake 2.7 units into the far half of the screen. That is
 the thing the second fuse exists to prevent.
 
-## What it costs, and it is a question for the player
+## What it costs
 
-**The stagger caps the rate at one shard a stagger, on every tier.** Over thirty seconds:
+**The stagger caps the rate at one shard a stagger.** Shards opened in thirty seconds of a phase,
+before this decision, with the stagger held flat at 30, and as it lands, scaled by tier:
 
-| phase | before, Savior | after, Savior | before, Burn | after, Burn |
-|---|---|---|---|---|
-| Rime Shelf 1 (wall) | 50 | 49 | 66 | 60 |
-| Rime Shelf 2 (spray of 2) | 54 | 54 | 74 | 60 |
-| Rime Shelf 4 (spray of 3) | 111 | 60 | 147 | 59 |
-| hydra 4 and 5 (frost head) | 16 | 14 | 20 | 16–17 |
+| phase | before, Savior | before, Burn | flat, Savior | flat, Burn | landed, Legend | landed, Savior | landed, Burn |
+|---|---|---|---|---|---|---|---|
+| Rime Shelf 1 (wall) | 50 | 66 | 49 | 60 | 36 | 50 | 67 |
+| Rime Shelf 2 (spray of 2) | 54 | 74 | 54 | 60 | 40 | 54 | 75 |
+| Rime Shelf 4 (spray of 3) | 111 | 147 | 60 | 59 | 43 | 60 | 75 |
+| hydra 4 (frost head) | 16 | 20 | 14 | 17 | 10 | 14 | 18 |
+| hydra 5 (frost head) | 16 | 20 | 14 | 16 | 14 | 14 | 18 |
 
-The Rime Shelf's last phase throws about half as many shards as it did. Burn is now the same as
-Savior there, because both cadences are shorter than a three-shard volley's stagger.
-[0270](0270-a-shattering-volley-is-counted-in-shards.md) said a tier makes a shattering shot harder by
-*"sending it twice as often"*, and this decision stops that for any phase where the stagger is the
-binding limit. It was not decided here which way to take it back: a shorter stagger on a harder
-tier, or leaving it. The pilot's worst gap went from 10.0 to 18.5 units at Savior and from 8.5 to
-20.0 at Burn in that phase.
+**The Rime Shelf's last phase throws about half the shards it did, on every tier.** That is the ask:
+the rate a player can read is one shard at a time. Flat, it also made Burn the same fight as Savior
+there, which undid [0270](0270-a-shattering-volley-is-counted-in-shards.md)'s *"sending it twice as
+often"*; scaled, Burn is a quarter more than Savior. The pilot's worst gap in that phase went from 10.0
+units to 12.5 at Savior, and from 8.5 to 14.5 at Burn.
 
 ## What was rejected
 
@@ -85,14 +92,18 @@ tier, or leaving it. The pilot's worst gap went from 10.0 to 18.5 units at Savio
 
 - *THE STAGGER, DRIVEN*: every phase of both frost fights, on every tier, for twenty seconds. No two
   shards leave the hull on one step, no two open on one step, and every rolled fuse is inside the
-  row's range with more than one length among them. The fights it walks are derived from the rows
+  row's range with more than one length among them. In every phase that throws frost, Burn throws
+  more shards than Savior and Savior more than Legend. The fights it walks are derived from the rows
   that stagger, and a sibling test pins that list to the two the report named.
+- **The tier half is asked of every phase, not the busiest, and its probe is why.** The first draft
+  asked only the phase with the most shards. Reading the spray's stagger flat went STILL GREEN,
+  because it thinned the spray phase until a wall phase was busiest, and the wall still differed.
 - *THE FISSION, DRIVEN* now runs twice, with every fuse pinned to the short end and then to the long
   end once it is lit and checked. It gains the other half of the snowflake's place: at the longest
   fuses, it still opens ahead of the ship's box.
 
 Probes: [`scripts/probes/0369-the-ice-is-staggered.mjs`](../../scripts/probes/0369-the-ice-is-staggered.mjs),
-seven, all red on the guard they name.
+eight, all red on the guard they name.
 
 **Three older probes went STILL GREEN, and the guards were right to stay green.** 0263's *a snowflake
 of twelve* and 0270's *a ceiling of six* and *no ceiling* each broke one defence. The stagger is now a
@@ -102,5 +113,6 @@ re-anchored on the `shots.ts` import line.
 
 ## What is owed
 
-**The play.** Both fights have been driven and counted, not played or photographed. Also owed is
-the tier question above.
+**The play.** Both fights have been driven and counted on all three tiers, not played or
+photographed. Whether Burn's quarter more is enough is a play question: its number is the frost
+row's 40 and the tier's `fireGap`, and nothing asserts on how far apart the tiers sit.

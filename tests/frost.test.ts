@@ -27,7 +27,7 @@ import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
-import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -246,7 +246,7 @@ describe('0253 — the frost ship chills', () => {
     // ⚠️ One shard a stagger since 0369, so the volley is counted over its whole length rather than
     // on its first step; `THE STAGGER, DRIVEN` below holds the spacing.
     let thrown = freshShards(e.world);
-    for (let s = 0; s < (SHARD_VOLLEY - 1) * SHOTS.frost.stagger!; s++) {
+    for (let s = 0; s < (SHARD_VOLLEY - 1) * fireGapFor(SHOTS.frost.stagger!, e.world.difficulty); s++) {
       e.world.ship.health = e.world.shipRow.health;
       e.world.ship.invulnFor = 0;
       e.frame.step();
@@ -582,7 +582,10 @@ describe('0369 — the ice is staggered', () => {
     const rolled = new Set<number>();
     for (const kind of STAGGERERS) {
       let thrown = 0;
+      // Shards thrown per phase per tier, for the tier ladder below.
+      const perPhase: Record<(typeof DIFFICULTY_KINDS)[number], number>[] = [];
       for (let phase = 0; phase < BOSSES[kind].phases.length; phase++) {
+        perPhase.push({ legendary: 0, savior: 0, burn: 0 });
         for (const tier of DIFFICULTY_KINDS) {
           const { world } = playableWorld({ ...FROST_ONLY, boss: kind }, tier);
           const frame = new GameFrame(world);
@@ -607,12 +610,28 @@ describe('0369 — the ice is staggered', () => {
             const left = freshAt(world, 0);
             const opened = freshAt(world, 1) / fan.shots;
             thrown += left;
+            perPhase[phase]![tier] += left;
             expect(left, `${kind} phase ${phase + 1} at ${tier}: ${left} shards left the hull on one step`).toBeLessThanOrEqual(1);
             expect(opened, `${kind} phase ${phase + 1} at ${tier}: ${opened} shards opened on one step`).toBeLessThanOrEqual(1);
           }
         }
       }
       expect(thrown, `${kind} threw no shards, so nothing about it was measured`).toBeGreaterThan(0);
+      /*
+        ⚠️ **AND A HARDER TIER THROWS MORE OF IT, IN EVERY PHASE THAT THROWS ANY.** *"Make it harder on
+        burn"* — asked once a flat stagger had made the Rime Shelf's last phase the same fight at Burn
+        and at Savior, 60 shards and 59 in thirty seconds, because the stagger and not the cadence was
+        what bound it.
+
+        ⚠️ **EVERY PHASE AND NOT THE BUSIEST, AND THE PROBE IS WHY.** The first draft asked only the
+        phase with the most shards, and a flat spray went STILL GREEN under it: flattening the spray
+        thinned that phase until a wall phase was the busiest, and the wall still differed by tier.
+      */
+      perPhase.forEach((counts, phase) => {
+        if (counts.savior === 0) return;
+        expect(counts.burn, `${kind} phase ${phase + 1}: Burn threw ${counts.burn} shards against Savior's ${counts.savior}`).toBeGreaterThan(counts.savior);
+        expect(counts.savior, `${kind} phase ${phase + 1}: Savior threw ${counts.savior} shards against Legend's ${counts.legendary}`).toBeGreaterThan(counts.legendary);
+      });
     }
     // *"A random length before they explode"*: inside the row's range, and more than one length of it.
     for (const fuse of rolled) {

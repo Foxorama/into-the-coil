@@ -965,7 +965,7 @@ function throwAttack(
       }
       const first = centre - (step * (count - 1)) / 2;
       if (bullet.stagger !== undefined && count > 1) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, first, step, 0);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);
         break;
       }
       for (let i = 0; i < count; i++) {
@@ -987,7 +987,7 @@ function throwAttack(
       */
       const around = TAU / count;
       if (bullet.stagger !== undefined && count > 1) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, bullet.stagger, 0, around, 0);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), 0, around, 0);
         break;
       }
       for (let i = 0; i < count; i++) {
@@ -1014,7 +1014,7 @@ function throwAttack(
         the muzzle is when it leaves; a slot outside the lane is still skipped, and costs its beat.
       */
       if (bullet.stagger !== undefined) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, perSide * 2, bullet.stagger, Math.PI, 0, attack.gap);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, perSide * 2, fireGapFor(bullet.stagger, tier), Math.PI, 0, attack.gap);
         break;
       }
       for (let i = 1; i <= perSide; i++) {
@@ -1298,6 +1298,10 @@ function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, s
  * gate, so a volley timed to the last shot's step would throw its first beside it, and the two would
  * leave together — the thing the stagger exists to stop. On the fire grid, as a sweep's is (0096).
  * A tier whose cadence is shorter than that is slowed to one shot a stagger; that is the ask.
+ *
+ * ⚠️ **`every` IS THE ROW'S STAGGER THROUGH THE TIER'S `fireGap`**, at each call, exactly as a phase's
+ * cadence is. Asked for once the flat stagger had made Burn's last frost phase Savior's: *"make it
+ * harder on burn."* Where the stagger is what binds the rate, it is the number a tier has to move.
  *
  * ⚠️ **ONLY A FAN, A RING AND A WALL CALL THIS.** A whip's lash and a breaker's crest are shapes
  * made by every shot leaving together, a lob is one shot, and rain, beams and summons throw nothing
