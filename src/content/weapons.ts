@@ -86,6 +86,15 @@ export interface WeaponRow {
    */
   weight: readonly number[];
   /**
+   * What a hit on a BOSS is worth, as a multiple of what it is worth on anything else — 0372.
+   *
+   * ⚠️ **Every row authors it, and only the arc's is not one.** The arc cannot be flown faster: its
+   * reach and its landing are the same at sixty units as at forty-five, so the closing-in that pays
+   * the pulse and the blade never pays the bolt, and measured it ran about 1.4 times the other two
+   * guns flown close. `docs/decisions/0372-a-death-keeps-the-ladders.md` has the table.
+   */
+  bossWeight: number;
+  /**
    * How far the FIRST hit reaches, in world units, one entry per rung — from the nose to the body
    * the bolt lands on. Zeros for a weapon that does not chain. What each jump AFTER it reaches is
    * this times `falloff`, again per jump.
@@ -175,6 +184,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: [1, 2, 3, 4, 4],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
+    bossWeight: 1,
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     coil: [0, 0, 0, 0, 0],
@@ -207,6 +217,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     // weight and rate, so every rung changes something.
     links: [1, 2, 3, 3, 3],
     weight: [1, 1, 1, 2, 2],
+    // *"lightning needs to do a bit more damage on bosses, it's currently too slow"* — 0372.
+    bossWeight: 1.5,
     /*
       A sixth further at every rung — 0236's ladder. `tests/guns-played.test.ts` holds the CLIMB,
       never the numbers.
@@ -329,6 +341,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: [1, 1, 1, 1, 1],
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
+    bossWeight: 1,
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     /*

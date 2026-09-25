@@ -505,10 +505,11 @@ describe('a pickup says which field it lands in', () => {
       `docs/decisions/0005-a-guard-must-be-seen-to-fail.md`'s shape exactly.
 
       What is held is the property that made moving it worthwhile: **every effect a pickup can report
-      is one the table already names**, so the shell's job is a routing table over `PickupEffect` and
-      never a decision about what a pickup is worth.
+      is one the table already names, or the overflow**, so the shell's job is a routing table over
+      `PickupEffect` and never a decision about what a pickup is worth. The overflow is named here
+      because 0372 took away the bomb pickup, which was the one row that said `special` itself.
     */
-    const named = new Set<string>(PICKUP_KINDS.map((k) => PICKUPS[k].effect));
+    const named = new Set<string>([...PICKUP_KINDS.map((k) => PICKUPS[k].effect), 'special']);
     const everything: UpgradeKind[] = [];
     for (let i = 0; i < UPGRADE_TIERS; i++) for (const k of UPGRADE_KINDS) everything.push(k);
     for (const kind of PICKUP_KINDS) {

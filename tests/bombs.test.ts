@@ -229,24 +229,22 @@ describe('what a run may spend', () => {
     );
   });
 
-  it('gains one per level cleared, for every special owned', () => {
-    // Stated over the arsenal rather than over the bomb: a second special inherits it without
-    // anybody remembering to, which is the whole reason the arsenal is a list.
+  it('a level clear pays nothing into the arsenal', () => {
+    // 0372 took away 0053's *"gains one per level cleared"*: *"it should be more than balanced by
+    // the fact that you're keeping them all on continues."*
     const before = begin();
     const after = reduce(before, { slice: 'run', type: 'levelCleared' });
-    expect(after.run.arsenal.map((e) => e.charges)).toEqual(before.run.arsenal.map((e) => e.charges + 1));
+    expect(after.run.arsenal, 'a level clear paid the arsenal').toEqual(before.run.arsenal);
   });
 
-  it('a death costs no charges at all, and a continue costs the banked ones', () => {
+  it('neither a death nor a continue costs a charge', () => {
     /*
-      ⚠️ **BOTH HALVES IN ONE TEST, BECAUSE THE ASK IS A DIFFERENCE BETWEEN TWO EVENTS** —
-      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`: *"bombs should be reset on a continue,
-      but not on player death."* Either half alone passes against a reducer that restocks on both or
-      on neither, which is what this used to be: one arm, asserting the arm the other one shares.
+      ⚠️ **BOTH HALVES IN ONE TEST, BECAUSE THEY WERE TWO DIFFERENT RULES UNTIL 0372.**
+      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` reset the charges on a continue and
+      not on a death; `docs/decisions/0372-a-death-keeps-the-ladders.md` keeps them through both.
     */
     let state = begin();
-    state = reduce(state, { slice: 'run', type: 'levelCleared' });
-    state = reduce(state, { slice: 'run', type: 'levelCleared' });
+    state = reduce(state, { slice: 'run', type: 'took', special: 'bomb' });
     const banked = state.run.arsenal[0]!.charges;
     expect(banked, 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
       startingArsenal()[0]!.charges,
@@ -256,7 +254,7 @@ describe('what a run may spend', () => {
     expect(dead.run.arsenal[0]!.charges, 'a death spent the bombs the player had banked').toBe(banked);
 
     const resumed = reduce(dead, { slice: 'run', type: 'continued' });
-    expect(resumed.run.arsenal, 'a continue did not go back to the ship’s own kit').toEqual(startingArsenal());
+    expect(resumed.run.arsenal[0]!.charges, 'a continue reset the charges the player had banked').toBe(banked);
   });
 
   it('and a death does not TOP UP an arsenal the player has emptied', () => {

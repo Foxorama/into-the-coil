@@ -398,7 +398,6 @@ export function playableWorld(
     hits: makeDeaths(CAPACITY.missiles),
     burstRng: makeRng('test').stream('burst'),
     dropRng: makeRng('test').stream('drop'),
-    scatterRng: makeRng('test').stream('scatter'),
     arcRng: makeRng('test').stream('arc'),
     rainRng: makeRng('test').stream('rain'),
     rockRng: makeRng('test').stream('rock'),

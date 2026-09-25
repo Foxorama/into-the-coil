@@ -35,6 +35,7 @@ import {
   type View,
 } from '../sim/camera.ts';
 import {
+  blastBoss,
   blastInto,
   collectInto,
   collideInto,
@@ -69,7 +70,7 @@ import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, paintStacks, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
+import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { bandAt, deepestFace, faceAt, laneIn, layFaces, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { VENT_OF } from '../content/volcano.ts';
@@ -82,7 +83,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Uncoil, chainReach } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -91,11 +92,10 @@ import {
   PICKUP_REPEATS,
   type PickupKind,
   type PickupRow,
-  type UpgradeKind,
   type Weapon,
 } from '../content/pickups.ts';
-import { WEAPONS, WEAPON_KINDS, type FlightKind } from '../content/weapons.ts';
-import { MISSILES, MISSILE_KINDS } from '../content/missiles.ts';
+import { WEAPONS, type FlightKind } from '../content/weapons.ts';
+import { MISSILES } from '../content/missiles.ts';
 import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
@@ -836,16 +836,6 @@ export interface World {
    */
   dropRng: Rng;
   /**
-   * The death scatter's own stream — 0066, and its own again rather than the drop's since 0266.
-   *
-   * ⚠️ **TWO CONCERNS, TWO STREAMS — 0021.** What a death throws back is which pieces the player
-   * can reach; what a mid-boss drops is what its fight was worth. They were one field for the day
-   * 0256 had the scatter deleted, and sharing one now would mean a level whose mid-boss died deals
-   * a different scatter from one whose did not — a fight's throw moving a death's, which is the
-   * exact coupling that decision exists to refuse.
-   */
-  scatterRng: Rng;
-  /**
    * The arc's own stream — 0021, one stream per concern. It seeds a link's jag and picks where on a
    * boss a jumping bolt lands; a bolt that rolled on the spawn stream would move a wave by one enemy
    * every time it fired.
@@ -1034,7 +1024,7 @@ export interface World {
    * `src/state/`'s business — an extra life and an upgrade land in different fields and are cleared
    * by different events.
    */
-  onPickup: (kind: PickupKind, face: number, stack: number) => void;
+  onPickup: (kind: PickupKind, face: number) => void;
   /**
    * The ship's health as the chrome last drew it.
    *
@@ -1835,6 +1825,8 @@ export class GameFrame implements Frame {
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
     const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
+    // And the gun's own weight on this boss — 0372; the missiles and the blast are not the gun's.
+    const gunOpen = open * gunWeightOn(w.bossRow, w.weapon.kind);
     /*
       ⚠️ **AND NONE OF IT WHILE THE BOSS MAKES ITS ENTRANCE — 0306.** *"Not-shootable, fully live"*:
       every pairing of the player's fire with the boss and its body is skipped, so a shot passes
@@ -1849,7 +1841,7 @@ export class GameFrame implements Frame {
       when the wreck lands, and a wreck that was shot never landed. Found by photographing it.
     */
     const shootable = w.bossEntering < 0 && !w.bossBeaten;
-    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -1873,7 +1865,7 @@ export class GameFrame implements Frame {
       log too.
     */
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     const bites = bladeHits === null ? 0 : w.hits.count;
@@ -1884,10 +1876,8 @@ export class GameFrame implements Frame {
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     // Only what it can see — 0349: stone stops a blast.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths, w.corridor);
-    if (shootable) {
-      blastInto(w.blasts, w.bossPool, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.corridor);
-      blastInto(w.blasts, w.bossBody, open, IMPACT_FLASH_STEPS, null, w.corridor);
-    }
+    // Once per animal, head or body, for the larger of its damage and its share — 0372.
+    if (shootable) blastBoss(w.blasts, w.bossPool, w.bossBody, open, w.bossFullHealth, IMPACT_FLASH_STEPS, w.bossDeaths, w.corridor);
     /*
       ⚠️ **AND THE SWEEP SITS HERE, WITH THE PAIRINGS, RATHER THAN AT THE END OF THE STEP** — 0283. A
       killing blow landed on the tail has to end the fight on the step it lands. `strike` is the arc's
@@ -2044,9 +2034,7 @@ export class GameFrame implements Frame {
       w.onCue('pickup', w.ship.across);
       // And the FACE it was showing — 0233. Which gun a weapon pickup was offering is decided on
       // the step it is taken, and `collectInto` logged it beside the kind for exactly this line.
-      // The stack rides with it — 0243, back with the scatter in 0266: a piece a death threw is
-      // worth every rung of its kind the death took, and one event carries them.
-      w.onPickup(kind, w.collected.face[i]!, w.collected.stack[i]!);
+      w.onPickup(kind, w.collected.face[i]!);
     }
 
     // Every enemy that died this step leaves something behind. The positions were recorded by the
@@ -2278,18 +2266,8 @@ export class GameFrame implements Frame {
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
-    // And a badge on every scattered piece worth more than one rung — 0243, back with the scatter
-    // in 0266. Over the pickup it rides, and after the bolts so nothing crosses it.
-    paintStacks(w.surface, w.view, w.pickups, STACK_BADGES, camera, alpha);
   }
 }
-
-/**
- * The badge a scattered piece wears for its stack, by stack: ×2, ×3, ×4 — 0243. A stack past the
- * last wears the last; `UPGRADE_TIERS` is four, so nothing does.
- */
-// @setup: three sprite indices, for the module's lifetime.
-const STACK_BADGES: readonly number[] = [SPRITE.stackTwo, SPRITE.stackThree, SPRITE.stackFour];
 
 /**
  * Whether this is the step the boss came apart on.
@@ -3009,7 +2987,7 @@ function fireArc(w: World): void {
       // The boss's own window scales a bolt as it scales a bullet — 0150. Read here rather than
       // remembered, on the collision section's own argument.
       const open = openBy(phaseFor(w.bossRow, w.bossPool.at(boss).health, w.bossFullHealth));
-      strike(w.bossPool, boss, w.weapon.damage * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+      strike(w.bossPool, boss, w.weapon.damage * open * gunWeightOn(w.bossRow, w.weapon.kind), IMPACT_FLASH_STEPS, w.bossDeaths);
     } else {
       // Dry, and nothing ate it on the way.
       spawnLink(w, row, fromAlong, fromAcross, toAlong, toAcross);
@@ -3190,6 +3168,8 @@ function stepBombs(w: World): void {
       // The blast holds station in the world while everything else moves past it — a shockwave is a
       // place rather than a body. `speed` is 0 on the row; this is the same statement for the camera.
       blast.lifeFor = BLAST_STEPS;
+      // What the player chose to throw is worth a share of the fight — 0372. The pyre's is not.
+      blast.bossShare = SPECIALS.bomb.bossShare;
     }
     /*
       ⚠️ **Outside the `blast !== null` branch, beside the burst rather than beside the ring.** The
@@ -5964,94 +5944,10 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
 }
 
 /**
- * Throw the upgrades a death has just cost back onto the field — one piece per kind, carrying
- * every rung of that kind the death took.
- *
- * Asked for in play: *"when a player dies, their power ups should explode from where they were and
- * bounce around the screen… non-cycling and on a short timer so there's enough time to grab some,
- * but maybe not all."* [0066](../../docs/decisions/0066-a-death-scatters-what-it-took.md), and one
- * piece per kind with a ×N badge is
- * [0243](../../docs/decisions/0243-a-death-throws-back-one-piece-per-kind.md) — *"a single missile
- * power up bubble with an x2/3/4 etc if they had multiple powerups, and same for weapons, it's too
- * hard to grab all the different powerups with all the different sequencing in the middle of a hail
- * of bullets."*
- *
- * ⚠️ **DELETED BY 0256 AND RESTORED BY 0266.** That decision made a death cost one rung and throw
- * nothing, on the argument that the rung IS the cost; played, the two halves together emptied the
- * field — *"in addition to reducing the power up total it also stopped the power ups spawning from
- * a death, which drastically reduced the power ups in game."* The rung is gone and this is back.
- *
- * ⚠️ **Exported and called by `src/app/mount.ts`, exactly as `respawn` and `launchSpecial` are.**
- * The frame cannot see the run — 0039 puts the upgrade list in `src/state/` — so the shell hands
- * over what was lost and this is the half that moves entities.
- *
- * ⚠️ **It has to be called BEFORE the reducer empties the list**, which is a real ordering the shell
- * has to keep and one there is no way to state here. `tests/pickups.test.ts` drives the shell.
- *
- * ⚠️ **Shields are absent by CONSTRUCTION rather than by a filter** — *"no shields spawn on death"*
- * (0083). They live on the ship's `health` (0050) and not in the upgrade list, so the signature is
- * the guarantee: this takes `UpgradeKind[]` and a shield is not one. The guard holds it anyway,
- * because *true because of a type* stops being obvious the moment somebody widens the type.
- */
-export function scatterUpgrades(w: World, upgrades: readonly UpgradeKind[]): void {
-  let weapons = 0;
-  let missiles = 0;
-  for (let i = 0; i < upgrades.length; i++) {
-    if (upgrades[i] === 'weapon') weapons++;
-    else missiles++;
-  }
-  /*
-    ⚠️ **The ring is spaced over the pieces that will really appear**, which at two kinds is all of
-    them — the pool bound `dropPickups` needs is moot here and stated by the type instead: a scatter
-    can never be longer than the kinds there are.
-  */
-  const pieces = (weapons > 0 ? 1 : 0) + (missiles > 0 ? 1 : 0);
-  let index = 0;
-  if (weapons > 0) scatterPiece(w, 'weapon', weapons, index++, pieces);
-  if (missiles > 0) scatterPiece(w, 'missile', missiles, index, pieces);
-}
-
-/** One thrown piece of `upgrade`, worth `stack` rungs, as the `index`th of `pieces` around the wreck. */
-function scatterPiece(w: World, upgrade: UpgradeKind, stack: number, index: number, pieces: number): void {
-  /*
-    ⚠️ **WHERE THE SHIP DIED, not where the ship object still is** — 0079. This used to read
-    `w.ship.along`, which was right for as long as the scatter happened on the step the hull reached
-    zero. It happens at the END of the beat, `DEATH_STEPS` later, and the ship object has sat still
-    in world coordinates the whole time — so the camera has moved about 27 units out from under it,
-    and the pieces would arrive a beat's worth of scroll behind the wreck they came off.
-  */
-  const along = w.cameraAlong + w.deathOffset;
-  const slot = w.pickupKinds[upgrade];
-  const row = w.pickupRows[slot];
-  if (row === undefined) return;
-  const item = w.pickups.spawn();
-  // A scatter one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
-  if (item === null) return;
-  reset(item, along, w.deathAcross, row, slot);
-  item.stack = stack;
-  /*
-    ⚠️ **A SCATTERED PIECE SHOWS THE FACE THE PLAYER JUST LOST, AND HOLDS IT** — 0233, finished by
-    0243. What a death throws back is what it took, and what it took was a gun of a particular kind;
-    a piece that came up showing the other gun would be offering a switch the player did not ask for
-    at the one moment they are trying to recover. 0233 had it cycle from there like any other, and
-    the fifth play-test named the cycling as what made a death's pieces impossible to grab under
-    fire — so a scattered piece does not turn. **A dropped one still does**: a drop is an offer.
-
-    ⚠️ **AND THE DIAL DOES NOT TURN HERE** — 0084 counts what a level OFFERS, and a piece handed
-    back is not an offer. `dropPickups` turns it and `weaponsOfferedBy` counts that; this is the
-    half of the distinction that would silently inflate the dial by one per death.
-  */
-  startCycle(item, row, upgrade === 'weapon' ? WEAPON_KINDS.indexOf(w.weapon.kind) : MISSILE_KINDS.indexOf(w.weapon.missile));
-  item.faceIn = 0;
-  throwArc(w, item, row, index, pieces, w.scatterRng);
-}
-
-/**
  * The ring every thrown piece leaves on: an angle per piece, evenly spaced, jittered, then a flight.
  *
- * ⚠️ **ONE DESCRIPTION FOR THE DROP AND THE SCATTER, and the stream is the caller's.** The two
- * differ in where they are thrown from, whether the face cycles and whether the dial turns; the arc
- * is the same arc, and 0021 is why the generator is a parameter rather than read off the world here.
+ * ⚠️ **The mid-boss's drop is the only thrower since 0372 deleted the death scatter**; the stream
+ * stays a parameter because 0021 is why a generator is never read off the world here.
  *
  * ⚠️ **A SIXTH OF A TURN ON, since 0243.** With one or two pieces, a ring that started along the
  * lane put one piece straight ahead and the other straight behind, a dozen units from the box's

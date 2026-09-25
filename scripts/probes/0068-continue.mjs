@@ -58,7 +58,8 @@ export const PROBES = [
     // The other direction: a continue that keeps the level and forgets to restock, so the player is
     // handed back a run with nothing in it. Silent, because the screen half would still work.
     broke: 'the lives left where the last death put them',
-    guard: 'and everything else goes back to what a run starts with',
+    // ⚠️ Renamed by 0372: a continue refills the lives and keeps everything else.
+    guard: 'refills the lives and keeps everything the run was carrying',
     edit: {
       path: 'src/state/slices/run.ts',
       find: '        lives: livesFor(state.difficulty),',

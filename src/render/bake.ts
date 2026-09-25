@@ -590,19 +590,6 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupArc: 'player',
   pickupShuriken: 'blade',
   pickupShield: 'pickup',
-  /*
-    ⚠️ **THE PICKUP INK OVER THE BOMB'S OWN SILHOUETTE, and the ink is doing the whole job here.**
-    `pickupBomb` and `bomb` share a drawing (see the case below), so this line is the only thing that
-    says *this one is lying in the lane waiting to be collected* rather than *this one just left the
-    ship*. That is colour carrying the ROLE while shape carries identity, which is the division
-    `docs/decisions/0024-the-accessibility-floor-is-settings.md` asks for — and the two are never in
-    the same place, because a thrown bomb is travelling and this is holding station.
-  */
-  pickupBomb: 'pickup',
-  // A scattered piece's badge is a pickup's, in the pickup ink — 0243.
-  stackTwo: 'pickup',
-  stackThree: 'pickup',
-  stackFour: 'pickup',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
   /*
@@ -1803,81 +1790,6 @@ function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, fl
       }
     }
   }
-}
-
-/** One bar of a numeral, as a rectangle subpath in the frame's `r` from the centre. */
-function bar(ctx: Pen, f: Frame, x0: number, y0: number, x1: number, y1: number): void {
-  ctx.rect(f.half + x0 * f.r, f.half + y0 * f.r, (x1 - x0) * f.r, (y1 - y0) * f.r);
-}
-
-/**
- * The badge a scattered piece wears: a disc in the pickup ink with `×N` cut out of it — 0243.
- *
- * ⚠️ **CUT OUT, NOT PAINTED ON.** The numeral is holes in the disc under `evenodd`, so what shows
- * through it is the void, and the badge is legible against anything by the rule that makes the
- * shuriken's hole legible. Seven bars make the digits, spaced so no two overlap (an overlap under
- * `evenodd` would fill again), and the cross is four arms that meet at nothing.
- */
-function paintStack(ctx: Pen, f: Frame, stack: number): void {
-  ring(ctx, f, 0, 0, 1);
-  // The cross, left of the numeral: four arms from just off the centre outward.
-  const cx = -0.5;
-  for (const [dx, dy] of [
-    [1, 1],
-    [1, -1],
-    [-1, 1],
-    [-1, -1],
-  ] as const) {
-    const ax = cx + dx * 0.07;
-    const ay = dy * 0.07;
-    const bx = cx + dx * 0.26;
-    const by = dy * 0.26;
-    // A thin quad along the arm, a bar's width across it.
-    const nx = -dy * 0.05;
-    const ny = dx * 0.05;
-    ctx.moveTo(f.half + (ax + nx) * f.r, f.half + (ay + ny) * f.r);
-    ctx.lineTo(f.half + (bx + nx) * f.r, f.half + (by + ny) * f.r);
-    ctx.lineTo(f.half + (bx - nx) * f.r, f.half + (by - ny) * f.r);
-    ctx.lineTo(f.half + (ax - nx) * f.r, f.half + (ay - ny) * f.r);
-    ctx.closePath();
-  }
-  // The numeral, seven-bar, in a box from x −0.05 to 0.55 and y −0.45 to 0.45.
-  const left = -0.05;
-  const right = 0.55;
-  const top = -0.45;
-  const bottom = 0.45;
-  const w = 0.11;
-  const gap = 0.02;
-  const segments = {
-    top: () => bar(ctx, f, left, top, right, top + w),
-    middle: () => bar(ctx, f, left, -w / 2, right, w / 2),
-    bottom: () => bar(ctx, f, left, bottom - w, right, bottom),
-    upperLeft: () => bar(ctx, f, left, top + w + gap, left + w, -w / 2 - gap),
-    upperRight: () => bar(ctx, f, right - w, top + w + gap, right, -w / 2 - gap),
-    lowerLeft: () => bar(ctx, f, left, w / 2 + gap, left + w, bottom - w - gap),
-    lowerRight: () => bar(ctx, f, right - w, w / 2 + gap, right, bottom - w - gap),
-  };
-  // Two, three, or four — the ladder's height. Not a switch, on purpose: a badge is one of three
-  // pictures, not one of a closed union that could grow, and the fourth bake would be a fourth arm.
-  if (stack === 2) {
-    segments.top();
-    segments.upperRight();
-    segments.middle();
-    segments.lowerLeft();
-    segments.bottom();
-  } else if (stack === 3) {
-    segments.top();
-    segments.upperRight();
-    segments.middle();
-    segments.lowerRight();
-    segments.bottom();
-  } else {
-    segments.upperLeft();
-    segments.upperRight();
-    segments.middle();
-    segments.lowerRight();
-  }
-  seal(ctx);
 }
 
 /**
@@ -9281,15 +9193,6 @@ export function drawKind(
       disc(ctx, fg, shade(palette.glass, 0.5), -0.1, -0.09, 0.1);
       return;
     }
-    case 'stackTwo':
-      paintStack(ctx, f, 2);
-      return;
-    case 'stackThree':
-      paintStack(ctx, f, 3);
-      return;
-    case 'stackFour':
-      paintStack(ctx, f, 4);
-      return;
     case 'arcNode': {
       /*
         WHERE A BOLT LANDS — a bright dot in the impact ink with a glow round it. The bolt itself is
@@ -9456,15 +9359,7 @@ export function drawKind(
         [0.45, 0.2],
       ]);
       return;
-    /*
-      ⚠️ **ONE DRAWING, TWO KINDS, AND IT IS THE ONLY SHARED SILHOUETTE OUTSIDE THE PYRE'S RUNGS.**
-      `bomb` is what leaves the ship; `pickupBomb` is what is lying in the lane waiting to be
-      collected (0082). They are baked at different extents and in different inks — the family map
-      above is what separates them — and sharing the path is the point rather than a saving: a player
-      learns the notched disc from the trigger strip long before they find one, so *the thing on the
-      ground is the thing on the button* costs no teaching at all.
-    */
-    case 'pickupBomb':
+    // What leaves the ship. It shared this drawing with `pickupBomb` until 0372 removed the pickup.
     case 'bomb': {
       /*
         A disc with a spike at the TOP — a bomb with a fuse. The spike is what stops it reading as a
@@ -9486,15 +9381,12 @@ export function drawKind(
         the picture had not. The disc is now 0.6r and the spike reaches r over a narrower base, so it
         is a fuse rather than a bump.
       */
-      // The bubble on the one lying in the lane, and not on the one just thrown — 0236. The thrown
-      // bomb keeps the whole frame; the pickup draws the same bomb in the smaller one.
-      const fg: Frame = kind === 'pickupBomb' ? { half, r: r * PICKUP_GLYPH } : f;
+      const fg = f;
       const g = fg.r;
       ctx.arc(half, half, g * 0.6, Math.PI * 1.35, Math.PI * 1.65, true);
       ctx.lineTo(half, half - g);
       ctx.closePath();
       seal(ctx);
-      if (kind === 'pickupBomb') bubble(ctx, f, palette);
       const casing = palette[INK_OF[kind]];
       // The casing's underside in shadow, then the lit core 0194 gave it, then the fuse burning.
       disc(ctx, fg, shade(casing, -0.3), 0.08, 0.16, 0.42);

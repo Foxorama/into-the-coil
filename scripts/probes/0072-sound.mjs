@@ -107,8 +107,9 @@ export const PROBES = [
     guard: 'THE ONE THAT WOULD BE EATEN BY THE CAP: a boss dying is heard, through a real speaker',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
-      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
+      // ⚠️ Re-anchored by 0372, which weighs the gun on a boss by its row: `open` became `gunOpen`.
+      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
+      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
     },
   },
   {

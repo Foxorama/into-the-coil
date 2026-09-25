@@ -289,6 +289,10 @@ const WITHOUT_PROBES: Record<string, string> = {
   // the tree; the table records a session that was real and cannot be re-run against code that
   // has no ring. 0242's own table covers what replaced it.
   '0240': 'its ring was superseded by 0242 — the lead and stretch its probes broke no longer exist, and the coil that replaced them has its own table and probes',
+  // Two more of the same kind: 0372 keeps the ladders through a death, so the scatter, its stack and
+  // its badge are gone from the tree. 0372's own probes break the rule that replaced them.
+  '0243': 'its one-piece-per-kind scatter and ×N badge were deleted by 0372 — a death throws nothing, and 0372 has its own table and probes',
+  '0266': 'its restored scatter was deleted by 0372 — a death keeps the ladders, and 0372 has its own table and probes for the reversed rule',
   '0007': 'every row needs `npm run build` and a browser run first, and the harness runs vitest against the tree rather than a built dist/',
   '0008': 'the manifest and `_headers` rows assert on a built dist/, which the harness does not produce',
   '0009': "the cache-sweep rows drive a real page against a built dist/ with a stranger's cache seeded on the origin",

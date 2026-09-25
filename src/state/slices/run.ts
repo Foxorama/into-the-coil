@@ -77,9 +77,9 @@ export interface ArsenalEntry {
  * reducer used to clear the arsenal to `[]` on a death, because there was no starting special for it
  * to go back to; there is one now, and the ask names its size: *"the player starts with 2."*
  *
- * ⚠️ **A DEATH NO LONGER CALLS THIS** — `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`.
- * Two callers are left and both are a run being stocked rather than a ship being replaced: `begin`
- * and `continued`.
+ * ⚠️ **ONE CALLER, `begin`.** A death stopped calling it in
+ * `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` and a continue in
+ * `docs/decisions/0372-a-death-keeps-the-ladders.md`: a run is stocked once.
  *
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
@@ -133,10 +133,8 @@ export interface RunState {
    * kind the ship is not carrying switches the gun, so *which gun* is a thing the list alone cannot
    * say. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
    *
-   * ⚠️ **A DEATH PUTS THEM BACK TO THE SHIP'S BASE KINDS — 0233, and 0266 restores it.** 0256 had
-   * a death cost a rung and keep the gun, because nothing was thrown back for the player to recover
-   * a kind from. The scatter is back, and every piece it throws holds the face the death took, so
-   * the base gun is what the ship flies with until the player crosses back through and takes it.
+   * ⚠️ **Nothing but a pickup changes them — 0372.** A death and a continue both keep the kinds
+   * with the ladder, so the base kinds are only ever what `begin` issues.
    */
   weapon: WeaponKind;
   missile: MissileKind;
@@ -153,15 +151,8 @@ export type RunAction =
     its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
     *weapon* could not tell a fifth pulse from a first arc.
   */
-  /*
-    ⚠️ **`count` is how many rungs the pickup was worth — 0243, deleted by 0256 and back with the
-    scatter in 0266.** One when absent, which is every authored pickup and every mid-boss drop; a
-    piece a death threw back carries every rung of its kind the death took, and the shell passes
-    that through rather than dispatching once per rung, so the ladder's clamp and the switch rule
-    below see one event.
-  */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind; count?: number }
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind; count?: number }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
+  | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' };
 
 /**
@@ -197,18 +188,12 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       /*
         A CONTINUE — `docs/decisions/0068-a-run-over-is-a-continue.md`.
 
-        ⚠️ **`begin` with the level left alone, and that single difference is the whole feature.** A
-        run that ran out of lives is picked up where it stopped: the level index does not move, so
-        the shell has nothing to re-enter and the field carries on underneath. Everything else goes
-        back to what a run starts with — the tier's full complement, the starting kit, and no
-        upgrades.
-
-        ⚠️ **AND THE STARTING KIT IS NOW THE ONE THING THIS DOES THAT `lifeLost` DOES NOT** —
-        `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, in the ask's own words: *"bombs
-        should be reset on a continue, but not on player death."* Both arms used to restock, so the
-        line below was a copy of a line in the arm above it; it is now the difference between the two
-        events. It cuts both ways and 0085 says so — a player who reaches the continue screen holding
-        five charges is put back to the starting two.
+        ⚠️ **THE LIVES ARE REFILLED AND NOTHING ELSE MOVES** —
+        `docs/decisions/0372-a-death-keeps-the-ladders.md`, in the ask's own words: *"you don't
+        lose power ups on death or continue, you keep the level you had."* 0068 sent the ship back to
+        the starting kit with no upgrades and 0085 reset the charges; both are gone, and the level
+        index staying put is no longer the only thing a continue keeps. The charges are kept too, and
+        the +1 a clear used to grant was taken away in the same ask to pay for it.
 
         ⚠️ **The tier is carried, never re-chosen.** It is a property of the run
         (`docs/decisions/0047-…`), and this is still the same run — a continue that dropped the
@@ -224,48 +209,20 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: livesFor(state.difficulty),
         level: state.level,
-        arsenal: startingArsenal(),
-        upgrades: [],
-        weapon: BASE_SHIP.weapon,
-        missile: BASE_SHIP.missile,
+        arsenal: state.arsenal,
+        upgrades: state.upgrades,
+        weapon: state.weapon,
+        missile: state.missile,
         difficulty: state.difficulty,
       };
     case 'lifeLost':
       /*
-        ⚠️ **A DEATH COSTS THE UPGRADES AND LEAVES THE ARSENAL ALONE** —
-        `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`, reported from play: *"bombs should
-        be reset on a continue, but not on player death."* This line used to send the arsenal back to
-        `startingArsenal()` on both, and the two are now the two different events they always were: a
-        death is a beat inside a run, and a continue is a run being restocked.
-
-        ⚠️ **`state.arsenal` UNTOUCHED, which is a top-up removed as well as a cost.** A player who
-        died holding five charges keeps five; a player who died having spent all of them keeps none,
-        where the old line handed back the starting two. 0085 has the trade — the charges banked from
-        clearing levels are the thing the ask is protecting, and a free restock every death is what
-        made them worth nothing.
-
-        ── A DEATH TAKES THE LADDERS AND THROWS THEM ON THE FIELD — 0039 AND 0066, RESTORED BY 0266 ─
-
-        ⚠️ **This line is what is left of
-        `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`** — *"back to the
-        ship's base weapon and starting special"*; the base weapon is exactly what an empty upgrade
-        list resolves to, so this and `weaponFor` between them mean there is no second description
-        of what the ship shoots with nothing. 0085 amends the *starting special* half, and
-        `docs/decisions/0066-a-death-scatters-what-it-took.md`'s scatter is what hands the upgrades
-        straight back — `scatterUpgrades` in `src/app/frame.ts`, dispatched by the shell BEFORE this
-        reducer, because this reducer is what empties the list.
-
-        ⚠️ **`afterDeath(state.upgrades)` WAS THIS LINE FOR ONE DAY — 0256's rung, and 0266 deletes
-        it.** *"A death reduces the power count by 1"* was asked for and built, and it landed in the
-        same change that deleted the scatter: two rules on the same quantity, and played together
-        they left the field with almost nothing on it. *"In addition to reducing the power up total
-        it also stopped the power ups spawning from a death, which drastically reduced the power ups
-        in game."* What a death costs is the crossing back through the fire, and the life.
-
-        ⚠️ **Unconditional on EVERY death, including the last one**, exactly as the arsenal clear was:
-        a `lifeLost` that behaved differently on the last life would be a rule with a hidden
-        condition, and the condition would be *did the caller intend to keep playing*, which is not a
-        thing state can know. `continued` is where the answer to that question lives.
+        ⚠️ **A DEATH COSTS THE LIFE AND NOTHING ELSE** —
+        `docs/decisions/0372-a-death-keeps-the-ladders.md`. 0085 left the arsenal alone; 0372 leaves
+        the ladders and both kinds alone as well, so the ship that comes back is the ship that came
+        apart. 0039's *"back to the ship's base weapon"*, 0066's scatter and 0266's restoring of it
+        are all reversed by that one ask, and the scatter is deleted rather than left to throw an
+        empty ring.
 
         ⚠️ **Clamped at zero, never below.** Nothing should dispatch this at zero lives, and the
         reducer is not the place to find out whether anything did: a negative life count would
@@ -277,10 +234,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             lives: state.lives - 1,
             level: state.level,
             arsenal: state.arsenal,
-            upgrades: [],
-            // The base kinds come back with the base weapon — 0233. The scatter holds the faces.
-            weapon: BASE_SHIP.weapon,
-            missile: BASE_SHIP.missile,
+            upgrades: state.upgrades,
+            weapon: state.weapon,
+            missile: state.missile,
             difficulty: state.difficulty,
           };
     case 'took': {
@@ -365,18 +321,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         way the list could grow past `UPGRADE_TIERS` of a kind; it switches and adds nothing now, so
         the list is the tier and the save holds nothing the ladder cannot read.
       */
-      /*
-        ⚠️ **AND EVERY RUNG THE PIECE WAS WORTH — 0243, back with the scatter in 0266.** A piece a
-        death threw carries the whole ladder it took, so the shell dispatches one event with a
-        count rather than one event per rung: the clamp above is asked once, and a ×3 arriving at a
-        ladder with room for two adds two rather than being refused or overflowing.
-      */
-      const count = action.count === undefined || action.count < 1 ? 1 : action.count;
+      // One rung a pickup: 0243's `count` went with the scatter that was its only sender — 0372.
       const room = UPGRADE_TIERS - tiersOf(state.upgrades, action.upgrade);
-      const added = count < room ? count : room;
-      const rungs: UpgradeKind[] = [];
-      for (let i = 0; i < added; i++) rungs.push(action.upgrade);
-      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;
+      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;
       return {
         lives: state.lives,
         level: state.level,
@@ -395,14 +342,14 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         A clear that reset anything would be the death rule wearing the wrong name.
       */
       /*
-        ⚠️ **Every owned special gains a charge**, which is the ask — *"gains one per level cleared"* —
-        stated as a rule about the arsenal rather than about the bomb. A second special added later
-        inherits it without anybody remembering to, which is the whole reason the arsenal is a list.
+        ⚠️ **A clear no longer grants a charge** — `docs/decisions/0372-a-death-keeps-the-ladders.md`
+        takes 0053's *"gains one per level cleared"* away, in the ask's words: *"it should be more
+        than balanced by the fact that you're keeping them all on continues."*
       */
       return {
         lives: state.lives,
         level: state.level + 1,
-        arsenal: state.arsenal.map((entry) => ({ kind: entry.kind, charges: entry.charges + 1 })),
+        arsenal: state.arsenal,
         upgrades: state.upgrades,
         weapon: state.weapon,
         missile: state.missile,

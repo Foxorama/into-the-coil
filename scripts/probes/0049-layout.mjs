@@ -11,12 +11,9 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0049',
-    suite: 'tests/layout.browser.test.ts',
-    // The reported bug itself: the key stacked above the tiers, so six things run down the axis that
-    // has 375 pixels of it. Looks perfect on a laptop.
-    /*
+  // `the title screen stacked down the short axis again` WAS HERE — the reported bug itself: the key
+  // stacked above the tiers, so six things ran down the axis that has 375 pixels of it.
+  /*
       ⚠️ **RE-ANCHORED BY 0210, AND THE MOVE IS THE INTERESTING PART.** This expected the failure on
       *the phone this bug was reported from* — 812x375. It no longer lands there: 0210 gave the title
       screen a two-column grid below 460px tall, so the screen is compact enough that stacking its
@@ -33,15 +30,14 @@ export const PROBES = [
       still have the two columns, and there it overflows the laptop and the tablet. The fit guard on
       those devices is what notices, and it is the claim the probe was always about: the title stacked
       down the short axis does not fit.
-    */
-    broke: 'the title screen stacked down the short axis again, instead of across the long one',
-    guard: 'draws all of every screen on a laptop',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: '  grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);',
-      replace: '  grid-template-columns: minmax(0, 1fr);',
-    },
-  },
+
+      ⚠️ **AND DELETED BY 0372, BECAUSE IT STOPPED BEING A BREAK.** 0372 took the bomb pickup out
+      of the key, and a key one row shorter fits the title in one column on every device the layout
+      guard flies. `npm run prove 0049` with the guard widened to all six of them said STILL GREEN.
+      Stacked is now a layout choice rather than an overflow, and a probe that could only be made to
+      redden by making its break bigger would be tuned to the answer — 0044. The two columns stay;
+      the claim that stacking does not fit is no longer true of this screen.
+  */
   {
     decision: '0049',
     suite: 'tests/layout.browser.test.ts',

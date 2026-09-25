@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, SHIP_START_ALONG, respawn, scatterUpgrades } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, dropPickups, respawn } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -173,22 +173,22 @@ describe('a new run opens on an empty field', () => {
     expect(built.world.enemyShots.size, 'level two opened under level one’s bullets').toBe(0);
   });
 
-  it('but what a death threw back crosses the boundary, and only a new run sweeps it', () => {
+  it('but a pickup still floating crosses the boundary, and only a new run sweeps it', () => {
     /*
       Played: *"if you die and the power ups are floating when the new level loads they'll
-      disappear."* 0266 says nothing a death takes is lost, and the boundary was spending it. A pickup
-      is the player's to catch, not the level's — so `arrive` keeps it and `begin` does not.
+      disappear."* That was a death's scatter, which 0372 deleted; the rule was never about deaths. A
+      pickup is the player's to catch, not the level's — so `arrive` keeps it and `begin` does not.
     */
     const built = shell();
     built.lifecycle.begin(TIER);
     intoAFight(built);
-    scatterUpgrades(built.world, ['weapon', 'weapon', 'missile']);
+    dropPickups(built.world, built.world.ship.along + 40, 50, ['weapon', 'shield', 'missile']);
     const thrown = built.world.pickups.size;
-    expect(thrown, 'the scatter threw nothing, so this asserts nothing').toBeGreaterThan(0);
+    expect(thrown, 'the drop threw nothing, so this asserts nothing').toBeGreaterThan(0);
 
     built.lifecycle.onward();
     built.lifecycle.arrive();
-    expect(built.world.pickups.size, 'level two opened with what the death threw back swept away').toBe(thrown);
+    expect(built.world.pickups.size, 'level two opened with what was still floating swept away').toBe(thrown);
 
     built.lifecycle.begin(TIER);
     expect(built.world.pickups.size, 'a new run opened on the last one’s pickups').toBe(0);
@@ -203,14 +203,7 @@ describe('a run over is a continue', () => {
     intoAFight(built);
     built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
     built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    /*
-      ⚠️ **Banked past the starting kit, or the restock below cannot be seen** —
-      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md`. Until 0085 every death restocked the
-      arsenal, so a fixture that reached the run-over screen was already holding exactly what a
-      continue was about to hand it and *the continue did not restock the arsenal* was a sentence
-      about nothing. A death now carries the charges through, so this is what makes the two arms of
-      the reducer distinguishable at all.
-    */
+    // Banked past the starting kit, or a continue resetting the arsenal could not be seen — 0372.
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     dieOutTheRun(built);
     expect(built.state().run.lives, 'the fixture kept a life, so there is no run to continue').toBe(0);
@@ -255,27 +248,22 @@ describe('a run over is a continue', () => {
     expect(built.state().screen.current, 'the continue did not put the player back in the game').toBe('playing');
   });
 
-  it('restocks the run with everything a fresh one carries', () => {
+  it('refills the lives and keeps the ladders and the charges', () => {
     /*
-      *"They start with the starting stats as if they had started a new run — default lives, shields,
-      bombs etc."* Read off `begin`'s own sources rather than written down here, so a tier that moves
-      any of them moves this with it — 0039's rule about numbers nobody has played yet.
+      0068 restocked *"as if they had started a new run"*; `docs/decisions/0372-a-death-keeps-the-ladders.md`
+      keeps what the run was carrying: *"you don't lose power ups on death or continue."* The lives
+      are read off the tier's own row, so a tier that moves them moves this with it.
     */
     const built = ranOut();
-    /*
-      ⚠️ **The arsenal reaching this screen is BIGGER than a fresh one's, and that is 0085.** The
-      restock is a reduction here — the one place in the game where a bomb count goes down without the
-      player pressing anything — and it is the half of *"reset on a continue, but not on player
-      death"* that the run-over screen owns.
-    */
-    expect(
-      built.state().run.arsenal,
-      'the run reached the continue screen with a fresh kit, so restocking it proves nothing',
-    ).not.toEqual(startingArsenal());
+    const carried = built.state().run;
+    expect(carried.arsenal, 'the run reached the continue screen with a fresh kit, so a reset proves nothing').not.toEqual(
+      startingArsenal(),
+    );
+    expect(carried.upgrades.length, 'the run reached the continue screen with no ladder to keep').toBeGreaterThan(0);
     built.lifecycle.resume();
-    expect(built.state().run.lives, 'the continue did not restock the run').toBe(livesFor(TIER));
-    expect(built.state().run.arsenal, 'the continue did not restock the arsenal').toEqual(startingArsenal());
-    expect(built.state().run.upgrades, 'the continue handed back the upgrades the last death took').toEqual([]);
+    expect(built.state().run.lives, 'the continue did not restock the lives').toBe(livesFor(TIER));
+    expect(built.state().run.arsenal, 'the continue reset the arsenal').toEqual(carried.arsenal);
+    expect(built.state().run.upgrades, 'the continue took the ladders').toEqual(carried.upgrades);
     expect(built.state().run.difficulty, 'the continue changed the tier under the player').toBe(TIER);
   });
 

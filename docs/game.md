@@ -25,28 +25,26 @@ whole game.
 | **The betrayer** | returns as the end boss of a later level |
 | **Target length** | 15–30 minutes, prologue to final boss. **~2 minutes of stage per level plus its boss** — it was ~3 and the player cut it twice from play, for DENSITY: *"reduce the level length without reducing enemy count to increase the density of enemies"*, and then *"it still took me 3 minutes"*. [0114](decisions/0114-the-fight-is-a-different-piece.md) |
 
-Upgrades and buffs **carry forward across levels, and are lost on a death** —
-[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). There is **no shop and no
-currency** — everything is found in the level and applied the instant you touch it.
+Upgrades and buffs **carry forward across levels, through a death and through a continue** —
+[0372](decisions/0372-a-death-keeps-the-ladders.md), reversing
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)'s *lost on a death*. There is
+**no shop and no currency** — everything is found in the level and applied the instant you touch it.
 
-A run carries **three lives**, fixed. A death spends one and **costs one rung of each ladder, to a
-minimum of one** — the gun and the tube are kept, and nothing is thrown back, because the rung is the
-cost — [0256](decisions/0256-a-pickup-keeps-the-count.md); the last one ends the run. ⚠️ **A death
-does NOT touch the arsenal's charges** —
-[0085](decisions/0085-a-death-does-not-cost-the-bombs.md) amends 0039's *a death costs the arsenal* to
-the upgrades alone, so bombs banked from clearing levels survive a death and a ship that died with none
-flies again with none.
+A run carries **three lives**, fixed. **A death spends one and nothing else**: both ladders, both
+kinds and the arsenal's charges are the ship that comes back —
+[0372](decisions/0372-a-death-keeps-the-ladders.md); nothing is thrown onto the field. The last life
+ends the run.
 ⚠️ **There are no extras findable in a level** —
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
 
 **A run that ends may be continued**, once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
-where the run stopped, the last death's scatter is still lying in it, and the button hands back a
-fresh ship and a full complement. ⚠️ **It is the one thing in the game that resets the arsenal** —
-[0085](decisions/0085-a-death-does-not-cost-the-bombs.md): a continue puts the charges back to the
-ship's starting kit, which is a reduction for a run that had banked any, and a death does not. The
-offer expires after seven seconds, which is the only other thing it costs.
+where the run stopped, and the button hands back a fresh ship and a full complement of lives. **It
+keeps everything else** — the ladders, the kinds and the charges
+([0372](decisions/0372-a-death-keeps-the-ladders.md), reversing 0068's starting kit and
+[0085](decisions/0085-a-death-does-not-cost-the-bombs.md)'s reset). The offer expires after seven
+seconds, which is the only other thing it costs.
 
 ## Orientation — the load-bearing rule
 
@@ -179,10 +177,8 @@ off by default — see [0024](decisions/0024-the-accessibility-floor-is-settings
 
 ## Upgrades
 
-Found in the level, applied on contact, kept across every level that follows — and **a death costs
-one rung of each ladder**, never the ladder
-([0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md), amended by
-[0256](decisions/0256-a-pickup-keeps-the-count.md)). Every upgrade **changes how the ship looks on
+Found in the level, applied on contact, kept across every level that follows **and every death** —
+[0372](decisions/0372-a-death-keeps-the-ladders.md). Every upgrade **changes how the ship looks on
 screen**, and every upgrade is worth taking — an upgrade that cannot change the outcome is worse than
 none.
 
@@ -197,13 +193,16 @@ level authors is what the player gets.
 | **`weapon`** | a barrel **and** a fire-rate step | 4 | 1 near the start; level one a second before its mid-boss | 1 | — |
 | **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
 | **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn | — | — | 1, not on Burn | — |
-| **`bomb`** | charges for the arsenal, uncapped — the only pickup the player decides when to use | — | — | 1 | the clear's charge |
 
-**The guns cap across the run rather than inside a level**, because a ladder is only ever one rung
-down.
+The mid-boss also drops a **`missile`** since [0372](decisions/0372-a-death-keeps-the-ladders.md) took
+the **`bomb`** pickup off the field, along with the charge a level clear used to pay. A run starts
+with two bomb charges and earns more only by overflowing a ladder.
+
+**The guns cap across the run rather than inside a level**, and a death never takes a rung back.
 
 ⚠️ **An upgrade pickup taken once its own ladder is full becomes a bomb charge** — per ladder, which is
-what makes bombs uncapped. That is how *every upgrade is worth taking* survives having a cap; before
+what makes bombs uncapped. A thrown bomb lands **the larger of its own damage and a twentieth of a
+boss's full health**, once however much of the animal it covers (0372). That is how *every upgrade is worth taking* survives having a cap; before
 0082 it became unbounded damage instead, which was the reported defect: *"when you get max speed
 nothing is a challenge, bosses die in less a second."*
 
@@ -236,17 +235,17 @@ The rest of the vocabulary is unbuilt: multi-tag tracking specials, piercing sho
 orbiting mines that are half shield and half weapon. Nothing triggers a special except the bomb.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
-grounds that a shield is the better version of the same promise: it stops the death, so it keeps the
-upgrades a death would cost ([0085](decisions/0085-a-death-does-not-cost-the-bombs.md) took the
-charges out of that sentence — a death no longer costs them). **This is open rather than settled**,
-and it is what
+grounds that a shield is the better version of the same promise: it stops the death. Since
+[0372](decisions/0372-a-death-keeps-the-ladders.md) a death costs only the life, so that is ALL a
+shield saves now. **This is open rather than settled**, and it is what
 [0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for.
 
-⚠️ **A death hands back everything it took, where it happened — but never a shield.** That is the
-answer to *what is a player who just died flying with*, and it replaces the twenty-second rearm ceiling
-this page carried until 0082. [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) made it
-half and a play-test called that *"too punishing"*, so
-[0083](decisions/0083-two-ladders-of-four.md) put it back to all of it.
+⚠️ **A player who just died is flying with everything they had** — 0372. The scatter that handed a
+death's ladders back on the field (0066, 0243, 0266) is gone with the cost it answered.
+
+⚠️ **A gun's hit on a boss is weighed by its row, and a boss may author its own weight for a gun** —
+0372. The arc is 1.5, because it is the one gun whose fight closing in cannot shorten; the serpent
+authors it back at 1, because it was already that animal's quickest gun.
 
 **The title screen carries a key** — every pickup, its real sprite, and what it does.
 [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no

@@ -19,10 +19,11 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0266, which gave the reducer a count to apply: the clamp is the same
       // clamp, asked once against the room left on the ladder rather than once per event.
-      find: '      const upgrades = added > 0 ? [...state.upgrades, ...rungs] : state.upgrades;',
+      // ⚠️ Re-anchored by 0372, which took the count away again: one rung a pickup.
+      find: '      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;',
       replace:
         '      const fitted = action.upgrade === \'weapon\' ? state.weapon : state.missile;\n' +
-        '      const upgrades = action.kind === fitted ? (added > 0 ? [...state.upgrades, ...rungs] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
+        '      const upgrades = action.kind === fitted ? (room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
     },
   },
   /*
@@ -40,7 +41,8 @@ export const PROBES = [
     suite: 'tests/death.test.ts',
     // The death dispatched on the step the hull reaches zero rather than at the end of the beat.
     broke: 'the death’s cost dispatched on the step the hull reached zero, before the beat',
-    guard: 'throws the upgrades out of the wreck at the end of the beat',
+    // ⚠️ Renamed by 0372: nothing is thrown now, and what shows the early dispatch is the life.
+    guard: 'throws nothing out of the wreck, and the next ship flies the ladders the last one had',
     edit: {
       path: 'src/app/frame.ts',
       find: '  w.onCue(\'death\', w.ship.across);',
@@ -88,11 +90,12 @@ export const PROBES = [
     suite: 'tests/pickups.test.ts',
     // The shield dropped from the mid-boss's list, so nothing in the game offers armour.
     broke: 'the shield taken out of the mid-boss’s drop',
-    guard: 'the fights offer the rest: a mid-boss drops one weapon, one shield and one bomb',
+    // ⚠️ Re-anchored and renamed by 0372, which put a missile where the bomb was.
+    guard: 'the fights offer the rest: a mid-boss drops one weapon, one shield and one missile',
     edit: {
       path: 'src/content/levels.ts',
-      find: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'bomb'];",
-      replace: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'bomb'];",
+      find: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'missile'];",
+      replace: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'missile'];",
     },
   },
   {

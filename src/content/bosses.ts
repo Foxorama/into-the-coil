@@ -30,6 +30,7 @@ import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
+import { WEAPONS, type WeaponKind } from './weapons.ts';
 
 /**
  * The `kind` a bolt in the bolts pool carries when it is the serpent's lightning rather than the
@@ -1514,8 +1515,22 @@ export interface BossRow extends Body {
    * Required, on `uncoil`'s and `room`'s terms.
    */
   wreck: Wreck | null;
+  /**
+   * What a gun's hit on THIS boss is worth, where it is not the gun's own `bossWeight` — 0372.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's DEFAULT SHAPE.** The gun's row says what it is worth on a boss and
+   * `gunWeightOn` falls back to it; a boss authors an entry only where the gun's answer is wrong for
+   * this animal. The serpent is the first: the lightning was already its quickest gun, and at the
+   * arc's 1.5 a player carrying tier three to it killed it in 24 s, under its floor.
+   */
+  gunWeights?: Partial<Record<WeaponKind, number>>;
   /** Full health to empty. The first entry must cover a full-health boss. */
   phases: readonly BossPhase[];
+}
+
+/** What `gun` is worth on `boss`: the boss's own entry, or the gun's row — 0372. */
+export function gunWeightOn(boss: BossRow, gun: WeaponKind): number {
+  return boss.gunWeights?.[gun] ?? WEAPONS[gun].bossWeight;
 }
 
 /**
@@ -2541,6 +2556,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     health: 770,
     damage: 3,
+    // The lightning at its own 1, not the arc's 1.5 — 0372: it was already this animal's quickest gun.
+    gunWeights: { arc: 1 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear

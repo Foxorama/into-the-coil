@@ -19,8 +19,9 @@ export const PROBES = [
       // ⚠️ `bomb` and it was `spread` — 0082 merged four kinds into one and `spread` stopped existing,
       // so the filter removed nothing and this went STILL GREEN. The break is unchanged in shape and
       // bigger in effect: the key is three rows now, so dropping one hides a third of the pickups.
+      // ⚠️ And `shield` since 0372 took the bomb pickup away, which made the old filter a no-op again.
       find: '      for (const pickup of PICKUP_KINDS) {',
-      replace: "      for (const pickup of PICKUP_KINDS.filter((k) => k !== 'bomb')) {",
+      replace: "      for (const pickup of PICKUP_KINDS.filter((k) => k !== 'shield')) {",
     },
   },
   {

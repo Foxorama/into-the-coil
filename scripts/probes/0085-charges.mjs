@@ -25,33 +25,22 @@ export const PROBES = [
     // ⚠️ Renamed with the guard by 0266, which took the rung out of the death rule. `anchorFailures`
     // cannot see a rename — the probe's own anchor still resolves — so `npm run prove` reporting
     // NOTHING WAS PROVEN is the only thing that could have said so, and did.
-    guard: 'a death takes both ladders and the kinds, and leaves the arsenal exactly where it was',
+    // ⚠️ Renamed again by 0372, which keeps the ladders through a death as well as the charges.
+    guard: 'a death costs the life and nothing else: both ladders, both kinds and the arsenal stay',
     edit: {
       path: 'src/state/slices/run.ts',
       // Anchored on the ARSENAL line rather than on the whole returned literal, for the reason
       // 0042's probe gives: a literal goes stale the day a field is added to it, and two have been.
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
-      replace: '            arsenal: startingArsenal(),\n            upgrades: [],',
+      // The twelve-space indent is the `lifeLost` arm; `continued` has the same pair at eight.
+      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
+      replace: '            arsenal: startingArsenal(),\n            upgrades: state.upgrades,',
     },
   },
-  {
-    decision: '0085',
-    suite: 'tests/continue.test.ts',
-    /*
-      ⚠️ THE OTHER HALF OF THE SENTENCE, AND IT IS THE HALF A TIDY-UP WOULD DELETE. With the restock
-      gone from the death arm, `continued` and `lifeLost` differ by one field — so making the continue
-      carry the arsenal too looks like removing a duplicated decision rather than deleting the only
-      thing the ask asked to be reset. A run would then be continuable with an arsenal it had spent a
-      whole run accumulating, which is the free continue getting freer.
-    */
-    broke: 'the continue keeping the arsenal too, so nothing in the game ever resets the charges',
-    guard: 'restocks the run with everything a fresh one carries',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: '        lives: livesFor(state.difficulty),\n        level: state.level,\n        arsenal: startingArsenal(),',
-      replace: '        lives: livesFor(state.difficulty),\n        level: state.level,\n        arsenal: state.arsenal,',
-    },
-  },
+  /*
+    ⚠️ `the continue keeping the arsenal too` WAS HERE, and it is the rule now — 0372: *"keep them
+    all."* The break against it, a continue that resets the charges, is in
+    `scripts/probes/0372-a-death-keeps-the-ladders.mjs`.
+  */
   {
     decision: '0085',
     suite: 'tests/bombs.test.ts',
@@ -69,9 +58,9 @@ export const PROBES = [
     guard: 'and a death does not TOP UP an arsenal the player has emptied',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            arsenal: state.arsenal,\n            upgrades: [],',
+      find: '            arsenal: state.arsenal,\n            upgrades: state.upgrades,',
       replace:
-        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: [],',
+        '            arsenal: state.arsenal.map((e) => ({ kind: e.kind, charges: Math.max(e.charges, SPECIALS[e.kind].charges) })),\n            upgrades: state.upgrades,',
     },
   },
 ];

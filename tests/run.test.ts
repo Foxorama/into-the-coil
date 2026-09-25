@@ -5,8 +5,6 @@ import { DEFAULT_DIFFICULTY, livesFor, startingArsenal } from '../src/state/slic
 import { SCREENS } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
-// The base kinds a death puts back on the ship — 0233, restored by 0266.
-import { SHIPS } from '../src/content/ships.ts';
 
 /**
  * WHAT A RUN COSTS — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.
@@ -48,12 +46,11 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'mines' },
-    // On the OTHER kinds, not the ship's own — 0256: a death keeps the gun and the tube, and a
-    // fixture on the base kinds could not see them being put back to the base. `npm run prove`
-    // said so.
+    // On the OTHER kinds, not the ship's own: a fixture on the base kinds could not see a death or a
+    // continue putting them back to the base. `npm run prove` said so.
     { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
     { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
-    // And two on the other ladder — 0256: a death costs one rung PER LADDER, which one ladder cannot show.
+    // And both ladders, so a rule that spared one would show.
     { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
     { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
   );
@@ -78,22 +75,13 @@ describe('a run is lives', () => {
     expect(play(BEGIN, PLAY, DIE, DIE).run.lives).toBe(STARTING_LIVES_OF_THE_TIER - 2);
   });
 
-  it('a death takes both ladders and the kinds, and leaves the arsenal exactly where it was', () => {
+  it('a death costs the life and nothing else: both ladders, both kinds and the arsenal stay', () => {
     /*
-      ⚠️ **THIS ASSERTION HAS INVERTED THREE TIMES, AND EVERY TIME WITH A DECISION.**
-      `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` turned *the arsenal survived a death*
-      from a failure into the rule — *"bombs should be reset on a continue, but not on player
-      death."* `docs/decisions/0256-a-pickup-keeps-the-count.md` turned *the weapon upgrades survived
-      a death* the same way: *"a death reduces the power count by 1 (to a minimum of 1)."* And 0266
-      turned it again, from the play that followed: *"in addition to reducing the power up total it
-      also stopped the power ups spawning from a death, which drastically reduced the power ups in
-      game."* A guard tied to a decision inverts when the decision does; the alternative is a guard
-      loose enough to hold neither.
-
-      ⚠️ **AND NOTHING IS LOST, WHICH IS THE HALF THIS FILE CANNOT SEE.** 0039's *"back to the
-      ship's base weapon and starting special"* is the whole of what happens here, and
-      `scatterUpgrades` throws every rung of it where the ship died — `tests/stack.test.ts` holds
-      that side, and the ordering between the two is `tests/pickups.test.ts`'s, over the shell.
+      ⚠️ **THIS ASSERTION HAS INVERTED FOUR TIMES, AND EVERY TIME WITH A DECISION.** 0085 kept the
+      arsenal, 0256 kept all but a rung, 0266 took the ladders and threw them back, and
+      `docs/decisions/0372-a-death-keeps-the-ladders.md` keeps everything: *"you don't lose power ups
+      on death or continue, you keep the level you had."* A guard tied to a decision inverts when the
+      decision does; the alternative is a guard loose enough to hold neither.
     */
     const before = armed();
     expect(
@@ -119,41 +107,21 @@ describe('a run is lives', () => {
       is armed past the starting kit precisely so the two answers are different objects.
     */
     expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal());
-    /*
-      ⚠️ **BOTH LADDERS, AND THE KINDS WITH THEM.** An empty list is what `weaponFor` resolves to the
-      base gun from, so this line and that function between them are the only description of what
-      the ship shoots with nothing.
-    */
-    expect(after.run.upgrades, 'a death left rungs on a ladder').toEqual([]);
-    expect(after.run.weapon, 'a death left the switched gun on the ship').toBe(SHIPS.proof.weapon);
-    expect(after.run.missile, 'a death left the switched tube on the ship').toBe(SHIPS.proof.missile);
+    // On the OTHER kinds, so a death that put the base gun back is a different answer from this one.
+    expect(after.run.upgrades, 'a death took rungs off a ladder').toEqual(before.run.upgrades);
+    expect(after.run.weapon, 'a death put the base gun back on the ship').toBe('arc');
+    expect(after.run.missile, 'a death put the base tube back on the ship').toBe('homing');
   });
 
-  it('and a ladder of one goes too, because the scatter is what hands it back', () => {
-    /*
-      ⚠️ **THE FLOOR WAS `DEATH_KEEPS` AND 0266 DELETED IT WITH THE RUNG.** *"To a minimum of 1"*
-      was 0256's rule and it kept the last rung on the ship; there is nothing to floor now, because
-      a death takes the ladder and throws it rather than shaving it. This guard is the same test
-      inverted rather than a new one — a half-restore that left the floor in would read as *a death
-      costs nothing at one rung* and would be caught here.
-    */
-    const one = play(BEGIN, PLAY, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    expect(reduce(one, DIE).run.upgrades, 'a death kept a rung back rather than throwing it').toEqual([]);
-    const none = play(BEGIN, PLAY);
-    expect(reduce(none, DIE).run.upgrades, 'a ladder with nothing on it came out of a death holding something').toEqual([]);
-  });
-
-  it('and takes the ladders on the LAST death too, so the rule has no hidden condition', () => {
-    // It reads as redundant — nobody flies that ship again. It is what keeps the reducer a function
-    // of its arguments rather than of what the shell intends to do next. 0085 kept the shape of that
-    // argument and changed what the answer is: the charges reach the run-over screen intact, and
-    // `continued` is the one thing in the reducer that puts them back to the starting kit.
+  it('and on the LAST death too, so the rule has no hidden condition', () => {
+    // It reads as redundant — nobody flies that ship again until the continue. It is what keeps the
+    // reducer a function of its arguments rather than of what the shell intends to do next.
     let state = armed();
-    const carried = state.run.arsenal;
+    const carried = state.run;
     for (let i = 0; i < STARTING_LIVES_OF_THE_TIER; i++) state = reduce(state, DIE);
     expect(state.run.lives).toBe(0);
-    expect(state.run.arsenal, 'the last death emptied what the continue screen is about to restock').toEqual(carried);
-    expect(state.run.upgrades, 'the last death left the ladders alone').toEqual([]);
+    expect(state.run.arsenal, 'the last death emptied the arsenal').toEqual(carried.arsenal);
+    expect(state.run.upgrades, 'the last death took the ladders').toEqual(carried.upgrades);
   });
 
   it('a pickup of another kind switches the kind and keeps the count — 0256', () => {
@@ -248,18 +216,24 @@ describe('a run over is a continue', () => {
     );
   });
 
-  it('and everything else goes back to what a run starts with', () => {
+  it('refills the lives and keeps everything the run was carrying', () => {
     /*
-      ⚠️ **Compared against `begin` rather than against written-down numbers**, which is what makes
-      this hold at any tier and against any later change to what a run opens with. The rule is *a
-      continue is a begin that does not move the level*, and a comparison is the only way to state a
-      rule about one action in terms of another.
+      ⚠️ **The lives against `begin`, and the rest against the run that ran out** —
+      `docs/decisions/0372-a-death-keeps-the-ladders.md`: *"keep them all."* 0068 and 0085 sent a
+      continue back to the starting kit with no upgrades, which this fixture would read as a
+      different arsenal and an empty list.
     */
     const fresh = play(BEGIN).run;
+    const before = ranOutDeep().run;
     const resumed = reduce(ranOutDeep(), CONTINUE).run;
-    expect(resumed.lives, 'the continue did not restock the run').toBe(fresh.lives);
-    expect(resumed.arsenal, 'the continue did not restock the arsenal').toEqual(fresh.arsenal);
-    expect(resumed.upgrades, 'the continue handed back what the last death took').toEqual(fresh.upgrades);
+    expect(resumed.lives, 'the continue did not restock the lives').toBe(fresh.lives);
+    expect(resumed.arsenal, 'the continue reset the charges').toEqual(before.arsenal);
+    expect(resumed.arsenal, 'the fixture holds the starting kit, so a reset would look the same').not.toEqual(
+      startingArsenal(),
+    );
+    expect(resumed.upgrades, 'the continue took the ladders').toEqual(before.upgrades);
+    expect(resumed.weapon, 'the continue put the base gun back').toBe(before.weapon);
+    expect(resumed.missile, 'the continue put the base tube back').toBe(before.missile);
   });
 
   it('carries the tier rather than re-choosing it', () => {
@@ -335,19 +309,8 @@ describe('a run is a sequence of levels', () => {
     const after = reduce(before, CLEAR);
     expect(after.run.level).toBe(before.run.level + 1);
     expect(after.run.lives, 'clearing a level cost a life').toBe(before.run.lives);
-    /*
-      ⚠️ **Carried forward AND paid into.** 0039's *carry forward* is the floor: nothing may be lost
-      at a boundary. 0053 adds the ask's *"gains one per level cleared"*, so what is asserted is that
-      every special the run owned is still owned and every one of them is one use richer.
-    */
-    expect(
-      after.run.arsenal.map((entry) => entry.kind),
-      'clearing a level emptied the arsenal',
-    ).toEqual(before.run.arsenal.map((entry) => entry.kind));
-    expect(
-      after.run.arsenal.map((entry) => entry.charges),
-      'clearing a level did not pay the arsenal',
-    ).toEqual(before.run.arsenal.map((entry) => entry.charges + 1));
+    // Carried forward and NOT paid into — 0372 took away 0053's *"gains one per level cleared."*
+    expect(after.run.arsenal, 'clearing a level moved the arsenal').toEqual(before.run.arsenal);
     expect(after.run.upgrades, 'clearing a level took the weapon upgrades').toEqual(before.run.upgrades);
   });
 
