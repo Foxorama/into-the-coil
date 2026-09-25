@@ -39,7 +39,14 @@ import {
 import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
-import { SPECIALS } from '../content/specials.ts';
+import { SIDES, SPECIALS, type Side, type SpecialKind } from '../content/specials.ts';
+import { chargesIn } from '../state/slices/run.ts';
+
+/**
+ * The face a trigger's button and readout wear over an empty stack, so the icon never goes: the gun's
+ * is the bomb, which every run starts with, and the tubes' is the golden surge they overflow to — 0376.
+ */
+const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive' };
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
@@ -1076,13 +1083,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         the second band was a quarter of the glass bound to a slot `onSpecial` answers with silence.
         Reported as *"how do you fire bombs on mobile? I can do one and then can't fire any more."*
 
-        ⚠️ **ONE, ALWAYS, SINCE 0373.** The arsenal is a stack of charges now and one trigger throws
-        its top, so its length is a count of presses and never a count of bands.
+        ⚠️ **ONE PER TRIGGER, TWO SINCE 0376** — the gun's and the tubes'. A stack's length is a count
+        of presses and never a count of bands, and an empty stack keeps its band, so the second
+        button does not appear the moment a player first overflows the tubes and move the first.
       */
       attachTouch(canvas, {
         alongAxis: () => view.alongAxis,
         scale: () => view.scale,
-        bands: () => 1,
+        bands: () => SIDES.length,
       }),
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
@@ -1244,17 +1252,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, state.run.arsenal.length, nextOf());
+    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());
     chrome.setTriggers(triggers());
   };
 
   /**
-   * What the trigger throws next — the top of the stack, or the bomb's face over an empty one, so
-   * the readout never loses its icon — 0373.
+   * What each trigger throws next and how many it holds — the top of its stack, or a face that stands
+   * for the side over an empty one, so the readout never loses its icon — 0373, 0376.
    */
-  const nextOf = (): { label: string; sprite: number } => {
-    const row = SPECIALS[state.run.arsenal[state.run.arsenal.length - 1] ?? 'bomb'];
-    return { label: row.label, sprite: row.face };
+  const stacksOf = (): { label: string; sprite: number; charges: number }[] => {
+    const out: { label: string; sprite: number; charges: number }[] = [];
+    for (const side of SIDES) {
+      const stack = state.run.arsenal[side];
+      const row = SPECIALS[stack[stack.length - 1] ?? EMPTY_FACE[side]];
+      out.push({ label: row.label, sprite: row.face, charges: stack.length });
+    }
+    return out;
   };
 
   /**
@@ -1272,17 +1285,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const touchable = navigator.maxTouchPoints > 0;
 
   /**
-   * What the trigger button draws — 0060, and 0358 for the shape.
+   * What the trigger buttons draw — 0060, and 0358 for the shape.
    *
-   * ⚠️ **ONE BUTTON SINCE 0373**, because there is one trigger: it wears the face of what it throws
-   * next and the count of everything on the stack. The hit test is told one band too (`bands`
-   * below), so the picture cannot claim a band the canvas is not listening on.
+   * ⚠️ **ONE BUTTON PER TRIGGER, TWO SINCE 0376**: the gun's and the tubes', each wearing the face of
+   * what it throws next and the count of its own stack. The hit test is told the same number of bands
+   * (`bands` below), so the picture cannot claim a band the canvas is not listening on.
    */
-  const triggers = (): { label: string; sprite: number; charges: number }[] => {
-    if (!touchable) return [];
-    const next = nextOf();
-    return [{ label: next.label, sprite: next.sprite, charges: state.run.arsenal.length }];
-  };
+  const triggers = (): { label: string; sprite: number; charges: number }[] => (touchable ? stacksOf() : []);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -2670,7 +2679,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surges included (0373).
   */
   world.onWreck = (): void => {
-    detonateArsenal(world, state.run.arsenal.length);
+    detonateArsenal(world, chargesIn(state.run.arsenal));
   };
 
   world.onDeath = (): void => {
@@ -2705,17 +2714,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     is a charge is the run's business; whether anything happens on screen is the frame's; and the two
     halves meet here rather than either one growing an opinion about the other.
 
-    ⚠️ **EVERY TRIGGER THROWS THE TOP OF THE STACK — 0373.** Asked: *"one trigger, fires the charges
-    in descending order earnt from most recent pickup."* The slot is still reported, because the
-    input layer's shape is 0030's, and it is no longer asked which special it means. An empty stack
-    is silence, not a throw.
+    ⚠️ **A TRIGGER THROWS THE TOP OF ITS OWN SIDE'S STACK — 0376.** The first trigger is the gun's
+    and the second the tubes' (`SIDES`); each stack is still newest-first, as 0373 asked. A slot past
+    the sides, or an empty stack, is silence, not a throw.
   */
-  world.onSpecial = (): void => {
-    const next = state.run.arsenal[state.run.arsenal.length - 1];
+  world.onSpecial = (slot: number): void => {
+    const side = SIDES[slot];
+    if (side === undefined) return;
+    const stack = state.run.arsenal[side];
+    const next = stack[stack.length - 1];
     if (next === undefined) return;
     // A throw inside the flash cap's gap is not made, and so costs nothing — 0375.
     if (!canThrow(world, next)) return;
-    dispatch({ slice: 'run', type: 'spent' });
+    dispatch({ slice: 'run', type: 'spent', side });
     launchSpecial(world, next);
   };
 

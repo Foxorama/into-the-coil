@@ -17,7 +17,7 @@ import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { livesFor } from '../src/state/slices/run.ts';
+import { chargesIn, livesFor } from '../src/state/slices/run.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 /**
@@ -136,7 +136,7 @@ function shell(level = LEVELS[LEVEL_KINDS[0]!]) {
     current = reduce(current, action);
   };
   world.onWreck = (): void => {
-    detonateArsenal(world, current.run.arsenal.length);
+    detonateArsenal(world, chargesIn(current.run.arsenal));
   };
   world.onDeath = (): void => {
     dispatch({ slice: 'run', type: 'lifeLost' });
@@ -431,7 +431,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     const built = shell(NO_LEVEL);
     built.lifecycle.begin(TIER);
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-    const charges = built.state().run.arsenal.length;
+    const charges = chargesIn(built.state().run.arsenal);
     expect(charges, 'a run opens with nothing to light, so this measures nothing').toBeGreaterThan(0);
 
     killShip(built.world, built.frame);
@@ -453,9 +453,9 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     */
     const built = shell(NO_LEVEL);
     built.lifecycle.begin(TIER);
-    const charges = built.state().run.arsenal.length;
-    for (let i = 0; i < charges; i++) built.dispatch({ slice: 'run', type: 'spent' });
-    expect(built.state().run.arsenal, 'the arsenal was not emptied').toEqual([]);
+    const charges = built.state().run.arsenal.gun.length;
+    for (let i = 0; i < charges; i++) built.dispatch({ slice: 'run', type: 'spent', side: 'gun' });
+    expect(chargesIn(built.state().run.arsenal), 'the arsenal was not emptied').toBe(0);
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     killShip(built.world, built.frame);
     expect(built.world.blasts.size, 'a death with an empty arsenal drew nothing at all').toBe(1);
@@ -480,7 +480,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const carried = built.state().run.arsenal;
-    expect(carried.length, 'the fixture had nothing to light, so keeping it proves nothing').toBeGreaterThan(0);
+    expect(chargesIn(carried), 'the fixture had nothing to light, so keeping it proves nothing').toBeGreaterThan(0);
 
     killShip(built.world, built.frame);
     expect(built.world.blasts.size, 'the pyre never went off, so this measures nothing').toBe(1);

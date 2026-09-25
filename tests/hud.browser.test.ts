@@ -8,6 +8,7 @@ import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { triggerRadius, triggerX, triggerY } from '../src/app/touch.ts';
+import { SIDES } from '../src/content/specials.ts';
 
 /**
  * WHAT THE PLAYER CAN SEE ABOUT THEIR OWN RUN.
@@ -196,17 +197,21 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
     });
     expect(geometry, 'there is no button to measure').not.toBeNull();
     const g = geometry!;
-    // A run opens carrying exactly one special — the bomb — so there is one button.
-    expect(g.buttons.length, 'the buttons are not one per owned trigger').toBe(1);
+    // One button per trigger since 0376 — the gun's and the tubes' — each where its own band listens.
+    expect(g.buttons.length, 'the buttons are not one per owned trigger').toBe(SIDES.length);
     expect(g.events, 'the button would swallow the tap it exists to advertise').toBe('none');
-    const b = g.buttons[0]!;
     const r = triggerRadius(g.canvas.width, g.canvas.height);
-    expect(Math.abs(b.cx - triggerX(g.canvas.width, g.canvas.height)), 'the button is not drawn where the tap is heard, along the glass').toBeLessThan(2);
-    expect(Math.abs(b.cy - triggerY(g.canvas.width, g.canvas.height, 0)), 'the button is not drawn where the tap is heard, across the glass').toBeLessThan(2);
-    expect(Math.abs(b.width - 2 * r), 'the disc is not the size the hit test listens on').toBeLessThan(2);
-    expect(Math.abs(b.height - 2 * r), 'the disc is not round').toBeLessThan(2);
-    // And it is a thumb's size in the player's own pixels, not a sliver: 0358's claim, as the player has it.
-    expect(b.width, 'the button is smaller than a fingertip').toBeGreaterThan(44);
+    const ys = g.buttons.map((button) => button.cy);
+    for (let band = 0; band < SIDES.length; band++) {
+      const y = triggerY(g.canvas.width, g.canvas.height, band);
+      const b = g.buttons.find((button) => Math.abs(button.cy - y) < 2);
+      expect(b, `no button is drawn where band ${band} is heard, across the glass (buttons at ${ys.join(', ')})`).toBeDefined();
+      expect(Math.abs(b!.cx - triggerX(g.canvas.width, g.canvas.height)), 'the button is not drawn where the tap is heard, along the glass').toBeLessThan(2);
+      expect(Math.abs(b!.width - 2 * r), 'the disc is not the size the hit test listens on').toBeLessThan(2);
+      expect(Math.abs(b!.height - 2 * r), 'the disc is not round').toBeLessThan(2);
+      // And it is a thumb's size in the player's own pixels, not a sliver: 0358's claim, as the player has it.
+      expect(b!.width, 'the button is smaller than a fingertip').toBeGreaterThan(44);
+    }
     await page.context().close();
   });
 

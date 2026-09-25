@@ -129,7 +129,8 @@ export const PROBES = [
     guard: 'spends one charge per press, and stops at empty',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      if (state.arsenal.length === 0) return state;\n',
+      // ⚠️ Re-anchored by 0376: a stack per side now.
+      find: '      if (spentFrom.length === 0) return state;\n',
       replace: '',
     },
   },

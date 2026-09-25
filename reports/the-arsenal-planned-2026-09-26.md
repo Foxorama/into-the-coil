@@ -79,12 +79,11 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
 4. **The void missile (5.6)** — a shield taken at the tier's `shellCap`. On Legendary almost every
    shield is one; on Burn there are no shields and so no void. The zone negates everything but the
    ship and the boss — enemies, shots, the serpent's lightning columns — lands a tenth of a boss, and
-   carves the stone it covers for good. **Which trigger throws it is the rework's to answer**, because
-   a shield is neither the gun nor the tubes.
-5. **The rework: a trigger for the gun and a trigger for the tubes.** 0373's one stack behind one
-   trigger lets a charge be thrown through a weapon it was not earned from — a golden surge while the
-   seekers are fitted. Two stacks: the gun's specials on one trigger and the tubes' on the other, each
-   throwing only its own. Touch grows a second button. The void's place is decided here.
+   carves the stone it covers for good. **On the tubes' trigger** — it is *"a void missile"*, and
+   the ask names it as one. Landed after the rework.
+5. **The rework: a trigger for the gun and a trigger for the tubes** —
+   [0376](../docs/decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md), landed before the
+   void so the void had a trigger to go on.
 
 ## Owed
 

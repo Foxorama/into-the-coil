@@ -26,8 +26,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a charge goes on top, and the trigger throws the newest first',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        arsenal: state.arsenal.slice(0, -1),',
-      replace: '        arsenal: state.arsenal.slice(1),',
+      // ⚠️ Re-anchored by 0376: each side's stack spends from its own top.
+      find: '      const left = spentFrom.slice(0, -1);',
+      replace: '      const left = spentFrom.slice(1);',
     },
   },
   {
@@ -38,8 +39,9 @@ export const PROBES = [
     guard: 'a surge throws nothing at all',
     edit: {
       path: 'src/content/specials.ts',
-      find: "    label: 'Hunt',\n    charges: 1,\n    shot: null,\n    becomes: null,",
-      replace: "    label: 'Hunt',\n    charges: 1,\n    shot: 'bomb',\n    becomes: 'blast',",
+      // ⚠️ Re-anchored by 0376, which put the trigger's side on every row.
+      find: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: null,\n    becomes: null,",
+      replace: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: 'bomb',\n    becomes: 'blast',",
     },
   },
   /*

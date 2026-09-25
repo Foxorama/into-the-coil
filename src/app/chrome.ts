@@ -1386,10 +1386,11 @@ export interface Chrome {
    * and a bomb survives until it is thrown. A triggered weapon whose count is invisible is a weapon
    * the player will not use — which is 0045's whole argument, reaching the arsenal.
    *
-   * ⚠️ **And `next`, since 0373**: the stack holds different specials, and the one the trigger
-   * throws next is the one the player is deciding whether to spend. Its face is the icon.
+   * ⚠️ **And what each trigger throws next, since 0373 and per trigger since 0376**: a stack holds
+   * different specials, and the one its trigger throws next is the one the player is deciding whether
+   * to spend. Its face is the icon; one group per stack, in trigger order.
    */
-  setHud(lives: number, health: number, maxHealth: number, charges: number, next: { label: string; sprite: number }): void;
+  setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void;
   /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
@@ -2184,20 +2185,26 @@ export function makeChrome(
   const livesCount = document.createElement('span');
   livesGroup.append(livesIcon, livesCount);
 
-  // What the trigger throws next, and how many presses are on the stack — 0373. The icon is swapped
-  // when the top of the stack changes kind, which is a change and never a frame.
-  const bombGroup = document.createElement('div');
-  bombGroup.className = 'itc-playing-hud-group';
+  /*
+    What each trigger throws next, and how many presses are on its stack — 0373, and one group per
+    trigger since 0376. The icon is swapped when the top of a stack changes kind, which is a change and
+    never a frame.
+  */
   const hudIcon = (sprite: number): HTMLElement => {
     const icon = iconOf(sprite);
     icon.className = 'itc-playing-hud-icon';
     icon.setAttribute('aria-hidden', 'true');
     return icon;
   };
-  let bombSprite = SPRITE.bomb;
-  let bombIcon = hudIcon(bombSprite);
-  const bombCount = document.createElement('span');
-  bombGroup.append(bombIcon, bombCount);
+  const stackGroups: { group: HTMLElement; icon: HTMLElement; sprite: number; count: HTMLElement }[] = [];
+  for (let i = 0; i < 2; i++) {
+    const group = document.createElement('div');
+    group.className = 'itc-playing-hud-group';
+    const icon = hudIcon(SPRITE.bomb);
+    const count = document.createElement('span');
+    group.append(icon, count);
+    stackGroups.push({ group, icon, sprite: SPRITE.bomb, count });
+  }
 
   const shieldGroup = document.createElement('div');
   shieldGroup.className = 'itc-playing-hud-group';
@@ -2205,7 +2212,7 @@ export function makeChrome(
   // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
-  hud.append(livesGroup, shieldGroup, bombGroup);
+  hud.append(livesGroup, shieldGroup, ...stackGroups.map((s) => s.group));
   // The row the readout shares with the boss bar — a grid, so the two cannot overlap on any width.
   const top = document.createElement('div');
   top.className = 'itc-playing-top';
@@ -2306,17 +2313,22 @@ export function makeChrome(
 
   return {
     elements,
-    setHud(lives: number, health: number, maxHealth: number, charges: number, next: { label: string; sprite: number }): void {
+    setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));
-      if (next.sprite !== bombSprite) {
-        const fresh = hudIcon(next.sprite);
-        bombIcon.replaceWith(fresh);
-        bombIcon = fresh;
-        bombSprite = next.sprite;
-      }
-      const held = Math.max(0, charges);
-      bombCount.textContent = '×' + String(held);
-      bombGroup.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + next.label);
+      stackGroups.forEach((slot, i) => {
+        const stack = stacks[i];
+        slot.group.hidden = stack === undefined;
+        if (stack === undefined) return;
+        if (stack.sprite !== slot.sprite) {
+          const fresh = hudIcon(stack.sprite);
+          slot.icon.replaceWith(fresh);
+          slot.icon = fresh;
+          slot.sprite = stack.sprite;
+        }
+        const held = Math.max(0, stack.charges);
+        slot.count.textContent = '×' + String(held);
+        slot.group.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label);
+      });
       livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives');
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.

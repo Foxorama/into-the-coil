@@ -161,10 +161,11 @@ Each ship carries:
 
 ⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials are triggered by the player — the
 Raiden II relationship between the shot you never think about and the bomb you have to spend.
-Straight from the Jörmungandr fight. **There is ONE trigger, and it throws the charge earned most
-recently** — [0373](decisions/0373-a-special-is-the-guns-own.md), which replaced *one trigger per
-owned weapon* on the ask: *"one trigger, fires the charges in descending order earnt from most recent
-pickup."*
+Straight from the Jörmungandr fight. **There are TWO triggers, the gun's and the tubes', and each
+throws the charge of its own side earned most recently** —
+[0376](decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md), correcting
+[0373](decisions/0373-a-special-is-the-guns-own.md)'s single queue, which let a charge be thrown
+through a weapon it was not earned from.
 
 ⚠️ **The arsenal is a STACK, never a slot**, and this is a code constraint rather than a flourish. A
 ship modelled with one special field or a save storing one special kind would make a second special a

@@ -8,7 +8,7 @@ import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { MAX_SHIELDS, shieldsOf } from '../src/content/ships.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
-import { DEFAULT_DIFFICULTY, startingArsenal } from '../src/state/slices/run.ts';
+import { DEFAULT_DIFFICULTY, chargesIn, startingArsenal } from '../src/state/slices/run.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -213,34 +213,55 @@ describe('what a run may spend', () => {
 
   it('starts with the ship’s own kit and no more', () => {
     expect(begin().run.arsenal).toEqual(startingArsenal());
-    expect(startingArsenal(), 'a run does not start with what the ask says').toEqual(
-      Array<SpecialKind>(SPECIALS.bomb.charges).fill('bomb'),
-    );
+    expect(startingArsenal(), 'a run does not start with what the ask says').toEqual({
+      gun: Array<SpecialKind>(SPECIALS.bomb.charges).fill('bomb'),
+      tubes: [],
+    });
   });
 
   it('spends one charge per press, and stops at empty', () => {
     let state = begin();
-    const charges = state.run.arsenal.length;
-    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent' });
-    expect(state.run.arsenal, 'the stack went past empty').toEqual([]);
-    expect(reduce(state, { slice: 'run', type: 'spent' }), 'spending an empty stack changed the run').toBe(state);
+    const charges = state.run.arsenal.gun.length;
+    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', side: 'gun' });
+    expect(state.run.arsenal.gun, 'the stack went past empty').toEqual([]);
+    expect(reduce(state, { slice: 'run', type: 'spent', side: 'gun' }), 'spending an empty stack changed the run').toBe(state);
   });
 
   it('THE REPORTED ONE: a charge goes on top, and the trigger throws the newest first', () => {
     /*
       `docs/decisions/0373-a-special-is-the-guns-own.md`: *"one trigger, fires the charges in
-      descending order earnt from most recent pickup."* Two kinds taken in turn over the starting
-      bombs, then spent one press at a time: the order out is the reverse of the order in.
+      descending order earnt from most recent pickup"* — per trigger since 0376. Two gun specials
+      taken in turn over the starting bombs, then spent one press at a time: the order out is the
+      reverse of the order in.
     */
     let state = begin();
-    state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
-    state = reduce(state, { slice: 'run', type: 'took', special: 'overdrive' });
+    state = reduce(state, { slice: 'run', type: 'took', special: 'storm' });
+    state = reduce(state, { slice: 'run', type: 'took', special: 'whirlpool' });
     const thrown: SpecialKind[] = [];
-    while (state.run.arsenal.length > 0) {
-      thrown.push(state.run.arsenal[state.run.arsenal.length - 1]!);
-      state = reduce(state, { slice: 'run', type: 'spent' });
+    while (state.run.arsenal.gun.length > 0) {
+      thrown.push(state.run.arsenal.gun[state.run.arsenal.gun.length - 1]!);
+      state = reduce(state, { slice: 'run', type: 'spent', side: 'gun' });
     }
-    expect(thrown, 'the stack did not throw the newest charge first').toEqual(['overdrive', 'hunt', 'bomb', 'bomb']);
+    expect(thrown, 'the stack did not throw the newest charge first').toEqual(['whirlpool', 'storm', 'bomb', 'bomb']);
+  });
+
+  it('THE REPORTED ONE, 0376: each trigger throws its own side’s stack and never the other’s', () => {
+    /*
+      *"Having one bomb queue means that you might not even have the autofire gun equipped when you
+      try to use that bomb."* A gun special and a tube special taken in turn, the tube one last: the
+      gun's trigger still throws the gun's, and the tubes' trigger the tubes'.
+    */
+    let state = begin();
+    state = reduce(state, { slice: 'run', type: 'took', special: 'storm' });
+    state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
+    for (const kind of SPECIAL_KINDS) {
+      expect(reduce(begin(), { slice: 'run', type: 'took', special: kind }).run.arsenal[SPECIALS[kind].side], `${kind} went on the wrong side`).toContain(kind);
+    }
+    expect(state.run.arsenal.gun[state.run.arsenal.gun.length - 1], 'the gun trigger would throw a tube special').toBe('storm');
+    expect(state.run.arsenal.tubes, 'a gun special went on the tubes').toEqual(['hunt']);
+    const afterTubes = reduce(state, { slice: 'run', type: 'spent', side: 'tubes' });
+    expect(afterTubes.run.arsenal.gun, 'spending the tubes touched the gun').toEqual(state.run.arsenal.gun);
+    expect(afterTubes.run.arsenal.tubes).toEqual([]);
   });
 
   it('a level clear pays nothing into the arsenal', () => {
@@ -260,8 +281,8 @@ describe('what a run may spend', () => {
     let state = begin();
     state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
     const banked = state.run.arsenal;
-    expect(banked.length, 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
-      startingArsenal().length,
+    expect(chargesIn(banked), 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
+      chargesIn(startingArsenal()),
     );
 
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
@@ -279,17 +300,17 @@ describe('what a run may spend', () => {
       the two, which would be the ask granted in one direction only.
     */
     let state = begin();
-    const charges = state.run.arsenal.length;
-    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent' });
-    expect(state.run.arsenal, 'the fixture still has a charge, so a top-up would be invisible').toEqual([]);
+    const charges = state.run.arsenal.gun.length;
+    for (let i = 0; i < charges; i++) state = reduce(state, { slice: 'run', type: 'spent', side: 'gun' });
+    expect(chargesIn(state.run.arsenal), 'the fixture still has a charge, so a top-up would be invisible').toBe(0);
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(dead.run.arsenal, 'a death handed back charges the player had already spent').toEqual([]);
+    expect(chargesIn(dead.run.arsenal), 'a death handed back charges the player had already spent').toBe(0);
   });
 
   it('a taking pushes the row’s own charges, each one press', () => {
     for (const kind of SPECIAL_KINDS) {
       const state = reduce(begin(), { slice: 'run', type: 'took', special: kind });
-      expect(state.run.arsenal.length - startingArsenal().length, `${kind} pushed the wrong number of charges`).toBe(
+      expect(chargesIn(state.run.arsenal) - chargesIn(startingArsenal()), `${kind} pushed the wrong number of charges`).toBe(
         SPECIALS[kind].charges,
       );
     }
