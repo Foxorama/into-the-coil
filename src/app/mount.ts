@@ -47,8 +47,9 @@ import { BOSSES } from '../content/bosses.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
-  WEAPON_OVERFLOW,
   effectOf,
+  isUpgrade,
+  overflowOf,
   missileFaceOf,
   weaponFaceOf,
   type PickupKind,
@@ -98,7 +99,7 @@ import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
 import { attachPad } from './pad.ts';
-import { attachTouch, bandCount } from './touch.ts';
+import { attachTouch } from './touch.ts';
 import { runLoop } from './loop.ts';
 
 /**
@@ -150,6 +151,8 @@ export const CAPACITY = {
   shieldOrbs: MAX_SHIELDS,
   // The ship's exhaust — 0230. One, out of the particle share, on the shell's own terms.
   exhaust: 1,
+  // A surge's aura — 0373. One, out of the four pickup slots 0066's deleted scatter was given.
+  aura: 1,
   enemies: 40,
   /*
     ⚠️ **EIGHTY-EIGHT, AND IT WAS A HUNDRED — the bolts came out of it, 0233.** A ship carries ONE
@@ -236,12 +239,12 @@ export const CAPACITY = {
   bolts: 12,
   boss: 1,
   /*
-    ⚠️ **TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
-    `docs/decisions/0372-a-death-keeps-the-ladders.md` deleted. Left at twelve rather than taken back
-    down in the same change: a pool drops rather than grows, so shrinking it is its own measurement
-    of what a level and a mid-boss put on the field at once, and nothing in 0372 made one.
+    ⚠️ **ELEVEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
+    `docs/decisions/0372-a-death-keeps-the-ladders.md` deleted. 0373 takes one for the surge's aura.
+    Eleven still covers everything a level can have out at once: it authors four at most and the
+    mid-boss throws three, which is seven even if nobody takes any of them.
   */
-  pickups: 12,
+  pickups: 11,
 };
 
 /**
@@ -703,6 +706,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const shipPool = new Pool<Entity>(CAPACITY.ship, makeEntity);
   const shieldOrbs = new Pool<Entity>(CAPACITY.shieldOrbs, makeEntity);
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
+  const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -861,7 +865,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // must stay on top is the ship itself, and 0050's rule that nothing comes between it and its marks.
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -897,6 +902,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shipPool,
     shieldOrbs,
     exhaust,
+    aura,
+    surgeFor: 0,
+    surgeKind: null,
     enemies,
     playerShots,
     missiles,
@@ -1047,11 +1055,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         strip used to be `SPECIAL_BINDINGS` bands wide unconditionally, so with one special owned
         the second band was a quarter of the glass bound to a slot `onSpecial` answers with silence.
         Reported as *"how do you fire bombs on mobile? I can do one and then can't fire any more."*
+
+        ⚠️ **ONE, ALWAYS, SINCE 0373.** The arsenal is a stack of charges now and one trigger throws
+        its top, so its length is a count of presses and never a count of bands.
       */
       attachTouch(canvas, {
         alongAxis: () => view.alongAxis,
         scale: () => view.scale,
-        bands: () => state.run.arsenal.length,
+        bands: () => 1,
       }),
       attachPad({ alongAxis: () => view.alongAxis }),
     ]),
@@ -1213,8 +1224,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, chargesOf(state.run.arsenal));
+    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, state.run.arsenal.length, nextOf());
     chrome.setTriggers(triggers());
+  };
+
+  /**
+   * What the trigger throws next — the top of the stack, or the bomb's face over an empty one, so
+   * the readout never loses its icon — 0373.
+   */
+  const nextOf = (): { label: string; sprite: number } => {
+    const row = SPECIALS[state.run.arsenal[state.run.arsenal.length - 1] ?? 'bomb'];
+    return { label: row.label, sprite: row.face };
   };
 
   /**
@@ -1232,33 +1252,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const touchable = navigator.maxTouchPoints > 0;
 
   /**
-   * What the trigger buttons draw: one per trigger that has a weapon behind it — 0060, and 0358 for
-   * the shape.
+   * What the trigger button draws — 0060, and 0358 for the shape.
    *
-   * ⚠️ **The same count the hit test uses**, through `bandCount`, so the picture cannot claim a band
-   * the canvas is not listening on. An arsenal longer than the binding budget is 0030's *owned,
-   * saved, and currently unreachable* — the strip does not draw a band nothing can press.
+   * ⚠️ **ONE BUTTON SINCE 0373**, because there is one trigger: it wears the face of what it throws
+   * next and the count of everything on the stack. The hit test is told one band too (`bands`
+   * below), so the picture cannot claim a band the canvas is not listening on.
    */
   const triggers = (): { label: string; sprite: number; charges: number }[] => {
     if (!touchable) return [];
-    const count = Math.min(state.run.arsenal.length, bandCount(state.run.arsenal.length));
-    const out: { label: string; sprite: number; charges: number }[] = [];
-    for (let i = 0; i < count; i++) {
-      const entry = state.run.arsenal[i]!;
-      out.push({ label: SPECIALS[entry.kind].label, sprite: SPECIALS[entry.kind].face, charges: entry.charges });
-    }
-    return out;
+    const next = nextOf();
+    return [{ label: next.label, sprite: next.sprite, charges: state.run.arsenal.length }];
   };
-
-  /**
-   * How many uses the arsenal has left, across everything in it.
-   *
-   * ⚠️ **A total rather than a per-weapon list, because the readout is one number today and the
-   * arsenal is one weapon.** When a second special can be owned this becomes a row per entry, which
-   * is a chrome change and not a state one — the list is already the right shape (0039).
-   */
-  const chargesOf = (arsenal: State['run']['arsenal']): number =>
-    arsenal.reduce((total, entry) => total + entry.charges, 0);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -2642,12 +2646,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     it was: the ordnance goes up with the hull and the next ship is issued the same kit, which is what
     *"reset on a continue, but not on player death"* asks for.
 
-    ⚠️ **Every charge in the arsenal, not every bomb.** `chargesOf` already totals the list for the
-    readout, and using it says *what the ship was carrying goes up with it* — a rule a second special
-    inherits without anybody remembering to.
+    ⚠️ **Every charge on the stack, not every bomb** — *what the ship was carrying goes up with it*,
+    surges included (0373).
   */
   world.onWreck = (): void => {
-    detonateArsenal(world, chargesOf(state.run.arsenal));
+    detonateArsenal(world, state.run.arsenal.length);
   };
 
   world.onDeath = (): void => {
@@ -2682,15 +2685,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     is a charge is the run's business; whether anything happens on screen is the frame's; and the two
     halves meet here rather than either one growing an opinion about the other.
 
-    ⚠️ **A slot nobody owns is silence, not a throw.** `src/content/actions.ts` says a binding is a
-    POSITION in the arsenal, and a player pressing the second trigger with one special owned is
-    asking for something that does not exist yet.
+    ⚠️ **EVERY TRIGGER THROWS THE TOP OF THE STACK — 0373.** Asked: *"one trigger, fires the charges
+    in descending order earnt from most recent pickup."* The slot is still reported, because the
+    input layer's shape is 0030's, and it is no longer asked which special it means. An empty stack
+    is silence, not a throw.
   */
-  world.onSpecial = (slot: number): void => {
-    const entry = state.run.arsenal[slot];
-    if (entry === undefined || entry.charges <= 0) return;
-    dispatch({ slice: 'run', type: 'spent', slot });
-    launchSpecial(world, entry.kind);
+  world.onSpecial = (): void => {
+    const next = state.run.arsenal[state.run.arsenal.length - 1];
+    if (next === undefined) return;
+    dispatch({ slice: 'run', type: 'spent' });
+    launchSpecial(world, next);
   };
 
   world.onPickup = (kind: PickupKind, face: number): void => {
@@ -2723,14 +2727,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       a mechanism rather than a shape.
 
       ⚠️ **The reducer decides what a charge is worth, not this.** `took` reads
-      `SPECIALS[kind].charges`, and a special already owned gains charges rather than a second
-      trigger — `src/state/slices/run.ts` has that rule and it is not restated here.
+      `SPECIALS[kind].charges` and pushes that many onto the stack.
 
       ⚠️ **One way of getting here since 0372 took the bomb pickup off the field**: an upgrade
-      pickup of the kind already fitted, taken by a ship whose ladder is full. It is still a bomb for
-      every kind until the arsenal is typed, which is the next change on the same ask.
+      pickup of the kind already fitted, taken by a ship whose ladder is full — and since 0373 it
+      buys that face's own special, `overflowOf`.
     */
-    if (effect === 'special') dispatch({ slice: 'run', type: 'took', special: WEAPON_OVERFLOW });
+    if (effect === 'special' && isUpgrade(kind)) dispatch({ slice: 'run', type: 'took', special: overflowOf(kind, face) });
     /*
       ⚠️ **A shield goes on the SHIP and not through the reducer**, and it is the one pickup that
       does. `docs/decisions/0017-the-state-is-slices.md` puts the run's own numbers in state — lives,

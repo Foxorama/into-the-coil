@@ -156,19 +156,20 @@ Each ship carries:
   is the only thing that fires itself.
 - **A starting special** — limited capacity, unique to the ship. May be offensive, may be shields.
   **Manual.**
-- **More specials, found during the run.** A shielded ship that picks up bombs carries both, each on
-  its own trigger and its own cooldown. Kept to the end of the run, like every other upgrade.
+- **More specials, earned during the run.** Each gun and each tube has its own, and a full ladder's
+  pickup buys one charge-worth of it. Kept to the end of the run, like every other upgrade.
 
-⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials, shields, bombs and heavies are all
-triggered by the player, one trigger per owned weapon, each on its own cooldown — the Raiden II
-relationship between the shot you never think about and the bomb you have to spend. Straight from the
-Jörmungandr fight.
+⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials are triggered by the player — the
+Raiden II relationship between the shot you never think about and the bomb you have to spend.
+Straight from the Jörmungandr fight. **There is ONE trigger, and it throws the charge earned most
+recently** — [0373](decisions/0373-a-special-is-the-guns-own.md), which replaced *one trigger per
+owned weapon* on the ask: *"one trigger, fires the charges in descending order earnt from most recent
+pickup."*
 
-⚠️ **The arsenal is a LIST, never a slot**, and this is a code constraint rather than a flourish. A
-ship modelled with one special field, an input layer with one special binding, or a save storing one
-special kind each independently make a second special a rewrite instead of a pickup. Nothing here
-says how many there will be — only that the shape must not decide it. One trigger per owned weapon
-is already the rule above; this is what it costs to mean it.
+⚠️ **The arsenal is a STACK, never a slot**, and this is a code constraint rather than a flourish. A
+ship modelled with one special field or a save storing one special kind would make a second special a
+rewrite instead of a pickup. The stack holds charges of any kinds in the order earned, so what the
+trigger throws next is always a fact the state can answer.
 
 **The skill is in surviving the onslaught, not in mashing a fire button.** A well-timed special is
 the difference between combat and tracing a finger across the screen, which is exactly why the shot
@@ -200,9 +201,9 @@ with two bomb charges and earns more only by overflowing a ladder.
 
 **The guns cap across the run rather than inside a level**, and a death never takes a rung back.
 
-⚠️ **An upgrade pickup taken once its own ladder is full becomes a bomb charge** — per ladder, which is
-what makes bombs uncapped. A thrown bomb lands **the larger of its own damage and a twentieth of a
-boss's full health**, once however much of the animal it covers (0372). That is how *every upgrade is worth taking* survives having a cap; before
+⚠️ **An upgrade pickup taken once its own ladder is full becomes a charge of that face's special** —
+per ladder, which is what makes specials uncapped
+([0373](decisions/0373-a-special-is-the-guns-own.md)). That is how *every upgrade is worth taking* survives having a cap; before
 0082 it became unbounded damage instead, which was the reported defect: *"when you get max speed
 nothing is a challenge, bosses die in less a second."*
 
@@ -231,8 +232,15 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | **missiles** | fly the lane from the wings; three pulses each | a tube **and** a rate step, max 2 tubes |
 | **seekers** | hunt the nearest body on the screen — and only on the screen — from the moment they leave the tube, any direction, for a second and a half and then go out in a puff; two pulses each; in the ally ink — their own pickup face's — so a seeker is never mistaken for a missile, a bolt or the ship — [0235](decisions/0235-a-seeker-hunts-the-nearest-body.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), [0246](decisions/0246-a-seeker-hunts-on-the-screen.md) | the same |
 
-The rest of the vocabulary is unbuilt: multi-tag tracking specials, piercing shots, faster engines,
-orbiting mines that are half shield and half weapon. Nothing triggers a special except the bomb.
+| special | whose | what it does |
+|---|---|---|
+| **bomb** | missiles (and, until their own land, the arc and the shuriken) | thrown up the lane; goes off as a blast that lands the larger of its own damage and a twentieth of a boss's full health, once however much of the animal it covers — [0372](decisions/0372-a-death-keeps-the-ladders.md) |
+| **hunt** | seekers | ten seconds of a purple aura: missiles four times the damage, seekers burning twice as long — [0373](decisions/0373-a-special-is-the-guns-own.md) |
+| **overdrive** | pulse | ten seconds of a golden aura: the pulse three times the damage, and every shot pierces like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md) |
+
+The arc's lightning blast, the shuriken's whirlpool and the shield's void are the next two changes on
+the same ask — [`the-arsenal-planned`](../reports/the-arsenal-planned-2026-09-26.md). Still unbuilt
+beyond them: multi-tag tracking specials, faster engines, orbiting mines.
 
 ⚠️ **There are no extra lives to find, and a run's complement can only go down** — 0082, on the
 grounds that a shield is the better version of the same promise: it stops the death. Since

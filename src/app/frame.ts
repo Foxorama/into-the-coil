@@ -96,7 +96,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { SPECIALS, pyreFor, type SpecialKind } from '../content/specials.ts';
+import { SPECIALS, pyreFor, type SpecialKind, type Surge } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -767,6 +767,14 @@ export interface World {
    * ship, so the root of the flame is behind the hull.
    */
   exhaust: Pool<Entity>;
+  /**
+   * A surge's aura: one entity, on the ship while a surge lasts — 0373. A pool of one for the
+   * exhaust's reason: the painter is handed pools and does not know what a ship is wearing.
+   */
+  aura: Pool<Entity>;
+  /** Steps of surge left, and which special it is; `surgeKind` is `null` when none has been thrown. */
+  surgeFor: number;
+  surgeKind: SpecialKind | null;
   enemies: Pool<Entity>;
   /** What the player fired. Separate from `enemyShots` because the PAIRING is the collision guard. */
   playerShots: Pool<Entity>;
@@ -1803,7 +1811,10 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
+    // And while a surge makes the pulse pierce, which is a blade's arrival on a straight shot — 0373.
+    const surging = surgeOf(w);
+    const piercing = w.weapon.flight === 'coil' || (surging !== null && surging.gun !== null);
+    const bladeHits = piercing ? w.hits : null;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
@@ -2067,6 +2078,8 @@ export class GameFrame implements Frame {
       it looks like it prevents. 0079.
     */
     stepShields(w);
+    // And a surge's aura, which goes with the ship that wore it — 0373.
+    stepSurge(w);
 
     /*
       ⚠️ **Before the death check, so the last thing the HUD shows is zero.** After it, a respawn
@@ -3095,6 +3108,17 @@ function firePulse(w: World): void {
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
     shot.damage = w.weapon.damage;
     /*
+      ⚠️ **AND A SURGE ON THE GUN — 0373**: *"damage is increased by 3x and bullets penetrate like
+      shurikens."* Per shot rather than on the row, so the row keeps the one health every straight
+      shot has, and the pierce is a blade's: `collideInto` lands a shot with more than one health
+      once per flash and takes one off it each time.
+    */
+    const surge = surgeOf(w);
+    if (surge !== null && surge.gun !== null) {
+      shot.damage *= surge.gun.damage;
+      shot.health = surge.gun.pierce;
+    }
+    /*
       ⚠️ **No lifetime, and there used to be one.** A volley that outlives the screen starves the
       next one — *"two streams continuous and the others stutter"* is how play reported it — and the
       answer was an 80-step timer on every bullet. The view cull
@@ -3191,6 +3215,20 @@ function stepBombs(w: World): void {
  */
 export function launchSpecial(w: World, kind: SpecialKind): void {
   const row = SPECIALS[kind];
+  /*
+    ⚠️ **A SURGE THROWS NOTHING — 0373.** It is worn: the timer starts, the aura goes on in
+    `stepSurge`, and the weapons read it as they fire. A second surge replaces the first rather than
+    stacking, because two auras on one ship is a picture nobody can read.
+
+    ⚠️ **ON THE SHIELD'S CUE, FOR NOW.** It is the other thing that appears round the ship. A surge
+    owes a cue of its own, and a cue is made by ear, which this change could not ask for.
+  */
+  if (row.surge !== null) {
+    w.surgeKind = kind;
+    w.surgeFor = row.surge.steps;
+    w.onCue('shield', w.ship.across);
+    return;
+  }
   if (row.shot === null) return;
   const body = SHOTS[row.shot];
   const thrown = w.bombs.spawn();
@@ -3282,6 +3320,16 @@ function fireMissiles(w: World): void {
     // And how long it burns — 0246. Zero is *never*, which is the straight missile: it lives to the
     // edge of the view. A seeker's fuse is what keeps a screen from filling with things that hunt.
     missile.lifeFor = w.weapon.fuse;
+    /*
+      ⚠️ **AND A SURGE ON THE TUBES — 0373**: *"they travel twice as far and do 4x as much damage."*
+      A seeker flies until its fuse is out, so twice the fuse is twice as far; a straight missile's
+      fuse is zero and stays zero, and it takes the damage alone.
+    */
+    const surge = surgeOf(w);
+    if (surge !== null && surge.tubes !== null) {
+      missile.damage *= surge.tubes.damage;
+      missile.lifeFor *= surge.tubes.fuse;
+    }
   }
 }
 
@@ -3384,6 +3432,51 @@ function steerMissiles(w: World): void {
  * every step — so integration would fight the placement, and the culls have nothing to do: a mark is
  * never anywhere the ship is not.
  */
+/** The surge the ship is wearing this step, or `null` — 0373. */
+function surgeOf(w: World): Surge | null {
+  return w.surgeFor > 0 && w.surgeKind !== null ? SPECIALS[w.surgeKind].surge : null;
+}
+
+/**
+ * The last second and a half of a surge blinks, so its end is seen coming rather than discovered —
+ * 0373. Twelve steps on and twelve off is two and a half blinks a second, under 0024's cap of three.
+ */
+const SURGE_WARN_STEPS = 90;
+const SURGE_BLINK_STEPS = 12;
+
+/** What an aura is as a body: a picture on the ship, hitting and hit by nothing. */
+// @setup: one body, read by `reset` whenever an aura comes on.
+const AURA_BODY = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage: 0 };
+
+/**
+ * A surge's clock and its aura — 0373. Counted down here, and the aura carried on the ship by hand as
+ * the shield marks are, because nothing else steps that pool and the renderer interpolates from it.
+ */
+function stepSurge(w: World): void {
+  // A wreck wears nothing: the surge ends with the ship, as the shell does (0079).
+  if (w.dyingIn > 0) w.surgeFor = 0;
+  if (w.surgeFor > 0) w.surgeFor--;
+  const surge = surgeOf(w);
+  const blinkOff = w.surgeFor < SURGE_WARN_STEPS && Math.floor(w.surgeFor / SURGE_BLINK_STEPS) % 2 === 1;
+  if (surge === null || blinkOff) {
+    w.aura.clear();
+    return;
+  }
+  let halo = w.aura.size > 0 ? w.aura.at(0) : null;
+  if (halo === null) {
+    halo = w.aura.spawn();
+    if (halo === null) return;
+    reset(halo, w.ship.along, w.ship.across, AURA_BODY);
+  }
+  halo.sprite = surge.aura;
+  halo.spriteBase = surge.aura;
+  halo.spriteHit = surge.aura;
+  halo.prevAlong = halo.along;
+  halo.prevAcross = halo.across;
+  halo.along = w.ship.along;
+  halo.across = w.ship.across;
+}
+
 function stepShields(w: World): void {
   const want = shieldsOf(w.shipRow, w.ship.health);
   // Spent, in the order they were taken. A burst where the mark was, then the slot goes back.
@@ -7792,6 +7885,9 @@ export function respawn(w: World): void {
   */
   w.bombs.clear();
   w.blasts.clear();
+  // A surge went with the ship that wore it — 0373. `stepSurge` ends it at the wreck; this is sure.
+  w.surgeFor = 0;
+  w.aura.clear();
   /*
     ⚠️ **The shell is cleared HERE rather than left to `stepShields`.** The ship comes back with its
     hull and nothing else, so the marks would be released anyway — but as three bursts, at the place

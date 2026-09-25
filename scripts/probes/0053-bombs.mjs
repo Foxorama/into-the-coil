@@ -122,15 +122,15 @@ export const PROBES = [
   {
     decision: '0053',
     suite: 'tests/bombs.test.ts',
-    // An emptied weapon dropped from the list. Every trigger below it shifts up, so spending the last
-    // bomb silently rebinds the player's buttons.
-    broke: 'an empty special dropped from the arsenal, so the triggers below it move',
+    // ⚠️ Re-aimed by 0373. This dropped an emptied entry so the triggers below it moved; the arsenal
+    // is a stack behind one trigger now and has no entries to drop. The break it still has is the
+    // floor: a press on an empty stack that rebuilds the run instead of being silence.
+    broke: 'a press on an empty stack that rebuilds the run rather than doing nothing',
     guard: 'spends one charge per press, and stops at empty',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      if (entry === undefined || entry.charges <= 0) return state;',
-      replace:
-        '      if (entry === undefined || entry.charges <= 0) return state;\n      if (entry.charges === 1) {\n        return {\n          lives: state.lives,\n          level: state.level,\n          arsenal: state.arsenal.filter((_, i) => i !== action.slot),\n          upgrades: state.upgrades,\n          difficulty: state.difficulty,\n        };\n      }',
+      find: '      if (state.arsenal.length === 0) return state;\n',
+      replace: '',
     },
   },
   {

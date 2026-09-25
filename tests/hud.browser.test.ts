@@ -445,9 +445,10 @@ describe.runIf(chromePath)('the readout follows what the player spends', () => {
     const page = await open();
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForTimeout(300);
-    const label = '.itc-playing-hud-group[aria-label*="bomb"]';
+    // "2 charges, next Bomb" since 0373: the stack's count and what it throws next.
+    const label = '.itc-playing-hud-group[aria-label*="charge"]';
     const before = await page.getAttribute(label, 'aria-label');
-    expect(before, 'the readout does not say what the player is carrying').toMatch(/\d+ bombs/);
+    expect(before, 'the readout does not say what the player is carrying').toMatch(/\d+ charges?, next \w+/);
 
     await page.keyboard.press('Space');
     await page.waitForTimeout(250);

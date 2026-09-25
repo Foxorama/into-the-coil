@@ -57,12 +57,14 @@ export const PROBES = [
       the binding budget its picture claims a band the canvas is not listening on — the player presses
       what they can see and nothing happens, which is the thing they actually described.
     */
-    broke: 'the buttons drawn one per binding rather than one per owned trigger',
+    // ⚠️ Re-aimed by 0373, which made the arsenal a stack of charges behind one trigger. The same
+    // picture-claims-a-band break in the new shape: a button per charge, when there is one trigger.
+    broke: 'the buttons drawn one per charge rather than one per trigger',
     guard: 'draws one button per owned trigger',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    const count = Math.min(state.run.arsenal.length, bandCount(state.run.arsenal.length));',
-      replace: '    const count = bandCount(SPECIAL_BINDINGS);',
+      find: '    return [{ label: next.label, sprite: next.sprite, charges: state.run.arsenal.length }];',
+      replace: '    return state.run.arsenal.map(() => ({ label: next.label, sprite: next.sprite, charges: state.run.arsenal.length }));',
     },
   },
   {

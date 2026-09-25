@@ -45,7 +45,7 @@ function armed(): State {
     BEGIN,
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
-    { slice: 'run', type: 'took', special: 'mines' },
+    { slice: 'run', type: 'took', special: 'hunt' },
     // On the OTHER kinds, not the ship's own: a fixture on the base kinds could not see a death or a
     // continue putting them back to the base. `npm run prove` said so.
     { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
@@ -84,14 +84,17 @@ describe('a run is lives', () => {
       decision does; the alternative is a guard loose enough to hold neither.
     */
     const before = armed();
+    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual([
+      'bomb',
+      'bomb',
+      'bomb',
+      'bomb',
+      'hunt',
+    ]);
     expect(
-      before.run.arsenal.map((entry) => entry.kind),
-      'the fixture has nothing to lose, so this proves nothing',
-    ).toEqual(['bomb', 'mines']);
-    expect(
-      before.run.arsenal[0]!.charges,
+      before.run.arsenal.length,
       'the fixture never banked a charge, so a death cannot be seen to spare one',
-    ).toBeGreaterThan(startingArsenal()[0]!.charges);
+    ).toBeGreaterThan(startingArsenal().length);
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'weapon',
       'weapon',

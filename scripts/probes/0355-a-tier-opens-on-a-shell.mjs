@@ -62,8 +62,9 @@ export const PROBES = [
     guard: 'draws one pip per shield the ship can carry on its tier',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, chargesOf(',
-      replace: 'shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, chargesOf(',
+      // ⚠️ Re-anchored by 0373, which counts the stack where `chargesOf` totalled the entries.
+      find: 'shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, state.run.arsenal.length,',
+      replace: 'shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, state.run.arsenal.length,',
     },
   },
   {

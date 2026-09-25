@@ -1385,8 +1385,11 @@ export interface Chrome {
    * is the third resource a run has: lives survive everything, the shell survives until it is hit,
    * and a bomb survives until it is thrown. A triggered weapon whose count is invisible is a weapon
    * the player will not use — which is 0045's whole argument, reaching the arsenal.
+   *
+   * ⚠️ **And `next`, since 0373**: the stack holds different specials, and the one the trigger
+   * throws next is the one the player is deciding whether to spend. Its face is the icon.
    */
-  setHud(lives: number, health: number, maxHealth: number, charges: number): void;
+  setHud(lives: number, health: number, maxHealth: number, charges: number, next: { label: string; sprite: number }): void;
   /**
    * Show exactly one screen's chrome and hide the rest. `null` shows none of it, which is what the
    * rotate gate needs — an overlay left visible under the gate is a focusable button on a page whose
@@ -2181,11 +2184,18 @@ export function makeChrome(
   const livesCount = document.createElement('span');
   livesGroup.append(livesIcon, livesCount);
 
+  // What the trigger throws next, and how many presses are on the stack — 0373. The icon is swapped
+  // when the top of the stack changes kind, which is a change and never a frame.
   const bombGroup = document.createElement('div');
   bombGroup.className = 'itc-playing-hud-group';
-  const bombIcon = iconOf(SPRITE.bomb);
-  bombIcon.className = 'itc-playing-hud-icon';
-  bombIcon.setAttribute('aria-hidden', 'true');
+  const hudIcon = (sprite: number): HTMLElement => {
+    const icon = iconOf(sprite);
+    icon.className = 'itc-playing-hud-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    return icon;
+  };
+  let bombSprite = SPRITE.bomb;
+  let bombIcon = hudIcon(bombSprite);
   const bombCount = document.createElement('span');
   bombGroup.append(bombIcon, bombCount);
 
@@ -2296,10 +2306,17 @@ export function makeChrome(
 
   return {
     elements,
-    setHud(lives: number, health: number, maxHealth: number, charges: number): void {
+    setHud(lives: number, health: number, maxHealth: number, charges: number, next: { label: string; sprite: number }): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));
-      bombCount.textContent = '×' + String(Math.max(0, charges));
-      bombGroup.setAttribute('aria-label', String(Math.max(0, charges)) + ' bombs');
+      if (next.sprite !== bombSprite) {
+        const fresh = hudIcon(next.sprite);
+        bombIcon.replaceWith(fresh);
+        bombIcon = fresh;
+        bombSprite = next.sprite;
+      }
+      const held = Math.max(0, charges);
+      bombCount.textContent = '×' + String(held);
+      bombGroup.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + next.label);
       livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives');
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.

@@ -25,6 +25,7 @@
 
 import { SPRITE } from './sprites.ts';
 import type { ShotKind } from './shots.ts';
+import type { SpecialKind } from './specials.ts';
 
 /**
  * Every gun. Closed.
@@ -94,6 +95,12 @@ export interface WeaponRow {
    * guns flown close. `docs/decisions/0372-a-death-keeps-the-ladders.md` has the table.
    */
   bossWeight: number;
+  /**
+   * What a pickup of this gun buys once its ladder is full — `docs/decisions/0373-a-special-is-the-guns-own.md`.
+   * *"It increases your bomb count for that weapon/missile type."* Every row authors it; the arc's
+   * and the shuriken's are the bomb until their own specials land.
+   */
+  special: SpecialKind;
   /**
    * How far the FIRST hit reaches, in world units, one entry per rung — from the nose to the body
    * the bolt lands on. Zeros for a weapon that does not chain. What each jump AFTER it reaches is
@@ -185,6 +192,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     bossWeight: 1,
+    // The golden aura — 0373.
+    special: 'overdrive',
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     coil: [0, 0, 0, 0, 0],
@@ -219,6 +228,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     weight: [1, 1, 1, 2, 2],
     // *"lightning needs to do a bit more damage on bosses, it's currently too slow"* — 0372.
     bossWeight: 1.5,
+    // The bomb until the lightning blast lands — the next change on 0373's ask.
+    special: 'bomb',
     /*
       A sixth further at every rung — 0236's ladder. `tests/guns-played.test.ts` holds the CLIMB,
       never the numbers.
@@ -342,6 +353,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     bossWeight: 1,
+    // The bomb until the whirlpool lands — the next change on 0373's ask.
+    special: 'bomb',
     reach: [0, 0, 0, 0, 0],
     falloff: 0,
     /*

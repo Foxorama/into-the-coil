@@ -13,6 +13,7 @@
 
 import { SPRITE } from './sprites.ts';
 import type { ShotKind } from './shots.ts';
+import type { SpecialKind } from './specials.ts';
 
 /** Every missile. Closed, and the cycle order of the missile pickup — see `WEAPON_KINDS`. */
 export const MISSILE_KINDS = ['straight', 'homing'] as const;
@@ -72,6 +73,11 @@ export interface MissileRow {
   fuse: number;
   /** The face the missile pickup shows when it is offering this kind — an index into the atlas. */
   pickup: number;
+  /**
+   * What a pickup of this tube buys once its ladder is full —
+   * `docs/decisions/0373-a-special-is-the-guns-own.md`. Every row authors it.
+   */
+  special: SpecialKind;
 }
 
 export const MISSILES: Record<MissileKind, MissileRow> = {
@@ -91,6 +97,8 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     seek: 0,
     fuse: 0,
     pickup: SPRITE.pickupMissile,
+    // *"forward missiles - give you a bomb like the current bomb"* — 0373.
+    special: 'bomb',
   },
   /**
    * Homing missiles — `docs/decisions/0235-a-seeker-hunts-the-nearest-body.md`. Asked for: *"do a
@@ -114,5 +122,7 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     seek: 0.09,
     fuse: 90,
     pickup: SPRITE.pickupSeeker,
+    // The purple aura — 0373.
+    special: 'hunt',
   },
 };

@@ -135,9 +135,8 @@ function shell(level = LEVELS[LEVEL_KINDS[0]!]) {
   const dispatch = (action: Action): void => {
     current = reduce(current, action);
   };
-  const chargesOf = (): number => current.run.arsenal.reduce((total, entry) => total + entry.charges, 0);
   world.onWreck = (): void => {
-    detonateArsenal(world, chargesOf());
+    detonateArsenal(world, current.run.arsenal.length);
   };
   world.onDeath = (): void => {
     dispatch({ slice: 'run', type: 'lifeLost' });
@@ -432,7 +431,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     const built = shell(NO_LEVEL);
     built.lifecycle.begin(TIER);
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-    const charges = built.state().run.arsenal.reduce((total, entry) => total + entry.charges, 0);
+    const charges = built.state().run.arsenal.length;
     expect(charges, 'a run opens with nothing to light, so this measures nothing').toBeGreaterThan(0);
 
     killShip(built.world, built.frame);
@@ -454,9 +453,9 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     */
     const built = shell(NO_LEVEL);
     built.lifecycle.begin(TIER);
-    const charges = built.state().run.arsenal[0]!.charges;
-    for (let i = 0; i < charges; i++) built.dispatch({ slice: 'run', type: 'spent', slot: 0 });
-    expect(built.state().run.arsenal[0]!.charges, 'the arsenal was not emptied').toBe(0);
+    const charges = built.state().run.arsenal.length;
+    for (let i = 0; i < charges; i++) built.dispatch({ slice: 'run', type: 'spent' });
+    expect(built.state().run.arsenal, 'the arsenal was not emptied').toEqual([]);
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     killShip(built.world, built.frame);
     expect(built.world.blasts.size, 'a death with an empty arsenal drew nothing at all').toBe(1);
@@ -481,7 +480,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const carried = built.state().run.arsenal;
-    expect(carried[0]!.charges, 'the fixture had nothing to light, so keeping it proves nothing').toBeGreaterThan(0);
+    expect(carried.length, 'the fixture had nothing to light, so keeping it proves nothing').toBeGreaterThan(0);
 
     killShip(built.world, built.frame);
     expect(built.world.blasts.size, 'the pyre never went off, so this measures nothing').toBe(1);
