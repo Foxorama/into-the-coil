@@ -37,6 +37,7 @@ import {
   bakeLayer,
   levelWrites,
   panGains,
+  panStereoGains,
   musicLevelFor,
   BUILD_BARS,
   RAMP_SPREAD,
@@ -2122,9 +2123,11 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
       on the instrument, and this repository has now found that inside `hear.mjs` three times — the
       missing bus shaper, the two reference levels, and the width.
 
-      ⚠️ **THE CUE CATALOGUE IS THE ONE DELIBERATE MONO.** `--out=cues.wav` plays each cue alone to
-      say what it IS; position is not part of a timbre and nothing is competing with it there. Named
-      rather than exempted by accident.
+      ⚠️ **THE CUE CATALOGUE WAS THE ONE DELIBERATE MONO, AND SINCE 0378 IT IS NOT.** `--out=cues.wav`
+      plays each cue alone to say what it IS, and the argument was that position is not part of a
+      timbre. True of where a cue HAPPENS — and false of a cue whose own layers pan, which is width
+      authored inside the cue and so part of what it is. The whirlpool sweeps across the field as it
+      opens; the mono catalogue sent it to be judged standing still. So there is no exemption now.
     */
     const src = readFileSync(resolve(root, 'scripts/hear.mjs'), 'utf8');
     const writes = [...src.matchAll(/writeFileSync\([^\n]*wavOf\(([^\n]*)\)\);/g)].map((m) => m[1]!);
@@ -2132,9 +2135,9 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
     const mono = writes.filter((w) => !/,\s*2\s*$/.test(w.trim()));
     expect(
       mono.length,
-      `these renders are still mono: ${mono.join(' | ')} — the music is panned and a mono file cannot ` +
-        'show it, which is what 0209 was written for',
-    ).toBe(1);
+      `these renders are still mono: ${mono.join(' | ')} — the music and the wide cues are panned and a ` +
+        'mono file cannot show it, which is what 0209 was written for',
+    ).toBe(0);
   });
 
   it('THE LAW: a layer does not get quieter as it crosses the middle', () => {
@@ -2159,6 +2162,33 @@ describe('0118 — the mix has a width, and the low end does not use it', () => 
     expect(middle.left).toBeCloseTo(middle.right, 12);
     expect(panGains(-1).left).toBeCloseTo(1, 9);
     expect(panGains(1).left).toBeCloseTo(0, 9);
+  });
+
+  it('0378 — and a STEREO input is leaned, not split: whole in the middle, folded to one side at the end', () => {
+    /*
+      ⚠️ **THE SPEC'S OTHER LAW, WHICH THE RIG DID NOT HAVE.** A wide cue reaches the panner as two
+      channels, and a `StereoPannerNode` passes both through whole at the centre — where the mono law
+      would put each at −3 dB — and folds the far channel into the near one as it turns. Held at the
+      points the spec fixes and for continuity across the middle, where its two branches meet.
+    */
+    const middle = panStereoGains(0);
+    expect(middle.leftToLeft, 'the middle does not pass the left through whole').toBe(1);
+    expect(middle.leftToRight, 'the middle bleeds the left into the right').toBe(0);
+    expect(middle.rightToLeft, 'the middle bleeds the right into the left').toBeCloseTo(0, 9);
+    expect(middle.rightToRight, 'the middle does not pass the right through whole').toBeCloseTo(1, 9);
+    const hardLeft = panStereoGains(-1);
+    expect(hardLeft.leftToLeft).toBe(1);
+    expect(hardLeft.rightToLeft, 'hard left does not fold the right channel into the left').toBeCloseTo(1, 9);
+    expect(hardLeft.rightToRight, 'hard left leaves something on the right').toBeCloseTo(0, 9);
+    const hardRight = panStereoGains(1);
+    expect(hardRight.rightToRight).toBe(1);
+    expect(hardRight.leftToRight, 'hard right does not fold the left channel into the right').toBeCloseTo(1, 9);
+    expect(hardRight.leftToLeft, 'hard right leaves something on the left').toBeCloseTo(0, 9);
+    const justLeft = panStereoGains(-1e-9);
+    const justRight = panStereoGains(1e-9);
+    expect(justLeft.rightToLeft, 'the law jumps as it crosses the middle').toBeCloseTo(justRight.rightToLeft, 6);
+    expect(justLeft.rightToRight, 'the law jumps as it crosses the middle').toBeCloseTo(justRight.rightToRight, 6);
+    expect(justLeft.leftToLeft, 'the law jumps as it crosses the middle').toBeCloseTo(justRight.leftToLeft, 6);
   });
 
   it('and the two layers most likely to mask each other are not in the same place', () => {

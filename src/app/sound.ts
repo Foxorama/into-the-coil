@@ -60,7 +60,7 @@ import {
   type CueRow,
 } from '../content/cues.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
-import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, type MusicOut } from './music.ts';
+import { makeMusicOut, bakeLayer, bakeLoops, layerNotes, panGains, panStereoGains, type MusicOut } from './music.ts';
 import { bakedBy, cueRowOf, cuedBy, type ThemeKind } from '../content/themes.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../content/music.ts';
 /*
@@ -465,6 +465,39 @@ function bufferOf(ctx: AudioContext, data: Float32Array): AudioBuffer {
 /** The left and right of `cue`, if its row gave it a width — and `null` if it is one channel. */
 export function widthOf(cue: Float32Array): readonly [Float32Array, Float32Array] | null {
   return WIDTHS.get(cue) ?? null;
+}
+
+/**
+ * One baked cue laid into an interleaved stereo buffer from frame `start`, as the panner at `pan`
+ * would play it, at `gain` — 0378. For `scripts/hear.mjs`: the game never calls this, a browser node
+ * does this, which is exactly why it lives beside `bufferOf` rather than in the rig — `panGains` in
+ * `src/app/music.ts` is here for the same reason.
+ *
+ * ⚠️ **A WIDE CUE IS TWO CHANNELS THROUGH THE STEREO LAW.** The rig laid every cue's middle through the
+ * mono law, so a cue whose layers pan was rendered narrower than the game and at another level — the
+ * third time the instrument has differed from the game (0104, 0114), found by a whirlpool that sweeps.
+ */
+export function layCue(into: Float32Array, cue: Float32Array, start: number, pan: number, gain: number): void {
+  const frames = into.length / 2;
+  const wide = widthOf(cue);
+  if (wide === null) {
+    const g = panGains(pan);
+    for (let i = 0; i < cue.length; i++) {
+      const j = start + i;
+      if (j < 0 || j >= frames) continue;
+      into[j * 2] = into[j * 2]! + cue[i]! * gain * g.left;
+      into[j * 2 + 1] = into[j * 2 + 1]! + cue[i]! * gain * g.right;
+    }
+    return;
+  }
+  const g = panStereoGains(pan);
+  const [left, right] = wide;
+  for (let i = 0; i < cue.length; i++) {
+    const j = start + i;
+    if (j < 0 || j >= frames) continue;
+    into[j * 2] = into[j * 2]! + (left[i]! * g.leftToLeft + right[i]! * g.rightToLeft) * gain;
+    into[j * 2 + 1] = into[j * 2 + 1]! + (left[i]! * g.leftToRight + right[i]! * g.rightToRight) * gain;
+  }
 }
 
 /**

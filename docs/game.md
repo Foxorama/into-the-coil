@@ -243,7 +243,9 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | **void** | a shield at a full shell | thrown up the lane on the tubes' trigger; opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
 A thrown special that reaches the edge of the screen goes off there
-([0377](decisions/0377-the-void.md)). The void is the last change on the same ask —
+([0377](decisions/0377-the-void.md)). Every special is heard as itself — its press, and for a
+thrown one what it sounds like going off, on the root like the bomb
+([0378](decisions/0378-the-specials-are-heard.md)). The void is the last change on the same ask —
 [`the-arsenal-planned`](../reports/the-arsenal-planned-2026-09-26.md). Still unbuilt
 beyond them: multi-tag tracking specials, faster engines, orbiting mines.
 

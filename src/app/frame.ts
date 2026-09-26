@@ -3269,12 +3269,12 @@ function stepBombs(w: World): void {
     const row = SPECIALS[SPECIAL_KINDS[bomb.kind] ?? 'bomb'];
     // A storm where a bomb has a blast: bolts, not a ring — 0374.
     if (row.storm !== null) {
-      unleashStorm(w, bomb.along, bomb.across, row.storm);
+      unleashStorm(w, bomb.along, bomb.across, row.storm, row.lands);
       continue;
     }
     // And a rift where a void missile's fuse runs out — 0377.
     if (row.rift !== null) {
-      openRift(w, bomb.along, bomb.across, row.rift);
+      openRift(w, bomb.along, bomb.across, row.rift, row.lands);
       continue;
     }
     const becomes = row.becomes;
@@ -3295,7 +3295,7 @@ function stepBombs(w: World): void {
       one picture of a detonation that cannot be refused. Inside the branch this would be the only
       cue in the file that goes quiet on the frame the screen is fullest.
     */
-    w.onCue('blast', bomb.across);
+    if (row.lands !== null) w.onCue(row.lands, bomb.across);
     burst(w, bomb.along, bomb.across, BURST.ship);
   }
 }
@@ -3379,13 +3379,14 @@ function carveStone(w: World, along: number, across: number, radius: number): vo
  * share, the stone. With no room in the pool it does not open at all, stone and share included —
  * `CAPACITY.blasts` in `src/app/mount.ts` is sized so a salvo never meets that, and a guard holds it.
  */
-function openRift(w: World, along: number, across: number, rift: Rift): void {
+function openRift(w: World, along: number, across: number, rift: Rift, sound: CueKind | null): void {
   const body = w.blasts.spawn();
   if (body === null) return;
   reset(body, along, across, RIFT_BODY, RIFT_KIND);
   body.radius = rift.radius;
   body.lifeFor = rift.steps;
-  w.onCue('blast', across);
+  // Its row's own — 0378. It borrowed the bomb's blast.
+  if (sound !== null) w.onCue(sound, across);
   carveStone(w, along, across, rift.radius);
   // The boss's share, once, if the rift reaches its head or any part of its body — 0372's shape.
   if (w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
@@ -3491,8 +3492,9 @@ function stormStrike(w: World, fromAlong: number, fromAcross: number, reach: num
 }
 
 /** The storm going off at `(along, across)` — the strikes, their chains, and the first flicker. */
-function unleashStorm(w: World, along: number, across: number, storm: Storm): void {
-  w.onCue('zap', across);
+function unleashStorm(w: World, along: number, across: number, storm: Storm, sound: CueKind | null): void {
+  // Its row's own — 0378. It borrowed the arc's zap.
+  if (sound !== null) w.onCue(sound, across);
   burst(w, along, across, BURST.ship);
   // The leading edge of the view this player has — the arc's own bound, 0257.
   const leading = w.cameraAlong + w.view.alongSpan;
@@ -3637,28 +3639,27 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     `stepSurge`, and the weapons read it as they fire. A second surge replaces the first rather than
     stacking, because two auras on one ship is a picture nobody can read.
 
-    ⚠️ **ON THE SHIELD'S CUE, FOR NOW.** It is the other thing that appears round the ship. A surge
-    owes a cue of its own, and a cue is made by ear, which this change could not ask for.
+    ⚠️ **ON ITS ROW'S OWN CUE since 0378**, where it borrowed the shield's.
   */
   if (row.surge !== null) {
     w.surgeKind = kind;
     w.surgeFor = row.surge.steps;
-    w.onCue('shield', w.ship.across);
+    w.onCue(row.cue, w.ship.across);
     return;
   }
-  // A whirlpool opens ahead of the ship rather than being thrown there — 0374. On the blades' cue,
-  // heard where the whirlpool opens.
+  // A whirlpool opens ahead of the ship rather than being thrown there — 0374. On its own cue since
+  // 0378, heard where the whirlpool opens.
   if (row.whirl !== null) {
     openWhirl(w, kind, row.whirl);
-    w.onCue('throw', w.whirlAcross);
+    w.onCue(row.cue, w.whirlAcross);
     return;
   }
   if (row.shot === null) return;
   const body = SHOTS[row.shot];
   const thrown = w.bombs.spawn();
   if (thrown === null) return;
-  // Rising, because the thing it turns into has not happened yet — the fuse is the point of a bomb.
-  w.onCue('bomb', w.ship.across);
+  // The throw, on its row's own cue — 0378: a missile's ignition, a storm's charge, a void's hollow.
+  w.onCue(row.cue, w.ship.across);
   // Which special it is rides on the body, so its fuse knows whether it becomes a blast or a storm.
   reset(thrown, w.ship.along + MUZZLE_ALONG, w.ship.across, body, SPECIAL_KINDS.indexOf(kind));
   thrown.velAlong = body.speed + w.scrollPerStep;

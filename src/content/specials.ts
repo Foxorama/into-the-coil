@@ -16,6 +16,7 @@
  * `null` for the one it is not.
  */
 
+import type { CueKind } from './cues.ts';
 import { BLADE_EDGE, type ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
@@ -198,6 +199,17 @@ export interface SpecialRow {
    * An index rather than a name, exactly as `Body.sprite` is.
    */
   face: number;
+  /**
+   * What the press sounds like: the throw, the aura lighting, the whirlpool opening — 0378. Immediate,
+   * because it answers a button (0104). Each special's own, on its row, as a boss's attack names its
+   * sound (0308), rather than the frame choosing one by what shape the row is.
+   */
+  cue: CueKind;
+  /**
+   * What it sounds like when a thrown special goes off — the blast, the storm, the rift — and `null`
+   * for one that is not thrown. On the grid: a consequence, on a clock the player no longer holds.
+   */
+  lands: CueKind | null;
 }
 
 /** Ten seconds of the sim's own clock — 0022. The seeker surge's length is the ask's. */
@@ -228,6 +240,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     face: SPRITE.bomb,
+    cue: 'bomb',
+    lands: 'blast',
   },
   /**
    * The seeker's — *"gives the ship a glowing purple aura and supercharges the homing missiles for
@@ -247,6 +261,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     face: SPRITE.pickupSeeker,
+    cue: 'hunt',
+    lands: null,
   },
   /**
    * The forward missiles' since 0375, and the pulse's before it — *"change the autogun supercharge
@@ -267,6 +283,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     rift: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
+    cue: 'overdrive',
+    lands: null,
   },
   /**
    * The arc's — *"fires a glowing lightning flickering projectile forward that explodes into a
@@ -290,6 +308,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     face: SPRITE.pickupArc,
+    cue: 'stormThrow',
+    lands: 'storm',
   },
   /**
    * The shuriken's — *"fires a huge shuriken in a whirlpool shape that gets progressively bigger, the
@@ -318,6 +338,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.7, spin: 0.05, damage: 4, swell: 2.2 },
     rift: null,
     face: SPRITE.pickupShuriken,
+    cue: 'whirlpool',
+    lands: null,
   },
   /**
    * The shields' — *"if you cap shields, you get a void missile -> it flies forward and creates a
@@ -338,6 +360,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: { radius: 36, steps: 90, bossShare: 0.1 },
     face: SPRITE.pickupShield,
+    cue: 'voidThrow',
+    lands: 'rift',
   },
 };
 

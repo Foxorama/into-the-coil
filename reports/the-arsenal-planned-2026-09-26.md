@@ -89,6 +89,7 @@ What is new in 4 is 4.3's *for that weapon/missile type* — the overflow is a b
 ## Owed
 
 - A play of each on its branch preview, before the next is built.
-- The specials' own cues: the surges, the storm, the whirlpool and the void still borrow the bomb's.
+- ~~The specials' own cues~~ — paid by [0378](../docs/decisions/0378-the-specials-are-heard.md);
+  the ear on them is owed.
 - 4.3's *"max power ups"* read as per ladder, as the overflow always has been; flagged in case it
   meant both ladders full.

@@ -44,6 +44,8 @@ import {
   resetPrewarm,
   sampleCue,
   sampleLayerInto,
+  layCue,
+  widthOf,
   releasedLayers,
   takePrewarmed,
   variantAt,
@@ -2079,9 +2081,16 @@ describe('every cue is played by something, and every cue the frame plays exists
       `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`'s default shape:
       the row says what its version is and `src/app/boss.ts` holds the fallback. A cue named by a row
       IS played, and reading only the frame reported all three as dead weight.
+
+      ⚠️ **AND `src/content/specials.ts` SINCE 0378, ON THE SAME TERMS.** A special names its press and
+      what it sounds like going off on its row, and the frame plays `row.cue` and `row.lands`.
     */
     const sources =
-      read('src/app/frame.ts') + read('src/app/boss.ts') + read('src/app/mount.ts') + read('src/content/bosses.ts');
+      read('src/app/frame.ts') +
+      read('src/app/boss.ts') +
+      read('src/app/mount.ts') +
+      read('src/content/bosses.ts') +
+      read('src/content/specials.ts');
     const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`));
     expect(unplayed, `these cues are in the table and nothing ever plays them: ${unplayed.join(', ')}`).toEqual([]);
   });
@@ -2494,6 +2503,46 @@ describe('0116 — the instrument is the game, and it is not a second copy of it
     property. `scripts/timeline.mjs` exists so these can be about VALUES, which is the only thing that
     made them redden. `docs/decisions/0005-a-guard-must-be-seen-to-fail.md` caught it.
   */
+  it('0378 — a cue is laid in its own width, as the panner plays it, and a narrow one as it always was', () => {
+    /*
+      ⚠️ **THE THIRD DRIFT, AND IT WAS IN THE CUES RATHER THAN THE MUSIC.** A cue whose layers pan bakes
+      a left and a right beside its middle, and the game hands the pair to the panner; the rig laid the
+      middle through the mono law, so every wide cue it rendered — the bomb's launch, the blast's rolls —
+      was narrower than the game and at another level. Asserted on VALUES, through `layCue`, which is
+      the one function the rig lays a cue with: the note above says what a spellcheck of the file cost.
+    */
+    /*
+      ⚠️ **AND EVERY CUE IN THE TABLE IS WIDE**, measured when this was written — so this was not the
+      rig misreading a few cues but every one it ever rendered, over the music included. The narrow
+      half below is a row with its pans taken out, because no real one is left to stand for it.
+    */
+    const wideKind = CUE_KINDS.find((kind) => widthOf(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('cues').stream(kind))) !== null);
+    expect(wideKind, 'no cue has a width, so this holds nothing').toBeDefined();
+
+    const wide = sampleCue(CUES[wideKind!], SAMPLE_RATE, makeRng('cues').stream(wideKind!));
+    const [left, right] = widthOf(wide)!;
+    const laid = new Float32Array(wide.length * 2);
+    layCue(laid, wide, 0, 0, 1);
+    let apart = 0;
+    for (let i = 0; i < wide.length; i++) {
+      // In the middle, the panner passes both channels through whole.
+      expect(laid[i * 2], `${wideKind} lost its left in the middle at sample ${i}`).toBeCloseTo(left[i]!, 6);
+      expect(laid[i * 2 + 1], `${wideKind} lost its right in the middle at sample ${i}`).toBeCloseTo(right[i]!, 6);
+      apart = Math.max(apart, Math.abs(left[i]! - right[i]!));
+    }
+    expect(apart, `${wideKind} is laid with no difference between its sides`).toBeGreaterThan(0.01);
+
+    const unpanned = { ...CUES[wideKind!], layers: CUES[wideKind!].layers.map((layer) => ({ ...layer, pan: 0, panTo: 0 })) };
+    const narrow = sampleCue(unpanned, SAMPLE_RATE, makeRng('cues').stream(wideKind!));
+    expect(widthOf(narrow), 'a row with no pans still baked a width').toBeNull();
+    const flat = new Float32Array(narrow.length * 2);
+    layCue(flat, narrow, 0, 0, 1);
+    for (let i = 0; i < narrow.length; i += 97) {
+      expect(flat[i * 2], 'a narrow cue is not split equally in the middle').toBeCloseTo(flat[i * 2 + 1]!, 9);
+      expect(flat[i * 2], 'a narrow cue is not at the mono law’s −3 dB in the middle').toBeCloseTo(narrow[i]! * Math.SQRT1_2, 6);
+    }
+  });
+
   it('THE RUNG SEQUENCE IS THE GAME’S ANSWER, not a list the rig keeps', () => {
     /*
       ⚠️ **Held against `musicLevelFor` itself rather than against expected names.** A list of rungs

@@ -1119,6 +1119,27 @@ export function panGains(pan: number): { left: number; right: number } {
   return { left: Math.cos(x), right: Math.sin(x) };
 }
 
+/**
+ * What a `StereoPannerNode` does to a STEREO input, as the Web Audio spec defines it — 0378.
+ *
+ * ⚠️ **NOT THE MONO LAW WITH TWO INPUTS.** A wide cue (`widthOf` in `src/app/sound.ts`) reaches the
+ * panner as two channels, and the spec leans it rather than splitting it: in the middle both channels
+ * pass through whole, and to one side the far channel is folded into the near one. The rig used the
+ * mono law for everything and so rendered a wide cue both narrower and at a different level.
+ *
+ * `leftToLeft` and so on are the four gains of the mix: out left = in left × `leftToLeft` + in right
+ * × `rightToLeft`, and the same for the right.
+ */
+export function panStereoGains(pan: number): { leftToLeft: number; rightToLeft: number; leftToRight: number; rightToRight: number } {
+  const clamped = pan < -1 ? -1 : pan > 1 ? 1 : pan;
+  const x = ((clamped <= 0 ? clamped + 1 : clamped) * Math.PI) / 2;
+  const toLeft = Math.cos(x);
+  const toRight = Math.sin(x);
+  return clamped <= 0
+    ? { leftToLeft: 1, rightToLeft: toLeft, leftToRight: 0, rightToRight: toRight }
+    : { leftToLeft: toLeft, rightToLeft: 0, leftToRight: toRight, rightToRight: 1 };
+}
+
 /** One gain to write: which layer, what it is heading for, when the ramp starts and how fast. */
 export interface RampWrite {
   layer: MusicLayer;
