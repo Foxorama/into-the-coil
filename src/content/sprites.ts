@@ -513,6 +513,43 @@ export const SPRITE_KINDS = [
   'boss12Hit',
   'boss13',
   'boss13Hit',
+  /*
+    ── THE HYDRA, IN PIECES — 0384 ──────────────────────────────────────────────────────────────────
+
+    *"It's supposed to be a hydra that grows extra heads and currently it looks like a weird mouldy
+    enokki mushroom."* `boss13` is its body now — the chest and shoulders that stand up out of the
+    acid — and the rest is drawn in pieces placed every step: its tail on the fish's terms (0374), a
+    neck per head turned about its root, and five heads, each after the lord it is named for and each
+    with a hurt twin, because a head is shot.
+  */
+  'hydraTail',
+  'hydraTailHit',
+  'hydraNeck0',
+  'hydraNeck1',
+  'hydraNeck2',
+  'hydraNeck3',
+  'hydraNeck4',
+  'hydraHead0',
+  'hydraHead0Hit',
+  'hydraHead1',
+  'hydraHead1Hit',
+  'hydraHead2',
+  'hydraHead2Hit',
+  'hydraHead3',
+  'hydraHead3Hit',
+  'hydraHead4',
+  'hydraHead4Hit',
+  /*
+    The acid the hydra stands in — 0384: the bank's caps with acid under the shore rather than mud,
+    one per whole rise as `bankRise*` are, drawn for the stretch of bank the body is standing in.
+  */
+  'acidRise0',
+  'acidRise1',
+  'acidRise2',
+  'acidRise3',
+  'acidRise4',
+  'acidRise5',
+  'acidRise6',
   'boss14',
   'boss14Hit',
   'bullet',
@@ -1086,6 +1123,9 @@ export const WALL_RISES = [
  */
 export const MIRE_BANK_CAPS = ['bankRise0', 'bankRise1', 'bankRise2', 'bankRise3', 'bankRise4', 'bankRise5', 'bankRise6'] as const;
 
+/** The acid caps, rise for rise with `MIRE_BANK_CAPS` — what the bank is where the hydra stands (0384). */
+export const MIRE_ACID_CAPS = ['acidRise0', 'acidRise1', 'acidRise2', 'acidRise3', 'acidRise4', 'acidRise5', 'acidRise6'] as const;
+
 /** The two halves of the Mire's bed, in the order they lie along the world — 0383. */
 export const MIRE_BED = ['mireBedA', 'mireBedB'] as const;
 
@@ -1488,8 +1528,45 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   mireBedB: ACROSS_SPAN,
   boss12: 33,
   boss12Hit: 33,
-  boss13: 41,
-  boss13Hit: 41,
+  /*
+    ⚠️ **56 SINCE 0384, AND IT WAS 41 WITH FIVE NECKS INSIDE IT.** The necks and heads are drawn apart
+    now, so this is a body alone — a chest and shoulders standing up out of the acid, broad enough to
+    carry five necks. The hurtbox stays 16: 0.29 of the extent, inside 0.25 to 0.55, and a body half
+    under the shore is shot at its top half, where the heads are also a target.
+  */
+  boss13: 56,
+  boss13Hit: 56,
+  // The tail on the fish's terms — 0374: rooted on the bitmap's centre, curling up out of the acid.
+  hydraTail: 48,
+  hydraTailHit: 48,
+  /*
+    ⚠️ **A NECK IS ROOTED ON THE BITMAP'S CENTRE, SO ITS TILE IS TWICE ITS REACH**, and 76 is under
+    `EDGE_MARGIN`'s ceiling of 80 (`src/sim/camera.ts`) with room for the reach's 36 and the joint.
+  */
+  hydraNeck0: 76,
+  hydraNeck1: 76,
+  hydraNeck2: 76,
+  hydraNeck3: 76,
+  hydraNeck4: 76,
+  // One box for every head, so a head grows no bigger than the neck it is carried on.
+  hydraHead0: 24,
+  hydraHead0Hit: 24,
+  hydraHead1: 24,
+  hydraHead1Hit: 24,
+  hydraHead2: 24,
+  hydraHead2Hit: 24,
+  hydraHead3: 24,
+  hydraHead3Hit: 24,
+  hydraHead4: 24,
+  hydraHead4Hit: 24,
+  // The bank's own tile, so an acid cap and a mud cap meet edge to edge — 0384.
+  acidRise0: 12,
+  acidRise1: 12,
+  acidRise2: 12,
+  acidRise3: 12,
+  acidRise4: 12,
+  acidRise5: 12,
+  acidRise6: 12,
   boss14: 46,
   boss14Hit: 46,
   bullet: 1.8,

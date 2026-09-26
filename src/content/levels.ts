@@ -43,7 +43,7 @@ import type { PickupKind } from './pickups.ts';
 import type { ThemeKind } from './themes.ts';
 import type { LevelSections } from './music.ts';
 import type { Eruption } from './volcano.ts';
-import { MIRE_BANK_CAPS, MIRE_BED, type SpriteKind } from './sprites.ts';
+import { MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, type SpriteKind } from './sprites.ts';
 import { PLAYER_MARGIN } from '../sim/flight.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
 
@@ -407,6 +407,12 @@ export interface BankRow {
    * — `POOLS_OF` is where the pools are, and its bubbles rise off these.
    */
   bed: readonly SpriteKind[];
+  /**
+   * The caps a stretch of the bank wears where a boss stands in it — acid under the shore where the
+   * rest is mud, rise for rise with `caps` — 0384. The stretch is the boss's (`wade.pool`); the shore
+   * itself does not move, so what bites is exactly what bit.
+   */
+  pool: readonly SpriteKind[];
 }
 
 export interface LevelRow {
@@ -1730,6 +1736,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
         ],
         caps: MIRE_BANK_CAPS,
         bed: MIRE_BED,
+        pool: MIRE_ACID_CAPS,
       },
     },
   },

@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS } from '../content/specials.ts';
-import { BEAD_HEAD, EMBER_HEAD, MIRE_BANK_CAPS, MIRE_BED, WALL_RISE_MAX } from '../content/sprites.ts';
+import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -532,6 +532,25 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   mireBedB: 'sky',
   boss12: 'enemy',
   boss13: 'enemy',
+  // The hydra's pieces are the hydra — 0384, and its acid is the bank's.
+  hydraTail: 'enemy',
+  hydraNeck0: 'enemy',
+  hydraNeck1: 'enemy',
+  hydraNeck2: 'enemy',
+  hydraNeck3: 'enemy',
+  hydraNeck4: 'enemy',
+  hydraHead0: 'enemy',
+  hydraHead1: 'enemy',
+  hydraHead2: 'enemy',
+  hydraHead3: 'enemy',
+  hydraHead4: 'enemy',
+  acidRise0: 'sky',
+  acidRise1: 'sky',
+  acidRise2: 'sky',
+  acidRise3: 'sky',
+  acidRise4: 'sky',
+  acidRise5: 'sky',
+  acidRise6: 'sky',
   boss14: 'enemy',
   bullet: 'bullet',
   /*
@@ -791,6 +810,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11BurntHit: 'impact',
   boss12Hit: 'impact',
   boss13Hit: 'impact',
+  hydraTailHit: 'impact',
+  hydraHead0Hit: 'impact',
+  hydraHead1Hit: 'impact',
+  hydraHead2Hit: 'impact',
+  hydraHead3Hit: 'impact',
+  hydraHead4Hit: 'impact',
   boss14Hit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
@@ -3694,6 +3719,8 @@ export interface BankArt {
   cap: (ctx: Pen, size: number, rise: number, land: string, glow: string, light?: LandLight) => void;
   fill: (ctx: Pen, size: number, land: string, glow: string, light?: LandLight) => void;
   bed: (ctx: Pen, size: number, part: number, parts: number, land: string, glow: string, light?: LandLight) => void;
+  /** A cap with acid under the shore, where a boss stands in the bank — 0384. */
+  pool: (ctx: Pen, size: number, rise: number, land: string, glow: string, light?: LandLight) => void;
 }
 
 export const BANK_OF: Record<ThemeKind, BankArt | null> = {
@@ -3706,6 +3733,7 @@ export const BANK_OF: Record<ThemeKind, BankArt | null> = {
     cap: (ctx, size, rise, land, glow, light) => drawBankCap(ctx, size, rise, bankInk(land, glow, light)),
     fill: (ctx, size, land, glow, light) => drawBankFill(ctx, size, bankInk(land, glow, light)),
     bed: drawBed,
+    pool: drawAcidCap,
   },
   core: null,
 };
@@ -4460,14 +4488,6 @@ function stripe(spine: readonly Pt[], i: number, h: (i: number) => number, from:
     offSpine(spine, i + 1, h(i + 1) * to),
     offSpine(spine, i, h(i) * to),
   ];
-}
-
-/** A frame at the end of a spine: `at(px, py)` is `px` along its last heading and `py` to port. */
-function endOf(spine: readonly Pt[]): (px: number, py: number) => Pt {
-  const last = spine.length - 1;
-  const [ux, uy] = headingAt(spine, last);
-  const [x, y] = spine[last]!;
-  return (px, py) => [x + ux * px - uy * py, y + uy * px + ux * py];
 }
 
 /*
@@ -6939,119 +6959,623 @@ function paintBoss12(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
 }
 
 /*
-  THE HYDRA. A broad body at the back and five necks reaching forward, each a ribbon on its own
-  spine and each ending in a skull with its jaws open — *"the hydra shows no heads"* is the report
-  this answers, and the heads are the outline, not paint on it.
+  ── THE HYDRA, IN PIECES — 0384 ───────────────────────────────────────────────────────────────────
+
+  *"It's supposed to be a hydra that grows extra heads and currently it looks like a weird mouldy
+  enokki mushroom"* — which is what five ribbon necks on one disc read as. It is drawn as an animal
+  now: a body that stands up out of the acid, a tail curling out of it behind, and a neck and a head
+  for each phase, each head after the lord it is named for and each neck in that lord's colours.
+  `src/app/frame.ts` places the pieces every step (`layNecks`).
+
+  ⚠️ **EVERY PIECE IS IN ITS OWN FRAME AND UNDER THE SAME LIGHT.** Upper-left, as every creature in
+  the game is lit. A neck is turned about its root to point up and forward, which puts its drawing's
+  `+y` side uppermost in the world — so a neck is lit along `+y` and its belly scutes are on `−y`, the
+  side that faces the player.
 */
+
+/**
+ * The body, snout side to `−x`: a chest rising out of the acid in front, the shoulders the necks grow
+ * from, and the back falling to where the tail leaves it. Everything below `HYDRA_WATER` is under the
+ * acid (the bank is drawn over it — `src/render/scene.ts`), so it is filled square and never seen.
+ */
 const HYDRA_BODY: readonly Pt[] = [
-  [-0.12, -0.66],
-  [0.28, -0.82],
-  [0.7, -0.74],
-  [0.96, -0.38],
-  [1, 0],
-  [0.96, 0.38],
-  [0.7, 0.74],
-  [0.28, 0.82],
-  [-0.12, 0.66],
+  [-1, 1],
+  [-1, 0.45],
+  [-0.94, 0.1],
+  [-0.84, -0.25],
+  [-0.68, -0.55],
+  [-0.46, -0.76],
+  [-0.18, -0.86],
+  [0.12, -0.82],
+  [0.38, -0.66],
+  [0.6, -0.44],
+  [0.78, -0.22],
+  [0.94, 0.05],
+  [1, 0.45],
+  [1, 1],
 ];
-/** The five necks' spines, base to end, top to bottom; the head reaches on from the end. */
-const HYDRA_NECKS: readonly (readonly Pt[])[] = [
-  [
-    [-0.12, -0.5],
-    [-0.3, -0.53],
-    [-0.48, -0.6],
-    [-0.6, -0.66],
-  ],
-  [
-    [-0.12, -0.24],
-    [-0.3, -0.26],
-    [-0.48, -0.3],
-    [-0.64, -0.34],
-  ],
-  [
-    [-0.12, 0],
-    [-0.32, 0],
-    [-0.52, 0],
-    [-0.66, 0],
-  ],
-  [
-    [-0.12, 0.24],
-    [-0.3, 0.26],
-    [-0.48, 0.3],
-    [-0.64, 0.34],
-  ],
-  [
-    [-0.12, 0.5],
-    [-0.3, 0.53],
-    [-0.48, 0.6],
-    [-0.6, 0.66],
-  ],
+/**
+ * Every piece of the hydra is outlined this wide, in world units, whatever its tile — 0384. `drawKind`'s
+ * default is a share of the tile, which on a 76-unit neck is a three-unit rim, heavier than any body in
+ * the game; one width across the pieces is what makes them read as one animal.
+ */
+const HYDRA_OUTLINE = 1.1;
+
+/** Where the acid's surface is on the body, in its frame: the row's `sink` over the drawing's radius. */
+const HYDRA_WATER = (BOSSES.hydra.move.kind === 'wade' ? BOSSES.hydra.move.sink : 0) / (SPRITE_EXTENT.boss13 * 0.42);
+
+/** A closed outline round a spine, `from` wide at its start and `to` at its end — half-widths, in `r`. */
+function tube(spine: readonly Pt[], from: number, to: number): Pt[] {
+  const last = spine.length - 1;
+  const upper: Pt[] = [];
+  const lower: Pt[] = [];
+  for (let i = 0; i <= last; i++) {
+    const h = from + ((to - from) * i) / last;
+    upper.push(offSpine(spine, i, h));
+    lower.push(offSpine(spine, i, -h));
+  }
+  return [...upper, ...lower.reverse()];
+}
+
+/** The tail's spine in its own frame, rooted on the bitmap's centre and curling up out of the acid. */
+const HYDRA_TAIL_SPINE: readonly Pt[] = [
+  [-0.3, 0.26],
+  [0, 0.18],
+  [0.26, 0.08],
+  [0.48, -0.08],
+  [0.64, -0.3],
+  [0.72, -0.54],
+  [0.68, -0.76],
+  [0.54, -0.9],
 ];
-// A quarter of `r` at the base, on the serpent's argument: finer than that is outline.
-const hydraHalf = (i: number): number => 0.12 - 0.01 * i;
-/** A skull in its neck's own frame, solid — starboard cheek to crown to snout to chin to port cheek. */
-const HYDRA_HEAD: readonly Pt[] = [
-  [-0.02, -0.13],
-  [0.12, -0.19],
-  [0.3, -0.17],
-  [0.38, -0.06],
-  [0.38, 0.06],
-  [0.3, 0.17],
-  [0.12, 0.19],
-  [-0.02, 0.13],
-];
-function hydraHull(): Pt[] {
-  const out: Pt[] = [...HYDRA_BODY];
-  // From the body's bottom corner up its front line, out and back along each neck in turn.
-  for (let n = HYDRA_NECKS.length - 1; n >= 0; n--) {
-    const spine = HYDRA_NECKS[n]!;
-    const at = endOf(spine);
-    out.push([-0.12, spine[0]![1] + hydraHalf(0)]);
-    for (let i = 1; i < spine.length; i++) out.push(offSpine(spine, i, -hydraHalf(i)));
-    for (const [px, py] of HYDRA_HEAD) out.push(at(px, py));
-    for (let i = spine.length - 1; i >= 1; i--) out.push(offSpine(spine, i, hydraHalf(i)));
-    out.push([-0.12, spine[0]![1] - hydraHalf(0)]);
+const HYDRA_TAIL: readonly Pt[] = tube(HYDRA_TAIL_SPINE, 0.2, 0.035);
+
+/** A neck's spine in its own frame: root on the bitmap's centre, the head's centre at `reach` on `+x`. */
+function neckSpine(reach: number): Pt[] {
+  const out: Pt[] = [];
+  const knots = 9;
+  for (let i = 0; i <= knots; i++) {
+    const t = i / knots;
+    // From just behind the root, which is inside the body, to the head's centre, which the head covers.
+    const x = -0.12 + (reach + 0.12) * t;
+    // A gentle S, so a neck is a serpent's and not a pole: nought at both ends.
+    out.push([x, 0.07 * Math.sin(t * Math.PI * 2)]);
   }
   return out;
 }
-const HYDRA_HULL: readonly Pt[] = hydraHull();
-function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The body: its underside in shadow, its back lit, sacs across it in the place's motif.
-  plate(ctx, f, skin, [
-    [0, 0.36],
-    [0.55, 0.62],
-    [0.85, 0.34],
-    [0.5, 0.3],
-  ]);
-  lit(ctx, f, skin, [
-    [0, -0.36],
-    [0.5, -0.62],
-    [0.8, -0.4],
-    [0.5, -0.3],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [-0.02, -0.28],
-    [0.72, -0.28],
-    [0.72, 0.28],
-    [-0.02, 0.28],
-  ], 'boss13');
-  // Every neck lit down its port edge and shadowed down its starboard; every skull an eye and a maw.
-  for (const spine of HYDRA_NECKS) {
-    for (let i = 0; i < spine.length - 1; i++) {
-      lit(ctx, f, skin, stripe(spine, i, hydraHalf, 0.35, 0.7));
-      plate(ctx, f, skin, stripe(spine, i, hydraHalf, -0.35, -0.7));
+
+/** How wide a neck is at its root and at the head, in the neck's `r` — the head covers the thinner end. */
+const NECK_ROOT = 0.105;
+const NECK_TIP = 0.07;
+
+/** Which neck of the hydra a sprite is, and so its reach and whose colours it wears — off the row. */
+function hydraNeckOf(kind: SpriteKind): { k: number; reach: number; livery: ThemeKind } | null {
+  const necks = BOSSES.hydra.necks?.necks ?? [];
+  for (let k = 0; k < necks.length; k++) {
+    const neck = necks[k]!;
+    const at = SPRITE[kind];
+    if (neck.art === at || neck.head === at || neck.headHit === at) {
+      return { k, reach: neck.reach / (SPRITE_EXTENT[kind] * 0.42), livery: neck.livery };
     }
-    const at = endOf(spine);
-    const socket = at(0.1, -0.09);
-    const eyeAt = at(0.095, -0.09);
-    const maw = at(0.3, 0);
-    // The mouth: a dark wedge back from the snout, the maw lit in it. Paint, because a notch that
-    // fine in the outline is stroked shut.
-    poly(ctx, f, shade(skin.plate, -0.5), [at(0.37, -0.05), at(0.18, 0), at(0.37, 0.05)]);
-    glow(ctx, f, skin.lit, maw[0], maw[1], 0.09, 0.8);
-    disc(ctx, f, shade(skin.plate, -0.5), socket[0], socket[1], 0.042);
-    disc(ctx, f, skin.eye, eyeAt[0], eyeAt[1], 0.028);
   }
+  return null;
+}
+
+/** The outline of neck `k`: a tube, and a frill, a crest of spikes or a ridge where its head has one. */
+function hydraNeckHull(k: number, reach: number): Pt[] {
+  const spine = neckSpine(reach);
+  if (k !== 1 && k !== 3) return tube(spine, NECK_ROOT, NECK_TIP);
+  // The fish's neck carries a fin along its back and the ice's a row of crystals: the `+y` edge, out.
+  const last = spine.length - 1;
+  const upper: Pt[] = [];
+  const lower: Pt[] = [];
+  for (let i = 0; i <= last; i++) {
+    const h = NECK_ROOT + ((NECK_TIP - NECK_ROOT) * i) / last;
+    lower.push(offSpine(spine, i, -h));
+    const edge = offSpine(spine, i, h);
+    upper.push(edge);
+    if (i === 0 || i === last) continue;
+    // Between knots, a fin ray or a crystal: out from the back and down again before the next knot.
+    const mid: Pt = [(spine[i]![0] + spine[i + 1]![0]) / 2, (spine[i]![1] + spine[i + 1]![1]) / 2];
+    const [ux, uy] = headingAt(spine, i);
+    const tall = k === 1 ? 0.075 : 0.1;
+    const lean = k === 1 ? 0.03 : 0;
+    upper.push([mid[0] - uy * (h + tall) - ux * lean, mid[1] + ux * (h + tall) - uy * lean]);
+  }
+  return [...upper, ...lower.reverse()];
+}
+/**
+ * The body — 0384. Lit along the back and falling into shadow toward the acid, a ridge of plates down
+ * the spine, scales in rows across the flank, the place's sacs, and the acid's own light on it low down,
+ * where it stands in the stuff.
+ */
+function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+  shaded(ctx, f, [-0.3, -0.9], [0.2, 0.5], shade(skin.hull, 0.22), shade(skin.hull, -0.4), HYDRA_BODY, 1, true);
+  // The back catches the light as one plane from the chest to the haunch.
+  shaded(ctx, f, [-0.2, -0.86], [-0.1, -0.5], mix(skin.hull, skin.lit, 0.35), skin.hull, [
+    [-0.72, -0.44],
+    [-0.46, -0.68],
+    [-0.18, -0.78],
+    [0.12, -0.74],
+    [0.36, -0.6],
+    [0.58, -0.38],
+    [0.5, -0.3],
+    [0.3, -0.48],
+    [0.08, -0.6],
+    [-0.18, -0.64],
+    [-0.44, -0.54],
+    [-0.64, -0.36],
+  ], 0.7, true);
+  // Scales as scallops, overlapping row on row down the flank, darker toward the acid.
+  for (let row = 0; row < 4; row++) {
+    const y = -0.5 + row * 0.15;
+    for (let c = 0; c < 9; c++) {
+      const x = -0.5 + c * 0.14 + (row % 2) * 0.07;
+      if (x > 0.62 - row * 0.02) continue;
+      seam(ctx, f, shade(skin.hull, -0.38), 0.035, [
+        [x - 0.065, y],
+        [x - 0.035, y + 0.05],
+        [x + 0.035, y + 0.05],
+        [x + 0.065, y],
+      ], 0.5, true);
+    }
+  }
+  // The dorsal ridge: curved plates down the spine, each lit on its leading face.
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    const x = -0.24 + t * 0.9;
+    const y = -0.74 + Math.pow((t + 0.1) * 0.95, 2) * 0.52;
+    const tall = 0.13 - t * 0.04;
+    poly(ctx, f, skin.plate, [
+      [x - 0.07, y + 0.07],
+      [x - 0.02, y - tall * 0.5],
+      [x + 0.03, y - tall + 0.05],
+      [x + 0.08, y + 0.07],
+    ]);
+    poly(ctx, f, mix(skin.plate, skin.lit, 0.35), [
+      [x - 0.07, y + 0.07],
+      [x - 0.02, y - tall * 0.5],
+      [x + 0.03, y - tall + 0.05],
+      [x - 0.005, y + 0.07],
+    ], 0.8);
+  }
+  /*
+    ⚠️ **NO PLACE MOTIF.** The Mire's is round sacs in the acid's green, and on a body this size three of
+    them photographed as a row of glowing eyes low on its flank — a face where there is none.
+  */
+  void theme;
+  // And the acid's light, from below: the whole body lit where it goes into the stuff, and less above.
+  shaded(ctx, f, [0, HYDRA_WATER], [0, HYDRA_WATER - 0.4], rgba(skin.lit, 0.32), rgba(skin.lit, 0), HYDRA_BODY, 1, true);
+}
+
+/** The tail — 0384: banded, a row of spines down its outer curve, and a spade of fin at its tip. */
+function paintHydraTail(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  const spine = HYDRA_TAIL_SPINE;
+  const half = (i: number): number => 0.2 + ((0.035 - 0.2) * i) / (spine.length - 1);
+  shaded(ctx, f, [0.8, -0.6], [0.2, 0.2], shade(skin.hull, 0.2), shade(skin.hull, -0.38), HYDRA_TAIL, 1, true);
+  for (let i = 1; i < spine.length - 1; i++) {
+    // The outer curve lit, the inner in shadow; a dark band across every other segment.
+    lit(ctx, f, skin, stripe(spine, i, half, 0.45, 0.85));
+    poly(ctx, f, shade(skin.hull, -0.45), stripe(spine, i, half, -0.4, -0.85), 0.8);
+    if (i % 2 === 0) poly(ctx, f, skin.plate, stripe(spine, i, half, -0.85, 0.85), 0.55);
+  }
+  // Spines along the outer curve, each a small tooth inside the edge.
+  for (let i = 2; i < spine.length - 1; i++) {
+    const base = offSpine(spine, i, half(i) * 0.55);
+    const tip = offSpine(spine, i, half(i) * 0.95);
+    const [ux, uy] = headingAt(spine, i);
+    poly(ctx, f, skin.plate, [
+      [base[0] - ux * 0.04, base[1] - uy * 0.04],
+      tip,
+      [base[0] + ux * 0.04, base[1] + uy * 0.04],
+    ]);
+  }
+  glow(ctx, f, skin.lit, spine[spine.length - 2]![0], spine[spine.length - 2]![1], 0.08, 0.5);
+}
+
+/**
+ * Neck `k` — 0384, in the colours of the head it carries: a serpent's banded scales, a fish's finned
+ * reds, a pterodactyl's leather, an ice crystal's facets, a clockwork's plated segments.
+ */
+function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, k: number, reach: number): void {
+  const spine = neckSpine(reach);
+  const last = spine.length - 1;
+  const half = (i: number): number => NECK_ROOT + ((NECK_TIP - NECK_ROOT) * i) / last;
+  // Lit on `+y`, which is uppermost in the world once the neck is turned up and forward. Over the neck's
+  // own outline, fin and crystals and all, drawn the way the outline is, so no wash leaves it.
+  shaded(ctx, f, [reach * 0.5, 0.14], [reach * 0.5, -0.14], shade(skin.hull, 0.2), shade(skin.hull, -0.38), hydraNeckHull(k, reach), 1, k !== 3);
+  for (let i = 0; i < last; i++) {
+    // A highlight along the upper side, the skin catching the light — not a stripe of the lord's lit.
+    poly(ctx, f, mix(skin.lit, skin.hull, 0.5), stripe(spine, i, half, 0.5, 0.82), 0.75);
+    // The belly scutes, on the side that faces the player.
+    const scute = k === 3 ? mix(skin.lit, skin.hull, 0.3) : k === 4 ? skin.plate : mix(skin.lit, skin.hull, 0.45);
+    poly(ctx, f, scute, stripe(spine, i, half, -0.25, -0.8), 0.9);
+    seam(ctx, f, shade(skin.hull, -0.5), 0.03, [offSpine(spine, i, -half(i) * 0.8), offSpine(spine, i, -half(i) * 0.25)], 0.8);
+  }
+  // One arm per neck, and an `if` chain because `k` is a number: there is no union for a `never` to close.
+  if (k === 0) {
+    // The serpent's own: dark bands down the neck and the place's acid in spots between them.
+    for (let i = 1; i < last; i += 2) poly(ctx, f, skin.plate, stripe(spine, i, half, -0.2, 0.5), 0.6);
+    for (let i = 2; i < last; i += 2) {
+      const at = offSpine(spine, i, half(i) * 0.15);
+      disc(ctx, f, skin.lit, at[0], at[1], 0.03, 0.9);
+    }
+    return;
+  }
+  if (k === 1) {
+    // The fish's: the fin along its back, rayed from the neck out toward each fin's point, in the
+    // ember's gold and inside the fin; and scales as arcs down its side.
+    for (let i = 1; i < last; i++) {
+      const [ux, uy] = headingAt(spine, i);
+      const mid: Pt = [(spine[i]![0] + spine[i + 1]![0]) / 2, (spine[i]![1] + spine[i + 1]![1]) / 2];
+      const h = half(i);
+      const peak: Pt = [mid[0] - uy * (h + 0.075) - ux * 0.03, mid[1] + ux * (h + 0.075) - uy * 0.03];
+      const foot: Pt = [mid[0] - uy * h * 0.7, mid[1] + ux * h * 0.7];
+      seam(ctx, f, skin.lit, 0.025, [foot, [foot[0] + (peak[0] - foot[0]) * 0.7, foot[1] + (peak[1] - foot[1]) * 0.7]], 0.9);
+      const on = offSpine(spine, i, 0);
+      seam(ctx, f, shade(skin.hull, -0.4), 0.03, [offSpine(spine, i, h * 0.4), [on[0] + ux * 0.05, on[1] + uy * 0.05], offSpine(spine, i, -h * 0.1)], 0.6, true);
+    }
+    return;
+  }
+  if (k === 2) {
+    // The pterodactyl's: leather, with tendons down it and a knuckled ridge along its back.
+    seam(ctx, f, shade(skin.hull, -0.35), 0.03, spine.slice(1, last).map((_, j) => offSpine(spine, j + 1, half(j + 1) * 0.35)), 0.6, true);
+    seam(ctx, f, shade(skin.hull, -0.35), 0.03, spine.slice(1, last).map((_, j) => offSpine(spine, j + 1, -half(j + 1) * 0.05)), 0.5, true);
+    for (let i = 1; i < last; i += 2) {
+      // Inside the neck's own edge at its thin end too: the knuckle and its radius both a share of it.
+      const at = offSpine(spine, i, half(i) * 0.5);
+      disc(ctx, f, skin.plate, at[0], at[1], half(i) * 0.32, 0.9);
+    }
+    return;
+  }
+  if (k === 3) {
+    // The ice's: faceted, each segment split into a lit and a cold face, and the crystals on its back.
+    for (let i = 0; i < last; i++) {
+      const a = offSpine(spine, i, half(i) * 0.85);
+      const b = offSpine(spine, i + 1, -half(i + 1) * 0.85);
+      const c = offSpine(spine, i + 1, half(i + 1) * 0.85);
+      poly(ctx, f, i % 2 === 0 ? mix(skin.hull, skin.lit, 0.3) : shade(skin.hull, -0.2), [a, b, c], 0.7);
+      seam(ctx, f, skin.lit, 0.02, [a, b], 0.6);
+    }
+    return;
+  }
+  // The clockwork's: plated segments with a glowing seam between each, and a rivet on each plate.
+  for (let i = 1; i < last; i++) {
+    seam(ctx, f, skin.lit, 0.03, [offSpine(spine, i, half(i) * 0.9), offSpine(spine, i, -half(i) * 0.9)], 0.85);
+    const bolt = offSpine(spine, i, half(i) * 0.55);
+    disc(ctx, f, shade(skin.plate, -0.3), bolt[0], bolt[1], 0.025, 1);
+  }
+}
+
+/*
+  ── THE FIVE HEADS — 0384 ─────────────────────────────────────────────────────────────────────────
+
+  Snout to `−x`, jaws parted, and every one after the lord it is named for — the serpent's own head
+  first, then the Ember Nebula's fish, Saurian Belt's pterodactyl, Rime Shelf's ice and the Labyrinth's
+  cog, *"with a mouth and eyes"*. The pterodactyl and the ice were asked for *"much higher quality"*
+  than their bosses are drawn at, so they are drawn from the animal and not from those hulls.
+*/
+const HYDRA_HEADS: readonly (readonly Pt[])[] = [
+  // The serpent: a wedge of skull, brow over the eye, the jaws parted at the snout.
+  [
+    [-1, -0.06],
+    [-0.76, -0.28],
+    [-0.42, -0.46],
+    [0, -0.56],
+    [0.44, -0.5],
+    [0.8, -0.28],
+    [0.9, 0.05],
+    [0.72, 0.38],
+    [0.3, 0.52],
+    [-0.2, 0.5],
+    [-0.6, 0.42],
+    [-0.92, 0.3],
+    [-0.46, 0.1],
+  ],
+  // The fish: a blunt round head with a crest of spines, and a wide mouth low at the front.
+  [
+    [-0.96, -0.08],
+    [-0.8, -0.44],
+    [-0.44, -0.66],
+    [-0.24, -0.92],
+    [-0.04, -0.7],
+    [0.16, -0.9],
+    [0.34, -0.64],
+    [0.6, -0.52],
+    [0.86, -0.2],
+    [0.88, 0.2],
+    [0.6, 0.55],
+    [0.1, 0.7],
+    [-0.44, 0.6],
+    [-0.84, 0.38],
+    [-0.98, 0.18],
+    [-0.6, 0.06],
+  ],
+  // The pterodactyl: a long toothed beak, the skull behind it, and the great crest swept back and up.
+  [
+    [-1, 0.02],
+    [-0.6, -0.12],
+    [-0.2, -0.24],
+    [0.1, -0.36],
+    [0.32, -0.48],
+    [0.6, -0.74],
+    [0.96, -0.96],
+    [0.8, -0.58],
+    [0.72, -0.22],
+    [0.56, 0.14],
+    [0.24, 0.3],
+    [-0.2, 0.22],
+    [-0.96, 0.14],
+    [-0.56, 0.07],
+  ],
+  // The ice: an angular head of facets, three crystals standing off its crown, jaws of cut ice.
+  [
+    [-1, 0],
+    [-0.7, -0.24],
+    [-0.46, -0.3],
+    [-0.32, -0.64],
+    [-0.12, -0.38],
+    [0.14, -0.84],
+    [0.3, -0.42],
+    [0.62, -0.96],
+    [0.56, -0.34],
+    [0.9, -0.18],
+    [0.94, 0.2],
+    [0.6, 0.46],
+    [0.2, 0.5],
+    [-0.3, 0.42],
+    [-0.9, 0.26],
+    [-0.54, 0.1],
+  ],
+  // The clockwork: a jaw of plate in front and a cranium that is a cog, its teeth round the back.
+  clockworkHead(),
+];
+
+/** The clockwork head's outline — 0384: the jaws, then the cog's teeth round the back of the skull. */
+function clockworkHead(): Pt[] {
+  const out: Pt[] = [
+    [-1, -0.1],
+    [-0.62, -0.3],
+    [-0.28, -0.44],
+  ];
+  const cx = 0.26;
+  const cy = -0.02;
+  // From the top of the skull round the back to its underside, a tooth every step.
+  const teeth = 7;
+  for (let i = 0; i <= teeth * 2; i++) {
+    const a = -Math.PI * 0.62 + (i / (teeth * 2)) * Math.PI * 1.24;
+    const rr = i % 2 === 1 ? 0.7 : 0.56;
+    // The tooth's two corners, so it is a tooth and not a spike.
+    out.push([cx + Math.cos(a - 0.07) * rr, cy + Math.sin(a - 0.07) * rr]);
+    out.push([cx + Math.cos(a + 0.07) * rr, cy + Math.sin(a + 0.07) * rr]);
+  }
+  out.push([-0.26, 0.5], [-0.62, 0.44], [-0.94, 0.3], [-0.5, 0.08]);
+  return out;
+}
+
+/** Where each head's eye is, its size, and whether its outline is curved (flesh) or straight (ice, metal). */
+const HYDRA_EYES: readonly { x: number; y: number; r: number }[] = [
+  { x: -0.3, y: -0.26, r: 0.12 },
+  { x: -0.4, y: -0.28, r: 0.18 },
+  { x: 0.18, y: -0.16, r: 0.1 },
+  { x: -0.34, y: -0.14, r: 0.11 },
+  { x: -0.3, y: -0.22, r: 0.1 },
+];
+const HYDRA_CURVED: readonly boolean[] = [true, true, true, false, false];
+
+/**
+ * How solid a tooth is drawn. A fang stands out of the jaw into the gape, which is the notch the jaws
+ * leave and so outside the hull — and a SOLID mark there is a mark off the animal (0227). Under 0.9 it
+ * is held as light, as the serpent's mouth interior is (0285), and it still reads as a fang.
+ */
+const TOOTH = 0.85;
+
+/** Head `k`'s paint — 0384. */
+function paintHydraHead(ctx: Pen, f: Frame, skin: FoeSkin, k: number): void {
+  const hull = HYDRA_HEADS[k]!;
+  const curved = HYDRA_CURVED[k]!;
+  shaded(ctx, f, [-0.2, -0.7], [0.1, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), hull, 1, curved);
+  const e = HYDRA_EYES[k]!;
+  // The mouth: dark in the notch the jaws leave, and what each breathes lit in the back of it.
+  ctx.globalAlpha = 0.85;
+  ctx.fillStyle = MOUTH_INK;
+  ctx.beginPath();
+  trace(ctx, f, [
+    [-0.94, k === 2 ? 0.05 : 0.02],
+    [k === 2 ? -0.5 : -0.4, k === 2 ? 0.08 : 0.1],
+    [-0.88, k === 2 ? 0.12 : 0.26],
+  ]);
+  ctx.fill('evenodd');
+  ctx.globalAlpha = 1;
+  // An `if` chain because `k` is a number: there is no union for a `never` arm to close.
+  if (k === 0) {
+    // The crown a plane of light from the snout to the back of the skull; the brow over the eye.
+    shaded(ctx, f, [-0.4, -0.56], [-0.2, -0.26], skin.lit, shade(skin.hull, 0.1), [
+      [-0.8, -0.24],
+      [-0.42, -0.42],
+      [0, -0.5],
+      [0.42, -0.44],
+      [0.6, -0.32],
+      [0.2, -0.36],
+      [-0.3, -0.34],
+      [-0.72, -0.18],
+    ], 0.7, true);
+    poly(ctx, f, shade(skin.hull, -0.5), [
+      [-0.08, -0.42],
+      [-0.36, -0.46],
+      [-0.52, -0.34],
+      [-0.46, -0.3],
+      [-0.24, -0.38],
+      [-0.04, -0.36],
+    ], 0.85);
+    // Scales down the jaw, the nostril, and fangs inside the jaws' edges.
+    // Scales down the cheek and jaw, a spot each, darker toward the throat.
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 2; j++) disc(ctx, f, shade(skin.hull, -0.3 - j * 0.1), -0.06 + i * 0.13 + j * 0.065, 0.12 + j * 0.13, 0.045, 0.7);
+    }
+    disc(ctx, f, shade(skin.plate, -0.5), -0.84, -0.12, 0.04);
+    for (const [x, y, d] of [[-0.8, -0.1, 1], [-0.62, -0.18, 1], [-0.78, 0.24, -1], [-0.6, 0.3, -1]] as const) {
+      poly(ctx, f, '#f2eedb', [[x - 0.04, y], [x + 0.04, y], [x, y + d * 0.1]], TOOTH);
+    }
+    glow(ctx, f, skin.lit, -0.78, 0.1, 0.12, 0.55);
+} else if (k === 1) {
+    // The crest's membrane between its spines, gold; gill slits; the ember glowing in the mouth.
+    shaded(ctx, f, [-0.1, -0.9], [-0.1, -0.6], skin.lit, skin.hull, [
+      [-0.36, -0.64],
+      [-0.24, -0.84],
+      [-0.04, -0.66],
+      [0.16, -0.82],
+      [0.3, -0.62],
+      [0.1, -0.58],
+      [-0.1, -0.6],
+    ], 0.85, true);
+    for (let i = 0; i < 3; i++) {
+      seam(ctx, f, shade(skin.hull, -0.5), 0.05, [[0.26 + i * 0.13, -0.34], [0.34 + i * 0.13, 0], [0.26 + i * 0.13, 0.32]], 0.8, true);
+    }
+    // A scale pattern on the cheek and a paler belly under the jaw.
+    poly(ctx, f, mix(skin.lit, skin.hull, 0.55), [[-0.7, 0.36], [-0.2, 0.5], [0.3, 0.52], [0.1, 0.62], [-0.44, 0.56]], 0.8);
+    for (const [x, y] of [[-0.66, 0.02], [-0.72, 0.22], [-0.58, -0.04]] as const) {
+      poly(ctx, f, '#fff4d0', [[x - 0.03, y], [x + 0.03, y], [x, y + 0.08]], TOOTH);
+    }
+    glow(ctx, f, skin.lit, -0.82, 0.12, 0.16, 0.8);
+} else if (k === 2) {
+    // The beak is bone, lit along its ridge; the crest a membrane with veins and a lit edge.
+    // Straight-edged and set in from the beak's own outline, which is curved: a curve through these
+    // corners would bulge past the tip.
+    shaded(ctx, f, [-0.6, -0.2], [-0.6, 0.2], mix(skin.lit, '#ffffff', 0.2), mix(skin.lit, skin.hull, 0.5), [
+      [-0.86, 0],
+      [-0.6, -0.07],
+      [-0.2, -0.17],
+      [0, -0.22],
+      [-0.04, 0.1],
+      [-0.5, 0.03],
+    ], 0.9, false);
+    shaded(ctx, f, [0.5, -0.9], [0.5, -0.3], mix(skin.lit, skin.hull, 0.2), shade(skin.hull, -0.2), [
+      [0.36, -0.46],
+      [0.6, -0.7],
+      [0.9, -0.9],
+      [0.76, -0.56],
+      [0.66, -0.28],
+      [0.44, -0.3],
+    ], 0.85, true);
+    for (let i = 0; i < 3; i++) seam(ctx, f, shade(skin.hull, -0.4), 0.03, [[0.44 + i * 0.07, -0.34], [0.62 + i * 0.08, -0.64 - i * 0.05]], 0.7);
+    seam(ctx, f, skin.lit, 0.035, [[0.34, -0.46], [0.6, -0.72], [0.92, -0.92]], 0.8, true);
+    // Serrations along the beak's cutting edge, and its nostril slit.
+    for (let i = 0; i < 5; i++) {
+      const x = -0.84 + i * 0.12;
+      poly(ctx, f, '#fff8e6', [[x - 0.03, 0.02], [x + 0.03, 0.02], [x, 0.08]], TOOTH);
+    }
+    seam(ctx, f, shade(skin.plate, -0.4), 0.04, [[-0.56, -0.08], [-0.4, -0.12]], 0.9);
+    // A pouch of skin under the jaw, darker.
+    poly(ctx, f, skin.plate, [[-0.1, 0.2], [0.24, 0.24], [0.44, 0.12], [0.3, 0.02], [0, 0.12]], 0.7);
+    glow(ctx, f, skin.eye, -0.7, 0.07, 0.1, 0.5);
+} else if (k === 3) {
+    // Facets: each plane of the head a shade of ice, the crystals lit on one face and cold on the other.
+    const facets: readonly (readonly Pt[])[] = [
+      [[-1, 0], [-0.7, -0.24], [-0.4, -0.02]],
+      [[-0.7, -0.24], [-0.46, -0.3], [-0.12, -0.2], [-0.4, -0.02]],
+      [[-0.46, -0.3], [-0.32, -0.64], [-0.12, -0.38]],
+      [[-0.12, -0.38], [0.14, -0.84], [0.3, -0.42]],
+      [[0.3, -0.42], [0.62, -0.96], [0.56, -0.34]],
+      [[-0.12, -0.2], [0.56, -0.34], [0.9, -0.18], [0.5, 0.1]],
+      [[0.5, 0.1], [0.9, -0.18], [0.94, 0.2], [0.6, 0.46]],
+      [[-0.3, 0.42], [0.2, 0.5], [0.6, 0.46], [0.5, 0.1], [-0.12, 0.18]],
+    ];
+    facets.forEach((facet, i) => poly(ctx, f, i % 3 === 0 ? mix(skin.hull, skin.lit, 0.45) : i % 3 === 1 ? skin.hull : shade(skin.hull, -0.3), facet, 0.85));
+    // Each crystal's lit spine, from the middle of its foot toward its point and short of it — down the
+    // crystal's middle, since its edges are the hull's and a stroke on them would be half outside it.
+    for (const [[x0, y0], [x1, y1]] of [[[-0.29, -0.34], [-0.32, -0.64]], [[0.09, -0.4], [0.14, -0.84]], [[0.43, -0.38], [0.62, -0.96]]] as const) {
+      seam(ctx, f, skin.lit, 0.03, [[x0, y0], [x0 + (x1 - x0) * 0.65, y0 + (y1 - y0) * 0.65]], 0.9);
+    }
+    // Cut-ice teeth, the cold core glowing through the skull, and frost at the mouth.
+    for (const [x, y, d] of [[-0.82, -0.02, 1], [-0.64, -0.08, 1], [-0.8, 0.22, -1], [-0.62, 0.28, -1]] as const) {
+      poly(ctx, f, skin.lit, [[x - 0.04, y], [x + 0.04, y], [x, y + d * 0.12]], TOOTH);
+    }
+    glow(ctx, f, skin.lit, 0.22, 0.02, 0.26, 0.55);
+    glow(ctx, f, skin.lit, -0.8, 0.12, 0.14, 0.6);
+} else {
+    // The cog: a hub on the cranium, bolts round it, a slot for the arbor; plates on the jaw with
+    // glowing seams between them, a hinge that is a cog of its own, and teeth of metal.
+    band(ctx, f, skin.plate, 0.26, -0.02, 0.4, 0.3, 0.9);
+    disc(ctx, f, shade(skin.plate, -0.2), 0.26, -0.02, 0.16);
+    poly(ctx, f, skin.lit, [[0.2, -0.04], [0.32, -0.04], [0.32, 0], [0.2, 0]], 0.85);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      disc(ctx, f, mix(skin.hull, '#ffffff', 0.35), 0.26 + Math.cos(a) * 0.35, -0.02 + Math.sin(a) * 0.35, 0.025);
+    }
+    seam(ctx, f, skin.lit, 0.035, [[-0.7, -0.2], [-0.2, -0.32]], 0.9);
+    seam(ctx, f, skin.lit, 0.035, [[-0.7, 0.34], [-0.2, 0.42]], 0.9);
+    band(ctx, f, shade(skin.plate, -0.2), -0.12, 0.26, 0.12, 0.06, 1);
+    for (const [x, y, d] of [[-0.84, -0.06, 1], [-0.68, -0.14, 1], [-0.52, -0.2, 1], [-0.8, 0.26, -1], [-0.64, 0.32, -1]] as const) {
+      poly(ctx, f, '#c9d2d6', [[x - 0.035, y], [x + 0.035, y], [x, y + d * 0.1]], TOOTH);
+    }
+  }
+  // And the eye — the clockwork's two, glowing, as a visor is.
+  if (k === 4) {
+    glow(ctx, f, skin.eye, e.x, e.y, e.r * 1.8, 0.6);
+    disc(ctx, f, shade(skin.plate, -0.6), e.x, e.y, e.r);
+    disc(ctx, f, skin.eye, e.x, e.y, e.r * 0.62);
+    glow(ctx, f, skin.eye, e.x + 0.26, e.y - 0.04, e.r * 1.4, 0.5);
+    disc(ctx, f, shade(skin.plate, -0.6), e.x + 0.26, e.y - 0.04, e.r * 0.8);
+    disc(ctx, f, skin.eye, e.x + 0.26, e.y - 0.04, e.r * 0.5);
+    return;
+  }
+  if (k === 3) glow(ctx, f, skin.eye, e.x, e.y, e.r * 1.6, 0.6);
+  eye(ctx, f, skin, e.x, e.y, e.r);
+  // A slit of a pupil for the reptiles, a ring for the fish.
+  if (k === 1) band(ctx, f, skin.lit, e.x, e.y, e.r, e.r * 0.8, 0.9);
+  // Five hundredths of `r` wide: over 2.5 pixels on a head at 1280×720, the floor a mark is drawn at.
+  else poly(ctx, f, shade(skin.plate, -0.6), [[e.x - 0.035, e.y - e.r * 0.55], [e.x + 0.015, e.y - e.r * 0.55], [e.x + 0.015, e.y + e.r * 0.55], [e.x - 0.035, e.y + e.r * 0.55]]);
+}
+
+/*
+  ── THE ACID THE HYDRA STANDS IN — 0384 ────────────────────────────────────────────────────────────
+
+  A bank cap (`drawBankCap`) with acid under the shore rather than mud: the same face, lit from within
+  at the surface and falling away into the mud a few units down, ripples on it, and the shore's edge.
+*/
+function drawAcidCap(ctx: Pen, size: number, rise: number, land: string, glow: string, light?: LandLight): void {
+  const ink = bankInk(land, glow, light);
+  const lit = light?.lit ?? mix(land, glow, 0.36);
+  const unit = size / BANK_TILE;
+  const faceY = (x: number): number => size / 2 + ((x - size / 2) * rise) / BANK_TILE;
+  drawBankCap(ctx, size, rise, ink);
+  /*
+    The acid: its surface at the face, as bright as the floor allows, and gone into the mud a few units
+    down. In bands laid parallel to the face, as the bank's veins are, so a band meets its neighbour's at
+    every knot whatever the two caps' rises — a gradient anchored on the tile would step at each join.
+  */
+  const bands = 6;
+  for (let b = 0; b < bands; b++) {
+    const from = b * 0.9 * unit;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = mix(lit, land, (b / bands) * 0.85);
+    ctx.beginPath();
+    ctx.moveTo(0, faceY(0) + from);
+    ctx.lineTo(size, faceY(size) + from);
+    ctx.lineTo(size, Math.min(size, faceY(size) + from + 0.95 * unit));
+    ctx.lineTo(0, Math.min(size, faceY(0) + from + 0.95 * unit));
+    ctx.closePath();
+    ctx.fill();
+  }
+  // Ripples on it, thin and bright, and the edge the shore always has.
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = glow;
+  ctx.lineWidth = Math.max(1, unit * 0.18);
+  for (const [from, to, down] of [[0.1, 0.55, 1.4], [0.45, 0.9, 2.6]] as const) {
+    ctx.beginPath();
+    ctx.moveTo(size * from, faceY(size * from) + down * unit);
+    ctx.lineTo(size * to, faceY(size * to) + down * unit);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 0.85;
+  ctx.lineWidth = Math.max(1, 0.7 * unit);
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.moveTo(0, faceY(0) + 0.35 * unit);
+  ctx.lineTo(size, faceY(size) + 0.35 * unit);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
 }
 
 /*
@@ -8570,13 +9094,62 @@ export function drawKind(
       return;
     case 'boss13':
     case 'boss13Hit':
-      // THE HYDRA — 0264: a broad body and five necks reaching forward, each ending in a skull
-      // with its jaws open. The drawing is `hydraHull` above.
-      trace(ctx, f, HYDRA_HULL);
+      // THE HYDRA'S BODY — 0384: the chest and shoulders standing up out of the acid. Its necks,
+      // heads and tail are drawn apart and placed every step (`layNecks`).
+      ctx.lineWidth = Math.max(1, size * HYDRA_OUTLINE / SPRITE_EXTENT.boss13);
+      curveLoop(ctx, f, HYDRA_BODY);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
       if (skin !== null) paintBoss13(ctx, f, skin, theme);
       return;
+    case 'hydraTail':
+    case 'hydraTailHit':
+      // Its tail, on the fish's terms (0374) — the Mire's lord, as the body it leaves is.
+      ctx.lineWidth = Math.max(1, size * HYDRA_OUTLINE / SPRITE_EXTENT.hydraTail);
+      curveLoop(ctx, f, HYDRA_TAIL);
+      {
+        const own = hurt ? null : lordOf(theme, palette);
+        if (own !== null) ctx.fillStyle = own.hull;
+        seal(ctx);
+        if (own !== null) paintHydraTail(ctx, f, own);
+      }
+      return;
+    case 'hydraNeck0':
+    case 'hydraNeck1':
+    case 'hydraNeck2':
+    case 'hydraNeck3':
+    case 'hydraNeck4':
+    case 'hydraHead0':
+    case 'hydraHead0Hit':
+    case 'hydraHead1':
+    case 'hydraHead1Hit':
+    case 'hydraHead2':
+    case 'hydraHead2Hit':
+    case 'hydraHead3':
+    case 'hydraHead3Hit':
+    case 'hydraHead4':
+    case 'hydraHead4Hit': {
+      /*
+        ⚠️ **IN THE COLOURS OF THE LORD THE HEAD IS NAMED FOR, NOT THE MIRE'S** — *"neck needs to be
+        coloured for the new head."* The row says whose (`Neck.livery`); a palette with no skins seals
+        every piece in the one ink, as it does every boss.
+      */
+      const neck = hydraNeckOf(kind);
+      if (neck === null) return;
+      const own = hurt ? null : lordOf(neck.livery, palette);
+      ctx.lineWidth = Math.max(1, size * HYDRA_OUTLINE / SPRITE_EXTENT[kind]);
+      const isNeck = kind.startsWith('hydraNeck');
+      const outline = isNeck ? hydraNeckHull(neck.k, neck.reach) : HYDRA_HEADS[neck.k]!;
+      // Flesh is curved; ice and metal are cut straight — and so is a crystal crest on an ice neck.
+      if (isNeck ? neck.k !== 3 : HYDRA_CURVED[neck.k]!) curveLoop(ctx, f, outline);
+      else trace(ctx, f, outline);
+      if (own !== null) ctx.fillStyle = own.hull;
+      seal(ctx);
+      if (own === null) return;
+      if (isNeck) paintHydraNeck(ctx, f, own, neck.k, neck.reach);
+      else paintHydraHead(ctx, f, own, neck.k);
+      return;
+    }
     case 'boss14':
     case 'boss14Hit': {
       // THE JELLYFISH — 0264: a bell to the front, the one curved edge in the game, and six
@@ -10057,6 +10630,15 @@ export function drawKind(
     case 'bankRise5':
     case 'bankRise6':
       drawBankCap(ctx, size, MIRE_BANK_CAPS.indexOf(kind) - (MIRE_BANK_CAPS.length - 1) / 2, bankInk(palette.space, palette.sky));
+      return;
+    case 'acidRise0':
+    case 'acidRise1':
+    case 'acidRise2':
+    case 'acidRise3':
+    case 'acidRise4':
+    case 'acidRise5':
+    case 'acidRise6':
+      drawAcidCap(ctx, size, MIRE_ACID_CAPS.indexOf(kind) - (MIRE_ACID_CAPS.length - 1) / 2, palette.space, palette.sky);
       return;
     case 'mireBedA':
     case 'mireBedB':
@@ -11936,6 +12518,7 @@ function bakeBank(atlas: Atlas, bank: BankArt, land: string, glow: string, pixel
   const steepest = (MIRE_BANK_CAPS.length - 1) / 2;
   MIRE_BANK_CAPS.forEach((kind, i) => bake(kind, (pen, size) => bank.cap(pen, size, i - steepest, land, glow, light)));
   MIRE_BED.forEach((kind, i) => bake(kind, (pen, size) => bank.bed(pen, size, i, MIRE_BED.length, land, glow, light)));
+  MIRE_ACID_CAPS.forEach((kind, i) => bake(kind, (pen, size) => bank.pool(pen, size, i - steepest, land, glow, light)));
 }
 
 /**

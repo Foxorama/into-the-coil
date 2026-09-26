@@ -32,11 +32,11 @@ export const PROBES = [
         breaks is unchanged: a head throwing the ROW's shot. And by 0365, which threads the bar's
         fraction for a round that grows.
       */
-      // And by 0380, which threads the breaker's own stream.
+      // And by 0380, which threads the breaker's own stream, and by 0384, which threads the mouths.
       find:
-        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);',
+        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue, mouths);',
       replace:
-        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);',
+        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue, mouths);',
     },
   },
   {
@@ -64,17 +64,12 @@ export const PROBES = [
       replace: "        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' } }] },",
     },
   },
-  {
-    decision: '0254',
-    suite: 'tests/hydra.test.ts',
-    // The laser head moved to the middle of the hull.
-    broke: 'the laser head’s beam authored from the middle of the hull, where no side head is',
-    guard: 'THE LASER HEAD',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // The three-head phase's laser, which is the one the guard drives.
-      find: "            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },\n          ],\n        },\n      },\n      {\n        upTo: 0.4,",
-      replace: "            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },\n          ],\n        },\n      },\n      {\n        upTo: 0.4,",
-    },
-  },
+  /*
+    ── *THE LASER HEAD'S BEAM AUTHORED FROM THE MIDDLE OF THE HULL* STOOD HERE, AND 0384 RETIRED IT ──
+
+    It broke `from: [-9]`, the offset that put 0254's laser on the side of a hull whose heads were all
+    inside its outline. The heads are drawn on their own necks now and every head's attack leaves its
+    own mouth, so the laser's root is the pterodactyl's mouth and `from` is nought. The claim that
+    replaced *THE LASER HEAD* is 0384's — *every head's attack leaves its own mouth* — with its own probe.
+  */
 ];

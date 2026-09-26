@@ -169,6 +169,14 @@ const HULLLESS: readonly SpriteKind[] = [
   'bankRise6',
   'mireBedA',
   'mireBedB',
+  // And the acid a boss stands in, which is the bank's caps with acid under the shore — 0384.
+  'acidRise0',
+  'acidRise1',
+  'acidRise2',
+  'acidRise3',
+  'acidRise4',
+  'acidRise5',
+  'acidRise6',
   'burst0',
   'burst1',
   'burst2',
@@ -569,23 +577,13 @@ describe('a boss differs from every other by more than its paint', () => {
     }
   });
 
-  it('0264 — THE HEADS: the hydra’s hull reaches forward in five places, and the serpent’s skull is wider than its neck', () => {
+  it('0264 — THE HEADS: the serpent’s skull is wider than its neck', () => {
     /*
-      *"The hydra shows no heads."* The report is about the SILHOUETTE — five necks were five
-      notches in a front edge — so this is held over the hull pass and not the paint: five separate
-      reaches into the front fifth of the box, each a head's width, is what a hydra's outline is.
-      In the player's units: at the shipped camera the front fifth is more than a ship's width.
+      ⚠️ **THE HYDRA'S HALF OF THIS WAS DELETED BY 0384, AND ITS CLAIM MOVED RATHER THAN WENT.** It held
+      five reaches into the front of one hull — *"the hydra shows no heads"* — and the hydra is not one
+      hull any more: its body is `boss13`, and each head is drawn on its own neck and placed every step.
+      *Every neck ends in its head, on the screen* is held in `tests/hydra.test.ts` where they are placed.
     */
-    const hydra = SPRITE_KINDS[BOSSES.hydra.sprite]!;
-    const hull = traceAt(hydra, COMMON).passes[0]!.subpaths[0]!;
-    const half = COMMON / 2;
-    const r = COMMON * 0.42;
-    // Walk the outline: every run of consecutive vertices in the front fifth is one reach into it.
-    const inFront = hull.map(([x]) => x < half - r * 0.8);
-    let reaches = 0;
-    for (let i = 0; i < inFront.length; i++) if (inFront[i] && !inFront[(i + inFront.length - 1) % inFront.length]) reaches++;
-    expect(reaches, 'the hydra’s hull does not reach forward in five places').toBe(5);
-
     const serpent = SPRITE_KINDS[BOSSES.jormungandr.sprite]!;
     const body = traceAt(serpent, COMMON).passes[0]!.subpaths[0]!;
     /*

@@ -40,18 +40,10 @@ export const PROBES = [
       replace: '  const skin = hurt ? null : foeOf(theme, palette);',
     },
   },
-  {
-    decision: '0264',
-    suite: 'tests/accents.test.ts',
-    // The hydra's heads taken off: five necks and nothing at the end of them.
-    broke: 'the hydra’s skulls taken off its necks, so the hull is five stumps',
-    guard: '0264 — THE HEADS',
-    edit: {
-      path: 'src/render/bake.ts',
-      find: '    for (const [px, py] of HYDRA_HEAD) out.push(at(px, py));\n',
-      replace: '',
-    },
-  },
+  /*
+    *The hydra's skulls taken off its necks* stood here, and 0384 retired it with the hull it broke: the
+    hydra's heads are drawn apart from its body now, and `tests/hydra.test.ts` holds that each is there.
+  */
   {
     decision: '0264',
     suite: 'tests/accents.test.ts',

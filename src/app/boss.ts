@@ -27,6 +27,7 @@ import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossAttack, type 
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
+import { faceAt, type Corridor } from '../sim/corridor.ts';
 import type { CueKind } from '../content/cues.ts';
 import { type DifficultyRow, crowdFor, fireGapFor } from '../content/difficulty.ts';
 import { FIRE_GRID, onFireGrid } from '../content/cadence.ts';
@@ -542,6 +543,14 @@ export function stepBoss(
   rainRng: Rng,
   /** Where the fish's wave rises off the edge — 0380, its own stream on the same terms. */
   breakerRng: Rng,
+  /** The floor under the hull, or `null` — what a `wade` stands in (0384). */
+  corridor: Corridor | null,
+  /**
+   * Where each of a many-headed boss's mouths is, two numbers a head — along and across, from the
+   * hull's centre — laid by `src/app/frame.ts` with the necks every step; empty for any other boss
+   * (0384). A volley leaves the mouth of the head that throws it.
+   */
+  mouths: Float64Array,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -722,6 +731,27 @@ export function stepBoss(
       boss.velAcross = want > cap ? cap : want < -cap ? -cap : want;
       break;
     }
+    case 'wade': {
+      /*
+        ── IT STANDS IN THE FLOOR — 0384 ───────────────────────────────────────────────────────────
+
+        ⚠️ **ASKED FOR**: *"a hydra that has its lower body in the acid pools."* The shore under it is
+        `src/sim/corridor.ts`'s face at the hull's own along — the one the stone bites at — and the hull
+        is held `sink` above it, so as the camera carries it over the rolling bank it rises and sinks
+        with the ground. Closed on at the row's `patrol`, as a socket closes on its seat, so a hull that
+        arrives mid-lane walks down into the acid rather than dropping into it.
+
+        ⚠️ **THE HEAVE IS ON `bobPhase`, THE HULL'S OWN ANGLE, ON THE BOB'S TERMS (0268)**: advanced by
+        the rate and never recomputed from a clock, so nothing re-centres it. A breath, not a patrol.
+      */
+      const face = corridor === null ? Number.POSITIVE_INFINITY : faceAt(corridor, boss.along, 1);
+      const shore = Number.isFinite(face) ? face : ACROSS_SPAN;
+      boss.bobPhase += TAU / move.wavelength;
+      const want = shore - move.sink + move.heave * Math.sin(boss.bobPhase) - boss.across;
+      const cap = row.patrol * phase.patrolScale;
+      boss.velAcross = want > cap ? cap : want < -cap ? -cap : want;
+      break;
+    }
     default: {
       const never: never = move;
       return never;
@@ -771,7 +801,7 @@ export function stepBoss(
     the gate rather than after, so that on the step the spray finishes its last globe leaves the mouth
     ahead of whatever the next head throws.
   */
-  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep);
+  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep, mouths);
 
   boss.fireIn--;
   if (boss.fireIn > 0) return direction;
@@ -816,8 +846,27 @@ export function stepBoss(
   // lightning, and the row's `attack` is the first of those.
   // The fraction on `phaseFor`'s terms, zero-guard and all, so a round that grows reads the bar the phase did.
   const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, phase.cue);
+  // A many-headed boss's volley leaves its first head unless a round says which — 0384, `heads` below.
+  boss.muzzleAt = mouths.length > 0 ? 0 : -1;
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, phase.cue, mouths);
   return direction;
+}
+
+/**
+ * Where a volley leaves, along — the mouth of the head that throws it on a many-headed boss (0384),
+ * else the row's muzzle, else the hull's centre.
+ */
+function muzzleAlongOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
+  const at = boss.muzzleAt * 2;
+  if (at >= 0 && at + 1 < mouths.length) return boss.along + mouths[at]!;
+  return boss.along + (row.muzzle?.along ?? 0);
+}
+
+/** `muzzleAlongOf`'s other half. */
+function muzzleAcrossOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
+  const at = boss.muzzleAt * 2;
+  if (at >= 0 && at + 1 < mouths.length) return boss.across + mouths[at + 1]!;
+  return boss.across + (row.muzzle?.across ?? 0);
 }
 
 /**
@@ -862,6 +911,8 @@ function throwAttack(
    * its version is, and shared code holds the fallback.
    */
   cue: CueKind | undefined,
+  /** The mouths of a many-headed boss, `stepBoss`'s — empty for every other (0384). */
+  mouths: Float64Array,
 ): void {
   const speed = bullet.speed * tier.shotSpeed;
   /*
@@ -878,9 +929,13 @@ function throwAttack(
     ⚠️ **`rain` AND `belch` ARE DELIBERATELY UNTOUCHED**: neither leaves the hull. Rain falls from the
     top of the lane and a belch comes off the lane's edge, so a muzzle on the body would move a shot
     that never came from the body.
+
+    ⚠️ **AND A MANY-HEADED BOSS THROWS FROM THE MOUTH OF THE HEAD THAT THROWS — 0384**, `muzzleAt`, and
+    aims from there: a fan aimed from the hull's centre and moved to the mouth afterwards would miss the
+    ship by as far as the mouth is from the hull.
   */
-  const muzzleAlong = boss.along + (row.muzzle?.along ?? 0);
-  const muzzleAcross = boss.across + (row.muzzle?.across ?? 0);
+  const muzzleAlong = muzzleAlongOf(boss, row, mouths);
+  const muzzleAcross = muzzleAcrossOf(boss, row, mouths);
 
   /*
     ── WHERE THE VOLLEY POINTS, AND IT USED TO POINT AT THE SHIP ─────────────────────────────────
@@ -976,7 +1031,7 @@ function throwAttack(
       }
       const first = centre - (step * (count - 1)) / 2;
       if (bullet.stagger !== undefined && count > 1) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0, mouths);
         break;
       }
       for (let i = 0; i < count; i++) {
@@ -998,7 +1053,7 @@ function throwAttack(
       */
       const around = TAU / count;
       if (bullet.stagger !== undefined && count > 1) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), 0, around, 0);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), 0, around, 0, mouths);
         break;
       }
       for (let i = 0; i < count; i++) {
@@ -1025,7 +1080,7 @@ function throwAttack(
         the muzzle is when it leaves; a slot outside the lane is still skipped, and costs its beat.
       */
       if (bullet.stagger !== undefined) {
-        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, perSide * 2, fireGapFor(bullet.stagger, tier), Math.PI, 0, attack.gap);
+        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, perSide * 2, fireGapFor(bullet.stagger, tier), Math.PI, 0, attack.gap, mouths);
         break;
       }
       for (let i = 1; i <= perSide; i++) {
@@ -1199,7 +1254,7 @@ function throwAttack(
       boss.sprayAt = 0;
       const until = Math.ceil(steps / FIRE_GRID) * FIRE_GRID;
       if (boss.fireIn < until) boss.fireIn = until;
-      throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots);
+      throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots, mouths);
       break;
     }
     case 'summon': {
@@ -1234,9 +1289,9 @@ function throwAttack(
         const bolt = bolts.spawn();
         if (bolt === null) break;
         const end = cameraAlong - BEAM_TAIL;
-        reset(bolt, end, boss.across + attack.from[i]!, bullet, BEAM_BOLT_KIND);
+        reset(bolt, end, muzzleAcross + attack.from[i]!, bullet, BEAM_BOLT_KIND);
         bolt.velAlong = scrollPerStep;
-        bolt.fromAlong = boss.along - end;
+        bolt.fromAlong = muzzleAlong - end;
         bolt.fromAcross = 0;
         bolt.radius = attack.halfWidth;
         bolt.damage = bullet.damage;
@@ -1272,10 +1327,12 @@ function throwAttack(
       const slot = ((boss.headAt % n) + n) % n;
       const at = grow === undefined || slot <= grow.head ? slot : slot <= grow.head + extra ? grow.head : slot - extra;
       const head = attack.heads[at]!;
+      // From its own mouth — 0384: slot `at` of the round is neck `at`, which grew with phase `at`.
+      if (mouths.length > 0) boss.muzzleAt = at;
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue, mouths);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets
@@ -1301,12 +1358,12 @@ function throwAttack(
  * that began as the acid head goes on throwing acid after the round has moved to the void. The speed
  * is the tier's on every globe, exactly as a volley's is.
  */
-function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: DifficultyRow, scrollPerStep: number): void {
+function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: DifficultyRow, scrollPerStep: number, mouths: Float64Array): void {
   boss.sprayLeft--;
   boss.sprayAngle += boss.sprayTurn;
   if (boss.sprayLeft % boss.sprayEvery !== 0) return;
   const bullet = SHOT_ROWS[boss.sprayKind]!;
-  throwGlobe(boss, row, bullet, boss.sprayKind, bullet.speed * tier.shotSpeed, scrollPerStep, shots);
+  throwGlobe(boss, row, bullet, boss.sprayKind, bullet.speed * tier.shotSpeed, scrollPerStep, shots, mouths);
 }
 
 /**
@@ -1316,8 +1373,8 @@ function spray(boss: Entity, row: BossRow, shots: Pool<Entity>, tier: Difficulty
  * spray whose globes all left the place the first one did would be a stream from a point in the air
  * the animal had already left, which is 0277's *the body coughing* in time rather than in space.
  */
-function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, speed: number, scrollPerStep: number, shots: Pool<Entity>): void {
-  let across = boss.across + (row.muzzle?.across ?? 0);
+function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, speed: number, scrollPerStep: number, shots: Pool<Entity>, mouths: Float64Array): void {
+  let across = muzzleAcrossOf(boss, row, mouths);
   if (boss.sprayGap !== 0) {
     // A staggered wall's next slot — 0371: the `wall` arm's own order, nearest pair first, the
     // near side of each pair before the far, and a slot outside the lane skipped as it is there.
@@ -1328,7 +1385,7 @@ function throwGlobe(boss: Entity, row: BossRow, bullet: ShotRow, kind: number, s
   const shot = shots.spawn();
   // A globe that will not fit is dropped rather than grown, exactly as `src/sim/pool.ts` says.
   if (shot === null) return;
-  reset(shot, boss.along + (row.muzzle?.along ?? 0), across, bullet, kind);
+  reset(shot, muzzleAlongOf(boss, row, mouths), across, bullet, kind);
   shot.velAlong = Math.cos(boss.sprayAngle) * speed + scrollPerStep;
   shot.velAcross = Math.sin(boss.sprayAngle) * speed;
 }
@@ -1365,6 +1422,7 @@ function staggerVolley(
   angle: number,
   turn: number,
   gap: number,
+  mouths: Float64Array,
 ): void {
   const steps = (count - 1) * every;
   boss.sprayLeft = steps;
@@ -1376,7 +1434,7 @@ function staggerVolley(
   boss.sprayAt = 0;
   const until = Math.ceil((steps + every) / FIRE_GRID) * FIRE_GRID;
   if (boss.fireIn < until) boss.fireIn = until;
-  throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots);
+  throwGlobe(boss, row, bullet, kind, speed, scrollPerStep, shots, mouths);
 }
 
 /**

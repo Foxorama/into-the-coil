@@ -74,8 +74,8 @@ export const PROBES = [
     guard: 'and the SPRAY it leaves behind does not sound again, because it is one attack',
     edit: {
       path: 'src/app/boss.ts',
-      find: '  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep);',
-      replace: "  if (boss.sprayLeft > 0) {\n    onCue('bossAcid', boss.across);\n    spray(boss, row, shots, tier, scrollPerStep);\n  }",
+      find: '  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep, mouths);',
+      replace: "  if (boss.sprayLeft > 0) {\n    onCue('bossAcid', boss.across);\n    spray(boss, row, shots, tier, scrollPerStep, mouths);\n  }",
     },
   },
   {

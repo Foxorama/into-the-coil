@@ -22,7 +22,7 @@ import { POOLS_OF } from '../src/content/pools.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTIES } from '../src/content/difficulty.ts';
-import { MIRE_BANK_CAPS, MIRE_BED, SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import type { Corridor } from '../src/sim/corridor.ts';
 import { paintScene } from '../src/render/scene.ts';
@@ -101,6 +101,8 @@ describe('0352 — the Mire is a swamp', () => {
       (pen, ground, _sky, glow, size, lights) => bank!.fill(pen, size, ground, glow, lights),
       ...MIRE_BANK_CAPS.map((_, i): GroundArt => (pen, ground, _sky, glow, size, lights) => bank!.cap(pen, size, i - steepest, ground, glow, lights)),
       ...MIRE_BED.map((_, i): GroundArt => (pen, ground, _sky, glow, size, lights) => bank!.bed(pen, size, i, MIRE_BED.length, ground, glow, lights)),
+      // And the acid the hydra stands in — 0384: the bank's caps with acid under the shore.
+      ...MIRE_ACID_CAPS.map((_, i): GroundArt => (pen, ground, _sky, glow, size, lights) => bank!.pool(pen, size, i - steepest, ground, glow, lights)),
     ];
     for (const name of Object.keys(PALETTES) as PaletteName[]) {
       const lights = land![name];

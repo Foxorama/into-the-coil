@@ -86,6 +86,15 @@ export interface Corridor {
    */
   beds: readonly number[];
   bedExtent: number;
+  /**
+   * Where a boss stands in the wall — 0384: world `poolFrom` to `poolTo`, written by the frame every
+   * step from the boss that wades, and empty (`poolTo < poolFrom`) otherwise. The painter draws those
+   * tiles with `poolCaps` — acid under the shore, rise for rise — and nothing else reads it: the face
+   * is the face, so what bites there is exactly what bites everywhere else.
+   */
+  poolCaps: readonly number[];
+  poolFrom: number;
+  poolTo: number;
 }
 
 /** Which of `faces`' knots knot `k` is — itself, or its place in the repeat (0383). */

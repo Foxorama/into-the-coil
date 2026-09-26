@@ -1246,6 +1246,17 @@ export interface World {
    */
   bossAura: Pool<Entity>;
   /**
+   * Where each of a many-headed boss's mouths is, along and across from the hull's centre, two numbers
+   * a neck — `layNecks` writes them every step and `src/app/boss.ts` throws from them (0384). Built
+   * once at `NECK_SLOTS`, so nothing allocates; only the first `2 × necks` are read.
+   */
+  mouths: Float64Array;
+  /**
+   * The step each neck first stood on the field, or −1 for one that has not grown yet — 0384. A neck
+   * rises out of the acid over its row's `rise` from here, so a head grows rather than appearing.
+   */
+  necksBorn: Float64Array;
+  /**
    * Where the boss's lane has been, one entry a step, so a turn arrives down the body — 0283.
    *
    * ⚠️ **Allocated once, at boot.** It is a ring, `bossTrailAt` is the newest entry, and node `k`
@@ -1883,6 +1894,8 @@ export class GameFrame implements Frame {
     layChain(w);
     // After the body is laid, so every flame is where its node is this step — 0305.
     layAura(w);
+    // And the acid a wading boss stands in, where the hull is this step — 0384.
+    layPool(w);
     stepEntities(w.enemies, w.cameraAlong);
     // And carried with the corridor as it bends — 0350.
     rideCorridor(w, w.enemies);
@@ -2653,7 +2666,10 @@ function pinBeams(w: World): void {
     const b = w.bolts.at(i);
     if (b.kind !== BEAM_BOLT_KIND) continue;
     if (alive) {
-      b.fromAlong = w.bossPool.at(0).along - b.along;
+      // Rooted in the mouth that fired it, on a boss with many — 0384; `muzzleAt` is still that head's.
+      const boss = w.bossPool.at(0);
+      const mouth = w.bossRow.necks !== undefined && boss.muzzleAt >= 0 ? w.mouths[boss.muzzleAt * 2]! : 0;
+      b.fromAlong = boss.along + mouth - b.along;
     } else if (b.lifeFor > b.holdFor) {
       // Still a warning on its last step — `lifeFor` above `holdFor` is what `strikeShip` reads.
       b.lifeFor = 1;
@@ -7534,6 +7550,9 @@ function driveBoss(w: World): void {
     w.bolts,
     w.rainRng,
     w.breakerRng,
+    w.corridor,
+    // The mouths only for a boss that has them — 0384; every other throws from its row's muzzle.
+    w.bossRow.necks !== undefined ? w.mouths : NO_MOUTHS,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
@@ -8434,6 +8453,11 @@ function layAura(w: World): void {
     }
     return;
   }
+  // A boss with necks lays this whole layer itself, and its heads with it — 0384.
+  if (w.bossRow.necks !== undefined) {
+    layNecks(w, head);
+    return;
+  }
   if (head === null) {
     w.bossAura.clear();
     return;
@@ -8547,6 +8571,170 @@ function layTail(w: World, head: Entity, tail: Tail, art: TailArt, body: Entity,
   body.spriteHit = worn;
 }
 
+/*
+  ── THE NECKS, AND THE HEADS ON THEM — 0384 ─────────────────────────────────────────────────────────
+
+  Asked for: *"it's supposed to be a hydra that grows extra heads… it starts with a single head, a
+  serpent head on a serpent neck; second stage, it actually grows a new head"* — and so on to five, each
+  neck *"coloured for the new head"*.
+
+  ⚠️ **A NECK IS A PICTURE AND A HEAD IS A BODY.** Each neck is one drawing turned about its root on the
+  hull, in the aura's layer behind the hull, as a tail is (0374); each head is a body in `bossBody` —
+  what lands on it reaches the hull at the row's `hurt` (`drainChain`), and flying into one costs the
+  ship a hit, as flying into a serpent's flank does (0283). The pools say why not a chain of discs.
+
+  ⚠️ **NECK `k` STANDS ON THE FIELD FROM PHASE `k`**, and it RISES there: from the step it is born it
+  swings up out of the acid in front of the body over the row's `rise`, eased, and only then sways.
+  A head that appeared whole would be *"grows a new head"* told by a switch.
+
+  ⚠️ **THE MOUTHS ARE WRITTEN HERE AND THROWN FROM IN `src/app/boss.ts`**, a step behind at most:
+  two numbers a head, from the hull's centre, into an array built once.
+
+  ⚠️ **THE AURA'S LAYER IS WHOLLY THIS FUNCTION'S ON A HYDRA**: the flames of a head that burns first,
+  then the necks, then the tail last — the order the pool draws them in — so a flame is behind its
+  neck, and the tail and the necks are behind the body. Nothing allocates.
+*/
+
+/** A boss with no necks has no mouths. Module-level, so saying so allocates nothing. */
+// @setup: one empty array for the lifetime of the module.
+const NO_MOUTHS = new Float64Array(0);
+
+/** The body a head is spawned from — the slot; its sprites and hurtbox are the neck's, written after. */
+// @setup: one body for the lifetime of the module, as `CHAIN_NODE` is.
+const HEAD_BODY: Body = {
+  sprite: 0,
+  spriteHit: 0,
+  radius: 1,
+  health: CHAIN_NODE_HEALTH,
+  damage: 1,
+};
+
+/**
+ * Where a new neck starts its rise from — pointing down and forward into the acid, so it comes up
+ * through the surface in front of the body and swings into its place (0384).
+ */
+const NECK_RISE_FROM = Math.PI * 0.62;
+
+/** How far out along a burning neck its flames stand, as shares of its reach, head last — 0384. */
+// @setup: two numbers for the lifetime of the module.
+const NECK_FLAMES = [0.4, 0.7] as const;
+
+function layNecks(w: World, hull: Entity | null): void {
+  const necks = w.bossRow.necks;
+  if (necks === undefined) return;
+  if (hull === null) {
+    w.bossBody.clear();
+    w.bossAura.clear();
+    w.necksBorn.fill(-1);
+    return;
+  }
+  const phase = phaseFor(w.bossRow, hull.health, w.bossFullHealth);
+  const shown = Math.min(necks.necks.length, w.bossRow.phases.indexOf(phase) + 1, w.necksBorn.length);
+  let flames = 0;
+  for (let k = 0; k < shown; k++) {
+    if (w.necksBorn[k]! < 0) w.necksBorn[k] = w.steps;
+    if (necks.necks[k]!.aura !== undefined) flames += NECK_FLAMES.length + 1;
+  }
+  // The heads: one body each, the neck's own sprites and hurtbox written over the slot.
+  while (w.bossBody.size < shown) {
+    const head = w.bossBody.spawn();
+    if (head === null) break;
+    reset(head, hull.along, hull.across, HEAD_BODY);
+    head.health = CHAIN_NODE_HEALTH;
+    head.damage = w.bossRow.damage;
+  }
+  while (w.bossBody.size > shown) w.bossBody.releaseAt(w.bossBody.size - 1);
+  // The aura's layer: the flames, then the necks, then the tail.
+  const tail = w.bossRow.tail;
+  const want = flames + shown + (tail === null ? 0 : 1);
+  let fresh = false;
+  while (w.bossAura.size < want) {
+    const slot = w.bossAura.spawn();
+    if (slot === null) break;
+    reset(slot, hull.along, hull.across, AURA_FLAME);
+    fresh = true;
+  }
+  while (w.bossAura.size > want) w.bossAura.releaseAt(w.bossAura.size - 1);
+  if (w.bossAura.size < want || w.bossBody.size < shown) return;
+  let flame = 0;
+  for (let k = 0; k < shown; k++) {
+    const row = necks.necks[k]!;
+    const risen = Math.min(1, (w.steps - w.necksBorn[k]!) / necks.rise);
+    const eased = 1 - (1 - risen) * (1 - risen);
+    const sway = necks.sway * Math.sin((w.steps / necks.beat) * TAU + k * 1.7) * eased;
+    const angle = NECK_RISE_FROM + (row.angle - NECK_RISE_FROM) * eased + sway;
+    const rootAlong = hull.along + row.root.along;
+    const rootAcross = hull.across + row.root.across;
+    const neck = w.bossAura.at(flames + k);
+    placeAt(neck, rootAlong, rootAcross, foldTurn(angle), fresh);
+    neck.swell = 1;
+    neck.sprite = row.art;
+    neck.spriteBase = row.art;
+    neck.spriteHit = row.art;
+    const head = w.bossBody.at(k);
+    const headAlong = rootAlong + Math.cos(angle) * row.reach;
+    const headAcross = rootAcross + Math.sin(angle) * row.reach;
+    /*
+      It looks at the ship, as far as its row lets it: a snout is at the drawing's −x, so a head
+      facing straight down the lane at the player is turned nought, and one looking at the ship is
+      turned by the ship's bearing less π.
+    */
+    const bearing = foldTurn(Math.atan2(w.ship.across - headAcross, w.ship.along - headAlong) - Math.PI);
+    const turn = bearing > necks.look ? necks.look : bearing < -necks.look ? -necks.look : bearing;
+    placeAt(head, headAlong, headAcross, turn, fresh);
+    head.radius = row.radius;
+    head.spriteBase = row.head;
+    head.spriteHit = row.headHit;
+    head.sprite = head.flashFor > 0 ? row.headHit : row.head;
+    w.mouths[k * 2] = headAlong - Math.cos(turn) * row.mouth - hull.along;
+    w.mouths[k * 2 + 1] = headAcross - Math.sin(turn) * row.mouth - hull.across;
+    // The flames of a head that burns: along its neck, and last on the head itself.
+    const aura = row.aura;
+    if (aura === undefined) continue;
+    const tick = Math.floor(w.steps / aura.hold);
+    for (let f = 0; f <= NECK_FLAMES.length; f++) {
+      const onHead = f === NECK_FLAMES.length;
+      const share = onHead ? 1 : NECK_FLAMES[f]!;
+      const at = w.bossAura.at(flame++);
+      placeAt(at, rootAlong + Math.cos(angle) * row.reach * share, rootAcross + Math.sin(angle) * row.reach * share, 0, fresh);
+      at.swell = (aura.head * (onHead ? 1 : 0.55 + 0.25 * f)) / SERPENT_BODY_DIAMETER;
+      const frame = aura.frames[(((tick + (NECK_FLAMES.length - f) * aura.stride) % aura.frames.length) + aura.frames.length) % aura.frames.length]!;
+      at.sprite = frame;
+      at.spriteBase = frame;
+      at.spriteHit = frame;
+    }
+  }
+  if (tail !== null) layTail(w, hull, tail, tail.art, w.bossAura.at(want - 1), fresh);
+}
+
+/**
+ * The stretch of the floor a wading boss stands in, written on the corridor every step — 0384. The
+ * painter draws it as acid; nothing else reads it, so the shore bites there exactly as it does anywhere.
+ */
+function layPool(w: World): void {
+  const corridor = w.corridor;
+  if (corridor === null) return;
+  const move = w.bossRow.move;
+  if (w.bossPool.size === 0 || w.bossBeaten || move.kind !== 'wade') {
+    corridor.poolFrom = 0;
+    corridor.poolTo = -1;
+    return;
+  }
+  const hull = w.bossPool.at(0);
+  corridor.poolFrom = hull.along - move.pool;
+  corridor.poolTo = hull.along + move.pool;
+}
+
+/** Put a laid piece where it is this step, carrying where it was so the painter interpolates — or not, the first time. */
+function placeAt(e: Entity, along: number, across: number, turn: number, fresh: boolean): void {
+  e.prevAlong = fresh ? along : e.along;
+  e.prevAcross = fresh ? across : e.across;
+  e.prevTurn = fresh ? turn : e.turn;
+  e.along = along;
+  e.across = across;
+  e.turn = turn;
+}
+
 /**
  * How long before a strike lands the crown is already flaring, in steps — 0310.
  *
@@ -8582,15 +8770,18 @@ const AURA_FLAME: Body = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage
  */
 function drainChain(w: World): number {
   const chain = w.bossRow.chain;
-  if (chain === null) return 0;
+  // A chain's flank or a hydra's heads — 0384: the pool is the animal's body either way, and the row
+  // says what share of a hit on it reaches the hull.
+  const hurt = chain !== null ? chain.hurt : w.bossRow.necks?.hurt;
+  if (hurt === undefined) return 0;
   let taken = 0;
   for (let i = 0; i < w.bossBody.size; i++) {
     const node = w.bossBody.at(i);
     taken += CHAIN_NODE_HEALTH - node.health;
     node.health = CHAIN_NODE_HEALTH;
-    if (chain.hurt === 0) node.flashFor = 0;
+    if (hurt === 0) node.flashFor = 0;
   }
-  return taken * chain.hurt;
+  return taken * hurt;
 }
 
 /**
@@ -8614,6 +8805,8 @@ function spawnBoss(w: World): void {
   w.bossPatrol = 1;
   w.bossPhaseAt = -1;
   w.bossUncoilAt = 0;
+  // No neck grown before the fight began — 0384: each rises with its own phase.
+  w.necksBorn.fill(-1);
   // Zero, so the first wall the health earns is thrown on the step it earns it — 0333. The gap is a
   // floor between two walls and never a wait in front of the first.
   w.bossWallIn = 0;
@@ -8981,6 +9174,10 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
     // @setup: a level boundary — the bed's tiles, read once into sprite numbers.
     beds: bank !== undefined ? bank.bed.map((kind) => SPRITE[kind]) : NO_BEDS,
     bedExtent: bank !== undefined && bank.bed.length > 0 ? SPRITE_EXTENT[bank.bed[0]!] : 0,
+    // @setup: a level boundary — the acid a wading boss stands in, read once into sprite numbers (0384).
+    poolCaps: bank !== undefined ? bank.pool.map((kind) => SPRITE[kind]) : NO_BEDS,
+    poolFrom: 0,
+    poolTo: -1,
   };
 }
 
