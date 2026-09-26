@@ -459,6 +459,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss9BarbedDown: 'enemy',
   boss9BarbedGape: 'enemy',
   boss9BarbedShut: 'enemy',
+  // The tail is flesh of the same animal — 0374 — so it is the same ink as the hull it beats behind.
+  volansTail: 'enemy',
+  volansTailBarbed: 'enemy',
   // The ember is energy in the place's own fire, on the serpent's aura's terms — `glass`, which means
   // nothing the player reads anywhere else.
   volansEmber0: 'glass',
@@ -761,6 +764,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss9BarbedHit: 'impact',
   boss9BarbedGapeHit: 'impact',
   boss9BarbedShutHit: 'impact',
+  volansTailHit: 'impact',
+  volansTailBarbedHit: 'impact',
   boss10Hit: 'impact',
   boss11Hit: 'impact',
   boss11ChippedHit: 'impact',
@@ -5597,17 +5602,16 @@ const VOLANS_BODY: readonly Pt[] = [
   // The peduncle, pinched in before the tail spreads.
   [0.7, -0.17],
   [0.74, -0.16],
-  // The caudal fin: upper lobe out, the fork in, lower lobe out.
-  [0.9, -0.36],
-  [1, -0.52],
-  [1, -0.52],
-  [0.95, -0.28],
-  [0.86, -0.05],
-  [0.86, 0.05],
-  [0.95, 0.28],
-  [1, 0.52],
-  [1, 0.52],
-  [0.9, 0.36],
+  /*
+    ⚠️ **THE CAUDAL FIN IS NOT HERE ANY MORE — 0374.** It is `VOLANS_TAIL`, a bitmap of its own,
+    rooted at 0.76 along and turned about that root every step so the animal swims. What the body
+    keeps is a rounded stump past the peduncle for the tail's base to sit over, so the join is under
+    the fin's root and not a seam beside it.
+  */
+  [0.8, -0.11],
+  [0.85, -0.05],
+  [0.85, 0.05],
+  [0.8, 0.11],
   [0.74, 0.16],
   [0.7, 0.17],
   [0.58, 0.25],
@@ -5688,17 +5692,11 @@ const VOLANS_BARBED: readonly Pt[] = [
   [0.58, -0.25],
   [0.7, -0.17],
   [0.74, -0.16],
-  // The caudal lobes drawn out — and no further, or the streamer painted off the lobe sits inside it.
-  [0.93, -0.4],
-  [1.05, -0.58],
-  [1.05, -0.58],
-  [0.97, -0.3],
-  [0.86, -0.05],
-  [0.86, 0.05],
-  [0.97, 0.3],
-  [1.05, 0.58],
-  [1.05, 0.58],
-  [0.93, 0.4],
+  // The same stump as the calm body's — 0374: the grown tail is `VOLANS_TAIL_BARBED`, on the same root.
+  [0.8, -0.11],
+  [0.85, -0.05],
+  [0.85, 0.05],
+  [0.8, 0.11],
   [0.74, 0.16],
   [0.7, 0.17],
   [0.58, 0.25],
@@ -5786,6 +5784,124 @@ const VOLANS_SNOUTS: Record<VolansJaw, readonly Pt[]> = {
 /** The fish's whole outline: one of its two bodies wearing one of its three mouths. */
 function volansHull(jaw: VolansJaw, barbed: boolean): readonly Pt[] {
   return [...(barbed ? VOLANS_BARBED : VOLANS_BODY), ...VOLANS_SNOUTS[jaw]];
+}
+
+/*
+  ── THE TAIL, IN A TILE OF ITS OWN — 0374 ────────────────────────────────────────────────────────
+
+  ⚠️ **PIVOTED ON THE PEDUNCLE, WHICH IS THIS TILE'S CENTRE.** `blit` turns a bitmap about its own
+  centre, so a tail that is to beat about its root has to be drawn with the root at (0, 0): the fin
+  fans out to +x from there, and `layAura` puts the entity on the hull's peduncle and hands it the
+  hull's heading plus the beat. Every point is the caudal fin 0318 drew into the body, moved to the
+  root and scaled by the two tiles' radii — the body's is 17.64 units and this one's 10.08, so 1.75.
+
+  ⚠️ **THE BASE IS THE PEDUNCLE'S OWN WIDTH, SO THE JOIN IS UNDER THE FLESH FOR THE WHOLE SWEEP.**
+  The body keeps a rounded stump past the root; the fin's base corners sit at ±0.28, which is the
+  peduncle's width at the root, and turned 0.42 radians either way they swing under a body that is
+  0.31 wide there. Measured on the outline rather than eyeballed, because a seam beside a fin is the
+  one thing a separate tail would reveal.
+*/
+const VOLANS_TAIL: readonly Pt[] = [
+  [-0.05, -0.28],
+  [0.25, -0.63],
+  [0.42, -0.91],
+  [0.42, -0.91],
+  [0.33, -0.49],
+  [0.18, -0.09],
+  [0.18, 0.09],
+  [0.33, 0.49],
+  [0.42, 0.91],
+  [0.42, 0.91],
+  [0.25, 0.63],
+  [-0.05, 0.28],
+  [-0.14, 0.12],
+  [-0.16, 0],
+  [-0.14, -0.12],
+];
+
+/** The grown body's tail — 0320's lobes drawn out, on the same root and in the same tile. */
+const VOLANS_TAIL_BARBED: readonly Pt[] = [
+  [-0.05, -0.28],
+  [0.3, -0.7],
+  [0.5, -1.0],
+  [0.5, -1.0],
+  [0.37, -0.53],
+  [0.18, -0.09],
+  [0.18, 0.09],
+  [0.37, 0.53],
+  [0.5, 1.0],
+  [0.5, 1.0],
+  [0.3, 0.7],
+  [-0.05, 0.28],
+  [-0.14, 0.12],
+  [-0.16, 0],
+  [-0.14, -0.12],
+];
+
+/**
+ * The tail's paint — 0374, on the body's own vocabulary and nothing new: a faint halo behind it so
+ * the astral light does not stop dead at the peduncle, the form-shade across it, three rays a lobe
+ * running out of the root, a soft light in the notch, and the streamer off the lower lobe that
+ * `paintBoss9` used to paint.
+ */
+function paintVolansTail(ctx: Pen, f: Frame, skin: FoeSkin, barbed: boolean): void {
+  const hull = barbed ? VOLANS_TAIL_BARBED : VOLANS_TAIL;
+  const lit = barbed ? 1.55 : 1;
+  const skirt = Math.max(...hull.map(([x, y]) => Math.max(Math.abs(x), Math.abs(y))));
+  ctx.globalCompositeOperation = 'destination-over';
+  for (const [gap, alpha] of [
+    [0.04, 0.12],
+    [0.1, 0.05],
+  ] as const) {
+    const swell = Math.min(1 + gap, 1.13 / skirt);
+    ctx.globalAlpha = alpha * lit;
+    ctx.fillStyle = skin.lit;
+    ctx.beginPath();
+    curveLoop(ctx, f, hull.map(([x, y]) => [x * swell, y * swell] as const));
+    ctx.fill('evenodd');
+    ctx.globalAlpha = 1;
+  }
+  glow(ctx, f, skin.lit, 0.16, 0, 0.3, 0.26 * lit);
+  ctx.globalCompositeOperation = 'source-over';
+  shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.22), rgba(skin.plate, 0.5), hull, 1, true);
+  const lobe = barbed ? 1.1 : 1;
+  for (const side of [-1, 1]) {
+    for (const [tx, ty] of [
+      [0.33, 0.66],
+      [0.25, 0.49],
+      [0.17, 0.28],
+    ] as const) {
+      seam(ctx, f, rgba(skin.plate, 0.5), 0.038, [
+        [0, 0.06 * side],
+        [tx * lobe, ty * lobe * side],
+      ]);
+    }
+  }
+  // The streamer off the lower lobe — the same five-sided filament as the wings', translucent and
+  // tapering, drawn bright: it leaves the fin and is allowed past the outline on the halo's terms.
+  // ⚠️ The grown tail's streamer starts further out and reaches no further: `tests/accents.test.ts`
+  // holds every translucent mark at 1.16 of the drawing radius, and the calm one already ends at 1.08.
+  const streamer: readonly number[] = barbed ? [0.48, 0.98, 0.58, 1.05, 0.68, 1.12, 0.54, 0.99, 0.46, 0.93] : [0.4, 0.9, 0.52, 1.0, 0.64, 1.08, 0.47, 0.92, 0.38, 0.84];
+  for (const side of [-1, 1]) {
+    const [ax, ay, bx, by, cx, cy, dx, dy, ex, ey] = streamer as [number, number, number, number, number, number, number, number, number, number];
+    shaded(
+      ctx,
+      f,
+      [ax, ay * side],
+      [cx, cy * side],
+      rgba(skin.lit, 0.7),
+      rgba(skin.lit, 0),
+      [
+        [ax, ay * side],
+        [bx, by * side],
+        [cx, cy * side],
+        [dx, dy * side],
+        [ex, ey * side],
+      ],
+      0.8,
+      true,
+    );
+  }
 }
 
 /**
@@ -6053,20 +6169,7 @@ function paintBoss9(
       [0.41, 0.3 * side],
       [0.47, 0.38 * side],
     ]);
-    /*
-      ⚠️ **THE TAIL'S RAYS RUN OUT OF THE PEDUNCLE AND NOT OFF THE SPINE**, which is what a caudal fin
-      does and is the difference between a tail and a pair of flaps. Three a lobe, fanning.
-    */
-    for (const [tx, ty] of [
-      [0.95, 0.38],
-      [0.9, 0.28],
-      [0.86, 0.16],
-    ] as const) {
-      seam(ctx, f, rgba(skin.plate, 0.5), 0.022, [
-        [0.76, 0.12 * side],
-        [tx, ty * side],
-      ]);
-    }
+    // The tail's rays are the tail's own now — 0374: `paintVolansTail` draws them out of the root.
     // And the back lit along the shoulder, where the light is coming from — a ribbon, tapering out.
     seam(ctx, f, rgba(skin.lit, 0.28), 0.034, [
       [-0.86, 0.1 * side],
@@ -6104,7 +6207,7 @@ function paintBoss9(
       [0.08, 0.845, 0.45, 0.88, 0.95, 0.85, 0.44, 0.81, 0.1, 0.79],
       [0.13, 0.73, 0.4, 0.75, 0.8, 0.71, 0.38, 0.67, 0.15, 0.66],
       [0.47, 0.41, 0.64, 0.5, 0.84, 0.57, 0.62, 0.45, 0.49, 0.365],
-      [0.99, 0.52, 1.06, 0.58, 1.13, 0.63, 1.03, 0.53, 0.975, 0.485],
+      // The fifth streamer, off the tail lobe, is the tail's own now — 0374.
     ] as const) {
       shaded(
         ctx,
@@ -8123,6 +8226,22 @@ export function drawKind(
       */
       if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)));
       return;
+    case 'volansTail':
+    case 'volansTailHit':
+    case 'volansTailBarbed':
+    case 'volansTailBarbedHit': {
+      /*
+        THE FISH'S TAIL — 0374. A hull of its own in the ink of the animal it beats behind, pivoted on
+        the peduncle, and read off the name as the body's faces are: the grown body wears the grown
+        tail. `layAura` places it and turns it; `paintVolansTail` says what is on it.
+      */
+      const grown = kind.startsWith('volansTailBarbed');
+      curveLoop(ctx, f, grown ? VOLANS_TAIL_BARBED : VOLANS_TAIL);
+      if (skin !== null) ctx.fillStyle = skin.hull;
+      seal(ctx);
+      if (skin !== null) paintVolansTail(ctx, f, skin, grown);
+      return;
+    }
     case 'boss9':
     case 'boss9Hit':
     case 'boss9Up':

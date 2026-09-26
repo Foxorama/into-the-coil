@@ -12,7 +12,8 @@ export const PROBES = [
     guard: 'the void phase burns with an aura behind every node and the head',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const aura = head === null ? null : (phaseFor(w.bossRow, head.health, w.bossFullHealth).look?.aura ?? null);',
+      // ⚠️ Re-anchored by 0374, which reads the look once for the aura and the tail.
+      find: '  const aura = look?.aura ?? null;',
       replace: '  const aura = null;',
     },
   },

@@ -233,18 +233,14 @@ export const BURST = {
    */
   breach: 11,
   /**
-   * A minnow eaten at the boss's mouth — 0314.
+   * A horde spat out of the boss's mouth — 0373. It replaces the burst a minnow made being EATEN at the
+   * same mouth (0314): the adds go the other way now, and what the spray marks is the same place.
    *
-   * ⚠️ **BIGGER THAN A KILL AND SMALLER THAN A PHASE, BECAUSE IT IS NEITHER AND THE PLAYER HAS TO
-   * TELL.** A body reaching the fish is a body the player did NOT kill, so drawing it as a kill would
-   * say the opposite of what happened; and it is not the fight getting harder either, which is what a
-   * phase burst means. What it is is *something was taken away from you*, four or five times a phase.
-   *
-   * ⚠️ **AND IT IS THROWN WHETHER OR NOT THE FEED LANDED.** A minnow arriving at a boss already at the
-   * top of its phase is still a minnow arriving; the burst says the thing happened and the cue is what
-   * says it cost something — `src/app/frame.ts` has the split.
+   * ⚠️ **SMALLER THAN A KILL, BECAUSE NOTHING DIED.** The bodies leaving the mouth are the event and
+   * they are on the screen; the spray is what makes the mouth the place they came from rather than a
+   * patch of lane they appeared on — 0036, at the one place the player is already looking.
    */
-  fed: 7,
+  spit: 6,
   /**
    * A puff of frost at a ship inside the frost ship's cold, every few steps — 0253.
    *

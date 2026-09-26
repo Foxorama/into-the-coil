@@ -380,6 +380,16 @@ export const SPRITE_KINDS = [
   'boss9BarbedShut',
   'boss9BarbedShutHit',
   /*
+    ⚠️ **THE TAIL IS A BODY OF ITS OWN — 0374.** A hull is one bitmap and cannot deform, so the one
+    part of a fish that has to move is baked apart from it and turned about its root every step, in
+    the layer drawn behind the hull. Two tails for two bodies: the calm one and the grown one's lobes
+    drawn out, each with its hurt twin so the tail flashes with the flesh it is joined to.
+  */
+  'volansTail',
+  'volansTailHit',
+  'volansTailBarbed',
+  'volansTailBarbedHit',
+  /*
     ⚠️ **AND SIX FRAMES OF EMBER, WHICH ARE THE FISH'S OWN AND NOT THE SERPENT'S.** `Aura` is read off
     the phase's `look` and `layAura` already works on a boss with no chain — one flame, on the head, at
     the girth the row names — so what this needs is frames in the fish's own fire rather than the
@@ -1322,6 +1332,17 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss9BarbedGapeHit: 42,
   boss9BarbedShut: 42,
   boss9BarbedShutHit: 42,
+  /*
+    ⚠️ **THE TAIL'S TILE IS ITS OWN, PIVOTED ON THE PEDUNCLE — 0374.** The fin it replaces spanned
+    0.26 of the hull's drawing radius long and 1.04 wide, which is 4.6 by 18.3 world units; a tile of
+    24 puts its lobes at 0.91 of the tile's own radius with the root at the centre, so `blit`'s turn
+    about the centre IS a turn about the root. The grown tail reaches a little further and fits the
+    same tile, on the hull's own argument: a tail that changed box mid-fight would move.
+  */
+  volansTail: 24,
+  volansTailHit: 24,
+  volansTailBarbed: 24,
+  volansTailBarbedHit: 24,
   /*
     ⚠️ **THE EMBER TILE IS THE FISH'S GIRTH AND NOT THE SERPENT'S.** `layAura` draws one flame on the
     head at `aura.head / SERPENT_BODY_DIAMETER` of this tile, so the tile has to be big enough for the

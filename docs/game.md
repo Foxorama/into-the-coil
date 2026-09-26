@@ -346,8 +346,12 @@ boss throws, since 0248; acid and void are shots in inks of their own.
 [0262](decisions/0262-the-eagle-throws-quills.md): a raking fan of quills — its own bullet, a
 feather shaft first — while whole, then a whip of flames thrown along an arc with the tip faster
 than the root so it bows as it flies, then volleys that call kites — a new body, Ember Nebula's
-horde, sent by no level, that dives for the ship's lane — from one side of the lane and then the
-other, and at the end raptors the same way. A boss may send a body as well as a bullet.
+horde, sent by no level, that dives for the ship's lane. A boss may send a body as well as a bullet.
+**And it spits them** — [0373](decisions/0373-the-fish-spits-its-adds.md): every horde the fish
+calls comes out of its open mouth in a fan thrown at the player, kites and a shoal of minnows alike,
+and both hunt and fire. **It swims** — [0374](decisions/0374-the-fish-beats-its-tail.md): the
+caudal fin is a body of its own behind the hull, beating about the peduncle, and the hull yaws
+against it. **And its breach has a body** — [0375](decisions/0375-the-breach-has-a-body.md).
 
 **The frost ship chills and shatters** — [0253](decisions/0253-the-frost-ship-chills.md),
 [0263](decisions/0263-the-frost-ship-shatters.md): a cold on the hull that slows a ship inside it

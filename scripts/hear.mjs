@@ -144,8 +144,10 @@ function bossCuesOf(theme) {
   const phase = row.phases[row.phases.length - 1];
   const attack = phase.attack ?? row.attack;
   const entrance = row.entrance !== null && row.entrance.kind === 'breach' ? ['bossBreach'] : [];
-  if (attack.kind === 'heads') return [...entrance, ...attack.heads.map((head) => head.cue ?? 'bossShot')];
-  return [...entrance, phase.cue ?? 'bossShot'];
+  // And a horde spat from the mouth sounds as it leaves — 0373 — on the escort's clock or the volley's.
+  const spits = phase.escort?.from === 'mouth' || (attack.kind === 'summon' && attack.from === 'mouth') ? ['bossSpit'] : [];
+  if (attack.kind === 'heads') return [...entrance, ...attack.heads.map((head) => head.cue ?? 'bossShot'), ...spits];
+  return [...entrance, phase.cue ?? 'bossShot', ...spits];
 }
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { FIRE_GRID, VOLLEY_CYCLE } from '../src/content/cadence.ts';
