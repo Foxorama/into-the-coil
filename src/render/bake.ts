@@ -25,6 +25,7 @@ import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { POD_ACROSS } from '../content/specials.ts';
 import { BEAD_HEAD, EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
@@ -9403,10 +9404,24 @@ export function drawKind(
     // two thrown things are told apart by shape and not by ink alone (0024).
     // The void missile — 0377: a purple hull with a dark heart, which is what it opens into.
     case 'voidBall': {
-      ctx.arc(half, half, r * 0.6, 0, Math.PI * 2);
+      /*
+        ⚠️ **AND A TRAIL BEHIND IT SINCE 0379** — *"all the bomb launch effects need to be more
+        visible."* Twice the size it was, and a wake of the same purple thinning out behind (−x, the
+        way it came), translucent because it is where the ball has been rather than the ball: the
+        silhouette stays the round hull.
+      */
+      // The hull first, because the first fill IS the hull and everything after it is paint.
+      ctx.arc(half, half, r * 0.4, 0, Math.PI * 2);
       seal(ctx);
-      disc(ctx, f, palette.space, 0, 0, 0.36);
-      glow(ctx, f, shade(palette.ally, 0.4), 0, 0, 0.6, 0.5);
+      for (const [x, size, alpha] of [
+        [-0.95, 0.12, 0.14],
+        [-0.78, 0.18, 0.22],
+        [-0.58, 0.24, 0.32],
+      ] as const) {
+        disc(ctx, f, shade(palette.ally, 0.2), x, 0, size, alpha);
+      }
+      glow(ctx, f, shade(palette.ally, 0.4), -0.2, 0, 0.75, 0.38);
+      disc(ctx, f, palette.space, 0, 0, 0.26);
       return;
     }
     /*
@@ -9425,9 +9440,32 @@ export function drawKind(
     case 'stormBall': {
       // ⚠️ A lit core, and it was glass first: the glass ink is dark, and the first photograph was a
       // hollow ring — the one thing a charged ball must not look like (`scripts/shot-sheet.mjs`).
-      ctx.arc(half, half, r * 0.55, 0, Math.PI * 2);
-      seal(ctx);
       const lit = shade(palette.player, 0.6);
+      // The hull first, because the first fill IS the hull and everything after it is paint.
+      ctx.arc(half, half, r * 0.4, 0, Math.PI * 2);
+      seal(ctx);
+      /*
+        ⚠️ **AND A TRAIL BEHIND IT SINCE 0379** — *"all the bomb launch effects need to be more
+        visible."* Twice the size it was, and two jagged streaks of its own light trailing back the
+        way it came, translucent: light and not body, on 0227's paint-on-hull rule.
+      */
+      glow(ctx, f, palette.player, -0.3, 0, 0.8, 0.4);
+      for (const side of [-1, 1] as const) {
+        poly(
+          ctx,
+          f,
+          lit,
+          [
+            [-0.3, side * 0.06],
+            [-0.55, side * 0.2],
+            [-0.62, side * 0.08],
+            [-0.98, side * 0.18],
+            [-0.66, side * 0.02],
+            [-0.58, side * 0.12],
+          ],
+          0.55,
+        );
+      }
       // Four short forks off the hull, so it reads as lightning held in a ball — translucent, because
       // they are light and not body: the silhouette stays the round hull (0227's paint-on-hull rule).
       for (const [dx, dy] of [
@@ -9441,15 +9479,15 @@ export function drawKind(
           f,
           lit,
           [
-            [dx * 0.45 - dy * 0.08, dy * 0.45 + dx * 0.08],
-            [dx * 0.95, dy * 0.95],
-            [dx * 0.45 + dy * 0.08, dy * 0.45 - dx * 0.08],
+            [dx * 0.32 - dy * 0.06, dy * 0.32 + dx * 0.06],
+            [dx * 0.7, dy * 0.7],
+            [dx * 0.32 + dy * 0.06, dy * 0.32 - dx * 0.06],
           ],
           0.8,
         );
       }
-      disc(ctx, f, lit, 0, 0, 0.3);
-      glow(ctx, f, '#ffffff', 0, 0, 0.3, 0.7);
+      disc(ctx, f, lit, 0, 0, 0.22);
+      glow(ctx, f, '#ffffff', 0, 0, 0.24, 0.7);
       return;
     }
     // What leaves the ship. It shared this drawing with `pickupBomb` until 0372 removed the pickup.
@@ -9625,26 +9663,40 @@ export function drawKind(
       glow(ctx, f, palette.player, 0, 0, 0.5, 0.7);
       return;
     /*
-      A surge's aura — 0373: a faint halo the ship sits in, and a thin rim that says where it ends.
+      A surge's picture — THE TWO PODS IT ADDS, since 0379.
 
-      ⚠️ **TRANSLUCENT ALL THROUGH, AND THE FIRST BAKE WAS A SOLID DISC.** The rim was laid on the path
-      the glow had left open and sealed with the ink, which filled the whole circle — photographed
-      with `scripts/shot-sheet.mjs` before anything was played. A disc that size round the ship would
-      hide every bullet beside it, so the rim is its own path at under full alpha, and nothing is
-      stroked.
+      ⚠️ **IT WAS A HALO AND A RIM, AND THE PLAY SAID SO:** *"the ship aura is a basic circle now as
+      well, it looks terrible."* It was also a picture of the wrong thing once the surge stopped
+      charging the fitted tubes and started adding its own two (0379). So it is those two: a pod each
+      side of the hull at `POD_ACROSS`, where the frame launches them from, on a strut, in the surge's
+      ink, lit at the nose and warm behind. Nothing round the ship, so nothing hides a bullet beside it.
     */
     case 'auraHunt':
     case 'auraOverdrive': {
       const ink = palette[INK_OF[kind]];
-      glow(ctx, f, ink, 0, 0, 1, 0.35);
-      ctx.beginPath();
-      ctx.arc(half, half, r, 0, Math.PI * 2);
-      ctx.moveTo(half + r * 0.9, half);
-      ctx.arc(half, half, r * 0.9, 0, Math.PI * 2);
-      ctx.globalAlpha = 0.7;
-      ctx.fillStyle = ink;
-      ctx.fill('evenodd');
-      ctx.globalAlpha = 1;
+      const lit = shade(ink, 0.55);
+      // As a share of the sprite's half-extent, which is the unit every point below is in.
+      const out = POD_ACROSS / (SPRITE_EXTENT[kind] / 2);
+      for (const side of [-1, 1] as const) {
+        const y = side * out;
+        // The heat behind it, then the strut back to the hull, then the pod.
+        glow(ctx, f, ink, -0.42, y, 0.3, 0.45);
+        poly(ctx, f, ink, [
+          [-0.1, side * 0.5],
+          [0.08, side * 0.5],
+          [0.04, y - side * 0.08],
+          [-0.08, y - side * 0.08],
+        ], 0.85);
+        poly(ctx, f, ink, [
+          [-0.42, y - 0.1],
+          [0.22, y - 0.1],
+          [0.46, y],
+          [0.22, y + 0.1],
+          [-0.42, y + 0.1],
+        ]);
+        disc(ctx, f, lit, 0.28, y, 0.06);
+        glow(ctx, f, lit, 0.3, y, 0.22, 0.6);
+      }
       return;
     }
     /*

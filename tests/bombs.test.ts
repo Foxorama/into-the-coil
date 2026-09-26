@@ -419,6 +419,31 @@ describe('0375 — the bomb is a missile, and it goes off as an explosion', () =
   });
 });
 
+describe('0379 — a thrown special is in the air long enough to be seen', () => {
+  it('every thrown kind takes the better part of a second from the press to going off', () => {
+    /*
+      *"All the bomb launch effects need to be more visible as well, they're all slightly too fast."*
+      They went off six tenths of a second after the press. Held in SECONDS, as the play put it, and
+      FLOWN rather than read off the row: from the press to the step something goes off.
+    */
+    for (const kind of SPECIAL_KINDS) {
+      if (SPECIALS[kind].shot === null) continue;
+      const { world, frame } = quietWorld();
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      launchSpecial(world, kind);
+      let steps = 0;
+      while (world.bombs.size > 0 && steps < 600) {
+        world.ship.invulnFor = 2;
+        frame.step();
+        steps++;
+      }
+      expect(world.bombs.size, `the ${kind} never went off`).toBe(0);
+      expect(steps / 60, `the ${kind} is gone too fast to be seen`).toBeGreaterThanOrEqual(0.85);
+    }
+  });
+});
+
 /**
  * EVERY SPECIAL IS HEARD AS ITSELF — `docs/decisions/0378-the-specials-are-heard.md`.
  *

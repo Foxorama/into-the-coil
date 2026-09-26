@@ -98,7 +98,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { SPECIALS, SPECIAL_KINDS, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, SPECIALS, SPECIAL_KINDS, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -1882,9 +1882,9 @@ export class GameFrame implements Frame {
       does not gain sparks it never had.
     */
     const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
-    // A surge whose missiles pierce: a blade's arrival on a missile, so it is told by the log — 0375.
+    // A surge whose pods pierce: a blade's arrival on a missile, so it is told by the log — 0375, 0379.
     const surging = surgeOf(w);
-    const tubesPierce = surging !== null && surging.tubes.pierce > 1;
+    const tubesPierce = surging !== null && surging.pods.pierce > 1;
     killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
@@ -3712,8 +3712,12 @@ function fireMissiles(w: World): void {
     counting down a cadence for a weapon that does not exist would arm the first volley to leave the
     instant the pickup lands — so the reward for finding a launcher would be a missile fired from
     wherever the ship happened to be, rather than a weapon starting.
+
+    ⚠️ **UNLESS A SURGE IS ON — 0379.** Its pods are tubes of their own, so a ship with none fitted
+    still fires the surge's pair on the tubes' clock.
   */
-  if (w.weapon.launchers === 0) return;
+  const surge = surgeOf(w);
+  if (w.weapon.launchers === 0 && surge === null) return;
   w.missileIn--;
   if (w.missileIn > 0) return;
   // ⚠️ On the grid, like the pulse — 0094. The missile's cadence is five pulses (0093), so this lands
@@ -3769,21 +3773,39 @@ function fireMissiles(w: World): void {
     // And how long it burns — 0246. Zero is *never*, which is the straight missile: it lives to the
     // edge of the view. A seeker's fuse is what keeps a screen from filling with things that hunt.
     missile.lifeFor = w.weapon.fuse;
-    /*
-      ⚠️ **AND A SURGE ON THE TUBES — 0373**: *"they travel twice as far and do 4x as much damage."*
-      A seeker flies until its fuse is out, so twice the fuse is twice as far; a straight missile's
-      fuse is zero and stays zero, and it takes the damage alone.
+  }
+  if (surge === null) return;
+  /*
+    ── THE SURGE'S PODS — `docs/decisions/0379-the-specials-are-seen.md` ────────────────────────────
 
-      ⚠️ **AND THE PIERCE, SINCE 0375** — the golden surge moved here from the gun: *"bullets
-      penetrate like shurikens."* Per missile rather than on the row, so the row keeps the one health
-      every missile has; `collideInto` lands one with more than that once per flash, one a landing.
-    */
-    const surge = surgeOf(w);
-    if (surge !== null) {
-      missile.damage *= surge.tubes.damage;
-      missile.lifeFor *= surge.tubes.fuse;
-      missile.health = surge.tubes.pierce;
-    }
+    *"Let's change that special so that it fires out two additional missiles of the special bomb
+    variety, so you could have any combo of 4 or 2/2 depending on your equipped missile and the
+    special."* The fitted tubes above fire as they are; the pods fire the surge's OWN kind, charged as
+    0373 charged the tubes — *"they travel twice as far and do 4x as much damage"*, and 0375's
+    *"penetrate like shurikens"* — from outside the hull, popping wider than the tubes do.
+
+    ⚠️ **PER MISSILE, AS THE CHARGE ALWAYS WAS**: `lifeFor` is the kind's fuse times the pod's, which a
+    straight missile's zero keeps at *never*; `health` is the pierce, which `collideInto` lands once per
+    flash.
+  */
+  const pods = surge.pods;
+  const tube = MISSILES[pods.missile];
+  const podRow = SHOTS[tube.shot];
+  for (let j = 0; j < pods.count; j++) {
+    const missile = w.missiles.spawn();
+    if (missile === null) return;
+    // One cue for the volley: the tubes' if they fired, the pods' if there are none.
+    if (j === 0 && w.weapon.launchers === 0) w.onCue('missile', w.ship.across);
+    const side = j % 2 === 0 ? -1 : 1;
+    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + POD_ACROSS * side, podRow);
+    missile.velAlong = podRow.speed + w.scrollPerStep;
+    missile.damage = podRow.damage * pods.damage;
+    // The tubes' own pop, carried on out past the pod.
+    missile.velAcross = side * LAUNCHER_POP_SPEED;
+    missile.steerAcross = w.ship.across + (POD_ACROSS + LAUNCHER_POP) * side;
+    missile.seekTurn = tube.seek;
+    missile.lifeFor = tube.fuse * pods.fuse;
+    missile.health = pods.pierce;
   }
 }
 

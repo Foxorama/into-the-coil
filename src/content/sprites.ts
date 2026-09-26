@@ -1516,11 +1516,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   seeker: 4.4,
   // A LARGE missile since 0375 — *"a large forward firing missile like a h-bomb style thing"* — so
   // twice the 4.4 it was as a lobbed disc. The biggest thing that leaves the ship by a distance.
-  bomb: 9,
-  // The same body as the bomb, so the same extent — 0374.
-  stormBall: 4.4,
-  // The void missile flies as the storm's ball does — 0377.
-  voidBall: 4.4,
+  // ⚠️ Twelve since 0379, and it was nine — *"all the bomb launch effects need to be more visible."*
+  bomb: 12,
+  // ⚠️ Ten since 0379, and 4.4 before: a ball the size of a seeker, lost among them. The extent holds
+  // its trail too, so the hull itself is about four across.
+  stormBall: 10,
+  // The void missile flies as the storm's ball does — 0377, and is as big since 0379.
+  voidBall: 10,
   // The rift is drawn at its diameter, which is the reach that negates — 0377, the blast's rule.
   riftZone: 72,
   /*

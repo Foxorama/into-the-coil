@@ -39,7 +39,8 @@ export const PROBES = [
     guard: 'does not run the missile clock down while it has nothing to fire from',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (w.weapon.launchers === 0) return;\n  w.missileIn--;',
+      // Since 0379 a surge's pods run the clock too; with neither, it must not run.
+      find: '  if (w.weapon.launchers === 0 && surge === null) return;\n  w.missileIn--;',
       replace: '  w.missileIn--;',
     },
   },

@@ -48,15 +48,20 @@ export const PROBES = [
     ⚠️ The gun surge's two probes were here; 0375 moved the golden surge onto the forward missiles, and
     its breaks moved with it.
   */
+  /*
+    ⚠️ **RE-AIMED BY 0379, WHICH MOVED THE CHARGE OFF THE FITTED TUBES AND ONTO THE SURGE'S OWN PODS.**
+    The three charges are the same — damage, pierce, fuse — and now live on the pods; the two probes
+    that each dropped the damage multiplier were one break written twice and are one now.
+  */
   {
     decision: '0373',
     suite: 'tests/surge.test.ts',
-    broke: 'the golden surge that lights an aura and multiplies nothing',
-    guard: 'a missile launched in the surge carries the row’s damage and pierce',
+    broke: 'the tube surge that multiplies nothing',
+    guard: 'every fitted tube with every tube special',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      missile.damage *= surge.tubes.damage;\n',
-      replace: '',
+      find: '    missile.damage = podRow.damage * pods.damage;\n',
+      replace: '    missile.damage = podRow.damage;\n',
     },
   },
   {
@@ -64,21 +69,10 @@ export const PROBES = [
     suite: 'tests/surge.test.ts',
     // The pierce forgotten: the missile is three times the damage and still spent by the first body.
     broke: 'the golden surge whose missiles never pierce',
-    guard: 'and a pierced body does not spend the missile',
+    guard: 'and a pierced body does not spend an overdrive pod',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      missile.health = surge.tubes.pierce;\n',
-      replace: '',
-    },
-  },
-  {
-    decision: '0373',
-    suite: 'tests/surge.test.ts',
-    broke: 'the tube surge that multiplies nothing',
-    guard: 'a missile launched in the surge carries the row’s damage and fuse',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '      missile.damage *= surge.tubes.damage;\n',
+      find: '    missile.health = pods.pierce;\n',
       replace: '',
     },
   },
@@ -87,11 +81,11 @@ export const PROBES = [
     suite: 'tests/surge.test.ts',
     // *"They travel twice as far"* dropped, leaving the damage.
     broke: 'the tube surge that leaves the fuse alone',
-    guard: 'a missile launched in the surge carries the row’s damage and fuse',
+    guard: 'a seeker pod flies twice as far as a seeker',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      missile.lifeFor *= surge.tubes.fuse;\n',
-      replace: '',
+      find: '    missile.lifeFor = tube.fuse * pods.fuse;\n',
+      replace: '    missile.lifeFor = tube.fuse;\n',
     },
   },
   {

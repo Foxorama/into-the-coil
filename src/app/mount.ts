@@ -179,7 +179,13 @@ export const CAPACITY = {
     eighteen more blits of a baked bitmap.
   */
   playerShots: 106,
-  missiles: 24,
+  /*
+    ⚠️ **FORTY SINCE 0379, AND IT WAS TWENTY-FOUR.** A tube special fires two missiles of its own every
+    volley beside the fitted tubes, and at the strongest tubes on the widest screen that is thirty-six
+    in flight at once, measured — the old pool was full and dropping volleys. The same tenth of headroom
+    the shots keep, paid out of 0286's worst case on 0153's terms. `tests/surge.test.ts` flies it.
+  */
+  missiles: 40,
   bombs: 4,
   /*
     ⚠️ **SIX SINCE 0377, BECAUSE A RIFT IS A BODY IN THIS POOL FOR A SECOND AND A HALF.** One throw per
