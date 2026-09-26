@@ -78,8 +78,9 @@ export const PROBES = [
     guard: 'once hurt, the acid is a SPRAY',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0) {',
-      replace: '  if (boss.fireIn <= FACE_GAPE) {',
+      // ⚠️ Re-anchored by 0373, which opens the jaw for a spit on the same line.
+      find: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting) {',
+      replace: '  if (boss.fireIn <= FACE_GAPE || spitting) {',
     },
   },
   /*

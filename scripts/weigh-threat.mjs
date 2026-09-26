@@ -2,7 +2,11 @@
 //
 // Usage:
 //   node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-threat.mjs
-//        [bossKind …] [--difficulty=savior] [--tier=4]
+//        [bossKind …] [--difficulty=savior] [--tier=4] [--sweep=6]
+//
+// --sweep=N flies the ship across 30% of the lane either side of each place over N seconds instead of
+// parking it — 0373: on a boss that stalks the player's lane, a parked ship is a case that never
+// happens, and every add spat from its mouth is spat into the stream.
 //
 // ⚠️ THE OTHER HALF OF `scripts/weigh-boss.mjs`, AND IT WAS ASKED FOR BY A QUESTION THAT INSTRUMENT
 // CANNOT ANSWER. weigh-boss makes the ship unhittable on purpose — *"a death is a respawn and a lost
@@ -21,17 +25,18 @@
 //
 //   hits a second   rising edges of *something is on the ship*, over the fight, as median/best/worst
 //                   of the fifteen. A boss nothing lands on is a boss the player never has to move for.
-//   the adds        how many the escorts and summons called, and how many reached the boss — which is
-//                   only ever more than zero for a boss whose adds have somewhere to be (0314).
+//   the adds        how many the escorts and summons called, and how many shots those adds got away
+//                   before they died or passed — 0373. It was *how many reached the boss* while the
+//                   shoal fed the fish (0314); the shoal is spat at the player now, and what an add
+//                   is FOR is measured by whether it ever fires.
 //
 // ⚠️ THE BOSS'S HEALTH IS NOT PINNED, so a phase is reached by fighting to it and the adds counted are
-// the ones a real fight calls. A fixture that pinned it would count feeds that are its own pin
-// restoring damage, which is the shape of the first draft of this file and is why it says so here.
+// the ones a real fight calls. A fixture that pinned it would count calls its own pin keeps making,
+// which is the shape of the first draft of this file and is why it says so here.
 
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { phaseFor } from '../src/app/boss.ts';
-import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -74,9 +79,9 @@ function touching(world) {
  *
  * @returns hits a second on the parked ship, how many adds were called, and how many reached the boss.
  */
-export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
+export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS, sweep = 0 } = {}) {
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
-  const { world, cues } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
+  const { world } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < tier; i++) carried.push('weapon');
@@ -88,9 +93,11 @@ export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 5
   let was = false;
   let called = 0;
   let standing = 0;
-  let turns = 0;
-  let health = null;
-  const row = BOSSES[kind];
+  let fired = 0;
+  let shotsBefore = 0;
+  /** The step each live add appeared on, and how many steps each finished one lasted. */
+  const born = new Map();
+  const lived = [];
   for (let step = 0; step < cap * STEPS_PER_SECOND + 3000; step++) {
     world.ship.health = world.shipRow.health;
     world.ship.invulnFor = NEVER;
@@ -100,7 +107,14 @@ export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 5
       if (start < 0) start = step;
       if (step - start > cap * STEPS_PER_SECOND) break;
       world.ship.prevAcross = world.ship.across;
-      world.ship.across = lane;
+      /*
+        ⚠️ **PARKED, OR SWEEPING — 0373.** A parked ship is the worst case for a boss's adds by
+        construction, and on a boss that stalks the player's lane (0258) it is a case that never
+        happens: the mouth sits in the player's own fire and everything spat from it is spat into the
+        stream. `sweep` is `scripts/weigh-presence.mjs`'s pilot — the ship crossing 30% of the lane
+        either side of its place over `sweep` seconds — so the fish is chasing, and the mouth trails.
+      */
+      world.ship.across = sweep > 0 ? lane + Math.sin(((step - start) / (sweep * STEPS_PER_SECOND)) * Math.PI * 2) * ACROSS_SPAN * 0.3 : lane;
       if (short !== null) {
         world.ship.prevAlong = world.ship.along;
         world.ship.along = boss.along - boss.radius - short;
@@ -115,24 +129,44 @@ export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 5
       // A pool that grew held a call.
       if (world.enemies.size > standing) called += world.enemies.size - standing;
       standing = world.enemies.size;
-      /*
-        ⚠️ **A FEED IS COUNTED OFF THE CUE AND NOT OFF THE BOSS'S HEALTH, AND THE FIRST DRAFT OF THIS
-        FILE GOT IT WRONG.** `feedTheLord` runs in the same step the player's shots land in, so a boss
-        fed 14 while being hit for more is a boss whose health went DOWN — and *health went up* reported
-        zero arrivals for a mechanism that was working. 0314 gives a feed the `bossPhase` cue; the only
-        other thing that plays it is a phase turning over, and there are at most four of those.
-      */
-      if (world.bossPool.size > 0) {
-        const now = row.phases.indexOf(phaseFor(row, world.bossPool.at(0).health, world.bossFullHealth));
-        if (health !== null && now !== health) turns++;
-        health = now;
+      // And how long each add lived, keyed by the pooled entity: a body that is gone this step is done.
+      const alive = new Set();
+      for (let i = 0; i < world.enemies.size; i++) {
+        const add = world.enemies.at(i);
+        alive.add(add);
+        if (!born.has(add)) born.set(add, step);
       }
+      for (const [add, at] of born) {
+        if (alive.has(add)) continue;
+        lived.push(step - at);
+        born.delete(add);
+      }
+      /*
+        ⚠️ **AN ADD'S SHOT IS ATTRIBUTED BY WHERE IT APPEARED — 0373**, on `scripts/weigh-presence.mjs`'s
+        own terms: `fireEnemies` places every volley on the body's along exactly, so a shot that came
+        into being within a hull of a live add is that add's. A boss is not in the enemy pool, so its
+        own fan cannot be counted here; what this column answers is whether a spat horde ever gets a
+        shot away, which *"the adds are trash"* was about. It replaces a feed count that counted
+        0314's minnows being eaten, which nothing does any more.
+      */
+      for (let i = shotsBefore; i < world.enemyShots.size; i++) {
+        const shot = world.enemyShots.at(i);
+        for (let k = 0; k < world.enemies.size; k++) {
+          const add = world.enemies.at(k);
+          if (Math.hypot(add.along - shot.along, add.across - shot.across) <= add.radius + shot.radius + 1) {
+            fired++;
+            break;
+          }
+        }
+      }
+      shotsBefore = world.enemyShots.size;
     }
     if (start >= 0 && world.bossPool.size === 0) break;
   }
   const seconds = steps / STEPS_PER_SECOND;
-  const rang = cues.filter((c) => c === 'bossPhase').length;
-  return { seconds, hits: seconds === 0 ? 0 : hits / seconds, called, arrived: Math.max(0, rang - turns) };
+  const sorted = [...lived].sort((a, b) => a - b);
+  const livedMedian = sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)] / STEPS_PER_SECOND;
+  return { seconds, hits: seconds === 0 ? 0 : hits / seconds, called, fired, lived: livedMedian };
 }
 
 const isMain = process.argv[1] !== undefined && /weigh-threat\.mjs$/.test(process.argv[1].replace(/\\/g, '/'));
@@ -146,19 +180,21 @@ if (isMain) {
   const kinds = named.length > 0 ? named : LEVEL_KINDS.map((level) => LEVELS[level].boss);
   const difficulty = flag('difficulty', 'savior');
   const tier = Number(flag('tier', 4));
+  const sweep = Number(flag('sweep', 0));
   const mid = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
-  console.log(`hits a second on a PARKED ship — ${difficulty}, tier ${tier}, missiles silenced, ship unhittable`);
+  console.log(`hits a second on a ${sweep > 0 ? `ship SWEEPING the lane every ${sweep}s` : 'PARKED ship'} — ${difficulty}, tier ${tier}, missiles silenced, ship unhittable`);
   for (const kind of kinds) {
     for (const gun of WEAPON_KINDS) {
       const runs = [];
-      for (const lane of LANES) for (const short of DISTANCES) runs.push(flyThreat(kind, gun, { tier, difficulty, lane, short }));
+      for (const lane of LANES) for (const short of DISTANCES) runs.push(flyThreat(kind, gun, { tier, difficulty, lane, short, sweep }));
       const hits = runs.map((r) => r.hits).sort((a, b) => a - b);
       const adds = mid(runs.map((r) => r.called));
-      const got = mid(runs.map((r) => r.arrived));
+      const got = mid(runs.map((r) => r.fired));
+      const lived = mid(runs.map((r) => r.lived));
       console.log(
         `  ${kind.padEnd(13)} ${gun.padEnd(9)} ${mid(runs.map((r) => r.seconds)).toFixed(0).padStart(4)}s   ` +
           `median ${hits[Math.floor(hits.length / 2)].toFixed(2)}   best ${hits[0].toFixed(2)}   worst ${hits[hits.length - 1].toFixed(2)}` +
-          (adds > 0 ? `   adds: ${adds} called, ${got} reached it` : ''),
+          (adds > 0 ? `   adds: ${adds} called, ${got} shots fired by them, one lives ${lived.toFixed(1)}s` : ''),
       );
     }
   }

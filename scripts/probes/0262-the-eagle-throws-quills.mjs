@@ -31,23 +31,11 @@ export const PROBES = [
       replace: "      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
     },
   },
-  {
-    decision: '0262',
-    suite: 'tests/volans.test.ts',
-    // The horde back down the lane in a file.
-    broke: 'the kites called at the leading edge again, in a file down the lane',
-    // ⚠️ Re-aimed by 0314 with the anchor: the kites are an escort now, and the guard that reads where
-    // an escort flanks from is 0314's, not the summons's.
-    guard: 'a horde comes in from the end of the lane the thing it is COMING FOR is at',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0270, which said how many of the horde may stand. And again by 0314, which
-      // made the kites an ESCORT — they arrive while the fish rakes now, rather than instead of a
-      // volley — so the row that says which edge they flank from is that one.
-      find: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },",
-      replace: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'lead', standing: 6, every: 150 } },",
-    },
-  },
+  /*
+    ⚠️ A PROBE WENT HERE WITH THE FLANK — docs/decisions/0373-the-fish-spits-its-adds.md. *The kites
+    called at the leading edge again, in a file down the lane* broke 0262's flanking entry, and the
+    kites do not flank any more: they are spat out of the mouth, and 0373's own probes break that.
+  */
   {
     decision: '0262',
     suite: 'tests/volans.test.ts',

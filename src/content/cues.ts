@@ -118,6 +118,7 @@ export const CUE_KINDS = [
   'bossBolt',
   // The fish going through the edge of the lane on its entrance — 0313.
   'bossBreach',
+  'bossSpit',
   'bossPhase',
   'bossDown',
   'bomb',
@@ -177,6 +178,7 @@ export const PLACE_CUES: readonly CueKind[] = [
   // And its entrance, which is the most a place-owned cue has ever been about the place — 0313: what
   // the fish goes through is the Ember Nebula, and a breach in Rime Shelf would not crackle.
   'bossBreach',
+  'bossSpit',
   'bossPhase',
   'bossDown',
 ];
@@ -202,6 +204,8 @@ export const TWIN_KINDS = [
   'threat-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
   'breach-appears',
+  /** A horde leaves the boss's open mouth in a spray of embers — 0373. */
+  'spit-appears',
   /** A body flashes its hit sprite for `IMPACT_FLASH_STEPS` — 0035. */
   'impact-flash',
   /** A dead enemy scatters `BURST.enemy` fragments where it died — 0036. */
@@ -1593,26 +1597,28 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * The flying fish going through the edge of the lane on its entrance — 0313.
+   * The flying fish going through the edge of the lane on its entrance — 0313, re-voiced by
+   * `docs/decisions/0375-the-breach-has-a-body.md`.
    *
-   * ⚠️ **A SPRAY OF EMBERS AND NOT A SPLASH, BECAUSE THERE IS NO WATER AND NO SURFACE DRAWN.**
-   * `src/content/themes.ts` says `ground: null` for the nebula — *"In space, and the Pillars are the
-   * proof."* So what this is the sound of is **the fish and the place meeting**, four times in one
-   * flight: something big displacing gas, a sheet thrown up off it, and embers crackling back down.
-   * It is the only thing on the screen that says the animal went through anything —
-   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` with nothing else to
-   * lean on.
+   * ⚠️ **REPORTED: *"intro sound is terrible."*** Measured with `scripts/weigh-cue.mjs` before a
+   * note was moved: the old row's weight was in the top two bands (`hi` 1.00, `air` 0.62 against a
+   * `low` of 0.15 and a `sub` of 0.008), and its centroid ROSE 6.8 dB from onset to tail — which is
+   * that instrument's own definition of a hiss with a click on the front. 0313 wrote a sheet whose
+   * lowpass opened to 9.5 kHz and an ember grain sampled at 900 Hz and rung at `q` 2.3, and heard
+   * four times in two and a half seconds that is a pitched buzz under a spray of white noise: the
+   * sound of an animal the size of the lane going through the edge of it, and nothing about it was
+   * big.
    *
-   * ⚠️ **THE SHEET'S LOWPASS OPENS UPWARD, WHICH NO NOISE LAYER IN THIS TABLE DOES.** 2.6 kHz to 9.5
-   * over a third of a second: the sound gets WIDER as it goes, which is what a spray fanning out does
-   * and is the opposite of everything else here — the acid thins upward as it dries, the bolt's grain
-   * coarsens downward, and both are things running out. Two pitched layers already brighten this way
-   * (`bomb`'s saw and `shield`'s square) and both do it under a note that is rising; this is the only
-   * one where the widening IS the event.
+   * ⚠️ **A BREACH IS A BODY DISPLACING THE PLACE, SO ITS WEIGHT IS LOW AND ITS CENTROID FALLS.**
+   * Something the size of this hull throws its mass first and its spray after: a whoomph that lasts
+   * a third of a second instead of a fifth, a surge of gas whose lowpass opens only as far as 2.2 kHz
+   * and then a splash that CLOSES from 4.6 kHz down over half a second, so the top leaves first. That
+   * is the shape `weigh-cue` calls an explosion and every other big cue in this table has; the one
+   * thing this keeps of 0313's is the resonant wake, the body going past, which is the mass.
    *
-   * ⚠️ **AND IT IS NOT `bossAcid`'s SIZZLE WITH A NEW NAME.** That is a fine grain at 8.2 kHz thinning
-   * upward over most of a second while its highpass rises. This is a broadband front with a coarse
-   * crackle at 900 Hz under it — **an octave and a half apart** — over half the length.
+   * ⚠️ **THE EMBERS ARE A FIZZ NOW AND NOT A BUZZ.** Sample-and-hold at 5.5 kHz falling to 2.2, an
+   * octave and a half above where it was: a grain that fast is a crackle, and one at 180 Hz is a
+   * note. Low in the mix, late, and short — sparks over the splash rather than the splash.
    *
    * ⚠️ **IT DOES NOT DUCK, AND THE RULE SAYS SO RATHER THAN AN EXCEPTION DOING IT.** Half a second is
    * over a beat, but its twin is a thing APPEARING and a thing that appears recurs: the four crossings
@@ -1626,43 +1632,68 @@ export const CUES: Record<CueKind, CueRow> = {
     air: 0.34,
     onGrid: true,
     hold: 8,
+    // 0313's, unmoved: the body is in the layers' balance and not in the row's share of the mix, and
+    // `tests/sound.test.ts` holds the four loudest cues at once under the limiter's threshold.
     gain: 0.46,
-    // Enough to hold the front and the crackle together as one event. Past this the grain flattens,
-    // which is `bossAcid`'s own reason for staying low.
-    glue: 0.22,
+    // Enough to hold the whoomph and the splash together as one event and put some throat on the
+    // surge; past this the splash flattens into a wash.
+    glue: 0.26,
     layers: [
       /*
-        THE WHOOMPH — the fifth of the key falling below the root, over in under a fifth of a second:
-        something big displacing what it came through. 0089's *something low under it*, and the one
-        layer here with a pitch.
+        THE WHOOMPH — the fifth of the key falling below the root, over a third of a second: something
+        big displacing what it came through. Longer than 0313's fifth of a second, because the animal
+        is forty-two units long and a thump that is over before the hull has cleared the edge is a
+        door, not a fish.
       */
-      { wave: 'sine', from: inKey(7), to: inKey(-4), seconds: 0.18, gain: 0.62, attack: 0.0025, curve: 3.6, drive: 0.32 },
+      { wave: 'sine', from: inKey(7), to: inKey(-4), seconds: 0.34, gain: 0.8, attack: 0.004, curve: 2.6, drive: 0.24 },
       /*
-        THE SHEET — white noise whose lowpass OPENS from 2.6 kHz to 9.5 while its highpass climbs under
-        it. A band that widens upward and is cut from below is a sheet of spray leaving a surface: it
-        starts as a thump with air in it and ends as hiss with no body left.
+        THE SURGE — white noise whose lowpass opens from 240 Hz to 2.2 kHz over a quarter of a second,
+        with a slow attack: gas shoved ahead of the body. It rises, and it is the only layer that
+        does, because a surge is the one part of this that is a thing arriving.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.58, attack: 0.0035, curve: 2, lowFrom: 2600, lowTo: 9500, highFrom: 700, highTo: 1600, q: 0.9, pan: -0.6, panTo: 0.6 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.5, attack: 0.05, curve: 1.4, lowFrom: 240, lowTo: 2200, highFrom: 110, q: 0.8 },
       /*
-        THE EMBERS — sample-and-hold at 900 Hz falling to 180, ringing at `q` 2.3. 900 is a grain every
-        millisecond and 180 is one every five, so the crackle coarsens into countable sparks; the
-        resonance is what makes each one ring rather than tick, which is the knob `bossBolt` uses to be
-        electric and `bossAcid`'s bubbles use to be wet. Here it is fire.
+        THE SPLASH — white noise whose lowpass CLOSES from 4.6 kHz to 520 over half a second, panned
+        across the field: the spray thrown up and coming down. This is the layer that used to open to
+        9.5 kHz, turned the other way round; a spray that ends brighter than it started is a hiss.
       */
-      { wave: 'noise', from: 900, to: 180, at: 0.06, seconds: 0.44, gain: 0.52, attack: 0.003, curve: 2.6, lowFrom: 5200, lowTo: 1400, highFrom: 380, q: 2.3, drive: 0.38, pan: 0.45, panTo: 0 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.52, attack: 0.006, curve: 2.8, lowFrom: 3800, lowTo: 380, highFrom: 160, highTo: 90, q: 0.9, pan: -0.5, panTo: 0.5 },
       /*
-        THE FALL-BACK — a finer grain, late and short, darkening fast: the sheet coming down again. It
-        is the only layer that starts after the front has passed and ends before the embers do, which is
-        what makes the figure a thing going up and then a thing coming down rather than one wash.
+        THE EMBERS — sample-and-hold at 5.5 kHz falling to 2.2, low, late and short: sparks over the
+        splash. Sampled fast enough to be a crackle and never a note.
       */
-      { wave: 'noise', from: 4200, to: 1100, at: 0.22, seconds: 0.22, gain: 0.223, attack: 0.004, curve: 3.4, lowFrom: 9000, lowTo: 2600, highFrom: 1200, q: 1.4, drive: 0.28, pan: -0.45, panTo: -0.85 },
-      { wave: 'noise', from: 4200, to: 1100, at: 0.22, seconds: 0.22, gain: 0.223, attack: 0.004, curve: 3.4, lowFrom: 9000, lowTo: 2600, highFrom: 1200, q: 1.4, drive: 0.28, pan: 0.45, panTo: 0.85 },
+      { wave: 'noise', from: 5500, to: 2200, at: 0.08, seconds: 0.22, gain: 0.12, attack: 0.006, curve: 3.4, lowFrom: 5000, lowTo: 1800, highFrom: 900, q: 1.1, pan: 0.4, panTo: -0.2 },
       /*
-        THE WAKE — a resonant peak travelling from 1.8 kHz down to 300 over a fifth of a second: the
-        body going past. It is the acid's glop knob on a different sweep and a different band, and what
-        it adds is MASS — without it the front is a spray with nothing in the middle of it.
+        THE WAKE — 0313's, kept: a resonant peak travelling from 1.4 kHz down to 240 over a quarter
+        of a second, the body going past. Without it the whoomph and the splash are two events with
+        nothing in the middle.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.2, gain: 0.46, attack: 0.002, curve: 4, lowFrom: 1800, lowTo: 300, highFrom: 90, q: 2.2, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.28, gain: 0.5, attack: 0.004, curve: 3.2, lowFrom: 1400, lowTo: 200, highFrom: 80, q: 2, drive: 0.36 },
+    ],
+  },
+  /**
+   * The flying fish spitting a horde out of its mouth — 0373.
+   *
+   * ⚠️ **SHORT, WET, AND PITCHED DOWN, BECAUSE IT IS A THING LEAVING A MOUTH.** The bodies that come
+   * out are the event and they are on the screen; the cue says WHERE they came from, which is the job
+   * `threat` does for an enemy's shot and the reason this is a tenth of a second and not a phase's
+   * half. A fifth falling to the root under a burst of resonant noise that darkens: a gob rather
+   * than a gun. It rides the same edge-of-the-lane pan as everything the boss throws.
+   */
+  bossSpit: {
+    twin: 'spit-appears',
+    air: 0.2,
+    onGrid: true,
+    hold: 6,
+    gain: 0.34,
+    glue: 0.18,
+    layers: [
+      // The gob: a fifth falling to the root, over in a tenth of a second.
+      { wave: 'tri', from: inKey(11), to: inKey(4), seconds: 0.11, gain: 0.5, attack: 0.003, curve: 4.5, drive: 0.2 },
+      // The spray: resonant noise closing from 3 kHz to 500 over a sixth of a second — wet, not sharp.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.5, attack: 0.004, curve: 3.6, lowFrom: 3000, lowTo: 500, highFrom: 200, q: 2.4, drive: 0.3 },
+      // Something under it, so a mouth this size does not sound like a pea-shooter.
+      { wave: 'sine', from: inKey(0), to: inKey(-3), seconds: 0.14, gain: 0.34, attack: 0.004, curve: 3.8 },
     ],
   },
   bossPhase: {

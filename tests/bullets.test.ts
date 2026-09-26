@@ -14,7 +14,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY } from '../src/content/cadence.ts';
-import { ENEMIES } from '../src/content/enemies.ts';
+import { BOSSES } from '../src/content/bosses.ts';
+import { ENEMIES, type EnemyKind } from '../src/content/enemies.ts';
 import { abreastCap, gapAcross } from '../src/content/formations.ts';
 import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
 import { GameFrame } from '../src/app/frame.ts';
@@ -265,13 +266,33 @@ describe('0259 — the bullets stay on the screen', () => {
       reddens this instead — `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule
       about a guard that only proves the code agrees with itself.
     */
+    /*
+      ⚠️ **OVER THE KINDS A LEVEL SENDS, SINCE 0373.** A rank is a formation an authored wave stands
+      in; a kind no level authors — the fish's kite and minnow, which fire now — stands only in the
+      rank its boss calls, and a call is at most `count` wide. The minnow at 2.2 would otherwise say a
+      rank of four is possible where nothing ever puts four of it abreast. `tests/volans.test.ts`
+      holds that no level sends either, and the calls below are read off the boss table.
+    */
+    const authored = new Set(LEVEL_KINDS.flatMap((kind) => LEVELS[kind].waves.map((wave) => wave.enemy)));
     const widestRank = Math.max(
-      ...Object.values(ENEMIES)
-        .filter((row) => row.fireEvery > 0)
-        .map((row) => abreastCap(gapAcross(row.radius))),
+      ...Object.entries(ENEMIES)
+        .filter(([kind, row]) => row.fireEvery > 0 && authored.has(kind as EnemyKind))
+        .map(([, row]) => abreastCap(gapAcross(row.radius))),
     );
     expect(ENTRY_SLOTS, `a rank of ${widestRank} firing bodies is dealt into ${ENTRY_SLOTS} slots, so two share one`).toBeGreaterThanOrEqual(
       widestRank,
     );
+    const widestCall = Math.max(
+      ...Object.values(BOSSES).flatMap((row) =>
+        row.phases.flatMap((phase) => {
+          const calls: number[] = [];
+          if (phase.escort !== undefined && ENEMIES[phase.escort.enemy].fireEvery > 0) calls.push(phase.escort.count);
+          const attack = phase.attack ?? row.attack;
+          if (attack.kind === 'summon' && ENEMIES[attack.enemy].fireEvery > 0) calls.push(attack.count);
+          return calls;
+        }),
+      ),
+    );
+    expect(ENTRY_SLOTS, `a boss calls ${widestCall} firing bodies at once, dealt into ${ENTRY_SLOTS} slots, so two share one`).toBeGreaterThanOrEqual(widestCall);
   });
 });

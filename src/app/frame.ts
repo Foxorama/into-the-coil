@@ -84,7 +84,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -145,6 +145,42 @@ const TAU = Math.PI * 2;
  * it reaches the lane, which is the half a slower cross buys that a further entry would not.
  */
 const FLANK_ENTRY_SPEED = 0.55;
+
+/**
+ * Where a boss's mouth is, as a share of its drawn radius ahead of its centre — 0373. The painters
+ * put the snout at the tile's edge (`src/render/bake.ts`, `VOLANS_SNOUTS` at −1); the adds appear a
+ * shade inside the lip rather than on it, so the first frame of one is a body IN the mouth.
+ */
+const MOUTH_REACH = 0.92;
+
+/**
+ * How much wider than its formation's spacing a spat horde fans — 0373. At 5, a rank of kites
+ * leaves the mouth for lanes thirty-one units apart, so the nearest member of a skewed call lands
+ * fifteen units off the mouth's lane and the furthest forty-six: a fan a player reads as a fan, and
+ * one that puts the horde outside the cap's spread before it dives back in. Traced at 3 (sixteen
+ * apart): a hunter that straightens ten units off the gun line is back in it within a dozen steps.
+ */
+const SPIT_FAN = 5;
+
+/**
+ * How fast a spat body leaves the mouth across the lane, in world units a step — 0373. Three times a
+ * flanker's crossing (0.55), because a body spat in front of a fish that stalks the player's lane is
+ * spat into the player's fire, and what decides whether it lives to do anything is how many steps it
+ * spends in the stream. `scripts/weigh-threat.mjs` measured a spat add living 0.1 s at 0.9 — six
+ * steps, dead before it had cleared its own spray. At 1.8 the nearest member of a fan is a hull's
+ * width off the mouth's lane in three steps and a ship's width in seven.
+ */
+const SPIT_SPEED = 1.8;
+
+/**
+ * Steps a spat body cannot be hit for, leaving the mouth — 0373. Eighteen is three tenths of a
+ * second: at `SPIT_SPEED` the nearest member of a fan has reached its lane fifteen units off the
+ * mouth's and the furthest is thirty out, outside the widest spread the cap's pulse throws, and the
+ * fish's own spray at the lip has finished falling. It is a STATE and the picture is the state's
+ * own — the body blinks (0035's split of a flash from a pulse) — so a player firing into the mouth
+ * sees why nothing died.
+ */
+const SPIT_GRACE = 18;
 
 /**
  * How far out a circling body starts orbiting rather than closing, as a multiple of its radius.
@@ -2020,9 +2056,6 @@ export class GameFrame implements Frame {
       logs now, and `scripts/probes/0072-*.mjs` breaks that instead.
     */
     if (w.deaths.count > 0) w.onCue('kill', w.deaths.across[0]);
-    // The shoal reaching what it was swimming for — 0314. Here rather than beside the other pairings
-    // because it does not need a ship: a fish eats whether or not the player is alive to watch.
-    feedTheLord(w);
     /*
       ⚠️ **THE SHIP TAKES HITS, NOT DAMAGE, and this is where a number becomes a count.** Its health
       is the hull plus the shell (`src/content/ships.ts`), and a shield is what absorbs **one hit** —
@@ -5155,57 +5188,6 @@ function standingAdds(w: World, kind: number): number {
 }
 
 /**
- * A body that swims for the boss, arriving — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
- *
- * ⚠️ **THE WHOLE OF WHAT MAKES THE SHOAL WORTH SHOOTING.** A minnow that reaches the fish is eaten and
- * the fish is fed, so every one the player lets past is health they have to take off again. Nothing
- * else in this game puts a body on the field with somewhere to be other than the player.
- *
- * ⚠️ **IT CANNOT PUT THE BOSS BACK INTO A PHASE IT HAS LEFT.** A phase is keyed to remaining health
- * (`docs/game.md`), so an unclamped heal would walk the fight backwards through the table — the look,
- * the cadence and the attack all reverting, and 0111's phase burst firing again on the way down. The
- * ceiling is the current phase's own `upTo`, so feeding can undo everything the player did **inside**
- * this phase and nothing they did before it. That is the trade being offered, with a floor under it.
- *
- * ⚠️ **NOT A PAIRING IN `src/sim/collide.ts`**, and the reason is that nothing here is a hit: no damage
- * is dealt, no invulnerable window opens, and the thing that is consumed is the one that arrived.
- * Writing it as a collision would mean a fourth meaning for `damage` on a row that already has one.
- *
- * ⚠️ **Nothing allocates**, and the walk is backwards because releasing reorders the pool
- * (`src/sim/pool.ts` says so at the top).
- */
-function feedTheLord(w: World): void {
-  if (w.bossPool.size === 0 || w.bossEntering >= 0) return;
-  const lord = w.bossPool.at(0);
-  for (let i = w.enemies.size - 1; i >= 0; i--) {
-    const body = w.enemies.at(i);
-    const row = w.enemyRows[body.kind];
-    if (row === undefined || row.motion.kind !== 'feed') continue;
-    const reach = lord.radius + body.radius;
-    if (Math.hypot(lord.along - body.along, lord.across - body.across) > reach) continue;
-    /*
-      ⚠️ **THE CEILING IS READ OFF THE PHASE THE BOSS IS IN, NOT OFF THE ONE IT WOULD BE IN AFTER.**
-      `phaseFor` takes the health it has now; `upTo` is the share of full health at which that phase
-      begins, so this is *back to the top of where you are* and never past it.
-    */
-    const ceiling = phaseFor(w.bossRow, lord.health, w.bossFullHealth).upTo * w.bossFullHealth;
-    const fed = Math.min(lord.health + row.motion.feeds, ceiling);
-    const gained = fed > lord.health;
-    lord.health = fed;
-    w.enemies.releaseAt(i);
-    /*
-      ⚠️ **0036, AND THE GAIN IS THE HALF THAT WOULD OTHERWISE BE INVISIBLE.** A body vanishing at the
-      hull is a body vanishing; what the player has to see is that it was EATEN, so the burst is thrown
-      at the mouth and the fight's own *something changed on the boss* cue plays with it. A feed that
-      was refused by the ceiling gets the burst and no cue: the minnow still died there, and the sound
-      is what says it was worth something.
-    */
-    burst(w, body.along, body.across, BURST.fed);
-    if (gained) w.onCue('bossPhase', body.across);
-  }
-}
-
-/**
  * Where authored lane `lane` falls in the corridor at `along`, kept a hull's width off both faces —
  * `docs/decisions/0350-the-corridor-turns.md`. The identity where there is no corridor.
  *
@@ -5408,10 +5390,70 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     const b = streamOffset(count - 1, row.radius);
     openPassage(w, along + Math.min(a, b), along + Math.max(a, b), row.radius, side < 0 ? -1 : 1, w.scrollPerStep);
   }
+  /*
+    ── OR OUT OF THE MOUTH — 0373 ───────────────────────────────────────────────────────────────────
+
+    ⚠️ **ASKED FOR**: *"adds should fly out of its mouth to attack the player."* A `mouth` call puts
+    every add at the hull's snout — the drawn radius ahead of its centre along its heading, which is
+    where the painter puts the jaw — and throws them DOWN the lane at the player in a fan: each member
+    steers for a lane spread about the boss's own by `SPIT_FAN` times the formation's spacing, at the
+    flank's crossing rate, and hunts from wherever it straightens. The flank's own mechanism, entered
+    from the middle of the screen rather than its edge: `steerAcross` is the marker, the hold on the
+    screen is added here and taken off on arrival, and the row's `closing` is what it flies at.
+
+    ⚠️ **AND IT CLOSES, WHERE A SUMMONED FLANKER NEVER DID.** A flank carries no `velAlong` past the
+    hold, so a kite called from the side held its world position and hunted across a lane the camera
+    was leaving behind — which is why *"a dive that never arrives"* was the report. A body that comes
+    out of a mouth at you comes AT you: `-closing`, exactly as an authored member is given.
+  */
+  const spat = from === 'mouth';
+  const lord = spat && w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+  if (spat && lord === null) return;
   const gap = gapAcross(row.radius);
   for (let i = 0; i < count; i++) {
     const e = w.enemies.spawn();
     if (e === null) return;
+    if (lord !== null) {
+      /*
+        ⚠️ **THE FAN IS SKEWED HALF A SPACING TO THE CALL'S SIDE, SO NO MEMBER TAKES THE MOUTH'S OWN
+        LANE.** A rank of three is centred, and its middle member left the mouth straight down the lane
+        the fish had stalked onto — the player's, with the player's fire in it — and died in the
+        stream on its first steps every time `scripts/weigh-threat.mjs` looked. `side` is the caller's
+        own alternation (the summons's `spin`, the escort's counter), so successive calls lean left and
+        right of the mouth in turn, which is the fan a mouth spitting in anger makes anyway.
+      */
+      const fan = (formation.acrossOffset(i, count, gap) + (side * gap) / 2) * SPIT_FAN;
+      const lane = Math.min(ACROSS_SPAN - row.radius, Math.max(row.radius, lord.across + fan));
+      reset(e, mouthAlongOf(w, lord), mouthAcrossOf(w, lord), row, kind);
+      e.entrySlot = i % ENTRY_SLOTS;
+      /*
+        ⚠️ **ITS FIRST SHOT IS THE ENTRY'S DEAL, NOT A WHOLE RELOAD AWAY — 0326's window, applied to a
+        body that entered through a mouth.** A summoned add's first volley used to be a full cadence
+        out (`nextOnGrid` over the row's gap), and `scripts/weigh-threat.mjs` counted what that cost:
+        a horde spat in front of a fish that stalks the player's lane is spat into the player's fire,
+        and at the cap not one of sixty-four called ever fired. The player watched these come out of
+        the mouth, which is the whole of what the seen window asks for; they get the same half-second
+        and slot a body crossing the leading edge gets, and then the row's reload.
+      */
+      // ⚠️ Written as `1 + …` so that 0259's and 0326's probes, which anchor on the fire gate's own
+      // spelling of this sum, still find exactly one line.
+      e.fireIn = 1 + SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;
+      e.velAlong = -row.closing * w.difficulty.closing + w.scrollPerStep;
+      e.velAcross = lane > e.across ? SPIT_SPEED : lane < e.across ? -SPIT_SPEED : 0;
+      e.steerAcross = lane;
+      /*
+        ⚠️ **AND IT CANNOT BE HIT WHILE IT IS STILL IN THE SPRAY — `SPIT_GRACE`.** Traced, with the
+        pulse at the cap on a parked ship: every spat add was born inside the column of shots already
+        in flight down the fish's lane, and lived one to nine steps — dead before its fan had opened,
+        whatever its speed. A horde nobody ever sees is the report this whole change answers. The
+        state and its picture are `src/sim/entity.ts`'s own: anything with `invulnFor` blinks, so a
+        body leaving the mouth pulses its hurt twin for a fifth of a second and then is live.
+      */
+      e.invulnFor = SPIT_GRACE;
+      if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
+      else if (row.motion.kind === 'circle') e.spin = i % 2 === 0 ? 1 : -1;
+      continue;
+    }
     const target = ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap);
     const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, count, gap);
     reset(e, along + stream, flanking ? entryAcross : target, row, kind);
@@ -5443,6 +5485,37 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
     else if (row.motion.kind === 'circle') e.spin = i % 2 === 0 ? 1 : -1;
   }
+}
+
+/**
+ * The along of a boss's mouth — 0373: its drawn radius ahead of its centre, along the heading it is
+ * wearing. The sprite's +x is `(cos turn, sin turn)` in the world (`turnFor`), and the snout is at −x.
+ */
+function mouthAlongOf(w: World, boss: Entity): number {
+  return boss.along - Math.cos(boss.turn) * SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! * DRAWING_RADIUS * MOUTH_REACH;
+}
+
+/** The across of a boss's mouth — the other half of `mouthAlongOf`. */
+function mouthAcrossOf(w: World, boss: Entity): number {
+  return boss.across - Math.sin(boss.turn) * SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! * DRAWING_RADIUS * MOUTH_REACH;
+}
+
+/**
+ * The radius a painter draws in, as a share of the tile — `drawKind` in `src/render/bake.ts` sets
+ * `r = size * 0.42`, and every point of every hull is a fraction of that. Half the extent is the tile's
+ * edge, not the drawing's; the first draft of `mouthAlongOf` used it and put the mouth two units
+ * outside the snout.
+ */
+const DRAWING_RADIUS = 0.42;
+
+/**
+ * The picture and the sound of a horde leaving the mouth — 0373, on 0036's terms: the bodies are the
+ * event, and the spray at the lip and the cue panned to it are what say WHERE they came from.
+ */
+function spitFrom(w: World, boss: Entity): void {
+  const across = mouthAcrossOf(w, boss);
+  burst(w, mouthAlongOf(w, boss), across, BURST.spit);
+  w.onCue('bossSpit', across);
 }
 
 /**
@@ -5886,26 +5959,8 @@ function steerEnemies(w: World): void {
         holds whatever the spawner gave it and leaves at the cull like anything else — which is what a
         level that authored one would get, and is why none does.
       */
-      case 'feed': {
-        const lord = w.bossPool.size > 0 && w.bossEntering < 0 ? w.bossPool.at(0) : null;
-        if (lord === null) break;
-        const dAlong = lord.along - e.along;
-        const dAcross = lord.across - e.across;
-        const far = Math.hypot(dAlong, dAcross);
-        if (far < 1e-6) break;
-        const rate = m.agility * aggression;
-        e.velAlong = w.scrollPerStep + (dAlong / far) * rate;
-        e.velAcross = (dAcross / far) * rate;
-        /*
-          ⚠️ **AND IT FACES WHERE IT SWIMS, WHICH IS THE ONE BODY IN THE GAME THAT HAS TO.** Every hull
-          is baked facing down the lane because every hull GOES that way; a minnow goes the other way,
-          so one that did not turn would swim to the fish tail first — which is exactly how it came out
-          on the sprite sheet before this line existed. `blit` has taken an angle since 0306 and 0313
-          put a whole hull on it; this is the third user of it and the first that is not a boss.
-        */
-        e.turn = turnFor(Math.atan2(dAcross, dAlong));
-        break;
-      }
+      // There was a `feed` arm here — the minnow swimming for the fish, 0314 — and 0373 turned the
+      // shoal round: it is spat at the player and hunts, so the arm went with the only row that flew it.
       case 'hunt': {
         const rate = m.agility * aggression;
         const gap = ship.across - e.across;
@@ -7369,6 +7424,8 @@ function driveBoss(w: World): void {
       // ⚠️ Anchored by `scripts/probes/0262-*.mjs`, which needs this line to be distinguishable from
       // the escort's — 0314 gave the same three lines a second home.
       summonAdds(w, calling.enemy, Math.min(boss.turnsLeft, room), calling.formation, calling.from, boss.spin);
+      // And a summons out of the mouth is spat exactly as an escort's call is — 0373.
+      if (calling.from === 'mouth') spitFrom(w, boss);
     }
     boss.turnsLeft = 0;
   }
@@ -7386,6 +7443,14 @@ function driveBoss(w: World): void {
   // below that are two statements about the same row.
   const stance = w.bossRow.phases[phase]!.stance;
   if (phase !== w.bossPhaseAt) {
+    /*
+      ⚠️ **A PHASE THAT SPITS OPENS ITS MOUTH FIRST — 0373.** 0314 had an escort's first call land on
+      the step its phase opened, because the phase turning over is already an event. A horde out of
+      the mouth is a horde out of a mouth the player watched open, so the first call of a phase that
+      spits waits the jaw's own tell: the escort's clock is put at the gape, not at zero. Every later
+      call already has its whole reload of warning.
+    */
+    if (w.bossRow.phases[phase]!.escort?.from === 'mouth') w.bossEscortIn = Math.max(w.bossEscortIn, FACE_GAPE + 1);
     /*
       ⚠️ **Only ever forwards, and the guard is the comparison rather than a rule about health.** A
       boss cannot heal, so a phase index that went down would be a bug somewhere else entirely — and
@@ -7654,7 +7719,10 @@ function driveBoss(w: World): void {
         */
         w.bossEscortSide = w.bossEscortSide > 0 ? -1 : 1;
         summonAdds(w, escort.enemy, Math.min(escort.count, room), escort.formation, escort.from, w.bossEscortSide);
-        w.onCue('threat', boss.across);
+        // A horde out of the mouth is spat, with the spray and the cue at the mouth — 0373; any other
+        // arrives as an enemy does, and says so the way an enemy's shot does.
+        if (escort.from === 'mouth') spitFrom(w, boss);
+        else w.onCue('threat', boss.across);
       }
       w.bossEscortIn = fireGapFor(escort.every, w.difficulty);
     }
@@ -7823,7 +7891,21 @@ function wearFace(w: World, boss: Entity): void {
   */
   // And the jaw stays wide for as long as a spray is coming out of it — 0304: a stream from a shut
   // mouth is a stream from nowhere, which is 0036 at the one place the player is watching.
-  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0) {
+  /*
+    ⚠️ **AND THE JAW OPENS BEFORE A HORDE IS SPAT, ON THE VOLLEY'S OWN TERMS — 0373.** An escort called
+    from the mouth is a thing coming out of it, so the tell that says *something is about to come out
+    of this mouth* is the same tell, read off the escort's clock instead of the volley's. Only when
+    there is room for the call to put something on the field: a full field spends no turn
+    (`summonAdds`'s caller says so), and a gape that nothing follows is the lie 0319's guard refuses.
+  */
+  const escort = phase.escort;
+  const spitting =
+    escort !== undefined &&
+    escort.from === 'mouth' &&
+    w.bossEntering < 0 &&
+    w.bossEscortIn <= FACE_GAPE &&
+    crowdFor(escort.standing, w.difficulty) > standingAdds(w, w.enemyKinds[escort.enemy]);
+  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting) {
     boss.spriteBase = face.gape;
     boss.spriteHit = face.gapeHit;
   } else if (w.bossBite > 0) {
@@ -8132,17 +8214,34 @@ function layAura(w: World): void {
     }
     return;
   }
-  const aura = head === null ? null : (phaseFor(w.bossRow, head.health, w.bossFullHealth).look?.aura ?? null);
-  if (head === null || aura === null) {
+  if (head === null) {
     w.bossAura.clear();
     return;
   }
-  const want = w.bossBody.size + 1;
+  const look = phaseFor(w.bossRow, head.health, w.bossFullHealth).look;
+  const aura = look?.aura ?? null;
+  /*
+    ── AND THE TAIL, IN THE SAME LAYER — 0374 ──────────────────────────────────────────────────────
+
+    ⚠️ **THE LAST SLOT OF THE POOL, SO IT IS DRAWN OVER THE FLAMES AND UNDER THE HULL.** A pool draws
+    in index order and this layer is drawn before the boss's; the fin is flesh, so it goes over the
+    ember behind the animal and under the body it is rooted in. Every slot is re-laid every step, so
+    which entity is the tail is a question about the count and never about identity — `releaseAt`
+    reorders, and nothing here depends on the order surviving.
+  */
+  const tail = w.bossRow.tail;
+  const flames = aura === null ? 0 : w.bossBody.size + 1;
+  const want = flames + (tail === null ? 0 : 1);
+  let fresh = false;
   while (w.bossAura.size < want) {
     const flame = w.bossAura.spawn();
     if (flame === null) break;
     reset(flame, head.along, head.across, AURA_FLAME);
+    fresh = true;
   }
+  while (w.bossAura.size > want) w.bossAura.releaseAt(w.bossAura.size - 1);
+  if (tail !== null && w.bossAura.size === want) layTail(w, head, tail, look?.tail ?? tail.art, w.bossAura.at(want - 1), fresh);
+  if (aura === null) return;
   const tick = Math.floor(w.steps / aura.hold);
   /*
     ⚠️ **AND WHETHER THE CROWN IS FLARING — 0310.** *"Half a second before the lightning attack happens,
@@ -8166,7 +8265,7 @@ function layAura(w: World): void {
       if (bolt.lifeFor > BOLT_STEPS && bolt.lifeFor <= BOLT_STEPS + FLARE_STEPS) charging = true;
     }
   }
-  for (let i = 0; i < w.bossAura.size; i++) {
+  for (let i = 0; i < flames; i++) {
     const flame = w.bossAura.at(i);
     // The body's nodes first, tail to neck in their own order, then the head's — last, so it is drawn
     // over the neck's flame as the skull is drawn over the neck.
@@ -8177,7 +8276,7 @@ function layAura(w: World): void {
     flame.prevAcross = on.prevAcross;
     flame.swell = on === head ? aura.head / SERPENT_BODY_DIAMETER : on.swell;
     // Node `k` counted from the head, so the ripple runs from the skull toward the tail.
-    const k = w.bossAura.size - 1 - i;
+    const k = flames - 1 - i;
     /*
       ⚠️ **THE HEAD'S FLAME ALONE TAKES THE FLARE, WHICH IS WHAT MAKES IT THE HORNS AND NOT THE WEATHER.**
       The body goes on crackling at its own subdued rate; the crown is the one place a charge builds, and
@@ -8188,6 +8287,44 @@ function layAura(w: World): void {
     flame.sprite = frame;
     flame.spriteBase = frame;
   }
+}
+
+/**
+ * Lay the tail on the hull's peduncle, beating — `docs/decisions/0374-the-fish-beats-its-tail.md`.
+ *
+ * ⚠️ **ONE DRAWING TURNED ABOUT ITS ROOT, AND THE HULL YAWS AGAINST IT.** The row says where the root
+ * is (along the hull's own heading), how long a beat is, how far the fin sweeps and how far the body
+ * answers it the other way. `blit` has taken an angle since 0306; the painter put the peduncle at the
+ * tile's centre so that angle IS a turn about the root. The yaw is written on the hull here and
+ * nowhere else, and only once the entrance has handed over — a breach turns the hull to its own arc,
+ * and the guard that holds that reads `turn` back.
+ *
+ * ⚠️ **ON `w.steps`, LIKE THE FLICKER**, so the beat is the same beat whatever step the fight began on
+ * and there is nothing to reset when a boss dies. The tail wears the hull's own hurt state, so a hit
+ * lights the whole animal and not the animal minus its fin (0035).
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function layTail(w: World, head: Entity, tail: Tail, art: TailArt, body: Entity, fresh: boolean): void {
+  const swing = Math.sin((w.steps / tail.beat) * TAU);
+  if (w.bossEntering < 0) head.turn = foldTurn(-swing * tail.yaw);
+  body.prevAlong = body.along;
+  body.prevAcross = body.across;
+  body.prevTurn = body.turn;
+  body.along = head.along + Math.cos(head.turn) * tail.root;
+  body.across = head.across + Math.sin(head.turn) * tail.root;
+  body.turn = foldTurn(head.turn + swing * tail.sweep);
+  // A tail laid for the first time starts where it is, rather than interpolating out of the hull's centre.
+  if (fresh) {
+    body.prevAlong = body.along;
+    body.prevAcross = body.across;
+    body.prevTurn = body.turn;
+  }
+  body.swell = 1;
+  const worn = head.flashFor > 0 ? art.spriteHit : art.sprite;
+  body.sprite = worn;
+  body.spriteBase = worn;
+  body.spriteHit = worn;
 }
 
 /**

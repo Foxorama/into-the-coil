@@ -10,8 +10,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame } from '../src/app/frame.ts';
+import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
@@ -22,7 +23,10 @@ import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
-import { reset } from '../src/sim/entity.ts';
+import { CUES } from '../src/content/cues.ts';
+import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
+import { makeRng } from '../src/sim/rng.ts';
+import { BANDS, centroid, spectrum } from './spectrum.ts';
 import { inside, tracingPen, type Pass } from './paths.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -51,6 +55,10 @@ function volansAt(fraction: number): { world: ReturnType<typeof playableWorld>['
   world.bossPool.at(0).health = world.bossFullHealth * fraction;
   world.enemyShots.clear();
   world.enemies.clear();
+  // And the pulses still in flight, since 0373: an add spat out of a mouth that sits in the ship's
+  // lane is spat into the stream the approach left in the air, and one of three died to it on the
+  // step it appeared. What a test here counts is what the fish put on the field.
+  world.playerShots.clear();
   return { world, frame };
 }
 
@@ -152,7 +160,7 @@ describe('0249 — the eagle summons', () => {
     expect(INK_OF[SPRITE_KINDS[SHOTS.flame.sprite]!], 'a flame wears the player’s own bullet ink').not.toBe('bullet');
   });
 
-  it('THE SUMMONS: a volley at the last sixth puts kites on the field from the sides in turn', () => {
+  it('THE SUMMONS: a volley at the last sixth puts kites on the field, out of the mouth, and the next volley adds more', () => {
     /*
       *"Summons hordes of flying kites and raptors as adds at various points throughout the fight."*
       Driven: a volley throws no bullet and the enemy pool gains the phase's count of its kind,
@@ -163,6 +171,10 @@ describe('0249 — the eagle summons', () => {
       throws nothing is the last third's alone; and that phase has an escort running under it, so the
       pool holds minnows as well and *how many did the volley call* is a question about one kind.
       What the escort does on its own clock is `0314 — the escort` below.
+
+      ⚠️ **AND OUT OF THE MOUTH SINCE 0373, WHERE 0262 HAD THEM FLANK.** *"Adds should fly out of its
+      mouth."* Where a call starts is `0373 — the fish spits its adds` below; what this holds is that a
+      summons is still a volley that throws nothing and calls a horde, twice.
     */
     for (const [fraction, enemy] of [[0.1, 'kite']] as const) {
       const { world, frame } = volansAt(fraction);
@@ -172,46 +184,51 @@ describe('0249 — the eagle summons', () => {
         for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) n++;
         return n;
       };
+      // The player's fire held: a kite spat out of a mouth that is in the ship's lane (0258) is spat
+      // into the pulse stream, and what is counted here is what the call PUT on the field.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       boss.fireIn = 1;
       frame.step();
       const count = (phaseFor(BOSSES.volans, boss.health, world.bossFullHealth).attack as { count: number }).count;
       expect(called(), `the summons at ${fraction} put ${called()} ${enemy}s on the field`).toBe(count);
       expect(world.enemyShots.size, 'a summons threw bullets as well').toBe(0);
-      /*
-        ⚠️ **FROM THE SIDES SINCE 0262** — *"they marched in gently from the left side in a single
-        file, they didn't swoop or dive bomb."* Every add of a call is outside the lane on the step
-        it is called, on ONE side, steering for a lane inside it; the next call comes from the
-        other side. Ahead of the ship still, and on the screen.
-      */
-      const sides = new Set<number>();
+      const first = new Set<object>();
+      let lean = 0;
       for (let i = 0; i < world.enemies.size; i++) {
         const add = world.enemies.at(i);
         if (add.kind !== world.enemyKinds[enemy]) continue;
+        first.add(add);
+        lean += (add.steerAcross !== 0 ? add.steerAcross : add.across) - boss.across;
         const inView = add.along - world.cameraAlong;
         expect(inView, 'an add arrived behind the ship').toBeGreaterThan(world.ship.along - world.cameraAlong);
-        expect(inView, 'an add arrived a whole view beyond the screen').toBeLessThan(world.view.alongSpan * 2);
-        expect(add.across < 0 || add.across > ACROSS_SPAN, `an add at ${fraction} arrived inside the lane rather than from a side`).toBe(true);
-        expect(add.steerAcross, 'an add from the side is not steering for a lane').toBeGreaterThan(0);
-        expect(add.steerAcross).toBeLessThan(ACROSS_SPAN);
-        sides.add(Math.sign(add.across));
+        expect(inView, 'an add arrived beyond the screen').toBeLessThan(world.view.alongSpan);
       }
-      expect(sides.size, 'one call came from both sides at once').toBe(1);
-      const firstSide = [...sides][0]!;
-      // And again on the next volley, from the other side: a horde is many calls, not one.
+      // And again on the next volley: a horde is many calls, not one.
       boss.fireIn = 1;
       frame.step();
       expect(called(), 'the second volley called nobody').toBe(count * 2);
-      // The newest of THAT kind, because the escort under this phase is filling the pool as well.
-      let latest = world.enemies.at(0);
-      for (let i = 0; i < world.enemies.size; i++) if (world.enemies.at(i).kind === world.enemyKinds[enemy]) latest = world.enemies.at(i);
-      expect(Math.sign(latest.across), 'the second call came from the same side as the first').toBe(-firstSide);
+      /*
+        ⚠️ **AND THE SECOND CALL LEANS THE OTHER WAY — 0262's alternation, on 0373's fan.** A spat
+        fan is skewed half a spacing to the call's side, and `spin` flips a call; two calls that lean
+        the same way are a horde that always comes out of one side of the mouth, which is the file
+        0262 was written against. Read off the lanes the NEW members are steering for.
+      */
+      let second = 0;
+      for (let i = 0; i < world.enemies.size; i++) {
+        const add = world.enemies.at(i);
+        if (add.kind !== world.enemyKinds[enemy] || first.has(add)) continue;
+        second += (add.steerAcross !== 0 ? add.steerAcross : add.across) - boss.across;
+      }
+      expect(Math.sign(lean) * Math.sign(second), `two calls leaned ${lean.toFixed(0)} and ${second.toFixed(0)} from the mouth's lane — the same way`).toBe(-1);
     }
   });
 
   it('THE KITE: Ember Nebula’s horde is a small quick flier that bites once, and no level sends it', () => {
     const kite = ENEMIES.kite;
     expect(kite.health).toBe(1);
-    expect(kite.fireEvery, 'a kite shoots, and a horde that shoots is a wall').toBe(0);
+    // A gun since 0373 — *"adds should be firing"* — where 0249 held that a horde that shoots is a wall.
+    expect(kite.fireEvery, 'a kite does not shoot, and the ask was that the adds fire').toBeGreaterThan(0);
     expect(kite.radius, 'a kite is no smaller than the raptor it is summoned with').toBeLessThan(ENEMIES.raptor.radius);
     expect(kite.closing, 'a kite is slower than the raptor').toBeGreaterThan(ENEMIES.raptor.closing);
     // And it dives — 0262: a hunt harder than any level's pilot, from the side the fish calls it on.
@@ -348,7 +365,8 @@ describe('0313 — the fish breaches', () => {
     const down = flying.filter((p) => p.turn < -0.2).length;
     expect(Math.min(up, down), `the hull turned one way only — ${up} steps up against ${down} down`).toBeGreaterThan(10);
     // And it is level again for the fight: the arrival clears the turn, so nothing patrols on its side.
-    expect(Math.abs(poses[poses.length - 1]!.turn), 'the fish stands on station still tilted from its entrance').toBeLessThan(1e-9);
+    // Level on station, to within the yaw its tail beat gives it — 0374 writes that and nothing else does.
+    expect(Math.abs(poses[poses.length - 1]!.turn), 'the fish stands on station still tilted from its entrance').toBeLessThanOrEqual(ROW.tail?.yaw ?? 1e-9);
   });
 
   it('and every time it goes through the edge the screen says so: four crossings, four sprays of embers and four cracks', () => {
@@ -435,7 +453,6 @@ describe('0314 — the escort', () => {
 
   /** The middle of the band a phase owns, found rather than typed — 0317 moved every one of them. */
   const inside = (at: number): number => (BOSSES.volans.phases[at]!.upTo + (BOSSES.volans.phases[at + 1]?.upTo ?? 0)) / 2;
-  const shoalAt = (): number => inside(BOSSES.volans.phases.findIndex((p) => p.escort?.enemy === "minnow"));
 
   const countOf = (world: ReturnType<typeof playableWorld>['world'], enemy: 'kite' | 'minnow'): number => {
     let n = 0;
@@ -461,146 +478,403 @@ describe('0314 — the escort', () => {
     expect(world.enemyShots.size, 'the fish threw nothing while the escort was arriving — which is a summons again').toBeGreaterThan(0);
   });
 
-  it('and a minnow swims for the FISH and not for the player, which is the reason to react to it', () => {
-    /*
-      ⚠️ **MEASURED AS A JOURNEY AND NOT AS A ROW.** `motion.kind === 'feed'` is what the table says;
-      what the frame does with it is the claim. Three minnows are put a lane's width down-lane of the
-      fish, one near each edge and one in the middle, and half a second is flown: each must end up
-      **closer to the fish than it started and further from the ship than it started**, which is the
-      whole of *it is not coming for you* in the two distances the player can see.
+  /*
+    ⚠️ **THREE GUARDS OF 0314's WERE DELETED HERE WITH THE FEED THEY HELD — 0373.** *A minnow swims for
+    the FISH*, *one that gets there is EATEN* and *feeding can never push it back into a phase it has
+    left* were each true of a mechanism the play called *"pretty meaningless"* and then *"trash"*, and
+    the mechanism is gone: the shoal is spat at the player now. A guard that outlives its subject is
+    what 0192 calls a guard to delete, and a decision says why rather than a diff.
+  */
 
-      ⚠️ **PLACED RATHER THAN CALLED, because a shoal called by the escort arrives over four seconds in
-      ones and twos.** A guard that walks whatever happens to be on the field is measuring the escort's
-      clock as well as the motion, and the two failure modes it would then have are not tellable apart.
-    */
-    const at = shoalAt();
-    const { world, frame } = flown(at);
-    const lord = world.bossPool.at(0);
-    const ship = world.ship;
-    ship.along = world.cameraAlong + 30;
-    ship.across = ACROSS_SPAN / 2;
-    const placed = [12, 50, 88].map((across) => {
-      const fry = world.enemies.spawn()!;
-      reset(fry, lord.along - 70, across, ENEMIES.minnow, world.enemyKinds.minnow);
-      return { fry, toLord: Math.hypot(lord.along - fry.along, lord.across - fry.across), toShip: Math.hypot(ship.along - fry.along, ship.across - fry.across) };
-    });
-    for (let i = 0; i < 30; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * at;
+  /** The mouth, as the guards below read it: the drawn radius ahead of the hull's centre, along its heading. */
+  const mouthOf = (world: ReturnType<typeof playableWorld>['world']): { along: number; across: number; reach: number } => {
+    const boss = world.bossPool.at(0);
+    // The painter's radius is 0.42 of the tile (`drawKind`), and the snout is at −1 of it.
+    const reach = SPRITE_EXTENT[SPRITE_KINDS[world.bossRow.sprite]!]! * 0.42;
+    return { along: boss.along - Math.cos(boss.turn) * reach, across: boss.across - Math.sin(boss.turn) * reach, reach };
+  };
+
+  /** Fly a phase with the player's fire held until `enemy` first appears; the pool on that step, and what the fish wore. */
+  function firstCall(fraction: number, enemy: 'kite' | 'minnow'): { world: ReturnType<typeof playableWorld>['world']; adds: { along: number; across: number; velAlong: number; velAcross: number; steerAcross: number }[]; gaped: boolean } {
+    const { world, frame } = flown(fraction);
+    const face = BOSSES.volans.face!;
+    for (let i = 0; i < 600; i++) {
+      world.bossPool.at(0).health = world.bossFullHealth * fraction;
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 2;
       world.fireIn = Number.MAX_SAFE_INTEGER;
       world.missileIn = Number.MAX_SAFE_INTEGER;
+      const before = countOf(world, enemy);
+      const gapedBefore = world.bossPool.at(0).spriteBase === face.gape || world.bossPool.at(0).spriteBase === (phaseFor(BOSSES.volans, world.bossPool.at(0).health, world.bossFullHealth).look?.face.gape ?? -1);
       frame.step();
-    }
-    for (const { fry, toLord, toShip } of placed) {
-      const nowLord = Math.hypot(lord.along - fry.along, lord.across - fry.across);
-      const nowShip = Math.hypot(ship.along - fry.along, ship.across - fry.across);
-      expect(nowLord, `a minnow started ${toLord.toFixed(0)} from the fish and is ${nowLord.toFixed(0)} away half a second later`).toBeLessThan(toLord - 5);
-      expect(nowShip, `a minnow closed on the SHIP, which is what every other add in the game does`).toBeGreaterThan(toShip);
-      /*
-        ⚠️ **AND IT IS DRAWN FACING THE WAY IT SWIMS — 0027, AND THE SPRITE SHEET FOUND IT.** Every
-        hull is baked facing down the lane because every hull goes that way. This one goes up it, so
-        the first photograph of it was a fish swimming to the fish **tail first**, with every
-        assertion about its position green over the top. `turn` is what the painter is handed.
-      */
-      const heading = Math.atan2(fry.velAcross, fry.velAlong - world.scrollPerStep);
-      const want = heading - Math.PI;
-      const swing = Math.abs(Math.atan2(Math.sin(fry.turn - want), Math.cos(fry.turn - want)));
-      expect(swing, `a minnow is drawn ${((swing * 180) / Math.PI).toFixed(0)}° away from the way it is swimming`).toBeLessThan(0.2);
-    }
-  });
-
-  it('and one that gets there is EATEN, so the fish gains health the player has to take off again', () => {
-    /*
-      ⚠️ **THE WHOLE TRADE, ASKED AS THE PLAYER WOULD ASK IT: what does letting one past cost me?** The
-      minnow is put where it would arrive, one step is flown, and the answer is in health — the unit the
-      player spends their whole fight in. Nothing here asserts how big a bite is; what it asserts is
-      that it is a bite.
-    */
-    const at = shoalAt();
-    const world = hold(at, 60);
-    const lord = world.bossPool.at(0);
-    lord.health = world.bossFullHealth * at;
-    const before = lord.health;
-    world.enemies.clear();
-    const fry = world.enemies.spawn()!;
-    reset(fry, lord.along, lord.across, ENEMIES.minnow, world.enemyKinds.minnow);
-    const frame = new GameFrame(world);
-    world.fireIn = Number.MAX_SAFE_INTEGER;
-    world.missileIn = Number.MAX_SAFE_INTEGER;
-    frame.step();
-    expect(countOf(world, 'minnow'), 'the minnow reached the fish and is still on the field').toBe(0);
-    expect(lord.health, `the fish ate a minnow and gained ${(lord.health - before).toFixed(0)} health`).toBeGreaterThan(before);
-    const feeds = ENEMIES.minnow.motion.kind === 'feed' ? ENEMIES.minnow.motion.feeds : 0;
-    expect(lord.health - before, 'a bite is worth more than the row says').toBeLessThanOrEqual(feeds);
-  });
-
-  it('and feeding can never push it back into a phase it has left, which is the floor under the trade', () => {
-    /*
-      ⚠️ **A PHASE IS KEYED TO REMAINING HEALTH** (`docs/game.md`), so an unclamped heal walks the fight
-      BACKWARDS through the table — the look, the cadence and the attack all reverting, and 0111's phase
-      burst firing again on the way down. The ceiling is the phase's own `upTo`: everything the player
-      did inside this phase is undoable and nothing before it is.
-    */
-    const row = BOSSES.volans;
-    const world = hold(shoalAt(), 60);
-    const lord = world.bossPool.at(0);
-    const phase = phaseFor(row, world.bossFullHealth * 0.3, world.bossFullHealth);
-    // Right at the top of the phase, where one more bite would cross it.
-    lord.health = world.bossFullHealth * phase.upTo - 1;
-    const frame = new GameFrame(world);
-    world.enemies.clear();
-    for (let i = 0; i < 3; i++) {
-      const fry = world.enemies.spawn()!;
-      reset(fry, lord.along, lord.across, ENEMIES.minnow, world.enemyKinds.minnow);
-    }
-    world.fireIn = Number.MAX_SAFE_INTEGER;
-    world.missileIn = Number.MAX_SAFE_INTEGER;
-    frame.step();
-    expect(lord.health, `three bites put the fish at ${lord.health.toFixed(0)}, over the ${(world.bossFullHealth * phase.upTo).toFixed(0)} its phase begins at`).toBeLessThanOrEqual(world.bossFullHealth * phase.upTo);
-    expect(phaseFor(row, lord.health, world.bossFullHealth).upTo, 'feeding put the fish back into a phase it had left').toBe(phase.upTo);
-  });
-
-  it('and a horde comes in from the end of the lane the thing it is COMING FOR is at, and no level sends a minnow', () => {
-    /*
-      ⚠️ **THE PAIRING 0317 MEASURED, AND IT IS THE WHOLE OF WHY THE SHOAL WORKS.** A horde that hunts
-      the ship flanks from the SIDES — 0262 was reported for the version that marched down the lane. A
-      horde that feeds the BOSS must come from the LEAD, past it, with its hull between them and a
-      stream of auto-fire that cannot be switched off: from the sides, nineteen were called in a fight
-      and not one arrived, and from the lead twenty-two of forty-nine do.
-    */
-    const row = BOSSES.volans;
-    for (const phase of row.phases) {
-      if (phase.escort === undefined) continue;
-      const feeds = ENEMIES[phase.escort.enemy].motion.kind === 'feed';
-      expect(phase.escort.from, `a ${phase.escort.enemy} escort comes in from the ${phase.escort.from}, and it is ${feeds ? 'coming for the boss' : 'coming for the ship'}`).toBe(feeds ? 'lead' : 'sides');
-    }
-    /*
-      ⚠️ **AND THE KITES STILL ALTERNATE, SAMPLED ON THE STEP THEY ARRIVE.** Reading the pool at the
-      end asks where a horde IS, and by then every one of them is inside the lane on its way somewhere,
-      which is the same answer whichever edge it entered over. The shoal has no side to alternate any
-      more — it comes past the fish, from one end — so what is asked of it is that it ARRIVES, which is
-      `one that gets there is EATEN` above.
-    */
-    const kiteAt = inside(row.phases.findIndex((p) => p.escort?.enemy === 'kite'));
-    const { world, frame } = flown(kiteAt);
-    const seen = new Set<number>();
-    for (let i = 0; i < 400; i++) {
-      world.bossPool.at(0).health = world.bossFullHealth * kiteAt;
-      world.ship.health = world.shipRow.health;
-      world.ship.invulnFor = 2;
-      world.fireIn = Number.MAX_SAFE_INTEGER;
-      world.missileIn = Number.MAX_SAFE_INTEGER;
-      frame.step();
+      if (countOf(world, enemy) <= before) continue;
+      const adds: { along: number; across: number; velAlong: number; velAcross: number; steerAcross: number }[] = [];
       for (let k = 0; k < world.enemies.size; k++) {
         const add = world.enemies.at(k);
-        if (add.kind === world.enemyKinds.kite && (add.across < 0 || add.across > ACROSS_SPAN)) seen.add(Math.sign(add.across));
+        if (add.kind !== world.enemyKinds[enemy]) continue;
+        adds.push({ along: add.along, across: add.across, velAlong: add.velAlong, velAcross: add.velAcross, steerAcross: add.steerAcross });
+      }
+      return { world, adds, gaped: gapedBefore };
+    }
+    throw new Error(`no ${enemy} was ever called at ${fraction} of the bar`);
+  }
+
+  it('0373 — THE ASKED-FOR ONE: every horde the fish calls comes OUT OF ITS MOUTH, thrown down the lane at the player', () => {
+    /*
+      ⚠️ **MEASURED ON THE STEP THE ADDS APPEAR, IN THE UNITS OF THE DRAWING.** *"Adds should fly out of
+      its mouth to attack the player."* The mouth is where the painter put it — the drawn radius ahead
+      of the hull's centre, along the heading it wears — and a body that came out of it is within a
+      hurtbox of that point on its first step, ahead of the fish's centre, and moving DOWN the lane in
+      the camera's frame. Every phase that calls anything is asked, escorts and the summons alike.
+
+      ⚠️ **AND THE JAW WAS OPEN, ON THE STEP BEFORE.** A horde out of a shut mouth is a horde out of
+      nowhere — 0036 — so what the fish wore as they came is asked beside where they came from.
+    */
+    const row = BOSSES.volans;
+    let asked = 0;
+    for (let index = 0; index < row.phases.length; index++) {
+      const phase = row.phases[index]!;
+      const called = phase.escort?.enemy ?? (phase.attack?.kind === 'summon' ? phase.attack.enemy : undefined);
+      if (called === undefined) continue;
+      expect(phase.escort?.from ?? 'mouth', `phase ${index + 1}'s escort does not come from the mouth`).toBe('mouth');
+      if (phase.attack?.kind === 'summon') expect(phase.attack.from, `phase ${index + 1}'s summons does not come from the mouth`).toBe('mouth');
+      const { world, adds, gaped } = firstCall(inside(index), called as 'kite' | 'minnow');
+      const mouth = mouthOf(world);
+      const boss = world.bossPool.at(0);
+      expect(adds.length, `phase ${index + 1} called nobody`).toBeGreaterThan(0);
+      for (const add of adds) {
+        const off = Math.hypot(add.along - mouth.along, add.across - mouth.across);
+        expect(off, `phase ${index + 1}: a ${called} appeared ${off.toFixed(1)} units from the mouth, which is not out of it`).toBeLessThan(boss.radius);
+        expect(add.along, `phase ${index + 1}: a ${called} appeared behind the fish's centre`).toBeLessThan(boss.along - mouth.reach / 2);
+        expect(add.velAlong - world.scrollPerStep, `phase ${index + 1}: a ${called} left the mouth flying UP the lane, away from the player`).toBeLessThan(0);
+      }
+      expect(gaped, `phase ${index + 1}: the fish's mouth was shut on the step its ${called}s came out of it`).toBe(true);
+      asked++;
+    }
+    expect(asked, 'no phase of the fish calls a horde at all').toBeGreaterThanOrEqual(3);
+  });
+
+  it('0373 — and they FAN: one call takes lanes a ship’s width apart, so a horde is a spread and not a stream', () => {
+    /*
+      ⚠️ **IN LANE UNITS, ON THE STEP THEY LEAVE.** Each spat body is steering for a lane of its own;
+      the spread of those lanes across one call is the fan the player sees open. Ten units is over
+      two ship-widths — a call of two or three from one point that lands inside ten units is a clump
+      the player answers as one target, which is the *"boring line"* 0314 was written against.
+    */
+    const row = BOSSES.volans;
+    const kiteAt = inside(row.phases.findIndex((p) => p.escort?.enemy === 'kite'));
+    const { adds } = firstCall(kiteAt, 'kite');
+    expect(adds.length, 'the kites are called one at a time, so there is no fan to measure').toBeGreaterThan(1);
+    const lanes = adds.map((add) => (add.steerAcross !== 0 ? add.steerAcross : add.across));
+    const spread = Math.max(...lanes) - Math.min(...lanes);
+    expect(spread, `one call of ${adds.length} kites left the mouth for lanes ${spread.toFixed(1)} units apart, which is a clump`).toBeGreaterThanOrEqual(10);
+    for (const add of adds) {
+      expect(add.steerAcross !== 0 || add.velAcross === 0, 'a spat kite is not steering for a lane').toBe(true);
+    }
+  });
+
+  it('0373 — and the adds FIRE: a phase flown with the fish itself silenced still puts shots on the field', () => {
+    /*
+      ⚠️ **THE FISH'S OWN FAN IS HELD, SO EVERY SHOT COUNTED IS AN ADD'S.** *"Adds should be firing."*
+      Both rows say so — `fireEvery` above zero — and this is the half a row cannot claim: that a horde
+      spat in a fight, with the ship parked where it is, actually gets a shot away before it dies or
+      passes. Eight seconds, which is over three calls.
+    */
+    expect(ENEMIES.minnow.fireEvery, 'the minnow has no gun').toBeGreaterThan(0);
+    expect(ENEMIES.kite.fireEvery, 'the kite has no gun').toBeGreaterThan(0);
+    const row = BOSSES.volans;
+    for (const enemy of ['minnow', 'kite'] as const) {
+      const at = inside(row.phases.findIndex((p) => p.escort?.enemy === enemy));
+      const { world, frame } = flown(at);
+      let shots = 0;
+      for (let i = 0; i < 480; i++) {
+        world.bossPool.at(0).health = world.bossFullHealth * at;
+        world.bossPool.at(0).fireIn = 999;
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 2;
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        const before = world.enemyShots.size;
+        frame.step();
+        if (world.enemyShots.size > before) shots += world.enemyShots.size - before;
+      }
+      expect(shots, `eight seconds of ${enemy}s put no shot on the field — the adds are not firing`).toBeGreaterThan(0);
+    }
+  });
+
+  it('0373 — and a spat add LIVES to leave the mouth: under the cap’s pulse on a parked ship, one is on the field for a fifth of a second', () => {
+    /*
+      ⚠️ **THE CASE THAT KILLED EVERY ADD THE FIRST DRAFT SPAT, MEASURED AS THE INSTRUMENT MEASURED
+      IT.** The fish stalks the player's lane (0258), so its mouth sits in the player's own column of
+      fire, and a body born there was born inside shots already in flight: one to nine steps, on every
+      gun, whatever speed it left at. What is asked is the median lifetime of an add in a fight
+      against the cap's pulse from a parked ship — in seconds, because that is what *nobody ever sees
+      them* is a claim about. The floor is between what was traced (0.1 s) and the grace's own length.
+    */
+    const { world } = playableWorld(VOLANS_ONLY, 'savior');
+    const frame = new GameFrame(world);
+    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
+    wearHull(world);
+    const born = new Map<object, number>();
+    const lived: number[] = [];
+    let start = -1;
+    for (let step = 0; step < 6000; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      if (world.bossPool.size > 0 && world.bossEntering < 0) {
+        const boss = world.bossPool.at(0);
+        if (start < 0) start = step;
+        world.ship.prevAcross = world.ship.across;
+        world.ship.across = ACROSS_SPAN / 2;
+        world.ship.prevAlong = world.ship.along;
+        world.ship.along = boss.along - boss.radius - 60;
+      }
+      frame.step();
+      if (start < 0) continue;
+      const alive = new Set<object>();
+      for (let i = 0; i < world.enemies.size; i++) {
+        const e = world.enemies.at(i);
+        alive.add(e);
+        if (!born.has(e)) born.set(e, step);
+      }
+      for (const [e, at] of born) {
+        if (alive.has(e)) continue;
+        lived.push(step - at);
+        born.delete(e);
+      }
+      if (world.bossPool.size === 0) break;
+    }
+    expect(lived.length, 'no add was ever spat and finished in a whole fight').toBeGreaterThan(10);
+    const sorted = [...lived].sort((a, b) => a - b);
+    const median = sorted[Math.floor(sorted.length / 2)]! / 60;
+    expect(median, `a spat add lives ${median.toFixed(2)}s under the cap's pulse — dead before anyone saw it leave the mouth`).toBeGreaterThanOrEqual(0.2);
+  });
+
+  it('0373 — and no level sends a minnow or a kite, which are the fish’s to spit', () => {
+    for (const level of Object.values(LEVELS)) {
+      for (const wave of level.waves) {
+        expect(wave.enemy, 'a level authors the minnow, which is the fish’s to call').not.toBe('minnow');
+        expect(wave.enemy, 'a level authors the kite, which is the fish’s to call').not.toBe('kite');
       }
     }
-    expect(seen.size, 'every call of the kites came in over the same edge').toBeGreaterThan(1);
-    for (const level of Object.values(LEVELS)) {
-      for (const wave of level.waves) expect(wave.enemy, 'a level authors the minnow, which is the fish’s to call').not.toBe('minnow');
+  });
+});
+
+/**
+ * The fish beats its tail — `docs/decisions/0374-the-fish-beats-its-tail.md`. *"Animation should be
+ * better."*
+ *
+ * ⚠️ **EVERY CLAIM IS ABOUT THE PICTURE THE FRAME LAYS OUT, IN THE PLAYER'S UNITS** — 0027: where the
+ * tail's body is put, how far its tip travels on the screen, what it wears when the fish is hit, and
+ * what the two drawings reach. The row says there is a tail; the frame is what puts one on the animal.
+ */
+describe('0374 — the fish beats its tail', () => {
+  const ROW = BOSSES.volans;
+  /** The fish on station, its fire held, the ship alive and parked. */
+  function onStation(): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame } {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
     }
+    expect(world.bossPool.size, 'the fish never arrived').toBe(1);
+    return { world, frame };
+  }
+  /** The tail's body this step, or `null`: the aura layer's entity wearing one of the tail's two faces. */
+  function tailOf(world: ReturnType<typeof playableWorld>['world'], art: { sprite: number; spriteHit: number }): { along: number; across: number; turn: number; sprite: number } | null {
+    for (let i = 0; i < world.bossAura.size; i++) {
+      const e = world.bossAura.at(i);
+      if (e.sprite === art.sprite || e.sprite === art.spriteHit) return { along: e.along, across: e.across, turn: e.turn, sprite: e.sprite };
+    }
+    return null;
+  }
+  /** The short way round between two headings. */
+  const swingBetween = (a: number, b: number): number => Math.atan2(Math.sin(a - b), Math.cos(a - b));
+
+  it('THE ASKED-FOR ONE: the tail is a body of its own behind the hull, rooted on the peduncle, and it BEATS', () => {
+    const tail = ROW.tail;
+    if (tail === null) throw new Error('the fish has no tail');
+    const { world, frame } = onStation();
+    const head = world.bossPool.at(0);
+    const hold = (): void => {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      head.fireIn = 999;
+      frame.step();
+    };
+    let most = -Infinity;
+    let least = Infinity;
+    let rootOff = 0;
+    let seen = 0;
+    for (let i = 0; i < tail.beat * 2; i++) {
+      hold();
+      const fin = tailOf(world, tail.art);
+      if (fin === null) continue;
+      seen++;
+      // Rooted on the peduncle: `root` units from the hull's centre, along the hull's own heading.
+      const want = { along: head.along + Math.cos(head.turn) * tail.root, across: head.across + Math.sin(head.turn) * tail.root };
+      rootOff = Math.max(rootOff, Math.hypot(fin.along - want.along, fin.across - want.across));
+      const relative = swingBetween(fin.turn, head.turn);
+      most = Math.max(most, relative);
+      least = Math.min(least, relative);
+    }
+    expect(seen, 'the tail was never on the field over two beats').toBe(tail.beat * 2);
+    expect(rootOff, `the tail's root strayed ${rootOff.toFixed(2)} units from the peduncle`).toBeLessThan(0.05);
+    /*
+      ⚠️ **THE TIP'S TRAVEL, IN CSS PIXELS OF A 1280×720 SCREEN.** A sweep is a number on the row; what
+      the player watches is the lobe moving. The lobes sit at 0.91 of the tail tile's drawing radius, so
+      the tip is that far from the root, and the travel is the chord of the relative swing.
+    */
+    // The painter draws in a radius of 0.42 of the tile (`drawKind`), and the lobes sit at 0.91 of it.
+    const tip = SPRITE_EXTENT[SPRITE_KINDS[tail.art.sprite]!]! * 0.42 * 0.91;
+    const travel = tip * Math.abs(Math.sin(most) - Math.sin(least));
+    const px = travel * viewOf(1280, 720).scale;
+    expect(most, 'the tail never swung to one side').toBeGreaterThan(tail.sweep * 0.8);
+    expect(least, 'the tail never swung to the other side').toBeLessThan(-tail.sweep * 0.8);
+    expect(px, `the tail's tip travels ${px.toFixed(1)} CSS pixels a beat on a 1280×720 screen, which is not a beat anyone sees`).toBeGreaterThan(12);
+  });
+
+  it('and the hull yaws AGAINST it, a fraction of the sweep the other way, so the beat is a swim and not a flag', () => {
+    const tail = ROW.tail;
+    if (tail === null) throw new Error('the fish has no tail');
+    const { world, frame } = onStation();
+    const head = world.bossPool.at(0);
+    let yawMost = 0;
+    let against = 0;
+    let with_ = 0;
+    for (let i = 0; i < tail.beat * 2; i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      head.fireIn = 999;
+      frame.step();
+      const fin = tailOf(world, tail.art);
+      if (fin === null) continue;
+      yawMost = Math.max(yawMost, Math.abs(head.turn));
+      const relative = swingBetween(fin.turn, head.turn);
+      if (Math.abs(relative) < 0.05 || Math.abs(head.turn) < 0.005) continue;
+      if (Math.sign(relative) === -Math.sign(head.turn)) against++;
+      else with_++;
+    }
+    expect(yawMost, `the hull yawed ${yawMost.toFixed(3)} radians at most, and the row asks ${tail.yaw}`).toBeGreaterThan(tail.yaw * 0.8);
+    expect(yawMost, 'the hull yaws as far as the tail sweeps, which is a flag on a pole').toBeLessThan(tail.sweep * 0.5);
+    expect(against, 'the hull never turned against its tail').toBeGreaterThan(0);
+    expect(with_, `the hull turned WITH its tail on ${with_} steps`).toBe(0);
+  });
+
+  it('and the tail wears the hull’s own hurt: a hit lights the fin with the flesh it is joined to', () => {
+    const tail = ROW.tail;
+    if (tail === null) throw new Error('the fish has no tail');
+    const { world, frame } = onStation();
+    const head = world.bossPool.at(0);
+    const step = (): void => {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      head.fireIn = 999;
+      frame.step();
+    };
+    step();
+    expect(tailOf(world, tail.art)?.sprite, 'the tail is lit with nothing having hit the fish').toBe(tail.art.sprite);
+    // A hit, as `strike` leaves it: the flash is on for its steps.
+    head.flashFor = 4;
+    step();
+    expect(tailOf(world, tail.art)?.sprite, 'the fish is flashing and its tail is not').toBe(tail.art.spriteHit);
+    for (let i = 0; i < 8; i++) step();
+    expect(tailOf(world, tail.art)?.sprite, 'the flash is over and the tail is still lit').toBe(tail.art.sprite);
+  });
+
+  it('and the body has no tail of its own any more: the hull ends at a stump, and the tail’s own hull reaches past it from a root at its centre', () => {
+    /*
+      ⚠️ **READ OFF THE DRAWINGS, IN THE PAINTER'S OWN UNITS.** If the body still carried a caudal fin
+      the animal would have two, and the beat would be a fin waving beside a fin. The stump ends short
+      of where the tail root sits plus a hull's width of overlap; the tail's hull starts behind its own
+      centre — the root — and reaches well aft of it.
+    */
+    const tail = ROW.tail;
+    if (tail === null) throw new Error('the fish has no tail');
+    const hullOf = (index: number): readonly (readonly [number, number])[] => {
+      const kind = SPRITE_KINDS[index]!;
+      const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'nebula');
+      return trace.passes[0]!.subpaths[0]!.map(([x, y]) => [(x - size / 2) / (size * 0.42), (y - size / 2) / (size * 0.42)] as const);
+    };
+    const bodyAft = Math.max(...hullOf(ROW.sprite).map(([x]) => x));
+    expect(bodyAft, `the body reaches ${bodyAft.toFixed(2)} of its radius aft, which is a fin still on it`).toBeLessThan(0.9);
+    const finXs = hullOf(tail.art.sprite).map(([x]) => x);
+    expect(Math.min(...finXs), 'the tail’s hull does not reach back past its own root').toBeLessThan(-0.05);
+    expect(Math.max(...finXs), 'the tail’s hull reaches nowhere aft of its root').toBeGreaterThan(0.35);
+    // And the root's place on the hull is inside the stump's overlap: the body covers the join.
+    const bodyRadius = SPRITE_EXTENT[SPRITE_KINDS[ROW.sprite]!]! * 0.42;
+    expect(tail.root / bodyRadius, 'the tail is rooted past the body’s stump, so the join shows').toBeLessThan(bodyAft);
+  });
+
+  it('and it is laid LAST in the layer behind the hull, so it is drawn over the fire and under the flesh', () => {
+    const tail = ROW.tail;
+    const ablaze = phaseFor(ROW, ROW.health * 0.1, ROW.health).look;
+    if (tail === null || ablaze === null || ablaze.aura === null) throw new Error('the fish has no tail or no fire');
+    const { world, frame } = onStation();
+    const head = world.bossPool.at(0);
+    for (let i = 0; i < 12; i++) {
+      head.health = world.bossFullHealth * 0.1;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      head.fireIn = 999;
+      frame.step();
+    }
+    expect(world.bossAura.size, 'the burning fish has no flame or no tail behind it').toBe(2);
+    const last = world.bossAura.at(world.bossAura.size - 1);
+    const worn = ablaze.tail ?? tail.art;
+    expect(last.sprite === worn.sprite || last.sprite === worn.spriteHit, 'the last body in the layer is not the tail, so the fire is drawn over the fin').toBe(true);
+  });
+});
+
+/**
+ * The breach has a body — `docs/decisions/0375-the-breach-has-a-body.md`. *"Intro sound is terrible."*
+ *
+ * ⚠️ **A TEST CANNOT HEAR, SO WHAT IS HELD IS THE SHAPE `scripts/weigh-cue.mjs` READS OFF THE ROW** —
+ * the same bands and the same centroid, with the bound read off the two rows that bracket it: the
+ * one the report was about, and the one that answered it.
+ */
+describe('0375 — the breach has a body', () => {
+  it('THE ASKED-FOR ONE: the breach’s weight is below the middle of the spectrum, and its centre of gravity does not climb', () => {
+    /*
+      ⚠️ **MEASURED, BEFORE AND AFTER, AND THE BOUNDS SIT BETWEEN.** The row 0313 wrote weighed `low`
+      0.15 and `lowmid` 0.25 against `hi` 1.00, and its centroid ROSE 6.8 dB from onset to tail — a
+      hiss with a click on the front. The re-voice weighs 0.72 and 0.55 and falls 0.7 dB. The floors
+      below are between the two rows on both axes, with the margin on the side of the fix, which is
+      how 0140 and 0179 set theirs.
+    */
+    const row = CUES.bossBreach;
+    const samples = sampleCue(row, SAMPLE_RATE, makeRng('cues').stream('bossBreach'));
+    const shares = spectrum(samples, SAMPLE_RATE);
+    const share = (name: string): number => shares[BANDS.findIndex(([, , band]) => band === name)]!;
+    const body = share('low') + share('lowmid');
+    expect(body, `the breach's low and low-mid bands share ${body.toFixed(2)} of its loudest, which is a hiss and not a body`).toBeGreaterThanOrEqual(0.8);
+    const seconds = cueSeconds(row);
+    const onset = centroid(samples, 0, Math.min(0.025, seconds / 3), SAMPLE_RATE);
+    const tail = centroid(samples, (seconds * 2) / 3, seconds, SAMPLE_RATE);
+    const climb = 20 * Math.log10(tail / onset);
+    expect(climb, `the breach starts at ${onset.toFixed(0)}Hz and ends at ${tail.toFixed(0)}Hz, a climb of ${climb.toFixed(1)}dB — a body leaves its top behind`).toBeLessThanOrEqual(2);
+  });
+
+  it('and the spit is a tenth of a second with a picture, because it says WHERE and the bodies say WHAT', () => {
+    const row = CUES.bossSpit;
+    expect(row.twin, 'the spit has no picture').toBe('spit-appears');
+    expect(cueSeconds(row), 'the spit is longer than a thing leaving a mouth').toBeLessThanOrEqual(0.25);
+    expect(BURST.spit, 'the spray at the mouth is the size of a death, which nothing died for').toBeLessThan(BURST.enemy);
   });
 });
 
@@ -1068,7 +1342,7 @@ describe('0319 — the fish has a face', () => {
     ).toBe(true);
   });
 
-  it('and the GAPE is the volley’s own tell: every open mouth is followed by shots, and the mouth is shut the rest of the time', () => {
+  it('and the GAPE is the volley’s own tell: every open mouth is followed by shots or by a horde, and the mouth is shut the rest of the time', () => {
     /*
       ⚠️ **THE HALF THE SERPENT'S SUITE NEVER ASKED, AND IT IS THE HALF THAT MAKES A TELL A TELL.** The
       guard above silences the gun to test the snap; this one lets it fire and asks the opposite
@@ -1095,10 +1369,13 @@ describe('0319 — the fish has a face', () => {
     for (let i = 0; i < 900; i++) {
       world.ship.health = world.shipRow.health;
       const before = world.enemyShots.size;
+      const standing = world.enemies.size;
       frame.step();
       if (world.bossPool.size === 0) break;
       // A VOLLEY is three or more at once: this boss throws five to seven, and an escort throws one.
-      if (world.enemyShots.size - before >= 3) volleys.push(i);
+      // And a horde leaving the mouth is a thing that came out of it too — 0373: the jaw opens for a
+      // spit on the escort's clock, and what the player learns is the same sentence.
+      if (world.enemyShots.size - before >= 3 || world.enemies.size > standing) volleys.push(i);
       if (world.bossPool.at(0).spriteBase === face.gape) gaped.push(i);
     }
     expect(gaped.length, 'the fish never opened its mouth in fifteen seconds of fighting, so the tell never fires').toBeGreaterThan(0);
@@ -1181,7 +1458,9 @@ describe('0320 — the fish kindles', () => {
       world.step(1 - i / 40);
       if (world.bossPool.size === 0) break;
       const boss = world.bossPool.at(0);
-      const burning = world.bossAura.size > 0 ? SPRITE_KINDS[world.bossAura.at(0).sprite]! : 'cold';
+      // A flame is an ember frame; the tail lives in the same layer since 0374 and is not fire.
+      let burning = 'cold';
+      for (let k = 0; k < world.bossAura.size; k++) if (SPRITE_KINDS[world.bossAura.at(k).sprite]!.startsWith('volansEmber')) burning = SPRITE_KINDS[world.bossAura.at(k).sprite]!;
       const body = SPRITE_KINDS[boss.spriteBase]!.startsWith('boss9Barbed') ? 'grown' : 'calm';
       // The ember cycles six frames, so what identifies a LOOK is that it is burning rather than which.
       const worn = `${body}/${burning === 'cold' ? 'cold' : 'lit'}`;
@@ -1203,7 +1482,9 @@ describe('0320 — the fish kindles', () => {
     const world = standing();
     const burning = (at: number): boolean => {
       world.step(at);
-      return world.bossAura.size > 0;
+      // A flame is an ember frame; the tail lives in the same layer since 0374 and is not fire.
+      for (let k = 0; k < world.bossAura.size; k++) if (SPRITE_KINDS[world.bossAura.at(k).sprite]!.startsWith('volansEmber')) return true;
+      return false;
     };
     expect(burning(0.95), 'the fish is already on fire at full health, so the fire says nothing about the fight').toBe(false);
     expect(burning(0.8), 'the fish is burning in its second phase, which is before it throws any flame').toBe(false);
@@ -1269,9 +1550,17 @@ describe('0320 — the fish kindles', () => {
         `the kindled fish is a different width at ${at.toFixed(2)} along, so the part of it a player flies INTO moved`,
       ).toBeCloseTo(spanAt(calm, at), 2);
     }
-    // And something did rise: further aft than the fish it grew from, or nothing grew at all.
-    const back = (hull: readonly (readonly [number, number])[]): number => Math.max(...hull.map(([x]) => x));
-    expect(back(grown), 'the kindled fish reaches no further aft than the calm one').toBeGreaterThan(back(calm));
+    /*
+      And something did rise: further aft than the fish it grew from, or nothing grew at all.
+
+      ⚠️ **READ OFF THE TAIL SINCE 0374, BECAUSE THE BODY NO LONGER HAS ONE.** The caudal fin is a
+      bitmap of its own on both bodies, so what the grown body reaches aft is the grown TAIL's reach;
+      the two bodies end at the same stump by construction and the guard above holds it.
+    */
+    const tail = BOSSES.volans.tail;
+    if (tail === null || ablaze.tail === undefined) throw new Error('the fish has no tail to have grown');
+    const back = (index: number): number => Math.max(...hullOf(index).map(([x]) => x));
+    expect(back(ablaze.tail.sprite), 'the kindled fish’s tail reaches no further aft than the calm one’s').toBeGreaterThan(back(tail.art.sprite));
   });
 });
 
