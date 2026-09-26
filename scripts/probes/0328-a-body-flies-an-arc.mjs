@@ -96,14 +96,16 @@ export const PROBES = [
   {
     decision: '0328',
     suite: 'tests/level.test.ts',
-    // A side-entering swift authored at lane 30: its U carries it fifty units back toward the edge
+    // A side-entering swift authored at lane 20: its U carries it fifty units back toward the edge
     // it came by, past the roam band, where the cull deletes it mid-turn.
+    // ⚠️ Re-aimed by 0382, which made the guard read lanes in WORLD units: a share of 30 is 36
+    // units across, and fifty back from there is still inside the band. Twenty is 24.
     broke: 'a flanking swift authored where its U leaves the roam band',
     guard: 'never puts an enemy where it can leave the ROAM band',
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },",
-      replace: "  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },",
+      replace: "  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 20, origin: 'acrossMinus' },",
     },
   },
 ];

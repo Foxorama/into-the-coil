@@ -71,7 +71,10 @@ fans (0073), and a member dealt the outward leg from a lane near an edge leaves 
 - **The lane-edge guard reads world units.** `membersOf` in `tests/level.test.ts` added the 0..100
   lane share to offsets and compared it with `ROAM_MIN`/`ROAM_MAX` and `ACROSS_SPAN`, which have been
   world units since 0364 made the lane 120 wide. It under-read every plus-side reach by up to twenty
-  units. Nothing authored reddened when it started reading correctly.
+  units. Nothing authored reddened when it started reading correctly, and two probes that had been
+  breaking it in share units stopped reaching the band — 0040's weaver line and 0328's flanking
+  swift — and were re-aimed at lanes that leave it in world units. The full proof found them, not
+  the suites: a guard that reads a new unit strands the probes written in the old one.
 
 ## What the first draft cost, and why it is not the rule
 

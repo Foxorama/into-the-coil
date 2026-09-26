@@ -39,8 +39,12 @@ export const PROBES = [
     guard: 'never puts an enemy where it can leave the ROAM band and be culled',
     edit: {
       path: 'src/content/levels.ts',
+      // ⚠️ Re-aimed by 0382, which made the guard read lanes in WORLD units: a share of 20 is 24
+      // units across and no longer clears the band with this weaver's swing, so the lane is 10. The
+      // `at` stays where it was, because moving it to 960 reddened the ordering guard as well and
+      // that is not the guard this probe is for.
       find: "  { at: 725, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
-      replace: "  { at: 960, enemy: 'weaver', formation: 'line', count: 5, lane: 20 },",
+      replace: "  { at: 725, enemy: 'weaver', formation: 'line', count: 5, lane: 10 },",
     },
   },
   /*
