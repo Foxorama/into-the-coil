@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the tail is a body of its own behind the hull, rooted on the peduncle, and it BEATS',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'tail: { art: VOLANS_TAIL, root: 13.4, beat: 26, sweep: 0.42, yaw: 0.06 },',
-      replace: 'tail: { art: VOLANS_TAIL, root: 13.4, beat: 26, sweep: 0, yaw: 0.06 },',
+      // ⚠️ Re-anchored by 0381, which grew the fish and re-tuned the beat.
+      find: 'tail: { art: VOLANS_TAIL, root: 16, beat: 32, sweep: 0.34, yaw: 0 },',
+      replace: 'tail: { art: VOLANS_TAIL, root: 16, beat: 32, sweep: 0, yaw: 0 },',
     },
   },
   {
@@ -28,18 +29,12 @@ export const PROBES = [
       replace: '  body.along = head.along;\n  body.across = head.across;',
     },
   },
-  {
-    decision: '0374',
-    suite: 'tests/volans.test.ts',
-    // The yaw dropped: the fin waves on a hull that holds dead level, which is a flag on a pole.
-    broke: 'the hull no longer yawing against the beat',
-    guard: 'and the hull yaws AGAINST it',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '  if (w.bossEntering < 0) head.turn = foldTurn(-swing * tail.yaw);\n',
-      replace: '',
-    },
-  },
+  /*
+    ⚠️ A PROBE WENT HERE WITH THE YAW — docs/decisions/0381-the-fish-is-bigger.md. *The hull no longer
+    yawing against the beat* broke 0374's yaw, and the play called the yaw *"funky and weird"*: the
+    row's `yaw` is zero and the guard now holds that the hull HOLDS its heading. A break of a line
+    that multiplies by zero would prove nothing, which is what `npm run prove` calls STILL GREEN.
+  */
   {
     decision: '0374',
     suite: 'tests/volans.test.ts',
@@ -63,7 +58,8 @@ export const PROBES = [
     guard: 'and the body has no tail of its own any more',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  [0.8, 0.11],\n  [0.74, 0.16],\n  [0.7, 0.17],\n  [0.58, 0.25],\n  [0.5, 0.42],',
+      // ⚠️ Re-anchored by 0381, which shortened the stump so it ends inside the fin's base.
+      find: '  [0.78, 0.12],\n  [0.74, 0.16],\n  [0.7, 0.17],\n  [0.58, 0.25],\n  [0.5, 0.42],',
       replace: '  [0.95, 0.28],\n  [1, 0.52],\n  [1, 0.52],\n  [0.9, 0.36],\n  [0.74, 0.16],\n  [0.7, 0.17],\n  [0.58, 0.25],\n  [0.5, 0.42],',
     },
   },

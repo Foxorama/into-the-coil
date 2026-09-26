@@ -23,9 +23,10 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the adds come in WHILE it is throwing',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0317 onto the FIRST escorted phase, and by 0373, which spits it from the mouth.
-      find: "escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'mouth', standing: 4, every: 150 } },",
-      replace: "escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'mouth', standing: 0, every: 150 } },",
+      // ⚠️ Re-anchored by 0317 onto the FIRST escorted phase, by 0373, which spits it from the mouth,
+      // and by 0380, which made the first stage the rake with the kites.
+      find: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 5, every: 150 } },",
+      replace: "escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 0, every: 150 } },",
     },
   },
   {
@@ -42,8 +43,9 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0317 onto the FIRST escorted phase, which the guard reads: it is the breaker
       // and its shoal now, where it was the rake and its kites.
-      find: "patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort:",
-      replace: "patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 6 }, cue: 'bossBreach', escort:",
+      // And by 0380: the first escorted stage is the opening rake now.
+      find: "patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort:",
+      replace: "patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 6 }, escort:",
     },
   },
 ];

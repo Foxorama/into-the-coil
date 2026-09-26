@@ -18,27 +18,27 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: it is drawn three different ways',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'look: ABLAZE,',
-      replace: 'look: KINDLED,',
+      // ⚠️ Re-anchored by 0380: two stages are ablaze now, and the break is the THIRD going back to
+      // kindled — a fish that grew its fins and then lost them, which is the *never goes back* half.
+      find: "look: ABLAZE, shot: null, attack: { kind: 'breaker'",
+      replace: "look: KINDLED, shot: null, attack: { kind: 'breaker'",
     },
   },
   {
     decision: '0320',
     suite: 'tests/volans.test.ts',
     /*
-      ⚠️ AND THE FIRE ON FROM THE FIRST STEP, WHICH IS THE DEFECT THAT SAYS NOTHING. A boss that is
-      always burning is burning as decoration: the whole of what an aura carries is *how far into this
-      am I*, and a fish that opens alight has spent that and bought a texture. It is also exactly the
-      wallpaper 0317 spent a decision removing from the adds, one layer up.
+      ⚠️ THE FIRE OUT AT THE FIRST STAGE. 0320 held the opposite — cold for the first half, so the fire
+      measured the fight — and 0380 put the burning stages first on the player's word; what the aura
+      carries now is the LADDER, kindled to ablaze to white-hot, and a cold first stage is the wall the
+      play named. Re-aimed by 0380; the sentence it breaks is the guard's own.
     */
-    broke: 'the fire lit from the first phase, so it decorates the boss instead of measuring it',
-    guard: 'the fire is OFF for the first half',
+    broke: 'the fire out at the first stage, so the fish arrives as the wall the play named',
+    guard: 'the fire is ON from the first stage',
     edit: {
       path: 'src/content/bosses.ts',
-      find:
-        "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-      replace:
-        "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null },",
+      find: "      { upTo: 1, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED,",
+      replace: "      { upTo: 1, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null,",
     },
   },
   {

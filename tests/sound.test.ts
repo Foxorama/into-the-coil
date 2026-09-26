@@ -17,7 +17,7 @@ import {
   type CueKind,
 } from '../src/content/cues.ts';
 import { DEFAULT_SOUND, SOUNDS, SOUND_KINDS } from '../src/content/sound.ts';
-import { FIRE_GRID } from '../src/content/cadence.ts';
+import { FIRE_GRID, onFireGrid } from '../src/content/cadence.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BEAT_SECONDS } from '../src/content/music.ts';
 import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
@@ -1565,6 +1565,8 @@ describe('the synthesiser', () => {
         return Math.max(gap, Math.ceil(steps / FIRE_GRID) * FIRE_GRID);
       }
       if (attack.kind === 'beam') return gap + attack.warning + attack.hold;
+      // A warned breaker (0380) holds the next wave out by its tell, on the grid, as a beam does.
+      if (attack.kind === 'breaker' && attack.warning !== undefined) return gap + onFireGrid(attack.warning);
       return gap;
     };
     let checked = 0;
