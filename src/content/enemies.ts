@@ -184,7 +184,7 @@ export function shotsPerVolley(attack: Attack): number {
  * the affordance* at the top and calls it the only tier that reliably works; that guard is deleted
  * with this change, and its reason is recorded rather than its assertion.
  */
-export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop', 'feed', 'arc'] as const;
+export const MOTION_KINDS = ['drift', 'weave', 'hunt', 'circle', 'loop', 'arc'] as const;
 
 /** Derived from the list, so a motion cannot exist in the union and be missing from the switch. */
 export type MotionKind = (typeof MOTION_KINDS)[number];
@@ -270,38 +270,14 @@ export type Motion =
    * to the unit.
    */
   | { kind: 'loop'; turns: number }
-  /**
-   * Swims for the BOSS and not for the player — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`.
-   *
-   * ⚠️ **THE FIRST MOTION IN THIS TABLE THAT IS NOT ABOUT THE SHIP AT ALL, WHICH IS THE WHOLE POINT.**
-   * Asked for: *"the adds need to be more interesting than a boring line of fish and a boring line of
-   * space shrimp — there needs to be a reason for the player to react and interact with them."* Every
-   * other kind here either ignores the player or converges on them, and both are answered by *shoot it
-   * or do not*. A body with somewhere else to be is a body the player has a REASON about: it is going
-   * to reach the thing they are trying to kill, and the fish eats it.
-   *
-   * ⚠️ **`agility` IS A SPEED AND NOT A TURN RATE, WHICH IS THE ONE PLACE THIS DIFFERS FROM `hunt`.**
-   * A feeder steers in both axes at once, so what it needs is how fast it swims along its own heading;
-   * the row's `closing` is *how fast it comes at the player*, which is a quantity a feeder has no use
-   * for. It carries one anyway, because `closing` is what the spawner gives every body its entry
-   * velocity from and what `tests/pilots.test.ts` measures time-on-screen with.
-   *
-   * ⚠️ **AND IT HAS NOWHERE TO BE WHEN THERE IS NO BOSS ON THE FIELD**, so it holds its lane and leaves
-   * like anything else — a level that authored one would get a body that drifts, which is why no level
-   * authors one and `tests/volans.test.ts` holds that.
-   */
   /*
-    ⚠️ **AND `feeds` RIDES THE MOTION RATHER THAN THE ROW, WHICH IS THE ONLY PLACE IT CANNOT BE
-    FORGOTTEN OR WASTED.** *What the boss gains by eating this* is meaningless for a body that is not
-    swimming at one, so a field on `EnemyRow` would be a number seventeen rows have to state and one
-    row has to mean — and the first time somebody sets it on a drifter, nothing would read it and
-    nothing would say so. In the arm, the compiler asks for it exactly when it applies.
-
-    ⚠️ **In health, absolutely, and nothing asserts the value** — on `SHIP_SPEED`'s terms. What IS
-    asserted is that a feed moves the boss's health up and that the ceiling holds; how big a bite is
-    worth is a play number, and `tests/volans.test.ts` prints what it comes to against the fight.
+    ⚠️ **THERE WAS A `feed` ARM HERE, AND 0373 DELETED IT RATHER THAN LEAVING IT FOR NOBODY.** 0314's
+    minnow swam for the BOSS and was eaten, so that the fish gained health the player had to take off
+    again — the first motion in this table that was not about the ship. Played, it was *"pretty
+    meaningless"* and then *"trash"*: the consequence was a number on a bar and the body was the
+    slowest thing on the field. The shoal comes OUT of the mouth at the player now, on `hunt`, and
+    `tests/pilots.test.ts` refuses an arm nothing flies — so the arm went with its only row.
   */
-  | { kind: 'feed'; agility: number; feeds: number }
   /**
    * Flies a circle segment across the lane, on the screen, then straight on — 0328.
    *
@@ -888,65 +864,60 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     damage: 1,
     closing: 0.42,
     shatter: null,
-    fireEvery: 0,
+    /*
+      ⚠️ **A GUN SINCE 0373, WHERE 0249 SAID A HORDE THAT SHOOTS IS A WALL.** Asked for: *"adds should
+      be firing and way more interactive — they're currently trash."* One aimed spit every 132 steps
+      (2.2 s), which at five standing is about two shots a second aimed down the lane — a horde that
+      has to be answered rather than one that is only in the way. `tests/crowd.test.ts` holds that a
+      pilot flying to the safest place always has somewhere to be, on every tier, which is where a
+      wall is refused rather than in this number.
+    */
+    fireEvery: 132,
     shot: 'spit',
     attack: { kind: 'aimed' },
     // A DIVE since 0262 — *"the adds marched in gently from the left side in a single file, they
     // didn't swoop or dive bomb."* It wove at 16 by 90; it steers hard for the ship's lane now,
     // at the quickest agility any hunter has, while closing at the quickest closing any hunter
-    // has — which, from the side of the lane the fish now calls it in on, is a dive. The fish's
-    // to call and no level's (0249), so 0258's one pilot a level does not read it.
+    // has — which, out of the fish's mouth (0373), is a dive at the player. The fish's to call and
+    // no level's (0249), so 0258's one pilot a level does not read it.
     motion: { kind: 'hunt', agility: 0.9 },
   },
   /**
-   * The minnow — `docs/decisions/0314-the-shoal-comes-in-while-it-fights.md`. Ember Nebula's second,
-   * and the flying fish's own: a shoal that swims **to the boss** while the boss goes on fighting.
+   * The minnow — 0314 drew it, `docs/decisions/0373-the-fish-spits-its-adds.md` turned it round.
+   * Ember Nebula's second, and the flying fish's own: a shoal the fish SPITS at the player.
    *
-   * ⚠️ **THE REASON TO REACT IS THAT IT IS NOT COMING FOR THE PLAYER.** *"The adds need to be more
-   * interesting than a boring line of fish and a boring line of space shrimp — there needs to be a
-   * reason for the player to react and interact with them."* A minnow that reaches the fish is eaten
-   * and the fish is fed; every one the player lets past is health they have to take off again. So the
-   * question it asks is not *dodge or shoot* — it is **what is worth your fire right now**, which is
-   * the first time anything in this game has asked that.
+   * ⚠️ **IT USED TO SWIM THE OTHER WAY, AND THE PLAY SAID SO TWICE.** 0314's minnow swam for the fish
+   * and fed it — *what is worth your fire right now* — and came back as *"pretty meaningless"* and
+   * then *"trash"*: the trade was a number on a bar, none of them arrived against a shuriken, and a
+   * body that ignores the player is a body the player ignores. Asked for instead: *"adds should fly
+   * out of its mouth to attack the player, adds should be firing."* So it comes out of the mouth in a
+   * fan (`from: 'mouth'`), hunts the ship's lane, and fires.
    *
-   * ⚠️ **ONE HIT AND NO GUN, WHICH IS WHAT MAKES THE QUESTION FAIR.** It cannot punish being ignored
-   * except by arriving, and a player who ignores it entirely is choosing a longer fight rather than a
-   * worse one. `tests/volans.test.ts` holds what one feed is worth, which is the number the whole
-   * trade rides on.
-   *
-   * ⚠️ **THE SLOWEST THING ON THE FIELD, AND THAT IS THE WINDOW.** Its `agility` is what it swims at,
-   * and it comes in from the side of the lane the escort called it on — so it crosses the player's
-   * fire on its way up-lane and has to be dealt with somewhere in the several seconds that takes.
+   * ⚠️ **SLOWER AND LESS AGILE THAN THE KITE, AND THAT IS WHAT TELLS THE TWO HORDES APART.** The
+   * kite dives at 0.9 and closes at 0.42; the minnow closes at 0.32 and leans at 0.45, and fires more
+   * often — a shoal that comes on steadily and shoots, against a horde that dives and bites. Its time
+   * on the screen clears 0105's floor with room (`tests/pilots.test.ts`).
    */
   minnow: {
     sprite: SPRITE.minnow,
     spriteHit: SPRITE.minnowHit,
     radius: 2.2,
-    /*
-      ⚠️ **STILL ONE, AND 0317 MEASURED WHY RAISING IT WAS THE WRONG ANSWER.** The shoal never arrived:
-      nineteen called in a fight and **not one reached the fish** — because the fish is the one boss
-      that stalks onto the player's lane (0258), so the shoal converged on the fish by converging on a
-      stream of auto-fire that cannot be switched off (0104). Three health changed nothing (0 arrived),
-      and neither did six. What fixed it was **where they come in from**, not how much they take: from
-      the lead edge, behind the fish, 22 of 49 arrive. A number that buys nothing does not get raised.
-    */
     health: 1,
     damage: 1,
-    // It is not coming at the player, so its closing is the entry velocity the spawner gives it and
-    // nothing else — the `feed` arm overwrites both axes from its first step inside the fight.
-    closing: 0.3,
+    closing: 0.32,
     shatter: null,
-    fireEvery: 0,
-    shot: 'spit',
-    attack: { kind: 'aimed' },
+    // One aimed spine every 96 steps (1.6 s): at four standing, about two and a half shots a second.
+    fireEvery: 96,
     /*
-      ⚠️ **14 HEALTH A BITE AGAINST THE FISH'S 3040 ON THE TUNED TIER, AND IT IS A PLAY NUMBER.** A
-      call of three every two seconds is at most 21 health a second handed back, against a max-weapon
-      loadout taking off the order of sixty — so ignoring the shoal entirely is a fight about a third
-      longer, and clearing it costs three shots each. That is meant to be a real choice and not a tax,
-      and the first play-test is what settles it.
+      ⚠️ **THE FISH'S OWN SPINE, WHICH IS WHAT A SHOAL OF ITS SPAWN WOULD THROW — AND THE PAIR IS
+      ITS OWN.** `tests/signature.test.ts` and `tests/legibility.test.ts` hold that no two shooters
+      send the same bullet-and-pattern; `spit/aimed` is the kite's (0373), so the minnow throws the
+      barbed fin-spine 0316 drew for the fish. Slower than a spit, so a shoal that shoots more often
+      is a shoal whose shots are easier to read.
     */
-    motion: { kind: 'feed', agility: 0.62, feeds: 14 },
+    shot: 'spine',
+    attack: { kind: 'aimed' },
+    motion: { kind: 'hunt', agility: 0.45 },
   },
   /**
    * The swift — 0328: a shared kind that swoops. A swept chevron that flies in, turns through a half

@@ -56,17 +56,10 @@ export const PROBES = [
       replace: '  const along = flanking ? w.cameraAlong : spawnAlong(w.cameraAlong);',
     },
   },
-  {
-    decision: '0249',
-    suite: 'tests/volans.test.ts',
-    // The kite given a gun: a horde that shoots is a wall.
-    broke: 'the kite given a gun, so the horde is a wall of bullets',
-    guard: 'THE KITE: Ember Nebula’s horde',
-    edit: {
-      path: 'src/content/enemies.ts',
-      // ⚠️ Re-anchored by 0263, which gave every enemy row a shatter.
-      find: "    closing: 0.42,\n    shatter: null,\n    fireEvery: 0,\n    shot: 'spit',",
-      replace: "    closing: 0.42,\n    shatter: null,\n    fireEvery: 60,\n    shot: 'spit',",
-    },
-  },
+  /*
+    ⚠️ A PROBE WENT HERE WITH THE RULE IT BROKE — docs/decisions/0373-the-fish-spits-its-adds.md. *The
+    kite given a gun, so the horde is a wall of bullets* held 0249's *a horde that shoots is a wall*;
+    the ask reversed it — *"adds should be firing"* — and the kite has a gun now. 0373's probe takes
+    it away instead.
+  */
 ];

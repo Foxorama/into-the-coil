@@ -454,8 +454,16 @@ export interface Grow {
   head: number;
 }
 
-/** Where a summons puts its adds — 0262: the leading edge, or the across edges in turn. */
-export type SummonFrom = 'lead' | 'sides';
+/**
+ * Where a summons puts its adds — 0262: the leading edge, or the across edges in turn.
+ *
+ * ⚠️ **OR OUT OF THE BOSS'S OWN MOUTH — `docs/decisions/0373-the-fish-spits-its-adds.md`.** Asked
+ * for: *"adds should fly out of its mouth to attack the player."* A `mouth` call puts the adds at the
+ * hull's snout, thrown down the lane at the player in a fan, with the jaw open before they leave and
+ * a spray at the mouth as they do — so the horde is a thing the boss DOES, on the screen, rather than
+ * a wave that happens to arrive while it fights. The other two edges are still the other bosses'.
+ */
+export type SummonFrom = 'lead' | 'sides' | 'mouth';
 
 /** One of the hydra's heads — 0254: what it throws, and how. */
 export interface Head {
@@ -1048,6 +1056,48 @@ export interface Look {
   face: Face;
   /** The aura it burns with in this phase, or `null`. */
   aura: Aura | null;
+  /**
+   * The tail it beats in this phase, where the phase's body has a different one — 0374. Absent is the
+   * row's own tail, on `rear`'s and `escort`'s argument: only the phase that grew a body says so.
+   */
+  tail?: TailArt;
+}
+
+/**
+ * The drawing of a tail — `docs/decisions/0374-the-fish-beats-its-tail.md`: one bitmap and its hurt
+ * twin, pivoted on the bitmap's own centre, which is where the painter puts the peduncle.
+ */
+export interface TailArt {
+  sprite: number;
+  spriteHit: number;
+}
+
+/**
+ * A tail that beats behind the hull — `docs/decisions/0374-the-fish-beats-its-tail.md`.
+ *
+ * ── THE ONE PART OF A BAKED ANIMAL THAT CAN MOVE WITHOUT A SECOND HULL ─────────────────────────
+ *
+ * Asked for: *"animation should be better."* A hull is one bitmap and `blit` cannot deform it (0022),
+ * so what a swimming fish costs is the same answer an aura and a flame already have: a body of its
+ * own in the layer drawn behind the hull, placed every step. The tail is that body. `blit` has taken
+ * an angle since 0306, so a caudal fin is ONE drawing turned about its root rather than a set of
+ * frames — and the hull yaws against it by a fraction of the sweep, which is what makes the beat a
+ * swim and not a flag.
+ *
+ * ⚠️ **ON THE ROW AND NULL ON THIRTEEN OTHERS, ON `entrance`'s TERMS** — 0282: every number about
+ * this animal is on its own row, and shared code holds the arithmetic and no opinion.
+ */
+export interface Tail {
+  /** What is drawn — a phase's `look` may wear a different one on the same root. */
+  art: TailArt;
+  /** How far aft of the hull's centre the tail is rooted, in world units. Positive is up-lane. */
+  root: number;
+  /** Steps one beat takes, there and back. */
+  beat: number;
+  /** How far the tail swings each side of the hull's own heading, in radians. */
+  sweep: number;
+  /** How far the HULL yaws against the beat, in radians — a fraction of `sweep`, the other way. */
+  yaw: number;
 }
 
 /**
@@ -1335,7 +1385,7 @@ export interface Escort {
   count: number;
   /** The shape they arrive in. */
   formation: FormationKind;
-  /** Which edge they come in over — `summon`'s own axis, alternating a call. */
+  /** Which edge they come in over — `summon`'s own axis, alternating a call — or the boss's own mouth (0373). */
   from: SummonFrom;
   /** The most of that kind the escort keeps standing, scaled by the tier — 0270's ceiling. */
   standing: number;
@@ -1482,6 +1532,11 @@ export interface BossRow extends Body {
    * `docs/decisions/0306-the-serpent-coils-in.md`. Required, on `uncoil`'s terms.
    */
   entrance: Entrance | null;
+  /**
+   * The tail it beats behind its hull, or `null` for a hull that is one drawing —
+   * `docs/decisions/0374-the-fish-beats-its-tail.md`. Required, on `entrance`'s terms.
+   */
+  tail: Tail | null;
   /**
    * The room this fight happens in, or `null` for a fight the level scrolls straight through —
    * `docs/decisions/0335-the-fight-happens-in-a-room.md`.
@@ -1740,6 +1795,10 @@ const EMBER: readonly number[] = [
  * [0282](../../docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md) is
  * being followed; the alternative is two `Aura` types that drift.
  */
+/** The fish's tail, and the one its grown body wears — 0374. Pivoted on the peduncle by the painter. */
+const VOLANS_TAIL: TailArt = { sprite: SPRITE.volansTail, spriteHit: SPRITE.volansTailHit };
+const VOLANS_TAIL_BARBED: TailArt = { sprite: SPRITE.volansTailBarbed, spriteHit: SPRITE.volansTailBarbedHit };
+
 const KINDLED: Look = {
   face: VOLANS_FACE,
   // A frame every four steps: slower than the serpent's three, because one flame flickering alone
@@ -1761,6 +1820,8 @@ const ABLAZE: Look = {
   // Bigger and quicker, and the same six frames: what changed is the row's numbers, which is where a
   // difference between two instances of one mechanism belongs.
   aura: { frames: EMBER, hold: 3, stride: 1, head: 21 },
+  // And the tail lobes drawn out with the fins — 0374: the grown body's own caudal fin, on the same root.
+  tail: VOLANS_TAIL_BARBED,
 };
 
 export const BOSSES: Record<BossKind, BossRow> = {
@@ -1795,6 +1856,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -1875,6 +1937,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -1942,6 +2005,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2009,6 +2073,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2057,6 +2122,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2127,6 +2193,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2206,6 +2273,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2411,6 +2479,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     // The middle of the screen after 0364's zoom — 107 of a 16:9 view of 213, and half the lane across.
     entrance: { kind: 'coil', centre: { along: 107, across: ACROSS_SPAN / 2 }, radius: 24, turns: 1.25, speed: 1.5 },
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -2876,10 +2945,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * higher than the last, and back down through it — a thing a fish does and a snake cannot, which is
    * the brief's *"the style is what makes the different bosses unique."*
    *
-   * ⚠️ **AND FIVE OF SIX ITEMS ARE STILL OWED HERE** —
-   * [`the-fish-asked`](../../reports/the-fish-asked-2026-09-12.md): quality art on the attacks, more
-   * attack styles, attacking WHILE the adds arrive, better art on the adds, and adds that are a reason
-   * to react.
+   * ⚠️ **AND IT SPITS ITS ADDS — `docs/decisions/0373-the-fish-spits-its-adds.md`.** *"Adds should
+   * fly out of its mouth to attack the player, adds should be firing and way more interactive."* Every
+   * horde this row calls is `from: 'mouth'`: the jaw opens, and the minnows or the kites leave the
+   * snout in a fan thrown at the player, hunting and firing from the moment they are out. The shoal
+   * that swam TO the fish (0314) is gone with the feed it carried — the player was not seeing the
+   * trade, and a body coming out of the boss at them is the interaction the ask names.
+   *
+   * ⚠️ **AND IT SWIMS — `docs/decisions/0374-the-fish-beats-its-tail.md`.** The caudal fin is a body
+   * of its own behind the hull, beating about the peduncle, and the hull yaws against it.
    */
   volans: {
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
@@ -2919,6 +2993,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
       `tests/volans.test.ts` parks a live ship in it for the whole flight.
     */
     entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
+    /*
+      THE TAIL — 0374. Rooted 13.4 units aft of the hull's centre, which is 0.76 of the drawing radius
+      (`SPRITE_EXTENT.boss9` is 42 across, so the radius the painter draws in is 17.64): the peduncle
+      the caudal fin used to be painted onto. A beat every 26 steps, sweeping 0.42 radians each way —
+      about two and a half beats a second, a little slower than a fish this size swims at, because a
+      tail the player is meant to SEE beat has to be slower than the flicker it shares a screen with.
+      The hull yaws a seventh of the sweep against it.
+    */
+    tail: { art: VOLANS_TAIL, root: 13.4, beat: 26, sweep: 0.42, yaw: 0.06 },
     room: null,
     burn: null,
     wreck: null,
@@ -2950,10 +3033,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ⚠️ **AND THE BREAKER COMES FORWARD TO A QUARTER OF THE BAR, FROM TWO THIRDS — 0317.** It is the
         one attack that covers a PLACE rather than a direction, so it is the one that makes a player
         move rather than lean; at a third of health a shuriken had already ended the fight before it
-        was ever thrown. The shoal arrives under it, which is where the fight first asks two questions
-        at once.
+        was ever thrown. The shoal comes out of the mouth under it (0373), which is where the fight
+        first asks two questions at once.
       */
-      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'lead', standing: 4, every: 150 } },
+      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'mouth', standing: 4, every: 150 } },
       /*
         ⚠️ **AND FROM HERE IT THROWS *AND* CALLS — 0314.** *"Needs to be attack while the adds are
         coming in."* These two phases used to be `summon` volleys, which is a volley that throws
@@ -2984,7 +3067,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // And the kites come back, diving from the sides in turn while it rakes — 0262's horde on 0314's
       // clock, in the slot the breaker used to have (0317). It goes on burning: a look that switched
       // off between two phases would read as the fire going OUT, which is the opposite of escalation.
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },
+      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 5, every: 150 } },
       /*
         ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
         RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the
@@ -2999,7 +3082,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         serpent buys its own escalation the same way and at twice the price (0305: sixteen faces and
         six frames) — what makes this two stages rather than one is that the FIRST is free.
       */
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'sides', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'lead', standing: 5, every: 108 } },
+      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'mouth', standing: 4, every: 108 } },
     ],
   },
   /**
@@ -3026,6 +3109,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -3110,6 +3194,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     /*
       ⚠️ **THE ONE ROOM IN THE GAME — 0335.** *"The cog is part of the wall and stationary on arrival
       … the background map stops moving — you've found the boss and are fighting it in a specific
@@ -3234,6 +3319,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -3285,6 +3371,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
@@ -3397,6 +3484,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
+    tail: null,
     room: null,
     burn: null,
     wreck: null,
