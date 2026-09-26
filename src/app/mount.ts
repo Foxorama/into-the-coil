@@ -22,7 +22,6 @@ import { RANGE_OF } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
-import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF } from '../content/veins.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
@@ -520,17 +519,18 @@ export function skyFor(place: ThemeKind | null): Sky {
 
 /**
  * A planet's sky: with a far range where it states one in `RANGE_OF`, the sky 0221 shipped where it
- * does not (0347) — and its ground layer carrying the place's pools where `POOLS_OF` states some
- * (0353), so the bubbles are blitted over the very tiles whose pools they rise from.
+ * does not (0347).
+ *
+ * ⚠️ **ITS GROUND CARRIED THE PLACE'S POOLS FROM 0353 TO 0383**, and carries none now: the Mire's
+ * pools lie in the bed under its bank, which moves with the world because it bites, and their bubbles
+ * are painted with it (`paintFront` in `src/render/scene.ts`).
  *
  * ⚠️ **BUILT ONCE, WHEN THE MODULE LOADS**, because `skyFor` runs at every level boundary and the
- * layers are shared: a copy of the ground layer per call would be a new sky object per level for no
- * reason, and one per place is the whole of what varies.
+ * layers are shared: a sky per call would be a new object per level for no reason, and one per place
+ * is the whole of what varies.
  */
 function planetSky(place: ThemeKind): Sky {
-  const base: Sky = RANGE_OF[place] !== null ? SKY_UNDER_A_RANGE : SKY_ON_A_PLANET;
-  const pools = POOLS_OF[place];
-  return pools === null ? base : base.map((layer) => (layer.sprite === SPRITE.skyGround ? { ...layer, pools } : layer));
+  return RANGE_OF[place] !== null ? SKY_UNDER_A_RANGE : SKY_ON_A_PLANET;
 }
 
 const PLANET_SKY_OF: Record<ThemeKind, Sky> = {
@@ -1966,7 +1966,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     world.warp = warpAt(travelSteps, travelLandingAt);
     // At full burn, once: the streaks are what hide it. `travelSwapped`'s own note has the argument,
     // and `placeOnScreen` is what reads it.
-    if (!travelSwapped && world.warp >= 1) travelSwapped = true;
+    if (!travelSwapped && world.warp >= 1) {
+      travelSwapped = true;
+      /*
+        ⚠️ **AND THE WALLS GO WITH THE PLACE — 0383.** The Mire's bank runs on for as long as its level
+        does, and the level is entered on arrival, not here; left standing, the acid would scroll on
+        under the next place's sky for the rest of the burn. The Labyrinth's corridor ended at its room
+        long before, so for it this line changes nothing.
+      */
+      world.corridor = null;
+    }
     const place = placeFor(state.run.level);
     const waiting = travelIsWaiting(state.settings.travel, travelSteps, ready);
     const leaving = travelLandingAt >= 0;

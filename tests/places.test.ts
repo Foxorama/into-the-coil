@@ -233,8 +233,12 @@ describe('0221 — a planet is not a space', () => {
       the roof is held NEAR THE TOP OF THE LANE now, where it used to be held low enough to feel tight.
 
       ⚠️ **STILL MEASURED AGAINST THE SHIP AT THE OTHER END**, because *the player cannot fly under it*
-      is a bug whatever the ask: the gap between the roof's lowest point and the pools' highest is more
+      is a bug whatever the ask: the gap between the roof's lowest point and the floor's highest is more
       than three ships.
+
+      ⚠️ **AND THE FLOOR IS THE SHORE SINCE 0383**, which is the Mire's corridor and not this tile: the
+      ground that bites moves with the world, so the tile draws the roof alone, and the floor's highest
+      point is the shore's — read off the level that lays it.
     */
     const size = 240;
     const { pen, trace } = tracingPen();
@@ -244,13 +248,13 @@ describe('0221 — a planet is not a space', () => {
       const ys = pass.subpaths.flat().map((p) => p[1]);
       return Math.min(...ys) <= 0.5 || Math.max(...ys) >= size - 0.5;
     });
-    expect(solid.length, 'the mire draws one surface, not two — there is no corridor').toBe(2);
+    expect(solid.length, 'the mire\'s tile draws the roof and nothing else — the floor is the bank now').toBe(1);
 
-    // The canopy is whichever mass reaches the top of the tile; the pools are the other one.
-    const spans = solid.map((pass) => pass.subpaths.flat().map((p) => laneAt(p[1] / size)));
-    const [roof, floor] = spans[0]!.some((at) => at < 0) ? [spans[0]!, spans[1]!] : [spans[1]!, spans[0]!];
+    const roof = solid[0]!.subpaths.flat().map((p) => laneAt(p[1] / size));
+    const shore = LEVELS.gauntlet.corridor?.bank?.shore;
+    expect(shore, 'the Mire lays no shore, so there is nothing under the roof to measure against').toBeDefined();
     const hangsTo = Math.max(...roof);
-    const risesTo = Math.min(...floor);
+    const risesTo = Math.min(...shore!);
     const gap = risesTo - hangsTo;
     const ship = SPRITE_EXTENT.ship;
     expect(

@@ -21,12 +21,13 @@ export const PROBES = [
     decision: '0353',
     suite: 'tests/mire.test.ts',
     // The baker back on a stream of its own: two sets of pools that are only written alike.
-    broke: 'the ground baked from its own positions, so the bubbles rise from pools that are not drawn',
-    guard: 'the ground is baked with those same pools',
+    // In the bed since 0383, where the pools went when the ground became a wall.
+    broke: 'the bed baked from its own positions, so the bubbles rise from pools that are not drawn',
+    guard: 'the bed is baked with those same pools',
     edit: {
       path: 'src/render/bake.ts',
-      find: '    const at = spot.at * size;',
-      replace: '    const at = (spot.at + 0.01) * size;',
+      find: '      const at = (spot.at + round) * drawing - part * size;',
+      replace: '      const at = (spot.at + 0.01 + round) * drawing - part * size;',
     },
   },
   {
@@ -53,16 +54,13 @@ export const PROBES = [
       replace: '  bubble: 2.4,',
     },
   },
-  {
-    decision: '0353',
-    suite: 'tests/mire.test.ts',
-    // Every planet's ground given the Mire's pools: one row made the rule for all.
-    broke: 'every planet given the Mire’s pools, so ice and jungle bubble',
-    guard: 'and only a place that states pools bubbles',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: '  const pools = POOLS_OF[place];',
-      replace: '  const pools = POOLS_OF.mire;\n  void place;',
-    },
-  },
+  /*
+    ── *EVERY PLANET GIVEN THE MIRE'S POOLS* STOOD HERE, AND 0383 DELETED IT WITH ITS GUARD ────────
+
+    It broke `planetSky`, which handed every planet's ground layer the Mire's pools. No sky layer holds
+    pools since 0383 — they lie in the bed under the Mire's bank, and bubbles are painted only with a
+    floor that has a bed — so *only a place that states pools bubbles* could no longer go red for any
+    change to the content or the painter: no other place lays a floor. Deleted rather than kept green
+    over nothing, per 0192.
+  */
 ];

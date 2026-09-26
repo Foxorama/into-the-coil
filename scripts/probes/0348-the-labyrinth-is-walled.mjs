@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'THE BOX IS THE LIMIT, IN LANE UNITS',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      width: ACROSS_SPAN - PLAYER_MARGIN * 2,',
-      replace: '      width: ACROSS_SPAN - PLAYER_MARGIN * 3,',
+      // With its wall, because 0383's Mire rests on the same box and states the same width.
+      find: "      width: ACROSS_SPAN - PLAYER_MARGIN * 2,\n      wall: 'roomWall',",
+      replace: "      width: ACROSS_SPAN - PLAYER_MARGIN * 3,\n      wall: 'roomWall',",
     },
   },
   {

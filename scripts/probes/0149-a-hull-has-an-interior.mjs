@@ -174,17 +174,12 @@ export const PROBES = [
     guard: 'draws exactly one call per live entity, plus one clear',
     edit: {
       path: 'src/render/scene.ts',
-      find:
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
-        '    }\n' +
-        '  }\n' +
-        '}',
+      // The blit alone — 0383 put the acid's front layer after this loop, and the closing braces it
+      // anchored on were never what this probe breaks.
+      find: '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n',
       replace:
         '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
-        '    }\n' +
-        '  }\n' +
-        '}',
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n',
     },
   },
 ];

@@ -11,11 +11,11 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import { SPRITE, SPRITE_EXTENT, WALL_RISES, WALL_RISE_MAX } from '../content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
 import { trunkAt, type Veins } from '../content/veins.ts';
-import { opened, type Corridor } from '../sim/corridor.ts';
+import { knotOf, opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
@@ -78,11 +78,11 @@ export interface SkyLayer {
    * must not, or the overlap draws a column of itself twice.
    */
   opaque?: boolean;
-  /**
-   * The pools this layer's tile holds and how they bubble — 0353. Absent is a layer with none, which is
-   * every layer but the Mire's ground. The spots are the ones the baker drew (`POOLS_OF`).
-   */
-  pools?: Pools;
+  /*
+    ⚠️ **`pools` STOOD HERE — 0353 — AND 0383 MOVED THEM TO THE BED.** The Mire's pools were in its
+    ground tile at 0.45 of the camera; the ground they lie in bites now, and a wall has to move with
+    the world. Their bubbles are painted with the bank (`paintFront`), and no sky layer holds any.
+  */
   /**
    * The veins this layer's tile carries and the pulse along them — 0354. Absent is a layer with none,
    * which is every layer but The Black Heart's weather. The trunks are the ones the baker drew
@@ -251,6 +251,8 @@ export function paintScene(
   warp = 0,
   time = 0,
   corridor: Corridor | null = null,
+  pools: Pools | null = null,
+  frontAfter = -1,
 ): void {
   surface.clear();
   /*
@@ -275,8 +277,9 @@ export function paintScene(
     can kill the player, because this file's one absolute is that nothing is ever lost behind
     scenery.
   */
-  // The corridor that arrives at it, in the same stone and on the room's own terms — 0348.
-  paintCorridor(surface, view, corridor, cameraAlong);
+  // The corridor that arrives at it, in the same stone and on the room's own terms — 0348. Stone only:
+  // a wall drawn in front of what is in it waits for the bodies (0383, below).
+  if (corridor !== null && !corridor.front) paintCorridor(surface, view, corridor, cameraAlong);
   paintRoom(surface, view, room, cameraAlong);
   /*
     ⚠️ **BEHIND EVERY BODY AND IN FRONT OF THE SKY.** It is a piece of information about the rules
@@ -317,6 +320,47 @@ export function paintScene(
       const inView = along - cameraAlong;
       surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);
     }
+    if (layer === frontAfter) paintFront(surface, view, corridor, pools, cameraAlong, time);
+  }
+  // A caller that names no layer — a fixture, a bench of scenery — gets the front wall over everything.
+  if (frontAfter < 0 || frontAfter >= layers.length) paintFront(surface, view, corridor, pools, cameraAlong, time);
+}
+
+/**
+ * A wall drawn IN FRONT of the bodies in it — 0383: the Mire's bank, the bed of pools it lies in, and
+ * the bubbles rising off them.
+ *
+ * ⚠️ **AFTER THE BODIES AND BEFORE WHAT FLIES — `frontAfter`, which is the enemies' layer.** A thing in
+ * acid is under its surface: a flanker rising out of it (*"rise through unbroken acid"*) and the end
+ * boss's lower body standing in it. And this file's one absolute still holds — *nothing is ever lost
+ * behind scenery* — because what the acid covers is only ever what is in it: a body that touches the
+ * shore bursts on the step it does (0349), and a shot breaks at the face. The bursts, every shot, the
+ * player's weapons and the ship are all later layers, and are drawn over it.
+ */
+function paintFront(surface: Surface, view: View, corridor: Corridor | null, pools: Pools | null, cameraAlong: number, time: number): void {
+  if (corridor === null || !corridor.front) return;
+  paintCorridor(surface, view, corridor, cameraAlong);
+  const beds = corridor.beds;
+  const extent = corridor.bedExtent;
+  if (beds.length === 0 || extent <= 0) return;
+  /*
+    The bed, on the world's grid from the corridor's own start, one half of the drawing after another
+    (`mireBedA`, `mireBedB` — `src/content/sprites.ts` has why it is two). Blitted centred on the lane,
+    which a tile the lane's width covers exactly. Nothing allocates.
+  */
+  const period = extent * beds.length;
+  const first = Math.floor((cameraAlong - extent - corridor.from) / extent);
+  const stop = cameraAlong + view.alongSpan + extent;
+  for (let n = first; corridor.from + n * extent < stop; n++) {
+    const inView = corridor.from + n * extent + extent / 2 - cameraAlong;
+    const across = view.acrossSpan / 2;
+    surface.blit(beds[((n % beds.length) + beds.length) % beds.length]!, screenX(view, inView, across), screenY(view, inView, across), view.scale);
+  }
+  if (pools === null) return;
+  // The bubbles over the bed's pools, a whole drawing at a time — `paintBubbles`, 0353's own arithmetic.
+  const firstPeriod = Math.floor((cameraAlong - period - corridor.from) / period);
+  for (let p = firstPeriod; corridor.from + p * period < stop; p++) {
+    paintBubbles(surface, view, corridor.from + p * period - cameraAlong, period, pools, time);
   }
 }
 
@@ -648,7 +692,9 @@ function paintWalls(
 function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, cameraAlong: number): void {
   if (corridor === null || corridor.extent <= 0) return;
   const extent = corridor.extent;
-  const knots = corridor.faces.length / 2;
+  // A repeating corridor has as many knots as the world is long — 0383; its faces are read round.
+  const knots = corridor.period > 0 ? Number.POSITIVE_INFINITY : corridor.faces.length / 2;
+  const steepest = (corridor.caps.length - 1) / 2;
   const first = Math.max(0, Math.floor((cameraAlong - extent - corridor.from) / extent));
   const stop = Math.min(corridor.to, cameraAlong + view.alongSpan + extent);
   for (let k = first; k + 1 < knots; k++) {
@@ -658,12 +704,14 @@ function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, 
     for (let side = -1; side <= 1; side += 2) {
       if (opened(corridor.passages, start, start + extent, side)) continue;
       const slot = side < 0 ? 0 : 1;
-      const a = corridor.faces[k * 2 + slot]!;
-      const b = corridor.faces[(k + 1) * 2 + slot]!;
-      const rise = Math.max(-WALL_RISE_MAX, Math.min(WALL_RISE_MAX, b - a));
+      const a = corridor.faces[knotOf(corridor, k) * 2 + slot]!;
+      const b = corridor.faces[knotOf(corridor, k + 1) * 2 + slot]!;
+      // A face a whole tile beyond the lane is a wall nobody can see — a floor's near side (0383).
+      if (side < 0 ? Math.max(a, b) < -extent : Math.min(a, b) > ACROSS_SPAN + extent) continue;
+      const rise = Math.max(-steepest, Math.min(steepest, b - a));
       const middle = (a + b) / 2;
       // The cap's stone is below its face; the near wall's is above, so it is the same cap turned over.
-      surface.blit(WALL_RISES[rise + WALL_RISE_MAX]!, screenX(view, inView, middle), screenY(view, inView, middle), view.scale, side < 0 ? Math.PI : 0);
+      surface.blit(corridor.caps[rise + steepest]!, screenX(view, inView, middle), screenY(view, inView, middle), view.scale, side < 0 ? Math.PI : 0);
       for (let across = middle + side * extent; side < 0 ? across + extent / 2 > 0 : across - extent / 2 < ACROSS_SPAN; across += side * extent) {
         surface.blit(corridor.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
       }
@@ -872,9 +920,6 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, t
       const inView = t * span - offset + span / 2;
       const across = view.acrossSpan / 2;
       surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
-    }
-    if (layer.pools !== undefined) {
-      for (let t = 0; t < count; t++) paintBubbles(surface, view, t * span - offset, span, layer.pools, time);
     }
     if (layer.veins !== undefined) {
       for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time);

@@ -485,6 +485,30 @@ export const SPRITE_KINDS = [
   'wallRise10',
   'wallRise11',
   'wallRise12',
+  /*
+    ── THE MIRE'S GROUND, WHICH IS A WALL NOW — 0383 ────────────────────────────────────────────────
+
+    The Labyrinth's scheme with the Mire's material: a cap per whole rise of the shore across a tile
+    (`bankRise3` is level, `bankRise0` falls three and `bankRise6` rises three), the mud under it,
+    and the bed of pools the mud lies in. Baked in the place's own land colours by `bakeGround`, as the
+    ground tile is, so a palette change repaints the bank with the rest of the land.
+  */
+  'mireBank',
+  'bankRise0',
+  'bankRise1',
+  'bankRise2',
+  'bankRise3',
+  'bankRise4',
+  'bankRise5',
+  'bankRise6',
+  /*
+    ⚠️ **ONE DRAWING OF THE POOLS, BAKED IN TWO HALVES.** The pools repeat every 240 units, the ground
+    tile's own width and for its reason — a row of pools that repeats every screen is a wallpaper — and
+    a bitmap is square, so one 240-unit tile of them is four times the memory of the band it holds.
+    Two 120-unit halves of the same drawing, blitted alternately, are the 240 at half the cost.
+  */
+  'mireBedA',
+  'mireBedB',
   'boss12',
   'boss12Hit',
   'boss13',
@@ -1055,6 +1079,17 @@ export const WALL_RISES = [
 ] as const;
 
 /**
+ * The Mire's bank caps, steepest fall to steepest climb — 0383: `bankRise3` is level, a rise of `i − 3`
+ * lane units across one tile. Named once, here, so the level that lays the bank (`src/content/levels.ts`)
+ * and the baker that paints it (`src/render/bake.ts`) read one list and cannot disagree about what a
+ * slot is.
+ */
+export const MIRE_BANK_CAPS = ['bankRise0', 'bankRise1', 'bankRise2', 'bankRise3', 'bankRise4', 'bankRise5', 'bankRise6'] as const;
+
+/** The two halves of the Mire's bed, in the order they lie along the world — 0383. */
+export const MIRE_BED = ['mireBedA', 'mireBedB'] as const;
+
+/**
  * An ejected rock's solid head, as a fraction of `SPRITE_EXTENT.ember` across: the rest of the bitmap
  * is tail and light. `drawEmber` draws to it and `tests/sky.test.ts` holds it under a bullet — 0347.
  */
@@ -1439,6 +1474,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   wallRise10: 12,
   wallRise11: 12,
   wallRise12: 12,
+  // The Mire's bank on the Labyrinth's tile, so its knots and its caps are the same arithmetic — 0383.
+  mireBank: 12,
+  bankRise0: 12,
+  bankRise1: 12,
+  bankRise2: 12,
+  bankRise3: 12,
+  bankRise4: 12,
+  bankRise5: 12,
+  bankRise6: 12,
+  // Half the ground tile's width each — 0383. Blitted centred on the lane, so each covers it exactly.
+  mireBedA: ACROSS_SPAN,
+  mireBedB: ACROSS_SPAN,
   boss12: 33,
   boss12Hit: 33,
   boss13: 41,

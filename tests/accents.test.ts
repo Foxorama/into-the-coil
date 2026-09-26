@@ -157,6 +157,18 @@ const HULLLESS: readonly SpriteKind[] = [
   'wallRise10',
   'wallRise11',
   'wallRise12',
+  // The Mire's bank, its caps and the bed it lies in — 0383, on the Labyrinth's wall's own terms: a
+  // surface that tiles into the next, and the bed's halves are transparent but for the pools.
+  'mireBank',
+  'bankRise0',
+  'bankRise1',
+  'bankRise2',
+  'bankRise3',
+  'bankRise4',
+  'bankRise5',
+  'bankRise6',
+  'mireBedA',
+  'mireBedB',
   'burst0',
   'burst1',
   'burst2',

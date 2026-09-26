@@ -17,15 +17,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
-import { THEMES, THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
+import { THEMES, type ThemeKind } from '../src/content/themes.ts';
 import { POOLS_OF } from '../src/content/pools.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { DIFFICULTIES } from '../src/content/difficulty.ts';
+import { MIRE_BANK_CAPS, MIRE_BED, SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { viewOf } from '../src/sim/camera.ts';
+import type { Corridor } from '../src/sim/corridor.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { skyFor } from '../src/app/mount.ts';
-import { GROUND_OF, RANGE_OF, type Pen } from '../src/render/bake.ts';
+import { corridorFor } from '../src/app/frame.ts';
+import { BANK_OF, GROUND_OF, RANGE_OF, type GroundArt, type Pen } from '../src/render/bake.ts';
 import { luminance } from './contrast.ts';
 import { tracingPen } from './paths.ts';
 
@@ -83,13 +87,26 @@ describe('0352 — the Mire is a swamp', () => {
     const theme = THEMES.mire;
     const land = theme.land;
     expect(land, 'The Toxic Mire states no colours for its land, so the floor has nothing to hold').toBeDefined();
-    const painters = [GROUND_OF.mire, RANGE_OF.mire];
+    const painters: (GroundArt | null)[] = [GROUND_OF.mire, RANGE_OF.mire];
     expect(painters.every((p) => p !== null), 'The Toxic Mire draws no ground or no swamp behind it').toBe(true);
+    /*
+      ⚠️ **AND THE BANK — 0383**, which is where the pools went when the ground became a wall: its caps
+      at every rise, its mud and its bed. The floor under the acid is the same floor wherever it is
+      baked, and a guard that watched only the tile the pools left would be watching the canopy.
+    */
+    const bank = BANK_OF.mire;
+    expect(bank, 'The Toxic Mire bakes no bank').not.toBeNull();
+    const steepest = (MIRE_BANK_CAPS.length - 1) / 2;
+    const banked: GroundArt[] = [
+      (pen, ground, _sky, glow, size, lights) => bank!.fill(pen, size, ground, glow, lights),
+      ...MIRE_BANK_CAPS.map((_, i): GroundArt => (pen, ground, _sky, glow, size, lights) => bank!.cap(pen, size, i - steepest, ground, glow, lights)),
+      ...MIRE_BED.map((_, i): GroundArt => (pen, ground, _sky, glow, size, lights) => bank!.bed(pen, size, i, MIRE_BED.length, ground, glow, lights)),
+    ];
     for (const name of Object.keys(PALETTES) as PaletteName[]) {
       const lights = land![name];
       const ceiling = Math.max(...Object.values(lights).map((c) => luminance(c)));
       let seen = 0;
-      for (const paint of painters) {
+      for (const paint of [...painters, ...banked]) {
         const { pen, areas } = recordingPen();
         paint!(pen, theme.ground![name], theme.space[name], theme.glow[name], 480, lights);
         seen += areas.length;
@@ -120,10 +137,19 @@ describe('0353 — the acid bubbles', () => {
     }
   }
 
-  /** Every bubble drawn over the place's sky with the camera at `camera` and the sim at `time`, in world units. */
+  /**
+   * The corridor a level in `place` is flown down, or `null` — the floor the pools lie in since 0383.
+   * Laid at nought, as a run's first level is.
+   */
+  function floorOf(place: ThemeKind): Corridor | null {
+    const kind = LEVEL_KINDS.find((k) => LEVELS[k].theme === place);
+    return kind === undefined ? null : corridorFor(LEVELS[kind], 0, DIFFICULTIES.savior);
+  }
+
+  /** Every bubble the place's scene draws with the camera at `camera` and the sim at `time`, in world units. */
   function bubblesAt(place: ThemeKind, camera: number, time: number): { along: number; across: number }[] {
     const surface = new Recorder();
-    paintScene(surface, VIEW, [], camera, 0, skyFor(place), null, [], 0, null, 0, time);
+    paintScene(surface, VIEW, [], camera, 0, skyFor(place), null, [], 0, null, 0, time, floorOf(place), POOLS_OF[place]);
     const x0 = screenX(VIEW, 0, 0);
     const y0 = screenY(VIEW, 0, 0);
     return surface.blits
@@ -131,22 +157,25 @@ describe('0353 — the acid bubbles', () => {
       .map((b) => ({ along: (b.x - x0) / VIEW.scale, across: (b.y - y0) / VIEW.scale }));
   }
 
-  it('THE ASK, IN LANE UNITS: every bubble rises from one of the pools the ground was baked with', () => {
+  it('THE ASK, IN LANE UNITS: every bubble rises from one of the pools the bed was baked with', () => {
     /*
-      The pools are in the ground's bitmap and the bubbles are blitted over it every frame, so the two
-      agree only if both read `POOLS_OF` and the painter puts a bubble where the tile it rides is. Held
+      The pools are in the bed's bitmaps and the bubbles are blitted over them every frame, so the two
+      agree only if both read `POOLS_OF` and the painter puts a bubble where the bed it rides is. Held
       at many camera positions and moments: each bubble lies over some pool's span along, and between
       that pool's surface and its rise above it.
+
+      ⚠️ **ON THE WORLD'S GRID SINCE 0383**, from the corridor's own start: the pools were in the ground
+      tile at 0.45 of the camera, and the ground they lie in bites now, so it moves with the world.
     */
     const pools = POOLS_OF.mire!;
-    const ground = skyFor('mire').find((layer) => layer.pools !== undefined);
-    expect(ground, 'the Mire\'s sky carries no pools, so nothing bubbles').toBeDefined();
-    const span = ground!.extent;
+    const floor = floorOf('mire');
+    expect(floor?.beds.length ?? 0, 'the Mire lies in no bed, so nothing bubbles').toBeGreaterThan(0);
+    const span = floor!.bedExtent * floor!.beds.length;
     let seen = 0;
     const strays: string[] = [];
     for (let camera = 0; camera < 1200; camera += 37) {
       for (const time of [0, 41, 97, 150]) {
-        const offset = (((camera * ground!.depth) % span) + span) % span;
+        const offset = (((camera - floor!.from) % span) + span) % span;
         for (const bubble of bubblesAt('mire', camera, time)) {
           seen++;
           const inTile = ((((bubble.along + offset) % span) + span) % span) / span;
@@ -167,18 +196,29 @@ describe('0353 — the acid bubbles', () => {
     expect(strays.slice(0, 5).join('\n'), `${strays.length} bubbles drawn off every pool`).toBe('');
   });
 
-  it('and the ground is baked with those same pools — the other half of the agreement', () => {
+  it('and the bed is baked with those same pools — the other half of the agreement', () => {
     /*
       The guard above holds the bubbles to `POOLS_OF`; this holds the baked pools to it, so the two are
       one set of pools and not two that happen to be written alike. Each spot's lens starts at its own
-      left edge and surface, in the tile's pixels.
+      left edge and surface, in the pixels of whichever half of the bed it begins in — the ground tile's
+      own fractions, scaled into a tile the lane's width (0383).
     */
     const size = 480;
-    const { pen, trace } = tracingPen();
-    GROUND_OF.mire!(pen, '#101010', '#405060', '#80a040', size, THEMES.mire.land!.vivid);
-    const starts = trace.passes.map((pass) => pass.subpaths[0]?.[0]).filter((p) => p !== undefined);
+    const parts = MIRE_BED.length;
+    const starts: { part: number; x: number; y: number }[] = [];
+    for (let part = 0; part < parts; part++) {
+      const { pen, trace } = tracingPen();
+      BANK_OF.mire!.bed(pen, size, part, parts, '#101010', '#80a040', THEMES.mire.land!.vivid);
+      for (const pass of trace.passes) {
+        const p = pass.subpaths[0]?.[0];
+        if (p !== undefined) starts.push({ part, x: p[0], y: p[1] });
+      }
+    }
     for (const spot of POOLS_OF.mire!.spots) {
-      const found = starts.some((p) => Math.abs(p![0] - spot.at * size) < 0.01 && Math.abs(p![1] - spot.top * size) < 0.01);
+      const x = spot.at * size * parts;
+      const part = Math.floor(x / size);
+      const y = spot.top * size * 2 - size / 2;
+      const found = starts.some((p) => p.part === part && Math.abs(p.x - (x - part * size)) < 0.01 && Math.abs(p.y - y) < 0.01);
       expect(found, `no pool is baked at the spot ${spot.at} / ${spot.top} the bubbles rise from`).toBe(true);
     }
   });
@@ -197,10 +237,12 @@ describe('0353 — the acid bubbles', () => {
     }
   });
 
-  it('and only a place that states pools bubbles', () => {
-    for (const place of THEME_KINDS) {
-      if (POOLS_OF[place] !== null) continue;
-      expect(bubblesAt(place, 400, 60).length, `${place} states no pools and draws bubbles`).toBe(0);
-    }
-  });
+  /*
+    ── *AND ONLY A PLACE THAT STATES POOLS BUBBLES* STOOD HERE, AND 0383 DELETED IT ───────────────────
+
+    It held that the Mire's pools were not handed to every planet's ground layer. No sky layer holds
+    pools since 0383: they lie in the bed under the Mire's bank, and a bubble is painted only with a
+    floor that has a bed, which no other place lays. Nothing a change could do would redden it, so it
+    went with its probe rather than staying green over nothing — 0192.
+  */
 });
