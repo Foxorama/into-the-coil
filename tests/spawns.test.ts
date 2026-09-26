@@ -549,7 +549,15 @@ describe('a threat uses the whole area, and the player does not', () => {
       device, so *left the lane* IS *left the screen*, and the assertion is that it went off and came
       back rather than that a velocity had a sign.
     */
-    const { world } = playableWorld(oneWave('drifter', 30));
+    /*
+      ⚠️ **LANE 70, AND THE PLAYER'S FIRE HELD — 0376.** The roam starts when the hull is seen now,
+      not when it spawns, so a drifter authored at lane 30 spent its first three seconds holding
+      its lane beyond the view and then roamed INTO the parked ship's gun on its way to the far edge;
+      this guard's subject died with every assertion about the roam untested. Measuring flight, not
+      attrition (`tests/pilots.test.ts` makes the same argument): the gun is held, and the lane is
+      one from which the far band is reached and left again well inside the along cull.
+    */
+    const { world } = playableWorld(oneWave('drifter', 70));
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
 
@@ -557,6 +565,8 @@ describe('a threat uses the whole area, and the player does not', () => {
     let cameBack = false;
     // Long enough to cross the band and return at the drifter's rate, with room to spare.
     for (let step = 0; step < 2400; step++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       frame.step();
       if (world.enemies.size === 0) break;
       const e = world.enemies.at(0);

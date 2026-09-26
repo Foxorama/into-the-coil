@@ -20,10 +20,11 @@ export const PROBES = [
     guard: 'takes something that holds station clear off the edge of the screen',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0073, which made the motion a union: only a drifting row is given a
-      // starting direction, because a reactive one recomputes `velAcross` from the ship every step.
-      find: "      e.velAcross = row.motion.kind === 'drift' ? ((index + i) % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;",
-      replace: '      e.velAcross = 0;',
+      // ⚠️ Re-anchored by 0073, which made the motion a union, and by 0376, which moved the START of
+      // the roam from the spawner to the step the hull is first seen: the spawner deals a direction
+      // onto `spin`, and this is the line that turns it into a velocity.
+      find: '          e.velAcross = (inward !== 0 ? inward : e.spin >= 0 ? 1 : -1) * m.roam;\n          break;',
+      replace: '          break;',
     },
   },
   {

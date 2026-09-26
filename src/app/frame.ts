@@ -147,6 +147,13 @@ const TAU = Math.PI * 2;
 const FLANK_ENTRY_SPEED = 0.55;
 
 /**
+ * The share of the lane at either edge inside which a roam's first leg heads inward — 0376. A
+ * quarter: a drifter authored at lane 20 or 80 turns toward the middle first, one at 30 or 70 takes
+ * its parity, and either way the body is on the screen for its first leg.
+ */
+const ROAM_INWARD = 0.25;
+
+/**
  * How far out a circling body starts orbiting rather than closing, as a multiple of its radius.
  *
  * ⚠️ **An orbit attempted from the spawn horizon is a TANGENT.** A body 246 units out that applied a
@@ -5437,7 +5444,11 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
         on the spawner rather than on the paint. `scripts/weigh-presence.mjs` prints the sighting.
       */
       e.velAlong += w.scrollPerStep;
-    } else e.velAcross = row.motion.kind === 'drift' ? (i % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
+    } else {
+      // Dealt and not started, as a wave's member is — 0376: the roam begins when the hull is seen.
+      e.velAcross = 0;
+      if (row.motion.kind === 'drift') e.spin = i % 2 === 0 ? 1 : -1;
+    }
     // The same two facts a wave's member is given, in the other order so 0073's probe over the
     // wave's line stays the one line it names.
     if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
@@ -5576,7 +5587,15 @@ function spawnWave(w: World, index: number): void {
         `velAcross` every step from where the ship is, so a lean written at spawn would last exactly
         one step. 0073.
       */
-      e.velAcross = row.motion.kind === 'drift' ? ((index + i) % 2 === 0 ? row.motion.roam : -row.motion.roam) : 0;
+      /*
+        ⚠️ **DEALT, NOT STARTED — `docs/decisions/0376-a-roam-waits-to-be-seen.md`.** The parity goes
+        on `spin` and the body holds its lane until its hull is inside the view; `steerEnemies` starts
+        the roam from there. Written straight into `velAcross`, a body that did not close spent three
+        seconds roaming beyond the leading edge — fifty-seven units of lane for a drifter — and was
+        first seen already off the screen, heading out.
+      */
+      e.velAcross = 0;
+      if (row.motion.kind === 'drift') e.spin = (index + i) % 2 === 0 ? 1 : -1;
     }
     /*
       WHAT A PILOT NEEDS TO KNOW ABOUT ITSELF, set once here — `docs/decisions/0073-an-enemy-is-a-pilot.md`.
@@ -5811,6 +5830,30 @@ function steerEnemies(w: World): void {
       */
       case 'drift': {
         if (m.roam <= 0) break;
+        /*
+          ── THE ROAM WAITS TO BE SEEN — `docs/decisions/0376-a-roam-waits-to-be-seen.md` ─────────
+
+          ⚠️ **REPORTED**: *"lots of enemies that start near the top/bottom of the screen and then
+          immediately fly off the screen."* A lead wave is placed at `camera + 328` and a 16:9 view
+          ends at `camera + 213`, so a body that does not close spent three seconds roaming before
+          anyone could see it — 57 units of lane for a drifter — and was first seen already off the
+          screen, heading out. 0059 says the roam is *what a body does with the whole area ONCE IT HAS
+          ARRIVED*; nothing here asked whether it had. `velAcross` is zero until this step, on the
+          arc's own precedent (0328's `after`): the spawner deals the parity onto `spin` and the roam
+          begins the step the hull is inside the view.
+
+          ⚠️ **AND THE FIRST LEG HEADS INWARD FROM THE OUTER QUARTER.** The parity stands where the
+          body has room either way, so a formation still fans; a body that starts within a quarter of
+          the lane of an edge and is dealt the outward leg would be off the screen in a second, which
+          is the report in one sentence. Deterministic from the wave and the lane, so a level is still
+          authored (0073's argument for the parity holds).
+        */
+        if (e.velAcross === 0) {
+          if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) break;
+          const inward = e.across < ACROSS_SPAN * ROAM_INWARD ? 1 : e.across > ACROSS_SPAN * (1 - ROAM_INWARD) ? -1 : 0;
+          e.velAcross = (inward !== 0 ? inward : e.spin >= 0 ? 1 : -1) * m.roam;
+          break;
+        }
         /*
           ⚠️ **IN A CORRIDOR IT TURNS AT THE WALL, ON ITS HULL — 0348.** Asked, and answered: *turn at
           the wall.* A drifter turning outside the lane drifted over the stone and back, and
