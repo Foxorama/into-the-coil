@@ -32,10 +32,11 @@ export const PROBES = [
         breaks is unchanged: a head throwing the ROW's shot. And by 0365, which threads the bar's
         fraction for a round that grows.
       */
+      // And by 0380, which threads the breaker's own stream.
       find:
-        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
+        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);',
       replace:
-        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);',
+        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);',
     },
   },
   {

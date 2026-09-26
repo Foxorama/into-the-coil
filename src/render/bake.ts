@@ -470,6 +470,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   volansEmber3: 'glass',
   volansEmber4: 'glass',
   volansEmber5: 'glass',
+  volansBlaze0: 'glass',
+  volansBlaze1: 'glass',
+  volansBlaze2: 'glass',
+  volansBlaze3: 'glass',
+  volansBlaze4: 'glass',
+  volansBlaze5: 'glass',
   boss10: 'enemy',
   boss11: 'enemy',
   boss11Chipped: 'enemy',
@@ -5033,6 +5039,13 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
  */
 const EMBER_INKS = { coal: '#7a1a06', ember: '#ff5a1e', gold: '#ffb03a', core: '#fff1cf' } as const;
 
+/**
+ * The same flame white-hot — 0380: the fish's last stage. Each ink is the ember's one step up the
+ * ladder — coal to ember, ember to gold, gold to the core, and the core to white — so the flame is
+ * the same flame at a higher temperature rather than a different fire.
+ */
+const BLAZE_INKS = { coal: '#ff5a1e', ember: '#ffb03a', gold: '#fff1cf', core: '#ffffff' } as const;
+
 /** A unit circle in twelve samples, for `curveLoop` to round off — the oval the ember's haze is built of. */
 const OVAL: readonly Pt[] = Array.from({ length: 12 }, (_, i) => {
   const at = (i / 12) * Math.PI * 2;
@@ -5054,8 +5067,10 @@ const OVAL: readonly Pt[] = Array.from({ length: 12 }, (_, i) => {
  * a round haze the size of the wings leaves the nose and tail bare and one the size of the animal is a
  * ball. Three ellipses, each wider than tall and each dragged further aft than the one inside it.
  */
-function paintVolansEmber(ctx: Pen, f: Frame, frame: number): void {
+function paintVolansEmber(ctx: Pen, f: Frame, frame: number, hot: boolean): void {
   const rng = makeRng('aura').stream(`volans/${frame}`);
+  // The same shapes off the same stream, in the hotter inks — 0380: one fire, two temperatures.
+  const inks = hot ? BLAZE_INKS : EMBER_INKS;
   /*
     ⚠️ **A STACK OF SHRINKING OVALS AND NOT A GRADIENT, BECAUSE `Pen` HAS NO TRANSFORM AND MUST NOT.**
     `glow`'s falloff is radial, so an elliptical one wants the canvas squeezed under it — and `save`,
@@ -5084,9 +5099,9 @@ function paintVolansEmber(ctx: Pen, f: Frame, frame: number): void {
     }
     ctx.globalAlpha = 1;
   };
-  haze(EMBER_INKS.coal, 0.14, 1.02, 0.74, 0.045);
-  haze(EMBER_INKS.ember, 0.09, 0.72, 0.52, 0.04);
-  haze(EMBER_INKS.gold, 0.02, 0.4, 0.3, 0.035);
+  haze(inks.coal, 0.14, 1.02, 0.74, 0.045);
+  haze(inks.ember, 0.09, 0.72, 0.52, 0.04);
+  haze(inks.gold, 0.02, 0.4, 0.3, 0.035);
   /*
     ⚠️ **THE TONGUES LEAVE THE FLANKS AND GO AFT, WHATEVER THE FLANK'S ANGLE.** Rooted inside the
     flesh so the animal covers the foot, tip a doubled point on `curveLoop`'s own terms, and each one
@@ -5124,10 +5139,10 @@ function paintVolansEmber(ctx: Pen, f: Frame, frame: number): void {
       [root + long * 0.26 * far, across + fat * 0.9 * wide + drift * 0.12],
       [root - fat * 0.3, across + fat * 0.7 * wide],
     ];
-    lick(EMBER_INKS.coal, tongue(1.3, 1.05), 0.3);
-    lick(EMBER_INKS.ember, tongue(1, 0.95), 0.36);
-    lick(EMBER_INKS.gold, tongue(0.62, 0.82), 0.36);
-    lick(EMBER_INKS.core, tongue(0.3, 0.62), 0.4);
+    lick(inks.coal, tongue(1.3, 1.05), 0.3);
+    lick(inks.ember, tongue(1, 0.95), 0.36);
+    lick(inks.gold, tongue(0.62, 0.82), 0.36);
+    lick(inks.core, tongue(0.3, 0.62), 0.4);
   }
 }
 
@@ -5605,13 +5620,13 @@ const VOLANS_BODY: readonly Pt[] = [
   /*
     ⚠️ **THE CAUDAL FIN IS NOT HERE ANY MORE — 0374.** It is `VOLANS_TAIL`, a bitmap of its own,
     rooted at 0.76 along and turned about that root every step so the animal swims. What the body
-    keeps is a rounded stump past the peduncle for the tail's base to sit over, so the join is under
-    the fin's root and not a seam beside it.
+    keeps is a short stump past the peduncle, ending at 0.80 — inside the fin's base, which reaches
+    forward under it (0381) — so the join is a curve drawn over flesh and not a knob beside a flap.
   */
-  [0.8, -0.11],
-  [0.85, -0.05],
-  [0.85, 0.05],
-  [0.8, 0.11],
+  [0.78, -0.12],
+  [0.8, -0.05],
+  [0.8, 0.05],
+  [0.78, 0.12],
   [0.74, 0.16],
   [0.7, 0.17],
   [0.58, 0.25],
@@ -5693,10 +5708,10 @@ const VOLANS_BARBED: readonly Pt[] = [
   [0.7, -0.17],
   [0.74, -0.16],
   // The same stump as the calm body's — 0374: the grown tail is `VOLANS_TAIL_BARBED`, on the same root.
-  [0.8, -0.11],
-  [0.85, -0.05],
-  [0.85, 0.05],
-  [0.8, 0.11],
+  [0.78, -0.12],
+  [0.8, -0.05],
+  [0.8, 0.05],
+  [0.78, 0.12],
   [0.74, 0.16],
   [0.7, 0.17],
   [0.58, 0.25],
@@ -5802,40 +5817,51 @@ function volansHull(jaw: VolansJaw, barbed: boolean): readonly Pt[] {
   one thing a separate tail would reveal.
 */
 const VOLANS_TAIL: readonly Pt[] = [
-  [-0.05, -0.28],
-  [0.25, -0.63],
-  [0.42, -0.91],
-  [0.42, -0.91],
-  [0.33, -0.49],
-  [0.18, -0.09],
-  [0.18, 0.09],
-  [0.33, 0.49],
-  [0.42, 0.91],
-  [0.42, 0.91],
-  [0.25, 0.63],
-  [-0.05, 0.28],
-  [-0.14, 0.12],
-  [-0.16, 0],
-  [-0.14, -0.12],
+  /*
+    ⚠️ **THE BASE REACHES FORWARD UNDER THE BODY, SO THE STUMP ENDS INSIDE THE FIN — 0381.** The first
+    draft's fin began at the root and the body's stump ran on past it: photographed, a rounded knob
+    with a flap pinned to its end. The base runs to −0.2 now, the lobes are a sixth bigger, and the
+    stump stops at 0.80 of the body — inside the fin's own silhouette, where the join is a curve the
+    body draws over flesh and not a knob beside a flap.
+  */
+  [-0.2, -0.24],
+  [-0.02, -0.34],
+  [0.28, -0.72],
+  [0.48, -1.04],
+  [0.48, -1.04],
+  [0.37, -0.56],
+  [0.2, -0.1],
+  [0.2, 0.1],
+  [0.37, 0.56],
+  [0.48, 1.04],
+  [0.48, 1.04],
+  [0.28, 0.72],
+  [-0.02, 0.34],
+  [-0.2, 0.24],
+  [-0.26, 0.1],
+  [-0.27, 0],
+  [-0.26, -0.1],
 ];
 
 /** The grown body's tail — 0320's lobes drawn out, on the same root and in the same tile. */
 const VOLANS_TAIL_BARBED: readonly Pt[] = [
-  [-0.05, -0.28],
-  [0.3, -0.7],
-  [0.5, -1.0],
-  [0.5, -1.0],
-  [0.37, -0.53],
-  [0.18, -0.09],
-  [0.18, 0.09],
-  [0.37, 0.53],
-  [0.5, 1.0],
-  [0.5, 1.0],
-  [0.3, 0.7],
-  [-0.05, 0.28],
-  [-0.14, 0.12],
-  [-0.16, 0],
-  [-0.14, -0.12],
+  [-0.2, -0.24],
+  [-0.02, -0.34],
+  [0.32, -0.78],
+  [0.54, -1.1],
+  [0.54, -1.1],
+  [0.4, -0.6],
+  [0.2, -0.1],
+  [0.2, 0.1],
+  [0.4, 0.6],
+  [0.54, 1.1],
+  [0.54, 1.1],
+  [0.32, 0.78],
+  [-0.02, 0.34],
+  [-0.2, 0.24],
+  [-0.26, 0.1],
+  [-0.27, 0],
+  [-0.26, -0.1],
 ];
 
 /**
@@ -5853,7 +5879,9 @@ function paintVolansTail(ctx: Pen, f: Frame, skin: FoeSkin, barbed: boolean): vo
     [0.04, 0.12],
     [0.1, 0.05],
   ] as const) {
-    const swell = Math.min(1 + gap, 1.13 / skirt);
+    // Capped at 1.08 of the skirt where the body's halo is capped at 1.13: a lobe this long rounds
+    // further past its samples under `curveLoop`, and `tests/accents.test.ts` measured 1.18 at 1.13.
+    const swell = Math.min(1 + gap, 1.08 / skirt);
     ctx.globalAlpha = alpha * lit;
     ctx.fillStyle = skin.lit;
     ctx.beginPath();
@@ -5867,12 +5895,12 @@ function paintVolansTail(ctx: Pen, f: Frame, skin: FoeSkin, barbed: boolean): vo
   const lobe = barbed ? 1.1 : 1;
   for (const side of [-1, 1]) {
     for (const [tx, ty] of [
-      [0.33, 0.66],
-      [0.25, 0.49],
-      [0.17, 0.28],
+      [0.38, 0.76],
+      [0.29, 0.56],
+      [0.2, 0.32],
     ] as const) {
       seam(ctx, f, rgba(skin.plate, 0.5), 0.038, [
-        [0, 0.06 * side],
+        [-0.08, 0.07 * side],
         [tx * lobe, ty * lobe * side],
       ]);
     }
@@ -5881,7 +5909,9 @@ function paintVolansTail(ctx: Pen, f: Frame, skin: FoeSkin, barbed: boolean): vo
   // tapering, drawn bright: it leaves the fin and is allowed past the outline on the halo's terms.
   // ⚠️ The grown tail's streamer starts further out and reaches no further: `tests/accents.test.ts`
   // holds every translucent mark at 1.16 of the drawing radius, and the calm one already ends at 1.08.
-  const streamer: readonly number[] = barbed ? [0.48, 0.98, 0.58, 1.05, 0.68, 1.12, 0.54, 0.99, 0.46, 0.93] : [0.4, 0.9, 0.52, 1.0, 0.64, 1.08, 0.47, 0.92, 0.38, 0.84];
+  // Its far point stays under 1.16 of the radius once `curveLoop` has rounded the corner, which
+  // `tests/accents.test.ts` measured at 1.18 for a point authored at 1.13.
+  const streamer: readonly number[] = barbed ? [0.5, 1.04, 0.58, 1.07, 0.66, 1.1, 0.54, 1.02, 0.48, 0.98] : [0.44, 0.98, 0.54, 1.03, 0.64, 1.08, 0.5, 0.96, 0.42, 0.92];
   for (const side of [-1, 1]) {
     const [ax, ay, bx, by, cx, cy, dx, dy, ex, ey] = streamer as [number, number, number, number, number, number, number, number, number, number];
     shaded(
@@ -8224,7 +8254,16 @@ export function drawKind(
         rather than up, because this hull is seen from overhead and up-screen is forward. Nothing at
         all in a palette with no skins, which is the high-contrast one.
       */
-      if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)));
+      if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)), false);
+      return;
+    case 'volansBlaze0':
+    case 'volansBlaze1':
+    case 'volansBlaze2':
+    case 'volansBlaze3':
+    case 'volansBlaze4':
+    case 'volansBlaze5':
+      // The same flame white-hot — 0380: the ember's own painter in its core inks, for the last stage.
+      if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)), true);
       return;
     case 'volansTail':
     case 'volansTailHit':

@@ -355,7 +355,16 @@ export type BossAttack =
    * alone: the wave covers `span` of lane and nothing else, so the answer is to be somewhere the fish
    * is not, rather than in a gap inside what it threw.
    */
-  | { kind: 'breaker'; span: number; rise: number; ends: number }
+  /*
+    ⚠️ **AND SINCE 0380 IT MAY ROAM AND WARN.** Reported: *"the second stage attack that fires upward
+    covers the right side of the screen and completely misses the player, it should 'spawn' at random
+    places along the bottom of the screen and fire upward so that the player has to actively move
+    forward/backward to dodge it."* `roams` draws the wave's centre from the fish's own stream, anywhere
+    the NARROWEST view can show the whole span; `warning` is how many steps the spines stand in the
+    edge, tips showing, before they rise — a wave from a random place with no tell is unfair rather than
+    learnable. Both optional, on 0282's terms: absent is 0315's wave, centred on the hull, unwarned.
+  */
+  | { kind: 'breaker'; span: number; rise: number; ends: number; roams?: boolean; warning?: number }
   /**
    * A summons — 0249. Asked for: *"summons hordes of flying kites and raptors as adds at various
    * points throughout the fight."* Each volley puts `count` of `enemy` on the field at the leading
@@ -1223,6 +1232,13 @@ export interface BossPhase {
    */
   escort?: Escort;
   /**
+   * A leap the phase makes on a clock of its own — 0380: the boss dives out through the near edge of
+   * the lane and flies its `entrance` again, unshootable and fully live, then arrives as every boss
+   * does. Optional, on `escort`'s argument: only the phase that leaps says so, and a row with no
+   * entrance has nothing to fly — `tests/volans.test.ts` holds that the one that carries it has one.
+   */
+  leap?: Leap;
+  /**
    * The bitmaps the HULL wears in this phase instead of the row's, or absent for the row's —
    * `docs/decisions/0332-the-gyre-is-set-into-the-wall.md`.
    *
@@ -1378,6 +1394,23 @@ export interface Burn {
  * clock. An escort has to run on a clock of its own or it is a summons again — and a clock of its own
  * is the whole of what *while* means.
  */
+/**
+ * A leap — 0380: *"we need a new stage 3 and four"*, and the one thing a flying fish does that no
+ * other boss can is leave the lane and come back over it. The phase's clock, not the volley's, so the
+ * fight goes on throwing between leaps; the flight itself is the row's `entrance`, replayed from
+ * wherever the boss is — it dives to the path's start first, at `DIVE_PER_STEP` in `src/app/frame.ts`.
+ */
+export interface Leap {
+  /**
+   * Steps from the stage opening to its first leap, before the tier scales it. Shorter than `every`,
+   * so a stage a capped gun ends in four seconds still leaps once — measured with `weigh-boss`: a
+   * shuriken reached the fish's last stage at 11 s and ended it at 15, inside a six-second interval.
+   */
+  first: number;
+  /** Steps between leaps after the first, before the tier scales it. */
+  every: number;
+}
+
 export interface Escort {
   /** The body it calls. */
   enemy: EnemyKind;
@@ -1799,28 +1832,54 @@ const EMBER: readonly number[] = [
 const VOLANS_TAIL: TailArt = { sprite: SPRITE.volansTail, spriteHit: SPRITE.volansTailHit };
 const VOLANS_TAIL_BARBED: TailArt = { sprite: SPRITE.volansTailBarbed, spriteHit: SPRITE.volansTailBarbedHit };
 
+/** The same six frames white-hot — 0380: the ember's painter in its core inks, for the last stage. */
+const BLAZE: readonly number[] = [
+  SPRITE.volansBlaze0,
+  SPRITE.volansBlaze1,
+  SPRITE.volansBlaze2,
+  SPRITE.volansBlaze3,
+  SPRITE.volansBlaze4,
+  SPRITE.volansBlaze5,
+];
+
 const KINDLED: Look = {
   face: VOLANS_FACE,
   // A frame every four steps: slower than the serpent's three, because one flame flickering alone
-  // reads as a lamp with a loose bulb where twenty-seven read as weather.
-  aura: { frames: EMBER, hold: 4, stride: 1, head: 16.5 },
+  // reads as a lamp with a loose bulb where twenty-seven read as weather. The crown's girth grew
+  // with the hull in 0381 (42 → 50 across), in the same proportion.
+  aura: { frames: EMBER, hold: 4, stride: 1, head: 19.6 },
+};
+
+/** The grown body's eight faces — 0320: fins risen, worn from the second stage on. */
+const BARBED_FACE: Face = {
+  rest: SPRITE.boss9Barbed,
+  restHit: SPRITE.boss9BarbedHit,
+  up: SPRITE.boss9BarbedUp,
+  down: SPRITE.boss9BarbedDown,
+  gape: SPRITE.boss9BarbedGape,
+  gapeHit: SPRITE.boss9BarbedGapeHit,
+  shut: SPRITE.boss9BarbedShut,
+  shutHit: SPRITE.boss9BarbedShutHit,
 };
 
 const ABLAZE: Look = {
-  face: {
-    rest: SPRITE.boss9Barbed,
-    restHit: SPRITE.boss9BarbedHit,
-    up: SPRITE.boss9BarbedUp,
-    down: SPRITE.boss9BarbedDown,
-    gape: SPRITE.boss9BarbedGape,
-    gapeHit: SPRITE.boss9BarbedGapeHit,
-    shut: SPRITE.boss9BarbedShut,
-    shutHit: SPRITE.boss9BarbedShutHit,
-  },
+  face: BARBED_FACE,
   // Bigger and quicker, and the same six frames: what changed is the row's numbers, which is where a
   // difference between two instances of one mechanism belongs.
-  aura: { frames: EMBER, hold: 3, stride: 1, head: 21 },
+  aura: { frames: EMBER, hold: 3, stride: 1, head: 25 },
   // And the tail lobes drawn out with the fins — 0374: the grown body's own caudal fin, on the same root.
+  tail: VOLANS_TAIL_BARBED,
+};
+
+/**
+ * White-hot — 0380: the fourth stage. The grown body and its tail, the same flame in the ember's core
+ * inks, the crown bigger again and the flicker at two steps a frame. One fire at a higher temperature,
+ * which is what a stage after *ablaze* has left to be, and it costs six bakes and no drawing of the
+ * animal.
+ */
+const BLAZING: Look = {
+  face: BARBED_FACE,
+  aura: { frames: BLAZE, hold: 2, stride: 1, head: 29 },
   tail: VOLANS_TAIL_BARBED,
 };
 
@@ -2933,12 +2992,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * this animal keep their filenames, because a decision is the record and renaming one is rewriting
    * history (0029); their prose says *eagle* and is true of what was decided then.
    *
-   * ⚠️ **FIVE PHASES, AND THE FIGHT ALTERNATES BETWEEN WHAT IT THROWS AND WHAT IT SENDS.** It opens
-   * throwing darts at where the player is; at three quarters it whips — five flames along an arc,
-   * the tip quicker than the root; at half it calls kites, two a volley, in a vee at the leading
-   * edge; at a third it whips again, seven wide; and at the last sixth it calls raptors, one a
-   * volley, which hunt. *"Hordes of flying kites and raptors as adds at various points throughout
-   * the fight"* — the points are the phases.
+   * ⚠️ **FOUR STAGES SINCE 0380, AND EVERY ONE THROWS AND CALLS.** It opens kindled, raking seven
+   * spines with kites out of its mouth; at 72% it is ablaze, dumping kites on the volley while the
+   * shoal comes out under them; at 46% the field empties for the breaker, which rises anywhere
+   * along the near edge after a half-second tell; and at 22% it is white-hot, leaping out through
+   * the edge and back across the screen every six seconds between whips of flame. *"Hordes of flying
+   * kites and raptors as adds at various points throughout the fight"* — the points are the stages,
+   * and the play of 2026-09-27 chose which two led.
    *
    * ⚠️ **AND IT BREACHES IN — `docs/decisions/0313-the-fish-breaches.md`.** *"Needs a flashy
    * entrance."* Up through the near edge of the lane, three leaps across the whole screen that each go
@@ -2994,20 +3054,21 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     entrance: { kind: 'breach', surface: ACROSS_SPAN, from: 176, leaps: 3, span: 59, height: 34, rise: 1.4, speed: 1.2 },
     /*
-      THE TAIL — 0374. Rooted 13.4 units aft of the hull's centre, which is 0.76 of the drawing radius
-      (`SPRITE_EXTENT.boss9` is 42 across, so the radius the painter draws in is 17.64): the peduncle
-      the caudal fin used to be painted onto. A beat every 26 steps, sweeping 0.42 radians each way —
-      about two and a half beats a second, a little slower than a fish this size swims at, because a
-      tail the player is meant to SEE beat has to be slower than the flicker it shares a screen with.
-      The hull yaws a seventh of the sweep against it.
+      THE TAIL — 0374, re-tuned by 0381. Rooted 16 units aft of the hull's centre, which is 0.76 of the
+      drawing radius (`SPRITE_EXTENT.boss9` is 50 across, so the radius the painter draws in is 21):
+      the peduncle the caudal fin used to be painted onto. A beat every 32 steps, sweeping 0.34 radians
+      each way — under two beats a second, slower and shallower than 0374's, because the play called
+      the quicker beat *"funky and weird"* and a flying fish glides more than it swims. **No yaw**: the
+      whole animal turning against its fin read as a picture wobbling, not a body flexing.
     */
-    tail: { art: VOLANS_TAIL, root: 13.4, beat: 26, sweep: 0.42, yaw: 0.06 },
+    tail: { art: VOLANS_TAIL, root: 16, beat: 32, sweep: 0.34, yaw: 0 },
     room: null,
     burn: null,
     wreck: null,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
-    radius: 15,
+    // Grown with the drawing in 0381 (42 → 50 across): the same share of the tile it always was.
+    radius: 18,
     // Doubled by 0260, from 760.
     health: 1520,
     damage: 3,
@@ -3021,68 +3082,50 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'spine',
     phases: [
       /*
-        ⚠️ **THE OPENING THROWS FROM THE FIRST SECOND — `docs/decisions/0317-the-pressure-comes-forward.md`.**
-        It was three spines every 78 steps, and flown it was the least threatening thing in the game:
-        `scripts/weigh-threat.mjs` put a parked ship at **0.10 hits a second** over the whole fight and
-        at **0.00** against a shuriken — never touched, once, in sixteen seconds. Five spines every 72
-        is 1.7 times the throughput and one more volley in the band, so 0260's eight is safer not
-        tighter.
-      */
-      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      /*
-        ⚠️ **AND THE BREAKER COMES FORWARD TO A QUARTER OF THE BAR, FROM TWO THIRDS — 0317.** It is the
-        one attack that covers a PLACE rather than a direction, so it is the one that makes a player
-        move rather than lean; at a third of health a shuriken had already ended the fight before it
-        was ever thrown. The shoal comes out of the mouth under it (0373), which is where the fight
-        first asks two questions at once.
-      */
-      { upTo: 0.75, fireEvery: 66, shots: 5, spread: 0.8, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort: { enemy: 'minnow', count: 2, formation: 'line', from: 'mouth', standing: 4, every: 150 } },
-      /*
-        ⚠️ **AND FROM HERE IT THROWS *AND* CALLS — 0314.** *"Needs to be attack while the adds are
-        coming in."* These two phases used to be `summon` volleys, which is a volley that throws
-        nothing: the horde WAS the attack, and for a third of the fight the fish stopped fighting to
-        send it. The horde is an `escort` now, on a clock of its own, and the phase goes on raking and
-        whipping over the top of it.
-      */
-      /*
-        ⚠️ **AND THEN THE FIELD EMPTIES, WHICH IS THE POINT OF THIS PHASE — 0317.** Asked for: *"a phase
-        that lasts too long or starts early and goes till end of the fight ends up being boring."* Both
-        escorts used to run from where they started to the end, so from half health on there was always
-        something in the way and the shoal was wallpaper. Here there is nothing on the field but the
-        whip and the fish, and what makes the shoal read when it comes back is that it went away.
-      */
-      /*
-        ⚠️ **AND IT CATCHES FIRE HERE — 0320, and this is the phase for it rather than a phase near
-        it.** Asked: *"We need the boss to change/morph between phases."* This is the rung where the
-        fish stops throwing spines and starts throwing **flame** (0248's per-phase shot, already on
-        this row before the art existed), so the morph is the animal agreeing with its own weapon
-        instead of a costume change on a timer.
+        ── FOUR STAGES — `docs/decisions/0380-the-fish-has-four-stages.md` ──────────────────────────
 
-        ⚠️ **THE FACE IS THE ROW'S OWN, AND THAT IS THE CHEAP HALF ON PURPOSE.** `Look` carries a face
-        AND an aura, and nothing says the face has to be a new one: the first stage of this morph is
-        six frames of ember behind an unchanged animal, for **zero new drawings of the fish**. What it
-        costs is the thing that reads — a creature that was cold and is now burning.
+        Played: *"last stage is great, it should be stage 2, the stage before it should be stage 1 and
+        we need a new stage 3 and four."* So the two stages the play liked are the first two, in that
+        order, and the fight opens ALREADY KINDLED and throwing and calling from its first second —
+        0317's opening and 0320's cold first half are gone with the three stages that held them. The
+        breaker and the whip come back as the two new stages' bones, each with a thing it did not have.
+
+        ⚠️ **STAGE ONE — a fan of seven and the kites, kindled.** 0262's rake on 0314's clock, out of
+        the mouth (0373). It goes on burning from the first frame: a look that switched on between two
+        stages would read as the fire catching, which this fish has already done by the time it arrives.
       */
-      { upTo: 0.5, fireEvery: 60, shots: 5, spread: 1.1, patrolScale: 1.5, stance: { kind: 'volley' }, look: KINDLED, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },
-      // And the kites come back, diving from the sides in turn while it rakes — 0262's horde on 0314's
-      // clock, in the slot the breaker used to have (0317). It goes on burning: a look that switched
-      // off between two phases would read as the fire going OUT, which is the opposite of escalation.
-      { upTo: 0.33, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 5, every: 150 } },
+      { upTo: 1, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 5, every: 150 } },
       /*
-        ⚠️ **THE LAST THIRD IS BOTH MECHANISMS AT ONCE, WHICH IS WHAT MAKES THEM DIFFERENT THINGS
-        RATHER THAN TWO SPELLINGS.** The volley dumps a wave of kites — the attack, all at once, on the
-        fire grid — while the escort keeps the shoal arriving underneath it on its own faster clock.
-        The raptor that used to be called here is the Saurian Belt's animal and is not missed: what the
-        fish sends now is its own.
+        ⚠️ **STAGE TWO — BOTH MECHANISMS AT ONCE, ABLAZE, WHICH IS THE ONE THE PLAY CALLED GREAT.** The
+        volley dumps a wave of kites — the attack, all at once, on the fire grid — while the escort
+        keeps the shoal coming out of the mouth underneath it on its own faster clock. The fins have
+        risen (0320): eight faces on a second body, and the ember behind it half again as big.
       */
+      { upTo: 0.72, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'mouth', standing: 4, every: 108 } },
       /*
-        ⚠️ **AND THE SECOND STAGE IS THE ONE THAT COSTS DRAWINGS — 0320.** The fish's fins have risen:
-        each pectoral's trailing edge serrated into three swept barbs, the pelvics longer, the tail
-        lobes drawn out. Eight faces on a second body, and the ember behind it half again as big. The
-        serpent buys its own escalation the same way and at twice the price (0305: sixteen faces and
-        six frames) — what makes this two stages rather than one is that the FIRST is free.
+        ⚠️ **STAGE THREE — THE BREAKER, ANYWHERE, WITH A TELL — and the field empties.** 0315's wave up
+        off the near edge, which rose where the fish was (the far half of the screen, on a boss that
+        stalks the player's lane) and was answered by standing still; it `roams` now — its centre drawn
+        on the breaker's own stream anywhere the narrowest screen shows the whole span — and it
+        `warning`s: the five spines stand in the edge with their tips showing for half a second before
+        they rise. A span of 60 against a narrowest view of 213, so there is always lane to stand on;
+        a wave every 42 steps with the tell's thirty on top of that, because a later stage fires
+        STRICTLY faster than the one before it (`tests/difficulty.test.ts`) and the stage before is
+        at 48; five to a wave rather than seven so two waves in the air is a field and not a wall.
+        No horde under it, on 0317's own finding: a stage with nothing on the field but the wave and the
+        fish is what makes the wave readable and the kites read when they come back.
       */
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'mouth', standing: 4, every: 108 } },
+      { upTo: 0.46, fireEvery: 42, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
+      /*
+        ⚠️ **STAGE FOUR — IT LEAPS, WHITE-HOT, WHIPPING FLAME.** Every six seconds it dives out through
+        the near edge and flies its breach again — three leaps across the whole screen, unshootable
+        and fully live, the one thing a flying fish does that no other boss can — then arrives and
+        goes back to the whip of flame (0249's lash, the tip quicker than the root) with a pair of
+        kites out of its mouth between leaps. The look is `BLAZING`: the same fire in the ember's own
+        core inks, the crown bigger and the flicker quicker — one fire at a higher temperature, which
+        is what a fourth stage after *ablaze* has left to be.
+      */
+      { upTo: 0.22, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
     ],
   },
   /**

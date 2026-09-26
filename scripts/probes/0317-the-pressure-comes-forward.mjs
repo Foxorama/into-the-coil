@@ -12,12 +12,14 @@ export const PROBES = [
       reaches: sixteen seconds, and the wave was never thrown once. The attack that covers a PLACE is
       the one the player has to move for, so where it sits IS the pressure.
     */
-    broke: 'the breaker back at the last third, where a shuriken ends the fight before it is thrown',
-    guard: 'THE ASKED-FOR ONE: the breaker opens in the first half of the bar',
+    // ⚠️ Re-aimed by 0380, which moved the breaker to the third stage and kept what 0317 was FOR:
+    // pressure from the first second. The break is the opening stage back at 0317's slow cadence.
+    broke: 'the opening stage back at 0317’s slow cadence, so the first quarter of the fight is the fish alone and idle',
+    guard: 'THE ASKED-FOR ONE: the pressure is there from the first second',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }, cue: 'bossBreach', escort:",
-      replace: "attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, shot: 'flame', escort:",
+      find: "      { upTo: 1, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.3,",
+      replace: "      { upTo: 1, fireEvery: 72, shots: 7, spread: 1.1, patrolScale: 1.3,",
     },
   },
   {
@@ -33,8 +35,9 @@ export const PROBES = [
     guard: 'the field EMPTIES between the two hordes',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 } },",
-      replace: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'sides', standing: 6, every: 150 } },",
+      // ⚠️ Re-anchored by 0380: the stage with no horde is the breaker's, the third.
+      find: "roams: true, warning: 30 }, cue: 'bossBreach' },",
+      replace: "roams: true, warning: 30 }, cue: 'bossBreach', escort: { enemy: 'kite', count: 3, formation: 'vee', from: 'mouth', standing: 6, every: 150 } },",
     },
   },
   {

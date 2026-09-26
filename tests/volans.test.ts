@@ -22,7 +22,7 @@ import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
-import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { CUES } from '../src/content/cues.ts';
 import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -85,9 +85,17 @@ describe('0249 — the eagle summons', () => {
       that covers a place rather than a direction, and at a third of the bar a shuriken had ended the
       fight before it was ever thrown.
     */
-    expect(kinds).toEqual(['rake', 'breaker', 'whip', 'rake', 'summon']);
-    expect(new Set(kinds).size, 'the fish throws fewer than four kinds of thing across its five phases').toBe(4);
-    expect(row.phases.filter((p) => p.escort !== undefined).length, 'no phase of the fish calls a horde while it fights').toBe(3);
+    /*
+      ⚠️ **AND FOUR STAGES SINCE 0380, WITH THE TWO THE PLAY CALLED GREAT LEADING.** *"Last stage is
+      great, it should be stage 2, the stage before it should be stage 1 and we need a new stage 3 and
+      four."* The rake with the kites, the summons with the shoal, the breaker roaming with a tell, and
+      the whip of flame with the leap — four kinds of thing, one a stage, and every stage calls.
+    */
+    expect(kinds).toEqual(['rake', 'summon', 'breaker', 'breaker', 'whip']);
+    expect(row.phases.map((p) => (p.attack ?? row.attack).kind)).toEqual(['rake', 'summon', 'breaker', 'whip']);
+    expect(new Set(kinds).size, 'the fish throws fewer than four kinds of thing across its four stages').toBe(4);
+    expect(row.phases.filter((p) => p.escort !== undefined).length, 'a stage of the fish calls no horde while it fights').toBe(3);
+    expect(row.phases.filter((p) => p.leap !== undefined).length, 'no stage of the fish leaps').toBe(1);
     expect(LEVELS.descent.boss).toBe('volans');
     expect(LEVELS.descent.theme).toBe('nebula');
   });
@@ -176,7 +184,11 @@ describe('0249 — the eagle summons', () => {
       mouth."* Where a call starts is `0373 — the fish spits its adds` below; what this holds is that a
       summons is still a volley that throws nothing and calls a horde, twice.
     */
-    for (const [fraction, enemy] of [[0.1, 'kite']] as const) {
+    // The stage that SUMMONS — the second since 0380 — found rather than typed.
+    const summoning = BOSSES.volans.phases.findIndex((p) => p.attack?.kind === 'summon');
+    expect(summoning, 'no stage of the fish summons').toBeGreaterThanOrEqual(0);
+    const midway = (BOSSES.volans.phases[summoning]!.upTo + (BOSSES.volans.phases[summoning + 1]?.upTo ?? 0)) / 2;
+    for (const [fraction, enemy] of [[midway, 'kite']] as const) {
       const { world, frame } = volansAt(fraction);
       const boss = world.bossPool.at(0);
       const called = (): number => {
@@ -741,14 +753,21 @@ describe('0374 — the fish beats its tail', () => {
     expect(px, `the tail's tip travels ${px.toFixed(1)} CSS pixels a beat on a 1280×720 screen, which is not a beat anyone sees`).toBeGreaterThan(12);
   });
 
-  it('and the hull yaws AGAINST it, a fraction of the sweep the other way, so the beat is a swim and not a flag', () => {
+  it('and the hull holds its heading: the beat is the fin’s and not the animal’s — 0381', () => {
+    /*
+      ⚠️ **0374 YAWED THE HULL AGAINST THE FIN, AND THE PLAY CALLED THE RESULT *"FUNKY AND WEIRD"*.** A
+      whole rigid picture turning a few degrees against its tail reads as the picture wobbling, not as
+      a body flexing; the row's `yaw` is zero now and this holds it, in the units the player sees: the
+      hull's heading on station does not move by a hundredth of a degree over two beats while the
+      tail sweeps its full arc.
+    */
     const tail = ROW.tail;
     if (tail === null) throw new Error('the fish has no tail');
+    expect(tail.yaw, 'the row still asks the hull to yaw').toBe(0);
     const { world, frame } = onStation();
     const head = world.bossPool.at(0);
     let yawMost = 0;
-    let against = 0;
-    let with_ = 0;
+    let swung = 0;
     for (let i = 0; i < tail.beat * 2; i++) {
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 2;
@@ -759,15 +778,10 @@ describe('0374 — the fish beats its tail', () => {
       const fin = tailOf(world, tail.art);
       if (fin === null) continue;
       yawMost = Math.max(yawMost, Math.abs(head.turn));
-      const relative = swingBetween(fin.turn, head.turn);
-      if (Math.abs(relative) < 0.05 || Math.abs(head.turn) < 0.005) continue;
-      if (Math.sign(relative) === -Math.sign(head.turn)) against++;
-      else with_++;
+      swung = Math.max(swung, Math.abs(swingBetween(fin.turn, head.turn)));
     }
-    expect(yawMost, `the hull yawed ${yawMost.toFixed(3)} radians at most, and the row asks ${tail.yaw}`).toBeGreaterThan(tail.yaw * 0.8);
-    expect(yawMost, 'the hull yaws as far as the tail sweeps, which is a flag on a pole').toBeLessThan(tail.sweep * 0.5);
-    expect(against, 'the hull never turned against its tail').toBeGreaterThan(0);
-    expect(with_, `the hull turned WITH its tail on ${with_} steps`).toBe(0);
+    expect((yawMost * 180) / Math.PI, `the hull turned ${((yawMost * 180) / Math.PI).toFixed(3)}° on station, so the picture wobbles`).toBeLessThan(0.01);
+    expect(swung, 'the tail did not sweep while the hull held still, so nothing about it moves').toBeGreaterThan(tail.sweep * 0.8);
   });
 
   it('and the tail wears the hull’s own hurt: a hit lights the fin with the flesh it is joined to', () => {
@@ -879,6 +893,267 @@ describe('0375 — the breach has a body', () => {
 });
 
 /**
+ * The fish has four stages — `docs/decisions/0380-the-fish-has-four-stages.md`. *"Last stage is great,
+ * it should be stage 2, the stage before it should be stage 1 and we need a new stage 3 and four."*
+ *
+ * ⚠️ **THE ORDER IS THE ROW'S; EVERYTHING ELSE HERE IS FLOWN** — 0027: where a roaming wave rises,
+ * how long its spines stand in the edge, whether the fish goes through the edge and comes back
+ * fighting, and what it burns with at the end.
+ */
+describe('0380 — the fish has four stages', () => {
+  const ROW = BOSSES.volans;
+  /** The middle of the band a stage owns, found rather than typed. */
+  const inside = (at: number): number => (ROW.phases[at]!.upTo + (ROW.phases[at + 1]?.upTo ?? 0)) / 2;
+  /** The fish on station at `fraction`, fire held, the field cleared, then `steps` flown with the health pinned. */
+  function stood(fraction: number): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame; hold: (steps: number, silence?: boolean) => void } {
+    const { world, frame } = volansAt(fraction);
+    const hold = (steps: number, silence = false): void => {
+      for (let i = 0; i < steps; i++) {
+        if (world.bossPool.size > 0 && world.bossEntering < 0) world.bossPool.at(0).health = world.bossFullHealth * fraction;
+        if (silence && world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 2;
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+    };
+    return { world, frame, hold };
+  }
+
+  it('THE ASKED-FOR ONE: the two stages the play liked lead, in that order, and two new ones follow — each with a look no earlier stage wore', () => {
+    const kinds = ROW.phases.map((p) => (p.attack ?? ROW.attack).kind);
+    expect(kinds, 'the stages are not the rake, the summons, the breaker and the whip, in that order').toEqual(['rake', 'summon', 'breaker', 'whip']);
+    expect(ROW.phases[0]!.escort?.enemy, 'the first stage does not call the kites').toBe('kite');
+    expect(ROW.phases[1]!.escort?.enemy, 'the second stage does not call the shoal under its summons').toBe('minnow');
+    // Four stages, three looks, and no look worn before a cooler one: kindled, ablaze, ablaze, white-hot.
+    const looks = ROW.phases.map((p) => p.look);
+    for (const look of looks) expect(look, 'a stage of the fish is cold').not.toBeNull();
+    expect(new Set(looks).size, 'the four stages wear fewer than three looks').toBe(3);
+    expect(looks[0]).not.toBe(looks[1]);
+    expect(looks[3], 'the last stage wears a look an earlier stage already wore').not.toBe(looks[2]);
+    const heads = looks.map((look) => look!.aura!.head);
+    for (let i = 1; i < heads.length; i++) expect(heads[i], `the crown shrank between stages ${i} and ${i + 1}`).toBeGreaterThanOrEqual(heads[i - 1]!);
+    // And the last stage's frames are its own, in the ember's hotter inks — a fourth set, not the third's.
+    expect(looks[3]!.aura!.frames, 'the last stage burns with the same frames as the one before it').not.toEqual(looks[2]!.aura!.frames);
+    for (const frame of looks[3]!.aura!.frames) expect(SPRITE_KINDS[frame]!.startsWith('volansBlaze'), `the last stage burns with ${SPRITE_KINDS[frame]}`).toBe(true);
+  });
+
+  it('and the BREAKER ROAMS: over twenty volleys the wave rises from many places, every one of them on the narrowest screen, and never where the hull is by rule', () => {
+    /*
+      ⚠️ **REPORTED**: *"the second stage attack that fires upward covers the right side of the screen
+      and completely misses the player, it should 'spawn' at random places along the bottom of the
+      screen."* Twenty volleys, the centre of each read off its own spines; in lane units, at least
+      five distinct places sixteen units apart, and every spine inside the narrowest view a device
+      can have (0023), so no part of a wave is ever off any screen.
+    */
+    const stage = ROW.phases.findIndex((p) => p.attack?.kind === 'breaker');
+    const attack = ROW.phases[stage]!.attack!;
+    if (attack.kind !== 'breaker') throw new Error('unreachable');
+    expect(attack.roams, 'the breaker is still centred on the hull').toBe(true);
+    const { world, hold } = stood(inside(stage));
+    const boss = world.bossPool.at(0);
+    const narrowest = ACROSS_SPAN * MIN_ASPECT;
+    const centres: number[] = [];
+    let onHull = 0;
+    for (let volley = 0; volley < 20; volley++) {
+      world.enemyShots.clear();
+      boss.fireIn = 1;
+      hold(1);
+      const spines: number[] = [];
+      for (let i = 0; i < world.enemyShots.size; i++) spines.push(world.enemyShots.at(i).along - world.cameraAlong);
+      expect(spines.length, `volley ${volley + 1} threw nothing`).toBeGreaterThan(2);
+      for (const along of spines) {
+        expect(along, `a spine of volley ${volley + 1} rose ${along.toFixed(0)} units ahead, beyond the narrowest screen`).toBeLessThanOrEqual(narrowest);
+        expect(along, `a spine of volley ${volley + 1} rose behind the ship`).toBeGreaterThan(0);
+      }
+      const centre = spines.reduce((s, a) => s + a, 0) / spines.length;
+      centres.push(centre);
+      if (Math.abs(centre - (boss.along - world.cameraAlong)) < 1) onHull++;
+      hold(attack.warning ?? 0);
+    }
+    const places = new Set(centres.map((c) => Math.round(c / 16)));
+    expect(places.size, `twenty waves rose from ${places.size} places — a wave that stays put is answered by standing still`).toBeGreaterThanOrEqual(5);
+    expect(onHull, `${onHull} of twenty waves rose exactly under the hull, which is the rule this replaced`).toBeLessThan(20);
+  });
+
+  it('and the wave WARNS: its spines stand in the edge, tips showing, for the row’s half second before they rise', () => {
+    const stage = ROW.phases.findIndex((p) => p.attack?.kind === 'breaker');
+    const attack = ROW.phases[stage]!.attack!;
+    if (attack.kind !== 'breaker') throw new Error('unreachable');
+    const warning = attack.warning ?? 0;
+    expect(warning / 60, `the tell is ${(warning / 60).toFixed(2)}s, which is not a tell anyone can use`).toBeGreaterThanOrEqual(0.4);
+    const { world, hold } = stood(inside(stage));
+    const boss = world.bossPool.at(0);
+    world.enemyShots.clear();
+    boss.fireIn = 1;
+    hold(1);
+    const spines = Array.from({ length: world.enemyShots.size }, (_, i) => world.enemyShots.at(i));
+    expect(spines.length).toBeGreaterThan(2);
+    // Standing IN the edge: the centre past the lane, the drawn tip inside it — visible and out of reach.
+    for (const s of spines) {
+      expect(s.across, 'a held spine is inside the lane').toBeGreaterThan(ACROSS_SPAN);
+      expect(s.across - SPRITE_EXTENT[SPRITE_KINDS[s.sprite]!]! * 0.42, 'a held spine shows nothing above the edge').toBeLessThan(ACROSS_SPAN);
+    }
+    let held = 0;
+    for (let i = 0; i < warning + 30; i++) {
+      if (spines.every((s) => s.velAcross === 0)) held++;
+      hold(1, true);
+    }
+    expect(held, `the spines stood for ${held} steps against a warning of ${warning}`).toBe(warning);
+    for (const s of spines) expect(s.velAcross, 'a spine never rose after its warning').toBeLessThan(0);
+  });
+
+  it('and at the last stage it LEAPS: out through the near edge, back across the screen with the edge breaking four times, and on station throwing again', () => {
+    /*
+      ⚠️ **THE ENTRANCE REPLAYED, MEASURED AS THE PLAYER SEES IT.** Within one interval of the stage
+      opening the fish is gone through the edge (unshootable: `bossEntering` is up); the edge breaks
+      `leaps + 1` times with the breach's own cue; and inside ten seconds it is back on station, on
+      the fire grid, throwing — a leap that ended the fight would be a boss that left.
+    */
+    const stage = ROW.phases.findIndex((p) => p.leap !== undefined);
+    expect(stage, 'no stage of the fish leaps').toBeGreaterThanOrEqual(0);
+    expect(ROW.entrance, 'a stage leaps and the row has no entrance to fly').not.toBeNull();
+    const leap = ROW.phases[stage]!.leap!;
+    const { world, cues } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      frame.step();
+    }
+    const fraction = inside(stage);
+    world.bossPool.at(0).health = world.bossFullHealth * fraction;
+    const crossingsBefore = cues.filter((c) => c === 'bossBreach').length;
+    let left = -1;
+    let back = -1;
+    let outside = false;
+    let thrown = false;
+    let longestStep = 0;
+    for (let i = 0; i < leap.every + 900; i++) {
+      if (world.bossEntering < 0) world.bossPool.at(0).health = world.bossFullHealth * fraction;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      const shots = world.enemyShots.size;
+      const wasAlong = world.bossPool.at(0).along - world.cameraAlong;
+      const wasAcross = world.bossPool.at(0).across;
+      frame.step();
+      const boss = world.bossPool.at(0);
+      // In the camera's frame, which is the one the player watches it move in (0023).
+      // While it is still flying its leap — the hand-over step lays it on station, which 0306 allows.
+      if (left >= 0 && world.bossEntering >= 0) longestStep = Math.max(longestStep, Math.hypot(boss.along - world.cameraAlong - wasAlong, boss.across - wasAcross));
+      if (left < 0 && world.bossEntering >= 0) left = i;
+      if (left >= 0 && boss.across - ROW.radius > ACROSS_SPAN) outside = true;
+      if (left >= 0 && back < 0 && world.bossEntering < 0) back = i;
+      if (back >= 0 && world.enemyShots.size > shots) {
+        thrown = true;
+        break;
+      }
+    }
+    expect(left, `the fish never leapt in ${((leap.every + 900) / 60).toFixed(0)}s of its last stage`).toBeGreaterThanOrEqual(0);
+    expect(left, 'the fish leapt before the player had seen the stage').toBeGreaterThan(leap.first * 0.5);
+    expect(left, `the first leap waited ${(left / 60).toFixed(1)}s, longer than the row's ${(leap.first / 60).toFixed(1)}s and a capped gun's whole last stage`).toBeLessThanOrEqual(leap.first * 1.5 + 30);
+    expect(outside, 'the fish leapt without ever going through the near edge').toBe(true);
+    expect(back, 'the fish leapt and never came back').toBeGreaterThanOrEqual(0);
+    expect((back - left) / 60, `the leap took ${((back - left) / 60).toFixed(1)}s`).toBeLessThan(10);
+    expect(cues.filter((c) => c === 'bossBreach').length - crossingsBefore, 'the edge did not break once for every crossing of the leap').toBeGreaterThanOrEqual(ROW.entrance!.kind === 'breach' ? ROW.entrance!.leaps + 1 : 1);
+    expect(thrown, 'the fish came back from its leap and never threw again').toBe(true);
+    /*
+      ⚠️ **AND IT FLIES THERE — NO STEP OF THE LEAP MOVES THE HULL FURTHER THAN A FLIGHT CAN.** The
+      first draft's probe for the dive stayed green: with the dive dropped, the entrance's own
+      steering put the hull on the path's start in one step — a teleport to the edge, and every
+      assertion about going through and coming back held over it. Twelve units a step — a tenth of
+      the lane — is twice the breach's own steepest rate, measured here at 6.6 on the third arc; a
+      jump from the station to the edge is sixty and more.
+    */
+    expect(longestStep, `the hull moved ${longestStep.toFixed(1)} units in one step of its leap, which is a jump and not a flight`).toBeLessThan(12);
+  });
+});
+
+/**
+ * The fish is bigger and its tail is one animal — `docs/decisions/0381-the-fish-is-bigger.md`.
+ * *"The graphic for it needs to be a bit bigger as well… the animation is a bit funky and weird."*
+ */
+describe('0381 — the fish is bigger, and its tail is one animal', () => {
+  const ROW = BOSSES.volans;
+  const hullOf = (index: number): readonly (readonly [number, number])[] => {
+    const kind = SPRITE_KINDS[index]!;
+    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'nebula');
+    return trace.passes[0]!.subpaths[0]!.map(([x, y]) => [(x - size / 2) / (size * 0.42), (y - size / 2) / (size * 0.42)] as const);
+  };
+  /** The outline's half-width at `at` along, in its own radius. */
+  const halfWidthAt = (hull: readonly (readonly [number, number])[], at: number): number => {
+    let widest = 0;
+    for (let i = 0; i < hull.length; i++) {
+      const [ax, ay] = hull[i]!;
+      const [bx, by] = hull[(i + 1) % hull.length]!;
+      if (ax <= at === bx <= at) continue;
+      widest = Math.max(widest, Math.abs(ay + ((at - ax) / (bx - ax)) * (by - ay)));
+    }
+    return widest;
+  };
+
+  it('THE ASKED-FOR ONE: the fish is drawn a fifth bigger than it was, and its hurtbox grew with it', () => {
+    /*
+      ⚠️ **IN CSS PIXELS OF A 1280×720 SCREEN, WHICH IS WHAT *A BIT BIGGER* MEANS.** 0318's fish was
+      42 units across, 252 pixels on that screen; fifty is 300. The hurtbox keeps the share of the
+      drawing it had (0.36 of the extent), so a bigger fish is not a fish that is easier to hit.
+    */
+    const extent = SPRITE_EXTENT[SPRITE_KINDS[ROW.sprite]!]!;
+    const px = extent * viewOf(1280, 720).scale;
+    expect(px, `the fish is ${px.toFixed(0)} CSS pixels across on a 1280×720 screen`).toBeGreaterThanOrEqual(295);
+    expect(ROW.radius / extent, 'the hurtbox is a smaller share of the drawing than it was').toBeGreaterThanOrEqual(0.35);
+    expect(ROW.radius / extent, 'the hurtbox is the whole drawing').toBeLessThanOrEqual(0.55);
+    // And every face and both tails scaled with it: one box for the animal, as 0319 and 0374 hold.
+    const face = ROW.face!;
+    for (const index of [face.rest, face.gape, face.shut, face.up, face.down]) expect(SPRITE_EXTENT[SPRITE_KINDS[index]!]).toBe(extent);
+  });
+
+  it('and the join is under the flesh: the body’s stump ends inside the fin’s base, at rest and at the full sweep', () => {
+    /*
+      ⚠️ **THE KNOB WAS THE FUNKINESS.** 0374's fin began at its root and the body's rounded stump ran
+      on past it — a knob with a flap pinned to its end. The fin's base reaches forward under the body
+      now and the stump stops inside it, so what shows at the peduncle is the body's curve over the
+      fin's flesh. Measured on the two outlines in the body's own radius: at the stump's aft end, the
+      fin is wider than the stump; and turned the row's full sweep either way, the fin's base corners
+      stay under a body that is wider there.
+    */
+    const tail = ROW.tail;
+    if (tail === null) throw new Error('the fish has no tail');
+    const body = hullOf(ROW.sprite);
+    const fin = hullOf(tail.art.sprite);
+    const bodyR = SPRITE_EXTENT[SPRITE_KINDS[ROW.sprite]!]! * 0.42;
+    const finR = SPRITE_EXTENT[SPRITE_KINDS[tail.art.sprite]!]! * 0.42;
+    const root = tail.root / bodyR;
+    const stumpEnd = Math.max(...body.map(([x]) => x));
+    expect(stumpEnd, 'the body reaches past the fin’s root by more than a tenth of its radius — a knob').toBeLessThan(root + 0.1);
+    // The fin's outline mapped into the body's frame, at rest: wider than the stump where the stump ends.
+    const finAtRest = fin.map(([x, y]) => [root + (x * finR) / bodyR, (y * finR) / bodyR] as const);
+    const stumpHalf = halfWidthAt(body, stumpEnd - 0.01);
+    const finHalf = halfWidthAt(finAtRest, stumpEnd - 0.01);
+    expect(finHalf, `where the body ends (${stumpEnd.toFixed(2)}) the fin is ${finHalf.toFixed(2)} wide against the stump's ${stumpHalf.toFixed(2)}, so the stump shows beside the fin`).toBeGreaterThan(stumpHalf);
+    // And swept: the fin's base corners, turned the full sweep about the root, stay under the body.
+    const base = Math.min(...fin.map(([x]) => x));
+    const baseHalf = halfWidthAt(fin, base + 0.02);
+    for (const sign of [-1, 1]) {
+      const c = Math.cos(tail.sweep * sign);
+      const s = Math.sin(tail.sweep * sign);
+      for (const corner of [-baseHalf, baseHalf]) {
+        const x = root + ((base * c - corner * s) * finR) / bodyR;
+        const y = ((base * s + corner * c) * finR) / bodyR;
+        expect(Math.abs(y), `a base corner of the fin swings to ${y.toFixed(2)} at ${x.toFixed(2)}, past the body's ${halfWidthAt(body, x).toFixed(2)} there`).toBeLessThan(halfWidthAt(body, x));
+      }
+    }
+  });
+});
+
+/**
  * The fish throws a breaker — `docs/decisions/0315-the-fish-throws-a-breaker.md`.
  *
  * *"Needs multiple styles of attacks."* The one attack in the game that does not leave the hull: a
@@ -893,7 +1168,6 @@ describe('0315 — the breaker', () => {
     if (attack.kind !== 'breaker') throw new Error('unreachable');
     const { world, frame } = volansAt((row.phases[phase]!.upTo + (row.phases[phase + 1]?.upTo ?? 0)) / 2);
     const hull = world.bossPool.at(0);
-    const at = hull.along;
     world.enemyShots.clear();
     hull.fireIn = 1;
     frame.step();
@@ -902,12 +1176,23 @@ describe('0315 — the breaker', () => {
     /*
       ⚠️ **OFF THE EDGE, IN THE UNITS THE LANE IS MEASURED IN — 0027.** Every other attack leaves the
       muzzle, so what is asked here is where the shots WERE on the step they were thrown: past the near
-      edge of the lane, every one of them, and rising into it.
+      edge of the lane, every one of them, and — once a warned wave's hold has run (0380) — rising
+      into it. The span is measured about the wave's OWN centre, since a roaming wave rises where the
+      hull is not; `0380 — the fish has four stages` holds where that centre may be.
     */
+    const warning = attack.warning ?? 0;
     for (const shot of wave) {
       expect(shot.prevAcross, `a shot of the wave started at ${shot.prevAcross.toFixed(0)} across, inside the lane`).toBeGreaterThanOrEqual(ACROSS_SPAN);
+    }
+    for (let i = 0; i < warning; i++) {
+      for (const shot of wave) expect(shot.velAcross, `a warned spine rose ${i} steps into a hold of ${warning}`).toBe(0);
+      hull.fireIn = 999;
+      frame.step();
+    }
+    const at = wave.reduce((sum, s) => sum + s.prevAlong, 0) / wave.length;
+    for (const shot of wave) {
       expect(shot.velAcross, 'a shot of the wave is not rising into the lane').toBeLessThan(0);
-      expect(Math.abs(shot.prevAlong - at), `a shot of the wave started ${Math.abs(shot.prevAlong - at).toFixed(0)} units from the hull, outside a span of ${attack.span}`).toBeLessThanOrEqual(attack.span / 2 + 0.001);
+      expect(Math.abs(shot.prevAlong - at), `a shot of the wave started ${Math.abs(shot.prevAlong - at).toFixed(0)} units from the wave's centre, outside a span of ${attack.span}`).toBeLessThanOrEqual(attack.span / 2 + 0.001);
     }
     /*
       ⚠️ **AND EVERY SPINE POINTS THE WAY IT FLIES — 0316, which is 0262's own claim about this
@@ -951,6 +1236,9 @@ describe('0315 — the breaker', () => {
     hull.fireIn = 999;
     frame.step();
     world.enemyShots.clear();
+    // And the field's other embers cleared — 0380: the fish spits from its first stage now, and a
+    // pool near its capacity drops what will not fit, which is `burst`'s rule and not the edge's.
+    world.debris.clear();
     const before = world.debris.size;
     hull.fireIn = 1;
     frame.step();
@@ -973,16 +1261,19 @@ describe('0315 — the breaker', () => {
 describe('0317 — the pressure comes forward', () => {
   const row = BOSSES.volans;
 
-  it('THE ASKED-FOR ONE: the breaker opens in the first half of the bar, where it used to wait for the last third', () => {
+  it('THE ASKED-FOR ONE: the pressure is there from the first second — the opening stage throws AND calls', () => {
     /*
-      ⚠️ **IT IS THE ONE ATTACK THAT COVERS A PLACE RATHER THAN A DIRECTION** — 0315 — so it is the one
-      that makes a player move rather than lean. At a third of health a shuriken had already finished
-      the fight before it was ever thrown: `scripts/weigh-threat.mjs` measured sixteen seconds and a
-      parked ship hit **zero times**.
+      ⚠️ **IT USED TO HOLD THAT THE BREAKER OPENED IN THE FIRST HALF, AND 0380 MOVED THE BREAKER.** The
+      play of 2026-09-27 put the two stages it liked first — the rake with kites, then the summons with
+      the shoal — and the breaker is the third stage now, with a tell and a roam it did not have. What
+      0317 was FOR was *"more forward pressure early"*: `scripts/weigh-threat.mjs` had measured a parked
+      ship hit zero times in sixteen seconds. That claim is held here in its own terms — the first
+      stage fires at the quickest cadence the old fight reached anywhere and calls a horde besides.
     */
-    const at = row.phases.findIndex((p) => (p.attack ?? row.attack).kind === 'breaker');
-    expect(at, 'the fish throws no breaker at all').toBeGreaterThanOrEqual(0);
-    expect(row.phases[at]!.upTo, `the breaker waits until ${row.phases[at]!.upTo} of the bar`).toBeGreaterThan(0.5);
+    const opening = row.phases[0]!;
+    expect(opening.fireEvery, `the opening stage fires every ${opening.fireEvery} steps, which is 0317's slow start again`).toBeLessThanOrEqual(60);
+    expect(opening.escort, 'the opening stage calls no horde, so the first quarter of the fight is the fish alone').toBeDefined();
+    expect(opening.look, 'the opening stage is cold, so the fish arrives looking like the one the play called a wall').not.toBeNull();
   });
 
   it('and the field EMPTIES between the two hordes, so neither runs from where it starts to the end', () => {
@@ -1298,6 +1589,9 @@ describe('0319 — the fish has a face', () => {
         // The volley tell outranks the snap, so it is silenced: what is under test is the other one.
         world.bossPool.at(0).fireIn = 999;
         world.ship.health = world.shipRow.health;
+        // Immortal, since 0380: the fish spits kites from its first stage, and a ship bitten dead
+        // respawns in the middle of the lane — across the fish's face, which is a real crossing.
+        world.ship.invulnFor = 2;
         stick.across = fly(i, world);
         frame.step();
         if (i >= 0) worn.add(world.bossPool.at(0).spriteBase);
@@ -1398,8 +1692,10 @@ describe('0319 — the fish has a face', () => {
       face worn nearly always carries no information, however well it is drawn: what the player has to
       be able to read is the CHANGE.
     */
+    // Shut for MOST of the fight: under half. It was under two fifths until 0380 opened the fight at
+    // a volley every 54 steps with a spit every 150, each with its tell — 47% agape, shut 53%.
     const share = gaped.length / 900;
-    expect(share, `the fish is agape for ${(share * 100).toFixed(0)}% of the fight`).toBeLessThan(0.4);
+    expect(share, `the fish is agape for ${(share * 100).toFixed(0)}% of the fight`).toBeLessThan(0.5);
   });
 });
 
@@ -1458,44 +1754,65 @@ describe('0320 — the fish kindles', () => {
       world.step(1 - i / 40);
       if (world.bossPool.size === 0) break;
       const boss = world.bossPool.at(0);
-      // A flame is an ember frame; the tail lives in the same layer since 0374 and is not fire.
+      // A flame is an ember frame, or a blaze frame since 0380; the tail lives in the same layer
+      // since 0374 and is not fire.
       let burning = 'cold';
-      for (let k = 0; k < world.bossAura.size; k++) if (SPRITE_KINDS[world.bossAura.at(k).sprite]!.startsWith('volansEmber')) burning = SPRITE_KINDS[world.bossAura.at(k).sprite]!;
+      for (let k = 0; k < world.bossAura.size; k++) {
+        const kind = SPRITE_KINDS[world.bossAura.at(k).sprite]!;
+        if (kind.startsWith('volansEmber')) burning = 'lit';
+        else if (kind.startsWith('volansBlaze')) burning = 'hot';
+      }
       const body = SPRITE_KINDS[boss.spriteBase]!.startsWith('boss9Barbed') ? 'grown' : 'calm';
       // The ember cycles six frames, so what identifies a LOOK is that it is burning rather than which.
-      const worn = `${body}/${burning === 'cold' ? 'cold' : 'lit'}`;
+      const worn = `${body}/${burning}`;
       if (seen[seen.length - 1] !== worn) seen.push(worn);
     }
+    /*
+      ⚠️ **THREE WAYS STILL, AND NONE OF THEM COLD — 0380.** It opened cold and caught fire at half;
+      the play put the burning stages first, so it arrives kindled, grows its fins ablaze, and goes
+      white-hot for the leap. What this holds is the ladder and its direction: hotter, never back.
+    */
     expect(
       seen.join(' → '),
       `the fish was drawn ${seen.length} ways down its bar: ${seen.join(' → ')}`,
-    ).toBe('calm/cold → calm/lit → grown/lit');
+    ).toBe('calm/lit → grown/lit → grown/hot');
   });
 
-  it('and the fire is OFF for the first half, in the fish’s own inks and never the serpent’s', () => {
+  it('and the fire is ON from the first stage and only ever hotter, in the fish’s own inks and never the serpent’s', () => {
     /*
-      ⚠️ **OFF FIRST IS HALF THE CLAIM AND IT IS THE HALF THAT FAILS QUIETLY.** An aura authored on every
-      phase is a boss that is always burning, which says nothing about how hurt it is — the wallpaper
-      0317 spent a whole decision taking out of the adds. The fish opens cold, and it catches at the
-      rung where it starts throwing flame rather than at a rung near it.
+      ⚠️ **IT USED TO BE OFF FOR THE FIRST HALF, AND 0380 PUT THE BURNING STAGES FIRST.** 0320's
+      worry — an aura on every phase says nothing about how hurt the boss is — is answered by the
+      ladder rather than by a cold start: kindled, then ablaze with the fins risen, then white-hot in
+      different inks with a bigger crown. What is held is that every stage burns and that the crown
+      never shrinks down the bar.
     */
     const world = standing();
     const burning = (at: number): boolean => {
       world.step(at);
-      // A flame is an ember frame; the tail lives in the same layer since 0374 and is not fire.
-      for (let k = 0; k < world.bossAura.size; k++) if (SPRITE_KINDS[world.bossAura.at(k).sprite]!.startsWith('volansEmber')) return true;
+      // A flame is an ember frame or a blaze frame; the tail lives in the same layer since 0374 and is not fire.
+      for (let k = 0; k < world.bossAura.size; k++) {
+        const kind = SPRITE_KINDS[world.bossAura.at(k).sprite]!;
+        if (kind.startsWith('volansEmber') || kind.startsWith('volansBlaze')) return true;
+      }
       return false;
     };
-    expect(burning(0.95), 'the fish is already on fire at full health, so the fire says nothing about the fight').toBe(false);
-    expect(burning(0.8), 'the fish is burning in its second phase, which is before it throws any flame').toBe(false);
-    expect(burning(0.45), 'the fish is not burning at the phase where its shot becomes FLAME').toBe(true);
-    expect(burning(0.1), 'the fish is not burning at its last phase').toBe(true);
+    expect(burning(0.95), 'the fish arrives cold, which is the wall the play named').toBe(true);
+    expect(burning(0.6), 'the fish is not burning in its second stage').toBe(true);
+    expect(burning(0.3), 'the fish is not burning in its third stage').toBe(true);
+    expect(burning(0.1), 'the fish is not burning at its last stage').toBe(true);
+    const full = BOSSES.volans.health;
+    let crown = 0;
+    for (const at of [0.95, 0.6, 0.3, 0.1]) {
+      const aura = phaseFor(BOSSES.volans, full * at, full).look?.aura;
+      expect(aura, `the stage at ${at} of the bar authors no aura`).toBeTruthy();
+      expect(aura!.head, `the crown shrank at ${at} of the bar, so the fire went DOWN a stage`).toBeGreaterThanOrEqual(crown);
+      crown = aura!.head;
+    }
     /*
       ⚠️ **AND THE FRAMES ARE ITS OWN** — 0282. Sharing the serpent's would make two animals in two
       levels burn with one flame, and it is the kind of sharing nobody sees until somebody changes the
       serpent's aura and the fish's changes with it.
     */
-    const full = BOSSES.volans.health;
     const serpent = SPRITE_KINDS.filter((k) => k.startsWith('serpentAura') || k.startsWith('serpentStorm'));
     for (const at of [0.45, 0.1]) {
       const aura = phaseFor(BOSSES.volans, full * at, full).look?.aura;

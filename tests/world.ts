@@ -135,6 +135,7 @@ export function inertLevel(): {
   bossFallIn: number;
   bossEscortIn: number;
   bossEscortSide: number;
+  bossLeapIn: number;
   chilledFor: number;
   frozenFor: number;
   dyingIn: number;
@@ -236,6 +237,7 @@ export function inertLevel(): {
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,
+    bossLeapIn: 0,
     chilledFor: 0,
     frozenFor: 0,
     // Nothing is dying in a fixture that has not been driven yet — 0079.
@@ -416,6 +418,7 @@ export function playableWorld(
     arcRng: makeRng('test').stream('arc'),
     stormRng: makeRng('test').stream('storm'),
     rainRng: makeRng('test').stream('rain'),
+    breakerRng: makeRng('test').stream('breaker'),
     rockRng: makeRng('test').stream('rock'),
     voidRng: makeRng('test').stream('void'),
     fuseRng: makeRng('test').stream('fuse'),
@@ -510,6 +513,7 @@ export function playableWorld(
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,
+    bossLeapIn: 0,
     chilledFor: 0,
     frozenFor: 0,
     dyingIn: 0,

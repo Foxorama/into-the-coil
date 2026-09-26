@@ -16,8 +16,9 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the wave comes up off the EDGE',
     edit: {
       path: 'src/app/boss.ts',
-      find: '        reset(shot, boss.along - attack.span / 2 + attack.span * t, edge, bullet, kind);',
-      replace: '        reset(shot, boss.along - attack.span / 2 + attack.span * t, muzzleAcross, bullet, kind);',
+      // ⚠️ Re-anchored by 0380, which lets the wave's centre roam.
+      find: '        reset(shot, centre - attack.span / 2 + attack.span * t, edge, bullet, kind);',
+      replace: '        reset(shot, centre - attack.span / 2 + attack.span * t, muzzleAcross, bullet, kind);',
     },
   },
   {
@@ -28,8 +29,9 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the wave comes up off the EDGE',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 }",
-      replace: "attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 1 }",
+      // ⚠️ Re-anchored by 0380, which narrowed the span and set the wave roaming with a tell.
+      find: "attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }",
+      replace: "attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 1, roams: true, warning: 30 }",
     },
   },
   {
@@ -56,7 +58,8 @@ export const PROBES = [
     guard: 'the edge it came up through is drawn',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  if (calling.kind === 'breaker' && w.enemyShots.size > beforeVolley) burst(w, boss.along, ACROSS_SPAN, BURST.breach);\n",
+      // ⚠️ Re-anchored by 0380, which throws the spray under the WAVE rather than under the hull.
+      find: '    burst(w, centre / (w.enemyShots.size - beforeVolley), ACROSS_SPAN, BURST.breach);\n',
       replace: '',
     },
   },
@@ -68,8 +71,9 @@ export const PROBES = [
     guard: 'the edge it came up through is drawn',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "rise: 1.5, ends: 0.66 }, cue: 'bossBreach'",
-      replace: "rise: 1.5, ends: 0.66 }, cue: 'bossShot'",
+      // ⚠️ Re-anchored by 0380.
+      find: "roams: true, warning: 30 }, cue: 'bossBreach'",
+      replace: "roams: true, warning: 30 }, cue: 'bossShot'",
     },
   },
 ];

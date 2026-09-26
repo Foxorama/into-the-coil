@@ -168,6 +168,23 @@ const ROAM_UNSEEN_MARGIN = 2;
 const MOUTH_REACH = 0.92;
 
 /**
+ * How fast a boss flies to the start of its entrance for a mid-fight leap, in world units a step —
+ * 0380. Three: twice the breach's own speed and a fifth over the ship's, so the dive out reads as a
+ * dive rather than a drift, and from the fish's station to the near edge is about a second.
+ */
+const DIVE_PER_STEP = 3;
+
+/**
+ * How far up-lane of a breach's first crest a mid-fight leap begins its run along the edge, in world
+ * units — 0380. Sixty-four, and the number is the arrival's and not the run-in's: the hand-over lays
+ * the boss at the path's start, mid-lane, and the fish's `from` is 176 against a narrowest view of
+ * 213, so a start any nearer than the view plus a hull (about 240) is a fish that pops into being on
+ * the screen after its dive. The run along the edge from there is about a second at the breach's
+ * speed, the first part of it just beyond the leading edge.
+ */
+const LEAP_RUN_IN = 64;
+
+/**
  * How much wider than its formation's spacing a spat horde fans — 0373. At 5, a rank of kites
  * leaves the mouth for lanes thirty-one units apart, so the nearest member of a skewed call lands
  * fifteen units off the mouth's lane and the furthest forty-six: a fan a player reads as a fan, and
@@ -967,6 +984,8 @@ export interface World {
    * stream per 0021: a strike that rolled on the spawn stream would move a wave by one enemy.
    */
   rainRng: Rng;
+  /** Where the fish's wave rises off the edge — 0380, on 0021's terms: its own stream. */
+  breakerRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
   /** Which way a pickup floats and how each bounce turns it — 0293, on 0021's own terms. */
@@ -1454,6 +1473,12 @@ export interface World {
    * is a clock a player who is doing well never sees run out.
    */
   bossEscortIn: number;
+  /**
+   * Steps until the boss next LEAPS — 0380: dives out through the edge of the lane and flies its
+   * entrance again. The phase that carries a `leap` sets it when it opens, so the first leap waits a
+   * whole interval; a phase without one never reads it.
+   */
+  bossLeapIn: number;
   /**
    * Which across edge the escort's next call flanks from — 0314, `1` or `-1`, alternating a call.
    *
@@ -4977,6 +5002,20 @@ function bendShots(w: World): void {
   const pool = w.enemyShots;
   for (let i = pool.size - 1; i >= 0; i--) {
     const shot = pool.at(i);
+    /*
+      ⚠️ **A WARNED BREAKER'S SPINE STANDS IN THE EDGE UNTIL ITS HOLD RUNS OUT — 0380.** `holdFor` is
+      the boss's brace and a beam's strike everywhere else and no enemy shot carried one; the breaker
+      puts its warning on it and the rise on `firePhase`, and this is the one place either is read.
+      Released, the spine rises at the rate the volley gave it, exactly as an unwarned one leaves.
+    */
+    if (shot.holdFor > 0) {
+      shot.holdFor--;
+      if (shot.holdFor === 0) {
+        shot.velAcross = -shot.firePhase;
+        shot.firePhase = 0;
+      }
+      continue;
+    }
     const path = SHOT_ROWS[shot.kind]!.path;
     if (path === undefined) continue;
     // A wall's shot still on its way out to its slot is not on its path yet — `spreadShots`.
@@ -7177,6 +7216,30 @@ function driveEntrance(w: World, boss: Entity): void {
   const entrance = w.bossRow.entrance!;
   const chain = w.bossRow.chain;
   const total = entranceLength(entrance, w.bossEntryAt, chain === null ? 0 : chainReach(chain), thickest(chain, SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! / 2));
+  /*
+    ── THE DIVE TO THE PATH'S START, WHEN THE ENTRANCE IS FLOWN AGAIN — 0380 ────────────────────
+
+    ⚠️ **A LEAP MID-FIGHT IS THE ENTRANCE REPLAYED, AND THE ONE THING IT NEEDS THAT A SPAWN DOES NOT
+    IS TO GET TO THE START.** A boss put on the field is put AT the path's start (`spawnBoss`), so
+    this is a distance of nothing there; a boss leaping from its station is a hull's length or more
+    away, and it flies there first — straight, at `DIVE_PER_STEP`, nosed into its own heading — and
+    the entrance counts from the step it arrives. Nothing in the path or the hand-over knows the
+    difference, which is what keeps one description of the flight.
+  */
+  if (w.bossEntering === 0) {
+    entranceAt(entrance, w.bossEntryAt, 0);
+    const dAlong = w.cameraAlong + ENTRANCE_AT[0]! - boss.along;
+    const dAcross = ENTRANCE_AT[1]! - boss.across;
+    const far = Math.hypot(dAlong, dAcross);
+    if (far > DIVE_PER_STEP) {
+      boss.velAlong = w.scrollPerStep + (dAlong / far) * DIVE_PER_STEP;
+      boss.velAcross = (dAcross / far) * DIVE_PER_STEP;
+      if (chain === null) boss.turn = turnFor(Math.atan2(dAcross, dAlong));
+      w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
+      w.bossAcross = boss.across + boss.velAcross;
+      return;
+    }
+  }
   w.bossEntering += 1;
   const s = w.bossEntering * entrance.speed;
   if (s >= total) {
@@ -7193,7 +7256,8 @@ function driveEntrance(w: World, boss: Entity): void {
     boss.velAcross = 0;
     boss.turn = 0;
     boss.bobPhase = 0;
-    boss.fireIn = nextOnGrid(w.steps, fireGapFor(w.bossRow.phases[0]!.fireEvery, w.difficulty));
+    // The phase it is IN, since 0380: a leap mid-fight hands over into whatever stage the bar says.
+    boss.fireIn = nextOnGrid(w.steps, fireGapFor(phaseFor(w.bossRow, boss.health, w.bossFullHealth).fireEvery, w.difficulty));
     w.bossTrail.fill(boss.across);
     w.bossSettle = true;
   } else {
@@ -7413,6 +7477,7 @@ function driveBoss(w: World): void {
     w.onCue,
     w.bolts,
     w.rainRng,
+    w.breakerRng,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
@@ -7462,7 +7527,13 @@ function driveBoss(w: World): void {
     edge broke here*, and seven of them would be a wall of embers rather than a place — 0036, and
     `BURST.breach` is the entrance's own, because it is the same edge and the same animal.
   */
-  if (calling.kind === 'breaker' && w.enemyShots.size > beforeVolley) burst(w, boss.along, ACROSS_SPAN, BURST.breach);
+  if (calling.kind === 'breaker' && w.enemyShots.size > beforeVolley) {
+    // Under the WAVE, since 0380 — a breaker that roams rises where the hull is not, and the edge
+    // that broke is the one under the spines: their mean along, read off the volley just thrown.
+    let centre = 0;
+    for (let i = beforeVolley; i < w.enemyShots.size; i++) centre += w.enemyShots.at(i).along;
+    burst(w, centre / (w.enemyShots.size - beforeVolley), ACROSS_SPAN, BURST.breach);
+  }
   if (calling.kind === 'summon' && boss.turnsLeft > 0) {
     /*
       ⚠️ **THE CALL TOPS THE HORDE UP RATHER THAN ADDING TO IT — 0270.** `standing` on the row is the
@@ -7513,6 +7584,9 @@ function driveBoss(w: World): void {
       call already has its whole reload of warning.
     */
     if (w.bossRow.phases[phase]!.escort?.from === 'mouth') w.bossEscortIn = Math.max(w.bossEscortIn, FACE_GAPE + 1);
+    // A stage that leaps waits its own `first` before it does — 0380: the player sees the stage first.
+    const opening = w.bossRow.phases[phase]!.leap;
+    if (opening !== undefined) w.bossLeapIn = fireGapFor(opening.first, w.difficulty);
     /*
       ⚠️ **Only ever forwards, and the guard is the comparison rather than a rule about health.** A
       boss cannot heal, so a phase index that went down would be a bug somewhere else entirely — and
@@ -7787,6 +7861,34 @@ function driveBoss(w: World): void {
         else w.onCue('threat', boss.across);
       }
       w.bossEscortIn = fireGapFor(escort.every, w.difficulty);
+    }
+  }
+  /*
+    ── THE LEAP — 0380 ────────────────────────────────────────────────────────────────────────────
+
+    *"We need a new stage 3 and four."* On a clock of its own, on the escort's argument: the phase goes
+    on throwing and calling between leaps, and a leap is not a volley. When it fires the boss goes
+    back into its entrance from the top — `bossEntering` at zero — and `driveEntrance` flies it to the
+    path's start first, then through the edge and back across the lane, unshootable and fully live,
+    and hands it over to the arrival every boss has. The clock is set by the phase that opens with a
+    leap, so the first one waits a whole interval and the player has seen the stage before it goes.
+  */
+  const leap = throwing.leap;
+  if (leap !== undefined && w.bossRow.entrance !== null) {
+    w.bossLeapIn--;
+    if (w.bossLeapIn <= 0) {
+      /*
+        ⚠️ **A LEAP STARTS ITS PATH A SHORT RUN-IN AHEAD OF THE FIRST CREST, NOT WHERE THE SPAWN WAS.**
+        `bossEntryAt` is where the boss was put on the field, which is the entrance's start and the
+        arrival's place; a breach mid-fight has no spawn to start from, and photographed on the bench
+        the fish dived to wherever that offset happened to be. The path begins `LEAP_RUN_IN` up-lane
+        of the breach's `from` — inside the narrowest screen, so the run-in along the edge is seen —
+        and the arrival that follows enters from there, as every arrival does.
+      */
+      if (w.bossRow.entrance.kind === 'breach') w.bossEntryAt = w.bossRow.entrance.from + LEAP_RUN_IN;
+      w.bossEntering = 0;
+      w.bossLeapIn = fireGapFor(leap.every, w.difficulty);
+      return;
     }
   }
   /*
