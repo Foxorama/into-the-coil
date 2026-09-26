@@ -871,19 +871,23 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * ⚠️ **Drawn as a large missile since 0375, and still spent by its fuse.** The radius follows the
    * picture to 2.5 so the hurtbox stays inside what is drawn (`tests/combat.test.ts`'s band); it only
    * matters where stone sets it off early (0349), because nothing else pairs with it.
+   *
+   * ⚠️ **1.5 A STEP SINCE 0379, AND IT WAS 2.2.** *"All the bomb launch effects need to be more
+   * visible as well, they're all slightly too fast and not visible enough."* Same reach, so it goes
+   * off where it did, nine tenths of a second after the press where it was six.
    */
-  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 2.5, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  bomb: { sprite: SPRITE.bomb, spriteHit: SPRITE.bomb, radius: 3.2, health: 1, damage: 0, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * The storm's ball — 0374: *"a glowing lightning flickering projectile."* The bomb's body in every
    * number, because it is thrown the same way to the same place; it hurts nothing in flight either,
    * and what it does is what it becomes when its fuse runs out.
    */
-  stormBall: { sprite: SPRITE.stormBall, spriteHit: SPRITE.stormBall, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  stormBall: { sprite: SPRITE.stormBall, spriteHit: SPRITE.stormBall, radius: 2.5, health: 1, damage: 0, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * The void missile — 0377: *"a void missile -> it flies forward."* The bomb's flight in every
    * number; what it does is the rift it opens where its fuse runs out.
    */
-  voidBall: { sprite: SPRITE.voidBall, spriteHit: SPRITE.voidBall, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  voidBall: { sprite: SPRITE.voidBall, spriteHit: SPRITE.voidBall, radius: 2.5, health: 1, damage: 0, speed: 1.5, fission: SPENT_BY_ARRIVING },
   /**
    * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
    *

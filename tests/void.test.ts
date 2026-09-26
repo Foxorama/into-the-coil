@@ -260,9 +260,26 @@ describe('0377 — the rift carves the Labyrinth’s stone, for good', () => {
     const near = faceAt(carved, at, -1) - 2;
     expect(stoneAt(pristine, at, near, 0), 'the fixture has no stone where the rift opened').toBe(-1);
     expect(stoneAt(carved, at, near, 0), 'the stone the rift covered is still there').toBe(0);
-    expect(stoneAt(carved, at, faceAt(carved, at, 1) + 2, 0), 'the rift carved a wall it does not reach').toBe(1);
+    /*
+      ⚠️ **THE FAR WALL AS THE LEVEL AUTHORED IT, ACROSS THE RIFT'S WHOLE SPAN.** This read *the far
+      wall is stone where the rift opened*, and 0379's slower throw moved the rift onto one of the
+      level's own far-wall openings — green or red by where an author put a gap, not by the carve. What
+      the rift must not do is change the far wall; held against the untouched corridor, with some of
+      that span real stone so the comparison says something.
+    */
+    let farStone = 0;
+    for (let along = at - RIFT.radius; along <= at + RIFT.radius; along += 1) {
+      const far = faceAt(pristine, along, 1) + 2;
+      if (stoneAt(pristine, along, far, 0) === 1) farStone++;
+      expect(stoneAt(carved, along, far, 0), `the rift carved the far wall it does not reach, at ${along.toFixed(0)}`).toBe(
+        stoneAt(pristine, along, far, 0),
+      );
+    }
+    expect(farStone, 'the far wall is open all along the rift, so this checked nothing').toBeGreaterThan(0);
     const past = at + RIFT.radius + carved.extent * 2;
-    expect(stoneAt(carved, past, faceAt(carved, past, -1) - 2, 0), 'the rift carved stone past its edge').toBe(-1);
+    expect(stoneAt(carved, past, faceAt(carved, past, -1) - 2, 0), 'the rift carved stone past its edge').toBe(
+      stoneAt(pristine, past, faceAt(pristine, past, -1) - 2, 0),
+    );
     for (let i = 0; i < RIFT.steps + 30; i++) step(world, frame);
     expect(rifts(world).length, 'the rift never closed').toBe(0);
     expect(stoneAt(carved, at, near, 0), 'the carve closed with the rift').toBe(0);

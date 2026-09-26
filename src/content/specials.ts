@@ -17,6 +17,7 @@
  */
 
 import type { CueKind } from './cues.ts';
+import type { MissileKind } from './missiles.ts';
 import { BLADE_EDGE, type ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 
@@ -50,24 +51,33 @@ export const SIDES = ['gun', 'tubes'] as const;
 export type Side = (typeof SIDES)[number];
 
 /**
- * A surge: for `steps`, the ship wears `aura` and its tubes hit harder — 0373, and on the tubes
- * alone since 0375, which moved the golden one off the gun and onto the forward missiles.
+ * A surge: for `steps`, the ship wears `aura` — two pods on its flanks — and each of its volleys
+ * fires `pods` extra missiles of the surge's OWN kind, charged — 0379.
  *
- * ⚠️ **What it strengthens is whatever tubes are fitted when it goes off, not the special's source.**
- * One stack behind one trigger means a surge can be thrown through tubes it was not earned from; the
- * user named that a flaw, and splitting the trigger is queued in
- * `reports/the-arsenal-planned-2026-09-26.md`.
+ * ⚠️ **IT STRENGTHENED WHATEVER TUBES WERE FITTED, AND THAT WAS THE FLAW 0376 FIXED FOR THE STACK.**
+ * Played: *"the missiles need a rework on the special, same problem exists when activating a special
+ * with the other equipped. Let's change that special so that it fires out two additional missiles of
+ * the special bomb variety, so you could have any combo of 4 or 2/2 depending on your equipped
+ * missile and the special."* So the fitted tubes fire as they are, and the surge adds its own.
  */
+/**
+ * How far out from the ship's centreline a surge's two pods sit, in world units — 0379. Outside the
+ * hull (half its seven-unit extent) and outside the fitted tubes, so four missiles leave from four
+ * places. The frame launches from here and the bake draws the pods here: one number for both (0036).
+ */
+export const POD_ACROSS = 4.5;
+
 export interface Surge {
   /** How long it lasts, in fixed steps (0022). */
   steps: number;
-  /** The bitmap drawn round the ship while it lasts — the picture of the whole effect (0036). */
+  /** The bitmap drawn on the ship while it lasts — its two pods, the picture of the whole effect (0036). */
   aura: number;
   /**
-   * The tubes: `damage` multiplies a missile, `fuse` multiplies a seeker's life, and `pierce` is how
-   * many landings a missile survives, gated as a blade's are (0357) — one is spent by arriving.
+   * The pods: `count` extra missiles of `missile` each volley, from outside the fitted tubes, with
+   * `damage` multiplying the missile's own, `fuse` its life, and `pierce` how many landings it
+   * survives, gated as a blade's are (0357) — one is spent by arriving.
    */
-  tubes: { damage: number; fuse: number; pierce: number };
+  pods: { missile: MissileKind; count: number; damage: number; fuse: number; pierce: number };
 }
 
 /**
@@ -263,7 +273,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, tubes: { damage: 4, fuse: 2, pierce: 1 } },
+    // Two seekers a volley, whatever tubes are fitted — 0379.
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, pods: { missile: 'homing', count: 2, damage: 4, fuse: 2, pierce: 1 } },
     storm: null,
     whirl: null,
     rift: null,
@@ -285,7 +296,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, tubes: { damage: 3, fuse: 1, pierce: BLADE_EDGE } },
+    // Two straight missiles a volley, whatever tubes are fitted — 0379.
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, pods: { missile: 'straight', count: 2, damage: 3, fuse: 1, pierce: BLADE_EDGE } },
     storm: null,
     whirl: null,
     rift: null,
@@ -313,7 +325,9 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     reach: 80,
     bossShare: 0,
     surge: null,
-    storm: { strikes: 6, chains: 2, reach: 45, damage: 12, bossShare: 0.05, flicker: 8, flickerSteps: 32 },
+    // ⚠️ The flicker runs 64 steps since 0379, and ran 32: *"the shuriken and lightning need to last
+    // just a .5 sec longer or so, they're too fast atm."* Its cue's after flickers run as long.
+    storm: { strikes: 6, chains: 2, reach: 45, damage: 12, bossShare: 0.05, flicker: 8, flickerSteps: 64 },
     whirl: null,
     rift: null,
     face: SPRITE.pickupArc,
@@ -344,8 +358,12 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
       blades along an arm stood eleven units apart — wider than a blade — so a body between two was
       never touched however often the arm swept it. Five and 0.25 at a blade swelled 2.2 leave no hole
       a body fits through.
+
+      ⚠️ **GROWING 0.6 A STEP SINCE 0379, AND IT WAS 0.7** — *"the shuriken and lightning need to last
+      just a .5 sec longer."* It ends when none of it is on the screen, so it lasts longer by growing
+      slower; measured at 184 steps before, and `tests/storm.test.ts` holds the new life.
     */
-    whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.7, spin: 0.05, damage: 4, swell: 2.2 },
+    whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.6, spin: 0.05, damage: 4, swell: 2.2 },
     rift: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',

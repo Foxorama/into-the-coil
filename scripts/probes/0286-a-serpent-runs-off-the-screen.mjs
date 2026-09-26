@@ -82,8 +82,9 @@ export const PROBES = [
       path: 'tests/budget.test.ts',
       // ⚠️ Re-anchored by 0305, which raised it again for the aura, and by 0364 for the shot pool;
       // back to 500 is the same break.
-      // ⚠️ And by 0374, for the storm's bolts and the whirlpool's blades, and by 0377 for the rifts.
-      find: 'const WORST_CASE = 616;',
+      // ⚠️ And by 0374, for the storm's bolts and the whirlpool's blades, by 0377 for the rifts, and by
+      // 0379 for the surge's pods.
+      find: 'const WORST_CASE = 632;',
       replace: 'const WORST_CASE = 500;',
     },
   },

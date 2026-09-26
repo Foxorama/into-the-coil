@@ -184,3 +184,34 @@ describe('0374 — the whirlpool: turns, grows, lands again and again, and ends 
     expect(seenBefore, 'the whirlpool closed while part of it was still on the screen').toBe(false);
   });
 });
+
+describe('0379 — the storm and the whirlpool last long enough to be watched', () => {
+  /*
+    *"The shuriken and lightning need to last just a .5 sec longer or so, they're too fast atm."*
+    Measured before: the whirlpool lived 3.07 s and the storm flickered 0.53 s. Held in SECONDS, the
+    unit the play was in, and as what the player sees — a whirlpool on the screen, bolts in the air.
+  */
+  it('the whirlpool is on the screen for at least three and a half seconds', () => {
+    const { world, frame } = quiet();
+    launchSpecial(world, 'whirlpool');
+    let steps = 0;
+    while (world.whirl.size > 0 && steps < 2000) {
+      world.ship.invulnFor = 2;
+      frame.step();
+      steps++;
+    }
+    expect(steps / 60, 'the whirlpool is gone before the play asked').toBeGreaterThanOrEqual(3.5);
+  });
+
+  it('the storm flickers for at least a second', () => {
+    const { world, frame } = quiet();
+    launchSpecial(world, 'storm');
+    untilItGoesOff(world, frame);
+    let lastLit = 0;
+    for (let i = 0; i < 200; i++) {
+      frame.step();
+      if (world.bolts.size > 0) lastLit = i + 1;
+    }
+    expect(lastLit / 60, 'the storm’s flicker is over before the play asked').toBeGreaterThanOrEqual(1);
+  });
+});
