@@ -53,12 +53,14 @@ The arc arm (0328) had already solved the first of these for itself — it waits
 the view before it turns — and 0338 solved the same shape for flankers on the other axis (*the
 placement is not the sighting*). The roam had neither.
 
-## What was built — [0376](../docs/decisions/0376-a-roam-waits-to-be-seen.md)
+## What was built — [0382](../docs/decisions/0382-a-roam-waits-to-be-seen.md)
 
-- **The roam waits to be seen.** A drifting body holds its lane until its hull is inside the view
-  along the lane, and starts roaming from there.
-- **Its first leg heads inward from the outer quarter.** Elsewhere the parity stands, so a formation
-  still fans.
+- **The roam turns inside the lane until it is seen.** A drifting body roams from its spawn, but
+  while its hull is beyond the leading edge it turns a hull and two units short of each edge, so it
+  is on the screen when it is first seen; from that step it turns where 0059 said.
+- **Its first leg on the screen heads inward from the outer quarter.** Elsewhere it keeps the way it
+  was going, so a formation still fans.
+- **The Approach's turret column at 2231 flies lane 40, not 30** — see the cost below.
 - **`tests/level.test.ts`'s lane-edge guard read lanes in the wrong units** — the 0..100 share
   against 0..120 world bounds since 0364 — and under-read every plus-side reach by up to twenty units.
   Fixed; nothing authored reddened.
@@ -67,22 +69,41 @@ After, the same instrument, same settings:
 
 | level | lead bodies | first seen off the screen | seen within 12 of an edge | left within 1.5 s |
 |---|---|---|---|---|
-| approach | 113 | 0 | 1 | 0 |
-| descent | 122 | 0 | 0 | 0 |
-| coilward | 74 | 0 | 0 | 0 |
-| shoal | 87 | 0 | 0 | 0 |
-| batteries | 78 | 0 | 0 | 0 |
-| gauntlet | 98 | 0 | 0 | 0 |
-| eye | 54 | 0 | 0 | 0 |
+| approach | 113 | 0 | 20 | 0 |
+| descent | 122 | 0 | 11 | 0 |
+| coilward | 74 | 0 | 7 | 0 |
+| shoal | 73 | 0 | 0 | 0 |
+| batteries | 78 | 0 | 19 | 0 |
+| gauntlet | 98 | 0 | 7 | 0 |
+| eye | 54 | 0 | 2 | 0 |
 
-`tests/roam.test.ts` holds the two zeros over all seven levels, so a re-authored wave or a re-tuned
-roam reddens it rather than the next play.
+*Seen within 12 of an edge* is not zero and is not the defect: those bodies are on the screen and
+heading inward, which is the rule. `tests/roam.test.ts` holds the two zeros over all seven levels, so
+a re-authored wave or a re-tuned roam reddens it rather than the next play.
+
+### What it cost, measured, and the draft it refused
+
+The first draft HELD a body on its lane until it was seen — the same zeros above — and
+`scripts/weigh-bullets.mjs` at the cap's loadout put the Approach's bullet cover from 41% to 29% and
+the Descent's from 59% to 44%, with fourteen-second dry stretches: the bodies that got a shot away at
+the cap were the ones first seen at the edges, out of the sweep's arc, and holding every one on its
+lane fed them all to the gun. That reversed the alpha list's bullet-time item (0259), which the same
+player asked for, so it was not built. The roam that turns inside the lane keeps most of the spread:
+Approach 35%, Descent 55%, the other levels within two points of `main`. One column still went: the
+turrets at 2231, lane 30, lived on `main` by roaming off the near edge before anyone saw them, sitting
+twenty units past the screen where the sweep cannot reach, and coming back at sixty seconds to fire;
+on the screen they died before their first volley and the level went 15.3 s dry against 0259's nine.
+A column whose fire depends on being off the screen is this report's own defect wearing a bullet, so
+the column moved and the budget did not: lane 40 (the lane the column at 2405 flies) reads 39%, and
+the dry stretch is back inside the run-up. **That re-lane is one number on one wave and the player
+may veto it**; the alternative that keeps lane 30 is a wider dry budget for the Approach, and 0259
+set nine so that the next regression would have to argue.
 
 ## What is left, and it is the player's
 
 - **The turn band.** 0059 chose *outside the screen* on the player's own words — *"they should fly
   off the across edges and back on"* — and the same player now calls the immediate leaving stupid.
-  Those are two reports about two things (where a roam starts, and where it turns), and 0376 touched
+  Those are two reports about two things (where a roam starts, and where it turns), and 0382 touched
   only the first. Turning at the hull's edge just past the screen instead of twenty units past it
   would cut a drifter's absence from 2.5 s to about 0.5 s and a turret's from 4.7 to 1, and put a
   turret on the screen for most of its time instead of half. One constant (`FLANK_MARGIN`'s share of

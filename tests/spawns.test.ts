@@ -550,14 +550,17 @@ describe('a threat uses the whole area, and the player does not', () => {
       back rather than that a velocity had a sign.
     */
     /*
-      ⚠️ **LANE 70, AND THE PLAYER'S FIRE HELD — 0376.** The roam starts when the hull is seen now,
-      not when it spawns, so a drifter authored at lane 30 spent its first three seconds holding
-      its lane beyond the view and then roamed INTO the parked ship's gun on its way to the far edge;
-      this guard's subject died with every assertion about the roam untested. Measuring flight, not
-      attrition (`tests/pilots.test.ts` makes the same argument): the gun is held, and the lane is
-      one from which the far band is reached and left again well inside the along cull.
+      ⚠️ **LANE 20, AND THE PLAYER'S FIRE HELD — 0382.** A roam turns inside the lane until its hull
+      is seen, and from the outer quarter its first leg on the screen heads inward, so where a lone
+      drifter is when it is seen is not where it was authored, and the lane decides whether it can
+      leave AND come back before the along cull takes it at step 613: authored at 30 it is seen at
+      91, sent inward, and leaves the near edge at 500 with no time to return; authored at 20 it is
+      seen at 80 mid-lane heading for the far edge, leaves at 328 and is back at 445. The gun is
+      held because the roam runs through the parked ship's line of fire, and this measures flight,
+      not attrition (`tests/pilots.test.ts` makes the same argument). The lane sweep is in the
+      decision.
     */
-    const { world } = playableWorld(oneWave('drifter', 70));
+    const { world } = playableWorld(oneWave('drifter', 20));
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
 

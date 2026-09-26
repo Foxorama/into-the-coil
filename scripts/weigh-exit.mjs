@@ -1,5 +1,5 @@
 // Where each lead body is when the player FIRST sees it, and whether it leaves the screen sideways
-// within a moment of being seen — docs/decisions/0376-a-roam-waits-to-be-seen.md.
+// within a moment of being seen — docs/decisions/0382-a-roam-waits-to-be-seen.md.
 //
 // Usage:  node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-exit.mjs
 //              [levelKind] [--window=1.5] [--edge=12]

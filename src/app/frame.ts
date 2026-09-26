@@ -147,11 +147,18 @@ const TAU = Math.PI * 2;
 const FLANK_ENTRY_SPEED = 0.55;
 
 /**
- * The share of the lane at either edge inside which a roam's first leg heads inward — 0376. A
+ * The share of the lane at either edge inside which a roam's first leg heads inward — 0382. A
  * quarter: a drifter authored at lane 20 or 80 turns toward the middle first, one at 30 or 70 takes
  * its parity, and either way the body is on the screen for its first leg.
  */
 const ROAM_INWARD = 0.25;
+
+/**
+ * How far inside the lane's edge a roam turns while its hull is not yet on the screen, in world
+ * units past the hull's own radius — 0382. Two: enough that a body turning there is whole on the
+ * screen when the leading edge reaches it, and no more, so it can still be seen at the very edge.
+ */
+const ROAM_UNSEEN_MARGIN = 2;
 
 /**
  * Where a boss's mouth is, as a share of its drawn radius ahead of its centre — 0373. The painters
@@ -5487,7 +5494,7 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
       */
       e.velAlong += w.scrollPerStep;
     } else {
-      // Dealt and not started, as a wave's member is — 0376: the roam begins when the hull is seen.
+      // Dealt and not started, as a wave's member is — 0382: the roam begins when the hull is seen.
       e.velAcross = 0;
       if (row.motion.kind === 'drift') e.spin = i % 2 === 0 ? 1 : -1;
     }
@@ -5661,7 +5668,7 @@ function spawnWave(w: World, index: number): void {
         one step. 0073.
       */
       /*
-        ⚠️ **DEALT, NOT STARTED — `docs/decisions/0376-a-roam-waits-to-be-seen.md`.** The parity goes
+        ⚠️ **DEALT, NOT STARTED — `docs/decisions/0382-a-roam-waits-to-be-seen.md`.** The parity goes
         on `spin` and the body holds its lane until its hull is inside the view; `steerEnemies` starts
         the roam from there. Written straight into `velAcross`, a body that did not close spent three
         seconds roaming beyond the leading edge — fifty-seven units of lane for a drifter — and was
@@ -5904,27 +5911,39 @@ function steerEnemies(w: World): void {
       case 'drift': {
         if (m.roam <= 0) break;
         /*
-          ── THE ROAM WAITS TO BE SEEN — `docs/decisions/0376-a-roam-waits-to-be-seen.md` ─────────
+          ── THE ROAM WAITS TO BE SEEN — `docs/decisions/0382-a-roam-waits-to-be-seen.md` ─────────
 
           ⚠️ **REPORTED**: *"lots of enemies that start near the top/bottom of the screen and then
           immediately fly off the screen."* A lead wave is placed at `camera + 328` and a 16:9 view
-          ends at `camera + 213`, so a body that does not close spent three seconds roaming before
-          anyone could see it — 57 units of lane for a drifter — and was first seen already off the
-          screen, heading out. 0059 says the roam is *what a body does with the whole area ONCE IT HAS
-          ARRIVED*; nothing here asked whether it had. `velAcross` is zero until this step, on the
-          arc's own precedent (0328's `after`): the spawner deals the parity onto `spin` and the roam
-          begins the step the hull is inside the view.
+          ends at `camera + 213`, so a body that does not close spends three seconds roaming before
+          anyone can see it — 57 units of lane for a drifter — and was first seen already off the
+          screen, heading out. Until its hull is inside the view a roam turns INSIDE the lane, a hull
+          and a margin short of each edge, so wherever it has wandered it is on the screen when it is
+          first seen; from that step it turns outside the lane as 0059 wrote. `spin` carries the
+          parity the spawner dealt and is zeroed at the sighting, which is how this step knows it.
 
-          ⚠️ **AND THE FIRST LEG HEADS INWARD FROM THE OUTER QUARTER.** The parity stands where the
-          body has room either way, so a formation still fans; a body that starts within a quarter of
-          the lane of an edge and is dealt the outward leg would be off the screen in a second, which
-          is the report in one sentence. Deterministic from the wave and the lane, so a level is still
-          authored (0073's argument for the parity holds).
+          ⚠️ **NOT A HOLD, AND THE HOLD WAS MEASURED.** The first draft held a body on its lane until
+          it was seen, and `scripts/weigh-bullets.mjs` put the Approach's bullet cover at the cap from
+          41% to 29% and level two's from 59% to 44%, with fourteen-second dry stretches: the bodies
+          that got a shot away at the cap were the ones first seen at the edges, out of the sweep's
+          arc, and holding every one on its authored lane fed them all to the gun. A roam that wanders
+          but stays on the screen keeps that spread and loses the defect.
+
+          ⚠️ **AND THE FIRST LEG ON THE SCREEN HEADS INWARD FROM THE OUTER QUARTER.** A body seen
+          within a quarter of the lane of an edge and heading out would be off the screen in a second,
+          which is the report in one sentence; elsewhere it keeps the way it was going, so a formation
+          still fans on the parity 0073 dealt it. Deterministic from the wave and the lane.
         */
-        if (e.velAcross === 0) {
-          if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) break;
+        if (e.spin !== 0) {
+          if (e.velAcross === 0) e.velAcross = e.spin * m.roam;
+          if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) {
+            if (e.across <= e.radius + ROAM_UNSEEN_MARGIN) e.velAcross = m.roam;
+            else if (e.across >= ACROSS_SPAN - e.radius - ROAM_UNSEEN_MARGIN) e.velAcross = -m.roam;
+            break;
+          }
           const inward = e.across < ACROSS_SPAN * ROAM_INWARD ? 1 : e.across > ACROSS_SPAN * (1 - ROAM_INWARD) ? -1 : 0;
-          e.velAcross = (inward !== 0 ? inward : e.spin >= 0 ? 1 : -1) * m.roam;
+          if (inward !== 0) e.velAcross = inward * m.roam;
+          e.spin = 0;
           break;
         }
         /*

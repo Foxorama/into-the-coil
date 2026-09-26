@@ -20,11 +20,11 @@ export const PROBES = [
     guard: 'takes something that holds station clear off the edge of the screen',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0073, which made the motion a union, and by 0376, which moved the START of
+      // ⚠️ Re-anchored by 0073, which made the motion a union, and by 0382, which moved the START of
       // the roam from the spawner to the step the hull is first seen: the spawner deals a direction
       // onto `spin`, and this is the line that turns it into a velocity.
-      find: '          e.velAcross = (inward !== 0 ? inward : e.spin >= 0 ? 1 : -1) * m.roam;\n          break;',
-      replace: '          break;',
+      find: '          if (e.velAcross === 0) e.velAcross = e.spin * m.roam;\n',
+      replace: '',
     },
   },
   {

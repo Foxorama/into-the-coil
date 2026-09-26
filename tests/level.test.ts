@@ -89,7 +89,7 @@ function membersOf(wave: WaveEntry): { along: number; across: number }[] {
   const gap = gapAcross(ENEMIES[wave.enemy].radius);
   for (let i = 0; i < wave.count; i++) {
     /*
-      ⚠️ **IN WORLD UNITS, WHICH THIS DID NOT USE TO BE — 0376.** A wave's `lane` is a share of the
+      ⚠️ **IN WORLD UNITS, WHICH THIS DID NOT USE TO BE — 0382.** A wave's `lane` is a share of the
       lane, 0..100, and the spawner reads it through `laneAcross` (0364 made the lane 120 wide); this
       compared the raw share against `ROAM_MIN`/`ROAM_MAX` and `ACROSS_SPAN`, all in world units, and
       so under-read every plus-side reach by up to twenty units. The guards below held nothing they

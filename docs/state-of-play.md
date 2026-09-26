@@ -200,7 +200,7 @@ cost, which does not exist yet.
 | **the fish throws a BREAKER: a wave of spines up off the near edge of the lane over a span centred on the hull, the crest leading and the shoulders trailing — the one attack in the game that does not leave the boss, so the answer to it is along the lane rather than across it; it takes the second whip's place, and a sixth phase was refused by the eight-volley rule** | [0315](decisions/0315-the-fish-throws-a-breaker.md) |
 | **the quill is a SPINE: the fish's own bullet redrawn as a barbed fin-spine, point first, where 0262 drew a feather for an animal that was then an eagle — every number of 0262's kept, and the mark settled by three photographs and the two guards that refused the first two** | [0316](decisions/0316-the-quill-is-a-spine.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md) |
 | **the PRESSURE comes forward: `scripts/weigh-threat.mjs` is the other half of `weigh-boss` — how hard a boss is to STAND IN FRONT OF, and whether its adds ever arrive; a rake may bound its sweep, because `firePhase` accumulated and the fish's fan walked a whole circle every thirteen volleys; a feeding horde comes in from the LEAD, past the boss, because from the sides it swam up the player's own firing line and none of nineteen ever arrived** | [0317](decisions/0317-the-pressure-comes-forward.md) — amends [0262](decisions/0262-the-eagle-throws-quills.md), [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md) |
-| **a roam WAITS TO BE SEEN: a drifting body holds its lane until its hull is inside the view and heads inward from the outer quarter; `scripts/weigh-exit.mjs` is the instrument, and the lane-edge guard reads world units** | [0376](decisions/0376-a-roam-waits-to-be-seen.md) — amends [0059](decisions/0059-the-lane-is-the-players-box.md), [0073](decisions/0073-an-enemy-is-a-pilot.md) |
+| **a roam WAITS TO BE SEEN: a drifting body turns inside the lane until its hull is inside the view, so it is first seen on the screen, and heads inward from the outer quarter; a hold was measured and refused for the bullet cover it cost; the Approach's 2231 turret column flies lane 40 because its fire depended on hiding; `scripts/weigh-exit.mjs` is the instrument, and the lane-edge guard reads world units** | [0382](decisions/0382-a-roam-waits-to-be-seen.md) — amends [0059](decisions/0059-the-lane-is-the-players-box.md), [0073](decisions/0073-an-enemy-is-a-pilot.md) |
 | **the fish SPITS its adds: a `mouth` summons puts a horde at the snout and throws it at the player in a fan, hittable once clear of the spray, the jaw open before and a spray and a cue at the lip; the kite and the minnow both hunt and both fire; the feeding shoal and the `feed` motion are gone; `weigh-threat` counts what a horde fires and can sweep the ship** | [0373](decisions/0373-the-fish-spits-its-adds.md) — reverses [0314](decisions/0314-the-shoal-comes-in-while-it-fights.md)'s feeder |
 | **the fish beats its TAIL: the caudal fin is a body of its own in the layer behind the hull, rooted on the peduncle and turned about it every step, the hull yawing against it; a `Tail` on the row, null on thirteen** | [0374](decisions/0374-the-fish-beats-its-tail.md) |
 | **the breach has a BODY: `bossBreach` re-voiced with its weight below the middle of the spectrum and a centroid that no longer climbs, measured before and after; `bossSpit` is new** | [0375](decisions/0375-the-breach-has-a-body.md) — amends [0313](decisions/0313-the-fish-breaches.md) |
@@ -976,10 +976,13 @@ items six and seven still want names from the player.
 [`the-flight-reviewed`](../reports/the-flight-reviewed-2026-09-26.md): *"lots of enemies that start
 near the top/bottom of the screen and then immediately fly off."* `scripts/weigh-exit.mjs` is the
 instrument, built first; every body it caught was a drifting kind roaming for three seconds before it
-could be seen, and [0376](decisions/0376-a-roam-waits-to-be-seen.md) makes a roam wait to be seen and
-head inward from the outer quarter — zero on every level now, held by `tests/roam.test.ts`. **One
-thing in the report is the player's:** whether a roam should turn at the screen's edge rather than
-twenty units past it (0059's own number), which is the other half of a body being out of sight.
+could be seen, and [0382](decisions/0382-a-roam-waits-to-be-seen.md) makes a roam turn inside the
+lane until it is seen and head inward from the outer quarter — zero on every level now, held by
+`tests/roam.test.ts`. A hold was measured first and refused for the bullet cover it cost. **Two
+things in the report are the player's:** whether a roam should turn at the screen's edge rather than
+twenty units past it (0059's own number), which is the other half of a body being out of sight; and
+the Approach's turret column at 2231 re-laned from 30 to 40, because at 30 its fire depended on
+hiding off the screen — one number, and a veto is one line.
 
 ⚠️ **THE SERPENT BRIEF IS LANDED, ALL THREE OF IT, AND WAITS ON A PLAY** —
 [`the-serpent-asked`](../reports/the-serpent-asked-2026-09-11.md), with the answers to the four

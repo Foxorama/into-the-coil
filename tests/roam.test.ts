@@ -1,10 +1,11 @@
 /**
- * A roam waits to be seen — `docs/decisions/0376-a-roam-waits-to-be-seen.md`.
+ * A roam waits to be seen — `docs/decisions/0382-a-roam-waits-to-be-seen.md`.
  *
  * Reported: *"lots of enemies that start near the top/bottom of the screen and then immediately fly
  * off the screen which is pretty stupid."* A drifting body roamed from the step it spawned, three
- * seconds before anyone could see it; it holds its lane until its hull is inside the view now, and
- * its first leg heads inward when it starts near an edge.
+ * seconds before anyone could see it, and turned twenty units outside the screen; until its hull is
+ * inside the view it turns inside the lane now, so it is first seen on the screen, and its first leg
+ * on the screen heads inward when it is seen near an edge.
  *
  * ⚠️ **EVERY CLAIM IS MEASURED ON A FLIGHT THE FRAME FLEW, IN THE PLAYER'S UNITS** — 0027: where a
  * body is when it is first on the screen, which way it goes, how long it stays, and the same over
@@ -14,15 +15,15 @@
 
 import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
-import { LEVEL_KINDS, laneAcross, type LevelRow } from '../src/content/levels.ts';
+import { LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { weighExit } from '../scripts/weigh-exit.mjs';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 /** One wave of drifters on a lane, arriving at the leading edge, with no boss to interrupt it. */
-function drifters(lane: number, count = 1): LevelRow {
+function drifters(lane: number, count = 1, formation: 'line' | 'column' = 'line'): LevelRow {
   return {
-    waves: [{ at: 400, enemy: 'drifter', formation: 'line', count, lane }],
+    waves: [{ at: 400, enemy: 'drifter', formation, count, lane }],
     pickups: [],
     landmarks: [],
     bossAt: Number.POSITIVE_INFINITY,
@@ -34,15 +35,16 @@ function drifters(lane: number, count = 1): LevelRow {
 }
 
 /** A wave flown with the guns held, from spawn until every member has been seen for `after` steps. */
-function fly(lane: number, count: number, after: number): { seenAt: number[]; seenAcross: number[]; firstLeg: number[]; offWithin: boolean[]; heldBefore: boolean[] } {
-  const { world } = playableWorld(drifters(lane, count));
+function fly(lane: number, count: number, after: number, formation: 'line' | 'column' = 'line'): { spawnLeg: number[]; seenAt: number[]; seenAcross: number[]; seenRadius: number[]; firstLeg: number[]; offWithin: boolean[] } {
+  const { world } = playableWorld(drifters(lane, count, formation));
   const frame = new GameFrame(world);
   while (world.enemies.size === 0) frame.step();
+  const spawnLeg: number[] = new Array(count).fill(0);
   const seenAt: number[] = new Array(count).fill(-1);
   const seenAcross: number[] = new Array(count).fill(0);
+  const seenRadius: number[] = new Array(count).fill(0);
   const firstLeg: number[] = new Array(count).fill(0);
   const offWithin: boolean[] = new Array(count).fill(false);
-  const heldBefore: boolean[] = new Array(count).fill(true);
   for (let step = 0; step < 1200; step++) {
     world.fireIn = Number.MAX_SAFE_INTEGER;
     world.missileIn = Number.MAX_SAFE_INTEGER;
@@ -51,56 +53,91 @@ function fly(lane: number, count: number, after: number): { seenAt: number[]; se
     let allDone = true;
     for (let i = 0; i < count; i++) {
       const e = world.enemies.at(i);
+      if (step === 0) spawnLeg[i] = Math.sign(e.velAcross);
       const inView = e.along - e.radius <= world.cameraAlong + world.view.alongSpan;
       if (seenAt[i]! < 0) {
-        // The step it is first in view is the step its roam may start, so the hold is asked before it.
         if (inView) {
           seenAt[i] = step;
           seenAcross[i] = e.across;
-        } else if (e.velAcross !== 0) heldBefore[i] = false;
+          seenRadius[i] = e.radius;
+          firstLeg[i] = Math.sign(e.velAcross);
+        }
         allDone = false;
         continue;
       }
-      if (firstLeg[i] === 0 && e.velAcross !== 0) firstLeg[i] = Math.sign(e.velAcross);
       if (step - seenAt[i]! <= after && (e.across + e.radius < 0 || e.across - e.radius > ACROSS_SPAN)) offWithin[i] = true;
       if (step - seenAt[i]! < after) allDone = false;
     }
     if (allDone) break;
   }
-  return { seenAt, seenAcross, firstLeg, offWithin, heldBefore };
+  return { spawnLeg, seenAt, seenAcross, seenRadius, firstLeg, offWithin };
 }
 
-describe('0376 — a roam waits to be seen', () => {
-  it('THE ASKED-FOR ONE: a drifting body is first seen on the lane it was authored at, having held it until then', () => {
+describe('0382 — a roam waits to be seen', () => {
+  it('THE ASKED-FOR ONE: a drifting body is first seen ON THE SCREEN, its whole hull inside the lane, wherever it has roamed to', () => {
     /*
-      ⚠️ **WHERE THE PLAYER FIRST SEES IT, AGAINST WHERE THE LEVEL PUT IT.** The spawner places a
-      lead wave a whole view beyond the leading edge, and a body that roamed from that step was
-      first seen fifty-seven units from its lane — off the screen, for a wave authored anywhere in
-      the outer half. Three lanes, and each member is where its author said, to within half a unit.
+      ⚠️ **WHERE THE PLAYER FIRST SEES IT.** The spawner places a lead wave a whole view beyond the
+      leading edge and the roam runs from that step, so a body could be fifty-seven units from its
+      lane by the time anyone saw it — off the screen, for a wave authored anywhere in the outer
+      half. It may still wander before it is seen; what it may not do is be seen off the screen.
+      Three lanes, and each member's hull is inside the lane on the step it first is in view.
     */
     for (const lane of [15, 45, 85]) {
-      const { seenAt, seenAcross, heldBefore } = fly(lane, 1, 1);
+      const { seenAt, seenAcross, seenRadius } = fly(lane, 1, 1);
       expect(seenAt[0], `a drifter at lane ${lane} was never seen`).toBeGreaterThanOrEqual(0);
-      expect(heldBefore[0], `a drifter at lane ${lane} was roaming before its hull was on the screen`).toBe(true);
-      expect(Math.abs(seenAcross[0]! - laneAcross(lane)), `a drifter authored at lane ${lane} was first seen ${(seenAcross[0]! - laneAcross(lane)).toFixed(1)} units from it`).toBeLessThan(0.5);
+      expect(seenAcross[0]! - seenRadius[0]!, `a drifter authored at lane ${lane} was first seen at ${seenAcross[0]!.toFixed(1)}, off the near edge`).toBeGreaterThanOrEqual(0);
+      expect(seenAcross[0]! + seenRadius[0]!, `a drifter authored at lane ${lane} was first seen at ${seenAcross[0]!.toFixed(1)}, off the far edge`).toBeLessThanOrEqual(ACROSS_SPAN);
     }
   });
 
-  it('and its first leg heads INWARD from the outer quarter, so it is on the screen for the whole of it — and keeps its parity elsewhere', () => {
+  it('and its first leg on the screen heads INWARD from the outer quarter, so it stays on the screen — and a rank still fans on its parity', () => {
     /*
-      ⚠️ **IN SECONDS ON THE SCREEN, WHICH IS THE REPORT'S OWN UNIT.** A body dealt the outward leg
-      at lane 15 is off the screen inside a second; heading inward it has the whole lane to cross.
-      Three seconds is well inside that crossing at the drifter's rate and well past the time the
-      report calls *immediately*. In the middle the parity stands, so a rank of two still fans.
+      ⚠️ **IN SECONDS ON THE SCREEN, WHICH IS THE REPORT'S OWN UNIT.** A body seen at lane 15 heading
+      out is off the screen inside a second, which is what the report calls *immediately*. A single
+      body roams before it is seen and turns inside the lane, so where it is seen is not where it was
+      authored: a drifter authored at 15 is seen at 74, in the middle, and keeps the way it was going.
+      What the rule buys is the leg it is dealt when it IS seen — inward from the outer quarter — and
+      so a quarter of the lane at least between any body and the edge it is heading for, which at the
+      drifter's rate is a second and three-quarters. The window is a second and a half, the same one
+      `scripts/weigh-exit.mjs` reads over every level below; it is NOT three seconds, because a body
+      seen mid-lane and heading out honestly leaves in under three, and the turn it makes twenty
+      units past the edge is 0059's number and the report's open question, not this guard's.
     */
-    const near = fly(15, 1, 180);
-    expect(near.firstLeg[0], 'a drifter at lane 15 set off toward the near edge').toBe(1);
-    expect(near.offWithin[0], 'a drifter at lane 15 was off the screen within three seconds of being seen').toBe(false);
-    const far = fly(85, 1, 180);
-    expect(far.firstLeg[0], 'a drifter at lane 85 set off toward the far edge').toBe(-1);
-    expect(far.offWithin[0], 'a drifter at lane 85 was off the screen within three seconds of being seen').toBe(false);
-    const middle = fly(45, 2, 30);
-    expect(new Set(middle.firstLeg).size, 'a rank of two in the middle of the lane set off the same way — the parity is gone and the formation no longer fans').toBe(2);
+    /*
+      ⚠️ **THE FIXTURE PUTS A BODY IN EACH OUTER QUARTER, AND SAYS SO.** The first draft flew lanes 15
+      and 85 and asserted the inward leg only IF the body was seen in the outer quarter — and neither
+      was: both are seen mid-lane after their unseen turn, so the inward rule was never exercised and
+      its probe reddened a different guard (`WRONG TEST`). A lone body's parity is always +1, so the
+      far side is a lone drifter authored at 40, seen at 103 heading for the far edge; the near side
+      is the second of a column at 60, dealt −1, seen at about 16 heading for the near edge. Each case
+      requires its quarter, so a re-tuned roam that moves the sighting reddens the fixture rather than
+      silently passing it.
+    */
+    const cases: { lane: number; count: number; formation: 'line' | 'column'; member: number; side: 'near' | 'far' }[] = [
+      { lane: 40, count: 1, formation: 'line', member: 0, side: 'far' },
+      { lane: 60, count: 2, formation: 'column', member: 1, side: 'near' },
+    ];
+    for (const { lane, count, formation, member, side } of cases) {
+      const { seenAcross, firstLeg, offWithin } = fly(lane, count, 90, formation);
+      const at = seenAcross[member]!;
+      if (side === 'near') {
+        expect(at, `the fixture's near case is seen at ${at.toFixed(0)}, not in the outer quarter — re-lane it`).toBeLessThan(ACROSS_SPAN * 0.25);
+        expect(firstLeg[member], `a drifter seen at ${at.toFixed(0)} set off toward the near edge`).toBe(1);
+      } else {
+        expect(at, `the fixture's far case is seen at ${at.toFixed(0)}, not in the outer quarter — re-lane it`).toBeGreaterThan(ACROSS_SPAN * 0.75);
+        expect(firstLeg[member], `a drifter seen at ${at.toFixed(0)} set off toward the far edge`).toBe(-1);
+      }
+      expect(offWithin[member], `a drifter authored at lane ${lane} and seen at ${at.toFixed(0)} was off the screen within a second and a half`).toBe(false);
+    }
+    // And a body seen mid-lane keeps the way it was going and still has a quarter of the lane in hand.
+    for (const lane of [15, 85]) {
+      const { seenAcross, offWithin } = fly(lane, 1, 90);
+      expect(offWithin[0], `a drifter authored at lane ${lane} and seen at ${seenAcross[0]!.toFixed(0)} was off the screen within a second and a half`).toBe(false);
+    }
+    // And the parity is dealt at the spawn: a rank of two in the middle sets off opposite ways.
+    const middle = fly(45, 2, 1);
+    expect(new Set(middle.spawnLeg).size, 'a rank of two set off the same way — the parity is gone and the formation no longer fans').toBe(2);
+    expect(middle.spawnLeg.includes(0), 'a member of a rank set off nowhere').toBe(false);
   });
 
   it('and over every level the game has, no lead body is first seen off the screen and none leaves it inside a second and a half', () => {
