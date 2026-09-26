@@ -20,7 +20,7 @@
  * formed. Angles are numbers and `Math.cos` returns a number.
  */
 
-import { ACROSS_SPAN } from '../sim/camera.ts';
+import { ACROSS_SPAN, MIN_ASPECT } from '../sim/camera.ts';
 import { type Entity, reset, turnFor } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossAttack, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
@@ -463,6 +463,13 @@ export function cogTurn(k: number): number {
 export const COG_TICK = 0.075;
 
 /**
+ * How much of a warned breaker's spine shows above the edge while it is held there — 0380, as a share
+ * of the spine's radius past the lane. At 0.4 the tip is visible and the hurtbox is not reachable: a
+ * ship cannot fly past the edge (0059), so a spine held in it can be seen and not touched.
+ */
+export const BREAKER_TIP = 0.4;
+
+/**
  * Swing a hull toward the turn it should be wearing, the short way round — 0332.
  *
  * ⚠️ **THE SHORT WAY, BECAUSE A COG THAT GOES THE LONG WAY ROUND IS GOING BACKWARDS.** Seven of the
@@ -533,6 +540,8 @@ export function stepBoss(
   bolts: Pool<Entity>,
   /** Where the lightning falls — 0248, its own stream per 0021. */
   rainRng: Rng,
+  /** Where the fish's wave rises off the edge — 0380, its own stream on the same terms. */
+  breakerRng: Rng,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -807,7 +816,7 @@ export function stepBoss(
   // lightning, and the row's `attack` is the first of those.
   // The fraction on `phaseFor`'s terms, zero-guard and all, so a round that grows reads the bar the phase did.
   const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, phase.cue);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, phase.cue);
   return direction;
 }
 
@@ -841,6 +850,8 @@ function throwAttack(
   scrollPerStep: number,
   bolts: Pool<Entity>,
   rainRng: Rng,
+  /** Where the fish's wave rises off the edge — 0380, its own stream on 0021's terms. */
+  breakerRng: Rng,
   onCue: (kind: CueKind, across?: number) => void,
   /**
    * What this attack sounds like, or `undefined` for the crash every boss shares — 0308.
@@ -1097,17 +1108,51 @@ function throwAttack(
         slot each. Its life is the lane plus its own diameter, at its own rate.
       */
       const n = count;
-      const edge = ACROSS_SPAN + bullet.radius;
+      /*
+        ⚠️ **ANYWHERE THE NARROWEST SCREEN CAN SHOW THE WHOLE WAVE, WHEN THE ROW SAYS `roams` — 0380.**
+        Reported: *"it should 'spawn' at random places along the bottom of the screen and fire upward
+        so that the player has to actively move forward/backward to dodge it."* Centred on the hull it
+        rose where the fish was — the far half of the screen, on a boss that stalks the player's lane —
+        and was answered by standing still. The centre is drawn on the breaker's own stream (0021)
+        between the ship's own margin and the narrowest view's leading edge, less half the span, so
+        every spine of it is on every screen and there is always lane left to stand on.
+
+        ⚠️ **AND WITH A TELL, WHEN THE ROW SAYS `warning`.** The spines are put IN the edge with their
+        tips showing and held there for `warning` steps before they rise — `holdFor`, which no enemy
+        shot carries otherwise, counted down in `bendShots`. A wave from a random place with no tell is
+        unfair; fins breaking the surface for half a second is learnable.
+      */
+      const roams = attack.roams === true;
+      const warning = attack.warning ?? 0;
+      const narrowest = ACROSS_SPAN * MIN_ASPECT;
+      const centre = roams
+        ? cameraAlong + breakerRng.range(PLAYER_ALONG_MARGIN + attack.span / 2, narrowest - attack.span / 2)
+        : boss.along;
+      const edge = warning > 0 ? ACROSS_SPAN + bullet.radius * BREAKER_TIP : ACROSS_SPAN + bullet.radius;
+      /*
+        ⚠️ **AND THE TELL IS ON TOP OF THE CADENCE, AS A BEAM'S WARNING IS.** The gate above has just
+        set `fireIn` to the phase's cadence; the warning is added to it, on the fire grid (0096), so
+        `fireEvery` is how long the field is quiet between one wave's rise and the next wave's tips.
+        Without this a tier whose cadence is shorter than the warning has two waves standing in the
+        edge at once, and the breach cue — half a second long — comes back before it has finished
+        (0323, `tests/sound.test.ts`), which is the continuous tone with bumps that decision is about.
+      */
+      if (warning > 0) boss.fireIn += onFireGrid(warning);
       for (let i = 0; i < n; i++) {
         const shot = shots.spawn();
         if (shot === null) break;
         const t = n > 1 ? i / (n - 1) : 0.5;
         const crest = 1 - Math.abs(t - 0.5) * 2;
         const rise = speed * attack.rise * (attack.ends + (1 - attack.ends) * crest);
-        reset(shot, boss.along - attack.span / 2 + attack.span * t, edge, bullet, kind);
+        reset(shot, centre - attack.span / 2 + attack.span * t, edge, bullet, kind);
         shot.velAlong = scrollPerStep;
-        shot.velAcross = -rise;
-        shot.lifeFor = Math.ceil((ACROSS_SPAN + 2 * bullet.radius) / rise) + 1;
+        shot.velAcross = warning > 0 ? 0 : -rise;
+        // Held in the edge for the warning, the rise kept on `firePhase` for `bendShots` to release.
+        // Plus one, because `bendShots` runs on the volley's own step and counts it: the spines stand
+        // for `warning` whole steps after the step they appeared on.
+        shot.holdFor = warning > 0 ? warning + 1 : 0;
+        shot.firePhase = warning > 0 ? rise : 0;
+        shot.lifeFor = warning + Math.ceil((ACROSS_SPAN + 2 * bullet.radius) / rise) + 1;
         /*
           ⚠️ **AND IT POINTS THE WAY IT FLIES — 0316, WHICH IS 0262's OWN CLAIM ABOUT THIS DRAWING.**
           *"The shaft points the way it flies"* is why a quill was legible and why a spine is; every
@@ -1230,7 +1275,7 @@ function throwAttack(
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, onCue, head.cue);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets

@@ -352,6 +352,12 @@ calls comes out of its open mouth in a fan thrown at the player, kites and a sho
 and both hunt and fire. **It swims** — [0374](decisions/0374-the-fish-beats-its-tail.md): the
 caudal fin is a body of its own behind the hull, beating about the peduncle, and the hull yaws
 against it. **And its breach has a body** — [0375](decisions/0375-the-breach-has-a-body.md).
+**It has four stages** — [0380](decisions/0380-the-fish-has-four-stages.md): kindled and raking
+with kites out of its mouth; ablaze, dumping kites on the volley with the shoal under them; the
+breaker rising anywhere along the near edge after a half-second tell, with the field otherwise
+empty; and white-hot, leaping out through the edge and back across the screen between whips of
+flame. **And it is drawn a fifth bigger, with its tail one animal** —
+[0381](decisions/0381-the-fish-is-bigger.md).
 
 **The frost ship chills and shatters** — [0253](decisions/0253-the-frost-ship-chills.md),
 [0263](decisions/0263-the-frost-ship-shatters.md): a cold on the hull that slows a ship inside it

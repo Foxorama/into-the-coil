@@ -27,8 +27,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0317, which quickened the opening and widened its fan.
-      find: "      { upTo: 1, fireEvery: 72, shots: 5, spread: 0.9, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
-      replace: "      { upTo: 1, fireEvery: 72, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },",
+      // ⚠️ Re-anchored by 0380: the opening stage is the rake of seven with the kites, kindled.
+      find: "      { upTo: 1, fireEvery: 54, shots: 7, spread: 1.1, patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort:",
+      replace: "      { upTo: 1, fireEvery: 54, shots: 1, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: KINDLED, shot: null, attack: null, escort:",
     },
   },
   /*

@@ -129,6 +129,7 @@ function stationKeepingWorld(surface: Surface): World {
     arcRng: makeRng('interp').stream('arc'),
     stormRng: makeRng('interp').stream('storm'),
     rainRng: makeRng('interp').stream('rain'),
+    breakerRng: makeRng('interp').stream('breaker'),
     rockRng: makeRng('interp').stream('rock'),
     voidRng: makeRng('interp').stream('void'),
     fuseRng: makeRng('interp').stream('fuse'),

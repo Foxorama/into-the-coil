@@ -402,6 +402,13 @@ export const SPRITE_KINDS = [
   'volansEmber3',
   'volansEmber4',
   'volansEmber5',
+  // The same six frames white-hot — 0380: the fish's last stage burns in the ember's core ink.
+  'volansBlaze0',
+  'volansBlaze1',
+  'volansBlaze2',
+  'volansBlaze3',
+  'volansBlaze4',
+  'volansBlaze5',
   'boss10',
   'boss10Hit',
   'boss11',
@@ -1311,50 +1318,57 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   serpentFlare1: 44,
   serpentFlare2: 44,
 
-  boss9: 42,
-  boss9Hit: 42,
+  boss9: 50,
+  boss9Hit: 50,
   // Every face is the same animal in the same box — 0319. A head that changed size when the mouth
   // moved would read as the fish lunging, which is a thing it does not do.
-  boss9Up: 42,
-  boss9Down: 42,
-  boss9Gape: 42,
-  boss9GapeHit: 42,
-  boss9Shut: 42,
-  boss9ShutHit: 42,
+  boss9Up: 50,
+  boss9Down: 50,
+  boss9Gape: 50,
+  boss9GapeHit: 50,
+  boss9Shut: 50,
+  boss9ShutHit: 50,
   // The kindled fish is the same animal in the same box — 0320. What grew are fins, which is drawing
   // inside the tile the hull already had; a boss that changed EXTENT mid-fight would move its own
   // hurtbox, and `tests/combat.test.ts` measures that against one number per kind.
-  boss9Barbed: 42,
-  boss9BarbedHit: 42,
-  boss9BarbedUp: 42,
-  boss9BarbedDown: 42,
-  boss9BarbedGape: 42,
-  boss9BarbedGapeHit: 42,
-  boss9BarbedShut: 42,
-  boss9BarbedShutHit: 42,
+  boss9Barbed: 50,
+  boss9BarbedHit: 50,
+  boss9BarbedUp: 50,
+  boss9BarbedDown: 50,
+  boss9BarbedGape: 50,
+  boss9BarbedGapeHit: 50,
+  boss9BarbedShut: 50,
+  boss9BarbedShutHit: 50,
   /*
-    ⚠️ **THE TAIL'S TILE IS ITS OWN, PIVOTED ON THE PEDUNCLE — 0374.** The fin it replaces spanned
-    0.26 of the hull's drawing radius long and 1.04 wide, which is 4.6 by 18.3 world units; a tile of
-    24 puts its lobes at 0.91 of the tile's own radius with the root at the centre, so `blit`'s turn
-    about the centre IS a turn about the root. The grown tail reaches a little further and fits the
-    same tile, on the hull's own argument: a tail that changed box mid-fight would move.
+    ⚠️ **THE TAIL'S TILE IS ITS OWN, PIVOTED ON THE PEDUNCLE — 0374, grown with the hull by 0381.**
+    The fin it replaces spanned 0.26 of the hull's drawing radius long and 1.04 wide; a tile of 28
+    against the hull's 50 keeps that proportion, with the root at the tile's centre so `blit`'s turn
+    about the centre IS a turn about the root, and the fin's base reaching forward under the body's
+    stump. The grown tail reaches a little further and fits the same tile, on the hull's own argument:
+    a tail that changed box mid-fight would move.
   */
-  volansTail: 24,
-  volansTailHit: 24,
-  volansTailBarbed: 24,
-  volansTailBarbedHit: 24,
+  volansTail: 28,
+  volansTailHit: 28,
+  volansTailBarbed: 28,
+  volansTailBarbedHit: 28,
   /*
     ⚠️ **THE EMBER TILE IS THE FISH'S GIRTH AND NOT THE SERPENT'S.** `layAura` draws one flame on the
     head at `aura.head / SERPENT_BODY_DIAMETER` of this tile, so the tile has to be big enough for the
     fish's own to be a crown rather than a spark — the serpent's is 44 for a 6-unit body, and the fish
     is 42 across.
   */
-  volansEmber0: 46,
-  volansEmber1: 46,
-  volansEmber2: 46,
-  volansEmber3: 46,
-  volansEmber4: 46,
-  volansEmber5: 46,
+  volansEmber0: 54,
+  volansEmber1: 54,
+  volansEmber2: 54,
+  volansEmber3: 54,
+  volansEmber4: 54,
+  volansEmber5: 54,
+  volansBlaze0: 54,
+  volansBlaze1: 54,
+  volansBlaze2: 54,
+  volansBlaze3: 54,
+  volansBlaze4: 54,
+  volansBlaze5: 54,
   boss10: 44,
   boss10Hit: 44,
   /*

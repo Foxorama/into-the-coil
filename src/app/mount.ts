@@ -963,6 +963,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     stormRng: makeRng('proof-scene').stream('storm'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
+    // Where the fish's wave rises off the edge — 0380, its own stream on the same terms.
+    breakerRng: makeRng('proof-scene').stream('breaker'),
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
     rockRng: makeRng('proof-scene').stream('rock'),
     voidRng: makeRng('proof-scene').stream('void'),
@@ -1035,6 +1037,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossFallIn: 0,
     bossEscortIn: 0,
     bossEscortSide: 1,
+    bossLeapIn: 0,
     chilledFor: 0,
     frozenFor: 0,
     // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet
