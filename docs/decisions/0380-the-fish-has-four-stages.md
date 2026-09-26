@@ -26,8 +26,8 @@ whip come back as the bones of the two new ones, each with a thing it did not ha
 |---|---|---|---|---|
 | 1 | 100–72% | a fan of seven every 54 steps | kites, three a call, from the mouth | kindled |
 | 2 | 72–46% | a summons of three kites on the volley, every 48 | the shoal, three a call | ablaze — the fins risen |
-| 3 | 46–22% | a breaker of five off the near edge every 48, **anywhere, warned** | nothing: the field empties | ablaze |
-| 4 | 22–0% | the whip of flame every 48 | two kites a call, **and a leap** | white-hot |
+| 3 | 46–22% | a breaker of five off the near edge every 42 plus the tell, **anywhere, warned** | nothing: the field empties | ablaze |
+| 4 | 22–0% | the whip of flame every 36 | two kites a call, **and a leap** | white-hot |
 
 **The breaker roams and warns** — the plan's item 2, and the report it answered: *"it should 'spawn'
 at random places along the bottom of the screen and fire upward so that the player has to actively
@@ -37,13 +37,14 @@ stand on (60 against 213); the spines stand IN the edge with their tips showing 
 before they rise, on `holdFor` — the boss's brace everywhere else, which no enemy shot carried — with
 the rise kept on `firePhase` and released in `bendShots`. A wave from a random place with no tell is
 unfair; fins breaking the surface for half a second is learnable. The spray at the edge moved under
-the wave, since the wave is no longer under the hull. Every 48 rather than 66, because a later stage
-may not fire slower than the one before it (`tests/level.test.ts`), and five to a wave so two in the
-air are a field and not a wall. **The tell is on top of the cadence**, as a beam's warning is: the
-next wave's clock starts after this one's has stood its thirty steps, so the field is quiet for the
-row's `fireEvery` between a rise and the next tips. Without that, a tier whose cadence is shorter
-than the tell had two waves in the edge at once and the breach cue coming back before it had ended —
-0323's guard said so, at burn.
+the wave, since the wave is no longer under the hull. Every 42 rather than 66, and the whip after it
+every 36, because a later stage fires STRICTLY faster than the one before it at the base tier
+(`tests/difficulty.test.ts`, which the wide suites did not run and the proof's baseline did) and the
+two liked stages hold 54 and 48; five to a wave so two in the air are a field and not a wall. **The
+tell is on top of the cadence**, as a beam's warning is: the next wave's clock starts after this
+one's has stood its thirty steps, so the field is quiet for the row's `fireEvery` between a rise and
+the next tips. Without that, a tier whose cadence is shorter than the tell had two waves in the edge
+at once and the breach cue coming back before it had ended — 0323's guard said so, at burn.
 
 **The leap is the entrance replayed.** The one thing a flying fish does that no other boss can is
 leave the lane and come back over it, so the fourth stage's new thing is 0313's breach mid-fight, on
@@ -69,8 +70,8 @@ no drawing of the animal.
 | | pulse | shuriken |
 |---|---|---|
 | hits a second, parked — 0373's fight | 0.69 | 0.49 |
-| hits a second, parked — this one | **0.84** | **0.71** |
-| hits a second, sweeping (`--sweep=6`) | 0.44 | 0.41 |
+| hits a second, parked — this one | **0.88** | **0.71** |
+| hits a second, sweeping (`--sweep=6`) | 0.48 | 0.44 |
 | seconds to kill, median held lane | 51 | 20 |
 
 ⚠️ **THE FIGHT IS HARDER TO STAND IN THAN ANY BUT THE FROST SHIP'S, AND IT IS SAID PLAINLY.** The two

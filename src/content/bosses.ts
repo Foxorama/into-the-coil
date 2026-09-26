@@ -3109,13 +3109,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
         on the breaker's own stream anywhere the narrowest screen shows the whole span — and it
         `warning`s: the five spines stand in the edge with their tips showing for half a second before
         they rise. A span of 60 against a narrowest view of 213, so there is always lane to stand on;
-        a wave every 48 steps, because a later stage may not fire slower than the one before it
-        (`tests/level.test.ts`), and five to a wave rather than seven so two waves in the air is a
-        field and not a wall.
+        a wave every 42 steps with the tell's thirty on top of that, because a later stage fires
+        STRICTLY faster than the one before it (`tests/difficulty.test.ts`) and the stage before is
+        at 48; five to a wave rather than seven so two waves in the air is a field and not a wall.
         No horde under it, on 0317's own finding: a stage with nothing on the field but the wave and the
         fish is what makes the wave readable and the kites read when they come back.
       */
-      { upTo: 0.46, fireEvery: 48, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
+      { upTo: 0.46, fireEvery: 42, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
       /*
         ⚠️ **STAGE FOUR — IT LEAPS, WHITE-HOT, WHIPPING FLAME.** Every six seconds it dives out through
         the near edge and flies its breach again — three leaps across the whole screen, unshootable
@@ -3125,7 +3125,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         core inks, the crown bigger and the flicker quicker — one fire at a higher temperature, which
         is what a fourth stage after *ablaze* has left to be.
       */
-      { upTo: 0.22, fireEvery: 48, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
+      { upTo: 0.22, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
     ],
   },
   /**
