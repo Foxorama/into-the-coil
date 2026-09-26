@@ -43,7 +43,7 @@ import type { PickupKind } from './pickups.ts';
 import type { ThemeKind } from './themes.ts';
 import type { LevelSections } from './music.ts';
 import type { Eruption } from './volcano.ts';
-import type { SpriteKind } from './sprites.ts';
+import { MIRE_BANK_CAPS, MIRE_BED, type SpriteKind } from './sprites.ts';
 import { PLAYER_MARGIN } from '../sim/flight.ts';
 import { ACROSS_SPAN } from '../sim/camera.ts';
 
@@ -371,6 +371,42 @@ export interface CorridorRow {
    * same places on every tier; how narrow they get and how steeply their walls may run is the tier's.
    */
   shape?: readonly { at: number; swing: number; narrow: number }[];
+  /**
+   * A corridor that is a FLOOR of acid rather than two walls of stone — 0383, and absent for stone.
+   *
+   * ⚠️ **ONE WALL, AND IT IS THE FAR ONE.** The Mire is flown over its ground, not down a corridor:
+   * *"make it a hard ground wall like the labyrinth wall that causes hit damage/death to everything
+   * but the end boss."* So the far face is the shore, and the near one is laid where nothing is.
+   *
+   * ⚠️ **AND IT IS ACID, WHICH SAYS THREE THINGS STONE DOES NOT.** It is drawn in front of what is in
+   * it, because a thing in acid is under its surface; a flank from below rises up through it rather
+   * than out of an opening — *"rise through unbroken acid"*, the player's answer; and a rift does not
+   * carve it, because a lake closes over a hole. What it shares with stone is everything that bites.
+   */
+  bank?: BankRow;
+}
+
+/**
+ * The Mire's floor — `docs/decisions/0383-the-mire-floor-is-a-wall.md`.
+ *
+ * ⚠️ **THE SHORE ROLLS, AND IT IS AUTHORED RATHER THAN ROLLED.** *"Rolling shore, world speed"* was the
+ * player's answer: the ground scrolls with the world as the Labyrinth's walls do, and its edge rises
+ * and falls. A knot per wall tile in whole lane units, as `layFaces` lays stone (0350), so a rise
+ * across one tile is a whole number and the painter needs one baked cap per whole number.
+ */
+export interface BankRow {
+  /**
+   * The shore at each knot, in lane units, read round and round for as long as the level lasts — so
+   * it runs on under a fight whose length nobody knows. A knot every `wall` tile.
+   */
+  shore: readonly number[];
+  /** The cap for each whole rise across a tile, steepest fall first, level in the middle. */
+  caps: readonly SpriteKind[];
+  /**
+   * The bed of pools under the shore: the tiles of one drawing, in the order they lie along the world
+   * — `POOLS_OF` is where the pools are, and its bubbles rise off these.
+   */
+  bed: readonly SpriteKind[];
 }
 
 export interface LevelRow {
@@ -1648,6 +1684,54 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     midBoss: { kind: 'chorus', at: 1619 },
     landmarks: [],
     theme: 'mire',
+    /*
+      ── THE GROUND IS A WALL — 0383 ───────────────────────────────────────────────────────────────
+
+      *"The bottom ground with the acid pools sits slightly too high on the screen… it needs to be
+      lower so that the lower row of acid pools sits just off screen. We also need to make it a hard
+      ground wall like the labyrinth wall."*
+
+      ⚠️ **AT REST IT IS THE LOWEST QUARTER OF THE LANE, FROM 90 TO THE BOX'S FLOOR AT 114**, where the
+      Labyrinth's is the whole box. A wave is read into the corridor against its rest and a body rides
+      it (0350), so this is how much of the lane the shore bends: what flies low over it keeps its
+      height over it, and a wave authored above 90 is put down where it was authored. Measured, flying
+      the level on every tier and the mid-boss fight with `scripts/weigh-fight.mjs`:
+
+      | rest from | the shore destroys | the mid-boss fight, against the 22 s asked |
+      |---|---|---|
+      | 60 | 0 / 0 / 0 | **25.5 s** — the squeeze moved every lower-half wave, and the fight with it |
+      | 80 – 96 | 0 / 0 / 0 | 21.0 s, the level as it was authored |
+      | 100 | 7 / 5 / 3 | 20.9 s — too little reach, and bodies meet the shore it did not bend them over |
+
+      90 is the middle of the range that changes nothing the author wrote and loses nothing to the shore.
+
+      ⚠️ **THE SHORE STANDS BETWEEN LANE 106 AND LANE 113, AND BOTH ENDS ARE MEASURED.** The pools lie
+      under it at fixed lanes — acid is level, and land rises over it — with the upper row's surfaces
+      at 117 to 118 and the lower row's past the screen's edge (`POOLS_OF`), so the lowest shore leaves
+      three lanes of bank over the highest pool, and the highest leaves eleven: the three to eight the
+      bank was before 0383, give or take its hills. And at 106 it takes eight lanes off the bottom of a
+      box that ends at 114, so the ship keeps a hundred of its hundred and eight at the shore's highest.
+
+      ⚠️ **HILLS OF THREE TO SEVEN LANES, NEVER STEEPER THAN TWO A TILE** — a rise of 9.5°, gentle enough
+      to be ground rather than a wall standing up out of it, and 480 units round, a little over two
+      screens, so the eye does not find the repeat.
+    */
+    corridor: {
+      centre: (ACROSS_SPAN * 0.75 + ACROSS_SPAN - PLAYER_MARGIN) / 2,
+      width: ACROSS_SPAN * 0.25 - PLAYER_MARGIN,
+      wall: 'mireBank',
+      passages: [],
+      bank: {
+        shore: [
+          112, 112, 111, 109, 108, 107, 107, 108, 110, 112,
+          113, 113, 112, 111, 111, 110, 108, 106, 106, 107,
+          109, 111, 112, 112, 111, 109, 108, 108, 109, 110,
+          110, 109, 107, 106, 106, 107, 108, 110, 111, 112,
+        ],
+        caps: MIRE_BANK_CAPS,
+        bed: MIRE_BED,
+      },
+    },
   },
   /**
    * Level seven. Its idea is written above its script.

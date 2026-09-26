@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS } from '../content/specials.ts';
-import { BEAD_HEAD, EMBER_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { BEAD_HEAD, EMBER_HEAD, MIRE_BANK_CAPS, MIRE_BED, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -518,6 +518,18 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   wallRise10: 'sky',
   wallRise11: 'sky',
   wallRise12: 'sky',
+  // The Mire's bank and its bed are the place, on the wall's own terms — 0383. `bakeGround` repaints
+  // them in the place's land colours; this is only what the atlas bakes before a place has any.
+  mireBank: 'sky',
+  bankRise0: 'sky',
+  bankRise1: 'sky',
+  bankRise2: 'sky',
+  bankRise3: 'sky',
+  bankRise4: 'sky',
+  bankRise5: 'sky',
+  bankRise6: 'sky',
+  mireBedA: 'sky',
+  mireBedB: 'sky',
   boss12: 'enemy',
   boss13: 'enemy',
   boss14: 'enemy',
@@ -3435,26 +3447,19 @@ function drawIce(ctx: Pen, land: string, _sky: string, _glow: string, size: numb
 }
 
 /**
- * ── THE TOXIC MIRE: A CORRIDOR BETWEEN A CANOPY AND THE POOLS ─────────────────────────────────────
+ * ── THE TOXIC MIRE: A CANOPY OVER THE FIGHT ───────────────────────────────────────────────────────
  *
  * Asked for: *"toxic mire is also a planet, but needs an overhanging canopy so that it feels like
  * you're flying through a tight narrow corridor above the toxic pools below and beneath the
  * overhanging canopy above."*
  *
- * ⚠️ **THE ONLY GROUND IN THE GAME WITH TWO SURFACES, AND THE SUBJECT IS THE GAP.** Both are drawn
- * from the same table with the fill going opposite ways — a canopy is a floor upside down, and
- * writing it as one is what keeps the two agreeing about how wide the corridor between them is.
- *
- * ⚠️ **AND THE GAP IS MEASURED AGAINST THE SHIP, NOT AGAINST ITSELF.** `tests/places.test.ts` holds
- * it. *"Tight"* is a feeling and *"a passage the ship cannot fly down"* is a bug, and only one of
- * those two has a number.
+ * ⚠️ **THE ROOF ONLY, SINCE 0383.** This was the only ground in the game with two surfaces — the
+ * canopy and the pools, one table with the fill going opposite ways. The pools' ground is a wall now,
+ * and a wall moves with the world while this tile moves at 0.45 of it, so the floor is the bank
+ * (`drawBankCap`, `drawBed`) and this is what is left: the roof, its shadow, and the acid's light on
+ * its underside. `tests/places.test.ts` still measures the gap between them against the ship.
  */
 function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: number, light?: LandLight): void {
-  /*
-    ⚠️ **BOTH EDGES SIT WELL INSIDE THE LANE**, which is what makes this place feel enclosed at all.
-    The canopy hangs to tile 0.4 — lane 30 — and the pools rise to 0.66, lane 82. Everything the game
-    does happens in the 52 lane units between them, against a ship 7 across.
-  */
   /*
     ⚠️ **THE CANOPY HANGS, WHICH IS NOT THE SAME AS BEING JAGGED.** A skyline sampled evenly around a
     base is a mountain range upside down — the bench showed a smooth hill, and *"overhanging"* was
@@ -3467,10 +3472,8 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
     has most of the screen and the canopy is a roof over it rather than a wall a third of the way down.
   */
   const canopy = skyline(size, 'mire/canopy', 0.3, 0.06, 28, 'down');
-  const pools = skyline(size, 'mire/pools', 0.66, 0.022, 14);
 
   fillTo(ctx, land, canopy, size, false);
-  fillTo(ctx, land, pools, size, true);
 
   /*
     The underside of the roof: clumps of leaf along its edge in a murk green, so it is foliage with a
@@ -3526,16 +3529,117 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
   }
 
   /*
-    ── AND THE POOLS ARE LIT AND THE CANOPY IS NOT ─────────────────────────────────────────────────
+    ⚠️ **AND THE UNDERSIDE OF THE CANOPY CATCHES THE ACID'S LIGHT, WHICH IS WHAT PUTS THE TWO IN ONE
+    ROOM.** Light from below on the roof above is the single mark that says these are two faces of one
+    enclosure rather than a floor and an unrelated ceiling. It is fainter than the pools it is coming
+    from, because it is a reflection of them — and the pools are the bank's since 0383 (`drawBed`).
+  */
+  ctx.globalAlpha = 0.26;
+  ctx.strokeStyle = glow;
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(1, size * 0.005);
+  ctx.beginPath();
+  ctx.moveTo(canopy[0]![0]!, canopy[0]![1]!);
+  for (let i = 1; i < canopy.length; i += 1) ctx.lineTo(canopy[i]![0]!, canopy[i]![1]!);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
 
-    Which is the whole reading of the place: the light is coming from BELOW, off something that should
-    not be glowing, and the roof over it is a silhouette. It is also the only way two surfaces of one
-    colour tell each other apart at a glance.
-  */
-  /*
-    The pools themselves, and they are the light source. **Drawn before the shoreline**, so the
-    shoreline closes over their far edge and they sit IN the ground rather than on it.
-  */
+/**
+ * ── THE MIRE'S BANK: THE GROUND THAT BITES — 0383 ────────────────────────────────────────────────
+ *
+ * Asked for: *"make it a hard ground wall like the labyrinth wall that causes hit damage/death to
+ * everything but the end boss"*, and answered on the plan: *rolling shore, world speed.* So it is the
+ * Labyrinth's scheme in the Mire's material — a cap per whole rise of the shore across a twelve-unit
+ * tile, mud under it out past the lane, and the bed of pools the mud lies in (`drawBed`).
+ *
+ * ⚠️ **NOTHING OF IT IS ABOVE THE FACE.** The face is where the stone bites (`src/sim/corridor.ts`), so
+ * the bank's lit edge is laid entirely UNDER that line: a body meets the picture's edge on the step it
+ * meets the model's. The old shoreline was a stroke centred on the edge, half of it in the air.
+ *
+ * ⚠️ **ITS BRIGHT EDGE IS A LINE, AND ITS AREAS ARE THE LAND'S** — 0352's floor under the acid, which
+ * `tests/mire.test.ts` now holds over the bank as well: the mud is the place's ground and the lip under
+ * the edge is the ground lit a little by the acid, while the glow the edge is drawn in is a stroke —
+ * the shoreline's own terms since 0221.
+ */
+interface BankInk {
+  mud: string;
+  lip: string;
+  vein: string;
+  shore: string;
+}
+
+function bankInk(land: string, glow: string, light?: LandLight): BankInk {
+  const lit = light?.lit ?? mix(land, glow, 0.36);
+  return { mud: land, lip: mix(land, lit, 0.28), vein: shade(land, -0.35), shore: glow };
+}
+
+/** How many lane units one bank tile spans, so a rise in lane units is a slope across it. */
+const BANK_TILE = SPRITE_EXTENT.mireBank;
+
+/**
+ * One cap of the bank — the shore rising `rise` lane units across the tile, through its centre, with
+ * the mud under it to the tile's foot. The painter puts the face on the knots (`paintCorridor`).
+ *
+ * ⚠️ **EVERY MARK IS A FIXED DEPTH UNDER THE FACE**, so two caps that meet at a knot meet mark to mark
+ * whatever their rises: the face is the same height either side of a knot, and so is everything laid
+ * parallel to it.
+ */
+function drawBankCap(ctx: Pen, size: number, rise: number, ink: BankInk): void {
+  const unit = size / BANK_TILE;
+  const faceY = (x: number): number => size / 2 + ((x - size / 2) * rise) / BANK_TILE;
+  const under = (from: number, depth: number, colour: string, alpha = 1): void => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.moveTo(0, faceY(0) + from * unit);
+    ctx.lineTo(size, faceY(size) + from * unit);
+    ctx.lineTo(size, Math.min(size, faceY(size) + (from + depth) * unit));
+    ctx.lineTo(0, Math.min(size, faceY(0) + (from + depth) * unit));
+    ctx.closePath();
+    ctx.fill();
+  };
+  // The mud, from the face to the foot of the tile.
+  under(0, BANK_TILE * 2, ink.mud);
+  // The lip under the edge, where the acid's light reaches the bank.
+  under(0, 1.6, ink.lip, 0.9);
+  // Veins of darker silt, lying along the shore as mud settles.
+  under(2.6, 0.35, ink.vein, 0.7);
+  under(4.1, 0.25, ink.vein, 0.55);
+  // The edge: a line of the acid's glow laid wholly under the face, so the lit edge IS the face.
+  const width = 0.7 * unit;
+  ctx.globalAlpha = 0.85;
+  ctx.strokeStyle = ink.shore;
+  ctx.lineCap = 'butt';
+  ctx.lineWidth = Math.max(1, width);
+  ctx.beginPath();
+  ctx.moveTo(0, faceY(0) + width / 2);
+  ctx.lineTo(size, faceY(size) + width / 2);
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+
+/** The bank's mud, below the caps and out past the lane — 0383. Flat: its veins are the caps'. */
+function drawBankFill(ctx: Pen, size: number, ink: BankInk): void {
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = ink.mud;
+  ctx.fillRect(0, 0, size, size);
+}
+
+/**
+ * One half of the bed the bank lies in — 0383: the Mire's pools, which were the ground tile's until the
+ * ground became a wall, at the lanes `POOLS_OF` says, in half `part` of one drawing `parts` tiles long.
+ *
+ * ⚠️ **TRANSPARENT BUT FOR THE POOLS**, so the mud under it is the bank's own and the two cannot
+ * disagree about its colour. The drawing is the ground tile's arithmetic unchanged — fractions of a
+ * tile twice the lane, centred on it — scaled into a tile the lane's width, so `paintBubbles` finds
+ * every pool where it always did.
+ *
+ * ⚠️ **EACH HALF DRAWS EVERY POOL, AND THE CANVAS KEEPS WHAT IS ITS OWN**, one period either side as
+ * well: a pool across the join between the halves, or across the join between one drawing and the
+ * next, is whole on both sides of it.
+ */
+function drawBed(ctx: Pen, size: number, part: number, parts: number, land: string, glow: string, light?: LandLight): void {
   /*
     ⚠️ **LIT FROM WITHIN, AND AS BRIGHT ACROSS THEIR AREA AS THE FLOOR ALLOWS — 0352.** *"Vibrant
     glowing acid pools"* is a lit area low in the lane, where shots are read. The surface of each pool
@@ -3545,59 +3649,66 @@ function drawEnclosure(ctx: Pen, land: string, sky: string, glow: string, size: 
   */
   const surface = light?.lit ?? mix(land, glow, 0.36);
   const depth = mix(surface, land, 0.6);
-  // Authored in `POOLS_OF`, which the bubbles read too, so the two are the same pools — 0353.
+  // Pixels per whole drawing along, and per tile-twice-the-lane across: the ground tile's fractions.
+  const drawing = size * parts;
+  const tile = size * 2;
   for (const spot of POOLS_OF.mire?.spots ?? []) {
-    const at = spot.at * size;
-    const wide = spot.wide * size;
-    const deep = spot.deep * size;
-    const top = spot.top * size;
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = vertical(ctx, size, top / size, surface, (top + deep) / size, depth);
-    // A shallow lens rather than a box: a pool is a hollow the acid has filled.
-    ctx.beginPath();
-    ctx.moveTo(at, top);
-    ctx.quadraticCurveTo(at + wide / 2, top - deep * 0.15, at + wide, top);
-    ctx.quadraticCurveTo(at + wide / 2, top + deep * 0.9, at, top);
-    ctx.closePath();
-    ctx.fill();
-    // Ripples on the surface: thin, bright, a few to a pool.
-    ctx.globalAlpha = 0.55;
-    ctx.strokeStyle = glow;
-    ctx.lineWidth = Math.max(1, size * 0.0015);
-    for (let r = 0; r < 3; r += 1) {
-      // Inside the lens, whose floor is under half its depth: ripples below it would float in the ground.
-      const y = top + deep * (0.07 + r * 0.1);
-      const inset = wide * (0.14 + r * 0.1);
+    for (let round = -1; round <= 1; round += 1) {
+      const at = (spot.at + round) * drawing - part * size;
+      const wide = spot.wide * drawing;
+      if (at > size || at + wide < 0) continue;
+      const deep = spot.deep * tile;
+      const top = spot.top * tile - size / 2;
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = vertical(ctx, size, top / size, surface, (top + deep) / size, depth);
+      // A shallow lens rather than a box: a pool is a hollow the acid has filled.
       ctx.beginPath();
-      ctx.moveTo(at + inset, y);
-      ctx.lineTo(at + wide - inset, y);
-      ctx.stroke();
+      ctx.moveTo(at, top);
+      ctx.quadraticCurveTo(at + wide / 2, top - deep * 0.15, at + wide, top);
+      ctx.quadraticCurveTo(at + wide / 2, top + deep * 0.9, at, top);
+      ctx.closePath();
+      ctx.fill();
+      // Ripples on the surface: thin, bright, a few to a pool.
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = glow;
+      ctx.lineWidth = Math.max(1, tile * 0.0015);
+      for (let r = 0; r < 3; r += 1) {
+        // Inside the lens, whose floor is under half its depth: ripples below it would float in the ground.
+        const y = top + deep * (0.07 + r * 0.1);
+        const inset = wide * (0.14 + r * 0.1);
+        ctx.beginPath();
+        ctx.moveTo(at + inset, y);
+        ctx.lineTo(at + wide - inset, y);
+        ctx.stroke();
+      }
     }
   }
-
-  ctx.globalAlpha = 0.85;
-  ctx.strokeStyle = glow;
-  ctx.lineCap = 'round';
-  ctx.lineWidth = Math.max(1, size * 0.007);
-  ctx.beginPath();
-  ctx.moveTo(pools[0]![0]!, pools[0]![1]!);
-  for (let i = 1; i < pools.length; i += 1) ctx.lineTo(pools[i]![0]!, pools[i]![1]!);
-  ctx.stroke();
-
-  /*
-    ⚠️ **AND THE UNDERSIDE OF THE CANOPY CATCHES IT, WHICH IS WHAT PUTS THE TWO IN ONE ROOM.** Light
-    from below on the roof above is the single mark that says these are two faces of one enclosure
-    rather than a floor and an unrelated ceiling. It is fainter than the water it is coming from,
-    because it is a reflection of it.
-  */
-  ctx.globalAlpha = 0.26;
-  ctx.lineWidth = Math.max(1, size * 0.005);
-  ctx.beginPath();
-  ctx.moveTo(canopy[0]![0]!, canopy[0]![1]!);
-  for (let i = 1; i < canopy.length; i += 1) ctx.lineTo(canopy[i]![0]!, canopy[i]![1]!);
-  ctx.stroke();
   ctx.globalAlpha = 1;
 }
+
+/**
+ * A place's bank, where it has one — 0383: the caps, the mud and the bed, baked by `bakeGround` in the
+ * place's land colours. `null` for a place whose ground does not bite, which is six of the seven.
+ */
+export interface BankArt {
+  cap: (ctx: Pen, size: number, rise: number, land: string, glow: string, light?: LandLight) => void;
+  fill: (ctx: Pen, size: number, land: string, glow: string, light?: LandLight) => void;
+  bed: (ctx: Pen, size: number, part: number, parts: number, land: string, glow: string, light?: LandLight) => void;
+}
+
+export const BANK_OF: Record<ThemeKind, BankArt | null> = {
+  approach: null,
+  nebula: null,
+  saurian: null,
+  labyrinth: null,
+  rime: null,
+  mire: {
+    cap: (ctx, size, rise, land, glow, light) => drawBankCap(ctx, size, rise, bankInk(land, glow, light)),
+    fill: (ctx, size, land, glow, light) => drawBankFill(ctx, size, bankInk(land, glow, light)),
+    bed: drawBed,
+  },
+  core: null,
+};
 
 /**
  * The swamp behind the fight — 0352: *"the background needs to be swampy trees and murk."* Two rows
@@ -9931,6 +10042,27 @@ export function drawKind(
       drawBead(ctx, size, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
       return;
     /*
+      The Mire's bank's placeholders, on `skyGround`'s terms exactly — 0383: drawn in the palette's own
+      space, and replaced in the place's land colours by `bakeGround` when a place that has one is
+      entered. A place without a bank never lays one, so these are never blitted there.
+    */
+    case 'mireBank':
+      drawBankFill(ctx, size, bankInk(palette.space, palette.sky));
+      return;
+    case 'bankRise0':
+    case 'bankRise1':
+    case 'bankRise2':
+    case 'bankRise3':
+    case 'bankRise4':
+    case 'bankRise5':
+    case 'bankRise6':
+      drawBankCap(ctx, size, MIRE_BANK_CAPS.indexOf(kind) - (MIRE_BANK_CAPS.length - 1) / 2, bankInk(palette.space, palette.sky));
+      return;
+    case 'mireBedA':
+    case 'mireBedB':
+      drawBed(ctx, size, MIRE_BED.indexOf(kind), MIRE_BED.length, palette.space, palette.sky);
+      return;
+    /*
       ── THE EDGE OF THE PLAYER'S BOX ────────────────────────────────────────────────────────────
 
       One dash of a dashed line, tiled down the lane by `src/render/scene.ts` —
@@ -11767,6 +11899,13 @@ export function bakeGround(
   drawGround(ctx, land, sky, glow, size, theme, light);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyGround] = canvas;
   /*
+    ⚠️ **AND THE BANK, FOR A PLACE WHOSE GROUND BITES — 0383**, in the same land colours, so the ground
+    that moves with the world and the canopy that does not are one place's. Before the far land, which
+    returns early for a place that has none.
+  */
+  const bank = BANK_OF[theme];
+  if (bank !== null) bakeBank(atlas, bank, land, glow, pixelsPerUnit, light);
+  /*
     ⚠️ **AND THE FAR LAND, FOR A PLACE THAT HAS ONE — 0347**, on exactly these terms: a place without
     one leaves the slot stale and never blits it, because `skyFor` builds its sky from what it states.
   */
@@ -11779,6 +11918,24 @@ export function bakeGround(
   if (pen === null) return;
   range(pen, land, sky, glow, size, light);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyRange] = far;
+}
+
+/** Every sprite of a bank, re-baked in a place's own land colours — 0383. A level boundary, never a frame. */
+function bakeBank(atlas: Atlas, bank: BankArt, land: string, glow: string, pixelsPerUnit: number, light?: LandLight): void {
+  const bake = (kind: SpriteKind, draw: (pen: Pen, size: number) => void): void => {
+    const size = bakeSize(SPRITE_EXTENT[kind], pixelsPerUnit);
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const pen = canvas.getContext('2d');
+    if (pen === null) return;
+    draw(pen, size);
+    (atlas.bitmaps as CanvasImageSource[])[SPRITE[kind]] = canvas;
+  };
+  bake('mireBank', (pen, size) => bank.fill(pen, size, land, glow, light));
+  const steepest = (MIRE_BANK_CAPS.length - 1) / 2;
+  MIRE_BANK_CAPS.forEach((kind, i) => bake(kind, (pen, size) => bank.cap(pen, size, i - steepest, land, glow, light)));
+  MIRE_BED.forEach((kind, i) => bake(kind, (pen, size) => bank.bed(pen, size, i, MIRE_BED.length, land, glow, light)));
 }
 
 /**

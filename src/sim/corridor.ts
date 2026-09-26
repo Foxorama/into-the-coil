@@ -53,6 +53,45 @@ export interface Corridor {
    * meets it before it is drawn there.
    */
   kills: number;
+  /**
+   * How many knots of `faces` repeat, or nought for a corridor laid end to end — 0383. The Mire's
+   * floor is one authored stretch of shore read round and round, because it has to run under a fight
+   * whose length nobody knows: `to` is infinite and knot `k` is `faces[k mod period]`.
+   */
+  period: number;
+  /**
+   * The cap for each whole rise of a face across one tile, from −(n − 1)/2 to +(n − 1)/2 — the
+   * painter's. The Labyrinth's masonry (0350) or the Mire's bank (0383).
+   */
+  caps: readonly number[];
+  /**
+   * Whether the wall is drawn IN FRONT of the bodies in it rather than behind them — 0383. Stone is
+   * behind everything, because a body over masonry is a body in the wall; acid is in front of what is
+   * in it, because a thing in acid is under its surface. Shots and the ship are over both.
+   */
+  front: boolean;
+  /**
+   * The side whose flankers rise THROUGH the wall rather than coming out of a passage cut for them —
+   * +1 or −1, or nought for none — 0383. *"Rise through unbroken acid"*: while a body is still crossing
+   * in from this side the wall does not take it, and no opening is cut, so the ship never finds a
+   * stretch of wall that is only a picture.
+   */
+  rises: number;
+  /** Whether a rift carves this wall (0377). Stone breaks; a lake closes over the hole — 0383. */
+  carves: boolean;
+  /**
+   * The bed a floor lies in — 0383: the tiles of one drawing of pools, blitted in turn along the world
+   * from `from`, each `bedExtent` wide and centred on the lane. Empty for stone. The painter's alone:
+   * nothing collides with a pool, and what bites is the shore above it.
+   */
+  beds: readonly number[];
+  bedExtent: number;
+}
+
+/** Which of `faces`' knots knot `k` is — itself, or its place in the repeat (0383). */
+export function knotOf(corridor: Corridor, k: number): number {
+  const period = corridor.period;
+  return period > 0 ? ((k % period) + period) % period : k;
 }
 
 /**
@@ -63,11 +102,12 @@ export function faceAt(corridor: Corridor, along: number, side: number): number 
   if (along < corridor.from || along > corridor.to) return side < 0 ? Number.NEGATIVE_INFINITY : Number.POSITIVE_INFINITY;
   const knots = corridor.faces.length / 2;
   const t = (along - corridor.from) / corridor.extent;
-  const i = Math.min(knots - 2, Math.max(0, Math.floor(t)));
+  // A repeating corridor has no last knot to clamp against, so its tile is wherever `t` is — 0383.
+  const i = corridor.period > 0 ? Math.floor(t) : Math.min(knots - 2, Math.max(0, Math.floor(t)));
   const f = Math.min(1, t - i);
   const slot = side < 0 ? 0 : 1;
-  const a = corridor.faces[i * 2 + slot]!;
-  const b = corridor.faces[(i + 1) * 2 + slot]!;
+  const a = corridor.faces[knotOf(corridor, i) * 2 + slot]!;
+  const b = corridor.faces[knotOf(corridor, i + 1) * 2 + slot]!;
   return a + (b - a) * f;
 }
 
@@ -208,6 +248,25 @@ export function layFaces(
   }
 }
 
+/**
+ * Lay a floor's faces — `docs/decisions/0383-the-mire-floor-is-a-wall.md`: the shore at every knot,
+ * one knot per entry of `shore`, and a near face a whole lane beyond the top of the box.
+ *
+ * ⚠️ **A FLOOR HAS ONE WALL, AND THE OTHER FACE IS WHERE NOTHING EVER IS.** A flanker is put down
+ * `FLANK_MARGIN` outside the lane and no body is authored bigger than `EDGE_MARGIN`, so nothing can
+ * reach a lane's width above it. Written as a face rather than as *no wall* so that every question
+ * the stone answers — `stoneAt`, `bandAt`, a line of sight — is the one question it already was.
+ *
+ * ⚠️ **NOT THROUGH `layFaces`**, because nothing about a floor is the tier's: the tiers' narrowest and
+ * slope are how tight a corridor's two walls may pinch, and the shore is terrain, the same on every one.
+ */
+export function layShore(out: Float64Array, shore: readonly number[], beyond: number): void {
+  for (let k = 0; k < shore.length; k++) {
+    out[k * 2] = beyond;
+    out[k * 2 + 1] = shore[k]!;
+  }
+}
+
 /** The shape's swing and narrowing at `at`: a half-cosine between points, held beyond the ends. */
 export function shapeAt(shape: readonly ShapePoint[] | undefined, at: number): { swing: number; narrow: number } {
   if (shape === undefined || shape.length === 0) return STRAIGHT;
@@ -239,6 +298,7 @@ export function bandAt(corridor: Corridor, along: number, radius: number, side: 
   const first = Math.ceil((along - radius - corridor.from) / corridor.extent);
   const last = Math.floor((along + radius - corridor.from) / corridor.extent);
   for (let k = first; k <= last; k++) {
+    // `faceAt` and not the array: a knot past either end is no wall, and a repeat is read round — 0383.
     const at = faceAt(corridor, corridor.from + k * corridor.extent, side);
     face = side < 0 ? Math.max(face, at) : Math.min(face, at);
   }
@@ -258,12 +318,33 @@ export function bandAt(corridor: Corridor, along: number, radius: number, side: 
  */
 export function laneIn(corridor: Corridor | null, along: number, lane: number, radius: number): number {
   if (corridor === null || along < corridor.from || along > corridor.to) return lane;
-  const low = bandAt(corridor, along, radius, -1);
-  const high = bandAt(corridor, along, radius, 1);
+  const low = heldAt(corridor, along, radius, -1);
+  const high = heldAt(corridor, along, radius, 1);
   const restLow = corridor.centre - corridor.width / 2 + radius;
   const restWidth = corridor.width - radius * 2;
   if (restWidth <= 0 || high <= low) return (low + high) / 2;
+  /*
+    ⚠️ **A LANE OUTSIDE THE CORRIDOR AT REST IS WHERE IT WAS AUTHORED — 0383.** The Labyrinth's rest is
+    the whole box, so nothing a wave is authored at is outside it. The Mire's is the lowest quarter: a floor
+    bends only what flies low over it, and a wave authored above it is not the floor's to move.
+  */
+  if (lane < restLow || lane > restLow + restWidth) return lane;
   return low + ((lane - restLow) * (high - low)) / restWidth;
+}
+
+/**
+ * `bandAt`, never wider than the corridor at rest — 0383: the band a body is read into and carried in.
+ *
+ * ⚠️ **THE SAME NUMBER AS `bandAt` WHEREVER BOTH WALLS ARE IN THE BOX**, which is every face the
+ * Labyrinth lays (`layFaces` clamps them to it). It differs for a floor: the Mire has no near wall,
+ * so its near face is a lane beyond the box, and a band read to it would put a wave authored at 50
+ * a hundred units above the screen. Held to its rest — the lowest quarter of the lane, for the Mire — a
+ * floor bends only what flies low over it.
+ */
+export function heldAt(corridor: Corridor, along: number, radius: number, side: number): number {
+  const rest = corridor.centre + (side * corridor.width) / 2 - side * radius;
+  const band = bandAt(corridor, along, radius, side);
+  return side < 0 ? Math.max(band, rest) : Math.min(band, rest);
 }
 
 /**
@@ -275,7 +356,7 @@ export function squeezeAt(corridor: Corridor | null, along: number, radius: numb
   if (corridor === null || along < corridor.from || along > corridor.to) return 1;
   const restWidth = corridor.width - radius * 2;
   if (restWidth <= 0) return 1;
-  return Math.max(0, bandAt(corridor, along, radius, 1) - bandAt(corridor, along, radius, -1)) / restWidth;
+  return Math.max(0, heldAt(corridor, along, radius, 1) - heldAt(corridor, along, radius, -1)) / restWidth;
 }
 
 /** How far apart the points are that a line of sight is tested at, in world units. */

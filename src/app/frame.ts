@@ -72,8 +72,9 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
-import { bandAt, deepestFace, faceAt, laneIn, layFaces, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
-import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
+import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
+import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
+import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -2428,8 +2429,9 @@ export class GameFrame implements Frame {
     // there and the picture is not. One `??` rather than a branch per painter: what changes is which
     // count of steps has passed, never what is drawn from it.
     const time = (w.pictureSteps ?? w.steps) + alpha;
-    // The wall only while it is met — 0359; `boundPress` is the step's answer to *is it*.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor);
+    // The wall only while it is met — 0359; `boundPress` is the step's answer to *is it*. And the
+    // Mire's acid over the bodies in it and under everything that flies — 0383: after the enemies' layer.
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies));
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -2505,12 +2507,34 @@ function stoneStops(w: World): void {
   }
   for (let i = w.enemies.size - 1; i >= 0; i--) {
     const e = w.enemies.at(i);
-    if (stoneAt(corridor, e.along, e.across, e.radius) === 0) continue;
+    const side = stoneAt(corridor, e.along, e.across, e.radius);
+    if (side === 0 || surfacing(corridor, e, side)) continue;
     burst(w, e.along, e.across, BURST.enemy);
     flare(w, e.along, e.across, 'burst');
     w.enemies.releaseAt(i);
     corridor.kills += 1;
   }
+}
+
+/**
+ * Whether a body in the wall on `side` is still rising up through it — 0383. *"Rise through unbroken
+ * acid"*, the player's answer for the Mire's flanks from below: a flanker is still crossing in while it
+ * steers for its lane (`steerAcross`, 0338), and while it is on the wall's side of that lane it is
+ * coming out of the acid, not going into it. Nothing else is spared: a body that has arrived, or one
+ * steering the other way, meets the shore as stone.
+ *
+ * ⚠️ **ON THE BODY AND NOT ON THE WALL**, which is the difference from a passage. An opening is a
+ * stretch of wall that is air for everything — the ship too — for as long as it is open; the acid
+ * spares only the thing rising out of it, and only until it is out.
+ */
+function surfacing(corridor: Corridor, e: Entity, side: number): boolean {
+  /*
+    In the wall that is risen through, steering for a lane, and on the wall's side of it. **No test of
+    which way it is moving, because there is nothing for one to catch**: `steerEnemies` puts a body on
+    its lane the step it passes it and clears `steerAcross`, so a body still steering is by construction
+    still on its way in.
+  */
+  return side === corridor.rises && e.steerAcross !== 0 && side * (e.across - e.steerAcross) > 0;
 }
 
 /** Every shot in `pool` whose centre has reached stone ends there, with a spark — 0349. */
@@ -3418,7 +3442,9 @@ const RIFT_BODY = { sprite: SPRITE.riftZone, spriteHit: SPRITE.riftZone, radius:
 /** Carve the stone a disc covers, a stretch per wall, into the corridor's own carve slots. */
 function carveStone(w: World, along: number, across: number, radius: number): void {
   const corridor = w.corridor;
-  if (corridor === null) return;
+  // The Mire's acid is not carved — 0383: a hole in a lake closes, and one the picture could not show
+  // would be a stretch of shore that no longer bites.
+  if (corridor === null || !corridor.carves) return;
   const extent = corridor.extent;
   const firstTile = Math.floor((along - radius - corridor.from) / extent);
   const lastTile = Math.floor((along + radius - corridor.from) / extent);
@@ -5254,7 +5280,14 @@ function inCorridor(w: World, along: number, lane: number, radius: number): numb
   if (corridor === null) return lane;
   const across = laneIn(corridor, along, lane, radius);
   // Beyond the corridor's span the band is infinite and the clamp does nothing, as it should.
-  return Math.min(bandAt(corridor, along, radius, 1), Math.max(bandAt(corridor, along, radius, -1), across));
+  if (along < corridor.from || along > corridor.to) return across;
+  /*
+    ⚠️ **HELD TO THE BOX, AND HELD BY THE WALL, WHICH ARE ONE LINE FOR STONE AND TWO FOR A FLOOR — 0383.**
+    The far side is `heldAt`, the band `laneIn` just read it into. The near side is the wall itself,
+    as it always was: the Labyrinth's is in the box, where the two numbers agree, and the Mire has no
+    near wall, so a member its formation puts above the box is left where the author put it.
+  */
+  return Math.min(heldAt(corridor, along, radius, 1), Math.max(bandAt(corridor, along, radius, -1), across));
 }
 
 /**
@@ -5280,17 +5313,25 @@ function rideCorridor(w: World, pool: Pool<Entity>): void {
       `laneIn` puts it down in. Scaled face to face, a body a hull's width off a narrowing wall is
       carried closer to it than its own radius, and the stone takes it for standing still.
     */
-    const lowBefore = bandAt(corridor, e.prevAlong, e.radius, -1);
-    const highBefore = bandAt(corridor, e.prevAlong, e.radius, 1);
-    const lowNow = bandAt(corridor, e.along, e.radius, -1);
-    const highNow = bandAt(corridor, e.along, e.radius, 1);
     // Outside the corridor's span either side of the step: nothing to ride.
-    if (!Number.isFinite(lowBefore + highBefore + lowNow + highNow)) continue;
+    if (e.prevAlong < corridor.from || e.prevAlong > corridor.to || e.along < corridor.from || e.along > corridor.to) continue;
+    /*
+      ⚠️ **AND THE BAND IS HELD TO THE CORRIDOR AT REST — `heldAt`, 0383.** The same band as `bandAt`
+      for stone, whose faces never leave the box. A floor has no near wall, and the Mire's rest is the
+      lowest quarter of the lane: what flies low over the shore keeps its height over it, and what flies
+      above lane 90 is not the floor's to move (`src/content/levels.ts` has what that was measured against).
+    */
+    const lowBefore = heldAt(corridor, e.prevAlong, e.radius, -1);
+    const highBefore = heldAt(corridor, e.prevAlong, e.radius, 1);
+    const lowNow = heldAt(corridor, e.along, e.radius, -1);
+    const highNow = heldAt(corridor, e.along, e.radius, 1);
     const band = highBefore - lowBefore;
     if (band <= 0) continue;
     const scale = (highNow - lowNow) / band;
     if (e.across >= lowBefore && e.across <= highBefore) e.across = lowNow + (e.across - lowBefore) * scale;
-    if (e.steerAcross !== 0) e.steerAcross = lowNow + (e.steerAcross - lowBefore) * scale;
+    if (e.steerAcross !== 0 && e.steerAcross >= lowBefore && e.steerAcross <= highBefore) {
+      e.steerAcross = lowNow + (e.steerAcross - lowBefore) * scale;
+    }
   }
 }
 
@@ -5385,6 +5426,8 @@ function cutFlank(w: World, index: number): void {
 function openPassage(w: World, first: number, last: number, radius: number, side: number, travel: number): void {
   const corridor = w.corridor;
   if (corridor === null) return;
+  // A wall that is risen through is never opened — 0383: the flanker is spared, not the wall (`surfacing`).
+  if (side === corridor.rises) return;
   /*
     How far along the world the body goes while it crosses from outside the lane to clear of the
     wall's face — `travel` a step, which is the velocity its spawner gave it.
@@ -5978,6 +6021,20 @@ function steerEnemies(w: World): void {
           if (e.along - e.radius > w.cameraAlong + w.view.alongSpan) {
             if (e.across <= e.radius + ROAM_UNSEEN_MARGIN) e.velAcross = m.roam;
             else if (e.across >= ACROSS_SPAN - e.radius - ROAM_UNSEEN_MARGIN) e.velAcross = -m.roam;
+            /*
+              ⚠️ **AND AT A WALL INSIDE THE LANE, ON WHERE THE STEP WOULD TAKE IT — 0383.** The lane's
+              edges are the bound above; the Mire's shore stands up to fourteen lanes inside the bottom
+              one, and a drifter roaming unseen ahead of the screen walked into it — flying the level,
+              every one of the six to twelve bodies the shore took a tier was one of these, burst before
+              anyone could see it. The band beyond a corridor's span, and on a floor's open side, is
+              infinite and this does nothing, so an open level is exactly 0382's. Its own statement, not
+              an `else`: the two bounds are independent, and the wall's is the tighter wherever it stands.
+            */
+            if (w.corridor !== null) {
+              const lands = e.across + e.velAcross;
+              if (lands <= bandAt(w.corridor, e.along, e.radius, -1)) e.velAcross = m.roam;
+              else if (lands >= bandAt(w.corridor, e.along, e.radius, 1)) e.velAcross = -m.roam;
+            }
             break;
           }
           const inward = e.across < ACROSS_SPAN * ROAM_INWARD ? 1 : e.across > ACROSS_SPAN * (1 - ROAM_INWARD) ? -1 : 0;
@@ -6008,11 +6065,10 @@ function steerEnemies(w: World): void {
         */
         // The hull's band where the body is — 0350: the corridor turns, and the face beside the hull's
         // nose is not the face beside its middle (`bandAt`). Past the corridor's ends there is no face,
-        // and the open level's band is the bound again.
-        const nearBand = bandAt(corridor, e.along, e.radius, -1);
-        const farBand = bandAt(corridor, e.along, e.radius, 1);
-        const low = Number.isFinite(nearBand) ? nearBand : ROAM_MIN;
-        const high = Number.isFinite(farBand) ? farBand : ROAM_MAX;
+        // and the open level's band is the bound again — and so is it on a side with no wall, which a
+        // floor's near side is (0383): its face is a lane beyond the box, and it turns where it always did.
+        const low = Math.max(bandAt(corridor, e.along, e.radius, -1), ROAM_MIN);
+        const high = Math.min(bandAt(corridor, e.along, e.radius, 1), ROAM_MAX);
         const next = e.across + e.velAcross;
         if (next <= low) {
           e.across = Math.max(e.across, low);
@@ -8866,7 +8922,16 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
   const sprite = SPRITE[row.wall];
   const extent = SPRITE_EXTENT[row.wall];
   const room = BOSSES[level.boss].room;
-  const to = room === null ? origin + level.bossAt + PLAYER_LEAD : origin + level.bossAt - room.stand - room.mouth;
+  const bank = row.bank;
+  /*
+    ⚠️ **A FLOOR RUNS ON UNTIL THE PLACE GOES — 0383.** The Labyrinth's corridor hands over to its
+    room; the Mire's fight has no room, and the camera goes on scrolling through it for as long as it
+    lasts. So the bank has no end: its shore is read round (`period`), and it goes when the crossing
+    swaps the place (`src/app/mount.ts`), under the streaks, with the rest of the Mire.
+  */
+  const to = bank !== undefined
+    ? Number.POSITIVE_INFINITY
+    : room === null ? origin + level.bossAt + PLAYER_LEAD : origin + level.bossAt - room.stand - room.mouth;
   // @setup: a level boundary — one array for the level, written in place from here on.
   const passages = new Float64Array((row.passages.length + RUNTIME_PASSAGES + CARVE_PASSAGES) * 3);
   for (let i = 0; i < row.passages.length; i++) {
@@ -8880,11 +8945,13 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
     passages[i * 3] = 0;
     passages[i * 3 + 1] = -1;
   }
-  // The faces at every knot, one per tile — 0349 — laid from the level's shape at this tier (0350).
-  const knots = Math.ceil((to - origin) / extent) + 1;
+  // The faces at every knot, one per tile — 0349 — laid from the level's shape at this tier (0350),
+  // or a floor's shore, once round, and read round from there (0383).
+  const knots = bank !== undefined ? bank.shore.length : Math.ceil((to - origin) / extent) + 1;
   // @setup: a level boundary — the corridor's shape, one array for the level.
   const faces = new Float64Array(knots * 2);
-  layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);
+  if (bank !== undefined) layShore(faces, bank.shore, -ACROSS_SPAN);
+  else layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);
   return {
     sprite,
     extent,
@@ -8899,8 +8966,27 @@ export function corridorFor(level: LevelRow, origin: number, tier: DifficultyRow
     fixed: row.passages.length,
     next: 0,
     kills: 0,
+    period: bank !== undefined ? knots : 0,
+    // @setup: a level boundary — the bank's caps, read once into sprite numbers.
+    caps: bank !== undefined ? bank.caps.map((kind) => SPRITE[kind]) : WALL_RISES,
+    /*
+      ⚠️ **WHAT MAKES A BANK ACID RATHER THAN STONE — 0383**, and it is three answers the player gave:
+      in front of what is in it (the hydra's lower body is in it, and a flanker from below is under it
+      until it rises out); a flank from the far side rises through it — *"rise through unbroken acid"*;
+      and a rift does not carve it, because a hole in a lake closes.
+    */
+    front: bank !== undefined,
+    rises: bank !== undefined ? 1 : 0,
+    carves: bank === undefined,
+    // @setup: a level boundary — the bed's tiles, read once into sprite numbers.
+    beds: bank !== undefined ? bank.bed.map((kind) => SPRITE[kind]) : NO_BEDS,
+    bedExtent: bank !== undefined && bank.bed.length > 0 ? SPRITE_EXTENT[bank.bed[0]!] : 0,
   };
 }
+
+/** Stone lies in no bed. Module-level, so a corridor of it allocates nothing to say so. */
+// @setup: one empty array for the lifetime of the module.
+const NO_BEDS: readonly number[] = [];
 
 /**
  * Change which script is running, and change nothing else.

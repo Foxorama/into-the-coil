@@ -32,7 +32,14 @@ import { SHOTS } from '../src/content/shots.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { playableWorld } from './world.ts';
 
-const walled = LEVEL_KINDS.filter((kind) => LEVELS[kind].corridor !== undefined);
+/*
+  ⚠️ **STONE CORRIDORS, AND NOT THE MIRE'S FLOOR — 0383.** Every claim here is a claim about two walls in
+  the box that pinch per tier and hand over to a room: the Labyrinth's. The Mire's bank is one wall,
+  the same on every tier, with no room, drawn in front of what is in it — and `tests/floor.test.ts`
+  holds it on its own terms. Scoped rather than bent: a claim made true of a floor by weakening it
+  would no longer hold the Labyrinth to what the player asked of it.
+*/
+const walled = LEVEL_KINDS.filter((kind) => LEVELS[kind].corridor !== undefined && LEVELS[kind].corridor!.bank === undefined);
 
 /**
  * A corridor that turns as hard as a shape can ask, at its tier's slope, with waves flown through it

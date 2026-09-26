@@ -38,8 +38,8 @@ export const PROBES = [
     guard: 'THE PLAYER’S NUMBERS, PER TIER',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);',
-      replace: '  layFaces(faces, extent, row.centre, row.width, row.shape, 56, 0.25);',
+      find: '  else layFaces(faces, extent, row.centre, row.width, row.shape, tier.corridor.narrowest, tier.corridor.slope);',
+      replace: '  else layFaces(faces, extent, row.centre, row.width, row.shape, 56, 0.25);',
     },
   },
   {
