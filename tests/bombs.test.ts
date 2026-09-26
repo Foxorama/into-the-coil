@@ -418,3 +418,43 @@ describe('0375 — the bomb is a missile, and it goes off as an explosion', () =
     expect(thrown, 'the gap refused every throw, so this measured nothing').toBeGreaterThan(1);
   });
 });
+
+/**
+ * EVERY SPECIAL IS HEARD AS ITSELF — `docs/decisions/0378-the-specials-are-heard.md`.
+ *
+ * Five specials borrowed other sounds: the surges the shield's, the storm the arc's zap, the whirlpool
+ * the blades' throw, and the storm's ball and the void the bomb's launch and boom. Each now names its
+ * own on its row, and the frame plays the row.
+ */
+describe('0378 — every special is heard as itself', () => {
+  it('THE ASK: no two specials share a press, and no two thrown ones share what they go off as', () => {
+    const presses = SPECIAL_KINDS.map((kind) => SPECIALS[kind].cue);
+    expect(new Set(presses).size, `two specials press alike: ${presses.join(', ')}`).toBe(presses.length);
+    const lands = SPECIAL_KINDS.map((kind) => SPECIALS[kind].lands).filter((cue) => cue !== null);
+    expect(new Set(lands).size, `two specials go off alike: ${lands.join(', ')}`).toBe(lands.length);
+    for (const kind of SPECIAL_KINDS) {
+      const row = SPECIALS[kind];
+      expect(row.lands !== null, `${kind} goes off without a sound, or has one it never goes off with`).toBe(row.shot !== null);
+    }
+  });
+
+  it('the press plays its row’s cue on the step it is pressed, and what it goes off as when it does', () => {
+    for (const kind of SPECIAL_KINDS) {
+      const row = SPECIALS[kind];
+      const built = playableWorld(NO_LEVEL);
+      const { world, cues } = built;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      const frame = new GameFrame(world);
+      cues.length = 0;
+      launchSpecial(world, kind);
+      expect(cues, `${kind}’s press did not play its own cue`).toEqual([row.cue]);
+      if (row.lands === null) continue;
+      for (let i = 0; i < 200 && !cues.includes(row.lands); i++) {
+        world.ship.invulnFor = 2;
+        frame.step();
+      }
+      expect(cues.includes(row.lands), `${kind} went off without its own sound`).toBe(true);
+    }
+  });
+});

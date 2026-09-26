@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
-import { velocitiesOf } from '../src/app/sound.ts';
+import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
 
 /**
  * How many buffers the bake produces: one per WEIGHT of every cue, plus one per music layer.
@@ -58,6 +58,11 @@ interface AudioTally {
    * exists only in a browser.
    */
   into: string[];
+  /**
+   * Every connection any node made, as `[from type, from id, to type, to id]` — 0378. The hush is a
+   * claim about the SHAPE of the graph, and no double can see a shape.
+   */
+  edges: [string, number, string, number][];
 }
 
 declare global {
@@ -78,8 +83,31 @@ async function open(): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const page = await context.newPage();
   await page.addInitScript(() => {
-    const tally = { buffers: 0, voices: 0, into: [] as string[] };
+    const tally = { buffers: 0, voices: 0, into: [] as string[], edges: [] as [string, number, string, number][] };
     window.__itcAudio = tally;
+    /*
+      ⚠️ **EVERY `connect`, ON THE NODE PROTOTYPE** — 0378. An id per node, handed out the first time
+      it is seen, so the test can follow a path; the type alone cannot tell the master from the hush.
+    */
+    const ids = new WeakMap<object, number>();
+    let nextId = 0;
+    const idOf = (node: object): number => {
+      let id = ids.get(node);
+      if (id === undefined) {
+        id = nextId++;
+        ids.set(node, id);
+      }
+      return id;
+    };
+    const nodeConnect = window.AudioNode.prototype.connect;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    window.AudioNode.prototype.connect = function (this: AudioNode, destination: any, ...rest: unknown[]): any {
+      if (destination instanceof window.AudioNode) {
+        tally.edges.push([this.constructor.name, idOf(this), destination.constructor.name, idOf(destination)]);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return (nodeConnect as any).apply(this, [destination, ...rest]);
+    } as typeof nodeConnect;
     const proto = window.AudioContext.prototype;
     const buffer = proto.createBuffer;
     const source = proto.createBufferSource;
@@ -121,7 +149,7 @@ async function open(): Promise<Page> {
 }
 
 const tally = (page: Page): Promise<AudioTally> =>
-  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [] });
+  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [], edges: [] });
 
 /** The cue bus's impulse response — one buffer, built on the same gesture. `THE WHOLE CHAIN` argues it. */
 const ROOM_IMPULSE = 1;
@@ -254,6 +282,42 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       small fraction of that — this is a ceiling, not a target.
     */
     expect(after.voices, 'more voices than the cap and the holds could possibly allow').toBeLessThan(240);
+    await page.context().close();
+  });
+
+  it('0378 — THE HUSH: the field, the room and the music reach the master through one gain, and a second field goes round it', async () => {
+    /*
+      ⚠️ **THE HUSH IS A SHAPE, AND ONLY HERE IS THERE A GRAPH.** `tests/sound.test.ts` holds that the
+      speaker passes the hush on and the frame asks for it; neither can see that the music actually
+      goes THROUGH it, or that the void's own cues have somewhere to go round it. The same finding 0127
+      wrote below: the arithmetic was never the risky half; the wiring is.
+    */
+    const page = await open();
+    await page.click(startButton);
+    const { edges } = await settled(page);
+    const into = (id: number): [string, number, string, number][] => edges.filter((e) => e[3] === id);
+    const outOf = (id: number): [string, number, string, number][] => edges.filter((e) => e[1] === id);
+    // The master is the gain that feeds the ceiling.
+    const master = edges.find((e) => e[0] === 'GainNode' && e[2] === 'WaveShaperNode')?.[1];
+    expect(master, 'no gain feeds the ceiling — the graph is not the one this reads').toBeDefined();
+    // The panners, grouped by where they go.
+    const panned = new Map<number, number>();
+    for (const e of edges) if (e[0] === 'StereoPannerNode') panned.set(e[3], (panned.get(e[3]) ?? 0) + 1);
+    // The music pans its own layers into its own bus; the cue field is the sets of `PAN_BUCKETS`.
+    expect(panned.get(master!), 'no set of places goes straight to the master, so nothing is heard through the hush').toBe(PAN_BUCKETS);
+    const hush = [...panned.keys()].find(
+      (id) => id !== master && panned.get(id) === PAN_BUCKETS && outOf(id).some((e) => e[3] === master),
+    );
+    expect(hush, 'no second set of places reaches the master through a gain, so nothing is hushed').toBeDefined();
+    expect(outOf(hush!).map((e) => e[3]), 'the hush does not lead to the master').toEqual([master]);
+    // The room's return, and the music, arrive at the hush and not at the master.
+    const roomReturn = edges.find((e) => e[0] === 'ConvolverNode')?.[3];
+    expect(outOf(roomReturn!).map((e) => e[3]), 'the room rings on through the silence').toEqual([hush]);
+    const clear = new Set(edges.filter((e) => e[0] === 'StereoPannerNode' && e[3] === master).map((e) => e[1]));
+    const others = into(master!).filter((e) => e[1] !== hush && !clear.has(e[1]));
+    expect(others, 'something other than the hush and the clear places reaches the master — the music is not hushed').toEqual([]);
+    const intoHush = into(hush!).filter((e) => e[0] !== 'StereoPannerNode' && e[1] !== roomReturn);
+    expect(intoHush.length, 'nothing but the field and the room reaches the hush — the music goes round it').toBeGreaterThan(0);
     await page.context().close();
   });
 

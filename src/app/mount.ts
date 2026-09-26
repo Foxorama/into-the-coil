@@ -93,6 +93,7 @@ import {
   detonateArsenal,
   landmarksFor,
   canThrow,
+  hushed,
   launchSpecial,
   respawn,
   takeShield,
@@ -2644,6 +2645,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the world's number over is what makes an accent land where the bar says.
     */
     speaker.step(world.steps);
+    /*
+      ⚠️ **THE HUSH, ONLY WHILE THE SIMULATION IS STEPPING** — 0378. A void in play silences the game;
+      paused, on the title, or between lives nothing is in play whatever the pools still hold, so the
+      world comes back rather than staying silent over a menu.
+    */
+    speaker.setHush(world.stepping && hushed(world));
     /*
       ⚠️ **BEFORE BOTH, BECAUSE BOTH READ IT** — 0212. `applyPlace` bakes the sky the walk is moving
       through and `applyMusicLevel` asks the walk which rung it has reached; a camera moved after them

@@ -59,7 +59,21 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, panFor, sampleCue, saturate, variantAt, velocitiesOf } from '../src/app/sound.ts';
+import {
+  HUSH_IN_SECONDS,
+  HUSH_LEVEL,
+  HUSH_OUT_SECONDS,
+  MASTER_GAIN,
+  SAMPLE_RATE,
+  cueSeconds,
+  layCue,
+  panFor,
+  sampleCue,
+  saturate,
+  variantAt,
+  velocitiesOf,
+  widthOf,
+} from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS, cueRowOf, panTrackOf, rungOf } from '../src/content/themes.ts';
@@ -134,7 +148,9 @@ function bossCuesOf(theme) {
   return [...entrance, phase.cue ?? 'bossShot'];
 }
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
-import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
+import { FIRE_GRID, VOLLEY_CYCLE } from '../src/content/cadence.ts';
+import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { SHOTS } from '../src/content/shots.ts';
 import { UNITS_PER_SECOND, auraAt, levelTimeline, rungAt, targetGain } from './timeline.mjs';
 import { UPGRADE_TIERS } from '../src/content/pickups.ts';
 /*
@@ -847,19 +863,18 @@ if (args.has('play')) {
    * scatter stream places them. Centre — `undefined` — is kept for the ship's own gun, which is where
    * the player's shots actually come from.
    */
+  /*
+    ⚠️ **AND IN THE CUE'S OWN WIDTH — 0378.** A row whose layers pan bakes a left and a right beside
+    its middle (`widthOf`), and the game plays that pair through the panner. This laid only the middle,
+    so every render of a wide cue — the bomb's, the blast's rolls — was narrower than the game, and a
+    whirlpool that sweeps across the field would have been heard sitting still.
+  */
   const put = (into, kind, step, across) => {
-    const start = Math.round(step * perStep);
     const data = baked[kind][variantAt(baked[kind].length, Math.round(step))];
-    const g = panGains(panFor(across));
-    const frames = into.length / 2;
-    for (let i = 0; i < data.length; i++) {
-      const j = start + i;
-      if (j >= 0 && j < frames) {
-        into[j * 2] += data[i] * MASTER_GAIN * g.left;
-        into[j * 2 + 1] += data[i] * MASTER_GAIN * g.right;
-      }
-    }
+    layCue(into, data, Math.round(step * perStep), panFor(across), MASTER_GAIN);
   };
+  // A gridded cue sounds on the next sixteenth strictly after it is asked for, as the speaker has it.
+  const gridded = (kind, step) => (CUES[kind].onGrid === true ? (Math.floor(step / FIRE_GRID) + 1) * FIRE_GRID : step);
 
   /**
    * Bars of `level`, with a ship at weapon/missile tier `tier` shooting and things dying.
@@ -867,7 +882,7 @@ if (args.has('play')) {
    * Returns the mix and the two halves of it separately, because *"background too quiet"* is a claim
    * about the RATIO and neither half alone can answer it.
    */
-  const scene = (level, tier, bars) => {
+  const scene = (level, tier, bars, specials = false) => {
     const steps = bars * 4 * VOLLEY_CYCLE;
     const length = Math.round(steps * perStep);
     /*
@@ -930,9 +945,51 @@ if (args.has('play')) {
       const kinds = bossCuesOf(place ?? 'approach');
       for (let i = 0, s = 0; s < steps; s += VOLLEY_CYCLE * 3, i++) put(cues, kinds[i % kinds.length], s);
     }
+    /*
+      ⚠️ **EVERY SPECIAL, ONE EVERY TWO BARS, ON ITS ROW'S OWN CUES — 0378.** Asked of the bomb, and
+      the answer was *"the bomb over music sound didn't have the bomb sound"*: this mode laid only the
+      guns, the kills and the boss, so no special was ever heard against the score. Read off the rows,
+      so a special added later is in this take without anyone remembering it: the press where it is
+      pressed, and what it sounds like going off after the fuse `launchSpecial` gives it — its reach
+      over its body's speed — and on the next sixteenth if its row is gridded, as the speaker has it.
+      From the middle of the lane, which is where the ship throws from as far as a rig knows.
+    */
+    /*
+      ⚠️ **AND THE HUSH, AS THE GAME HAS IT — 0378.** While a special whose row `hushes` is in play —
+      pressed, in the air, and open where it went off — the bed and every cue fall to `HUSH_LEVEL`, on
+      the game's own time constants; the cues that go round the hush are laid beside it, untouched.
+      Without this the take would play the void's whumm over a score the game has silenced.
+    */
+    const clear = new Float32Array(length * 2);
+    const hushes = [];
+    if (specials) {
+      const bar = 4 * VOLLEY_CYCLE;
+      SPECIAL_KINDS.forEach((kind, k) => {
+        const row = SPECIALS[kind];
+        const pressed = k * 2 * bar + bar / 2;
+        const bus = (cue) => (CUES[cue].throughHush === true ? clear : cues);
+        put(bus(row.cue), row.cue, pressed, ACROSS_SPAN / 2);
+        if (row.lands === null || row.shot === null) return;
+        const fuse = Math.max(1, Math.round(row.reach / SHOTS[row.shot].speed));
+        put(bus(row.lands), row.lands, gridded(row.lands, pressed + fuse), ACROSS_SPAN / 2);
+        if (row.hushes) hushes.push([pressed, pressed + fuse + (row.rift?.steps ?? 0)]);
+      });
+    }
     // Interleaved, so the sum is over both channels — 0209.
     const mix = new Float32Array(length * 2);
-    for (let i = 0; i < mix.length; i++) mix[i] = bed[i] + cues[i];
+    const down = 1 - Math.exp(-1 / (HUSH_IN_SECONDS * SAMPLE_RATE));
+    const up = 1 - Math.exp(-1 / (HUSH_OUT_SECONDS * SAMPLE_RATE));
+    let hush = 1;
+    for (let frame = 0; frame < length; frame++) {
+      const step = frame / perStep;
+      const target = hushes.some(([from, to]) => step >= from && step < to) ? HUSH_LEVEL : 1;
+      hush += (target - hush) * (target < hush ? down : up);
+      for (let side = 0; side < 2; side++) {
+        const i = frame * 2 + side;
+        mix[i] = (bed[i] + cues[i]) * hush + clear[i];
+        cues[i] += clear[i];
+      }
+    }
     return { mix, bed, cues };
   };
 
@@ -955,6 +1012,8 @@ if (args.has('play')) {
     ['surge', UPGRADE_TIERS, 'the surge, maxed'],
     ['boss', UPGRADE_TIERS, 'the boss arrives, maxed'],
     ['bossPeak', UPGRADE_TIERS, 'the boss at its peak, maxed'],
+    // Every special over a level, two bars apart — 0378. Its own file, named for what is in it.
+    ['run', 2, 'the specials, in turn', 'specials'],
   ];
   /*
     ⚠️ **THE LAST COLUMN IS THE REPORTED DEFECT AS A NUMBER.** *"Volume levels are still way off,
@@ -963,11 +1022,13 @@ if (args.has('play')) {
     than the things shooting over it.
   */
   console.log('take                  rung      tier  peak   rms     clip  music vs cues');
-  for (const [level, tier, what] of takes) {
-    const { mix, bed, cues } = scene(level, tier, 4);
+  for (const [level, tier, what, specials] of takes) {
+    // Two bars a special, and one to let the last one ring out.
+    const bars = specials === undefined ? 4 : SPECIAL_KINDS.length * 2 + 1;
+    const { mix, bed, cues } = scene(level, tier, bars, specials !== undefined);
     const all = measure(mix);
     const ratio = 20 * Math.log10(measure(bed).rms / measure(cues).rms);
-    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE, 2));
+    writeFileSync(`${base}-play-${specials ?? level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE, 2));
     console.log(
       `${what.padEnd(21)} ${level.padEnd(9)} ${String(tier).padStart(4)}  ` +
         `${all.peak.toFixed(3)}  ${all.rms.toFixed(4)}  ${String(all.clipped).padStart(4)}  ` +
@@ -988,8 +1049,19 @@ for (const kind of kinds) {
   const row = cueRowOf(place, kind);
   // The same stream the game bakes this cue from — one per kind, per decision 0021.
   const samples = sampleCue(row, SAMPLE_RATE, makeRng('cues').stream(kind));
-  for (const s of samples) peak = Math.max(peak, Math.abs(s));
-  pieces.push(samples, new Float32Array(silence));
+  /*
+    ⚠️ **IN STEREO SINCE 0378, IN THE CUE'S OWN WIDTH.** A row whose layers pan bakes a left and a right
+    (`widthOf`); this wrote only the middle, so a cue that sweeps across the field was sent to be judged
+    sitting still. A cue with no width is the same sample on both sides, as the panner plays it centred.
+  */
+  const [left, right] = widthOf(samples) ?? [samples, samples];
+  const pair = new Float32Array(samples.length * 2);
+  for (let i = 0; i < samples.length; i++) {
+    pair[i * 2] = left[i];
+    pair[i * 2 + 1] = right[i];
+    peak = Math.max(peak, Math.abs(left[i]), Math.abs(right[i]));
+  }
+  pieces.push(pair, new Float32Array(silence * 2));
   total += samples.length + silence;
   console.log(
     `${kind.padEnd(13)} ${String(row.layers.length).padStart(6)}  ${cueSeconds(row).toFixed(2).padStart(7)}  ` +
@@ -997,14 +1069,14 @@ for (const kind of kinds) {
   );
 }
 
-const joined = new Float32Array(total);
+const joined = new Float32Array(total * 2);
 let at = 0;
 for (const piece of pieces) {
   joined.set(piece, at);
   at += piece.length;
 }
 
-writeFileSync(out, wavOf(joined, SAMPLE_RATE));
+writeFileSync(out, wavOf(joined, SAMPLE_RATE, 2));
 
 const seconds = total / SAMPLE_RATE;
 if (peak <= 0) {

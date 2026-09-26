@@ -17,8 +17,9 @@ export const PROBES = [
     guard: 'every rig render that carries the music is written in stereo',
     edit: {
       path: 'scripts/hear.mjs',
-      find: '    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE, 2));',
-      replace: '    writeFileSync(`${base}-play-${level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE));',
+      // Since 0378 the file is named for the specials take when it is one.
+      find: '    writeFileSync(`${base}-play-${specials ?? level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE, 2));',
+      replace: '    writeFileSync(`${base}-play-${specials ?? level}-${tier}.wav`, wavOf(mix, SAMPLE_RATE));',
     },
   },
 ];

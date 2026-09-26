@@ -122,6 +122,14 @@ export const CUE_KINDS = [
   'bossDown',
   'bomb',
   'blast',
+  // The specials' own, each named on its row in `src/content/specials.ts` — 0378.
+  'hunt',
+  'overdrive',
+  'stormThrow',
+  'storm',
+  'whirlpool',
+  'voidThrow',
+  'rift',
   'shield',
   'death',
   'pickup',
@@ -202,10 +210,18 @@ export const TWIN_KINDS = [
   'boss-burst',
   /** A boss crosses a health threshold and sheds `BURST.phase` fragments — 0111. */
   'phase-burst',
-  /** A thrown bomb is on the field, counting down its fuse — 0053. */
+  /** A thrown special — a bomb, a storm's ball, a void — is on the field, counting down its fuse — 0053, 0378. */
   'bomb-appears',
   /** The blast ring, which outlives its own damage by `BLAST_STEPS` — 0053. */
   'blast-ring',
+  /** A surge's aura lights around the ship in its row's colour — `stepSurge`, 0373. */
+  'aura-appears',
+  /** A storm's strikes are stroked to the bodies it found, and its flicker runs — `unleashStorm`, 0374. */
+  'storm-strikes',
+  /** A whirlpool's arms open ahead of the ship with every blade — `openWhirl`, 0374. */
+  'whirl-appears',
+  /** A rift opens where the void went off, drawn at the radius it negates at — `openRift`, 0377. */
+  'rift-opens',
   /** A mark leaves the shell and a pip leaves the readout — 0050, 0045. */
   'shell-mark',
   /** The ship scatters `BURST.ship` fragments, and its upgrades with them — 0036, 0066. */
@@ -511,6 +527,13 @@ export interface CueRow {
    * wall-clock, because a waveform is sampled in real time and cannot be anything else.
    */
   hold: number;
+  /**
+   * Heard through the HUSH rather than under it — 0378. While a void is in play the music and every
+   * other cue drop almost to nothing (`HUSH_LEVEL` in `src/app/sound.ts`): *"it needs to negate all
+   * sound and be an orb of silence."* The void's own cues are what is left in it, so they go round the
+   * hush to the master. Absent is hushed, as everything else is.
+   */
+  throughHush?: boolean;
 }
 
 /**
@@ -1788,6 +1811,166 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.12, gain: 0.6, attack: 0.001, curve: 2.6, drive: 0.6 },
       { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.02, seconds: 0.9, gain: 0.45, attack: 0.004, curve: 2.2, drive: 0.55 },
       { wave: 'sine', from: inKey(-7), to: inKey(-7), at: 0.02, seconds: 1.2, gain: 0.34, attack: 0.01, curve: 1.9, drive: 0.25 },
+    ],
+  },
+  /*
+    ── THE SPECIALS' OWN — `docs/decisions/0378-the-specials-are-heard.md` ──────────────────────────
+
+    Five specials borrowed other sounds: the surges the shield's, the storm the arc's zap, the
+    whirlpool the blade's throw, and the storm's ball and the void the bomb's launch and boom. Each is
+    now its own, named on its row. They keep 0375's lesson — the bomb's rebuild on the root is the one
+    special sound approved by ear — so every pitch here is the root, its fifth or its octaves, and the
+    character is in the noise, the filters and the pan, where the key cannot object.
+
+    A press is immediate and a consequence is on the grid (0104): the surges, the throws and the
+    whirlpool answer a button; the storm going off and the rift opening land on a clock the player is
+    no longer holding.
+  */
+  /**
+   * The purple surge: seekers hunting. Dark, and it LOCKS ON — a swell on the root with a pulse under
+   * it, and two pings an octave apart, left then right, the sound of a seeker finding something.
+   */
+  hunt: {
+    twin: 'aura-appears',
+    air: 0.4,
+    hold: 6,
+    gain: 0.36,
+    glue: 0.1,
+    layers: [
+      // The swell: the root, rising into the aura rather than struck.
+      { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 0.75, gain: 0.55, attack: 0.09, curve: 2.2, drive: 0.3 },
+      // The pulse: a filtered square on A2 whose filter opens, vibrating like something tracking.
+      { wave: 'square', from: inKey(7), to: inKey(7), seconds: 0.7, gain: 0.3, attack: 0.05, curve: 2, lowFrom: 300, lowTo: 1500, highFrom: 90, q: 1.8, vibrato: 30 },
+      // The two pings: A4 then A5, one each side — the lock.
+      { wave: 'sine', from: inKey(21), to: inKey(21), at: 0.04, seconds: 0.22, gain: 0.32, attack: 0.003, curve: 4.5, pan: -0.5 },
+      { wave: 'sine', from: inKey(28), to: inKey(28), at: 0.2, seconds: 0.26, gain: 0.28, attack: 0.003, curve: 4.5, pan: 0.5 },
+      // A breath of dark noise under it, drifting across.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.6, gain: 0.14, attack: 0.06, curve: 2.4, lowFrom: 1400, lowTo: 500, highFrom: 180, pan: 0.4, panTo: -0.4 },
+    ],
+  },
+  /**
+   * The golden surge: the missiles overdriven. Bright and driven — a kick onto the root and an engine
+   * revving up the octave in a fifth, with a sizzle over the top.
+   */
+  overdrive: {
+    twin: 'aura-appears',
+    air: 0.35,
+    hold: 6,
+    gain: 0.38,
+    glue: 0.16,
+    layers: [
+      // The kick onto the root.
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.16, gain: 0.8, attack: 0.001, curve: 3, drive: 0.5 },
+      // The rev: A2 up to A3, and its fifth E3 up to E4 beside it, filters opening as they climb.
+      { wave: 'saw', from: inKey(7), to: inKey(14), at: 0.03, seconds: 0.55, gain: 0.3, attack: 0.03, curve: 2.2, lowFrom: 700, lowTo: 4200, highFrom: 120, q: 1.1, drive: 0.5, pan: -0.3 },
+      { wave: 'saw', from: inKey(11), to: inKey(18), at: 0.03, seconds: 0.55, gain: 0.22, attack: 0.03, curve: 2.2, lowFrom: 700, lowTo: 4200, highFrom: 160, q: 1.1, drive: 0.5, pan: 0.3 },
+      // The sizzle: bright noise, widening.
+      { wave: 'noise', from: 0, to: 0, at: 0.05, seconds: 0.5, gain: 0.12, attack: 0.02, curve: 2.6, lowFrom: 9000, highFrom: 3200, highTo: 2000, pan: 0, panTo: 0.5 },
+    ],
+  },
+  /**
+   * A storm's ball leaves — charge, not ignition. A crackle of held noise falling as it goes, a buzz
+   * dropping an octave onto A3, and a small thump on the root.
+   */
+  stormThrow: {
+    twin: 'bomb-appears',
+    // A press and its consequence — 0104. Only the consequence gets much of the room.
+    air: 0.2,
+    hold: 6,
+    gain: 0.34,
+    glue: 0.1,
+    layers: [
+      { wave: 'noise', from: 2600, to: 700, seconds: 0.42, gain: 0.55, attack: 0.004, curve: 2.4, lowFrom: 7000, lowTo: 2600, highFrom: 900, q: 0.8, pan: 0, panTo: 0.3 },
+      { wave: 'square', from: inKey(21), to: inKey(14), seconds: 0.3, gain: 0.26, attack: 0.004, curve: 3, lowFrom: 3200, lowTo: 1200, highFrom: 200, q: 1.4 },
+      { wave: 'sine', from: inKey(14), to: inKey(0), seconds: 0.14, gain: 0.6, attack: 0.001, curve: 3.2, drive: 0.35 },
+    ],
+  },
+  /**
+   * The storm goes off — *"a blast of lightning with some after flickers."* One crack of it, bright
+   * and hard, with the thunder's weight on the root under it; then the flickers, three short snaps of
+   * held noise, each later, quieter and somewhere else, as the picture's flicker runs on.
+   */
+  storm: {
+    twin: 'storm-strikes',
+    air: 0.6,
+    // The player paid a charge for this; the track makes room for it, a little less than for the bomb.
+    duck: 0.3,
+    onGrid: true,
+    hold: 6,
+    // Weighed 3 dB over the blast at 0.46; the bomb stays the loudest thing a charge buys.
+    gain: 0.32,
+    glue: 0.18,
+    layers: [
+      // The crack: white, very bright, over almost at once.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.7, attack: 0.0003, curve: 5, lowFrom: 12000, lowTo: 6000, highFrom: 1500 },
+      // The blast: held noise at a high rate, so it tears rather than hisses, falling as it goes.
+      { wave: 'noise', from: 5200, to: 1400, at: 0.005, seconds: 0.42, gain: 0.5, attack: 0.002, curve: 2.4, lowFrom: 9000, lowTo: 2400, highFrom: 700, drive: 0.4 },
+      // Its weight: a kick onto the root, driven.
+      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.004, seconds: 0.3, gain: 0.62, attack: 0.001, curve: 2.8, drive: 0.55 },
+      // The after flickers, each later, quieter and somewhere else.
+      { wave: 'noise', from: 6400, to: 3200, at: 0.46, seconds: 0.12, gain: 0.36, attack: 0.001, curve: 3.4, lowFrom: 10000, highFrom: 1800, pan: -0.55 },
+      { wave: 'noise', from: 6000, to: 3000, at: 0.78, seconds: 0.1, gain: 0.28, attack: 0.001, curve: 3.4, lowFrom: 10000, highFrom: 1900, pan: 0.6 },
+      { wave: 'noise', from: 5600, to: 2800, at: 1.12, seconds: 0.09, gain: 0.2, attack: 0.001, curve: 3.4, lowFrom: 9500, highFrom: 2000, pan: -0.15 },
+    ],
+  },
+  /**
+   * The whirlpool opens — *"sharpening knives."* Three strokes of a blade along steel, left, right,
+   * left: each a narrow band of noise sweeping UP as the edge runs along, the scrape building rather
+   * than struck, and a thin ring as each stroke leaves the steel — the last and longest one rings on.
+   */
+  whirlpool: {
+    twin: 'whirl-appears',
+    air: 0.35,
+    hold: 6,
+    gain: 0.36,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.28, gain: 0.6, attack: 0.07, curve: 1.6, lowFrom: 2600, lowTo: 9000, highFrom: 1800, highTo: 5200, q: 3.2, pan: -0.45, panTo: -0.2 },
+      { wave: 'sine', from: inKey(42), to: inKey(42), at: 0.22, seconds: 0.18, gain: 0.16, attack: 0.002, curve: 4, pan: -0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.28, gain: 0.56, attack: 0.07, curve: 1.6, lowFrom: 2800, lowTo: 9500, highFrom: 1900, highTo: 5400, q: 3.2, pan: 0.45, panTo: 0.2 },
+      { wave: 'sine', from: inKey(46), to: inKey(46), at: 0.56, seconds: 0.2, gain: 0.14, attack: 0.002, curve: 4, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.68, seconds: 0.36, gain: 0.52, attack: 0.08, curve: 1.5, lowFrom: 2600, lowTo: 10000, highFrom: 1800, highTo: 5600, q: 3.2, pan: -0.3, panTo: 0.1 },
+      { wave: 'sine', from: inKey(42), to: inKey(42), at: 0.98, seconds: 0.5, gain: 0.18, attack: 0.002, curve: 3.2, vibrato: 8 },
+    ],
+  },
+  /**
+   * A void is fired — *"a short fire sound, then nothing."* A muffled thump on the root and a breath,
+   * over in a fifth of a second. What follows it is the hush (0378): everything else drops away while
+   * the void is in play, so this is heard THROUGH it, never under it.
+   */
+  voidThrow: {
+    twin: 'bomb-appears',
+    air: 0.1,
+    throughHush: true,
+    hold: 6,
+    gain: 0.36,
+    glue: 0.12,
+    layers: [
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.16, gain: 0.85, attack: 0.002, curve: 3, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.3, attack: 0.002, curve: 3.4, lowFrom: 1600, lowTo: 400, highFrom: 90 },
+    ],
+  },
+  /**
+   * The rift is open — *"a very low whumm mmmm mmm mm while it's active."* Four swells on the root,
+   * each shorter and quieter than the last, a filter closing on each so it opens with the *wh* and
+   * settles into the *mm*; a sub under all four. It is the only thing left in the hush, so it is low
+   * and it is enough.
+   */
+  rift: {
+    twin: 'rift-opens',
+    air: 0.2,
+    throughHush: true,
+    duck: 0.32,
+    onGrid: true,
+    hold: 6,
+    gain: 0.44,
+    glue: 0.1,
+    layers: [
+      { wave: 'saw', from: inKey(0), to: inKey(0), seconds: 0.5, gain: 0.8, attack: 0.05, curve: 1.6, lowFrom: 480, lowTo: 150, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.5, seconds: 0.42, gain: 0.56, attack: 0.05, curve: 1.6, lowFrom: 420, lowTo: 140, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.9, seconds: 0.34, gain: 0.4, attack: 0.05, curve: 1.6, lowFrom: 380, lowTo: 130, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 1.22, seconds: 0.28, gain: 0.28, attack: 0.05, curve: 1.6, lowFrom: 340, lowTo: 120, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 1.5, gain: 0.34, attack: 0.04, curve: 1.8 },
     ],
   },
   /**
