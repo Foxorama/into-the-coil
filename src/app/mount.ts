@@ -180,7 +180,13 @@ export const CAPACITY = {
   playerShots: 106,
   missiles: 24,
   bombs: 4,
-  blasts: 4,
+  /*
+    ⚠️ **SIX SINCE 0377, BECAUSE A RIFT IS A BODY IN THIS POOL FOR A SECOND AND A HALF.** One throw per
+    `THROW_GAP_STEPS` (20) and a rift open for its row's 90 steps is five open at once for a player
+    who banked five voids — 0372 keeps every charge — and the pyre a wreck throws is the sixth. A
+    rift that found the pool full would not open at all; `tests/void.test.ts` throws that salvo.
+  */
+  blasts: 6,
   enemyShots: 150,
   /*
     ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
@@ -2777,7 +2783,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
 
       ⚠️ **Capped by the TIER, in `takeShield`, since 0355.** `MAX_SHIELDS` is the most the readout
       can draw and the tier's `shellCap` is what the pilot may wear under it — none on Burn.
-    */ else if (effect === 'shield') takeShield(world);
+
+      ⚠️ **AND A SHIELD TAKEN AT A FULL SHELL SPILLS INTO A CHARGE — 0377**, which `takeShield` decides
+      and this only routes, as it routes a capped ladder's `overflowOf`.
+    */ else if (effect === 'shield') {
+      const spilled = takeShield(world);
+      if (spilled !== null) dispatch({ slice: 'run', type: 'took', special: spilled });
+    }
     /*
       ⚠️ **ONE ARM PER UPGRADE KIND, since 0233, because each names its own kind of face.** This
       was one `isUpgrade(kind)` arm dispatching the pickup's name; an `upgraded` action now says

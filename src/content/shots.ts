@@ -51,6 +51,7 @@ export type ShotKind =
   | 'seeker'
   | 'bomb'
   | 'stormBall'
+  | 'voidBall'
   | 'blast'
   | 'blastHalf'
   | 'blastWide'
@@ -352,6 +353,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'seeker',
   'bomb',
   'stormBall',
+  'voidBall',
   'blast',
   'blastHalf',
   'blastWide',
@@ -877,6 +879,11 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * and what it does is what it becomes when its fuse runs out.
    */
   stormBall: { sprite: SPRITE.stormBall, spriteHit: SPRITE.stormBall, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
+  /**
+   * The void missile — 0377: *"a void missile -> it flies forward."* The bomb's flight in every
+   * number; what it does is the rift it opens where its fuse runs out.
+   */
+  voidBall: { sprite: SPRITE.voidBall, spriteHit: SPRITE.voidBall, radius: 2, health: 1, damage: 0, speed: 2.2, fission: SPENT_BY_ARRIVING },
   /**
    * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
    *

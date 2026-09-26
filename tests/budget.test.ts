@@ -90,8 +90,11 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * storm's thirty bolts (six strikes, twelve chains and a renewing flicker) and a whirlpool's
  * twenty-four blades. Both are the player's own fire on the one moment they spend a charge, on a
  * desktop target — thirty strokes and twenty-four blits. The particle share was not touched.
+ *
+ * ⚠️ **AND 616 SINCE 0377, ON THE SAME LINE.** A rift is a body in the blast pool, and a banked salvo
+ * of voids holds five open at once beside a wreck's pyre: two more blits of a baked bitmap.
  */
-const WORST_CASE = 614;
+const WORST_CASE = 616;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

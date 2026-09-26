@@ -50,8 +50,9 @@ export const PROBES = [
     guard: 'a shield never raises health past the tier’s full shell',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  w.ship.health = Math.min(w.ship.health + 1, fullHealthFor(w.shipRow, w.difficulty));',
-      replace: '  w.ship.health = Math.min(w.ship.health + 1, w.shipRow.health + 3);',
+      // Since 0377 the cap is read once and also decides the spill; the break is the same number.
+      find: '  const full = fullHealthFor(w.shipRow, w.difficulty);',
+      replace: '  const full = w.shipRow.health + 3;',
     },
   },
   {

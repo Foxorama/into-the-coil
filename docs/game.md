@@ -240,8 +240,10 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | **overdrive** | missiles | ten seconds of a golden aura: missiles three times the damage, and every one pierces like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md), moved off the gun by [0375](decisions/0375-the-bomb-is-a-missile.md) |
 | **storm** | arc | thrown like the bomb; goes off as six strikes to the nearest bodies on the screen, each chaining to two more, a twentieth of a boss once, and bolts flickering across the screen for half a second — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
 | **whirlpool** | shuriken | three spiral arms of eight big blades opened ahead of the ship, turning and growing, landing on a boss again and again, and gone once none of it is on the screen — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
+| **void** | a shield at a full shell | thrown up the lane on the tubes' trigger; opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
-The shield's void is the last change on the same ask —
+A thrown special that reaches the edge of the screen goes off there
+([0377](decisions/0377-the-void.md)). The void is the last change on the same ask —
 [`the-arsenal-planned`](../reports/the-arsenal-planned-2026-09-26.md). Still unbuilt
 beyond them: multi-tag tracking specials, faster engines, orbiting mines.
 
