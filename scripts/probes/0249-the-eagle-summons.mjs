@@ -46,14 +46,16 @@ export const PROBES = [
     decision: '0249',
     suite: 'tests/volans.test.ts',
     // The adds put behind the camera, where a wave never arrives.
-    // ⚠️ Re-aimed by 0262: the fish's calls come from the sides now, so the break is the flank
-    // placement's along put at the camera — behind the ship — rather than the leading edge's.
+    // ⚠️ Re-aimed by 0262 onto the flank placement, and by 0373 onto the mouth's: the fish's calls
+    // come out of its mouth now, so the break is the spat body placed at the camera — behind the
+    // ship — rather than at the snout. `npm run prove` reported the flank version STILL GREEN, because
+    // no call of the fish's reaches that line any more.
     broke: 'the adds placed at the camera rather than ahead of the ship',
     guard: 'THE SUMMONS: a volley at the last sixth',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const along = flanking ? flankAlongFor(w.ship.along, w.cameraAlong, w.view.alongSpan) + w.cameraAlong : spawnAlong(w.cameraAlong);',
-      replace: '  const along = flanking ? w.cameraAlong : spawnAlong(w.cameraAlong);',
+      find: '      reset(e, mouthAlongOf(w, lord), mouthAcrossOf(w, lord), row, kind);',
+      replace: '      reset(e, w.cameraAlong, mouthAcrossOf(w, lord), row, kind);',
     },
   },
   /*

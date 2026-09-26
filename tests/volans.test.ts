@@ -193,9 +193,13 @@ describe('0249 — the eagle summons', () => {
       const count = (phaseFor(BOSSES.volans, boss.health, world.bossFullHealth).attack as { count: number }).count;
       expect(called(), `the summons at ${fraction} put ${called()} ${enemy}s on the field`).toBe(count);
       expect(world.enemyShots.size, 'a summons threw bullets as well').toBe(0);
+      const first = new Set<object>();
+      let lean = 0;
       for (let i = 0; i < world.enemies.size; i++) {
         const add = world.enemies.at(i);
         if (add.kind !== world.enemyKinds[enemy]) continue;
+        first.add(add);
+        lean += (add.steerAcross !== 0 ? add.steerAcross : add.across) - boss.across;
         const inView = add.along - world.cameraAlong;
         expect(inView, 'an add arrived behind the ship').toBeGreaterThan(world.ship.along - world.cameraAlong);
         expect(inView, 'an add arrived beyond the screen').toBeLessThan(world.view.alongSpan);
@@ -204,6 +208,19 @@ describe('0249 — the eagle summons', () => {
       boss.fireIn = 1;
       frame.step();
       expect(called(), 'the second volley called nobody').toBe(count * 2);
+      /*
+        ⚠️ **AND THE SECOND CALL LEANS THE OTHER WAY — 0262's alternation, on 0373's fan.** A spat
+        fan is skewed half a spacing to the call's side, and `spin` flips a call; two calls that lean
+        the same way are a horde that always comes out of one side of the mouth, which is the file
+        0262 was written against. Read off the lanes the NEW members are steering for.
+      */
+      let second = 0;
+      for (let i = 0; i < world.enemies.size; i++) {
+        const add = world.enemies.at(i);
+        if (add.kind !== world.enemyKinds[enemy] || first.has(add)) continue;
+        second += (add.steerAcross !== 0 ? add.steerAcross : add.across) - boss.across;
+      }
+      expect(Math.sign(lean) * Math.sign(second), `two calls leaned ${lean.toFixed(0)} and ${second.toFixed(0)} from the mouth's lane — the same way`).toBe(-1);
     }
   });
 
