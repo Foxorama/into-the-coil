@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, type WaveEntry } from '../src/content/levels.ts';
+import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, laneAcross, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import {
   ENGAGE_RANGE,
@@ -88,9 +88,16 @@ function membersOf(wave: WaveEntry): { along: number; across: number }[] {
   // it now, because 0202 derives how deep a wave is from how wide its bodies are.
   const gap = gapAcross(ENEMIES[wave.enemy].radius);
   for (let i = 0; i < wave.count; i++) {
+    /*
+      ⚠️ **IN WORLD UNITS, WHICH THIS DID NOT USE TO BE — 0382.** A wave's `lane` is a share of the
+      lane, 0..100, and the spawner reads it through `laneAcross` (0364 made the lane 120 wide); this
+      compared the raw share against `ROAM_MIN`/`ROAM_MAX` and `ACROSS_SPAN`, all in world units, and
+      so under-read every plus-side reach by up to twenty units. The guards below held nothing they
+      appeared to hold on the far side of the lane; nothing authored reddened when they started to.
+    */
     out.push({
       along: wave.at + formation.alongOffset(i, wave.count, gap),
-      across: wave.lane + formation.acrossOffset(i, wave.count, gap),
+      across: laneAcross(wave.lane) + formation.acrossOffset(i, wave.count, gap),
     });
   }
   return out;

@@ -614,7 +614,17 @@ const APPROACH: readonly WaveEntry[] = [
   { at: 2073, enemy: 'drifter', formation: 'column', count: 5, lane: 40 },
   { at: 2115, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
   { at: 2174, enemy: 'picket', formation: 'line', count: 8, lane: 50 },
-  { at: 2231, enemy: 'turret', formation: 'column', count: 6, lane: 30 },
+  /*
+    ⚠️ **LANE 40, NOT 30 — 0382.** This column's fire used to depend on hiding: authored at 30, its
+    turrets roamed off the near edge before anyone saw them, sat twenty units past the screen where
+    the cap's sweeping guns cannot reach, and came back at sixty seconds to fire — the bursts at 60
+    and 62 s in `scripts/weigh-bullets.mjs`'s strip. A roam that turns inside the lane until it is
+    seen put the same column on the screen, where the sweep killed it before its first volley, and
+    the level went 15.3 s dry at 2358 units against 0259's nine. Measured at 30 / 40 / 50: cover
+    35% / 39% / 38%, and the dry stretch is inside the run-up at either of the last two. Forty is
+    the lane the column at 2405 already flies.
+  */
+  { at: 2231, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
   { at: 2290, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
   { at: 2347, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   { at: 2405, enemy: 'turret', formation: 'column', count: 6, lane: 40 },

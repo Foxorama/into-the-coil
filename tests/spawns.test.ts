@@ -549,7 +549,18 @@ describe('a threat uses the whole area, and the player does not', () => {
       device, so *left the lane* IS *left the screen*, and the assertion is that it went off and came
       back rather than that a velocity had a sign.
     */
-    const { world } = playableWorld(oneWave('drifter', 30));
+    /*
+      ⚠️ **LANE 20, AND THE PLAYER'S FIRE HELD — 0382.** A roam turns inside the lane until its hull
+      is seen, and from the outer quarter its first leg on the screen heads inward, so where a lone
+      drifter is when it is seen is not where it was authored, and the lane decides whether it can
+      leave AND come back before the along cull takes it at step 613: authored at 30 it is seen at
+      91, sent inward, and leaves the near edge at 500 with no time to return; authored at 20 it is
+      seen at 80 mid-lane heading for the far edge, leaves at 328 and is back at 445. The gun is
+      held because the roam runs through the parked ship's line of fire, and this measures flight,
+      not attrition (`tests/pilots.test.ts` makes the same argument). The lane sweep is in the
+      decision.
+    */
+    const { world } = playableWorld(oneWave('drifter', 20));
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
 
@@ -557,6 +568,8 @@ describe('a threat uses the whole area, and the player does not', () => {
     let cameBack = false;
     // Long enough to cross the band and return at the drifter's rate, with room to spare.
     for (let step = 0; step < 2400; step++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       frame.step();
       if (world.enemies.size === 0) break;
       const e = world.enemies.at(0);
