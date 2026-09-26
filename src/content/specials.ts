@@ -210,6 +210,12 @@ export interface SpecialRow {
    * for one that is not thrown. On the grid: a consequence, on a clock the player no longer holds.
    */
   lands: CueKind | null;
+  /**
+   * Whether the game falls silent while this one is in play — in the air, and open where it went off
+   * — 0378. *"The void bomb needs to negate all sound and be an orb of silence when it's fired."* Its
+   * own cues go through the hush (`throughHush` in `src/content/cues.ts`).
+   */
+  hushes: boolean;
 }
 
 /** Ten seconds of the sim's own clock — 0022. The seeker surge's length is the ask's. */
@@ -242,6 +248,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.bomb,
     cue: 'bomb',
     lands: 'blast',
+    hushes: false,
   },
   /**
    * The seeker's — *"gives the ship a glowing purple aura and supercharges the homing missiles for
@@ -263,6 +270,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
     lands: null,
+    hushes: false,
   },
   /**
    * The forward missiles' since 0375, and the pulse's before it — *"change the autogun supercharge
@@ -285,6 +293,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.pickupMissile,
     cue: 'overdrive',
     lands: null,
+    hushes: false,
   },
   /**
    * The arc's — *"fires a glowing lightning flickering projectile forward that explodes into a
@@ -310,6 +319,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
     lands: 'storm',
+    hushes: false,
   },
   /**
    * The shuriken's — *"fires a huge shuriken in a whirlpool shape that gets progressively bigger, the
@@ -340,6 +350,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
     lands: null,
+    hushes: false,
   },
   /**
    * The shields' — *"if you cap shields, you get a void missile -> it flies forward and creates a
@@ -362,6 +373,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     face: SPRITE.pickupShield,
     cue: 'voidThrow',
     lands: 'rift',
+    hushes: true,
   },
 };
 

@@ -6,6 +6,7 @@ import {
   RIFT_KIND,
   THROW_GAP_STEPS,
   corridorFor,
+  hushed,
   launchSpecial,
   respawn,
   takeShield,
@@ -372,6 +373,41 @@ describe('0377 — a thrown special goes off on the screen, wherever it was thro
       }
       expect(wentOff, `a ${kind} thrown from the top of the box never went off`).toBe(true);
       expect(onScreen, `a ${kind} went off past the edge of the screen`).toBe(true);
+    }
+  });
+});
+
+describe('0378 — the void is an orb of silence', () => {
+  it('THE ASK: the game is hushed from the moment the void is fired until its rift has closed, and not after', () => {
+    /*
+      *"A short fire sound, then nothing, then a very low whumm mmmm mmm mm while it's active."* The
+      nothing is the hush, and it covers the whole of the void's life: the ball in the air, and the rift
+      open where it went off. Walked step by step, so a gap between the two is a step that is not hushed.
+    */
+    const { world, frame } = quiet();
+    expect(hushed(world), 'the game is hushed with no void in play').toBe(false);
+    launchSpecial(world, 'voidMissile');
+    let steps = 0;
+    let everOpen = false;
+    while ((world.bombs.size > 0 || rifts(world).length > 0) && steps < 400) {
+      expect(hushed(world), `the hush lifted at step ${steps} while the void was still in play`).toBe(true);
+      everOpen = everOpen || rifts(world).length > 0;
+      step(world, frame);
+      steps++;
+    }
+    expect(everOpen, 'the rift never opened, so the hush was only ever the ball').toBe(true);
+    expect(hushed(world), 'the hush outlived the rift').toBe(false);
+  });
+
+  it('and nothing else hushes it', () => {
+    for (const kind of SPECIAL_KINDS) {
+      if (SPECIALS[kind].hushes) continue;
+      const { world, frame } = quiet();
+      launchSpecial(world, kind);
+      for (let i = 0; i < 200; i++) {
+        expect(hushed(world), `${kind} hushed the game`).toBe(false);
+        step(world, frame);
+      }
     }
   });
 });

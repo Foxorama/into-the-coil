@@ -3274,7 +3274,7 @@ function stepBombs(w: World): void {
     }
     // And a rift where a void missile's fuse runs out — 0377.
     if (row.rift !== null) {
-      openRift(w, bomb.along, bomb.across, row.rift, row.lands);
+      openRift(w, bomb.along, bomb.across, row.rift, row.lands, bomb.kind);
       continue;
     }
     const becomes = row.becomes;
@@ -3325,6 +3325,21 @@ function stepBombs(w: World): void {
 
 /** A rift's kind in the blast pool, beside a bomb's explosion — its kind keeps it apart. */
 export const RIFT_KIND = 2;
+
+/**
+ * Whether the game is silent — 0378: a special whose row `hushes` is in the air, or has opened a rift
+ * that is still open. The shell hands this to the speaker every step.
+ */
+export function hushed(w: World): boolean {
+  for (let i = 0; i < w.bombs.size; i++) {
+    if (SPECIALS[SPECIAL_KINDS[w.bombs.at(i).kind] ?? 'bomb'].hushes) return true;
+  }
+  for (let i = 0; i < w.blasts.size; i++) {
+    const body = w.blasts.at(i);
+    if (body.kind === RIFT_KIND && SPECIALS[SPECIAL_KINDS[body.face] ?? 'bomb'].hushes) return true;
+  }
+  return false;
+}
 // @setup: one body, read by `reset` whenever a rift opens; the radius is the row's, set after.
 const RIFT_BODY = { sprite: SPRITE.riftZone, spriteHit: SPRITE.riftZone, radius: 0, health: 1, damage: 0 };
 
@@ -3379,12 +3394,18 @@ function carveStone(w: World, along: number, across: number, radius: number): vo
  * share, the stone. With no room in the pool it does not open at all, stone and share included —
  * `CAPACITY.blasts` in `src/app/mount.ts` is sized so a salvo never meets that, and a guard holds it.
  */
-function openRift(w: World, along: number, across: number, rift: Rift, sound: CueKind | null): void {
+function openRift(w: World, along: number, across: number, rift: Rift, sound: CueKind | null, special: number): void {
   const body = w.blasts.spawn();
   if (body === null) return;
   reset(body, along, across, RIFT_BODY, RIFT_KIND);
   body.radius = rift.radius;
   body.lifeFor = rift.steps;
+  /*
+    ⚠️ **WHICH SPECIAL OPENED IT, ON `face`** — 0378. `kind` is taken by `RIFT_KIND`, which is how the
+    pool tells a rift from an explosion; `face` is a pickup's and a blast body never reads it. The
+    hush asks the row whether a rift that is open silences the game, rather than every rift doing so.
+  */
+  body.face = special;
   // Its row's own — 0378. It borrowed the bomb's blast.
   if (sound !== null) w.onCue(sound, across);
   carveStone(w, along, across, rift.radius);

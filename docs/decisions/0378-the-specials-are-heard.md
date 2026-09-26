@@ -36,10 +36,37 @@ the pan, where the key cannot object.
 | **hunt** | A swell on the root, a filtered square that tracks, and two pings an octave apart, left then right — the lock-on. |
 | **overdrive** | A kick onto the root, and a rev up the octave in parallel fifths with the filters opening, with a sizzle over the top. |
 | **stormThrow** | Charge rather than ignition: held-noise crackle falling as it goes, and a buzz dropping onto A3. |
-| **storm** | A clap, crackle running both ways across the field, two zaps on the octaves, and thunder with the root under it. |
-| **whirlpool** | Two whooshes sweeping across the field in opposite directions, a tone rising an octave, and steel ringing on A5. |
-| **voidThrow** | Low and hollow: a sub falling an octave onto the root, and dark air closing behind it. |
-| **rift** | Air pulled inward from both sides, a seal on the root, then a drone that dies away over the rift's second and a half. |
+| **storm** | *"A blast of lightning with some after flickers."* One hard, bright crack with a kick on the root under it, then three snaps of held noise, each later, quieter and somewhere else. |
+| **whirlpool** | *"Sharpening knives."* Three strokes of a blade along steel, left, right, left: a narrow band of noise sweeping up as the edge runs, and a thin ring as it leaves; the last rings on. |
+| **voidThrow** | *"A short fire sound."* A muffled thump on the root and a breath, over in a fifth of a second. |
+| **rift** | *"A very low whumm mmmm mmm mm while it's active."* Four swells on the root, each shorter and quieter, a filter closing on each so it opens on the *wh*; a sub under all four. |
+
+**The first set was heard and refused:** *"they're not great to be honest, they all sound a bit dodgy
+and not at all like what I'd expect them to sound like."* The storm, whirlpool, voidThrow and rift
+above are the second set, built from what the play said each should be. The surges' cues stay as
+they are for now, because the missile special they belong to is being rebuilt.
+
+## The hush
+
+*"Void bomb needs to negate all sound and be an orb of silence when it's fired. There needs to be a
+short fire sound, then nothing, then a very low whumm while it's active."*
+- **When.** While a special whose row `hushes` is in play, the game is hushed. That covers the ball in
+  the air and a rift it opened that is still open; `hushed(w)` in the frame answers it. A rift
+  remembers which special opened it.
+- **How much.** The music, every cue and the room fall to `HUSH_LEVEL`, about 30 dB down. It is not
+  zero, because a hard cut reads as a fault when the score comes back.
+- **What goes round it.** The void's own two cues are `throughHush`. They go to a second set of
+  places wired straight to the master, so they are what is left in the silence.
+- **The shell.** It hands the answer to the speaker every step while the sim is stepping, and the
+  speaker passes on only a change. Paused, on the title or between lives, nothing is in play, so the
+  world comes back.
+- **Guards.** The speaker's forwarding and the frame's answer are held in `tests/sound.test.ts` and
+  `tests/void.test.ts`. The shape — the field, the room and the music reaching the master only
+  through one gain, and a second field going round it — is held in a real browser by
+  `tests/sound.browser.test.ts`, the only place there is a graph to see.
+- **The rig models it.** The specials take in `hear.mjs --play` hushes the bed and the other cues on
+  the game's own time constants. Measured on the take: −18.9 dB before the void, −50 dB while it
+  flies, −27 dB for the whumm, and −19.7 dB after the rift closes.
 
 Each fits the table's rules:
 - **Twins.** Four new twins name what draws them: `aura-appears`, `storm-strikes`, `whirl-appears` and
@@ -50,11 +77,11 @@ Each fits the table's rules:
 
 **Loudness was checked against the bomb** with `scripts/weigh-cue.mjs`:
 - The presses land between −34.7 and −39.3 dB, beside the bomb's −38.3.
-- The storm and the rift sit about 3 dB under the blast, so a bomb is still the loudest thing a charge
-  buys.
-- The rift first weighed 7 dB under the blast, because its drone was on A1 and A-weighting hears
-  almost nothing that low. Its weight moved into a filtered saw's harmonics and the air. Its fade was
-  then steepened, because the decay guard was right: a rift closes.
+- The storm sits level with the blast at most, so a bomb is still the loudest thing a charge buys.
+- The first rift weighed 7 dB under the blast and was rebuilt twice for it. The second set is quiet
+  on purpose, because it plays into the hush.
+- The second storm first weighed 3 dB over the blast, and its gain came down until the bomb was the
+  loudest again.
 
 ## The rig was rendering every cue narrower than the game
 
@@ -86,13 +113,22 @@ on the same terms as those:
 
 ## Confirmed, not assumed
 
-`scripts/probes/0378-the-specials-are-heard.mjs` has ten breaks, and every one turned its guard red:
+`scripts/probes/0378-the-specials-are-heard.mjs` has sixteen breaks, and every one turned its guard
+red:
 - each special put back on the sound it borrowed;
 - a bomb that goes off in silence;
 - two specials sharing a press;
 - the rig laying a wide cue by its middle;
 - the stereo law splitting the middle as the mono law does;
-- the cue catalogue written in mono.
+- the cue catalogue written in mono;
+- the speaker restarting the hush every step;
+- the hush lifting while the rift is still open;
+- the whumm hushed with everything else;
+- the cue field, the music or the room wired past the hush, each in a real browser.
+
+**Not held by any guard: the one line in `src/app/mount.ts` that hands `hushed` to the speaker.** A
+guard would have to earn and fire a void in a real run in a browser, and the speaker, the frame and
+the graph on either side of that line are each held.
 
 **The first of them happened for real.** The edit that moved the surges off the shield's cue was
 refused by the editor and went unnoticed. The guard found the surges still sounding like a shield

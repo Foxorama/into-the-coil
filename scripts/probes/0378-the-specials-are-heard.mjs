@@ -111,4 +111,55 @@ export const PROBES = [
       replace: 'writeFileSync(out, wavOf(joined, SAMPLE_RATE));',
     },
   },
+  // ── The hush — the void's silence, after the first set of sounds was refused. ──
+  {
+    decision: '0378',
+    suite: 'tests/sound.test.ts',
+    broke: 'the speaker restarting the hush on every step',
+    guard: 'passes the hush on when it changes, and only then',
+    edit: { path: 'src/app/sound.ts', find: '      if (next === hushed) return;', replace: '' },
+  },
+  {
+    decision: '0378',
+    suite: 'tests/void.test.ts',
+    broke: 'the hush lifting when the ball goes off and the rift is still open',
+    guard: 'hushed from the moment the void is fired until its rift has closed',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: "    if (body.kind === RIFT_KIND && SPECIALS[SPECIAL_KINDS[body.face] ?? 'bomb'].hushes) return true;",
+      replace: '',
+    },
+  },
+  {
+    decision: '0378',
+    suite: 'tests/sound.test.ts',
+    broke: 'the whumm hushed with everything else',
+    guard: 'exactly the cues of a special that hushes go round the hush',
+    edit: { path: 'src/content/cues.ts', find: '    air: 0.2,\n    throughHush: true,', replace: '    air: 0.2,' },
+  },
+  {
+    decision: '0378',
+    suite: 'tests/sound.browser.test.ts',
+    broke: 'the cue field wired past the hush',
+    guard: 'THE HUSH: the field, the room and the music reach the master through one gain',
+    edit: { path: 'src/app/sound.ts', find: '          place.connect(hushGain);', replace: '          place.connect(master);' },
+  },
+  {
+    decision: '0378',
+    suite: 'tests/sound.browser.test.ts',
+    broke: 'the music wired past the hush',
+    guard: 'THE HUSH: the field, the room and the music reach the master through one gain',
+    edit: {
+      path: 'src/app/sound.ts',
+      find: '        music = makeMusicOut(ctx, hushGain, wholeLoops(), SAMPLE_RATE);',
+      replace: '        music = makeMusicOut(ctx, master, wholeLoops(), SAMPLE_RATE);',
+    },
+  },
+  {
+    decision: '0378',
+    suite: 'tests/sound.browser.test.ts',
+    broke: 'the room ringing on through the silence',
+    guard: 'THE HUSH: the field, the room and the music reach the master through one gain',
+    edit: { path: 'src/app/sound.ts', find: '        wet.connect(hushGain);', replace: '        wet.connect(master);' },
+  },
 ];

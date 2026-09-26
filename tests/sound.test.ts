@@ -73,6 +73,7 @@ import { BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
+import { SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SCREENS } from '../src/state/screens.ts';
@@ -131,6 +132,7 @@ function recorder(ready = true): {
   struck: number[];
   ducked: number[];
   placed: number[];
+  hushes: boolean[];
 } {
   const heard: number[] = [];
   /** Which WEIGHT each sounding was struck at, in the same order — 0104. */
@@ -139,11 +141,14 @@ function recorder(ready = true): {
   const ducked: number[] = [];
   /** Where each sounding was placed in the field, in the same order — 0127. */
   const placed: number[] = [];
+  /** Every hush the speaker passed on, in order — 0378. */
+  const hushes: boolean[] = [];
   return {
     heard,
     struck,
     ducked,
     placed,
+    hushes,
     out: {
       ready: () => ready,
       sound: (index: number, velocity: number, pan: number) => {
@@ -153,6 +158,9 @@ function recorder(ready = true): {
       },
       duck: (amount: number) => {
         ducked.push(amount);
+      },
+      hush: (on: boolean) => {
+        hushes.push(on);
       },
     },
   };
@@ -1654,6 +1662,39 @@ describe('the synthesiser', () => {
 });
 
 describe('the speaker decides WHEN, and it is the half that is arithmetic', () => {
+  it('0378 — passes the hush on when it changes, and only then', () => {
+    /*
+      The shell asks every step; a gain ramp restarted sixty times a second never arrives anywhere,
+      so the output hears each change once.
+    */
+    const { out, hushes } = recorder();
+    const speaker = makeSpeaker(out);
+    speaker.setHush(false);
+    expect(hushes, 'a hush that was never on was lifted').toEqual([]);
+    for (let i = 0; i < 5; i++) speaker.setHush(true);
+    expect(hushes, 'the hush was passed on more than once, or not at all').toEqual([true]);
+    for (let i = 0; i < 5; i++) speaker.setHush(false);
+    expect(hushes, 'the hush was not lifted exactly once').toEqual([true, false]);
+  });
+
+  it('0378 — exactly the cues of a special that hushes go round the hush', () => {
+    /*
+      The void's own cues are what is left in its silence; every other cue is silenced by it. A cue
+      that went round the hush for no special would be a sound the void could not silence.
+    */
+    const round = new Set<CueKind>();
+    for (const kind of SPECIAL_KINDS) {
+      const row = SPECIALS[kind];
+      if (!row.hushes) continue;
+      round.add(row.cue);
+      if (row.lands !== null) round.add(row.lands);
+    }
+    expect(round.size, 'no special hushes, so this holds nothing').toBeGreaterThan(0);
+    for (const kind of CUE_KINDS) {
+      expect(CUES[kind].throughHush === true, `${kind} is on the wrong side of the hush`).toBe(round.has(kind));
+    }
+  });
+
   it('says nothing at all when the player has turned it off', () => {
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);

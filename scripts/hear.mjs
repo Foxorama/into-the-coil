@@ -59,7 +59,21 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
-import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, layCue, panFor, sampleCue, saturate, variantAt, velocitiesOf, widthOf } from '../src/app/sound.ts';
+import {
+  HUSH_IN_SECONDS,
+  HUSH_LEVEL,
+  HUSH_OUT_SECONDS,
+  MASTER_GAIN,
+  SAMPLE_RATE,
+  cueSeconds,
+  layCue,
+  panFor,
+  sampleCue,
+  saturate,
+  variantAt,
+  velocitiesOf,
+  widthOf,
+} from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { bakeLoops } from '../src/app/music.ts';
 import { THEME_KINDS, cueRowOf, panTrackOf, rungOf } from '../src/content/themes.ts';
@@ -940,20 +954,42 @@ if (args.has('play')) {
       over its body's speed — and on the next sixteenth if its row is gridded, as the speaker has it.
       From the middle of the lane, which is where the ship throws from as far as a rig knows.
     */
+    /*
+      ⚠️ **AND THE HUSH, AS THE GAME HAS IT — 0378.** While a special whose row `hushes` is in play —
+      pressed, in the air, and open where it went off — the bed and every cue fall to `HUSH_LEVEL`, on
+      the game's own time constants; the cues that go round the hush are laid beside it, untouched.
+      Without this the take would play the void's whumm over a score the game has silenced.
+    */
+    const clear = new Float32Array(length * 2);
+    const hushes = [];
     if (specials) {
       const bar = 4 * VOLLEY_CYCLE;
       SPECIAL_KINDS.forEach((kind, k) => {
         const row = SPECIALS[kind];
         const pressed = k * 2 * bar + bar / 2;
-        put(cues, row.cue, pressed, ACROSS_SPAN / 2);
+        const bus = (cue) => (CUES[cue].throughHush === true ? clear : cues);
+        put(bus(row.cue), row.cue, pressed, ACROSS_SPAN / 2);
         if (row.lands === null || row.shot === null) return;
         const fuse = Math.max(1, Math.round(row.reach / SHOTS[row.shot].speed));
-        put(cues, row.lands, gridded(row.lands, pressed + fuse), ACROSS_SPAN / 2);
+        put(bus(row.lands), row.lands, gridded(row.lands, pressed + fuse), ACROSS_SPAN / 2);
+        if (row.hushes) hushes.push([pressed, pressed + fuse + (row.rift?.steps ?? 0)]);
       });
     }
     // Interleaved, so the sum is over both channels — 0209.
     const mix = new Float32Array(length * 2);
-    for (let i = 0; i < mix.length; i++) mix[i] = bed[i] + cues[i];
+    const down = 1 - Math.exp(-1 / (HUSH_IN_SECONDS * SAMPLE_RATE));
+    const up = 1 - Math.exp(-1 / (HUSH_OUT_SECONDS * SAMPLE_RATE));
+    let hush = 1;
+    for (let frame = 0; frame < length; frame++) {
+      const step = frame / perStep;
+      const target = hushes.some(([from, to]) => step >= from && step < to) ? HUSH_LEVEL : 1;
+      hush += (target - hush) * (target < hush ? down : up);
+      for (let side = 0; side < 2; side++) {
+        const i = frame * 2 + side;
+        mix[i] = (bed[i] + cues[i]) * hush + clear[i];
+        cues[i] += clear[i];
+      }
+    }
     return { mix, bed, cues };
   };
 

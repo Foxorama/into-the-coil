@@ -527,6 +527,13 @@ export interface CueRow {
    * wall-clock, because a waveform is sampled in real time and cannot be anything else.
    */
   hold: number;
+  /**
+   * Heard through the HUSH rather than under it — 0378. While a void is in play the music and every
+   * other cue drop almost to nothing (`HUSH_LEVEL` in `src/app/sound.ts`): *"it needs to negate all
+   * sound and be an orb of silence."* The void's own cues are what is left in it, so they go round the
+   * hush to the master. Absent is hushed, as everything else is.
+   */
+  throughHush?: boolean;
 }
 
 /**
@@ -1879,98 +1886,91 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * The storm goes off: a thunderclap, crackle running both ways across the screen with the strikes,
-   * two zaps on the octaves, and thunder rolling in behind on the root.
+   * The storm goes off — *"a blast of lightning with some after flickers."* One crack of it, bright
+   * and hard, with the thunder's weight on the root under it; then the flickers, three short snaps of
+   * held noise, each later, quieter and somewhere else, as the picture's flicker runs on.
    */
   storm: {
     twin: 'storm-strikes',
-    air: 0.8,
+    air: 0.6,
     // The player paid a charge for this; the track makes room for it, a little less than for the bomb.
     duck: 0.3,
     onGrid: true,
     hold: 6,
-    gain: 0.45,
-    glue: 0.14,
+    // Weighed 3 dB over the blast at 0.46; the bomb stays the loudest thing a charge buys.
+    gain: 0.32,
+    glue: 0.18,
     layers: [
-      // The clap.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.5, attack: 0.0004, curve: 6, lowFrom: 9000, lowTo: 3000, highFrom: 1200 },
-      // The crackle, running left to right and back, sample-and-hold so it snaps rather than hisses.
-      { wave: 'noise', from: 3400, to: 900, at: 0.01, seconds: 0.7, gain: 0.3, attack: 0.004, curve: 2.2, lowFrom: 8000, lowTo: 3000, highFrom: 1400, pan: -0.8, panTo: 0.7 },
-      { wave: 'noise', from: 3000, to: 700, at: 0.12, seconds: 0.7, gain: 0.26, attack: 0.004, curve: 2.2, lowFrom: 7000, lowTo: 2600, highFrom: 1300, pan: 0.8, panTo: -0.6 },
-      // Two zaps, A5 down to A4, one each side.
-      { wave: 'square', from: inKey(28), to: inKey(21), at: 0.02, seconds: 0.14, gain: 0.2, attack: 0.001, curve: 4, lowFrom: 6000, highFrom: 500, pan: -0.5 },
-      { wave: 'square', from: inKey(28), to: inKey(21), at: 0.21, seconds: 0.14, gain: 0.18, attack: 0.001, curve: 4, lowFrom: 6000, highFrom: 500, pan: 0.5 },
-      // The thunder: a held rumble rolling in, and the root under it.
-      { wave: 'noise', from: 320, to: 60, at: 0.08, seconds: 1.3, gain: 0.34, attack: 0.08, curve: 2, lowFrom: 1000, lowTo: 160, highFrom: 40, highTo: 28, q: 0.7, drive: 0.4, pan: -0.3, panTo: 0.3 },
-      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.03, seconds: 1.05, gain: 0.42, attack: 0.02, curve: 2.1, drive: 0.45 },
+      // The crack: white, very bright, over almost at once.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.07, gain: 0.7, attack: 0.0003, curve: 5, lowFrom: 12000, lowTo: 6000, highFrom: 1500 },
+      // The blast: held noise at a high rate, so it tears rather than hisses, falling as it goes.
+      { wave: 'noise', from: 5200, to: 1400, at: 0.005, seconds: 0.42, gain: 0.5, attack: 0.002, curve: 2.4, lowFrom: 9000, lowTo: 2400, highFrom: 700, drive: 0.4 },
+      // Its weight: a kick onto the root, driven.
+      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.004, seconds: 0.3, gain: 0.62, attack: 0.001, curve: 2.8, drive: 0.55 },
+      // The after flickers, each later, quieter and somewhere else.
+      { wave: 'noise', from: 6400, to: 3200, at: 0.46, seconds: 0.12, gain: 0.36, attack: 0.001, curve: 3.4, lowFrom: 10000, highFrom: 1800, pan: -0.55 },
+      { wave: 'noise', from: 6000, to: 3000, at: 0.78, seconds: 0.1, gain: 0.28, attack: 0.001, curve: 3.4, lowFrom: 10000, highFrom: 1900, pan: 0.6 },
+      { wave: 'noise', from: 5600, to: 2800, at: 1.12, seconds: 0.09, gain: 0.2, attack: 0.001, curve: 3.4, lowFrom: 9500, highFrom: 2000, pan: -0.15 },
     ],
   },
   /**
-   * The whirlpool opens — turning. Two whooshes sweeping across the stereo field in opposite
-   * directions as the arms open, a tone rising an octave as it grows, and the steel of the blades
-   * ringing on A5 over it.
+   * The whirlpool opens — *"sharpening knives."* Three strokes of a blade along steel, left, right,
+   * left: each a narrow band of noise sweeping UP as the edge runs along, the scrape building rather
+   * than struck, and a thin ring as each stroke leaves the steel — the last and longest one rings on.
    */
   whirlpool: {
     twin: 'whirl-appears',
-    air: 0.5,
+    air: 0.35,
     hold: 6,
-    gain: 0.4,
-    glue: 0.1,
+    gain: 0.36,
+    glue: 0.08,
     layers: [
-      { wave: 'noise', from: 0, to: 0, seconds: 0.9, gain: 0.42, attack: 0.08, curve: 2, lowFrom: 700, lowTo: 4200, highFrom: 220, highTo: 600, q: 1.6, pan: -0.85, panTo: 0.85 },
-      { wave: 'noise', from: 0, to: 0, at: 0.28, seconds: 0.9, gain: 0.34, attack: 0.08, curve: 2.1, lowFrom: 900, lowTo: 5000, highFrom: 300, highTo: 800, q: 1.6, pan: 0.85, panTo: -0.85 },
-      { wave: 'tri', from: inKey(7), to: inKey(14), seconds: 1.1, gain: 0.36, attack: 0.05, curve: 2.2, vibrato: 18 },
-      { wave: 'sine', from: inKey(28), to: inKey(28), at: 0.06, seconds: 0.9, gain: 0.12, attack: 0.004, curve: 3.2, pan: 0.2, panTo: -0.2 },
-      { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 0.5, gain: 0.4, attack: 0.02, curve: 2.6, drive: 0.25 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.28, gain: 0.6, attack: 0.07, curve: 1.6, lowFrom: 2600, lowTo: 9000, highFrom: 1800, highTo: 5200, q: 3.2, pan: -0.45, panTo: -0.2 },
+      { wave: 'sine', from: inKey(42), to: inKey(42), at: 0.22, seconds: 0.18, gain: 0.16, attack: 0.002, curve: 4, pan: -0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.34, seconds: 0.28, gain: 0.56, attack: 0.07, curve: 1.6, lowFrom: 2800, lowTo: 9500, highFrom: 1900, highTo: 5400, q: 3.2, pan: 0.45, panTo: 0.2 },
+      { wave: 'sine', from: inKey(46), to: inKey(46), at: 0.56, seconds: 0.2, gain: 0.14, attack: 0.002, curve: 4, pan: 0.3 },
+      { wave: 'noise', from: 0, to: 0, at: 0.68, seconds: 0.36, gain: 0.52, attack: 0.08, curve: 1.5, lowFrom: 2600, lowTo: 10000, highFrom: 1800, highTo: 5600, q: 3.2, pan: -0.3, panTo: 0.1 },
+      { wave: 'sine', from: inKey(42), to: inKey(42), at: 0.98, seconds: 0.5, gain: 0.18, attack: 0.002, curve: 3.2, vibrato: 8 },
     ],
   },
   /**
-   * A void leaves: low and hollow. A sub falling from the root an octave, a hollow triangle falling
-   * with it, and dark air closing behind it.
+   * A void is fired — *"a short fire sound, then nothing."* A muffled thump on the root and a breath,
+   * over in a fifth of a second. What follows it is the hush (0378): everything else drops away while
+   * the void is in play, so this is heard THROUGH it, never under it.
    */
   voidThrow: {
     twin: 'bomb-appears',
-    air: 0.25,
+    air: 0.1,
+    throughHush: true,
     hold: 6,
-    gain: 0.34,
+    gain: 0.36,
     glue: 0.12,
     layers: [
-      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.4, gain: 0.8, attack: 0.004, curve: 2.4, drive: 0.35 },
-      { wave: 'tri', from: inKey(14), to: inKey(7), seconds: 0.45, gain: 0.3, attack: 0.01, curve: 2.6, lowFrom: 1400, highFrom: 80 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.22, attack: 0.02, curve: 2.4, lowFrom: 2200, lowTo: 300, highFrom: 90, pan: 0, panTo: 0.3 },
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.16, gain: 0.85, attack: 0.002, curve: 3, drive: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.3, attack: 0.002, curve: 3.4, lowFrom: 1600, lowTo: 400, highFrom: 90 },
     ],
   },
   /**
-   * A rift opens: everything is PULLED IN. Air rushing inward as its filter closes, a thud on the
-   * root as it seals, and then the rift held open — a hollow drone on the root with dark air turning
-   * in it — dying away over the second and a half the rift is open.
+   * The rift is open — *"a very low whumm mmmm mmm mm while it's active."* Four swells on the root,
+   * each shorter and quieter than the last, a filter closing on each so it opens with the *wh* and
+   * settles into the *mm*; a sub under all four. It is the only thing left in the hush, so it is low
+   * and it is enough.
    */
   rift: {
     twin: 'rift-opens',
-    air: 0.7,
+    air: 0.2,
+    throughHush: true,
     duck: 0.32,
     onGrid: true,
     hold: 6,
     gain: 0.44,
-    glue: 0.12,
+    glue: 0.1,
     layers: [
-      // The pull: bright air closing to dark, from both sides into the middle.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.32, gain: 0.36, attack: 0.02, curve: 1.6, lowFrom: 8000, lowTo: 500, highFrom: 300, highTo: 120, pan: -0.7, panTo: 0 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.32, gain: 0.36, attack: 0.02, curve: 1.6, lowFrom: 8000, lowTo: 500, highFrom: 300, highTo: 120, pan: 0.7, panTo: 0 },
-      // The seal: A2 onto A1, driven — under the drone's level rather than over it, or the row's gain
-      // is spent on the thud and the rift itself is heard as a tail.
-      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.22, seconds: 0.22, gain: 0.55, attack: 0.001, curve: 3, drive: 0.55 },
-      /*
-        The drone: the root held, and a hollow octave over it. ⚠️ **Weighed 7 dB under the blast at
-        first** — a consequence the player paid a charge for, as the blast is — because the drone was
-        under the seal and A-weighting hears little of a sub. The octave and the air carry it now.
-      */
-      { wave: 'sine', from: inKey(0), to: inKey(0), at: 0.24, seconds: 1.35, gain: 0.36, attack: 0.03, curve: 2.2, drive: 0.4 },
-      // ⚠️ A saw rather than a triangle, and filtered: A-weighting hears almost nothing of A1, so the
-      // drone's weight has to be in its harmonics, where the ear is.
-      { wave: 'saw', from: inKey(7), to: inKey(7), at: 0.26, seconds: 1.25, gain: 0.5, attack: 0.06, curve: 2.4, lowFrom: 1600, lowTo: 500, highFrom: 70, q: 1.2, drive: 0.35, vibrato: 12 },
-      // Dark air turning inside it, closing as the rift does.
-      { wave: 'noise', from: 240, to: 60, at: 0.28, seconds: 1.3, gain: 0.56, attack: 0.06, curve: 2.4, lowFrom: 1800, lowTo: 300, highFrom: 60, q: 0.7, pan: -0.5, panTo: 0.5 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), seconds: 0.5, gain: 0.8, attack: 0.05, curve: 1.6, lowFrom: 480, lowTo: 150, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.5, seconds: 0.42, gain: 0.56, attack: 0.05, curve: 1.6, lowFrom: 420, lowTo: 140, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.9, seconds: 0.34, gain: 0.4, attack: 0.05, curve: 1.6, lowFrom: 380, lowTo: 130, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'saw', from: inKey(0), to: inKey(0), at: 1.22, seconds: 0.28, gain: 0.28, attack: 0.05, curve: 1.6, lowFrom: 340, lowTo: 120, highFrom: 30, q: 1.4, drive: 0.3 },
+      { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 1.5, gain: 0.34, attack: 0.04, curve: 1.8 },
     ],
   },
   /**

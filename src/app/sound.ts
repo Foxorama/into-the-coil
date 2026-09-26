@@ -710,7 +710,30 @@ export interface AudioOut {
    * double records it.
    */
   duck(amount: number): void;
+  /**
+   * Drop everything but the cues that go through it to `HUSH_LEVEL`, or bring it back — 0378. Called
+   * only when the answer changes.
+   */
+  hush(on: boolean): void;
 }
+
+/**
+ * THE HUSH — `docs/decisions/0378-the-specials-are-heard.md`.
+ *
+ * *"The void bomb needs to negate all sound and be an orb of silence when it's fired. There needs to
+ * be a short fire sound, then nothing, then a very low whumm mmmm mmm mm while it's active."* While a
+ * void is in play the music, every cue and the room fall to this share of themselves; the void's own
+ * cues (`throughHush`) go round it and are what is left.
+ *
+ * ⚠️ **ALMOST NOTHING RATHER THAN NOTHING**, about 30 dB down: a gain of zero is a cut the ear hears
+ * as a fault when the score comes back, and at this depth the silence is the event and the return is
+ * a swell rather than a switch.
+ */
+export const HUSH_LEVEL = 0.03;
+/** How fast the hush falls — a time constant, in seconds. Fast: the fire sound is the last thing. */
+export const HUSH_IN_SECONDS = 0.04;
+/** How fast the world comes back once the rift has closed — a time constant, in seconds. */
+export const HUSH_OUT_SECONDS = 0.3;
 
 export interface Speaker {
   /**
@@ -738,6 +761,11 @@ export interface Speaker {
   play(kind: CueKind, across?: number): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
+  /**
+   * Whether a void is in play, every step — 0378. The speaker tells its output only when the answer
+   * changes, so a step costs one comparison.
+   */
+  setHush(on: boolean): void;
 }
 
 /**
@@ -949,6 +977,8 @@ export function makeSpeaker(out: AudioOut): Speaker {
   /** The SIM's step count, which is the clock the music is in phase with — 0104. */
   let beat = 0;
   let on = true;
+  /** Whether the output was last told to hush — 0378. */
+  let hushed = false;
   /**
    * The step each cue last sounded on, by index. Pre-filled with a number far enough below zero that
    * every cue is free to sound on step one — `-Infinity` would work and this stays an integer array.
@@ -1060,6 +1090,11 @@ export function makeSpeaker(out: AudioOut): Speaker {
     },
     setOn(next: boolean): void {
       on = next;
+    },
+    setHush(next: boolean): void {
+      if (next === hushed) return;
+      hushed = next;
+      out.hush(next);
     },
   };
 }
@@ -1583,6 +1618,16 @@ const cueStreams = makeRng('cues');
 export function makeAudioOut(): WebAudioOut {
   let ctx: AudioContext | null = null;
   let master: GainNode | null = null;
+  /*
+    ⚠️ **THE HUSH, BETWEEN EVERYTHING AND THE MASTER** — 0378. The field's places, the room's return
+    and the music all arrive here; the void's own cues arrive at `clearPlaces`, which go straight to
+    the master, so they are what is left in it.
+  */
+  let hushGain: GainNode | null = null;
+  let clearPlaces: StereoPannerNode[] = [];
+  /** Which cue kinds go round the hush, resolved once — `sound` reads it per voice. */
+  // @setup: one list for the output's lifetime.
+  const through = CUE_KINDS.map((kind) => CUES[kind].throughHush === true);
   let buffers: AudioBuffer[][] = [];
   /*
     ⚠️ **WHAT THE BUFFERS WERE BUILT FROM, KEPT SO A SWAP CAN BE A COMPARISON** — 0190. `setCues` is
@@ -1650,6 +1695,10 @@ export function makeAudioOut(): WebAudioOut {
         ceiling.curve = curve;
         master.connect(ceiling);
         ceiling.connect(ctx.destination);
+        // @setup: the hush, at full until a void is in play — 0378.
+        hushGain = ctx.createGain();
+        hushGain.gain.value = 1;
+        hushGain.connect(master);
         /*
           The bake, and it happens exactly once — this is `bakeAtlas`'s moment for the other channel.
           It is on the gesture rather than at boot because a buffer needs a context to live in, and
@@ -1662,11 +1711,18 @@ export function makeAudioOut(): WebAudioOut {
         */
         // @setup: nine panners at context creation, read by the audio thread thereafter.
         places = [];
+        clearPlaces = [];
         for (let i = 0; i < PAN_BUCKETS; i++) {
           const place = ctx.createStereoPanner();
           place.pan.value = ((i / (PAN_BUCKETS - 1)) * 2 - 1) * CUE_PAN_LIMIT;
-          place.connect(master);
+          // Through the hush — 0378. Everything a void silences is on this side of it.
+          place.connect(hushGain);
           places.push(place);
+          // And the same place round it, for the void's own cues.
+          const clear = ctx.createStereoPanner();
+          clear.pan.value = place.pan.value;
+          clear.connect(master);
+          clearPlaces.push(clear);
         }
         /*
           ⚠️ **THE ROOM, BUILT ONCE AND NEVER TOUCHED AGAIN** — 0173. `normalize = false` because the
@@ -1694,7 +1750,8 @@ export function makeAudioOut(): WebAudioOut {
         const wet = ctx.createGain();
         wet.gain.value = CUE_ROOM_GAIN;
         room.connect(wet);
-        wet.connect(master);
+        // The room is hushed with what fills it — 0378: a tail ringing on in the silence is not one.
+        wet.connect(hushGain);
         sends = CUE_KINDS.map((kind) => {
           const send = ctx!.createGain();
           send.gain.value = CUES[kind].air ?? 0;
@@ -1723,7 +1780,8 @@ export function makeAudioOut(): WebAudioOut {
           because the four loops have to START together, and a layer created later starts wherever
           the bar happens to be.
         */
-        music = makeMusicOut(ctx, master, wholeLoops(), SAMPLE_RATE);
+        // Into the hush, like every cue it does not let through — 0378.
+        music = makeMusicOut(ctx, hushGain, wholeLoops(), SAMPLE_RATE);
       }
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
@@ -1733,7 +1791,8 @@ export function makeAudioOut(): WebAudioOut {
       // The speaker takes the modulo, so an out-of-range variant is a bug rather than a state — but
       // a missing buffer is silence and never a throw, on the same terms as an absent context.
       const buffer = variants?.[velocity] ?? variants?.[0];
-      const place = places[panBucket(pan)];
+      // Round the hush for the void's own cues — 0378.
+      const place = (through[index] === true ? clearPlaces : places)[panBucket(pan)];
       if (ctx === null || master === null || buffer === undefined || place === undefined) return;
       /*
         ⚠️ **THE ONE UNAVOIDABLE ALLOCATION, and the reason this file is on the cold list with its
@@ -1760,6 +1819,10 @@ export function makeAudioOut(): WebAudioOut {
       // has no bed to push down.
       music?.duck(amount);
     },
+    hush(on: boolean): void {
+      if (ctx === null || hushGain === null) return;
+      hushGain.gain.setTargetAtTime(on ? HUSH_LEVEL : 1, ctx.currentTime, on ? HUSH_IN_SECONDS : HUSH_OUT_SECONDS);
+    },
     music(): MusicOut | null {
       return music;
     },
@@ -1782,6 +1845,9 @@ export function makeAudioOut(): WebAudioOut {
       buffers = [];
       cueSamples = [];
       places = [];
+      // A closed context's nodes, dropped for the same reason `places` is — 0378.
+      clearPlaces = [];
+      hushGain = null;
       /*
         ⚠️ **AND THE SENDS, WHICH IS THE HALF THAT WOULD HAVE THROWN RATHER THAN LEAKED** — 0173. Every
         other line here drops a reference; this one drops a node belonging to a CLOSED context, and
