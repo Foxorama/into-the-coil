@@ -21,6 +21,7 @@ import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
 import { PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
+import { BEAM_POINTS, beamOffset, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
 
@@ -453,13 +454,8 @@ const LINK = new Float32Array(BOLT_VERTICES * 2);
 // @setup: the twig's own, for the same reason and lifetime.
 const TWIG = new Float32Array(TWIG_VERTICES * 2);
 
-/** A number in [-1, 1] from three integers, the same every time it is asked. */
-function jag(seed: number, vertex: number, page: number): number {
-  let h = (Math.imul(seed, 374761393) + Math.imul(vertex, 668265263) + Math.imul(page, 2246822519)) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  h ^= h >>> 16;
-  return (h & 0xffff) / 0x7fff - 1;
-}
+// @setup: a jagged beam's knots, both ends included, refilled per beam — 0388.
+const BEAM_PATH = new Float32Array(BEAM_POINTS * 2);
 
 /**
  * Every live link, stroked. Called after `paintScene`, so a bolt is over everything it struck.
@@ -489,13 +485,35 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
     /*
       ⚠️ **AND A LASER IS A STRAIGHT ONE THAT STAYS ON — 0250.** A bolt with `BEAM_BOLT_KIND` warns
       the same way while its life is past its own `holdFor`, and is then a straight hostile stroke
-      as wide as it hurts — its `radius` is the half-width the frame reads — with no jag, no points
-      and no twig, full until its last `BOLT_STEPS`, on which it fades. A beam that jagged would be
-      lightning, and a beam drawn thinner than it hurts would be a lie about where the player may be.
+      as wide as it hurts — its `radius` is the half-width the frame reads — with no flicker, no points
+      and no twig, full until its last `BOLT_STEPS`, on which it fades. A beam drawn thinner than it
+      hurts would be a lie about where the player may be. One that jags does so on a path it keeps
+      from its warning to its fade, which is the difference from lightning (0388, above).
     */
     const beam = e.kind === BEAM_BOLT_KIND;
     const hostile = e.kind === RAIN_BOLT_KIND || beam;
     const warning = hostile && e.lifeFor > (beam ? e.holdFor : BOLT_STEPS);
+    /*
+      ⚠️ **AND A JAGGED BEAM IS A ZIGZAG, WARNED ALONG THE SAME ZIGZAG — 0388.** *"A random jagged
+      laser"*, asked with its warning on the exact path it will fire along. The knots are
+      `src/sim/jag.ts`'s, the ones the frame hurts along, from the far end (knot 0) to the mouth; the
+      width and the fade are a straight beam's exactly, so only where it runs has changed.
+    */
+    if (beam && e.jag > 0) {
+      for (let i = 0; i < BEAM_POINTS; i++) {
+        const inView = endAlong + e.fromAlong * beamT(e.spin, i) - cameraAlong;
+        const across = endAcross + beamOffset(e.spin, e.jag, i);
+        BEAM_PATH[i * 2] = screenX(view, inView, across);
+        BEAM_PATH[i * 2 + 1] = screenY(view, inView, across);
+      }
+      if (warning) {
+        surface.bolt(BEAM_PATH, BEAM_POINTS, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+      } else {
+        const held = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
+        surface.bolt(BEAM_PATH, BEAM_POINTS, e.radius * BEAM_STROKE * view.scale, held, true);
+      }
+      continue;
+    }
     const amp = warning || beam ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
     const page = Math.floor(e.lifeFor / BOLT_PAGE_STEPS);
     const seed = e.spin;

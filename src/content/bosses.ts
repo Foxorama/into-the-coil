@@ -437,8 +437,12 @@ export type BossAttack =
    * hull that never moves again. The beam's root stays on the hull along the lane as it drifts.
    *
    * The phase's `shots` and `spread` are carried and unused, on `summon`'s terms.
+   *
+   * ⚠️ **`jag`, AND A BEAM WITH ONE IS A ZIGZAG — 0388.** How far either side of its line the beam's
+   * knots swing, in lane units: a new random zigzag every beam, warned along the path it will burn.
+   * Absent is straight, which is Medusa's — asked of the pterodactyls, not of every laser.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[] }
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[]; jag?: number }
   /**
    * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
    * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
@@ -1182,6 +1186,18 @@ export interface Necks {
   hurt: number;
   /** How far a head may turn from the lane's axis to look at the ship, in radians. */
   look: number;
+  /**
+   * The whole animal catching fire from one head — `docs/decisions/0389-the-hydra-catches-fire.md`, or
+   * absent for a boss whose aura stays on the head that owns it.
+   *
+   * ⚠️ **ASKED FOR**: *"all the heads need to get their flaming aura when the last head emerges and the
+   * aura needs to travel down the neck and merge into a combined aura that covers the whole body and tail
+   * as well."* When neck `from` has risen — the head whose `aura` it is — every head burns with that aura;
+   * over `travel` steps the fire runs down each neck, head first; and then each of `spots`, a place on the
+   * body or the tail from the hull's centre with a flame `size` across in lane units, lights `gap` steps
+   * after the one before, in the order listed. Spots are the row's because the body is the row's.
+   */
+  blaze?: { from: number; travel: number; gap: number; spots: readonly { along: number; across: number; size: number }[] };
 }
 
 /**
@@ -3184,7 +3200,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         keeps the shoal coming out of the mouth underneath it on its own faster clock. The fins have
         risen (0320): eight faces on a second body, and the ember behind it half again as big.
       */
-      { upTo: 0.72, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'mouth', standing: 4, every: 108 } },
+      { upTo: 0.69, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 }, escort: { enemy: 'minnow', count: 3, formation: 'line', from: 'mouth', standing: 4, every: 108 } },
       /*
         ⚠️ **STAGE THREE — THE BREAKER, ANYWHERE, WITH A TELL — and the field empties.** 0315's wave up
         off the near edge, which rose where the fish was (the far half of the screen, on a boss that
@@ -3198,7 +3214,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         No horde under it, on 0317's own finding: a stage with nothing on the field but the wave and the
         fish is what makes the wave readable and the kites read when they come back.
       */
-      { upTo: 0.46, fireEvery: 42, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
+      { upTo: 0.44, fireEvery: 42, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
       /*
         ⚠️ **STAGE FOUR — IT LEAPS, WHITE-HOT, WHIPPING FLAME.** Every six seconds it dives out through
         the near edge and flies its breach again — three leaps across the whole screen, unshootable
@@ -3208,7 +3224,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         core inks, the crown bigger and the flicker quicker — one fire at a higher temperature, which
         is what a fourth stage after *ablaze* has left to be.
       */
-      { upTo: 0.22, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
+      { upTo: 0.15, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
     ],
   },
   /**
@@ -3253,12 +3269,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       // The wings: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.66, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18] } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18], jag: 10 } },
       // The mouth: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.33, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0] } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },
       // Everything: the mouth and both wings, on the mouth's timing, each five units wide — three of
       // them narrower than the mouth alone, because three of them are what cover the lane.
-      { upTo: 0.16, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18] } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18], jag: 7 } },
     ],
   },
   /**
@@ -3475,9 +3491,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     phases: [
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.7, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
-      { upTo: 0.45, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },
-      { upTo: 0.2, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.74, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.49, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },
+      { upTo: 0.25, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
     ],
   },
   /**
@@ -3555,6 +3571,25 @@ export const BOSSES: Record<BossKind, BossRow> = {
       rise: 70,
       hurt: 1,
       look: 0.6,
+      /*
+        ⚠️ **THE CLOCKWORK'S FIRE TAKES THE WHOLE ANIMAL — 0389.** When it has risen, every head burns with
+        its aura; the fire runs down the necks over a second; then the body lights where the necks meet it
+        and spreads out across the mound and up the tail, one place every eight steps. Six places, which
+        with three flames a neck is the aura pool's twenty-seven to the slot — the budget is what says six.
+      */
+      blaze: {
+        from: 4,
+        travel: 60,
+        gap: 8,
+        spots: [
+          { along: -2, across: -17, size: 40 },
+          { along: -20, across: -9, size: 34 },
+          { along: 16, across: -10, size: 34 },
+          { along: -2, across: -3, size: 38 },
+          { along: 28, across: -12, size: 26 },
+          { along: 34, across: -26, size: 24 },
+        ],
+      },
     },
     room: null,
     burn: null,
@@ -3579,6 +3614,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **DENSER, WIDER AND FASTER SINCE 0385** — *"have the attacks spray more to make it harder"* —
       until `tests/crowd.test.ts`'s pilot found the narrowest place in every phase, on every tier,
       at or under what the hydra left before 0384 moved it into the acid. The decision has the table.
+
+      ⚠️ **AND SIX A FAN FROM SIXTY PERCENT DOWN SINCE 0387** — *"about 1-2 less orbs at 60% and less
+      health - gets really hard to dodge."* A play outranks the measured target 0385 set, so the last
+      three phases are roomier than it left them. `docs/decisions/0387-the-hydra-throws-fewer-from-sixty.md`.
     */
     phases: [
       { upTo: 1, fireEvery: 72, shots: 5, spread: 1.0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
@@ -3596,7 +3635,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       {
         upTo: 0.6,
         fireEvery: 54,
-        shots: 7,
+        shots: 6,
         spread: 1.3,
         patrolScale: 1.4,
         stance: { kind: 'volley' },
@@ -3607,14 +3646,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
           ],
         },
       },
       {
         upTo: 0.4,
         fireEvery: 48,
-        shots: 7,
+        shots: 6,
         spread: 1.4,
         patrolScale: 1.6,
         stance: { kind: 'volley' },
@@ -3625,7 +3664,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
           ],
         },
@@ -3633,7 +3672,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       {
         upTo: 0.2,
         fireEvery: 42,
-        shots: 8,
+        shots: 6,
         spread: 1.5,
         patrolScale: 1.8,
         stance: { kind: 'volley' },
@@ -3644,7 +3683,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
             { shot: 'void', attack: { kind: 'ring' } },
           ],
@@ -3697,12 +3736,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
         sixth of a second. *"The black heart spewing forth a rain of void blasts."*
       */
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.75, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [-12, -6, 0, 6, 12] } },
-      { upTo: 0.5, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.3, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 18, halfWidth: 1.5, from: [-15, -7.5, 0, 7.5, 15] } },
+      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [-12, -6, 0, 6, 12] } },
+      { upTo: 0.6, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 18, halfWidth: 1.5, from: [-15, -7.5, 0, 7.5, 15] } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor).
-      { upTo: 0.2, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' } },
+      { upTo: 0.21, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' } },
     ],
   },
 };

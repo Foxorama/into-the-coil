@@ -304,17 +304,26 @@ describe('0384 — the hydra stands in the acid and grows its heads', () => {
     expect(watched, 'the hydra never stood in the fight, so this measured nothing').toBeGreaterThan(100);
   });
 
-  it('AND THE CLOCKWORK HEAD BURNS, ALONE: its aura is round it at the last phase and nowhere before', () => {
+  it('AND THE CLOCKWORK HEAD BURNS FIRST: its aura is round it at the last phase, nowhere before, and alone while it rises', () => {
+    /*
+      ⚠️ **ALONE ONLY WHILE IT RISES SINCE 0389**, which set the whole animal alight once it has: the
+      claim this held — *nowhere but the clockwork* — is now true for the rise and no longer after it.
+      0389's own block holds the rest.
+    */
     const burning = NECKS.necks[4]!.aura!.frames as readonly number[];
-    const flamesAt = (fraction: number): Driven & { flames: number } => {
+    const flamesAt = (fraction: number, steps: number): Driven & { flames: number } => {
       const d = hydraAt(fraction);
-      settle(d);
+      for (let i = 0; i < steps; i++) {
+        d.world.ship.health = d.world.shipRow.health;
+        d.world.bossPool.at(0).fireIn = 999;
+        d.frame.step();
+      }
       let flames = 0;
       for (let i = 0; i < d.world.bossAura.size; i++) if (burning.includes(d.world.bossAura.at(i).sprite)) flames++;
       return { ...d, flames };
     };
-    expect(flamesAt(0.35).flames, 'something burns before the clockwork head has grown').toBe(0);
-    const last = flamesAt(0.15);
+    expect(flamesAt(0.35, NECKS.rise + 10).flames, 'something burns before the clockwork head has grown').toBe(0);
+    const last = flamesAt(0.15, NECKS.rise - 10);
     expect(last.flames, 'the clockwork head does not burn').toBeGreaterThan(0);
     const head = last.world.bossBody.at(4);
     for (let i = 0; i < last.world.bossAura.size; i++) {
@@ -323,5 +332,78 @@ describe('0384 — the hydra stands in the acid and grows its heads', () => {
       const gap = Math.hypot(flame.along - head.along, flame.across - head.across);
       expect(gap, 'a flame burns off somewhere other than the clockwork head and its neck').toBeLessThanOrEqual(NECKS.necks[4]!.reach);
     }
+  });
+});
+
+/**
+ * The hydra catches fire — `docs/decisions/0389-the-hydra-catches-fire.md`.
+ *
+ * Asked for: *"all the heads need to get their flaming aura when the last head emerges and the aura
+ * needs to travel down the neck and merge into a combined aura that covers the whole body and tail as
+ * well."*
+ */
+describe('0389 — the hydra catches fire', () => {
+  const BLAZE = NECKS.blaze!;
+  const FIRE = NECKS.necks[BLAZE.from]!.aura!.frames as readonly number[];
+
+  /** The hydra at its last phase, `after` steps past the step the clockwork finished rising; its flames. */
+  function burningAt(after: number): Driven & { flames: { along: number; across: number }[] } {
+    const d = hydraAt(0.1);
+    for (let i = 0; i <= NECKS.rise + after; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.bossPool.at(0).fireIn = 999;
+      d.frame.step();
+    }
+    const flames = [];
+    for (let i = 0; i < d.world.bossAura.size; i++) {
+      const f = d.world.bossAura.at(i);
+      if (FIRE.includes(f.sprite)) flames.push({ along: f.along, across: f.across });
+    }
+    return { ...d, flames };
+  }
+  const near = (flames: { along: number; across: number }[], along: number, across: number, within: number): boolean =>
+    flames.some((f) => Math.hypot(f.along - along, f.across - across) <= within);
+  const whole = BLAZE.travel + BLAZE.gap * BLAZE.spots.length;
+
+  it('THE ASK, IN WORLD UNITS: once the last head has risen every head burns, every neck, and the body and the tail', () => {
+    const d = burningAt(whole + 5);
+    const hull = d.world.bossPool.at(0);
+    for (let k = 0; k < NECKS.necks.length; k++) {
+      const head = d.world.bossBody.at(k);
+      expect(near(d.flames, head.along, head.across, 1), `head ${k} does not burn`).toBe(true);
+      // And down its neck: a flame between the head and the root, off the head.
+      const inward = d.flames.filter((f) => {
+        const fromHead = Math.hypot(f.along - head.along, f.across - head.across);
+        return fromHead > 5 && fromHead < NECKS.necks[k]!.reach * 0.75;
+      });
+      expect(inward.length, `the fire never ran down neck ${k}`).toBeGreaterThan(0);
+    }
+    for (const [i, spot] of BLAZE.spots.entries()) {
+      expect(near(d.flames, hull.along + spot.along, hull.across + spot.across, 1), `place ${i} on the body or tail never caught`).toBe(true);
+    }
+    // All of it fits the aura's pool: flames, necks and the tail, none of them dropped.
+    expect(d.world.bossAura.size, 'the aura pool could not hold the blaze, so something was not drawn').toBe(d.flames.length + NECKS.necks.length + 1);
+  });
+
+  it('IT TRAVELS, IN SECONDS: the heads catch first, the fire runs down the necks after, the body last', () => {
+    /*
+      *"Travel down the neck and merge"*: an order, and a time a player can watch it in. Every head
+      burns the step the blaze lights and the body does not; half way the necks' outer flames are lit and
+      their inner ones are not; the body catches only once every neck has; and the whole takes between
+      half a second and three.
+    */
+    const heads = NECKS.necks.length;
+    const start = burningAt(1);
+    const clockwork = 3;
+    expect(start.flames.length, 'the heads did not all catch together').toBe(clockwork + heads - 1);
+    const half = burningAt(Math.ceil(BLAZE.travel / 2) + 1);
+    expect(half.flames.length, 'half way, the fire is not on the necks’ outer flames').toBe(clockwork + (heads - 1) * 2);
+    const necksDone = burningAt(BLAZE.travel + 1);
+    expect(necksDone.flames.length, 'the fire has not reached the roots of the necks').toBe(heads * 3);
+    const hull = necksDone.world.bossPool.at(0);
+    const body = BLAZE.spots[0]!;
+    expect(near(necksDone.flames, hull.along + body.along, hull.across + body.across, 1), 'the body caught before the necks had').toBe(false);
+    expect(whole / STEPS_PER_SECOND, 'the fire takes the whole animal too fast to be seen travelling').toBeGreaterThanOrEqual(0.5);
+    expect(whole / STEPS_PER_SECOND, 'the fire takes the whole animal too slowly to read as one blaze').toBeLessThanOrEqual(3);
   });
 });

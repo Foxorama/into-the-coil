@@ -543,6 +543,8 @@ export function stepBoss(
   rainRng: Rng,
   /** Where the fish's wave rises off the edge — 0380, its own stream on the same terms. */
   breakerRng: Rng,
+  /** How a jagged laser zigzags — 0388, its own stream on the same terms. */
+  beamRng: Rng,
   /** The floor under the hull, or `null` — what a `wade` stands in (0384). */
   corridor: Corridor | null,
   /**
@@ -848,7 +850,7 @@ export function stepBoss(
   const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
   // A many-headed boss's volley leaves its first head unless a round says which — 0384, `heads` below.
   boss.muzzleAt = mouths.length > 0 ? 0 : -1;
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, phase.cue, mouths);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, phase.cue, mouths);
   return direction;
 }
 
@@ -901,6 +903,8 @@ function throwAttack(
   rainRng: Rng,
   /** Where the fish's wave rises off the edge — 0380, its own stream on 0021's terms. */
   breakerRng: Rng,
+  /** How a jagged laser zigzags — 0388, its own stream on 0021's terms. */
+  beamRng: Rng,
   onCue: (kind: CueKind, across?: number) => void,
   /**
    * What this attack sounds like, or `undefined` for the crash every boss shares — 0308.
@@ -1297,6 +1301,16 @@ function throwAttack(
         bolt.damage = bullet.damage;
         bolt.holdFor = attack.hold;
         bolt.lifeFor = held;
+        /*
+          ⚠️ **A NEW ZIGZAG EVERY BEAM — 0388**: *"a random jagged laser"*, because a straight one from
+          a head that barely moves was *"essentially a non-event."* The seed is drawn here, once, and the
+          path is `src/sim/jag.ts`'s from then until the beam goes out: the warning shows exactly where
+          it will burn. A row with no `jag` draws nothing from the stream and fires straight.
+        */
+        if (attack.jag !== undefined) {
+          bolt.jag = attack.jag;
+          bolt.spin = beamRng.int(0, 0x7fffffff);
+        }
       }
       break;
     }
@@ -1332,7 +1346,7 @@ function throwAttack(
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, onCue, head.cue, mouths);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets

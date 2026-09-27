@@ -59,6 +59,17 @@ export type ShotKind =
 
 export interface ShotRow extends Body {
   /**
+   * What a stage that will NOT burst wears — `docs/decisions/0390-a-dud-icicle-looks-like-one.md` — or
+   * absent to wear `sprite` whole life long.
+   *
+   * ⚠️ **ASKED FOR**: *"we need a different icicle art for the non-exploding icicles so that the player
+   * knows whether an icicle is going to explode or not."* A child whose next stage is a melt, or who has
+   * none, is drawn in this and pointed along its flight; everything that will still burst keeps `sprite`.
+   * Structural rather than listed: it reads the row's own `fission`, so a stage added later is dressed by
+   * what it does.
+   */
+  spriteSpent?: number;
+  /**
    * World units travelled per fixed step, always positive. Which way it points is the spawner's
    * business — the same row fired backwards is the same shot.
    *
@@ -823,6 +834,8 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   frost: {
     sprite: SPRITE.frost,
     spriteHit: SPRITE.frost,
+    // The last ring, which melts rather than bursts, as a plain icicle — 0390.
+    spriteSpent: SPRITE.frostSpent,
     radius: 1.7,
     health: 1,
     damage: 1,

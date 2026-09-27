@@ -107,11 +107,13 @@ export const PROBES = [
     suite: 'tests/hydra.test.ts',
     // The aura made a property of every head: five burning heads, from the first phase.
     broke: 'every head burning with the clockwork’s aura, from the first phase on',
-    guard: 'AND THE CLOCKWORK HEAD BURNS, ALONE',
+    // Re-anchored by 0389, which set the whole animal alight once the clockwork has risen: what burns is
+    // `burns`'s to say now, and the break is every flame saying yes from the start.
+    guard: 'AND THE CLOCKWORK HEAD BURNS FIRST',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const aura = row.aura;',
-      replace: '    const aura = necks.necks[4]!.aura;',
+      find: '  if (necks.necks[k]!.aura !== undefined) return true;',
+      replace: '  if (necks.necks[k]!.aura !== undefined || k >= 0) return true;',
     },
   },
 ];

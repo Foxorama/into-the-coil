@@ -70,6 +70,7 @@ import {
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
+import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
@@ -85,7 +86,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -987,6 +988,8 @@ export interface World {
   rainRng: Rng;
   /** Where the fish's wave rises off the edge — 0380, on 0021's terms: its own stream. */
   breakerRng: Rng;
+  /** How a jagged laser zigzags — 0388, on the same terms. */
+  beamRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
   /** Which way a pickup floats and how each bounce turns it — 0293, on 0021's own terms. */
@@ -2591,8 +2594,8 @@ function strikeShip(w: World): void {
     const b = w.bolts.at(i);
     if (b.kind === BEAM_BOLT_KIND) {
       if (b.lifeFor > b.holdFor) continue;
-      if (Math.abs(w.ship.across - b.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
-      if (w.ship.along < b.along || w.ship.along > b.along + b.fromAlong) continue;
+      // Its nearest leg, which for a straight beam is its distance across — 0388, `src/sim/jag.ts`.
+      if (beamDistance(b, w.ship.along, w.ship.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
     } else {
       if (b.kind !== RAIN_BOLT_KIND || b.lifeFor !== BOLT_STEPS) continue;
       if (Math.abs(w.ship.along - b.along) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
@@ -3568,7 +3571,8 @@ function stepRift(w: World): void {
         const hi = bolt.fromAlong < 0 ? bolt.along : bolt.along + bolt.fromAlong;
         const nearest = rift.along < lo ? lo : rift.along > hi ? hi : rift.along;
         const dAlong = nearest - rift.along;
-        const dAcross = bolt.across - rift.across;
+        // Where its zigzag is at that along, for a jagged one — 0388.
+        const dAcross = beamAcrossAt(bolt, nearest) - rift.across;
         const r = rift.radius + bolt.radius;
         if (dAlong * dAlong + dAcross * dAcross < r * r) w.bolts.releaseAt(i);
       }
@@ -4588,6 +4592,19 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
   child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;
   child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
   child.velAcross = Math.sin(angle) * speed;
+  /*
+    ⚠️ **A CHILD THAT WILL NOT BURST WEARS THE ROW'S SPENT ART — 0390**, pointed along the heading it
+    flies straight on for the rest of its life: *"so that the player knows whether an icicle is going to
+    explode or not."* Read off the row's own stages, so a melt is what dresses it and not a list.
+  */
+  const bursts = stage < row.fission.length && row.fission[stage]!.into !== 'nothing';
+  if (!bursts && row.spriteSpent !== undefined) {
+    child.sprite = row.spriteSpent;
+    child.spriteBase = row.spriteSpent;
+    child.spriteHit = row.spriteSpent;
+    child.turn = turnFor(angle);
+    child.prevTurn = child.turn;
+  }
   /*
     ⚠️ **IT HANDS THE CHILD BACK SINCE 0299, AND EVERY OTHER CALLER IGNORES IT.** A shard needs an
     appetite of its own and this is the one place that knows which entity it just made. `fissionShots`
@@ -7550,6 +7567,7 @@ function driveBoss(w: World): void {
     w.bolts,
     w.rainRng,
     w.breakerRng,
+    w.beamRng,
     w.corridor,
     // The mouths only for a boss that has them — 0384; every other throws from its row's muzzle.
     w.bossRow.necks !== undefined ? w.mouths : NO_MOUTHS,
@@ -8630,11 +8648,22 @@ function layNecks(w: World, hull: Entity | null): void {
   }
   const phase = phaseFor(w.bossRow, hull.health, w.bossFullHealth);
   const shown = Math.min(necks.necks.length, w.bossRow.phases.indexOf(phase) + 1, w.necksBorn.length);
+  for (let k = 0; k < shown; k++) if (w.necksBorn[k]! < 0) w.necksBorn[k] = w.steps;
+  /*
+    ⚠️ **THE BLAZE — 0389**: steps since neck `from` finished rising, or −1 before it. From then every
+    head burns with that neck's aura, the fire runs down each neck over `travel`, and the body and tail
+    light one spot a `gap` after that. What burns is counted before the pool is sized, so the slots are
+    exactly the flames lit this step.
+  */
+  const blaze = necks.blaze;
+  const source = blaze === undefined ? undefined : necks.necks[blaze.from]?.aura;
+  const lit =
+    blaze !== undefined && source !== undefined && shown > blaze.from && w.necksBorn[blaze.from]! >= 0
+      ? w.steps - w.necksBorn[blaze.from]! - necks.rise
+      : -1;
   let flames = 0;
-  for (let k = 0; k < shown; k++) {
-    if (w.necksBorn[k]! < 0) w.necksBorn[k] = w.steps;
-    if (necks.necks[k]!.aura !== undefined) flames += NECK_FLAMES.length + 1;
-  }
+  for (let k = 0; k < shown; k++) for (let f = 0; f <= NECK_FLAMES.length; f++) if (burns(necks, k, f, lit)) flames++;
+  if (blaze !== undefined && lit >= 0) for (let i = 0; i < blaze.spots.length; i++) if (lit >= spotLights(blaze, i)) flames++;
   // The heads: one body each, the neck's own sprites and hurtbox written over the slot.
   while (w.bossBody.size < shown) {
     const head = w.bossBody.spawn();
@@ -8688,11 +8717,13 @@ function layNecks(w: World, hull: Entity | null): void {
     head.sprite = head.flashFor > 0 ? row.headHit : row.head;
     w.mouths[k * 2] = headAlong - Math.cos(turn) * row.mouth - hull.along;
     w.mouths[k * 2 + 1] = headAcross - Math.sin(turn) * row.mouth - hull.across;
-    // The flames of a head that burns: along its neck, and last on the head itself.
-    const aura = row.aura;
+    // The flames of a head that burns: along its neck, and last on the head itself — its own aura, or
+    // the blaze's once the whole animal has caught (0389).
+    const aura = row.aura ?? source;
     if (aura === undefined) continue;
     const tick = Math.floor(w.steps / aura.hold);
     for (let f = 0; f <= NECK_FLAMES.length; f++) {
+      if (!burns(necks, k, f, lit)) continue;
       const onHead = f === NECK_FLAMES.length;
       const share = onHead ? 1 : NECK_FLAMES[f]!;
       const at = w.bossAura.at(flame++);
@@ -8704,7 +8735,40 @@ function layNecks(w: World, hull: Entity | null): void {
       at.spriteHit = frame;
     }
   }
+  // And the body and the tail, once the fire has come down the necks to them — 0389.
+  if (blaze !== undefined && source !== undefined && lit >= 0) {
+    const tick = Math.floor(w.steps / source.hold);
+    for (let i = 0; i < blaze.spots.length; i++) {
+      if (lit < spotLights(blaze, i)) continue;
+      const spot = blaze.spots[i]!;
+      const at = w.bossAura.at(flame++);
+      placeAt(at, hull.along + spot.along, hull.across + spot.across, 0, fresh);
+      at.swell = spot.size / SERPENT_BODY_DIAMETER;
+      const frame = source.frames[(((tick + i * source.stride) % source.frames.length) + source.frames.length) % source.frames.length]!;
+      at.sprite = frame;
+      at.spriteBase = frame;
+      at.spriteHit = frame;
+    }
+  }
   if (tail !== null) layTail(w, hull, tail, tail.art, w.bossAura.at(want - 1), fresh);
+}
+
+/**
+ * Whether flame `f` of neck `k` burns — 0389. A neck with its own aura always does; any other from the
+ * blaze, head first and down the neck: the head as it lights, the neck's outer flame half way through
+ * `travel`, its inner one at the end.
+ */
+function burns(necks: Necks, k: number, f: number, lit: number): boolean {
+  if (necks.necks[k]!.aura !== undefined) return true;
+  const blaze = necks.blaze;
+  if (blaze === undefined || lit < 0) return false;
+  const share = f === NECK_FLAMES.length ? 1 : NECK_FLAMES[f]!;
+  return lit >= (blaze.travel * (1 - share)) / (1 - NECK_FLAMES[0]);
+}
+
+/** The step, counted from the blaze lighting, that spot `i` of the body catches — 0389. */
+function spotLights(blaze: NonNullable<Necks['blaze']>, i: number): number {
+  return blaze.travel + (i + 1) * blaze.gap;
 }
 
 /**

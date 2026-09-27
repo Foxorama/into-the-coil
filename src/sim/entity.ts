@@ -403,6 +403,12 @@ export interface Entity extends Body {
   fromAlong: number;
   fromAcross: number;
   /**
+   * How far a beam's zigzag swings across the lane either side of its line, in lane units, or 0 for a
+   * straight one — `docs/decisions/0388-the-laser-is-jagged.md`. Its path is `src/sim/jag.ts`'s, from
+   * this and the bolt's `spin`, so the painter and the frame draw and hurt along the same zigzag.
+   */
+  jag: number;
+  /**
    * A blade's place on its strand — the phase of its swing, the swing's half-width, how much the
    * phase advances a step, and how fast the strand's AXIS goes up the lane (`orbitGrow`, in units a
    * step; the axis itself is `fromAlong`/`fromAcross` above) —
@@ -504,6 +510,7 @@ export function makeEntity(): Entity {
     faceIn: 0,
     fromAlong: 0,
     fromAcross: 0,
+    jag: 0,
     orbitAngle: 0,
     orbitRadius: 0,
     orbitTurn: 0,
@@ -564,6 +571,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.faceIn = 0;
   e.fromAlong = 0;
   e.fromAcross = 0;
+  e.jag = 0;
   e.orbitAngle = 0;
   e.orbitRadius = 0;
   e.orbitTurn = 0;

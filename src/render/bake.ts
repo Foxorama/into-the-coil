@@ -602,6 +602,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   rock: 'fire',
   // The frost ship's shard in its own ink — 0253: the one cold thing that hurts.
   frost: 'frost',
+  // And the one that will not burst, in the same ink — 0390: it still hurts, and it is told by its shape.
+  frostSpent: 'frost',
   // The fish's spine in the enemy's ink — 0262: a spine is told from a slab by its shape.
   spine: 'enemy',
   // The ripple and the curl in their place's ink — 0327, on 0296's rule that a raider's bullet takes
@@ -9395,6 +9397,25 @@ export function drawKind(
       seal(ctx);
       glow(ctx, f, palette.frost, 0, 0, 1.12, 0.45);
       disc(ctx, f, shade(palette.frost, 0.6), 0, 0, 0.2);
+      return;
+    case 'frostSpent':
+      /*
+        AN ICICLE THAT WILL NOT BURST — 0390: *"a different icicle art for the non-exploding icicles so
+        that the player knows whether an icicle is going to explode or not."* Told by its silhouette,
+        which is the channel a bullet read at speed is read on: the shard that bursts has points all
+        round and a dark heart; this has two points and none, a long faceted needle flown point first
+        (its point at −x, the frame turns it to its heading). The same ink, because it hurts the same.
+      */
+      trace(ctx, f, [
+        [-0.95, 0],
+        [-0.3, -0.26],
+        [0.5, -0.3],
+        [0.82, 0],
+        [0.5, 0.3],
+        [-0.3, 0.26],
+      ]);
+      seal(ctx);
+      glow(ctx, f, palette.frost, 0, 0, 0.95, 0.3);
       return;
     case 'rock':
       /*

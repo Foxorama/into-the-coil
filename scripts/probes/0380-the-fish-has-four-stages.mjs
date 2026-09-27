@@ -12,8 +12,8 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the two stages the play liked lead',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "{ upTo: 0.72, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 },",
-      replace: "{ upTo: 0.72, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 },",
+      find: "{ upTo: 0.69, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'summon', enemy: 'kite', count: 3, formation: 'line', from: 'mouth', standing: 6 },",
+      replace: "{ upTo: 0.69, fireEvery: 48, shots: 7, spread: 1.1, patrolScale: 1.8, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 96, rise: 1.5, ends: 0.66 },",
     },
   },
   {

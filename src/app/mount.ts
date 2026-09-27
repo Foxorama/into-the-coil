@@ -971,6 +971,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     rainRng: makeRng('proof-scene').stream('rain'),
     // Where the fish's wave rises off the edge — 0380, its own stream on the same terms.
     breakerRng: makeRng('proof-scene').stream('breaker'),
+    // How a jagged laser zigzags — 0388, its own stream on the same terms.
+    beamRng: makeRng('proof-scene').stream('beam'),
     // Where the volcanoes' rock falls — 0251, its own stream on the same terms.
     rockRng: makeRng('proof-scene').stream('rock'),
     voidRng: makeRng('proof-scene').stream('void'),

@@ -1178,6 +1178,9 @@ const HOT_FILES = [
   // the one place where an innocent `.filter()` over "the live ones" would allocate hardest exactly
   // when the screen is fullest.
   'src/sim/collide.ts',
+  // ⚠️ Added with 0388: a jagged beam's path is derived every step by the painter AND the frame, from
+  // the same hash, rather than stored — so this is called per beam per frame from both halves.
+  'src/sim/jag.ts',
   'src/render/scene.ts',
   'src/render/surface.ts',
   'src/render/canvas.ts',
