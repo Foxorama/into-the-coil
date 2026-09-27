@@ -437,8 +437,12 @@ export type BossAttack =
    * hull that never moves again. The beam's root stays on the hull along the lane as it drifts.
    *
    * The phase's `shots` and `spread` are carried and unused, on `summon`'s terms.
+   *
+   * ⚠️ **`jag`, AND A BEAM WITH ONE IS A ZIGZAG — 0388.** How far either side of its line the beam's
+   * knots swing, in lane units: a new random zigzag every beam, warned along the path it will burn.
+   * Absent is straight, which is Medusa's — asked of the pterodactyls, not of every laser.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[] }
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[]; jag?: number }
   /**
    * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
    * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
@@ -3253,12 +3257,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
     phases: [
       { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       // The wings: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18] } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18], jag: 10 } },
       // The mouth: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0] } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },
       // Everything: the mouth and both wings, on the mouth's timing, each five units wide — three of
       // them narrower than the mouth alone, because three of them are what cover the lane.
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18] } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18], jag: 7 } },
     ],
   },
   /**
@@ -3611,7 +3615,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
           ],
         },
       },
@@ -3629,7 +3633,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
           ],
         },
@@ -3648,7 +3652,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
             { shot: 'void', attack: { kind: 'ring' } },
           ],

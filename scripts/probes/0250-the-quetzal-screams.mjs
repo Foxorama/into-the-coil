@@ -24,8 +24,9 @@ export const PROBES = [
     guard: 'THE WARNING AND THE HOLD',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0] } },",
-      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [0] } },",
+      // Re-anchored by 0388, which gave the mouth its zigzag.
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },",
+      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [0], jag: 18 } },",
     },
   },
   {
@@ -48,7 +49,8 @@ export const PROBES = [
     guard: 'and a ship beside the beam',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      if (Math.abs(w.ship.across - b.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;\n',
+      // Re-anchored by 0388: the half-width is measured to the zigzag's nearest leg now, and is the same line.
+      find: '      if (beamDistance(b, w.ship.along, w.ship.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;\n',
       replace: '',
     },
   },

@@ -70,6 +70,7 @@ import {
 import type { Intent } from '../sim/intent.ts';
 import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
+import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
@@ -987,6 +988,8 @@ export interface World {
   rainRng: Rng;
   /** Where the fish's wave rises off the edge — 0380, on 0021's terms: its own stream. */
   breakerRng: Rng;
+  /** How a jagged laser zigzags — 0388, on the same terms. */
+  beamRng: Rng;
   /** Where the volcanoes' rock falls — `docs/decisions/0251-the-volcanoes-belch.md`, on the same terms. */
   rockRng: Rng;
   /** Which way a pickup floats and how each bounce turns it — 0293, on 0021's own terms. */
@@ -2591,8 +2594,8 @@ function strikeShip(w: World): void {
     const b = w.bolts.at(i);
     if (b.kind === BEAM_BOLT_KIND) {
       if (b.lifeFor > b.holdFor) continue;
-      if (Math.abs(w.ship.across - b.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
-      if (w.ship.along < b.along || w.ship.along > b.along + b.fromAlong) continue;
+      // Its nearest leg, which for a straight beam is its distance across — 0388, `src/sim/jag.ts`.
+      if (beamDistance(b, w.ship.along, w.ship.across) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
     } else {
       if (b.kind !== RAIN_BOLT_KIND || b.lifeFor !== BOLT_STEPS) continue;
       if (Math.abs(w.ship.along - b.along) > b.radius + w.ship.radius * w.tuning.hurtbox) continue;
@@ -3568,7 +3571,8 @@ function stepRift(w: World): void {
         const hi = bolt.fromAlong < 0 ? bolt.along : bolt.along + bolt.fromAlong;
         const nearest = rift.along < lo ? lo : rift.along > hi ? hi : rift.along;
         const dAlong = nearest - rift.along;
-        const dAcross = bolt.across - rift.across;
+        // Where its zigzag is at that along, for a jagged one — 0388.
+        const dAcross = beamAcrossAt(bolt, nearest) - rift.across;
         const r = rift.radius + bolt.radius;
         if (dAlong * dAlong + dAcross * dAcross < r * r) w.bolts.releaseAt(i);
       }
@@ -7550,6 +7554,7 @@ function driveBoss(w: World): void {
     w.bolts,
     w.rainRng,
     w.breakerRng,
+    w.beamRng,
     w.corridor,
     // The mouths only for a boss that has them — 0384; every other throws from its row's muzzle.
     w.bossRow.necks !== undefined ? w.mouths : NO_MOUTHS,

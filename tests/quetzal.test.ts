@@ -20,6 +20,7 @@ import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
+import { BEAM_KNOTS, BEAM_POINTS, beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -66,6 +67,32 @@ function volley(d: Driven): { across: number; radius: number; lifeFor: number; h
   return beams;
 }
 
+/** Where `stepShipAt` holds the ship along the lane. */
+const shipAlong = (d: Driven): number => d.world.cameraAlong + (PLAYER_ALONG_MARGIN + PLAYER_LEAD) / 2;
+
+/**
+ * Where the first beam burns across the lane at the ship's along — on its zigzag since 0388. A jagged
+ * beam's root is not where it is at the ship: it may be a dozen units off it there.
+ */
+const onBeam = (d: Driven): number => beamAcrossAt(d.world.bolts.at(0), shipAlong(d));
+
+/**
+ * The place across the lane nearest the first beam that is clear of it by four units past touching, at
+ * the ship's along — measured to its nearest leg (0388), because a leg may be steep.
+ */
+function besideBeam(d: Driven): number {
+  const b = d.world.bolts.at(0);
+  const clear = b.radius + d.world.ship.radius + 4;
+  const from = onBeam(d);
+  for (let off = 0; off < ACROSS_SPAN; off += 0.5) {
+    for (const across of [from + off, from - off]) {
+      if (across < 6 || across > ACROSS_SPAN - 6) continue;
+      if (beamDistance(b, shipAlong(d), across) > clear) return across;
+    }
+  }
+  throw new Error('nowhere on the lane is clear of the beam');
+}
+
 /**
  * Hold the ship at `across`, in the box, immortal and never lit by anything but a beam, for one
  * step — and say whether that step hurt it. Watched every step, because a ship of one health that
@@ -74,7 +101,7 @@ function volley(d: Driven): { across: number; radius: number; lifeFor: number; h
 function stepShipAt(d: Driven, across: number): boolean {
   const { world, frame } = d;
   world.ship.across = across;
-  world.ship.along = world.cameraAlong + (PLAYER_ALONG_MARGIN + PLAYER_LEAD) / 2;
+  world.ship.along = shipAlong(d);
   world.ship.velAlong = world.scrollPerStep;
   world.ship.velAcross = 0;
   world.ship.invulnFor = 0;
@@ -172,8 +199,8 @@ describe('0250 — the quetzal screams', () => {
     const d = quetzalAt(0.3);
     const [beam] = volley(d);
     expect(beam, 'the mouth threw no beam').toBeDefined();
-    const inside = beam!.across;
-    const beside = inside + beam!.radius + d.world.ship.radius + 4;
+    const inside = onBeam(d);
+    const beside = besideBeam(d);
     // Parked in the beam through the warning: not hurt, for as long as the row says.
     let hurtAt = -1;
     for (let step = 1; step <= 200 && hurtAt < 0; step++) if (stepShipAt(d, inside)) hurtAt = step;
@@ -189,12 +216,15 @@ describe('0250 — the quetzal screams', () => {
     // Again, and this time the ship waits BESIDE the beam until the hold is a third gone, then crosses in.
     const e = quetzalAt(0.3);
     const [again] = volley(e);
+    expect(again, 'the mouth threw no beam the second time').toBeDefined();
     const crossAt = attack.warning + Math.floor(attack.hold / 3);
+    const clear = besideBeam(e);
+    const onIt = onBeam(e);
     let hurtBeside = false;
-    for (let step = 1; step <= crossAt; step++) if (stepShipAt(e, again!.across + again!.radius + e.world.ship.radius + 4)) hurtBeside = true;
+    for (let step = 1; step <= crossAt; step++) if (stepShipAt(e, clear)) hurtBeside = true;
     expect(hurtBeside, 'a ship beside the beam was hurt').toBe(false);
     let hurtCrossing = -1;
-    for (let step = 1; step <= attack.hold && hurtCrossing < 0; step++) if (stepShipAt(e, again!.across)) hurtCrossing = step;
+    for (let step = 1; step <= attack.hold && hurtCrossing < 0; step++) if (stepShipAt(e, onIt)) hurtCrossing = step;
     expect(hurtCrossing, 'a ship that flew into the beam while it was held was not hurt — the beam only hurts on the step it lights').toBe(1);
     // And one hit is one hit: the window every other threat opens is the one the beam gets.
     expect(INVULN_STEPS, 'a held beam would hurt every step').toBeGreaterThan(1);
@@ -203,9 +233,8 @@ describe('0250 — the quetzal screams', () => {
 
   it('and a ship beside the beam, however far down the lane, is not touched by it', () => {
     const d = quetzalAt(0.3);
-    const [beam] = volley(d);
-    const beside = beam!.across + beam!.radius + d.world.ship.radius + 4;
-    const target = beside <= ACROSS_SPAN ? beside : beam!.across - beam!.radius - d.world.ship.radius - 4;
+    volley(d);
+    const target = besideBeam(d);
     let struck = false;
     for (let step = 1; step <= 120; step++) if (stepShipAt(d, target)) struck = true;
     expect(struck, 'a ship beside the beam was struck').toBe(false);
@@ -224,14 +253,14 @@ describe('0250 — the quetzal screams', () => {
     const boss = d.world.bossPool.at(0);
     const attack = phaseFor(BOSSES.quetzal, boss.health, d.world.bossFullHealth).attack!;
     if (attack.kind !== 'beam') return;
-    const [beam] = volley(d);
+    volley(d);
     const held = attack.warning + attack.hold;
     const at = boss.across;
     // The cadence is the boss's own from here: the ship is parked beside the beam, immortal, and
     // nothing resets `fireIn` — which is exactly what the fold would corrupt.
-    const beside = beam!.across + beam!.radius + d.world.ship.radius + 4;
+    const beside = besideBeam(d);
     const park = (): void => {
-      d.world.ship.across = beside <= ACROSS_SPAN ? beside : beam!.across - beam!.radius - d.world.ship.radius - 4;
+      d.world.ship.across = beside;
       d.world.ship.health = d.world.shipRow.health;
       d.world.ship.invulnFor = 0;
       d.world.enemyShots.clear();
@@ -252,7 +281,7 @@ describe('0250 — the quetzal screams', () => {
     expect(flying / STEPS_PER_SECOND, `the hull flew ${(flying / STEPS_PER_SECOND).toFixed(2)} s between volleys`).toBeGreaterThanOrEqual(0.5);
   });
 
-  it('THE PICTURE: the warning is drawn dim, the beam bright and as wide as it hurts, straight, in the enemy’s hand', () => {
+  it('THE PICTURE: the warning is drawn dim, the beam bright and as wide as it hurts, on the zigzag it warned, in the enemy’s hand', () => {
     /*
       0036: the model holds a beam, and the picture must mention both halves of it — the line, then
       the beam. The surface is asked whose ink it stroked in, how loud, and how wide: a beam drawn
@@ -278,13 +307,95 @@ describe('0250 — the quetzal screams', () => {
     const widest = Math.max(...strokes.map((s) => s.width));
     expect(widest * 4, 'the beam is drawn narrower than it hurts').toBeGreaterThanOrEqual(beam!.radius * 2 * d.world.view.scale - 1e-6);
     expect(recorder.strokes.some((s) => !s.hostile), 'the laser was drawn in the player’s hand').toBe(false);
-    // Straight, on the screen: every vertex of the widest stroke shares one screen line, which the
-    // lightning's jag would break.
+    /*
+      ⚠️ **A ZIGZAG SINCE 0388, AND THE ONE ITS WARNING SHOWED.** It was *straight, on the screen*
+      until the pterodactyls' lasers were asked to jag. What is held now is the part of that which
+      mattered: the beam burns where its line was drawn. The camera moves along the lane between the
+      two pictures and not across it, so the across of every knot — one screen axis — is the same in
+      the warning and in the beam; and it is not one value, or the beam would be straight.
+    */
     const stroke = strokes.find((s) => s.width === widest)!;
-    const xs = new Set(stroke.points.filter((_, i) => i % 2 === 0).map((v) => v.toFixed(3)));
-    const ys = new Set(stroke.points.filter((_, i) => i % 2 === 1).map((v) => v.toFixed(3)));
-    expect(Math.min(xs.size, ys.size), 'the beam is drawn jagged, as lightning is').toBe(1);
+    const warned = warnings.find((s) => s.count === stroke.count)!;
+    expect(stroke.count, 'the beam is not drawn on its knots').toBe(BEAM_POINTS);
+    expect(warned, 'the warning was not drawn on the same knots as the beam').toBeDefined();
+    // The view lays along on x and across on y, so y is the screen's across.
+    const ys = (s: { points: number[] }): string[] => s.points.filter((_, i) => i % 2 === 1).map((v) => v.toFixed(2));
+    expect(new Set(ys(stroke)).size, 'the pterodactyl’s beam is drawn straight').toBeGreaterThan(2);
+    expect(ys(stroke), 'the beam burns somewhere other than where its warning was drawn').toEqual(ys(warned));
     // And it goes out on its own steps, not the strike's.
     expect(bolt.holdFor, 'the beam is held for one flash').toBeGreaterThan(BOLT_STEPS);
+  });
+});
+
+/**
+ * The laser is jagged — `docs/decisions/0388-the-laser-is-jagged.md`.
+ *
+ * Asked from a play of the hydra: *"the pteradactyl head needs to shoot a random jagged lazer as it
+ * currently fires straight ahead and because the head is basically static, it's essentially a
+ * non-event in the fight - this change needs to affect the level 3 pteradactyl boss as well."* And,
+ * asked back, warned along the exact zigzag before it fires.
+ */
+describe('0388 — the laser is jagged', () => {
+  /** Beams from volleys at the mouth's phase until one's zigzag stands clear of its root at the ship. */
+  function offTheLine(): { d: Driven; tries: number; root: number; zig: number } {
+    for (let tries = 1; tries <= 30; tries++) {
+      const d = quetzalAt(0.3);
+      for (let i = 1; i < tries; i++) {
+        volley(d);
+        d.world.bolts.clear();
+      }
+      const [beam] = volley(d);
+      const zig = onBeam(d);
+      if (Math.abs(zig - beam!.across) > beam!.radius + d.world.ship.radius + 3) return { d, tries, root: beam!.across, zig };
+    }
+    throw new Error('thirty beams and none stood clear of its own line at the ship');
+  }
+
+  it('THE ASK: every laser the pterodactyls fire jags — the quetzal’s and the hydra’s third head’s — and Medusa’s stay straight', () => {
+    const beams = (kind: 'quetzal' | 'hydra' | 'medusa'): { jag?: number }[] =>
+      BOSSES[kind].phases.flatMap((p) => {
+        const attack = p.attack ?? BOSSES[kind].attack;
+        if (attack.kind === 'beam') return [attack];
+        if (attack.kind === 'heads') return attack.heads.flatMap((h) => (h.attack.kind === 'beam' ? [h.attack] : []));
+        return [];
+      });
+    for (const kind of ['quetzal', 'hydra'] as const) {
+      expect(beams(kind).length, `${kind} fires no laser, so this checks nothing`).toBeGreaterThan(0);
+      for (const b of beams(kind)) expect(b.jag ?? 0, `a ${kind} laser is straight`).toBeGreaterThan(0);
+    }
+    expect(beams('medusa').length, 'Medusa fires no laser, so her half checks nothing').toBeGreaterThan(0);
+    for (const b of beams('medusa')) expect(b.jag, 'Medusa’s lasers jag, which was asked of the pterodactyls only').toBeUndefined();
+  });
+
+  it('THE REPORTED ONE, IN LANE UNITS: a jagged beam burns along its zigzag, where a straight one from the same mouth could not reach', () => {
+    /*
+      The whole of the change, where the player is: a beam whose zigzag at the ship's along stands
+      further from its root than a straight beam's half-width and a ship — a place the straight laser
+      never burned — burns a ship parked there. That it is safe beside the zigzag is `besideBeam`'s,
+      held above; the straight line itself is not safe, and is not claimed to be: a zigzag crosses its
+      line once a leg, and a leg a few units down the lane is near enough to burn a ship on it.
+    */
+    const { d, root, zig } = offTheLine();
+    const attack = phaseFor(BOSSES.quetzal, d.world.bossPool.at(0).health, d.world.bossFullHealth).attack!;
+    if (attack.kind !== 'beam') throw new Error('the mouth’s phase is not a beam');
+    let hurtOnZig = false;
+    for (let step = 1; step <= attack.warning + attack.hold; step++) if (stepShipAt(d, onBeam(d))) hurtOnZig = true;
+    expect(hurtOnZig, `a ship on the zigzag, ${Math.abs(zig - root).toFixed(1)} units off the straight line, was never burned`).toBe(true);
+  });
+
+  it('every beam is a new zigzag, and every one leaves the mouth that fired it', () => {
+    const d = quetzalAt(0.3);
+    const paths: string[] = [];
+    for (let v = 0; v < 4; v++) {
+      volley(d);
+      const b = d.world.bolts.at(0);
+      // A hair short of the mouth, where the last leg arrives: AT it `beamAcrossAt` answers the root by construction.
+      expect(Math.abs(beamAcrossAt(b, b.along + b.fromAlong * (1 - 1e-6)) - b.across), 'the zigzag does not leave the mouth').toBeLessThan(0.01);
+      const knots: string[] = [];
+      for (let k = 0; k <= BEAM_KNOTS; k++) knots.push(beamAcrossAt(b, b.along + (b.fromAlong * k) / BEAM_KNOTS).toFixed(2));
+      paths.push(knots.join(' '));
+      d.world.bolts.clear();
+    }
+    expect(new Set(paths).size, 'two beams burned the same zigzag').toBe(paths.length);
   });
 });
