@@ -41,8 +41,9 @@ export const PROBES = [
     guard: '0373 — THE ASKED-FOR ONE: every horde the fish calls comes OUT OF ITS MOUTH',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting) {',
-      replace: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0) {',
+      // ⚠️ Re-anchored by 0398, which holds the jaw open while a laser is on, on the same line.
+      find: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting || boss.holdFor > 0) {',
+      replace: '  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || boss.holdFor > 0) {',
     },
   },
   {

@@ -44,6 +44,7 @@ export type ShotKind =
   | 'rock'
   | 'frost'
   | 'spine'
+  | 'quill'
   // The two that do not fly straight — 0327. A ripple snakes across the lane; a curl bends.
   | 'ripple'
   | 'curl'
@@ -358,6 +359,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'rock',
   'frost',
   'spine',
+  'quill',
   'ripple',
   'curl',
   'missile',
@@ -721,6 +723,17 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * new bullet costs, and the hurtbox is 0.26 of the drawing. What changed is the shape.
    */
   spine: { sprite: SPRITE.spine, spriteHit: SPRITE.spine, radius: 1.1, health: 1, damage: 1, speed: 0.95, fission: SPENT_BY_ARRIVING },
+  /**
+   * The pterodactyl's quill — `docs/decisions/0398-the-pterodactyl-is-feathered.md`: *"the initial
+   * bullet firing needs to be shooting feathered quills from it's wings rather than tiny bullet shapped
+   * things now."* It threw the lancer's lance, a 1.9-unit dash.
+   *
+   * ⚠️ **BIGGER AND SLOWER THAN THE LANCE IT REPLACES, AND BOTH ON PURPOSE.** A quill is long, so it is
+   * drawn at 5.6 units, and the hurtbox is a quarter of that — inside the band `tests/combat.test.ts`
+   * holds. A body three times the size at the lance's 1.6 would be more to dodge in less time, so it
+   * flies at 1.3: the player sees more of it and has longer to see it.
+   */
+  quill: { sprite: SPRITE.quill, spriteHit: SPRITE.quill, radius: 1.4, health: 1, damage: 1, speed: 1.3, fission: SPENT_BY_ARRIVING },
   /**
    * The fish's flame — `docs/decisions/0249-the-eagle-summons.md`, and the hydra's second head's.
    * The smallest and quickest bullet in the game, on 0098's rule the other way round from the

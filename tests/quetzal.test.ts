@@ -14,11 +14,12 @@ import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BEAM_BOLT_KIND, BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
+import { QUETZAL_CANNON } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { BEAM_KNOTS, BEAM_POINTS, beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -397,5 +398,100 @@ describe('0388 — the laser is jagged', () => {
       d.world.bolts.clear();
     }
     expect(new Set(paths).size, 'two beams burned the same zigzag').toBe(paths.length);
+  });
+});
+
+/**
+ * The pterodactyl is feathered — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.
+ *
+ * *"It needs feathers, lazer cannon when it opens it's mouth to fire, shoulder mounted lazers for when it
+ * fires two and three etc. The initial bullet firing needs to be shooting feathered quills from it's
+ * wings rather than tiny bullet shapped things now."* Whether it looks feathered is a photograph's; what
+ * is held here is where each thing leaves the animal, and that the animal says so while it happens.
+ */
+describe('0398 — the pterodactyl is feathered', () => {
+  it('THE ASKED-FOR ONE, THE QUILLS: the first stage throws quills, every one off a wing and both wings, each one a real mark on the screen', () => {
+    const d = quetzalAt(0.95);
+    const boss = d.world.bossPool.at(0);
+    d.world.enemyShots.clear();
+    boss.fireIn = 1;
+    d.frame.step();
+    const quills: number[] = [];
+    for (let i = 0; i < d.world.enemyShots.size; i++) {
+      const shot = d.world.enemyShots.at(i);
+      // The volcanoes' rock falls through the whole fight (0251) and is not the pterodactyl's.
+      if (SPRITE_KINDS[shot.sprite] === 'rock') continue;
+      expect(SPRITE_KINDS[shot.sprite], 'the first stage threw something other than a quill').toBe('quill');
+      quills.push(shot.across - boss.across);
+    }
+    expect(quills.length, 'the first stage threw nothing').toBeGreaterThan(0);
+    // Off a wing: further across than the body's own hurtbox, which a quill thrown from the chest is not.
+    for (const across of quills) expect(Math.abs(across), `a quill left ${across.toFixed(1)} units across — from the body, not a wing`).toBeGreaterThan(BOSSES.quetzal.radius);
+    expect(quills.some((a) => a < 0) && quills.some((a) => a > 0), 'the quills came off one wing').toBe(true);
+    // In the player's units: at least thirty pixels long on the screen the reports were made on, where
+    // the lance it replaces was eleven — *"tiny bullet shaped things."*
+    expect(SPRITE_EXTENT.quill * viewOf(1280, 720).scale, 'a quill is a speck on a 1280×720 screen').toBeGreaterThanOrEqual(30);
+  });
+
+  it('THE SHOULDER CANNONS: every beam that is not the mouth’s leaves a cannon’s muzzle as it is drawn', () => {
+    const across = QUETZAL_CANNON[1] * SPRITE_EXTENT.boss10 * 0.42;
+    let checked = 0;
+    for (const phase of BOSSES.quetzal.phases) {
+      const attack = phase.attack ?? BOSSES.quetzal.attack;
+      if (attack.kind !== 'beam') continue;
+      for (const from of attack.from) {
+        if (from === 0) continue;
+        checked++;
+        expect(Math.abs(Math.abs(from) - across), `a beam leaves ${from} across, where the cannon's muzzle is drawn at ${across.toFixed(1)}`).toBeLessThanOrEqual(0.5);
+      }
+    }
+    expect(checked, 'no stage fires the shoulders, so nothing was held').toBeGreaterThanOrEqual(4);
+  });
+
+  it('THE TELL IS THE BODY: while a laser is on the screen the beak is open on its cannon, or the shoulders are lit, for every step of it', () => {
+    for (const [fraction, face, name] of [
+      [0.6, SPRITE.boss10Charged, 'the shoulders lit'],
+      [0.3, SPRITE.boss10Gape, 'the beak open'],
+      [0.1, SPRITE.boss10GapeCharged, 'the beak open and the shoulders lit'],
+    ] as const) {
+      const d = quetzalAt(fraction);
+      volley(d);
+      let live = 0;
+      let wrong = 0;
+      for (let i = 0; i < 200 && d.world.bolts.size > 0; i++) {
+        d.world.ship.health = d.world.shipRow.health;
+        d.world.bossPool.at(0).fireIn = 999;
+        d.frame.step();
+        if (d.world.bolts.size === 0) break;
+        live++;
+        if (d.world.bossPool.at(0).spriteBase !== face) wrong++;
+      }
+      expect(live, `no laser stayed on the screen at ${fraction}, so nothing was held`).toBeGreaterThan(20);
+      expect(wrong, `for ${wrong} of the ${live} steps a laser was on the screen at ${fraction}, the pterodactyl was not wearing ${name}`).toBe(0);
+    }
+  });
+
+  it('THE WINGS BEAT, AND A HIT LIGHTS THEM WITH THE BODY', () => {
+    const d = quetzalAt(0.95);
+    const wing = (): string => {
+      for (let k = 0; k < d.world.bossAura.size; k++) {
+        const kind = SPRITE_KINDS[d.world.bossAura.at(k).sprite]!;
+        if (kind.startsWith('quetzalWing')) return kind;
+      }
+      return 'none';
+    };
+    const seen = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.bossPool.at(0).fireIn = 999;
+      d.world.bossPool.at(0).flashFor = 0;
+      d.frame.step();
+      seen.add(wing());
+    }
+    expect(seen.has('none'), 'a step went by with no wings behind the body').toBe(false);
+    expect(seen.size, `the wings wore ${seen.size} frames in a second, which is not a wingbeat`).toBeGreaterThanOrEqual(6);
+    d.world.bossPool.at(0).flashFor = 4;
+    d.frame.step();
+    expect(wing().endsWith('Hit'), `the body was lit by a hit and its wings wore ${wing()}`).toBe(true);
   });
 });

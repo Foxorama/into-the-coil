@@ -415,6 +415,37 @@ export const SPRITE_KINDS = [
   'volansBlaze7',
   'boss10',
   'boss10Hit',
+  /*
+    ⚠️ **THE PTERODACTYL'S FACES AND ITS WINGS — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.**
+    Its eye follows the ship; its beak opens on the cannon in its throat for the mouth's laser, and the
+    cannons on its shoulders light for the wings' — each a face, so the tell is the animal's own body.
+    The wings are a layer of their own behind it, eight frames of a wingbeat, each with a hurt twin so
+    a hit lights the whole animal and not the animal minus its wings.
+  */
+  'boss10Up',
+  'boss10Down',
+  'boss10Gape',
+  'boss10GapeHit',
+  'boss10Charged',
+  'boss10ChargedHit',
+  'boss10GapeCharged',
+  'boss10GapeChargedHit',
+  'quetzalWing0',
+  'quetzalWing1',
+  'quetzalWing2',
+  'quetzalWing3',
+  'quetzalWing4',
+  'quetzalWing5',
+  'quetzalWing6',
+  'quetzalWing7',
+  'quetzalWing0Hit',
+  'quetzalWing1Hit',
+  'quetzalWing2Hit',
+  'quetzalWing3Hit',
+  'quetzalWing4Hit',
+  'quetzalWing5Hit',
+  'quetzalWing6Hit',
+  'quetzalWing7Hit',
   'boss11',
   'boss11Hit',
   /*
@@ -626,6 +657,9 @@ export const SPRITE_KINDS = [
   // The fish's spine — 0262 as a feather, 0316 as what a fish actually throws: a barbed fin-spine,
   // point first, between the slab and the ring. The size and the place on the ladder are 0262's.
   'spine',
+  // The pterodactyl's quill — 0398: a flight feather thrown off its wings, point first, where it
+  // threw the lancer's lance. *"Feathered quills … rather than tiny bullet shaped things."*
+  'quill',
   /*
     The two that do not fly straight — 0327. A LOZENGE lying across the lane for the ripple, its long
     axis the axis it swings on, twice as wide as deep so it is not the drifter's diamond (which is
@@ -1462,6 +1496,38 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   volansBlaze7: 64,
   boss10: 44,
   boss10Hit: 44,
+  // Every face in the same box — 0398: a boss whose edge moved with its expression would teach the
+  // player a hurtbox and take it back.
+  boss10Up: 44,
+  boss10Down: 44,
+  boss10Gape: 44,
+  boss10GapeHit: 44,
+  boss10Charged: 44,
+  boss10ChargedHit: 44,
+  boss10GapeCharged: 44,
+  boss10GapeChargedHit: 44,
+  /*
+    ⚠️ **THE WINGS' TILE IS WIDER THAN THE BODY'S, AND THAT IS WHY THEY ARE A LAYER — 0398.** Spread,
+    they reach 32 units either side of the hull, which the body's 44-unit box cannot hold without the
+    hurtbox growing with it. Behind the hull and never collided, they are the fish's fire on 0320's
+    terms: frames an `Aura` flips through, at the girth `QUETZAL_WING_HEAD` blits them.
+  */
+  quetzalWing0: 72,
+  quetzalWing1: 72,
+  quetzalWing2: 72,
+  quetzalWing3: 72,
+  quetzalWing4: 72,
+  quetzalWing5: 72,
+  quetzalWing6: 72,
+  quetzalWing7: 72,
+  quetzalWing0Hit: 72,
+  quetzalWing1Hit: 72,
+  quetzalWing2Hit: 72,
+  quetzalWing3Hit: 72,
+  quetzalWing4Hit: 72,
+  quetzalWing5Hit: 72,
+  quetzalWing6Hit: 72,
+  quetzalWing7Hit: 72,
   /*
     ⚠️ **36 UNTIL 0332, AND THE ASK WAS *UPSCALE THE GRAPHICS*.** 52 across, with the hurtbox at 20 —
     0.385 of its own extent against the 0.389 it had at 36 and 14, so what changed is the size on
@@ -1682,6 +1748,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // A spine between the flak's slab and the void's ring — 0262's size, 0316's shape. The hurtbox is
   // 0.26 of it, which is the band `tests/combat.test.ts` holds and is why the number did not move.
   spine: 4.2,
+  // A flight feather — 0398: longer than the spine and as long as the frost's icicle, because a quill
+  // is long and thin and at the lance's 1.9 it was the *"tiny bullet shaped thing"* that was reported.
+  // The hurtbox in `src/content/shots.ts` is 0.25 of it.
+  quill: 5.6,
   // The ripple between the spit and the slab, and the curl a shade under the slab it is bent from —
   // 0327. Both keep the 0.9 hurtbox, so the band `tests/combat.test.ts` holds is what bounds them.
   ripple: 2.9,
@@ -1981,3 +2051,11 @@ export const SERPENT_BODY_DIAMETER = 15.7;
  * note records about the serpent's horns.
  */
 export const VOLANS_FIRE_HEAD = { ember: 21.1, blaze: 24.5 } as const;
+
+/**
+ * The girth the pterodactyl's wings are blitted at, as `Aura.head` —
+ * `docs/decisions/0398-the-pterodactyl-is-feathered.md`: the serpent's own diameter, so the swell
+ * `layAura` computes is exactly 1 and the wings are drawn at the tile's own 72 units. The painter
+ * roots them on the body's shoulders, so it needs the same number the row does.
+ */
+export const QUETZAL_WING_HEAD = SERPENT_BODY_DIAMETER;

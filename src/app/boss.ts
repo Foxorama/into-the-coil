@@ -1034,6 +1034,31 @@ function throwAttack(
         centre = Math.PI + (attack.arc === undefined ? boss.firePhase : (attack.arc / 2) * Math.sin(boss.firePhase));
       }
       const first = centre - (step * (count - 1)) / 2;
+      /*
+        ⚠️ **OUT OF MORE THAN ONE PLACE WHERE THE ROW SAYS SO — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.**
+        *"Shooting feathered quills from it's wings."* Each place throws its own fan, the volley's shots
+        dealt out between them and each fan the phase's own spread, so a pair of wings throwing four is
+        two fans of two rather than one fan whose shots alternate wings — which would be a fan with its
+        middle missing. Centred on the lane as every spray is (0258); the tier's count is `count`'s.
+      */
+      const from = attack.kind === 'spray' ? attack.from : undefined;
+      if (from !== undefined && from.length > 0) {
+        const per = Math.max(1, Math.ceil(count / from.length));
+        const each = per > 1 ? phase.spread / (per - 1) : 0;
+        const start = centre - (each * (per - 1)) / 2;
+        for (let m = 0; m < from.length; m++) {
+          const place = from[m]!;
+          for (let i = 0; i < per; i++) {
+            const shot = shots.spawn();
+            if (shot === null) break;
+            const angle = start + each * i;
+            reset(shot, boss.along + place[0], boss.across + place[1], bullet, kind);
+            shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
+            shot.velAcross = Math.sin(angle) * speed;
+          }
+        }
+        break;
+      }
       if (bullet.stagger !== undefined && count > 1) {
         staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0, mouths);
         break;
