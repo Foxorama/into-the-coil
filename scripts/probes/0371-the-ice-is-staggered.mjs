@@ -15,8 +15,9 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '      if (bullet.stagger !== undefined && count > 1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
-      replace: '      if (bullet.stagger === -1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
+      // Re-anchored by 0384, which threads the mouths a many-headed boss throws from.
+      find: '      if (bullet.stagger !== undefined && count > 1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0, mouths);',
+      replace: '      if (bullet.stagger === -1) {\n        staggerVolley(boss, row, bullet, kind, speed, scrollPerStep, shots, count, fireGapFor(bullet.stagger, tier), first, step, 0, mouths);',
     },
   },
   {
@@ -87,8 +88,8 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: 'shots, count, fireGapFor(bullet.stagger, tier), first, step, 0);',
-      replace: 'shots, count, bullet.stagger, first, step, 0);',
+      find: 'shots, count, fireGapFor(bullet.stagger, tier), first, step, 0, mouths);',
+      replace: 'shots, count, bullet.stagger, first, step, 0, mouths);',
     },
   },
   {

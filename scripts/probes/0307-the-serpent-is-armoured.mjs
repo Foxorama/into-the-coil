@@ -16,7 +16,8 @@ export const PROBES = [
     guard: '0307 — and the body is armour',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return taken * chain.hurt;',
+      // `hurt` since 0384, which is the chain's for a serpent and the necks' for a hydra.
+      find: '  return taken * hurt;',
       replace: '  return taken;',
     },
   },
@@ -32,7 +33,7 @@ export const PROBES = [
     guard: '0307 — and the body is armour',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (chain.hurt === 0) node.flashFor = 0;\n',
+      find: '    if (hurt === 0) node.flashFor = 0;\n',
       replace: '',
     },
   },

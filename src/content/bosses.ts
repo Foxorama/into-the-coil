@@ -29,6 +29,7 @@ import type { CueKind } from './cues.ts';
 import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
+import type { ThemeKind } from './themes.ts';
 import { SPRITE } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 
@@ -102,7 +103,7 @@ export type BossKind = (typeof BOSS_KINDS)[number];
  * from the player would either break them or force them to be loosened. *"Up/down motion"* is what
  * was asked for and it is the axis those guards do not hold.
  */
-export const BOSS_MOVE_KINDS = ['patrol', 'bob', 'stalk', 'socket'] as const;
+export const BOSS_MOVE_KINDS = ['patrol', 'bob', 'stalk', 'socket', 'wade'] as const;
 
 /** Derived from the list, so a movement cannot exist in the union and be missing from the switch. */
 export type BossMoveKind = (typeof BOSS_MOVE_KINDS)[number];
@@ -177,7 +178,25 @@ export type BossMove =
    * taken rather than an oversight: what this fight asks of the player is the wall, and `tests/level.test.ts`'s
    * *a boss swings across the lane* is scoped to the arms that claim to.
    */
-  | { kind: 'socket'; at: number; seat: number };
+  | { kind: 'socket'; at: number; seat: number }
+  /**
+   * Stands in the floor — `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
+   *
+   * ⚠️ **ASKED FOR**: *"a hydra that has its lower body in the acid pools, the top half of its body and
+   * tail sitting above the acid pools."* The hull's centre is held `sink` above the shore under it
+   * (`src/sim/corridor.ts`'s face) — so as the camera carries it along the rolling bank it wades,
+   * rising and falling with the ground rather than floating over it — and heaves `heave` units on a
+   * sine `wavelength` steps long, which is breathing and not a patrol. With no floor under it the lane's
+   * bottom edge stands in for the shore.
+   *
+   * ⚠️ **`pool` IS THE ACID IT STANDS IN**, half its width along the lane: the bank under it is drawn
+   * as acid rather than mud for that stretch (`BankRow.pool`), so the body goes down into acid, which
+   * is the ask, and not behind a bank of earth.
+   *
+   * ⚠️ **ON `across` ALONE, AS EVERY ARM IS**, so 0061's and 0101's station assertions still mean what
+   * they say; its `drift` stays the row's.
+   */
+  | { kind: 'wade'; sink: number; heave: number; wavelength: number; pool: number };
 
 /**
  * Every way a boss's volley can be shaped. Closed.
@@ -1110,6 +1129,62 @@ export interface Tail {
 }
 
 /**
+ * One neck of a many-headed animal and the head on it — `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
+ *
+ * ⚠️ **A NECK IS ONE DRAWING TURNED ABOUT ITS ROOT, ON THE TAIL'S TERMS (0374)**, and it is a picture:
+ * it is drawn behind the hull, in the layer the aura and the tail use, and it has no hurtbox. The HEAD
+ * is a body — it is shot, what lands on it reaches the hull (`Necks.hurt`), flying into it costs the
+ * ship a hit, and its mouth is where its attack leaves. A neck the size of this one as a chain of discs
+ * would be forty bodies against a pool of twenty-six (`src/app/mount.ts`), and a disc on a long
+ * neck's centre would be a hurtbox that disagreed with its picture everywhere but the middle.
+ */
+export interface Neck {
+  /** Where it leaves the hull, world units from the hull's centre. */
+  root: { along: number; across: number };
+  /** Its heading at rest, radians in the world: `π` straight down the lane at the player, `−π/2` straight up the screen. */
+  angle: number;
+  /** How far the head's centre stands from the root, in world units — the neck's drawn length. */
+  reach: number;
+  /** The neck's drawing, rooted on the bitmap's centre and running along its `+x` to `reach`. */
+  art: number;
+  /** The head, and its hurt twin. Drawn snout to `−x`, as every head in the game is. */
+  head: number;
+  headHit: number;
+  /** The head's hurtbox, in world units. */
+  radius: number;
+  /** How far ahead of the head's centre its mouth is, along the way it faces. */
+  mouth: number;
+  /**
+   * Whose colours the neck and the head are painted in — the place whose lord the head is drawn after.
+   * *"Neck needs to be coloured for the new head"*: a fish's neck in the fish's reds, and so on.
+   */
+  livery: ThemeKind;
+  /** The aura this head burns with, or absent for one that burns with nothing. */
+  aura?: Aura;
+}
+
+/**
+ * The necks a hydra grows — 0384, and 0254's *"a head a fifth"* made a thing the player sees.
+ *
+ * ⚠️ **NECK `k` GROWS WITH PHASE `k`**, so the phase table is the one statement of when a head appears
+ * and `heads` in that phase's attack is the one statement of what it throws: the round's slot `k` fires
+ * from neck `k`'s mouth. `tests/hydra.test.ts` holds that there are as many necks as phases.
+ */
+export interface Necks {
+  /** In the order they grow. */
+  necks: readonly Neck[];
+  /** How far a neck sways each side of its rest, in radians, and the steps one sway takes. */
+  sway: number;
+  beat: number;
+  /** Steps a new neck takes to rise up out of the acid into its place. */
+  rise: number;
+  /** How much of a hit on a head reaches the hull — 1 for all of it. */
+  hurt: number;
+  /** How far a head may turn from the lane's axis to look at the ship, in radians. */
+  look: number;
+}
+
+/**
  * A creature reared back on its own neck — `docs/decisions/0309-the-serpent-rears-back.md`.
  *
  * ⚠️ **ASKED FOR**: *"at the lightning phase, the serpent needs to rear back with it's head and upper
@@ -1570,6 +1645,14 @@ export interface BossRow extends Body {
    * `docs/decisions/0374-the-fish-beats-its-tail.md`. Required, on `entrance`'s terms.
    */
   tail: Tail | null;
+  /**
+   * The necks it grows, a head on each — `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
+   * Absent for a boss with one head or none, which is fourteen of them.
+   *
+   * ⚠️ **OPTIONAL, ON 0282's DEFAULT TERMS**, as `hull` and `leap` on a phase are: only the animal that
+   * grows heads says so, and a required `null` on fourteen rows is a field for its own sake.
+   */
+  necks?: Necks;
   /**
    * The room this fight happens in, or `null` for a fight the level scrolls straight through —
    * `docs/decisions/0335-the-fight-happens-in-a-room.md`.
@@ -3403,9 +3486,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * ⚠️ **A head at every fifth of its health — 80, 60, 40 and 20 per cent — and every head is a
    * phase.** The ask gives each head its own attack: acid, then flame, then laser bolts, then
    * frost, then void — and since 0254 each is a `Head`, taking its turn a volley.
+   *
+   * ⚠️ **AND SINCE 0384 EVERY HEAD IS ON THE SCREEN, GROWN WITH ITS PHASE.** *"It's supposed to be a
+   * hydra that grows extra heads and currently it looks like a weird mouldy enokki mushroom."* It
+   * stands in the Mire's acid with its tail above it, and each phase a neck rises out of the acid in
+   * the colours of the head on it: the serpent's own, then a fish after Ember Nebula's, a pterodactyl
+   * after Saurian Belt's, an ice crystal after Rime Shelf's at 40% — and last, at 20%, a clockwork
+   * head after the Labyrinth's cog, with a mouth and eyes and a dark aura. The player swapped the
+   * heads rather than the attacks, so the frost is the ice's and the void the clockwork's.
    */
   hydra: {
-    move: { kind: 'bob', amplitude: 18, wavelength: 220, rear: 0 },
+    move: { kind: 'wade', sink: 2, heave: 1.5, wavelength: 240, pool: 26 },
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
@@ -3414,7 +3505,52 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chain: null,
     face: null,
     entrance: null,
-    tail: null,
+    // Curling up out of the acid behind the body, and swinging slowly — on the fish's terms (0374).
+    tail: { art: { sprite: SPRITE.hydraTail, spriteHit: SPRITE.hydraTailHit }, root: 16, beat: 200, sweep: 0.1, yaw: 0 },
+    /*
+      ── FIVE NECKS, A HEAD ON EACH — 0384 ─────────────────────────────────────────────────────────
+
+      ⚠️ **ROOTED ALONG THE SHOULDERS AND FANNED UP AND FORWARD**, so the heads stand across the middle
+      of the lane — lanes 50 to 85 with the body on a shore at 110 — where the player meets them and
+      shoots them. Alternate reaches, long and short, so five heads on one body stand in two ranks
+      rather than one row of skulls touching. Every head a hurtbox of 9, the anatomy's size (0283),
+      and every hit on one reaches the hull whole: the heads are what the player fights.
+    */
+    necks: {
+      necks: [
+        { root: { along: -7, across: -15 }, angle: -0.78 * Math.PI, reach: 34, art: SPRITE.hydraNeck0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 9, mouth: 9.5, livery: 'mire' },
+        { root: { along: -13, across: -9 }, angle: -0.93 * Math.PI, reach: 32, art: SPRITE.hydraNeck1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 9, mouth: 9.5, livery: 'nebula' },
+        { root: { along: 1, across: -15.5 }, angle: -0.55 * Math.PI, reach: 36, art: SPRITE.hydraNeck2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 9, mouth: 9.5, livery: 'saurian' },
+        { root: { along: -10.5, across: -12 }, angle: -0.86 * Math.PI, reach: 22, art: SPRITE.hydraNeck3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 9, mouth: 9.5, livery: 'rime' },
+        {
+          root: { along: -3, across: -15.5 },
+          angle: -0.66 * Math.PI,
+          reach: 36,
+          art: SPRITE.hydraNeck4,
+          head: SPRITE.hydraHead4,
+          headHit: SPRITE.hydraHead4Hit,
+          radius: 9,
+          mouth: 9.5,
+          livery: 'labyrinth',
+          /*
+            ⚠️ **THE SERPENT'S DARK AURA, AND ASKED FOR AS A PROPER ONE** — *"has a dark aura (a proper
+            aura, not just a basic circle)."* The frames 0305 drew for *"a super saiyan aura, but dark
+            blue and purple energy"*: tongues licking off the head and up its neck, flickering down it.
+          */
+          aura: {
+            frames: [SPRITE.serpentAura0, SPRITE.serpentAura1, SPRITE.serpentAura2, SPRITE.serpentAura3, SPRITE.serpentAura4, SPRITE.serpentAura5],
+            hold: 3,
+            stride: 1,
+            head: 22,
+          },
+        },
+      ],
+      sway: 0.08,
+      beat: 170,
+      rise: 70,
+      hurt: 1,
+      look: 0.6,
+    },
     room: null,
     burn: null,
     wreck: null,
@@ -3462,7 +3598,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
           ],
         },
       },
@@ -3480,7 +3616,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
           ],
         },
@@ -3499,7 +3635,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' } },
             { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [-9] } },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0] } },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
             { shot: 'void', attack: { kind: 'ring' } },
           ],

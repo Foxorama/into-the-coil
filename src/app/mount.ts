@@ -289,6 +289,12 @@ export const CAPACITY = {
 export const CHAIN_TRAIL = 96;
 
 /**
+ * How many necks a boss may grow — 0384: the size the mouths and births are built at, once.
+ * `tests/hydra.test.ts` holds every row with necks inside it.
+ */
+export const NECK_SLOTS = 8;
+
+/**
  * The sky, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
  *
  * ── THE DEPTHS ARE A THIRD LARGER THAN 0065 SHIPPED ─────────────────────────────────────────────
@@ -1012,6 +1018,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPool,
     bossBody,
     bossAura,
+    // The mouths and births of a many-headed boss — 0384. @setup: built at mount, never in a frame.
+    mouths: new Float64Array(NECK_SLOTS * 2),
+    necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
     // A ring of the head's lane, allocated once — 0283. @setup: built at mount, never in a frame.
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,

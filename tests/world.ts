@@ -37,7 +37,7 @@ import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type World } from '../src/app/frame.ts';
-import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
+import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -108,6 +108,9 @@ export function inertLevel(): {
   bossBody: Pool<Entity>;
   // And its aura — 0305. Empty for every fixture whose boss's phase burns with none.
   bossAura: Pool<Entity>;
+  // The mouths and births of a many-headed boss — 0384. Never read for a boss without necks.
+  mouths: Float64Array;
+  necksBorn: Float64Array;
   bossTrail: Float32Array;
   bossTrailAt: number;
   chainPhase: number;
@@ -213,6 +216,8 @@ export function inertLevel(): {
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossBody: new Pool<Entity>(CAPACITY.bossBody, makeEntity),
     bossAura: new Pool<Entity>(CAPACITY.bossAura, makeEntity),
+    mouths: new Float64Array(NECK_SLOTS * 2),
+    necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
@@ -489,6 +494,8 @@ export function playableWorld(
     bossPool,
     bossBody,
     bossAura,
+    mouths: new Float64Array(NECK_SLOTS * 2),
+    necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,

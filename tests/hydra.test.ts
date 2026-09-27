@@ -5,8 +5,9 @@
  * it spawns an extra head, the first head fires acid blasts, the second head adds flame ball
  * attacks, the third head fires laser bolts, the 4th head fires frost attacks and the last head
  * fires out void blasts."* What is held here is that a head is a shot and an attack of its own,
- * that a phase grows one, that every head stays and the heads take turns a volley, and that the
- * laser head's beam leaves the side of the hull. What a boss IS is `tests/bosses.test.ts`'s and
+ * that a phase grows one, that every head stays and the heads take turns a volley — and since 0384,
+ * that each head is on the screen on its own neck, rises out of the acid it stands in, throws from its
+ * own mouth and is what the player shoots. What a boss IS is `tests/bosses.test.ts`'s and
  * `tests/level.test.ts`'s; the beam's own rules are `tests/quetzal.test.ts`'s.
  */
 
@@ -18,6 +19,9 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import { NECK_SLOTS } from '../src/app/mount.ts';
+import { faceAt } from '../src/sim/corridor.ts';
+import { reset } from '../src/sim/entity.ts';
 
 /** The hydra alone, a short way in, with no mid-boss in front of it. */
 const HYDRA_ONLY: LevelRow = {
@@ -134,20 +138,190 @@ describe('0254 — the hydra grows heads', () => {
     expect(pair).toEqual([['acid'], ['flame'], ['acid']]);
   });
 
-  it('THE LASER HEAD: its beam leaves the side of the hull, where the head is, and not the middle', () => {
-    const d = hydraAt(0.55);
-    volley(d);
-    volley(d);
+  /*
+    ── *THE LASER HEAD: its beam leaves the side of the hull* STOOD HERE, AND 0384 REPLACED IT ─────────
+
+    It held `from: [-9]`, an offset that put the laser on the side of a hull whose five heads were drawn
+    inside it. The heads stand on their own necks now and every attack leaves its own head's mouth — the
+    laser's included — which `EVERY HEAD'S ATTACK LEAVES ITS OWN MOUTH` below holds for all five.
+  */
+});
+
+/** The hydra's necks, off its row. */
+const NECKS = BOSSES.hydra.necks!;
+
+/** Where head `k`'s mouth is now, in world units: the head's centre, and its mouth ahead of it along its turn. */
+function mouthOf(d: Driven, k: number): { along: number; across: number } {
+  const head = d.world.bossBody.at(k);
+  const reach = NECKS.necks[k]!.mouth;
+  return { along: head.along - Math.cos(head.turn) * reach, across: head.across - Math.sin(head.turn) * reach };
+}
+
+/** Let the hydra stand in a phase until its newest neck has risen. */
+function settle(d: Driven): void {
+  for (let i = 0; i < NECKS.rise + 10; i++) {
+    d.world.ship.health = d.world.shipRow.health;
+    d.world.bossPool.at(0).fireIn = 999;
+    d.frame.step();
+  }
+}
+
+/** The Mire's own level with only the hydra in it — its floor under the fight. */
+const HYDRA_IN_THE_MIRE: LevelRow = { ...HYDRA_ONLY, corridor: LEVELS.gauntlet.corridor };
+
+describe('0384 — the hydra stands in the acid and grows its heads', () => {
+  it('there are as many necks as phases, and room for every one', () => {
+    expect(NECKS.necks.length, 'a phase with no neck to grow, or a neck no phase grows').toBe(BOSSES.hydra.phases.length);
+    expect(NECKS.necks.length).toBeLessThanOrEqual(NECK_SLOTS);
+  });
+
+  it('THE ASK: a neck grows with every phase, and every neck carries its own head', () => {
+    /*
+      *"It starts with a single head… second stage, it actually grows a new head."* Driven to each
+      phase in turn and let stand: the heads on the field are the phase's count, each is the head its
+      neck names, and every neck is drawn behind the body with its own drawing.
+    */
+    [1, 0.75, 0.55, 0.35, 0.15].forEach((fraction, phase) => {
+      const d = hydraAt(fraction);
+      settle(d);
+      expect(d.world.bossBody.size, `at ${fraction * 100}% the hydra has ${d.world.bossBody.size} heads`).toBe(phase + 1);
+      const drawn = new Set<number>();
+      for (let i = 0; i < d.world.bossAura.size; i++) drawn.add(d.world.bossAura.at(i).sprite);
+      for (let k = 0; k <= phase; k++) {
+        expect([NECKS.necks[k]!.head, NECKS.necks[k]!.headHit], `head ${k} is not its neck's own`).toContain(d.world.bossBody.at(k).sprite);
+        expect(drawn.has(NECKS.necks[k]!.art), `neck ${k} is not drawn`).toBe(true);
+      }
+    });
+  });
+
+  it('AND A NEW HEAD RISES OUT OF THE ACID, IN LANE UNITS: it is born under the shore and stands in its place a rise later', () => {
+    const { world } = playableWorld(HYDRA_IN_THE_MIRE);
+    const frame = new GameFrame(world);
+    const d = { world, frame };
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+      frame.step();
+    }
+    world.bossPool.at(0).health = world.bossFullHealth * 0.75;
+    world.ship.health = world.shipRow.health;
+    frame.step();
+    const born = world.bossBody.at(1);
+    const shore = faceAt(world.corridor!, born.along, 1);
+    expect(born.across, `the fish's head was born at lane ${born.across.toFixed(1)}, above the shore at ${shore.toFixed(1)}`).toBeGreaterThan(shore);
+    settle(d);
+    const risen = world.bossBody.at(1);
+    expect(risen.across, 'the fish never rose out of the acid').toBeLessThan(faceAt(world.corridor!, risen.along, 1) - 10);
+  });
+
+  it('EVERY HEAD’S ATTACK LEAVES ITS OWN MOUTH, IN WORLD UNITS — the laser’s too', () => {
+    /*
+      0036's class: a shot the picture gives no source for. Every volley at five heads, and for each, the
+      first thing it put in the air is at the mouth of the head the round says is throwing, far from the
+      hull's centre, and nearer that mouth than any other head's.
+    */
+    const d = hydraAt(0.15);
+    settle(d);
+    for (let k = 0; k < 5; k++) {
+      const mouth = mouthOf(d, k);
+      const got = volley(d);
+      const boss = d.world.bossPool.at(0);
+      let at: { along: number; across: number } | null = null;
+      if (got.beams > 0) {
+        for (let i = 0; i < d.world.bolts.size; i++) {
+          const b = d.world.bolts.at(i);
+          if (b.kind === BEAM_BOLT_KIND) at = { along: b.along + b.fromAlong, across: b.across };
+        }
+      } else {
+        let best = Infinity;
+        for (let i = 0; i < d.world.enemyShots.size; i++) {
+          const s = d.world.enemyShots.at(i);
+          const gap = Math.hypot(s.along - mouth.along, s.across - mouth.across);
+          if (gap < best) {
+            best = gap;
+            at = { along: s.along, across: s.across };
+          }
+        }
+      }
+      expect(at, `volley ${k + 1} put nothing in the air`).not.toBeNull();
+      /*
+        ⚠️ **A WALL IS CENTRED ON THE MOUTH AND NO SHOT OF IT LEAVES THE MOUTH ITSELF** — its slots are a
+        gap either side, thrown in 0371's order, nearest pair first. So for the ice's frost the stagger is
+        let put down its first pair, and the pair's middle is what is measured.
+      */
+      const phase = phaseFor(BOSSES.hydra, boss.health, d.world.bossFullHealth).attack!;
+      const thrown = phase.kind === 'heads' ? phase.heads[k]!.attack : phase;
+      if (thrown.kind === 'wall') {
+        for (let s = 0; s < 30 && d.world.enemyShots.size < 2; s++) d.frame.step();
+        const a = d.world.enemyShots.at(0);
+        const b = d.world.enemyShots.at(1);
+        // Along, where the first shard was thrown; across, the pair's middle — the pair flew on meanwhile.
+        at = { along: at!.along, across: (a.across + b.across) / 2 };
+      }
+      const gap = Math.hypot(at!.along - mouth.along, at!.across - mouth.across);
+      expect(gap, `head ${k}'s attack left ${gap.toFixed(1)} units from its mouth`).toBeLessThan(5);
+      expect(Math.hypot(at!.along - boss.along, at!.across - boss.across), `head ${k}'s attack left the hull's centre`).toBeGreaterThan(15);
+      for (let j = 0; j < 5; j++) {
+        if (j === k) continue;
+        const other = mouthOf(d, j);
+        expect(Math.hypot(at!.along - other.along, at!.across - other.across), `head ${k}'s attack left nearer head ${j}'s mouth`).toBeGreaterThan(gap);
+      }
+    }
+  });
+
+  it('A SHOT ON A HEAD HURTS THE HYDRA: the heads are what the player fights', () => {
+    const d = hydraAt(1);
+    settle(d);
     const boss = d.world.bossPool.at(0);
-    const third = volley(d);
-    // Where the hull was when it threw: the step moved it by its own velocity after the throw.
-    const hullAcross = boss.across - boss.velAcross;
-    expect(third.beams, 'the third head lit no beam').toBe(1);
-    const phase = phaseFor(BOSSES.hydra, boss.health, d.world.bossFullHealth).attack!;
-    if (phase.kind !== 'heads') return;
-    const laser = phase.heads[2]!.attack;
-    if (laser.kind !== 'beam') return;
-    expect(Math.abs(laser.from[0]!), 'the laser head sits in the middle of the hull').toBeGreaterThan(BOSSES.hydra.radius / 3);
-    expect(third.beamAcross - hullAcross, 'the beam does not leave from the laser head').toBeCloseTo(laser.from[0]!, 3);
+    const head = d.world.bossBody.at(0);
+    const before = boss.health;
+    const shot = d.world.playerShots.spawn()!;
+    reset(shot, head.along, head.across, { sprite: 0, spriteHit: 0, radius: 1, health: 1, damage: 5 });
+    boss.fireIn = 999;
+    d.frame.step();
+    expect(boss.health, 'a shot that landed on a head took nothing off the hydra').toBeLessThan(before);
+  });
+
+  it('IT STANDS IN THE ACID, IN LANE UNITS: its centre is held its sink above the shore under it, as the bank rolls by', () => {
+    const { world } = playableWorld(HYDRA_IN_THE_MIRE);
+    const frame = new GameFrame(world);
+    const wade = BOSSES.hydra.move;
+    if (wade.kind !== 'wade') throw new Error('the hydra does not wade');
+    let watched = 0;
+    for (let i = 0; i < 1600; i++) {
+      world.ship.health = world.shipRow.health;
+      if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      if (world.bossPool.size === 0 || i < 900) continue;
+      const hull = world.bossPool.at(0);
+      const shore = faceAt(world.corridor!, hull.along, 1);
+      expect(Math.abs(hull.across - (shore - wade.sink)), `at step ${i} the hydra stands ${(shore - hull.across).toFixed(1)} above the shore`).toBeLessThanOrEqual(wade.heave + 0.5);
+      // And the bank is acid where it stands.
+      expect(world.corridor!.poolFrom, 'the acid it stands in does not reach its near side').toBeLessThanOrEqual(hull.along - wade.pool + 1e-9);
+      expect(world.corridor!.poolTo, 'the acid it stands in does not reach its far side').toBeGreaterThanOrEqual(hull.along + wade.pool - 1e-9);
+      watched++;
+    }
+    expect(watched, 'the hydra never stood in the fight, so this measured nothing').toBeGreaterThan(100);
+  });
+
+  it('AND THE CLOCKWORK HEAD BURNS, ALONE: its aura is round it at the last phase and nowhere before', () => {
+    const burning = NECKS.necks[4]!.aura!.frames as readonly number[];
+    const flamesAt = (fraction: number): Driven & { flames: number } => {
+      const d = hydraAt(fraction);
+      settle(d);
+      let flames = 0;
+      for (let i = 0; i < d.world.bossAura.size; i++) if (burning.includes(d.world.bossAura.at(i).sprite)) flames++;
+      return { ...d, flames };
+    };
+    expect(flamesAt(0.35).flames, 'something burns before the clockwork head has grown').toBe(0);
+    const last = flamesAt(0.15);
+    expect(last.flames, 'the clockwork head does not burn').toBeGreaterThan(0);
+    const head = last.world.bossBody.at(4);
+    for (let i = 0; i < last.world.bossAura.size; i++) {
+      const flame = last.world.bossAura.at(i);
+      if (!burning.includes(flame.sprite)) continue;
+      const gap = Math.hypot(flame.along - head.along, flame.across - head.across);
+      expect(gap, 'a flame burns off somewhere other than the clockwork head and its neck').toBeLessThanOrEqual(NECKS.necks[4]!.reach);
+    }
   });
 });

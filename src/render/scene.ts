@@ -711,7 +711,10 @@ function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, 
       const rise = Math.max(-steepest, Math.min(steepest, b - a));
       const middle = (a + b) / 2;
       // The cap's stone is below its face; the near wall's is above, so it is the same cap turned over.
-      surface.blit(corridor.caps[rise + steepest]!, screenX(view, inView, middle), screenY(view, inView, middle), view.scale, side < 0 ? Math.PI : 0);
+      // Where a boss stands in the wall, its acid caps instead — 0384: the same face, drawn as acid.
+      const standing = start < corridor.poolTo && start + extent > corridor.poolFrom;
+      const caps = standing && corridor.poolCaps.length > 0 ? corridor.poolCaps : corridor.caps;
+      surface.blit(caps[rise + steepest]!, screenX(view, inView, middle), screenY(view, inView, middle), view.scale, side < 0 ? Math.PI : 0);
       for (let across = middle + side * extent; side < 0 ? across + extent / 2 > 0 : across - extent / 2 < ACROSS_SPAN; across += side * extent) {
         surface.blit(corridor.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
       }

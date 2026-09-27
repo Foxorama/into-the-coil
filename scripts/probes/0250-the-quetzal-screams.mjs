@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'THE WINGS AND THE MOUTH, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '        reset(bolt, end, boss.across + attack.from[i]!, bullet, BEAM_BOLT_KIND);',
-      replace: '        reset(bolt, end, boss.across + 0 * attack.from[i]!, bullet, BEAM_BOLT_KIND);',
+      // From the muzzle since 0384, which is the hull's centre for every boss but a many-headed one.
+      find: '        reset(bolt, end, muzzleAcross + attack.from[i]!, bullet, BEAM_BOLT_KIND);',
+      replace: '        reset(bolt, end, muzzleAcross + 0 * attack.from[i]!, bullet, BEAM_BOLT_KIND);',
     },
   },
   {

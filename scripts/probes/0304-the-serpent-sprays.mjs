@@ -50,7 +50,7 @@ export const PROBES = [
     guard: 'once hurt, the acid is a SPRAY',
     edit: {
       path: 'src/app/boss.ts',
-      find: '  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep);\n',
+      find: '  if (boss.sprayLeft > 0) spray(boss, row, shots, tier, scrollPerStep, mouths);\n',
       replace: '',
     },
   },

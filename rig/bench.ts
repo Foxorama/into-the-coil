@@ -32,6 +32,7 @@ import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
+import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
 
 const stage = document.querySelector('#stage');
 const levelPick = document.querySelector<HTMLSelectElement>('#level');
@@ -45,6 +46,13 @@ if (!stage || !levelPick || !along || !where || !hold || !bossHp || !note) throw
 const mounted = mount(stage, 'vivid');
 if (mounted === null) throw new Error('bench: the game would not mount');
 const { world, dispatch, lifecycle } = mounted.rig;
+
+/*
+  `?proof` parks a ship nothing can hurt — 0384: the game's own `resilience: proof` assist (0024), so a
+  boss can be photographed in its last phase without the parked ship dying on the way there. The fight
+  is untouched; only what a hit costs the ship is.
+*/
+if (new URLSearchParams(location.search).has('proof')) world.tuning = tuningFor({ ...DEFAULT_ASSISTS, resilience: 'proof' });
 
 for (const kind of LEVEL_KINDS) {
   const option = document.createElement('option');

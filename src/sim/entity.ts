@@ -343,6 +343,16 @@ export interface Entity extends Body {
    */
   headAt: number;
   /**
+   * Which of a many-headed boss's mouths its volley leaves, or −1 for the row's own muzzle —
+   * `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
+   *
+   * ⚠️ **NOT `headAt`, ON THAT FIELD'S OWN ARGUMENT.** `headAt` is how far round the round the count
+   * has got and it moves on the step a head throws; this is which head is STILL throwing — a spray's
+   * globes go on leaving the mouth that began it after the count has moved on, and a laser stays rooted
+   * in the mouth it came out of for as long as it is held.
+   */
+  muzzleAt: number;
+  /**
    * A spray in progress — `docs/decisions/0304-the-serpent-sprays.md`: steps it has left, how often
    * it throws, where it is aiming now, how far the aim turns a step, and which shot it throws (an
    * index into `SHOT_KINDS`, on `kind`'s own terms).
@@ -482,6 +492,7 @@ export function makeEntity(): Entity {
     bobPhase: 0,
     firePhase: 0,
     headAt: 0,
+    muzzleAt: -1,
     sprayLeft: 0,
     sprayEvery: 0,
     sprayAngle: 0,
@@ -541,6 +552,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.bobPhase = 0;
   e.firePhase = 0;
   e.headAt = 0;
+  e.muzzleAt = -1;
   e.sprayLeft = 0;
   e.sprayEvery = 0;
   e.sprayAngle = 0;
