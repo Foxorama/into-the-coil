@@ -86,20 +86,30 @@ export const PROBES = [
     guard: 'THE PICTURE: the warning is drawn dim',
     edit: {
       path: 'src/render/scene.ts',
-      find: '      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * view.scale, held, true);',
-      replace: '      surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, held, true);',
+      /*
+        Re-anchored by 0388: the quetzal's beams are all jagged, so they are drawn by the jagged branch,
+        and the straight one's stroke went STILL GREEN under the proof. The same break, on the line that
+        draws them.
+      */
+      find: '        surface.bolt(BEAM_PATH, BEAM_POINTS, e.radius * BEAM_STROKE * view.scale, held, true);',
+      replace: '        surface.bolt(BEAM_PATH, BEAM_POINTS, BOLT_WIDTH * view.scale, held, true);',
     },
   },
   {
     decision: '0250',
     suite: 'tests/quetzal.test.ts',
-    // The beam jagged like lightning.
-    broke: 'the beam given the lightning’s jag',
+    /*
+      The beam jagged LIKE LIGHTNING — a jag re-rolled every couple of frames, as a bolt flickers.
+      ⚠️ **RE-AIMED BY 0388**, which jagged the pterodactyls' beams on purpose, so the old break (any jag
+      at all) is now the ask. What still makes a laser lightning is the flicker: a zigzag that moves
+      burns somewhere other than where its warning was drawn, which is the lie 0250 refused.
+    */
+    broke: 'the beam given the lightning’s flicker, so it burns off the line it warned',
     guard: 'THE PICTURE: the warning is drawn dim',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    const amp = warning || beam ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;',
-      replace: '    const amp = warning ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;',
+      find: '        const across = endAcross + beamOffset(e.spin, e.jag, i);',
+      replace: '        const across = endAcross + beamOffset(e.spin + Math.floor(e.lifeFor / BOLT_PAGE_STEPS), e.jag, i);',
     },
   },
 ];
