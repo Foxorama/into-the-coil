@@ -1534,31 +1534,31 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     carry five necks. The hurtbox stays 16: 0.29 of the extent, inside 0.25 to 0.55, and a body half
     under the shore is shot at its top half, where the heads are also a target.
   */
-  boss13: 56,
-  boss13Hit: 56,
+  boss13: 73,
+  boss13Hit: 73,
   // The tail on the fish's terms — 0374: rooted on the bitmap's centre, curling up out of the acid.
-  hydraTail: 48,
-  hydraTailHit: 48,
+  hydraTail: 62.5,
+  hydraTailHit: 62.5,
   /*
     ⚠️ **A NECK IS ROOTED ON THE BITMAP'S CENTRE, SO ITS TILE IS TWICE ITS REACH**, and 76 is under
     `EDGE_MARGIN`'s ceiling of 80 (`src/sim/camera.ts`) with room for the reach's 36 and the joint.
   */
-  hydraNeck0: 76,
-  hydraNeck1: 76,
-  hydraNeck2: 76,
-  hydraNeck3: 76,
-  hydraNeck4: 76,
+  hydraNeck0: 99,
+  hydraNeck1: 99,
+  hydraNeck2: 99,
+  hydraNeck3: 99,
+  hydraNeck4: 99,
   // One box for every head, so a head grows no bigger than the neck it is carried on.
-  hydraHead0: 24,
-  hydraHead0Hit: 24,
-  hydraHead1: 24,
-  hydraHead1Hit: 24,
-  hydraHead2: 24,
-  hydraHead2Hit: 24,
-  hydraHead3: 24,
-  hydraHead3Hit: 24,
-  hydraHead4: 24,
-  hydraHead4Hit: 24,
+  hydraHead0: 31,
+  hydraHead0Hit: 31,
+  hydraHead1: 31,
+  hydraHead1Hit: 31,
+  hydraHead2: 31,
+  hydraHead2Hit: 31,
+  hydraHead3: 31,
+  hydraHead3Hit: 31,
+  hydraHead4: 31,
+  hydraHead4Hit: 31,
   // The bank's own tile, so an acid cap and a mud cap meet edge to edge — 0384.
   acidRise0: 12,
   acidRise1: 12,
