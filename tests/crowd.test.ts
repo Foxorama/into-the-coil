@@ -35,16 +35,28 @@ import { GameFrame } from '../src/app/frame.ts';
 import { BOSSES, BOSS_KINDS, type BossAttack, type BossKind } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, crowdFor } from '../src/content/difficulty.ts';
 import { SHARD_VOLLEY, SHOTS, type ShotKind } from '../src/content/shots.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { faceAt } from '../src/sim/corridor.ts';
 import { SHIP_SPEED } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
 type World = ReturnType<typeof playableWorld>['world'];
 
+/*
+  ⚠️ **A BOSS WHOSE PLACE HAS A FLOOR IS FLOWN OVER IT — 0384.** The hydra stands in the Mire's acid,
+  held a little above its shore, and flown in the Approach with no floor it stood at the lane's far
+  edge instead, with the lane below the shore counted as room: 47.5 units at its first phase on
+  Legendary where its own ground leaves 37. A quantity is checked in the case it runs in —
+  `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`. Only a bank
+  reaches the fight; a stone corridor hands over to its room before the boss arrives.
+*/
+const floorOf = (boss: BossKind) => LEVEL_KINDS.map((k) => LEVELS[k]).find((l) => l.boss === boss && l.corridor?.bank !== undefined)?.corridor;
+
 const solo = (boss: BossKind) =>
-  ({ waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss, theme: 'approach' } as const);
+  ({ waves: [], pickups: [], landmarks: [], bossAt: 200, midBoss: null, sections: NO_SECTIONS, boss, theme: 'approach', corridor: floorOf(boss) } as const);
 
 /**
  * How far ahead the pilot is asked to see: three quarters of a second.
@@ -102,6 +114,12 @@ function widestReachableRun(w: World, speed: number): { run: number; middle: num
       const hi = Math.min(CELLS - 1, Math.ceil((at + reach) / CELL));
       for (let c = lo; c <= hi; c++) unsafe[c] = 1;
     }
+  }
+  // The floor bites (0383), so the lane past its face is no place to be — 0384.
+  if (w.corridor !== null) {
+    const near = faceAt(w.corridor, w.ship.along, -1) + SHIPS.proof.radius;
+    const far = faceAt(w.corridor, w.ship.along, 1) - SHIPS.proof.radius;
+    for (let c = 0; c < CELLS; c++) if (c * CELL < near || c * CELL > far) unsafe[c] = 1;
   }
   let best = 0;
   let bestEnd = 0;

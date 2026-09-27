@@ -97,6 +97,16 @@ one ink, as it does every boss.
 - **The fight:** it has moved. The hurtbox is now five small heads on the lane and a body half under
   the shore, where it was one 16-unit disc bobbing through the middle. **Not re-tuned, and owed a
   play.** The boss guards that measure a fight's length pass as they stand.
+- **The room: the fight is easier.** Its attacks leave mouths standing low in the lane now, where they
+  left a hull bobbing through its middle, and `tests/crowd.test.ts`'s pilot (0270), flown over the
+  hydra's own floor, finds more room in every phase and on every tier. The narrowest reachable place
+  went from 26.5 units to 37 in the first phase on Legendary, and from 4.5 to 7.5 in the last on Burn.
+  **Not re-tuned, and owed a play** with the fight's length above. The crowd fixture flies a boss
+  whose place has a floor over it since this, and counts the lane past the shore as no room; flown
+  in the Approach, it stood the hydra at the lane's edge.
+- **0270's reported break no longer closes the lane.** Restored exactly — the frost head's volley
+  uncapped and unstaggered — it leaves 0.5 units at the narrowest, where before this it left none.
+  Its probe is held to the pool guard it still reddens, and the lane guard has a probe of its own.
 
 ## Not held by any guard
 
@@ -122,6 +132,7 @@ one ink, as it does every boss.
 **Replaced:** 0254's *THE LASER HEAD* and its probe — the laser leaves a mouth now, held above for all
 five. 0264's *the hydra's hull reaches forward in five places* and its probe — the hydra is not one hull;
 the serpent's half of that guard stands. **Re-anchored**, on only what they break: 0250, 0254, 0304,
-0307, 0308, 0371 (the mouths threaded through the throw).
+0307, 0308, 0371 (the mouths threaded through the throw). **Re-aimed:** 0270's first probe, and a
+second added for the lane guard it left, as above.
 
 No rollback note: no storage key, save schema, cache prefix or origin is touched.
