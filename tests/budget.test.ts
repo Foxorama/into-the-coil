@@ -96,8 +96,12 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  *
  * ⚠️ **AND 632 SINCE 0379, ON THE SAME LINE.** A tube special's two pods fire beside the fitted tubes,
  * thirty-six missiles in flight at the strongest tubes on the widest screen: sixteen more blits.
+ *
+ * ⚠️ **AND 646 SINCE 0403, ON 0286's LINE — ONE BOSS THAT IS MANY.** The jellyfish's five tentacles are
+ * eight lengths each, and the body pool that held the serpent's twenty-six holds forty: fourteen more
+ * blits of a baked bitmap on a desktop target. The particle share was not touched.
  */
-const WORST_CASE = 632;
+const WORST_CASE = 646;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

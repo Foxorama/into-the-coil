@@ -447,6 +447,17 @@ export interface Entity extends Body {
    */
   swell: number;
   /**
+   * How much of its size it swells by on a heartbeat the player hears at full strength — 0400. `0` for
+   * everything but the Black Heart's heart.
+   *
+   * ⚠️ **THE ONE ANIMATION ON A SIZE, AND IT IS NOT A SINE.** `swell` above refuses breathing on a sine
+   * as a substitute for art; this is a heart, and a heart's whole picture is that it swells when it
+   * beats. What it beats to is the music's own heartbeat, which the sim does not know and must not — so
+   * this is a SHARE, set by the row, and the painter multiplies it by the heart's strength this frame
+   * (`paintScene`'s `heart`). Nothing that collides reads it.
+   */
+  throb: number;
+  /**
    * How far its bitmap is turned from the way it was baked, in radians, and where that was last step
    * — `docs/decisions/0306-the-serpent-coils-in.md`. `0` for everything but a creature that flies
    * round a curve.
@@ -522,6 +533,7 @@ export function makeEntity(): Entity {
     orbitTurn: 0,
     orbitGrow: 0,
     swell: 1,
+    throb: 0,
     turn: 0,
     prevTurn: 0,
     seekTurn: 0,
@@ -585,6 +597,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.orbitGrow = 0;
   // A body is drawn at the size it was baked unless a chain says otherwise — 0283.
   e.swell = 1;
+  // And does not beat unless it is a heart — 0400.
+  e.throb = 0;
   // And the way it was baked unless something turns it — 0306.
   e.turn = 0;
   e.prevTurn = 0;

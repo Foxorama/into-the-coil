@@ -25,9 +25,9 @@ export const PROBES = [
     guard: 'a planet has no field of stars in its sky',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'export const SKY_ON_A_PLANET = [\n  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },',
+      find: 'export const SKY_ON_A_PLANET = [\n  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },',
       replace:
-        'export const SKY_ON_A_PLANET = [\n  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },\n' +
+        'export const SKY_ON_A_PLANET = [\n  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },\n' +
         '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
     },
   },

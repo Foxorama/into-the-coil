@@ -352,20 +352,25 @@ describe('0388 — the laser is jagged', () => {
     throw new Error('thirty beams and none stood clear of its own line at the ship');
   }
 
-  it('THE ASK: every laser the pterodactyls fire jags — the quetzal’s and the hydra’s third head’s — and Medusa’s stay straight', () => {
-    const beams = (kind: 'quetzal' | 'hydra' | 'medusa'): { jag?: number }[] =>
+  it('THE ASK: every laser the pterodactyls fire jags — the quetzal’s and the hydra’s third head’s — and since 0403 the jellyfish’s, as one formation', () => {
+    /*
+      ⚠️ **THE JELLYFISH'S HALF WAS *STRAIGHT* UNTIL 0403**, which is when it was asked: *"the lazes fire
+      from the tentacles is a jagged formation like the updated pteradactyl and hydra, there's still 5
+      that fire, but they need to be jagged so that there's a safe gap."* So its lasers jag too, and fly
+      `together` — one zigzag a volley — where the pterodactyls' each take their own.
+    */
+    const beams = (kind: 'quetzal' | 'hydra' | 'medusa'): { jag?: number; together?: boolean }[] =>
       BOSSES[kind].phases.flatMap((p) => {
         const attack = p.attack ?? BOSSES[kind].attack;
         if (attack.kind === 'beam') return [attack];
         if (attack.kind === 'heads') return attack.heads.flatMap((h) => (h.attack.kind === 'beam' ? [h.attack] : []));
         return [];
       });
-    for (const kind of ['quetzal', 'hydra'] as const) {
+    for (const kind of ['quetzal', 'hydra', 'medusa'] as const) {
       expect(beams(kind).length, `${kind} fires no laser, so this checks nothing`).toBeGreaterThan(0);
       for (const b of beams(kind)) expect(b.jag ?? 0, `a ${kind} laser is straight`).toBeGreaterThan(0);
     }
-    expect(beams('medusa').length, 'Medusa fires no laser, so her half checks nothing').toBeGreaterThan(0);
-    for (const b of beams('medusa')) expect(b.jag, 'Medusa’s lasers jag, which was asked of the pterodactyls only').toBeUndefined();
+    for (const b of beams('medusa')) expect(b.together, 'the jellyfish’s five lasers each bend their own way, so the gaps between them close').toBe(true);
   });
 
   it('THE REPORTED ONE, IN LANE UNITS: a jagged beam burns along its zigzag, where a straight one from the same mouth could not reach', () => {

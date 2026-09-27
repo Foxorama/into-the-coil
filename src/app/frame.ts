@@ -77,6 +77,7 @@ import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfS
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
+import { VEINS_OF, arteryAt } from '../content/veins.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
@@ -102,7 +103,7 @@ import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
 import { POD_ACROSS, SPECIALS, SPECIAL_KINDS, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
+import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 
@@ -1260,6 +1261,17 @@ export interface World {
    */
   necksBorn: Float64Array;
   /**
+   * The step a jellyfish's tentacles began to pull out of the heart's arteries, or −1 before — 0403.
+   * They start on the step the fight's camera comes to rest, so they peel out of vessels the player can
+   * see standing still, and they sting and take hits only once `draw` steps have passed.
+   */
+  tendrilsFrom: number;
+  /**
+   * How straight the tentacles are held, from nought (waving) to one (hung at rest, a laser leaving each
+   * tip) — 0403. It eases towards one while a volley is held and back after, over the row's `brace`.
+   */
+  tendrilBrace: number;
+  /**
    * Where the boss's lane has been, one entry a step, so a turn arrives down the body — 0283.
    *
    * ⚠️ **Allocated once, at boot.** It is a ring, `bossTrailAt` is the newest entry, and node `k`
@@ -1559,6 +1571,17 @@ export interface World {
    * arrived at.
    */
   pictureSteps: number | null;
+  /**
+   * How hard the heart the player hears is beating this frame, nought to one — 0401. The shell writes
+   * it once a frame from the music's own clock (`heartAt`); nothing that steps reads it.
+   *
+   * ⚠️ **THE PICTURE READS THE MUSIC, AND THE MUSIC STILL READS NOTHING.** 0160 took the sim out of the
+   * music because a correction towards a clock it no longer shared was a glitch with a rule behind it;
+   * that direction is untouched. This is the other one: the vessels beat to the heart the player hears,
+   * and the only clock that heart is on is the audio one. Only `draw` reads it, so a seeded run is the
+   * same run with or without it — and a fixture that never writes it draws a heart at rest.
+   */
+  heartBeat: number;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
@@ -1895,6 +1918,8 @@ export class GameFrame implements Frame {
     */
     stepEntities(w.bossBody, w.cameraAlong, Number.POSITIVE_INFINITY, false);
     layChain(w);
+    // A jellyfish's tentacles, in the same pool a chain's body is — 0403.
+    layTendrils(w, w.bossPool.size > 0 ? w.bossPool.at(0) : null);
     // After the body is laid, so every flame is where its node is this step — 0305.
     layAura(w);
     // And the acid a wading boss stands in, where the hull is this step — 0384.
@@ -1952,6 +1977,8 @@ export class GameFrame implements Frame {
     stepRift(w);
     // The stone first, so nothing it stopped goes on to land — 0349.
     stoneStops(w);
+    // A body that fell from the boss and drifted back into it feeds it, before anything can shoot it — 0404.
+    feedBoss(w);
     /*
       ⚠️ **The two numbers below exist so a SURVIVED hit can be heard, and there is no third way to
       know about one.** `collideInto` returns what it destroyed and logs where; a hit that was
@@ -2459,7 +2486,19 @@ export class GameFrame implements Frame {
     const time = (w.pictureSteps ?? w.steps) + alpha;
     // The wall only while it is met — 0359; `boundPress` is the step's answer to *is it*. And the
     // Mire's acid over the bodies in it and under everything that flies — 0383: after the enemies' layer.
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies));
+    /*
+      ⚠️ **AND THE HEART, WHERE A FIGHT HAS ONE — 0400**: the seat of a `socket` that beats, interpolated
+      as it is drawn, so the vessels the painter lays into it arrive where it is on this frame.
+    */
+    const move = w.bossRow.move;
+    let heart: Float64Array | null = null;
+    if (move.kind === 'socket' && move.throb !== undefined && w.bossAura.size > 0) {
+      const seat = w.bossAura.at(0);
+      HEART_AT[0] = seat.prevAlong + (seat.along - seat.prevAlong) * alpha;
+      HEART_AT[1] = seat.prevAcross + (seat.across - seat.prevAcross) * alpha;
+      heart = HEART_AT;
+    }
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
     // `layers` and were blitted above; this strokes the lines between them.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
@@ -2519,6 +2558,40 @@ function bossJustDied(w: World): boolean {
  * ⚠️ **A WALL KILL IS NOT A KILL.** It bursts where it was, exactly as a shot-down body does, and it
  * never reaches `w.deaths` — so nothing is scored for it and nothing drops. The player did not kill it.
  */
+/**
+ * A falling body that touches the boss that let it fall is taken back into it — 0404.
+ *
+ * ⚠️ **ASKED FOR**: *"if a falling jellyfish hits the boss, the boss regains 5% health and the jellyfish
+ * disappears -> this includes if they hit a tentacle."* Any body of the fall's kind overlapping the hull
+ * or any body of the animal (`bossBody` — the tentacles) is gone on this step, in a burst where it met
+ * it, and the hull has the fall's `feeds` share of its full health back, never past full.
+ *
+ * ⚠️ **AND A HEAL OVER A PHASE'S LINE IS THAT PHASE AGAIN.** `phaseFor` reads the health, so a jellyfish
+ * fed back past its last fifth shuts its bell and stops the void until it is knocked back down — asked,
+ * and the player's answer: *"the bell closes again."* A dead boss is not fed.
+ */
+function feedBoss(w: World): void {
+  const fall = w.bossRow.fall;
+  if (fall === null || fall.kind !== 'body' || fall.feeds === undefined) return;
+  if (w.bossPool.size === 0 || w.bossBeaten) return;
+  const hull = w.bossPool.at(0);
+  const kind = w.enemyKinds[fall.enemy];
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const e = w.enemies.at(i);
+    if (e.kind !== kind) continue;
+    let touches = overlaps(e, hull, 1);
+    for (let j = 0; !touches && j < w.bossBody.size; j++) touches = overlaps(e, w.bossBody.at(j), 1);
+    if (!touches) continue;
+    hull.health = Math.min(w.bossFullHealth, hull.health + fall.feeds * w.bossFullHealth);
+    // Where it met the animal, read before the slot is handed back.
+    const along = e.along;
+    const across = e.across;
+    w.enemies.releaseAt(i);
+    burst(w, along, across, BURST.belch);
+    flare(w, along, across, 'burst');
+  }
+}
+
 function stoneStops(w: World): void {
   const corridor = w.corridor;
   if (corridor === null) return;
@@ -2684,7 +2757,8 @@ function pinBeams(w: World): void {
       // Rooted in the mouth that fired it, on a boss with many — 0384; `muzzleAt` is still that head's.
       const boss = w.bossPool.at(0);
       const mouth = w.bossRow.necks !== undefined && boss.muzzleAt >= 0 ? w.mouths[boss.muzzleAt * 2]! : 0;
-      b.fromAlong = boss.along + mouth - b.along;
+      // And at the tips of the tentacles, on a boss that has them — 0403.
+      b.fromAlong = boss.along + mouth + beamRootOf(w.bossRow) - b.along;
     } else if (b.lifeFor > b.holdFor) {
       // Still a warning on its last step — `lifeFor` above `holdFor` is what `strikeShip` reads.
       b.lifeFor = 1;
@@ -2749,7 +2823,8 @@ export function layRoom(w: World): void {
   const rest = roomRestFor(w);
   // A new fight's room opens from nothing, or the last one's rest would carry into it.
   w.roomHold = 0;
-  w.room = room === null || !Number.isFinite(rest) ? null : {
+  // A room with no walls — 0400 — is a camera at rest and nothing for the painter.
+  w.room = room === null || room.wall === null || !Number.isFinite(rest) ? null : {
     sprite: room.wall,
     extent: SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
     from: rest - room.mouth,
@@ -5688,6 +5763,22 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
     e.steerAcross = ACROSS_CULL_MAX + row.radius;
     if (row.motion.kind === 'loop') e.turnsLeft = row.motion.turns;
     else if (row.motion.kind === 'circle') e.spin = i % 2 === 0 ? 1 : -1;
+    /*
+      ⚠️ **CROWN UP, SINKING — 0404.** *"The falling jellyfish need to be rotated so that they are
+      correctly dropping down"*, and asked which way: the bell on top and the fringe hanging under it.
+      Baked crown to `−x` as every body is, so a quarter turn puts the crown up the screen.
+    */
+    e.turn = Math.PI / 2;
+    e.prevTurn = e.turn;
+    // One of its glows, by a hash of where it formed — 0404: no stream a level spends moves by a draw.
+    const tints = row.tints;
+    if (tints !== undefined && tints.length > 0) {
+      const hashed = Math.sin(along * 12.9898 + i * 78.233) * 43758.5453;
+      const tint = tints[Math.floor((hashed - Math.floor(hashed)) * tints.length)]!;
+      e.spriteBase = tint[0];
+      e.sprite = tint[0];
+      e.spriteHit = tint[1];
+    }
   }
 }
 
@@ -7693,10 +7784,10 @@ function driveBoss(w: World): void {
     const opening = w.bossRow.phases[phase]!.leap;
     if (opening !== undefined) w.bossLeapIn = fireGapFor(opening.first, w.difficulty);
     /*
-      ⚠️ **Only ever forwards, and the guard is the comparison rather than a rule about health.** A
-      boss cannot heal, so a phase index that went down would be a bug somewhere else entirely — and
-      the burst firing on it would be the picture reporting that bug, which is the right behaviour for
-      an event twin.
+      ⚠️ **EITHER WAY, AND THE GUARD IS THE COMPARISON RATHER THAN A RULE ABOUT HEALTH.** A boss could
+      not heal until 0404, and a jellyfish fed by its own rain can: fed back over a phase's line, the
+      phase before is the phase again, and it turns over with the same burst and cue as any other — the
+      bell shutting on the heart is an event the player must see (0036).
     */
     if (w.bossPhaseAt >= 0) {
       burst(w, boss.along, boss.across, BURST.phase);
@@ -8114,6 +8205,12 @@ const BITE_STEPS = 7;
  * A pupil is not a flight path: the serpent still flies the pattern its row authors, and what reacts
  * is where it is LOOKING.
  */
+/** Whether `sprite` is a body one of the row's phases wears — 0404. Indexed: this runs every step. */
+function wearsAsHull(row: BossRow, sprite: number): boolean {
+  for (let i = 0; i < row.phases.length; i++) if (row.phases[i]!.hull?.rest === sprite) return true;
+  return false;
+}
+
 function wearFace(w: World, boss: Entity): void {
   const phase = phaseFor(w.bossRow, boss.health, w.bossFullHealth);
   /*
@@ -8130,6 +8227,15 @@ function wearFace(w: World, boss: Entity): void {
   if (worn !== undefined) {
     boss.spriteBase = worn.rest;
     boss.spriteHit = worn.hit;
+  } else if (boss.spriteBase !== w.bossRow.sprite && wearsAsHull(w.bossRow, boss.spriteBase)) {
+    /*
+      ⚠️ **AND BACK TO THE ROW'S OWN, WHICH NOTHING NEEDED UNTIL A BOSS COULD HEAL — 0404.** A phase
+      that authors no body wears the row's; the gyre only ever went forward, so the last worn body was
+      always right. A jellyfish fed back over its last fifth shuts its bell, and a body still wearing the
+      open one would be the picture saying the heart is bare while the damage says it is not.
+    */
+    boss.spriteBase = w.bossRow.sprite;
+    boss.spriteHit = w.bossRow.spriteHit;
   }
   /*
     ⚠️ **THE PHASE'S FACES WHERE IT AUTHORS A LOOK — 0305**: the same seven faces with the horns
@@ -8465,6 +8571,8 @@ function layAura(w: World): void {
         seat.sprite = move.seat;
         seat.spriteBase = move.seat;
         seat.spriteHit = move.seat;
+        // A seat that is a heart beats — 0400; the painter says how hard.
+        seat.throb = move.throb ?? 0;
         continue;
       }
       if (burn === null) continue;
@@ -8878,6 +8986,108 @@ function placeAt(e: Entity, along: number, across: number, turn: number, fresh: 
   e.turn = turn;
 }
 
+// @setup: where the heart is on the frame being drawn — 0400; written and handed to the painter, never kept.
+const HEART_AT = new Float64Array(2);
+
+// @setup: one body for the lifetime of the module, as `HEAD_BODY` is — a length of tentacle, 0403.
+const TENDRIL_BODY: Body = {
+  sprite: 0,
+  spriteHit: 0,
+  radius: 1,
+  health: CHAIN_NODE_HEALTH,
+  damage: 0,
+};
+
+/** The most lengths of tentacle a boss lays — `bossBody`'s capacity is sized to it (`src/app/mount.ts`). */
+export const TENDRIL_SLOTS = 40;
+// @setup: where each length is this step, written before any is placed so each can be turned to the next.
+const TENDRIL_AT = new Float64Array(TENDRIL_SLOTS * 2);
+// @setup: one point off an artery, read at once.
+const TENDRIL_ARTERY = new Float64Array(2);
+/** How much of its artery a tentacle lies along before it pulls out, from the heart outward. */
+const TENDRIL_LIE = 0.8;
+
+/**
+ * Lay a jellyfish's tentacles — 0403: `nodes` lengths each, in `bossBody`, down the curve from its root
+ * on the bell to its tip, waving across the lane.
+ *
+ * ⚠️ **THEY LIE IN THE HEART'S ARTERIES UNTIL THE CAMERA HAS COME TO REST, AND THEN PULL OUT.** *"When
+ * the player gets to the screen, the jellyfish tentacles need to 'pull out' from the background where the
+ * arteries of the heart are and start waving around."* Tentacle `k` lies along artery `k` — the same
+ * curve the painter lays the vessel down (`arteryAt`), so it is the vessel until it moves — and over the
+ * row's `draw` it eases off it into its hanging place. **It stings only once it is out** (`damage` is
+ * nought until then): a thing sweeping out of the background across the ship is not a thing to dodge.
+ *
+ * ⚠️ **A WAVE RUNS DOWN EACH, AND A HELD VOLLEY STRAIGHTENS THEM.** The sway grows from the root to the
+ * tip and travels, each tentacle a little out of step with the next; while the boss holds a volley
+ * (`holdFor`) `tendrilBrace` eases to one and the wave with it to nothing, so each tip is on its beam's
+ * root when the beam burns.
+ */
+function layTendrils(w: World, hull: Entity | null): void {
+  const tendrils = w.bossRow.tendrils;
+  if (tendrils === undefined) return;
+  if (hull === null) {
+    w.bossBody.clear();
+    return;
+  }
+  const count = Math.min(TENDRIL_SLOTS, tendrils.roots.length * tendrils.nodes);
+  let fresh = false;
+  while (w.bossBody.size < count) {
+    const node = w.bossBody.spawn();
+    if (node === null) break;
+    reset(node, hull.along, hull.across, TENDRIL_BODY);
+    node.spriteBase = tendrils.sprite;
+    node.spriteHit = tendrils.spriteHit;
+    node.sprite = tendrils.sprite;
+    fresh = true;
+  }
+  if (w.bossBody.size < count) return;
+  // They begin to pull out on the step the fight's camera is at rest, or at once in a fight with no room.
+  const room = w.bossRow.room;
+  if (w.tendrilsFrom < 0 && (room === null || w.roomHold >= room.settle)) w.tendrilsFrom = w.steps;
+  const drawn = w.tendrilsFrom < 0 ? 0 : Math.min(1, (w.steps - w.tendrilsFrom) / tendrils.draw);
+  const out = drawn * drawn * (3 - 2 * drawn);
+  const braced = hull.holdFor > 0 ? 1 : 0;
+  const ease = 1 / tendrils.brace;
+  w.tendrilBrace += Math.max(-ease, Math.min(ease, braced - w.tendrilBrace));
+  const slack = 1 - w.tendrilBrace;
+  const veins = VEINS_OF[w.level.theme];
+  const span = SPRITE_EXTENT.skyNebula;
+  for (let k = 0; k < tendrils.roots.length; k++) {
+    const root = tendrils.roots[k]!;
+    const tip = tendrils.tips[k]!;
+    const artery = veins === null ? undefined : veins.arteries[k];
+    for (let j = 0; j < tendrils.nodes; j++) {
+      const t = (j + 0.5) / tendrils.nodes;
+      let along = hull.along + root[0] + (tendrils.reach - root[0]) * t;
+      let across = hull.across + root[1] + (tip - root[1]) * t;
+      across += slack * tendrils.sway * t ** 1.3 * Math.sin((w.steps / tendrils.beat) * TAU - t * 2.4 + k * 1.3);
+      if (artery !== undefined && veins !== null && out < 1) {
+        arteryAt(artery, veins, 1 - t * TENDRIL_LIE, hull.along, hull.across, w.cameraAlong, span, ACROSS_SPAN, TENDRIL_ARTERY);
+        along = TENDRIL_ARTERY[0]! + (along - TENDRIL_ARTERY[0]!) * out;
+        across = TENDRIL_ARTERY[1]! + (across - TENDRIL_ARTERY[1]!) * out;
+      }
+      const at = (k * tendrils.nodes + j) * 2;
+      TENDRIL_AT[at] = along;
+      TENDRIL_AT[at + 1] = across;
+    }
+  }
+  for (let k = 0; k < tendrils.roots.length; k++) {
+    for (let j = 0; j < tendrils.nodes; j++) {
+      const at = (k * tendrils.nodes + j) * 2;
+      // Turned to point at the next length out, or on from the last one for the tip: the bitmap's tip end is `−x`.
+      const from = j + 1 < tendrils.nodes ? at : at - 2;
+      const heading = Math.atan2(TENDRIL_AT[from + 3]! - TENDRIL_AT[from + 1]!, TENDRIL_AT[from + 2]! - TENDRIL_AT[from]!);
+      const node = w.bossBody.at(k * tendrils.nodes + j);
+      const t = (j + 0.5) / tendrils.nodes;
+      node.swell = 1 - (1 - tendrils.taper) * t;
+      node.radius = tendrils.radius * node.swell;
+      node.damage = drawn >= 1 ? w.bossRow.damage : 0;
+      placeAt(node, TENDRIL_AT[at]!, TENDRIL_AT[at + 1]!, foldTurn(heading - Math.PI), fresh);
+    }
+  }
+}
+
 /**
  * How long before a strike lands the crown is already flaring, in steps — 0310.
  *
@@ -8915,7 +9125,8 @@ function drainChain(w: World): number {
   const chain = w.bossRow.chain;
   // A chain's flank or a hydra's heads — 0384: the pool is the animal's body either way, and the row
   // says what share of a hit on it reaches the hull.
-  const hurt = chain !== null ? chain.hurt : w.bossRow.necks?.hurt;
+  // And a jellyfish's tentacles — 0403.
+  const hurt = chain !== null ? chain.hurt : (w.bossRow.necks?.hurt ?? w.bossRow.tendrils?.hurt);
   if (hurt === undefined) return 0;
   let taken = 0;
   for (let i = 0; i < w.bossBody.size; i++) {
@@ -8950,6 +9161,9 @@ function spawnBoss(w: World): void {
   w.bossUncoilAt = 0;
   // No neck grown before the fight began — 0384: each rises with its own phase.
   w.necksBorn.fill(-1);
+  // And no tentacle out of its artery, hung slack — 0403.
+  w.tendrilsFrom = -1;
+  w.tendrilBrace = 0;
   // Zero, so the first wall the health earns is thrown on the step it earns it — 0333. The gap is a
   // floor between two walls and never a wait in front of the first.
   w.bossWallIn = 0;

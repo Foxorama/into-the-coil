@@ -45,7 +45,8 @@ export const PROBES = [
     suite: 'tests/heart.test.ts',
     // The travel taken off the clock: every bead swells where it stands.
     broke: 'the pulse not travelling, so each bead throbs in one place',
-    guard: 'the camera stops and the heart does not',
+    // Renamed by 0401, whose beat is handed to the painter: the light rides the clock, the beat is the music's.
+    guard: 'the camera stops and the light does not',
     edit: {
       path: 'src/render/scene.ts',
       find: '      const travelled = time / period + k / beads + streakHash(i * 5.7 + 0.5);',
@@ -57,11 +58,12 @@ export const PROBES = [
     suite: 'tests/heart.test.ts',
     // No beat: light running down a vein at one size, which is a conveyor and not a pulse.
     broke: 'the beads left at one size, so the veins carry light and do not pulse',
-    guard: 'the camera stops and the heart does not',
+    guard: 'the camera stops and the light does not',
     edit: {
       path: 'src/render/scene.ts',
-      find: '      const swell = 1 - PULSE_SWELL + PULSE_SWELL * Math.min(1, beatAt(phase - Math.floor(phase)));',
-      replace: '      const swell = 1;\n      void phase;',
+      // Re-anchored by 0401: a bead swells with the heart the painter is handed.
+      find: '      const swell = 1 - PULSE_SWELL + PULSE_SWELL * Math.min(1, beat);',
+      replace: '      const swell = 1;\n      void beat;',
     },
   },
   {

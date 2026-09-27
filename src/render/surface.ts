@@ -41,8 +41,14 @@ export interface Surface {
    * count this file's opening note exists to protect; what it costs is a transform, and only for the
    * few entities whose turn is not zero. A world angle is a screen angle in both orientations,
    * because each maps the lane onto the screen by a proper rotation.
+   *
+   * ⚠️ **AND `alpha` IS AN ARGUMENT ON `turn`'s TERMS — `docs/decisions/0401-the-vessels-beat-with-the-music.md`.**
+   * *"The background arteries for the level need to pulse in time with the heartbeat to the music."* A
+   * vessel lit by a beat is lit by how strong the beat is THIS frame, which is a continuous quantity a
+   * bake cannot hold except as a stack of bitmaps, one per step of brightness — a full sky tile each. A
+   * faded blit is still one draw of one bitmap, so it hides nothing from the count. Absent is opaque.
    */
-  blit(sprite: number, x: number, y: number, scale: number, turn?: number): void;
+  blit(sprite: number, x: number, y: number, scale: number, turn?: number, alpha?: number): void;
   /**
    * Stroke a polyline through the first `count` points of `points` — `x0, y0, x1, y1, …` in CSS
    * pixels — `width` pixels wide at `alpha`, in the bolt ink the backend was given. A `count` of

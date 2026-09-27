@@ -55,21 +55,12 @@ export const PROBES = [
       replace: 'const BEAT_SWELL = 0;',
     },
   },
-  {
-    decision: '0220',
-    suite: 'tests/places.test.ts',
-    // And the same silence from the content side: the renderer is fine and the level asks for nothing.
-    broke: 'the level’s own beat set to none, so the renderer works and the heart is still',
-    guard: 'The Black Heart’s landmark changes size',
-    edit: {
-      path: 'src/content/levels.ts',
-      // ⚠️ Re-anchored by 0331, which moved this landmark up the level with the rest of the script
-      // (2360 → 2070). The anchor drops the distance for that reason: `beat: 96` is what this break is
-      // about, and where in the level the heart hangs is not.
-      find: 'lane: 46, depth: 0.07, beat: 96, variant: 0 }],',
-      replace: 'lane: 46, depth: 0.07, beat: 0, variant: 0 }],',
-    },
-  },
+  /*
+    ⚠️ **RETIRED BY 0400: *the level's own beat set to none*.** It broke the content side — The Black
+    Heart's landmark asking for no beat — and there is no such landmark now: the heart is the last fight's
+    seat (docs/decisions/0400-the-heart-is-the-room.md). The guard holds the renderer against an entry
+    it states itself, and the break above is still the renderer's.
+  */
   {
     decision: '0220',
     suite: 'tests/places.test.ts',

@@ -120,6 +120,15 @@ export function openBy(phase: BossPhase): number {
 }
 
 /**
+ * How far down the lane from the muzzle a boss's beams leave — 0403: the tips of its tentacles, on a
+ * boss that has them, and the muzzle itself on every other. One description, because the throw sets a
+ * beam's root and `src/app/frame.ts` re-pins it there every step, and two copies would part.
+ */
+export function beamRootOf(row: BossRow): number {
+  return row.tendrils === undefined ? 0 : row.tendrils.reach;
+}
+
+/**
  * How far apart a curtain's shots actually stand, in world units, for a stance authoring `gap`.
  *
  * ⚠️ **`gap` is a CEILING on the spacing rather than the spacing**, because the curtain has to span
@@ -1314,13 +1323,17 @@ function throwAttack(
       const held = attack.warning + attack.hold;
       boss.holdFor = held;
       boss.fireIn += held;
+      // One seed for the volley when it flies `together` — 0403, drawn once, so its beams bend as one.
+      const volleySeed = attack.jag !== undefined && attack.together === true ? beamRng.int(0, 0x7fffffff) : 0;
+      // From the tips, on a boss with tentacles — 0403: the laser and the thing it comes out of are one place.
+      const root = muzzleAlong + beamRootOf(row);
       for (let i = 0; i < attack.from.length; i++) {
         const bolt = bolts.spawn();
         if (bolt === null) break;
         const end = cameraAlong - BEAM_TAIL;
         reset(bolt, end, muzzleAcross + attack.from[i]!, bullet, BEAM_BOLT_KIND);
         bolt.velAlong = scrollPerStep;
-        bolt.fromAlong = muzzleAlong - end;
+        bolt.fromAlong = root - end;
         bolt.fromAcross = 0;
         bolt.radius = attack.halfWidth;
         bolt.damage = bullet.damage;
@@ -1334,7 +1347,7 @@ function throwAttack(
         */
         if (attack.jag !== undefined) {
           bolt.jag = attack.jag;
-          bolt.spin = beamRng.int(0, 0x7fffffff);
+          bolt.spin = attack.together === true ? volleySeed : beamRng.int(0, 0x7fffffff);
         }
       }
       break;

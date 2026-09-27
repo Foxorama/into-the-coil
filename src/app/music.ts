@@ -864,6 +864,12 @@ export interface MusicOut {
   /** Which level is currently asked for, so a guard can read it. */
   level(): MusicLevel;
   /**
+   * Where the loops are, in seconds from their origin (`anchorAudio`) on the audio clock — 0401. What a
+   * voice's `i`-th step is measured from, so the picture can beat with a heart the music plays. It is
+   * read, never written: the music free-runs (0160) and nothing here corrects it.
+   */
+  clock(): number;
+  /**
    * A layer's own gain parameter.
    *
    * ── THE GAME DOES NOT CALL THIS AND `rig/` DOES, WHICH IS THE SAME ARGUMENT `panGains` MAKES ────
@@ -1855,6 +1861,9 @@ export function makeMusicOut(
     },
     level(): MusicLevel {
       return current;
+    },
+    clock(): number {
+      return ctx.currentTime - anchorAudio;
     },
     gainOf(layer: MusicLayer): AudioParam {
       return gains[layer].gain;

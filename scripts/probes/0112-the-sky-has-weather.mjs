@@ -60,11 +60,11 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       find:
-        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },\n' +
+        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },\n' +
         '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
       replace:
         '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },\n' +
-        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },',
+        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },',
     },
   },
   {
@@ -86,7 +86,7 @@ export const PROBES = [
         — so the pair names `SKY` and nothing else, and the break is unchanged.
       */
       find:
-        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },\n' +
+        '  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },\n' +
         '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
       replace: '  { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },',
     },
