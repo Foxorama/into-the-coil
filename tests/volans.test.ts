@@ -19,7 +19,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
@@ -1033,6 +1033,9 @@ describe('0380 — the fish has four stages', () => {
     let outside = false;
     let thrown = false;
     let longestStep = 0;
+    // 0395: while it banks through the leap, every flame of its fire is turned as the hull is.
+    let banked = 0;
+    let apart = 0;
     for (let i = 0; i < leap.every + 900; i++) {
       if (world.bossEntering < 0) world.bossPool.at(0).health = world.bossFullHealth * fraction;
       world.ship.health = world.shipRow.health;
@@ -1048,6 +1051,13 @@ describe('0380 — the fish has four stages', () => {
       // While it is still flying its leap — the hand-over step lays it on station, which 0306 allows.
       if (left >= 0 && world.bossEntering >= 0) longestStep = Math.max(longestStep, Math.hypot(boss.along - world.cameraAlong - wasAlong, boss.across - wasAcross));
       if (left < 0 && world.bossEntering >= 0) left = i;
+      if (left >= 0 && world.bossEntering >= 0 && Math.abs(boss.turn) > 0.2)
+        for (let k = 0; k < world.bossAura.size; k++) {
+          const flame = world.bossAura.at(k);
+          if (!SPRITE_KINDS[flame.sprite]!.startsWith('volansBlaze')) continue;
+          banked++;
+          if (flame.turn !== boss.turn) apart++;
+        }
       if (left >= 0 && boss.across - ROW.radius > ACROSS_SPAN) outside = true;
       if (left >= 0 && back < 0 && world.bossEntering < 0) back = i;
       if (back >= 0 && world.enemyShots.size > shots) {
@@ -1063,6 +1073,13 @@ describe('0380 — the fish has four stages', () => {
     expect((back - left) / 60, `the leap took ${((back - left) / 60).toFixed(1)}s`).toBeLessThan(10);
     expect(cues.filter((c) => c === 'bossBreach').length - crossingsBefore, 'the edge did not break once for every crossing of the leap').toBeGreaterThanOrEqual(ROW.entrance!.kind === 'breach' ? ROW.entrance!.leaps + 1 : 1);
     expect(thrown, 'the fish came back from its leap and never threw again').toBe(true);
+    /*
+      ⚠️ **AND ITS FIRE BANKS WITH IT — `docs/decisions/0395-the-fish-wears-its-fire.md`.** The ribbons are
+      wound round the animal's outline, so a flame laid at heading zero while the hull turns through
+      its arc is fire beside the fish rather than on it — which is what the leap looked like until then.
+    */
+    expect(banked, 'the fish never banked through its leap while burning, so nothing here was measured').toBeGreaterThan(0);
+    expect(apart, `${apart} of ${banked} flames were laid at another heading than the hull they burn on`).toBe(0);
     /*
       ⚠️ **AND IT FLIES THERE — NO STEP OF THE LEAP MOVES THE HULL FURTHER THAN A FLIGHT CAN.** The
       first draft's probe for the dive stayed green: with the dive dropped, the entrance's own
@@ -1401,23 +1418,47 @@ describe('0318 — the fish is drawn', () => {
     return worst;
   }
 
-  it('THE ASKED-FOR ONE: the wings TRAIL — filaments that start on the fin and stream out past the hull, both sides', () => {
+  it('THE ASKED-FOR ONE: the animal TRAILS — its fire passes behind the flesh and streams out past the hull, both sides, in every frame', () => {
     /*
-      ⚠️ **THE FIRST DRAFT PUT THEM IN THE SILHOUETTE AND THE PHOTOGRAPH REFUSED IT.** A trail drawn as
-      hull gets the outline traced round it, so the gap between the streamer and the fin becomes a black
-      wedge — at 4× the wing read as a hook with a bite out of it. *"The shape is good"* settles which
-      half moves: the hull the ask approved is the hull that ships, and the trails are paint on it.
+      ⚠️ **THE TRAILS WERE PAINT ON THE WING, AND SINCE 0395 THEY ARE THE FIRE.** 0318's filaments baked
+      olive over the void and the play called them janky
+      ([0395](../docs/decisions/0395-the-fish-wears-its-fire.md)); the ask they answered — *"longer
+      finny trails coming off them"* — is answered by the ribbons, which leave the animal and stream
+      aft of it. So this reads the fire, drawn in the same screen pixels as the hull it burns behind,
+      at the girth the ablaze stage blits it at.
 
-      ⚠️ **SO WHAT IS ASSERTED IS THE PAIR, AND NEITHER HALF ALONE IS THE ASK.** A mark that starts
-      inside the hull and ends outside it is a trail; one wholly inside is a stripe, and one wholly
-      outside is a cloud floating beside the animal. Both wrong drawings pass half of this.
+      ⚠️ **SO WHAT IS ASSERTED IS THE PAIR, AND NEITHER HALF ALONE IS THE ASK.** A mark that runs from
+      under the hull to outside it is a trail; one wholly outside is a cloud floating beside the
+      animal, and a fire made only of those is fire NEAR the fish rather than on it.
     */
-    const { size, hull, paint } = fish();
-    const streamers = paint.filter((mark) => {
-      if (mark.composite !== 'source-over' || mark.alpha >= 0.9) return false;
-      const points = mark.subpaths.flat();
-      return points.some((p) => inside(hull, p)) && points.some((p) => !inside(hull, p));
-    });
+    const { size, hull } = fish();
+    const scale = viewOf(1280, 720).scale;
+    const ablaze = BOSSES.volans.phases[1]!.look!.aura!;
+    const tile = SPRITE_EXTENT.volansEmber0 * (ablaze.head / SERPENT_BODY_DIAMETER) * scale;
+    for (const sprite of ablaze.frames) {
+      const { pen, trace } = tracingPen();
+      drawKind(pen, SPRITE_KINDS[sprite]!, PALETTES[DEFAULT_PALETTE], tile, 'nebula');
+      // Into the hull's own pixels: both tiles are centred on the hull's centre.
+      const shift = size / 2 - tile / 2;
+      const paint: Pass[] = trace.passes.map((pass) => ({ ...pass, subpaths: pass.subpaths.map((sub) => sub.map(([x, y]) => [x + shift, y + shift] as const)) }));
+      /*
+        ⚠️ **AND NOT THE HAZE.** The glow the fire sits in is a stack of ovals round the hull's centre,
+        each crossing the outline and hanging well off it — every one a *trail* by the pair above. The
+        first draft of this guard stayed green with every ribbon moved off the animal, on the haze
+        alone. A trail does not enclose the thing it trails from.
+      */
+      const streamers = paint.filter((mark) => {
+        if (mark.composite !== 'source-over' || mark.alpha >= 0.9) return false;
+        if (inside(mark, [size / 2, size / 2])) return false;
+        const points = mark.subpaths.flat();
+        return points.some((p) => inside(hull, p)) && points.some((p) => !inside(hull, p));
+      });
+      checkTrails(size, hull, streamers, SPRITE_KINDS[sprite]!);
+    }
+  });
+
+  /** 0318's claim about what trails, asked of one frame's marks — its numbers unmoved by 0395. */
+  function checkTrails(size: number, hull: Pass, streamers: readonly Pass[], frame: string): void {
     /*
       ⚠️ **EIGHT PIXELS, IN UNITS OF THE SCREEN EVERY REPORT IN `reports/` WAS GIVEN ON** — 0027's *at
       least one assertion written in what the player experiences*. It is
@@ -1428,19 +1469,19 @@ describe('0318 — the fish is drawn', () => {
     const aft = streamers.filter((mark) => overhang(hull, mark) >= 8);
     expect(
       aft.length,
-      `the fish paints ${streamers.length} marks that cross its own outline and ${aft.length} of them hang 8px or ` +
+      `${frame} paints ${streamers.length} marks that cross the fish's outline and ${aft.length} of them hang 8px or ` +
         'more off it — a mark that stays inside is a stripe and one that never touches the hull is a cloud beside ' +
-        'the animal, and neither is a wing that trails',
+        'the animal, and neither is a fish that trails',
     ).toBeGreaterThanOrEqual(6);
     // Both sides, because a fish with one wing trailing is a fish that has lost one.
     for (const side of [-1, 1]) {
       const mine = aft.filter((mark) => mark.subpaths.flat().some(([, y]) => (y - size / 2) * side > size * 0.1));
-      expect(mine.length, `${mine.length} of the ${aft.length} streamers are on the ${side < 0 ? 'near' : 'far'} side`).toBeGreaterThanOrEqual(3);
+      expect(mine.length, `${frame}: ${mine.length} of the ${aft.length} trails are on the ${side < 0 ? 'near' : 'far'} side`).toBeGreaterThanOrEqual(3);
     }
     // And the longest of them streams a real distance, rather than six marks each just clearing the bar.
     const furthest = Math.max(...aft.map((mark) => overhang(hull, mark)));
-    expect(furthest, `the longest trail hangs ${furthest.toFixed(1)}px off the hull`).toBeGreaterThanOrEqual(24);
-  });
+    expect(furthest, `${frame}: the longest trail hangs ${furthest.toFixed(1)}px off the hull`).toBeGreaterThanOrEqual(24);
+  }
 
   it('and the astral light is BEHIND the animal, brightest ring first, so the falloff stacks outward', () => {
     /*

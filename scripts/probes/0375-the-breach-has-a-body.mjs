@@ -12,23 +12,25 @@ export const PROBES = [
       cue ends brighter than it began. The weight moves up the spectrum with it, which is the thing
       the report was about.
     */
-    broke: 'the splash opening upward again, so the breach ends as a hiss',
+    broke: 'the rush opening upward, so the breach ends as a hiss',
     guard: 'THE ASKED-FOR ONE: the breach’s weight is below the middle of the spectrum',
     edit: {
       path: 'src/content/cues.ts',
-      find: 'lowFrom: 3800, lowTo: 380, highFrom: 160, highTo: 90, q: 0.9, pan: -0.5, panTo: 0.5 },',
-      replace: 'lowFrom: 2600, lowTo: 9500, highFrom: 160, highTo: 90, q: 0.9, pan: -0.5, panTo: 0.5 },',
+      // ⚠️ Re-anchored by 0397, whose rush is the one bright layer left that could carry the break.
+      find: 'lowFrom: 1300, lowTo: 300, highFrom: 140, highTo: 90, q: 0.55, pan: -0.6, panTo: 0.6 },',
+      replace: 'lowFrom: 2600, lowTo: 9500, highFrom: 140, highTo: 90, q: 0.55, pan: -0.6, panTo: 0.6 },',
     },
   },
   {
     decision: '0375',
     suite: 'tests/volans.test.ts',
-    // The whoomph and the wake both pulled, so the cue is spray with nothing under it.
-    broke: 'the whoomph and the wake pulled out, so the breach has no body under its spray',
+    // The whoomph pulled, so the cue is air with nothing under it.
+    broke: 'the whoomph pulled out, so the breach has no body under its rush',
     guard: 'THE ASKED-FOR ONE: the breach’s weight is below the middle of the spectrum',
     edit: {
       path: 'src/content/cues.ts',
-      find: "      { wave: 'sine', from: inKey(7), to: inKey(-4), seconds: 0.34, gain: 0.8, attack: 0.004, curve: 2.6, drive: 0.24 },\n",
+      // ⚠️ Re-anchored by 0397, which eased the whoomph's front and took most of its drive.
+      find: "      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.42, gain: 0.85, attack: 0.014, curve: 2.3, drive: 0.1 },\n",
       replace: '',
     },
   },

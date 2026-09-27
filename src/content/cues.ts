@@ -1624,6 +1624,15 @@ export const CUES: Record<CueKind, CueRow> = {
    * over a beat, but its twin is a thing APPEARING and a thing that appears recurs: the four crossings
    * of one breach are 0.82 s apart, which is inside a duck's own recovery. 0308's second axis, applied
    * to the first cue written after it.
+   *
+   * ⚠️ **AND IT WAS STILL A TEAR — `docs/decisions/0397-the-leap-is-a-rush.md`.** Played across the
+   * last stage's leap, four at a time: *"sounds like something tearing."* 0375 moved the weight down
+   * and kept the two layers that were doing it — a resonant peak swept at `q` 2 under drive, and a
+   * sample-and-hold crackle — and `weigh-cue` still read the heaviest bands as `mid` 0.85, `himid`
+   * 0.93 and `hi` 1.00. A narrow resonance dragged through noise is what ripping cloth IS. What is
+   * left is air and mass: a whoomph, a rush that swells slowly and closes as it passes across the
+   * field, and a low roll of flame under it. No layer is resonant, no noise is driven, and nothing is
+   * sampled-and-held.
    */
   bossBreach: {
     twin: 'breach-appears',
@@ -1635,40 +1644,30 @@ export const CUES: Record<CueKind, CueRow> = {
     // 0313's, unmoved: the body is in the layers' balance and not in the row's share of the mix, and
     // `tests/sound.test.ts` holds the four loudest cues at once under the limiter's threshold.
     gain: 0.46,
-    // Enough to hold the whoomph and the splash together as one event and put some throat on the
-    // surge; past this the splash flattens into a wash.
-    glue: 0.26,
+    // Less than 0375's 0.26, because squashing a noise bed is grit and grit is the half of a tear the
+    // resonance did not supply — 0397.
+    glue: 0.14,
     layers: [
       /*
-        THE WHOOMPH — the fifth of the key falling below the root, over a third of a second: something
-        big displacing what it came through. Longer than 0313's fifth of a second, because the animal
-        is forty-two units long and a thump that is over before the hull has cleared the edge is a
-        door, not a fish.
+        THE WHOOMPH — the fifth of the key falling past the root to the fifth below it, over four
+        tenths of a second with a soft front: something big displacing what it came through. 0375's
+        with its drive lowered and its attack eased — a four-millisecond front on a sine is a click,
+        and a click four times in three seconds is a rhythm of its own.
       */
-      { wave: 'sine', from: inKey(7), to: inKey(-4), seconds: 0.34, gain: 0.8, attack: 0.004, curve: 2.6, drive: 0.24 },
+      { wave: 'sine', from: inKey(7), to: inKey(-5), seconds: 0.42, gain: 0.85, attack: 0.014, curve: 2.3, drive: 0.1 },
       /*
-        THE SURGE — white noise whose lowpass opens from 240 Hz to 2.2 kHz over a quarter of a second,
-        with a slow attack: gas shoved ahead of the body. It rises, and it is the only layer that
-        does, because a surge is the one part of this that is a thing arriving.
+        THE RUSH — white noise swelling over a tenth of a second and fading over the rest, its lowpass
+        CLOSING from 1.3 kHz to 300 as it crosses the field left to right: air going past a body. The
+        slow front is what makes it a whoosh rather than a hit, and the falling filter is what makes it
+        pass rather than arrive. `q` under 1, so it is a band of air and never a pitch.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.26, gain: 0.5, attack: 0.05, curve: 1.4, lowFrom: 240, lowTo: 2200, highFrom: 110, q: 0.8 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.62, attack: 0.1, curve: 2, lowFrom: 1300, lowTo: 300, highFrom: 140, highTo: 90, q: 0.55, pan: -0.6, panTo: 0.6 },
       /*
-        THE SPLASH — white noise whose lowpass CLOSES from 4.6 kHz to 520 over half a second, panned
-        across the field: the spray thrown up and coming down. This is the layer that used to open to
-        9.5 kHz, turned the other way round; a spray that ends brighter than it started is a hiss.
+        THE ROLL — the flame under it: noise held below 520 Hz and closing to 150, a little late and
+        long, the body's own heat going by. Low enough that it is felt as weight rather than heard as
+        texture, which is where a fire's sound lives on a speaker the size of a laptop's.
       */
-      { wave: 'noise', from: 0, to: 0, seconds: 0.5, gain: 0.52, attack: 0.006, curve: 2.8, lowFrom: 3800, lowTo: 380, highFrom: 160, highTo: 90, q: 0.9, pan: -0.5, panTo: 0.5 },
-      /*
-        THE EMBERS — sample-and-hold at 5.5 kHz falling to 2.2, low, late and short: sparks over the
-        splash. Sampled fast enough to be a crackle and never a note.
-      */
-      { wave: 'noise', from: 5500, to: 2200, at: 0.08, seconds: 0.22, gain: 0.12, attack: 0.006, curve: 3.4, lowFrom: 5000, lowTo: 1800, highFrom: 900, q: 1.1, pan: 0.4, panTo: -0.2 },
-      /*
-        THE WAKE — 0313's, kept: a resonant peak travelling from 1.4 kHz down to 240 over a quarter
-        of a second, the body going past. Without it the whoomph and the splash are two events with
-        nothing in the middle.
-      */
-      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.28, gain: 0.5, attack: 0.004, curve: 3.2, lowFrom: 1400, lowTo: 200, highFrom: 80, q: 2, drive: 0.36 },
+      { wave: 'noise', from: 0, to: 0, at: 0.03, seconds: 0.5, gain: 0.5, attack: 0.04, curve: 2.4, lowFrom: 520, lowTo: 150, highFrom: 50, q: 0.7 },
     ],
   },
   /**

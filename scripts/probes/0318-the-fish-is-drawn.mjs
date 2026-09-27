@@ -4,33 +4,11 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0318',
-    suite: 'tests/volans.test.ts',
-    /*
-      ⚠️ THE TRAILS PULLED BACK INSIDE THE FIN, WHICH IS THE DRAWING THE ASK WAS MADE AGAINST. Five
-      marks a side, same inks, same alphas, same count — and every one of them a STRIPE on the wing
-      rather than something coming off it. *"Extend the wings to have longer finny trails coming off
-      them"* is a claim about what leaves the outline, and nothing else in the file can see it: the
-      containment guards are all happy, because a mark that stays in is the one thing they ask for.
-    */
-    broke: 'the streamers pulled back inside the fin, so the wings are striped rather than trailing',
-    guard: 'THE ASKED-FOR ONE: the wings TRAIL',
-    edit: {
-      path: 'src/render/bake.ts',
-      // ⚠️ Re-anchored by 0374: the fifth streamer, off the tail lobe, went to the tail's own tile.
-      find:
-        '      [0.03, 0.96, 0.5, 1.02, 1.08, 0.99, 0.48, 0.94, 0.05, 0.9],\n' +
-        '      [0.08, 0.845, 0.45, 0.88, 0.95, 0.85, 0.44, 0.81, 0.1, 0.79],\n' +
-        '      [0.13, 0.73, 0.4, 0.75, 0.8, 0.71, 0.38, 0.67, 0.15, 0.66],\n' +
-        '      [0.47, 0.41, 0.64, 0.5, 0.84, 0.57, 0.62, 0.45, 0.49, 0.365],\n',
-      replace:
-        '      [-0.1, 0.86, -0.04, 0.88, 0.02, 0.86, -0.04, 0.83, -0.1, 0.82],\n' +
-        '      [-0.16, 0.72, -0.1, 0.74, -0.04, 0.72, -0.1, 0.69, -0.16, 0.68],\n' +
-        '      [-0.22, 0.6, -0.16, 0.62, -0.1, 0.6, -0.16, 0.57, -0.22, 0.56],\n' +
-        '      [-0.28, 0.48, -0.22, 0.5, -0.16, 0.48, -0.22, 0.45, -0.28, 0.44],\n',
-    },
-  },
+  /*
+    ⚠️ THE TRAILS' PROBE MOVED TO 0395 WITH THE TRAILS. The wings' filaments were taken out of the body
+    by docs/decisions/0395-the-fish-wears-its-fire.md and the fire's ribbons answer the same ask; the
+    guard reads the fire now, so its break is the fire's — scripts/probes/0395-the-fish-wears-its-fire.mjs.
+  */
   {
     decision: '0318',
     suite: 'tests/volans.test.ts',

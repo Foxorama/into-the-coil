@@ -8549,6 +8549,17 @@ function layAura(w: World): void {
     flame.prevAlong = on.prevAlong;
     flame.prevAcross = on.prevAcross;
     flame.swell = on === head ? aura.head / SERPENT_BODY_DIAMETER : on.swell;
+    /*
+      ⚠️ **A HULL WITH NO CHAIN WEARS ITS FIRE TURNED AS IT IS — `docs/decisions/0395-the-fish-wears-its-fire.md`.**
+      The fish's flame was laid unturned, which was invisible on station and wrong the moment it
+      leapt: the animal banked through its arc and the fire went on streaming at heading zero, beside
+      it rather than off it. Its ribbons are wound round its own outline now, so they must turn with
+      the outline. A chain's flames stay as they were — each node's is a crown, and its round.
+    */
+    if (w.bossBody.size === 0) {
+      flame.turn = head.turn;
+      flame.prevTurn = head.prevTurn;
+    }
     // Node `k` counted from the head, so the ripple runs from the skull toward the tail.
     const k = flames - 1 - i;
     /*
