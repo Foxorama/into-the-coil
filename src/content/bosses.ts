@@ -30,7 +30,7 @@ import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
 import type { ThemeKind } from './themes.ts';
-import { SPRITE } from './sprites.ts';
+import { SPRITE, VOLANS_FIRE_HEAD } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 
 /**
@@ -1900,7 +1900,10 @@ const VOLANS_FACE: Face = {
   shutHit: SPRITE.boss9ShutHit,
 };
 
-/** Six frames of the fish's own fire — 0320. Its inks are the nebula's, not the serpent's violet. */
+/**
+ * Eight frames of the fish's own fire — 0320, wound round it as ribbons since
+ * `docs/decisions/0395-the-fish-wears-its-fire.md`. Its inks are the nebula's, not the serpent's violet.
+ */
 const EMBER: readonly number[] = [
   SPRITE.volansEmber0,
   SPRITE.volansEmber1,
@@ -1908,6 +1911,8 @@ const EMBER: readonly number[] = [
   SPRITE.volansEmber3,
   SPRITE.volansEmber4,
   SPRITE.volansEmber5,
+  SPRITE.volansEmber6,
+  SPRITE.volansEmber7,
 ];
 
 /**
@@ -1931,7 +1936,7 @@ const EMBER: readonly number[] = [
 const VOLANS_TAIL: TailArt = { sprite: SPRITE.volansTail, spriteHit: SPRITE.volansTailHit };
 const VOLANS_TAIL_BARBED: TailArt = { sprite: SPRITE.volansTailBarbed, spriteHit: SPRITE.volansTailBarbedHit };
 
-/** The same six frames white-hot — 0380: the ember's painter in its core inks, for the last stage. */
+/** The same eight frames white-hot — 0380: the ember's painter in its core inks, for the last stage. */
 const BLAZE: readonly number[] = [
   SPRITE.volansBlaze0,
   SPRITE.volansBlaze1,
@@ -1939,6 +1944,8 @@ const BLAZE: readonly number[] = [
   SPRITE.volansBlaze3,
   SPRITE.volansBlaze4,
   SPRITE.volansBlaze5,
+  SPRITE.volansBlaze6,
+  SPRITE.volansBlaze7,
 ];
 
 const KINDLED: Look = {
@@ -1946,7 +1953,9 @@ const KINDLED: Look = {
   // A frame every four steps: slower than the serpent's three, because one flame flickering alone
   // reads as a lamp with a loose bulb where twenty-seven read as weather. The crown's girth grew
   // with the hull in 0381 (42 → 50 across), in the same proportion.
-  aura: { frames: EMBER, hold: 4, stride: 1, head: 19.6 },
+  // ⚠️ **THE SAME GIRTH AS *ABLAZE* SINCE 0395**: the ribbons are drawn round the animal at one size,
+  // so a smaller crown would sink them under the flesh. What the first stage keeps is the slower beat.
+  aura: { frames: EMBER, hold: 4, stride: 1, head: VOLANS_FIRE_HEAD.ember },
 };
 
 /** The grown body's eight faces — 0320: fins risen, worn from the second stage on. */
@@ -1965,7 +1974,7 @@ const ABLAZE: Look = {
   face: BARBED_FACE,
   // Bigger and quicker, and the same six frames: what changed is the row's numbers, which is where a
   // difference between two instances of one mechanism belongs.
-  aura: { frames: EMBER, hold: 3, stride: 1, head: 25 },
+  aura: { frames: EMBER, hold: 3, stride: 1, head: VOLANS_FIRE_HEAD.ember },
   // And the tail lobes drawn out with the fins — 0374: the grown body's own caudal fin, on the same root.
   tail: VOLANS_TAIL_BARBED,
 };
@@ -1978,7 +1987,7 @@ const ABLAZE: Look = {
  */
 const BLAZING: Look = {
   face: BARBED_FACE,
-  aura: { frames: BLAZE, hold: 2, stride: 1, head: 29 },
+  aura: { frames: BLAZE, hold: 2, stride: 1, head: VOLANS_FIRE_HEAD.blaze },
   tail: VOLANS_TAIL_BARBED,
 };
 

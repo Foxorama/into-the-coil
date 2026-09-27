@@ -402,13 +402,17 @@ export const SPRITE_KINDS = [
   'volansEmber3',
   'volansEmber4',
   'volansEmber5',
-  // The same six frames white-hot — 0380: the fish's last stage burns in the ember's core ink.
+  'volansEmber6',
+  'volansEmber7',
+  // The same eight frames white-hot — 0380: the fish's last stage burns in the ember's core ink.
   'volansBlaze0',
   'volansBlaze1',
   'volansBlaze2',
   'volansBlaze3',
   'volansBlaze4',
   'volansBlaze5',
+  'volansBlaze6',
+  'volansBlaze7',
   'boss10',
   'boss10Hit',
   'boss11',
@@ -1434,18 +1438,28 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     fish's own to be a crown rather than a spark — the serpent's is 44 for a 6-unit body, and the fish
     is 42 across.
   */
-  volansEmber0: 54,
-  volansEmber1: 54,
-  volansEmber2: 54,
-  volansEmber3: 54,
-  volansEmber4: 54,
-  volansEmber5: 54,
-  volansBlaze0: 54,
-  volansBlaze1: 54,
-  volansBlaze2: 54,
-  volansBlaze3: 54,
-  volansBlaze4: 54,
-  volansBlaze5: 54,
+  /*
+    ⚠️ **64 SINCE 0395, AND EIGHT FRAMES A SET.** The fire is ribbons wound round the animal now, and a
+    ribbon is an edge the eye follows: baked at 54 and blitted at 1.85 of that, it was a smear. 64 is
+    blitted at 1.35 and 1.56, which keeps the ribbons' edges while the bake stays one a place can
+    afford sixteen of.
+  */
+  volansEmber0: 64,
+  volansEmber1: 64,
+  volansEmber2: 64,
+  volansEmber3: 64,
+  volansEmber4: 64,
+  volansEmber5: 64,
+  volansEmber6: 64,
+  volansEmber7: 64,
+  volansBlaze0: 64,
+  volansBlaze1: 64,
+  volansBlaze2: 64,
+  volansBlaze3: 64,
+  volansBlaze4: 64,
+  volansBlaze5: 64,
+  volansBlaze6: 64,
+  volansBlaze7: 64,
   boss10: 44,
   boss10Hit: 44,
   /*
@@ -1955,3 +1969,15 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
  * the bitmap's own box — 0277's halo ran off its tile and bled into the next sprite in the atlas.
  */
 export const SERPENT_BODY_DIAMETER = 15.7;
+
+/**
+ * The girth the fish's fire is blitted at — `docs/decisions/0395-the-fish-wears-its-fire.md`, as
+ * `Aura.head`: the ember sets at 86 world units across, the white-hot set at 100.
+ *
+ * ⚠️ **ONE DESCRIPTION, BECAUSE THE PAINTER NEEDS IT TOO.** The ribbons are wound round the animal's
+ * own outline, so `src/render/bake.ts` has to know how big the fish is inside the tile — and that is
+ * this number over `SERPENT_BODY_DIAMETER`, the same arithmetic `layAura` does. Typed twice, the
+ * ribbons would drift off the flesh the first time a crown grew, which is what `FLARE_SWELL`'s own
+ * note records about the serpent's horns.
+ */
+export const VOLANS_FIRE_HEAD = { ember: 21.1, blaze: 24.5 } as const;

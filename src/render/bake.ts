@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS } from '../content/specials.ts';
-import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, WALL_RISE_MAX } from '../content/sprites.ts';
+import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -470,12 +470,16 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   volansEmber3: 'glass',
   volansEmber4: 'glass',
   volansEmber5: 'glass',
+  volansEmber6: 'glass',
+  volansEmber7: 'glass',
   volansBlaze0: 'glass',
   volansBlaze1: 'glass',
   volansBlaze2: 'glass',
   volansBlaze3: 'glass',
   volansBlaze4: 'glass',
   volansBlaze5: 'glass',
+  volansBlaze6: 'glass',
+  volansBlaze7: 'glass',
   boss10: 'enemy',
   boss11: 'enemy',
   boss11Chipped: 'enemy',
@@ -5199,11 +5203,30 @@ const OVAL: readonly Pt[] = Array.from({ length: 12 }, (_, i) => {
  * a disc and a round haze crowns it; the fish is as wide as it is long with two enormous pectorals, so
  * a round haze the size of the wings leaves the nose and tail bare and one the size of the animal is a
  * ball. Three ellipses, each wider than tall and each dragged further aft than the one inside it.
+ *
+ * ── AND THE TONGUES ARE RIBBONS — `docs/decisions/0395-the-fish-wears-its-fire.md` ─────────────────
+ *
+ * Played: *"the fire streamers coming off just look weird and janky"*, and asked for fire *"curving
+ * around it like contours… like streamers being twirled by a gymnast."* Seven straight teardrops aft
+ * of the hull, re-rolled every frame off a stream, are a flicker with no motion in it: nothing on one
+ * frame is the same flame on the next, so six frames were six unrelated pictures.
+ *
+ * ⚠️ **A RIBBON IS ONE CURVE, AND EVERY FRAME IS THE SAME RIBBON FURTHER ROUND ITS TWIST.** Each is a
+ * spline through points on the fish's own outline, a little outside it — off the snout, along the
+ * wing's leading edge, round the tip and away aft — or wound behind the tail where the two sides cross.
+ * Two things travel along it with the frame, and neither is random: a sway that grows toward the free
+ * end, and the TWIST, which is what makes a gymnast's ribbon a ribbon — broad where it faces the eye,
+ * a thread where it turns edge-on, and its back a darker ink than its face.
+ *
+ * ⚠️ **THE BODY IS DRAWN OVER IT, AND THAT IS THE WRAP.** This layer is behind the hull, so the stretch
+ * of a ribbon that passes behind a barb or under the tail is hidden by the flesh and comes out the far
+ * side — which is exactly what *curving around it* looks like from above, and costs no front layer.
  */
 function paintVolansEmber(ctx: Pen, f: Frame, frame: number, hot: boolean): void {
-  const rng = makeRng('aura').stream(`volans/${frame}`);
-  // The same shapes off the same stream, in the hotter inks — 0380: one fire, two temperatures.
+  // One fire, two temperatures — 0380.
   const inks = hot ? BLAZE_INKS : EMBER_INKS;
+  // How big the fish is inside this tile: its radius over this tile's, at the girth the row blits at.
+  const fish = SPRITE_EXTENT.boss9 / ((SPRITE_EXTENT.volansEmber0 * (hot ? VOLANS_FIRE_HEAD.blaze : VOLANS_FIRE_HEAD.ember)) / SERPENT_BODY_DIAMETER);
   /*
     ⚠️ **A STACK OF SHRINKING OVALS AND NOT A GRADIENT, BECAUSE `Pen` HAS NO TRANSFORM AND MUST NOT.**
     `glow`'s falloff is radial, so an elliptical one wants the canvas squeezed under it — and `save`,
@@ -5232,50 +5255,214 @@ function paintVolansEmber(ctx: Pen, f: Frame, frame: number, hot: boolean): void
     }
     ctx.globalAlpha = 1;
   };
-  haze(inks.coal, 0.14, 1.02, 0.74, 0.045);
-  haze(inks.ember, 0.09, 0.72, 0.52, 0.04);
-  haze(inks.gold, 0.02, 0.4, 0.3, 0.035);
+  // The haze hugs the animal at whatever size it is in this tile — 0395 — rather than at 0320's.
+  haze(inks.coal, 0.18 * fish, 1.5 * fish, 1.18 * fish, 0.04);
+  haze(inks.ember, 0.1 * fish, 1.05 * fish, 0.8 * fish, 0.035);
+  const turn = (frame / VOLANS_FIRE_FRAMES) * Math.PI * 2;
+  for (const ribbon of hot ? [...VOLANS_RIBBONS, ...VOLANS_RIBBONS_HOT] : VOLANS_RIBBONS) {
+    // Both sides, and the second half a turn on — a mirror that flapped in step would be a pair of wings.
+    for (const side of [-1, 1]) paintVolansRibbon(ctx, f, inks, ribbon, fish, side, turn + (side > 0 ? Math.PI : 0));
+  }
+}
+
+/** How many frames one turn of the ribbons is — 0395. The frames are the turn, so they loop. */
+const VOLANS_FIRE_FRAMES = 8;
+
+/**
+ * One ribbon of the fish's fire, in the fish's own units — 0395: `r` of the fish is 1, the snout is at
+ * −1 and aft is +x, exactly as `VOLANS_BODY` is authored, so a point here is a point beside that outline.
+ */
+interface VolansRibbon {
+  /** The spline it is wound along, on the `−y` side; the other side is its mirror. */
+  readonly path: readonly Pt[];
+  /** Its width where it faces the eye, before the taper. */
+  readonly wide: number;
+  /** How many half-turns of twist along its length. */
+  readonly twists: number;
+  /** How many waves of sway along its length. */
+  readonly waves: number;
+  /** How far the free end sways off the spline. */
+  readonly sway: number;
+  /** Where in the turn this one starts, so no two ribbons twist in step. */
+  readonly phase: number;
+}
+
+const VOLANS_RIBBONS: readonly VolansRibbon[] = [
   /*
-    ⚠️ **THE TONGUES LEAVE THE FLANKS AND GO AFT, WHATEVER THE FLANK'S ANGLE.** Rooted inside the
-    flesh so the animal covers the foot, tip a doubled point on `curveLoop`'s own terms, and each one
-    a stack of four fading layers so its edge is a falloff rather than a line — which is the finding
-    `paintSerpentAura` carries about hard-cornered tongues baking as a sawtooth.
+    THE CONTOUR — off the snout, along the pectoral's leading edge a little outside it, round the wing
+    tip, behind the barbs, and away aft in a long sway. The one the ask describes: fire lying along
+    the shape of the animal rather than beside it.
   */
-  const lick = (colour: string, points: readonly Pt[], alpha: number): void => {
+  {
+    path: [
+      [-1.1, -0.05],
+      [-0.94, -0.24],
+      [-0.68, -0.4],
+      [-0.42, -0.7],
+      [-0.14, -1.0],
+      [0.1, -1.13],
+      [0.34, -1.04],
+      [0.56, -0.86],
+      [0.88, -0.8],
+      [1.2, -0.66],
+      [1.52, -0.72],
+      [1.74, -0.6],
+    ],
+    wide: 0.21,
+    twists: 2.5,
+    waves: 1.2,
+    sway: 0.18,
+    phase: 0,
+  },
+  /*
+    THE BRAID — out from under the flank behind the wing, round, and across behind the tail to the
+    far side. Its mirror crosses it there, so the two twist round each other where the fin beats.
+  */
+  {
+    path: [
+      [0.06, -0.36],
+      [0.4, -0.58],
+      [0.74, -0.48],
+      [1.0, -0.18],
+      [1.18, 0.16],
+      [1.42, 0.34],
+      [1.68, 0.22],
+    ],
+    wide: 0.17,
+    twists: 2,
+    waves: 1,
+    sway: 0.14,
+    phase: 1.7,
+  },
+];
+
+/**
+ * White-hot adds an orbit — 0395: a third ribbon a side, wound round the whole animal wider than the
+ * contour, so the last stage is more fire and not only brighter fire.
+ */
+const VOLANS_RIBBONS_HOT: readonly VolansRibbon[] = [
+  {
+    path: [
+      [-1.24, 0.04],
+      [-1.1, -0.42],
+      [-0.72, -0.86],
+      [-0.2, -1.2],
+      [0.36, -1.3],
+      [0.9, -1.12],
+      [1.36, -0.86],
+      [1.78, -0.9],
+      [2.06, -0.72],
+    ],
+    wide: 0.16,
+    twists: 3,
+    waves: 1.4,
+    sway: 0.14,
+    phase: 3.1,
+  },
+];
+
+/** Samples along one ribbon. Enough that a quarter-twist is several of them at the tile's own size. */
+const RIBBON_SAMPLES = 72;
+
+/**
+ * Paint one ribbon — 0395.
+ *
+ * ⚠️ **THE TWIST IS A WIDTH AND AN INK, AND THAT IS ALL A TWIST IS FROM ABOVE.** Where the ribbon
+ * faces the eye it is its full width in the fire's bright inks; turning away it narrows to a fifth,
+ * and past edge-on it is its own BACK, in the coal. Each stretch of one face is filled as a single
+ * polygon, so the join between two samples is never a seam at a translucent alpha.
+ */
+function paintVolansRibbon(
+  ctx: Pen,
+  f: Frame,
+  inks: { readonly coal: string; readonly ember: string; readonly gold: string; readonly core: string },
+  ribbon: VolansRibbon,
+  fish: number,
+  side: number,
+  turn: number,
+): void {
+  const n = RIBBON_SAMPLES;
+  const path = ribbon.path.map(([x, y]) => [x, y * side] as const);
+  // The spline, sampled evenly in its parameter: Catmull-Rom, clamped at the ends like `curveThrough`.
+  const spine: Pt[] = [];
+  const at = (i: number): Pt => path[Math.max(0, Math.min(path.length - 1, i))]!;
+  for (let i = 0; i < n; i++) {
+    const u = (i / (n - 1)) * (path.length - 1);
+    const j = Math.min(path.length - 2, Math.floor(u));
+    const t = u - j;
+    const [ax, ay] = at(j - 1);
+    const [bx, by] = at(j);
+    const [cx, cy] = at(j + 1);
+    const [dx, dy] = at(j + 2);
+    const t2 = t * t;
+    const t3 = t2 * t;
+    spine.push([
+      0.5 * (2 * bx + (cx - ax) * t + (2 * ax - 5 * bx + 4 * cx - dx) * t2 + (3 * bx - ax - 3 * cx + dx) * t3),
+      0.5 * (2 * by + (cy - ay) * t + (2 * ay - 5 * by + 4 * cy - dy) * t2 + (3 * by - ay - 3 * cy + dy) * t3),
+    ]);
+  }
+  const normal = (points: readonly Pt[], i: number): Pt => {
+    const [ax, ay] = points[Math.max(0, i - 1)]!;
+    const [bx, by] = points[Math.min(points.length - 1, i + 1)]!;
+    const len = Math.hypot(bx - ax, by - ay) || 1;
+    return [-(by - ay) / len, (bx - ax) / len];
+  };
+  // The sway: nothing at the root, growing toward the free end, travelling aft as the frame turns.
+  const swayed: Pt[] = spine.map(([x, y], i) => {
+    const s = i / (n - 1);
+    const grow = s < 0.3 ? 0 : ((s - 0.3) / 0.7) ** 1.4;
+    const off = ribbon.sway * grow * Math.sin(Math.PI * 2 * ribbon.waves * s - turn + ribbon.phase);
+    const [nx, ny] = normal(spine, i);
+    return [(x + nx * off) * fish, (y + ny * off) * fish];
+  });
+  // Width and face, per sample: a tapered root, a pointed end, and the twist between them.
+  const halfWidth: number[] = [];
+  const face: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const s = i / (n - 1);
+    const envelope = Math.min(1, s / 0.1) * (1 - s) ** 0.8;
+    const twist = Math.cos(Math.PI * ribbon.twists * s - turn + ribbon.phase);
+    halfWidth.push(0.5 * ribbon.wide * fish * envelope * (0.2 + 0.8 * Math.abs(twist)));
+    face.push(twist >= 0 ? 1 : -1);
+  }
+  /** The outline of samples `a`..`b` at `scale` of the width, `extra` added — out one edge and back the other. */
+  const band = (a: number, b: number, scale: number, extra: number): Pt[] => {
+    const left: Pt[] = [];
+    const right: Pt[] = [];
+    for (let i = a; i <= b; i++) {
+      const [x, y] = swayed[i]!;
+      const [nx, ny] = normal(swayed, i);
+      const w = halfWidth[i]! * scale + extra * fish * Math.min(1, (i / (n - 1)) / 0.1) * (1 - i / (n - 1));
+      left.push([x + nx * w, y + ny * w]);
+      right.push([x - nx * w, y - ny * w]);
+    }
+    return [...left, ...right.reverse()];
+  };
+  const fillBand = (colour: string, alpha: number, points: readonly Pt[]): void => {
     ctx.globalAlpha = alpha;
     ctx.fillStyle = colour;
     ctx.beginPath();
-    curveLoop(ctx, f, points);
+    trace(ctx, f, points);
     ctx.fill();
     ctx.globalAlpha = 1;
   };
-  for (let i = 0; i < 7; i++) {
-    const across = (i - 3) * 0.21 + rng.range(-0.07, 0.07);
-    const root = -0.16 + rng.range(-0.14, 0.14);
-    // Aft to 1.12 of `r` at most, inside the 1.16 where the next bitmap in the atlas begins.
-    const long = rng.range(0.55, 1.26);
-    const drift = rng.range(-0.2, 0.2);
-    const fat = rng.range(0.05, 0.1);
-    /*
-      ⚠️ **THE LAYERS TAPER IN WIDTH AND BARELY IN LENGTH, AND THE FIRST DRAFT SCALED BOTH.** One
-      `scale` on a teardrop shrinks it toward its own root, so the inner layers piled up into a pale
-      **bulb** at the base and the whole flame photographed as a slug with a highlight on its nose. A
-      flame's core is nearly as long as the flame and much thinner, which is these two numbers.
-    */
-    const tongue = (wide: number, far: number): Pt[] => [
-      [root - fat * 0.3, across - fat * 0.7 * wide],
-      [root + long * 0.3 * far, across - fat * wide + drift * 0.1],
-      [root + long * 0.68 * far, across - fat * 0.45 * wide + drift * 0.55],
-      [root + long * far, across + drift * far],
-      [root + long * far, across + drift * far],
-      [root + long * 0.62 * far, across + fat * 0.4 * wide + drift * 0.6],
-      [root + long * 0.26 * far, across + fat * 0.9 * wide + drift * 0.12],
-      [root - fat * 0.3, across + fat * 0.7 * wide],
-    ];
-    lick(inks.coal, tongue(1.3, 1.05), 0.3);
-    lick(inks.ember, tongue(1, 0.95), 0.36);
-    lick(inks.gold, tongue(0.62, 0.82), 0.36);
-    lick(inks.core, tongue(0.3, 0.62), 0.4);
+  // The heat round the whole ribbon first, face or back: what makes it fire and not cloth.
+  fillBand(inks.coal, 0.16, band(0, n - 1, 2.6, 0.03));
+  fillBand(inks.ember, 0.18, band(0, n - 1, 1.6, 0.012));
+  // Then each stretch of one face, in that face's inks.
+  let from = 0;
+  for (let i = 1; i <= n; i++) {
+    if (i < n && face[i] === face[from]) continue;
+    const to = Math.min(n - 1, i);
+    if (face[from]! > 0) {
+      fillBand(inks.ember, 0.74, band(from, to, 1, 0));
+      fillBand(inks.gold, 0.7, band(from, to, 0.58, 0));
+      fillBand(inks.core, 0.6, band(from, to, 0.22, 0));
+    } else {
+      fillBand(inks.coal, 0.72, band(from, to, 1, 0));
+      fillBand(inks.ember, 0.42, band(from, to, 0.45, 0));
+    }
+    from = i;
   }
 }
 
@@ -5957,41 +6144,60 @@ const VOLANS_TAIL: readonly Pt[] = [
     stump stops at 0.80 of the body — inside the fin's own silhouette, where the join is a curve the
     body draws over flesh and not a knob beside a flap.
   */
-  [-0.2, -0.24],
-  [-0.02, -0.34],
-  [0.28, -0.72],
-  [0.48, -1.04],
-  [0.48, -1.04],
-  [0.37, -0.56],
-  [0.2, -0.1],
-  [0.2, 0.1],
-  [0.37, 0.56],
-  [0.48, 1.04],
-  [0.48, 1.04],
-  [0.28, 0.72],
-  [-0.02, 0.34],
-  [-0.2, 0.24],
+  /*
+    ⚠️ **TWO BROAD LOBES AND A DEEP FORK — `docs/decisions/0396-the-fish-has-a-tail.md`.** Played: *"the
+    tail looks… I don't even know, but it's not great."* Photographed, the lobes were slivers — 0.15
+    of `r` across at their widest, swept forward of the fork to tips only 0.48 aft of the root — so
+    the fin read as a boomerang on the sheet and, turned through a leap, as a stick. A caudal fin is a
+    fan: each lobe a blade a third of `r` across, its leading edge convex, the fork between them cut
+    back to 0.38, and the tips well aft of the notch so the shape says *forked* at every angle the
+    beat puts it through.
+  */
+  [-0.2, -0.26],
+  [0.05, -0.42],
+  [0.35, -0.68],
+  [0.66, -0.9],
+  [0.95, -1.02],
+  [0.95, -1.02],
+  [0.86, -0.72],
+  [0.72, -0.42],
+  [0.56, -0.14],
+  [0.5, 0],
+  [0.56, 0.14],
+  [0.72, 0.42],
+  [0.86, 0.72],
+  [0.95, 1.02],
+  [0.95, 1.02],
+  [0.66, 0.9],
+  [0.35, 0.68],
+  [0.05, 0.42],
+  [-0.2, 0.26],
   [-0.26, 0.1],
   [-0.27, 0],
   [-0.26, -0.1],
 ];
 
-/** The grown body's tail — 0320's lobes drawn out, on the same root and in the same tile. */
+/** The grown body's tail — 0320's lobes drawn out, on the same root and in the same tile; 0396's fan. */
 const VOLANS_TAIL_BARBED: readonly Pt[] = [
-  [-0.2, -0.24],
-  [-0.02, -0.34],
-  [0.32, -0.78],
-  [0.54, -1.1],
-  [0.54, -1.1],
-  [0.4, -0.6],
-  [0.2, -0.1],
-  [0.2, 0.1],
-  [0.4, 0.6],
-  [0.54, 1.1],
-  [0.54, 1.1],
-  [0.32, 0.78],
-  [-0.02, 0.34],
-  [-0.2, 0.24],
+  [-0.2, -0.26],
+  [0.05, -0.44],
+  [0.36, -0.72],
+  [0.7, -0.96],
+  [1.02, -1.06],
+  [1.02, -1.06],
+  [0.9, -0.74],
+  [0.76, -0.42],
+  [0.6, -0.14],
+  [0.52, 0],
+  [0.6, 0.14],
+  [0.76, 0.42],
+  [0.9, 0.74],
+  [1.02, 1.06],
+  [1.02, 1.06],
+  [0.7, 0.96],
+  [0.36, 0.72],
+  [0.05, 0.44],
+  [-0.2, 0.26],
   [-0.26, 0.1],
   [-0.27, 0],
   [-0.26, -0.1],
@@ -6025,46 +6231,24 @@ function paintVolansTail(ctx: Pen, f: Frame, skin: FoeSkin, barbed: boolean): vo
   glow(ctx, f, skin.lit, 0.16, 0, 0.3, 0.26 * lit);
   ctx.globalCompositeOperation = 'source-over';
   shaded(ctx, f, [0, -1], [0, 1], rgba(skin.lit, 0.22), rgba(skin.plate, 0.5), hull, 1, true);
-  const lobe = barbed ? 1.1 : 1;
+  // Four rays a lobe fanned from the root into the blade — 0396 — each ending short of its edges.
+  const lobe = barbed ? 1.05 : 1;
   for (const side of [-1, 1]) {
     for (const [tx, ty] of [
-      [0.38, 0.76],
-      [0.29, 0.56],
-      [0.2, 0.32],
+      [0.84, 0.9],
+      [0.76, 0.66],
+      [0.66, 0.42],
+      [0.54, 0.2],
     ] as const) {
-      seam(ctx, f, rgba(skin.plate, 0.5), 0.038, [
+      seam(ctx, f, rgba(skin.plate, 0.5), 0.034, [
         [-0.08, 0.07 * side],
         [tx * lobe, ty * lobe * side],
       ]);
     }
   }
-  // The streamer off the lower lobe — the same five-sided filament as the wings', translucent and
-  // tapering, drawn bright: it leaves the fin and is allowed past the outline on the halo's terms.
-  // ⚠️ The grown tail's streamer starts further out and reaches no further: `tests/accents.test.ts`
-  // holds every translucent mark at 1.16 of the drawing radius, and the calm one already ends at 1.08.
-  // Its far point stays under 1.16 of the radius once `curveLoop` has rounded the corner, which
-  // `tests/accents.test.ts` measured at 1.18 for a point authored at 1.13.
-  const streamer: readonly number[] = barbed ? [0.5, 1.04, 0.58, 1.07, 0.66, 1.1, 0.54, 1.02, 0.48, 0.98] : [0.44, 0.98, 0.54, 1.03, 0.64, 1.08, 0.5, 0.96, 0.42, 0.92];
-  for (const side of [-1, 1]) {
-    const [ax, ay, bx, by, cx, cy, dx, dy, ex, ey] = streamer as [number, number, number, number, number, number, number, number, number, number];
-    shaded(
-      ctx,
-      f,
-      [ax, ay * side],
-      [cx, cy * side],
-      rgba(skin.lit, 0.7),
-      rgba(skin.lit, 0),
-      [
-        [ax, ay * side],
-        [bx, by * side],
-        [cx, cy * side],
-        [dx, dy * side],
-        [ex, ey * side],
-      ],
-      0.8,
-      true,
-    );
-  }
+  // ⚠️ The streamer that used to leave each lobe tip went with the wings' — 0395: the fire's ribbons
+  // are the only thing that trails this animal now, and a still filament in the flesh's ink beside
+  // them is the disagreement the play called janky.
 }
 
 /**
@@ -6364,32 +6548,14 @@ function paintBoss9(
       filament rather than a slab, and at 0.8 rather than 0.6 because a `lit` ink laid at a third over
       the void bakes olive. Still under 0.9, which is where `tests/accents.test.ts` starts calling a
       mark solid and holding it inside the silhouette.
+
+      ⚠️ **AND THEY ARE GONE — `docs/decisions/0395-the-fish-wears-its-fire.md`.** Played: *"the fire
+      streamers coming off just look weird and janky."* Photographed, the four a side laid over the
+      grown fins' three rays as a comb of olive smudges — the lit ink still baked olive over the void
+      at 0.8, and on the barbed body they doubled every ray. The trail off the wing is the contour
+      ribbon now, which leaves the wing tip in the fire's own inks and moves; a second, still trail
+      beside it in the flesh's ink was the disagreement the play was describing.
     */
-    for (const [ax, ay, bx, by, cx, cy, dx, dy, ex, ey] of [
-      [0.03, 0.96, 0.5, 1.02, 1.08, 0.99, 0.48, 0.94, 0.05, 0.9],
-      [0.08, 0.845, 0.45, 0.88, 0.95, 0.85, 0.44, 0.81, 0.1, 0.79],
-      [0.13, 0.73, 0.4, 0.75, 0.8, 0.71, 0.38, 0.67, 0.15, 0.66],
-      [0.47, 0.41, 0.64, 0.5, 0.84, 0.57, 0.62, 0.45, 0.49, 0.365],
-      // The fifth streamer, off the tail lobe, is the tail's own now — 0374.
-    ] as const) {
-      shaded(
-        ctx,
-        f,
-        [ax, ay * side],
-        [cx, cy * side],
-        rgba(skin.lit, 0.7),
-        rgba(skin.lit, 0),
-        [
-          [ax, ay * side],
-          [bx, by * side],
-          [cx, cy * side],
-          [dx, dy * side],
-          [ex, ey * side],
-        ],
-        0.8,
-        true,
-      );
-    }
     /*
       ⚠️ **AND A DUST OF MOTES ALONG THE BACK.** Three small lights a side, staggered off the dorsal
       line and shrinking aft: it is the mark that makes the flesh look like it is made of the place
@@ -8885,6 +9051,8 @@ export function drawKind(
     case 'volansEmber3':
     case 'volansEmber4':
     case 'volansEmber5':
+    case 'volansEmber6':
+    case 'volansEmber7':
       /*
         ONE FLAME OF THE FISH'S AURA — 0320. No hull and no outline: it is energy, on the exhaust's
         and the serpent's aura's terms, and the animal it rises off is drawn over it. It streams AFT
@@ -8899,6 +9067,8 @@ export function drawKind(
     case 'volansBlaze3':
     case 'volansBlaze4':
     case 'volansBlaze5':
+    case 'volansBlaze6':
+    case 'volansBlaze7':
       // The same flame white-hot — 0380: the ember's own painter in its core inks, for the last stage.
       if (skin !== null) paintVolansEmber(ctx, f, Number(kind.slice(-1)), true);
       return;
