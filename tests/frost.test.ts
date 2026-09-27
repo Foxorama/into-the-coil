@@ -411,6 +411,8 @@ describe('0263 — the frost ship shatters', () => {
     for (let i = 0; i < world.enemyShots.size; i++) {
       const bolt = world.enemyShots.at(i);
       expect(bolt.turnsLeft, 'a bolt is not at the second stage').toBe(1);
+      // It will burst again, so it keeps the shard's art — 0390; only the flake that melts is dressed.
+      expect(bolt.sprite, 'a bolt that will still burst is drawn as one that will not').toBe(SHOTS.frost.sprite);
       // About the shard's OWN heading — not the ship's — and split, so neither bolt is the shard.
       const off = between(headingOf(d, i), Math.PI);
       expect(off, 'a bolt is not inside the fan').toBeLessThanOrEqual(fan.spread / 2 + 1e-6);
@@ -438,7 +440,8 @@ describe('0263 — the frost ship shatters', () => {
     for (let i = 0; i < world.enemyShots.size; i++) {
       const flake = world.enemyShots.at(i);
       expect(flake.turnsLeft, 'a flake is not at the last stage').toBe(2);
-      expect(flake.sprite, 'a flake is not frost').toBe(SHOTS.frost.sprite);
+      // Frost that will not burst, since 0390: the row's own spent icicle.
+      expect(flake.sprite, 'a flake is not frost').toBe(SHOTS.frost.spriteSpent);
       if (flake.velAlong - world.scrollPerStep > 0.1) forward++;
       // In the player's units: the snowflake opens in the near half of the screen, where the ship is.
       expect(flake.along, `the snowflake opened in the far half of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan / 2);
@@ -500,7 +503,8 @@ describe('0263 — the frost ship shatters', () => {
     expect(world.enemyShots.size - before, 'the shard did not shatter into six').toBe(6);
     for (let i = before; i < world.enemyShots.size; i++) {
       const flake = world.enemyShots.at(i);
-      expect(flake.sprite, 'a piece of the shatter is not frost').toBe(SHOTS.frost.sprite);
+      // It never opens again (0299), so since 0390 it wears the frost that will not burst.
+      expect(flake.sprite, 'a piece of the shatter is not frost').toBe(SHOTS.frost.spriteSpent);
       expect(flake.turnsLeft, 'a piece of the shatter is not at the last stage').toBe(stages.length - 1);
       expect(Math.hypot(flake.along - (world.cameraAlong + 80), flake.across - 50), 'the shatter is not where the shard died').toBeLessThan(4);
     }

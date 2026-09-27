@@ -29,6 +29,7 @@ import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
@@ -878,5 +879,40 @@ describe('paint costs nothing to draw', () => {
     for (const kind of HULLLESS) expect(SPRITE_KINDS, `${kind} is listed as hull-less and is not a kind`).toContain(kind);
     expect(new Set(HULLLESS).size, 'a kind is listed hull-less twice').toBe(HULLLESS.length);
     expect(BODIES.length + HULLLESS.length).toBe(SPRITE_KINDS.length);
+  });
+});
+
+/**
+ * A dud icicle looks like one — `docs/decisions/0390-a-dud-icicle-looks-like-one.md`. Asked for: *"a
+ * different icicle art for the non-exploding icicles so that the player knows whether an icicle is going
+ * to explode or not."*
+ */
+describe('0390 — a dud icicle looks like one', () => {
+  /** How long a hull is for its width, in CSS pixels of a 1280×720 screen: 1 for a star, more for a needle. */
+  const elongation = (kind: SpriteKind): number => {
+    const b = boundsOf(hullAndPaint(kind).hull);
+    const w = b.maxX - b.minX;
+    const h = b.maxY - b.minY;
+    return Math.max(w, h) / Math.min(w, h);
+  };
+
+  it('THE ASK, IN CSS PIXELS: the icicle that will not burst is a needle, and the shard that will is not', () => {
+    /*
+      Told by silhouette, which is the channel a bullet read at speed is read on: both are in the frost
+      ink and the same size, so the shape is the whole of the difference, and it is held in the pixels
+      of the screen the game is argued against — the needle at least twice as long as it is wide, the
+      star within half as much again of square.
+    */
+    expect(elongation('frostSpent'), 'the icicle that will not burst is not a needle').toBeGreaterThanOrEqual(2);
+    expect(elongation('frost'), 'the shard that will burst is drawn long, like the one that will not').toBeLessThan(1.5);
+  });
+
+  it('and every shot that can melt without bursting says what it looks like when it will', () => {
+    for (const kind of Object.keys(SHOTS) as ShotKind[]) {
+      const row = SHOTS[kind];
+      if (!row.fission.some((stage) => stage.into === 'nothing')) continue;
+      expect(row.spriteSpent, `${kind} melts at its last stage and wears the same art there as when it bursts`).toBeDefined();
+      expect(row.spriteSpent, `${kind}'s spent art is its bursting art`).not.toBe(row.sprite);
+    }
   });
 });

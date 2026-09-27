@@ -4593,6 +4593,19 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
   child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
   child.velAcross = Math.sin(angle) * speed;
   /*
+    ⚠️ **A CHILD THAT WILL NOT BURST WEARS THE ROW'S SPENT ART — 0390**, pointed along the heading it
+    flies straight on for the rest of its life: *"so that the player knows whether an icicle is going to
+    explode or not."* Read off the row's own stages, so a melt is what dresses it and not a list.
+  */
+  const bursts = stage < row.fission.length && row.fission[stage]!.into !== 'nothing';
+  if (!bursts && row.spriteSpent !== undefined) {
+    child.sprite = row.spriteSpent;
+    child.spriteBase = row.spriteSpent;
+    child.spriteHit = row.spriteSpent;
+    child.turn = turnFor(angle);
+    child.prevTurn = child.turn;
+  }
+  /*
     ⚠️ **IT HANDS THE CHILD BACK SINCE 0299, AND EVERY OTHER CALLER IGNORES IT.** A shard needs an
     appetite of its own and this is the one place that knows which entity it just made. `fissionShots`
     — the frost's shatter, 0263 — is untouched by that: it wants exactly the row's own numbers, and a
