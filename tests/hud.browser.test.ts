@@ -24,17 +24,31 @@ import { SIDES } from '../src/content/specials.ts';
  * ⚠️ **READ THE SKIPPED COUNT.** `runIf` means a machine with no browser still passes.
  */
 
-vi.setConfig({ testTimeout: 60_000 });
+/*
+  ⚠️ **105 s, AND THE MEASUREMENT IS BESIDE IT BECAUSE 0245 SAYS IT HAS TO BE.** It was 60 s, sized
+  alone, and the pips test timed out past it in a whole-suite run while passing in 17 s by itself.
+  Every test here that presses pays one music bake — see the pips test — so the file's cost is the
+  press, and the worst press is the pips test's three: under `npx vitest run` on 2026-09-27, three
+  runs with a log showing nothing else on the box took 17.8, 19.5 and 21.5 s, and two runs whose box
+  was not logged took 31.6 and 33.7 s. Three times 33.7. The first death has its own budget below.
+  Two further runs that shared the box with another session's `npm run prove` were thrown out, not
+  counted: a budget is sized against this suite's load, not a neighbour's
+  — `docs/decisions/0245-a-budget-is-sized-under-load.md`.
+*/
+vi.setConfig({ testTimeout: 105_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
-let browser: Browser | undefined;
+// ⚠️ **The launch is a promise shared by every caller**, because the pips test opens its pages at
+// once: `browser ??= await launch()` checks before it awaits, and three callers would launch three.
+let launching: Promise<Browser> | undefined;
 afterAll(async () => {
-  await browser?.close();
+  await (await launching)?.close();
 });
 
 async function open(hasTouch = false): Promise<Page> {
-  browser ??= await launchChromium({ headless: true });
+  launching ??= launchChromium({ headless: true });
+  const browser = await launching;
   const context = await browser.newContext({
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 1,
@@ -42,9 +56,16 @@ async function open(hasTouch = false): Promise<Page> {
     // `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`. This is the capability.
     hasTouch,
   });
+  /*
+    ⚠️ **THE TEST'S BUDGET IS THE ONLY CLOCK, SO PLAYWRIGHT'S ARE OFF.** A press bakes the rest of the
+    music prewarm inside the click, so `page.click` carried Playwright's own thirty seconds — a
+    budget nobody sized, under the one this file sizes — and it was that one that failed a whole-suite
+    run on 2026-09-27, 30 s into a press. A second clock can only fire first and name the wrong cost.
+  */
+  context.setDefaultTimeout(0);
   const page = await context.newPage();
   await page.goto(dist);
-  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await page.waitForSelector('#app canvas');
   return page;
 }
 
@@ -256,7 +277,7 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
     */
     const page = await open(true);
     await page.click('.' + prefixFor('title') + 'action');
-    await page.waitForSelector('.itc-playing-hud-shown', { timeout: 15_000 });
+    await page.waitForSelector('.itc-playing-hud-shown');
     for (const [width, height] of [
       [667, 375],
       [844, 390],
@@ -331,23 +352,34 @@ describe.runIf(chromePath)('the in-game readout', () => {
       three and three and none — and the ones LIT are what its life opens with, so a Legendary life
       opens full and a Savior one opens on three empty sockets, as every life did before. Counted as
       the player sees them: a socket hidden by the stylesheet is not a socket.
+
+      ⚠️ **THE TIERS ARE PRESSED AT ONCE, EACH ON ITS OWN PAGE, AND THE PRESS IS WHY.** A press made
+      before the music prewarm finishes bakes the rest of it synchronously — `src/app/sound.ts`,
+      `prewarmAudio` — and a headless page presses at once: 5.6 s a press here on 2026-09-27, against
+      0.1 s after fifteen idle seconds on the title, so waiting costs more than it saves. The bake is
+      the page's and there is no road from a run back to the title but a game over, so every tier
+      pays one. Three pages in turn were 20.7 s and 21.4 s; three at once 9.7 s and 8.9 s, because
+      each page's renderer bakes on its own core.
     */
-    for (const [index, tier] of DIFFICULTY_KINDS.entries()) {
-      const row = DIFFICULTIES[tier];
-      const page = await open();
-      await page.locator('.' + prefixFor('title') + 'action').nth(index).click();
-      await page.waitForTimeout(200);
-      const pips = await page.evaluate(() =>
-        [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-pip')]
-          .filter((el) => el.offsetParent !== null)
-          .map((el) => el.classList.contains('itc-playing-hud-spent')),
-      );
-      expect(pips.length, `the pip row on ${tier} is not the shell the tier lets the ship carry`).toBe(row.shellCap);
-      expect(pips.filter((spent) => !spent).length, `a fresh ${tier} life does not light the shell it opens with`).toBe(
-        row.shellOpen,
-      );
-      await page.context().close();
-    }
+    await Promise.all(
+      DIFFICULTY_KINDS.map(async (tier, index) => {
+        const row = DIFFICULTIES[tier];
+        const page = await open();
+        await page.locator('.' + prefixFor('title') + 'action').nth(index).click();
+        await page.waitForTimeout(200);
+        const pips = await page.evaluate(() =>
+          [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-pip')]
+            .filter((el) => el.offsetParent !== null)
+            .map((el) => el.classList.contains('itc-playing-hud-spent')),
+        );
+        expect(pips.length, `the pip row on ${tier} is not the shell the tier lets the ship carry`).toBe(row.shellCap);
+        expect(
+          pips.filter((spent) => !spent).length,
+          `a fresh ${tier} life does not light the shell it opens with`,
+        ).toBe(row.shellOpen);
+        await page.context().close();
+      }),
+    );
   });
 
   it('follows the run down as it is spent, and shows a spent pip as EMPTY', async () => {
@@ -421,7 +453,6 @@ describe.runIf(chromePath)('the in-game readout', () => {
     await page.waitForFunction(
       (was: string) => (document.querySelector('.itc-playing-hud-group span')?.textContent ?? '') !== was,
       before ?? '',
-      { timeout: 60_000 },
     );
     const after = await page.textContent('.itc-playing-hud-group span');
     expect(after, 'the run spent a life and the readout did not move').not.toBe(before);
@@ -430,7 +461,16 @@ describe.runIf(chromePath)('the in-game readout', () => {
       new RegExp('Shield \\d+ of ' + String(MAX_SHIELDS)),
     );
     await page.context().close();
-  });
+    /*
+      ⚠️ **170 s, ITS OWN, AND THE COST IS GAME TIME RATHER THAN WORK.** A press, then 24.6 s of play
+      before the first wave reaches a ship that does not move — the same figure every run, because the
+      level opens empty (0043) and the sim steps at 60 Hz. Nothing here can make that shorter without a
+      road into the game that only a test would use. Under `npx vitest run` on 2026-09-27: 39.3, 41.3
+      and 43.8 s with nothing else on the box, 55.1 and 48.9 s on a box that was not logged — three
+      times 55.1 — `docs/decisions/0245-a-budget-is-sized-under-load.md`. The wait for the death took
+      its own 60 s, which could never fire before the test's, and is gone with Playwright's others.
+    */
+  }, 170_000);
 
 });
 
