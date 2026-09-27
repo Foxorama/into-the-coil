@@ -59,6 +59,12 @@ interface AudioTally {
    */
   into: string[];
   /**
+   * The same connections as `into`, each as `[source id, destination type]` — 0394. A cue's source may
+   * go into its place AND into its reverb send (0173), and a send is a `GainNode` exactly as the master
+   * is, so what 0127 asks is per SOURCE: that each one reaches a panner, not that nothing else is fed.
+   */
+  cues: [number, string][];
+  /**
    * Every connection any node made, as `[from type, from id, to type, to id]` — 0378. The hush is a
    * claim about the SHAPE of the graph, and no double can see a shape.
    */
@@ -83,7 +89,7 @@ async function open(): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const page = await context.newPage();
   await page.addInitScript(() => {
-    const tally = { buffers: 0, voices: 0, into: [] as string[], edges: [] as [string, number, string, number][] };
+    const tally = { buffers: 0, voices: 0, into: [] as string[], cues: [] as [number, string][], edges: [] as [string, number, string, number][] };
     window.__itcAudio = tally;
     /*
       ⚠️ **EVERY `connect`, ON THE NODE PROTOTYPE** — 0378. An id per node, handed out the first time
@@ -136,6 +142,7 @@ async function open(): Promise<Page> {
         const seconds = node.buffer?.duration ?? 0;
         if (seconds > 0 && seconds <= CUE_CEILING && destination?.constructor?.name !== undefined) {
           tally.into.push(String(destination.constructor.name));
+          tally.cues.push([idOf(node), String(destination.constructor.name)]);
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         return (connect as any)(destination, ...rest);
@@ -149,7 +156,7 @@ async function open(): Promise<Page> {
 }
 
 const tally = (page: Page): Promise<AudioTally> =>
-  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [], edges: [] });
+  page.evaluate(() => window.__itcAudio ?? { buffers: -1, voices: -1, into: [], cues: [], edges: [] });
 
 /** The cue bus's impulse response — one buffer, built on the same gesture. `THE WHOLE CHAIN` argues it. */
 const ROOM_IMPULSE = 1;
@@ -346,11 +353,20 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     await page.waitForTimeout(1200);
     const after = await tally(page);
     expect(after.into.length, 'no cue sounded at all, so this guard measured nothing').toBeGreaterThan(0);
-    const straight = after.into.filter((node) => node !== 'StereoPannerNode');
+    /*
+      ⚠️ **PER SOURCE SINCE 0394, AND IT WAS PER CONNECTION.** A cue with a reverb send (0173) connects
+      twice — to its place and to its send, a `GainNode` — and counted per connection that second one
+      read as a bypass. It went red only when such a cue happened to sound in the window, which load
+      makes likelier, so it failed the proof's baseline on one run and passed alone three times running.
+      A source wired to the master reaches no panner at all, and that is still what fails here.
+    */
+    const into = new Map<number, string[]>();
+    for (const [id, node] of after.cues) into.set(id, [...(into.get(id) ?? []), node]);
+    const straight = [...into.values()].filter((nodes) => !nodes.includes('StereoPannerNode'));
     expect(
       straight,
-      `${straight.length} of ${after.into.length} cue sources bypassed the field and went into ` +
-        `${[...new Set(straight)].join(', ')} — a cue wired to the master is centred for ever`,
+      `${straight.length} of ${into.size} cue sources bypassed the field and went only into ` +
+        `${[...new Set(straight.flat())].join(', ')} — a cue wired to the master is centred for ever`,
     ).toEqual([]);
     await page.context().close();
   });
