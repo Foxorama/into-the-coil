@@ -30,7 +30,7 @@ import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
 import type { ThemeKind } from './themes.ts';
-import { SPRITE, VOLANS_FIRE_HEAD } from './sprites.ts';
+import { QUETZAL_WING_HEAD, SPRITE, VOLANS_FIRE_HEAD } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 
 /**
@@ -242,8 +242,15 @@ export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
   and a boss that aimed would fail to compile. `docs/decisions/0258-one-pilot-a-level.md`.
 */
 export type BossAttack =
-  /** The fan, centred on the lane — a pattern the player reads rather than a spread that follows. */
-  | { kind: 'spray' }
+  /**
+   * The fan, centred on the lane — a pattern the player reads rather than a spread that follows.
+   *
+   * `from` throws it out of more than one place — `docs/decisions/0398-the-pterodactyl-is-feathered.md`:
+   * each entry an `[along, across]` offset from the hull's centre, and each throws its own fan of the
+   * volley's shots dealt out between them, so a pair of wings throwing four throws two a wing. Absent is
+   * the one place every other spray leaves from.
+   */
+  | { kind: 'spray'; from?: readonly (readonly [number, number])[] }
   /**
    * ONE shot, straight down the lane, whatever the phase's fan says — `docs/decisions/0311-the-acid-and-the-void-come-as-one-ball.md`.
    *
@@ -1070,6 +1077,16 @@ export interface Aura {
    * phase's does not — it has no strike to warn about.
    */
   flare?: readonly number[];
+  /**
+   * What the frames wear while the body they are behind is hurt, frame for frame, or absent —
+   * `docs/decisions/0398-the-pterodactyl-is-feathered.md`.
+   *
+   * ⚠️ **A FLAME DOES NOT FLASH AND A WING DOES.** 0035's rule is that a hit lights the body that took
+   * it, and a fire round the animal is not its body — so the fish's and the serpent's leave this out. The
+   * pterodactyl's wings are flesh laid in this layer so that they can beat, and a hit that lit the
+   * animal minus its wings would be the tail's defect over again (0374).
+   */
+  hurt?: readonly number[];
 }
 
 /**
@@ -1990,6 +2007,59 @@ const BLAZING: Look = {
   aura: { frames: BLAZE, hold: 2, stride: 1, head: VOLANS_FIRE_HEAD.blaze },
   tail: VOLANS_TAIL_BARBED,
 };
+
+/*
+  ── THE PTERODACTYL'S BODY, FACES AND WINGS — `docs/decisions/0398-the-pterodactyl-is-feathered.md` ──
+
+  ⚠️ **ONE FACE A STAGE, AND WHAT DIFFERS IS THE TELL.** `wearFace` puts on `gape` before a volley and
+  while a laser is on the hull: so the stage that fires the shoulder cannons gapes with the cannons lit,
+  the stage that fires the mouth opens its beak on the throat cannon, and the last does both. The first
+  stage throws quills off its wings and its tell is the wings' own beat, so its `gape` is its rest —
+  a beak that opened for a volley that did not come out of it would be the lie 0319's guard refuses.
+*/
+const QUETZAL_REST = { rest: SPRITE.boss10, restHit: SPRITE.boss10Hit, up: SPRITE.boss10Up, down: SPRITE.boss10Down, shut: SPRITE.boss10, shutHit: SPRITE.boss10Hit } as const;
+const QUETZAL_FACE: Face = { ...QUETZAL_REST, gape: SPRITE.boss10, gapeHit: SPRITE.boss10Hit };
+const QUETZAL_SHOULDERS: Face = { ...QUETZAL_REST, gape: SPRITE.boss10Charged, gapeHit: SPRITE.boss10ChargedHit };
+const QUETZAL_MOUTH: Face = { ...QUETZAL_REST, gape: SPRITE.boss10Gape, gapeHit: SPRITE.boss10GapeHit };
+const QUETZAL_EVERYTHING: Face = { ...QUETZAL_REST, gape: SPRITE.boss10GapeCharged, gapeHit: SPRITE.boss10GapeChargedHit };
+
+/** Eight frames of a wingbeat, and the same eight lit by a hit — 0398. */
+const QUETZAL_WINGS: readonly number[] = [
+  SPRITE.quetzalWing0,
+  SPRITE.quetzalWing1,
+  SPRITE.quetzalWing2,
+  SPRITE.quetzalWing3,
+  SPRITE.quetzalWing4,
+  SPRITE.quetzalWing5,
+  SPRITE.quetzalWing6,
+  SPRITE.quetzalWing7,
+];
+const QUETZAL_WINGS_HIT: readonly number[] = [
+  SPRITE.quetzalWing0Hit,
+  SPRITE.quetzalWing1Hit,
+  SPRITE.quetzalWing2Hit,
+  SPRITE.quetzalWing3Hit,
+  SPRITE.quetzalWing4Hit,
+  SPRITE.quetzalWing5Hit,
+  SPRITE.quetzalWing6Hit,
+  SPRITE.quetzalWing7Hit,
+];
+
+/** The wings beating at `hold` steps a frame — quicker each stage, which is the animal working harder. */
+const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_WINGS_HIT, hold, stride: 1, head: QUETZAL_WING_HEAD });
+
+/**
+ * Where the shoulder cannons' muzzles are, across the lane from the hull's centre — 0398:
+ * `QUETZAL_CANNON` in `src/render/bake.ts`, 0.6 of the 44-unit drawing's radius. The row's wing beams
+ * leave from here; `tests/quetzal.test.ts` holds the two numbers together.
+ */
+const SHOULDER = 11;
+
+/** Where a quill leaves each wing, `[along, across]` — 0398: at the wrist, the wing's leading edge. */
+const WINGS: readonly (readonly [number, number])[] = [
+  [-3, -20],
+  [-3, 20],
+];
 
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
@@ -3253,10 +3323,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * huge laser blast."* Between beams it flies, and each phase's flight is shorter than the last.
    * Owed, in `docs/decisions/0250-the-quetzal-screams.md`: the volcanoes in its backdrop belching
    * rock that rains on the lane.
+   *
+   * ⚠️ **FEATHERED, BEATING ITS WINGS, AND ARMED WHERE THE PLAYER CAN SEE IT — 0398.** *"It needs
+   * feathers, lazer cannon when it opens it's mouth to fire, shoulder mounted lazers for when it fires
+   * two and three … the initial bullet firing needs to be shooting feathered quills from it's wings."*
+   * The quills leave the wings, two a wing; the wing beams leave cannons on its shoulders, eleven units
+   * out where they were eighteen, because that is where a shoulder is; and the mouth's beam leaves a
+   * cannon in its throat that the beak opens on. Each stage's face lights the thing about to fire.
    */
   quetzal: {
     move: { kind: 'patrol' },
-    attack: { kind: 'spray' },
+    attack: { kind: 'spray', from: WINGS },
     uncoil: null,
     // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
     // the whole fight.
@@ -3264,7 +3341,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     chill: null,
     muzzle: null,
     chain: null,
-    face: null,
+    face: QUETZAL_FACE,
     entrance: null,
     tail: null,
     room: null,
@@ -3280,16 +3357,22 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 6,
     driftWavelength: 160,
     patrol: 0.55,
-    shot: 'lance',
+    // A feathered quill since 0398, where it threw the lancer's lance.
+    shot: 'quill',
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      // The wings: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-18, 18], jag: 10 } },
-      // The mouth: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },
-      // Everything: the mouth and both wings, on the mouth's timing, each five units wide — three of
-      // them narrower than the mouth alone, because three of them are what cover the lane.
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-18, 0, 18], jag: 7 } },
+      // Four quills, two off each wing — 0398: three shared between two wings would throw lopsided.
+      { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(5) }, shot: null, attack: null },
+      // The shoulder cannons: 0.3 s of warning, 0.4 s of beam, three units wide each.
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-SHOULDER, SHOULDER], jag: 10 } },
+      // The throat cannon: half a second of warning, half a second of beam, twelve units wide.
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },
+      /*
+        Everything: the throat and both shoulders, on the mouth's timing, each five units wide. 0398
+        brought the shoulders in from eighteen to eleven, so what the three leave between them is two
+        gaps of six units rather than two of thirteen — a thing a player can thread and not be sure of,
+        with open lane either side of the brace for the player who would rather go round.
+      */
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-SHOULDER, 0, SHOULDER], jag: 7 } },
     ],
   },
   /**

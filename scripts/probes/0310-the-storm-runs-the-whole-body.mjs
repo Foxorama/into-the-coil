@@ -80,8 +80,9 @@ export const PROBES = [
     guard: 'and the CROWN flares for half a second before a strike, and at no other time',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const set = charging && on === head && flare !== undefined ? flare : aura.frames;',
-      replace: '    const set = charging && flare !== undefined ? flare : aura.frames;',
+      // ⚠️ Re-anchored by 0398, which puts a hurt set in front of the flare on the same line.
+      find: '    const set = hurt ?? (charging && on === head && flare !== undefined ? flare : aura.frames);',
+      replace: '    const set = hurt ?? (charging && flare !== undefined ? flare : aura.frames);',
     },
   },
   {

@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS } from '../content/specials.ts';
-import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -481,6 +481,20 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   volansBlaze6: 'glass',
   volansBlaze7: 'glass',
   boss10: 'enemy',
+  // The pterodactyl's faces and its wings are the animal's flesh — 0398 — so they are the hull's ink.
+  boss10Up: 'enemy',
+  boss10Down: 'enemy',
+  boss10Gape: 'enemy',
+  boss10Charged: 'enemy',
+  boss10GapeCharged: 'enemy',
+  quetzalWing0: 'enemy',
+  quetzalWing1: 'enemy',
+  quetzalWing2: 'enemy',
+  quetzalWing3: 'enemy',
+  quetzalWing4: 'enemy',
+  quetzalWing5: 'enemy',
+  quetzalWing6: 'enemy',
+  quetzalWing7: 'enemy',
   boss11: 'enemy',
   boss11Chipped: 'enemy',
   boss11Broken: 'enemy',
@@ -610,6 +624,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   frostSpent: 'frost',
   // The fish's spine in the enemy's ink — 0262: a spine is told from a slab by its shape.
   spine: 'enemy',
+  // The pterodactyl's quill in the enemy's ink — 0398, on the spine's terms: told by its shape.
+  quill: 'enemy',
   // The ripple and the curl in their place's ink — 0327, on 0296's rule that a raider's bullet takes
   // its place's colour. What tells them from the spit and the slab is the shape and the path.
   ripple: 'enemy',
@@ -810,6 +826,17 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   volansTailHit: 'impact',
   volansTailBarbedHit: 'impact',
   boss10Hit: 'impact',
+  boss10GapeHit: 'impact',
+  boss10ChargedHit: 'impact',
+  boss10GapeChargedHit: 'impact',
+  quetzalWing0Hit: 'impact',
+  quetzalWing1Hit: 'impact',
+  quetzalWing2Hit: 'impact',
+  quetzalWing3Hit: 'impact',
+  quetzalWing4Hit: 'impact',
+  quetzalWing5Hit: 'impact',
+  quetzalWing6Hit: 'impact',
+  quetzalWing7Hit: 'impact',
   boss11Hit: 'impact',
   boss11ChippedHit: 'impact',
   boss11BrokenHit: 'impact',
@@ -6618,84 +6645,387 @@ function paintBoss9(
 }
 
 /*
-  THE PTERODACTYL. A long beak, a crest swept back over the skull, and two wings swept to the back
-  corners with the membrane scalloped between the wing-fingers and the body.
+  ── THE PTERODACTYL, FEATHERED AND ARMED — `docs/decisions/0398-the-pterodactyl-is-feathered.md` ──
+
+  Asked: *"It needs feathers, lazer cannon when it opens it's mouth to fire, shoulder mounted lazers for
+  when it fires two and three."* 0264's drawing was a flat polygon — beak, crest, two wings swept to the
+  corners — with three plates a wing and never a face; it was the one real boss the art passes had not
+  reached.
+
+  ⚠️ **THE BODY AND THE WINGS ARE TWO BITMAPS NOW, AND THE WINGS BEAT.** This hull is the head, neck,
+  torso, tail and the two cannon pods on the shoulders; the wings are `quetzalWing*`, eight frames of a
+  wingbeat in the layer behind the hull, rooted under the pods. So the animal flaps without a single
+  face being baked eight times over, and the hurtbox is still this 44-unit box.
+
+  ⚠️ **THE CANNONS ARE PART OF THE SILHOUETTE, AT THE BEAMS' OWN ROOTS.** Their muzzles are 0.6 of `r`
+  across — eleven units, `BOSSES.quetzal`'s wing beams' `from` — so the lasers leave the barrels the
+  player can see. The mouth's cannon sits in the throat, and the beak opens on it.
 */
-const QUETZAL_HULL: readonly Pt[] = [
-  [-1, 0],
-  [-0.62, -0.1],
-  [-0.52, -0.2],
-  [-0.3, -0.56],
-  [-0.34, -0.32],
-  [-0.2, -0.24],
-  [-0.1, -0.28],
-  [0.85, -1],
-  [0.96, -0.84],
-  [0.6, -0.56],
-  [0.66, -0.46],
-  [0.34, -0.32],
-  [0.4, -0.22],
-  [0.2, -0.16],
-  [0.6, -0.08],
+
+/** Where a shoulder cannon's muzzle is, in `r` — 0398. The row's wing beams are fired from here. */
+export const QUETZAL_CANNON: Pt = [-0.4, 0.6];
+
+/** The body's upper half, skull to tail — 0398. The lower half is its mirror, and the beak is a face's. */
+const QUETZAL_UPPER: readonly Pt[] = [
+  [-0.5, -0.1],
+  [-0.4, -0.14],
+  [-0.3, -0.13],
+  [-0.22, -0.1],
+  [-0.14, -0.13],
+  [-0.08, -0.26],
+  [-0.12, -0.46],
+  // The cannon: a barrel out forward of the pod, square at the muzzle.
+  [-0.34, -0.52],
+  [-0.4, -0.53],
+  [-0.4, -0.53],
+  [-0.4, -0.67],
+  [-0.4, -0.67],
+  [-0.34, -0.68],
+  [-0.12, -0.72],
+  [0.08, -0.74],
+  [0.18, -0.66],
+  [0.16, -0.5],
+  [0.22, -0.36],
+  [0.34, -0.25],
+  [0.46, -0.24],
+  // A foot tucked under the hip, talons aft.
+  [0.54, -0.32],
+  [0.62, -0.31],
+  [0.62, -0.31],
+  [0.56, -0.21],
+  [0.66, -0.12],
+  [0.8, -0.08],
+  // The tail's fan of plumes.
+  [0.88, -0.16],
+  [0.99, -0.2],
+  [0.99, -0.2],
+  [0.93, -0.1],
   [1, -0.05],
-  [1, 0.05],
-  [0.6, 0.08],
-  [0.2, 0.16],
-  [0.4, 0.22],
-  [0.34, 0.32],
-  [0.66, 0.46],
-  [0.6, 0.56],
-  [0.96, 0.84],
-  [0.85, 1],
-  [-0.1, 0.28],
-  [-0.2, 0.24],
-  [-0.52, 0.2],
-  [-0.62, 0.1],
+  [1, -0.05],
+  [0.96, 0],
 ];
-function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The membrane: ribs from the shoulder to the wing-finger and to each scallop, both wings.
+
+/** The two beaks, each lower jaw → tip → upper jaw, which is the order the hull meets them in. */
+const QUETZAL_BEAKS: Record<'shut' | 'open', readonly Pt[]> = {
+  shut: [
+    [-0.62, 0.075],
+    [-1, 0.012],
+    [-1, -0.012],
+    [-0.62, -0.075],
+  ],
+  // The mandibles splay across — seen from above an opening beak is two blades parting, on the fish's
+  // own terms (0319) — with the throat between them where the cannon is.
+  open: [
+    [-0.6, 0.1],
+    [-0.98, 0.18],
+    [-0.98, 0.18],
+    [-0.88, 0.1],
+    [-0.66, 0.025],
+    [-0.66, -0.025],
+    [-0.88, -0.1],
+    [-0.98, -0.18],
+    [-0.98, -0.18],
+    [-0.6, -0.1],
+  ],
+};
+
+/** The whole outline: the upper half, the lower half mirrored back to the skull, then the beak. */
+function quetzalHull(open: boolean): Pt[] {
+  const lower = QUETZAL_UPPER.slice(0, -1).map(([x, y]) => [x, -y] as const).reverse();
+  return [...QUETZAL_UPPER, ...lower, ...QUETZAL_BEAKS[open ? 'open' : 'shut']];
+}
+
+/** Which face a body sprite is: the beak, the cannons, and the eye — read off the name, as `volansFace` does. */
+function quetzalFace(kind: SpriteKind): { open: boolean; charged: boolean; gaze: number } {
+  const worn = kind.replace(/Hit$/, '');
+  return {
+    open: worn === 'boss10Gape' || worn === 'boss10GapeCharged',
+    charged: worn === 'boss10Charged' || worn === 'boss10GapeCharged',
+    gaze: worn === 'boss10Up' ? -1 : worn === 'boss10Down' ? 1 : 0,
+  };
+}
+
+/**
+ * The pterodactyl's paint — 0398: a form-shade, rows of contour feathers from the nape to the tail, a
+ * plumed crest, the cannon pods in the place's metal, and the head.
+ */
+function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, palette: Palette, kind: SpriteKind): void {
+  const { open, charged, gaze } = quetzalFace(kind);
+  const hull = quetzalHull(open);
+  shaded(ctx, f, [0, -0.7], [0, 0.7], rgba(skin.lit, 0.24), rgba(skin.plate, 0.5), hull, 1, true);
+  /*
+    ⚠️ **FEATHERS ARE ROWS OF SCALLOPS, EACH OVERLAPPING THE ONE BEHIND IT.** A contour feather seen
+    from above is a rounded tip lying aft over the next; what makes a coat of them read as plumage
+    rather than scales is that they are longer than wide, point aft, and the light catches each tip.
+    Staggered row to row, shrinking toward the tail, and only where the body is wide enough to hold
+    one inside its outline — `tests/accents.test.ts` measures every one.
+  */
+  const rows: readonly (readonly [number, number, number])[] = [
+    // x, half-width of the row, feather size
+    [-0.2, 0.04, 0.045],
+    [-0.1, 0.08, 0.055],
+    [0, 0.22, 0.065],
+    [0.1, 0.24, 0.065],
+    [0.2, 0.22, 0.06],
+    [0.3, 0.16, 0.055],
+    [0.4, 0.14, 0.05],
+    [0.5, 0.1, 0.045],
+    [0.6, 0.06, 0.04],
+    [0.7, 0.04, 0.035],
+  ];
+  rows.forEach(([x, half, size], row) => {
+    const count = Math.max(1, Math.round((half * 2) / (size * 1.3)));
+    for (let i = 0; i < count; i++) {
+      const y = count === 1 ? 0 : -half + (i / (count - 1)) * half * 2;
+      const at = x + (i % 2 === 0 ? 0 : size * 0.35) + (row % 2 === 0 ? 0 : size * 0.2);
+      // The feather: a teardrop, rounded tip aft, in the plate ink, and its tip lit.
+      shaded(ctx, f, [at - size, y], [at + size, y], rgba(skin.plate, 0.1), rgba(skin.plate, 0.55), [
+        [at - size * 0.9, y],
+        [at - size * 0.2, y - size * 0.62],
+        [at + size * 0.7, y - size * 0.52],
+        [at + size, y],
+        [at + size * 0.7, y + size * 0.52],
+        [at - size * 0.2, y + size * 0.62],
+      ], 1, true);
+      seam(ctx, f, rgba(skin.lit, 0.5), 0.018, [
+        [at + size * 0.35, y - size * 0.5],
+        [at + size * 0.85, y - size * 0.2],
+        [at + size * 0.85, y + size * 0.2],
+        [at + size * 0.35, y + size * 0.5],
+      ], 1, true);
+    }
+  });
+  // The crest: a plume from the crown back over the nape, lit along its spine, three barbs a side.
+  shaded(ctx, f, [-0.44, 0], [-0.08, 0], rgba(shade(skin.hull, -0.3), 0.9), rgba(shade(skin.hull, -0.3), 0.3), [
+    [-0.44, 0],
+    [-0.34, -0.06],
+    [-0.16, -0.07],
+    [-0.04, -0.03],
+    [-0.04, 0.03],
+    [-0.16, 0.07],
+    [-0.34, 0.06],
+  ], 1, true);
+  seam(ctx, f, skin.lit, 0.022, [
+    [-0.42, 0],
+    [-0.08, 0],
+  ]);
+  for (const side of [-1, 1]) for (const x of [-0.34, -0.26, -0.18]) seam(ctx, f, rgba(skin.lit, 0.55), 0.014, [[x, 0], [x + 0.07, 0.05 * side]]);
+  // The cannon pods: the place's metal on the shoulders, a lit rim, rivets, and a dark bore.
   for (const side of [-1, 1]) {
-    plate(ctx, f, skin, [
-      [0, -0.32 * side],
-      [0.78, -0.9 * side],
-      [0.8, -0.86 * side],
-      [0.02, -0.28 * side],
-    ]);
-    plate(ctx, f, skin, [
-      [0.02, -0.3 * side],
-      [0.56, -0.56 * side],
-      [0.58, -0.52 * side],
-      [0.04, -0.26 * side],
-    ]);
-    plate(ctx, f, skin, [
-      [0.04, -0.26 * side],
-      [0.3, -0.32 * side],
-      [0.32, -0.28 * side],
-      [0.06, -0.22 * side],
-    ]);
+    const pod: Pt[] = (
+      [
+        [-0.1, -0.5],
+        [-0.1, -0.7],
+        [0.07, -0.72],
+        [0.15, -0.65],
+        [0.13, -0.52],
+      ] as const
+    ).map(([x, y]) => [x, y * side] as const);
+    shaded(ctx, f, [0, -0.72 * side], [0, -0.5 * side], shade(skin.plate, 0.2), shade(skin.plate, -0.35), pod, 1, true);
+    const barrel: Pt[] = (
+      [
+        [-0.39, -0.545],
+        [-0.39, -0.655],
+        [-0.1, -0.69],
+        [-0.1, -0.51],
+      ] as const
+    ).map(([x, y]) => [x, y * side] as const);
+    shaded(ctx, f, [-0.2, -0.54 * side], [-0.2, -0.66 * side], shade(skin.plate, 0.1), shade(skin.plate, -0.45), barrel);
+    // Bands round the barrel, and the rivets on the pod.
+    for (const x of [-0.3, -0.2]) seam(ctx, f, rgba(skin.lit, 0.6), 0.02, [[x, -0.55 * side], [x, -0.65 * side]]);
+    for (const [x, y] of [[0.02, -0.56], [0.08, -0.64]] as const) disc(ctx, f, rgba(skin.lit, 0.8), x, y * side, 0.022);
+    // The bore, dark — or, charged, the laser's own light building in it and spilling out of the muzzle.
+    const [mx, my] = QUETZAL_CANNON;
+    disc(ctx, f, shade(skin.plate, -0.6), mx + 0.05, my * side, 0.04);
+    if (charged) {
+      glow(ctx, f, palette.enemy, mx - 0.02, my * side, 0.2, 0.75);
+      disc(ctx, f, palette.impact, mx + 0.05, my * side, 0.03, 0.85);
+      seam(ctx, f, rgba(palette.impact, 0.7), 0.02, [[mx + 0.05, my * side], [-0.12, my * side]]);
+    }
   }
-  // Scales on the body, in the place's motif.
-  motif(ctx, f, skin, theme, [
-    [-0.15, -0.14],
-    [0.5, -0.07],
-    [0.5, 0.07],
-    [-0.15, 0.14],
-  ], 'boss10');
-  // The crest lit, the beak lit along its length, the eye in its socket.
-  lit(ctx, f, skin, [
-    [-0.4, -0.32],
-    [-0.32, -0.5],
-    [-0.35, -0.34],
-    [-0.44, -0.28],
+  // The head: the beak lit along its ridge, a nostril, and the eye watching the ship.
+  if (!open) {
+    poly(ctx, f, skin.lit, [
+      [-0.94, -0.005],
+      [-0.72, -0.045],
+      [-0.66, -0.03],
+      [-0.86, 0.004],
+    ], 0.8);
+    seam(ctx, f, rgba(skin.plate, 0.6), 0.016, [
+      [-0.96, 0],
+      [-0.64, 0.01],
+    ]);
+  } else {
+    /*
+      THE THROAT CANNON — asked for in those words: *"lazer cannon when it opens it's mouth to fire."*
+      A ring of the place's metal where the throat is, its bore lit, and the charge spilling forward
+      through the gape. The notch the beak leaves is outside the hull, so what lies in it is light and
+      is drawn under 0.9 (0227): a mouth that painted solid there would be paint on the sky.
+    */
+    disc(ctx, f, shade(skin.plate, -0.2), -0.53, 0, 0.065);
+    disc(ctx, f, shade(skin.plate, -0.6), -0.54, 0, 0.045);
+    disc(ctx, f, palette.impact, -0.545, 0, 0.03, 0.85);
+    glow(ctx, f, palette.enemy, -0.7, 0, 0.26, 0.7);
+    for (const side of [-1, 1]) {
+      poly(ctx, f, skin.lit, [
+        [-0.95, 0.16 * side],
+        [-0.74, 0.08 * side],
+        [-0.7, 0.1 * side],
+        [-0.88, 0.16 * side],
+      ], 0.8);
+    }
+  }
+  disc(ctx, f, shade(skin.plate, -0.4), -0.8, open ? -0.12 : -0.02, 0.014);
+  for (const side of [-1, 1]) eye(ctx, f, skin, -0.46, 0.074 * side, 0.03, gaze);
+}
+
+/** How many frames one wingbeat is — 0398. The frames are the beat, so they loop. */
+const QUETZAL_BEAT = 8;
+
+/**
+ * One wing at full spread, the `−y` side, in the wing tile's own `r` — 0398: root under the shoulder
+ * pod, the leading edge out to the wrist and the hand, then the trailing edge back as flight feathers.
+ */
+function quetzalWing(frame: number): { outline: Pt[]; feathers: readonly (readonly [Pt, Pt])[]; arm: readonly Pt[] } {
+  // Where the body's shoulder is in this tile — the body's `r` over this one's.
+  const body = (SPRITE_EXTENT.boss10 * 0.42) / ((SPRITE_EXTENT.quetzalWing0 * QUETZAL_WING_HEAD) / SERPENT_BODY_DIAMETER * 0.42);
+  const root: Pt = [0.02 * body, -0.5 * body];
+  const beat = (frame / QUETZAL_BEAT) * Math.PI * 2;
+  // The downstroke spreads the wing to its full span; on the upstroke it is raised, so from above it is
+  // foreshortened across and its hand swings back.
+  const span = 0.78 + 0.22 * Math.cos(beat);
+  const sweep = 0.08 * Math.sin(beat);
+  const place = ([x, y]: Pt): Pt => {
+    const out = y - root[1];
+    return [x + (1 - span) * 0.6 * -out + sweep * -out, root[1] + out * span];
+  };
+  /*
+    ⚠️ **LONG AND NARROW, WHICH IS WHAT MAKES IT A WING.** The first draft's chord was three quarters of
+    its span and photographed as a clam shell either side of the body. A wing from above is an arm out
+    to the wrist, a hand swept back to the tip, and a band of flight feathers a quarter of the span deep
+    behind both — the primaries off the hand, pointed and parted, and the secondaries off the arm.
+  */
+  const leading: Pt[] = (
+    [
+      [root[0] - 0.03, root[1] - 0.01],
+      [-0.08, -0.42],
+      [-0.12, -0.54],
+      [-0.12, -0.64],
+      [-0.03, -0.8],
+      [0.12, -0.96],
+      [0.3, -1.08],
+      [0.3, -1.08],
+    ] as const
+  ).map(place);
+  const arm: Pt[] = leading.slice(1, 6);
+  const feathers: [Pt, Pt][] = [];
+  const edge: Pt[] = [];
+  // Six primaries off the hand, each a pointed tip with a notch before the next, raking back.
+  for (let i = 0; i < 6; i++) {
+    const t = i / 5;
+    const tip: Pt = [0.4 + t * 0.06, -1.02 + t * 0.34];
+    const next: Pt = [0.4 + (t + 0.2) * 0.06, -1.02 + (t + 0.2) * 0.34];
+    const notch: Pt = [(tip[0] + next[0]) / 2 - 0.05, (tip[1] + next[1]) / 2];
+    const base: Pt = [tip[0] - 0.2, tip[1] + 0.07];
+    feathers.push([place(base), place([tip[0] - 0.03, tip[1] + 0.005])]);
+    edge.push(place(tip), place(tip), place(notch));
+  }
+  // Five secondaries off the arm, rounded, shorter toward the body.
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    const tip: Pt = [0.4 - t * 0.2, -0.62 + t * 0.28];
+    const base: Pt = [-0.06 + t * 0.02, -0.62 + t * 0.26];
+    feathers.push([place(base), place([tip[0] - 0.05, tip[1]])]);
+    edge.push(place(tip), place([tip[0] - 0.06, tip[1] + 0.035]));
+  }
+  const outline: Pt[] = [...leading, ...edge, [root[0] + 0.14, root[1] + 0.03]];
+  return { outline, feathers, arm };
+}
+
+/**
+ * Both wings, one frame of the beat — 0398. Sealed as one hull of two sub-paths, then paint: a shade
+ * from the leading edge back, three rows of coverts along the arm, a shaft down every flight feather,
+ * and the leading edge lit.
+ */
+function drawQuetzalWings(ctx: Pen, f: Frame, skin: FoeSkin | null, frame: number): void {
+  const wing = quetzalWing(frame);
+  const both = [-1, 1].map((side) => wing.outline.map(([x, y]) => [x, y * -side] as const));
+  ctx.beginPath();
+  for (const outline of both) curveLoop(ctx, f, outline);
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin === null) return;
+  for (const side of [-1, 1]) {
+    const flip = ([x, y]: Pt): Pt => [x, y * -side];
+    const outline = wing.outline.map(flip);
+    // Lit along the arm, darkening back into the flight feathers.
+    shaded(ctx, f, flip([-0.1, -0.6]), flip([0.4, -0.6]), rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), outline, 1, true);
+    // A shaft down every flight feather.
+    // Stopping short of the tip, which `curveLoop` rounds inside where the doubled point was authored.
+    for (const [[bx, by], [tx, ty]] of wing.feathers) seam(ctx, f, rgba(skin.plate, 0.6), 0.016, [flip([bx + (tx - bx) * 0.1, by + (ty - by) * 0.1]), flip([bx + (tx - bx) * 0.75, by + (ty - by) * 0.75])]);
+    // Coverts: two rows of scallops over the roots of the flight feathers, along the arm and the hand.
+    for (let row = 0; row < 2; row++) {
+      for (let i = 0; i + 1 < wing.arm.length; i++) {
+        for (const t of [0.25, 0.75]) {
+          const [ax, ay] = wing.arm[i]!;
+          const [bx, by] = wing.arm[i + 1]!;
+          const x = ax + (bx - ax) * t + 0.06 + row * 0.06;
+          const y = ay + (by - ay) * t + 0.015;
+          const s = 0.028 + row * 0.006;
+          seam(ctx, f, rgba(skin.lit, 0.45 - row * 0.12), 0.014, [flip([x - s * 0.4, y - s]), flip([x + s * 0.6, y - s * 0.3]), flip([x + s * 0.6, y + s * 0.3]), flip([x - s * 0.4, y + s])], 1, true);
+        }
+      }
+    }
+    // The leading edge caught by the light.
+    seam(ctx, f, rgba(skin.lit, 0.6), 0.024, wing.arm.map(([x, y]) => flip([x + 0.045, y + 0.012])), 1, true);
+  }
+}
+
+/**
+ * The pterodactyl's quill — 0398: a flight feather, point first. A shaft the whole length, a vane
+ * widest behind the middle and ragged at its back, and the bare quill at the root.
+ */
+function paintQuill(ctx: Pen, f: Frame, ink: string): void {
+  // The vane, split twice down each side where the barbs have parted — which is what makes a feather
+  // read as a feather rather than a leaf — and the bare quill at the root.
+  trace(ctx, f, [
+    [1, 0],
+    [0.62, -0.18],
+    [0.2, -0.36],
+    [0.02, -0.4],
+    [-0.04, -0.28],
+    [-0.14, -0.42],
+    [-0.4, -0.4],
+    [-0.46, -0.27],
+    [-0.54, -0.36],
+    [-0.66, -0.3],
+    [-0.7, -0.12],
+    [-1, -0.12],
+    [-1, 0.12],
+    [-0.7, 0.12],
+    [-0.66, 0.3],
+    [-0.54, 0.36],
+    [-0.46, 0.27],
+    [-0.4, 0.4],
+    [-0.14, 0.42],
+    [-0.04, 0.28],
+    [0.02, 0.4],
+    [0.2, 0.36],
+    [0.62, 0.18],
   ]);
-  lit(ctx, f, skin, [
-    [-0.92, 0],
-    [-0.7, -0.05],
-    [-0.68, -0.01],
-    [-0.88, 0.012],
+  seal(ctx);
+  /*
+    The shaft, lit, from the quill to where the vane narrows. ⚠️ A rachis is a hairline on a real
+    feather, and `tests/accents.test.ts` refuses a mark thinner than 2.5 CSS pixels — so it is drawn
+    the width a mark has to be, which on a feather five and a half units long is still a shaft.
+  */
+  poly(ctx, f, shade(ink, 0.6), [
+    [-0.98, -0.11],
+    [0.5, -0.1],
+    [0.5, 0.1],
+    [-0.98, 0.11],
   ]);
-  disc(ctx, f, shade(skin.plate, -0.5), -0.52, -0.06, 0.05);
-  disc(ctx, f, skin.eye, -0.53, -0.06, 0.032);
+  glow(ctx, f, ink, 0, 0, 0.6, 0.3);
 }
 /*
   ── THE GYRE, UPSCALED AND WORN — 0332 ─────────────────────────────────────────────────────────
@@ -9130,12 +9460,43 @@ export function drawKind(
     }
     case 'boss10':
     case 'boss10Hit':
-      // THE PTERODACTYL — 0264: a long beak, a crest swept back, and wings swept to the corners
-      // with the membrane scalloped between the wing-fingers and the body.
-      trace(ctx, f, QUETZAL_HULL);
+    case 'boss10Up':
+    case 'boss10Down':
+    case 'boss10Gape':
+    case 'boss10GapeHit':
+    case 'boss10Charged':
+    case 'boss10ChargedHit':
+    case 'boss10GapeCharged':
+    case 'boss10GapeChargedHit':
+      /*
+        THE PTERODACTYL — 0264's, redrawn by 0398: feathered, a cannon on each shoulder and one in its
+        throat, and its wings a layer of their own. Which face this is — the beak, the cannons, the
+        eye — is read off the name.
+      */
+      ctx.beginPath();
+      curveLoop(ctx, f, quetzalHull(quetzalFace(kind).open));
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintBoss10(ctx, f, skin, theme);
+      if (skin !== null) paintBoss10(ctx, f, skin, palette, kind);
+      return;
+    case 'quetzalWing0':
+    case 'quetzalWing1':
+    case 'quetzalWing2':
+    case 'quetzalWing3':
+    case 'quetzalWing4':
+    case 'quetzalWing5':
+    case 'quetzalWing6':
+    case 'quetzalWing7':
+    case 'quetzalWing0Hit':
+    case 'quetzalWing1Hit':
+    case 'quetzalWing2Hit':
+    case 'quetzalWing3Hit':
+    case 'quetzalWing4Hit':
+    case 'quetzalWing5Hit':
+    case 'quetzalWing6Hit':
+    case 'quetzalWing7Hit':
+      // THE PTERODACTYL'S WINGS — 0398: one frame of the wingbeat, both wings, behind the body.
+      drawQuetzalWings(ctx, f, skin, Number(kind.slice('quetzalWing'.length, 'quetzalWing'.length + 1)));
       return;
     case 'boss11':
     case 'boss11Hit':
@@ -9739,6 +10100,10 @@ export function drawKind(
       // wide end of its vane, and the same offset on a needle is a halo round the tip that fills the
       // taper back in. Photographed twice.
       glow(ctx, f, ink, -0.1, 0, 0.5, 0.35);
+      return;
+    case 'quill':
+      // THE PTERODACTYL'S QUILL — 0398: a flight feather off its wing, point first.
+      paintQuill(ctx, f, ink);
       return;
     case 'ripple':
       /*

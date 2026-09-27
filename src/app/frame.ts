@@ -8174,7 +8174,13 @@ function wearFace(w: World, boss: Entity): void {
     w.bossEntering < 0 &&
     w.bossEscortIn <= FACE_GAPE &&
     crowdFor(escort.standing, w.difficulty) > standingAdds(w, w.enemyKinds[escort.enemy]);
-  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting) {
+  /*
+    ⚠️ **AND IT STAYS OPEN FOR AS LONG AS A LASER IS ON THE HULL — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.**
+    *"Lazer cannon when it opens it's mouth to fire."* A beam is warned and then held for up to a
+    second, and `holdFor` is the brace it stands in for all of it (0250); a beak that shut on the step
+    the warning line appeared would be firing a laser out of a closed mouth — 0304's stream from nowhere.
+  */
+  if (boss.fireIn <= FACE_GAPE || boss.sprayLeft > 0 || spitting || boss.holdFor > 0) {
     boss.spriteBase = face.gape;
     boss.spriteHit = face.gapeHit;
   } else if (w.bossBite > 0) {
@@ -8567,7 +8573,14 @@ function layAura(w: World): void {
       The body goes on crackling at its own subdued rate; the crown is the one place a charge builds, and
       the two together are the animal winding up rather than the animal being brighter.
     */
-    const set = charging && on === head && flare !== undefined ? flare : aura.frames;
+    /*
+      ⚠️ **AND WINGS FLASH WITH THE BODY THEY BEAT ON — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.**
+      An aura that authors `hurt` is flesh laid in this layer, so while the hull is lit by a hit it
+      wears the same frame of its beat in the flash — the tail's rule (0374), one layer over. A flame
+      authors none and burns on.
+    */
+    const hurt = aura.hurt !== undefined && head.flashFor > 0 ? aura.hurt : undefined;
+    const set = hurt ?? (charging && on === head && flare !== undefined ? flare : aura.frames);
     const frame = set[(((tick + k * aura.stride) % set.length) + set.length) % set.length]!;
     flame.sprite = frame;
     flame.spriteBase = frame;
