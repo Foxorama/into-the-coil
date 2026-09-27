@@ -20,9 +20,9 @@ export const PROBES = [
       path: 'src/sim/collide.ts',
       // ⚠️ The `shots` line is what keeps this unique: `blastInto` walks its targets the same way,
       // and an anchor on the loop alone matched both the day it landed.
-      find: '  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    for (let s = shots.size - 1; s >= 0; s--) {',
+      find: '  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    const clock = gate ?? target;\n    for (let s = shots.size - 1; s >= 0; s--) {',
       replace:
-        '  for (let t = 0; t < targets.size; t++) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    for (let s = shots.size - 1; s >= 0; s--) {',
+        '  for (let t = 0; t < targets.size; t++) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    const clock = gate ?? target;\n    for (let s = shots.size - 1; s >= 0; s--) {',
     },
   },
   {
@@ -173,9 +173,9 @@ export const PROBES = [
     guard: 'no hot file allocates',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '  let destroyed = 0;\n  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    for (let s = shots.size - 1;',
+      find: '  let destroyed = 0;\n  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    const clock = gate ?? target;\n    for (let s = shots.size - 1;',
       replace:
-        '  let destroyed = 0;\n  const label = `pairs`;\n  if (label.length < 0) return 0;\n  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    for (let s = shots.size - 1;',
+        '  let destroyed = 0;\n  const label = `pairs`;\n  if (label.length < 0) return 0;\n  for (let t = targets.size - 1; t >= 0; t--) {\n    const target = targets.at(t);\n    if (target.invulnFor > 0) continue;\n    const clock = gate ?? target;\n    for (let s = shots.size - 1;',
     },
   },
   {

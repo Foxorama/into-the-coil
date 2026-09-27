@@ -214,6 +214,7 @@ cost, which does not exist yet.
 | **the LASER IS JAGGED: the pterodactyls' beams a new random zigzag every beam, warned along it, drawn and hurt through one hash** | [0388](decisions/0388-the-laser-is-jagged.md) — amends [0250](decisions/0250-the-quetzal-screams.md) |
 | **the HYDRA CATCHES FIRE: from the clockwork, down every neck and over the body and tail** | [0389](decisions/0389-the-hydra-catches-fire.md) — amends [0384](decisions/0384-the-hydra-stands-in-the-acid.md) |
 | **a DUD ICICLE LOOKS LIKE ONE: frost that will melt is a needle, frost that will burst a star** | [0390](decisions/0390-a-dud-icicle-looks-like-one.md) — amends [0263](decisions/0263-the-frost-ship-shatters.md) |
+| **a TARGET TAKES A BLADE ONLY SO OFTEN: thirty shuriken landings a second at most, a boss one target; every end boss about 15% lighter; the serpent's flank counts again** | [0391](decisions/0391-a-target-takes-a-blade-so-often.md) — amends [0234](decisions/0234-a-blade-circles-the-ship.md), [0307](decisions/0307-the-serpent-is-armoured.md) |
 | **a sound is made for the HUNDREDTH time: 0104's rule — a cue finishes before its own next volley — asked about a boss for the first time, over the table and in the flown fight; the serpent's acid a third of its length with its weight out of the 2–5 kHz band; four boss cues struck at four weights; and the ship's death landing on the root, which reverses the one thing 0099 was proudest of** | [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0099](decisions/0099-the-cues-are-in-the-key.md), [0104](decisions/0104-the-gun-plays-a-figure.md) |
 | **the void comes every SECOND spray: a round of three heads whose first and third are the same attack puts the odd one on every second turn — the serpent's hurt phase reads spray, void, spray; the combined ball's appetite is 13.2, and a tenth of it buys a whole extra bite from the opening gun; a round's cue claim is one sound per ATTACK, held as a bijection, where it was one per head** | [0324](decisions/0324-the-void-comes-every-second-spray.md) — amends [0261](decisions/0261-the-serpent-throws-together.md), [0322](decisions/0322-the-ball-is-worth-shooting.md), [0308](decisions/0308-the-attacks-are-heard.md) |
 | **the fight SOUNDS like the fight: `scripts/weigh-fit.mjs` measures a cue against the music it plays over — and found that NO cue in the game states a note, every one of them measuring as percussion over a piece that measures +24.5 dB; the serpent's three attacks hold scale tones its bed is holding; and level one owns an `ownA` for the first time, a maraca and a rattle at its two fight rungs** | [0325](decisions/0325-the-fight-sounds-like-the-fight.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md), [0172](decisions/0172-a-place-opens-with-its-own-four.md) |
@@ -834,8 +835,10 @@ look. **A second play report answered by five**: every boss's phases solved for 
 ([0388](decisions/0388-the-laser-is-jagged.md)), the hydra catching fire from its last head
 ([0389](decisions/0389-the-hydra-catches-fire.md)), and frost that will melt drawn as an icicle
 ([0390](decisions/0390-a-dud-icicle-looks-like-one.md)). **All are owed a play**, and each decision's
-*Not held by any guard* names what the play has to look at. 0386 leaves one question open: the shuriken
-speeds up through a fight where the pulse and the arc do not, on the gyre too, and why is not established.
+*Not held by any guard* names what the play has to look at. 0386's open question — why the shuriken
+sped up through a fight — is answered by [0391](decisions/0391-a-target-takes-a-blade-so-often.md): more
+to cross is more landings, so a target now takes blades thirty times a second at most, every end boss is
+about fifteen percent lighter, and the serpent's flank counts again. Owed a play with the rest.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel

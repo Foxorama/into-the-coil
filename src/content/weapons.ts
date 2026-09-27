@@ -96,6 +96,13 @@ export interface WeaponRow {
    */
   bossWeight: number;
   /**
+   * Steps between one of this gun's blades landing on a target and the next landing there, however
+   * many blades are across it — `docs/decisions/0391-a-target-takes-a-blade-so-often.md` — or absent
+   * for a gun whose shots are spent by arriving and so cannot pile up on one body. A boss is one
+   * target, hull and body together.
+   */
+  landGap?: number;
+  /**
    * What a pickup of this gun buys once its ladder is full — `docs/decisions/0373-a-special-is-the-guns-own.md`.
    * *"It increases your bomb count for that weapon/missile type."* Every row authors it — 0373, 0374.
    */
@@ -352,6 +359,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: [1, 1, 1, 1, 1],
     weight: [1, 1, 1, 1, 1],
     bossWeight: 1,
+    /*
+      ⚠️ **THIRTY LANDINGS A SECOND ON ANY ONE TARGET — 0391.** *"Cap the max number of shuriken hits on
+      any one target."* Measured flown at the cap: on the level 2 mid-boss the shuriken lands 28 a
+      second, which this leaves alone; on the hydra's five heads 151 and on the gyre 89, which it brings
+      to about the damage the pulse and the arc do on the same boss.
+    */
+    landGap: 2,
     // The whirlpool — 0374.
     special: 'whirlpool',
     reach: [0, 0, 0, 0, 0],

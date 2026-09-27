@@ -1212,7 +1212,7 @@ describe('0283 — the serpent is a chain', () => {
     ).toBe(nodes);
   });
 
-  it('0307 — and the body is armour: a shot on it stops and sparks, and takes nothing off the serpent', () => {
+  it('0307, 0391 — and a shot on the body stops there and is a hit on the serpent', () => {
     /*
       ⚠️ **THE HURT SHAPE IS THE ANATOMY**, which is the request 0277 could not answer: *"we need to
       update the boss collision to no longer be a disc if we can."* A node is as wide as the animal is
@@ -1258,8 +1258,46 @@ describe('0283 — the serpent is a chain', () => {
     reset(shot, tail.along, tail.across, SHOTS.pulse);
     world.bossPool.at(0).fireIn = 999;
     frame.step();
-    expect(world.playerShots.size, 'the shot went through the serpent’s flank — armour is not a hole').toBe(0);
-    expect(world.bossPool.at(0).health, 'a shot on the serpent’s tail hurt the serpent, so the body is not armour').toBe(before);
+    expect(world.playerShots.size, 'the shot went through the serpent’s flank — a body is not a hole').toBe(0);
+    /*
+      ⚠️ **SOFT AGAIN SINCE 0391**, which put a ceiling on how often a target takes a blade: the armour
+      was there because a blade rode the whole flank, and the ceiling answers that for every boss. *"We
+      can have the serpent boss on level one have hits count on body as well."* So a shot on the tail is
+      a hit on the animal, and the flank that took it flashes (0035) — the claim 0283 made, back.
+    */
+    expect(world.bossPool.at(0).health, 'a shot on the serpent’s tail took nothing off the serpent').toBeLessThan(before);
+    let lit = 0;
+    for (let i = 0; i < world.bossBody.size; i++) if (world.bossBody.at(i).flashFor > 0) lit++;
+    expect(lit, 'the flank that took the shot did not flash').toBeGreaterThan(0);
+  });
+
+  it('0307 — and the body is armour: a shot on it stops and sparks, and takes nothing off the serpent', () => {
+    /*
+      ⚠️ **HELD ON A ROW MADE FOR THE TEST SINCE 0391**, which made the serpent's flank soft again. The
+      mechanism outlives its only row's use of it, as `hurt`'s half-share does below: a creature whose
+      flank is armour is a number on its row (0282), and what 0307 held of one is held here on the
+      serpent's own row wearing none — nothing reaches the head, the shot stops, the flank does not
+      flash, and it sparks, because a shot vanishing with no mark is the bug report after report filed.
+    */
+    const { world, frame } = serpentAt(1);
+    const chain = BOSSES.jormungandr.chain!;
+    world.bossRow = { ...BOSSES.jormungandr, chain: { ...chain, hurt: 0 } };
+    for (let i = 0; i < 60 && world.bossBody.size === 0; i++) frame.step();
+    const before = world.bossPool.at(0).health;
+    const s = spine(world);
+    const reachable = cullPlayerShotAlong(world.cameraAlong, world.view.alongSpan);
+    const tail = [...s].reverse().find((n) => n.along <= reachable);
+    if (tail === undefined || tail === s[0]) throw new Error('no body node is inside the player’s reach');
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
+    world.playerShots.clear();
+    world.debris.clear();
+    const shot = world.playerShots.spawn()!;
+    reset(shot, tail.along, tail.across, SHOTS.pulse);
+    world.bossPool.at(0).fireIn = 999;
+    frame.step();
+    expect(world.playerShots.size, 'the shot went through the flank — armour is not a hole').toBe(0);
+    expect(world.bossPool.at(0).health, 'a shot on an armoured tail hurt the animal').toBe(before);
     let lit = 0;
     for (let i = 0; i < world.bossBody.size; i++) if (world.bossBody.at(i).flashFor > 0) lit++;
     expect(lit, 'the flank flashed hurt for a shot that took nothing').toBe(0);

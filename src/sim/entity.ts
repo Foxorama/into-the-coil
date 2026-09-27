@@ -168,6 +168,11 @@ export interface Entity extends Body {
    */
   landIn: number;
   /**
+   * Steps until this target may take another blade — `docs/decisions/0391-a-target-takes-a-blade-so-often.md`.
+   * `landIn` is the blade's clock; this is the target's, and a boss's body keeps its hull's.
+   */
+  bladeIn: number;
+  /**
    * The share of a boss's full health a blast lands on it, when that is more than `damage` — 0372.
    * Zero for everything else, and for a blast that is only ever flat.
    */
@@ -487,6 +492,7 @@ export function makeEntity(): Entity {
     flashGap: 0,
     struckIn: 0,
     landIn: 0,
+    bladeIn: 0,
     kind: 0,
     fireIn: 0,
     entrySlot: 0,
@@ -548,6 +554,7 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.flashGap = 0;
   e.struckIn = 0;
   e.landIn = 0;
+  e.bladeIn = 0;
   e.kind = kind;
   e.fireIn = 0;
   e.entrySlot = 0;

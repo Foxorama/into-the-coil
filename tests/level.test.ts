@@ -2361,11 +2361,17 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       the fight itself — `0307 — flown at the cap` in `tests/serpent.test.ts`, through
       `scripts/weigh-boss.mjs`. The other six are still read here; what they measure flown is in
       0307's decision, as a measurement and not a guard.
+
+      ⚠️ **ANY CHAIN, SINCE 0391, AND NOT ONLY AN ARMOURED ONE.** The serpent's flank counts again, and
+      this arithmetic reads it as twenty seconds at 700 — while the flown fight's quickest gun takes
+      twenty-five and 0307's own guard holds it in the fight itself. `FASTEST` was never a model of a
+      body a blade lands on thirty times a second at most and a pulse meets only at the skull; the
+      armour was one way it was wrong, and the ceiling is another. The flown floor is the measure.
     */
     for (const level of LEVEL_KINDS) {
       const kind = LEVELS[level].boss;
       const row = BOSSES[kind];
-      if (row.chain !== null && row.chain.hurt < 1) continue;
+      if (row.chain !== null) continue;
       const total = (row.health * TUNED.toughness) / FASTEST;
       expect(total, `${kind} is over in ${total.toFixed(1)}s at max weapons on the tuned tier`).toBeGreaterThanOrEqual(40);
       const ups = row.phases.map((p) => p.upTo);
