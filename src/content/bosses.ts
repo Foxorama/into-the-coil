@@ -3636,7 +3636,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         stance: { kind: 'volley' },
         look: null,
         shot: null,
-        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' } }, { shot: 'flame', attack: { kind: 'spray' } }] },
+        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' }, gap: 24 }, { shot: 'flame', attack: { kind: 'spray' }, gap: 24 }] },
       },
       {
         upTo: 0.6,
@@ -3650,9 +3650,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'spray' } },
-            { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
+            { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
           ],
         },
       },
@@ -3668,10 +3668,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'spray' } },
-            { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
-            { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
+            { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
+            { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
           ],
         },
       },
@@ -3687,11 +3687,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
         attack: {
           kind: 'heads',
           heads: [
-            { shot: 'acid', attack: { kind: 'spray' } },
-            { shot: 'flame', attack: { kind: 'spray' } },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 } },
-            { shot: 'frost', attack: { kind: 'wall', gap: 12 } },
-            { shot: 'void', attack: { kind: 'ring' } },
+            { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
+            { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
+            { shot: 'void', attack: { kind: 'ring' }, gap: 24 },
           ],
         },
       },

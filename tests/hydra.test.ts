@@ -16,6 +16,7 @@ import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BEAM_BOLT_KIND, BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -405,5 +406,65 @@ describe('0389 — the hydra catches fire', () => {
     expect(near(necksDone.flames, hull.along + body.along, hull.across + body.across, 1), 'the body caught before the necks had').toBe(false);
     expect(whole / STEPS_PER_SECOND, 'the fire takes the whole animal too fast to be seen travelling').toBeGreaterThanOrEqual(0.5);
     expect(whole / STEPS_PER_SECOND, 'the fire takes the whole animal too slowly to read as one blaze').toBeLessThanOrEqual(3);
+  });
+});
+
+/**
+ * The heads take a breath between them — `docs/decisions/0392-the-heads-take-a-breath.md`.
+ *
+ * Asked from play: *"the attacks from the different heads come too fast to each and merge together,
+ * needs to be a slightly longer pause, maybe .4 sec for each heads attack, it's fine if they go out of
+ * sync with each, but at the moment they're clustered together and it's too hard to dodge."*
+ */
+describe('0392 — the heads take a breath', () => {
+  it('THE REPORTED ONE, IN SECONDS: on every tier and at every round of heads, no head throws within 0.8 s of the last one finishing', () => {
+    /*
+      Where the player meets it: the hydra in each phase that has a round, flown for twenty seconds on
+      each tier. A head's attack is still going while the hull holds a beam or has a spray or a staggered
+      wall left to throw; the moment neither is true it has finished, and the next head's volley — the
+      round's count moving on — must come at least 0.8 s after that.
+
+      ⚠️ **0.8 IS THE QUIET THE ROUND HAD, PLUS THE 0.4 ASKED FOR.** Measured before this, the quiet
+      after a head was the phase's cadence: 0.5 s on Savior at five heads and 0.4 on Burn — so *at
+      least 0.4 s* was already true, and the ask is 0.4 s MORE. The tightest round before was Burn's,
+      at 0.4, so this is the floor that the round without the breath fails and the round with it keeps.
+    */
+    const floor = 0.8;
+    for (const tier of DIFFICULTY_KINDS) for (const hold of [0.7, 0.5, 0.3, 0.1]) {
+      const { world } = playableWorld(HYDRA_ONLY, tier);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+        world.ship.health = world.shipRow.health;
+        frame.step();
+      }
+      const boss = world.bossPool.at(0);
+      // The last step the previous head's attack was still going — the step it was thrown, for one
+      // that is over at once — or −1 before the first volley has been seen.
+      let lastBusy = -1;
+      let lastCount = boss.headAt;
+      let volleys = 0;
+      let tightest = Number.POSITIVE_INFINITY;
+      for (let step = 0; step < 20 * STEPS_PER_SECOND; step++) {
+        boss.health = world.bossFullHealth * hold;
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 999;
+        frame.step();
+        if (boss.headAt !== lastCount) {
+          lastCount = boss.headAt;
+          if (lastBusy >= 0) {
+            volleys++;
+            tightest = Math.min(tightest, step - lastBusy);
+          }
+          lastBusy = step;
+        } else if (lastBusy >= 0 && (boss.holdFor > 0 || boss.sprayLeft > 0)) {
+          lastBusy = step;
+        }
+      }
+      expect(volleys, `${tier} at ${hold}: the round never came round, so this measured nothing`).toBeGreaterThan(5);
+      expect(
+        tightest / STEPS_PER_SECOND,
+        `${tier} at ${hold}: a head threw ${(tightest / STEPS_PER_SECOND).toFixed(2)} s after the last one finished`,
+      ).toBeGreaterThanOrEqual(floor);
+    }
   });
 });

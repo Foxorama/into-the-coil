@@ -49,8 +49,10 @@ export const PROBES = [
     guard: 'THE ASK, IN CSS PIXELS: the icicle that will not burst is a needle',
     edit: {
       path: 'src/render/bake.ts',
-      find: '        [-0.95, 0],\n        [-0.3, -0.26],',
-      replace: '        [-0.3, 0],\n        [-0.3, -0.26],',
+      // Re-anchored by 0393, which cut the icicle on eight edges: the root swollen as wide as it is long,
+      // so its paint still sits inside the hull and only the silhouette stops being a needle.
+      find: '        [0.2, -0.3],\n        [0.62, -0.22],\n        [0.82, 0],\n        [0.62, 0.22],\n        [0.2, 0.3],',
+      replace: '        [0.2, -0.8],\n        [0.62, -0.7],\n        [0.82, 0],\n        [0.62, 0.7],\n        [0.2, 0.8],',
     },
   },
 ];

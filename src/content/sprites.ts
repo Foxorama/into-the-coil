@@ -1662,8 +1662,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   rock: 7.4,
   // Between the acid's 5.8 and the rock's 7.4 — 0253. The hurtbox is 0.26 of it.
   frost: 6.6,
-  // The same box — 0390: the hurtbox is the row's and does not change with the art.
-  frostSpent: 6.6,
+  // The same box — 0390: the hurtbox is the row's and does not change with the art. A seventh smaller
+  // since 0393, asked as *"about 15% smaller"*, so the shard that bursts is the bigger of the two.
+  frostSpent: 5.6,
   // A spine between the flak's slab and the void's ring — 0262's size, 0316's shape. The hurtbox is
   // 0.26 of it, which is the band `tests/combat.test.ts` holds and is why the number did not move.
   spine: 4.2,

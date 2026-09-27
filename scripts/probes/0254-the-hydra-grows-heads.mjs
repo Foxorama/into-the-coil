@@ -61,8 +61,9 @@ export const PROBES = [
     guard: 'THE FIVE HEADS: a head a fifth',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' } }, { shot: 'flame', attack: { kind: 'spray' } }] },",
-      replace: "        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' } }] },",
+      // Re-anchored by 0392, which gave every head its breath.
+      find: "        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' }, gap: 24 }, { shot: 'flame', attack: { kind: 'spray' }, gap: 24 }] },",
+      replace: "        attack: { kind: 'heads', heads: [{ shot: 'acid', attack: { kind: 'spray' }, gap: 24 }] },",
     },
   },
   /*

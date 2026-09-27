@@ -915,4 +915,18 @@ describe('0390 — a dud icicle looks like one', () => {
       expect(row.spriteSpent, `${kind}'s spent art is its bursting art`).not.toBe(row.sprite);
     }
   });
+
+  it('0393 — IN CSS PIXELS: the icicle reaches no further on the screen than nine tenths of the shard that bursts', () => {
+    /*
+      *"The original frost attack itself that splits is over-shadowed"* — asked with the icicle *"about 15%
+      smaller"*. The shard is the one the player has to read first, so it is the bigger of the two where
+      it is drawn: the icicle's longest reach at most nine tenths of the star's. At the size 0390 drew it,
+      the icicle reached 0.93 of the star.
+    */
+    const reach = (kind: SpriteKind): number => {
+      const b = boundsOf(hullAndPaint(kind).hull);
+      return Math.max(b.maxX - b.minX, b.maxY - b.minY);
+    };
+    expect(reach('frostSpent') / reach('frost'), 'the icicle that melts is as big on the screen as the shard that bursts').toBeLessThanOrEqual(0.9);
+  });
 });

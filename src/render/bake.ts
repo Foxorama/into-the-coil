@@ -9405,17 +9405,41 @@ export function drawKind(
         which is the channel a bullet read at speed is read on: the shard that bursts has points all
         round and a dark heart; this has two points and none, a long faceted needle flown point first
         (its point at −x, the frame turns it to its heading). The same ink, because it hurts the same.
+
+        ⚠️ **A CRYSTAL AND NOT A FLAT BLADE SINCE 0393** — *"slightly smaller and look slightly cooler,
+        they look super basic… and the original frost attack itself that splits is over-shadowed."* Cut
+        on eight edges rather than six, the belly in shadow and the upper face lit, a glint near the
+        root; and a smaller, softer glow than the shard's, so the thing that bursts is the loud one.
       */
       trace(ctx, f, [
         [-0.95, 0],
-        [-0.3, -0.26],
-        [0.5, -0.3],
+        [-0.45, -0.2],
+        [0.2, -0.3],
+        [0.62, -0.22],
         [0.82, 0],
-        [0.5, 0.3],
-        [-0.3, 0.26],
+        [0.62, 0.22],
+        [0.2, 0.3],
+        [-0.45, 0.2],
       ]);
       seal(ctx);
-      glow(ctx, f, palette.frost, 0, 0, 0.95, 0.3);
+      // The belly in shadow: everything below the ridge that runs point to root.
+      poly(ctx, f, shade(palette.frost, -0.35), [
+        [-0.9, 0.01],
+        [0.78, 0.01],
+        [0.6, 0.19],
+        [0.2, 0.26],
+        [-0.43, 0.17],
+      ]);
+      // The upper face catching the light, from the point back along the ridge.
+      poly(ctx, f, shade(palette.frost, 0.5), [
+        [-0.86, -0.02],
+        [-0.43, -0.17],
+        [0.18, -0.26],
+        [0.12, -0.08],
+      ]);
+      // And a glint where the ice is thickest.
+      disc(ctx, f, shade(palette.frost, 0.85), 0.4, -0.1, 0.09);
+      glow(ctx, f, palette.frost, 0, 0, 0.8, 0.22);
       return;
     case 'rock':
       /*
