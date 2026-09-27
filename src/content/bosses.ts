@@ -3496,7 +3496,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * heads rather than the attacks, so the frost is the ice's and the void the clockwork's.
    */
   hydra: {
-    move: { kind: 'wade', sink: 2, heave: 1.5, wavelength: 240, pool: 26 },
+    move: { kind: 'wade', sink: 2.5, heave: 2, wavelength: 240, pool: 34 },
     attack: { kind: 'spray' },
     uncoil: null,
     fall: null,
@@ -3506,31 +3506,36 @@ export const BOSSES: Record<BossKind, BossRow> = {
     face: null,
     entrance: null,
     // Curling up out of the acid behind the body, and swinging slowly — on the fish's terms (0374).
-    tail: { art: { sprite: SPRITE.hydraTail, spriteHit: SPRITE.hydraTailHit }, root: 16, beat: 200, sweep: 0.1, yaw: 0 },
+    tail: { art: { sprite: SPRITE.hydraTail, spriteHit: SPRITE.hydraTailHit }, root: 21, beat: 200, sweep: 0.1, yaw: 0 },
     /*
       ── FIVE NECKS, A HEAD ON EACH — 0384 ─────────────────────────────────────────────────────────
 
       ⚠️ **ROOTED ALONG THE SHOULDERS AND FANNED UP AND FORWARD**, so the heads stand across the middle
-      of the lane — lanes 50 to 85 with the body on a shore at 110 — where the player meets them and
+      of the lane — lanes 35 to 85 with the body on a shore at 110 — where the player meets them and
       shoots them. Alternate reaches, long and short, so five heads on one body stand in two ranks
-      rather than one row of skulls touching. Every head a hurtbox of 9, the anatomy's size (0283),
+      rather than one row of skulls touching. Every head a hurtbox of 11.5, the anatomy's size (0283),
       and every hit on one reaches the hull whole: the heads are what the player fights.
+
+      ⚠️ **EVERY LENGTH HERE, THE HULL'S AND THE TAIL'S, AND THE EXTENTS IN `sprites.ts` ARE 1.3 TIMES
+      WHAT 0384 DREW** — *"can we make the hydra bigger?"* —
+      `docs/decisions/0385-the-hydra-is-bigger-and-sprays-harder.md`. Scaled together, because a neck
+      is drawn from its reach over its extent, and a head grown alone would stand off its own neck.
     */
     necks: {
       necks: [
-        { root: { along: -7, across: -15 }, angle: -0.78 * Math.PI, reach: 34, art: SPRITE.hydraNeck0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 9, mouth: 9.5, livery: 'mire' },
-        { root: { along: -13, across: -9 }, angle: -0.93 * Math.PI, reach: 32, art: SPRITE.hydraNeck1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 9, mouth: 9.5, livery: 'nebula' },
-        { root: { along: 1, across: -15.5 }, angle: -0.55 * Math.PI, reach: 36, art: SPRITE.hydraNeck2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 9, mouth: 9.5, livery: 'saurian' },
-        { root: { along: -10.5, across: -12 }, angle: -0.86 * Math.PI, reach: 22, art: SPRITE.hydraNeck3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 9, mouth: 9.5, livery: 'rime' },
+        { root: { along: -9, across: -19.5 }, angle: -0.78 * Math.PI, reach: 44, art: SPRITE.hydraNeck0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 11.5, mouth: 12.5, livery: 'mire' },
+        { root: { along: -17, across: -11.5 }, angle: -0.93 * Math.PI, reach: 41.5, art: SPRITE.hydraNeck1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 11.5, mouth: 12.5, livery: 'nebula' },
+        { root: { along: 1.5, across: -20 }, angle: -0.55 * Math.PI, reach: 47, art: SPRITE.hydraNeck2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 11.5, mouth: 12.5, livery: 'saurian' },
+        { root: { along: -13.5, across: -15.5 }, angle: -0.86 * Math.PI, reach: 28.5, art: SPRITE.hydraNeck3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 11.5, mouth: 12.5, livery: 'rime' },
         {
-          root: { along: -3, across: -15.5 },
+          root: { along: -4, across: -20 },
           angle: -0.66 * Math.PI,
-          reach: 36,
+          reach: 47,
           art: SPRITE.hydraNeck4,
           head: SPRITE.hydraHead4,
           headHit: SPRITE.hydraHead4Hit,
-          radius: 9,
-          mouth: 9.5,
+          radius: 11.5,
+          mouth: 12.5,
           livery: 'labyrinth',
           /*
             ⚠️ **THE SERPENT'S DARK AURA, AND ASKED FOR AS A PROPER ONE** — *"has a dark aura (a proper
@@ -3541,7 +3546,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
             frames: [SPRITE.serpentAura0, SPRITE.serpentAura1, SPRITE.serpentAura2, SPRITE.serpentAura3, SPRITE.serpentAura4, SPRITE.serpentAura5],
             hold: 3,
             stride: 1,
-            head: 22,
+            head: 28.5,
           },
         },
       ],
@@ -3556,7 +3561,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     wreck: null,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
-    radius: 16,
+    radius: 21,
     // Doubled by 0260, from 1000.
     health: 2000,
     damage: 3,
@@ -3570,14 +3575,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
       acid, sprayed. Each phase's is the round so far with one more: flame sprayed at 80%, a laser
       from a side head at 60%, a wall of frost at 40%, a ring of void at 20%. The phase's `shots`
       and `spread` are every head's fan; the laser and the ring read them their own way.
+
+      ⚠️ **DENSER, WIDER AND FASTER SINCE 0385** — *"have the attacks spray more to make it harder"* —
+      until `tests/crowd.test.ts`'s pilot found the narrowest place in every phase, on every tier,
+      at or under what the hydra left before 0384 moved it into the acid. The decision has the table.
     */
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 3, spread: 0.6, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 1, fireEvery: 72, shots: 5, spread: 1.0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       {
         upTo: 0.8,
-        fireEvery: 66,
-        shots: 3,
-        spread: 0.6,
+        fireEvery: 60,
+        shots: 6,
+        spread: 1.2,
         patrolScale: 1.2,
         stance: { kind: 'volley' },
         look: null,
@@ -3586,9 +3595,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.6,
-        fireEvery: 60,
-        shots: 4,
-        spread: 0.8,
+        fireEvery: 54,
+        shots: 7,
+        spread: 1.3,
         patrolScale: 1.4,
         stance: { kind: 'volley' },
         look: null,
@@ -3604,9 +3613,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.4,
-        fireEvery: 54,
-        shots: 4,
-        spread: 0.8,
+        fireEvery: 48,
+        shots: 7,
+        spread: 1.4,
         patrolScale: 1.6,
         stance: { kind: 'volley' },
         look: null,
@@ -3623,9 +3632,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.2,
-        fireEvery: 48,
-        shots: 6,
-        spread: 1,
+        fireEvery: 42,
+        shots: 8,
+        spread: 1.5,
         patrolScale: 1.8,
         stance: { kind: 'volley' },
         look: null,
