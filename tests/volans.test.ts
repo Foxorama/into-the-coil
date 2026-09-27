@@ -65,7 +65,8 @@ function volansAt(fraction: number): { world: ReturnType<typeof playableWorld>['
 describe('0249 — the eagle summons', () => {
   it('THE FIVE PHASES: darts, a whip, and then three that throw AND call — and it is Ember Nebula’s real boss', () => {
     const row = BOSSES.volans;
-    const kinds = [1, 0.7, 0.45, 0.3, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
+    // Inside the bands since 0386 solved them for an equal time each: 0.69, 0.44 and 0.15.
+    const kinds = [1, 0.6, 0.35, 0.25, 0.1].map((f) => (phaseFor(row, row.health * f).attack ?? row.attack).kind);
     // A spray since 0258: the fish is the one end boss that stalks, and what reacts is where it is.
     // A rake since 0262: a fan of spines that sweeps, which a fan that sits was not — *"boring"*.
     /*
