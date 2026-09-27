@@ -2237,7 +2237,17 @@ describe('what the real frame actually says out loud', () => {
       with the loudest event in the game inaudible; so the speaker is real, the cap is on, and what is
       checked is what came out.
     */
-    const { world, cues } = playableWorld(LEVELS.approach);
+    /*
+      ⚠️ **TWO BOSSES SINCE 0391, BECAUSE THERE ARE TWO WAYS A BOSS DIES TO THE PLAYER'S SHOTS.** On its
+      hull, through the boss pairing, or on a body that passes its hits to the hull through the drain —
+      and 0391 made the serpent's flank count, so the serpent now dies the second way and the first went
+      unexercised: its probe went STILL GREEN. The serpent for the drain, the eagle for the hull.
+    */
+    for (const level of [LEVELS.approach, LEVELS.descent]) bossDeathIsHeard(level);
+  });
+
+  function bossDeathIsHeard(level: (typeof LEVELS)[keyof typeof LEVELS]): void {
+    const { world, cues } = playableWorld(level);
     const frame = new GameFrame(world);
     const { out, heard } = recorder();
     const speaker = makeSpeaker(out);
@@ -2297,7 +2307,7 @@ describe('what the real frame actually says out loud', () => {
       boss's own cue past the voice cap on the one step it matters.
     */
     expect(cues, 'the boss death also fired the ordinary kill cue, which is what the cap then eats').not.toContain('kill');
-  });
+  }
 
   it('and a death is heard, which is the other event nothing may swallow', () => {
     const { world, cues } = playableWorld(LEVELS.approach);

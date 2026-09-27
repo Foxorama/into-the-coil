@@ -19,8 +19,9 @@ export const PROBES = [
     guard: '0260 — a real boss lasts forty seconds at max weapons',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    health: 1520,',
-      replace: '    health: 760,',
+      // Re-anchored by 0391, which cut every end boss's health; still half of it.
+      find: '    health: 1300,',
+      replace: '    health: 650,',
     },
   },
   {

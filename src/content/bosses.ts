@@ -2746,8 +2746,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
         flank, while a blade rides up the whole 133 units landing every flash — the body was up to
         half of what the shuriken did. Asked for: *"reduce the body damage taken overall so shurikens
         only damage the head."*
+
+        ⚠️ **AND SOFT AGAIN SINCE 0391**, because the reason for the armour went with it: a target takes
+        blades only thirty times a second now, however long its flank. *"We can have the serpent boss on
+        level one have hits count on body as well which make that fight feel a bit faster and more
+        intuitive."* Flown with the ceiling at 700, the whole body counting: the shuriken's best fight
+        25 s, the arc's 26, the pulse's 51 — where armour at 770 had them at 44, 29 and 68.
       */
-      hurt: 0,
+      hurt: 1,
     },
     // Doubled by 0260, from 700 — *"need a lot more health, I think I only saw about 50% of their
     // attacks before they died."* Every real boss is twice what 0247 authored; the mid-bosses stay.
@@ -2781,7 +2787,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       phase's own share: 253, 242 and 363 before, **231, 231 and 308** now, which is 9, 5 and 15 per
       cent off. The last phase gives up the most, and it is the one with the ball eating the fire.
     */
-    health: 770,
+    health: 700,
     damage: 3,
     // The lightning at its own 1, not the arc's 1.5 — 0372: it was already this animal's quickest gun.
     gunWeights: { arc: 1 },
@@ -3169,7 +3175,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Grown with the drawing in 0381 (42 → 50 across): the same share of the tile it always was.
     radius: 18,
     // Doubled by 0260, from 760.
-    health: 1520,
+    health: 1300,
     damage: 3,
     station: 155,
     drift: 5,
@@ -3259,7 +3265,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
     // Doubled by 0260, from 820.
-    health: 1640,
+    health: 1390,
     damage: 3,
     station: 154,
     drift: 6,
@@ -3378,7 +3384,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // what 0101 says about the near end of a swing that no longer swings.
     radius: 20,
     // Doubled by 0260, from 880.
-    health: 1760,
+    health: 1500,
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
@@ -3469,7 +3475,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss12Hit,
     radius: 13,
     // Doubled by 0260, from 940.
-    health: 1880,
+    health: 1600,
     damage: 3,
     station: 157,
     drift: 5,
@@ -3598,7 +3604,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss13Hit,
     radius: 21,
     // Doubled by 0260, from 1000.
-    health: 2000,
+    health: 1700,
     damage: 3,
     station: 154,
     drift: 5,
@@ -3719,7 +3725,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
     // Doubled by 0260, from 1100.
-    health: 2200,
+    health: 1870,
     damage: 3,
     station: 152,
     drift: 5,

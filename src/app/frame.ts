@@ -1974,10 +1974,22 @@ export class GameFrame implements Frame {
       does not gain sparks it never had.
     */
     const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
+    /*
+      ⚠️ **A TARGET TAKES THE GUN'S BLADES ONLY SO OFTEN — 0391**: the row's `landGap`, a clock on each
+      enemy and one on the boss's hull that its body shares. Counted down here, once a step, before
+      anything lands; nothing allocates.
+    */
+    const bladeGap = w.weapon.flight === 'coil' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
+    for (let i = 0; i < w.enemies.size; i++) {
+      const e = w.enemies.at(i);
+      if (e.bladeIn > 0) e.bladeIn--;
+    }
+    const hull = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+    if (hull !== null && hull.bladeIn > 0) hull.bladeIn--;
     // A surge whose pods pierce: a blade's arrival on a missile, so it is told by the log — 0375, 0379.
     const surging = surgeOf(w);
     const tubesPierce = surging !== null && surging.pods.pierce > 1;
-    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits);
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits, bladeGap);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
@@ -2014,7 +2026,7 @@ export class GameFrame implements Frame {
       when the wreck lands, and a wreck that was shot never landed. Found by photographing it.
     */
     const shootable = w.bossEntering < 0 && !w.bossBeaten;
-    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits, bladeGap, hull);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -2038,7 +2050,7 @@ export class GameFrame implements Frame {
       log too.
     */
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits);
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits, bladeGap, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     let bites = bladeHits === null ? 0 : w.hits.count;

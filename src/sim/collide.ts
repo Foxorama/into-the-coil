@@ -171,6 +171,9 @@ function killed(targets: Pool<Entity>, index: number, deaths: Deaths | null): vo
   targets.releaseAt(index);
 }
 
+/** How many blade landings a target may take back to back before its clock refuses the next — 0391. */
+const BLADE_BURST = 4;
+
 export function collideInto(
   shots: Pool<Entity>,
   targets: Pool<Entity>,
@@ -179,11 +182,19 @@ export function collideInto(
   flashSteps: number,
   deaths: Deaths | null,
   hits: Deaths | null = null,
+  /**
+   * Steps between one blade's landing and the next on the same target, or 0 for no ceiling —
+   * `docs/decisions/0391-a-target-takes-a-blade-so-often.md`.
+   */
+  bladeGap = 0,
+  /** Whose clock that is: the target's own when `null`, or one entity for all of `targets` — a boss's hull for its body. */
+  gate: Entity | null = null,
 ): number {
   let destroyed = 0;
   for (let t = targets.size - 1; t >= 0; t--) {
     const target = targets.at(t);
     if (target.invulnFor > 0) continue;
+    const clock = gate ?? target;
     for (let s = shots.size - 1; s >= 0; s--) {
       const shot = shots.at(s);
       /*
@@ -201,7 +212,22 @@ export function collideInto(
       if (!overlaps(shot, target, targetRadiusScale)) continue;
       if (shot.health > 1) {
         if (shot.landIn > 0) continue;
+        /*
+          ⚠️ **AND A TARGET TAKES A BLADE ONLY SO OFTEN — 0391.** Per blade, as above, a coil of two
+          dozen blades lands on a big target as often as it crosses it: 151 a second on the hydra's five
+          heads against 80 on one, while the pulse went from 84 to 97. A blade that finds the clock
+          running waits — not spent, not landed — so the ceiling is on the TARGET, and a boss's body
+          shares its hull's clock, or five heads would be five ceilings.
+
+          ⚠️ **A BUCKET AND NOT A GATE: A TARGET MAY OWE `BLADE_BURST` LANDINGS.** Each landing adds the
+          gap to the clock, and a blade is refused only while more than that many are owed. A gate of
+          one landing every `bladeGap` steps clipped the level 2 mid-boss from 56 health a second to 43
+          while the gun averaged 28 landings there, under the ceiling: blades arrive in bursts, and a
+          gate throws the burst away. Over a second the ceiling is the same.
+        */
+        if (bladeGap > 0 && clock.bladeIn > bladeGap * (BLADE_BURST - 1)) continue;
         shot.landIn = flashSteps;
+        if (bladeGap > 0) clock.bladeIn += bladeGap;
       }
       target.health -= shot.damage * damageScale;
       /*

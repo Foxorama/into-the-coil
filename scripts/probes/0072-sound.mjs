@@ -108,8 +108,8 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0372, which weighs the gun on a boss by its row: `open` became `gunOpen`.
-      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits);',
-      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.deaths, bladeHits);',
+      find: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits, bladeGap, hull);',
+      replace: '    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.deaths, bladeHits, bladeGap, hull);',
     },
   },
   {

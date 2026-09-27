@@ -24,7 +24,7 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
       // And by 0307, which armoured the serpent's body and brought it to 1000. And by 0322, which put it
       // at 1100 to pay for the ball's smaller appetite. And by 0365, which took a tenth off each phase.
-      find: '    health: 770,',
+      find: '    health: 700,',
       replace: '    health: 150,',
     },
   },
@@ -68,7 +68,7 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0247: the last boss in the table is the jellyfish.
       // ⚠️ Re-anchored by 0260, which doubled it and put a comment between the radius and the health.
-      find: '    health: 2200,',
+      find: '    health: 1870,',
       replace: '    health: 400,',
     },
   },
