@@ -601,7 +601,14 @@ describe('0371 — the ice is staggered', () => {
           const at = Math.max(0.02, BOSSES[kind].phases[phase]!.upTo - 0.01);
           freshAt(world, 0);
           freshAt(world, 1);
-          for (let s = 0; s < STEPS_PER_SECOND * 20; s++) {
+          /*
+            ⚠️ **THIRTY SECONDS SINCE 0392, AND TWENTY BEFORE.** A wall is four shards, so this counts in
+            fours, and 0392 gave each of the hydra's heads 0.4 s of air — the same on every tier, as a
+            head's `gap` always is. Its frost phase then threw two walls in twenty seconds on Burn and on
+            Savior alike, while over a minute Burn threw 26 to Savior's 22 and Legend's 18: the order held
+            and the window was too short to see it. Thirty is the length this claim was first made over.
+          */
+          for (let s = 0; s < STEPS_PER_SECOND * 30; s++) {
             world.bossPool.at(0).health = world.bossFullHealth * at;
             world.ship.health = world.shipRow.health;
             world.ship.invulnFor = 0;
