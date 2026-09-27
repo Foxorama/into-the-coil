@@ -546,6 +546,19 @@ export const SPRITE_KINDS = [
   'mireBedB',
   'boss12',
   'boss12Hit',
+  /*
+    ── THE COLD, SEEN — `docs/decisions/0399-the-frost-is-crystal.md` ─────────────────────────────
+
+    *"It also needs to have its slowing aura actually visible … it needs to look like a frosty aura,
+    but not the flame aura style … because it's an effect field not a 1hit death field."* A haze and
+    three rings of snowflakes, each laid behind the hull at its centre, swelled to the row's
+    `chill.radius` and turned a little every step — the rings at different rates, which is what makes
+    the flakes twirl rather than the field spin. No hurt twins: nothing ever hits the cold.
+  */
+  'chillHaze',
+  'chillFlakes0',
+  'chillFlakes1',
+  'chillFlakes2',
   'boss13',
   'boss13Hit',
   /*
@@ -1608,8 +1621,22 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Half the ground tile's width each — 0383. Blitted centred on the lane, so each covers it exactly.
   mireBedA: ACROSS_SPAN,
   mireBedB: ACROSS_SPAN,
-  boss12: 33,
-  boss12Hit: 33,
+  /*
+    ⚠️ **54 SINCE 0399, AND IT WAS 33.** *"A large crystalline structure"*: 324 CSS pixels on a
+    1280×720 screen where it was 198, past the fish's 50 and the gyre's 52 and short of the hydra. The
+    hurtbox grew with it, to the same share of the drawing (0.39).
+  */
+  boss12: 54,
+  boss12Hit: 54,
+  /*
+    ⚠️ **TWICE THE ROW'S COLD, SO A FIELD IS BLITTED AT A SWELL OF ONE** — 0399. The frame swells each
+    layer to `chill.radius` whatever this says; this is only the resolution it is baked at, and the
+    painter's edge is the tile's edge.
+  */
+  chillHaze: 76,
+  chillFlakes0: 76,
+  chillFlakes1: 76,
+  chillFlakes2: 76,
   /*
     ⚠️ **56 SINCE 0384, AND IT WAS 41 WITH FIVE NECKS INSIDE IT.** The necks and heads are drawn apart
     now, so this is a body alone — a chest and shoulders standing up out of the acid, broad enough to

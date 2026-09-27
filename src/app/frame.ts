@@ -86,7 +86,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -8510,8 +8510,18 @@ function layAura(w: World): void {
     reorders, and nothing here depends on the order surviving.
   */
   const tail = w.bossRow.tail;
+  /*
+    ── AND THE COLD, UNDER ALL OF IT — `docs/decisions/0399-the-frost-is-crystal.md` ───────────────
+
+    ⚠️ **THE FIRST SLOTS, SO THE FIELD IS DRAWN UNDER THE FLAMES, THE TAIL AND THE HULL** — and this
+    whole pool is drawn before every enemy, bullet and the ship, so nothing that can hurt is ever
+    behind it. It is laid whenever the hull is, because `chillShip` slows whenever there is a hull:
+    the picture says what the model does, for exactly as long (0036).
+  */
+  const chill = w.bossRow.chill;
+  const field = chill === null ? 0 : chill.field.length;
   const flames = aura === null ? 0 : w.bossBody.size + 1;
-  const want = flames + (tail === null ? 0 : 1);
+  const want = field + flames + (tail === null ? 0 : 1);
   let fresh = false;
   while (w.bossAura.size < want) {
     const flame = w.bossAura.spawn();
@@ -8520,6 +8530,7 @@ function layAura(w: World): void {
     fresh = true;
   }
   while (w.bossAura.size > want) w.bossAura.releaseAt(w.bossAura.size - 1);
+  if (chill !== null && w.bossAura.size === want) layChill(w, head, chill);
   if (tail !== null && w.bossAura.size === want) layTail(w, head, tail, look?.tail ?? tail.art, w.bossAura.at(want - 1), fresh);
   if (aura === null) return;
   const tick = Math.floor(w.steps / aura.hold);
@@ -8546,7 +8557,7 @@ function layAura(w: World): void {
     }
   }
   for (let i = 0; i < flames; i++) {
-    const flame = w.bossAura.at(i);
+    const flame = w.bossAura.at(field + i);
     // The body's nodes first, tail to neck in their own order, then the head's — last, so it is drawn
     // over the neck's flame as the skull is drawn over the neck.
     const on = i < w.bossBody.size ? w.bossBody.at(i) : head;
@@ -8584,6 +8595,38 @@ function layAura(w: World): void {
     const frame = set[(((tick + k * aura.stride) % set.length) + set.length) % set.length]!;
     flame.sprite = frame;
     flame.spriteBase = frame;
+  }
+}
+
+/**
+ * Lay a cold's field on the hull, turning — `docs/decisions/0399-the-frost-is-crystal.md`. Layer `i`
+ * of the row's `field` is slot `i` of the aura pool.
+ *
+ * ⚠️ **SWELLED TO THE ROW'S RADIUS, SO WHAT IS DRAWN IS WHERE THE COLD IS.** Every field is painted to
+ * its tile's edge, so a layer blitted at `2 × radius / extent` ends exactly where `chillShip` stops
+ * slowing — one number on the row, read by both, and a cold that grows cannot outrun its picture.
+ *
+ * ⚠️ **TURNED ON `w.steps`, like the flicker and the beat**, so it needs nothing reset when the boss
+ * dies and its previous turn is the same arithmetic a step back — interpolated the short way round by
+ * the scene. Taking the hull's previous place, it moves with the hull rather than a step behind it.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function layChill(w: World, head: Entity, chill: Chill): void {
+  for (let i = 0; i < chill.field.length; i++) {
+    const layer = chill.field[i]!;
+    const slot = w.bossAura.at(i);
+    slot.along = head.along;
+    slot.across = head.across;
+    slot.prevAlong = head.prevAlong;
+    slot.prevAcross = head.prevAcross;
+    slot.swell = (2 * chill.radius) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];
+    // Taken off a whole turn first, so the fold is one pass however long the fight has run.
+    slot.turn = foldTurn((w.steps * layer.spin) % TAU);
+    slot.prevTurn = foldTurn(((w.steps - 1) * layer.spin) % TAU);
+    slot.sprite = layer.sprite;
+    slot.spriteBase = layer.sprite;
+    slot.spriteHit = layer.sprite;
   }
 }
 
