@@ -86,7 +86,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Entrance, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -8635,11 +8635,22 @@ function layNecks(w: World, hull: Entity | null): void {
   }
   const phase = phaseFor(w.bossRow, hull.health, w.bossFullHealth);
   const shown = Math.min(necks.necks.length, w.bossRow.phases.indexOf(phase) + 1, w.necksBorn.length);
+  for (let k = 0; k < shown; k++) if (w.necksBorn[k]! < 0) w.necksBorn[k] = w.steps;
+  /*
+    ⚠️ **THE BLAZE — 0389**: steps since neck `from` finished rising, or −1 before it. From then every
+    head burns with that neck's aura, the fire runs down each neck over `travel`, and the body and tail
+    light one spot a `gap` after that. What burns is counted before the pool is sized, so the slots are
+    exactly the flames lit this step.
+  */
+  const blaze = necks.blaze;
+  const source = blaze === undefined ? undefined : necks.necks[blaze.from]?.aura;
+  const lit =
+    blaze !== undefined && source !== undefined && shown > blaze.from && w.necksBorn[blaze.from]! >= 0
+      ? w.steps - w.necksBorn[blaze.from]! - necks.rise
+      : -1;
   let flames = 0;
-  for (let k = 0; k < shown; k++) {
-    if (w.necksBorn[k]! < 0) w.necksBorn[k] = w.steps;
-    if (necks.necks[k]!.aura !== undefined) flames += NECK_FLAMES.length + 1;
-  }
+  for (let k = 0; k < shown; k++) for (let f = 0; f <= NECK_FLAMES.length; f++) if (burns(necks, k, f, lit)) flames++;
+  if (blaze !== undefined && lit >= 0) for (let i = 0; i < blaze.spots.length; i++) if (lit >= spotLights(blaze, i)) flames++;
   // The heads: one body each, the neck's own sprites and hurtbox written over the slot.
   while (w.bossBody.size < shown) {
     const head = w.bossBody.spawn();
@@ -8693,11 +8704,13 @@ function layNecks(w: World, hull: Entity | null): void {
     head.sprite = head.flashFor > 0 ? row.headHit : row.head;
     w.mouths[k * 2] = headAlong - Math.cos(turn) * row.mouth - hull.along;
     w.mouths[k * 2 + 1] = headAcross - Math.sin(turn) * row.mouth - hull.across;
-    // The flames of a head that burns: along its neck, and last on the head itself.
-    const aura = row.aura;
+    // The flames of a head that burns: along its neck, and last on the head itself — its own aura, or
+    // the blaze's once the whole animal has caught (0389).
+    const aura = row.aura ?? source;
     if (aura === undefined) continue;
     const tick = Math.floor(w.steps / aura.hold);
     for (let f = 0; f <= NECK_FLAMES.length; f++) {
+      if (!burns(necks, k, f, lit)) continue;
       const onHead = f === NECK_FLAMES.length;
       const share = onHead ? 1 : NECK_FLAMES[f]!;
       const at = w.bossAura.at(flame++);
@@ -8709,7 +8722,40 @@ function layNecks(w: World, hull: Entity | null): void {
       at.spriteHit = frame;
     }
   }
+  // And the body and the tail, once the fire has come down the necks to them — 0389.
+  if (blaze !== undefined && source !== undefined && lit >= 0) {
+    const tick = Math.floor(w.steps / source.hold);
+    for (let i = 0; i < blaze.spots.length; i++) {
+      if (lit < spotLights(blaze, i)) continue;
+      const spot = blaze.spots[i]!;
+      const at = w.bossAura.at(flame++);
+      placeAt(at, hull.along + spot.along, hull.across + spot.across, 0, fresh);
+      at.swell = spot.size / SERPENT_BODY_DIAMETER;
+      const frame = source.frames[(((tick + i * source.stride) % source.frames.length) + source.frames.length) % source.frames.length]!;
+      at.sprite = frame;
+      at.spriteBase = frame;
+      at.spriteHit = frame;
+    }
+  }
   if (tail !== null) layTail(w, hull, tail, tail.art, w.bossAura.at(want - 1), fresh);
+}
+
+/**
+ * Whether flame `f` of neck `k` burns — 0389. A neck with its own aura always does; any other from the
+ * blaze, head first and down the neck: the head as it lights, the neck's outer flame half way through
+ * `travel`, its inner one at the end.
+ */
+function burns(necks: Necks, k: number, f: number, lit: number): boolean {
+  if (necks.necks[k]!.aura !== undefined) return true;
+  const blaze = necks.blaze;
+  if (blaze === undefined || lit < 0) return false;
+  const share = f === NECK_FLAMES.length ? 1 : NECK_FLAMES[f]!;
+  return lit >= (blaze.travel * (1 - share)) / (1 - NECK_FLAMES[0]);
+}
+
+/** The step, counted from the blaze lighting, that spot `i` of the body catches — 0389. */
+function spotLights(blaze: NonNullable<Necks['blaze']>, i: number): number {
+  return blaze.travel + (i + 1) * blaze.gap;
 }
 
 /**

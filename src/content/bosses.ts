@@ -1186,6 +1186,18 @@ export interface Necks {
   hurt: number;
   /** How far a head may turn from the lane's axis to look at the ship, in radians. */
   look: number;
+  /**
+   * The whole animal catching fire from one head — `docs/decisions/0389-the-hydra-catches-fire.md`, or
+   * absent for a boss whose aura stays on the head that owns it.
+   *
+   * ⚠️ **ASKED FOR**: *"all the heads need to get their flaming aura when the last head emerges and the
+   * aura needs to travel down the neck and merge into a combined aura that covers the whole body and tail
+   * as well."* When neck `from` has risen — the head whose `aura` it is — every head burns with that aura;
+   * over `travel` steps the fire runs down each neck, head first; and then each of `spots`, a place on the
+   * body or the tail from the hull's centre with a flame `size` across in lane units, lights `gap` steps
+   * after the one before, in the order listed. Spots are the row's because the body is the row's.
+   */
+  blaze?: { from: number; travel: number; gap: number; spots: readonly { along: number; across: number; size: number }[] };
 }
 
 /**
@@ -3559,6 +3571,25 @@ export const BOSSES: Record<BossKind, BossRow> = {
       rise: 70,
       hurt: 1,
       look: 0.6,
+      /*
+        ⚠️ **THE CLOCKWORK'S FIRE TAKES THE WHOLE ANIMAL — 0389.** When it has risen, every head burns with
+        its aura; the fire runs down the necks over a second; then the body lights where the necks meet it
+        and spreads out across the mound and up the tail, one place every eight steps. Six places, which
+        with three flames a neck is the aura pool's twenty-seven to the slot — the budget is what says six.
+      */
+      blaze: {
+        from: 4,
+        travel: 60,
+        gap: 8,
+        spots: [
+          { along: -2, across: -17, size: 40 },
+          { along: -20, across: -9, size: 34 },
+          { along: 16, across: -10, size: 34 },
+          { along: -2, across: -3, size: 38 },
+          { along: 28, across: -12, size: 26 },
+          { along: 34, across: -26, size: 24 },
+        ],
+      },
     },
     room: null,
     burn: null,
