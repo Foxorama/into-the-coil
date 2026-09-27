@@ -871,6 +871,27 @@ export interface Chill {
   freezeAfter: number;
   /** Steps the freeze lasts, during which the stick asks for nothing. */
   frozenFor: number;
+  /**
+   * What the cold looks like — `docs/decisions/0399-the-frost-is-crystal.md`: the layers laid behind
+   * the hull, bottom first, each swelled so its edge is `radius` and turned `spin` radians a step.
+   *
+   * ⚠️ **ASKED FOR**: *"it does currently slow the ship now, but there's no actually visible aura"* —
+   * 0036's class again: an event the model resolves and the picture never mentions. The puffs at the
+   * ship said *you are slowed* after the fact; nothing said *here is where you will be*.
+   *
+   * ⚠️ **REQUIRED, NOT OPTIONAL**, because a cold nobody can see is the defect this answers: a second
+   * cold hull authors its own field or does not compile. And on 0282's terms it is this row's — the
+   * layers, their order and how fast each turns are what make it this ship's cold, and the frame holds
+   * the arithmetic and no opinion.
+   */
+  field: readonly ChillLayer[];
+}
+
+/** One layer of a cold's field — 0399: a bitmap, and how far it turns each step. */
+export interface ChillLayer {
+  sprite: number;
+  /** Radians a step, signed — the way it turns is the way the cold swirls. */
+  spin: number;
 }
 
 /**
@@ -3543,6 +3564,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
    *
    * It tracks the player's lane and lays a wall across it. Owed: frost bolts and frost blasts, the
    * cold that slows and freezes a ship that comes too close, and its adds.
+   *
+   * ⚠️ **A CLUSTER OF ICE SINCE 0399** — *"a large crystalline structure … high tier graphics to match
+   * the other bosses that we've uplifted."* A keel of ice with spires grown off it, a red heart frozen
+   * in its core, and its cold drawn round it.
    */
   hoarfrost: {
     // A patrol since 0258: the cold is on the row and the hull flies a pattern through it, so the
@@ -3552,9 +3577,30 @@ export const BOSSES: Record<BossKind, BossRow> = {
     attack: { kind: 'wall', gap: 10 },
     uncoil: null,
     fall: null,
-    // The cold — 0253: thirty units from the hull's centre, half speed inside it, frozen for half a
-    // second after three quarters of one inside.
-    chill: { radius: 30, slow: 0.5, freezeAfter: 45, frozenFor: 30 },
+    /*
+      The cold — 0253: half speed inside it, frozen for half a second after three quarters of one
+      inside.
+
+      ⚠️ **THIRTY-EIGHT SINCE 0399, AND WHAT IS KEPT IS THE SEVENTEEN.** The hull grew from a 13-unit
+      hurtbox to 21, and the cold that reached 17 units past the old one would have reached 9 past the
+      new — a ring the crystal's own spires would cover. What the player flies in is the band between
+      the cold's edge and the hull, so the band is what stays.
+
+      ⚠️ **AND IT IS SEEN** — 0399: a haze, and three rings of flakes twirling at different rates, the
+      inner quickest. Every layer's edge is `radius`.
+    */
+    chill: {
+      radius: 38,
+      slow: 0.5,
+      freezeAfter: 45,
+      frozenFor: 30,
+      field: [
+        { sprite: SPRITE.chillHaze, spin: -0.0025 },
+        { sprite: SPRITE.chillFlakes0, spin: -0.005 },
+        { sprite: SPRITE.chillFlakes1, spin: -0.009 },
+        { sprite: SPRITE.chillFlakes2, spin: -0.016 },
+      ],
+    },
     muzzle: null,
     chain: null,
     face: null,
@@ -3565,7 +3611,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     wreck: null,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
-    radius: 13,
+    // 21 since 0399, from 13: the same share of a drawing grown from 33 to 54.
+    radius: 21,
     // Doubled by 0260, from 940.
     health: 1600,
     damage: 3,

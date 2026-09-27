@@ -17,6 +17,9 @@
  * And since `docs/decisions/0371-the-ice-is-staggered.md`: that every fuse is rolled inside its row's
  * range and the stages hold at both ends of it, and that in both frost fights, on every tier, no two
  * shards leave the hull on one step and no two open on one step.
+ *
+ * And since `docs/decisions/0399-the-frost-is-crystal.md`: that the ship is drawn large, and that its
+ * cold is drawn — where the slow is, for as long as it is, heavily transparent, and twirling.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -29,8 +32,10 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
 import { DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { INK_OF } from '../src/render/bake.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { CHILL_RINGS, INK_OF, drawKind } from '../src/render/bake.ts';
+import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
+import { tracingPen } from './paths.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -299,6 +304,143 @@ describe('0253 — the frost ship chills', () => {
     }
     expect(puffs, 'a ship in the cold shed no frost').toBeGreaterThanOrEqual(Math.floor(chill.freezeAfter / 6) - 2);
     expect(atFreeze, 'the freeze was not drawn').toBeGreaterThanOrEqual(BURST.freeze);
+  });
+});
+
+/**
+ * The frost is crystal, and its cold is seen — `docs/decisions/0399-the-frost-is-crystal.md`. Asked for:
+ * *"it should be a large crystalline structure"*, and *"it does currently slow the ship now, but there's
+ * no actually visible aura … heavily transparent but full of soft light twirling snowflakes."*
+ */
+describe('0399 — the frost is crystal', () => {
+  const screen = viewOf(1280, 720);
+  const ink = PALETTES[DEFAULT_PALETTE];
+  const field = chill.field.map((layer) => SPRITE_KINDS[layer.sprite]!);
+  /** One layer of the field traced at the size it bakes for that screen, with its centre. */
+  const traced = (kind: (typeof field)[number]): { trace: ReturnType<typeof tracingPen>['trace']; size: number } => {
+    const size = SPRITE_EXTENT[kind] * screen.scale;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, ink, size, 'rime');
+    return { trace, size };
+  };
+  /** How far from the tile's centre any ink of a traced layer reaches, in the tile's own pixels. */
+  const reachOf = (kind: (typeof field)[number]): { reach: number; size: number } => {
+    const { trace, size } = traced(kind);
+    let reach = 0;
+    for (const mark of [...trace.passes, ...trace.inks]) {
+      for (const sub of mark.subpaths) for (const [x, y] of sub) reach = Math.max(reach, Math.hypot(x - size / 2, y - size / 2));
+    }
+    return { reach, size };
+  };
+
+  it('THE ASKED-FOR ONE, LARGE: the frost ship is at least 320 CSS pixels across on a 1280×720 screen, and its hurtbox kept its share', () => {
+    // 0264's crystal was 33 units: 198 pixels, smaller than the fish. The hurtbox was 0.39 of it and still is.
+    const extent = SPRITE_EXTENT[SPRITE_KINDS[BOSSES.hoarfrost.sprite]!];
+    const px = extent * screen.scale;
+    expect(px, `the frost ship is ${px.toFixed(0)} CSS pixels across`).toBeGreaterThanOrEqual(320);
+    expect(BOSSES.hoarfrost.radius / extent, 'the hurtbox shrank against the drawing').toBeGreaterThanOrEqual(0.38);
+    expect(SPRITE_EXTENT[SPRITE_KINDS[BOSSES.hoarfrost.spriteHit]!], 'the hurt twin is another size').toBe(extent);
+  });
+
+  it('THE ASKED-FOR ONE, SEEN WHERE IT IS: the cold is drawn on the hull for every step the hull stands, and the slow begins within two pixels of where the drawing ends', () => {
+    const d = frostAt(1);
+    const { world, frame } = d;
+    for (let i = 0; i < 30; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      frame.step();
+      const boss = world.bossPool.at(0);
+      expect(world.bossAura.size, 'the cold is not drawn').toBeGreaterThanOrEqual(chill.field.length);
+      chill.field.forEach((layer, k) => {
+        const slot = world.bossAura.at(k);
+        expect(slot.sprite, `layer ${k} of the cold is not the row's`).toBe(layer.sprite);
+        expect(Math.hypot(slot.along - boss.along, slot.across - boss.across), 'the cold is drawn off the hull').toBeLessThan(1e-9);
+      });
+    }
+    /*
+      ⚠️ **THE EDGE OF THE PICTURE, AGAINST THE EDGE OF THE MODEL, IN PIXELS.** The haze is traced as the
+      game bakes it and its furthest ink turned into world units by the swell the frame laid it at — so
+      a painter whose rim stopped short, a tile that changed size, or a swell that forgot the radius
+      each moves the drawn edge off the slow. Then the ship is parked two pixels inside that edge and
+      two outside, and asked whether it is chilled.
+    */
+    const haze = field[0]!;
+    const { reach, size } = reachOf(haze);
+    const drawn = (reach / size) * SPRITE_EXTENT[haze] * world.bossAura.at(0).swell;
+    const margin = 2 / screen.scale;
+    for (const [dAlong, cold] of [[drawn - margin, true], [drawn + margin, false]] as const) {
+      const e = frostAt(1);
+      const boss = e.world.bossPool.at(0);
+      pushAcross(e, 0);
+      e.world.ship.along = boss.along - dAlong;
+      e.world.ship.across = boss.across;
+      e.world.chilledFor = 0;
+      e.frame.step();
+      expect(
+        e.world.chilledFor > 0,
+        `a ship ${((dAlong - drawn) * screen.scale).toFixed(1)} px from the drawn edge of the cold (${(drawn * screen.scale).toFixed(0)} px out) is ${cold ? 'not ' : ''}chilled`,
+      ).toBe(cold);
+    }
+    /*
+      And when the hull goes, the cold goes by the next step. ⚠️ **ONE STEP AND NOT THE SAME ONE, AND
+      THAT IS THIS WHOLE LAYER'S AND NOT THE COLD'S** — `layAura` runs before the step's hits land, so
+      a serpent's flames and a fish's tail outlive a dying hull by the same frame, under its burst.
+    */
+    world.bossPool.at(0).health = 0;
+    for (let i = 0; i < 5 && world.bossPool.size > 0; i++) frame.step();
+    expect(world.bossPool.size, 'the frost ship did not die').toBe(0);
+    frame.step();
+    for (let i = 0; i < world.bossAura.size; i++) expect(field, 'the cold outlived the hull').not.toContain(SPRITE_KINDS[world.bossAura.at(i).sprite]);
+  });
+
+  it('THE ASKED-FOR ONE, HEAVILY TRANSPARENT: no mark in the cold is laid down at half or more, none is the frost bullet’s ink, and it is full of flakes', () => {
+    /*
+      ⚠️ **NOT A DEATH FIELD, SO NOTHING IN IT MAY LOOK LIKE THE THING THAT KILLS.** The frost ship's
+      shards are its own saturated ink with a dark edge; the field round the hull that throws them is
+      the one place a decoration could be read as a bullet.
+    */
+    let flakes = 0;
+    for (const kind of field) {
+      const { trace } = traced(kind);
+      for (const mark of [...trace.passes, ...trace.inks]) {
+        expect(mark.alpha, `a mark in ${kind} is laid down at ${mark.alpha}`).toBeLessThan(0.5);
+        expect(mark.colour, `a mark in ${kind} is the frost bullet's own ink`).not.toBe(ink.frost);
+      }
+      if (kind !== field[0]) flakes += trace.passes.filter((p) => p.colour === 'gradient').length;
+      // And no layer reaches past its tile's edge, which is the cold's edge.
+      const { reach, size } = reachOf(kind);
+      expect(reach / (size / 2), `${kind} is drawn past the edge of the cold`).toBeLessThanOrEqual(1 + 1e-6);
+    }
+    expect(flakes, 'the cold is not full of flakes').toBeGreaterThanOrEqual(50);
+  });
+
+  it('THE ASKED-FOR ONE, TWIRLING: every ring of flakes travels at least 40 CSS pixels a second on a 1280×720 screen, and the inner rings turn quicker than the outer', () => {
+    /*
+      ⚠️ **A TWIRL IS THE RINGS OVERTAKING ONE ANOTHER.** One ring, or three at one rate, is a disc
+      turning under the hull; the inner quickest is a vortex. Measured on the slots the frame lays,
+      over a second, the short way round each step — which is how the scene interpolates a turn.
+    */
+    const d = frostAt(1);
+    const turned = chill.field.map(() => 0);
+    let before = chill.field.map((_, k) => d.world.bossAura.at(k).turn);
+    for (let i = 0; i < STEPS_PER_SECOND; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.frame.step();
+      const now = chill.field.map((_, k) => d.world.bossAura.at(k).turn);
+      now.forEach((turn, k) => {
+        let swing = turn - before[k]!;
+        if (swing > Math.PI) swing -= Math.PI * 2;
+        if (swing < -Math.PI) swing += Math.PI * 2;
+        turned[k] = turned[k]! + Math.abs(swing);
+      });
+      before = now;
+    }
+    const rings = turned.slice(1);
+    rings.forEach((rate, k) => {
+      const ring = CHILL_RINGS[k]!;
+      const px = rate * ((ring.from + ring.to) / 2) * chill.radius * screen.scale;
+      expect(px, `ring ${k} of the flakes travels ${px.toFixed(0)} px a second`).toBeGreaterThanOrEqual(40);
+      if (k > 0) expect(rate, `ring ${k} turns no quicker than the ring outside it`).toBeGreaterThan(rings[k - 1]!);
+    });
   });
 });
 

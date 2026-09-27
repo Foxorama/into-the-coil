@@ -549,6 +549,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   mireBedA: 'sky',
   mireBedB: 'sky',
   boss12: 'enemy',
+  // The frost ship's cold — 0399: the cold's own ink, which is the frost's.
+  chillHaze: 'frost',
+  chillFlakes0: 'frost',
+  chillFlakes1: 'frost',
+  chillFlakes2: 'frost',
   boss13: 'enemy',
   // The hydra's pieces are the hydra — 0384, and its acid is the bank's.
   hydraTail: 'enemy',
@@ -7392,68 +7397,492 @@ function paintBoss11Seat(ctx: Pen, f: Frame, palette: Palette): void {
   }
 }
 /*
-  THE FROST SHIP. A long crystal, its point to the front, with two great ice-spires swept back
-  off its flanks and a smaller pair near the prow — the one hull made of spikes rather than of a
-  body — and a cold core lit at its heart.
+  ── THE FROST SHIP, GROWN — `docs/decisions/0399-the-frost-is-crystal.md` ─────────────────────────
+
+  Asked: *"it should be a large crystalline structure and it needs to be high tier graphics to match
+  the other bosses that we've uplifted."* 0264's drawing was a blue polygon with two triangles of lit
+  paint on it, and at 198 pixels across it read as a fish.
+
+  ⚠️ **A KEEL OF ICE, AND CRYSTALS GROWN OFF IT.** The keel is one long prism, point to the player; ten
+  spires rise off its two edges, swept back as if it were flying through them, the two great ones
+  reaching the corners of the tile. Each spire is a hexagonal crystal seen from above: two parallel
+  flanks, a bevelled point, and a ridge between the facet that faces the light and the one that
+  does not. That ridge is what makes a shard read as ICE rather than as a spike: the flat faces and
+  the lit edge between them.
+
+  ⚠️ **THE SILHOUETTE IS ONE OUTLINE, BUILT RATHER THAN LISTED.** A spire is placed on the keel's edge
+  by where along it stands, and the outline walks the edge, stepping out round each spire as it
+  reaches it. So the spires can be moved one number at a time, and no two can overlap into a hole —
+  `seal` fills `evenodd`, and a spire authored across its neighbour would cut a notch out of both.
+
+  ⚠️ **LIT BY ONE LIGHT, FACET BY FACET.** Every facet's tone is how squarely it faces `ICE_LIGHT`, so
+  the whole cluster is lit from one place — the pterodactyl's shade runs top to bottom, and the
+  crystal answers the same light with flat planes rather than a gradient.
 */
-const HOARFROST_HULL: readonly Pt[] = [
-  [-1, 0],
-  [-0.62, -0.28],
-  [-0.54, -0.31],
-  [-0.38, -0.64],
-  [-0.28, -0.36],
-  [-0.02, -0.42],
-  [0.06, -0.44],
-  [0.5, -1],
-  [0.42, -0.36],
-  [0.72, -0.3],
-  [1, -0.12],
-  [1, 0.12],
-  [0.72, 0.3],
-  [0.42, 0.36],
-  [0.5, 1],
-  [0.06, 0.44],
-  [-0.02, 0.42],
-  [-0.28, 0.36],
-  [-0.38, 0.64],
-  [-0.54, 0.31],
-  [-0.62, 0.28],
+
+/** One crystal grown off the keel — 0399: where along the keel, which edge, how wide, which way, how long. */
+interface Spire {
+  at: number;
+  side: -1 | 1;
+  half: number;
+  dir: Pt;
+  length: number;
+}
+
+/** The keel's upper edge, prow to stern, in `r`. The lower edge is its mirror, and the ridge runs between. */
+const HOARFROST_KEEL: readonly Pt[] = [
+  [-1.04, 0],
+  [-0.8, -0.085],
+  [-0.52, -0.155],
+  [-0.2, -0.215],
+  [0.14, -0.235],
+  [0.46, -0.2],
+  [0.72, -0.12],
+  [0.98, 0],
 ];
-function paintBoss12(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The underside in shadow, the prow's upper facet lit, facets up both great spires.
-  plate(ctx, f, skin, [
-    [-0.5, 0.12],
-    [0.3, 0.34],
-    [0.9, 0.18],
-    [0.9, 0.08],
-  ]);
-  lit(ctx, f, skin, [
-    [-0.9, -0.02],
-    [-0.62, -0.24],
-    [-0.5, -0.1],
-  ]);
-  lit(ctx, f, skin, [
-    [0.16, -0.46],
-    [0.44, -0.86],
-    [0.36, -0.46],
-  ]);
-  plate(ctx, f, skin, [
-    [0.16, 0.46],
-    [0.44, 0.86],
-    [0.36, 0.46],
-  ]);
-  // Cut ice across the mid-hull, in the place's motif.
-  motif(ctx, f, skin, theme, [
-    [-0.2, -0.3],
-    [0.5, -0.3],
-    [0.5, 0.3],
-    [-0.2, 0.3],
-  ], 'boss12');
-  // The cold core, the canopy, and the drive.
-  glow(ctx, f, skin.lit, 0.12, 0, 0.24, 0.7);
-  disc(ctx, f, shade(skin.plate, -0.5), -0.52, 0, 0.08);
-  disc(ctx, f, skin.eye, -0.53, 0, 0.05);
-  glow(ctx, f, skin.lit, 0.94, 0, 0.14, 0.6);
+
+/**
+ * The spires — 0399. Not mirrored: a crystal grows as it grows, and a cluster that matched itself edge
+ * for edge read as a ship with ice glued to it.
+ */
+const HOARFROST_SPIRES: readonly Spire[] = [
+  { at: -0.64, side: -1, half: 0.045, dir: [-0.35, -1], length: 0.3 },
+  { at: -0.34, side: -1, half: 0.07, dir: [0.2, -1], length: 0.58 },
+  { at: 0.02, side: -1, half: 0.11, dir: [0.5, -1], length: 0.92 },
+  { at: 0.4, side: -1, half: 0.075, dir: [1, -0.95], length: 0.55 },
+  { at: 0.7, side: -1, half: 0.05, dir: [1, -0.35], length: 0.3 },
+  { at: -0.6, side: 1, half: 0.045, dir: [-0.3, 1], length: 0.26 },
+  { at: -0.28, side: 1, half: 0.075, dir: [0.3, 1], length: 0.66 },
+  { at: 0.08, side: 1, half: 0.11, dir: [0.62, 1], length: 0.9 },
+  { at: 0.44, side: 1, half: 0.07, dir: [1, 0.8], length: 0.46 },
+  { at: 0.72, side: 1, half: 0.05, dir: [1, 0.45], length: 0.3 },
+];
+
+/** Where the light comes from, as a unit vector in `r` — ahead of the hull and above it. */
+const ICE_LIGHT: Pt = [-0.4 / Math.hypot(0.4, 0.92), -0.92 / Math.hypot(0.4, 0.92)];
+
+/**
+ * The crystal's outline, in world units — 0399, on the hydra's terms. `drawKind`'s default is a share of
+ * the tile, which at 54 units is a black rim round every spire as thick as the spire's ridge is bright:
+ * it photographed as a stained-glass window rather than as ice. A fine dark edge is what glass has.
+ */
+const HOARFROST_OUTLINE = 0.9;
+
+/** Where the frozen heart sits, in `r` — 0399. */
+const HOARFROST_HEART: Pt = [0.04, 0];
+
+/** A spire placed on the keel: its base on the edge, its two shoulders, its point, and the facets between. */
+interface Grown {
+  spire: Spire;
+  /** The two base corners on the keel's edge, fore then aft. */
+  fore: Pt;
+  aft: Pt;
+  /** Where its ridge starts, a little inside the keel so the facets reach under the edge. */
+  root: Pt;
+  /** The shoulders where the bevel starts, fore then aft, and the point. */
+  foreShoulder: Pt;
+  aftShoulder: Pt;
+  tip: Pt;
+  /** The unit axis, and the unit normal toward the fore flank. */
+  axis: Pt;
+  normal: Pt;
+}
+
+/** The keel's edge on `side` at `x`, and the unit direction it runs prow to stern there. */
+function keelAt(x: number, side: -1 | 1): { at: Pt; along: Pt } {
+  for (let i = 0; i + 1 < HOARFROST_KEEL.length; i++) {
+    const [ax, ay] = HOARFROST_KEEL[i]!;
+    const [bx, by] = HOARFROST_KEEL[i + 1]!;
+    if (x > bx) continue;
+    const t = (x - ax) / (bx - ax);
+    const len = Math.hypot(bx - ax, by - ay);
+    // The keel is authored as its upper edge, `side` −1; the lower is the same edge mirrored.
+    return { at: [x, (ay + (by - ay) * t) * -side], along: [(bx - ax) / len, ((by - ay) / len) * -side] };
+  }
+  throw new Error(`no keel at ${x}`);
+}
+
+/** Place one spire on the keel. */
+function grow(spire: Spire): Grown {
+  const { at, along } = keelAt(spire.at, spire.side);
+  const len = Math.hypot(spire.dir[0], spire.dir[1]);
+  const axis: Pt = [spire.dir[0] / len, spire.dir[1] / len];
+  // The perpendicular that points toward the prow is the fore flank's.
+  const normal: Pt = -axis[1] < 0 ? [-axis[1], axis[0]] : [axis[1], -axis[0]];
+  const width = spire.half * 0.82;
+  const bevel = width * 1.7;
+  const reach = (d: number, side: number): Pt => [at[0] + axis[0] * d + normal[0] * width * side, at[1] + axis[1] * d + normal[1] * width * side];
+  // A cut crystal's point is rarely on its axis: it sits a little toward the fore flank.
+  const tip: Pt = [at[0] + axis[0] * spire.length + normal[0] * width * 0.22, at[1] + axis[1] * spire.length + normal[1] * width * 0.22];
+  return {
+    spire,
+    fore: [at[0] - along[0] * spire.half, at[1] - along[1] * spire.half],
+    aft: [at[0] + along[0] * spire.half, at[1] + along[1] * spire.half],
+    root: [at[0] - axis[0] * 0.06, at[1] - axis[1] * 0.06],
+    foreShoulder: reach(spire.length - bevel, 1),
+    aftShoulder: reach(spire.length - bevel, -1),
+    tip,
+    axis,
+    normal,
+  };
+}
+
+/**
+ * The whole outline, and every spire as placed on it: the upper edge prow to stern stepping out round
+ * each upper spire, then the lower edge stern to prow round each lower one.
+ */
+function hoarfrostHull(): { outline: Pt[]; grown: Grown[] } {
+  const grown = HOARFROST_SPIRES.map(grow);
+  const outline: Pt[] = [];
+  for (const side of [-1, 1] as const) {
+    const edge = HOARFROST_KEEL.map(([x, y]) => [x, y * -side] as Pt);
+    const spires = grown.filter((g) => g.spire.side === side).sort((a, b) => a.spire.at - b.spire.at);
+    const walk: Pt[] = [];
+    let next = 0;
+    for (const [i, point] of edge.entries()) {
+      while (next < spires.length && spires[next]!.fore[0] < point[0]) {
+        const g = spires[next++]!;
+        walk.push(g.fore, g.foreShoulder, g.tip, g.aftShoulder, g.aft);
+      }
+      // The prow and the stern are the upper walk's, so the lower one does not add them twice.
+      if (side === 1 && (i === 0 || i === edge.length - 1)) continue;
+      // A keel point inside a spire's base is under the spire, not on the outline.
+      if (spires.some((g) => point[0] > g.fore[0] && point[0] < g.aft[0])) continue;
+      walk.push(point);
+    }
+    outline.push(...(side === -1 ? walk : walk.reverse()));
+  }
+  return { outline, grown };
+}
+
+/** A facet's ink by how squarely it faces the light: toward the lit ink facing it, the plate turned away. */
+function iceTone(skin: FoeSkin, facing: Pt): string {
+  const k = facing[0] * ICE_LIGHT[0] + facing[1] * ICE_LIGHT[1];
+  return k >= 0 ? mix(skin.hull, skin.lit, 0.12 + 0.62 * k) : mix(skin.hull, skin.plate, 0.18 + 0.62 * -k);
+}
+
+function paintBoss12(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  const { outline, grown } = hoarfrostHull();
+  // Depth under everything: the whole cluster a shade darker toward the side away from the light.
+  shaded(ctx, f, [-0.4, -0.95], [0.4, 0.95], rgba(skin.lit, 0.18), rgba(skin.plate, 0.55), outline);
+  for (const g of grown) {
+    const { spire, fore, aft, root, foreShoulder, aftShoulder, tip, axis, normal } = g;
+    const big = spire.half >= 0.07;
+    // The light from the heart, coming up through the ice into the root of every spire.
+    glow(ctx, f, skin.lit, root[0] + axis[0] * 0.08, root[1] + axis[1] * 0.08, spire.half * 1.9, 0.32);
+    // Two facets either side of the ridge, each shaded root to point: darker where the ice is thick.
+    const flanks: readonly (readonly [readonly Pt[], Pt])[] = [
+      [[fore, foreShoulder, tip, root], normal],
+      [[root, tip, aftShoulder, aft], [-normal[0], -normal[1]]],
+    ];
+    for (const [facet, facing] of flanks) {
+      const tone = iceTone(skin, facing);
+      shaded(ctx, f, root, tip, rgba(mix(tone, skin.plate, 0.25), 0.9), rgba(mix(tone, skin.lit, 0.18), 0.88), facet, 0.88);
+    }
+    // The bevel on whichever flank faces the light: the brightest plane on the spire.
+    const litSide = normal[0] * ICE_LIGHT[0] + normal[1] * ICE_LIGHT[1] >= 0 ? foreShoulder : aftShoulder;
+    const bevelFoot: Pt = [tip[0] - axis[0] * spire.half * 1.1, tip[1] - axis[1] * spire.half * 1.1];
+    poly(ctx, f, mix(skin.lit, skin.hull, 0.2), [litSide, tip, bevelFoot], 0.7);
+    // The ridge caught by the light, and the lit flank's edge.
+    seam(ctx, f, skin.lit, Math.max(0.012, spire.half * 0.2), [
+      [root[0] + axis[0] * 0.1, root[1] + axis[1] * 0.1],
+      [tip[0] - axis[0] * 0.02, tip[1] - axis[1] * 0.02],
+    ], 0.75);
+    const edgeFrom = litSide === foreShoulder ? fore : aft;
+    seam(ctx, f, skin.lit, 0.012, [
+      [edgeFrom[0] + axis[0] * 0.06 - (litSide === foreShoulder ? normal[0] : -normal[0]) * 0.012, edgeFrom[1] + axis[1] * 0.06 - (litSide === foreShoulder ? normal[1] : -normal[1]) * 0.012],
+      [litSide[0] - (litSide === foreShoulder ? normal[0] : -normal[0]) * 0.012, litSide[1] - (litSide === foreShoulder ? normal[1] : -normal[1]) * 0.012],
+    ], 0.45);
+    if (!big) continue;
+    // A fracture inside the thick of it, parallel to the ridge on the shadowed flank: ice has depth.
+    const dark = litSide === foreShoulder ? -1 : 1;
+    for (const [off, from, to] of [[0.45, 0.22, 0.62], [0.72, 0.4, 0.78]] as const) {
+      const o = spire.half * 0.82 * off * dark;
+      seam(ctx, f, skin.lit, 0.008, [
+        [root[0] + axis[0] * spire.length * from + normal[0] * o, root[1] + axis[1] * spire.length * from + normal[1] * o],
+        [root[0] + axis[0] * spire.length * to + normal[0] * o, root[1] + axis[1] * spire.length * to + normal[1] * o],
+      ], 0.28);
+    }
+    // And a glint at the point of every great one: a four-pointed star of light.
+    const gx = tip[0] - axis[0] * spire.half * 0.9;
+    const gy = tip[1] - axis[1] * spire.half * 0.9;
+    const arm = spire.half * 0.7;
+    seam(ctx, f, skin.lit, 0.01, [[gx - axis[0] * arm, gy - axis[1] * arm], [gx + axis[0] * arm, gy + axis[1] * arm]], 0.8);
+    seam(ctx, f, skin.lit, 0.01, [[gx - normal[0] * arm * 0.6, gy - normal[1] * arm * 0.6], [gx + normal[0] * arm * 0.6, gy + normal[1] * arm * 0.6]], 0.8);
+    glow(ctx, f, skin.lit, gx, gy, spire.half * 0.6, 0.7);
+  }
+  /*
+    The keel over the spires' roots, so each spire grows out from under it: its upper plane toward the
+    light and its lower away, split by a lit ridge, and a bevel at the prow.
+  */
+  const upper: Pt[] = [...HOARFROST_KEEL, [0.9, -0.025], [-0.96, -0.02]];
+  const lower: Pt[] = [...mirrored(HOARFROST_KEEL), [0.9, -0.025], [-0.96, -0.02]];
+  shaded(ctx, f, [0, -0.02], [0, -0.24], rgba(iceTone(skin, [0, -1]), 0.9), rgba(mix(iceTone(skin, [0, -1]), skin.hull, 0.4), 0.88), upper, 0.88);
+  shaded(ctx, f, [0, -0.02], [0, 0.24], rgba(iceTone(skin, [0, 1]), 0.9), rgba(mix(iceTone(skin, [0, 1]), skin.plate, 0.35), 0.88), lower, 0.88);
+  poly(ctx, f, mix(skin.lit, skin.hull, 0.15), [[-1.02, -0.004], [-0.8, -0.08], [-0.74, -0.026]], 0.75);
+  poly(ctx, f, iceTone(skin, [-0.3, 1]), [[-1.02, 0.004], [-0.8, 0.08], [-0.74, 0.02]], 0.75);
+  /*
+    The keel is cut, not moulded: each long plane is broken into three by two cuts from the ridge to the
+    edge, the fore third turned toward the light and the aft third away from it. Without them it
+    photographed as a lens with crystals stuck in it.
+  */
+  for (const side of [-1, 1] as const) {
+    const cuts: readonly (readonly [number, number])[] = [[-0.5, -0.6], [0.46, 0.58]];
+    const [fore, aft] = cuts.map(([ridge, edgeX]) => [[ridge, -0.022] as Pt, keelAt(edgeX, side).at] as const);
+    const foreFacet: Pt[] = [HOARFROST_KEEL[0]!, ...HOARFROST_KEEL.slice(1, 2).map(([x, y]) => [x, y * -side] as Pt), fore![1], fore![0]];
+    const aftFacet: Pt[] = [aft![0], aft![1], ...HOARFROST_KEEL.slice(6).map(([x, y]) => [x, y * -side] as Pt), [0.9, -0.025]];
+    poly(ctx, f, skin.lit, foreFacet, side === -1 ? 0.22 : 0.1);
+    poly(ctx, f, skin.plate, aftFacet, side === -1 ? 0.18 : 0.3);
+    for (const [from, to] of [fore!, aft!]) seam(ctx, f, skin.lit, 0.01, [from, [to[0], to[1] * 0.96]], 0.42);
+  }
+  // The ridge the planes meet on, caught by the light end to end.
+  seam(ctx, f, skin.lit, 0.02, [[-0.98, -0.022], [0.9, -0.026]], 0.8);
+  for (const [y, alpha] of [[-0.12, 0.4], [0.1, 0.22]] as const) seam(ctx, f, skin.lit, 0.01, [[-0.7, y * 0.7], [-0.3, y], [0.5, y * 0.95], [0.78, y * 0.5]], alpha, true);
+  /*
+    ⚠️ **HOARFROST, ON THE EDGES.** The frost the ship is named for is a crust of rime on the keel's
+    edges, thickest in the hollows between spires where ice meets ice: grains of light, crowding the
+    edge and thinning toward the ridge. A first draft fanned needles out of each hollow, and they
+    photographed as little hands.
+  */
+  const rime = makeRng('art').stream('hoarfrost/rime');
+  for (const side of [-1, 1] as const) {
+    const spires = grown.filter((g) => g.spire.side === side);
+    for (let x = -0.86; x < 0.86; x += 0.018) {
+      const { at } = keelAt(x, side);
+      // Thicker in a hollow: near a spire's base, but not under one.
+      const near = Math.min(...spires.map((g) => Math.max(0, Math.abs(x - g.spire.at) - g.spire.half)));
+      if (!rime.bool(near < 0.06 ? 0.75 : 0.12)) continue;
+      const inward = rime.range(0, 1) ** 2 * 0.05;
+      const y = at[1] + inward * -side;
+      disc(ctx, f, skin.lit, x + rime.range(-0.008, 0.008), y, rime.range(0.004, 0.009), rime.range(0.25, 0.6));
+    }
+  }
+  /*
+    ⚠️ **THE HEART, FROZEN IN THE CORE.** A cut gem the width of the keel — six planes lit by the one
+    light, and a table on top — with the place's eye red in the middle of it. *"Whatever the ice is
+    keeping"* is the Rime Shelf's own line (`src/content/themes.ts`), and this is what it was keeping.
+  */
+  const [hx, hy] = HOARFROST_HEART;
+  const gem = 0.18;
+  glow(ctx, f, skin.lit, hx, hy, 0.24, 0.45);
+  for (let s = 0; s < 6; s++) {
+    const a0 = (s / 6) * Math.PI * 2 + Math.PI / 6;
+    const a1 = ((s + 1) / 6) * Math.PI * 2 + Math.PI / 6;
+    const mid = (a0 + a1) / 2;
+    poly(ctx, f, iceTone(skin, [Math.cos(mid), Math.sin(mid)]), [
+      [hx, hy],
+      [hx + Math.cos(a0) * gem, hy + Math.sin(a0) * gem * 0.95],
+      [hx + Math.cos(a1) * gem, hy + Math.sin(a1) * gem * 0.95],
+    ], 0.85);
+  }
+  const table: Pt[] = [];
+  for (let s = 0; s < 6; s++) {
+    const a = (s / 6) * Math.PI * 2 + Math.PI / 6;
+    table.push([hx + Math.cos(a) * gem * 0.52, hy + Math.sin(a) * gem * 0.52 * 0.95]);
+  }
+  poly(ctx, f, mix(skin.lit, skin.hull, 0.35), table, 0.55);
+  glow(ctx, f, skin.eye, hx, hy, 0.13, 0.8);
+  disc(ctx, f, skin.eye, hx, hy, 0.045, 0.85);
+  disc(ctx, f, skin.lit, hx - 0.05, hy - 0.06, 0.018, 0.85);
+  for (let s = 0; s < 6; s++) {
+    const a = (s / 6) * Math.PI * 2 + Math.PI / 6;
+    seam(ctx, f, skin.lit, 0.008, [[hx + Math.cos(a) * gem * 0.52, hy + Math.sin(a) * gem * 0.5], [hx + Math.cos(a) * gem, hy + Math.sin(a) * gem * 0.95]], 0.4);
+  }
+}
+
+/*
+  ── THE COLD, SEEN — `docs/decisions/0399-the-frost-is-crystal.md` ───────────────────────────────
+
+  Asked: *"there's no actually visible aura … it needs to look like a frosty aura, but not the flame
+  aura style we've used elsewhere because it's an effect field not a 1hit death field. maybe an aura
+  that's heavily transparent but full of soft light twirling snowflakes."*
+
+  ⚠️ **NOTHING IN IT MAY LOOK LIKE SOMETHING THAT HURTS.** The frost ship's shards are cyan stars with
+  a dark edge, and they open into cyan flakes; a field of snowflakes round the hull that throws them
+  is the one place in the game a decoration could be mistaken for a bullet. So nothing here has an
+  edge, nothing is the frost's saturated ink — every mark is that ink taken most of the way to white
+  — and nothing is anywhere near opaque: the brightest mark in the field is under half, which is
+  what *heavily transparent* is in the only number a bake has for it.
+
+  ⚠️ **AND ITS EDGE IS THE COLD'S EDGE.** Every layer is painted to its tile's own edge and no
+  further, and the frame swells the tile to the row's radius — so the ring of mist and glints round
+  the rim is exactly where the slow begins. A field whose picture ends somewhere near where the slow
+  ends teaches the player the wrong line.
+
+  ⚠️ **THE TWIRL IS THREE RINGS TURNING AT THREE RATES.** One ring turned is a wheel; three, the inner
+  quickest, is a vortex — the flakes near the hull overtake the ones at the rim. Each flake trails a
+  wisp of its own arc behind it, which is what makes the turn read as motion rather than as the
+  field rotating under a camera.
+*/
+
+/**
+ * The most any mark in the cold is laid down at — 0399's *heavily transparent*. `tests/frost.test.ts`
+ * holds the field under half in its own number rather than reading this one back.
+ */
+const CHILL_OPACITY = 0.45;
+
+/** The flakes' ring for each layer, as fractions of the field's radius, and how many — 0399. */
+export const CHILL_RINGS: readonly { from: number; to: number; count: number }[] = [
+  { from: 0.72, to: 0.96, count: 26 },
+  { from: 0.48, to: 0.74, count: 18 },
+  { from: 0.24, to: 0.52, count: 12 },
+];
+
+/** The colour of the cold: the frost's ink most of the way to white, so it is never the frost's bullet. */
+function frostWhite(palette: Palette, by: number): string {
+  return shade(palette.frost, by);
+}
+
+/** The haze: a veil thickening toward the rim, a mottled band of mist, curling wisps, and glints on the rim. */
+function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
+  const c = size / 2;
+  const edge = c;
+  const rng = makeRng('aura').stream('chill/haze');
+  const soft = (x: number, y: number, radius: number, colour: string, alpha: number): void => {
+    const light = ctx.createRadialGradient(x, y, 0, x, y, radius);
+    light.addColorStop(0, rgba(colour, 1));
+    light.addColorStop(0.5, rgba(colour, 0.5));
+    light.addColorStop(1, rgba(colour, 0));
+    ctx.globalAlpha = Math.min(alpha, CHILL_OPACITY);
+    ctx.fillStyle = light;
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill('evenodd');
+  };
+  // The veil: faint in the middle, thickest just inside the rim, gone at the edge.
+  const veil = ctx.createRadialGradient(c, c, 0, c, c, edge);
+  const ice = frostWhite(palette, 0.6);
+  veil.addColorStop(0, rgba(ice, 0.25));
+  veil.addColorStop(0.62, rgba(ice, 0.4));
+  veil.addColorStop(0.9, rgba(ice, 1));
+  veil.addColorStop(1, rgba(ice, 0));
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = veil;
+  ctx.beginPath();
+  ctx.moveTo(c + edge, c);
+  ctx.arc(c, c, edge, 0, Math.PI * 2);
+  ctx.fill('evenodd');
+  // Mist: puffs crowding the rim and thinning inward, so the band is a cloud and not a ring.
+  for (let i = 0; i < 44; i++) {
+    const a = rng.range(0, Math.PI * 2);
+    const out = rng.range(0.5, 1) ** 0.6;
+    const radius = edge * rng.range(0.07, 0.16);
+    const at = Math.min(out * edge, edge - radius);
+    soft(c + Math.cos(a) * at, c + Math.sin(a) * at, radius, frostWhite(palette, rng.range(0.55, 0.8)), rng.range(0.07, 0.15));
+  }
+  /*
+    Wisps: arcs spiralling inward the way the cold turns, each swelling from nothing to its width and
+    back, a wide faint pass under a fine one. A first draft stroked them at one width end to end, and
+    the field photographed as a loading spinner.
+  */
+  // Butt caps: the pieces meet end to end, and round ones overlapped into a string of beads.
+  ctx.lineCap = 'butt';
+  for (let i = 0; i < 12; i++) {
+    const from = rng.range(0, Math.PI * 2);
+    const span = rng.range(0.5, 1.2);
+    const r0 = edge * rng.range(0.4, 0.9);
+    const width = edge * rng.range(0.012, 0.026);
+    const pieces = 18;
+    for (const [w, alpha] of [[width * 2.6, 0.06], [width, 0.12]] as const) {
+      ctx.strokeStyle = frostWhite(palette, 0.8);
+      for (let s = 0; s < pieces; s++) {
+        const swell = Math.sin((Math.PI * (s + 0.5)) / pieces);
+        ctx.globalAlpha = alpha * swell;
+        ctx.lineWidth = Math.max(0.5, w * swell);
+        ctx.beginPath();
+        for (const t of [s / pieces, (s + 1) / pieces]) {
+          const a = from + span * t;
+          const rad = r0 * (1 - 0.14 * t);
+          if (t === s / pieces) ctx.moveTo(c + Math.cos(a) * rad, c + Math.sin(a) * rad);
+          else ctx.lineTo(c + Math.cos(a) * rad, c + Math.sin(a) * rad);
+        }
+        ctx.stroke();
+      }
+    }
+  }
+  /*
+    Rime on the rim: specks of light scattered along the edge, which is where the slow begins — at
+    no fixed spacing, because a ring of evenly spaced beads photographed as a dotted line drawn round
+    the ship, which is the basic circle this was asked not to be.
+  */
+  for (let i = 0; i < 70; i++) {
+    const a = rng.range(0, Math.PI * 2);
+    const at = edge * (1 - rng.range(0.03, 0.14) ** 1.4);
+    const dot = edge * rng.range(0.003, 0.009);
+    const x = c + Math.cos(a) * Math.min(at, edge - dot * 2.5);
+    const y = c + Math.sin(a) * Math.min(at, edge - dot * 2.5);
+    soft(x, y, dot * 2.5, frostWhite(palette, 0.85), rng.range(0.12, 0.3));
+    ctx.globalAlpha = rng.range(0.18, 0.4);
+    ctx.fillStyle = frostWhite(palette, 0.9);
+    ctx.beginPath();
+    ctx.moveTo(x + dot, y);
+    ctx.arc(x, y, dot, 0, Math.PI * 2);
+    ctx.fill('evenodd');
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * One ring of flakes — 0399. Half are snowflakes, six arms with a pair of barbs each; half are motes,
+ * a soft point of light. Each trails a wisp of its own orbit behind it, on the side it came from: the
+ * row turns every ring the negative way, so a flake has come from the larger angle.
+ */
+function paintChillFlakes(ctx: Pen, size: number, palette: Palette, layer: number): void {
+  const c = size / 2;
+  const edge = c;
+  const ring = CHILL_RINGS[layer]!;
+  const unit = size / SPRITE_EXTENT.chillFlakes0;
+  const rng = makeRng('aura').stream(`chill/flakes${layer}`);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < ring.count; i++) {
+    const a = ((i + rng.range(-0.35, 0.35)) / ring.count) * Math.PI * 2;
+    const flake = unit * rng.range(1.3, 2.6);
+    const at = Math.min(edge * rng.range(ring.from, ring.to), edge - flake);
+    const x = c + Math.cos(a) * at;
+    const y = c + Math.sin(a) * at;
+    // The wisp: its own arc behind it, fading as it goes.
+    const trail = rng.range(0.07, 0.16);
+    for (let s = 0; s < 4; s++) {
+      ctx.globalAlpha = 0.11 * (1 - s / 4);
+      ctx.strokeStyle = frostWhite(palette, 0.8);
+      ctx.lineWidth = flake * (0.3 - s * 0.06);
+      ctx.beginPath();
+      ctx.arc(c, c, at, a + (trail * s) / 4, a + (trail * (s + 1)) / 4);
+      ctx.stroke();
+    }
+    // Its light.
+    const light = ctx.createRadialGradient(x, y, 0, x, y, flake * 0.95);
+    light.addColorStop(0, rgba(frostWhite(palette, 0.9), 1));
+    light.addColorStop(1, rgba(frostWhite(palette, 0.7), 0));
+    ctx.globalAlpha = 0.3;
+    ctx.fillStyle = light;
+    ctx.beginPath();
+    ctx.moveTo(x + flake * 0.95, y);
+    ctx.arc(x, y, flake * 0.95, 0, Math.PI * 2);
+    ctx.fill('evenodd');
+    if (i % 2 === 1) continue;
+    // A snowflake: six arms, a pair of barbs on each, turned its own way.
+    const spin = rng.range(0, Math.PI / 3);
+    ctx.globalAlpha = CHILL_OPACITY;
+    ctx.strokeStyle = frostWhite(palette, 0.92);
+    ctx.lineWidth = Math.max(1, flake * 0.1);
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) {
+      const b = spin + (k / 6) * Math.PI * 2;
+      const arm = flake * 0.55;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(b) * arm, y + Math.sin(b) * arm);
+      const bx = x + Math.cos(b) * arm * 0.58;
+      const by = y + Math.sin(b) * arm * 0.58;
+      for (const side of [-1, 1]) {
+        ctx.moveTo(bx, by);
+        ctx.lineTo(bx + Math.cos(b + side * 0.8) * arm * 0.3, by + Math.sin(b + side * 0.8) * arm * 0.3);
+      }
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
 }
 
 /*
@@ -9618,12 +10047,25 @@ export function drawKind(
       return;
     case 'boss12':
     case 'boss12Hit':
-      // THE FROST SHIP — 0264: a long crystal, its point to the front, two great ice-spires swept
-      // back off its flanks and a smaller pair at the prow.
-      trace(ctx, f, HOARFROST_HULL);
+      // THE FROST SHIP — 0264's, grown by 0399 into a cluster of ice: a keel pointing at the player,
+      // ten spires off it, and a heart frozen in the core.
+      ctx.beginPath();
+      ctx.lineWidth = Math.max(1, (size * HOARFROST_OUTLINE) / SPRITE_EXTENT.boss12);
+      trace(ctx, f, hoarfrostHull().outline);
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);
-      if (skin !== null) paintBoss12(ctx, f, skin, theme);
+      if (skin !== null) paintBoss12(ctx, f, skin);
+      return;
+    case 'chillHaze':
+      // THE COLD — 0399: the veil, the mist and the rime round its rim. Painted in the palette's own
+      // frost rather than a place's skin, because it is the one picture of a rule the ship flies under.
+      paintChillHaze(ctx, size, palette);
+      return;
+    case 'chillFlakes0':
+    case 'chillFlakes1':
+    case 'chillFlakes2':
+      // And its three rings of flakes, the outer first — 0399.
+      paintChillFlakes(ctx, size, palette, Number(kind.slice('chillFlakes'.length)));
       return;
     case 'boss13':
     case 'boss13Hit':
