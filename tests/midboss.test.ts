@@ -25,12 +25,7 @@ import { BOSSES } from '../src/content/bosses.ts';
 import { BOSS_DEATH_STEPS } from '../src/app/frame.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS, type LevelKind } from '../src/content/levels.ts';
-import { weighFight } from '../scripts/weigh-fight.mjs';
-
-/** The loadout a mid-boss is met with — one weapon, one missile, which is what a level authors. */
-const AT_THE_MID_BOSS = { weaponTier: 1, missileTier: 1 };
-/** And the other end: everything the ladders hold, which is what a player carries by the last levels. */
-const AT_THE_CAP = { weaponTier: 4, missileTier: 2 };
+import { carriedAt, weighFight } from '../scripts/weigh-fight.mjs';
 
 /**
  * How far a measured fight may sit from what its level asked for, in seconds.
@@ -43,12 +38,16 @@ const AT_THE_CAP = { weaponTier: 4, missileTier: 2 };
  */
 const CLOSE_ENOUGH_SECONDS = 3;
 
+/*
+  ⚠️ **AT THE LOADOUT THE RUN CARRIES IN, READ OFF THE LEVEL SCRIPTS — 0406.** This measured one rung
+  of each (0269) while the ladders crossed every level and outlived every death, so from the second
+  level on the fight it held was one nobody flew: the flown one ran six to nine seconds. `carriedAt`
+  walks the run's pickups in order, so a pickup moved anywhere moves the loadout this is asked at.
+*/
 const met = new Map<LevelKind, ReturnType<typeof weighFight>>();
-const capped = new Map<LevelKind, ReturnType<typeof weighFight>>();
 for (const kind of LEVEL_KINDS) {
   if (LEVELS[kind].midBoss === null) continue;
-  met.set(kind, weighFight(kind, AT_THE_MID_BOSS));
-  capped.set(kind, weighFight(kind, AT_THE_CAP));
+  met.set(kind, weighFight(kind, carriedAt(kind)));
 }
 
 describe('0269 — a mid-boss is fought for as long as its level says', () => {
@@ -90,29 +89,22 @@ describe('0269 — a mid-boss is fought for as long as its level says', () => {
     expect(mean, `the seven mid-boss fights average ${mean.toFixed(1)}s`).toBeLessThan(22);
   });
 
-  it('and at a full loadout it is still a speed bump, which is what a mid-boss is', () => {
-    /*
-      ⚠️ **0247's OWN SENTENCE, held as a number for the first time**: *"a mid-boss over in seven
-      seconds at max weapons IS the miniboss that guard's message names, on purpose."* It was not
-      true when it was written — the fights measured 14 to 28 seconds at the cap — and it is now.
-      The floor matters as much as the ceiling: a mid-boss the capped ship deletes on contact is a
-      pickup with a health bar, and `docs/decisions/0124-the-boss-is-a-boss.md` is the decision that
-      would be owed an amendment if this ever went under it.
-    */
-    for (const [kind, r] of capped) {
-      expect(r.during.seconds, `${kind}'s mid-boss survives ${r.during.seconds.toFixed(0)}s at the cap`).toBeLessThanOrEqual(12);
-      expect(r.during.seconds, `${kind}'s mid-boss lasts ${r.during.seconds.toFixed(0)}s at the cap`).toBeGreaterThanOrEqual(3);
-    }
-  });
+  /*
+    ⚠️ **"AT A FULL LOADOUT IT IS STILL A SPEED BUMP" IS DELETED — 0406.** It held three to twelve
+    seconds at the cap, on 0247's *"a mid-boss over in seven seconds at max weapons IS the miniboss"*
+    — a sentence about a fight met at one rung that got easy as the ladders filled. From the second
+    level the fight is MET at the cap, so that guard and the one above were asking for seven seconds
+    and twenty of the same fight, and the play answered which: *"other bosses were very quick, inc
+    minibosses."* The floor it also held — never deleted on contact — is the phase floor below, now
+    asked at the loadout that deletes fastest.
+  */
 
   it('and every phase of it lasts long enough to be seen, at that loadout', () => {
     /*
       ⚠️ **0124's FLOOR, MOVED TO THE LOADOUT THE FIGHT IS MET AT — 0269.** That guard reads every
       phase at MAX weapons and refuses one under three seconds, and it is right to for a boss the
-      player arrives at fully armed. A mid-boss is met with one rung and is a speed bump by the time
-      the ladders are full — 0247 ruled the twelve-second fight floor *"the end bosses' floor and not
-      the mid-bosses'"* for exactly that reason, and the phase floor is the same claim about the same
-      fight. So it is asked here instead, of the fight that actually happens.
+      player arrives at fully armed. So it is asked here instead, of the fight that actually happens —
+      which since 0406 is at the loadout the run carries in, and from the second level that is the cap.
 
       ⚠️ **Against the MEASURED fight rather than an arithmetic one.** The band is the table's; the
       seconds are the instrument's. A `bare` window is skipped here for 0150's reason — a bared hull

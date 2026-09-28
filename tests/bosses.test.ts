@@ -79,9 +79,14 @@ describe('0247 — a level has a mid-boss and a real one', () => {
     for (let i = 1; i < ends.length; i++) {
       expect(BOSSES[ends[i]!].health, `${ends[i]} is no tougher than ${ends[i - 1]}`).toBeGreaterThan(BOSSES[ends[i - 1]!].health);
     }
-    const toughestMid = Math.max(...mids.map((k) => BOSSES[k].health));
-    const weakestEnd = Math.min(...ends.map((k) => BOSSES[k].health));
-    expect(toughestMid, 'a mid-boss is tougher than a real one').toBeLessThan(weakestEnd);
+    /*
+      ⚠️ **"NONE OUTWEIGHS ANY REAL BOSS" IS DELETED — 0406, on 0295's terms.** It held the toughest
+      mid-boss under the weakest end boss ACROSS levels: the axis, met at a full loadout on the last
+      level, against the serpent, met on the first. Solved at the loadout each is actually met with,
+      the axis is 699 and the serpent 700, so it passed by one, and a pass by one is the next re-solve
+      reddening a correct table. Health across two different fights is not a quantity a player
+      compares; a mid-boss lighter than ITS OWN level's end boss is, and THE ROSTER above holds that.
+    */
     // And every boss in the table is fought somewhere.
     expect(new Set([...mids, ...ends]).size).toBe(BOSS_KINDS.length);
   });

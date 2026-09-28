@@ -51,8 +51,8 @@ export const SIDES = ['gun', 'tubes'] as const;
 export type Side = (typeof SIDES)[number];
 
 /**
- * A surge: for `steps`, the ship wears `aura` — two pods on its flanks — and each of its volleys
- * fires `pods` extra missiles of the surge's OWN kind, charged — 0379.
+ * A surge: for `steps`, the ship wears `aura` — its pods — and each of its volleys fires `pods` extra
+ * missiles of the surge's OWN kind, charged — 0379. One of them since 0405, down the middle.
  *
  * ⚠️ **IT STRENGTHENED WHATEVER TUBES WERE FITTED, AND THAT WAS THE FLAW 0376 FIXED FOR THE STACK.**
  * Played: *"the missiles need a rework on the special, same problem exists when activating a special
@@ -67,13 +67,33 @@ export type Side = (typeof SIDES)[number];
  */
 export const POD_ACROSS = 4.5;
 
+/**
+ * How far ahead of the ship's centre a pod ON THE CENTRELINE launches, in world units — 0405. The
+ * fitted tubes launch at `MUZZLE_ALONG`, which is under the nose; a pod there would leave from inside
+ * the hull and be drawn where the hull covers it. So its barrel runs out past the longest nose any
+ * ship has (7.8 units, half of it 3.9) and it launches from the barrel's tip. One number for the frame
+ * and the bake, on 0036's terms, as `POD_ACROSS` is.
+ */
+export const POD_NOSE = 4.5;
+
+/**
+ * Where pod `j` of `count` sits across, as a share of `POD_ACROSS` either side of the centreline —
+ * 0405. One pod is the centreline, between the fitted tubes: *"1 bonus missile firing in the middle
+ * of the two regular ones."* More spread evenly from one side to the other, which for two is the pair
+ * 0379 drew. The frame launches from it and the bake draws from it, so the count on the row is the
+ * whole of what decides the picture.
+ */
+export function podSide(j: number, count: number): number {
+  return count === 1 ? 0 : -1 + (2 * j) / (count - 1);
+}
+
 export interface Surge {
   /** How long it lasts, in fixed steps (0022). */
   steps: number;
-  /** The bitmap drawn on the ship while it lasts — its two pods, the picture of the whole effect (0036). */
+  /** The bitmap drawn on the ship while it lasts — its pods, the picture of the whole effect (0036). */
   aura: number;
   /**
-   * The pods: `count` extra missiles of `missile` each volley, from outside the fitted tubes, with
+   * The pods: `count` extra missiles of `missile` each volley, placed by `podSide`, with
    * `damage` multiplying the missile's own, `fuse` its life, and `pierce` how many landings it
    * survives, gated as a blade's are (0357) — one is spent by arriving.
    */
@@ -273,8 +293,9 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    // Two seekers a volley, whatever tubes are fitted — 0379.
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, pods: { missile: 'homing', count: 2, damage: 4, fuse: 2, pierce: 1 } },
+    // One seeker a volley, down the middle, whatever tubes are fitted — 0379; one and not two since
+    // 0405, played: *"the big problem was the supercharged missiles."*
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraHunt, pods: { missile: 'homing', count: 1, damage: 4, fuse: 2, pierce: 1 } },
     storm: null,
     whirl: null,
     rift: null,
@@ -296,8 +317,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     becomes: null,
     reach: 0,
     bossShare: 0,
-    // Two straight missiles a volley, whatever tubes are fitted — 0379.
-    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, pods: { missile: 'straight', count: 2, damage: 3, fuse: 1, pierce: BLADE_EDGE } },
+    // One straight missile a volley, down the middle, whatever tubes are fitted — 0379; one since 0405.
+    surge: { steps: SURGE_STEPS, aura: SPRITE.auraOverdrive, pods: { missile: 'straight', count: 1, damage: 3, fuse: 1, pierce: BLADE_EDGE } },
     storm: null,
     whirl: null,
     rift: null,

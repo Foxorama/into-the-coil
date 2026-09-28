@@ -1,5 +1,9 @@
 # 0379 — The specials are seen
 
+> ⚠️ **AMENDED 2026-09-28 by [0405](0405-the-surge-fires-one-down-the-middle.md).** A tube surge adds
+> one pod, not two, on the centreline between the fitted tubes, launched from a barrel past the nose.
+> The flank pods below are what a row asking for more than one still gets.
+
 **Accepted 2026-09-26.** Four changes, all from one play of the specials:
 - **The thrown specials are slower and bigger.** The bomb, the storm's ball and the void fly at 1.5 a
   step, where they flew at 2.2. They draw bigger, and the two balls trail their own light.

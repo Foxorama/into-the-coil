@@ -43,10 +43,12 @@ export const PROBES = [
     suite: 'tests/surge.test.ts',
     broke: 'the pods firing from the fitted tubes rather than from where they are drawn',
     guard: 'every fitted tube with every tube special',
+    // Re-anchored by 0405: with one pod on the centreline, `LAUNCHER_ACROSS * side` is zero as well, so
+    // the old break moved nothing. The pod put in the first fitted tube's place is still the break.
     edit: {
       path: 'src/app/frame.ts',
-      find: '    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + POD_ACROSS * side, podRow);',
-      replace: '    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, podRow);',
+      find: 'w.ship.across + POD_ACROSS * side, podRow);',
+      replace: 'w.ship.across - LAUNCHER_ACROSS, podRow);',
     },
   },
   {

@@ -25,7 +25,7 @@ import { BOSSES } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
-import { POD_ACROSS } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
 import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
@@ -11834,21 +11834,54 @@ export function drawKind(
       glow(ctx, f, palette.player, 0, 0, 0.5, 0.7);
       return;
     /*
-      A surge's picture — THE TWO PODS IT ADDS, since 0379.
+      A surge's picture — THE PODS IT ADDS, since 0379.
 
       ⚠️ **IT WAS A HALO AND A RIM, AND THE PLAY SAID SO:** *"the ship aura is a basic circle now as
       well, it looks terrible."* It was also a picture of the wrong thing once the surge stopped
-      charging the fitted tubes and started adding its own two (0379). So it is those two: a pod each
-      side of the hull at `POD_ACROSS`, where the frame launches them from, on a strut, in the surge's
-      ink, lit at the nose and warm behind. Nothing round the ship, so nothing hides a bullet beside it.
+      charging the fitted tubes and started adding its own (0379). So it is those: each pod where
+      `podSide` puts it, which is where the frame launches it from, in the surge's ink. Nothing round
+      the ship, so nothing hides a bullet beside it.
+
+      ⚠️ **ONE POD SINCE 0405, AND IT IS ON THE CENTRELINE** — *"1 bonus missile firing in the middle
+      of the two regular ones."* A pod on a flank hangs off a strut; one on the centreline is a barrel
+      under the hull running out past the nose to `POD_NOSE`, because this layer is under the ship
+      (0373) and anything shorter would be covered by it. The count is read off the surge's row, so
+      the picture follows the row rather than restating it.
     */
     case 'auraHunt':
     case 'auraOverdrive': {
       const ink = palette[INK_OF[kind]];
       const lit = shade(ink, 0.55);
-      // As a share of the sprite's half-extent, which is the unit every point below is in.
-      const out = POD_ACROSS / (SPRITE_EXTENT[kind] / 2);
-      for (const side of [-1, 1] as const) {
+      /*
+        World units as a share of the frame's `r`, which is the unit every point below is in — and `r`
+        is 0.42 of the tile, not half of it. ⚠️ **0379 divided by the half-extent**, so its pods were
+        drawn at 3.8 units while the frame launched them at 4.5; 0405's photograph of the barrel is what
+        showed it, the muzzle landing on the nose it was meant to clear.
+      */
+      const out = POD_ACROSS / (SPRITE_EXTENT[kind] * 0.42);
+      const nose = POD_NOSE / (SPRITE_EXTENT[kind] * 0.42);
+      const surge = SPECIAL_KINDS.map((k) => SPECIALS[k].surge).find((s) => s !== null && s.aura === SPRITE[kind]);
+      if (surge === undefined || surge === null) throw new Error(`${kind} is no surge's aura, so it has no pods to draw`);
+      for (let j = 0; j < surge.pods.count; j++) {
+        const side = podSide(j, surge.pods.count);
+        if (side === 0) {
+          // The barrel from under the hull, a collar at the muzzle, and the muzzle lit.
+          poly(ctx, f, ink, [
+            [0.2, -0.07],
+            [nose - 0.1, -0.07],
+            [nose - 0.1, 0.07],
+            [0.2, 0.07],
+          ]);
+          poly(ctx, f, ink, [
+            [nose - 0.14, -0.12],
+            [nose, -0.1],
+            [nose, 0.1],
+            [nose - 0.14, 0.12],
+          ]);
+          disc(ctx, f, lit, nose - 0.04, 0, 0.06);
+          glow(ctx, f, lit, nose, 0, 0.22, 0.6);
+          continue;
+        }
         const y = side * out;
         // The heat behind it, then the strut back to the hull, then the pod.
         glow(ctx, f, ink, -0.42, y, 0.3, 0.45);

@@ -25,13 +25,13 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { weighFight } from '../scripts/weigh-fight.mjs';
 
 /**
- * The loadout a player carries at the mid-boss.
+ * The loadout the fight is flown at here: one rung of each, the weakest ship that can reach a mid-boss.
  *
- * ⚠️ **ONE RUNG OF EACH, AND IT IS THE ASK'S OWN CASE.** A level authors one weapon near its start
- * and one missile a fifth of the way in (0256), and the mid-boss's own drop comes out of the fight
- * rather than into it — so one rung is what the fight is met with on a level the player did not
- * arrive at loaded. It is also the slowest kill, which is the case the report is about: the longer
- * the fight, the more of the script the camera drags across it.
+ * ⚠️ **NOT THE LOADOUT A PLAYER CARRIES, SINCE 0406** — a player who takes the pickups carries the
+ * cap from the second level on, and `carriedAt` in `scripts/weigh-fight.mjs` is that loadout, which
+ * `tests/midboss.test.ts` holds the fight's length at. This file keeps one rung for the reason that
+ * was always the stronger half of its argument: it is the slowest kill, which is the case the report
+ * is about — the longer the fight, the more of the script the camera drags across it.
  */
 const AT_THE_MID_BOSS = { weaponTier: 1, missileTier: 1 };
 

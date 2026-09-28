@@ -101,7 +101,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, SPECIALS, SPECIAL_KINDS, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -3919,7 +3919,7 @@ function fireMissiles(w: World): void {
     wherever the ship happened to be, rather than a weapon starting.
 
     ⚠️ **UNLESS A SURGE IS ON — 0379.** Its pods are tubes of their own, so a ship with none fitted
-    still fires the surge's pair on the tubes' clock.
+    still fires the surge's pods on the tubes' clock.
   */
   const surge = surgeOf(w);
   if (w.weapon.launchers === 0 && surge === null) return;
@@ -4001,11 +4001,12 @@ function fireMissiles(w: World): void {
     if (missile === null) return;
     // One cue for the volley: the tubes' if they fired, the pods' if there are none.
     if (j === 0 && w.weapon.launchers === 0) w.onCue('missile', w.ship.across);
-    const side = j % 2 === 0 ? -1 : 1;
-    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + POD_ACROSS * side, podRow);
+    // Where the bake draws it — 0405. A pod on the centreline launches from its barrel's tip, past the nose.
+    const side = podSide(j, pods.count);
+    reset(missile, w.ship.along + (side === 0 ? POD_NOSE : MUZZLE_ALONG), w.ship.across + POD_ACROSS * side, podRow);
     missile.velAlong = podRow.speed + w.scrollPerStep;
     missile.damage = podRow.damage * pods.damage;
-    // The tubes' own pop, carried on out past the pod.
+    // The tubes' own pop, carried on out past the pod — none for one on the centreline.
     missile.velAcross = side * LAUNCHER_POP_SPEED;
     missile.steerAcross = w.ship.across + (POD_ACROSS + LAUNCHER_POP) * side;
     missile.seekTurn = tube.seek;

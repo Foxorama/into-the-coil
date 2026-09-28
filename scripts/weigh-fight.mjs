@@ -1,7 +1,7 @@
 // What the field is carrying while a mid-boss is on it.
 //
 // Usage:  node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-fight.mjs
-//              [levelKind] [--weapon=1] [--missiles=1] [--sweep=8]
+//              [levelKind] [--weapon=1] [--missiles=1] [--sweep=8] [--gun=pulse|arc|shuriken]
 //
 // ⚠️ THE INSTRUMENT FOR THE MID-BOSS WAVE ITEM, built before the tuning pass on it —
 // docs/decisions/0027-measure-the-picture-not-the-model.md. Reported: *"when the minibosses are on
@@ -33,12 +33,43 @@
 // instrument that measured nothing must not report success.
 
 import { ENEMIES } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { weaponFor } from '../src/content/pickups.ts';
+import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld } from '../tests/world.ts';
+
+/**
+ * The loadout a player who took every pickup carries into `kind`'s mid-boss — 0406.
+ *
+ * ⚠️ **READ OFF THE LEVEL SCRIPTS, NEVER WRITTEN DOWN.** 0269 solved every mid-boss at one rung of
+ * each, on *"a level authors one weapon near its start"*; but a clear carries the ladders into the
+ * next level (0039) and since 0372 a death does not take them either, so from the second level on the
+ * mid-boss is met at the cap and its fight ran six to nine seconds against the seventeen to twenty-three
+ * its level asks for. Played: *"other bosses were very quick, inc minibosses."* So this walks the run
+ * in order — every earlier level's pickups and its mid-boss's drop, then this level's up to its
+ * mid-boss — and clamps at the ladder, and a pickup moved in any level moves the answer with it.
+ *
+ * @param {import('../src/content/levels.ts').LevelKind} kind
+ * @returns {{ weaponTier: number, missileTier: number }}
+ */
+export function carriedAt(kind) {
+  let weaponTier = 0;
+  let missileTier = 0;
+  const take = (pickup) => {
+    if (pickup === 'weapon') weaponTier = Math.min(UPGRADE_TIERS, weaponTier + 1);
+    if (pickup === 'missile') missileTier = Math.min(UPGRADE_TIERS, missileTier + 1);
+  };
+  for (const level of LEVEL_KINDS) {
+    const row = LEVELS[level];
+    const midAt = row.midBoss === null ? Number.POSITIVE_INFINITY : row.midBoss.at;
+    for (const p of row.pickups) if (level !== kind || p.at < midAt) take(p.kind);
+    if (level === kind) return { weaponTier, missileTier };
+    if (row.midBoss !== null) for (const p of MID_BOSS_DROP) take(p);
+  }
+  throw new Error(`${kind} is not a level`);
+}
 
 /** Whether any enemy shot is inside the view this step — the same question `weigh-bullets` asks. */
 function bulletOnScreen(world) {
@@ -122,8 +153,10 @@ export function weighFight(kind, options = {}) {
   const carried = [];
   for (let i = 0; i < weaponTier; i++) carried.push('weapon');
   for (let i = 0; i < missileTier; i++) carried.push('missile');
-  world.weapon = weaponFor(world.shipRow, carried);
+  // The ship's own gun unless one is named — 0406, because what a fight lands depends on it.
+  world.weapon = weaponFor(world.shipRow, carried, options.gun);
   wearHull(world);
+  const armed = world.weapon;
 
   const fires = (enemy) => ENEMIES[enemy].fireEvery > 0;
   const before = stretch();
@@ -167,6 +200,9 @@ export function weighFight(kind, options = {}) {
     const spawnedBefore = world.nextWave;
     frame.step();
     step++;
+    // A pickup on the field is the shell's to fit, never the frame's, so the loadout asked for is the
+    // one flown — held rather than assumed, because a fight measured at the wrong loadout is 0406.
+    if (world.weapon !== armed) throw new Error(`${kind}: the loadout changed mid-walk, so this measured another one`);
     const fighting = world.bossPool.size > 0 && world.fight === 0;
     if (fighting) fought = true;
     const here = fighting ? during : world.fight === 0 ? before : after;
@@ -204,10 +240,12 @@ if (isMain) {
   };
   const named = args.filter((a) => !a.startsWith('--'));
   const kinds = named.length > 0 ? named : LEVEL_KINDS;
+  const gun = args.find((a) => a.startsWith('--gun='));
   const options = {
     weaponTier: flag('weapon', 1),
     missileTier: flag('missiles', 1),
     sweepSeconds: flag('sweep', 8),
+    gun: gun === undefined ? undefined : gun.slice('--gun='.length),
   };
   let unfought = 0;
   for (const kind of kinds) {
