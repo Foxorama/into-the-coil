@@ -73,7 +73,7 @@ export const PROBES = [
     // ⚠️ **RE-TARGETED BY 0406**, which deleted the across-levels ordering this broke: the axis is now
     // made heavier than its OWN level's end boss, Medusa at 1870, which THE ROSTER refuses.
     broke: 'the axis authored heavier than its own level’s end boss, so the mid-boss is the bigger fight',
-    guard: 'THE ROSTER',
+    guard: 'THE ROSTER: every level has a mid-boss',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length,
