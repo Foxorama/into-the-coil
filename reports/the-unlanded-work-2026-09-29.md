@@ -49,18 +49,21 @@ number and merged-PR search where the code had moved on.
 One PR at a time — [0033](../docs/decisions/0033-a-branch-starts-at-main.md).
 
 1. **0405 + 0406**, the play report about surges and mid-bosses. It is the one the player is waiting on.
-2. **0407 + 0408 + 0409**, with this report. Tooling only, so one proof covers all three.
-3. **Enemy frames**, the owed half of 0280.
-4. **0265's muzzle flash**, re-measured against the bullets as they are now. Bullets have changed
-   since 0265 was written ([0295](../docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md) and
-   the place-coloured bullets), so its halo half is re-examined rather than replayed.
+   Landed as #435.
+2. **0407 + 0408 + 0409**, with this report. Tooling only, so one proof covers all three. Landed as #436.
+3. **Enemy frames**, the owed half of 0280 — [0410](../docs/decisions/0410-the-enemies-move.md).
 
-## Left for the player
+**0265's muzzle flash is declined, and is not owed.** Offered to the player on 2026-09-29 with the
+case against it — the reports it answered are answered by place-coloured bullets and by boss faces
+that show their tell before a volley, and a flash on every enemy volley is clutter on a crowded screen —
+and the answer was *"skip the muzzle flash"*. [0264](../docs/decisions/0264-the-real-bosses-are-drawn.md)'s
+line that the bullet report *"get[s] its own decision"* points at work declined, not work outstanding.
 
-- **The 23 emptied directories.** Deleting through a junction deletes its target, so each one is
-  removed with `rmdir` on the junction first —
-  [0200](../docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md) says to list them
-  and ask, and they are listed above.
-- **The branches tidy keeps** once these land: the `keep/*` and `wip-*` branches are landed or
-  superseded by the table above, but tidy keeps them because no PR merged them. Deleting them is a
-  branch delete, which is also 0200's to ask about.
+## Left for the player, and what they said
+
+- **The 23 emptied directories** — *deleted*, on the player's yes. Each junction was removed as a link
+  before its folder, because a recursive delete follows a junction into its target —
+  [0200](../docs/decisions/0200-the-tool-that-edits-must-not-lose-what-it-edits.md). The shared
+  `node_modules` held 71 entries before and after.
+- **The branches tidy keeps** — *deleted*, on the same yes: eighteen branches from the table above that
+  no PR merged. `npm run tidy` then deleted the thirty-four a PR had merged.

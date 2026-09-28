@@ -302,6 +302,22 @@ export interface Entity extends Body {
    * the source says 146.
    */
   bobPhase: number;
+  /*
+    ── A BODY IS SEVERAL BITMAPS — 0410 ────────────────────────────────────────────────────────────
+
+    ⚠️ **REPORTED FROM PLAY:** *"none of them feel alive because while their location changes, the
+    individual enemies don't 'move'."* `animate` hands a body its row's cycle; `stepEntities` walks it.
+    The lists are the row's own, held by reference — a pool is not reducer state (0022), and a
+    reference assigned at spawn allocates nothing.
+  */
+  /** The bitmaps of its cycle, in order. Empty is a still body, and is every prop in the game. */
+  frames: readonly number[];
+  /** The same cycle lit by a hit, frame for frame. */
+  framesHit: readonly number[];
+  /** Steps each frame is held for. */
+  frameHold: number;
+  /** Where in its cycle this body is, in steps. Advanced every step; seeded per body at spawn. */
+  framePhase: number;
   /**
    * Which way a body whose fire TURNS is pointing, in radians. Advanced once per volley.
    *
@@ -481,6 +497,44 @@ export interface Entity extends Body {
   seekTurn: number;
 }
 
+/**
+ * A body's animation cycle — 0410: the bitmaps it walks through, the same bitmaps lit by a hit, and
+ * how many steps each is held.
+ *
+ * ⚠️ **THE LISTS ARE WRITTEN OUT ON THE ROW, NOT A COUNT AND A STRIDE.** A count would have the frame
+ * picked by adding to the base sprite's index, which makes `SPRITE_KINDS`' order load-bearing and a kind
+ * inserted mid-cycle a body animating into somebody else's bitmap. A list is 0016's explicit registry,
+ * and it may name a frame twice — a wingbeat that comes back through the middle is `[mid, up, mid, down]`.
+ *
+ * ⚠️ **A HOLD IN STEPS RATHER THAN A RATE**, because the frames are indexed by steps and nothing then
+ * has to be converted: at 60Hz a hold of 8 on a four-frame cycle is a beat about every half second.
+ */
+export interface Cycle {
+  frames: readonly number[];
+  /** Must be as long as `frames`; `tests/frames.test.ts` holds it. */
+  hurt: readonly number[];
+  hold: number;
+}
+
+/** The empty cycle, shared, so a still body allocates nothing and says nothing. */
+// @setup: one empty list at module load, shared by every still body for the life of the page.
+const STILL: readonly number[] = [];
+
+/**
+ * Give a body a cycle — 0410. Called by whoever spawns an animal, after `reset`.
+ *
+ * ⚠️ **THE PHASE IS SEEDED FROM THE SPAWN POINT AND NOT ROLLED.** Eight raiders on the same frame of
+ * the same cycle are one machine with eight bodies — the fault 0098 names as *"they all fire at exactly
+ * the same time"*, in another channel. A roll would shift every draw after it on whatever stream it
+ * took (0021); the spawn point already differs per member and is already deterministic.
+ */
+export function animate(e: Entity, cycle: Cycle): void {
+  e.frames = cycle.frames;
+  e.framesHit = cycle.hurt;
+  e.frameHold = cycle.hold;
+  e.framePhase = Math.floor(Math.abs(e.along * 3.7 + e.across * 6.1)) % (cycle.frames.length * cycle.hold);
+}
+
 /** A blank entity. Called only while a pool is being constructed. */
 export function makeEntity(): Entity {
   // @setup: entities are built when the pool is constructed, never during a frame.
@@ -513,6 +567,10 @@ export function makeEntity(): Entity {
     turnsLeft: 0,
     spin: 0,
     bobPhase: 0,
+    frames: STILL,
+    framesHit: STILL,
+    frameHold: 1,
+    framePhase: 0,
     firePhase: 0,
     headAt: 0,
     muzzleAt: -1,
@@ -576,6 +634,15 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.turnsLeft = 0;
   e.spin = 0;
   e.bobPhase = 0;
+  /*
+    ⚠️ **STILL BY DEFAULT, AND A SPAWNER OPTS A BODY IN** — 0410. `reset` takes a `Body`, which is every
+    shot, fragment, plume and pickup as well as every enemy; a cycle there would make fifty rows say
+    they do not animate in order to say nothing. `frameHold` is 1 and not 0 because it is a divisor.
+  */
+  e.frames = STILL;
+  e.framesHit = STILL;
+  e.frameHold = 1;
+  e.framePhase = 0;
   e.firePhase = 0;
   e.headAt = 0;
   e.muzzleAt = -1;
@@ -677,7 +744,20 @@ export function stepEntities(
       currently gets both, and gets them in that order: a solid hit, then a pulse while it recovers.
     */
     const blinking = e.invulnFor > 0 && (e.invulnFor & BLINK_PHASE) !== 0;
-    e.sprite = e.flashFor > 0 || blinking ? e.spriteHit : e.spriteBase;
+    const lit = e.flashFor > 0 || blinking;
+    /*
+      ── AND WHICH FRAME OF ITS OWN CYCLE — 0410 ──────────────────────────────────────────────────
+
+      ⚠️ **ADVANCED HERE AND NOT IN THE PAINTER** — 0015, and 0022's fixed step: a cycle driven off
+      wall clock runs faster on a dropped frame and does not repeat on a replay. `spriteBase` stays the
+      body's identity and is not written; only what is drawn this step changes.
+    */
+    const cycle = e.frames.length;
+    if (cycle > 0) {
+      e.framePhase++;
+      const at = Math.floor(e.framePhase / e.frameHold) % cycle;
+      e.sprite = lit ? e.framesHit[at]! : e.frames[at]!;
+    } else e.sprite = lit ? e.spriteHit : e.spriteBase;
     /*
       A lifetime retires the entity itself, and it is checked BEFORE the cull rather than after.
 

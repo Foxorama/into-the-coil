@@ -373,16 +373,20 @@ describe('0404 — the rain feeds it', () => {
     const tints = ENEMIES.moonJelly.tints!;
     expect(tints.length, 'the rain is one colour').toBeGreaterThanOrEqual(3);
     const d = medusaAt(0.7);
+    // Which glows fell, and every bitmap they were drawn in — a glow pulses through its own cycle (0410).
     const seen = new Set<number>();
+    const drawn = new Set<number>();
     for (let step = 1; step <= fall.every * 12; step++) {
       stepHeld(d, 5);
       for (const j of jellies(d)) {
         expect(j.turn, 'a moon jelly falls on its side').toBeCloseTo(Math.PI / 2, 9);
-        expect(tints.some(([sprite]) => sprite === j.sprite), 'a moon jelly glows in no colour of its row').toBe(true);
-        seen.add(j.sprite);
+        const glow = tints.findIndex((t) => t.frames.includes(j.sprite) || t.hurt.includes(j.sprite));
+        expect(glow, 'a moon jelly glows in no colour of its row').toBeGreaterThanOrEqual(0);
+        seen.add(glow);
+        drawn.add(j.sprite);
       }
     }
     expect(seen.size, 'a dozen belches all fell in one glow').toBeGreaterThanOrEqual(3);
-    expect(seen.has(row.sprite), 'a moon jelly is the jellyfish’s own colour').toBe(false);
+    expect(drawn.has(row.sprite), 'a moon jelly is the jellyfish’s own colour').toBe(false);
   });
 });

@@ -11,7 +11,7 @@
  * pointer, per `docs/decisions/0029-the-tracked-record-is-the-record.md`.
  */
 
-import type { Body } from '../sim/entity.ts';
+import type { Body, Cycle } from '../sim/entity.ts';
 import type { ShotKind } from './shots.ts';
 import { SPRITE } from './sprites.ts';
 import type { ThemeKind } from './themes.ts';
@@ -320,11 +320,21 @@ export type Motion =
 
 export interface EnemyRow extends Body {
   /**
-   * The glows it may wear, each a bitmap and its hurt twin — 0404; absent is the one `sprite`. A body
-   * that falls from a boss (`Fall`'s `body`) takes one of these where it forms, by a hash of where that
-   * is rather than a draw, so no stream a level already spends moves by one.
+   * How it moves while it flies — 0410: its drawings in order, each lit twin, and how long each holds.
+   *
+   * ⚠️ **REPORTED FROM PLAY:** *"none of them feel alive because while their location changes, the
+   * individual enemies don't 'move'."* Every row authors its own — which drawings, in what order and
+   * how fast is the animal's character, so a charger flicks and a warden's iris is slow — and 0282's
+   * rule is why there is no shared default to fall back on: a body that did not say how it moves would
+   * be a prop again, and nothing would notice.
    */
-  tints?: readonly (readonly [number, number])[];
+  cycle: Cycle;
+  /**
+   * The glows it may wear, each its own cycle — 0404, animated by 0410; absent is the one `cycle`. A
+   * body that falls from a boss (`Fall`'s `body`) takes one of these where it forms, by a hash of where
+   * that is rather than a draw, so no stream a level already spends moves by one.
+   */
+  tints?: readonly Cycle[];
   /**
    * World units per step it closes on the player, ON TOP of the camera's own advance.
    *
@@ -426,6 +436,23 @@ export const SIGNATURE_OF: Record<ThemeKind, EnemyKind> = {
   core: 'gaze',
 };
 
+/** A body's three drawings as `[bitmap, lit twin]` pairs: rest, and its two other poses — 0410. */
+type Poses = readonly [readonly [number, number], readonly [number, number], readonly [number, number]];
+
+/**
+ * A cycle through a body's drawings in `order` — 0410. `0` is the rest drawing and `1` and `2` are its
+ * other poses, so `[0, 1, 0, 2]` is a beat that passes back through rest on its way each way.
+ */
+function cycleOf(poses: Poses, order: readonly (0 | 1 | 2)[], hold: number): Cycle {
+  return { frames: order.map((i) => poses[i][0]), hurt: order.map((i) => poses[i][1]), hold };
+}
+
+/** Out through one pose, back through rest, out through the other: a wing, a tail, a jaw. */
+const BEAT = [0, 1, 0, 2] as const;
+
+/** A jelly's pulse: the bell snaps in once, and relaxes wide for longer. */
+const JELLY_PULSE = [1, 0, 2, 2, 0] as const;
+
 export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   /**
    * Holds its line and never fires. The thing you shoot while you are learning where the lane is —
@@ -439,6 +466,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   drifter: {
     sprite: SPRITE.drifter,
     spriteHit: SPRITE.drifterHit,
+    // It holds station, so it swims in place, slowly: a ray's beat, looking about — 0410.
+    cycle: cycleOf([[SPRITE.drifter, SPRITE.drifterHit], [SPRITE.drifterB, SPRITE.drifterBHit], [SPRITE.drifterC, SPRITE.drifterCHit]], BEAT, 10),
     radius: 2.6,
     health: 1,
     damage: 2,
@@ -473,6 +502,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   lancer: {
     sprite: SPRITE.lancer,
     spriteHit: SPRITE.lancerHit,
+    cycle: cycleOf([[SPRITE.lancer, SPRITE.lancerHit], [SPRITE.lancerB, SPRITE.lancerBHit], [SPRITE.lancerC, SPRITE.lancerCHit]], BEAT, 7),
     // Bigger on screen, so bigger to hit. A drawn size and a hurtbox that disagree is the complaint
     // `tests/combat.test.ts` holds a band against, in both directions.
     radius: 3.2,
@@ -526,6 +556,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   weaver: {
     sprite: SPRITE.weaver,
     spriteHit: SPRITE.weaverHit,
+    cycle: cycleOf([[SPRITE.weaver, SPRITE.weaverHit], [SPRITE.weaverB, SPRITE.weaverBHit], [SPRITE.weaverC, SPRITE.weaverCHit]], BEAT, 8),
     radius: 2.2,
     health: 1,
     damage: 2,
@@ -571,6 +602,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   turret: {
     sprite: SPRITE.turret,
     spriteHit: SPRITE.turretHit,
+    // A slow breath through the gun face: the heaviest thing on the shared roster moves least often.
+    cycle: cycleOf([[SPRITE.turret, SPRITE.turretHit], [SPRITE.turretB, SPRITE.turretBHit], [SPRITE.turretC, SPRITE.turretCHit]], BEAT, 12),
     radius: 3.7,
     health: 3,
     damage: 2,
@@ -612,6 +645,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   charger: {
     sprite: SPRITE.charger,
     spriteHit: SPRITE.chargerHit,
+    // It charges, so its tail flicks fast — the quickest cycle on the roster.
+    cycle: cycleOf([[SPRITE.charger, SPRITE.chargerHit], [SPRITE.chargerB, SPRITE.chargerBHit], [SPRITE.chargerC, SPRITE.chargerCHit]], BEAT, 4),
     radius: 2.4,
     health: 1,
     damage: 2,
@@ -659,6 +694,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   warden: {
     sprite: SPRITE.warden,
     spriteHit: SPRITE.wardenHit,
+    // An iris dilates slowly, and lingers shut and open rather than passing through.
+    cycle: cycleOf([[SPRITE.warden, SPRITE.wardenHit], [SPRITE.wardenB, SPRITE.wardenBHit], [SPRITE.wardenC, SPRITE.wardenCHit]], [0, 1, 1, 0, 2, 2], 12),
     radius: 4,
     health: 4,
     damage: 2,
@@ -704,6 +741,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   spinner: {
     sprite: SPRITE.spinner,
     spriteHit: SPRITE.spinnerHit,
+    cycle: cycleOf([[SPRITE.spinner, SPRITE.spinnerHit], [SPRITE.spinnerB, SPRITE.spinnerBHit], [SPRITE.spinnerC, SPRITE.spinnerCHit]], BEAT, 5),
     radius: 3.4,
     health: 3,
     damage: 2,
@@ -754,6 +792,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   sower: {
     sprite: SPRITE.sower,
     spriteHit: SPRITE.sowerHit,
+    cycle: cycleOf([[SPRITE.sower, SPRITE.sowerHit], [SPRITE.sowerB, SPRITE.sowerBHit], [SPRITE.sowerC, SPRITE.sowerCHit]], BEAT, 7),
     radius: 3.1,
     health: 2,
     damage: 2,
@@ -794,6 +833,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   picket: {
     sprite: SPRITE.picket,
     spriteHit: SPRITE.picketHit,
+    cycle: cycleOf([[SPRITE.picket, SPRITE.picketHit], [SPRITE.picketB, SPRITE.picketBHit], [SPRITE.picketC, SPRITE.picketCHit]], BEAT, 8),
     radius: 3.0,
     health: 2,
     damage: 2,
@@ -828,6 +868,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   moth: {
     sprite: SPRITE.moth,
     spriteHit: SPRITE.mothHit,
+    cycle: cycleOf([[SPRITE.moth, SPRITE.mothHit], [SPRITE.mothB, SPRITE.mothBHit], [SPRITE.mothC, SPRITE.mothCHit]], BEAT, 5),
     radius: 3.4,
     health: 2,
     damage: 2,
@@ -844,6 +885,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   raptor: {
     sprite: SPRITE.raptor,
     spriteHit: SPRITE.raptorHit,
+    cycle: cycleOf([[SPRITE.raptor, SPRITE.raptorHit], [SPRITE.raptorB, SPRITE.raptorBHit], [SPRITE.raptorC, SPRITE.raptorCHit]], BEAT, 6),
     radius: 3.0,
     health: 2,
     damage: 2,
@@ -865,6 +907,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   kite: {
     sprite: SPRITE.kite,
     spriteHit: SPRITE.kiteHit,
+    cycle: cycleOf([[SPRITE.kite, SPRITE.kiteHit], [SPRITE.kiteB, SPRITE.kiteBHit], [SPRITE.kiteC, SPRITE.kiteCHit]], BEAT, 5),
     radius: 2.6,
     health: 1,
     damage: 1,
@@ -907,6 +950,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   minnow: {
     sprite: SPRITE.minnow,
     spriteHit: SPRITE.minnowHit,
+    cycle: cycleOf([[SPRITE.minnow, SPRITE.minnowHit], [SPRITE.minnowB, SPRITE.minnowBHit], [SPRITE.minnowC, SPRITE.minnowCHit]], BEAT, 5),
     radius: 2.2,
     health: 1,
     damage: 1,
@@ -952,6 +996,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   swift: {
     sprite: SPRITE.swift,
     spriteHit: SPRITE.swiftHit,
+    cycle: cycleOf([[SPRITE.swift, SPRITE.swiftHit], [SPRITE.swiftB, SPRITE.swiftBHit], [SPRITE.swiftC, SPRITE.swiftCHit]], BEAT, 4),
     radius: 2.8,
     health: 2,
     damage: 2,
@@ -974,14 +1019,16 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   moonJelly: {
     sprite: SPRITE.moonJelly,
     spriteHit: SPRITE.moonJellyHit,
+    cycle: cycleOf([[SPRITE.moonJelly, SPRITE.moonJellyHit], [SPRITE.moonJellyB, SPRITE.moonJellyBHit], [SPRITE.moonJellyC, SPRITE.moonJellyCHit]], JELLY_PULSE, 8),
     // Six glows, reds, blues and greens — 0404: *"randomly have a range of glowing colours as they fall."*
+    // Each pulses as the base does — 0410: a glow is a colour, not a different animal.
     tints: [
-      [SPRITE.moonJelly, SPRITE.moonJellyHit],
-      [SPRITE.moonJellyRose, SPRITE.moonJellyRoseHit],
-      [SPRITE.moonJellyAzure, SPRITE.moonJellyAzureHit],
-      [SPRITE.moonJellyCyan, SPRITE.moonJellyCyanHit],
-      [SPRITE.moonJellyEmerald, SPRITE.moonJellyEmeraldHit],
-      [SPRITE.moonJellyLime, SPRITE.moonJellyLimeHit],
+      cycleOf([[SPRITE.moonJelly, SPRITE.moonJellyHit], [SPRITE.moonJellyB, SPRITE.moonJellyBHit], [SPRITE.moonJellyC, SPRITE.moonJellyCHit]], JELLY_PULSE, 8),
+      cycleOf([[SPRITE.moonJellyRose, SPRITE.moonJellyRoseHit], [SPRITE.moonJellyRoseB, SPRITE.moonJellyRoseBHit], [SPRITE.moonJellyRoseC, SPRITE.moonJellyRoseCHit]], JELLY_PULSE, 8),
+      cycleOf([[SPRITE.moonJellyAzure, SPRITE.moonJellyAzureHit], [SPRITE.moonJellyAzureB, SPRITE.moonJellyAzureBHit], [SPRITE.moonJellyAzureC, SPRITE.moonJellyAzureCHit]], JELLY_PULSE, 8),
+      cycleOf([[SPRITE.moonJellyCyan, SPRITE.moonJellyCyanHit], [SPRITE.moonJellyCyanB, SPRITE.moonJellyCyanBHit], [SPRITE.moonJellyCyanC, SPRITE.moonJellyCyanCHit]], JELLY_PULSE, 8),
+      cycleOf([[SPRITE.moonJellyEmerald, SPRITE.moonJellyEmeraldHit], [SPRITE.moonJellyEmeraldB, SPRITE.moonJellyEmeraldBHit], [SPRITE.moonJellyEmeraldC, SPRITE.moonJellyEmeraldCHit]], JELLY_PULSE, 8),
+      cycleOf([[SPRITE.moonJellyLime, SPRITE.moonJellyLimeHit], [SPRITE.moonJellyLimeB, SPRITE.moonJellyLimeBHit], [SPRITE.moonJellyLimeC, SPRITE.moonJellyLimeCHit]], JELLY_PULSE, 8),
     ],
     radius: 2.6,
     health: 1,
@@ -996,6 +1043,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   sentry: {
     sprite: SPRITE.sentry,
     spriteHit: SPRITE.sentryHit,
+    // The slot works like a jaw that holds shut a while between bites.
+    cycle: cycleOf([[SPRITE.sentry, SPRITE.sentryHit], [SPRITE.sentryB, SPRITE.sentryBHit], [SPRITE.sentryC, SPRITE.sentryCHit]], [0, 1, 1, 0, 2], 9),
     radius: 3.6,
     health: 3,
     damage: 2,
@@ -1016,6 +1065,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   shard: {
     sprite: SPRITE.shard,
     spriteHit: SPRITE.shardHit,
+    // A crystal turning: one way round, through its face, and on — so it rolls rather than rocks.
+    cycle: cycleOf([[SPRITE.shard, SPRITE.shardHit], [SPRITE.shardB, SPRITE.shardBHit], [SPRITE.shardC, SPRITE.shardCHit]], [0, 1, 2], 8),
     radius: 3.2,
     health: 3,
     damage: 2,
@@ -1032,6 +1083,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   spore: {
     sprite: SPRITE.spore,
     spriteHit: SPRITE.sporeHit,
+    cycle: cycleOf([[SPRITE.spore, SPRITE.sporeHit], [SPRITE.sporeB, SPRITE.sporeBHit], [SPRITE.sporeC, SPRITE.sporeCHit]], BEAT, 11),
     radius: 4.0,
     health: 3,
     damage: 2,
@@ -1049,6 +1101,8 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   gaze: {
     sprite: SPRITE.gaze,
     spriteHit: SPRITE.gazeHit,
+    // Open most of the time: it glances, looks back, and now and then blinks.
+    cycle: cycleOf([[SPRITE.gaze, SPRITE.gazeHit], [SPRITE.gazeB, SPRITE.gazeBHit], [SPRITE.gazeC, SPRITE.gazeCHit]], [0, 0, 0, 2, 2, 0, 0, 1], 10),
     radius: 3.6,
     health: 4,
     damage: 2,

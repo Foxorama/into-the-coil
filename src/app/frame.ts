@@ -48,7 +48,7 @@ import {
   type Collected,
   type Deaths,
 } from '../sim/collide.ts';
-import { type Body, type Entity, reset, stepEntities, turnFor } from '../sim/entity.ts';
+import { animate, type Body, type Entity, reset, stepEntities, turnFor } from '../sim/entity.ts';
 // `SCROLL_PER_STEP` for `PICKUP_SLOW_AT`, which is a distance derived from a duration — 0087. Every
 // other speed in this file rides `w.scrollPerStep`, which is the same number reachable from a world.
 // `PLAYER_ALONG_MARGIN` and `PLAYER_LEAD` are the two ends of the player's box, imported rather than
@@ -5642,6 +5642,7 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
       const fan = (formation.acrossOffset(i, count, gap) + (side * gap) / 2) * SPIT_FAN;
       const lane = Math.min(ACROSS_SPAN - row.radius, Math.max(row.radius, lord.across + fan));
       reset(e, mouthAlongOf(w, lord), mouthAcrossOf(w, lord), row, kind);
+      animate(e, row.cycle);
       e.entrySlot = i % ENTRY_SLOTS;
       /*
         ⚠️ **ITS FIRST SHOT IS THE ENTRY'S DEAL, NOT A WHOLE RELOAD AWAY — 0326's window, applied to a
@@ -5674,6 +5675,7 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     const target = ACROSS_SPAN / 2 + formation.acrossOffset(i, count, gap);
     const stream = flanking ? streamOffset(i, row.radius) : formation.alongOffset(i, count, gap);
     reset(e, along + stream, flanking ? entryAcross : target, row, kind);
+    animate(e, row.cycle);
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
     // A summoned rank enters abreast exactly as an authored one does, so it is dealt the same — 0259.
     // ⚠️ It is dealt whichever edge it comes in from: a flanking summon (0262) still arrives as a
@@ -5756,6 +5758,7 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
     if (e === null) return;
     const along = w.cameraAlong + w.rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
     reset(e, along, -row.radius, row, kind);
+    animate(e, row.cycle);
     e.fireIn = nextOnGrid(w.steps, fireGapFor(row.fireEvery, w.difficulty), i / count);
     // A steering body is not driven by its motion until it arrives, so it must ride the camera on
     // its own or fall off the back of the world before it reaches the bottom of the lane.
@@ -5776,9 +5779,11 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
     if (tints !== undefined && tints.length > 0) {
       const hashed = Math.sin(along * 12.9898 + i * 78.233) * 43758.5453;
       const tint = tints[Math.floor((hashed - Math.floor(hashed)) * tints.length)]!;
-      e.spriteBase = tint[0];
-      e.sprite = tint[0];
-      e.spriteHit = tint[1];
+      // A glow is a whole cycle — 0410 — and its first drawing is the body's identity.
+      e.spriteBase = tint.frames[0]!;
+      e.sprite = tint.frames[0]!;
+      e.spriteHit = tint.hurt[0]!;
+      animate(e, tint);
     }
   }
 }
@@ -5864,6 +5869,8 @@ function spawnWave(w: World, index: number): void {
       spacing, which it was never able to express.
     */
     reset(e, along + stream, across, row, kind);
+    // How it moves while it flies — 0410. Every spawner of an animal does this beside `reset`.
+    animate(e, row.cycle);
     if (flanking) {
       // The turn: cross at a fixed rate until the authored lane, then slow to the roam and carry on.
       // `steerEnemies` is where that second half happens.
