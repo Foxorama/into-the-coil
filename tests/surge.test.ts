@@ -3,11 +3,11 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { GameFrame, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, MUZZLE_ALONG, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
 import { UPGRADE_TIERS, effectOf, overflowOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
-import { POD_ACROSS, SPECIALS, type Surge } from '../src/content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, podSide, type Surge } from '../src/content/specials.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -80,7 +80,7 @@ function volley(world: World, frame: GameFrame, surge: Surge): { tubes: Entity[]
   return { tubes: all.filter((m) => !charged(m)), pods: all.filter(charged) };
 }
 
-describe('0379 — a tube special fires two of its own, and the fitted tubes fire as they are', () => {
+describe('0379 — a tube special fires its own, and the fitted tubes fire as they are', () => {
   it('THE ASK: every fitted tube with every tube special — four of one kind, or two and two', () => {
     /*
       *"Let's change that special so that it fires out two additional missiles of the special bomb
@@ -102,10 +102,37 @@ describe('0379 — a tube special fires two of its own, and the fitted tubes fir
         }
         expect(pods.length, `${kind} did not fire its pods`).toBe(surge.pods.count);
         for (const m of pods) expect(m.health, `${kind}'s pods do not carry its pierce`).toBe(surge.pods.pierce);
-        // From outside the hull, one each side, where the pods are drawn.
+        // From where the pods are drawn — `podSide`, which the bake reads too (0405).
         const offsets = pods.map((m) => Math.round((m.prevAcross - world.ship.across) * 10) / 10).sort((a, b) => a - b);
-        expect(offsets, `${kind}'s pods did not fire from where they are drawn`).toEqual([-POD_ACROSS, POD_ACROSS]);
+        const drawn = Array.from({ length: surge.pods.count }, (_, j) => Math.round(podSide(j, surge.pods.count) * POD_ACROSS * 10) / 10);
+        expect(offsets, `${kind}'s pods did not fire from where they are drawn`).toEqual(drawn);
       }
+    }
+  });
+
+  it('0405, THE REPORTED ONE: a tube surge adds ONE missile, and it flies between the two regular ones', () => {
+    /*
+      *"The big problem was the supercharged missiles, can we make that 1 bonus missile firing in the
+      middle of the two regular ones instead of 2 bonus missiles."* Held in the picture's units — where
+      each missile is across the lane as it leaves — against a ship with both tubes fitted, so "the
+      middle of the two regular ones" is a thing the volley can be wrong about.
+    */
+    for (const kind of [MISSILES.straight.special, MISSILES.homing.special]) {
+      const surge = SPECIALS[kind].surge!;
+      const { world, frame } = fitted('pulse', 'straight');
+      launchSpecial(world, kind);
+      const { tubes, pods } = volley(world, frame, surge);
+      expect(tubes.length, 'the fixture has fewer than two tubes, so there is no middle to be in').toBe(2);
+      expect(pods.length, `${kind} adds ${pods.length} missiles a volley`).toBe(1);
+      const [low, high] = tubes.map((m) => m.prevAcross - world.ship.across).sort((a, b) => a - b);
+      const pod = pods[0]!.prevAcross - world.ship.across;
+      expect(pod, `${kind}'s missile leaves from ${pod.toFixed(2)} across, outside the tubes at ${low!.toFixed(2)} and ${high!.toFixed(2)}`).toBeGreaterThan(low!);
+      expect(pod).toBeLessThan(high!);
+      expect(Math.abs(pod), `${kind}'s missile is off the middle by ${pod.toFixed(2)}`).toBeLessThan(0.05);
+      // And ahead of the nose, where its barrel is drawn, rather than from inside the hull: past the
+      // fitted tubes' muzzle, launched the same step, by the barrel's length.
+      const ahead = pods[0]!.prevAlong - tubes[0]!.prevAlong;
+      expect(ahead, `${kind}'s missile leaves ${ahead.toFixed(2)} ahead of the tubes`).toBeCloseTo(POD_NOSE - MUZZLE_ALONG, 2);
     }
   });
 
@@ -149,7 +176,14 @@ describe('0379 — a tube special fires two of its own, and the fitted tubes fir
           most = Math.max(most, world.missiles.size);
         }
         expect(most, `${tube} with ${kind} filled the missile pool of ${CAPACITY.missiles}`).toBeLessThan(CAPACITY.missiles);
-        expect(most, `${tube} with ${kind} barely fired, so this measured nothing`).toBeGreaterThan(CAPACITY.missiles / 2);
+        /*
+          ⚠️ **"MEASURED SOMETHING" IS VOLLEYS STACKING UP, not half the pool — 0405.** Half the pool was
+          a floor sized for four missiles a volley; with one pod a volley is three and the heaviest pairing
+          peaks at nineteen, which is the pods being lighter and not this measuring nothing. What makes
+          the budget a question at all is missiles from more than one volley in the air at once.
+        */
+        const aVolley = world.weapon.launchers + SPECIALS[kind].surge!.pods.count;
+        expect(most, `${tube} with ${kind} never had two volleys in the air, so this measured nothing`).toBeGreaterThan(aVolley * 2);
       }
     }
   });

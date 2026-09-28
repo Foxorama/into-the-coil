@@ -2221,7 +2221,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // `scripts/solve-mid-health.mjs` against `MID_BOSS_SECONDS` since 0269.
     // 42 from 83 — re-solved after 0364's zoom put it a fifth further off (`scripts/solve-mid-health.mjs`,
     // which overshoots both ways here, so the last step is read between its two passes).
-    health: 42,
+    // 120 from 42 — 0406: solved at the loadout the run carries in (`carriedAt`), two weapon rungs here.
+    health: 120,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -2300,7 +2301,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 12.5,
     // A mid-boss since 0247, which halved 580 to 290; solved to its level's seconds since 0269.
     // 66 from 65 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
-    health: 66,
+    // 277 from 66 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 277,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -2375,7 +2377,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // fire on its way to the hull, and the fight came in at 16 s against the 20 its level asks.
     // 32 from 48 — re-solved after 0364: a fifth further off and patrolling a lane a fifth wider, so
     // less of what is fired at it lands, and at 48 the fight ran 52 s against 20. See `patrol`.
-    health: 32,
+    // 187 from 32 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 187,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -2437,7 +2440,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The saurian belt's mid-boss since 0247, moved from the labyrinth's end; 0247 halved 780 to 390
     // and 0269 solved it to its level's seconds.
     // 50 from 61 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
-    health: 50,
+    // 229 from 50 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 229,
     damage: 3,
     station: 163,
     drift: 18,
@@ -2487,7 +2491,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // ⚠️ **It keeps the most of any mid-boss, by six times the lattice's** — the redoubt patrols at
     // 0.16, so nearly everything fired at it lands and the health is the whole of the fight.
     // 158 from 210 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
-    health: 158,
+    // 541 from 158 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 541,
     damage: 3,
     station: 170,
     drift: 8,
@@ -2556,7 +2561,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 12.5,
     // A mid-boss since 0247, which halved 980 to 490; solved to its level's seconds since 0269.
     // 97 from 94 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
-    health: 97,
+    // 419 from 97 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 419,
     damage: 3,
     station: 166,
     drift: 15,
@@ -2637,7 +2643,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The black heart's mid-boss since 0247, which halved 1140 to 570; solved to its level's seconds
     // since 0269, and the toughest of the seven in both.
     // 164 from 208 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
-    health: 164,
+    // 699 from 164 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
+    health: 699,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.

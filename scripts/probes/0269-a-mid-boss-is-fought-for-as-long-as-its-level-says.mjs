@@ -17,12 +17,13 @@ export const PROBES = [
       asks for. One row is enough: the guard is per level, so a hand that re-tuned a single mid-boss
       by feel is caught by the same assertion as a hand that reverted all seven.
     */
-    broke: 'the sentinel’s health put back to what 0247 gave it, so its fight is four times what its level asks',
+    broke: 'the sentinel’s health put back to what 0247 gave it, so its fight is twice what its level asks',
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0364, which re-solved every mid-boss after the zoom.
-      find: '    health: 42,',
+      // ⚠️ Re-anchored by 0364, which re-solved every mid-boss after the zoom, and by 0406, which
+      // solved it at the loadout the run carries in: 120, so 0247's 240 is twice it now, not four times.
+      find: '    health: 120,',
       replace: '    health: 240,',
     },
   },
@@ -40,34 +41,17 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0364 — the redoubt's re-solved health, given the lattice's re-solved one.
-      find: '    health: 158,',
-      replace: '    health: 32,',
+      // ⚠️ Re-anchored by 0364 — the redoubt's re-solved health, given the lattice's re-solved one —
+      // and by 0406, which re-solved both at the loadout the run carries in.
+      find: '    health: 541,',
+      replace: '    health: 187,',
     },
   },
-  {
-    decision: '0269',
-    suite: 'tests/midboss.test.ts',
-    /*
-      ⚠️ THE CAP'S END OF IT, and it is the half a solve against ONE loadout cannot see. The solver
-      measures at one rung; a mid-boss given enough health to sit inside the band there can still be a
-      fight at the cap, which is 0247's *speed bump* stopped being one. The axis is the toughest of
-      the seven, so giving it a real boss's health is the plausible shape of the slip.
-
-      ⚠️ **THREE TIMES AND NOT TWICE, BECAUSE TWICE ONLY JUST REDDENED** — 13 seconds against a
-      ceiling of 12. A probe that clears its guard by one second is one small change elsewhere away
-      from reporting STILL GREEN, and a break has to be seen to fail for a reason rather than by a
-      margin (0044's subject, arriving from the other side).
-    */
-    broke: 'the axis given a real boss’s health, so the last mid-boss is still a fight at a full loadout',
-    guard: 'and at a full loadout it is still a speed bump',
-    edit: {
-      path: 'src/content/bosses.ts',
-      // ⚠️ Re-anchored by 0364, which re-solved the axis to 164; three times it, as before.
-      find: '    health: 164,',
-      replace: '    health: 492,',
-    },
-  },
+  /*
+    ⚠️ **THE CAP'S END OF IT WAS A PROBE HERE AND IS GONE — 0406** deleted *"and at a full loadout it is
+    still a speed bump"*, which it broke: from the second level the fight is met at the cap, so the
+    band above is asked there. 0406's own probe puts the one-rung assumption back.
+  */
   {
     decision: '0269',
     suite: 'tests/midboss.test.ts',

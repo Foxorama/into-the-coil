@@ -15,19 +15,17 @@
 // health is solved against the real frame. Re-run it after anything that changes what the player's
 // guns do, or what the waves in front of a mid-boss absorb.
 //
-// ⚠️ **ONE RUNG, because that is the loadout a mid-boss is met with** — a level authors one weapon
-// near its start and one missile a fifth of the way in (0256), and the fight's own drop comes out of
-// it rather than into it.
+// ⚠️ **AT THE LOADOUT THE RUN HAS HANDED OVER BY THEN — `carriedAt`, since 0406.** It was one rung of
+// each (0269), on *"a level authors one weapon near its start"*; but the ladders cross a level and
+// outlive a death, so from the second level on a mid-boss is met at the cap and every fight here was
+// solved for a ship a third as strong as the one that flies it. The ship's own gun, as before.
 //
 // It exits non-zero if any level's mid-boss is not fought, on the same terms as its siblings: an
 // instrument that measured nothing must not report success.
 
 import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS } from '../src/content/levels.ts';
-import { weighFight } from './weigh-fight.mjs';
-
-/** The loadout the fight is met with — the same one `tests/fight.test.ts` measures at. */
-const AT_THE_MID_BOSS = { weaponTier: 1, missileTier: 1 };
+import { carriedAt, weighFight } from './weigh-fight.mjs';
 
 let unfought = 0;
 console.log('level        mid-boss       want   measured   health now   health wanted');
@@ -36,7 +34,7 @@ for (const kind of LEVEL_KINDS) {
   if (level.midBoss === null) continue;
   const row = BOSSES[level.midBoss.kind];
   const want = MID_BOSS_SECONDS[kind];
-  const r = weighFight(kind, AT_THE_MID_BOSS);
+  const r = weighFight(kind, carriedAt(kind));
   if (!r.fought) {
     unfought++;
     continue;

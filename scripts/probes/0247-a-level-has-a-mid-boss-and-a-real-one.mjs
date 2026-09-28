@@ -70,14 +70,16 @@ export const PROBES = [
       ORDERING and the break has to be one too, so it is now *heavier than jormungandr* rather than
       *back to what it was*, which is a fact about the ordering rather than about 2026-09.
     */
-    broke: 'the axis authored heavier than the weakest real boss, so a mid-boss outweighs an end one',
-    guard: 'and the old end bosses are the mid-bosses now',
+    // ⚠️ **RE-TARGETED BY 0406**, which deleted the across-levels ordering this broke: the axis is now
+    // made heavier than its OWN level's end boss, Medusa at 1870, which THE ROSTER refuses.
+    broke: 'the axis authored heavier than its own level’s end boss, so the mid-boss is the bigger fight',
+    guard: 'THE ROSTER',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length,
-      // and by 0364, which re-solved them after the zoom.
-      find: '    health: 164,',
-      replace: '    health: 1500,',
+      // by 0364, which re-solved them after the zoom, and by 0406, at the loadout the run carries in.
+      find: '    health: 699,',
+      replace: '    health: 2000,',
     },
   },
 ];

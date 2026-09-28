@@ -1,5 +1,9 @@
 # 0269 — A mid-boss is fought for as long as its level says
 
+> ⚠️ **AMENDED 2026-09-28 by [0406](0406-a-mid-boss-is-met-armed.md).** The healths are solved at the
+> loadout the run carries in, not at one rung — from the second level that is the cap — and *"a speed
+> bump at a full loadout"* is deleted: it and the seconds below were asking for two lengths of one fight.
+
 **Accepted 2026-09-06**, from the alpha play:
 
 > *"Mid bosses need less health, and we'll need to go through and change all their attacks and stuff
