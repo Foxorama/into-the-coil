@@ -13,7 +13,7 @@
 import { PALETTES, type PaletteName } from '../content/palette.ts';
 import { THEMES, THEME_KINDS, type ThemeKind } from '../content/themes.ts';
 import { ACROSS_SPAN, MAX_ALONG_SPAN, type View, viewOf } from '../sim/camera.ts';
-import { type Entity, makeEntity, reset } from '../sim/entity.ts';
+import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
@@ -819,6 +819,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const row = enemyRows[kind]!;
       const margin = row.radius + 2;
       reset(e, seed.range(SHIP_START_ALONG + 60, MAX_ALONG_SPAN), seed.range(margin, ACROSS_SPAN - margin), row, kind);
+      // The field behind the title moves as a level's does — 0410.
+      animate(e, row.cycle);
       e.velAlong = -row.closing;
       /*
         ⚠️ **On the grid and at its own place in it, exactly like a wave** —

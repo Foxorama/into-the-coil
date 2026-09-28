@@ -41,8 +41,10 @@ export const PROBES = [
     guard: 'THE ONE: a survivor is drawn differently on the step it is hit',
     edit: {
       path: 'src/sim/entity.ts',
-      find: '    e.sprite = e.flashFor > 0 || blinking ? e.spriteHit : e.spriteBase;',
-      replace: '    e.sprite = e.spriteBase;',
+      // ⚠️ Re-anchored by 0410, which picks the frame of a body's own cycle beside the flash: the one
+      // line both branches read is what decides *lit*, so that is what is broken.
+      find: '    const lit = e.flashFor > 0 || blinking;',
+      replace: '    const lit = false;',
     },
   },
   {

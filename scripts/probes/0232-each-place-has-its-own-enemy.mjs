@@ -49,8 +49,9 @@ export const PROBES = [
     guard: 'and every signature is a new silhouette against every other enemy hull',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      trace(ctx, f, PICKET_HULL);',
-      replace: '      trace(ctx, f, SHARD_HULL);',
+      // ⚠️ Re-anchored by 0410, which draws the picket in `drawPicket` so each frame of its cycle can.
+      find: '  drawBody(ctx, f, skin, bent(PICKET_HULL, PICKET_POSES[n]!)',
+      replace: '  drawBody(ctx, f, skin, bent(SHARD_HULL, PICKET_POSES[n]!)',
     },
   },
   {

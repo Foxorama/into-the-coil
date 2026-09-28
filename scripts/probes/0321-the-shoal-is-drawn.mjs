@@ -35,8 +35,9 @@ export const PROBES = [
     guard: 'the two are not drawn the SAME way',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      trace(ctx, f, KITE_HULL);',
-      replace: '      curveLoop(ctx, f, KITE_HULL);',
+      // ⚠️ Re-anchored by 0410, which draws the kite in `drawKite` so each frame of its cycle can.
+      find: '  trace(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));',
+      replace: '  curveLoop(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));',
     },
   },
 ];

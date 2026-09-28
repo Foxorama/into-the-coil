@@ -801,6 +801,103 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   moonJellyEmeraldHit: 'impact',
   moonJellyLime: 'enemy',
   moonJellyLimeHit: 'impact',
+  // Every frame of a cycle in its body's inks, or an animal would change colour as it moves — 0410.
+  drifterB: 'enemy',
+  drifterBHit: 'impact',
+  drifterC: 'enemy',
+  drifterCHit: 'impact',
+  lancerB: 'enemy',
+  lancerBHit: 'impact',
+  lancerC: 'enemy',
+  lancerCHit: 'impact',
+  weaverB: 'enemy',
+  weaverBHit: 'impact',
+  weaverC: 'enemy',
+  weaverCHit: 'impact',
+  turretB: 'enemy',
+  turretBHit: 'impact',
+  turretC: 'enemy',
+  turretCHit: 'impact',
+  chargerB: 'enemy',
+  chargerBHit: 'impact',
+  chargerC: 'enemy',
+  chargerCHit: 'impact',
+  wardenB: 'enemy',
+  wardenBHit: 'impact',
+  wardenC: 'enemy',
+  wardenCHit: 'impact',
+  spinnerB: 'enemy',
+  spinnerBHit: 'impact',
+  spinnerC: 'enemy',
+  spinnerCHit: 'impact',
+  sowerB: 'enemy',
+  sowerBHit: 'impact',
+  sowerC: 'enemy',
+  sowerCHit: 'impact',
+  picketB: 'enemy',
+  picketBHit: 'impact',
+  picketC: 'enemy',
+  picketCHit: 'impact',
+  mothB: 'enemy',
+  mothBHit: 'impact',
+  mothC: 'enemy',
+  mothCHit: 'impact',
+  raptorB: 'enemy',
+  raptorBHit: 'impact',
+  raptorC: 'enemy',
+  raptorCHit: 'impact',
+  kiteB: 'enemy',
+  kiteBHit: 'impact',
+  kiteC: 'enemy',
+  kiteCHit: 'impact',
+  swiftB: 'enemy',
+  swiftBHit: 'impact',
+  swiftC: 'enemy',
+  swiftCHit: 'impact',
+  minnowB: 'enemy',
+  minnowBHit: 'impact',
+  minnowC: 'enemy',
+  minnowCHit: 'impact',
+  sentryB: 'enemy',
+  sentryBHit: 'impact',
+  sentryC: 'enemy',
+  sentryCHit: 'impact',
+  shardB: 'enemy',
+  shardBHit: 'impact',
+  shardC: 'enemy',
+  shardCHit: 'impact',
+  sporeB: 'enemy',
+  sporeBHit: 'impact',
+  sporeC: 'enemy',
+  sporeCHit: 'impact',
+  gazeB: 'enemy',
+  gazeBHit: 'impact',
+  gazeC: 'enemy',
+  gazeCHit: 'impact',
+  moonJellyB: 'enemy',
+  moonJellyBHit: 'impact',
+  moonJellyC: 'enemy',
+  moonJellyCHit: 'impact',
+  moonJellyRoseB: 'enemy',
+  moonJellyRoseBHit: 'impact',
+  moonJellyRoseC: 'enemy',
+  moonJellyRoseCHit: 'impact',
+  moonJellyAzureB: 'enemy',
+  moonJellyAzureBHit: 'impact',
+  moonJellyAzureC: 'enemy',
+  moonJellyAzureCHit: 'impact',
+  moonJellyCyanB: 'enemy',
+  moonJellyCyanBHit: 'impact',
+  moonJellyCyanC: 'enemy',
+  moonJellyCyanCHit: 'impact',
+  moonJellyEmeraldB: 'enemy',
+  moonJellyEmeraldBHit: 'impact',
+  moonJellyEmeraldC: 'enemy',
+  moonJellyEmeraldCHit: 'impact',
+  moonJellyLimeB: 'enemy',
+  moonJellyLimeBHit: 'impact',
+  moonJellyLimeC: 'enemy',
+  moonJellyLimeCHit: 'impact',
   kiteHit: 'impact',
   // The swift — 0328. A shared body, in the place's ink like the other eight.
   swift: 'enemy',
@@ -1029,6 +1126,60 @@ interface Frame {
 
 /** A point in a sprite's own frame — fractions of `r`, +x forward, +y down the screen. */
 type Pt = readonly [number, number];
+
+/*
+  ── A POSE: WHERE THE REST DRAWING'S POINTS ARE IN ONE FRAME — 0410 ─────────────────────────────
+
+  ⚠️ **REPORTED FROM PLAY:** *"none of them feel alive because while their location changes, the
+  individual enemies don't 'move'."* An enemy's second and third frames are its first drawing with
+  every point it is made of — hull, plates, lit strips, eyes — passed through one of these, so a wing
+  that goes up takes its eyespot with it and a tail that swings takes its fin.
+
+  ⚠️ **A POSE MOVES PARTS, AND IS NEVER THE WHOLE BODY SCALED.** A uniform swell is one picture
+  changing size — the substitution [0280](../../docs/decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md)
+  was written about. Every pose below is weighted by where on the body a point is, so the core holds
+  still and something attached to it moves.
+*/
+type Pose = (p: Pt) => Pt;
+
+/** The rest drawing: every enemy's first frame. */
+const REST: Pose = (p) => p;
+
+/** Smooth from 0 at `from` to 1 at `to`, and flat either side. */
+function ramp(v: number, from: number, to: number): number {
+  const t = Math.min(1, Math.max(0, (v - from) / (to - from)));
+  return t * t * (3 - 2 * t);
+}
+
+/**
+ * What is aft of `from` swings: its spread across the lane scaled by `spread` and pushed along by
+ * `back`, growing from nothing at `from` to all of it at the tail. A wing, a blade, a horn.
+ */
+const aftSwings = (from: number, spread: number, back: number): Pose => ([x, y]) => {
+  const t = ramp(x, from, 1);
+  return [x + back * t, y * (1 + (spread - 1) * t)];
+};
+
+/** What is FORE of `from` swings, the same way: jaws, horns and a bell's rim, which lead. */
+const foreSwings = (from: number, spread: number, fore: number): Pose => ([x, y]) => {
+  const t = ramp(-x, -from, 1);
+  return [x - fore * t, y * (1 + (spread - 1) * t)];
+};
+
+/** What is aft of `from` is carried across by `across` at the tail, on a curve: a tail wagging. */
+const wags = (from: number, across: number): Pose => ([x, y]) => {
+  const t = ramp(x, from, 1);
+  return [x, y + across * t * t];
+};
+
+/** Every point turned about the centre by `twist` radians at the rim and none at the heart: a rotor. */
+const curls = (twist: number): Pose => ([x, y]) => {
+  const a = twist * Math.min(1, Math.hypot(x, y));
+  return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+};
+
+/** The rest drawing's points, posed. */
+const posed = (points: readonly Pt[], pose: Pose): Pt[] => points.map(pose);
 
 /**
  * How much of the flash ink a hurt twin wears — 0278.
@@ -3949,17 +4100,24 @@ const diamond = (x: number, y: number, h: number): Pt[] => [
  * ⚠️ **SEVEN ARMS OVER A CLOSED UNION, WITH A `never` ARM**, so an eighth place has to say what it
  * puts on its enemies before it can bake — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
  */
-function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, belly: Belly, seed: string): void {
+function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, rest: Belly, seed: string, pose: Pose = REST): void {
   const rng = makeRng('art').stream(`${theme}/${seed}`);
-  const { x0, y0, x1, y1 } = boundsOfBelly(belly);
+  /*
+    ⚠️ **THE GRID IS LAID ON THE REST BELLY AND EACH MARK IS POSED WITH IT — 0410**, so every frame of
+    a cycle rolls the same marks in the same order and a mark rides the part of the body it is on. Laid
+    on the posed belly instead, the grid would shift under the body and the texture would boil.
+  */
+  // Densified first, so a belly on a side that bends bends with it — a straight belly under a bent
+  // hull kept a weaver's facet that stood 0.43px off the body.
+  const belly = pose === REST ? rest : posed(densify(rest, 12), pose);
+  const { x0, y0, x1, y1 } = boundsOfBelly(rest);
   // Close enough that a five-unit belly carries a few marks, far enough that two never touch.
   const pitch = 0.24;
   // A speck's half-width: 0.205 across is 0106's floor on the weaver since the view zoomed out (0364).
   const speck = 0.1025;
   for (let gy = y0; gy <= y1; gy += pitch) {
     for (let gx = x0; gx <= x1; gx += pitch) {
-      const x = gx + rng.range(-0.06, 0.06);
-      const y = gy + rng.range(-0.06, 0.06);
+      const [x, y] = pose([gx + rng.range(-0.06, 0.06), gy + rng.range(-0.06, 0.06)]);
       switch (theme) {
         case 'approach': {
           // Rivets: a dark stud on every panel.
@@ -4068,20 +4226,68 @@ const DRIFTER_BELLY: Belly = [
   [0.05, 0.55],
 ];
 
-function paintDrifter(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/*
+  ── EVERY ENEMY'S CYCLE, DRAWN — 0410 ──────────────────────────────────────────────────────────────
+
+  ⚠️ **WHAT READS AT FORTY PIXELS IS THE OUTLINE AND THE ONE BRIGHT MARK**, so every cycle below moves
+  the silhouette and, where the body has one, the eye. Each enemy's three poses are its own: what the
+  animal is decides which part of it moves — wings on a flier, a tail on a fish, a slot on a block.
+  The rows in `src/content/enemies.ts` say in what order and how fast.
+*/
+
+/** Straight edges cut into short ones, so a pose can bend a side rather than only move its ends. */
+function densify(points: readonly Pt[], pieces = 6): Pt[] {
+  const out: Pt[] = [];
+  points.forEach(([ax, ay], i) => {
+    const [bx, by] = points[(i + 1) % points.length]!;
+    for (let k = 0; k < pieces; k++) out.push([ax + ((bx - ax) * k) / pieces, ay + ((by - ay) * k) / pieces]);
+  });
+  return out;
+}
+
+/**
+ * A straight-edged drawing, densified and posed, so its sides bend with the body. `pieces` is how
+ * finely: a pose that curves a whole side, as the weaver's does, needs more than one that swings a
+ * corner, or the chord between two samples cuts inside the paint laid along it.
+ */
+const bent = (points: readonly Pt[], pose: Pose, pieces = 6): Pt[] => posed(densify(points, pieces), pose);
+
+/** One pose after another. */
+const andThen = (a: Pose, b: Pose): Pose => (p) => b(a(p));
+
+/** A ray's wingbeat: the side points swept back and in, or forward and out. */
+const beat = (back: number, spread: number): Pose => ([x, y]) => {
+  const t = Math.min(1, Math.abs(y));
+  return [x + back * t * t, y * (1 + (spread - 1) * t)];
+};
+
+const DRIFTER_HULL: readonly Pt[] = [
+  [-1, 0],
+  [0, -1],
+  [1, 0],
+  [0, 1],
+];
+
+/** The drifter holds station and never fires, so it swims in place: a ray's beat, and it looks about. */
+const DRIFTER_POSES: readonly Pose[] = [REST, beat(0.22, 0.88), beat(-0.14, 1.07)];
+const DRIFTER_GAZE: readonly number[] = [0, -1, 1];
+
+function paintDrifter(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = DRIFTER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.9, 0.06],
     [0.9, 0.06],
     [0, 0.94],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.86, -0.04],
     [-0.06, -0.84],
     [0.06, -0.72],
     [-0.66, -0.02],
-  ]);
-  motif(ctx, f, skin, theme, DRIFTER_BELLY, 'drifter');
-  eye(ctx, f, skin, -0.28, 0, 0.17);
+  ], pose));
+  motif(ctx, f, skin, theme, DRIFTER_BELLY, 'drifter', pose);
+  const [ex, ey] = pose([-0.28, 0]);
+  eye(ctx, f, skin, ex, ey, 0.17, DRIFTER_GAZE[n]!);
 }
 
 const LANCER_BELLY: Belly = [
@@ -4090,48 +4296,89 @@ const LANCER_BELLY: Belly = [
   [0.58, 0.72],
 ];
 
-function paintLancer(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+const LANCER_HULL: readonly Pt[] = [
+  [-1, 0],
+  [0.7, -0.95],
+  [0.7, 0.95],
+];
+
+/** The lancer's back corners are its wings, and it beats them: folded in and back, then flared. */
+/*
+  ⚠️ **SWEPT ALONG AS WELL AS IN.** The back corners sit on the back edge, so drawing them in only
+  slides them along a line that is already there — `tests/cycles.test.ts` measured 1.4px of that. A
+  wing that beats sweeps, so the tips go back as they close and forward as they open.
+*/
+const LANCER_POSES: readonly Pose[] = [REST, aftSwings(-0.3, 0.84, 0.16), aftSwings(-0.3, 1.06, -0.1)];
+
+function paintLancer(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = LANCER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.86, 0.06],
     [0.62, 0.06],
     [0.62, 0.88],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.9, -0.03],
     [0.6, -0.86],
     [0.62, -0.7],
     [-0.66, -0.03],
-  ]);
-  motif(ctx, f, skin, theme, LANCER_BELLY, 'lancer');
-  eye(ctx, f, skin, -0.4, 0, 0.16);
+  ], pose));
+  motif(ctx, f, skin, theme, LANCER_BELLY, 'lancer', pose);
+  const [ex, ey] = pose([-0.4, 0]);
+  eye(ctx, f, skin, ex, ey, 0.16);
 }
 
-function paintWeaver(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+const WEAVER_HULL: readonly Pt[] = [
+  [-0.22, -1],
+  [0.22, -1],
+  [0.22, 1],
+  [-0.22, 1],
+];
+
+/**
+ * The weaver is a bar across the lane that weaves, so it ripples along its length: an S one way, then
+ * the other. The eye sits on the node at the middle, which is why it looks about instead.
+ */
+const WEAVER_POSES: readonly Pose[] = [
+  REST,
+  ([x, y]) => [x + 0.2 * Math.sin(Math.PI * y), y],
+  ([x, y]) => [x - 0.2 * Math.sin(Math.PI * y), y],
+];
+const WEAVER_GAZE: readonly number[] = [0, 1, -1];
+
+/**
+ * How finely the weaver's sides are cut before they bend. Its lit strips run a hundredth of its radius
+ * inside the hull, and six pieces left the hull's chord cutting 0.12px into one of them.
+ */
+const WEAVER_PIECES = 24;
+
+function paintWeaver(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = WEAVER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [0.005, -0.92],
     [0.21, -0.92],
     [0.21, 0.92],
     [0.005, 0.92],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose, WEAVER_PIECES));
+  lit(ctx, f, skin, bent([
     [-0.21, -0.9],
     [-0.005, -0.9],
     [-0.005, -0.4],
     [-0.21, -0.4],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose, WEAVER_PIECES));
+  lit(ctx, f, skin, bent([
     [-0.21, 0.4],
     [-0.005, 0.4],
     [-0.005, 0.9],
     [-0.21, 0.9],
-  ]);
+  ], pose, WEAVER_PIECES));
   motif(ctx, f, skin, theme, [
     [-0.16, -0.7],
     [0.16, -0.7],
     [0.16, 0.7],
     [-0.16, 0.7],
-  ], 'weaver');
-  eye(ctx, f, skin, 0, 0, 0.165);
+  ], 'weaver', pose);
+  eye(ctx, f, skin, 0, 0, 0.165, WEAVER_GAZE[n]!);
 }
 
 const TURRET_BELLY: Belly = [
@@ -4142,41 +4389,71 @@ const TURRET_BELLY: Belly = [
   [-0.4, 0.5],
 ];
 
-function paintTurret(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/** The turret's half-disc: a flat face at −x and the dome behind it, sampled so a pose can bend both. */
+const TURRET_HULL: readonly Pt[] = (() => {
+  const out: Pt[] = [];
+  for (let k = 0; k <= 8; k++) out.push([-0.55, -1 + k / 4]);
+  for (let k = 1; k < 16; k++) {
+    const a = Math.PI / 2 - (Math.PI * k) / 16;
+    out.push([-0.55 + Math.cos(a), Math.sin(a)]);
+  }
+  return out.reverse();
+})();
+
+/**
+ * The turret's face is its gun, and it breathes through it: the flat face drawn in at the middle, then
+ * bowed out, while the dome behind holds. A pose weighted to the face and nothing aft of it.
+ */
+const faceBows = (depth: number): Pose => ([x, y]) => [x + depth * (1 - y * y) * ramp(-x, 0.05, 0.3), y];
+const TURRET_POSES: readonly Pose[] = [REST, faceBows(0.16), faceBows(-0.1)];
+
+function paintTurret(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = TURRET_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.5, 0.06],
     [0.4, 0.06],
     [0.28, 0.5],
     [0, 0.8],
     [-0.5, 0.92],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.5, -0.9],
     [-0.33, -0.9],
     [-0.33, 0.9],
     [-0.5, 0.9],
-  ]);
-  motif(ctx, f, skin, theme, TURRET_BELLY, 'turret');
-  eye(ctx, f, skin, -0.18, 0, 0.2);
+  ], pose));
+  motif(ctx, f, skin, theme, TURRET_BELLY, 'turret', pose);
+  const [ex, ey] = pose([-0.18, 0]);
+  eye(ctx, f, skin, ex, ey, 0.2);
 }
 
-function paintCharger(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+const CHARGER_HULL: readonly Pt[] = [
+  [-1, 0],
+  [0.9, -0.22],
+  [0.9, 0.22],
+];
+
+/** The needle's tail flicks one way and the other, the nose held on the ship. */
+const CHARGER_POSES: readonly Pose[] = [REST, wags(-0.2, 0.16), wags(-0.2, -0.16)];
+
+function paintCharger(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = CHARGER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.8, 0.02],
     [0.84, 0.02],
     [0.84, 0.19],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.8, -0.02],
     [0.84, -0.19],
     [0.84, -0.04],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [0.1, -0.1],
     [0.7, -0.15],
     [0.7, 0.15],
     [0.1, 0.1],
-  ], 'charger');
+  ], 'charger', pose);
   // A lamp rather than an eye: the needle is too thin at its nose for a socket and a pupil both.
   disc(ctx, f, skin.eye, -0.1, 0, 0.09);
 }
@@ -4195,65 +4472,163 @@ function sector(r0: number, r1: number, a0: number, a1: number, steps = 12): Pt[
   return out;
 }
 
-function paintWarden(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The lower half of the ring in shadow, the upper-front quarter lit.
-  plate(ctx, f, skin, sector(0.5, 0.94, 0.05, Math.PI - 0.05));
-  lit(ctx, f, skin, sector(0.5, 0.66, Math.PI + 0.15, Math.PI * 1.5 - 0.1));
-  motif(ctx, f, skin, theme, sector(0.56, 0.9, Math.PI * 1.05, Math.PI * 1.95, 16), 'warden');
-  // Three eyes on the front of the ring, so the aperture looks back.
-  eye(ctx, f, skin, -0.72, 0, 0.13);
-  eye(ctx, f, skin, -0.36, -0.62, 0.11);
-  eye(ctx, f, skin, -0.36, 0.62, 0.11);
+/**
+ * How wide the warden's aperture is at each frame, as a fraction of its radius. It is an iris, and it
+ * dilates: the ring's outer edge holds and its hole opens and closes, taking the paint on it along.
+ */
+const WARDEN_BORE: readonly number[] = [0.45, 0.34, 0.54];
+const WARDEN_GAZE: readonly number[] = [0, 1, -1];
+
+function paintWarden(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const bore = WARDEN_BORE[n]!;
+  const gaze = WARDEN_GAZE[n]!;
+  // The lower half of the ring in shadow, the upper-front quarter lit — each from the bore outward.
+  plate(ctx, f, skin, sector(bore + 0.05, 0.94, 0.05, Math.PI - 0.05));
+  lit(ctx, f, skin, sector(bore + 0.05, bore + 0.21, Math.PI + 0.15, Math.PI * 1.5 - 0.1));
+  motif(ctx, f, skin, theme, sector(bore + 0.11, 0.9, Math.PI * 1.05, Math.PI * 1.95, 16), 'warden');
+  // Three eyes on the front of the ring, so the aperture looks back — and looks about as it breathes.
+  eye(ctx, f, skin, -0.72, 0, 0.13, gaze);
+  eye(ctx, f, skin, -0.36, -0.62, 0.11, gaze);
+  eye(ctx, f, skin, -0.36, 0.62, 0.11, gaze);
 }
 
-function paintSpinner(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+const SPINNER_HULL: readonly Pt[] = [
+  [-0.3, -1],
+  [0.3, -1],
+  [0.3, -0.3],
+  [1, -0.3],
+  [1, 0.3],
+  [0.3, 0.3],
+  [0.3, 1],
+  [-0.3, 1],
+  [-0.3, 0.3],
+  [-1, 0.3],
+  [-1, -0.3],
+  [-0.3, -0.3],
+];
+
+/**
+ * The spinner is a rotor, so its arms trail: curled one way and back the other, the hub holding. A
+ * whole cross turned would be the same picture at another angle; arms that bend are a thing spinning.
+ */
+const SPINNER_POSES: readonly Pose[] = [REST, curls(0.3), curls(-0.3)];
+
+function paintSpinner(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = SPINNER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.26, 0.32],
     [0.26, 0.32],
     [0.26, 0.94],
     [-0.26, 0.94],
-  ]);
-  plate(ctx, f, skin, [
+  ], pose));
+  plate(ctx, f, skin, bent([
     [0.32, -0.26],
     [0.94, -0.26],
     [0.94, 0.26],
     [0.32, 0.26],
-  ]);
+  ], pose));
   for (const [x0, y0, x1, y1] of [
     [-0.94, -0.24, -0.76, 0.24],
     [-0.24, -0.94, 0.24, -0.76],
   ] as const) {
-    lit(ctx, f, skin, [
+    lit(ctx, f, skin, bent([
       [x0, y0],
       [x1, y0],
       [x1, y1],
       [x0, y1],
-    ]);
+    ], pose));
   }
-  motif(ctx, f, skin, theme, square(0, 0, 0.27), 'spinner');
+  motif(ctx, f, skin, theme, square(0, 0, 0.27), 'spinner', pose);
   eye(ctx, f, skin, 0, 0, 0.2);
 }
 
-function paintSower(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+const SOWER_HULL: readonly Pt[] = [
+  [-1, 0],
+  [0.55, -0.9],
+  [1, -0.55],
+  [-0.15, 0],
+  [1, 0.55],
+  [0.55, 0.9],
+];
+
+/** The chevron's two arms are wings, and they beat: drawn in and back, then flared. */
+const SOWER_POSES: readonly Pose[] = [REST, aftSwings(-0.2, 0.8, 0.09), aftSwings(-0.2, 1.08, -0.05)];
+
+function paintSower(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = SOWER_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.72, 0.1],
     [0.52, 0.82],
     [0.8, 0.54],
     [-0.02, 0.09],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.9, -0.02],
     [0.5, -0.84],
     [0.6, -0.72],
     [-0.62, -0.02],
-  ]);
-  eye(ctx, f, skin, -0.58, 0, 0.14);
+  ], pose));
+  const [ex, ey] = pose([-0.58, 0]);
+  eye(ctx, f, skin, ex, ey, 0.14);
   motif(ctx, f, skin, theme, [
     [0.2, -0.68],
     [0.62, -0.62],
     [0.58, -0.36],
     [0.1, -0.44],
-  ], 'sower');
+  ], 'sower', pose);
+}
+
+/**
+ * A body's outline in pose `n`, sealed, and its paint on it — 0410. `skin` is null for a hurt twin,
+ * which is the outline alone (0278 washes it afterwards).
+ */
+function drawBody(ctx: Pen, f: Frame, skin: FoeSkin | null, hull: readonly Pt[], paint: (skin: FoeSkin) => void): void {
+  trace(ctx, f, hull);
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin !== null) paint(skin);
+}
+
+function drawDrifter(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(DRIFTER_HULL, DRIFTER_POSES[n]!), (s) => paintDrifter(ctx, f, s, theme, n));
+}
+
+function drawLancer(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(LANCER_HULL, LANCER_POSES[n]!), (s) => paintLancer(ctx, f, s, theme, n));
+}
+
+function drawWeaver(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(WEAVER_HULL, WEAVER_POSES[n]!, WEAVER_PIECES), (s) => paintWeaver(ctx, f, s, theme, n));
+}
+
+function drawTurret(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, posed(TURRET_HULL, TURRET_POSES[n]!), (s) => paintTurret(ctx, f, s, theme, n));
+}
+
+function drawCharger(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(CHARGER_HULL, CHARGER_POSES[n]!), (s) => paintCharger(ctx, f, s, theme, n));
+}
+
+function drawWarden(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  /*
+    A RING. Filled with `evenodd`, so the inner circle is a hole rather than a second disc — which is
+    what makes it read as an aperture rather than as a fat bullet, and what lets it dilate (0410).
+  */
+  const bore = WARDEN_BORE[n]!;
+  ctx.arc(f.half, f.half, f.r, 0, Math.PI * 2);
+  ctx.moveTo(f.half + f.r * bore, f.half);
+  ctx.arc(f.half, f.half, f.r * bore, 0, Math.PI * 2);
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin !== null) paintWarden(ctx, f, skin, theme, n);
+}
+
+function drawSpinner(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(SPINNER_HULL, SPINNER_POSES[n]!), (s) => paintSpinner(ctx, f, s, theme, n));
+}
+
+function drawSower(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(SOWER_HULL, SOWER_POSES[n]!), (s) => paintSower(ctx, f, s, theme, n));
 }
 /*
   ── THE BOSSES, PAINTED IN THEIR PLACE — 0228 ───────────────────────────────────────────────────
@@ -8866,26 +9241,31 @@ const PICKET_HULL: readonly Pt[] = [
   [-1, 0.16],
 ];
 
-function paintPicket(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/** The Y's two back blades scissor — closed in and back, then open — and its one blade down the lane holds. */
+const PICKET_POSES: readonly Pose[] = [REST, aftSwings(0.05, 0.8, 0.14), aftSwings(0.05, 1.08, -0.08)];
+
+function paintPicket(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = PICKET_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.3, 0.02],
     [0.16, 0.02],
     [0.62, 0.8],
     [0.48, 0.88],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.94, -0.1],
     [-0.3, -0.06],
     [-0.3, 0.06],
     [-0.94, 0.1],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [-0.2, -0.08],
     [0.14, -0.02],
     [0.14, 0.02],
     [-0.2, 0.08],
-  ], 'picket');
-  eye(ctx, f, skin, -0.1, 0, 0.14);
+  ], 'picket', pose);
+  const [ex, ey] = pose([-0.1, 0]);
+  eye(ctx, f, skin, ex, ey, 0.14);
 }
 
 /** Ember Nebula's moth: a thin body with two wide wings. */
@@ -8905,30 +9285,44 @@ const MOTH_HULL: readonly Pt[] = [
   [-0.4, 0.18],
 ];
 
-function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
+/**
+ * A moth's wings beat, and seen from above a beat is a wing narrowing as it lifts and spreading as it
+ * comes down. Weighted by how far out a point is, so the body down the middle holds and the eyespots
+ * ride their wings.
+ */
+const wingsBeat = (spread: number, back: number): Pose => ([x, y]) => {
+  const t = ramp(Math.abs(y), 0.15, 1);
+  return [x + back * t, y * (1 + (spread - 1) * t)];
+};
+const MOTH_POSES: readonly Pose[] = [REST, wingsBeat(0.76, 0.08), wingsBeat(1.07, -0.04)];
+
+function paintMoth(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = MOTH_POSES[n]!;
   // The lower wing in shadow, an eyespot on each wing, and the body lit down its spine.
-  plate(ctx, f, skin, [
+  plate(ctx, f, skin, bent([
     [-0.06, 0.5],
     [0.32, 0.92],
     [0.72, 0.82],
     [0.4, 0.34],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.92, -0.02],
     [-0.36, -0.1],
     [0.6, -0.06],
     [0.6, 0.06],
     [-0.36, 0.1],
     [-0.92, 0.02],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [0.02, -0.5],
     [0.36, -0.86],
     [0.66, -0.78],
     [0.42, -0.36],
-  ], 'moth');
-  eye(ctx, f, skin, 0.44, -0.66, 0.12);
-  eye(ctx, f, skin, 0.44, 0.66, 0.12);
+  ], 'moth', pose);
+  for (const side of [-1, 1]) {
+    const [ex, ey] = pose([0.44, 0.66 * side]);
+    eye(ctx, f, skin, ex, ey, 0.12);
+  }
 }
 
 /** Saurian Belt's raptor: a crescent, horns down the lane. */
@@ -9024,21 +9418,80 @@ const MOON_GLOW = {
 } as const;
 type MoonGlow = keyof typeof MOON_GLOW;
 
-function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, light: string): void {
+/**
+ * Which glow and which frame of the pulse each moon jelly kind is — 0410. Written out for the reason
+ * the switch arms are: a glow read off the kind's spelling is discovery, and a kind missing here is a
+ * throw at bake rather than a jelly quietly drawn in the wrong light.
+ */
+const MOON_JELLY_OF: { readonly [K in SpriteKind]?: readonly [MoonGlow, number] } = {
+  moonJelly: ['moonJelly', 0],
+  moonJellyHit: ['moonJelly', 0],
+  moonJellyB: ['moonJelly', 1],
+  moonJellyBHit: ['moonJelly', 1],
+  moonJellyC: ['moonJelly', 2],
+  moonJellyCHit: ['moonJelly', 2],
+  moonJellyRose: ['moonJellyRose', 0],
+  moonJellyRoseHit: ['moonJellyRose', 0],
+  moonJellyRoseB: ['moonJellyRose', 1],
+  moonJellyRoseBHit: ['moonJellyRose', 1],
+  moonJellyRoseC: ['moonJellyRose', 2],
+  moonJellyRoseCHit: ['moonJellyRose', 2],
+  moonJellyAzure: ['moonJellyAzure', 0],
+  moonJellyAzureHit: ['moonJellyAzure', 0],
+  moonJellyAzureB: ['moonJellyAzure', 1],
+  moonJellyAzureBHit: ['moonJellyAzure', 1],
+  moonJellyAzureC: ['moonJellyAzure', 2],
+  moonJellyAzureCHit: ['moonJellyAzure', 2],
+  moonJellyCyan: ['moonJellyCyan', 0],
+  moonJellyCyanHit: ['moonJellyCyan', 0],
+  moonJellyCyanB: ['moonJellyCyan', 1],
+  moonJellyCyanBHit: ['moonJellyCyan', 1],
+  moonJellyCyanC: ['moonJellyCyan', 2],
+  moonJellyCyanCHit: ['moonJellyCyan', 2],
+  moonJellyEmerald: ['moonJellyEmerald', 0],
+  moonJellyEmeraldHit: ['moonJellyEmerald', 0],
+  moonJellyEmeraldB: ['moonJellyEmerald', 1],
+  moonJellyEmeraldBHit: ['moonJellyEmerald', 1],
+  moonJellyEmeraldC: ['moonJellyEmerald', 2],
+  moonJellyEmeraldCHit: ['moonJellyEmerald', 2],
+  moonJellyLime: ['moonJellyLime', 0],
+  moonJellyLimeHit: ['moonJellyLime', 0],
+  moonJellyLimeB: ['moonJellyLime', 1],
+  moonJellyLimeBHit: ['moonJellyLime', 1],
+  moonJellyLimeC: ['moonJellyLime', 2],
+  moonJellyLimeCHit: ['moonJellyLime', 2],
+};
+
+/**
+ * A jelly swims by its bell, so its cycle is the pulse: the bell drawn in and thrust forward with the
+ * fringe streaming back behind it, then the bell relaxed wide over a shortened fringe. The rings and
+ * the lit margin ride the bell; `curveLoop` draws through the points, so they are posed and not
+ * densified.
+ */
+const JELLY_POSES: readonly Pose[] = [
+  REST,
+  andThen(foreSwings(0.1, 0.76, 0.1), aftSwings(0.3, 0.88, 0.1)),
+  andThen(foreSwings(0.1, 1.08, -0.05), aftSwings(0.3, 1.06, -0.08)),
+];
+
+function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, light: string, n = 0): void {
+  const pose = JELLY_POSES[n]!;
+  const hull = posed(MOON_JELLY_HULL, pose);
   // A halo past the outline in its own glow, translucent — 0321's terms for a small body's light.
   glow(ctx, f, light, -0.2, 0, 0.9, 0.45);
   // The glass, over the whole outline and drawn the way the outline is: crown bright, fringe faint.
-  shaded(ctx, f, [-0.9, 0], [0.4, 0], rgba(light, 0.75), rgba(light, 0.25), MOON_JELLY_HULL, 1, true);
+  shaded(ctx, f, [-0.9, 0], [0.4, 0], rgba(light, 0.75), rgba(light, 0.25), hull, 1, true);
   // The four rings, as the four gonads of a moon jelly are, round the middle of the bell.
-  for (const [x, y] of [[-0.52, -0.22], [-0.52, 0.22], [-0.3, -0.36], [-0.3, 0.36]] as const) {
+  for (const [rx, ry] of [[-0.52, -0.22], [-0.52, 0.22], [-0.3, -0.36], [-0.3, 0.36]] as const) {
+    const [x, y] = pose([rx, ry]);
     band(ctx, f, mix(light, '#ffffff', 0.55), x, y, 0.13, 0.07, 0.85);
   }
   // The margin lit where the fringe leaves it, and the fringe's roots.
-  seam(ctx, f, mix(light, '#ffffff', 0.6), 0.08, [[-0.02, -0.56], [0.02, -0.3], [0.02, 0.3], [-0.02, 0.56]], 0.95, true);
-  seam(ctx, f, light, 0.05, [[0.12, -0.18], [0.45, -0.2], [0.66, -0.24]], 0.8, true);
-  seam(ctx, f, light, 0.05, [[0.12, 0.18], [0.45, 0.2], [0.66, 0.24]], 0.8, true);
+  seam(ctx, f, mix(light, '#ffffff', 0.6), 0.08, posed([[-0.02, -0.56], [0.02, -0.3], [0.02, 0.3], [-0.02, 0.56]], pose), 0.95, true);
+  seam(ctx, f, light, 0.05, posed([[0.12, -0.18], [0.45, -0.2], [0.66, -0.24]], pose), 0.8, true);
+  seam(ctx, f, light, 0.05, posed([[0.12, 0.18], [0.45, 0.2], [0.66, 0.24]], pose), 0.8, true);
   // The crown's sheen.
-  seam(ctx, f, '#ffffff', 0.07, [[-0.66, -0.3], [-0.74, 0], [-0.66, 0.3]], 0.55, true);
+  seam(ctx, f, '#ffffff', 0.07, posed([[-0.66, -0.3], [-0.74, 0], [-0.66, 0.3]], pose), 0.55, true);
   void skin;
 }
 /**
@@ -9111,24 +9564,48 @@ const SWIFT_HULL: readonly Pt[] = [
  * across the body, and the two leading edges lit as seams. No motif, for the kite's reason — on a
  * body this size the place's motif survives as one speck the size of an eye.
  */
-function paintSwift(ctx: Pen, f: Frame, skin: FoeSkin): void {
-  nimbus(ctx, f, skin.lit, SWIFT_HULL);
-  shaded(ctx, f, [0, -0.74], [0, 0.74], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), SWIFT_HULL, 1, false);
+/** The swift's raked wings beat: drawn in and back as they lift, spread as they come down. */
+const SWIFT_POSES: readonly Pose[] = [REST, foreSwings(0.2, 0.78, -0.06), foreSwings(0.2, 1.08, 0.03)];
+
+function paintSwift(ctx: Pen, f: Frame, skin: FoeSkin, n = 0): void {
+  const pose = SWIFT_POSES[n]!;
+  const hull = bent(SWIFT_HULL, pose);
+  nimbus(ctx, f, skin.lit, hull);
+  shaded(ctx, f, [0, -0.74], [0, 0.74], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), hull, 1, false);
   // Inboard of the leading edge by the seam's own half-width all the way to the nose, where the hull
   // is a tenth wide — `tests/accents.test.ts` refused a seam that started at 0.7 and poked past it.
   for (const side of [-1, 1]) {
-    seam(ctx, f, rgba(skin.lit, 0.85), 0.11, [
+    seam(ctx, f, rgba(skin.lit, 0.85), 0.11, posed([
       [0.5, 0.08 * side],
+      [0.03, 0.25 * side],
       [-0.45, 0.42 * side],
-    ]);
+    ], pose));
   }
 }
 
-function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
-  nimbus(ctx, f, skin.lit, KITE_HULL);
+/**
+ * The kite's streamers ripple behind it, one way and the other, while its wings beat — the two things
+ * a flier this size has that move. Its nose holds on the line it is flying.
+ */
+const kiteWings = (spread: number, back: number): Pose => ([x, y]) => {
+  // Aft of the shoulder only, so the leading edge from the nose — where its lit seam runs — holds.
+  const t = ramp(x, -0.15, 0.1);
+  return [x + back * t, y * (1 + (spread - 1) * t)];
+};
+const KITE_POSES: readonly Pose[] = [
+  REST,
+  andThen(kiteWings(0.86, 0.04), wags(0.25, 0.14)),
+  andThen(kiteWings(1.06, -0.02), wags(0.25, -0.14)),
+];
+
+function paintKite(ctx: Pen, f: Frame, skin: FoeSkin, n = 0): void {
+  const pose = KITE_POSES[n]!;
+  // Its corners posed and its sides left straight, as `drawKite` draws it.
+  const hull = posed(KITE_HULL, pose);
+  nimbus(ctx, f, skin.lit, hull);
   // The form-shade: lit along one edge, shadowed at the other, across the whole animal. It is what
   // turns a cut-out into a body, and it is the first mark the serpent's and the fish's paint both make.
-  shaded(ctx, f, [0, -0.64], [0, 0.64], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), KITE_HULL, 1, false);
+  shaded(ctx, f, [0, -0.64], [0, 0.64], rgba(skin.lit, 0.26), rgba(skin.plate, 0.55), hull, 1, false);
   for (const side of [-1, 1]) {
     // Each wing darkened toward its trailing edge, so it reads as a membrane rather than as more body.
     shaded(
@@ -9138,13 +9615,13 @@ function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
       [0.14, -0.6 * side],
       rgba(skin.plate, 0.08),
       rgba(skin.plate, 0.6),
-      [
+      posed([
         [-0.5, 0.14 * side],
         [-0.16, 0.4 * side],
         [0.08, 0.5 * side],
         [0.16, 0.34 * side],
         [0.2, 0.18 * side],
-      ],
+      ], pose),
       1,
       false,
     );
@@ -9163,11 +9640,11 @@ function paintKite(ctx: Pen, f: Frame, skin: FoeSkin): void {
     the motif was a fourth channel, and it is the one that does not survive the scale.
   */
   for (const side of [-1, 1]) {
-    seam(ctx, f, rgba(skin.lit, 0.85), 0.13, [
+    seam(ctx, f, rgba(skin.lit, 0.85), 0.13, posed([
       [-0.58, 0.17 * side],
       [-0.42, 0.28 * side],
       [-0.27, 0.39 * side],
-    ]);
+    ], pose));
   }
   /*
     ⚠️ **0.127 IS A FLOOR AND NOT A TASTE, AND `eye`'s PUPIL IS WHAT SETS IT.** A pupil is 0.62 of its
@@ -9223,8 +9700,19 @@ const MINNOW_HULL: readonly Pt[] = [
   [-0.82, 0.24],
 ];
 
+/**
+ * A fish swims with its tail, so the minnow's cycle is its tail beating across and back, the body
+ * bending behind the head and the head holding its line. Posed point by point and NOT densified: the
+ * hull is a curve through its points, and extra points would change the curve.
+ */
+// 0.3 and not 0.22: at 0.22 the photograph of the sheet showed three frames of one fish — the tail's
+// fork moved inside its own notch and nothing else did.
+const MINNOW_POSES: readonly Pose[] = [REST, wags(-0.1, 0.3), wags(-0.1, -0.3)];
+
 /** The minnow's paint — 0314: a lit back, a shadowed belly, embers of the place, and a pale eye. */
-function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin): void {
+function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin, n = 0): void {
+  const pose = MINNOW_POSES[n]!;
+  const hull = posed(MINNOW_HULL, pose);
   /*
     ⚠️ **THE SAME THREE MARKS THE KITE GETS, BECAUSE THE SCALE IS THE SAME PROBLEM — 0321.** This is 5
     units where the kite is 6.5, so 0106's floor is **0.17 of the drawing radius** here: even wider
@@ -9234,8 +9722,8 @@ function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin): void {
     ⚠️ **AND THE HALO IS SMOOTH HERE AND ANGULAR THERE**, which is the two animals' own difference
     carried into their light rather than contradicted by it.
   */
-  nimbus(ctx, f, skin.lit, MINNOW_HULL, true);
-  shaded(ctx, f, [0, -0.6], [0, 0.5], rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), MINNOW_HULL, 1, true);
+  nimbus(ctx, f, skin.lit, hull, true);
+  shaded(ctx, f, [0, -0.6], [0, 0.5], rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), hull, 1, true);
   /*
     The back lit along the shoulder, where the light is: 0.17 wide, which is the floor on this body.
 
@@ -9244,11 +9732,11 @@ function paintMinnow(ctx: Pen, f: Frame, skin: FoeSkin): void {
     fish rather than as light on its back — and it reached the eye, so the two read as one mark. A
     sheen follows the edge it is a sheen on.
   */
-  seam(ctx, f, rgba(skin.lit, 0.55), 0.17, [
+  seam(ctx, f, rgba(skin.lit, 0.55), 0.17, posed([
     [-0.5, -0.16],
     [-0.3, -0.25],
     [-0.04, -0.22],
-  ], 1, true);
+  ], pose), 1, true);
   /*
     ⚠️ **0.165 IS THE EYE'S FLOOR ON A FIVE-UNIT BODY**, by the same arithmetic the kite's 0.127 comes
     from: a pupil is 0.62 of its eye, the radius here is 12.6 CSS pixels since the view zoomed out
@@ -9275,8 +9763,12 @@ const RAPTOR_HULL: readonly Pt[] = [
   [-0.4, -0.5],
 ];
 
-function paintRaptor(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/** The crescent's horns are its jaws, and they work: snapped in and forward, then thrown wide. */
+const RAPTOR_POSES: readonly Pose[] = [REST, foreSwings(0.1, 0.82, 0.05), foreSwings(0.1, 1.08, -0.03)];
+
+function paintRaptor(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = RAPTOR_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [0.44, 0.02],
     [0.9, 0.02],
     [0.78, 0.5],
@@ -9284,22 +9776,23 @@ function paintRaptor(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
     [-0.14, 0.88],
     [-0.28, 0.6],
     [0.2, 0.36],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.92, -0.64],
     [-0.6, -0.84],
     [0.16, -0.9],
     [0.14, -0.74],
     [-0.5, -0.66],
     [-0.8, -0.61],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [0.5, -0.5],
     [0.9, -0.5],
     [0.9, 0.3],
     [0.5, 0.3],
-  ], 'raptor');
-  eye(ctx, f, skin, 0.0, -0.72, 0.14);
+  ], 'raptor', pose);
+  const [ex, ey] = pose([0.0, -0.72]);
+  eye(ctx, f, skin, ex, ey, 0.14);
 }
 
 /** The Labyrinth's sentry: a block with a slot in its face. */
@@ -9314,26 +9807,42 @@ const SENTRY_HULL: readonly Pt[] = [
   [-0.95, -0.24],
 ];
 
-function paintSentry(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/**
+ * The sentry's slot is its mouth, and it works: narrowed nearly shut, then gaping. Only the front of
+ * the block moves, and everything within reach of the slot moves with it — the lit throat inside it
+ * and the plate under it — so the jaw is a jaw and not a hole changing size in a still wall.
+ */
+const slotOpens = (by: number): Pose => ([x, y]) => {
+  const front = ramp(-x, 0.1, 0.4);
+  const a = Math.abs(y);
+  // Inside the slot every point opens by `by`; beyond it the opening fades out by 0.62, where the eye is.
+  const reach = a <= 0.24 ? a * by : a + 0.24 * (by - 1) * (1 - ramp(a, 0.24, 0.62));
+  return [x, Math.sign(y) * (a + (reach - a) * front)];
+};
+const SENTRY_POSES: readonly Pose[] = [REST, slotOpens(0.5), slotOpens(1.35)];
+
+function paintSentry(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = SENTRY_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.88, 0.32],
     [0.88, 0.32],
     [0.88, 0.88],
     [-0.88, 0.88],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.44, -0.2],
     [-0.2, -0.2],
     [-0.2, 0.2],
     [-0.44, 0.2],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [-0.1, -0.86],
     [0.86, -0.86],
     [0.86, 0.24],
     [-0.1, 0.24],
-  ], 'sentry');
-  eye(ctx, f, skin, -0.62, -0.6, 0.14);
+  ], 'sentry', pose);
+  const [ex, ey] = pose([-0.62, -0.6]);
+  eye(ctx, f, skin, ex, ey, 0.14);
 }
 
 /** Rime Shelf's shard: a long hexagon, pointed both ways. */
@@ -9346,25 +9855,34 @@ const SHARD_HULL: readonly Pt[] = [
   [-0.4, 0.5],
 ];
 
-function paintShard(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/**
+ * A crystal has no limbs, so it turns: a hexagonal prism rolling about its long axis carries its top
+ * ridge one way along it and its bottom ridge the other, and the lit facet with them. Weighted by how
+ * far off the axis a point is, so the axis — and the eye on it — holds.
+ */
+const rolls = (by: number): Pose => ([x, y]) => [x + by * y, y];
+const SHARD_POSES: readonly Pose[] = [REST, rolls(0.36), rolls(-0.36)];
+
+function paintShard(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = SHARD_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.9, 0.04],
     [0.9, 0.04],
     [0.36, 0.44],
     [-0.36, 0.44],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.92, -0.02],
     [-0.4, -0.44],
     [-0.2, -0.44],
     [-0.7, -0.02],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [-0.3, -0.4],
     [0.3, -0.4],
     [0.3, -0.06],
     [-0.3, -0.06],
-  ], 'shard');
+  ], 'shard', pose);
   eye(ctx, f, skin, -0.42, 0, 0.13);
 }
 
@@ -9385,30 +9903,43 @@ const SPORE_HULL: readonly Pt[] = [
   [-0.96, 0.24],
 ];
 
-function paintSpore(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/**
+ * The sac heaves: three lumps bulge round its rim and travel, so it is something alive inside a skin
+ * rather than a ball. Weighted by the square of the distance out, so the heart of it holds.
+ */
+const heaves = (phase: number): Pose => ([x, y]) => {
+  const rho = Math.hypot(x, y);
+  const swell = 1 + 0.1 * rho * rho * Math.sin(3 * Math.atan2(y, x) + phase);
+  return [x * swell, y * swell];
+};
+const SPORE_POSES: readonly Pose[] = [REST, heaves(0), heaves(Math.PI)];
+
+function paintSpore(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = SPORE_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [-0.86, 0.3],
     [0.84, 0.3],
     [0.5, 0.76],
     [0.1, 0.9],
     [-0.4, 0.8],
     [-0.74, 0.56],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.84, -0.5],
     [-0.5, -0.76],
     [-0.1, -0.88],
     [-0.14, -0.7],
     [-0.46, -0.6],
     [-0.7, -0.36],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [-0.6, -0.4],
     [0.6, -0.4],
     [0.6, 0.2],
     [-0.6, 0.2],
-  ], 'spore');
-  eye(ctx, f, skin, -0.5, 0, 0.16);
+  ], 'spore', pose);
+  const [ex, ey] = pose([-0.5, 0]);
+  eye(ctx, f, skin, ex, ey, 0.16);
 }
 
 /** The Black Heart's gaze: a lens, pointed across the lane, with a pupil. */
@@ -9425,30 +9956,94 @@ const GAZE_HULL: readonly Pt[] = [
   [0.5, -0.66],
 ];
 
-function paintGaze(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  plate(ctx, f, skin, [
+/**
+ * The gaze is an eye, so it blinks and it glances. Its second frame is the lids half down — the lens
+ * narrowed along the lane with the socket squeezed inside it — and its third is the pupil gone to one
+ * side and the lens leaning after it. `EnemyRow.cycle` holds it open most of the time.
+ */
+const GAZE_POSES: readonly Pose[] = [REST, ([x, y]) => [x * 0.55, y], ([x, y]) => [x * 0.9, y + 0.06 * (1 - x * x)]];
+const GAZE_PUPIL: readonly Pt[] = [[-0.08, 0], [-0.04, 0], [-0.06, 0.16]];
+const GAZE_SOCKET: readonly number[] = [0.34, 0.24, 0.32];
+
+function paintGaze(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0): void {
+  const pose = GAZE_POSES[n]!;
+  plate(ctx, f, skin, bent([
     [0.06, 0.06],
     [0.7, 0.24],
     [0.46, 0.62],
     [0.02, 0.9],
-  ]);
-  lit(ctx, f, skin, [
+  ], pose));
+  lit(ctx, f, skin, bent([
     [-0.7, -0.24],
     [-0.46, -0.6],
     [-0.02, -0.9],
     [-0.06, -0.66],
     [-0.36, -0.44],
     [-0.56, -0.16],
-  ]);
+  ], pose));
   motif(ctx, f, skin, theme, [
     [-0.4, 0.3],
     [0.4, 0.3],
     [0.3, 0.6],
     [-0.3, 0.6],
-  ], 'gaze');
-  // The pupil: a big socket and the eye colour in it, dead centre, looking down the lane.
-  disc(ctx, f, shade(skin.plate, -0.5), 0, 0, 0.34);
-  disc(ctx, f, skin.eye, -0.08, 0, 0.2);
+  ], 'gaze', pose);
+  // The pupil: a big socket and the eye colour in it, looking down the lane — or away, or half-lidded.
+  const socket = GAZE_SOCKET[n]!;
+  const [px, py] = GAZE_PUPIL[n]!;
+  disc(ctx, f, shade(skin.plate, -0.5), 0, py * 0.5, socket);
+  disc(ctx, f, skin.eye, px, py, socket * 0.59);
+}
+
+function drawPicket(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(PICKET_HULL, PICKET_POSES[n]!), (s) => paintPicket(ctx, f, s, theme, n));
+}
+
+function drawMoth(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(MOTH_HULL, MOTH_POSES[n]!), (s) => paintMoth(ctx, f, s, theme, n));
+}
+
+function drawRaptor(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(RAPTOR_HULL, RAPTOR_POSES[n]!), (s) => paintRaptor(ctx, f, s, theme, n));
+}
+
+function drawSentry(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(SENTRY_HULL, SENTRY_POSES[n]!), (s) => paintSentry(ctx, f, s, theme, n));
+}
+
+function drawShard(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(SHARD_HULL, SHARD_POSES[n]!), (s) => paintShard(ctx, f, s, theme, n));
+}
+
+function drawSpore(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(SPORE_HULL, SPORE_POSES[n]!), (s) => paintSpore(ctx, f, s, theme, n));
+}
+
+function drawGaze(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
+  drawBody(ctx, f, skin, bent(GAZE_HULL, GAZE_POSES[n]!), (s) => paintGaze(ctx, f, s, theme, n));
+}
+
+function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
+  /*
+    ⚠️ **POSED AT ITS CORNERS AND NEVER DENSIFIED.** Straight edges are one of the two channels 0314
+    tells this from the minnow by (`KITE_HULL`'s note), and a densified side that a pose bends is a
+    curve — `tests/volans.test.ts` counted it as one. The corners move; the sides stay straight.
+  */
+  trace(ctx, f, posed(KITE_HULL, KITE_POSES[n]!));
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin !== null) paintKite(ctx, f, skin, n);
+}
+
+function drawSwift(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
+  drawBody(ctx, f, skin, bent(SWIFT_HULL, SWIFT_POSES[n]!), (s) => paintSwift(ctx, f, s, n));
+}
+
+function drawMinnow(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
+  // A curve through its points, so posed and not densified — `MINNOW_POSES` has why.
+  curveLoop(ctx, f, posed(MINNOW_HULL, MINNOW_POSES[n]!));
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin !== null) paintMinnow(ctx, f, skin, n);
 }
 export function drawKind(
   ctx: Pen,
@@ -9667,18 +10262,81 @@ export function drawKind(
       if (!hurt) paintShip(ctx, fh, palette, 2, 'shuriken');
       return;
     }
+    /*
+      ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index
+      off the kind's name would be discovery by spelling, the first of the ways
+      [0016](../../docs/decisions/0016-a-hub-enumerates-kinds.md) says a hub gets defeated. Written out, a
+      frame the switch has forgotten is a compile error rather than a body that stops moving.
+    */
     case 'drifter':
     case 'drifterHit':
       // A diamond: symmetrical, pointing nowhere, which is exactly what a drifter does. It holds its
       // line and never fires, and the silhouette says so by having no front.
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half, half - r);
-      ctx.lineTo(half + r, half);
-      ctx.lineTo(half, half + r);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintDrifter(ctx, f, skin, theme);
+      drawDrifter(ctx, f, skin, theme, 0);
+      return;
+    case 'drifterB':
+    case 'drifterBHit':
+      drawDrifter(ctx, f, skin, theme, 1);
+      return;
+    case 'drifterC':
+    case 'drifterCHit':
+      drawDrifter(ctx, f, skin, theme, 2);
+      return;
+    case 'lancerB':
+    case 'lancerBHit':
+      drawLancer(ctx, f, skin, theme, 1);
+      return;
+    case 'lancerC':
+    case 'lancerCHit':
+      drawLancer(ctx, f, skin, theme, 2);
+      return;
+    case 'weaverB':
+    case 'weaverBHit':
+      drawWeaver(ctx, f, skin, theme, 1);
+      return;
+    case 'weaverC':
+    case 'weaverCHit':
+      drawWeaver(ctx, f, skin, theme, 2);
+      return;
+    case 'turretB':
+    case 'turretBHit':
+      drawTurret(ctx, f, skin, theme, 1);
+      return;
+    case 'turretC':
+    case 'turretCHit':
+      drawTurret(ctx, f, skin, theme, 2);
+      return;
+    case 'chargerB':
+    case 'chargerBHit':
+      drawCharger(ctx, f, skin, theme, 1);
+      return;
+    case 'chargerC':
+    case 'chargerCHit':
+      drawCharger(ctx, f, skin, theme, 2);
+      return;
+    case 'wardenB':
+    case 'wardenBHit':
+      drawWarden(ctx, f, skin, theme, 1);
+      return;
+    case 'wardenC':
+    case 'wardenCHit':
+      drawWarden(ctx, f, skin, theme, 2);
+      return;
+    case 'spinnerB':
+    case 'spinnerBHit':
+      drawSpinner(ctx, f, skin, theme, 1);
+      return;
+    case 'spinnerC':
+    case 'spinnerCHit':
+      drawSpinner(ctx, f, skin, theme, 2);
+      return;
+    case 'sowerB':
+    case 'sowerBHit':
+      drawSower(ctx, f, skin, theme, 1);
+      return;
+    case 'sowerC':
+    case 'sowerCHit':
+      drawSower(ctx, f, skin, theme, 2);
       return;
     case 'lancer':
     case 'lancerHit':
@@ -9699,13 +10357,7 @@ export function drawKind(
         It cannot be confused with the player's wedge: that one is cyan, points the other way, and
         has a concave tail this deliberately does not.
       */
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half + r * 0.7, half - r * 0.95);
-      ctx.lineTo(half + r * 0.7, half + r * 0.95);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintLancer(ctx, f, skin, theme);
+      drawLancer(ctx, f, skin, theme, 0);
       return;
     case 'weaver':
     case 'weaverHit':
@@ -9714,10 +10366,7 @@ export function drawKind(
         travels. Nothing else in the game is a rectangle, and orientation is the cue that tells it
         from the charger's needle, which is the same primitive lying the other way.
       */
-      ctx.rect(half - r * 0.22, half - r, r * 0.44, r * 2);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintWeaver(ctx, f, skin, theme);
+      drawWeaver(ctx, f, skin, theme, 0);
       return;
     case 'turret':
     case 'turretHit': {
@@ -9727,13 +10376,7 @@ export function drawKind(
         rather than by counting them — which is the property `reports/enemy-silhouettes-2026-08-05.md`
         found survives twenty pixels.
       */
-      ctx.moveTo(half - r * 0.55, half - r);
-      ctx.lineTo(half - r * 0.55, half + r);
-      ctx.arc(half - r * 0.55, half, r, Math.PI / 2, -Math.PI / 2, true);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintTurret(ctx, f, skin, theme);
+      drawTurret(ctx, f, skin, theme, 0);
       return;
     }
     case 'charger':
@@ -9744,13 +10387,7 @@ export function drawKind(
         a fifth of that. Size and shape carrying one message together, which is the pairing
         `src/content/sprites.ts` already uses to say how much killing a thing takes.
       */
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half + r * 0.9, half - r * 0.22);
-      ctx.lineTo(half + r * 0.9, half + r * 0.22);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintCharger(ctx, f, skin, theme);
+      drawCharger(ctx, f, skin, theme, 0);
       return;
     case 'boss':
     case 'bossHit': {
@@ -9789,22 +10426,7 @@ export function drawKind(
         as pointing at nothing — which is what a body that fires in every direction should look like.
         A diagonal cross is an ✕, which reads as a marker.
       */
-      ctx.moveTo(half - r * 0.3, half - r);
-      ctx.lineTo(half + r * 0.3, half - r);
-      ctx.lineTo(half + r * 0.3, half - r * 0.3);
-      ctx.lineTo(half + r, half - r * 0.3);
-      ctx.lineTo(half + r, half + r * 0.3);
-      ctx.lineTo(half + r * 0.3, half + r * 0.3);
-      ctx.lineTo(half + r * 0.3, half + r);
-      ctx.lineTo(half - r * 0.3, half + r);
-      ctx.lineTo(half - r * 0.3, half + r * 0.3);
-      ctx.lineTo(half - r, half + r * 0.3);
-      ctx.lineTo(half - r, half - r * 0.3);
-      ctx.lineTo(half - r * 0.3, half - r * 0.3);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSpinner(ctx, f, skin, theme);
+      drawSpinner(ctx, f, skin, theme, 0);
       return;
     case 'sower':
     case 'sowerHit':
@@ -9818,16 +10440,7 @@ export function drawKind(
         first draft failing exactly this test, so the notch is deliberately deep: it reaches 0.45 of
         the radius, against the 0.25 that was found to be invisible.
       */
-      ctx.moveTo(half - r, half);
-      ctx.lineTo(half + r * 0.55, half - r * 0.9);
-      ctx.lineTo(half + r, half - r * 0.55);
-      ctx.lineTo(half - r * 0.15, half);
-      ctx.lineTo(half + r, half + r * 0.55);
-      ctx.lineTo(half + r * 0.55, half + r * 0.9);
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSower(ctx, f, skin, theme);
+      drawSower(ctx, f, skin, theme, 0);
       return;
     case 'warden':
     case 'wardenHit':
@@ -9837,12 +10450,7 @@ export function drawKind(
         silhouette in the game with a hole in it, and holes survive being small better than corners
         do.
       */
-      ctx.arc(half, half, r, 0, Math.PI * 2);
-      ctx.moveTo(half + r * 0.45, half);
-      ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintWarden(ctx, f, skin, theme);
+      drawWarden(ctx, f, skin, theme, 0);
       return;
     case 'boss2':
     case 'boss2Hit': {
@@ -10916,28 +11524,43 @@ export function drawKind(
         drifter has not. **Straight-edged on purpose** — `KITE_HULL`'s own note has why, and it is one
         of the two channels 0314 separates this from the minnow on.
       */
-      trace(ctx, f, KITE_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintKite(ctx, f, skin);
+      drawKite(ctx, f, skin, 0);
+      return;
+    case 'kiteB':
+    case 'kiteBHit':
+      drawKite(ctx, f, skin, 1);
+      return;
+    case 'kiteC':
+    case 'kiteCHit':
+      drawKite(ctx, f, skin, 2);
       return;
     case 'swift':
     case 'swiftHit':
       // A SWEPT CHEVRON — 0328: nose forward, wings raked back, open at the back. `SWIFT_HULL` has why
       // it is none of the diamond, the delta or the triangle it shares a sky with.
-      trace(ctx, f, SWIFT_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSwift(ctx, f, skin);
+      drawSwift(ctx, f, skin, 0);
+      return;
+    case 'swiftB':
+    case 'swiftBHit':
+      drawSwift(ctx, f, skin, 1);
+      return;
+    case 'swiftC':
+    case 'swiftCHit':
+      drawSwift(ctx, f, skin, 2);
       return;
     case 'minnow':
     case 'minnowHit':
       // A SPINDLE WITH A FORKED TAIL — 0314: a blunt snout, a dorsal fin up and an anal fin down, and
       // a notch in the back end. The kite beside it is a straight-edged diamond with two streamers.
-      curveLoop(ctx, f, MINNOW_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintMinnow(ctx, f, skin);
+      drawMinnow(ctx, f, skin, 0);
+      return;
+    case 'minnowB':
+    case 'minnowBHit':
+      drawMinnow(ctx, f, skin, 1);
+      return;
+    case 'minnowC':
+    case 'minnowCHit':
+      drawMinnow(ctx, f, skin, 2);
       return;
     case 'moonJelly':
     case 'moonJellyHit':
@@ -10950,7 +11573,31 @@ export function drawKind(
     case 'moonJellyEmerald':
     case 'moonJellyEmeraldHit':
     case 'moonJellyLime':
-    case 'moonJellyLimeHit': {
+    case 'moonJellyLimeHit':
+    case 'moonJellyB':
+    case 'moonJellyBHit':
+    case 'moonJellyC':
+    case 'moonJellyCHit':
+    case 'moonJellyRoseB':
+    case 'moonJellyRoseBHit':
+    case 'moonJellyRoseC':
+    case 'moonJellyRoseCHit':
+    case 'moonJellyAzureB':
+    case 'moonJellyAzureBHit':
+    case 'moonJellyAzureC':
+    case 'moonJellyAzureCHit':
+    case 'moonJellyCyanB':
+    case 'moonJellyCyanBHit':
+    case 'moonJellyCyanC':
+    case 'moonJellyCyanCHit':
+    case 'moonJellyEmeraldB':
+    case 'moonJellyEmeraldBHit':
+    case 'moonJellyEmeraldC':
+    case 'moonJellyEmeraldCHit':
+    case 'moonJellyLimeB':
+    case 'moonJellyLimeBHit':
+    case 'moonJellyLimeC':
+    case 'moonJellyLimeCHit': {
       /*
         A BELL WITH A FRINGE — 0255, glowing since 0404: a dome across the front and four short
         tendrils trailing off the back, in one of six lights. The kite is a diamond and the moth a
@@ -10958,11 +11605,12 @@ export function drawKind(
         keeps its own skin, so the six are six in colour and one in high contrast.
       */
       const plain = palette.glass === palette.space && palette.trim === palette.space;
-      const light = skin === null || plain ? (skin?.hull ?? palette.sky) : MOON_GLOW[kind.replace(/Hit$/, '') as MoonGlow];
-      curveLoop(ctx, f, MOON_JELLY_HULL);
+      const [glowOf, n] = MOON_JELLY_OF[kind]!;
+      const light = skin === null || plain ? (skin?.hull ?? palette.sky) : MOON_GLOW[glowOf];
+      curveLoop(ctx, f, posed(MOON_JELLY_HULL, JELLY_POSES[n]!));
       ctx.fillStyle = rgba(light, 0.35);
       seal(ctx);
-      if (skin !== null) paintMoonJelly(ctx, f, skin, light);
+      if (skin !== null) paintMoonJelly(ctx, f, skin, light, n);
       return;
     }
     case 'debris':
@@ -11130,64 +11778,99 @@ export function drawKind(
     case 'picketHit':
       // A Y: three blades at 120°, one pointing down the lane. The only three-armed thing in the
       // game — the spinner has four, and a drifter's diamond has none.
-      trace(ctx, f, PICKET_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintPicket(ctx, f, skin, theme);
+      drawPicket(ctx, f, skin, theme, 0);
+      return;
+    case 'picketB':
+    case 'picketBHit':
+      drawPicket(ctx, f, skin, theme, 1);
+      return;
+    case 'picketC':
+    case 'picketCHit':
+      drawPicket(ctx, f, skin, theme, 2);
       return;
     case 'moth':
     case 'mothHit':
       // Two wings on a body: the widest thing across the lane that is not a bar, and the only
       // silhouette with two lobes side by side.
-      trace(ctx, f, MOTH_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintMoth(ctx, f, skin, theme);
+      drawMoth(ctx, f, skin, theme, 0);
+      return;
+    case 'mothB':
+    case 'mothBHit':
+      drawMoth(ctx, f, skin, theme, 1);
+      return;
+    case 'mothC':
+    case 'mothCHit':
+      drawMoth(ctx, f, skin, theme, 2);
       return;
     case 'raptor':
     case 'raptorHit':
       // A crescent with its horns down the lane: the only concave FRONT in the game. The sower's
       // chevron is open at the back; this is open at the front, where the jaws are.
-      trace(ctx, f, RAPTOR_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintRaptor(ctx, f, skin, theme);
+      drawRaptor(ctx, f, skin, theme, 0);
+      return;
+    case 'raptorB':
+    case 'raptorBHit':
+      drawRaptor(ctx, f, skin, theme, 1);
+      return;
+    case 'raptorC':
+    case 'raptorCHit':
+      drawRaptor(ctx, f, skin, theme, 2);
       return;
     case 'sentry':
     case 'sentryHit':
       // A block with a slot in its face: square, three times a spit's size, and notched where it
       // fires from. The turret is round-backed; this has corners everywhere.
-      trace(ctx, f, SENTRY_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSentry(ctx, f, skin, theme);
+      drawSentry(ctx, f, skin, theme, 0);
+      return;
+    case 'sentryB':
+    case 'sentryBHit':
+      drawSentry(ctx, f, skin, theme, 1);
+      return;
+    case 'sentryC':
+    case 'sentryCHit':
+      drawSentry(ctx, f, skin, theme, 2);
       return;
     case 'shard':
     case 'shardHit':
       // A crystal: a long hexagon pointed both ways. Told from the charger's needle by having a
       // waist, and from the drifter's diamond by being twice as long as it is deep.
-      trace(ctx, f, SHARD_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintShard(ctx, f, skin, theme);
+      drawShard(ctx, f, skin, theme, 0);
+      return;
+    case 'shardB':
+    case 'shardBHit':
+      drawShard(ctx, f, skin, theme, 1);
+      return;
+    case 'shardC':
+    case 'shardCHit':
+      drawShard(ctx, f, skin, theme, 2);
       return;
     case 'spore':
     case 'sporeHit':
       // A sac: a lumpy round mass with no hole and no corners. The warden is a ring and the turret a
       // half-disc; this is the only full round body, and it is a mine.
-      trace(ctx, f, SPORE_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintSpore(ctx, f, skin, theme);
+      drawSpore(ctx, f, skin, theme, 0);
+      return;
+    case 'sporeB':
+    case 'sporeBHit':
+      drawSpore(ctx, f, skin, theme, 1);
+      return;
+    case 'sporeC':
+    case 'sporeCHit':
+      drawSpore(ctx, f, skin, theme, 2);
       return;
     case 'gaze':
     case 'gazeHit':
       // A lens: pointed at both ends across the lane, with a pupil. The one body that is wider
       // across than along and comes to a point — a weaver's bar has no points.
-      trace(ctx, f, GAZE_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
-      seal(ctx);
-      if (skin !== null) paintGaze(ctx, f, skin, theme);
+      drawGaze(ctx, f, skin, theme, 0);
+      return;
+    case 'gazeB':
+    case 'gazeBHit':
+      drawGaze(ctx, f, skin, theme, 1);
+      return;
+    case 'gazeC':
+    case 'gazeCHit':
+      drawGaze(ctx, f, skin, theme, 2);
       return;
     case 'lifeIcon': {
       /*

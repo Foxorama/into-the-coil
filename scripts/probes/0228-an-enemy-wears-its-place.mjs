@@ -104,8 +104,9 @@ export const PROBES = [
     guard: 'and every enemy and boss is painted in the vivid palette, in every place',
     edit: {
       path: 'src/render/bake.ts',
-      find: '      seal(ctx);\n      if (skin !== null) paintCharger(ctx, f, skin, theme);\n      return;',
-      replace: '      seal(ctx);\n      return;',
+      // ⚠️ Re-anchored by 0410, which draws the charger in `drawCharger` so each frame of its cycle can.
+      find: '(s) => paintCharger(ctx, f, s, theme, n));',
+      replace: '() => undefined);',
     },
   },
 ];
