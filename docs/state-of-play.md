@@ -222,6 +222,10 @@ cost, which does not exist yet.
 | **the fight SOUNDS like the fight: `scripts/weigh-fit.mjs` measures a cue against the music it plays over — and found that NO cue in the game states a note, every one of them measuring as percussion over a piece that measures +24.5 dB; the serpent's three attacks hold scale tones its bed is holding; and level one owns an `ownA` for the first time, a maraca and a rattle at its two fight rungs** | [0325](decisions/0325-the-fight-sounds-like-the-fight.md) — amends [0308](decisions/0308-the-attacks-are-heard.md), [0323](decisions/0323-a-sound-is-made-for-the-hundredth-time.md), [0172](decisions/0172-a-place-opens-with-its-own-four.md) |
 | **the SURGE FIRES ONE, down the middle: a tube special adds one charged missile a volley, between the fitted tubes, from a barrel past the nose** | [0405](decisions/0405-the-surge-fires-one-down-the-middle.md) — amends [0379](decisions/0379-the-specials-are-seen.md) |
 | **a MID-BOSS IS MET ARMED: its health solved at the loadout the run carries in, the cap from level two — two to four times what it was** | [0406](decisions/0406-a-mid-boss-is-met-armed.md) — amends [0269](decisions/0269-a-mid-boss-is-fought-for-as-long-as-its-level-says.md), [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) |
+| **an UPDATE WAITS for the browser to finish starting, so the offline sweep test stands its next release up by `register()`** | [0407](decisions/0407-an-update-waits-for-the-browser-to-finish-starting.md) — the cause behind [0139](decisions/0139-a-deadline-between-unbounded-awaits.md), [0141](decisions/0141-await-the-post-condition-not-the-machinery.md), [0142](decisions/0142-a-post-condition-may-wait-and-must-say-what-it-waited-for.md) |
+| **the RITUAL TIDIES: `npm run tidy` is the last step of `/ship`** | [0408](decisions/0408-the-ritual-tidies.md) — amends [0201](decisions/0201-the-ritual-is-tracked-or-it-is-not-followed.md) |
+| **a FAILED BUILD SAYS WHAT FAILED: the test setup prints the bundler's error, and the identity hook is quiet over a bundle that never happened** | [0409](decisions/0409-a-failed-build-says-what-failed.md) |
+| **the ENEMIES MOVE: every enemy in three poses — wings, tails, jaws, an iris, a pulse — each row authoring its own cycle** | [0410](decisions/0410-the-enemies-move.md) — the owed half of [0280](decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md); what never landed before it is [`the-unlanded-work`](../reports/the-unlanded-work-2026-09-29.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -849,6 +853,8 @@ A fourth, *"bosses dying a bit fast … inc minibosses"*: a surge adds one missi
 two ([0405](decisions/0405-the-surge-fires-one-down-the-middle.md)), and every mid-boss is solved at the
 loadout the run carries in ([0406](decisions/0406-a-mid-boss-is-met-armed.md)). **Owed a play, and
 0406's per-gun table is what decides whether the mid-bosses are tuned to the pulse or the shuriken.**
+And every enemy now moves ([0410](decisions/0410-the-enemies-move.md)) — **owed a play for whether each
+animal reads at speed and whether any is too busy**; the holds on the rows are the first thing to turn.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel
