@@ -62,10 +62,28 @@ const stamped = (tokens: Record<string, string>, text: string, where: string): s
  */
 const SHIPPED_PAGE = '/index.html';
 
-function stampBuildIdentity(): Plugin {
+export function stampBuildIdentity(): Plugin {
   let outDir = 'dist';
+  /**
+   * ⚠️ **A BUILD THAT FAILED MUST NOT BE REPORTED AS A MISSING PLACEHOLDER.**
+   *
+   * `closeBundle` runs whether or not a bundle was written. So when the bundler REFUSES the source
+   * — `damage++` against a `const` is the case that found this — nothing reaches `outDir`, the hook
+   * below throws about `sw.js`, and **that becomes the only error printed**. The developer is sent
+   * to a file that is in perfect health while the error they need is never shown at all. Worse: a
+   * previous build's `dist/sw.js` survives, is already stamped, and produces *"public/sw.js has no
+   * %ITC_VERSION% placeholder"* — a sentence about a tracked file that does have one.
+   *
+   * The guard above is unchanged and still fails the build on a genuinely missing placeholder. What
+   * this adds is that it only speaks when there is a bundle for it to have an opinion about.
+   * — `docs/decisions/0409-a-failed-build-says-what-failed.md`
+   */
+  let bundled = false;
   return {
     name: 'itc-stamp-build-identity',
+    buildEnd(error) {
+      bundled = error === undefined;
+    },
     configResolved(config) {
       // Resolved against the project root rather than `process.cwd()`: the tests invoke the build
       // through `process.execPath` from `tests/globalSetup.ts`, and a cwd-relative guess is the
@@ -96,6 +114,8 @@ function stampBuildIdentity(): Plugin {
      * version alone would freeze the precached shell at whichever build first shipped that version.
      */
     closeBundle() {
+      // The bundler already has an error, and it is the one worth reading. See `bundled` above.
+      if (!bundled) return;
       const sw = resolve(outDir, 'sw.js');
       if (!existsSync(sw)) {
         throw new Error(

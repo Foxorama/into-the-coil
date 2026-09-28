@@ -144,6 +144,12 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
    * ⚠️ **IT IS NOT LICENCE TO KEEP RAISING IT.** If this fires again the answer is the state readout
    * below, not a bigger number — a budget that gets widened until it stops firing has stopped being a
    * bound, which is 0141's own rejection.
+   *
+   * ⚠️ **AND WHAT FIRED AFTER THIS WAS NOT A SLOW INSTALL** —
+   * `docs/decisions/0407-an-update-waits-for-the-browser-to-finish-starting.md`. The readout said
+   * `installing —`, and that was true: Chromium had not started the update at all. It holds update
+   * jobs until the browser calls its own startup complete. The test no longer asks for an update, so
+   * this budget now covers an install and a sweep and nothing else.
    */
   const SWEEP_MS = 35_000;
 
@@ -298,37 +304,38 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
       ])`);
 
       /*
-        Stand a NEXT RELEASE up in front of the browser. A worker is only re-installed when its
-        bytes change — which is the entire reason the cache name carries the commit and not just the
-        package version — so the stamped tail is what moves here. The PREFIX deliberately does not:
-        changing that would make the new worker sweep a different namespace and the test would pass
-        while proving nothing about retiring its own.
+        Stand a NEXT RELEASE up in front of the browser: the same worker with a different stamped
+        tail, so it owns a different cache and has an old one of its own to retire. The PREFIX
+        deliberately does not move: changing that would make the new worker sweep a different
+        namespace and the test would pass while proving nothing about retiring its own.
       */
       swBody = readFileSync(resolve(dist, 'sw.js'), 'utf8').replace(/PREFIX \+ '[^']*'/, "PREFIX + 'next'");
       /*
-        ⚠️ **STARTED AND NOT AWAITED, AND THAT IS 0141 RATHER THAN A LONGER TIMEOUT.**
-        `docs/decisions/0141-await-the-post-condition-not-the-machinery.md`. `registration.update()`
-        does not resolve when the new worker is fetched — it resolves when the update algorithm has
-        finished, which includes running `install`, and this worker's `install` is
-        `waitUntil(Promise.all(SHELL.map(c.add({cache: 'reload'}))))`: **nine forced network fetches
-        through the single Node server this suite is itself running.** Awaiting it makes the test
-        depend on all of that completing promptly, on a machine it does not control.
+        ── REGISTERED UNDER A NEW URL, BECAUSE CHROMIUM PARKS AN UPDATE UNTIL STARTUP IS OVER ─────
 
-        ⚠️ **AND THE TEST NEVER NEEDED IT** — its own comment below says to wait for the SWEEP, which
-        happens later still, in `activate`. `cacheKeysUntil` already polls for exactly that
-        post-condition. So the dependency is removed rather than bounded: 0139 gave this failure a
-        name, and the name is what made it obvious that the wait was not load-bearing.
+        ⚠️ **`docs/decisions/0407-an-update-waits-for-the-browser-to-finish-starting.md`.** This used
+        to call `registration.update()` and let the browser find the new bytes. Chromium posts every
+        UPDATE job, explicit `update()` included, as a `BEST_EFFORT` task, and those do not run
+        until the browser calls its own startup complete. That happens when a visible page goes
+        loaded-and-idle, and this page is a game that never idles. So every run of this test waited
+        about ten seconds with nothing fetched, and on a loaded runner the wait ran past the whole
+        sweep budget. That was the intermittent failure. A REGISTRATION job runs at normal priority,
+        and a different script URL is what makes it one.
 
-        ⚠️ **The rejection is kept rather than dropped.** If the new worker genuinely fails to
-        install, the sweep never happens either — and without this the test would report a stale
-        cache, which is the symptom two steps downstream of the cause.
+        The query string is a new URL to the browser and the same file to the server above, which
+        drops it. What this test asserts is the sweep in `activate`. How the browser learns about a
+        new release is the browser's job and is not asserted here.
+
+        ⚠️ **STARTED AND NOT AWAITED** — `docs/decisions/0141-await-the-post-condition-not-the-machinery.md`.
+        The promise settles only after `install` has run its nine forced fetches through this
+        suite's own server, and the test waits for the sweep below anyway. **The rejection is
+        kept**, so a worker that genuinely fails to install reports as that and not as a stale cache.
       */
       await page.evaluate(`
-        window.__updateFailed = null;
+        window.__nextFailed = null;
         navigator.serviceWorker
-          .getRegistration()
-          .then(function (r) { return r.update(); })
-          .catch(function (e) { window.__updateFailed = String(e); });
+          .register(new URL('./sw.js?next', location.href).href, { scope: new URL('./', location.href).href })
+          .catch(function (e) { window.__nextFailed = String(e); });
         'started';
       `);
 
@@ -355,8 +362,8 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
         stale cache*: the symptom two steps downstream of the cause, and the reading that sent this
         investigation after the cache logic rather than after the fetch.
       */
-      const updateFailed = await within('window.__updateFailed', POLL_MS, page.evaluate('window.__updateFailed'));
-      expect(updateFailed, `the new worker never installed, so there was nothing to sweep${worker}`).toBeNull();
+      const nextFailed = await within('window.__nextFailed', POLL_MS, page.evaluate('window.__nextFailed'));
+      expect(nextFailed, `the new worker never installed, so there was nothing to sweep${worker}`).toBeNull();
       expect(keys, `the worker kept a stale cache of its own${worker}`).not.toContain('into-the-coil-0.0.1+stale');
       // THE assertion this test exists for. On itch.io every HTML game shares one origin, so a
       // sweep that deletes what it did not create is one game deleting another game's offline copy.

@@ -40,24 +40,46 @@ export default function setup(): void {
   }
 
   const root = fileURLToPath(new URL('..', import.meta.url));
-  execFileSync(process.execPath, [resolve(root, 'node_modules/vite/bin/vite.js'), 'build'], {
-    cwd: root,
-    stdio: 'ignore',
-    /**
-     * ⚠️ NODE_ENV IS EXPLICIT, AND THIS IS NOT DEFENSIVE TIDINESS.
-     *
-     * Vitest sets `NODE_ENV=test` in its own process, `execFileSync` inherits the environment, and
-     * Vite honours an already-set `NODE_ENV` rather than forcing `production` — so this build
-     * produced `import.meta.env.PROD === false`, and every `PROD`-guarded branch was eliminated
-     * from the bundle. The service-worker registration in `src/main.ts` is one, and it vanished.
-     *
-     * That is the worst shape a test rig can have: the suite goes green against an artifact that is
-     * NOT the artifact that ships, and it is silent about the difference. Found by the offline test,
-     * which could not explain why no worker ever took control; `tests/shell.test.ts` now asserts the
-     * registration survives into `dist/`, so the next occurrence fails loudly instead.
-     */
-    env: { ...process.env, NODE_ENV: 'production' },
-  });
+  /**
+   * ⚠️ THE BUILD'S OWN ERROR IS CAPTURED RATHER THAN DISCARDED, AND THAT IS THE POINT OF THE `try`.
+   *
+   * This was `stdio: 'ignore'`, which is quiet on success and silent on failure — so a tree that did
+   * not compile threw `Command failed: …vite.js build` and nothing else, naming no file and no line.
+   * `npm run prove` applies breaks that sometimes do not compile, and the one that did cost a
+   * debugging cycle to place: `docs/decisions/0409-a-failed-build-says-what-failed.md`.
+   *
+   * `'pipe'` is just as quiet on the happy path — the output goes to the error object rather than to
+   * the console — so the diagnostic costs nothing on every other run.
+   */
+  try {
+    execFileSync(process.execPath, [resolve(root, 'node_modules/vite/bin/vite.js'), 'build'], {
+      cwd: root,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      /**
+       * ⚠️ NODE_ENV IS EXPLICIT, AND THIS IS NOT DEFENSIVE TIDINESS.
+       *
+       * Vitest sets `NODE_ENV=test` in its own process, `execFileSync` inherits the environment, and
+       * Vite honours an already-set `NODE_ENV` rather than forcing `production` — so this build
+       * produced `import.meta.env.PROD === false`, and every `PROD`-guarded branch was eliminated
+       * from the bundle. The service-worker registration in `src/main.ts` is one, and it vanished.
+       *
+       * That is the worst shape a test rig can have: the suite goes green against an artifact that
+       * is NOT the artifact that ships, and it is silent about the difference. Found by the offline
+       * test, which could not explain why no worker ever took control; `tests/shell.test.ts` now
+       * asserts the registration survives into `dist/`, so the next occurrence fails loudly instead.
+       */
+      env: { ...process.env, NODE_ENV: 'production' },
+    });
+  } catch (e) {
+    const spawned = e as { stdout?: Buffer | string | null; stderr?: Buffer | string | null };
+    throw new Error(
+      'globalSetup: the build failed, so NOT ONE TEST IN THIS RUN COULD START. This is not a test ' +
+        'failure and it is not a guard that stopped firing.\n' +
+        'If a probe is applied, LOOK AT THE PROBE: a break that does not compile fails here, and ' +
+        'nothing runs, and `npm run prove` reports that as NO SUCH GUARD.\n' +
+        `${String(spawned.stdout ?? '')}${String(spawned.stderr ?? '')}`,
+    );
+  }
   if (!existsSync(resolve(root, 'dist/index.html'))) {
     throw new Error('globalSetup: `vite build` produced no dist/index.html — the build tests cannot run');
   }

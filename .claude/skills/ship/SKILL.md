@@ -116,6 +116,15 @@ Nothing else does — [0001](../../../docs/decisions/0001-revertability-not-risk
 
 ## 8. After it merges
 
+```bash
+npm run tidy
+```
+
+**Always, and it is the step that gets skipped** —
+[0408](../../../docs/decisions/0408-the-ritual-tidies.md). It fast-forwards `main`, deletes the
+branches whose PR proves them merged, keeps the rest with a reason, and prunes worktrees. A worktree
+directory left holding a `node_modules` junction is not pruned; removing one is 0200's to ask about.
+
 - Rewrite `docs/state-of-play.md`: what is settled, what is next, why in that order. **Pointers and
   intentions, never findings** — [0038](../../../docs/decisions/0038-the-handover-is-a-file.md).
 - Play-testing happens on a deployed URL, and staging is `main` only. Hand over the branch preview
