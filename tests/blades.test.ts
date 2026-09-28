@@ -262,6 +262,14 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     const fought = (sweep: boolean): number => {
       const built = playableWorld(MEDUSA_ALONE, 'savior');
       const world = built.world;
+      /*
+        ⚠️ **THE RAIN WITHOUT THE TENTACLES IN FRONT OF IT, SINCE 0403.** Five tentacles now hang down the
+        lane between the ship and the bell, and a blade spends its edges on them before it ever meets the
+        void thrown from the heart — so with them the rain decides nothing and this held nothing (0400's
+        proof: *went red, but on the wrong test*). What is measured is still medusa's own rain, from the
+        heart, at its own rate; the tentacles' part in the fight is `tests/medusa.test.ts`'s.
+      */
+      world.bossRow = { ...world.bossRow, tendrils: undefined };
       world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
       wearHull(world);
       const frame = new GameFrame(world);
@@ -295,10 +303,18 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     const swept = fought(true);
     const rained = fought(false);
     expect(swept, 'the blade did nothing even with the rain swept, so the share means nothing').toBeGreaterThan(10);
+    /*
+      ⚠️ **A SIXTH, NOT TWO THIRDS, SINCE 0402 — the quantity checked in the case it is now applied to
+      (0280).** A third was right against the medusa that bobbed and threw ten void a ring: the defect took
+      the blade to a fortieth. Set over its heart and throwing eight, the medusa's rain costs a whole blade
+      nothing (110.3 a second rained against 109.6 swept), and a void that eats the whole blade takes it
+      to 78.9, which is 0.72 — well over a third, so the old line stayed green over the defect (CI's proof:
+      *went red, but on the wrong test*). Measured with a throwaway copy of this fight, not kept.
+    */
     expect(
       rained,
       `the blade takes ${rained.toFixed(1)} a second off medusa through its own void rain against ${swept.toFixed(1)} with the rain swept`,
-    ).toBeGreaterThan(swept / 3);
+    ).toBeGreaterThan(swept * 0.85);
   });
 });
 

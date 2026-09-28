@@ -68,6 +68,20 @@ cannot float beside its trunk. The painter lays each vessel as capsule lengths e
 | *each vessel into the heart leaves a trunk where the trunk is drawn* (`tests/heart.test.ts`) | the vessel's trunk read without the parallax |
 | *drawn only where a fight has a heart* | no heart handed to the painter |
 
+## ⚠️ Three guards elsewhere that this moved, found by CI's whole proof
+
+- **0268's second probe is retired.** It broke the bob's angle through a brace, and the jellyfish was the
+  last bobbing boss that held still for a laser. With no content left to reach that line, the proof
+  reported it STILL GREEN. The line stays in `src/app/boss.ts`.
+- **0357's picture guard measures the rain without the tentacles** (`tests/blades.test.ts`). The
+  tentacles take the blades before the void does, so with them the rain decided nothing. **Its line
+  moved from a third to 0.85**, checked in the case it now applies to. The rain now costs a whole blade
+  nothing (110.3 against 109.6 swept), and the defect takes it to 0.72, where it used to take it to a
+  fortieth.
+- **0206's cloud-wrap guard had lost its end marker** (`tests/sky.test.ts`). Its heading was retitled by
+  [0211](0211-every-place-has-its-own-structure.md), so its slice ran to the end of the file and held
+  by luck until 0401 added a wrap of its own. Both ends are now required to be present.
+
 ## Not held by any guard
 
 **Whether the vessels read as the level's arteries leading to the heart.** Photographed on the bench.

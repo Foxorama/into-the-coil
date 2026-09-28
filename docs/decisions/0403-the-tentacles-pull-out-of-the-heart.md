@@ -21,8 +21,13 @@ Asked whether touching a tentacle hurts the ship: *"They sting."*
 **A tentacle is `nodes` bodies in `bossBody`** (`BossRow.tendrils`), laid every step down the line from
 its `root` on the bell's margin to its tip. A wave runs down it, growing to `sway` lane units at the
 tip, each tentacle a little out of step with the next. As a hydra's head is ([0384](0384-the-hydra-stands-in-the-acid.md)),
-a hit on one is spent on the hull at the row's `hurt`, here half. A ship that touches one is hurt as
-it would be by the hull. Each length is drawn at its thickness there and turned to the next one out.
+a hit on one is spent on the hull at the row's `hurt`, **here all of it**. A ship that touches one is
+hurt as it would be by the hull.
+
+⚠️ **The first draft passed half, and that doubled the fight.** The tentacles hang between the ship
+and the bell, so nearly every frontal shot meets one first. At half, the fight would have run at about
+half the damage [0386](0386-every-phase-is-fought-for-as-long.md) banded its phases against. The
+player's answer was *they sting*, and a shot on the animal is a shot on the animal. Each length is drawn at its thickness there and turned to the next one out.
 They overlap with no outline, so eight read as one tentacle.
 
 **They lie in the arteries and pull out when the room is still.** Tentacle `k` lies along artery `k`,

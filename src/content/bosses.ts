@@ -3966,8 +3966,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     /*
       ⚠️ **FIVE TENTACLES, ONE A LASER — 0403**, rooted along the bell's margin where the frill is and
       hanging down the lane to `MEDUSA_TIPS`. Eight lengths of 4.1 units: a wave along them bends as a
-      tentacle does rather than as a chain of rods. Half of a hit on one reaches the hull — they are the
-      animal, and the bell over the heart is where it is meant to be fought.
+      tentacle does rather than as a chain of rods. **All of a hit on one reaches the hull**: they hang
+      between the ship and the bell, so nearly every frontal shot meets a tentacle first, and a half
+      share doubled the fight that 0386 banded — the first draft had it, and CI's proof is what made the
+      arithmetic visible. They are the animal, and a hit on the animal is a hit.
     */
     tendrils: {
       roots: [
@@ -3989,7 +3991,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       beat: 150,
       draw: 90,
       brace: 18,
-      hurt: 0.5,
+      hurt: 1,
     },
     /*
       ⚠️ **THE LABYRINTH'S ROOM WITH NO WALLS — 0400.** *"The boss fight needs to be similar to the
