@@ -18,7 +18,8 @@ import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
-import { RANGE_OF } from '../render/bake.ts';
+import { RANGE_OF, type Atlas } from '../render/bake.ts';
+import { bakePort } from '../render/port-bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
@@ -869,6 +870,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let view = measure();
   let dpr = fitCanvas(canvas, ctx, viewportWidth(host), viewportHeight(host));
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
+  // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
+  let port: Atlas | null = null;
   const surface = new CanvasSurface(ctx, atlas);
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
@@ -994,6 +997,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     steps: 0,
     // 0362: a run's picture runs on the sim's own clock, and only the music room says otherwise.
     pictureSteps: null,
+    intro: null,
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
     heartBeat: 0,
     cameraAlong: 0,
@@ -1230,6 +1234,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const applyScreen = (): void => {
     const screen = state.screen.current;
     world.stepping = SCREENS[screen].steps;
+    /*
+      ⚠️ **THE INTRO DRAWS FROM ITS OWN ATLAS, AND GIVES IT BACK** — 0411. The port is baked here rather
+      than at boot so a resize or a rotation back from portrait re-bakes it at the resolution it will
+      now be blitted at, on the same `atlasIsStale` terms as the game's; and it is dropped the moment
+      the intro is over, because nothing will draw it again this page.
+    */
+    if (screen === 'intro' && playable) {
+      const resolution = view.scale * dpr;
+      if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution);
+      surface.setAtlas(port);
+      world.intro = 0;
+    } else if (world.intro !== null) {
+      world.intro = null;
+      port = null;
+      surface.setAtlas(atlas);
+    }
     /*
       ⚠️ **THE CROSSING IS ARMED HERE AND ON NO OTHER PATH, WHICH IS WHAT MAKES IT ONCE PER LEVEL** —
       0340. This runs only on a real transition (`moved` at the call site), so arming it is the same
@@ -1753,7 +1773,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const backdrop: ThemeKind = place ?? 'approach';
     if (atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
       atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
-      surface.setAtlas(atlas);
+      // Not over the port's own atlas while the intro is drawing from it — 0411.
+      if (world.intro === null) surface.setAtlas(atlas);
     }
     const clouds = place === null ? PALETTES[palette].sky : THEMES[place].nebula[palette];
     /*
@@ -2593,9 +2614,41 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     when the tab goes to the background, so the gesture that brings the player back is the one that
     has to revive it — `unlock` is idempotent and re-resumes rather than rebuilding.
   */
-  const unlock = (): void => audioOut.unlock();
+  /*
+    ⚠️ **BUT NOT FROM THE INTRO** — 0411. The first unlock drains whatever of the music prewarm is left,
+    synchronously: five seconds of a frozen page when it comes early. A press on the intro is a skip,
+    and a skip that froze the picture for five seconds before the title came up reads as a hang. So the
+    skip does not unlock; the first press on the title does, exactly as it did before the intro existed
+    — and a player who watched the intro through finds the prewarm already done.
+  */
+  const unlock = (): void => {
+    if (state.screen.current === 'intro') return;
+    audioOut.unlock();
+  };
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
+
+  /*
+    ⚠️ **ANY PRESS SKIPS THE INTRO, AND THAT IS ALL IT DOES** — 0411. In the capture phase like the
+    unlock above, so it is heard before anything on the page, and it goes to the title rather than past
+    it: a press that skipped the picture AND chose a tier would be choosing for the player.
+
+    ⚠️ **A PRESS HERE MUST NOT CARRY THROUGH ONTO THE TITLE'S BUTTONS**, and
+    `tests/intro.browser.test.ts` holds it rather than this comment. A click is dispatched to the element
+    both halves of it landed on, and the pointer went down on the canvas, so a click cannot. **A key
+    could, and Enter did**: the skip puts focus on the title's first tier, and the platform activates a
+    focused button on the `keypress` that FOLLOWS the keydown — by which time the tier is focused. The
+    first build started a run from a skip. So an activation key that skips has its default cancelled,
+    which cancels the keypress; any other key keeps its default, because a reload pressed during the
+    intro is still a reload.
+  */
+  const skipIntro = (e?: Event): void => {
+    if (state.screen.current !== 'intro') return;
+    if (e instanceof KeyboardEvent && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();
+    dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+  };
+  window.addEventListener('pointerdown', skipIntro, { capture: true });
+  window.addEventListener('keydown', skipIntro, { capture: true });
 
   /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
@@ -2626,6 +2679,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
+    // The pad skips the intro as a key does, and does nothing else on it — not even the unlock — 0411.
+    if (state.screen.current === 'intro') {
+      if (menuAsk.move !== 0 || menuAsk.confirm) skipIntro(undefined);
+      return;
+    }
     /*
       ⚠️ **THE PAD ASKS FOR THE UNLOCK TOO, AND IT IS NOT POINTLESS EVEN THOUGH IT USUALLY FAILS.**
       Reported, as an objection to this decision's own wording: *"if the gamepad can move between
@@ -2716,6 +2774,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       drawn into.
     */
     stepCrossing();
+    // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
+    if (world.intro !== null) world.intro++;
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();
@@ -2886,7 +2946,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const wantResolution = next.scale * nextDpr;
     if (atlasIsStale(atlas, wantView, wantResolution, atlas.theme)) {
       atlas = bakeAtlas(colours, wantView, wantResolution, atlas.theme);
-      surface.setAtlas(atlas);
+      // The port's is re-baked by `applyScreen`, which `setPlayable` below runs — 0411.
+      if (world.intro === null) surface.setAtlas(atlas);
     }
     view = next;
     dpr = nextDpr;
@@ -2979,6 +3040,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       window.clearTimeout(settling);
       window.removeEventListener('pointerdown', unlock, { capture: true });
       window.removeEventListener('keydown', unlock, { capture: true });
+      window.removeEventListener('pointerdown', skipIntro, { capture: true });
+      window.removeEventListener('keydown', skipIntro, { capture: true });
       chrome.release();
       world.input.release();
       // Closes the context and drops the buffers. A page that mounts twice must not leave the first

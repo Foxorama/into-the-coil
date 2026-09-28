@@ -23,6 +23,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { pastIntro } from './intro.ts';
 import { framesInARow, moved } from './frames.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
@@ -96,6 +97,7 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
  * twice by unrelated work. It is asserted below, not assumed.
  */
 async function start(page: Page): Promise<void> {
+  await pastIntro(page);
   await page.click('.' + prefixFor('title') + 'action');
   await page.waitForTimeout(120);
 }
@@ -333,6 +335,7 @@ describe.runIf(chromePath)('a turn leaves nothing behind it', () => {
       sliding in was a screen change. Measured on the title: focus on the second control, then resize.
     */
     const page = await open(LANDSCAPE);
+    await pastIntro(page);
     const actions = '.' + prefixFor('title') + 'action';
     const second = await page.evaluate((selector: string) => {
       const control = document.querySelectorAll<HTMLElement>(selector)[1];

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { pastIntro } from './intro.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
@@ -43,6 +44,7 @@ async function open(): Promise<Page> {
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await pastIntro(page);
   return page;
 }
 

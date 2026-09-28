@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
+import { pastIntro } from './intro.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
@@ -84,7 +85,7 @@ declare global {
  * instances the game builds.** Counting `createBuffer` counts the bake; counting `createBufferSource`
  * counts voices, because a source node is single-use and there is exactly one per sound.
  */
-async function open(): Promise<Page> {
+async function open(skipIntro = true): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
   const page = await context.newPage();
@@ -152,6 +153,9 @@ async function open(): Promise<Page> {
   });
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  // The one test about the page before anybody has touched it opens on the intro and stays there: a
+  // skip builds no sound (`tests/intro.ts`), but it is still somebody touching the page.
+  if (skipIntro) await pastIntro(page);
   return page;
 }
 
@@ -219,7 +223,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       builds the context ON the first gesture instead, and this is that being true rather than
       intended.
     */
-    const page = await open();
+    const page = await open(false);
     const before = await tally(page);
     expect(before.buffers, 'the page baked audio before anyone touched it').toBe(0);
     expect(before.voices, 'the page made a sound before anyone touched it').toBe(0);

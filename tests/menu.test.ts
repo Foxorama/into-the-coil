@@ -541,9 +541,18 @@ describe('a screen says whether it stops the world and whether it hides it', () 
   it('a screen that does not dim never carries a countdown, because it never took anything away', () => {
     // `docs/game.md`'s voice rule: no restating what the screen already shows. A number counting down
     // over a world that never stopped is a fact about nothing the player is waiting for.
+    /*
+      ⚠️ **ONLY A SCREEN WITH A PANEL SHOWS A COUNTDOWN, AND THE INTRO HAS NONE** — 0411. The intro
+      leaves on its own clock and neither dims nor steps, which this read as a number over a world
+      nobody stopped. There is no number: `setTimer` writes into the shown screen's panel and returns
+      without one, so the intro's timeout is its length and never a readout. The condition is
+      `hasChrome`'s, written out as the test below writes it.
+    */
     for (const screen of SCREEN_KINDS) {
-      if (SCREENS[screen].timeout === null || SCREENS[screen].dims) continue;
-      expect(SCREENS[screen].steps, `${screen} shows a countdown over a world it did not stop`).toBe(true);
+      const row = SCREENS[screen];
+      const hasChrome = row.heading.length > 0 || row.actions.length > 0 || row.pushed;
+      if (row.timeout === null || row.dims || !hasChrome) continue;
+      expect(row.steps, `${screen} shows a countdown over a world it did not stop`).toBe(true);
     }
   });
 });
