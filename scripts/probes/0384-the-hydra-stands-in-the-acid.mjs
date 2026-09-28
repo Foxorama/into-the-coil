@@ -62,8 +62,9 @@ export const PROBES = [
     guard: 'EVERY HEAD’S ATTACK LEAVES ITS OWN MOUTH',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      b.fromAlong = boss.along + mouth - b.along;',
-      replace: '      b.fromAlong = boss.along + 0 * mouth - b.along;',
+      // Re-anchored by 0403, whose tentacles root a beam at their tips.
+      find: '      b.fromAlong = boss.along + mouth + beamRootOf(w.bossRow) - b.along;',
+      replace: '      b.fromAlong = boss.along + 0 * mouth + beamRootOf(w.bossRow) - b.along;',
     },
   },
   {
@@ -74,8 +75,9 @@ export const PROBES = [
     guard: 'A SHOT ON A HEAD HURTS THE HYDRA',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const hurt = chain !== null ? chain.hurt : w.bossRow.necks?.hurt;',
-      replace: '  const hurt = chain !== null ? chain.hurt : undefined;',
+      // Re-anchored by 0403, whose tentacles pass their hits on the same way.
+      find: '  const hurt = chain !== null ? chain.hurt : (w.bossRow.necks?.hurt ?? w.bossRow.tendrils?.hurt);',
+      replace: '  const hurt = chain !== null ? chain.hurt : (undefined ?? w.bossRow.tendrils?.hurt);',
     },
   },
   {

@@ -177,8 +177,14 @@ export type BossMove =
    * ⚠️ **AND A HULL THAT DOES NOT MOVE IS A HULL THE PLAYER CAN ALWAYS HIT.** That is the trade
    * taken rather than an oversight: what this fight asks of the player is the wall, and `tests/level.test.ts`'s
    * *a boss swings across the lane* is scoped to the arms that claim to.
+   *
+   * ⚠️ **`throb`, AND A SEAT WITH ONE BEATS — 0400.** The share of its size the seat swells by on a
+   * heartbeat at full strength: the Black Heart's heart is the seat of its fight, and *"you can see the
+   * heart beating behind it"* is the ask. It beats to the heart the player HEARS (`Entity.throb`, read
+   * against the music's clock by the painter), so it is picture and never touches the sim. Absent is a
+   * housing, which does not beat.
    */
-  | { kind: 'socket'; at: number; seat: number }
+  | { kind: 'socket'; at: number; seat: number; throb?: number }
   /**
    * Stands in the floor — `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
    *
@@ -447,9 +453,17 @@ export type BossAttack =
    *
    * ⚠️ **`jag`, AND A BEAM WITH ONE IS A ZIGZAG — 0388.** How far either side of its line the beam's
    * knots swing, in lane units: a new random zigzag every beam, warned along the path it will burn.
-   * Absent is straight, which is Medusa's — asked of the pterodactyls, not of every laser.
+   * Absent is straight.
+   *
+   * ⚠️ **`together`, AND A VOLLEY WITH IT IS ONE ZIGZAG LAID DOWN EVERY ROOT — 0403.** *"The lasers fire
+   * from the tentacles is a jagged formation like the updated pteradactyl and hydra, there's still 5
+   * that fire, but they need to be jagged so that there's a safe gap."* Five beams each jagged their
+   * own way close on each other wherever two knots swing inward, and the gap between them is whatever
+   * the dice left. One seed for the volley puts the same knots on every beam: they bend as one, and the
+   * room between two neighbours is their spacing less their widths along the whole of their length.
+   * Absent is a seed a beam, which is the pterodactyl's and the hydra's.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[]; jag?: number }
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[]; jag?: number; together?: boolean }
   /**
    * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
    * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
@@ -846,6 +860,17 @@ export type Fall =
       every: number;
       count: number;
       from: number;
+      /**
+       * The share of the boss's full health a body gives back when it drifts into the boss — its hull
+       * or any body of it — and is gone, or absent for a fall that is only a hazard — 0404.
+       *
+       * ⚠️ **ASKED FOR**: *"if a falling jellyfish hits the boss, the boss regains 5% health and the
+       * jellyfish disappears -> this includes if they hit a tentacle."* So the rain is the player's to
+       * shoot twice over: once because it hurts, and once because it feeds. And a heal that carries the
+       * health back over a phase's line is that phase again (`phaseFor` reads health, and the player
+       * chose it): the bell shuts while it is fed past its last fifth.
+       */
+      feeds?: number;
     };
 
 /**
@@ -1236,6 +1261,52 @@ export interface Necks {
    * after the one before, in the order listed. Spots are the row's because the body is the row's.
    */
   blaze?: { from: number; travel: number; gap: number; spots: readonly { along: number; across: number; size: number }[] };
+}
+
+/**
+ * A jellyfish's tentacles — `docs/decisions/0403-the-tentacles-pull-out-of-the-heart.md`.
+ *
+ * ⚠️ **ASKED FOR**: *"when the player gets to the screen, the jellyfish tentacles need to 'pull out' from
+ * the background where the arteries of the heart are and start waving around"*, *"the lazes fire from
+ * the tentacles"*, and — asked whether a tentacle stings — *"they sting"*. Each tentacle is `nodes`
+ * bodies in `bossBody`, laid every step down a curve from its `root` on the bell's rim to its `tip`,
+ * waving across the lane; a hit on one is the row's `hurt` share on the hull, as a hydra's head's is, and
+ * the ship that touches one is hurt as it would be by the hull.
+ *
+ * ⚠️ **THEY PULL OUT OF THE HEART'S ARTERIES.** On the step the fight's camera comes to rest the tentacles
+ * lie along the vessels that run into the heart (`src/content/veins.ts`'s `ARTERIES`, tentacle `k` along
+ * artery `k`), and over `draw` steps they peel off them into their hanging places. **They do not sting
+ * while they are pulling out** — a tentacle sweeping out of the background across the ship would be a hit
+ * nobody could see coming. They can be shot, as the bell over the heart already can.
+ *
+ * ⚠️ **AND A TENTACLE FIRES FROM ITS TIP.** Beam `k` of a volley leaves from the tip at rest (`tips[k]`);
+ * while the boss holds a volley the tentacles straighten into their rest over `brace` steps, so the laser
+ * and the thing it comes out of are in the same place. `tests/medusa.test.ts` holds the beams' roots to
+ * the tips.
+ */
+export interface Tendrils {
+  /** Where each leaves the bell's rim, `[along, across]` from the hull's centre. */
+  roots: readonly (readonly [number, number])[];
+  /** Where each tip hangs at rest, across the lane from the hull's centre — beam `k`'s root is tip `k`. */
+  tips: readonly number[];
+  /** How far down the lane from the hull's centre every tip hangs, in world units — a negative number. */
+  reach: number;
+  /** Lengths of tentacle each is drawn and hit as. */
+  nodes: number;
+  sprite: number;
+  spriteHit: number;
+  /** A length's hurtbox at the root, and the share of it at the tip. */
+  radius: number;
+  taper: number;
+  /** How far the tip waves each side of its rest, in lane units, and the steps one wave takes. */
+  sway: number;
+  beat: number;
+  /** Steps a tentacle takes to peel out of its artery into its place. */
+  draw: number;
+  /** Steps a tentacle takes to straighten when a volley is held, and to go slack after. */
+  brace: number;
+  /** How much of a hit on a tentacle reaches the hull — 1 for all of it. */
+  hurt: number;
 }
 
 /**
@@ -1700,6 +1771,11 @@ export interface BossRow extends Body {
    */
   tail: Tail | null;
   /**
+   * Its tentacles — 0403. Absent for a boss with none, on `necks`' terms below: only the animal that
+   * has them says so.
+   */
+  tendrils?: Tendrils;
+  /**
    * The necks it grows, a head on each — `docs/decisions/0384-the-hydra-stands-in-the-acid.md`.
    * Absent for a boss with one head or none, which is fourteen of them.
    *
@@ -1797,8 +1873,15 @@ export interface Room {
   settle: number;
   /** How far behind the resting camera the room's open side sits, in world units. */
   mouth: number;
-  /** The bitmap the walls are tiled from. */
-  wall: number;
+  /**
+   * The bitmap the walls are tiled from, or `null` for a room with none — 0400.
+   *
+   * ⚠️ **ASKED FOR**: *"the boss fight needs to be similar to the labyrinth in that it's a stationary
+   * screen, no walls."* What makes a room is the camera coming to rest; the walls are what made the
+   * Labyrinth's one a labyrinth, and the Black Heart is not one. A room with no walls lays nothing for
+   * the painter (`w.room` stays `null`) and has nothing to part, so it states `opens: 0`.
+   */
+  wall: number | null;
   /**
    * Steps the far wall takes to part once the fight is over — 0337.
    *
@@ -2081,6 +2164,19 @@ const WINGS: readonly (readonly [number, number])[] = [
   [-3, -20],
   [-3, 20],
 ];
+
+/**
+ * Where the jellyfish's tentacles hang at rest, across the lane from its centre — 0403: fanned wider
+ * than the bell, because a laser leaves each tip and the room between two neighbours is the room the
+ * player has. Thirteen apart, less two half-widths, is at least nine lane units at every point of a volley
+ * (`together`), against a ship two across — eleven was tried first, and photographed, the beams' glow
+ * closed most of each gap on the screen even where the hurtbox left it open.
+ */
+const MEDUSA_TIPS = [-26, -13, 0, 13, 26] as const;
+
+/** How far down the lane from its centre the tips hang, and where the roots leave the bell's rim. */
+const MEDUSA_REACH = 40;
+const MEDUSA_RIM = -10.8;
 
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
@@ -3837,27 +3933,73 @@ export const BOSSES: Record<BossKind, BossRow> = {
     ],
   },
   /**
-   * The Black Heart's end: the jellyfish, with the heart pulsing inside it.
+   * The Black Heart's end: a jellyfish of glass hung over the heart, in a room with no walls.
    *
-   * ⚠️ **It opens at the end, and that is the ask** — *"final phase will be the jellyfish opening
-   * up and the black heart spewing forth a rain of void blasts."* The bared window is the opening;
-   * the rain of void, the tendrils that pulse lightning, and the moon jellies that fall on the
-   * player are owed. Its ring gets denser as it dies and its curtain is the tendrils' stand-in.
+   * ⚠️ **WHAT IT WAS, AND WHY NONE OF IT STAYED** — 0400 to 0404, one play-report's thirteen items. It
+   * bobbed across a level that scrolled on while the heart went past a long way off; its hull was a bell
+   * to the front with snakes trailing off the back and a gold eye in it (*"it's not a medusa head"*); its
+   * tendrils were five straight beams from its middle; its moon jellies fell sideways in its own red; and
+   * its last fifth took twice the damage and looked exactly as the four before it.
    */
   medusa: {
-    move: { kind: 'bob', amplitude: 14, wavelength: 260, rear: 0 },
+    /*
+      ⚠️ **HUNG OVER THE HEART, AND THE HEART IS SET INTO THE PLACE — 0400.** *"The black heart needs to be
+      set into the screen like the cog boss at the end of the 4th"*, and *"the jellyfish boss is positioned
+      over the heart."* The gyre's move: it closes on the lane's middle and holds there, with the heart as
+      its seat, beating to the heart the music plays.
+    */
+    move: { kind: 'socket', at: ACROSS_SPAN / 2, seat: SPRITE.heart, throb: 0.07 },
     attack: { kind: 'ring' },
     // No curtain since 0255: it was the tendrils' stand-in, and the tendrils are here.
     uncoil: null,
-    // The moon jellies — 0255: from three quarters of its health, two a volley from the top edge.
-    fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75 },
+    /*
+      The moon jellies — 0255: from three quarters of its health, two a volley from the top edge. And a
+      jelly that drifts into it or any tentacle of it feeds it a twentieth of its health — 0404.
+    */
+    fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75, feeds: 0.05 },
     chill: null,
     muzzle: null,
     chain: null,
     face: null,
     entrance: null,
     tail: null,
-    room: null,
+    /*
+      ⚠️ **FIVE TENTACLES, ONE A LASER — 0403**, rooted along the bell's margin where the frill is and
+      hanging down the lane to `MEDUSA_TIPS`. Eight lengths of 4.1 units: a wave along them bends as a
+      tentacle does rather than as a chain of rods. **All of a hit on one reaches the hull**: they hang
+      between the ship and the bell, so nearly every frontal shot meets a tentacle first, and a half
+      share doubled the fight that 0386 banded — the first draft had it, and CI's proof is what made the
+      arithmetic visible. They are the animal, and a hit on the animal is a hit.
+    */
+    tendrils: {
+      roots: [
+        [MEDUSA_RIM, -13.9],
+        [MEDUSA_RIM, -7.7],
+        [MEDUSA_RIM, 0],
+        [MEDUSA_RIM, 7.7],
+        [MEDUSA_RIM, 13.9],
+      ],
+      tips: MEDUSA_TIPS,
+      reach: -MEDUSA_REACH,
+      nodes: 8,
+      sprite: SPRITE.tendril,
+      spriteHit: SPRITE.tendrilHit,
+      // The drawn tentacle's own half-thickness and a little over, so what stings is what is seen.
+      radius: 1.4,
+      taper: 0.5,
+      sway: 5,
+      beat: 150,
+      draw: 90,
+      brace: 18,
+      hurt: 1,
+    },
+    /*
+      ⚠️ **THE LABYRINTH'S ROOM WITH NO WALLS — 0400.** *"The boss fight needs to be similar to the
+      labyrinth in that it's a stationary screen, no walls."* The gyre's numbers: the camera settles over
+      two and a half seconds sixty units short of the fight, which puts the heart on its station and
+      stops it there with everything else.
+    */
+    room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
     sprite: SPRITE.boss14,
@@ -3867,26 +4009,33 @@ export const BOSSES: Record<BossKind, BossRow> = {
     health: 1870,
     damage: 3,
     station: 152,
-    drift: 5,
+    // Zero, on the gyre's terms (0332): a thing hung over a heart set into the place does not drift along it.
+    drift: 0,
     driftWavelength: 300,
     patrol: 0.24,
     shot: 'spit',
     phases: [
       /*
-        ⚠️ **FIVE PHASES, AND THE LAST ONE OPENS AND KEEPS THROWING — 0255.** A ring while whole;
-        at three quarters the tendrils — five beams hanging down the lane from the bell, pulsing
-        (0250's beam, short warning, short hold) — while the moon jellies begin to fall; a denser
-        ring at half; the tendrils wider and longer held at the last third; and at the last fifth
-        the bell opens: twice the damage taken, and a ring of ten void out of the heart every
-        sixth of a second. *"The black heart spewing forth a rain of void blasts."*
+        ⚠️ **FIVE PHASES, AND THE LAST ONE OPENS AND KEEPS THROWING — 0255, DRAWN SINCE 0402.** A ring
+        while whole; at four fifths the tentacles fire; a denser ring at three fifths; the tentacles held
+        longer at two; and at the last fifth the bell opens on the heart: twice the damage taken, and a
+        ring of void out of it.
+
+        ⚠️ **THE LASERS ARE ONE JAGGED FORMATION NOW — 0403.** From the five tips, with 0388's zigzag
+        and one seed a volley (`together`), so the four gaps between them are open all the way down the
+        lane; warned for 0.4 s rather than 0.2, because a zigzag has to be read before it is dodged —
+        the pterodactyl's and the hydra's are warned for 0.3 and 0.4.
+
+        ⚠️ **AND EIGHT VOID A RING RATHER THAN TEN — 0402.** *"It needs slightly less void balls
+        firing."* A fifth fewer, on the same cadence.
       */
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [-12, -6, 0, 6, 12] } },
+      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_TIPS, jag: 7, together: true } },
       { upTo: 0.6, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 12, hold: 18, halfWidth: 1.5, from: [-15, -7.5, 0, 7.5, 15] } },
+      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_TIPS, jag: 9, together: true } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
-      // runs into (0150's floor).
-      { upTo: 0.21, fireEvery: 36, shots: 10, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' } },
+      // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
+      { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
     ],
   },
 };

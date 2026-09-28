@@ -22,7 +22,7 @@ import { RANGE_OF } from '../render/bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
-import { VEINS_OF } from '../content/veins.ts';
+import { VEINS_OF, WEATHER_DEPTH, heartAt } from '../content/veins.ts';
 // 0340: the crossing's own rule, and the one knob over it.
 import {
   DEFAULT_TRAVEL,
@@ -96,6 +96,7 @@ import {
   launchSpecial,
   respawn,
   takeShield,
+  TENDRIL_SLOTS,
   wearHull,
   type World,
 } from './frame.ts';
@@ -231,8 +232,12 @@ export const CAPACITY = {
     thing there are MANY of. One boss that is twenty-six entities is a new line on that list rather
     than a bigger helping of an existing one, which is why the answer is a new total and not a
     re-slice of the old one.
+
+    ⚠️ **FORTY SINCE 0403: THE JELLYFISH'S FIVE TENTACLES OF EIGHT.** The serpent's twenty-six were the
+    most this pool held; five tentacles that wave need eight lengths each to bend as a tentacle does
+    rather than as a chain of rods. It is `TENDRIL_SLOTS` in `src/app/frame.ts` — one number.
   */
-  bossBody: 26,
+  bossBody: TENDRIL_SLOTS,
   /*
     ⚠️ **TWENTY-SEVEN: A FLAME FOR EVERY NODE AND ONE FOR THE HEAD — 0305**, and 0286's line on the
     worst case again rather than a slice of another pool. *"A dark aura, kind of like a super saiyan
@@ -459,7 +464,7 @@ export const SKY = [
     there is. `paintScene` walks this array in order and the order is the only thing that decides what
     is in front of what.
   */
-  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },
+  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },
   { sprite: SPRITE.skyFar, extent: SPRITE_EXTENT.skyFar, depth: 0.33 },
   { sprite: SPRITE.skyNear, extent: SPRITE_EXTENT.skyNear, depth: 0.825 },
   { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
@@ -488,7 +493,7 @@ export const SKY = [
  * of rates rather than the largest of them.
  */
 export const SKY_ON_A_PLANET = [
-  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: 0.09 },
+  { sprite: SPRITE.skyNebula, extent: SPRITE_EXTENT.skyNebula, depth: WEATHER_DEPTH },
   { sprite: SPRITE.skyRush, extent: SPRITE_EXTENT.skyRush, depth: 2.7 },
   // Opaque, so its tiles overlap rather than meet and no join shows the sky through the land — 0347.
   { sprite: SPRITE.skyGround, extent: SPRITE_EXTENT.skyGround, depth: 0.45, opaque: true },
@@ -987,6 +992,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     steps: 0,
     // 0362: a run's picture runs on the sim's own clock, and only the music room says otherwise.
     pictureSteps: null,
+    // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
+    heartBeat: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -1023,6 +1030,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The mouths and births of a many-headed boss — 0384. @setup: built at mount, never in a frame.
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    // No tentacle out of anything yet — 0403.
+    tendrilsFrom: -1,
+    tendrilBrace: 0,
     // A ring of the head's lane, allocated once — 0283. @setup: built at mount, never in a frame.
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
@@ -2560,6 +2570,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       shownTheme = theme;
       music.setLevel(level, nearness, theme);
     }
+    /*
+      ⚠️ **THE HEART THE PLAYER HEARS, FOR THE PICTURE — 0401.** Read off the loops' own clock at the
+      rung just asked for, in the place just asked for, so the vessels flare on the beat the speakers
+      play. The frame reads it in `draw` and nowhere else.
+    */
+    const veins = VEINS_OF[theme];
+    world.heartBeat = veins === null ? 0 : heartAt(theme, veins, level, music.clock());
   };
 
   /*

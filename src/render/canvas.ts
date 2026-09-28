@@ -90,13 +90,16 @@ export class CanvasSurface implements Surface {
     this.ctx.fillRect(0, 0, this.width, this.height);
   }
 
-  blit(sprite: number, x: number, y: number, scale: number, turn = 0): void {
+  blit(sprite: number, x: number, y: number, scale: number, turn = 0, alpha = 1): void {
     const bitmap = this.atlas.bitmaps[sprite];
-    if (bitmap === undefined) return;
+    if (bitmap === undefined || alpha <= 0) return;
     const size = this.atlas.extents[sprite]! * scale;
     const half = size / 2;
+    // 0401: a faded blit is the same one draw with the context's alpha set round it, and put back.
+    if (alpha < 1) this.ctx.globalAlpha = alpha;
     if (turn === 0) {
       this.ctx.drawImage(bitmap, x - half, y - half, size, size);
+      if (alpha < 1) this.ctx.globalAlpha = 1;
       return;
     }
     /*
@@ -111,6 +114,7 @@ export class CanvasSurface implements Surface {
     ctx.rotate(turn);
     ctx.drawImage(bitmap, -half, -half, size, size);
     ctx.restore();
+    if (alpha < 1) ctx.globalAlpha = 1;
   }
 
   /**

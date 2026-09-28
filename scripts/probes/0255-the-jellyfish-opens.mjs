@@ -72,8 +72,9 @@ export const PROBES = [
     guard: 'THE FIVE PHASES: a ring, the tendrils',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [-12, -6, 0, 6, 12] } },",
-      replace: "attack: { kind: 'beam', warning: 12, hold: 12, halfWidth: 1.2, from: [0, 0, 0, 0, 0] } },",
+      // ⚠️ Re-anchored by 0403, whose lasers leave the tentacles' tips in one zigzag.
+      find: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_TIPS, jag: 7, together: true } },",
+      replace: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: [0, 0, 0, 0, 0], jag: 7, together: true } },",
     },
   },
 ];

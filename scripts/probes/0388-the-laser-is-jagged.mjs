@@ -38,8 +38,9 @@ export const PROBES = [
     guard: 'every beam is a new zigzag',
     edit: {
       path: 'src/app/boss.ts',
-      find: '          bolt.spin = beamRng.int(0, 0x7fffffff);',
-      replace: '          bolt.spin = 7 + 0 * beamRng.int(0, 0x7fffffff);',
+      // Re-anchored by 0403, whose volleys that fly together share one seed.
+      find: '          bolt.spin = attack.together === true ? volleySeed : beamRng.int(0, 0x7fffffff);',
+      replace: '          bolt.spin = attack.together === true ? volleySeed : 7 + 0 * beamRng.int(0, 0x7fffffff);',
     },
   },
   {

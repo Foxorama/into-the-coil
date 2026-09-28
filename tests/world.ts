@@ -111,6 +111,9 @@ export function inertLevel(): {
   // The mouths and births of a many-headed boss — 0384. Never read for a boss without necks.
   mouths: Float64Array;
   necksBorn: Float64Array;
+  // The jellyfish's tentacles — 0403.
+  tendrilsFrom: number;
+  tendrilBrace: number;
   bossTrail: Float32Array;
   bossTrailAt: number;
   chainPhase: number;
@@ -218,6 +221,9 @@ export function inertLevel(): {
     bossAura: new Pool<Entity>(CAPACITY.bossAura, makeEntity),
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    // 0403: no tentacle has pulled out of anything yet.
+    tendrilsFrom: -1,
+    tendrilBrace: 0,
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,
@@ -435,6 +441,8 @@ export function playableWorld(
     steps: 0,
     // 0362: the sim's own clock, as a run has it.
     pictureSteps: null,
+    // 0401: no heart heard, so none beating.
+    heartBeat: 0,
     cameraAlong: 0,
     prevCameraAlong: 0,
     scrollPerStep: SCROLL_PER_STEP,
@@ -497,6 +505,9 @@ export function playableWorld(
     bossAura,
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    // 0403: no tentacle has pulled out of anything yet.
+    tendrilsFrom: -1,
+    tendrilBrace: 0,
     bossTrail: new Float32Array(CHAIN_TRAIL),
     bossTrailAt: 0,
     chainPhase: 0,

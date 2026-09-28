@@ -197,6 +197,22 @@ export const SPRITE_KINDS = [
   // fall and by nothing else.
   'moonJelly',
   'moonJellyHit',
+  /*
+    ⚠️ **AND IN SIX GLOWS, BECAUSE THE RAIN IS A SHOAL AND NOT A UNIFORM — 0404.** *"They should
+    randomly have a range of glowing colours as they fall down (reds, blues, greens)"*, and *"a
+    different colour to the boss jellyfish"*. The base above is the crimson one; these are the other
+    five, each with its own hurt twin, and the row lists all six (`EnemyRow.tints`).
+  */
+  'moonJellyRose',
+  'moonJellyRoseHit',
+  'moonJellyAzure',
+  'moonJellyAzureHit',
+  'moonJellyCyan',
+  'moonJellyCyanHit',
+  'moonJellyEmerald',
+  'moonJellyEmeraldHit',
+  'moonJellyLime',
+  'moonJellyLimeHit',
   'sentry',
   'sentryHit',
   'shard',
@@ -600,6 +616,22 @@ export const SPRITE_KINDS = [
   'acidRise6',
   'boss14',
   'boss14Hit',
+  /*
+    ⚠️ **THE BELL OPEN — 0402.** *"The jellyfish needs to actually 'open and expose the heart' for the
+    increased damage (currently that never happens at all)."* The last phase took twice the damage from
+    0255 on and nothing was ever drawn to say so; this is its hull, worn by the phase (`BossPhase.hull`).
+  */
+  'boss14Open',
+  'boss14OpenHit',
+  /*
+    ⚠️ **THE HEART THE JELLYFISH HANGS OVER — 0400**, the seat of a `socket` move: scenery, in the
+    layer behind the hull, with no hurt twin because nothing collides with it. It beats to the heart
+    the player hears (`Entity.throb`), so it is the one seat that moves.
+  */
+  'heart',
+  // A length of the jellyfish's tentacle — 0403: a body in `bossBody`, so it has a hurt twin.
+  'tendril',
+  'tendrilHit',
   'bullet',
   /*
     ── WHAT SHOOTS BACK, AND IT WAS THE SAME BITMAP AS WHAT THE PLAYER FIRES ───────────────────────
@@ -1086,6 +1118,23 @@ export const SPRITE_KINDS = [
   */
   'veinBead',
   /*
+    ── THE VESSELS LIT, FOR THE BEAT — 0401 ─────────────────────────────────────────────────────────
+
+    *"The background arteries for the level need to pulse in time with the heartbeat to the music."*
+    The weather tile's vessels again, as light and nothing else, blitted over them at the heart's own
+    strength this frame — so the whole vessel swells with the beat rather than a bead on it. Baked with
+    the tile, in the place's own gas colour, and blank in every place without veins.
+  */
+  'skyVeins',
+  /*
+    ── THE HEART'S OWN VESSELS, FROM THE PLACE'S INTO IT — 0400 ─────────────────────────────────────
+
+    *"With the background level arteries leading to it."* A length of vessel, blitted along a curve from
+    where a trunk of the sky is this frame to where the heart is — so the place's arteries run into the
+    heart whatever the parallax has done. Re-baked with the tile, in its gas colour.
+  */
+  'artery',
+  /*
     ── THE EDGE OF THE PLAYER'S BOX, WHICH WAS A WALL WITH NOTHING DRAWN ON IT ─────────────────────
 
     Reported from play: *"the hard block on the player movement was a problem because there was no
@@ -1309,6 +1358,17 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // The kite's size, and told from it by shape: a bell over a fringe against a diamond — 0255.
   moonJelly: 6.5,
   moonJellyHit: 6.5,
+  // One body in six glows, so one box — 0404.
+  moonJellyRose: 6.5,
+  moonJellyRoseHit: 6.5,
+  moonJellyAzure: 6.5,
+  moonJellyAzureHit: 6.5,
+  moonJellyCyan: 6.5,
+  moonJellyCyanHit: 6.5,
+  moonJellyEmerald: 6.5,
+  moonJellyEmeraldHit: 6.5,
+  moonJellyLime: 6.5,
+  moonJellyLimeHit: 6.5,
   sentry: 7,
   sentryHit: 7,
   shard: 7.5,
@@ -1678,6 +1738,24 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   acidRise6: 12,
   boss14: 46,
   boss14Hit: 46,
+  // The bell parted — 0402: the same box, so the hull that opens is the hull that was shut (0332's rule).
+  boss14Open: 46,
+  boss14OpenHit: 46,
+  /*
+    ⚠️ **THE HEART IT HANGS OVER, AND SMALLER THAN THE BELL ON PURPOSE — 0400.** *"The black heart needs
+    to be set into the screen like the cog boss."* The seat, drawn behind the hull: 44 against the
+    bell's 46 puts the organ under the glass while the bell is shut, so it is seen THROUGH the jellyfish
+    (*"you can see the heart beating behind it"*), and its great vessels reach past the rim. 40 was the
+    first size, and on the bench most of it was under the frill.
+  */
+  heart: 44,
+  /*
+    ⚠️ **A LENGTH OF TENTACLE, AND THE TENTACLE IS EIGHT OF THEM — 0403.** Laid down a curve that is
+    waving, each turned to the curve and a little narrower than the one before, overlapping its
+    neighbours so no join shows at the camera the game ships.
+  */
+  tendril: 10,
+  tendrilHit: 10,
   bullet: 1.8,
   /*
     ⚠️ **Bigger than the pulse and drawn in the ENEMY ink** — 0081. It is the only thing on screen the
@@ -2040,6 +2118,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     held under the smallest thing that can kill the player.
   */
   veinBead: 4,
+  // The weather tile's own period, so the light lies on the vessels it lights — 0401.
+  skyVeins: ACROSS_SPAN * 2,
+  // A length of vessel five times as long as it is wide, so a dozen lie end to end down a curve — 0400.
+  artery: 10,
   /*
     ⚠️ **The TILING PERIOD of the dash, exactly as a sky tile's extent is.** Ten units is a mark and
     a gap, so the boundary is ten dashes down a hundred-unit lane — legible as a line at a glance and
@@ -2066,6 +2148,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
  * the bitmap's own box — 0277's halo ran off its tile and bled into the next sprite in the atlas.
  */
 export const SERPENT_BODY_DIAMETER = 15.7;
+
+/**
+ * A length of artery's capsule, as shares of the baked frame's radius (0.42 of the bitmap) — 0400: the
+ * baker draws it and the painter scales a length by its thickness to the vessel's width where it lies,
+ * and spaces them by its length so they meet end to end. One description for both.
+ */
+export const ARTERY_HALF_LENGTH = 0.95;
+export const ARTERY_HALF_WIDTH = 0.2;
 
 /**
  * The girth the fish's fire is blitted at — `docs/decisions/0395-the-fish-wears-its-fire.md`, as

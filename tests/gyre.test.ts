@@ -742,7 +742,8 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     // The sides: outside the lane, and the lane is already outside the player's box by its margin.
     expect(PLAYER_MARGIN, 'the ship can reach the lane’s own edge, so it can reach a wall on it').toBeGreaterThan(0);
     expect(laid.extent, 'the wall has no tiling period, so nothing is drawn').toBeGreaterThan(0);
-    expect(SPRITE_KINDS[laid.sprite], 'the room is not tiled from the wall the row names').toBe(SPRITE_KINDS[room.wall]);
+    expect(room.wall, 'the Labyrinth’s room has no walls').not.toBeNull();
+    expect(SPRITE_KINDS[laid.sprite], 'the room is not tiled from the wall the row names').toBe(SPRITE_KINDS[room.wall!]);
   });
 
   it('THE WHEEL: it rises out of its seat at each of the asked health shares, sprays all the way round, and sits back down', () => {

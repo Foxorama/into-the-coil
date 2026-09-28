@@ -176,10 +176,11 @@ export const PROBES = [
       path: 'src/render/scene.ts',
       // The blit alone — 0383 put the acid's front layer after this loop, and the closing braces it
       // anchored on were never what this probe breaks.
-      find: '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n',
+      // And the heart's throb on its scale — 0400.
+      find: '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);\n',
       replace:
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
-        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n',
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);\n' +
+        '      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);\n',
     },
   },
 ];

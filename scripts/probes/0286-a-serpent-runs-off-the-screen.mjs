@@ -83,8 +83,8 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0305, which raised it again for the aura, and by 0364 for the shot pool;
       // back to 500 is the same break.
       // ⚠️ And by 0374, for the storm's bolts and the whirlpool's blades, by 0377 for the rifts, and by
-      // 0379 for the surge's pods.
-      find: 'const WORST_CASE = 632;',
+      // 0379 for the surge's pods, and by 0403 for the jellyfish's tentacles.
+      find: 'const WORST_CASE = 646;',
       replace: 'const WORST_CASE = 500;',
     },
   },

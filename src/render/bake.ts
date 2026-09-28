@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS } from '../content/specials.ts';
-import { BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -575,6 +575,15 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   acidRise5: 'sky',
   acidRise6: 'sky',
   boss14: 'enemy',
+  boss14Open: 'enemy',
+  // A tentacle is the animal — 0403: it stings and it is shot, so it is in the ink of what can kill.
+  tendril: 'enemy',
+  /*
+    ⚠️ **THE HEART IS THE PLACE, ON THE SEAT'S TERMS — 0400.** It is scenery that nothing collides with,
+    as the gyre's housing is, so it takes the ink nothing the player must find is drawn in; what hurts is
+    the glass hung over it.
+  */
+  heart: 'sky',
   bullet: 'bullet',
   /*
     ⚠️ **THE ENEMY INK, and this is the one ink assignment in the table that changed a rule** — 0081.
@@ -781,6 +790,17 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   minnowHit: 'impact',
   moonJelly: 'enemy',
   moonJellyHit: 'impact',
+  // Six glows of one body — 0404, all of them the enemy's ink: a colour is what a jelly glows, not what it is.
+  moonJellyRose: 'enemy',
+  moonJellyRoseHit: 'impact',
+  moonJellyAzure: 'enemy',
+  moonJellyAzureHit: 'impact',
+  moonJellyCyan: 'enemy',
+  moonJellyCyanHit: 'impact',
+  moonJellyEmerald: 'enemy',
+  moonJellyEmeraldHit: 'impact',
+  moonJellyLime: 'enemy',
+  moonJellyLimeHit: 'impact',
   kiteHit: 'impact',
   // The swift — 0328. A shared body, in the place's ink like the other eight.
   swift: 'enemy',
@@ -855,6 +875,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   hydraHead3Hit: 'impact',
   hydraHead4Hit: 'impact',
   boss14Hit: 'impact',
+  boss14OpenHit: 'impact',
+  tendrilHit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
   debris: 'impact',
   /*
@@ -936,6 +958,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   bubble: 'sky',
   bubblePop: 'sky',
   veinBead: 'sky',
+  // The vessels lit, and the vessels into the heart — 0401, 0400: the place, on the bead's terms.
+  skyVeins: 'sky',
+  artery: 'sky',
   /*
     ⚠️ **The PLAYER's ink, because the thing it marks is the player's box and nothing else's.**
     Enemies, bullets and pickups all cross this line freely — `src/sim/flight.ts` clamps the ship and
@@ -4478,6 +4503,8 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   */
   const named = [row.sprite, row.spriteHit];
   if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
+  // A jellyfish's tentacles are its glass — 0403.
+  if (row.tendrils !== undefined) named.push(row.tendrils.sprite, row.tendrils.spriteHit);
   if (row.face !== null) named.push(...Object.values(row.face));
   /*
     ⚠️ **AND WHAT EVERY PHASE'S LOOK NAMES — 0305**, on this list's own terms: the horned faces and the
@@ -8506,73 +8533,309 @@ function drawAcidCap(ctx: Pen, size: number, rise: number, land: string, glow: s
 }
 
 /*
-  THE JELLYFISH. A bell to the front — the one hull with a curved edge — and six tendrils trailing
-  behind it, each a wedge from the rim to a point, spreading as they go; the black heart in the
-  bell, big, looking down the lane.
+  ── THE JELLYFISH, IN GLASS — 0402 ───────────────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR**: *"it's not a medusa head, it was also supposed to be a jellyfish"*, *"it needs to be
+  flipped"*, and *"the art needs to be updated so it's a translucent jellyfish and you can see the heart
+  beating behind it."* The hull that stood here was a bell to the FRONT with six wedges trailing behind
+  it and a gold eye in the middle — a head with snakes for hair, looking down the lane.
+
+  ⚠️ **SO THE BELL IS AT THE BACK AND WHAT HANGS FROM IT FACES THE PLAYER.** A jellyfish hangs its
+  tentacles below it, and *below* here is down the lane: the dome is at `+x`, the margin and its frill at
+  `−x`, and the oral arms hang from the middle of the margin towards the ship. The tentacles are not in
+  this bitmap at all — they are bodies of their own (0403), waving, and they leave from under the rim.
+
+  ⚠️ **AND IT IS GLASS: THE BELL IS FILLED AT A FIFTH, SO THE HEART UNDER IT IS SEEN.** The heart is the
+  seat, in the layer behind the hull (0400), and nothing here draws one. What makes a translucent thing
+  read as a THING rather than a smudge is its edges, so the light is spent there: a lit rim round the
+  dome, a glowing margin, the radial canals catching light, and a sheen along the crown.
 */
-/** The bell's centre and radius, in the frame. */
-const MEDUSA_BELL: readonly [number, number, number] = [-0.05, 0, 0.8];
-/** Each tendril's upper root, tip and lower root, top to bottom, off the rim behind the bell. */
-// Each root a quarter of `r` wide, on the serpent's argument: a tendril finer than the outline's
-// stroke is a dark spine with no light in it.
-const MEDUSA_TENDRILS: readonly (readonly [Pt, Pt, Pt])[] = [
-  [
-    [0, -0.8],
-    [0.72, -0.96],
-    [0.06, -0.58],
-  ],
-  [
-    [0.08, -0.5],
-    [0.95, -0.62],
-    [0.1, -0.28],
-  ],
-  [
-    [0.1, -0.2],
-    [1, -0.16],
-    [0.1, 0],
-  ],
-  [
-    [0.1, 0],
-    [1, 0.16],
-    [0.1, 0.2],
-  ],
-  [
-    [0.1, 0.28],
-    [0.95, 0.62],
-    [0.08, 0.5],
-  ],
-  [
-    [0.06, 0.58],
-    [0.72, 0.96],
-    [0, 0.8],
-  ],
+/** Where the margin — the bell's open edge — stands, and how far across it reaches, in the frame. */
+const MEDUSA_MARGIN = -0.56;
+const MEDUSA_REACH = 0.9;
+/**
+ * How far back the dome's crown stands. The bell is centred a little ahead of the hull's centre, so the
+ * dome — the glass — is over the heart rather than the margin (the first draw hid the heart under the
+ * frill, photographed on the bench).
+ */
+const MEDUSA_CROWN = 0.7;
+/** How many lappets scallop the margin. */
+const MEDUSA_LAPPETS = 9;
+
+/** A point on the dome at `t` in `[−π/2, π/2]`: the margin's top corner, round the crown, to the bottom. */
+function medusaDome(t: number): Pt {
+  const c = Math.cos(t);
+  // A superellipse a little fuller than an ellipse, so the crown is a dome rather than a lens.
+  return [MEDUSA_MARGIN + (MEDUSA_CROWN - MEDUSA_MARGIN) * Math.sign(c) * Math.abs(c) ** 0.8, MEDUSA_REACH * Math.sin(t)];
+}
+
+/**
+ * The oral arms, hanging from the middle of the margin towards the player: two frilled ribbons, the
+ * outline of `+y`'s then `−y`'s, from the margin out to the tip and back.
+ */
+const MEDUSA_ARM: readonly Pt[] = [
+  [-0.65, 0.29],
+  [-0.755, 0.25],
+  [-0.86, 0.27],
+  [-0.965, 0.21],
+  [-1.01, 0.14],
+  [-0.95, 0.09],
+  [-0.845, 0.11],
+  [-0.74, 0.07],
+  [-0.65, 0.08],
 ];
-function paintBoss14(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  const [bx, by, br] = MEDUSA_BELL;
-  // The rim lit round the front of the bell, and the bell's underside in shadow.
-  lit(ctx, f, skin, sector(br * 0.76, br * 0.9, Math.PI - 0.9, Math.PI + 0.9, 12).map(([x, y]) => [x + bx, y + by] as const));
-  plate(ctx, f, skin, sector(br * 0.5, br * 0.7, Math.PI / 2 + 0.2, Math.PI - 0.35, 8).map(([x, y]) => [x + bx, y + by] as const));
-  // Veins round the heart, in the place's motif; the heart itself, dark-rimmed and gold, and its light.
-  motif(ctx, f, skin, theme, [
-    [-0.6, -0.42],
-    [-0.12, -0.42],
-    [-0.12, 0.42],
-    [-0.6, 0.42],
-  ], 'boss14');
-  glow(ctx, f, skin.eye, -0.34, 0, 0.34, 0.6);
-  disc(ctx, f, shade(skin.plate, -0.5), -0.34, 0, 0.22);
-  disc(ctx, f, skin.eye, -0.36, 0, 0.16);
-  disc(ctx, f, shade(skin.plate, -0.6), -0.37, 0, 0.06);
-  // A lit thread down each tendril, from its root to over halfway to its tip.
-  for (const [top, tip, bottom] of MEDUSA_TENDRILS) {
-    const rx = (top[0] + bottom[0]) / 2 + 0.06;
-    const ry = (top[1] + bottom[1]) / 2;
-    lit(ctx, f, skin, [
-      [rx, ry - 0.025],
-      [rx, ry + 0.025],
-      [rx + (tip[0] - rx) * 0.55, ry + (tip[1] - ry) * 0.55],
-    ]);
+
+/**
+ * The shut bell's outline: the dome from the margin's top corner round the crown to its bottom, then
+ * back up the margin through its lappets — with the oral arms let into the middle of it.
+ */
+function medusaHull(): Pt[] {
+  const out: Pt[] = [];
+  for (let s = 0; s <= 24; s++) out.push(medusaDome(-Math.PI / 2 + (Math.PI * s) / 24));
+  // Up the margin from `+y` to the arms, one scallop per lappet, bulging towards the player.
+  const lappetsDown = (from: number, to: number): void => {
+    const n = Math.max(1, Math.round((MEDUSA_LAPPETS * Math.abs(to - from)) / (2 * MEDUSA_REACH)));
+    for (let i = 0; i < n; i++) {
+      const y0 = from + ((to - from) * i) / n;
+      const y1 = from + ((to - from) * (i + 1)) / n;
+      out.push([MEDUSA_MARGIN - 0.09, (y0 + y1) / 2]);
+      out.push([MEDUSA_MARGIN, y1]);
+    }
+  };
+  lappetsDown(MEDUSA_REACH, 0.3);
+  for (const p of MEDUSA_ARM) out.push(p);
+  out.push([MEDUSA_MARGIN - 0.06, 0]);
+  for (let i = MEDUSA_ARM.length - 1; i >= 0; i--) out.push([MEDUSA_ARM[i]![0], -MEDUSA_ARM[i]![1]]);
+  out.push([MEDUSA_MARGIN, -0.3]);
+  lappetsDown(-0.3, -MEDUSA_REACH);
+  return out;
+}
+
+/**
+ * The bell open — 0402: split along the lane's axis, each half swung out on a hinge at the crown, so a
+ * wedge of it stands open to the player with the heart in it. `side` is −1 for the half at `−y`.
+ */
+const MEDUSA_OPEN_SWING = 0.2;
+/** How far each half is carried off the axis as it swings, so the heart shows between them. */
+const MEDUSA_OPEN_PART = 0.02;
+/** How much smaller each open half is drawn about the hinge, so its swung corner stays in the bitmap. */
+const MEDUSA_OPEN_SHRINK = 0.92;
+function medusaHalf(side: 1 | -1): Pt[] {
+  const half: Pt[] = [];
+  // The crown to the margin corner, then back along the lappets to the axis, then the split edge.
+  for (let s = 0; s <= 12; s++) half.push(medusaDome((side * Math.PI * s) / 24));
+  const n = 5;
+  for (let i = 0; i < n; i++) {
+    const y0 = side * (MEDUSA_REACH - ((MEDUSA_REACH - 0.34) * i) / n);
+    const y1 = side * (MEDUSA_REACH - ((MEDUSA_REACH - 0.34) * (i + 1)) / n);
+    half.push([MEDUSA_MARGIN - 0.09, (y0 + y1) / 2]);
+    half.push([MEDUSA_MARGIN, y1]);
   }
+  // The torn edge the bell parts along, ragged, back to the crown — standing off the axis, so the two
+  // halves leave the middle of the bell to the heart rather than meeting over it.
+  const TEAR = 6;
+  for (let i = 1; i < TEAR; i++) {
+    const x = MEDUSA_MARGIN + ((MEDUSA_CROWN - MEDUSA_MARGIN) * i) / TEAR;
+    half.push([x, side * ((i % 2 === 0 ? 0.26 : 0.34) * (1 - (0.6 * i) / TEAR))]);
+  }
+  return half.map(([x, y]) => flip(x, y, side));
+}
+
+/** The glass: what the bell is filled with, at a fifth — 0402. */
+const MEDUSA_GLASS = 0.22;
+
+/** The bell's body colour — the lord's red lifted towards its ice, so the glass is a violet. */
+function medusaGlass(skin: FoeSkin): string {
+  return mix(skin.hull, skin.lit, 0.5);
+}
+
+/**
+ * What the jellyfish's bell is sealed in: its lord's skin as glass — 0402. Exported so
+ * `tests/foes.test.ts` can hold the one glass lord to its own skin, as it holds every other lord to its.
+ */
+export function medusaSeal(skin: FoeSkin): string {
+  return rgba(medusaGlass(skin), MEDUSA_GLASS);
+}
+
+/** Paint one bell, shut or a half of one open, over an outline already traced and sealed. */
+function paintMedusaBell(ctx: Pen, f: Frame, skin: FoeSkin, open: boolean): void {
+  const glass = medusaGlass(skin);
+  // Light inside it, strongest at the crown, as a lamp in a bell would be.
+  glow(ctx, f, skin.lit, 0.3, 0, 0.6, 0.28);
+  // The radial canals, from the middle of the bell out to the rim, catching light.
+  for (let k = 0; k < 9; k++) {
+    const t = -Math.PI / 2 + (Math.PI * (k + 0.5)) / 9;
+    // Open, a canal starts clear of the tear, which stands off the axis — the middle is the heart's.
+    if (open && Math.abs(Math.sin(t)) < 0.55) continue;
+    const [ex, ey] = medusaDome(t);
+    const from: Pt = [0.05, ey * (open ? 0.66 : 0.12)];
+    const to: Pt = [ex - 0.08 * Math.cos(t), ey * 0.9];
+    const pts: Pt[] = [from, [(from[0] + to[0]) / 2 + 0.05, (from[1] + to[1]) / 2], to];
+    seam(ctx, f, mix(glass, skin.lit, 0.6), 0.03, pts.map(([x, y]) => (open ? flip(x, y, ey < 0 ? -1 : 1) : [x, y])), 0.45, true);
+  }
+  // The rim of the dome lit, the whole curve, and a sheen along the crown.
+  const rim: Pt[] = [];
+  for (let s = 1; s < 24; s++) {
+    const t = -Math.PI / 2 + (Math.PI * s) / 24;
+    if (open && Math.abs(Math.sin(t)) < 0.1) continue;
+    const [x, y] = medusaDome(t);
+    rim.push(open ? flip(x - 0.04 * Math.cos(t), y * 0.95, y < 0 ? -1 : 1) : [x - 0.04 * Math.cos(t), y * 0.95]);
+  }
+  if (!open) seam(ctx, f, skin.lit, 0.05, rim, 0.8, true);
+  else {
+    const split = rim.findIndex(([, y]) => y > 0);
+    seam(ctx, f, skin.lit, 0.05, rim.slice(0, split), 0.8, true);
+    seam(ctx, f, skin.lit, 0.05, rim.slice(split), 0.8, true);
+  }
+  const sheen: Pt[] = [];
+  for (let s = 5; s <= 10; s++) {
+    const [x, y] = medusaDome(-Math.PI / 2 + (Math.PI * s) / 24);
+    sheen.push(open ? flip(x - 0.16, y * 0.78, -1) : [x - 0.16, y * 0.78]);
+  }
+  seam(ctx, f, '#ffffff', 0.07, sheen, 0.35, true);
+  // The margin glowing, and a bead of light on every lappet.
+  for (let i = 0; i < MEDUSA_LAPPETS; i++) {
+    const y = -MEDUSA_REACH + ((2 * MEDUSA_REACH) * (i + 0.5)) / MEDUSA_LAPPETS;
+    // Clear of the arms, and open, clear of the tear: a bead over the edge is paint off the animal.
+    if (Math.abs(y) < (open ? 0.45 : 0.32) || (open && Math.abs(y) > 0.7)) continue;
+    const [x, yy] = open ? flip(MEDUSA_MARGIN + 0.03, y, y < 0 ? -1 : 1) : [MEDUSA_MARGIN + 0.03, y];
+    disc(ctx, f, mix(skin.lit, '#ffffff', 0.3), x, yy, 0.035, 0.9);
+    glow(ctx, f, skin.lit, x, yy, 0.09, 0.5);
+  }
+  // The oral arms, a little denser than the glass, their frilled edges lit.
+  if (!open) {
+    for (const side of [1, -1] as const) {
+      const arm = MEDUSA_ARM.map(([x, y]) => [x, y * side] as Pt);
+      seam(ctx, f, mix(skin.lit, glass, 0.3), 0.025, arm.slice(0, 5), 0.8, true);
+      seam(ctx, f, glass, 0.06, [[MEDUSA_MARGIN, side * 0.18], [-0.8, side * 0.18], [-0.95, side * 0.15]], 0.45, true);
+    }
+  }
+}
+
+/**
+ * A point of the shut bell carried onto the open half on `side` — swung OUT on a hinge at the crown, so
+ * the margin gapes towards the player and the split runs back into the dome, and drawn a little smaller
+ * about the hinge so the swung corners stay inside the bitmap. The first draw turned each half the other
+ * way, which closes a bell at its mouth: photographed, the heart showed only in a slot down the middle.
+ */
+function flip(x: number, y: number, side: 1 | -1): Pt {
+  const [hx, hy] = [MEDUSA_CROWN, 0];
+  const a = -side * MEDUSA_OPEN_SWING;
+  const [c, s] = [Math.cos(a), Math.sin(a)];
+  const dx = (x - hx) * MEDUSA_OPEN_SHRINK;
+  const dy = (y - hy) * MEDUSA_OPEN_SHRINK;
+  return [hx + dx * c - dy * s, hy + dx * s + dy * c + side * MEDUSA_OPEN_PART];
+}
+
+/*
+  ── THE HEART IT HANGS OVER — 0400 ───────────────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR**: *"the black heart needs to be set into the screen like the cog boss at the end of
+  the 4th and not show in the background prior to that, with the background level arteries leading to
+  it."* The landmark's organ — 0220's muscle, apex low and towards the player, great vessels over the
+  top — drawn as the seat of a fight rather than a thing a long way off: near-black, with its light at
+  its edges and in the cracks of it, *"dark red and purple pulsating energy"* (0255's ask, owed since).
+*/
+const HEART_BODY: readonly Pt[] = [
+  [-0.62, 0.62],
+  [-0.78, 0.3],
+  [-0.8, -0.04],
+  [-0.68, -0.34],
+  [-0.46, -0.48],
+  [-0.26, -0.44],
+  [-0.12, -0.56],
+  [0.1, -0.5],
+  [0.28, -0.62],
+  [0.52, -0.58],
+  [0.72, -0.4],
+  [0.82, -0.08],
+  [0.78, 0.26],
+  [0.6, 0.54],
+  [0.28, 0.72],
+  [-0.08, 0.8],
+  [-0.4, 0.78],
+];
+/** The great vessels, each a path out of the top of the organ and its width at the root. */
+const HEART_VESSELS: readonly { path: readonly Pt[]; width: number }[] = [
+  { path: [[0.12, -0.44], [0.16, -0.78], [0.38, -0.94], [0.62, -0.9], [0.76, -0.74]], width: 0.22 },
+  { path: [[0.34, -0.5], [0.46, -0.76], [0.7, -0.84]], width: 0.15 },
+  { path: [[-0.4, -0.42], [-0.46, -0.72], [-0.4, -0.94]], width: 0.16 },
+];
+/** The heart's fixed inks, as the bead's are: it is the place's, whatever the palette's body is. */
+const HEART_FLESH = '#0e0206';
+const HEART_ROSE = '#ff5c7a';
+const HEART_VIOLET = '#a557ff';
+
+function drawHeartSeat(ctx: Pen, f: Frame, plain: string | null): void {
+  const flesh = plain === null ? HEART_FLESH : shade(plain, -0.6);
+  const rose = plain ?? HEART_ROSE;
+  const violet = plain ?? HEART_VIOLET;
+  // Light escaping round it, as the landmark's does: a hole with light past its edges.
+  glow(ctx, f, rose, 0, 0.05, 1.1, 0.45);
+  glow(ctx, f, violet, 0.25, -0.2, 0.75, 0.4);
+  // The vessels first, so the body closes over their roots.
+  ctx.lineCap = 'round';
+  for (const vessel of HEART_VESSELS) {
+    const n = vessel.path.length - 1;
+    for (let s = 0; s < n; s++) {
+      seam(ctx, f, flesh, vessel.width * (1 - (s / n) * 0.4), [vessel.path[s]!, vessel.path[s + 1]!], 1);
+    }
+    seam(ctx, f, rose, 0.03, vessel.path.map(([x, y]) => [x - 0.04, y] as Pt), 0.55, true);
+  }
+  ctx.beginPath();
+  curveLoop(ctx, f, HEART_BODY);
+  ctx.fillStyle = flesh;
+  ctx.fill('evenodd');
+  // The chambers' muscle in shadow and light: the left ventricle's bulk lit from the rose side.
+  shaded(ctx, f, [-0.7, -0.3], [0.5, 0.6], rgba(rose, 0.16), rgba(rose, 0), HEART_BODY, 1, true);
+  // The coronary vessels over it, and the cracks the energy shows through.
+  seam(ctx, f, shade(rose, -0.35), 0.035, [[-0.2, -0.4], [-0.1, -0.05], [-0.22, 0.35], [-0.36, 0.7]], 0.8, true);
+  seam(ctx, f, shade(rose, -0.35), 0.03, [[0.35, -0.5], [0.3, -0.1], [0.42, 0.25], [0.3, 0.6]], 0.7, true);
+  seam(ctx, f, violet, 0.025, [[-0.1, -0.05], [0.12, 0.1], [0.3, -0.1]], 0.75, true);
+  seam(ctx, f, violet, 0.022, [[-0.22, 0.35], [0.02, 0.42], [0.42, 0.25]], 0.65, true);
+  glow(ctx, f, violet, 0.1, 0.1, 0.32, 0.55);
+  glow(ctx, f, rose, -0.3, 0.45, 0.22, 0.5);
+  // Its edge lit all round, brightest on the upper left where the light comes from.
+  seam(ctx, f, rose, 0.06, HEART_BODY.slice(0, 9), 0.95, true);
+  seam(ctx, f, shade(rose, -0.15), 0.045, HEART_BODY.slice(8).concat([HEART_BODY[0]!]), 0.8, true);
+}
+
+/*
+  ── A LENGTH OF TENTACLE — 0403 ──────────────────────────────────────────────────────────────────
+
+  A capsule along `x`, root end at `+x`, in the bell's own glass but denser, with a bright core and the
+  stinging cells down it. **No outline**: eight overlap to make one tentacle and an outline on each would
+  draw every join; what reads as its edge is the core and the glow round it.
+*/
+function drawTendril(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  const glass = medusaGlass(skin);
+  const body: Pt[] = [];
+  for (let s = 0; s <= 16; s++) {
+    const t = -Math.PI / 2 + (Math.PI * s) / 16;
+    body.push([0.74 + 0.26 * Math.cos(t), 0.26 * Math.sin(t)]);
+  }
+  for (let s = 0; s <= 16; s++) {
+    const t = Math.PI / 2 + (Math.PI * s) / 16;
+    body.push([-0.76 + 0.22 * Math.cos(t), 0.22 * Math.sin(t)]);
+  }
+  poly(ctx, f, glass, body, 0.9);
+  seam(ctx, f, mix(skin.lit, '#ffffff', 0.4), 0.1, [[-0.9, 0], [0.9, 0]], 0.7);
+  for (const [x, y] of [[-0.5, 0.1], [0, -0.1], [0.5, 0.1]] as const) disc(ctx, f, mix(skin.hull, '#ffffff', 0.35), x, y, 0.065, 0.9);
+}
+
+/** A length of the heart's own vessel — 0400: the gas's body colour, lit down its middle. */
+function drawArtery(ctx: Pen, f: Frame, body: string): void {
+  const hull: Pt[] = [];
+  for (let s = 0; s <= 16; s++) {
+    const t = -Math.PI / 2 + (Math.PI * s) / 16;
+    hull.push([ARTERY_HALF_LENGTH + ARTERY_HALF_WIDTH * Math.cos(t), ARTERY_HALF_WIDTH * Math.sin(t)]);
+  }
+  for (let s = 0; s <= 16; s++) {
+    const t = Math.PI / 2 + (Math.PI * s) / 16;
+    hull.push([-ARTERY_HALF_LENGTH + ARTERY_HALF_WIDTH * Math.cos(t), ARTERY_HALF_WIDTH * Math.sin(t)]);
+  }
+  poly(ctx, f, body, hull, 0.9);
+  seam(ctx, f, mix(body, '#ffffff', 0.3), 0.05, [[-ARTERY_HALF_LENGTH, -0.04], [ARTERY_HALF_LENGTH, -0.04]], 0.55);
 }
 function paintBoss7(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   // The axis: the outer ring's lower half in shadow, its front lit, the motif round the back.
@@ -8718,47 +8981,65 @@ const KITE_HULL: readonly Pt[] = [
   [-0.2, 0.52],
 ];
 
-/** The moon jelly's hull — 0255: a dome across the front, four short tendrils ragged off the back. */
+/*
+  ── THE MOON JELLY, GLOWING — 0404 ───────────────────────────────────────────────────────────────
+
+  ⚠️ **ASKED FOR**: *"the falling jellyfish need to be rotated so that they are correctly dropping down
+  and need to be a different colour to the boss jellyfish and they should randomly have a range of
+  glowing colours as they fall down (reds, blues, greens)."* Baked as every body is, crown at `−x`; the
+  fall turns it crown-up (`rainBodies`), so it sinks with its fringe hanging under it, which is the way
+  the player chose. A glass bell, the four horseshoe rings a moon jelly is known by, a lit margin, and a
+  halo in its own glow — one of six, none of them the boss's violet.
+*/
 const MOON_JELLY_HULL: readonly Pt[] = [
-  [-0.9, 0],
-  [-0.74, -0.5],
-  [-0.36, -0.82],
-  [0.12, -0.86],
-  [0.12, -0.5],
-  [0.5, -0.66],
-  [0.34, -0.22],
-  [0.86, -0.28],
-  [0.4, 0],
-  [0.86, 0.28],
-  [0.34, 0.22],
-  [0.5, 0.66],
-  [0.12, 0.5],
-  [0.12, 0.86],
-  [-0.36, 0.82],
-  [-0.74, 0.5],
+  [-0.92, 0],
+  [-0.84, -0.4],
+  [-0.62, -0.72],
+  [-0.3, -0.88],
+  [0.02, -0.86],
+  [0.06, -0.62],
+  [0.46, -0.7],
+  [0.3, -0.42],
+  [0.9, -0.3],
+  [0.4, -0.14],
+  [0.94, 0.02],
+  [0.4, 0.14],
+  [0.9, 0.32],
+  [0.3, 0.42],
+  [0.46, 0.7],
+  [0.06, 0.62],
+  [0.02, 0.86],
+  [-0.3, 0.88],
+  [-0.62, 0.72],
+  [-0.84, 0.4],
 ];
-function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  // The lower half of the bell in shadow, its crown lit, the fringe's roots as a motif, an eye low
-  // in the bell where the light would sit.
-  plate(ctx, f, skin, [
-    [-0.7, 0.1],
-    [0.06, 0.1],
-    [0.06, 0.44],
-    [-0.4, 0.6],
-  ]);
-  lit(ctx, f, skin, [
-    [-0.8, -0.1],
-    [-0.5, -0.6],
-    [-0.36, -0.5],
-    [-0.66, -0.08],
-  ]);
-  motif(ctx, f, skin, theme, [
-    [0.06, -0.4],
-    [0.3, -0.2],
-    [0.3, 0.2],
-    [0.06, 0.4],
-  ], 'moonJelly');
-  disc(ctx, f, skin.eye, -0.34, 0.06, 0.1);
+/** Each glow's own light, by sprite — 0404. The crimson is the base row's. */
+const MOON_GLOW = {
+  moonJelly: '#ff4a6a',
+  moonJellyRose: '#ff7ad0',
+  moonJellyAzure: '#4f8dff',
+  moonJellyCyan: '#3fe6ff',
+  moonJellyEmerald: '#33e888',
+  moonJellyLime: '#c2ff4d',
+} as const;
+type MoonGlow = keyof typeof MOON_GLOW;
+
+function paintMoonJelly(ctx: Pen, f: Frame, skin: FoeSkin, light: string): void {
+  // A halo past the outline in its own glow, translucent — 0321's terms for a small body's light.
+  glow(ctx, f, light, -0.2, 0, 0.9, 0.45);
+  // The glass, over the whole outline and drawn the way the outline is: crown bright, fringe faint.
+  shaded(ctx, f, [-0.9, 0], [0.4, 0], rgba(light, 0.75), rgba(light, 0.25), MOON_JELLY_HULL, 1, true);
+  // The four rings, as the four gonads of a moon jelly are, round the middle of the bell.
+  for (const [x, y] of [[-0.52, -0.22], [-0.52, 0.22], [-0.3, -0.36], [-0.3, 0.36]] as const) {
+    band(ctx, f, mix(light, '#ffffff', 0.55), x, y, 0.13, 0.07, 0.85);
+  }
+  // The margin lit where the fringe leaves it, and the fringe's roots.
+  seam(ctx, f, mix(light, '#ffffff', 0.6), 0.08, [[-0.02, -0.56], [0.02, -0.3], [0.02, 0.3], [-0.02, 0.56]], 0.95, true);
+  seam(ctx, f, light, 0.05, [[0.12, -0.18], [0.45, -0.2], [0.66, -0.24]], 0.8, true);
+  seam(ctx, f, light, 0.05, [[0.12, 0.18], [0.45, 0.2], [0.66, 0.24]], 0.8, true);
+  // The crown's sheen.
+  seam(ctx, f, '#ffffff', 0.07, [[-0.66, -0.3], [-0.74, 0], [-0.66, 0.3]], 0.55, true);
+  void skin;
 }
 /**
  * A soft ring or two behind a small body, in the place's own light — 0321.
@@ -10126,22 +10407,32 @@ export function drawKind(
       return;
     }
     case 'boss14':
-    case 'boss14Hit': {
-      // THE JELLYFISH — 0264: a bell to the front, the one curved edge in the game, and six
-      // tendrils trailing behind it, spreading as they go — the biggest hull there is.
-      const [bx, by, br] = MEDUSA_BELL;
-      ctx.arc(half + r * bx, half + r * by, r * br, Math.PI / 2, (Math.PI * 3) / 2);
-      for (const [top, tip, bottom] of MEDUSA_TENDRILS) {
-        ctx.lineTo(half + r * top[0], half + r * top[1]);
-        ctx.lineTo(half + r * tip[0], half + r * tip[1]);
-        ctx.lineTo(half + r * bottom[0], half + r * bottom[1]);
-      }
-      ctx.closePath();
-      if (skin !== null) ctx.fillStyle = skin.hull;
+    case 'boss14Hit':
+    case 'boss14Open':
+    case 'boss14OpenHit': {
+      /*
+        THE JELLYFISH — 0402: a bell of glass at the back with its frill and oral arms towards the
+        player, filled at a fifth so the heart under it shows; or the same bell split and swung open on
+        its crown, the heart bare between the halves. The outline is still sealed — the rim a player
+        reads the animal by — and only the fill is glass.
+      */
+      const open = kind === 'boss14Open' || kind === 'boss14OpenHit';
+      const outlines = open ? [medusaHalf(-1), medusaHalf(1)] : [medusaHull()];
+      for (const outline of outlines) curveLoop(ctx, f, outline);
+      if (skin !== null) ctx.fillStyle = medusaSeal(skin);
       seal(ctx);
-      if (skin !== null) paintBoss14(ctx, f, skin, theme);
+      if (skin !== null) paintMedusaBell(ctx, f, skin, open);
       return;
     }
+    case 'heart':
+      // THE HEART THE JELLYFISH HANGS OVER — 0400. Scenery with no hurt twin, as the gyre's seat is.
+      drawHeartSeat(ctx, f, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
+    case 'tendril':
+    case 'tendrilHit':
+      // A LENGTH OF TENTACLE — 0403, in the lord's glass. No outline: eight overlap as one.
+      if (skin !== null) drawTendril(ctx, f, skin);
+      return;
     case 'bullet':
       /*
         The pulse: a disc, and now a BOLT — a halo round it and a white-hot heart in it. The
@@ -10650,14 +10941,30 @@ export function drawKind(
       return;
     case 'moonJelly':
     case 'moonJellyHit':
-      // A BELL WITH A FRINGE — 0255: a dome across the front and four short tendrils trailing off
-      // the back. The kite is a diamond and the moth a disc; a dome with a ragged back edge is
-      // neither at twenty pixels.
-      trace(ctx, f, MOON_JELLY_HULL);
-      if (skin !== null) ctx.fillStyle = skin.hull;
+    case 'moonJellyRose':
+    case 'moonJellyRoseHit':
+    case 'moonJellyAzure':
+    case 'moonJellyAzureHit':
+    case 'moonJellyCyan':
+    case 'moonJellyCyanHit':
+    case 'moonJellyEmerald':
+    case 'moonJellyEmeraldHit':
+    case 'moonJellyLime':
+    case 'moonJellyLimeHit': {
+      /*
+        A BELL WITH A FRINGE — 0255, glowing since 0404: a dome across the front and four short
+        tendrils trailing off the back, in one of six lights. The kite is a diamond and the moth a
+        disc; a dome with a ragged back edge is neither at twenty pixels. A palette that has no hue
+        keeps its own skin, so the six are six in colour and one in high contrast.
+      */
+      const plain = palette.glass === palette.space && palette.trim === palette.space;
+      const light = skin === null || plain ? (skin?.hull ?? palette.sky) : MOON_GLOW[kind.replace(/Hit$/, '') as MoonGlow];
+      curveLoop(ctx, f, MOON_JELLY_HULL);
+      ctx.fillStyle = rgba(light, 0.35);
       seal(ctx);
-      if (skin !== null) paintMoonJelly(ctx, f, skin, theme);
+      if (skin !== null) paintMoonJelly(ctx, f, skin, light);
       return;
+    }
     case 'debris':
       // A shard: small, angular, and deliberately NOT a disc, so a fragment is never mistaken for a
       // bullet at the one moment the screen is busiest.
@@ -11635,6 +11942,16 @@ export function drawKind(
       return;
     case 'veinBead':
       drawBead(ctx, size, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
+    /*
+      The vessels lit and the vessels into the heart — 0401, 0400: placeholders on `skyNebula`'s terms,
+      re-baked in the place's own gas colour by `bakeNebula` when a place with veins is entered. The lit
+      tile is blank until then, so a place without veins that blitted it would draw nothing.
+    */
+    case 'skyVeins':
+      return;
+    case 'artery':
+      drawArtery(ctx, f, palette.sky);
       return;
     /*
       The Mire's bank's placeholders, on `skyGround`'s terms exactly — 0383: drawn in the palette's own
@@ -13473,6 +13790,51 @@ export function bakeNebula(
   if (ctx === null) return;
   drawNebula(ctx, colour, glow, space, size, theme, gases);
   (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyNebula] = canvas;
+  if (VEINS_OF[theme] !== null) bakeVeins(atlas, colour, pixelsPerUnit, theme);
+}
+
+/**
+ * The vessels lit, and a length of the heart's own vessel, in the place's gas colour — 0401, 0400.
+ *
+ * ⚠️ **AT HALF THE TILE'S DETAIL, BECAUSE IT IS LIGHT.** The lit tile is the same vessels as a glow and
+ * nothing else, blitted over the tile at the beat's strength: a soft thing at half resolution is the
+ * same soft thing, and a second full-detail tile is the biggest bitmap in the game twice.
+ */
+function bakeVeins(atlas: Atlas, colour: string, pixelsPerUnit: number, theme: ThemeKind): void {
+  const size = bakeSize(SPRITE_EXTENT.skyVeins, pixelsPerUnit * 0.5);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (ctx === null) return;
+  const light = mix(colour, HEART_ROSE, 0.6);
+  const marks = STRUCTURE_OF[theme](size).filter((mark) => mark.gas === true && mark.width > 0);
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  // Three strokes a vessel, widest and faintest first: a halo, a glow, and the lit vessel itself.
+  for (const [grow, alpha, ink] of [[5, 0.14, light], [2.4, 0.3, light], [1, 0.9, mix(light, '#ffffff', 0.35)]] as const) {
+    ctx.strokeStyle = ink;
+    ctx.globalAlpha = alpha;
+    for (const mark of marks) {
+      ctx.lineWidth = Math.max(1, mark.width * grow);
+      for (const dx of [-size, 0, size]) {
+        ctx.beginPath();
+        ctx.moveTo(mark.points[0]![0]! + dx, mark.points[0]![1]!);
+        for (let i = 1; i < mark.points.length; i += 1) ctx.lineTo(mark.points[i]![0]! + dx, mark.points[i]![1]!);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.skyVeins] = canvas;
+  const piece = bakeSize(SPRITE_EXTENT.artery, pixelsPerUnit);
+  const artery = document.createElement('canvas');
+  artery.width = piece;
+  artery.height = piece;
+  const pen = artery.getContext('2d');
+  if (pen === null) return;
+  drawArtery(pen, { half: piece / 2, r: piece * 0.42 }, colour);
+  (atlas.bitmaps as CanvasImageSource[])[SPRITE.artery] = artery;
 }
 
 /**

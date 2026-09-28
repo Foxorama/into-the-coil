@@ -320,6 +320,12 @@ export type Motion =
 
 export interface EnemyRow extends Body {
   /**
+   * The glows it may wear, each a bitmap and its hurt twin — 0404; absent is the one `sprite`. A body
+   * that falls from a boss (`Fall`'s `body`) takes one of these where it forms, by a hash of where that
+   * is rather than a draw, so no stream a level already spends moves by one.
+   */
+  tints?: readonly (readonly [number, number])[];
+  /**
    * World units per step it closes on the player, ON TOP of the camera's own advance.
    *
    * ⚠️ Positive means *towards* the trailing edge, which is towards the player. It is not the
@@ -968,6 +974,15 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
   moonJelly: {
     sprite: SPRITE.moonJelly,
     spriteHit: SPRITE.moonJellyHit,
+    // Six glows, reds, blues and greens — 0404: *"randomly have a range of glowing colours as they fall."*
+    tints: [
+      [SPRITE.moonJelly, SPRITE.moonJellyHit],
+      [SPRITE.moonJellyRose, SPRITE.moonJellyRoseHit],
+      [SPRITE.moonJellyAzure, SPRITE.moonJellyAzureHit],
+      [SPRITE.moonJellyCyan, SPRITE.moonJellyCyanHit],
+      [SPRITE.moonJellyEmerald, SPRITE.moonJellyEmeraldHit],
+      [SPRITE.moonJellyLime, SPRITE.moonJellyLimeHit],
+    ],
     radius: 2.6,
     health: 1,
     damage: 1,

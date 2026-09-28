@@ -573,11 +573,19 @@ describe('0203 — the sky may hold a landmark, and the rule is a band', () => {
       `docs/decisions/0027-measure-the-picture-not-the-model.md` one layer down, and the probe is
       what said so.
     */
+    /*
+      ⚠️ **AND THE END OF THE SLICE WAS A HEADING THAT HAD GONE — found by 0400's proof.** It ended at
+      *THE DUST, AFTER THE GAS*, which 0211 retitled; `indexOf` answered −1, so the slice ran to the end
+      of the file, and it held because nothing after the clouds wrapped both ways — until 0401's lit
+      vessels brought a `dx` wrap of their own, and breaking the cloud loop left this green. Both ends
+      are now asked to be there.
+    */
     const bake = readFileSync(resolve(root, 'src/render/bake.ts'), 'utf8');
-    const clouds = bake.slice(
-      bake.indexOf('for (const cloud of nebulaField'),
-      bake.indexOf('THE DUST, AFTER THE GAS'),
-    );
+    const from = bake.indexOf('for (const cloud of nebulaField');
+    const to = bake.indexOf("AND THE PLACE'S OWN STRUCTURE, OVER THE GAS");
+    expect(from, 'the cloud loop is not where this looks for it').toBeGreaterThan(0);
+    expect(to, 'the heading after the cloud loop is not where this looks for it').toBeGreaterThan(from);
+    const clouds = bake.slice(from, to);
     const wraps = clouds.includes('for (const dx of [-size, 0, size])') &&
       clouds.includes('for (const dy of [-size, 0, size])');
     expect(

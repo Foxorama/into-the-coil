@@ -11,10 +11,10 @@
  */
 
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
-import { trunkAt, type Veins } from '../content/veins.ts';
+import { arteryAt, trunkAt, type Veins } from '../content/veins.ts';
 import { knotOf, opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
@@ -254,7 +254,15 @@ export function paintScene(
   corridor: Corridor | null = null,
   pools: Pools | null = null,
   frontAfter = -1,
+  beat = 0,
+  heart: Float64Array | null = null,
 ): void {
+  /*
+    ⚠️ **`beat` IS HOW HARD THE HEART THE PLAYER HEARS IS BEATING THIS FRAME — 0401**, from nothing to
+    one; the caller reads it off the music's clock, and this file only draws it. **`heart` IS WHERE THE
+    HEART IS**, `[along, across]` in the world, or `null` with no heart on the field — the vessels into
+    it are laid to it (0400).
+  */
   surface.clear();
   /*
     ⚠️ **BEFORE THE SKY, BECAUSE IT IS SLOWER THAN THE SKY.** A landmark's `depth` is below every
@@ -264,7 +272,9 @@ export function paintScene(
     least, is the one arrangement that says *far away* twice.
   */
   paintLandmarks(surface, view, cameraAlong, landmarks, levelOrigin, time);
-  paintSky(surface, view, cameraAlong, sky, time);
+  paintSky(surface, view, cameraAlong, sky, time, beat);
+  // The vessels into the heart, over the sky whose trunks they leave and under everything — 0400.
+  paintArteries(surface, view, cameraAlong, sky, heart, beat);
   /*
     ⚠️ **OVER THE SKY AND UNDER EVERY BODY — 0340**, on the room's own terms one paragraph down: the
     streaks are what the sky does at speed, so they belong to it, and the one absolute in this file is
@@ -319,7 +329,7 @@ export function paintScene(
       else if (swing < -Math.PI) swing += Math.PI * 2;
       const turn = e.prevTurn + swing * alpha;
       const inView = along - cameraAlong;
-      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);
+      surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);
     }
     if (layer === frontAfter) paintFront(surface, view, corridor, pools, cameraAlong, time);
   }
@@ -911,7 +921,7 @@ function paintEruption(
 /** How many screen pixels a sky tile overlaps its neighbour by, in total across its width — 0347. */
 const SEAM_BLEED_PX = 2;
 
-function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, time = 0): void {
+function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, time = 0, beat = 0): void {
   for (let i = 0; i < sky.length; i++) {
     const layer = sky[i]!;
     const span = layer.extent;
@@ -943,7 +953,77 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, t
       surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
     }
     if (layer.veins !== undefined) {
-      for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time);
+      /*
+        ⚠️ **THE VESSELS THEMSELVES SWELL WITH THE BEAT — 0401**, not only a bead on them: the lit tile is
+        the same vessels as light and nothing else, laid over the tile at the heart's strength this frame,
+        so on a lub the whole of every vein flares and falls away with it. One blit a tile, a faded one.
+      */
+      if (beat > VEIN_FLARE_FLOOR) {
+        for (let t = 0; t < count; t++) {
+          const inView = t * span - offset + span / 2;
+          const across = view.acrossSpan / 2;
+          surface.blit(SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0, Math.min(1, beat));
+        }
+      }
+      for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time, beat);
+    }
+  }
+}
+
+/** Below this the heart's light is not drawn at all: a blit of nothing is still a blit. */
+const VEIN_FLARE_FLOOR = 0.02;
+
+/** Points each artery's curve is walked at to lay its lengths end to end — 0400. Arithmetic, not blits. */
+const ARTERY_SAMPLES = 64;
+/** How much of a length's own run the next one starts inside, so no gap opens where the curve bends. */
+const ARTERY_OVERLAP = 0.7;
+/** How much wider an artery is drawn on a beat at full strength. */
+const ARTERY_THROB = 0.3;
+// @setup: one point, written and read inside `paintArteries` and never kept — 0400.
+const ARTERY_AT = new Float64Array(2);
+// @setup: the point after it, for the heading.
+const ARTERY_NEXT = new Float64Array(2);
+
+/**
+ * The vessels from the place's trunks into the heart — 0400: each a run of blitted lengths down a curve
+ * that leaves its trunk where the trunk is drawn THIS frame, so however the parallax has carried the sky
+ * the vessel leaves it and never floats beside it. Thin where it leaves, the artery's `width` at the
+ * heart, and a little wider on a beat. Nothing with no heart on the field, which is every fight but one.
+ */
+function paintArteries(surface: Surface, view: View, cameraAlong: number, sky: Sky, heart: Float64Array | null, beat: number): void {
+  if (heart === null) return;
+  for (let i = 0; i < sky.length; i++) {
+    const veins = sky[i]!.veins;
+    if (veins === undefined) continue;
+    const span = sky[i]!.extent;
+    // A length's thickness and run at a scale of one, in world units.
+    const thick = 2 * ARTERY_HALF_WIDTH * 0.42 * SPRITE_EXTENT.artery;
+    const run = 2 * ARTERY_HALF_LENGTH * 0.42 * SPRITE_EXTENT.artery;
+    for (let a = 0; a < veins.arteries.length; a++) {
+      const artery = veins.arteries[a]!;
+      const thin = veins.trunks[artery.trunk]!.width * span;
+      arteryAt(artery, veins, 0, heart[0]!, heart[1]!, cameraAlong, span, view.acrossSpan, ARTERY_AT);
+      // Walked from the trunk to the heart; a length is laid whenever the walk has gone most of one.
+      let owed = 0;
+      for (let k = 1; k <= ARTERY_SAMPLES; k++) {
+        const t = k / ARTERY_SAMPLES;
+        arteryAt(artery, veins, t, heart[0]!, heart[1]!, cameraAlong, span, view.acrossSpan, ARTERY_NEXT);
+        const dx = ARTERY_NEXT[0]! - ARTERY_AT[0]!;
+        const dy = ARTERY_NEXT[1]! - ARTERY_AT[1]!;
+        owed += Math.hypot(dx, dy);
+        const width = (thin + (artery.width - thin) * t * t) * (1 + ARTERY_THROB * beat * t);
+        const scale = width / thick;
+        if (owed >= run * scale * ARTERY_OVERLAP || k === ARTERY_SAMPLES) {
+          owed = 0;
+          const inView = ARTERY_NEXT[0]! - cameraAlong;
+          const x = screenX(view, inView, ARTERY_NEXT[1]!);
+          const y = screenY(view, inView, ARTERY_NEXT[1]!);
+          const heading = Math.atan2(screenY(view, inView, ARTERY_NEXT[1]!) - screenY(view, ARTERY_AT[0]! - cameraAlong, ARTERY_AT[1]!), screenX(view, inView, ARTERY_NEXT[1]!) - screenX(view, ARTERY_AT[0]! - cameraAlong, ARTERY_AT[1]!));
+          surface.blit(SPRITE.artery, x, y, view.scale * scale, heading);
+        }
+        ARTERY_AT[0] = ARTERY_NEXT[0]!;
+        ARTERY_AT[1] = ARTERY_NEXT[1]!;
+      }
     }
   }
 }
@@ -997,12 +1077,13 @@ const PULSE_SWELL = 0.35;
  * `k / beads` of a crossing ahead of bead 0, and nothing is pooled or remembered. It rides the steps
  * and not the camera, so the heart goes on beating while the camera stops for a fight.
  *
- * ⚠️ **THE BEAT IS THE LANDMARK'S OWN SHAPE** (`beatAt` — two thumps and a rest), and it TRAVELS: a
- * bead further along its vessel is later in the beat, so the thump runs down the vein rather than
- * every bead swelling at once. One blit a bead.
+ * ⚠️ **THE BEAT IS THE ONE THE PLAYER HEARS SINCE 0401.** It was the landmark's shape on a clock of its
+ * own — 66 steps, a heart the music never played — and travelled down the vein; *"pulse in time with the
+ * heartbeat to the music"* is the ask that replaced it, and a bead now swells with the vessel it runs in,
+ * on `beat`. Where it is still rides the steps. One blit a bead.
  */
-function paintPulse(surface: Surface, view: View, left: number, span: number, veins: Veins, time: number): void {
-  const { beads, period, beat } = veins.pulse;
+function paintPulse(surface: Surface, view: View, left: number, span: number, veins: Veins, time: number, beat: number): void {
+  const { beads, period } = veins.pulse;
   for (let i = 0; i < veins.trunks.length; i++) {
     const trunk = veins.trunks[i]!;
     for (let k = 0; k < beads; k++) {
@@ -1011,8 +1092,8 @@ function paintPulse(surface: Surface, view: View, left: number, span: number, ve
       const along = left + x * span;
       if (along < -2 || along > view.alongSpan + 2) continue;
       const across = view.acrossSpan / 2 + (trunkAt(trunk, x) - 0.5) * span;
-      const phase = time / beat - x * 0.8;
-      const swell = 1 - PULSE_SWELL + PULSE_SWELL * Math.min(1, beatAt(phase - Math.floor(phase)));
+      // The heart the player hears, since 0401 — the bead swells with the vessel it runs in.
+      const swell = 1 - PULSE_SWELL + PULSE_SWELL * Math.min(1, beat);
       // Its heading, taken in SCREEN space as the ember's is, so the tail trails down the vessel.
       const aheadAlong = along + span * 0.002;
       const aheadAcross = view.acrossSpan / 2 + (trunkAt(trunk, x + 0.002) - 0.5) * span;

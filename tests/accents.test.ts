@@ -149,6 +149,15 @@ const HULLLESS: readonly SpriteKind[] = [
   'bubblePop',
   // The heart's pulse is light travelling in a vein, with no hull — 0354.
   'veinBead',
+  /*
+    The vessels lit, and a length of the vessels into the heart — 0401, 0400: light, and a piece of the
+    sky's own vessel laid end to end with the next, which an outline would rule across every join. And
+    the heart itself — 0400: the place, as the gyre's housing is, but a thing of glowing edges rather
+    than a sealed block; the one seat nothing outlines.
+  */
+  'skyVeins',
+  'artery',
+  'heart',
   'bound',
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.
@@ -209,7 +218,12 @@ const BOSS_HULLS: readonly SpriteKind[] = BOSS_KINDS.map((kind) => SPRITE_KINDS[
  */
 const CHAIN_BODIES: readonly SpriteKind[] = BOSS_KINDS.flatMap((kind) => {
   const chain = BOSSES[kind].chain;
-  return chain === null ? [] : [SPRITE_KINDS[chain.sprite]!, SPRITE_KINDS[chain.spriteHit]!];
+  // A length of a jellyfish's tentacle is a slice of one on the same terms — 0403.
+  const tendrils = BOSSES[kind].tendrils;
+  return [
+    ...(chain === null ? [] : [SPRITE_KINDS[chain.sprite]!, SPRITE_KINDS[chain.spriteHit]!]),
+    ...(tendrils === undefined ? [] : [SPRITE_KINDS[tendrils.sprite]!, SPRITE_KINDS[tendrils.spriteHit]!]),
+  ];
 });
 
 /**

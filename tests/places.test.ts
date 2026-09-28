@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, type LandmarkEntry } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -301,7 +301,14 @@ describe('0220 — the heart beats', () => {
   }
 
   const view = viewOf(1280, 640);
-  const heartLevel = LEVEL_KINDS.map((kind) => LEVELS[kind]).find((level) => level.theme === 'core');
+  /*
+    ⚠️ **THE HEART LANDMARK IS GONE SINCE 0400, AND THE BEAT IT WAS BUILT FOR STAYS.** *"The black heart
+    needs to be set into the screen like the cog boss at the end of the 4th and not show in the background
+    prior to that"* — the heart is the last fight's seat now, beating to the music (0401). A landmark may
+    still state a `beat`, and `paintLandmarks` still draws one, so these three hold that machinery against
+    the entry The Black Heart placed until 0400 rather than against a level that no longer places it.
+  */
+  const heartLevel = { landmarks: [{ at: 2070, lane: 46, depth: 0.07, beat: 96, variant: 0 }] as readonly LandmarkEntry[] };
 
   /** The width in CSS pixels the landmark is drawn at, with the camera `local` units into the level. */
   function widthAt(local: number, entry: Landmark): number {

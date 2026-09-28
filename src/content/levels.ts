@@ -1795,18 +1795,13 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
     boss: 'medusa',
     midBoss: { kind: 'axis', at: 1044 },
     /*
-      ⚠️ **THE HEART ARRIVES WITH `surge`, ON THE PILLARS' OWN REASONING.** *"black heart needs to be a
-      beating black heart."* 0203 tied Ember Nebula's landmark to the bar its music opens on rather
-      than to a number someone liked; the same argument puts this one where The Black Heart's ladder
-      turns, and `sections` above is where that is read from. It is the last thing the player flies
-      past before the last boss in the game.
-
-      ⚠️ **`beat: 96` IS 2.7 SECONDS OF CAMERA TRAVEL**, which is a resting pulse at about 22 a
-      minute — slow, because it is enormous and a long way off, and a heart the size of a moon that
-      beat at 70 would read as a strobe. `SCROLL_PER_STEP * STEPS_PER_SECOND` is the conversion and it
-      is the same one `rig/bench.ts` prints its readout in.
+      ⚠️ **NO LANDMARK SINCE 0400: THE HEART IS WHERE THE FIGHT IS.** It went past a long way off with
+      `surge` from 0220 on, beating to the camera. *"The black heart needs to be set into the screen
+      like the cog boss at the end of the 4th and not show in the background prior to that, with the
+      background level arteries leading to it."* It is the seat of the last fight now (`BOSSES.medusa`),
+      and the level's vessels run into it there.
     */
-    landmarks: [{ at: 2070, lane: 46, depth: 0.07, beat: 96, variant: 0 }],
+    landmarks: [],
     theme: 'core',
   },
 };

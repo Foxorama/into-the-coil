@@ -102,10 +102,11 @@ export const PROBES = [
     guard: 'draws exactly one call per live entity',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);',
+      // Re-anchored by 0400: the blit's scale carries the heart's throb.
+      find: '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);',
       replace:
-        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);\n' +
-        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell, turn);',
+        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);\n' +
+        '    surface.blit(e.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * e.swell * (1 + e.throb * beat), turn);',
     },
   },
 ];

@@ -25,22 +25,11 @@ export const PROBES = [
       replace: '      boss.velAcross = move.amplitude * rate * Math.cos((cameraAlong * TAU) / wavelength);',
     },
   },
-  {
-    decision: '0268',
-    suite: 'tests/bob.test.ts',
-    /*
-      ⚠️ THE ANGLE TURNING THROUGH THE BRACE — the second cause, and the one that was found by
-      measuring rather than by reading. A beam holds the hull still (0250) and zeroes `velAcross`; an
-      angle that goes on advancing through that comes out describing a position the hull never
-      travelled to. It reddens on the hydra, the one bobbing boss with a laser head (0254), and on
-      nothing else — which is what makes it worth its own probe rather than a clause of the one above.
-    */
-    broke: 'the bob’s angle turning through a brace, so a held hull loses its place in the swing',
-    guard: 'and it stays centred on the lane, rather than merely staying inside it',
-    edit: {
-      path: 'src/app/boss.ts',
-      find: '      if (boss.holdFor <= 0) boss.bobPhase += rate;',
-      replace: '      boss.bobPhase += rate;',
-    },
-  },
+  /*
+    ⚠️ **RETIRED BY 0400: *the bob's angle turning through a brace*.** It reddened on the one bobbing
+    boss that held still for a laser — the hydra until 0384 stood it in the acid, then the jellyfish —
+    and since 0400 set the jellyfish over its heart no boss that bobs ever braces: the line it broke is
+    one no content reaches, and the proof reported it STILL GREEN. The line stays right and stays in
+    `src/app/boss.ts`; a bobbing boss that fires a beam brings this probe back.
+  */
 ];

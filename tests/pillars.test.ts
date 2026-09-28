@@ -75,6 +75,15 @@ describe('0346 — the Pillars fill the sky', () => {
         );
       });
     }
+    /*
+      ⚠️ **AND AN ENTRY THAT SAYS NOTHING, STATED HERE, SINCE 0400.** The Black Heart's was the last one a
+      level placed, and it is the last fight's seat now; so the frame is asked about one directly rather
+      than this holding nothing the day no level happens to place one.
+    */
+    const stated = landmarksFor({ ...LEVELS.eye, landmarks: [{ at: 2070, lane: 46, depth: 0.07, beat: 0, variant: 0 }] });
+    unscaled += 1;
+    expect(stated[0]!.scale, 'a landmark that states no scale is drawn scaled').toBe(1);
+    expect(stated[0]!.extent, 'a landmark that states no scale is culled as a bigger one').toBe(SPRITE_EXTENT.landmark);
     expect(unscaled, 'every landmark in the game states a scale, so this holds nothing').toBeGreaterThan(0);
   });
 
