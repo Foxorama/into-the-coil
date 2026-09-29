@@ -10,8 +10,11 @@ import {
   firstLine,
   planEdit,
   isAVerdict,
+  joinProblems,
+  probeKey,
   sealedBaseline,
   sealOf,
+  shardOf,
   verdictOf,
   verifyApplied,
 } from '../scripts/prove-guard.mjs';
@@ -750,5 +753,106 @@ describe('0419 — the baseline is the suite’s own run, when it can be shown t
   it('and only the suites judged are read: an unrelated suite skipping is not this proof’s business', () => {
     const other = { testResults: [...report.testResults, file('/r/tests/z.test.ts', ['skipped'])] };
     expect(sealedBaseline({ ...asked, report: other })).toEqual({ failed: [], ran: 3 });
+  });
+});
+
+/*
+  ── 0420 — THE CI IS SHARDED, AND THE REQUIRED JOB JOINS IT ──────────────────────────────────────
+
+  `docs/decisions/0420-the-ci-is-sharded-and-joined.md`. Every shard can succeed and the whole still
+  not be proven; each test below is one way, and each of them would read as GREEN.
+*/
+describe('0420 — the shards are dealt, and the join is the verdict', () => {
+  const probes = Array.from({ length: 23 }, (_, i) => ({
+    decision: String(1000 + Math.floor(i / 6)),
+    suite: `tests/s${i % 3}.test.ts`,
+    broke: `break ${i}`,
+    guard: `guard ${i}`,
+    edit: { path: 'x', find: 'a', replace: 'b' },
+  }));
+
+  it('THE PARTITION: the shards together are every probe, each exactly once', () => {
+    for (const total of [1, 4, 10, 30]) {
+      const keys = Array.from({ length: total }, (_, n) => shardOf(probes, `${n + 1}/${total}`).map((d) => d.key)).flat();
+      expect(keys.length, `${total} shard(s) dealt a probe twice or dropped one`).toBe(probes.length);
+      expect(new Set(keys)).toEqual(new Set(probes.map(probeKey)));
+    }
+  });
+
+  it('DEALT, NOT CUT: a decision’s probes land in different shards, so its expensive ones are spread', () => {
+    // Six probes to a decision in the sample, as the 0149 hull guard has; cut into runs they share a shard.
+    const shardsOfFirst = [1, 2, 3, 4].map((n) => shardOf(probes, `${n}/4`).filter((d) => d.probe.decision === '1000').length);
+    expect(Math.max(...shardsOfFirst), 'one shard holds most of a decision').toBeLessThanOrEqual(2);
+  });
+
+  it('and a shard that is not one of its own set is refused, not read as an empty one', () => {
+    for (const spec of ['0/4', '5/4', '4', 'a/b', '', '1/0']) expect(() => shardOf(probes, spec)).toThrow(/PROVE_SHARD/);
+  });
+
+  const tree = sealOf(new Map([['tests/a.test.ts', 'aa']]));
+  const passing = (name: string) => ({ name, status: 'passed', assertionResults: [{ title: 't', status: 'passed' }] });
+  const probeKeys = probes.map(probeKey);
+  const whole = {
+    needs: { base: { result: 'success' }, suite: { result: 'success' }, prove: { result: 'success' } },
+    tree,
+    seals: [tree, tree, tree],
+    reports: [{ testResults: [passing('/w/tests/s0.test.ts'), passing('/w/tests/s1.test.ts')] }, { testResults: [passing('/w/tests/s2.test.ts')] }],
+    testFiles: ['tests/s0.test.ts', 'tests/s1.test.ts', 'tests/s2.test.ts'],
+    suites: ['tests/s0.test.ts', 'tests/s1.test.ts', 'tests/s2.test.ts'],
+    probeKeys,
+    results: [
+      { shard: '1/2', keys: shardOf(probes, '1/2').map((d) => d.key), ok: true },
+      { shard: '2/2', keys: shardOf(probes, '2/2').map((d) => d.key), ok: true },
+    ],
+  };
+
+  it('every job succeeded, on one tree, every file and every probe accounted for, is a proof', () => {
+    expect(joinProblems(whole)).toEqual([]);
+  });
+
+  it('THE TRAP, READ: a SKIPPED dependency is not a successful one', () => {
+    expect(joinProblems({ ...whole, needs: { ...whole.needs, prove: { result: 'skipped' } } }).join('\n')).toMatch(/`prove` did not succeed: skipped/);
+    expect(joinProblems({ ...whole, needs: { ...whole.needs, suite: { result: 'cancelled' } } }).join('\n')).toMatch(/`suite` did not succeed/);
+  });
+
+  it('and a join that waited on nothing has joined nothing', () => {
+    expect(joinProblems({ ...whole, needs: {} }).join('\n')).toMatch(/waited on nothing/);
+  });
+
+  it('A TREE THAT IS NOT THIS ONE: a job that ran against other bytes is refused', () => {
+    const other = sealOf(new Map([['tests/a.test.ts', 'changed']]));
+    expect(joinProblems({ ...whole, seals: [tree, other, tree] }).join('\n')).toMatch(/1 of 3 job\(s\) sealed a tree that is not this one/);
+    expect(joinProblems({ ...whole, seals: [] }).join('\n')).toMatch(/no job sealed/);
+  });
+
+  it('A HOLE IN THE PARTITION: a test file no suite shard ran is named', () => {
+    const holed = { ...whole, testFiles: [...whole.testFiles, 'tests/unrun.test.ts'] };
+    expect(joinProblems(holed).join('\n')).toMatch(/1 test file\(s\) ran in no suite shard[\s\S]*tests\/unrun\.test\.ts/);
+  });
+
+  it('THE BASELINE, AFTER: a judged suite that was red makes every red over it prove nothing', () => {
+    const red = {
+      ...whole,
+      reports: [
+        {
+          testResults: [
+            { name: '/w/tests/s0.test.ts', status: 'failed', assertionResults: [{ title: 'the pace holds', status: 'failed', failureMessages: ['AssertionError: slow'] }] },
+            passing('/w/tests/s1.test.ts'),
+          ],
+        },
+        whole.reports[1]!,
+      ],
+    };
+    expect(joinProblems(red).join('\n')).toMatch(/were not green[\s\S]*the pace holds — AssertionError: slow/);
+  });
+
+  it('A PROBE NO SHARD RAN is named, however the shards were counted', () => {
+    const short = { ...whole, results: [whole.results[0]!] };
+    expect(joinProblems(short).join('\n')).toMatch(new RegExp(`${shardOf(probes, '2/2').length} probe\\(s\\) ran in no shard`));
+  });
+
+  it('and a shard that came back without every guard red fails the join', () => {
+    const failed = { ...whole, results: [whole.results[0]!, { ...whole.results[1]!, ok: false }] };
+    expect(joinProblems(failed).join('\n')).toMatch(/probe shard 2\/2 did not see every one of its guards go red/);
   });
 });

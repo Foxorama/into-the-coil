@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 // A plain .mjs script, deliberately: it is a CLI the workflow runs,
 // not a module `src/` imports. Typing it would mean a build step for something node runs directly.
 import { baseProblem, pileUpProblem, BASE } from '../scripts/check-base.mjs';
+import { jobsOf } from './jobs.ts';
 
 /**
  * A BRANCH STARTS AT `main`.
@@ -126,21 +127,33 @@ describe('the workflow actually runs the check', () => {
   });
 
   it('THE ORDERING ONE: runs it before npm ci, so a stacked PR fails in seconds', () => {
-    const check = workflow.indexOf('node scripts/check-base.mjs');
-    // The RUN STEP, not the phrase — the comment above the check says "before `npm ci`", and matching
-    // that instead put the install before the check and failed this test on its first run.
-    const install = workflow.indexOf('- run: npm ci');
-    expect(check, 'the check is not in the workflow at all').toBeGreaterThan(-1);
-    expect(install, 'the npm ci step is not in the workflow at all').toBeGreaterThan(-1);
-    expect(check, 'the check runs after the install, which wastes the CI cycle it exists to save').toBeLessThan(
-      install,
-    );
+    /*
+      ⚠️ **ACROSS JOBS NOW, SO "BEFORE" IS `needs` AND NOT A LINE NUMBER** — 0420. The check has a job
+      of its own, and every job that installs waits for it: a stacked PR fails in the seconds the
+      check takes and no install starts. One job that installs without waiting spends the minutes
+      this exists to save, and the old reading — the check's line above the first `npm ci` — would
+      still have passed.
+    */
+    const jobs = jobsOf(workflow);
+    const checking = jobs.filter((job) => job.body.includes('node scripts/check-base.mjs'));
+    expect(checking.length, 'the check is not in exactly one job').toBe(1);
+    const check = checking[0]!;
+    // The RUN STEP, not the phrase — a comment that says "before `npm ci`" is not an install.
+    expect(check.body, 'the check’s own job installs before it has passed').not.toContain('- run: npm ci');
+    const installing = jobs.filter((job) => job.body.includes('- run: npm ci'));
+    expect(installing.length, 'no job installs at all, so this is reading the wrong file').toBeGreaterThan(0);
+    const early = installing.filter((job) => !job.needs.includes(check.key)).map((job) => job.key);
+    expect(early, 'these jobs install without waiting for the check, which wastes the CI cycle it exists to save').toEqual([]);
   });
 
-  it('lives in the REQUIRED job, because an unrequired check is one nobody is blocked by', () => {
-    // The required context is the job key `test`. A check in a job of its own would need a settings
-    // change to become required, and until it did it would be advisory — which is how a guard rots.
-    const job = workflow.slice(workflow.indexOf('  test:'));
-    expect(job).toContain('node scripts/check-base.mjs');
+  it('blocks the REQUIRED job, because an unrequired check is one nobody is blocked by', () => {
+    // The required context is the job key `test`. The check has a job of its own since 0420, which
+    // is only as good as `test` waiting on it and reading its result — `tests/shards.test.ts` holds
+    // the reading; this holds the waiting.
+    const jobs = jobsOf(workflow);
+    const check = jobs.find((job) => job.body.includes('node scripts/check-base.mjs'));
+    const required = jobs.find((job) => job.key === 'test');
+    expect(required, 'there is no `test` job, which is the context branch protection requires').toBeDefined();
+    expect(required!.needs, 'the required job does not wait for the check').toContain(check?.key);
   });
 });
