@@ -131,12 +131,13 @@ export const PROBES = [
         '      if (CUES[kind].onGrid === true) {\n' +
         '        // The first of a collapsed pair keeps its place — the note on `waitingPan` has why.\n' +
         '        if (waiting[index] === 0) waitingPan[index] = pan;\n' +
-        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan);',
+        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan, rate);',
+      // Re-anchored by 0418, which carries a golfer's voice through `emit` as a rate.
       replace:
         '      const asked = CUES[kind].duck;\n      if (asked !== undefined) out.duck(asked);\n' +
         '      if (CUES[kind].onGrid === true) {\n' +
         '        if (waiting[index] === 0) waitingPan[index] = pan;\n' +
-        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan);',
+        '        waiting[index] = 1;\n        return;\n      }\n      emit(index, pan, rate);',
     },
   },
   {

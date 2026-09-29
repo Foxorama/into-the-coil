@@ -25,10 +25,11 @@ import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { INTRO_STEPS } from '../content/port.ts';
+import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['splash', 'select', 'intro', 'title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
+export const SCREEN_KINDS = ['splash', 'select', 'intro', 'title', 'playing', 'gameOver', 'cleared', 'outro', 'victory', 'music', 'travel'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -190,6 +191,26 @@ export interface ScreenRow {
    * answer there changes nothing, and is stated because it is true.
    */
   pushed: boolean;
+  /**
+   * Whether the screen offers a Skip, which goes where its timeout goes — 0418. The intro and the
+   * finale are pictures that play out by themselves, and a player who has seen one presses past it.
+   *
+   * ⚠️ **A FACT ABOUT THE ROW, on `pushed`'s own terms one field up**: the Skip was bound to the intro
+   * by name until a second cutscene needed one, and `screen === 'intro' || screen === 'outro'` in the
+   * chrome and the shell would be the hub enumerating instances.
+   */
+  skips: boolean;
+  /**
+   * Whether this screen is part of a run — 0418: the run's place is what the music is made of while it
+   * is up, and anywhere else the title's is.
+   *
+   * ⚠️ **THE BUG THIS FIXES WAS THE MUSIC ASKING THE RUN WHILE NO RUN WAS ON.** The material a piece is
+   * played from was chosen from `run.level` on every screen, and `run.level` is only reset when a run
+   * begins — so after the last boss the victory screen and the title went on playing The Black Heart's
+   * drone, pipes and kit under the title's mix, until a new run or the music room moved it. Reported:
+   * *"the last level music doesn't stop till you start a new run or go to the music settings."*
+   */
+  inRun: boolean;
 }
 
 /**
@@ -221,6 +242,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: true,
     timeout: null,
     pushed: false,
+    skips: false,
+    inRun: false,
   },
   /**
    * The golfers — 0415. Four buttons, one per row of `src/content/golfers.ts`, each with a portrait
@@ -241,6 +264,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: true,
     timeout: null,
     pushed: false,
+    skips: false,
+    inRun: false,
   },
   /**
    * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`. What the page
@@ -265,6 +290,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: false,
     timeout: { steps: INTRO_STEPS, then: 'title' },
     pushed: false,
+    skips: true,
+    inRun: false,
   },
   /**
    * ⚠️ **The game no longer starts by itself, and that is a deliberate loss.** Until now the page
@@ -350,10 +377,12 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: true,
     timeout: null,
     pushed: false,
+    skips: false,
+    inRun: false,
   },
   // `pushed: false` — the HUD is pushed at it, and the HUD is not a panel: `src/app/chrome.ts` builds
   // it apart and shows it on every row that steps, which is why this row still has no panel.
-  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false },
+  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false, skips: false, inRun: true },
   /**
    * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
    * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
@@ -396,6 +425,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // seconds of silence is evidence against. The offer expires — that is what gives it its cost.
     timeout: { steps: 7 * STEPS_PER_SECOND, then: 'title' },
     pushed: false,
+    skips: false,
+    // Its *Continue* resumes the run, in the place it ended in (0068).
+    inRun: true,
   },
   /**
    * The boss is dead and there is another level behind it.
@@ -432,6 +464,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
     timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
     pushed: false,
+    skips: false,
+    inRun: true,
   },
   /**
    * The crossing: the respite is over, and the ship is burning its way to the next place.
@@ -474,6 +508,26 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: false,
     timeout: null,
     pushed: true,
+    skips: false,
+    inRun: true,
+  },
+  /**
+   * The finale — `docs/decisions/0418-the-heart-lets-go.md`: the last boss beaten, the heart bursting,
+   * the Viper inside it and whoever was in it, and the two ships leaving together. On the intro's terms
+   * exactly — no panel, nothing stepped, a picture on its own clock — and it expires into the victory
+   * screen, which is where its Skip goes too.
+   */
+  outro: {
+    heading: '',
+    actions: [],
+    choices: [],
+    steps: false,
+    dims: false,
+    timeout: { steps: OUTRO_STEPS, then: 'victory' },
+    pushed: false,
+    skips: true,
+    // The last place, heard to its end: the heart is still what is on the screen — 0418.
+    inRun: true,
   },
   /**
    * Every level in the run is behind the player.
@@ -491,6 +545,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: true,
     timeout: null,
     pushed: false,
+    skips: false,
+    inRun: false,
   },
   /*
     ── THE MUSIC ROOM — `docs/decisions/0210-the-title-plays-the-music.md` ──────────────────────────
@@ -534,5 +590,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     timeout: null,
     // The now-playing readout is `setNowPlaying`'s — 0212. True, and changes nothing: it has a heading.
     pushed: true,
+    skips: false,
+    inRun: false,
   },
 };

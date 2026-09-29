@@ -336,7 +336,9 @@ describe('a run is a sequence of levels', () => {
     for (let i = 0; i < LEVEL_KINDS.length; i++) state = reduce(state, CLEAR);
     state = reduce(state, SHOW_CLEARED);
     expect(state.run.level).toBe(LEVEL_KINDS.length);
-    expect(state.screen.current, 'the last level was cleared and the run carried on').toBe('victory');
+    // Into the finale, which expires into the victory screen — 0418.
+    expect(state.screen.current, 'the last level was cleared and the run carried on').toBe('outro');
+    expect(SCREENS.outro.timeout?.then, 'the finale does not end on the victory screen').toBe('victory');
   });
 
   it('starting again after a victory goes back to the first level', () => {
@@ -344,7 +346,7 @@ describe('a run is a sequence of levels', () => {
     for (let i = 0; i < LEVEL_KINDS.length; i++) state = reduce(state, CLEAR);
     state = reduce(reduce(state, SHOW_CLEARED), BEGIN);
     expect(state.run.level, 'a new run resumed where the last one finished').toBe(0);
-    expect(state.screen.current, 'starting a run re-raised the victory screen').toBe('victory');
+    expect(state.screen.current, 'starting a run re-raised the finale').toBe('outro');
   });
 });
 

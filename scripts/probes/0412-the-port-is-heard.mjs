@@ -96,8 +96,9 @@ export const PROBES = [
     guard: 'goes on Escape',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    if (e.key !== 'Escape' && !(activates && introReady)) return;",
-      replace: '    if (!(activates && introReady)) return;',
+      // Re-anchored by 0418, which asks the row whether it skips and the intro whether it may yet.
+      find: "    if (e.key !== 'Escape' && !(activates && skipsNow())) return;",
+      replace: '    if (!(activates && skipsNow())) return;',
     },
   },
   {

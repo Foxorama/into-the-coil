@@ -20,6 +20,8 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, withTheGame } from '../render/port-bake.ts';
+import { bakeFinale } from '../render/finale-bake.ts';
+import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
@@ -76,6 +78,7 @@ import {
   auraNearnessFor,
   levelOfPlace,
   musicLevelFor,
+  musicPlaceFor,
   placeFor,
   UNITS_PER_SECOND,
 } from './music.ts';
@@ -83,7 +86,8 @@ import {
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
 import { INTRO_CUES, SPLASH_STEPS } from '../content/port.ts';
-import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
+import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, rescuable, type GolferKind } from '../content/golfers.ts';
+import { FINALE_BEATS, FINALE_CUES, FINALE_FADE, SAVED_CLOSE, SAVING_CLOSE, blipsAt, closeAlong, lettersSaid } from '../content/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
@@ -890,7 +894,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const showPort = (): void => {
     if (port !== null && world.intro !== null) surface.setAtlas(withTheGame(port, atlas));
+    // And the finale, on the same terms: the port's pieces and its own, then the game's — 0418.
+    if (finale !== null && world.outro !== null) surface.setAtlas(withTheGame(finale, atlas));
   };
+  // The finale's atlas while it is up, less the game's — 0418; baked by `applyScreen`.
+  let finale: Atlas | null = null;
+  /*
+    ⚠️ **WHO WAS IN THE VIPER, AND WHAT THE TWO OF THEM SAY, IS DRAWN ONCE WHEN THE FINALE STARTS** —
+    0418, from a seed the shell draws there (0021: the shell draws the seed; below it, a stream is an
+    argument). Held here so a frame of the finale is the same frame however often it is asked for.
+  */
+  let finaleSaved: GolferKind = DEFAULT_GOLFER;
+  let savedLine = '';
+  let savingLine = '';
+  /** The next of `FINALE_CUES` the finale has not yet passed. */
+  let finaleCueNext = 0;
   // Whether the select screen was opened from the menu's *Pilot* (back to the menu) or at boot (on
   // to the intro) — 0415.
   let selectFromMenu = false;
@@ -1022,6 +1040,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0362: a run's picture runs on the sim's own clock, and only the music room says otherwise.
     pictureSteps: null,
     intro: null,
+    outro: null,
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
     heartBeat: 0,
     cameraAlong: 0,
@@ -1276,6 +1295,30 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (world.intro !== null) {
       world.intro = null;
       port = null;
+      surface.setAtlas(atlas);
+    }
+    /*
+      ⚠️ **THE FINALE, ON THE INTRO'S TERMS — 0418**: baked here, at the resolution it will be blitted at,
+      and dropped when it is over. Who was in the Viper is every golfer but the one flying
+      (`rescuable`), and what each says is one of their own lines — all three drawn now, once.
+    */
+    if (screen === 'outro' && playable) {
+      const pick = makeRng(Math.floor(Math.random() * 0x7fffffff)).stream('finale');
+      const chosen = state.settings.pilot;
+      finaleSaved = pick.pick(rescuable(chosen));
+      savedLine = pick.pick(GOLFERS[finaleSaved].saved);
+      savingLine = pick.pick(GOLFERS[chosen].saving);
+      const resolution = view.scale * dpr;
+      finale = withTheGame(bakePort(colours, resolution, GOLFERS[chosen]), bakeFinale(colours, resolution, GOLFERS[finaleSaved], GOLFERS[chosen]));
+      world.outro = 0;
+      finaleCueNext = 0;
+      // Always skippable: the game behind it loaded long ago.
+      chrome.setSkipReady(true);
+      showPort();
+    } else if (world.outro !== null) {
+      world.outro = null;
+      finale = null;
+      chrome.setBubble(null, 0, 0, 0, 'left');
       surface.setAtlas(atlas);
     }
     // The splash counts from when it appears — 0415.
@@ -2192,7 +2235,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   function placeOnScreen(): ThemeKind | null {
     const screen = state.screen.current;
-    if (screen === 'playing' || screen === 'cleared') return world.level.theme;
+    // And the finale's, which happens where the last boss died — 0418.
+    if (screen === 'playing' || screen === 'cleared' || screen === 'outro') return world.level.theme;
     // The intro's dark outside is the first level's place, since it leads into it — 0416.
     if (screen === 'intro') return placeFor(0);
     if (screen === 'travel') return travelSwapped ? placeFor(state.run.level) : world.level.theme;
@@ -2530,8 +2574,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const music = audioOut.music();
     if (music === null) return;
     music.start();
-    // 0210: the room's place if one is being auditioned, the run's otherwise.
-    bakeIncomingPlace(audition ?? undefined);
+    /*
+      0210: the room's place if one is being auditioned, the run's on a screen that is part of a run —
+      and the title's own everywhere else, which is 0418's fix: the run's was asked on every screen, and
+      after the last boss it was The Black Heart's until a new run began.
+    */
+    bakeIncomingPlace(musicPlaceFor(state.screen.current, audition, state.run.level));
     /*
       ⚠️ **`music.phaseTo(world.steps)` WAS THE LINE ABOVE THIS AND 0160 REMOVED IT.** It ran every
       frame and did nothing almost every time: it kept the loops in phase with the sim's step clock
@@ -2717,9 +2765,25 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     on the `keypress` that FOLLOWS the keydown — by which time the tier is focused; 0411's first build
     started a run from a skip on Enter. So an activation key that skips has its default cancelled.
   */
+  /*
+    ⚠️ **ANY SCREEN WHOSE ROW SKIPS, TO WHERE ITS TIMEOUT GOES — 0418**, which is the title from the
+    intro and the victory screen from the finale. It was the intro's by name until the second cutscene.
+  */
   const leaveIntro = (): void => {
-    if (state.screen.current === 'intro') dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+    const row = SCREENS[state.screen.current];
+    if (row.skips && row.timeout !== null && row.timeout.then !== null) dispatch({ slice: 'screen', type: 'show', screen: row.timeout.then });
   };
+  /**
+   * One step of a golfer saying `line`, begun at `from`, from the mouth at (`along`, `across`) — 0418:
+   * the bubble placed there in the canvas's pixels, the letters said by now, and a blip in their voice
+   * on each syllable's first letter.
+   */
+  const speak = (line: string, t: number, from: number, along: number, across: number, tail: 'left' | 'right', voice: number): void => {
+    chrome.setBubble(line, lettersSaid(t, from), screenX(view, along, across), screenY(view, along, across), tail);
+    if (blipsAt(line, t, from) && audioOut.ready()) speaker.play('talk', across, voice);
+  };
+  /** Whether a key may skip now: the intro once the game behind it has loaded, any other that skips at once. */
+  const skipsNow = (): boolean => SCREENS[state.screen.current].skips && (state.screen.current !== 'intro' || introReady);
   const introKey = (e: KeyboardEvent): void => {
     const screen = state.screen.current;
     /*
@@ -2731,9 +2795,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       dispatch({ slice: 'screen', type: 'show', screen: 'title' });
       return;
     }
-    if (screen !== 'intro') return;
+    if (!SCREENS[screen].skips) return;
     const activates = e.key === 'Enter' || e.key === ' ';
-    if (e.key !== 'Escape' && !(activates && introReady)) return;
+    if (e.key !== 'Escape' && !(activates && skipsNow())) return;
     if (activates) e.preventDefault();
     leaveIntro();
   };
@@ -2775,6 +2839,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (introReady) audioOut.unlock();
       else introWantsSound = true;
       if (menuAsk.confirm && introReady) leaveIntro();
+      return;
+    }
+    // On the finale the pad's confirm skips, as it does on the intro once it may — 0418.
+    if (state.screen.current === 'outro') {
+      if (menuAsk.confirm) leaveIntro();
       return;
     }
     /*
@@ -2893,13 +2962,35 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       */
       if (!introReady && prewarmDone()) {
         introReady = true;
-        chrome.setIntroSkip(true);
+        chrome.setSkipReady(true);
         if (introWantsSound) audioOut.unlock();
       }
       // Every beat the intro has passed, heard if the sound is on by then and never caught up on.
       while (introCueNext < INTRO_CUES.length && INTRO_CUES[introCueNext]!.at <= world.intro) {
         if (audioOut.ready()) speaker.play(INTRO_CUES[introCueNext]!.cue);
         introCueNext++;
+      }
+    }
+    // The finale's clock, its beats, and its two voices — 0418.
+    if (world.outro !== null) {
+      world.outro++;
+      const t = world.outro;
+      while (finaleCueNext < FINALE_CUES.length && FINALE_CUES[finaleCueNext]!.at <= t) {
+        if (audioOut.ready()) speaker.play(FINALE_CUES[finaleCueNext]!.cue);
+        finaleCueNext++;
+      }
+      /*
+        Each golfer speaks in their own shot, and the bubble goes before the shot fades — the found one
+        first, beside the Viper's canopy, then the one who came for them, beside the fighter's.
+      */
+      if (t >= FINALE_BEATS.savedSays && t < FINALE_BEATS.cutSaved - FINALE_FADE) {
+        const along = closeAlong(view.alongSpan, false, SAVED_CLOSE.mouth);
+        speak(savedLine, t, FINALE_BEATS.savedSays, along, SAVED_CLOSE.mouthAcross, 'left', GOLFERS[finaleSaved].voice);
+      } else if (t >= FINALE_BEATS.savingSays && t < FINALE_BEATS.cutSaving - FINALE_FADE) {
+        const along = closeAlong(view.alongSpan, true, SAVING_CLOSE.mouth);
+        speak(savingLine, t, FINALE_BEATS.savingSays, along, SAVING_CLOSE.mouthAcross, 'right', GOLFERS[state.settings.pilot].voice);
+      } else {
+        chrome.setBubble(null, 0, 0, 0, 'left');
       }
     }
     if (timeoutLeft <= 0) return;

@@ -75,7 +75,7 @@ import { SCROLL_PER_STEP } from '../sim/flight.ts';
   and the room walks at 35.99999999999999 units a second — right to eleven places and not equal to
   anything. The whole number is the one description; the millisecond is derived from it.
 */
-import { STEPS_PER_SECOND } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type Screen } from '../state/screens.ts';
 
 /**
  * One note of one voice, at `at` seconds into its layer's loop.
@@ -441,6 +441,22 @@ export function addRoom(buffer: Float32Array, rate: number, wet: number): void {
 export function placeFor(runLevel: number): ThemeKind {
   const index = runLevel < 0 ? 0 : runLevel > LEVEL_KINDS.length - 1 ? LEVEL_KINDS.length - 1 : runLevel;
   return LEVELS[LEVEL_KINDS[index]!].theme;
+}
+
+/**
+ * Which place's music the mixer should be holding, on `screen`: the room's if one is being auditioned,
+ * the run's on a screen that is part of a run, and the title's — the base composition, `approach` —
+ * everywhere else. `docs/decisions/0418-the-heart-lets-go.md`.
+ *
+ * ⚠️ **THE RUN'S WAS ASKED ON EVERY SCREEN, AND `placeFor` HOLDS THE LAST PLACE ONCE A RUN IS OVER.**
+ * So after the last boss the victory screen and the title went on playing The Black Heart's drone,
+ * pipes and kit under the title's mix, until a new run or the music room moved it — reported as *"the
+ * last level music doesn't stop till you start a new run or go to the music settings."* A pure function
+ * here, on `placeFor`'s own terms, so the rule is a unit test rather than a canvas.
+ */
+export function musicPlaceFor(screen: Screen, audition: ThemeKind | null, runLevel: number): ThemeKind {
+  if (audition !== null) return audition;
+  return SCREENS[screen].inRun ? placeFor(runLevel) : 'approach';
 }
 
 /*

@@ -33,6 +33,7 @@ import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
+import { GOLFER_KINDS, type GolferKind } from '../src/content/golfers.ts';
 
 const stage = document.querySelector('#stage');
 const levelPick = document.querySelector<HTMLSelectElement>('#level');
@@ -183,6 +184,26 @@ if (crossTo !== null) {
   world.bossBeaten = true;
   for (let i = 0; i < leg; i++) dispatch({ slice: 'run', type: 'levelCleared' });
   lifecycle.onward();
+}
+
+/*
+  ── THE FINALE, FROM THE QUERY — 0418 ───────────────────────────────────────────────────────────
+
+  `?finale` plays what follows the last boss; `&pilot=larry` (any of `GOLFER_KINDS`) flies it as that
+  golfer, so each of them can be heard answering. On `?cross=`'s terms exactly: the last place with its
+  boss beaten, every level cleared, and the level break shown — which the reducer's own agreement turns
+  into the finale, as it does when the boss really dies. Without it the finale is seven boss fights away.
+*/
+if (query.has('finale')) {
+  const last = LEVEL_KINDS[LEVEL_KINDS.length - 1]!;
+  const pilot = query.get('pilot');
+  if (pilot !== null && (GOLFER_KINDS as readonly string[]).includes(pilot)) {
+    dispatch({ slice: 'settings', type: 'pilot', pilot: pilot as GolferKind });
+  }
+  goTo(last, LEVELS[last].bossAt + 1);
+  world.bossBeaten = true;
+  for (let i = 0; i < LEVEL_KINDS.length; i++) dispatch({ slice: 'run', type: 'levelCleared' });
+  dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
 }
 
 /*

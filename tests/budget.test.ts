@@ -1190,6 +1190,8 @@ const HOT_FILES = [
   'src/render/canvas.ts',
   // The intro's painter — 0411. Every frame the intro is up, and nothing else draws on those frames.
   'src/render/port.ts',
+  // And the finale's — 0418, on the intro's terms.
+  'src/render/finale.ts',
 ];
 
 /**
@@ -1205,6 +1207,7 @@ const DELIBERATELY_COLD: Record<string, string> = {
   'src/render/bake.ts': 'draws every sprite once at load. Allocating is what it is FOR; blitting afterwards is the point.',
   'src/render/port-bake.ts': "draws the intro's port once, when the intro comes up or is resized. Allocating is what it is for — 0411.",
   'src/render/golfer-art.ts': 'draws a golfer once, into the port bake or a select-screen portrait. Never in a frame — 0415.',
+  'src/render/finale-bake.ts': "draws the finale's own pieces once, when the finale comes up. Allocating is what it is for — 0418.",
   /*
     ⚠️ **THE ONE ENTRY ON THIS LIST THAT IS REACHED FROM A STEP, and it is here rather than above
     because putting it above would be a claim this scan cannot make.** A cue is played during a step,

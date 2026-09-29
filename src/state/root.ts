@@ -74,7 +74,8 @@ export function reduce(state: State, action: Action): State {
 
 /** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
 const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'gameOver' };
-const SHOW_VICTORY: ScreenAction = { slice: 'screen', type: 'show', screen: 'victory' };
+// The run finished goes to the finale, which expires into the victory screen — 0418.
+const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
 
 /**
  * THE AGREEMENTS BETWEEN TWO SLICES, deliberately here rather than in either of them.
@@ -102,7 +103,7 @@ function agree(state: State): State {
     like it can be played out in a unit test.
   */
   if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
-    return { screen: reduceScreen(state.screen, SHOW_VICTORY), run: state.run, settings: state.settings };
+    return { screen: reduceScreen(state.screen, SHOW_FINALE), run: state.run, settings: state.settings };
   }
   return state;
 }

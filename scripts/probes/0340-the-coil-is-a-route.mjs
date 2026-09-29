@@ -244,8 +244,9 @@ export const PROBES = [
     guard: 'and the screens that show the scene through them are the two that say so',
     edit: {
       path: 'src/state/screens.ts',
-      find: '    steps: true,\n    dims: false,\n    timeout: null,\n    pushed: true,\n  },\n  /**\n   * Every level in the run is behind the player.',
-      replace: '    steps: true,\n    dims: true,\n    timeout: null,\n    pushed: true,\n  },\n  /**\n   * Every level in the run is behind the player.',
+      // Re-anchored by 0418, whose rows say whether they skip and whether they are part of a run.
+      find: '    steps: true,\n    dims: false,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n  },',
+      replace: '    steps: true,\n    dims: true,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n  },',
     },
   },
   {
