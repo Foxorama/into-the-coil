@@ -86,8 +86,8 @@ broke: 0401's vein flare (the sky's sprites are offset now), 0411's last beat, f
 0414's chase gap. **And 0412's dead-door probe, which CI's full proof found STILL GREEN and mine did
 not, because 0412 was not among the decisions I proved:** Venoma opens the bar's door too, so taking
 out the golfer's door left hers playing the cue. It now takes out both.
-[`demoting-a-guard`'s lesson](0005-a-guard-must-be-seen-to-fail.md), met again: a change reaches probes
-in decisions it does not name, and only the full proof walks them all.
+A change reaches probes in decisions it does not name, and only the full proof walks them all —
+[0005](0005-a-guard-must-be-seen-to-fail.md), met again.
 
 ## Owed
 
