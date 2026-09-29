@@ -18,11 +18,11 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, VIPER, type PortKind } from '../content/port.ts';
+import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VENOMA, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
-import { makeRng, type Rng } from '../sim/rng.ts';
+import { makeRng } from '../sim/rng.ts';
 import { bakeSize, disc, glow, paintShip, poly, rgba, seal, shade, SHIP_HULL, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import { paintRunner } from './golfer-art.ts';
+import { paintRunner, type RunnerPose } from './golfer-art.ts';
 
 /**
  * Bake every piece of the port for one palette, at the resolution it will be blitted at, with the
@@ -38,6 +38,30 @@ export function bakePort(palette: Palette, pixelsPerUnit: number, pilot: GolferR
   };
 }
 
+/**
+ * The port's pieces with the game's after them — 0416. The sky outside is the first level's, and it
+ * is in the GAME's atlas, recoloured for the place it is; the surface draws from one atlas at a time
+ * and is never swapped mid-frame (`CanvasSurface.setAtlas`), so the intro draws from both by drawing
+ * from this. Every game sprite is at its own index plus `PORT_KINDS.length`. Nothing is copied but two
+ * lists of references, so it is recomposed whenever the game's atlas changes rather than kept in step.
+ */
+export function withTheGame(port: Atlas, game: Atlas): Atlas {
+  return {
+    ...port,
+    bitmaps: [...port.bitmaps, ...game.bitmaps],
+    extents: [...port.extents, ...game.extents],
+  };
+}
+
+/** Her poses, by the runner's names for them — 0416. */
+const RIVAL_POSE: Record<'rivalRun0' | 'rivalRun1' | 'rivalRun2' | 'rivalRun3' | 'rivalLeap', RunnerPose> = {
+  rivalRun0: 'pilotRun0',
+  rivalRun1: 'pilotRun1',
+  rivalRun2: 'pilotRun2',
+  rivalRun3: 'pilotRun3',
+  rivalLeap: 'pilotLeap',
+};
+
 function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {
   const extent = PORT_EXTENT[kind];
   const size = bakeSize(extent, pixelsPerUnit);
@@ -49,6 +73,8 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
   const f: Frame = { half: size / 2, r: size * 0.42 };
   // A flame's box is `FLAME_BOX` times its ship's, at the ship's own radius — see `FLAME_BOX`.
   const jet: Frame = { half: size / 2, r: (size * 0.42) / FLAME_BOX };
+  // And a surge's is `SURGE_BOX` times, on the same terms — 0416.
+  const surge: Frame = { half: size / 2, r: (size * 0.42) / SURGE_BOX };
   switch (kind) {
     case 'blue':
       paintBlue(ctx, f, palette, size);
@@ -61,6 +87,18 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       return canvas;
     case 'blueFlare':
       paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 1.35, 0.115, 0.55);
+      return canvas;
+    /*
+      ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
+      again, and its bloom nearly a whole ship across, so the frame the thump lands on is visibly a
+      different engine from the one that was burning a step before. The painter lays it over the flare
+      and lets it die back into it (`SURGE_STEPS`).
+    */
+    case 'blueSurge':
+      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', BLUE_JETS, 2.3, 0.17, 0.95);
+      return canvas;
+    case 'viperSurge':
+      paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
       return canvas;
     case 'viper':
       paintViper(ctx, f, palette, size);
@@ -84,8 +122,6 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'spill':
     case 'pad':
     case 'beam':
-    case 'stars':
-    case 'starsNear':
     case 'bayTop':
     case 'bayBottom':
     case 'field':
@@ -95,11 +131,16 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'pilotRun2':
     case 'pilotRun3':
     case 'pilotLeap':
+    case 'rivalRun0':
+    case 'rivalRun1':
+    case 'rivalRun2':
+    case 'rivalRun3':
+    case 'rivalLeap':
     case 'station':
     case 'flash':
     case 'pool':
     case 'contrail':
-    case 'black':
+    case 'veil':
       break;
     default: {
       const never: never = kind;
@@ -272,12 +313,6 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       }
       return;
     }
-    case 'stars':
-      paintStars(ctx, makeRng('port').stream('stars'), h, 90, 0.12, 0.3, 0.25, 0.6);
-      return;
-    case 'starsNear':
-      paintStars(ctx, makeRng('port').stream('stars-near'), h, 22, 0.25, 0.5, 0.6, 1);
-      return;
     case 'bayTop':
     case 'bayBottom': {
       // The edge of the room: a bulkhead with the bay's door run back into it, and a stripe on its lip.
@@ -341,6 +376,14 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // The chosen golfer, at the pilot's size — 0415; the figure is `src/render/golfer-art.ts`'s.
       paintRunner(ctx, pilot, kind, PILOT_STANDS / 5);
       return;
+    // Venoma, hooded, at the same size — 0416.
+    case 'rivalRun0':
+    case 'rivalRun1':
+    case 'rivalRun2':
+    case 'rivalRun3':
+    case 'rivalLeap':
+      paintRunner(ctx, VENOMA, RIVAL_POSE[kind], PILOT_STANDS / 5);
+      return;
     case 'station':
       paintStation(ctx, palette, h);
       return;
@@ -368,18 +411,25 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.globalCompositeOperation = 'source-over';
       return;
     }
-    case 'black':
-      ctx.fillStyle = '#000000';
+    /*
+      What every fade goes to and comes up from: the palette's own space, which is what the splash, the
+      golfers and the title are drawn on — so the intro rises out of the screen before it and sinks into
+      the one after, where it used to go through black on both sides (0416).
+    */
+    case 'veil':
+      ctx.fillStyle = palette.space;
       ctx.fillRect(-h, -h, extent, extent);
       return;
     case 'blue':
     case 'blueIdle':
     case 'blueBurn':
     case 'blueFlare':
+    case 'blueSurge':
     case 'viper':
     case 'viperIdle':
     case 'viperBurn':
     case 'viperFlare':
+    case 'viperSurge':
       throw new Error(`bakePort: ${kind} is drawn in the ship's own frame`);
     default: {
       const never: never = kind;
@@ -407,22 +457,6 @@ function radialEllipse(ctx: CanvasRenderingContext2D, x: number, y: number, rx: 
   ctx.scale(1, ry / rx);
   radial(ctx, 0, 0, rx, colour, alpha);
   ctx.restore();
-}
-
-function paintStars(ctx: CanvasRenderingContext2D, rng: Rng, h: number, count: number, rMin: number, rMax: number, aMin: number, aMax: number): void {
-  for (let i = 0; i < count; i++) {
-    const x = rng.range(-h, h);
-    const y = rng.range(-h, h);
-    const r = rng.range(rMin, rMax);
-    ctx.fillStyle = rgba('#cfe0ff', rng.range(aMin, aMax));
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    if (r > 0.42) {
-      ctx.fillRect(x - r * 3, y - 0.05, r * 6, 0.1);
-      ctx.fillRect(x - 0.05, y - r * 3, 0.1, r * 6);
-    }
-  }
 }
 
 /**

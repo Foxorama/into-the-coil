@@ -33,6 +33,8 @@
  * a layer up in `src/state/screens.ts`, so the seconds are in the comment beside each number.
  */
 
+import type { RunnerRow } from './golfers.ts';
+
 /** Everything the port is drawn from, in the order its atlas holds them. Closed — 0016. */
 export const PORT_KINDS = [
   'wall',
@@ -44,8 +46,6 @@ export const PORT_KINDS = [
   'spill',
   'pad',
   'beam',
-  'stars',
-  'starsNear',
   'bayTop',
   'bayBottom',
   'field',
@@ -54,21 +54,34 @@ export const PORT_KINDS = [
   'blueIdle',
   'blueBurn',
   'blueFlare',
+  'blueSurge',
   'viper',
   'viperIdle',
   'viperBurn',
   'viperFlare',
+  'viperSurge',
   'pilotRun0',
   'pilotRun1',
   'pilotRun2',
   'pilotRun3',
   'pilotLeap',
+  'rivalRun0',
+  'rivalRun1',
+  'rivalRun2',
+  'rivalRun3',
+  'rivalLeap',
   'station',
   'flash',
   'pool',
   'contrail',
-  'black',
+  'veil',
 ] as const;
+/*
+  ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
+  looks super basic compared to the level 1 starfield and it should kinda lead straight into level 1."*
+  The port's atlas carries the game's after its own kinds (`bakePort`), and the sky outside is the
+  first level's, drawn by the level's own painter.
+*/
 
 export type PortKind = (typeof PORT_KINDS)[number];
 
@@ -92,8 +105,6 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   spill: 36,
   pad: 36,
   beam: 36,
-  stars: 60,
-  starsNear: 60,
   bayTop: 30,
   bayBottom: 30,
   field: 80,
@@ -102,20 +113,27 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueIdle: 60,
   blueBurn: 60,
   blueFlare: 60,
+  blueSurge: 90,
   viper: 40,
   viperIdle: 80,
   viperBurn: 80,
   viperFlare: 80,
+  viperSurge: 120,
   pilotRun0: 16,
   pilotRun1: 16,
   pilotRun2: 16,
   pilotRun3: 16,
   pilotLeap: 16,
+  rivalRun0: 16,
+  rivalRun1: 16,
+  rivalRun2: 16,
+  rivalRun3: 16,
+  rivalLeap: 16,
   station: 110,
   flash: 40,
   pool: 40,
   contrail: 16,
-  black: 1,
+  veil: 1,
 };
 
 /**
@@ -127,6 +145,23 @@ export const PORT_EXTENT: Record<PortKind, number> = {
  * The flames are baked in a box twice as big, at the SAME radius, and blitted at the ship's centre.
  */
 export const FLAME_BOX = 2;
+
+/**
+ * A surge's box against its ship's — 0416. The surge is the burn at the moment a launch is heard, near
+ * twice a flare's length, and it would be cut off in `FLAME_BOX` exactly as the flare was in the ship's.
+ */
+export const SURGE_BOX = 3;
+
+/**
+ * How long a surge takes to die back into the burn, in steps — 0416: *"we also need the jets to
+ * supercharge fire when the blast off happens in the movie as well to match the blast off sound they
+ * have"*. The `launch` cue (`src/content/cues.ts`) is a 0.3 s thump under a roar that decays over
+ * 0.95 s, so the flame that is its twin is at full on the step it sounds and dies back into the burn
+ * over the roar's length, on the low roar's own curve (`SURGE_CURVE`), so most of it has gone by the
+ * time the thump has and the tail rides the roar.
+ */
+export const SURGE_STEPS = 57;
+export const SURGE_CURVE = 1.8;
 
 /** The Viper's livery — the predecessor's Coil Wyrm-Ship, carried on the row because it is hers. */
 export const VIPER = {
@@ -161,6 +196,27 @@ export const PORT_INK = {
   ⚠️ **THE PILOT'S COLOURS WERE HERE AS `BO`** — 0412 — and 0415 moved them to
   `src/content/golfers.ts`, because the pilot is whoever was chosen and Bo is one row of four.
 */
+
+/**
+ * Venoma Krait, running for her ship — 0416: *"can we add a viper hooded character running to the
+ * viper ship as well? with a viper coloured golf bag too"*. Hooded in the Wyrm-Ship's green, the bag
+ * in its acid, and the rest of her in its dark. Hers and nobody else's, so it is a row here beside
+ * `VIPER` rather than a fifth golfer: she is not offered.
+ */
+export const VENOMA: RunnerRow = {
+  cap: VIPER.body,
+  shirt: VIPER.body,
+  skin: '#c89a74',
+  hair: '#0d1a12',
+  cut: 'sweep',
+  stubble: false,
+  build: 0.97,
+  bag: VIPER.accent,
+  hood: '#2a5a40',
+  pants: VIPER.belly,
+  // A hoodie's, to the wrist — the first photograph had bare forearms under a hood.
+  longSleeves: true,
+};
 
 /**
  * Where the room's fixed things stand, in world units — along from the view's trailing edge, across
@@ -202,45 +258,59 @@ export const STAGE = {
  * WITH the two ships, so the stars run and the chase is the thing that is still.
  */
 export const BEATS = {
-  /** The room fades up out of black. 0.6 s. */
+  /** The bar's door slides back for her while the room is still coming up. 0.3 s. */
+  rivalDoor: 18,
+  /** The room has faded up out of the backdrop. 0.6 s. */
   fadeIn: 36,
-  /** The Viper's engines light at idle. 1.2 s. */
-  viperLit: 72,
-  /** She lifts off her pad. 2.0 s. */
-  viperLift: 120,
-  /** Full burn, and she goes — through the bay a second later. 2.7 s. */
-  viperGo: 162,
-  /** The bay's alarm starts to turn. 4.1 s. */
-  alarm: 246,
+  /** She is out, running for the Viper. 0.7 s. */
+  rivalOut: 42,
+  /** The door slides shut behind her. 1.2 s. */
+  rivalShut: 72,
+  /** She has reached her ship and leaps. 3.3 s. */
+  rivalLeap: 198,
+  /** She is in. 3.8 s. */
+  rivalIn: 228,
   /**
-   * The bar's door opens. 5.5 s — ⚠️ **a beat later than 0411's 4.7**, asked for as *"slightly more
+   * The Viper's engines light at idle. 4.1 s — ⚠️ **186 steps later than 0414's 1.2**, because she has
+   * to get to the ship first (0416). Everything after this beat moved by the same 186 and nothing else
+   * about it changed: the chase is the same chase, begun three seconds later.
+   */
+  viperLit: 246,
+  /** She lifts off her pad. 4.9 s. */
+  viperLift: 294,
+  /** Full burn, and she goes — through the bay a second later. 5.6 s. */
+  viperGo: 336,
+  /** The bay's alarm starts to turn. 7.0 s. */
+  alarm: 420,
+  /**
+   * The bar's door opens. 8.4 s — ⚠️ **a beat later than 0411's**, asked for as *"slightly more
    * delay on the chase"* (0414): the room stands empty with the alarm turning before anyone comes.
    */
-  door: 330,
-  /** The door is open and the pilot is out. 5.9 s. */
-  pilotOut: 354,
-  /** The pilot has reached the ship and leaps. 7.9 s. */
-  pilotLeap: 474,
-  /** The pilot is in. 8.4 s. */
-  pilotIn: 504,
-  /** The blue fighter's engines light. 8.7 s. */
-  blueLit: 522,
-  /** It lifts — a longer spool than hers, 0414's *"slightly slower off the mark"*. 9.3 s. */
-  blueLift: 560,
-  /** Full burn, and it goes, slower than she did (`BLUE_LAUNCH_ACCEL`). 10.2 s. */
-  blueGo: 612,
-  /** The hangar is black, having faded from 11.5 s. 11.9 s. */
-  cut: 712,
-  /** The dark outside comes up. 12.3 s. */
-  outside: 736,
-  /** The Viper opens her throttle and leaves the frame. 16.3 s. */
-  viperRuns: 976,
-  /** The fighter goes after her, further behind than 0411 had it. 17.5 s. */
-  blueRuns: 1048,
-  /** The picture goes to black. 19.5 s. */
-  fadeOut: 1168,
-  /** The intro is over and the title comes up. 20.1 s — asked for *"slightly longer"* (0414). */
-  end: 1204,
+  door: 504,
+  /** The door is open and the pilot is out. 8.8 s. */
+  pilotOut: 528,
+  /** The pilot has reached the ship and leaps. 10.8 s. */
+  pilotLeap: 648,
+  /** The pilot is in. 11.3 s. */
+  pilotIn: 678,
+  /** The blue fighter's engines light. 11.6 s. */
+  blueLit: 696,
+  /** It lifts — a longer spool than hers, 0414's *"slightly slower off the mark"*. 12.3 s. */
+  blueLift: 734,
+  /** Full burn, and it goes, slower than she did (`BLUE_LAUNCH_ACCEL`). 13.1 s. */
+  blueGo: 786,
+  /** The hangar has faded into the backdrop, from 14.4 s. 14.8 s. */
+  cut: 886,
+  /** The dark outside comes up. 15.2 s. */
+  outside: 910,
+  /** The Viper opens her throttle and leaves the frame. 19.2 s. */
+  viperRuns: 1150,
+  /** The fighter goes after her, further behind than 0411 had it. 20.4 s. */
+  blueRuns: 1222,
+  /** The picture fades into the backdrop the title is drawn on. 22.4 s. */
+  fadeOut: 1342,
+  /** The intro is over and the title comes up. 23.0 s. */
+  end: 1378,
 } as const;
 
 /** How long the intro runs, in steps — the screen's own countdown (`src/state/screens.ts`). */
@@ -279,6 +349,22 @@ export const LEAP_FROM = STAGE.bluePad - 16;
 /** The pilot's running speed, in world units per step — the doorway to the leap in two seconds. */
 export const RUN_SPEED = (LEAP_FROM - STAGE.doorway.along) / (BEATS.pilotLeap - BEATS.pilotOut);
 
+/**
+ * Where her run ends and her leap begins, along — short of the Viper's tail, which sits about 15 units
+ * aft of its pad, on `LEAP_FROM`'s terms.
+ */
+export const RIVAL_LEAP_FROM = STAGE.viperPad - 20;
+
+/**
+ * Her running speed: the doorway to her leap in two and a half seconds, which is 0.5 units a step —
+ * nearly twice the pilot's. She is the one leaving before anyone can stop her, and she is not running
+ * after anybody.
+ */
+export const RIVAL_SPEED = (RIVAL_LEAP_FROM - STAGE.doorway.along) / (BEATS.rivalLeap - BEATS.rivalOut);
+
+/** Steps per frame of her run cycle: the longer stride of a faster run turns over faster. */
+export const RIVAL_FRAME_STEPS = 4;
+
 /** How far above the deck the pilot's sprite centre stands: their feet are at the bottom of it. */
 export const PILOT_STANDS = 6.5;
 
@@ -292,27 +378,34 @@ export const ALARM_PERIOD = 60;
 export const FLICKER_STEPS = 3;
 
 /**
- * The dark outside: how fast the two star fields and the station fall behind the ships at cruise, in
- * world units per step, and how many steps the ships take to reach it — they have only just left the
- * bay, so the shot opens slow and gathers speed. The near field three times the far, so the sky has
- * depth while the camera flies with the chase.
+ * The dark outside: how fast the station falls behind the ships at cruise, in world units per step, and
+ * how many steps the ships take to reach cruise — they have only just left the bay, so the shot opens
+ * slow and gathers speed.
+ *
+ * ⚠️ **THE SKY IS NOT HERE SINCE 0416**: it goes past at the level's own scroll, which is the sim's
+ * number and not the intro's, so `src/render/port.ts` reads it where it draws the sky. 0411's two
+ * fields ran at 0.45 and 1.4 from this table — faster than the game's far and near and slower than its
+ * streaks, a sky of its own, and it looked like one.
  */
-export const OUTSIDE = { far: 0.45, near: 1.4, station: 1, ramp: 150 } as const;
+export const OUTSIDE = { station: 1, ramp: 150 } as const;
 
 /**
- * How the dark outside is framed — 0414: *"needs to zoom out about 25%"*. Everything that flies in it,
- * and the station, is drawn at this share of its size about the middle of the view, so the shot shows
- * a quarter as much again. The stars are not: a field at infinity is the same field at any width.
+ * How the dark outside is framed. 0414: *"needs to zoom out about 25%"*; 0416: *"zoom out on the ships a
+ * bit more, just so they're a bit tighter looking"* — 0.8 to 0.65. Everything that flies in it, and the
+ * station, is drawn at this share of its size about the middle of the view. The sky is not: it is the
+ * level's, at the level's own size, because the next thing drawn in it is the level.
  */
-export const OUTSIDE_ZOOM = 0.8;
+export const OUTSIDE_ZOOM = 0.65;
 
 /**
  * Where the ships hold along the lane outside, and across it before the first jink. The fighter is
- * further back than 0411 put it — *"slightly further behind in space"* (0414).
+ * further back than 0411 put it — *"slightly further behind in space"* (0414) — and further again in
+ * world units since 0416's zoom, 40 to 30, so the gap ON SCREEN is still the one that was asked for:
+ * the zoom shrinks every distance in the shot, and that one is a picture quantity.
  */
 export const CHASE = {
   viper: { along: 150, across: 52 },
-  blue: { along: 40, across: 60 },
+  blue: { along: 30, across: 60 },
 } as const;
 
 /**
@@ -364,7 +457,17 @@ export interface IntroCue {
 /** Bo's feet strike twice a run cycle — on the first and third of its four frames. */
 const STRIDE = 2 * RUN_FRAME_STEPS;
 
+/** Her feet, on her own faster cycle — 0416. */
+const RIVAL_STRIDE = 2 * RIVAL_FRAME_STEPS;
+
 const UNSORTED_CUES: IntroCue[] = [
+  // Venoma out of the bar and across the deck to her ship — 0416.
+  { at: BEATS.rivalDoor, cue: 'door' },
+  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({
+    at: BEATS.rivalOut + i * RIVAL_STRIDE,
+    cue: 'step' as const,
+  })),
+  { at: BEATS.rivalLeap, cue: 'step' },
   { at: BEATS.viperLit, cue: 'ignite' },
   { at: BEATS.viperGo, cue: 'launch' },
   // The alarm on every turn of the beacon, from its first until the hangar goes dark.

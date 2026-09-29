@@ -22,7 +22,7 @@ import { INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { INTRO_STEPS } from '../src/content/port.ts';
+import { BEATS, INTRO_STEPS } from '../src/content/port.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -282,7 +282,9 @@ describe.runIf(chromePath)('a pick plays the intro, heard, with the golfer in it
     const capOf = async (golfer: number): Promise<number> => {
       const page = await open();
       await pick(page, golfer);
-      await page.waitForTimeout(6_800);
+      // Half way through their run, read off the beats — it was a flat 6.8 s, and 0416 moved the run
+      // three seconds later for Venoma's, which put the count on an empty deck.
+      await page.waitForTimeout(((BEATS.pilotOut + BEATS.pilotLeap) / 2 / STEPS_PER_SECOND) * 1000);
       const count = await pixelsOf(page, GOLFERS.feather.cap);
       await page.context().close();
       return count;

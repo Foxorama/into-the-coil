@@ -20,13 +20,12 @@ export type GolferKind = (typeof GOLFER_KINDS)[number];
 /** How a golfer's hair is cut — the predecessor's four, each drawn by `src/render/golfer-art.ts`. */
 export type HairKind = 'coils' | 'sweep' | 'crop' | 'tousled';
 
-export interface GolferRow {
-  /** Their name, as the select screen and the menu say it. */
-  name: string;
-  /** Where they are from — the one line under the name, because `docs/game.md`'s voice is terse. */
-  home: string;
-  /** Their pronouns, as the predecessor gives them. */
-  pronouns: string;
+/**
+ * What a figure running across the port is drawn from — `src/render/golfer-art.ts`. Every golfer is
+ * one, and so is the Viper's pilot, who is not offered (0416).
+ */
+export interface RunnerRow {
+  /** The cap's colour. Under a hood, none of it shows. */
   cap: string;
   shirt: string;
   skin: string;
@@ -36,6 +35,23 @@ export interface GolferRow {
   stubble: boolean;
   /** How big they stand against the others — 1 is everyone else; the big hitter a touch taller. */
   build: number;
+  /** Their carry bag's colour. Absent is `KIT.bag`, the predecessor intro's red. */
+  bag?: string;
+  /** A hood up over the head, in this colour, in place of the cap. Absent is a cap. */
+  hood?: string;
+  /** Their trousers. Absent is `KIT.pants`. */
+  pants?: string;
+  /** Sleeves to the wrist. Absent is a polo's short ones. */
+  longSleeves?: boolean;
+}
+
+export interface GolferRow extends RunnerRow {
+  /** Their name, as the select screen and the menu say it. */
+  name: string;
+  /** Where they are from — the one line under the name, because `docs/game.md`'s voice is terse. */
+  home: string;
+  /** Their pronouns, as the predecessor gives them. */
+  pronouns: string;
 }
 
 /** What every golfer wears under the cap and polo: the predecessor intro's trousers, shoes and bag. */

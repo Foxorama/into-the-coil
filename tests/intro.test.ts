@@ -18,18 +18,24 @@ import {
   JINKS,
   JINK_STEPS,
   LEAP_FROM,
+  OUTSIDE,
   OUTSIDE_ZOOM,
   PORT_EXTENT,
   PORT_KINDS,
   PORT_SPRITE,
+  RIVAL_LEAP_FROM,
   STAGE,
+  SURGE_STEPS,
   TRACK_DELAY,
   type IntroCue,
   type PortKind,
 } from '../src/content/port.ts';
+import { SPRITE } from '../src/content/sprites.ts';
+import { SKY } from '../src/app/mount.ts';
 import { paintPort } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialScreen } from '../src/state/slices/screen.ts';
 
@@ -56,12 +62,19 @@ class RecordingSurface implements Surface {
 const WIDE = { width: Math.round(1000 * MAX_ASPECT), height: 1000 };
 const NARROW = { width: 1920, height: 1080 };
 
+/**
+ * Draw the intro at `t`, flying the sky the game builds for a place in space — `SKY`, exactly as
+ * `src/app/mount.ts` builds it — whose sprites land at `GAME_BASE` on in the intro's atlas (0416).
+ */
 function drawAt(t: number, size = WIDE): { blits: Blit[]; view: View } {
   const view = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
-  paintPort(surface, view, t);
+  paintPort(surface, view, t, SKY);
   return { blits: surface.blits, view };
 }
+
+/** Where the game's sprites start in the intro's atlas — `withTheGame` in `src/render/port-bake.ts`. */
+const GAME_BASE = PORT_KINDS.length;
 
 const of = (blits: readonly Blit[], kind: PortKind): Blit | undefined => blits.find((b) => b.sprite === PORT_SPRITE[kind]);
 
@@ -97,18 +110,19 @@ describe('the intro is a screen a pick plays, and it leaves by itself', () => {
 });
 
 describe('the picture', () => {
-  it('opens out of black and ends in it, so the title comes up out of the dark', () => {
+  it('opens out of the backdrop and ends in it, so the title comes up out of the screen it is drawn on', () => {
+    // The veil is the palette's space — the colour the golfers and the title are drawn on (0416).
     const first = drawAt(0).blits.at(-1)!;
-    expect(first.sprite, 'the first frame is not covered').toBe(PORT_SPRITE.black);
+    expect(first.sprite, 'the first frame is not covered').toBe(PORT_SPRITE.veil);
     expect(first.alpha).toBeCloseTo(1, 5);
     const last = drawAt(INTRO_STEPS - 0.001).blits.at(-1)!;
-    expect(last.sprite, 'the last frame is not covered, so the title cuts in over a picture').toBe(PORT_SPRITE.black);
+    expect(last.sprite, 'the last frame is not covered, so the title cuts in over a picture').toBe(PORT_SPRITE.veil);
     expect(last.alpha).toBeGreaterThan(0.99);
   });
 
-  it('is never dark in the middle of a shot', () => {
-    for (const t of [BEATS.viperGo, BEATS.pilotOut, BEATS.blueGo, BEATS.viperRuns, BEATS.blueRuns]) {
-      expect(of(drawAt(t).blits, 'black'), `the picture is dark at step ${t}`).toBeUndefined();
+  it('is never veiled in the middle of a shot', () => {
+    for (const t of [BEATS.rivalLeap, BEATS.viperGo, BEATS.pilotOut, BEATS.blueGo, BEATS.viperRuns, BEATS.blueRuns]) {
+      expect(of(drawAt(t).blits, 'veil'), `the picture is veiled at step ${t}`).toBeUndefined();
     }
   });
 
@@ -181,10 +195,10 @@ describe('the intro is heard where it is seen — 0412', () => {
   */
   const TWIN_SPRITES: Record<IntroCue['cue'], readonly PortKind[]> = {
     ignite: ['viperIdle', 'blueIdle'],
-    launch: ['flash', 'viperFlare', 'blueFlare'],
+    launch: ['flash', 'viperFlare', 'blueFlare', 'viperSurge', 'blueSurge'],
     alarm: ['beacon'],
     door: ['spill'],
-    step: ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap'],
+    step: ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap', 'rivalRun0', 'rivalRun1', 'rivalRun2', 'rivalRun3', 'rivalLeap'],
   };
 
   it('plays every cue on a step that draws its twin', () => {
@@ -269,5 +283,79 @@ describe('the chase is a chase — 0414', () => {
     const hers = trails(BEATS.viperRuns + 30);
     expect(hers, 'no trail behind her as she jets off').toBeGreaterThan(8);
     expect(trails(BEATS.blueRuns + 30), 'no trail behind the fighter as it jets off').toBeGreaterThan(trails(BEATS.blueRuns - 1));
+  });
+});
+
+describe('the Viper has a pilot, the jets surge, and the sky is the first level’s — 0416', () => {
+  const rival = (blits: readonly Blit[]): Blit | undefined =>
+    blits.find((b) => b.sprite >= PORT_SPRITE.rivalRun0 && b.sprite <= PORT_SPRITE.rivalLeap);
+
+  it('runs Venoma out of the bar and into the Viper before its engines light', () => {
+    const { view } = drawAt(0);
+    const out = rival(drawAt(BEATS.rivalOut + 1).blits);
+    expect(out, 'nobody comes out of the bar for the Viper').toBeDefined();
+    expect(Math.abs(out!.x - screenX(view, STAGE.doorway.along, 0)), 'she does not come out of the bar door').toBeLessThan(view.scale * 2);
+    for (let t = BEATS.rivalOut; t < BEATS.rivalIn; t += 4) expect(rival(drawAt(t).blits), `she is not drawn at step ${t}`).toBeDefined();
+    expect(rival(drawAt(BEATS.viperLit).blits), 'she is still outside the Viper when its engines light').toBeUndefined();
+    // From the run into the leap without a jump, on the pilot's terms.
+    const ran = rival(drawAt(BEATS.rivalLeap - 0.001).blits)!;
+    const leapt = rival(drawAt(BEATS.rivalLeap).blits)!;
+    expect(Math.abs(leapt.x - ran.x), 'she jumped along the deck between the run and the leap').toBeLessThan(2);
+    expect(leapt.x).toBeCloseTo(screenX(view, RIVAL_LEAP_FROM, 0), 0);
+  });
+
+  it('never lets either ship cover her', () => {
+    for (let t = BEATS.rivalOut; t < BEATS.rivalIn; t += 3) {
+      const { blits } = drawAt(t);
+      const her = blits.findIndex((b) => b.sprite >= PORT_SPRITE.rivalRun0 && b.sprite <= PORT_SPRITE.rivalLeap);
+      let ship = -1;
+      blits.forEach((b, i) => {
+        if (b.sprite === PORT_SPRITE.blue || b.sprite === PORT_SPRITE.viper) ship = i;
+      });
+      expect(her, `a ship is drawn over her at step ${t}`).toBeGreaterThan(ship);
+    }
+  });
+
+  it('surges the jets on the step each launch is heard, and settles them into the burn', () => {
+    /*
+      Asked for: *"we also need the jets to supercharge fire when the blast off happens in the movie as
+      well to match the blast off sound they have"*. Held against the cue table rather than the beats, so
+      a launch moved in either one without the other fails here.
+    */
+    const surges = (t: number): Blit[] =>
+      drawAt(t, NARROW).blits.filter((b) => b.sprite === PORT_SPRITE.viperSurge || b.sprite === PORT_SPRITE.blueSurge);
+    const launches = INTRO_CUES.filter((row) => row.cue === 'launch');
+    expect(launches.length, 'the intro has no launches to surge on').toBe(4);
+    for (const row of launches) {
+      const at = surges(row.at);
+      expect(at.length, `no surge on the launch heard at step ${row.at}`).toBe(1);
+      expect(at[0]!.alpha, `the surge at step ${row.at} is not at full`).toBeGreaterThan(0.95);
+      expect(surges(row.at - 1), `a surge before the launch at step ${row.at} is heard`).toEqual([]);
+      expect(surges(row.at + SURGE_STEPS), `the surge from step ${row.at} never settles`).toEqual([]);
+    }
+  });
+
+  it('flies the level’s own sky past the ships, at the level’s own rate and size', () => {
+    /*
+      *"it should kinda lead straight into level 1"* — held in pixels on a 16:9 screen: every layer of the
+      sky a place in space is built with is drawn outside, each moves at `SCROLL_PER_STEP` times its own
+      depth, which is how far it moves in a step of play, and none is framed by the shot's zoom.
+    */
+    const { view } = drawAt(0, NARROW);
+    const s = BEATS.outside + OUTSIDE.ramp + 40;
+    const now = drawAt(s, NARROW).blits;
+    const next = drawAt(s + 1, NARROW).blits;
+    for (const layer of SKY) {
+      const sprite = GAME_BASE + layer.sprite;
+      const tiles = now.filter((b) => b.sprite === sprite);
+      expect(tiles.length, `a layer of the level's sky is not drawn outside (sprite ${layer.sprite})`).toBeGreaterThan(0);
+      for (const tile of tiles) expect(tile.scale, 'the sky is framed by the zoom').toBeCloseTo(view.scale, 6);
+      const moved = SCROLL_PER_STEP * layer.depth * view.scale;
+      const x = tiles[0]!.x - moved;
+      const found = next.some((b) => b.sprite === sprite && Math.abs(b.x - x) < 0.01);
+      expect(found, `the layer at depth ${layer.depth} does not move ${moved.toFixed(2)} px a step, as it does in play`).toBe(true);
+    }
+    // And through the bay, while the room is held still.
+    expect(drawAt(BEATS.viperLit).blits.some((b) => b.sprite === GAME_BASE + SPRITE.skyFar), 'no sky through the bay').toBe(true);
   });
 });

@@ -921,7 +921,12 @@ function paintEruption(
 /** How many screen pixels a sky tile overlaps its neighbour by, in total across its width — 0347. */
 const SEAM_BLEED_PX = 2;
 
-function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, time = 0, beat = 0): void {
+/**
+ * The sky's layers at a camera position. Exported for the intro since 0416, which flies the first
+ * level's sky from an atlas holding the game's sprites after its own: `base` is where they start in
+ * it, and every sprite this draws is offset by it. Nought for the game's own atlas.
+ */
+export function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, time = 0, beat = 0, base = 0): void {
   for (let i = 0; i < sky.length; i++) {
     const layer = sky[i]!;
     const span = layer.extent;
@@ -950,7 +955,7 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, t
       // Centred, because `blit` centres — `src/render/surface.ts`. Half a tile on from its edge.
       const inView = t * span - offset + span / 2;
       const across = view.acrossSpan / 2;
-      surface.blit(layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
+      surface.blit(base + layer.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale * bleed);
     }
     if (layer.veins !== undefined) {
       /*
@@ -962,10 +967,10 @@ function paintSky(surface: Surface, view: View, cameraAlong: number, sky: Sky, t
         for (let t = 0; t < count; t++) {
           const inView = t * span - offset + span / 2;
           const across = view.acrossSpan / 2;
-          surface.blit(SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0, Math.min(1, beat));
+          surface.blit(base + SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0, Math.min(1, beat));
         }
       }
-      for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time, beat);
+      for (let t = 0; t < count; t++) paintPulse(surface, view, t * span - offset, span, layer.veins, time, beat, base);
     }
   }
 }
@@ -1082,7 +1087,7 @@ const PULSE_SWELL = 0.35;
  * heartbeat to the music"* is the ask that replaced it, and a bead now swells with the vessel it runs in,
  * on `beat`. Where it is still rides the steps. One blit a bead.
  */
-function paintPulse(surface: Surface, view: View, left: number, span: number, veins: Veins, time: number, beat: number): void {
+function paintPulse(surface: Surface, view: View, left: number, span: number, veins: Veins, time: number, beat: number, base: number): void {
   const { beads, period } = veins.pulse;
   for (let i = 0; i < veins.trunks.length; i++) {
     const trunk = veins.trunks[i]!;
@@ -1100,7 +1105,7 @@ function paintPulse(surface: Surface, view: View, left: number, span: number, ve
       const sx = screenX(view, along, across);
       const sy = screenY(view, along, across);
       surface.blit(
-        SPRITE.veinBead,
+        base + SPRITE.veinBead,
         sx,
         sy,
         view.scale * swell,

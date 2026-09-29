@@ -27,19 +27,20 @@ export const PROBES = [
     guard: 'runs its beats in the order they are written',
     edit: {
       path: 'src/content/port.ts',
-      // Re-anchored by 0414, which moved the beat.
-      find: '  blueRuns: 1048,',
-      replace: '  blueRuns: 900,',
+      // Re-anchored by 0414 and 0416, which moved the beat.
+      find: '  blueRuns: 1222,',
+      replace: '  blueRuns: 1074,',
     },
   },
   {
     decision: '0411',
     suite: 'tests/intro.test.ts',
     broke: 'the last fade taken out, so the title cuts in over the stars',
-    guard: 'opens out of black and ends in it',
+    // Since 0416 the fades are to the backdrop, not to black.
+    guard: 'opens out of the backdrop and ends in it',
     edit: {
       path: 'src/render/port.ts',
-      find: '  else if (t >= BEATS.fadeOut) dark = Math.min(1, (t - BEATS.fadeOut) / (BEATS.end - BEATS.fadeOut));',
+      find: '  else if (t >= BEATS.fadeOut) veil = Math.min(1, (t - BEATS.fadeOut) / (BEATS.end - BEATS.fadeOut));',
       replace: '',
     },
   },
@@ -47,14 +48,14 @@ export const PROBES = [
     decision: '0411',
     suite: 'tests/intro.test.ts',
     broke: 'the hangar fading from the fighter’s launch rather than after it',
-    guard: 'is never dark in the middle of a shot',
+    guard: 'is never veiled in the middle of a shot',
     edit: {
       path: 'src/render/port.ts',
       // The WHOLE line: moving only the condition left the darkness counting from the old cut, so it
       // came out negative, nothing was drawn, and the proof reported the guard STILL GREEN over a
       // break that never applied.
-      find: '  else if (t >= BEATS.cut - FADE && t < BEATS.outside) dark = Math.min(1, (t - (BEATS.cut - FADE)) / FADE);',
-      replace: '  else if (t >= BEATS.blueGo - FADE && t < BEATS.outside) dark = Math.min(1, (t - (BEATS.blueGo - FADE)) / FADE);',
+      find: '  else if (t >= BEATS.cut - FADE && t < BEATS.outside) veil = Math.min(1, (t - (BEATS.cut - FADE)) / FADE);',
+      replace: '  else if (t >= BEATS.blueGo - FADE && t < BEATS.outside) veil = Math.min(1, (t - (BEATS.blueGo - FADE)) / FADE);',
     },
   },
   {
@@ -144,7 +145,7 @@ export const PROBES = [
     guard: 'runs the golfer who was picked out of the bar',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      paintPort(w.surface, w.view, w.intro + alpha);',
+      find: '      paintPort(w.surface, w.view, w.intro + alpha, w.sky);',
       replace: '      w.surface.clear();',
     },
   },
