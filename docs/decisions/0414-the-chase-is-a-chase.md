@@ -58,7 +58,7 @@ measurement. `tests/intro.test.ts` adds:
 - **the fighter leaves the pad slower than she did**, and **opens up further behind her**.
 
 `HANDOVER_MS` is re-measured for the longer intro on [0245](0245-a-budget-is-sized-under-load.md)'s
-terms; the figures are beside it.
+terms: 61 s → 75 s, three times the worst handover measured while the whole suite ran (22.8–24.8 s).
 
 ## Seen to fail
 
