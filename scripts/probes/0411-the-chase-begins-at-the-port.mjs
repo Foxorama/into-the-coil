@@ -48,8 +48,11 @@ export const PROBES = [
     guard: 'is never dark in the middle of a shot',
     edit: {
       path: 'src/render/port.ts',
-      find: '  else if (t >= BEATS.cut - FADE && t < BEATS.outside)',
-      replace: '  else if (t >= BEATS.blueGo - FADE && t < BEATS.outside)',
+      // The WHOLE line: moving only the condition left the darkness counting from the old cut, so it
+      // came out negative, nothing was drawn, and the proof reported the guard STILL GREEN over a
+      // break that never applied.
+      find: '  else if (t >= BEATS.cut - FADE && t < BEATS.outside) dark = Math.min(1, (t - (BEATS.cut - FADE)) / FADE);',
+      replace: '  else if (t >= BEATS.blueGo - FADE && t < BEATS.outside) dark = Math.min(1, (t - (BEATS.blueGo - FADE)) / FADE);',
     },
   },
   {
