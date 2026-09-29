@@ -72,7 +72,17 @@ jobs:
       # `CI=true` is already set by Actions, which is what makes the browser-gate assertion in
       # tests/boot.browser.test.ts hard-fail here instead of skipping. That assertion is the whole
       # reason this job can be trusted: fifty browser tests once skipped for months on a green board.
+      #
+      # ⚠️ SEALED FIRST, AND THE REPORT KEPT. The proof's baseline asks whether the suites are green
+      # on these bytes, which is the question `npm run check` is about to answer; it used to be asked
+      # twice, thirteen minutes each. The seal is the tree before the suite runs, and `npm run prove`
+      # reads the report only if the tree still matches it. See
+      # docs/decisions/0419-the-baseline-is-the-suites-own-run.md.
+      - run: node scripts/prove-guard.mjs --seal "$RUNNER_TEMP/tree.seal"
+
       - run: npm run check
+        env:
+          ITC_SUITE_REPORT: ${{ runner.temp }}/suite.json
 
       # Inside the REQUIRED `test` job on purpose, rather than as a job of its own. A new job means a
       # new required context, which means a settings change — and an unrequired check is one nobody
@@ -82,3 +92,6 @@ jobs:
       # docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md. It still runs last only
       # because `npm run check` above is the cheaper of the two ways to find out the tree is broken.
       - run: npm run prove
+        env:
+          PROVE_BASELINE: ${{ runner.temp }}/suite.json
+          PROVE_SEAL: ${{ runner.temp }}/tree.seal

@@ -226,5 +226,15 @@ export default defineConfig({
       budgets already written stay, each re-sized by the same rule with its measurement beside it.
     */
     testTimeout: 180_000,
+    /*
+      ── THE RUN THE PROOF'S BASELINE IS READ FROM — 0419 ───────────────────────────────────────────
+
+      Set by CI on `npm run check`, and nowhere else. The console output is unchanged; the JSON
+      beside it is what `npm run prove` holds to the tree's seal instead of running every suite a
+      second time. `prove`'s own runs pass `--reporter` and `--outputFile`, which override this.
+    */
+    ...(process.env.ITC_SUITE_REPORT
+      ? { reporters: ['default', 'json'], outputFile: { json: process.env.ITC_SUITE_REPORT } }
+      : {}),
   },
 });

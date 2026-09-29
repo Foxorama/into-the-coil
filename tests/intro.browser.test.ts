@@ -22,7 +22,7 @@ import { INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { BEATS, INTRO_STEPS } from '../src/content/port.ts';
+import { INTRO_STEPS } from '../src/content/port.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -159,23 +159,6 @@ const longestGap = async (page: Page): Promise<number> => {
   return page.evaluate(() => (window as unknown as { __itcGap: number }).__itcGap);
 };
 
-/** How many sampled pixels are within a few levels of `hex` — the cheapest honest "is that drawn". */
-function pixelsOf(page: Page, hex: string): Promise<number> {
-  return page.evaluate((colour: string) => {
-    const canvas = document.querySelector('#app canvas');
-    if (!(canvas instanceof HTMLCanvasElement)) return -1;
-    const ctx = canvas.getContext('2d');
-    if (ctx === null) return -1;
-    const want = [1, 3, 5].map((i) => parseInt(colour.slice(i, i + 2), 16));
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    let count = 0;
-    for (let i = 0; i < data.length; i += 4) {
-      if (Math.abs(data[i]! - want[0]!) <= 6 && Math.abs(data[i + 1]! - want[1]!) <= 6 && Math.abs(data[i + 2]! - want[2]!) <= 6) count++;
-    }
-    return count;
-  }, hex);
-}
-
 describe.runIf(chromePath)('the page opens on the name, and offers the golfers once it has loaded', () => {
   it('shows the splash first, and the golfers only after it', async () => {
     const page = await open();
@@ -276,21 +259,55 @@ describe.runIf(chromePath)('a pick plays the intro, heard, with the golfer in it
   it('runs the golfer who was picked out of the bar', async () => {
     /*
       ⚠️ **THE PICTURE, NOT THE STATE** — 0027. The pilot's cap is the golfer's own colour and appears
-      nowhere else in the port, so it is counted on the canvas while they run for the ship: Feather's
-      teal when she was picked, and not when Bo was.
+      nowhere else in the port, so it is counted on the canvas while they run for the ship: the picked
+      golfer's cap, and at that same moment none of the other's.
+
+      ⚠️ **AND THE MOMENT IS THE PICTURE'S, NOT THE CLOCK'S** — 0044. This slept to the middle of the
+      run as the beats would place it at sixty steps a second, which is a 2.2 s window about 9.8 s
+      after the pick; under the whole suite the loop falls behind real time and the count landed on an
+      empty deck — *"Feather was picked and her cap is not in the intro: expected 0"*, passing alone
+      three times in three. So it waits for EITHER cap to be drawn — the picked golfer's, or the one
+      that should not be there — with the handover's budget as the bound, and reads both on that same
+      frame. Measured 2026-09-30 over two whole intros, alone: Feather's teal and Bo's violet each 0 px
+      for the whole intro unless that golfer was picked, and 106 and 126 px at most while they ran.
     */
-    const capOf = async (golfer: number): Promise<number> => {
+    const capsWhenRunning = async (golfer: 'feather' | 'bo', other: 'feather' | 'bo'): Promise<{ mine: number; theirs: number }> => {
       const page = await open();
-      await pick(page, golfer);
-      // Half way through their run, read off the beats — it was a flat 6.8 s, and 0416 moved the run
-      // three seconds later for Venoma's, which put the count on an empty deck.
-      await page.waitForTimeout(((BEATS.pilotOut + BEATS.pilotLeap) / 2 / STEPS_PER_SECOND) * 1000);
-      const count = await pixelsOf(page, GOLFERS.feather.cap);
+      await pick(page, GOLFER_KINDS.indexOf(golfer));
+      const seen = page.waitForFunction(
+        ([mine, theirs]: [string, string]) => {
+          const canvas = document.querySelector('#app canvas');
+          if (!(canvas instanceof HTMLCanvasElement)) return null;
+          const data = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height).data;
+          if (data === undefined) return null;
+          const count = (hex: string): number => {
+            const want = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+            let n = 0;
+            for (let i = 0; i < data.length; i += 4) {
+              if (Math.abs(data[i]! - want[0]!) <= 6 && Math.abs(data[i + 1]! - want[1]!) <= 6 && Math.abs(data[i + 2]! - want[2]!) <= 6) n++;
+            }
+            return n;
+          };
+          const drawn = { mine: count(mine), theirs: count(theirs) };
+          return drawn.mine > 10 || drawn.theirs > 10 ? drawn : null;
+        },
+        [GOLFERS[golfer].cap, GOLFERS[other].cap] as [string, string],
+        { timeout: HANDOVER_MS, polling: 100 },
+      );
+      // A page that never draws either cap is a wait that runs out, and says so in the claim's words.
+      const drawn = await seen.then(
+        async (handle) => (await handle.jsonValue()) as { mine: number; theirs: number },
+        () => ({ mine: 0, theirs: 0 }),
+      );
       await page.context().close();
-      return count;
+      return drawn;
     };
-    expect(await capOf(GOLFER_KINDS.indexOf('feather')), 'Feather was picked and her cap is not in the intro').toBeGreaterThan(10);
-    expect(await capOf(GOLFER_KINDS.indexOf('bo')), 'Bo was picked and Feather ran out of the bar').toBe(0);
+    const feather = await capsWhenRunning('feather', 'bo');
+    expect(feather.mine, 'Feather was picked and her cap is not in the intro').toBeGreaterThan(10);
+    expect(feather.theirs, 'Feather was picked and Bo ran out of the bar beside her').toBe(0);
+    const bo = await capsWhenRunning('bo', 'feather');
+    expect(bo.mine, 'Bo was picked and their cap is not in the intro').toBeGreaterThan(10);
+    expect(bo.theirs, 'Bo was picked and Feather ran out of the bar').toBe(0);
   });
 });
 

@@ -92,6 +92,15 @@ worker keeps one vitest alive. It also holds the measurement that refused *provi
 time, and names the two things still owed — the seventy slow guards, and a rule about what a test may
 cost, which does not exist yet.
 
+⚠️ **CI IS BEING TAKEN UNDER TEN MINUTES, AND UNDER FIVE IS THE AIM — A QUEUE OF THREE, ONE PR EACH.**
+Asked for 2026-09-30, and the repository stays public: private would halve the runners and lose
+branch protection on the free plan.
+**1.** [0419](decisions/0419-the-baseline-is-the-suites-own-run.md): the proof's baseline is read from
+`npm run check`'s own run, sealed to the tree. **2.** Sharding the suite and the probes across runner
+jobs, behind a required `test` job that waits on them — 0419's *What is next* names the trap it must
+guard. **3.** Splitting the files that take over three minutes, then the long single guards 0344 owes.
+In that order because each is measured against what the one before it leaves.
+
 ---
 
 ## What is settled

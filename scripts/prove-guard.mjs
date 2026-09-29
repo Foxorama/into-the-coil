@@ -463,6 +463,76 @@ export function drift(before, after) {
   return out;
 }
 
+// ── The baseline the suite already ran ───────────────────────────────────────────────────────────
+
+/**
+ * One hash for a whole tree: every path and every file's bytes, in path order. `manifest`'s view, so
+ * it sees exactly what `drift` sees and nothing else — `node_modules`, `dist` and `.git` are out.
+ *
+ * @param {Map<string, string>} files   a manifest
+ * @returns {string}
+ */
+export function sealOf(files) {
+  const hash = createHash('sha256');
+  for (const path of [...files.keys()].sort()) hash.update(`${path}\0${files.get(path)}\n`);
+  return hash.digest('hex');
+}
+
+/**
+ * The baseline, read from the run `npm run check` already made — or a thrown reason it cannot be.
+ *
+ * ⚠️ **THE SAME CLAIM, MADE ONCE** — `docs/decisions/0419-the-baseline-is-the-suites-own-run.md`.
+ * The baseline asks *are the suites these probes judge green on these bytes, before anything is
+ * broken*. In CI, `npm run check` has just asked exactly that of the same checkout, and the proof
+ * asked it again for thirteen minutes. So a report is taken in place of a run only when it can be
+ * shown to BE that run:
+ *
+ *   - **sealed to these bytes.** `sealed` is `sealOf` taken before the suite ran, `tree` is taken now.
+ *     A report of other bytes is a green somebody else earned.
+ *   - **covering every suite judged.** A suite the report never ran is a baseline never made.
+ *   - **every test in them passed.** Skipped is not green: a filtered or sharded run skips what it did
+ *     not ask, and a report that skipped a guard has not seen it pass.
+ *
+ * A suite that failed as a FILE — a module that threw before any `it` ran — carries no tests at all,
+ * so counting tests alone would read it as green. It is counted as a failure here.
+ *
+ * @param {{report: any, sealed: string | null, tree: string, suites: string[]}} args
+ * @returns {{failed: Failure[], ran: number}}
+ */
+export function sealedBaseline({ report, sealed, tree, suites }) {
+  if (report === null) throw new Error('there is no report to read the baseline from');
+  if (sealed === null) {
+    throw new Error('the report has no seal, so nothing says which bytes it ran against');
+  }
+  if (sealed !== tree) {
+    throw new Error(
+      'the report was sealed to different bytes from the tree being proven — something changed ' +
+        'between the suite and the proof, and its green is not this tree’s',
+    );
+  }
+  const files = (report.testResults ?? []).map((file) => ({ ...file, name: String(file.name).replaceAll('\\', '/') }));
+  const judged = files.filter((file) => suites.some((suite) => file.name.endsWith(`/${suite}`)));
+  const missing = suites.filter((suite) => !judged.some((file) => file.name.endsWith(`/${suite}`)));
+  if (missing.length) {
+    throw new Error(`the report never ran ${missing.length} suite(s) this proof judges:\n  ${missing.join('\n  ')}`);
+  }
+  const unasked = judged.flatMap((file) =>
+    (file.assertionResults ?? [])
+      .filter((t) => t.status !== 'passed' && t.status !== 'failed')
+      .map((t) => `${file.name} > ${t.title} — ${t.status}`),
+  );
+  if (unasked.length) {
+    throw new Error(`the report did not run every test it holds, and skipped is not green:\n  ${unasked.join('\n  ')}`);
+  }
+  const { failed, ran } = resultsOf({ testResults: judged });
+  for (const file of judged) {
+    if (file.status === 'failed' && (file.assertionResults ?? []).length === 0) {
+      failed.push({ title: file.name, message: file.message ?? 'the suite failed before any test ran' });
+    }
+  }
+  return { failed, ran };
+}
+
 // ── Running the suite ────────────────────────────────────────────────────────────────────────────
 
 /**
@@ -490,6 +560,24 @@ export function drift(before, after) {
  * nothing looked at; `main` re-runs the whole suite when the filtered run does NOT go red, which is
  * the only path that ever wanted them.
  */
+/**
+ * A vitest JSON report as the tests that ran and the ones that failed. The one reading of a report,
+ * shared by a run this harness started and the run `npm run check` sealed.
+ *
+ * @returns {{failed: Failure[], ran: number}}
+ */
+function resultsOf(parsed) {
+  const failed = [];
+  let ran = 0;
+  for (const file of parsed.testResults ?? []) {
+    for (const t of file.assertionResults ?? []) {
+      if (t.status !== 'skipped') ran++;
+      if (t.status === 'failed') failed.push({ title: t.title, message: t.failureMessages?.[0] ?? '' });
+    }
+  }
+  return { failed, ran };
+}
+
 function runSuite(suites, cwd, report, only) {
   return new Promise((done, fail) => {
     rmSync(report, { force: true });
@@ -511,16 +599,7 @@ function runSuite(suites, cwd, report, only) {
     child.on('error', fail);
     child.on('close', () => {
       if (!existsSync(report)) return fail(new Error(`vitest produced no report for ${suites.join(' ')}.\n${out}`));
-      const parsed = JSON.parse(readFileSync(report, 'utf8'));
-      const failed = [];
-      let ran = 0;
-      for (const file of parsed.testResults ?? []) {
-        for (const t of file.assertionResults ?? []) {
-          if (t.status !== 'skipped') ran++;
-          if (t.status === 'failed') failed.push({ title: t.title, message: t.failureMessages?.[0] ?? '' });
-        }
-      }
-      done({ failed, ran });
+      done(resultsOf(JSON.parse(readFileSync(report, 'utf8'))));
     });
   });
 }
@@ -674,7 +753,36 @@ async function main(filter) {
       whether the WHOLE suite passes is `npm test`'s question, asked by `npm run check` before this.
     */
     process.stdout.write(`Baseline: ${suites.length} suite(s) must be green before anything is broken ... `);
-    const baseline = await runSuite(suites, root, join(base, 'baseline.json'));
+    /*
+      ⚠️ **IN CI THE SUITE HAS ALREADY ANSWERED, AND THE ANSWER IS READ RATHER THAN ASKED AGAIN** —
+      `sealedBaseline`, and 0419. Both variables or neither: one alone is a proof that meant to reuse
+      a run and cannot show which one, and that is refused rather than quietly run the long way.
+    */
+    const reportPath = process.env.PROVE_BASELINE;
+    const sealPath = process.env.PROVE_SEAL;
+    if (Boolean(reportPath) !== Boolean(sealPath)) {
+      console.log('REFUSED');
+      console.error('\nPROVE_BASELINE and PROVE_SEAL go together: a report, and the seal of the bytes it ran against.');
+      return 1;
+    }
+    let baseline;
+    if (reportPath) {
+      const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : null);
+      try {
+        const report = read(reportPath);
+        baseline = sealedBaseline({
+          report: report === null ? null : JSON.parse(report),
+          sealed: read(sealPath)?.trim() ?? null,
+          tree: sealOf(manifest(root)),
+          suites,
+        });
+      } catch (e) {
+        console.log('REFUSED');
+        console.error(`\nThe suite's own run cannot stand in for the baseline: ${e.message ?? e}`);
+        return 1;
+      }
+      process.stdout.write('read from the suite’s own run, sealed to these bytes ... ');
+    } else baseline = await runSuite(suites, root, join(base, 'baseline.json'));
     if (baseline.failed.length) {
       console.log('RED');
       console.error(
@@ -860,5 +968,14 @@ async function main(filter) {
 // Only when run as a command. Imported — by `tests/prove-guard.test.ts`, which proves the two checks
 // above against samples — this file must do nothing but export.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  // `--seal <file>`: the tree as it stands, for a later proof to hold a report of it to — 0419.
+  if (process.argv[2] === '--seal') {
+    if (!process.argv[3]) {
+      console.error('usage: node scripts/prove-guard.mjs --seal <file>');
+      process.exit(1);
+    }
+    writeFileSync(process.argv[3], `${sealOf(manifest(root))}\n`);
+    process.exit(0);
+  }
   process.exit(await main(process.argv[2]));
 }
