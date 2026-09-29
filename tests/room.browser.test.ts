@@ -364,8 +364,8 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
 
     /*
       ⚠️ **ONE VISIT FIRST, AND IT IS NOT A WARM-UP — IT IS WHAT MAKES THE COMPARISON MEAN THE CAMERA.**
-      The title at BOOT has never had its weather baked: `applyPlace` is memoised on the backdrop
-      colour and returns early until something changes it, so the first place pressed is what causes
+      The title at BOOT has never had its weather baked: `applyPlace` is memoised on the place, which
+      starts as the title's, and returns early until something changes it, so the first place pressed is what causes
       `bakeNebula` to run at all. Comparing a post-visit title against a boot title therefore compares
       *weather against no weather* and would go red however perfectly the camera was restored — which
       is what the first draft of this test did.
