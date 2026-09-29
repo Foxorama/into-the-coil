@@ -269,8 +269,13 @@ describe.runIf(chromePath)('the orientation gate', () => {
       { timeout: 5_000 },
     );
     expect(await canvasShown(page)).toBe(true);
-    await page.waitForTimeout(120);
-    expect(await inkedPixels(page)).toBeGreaterThan(0);
+    /*
+      ⚠️ **POLLED, BECAUSE WHAT COMES BACK IS THE INTRO AND THE INTRO OPENS OUT OF BLACK** — 0411, found
+      by 0413. The picture it resumes on is a hangar fading up over 36 steps, so a sample taken 120 ms
+      after the turn could land on a frame that is black by design, and it did under load. Still a
+      claim that the page draws: a page that never does fails at the bound.
+    */
+    await expect.poll(() => inkedPixels(page), { timeout: 5_000 }).toBeGreaterThan(0);
     await page.context().close();
   });
 });

@@ -1272,7 +1272,22 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
     ⚠️ **The buffer is claimed up front and filled in place**, so a press that arrives mid-prewarm
     finds `prewarmed` still null and takes the cold path — a half-filled buffer is never reachable.
   */
+  /*
+    ⚠️ **ON THE WORKERS WHERE THERE ARE ANY** — `docs/decisions/0413-the-prewarm-is-parallel.md`. The
+    loops are nearly all of the prewarm's synthesis, and walked here they were six seconds of the intro
+    stepping around 8 ms slices: dropped frames the whole time, and the Skip and the sound waiting on
+    the last of them. The place bakes have had a pool since 0331; the base layers go to it too, all at
+    once, and only the cues stay on this thread. `bakeLayer` is `layerNotes` with every note run in
+    order, so the samples are the walk's to the bit.
+  */
+  const remote = new Set<MusicLayer>();
+  const baker = layerBaker;
   for (const layer of MUSIC_LAYERS) {
+    if (baker !== null) {
+      remote.add(layer);
+      loops[layer] = RELEASED;
+      continue;
+    }
     const { buffer, notes } = layerNotes(layer, SAMPLE_RATE);
     loops[layer] = buffer;
     for (const note of notes) jobs.push(note);
@@ -1282,7 +1297,26 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
     `drainPrewarm` below. Without this the partial work is unreachable and a press mid-prewarm
     re-synthesises everything from zero, which is what it did for its whole life.
   */
-  pending = { jobs, at: 0, cues, loops };
+  const set: PendingPrewarm = { jobs, at: 0, cues, loops, remote };
+  pending = set;
+  /** Done when the walk and every worker are — whichever of them finishes last says so. */
+  const finishIfDone = (): void => {
+    if (pending !== set || set.at < set.jobs.length || set.remote.size > 0) return;
+    prewarmed = { cues: set.cues, loops: set.loops };
+    pending = null;
+    warming = false;
+  };
+  if (baker !== null) {
+    for (const layer of MUSIC_LAYERS) {
+      void baker(layer, undefined).then((buffer) => {
+        // A reply for a layer a press has already baked here is late, and dropped: the one it would
+        // replace is the same samples, and the set may already be handed over.
+        if (!set.remote.delete(layer)) return;
+        set.loops[layer] = buffer;
+        finishIfDone();
+      });
+    }
+  }
   const step = (): void => {
     /*
       ⚠️ **A SLICE IS A TIME BUDGET AND IT USED TO BE ONE JOB, WHICH MADE THE PREWARM 4× ITS OWN
@@ -1297,17 +1331,25 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
       deciding how much work to do before yielding, which is the one place a clock is the right
       instrument — a fixed job count would be a guess about a machine.
     */
-    if (pending === null) return;
-    pending.at = sliceOf(pending.jobs, pending.at);
-    if (pending.at >= pending.jobs.length) {
-      prewarmed = { cues: pending.cues, loops: pending.loops };
-      pending = null;
-      warming = false;
+    if (pending !== set) return;
+    set.at = sliceOf(set.jobs, set.at);
+    if (set.at >= set.jobs.length) {
+      // The walk is done; the workers, if any are still out, finish it.
+      finishIfDone();
       return;
     }
     schedule(step);
   };
   schedule(step);
+}
+
+/** A prewarm in flight: the jobs it has left, the layers still on a worker, and the half-filled set. */
+interface PendingPrewarm {
+  jobs: (() => void)[];
+  at: number;
+  cues: Float32Array[][];
+  loops: Record<MusicLayer, Float32Array>;
+  remote: Set<MusicLayer>;
 }
 
 /**
@@ -1320,9 +1362,8 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
  */
 const PREWARM_SLICE_MS = 8;
 
-/** A prewarm in flight: the jobs it has left, and the half-filled set they are filling. */
-let pending: { jobs: (() => void)[]; at: number; cues: Float32Array[][]; loops: Record<MusicLayer, Float32Array> } | null =
-  null;
+/** A prewarm in flight, or null. */
+let pending: PendingPrewarm | null = null;
 
 /**
  * Finish a prewarm that is still walking, synchronously, and hand back the completed set.
@@ -1344,6 +1385,13 @@ let pending: { jobs: (() => void)[]; at: number; cues: Float32Array[][]; loops: 
 export function drainPrewarm(): void {
   if (pending === null) return;
   while (pending.at < pending.jobs.length) pending.jobs[pending.at++]!();
+  /*
+    ⚠️ **AND WHAT IS STILL ON A WORKER IS BAKED HERE** — 0413. A press cannot wait for a message, so a
+    layer still out is synthesised on this thread by the same `bakeLayer` the worker runs, and the
+    worker's reply, when it comes, finds the layer no longer out and is dropped.
+  */
+  for (const layer of pending.remote) pending.loops[layer] = bakeLayer(layer, SAMPLE_RATE);
+  pending.remote.clear();
   prewarmed = { cues: pending.cues, loops: pending.loops };
   pending = null;
   warming = false;
