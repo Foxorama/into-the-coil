@@ -228,6 +228,7 @@ cost, which does not exist yet.
 | **the ENEMIES MOVE: every enemy in three poses — wings, tails, jaws, an iris, a pulse — each row authoring its own cycle** | [0410](decisions/0410-the-enemies-move.md) — the owed half of [0280](decisions/0280-a-cheap-mechanism-does-not-rename-the-ask.md); what never landed before it is [`the-unlanded-work`](../reports/the-unlanded-work-2026-09-29.md) |
 | **the CHASE BEGINS AT THE PORT: the page opens on an intro — the Viper blasts out of the spaceport, a pilot runs out of the bar to the blue fighter and goes after her — and any press skips it to the title** | [0411](decisions/0411-the-chase-begins-at-the-port.md) — Phase E of [the overnight plan](../reports/the-overnight-plan-2026-09-19.md) |
 | **the PORT IS HEARD: the pilot is Backspin Bo, the intro plays its own cues from the first real press, and a Skip appears once the game behind it has loaded — Escape skips at any moment** | [0412](decisions/0412-the-port-is-heard.md) — amends 0411's *any press skips* |
+| **the PREWARM IS PARALLEL: the music baked at boot goes to the worker pool two layers at a time, so the Skip is up in about two seconds and the intro stops dropping frames** | [0413](decisions/0413-the-prewarm-is-parallel.md) — the pool is [0331](decisions/0331-the-heart-beats-under-it.md)'s |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -860,9 +861,9 @@ animal reads at speed and whether any is too busy**; the holds on the rows are t
 And the page opens on the intro ([0411](decisions/0411-the-chase-begins-at-the-port.md),
 [0412](decisions/0412-the-port-is-heard.md)) — **owed a look for its pacing, whether the Viper reads as
 her, and whether seventeen seconds is too long on every load, and a listen to its five cues**; the beats
-and the cues are tables in `src/content/port.ts`. **Next on it is a faster prewarm** — on the workers the
-place bakes use — which would bring the Skip and the sound forward and take the dropped frames out of
-the first six seconds.
+and the cues are tables in `src/content/port.ts`. The prewarm it waited on is on the workers now
+([0413](decisions/0413-the-prewarm-is-parallel.md)); **next on it is the play-test's second list** —
+longer, less floaty in space, trails on the way out, a wider shot and a later chaser.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel

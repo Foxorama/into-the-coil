@@ -20,8 +20,9 @@ export const PROBES = [
     guard: '0157 — a SLICE does many notes, because a browser clamps the gap between them',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    pending.at = sliceOf(pending.jobs, pending.at);',
-      replace: '    if (pending.at < pending.jobs.length) pending.jobs[pending.at++]!();',
+      // Re-anchored by 0413, which names the prewarm in flight `set` inside its own closure.
+      find: '    set.at = sliceOf(set.jobs, set.at);',
+      replace: '    if (set.at < set.jobs.length) set.jobs[set.at++]!();',
     },
   },
   {
