@@ -251,7 +251,9 @@ describe('the chase is a chase — 0414', () => {
     const after = 40;
     const hers = moved(BEATS.viperGo + after, 'viper') - moved(BEATS.viperGo, 'viper');
     const theirs = moved(BEATS.blueGo + after, 'blue') - moved(BEATS.blueGo, 'blue');
-    expect(theirs, 'the fighter left its pad as fast as she did').toBeLessThan(hers);
+    // With a margin: two equal launches differ only by rounding, and `npm run prove` found a bare
+    // less-than passing over one. The fighter's is three quarters of hers by design.
+    expect(theirs, 'the fighter left its pad as fast as she did').toBeLessThan(hers * 0.9);
   });
 
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {

@@ -12,9 +12,11 @@ export const PROBES = [
     broke: 'her line drifting on a slow wave again — the floating that was reported',
     guard: 'holds her line between breaks',
     edit: {
+      // On top of her line, not under it: a drift added before the jinks is overwritten by each one
+      // that finishes, and the proof said STILL GREEN over it — correctly.
       path: 'src/render/port.ts',
-      find: '  let across = CHASE.viper.across;',
-      replace: '  let across = CHASE.viper.across + 6 * Math.sin(s / 20);',
+      find: '    across += (jink.to - across) * ease(s, jink.at, jink.at + JINK_STEPS);\n  }\n  return across;',
+      replace: '    across += (jink.to - across) * ease(s, jink.at, jink.at + JINK_STEPS);\n  }\n  return across + 6 * Math.sin(s / 20);',
     },
   },
   {
