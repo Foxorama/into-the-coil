@@ -708,20 +708,31 @@ describe('the cue table', () => {
 
       resetPrewarm();
       const asked: (string | undefined)[] = [];
-      const replies: Promise<Float32Array>[] = [];
+      /*
+        ⚠️ **AND NEVER MORE THAN TWO OUT AT ONCE** — `PREWARM_IN_FLIGHT`. Every layer out at once took
+        pages' first paint away in the test suite; the most this pool ever holds is counted here.
+      */
+      let out = 0;
+      let mostOut = 0;
       useLayerBaker((layer, theme) => {
         asked.push(theme);
-        const reply = Promise.resolve().then(() => bakeLayer(layer, SAMPLE_RATE, theme));
-        replies.push(reply);
-        return reply;
+        out++;
+        mostOut = Math.max(mostOut, out);
+        return new Promise<Float32Array>((done) =>
+          setTimeout(() => {
+            out--;
+            done(bakeLayer(layer, SAMPLE_RATE, theme));
+          }, 0),
+        );
       });
       try {
         prewarmAudio((run) => run());
+        expect(takePrewarmed(), 'the set was handed over before the pool had answered').toBeNull();
+        for (let i = 0; i < 1_000 && takePrewarmed() === null; i++) await new Promise((next) => setTimeout(next, 0));
         expect(asked.length, 'the loops were not all handed to the pool').toBe(MUSIC_LAYERS.length);
         expect(asked.every((theme) => theme === undefined), 'the prewarm asked the pool for a place').toBe(true);
-        expect(takePrewarmed(), 'the set was handed over before the pool had answered').toBeNull();
-        await Promise.all(replies);
-        await Promise.resolve();
+        expect(mostOut, 'more of the prewarm was on the pool at once than it may put there').toBeLessThanOrEqual(2);
+        expect(mostOut, 'the pool was only ever given one layer at a time').toBe(2);
         const pooled = takePrewarmed();
         expect(pooled, 'the pool answered and the set was never handed over').not.toBeNull();
         for (const layer of MUSIC_LAYERS) {

@@ -1307,15 +1307,24 @@ export function prewarmAudio(schedule: (run: () => void) => void = (run) => void
     warming = false;
   };
   if (baker !== null) {
-    for (const layer of MUSIC_LAYERS) {
+    /*
+      ⚠️ **`PREWARM_IN_FLIGHT` AT A TIME, AND NOT THE WHOLE POOL** — each reply sends the next. See the
+      constant for the measurement; a layer a press has already baked here is never sent at all.
+    */
+    const queue = [...MUSIC_LAYERS];
+    const send = (): void => {
+      const layer = queue.shift();
+      if (layer === undefined || !set.remote.has(layer)) return;
       void baker(layer, undefined).then((buffer) => {
         // A reply for a layer a press has already baked here is late, and dropped: the one it would
         // replace is the same samples, and the set may already be handed over.
         if (!set.remote.delete(layer)) return;
         set.loops[layer] = buffer;
         finishIfDone();
+        send();
       });
-    }
+    };
+    for (let i = 0; i < PREWARM_IN_FLIGHT; i++) send();
   }
   const step = (): void => {
     /*
@@ -1364,6 +1373,18 @@ const PREWARM_SLICE_MS = 8;
 
 /** A prewarm in flight, or null. */
 let pending: PendingPrewarm | null = null;
+
+/**
+ * How many of the prewarm's layers may be on the workers at once — 0413.
+ *
+ * ⚠️ **TWO, AND NOT THE POOL'S FOUR, BECAUSE THE PREWARM RUNS ON EVERY PAGE THAT LOADS.** A place bake
+ * happens at a level boundary, one at a time; the prewarm happens at boot, and all of it now happens
+ * rather than being abandoned when the page closes. With every layer out at once the Skip came up in
+ * 1.2 s, and the test suite — dozens of pages booting together — lost pages' first paint for fifteen
+ * seconds. Two keeps the page's own thread free, which is what took the dropped frames out of the
+ * intro, at the measured cost in the decision.
+ */
+const PREWARM_IN_FLIGHT = 2;
 
 /**
  * Finish a prewarm that is still walking, synchronously, and hand back the completed set.
