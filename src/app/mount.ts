@@ -1665,11 +1665,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ⚠️ **WHICH PLACE IS ACTUALLY ON THE SCREEN, AND IT IS NOT DERIVABLE WHERE IT IS NEEDED** — 0221.
     `applySky` runs from the style chooser, which knows nothing about levels and cannot call
     `placeOnScreen()` — that reads the run, and the chooser is reachable from the title screen and
-    from the music room. This is the same memo `shownSpace` is, carrying the answer rather than the
-    colour it produced.
+    from the music room. **And it is `applyPlace`'s memo too, since 0417** — that one used to be the
+    backdrop COLOUR, which two places can share, and level one was never baked because of it.
 
-    ⚠️ **DECLARED HERE AND NOT BESIDE `shownSpace`, WHICH IS WHERE IT BELONGS BY SUBJECT.** `applyStyle`
-    is called at boot, four hundred lines above that pairing, so a `let` next to its twin is in the
+    ⚠️ **`null` AT BOOT, WHICH IS THE TITLE'S, AND THAT IS NOT A SHORTCUT**: the atlas is baked in the
+    palette's own sky ink (`bakeOne` in `src/render/bake.ts`), which is what the title asks for, so the
+    first bake is the first place — `tests/room.browser.test.ts` leans on that.
+
+    ⚠️ **DECLARED HERE AND NOT BESIDE `applyPlace`, WHICH IS WHERE IT BELONGS BY SUBJECT.** `applyStyle`
+    is called at boot, four hundred lines above that function, so a `let` beside it is in the
     temporal dead zone when the chooser first reads it — `Cannot access 'bakedPlace' before
     initialization`, and a blank canvas. The same trap 0216 hit with `onSeek`, which is the second time
     in this file that *where a thing belongs* and *where a thing may be declared* have disagreed.
@@ -1812,9 +1816,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    */
   let loadedTheme: ThemeKind | null = null;
 
-  /** The backdrop the surface was last given, so a place is applied once rather than every step. */
-  let shownSpace = colours.space;
-
   /**
    * Put the run in its PLACE — the backdrop half of a level's theme.
    *
@@ -1849,8 +1850,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       frame and does nothing almost every time, exactly as `applyMusicLevel` does — and the two are
       separate for the reason stated below: the music can be off and the place cannot.
     */
-    if (want === shownSpace) return;
-    shownSpace = want;
+    /*
+      ⚠️ **KEYED ON THE PLACE, NEVER ON A COLOUR IT PRODUCES** — 0417. This compared the backdrop
+      colour, and The Approach's `space` is the palette's own in both palettes, so going from the
+      title into level one looked like no change: level one flew the title's generic weather, and The
+      Approach's nebula, glow and landmark colouring were never baked at all. A colour is one output
+      of a place and two places may share it; the place is the one key that differs whenever anything
+      baked below does. The palette is not in it because it cannot change under one mount.
+    */
+    if (place === bakedPlace) return;
     bakedPlace = place;
     surface.setSpace(want);
     /*
