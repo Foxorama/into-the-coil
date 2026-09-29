@@ -1119,13 +1119,13 @@ const PLACE_SHOTS: ReadonlySet<SpriteKind> = new Set(
 */
 
 /** The frame a sprite is drawn in: its centre, and the radius every coordinate is a fraction of. */
-interface Frame {
+export interface Frame {
   readonly half: number;
   readonly r: number;
 }
 
 /** A point in a sprite's own frame — fractions of `r`, +x forward, +y down the screen. */
-type Pt = readonly [number, number];
+export type Pt = readonly [number, number];
 
 /*
   ── A POSE: WHERE THE REST DRAWING'S POINTS ARE IN ONE FRAME — 0410 ─────────────────────────────
@@ -1191,7 +1191,7 @@ const posed = (points: readonly Pt[], pose: Pose): Pt[] => points.map(pose);
 const FLASH_WASH = 0.55;
 
 /** A hex colour with an alpha, for the transparent end of a glow. */
-function rgba(hex: string, alpha: number): string {
+export function rgba(hex: string, alpha: number): string {
   const read = (i: number): number => parseInt(hex.slice(i, i + 2), 16);
   return `rgba(${read(1)}, ${read(3)}, ${read(5)}, ${alpha})`;
 }
@@ -1209,12 +1209,12 @@ export function shade(hex: string, by: number): string {
 }
 
 /** The same points, reflected across the sprite's centreline. */
-function mirrored(points: readonly Pt[]): Pt[] {
+export function mirrored(points: readonly Pt[]): Pt[] {
   return points.map(([x, y]) => [x, -y] as const);
 }
 
 /** Add one closed sub-path to the current path, in frame coordinates. Fills nothing. */
-function trace(ctx: Pen, f: Frame, points: readonly Pt[]): void {
+export function trace(ctx: Pen, f: Frame, points: readonly Pt[]): void {
   points.forEach(([x, y], i) => {
     if (i === 0) ctx.moveTo(f.half + x * f.r, f.half + y * f.r);
     else ctx.lineTo(f.half + x * f.r, f.half + y * f.r);
@@ -1236,13 +1236,13 @@ function ring(ctx: Pen, f: Frame, x: number, y: number, radius: number): void {
  * neither the outline nor the collision box. `tests/paths.ts` records this as the first pass of the
  * trace, and every containment claim in `tests/accents.test.ts` is measured against it.
  */
-function seal(ctx: Pen): void {
+export function seal(ctx: Pen): void {
   ctx.fill('evenodd');
   ctx.stroke();
 }
 
 /** A filled polygon on the sprite, in one colour. `evenodd`, so a hole is one more sub-path. */
-function poly(ctx: Pen, f: Frame, colour: string, points: readonly Pt[], alpha = 1): void {
+export function poly(ctx: Pen, f: Frame, colour: string, points: readonly Pt[], alpha = 1): void {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = colour;
   ctx.beginPath();
@@ -1252,7 +1252,7 @@ function poly(ctx: Pen, f: Frame, colour: string, points: readonly Pt[], alpha =
 }
 
 /** A filled circle on the sprite. */
-function disc(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 1): void {
+export function disc(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 1): void {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = colour;
   ctx.beginPath();
@@ -1281,7 +1281,7 @@ function band(ctx: Pen, f: Frame, colour: string, x: number, y: number, outer: n
  * so it is drawn under one — which is also what a glow IS. The ceiling is 0.85; `tests/accents.test.ts`
  * treats anything at or above 0.9 as solid.
  */
-function glow(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 0.7): void {
+export function glow(ctx: Pen, f: Frame, colour: string, x: number, y: number, radius: number, alpha = 0.7): void {
   const cx = f.half + x * f.r;
   const cy = f.half + y * f.r;
   const light = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius * f.r);
@@ -1669,7 +1669,7 @@ const SHIP_UPPER: readonly Pt[] = [
 ];
 
 /** The whole hull: the upper half forward, the lower half back, one closed path. */
-const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).slice(1, -1).reverse()];
+export const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).slice(1, -1).reverse()];
 
 /*
   ── THE TIERS, AND THEY ARE BIG NOW — 0229 ──────────────────────────────────────────────────────
@@ -1843,7 +1843,7 @@ function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
   ctx.closePath();
 }
 
-function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: WeaponKind): void {
+export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: WeaponKind): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);

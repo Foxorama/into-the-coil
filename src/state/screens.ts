@@ -24,9 +24,10 @@ import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
+import { INTRO_STEPS } from '../content/port.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
+export const SCREEN_KINDS = ['intro', 'title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -202,6 +203,30 @@ export interface ScreenRow {
 export const STEPS_PER_SECOND = 60;
 
 export const SCREENS: Record<Screen, ScreenRow> = {
+  /**
+   * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`. What the page
+   * opens on: the Viper blasts out of the spaceport, a pilot runs out of the bar to the blue fighter and
+   * goes after her, and the title comes up when they are gone.
+   *
+   * ⚠️ **NO PANEL, NO BUTTON, AND IT LEAVES ON ITS OWN CLOCK** — `timeout.then` is the title, so a
+   * player who watches it to the end is handed the title without pressing anything. Any press skips it
+   * (`src/app/mount.ts`), and that is the only thing a press does here. It is a picture and not a
+   * screen with controls on it, which is why `heading` and `actions` are empty and the chrome builds
+   * nothing for it — the same shape `playing` has.
+   *
+   * ⚠️ **`steps: false`: nothing in it is simulated.** The picture is a pure function of how long the
+   * screen has been up (`src/render/port.ts`), so the sim never runs under it and there is no code path
+   * by which anything here can touch the run that follows.
+   */
+  intro: {
+    heading: '',
+    actions: [],
+    choices: [],
+    steps: false,
+    dims: false,
+    timeout: { steps: INTRO_STEPS, then: 'title' },
+    pushed: false,
+  },
   /**
    * ⚠️ **The game no longer starts by itself, and that is a deliberate loss.** Until now the page
    * loaded straight into a moving scene, which was right for something proving the page draws and is

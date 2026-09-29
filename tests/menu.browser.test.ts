@@ -97,7 +97,24 @@ async function open(): Promise<Page> {
   }, PAD_STATE);
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await pastIntroByPad(page);
   return page;
+}
+
+/**
+ * Past the intro with the pad alone — 0411 — and not with `tests/intro.ts`'s key.
+ *
+ * ⚠️ **A KEY HANDS THE PAGE A GESTURE, AND THE PAD NEVER CAN.** Every test here is about a player with
+ * nothing but a pad, and a page that has had a key pressed on it lets the pad's own unlock succeed —
+ * which drains the music prewarm on the pad's first press, five seconds of a frozen page in the
+ * middle of a test that was measuring something else. Skipping with the pad is the player this file
+ * is about, and it is the intro's pad path besides.
+ */
+async function pastIntroByPad(page: Page): Promise<void> {
+  await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
+  await afterFrames(page, 8);
+  await setPad(page, [0, 0], []);
+  await page.waitForSelector('.' + prefixFor('title') + 'shown', { timeout: 15_000 });
 }
 
 /** Set what the stub pad is reporting. */

@@ -57,8 +57,10 @@ function armed(): State {
 }
 
 describe('a run is lives', () => {
-  it('starts on the title screen with no run in progress', () => {
-    expect(initialState.screen.current).toBe('title');
+  it('starts on the intro, which hands over to the title, with no run in progress', () => {
+    // 0411: the page opens on the intro, whose own clock ends on the title — `SCREENS.intro.timeout`.
+    expect(initialState.screen.current).toBe('intro');
+    expect(SCREENS.intro.timeout?.then).toBe('title');
     // Zero rather than a full complement, so `begin` is the only way into a run — a state that was
     // already stocked would let a stray dispatch drop the player into a half-run.
     expect(initialState.run.lives).toBe(0);

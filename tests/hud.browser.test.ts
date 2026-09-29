@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { pastIntro } from './intro.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -66,6 +67,7 @@ async function open(hasTouch = false): Promise<Page> {
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas');
+  await pastIntro(page);
   return page;
 }
 

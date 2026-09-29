@@ -73,6 +73,7 @@ import type { InputSource } from './input.ts';
 import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
+import { paintPort } from '../render/port.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -1572,6 +1573,14 @@ export interface World {
    */
   pictureSteps: number | null;
   /**
+   * How many steps the intro has been up, or null on every other screen — 0411.
+   *
+   * ⚠️ **A NUMBER, AND THE FRAME NEVER LEARNS WHAT IT IS COUNTING**, on 0340's terms for `warp`: the
+   * shell writes it from the screen's own countdown, and the draw below hands it to the port's painter
+   * in place of the scene. Nothing that steps reads it, because nothing steps under the intro.
+   */
+  intro: number | null;
+  /**
    * How hard the heart the player hears is beating this frame, nought to one — 0401. The shell writes
    * it once a frame from the music's own clock (`heartAt`); nothing that steps reads it.
    *
@@ -2473,6 +2482,11 @@ export class GameFrame implements Frame {
 
   draw(alpha: number): void {
     const w = this.world;
+    // The intro is its own picture on its own atlas, and none of the scene below is in it — 0411.
+    if (w.intro !== null) {
+      paintPort(w.surface, w.view, w.intro + alpha);
+      return;
+    }
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
     // the stepped value here is what made a ship holding station exactly still judder on screen.
     const camera = w.prevCameraAlong + (w.cameraAlong - w.prevCameraAlong) * alpha;

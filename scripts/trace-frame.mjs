@@ -181,6 +181,9 @@ try {
     a .mjs script and cannot import the TypeScript seam, so it is the one second description of the
     prefix in the repository, and it FAILS LOUD below rather than tracing a frozen page.
   */
+  // Past the intro, which the page opens on — 0411; `tests/intro.ts` says why the key is Shift.
+  await page.keyboard.press('Shift');
+  await page.waitForSelector('.itc-title-shown', { timeout: 15_000 });
   const START = '.itc-title-action';
   const started = await page.$(START);
   if (started === null) {

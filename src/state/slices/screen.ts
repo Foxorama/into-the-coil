@@ -20,8 +20,11 @@ export interface ScreenState {
  */
 export type ScreenAction = { slice: 'screen'; type: 'show'; screen: Screen };
 
-/** A run that has not started yet. The game opens on the title screen and waits. */
-export const initialScreen: ScreenState = { current: 'title' };
+/**
+ * A run that has not started yet. The game opens on the intro, which hands over to the title screen by
+ * itself — `docs/decisions/0411-the-chase-begins-at-the-port.md` — and the title waits.
+ */
+export const initialScreen: ScreenState = { current: 'intro' };
 
 export function reduceScreen(state: ScreenState, action: ScreenAction): ScreenState {
   switch (action.type) {
