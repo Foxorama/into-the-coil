@@ -26,12 +26,13 @@ import { afterFrames } from './frames.ts';
 /**
  * How long the game behind the intro may take to load — to the step the Skip button appears.
  *
- * ⚠️ **A BUDGET, OWNED BY 0412 AND SIZED ON 0245's TERMS.** Measured 2026-09-29, from the canvas to
- * the Skip: **6.2–6.4 s alone, and 7.7–16.5 s while the whole suite ran** (nine loads). Three times
- * the worst. A slower load is a prewarm that has got slower, and a player who waits that long for a
- * Skip has been told the game is not ready.
+ * ⚠️ **A BUDGET, OWNED BY 0412 AND SIZED ON 0245's TERMS — AND RE-SIZED BY 0413**, which moved the
+ * load onto the workers. Measured 2026-09-29, from the canvas to the Skip: **1.19–1.23 s alone, and
+ * 1.1–4.1 s while the whole suite ran** (ten loads). Three times the worst. It was 50 s against 0412's
+ * 6.2 s walk; a slower load now is a prewarm back on the page's own thread, and a player who waits
+ * that long for a Skip has been told the game is not ready.
  */
-export const INTRO_READY_MS = 50_000;
+export const INTRO_READY_MS = 12_500;
 
 export async function pastIntro(page: Page): Promise<void> {
   await page.keyboard.press('Escape');

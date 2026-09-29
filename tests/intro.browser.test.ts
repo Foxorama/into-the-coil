@@ -22,6 +22,7 @@ import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS } from '../src/content/port.ts';
+import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 vi.setConfig({ testTimeout: 180_000 });
@@ -47,11 +48,11 @@ const HANDOVER_MS = 75_000;
 /**
  * The longest gap between two frames across a press on the intro — a frozen picture is the defect.
  *
- * ⚠️ **A BUDGET, SIZED ON 0245's TERMS AND OWNED BY 0412.** Measured 2026-09-29, a press 1.5 s in:
- * **33–50 ms alone, and 83–617 ms while the whole suite ran** (twelve presses). Three times the worst.
- * The defect it is for is the whole remaining load run on the press — 5.1 s at 0.3 s in, measured on
- * 0411's first build — so the two cannot be mistaken for each other. (The intro's own first second
- * hitches for 144–423 ms at boot, pressed or not; the press waits past it.)
+ * ⚠️ **A BUDGET, SIZED ON 0245's TERMS AND OWNED BY 0412, RE-MEASURED BY 0413** — whose quicker load
+ * moved the press to as soon as the canvas exists, into the boot's own hitch. Measured 2026-09-29,
+ * that press: **143–478 ms alone, and 504–639 ms while the whole suite ran** (ten presses; the hitch is
+ * the boot, pressed or not). Three times the worst. The defect it is for is the whole remaining load
+ * run on the press — 5.1 s when 0411's first build did it — so the two cannot be mistaken.
  */
 const FROZEN_MS = 1_900;
 
@@ -64,6 +65,7 @@ declare global {
   interface Window {
     __itcContexts?: number;
     __itcCues?: number;
+    __itcPosts?: number;
   }
 }
 
@@ -102,6 +104,13 @@ async function open(): Promise<Page> {
         } as unknown as Gamepad,
       ],
     });
+    // Every message the page sends a worker — a layer asked of the bake pool is one (0413).
+    window.__itcPosts = 0;
+    const post = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]): void {
+      window.__itcPosts = (window.__itcPosts ?? 0) + 1;
+      (post as (...a: unknown[]) => void).apply(this, args);
+    } as typeof post;
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: Parameters<typeof start>): void {
       if (this.buffer !== null && this.buffer.duration <= 1.5) window.__itcCues = (window.__itcCues ?? 0) + 1;
@@ -187,6 +196,21 @@ describe.runIf(chromePath)('the page opens on the chase, and hands over to the t
   });
 });
 
+describe.runIf(chromePath)('the game behind the intro loads on the workers', () => {
+  it('sends every base layer of the music to the bake pool, so the page is not the one baking it', async () => {
+    /*
+      ⚠️ **THE POOL HAS TO REACH THE PREWARM** — 0413. `src/main.ts` hands it over, and `mount` starts
+      the prewarm after the first paint; without it every layer is walked on the main thread again,
+      which is six seconds of dropped frames and a late Skip — and every unit test would still pass,
+      because none of them has a browser's workers.
+    */
+    const page = await open();
+    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+    expect(await page.evaluate(() => window.__itcPosts ?? -1), 'the base layers were not sent to the workers').toBeGreaterThanOrEqual(MUSIC_LAYERS.length);
+    await page.context().close();
+  });
+});
+
 describe.runIf(chromePath)('the skip waits for the game behind the intro', () => {
   it('is not offered until the game has loaded, and then is', async () => {
     const page = await open();
@@ -257,11 +281,15 @@ describe.runIf(chromePath)('a press on the intro is heard, and never frozen', ()
       time, no sound is built yet, and the sound arrives with the Skip.
     */
     const page = await open();
-    // Past the first second, whose boot hitch (144–423 ms, pressed or not) is not the press's to answer
-    // for — and still well before the load, which took 6.2 s at the quickest measured.
-    await page.waitForTimeout(1_500);
+    /*
+      ⚠️ **AT ONCE, BECAUSE THE LOAD IS QUICK NOW** — 0413 moved it onto the workers, and it finishes in
+      about a second. So the press goes in as soon as the canvas is there, and the test says so if the
+      load beat it: a press after the load is the next test's subject, and passing here over one would
+      be the claim made about the wrong case.
+    */
     await watchFrames(page);
     await page.mouse.click(640, 360);
+    expect(await shown(page, SKIP_SHOWN), 'the load finished before the press, so this is not the case it is about').toBe(false);
     expect(await longestGap(page), 'the press froze the picture').toBeLessThan(FROZEN_MS);
     expect(await shown(page, TITLE), 'a press that was not a skip skipped').toBe(false);
     await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });

@@ -49,11 +49,12 @@ import {
   widthOf,
   releasedLayers,
   takePrewarmed,
+  useLayerBaker,
   variantAt,
   velocitiesOf,
   type AudioOut,
 } from '../src/app/sound.ts';
-import { bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
+import { bakeLayer, bakeLoops, layerNotes, musicLevelFor, placeFor } from '../src/app/music.ts';
 import { UNITS_PER_SECOND, rungMarks, targetGain } from '../scripts/timeline.mjs';
 import { AURA_LAYERS, BAR_SECONDS, MUSIC, MUSIC_LAYERS, secondsOfLayer, type MusicLayer } from '../src/content/music.ts';
 import {
@@ -681,6 +682,101 @@ describe('the cue table', () => {
         24 s under the whole suite; ninety is three times that —
         `docs/decisions/0245-a-budget-is-sized-under-load.md`.
       */
+    }, 90_000);
+
+    /** The largest difference between two layers' samples, or -1 when their lengths differ. */
+    const worstOf = (a: Float32Array, b: Float32Array): number => {
+      if (a.length !== b.length) return -1;
+      let worst = 0;
+      for (let i = 0; i < a.length; i++) worst = Math.max(worst, Math.abs(a[i]! - b[i]!));
+      return worst;
+    };
+
+    it('0413 — WITH A POOL, THE LOOPS GO TO IT, AND THE SAMPLES ARE THE WALK’S', async () => {
+      /*
+        ⚠️ **SIX SECONDS OF THE INTRO WERE THE PREWARM WALKING THE LOOPS HERE** —
+        `docs/decisions/0413-the-prewarm-is-parallel.md`: the Skip and the sound waited on it, and the
+        picture dropped frames around its slices. With a pool the base layers go to it; this holds that
+        every one does, that the set is not handed over until the last comes back, and that what comes
+        back is the walk's to the sample. The pool here runs `bakeLayer` itself, which is exactly what
+        `src/app/bake.worker.ts` does with the message.
+      */
+      resetPrewarm();
+      prewarmAudio((run) => run());
+      const walked = takePrewarmed();
+      expect(walked, 'the walk did not finish, so there is nothing to compare against').not.toBeNull();
+
+      resetPrewarm();
+      const asked: (string | undefined)[] = [];
+      /*
+        ⚠️ **AND NEVER MORE THAN TWO OUT AT ONCE** — `PREWARM_IN_FLIGHT`. Every layer out at once took
+        pages' first paint away in the test suite; the most this pool ever holds is counted here.
+      */
+      let out = 0;
+      let mostOut = 0;
+      useLayerBaker((layer, theme) => {
+        asked.push(theme);
+        out++;
+        mostOut = Math.max(mostOut, out);
+        return new Promise<Float32Array>((done) =>
+          setTimeout(() => {
+            out--;
+            done(bakeLayer(layer, SAMPLE_RATE, theme));
+          }, 0),
+        );
+      });
+      try {
+        prewarmAudio((run) => run());
+        expect(takePrewarmed(), 'the set was handed over before the pool had answered').toBeNull();
+        for (let i = 0; i < 1_000 && takePrewarmed() === null; i++) await new Promise((next) => setTimeout(next, 0));
+        expect(asked.length, 'the loops were not all handed to the pool').toBe(MUSIC_LAYERS.length);
+        expect(asked.every((theme) => theme === undefined), 'the prewarm asked the pool for a place').toBe(true);
+        expect(mostOut, 'more of the prewarm was on the pool at once than it may put there').toBeLessThanOrEqual(2);
+        expect(mostOut, 'the pool was only ever given one layer at a time').toBe(2);
+        const pooled = takePrewarmed();
+        expect(pooled, 'the pool answered and the set was never handed over').not.toBeNull();
+        for (const layer of MUSIC_LAYERS) {
+          expect(worstOf(pooled!.loops[layer], walked!.loops[layer]), `${layer} came back from the pool different`).toBe(0);
+        }
+      } finally {
+        useLayerBaker(null);
+        resetPrewarm();
+      }
+    }, 90_000);
+
+    it('0413 — AND A PRESS WITH LAYERS STILL OUT BAKES THEM HERE, AND A LATE REPLY CHANGES NOTHING', () => {
+      /*
+        ⚠️ **A PRESS CANNOT WAIT FOR A MESSAGE.** The drain bakes whatever is still on a worker on this
+        thread, with the same `bakeLayer` — so the set is the walk's — and a reply that turns up after
+        must not overwrite a set that has already been handed to the speaker.
+      */
+      resetPrewarm();
+      prewarmAudio((run) => run());
+      const walked = takePrewarmed();
+      expect(walked, 'the walk did not finish, so there is nothing to compare against').not.toBeNull();
+
+      resetPrewarm();
+      const late: ((buffer: Float32Array) => void)[] = [];
+      useLayerBaker(() => new Promise<Float32Array>((done) => late.push(done)));
+      try {
+        prewarmAudio((run) => run());
+        expect(takePrewarmed(), 'the set was handed over with every layer still out').toBeNull();
+        drainPrewarm();
+        const drained = takePrewarmed();
+        expect(drained, 'a drain did not finish a prewarm whose layers were on the pool').not.toBeNull();
+        for (const layer of MUSIC_LAYERS) {
+          expect(worstOf(drained!.loops[layer], walked!.loops[layer]), `${layer} drained different`).toBe(0);
+        }
+        // Now the pool answers, with something that is certainly not the layer.
+        for (const done of late) done(new Float32Array(8).fill(1));
+        return Promise.resolve().then(() => {
+          for (const layer of MUSIC_LAYERS) {
+            expect(worstOf(takePrewarmed()!.loops[layer], walked!.loops[layer]), `a late reply overwrote ${layer}`).toBe(0);
+          }
+        });
+      } finally {
+        useLayerBaker(null);
+      }
     }, 90_000);
 
     describe('0133 — and a PLACE is baked at the boundary, on the same terms', () => {
