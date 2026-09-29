@@ -1590,6 +1590,15 @@ export function takePrewarmed(): { cues: Float32Array[][]; loops: Record<MusicLa
   return prewarmed;
 }
 
+/**
+ * Whether the prewarm has finished — so the first unlock costs nothing, because `drainPrewarm` has
+ * nothing left to drain. `docs/decisions/0412-the-port-is-heard.md`: the intro waits on this before it
+ * offers its skip or turns the sound on, since either one before it would freeze the picture.
+ */
+export function prewarmDone(): boolean {
+  return prewarmed !== null;
+}
+
 /** Every layer a loaded place has let go of the shared copy of — for `tests/sound.test.ts`. */
 export function releasedLayers(): ReadonlySet<MusicLayer> {
   return released;

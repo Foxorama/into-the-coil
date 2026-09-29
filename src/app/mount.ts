@@ -81,7 +81,8 @@ import {
 } from './music.ts';
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
-import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio } from './sound.ts';
+import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
+import { INTRO_CUES } from '../content/port.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
@@ -1245,6 +1246,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution);
       surface.setAtlas(port);
       world.intro = 0;
+      // Its beats from the first — 0412.
+      introCueNext = 0;
     } else if (world.intro !== null) {
       world.intro = null;
       port = null;
@@ -1544,7 +1547,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     off its own box and hands over 0 to 1; `onSeek` below turns that into world units against the
     level being auditioned. A chrome that dealt in units would need the level, which is the shell's.
   */
-  onSeek);
+  onSeek,
+  // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
+  () => leaveIntro());
   for (const element of chrome.elements) host.appendChild(element);
 
   /*
@@ -2615,40 +2620,53 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     has to revive it — `unlock` is idempotent and re-resumes rather than rebuilding.
   */
   /*
-    ⚠️ **BUT NOT FROM THE INTRO** — 0411. The first unlock drains whatever of the music prewarm is left,
-    synchronously: five seconds of a frozen page when it comes early. A press on the intro is a skip,
-    and a skip that froze the picture for five seconds before the title came up reads as a hang. So the
-    skip does not unlock; the first press on the title does, exactly as it did before the intro existed
-    — and a player who watched the intro through finds the prewarm already done.
+    ⚠️ **ON THE INTRO, A PRESS IS A REQUEST FOR SOUND, AND IT IS KEPT UNTIL IT CAN BE MET** — 0412,
+    replacing 0411's *the intro never unlocks*. The first unlock drains whatever of the music prewarm is
+    left, synchronously: five seconds of a frozen picture when it comes early. So until the game behind
+    the intro has loaded (`introReady`, set from `prewarmDone` in `onTick`), a press is remembered and
+    the sound comes on the step loading finishes — the platform keeps the activation the press granted,
+    which is the same stickiness the pad's unlock below relies on. After that, a press unlocks at once
+    and costs nothing. **Escape is the skip and asks for nothing**, so a player who wants the title and
+    silence gets exactly that.
   */
-  const unlock = (): void => {
-    if (state.screen.current === 'intro') return;
+  let introReady = false;
+  let introWantsSound = false;
+  /** The next of `INTRO_CUES` the intro has not yet passed. */
+  let introCueNext = 0;
+  const unlock = (e: Event): void => {
+    if (state.screen.current === 'intro') {
+      if (e instanceof KeyboardEvent && e.key === 'Escape') return;
+      if (introReady) audioOut.unlock();
+      else introWantsSound = true;
+      return;
+    }
     audioOut.unlock();
   };
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
 
   /*
-    ⚠️ **ANY PRESS SKIPS THE INTRO, AND THAT IS ALL IT DOES** — 0411. In the capture phase like the
-    unlock above, so it is heard before anything on the page, and it goes to the title rather than past
-    it: a press that skipped the picture AND chose a tier would be choosing for the player.
+    ⚠️ **THE INTRO IS SKIPPED BY ITS BUTTON, AND BY THREE KEYS** — 0412, replacing 0411's *any press
+    skips*, because a press is now how the sound is asked for. Escape at any moment, which is the key a
+    cutscene is left by; Enter and Space once the button is there, since they are the keys that would
+    press it. Every skip goes to the title and no further.
 
-    ⚠️ **A PRESS HERE MUST NOT CARRY THROUGH ONTO THE TITLE'S BUTTONS**, and
-    `tests/intro.browser.test.ts` holds it rather than this comment. A click is dispatched to the element
-    both halves of it landed on, and the pointer went down on the canvas, so a click cannot. **A key
-    could, and Enter did**: the skip puts focus on the title's first tier, and the platform activates a
-    focused button on the `keypress` that FOLLOWS the keydown — by which time the tier is focused. The
-    first build started a run from a skip. So an activation key that skips has its default cancelled,
-    which cancels the keypress; any other key keeps its default, because a reload pressed during the
-    intro is still a reload.
+    ⚠️ **A SKIP MUST NOT CARRY THROUGH ONTO THE TITLE'S BUTTONS**, and `tests/intro.browser.test.ts`
+    holds it. The skip puts focus on the title's first tier, and the platform activates a focused button
+    on the `keypress` that FOLLOWS the keydown — by which time the tier is focused; 0411's first build
+    started a run from a skip on Enter. So an activation key that skips has its default cancelled.
   */
-  const skipIntro = (e?: Event): void => {
-    if (state.screen.current !== 'intro') return;
-    if (e instanceof KeyboardEvent && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();
-    dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+  const leaveIntro = (): void => {
+    if (state.screen.current === 'intro') dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   };
-  window.addEventListener('pointerdown', skipIntro, { capture: true });
-  window.addEventListener('keydown', skipIntro, { capture: true });
+  const introKey = (e: KeyboardEvent): void => {
+    if (state.screen.current !== 'intro') return;
+    const activates = e.key === 'Enter' || e.key === ' ';
+    if (e.key !== 'Escape' && !(activates && introReady)) return;
+    if (activates) e.preventDefault();
+    leaveIntro();
+  };
+  window.addEventListener('keydown', introKey, { capture: true });
 
   /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
@@ -2679,9 +2697,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   world.onIdle = (): void => {
     menuPad.read(menuAsk);
-    // The pad skips the intro as a key does, and does nothing else on it — not even the unlock — 0411.
+    // On the intro the pad is a key like any other — 0412: confirm skips once the game has loaded, and
+    // anything before that asks for the sound, which a pad can only have if the page was touched.
     if (state.screen.current === 'intro') {
-      if (menuAsk.move !== 0 || menuAsk.confirm) skipIntro(undefined);
+      if (menuAsk.move === 0 && !menuAsk.confirm) return;
+      if (introReady) audioOut.unlock();
+      else introWantsSound = true;
+      if (menuAsk.confirm && introReady) leaveIntro();
       return;
     }
     /*
@@ -2775,7 +2797,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     stepCrossing();
     // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
-    if (world.intro !== null) world.intro++;
+    if (world.intro !== null) {
+      world.intro++;
+      /*
+        ⚠️ **READY IS THE PREWARM, BECAUSE THE PREWARM IS WHAT A PRESS WOULD OTHERWISE PAY FOR** — 0412.
+        From this step the skip is offered, a remembered press gets its sound, and the title's first
+        press starts a run at once.
+      */
+      if (!introReady && prewarmDone()) {
+        introReady = true;
+        chrome.setIntroSkip(true);
+        if (introWantsSound) audioOut.unlock();
+      }
+      // Every beat the intro has passed, heard if the sound is on by then and never caught up on.
+      while (introCueNext < INTRO_CUES.length && INTRO_CUES[introCueNext]!.at <= world.intro) {
+        if (audioOut.ready()) speaker.play(INTRO_CUES[introCueNext]!.cue);
+        introCueNext++;
+      }
+    }
     if (timeoutLeft <= 0) return;
     timeoutLeft--;
     tickTimer();
@@ -3040,8 +3079,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       window.clearTimeout(settling);
       window.removeEventListener('pointerdown', unlock, { capture: true });
       window.removeEventListener('keydown', unlock, { capture: true });
-      window.removeEventListener('pointerdown', skipIntro, { capture: true });
-      window.removeEventListener('keydown', skipIntro, { capture: true });
+      window.removeEventListener('keydown', introKey, { capture: true });
       chrome.release();
       world.input.release();
       // Closes the context and drops the buffers. A page that mounts twice must not leave the first

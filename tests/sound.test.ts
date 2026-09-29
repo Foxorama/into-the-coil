@@ -2133,7 +2133,10 @@ describe('every cue is played by something, and every cue the frame plays exists
       read('src/app/boss.ts') +
       read('src/app/mount.ts') +
       read('src/content/bosses.ts') +
-      read('src/content/specials.ts');
+      read('src/content/specials.ts') +
+      // AND `src/content/port.ts` SINCE 0412, on the same terms again: the intro's beats name their
+      // cues on the rows of `INTRO_CUES`, and the shell plays `row.cue` as the intro passes each one.
+      read('src/content/port.ts');
     const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`));
     expect(unplayed, `these cues are in the table and nothing ever plays them: ${unplayed.join(', ')}`).toEqual([]);
   });

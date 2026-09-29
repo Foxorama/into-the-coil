@@ -135,6 +135,12 @@ export const CUE_KINDS = [
   'death',
   'pickup',
   'chime',
+  // The intro's own — 0412. Played on its beats and by nothing else.
+  'ignite',
+  'launch',
+  'alarm',
+  'door',
+  'step',
 ] as const;
 
 /** Derived from the list, so a cue cannot exist in the union and be missing from the table. */
@@ -234,6 +240,16 @@ export const TWIN_KINDS = [
   'pickup-taken',
   /** The chosen option fills, in ink rather than in opacity — 0070. */
   'chooser-fill',
+  /** An engine in the intro lights on its pad, the flame coming up at idle — `flameOf` in `src/render/port.ts`, 0412. */
+  'engine-lights',
+  /** An engine in the intro goes to full burn in a launch flash and the ship leaves — `paintViper`/`paintBlue`, 0412. */
+  'engine-burns',
+  /** A beacon in the bay sweeps past — the alarm, 0412. */
+  'beacon-turns',
+  /** The bar's door slides back and its light spills out — 0412. */
+  'door-opens',
+  /** Bo's stride, a frame of the run — 0412. */
+  'pilot-steps',
 ] as const;
 
 /**
@@ -2155,6 +2171,86 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'tri', from: inKey(33), to: inKey(37), seconds: 0.1, gain: 0.16, attack: 0.003, curve: 5, pan: 0.45, panTo: -0.45 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.087, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000, pan: -0.45, panTo: -0.7 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.06, gain: 0.087, attack: 0.001, curve: 6, lowFrom: 12000, highFrom: 3600, highTo: 7000, pan: 0.45, panTo: 0.7 },
+    ],
+  },
+  /*
+    ── THE PORT — 0412 ─────────────────────────────────────────────────────────────────────────────
+
+    ⚠️ **FIVE CUES THE INTRO PLAYS ON ITS OWN BEATS, AND NOTHING ELSE PLAYS THEM.** They are cues and
+    not a baked soundtrack because the intro is heard from whatever moment the player pressed — the
+    browser allows no sound before that — and a cue is a thing that happens at a beat, which is what
+    the intro is made of (`INTRO_CUES` in `src/content/port.ts`). Each is the twin of a picture the
+    intro draws on the same step.
+  */
+  /** An engine lights on the pad: a starter's whine, the catch, and the roar coming up. */
+  ignite: {
+    twin: 'engine-lights',
+    air: 0.45,
+    // Longer than a beat, so the music makes room for it rather than playing through it.
+    duck: 0.2,
+    hold: 20,
+    gain: 0.3,
+    glue: 0.1,
+    layers: [
+      { wave: 'saw', from: inKey(19), to: inKey(31), seconds: 0.3, gain: 0.14, attack: 0.02, curve: 1.6, lowFrom: 1400, lowTo: 3200, q: 1.2 },
+      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.22, seconds: 0.16, gain: 0.8, attack: 0.001, curve: 3.4, drive: 0.4 },
+      // The catch, then the roar settling to idle — it has to die away, or it is a drone rather than a cue.
+      { wave: 'noise', from: 0, to: 0, at: 0.22, seconds: 0.6, gain: 0.34, attack: 0.01, curve: 2.8, lowFrom: 2200, lowTo: 700, highFrom: 90, q: 0.7, drive: 0.3 },
+    ],
+  },
+  /** An engine goes to full burn and the ship leaves: a slam, a roar tearing away to the right, and the rumble under it. */
+  launch: {
+    twin: 'engine-burns',
+    air: 0.85,
+    duck: 0.3,
+    hold: 20,
+    gain: 0.45,
+    glue: 0.12,
+    layers: [
+      { wave: 'sine', from: inKey(12), to: inKey(-12), seconds: 0.3, gain: 1, attack: 0.001, curve: 2.6, drive: 0.5 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.95, gain: 0.46, attack: 0.02, curve: 1.4, lowFrom: 3200, lowTo: 700, highFrom: 120, q: 0.7, drive: 0.45, pan: 0, panTo: 0.7 },
+      { wave: 'noise', from: 110, to: 50, seconds: 0.95, gain: 0.34, attack: 0.04, curve: 1.8, lowFrom: 600, lowTo: 240, highFrom: 40, q: 0.7, drive: 0.4, pan: 0.1, panTo: 0.5 },
+    ],
+  },
+  /** The bay's alarm, once a turn of the beacon: a two-tone whoop, high and then low. */
+  alarm: {
+    twin: 'beacon-turns',
+    air: 0.6,
+    // Half a second, over a beat: the music makes room for it.
+    duck: 0.15,
+    hold: 30,
+    gain: 0.26,
+    glue: 0.08,
+    layers: [
+      { wave: 'square', from: inKey(24), to: inKey(26), seconds: 0.22, gain: 0.45, attack: 0.01, curve: 1.2, lowFrom: 2400, q: 1 },
+      { wave: 'square', from: inKey(19), to: inKey(17), at: 0.24, seconds: 0.26, gain: 0.45, attack: 0.01, curve: 1.6, lowFrom: 2000, q: 1 },
+    ],
+  },
+  /** The bar's door sliding back: a pneumatic hiss, and the thunk of it reaching its stop. */
+  door: {
+    twin: 'door-opens',
+    air: 0.35,
+    hold: 20,
+    gain: 0.26,
+    glue: 0.08,
+    // The latch letting go, then the hiss of the slide dying away — a cue has to decay.
+    layers: [
+      { wave: 'sine', from: inKey(5), to: inKey(0), seconds: 0.09, gain: 0.7, attack: 0.001, curve: 4, pan: -0.5 },
+      { wave: 'noise', from: 0, to: 0, at: 0.02, seconds: 0.36, gain: 0.5, attack: 0.005, curve: 3, lowFrom: 7000, lowTo: 3000, highFrom: 1400, highTo: 2400, pan: -0.5, panTo: -0.65 },
+    ],
+  },
+  /** A footfall on the deck — Bo running for the fighter. */
+  step: {
+    twin: 'pilot-steps',
+    // A step is an event, so it is somewhere — the smallest send in the table, on a deck under a truss.
+    air: 0.12,
+    hold: 4,
+    // Over the gun's level, as every event is; the layers keep it a footfall.
+    gain: 0.25,
+    glue: 0.05,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.42, attack: 0.001, curve: 5, lowFrom: 1800, lowTo: 900, highFrom: 180 },
+      { wave: 'sine', from: inKey(0), to: inKey(-5), seconds: 0.06, gain: 0.42, attack: 0.001, curve: 4 },
     ],
   },
 };

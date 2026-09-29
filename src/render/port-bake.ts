@@ -18,7 +18,7 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, VIPER, type PortKind } from '../content/port.ts';
+import { BO, FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, VIPER, type PortKind } from '../content/port.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { bakeSize, disc, glow, paintShip, poly, rgba, seal, shade, SHIP_HULL, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 
@@ -533,8 +533,9 @@ function paintBar(ctx: CanvasRenderingContext2D, palette: Palette, px: number): 
 }
 
 /**
- * The pilot: a flight suit in the fighter's own orange, a helmet in its blue, and a golf bag slung
- * across the back — this is the Far Carry's galaxy, and they are golfers first.
+ * The pilot is Backspin Bo — 0412, and `BO` in `src/content/port.ts` says whose colours these are: a
+ * purple cap with its brim forward over a dark tousled crop, a deeper purple polo with the collar lit,
+ * dark trousers, and the red carry bag across the back with three clubs out of it.
  *
  * Drawn with feet at +5 and scaled by `PILOT_SCALE`, so they stand at `PILOT_STANDS` below the centre,
  * facing forward (+x). The run is four frames, legs and arms swinging opposite; the leap is tucked,
@@ -571,53 +572,100 @@ function paintPilot(ctx: CanvasRenderingContext2D, palette: Palette, kind: 'pilo
     points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
     ctx.stroke();
   };
-  const suit = PORT_INK.suit;
-  const suitBack = shade(suit, -0.3);
-  const boot = '#2a2f3a';
+  const disc = (x: number, y: number, r: number, colour: string): void => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  const legBack = shade(BO.pants, -0.3);
+  const shirtBack = shade(BO.shirt, -0.3);
+  const skinBack = shade(BO.skin, -0.25);
   // The arms swing against the legs.
   const armFront = leap ? 150 : -ft * 0.9;
   const armBack = leap ? 130 : -bt * 0.9;
-  // Back limbs first, in shadow.
+  // Back limbs first, in shadow: trouser leg and shoe, then a short sleeve and a bare forearm.
   const [bk, bf] = limb(hip, bt, 2.3, bs, 2.4);
-  line([hip, bk, bf], suitBack, 1.05);
-  line([bf, [bf[0] + 0.7, bf[1]]], boot, 0.9);
+  line([hip, bk, bf], legBack, 1.05);
+  line([bf, [bf[0] + 0.8, bf[1]]], BO.shoes, 0.9);
   const [be, bh] = limb(shoulder, armBack, 1.7, leap ? -20 : 70, 1.5);
-  line([shoulder, be, bh], suitBack, 0.8);
-  // The golf bag on the back, and two club heads out of it.
+  line([shoulder, [shoulder[0] + (be[0] - shoulder[0]) * 0.55, shoulder[1] + (be[1] - shoulder[1]) * 0.55]], shirtBack, 0.95);
+  line([[shoulder[0] + (be[0] - shoulder[0]) * 0.5, shoulder[1] + (be[1] - shoulder[1]) * 0.5], be, bh], skinBack, 0.6);
+  // The carry bag on the back, red, with the shafts and heads of the clubs out of the top.
   const back: Pt = [-Math.cos(lean) * 0.95, -Math.sin(lean) * 0.95];
   const bagLow: Pt = [hip[0] + back[0], hip[1] + back[1] - 0.4];
   const bagHigh: Pt = [shoulder[0] + back[0] - 0.3, shoulder[1] + back[1] - 0.6];
-  line([bagHigh, [bagHigh[0] - 0.4, bagHigh[1] - 1.3]], '#cfd6e0', 0.25);
-  line([bagHigh, [bagHigh[0] + 0.3, bagHigh[1] - 1.5]], '#cfd6e0', 0.25);
-  line([bagLow, bagHigh], '#6e4a2c', 1.2);
-  line([[bagLow[0], bagLow[1] - 0.2], [bagHigh[0], bagHigh[1] + 0.3]], PORT_INK.woodLight, 0.25);
-  // The body.
-  line([hip, shoulder], suit, 2);
-  line([[hip[0] - 0.3, hip[1] - 0.6], [hip[0] + 0.6, hip[1] - 0.8]], PORT_INK.hazard, 0.35);
+  const tips: readonly Pt[] = [
+    [bagHigh[0] - 0.5, bagHigh[1] - 1.5],
+    [bagHigh[0] + 0.1, bagHigh[1] - 1.8],
+    [bagHigh[0] + 0.6, bagHigh[1] - 1.4],
+  ];
+  for (const tip of tips) {
+    line([bagHigh, tip], BO.shaft, 0.2);
+    disc(tip[0], tip[1], 0.28, BO.shaft);
+  }
+  line([bagLow, bagHigh], BO.bag, 1.25);
+  line([[bagLow[0] + 0.1, bagLow[1] - 0.3], [bagHigh[0] + 0.1, bagHigh[1] + 0.4]], shade(BO.bag, 0.3), 0.25);
+  // The body: the polo, with its collar lit, and a belt at the waist.
+  line([hip, shoulder], BO.shirt, 2);
+  line([[shoulder[0] - 0.5, shoulder[1] + 0.1], [shoulder[0] + 0.5, shoulder[1] - 0.05]], shade(BO.shirt, 0.35), 0.35);
+  line([[hip[0] - 0.8, hip[1] - 0.35], [hip[0] + 0.85, hip[1] - 0.5]], BO.shoes, 0.35);
   // The front leg and arm.
   const [fk, ff] = limb(hip, ft, 2.3, fs, 2.4);
-  line([hip, fk, ff], suit, 1.1);
-  line([ff, [ff[0] + 0.8, ff[1]]], boot, 0.95);
+  line([hip, fk, ff], BO.pants, 1.1);
+  line([ff, [ff[0] + 0.9, ff[1]]], BO.shoes, 0.95);
   const [fe, fh] = limb(shoulder, armFront, 1.7, leap ? -20 : 75, 1.5);
-  line([shoulder, fe, fh], suit, 0.85);
-  ctx.fillStyle = boot;
-  ctx.beginPath();
-  ctx.arc(fh[0], fh[1], 0.45, 0, Math.PI * 2);
-  ctx.fill();
-  // The helmet, in the fighter's blue, with its visor forward.
+  line([[shoulder[0] + (fe[0] - shoulder[0]) * 0.5, shoulder[1] + (fe[1] - shoulder[1]) * 0.5], fe, fh], BO.skin, 0.65);
+  line([shoulder, [shoulder[0] + (fe[0] - shoulder[0]) * 0.55, shoulder[1] + (fe[1] - shoulder[1]) * 0.55]], BO.shirt, 1);
+  disc(fh[0], fh[1], 0.4, BO.skin);
+  // The head: the hair's back mass under the cap, the face in profile, the cap and its brim forward.
   const head: Pt = [shoulder[0] + Math.sin(lean) * 1.55, shoulder[1] - Math.cos(lean) * 1.55];
-  ctx.fillStyle = palette.player;
+  ctx.fillStyle = BO.hair;
   ctx.beginPath();
-  ctx.arc(head[0], head[1], 1.3, 0, Math.PI * 2);
+  ctx.ellipse(head[0] - 0.55, head[1] + 0.25, 0.95, 1.15, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = palette.glass;
+  disc(head[0], head[1], 1.2, BO.skin);
+  // The nose, and an eye under the brim.
+  ctx.fillStyle = BO.skin;
   ctx.beginPath();
-  ctx.ellipse(head[0] + 0.55, head[1] - 0.05, 0.75, 0.6, 0, 0, Math.PI * 2);
+  ctx.moveTo(head[0] + 1.05, head[1] - 0.2);
+  ctx.lineTo(head[0] + 1.55, head[1] + 0.25);
+  ctx.lineTo(head[0] + 1.05, head[1] + 0.4);
+  ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = rgba('#ffffff', 0.7);
+  disc(head[0] + 0.6, head[1] - 0.15, 0.16, '#1a1410');
+  // The side lock in front of the ear, and the jagged fringe under the brim.
+  ctx.fillStyle = BO.hair;
   ctx.beginPath();
-  ctx.ellipse(head[0] + 0.8, head[1] - 0.3, 0.28, 0.14, -0.4, 0, Math.PI * 2);
+  ctx.moveTo(head[0] - 0.2, head[1] - 0.9);
+  ctx.lineTo(head[0] + 0.15, head[1] + 0.5);
+  ctx.lineTo(head[0] - 0.35, head[1] + 0.2);
+  ctx.lineTo(head[0] - 0.65, head[1] - 0.6);
+  ctx.closePath();
   ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(head[0] - 0.2, head[1] - 0.75);
+  ctx.lineTo(head[0] + 0.35, head[1] - 0.35);
+  ctx.lineTo(head[0] + 0.55, head[1] - 0.75);
+  ctx.lineTo(head[0] + 0.85, head[1] - 0.4);
+  ctx.lineTo(head[0] + 1.0, head[1] - 0.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = BO.cap;
+  ctx.beginPath();
+  ctx.arc(head[0], head[1] - 0.45, 1.25, Math.PI, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = shade(BO.cap, -0.25);
+  ctx.beginPath();
+  ctx.moveTo(head[0] + 0.6, head[1] - 0.55);
+  ctx.lineTo(head[0] + 2.1, head[1] - 0.35);
+  ctx.lineTo(head[0] + 2.0, head[1] - 0.1);
+  ctx.lineTo(head[0] + 0.6, head[1] - 0.25);
+  ctx.closePath();
+  ctx.fill();
+  disc(head[0] - 0.1, head[1] - 1.65, 0.18, shade(BO.cap, 0.3));
+  void palette;
 }
 
 /**

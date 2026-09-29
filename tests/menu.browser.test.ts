@@ -5,6 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { afterFrames } from './frames.ts';
 import { prefixFor } from '../src/app/chrome.ts';
+import { pastIntro } from './intro.ts';
 import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
@@ -97,24 +98,15 @@ async function open(): Promise<Page> {
   }, PAD_STATE);
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
-  await pastIntroByPad(page);
+  /*
+    ⚠️ **PAST THE INTRO BY ESCAPE, WHICH THE PAGE DOES NOT COUNT AS A HAND ON IT** — 0412. Every test
+    here is about a player with nothing but a pad, and HTML excludes Escape from the keydowns that
+    grant activation, so the page after it is the page a pad-only player has. The pad's own skip —
+    confirm, once the Skip is offered — is `tests/intro.browser.test.ts`'s, and waiting here for a
+    load these tests are not about made every one of them hostage to it.
+  */
+  await pastIntro(page);
   return page;
-}
-
-/**
- * Past the intro with the pad alone — 0411 — and not with `tests/intro.ts`'s key.
- *
- * ⚠️ **A KEY HANDS THE PAGE A GESTURE, AND THE PAD NEVER CAN.** Every test here is about a player with
- * nothing but a pad, and a page that has had a key pressed on it lets the pad's own unlock succeed —
- * which drains the music prewarm on the pad's first press, five seconds of a frozen page in the
- * middle of a test that was measuring something else. Skipping with the pad is the player this file
- * is about, and it is the intro's pad path besides.
- */
-async function pastIntroByPad(page: Page): Promise<void> {
-  await setPad(page, [0, 0], [MENU_CONFIRM_BUTTONS[0]!]);
-  await afterFrames(page, 8);
-  await setPad(page, [0, 0], []);
-  await page.waitForSelector('.' + prefixFor('title') + 'shown', { timeout: 15_000 });
 }
 
 /** Set what the stub pad is reporting. */
@@ -385,6 +377,16 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     const page = await open();
     await page.getByRole('button', { name: /^Music/ }).click();
     await page.waitForSelector('.' + prefixFor('music').slice(0, -1) + '-shown', { timeout: 15_000 });
+    /*
+      ⚠️ **AND LET THE ROOM TAKE A STEP BEFORE THE PAD PRESSES ANYTHING** — found by 0412. Opening a
+      screen spends the pad reader (0055): its next read learns what is held as the baseline, so a
+      button held ACROSS the change is not a new press. This test pressed in the same frame as its
+      click, before that read, so the reader learned the push as held and swallowed it — and passed for
+      as long as the click paid for the music, because the 3.7 s it froze for let the steps run first.
+      Measured: with the sound already built, the room opened in 43 ms and the push was lost; three
+      seconds later it moved the ring. No hand presses inside the frame it clicked in.
+    */
+    await afterFrames(page, 4);
 
     /*
       ⚠️ **THE EXPECTED LANDINGS ARE READ OFF THE LAYOUT, NOT TYPED.** `THEME_KINDS` is the order the

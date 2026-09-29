@@ -153,8 +153,25 @@ export const PORT_INK = {
   pad: '#7fd8ff',
   hazard: '#e8c25a',
   alarm: '#ff4040',
-  suit: '#e8743a',
-  skin: '#e0b48c',
+} as const;
+
+/**
+ * The pilot is Backspin Bo — `docs/decisions/0412-the-port-is-heard.md`. One of the four *Far Carry*
+ * golfers `docs/game.md` puts in the prologue: Portland's wedge player, *"the still centre of the
+ * tour"*, they/them. The colours are the predecessor's own roster row (`characters.ts`, read for this
+ * and for nothing else) — a purple cap over a deeper purple polo, a tousled dark crop under the cap —
+ * and its intro's red carry bag with the shafts showing, because a golfer running for a ship still
+ * has their clubs.
+ */
+export const BO = {
+  cap: '#9b5fd4',
+  shirt: '#7d46b8',
+  skin: '#a8714c',
+  hair: '#2f2318',
+  pants: '#2c3142',
+  shoes: '#232733',
+  bag: '#c0392b',
+  shaft: '#d7dbe2',
 } as const;
 
 /**
@@ -284,3 +301,44 @@ export const CHASE = {
   viper: { along: 150, across: 52, weave: 9, period: 150 },
   blue: { along: 78, across: 64, weave: 12, period: 170 },
 } as const;
+
+/**
+ * What the intro sounds like, and on which step — `docs/decisions/0412-the-port-is-heard.md`.
+ *
+ * ⚠️ **HEARD FROM WHEREVER THE PLAYER PRESSED, AND NOT BEFORE.** No browser plays anything until the
+ * page has been touched, so this is a list of things that happen rather than a soundtrack that
+ * starts: the shell plays each row as the intro passes its step, if the sound is on by then, and a row
+ * already passed is simply not heard. The music under it is the title's own, which carries on into the
+ * title — nothing to cut between.
+ *
+ * Every cue is the twin of something drawn on the same step (`src/content/cues.ts`). Sorted by step.
+ */
+export interface IntroCue {
+  at: number;
+  cue: 'ignite' | 'launch' | 'alarm' | 'door' | 'step';
+}
+
+/** Bo's feet strike twice a run cycle — on the first and third of its four frames. */
+const STRIDE = 2 * RUN_FRAME_STEPS;
+
+const UNSORTED_CUES: IntroCue[] = [
+  { at: BEATS.viperLit, cue: 'ignite' },
+  { at: BEATS.viperGo, cue: 'launch' },
+  // The alarm on every turn of the beacon, from its first until the hangar goes dark.
+  ...Array.from({ length: Math.ceil((BEATS.cut - FADE - BEATS.alarm) / ALARM_PERIOD) }, (_, i) => ({
+    at: BEATS.alarm + i * ALARM_PERIOD,
+    cue: 'alarm' as const,
+  })),
+  { at: BEATS.door, cue: 'door' },
+  ...Array.from({ length: Math.floor((BEATS.pilotLeap - BEATS.pilotOut) / STRIDE) }, (_, i) => ({
+    at: BEATS.pilotOut + i * STRIDE,
+    cue: 'step' as const,
+  })),
+  { at: BEATS.pilotLeap, cue: 'step' },
+  { at: BEATS.blueLit, cue: 'ignite' },
+  { at: BEATS.blueGo, cue: 'launch' },
+  { at: BEATS.viperRuns, cue: 'launch' },
+  { at: BEATS.blueRuns, cue: 'launch' },
+];
+
+export const INTRO_CUES: readonly IntroCue[] = UNSORTED_CUES.sort((a, b) => a.at - b.at);

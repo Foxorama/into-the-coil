@@ -18,7 +18,7 @@ whole game.
 
 | | |
 |---|---|
-| **Intro** | the page opens on the chase: the Viper blasts out of the spaceport, a pilot runs out of the bar to the blue fighter and goes after her, and the title comes up when they are gone. Any press skips it — [0411](decisions/0411-the-chase-begins-at-the-port.md) |
+| **Intro** | the page opens on the chase: the Viper blasts out of the spaceport, Backspin Bo runs out of the bar to the blue fighter and goes after her, and the title comes up when they are gone — [0411](decisions/0411-the-chase-begins-at-the-port.md). It is the loading screen: a Skip appears once the game behind it has loaded, Escape skips at any moment, and any other press turns the sound on — [0412](decisions/0412-the-port-is-heard.md) |
 | **Prologue** | choose 1 of the 4 *Far Carry* golfers. Short stage → the Jörmungandr fight. One of the three unchosen characters betrays you |
 | **Level 1 choice** | keep your prologue character, or swap to one of 3 others drawn from the unlocked pool |
 | **Levels 1–7** | waves, hazards, a mid-boss inside each level and one unique end boss at its end — [0247](decisions/0247-a-level-has-a-mid-boss-and-a-real-one.md) |

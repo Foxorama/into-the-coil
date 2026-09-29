@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { BEATS, FADE, INTRO_STEPS, LEAP_FROM, PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type PortKind } from '../src/content/port.ts';
+import { BEATS, FADE, INTRO_CUES, INTRO_STEPS, LEAP_FROM, PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type IntroCue, type PortKind } from '../src/content/port.ts';
 import { paintPort } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
@@ -151,5 +151,38 @@ describe('the picture', () => {
     expect(Math.abs(leapt.x - ran.x), 'the pilot jumped along the deck between the run and the leap').toBeLessThan(2);
     expect(Math.abs(leapt.y - ran.y), 'the pilot jumped off the deck between the run and the leap').toBeLessThan(view.scale * 1);
     expect(leapt.x).toBeCloseTo(screenX(view, LEAP_FROM, 0), 0);
+  });
+});
+
+describe('the intro is heard where it is seen — 0412', () => {
+  /*
+    ⚠️ **EVERY CUE IS THE TWIN OF A PICTURE, AND HERE THE PICTURE IS ON A CLOCK.** `src/content/cues.ts`
+    names what each cue's twin is; this holds that the intro actually DRAWS it on the step the cue plays
+    — 0024's *every cue has a visual twin* in the one place where a sound and a picture are both
+    authored as times, so they can drift apart by an edit to either table.
+  */
+  const TWIN_SPRITES: Record<IntroCue['cue'], readonly PortKind[]> = {
+    ignite: ['viperIdle', 'blueIdle'],
+    launch: ['flash', 'viperFlare', 'blueFlare'],
+    alarm: ['beacon'],
+    door: ['spill'],
+    step: ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap'],
+  };
+
+  it('plays every cue on a step that draws its twin', () => {
+    for (const row of INTRO_CUES) {
+      const drawn = new Set(drawAt(row.at + 1, NARROW).blits.map((b) => b.sprite));
+      const twin = TWIN_SPRITES[row.cue].some((kind) => drawn.has(PORT_SPRITE[kind]));
+      expect(twin, `${row.cue} at step ${row.at} sounds over a picture that does not show it`).toBe(true);
+    }
+  });
+
+  it('plays nothing outside the intro, and nothing during the dark between its shots', () => {
+    for (const row of INTRO_CUES) {
+      expect(row.at, `${row.cue} is outside the intro`).toBeGreaterThanOrEqual(0);
+      expect(row.at, `${row.cue} is outside the intro`).toBeLessThan(INTRO_STEPS);
+      const dark = row.at >= BEATS.cut && row.at < BEATS.outside;
+      expect(dark, `${row.cue} at step ${row.at} sounds over a black screen`).toBe(false);
+    }
   });
 });

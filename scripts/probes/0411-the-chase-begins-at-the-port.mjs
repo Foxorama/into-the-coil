@@ -4,7 +4,7 @@
 // on tests/budget.test.ts's hot list: the page opens on the title again, the beats run out of order, the
 // picture does not end in black or goes dark mid-shot, a baked piece is never drawn, a ship is still on
 // the screen when its shot ends, the fighter covers the pilot, the pilot jumps between the run and the
-// leap, the intro draws nothing, and a press either fails to skip or carries through onto a tier.
+// leap, and the intro draws nothing. The skip's own went to 0412's file, which replaced it.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -143,48 +143,9 @@ export const PROBES = [
       replace: '      w.surface.clear();',
     },
   },
-  {
-    decision: '0411',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'Enter’s default left alone, so the skip’s keypress starts a run on the tier it focused',
-    guard: 'skips to the title on Enter',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "    if (e instanceof KeyboardEvent && (e.key === 'Enter' || e.key === ' ')) e.preventDefault();",
-      replace: '',
-    },
-  },
-  {
-    decision: '0411',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'the skip unlocking the sound, which drains the prewarm and freezes the page for five seconds',
-    guard: 'builds no sound on a skip',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "    if (state.screen.current === 'intro') return;\n    audioOut.unlock();",
-      replace: '    audioOut.unlock();',
-    },
-  },
-  {
-    decision: '0411',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'a key that does not skip',
-    guard: 'skips to the title on Space',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "  window.addEventListener('keydown', skipIntro, { capture: true });",
-      replace: '',
-    },
-  },
-  {
-    decision: '0411',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'a click that does not skip',
-    guard: 'skips to the title on a click',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "  window.addEventListener('pointerdown', skipIntro, { capture: true });",
-      replace: '',
-    },
-  },
+  /*
+    The four probes on the skip — Enter carrying through, the skip unlocking the sound, and a key and a
+    click that did not skip — moved to scripts/probes/0412-the-port-is-heard.mjs with the code they
+    break: 0412 replaced *any press skips* with a button, three keys, and a press that asks for sound.
+  */
 ];
