@@ -9,7 +9,24 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { BEATS, FADE, INTRO_CUES, INTRO_STEPS, LEAP_FROM, PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type IntroCue, type PortKind } from '../src/content/port.ts';
+import {
+  BEATS,
+  CHASE,
+  FADE,
+  INTRO_CUES,
+  INTRO_STEPS,
+  JINKS,
+  JINK_STEPS,
+  LEAP_FROM,
+  OUTSIDE_ZOOM,
+  PORT_EXTENT,
+  PORT_KINDS,
+  PORT_SPRITE,
+  STAGE,
+  TRACK_DELAY,
+  type IntroCue,
+  type PortKind,
+} from '../src/content/port.ts';
 import { paintPort } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
@@ -184,5 +201,64 @@ describe('the intro is heard where it is seen — 0412', () => {
       const dark = row.at >= BEATS.cut && row.at < BEATS.outside;
       expect(dark, `${row.cue} at step ${row.at} sounds over a black screen`).toBe(false);
     }
+  });
+});
+
+describe('the chase is a chase — 0414', () => {
+  /** Where a ship was drawn, in pixels, `s` steps into the dark outside, on a 16:9 screen. */
+  const shipAt = (s: number, kind: 'viper' | 'blue'): Blit => of(drawAt(BEATS.outside + s, NARROW).blits, kind)!;
+  const { view } = drawAt(0, NARROW);
+
+  it('holds her line between breaks, and each break is quick', () => {
+    /*
+      ⚠️ **THE FLOATING WAS REPORTED, SO THE HOLD IS WHAT IS HELD.** *"The floaty motion of the
+      spaceships in space felt really weird."* 0411's ships were never still across the lane; hers now is,
+      except while she breaks.
+    */
+    for (let i = 0; i < JINKS.length; i++) {
+      const from = JINKS[i]!.at + JINK_STEPS;
+      const until = i + 1 < JINKS.length ? JINKS[i + 1]!.at : BEATS.viperRuns - BEATS.outside;
+      const held = shipAt(from, 'viper').y;
+      for (let s = from; s <= until; s += 6) {
+        expect(Math.abs(shipAt(s, 'viper').y - held), `she drifts off her line at step ${s} of the shot`).toBeLessThan(0.01);
+      }
+      const before = shipAt(JINKS[i]!.at, 'viper').y;
+      expect(Math.abs(held - before), `break ${i} did not move her`).toBeGreaterThan(view.scale * 5);
+    }
+  });
+
+  it('has the fighter fly her line, late', () => {
+    // Once it has settled onto her track — its line is hers `TRACK_DELAY` steps earlier, a little below.
+    const offset = (CHASE.blue.across - CHASE.viper.across) * OUTSIDE_ZOOM * view.scale;
+    for (let s = 90; s < BEATS.viperRuns - BEATS.outside; s += 10) {
+      const theirs = shipAt(s, 'blue').y;
+      const hers = shipAt(s - TRACK_DELAY, 'viper').y;
+      expect(Math.abs(theirs - (hers + offset)), `the fighter is off her line at step ${s} of the shot`).toBeLessThan(0.5);
+    }
+  });
+
+  it('opens up well behind her', () => {
+    const s = BEATS.viperRuns - BEATS.outside - 1;
+    const gap = shipAt(s, 'viper').x - shipAt(s, 'blue').x;
+    expect(gap, 'the fighter is not far enough behind her to be chasing').toBeGreaterThan(view.alongSpan * view.scale * 0.35);
+  });
+
+  it('leaves the pad slower off the mark than she did', () => {
+    const moved = (t: number, kind: 'viper' | 'blue'): number => {
+      const blits = drawAt(t, NARROW).blits;
+      return of(blits, kind)!.x;
+    };
+    const after = 40;
+    const hers = moved(BEATS.viperGo + after, 'viper') - moved(BEATS.viperGo, 'viper');
+    const theirs = moved(BEATS.blueGo + after, 'blue') - moved(BEATS.blueGo, 'blue');
+    expect(theirs, 'the fighter left its pad as fast as she did').toBeLessThan(hers);
+  });
+
+  it('draws no trail before a ship jets off, and trails off its wingtips after', () => {
+    const trails = (t: number): number => drawAt(t, NARROW).blits.filter((b) => b.sprite === PORT_SPRITE.contrail).length;
+    expect(trails(BEATS.viperRuns - 1), 'a trail before anyone jetted off').toBe(0);
+    const hers = trails(BEATS.viperRuns + 30);
+    expect(hers, 'no trail behind her as she jets off').toBeGreaterThan(8);
+    expect(trails(BEATS.blueRuns + 30), 'no trail behind the fighter as it jets off').toBeGreaterThan(trails(BEATS.blueRuns - 1));
   });
 });

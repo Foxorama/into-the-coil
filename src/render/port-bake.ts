@@ -93,6 +93,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number): HTM
     case 'station':
     case 'flash':
     case 'pool':
+    case 'contrail':
     case 'black':
       break;
     default: {
@@ -344,6 +345,23 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // The bar's light lying on the deck in front of its door: the same warm light, flattened.
       radialEllipse(ctx, 0, 0, h, h * 0.16, PORT_INK.lamp, 0.8);
       return;
+    case 'contrail': {
+      // A length of vapour, long across the box and a hair high, soft at both ends and both edges —
+      // laid end to end along where a ship has been, it is a trail (0414).
+      const along = ctx.createLinearGradient(-h, 0, h, 0);
+      along.addColorStop(0, 'rgba(235, 244, 255, 0)');
+      along.addColorStop(0.5, 'rgba(235, 244, 255, 0.9)');
+      along.addColorStop(1, 'rgba(235, 244, 255, 0)');
+      ctx.save();
+      ctx.scale(1, 0.14);
+      radial(ctx, 0, 0, h, '#ffffff', 0.9);
+      ctx.restore();
+      ctx.globalCompositeOperation = 'source-in';
+      ctx.fillStyle = along;
+      ctx.fillRect(-h, -h, extent, extent);
+      ctx.globalCompositeOperation = 'source-over';
+      return;
+    }
     case 'black':
       ctx.fillStyle = '#000000';
       ctx.fillRect(-h, -h, extent, extent);

@@ -26,8 +26,9 @@ export const PROBES = [
     guard: 'runs its beats in the order they are written',
     edit: {
       path: 'src/content/port.ts',
-      find: '  blueRuns: 870,',
-      replace: '  blueRuns: 800,',
+      // Re-anchored by 0414, which moved the beat.
+      find: '  blueRuns: 1048,',
+      replace: '  blueRuns: 900,',
     },
   },
   {
@@ -84,8 +85,9 @@ export const PROBES = [
     guard: 'has the fighter through the bay before the hangar fades',
     edit: {
       path: 'src/render/port.ts',
-      find: '  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo);',
-      replace: '  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo) * 0.3;',
+      // Re-anchored by 0414, which gave the fighter its own, slower launch.
+      find: '  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL);',
+      replace: '  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL) * 0.3;',
     },
   },
   {
@@ -95,8 +97,9 @@ export const PROBES = [
     guard: 'has both ships off the widest screen before the last fade',
     edit: {
       path: 'src/render/port.ts',
-      find: '+ launched(s, BEATS.blueRuns - BEATS.outside);',
-      replace: '+ launched(s, BEATS.fadeOut - BEATS.outside);',
+      // Re-anchored by 0414, whose fighter is placed by `blueAlongAt`.
+      find: '  return mouth + (CHASE.blue.along - mouth) * blueArrived(s) + launched(s, BLUE_RUNS);',
+      replace: '  return mouth + (CHASE.blue.along - mouth) * blueArrived(s) + launched(s, BEATS.fadeOut - BEATS.outside);',
     },
   },
   {
