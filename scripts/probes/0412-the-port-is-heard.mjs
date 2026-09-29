@@ -32,8 +32,39 @@ export const PROBES = [
     guard: 'no cue in the table is dead weight',
     edit: {
       path: 'src/content/port.ts',
-      find: "  { at: BEATS.door, cue: 'door' },",
-      replace: '',
+      /*
+        ⚠️ **BOTH DOORS, SINCE 0416**, which opened the bar a second time for Venoma: taking out the
+        golfer's door left hers playing the cue, and the full proof on #443 reported this STILL GREEN.
+        One edit spans the two rows and keeps everything between them.
+      */
+      find:
+        "  { at: BEATS.rivalDoor, cue: 'door' },\n" +
+        '  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({\n' +
+        '    at: BEATS.rivalOut + i * RIVAL_STRIDE,\n' +
+        "    cue: 'step' as const,\n" +
+        '  })),\n' +
+        "  { at: BEATS.rivalLeap, cue: 'step' },\n" +
+        "  { at: BEATS.viperLit, cue: 'ignite' },\n" +
+        "  { at: BEATS.viperGo, cue: 'launch' },\n" +
+        '  // The alarm on every turn of the beacon, from its first until the hangar goes dark.\n' +
+        '  ...Array.from({ length: Math.ceil((BEATS.cut - FADE - BEATS.alarm) / ALARM_PERIOD) }, (_, i) => ({\n' +
+        '    at: BEATS.alarm + i * ALARM_PERIOD,\n' +
+        "    cue: 'alarm' as const,\n" +
+        '  })),\n' +
+        "  { at: BEATS.door, cue: 'door' },\n",
+      replace:
+        '  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({\n' +
+        '    at: BEATS.rivalOut + i * RIVAL_STRIDE,\n' +
+        "    cue: 'step' as const,\n" +
+        '  })),\n' +
+        "  { at: BEATS.rivalLeap, cue: 'step' },\n" +
+        "  { at: BEATS.viperLit, cue: 'ignite' },\n" +
+        "  { at: BEATS.viperGo, cue: 'launch' },\n" +
+        '  // The alarm on every turn of the beacon, from its first until the hangar goes dark.\n' +
+        '  ...Array.from({ length: Math.ceil((BEATS.cut - FADE - BEATS.alarm) / ALARM_PERIOD) }, (_, i) => ({\n' +
+        '    at: BEATS.alarm + i * ALARM_PERIOD,\n' +
+        "    cue: 'alarm' as const,\n" +
+        '  })),\n',
     },
   },
   {
