@@ -10,6 +10,8 @@ import {
   firstLine,
   planEdit,
   isAVerdict,
+  sealedBaseline,
+  sealOf,
   verdictOf,
   verifyApplied,
 } from '../scripts/prove-guard.mjs';
@@ -634,5 +636,119 @@ describe('0177 — a red is a verdict, and not any failure with the right name',
   it('and what the log keeps is what the guard SAID, not that it spoke', () => {
     expect(firstLine(ASSERTION)).toBe('AssertionError: expected 1 to be greater than or equal to 2');
     expect(firstLine('')).toBe('');
+  });
+});
+
+/*
+  ── 0419 — THE BASELINE IS THE SUITE'S OWN RUN, WHEN IT CAN BE SHOWN TO BE ─────────────────────────
+
+  `docs/decisions/0419-the-baseline-is-the-suites-own-run.md`. In CI the proof reads the report
+  `npm run check` wrote instead of running every suite again. Each refusal below is a way a report
+  could stand in for a baseline it never made, and every one of them would read as GREEN.
+*/
+describe('0419 — the baseline is the suite’s own run, when it can be shown to be', () => {
+  const tree = sealOf(
+    new Map([
+      ['src/a.ts', 'aa'],
+      ['tests/a.test.ts', 'bb'],
+    ]),
+  );
+  const file = (name: string, statuses: string[]) => ({
+    name,
+    status: statuses.includes('failed') ? 'failed' : 'passed',
+    assertionResults: statuses.map((status, i) => ({
+      title: `test ${i}`,
+      status,
+      failureMessages: status === 'failed' ? ['AssertionError: no'] : [],
+    })),
+  });
+  const report = {
+    testResults: [
+      file('/home/runner/work/itc/tests/a.test.ts', ['passed', 'passed']),
+      file('C:\\into-the-coil\\tests\\b.test.ts', ['passed']),
+    ],
+  };
+  const asked = { report, sealed: tree, tree, suites: ['tests/a.test.ts', 'tests/b.test.ts'] };
+
+  it('a sealed report of every suite judged, all passed, is the baseline', () => {
+    expect(sealedBaseline(asked)).toEqual({ failed: [], ran: 3 });
+  });
+
+  it('THE SEAL: a report of other bytes is refused, because its green is not this tree’s', () => {
+    const edited = sealOf(
+      new Map([
+        ['src/a.ts', 'a-changed'],
+        ['tests/a.test.ts', 'bb'],
+      ]),
+    );
+    expect(() => sealedBaseline({ ...asked, tree: edited })).toThrow(/sealed to different bytes/);
+  });
+
+  it('and the seal is of the bytes, not only the names: one file changed is a different tree', () => {
+    const a = sealOf(new Map([['src/a.ts', 'aa']]));
+    expect(sealOf(new Map([['src/a.ts', 'ab']]))).not.toBe(a);
+    expect(sealOf(new Map([['src/b.ts', 'aa']]))).not.toBe(a);
+    expect(
+      sealOf(
+        new Map([
+          ['src/a.ts', 'aa'],
+          ['src/new.ts', 'cc'],
+        ]),
+      ),
+    ).not.toBe(a);
+    // …and the order a directory happens to be walked in is not a difference.
+    expect(
+      sealOf(
+        new Map([
+          ['x', '1'],
+          ['y', '2'],
+        ]),
+      ),
+    ).toBe(
+      sealOf(
+        new Map([
+          ['y', '2'],
+          ['x', '1'],
+        ]),
+      ),
+    );
+  });
+
+  it('and a report with no seal is refused, since nothing says what it ran against', () => {
+    expect(() => sealedBaseline({ ...asked, sealed: null })).toThrow(/no seal/);
+    expect(() => sealedBaseline({ ...asked, report: null })).toThrow(/no report/);
+  });
+
+  it('A SUITE THE REPORT NEVER RAN is a baseline never made, and is named', () => {
+    expect(() => sealedBaseline({ ...asked, suites: [...asked.suites, 'tests/c.test.ts'] })).toThrow(
+      /never ran 1 suite[\s\S]*tests\/c\.test\.ts/,
+    );
+  });
+
+  it('SKIPPED IS NOT GREEN: a report that did not run a test has not seen it pass', () => {
+    const filtered = { testResults: [file('/r/tests/a.test.ts', ['passed', 'skipped']), report.testResults[1]] };
+    expect(() => sealedBaseline({ ...asked, report: filtered })).toThrow(/skipped is not green[\s\S]*test 1 — skipped/);
+  });
+
+  it('and a failure in the report is a red baseline, handed back like a run’s', () => {
+    const red = { testResults: [file('/r/tests/a.test.ts', ['passed', 'failed']), report.testResults[1]] };
+    expect(sealedBaseline({ ...asked, report: red }).failed).toEqual([{ title: 'test 1', message: 'AssertionError: no' }]);
+  });
+
+  it('THE ONE WITH NO TESTS: a suite that threw before any test ran is a failure, not an empty green', () => {
+    const broken = {
+      testResults: [
+        { name: '/r/tests/a.test.ts', status: 'failed', message: 'ReferenceError: x is not defined', assertionResults: [] },
+        report.testResults[1],
+      ],
+    };
+    expect(sealedBaseline({ ...asked, report: broken }).failed).toEqual([
+      { title: '/r/tests/a.test.ts', message: 'ReferenceError: x is not defined' },
+    ]);
+  });
+
+  it('and only the suites judged are read: an unrelated suite skipping is not this proof’s business', () => {
+    const other = { testResults: [...report.testResults, file('/r/tests/z.test.ts', ['skipped'])] };
+    expect(sealedBaseline({ ...asked, report: other })).toEqual({ failed: [], ran: 3 });
   });
 });
