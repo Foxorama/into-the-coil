@@ -60,10 +60,11 @@ export const PROBES = [
     guard: 'a screen that expires onto its own control has a control to press',
     edit: {
       path: 'src/state/screens.ts',
-      // ⚠️ The row gained `choices` — decision 0070 — and then `pushed` — 0340. Same break, current text.
-      find: "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false },",
+      // ⚠️ The row gained `choices` — decision 0070 — then `pushed` — 0340 — then `skips` and `inRun` —
+      // 0418. Same break, current text.
+      find: "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false, skips: false, inRun: true },",
       replace:
-        "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: { steps: 60, then: null }, pushed: false },",
+        "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: { steps: 60, then: null }, pushed: false, skips: false, inRun: true },",
     },
   },
   {

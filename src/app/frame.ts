@@ -74,6 +74,7 @@ import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { paintPort } from '../render/port.ts';
+import { paintFinale } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -1580,6 +1581,8 @@ export interface World {
    * in place of the scene. Nothing that steps reads it, because nothing steps under the intro.
    */
   intro: number | null;
+  /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
+  outro: number | null;
   /**
    * How hard the heart the player hears is beating this frame, nought to one — 0401. The shell writes
    * it once a frame from the music's own clock (`heartAt`); nothing that steps reads it.
@@ -2486,6 +2489,11 @@ export class GameFrame implements Frame {
     // but the sky it flies through is the first level's, from the game's sprites in that atlas (0416).
     if (w.intro !== null) {
       paintPort(w.surface, w.view, w.intro + alpha, w.sky);
+      return;
+    }
+    // And the finale, on the same terms, in the last place's sky — 0418.
+    if (w.outro !== null) {
+      paintFinale(w.surface, w.view, w.outro + alpha, w.sky);
       return;
     }
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing

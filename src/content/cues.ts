@@ -141,6 +141,8 @@ export const CUE_KINDS = [
   'alarm',
   'door',
   'step',
+  // The finale's voices — 0418: one blip, played at each golfer's own pitch as their words appear.
+  'talk',
 ] as const;
 
 /** Derived from the list, so a cue cannot exist in the union and be missing from the table. */
@@ -250,6 +252,8 @@ export const TWIN_KINDS = [
   'door-opens',
   /** Bo's stride, a frame of the run — 0412. */
   'pilot-steps',
+  /** A speech bubble in the finale gains its next letters — 0418. */
+  'words-appear',
 ] as const;
 
 /**
@@ -2251,6 +2255,24 @@ export const CUES: Record<CueKind, CueRow> = {
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.05, gain: 0.42, attack: 0.001, curve: 5, lowFrom: 1800, lowTo: 900, highFrom: 180 },
       { wave: 'sine', from: inKey(0), to: inKey(-5), seconds: 0.06, gain: 0.42, attack: 0.001, curve: 4 },
+    ],
+  },
+  /**
+   * A golfer talking — 0418: *"bubble + talk blips"*, the classic game dialogue voice. One short pitched
+   * blip for every couple of letters a speech bubble gains, played at the golfer's own `voice` as a rate
+   * (`src/content/golfers.ts`), so four golfers are four voices and one cue.
+   */
+  talk: {
+    twin: 'words-appear',
+    // Said to someone in a cockpit, close — nearly dry.
+    air: 0.1,
+    hold: 3,
+    // Over the pulse, as every event is (0145); the soft square keeps it a voice rather than a chime.
+    gain: 0.26,
+    glue: 0.04,
+    layers: [
+      { wave: 'square', from: inKey(12), to: inKey(10), seconds: 0.055, gain: 0.35, attack: 0.003, curve: 3, lowFrom: 2600, lowTo: 1400, q: 0.8 },
+      { wave: 'sine', from: inKey(12), to: inKey(10), seconds: 0.07, gain: 0.5, attack: 0.003, curve: 3 },
     ],
   },
 };

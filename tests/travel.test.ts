@@ -361,7 +361,8 @@ describe('a crossing carries the run forward exactly once', () => {
     const s = shell();
     for (let i = 0; i < LEVEL_KINDS.length; i += 1) clearLevel(s);
     expect(s.state().run.level, 'the roster did not run out').toBeGreaterThanOrEqual(LEVEL_KINDS.length);
-    expect(s.state().screen.current, 'a finished run was offered another place to fly to').toBe('victory');
+    // The finale, since 0418 — which goes on to the victory screen and nowhere else.
+    expect(s.state().screen.current, 'a finished run was offered another place to fly to').toBe('outro');
   });
 
   it('and the row it is on is the game with words over it, exactly as the level break is', () => {

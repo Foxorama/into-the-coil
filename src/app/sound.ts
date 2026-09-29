@@ -701,7 +701,7 @@ export interface AudioOut {
    * at all; the weights are baked instead, so an accented shot costs exactly what an unaccented one
    * does. **0183 took the voice cap off this path and that makes the saving matter more, not less.**
    */
-  sound(index: number, velocity: number, pan: number): void;
+  sound(index: number, velocity: number, pan: number, rate?: number): void;
   /**
    * Push the music down by `amount` for a moment, because a loud cue is landing — 0104.
    *
@@ -758,7 +758,7 @@ export interface Speaker {
    * caller hands over the coordinate it already has and `panFor` owns the arithmetic; a call with
    * nothing to give is centred, which is the honest answer for the chime and for a menu.
    */
-  play(kind: CueKind, across?: number): void;
+  play(kind: CueKind, across?: number, rate?: number): void;
   /** Whether the player wants sound at all. */
   setOn(on: boolean): void;
   /**
@@ -1020,11 +1020,11 @@ export function makeSpeaker(out: AudioOut): Speaker {
   const waitingPan = new Float32Array(CUE_KINDS.length);
 
   /** Sound `index` now, if the hold allows it. The last gate before the browser. */
-  const emit = (index: number, pan: number): void => {
+  const emit = (index: number, pan: number, rate = 1): void => {
     if (clock - (lastAt[index] ?? 0) < CUES[CUE_KINDS[index]!]!.hold) return;
     if (!out.ready()) return;
     lastAt[index] = clock;
-    out.sound(index, variantAt(variantsOf[index] ?? 1, beat), pan);
+    out.sound(index, variantAt(variantsOf[index] ?? 1, beat), pan, rate);
     /*
       ⚠️ **AFTER the cue is known to have sounded, never when it was asked for** — 0104. A cue the
       hold refused is a cue the player never hears, and ducking the music for it would be the track
@@ -1055,7 +1055,13 @@ export function makeSpeaker(out: AudioOut): Speaker {
         emit(i, waitingPan[i] ?? 0);
       }
     },
-    play(kind: CueKind, across?: number): void {
+    play(kind: CueKind, across?: number, rate = 1): void {
+      /*
+        ⚠️ **`rate` IS A PLAYBACK RATE, ONE FOR THE WHOLE BUFFER — 0418**: a golfer's voice pitched up or
+        down, and the blip shorter or longer with it. One for everything else. A gridded cue that waits
+        for its sixteenth sounds at one, because the grid keeps a flag and a pan and nothing else; the
+        voices are not gridded.
+      */
       if (!on) return;
       const index = indexOf[kind];
       const pan = panFor(across);
@@ -1086,7 +1092,7 @@ export function makeSpeaker(out: AudioOut): Speaker {
         waiting[index] = 1;
         return;
       }
-      emit(index, pan);
+      emit(index, pan, rate);
     },
     setOn(next: boolean): void {
       on = next;
@@ -1864,7 +1870,7 @@ export function makeAudioOut(): WebAudioOut {
       // Every time, not only on the first: a backgrounded tab suspends the context behind us.
       if (ctx.state === 'suspended') void ctx.resume();
     },
-    sound(index: number, velocity: number, pan: number): void {
+    sound(index: number, velocity: number, pan: number, rate = 1): void {
       const variants = buffers[index];
       // The speaker takes the modulo, so an out-of-range variant is a bug rather than a state — but
       // a missing buffer is silence and never a throw, on the same terms as an absent context.
@@ -1880,6 +1886,8 @@ export function makeAudioOut(): WebAudioOut {
       */
       const source = ctx.createBufferSource();
       source.buffer = buffer;
+      // A golfer's voice, pitched — 0418. A property write on the node that exists anyway.
+      if (rate !== 1) source.playbackRate.value = rate;
       // Into its PLACE rather than straight at the master — 0127. The panner is already wired to the
       // master, so the bus and every gain on it are unchanged.
       source.connect(place);

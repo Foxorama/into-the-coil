@@ -232,6 +232,7 @@ cost, which does not exist yet.
 | **the CHASE IS A CHASE: the intro is 20 s, the chaser later and slower, the shot in space a quarter wider, the Viper jinking with the fighter on her line, and contrails as they jet off** | [0414](decisions/0414-the-chase-is-a-chase.md) |
 | **the GOLFER IS CHOSEN: a splash while the game loads, the four Far Carry golfers, and the pick turning the sound on and playing the intro with them in it; Pilot on the menu changes golfer. Who they are, not yet what they fly** | [0415](decisions/0415-the-golfer-is-chosen.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0412](decisions/0412-the-port-is-heard.md) |
 | **the VIPER HAS A PILOT: Venoma runs hooded for her ship, every launch surges where it is heard, the chase flies the first level's sky at its own rate, framed smaller, and every fade is to the backdrop** | [0416](decisions/0416-the-viper-has-a-pilot.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0414](decisions/0414-the-chase-is-a-chase.md) |
+| **the HEART LETS GO: the finale after the last boss — the heart bursts, a golfer not chosen is found in the Viper and says so, the chosen one answers, and the two leave together; and the music leaves the run when the run is over** | [0418](decisions/0418-the-heart-lets-go.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -870,6 +871,12 @@ jinks and the cues are tables in `src/content/port.ts`, the golfers in `src/cont
 **Level 1 has never been drawn in its own sky colours** — 0416 says why — and the intro will follow it
 when it is. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
 `docs/game.md` asks for each ship to differ on an axis the player can feel.
+
+And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md)): the finale, then the
+victory screen — **owed a look at its four shots and a listen to the voices against their bubbles**,
+on the bench at `rig/bench.html?finale&pilot=…`. The lines are on each golfer's row in
+`src/content/golfers.ts`. **Next on the ending is the victory piece**, which 0418 says it is not: the
+music is keyed by place from the bake to the hand-over, and a piece that is not a place is the work.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel

@@ -864,6 +864,40 @@ ${each('-action-cursor')} {
 .itc-intro-skip.itc-intro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 @keyframes itc-intro-skip-in { from { opacity: 0; } to { opacity: 0.9; } }
 /*
+  ── THE FINALE'S SPEECH BUBBLE — 0418 ──────────────────────────────────────────────────────────────
+
+  Light ink on the dark, the space colour for the words, and a tail toward the mouth it comes from. Its
+  corner sits at the mouth: to the right of it with the tail on its left, or to the left with the tail
+  on its right. Sized off the short axis on the chrome's own terms, so a phone gets a bubble it can read.
+*/
+.itc-outro-bubble {
+  position: absolute;
+  display: none;
+  max-width: min(22em, 40vw);
+  padding: 0.7em 0.95em;
+  font: 600 clamp(0.85rem, 3.2vh, 1.35rem)/1.3 system-ui, sans-serif;
+  background: var(--itc-ink, #fff);
+  border-radius: 0.9em;
+  transform: translate(0.6em, -100%);
+  pointer-events: none;
+  box-shadow: 0 0.2em 0.9em rgba(0, 0, 0, 0.45);
+}
+.itc-outro-bubble::after {
+  content: '';
+  position: absolute;
+  left: -0.55em;
+  bottom: 0.5em;
+  border: 0.45em solid transparent;
+  border-right: 0.7em solid var(--itc-ink, #fff);
+  border-left: 0;
+}
+.itc-outro-bubble-right { transform: translate(calc(-100% - 0.6em), -100%); }
+.itc-outro-bubble-right::after { left: auto; right: -0.55em; border-right: 0; border-left: 0.7em solid var(--itc-ink, #fff); }
+.itc-outro-bubble-shown { display: block; animation: itc-outro-bubble-in 0.25s ease-out both; }
+.itc-outro-bubble-unsaid { visibility: hidden; }
+.itc-outro-bubble.itc-outro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@keyframes itc-outro-bubble-in { from { opacity: 0; } to { opacity: 1; } }
+/*
   ⚠️ A filled disc against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and a shield readout is the most tempting place in the
   game to break it — full and empty are the same shape in two inks everywhere else in the genre.
@@ -1557,10 +1591,16 @@ export interface Chrome {
    */
   setCrossing(crossing: Crossing | null): void;
   /**
-   * Say whether the game behind the intro has finished loading — 0412. The skip is shown while the
-   * intro is up and this is true, and at no other time.
+   * Say whether the screen up now may be skipped yet — 0412 for the intro, whose game behind it has to
+   * finish loading first; the finale always may (0418). Shown on a row that `skips`, while this is true.
    */
-  setIntroSkip(ready: boolean): void;
+  setSkipReady(ready: boolean): void;
+  /**
+   * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
+   * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
+   * them. `null` takes the bubble away. Called every step; it touches the DOM only when a letter lands.
+   */
+  setBubble(line: string | null, shown: number, x: number, y: number, tail: 'left' | 'right'): void;
   /**
    * Say something under one control that the row cannot know in advance — 0415: *Pilot* on the menu
    * says who is flying. Pushed in, on `setHud`'s terms, when it changes.
@@ -2391,9 +2431,31 @@ export function makeChrome(
   skip.addEventListener('click', () => onSkip());
   elements.push(skip);
   let skipReady = false;
+  // On any screen whose row skips, since 0418 — the finale's as well as the intro's. One button: its
+  // class keeps the intro's name because the intro is where it was drawn first.
   const paintSkip = (): void => {
-    skip.classList.toggle(prefixFor('intro') + 'skip-shown', shownScreen === 'intro' && skipReady);
+    skip.classList.toggle(prefixFor('intro') + 'skip-shown', shownScreen !== null && SCREENS[shownScreen].skips && skipReady);
   };
+
+  /*
+    ── THE FINALE'S SPEECH BUBBLE — 0418 ──────────────────────────────────────────────────────────────
+
+    What a golfer says, typed out a few letters at a time while the shell plays their voice. The WHOLE
+    line is set from the start with the part not yet said held invisible, so the bubble is its final
+    size before the first letter and nothing reflows as it types. Placed by the shell at the speaker's
+    mouth, in the canvas's own pixels, with its tail on the side the speaker is.
+  */
+  const bubble = document.createElement('div');
+  bubble.className = prefixFor('outro') + 'bubble';
+  bubble.style.color = colours.space;
+  bubble.style.setProperty('--itc-ink', colours.player);
+  const said = document.createElement('span');
+  const unsaid = document.createElement('span');
+  unsaid.className = prefixFor('outro') + 'bubble-unsaid';
+  bubble.append(said, unsaid);
+  elements.push(bubble);
+  let bubbleLine: string | null = null;
+  let bubbleShown = -1;
 
   /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
@@ -2644,10 +2706,32 @@ export function makeChrome(
       trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       skip.classList.toggle(prefixFor('intro') + 'face-pixel', face === 'pixel');
+      bubble.classList.toggle(prefixFor('outro') + 'face-pixel', face === 'pixel');
     },
-    setIntroSkip(ready: boolean): void {
+    setSkipReady(ready: boolean): void {
       skipReady = ready;
       paintSkip();
+    },
+    setBubble(line: string | null, shown: number, x: number, y: number, tail: 'left' | 'right'): void {
+      if (line === null) {
+        if (bubbleLine === null) return;
+        bubbleLine = null;
+        bubble.classList.remove(prefixFor('outro') + 'bubble-shown');
+        return;
+      }
+      const letters = Math.max(0, Math.min(line.length, shown));
+      if (line !== bubbleLine) {
+        bubbleLine = line;
+        bubbleShown = -1;
+        bubble.style.left = `${x}px`;
+        bubble.style.top = `${y}px`;
+        bubble.classList.toggle(prefixFor('outro') + 'bubble-right', tail === 'right');
+        bubble.classList.add(prefixFor('outro') + 'bubble-shown');
+      }
+      if (letters === bubbleShown) return;
+      bubbleShown = letters;
+      said.textContent = line.slice(0, letters);
+      unsaid.textContent = line.slice(letters);
     },
     setActionHint(screen: Screen, index: number, hint: string): void {
       const control = panels[screen]?.controls[index];
