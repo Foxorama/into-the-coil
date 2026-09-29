@@ -866,7 +866,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     walks the set a voice at a time across frames, so by the time a player has read the three
     difficulty names it is done — and `unlock` still bakes synchronously if they beat it.
   */
-  prewarmAudio();
+  /*
+    ⚠️ **AFTER THE FIRST PAINTED FRAME, NOT INSIDE `mount`** — 0413. On the workers the prewarm starts
+    its pool, and starting a worker is work on this thread before any of its own: the inline bundle is
+    decoded here, then the thread parses it. Begun inside `mount` that ran ahead of the first paint,
+    and in the test suite — dozens of pages booting at once, four workers each — pages missed their
+    first paint by fifteen seconds. The second callback runs after the first frame has been painted.
+    Measured after: first contentful paint 760 ms median against `main`'s 752, seven loads each. A
+    press before then finds no prewarm and takes the cold path, as a press always could.
+  */
+  requestAnimationFrame(() => requestAnimationFrame(() => prewarmAudio()));
 
   const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
   let view = measure();

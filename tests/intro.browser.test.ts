@@ -24,6 +24,7 @@ import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS } from '../src/content/port.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
+import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
@@ -70,6 +71,7 @@ declare global {
   interface Window {
     __itcContexts?: number;
     __itcCues?: number;
+    __itcPosts?: number;
   }
 }
 
@@ -108,6 +110,13 @@ async function open(): Promise<Page> {
         } as unknown as Gamepad,
       ],
     });
+    // Every message the page sends a worker — a layer asked of the bake pool is one (0413).
+    window.__itcPosts = 0;
+    const post = Worker.prototype.postMessage;
+    Worker.prototype.postMessage = function (this: Worker, ...args: unknown[]): void {
+      window.__itcPosts = (window.__itcPosts ?? 0) + 1;
+      (post as (...a: unknown[]) => void).apply(this, args);
+    } as typeof post;
     const start = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (this: AudioBufferSourceNode, ...args: Parameters<typeof start>): void {
       if (this.buffer !== null && this.buffer.duration <= 1.5) window.__itcCues = (window.__itcCues ?? 0) + 1;
@@ -225,6 +234,22 @@ describe.runIf(chromePath)('the page opens on the name, and offers the golfers o
     await page.keyboard.press('Escape');
     await page.waitForSelector(TITLE, { timeout: 5_000 });
     expect(await contexts(page), 'Escape on the golfers built the sound').toBe(0);
+    await page.context().close();
+  });
+});
+
+describe.runIf(chromePath)('the game behind the splash loads on the workers', () => {
+  it('sends every base layer of the music to the bake pool, so the page is not the one baking it', async () => {
+    /*
+      ⚠️ **THE POOL HAS TO REACH THE PREWARM** — 0413. `src/main.ts` hands it over, and `mount` starts
+      the prewarm after the first paint; without it every layer is walked on the main thread again,
+      which is seconds of dropped frames and a late splash — and every unit test would still pass,
+      because none of them has a browser's workers. Counted by the time the golfers are offered, which
+      is when 0415 says the load is done.
+    */
+    const page = await open();
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    expect(await page.evaluate(() => window.__itcPosts ?? -1), 'the base layers were not sent to the workers').toBeGreaterThanOrEqual(MUSIC_LAYERS.length);
     await page.context().close();
   });
 });

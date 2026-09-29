@@ -273,9 +273,15 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
     expect(first, 'the countdown started above what the table says').toBeLessThanOrEqual(seconds);
     expect(first, 'the countdown never started').toBeGreaterThan(0);
 
-    await page.waitForTimeout(1400);
-    const later = Number((await page.textContent(over)) ?? '0');
-    expect(later, 'the countdown is not counting').toBeLessThan(first);
+    /*
+      ⚠️ **POLLED, NOT SAMPLED AFTER 1.4 s** — found by 0413. The countdown is in STEPS and this read it
+      against the wall clock: under a loaded suite the page got fewer than sixty steps in 1.4 s and the
+      digit had not moved, though it passed alone — 0044's *reading wall clock where it meant frames*.
+      The claim is that it counts, so it must drop before five seconds of its seven are gone.
+    */
+    await expect
+      .poll(async () => Number((await page.textContent(over)) ?? '0'), { timeout: 5_000, message: 'the countdown is not counting' })
+      .toBeLessThan(first);
 
     /*
       ⚠️ **Waited for the TITLE, not merely for the run-over screen to vanish.** A countdown that
