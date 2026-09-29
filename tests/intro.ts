@@ -4,23 +4,43 @@
  * `docs/decisions/0411-the-chase-begins-at-the-port.md` opens the page on a sixteen-second picture
  * that hands over to the title by itself. A test that clicked the title straight after boot would
  * now wait out the whole of it, and Playwright's click would carry the wait silently. So a test
- * skips it the way a player does — one press — and waits for the title to say it is up.
+ * skips it the way a player can at any moment — Escape — and waits for the title to say it is up.
  *
- * ⚠️ **Shift, because it is the key that does nothing once the title is up.** A skip moves focus to
- * the title's first control, and a key whose release activates a button (Space) or whose press does
- * (Enter) would be the one assertion `tests/intro.browser.test.ts` exists to make, made by accident
- * in every other file. That file presses the dangerous ones on purpose.
+ * ⚠️ **ESCAPE, BECAUSE IT IS THE ONE PRESS THAT ASKS FOR NOTHING** — 0412. Every other press on the
+ * intro is a request for sound, and the Skip button only appears once the game behind it has
+ * loaded; Escape skips at once and builds no sound, so the first press on the title is still the one
+ * that does, as it was before the intro existed. It is also not a key whose press or release
+ * activates the title's focused button, which `tests/intro.browser.test.ts` presses on purpose.
  *
- * ⚠️ **A SKIP BUILDS NO SOUND**, so the first press on the title is still the one that does, exactly as
- * it was before the intro — `src/app/mount.ts`'s unlock says why, and `tests/intro.browser.test.ts`
- * holds it. It is still a press, though: `tests/sound.browser.test.ts`'s test of a page nobody has
+ * ⚠️ **AND IT IS THE ONE KEY THE PLATFORM DOES NOT COUNT AS THE PERSON ACTIVATING THE PAGE** — HTML
+ * excludes Escape from the keydowns that grant activation. So `tests/menu.browser.test.ts`, whose
+ * subject is a player with nothing but a pad, can use it and still be testing a page no hand has
+ * activated. It is still a press, though: `tests/sound.browser.test.ts`'s test of a page nobody has
  * touched opens without it.
  */
 
 import type { Page } from 'playwright-core';
 import { prefixFor } from '../src/app/chrome.ts';
+import { afterFrames } from './frames.ts';
+
+/**
+ * How long the game behind the intro may take to load — to the step the Skip button appears.
+ *
+ * ⚠️ **A BUDGET, OWNED BY 0412 AND SIZED ON 0245's TERMS.** Measured 2026-09-29, from the canvas to
+ * the Skip: **6.2–6.4 s alone, and 7.7–16.5 s while the whole suite ran** (nine loads). Three times
+ * the worst. A slower load is a prewarm that has got slower, and a player who waits that long for a
+ * Skip has been told the game is not ready.
+ */
+export const INTRO_READY_MS = 50_000;
 
 export async function pastIntro(page: Page): Promise<void> {
-  await page.keyboard.press('Shift');
+  await page.keyboard.press('Escape');
   await page.waitForSelector('.' + prefixFor('title') + 'shown', { timeout: 15_000 });
+  /*
+    ⚠️ **AND A FEW FRAMES OF THE TITLE BEFORE ANYTHING ELSE IS PRESSED.** A screen change spends the
+    readers (0055): their next read learns what is held as a baseline. A test that pressed on the next
+    line could land before that read and be swallowed as held — 0412 found the music room's pad test
+    doing exactly that, hidden for as long as a click froze long enough to let the steps run first.
+  */
+  await afterFrames(page, 4);
 }

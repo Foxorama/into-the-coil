@@ -796,6 +796,31 @@ ${each('-action-cursor')} {
   opacity: 0.8;
 }
 /*
+  ── THE INTRO'S SKIP ─────────────────────────────────────────────────────────────────────────────
+
+  Decision 0412. Bottom right, over the deck and the stars rather than over anything that moves, and
+  hidden until the game behind the intro has finished loading — a skip offered before then would land
+  the player on a title that froze on their next press. It fades in rather than appearing, because it
+  arrives in the middle of a shot.
+*/
+.itc-intro-skip {
+  position: absolute;
+  right: 1.4em;
+  bottom: 1.4em;
+  display: none;
+  padding: 0.45em 1.1em;
+  font: 600 clamp(0.95rem, 2.2vw, 1.25rem)/1 system-ui, sans-serif;
+  letter-spacing: 0.06em;
+  border: 2px solid currentColor;
+  border-radius: 0.5em;
+  background: var(--itc-void, #000);
+  cursor: pointer;
+}
+.itc-intro-skip-shown { display: block; animation: itc-intro-skip-in 0.5s ease-out both; }
+.itc-intro-skip:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.itc-intro-skip.itc-intro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@keyframes itc-intro-skip-in { from { opacity: 0; } to { opacity: 0.9; } }
+/*
   ⚠️ A filled disc against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and a shield readout is the most tempting place in the
   game to break it — full and empty are the same shape in two inks everywhere else in the genre.
@@ -1473,6 +1498,11 @@ export interface Chrome {
    * caller decides the resolution, and there are two things here that can change in a whole crossing.
    */
   setCrossing(crossing: Crossing | null): void;
+  /**
+   * Say whether the game behind the intro has finished loading — 0412. The skip is shown while the
+   * intro is up and this is true, and at no other time.
+   */
+  setIntroSkip(ready: boolean): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -1867,6 +1897,8 @@ export function makeChrome(
   onChoice: (name: SettingName, index: number) => void,
   // 0212: the music room's seek. A fraction of the walk, and the shell decides what that means.
   onSeek: (through: number) => void,
+  // 0412: the intro's skip, pressed.
+  onSkip: () => void,
 ): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -2265,6 +2297,26 @@ export function makeChrome(
   top.appendChild(bossBar);
 
   /*
+    ── THE INTRO'S SKIP — 0412 ───────────────────────────────────────────────────────────────────────
+
+    A real `<button>`, so a click and a tap reach it the way they reach every other control. Shown while
+    the intro is up AND the shell has said the game behind it is ready; the keys that skip are the
+    shell's (`src/app/mount.ts`), because Escape has to work while this is still hidden.
+  */
+  const skip = document.createElement('button');
+  skip.type = 'button';
+  skip.className = prefixFor('intro') + 'skip';
+  skip.textContent = 'Skip';
+  skip.style.color = colours.player;
+  skip.style.setProperty('--itc-void', colours.space);
+  skip.addEventListener('click', () => onSkip());
+  elements.push(skip);
+  let skipReady = false;
+  const paintSkip = (): void => {
+    skip.classList.toggle(prefixFor('intro') + 'skip-shown', shownScreen === 'intro' && skipReady);
+  };
+
+  /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
 
     Which screen is up, and which of its controls the focus is on.
@@ -2441,6 +2493,7 @@ export function makeChrome(
       shownScreen = screen;
       paintTriggers();
       paintBoss();
+      paintSkip();
       // Back to the first control every time a screen appears. A remembered position on a screen the
       // player has left is a cursor sitting somewhere nobody put it.
       focused = 0;
@@ -2511,6 +2564,11 @@ export function makeChrome(
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      skip.classList.toggle(prefixFor('intro') + 'face-pixel', face === 'pixel');
+    },
+    setIntroSkip(ready: boolean): void {
+      skipReady = ready;
+      paintSkip();
     },
     setCrossing(crossing: Crossing | null): void {
       const parts = panels.travel?.crossing;

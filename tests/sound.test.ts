@@ -22,6 +22,7 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BEAT_SECONDS } from '../src/content/music.ts';
 import { DUCK_DOWN_SECONDS, DUCK_HOLD_SECONDS, DUCK_UP_SECONDS } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
+import { INTRO_CUES } from '../src/content/port.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import {
   CUE_ROOM_GAIN,
@@ -2134,7 +2135,15 @@ describe('every cue is played by something, and every cue the frame plays exists
       read('src/app/mount.ts') +
       read('src/content/bosses.ts') +
       read('src/content/specials.ts');
-    const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`));
+    /*
+      ⚠️ **AND THE ROWS OF `INTRO_CUES` SINCE 0412 — READ AS ROWS, NOT AS A FILE.** The intro's beats
+      name their cues there and the shell plays `row.cue` as the intro passes each one. Reading the
+      whole of `src/content/port.ts` was the first version, and `npm run prove` found it could not
+      fail: the file also names a DOOR sprite and the cue union, so a door cue with no beat left
+      `'door'` in it three times over. The rows are the only thing in it that plays anything.
+    */
+    const onBeats = new Set<string>(INTRO_CUES.map((row) => row.cue));
+    const unplayed = CUE_KINDS.filter((kind) => !sources.includes(`'${kind}'`) && !onBeats.has(kind));
     expect(unplayed, `these cues are in the table and nothing ever plays them: ${unplayed.join(', ')}`).toEqual([]);
   });
 });
