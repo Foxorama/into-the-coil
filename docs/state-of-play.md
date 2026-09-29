@@ -230,6 +230,7 @@ cost, which does not exist yet.
 | **the PORT IS HEARD: the pilot is Backspin Bo, the intro plays its own cues from the first real press, and a Skip appears once the game behind it has loaded — Escape skips at any moment** | [0412](decisions/0412-the-port-is-heard.md) — amends 0411's *any press skips* |
 | **the PREWARM IS PARALLEL: the music baked at boot goes to the worker pool two layers at a time, so the Skip is up in about two seconds and the intro stops dropping frames** | [0413](decisions/0413-the-prewarm-is-parallel.md) — the pool is [0331](decisions/0331-the-heart-beats-under-it.md)'s |
 | **the CHASE IS A CHASE: the intro is 20 s, the chaser later and slower, the shot in space a quarter wider, the Viper jinking with the fighter on her line, and contrails as they jet off** | [0414](decisions/0414-the-chase-is-a-chase.md) |
+| **the GOLFER IS CHOSEN: a splash while the game loads, the four Far Carry golfers, and the pick turning the sound on and playing the intro with them in it; Pilot on the menu changes golfer. Who they are, not yet what they fly** | [0415](decisions/0415-the-golfer-is-chosen.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0412](decisions/0412-the-port-is-heard.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -859,12 +860,13 @@ loadout the run carries in ([0406](decisions/0406-a-mid-boss-is-met-armed.md)). 
 0406's per-gun table is what decides whether the mid-bosses are tuned to the pulse or the shuriken.**
 And every enemy now moves ([0410](decisions/0410-the-enemies-move.md)) — **owed a play for whether each
 animal reads at speed and whether any is too busy**; the holds on the rows are the first thing to turn.
-And the page opens on the intro ([0411](decisions/0411-the-chase-begins-at-the-port.md),
+And the page opens on the way in ([0415](decisions/0415-the-golfer-is-chosen.md)): the splash, the four
+golfers, and the intro the pick plays ([0411](decisions/0411-the-chase-begins-at-the-port.md),
 [0412](decisions/0412-the-port-is-heard.md), [0414](decisions/0414-the-chase-is-a-chase.md)) — **owed a
-look at the jinks and the trails, and a listen to its five cues**; the beats, the jinks and the cues are
-tables in `src/content/port.ts`. The prewarm it waited on is on the workers now
-([0413](decisions/0413-the-prewarm-is-parallel.md)); **next on it is the way in** — a splash, the four
-golfers, and the pick turning the sound on.
+look at the portraits, the runners, the jinks and the trails, and a listen to the intro's five cues**;
+the beats, the jinks and the cues are tables in `src/content/port.ts`, the golfers in
+`src/content/golfers.ts`. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
+`docs/game.md` asks for each ship to differ on an axis the player can feel.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said
 *the work is a driving session, everything else is waiting on an ear* for six days after the channel

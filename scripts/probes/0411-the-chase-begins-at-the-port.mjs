@@ -12,10 +12,11 @@ export const PROBES = [
     decision: '0411',
     suite: 'tests/intro.test.ts',
     broke: 'the page opens on the title again',
-    guard: 'opens the page, has no panel',
+    // Re-anchored by 0415, whose page opens on the splash that leads to the intro.
+    guard: 'follows the splash, has no panel',
     edit: {
       path: 'src/state/slices/screen.ts',
-      find: "export const initialScreen: ScreenState = { current: 'intro' };",
+      find: "export const initialScreen: ScreenState = { current: 'splash' };",
       replace: "export const initialScreen: ScreenState = { current: 'title' };",
     },
   },
@@ -139,7 +140,8 @@ export const PROBES = [
     decision: '0411',
     suite: 'tests/intro.browser.test.ts',
     broke: 'the frame clearing the canvas in place of drawing the intro',
-    guard: 'draws the intro with no panel over it',
+    // 0415 folded *the intro draws* into the test that looks for the picked golfer in it.
+    guard: 'runs the golfer who was picked out of the bar',
     edit: {
       path: 'src/app/frame.ts',
       find: '      paintPort(w.surface, w.view, w.intro + alpha);',

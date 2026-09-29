@@ -25,9 +25,10 @@ import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { INTRO_STEPS } from '../content/port.ts';
+import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['intro', 'title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
+export const SCREEN_KINDS = ['splash', 'select', 'intro', 'title', 'playing', 'gameOver', 'cleared', 'victory', 'music', 'travel'] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -55,7 +56,7 @@ export interface ScreenAction {
  * `slices/` and is the sanctioned place for a shape two of them must agree on. `settings` keys its
  * state by it and `screen` rows name it, and neither imports the other.
  */
-export type SettingName = 'style' | 'sound' | 'travel';
+export type SettingName = 'style' | 'sound' | 'travel' | 'pilot';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -204,6 +205,44 @@ export const STEPS_PER_SECOND = 60;
 
 export const SCREENS: Record<Screen, ScreenRow> = {
   /**
+   * The splash — `docs/decisions/0415-the-golfer-is-chosen.md`. What the page opens on: the name, over
+   * the dark, while the game loads behind it.
+   *
+   * ⚠️ **IT LEAVES WHEN THE GAME HAS LOADED, NOT ON A CLOCK**, which is why `timeout` is null:
+   * `src/app/mount.ts` moves it on to the select screen once the prewarm is done and it has been up
+   * long enough to be read. So the press that picks a golfer is never the one that pays for loading —
+   * and that press is what turns the sound on, which is the whole reason this screen exists.
+   */
+  splash: {
+    heading: GAME_TITLE,
+    actions: [],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+  },
+  /**
+   * The golfers — 0415. Four buttons, one per row of `src/content/golfers.ts`, each with a portrait
+   * the chrome draws in: their name, and where they are from.
+   *
+   * ⚠️ **THE PRESS THAT PICKS IS THE PRESS THAT TURNS THE SOUND ON.** No browser plays anything before
+   * the page is touched (0412), so a screen that asks for a choice everyone makes anyway is the one
+   * place a gesture costs the player nothing. Picked at boot it goes on to the intro, with sound; picked
+   * from the menu's *Pilot* it goes back to the menu.
+   *
+   * ⚠️ **Built by walking `GOLFER_KINDS`, so the buttons ARE the table**, on the tiers' own terms.
+   */
+  select: {
+    heading: 'Pilot',
+    actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: GOLFERS[kind].home })),
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+  },
+  /**
    * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`. What the page
    * opens on: the Viper blasts out of the spaceport, a pilot runs out of the bar to the blue fighter and
    * goes after her, and the title comes up when they are gone.
@@ -258,6 +297,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     actions: [
       ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
       { label: 'Music', hint: '' },
+      // 0415: change golfer without going back through the splash — past the music room, on 0210's terms.
+      { label: 'Pilot', hint: '' },
     ],
     /*
       ⚠️ **THE FIRST SETTING, AND IT IS ON THE TITLE SCREEN RATHER THAN BEHIND ONE** —

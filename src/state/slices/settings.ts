@@ -22,6 +22,7 @@
 import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
 import { DEFAULT_STYLE, type StyleKind } from '../../content/styles.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
+import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { type SettingName } from '../screens.ts';
 
 /**
@@ -55,6 +56,16 @@ interface SettingValue {
    * of holding it.
    */
   travel: TravelKind;
+  /**
+   * Which golfer is flying — `docs/decisions/0415-the-golfer-is-chosen.md`. Chosen on the select
+   * screen at boot and from the menu's *Pilot*; `src/content/golfers.ts` is the table.
+   *
+   * ⚠️ **WHO THEY ARE, NOT WHAT THEY FLY, WHICH IS WHY IT IS A SETTING** and not on the run: it changes
+   * the pilot the intro draws and nothing the simulation reads, on `style`'s terms above. The day a
+   * golfer owns a ship it moves to the run, because then it is a property of the game being played.
+   * Not remembered between visits — asked for as *"pick each visit"*.
+   */
+  pilot: GolferKind;
 }
 
 /**
@@ -75,10 +86,11 @@ export type SettingsState = { readonly [K in SettingName]: SettingValue[K] };
 export type SettingsAction =
   | { slice: 'settings'; type: 'style'; style: StyleKind }
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
-  | { slice: 'settings'; type: 'travel'; travel: TravelKind };
+  | { slice: 'settings'; type: 'travel'; travel: TravelKind }
+  | { slice: 'settings'; type: 'pilot'; pilot: GolferKind };
 
 /** What a player who has chosen nothing has. The default IS the game — 0024. */
-export const initialSettings: SettingsState = { style: DEFAULT_STYLE, sound: DEFAULT_SOUND, travel: DEFAULT_TRAVEL };
+export const initialSettings: SettingsState = { style: DEFAULT_STYLE, sound: DEFAULT_SOUND, travel: DEFAULT_TRAVEL, pilot: DEFAULT_GOLFER };
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
@@ -95,6 +107,9 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // from its neighbours is a slice somebody has to read three times.
     case 'travel':
       return state.travel === action.travel ? state : { ...state, travel: action.travel };
+    // 0415: the golfer, on the same shape.
+    case 'pilot':
+      return state.pilot === action.pilot ? state : { ...state, pilot: action.pilot };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per

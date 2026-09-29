@@ -34,6 +34,8 @@ import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SPRITE } from '../content/sprites.ts';
 import { bakeAtlas, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
+import { paintPortrait } from '../render/golfer-art.ts';
+import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
@@ -261,6 +263,47 @@ ${each('-choices')} {
   max-width: min(100%, 60ch);
 }
 .itc-music-action { width: min(100%, 18ch); }
+/*
+  ── THE SPLASH AND THE GOLFERS — decision 0415 ───────────────────────────────────────────────────
+
+  The splash is the name, large, fading up while the game loads behind it; the select screen fades up
+  in its place. Both dim to the space colour, so one after the other reads as the name giving way to
+  the four golfers rather than as a cut.
+
+  The golfers are four cards, a portrait over a name over a home, always four across: the game is
+  landscape only (0031), so the scarce axis is the height, and a two-by-two grid was tried first and
+  the layout guard refused it — 33 pixels too tall on a 480x320 phone. The portrait is sized against
+  the short axis like the rest of the chrome (0049), with a floor so a phone's is still a face.
+*/
+.itc-splash-heading {
+  font-size: clamp(1.8rem, min(9cqw, 14cqh), 5rem);
+  letter-spacing: 0.04em;
+  margin: 0;
+  animation: itc-splash-in 1.2s ease-out both;
+}
+.itc-select-shown { animation: itc-select-in 0.6s ease-out both; }
+@keyframes itc-splash-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes itc-select-in { from { opacity: 0; } to { opacity: 1; } }
+.itc-select-heading { font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem); margin: 0; }
+.itc-select-choices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: min(1rem, 2.5cqh) min(1rem, 2cqw);
+  width: min(100%, 64rem);
+}
+.itc-select-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.2em;
+  height: 100%;
+}
+.itc-select-action-hint { display: block; font-size: 0.8em; font-weight: 500; opacity: 0.7; }
+.itc-select-portrait {
+  width: clamp(3rem, min(24cqh, 14cqw), 9rem);
+  height: clamp(3rem, min(24cqh, 14cqw), 9rem);
+}
 /*
   ── THE NOW PLAYING READOUT — decision 0212, and no extension on that path ──────────────────────
   (0210's own note: the prefix scanner reads every dotted token in this template as a class name.)
@@ -1047,10 +1090,19 @@ ${each('-action-cursor')} {
     grid-row: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    grid-auto-flow: column;
+    grid-template-rows: auto auto;
     align-items: stretch;
     gap: min(0.6rem, 1.5cqw);
     width: 100%;
   }
+  /*
+    ⚠️ **THE TIERS SPAN BOTH ROWS AND THE MUSIC ROOM AND THE PILOT SHARE THE FOURTH COLUMN — 0415.**
+    Pilot was a fifth card, and a fifth card in a four-column grid wraps onto a row of its own: 46
+    pixels of a 320-pixel screen, which fitted on Windows' fonts and scrolled by 9 on CI's. Two short
+    buttons stacked beside three tall cards cost the row nothing.
+  */
+  .itc-title-choices > :nth-child(-n+3) { grid-row: span 2; }
   /*
     A card's lines start at its top, so the three names sit on one line across the row whatever each
     card has under it — centred, the name moved with the length of its hint.
@@ -1070,8 +1122,8 @@ ${each('-action-cursor')} {
     align-items: center;
     justify-content: flex-start;
   }
-  /* The music room has no lines under its name, so its one word sits in the middle of its card. */
-  .itc-title-choices > :last-child { justify-content: center; }
+  /* The music room and the pilot are short, so each sits in the middle of its half of the column. */
+  .itc-title-choices > :nth-child(n+4) { justify-content: center; }
   .itc-title-column { grid-row: 2; }
   .itc-title-settings-box { grid-row: 3; }
   /*
@@ -1400,6 +1452,12 @@ export interface NowPlaying {
  */
 const ICON_PIXELS_PER_UNIT = 28;
 
+/**
+ * How many pixels square a golfer's portrait is baked at — 0415. Above the largest it is ever drawn
+ * (9rem) at a pixel ratio of two, on the icons' own argument: a few kilobytes once, and no pixel steps.
+ */
+const PORTRAIT_PIXELS = 320;
+
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
@@ -1503,6 +1561,11 @@ export interface Chrome {
    * intro is up and this is true, and at no other time.
    */
   setIntroSkip(ready: boolean): void;
+  /**
+   * Say something under one control that the row cannot know in advance — 0415: *Pilot* on the menu
+   * says who is flying. Pushed in, on `setHud`'s terms, when it changes.
+   */
+  setActionHint(screen: Screen, index: number, hint: string): void;
   /** Drop every listener. */
   release(): void;
 }
@@ -2088,6 +2151,22 @@ export function makeChrome(
       control.className = prefix + 'action';
       control.textContent = action.label;
       /*
+        ⚠️ **THE GOLFERS' BUTTONS CARRY A PORTRAIT — 0415**, above the name, drawn from the golfer's
+        row by `src/render/golfer-art.ts`. The index IS the golfer: `src/state/screens.ts` walks
+        `GOLFER_KINDS` to build the row. Decorative, like the key's icons — the name is the label.
+      */
+      const golfer = screen === 'select' ? GOLFER_KINDS[index] : undefined;
+      if (golfer !== undefined) {
+        const portrait = document.createElement('canvas');
+        portrait.width = PORTRAIT_PIXELS;
+        portrait.height = PORTRAIT_PIXELS;
+        portrait.className = prefix + 'portrait';
+        portrait.setAttribute('aria-hidden', 'true');
+        const pen = portrait.getContext('2d');
+        if (pen !== null) paintPortrait(pen, GOLFERS[golfer], PORTRAIT_PIXELS);
+        control.prepend(portrait);
+      }
+      /*
         The hint, INSIDE the button so it is part of what the control announces itself as.
 
         ⚠️ **Beside it would be a second thing to focus and a second thing to tab past**, and the
@@ -2569,6 +2648,18 @@ export function makeChrome(
     setIntroSkip(ready: boolean): void {
       skipReady = ready;
       paintSkip();
+    },
+    setActionHint(screen: Screen, index: number, hint: string): void {
+      const control = panels[screen]?.controls[index];
+      if (control === undefined) return;
+      const prefix = prefixFor(screen);
+      let line = control.querySelector<HTMLElement>('.' + prefix + 'action-hint');
+      if (line === null) {
+        line = document.createElement('span');
+        line.className = prefix + 'action-hint';
+        control.appendChild(line);
+      }
+      line.textContent = hint;
     },
     setCrossing(crossing: Crossing | null): void {
       const parts = panels.travel?.crossing;

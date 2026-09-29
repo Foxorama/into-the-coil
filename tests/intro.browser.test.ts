@@ -1,11 +1,12 @@
 /**
- * The intro in a real page — `docs/decisions/0411-the-chase-begins-at-the-port.md` and
- * `docs/decisions/0412-the-port-is-heard.md`.
+ * The way in, in a real page — `docs/decisions/0415-the-golfer-is-chosen.md`, with the intro of
+ * `docs/decisions/0411-the-chase-begins-at-the-port.md` and `docs/decisions/0412-the-port-is-heard.md`.
  *
- * The claims `tests/intro.test.ts` cannot make, because they are about the DOM, the input and the
- * sound around the picture rather than the picture: the page opens on it and draws it, it hands over
- * to the title with nothing pressed, its Skip appears once the game behind it has loaded, a skip goes
- * to the title and no further, and a press that is not a skip turns the sound on without freezing it.
+ * The claims `tests/intro.test.ts` cannot make, because they are about the DOM, the input and the sound
+ * around the picture: the page opens on the name and offers the golfers only once the game behind it
+ * has loaded; the pick turns the sound on and plays the intro with the golfer in it; the intro's Skip
+ * is up for the whole of it; a skip goes to the title and no further; Escape goes to the menu from
+ * anywhere before it; and *Pilot* on the menu changes golfer and comes back.
  *
  * ⚠️ **"NO FURTHER" IS THE WHOLE OF THE SKIP'S HALF.** A skip moves focus onto the title's first
  * control, which is a tier. Space activates a focused button on its RELEASE and Enter on its press, so
@@ -22,20 +23,26 @@ import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS } from '../src/content/port.ts';
+import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
+import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 vi.setConfig({ testTimeout: 180_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
+const SPLASH = '.' + prefixFor('splash') + 'shown';
+const SELECT = '.' + prefixFor('select') + 'shown';
+const GOLFER = '.' + prefixFor('select') + 'action';
 const TITLE = '.' + prefixFor('title') + 'shown';
+const TITLE_ACTION = '.' + prefixFor('title') + 'action';
 const HUD = '.itc-playing-hud-shown';
 const SKIP = '.' + prefixFor('intro') + 'skip';
 const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
 
 /**
- * How long the title may take to come up with nothing pressed, from the canvas appearing.
+ * How long the title may take to come up with nothing pressed, from the pick that starts the intro.
  *
  * ⚠️ **A BUDGET, SIZED ON 0245's TERMS, OWNED BY 0411 AND RE-SIZED BY 0414** for the longer intro:
  * 20.1 s of steps, and a step is a sixtieth of a second only while the loop keeps up. Measured
@@ -46,13 +53,12 @@ const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
 const HANDOVER_MS = 75_000;
 
 /**
- * The longest gap between two frames across a press on the intro — a frozen picture is the defect.
+ * The longest gap between two frames across a press — a frozen picture is the defect.
  *
- * ⚠️ **A BUDGET, SIZED ON 0245's TERMS AND OWNED BY 0412, RE-MEASURED BY 0413** — whose quicker load
- * moved the press to as soon as the canvas exists, into the boot's own hitch. Measured 2026-09-29,
- * that press: **143–478 ms alone, and 504–639 ms while the whole suite ran** (ten presses; the hitch is
- * the boot, pressed or not). Three times the worst. The defect it is for is the whole remaining load
- * run on the press — 5.1 s when 0411's first build did it — so the two cannot be mistaken.
+ * ⚠️ **A BUDGET, SIZED ON 0245's TERMS AND OWNED BY 0412.** Measured 2026-09-29, a press 1.5 s into
+ * the intro: **33–50 ms alone, and 83–617 ms while the whole suite ran** (twelve presses). Three times
+ * the worst. The defect it is for is the whole remaining load run on the press — 5.1 s when 0411's
+ * first build did it — so the two cannot be mistaken for each other.
  */
 const FROZEN_MS = 1_900;
 
@@ -125,6 +131,12 @@ async function open(): Promise<Page> {
 const shown = (page: Page, selector: string): Promise<boolean> => page.evaluate((s: string) => document.querySelector(s) !== null, selector);
 const contexts = (page: Page): Promise<number> => page.evaluate(() => window.__itcContexts ?? -1);
 
+/** Wait for the golfers, and pick one with a click — the press that turns the sound on. */
+async function pick(page: Page, golfer = 0): Promise<void> {
+  await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+  await page.locator(GOLFER).nth(golfer).click();
+}
+
 /**
  * Watch the frames from now, and report the longest gap between two — the honest "did the page
  * freeze". ⚠️ **In the page, and started BEFORE the press**: a frame timed after the press returns
@@ -147,93 +159,143 @@ const longestGap = async (page: Page): Promise<number> => {
   return page.evaluate(() => (window as unknown as { __itcGap: number }).__itcGap);
 };
 
-/** How many of a grid of sampled pixels differ from the top-left one — the cheapest honest "did it draw". */
-function inked(page: Page): Promise<number> {
-  return page.evaluate(() => {
+/** How many sampled pixels are within a few levels of `hex` — the cheapest honest "is that drawn". */
+function pixelsOf(page: Page, hex: string): Promise<number> {
+  return page.evaluate((colour: string) => {
     const canvas = document.querySelector('#app canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return -1;
     const ctx = canvas.getContext('2d');
     if (ctx === null) return -1;
+    const want = [1, 3, 5].map((i) => parseInt(colour.slice(i, i + 2), 16));
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-    const base = [data[0], data[1], data[2]];
     let count = 0;
-    for (let y = 0; y < canvas.height; y += 16) {
-      for (let x = 0; x < canvas.width; x += 16) {
-        const i = (y * canvas.width + x) * 4;
-        if (data[i] !== base[0] || data[i + 1] !== base[1] || data[i + 2] !== base[2]) count++;
-      }
+    for (let i = 0; i < data.length; i += 4) {
+      if (Math.abs(data[i]! - want[0]!) <= 6 && Math.abs(data[i + 1]! - want[1]!) <= 6 && Math.abs(data[i + 2]! - want[2]!) <= 6) count++;
     }
     return count;
-  });
+  }, hex);
 }
 
-describe.runIf(chromePath)('the page opens on the chase, and hands over to the title', () => {
-  it('draws the intro with no panel over it, and brings the title up by itself', async () => {
+describe.runIf(chromePath)('the page opens on the name, and offers the golfers once it has loaded', () => {
+  it('shows the splash first, and the golfers only after it', async () => {
     const page = await open();
-    await page.waitForTimeout(2_000);
-    expect(await shown(page, TITLE), 'the title is up over the intro').toBe(false);
-    expect(await inked(page), 'the intro drew nothing').toBeGreaterThan(100);
-    const started = Date.now();
-    await page.waitForSelector(TITLE, { timeout: HANDOVER_MS });
-    const took = Date.now() - started + 2_000;
-    expect(took, 'the title came up long before the intro could have ended').toBeGreaterThan((INTRO_STEPS / STEPS_PER_SECOND) * 1000 * 0.9);
-    expect(await shown(page, HUD), 'the intro ended in a run').toBe(false);
+    await page.waitForTimeout(300);
+    expect(await shown(page, SPLASH), 'the page did not open on the splash').toBe(true);
+    expect(await shown(page, SELECT), 'the golfers were offered before the game behind them had loaded').toBe(false);
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    expect(await page.locator(GOLFER).count(), 'the golfers are not the table').toBe(GOLFER_KINDS.length);
+    // Every card carries its golfer's face, drawn — not an empty box beside a name.
+    const faces = await page.evaluate((selector: string) => {
+      return [...document.querySelectorAll(selector + ' canvas')].map((c) => {
+        const canvas = c as HTMLCanvasElement;
+        const data = canvas.getContext('2d')?.getImageData(0, 0, canvas.width, canvas.height).data;
+        let inked = 0;
+        for (let i = 3; data !== undefined && i < data.length; i += 16) if (data[i]! > 0) inked++;
+        return inked;
+      });
+    }, GOLFER);
+    expect(faces.length, 'a golfer has no portrait').toBe(GOLFER_KINDS.length);
+    expect(faces.every((inked) => inked > 100), 'a portrait is blank').toBe(true);
     await page.context().close();
   });
 
-  it('skips at once on Escape, chooses nothing, and builds no sound', async () => {
+  it('keeps a press on the splash, turns the sound on when the game has loaded, and never freezes', async () => {
+    /*
+      ⚠️ **THE EARLY PRESS IS THE ONE THAT USED TO FREEZE** — 0412 measured 5.1 s with the picture
+      stopped when the first unlock drained an unfinished load. So a press here is remembered, and the
+      sound arrives with the golfers.
+    */
+    const page = await open();
+    await watchFrames(page);
+    await page.mouse.click(640, 360);
+    expect(await longestGap(page), 'the press froze the page').toBeLessThan(FROZEN_MS);
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    await page.waitForFunction(() => (window.__itcContexts ?? 0) > 0, null, { timeout: 5_000 });
+    await page.context().close();
+  });
+
+  it('goes to the menu on Escape from the splash, chooses nothing, and builds no sound', async () => {
     const page = await open();
     await page.waitForTimeout(300);
     await page.keyboard.press('Escape');
     await page.waitForSelector(TITLE, { timeout: 5_000 });
     await page.waitForTimeout(500);
-    expect(await shown(page, HUD), 'Escape skipped the intro and went on to start a run').toBe(false);
+    expect(await shown(page, HUD), 'Escape went on to start a run').toBe(false);
     expect(await contexts(page), 'Escape built the sound, which it never asked for').toBe(0);
     // And the first press on the title builds it, so a page that never built one proves nothing.
     await page.mouse.click(5, 5);
     await page.waitForFunction(() => (window.__itcContexts ?? 0) > 0, null, { timeout: 30_000 });
     await page.context().close();
   });
+
+  it('goes to the menu on Escape from the golfers too, and builds no sound', async () => {
+    const page = await open();
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(TITLE, { timeout: 5_000 });
+    expect(await contexts(page), 'Escape on the golfers built the sound').toBe(0);
+    await page.context().close();
+  });
 });
 
-describe.runIf(chromePath)('the game behind the intro loads on the workers', () => {
+describe.runIf(chromePath)('the game behind the splash loads on the workers', () => {
   it('sends every base layer of the music to the bake pool, so the page is not the one baking it', async () => {
     /*
       ⚠️ **THE POOL HAS TO REACH THE PREWARM** — 0413. `src/main.ts` hands it over, and `mount` starts
       the prewarm after the first paint; without it every layer is walked on the main thread again,
-      which is six seconds of dropped frames and a late Skip — and every unit test would still pass,
-      because none of them has a browser's workers.
+      which is seconds of dropped frames and a late splash — and every unit test would still pass,
+      because none of them has a browser's workers. Counted by the time the golfers are offered, which
+      is when 0415 says the load is done.
     */
     const page = await open();
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
     expect(await page.evaluate(() => window.__itcPosts ?? -1), 'the base layers were not sent to the workers').toBeGreaterThanOrEqual(MUSIC_LAYERS.length);
     await page.context().close();
   });
 });
 
-describe.runIf(chromePath)('the skip waits for the game behind the intro', () => {
-  it('is not offered until the game has loaded, and then is', async () => {
+describe.runIf(chromePath)('a pick plays the intro, heard, with the golfer in it', () => {
+  it('turns the sound on with the pick, never freezes, plays the cues, and hands over by itself', async () => {
     const page = await open();
-    await page.waitForTimeout(300);
-    expect(await shown(page, SKIP_SHOWN), 'the skip was offered before anything behind the intro had loaded').toBe(false);
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
-    expect(await shown(page, TITLE), 'the intro ended before its skip was offered').toBe(false);
+    await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    expect(await contexts(page), 'the sound came on before anybody picked').toBe(0);
+    await watchFrames(page);
+    await pick(page);
+    const started = Date.now();
+    expect(await longestGap(page), 'the pick froze the page').toBeLessThan(FROZEN_MS);
+    expect(await contexts(page), 'the pick did not turn the sound on').toBe(1);
+    expect(await shown(page, SKIP_SHOWN), 'the intro opened without its skip, though the game had loaded').toBe(true);
+    await page.waitForFunction(() => (window.__itcCues ?? 0) > 0, null, { timeout: HANDOVER_MS });
+    expect(await shown(page, TITLE), 'the intro was over before any of it was heard').toBe(false);
+    await page.waitForSelector(TITLE, { timeout: HANDOVER_MS });
+    expect(Date.now() - started, 'the title came up long before the intro could have ended').toBeGreaterThan((INTRO_STEPS / STEPS_PER_SECOND) * 1000 * 0.9);
+    expect(await shown(page, HUD), 'the intro ended in a run').toBe(false);
     await page.context().close();
   });
 
-  it('and Escape still asks for no sound once it is offered', async () => {
-    // Before the load a press is only remembered, so the Escape above could not show this half.
-    const page = await open();
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
-    await page.keyboard.press('Escape');
-    await page.waitForSelector(TITLE, { timeout: 5_000 });
-    expect(await contexts(page), 'Escape built the sound, which it never asked for').toBe(0);
-    await page.context().close();
+  it('runs the golfer who was picked out of the bar', async () => {
+    /*
+      ⚠️ **THE PICTURE, NOT THE STATE** — 0027. The pilot's cap is the golfer's own colour and appears
+      nowhere else in the port, so it is counted on the canvas while they run for the ship: Feather's
+      teal when she was picked, and not when Bo was.
+    */
+    const capOf = async (golfer: number): Promise<number> => {
+      const page = await open();
+      await pick(page, golfer);
+      await page.waitForTimeout(6_800);
+      const count = await pixelsOf(page, GOLFERS.feather.cap);
+      await page.context().close();
+      return count;
+    };
+    expect(await capOf(GOLFER_KINDS.indexOf('feather')), 'Feather was picked and her cap is not in the intro').toBeGreaterThan(10);
+    expect(await capOf(GOLFER_KINDS.indexOf('bo')), 'Bo was picked and Feather ran out of the bar').toBe(0);
   });
+});
 
-  it('goes to the title on a click, and the click chooses nothing there', async () => {
+describe.runIf(chromePath)('the skip goes to the title and no further', () => {
+  it('goes on a click', async () => {
     const page = await open();
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+    await pick(page);
     await page.click(SKIP);
     await page.waitForSelector(TITLE, { timeout: 5_000 });
     await page.waitForTimeout(500);
@@ -242,13 +304,14 @@ describe.runIf(chromePath)('the skip waits for the game behind the intro', () =>
     await page.context().close();
   });
 
-  it("goes to the title on the pad's confirm once it is offered, and chooses nothing there", async () => {
+  it("goes on the pad's confirm", async () => {
     const page = await open();
     const press = (buttons: number[]): Promise<void> =>
       page.evaluate((b: number[]) => {
         (window as unknown as { __itcPad: { pressed: number[] } }).__itcPad.pressed = b;
       }, buttons);
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+    await pick(page);
+    await afterFrames(page, 8);
     await press([MENU_CONFIRM_BUTTONS[0]!]);
     await afterFrames(page, 8);
     await press([]);
@@ -258,10 +321,19 @@ describe.runIf(chromePath)('the skip waits for the game behind the intro', () =>
     await page.context().close();
   });
 
+  it('goes on Escape', async () => {
+    const page = await open();
+    await pick(page);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(TITLE, { timeout: 5_000 });
+    expect(await shown(page, HUD), 'Escape skipped the intro and went on to start a run').toBe(false);
+    await page.context().close();
+  });
+
   for (const key of ['Space', 'Enter'] as const) {
-    it(`goes to the title on ${key} once it is offered, and ${key} chooses nothing there`, async () => {
+    it(`goes on ${key}, and ${key} chooses nothing there`, async () => {
       const page = await open();
-      await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+      await pick(page);
       await page.keyboard.press(key);
       await page.waitForSelector(TITLE, { timeout: 5_000 });
       await page.waitForTimeout(500);
@@ -272,43 +344,20 @@ describe.runIf(chromePath)('the skip waits for the game behind the intro', () =>
   }
 });
 
-describe.runIf(chromePath)('a press on the intro is heard, and never frozen', () => {
-  it('turns the sound on without skipping or freezing, and the intro plays its cues', async () => {
-    /*
-      ⚠️ **THE PRESS COMES BEFORE THE GAME HAS LOADED, WHICH IS THE CASE THAT USED TO FREEZE.** 0411's
-      first build unlocked on such a press and drained the prewarm on the spot: 5.1 s with the picture
-      stopped. 0412 keeps the request until the load finishes, so the frame after the press arrives on
-      time, no sound is built yet, and the sound arrives with the Skip.
-    */
+describe.runIf(chromePath)('Pilot on the menu changes golfer without going back through the intro', () => {
+  it('opens the golfers, and a pick comes straight back to the menu and says who is flying', async () => {
     const page = await open();
-    /*
-      ⚠️ **AT ONCE, BECAUSE THE LOAD IS QUICK NOW** — 0413 moved it onto the workers, and it finishes in
-      about a second. So the press goes in as soon as the canvas is there, and the test says so if the
-      load beat it: a press after the load is the next test's subject, and passing here over one would
-      be the claim made about the wrong case.
-    */
-    await watchFrames(page);
-    await page.mouse.click(640, 360);
-    expect(await shown(page, SKIP_SHOWN), 'the load finished before the press, so this is not the case it is about').toBe(false);
-    expect(await longestGap(page), 'the press froze the picture').toBeLessThan(FROZEN_MS);
-    expect(await shown(page, TITLE), 'a press that was not a skip skipped').toBe(false);
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
-    await page.waitForFunction(() => (window.__itcContexts ?? 0) > 0, null, { timeout: 5_000 });
-    // The beats after the load are heard — the alarm, the steps, the launches — before the title.
-    await page.waitForFunction(() => (window.__itcCues ?? 0) > 0, null, { timeout: HANDOVER_MS });
-    expect(await shown(page, TITLE), 'the intro was over before any of it was heard').toBe(false);
-    await page.context().close();
-  });
-
-  it('turns the sound on at once when the game has loaded', async () => {
-    const page = await open();
-    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
-    expect(await contexts(page), 'the sound came on with nobody having pressed anything').toBe(0);
-    await watchFrames(page);
-    await page.mouse.click(640, 200);
-    expect(await longestGap(page), 'the press froze the picture').toBeLessThan(FROZEN_MS);
-    expect(await contexts(page), 'a press after the load did not turn the sound on').toBe(1);
-    expect(await shown(page, TITLE), 'a press that was not a skip skipped').toBe(false);
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(TITLE, { timeout: 5_000 });
+    const pilot = page.locator(TITLE_ACTION).nth(DIFFICULTY_KINDS.length + 1);
+    expect(await pilot.textContent(), 'the menu does not say who is flying').toContain(GOLFERS.bo.name);
+    await pilot.click();
+    await page.waitForSelector(SELECT, { timeout: 5_000 });
+    const larry = GOLFER_KINDS.indexOf('larry');
+    await page.locator(GOLFER).nth(larry).click();
+    await page.waitForSelector(TITLE, { timeout: 5_000 });
+    expect(await shown(page, SKIP_SHOWN), 'a pick from the menu played the intro').toBe(false);
+    expect(await pilot.textContent(), 'the menu did not take the new golfer').toContain(GOLFERS.larry.name);
     await page.context().close();
   });
 });

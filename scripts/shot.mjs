@@ -84,8 +84,9 @@ try {
   page.on('pageerror', (e) => errors.push(String(e)));
   await page.goto(pathToFileURL(dist).href);
   await page.waitForSelector('#app canvas', { timeout: 15_000 });
-  // Past the intro, which the page opens on — 0411; `tests/intro.ts` says why the key is Shift.
-  await page.keyboard.press('Shift');
+  // Past the splash to the menu — 0415; `tests/intro.ts` says why the key is Escape. (It was Shift, which
+  // 0412 made a request for sound rather than a skip, so this waited out the whole intro.)
+  await page.keyboard.press('Escape');
   await page.waitForSelector('.itc-title-shown', { timeout: 15_000 });
 
   /*
