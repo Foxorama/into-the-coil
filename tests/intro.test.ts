@@ -257,6 +257,12 @@ describe('the chase is a chase — 0414', () => {
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {
     const trails = (t: number): number => drawAt(t, NARROW).blits.filter((b) => b.sprite === PORT_SPRITE.contrail).length;
     expect(trails(BEATS.viperRuns - 1), 'a trail before anyone jetted off').toBe(0);
+    /*
+      ⚠️ **AND WHILE THE FIGHTER IS STILL COMING OUT OF THE BAY**, which is the one time before the
+      throttle that a ship is moving forward on screen — a trail sample is invisible where it is not, so
+      the step above could not see trails drawn early, and `npm run prove` said so.
+    */
+    expect(trails(BEATS.outside + 40), 'a trail behind the fighter as it leaves the station').toBe(0);
     const hers = trails(BEATS.viperRuns + 30);
     expect(hers, 'no trail behind her as she jets off').toBeGreaterThan(8);
     expect(trails(BEATS.blueRuns + 30), 'no trail behind the fighter as it jets off').toBeGreaterThan(trails(BEATS.blueRuns - 1));
