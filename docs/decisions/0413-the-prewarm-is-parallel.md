@@ -72,9 +72,11 @@ not handed over until the last comes back, and what comes back is the walk's to 
 press with layers still out bakes them here to the same samples, and a late reply changes nothing**.
 
 `tests/intro.browser.test.ts`: **the page sends every base layer to the bake pool** — counted as
-messages to a worker by the time the Skip appears. ⚠️ It is the only guard that can see
-`src/main.ts` hand the pool over BEFORE `mount` starts the prewarm; the other order walks every layer
-on the page again, and every headless test passes.
+messages to a worker by the time the Skip appears. ⚠️ It is the only guard that can see the pool
+fail to reach the prewarm — every headless test passes without it. Its first probe moved the
+hand-over in `src/main.ts` to after `mount` and the proof said STILL GREEN, which was right: with the
+prewarm starting after the first paint, that order no longer matters. The probe now removes the
+hand-over.
 
 Re-sized on [0245](0245-a-budget-is-sized-under-load.md)'s terms: `INTRO_READY_MS` 50 s → 12.5 s, three
 times the 4.1 s worst measured under the suite with every layer out at once; two at a time is 2.3 s
@@ -91,7 +93,7 @@ wall clock read where steps were meant; and 0157's probe is re-anchored on the r
 
 [0005](0005-a-guard-must-be-seen-to-fail.md). `scripts/probes/0413-the-prewarm-is-parallel.mjs`: the
 loops walked although a pool was handed over; a drain leaving what is out empty; a late reply
-overwriting the set; the pool handed over after `mount`.
+overwriting the set; the pool never handed over.
 
 ## Rollback
 

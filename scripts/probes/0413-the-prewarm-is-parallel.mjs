@@ -42,12 +42,17 @@ export const PROBES = [
   {
     decision: '0413',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'the pool handed over after the prewarm has started, so every layer is walked on the page again',
+    /*
+      ⚠️ **THIS PROBE MOVED THE HAND-OVER TO AFTER `mount` AND THE PROOF SAID STILL GREEN — CORRECTLY.**
+      Since the prewarm starts after the first paint, the order inside `src/main.ts` no longer matters,
+      so that was not a break. What the guard is for is the pool reaching the prewarm at all.
+    */
+    broke: 'the pool never handed to the prewarm, so every layer is walked on the page again',
     guard: 'sends every base layer of the music to the bake pool',
     edit: {
       path: 'src/main.ts',
-      find: '  useLayerBaker(makeBakePool());\n  const mounted = mount(app, DEFAULT_PALETTE);',
-      replace: '  const mounted = mount(app, DEFAULT_PALETTE);\n  useLayerBaker(makeBakePool());',
+      find: '  useLayerBaker(makeBakePool());\n',
+      replace: '',
     },
   },
 ];

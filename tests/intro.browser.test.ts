@@ -198,10 +198,10 @@ describe.runIf(chromePath)('the page opens on the chase, and hands over to the t
 describe.runIf(chromePath)('the game behind the intro loads on the workers', () => {
   it('sends every base layer of the music to the bake pool, so the page is not the one baking it', async () => {
     /*
-      ⚠️ **THE POOL HAS TO BE HANDED OVER BEFORE THE PREWARM STARTS** — 0413. `src/main.ts` calls
-      `useLayerBaker` and then `mount`, which starts the prewarm; the other way round and every layer
-      is walked on the main thread again, which is six seconds of dropped frames and a late Skip —
-      and every unit test would still pass, because none of them has a browser's workers.
+      ⚠️ **THE POOL HAS TO REACH THE PREWARM** — 0413. `src/main.ts` hands it over, and `mount` starts
+      the prewarm after the first paint; without it every layer is walked on the main thread again,
+      which is six seconds of dropped frames and a late Skip — and every unit test would still pass,
+      because none of them has a browser's workers.
     */
     const page = await open();
     await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
