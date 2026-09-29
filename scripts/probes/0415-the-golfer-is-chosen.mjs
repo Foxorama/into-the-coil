@@ -3,6 +3,8 @@
 // One per claim in tests/intro.browser.test.ts's way in: the golfers offered at once rather than once
 // loaded, the port baked with one golfer whoever was picked, a pick from the menu that plays the intro,
 // the menu not saying who is flying, Escape that does nothing before the menu, and cards with no faces.
+// And one in tests/layout.browser.test.ts: Pilot as a fifth card on a phone, wrapping onto a row of
+// its own — which the no-scrolling guard saw on CI's fonts and not on Windows', so it is held by shape.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -69,6 +71,17 @@ export const PROBES = [
     edit: {
       path: 'src/app/chrome.ts',
       find: '        control.prepend(portrait);',
+      replace: '',
+    },
+  },
+  {
+    decision: '0415',
+    suite: 'tests/layout.browser.test.ts',
+    broke: 'Pilot as a fifth card on a phone, wrapping onto a row of its own under the tiers',
+    guard: 'keeps the title’s choices in one row on a phone',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '  .itc-title-choices > :nth-child(-n+3) { grid-row: span 2; }',
       replace: '',
     },
   },

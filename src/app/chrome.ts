@@ -1090,10 +1090,19 @@ ${each('-action-cursor')} {
     grid-row: 1;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+    grid-auto-flow: column;
+    grid-template-rows: auto auto;
     align-items: stretch;
     gap: min(0.6rem, 1.5cqw);
     width: 100%;
   }
+  /*
+    ⚠️ **THE TIERS SPAN BOTH ROWS AND THE MUSIC ROOM AND THE PILOT SHARE THE FOURTH COLUMN — 0415.**
+    Pilot was a fifth card, and a fifth card in a four-column grid wraps onto a row of its own: 46
+    pixels of a 320-pixel screen, which fitted on Windows' fonts and scrolled by 9 on CI's. Two short
+    buttons stacked beside three tall cards cost the row nothing.
+  */
+  .itc-title-choices > :nth-child(-n+3) { grid-row: span 2; }
   /*
     A card's lines start at its top, so the three names sit on one line across the row whatever each
     card has under it — centred, the name moved with the length of its hint.
@@ -1113,8 +1122,8 @@ ${each('-action-cursor')} {
     align-items: center;
     justify-content: flex-start;
   }
-  /* The music room has no lines under its name, so its one word sits in the middle of its card. */
-  .itc-title-choices > :last-child { justify-content: center; }
+  /* The music room and the pilot are short, so each sits in the middle of its half of the column. */
+  .itc-title-choices > :nth-child(n+4) { justify-content: center; }
   .itc-title-column { grid-row: 2; }
   .itc-title-settings-box { grid-row: 3; }
   /*

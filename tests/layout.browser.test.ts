@@ -10,6 +10,8 @@ import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+// 0415: the title's Pilot card is as wide as whoever was picked.
+import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 
 /**
  * EVERY SCREEN FITS THE SCREEN IT IS DRAWN ON.
@@ -101,6 +103,28 @@ async function showOnly(page: Page, screen: Screen): Promise<void> {
     },
   );
   if (screen === 'music') await fillTheRoom(page);
+  if (screen === 'title') await nameTheWidestPilot(page);
+}
+
+/**
+ * Put the longest golfer's name under Pilot on the title — 0415, and 0212's argument again.
+ *
+ * ⚠️ **THE PILOT CARD SAYS WHO WAS PICKED, SO IT IS AS WIDE AS THEIR NAME**, and the page opens on
+ * the default golfer: a guard that took the title as it loads measured one name of four, and the
+ * column it sits in on a phone is `auto`. Written into the DOM for the reason `fillTheRoom` gives.
+ */
+async function nameTheWidestPilot(page: Page): Promise<void> {
+  const name = GOLFER_KINDS.map((kind) => GOLFERS[kind].name).reduce((a, b) => (b.length > a.length ? b : a), '');
+  const index = SCREENS.title.actions.findIndex((action) => action.label === 'Pilot');
+  await page.evaluate(
+    ({ prefix, index, name }: { prefix: string; index: number; name: string }) => {
+      const control = document.querySelectorAll('.' + prefix + 'action')[index];
+      const hint = control?.querySelector('.' + prefix + 'action-hint');
+      if (!(hint instanceof HTMLElement)) throw new Error('the title has no Pilot card saying who is picked');
+      hint.textContent = name;
+    },
+    { prefix: prefixFor('title'), index, name },
+  );
 }
 
 /**
@@ -334,6 +358,35 @@ describe.runIf(chromePath)('0370 — the tiers explain themselves on every scree
         expect(line.shown, `${at} is not drawn`).toBe(true);
         expect(line.inside, `${at} is off the display`).toBe(true);
         expect(line.px, `${at} is set at ${line.px}px`).toBeGreaterThanOrEqual(11);
+      }
+      await page.context().close();
+    }
+  });
+
+  it('keeps the title’s choices in one row on a phone, where a second row is what scrolled it', async () => {
+    /*
+      0370's phone title is rows ACROSS the long axis, and the choices are the first of them. 0415
+      added Pilot as a fifth card to a four-column grid, and it wrapped onto a row of its own: 46
+      pixels of a 320-pixel screen. **The no-scrolling guard above could not see it here** — on this
+      machine's fonts the second row still fitted, and only CI's scrolled, by 9. A net that catches a
+      break on one machine's fonts and not another's is measuring the headroom, so this measures the
+      shape: every choice lies within the height of the first, on every phone in the list.
+    */
+    for (const viewport of VIEWPORTS.filter((v) => v.height < 460)) {
+      const page = await open(viewport);
+      await showOnly(page, 'title');
+      const rows = await page.evaluate((p: string) => {
+        return [...document.querySelectorAll<HTMLElement>('.' + p + 'choices > *')].map((card) => {
+          const r = card.getBoundingClientRect();
+          return { what: card.firstChild?.textContent ?? '', top: r.top, bottom: r.bottom };
+        });
+      }, prefixFor('title'));
+      const first = rows[0];
+      expect(first, `${viewport.what}: the title has no choices`).toBeDefined();
+      for (const card of rows) {
+        const at = `${viewport.what}: ${card.what} is outside the row the tiers make`;
+        expect(card.top, at).toBeGreaterThanOrEqual(first!.top - 0.5);
+        expect(card.bottom, at).toBeLessThanOrEqual(first!.bottom + 0.5);
       }
       await page.context().close();
     }

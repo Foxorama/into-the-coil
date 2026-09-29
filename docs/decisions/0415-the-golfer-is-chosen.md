@@ -47,8 +47,10 @@ one is the gesture, and the intro after it is heard from its first frame.
 - **Phones.** The golfers are always four across: the game is landscape only
   ([0031](0031-landscape-is-the-shipped-orientation.md)), so the scarce axis is height, and a
   two-by-two grid was tried first and refused by the layout guard — 33 px too tall on a 480×320 phone.
-  The portraits are sized against the short axis with a floor. The menu's fifth control fits every
-  device the layout guard checks.
+  The portraits are sized against the short axis with a floor. **On a phone, Pilot shares the menu's
+  fourth column with Music**, the tiers spanning both halves of it. It went in first as a fifth card in
+  [0370](0370-the-title-fits-the-hand.md)'s four-column row, and a fifth card wraps onto a row of
+  its own: this machine's fonts fitted that row, CI's scrolled by 9 px, and the PR failed there.
 
 ## What it does not do
 
@@ -72,7 +74,14 @@ slice rather than the run because it cannot change the game being played. The da
   Enter;
 - **Pilot opens the golfers, a pick comes straight back to the menu, and the menu says who is flying**.
 
-The layout guard now covers both new screens and the fifth menu control on every device.
+The layout guard now covers both new screens and the fifth menu control on every device, and in
+`tests/layout.browser.test.ts`:
+
+- **the title is measured with the longest golfer's name under Pilot**, because the card is as wide as
+  the name and the page opens on one golfer of four;
+- **on every phone, the title's choices lie in one row** — held by shape, because the no-scrolling
+  guard saw the wrapped row on CI's fonts and not on this machine's. A net that fires on one machine's
+  fonts is measuring the headroom, not the layout.
 
 Changed, with the reasons beside them: `tests/run.test.ts`, `tests/intro.test.ts` and
 `tests/menu.test.ts` for the page opening on the splash and two screens that wait for a hand; the two
@@ -83,7 +92,9 @@ skipping with Shift — a request for sound since 0412, so they had been sitting
 
 [0005](0005-a-guard-must-be-seen-to-fail.md). `scripts/probes/0415-the-golfer-is-chosen.mjs`: the
 golfers offered before the load; Feather whoever was picked; a pick from the menu playing the intro;
-the menu naming the old golfer; Escape doing nothing on the splash; cards with no faces. 0412's probes
+the menu naming the old golfer; Escape doing nothing on the splash; cards with no faces; Pilot as a
+fifth card on a phone — which the no-scrolling guard stayed green over here, and the one-row guard
+did not. 0412's probes
 were re-pointed at the new tests and two were retired, because their subject — an intro that could
 start before the load — is gone; its file says so. Two of 0411's were re-anchored.
 
