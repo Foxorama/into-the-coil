@@ -18,19 +18,26 @@
 import {
   ALARM_PERIOD,
   BEATS,
+  BLUE_LAUNCH_ACCEL,
   CHASE,
   FADE,
   FLICKER_STEPS,
+  JINKS,
+  JINK_STEPS,
   LAUNCH_ACCEL,
   LEAP_FROM,
   LIFT,
   OUTSIDE,
+  OUTSIDE_ZOOM,
   PILOT_STANDS,
   PORT_EXTENT,
   PORT_SPRITE,
   RUN_FRAME_STEPS,
   RUN_SPEED,
   STAGE,
+  TRACK_DELAY,
+  TRAIL_EVERY,
+  TRAIL_SAMPLES,
 } from '../content/port.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
@@ -80,11 +87,11 @@ function ease(t: number, from: number, to: number): number {
   return u * u * (3 - 2 * u);
 }
 
-/** How far a ship launched at `go` has travelled by `t`, from a standing start. */
-function launched(t: number, go: number): number {
+/** How far a ship launched at `go` has travelled by `t`, from a standing start, at `accel`. */
+function launched(t: number, go: number, accel = LAUNCH_ACCEL): number {
   if (t <= go) return 0;
   const s = t - go;
-  return 0.5 * LAUNCH_ACCEL * s * s;
+  return 0.5 * accel * s * s;
 }
 
 /** A field of tiles, run past at `offset` world units — both star fields, in both shots. */
@@ -168,7 +175,7 @@ function paintHangar(surface: Surface, view: View, t: number): void {
   paintViper(surface, view, t, viperAlong, viperAcross, BEATS.viperLit, BEATS.viperGo);
   // The pilot: out of the door, across the deck, and up into the cockpit.
   const blueBob = t < BEATS.blueGo ? Math.sin(t * 0.06 + 1.7) * 0.6 : 0;
-  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo);
+  const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL);
   const blueAcross = STAGE.blueRide - LIFT * ease(t, BEATS.blueLift, BEATS.blueGo) + blueBob;
   paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo);
   /*
@@ -246,35 +253,105 @@ const BAY_MOUTH_ALONG = 42;
 const BAY_MOUTH_ACROSS = 2;
 const STATION_ACROSS = 58;
 
+/**
+ * One blit in the dark outside, framed `OUTSIDE_ZOOM` about the middle of the view — 0414. The shot is
+ * authored in the same world units as the hangar; only where they land and how big is scaled.
+ */
+function putOut(surface: Surface, view: View, sprite: number, along: number, across: number, alpha = 1, turn = 0): void {
+  const midAlong = view.alongSpan / 2;
+  const midAcross = ACROSS_SPAN / 2;
+  put(surface, view, sprite, midAlong + (along - midAlong) * OUTSIDE_ZOOM, midAcross + (across - midAcross) * OUTSIDE_ZOOM, alpha, turn, OUTSIDE_ZOOM);
+}
+
+/** Steps into the shot at which each ship opens her throttle. */
+const VIPER_RUNS = BEATS.viperRuns - BEATS.outside;
+const BLUE_RUNS = BEATS.blueRuns - BEATS.outside;
+/** When the fighter comes out of the bay, and when it has settled onto her line. */
+const BLUE_OUT = 6;
+const BLUE_SETTLED = 72;
+
+/** Her line across the lane, `s` steps into the shot: held, and broken by each of `JINKS` in turn. */
+function viperLine(s: number): number {
+  let across = CHASE.viper.across;
+  for (let i = 0; i < JINKS.length; i++) {
+    const jink = JINKS[i]!;
+    across += (jink.to - across) * ease(s, jink.at, jink.at + JINK_STEPS);
+  }
+  return across;
+}
+
+function viperAlongAt(s: number): number {
+  return CHASE.viper.along + launched(s, VIPER_RUNS);
+}
+
+/** The fighter's share of the way from the bay mouth to its place in the chase. */
+function blueArrived(s: number): number {
+  return ease(s, BLUE_OUT, BLUE_SETTLED);
+}
+
+function blueAlongAt(s: number): number {
+  const mouth = stationAlong(s) + BAY_MOUTH_ALONG;
+  return mouth + (CHASE.blue.along - mouth) * blueArrived(s) + launched(s, BLUE_RUNS);
+}
+
+/** Her line, `TRACK_DELAY` steps late, and a little below it — the fighter flying where she flew. */
+function blueAcrossAt(s: number): number {
+  const mouth = STATION_ACROSS + BAY_MOUTH_ACROSS;
+  const track = viperLine(s - TRACK_DELAY) + (CHASE.blue.across - CHASE.viper.across);
+  return mouth + (track - mouth) * blueArrived(s);
+}
+
+/**
+ * How far a ship banks into a move across the lane: nose down going down the screen, up going up, in
+ * proportion to how fast, and level on a held line. The move is what tilts it — nothing sways.
+ */
+function bank(from: number, to: number): number {
+  return Math.max(-0.16, Math.min(0.16, (to - from) * 0.09));
+}
+
+/**
+ * A ship's trails, from the moment it opened its throttle: `TRAIL_SAMPLES` of where it was, each a
+ * length of vapour off its wingtip, fading with age — and faint where the ship was barely moving, so a
+ * standing start does not pile a blot on the tip. `tipAlong`/`tipAcross` are the wingtip, relative to
+ * the ship's centre, and `blue` says whose position to ask for.
+ */
+function paintTrail(surface: Surface, view: View, s: number, runs: number, blue: boolean, tipAlong: number, tipAcross: number): void {
+  for (let k = 1; k <= TRAIL_SAMPLES; k++) {
+    const at = s - k * TRAIL_EVERY;
+    if (at < runs) return;
+    const along = blue ? blueAlongAt(at) : viperAlongAt(at);
+    const across = blue ? blueAcrossAt(at) : viperLine(at);
+    const before = blue ? blueAlongAt(at - TRAIL_EVERY) : viperAlongAt(at - TRAIL_EVERY);
+    const spread = Math.min(1, (along - before) / 6);
+    const alpha = 0.75 * (1 - k / (TRAIL_SAMPLES + 1)) * spread;
+    if (alpha > 0.01) putOut(surface, view, PORT_SPRITE.contrail, along + tipAlong, across + tipAcross, alpha);
+  }
+}
+
 function paintOutside(surface: Surface, view: View, s: number): void {
   if (s < 0) return;
   tileStars(surface, view, PORT_SPRITE.stars, 0, fallen(s, OUTSIDE.far), 1);
   tileStars(surface, view, PORT_SPRITE.starsNear, 0, fallen(s, OUTSIDE.near), 1);
   const station = stationAlong(s);
-  if (station > -PORT_EXTENT.station) put(surface, view, PORT_SPRITE.station, station, STATION_ACROSS);
-  // The Viper, ahead, weaving — until she opens her throttle and is gone.
-  const runs = BEATS.viperRuns - BEATS.outside;
-  const v = CHASE.viper;
-  const viperWeave = Math.sin((s / v.period) * Math.PI * 2);
-  const viperAlong = v.along + launched(s, runs);
-  const viperAcross = v.across + v.weave * viperWeave;
-  const viperTurn = 0.12 * Math.cos((s / v.period) * Math.PI * 2);
-  const viperFlame = s < runs ? PORT_SPRITE.viperBurn : PORT_SPRITE.viperFlare;
-  put(surface, view, Math.floor(s / FLICKER_STEPS) % 2 === 0 ? viperFlame : PORT_SPRITE.viperFlare, viperAlong, viperAcross, 1, viperTurn);
-  put(surface, view, PORT_SPRITE.viper, viperAlong, viperAcross, 1, viperTurn);
-  // The fighter: out of the station's bay, up to the chase, weaving after her — and then after her.
-  const b = CHASE.blue;
-  const out = 6;
-  const settled = 72;
-  const mouthAlong = station + BAY_MOUTH_ALONG;
-  const mouthAcross = STATION_ACROSS + BAY_MOUTH_ACROSS;
-  if (s < out) return;
-  const arrive = ease(s, out, settled);
-  const blueWeave = Math.sin((s / b.period) * Math.PI * 2 + 1.2) * ease(s, out, settled + 40);
-  const blueAlong = mouthAlong + (b.along - mouthAlong) * arrive + launched(s, BEATS.blueRuns - BEATS.outside);
-  const blueAcross = mouthAcross + (b.across - mouthAcross) * arrive + b.weave * blueWeave;
-  const blueTurn = 0.12 * Math.cos((s / b.period) * Math.PI * 2 + 1.2) * ease(s, out, settled + 40);
-  const blueFlame = s < out + 24 || s >= BEATS.blueRuns - BEATS.outside || Math.floor(s / FLICKER_STEPS) % 2 === 1 ? PORT_SPRITE.blueFlare : PORT_SPRITE.blueBurn;
-  put(surface, view, blueFlame, blueAlong, blueAcross, 1, blueTurn);
-  put(surface, view, PORT_SPRITE.blue, blueAlong, blueAcross, 1, blueTurn);
+  if (station > -PORT_EXTENT.station) putOut(surface, view, PORT_SPRITE.station, station, STATION_ACROSS);
+  // The Viper, ahead, holding her line and breaking from it — until she opens her throttle and is gone.
+  const viperAlong = viperAlongAt(s);
+  const viperAcross = viperLine(s);
+  const viperTurn = bank(viperAcross, viperLine(s + 1));
+  // Her trails, off both wingtips — the near one low and aft, the far one high and forward.
+  paintTrail(surface, view, s, VIPER_RUNS, false, -8.7, 7.7);
+  paintTrail(surface, view, s, VIPER_RUNS, false, -5.7, -6.4);
+  const viperFlame = s < VIPER_RUNS ? PORT_SPRITE.viperBurn : PORT_SPRITE.viperFlare;
+  putOut(surface, view, Math.floor(s / FLICKER_STEPS) % 2 === 0 ? viperFlame : PORT_SPRITE.viperFlare, viperAlong, viperAcross, 1, viperTurn);
+  putOut(surface, view, PORT_SPRITE.viper, viperAlong, viperAcross, 1, viperTurn);
+  // The fighter: out of the station's bay, onto her line behind her — and then after her.
+  if (s < BLUE_OUT) return;
+  const blueAlong = blueAlongAt(s);
+  const blueAcross = blueAcrossAt(s);
+  const blueTurn = bank(blueAcross, blueAcrossAt(s + 1));
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, -12);
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, 12);
+  const blueFlame = s < BLUE_OUT + 24 || s >= BLUE_RUNS || Math.floor(s / FLICKER_STEPS) % 2 === 1 ? PORT_SPRITE.blueFlare : PORT_SPRITE.blueBurn;
+  putOut(surface, view, blueFlame, blueAlong, blueAcross, 1, blueTurn);
+  putOut(surface, view, PORT_SPRITE.blue, blueAlong, blueAcross, 1, blueTurn);
 }

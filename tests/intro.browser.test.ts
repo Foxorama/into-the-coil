@@ -37,12 +37,13 @@ const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
 /**
  * How long the title may take to come up with nothing pressed, from the canvas appearing.
  *
- * ⚠️ **A BUDGET, SIZED ON 0245's TERMS AND OWNED BY 0411.** The intro is 16.6 s of steps, and a step is
- * a sixtieth of a second only while the loop keeps up. Measured 2026-09-29, from the canvas to the
- * title with nothing pressed: **17.3–17.8 s alone, and 17.6–20.3 s while the whole suite ran** (nine
- * loads). Three times the worst of those. A slower handover is a loop that is not keeping time.
+ * ⚠️ **A BUDGET, SIZED ON 0245's TERMS, OWNED BY 0411 AND RE-SIZED BY 0414** for the longer intro:
+ * 20.1 s of steps, and a step is a sixtieth of a second only while the loop keeps up. Measured
+ * 2026-09-29, from the canvas to the title with nothing pressed: **20.6–21.2 s beside a running proof,
+ * and 22.8–24.8 s while the whole suite ran** (three loads each). Three times the worst. A slower
+ * handover is a loop that is not keeping time. (It was 61 s against 0411's 16.6.)
  */
-const HANDOVER_MS = 61_000;
+const HANDOVER_MS = 75_000;
 
 /**
  * The longest gap between two frames across a press on the intro — a frozen picture is the defect.

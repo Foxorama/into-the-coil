@@ -66,6 +66,7 @@ export const PORT_KINDS = [
   'station',
   'flash',
   'pool',
+  'contrail',
   'black',
 ] as const;
 
@@ -113,6 +114,7 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   station: 110,
   flash: 40,
   pool: 40,
+  contrail: 16,
   black: 1,
 };
 
@@ -224,32 +226,35 @@ export const BEATS = {
   viperGo: 162,
   /** The bay's alarm starts to turn. 4.1 s. */
   alarm: 246,
-  /** The bar's door opens. 4.7 s. */
-  door: 282,
-  /** The door is open and the pilot is out. 5.1 s. */
-  pilotOut: 306,
-  /** The pilot has reached the ship and leaps. 7.1 s. */
-  pilotLeap: 426,
-  /** The pilot is in. 7.6 s. */
-  pilotIn: 456,
-  /** The blue fighter's engines light. 7.8 s. */
-  blueLit: 468,
-  /** It lifts. 8.4 s. */
-  blueLift: 504,
-  /** Full burn, and it goes — through the bay by 9.9 s. 9.1 s. */
-  blueGo: 546,
-  /** The hangar is black, having faded from 10.1 s. 10.5 s. */
-  cut: 630,
-  /** The dark outside comes up. 10.9 s. */
-  outside: 654,
-  /** The Viper opens her throttle and leaves the frame. 13.7 s. */
-  viperRuns: 822,
-  /** The fighter goes after her, and is gone by 15.9 s. 14.5 s. */
-  blueRuns: 870,
-  /** The picture goes to black. 16.0 s. */
-  fadeOut: 960,
-  /** The intro is over and the title comes up. 16.6 s. */
-  end: 996,
+  /**
+   * The bar's door opens. 5.5 s — ⚠️ **a beat later than 0411's 4.7**, asked for as *"slightly more
+   * delay on the chase"* (0414): the room stands empty with the alarm turning before anyone comes.
+   */
+  door: 330,
+  /** The door is open and the pilot is out. 5.9 s. */
+  pilotOut: 354,
+  /** The pilot has reached the ship and leaps. 7.9 s. */
+  pilotLeap: 474,
+  /** The pilot is in. 8.4 s. */
+  pilotIn: 504,
+  /** The blue fighter's engines light. 8.7 s. */
+  blueLit: 522,
+  /** It lifts — a longer spool than hers, 0414's *"slightly slower off the mark"*. 9.3 s. */
+  blueLift: 560,
+  /** Full burn, and it goes, slower than she did (`BLUE_LAUNCH_ACCEL`). 10.2 s. */
+  blueGo: 612,
+  /** The hangar is black, having faded from 11.5 s. 11.9 s. */
+  cut: 712,
+  /** The dark outside comes up. 12.3 s. */
+  outside: 736,
+  /** The Viper opens her throttle and leaves the frame. 16.3 s. */
+  viperRuns: 976,
+  /** The fighter goes after her, further behind than 0411 had it. 17.5 s. */
+  blueRuns: 1048,
+  /** The picture goes to black. 19.5 s. */
+  fadeOut: 1168,
+  /** The intro is over and the title comes up. 20.1 s — asked for *"slightly longer"* (0414). */
+  end: 1204,
 } as const;
 
 /** How long the intro runs, in steps — the screen's own countdown (`src/state/screens.ts`). */
@@ -263,6 +268,12 @@ export const FADE = 24;
  * screen in a second and a fifth. Solved from the widest view, so it is off every screen in time.
  */
 export const LAUNCH_ACCEL = 0.068;
+
+/**
+ * The fighter's, which is slower off the mark than hers — 0414. Still through the bay before the
+ * hangar fades, which `tests/intro.test.ts` holds in pixels.
+ */
+export const BLUE_LAUNCH_ACCEL = 0.05;
 
 /** How far a ship lifts off its pad before it goes, in world units. */
 export const LIFT = 7;
@@ -296,11 +307,51 @@ export const FLICKER_STEPS = 3;
  */
 export const OUTSIDE = { far: 0.45, near: 1.4, station: 1, ramp: 150 } as const;
 
-/** Where the ships hold across the lane outside, and how far and how fast they weave about it. */
+/**
+ * How the dark outside is framed — 0414: *"needs to zoom out about 25%"*. Everything that flies in it,
+ * and the station, is drawn at this share of its size about the middle of the view, so the shot shows
+ * a quarter as much again. The stars are not: a field at infinity is the same field at any width.
+ */
+export const OUTSIDE_ZOOM = 0.8;
+
+/**
+ * Where the ships hold along the lane outside, and across it before the first jink. The fighter is
+ * further back than 0411 put it — *"slightly further behind in space"* (0414).
+ */
 export const CHASE = {
-  viper: { along: 150, across: 52, weave: 9, period: 150 },
-  blue: { along: 78, across: 64, weave: 12, period: 170 },
+  viper: { along: 150, across: 52 },
+  blue: { along: 40, across: 60 },
 } as const;
+
+/**
+ * ⚠️ **THE VIPER JINKS, AND THE FIGHTER FOLLOWS HER LINE** — 0414, replacing 0411's weave: *"the floaty
+ * motion of the spaceships in space felt really weird"*. Two ships bobbing on sine waves are two ships
+ * drifting, and a chase is one ship choosing where to go and the other going there after her. So she
+ * holds a line and breaks from it — a quick move, eased at both ends, then held — and the fighter
+ * flies her track `TRACK_DELAY` steps late. Each row is when she breaks, in steps into the shot, and
+ * the line she breaks to.
+ */
+export const JINKS: readonly { at: number; to: number }[] = [
+  { at: 40, to: 34 },
+  { at: 112, to: 72 },
+  { at: 176, to: 46 },
+];
+
+/** How long a jink takes, in steps — quick, so it reads as a decision rather than a drift. */
+export const JINK_STEPS = 22;
+
+/** How far behind her the fighter flies her line, in steps. */
+export const TRACK_DELAY = 42;
+
+/**
+ * The trails the two ships leave when they open up at the end — 0414: *"I also know that you wouldn't
+ * have contour trails in space, but can we add some contour trails when they jet off at the end of the
+ * space bit?"* A trail is where the ship WAS: `TRAIL_SAMPLES` of its own past positions, every
+ * `TRAIL_EVERY` steps, drawn from the moment it opened up and fading with age — which a pure function of
+ * the clock gives for nothing, since the painter can ask where the ship was.
+ */
+export const TRAIL_SAMPLES = 28;
+export const TRAIL_EVERY = 2;
 
 /**
  * What the intro sounds like, and on which step — `docs/decisions/0412-the-port-is-heard.md`.
