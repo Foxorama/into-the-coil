@@ -62,7 +62,14 @@ terms: 61 s → 75 s, three times the worst handover measured while the whole su
 
 ## Seen to fail
 
-[0005](0005-a-guard-must-be-seen-to-fail.md). `scripts/probes/0414-the-chase-is-a-chase.mjs`.
+[0005](0005-a-guard-must-be-seen-to-fail.md). `scripts/probes/0414-the-chase-is-a-chase.mjs`: her line
+drifting; the fighter on her line with no lag; the fighter close behind; the fighter as quick off the
+pad as she is; no trail as she jets off; trails before anyone has. ⚠️ **The first proof found three of
+these unable to fire**, and each was fixed rather than dropped: a drift added under her line was
+overwritten by the first jink that finished; two equal launches differ only by rounding, so *slower off
+the mark* needs a margin (under nine tenths of hers — it is three quarters); and a trail sample is
+invisible where a ship is not moving forward, so *no trail early* now also looks while the fighter is
+leaving the station, the one time it is. Three of 0411's probes were re-anchored on the moved lines.
 
 ## Owed
 
