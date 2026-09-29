@@ -157,24 +157,10 @@ export const PORT_INK = {
   alarm: '#ff4040',
 } as const;
 
-/**
- * The pilot is Backspin Bo — `docs/decisions/0412-the-port-is-heard.md`. One of the four *Far Carry*
- * golfers `docs/game.md` puts in the prologue: Portland's wedge player, *"the still centre of the
- * tour"*, they/them. The colours are the predecessor's own roster row (`characters.ts`, read for this
- * and for nothing else) — a purple cap over a deeper purple polo, a tousled dark crop under the cap —
- * and its intro's red carry bag with the shafts showing, because a golfer running for a ship still
- * has their clubs.
- */
-export const BO = {
-  cap: '#9b5fd4',
-  shirt: '#7d46b8',
-  skin: '#a8714c',
-  hair: '#2f2318',
-  pants: '#2c3142',
-  shoes: '#232733',
-  bag: '#c0392b',
-  shaft: '#d7dbe2',
-} as const;
+/*
+  ⚠️ **THE PILOT'S COLOURS WERE HERE AS `BO`** — 0412 — and 0415 moved them to
+  `src/content/golfers.ts`, because the pilot is whoever was chosen and Bo is one row of four.
+*/
 
 /**
  * Where the room's fixed things stand, in world units — along from the view's trailing edge, across
@@ -262,6 +248,12 @@ export const INTRO_STEPS = BEATS.end;
 
 /** How long a fade to or from black takes across the cut, in steps. 0.4 s. */
 export const FADE = 24;
+
+/**
+ * The least the splash is up for, in steps — `docs/decisions/0415-the-golfer-is-chosen.md`. 1.5 s:
+ * long enough to read the name, and about what the load takes (0413), so it rarely waits on either.
+ */
+export const SPLASH_STEPS = 90;
 
 /**
  * The ships' motion out through the bay, in world units per step squared: a standing start to off the

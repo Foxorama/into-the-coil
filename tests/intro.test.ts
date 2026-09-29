@@ -76,9 +76,10 @@ function tailPx(b: Blit, kind: 'blue' | 'viper'): number {
   return b.x - TAIL[kind]! * PORT_EXTENT[kind] * b.scale;
 }
 
-describe('the intro is a screen the page opens on and leaves by itself', () => {
-  it('opens the page, has no panel, steps nothing, and goes to the title on its own clock', () => {
-    expect(initialScreen.current).toBe('intro');
+describe('the intro is a screen a pick plays, and it leaves by itself', () => {
+  it('follows the splash, has no panel, steps nothing, and goes to the title on its own clock', () => {
+    // 0415: the page opens on the splash; a golfer picked on the select screen plays the intro.
+    expect(initialScreen.current).toBe('splash');
     const row = SCREENS.intro;
     expect(row.heading, 'the intro grew words').toBe('');
     expect(row.actions, 'the intro grew a button — a picture, not a screen with controls').toEqual([]);

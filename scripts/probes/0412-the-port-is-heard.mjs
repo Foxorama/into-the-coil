@@ -1,10 +1,16 @@
 // The breaks behind docs/decisions/0412-the-port-is-heard.md.
 //
 // One per claim: a cue that sounds over a picture that does not show it, a cue the intro never plays,
-// the skip offered before the game has loaded, a press that unlocks at once and freezes the picture, a
-// press after the load that is only remembered, the intro's cues never played, Escape that does not
-// skip and Escape that asks for sound, Enter carrying through onto a tier, and a Skip button that does
-// nothing when clicked.
+// an early press that unlocks at once and freezes the page, the intro's cues never played, Escape that
+// does not skip the intro and Escape that asks for sound, Enter carrying through onto a tier, the pad's
+// confirm never a skip, and a Skip button that does nothing when clicked.
+//
+// ⚠️ **TWO WERE RETIRED BY 0415, AND THE REASON IS THAT THEIR SUBJECT IS GONE.** *The skip offered
+// before the game has loaded* and *a press after the load only remembered* were both about an intro
+// that could start before loading finished. Since 0415 the intro is reached only through a golfer
+// picked on a screen that appears once loading has finished — so the skip is always up from the first
+// frame and the pick has already turned the sound on. The early press now happens on the splash, and
+// the probe on it points there.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -33,41 +39,19 @@ export const PROBES = [
   {
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'the skip offered from the first frame, before anything behind the intro has loaded',
-    guard: 'is not offered until the game has loaded',
+    broke: 'an early press unlocking at once, which runs the whole load on the press and freezes the page',
+    guard: 'keeps a press on the splash',
     edit: {
       path: 'src/app/mount.ts',
-      find: '      if (!introReady && prewarmDone()) {',
-      replace: '      if (!introReady) {',
-    },
-  },
-  {
-    decision: '0412',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'a press on the intro unlocking at once, which drains the prewarm and freezes the picture',
-    guard: 'turns the sound on without skipping or freezing',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: '      if (introReady) audioOut.unlock();\n      else introWantsSound = true;\n      return;\n    }\n    audioOut.unlock();',
+      find: '      if (prewarmDone()) audioOut.unlock();\n      else introWantsSound = true;\n      return;\n    }\n    audioOut.unlock();',
       replace: '      audioOut.unlock();\n      return;\n    }\n    audioOut.unlock();',
     },
   },
   {
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'a press after the load only remembered, so the sound never comes on',
-    guard: 'turns the sound on at once when the game has loaded',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: '      if (introReady) audioOut.unlock();\n      else introWantsSound = true;\n      return;\n    }\n    audioOut.unlock();',
-      replace: '      introWantsSound = true;\n      return;\n    }\n    audioOut.unlock();',
-    },
-  },
-  {
-    decision: '0412',
-    suite: 'tests/intro.browser.test.ts',
     broke: 'the sound on and the intro’s beats never played',
-    guard: 'and the intro plays its cues',
+    guard: 'turns the sound on with the pick, never freezes, plays the cues',
     edit: {
       path: 'src/app/mount.ts',
       find: '        if (audioOut.ready()) speaker.play(INTRO_CUES[introCueNext]!.cue);\n',
@@ -77,8 +61,8 @@ export const PROBES = [
   {
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'Escape no longer a skip',
-    guard: 'skips at once on Escape',
+    broke: 'Escape no longer a skip of the intro',
+    guard: 'goes on Escape',
     edit: {
       path: 'src/app/mount.ts',
       find: "    if (e.key !== 'Escape' && !(activates && introReady)) return;",
@@ -89,10 +73,10 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'Escape asking for the sound like any other press',
-    guard: 'and Escape still asks for no sound once it is offered',
+    guard: 'goes to the menu on Escape from the golfers too, and builds no sound',
     edit: {
       path: 'src/app/mount.ts',
-      find: "      if (e instanceof KeyboardEvent && e.key === 'Escape') return;\n",
+      find: "    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'select' || screen === 'intro')) return;\n",
       replace: '',
     },
   },
@@ -100,7 +84,7 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'Enter’s default left alone, so the skip’s keypress starts a run on the tier it focused',
-    guard: 'goes to the title on Enter once it is offered',
+    guard: 'goes on Enter',
     edit: {
       path: 'src/app/mount.ts',
       find: '    if (activates) e.preventDefault();',
@@ -111,7 +95,7 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'the pad’s confirm heard as a request for sound and never as the skip',
-    guard: "goes to the title on the pad's confirm",
+    guard: "goes on the pad's confirm",
     edit: {
       path: 'src/app/mount.ts',
       find: '      if (menuAsk.confirm && introReady) leaveIntro();',
@@ -122,7 +106,7 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'a Skip button that does nothing when it is clicked',
-    guard: 'goes to the title on a click',
+    guard: 'goes on a click',
     edit: {
       path: 'src/app/chrome.ts',
       find: "  skip.addEventListener('click', () => onSkip());",

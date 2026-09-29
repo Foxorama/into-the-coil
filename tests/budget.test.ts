@@ -1204,6 +1204,7 @@ const DELIBERATELY_COLD: Record<string, string> = {
   'src/app/mount.ts': 'boot and resize: creates the canvas, builds the pool, seeds the field. Never called from a frame.',
   'src/render/bake.ts': 'draws every sprite once at load. Allocating is what it is FOR; blitting afterwards is the point.',
   'src/render/port-bake.ts': "draws the intro's port once, when the intro comes up or is resized. Allocating is what it is for — 0411.",
+  'src/render/golfer-art.ts': 'draws a golfer once, into the port bake or a select-screen portrait. Never in a frame — 0415.',
   /*
     ⚠️ **THE ONE ENTRY ON THIS LIST THAT IS REACHED FROM A STEP, and it is here rather than above
     because putting it above would be a claim this scan cannot make.** A cue is played during a step,

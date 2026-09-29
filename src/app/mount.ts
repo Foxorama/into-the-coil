@@ -82,7 +82,8 @@ import {
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
-import { INTRO_CUES } from '../content/port.ts';
+import { INTRO_CUES, SPLASH_STEPS } from '../content/port.ts';
+import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
@@ -873,6 +874,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
   // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
   let port: Atlas | null = null;
+  // Whether the select screen was opened from the menu's *Pilot* (back to the menu) or at boot (on
+  // to the intro) — 0415.
+  let selectFromMenu = false;
+  // How many steps the splash has been up — 0415: it leaves once loaded AND read, never before.
+  let splashSteps = 0;
   const surface = new CanvasSurface(ctx, atlas);
   surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
@@ -1243,7 +1249,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (screen === 'intro' && playable) {
       const resolution = view.scale * dpr;
-      if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution);
+      // With the golfer who was picked — 0415. The port is dropped when the intro ends, so a new pick
+      // always meets a fresh bake.
+      if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution, GOLFERS[state.settings.pilot]);
       surface.setAtlas(port);
       world.intro = 0;
       // Its beats from the first — 0412.
@@ -1253,6 +1261,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       port = null;
       surface.setAtlas(atlas);
     }
+    // The splash counts from when it appears — 0415.
+    if (screen === 'splash') splashSteps = 0;
     /*
       ⚠️ **THE CROSSING IS ARMED HERE AND ON NO OTHER PATH, WHICH IS WHAT MAKES IT ONCE PER LEVEL** —
       0340. This runs only on a real transition (`moved` at the call site), so arming it is the same
@@ -1511,12 +1521,27 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     else if (screen === 'title') {
       const tier = DIFFICULTY_KINDS[index];
-      if (tier === undefined) {
+      if (tier !== undefined) lifecycle.begin(tier);
+      else if (index === DIFFICULTY_KINDS.length) {
         // 0213: the field is swept and the dust is dealt as the room OPENS, because the enemies were
         // visible before anything was pressed — which is what the report is about.
         enterRoom();
         dispatch({ slice: 'screen', type: 'show', screen: 'music' });
-      } else lifecycle.begin(tier);
+      } else {
+        // 0415: *Pilot* — the golfers, and back to this menu when one is picked, not through the intro.
+        selectFromMenu = true;
+        dispatch({ slice: 'screen', type: 'show', screen: 'select' });
+      }
+    } else if (screen === 'select') {
+      /*
+        ⚠️ **A GOLFER IS PICKED — 0415.** `GOLFER_KINDS` IS the order `src/state/screens.ts` built the
+        buttons in. Picked at boot, the intro plays — and this press is the gesture that turned its
+        sound on (`unlock`, above it in the capture phase); picked from the menu, the menu comes back.
+      */
+      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
+      showPilot();
+      dispatch({ slice: 'screen', type: 'show', screen: selectFromMenu ? 'title' : 'intro' });
+      selectFromMenu = false;
     } else if (screen === 'music') onMusicRoom(index);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   },
@@ -1551,6 +1576,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
   () => leaveIntro());
   for (const element of chrome.elements) host.appendChild(element);
+  /*
+    ⚠️ **THE MENU'S *PILOT* SAYS WHO IS FLYING — 0415**, so the choice can be seen without opening the
+    golfers. It is the control after the music room, on 0210's terms for the order.
+  */
+  const PILOT_ACTION = DIFFICULTY_KINDS.length + 1;
+  function showPilot(): void {
+    chrome.setActionHint('title', PILOT_ACTION, GOLFERS[state.settings.pilot].name);
+  }
+  showPilot();
 
   /*
     WHAT A STYLE CHANGES, in one place — `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`.
@@ -2634,9 +2668,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /** The next of `INTRO_CUES` the intro has not yet passed. */
   let introCueNext = 0;
   const unlock = (e: Event): void => {
-    if (state.screen.current === 'intro') {
-      if (e instanceof KeyboardEvent && e.key === 'Escape') return;
-      if (introReady) audioOut.unlock();
+    const screen = state.screen.current;
+    /*
+      ⚠️ **AND ON THE SPLASH TOO, AND ESCAPE ON THE SELECT SCREEN** — 0415. The splash is up while the
+      game loads, so a press there is the early press the intro's rule is for; Escape anywhere before
+      the menu is the skip, and asks for nothing.
+    */
+    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'select' || screen === 'intro')) return;
+    if (screen === 'intro' || screen === 'splash') {
+      if (prewarmDone()) audioOut.unlock();
       else introWantsSound = true;
       return;
     }
@@ -2660,7 +2700,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (state.screen.current === 'intro') dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   };
   const introKey = (e: KeyboardEvent): void => {
-    if (state.screen.current !== 'intro') return;
+    const screen = state.screen.current;
+    /*
+      ⚠️ **ESCAPE ON THE SPLASH OR THE SELECT SCREEN GOES STRAIGHT TO THE MENU** — 0415, with whoever
+      is already chosen (Bo, if nobody has been). The select screen's other keys are its own buttons'.
+    */
+    if ((screen === 'splash' || screen === 'select') && e.key === 'Escape') {
+      selectFromMenu = false;
+      dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+      return;
+    }
+    if (screen !== 'intro') return;
     const activates = e.key === 'Enter' || e.key === ' ';
     if (e.key !== 'Escape' && !(activates && introReady)) return;
     if (activates) e.preventDefault();
@@ -2796,6 +2846,22 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       drawn into.
     */
     stepCrossing();
+    /*
+      ⚠️ **THE SPLASH GIVES WAY WHEN THE GAME HAS LOADED AND IT HAS BEEN READ** — 0415: not before
+      `SPLASH_STEPS`, so the name is seen, and not before the prewarm is done, so the press that picks a
+      golfer is instant. A press made on the splash gets its sound the step loading finishes.
+    */
+    if (state.screen.current === 'splash') {
+      splashSteps++;
+      if (introWantsSound && prewarmDone()) {
+        introWantsSound = false;
+        audioOut.unlock();
+      }
+      if (prewarmDone() && splashSteps >= SPLASH_STEPS) {
+        selectFromMenu = false;
+        dispatch({ slice: 'screen', type: 'show', screen: 'select' });
+      }
+    }
     // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
     if (world.intro !== null) {
       world.intro++;

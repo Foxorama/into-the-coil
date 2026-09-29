@@ -21,10 +21,11 @@ export interface ScreenState {
 export type ScreenAction = { slice: 'screen'; type: 'show'; screen: Screen };
 
 /**
- * A run that has not started yet. The game opens on the intro, which hands over to the title screen by
- * itself — `docs/decisions/0411-the-chase-begins-at-the-port.md` — and the title waits.
+ * A run that has not started yet. The game opens on the splash, which gives way to the golfers once it
+ * has loaded; picking one plays the intro, which hands over to the title by itself —
+ * `docs/decisions/0415-the-golfer-is-chosen.md`, 0411 — and the title waits.
  */
-export const initialScreen: ScreenState = { current: 'intro' };
+export const initialScreen: ScreenState = { current: 'splash' };
 
 export function reduceScreen(state: ScreenState, action: ScreenAction): ScreenState {
   switch (action.type) {
