@@ -66,8 +66,11 @@ the intro IS the loading screen. What is built instead is the part the platform 
 
 `tests/intro.test.ts`: **every intro cue plays on a step that draws its twin**, and none plays
 outside the intro or over the black between its shots. `tests/sound.test.ts` holds the five rows to
-every rule a cue is held to, and its *no cue in the table is dead weight* reads `src/content/port.ts`
-now, on the terms it reads the boss and special rows: a cue named by a row is played.
+every rule a cue is held to, and its *no cue in the table is dead weight* reads the rows of
+`INTRO_CUES` now, on the terms it reads the boss and special rows: a cue named by a row is played.
+⚠️ **Its first version read the whole of `src/content/port.ts`, and the proof found it could not
+fail** — the file names a door SPRITE and the cue union too, so a door cue with no beat still left
+`'door'` in it. Read as rows, it goes red.
 
 `tests/intro.browser.test.ts`: **Escape skips at once, chooses nothing and builds no sound — before
 and after the load**; **the skip is not offered until the game has loaded, and then is**; **a click
