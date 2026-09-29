@@ -10,7 +10,7 @@
  * builds the select screen, never in a frame. `tests/budget.test.ts` lists it.
  */
 
-import { KIT, type GolferRow } from '../content/golfers.ts';
+import { KIT, type GolferRow, type RunnerRow } from '../content/golfers.ts';
 import { shade, type Pt } from './bake.ts';
 
 /** The five poses the intro's pilot is drawn in: the run's four and the leap for the cockpit. */
@@ -20,9 +20,11 @@ export type RunnerPose = 'pilotRun0' | 'pilotRun1' | 'pilotRun2' | 'pilotRun3' |
  * A golfer running, side on and facing forward (+x), feet at +5 before `scale` and `build` —
  * 0412's figure, dressed from the row. The run is four frames, legs and arms swinging opposite; the
  * leap is tucked, arms up and reaching for the cockpit. The context is in world units about the
- * sprite's centre.
+ * sprite's centre. Any runner, since 0416: the Viper's pilot is one and is not a golfer.
  */
-export function paintRunner(ctx: CanvasRenderingContext2D, golfer: GolferRow, pose: RunnerPose, scale: number): void {
+export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, pose: RunnerPose, scale: number): void {
+  const pants = golfer.pants ?? KIT.pants;
+  const bag = golfer.bag ?? KIT.bag;
   // Built about the feet, so a taller golfer is taller and still stands on the deck.
   ctx.translate(0, 5 * scale);
   ctx.scale(scale * golfer.build, scale * golfer.build);
@@ -65,13 +67,18 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: GolferRow, po
   // The arms swing against the legs.
   const armFront = leap ? 150 : -ft * 0.9;
   const armBack = leap ? 130 : -bt * 0.9;
-  // Back limbs first, in shadow: trouser leg and shoe, then a short sleeve and a bare forearm.
+  // Back limbs first, in shadow: trouser leg and shoe, then a sleeve and the forearm — bare under a
+  // polo's, covered to the wrist under a long one (0416).
   const [bk, bf] = limb(hip, bt, 2.3, bs, 2.4);
-  line([hip, bk, bf], shade(KIT.pants, -0.3), 1.05);
+  line([hip, bk, bf], shade(pants, -0.3), 1.05);
   line([bf, [bf[0] + 0.8, bf[1]]], KIT.shoes, 0.9);
   const [be, bh] = limb(shoulder, armBack, 1.7, leap ? -20 : 70, 1.5);
-  line([shoulder, part(shoulder, be, 0.55)], shade(golfer.shirt, -0.3), 0.95);
-  line([part(shoulder, be, 0.5), be, bh], shade(golfer.skin, -0.25), 0.6);
+  if (golfer.longSleeves === true) {
+    line([shoulder, be, part(be, bh, 0.85)], shade(golfer.shirt, -0.3), 0.8);
+  } else {
+    line([shoulder, part(shoulder, be, 0.55)], shade(golfer.shirt, -0.3), 0.95);
+    line([part(shoulder, be, 0.5), be, bh], shade(golfer.skin, -0.25), 0.6);
+  }
   // The carry bag on the back, with the shafts and heads of the clubs out of the top.
   const back: Pt = [-Math.cos(lean) * 0.95, -Math.sin(lean) * 0.95];
   const bagLow: Pt = [hip[0] + back[0], hip[1] + back[1] - 0.4];
@@ -80,23 +87,31 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: GolferRow, po
     line([bagHigh, tip], KIT.shaft, 0.2);
     disc(tip[0], tip[1], 0.28, KIT.shaft);
   }
-  line([bagLow, bagHigh], KIT.bag, 1.25);
-  line([[bagLow[0] + 0.1, bagLow[1] - 0.3], [bagHigh[0] + 0.1, bagHigh[1] + 0.4]], shade(KIT.bag, 0.3), 0.25);
+  line([bagLow, bagHigh], bag, 1.25);
+  line([[bagLow[0] + 0.1, bagLow[1] - 0.3], [bagHigh[0] + 0.1, bagHigh[1] + 0.4]], shade(bag, 0.3), 0.25);
   // The body: the polo, with its collar lit, and a belt at the waist.
   line([hip, shoulder], golfer.shirt, 2);
   line([[shoulder[0] - 0.5, shoulder[1] + 0.1], [shoulder[0] + 0.5, shoulder[1] - 0.05]], shade(golfer.shirt, 0.35), 0.35);
   line([[hip[0] - 0.8, hip[1] - 0.35], [hip[0] + 0.85, hip[1] - 0.5]], KIT.shoes, 0.35);
   // The front leg and arm.
   const [fk, ff] = limb(hip, ft, 2.3, fs, 2.4);
-  line([hip, fk, ff], KIT.pants, 1.1);
+  line([hip, fk, ff], pants, 1.1);
   line([ff, [ff[0] + 0.9, ff[1]]], KIT.shoes, 0.95);
   const [fe, fh] = limb(shoulder, armFront, 1.7, leap ? -20 : 75, 1.5);
-  line([part(shoulder, fe, 0.5), fe, fh], golfer.skin, 0.65);
-  line([shoulder, part(shoulder, fe, 0.55)], golfer.shirt, 1);
+  if (golfer.longSleeves === true) {
+    line([shoulder, fe, part(fe, fh, 0.85)], golfer.shirt, 0.85);
+  } else {
+    line([part(shoulder, fe, 0.5), fe, fh], golfer.skin, 0.65);
+    line([shoulder, part(shoulder, fe, 0.55)], golfer.shirt, 1);
+  }
   disc(fh[0], fh[1], 0.4, golfer.skin);
   // The head, in profile: the hair's back mass by its cut, the face, the cap and its brim forward.
   const head: Pt = [shoulder[0] + Math.sin(lean) * 1.55, shoulder[1] - Math.cos(lean) * 1.55];
   const [hx, hy] = head;
+  if (golfer.hood !== undefined) {
+    paintHood(ctx, golfer, golfer.hood, hx, hy);
+    return;
+  }
   ctx.fillStyle = golfer.hair;
   switch (golfer.cut) {
     case 'coils':
@@ -189,6 +204,51 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: GolferRow, po
   ctx.closePath();
   ctx.fill();
   disc(hx - 0.1, hy - 1.65, 0.18, shade(golfer.cap, 0.3));
+}
+
+/**
+ * A head under a hood, in profile, facing +x — 0416. The hood is a cowl bigger than the skull, its back
+ * falling to the shoulders and its peak overhanging the brow, so the face is a lit edge in a shadow:
+ * the nose, the jaw, and the eye catching the light under the peak. Nothing of the hair or the cap
+ * shows. `hx`, `hy` is the head's centre, in the runner's own units.
+ */
+function paintHood(ctx: CanvasRenderingContext2D, runner: RunnerRow, hood: string, hx: number, hy: number): void {
+  const fill = (colour: string, points: readonly Pt[]): void => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    points.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(hx + x, hy + y) : ctx.lineTo(hx + x, hy + y)));
+    ctx.closePath();
+    ctx.fill();
+  };
+  // The cowl's back: from the nape down to the shoulders, and a point at the crown streaming back.
+  ctx.fillStyle = shade(hood, -0.2);
+  ctx.beginPath();
+  ctx.ellipse(hx - 0.45, hy + 0.05, 1.7, 1.85, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  fill(shade(hood, -0.2), [[-1.2, -1.2], [-2.6, -0.6], [-1.6, 0.2]]);
+  fill(shade(hood, -0.25), [[-1.4, 0.9], [-1.1, 2.2], [0.2, 1.9], [0.3, 1.1]]);
+  // The face, in the cowl's shadow: the skin, darkened, then the lit profile of the nose and jaw.
+  ctx.fillStyle = shade(runner.skin, -0.35);
+  ctx.beginPath();
+  ctx.arc(hx + 0.2, hy + 0.15, 1.05, 0, Math.PI * 2);
+  ctx.fill();
+  fill(runner.skin, [[1.05, -0.15], [1.55, 0.3], [1.1, 0.45], [1.15, 0.9], [0.55, 1.2], [0.85, 0.5]]);
+  // The eye, catching what light gets under the peak.
+  ctx.fillStyle = '#f2f6e8';
+  ctx.beginPath();
+  ctx.arc(hx + 0.75, hy - 0.05, 0.17, 0, Math.PI * 2);
+  ctx.fill();
+  // The hood's front: the rim over the brow and down the cheek, and its peak overhanging the face.
+  fill(hood, [[-0.3, -1.85], [1.1, -1.3], [1.5, -0.75], [0.95, -0.55], [0.35, -0.95], [-0.1, -0.2], [0.2, 1.25], [-0.35, 1.6], [-0.75, 0.2]]);
+  // Its lit edge, where the light from ahead falls on the rim.
+  ctx.strokeStyle = shade(hood, 0.35);
+  ctx.lineWidth = 0.22;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(hx - 0.25, hy - 1.8);
+  ctx.lineTo(hx + 1.05, hy - 1.3);
+  ctx.lineTo(hx + 1.45, hy - 0.78);
+  ctx.stroke();
 }
 
 /**

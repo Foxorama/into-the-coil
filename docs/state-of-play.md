@@ -231,6 +231,7 @@ cost, which does not exist yet.
 | **the PREWARM IS PARALLEL: the music baked at boot goes to the worker pool two layers at a time, so the Skip is up in about two seconds and the intro stops dropping frames** | [0413](decisions/0413-the-prewarm-is-parallel.md) — the pool is [0331](decisions/0331-the-heart-beats-under-it.md)'s |
 | **the CHASE IS A CHASE: the intro is 20 s, the chaser later and slower, the shot in space a quarter wider, the Viper jinking with the fighter on her line, and contrails as they jet off** | [0414](decisions/0414-the-chase-is-a-chase.md) |
 | **the GOLFER IS CHOSEN: a splash while the game loads, the four Far Carry golfers, and the pick turning the sound on and playing the intro with them in it; Pilot on the menu changes golfer. Who they are, not yet what they fly** | [0415](decisions/0415-the-golfer-is-chosen.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0412](decisions/0412-the-port-is-heard.md) |
+| **the VIPER HAS A PILOT: Venoma runs hooded for her ship, every launch surges where it is heard, the chase flies the first level's sky at its own rate, framed smaller, and every fade is to the backdrop** | [0416](decisions/0416-the-viper-has-a-pilot.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0414](decisions/0414-the-chase-is-a-chase.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -862,10 +863,12 @@ And every enemy now moves ([0410](decisions/0410-the-enemies-move.md)) — **owe
 animal reads at speed and whether any is too busy**; the holds on the rows are the first thing to turn.
 And the page opens on the way in ([0415](decisions/0415-the-golfer-is-chosen.md)): the splash, the four
 golfers, and the intro the pick plays ([0411](decisions/0411-the-chase-begins-at-the-port.md),
-[0412](decisions/0412-the-port-is-heard.md), [0414](decisions/0414-the-chase-is-a-chase.md)) — **owed a
-look at the portraits, the runners, the jinks and the trails, and a listen to the intro's five cues**;
-the beats, the jinks and the cues are tables in `src/content/port.ts`, the golfers in
-`src/content/golfers.ts`. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
+[0412](decisions/0412-the-port-is-heard.md), [0414](decisions/0414-the-chase-is-a-chase.md),
+[0416](decisions/0416-the-viper-has-a-pilot.md)) — **owed a look at the portraits, the runners and
+Venoma, the jinks, the trails and the surges, and a listen to the intro's five cues**; the beats, the
+jinks and the cues are tables in `src/content/port.ts`, the golfers in `src/content/golfers.ts`.
+**Level 1 has never been drawn in its own sky colours** — 0416 says why — and the intro will follow it
+when it is. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
 `docs/game.md` asks for each ship to differ on an axis the player can feel.
 
 ⚠️ **AND IT HAS BEEN RETIRED ONCE, ON 2026-08-25, WHICH IS THE PROOF THE INSTRUCTION WORKS.** It said

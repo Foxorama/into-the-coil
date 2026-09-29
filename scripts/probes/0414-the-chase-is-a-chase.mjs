@@ -37,7 +37,8 @@ export const PROBES = [
     guard: 'opens up well behind her',
     edit: {
       path: 'src/content/port.ts',
-      find: '  blue: { along: 40, across: 60 },',
+      // Re-anchored by 0416, which moved the fighter back to hold the gap on screen under its zoom.
+      find: '  blue: { along: 30, across: 60 },',
       replace: '  blue: { along: 110, across: 60 },',
     },
   },

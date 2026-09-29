@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'IN PIXELS: the lit vessels are laid over the weather at the heart',
     edit: {
       path: 'src/render/scene.ts',
-      find: '          surface.blit(SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0, Math.min(1, beat));',
-      replace: '          surface.blit(SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0);',
+      // Re-anchored by 0416, which offset every sky sprite for the intro's atlas.
+      find: '          surface.blit(base + SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0, Math.min(1, beat));',
+      replace: '          surface.blit(base + SPRITE.skyVeins, screenX(view, inView, across), screenY(view, inView, across), view.scale, 0);',
     },
   },
 ];

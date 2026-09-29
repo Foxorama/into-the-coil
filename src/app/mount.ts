@@ -19,7 +19,7 @@ import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
-import { bakePort } from '../render/port-bake.ts';
+import { bakePort, withTheGame } from '../render/port-bake.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
@@ -883,6 +883,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
   // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
   let port: Atlas | null = null;
+  /*
+    ⚠️ **THE INTRO DRAWS FROM ITS PIECES AND THE GAME'S TOGETHER — 0416**, because the sky it flies is
+    the first level's and is in the game's atlas. Composed again whenever the game's changes — a place
+    re-baked, a rotation — since the composition holds references to the bitmaps it was made from.
+  */
+  const showPort = (): void => {
+    if (port !== null && world.intro !== null) surface.setAtlas(withTheGame(port, atlas));
+  };
   // Whether the select screen was opened from the menu's *Pilot* (back to the menu) or at boot (on
   // to the intro) — 0415.
   let selectFromMenu = false;
@@ -1261,8 +1269,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // With the golfer who was picked — 0415. The port is dropped when the intro ends, so a new pick
       // always meets a fresh bake.
       if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution, GOLFERS[state.settings.pilot]);
-      surface.setAtlas(port);
       world.intro = 0;
+      showPort();
       // Its beats from the first — 0412.
       introCueNext = 0;
     } else if (world.intro !== null) {
@@ -1901,6 +1909,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ **AND THE SKY ITSELF CHANGES SHAPE, not just its colours**: a planet has no star fields.
     // Routed through `applySky` so the style chooser's Retro-off and this cannot disagree.
     applySky();
+    // The intro flies this sky, from references to the bitmaps just baked — 0416. Nothing outside it.
+    showPort();
   };
 
   /**
@@ -2183,6 +2193,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function placeOnScreen(): ThemeKind | null {
     const screen = state.screen.current;
     if (screen === 'playing' || screen === 'cleared') return world.level.theme;
+    // The intro's dark outside is the first level's place, since it leads into it — 0416.
+    if (screen === 'intro') return placeFor(0);
     if (screen === 'travel') return travelSwapped ? placeFor(state.run.level) : world.level.theme;
     return audition;
   }
@@ -3060,8 +3072,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const wantResolution = next.scale * nextDpr;
     if (atlasIsStale(atlas, wantView, wantResolution, atlas.theme)) {
       atlas = bakeAtlas(colours, wantView, wantResolution, atlas.theme);
-      // The port's is re-baked by `applyScreen`, which `setPlayable` below runs — 0411.
+      // The port's is re-baked by `applyScreen`, which `setPlayable` below runs — 0411 — and the intro
+      // draws the new sky with it (0416).
       if (world.intro === null) surface.setAtlas(atlas);
+      else showPort();
     }
     view = next;
     dpr = nextDpr;

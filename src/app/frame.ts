@@ -2482,9 +2482,10 @@ export class GameFrame implements Frame {
 
   draw(alpha: number): void {
     const w = this.world;
-    // The intro is its own picture on its own atlas, and none of the scene below is in it — 0411.
+    // The intro is its own picture on its own atlas, and none of the scene below is in it — 0411 —
+    // but the sky it flies through is the first level's, from the game's sprites in that atlas (0416).
     if (w.intro !== null) {
-      paintPort(w.surface, w.view, w.intro + alpha);
+      paintPort(w.surface, w.view, w.intro + alpha, w.sky);
       return;
     }
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
