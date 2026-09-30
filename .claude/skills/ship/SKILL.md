@@ -72,7 +72,7 @@ npm run prove <NNNN> 2>&1 | tail -40; echo "PROVE_EXIT=${PIPESTATUS[0]}"
 report `tail`'s status, which is zero for any input including none. Read the number.
 
 **Prove the change's own decision, not the whole set** —
-[0432](../../../docs/decisions/0432-the-whole-proof-is-cis.md). The filtered run still checks every
+[0434](../../../docs/decisions/0434-the-whole-proof-is-cis.md). The filtered run still checks every
 probe's anchor, which is the failure the proof most often catches. The whole suite and the whole
 proof are the required check's, and run on every PR in about five minutes. A change that adds no
 probe skips the `prove` line.

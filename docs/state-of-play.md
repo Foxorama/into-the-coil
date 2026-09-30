@@ -78,7 +78,7 @@ like in practice.
 ⚠️ **`npm test` is not `npm run prove`.** A change to a shared quantity wants the whole proof before
 it merges — guards stop reaching their subject without ever going red, and only a full run sees it.
 **That run is CI's**, on every PR; before the push, prove the change's own decision —
-[0432](decisions/0432-the-whole-proof-is-cis.md).
+[0434](decisions/0434-the-whole-proof-is-cis.md).
 
 ⚠️ **AND `prove` IS THE LARGEST PART OF WHAT CI COSTS.**
 [0115](decisions/0115-a-probe-runs-its-own-guard.md) is where that got to, and it takes an option

@@ -1,4 +1,4 @@
-# 0432 — The whole proof is CI's, and the one before the push is the change's own
+# 0434 — The whole proof is CI's, and the one before the push is the change's own
 
 **Accepted 2026-10-01.** Asked for after [0420](0420-the-ci-is-sharded-and-joined.md) took CI to five
 minutes and the proof before the push stayed at two hours:

@@ -204,24 +204,36 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
   }
 
   /**
-   * Polls Cache Storage from HERE, rather than passing an async predicate to `waitForFunction`.
+   * Polls until the worker whose script URL contains `script` is ACTIVATED. Whether it got there
+   * within `ms`, so a timeout produces the worker's state rather than a bare "timed out".
    *
-   * ⚠️ `page.waitForFunction` does not await a promise its predicate returns — and a `Promise` is
-   * truthy, so `caches.keys().then(…)` as a predicate succeeds on the first poll regardless of what
-   * it would eventually have resolved to. That reads as a passing wait followed by an inexplicable
-   * assertion failure, which is precisely how it presented.
+   * ⚠️ **POLLED FROM HERE, rather than passing an async predicate to `waitForFunction`.**
+   * `page.waitForFunction` does not await a promise its predicate returns — and a `Promise` is
+   * truthy, so `getRegistration().then(…)` as a predicate succeeds on the first poll regardless of
+   * what it would eventually have resolved to. That reads as a passing wait followed by an
+   * inexplicable assertion failure, which is precisely how it presented over `caches.keys()`.
    *
-   * Returns the last keys seen either way, so a timeout produces the real diagnostic instead of a
-   * bare "timed out".
+   * ⚠️ **EACH POLL IS BOUNDED AS WELL AS THE LOOP** — 0139. A single poll cannot eat the whole budget.
    *
-   * ⚠️ **EACH POLL IS BOUNDED AS WELL AS THE LOOP** — 0139. The whole budget is what it always was;
-   * what changed is that a single poll can no longer eat all of it and then some.
+   * ⚠️ **`activated` IS THE ONLY END OF THE SWEEP THERE IS** —
+   * `docs/decisions/0435-a-sweep-is-over-when-the-worker-says-so.md`. The browser moves a worker from
+   * `activating` to `activated` once every promise `activate` handed `waitUntil` has settled, and the
+   * sweep is one of them. A state of the cache list is not an end: a broken sweep passes through the
+   * correct one's on its way to deleting more.
    */
-  async function cacheKeysUntil(page: Page, done: (keys: string[]) => boolean, ms = 20_000): Promise<string[]> {
+  async function activatedUntil(page: Page, script: string, ms: number): Promise<boolean> {
     const deadline = Date.now() + ms;
     for (;;) {
-      const keys = (await within('caches.keys()', POLL_MS, page.evaluate('caches.keys()'))) as string[];
-      if (done(keys) || Date.now() > deadline) return keys;
+      const done = (await within(
+        'the registration’s active worker',
+        POLL_MS,
+        page.evaluate(`navigator.serviceWorker.getRegistration().then(function (r) {
+          var w = r && r.active;
+          return !!w && w.scriptURL.indexOf(${JSON.stringify(script)}) !== -1 && w.state === 'activated';
+        })`),
+      )) as boolean;
+      if (done) return true;
+      if (Date.now() > deadline) return false;
       await page.waitForTimeout(100);
     }
   }
@@ -343,19 +355,19 @@ describe.runIf(chromePath)('the app plays offline once it has been visited', () 
         Wait for the SWEEP, not for the new cache. The new cache appears during `install`, which
         runs before `activate` — waiting on it lands mid-update and reads the old worker's state,
         which is what made the first version of this test fail against a worker that was working
-        correctly. The sweep's own post-condition is the only signal that `activate` has finished:
-        exactly one cache under our prefix, and it is the new one.
+        correctly.
+
+        ⚠️ **AND NOT FOR THE CORRECT SWEEP'S RESULT EITHER** —
+        `docs/decisions/0435-a-sweep-is-over-when-the-worker-says-so.md`. This used to poll until
+        exactly one cache under our prefix was left. A sweep that deletes a stranger's cache too
+        deletes both at once, and the poll could read the list between the two: ours retired, the
+        stranger's not yet gone, and the guard green with the break in. The keys are read once, after
+        the new worker says `activate` is over.
       */
-      const keys = await cacheKeysUntil(
-        page,
-        (ks) => {
-          const ours = ks.filter((k) => k.startsWith('into-the-coil-'));
-          return ours.length === 1 && ours[0] === 'into-the-coil-next';
-        },
-        SWEEP_MS,
-      );
+      const swept = await activatedUntil(page, 'sw.js?next', SWEEP_MS);
+      const keys = (await within('caches.keys()', POLL_MS, page.evaluate('caches.keys()'))) as string[];
       // Asked only once the poll is over, so a passing run pays nothing for it — 0142.
-      const worker = keys.includes('into-the-coil-next') ? '' : ` · the worker was: ${await workerState(page)}`;
+      const worker = swept ? '' : ` · the worker was: ${await workerState(page)}`;
       /*
         ⚠️ **ASKED FIRST, SO A FAILED INSTALL REPORTS AS ITSELF** — 0141. A worker that never
         installed also never sweeps, so every assertion below it would fail with *the worker kept a
