@@ -69,8 +69,9 @@ export const PROBES = [
       // a step that no longer moves, which is exactly the shape a hand's optimisation would have.
       // ⚠️ And again by 0422, which skips the `pow` when the ratio is exactly 1: the ratio forced to 1
       // is the same break, every glide held, now on the line that decides it.
-      find: '    const glide = (layer.to || layer.from) / layer.from;',
-      replace: '    const glide = 1;',
+      // ⚠️ And by 0425, which moved it out of the per-sample loop — it never changed within a note.
+      find: '  const glide = (layer.to || layer.from) / layer.from;',
+      replace: '  const glide = 1;',
     },
   },
   {

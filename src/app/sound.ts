@@ -566,8 +566,20 @@ export function sampleLayerInto(
   const release = wrap ? Math.max(1, Math.min(Math.round(RELEASE_SECONDS * rate), Math.floor(length / 2))) : 0;
   // 0331's ninth listen: a note that states a release dies away over it, on a curve the ear hears as even.
   const tail = layer.release ? Math.min(length - 1, Math.round(layer.release * rate)) : 0;
-  const low = makeFilter();
-  const high = makeFilter();
+  /*
+    ⚠️ **A PITCHED NOTE DOES NOT GLIDE, SO ITS RATIO IS EXACTLY 1 AND ITS `pow` IS SKIPPED** — 0422.
+    `renderNote` sets `from` and `to` to the same pitch, and `Math.pow(1, u)` is 1 exactly.
+  */
+  const glide = (layer.to || layer.from) / layer.from;
+  // 0425: everything but the pitch, the gain and the oscillator, computed once for every note of this shape.
+  const shape = shapeOf(layer, rate, length, attack, curve, release, tail, glide);
+  const { envelope, bend, vibrato, scoop, high, low } = shape;
+  const scoopEnd = scoop === null ? 0 : scoop.length;
+  /** The two filters' state: one pair of integrators each, exactly `makeFilter`'s. */
+  let hic1 = 0;
+  let hic2 = 0;
+  let lic1 = 0;
+  let lic2 = 0;
   /** Where in the waveform we are, in cycles. Fractional part is the position within one. */
   let phase = 0;
   /** The value sample-and-hold noise is currently holding. */
@@ -578,23 +590,12 @@ export function sampleLayerInto(
     // The wrap, and it is the only line `src/app/music.ts` needed that a cue did not.
     const at = wrap ? raw % out.length : raw;
     if (!wrap && at >= out.length) break;
-    const u = i / length;
     // Exponential in the frequency, which is what makes it linear to the ear.
-    /*
-      ⚠️ **A PITCHED NOTE DOES NOT GLIDE, SO ITS RATIO IS EXACTLY 1 AND ITS `pow` IS SKIPPED** — 0422.
-      `renderNote` sets `from` and `to` to the same pitch, and `Math.pow(1, u)` is 1 exactly, so the
-      branch returns the bits the call did: every layer and cue of every place fingerprinted the same
-      before and after, and a bake of the whole game got 8–10% faster.
-    */
-    const glide = (layer.to || layer.from) / layer.from;
-    let step = (layer.from * (glide === 1 ? 1 : Math.pow(glide, u))) / rate;
+    let step = (layer.from * (bend === null ? 1 : bend[i]!)) / rate;
     // 0331's ninth listen: a vibrato that eases in over the first third of the note.
-    if (layer.vibrato) step *= Math.pow(2, (layer.vibrato * Math.min(1, u * 3) * Math.sin((i / rate) * VIBRATO_HZ * Math.PI * 2)) / 1200);
+    if (vibrato !== null) step *= vibrato[i]!;
     // 0331's eleventh listen: a scoop, easing into the pitch over the first 90 ms.
-    if (layer.scoop && i < SCOOP_SECONDS * rate) {
-      const left = 1 - i / (SCOOP_SECONDS * rate);
-      step *= Math.pow(2, (layer.scoop * left * left) / 1200);
-    }
+    if (i < scoopEnd) step *= scoop![i]!;
     phase += step;
     if (phase >= 1) phase -= 1;
     let value: number;
@@ -613,20 +614,185 @@ export function sampleLayerInto(
       }
       value = held;
     }
-    if (layer.highFrom) {
-      value = high(value, sweep(layer.highFrom, layer.highTo, u), HIGH_Q).high;
+    if (high !== null) {
+      // `makeFilter`'s step, with its coefficients read rather than recomputed.
+      const v3 = value - hic2;
+      const v1 = high.a1[i]! * hic1 + high.a2[i]! * v3;
+      const v2 = hic2 + high.a2[i]! * hic1 + high.ga2[i]! * v3;
+      hic1 = 2 * v1 - hic1;
+      hic2 = 2 * v2 - hic2;
+      value = value - high.k * v1 - v2;
     }
-    if (layer.lowFrom) value = low(value, sweep(layer.lowFrom, layer.lowTo, u), layer.q ?? LOW_Q).low;
+    if (low !== null) {
+      const v3 = value - lic2;
+      const v1 = low.a1[i]! * lic1 + low.a2[i]! * v3;
+      const v2 = lic2 + low.a2[i]! * lic1 + low.ga2[i]! * v3;
+      lic1 = 2 * v1 - lic1;
+      lic2 = 2 * v2 - lic2;
+      value = v2;
+    }
     if (layer.drive) value = saturate(value, layer.drive);
-    let envelope = Math.exp(-curve * u);
-    if (i < attack) envelope *= i / attack;
-    if (length - i <= release) envelope *= (length - 1 - i) / release;
+    out[at] = (out[at] ?? 0) + value * envelope[i]! * layer.gain;
+  }
+}
+
+/**
+ * A filter's coefficients for every sample of a sweep: exactly what `makeFilter` computes per call,
+ * computed once. `ga2` is `g * a2`, which `makeFilter` multiplies by `v3` in that order.
+ */
+interface FilterRamp {
+  readonly a1: Float64Array;
+  readonly a2: Float64Array;
+  readonly ga2: Float64Array;
+  readonly k: number;
+}
+
+/**
+ * Everything about a note but its pitch, its gain and its oscillator, per sample — 0425.
+ *
+ * ⚠️ **EVERY NOTE OF A VOICE HAS THE SAME SHAPE, AND WAS COMPUTING IT AGAIN.** Its length, envelope,
+ * filter sweeps, vibrato and scoop are fixed by the voice; only the pitch and the weight move. So The
+ * Black Heart's `groove` — 2,078 notes over eight voices — asked `Math.exp`, `Math.pow` twice,
+ * `Math.sin` and `Math.tan` for every sample of every note, about 250 times each over.
+ *
+ * ⚠️ **EXACT, AND THAT IS THE WHOLE OF ITS CONTRACT.** Each value is the expression the loop used to
+ * evaluate, over the same inputs in the same order, stored in a `Float64Array` so nothing is rounded;
+ * the loop reads it where it computed it. A multiplier the loop applied in two steps is stored as two
+ * tables, never folded into one, because folding changes the rounding. `tests/sound.test.ts`
+ * fingerprints every layer and cue of every place against the one this replaced.
+ */
+interface NoteShape {
+  readonly envelope: Float64Array;
+  /** `Math.pow(glide, u)`, for a note that sweeps its pitch; null for one that does not. */
+  readonly bend: Float64Array | null;
+  readonly vibrato: Float64Array | null;
+  /** Only as long as the scoop lasts. */
+  readonly scoop: Float64Array | null;
+  readonly high: FilterRamp | null;
+  readonly low: FilterRamp | null;
+}
+
+/**
+ * The shapes most recently used. A voice's notes are baked one after another — `layerNotes` walks a
+ * voice's steps in order, and the prewarm runs its jobs in that order — so a handful is every hit
+ * there is, and the memory stays a few shapes wide rather than growing with the game.
+ */
+const SHAPES = new Map<string, NoteShape>();
+const SHAPES_KEPT = 6;
+
+/**
+ * Forget every shape, so the next note builds its own. For `tests/shapes.test.ts` and for nothing
+ * else: it is how a guard compares a shape reused against the same shape built fresh.
+ */
+export function forgetShapes(): void {
+  SHAPES.clear();
+  built = 0;
+}
+
+/** How many shapes have been built since the last `forgetShapes` — so the same guard can see the reuse happen. */
+let built = 0;
+export function shapesBuilt(): number {
+  return built;
+}
+
+function shapeOf(
+  layer: CueLayer,
+  rate: number,
+  length: number,
+  attack: number,
+  curve: number,
+  release: number,
+  tail: number,
+  glide: number,
+): NoteShape {
+  const key = [
+    rate,
+    length,
+    attack,
+    curve,
+    release,
+    tail,
+    glide,
+    layer.vibrato ?? 0,
+    layer.scoop ?? 0,
+    layer.highFrom ?? 0,
+    layer.highTo,
+    layer.lowFrom ?? 0,
+    layer.lowTo,
+    layer.q ?? LOW_Q,
+  ].join('|');
+  const known = SHAPES.get(key);
+  if (known !== undefined) {
+    // Most recent last, so the oldest is the first one a full map drops.
+    SHAPES.delete(key);
+    SHAPES.set(key, known);
+    return known;
+  }
+  const envelope = new Float64Array(length);
+  for (let i = 0; i < length; i++) {
+    const u = i / length;
+    let value = Math.exp(-curve * u);
+    if (i < attack) value *= i / attack;
+    if (length - i <= release) value *= (length - 1 - i) / release;
     if (length - i <= tail) {
       const left = (length - i) / tail;
-      envelope *= left * left;
+      value *= left * left;
     }
-    out[at] = (out[at] ?? 0) + value * envelope * layer.gain;
+    envelope[i] = value;
   }
+  let bend: Float64Array | null = null;
+  if (glide !== 1) {
+    bend = new Float64Array(length);
+    for (let i = 0; i < length; i++) bend[i] = Math.pow(glide, i / length);
+  }
+  let vibrato: Float64Array | null = null;
+  if (layer.vibrato) {
+    vibrato = new Float64Array(length);
+    for (let i = 0; i < length; i++) {
+      const u = i / length;
+      vibrato[i] = Math.pow(2, (layer.vibrato * Math.min(1, u * 3) * Math.sin((i / rate) * VIBRATO_HZ * Math.PI * 2)) / 1200);
+    }
+  }
+  let scoop: Float64Array | null = null;
+  if (layer.scoop) {
+    let end = 0;
+    while (end < length && end < SCOOP_SECONDS * rate) end++;
+    scoop = new Float64Array(end);
+    for (let i = 0; i < end; i++) {
+      const left = 1 - i / (SCOOP_SECONDS * rate);
+      scoop[i] = Math.pow(2, (layer.scoop * left * left) / 1200);
+    }
+  }
+  const shape: NoteShape = {
+    envelope,
+    bend,
+    vibrato,
+    scoop,
+    high: layer.highFrom ? rampOf(layer.highFrom, layer.highTo, HIGH_Q, length) : null,
+    low: layer.lowFrom ? rampOf(layer.lowFrom, layer.lowTo, layer.q ?? LOW_Q, length) : null,
+  };
+  SHAPES.set(key, shape);
+  built++;
+  if (SHAPES.size > SHAPES_KEPT) SHAPES.delete(SHAPES.keys().next().value!);
+  return shape;
+}
+
+/** `makeFilter`'s coefficients along a sweep from `from` to `to`, at `rateCeiling`. */
+function rampOf(from: number, to: number | undefined, q: number, length: number): FilterRamp {
+  const a1 = new Float64Array(length);
+  const a2 = new Float64Array(length);
+  const ga2 = new Float64Array(length);
+  const k = 1 / Math.max(0.5, q);
+  for (let i = 0; i < length; i++) {
+    const cutoff = sweep(from, to, i / length);
+    const g = Math.tan((Math.PI * Math.min(Math.max(cutoff, 10), rateCeiling * 0.45)) / rateCeiling);
+    const a = 1 / (1 + g * (g + k));
+    const b = g * a;
+    a1[i] = a;
+    a2[i] = b;
+    ga2[i] = g * b;
+  }
+  return { a1, a2, ga2, k };
 }
 
 /** An exponential sweep from `a` to `b` at `u` in `[0, 1)`. `b` absent or zero means no sweep. */

@@ -133,8 +133,10 @@ export const PROBES = [
       // the shared `DECAY` is its default rather than its value. Same break, same guard — and 0089
       // added a second assertion to that guard, because the release it restored would otherwise
       // satisfy *ends at zero* on its own.
-      find: '    let envelope = Math.exp(-curve * u);',
-      replace: '    let envelope = 1;\n    void DECAY;',
+      // ⚠️ And again by 0425, which computes a note's envelope once for its shape: the same fall taken
+      // out, on the line that now holds it.
+      find: '    let value = Math.exp(-curve * u);',
+      replace: '    let value = 1;\n    void curve;',
     },
   },
   {
