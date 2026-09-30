@@ -2134,7 +2134,7 @@ function buildCrossing(prefix: string): CrossingParts {
     minutes before the first boss died. `setCrossing` calls `beginElement()` on the step the run has
     moved a leg.
   */
-  const SVG = 'http://www%2Ew3%2Eorg/2000/svg';
+  const SVG = 'http://www.w3.org/2000/svg';
   const overlay = document.createElementNS(SVG, 'svg');
   overlay.setAttribute('class', prefix + 'crossing-overlay');
   overlay.setAttribute('viewBox', '0 0 100 100');

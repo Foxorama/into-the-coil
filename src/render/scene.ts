@@ -304,7 +304,8 @@ export function paintScene(
     const entities = layers[layer]!;
     const count = entities.size;
     /*
-      ⚠️ **`swell` IS 1 FOR EVERYTHING BUT A CHAIN'S BODY — 0283**, and it is a SIZE rather than an
+      ⚠️ **`swell` IS 1 FOR MOST THINGS** — a floating pickup breathes on it since 0431 and a blade's
+      whirl scales it. **FOR A CHAIN'S BODY — 0283** it is a SIZE rather than an
       animation: a node is drawn at the animal's cross-section where it stands, and that number never
       moves once the node is placed. The landmark's own note above weighs scale-swell against a second
       baked frame and picks scale for one mark; this is the second, on the same terms and for the same

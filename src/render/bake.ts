@@ -1539,10 +1539,21 @@ function seam(
   ctx.globalAlpha = 1;
 }
 
-function bubble(ctx: Pen, f: Frame, palette: Palette): void {
+/*
+  ⚠️ **TWO RINGS AND A LIGHT IN WHAT IT OFFERS — 0431.** The bubble was one faint ring and a mint glow,
+  and at the shipped camera the glow read as a grey disc: a button, not a thing to collect. The OUTER
+  ring is still the pickup ink at full strength — 0236's *this is a pickup*, which no enemy wears —
+  and inside it a second ring and the glow are in the ink of the thing offered, so the whole piece is
+  lit in the colour it will give the ship (0239's reason for the glyph's ink, reaching the bubble).
+  `destination-over` lays each under what is already there, so the first drawn is the top.
+*/
+function bubble(ctx: Pen, f: Frame, palette: Palette, ink: string): void {
   ctx.globalCompositeOperation = 'destination-over';
-  band(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, PICKUP_HALO - 0.07, 0.5);
-  glow(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, 0.42);
+  // 0.85 and not solid: it is light round the body rather than a part of it, and at 0.9 the paint
+  // guard in tests/accents.test.ts would rightly read it as a mark off the hull (0149).
+  band(ctx, f, palette.pickup, 0, 0, PICKUP_HALO, PICKUP_HALO - 0.08, 0.85);
+  band(ctx, f, ink, 0, 0, PICKUP_HALO - 0.13, PICKUP_HALO - 0.19, 0.75);
+  glow(ctx, f, ink, 0, 0, PICKUP_HALO - 0.1, 0.5);
   ctx.globalCompositeOperation = 'source-over';
 }
 
@@ -12002,7 +12013,7 @@ export function drawKind(
       ctx.lineTo(half - g * 0.2, half + g * 0.85);
       ctx.closePath();
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The lower arm in shadow, so the chevron has a top and an underside — in the pulse's own
       // orange since 0240, like the fill `INK_OF` gave the seal.
       poly(ctx, fg, shade(palette.bullet, -0.28), [
@@ -12034,7 +12045,7 @@ export function drawKind(
       traceStar(ctx, fg, 1, 0);
       ring(ctx, fg, 0, 0, 0.16);
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The trailing edge of each blade in shadow, so it has a lit face and a ground one — in
       // steel, the face's own ink since 0239.
       for (let k = 0; k < 4; k++) {
@@ -12156,7 +12167,7 @@ export function drawKind(
       ctx.lineTo(half - g * 0.62, half + g * 0.15);
       ctx.closePath();
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The lower half in shadow, so the bolt has a lit edge and an underside like the chevron.
       // In the face's own ink — the ship's, since 0239 — like the fill `INK_OF` gave the seal.
       poly(ctx, fg, shade(palette.player, -0.28), [
@@ -12202,7 +12213,7 @@ export function drawKind(
       const fg: Frame = { half, r: r * PICKUP_GLYPH };
       ring(ctx, fg, 0, 0, 1);
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       const dark = shade(palette.ally, -0.45);
       band(ctx, fg, dark, 0, 0, 0.72, 0.5);
       disc(ctx, fg, dark, 0, 0, 0.17);
@@ -12283,7 +12294,7 @@ export function drawKind(
       ctx.lineTo(half - g * 0.85, half + g * 0.2);
       ctx.closePath();
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The trailing arm in shadow — the same underside the weapon chevron has, turned with it, and
       // in the missile's own orange since 0240.
       poly(ctx, fg, shade(palette.bullet, -0.28), [
@@ -12570,7 +12581,7 @@ export function drawKind(
       ctx.lineTo(half - g * 0.85, half - g);
       ctx.closePath();
       seal(ctx);
-      bubble(ctx, f, palette);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
       // The right half in shadow, so the face is curved; a band across it and a boss at its centre.
       poly(ctx, fg, shade(palette.pickup, -0.28), [
         [0.04, -0.9],

@@ -6527,6 +6527,20 @@ function keepInside(corridor: Corridor | null, e: Entity): void {
 }
 
 /**
+ * How much bigger a pickup is drawn at the top of its breath — `docs/decisions/0431-a-pickup-glows-in-what-it-offers.md`.
+ *
+ * ⚠️ **A SHARE OF ITS SIZE, AND IT ONLY EVER GROWS.** At rest a pickup is exactly the size its hurtbox
+ * was sized against (0035), so the breath never draws it SMALLER than what the player can touch; at
+ * the top it is 7% over, which `COLLECT_REACH`'s 1.8 swallows many times — the picture never promises
+ * a touch the collection refuses. No enemy breathes, so it is a second cue beside the bubble that this
+ * is a thing to fly into, and it costs nothing: `swell` is a number the one blit already takes.
+ */
+const PICKUP_BREATH = 0.07;
+
+/** Steps in one breath: a second and a half, slow enough to read as alive and never as a warning. */
+const PICKUP_BREATH_STEPS = 90;
+
+/**
  * Everything lying about, wandering.
  *
  * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
@@ -6542,8 +6556,11 @@ function keepInside(corridor: Corridor | null, e: Entity): void {
  * about a moving target rather than to turn it into a reflex.
  */
 function driftPickups(w: World): void {
+  // The breath every pickup shares this step — 0431. One sine for the field, so they breathe together.
+  const breath = 1 + PICKUP_BREATH * (0.5 + 0.5 * Math.sin((w.steps * TAU) / PICKUP_BREATH_STEPS));
   for (let i = w.pickups.size - 1; i >= 0; i--) {
     const item = w.pickups.at(i);
+    item.swell = breath;
     /*
       ── THE CYCLE — 0233 ─────────────────────────────────────────────────────────────────────────
 

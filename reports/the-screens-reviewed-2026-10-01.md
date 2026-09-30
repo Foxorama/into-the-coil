@@ -6,7 +6,7 @@ points totals and displays and floating power pickups … suggest a list of impr
 highest quality that still fits the game aesthetic and then start working on improving them."*
 
 Looked at on `main` at `4834944` (0428/0429's score merged), 1280×720, with `scripts/shot.mjs` and
-3× crops. **A queue, highest value first. Item 1 is built** — [0430](../docs/decisions/0430-the-readout-counts-ships-and-shields.md);
+3× crops. **A queue, highest value first. Items 1 and 10 are built** — [0430](../docs/decisions/0430-the-readout-counts-ships-and-shields.md);
 the rest are proposals, and several touch a decision that would have to be amended rather than
 worked around.
 
@@ -31,7 +31,7 @@ list below is closing that gap without inventing a second style.
 | 7 | title | the settings chips are small, low-contrast and far from the controls they set | a larger row with the selected state marked by shape as well as fill (0024), and touch-sized targets | small |
 | 8 | splash | the name alone on black while the game loads, for up to seconds, with no sign it is working | a progress line or the coil turning under the name, tied to what the boot is actually waiting on | small |
 | 9 | pilot | *"Pilot"* as a heading is a label, not an instruction; nothing says which golfer is flying now | *"Choose your pilot"*; the current pilot marked; a hover lift on the cards | small |
-| 10 | field | the pickup bubble is a dark disc with a grey hairline, which reads as a UI button more than as something to collect | the ring in the pickup's own ink with a slow pulse, and a gentle bob — amending 0236/0239 rather than beside them | medium |
+| 10 | field | the pickup bubble is a dark disc with a grey hairline, which reads as a UI button more than as something to collect | **BUILT — [0431](../docs/decisions/0431-a-pickup-glows-in-what-it-offers.md).** A full-strength pickup-ink ring, a second ring and the glow in the offered ink, and a breath on `swell`. The bob was not needed: pickups already drift (0087) | — |
 
 ## Not looked at
 
