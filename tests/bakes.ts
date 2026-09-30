@@ -37,12 +37,104 @@
  * `docs/decisions/0027-measure-the-picture-not-the-model.md` is named for.
  */
 
-import { bakeLoops } from '../src/app/music.ts';
+import { Worker } from 'node:worker_threads';
+import { availableParallelism } from 'node:os';
+import { bakeLayer, layerNotes } from '../src/app/music.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
 
 /** One bake per rate and place, for the life of the process. A worker per suite, so it never spans files. */
 const cache = new Map<string, Record<MusicLayer, Float32Array>>();
+
+const keyOf = (rate: number, theme?: ThemeKind): string => `${rate}/${theme ?? ''}`;
+
+/**
+ * How long a caller may block on the pool before it is called hung. A bake is arithmetic that cannot
+ * wait on anything, so this bounds a thread that died, not a slow machine: the whole game's music is
+ * under a minute of CPU on the development box and this is ten.
+ */
+const POOL_DEADLINE_MS = 600_000;
+
+/**
+ * Every layer of every place in `themes` not already baked, baked on every core at once and cached.
+ *
+ * ── A PLACE IS BAKED ON EVERY CORE — `docs/decisions/0422-a-place-is-baked-on-every-core.md` ────
+ *
+ * ⚠️ **THE CLIP GUARD WAS 55 OF ITS 61 SECONDS BAKING, SEVEN PLACES ONE LAYER AT A TIME.** The Black
+ * Heart alone was 29 s, and 13.5 of that its `groove`. Every layer has its own stream (0021) and
+ * shares no state with any other, so the 161 layers of the seven places are 161 independent jobs, and
+ * the floor is the slowest single layer rather than the sum.
+ *
+ * ⚠️ **SYNCHRONOUS, ON PURPOSE.** Every caller reads a bake in the line after asking for it, and
+ * making them await would change forty call sites to save none. The threads write into shared memory
+ * and this thread blocks in `Atomics.wait` until each job says it is done — node allows that on any
+ * thread, and a bake has nothing to wait for but arithmetic.
+ *
+ * ⚠️ **A FAILED JOB IS BAKED AGAIN HERE**, so the exception a test reports is the synth's own, with
+ * our stack, rather than *a worker failed*.
+ */
+export function primeLoops(rate: number, themes: readonly (ThemeKind | undefined)[]): void {
+  const wanted = [...new Set(themes)].filter((theme) => !cache.has(keyOf(rate, theme)));
+  if (wanted.length === 0) return;
+  const asked = wanted.flatMap((theme) => MUSIC_LAYERS.map((layer) => ({ layer, theme })));
+  const baked = bakeInPool(rate, asked);
+  for (const theme of wanted) {
+    const loops = {} as Record<MusicLayer, Float32Array>;
+    asked.forEach((job, j) => {
+      if (job.theme === theme) loops[job.layer] = baked[j]!;
+    });
+    cache.set(keyOf(rate, theme), loops);
+  }
+}
+
+/**
+ * Each asked layer, in the order asked, exactly as `bakeLayer(layer, rate, theme)` returns it — baked
+ * on every core at once. `primeLoops` is this over whole places; `tests/clean.ts` asks it for the
+ * layers its own cache is missing.
+ */
+export function bakeInPool(rate: number, asked: readonly { layer: MusicLayer; theme?: ThemeKind | undefined }[]): Float32Array[] {
+  if (asked.length === 0) return [];
+  // @setup: each layer's slot, sized by the same `layerNotes` the thread will run — setup only, no notes.
+  const jobs = asked.map(({ layer, theme }, at) => {
+    const { buffer, notes } = layerNotes(layer, rate, theme);
+    return { at, layer, theme: theme ?? null, shared: new SharedArrayBuffer(buffer.byteLength), weight: buffer.length * notes.length };
+  });
+  // Heaviest first, so the long layers start at once rather than last. The order changes no sample.
+  jobs.sort((a, b) => b.weight - a.weight);
+  const next = new SharedArrayBuffer(4);
+  const status = new SharedArrayBuffer(4 * jobs.length);
+  const done = new Int32Array(status);
+  /*
+    ⚠️ **HALF THE CORES, BECAUSE THE SUITE IS RUNNING BESIDE IT.** Every core made each bake a burst that
+    took the whole machine while four suites baked at once — and the browser suites' page boots are
+    wall-clock waits that a starved machine misses (0044's class). The floor is one layer, 13.5 s, and
+    half the cores already reach within a few seconds of it.
+  */
+  const threads = Math.max(1, Math.min(Math.floor(availableParallelism() / 2), jobs.length));
+  const pool = Array.from(
+    { length: threads },
+    () =>
+      new Worker(new URL('./bake-worker.mjs', import.meta.url), {
+        workerData: { rate, jobs: jobs.map(({ layer, theme, shared }) => ({ layer, theme, shared })), next, status },
+      }),
+  );
+  const deadline = Date.now() + POOL_DEADLINE_MS;
+  try {
+    for (let j = 0; j < jobs.length; j++) {
+      while (Atomics.load(done, j) === 0) {
+        if (Date.now() > deadline) throw new Error(`the bake pool did not finish ${jobs[j]!.theme ?? 'base'}/${jobs[j]!.layer} in ${POOL_DEADLINE_MS / 1000} s`);
+        Atomics.wait(done, j, 0, 1000);
+      }
+    }
+  } finally {
+    for (const thread of pool) void thread.terminate();
+  }
+  const out: Float32Array[] = new Array(asked.length);
+  jobs.forEach((job, j) => {
+    out[job.at] = Atomics.load(done, j) === 1 ? new Float32Array(job.shared) : bakeLayer(job.layer, rate, job.theme ?? undefined);
+  });
+  return out;
+}
 
 /**
  * Every loop at `rate`, exactly as `bakeLoops` returns them — fresh arrays on every call.
@@ -68,12 +160,8 @@ const cache = new Map<string, Record<MusicLayer, Float32Array>>();
  * audio for it and the cache is keyed on the name — six of the seven places still share one bake.
  */
 export function loopsAt(rate: number, theme?: ThemeKind): Record<MusicLayer, Float32Array> {
-  const key = `${rate}/${theme ?? ''}`;
-  let baked = cache.get(key);
-  if (baked === undefined) {
-    baked = bakeLoops(rate, theme);
-    cache.set(key, baked);
-  }
+  primeLoops(rate, [theme]);
+  const baked = cache.get(keyOf(rate, theme))!;
   const out = {} as Record<MusicLayer, Float32Array>;
   for (const layer of MUSIC_LAYERS) out[layer] = Float32Array.from(baked[layer]);
   return out;
