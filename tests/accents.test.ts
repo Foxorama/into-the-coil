@@ -26,6 +26,10 @@ import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
   MAKE THE WORK CHEAPER FOR, NOT TO RAISE THIS AGAIN FOR** — six bosses still ride the lifted kit
   undrawn, and each is a third of a minute. A bounding-box reject was tried at `distanceToEdge` and
   measured slower; the win left is fusing its edge walk with `inside`'s, which halves them.
+
+  ⚠️ **THE WIN TAKEN WAS NOT WALKING MOST EDGES AT ALL — 0421.** `edgeIndex` in `tests/paths.ts`
+  answers both questions exactly, from the edges near the point; the 0149 guard went 89 s → 8.6 s
+  alone. Its own budget beside it is re-sized from that.
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
@@ -34,7 +38,7 @@ import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/spr
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { viewOf } from '../src/sim/camera.ts';
-import { inside, strokeOutside, tracingPen, type Pass, type Point } from './paths.ts';
+import { edgeIndex, strokeOutside, tracingPen, type Pass, type Point } from './paths.ts';
 
 /**
  * A SPRITE IS PAINTED, AND THE PAINT STAYS ON THE HULL.
@@ -255,33 +259,6 @@ function traceAt(kind: SpriteKind, size: number, theme: ThemeKind = 'approach'):
 const trace = (kind: SpriteKind, theme: ThemeKind = 'approach'): ReturnType<typeof tracingPen>['trace'] =>
   traceAt(kind, cssSize(kind), theme);
 
-/**
- * How far a point is from the nearest edge of a pass, in the pass's own pixels. Unsigned.
- *
- * ⚠️ **A BOUNDING-BOX REJECT WAS TRIED HERE AND MEASURED SLOWER** — 0318. *A point is never nearer to
- * a segment than to that segment's own box* is exact and would skip most edges once `best` is small,
- * and it cost a second a run: the four comparisons are not cheaper than the projection they skip, on
- * a hull whose every edge is a fraction of a pixel long. The measurement is the reason this is a
- * comment and not code.
- */
-function distanceToEdge(pass: Pass, [px, py]: Point): number {
-  let best = Number.POSITIVE_INFINITY;
-  for (const subpath of pass.subpaths) {
-    for (let i = 0; i < subpath.length; i++) {
-      const [ax, ay] = subpath[i]!;
-      const [bx, by] = subpath[(i + 1) % subpath.length]!;
-      const dx = bx - ax;
-      const dy = by - ay;
-      const lengthSq = dx * dx + dy * dy;
-      const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
-      const ex = px - (ax + t * dx);
-      const ey = py - (ay + t * dy);
-      best = Math.min(best, Math.sqrt(ex * ex + ey * ey));
-    }
-  }
-  return best;
-}
-
 /** Every point of a pass's outline, one per pixel of edge, so nothing slips between two samples. */
 function outlineSamples(pass: Pass): Point[] {
   const out: Point[] = [];
@@ -328,11 +305,19 @@ function boundsOf(pass: Pass): { minX: number; minY: number; maxX: number; maxY:
  * of a pixel of the edge is taken as on it.
  */
 function clearance(hull: Pass, mark: Pass): number {
+  /*
+    ⚠️ **ASKED OF THE EDGES NEAR THE POINT, AND THE ANSWERS ARE THE SAME TO THE BIT** — 0421. This
+    walked every edge of the hull for every sample, twice: 79 of the guard's 80 s alone, and a timeout
+    under the suite. `edgeIndex` answers `inside` and the nearest-edge distance exactly as the full
+    walk does; `tests/paths.test.ts` holds it to that on every hull.
+  */
+  const hullIndex = edgeIndex(hull);
+  const markIndex = edgeIndex(mark);
   let worst = Number.POSITIVE_INFINITY;
   for (const point of outlineSamples(mark)) {
-    const gap = distanceToEdge(hull, point);
+    const gap = hullIndex.distance(point);
     if (gap < 0.1) continue;
-    worst = Math.min(worst, inside(hull, point) ? gap : -gap);
+    worst = Math.min(worst, hullIndex.inside(point) ? gap : -gap);
   }
   /*
     ⚠️ **A HULL OF ONE SUB-PATH HAS NO HOLES, SO THE GRID BELOW HAS NOTHING TO FIND.** The interior
@@ -351,9 +336,9 @@ function clearance(hull: Pass, mark: Pass): number {
   for (let x = minX; x <= maxX; x += 2) {
     for (let y = minY; y <= maxY; y += 2) {
       const point: Point = [x, y];
-      if (!inside(mark, point)) continue;
-      if (inside(hull, point)) continue;
-      const gap = distanceToEdge(hull, point);
+      if (!markIndex.inside(point)) continue;
+      if (hullIndex.inside(point)) continue;
+      const gap = hullIndex.distance(point);
       if (gap < 0.1) continue;
       worst = Math.min(worst, -gap);
     }
@@ -431,8 +416,14 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
       rule is 3×. It timed out in two of three `npm run prove` baselines while 0342 and 0343 were being
       proven, with no assertion message — and passed every `npm run check`, which is what made it
       look like load. 0044: it was wall clock read where the subject is arithmetic that cannot hang.
+
+      ⚠️ **AND THEN THE WORK WAS MADE CHEAPER, AS THE FILE'S HEAD SAID IT SHOULD BE — 0421.** By
+      2026-09-30 the same test took 89 s alone and timed out at its 345 s under the suite on an idle
+      development box; 99.6% of it was the clearance search asking every edge. Asked of the edges near
+      the point: **8.6 s alone, 36.8 s and 51.0 s in two whole-suite runs** on the development box.
+      Three times the worst, per 0245.
     */
-  }, 345_000);
+  }, 155_000);
 
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
     for (const theme of THEME_KINDS) {
