@@ -479,7 +479,8 @@ export function sealOf(files) {
 }
 
 /**
- * The baseline, read from the run `npm run check` already made — or a thrown reason it cannot be.
+ * The baseline, read from a run the suite already made — or a thrown reason it cannot be. Since
+ * 0420 that run is every suite shard's report at once, and the caller is `joinProblems`.
  *
  * ⚠️ **THE SAME CLAIM, MADE ONCE** — `docs/decisions/0419-the-baseline-is-the-suites-own-run.md`.
  * The baseline asks *are the suites these probes judge green on these bytes, before anything is
@@ -531,6 +532,109 @@ export function sealedBaseline({ report, sealed, tree, suites }) {
     }
   }
   return { failed, ran };
+}
+
+// ── Shards, and the join that makes them one verdict ─────────────────────────────────────────────
+
+/**
+ * A probe's name in a join: its place in the whole set, its decision and its break. Both sides of a
+ * join compute it from trees whose seals are checked equal, so the place means the same on each.
+ *
+ * @param {Probe} probe
+ * @param {number} index   its position in `loadProbes()`, unfiltered
+ */
+export function probeKey(probe, index) {
+  return `${index}  ${probe.decision}  ${probe.broke}`;
+}
+
+/**
+ * The probes one shard of `total` proves, as keys — every `total`-th probe of the whole set, from
+ * `index`. Dealt rather than cut into runs, because a decision's probes sit together in the set and
+ * the expensive ones come in a decision's worth at a time: six on the 0149 hull guard, four on the
+ * clip guard. Cut into runs, they would all land in one shard and set its length.
+ *
+ * `0419`'s successor — `docs/decisions/0420-the-ci-is-sharded-and-joined.md`.
+ *
+ * @param {Probe[]} probes   the whole set, as `loadProbes()` returns it
+ * @param {string} spec      `<n>/<total>`, counted from 1
+ * @returns {{probe: Probe, key: string}[]}
+ */
+export function shardOf(probes, spec) {
+  const m = /^(\d+)\/(\d+)$/.exec(String(spec));
+  const n = m ? Number(m[1]) : NaN;
+  const total = m ? Number(m[2]) : NaN;
+  if (!(total >= 1 && n >= 1 && n <= total)) {
+    throw new Error(`PROVE_SHARD must be <n>/<total> with 1 ≤ n ≤ total, and it is ${JSON.stringify(spec)}`);
+  }
+  return probes.map((probe, i) => ({ probe, key: probeKey(probe, i) })).filter((_, i) => i % total === n - 1);
+}
+
+/**
+ * Everything that stops the jobs of one CI run from being one proof, or nothing.
+ *
+ * ⚠️ **THE REQUIRED CHECK IS THIS FUNCTION** — `docs/decisions/0420-the-ci-is-sharded-and-joined.md`.
+ * The suite and the probes run in parallel jobs, so nothing inside a probe shard can know that the
+ * suites it judges were green: 0054's baseline is established here instead, after the fact and on the
+ * same bytes, which makes each red exactly as attributable as a baseline taken first. Before is
+ * cheaper to fail and no stronger to pass.
+ *
+ * Each check is a way the shards could each report success and the whole still not be proven:
+ *
+ *   - **a job that did not succeed.** Skipped counts: a job skipped because another failed reports
+ *     *skipped*, and GitHub reports a skipped REQUIRED check as passing.
+ *   - **a tree that is not this one.** Every job seals its checkout, and all of them must be the tree
+ *     the join is standing in.
+ *   - **a test file no shard ran.** The suite shards are a partition only if they cover every file.
+ *   - **a judged suite that was not green** — `sealedBaseline`, over every shard's report at once.
+ *   - **a probe no shard ran**, or a shard that did not come back with every one of its probes red.
+ *
+ * @param {object} args
+ * @param {Record<string, {result: string}>} args.needs   the required job's `toJSON(needs)`
+ * @param {string} args.tree                              this checkout's seal
+ * @param {string[]} args.seals                           every seal a job uploaded
+ * @param {any[]} args.reports                            every suite shard's vitest JSON
+ * @param {string[]} args.testFiles                       every test file in the tree, `tests/…`
+ * @param {string[]} args.suites                          every suite a probe judges
+ * @param {string[]} args.probeKeys                       every probe's `probeKey`
+ * @param {{shard: string, keys: string[], ok: boolean}[]} args.results   every probe shard's result
+ * @returns {string[]}
+ */
+export function joinProblems({ needs, tree, seals, reports, testFiles, suites, probeKeys, results }) {
+  const out = [];
+  const jobs = Object.entries(needs ?? {});
+  if (jobs.length === 0) out.push('the required job waited on nothing, so it has nothing to join');
+  for (const [job, { result }] of jobs) {
+    if (result !== 'success') out.push(`job \`${job}\` did not succeed: ${result}`);
+  }
+
+  if (seals.length === 0) out.push('no job sealed its tree, so nothing says what any of them ran against');
+  const foreign = seals.filter((seal) => seal !== tree).length;
+  if (foreign) out.push(`${foreign} of ${seals.length} job(s) sealed a tree that is not this one`);
+
+  const merged = { testResults: reports.flatMap((report) => report.testResults ?? []) };
+  const ran = merged.testResults.map((file) => String(file.name).replaceAll('\\', '/'));
+  const unrun = testFiles.filter((file) => !ran.some((name) => name.endsWith(`/${file}`)));
+  if (unrun.length) out.push(`${unrun.length} test file(s) ran in no suite shard:\n    ${unrun.join('\n    ')}`);
+  try {
+    const baseline = sealedBaseline({ report: merged, sealed: tree, tree, suites });
+    if (baseline.failed.length) {
+      out.push(
+        `the suites the probes judge were not green, so no red over them proves anything:\n    ${baseline.failed
+          .map((f) => `${f.title} — ${firstLine(f.message)}`)
+          .join('\n    ')}`,
+      );
+    }
+  } catch (e) {
+    out.push(String(e.message ?? e));
+  }
+
+  const proven = new Set(results.flatMap((result) => result.keys));
+  const unproven = probeKeys.filter((key) => !proven.has(key));
+  if (unproven.length) out.push(`${unproven.length} probe(s) ran in no shard:\n    ${unproven.join('\n    ')}`);
+  for (const result of results) {
+    if (result.ok !== true) out.push(`probe shard ${result.shard} did not see every one of its guards go red`);
+  }
+  return out;
 }
 
 // ── Running the suite ────────────────────────────────────────────────────────────────────────────
@@ -717,8 +821,34 @@ function rebuild(tree) {
 const longestFirst = (a, b) => Number(b.suite.includes('.browser.')) - Number(a.suite.includes('.browser.'));
 
 async function main(filter) {
-  const probes = await loadProbes(filter);
+  /*
+    ⚠️ **A SHARD IS TWO VARIABLES OR NONE** — 0420. `PROVE_SHARD` picks the probes and `PROVE_RESULT`
+    is where the join reads which ones came back red; a shard that wrote nowhere would be proven by
+    nobody, and a result with no shard would claim the whole set.
+  */
+  const shard = process.env.PROVE_SHARD;
+  const resultPath = process.env.PROVE_RESULT;
+  if (Boolean(shard) !== Boolean(resultPath)) {
+    console.error('PROVE_SHARD and PROVE_RESULT go together: which probes, and where the join reads their verdict.');
+    return 1;
+  }
+  if (shard && filter) {
+    console.error('A shard is dealt from the whole set, so it cannot also be filtered to one decision.');
+    return 1;
+  }
+  const everything = await loadProbes();
+  const dealt = shard ? shardOf(everything, shard) : null;
+  const probes = dealt ? dealt.map((d) => d.probe) : await loadProbes(filter);
+  const written = (ok) => {
+    if (dealt) writeFileSync(resultPath, JSON.stringify({ shard, keys: dealt.map((d) => d.key), ok }));
+  };
   if (probes.length === 0) {
+    if (dealt) {
+      // More shards than probes: an empty shard has proven everything it was dealt, which is nothing.
+      written(true);
+      console.log(`Shard ${shard} was dealt no probes.`);
+      return 0;
+    }
     console.error(filter ? `No probes for ${filter}.` : 'No probes found under scripts/probes/.');
     return 1;
   }
@@ -727,7 +857,7 @@ async function main(filter) {
     A filtered run still checks the whole set, because the probe an edit strands is almost never one
     belonging to the decision being worked on.
   */
-  const stale = anchorFailures(await loadProbes());
+  const stale = anchorFailures(everything);
   if (stale.length) {
     console.error(`${stale.length} probe(s) can no longer be applied at all:\n`);
     for (const s of stale) console.error(`  ${s}\n`);
@@ -754,35 +884,15 @@ async function main(filter) {
     */
     process.stdout.write(`Baseline: ${suites.length} suite(s) must be green before anything is broken ... `);
     /*
-      ⚠️ **IN CI THE SUITE HAS ALREADY ANSWERED, AND THE ANSWER IS READ RATHER THAN ASKED AGAIN** —
-      `sealedBaseline`, and 0419. Both variables or neither: one alone is a proof that meant to reuse
-      a run and cannot show which one, and that is refused rather than quietly run the long way.
+      ⚠️ **A SHARD'S BASELINE IS THE JOIN'S** — `joinProblems`, and 0420. The suite runs in jobs beside
+      this one, so its answer does not exist yet; the required job holds every suite shard's report to
+      this tree's seal once all of them are done. Only a shard defers, and a shard's result is read by
+      nothing but the join.
     */
-    const reportPath = process.env.PROVE_BASELINE;
-    const sealPath = process.env.PROVE_SEAL;
-    if (Boolean(reportPath) !== Boolean(sealPath)) {
-      console.log('REFUSED');
-      console.error('\nPROVE_BASELINE and PROVE_SEAL go together: a report, and the seal of the bytes it ran against.');
-      return 1;
+    if (shard) {
+      console.log('deferred to the join, which holds the suite shards’ reports to this tree’s seal');
     }
-    let baseline;
-    if (reportPath) {
-      const read = (p) => (existsSync(p) ? readFileSync(p, 'utf8') : null);
-      try {
-        const report = read(reportPath);
-        baseline = sealedBaseline({
-          report: report === null ? null : JSON.parse(report),
-          sealed: read(sealPath)?.trim() ?? null,
-          tree: sealOf(manifest(root)),
-          suites,
-        });
-      } catch (e) {
-        console.log('REFUSED');
-        console.error(`\nThe suite's own run cannot stand in for the baseline: ${e.message ?? e}`);
-        return 1;
-      }
-      process.stdout.write('read from the suite’s own run, sealed to these bytes ... ');
-    } else baseline = await runSuite(suites, root, join(base, 'baseline.json'));
+    const baseline = shard ? { failed: [], ran: 0 } : await runSuite(suites, root, join(base, 'baseline.json'));
     if (baseline.failed.length) {
       console.log('RED');
       console.error(
@@ -799,7 +909,7 @@ async function main(filter) {
       );
       return 1;
     }
-    console.log(`green (${baseline.ran} tests)`);
+    if (!shard) console.log(`green (${baseline.ran} tests)`);
 
     const workers = Math.max(
       1,
@@ -947,6 +1057,9 @@ async function main(filter) {
       }
     }
 
+    // A shard is `ok` only if every probe it was dealt came back red — the count, not the absence of
+    // a complaint, since a probe that never reached the loop complains about nothing.
+    written(failures.length === 0 && rows.length === probes.length);
     if (failures.length) {
       console.error(`\n${failures.length} probe(s) did not do what the decision says they do:\n`);
       for (const f of failures) console.error(`  ${f}\n`);
@@ -974,8 +1087,79 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       console.error('usage: node scripts/prove-guard.mjs --seal <file>');
       process.exit(1);
     }
+    mkdirSync(dirname(resolve(process.argv[3])), { recursive: true });
     writeFileSync(process.argv[3], `${sealOf(manifest(root))}\n`);
     process.exit(0);
   }
+  // `--join <dir>`: every job's seal, report and result, downloaded into `dir`, as one verdict — 0420.
+  if (process.argv[2] === '--join') {
+    process.exit(await joinCommand(process.argv[3]));
+  }
   process.exit(await main(process.argv[2]));
+}
+
+/** Every file under `dir` with one of `names`, by name. */
+function collect(dir, names) {
+  const out = Object.fromEntries(names.map((name) => [name, []]));
+  const walk = (d) => {
+    for (const entry of readdirSync(d, { withFileTypes: true })) {
+      const path = join(d, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (names.includes(entry.name)) out[entry.name].push(readFileSync(path, 'utf8'));
+    }
+  };
+  if (existsSync(dir)) walk(dir);
+  return out;
+}
+
+/** Every test file vitest's `include` reaches — `tests/**\/*.test.ts` — as `tests/…`. */
+function testFilesIn(treeRoot) {
+  const out = [];
+  const walk = (rel) => {
+    for (const entry of readdirSync(resolve(treeRoot, rel), { withFileTypes: true })) {
+      const path = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) walk(path);
+      else if (entry.name.endsWith('.test.ts')) out.push(path);
+    }
+  };
+  walk('tests');
+  return out;
+}
+
+async function joinCommand(dir) {
+  if (!dir) {
+    console.error('usage: node scripts/prove-guard.mjs --join <dir>');
+    return 1;
+  }
+  const everything = await loadProbes();
+  const found = collect(dir, ['tree.seal', 'suite.json', 'prove.json']);
+  let needs = {};
+  try {
+    needs = JSON.parse(process.env.NEEDS ?? '{}');
+  } catch {
+    console.error('NEEDS is not JSON — it is meant to be the required job’s `toJSON(needs)`.');
+    return 1;
+  }
+  const results = found['prove.json'].map((text) => JSON.parse(text));
+  const problems = joinProblems({
+    needs,
+    tree: sealOf(manifest(root)),
+    seals: found['tree.seal'].map((text) => text.trim()),
+    reports: found['suite.json'].map((text) => JSON.parse(text)),
+    testFiles: testFilesIn(root),
+    suites: [...new Set(everything.map((p) => p.suite))],
+    probeKeys: everything.map(probeKey),
+    results,
+  });
+  if (problems.length) {
+    console.error(`The jobs of this run are not one proof — ${problems.length} problem(s):\n`);
+    for (const p of problems) console.error(`  ${p}\n`);
+    return 1;
+  }
+  const proven = results.reduce((sum, r) => sum + r.keys.length, 0);
+  console.log(
+    `${Object.keys(needs).length} job(s) succeeded on one tree: ${found['suite.json'].length} suite shard(s) ` +
+      `covering every test file, green; ${results.length} probe shard(s), ${proven} probe(s), every one red.`,
+  );
+  return 0;
 }

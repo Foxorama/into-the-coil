@@ -26,15 +26,24 @@ concurrency:
 # nothing, and a protection rule waiting on a check that will never arrive blocks the merge
 # forever. The suite takes seconds; buying nothing is cheaper than buying that.
 
+# ── FIVE KINDS OF JOB, AND ONE OF THEM IS THE VERDICT ─────────────────────────────────────────────
+#
+# One job ran everything in sixty minutes on four cores. The suite and the probes are independent
+# work, so they are dealt across runners: `suite` shards the test files, `prove` shards the probes,
+# and `test` — the REQUIRED context, still the job key branch protection names — waits for all of
+# them and joins what they report into one verdict. See
+# docs/decisions/0420-the-ci-is-sharded-and-joined.md.
+
 jobs:
-  test:
+  base:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
 
       # FIRST, and before `npm ci`, because a stacked PR is a mechanical mistake that costs five
       # seconds to catch here and four minutes to catch after the suite. See
-      # docs/decisions/0033-a-branch-starts-at-main.md.
+      # docs/decisions/0033-a-branch-starts-at-main.md. Every job that installs anything `needs`
+      # this one, so none of them starts until it has passed.
       #
       # The logic is in a SCRIPT and not in this file. A condition written inline here cannot be
       # broken on purpose and watched to go red — `npm run prove` reaches vitest suites and cannot
@@ -55,43 +64,111 @@ jobs:
           open=$(gh pr list --state open --json number --jq 'length' 2>/dev/null || echo "")
           node scripts/check-base.mjs "${{ github.event.pull_request.base.ref }}" "$open"
 
+  # `npm run check`'s first and last thirds: `build` is `tsc && vite build`, and tsconfig is
+  # `noEmit`, so this is the typecheck and the shipped page. The middle third is `suite`.
+  typecheck:
+    needs: base
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:
           # One source, read by both workflows AND by Cloudflare Pages, which cannot read either
           # of them. A literal here would be a second spelling — see tests/toolchain.test.ts.
           node-version-file: '.node-version'
           cache: npm
-
       - run: npm ci
+      - run: npm run build
 
-      # No `playwright install` step: the runner image ships Google Chrome at
-      # /usr/bin/google-chrome, which `scripts/chromium.mjs` already finds. `npx playwright install`
-      # would also pull the full `playwright` package — this repo has `playwright-core`, which ships
-      # no CLI.
-      #
-      # `CI=true` is already set by Actions, which is what makes the browser-gate assertion in
-      # tests/boot.browser.test.ts hard-fail here instead of skipping. That assertion is the whole
-      # reason this job can be trusted: fifty browser tests once skipped for months on a green board.
-      #
-      # ⚠️ SEALED FIRST, AND THE REPORT KEPT. The proof's baseline asks whether the suites are green
-      # on these bytes, which is the question `npm run check` is about to answer; it used to be asked
-      # twice, thirteen minutes each. The seal is the tree before the suite runs, and `npm run prove`
-      # reads the report only if the tree still matches it. See
+  # The test files, dealt across runners by vitest's own `--shard`, which partitions by file. The
+  # count is the matrix's length and is read back as `strategy.job-total`, so it is spelled once;
+  # and the join refuses a run in which any test file ran in no shard, so a partition with a hole
+  # cannot pass.
+  #
+  # No `playwright install` step: the runner image ships Google Chrome at /usr/bin/google-chrome,
+  # which `scripts/chromium.mjs` already finds. `CI=true` is set by Actions, which is what makes the
+  # browser gate in tests/globalSetup.ts hard-fail rather than skip — fifty browser tests once
+  # skipped for months on a green board.
+  suite:
+    needs: base
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - run: npm ci
+      # ⚠️ SEALED BEFORE THE SUITE RUNS, AND THE REPORT KEPT — the join holds every shard's report to
+      # the tree it is standing in, and that is the proof's baseline.
       # docs/decisions/0419-the-baseline-is-the-suites-own-run.md.
-      - run: node scripts/prove-guard.mjs --seal "$RUNNER_TEMP/tree.seal"
-
-      - run: npm run check
+      - run: node scripts/prove-guard.mjs --seal "$RUNNER_TEMP/out/tree.seal"
+      - run: npm test -- --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         env:
-          ITC_SUITE_REPORT: ${{ runner.temp }}/suite.json
+          ITC_SUITE_REPORT: ${{ runner.temp }}/out/suite.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: suite-${{ matrix.shard }}
+          path: ${{ runner.temp }}/out
+          retention-days: 1
 
-      # Inside the REQUIRED `test` job on purpose, rather than as a job of its own. A new job means a
-      # new required context, which means a settings change — and an unrequired check is one nobody
-      # is blocked by, which is how it rots. See docs/decisions/0019-a-probe-must-be-seen-to-apply.md.
-      #
-      # ⚠️ It no longer mutates the checkout — it proves against disposable copies, in parallel. See
-      # docs/decisions/0054-the-proof-runs-beside-the-work-not-on-it.md. It still runs last only
-      # because `npm run check` above is the cheaper of the two ways to find out the tree is broken.
+  # The probes, dealt across runners — every Nth probe of the whole set, so a decision's worth of
+  # expensive ones does not land on one shard. See docs/decisions/0019-a-probe-must-be-seen-to-apply.md
+  # for why they run on every PR, and 0054 for the disposable copies each shard proves in.
+  #
+  # ⚠️ A SHARD HAS NO BASELINE OF ITS OWN: the suites it judges are running beside it. Its result
+  # says which probes it was dealt and whether every one went red, and only the join reads it.
+  prove:
+    needs: base
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+          cache: npm
+      - run: npm ci
+      - run: node scripts/prove-guard.mjs --seal "$RUNNER_TEMP/out/tree.seal"
       - run: npm run prove
         env:
-          PROVE_BASELINE: ${{ runner.temp }}/suite.json
-          PROVE_SEAL: ${{ runner.temp }}/tree.seal
+          PROVE_SHARD: ${{ matrix.shard }}/${{ strategy.job-total }}
+          PROVE_RESULT: ${{ runner.temp }}/out/prove.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prove-${{ matrix.shard }}
+          path: ${{ runner.temp }}/out
+          retention-days: 1
+
+  # ── THE REQUIRED CHECK ──────────────────────────────────────────────────────────────────────────
+  #
+  # ⚠️ `if: always()`, AND THIS IS THE LINE THE WHOLE DESIGN HANGS ON. Without it, a failed shard
+  # makes this job SKIPPED — and GitHub reports a skipped required check as PASSING. Every red in
+  # every shard would merge. `!cancelled()` is not enough either: a cancelled run would skip this
+  # job, and the PR's head would read green. So it always runs, and the join reads every
+  # dependency's result itself.
+  #
+  # ⚠️ AND IT WAITS ON EVERY OTHER JOB. A job missing from `needs` is one whose failure this
+  # verdict never hears about. `tests/shards.test.ts` holds both of these.
+  test:
+    needs: [base, typecheck, suite, prove]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: '.node-version'
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/joined
+      - run: node scripts/prove-guard.mjs --join "$RUNNER_TEMP/joined"
+        env:
+          NEEDS: ${{ toJSON(needs) }}

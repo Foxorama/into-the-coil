@@ -96,9 +96,10 @@ cost, which does not exist yet.
 Asked for 2026-09-30, and the repository stays public: private would halve the runners and lose
 branch protection on the free plan.
 **1.** [0419](decisions/0419-the-baseline-is-the-suites-own-run.md): the proof's baseline is read from
-`npm run check`'s own run, sealed to the tree. **2.** Sharding the suite and the probes across runner
-jobs, behind a required `test` job that waits on them — 0419's *What is next* names the trap it must
-guard. **3.** Splitting the files that take over three minutes, then the long single guards 0344 owes.
+`npm run check`'s own run, sealed to the tree. **2.** [0420](decisions/0420-the-ci-is-sharded-and-joined.md):
+the suite and the probes dealt across runner jobs, and the required `test` job joins them. **3.**
+Splitting the files that take over three minutes, then the long single guards 0344 owes — **the 0149
+hull guard first**, which times out locally under the suite and is named in 0420.
 In that order because each is measured against what the one before it leaves.
 
 ---
