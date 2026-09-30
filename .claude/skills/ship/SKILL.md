@@ -62,16 +62,20 @@ Never base a branch on another branch. CI refuses it before `npm ci` (`scripts/c
 
 ```bash
 set -o pipefail
-npm run check 2>&1 | tail -40; echo "CHECK_EXIT=${PIPESTATUS[0]}"
-npm run prove 2>&1 | tail -40; echo "PROVE_EXIT=${PIPESTATUS[0]}"
+npm run typecheck 2>&1 | tail -40; echo "TYPECHECK_EXIT=${PIPESTATUS[0]}"
+npx vitest run <the suites the change touches> 2>&1 | tail -40; echo "SUITES_EXIT=${PIPESTATUS[0]}"
+npm run prove <NNNN> 2>&1 | tail -40; echo "PROVE_EXIT=${PIPESTATUS[0]}"
 ```
 
 **A verdict is the exit code, never the output** —
-[0199](../../../docs/decisions/0199-a-verdict-is-an-exit-code.md). Without `pipefail` both of these
+[0199](../../../docs/decisions/0199-a-verdict-is-an-exit-code.md). Without `pipefail` these
 report `tail`'s status, which is zero for any input including none. Read the number.
 
-`npm run prove` is slow — start it at commit time in the background. The failure it most often
-catches is a probe anchor stranded by an unrelated edit.
+**Prove the change's own decision, not the whole set** —
+[0432](../../../docs/decisions/0432-the-whole-proof-is-cis.md). The filtered run still checks every
+probe's anchor, which is the failure the proof most often catches. The whole suite and the whole
+proof are the required check's, and run on every PR in about five minutes. A change that adds no
+probe skips the `prove` line.
 
 **One proof at a time on a machine.** A second session's proof makes this one's baseline time out
 before a probe has run — [0344](../../../docs/decisions/0344-a-probe-runs-warm.md) has the
@@ -108,7 +112,9 @@ gh pr create --base main --fill
 gh pr merge --squash --auto
 ```
 
-Arm it at creation. CI here runs 20–60+ minutes, so poll in the background rather than waiting.
+Arm it at creation. CI here runs about five minutes since
+[0420](../../../docs/decisions/0420-the-ci-is-sharded-and-joined.md); poll in the background rather
+than waiting, and a red there is the whole proof reporting — fix it on the branch.
 
 **If the PR touches an irreversible surface** — an `itc_*` storage key, the save schema, the service
 worker cache prefix, the origin, anything already shipped — **the body carries a rollback note**.
