@@ -1,4 +1,4 @@
-# 0434 — The title has a voice
+# 0436 — The title has a voice
 
 **Accepted 2026-10-01.** Items 5–9 of [the screens review](../../reports/the-screens-reviewed-2026-10-01.md),
 as far as each could go without a decision this one is not entitled to make.

@@ -201,7 +201,7 @@ ${each('-panel')} {
 }
 .itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
 /*
-  ── THE WORDMARK — 0434 ──────────────────────────────────────────────────────────────────────────
+  ── THE WORDMARK — 0436 ──────────────────────────────────────────────────────────────────────────
 
   The name was set as a heading in the panel's own type, the same cyan as every button under it, so
   the one thing on the screen that is the game's name read as a label. Heavier, spaced, and run from
@@ -324,7 +324,7 @@ ${each('-choices')} {
 .itc-select-shown { animation: itc-select-in 0.6s ease-out both; }
 @keyframes itc-splash-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
 /*
-  ⚠️ **THE SPLASH SAYS IT IS WORKING — 0434.** It was the name alone on the void for as long as the
+  ⚠️ **THE SPLASH SAYS IT IS WORKING — 0436.** It was the name alone on the void for as long as the
   load took, which on a slow machine is long enough to wonder whether anything is happening. A light
   runs along a line under the name for as long as the splash is up. It is deliberately a sweep and not
   a bar that fills: the boot does not know its own fraction, and a bar that guessed would be a claim.
@@ -766,7 +766,7 @@ ${each('-action')} {
 */
 .itc-title-action { width: min(100%, 32ch); }
 /*
-  ── THE CHOICE IS THE TIERS — 0434 ───────────────────────────────────────────────────────────────
+  ── THE CHOICE IS THE TIERS — 0436 ───────────────────────────────────────────────────────────────
 
   Five buttons at one weight made the music room and the pilot as loud as the three ways to start a
   run. On a screen tall enough for the desktop's column the tiers keep the full width, and the two
@@ -1415,7 +1415,7 @@ ${faceTurns()}
   opacity: 1;
 }
 /*
-  The settings on a desktop — 0434: a size a pointer finds without hunting, and the unchosen option at
+  The settings on a desktop — 0436: a size a pointer finds without hunting, and the unchosen option at
   a contrast that reads as a choice rather than as disabled. The phone's are under 0370's query.
 */
 @container (min-height: 461px) {
@@ -2545,7 +2545,7 @@ export function makeChrome(
     // second stylesheet: the palette is chosen at runtime and a static rule cannot know it.
     root.style.setProperty('--itc-ink', colours.player);
     root.style.setProperty('--itc-void', colours.space);
-    // The coil's own second ink, for the title's wordmark — 0434. The ally violet is the ship's too.
+    // The coil's own second ink, for the title's wordmark — 0436. The ally violet is the ship's too.
     root.style.setProperty('--itc-ally', colours.ally);
 
     /*
