@@ -74,7 +74,7 @@ import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { paintPort } from '../render/port.ts';
-import { paintFinale } from '../render/finale.ts';
+import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -1584,6 +1584,11 @@ export interface World {
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
+   * What the fight was drawing when its last boss's death beat ended — 0426: the finale's first frame is
+   * that one. Written once by `holdFinale` as the finale starts; the finale's painter only reads it.
+   */
+  finale: FinaleScene;
+  /**
    * How hard the heart the player hears is beating this frame, nought to one — 0401. The shell writes
    * it once a frame from the music's own clock (`heartAt`); nothing that steps reads it.
    *
@@ -2491,9 +2496,9 @@ export class GameFrame implements Frame {
       paintPort(w.surface, w.view, w.intro + alpha, w.sky);
       return;
     }
-    // And the finale, on the same terms, in the last place's sky — 0418.
+    // And the finale, going on from the fight's last frame — 0418, 0426.
     if (w.outro !== null) {
-      paintFinale(w.surface, w.view, w.outro + alpha, w.sky);
+      paintFinale(w.surface, w.view, w.outro + alpha, w.finale);
       return;
     }
     // The camera is interpolated on the same alpha as everything it gets subtracted from. Passing
@@ -2527,6 +2532,39 @@ export class GameFrame implements Frame {
     paintBolts(w.surface, w.view, w.bolts, camera, alpha);
   }
 }
+
+/**
+ * Hand the finale the fight's last frame — 0426. Called once by the shell as the finale starts, when
+ * nothing has stepped since the death beat ended: the camera and how fast it was going, the place's
+ * scene, where the heart's seat is, and the fighter as it was last drawn.
+ *
+ * ⚠️ **A FIGHT WITH NO HEART STILL GETS A FINALE** — the bench clears every level through the game's
+ * verbs and may never have raised the jellyfish — so a missing seat stands at the far side of the
+ * narrowest view, the lane's middle, where the socket closes on.
+ */
+export function holdFinale(w: World): void {
+  const scene = w.finale;
+  scene.sky = w.sky;
+  scene.landmarks = w.landmarks;
+  scene.levelOrigin = w.levelOrigin;
+  scene.room = w.room;
+  scene.corridor = w.corridor;
+  scene.pools = POOLS_OF[w.level.theme];
+  scene.camera = w.cameraAlong;
+  scene.scroll = w.scrollPerStep;
+  scene.time = w.pictureSteps ?? w.steps;
+  const move = w.bossRow.move;
+  const seat = move.kind === 'socket' && move.throb !== undefined && w.bossAura.size > 0 ? w.bossAura.at(0) : null;
+  scene.throb = move.kind === 'socket' ? (move.throb ?? 0) : 0;
+  scene.from.heartAlong = seat === null ? FINALE_NO_SEAT.along : seat.along - w.cameraAlong;
+  scene.from.heartAcross = seat === null ? FINALE_NO_SEAT.across : seat.across;
+  scene.from.shipAlong = w.ship.along - w.cameraAlong;
+  scene.from.shipAcross = w.ship.across;
+  scene.ship = w.ship.spriteBase;
+}
+
+/** Where the finale's heart stands when the fight had none — `holdFinale`. */
+const FINALE_NO_SEAT = { along: 150, across: ACROSS_SPAN / 2 } as const;
 
 /**
  * Whether this is the step the boss came apart on.
@@ -8552,6 +8590,26 @@ function layAura(w: World): void {
     also the order they are drawn in: the mounting under the flames, the flames under the cog.
   */
   const move = w.bossRow.move;
+  /*
+    ── AND A HEART OUTLIVES WHAT WAS FEEDING ON IT — 0426 ──────────────────────────────────────────
+
+    ⚠️ **THE SEAT WENT WITH THE HULL, AND THE FINALE COULD NOT START FROM A HEART THAT WAS NOT THERE.**
+    Played: *"it doesn't flow nicely."* The jellyfish's death beat cleared the heart on its first step,
+    and the finale then faded up on a heart staged somewhere else. A seat that beats is the place, not
+    the animal: once the boss is beaten it stays where it was set, holding station with the camera as
+    the hull did, flames dropped, until the finale takes it from exactly there.
+    ⚠️ **`bossSpawned` WITH AN EMPTY POOL, NOT `bossBeaten`**: this is laid before the step latches
+    `bossBeaten`, so on the step she dies the latch is still down. A new level lowers `bossSpawned`, and
+    the lines below clear the seat.
+  */
+  if (head === null && w.bossSpawned && move.kind === 'socket' && move.throb !== undefined && w.bossAura.size > 0) {
+    while (w.bossAura.size > 1) w.bossAura.releaseAt(w.bossAura.size - 1);
+    const seat = w.bossAura.at(0);
+    seat.prevAlong = seat.along;
+    seat.prevAcross = seat.across;
+    seat.along += w.scrollPerStep;
+    return;
+  }
   if (head !== null && move.kind === 'socket') {
     /*
       ── AND THE FIRE IT HAS CAUGHT — 0336 ────────────────────────────────────────────────────────

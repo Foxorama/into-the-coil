@@ -2,9 +2,12 @@
 //
 // One per claim: the run's end going straight to the victory screen, the finale not skippable, the
 // chosen golfer found in their own rescue, lines typed too slowly to be read, a voice blipping on
-// spaces, two golfers with one voice, the jellyfish never gone, the Viper out before the heart bursts,
-// a close-up placed for the narrowest screen, the ships still on screen as it fades, no surge on a
-// launch, and the title playing the last level's music after a win.
+// spaces, two golfers with one voice, the Viper out before the heart bursts, the ships still on screen
+// as it fades, no surge on a launch, and the title playing the last level's music after a win.
+//
+// ⚠️ Two claims are gone with what they held — docs/decisions/0426: the jellyfish melting off the heart
+// (she dies in the fight now, and the finale starts after) and the cockpit close-ups (there are none).
+// The Viper, the leaving and the surge are re-anchored on the one-shot painter, breaking what they broke.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -77,34 +80,12 @@ export const PROBES = [
   {
     decision: '0418',
     suite: 'tests/finale.test.ts',
-    broke: 'the jellyfish still drawn once she has melted',
-    guard: 'melts the jellyfish off the heart',
-    edit: {
-      path: 'src/render/finale.ts',
-      find: '    if (melted < 1) {',
-      replace: '    if (melted <= 1) {',
-    },
-  },
-  {
-    decision: '0418',
-    suite: 'tests/finale.test.ts',
     broke: 'the Viper out of the heart before it has burst',
-    guard: 'melts the jellyfish off the heart',
+    guard: 'races the heart, sets it on fire, and bursts it',
     edit: {
       path: 'src/render/finale.ts',
-      find: '  if (t >= FINALE_BEATS.burst) {\n    if (t >= FINALE_BEATS.viperLit)',
-      replace: '  if (t >= FINALE_BEATS.melted) {\n    if (t >= FINALE_BEATS.viperLit)',
-    },
-  },
-  {
-    decision: '0418',
-    suite: 'tests/finale.test.ts',
-    broke: 'the fighter’s close-up placed for the narrowest screen, stopping in mid-air on a wider one',
-    guard: 'shows each cockpit close, with its hull running off its own edge of the screen on every screen',
-    edit: {
-      path: 'src/content/finale.ts',
-      find: '  return saving ? alongSpan - inFrom : inFrom;',
-      replace: '  return saving ? 213 - inFrom : inFrom;',
+      find: '  if (!alive) paintViper(surface, view, t, from);',
+      replace: '  paintViper(surface, view, t, from);',
     },
   },
   {
@@ -113,9 +94,9 @@ export const PROBES = [
     broke: 'the two ships leaving too slowly to be gone when the picture goes',
     guard: 'has both ships leave the widest screen before the picture goes',
     edit: {
-      path: 'src/render/finale.ts',
-      find: '  const d = s - go;\n  return 0.5 * LAUNCH_ACCEL * d * d;',
-      replace: '  const d = s - go;\n  return 0.1 * LAUNCH_ACCEL * d * d;',
+      path: 'src/content/finale.ts',
+      find: '  const d = t - go;\n  return 0.5 * LAUNCH_ACCEL * d * d;',
+      replace: '  const d = t - go;\n  return 0.1 * LAUNCH_ACCEL * d * d;',
     },
   },
   {
@@ -125,7 +106,7 @@ export const PROBES = [
     guard: 'plays every cue on a step that draws its twin',
     edit: {
       path: 'src/render/finale.ts',
-      find: '  if (viperSurge > 0) putOut(surface, view, PORT_SPRITE.viperSurge, viperAlong, v.across, viperSurge);\n',
+      find: '      if (surge > 0) put(surface, view, PORT_BASE + PORT_SPRITE.viperSurge, along, across, surge, turn, VIPER_GROW);\n',
       replace: '',
     },
   },

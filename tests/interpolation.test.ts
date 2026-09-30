@@ -9,6 +9,7 @@ import { Pool } from '../src/sim/pool.ts';
 import { makeDeaths } from '../src/sim/collide.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import type { Surface } from '../src/render/surface.ts';
+import { makeFinaleScene } from '../src/render/finale.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
 import type { InputSource } from '../src/app/input.ts';
 import { DEFAULT_ASSISTS, tuningFor } from '../src/sim/assist.ts';
@@ -145,6 +146,7 @@ function stationKeepingWorld(surface: Surface): World {
     pictureSteps: null,
     intro: null,
     outro: null,
+    finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
     heartBeat: 0,
     cameraAlong: 0,

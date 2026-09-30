@@ -45,6 +45,7 @@ import { STEP_MS } from '../src/app/loop.ts';
 import type { InputSource } from '../src/app/input.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { paintScene } from '../src/render/scene.ts';
+import { makeFinaleScene } from '../src/render/finale.ts';
 import { bodyOf } from './bodies.ts';
 import { inertLevel } from './world.ts';
 
@@ -477,6 +478,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     pictureSteps: null,
     intro: null,
     outro: null,
+    finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
     heartBeat: 0,
     cameraAlong: 0,
@@ -615,6 +617,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     pictureSteps: null,
     intro: null,
     outro: null,
+    finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
     heartBeat: 0,
     cameraAlong: 0,

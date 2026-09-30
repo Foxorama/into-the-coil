@@ -112,7 +112,8 @@ and the title playing the last level after a win. Re-anchored, breaking what the
 
 ## Owed
 
-- A look at the four shots, and a listen to the voices against their bubbles.
+- ~~A look at the four shots~~ — played, and replaced by one shot that goes on from the fight:
+  [0426](0426-the-finale-is-the-fight-going-on.md). A listen to the voices against their bubbles.
 - **The victory piece.**
 
 ## Rollback

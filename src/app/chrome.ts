@@ -867,8 +867,9 @@ ${each('-action-cursor')} {
   ── THE FINALE'S SPEECH BUBBLE — 0418 ──────────────────────────────────────────────────────────────
 
   Light ink on the dark, the space colour for the words, and a tail toward the mouth it comes from. Its
-  corner sits at the mouth: to the right of it with the tail on its left, or to the left with the tail
-  on its right. Sized off the short axis on the chrome's own terms, so a phone gets a bubble it can read.
+  corner sits at the mouth, to the right of it with the tail on its left: hung above the ship speaking,
+  or below it — 0426, since the two ships fly one over the other and each bubble needs the sky on its
+  own side. Sized off the short axis on the chrome's own terms, so a phone gets a bubble it can read.
 */
 .itc-outro-bubble {
   position: absolute;
@@ -891,10 +892,20 @@ ${each('-action-cursor')} {
   border-right: 0.7em solid var(--itc-ink, #fff);
   border-left: 0;
 }
-.itc-outro-bubble-right { transform: translate(calc(-100% - 0.6em), -100%); }
-.itc-outro-bubble-right::after { left: auto; right: -0.55em; border-right: 0; border-left: 0.7em solid var(--itc-ink, #fff); }
+.itc-outro-bubble-below { transform: translate(0.6em, 0); }
+.itc-outro-bubble-below::after { bottom: auto; top: 0.5em; }
 .itc-outro-bubble-shown { display: block; animation: itc-outro-bubble-in 0.25s ease-out both; }
 .itc-outro-bubble-unsaid { visibility: hidden; }
+.itc-outro-bubble-who {
+  display: block;
+  margin-bottom: 0.2em;
+  padding-left: 0.45em;
+  border-left: 0.35em solid transparent;
+  font-size: 0.72em;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.8;
+}
 .itc-outro-bubble.itc-outro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 @keyframes itc-outro-bubble-in { from { opacity: 0; } to { opacity: 1; } }
 /*
@@ -1598,9 +1609,11 @@ export interface Chrome {
   /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
-   * them. `null` takes the bubble away. Called every step; it touches the DOM only when a letter lands.
+   * them, hung `above` or `below` it, with the speaker's `name` over the words beside a `mark` in their
+   * colour. `null` takes the bubble away. Called every step; it touches the DOM only when a letter lands
+   * or the speaker has moved a pixel — since 0426 a bubble rides its ship.
    */
-  setBubble(line: string | null, shown: number, x: number, y: number, tail: 'left' | 'right'): void;
+  setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name?: string, mark?: string): void;
   /**
    * Say something under one control that the row cannot know in advance — 0415: *Pilot* on the menu
    * says who is flying. Pushed in, on `setHud`'s terms, when it changes.
@@ -2449,13 +2462,19 @@ export function makeChrome(
   bubble.className = prefixFor('outro') + 'bubble';
   bubble.style.color = colours.space;
   bubble.style.setProperty('--itc-ink', colours.player);
+  // Who is speaking, over what they say — 0426: with no close-up of the cockpit, the bubble names them.
+  const who = document.createElement('span');
+  who.className = prefixFor('outro') + 'bubble-who';
   const said = document.createElement('span');
   const unsaid = document.createElement('span');
   unsaid.className = prefixFor('outro') + 'bubble-unsaid';
-  bubble.append(said, unsaid);
+  bubble.append(who, said, unsaid);
   elements.push(bubble);
   let bubbleLine: string | null = null;
   let bubbleShown = -1;
+  // Where the bubble was last put, in whole pixels — 0426: it rides a ship, so it moves while it is up.
+  let bubbleX = Number.NaN;
+  let bubbleY = Number.NaN;
 
   /*
     ── THE FOCUS RING ──────────────────────────────────────────────────────────────────────────────
@@ -2712,7 +2731,7 @@ export function makeChrome(
       skipReady = ready;
       paintSkip();
     },
-    setBubble(line: string | null, shown: number, x: number, y: number, tail: 'left' | 'right'): void {
+    setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {
         if (bubbleLine === null) return;
         bubbleLine = null;
@@ -2723,10 +2742,19 @@ export function makeChrome(
       if (line !== bubbleLine) {
         bubbleLine = line;
         bubbleShown = -1;
-        bubble.style.left = `${x}px`;
-        bubble.style.top = `${y}px`;
-        bubble.classList.toggle(prefixFor('outro') + 'bubble-right', tail === 'right');
+        who.textContent = name;
+        who.style.borderLeftColor = mark;
+        bubble.classList.toggle(prefixFor('outro') + 'bubble-below', hang === 'below');
         bubble.classList.add(prefixFor('outro') + 'bubble-shown');
+      }
+      // Moved only when it has moved a whole pixel, so a bubble on a ship holding station is left alone.
+      const px = Math.round(x);
+      const py = Math.round(y);
+      if (px !== bubbleX || py !== bubbleY) {
+        bubbleX = px;
+        bubbleY = py;
+        bubble.style.left = `${px}px`;
+        bubble.style.top = `${py}px`;
       }
       if (letters === bubbleShown) return;
       bubbleShown = letters;
