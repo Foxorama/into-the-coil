@@ -103,6 +103,7 @@ import {
   holdFinale,
   hushed,
   launchSpecial,
+  resetLevelScore,
   respawn,
   takeShield,
   TENDRIL_SLOTS,
@@ -113,6 +114,8 @@ import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
+import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
+import { browserStore, readScores, recordScore } from '../save/scores.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1198,6 +1201,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // No boss on the field at mount, and replaced below with the chrome — 0360.
     shownBoss: -1,
     onBoss: (): void => {},
+    // Nothing scored at mount, and replaced below with the chrome — 0428.
+    score: { points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 },
+    shownPoints: 0,
+    shownStreak: 0,
+    onScore: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
@@ -1451,10 +1459,59 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const menuPad = attachMenuPad();
   const menuAsk = makeMenuAsk();
 
+  /*
+    ── THE SCORE AND THE TABLE — 0428, 0429 ──────────────────────────────────────────────────────────
+
+    The frame counts a level; the run banks each cleared one; this shows both and, when a run ends,
+    puts it on the table. A run ends in exactly two places — the victory, and a run over whose
+    continue ran out onto the title — and `runRecorded` is what makes each run one row however it
+    got there.
+  */
+  const scoreStore = browserStore();
+  let scoreTable = readScores(scoreStore);
+  /** The row a run just set, lit on the title until the next run begins. `-1` for none. */
+  let freshPlace = -1;
+  let runRecorded = false;
+  const syncScore = (): void => {
+    chrome.setScore(runScore(state.run, world.score), world.score.streak);
+  };
+  const recordRun = (cleared: boolean): number | null => {
+    if (runRecorded) return freshPlace < 0 ? null : freshPlace;
+    runRecorded = true;
+    const placed = recordScore(scoreStore, entryOf(state.run, world.score, state.settings.pilot, cleared, Date.now()));
+    scoreTable = placed.table;
+    freshPlace = placed.place ?? -1;
+    chrome.setBoard(boardLines(scoreTable), freshPlace);
+    return placed.place;
+  };
+  /** What a screen shows of the score as it arrives — `was` is where the player came from. */
+  const enterScreen = (was: Screen, now: Screen): void => {
+    if (now === 'cleared') {
+      const tally = state.run.tallies[state.run.tallies.length - 1];
+      chrome.setSheet('cleared', tally === undefined ? null : levelSheet(tally, state.run));
+    } else if (now === 'gameOver') {
+      chrome.setSheet('gameOver', overSheet(state.run, world.score));
+    } else if (now === 'victory') {
+      chrome.setSheet('victory', runSheet(state.run, recordRun(true)));
+    } else if (now === 'title' && was === 'gameOver') {
+      // The continue ran out, or was walked away from: the run is over and it goes on the table.
+      recordRun(false);
+    }
+  };
+
   const dispatch = (action: Action): void => {
     const next = reduce(state, action);
     if (next === state) return;
     const moved = next.screen !== state.screen;
+    const was = state.screen.current;
+    // A new run: nothing on the table is its yet, and last run's row stops being lit on the title.
+    if (action.slice === 'run' && action.type === 'begin') {
+      runRecorded = false;
+      if (freshPlace >= 0) {
+        freshPlace = -1;
+        chrome.setBoard(boardLines(scoreTable), -1);
+      }
+    }
     // The list, or either KIND — 0233. `upgraded` replaces the list on a switch too, so the first
     // test would do alone; the other two are the claim written out rather than relied on.
     const rearmed =
@@ -1506,6 +1563,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       `tests/hud.browser.test.ts` now drives exactly that.
     */
     if (runChanged || moved) syncHud();
+    // And the score, which a banked level or a new run moves as much as a kill does — 0428.
+    if (runChanged || moved) syncScore();
     /*
       ⚠️ **By identity, like the weapon above.** The reducer preserves it when nothing moved
       (`tests/style.test.ts` holds that), so pressing the option that is already on re-paints
@@ -1523,6 +1582,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (state.settings.sound === 'on') speaker.play('chime');
     }
     if (travelChanged) applyTravel();
+    // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
+    if (moved) enterScreen(was, state.screen.current);
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
@@ -2836,6 +2897,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   world.onBoss = (fraction: number): void => {
     chrome.setBoss(fraction, world.bossRow);
   };
+  // The score — 0428: the frame says a kill or a hit moved it, and the run's banked levels are added here.
+  world.onScore = syncScore;
+  // And the table the title rolls, as this browser kept it — 0429.
+  chrome.setBoard(boardLines(scoreTable), -1);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -3050,6 +3115,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     only things that change are the level count and the screen.
   */
   world.onCleared = (): void => {
+    /*
+      ⚠️ **THE LEVEL IS BANKED FIRST, WHILE `run.level` IS STILL THE ONE CLEARED** — 0428. What the
+      ship is carrying is read now, as it clears: its shell and both triggers' stacks. Then the frame's
+      count starts again from nothing, so the break and the burn do not count this level twice; the
+      streak is not a level's and carries on.
+    */
+    dispatch({ slice: 'run', type: 'scored', tally: tallyAtClear(state.run, world.score, shieldsOf(shipRow, world.ship.health)) });
+    resetLevelScore(world.score);
+    syncScore();
     dispatch({ slice: 'run', type: 'levelCleared' });
     /*
       ⚠️ **`cleared` unconditionally, and the reducer decides whether that is the truth.**

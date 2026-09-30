@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Into the Coil — the score bench</title>
+    <!--
+      docs/decisions/0428-the-score-is-kept.md and 0429-the-table-is-kept.md.
+
+      DEV ONLY, AND IT IS NOT IN THE BUILD, on the bench's own terms: vite.config.ts has one entry, the
+      root index.html. It stands the real game on any screen the score is shown on, with a made-up run
+      behind it, so each can be looked at without flying seven levels to reach it.
+    -->
+    <style>
+      :root { color-scheme: dark; --ink: #e8e9f2; --dim: #8b90a8; --line: #262a3d; --panel: #14161f; --back: #0b0c12; --hot: #ff7a4d; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--back); color: var(--ink); font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; display: grid; grid-template-rows: auto 1fr; height: 100vh; }
+      header { border-bottom: 1px solid var(--line); padding: 0.6rem 0.9rem; display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; background: var(--panel); }
+      h1 { font-size: 13px; margin: 0 0.6rem 0 0; color: var(--hot); letter-spacing: 0.08em; }
+      button { background: var(--back); color: var(--ink); border: 1px solid var(--line); padding: 0.2rem 0.6rem; font: inherit; cursor: pointer; }
+      button:hover { border-color: var(--hot); }
+      #stage { min-height: 0; display: grid; place-items: stretch; }
+      #stage > canvas { width: 100%; height: 100%; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>THE SCORE BENCH</h1>
+      <button data-go="playing">In play</button>
+      <button data-go="kill">+ Kill</button>
+      <button data-go="hit">Hit</button>
+      <button data-go="cleared">Level clear</button>
+      <button data-go="gameOver">Run over</button>
+      <button data-go="victory">Victory</button>
+      <button data-go="title">Title</button>
+      <button data-go="wipe">Wipe the table</button>
+    </header>
+    <div id="stage"></div>
+    <script type="module" src="./score.ts"></script>
+  </body>
+</html>

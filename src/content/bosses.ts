@@ -1628,6 +1628,11 @@ export interface Escort {
 
 export interface BossRow extends Body {
   /**
+   * What beating it is worth — 0428. Flat: the streak multiplies a wave and never a boss, so a fight
+   * is worth the same however the level went before it. Every row authors its own, deeper is more.
+   */
+  points: number;
+  /**
    * Where it settles, in world units ahead of the camera's trailing edge.
    *
    * ⚠️ **It holds station in the CAMERA's frame**, like everything else the player watches move —
@@ -2199,6 +2204,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     would have nothing to make the sixth one strange.
   */
   sentinel: {
+    points: 5000,
     move: { kind: 'patrol' },
     // A spray since 0258 — *"minibosses need to be on their own pattern path and not actively
     // matching the player or aiming at the player."* One shot straight down the lane, then the fan.
@@ -2282,6 +2288,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     which is what the phrase *one idea* means here.
   */
   harrow: {
+    points: 6000,
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.24 from 0111.
     move: { kind: 'bob', amplitude: 22, wavelength: 140, rear: 0 },
     attack: { kind: 'spray' },
@@ -2352,6 +2359,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     the difference is that a sower is 6 units wide and this is 23.
   */
   lattice: {
+    points: 8000,
     move: { kind: 'patrol' },
     attack: { kind: 'wall', gap: 15 },
     uncoil: null,
@@ -2419,6 +2427,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     for by name: a hull rising and falling across the lane while it throws darts at where you are.
   */
   shoalMother: {
+    points: 7000,
     move: { kind: 'bob', amplitude: 26, wavelength: 150, rear: 0 },
     // A wall since 0258: a mid-boss fires a pattern, and `bob/spray` is the harrow's pair. Its
     // phases widen the wall from one pair of lances either side of it to five, the hole in front.
@@ -2471,6 +2480,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     with a clock on it rather than a stalemate.
   */
   redoubt: {
+    points: 9000,
     move: { kind: 'patrol' },
     attack: { kind: 'ring' },
     uncoil: null,
@@ -2525,6 +2535,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     this row was already described as being and never was.
   */
   chorus: {
+    points: 10000,
     move: { kind: 'bob', amplitude: 22, wavelength: 110, rear: 0 },
     attack: { kind: 'rake', turn: 0.55 },
     /*
@@ -2611,6 +2622,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     exists for on the row most likely to be written by analogy.
   */
   axis: {
+    points: 12000,
     // A bob since 0258: a mid-boss flies a pattern. It stalked at 0.2 from 0111.
     move: { kind: 'bob', amplitude: 20, wavelength: 180, rear: 0 },
     attack: { kind: 'ring' },
@@ -2715,6 +2727,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     step it lands. The row's `shot` and `attack` are the first phase's; the phases say what changes.
   */
   jormungandr: {
+    points: 20000,
     move: { kind: 'bob', amplitude: 24, wavelength: 200, rear: 14 },
     /*
       ── THE ACID IS A SPRAY THAT RAKES, AND THE THREE WEAPONS ARE THROWN TOGETHER — 0261 ──────────
@@ -3324,6 +3337,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * of its own behind the hull, beating about the peduncle, and the hull yaws against it.
    */
   volans: {
+    points: 25000,
     // THE ONE END BOSS THAT STALKS — 0258. *"We need less enemies (and bosses) reacting to the
     // player"*: the fish hunts, and every other hull flies a pattern. Its spines are a fan that
     // rakes across the lane — 0262, *"the bullet attacks were boring"* — so what reacts is where
@@ -3456,6 +3470,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * cannon in its throat that the beak opens on. Each stage's face lights the thing about to fire.
    */
   quetzal: {
+    points: 30000,
     move: { kind: 'patrol' },
     attack: { kind: 'spray', from: WINGS },
     uncoil: null,
@@ -3510,6 +3525,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * diagonal, vertical and horizontal in turn — is owed, and the rake is its stand-in.
    */
   gyre: {
+    points: 35000,
     /*
       ⚠️ **SET INTO THE PLACE SINCE 0332** — *"when it appears on screen I want it 'locked' into the
       background like a cog set into an image."* It closes on the lane's centre and stops there, and
@@ -3673,6 +3689,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * in its core, and its cold drawn round it.
    */
   hoarfrost: {
+    points: 40000,
     // A patrol since 0258: the cold is on the row and the hull flies a pattern through it, so the
     // fight is to be where the ship is not going rather than to get out from in front of it.
     // `patrol/wall` rather than `bob/wall`, which is the serpent's pair among the real bosses.
@@ -3760,6 +3777,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * heads rather than the attacks, so the frost is the ice's and the void the clockwork's.
    */
   hydra: {
+    points: 45000,
     move: { kind: 'wade', sink: 2.5, heave: 2, wavelength: 240, pool: 34 },
     attack: { kind: 'spray' },
     uncoil: null,
@@ -3949,6 +3967,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
    * its last fifth took twice the damage and looked exactly as the four before it.
    */
   medusa: {
+    points: 60000,
     /*
       ⚠️ **HUNG OVER THE HEART, AND THE HEART IS SET INTO THE PLACE — 0400.** *"The black heart needs to be
       set into the screen like the cog boss at the end of the 4th"*, and *"the jellyfish boss is positioned
