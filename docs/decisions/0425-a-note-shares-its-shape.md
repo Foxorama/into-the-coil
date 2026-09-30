@@ -66,6 +66,19 @@ The whole suite, every bake cold — the condition CI runs in:
 **And it is the game's own synth**: the prewarm on the title screen, the boundary bake on its deadline
 and the music room all bake through it.
 
+⚠️ **THE PLAYER FEELS IT, AND THE PROOF FOUND IT.** The first full proof of this came back with one
+probe STILL GREEN: 0169's, which shrinks `tests/menu.browser.test.ts`'s `HUD_MS` under *the measured
+4.2 s transition* to show the budget is not slack. A press finishes the music prewarm the boot did not
+have time for — 0102's *the bake happens before the press* — so the synth's cost was the press's cost:
+
+| from the press to the run's HUD, idle machine, six presses | |
+|---|---|
+| the build before this | 3.54–3.68 s |
+| this build | **1.15–1.22 s** |
+
+The probe's claim is unchanged and it was re-aimed under the new number, 0.5 s; red. `HUD_MS` keeps its
+30 s, a ceiling on a hang, with the measurement beside it.
+
 ⚠️ **The budgets are not re-sized here.** The clip guard's 420 s, which
 [0423](0423-the-pool-is-taken-out-and-a-page-boot-is-sized-under-the-suite.md) found under three times
 its worst, is now four times it; nothing measured is over. Shrinking them is a separate edit with its

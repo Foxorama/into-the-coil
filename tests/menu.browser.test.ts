@@ -66,6 +66,11 @@ const PAD_STATE = '__itcTestPad';
  * `docs/decisions/0044-an-intermittent-guard-is-measuring-the-wrong-thing.md` forbids: 30 s is seven
  * times the measured cost, it is the same shape as `open`'s 15 s over a 0.5 s boot, and if the
  * transition genuinely stops happening the test still fails in half a minute rather than hanging.
+ *
+ * ⚠️ **1.2 SECONDS SINCE 0425**, which made the synth compute a note's shape once: `press → HUD`
+ * **1.15–1.22 s** on an idle machine, where the same build before it took **3.54–3.68 s** (six presses
+ * each, 2026-09-30). The budget is left where it was — it is a ceiling on a hang, not a claim about the
+ * cost — and 0169's probe now shrinks it under the 1.2 s.
  */
 const HUD_MS = 30_000;
 
