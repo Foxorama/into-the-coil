@@ -355,6 +355,174 @@ export function inside(pass: Pass, [px, py]: Point): boolean {
   return pass.rule === 'evenodd' ? crossings % 2 === 1 : winding !== 0;
 }
 
+/**
+ * How far a point is from the nearest edge of a pass, in the pass's own pixels. Unsigned. Every edge
+ * is asked — this is the reference `edgeIndex` answers to, and it is exact by construction.
+ *
+ * ⚠️ **A BOUNDING-BOX REJECT WAS TRIED HERE AND MEASURED SLOWER** — 0318. *A point is never nearer to
+ * a segment than to that segment's own box* is exact and would skip most edges once `best` is small,
+ * and it cost a second a run: the four comparisons are not cheaper than the projection they skip, on
+ * a hull whose every edge is a fraction of a pixel long. What skips edges cheaply is not asking about
+ * them at all — `edgeIndex`, 0421.
+ */
+export function nearestEdge(pass: Pass, [px, py]: Point): number {
+  let best = Number.POSITIVE_INFINITY;
+  for (const subpath of pass.subpaths) {
+    for (let i = 0; i < subpath.length; i++) {
+      const [ax, ay] = subpath[i]!;
+      const [bx, by] = subpath[(i + 1) % subpath.length]!;
+      best = Math.min(best, segmentDistance(px, py, ax, ay, bx, by));
+    }
+  }
+  return best;
+}
+
+/** One edge's share of `nearestEdge`, written once so the index and the reference cannot differ. */
+function segmentDistance(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const lengthSq = dx * dx + dy * dy;
+  const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / lengthSq));
+  const ex = px - (ax + t * dx);
+  const ey = py - (ay + t * dy);
+  return Math.sqrt(ex * ex + ey * ey);
+}
+
+/** Exactly `inside(pass, point)` and exactly `nearestEdge(pass, point)`, asked of far fewer edges. */
+export interface EdgeIndex {
+  inside(point: Point): boolean;
+  distance(point: Point): number;
+}
+
+const INDEXES = new WeakMap<Pass, EdgeIndex>();
+
+/**
+ * A pass's edges filed in a grid, so a question about one point is asked of the edges near it.
+ *
+ * ⚠️ **EXACT, AND THAT IS THE WHOLE OF ITS CONTRACT** — `docs/decisions/0421-the-hull-is-asked-near.md`.
+ * The containment guards were asking every point about every edge: the 0149 hull guard spent 79 of its
+ * 80 s there, on hulls of 2,400 edges sampled 80,000 times each. Nothing about what they measure may
+ * move to make that cheaper, so this answers the same two questions to the same bit:
+ *
+ *   - **`inside`** casts the same ray as `inside` above. An edge can only cross the horizontal ray at
+ *     `py` if its y-range spans `py`, and every such edge is filed in `py`'s band, so the band holds
+ *     every edge the reference would count. Counts and winding are sums, and a sum does not care about
+ *     order.
+ *   - **`distance`** searches outward from the point's cell a ring at a time, with `segmentDistance`
+ *     — the reference's own arithmetic. An edge is filed in every cell its box touches, so its nearest
+ *     point to anything is in a cell it is filed in; once the best found is within a whole cell less
+ *     than the ring's reach, no unseen edge can be nearer. A minimum does not care about order either.
+ *     **The cell of slack is deliberate**: the stop compares a distance against cell arithmetic done
+ *     in floating point, and a margin of one ring puts every rounding error far out of reach for the
+ *     price of one more ring.
+ *
+ * `tests/paths.test.ts` holds both against the reference on every hull the game draws.
+ */
+export function edgeIndex(pass: Pass): EdgeIndex {
+  const known = INDEXES.get(pass);
+  if (known !== undefined) return known;
+  const ax: number[] = [];
+  const ay: number[] = [];
+  const bx: number[] = [];
+  const by: number[] = [];
+  for (const subpath of pass.subpaths) {
+    for (let i = 0; i < subpath.length; i++) {
+      const a = subpath[i]!;
+      const b = subpath[(i + 1) % subpath.length]!;
+      ax.push(a[0]);
+      ay.push(a[1]);
+      bx.push(b[0]);
+      by.push(b[1]);
+    }
+  }
+  const n = ax.length;
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (let s = 0; s < n; s++) {
+    minX = Math.min(minX, ax[s]!, bx[s]!);
+    maxX = Math.max(maxX, ax[s]!, bx[s]!);
+    minY = Math.min(minY, ay[s]!, by[s]!);
+    maxY = Math.max(maxY, ay[s]!, by[s]!);
+  }
+  const evenodd = pass.rule === 'evenodd';
+  if (n === 0) {
+    const empty: EdgeIndex = { inside: () => false, distance: () => Number.POSITIVE_INFINITY };
+    INDEXES.set(pass, empty);
+    return empty;
+  }
+  // Some sixty cells across the longer side: a few edges a cell on a curved hull, and a grid small
+  // enough that an empty ring costs nothing.
+  const cell = Math.max(1, Math.max(maxX - minX, maxY - minY) / 64);
+  const colOf = (x: number): number => Math.floor((x - minX) / cell);
+  const rowOf = (y: number): number => Math.floor((y - minY) / cell);
+  const cols = colOf(maxX) + 1;
+  const rows = rowOf(maxY) + 1;
+  const cells: number[][] = Array.from({ length: cols * rows }, () => []);
+  const bands: number[][] = Array.from({ length: rows }, () => []);
+  for (let s = 0; s < n; s++) {
+    const c0 = colOf(Math.min(ax[s]!, bx[s]!));
+    const c1 = colOf(Math.max(ax[s]!, bx[s]!));
+    const r0 = rowOf(Math.min(ay[s]!, by[s]!));
+    const r1 = rowOf(Math.max(ay[s]!, by[s]!));
+    for (let r = r0; r <= r1; r++) {
+      bands[r]!.push(s);
+      for (let c = c0; c <= c1; c++) cells[r * cols + c]!.push(s);
+    }
+  }
+  const seen = new Int32Array(n);
+  let stamp = 0;
+
+  const index: EdgeIndex = {
+    inside([px, py]) {
+      let crossings = 0;
+      let winding = 0;
+      const r = rowOf(py);
+      const band = r >= 0 && r < rows ? bands[r]! : [];
+      for (const s of band) {
+        const say = ay[s]!;
+        const sby = by[s]!;
+        if (say <= py === sby <= py) continue;
+        const sax = ax[s]!;
+        const at = sax + ((py - say) / (sby - say)) * (bx[s]! - sax);
+        if (at <= px) continue;
+        crossings++;
+        winding += sby > say ? 1 : -1;
+      }
+      return evenodd ? crossings % 2 === 1 : winding !== 0;
+    },
+    distance([px, py]) {
+      stamp++;
+      const cx = colOf(px);
+      const cy = rowOf(py);
+      let best = Number.POSITIVE_INFINITY;
+      const visit = (c: number, r: number): void => {
+        if (c < 0 || c >= cols || r < 0 || r >= rows) return;
+        for (const s of cells[r * cols + c]!) {
+          if (seen[s] === stamp) continue;
+          seen[s] = stamp;
+          best = Math.min(best, segmentDistance(px, py, ax[s]!, ay[s]!, bx[s]!, by[s]!));
+        }
+      };
+      for (let k = 0; ; k++) {
+        for (let c = cx - k; c <= cx + k; c++) {
+          visit(c, cy - k);
+          if (k > 0) visit(c, cy + k);
+        }
+        for (let r = cy - k + 1; r <= cy + k - 1; r++) {
+          visit(cx - k, r);
+          visit(cx + k, r);
+        }
+        const covered = cx - k <= 0 && cy - k <= 0 && cx + k >= cols - 1 && cy + k >= rows - 1;
+        if (covered || best <= (k - 1) * cell) return best;
+      }
+    },
+  };
+  INDEXES.set(pass, index);
+  return index;
+}
+
 /** How far `p` is from the nearest edge of `pass`, ignoring which side of it `p` is on. */
 function clearanceFrom(pass: Pass, [px, py]: Point): number {
   let best = Infinity;
