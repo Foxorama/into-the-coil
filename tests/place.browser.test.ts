@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { pastIntro } from './intro.ts';
+import { CANVAS_MS, pastIntro } from './intro.ts';
 import { placeFor } from '../src/app/music.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -84,7 +84,7 @@ describe.runIf(chromePath)('level one is drawn in its own place, not in the titl
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     const page = await context.newPage();
     await page.goto(dist);
-    await page.waitForSelector('#app canvas', { timeout: 15_000 });
+    await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     // The first tier, which is the one `scripts/shot.mjs` presses.
     await page.locator('.' + prefixFor('title') + 'action').first().click();

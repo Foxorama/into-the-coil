@@ -23,7 +23,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { pastIntro } from './intro.ts';
+import { CANVAS_MS, pastIntro } from './intro.ts';
 import { framesInARow, moved } from './frames.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
@@ -54,7 +54,7 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
   await page.goto(dist);
   // `attached`, not the default `visible`: in portrait the gate deliberately hides the canvas, so
   // waiting for it to be visible would time out on exactly the state under test.
-  await page.waitForSelector('#app canvas', { state: 'attached', timeout: 15_000 });
+  await page.waitForSelector('#app canvas', { state: 'attached', timeout: CANVAS_MS });
   /*
     ⚠️ AND THEN WAIT FOR A FRAME, because the canvas exists before anything has been drawn on it.
 
@@ -318,7 +318,7 @@ describe.runIf(chromePath)('a turn leaves nothing behind it', () => {
     });
     const page = await context.newPage();
     await page.goto(dist);
-    await page.waitForSelector('#app canvas', { state: 'attached', timeout: 15_000 });
+    await page.waitForSelector('#app canvas', { state: 'attached', timeout: CANVAS_MS });
     await start(page);
     await page.setViewportSize(PORTRAIT);
     await page.waitForFunction(() => getComputedStyle(document.querySelector('[data-itc-rotate]')!).display !== 'none', null, { timeout: 5_000 });

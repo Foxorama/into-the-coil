@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
-import { pastIntro } from './intro.ts';
+import { CANVAS_MS, pastIntro } from './intro.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
@@ -152,7 +152,7 @@ async function open(skipIntro = true): Promise<Page> {
     };
   });
   await page.goto(dist);
-  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   // The one test about the page before anybody has touched it opens on the intro and stays there: a
   // skip builds no sound (`tests/intro.ts`), but it is still somebody touching the page.
   if (skipIntro) await pastIntro(page);

@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { afterFrames } from './frames.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { pastIntro } from './intro.ts';
+import { CANVAS_MS, pastIntro } from './intro.ts';
 import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
@@ -97,7 +97,7 @@ async function open(): Promise<Page> {
     Object.defineProperty(navigator, 'getGamepads', { value: snapshot, configurable: true });
   }, PAD_STATE);
   await page.goto(dist);
-  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   /*
     ⚠️ **PAST THE INTRO BY ESCAPE, WHICH THE PAGE DOES NOT COUNT AS A HAND ON IT** — 0412. Every test
     here is about a player with nothing but a pad, and HTML excludes Escape from the keydowns that
