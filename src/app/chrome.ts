@@ -29,11 +29,11 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, type Screen, type SettingName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
-import { PICKUPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
-import { SPRITE } from '../content/sprites.ts';
-import { bakeAtlas, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
+import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
+import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
+import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
@@ -101,6 +101,27 @@ const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(ha
  * was meant to make screens safer to add.
  */
 const each = (part = ''): string => PANELLED.map((screen) => `.${prefixFor(screen).slice(0, -1)}${part}`).join(', ');
+
+/**
+ * The title key's turns — 0432: one keyframe set per number of faces a pickup has, read off the table,
+ * so a pickup given a fourth face turns through four without an edit here. Each face is up for its
+ * share of the turn and crossfades over the last few percent of it.
+ */
+function faceTurns(): string {
+  const counts = [...new Set(PICKUP_KINDS.map((kind) => PICKUPS[kind].faces.length))].filter((n) => n > 1);
+  return counts
+    .map((n) => {
+      const share = 100 / n;
+      const fade = 3;
+      return (
+        `@keyframes ${prefixFor('title')}key-face-${n} { ` +
+        `0% { opacity: 1; visibility: visible; } ${share - fade}% { opacity: 1; visibility: visible; } ` +
+        `${share}% { opacity: 0; visibility: hidden; } ${100 - fade}% { opacity: 0; visibility: hidden; } ` +
+        `100% { opacity: 1; visibility: visible; } }`
+      );
+    })
+    .join('\n');
+}
 
 /**
  * ⚠️ **EXPORTED SINCE 0210, AND IT IS A CONTRACT WITH `tests/chrome.test.ts` RATHER THAN A CONVENIENCE.**
@@ -750,8 +771,19 @@ ${each('-action-cursor')} {
   font-weight: 400;
   opacity: 0.85;
 }
-.itc-title-key-icon { display: block; width: 1.6em; height: 1.6em; }
-.itc-title-key-name { text-align: left; }
+/*
+  One row per pickup, cycling — 0432. The row is not a box of its own: its three cells sit in the
+  key's grid as the three siblings of each line did before, so the desktop's three columns and the
+  phone's column-per-pickup both read it unchanged. Each cell stacks its faces in one grid area, so it
+  is as wide as its widest face and a turn moves nothing beside it.
+*/
+.itc-title-key-row { display: contents; }
+.itc-title-key-cell { display: grid; align-items: center; }
+.itc-title-key-cell > * { grid-area: 1 / 1; }
+.itc-title-key-face { animation-timing-function: linear; animation-iteration-count: infinite; }
+${faceTurns()}
+.itc-title-key-icon { display: block; width: 2em; height: 2em; }
+.itc-title-key-name { text-align: left; font-weight: 600; }
 .itc-title-key-hint { text-align: left; opacity: 0.7; }
 /*
   ⚠️ The HUD is NOT inside a screen's overlay. Those are absolutely positioned over the whole page
@@ -797,6 +829,11 @@ ${each('-action-cursor')} {
 }
 .itc-playing-hud-shown { display: flex; }
 .itc-playing-hud-group { display: flex; gap: 0.4em; align-items: center; }
+/*
+  The counts in the score's type — 0433: its weight, its spacing and its fixed-width figures, so the
+  corner and the score read as one readout and a count going from 9 to 10 does not shove the row.
+*/
+.itc-playing-hud-group > span, .itc-playing-trigger-button > span { font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.05em; }
 .itc-playing-hud-icon { display: block; width: 1.7em; height: 1.7em; filter: drop-shadow(0 0 0.15em var(--itc-void, #000)); }
 /* The ship in reserve — 0430. A hull is long and thin where a pickup's face is round, so it is given the room a round face spends on its bubble. */
 .itc-playing-hud-ship { width: 2.2em; height: 2.2em; margin: -0.25em -0.1em; }
@@ -1086,6 +1123,8 @@ ${each('-action-cursor')} {
   .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value,
   .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { animation: none; opacity: 1; }
   .itc-title-column-rolls > .itc-title-key { animation-timing-function: steps(1, end); }
+  /* The key still turns — it is how a cycling pickup is told — but it cuts rather than fades. 0432. */
+  .itc-title-key-face { animation-timing-function: steps(1, end); }
   .itc-title-column-rolls > .itc-title-board { animation-timing-function: steps(1, end); }
   .itc-title-board-rows { animation: none; }
 }
@@ -1193,6 +1232,39 @@ ${each('-action-cursor')} {
   mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 20 24'><path d='M4 1H16L19 4V12C19 17 15 20.5 10 23C5 20.5 1 17 1 12V4Z' fill='none' stroke='black' stroke-width='2'/></svg>") center / contain no-repeat;
 }
 .itc-playing-hud-spent { background: transparent; }
+/*
+  The readout's events — 0433. A shield lost flares in the hazard gold and drops back into its socket;
+  one gained pops in from small; a life lost shakes the ship and flashes it. Short, because the
+  player's eyes are on the lane and the corner of the eye only needs to be told something moved.
+*/
+.itc-playing-hud-lost-a { animation: itc-playing-hud-lost-a 0.6s ease-out; }
+.itc-playing-hud-lost-b { animation: itc-playing-hud-lost-b 0.6s ease-out; }
+@keyframes itc-playing-hud-lost-a { 0% { transform: scale(1.5); color: var(--itc-gold, #ffd23f); } 30% { transform: translateY(0.15em) scale(1.1); } 100% { transform: none; } }
+@keyframes itc-playing-hud-lost-b { 0% { transform: scale(1.5); color: var(--itc-gold, #ffd23f); } 30% { transform: translateY(0.15em) scale(1.1); } 100% { transform: none; } }
+.itc-playing-hud-gained-a { animation: itc-playing-hud-gained-a 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.5); }
+.itc-playing-hud-gained-b { animation: itc-playing-hud-gained-b 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.5); }
+@keyframes itc-playing-hud-gained-a { from { transform: scale(0.3); filter: brightness(2); } to { transform: none; filter: none; } }
+@keyframes itc-playing-hud-gained-b { from { transform: scale(0.3); filter: brightness(2); } to { transform: none; filter: none; } }
+.itc-playing-hud-group.itc-playing-hud-lost-a { animation: itc-playing-hud-life-a 0.9s ease-out; }
+.itc-playing-hud-group.itc-playing-hud-lost-b { animation: itc-playing-hud-life-b 0.9s ease-out; }
+@keyframes itc-playing-hud-life-a {
+  0%, 30%, 60% { transform: translateX(-0.15em); color: var(--itc-lost, #ff7286); }
+  15%, 45%, 75% { transform: translateX(0.15em); }
+  100% { transform: none; }
+}
+@keyframes itc-playing-hud-life-b {
+  0%, 30%, 60% { transform: translateX(-0.15em); color: var(--itc-lost, #ff7286); }
+  15%, 45%, 75% { transform: translateX(0.15em); }
+  100% { transform: none; }
+}
+/* Still told without motion, because the event is the point: the colour flares and nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .itc-playing-hud-lost-a, .itc-playing-hud-lost-b, .itc-playing-hud-gained-a, .itc-playing-hud-gained-b,
+  .itc-playing-hud-group.itc-playing-hud-lost-a, .itc-playing-hud-group.itc-playing-hud-lost-b {
+    animation-name: itc-playing-hud-still;
+  }
+}
+@keyframes itc-playing-hud-still { from { color: var(--itc-gold, #ffd23f); } }
 /*
   ⚠️ **BELOW THE SHARED PANEL RULE, AND THAT IS THE WHOLE OF WHY IT WORKS.** The panel rule near the
   top sets margin: auto to centre every screen's content, so this has to beat it on source order —
@@ -2355,6 +2427,26 @@ export function makeChrome(
     if (ctx !== null && source !== undefined) ctx.drawImage(source, 0, 0, size, size);
     return canvas;
   };
+  /*
+    The readout's faces, bare — 0433. Baked on first ask and kept, because a stack changes face a few
+    times a run and each change would otherwise bake again. Copied out like `iconOf`'s, so the kept
+    bake is never the element in the page.
+  */
+  const glyphs = new Map<number, HTMLCanvasElement>();
+  const glyphOf = (sprite: number): HTMLCanvasElement => {
+    let source = glyphs.get(sprite);
+    const kind = SPRITE_KINDS[sprite];
+    if (source === undefined && kind !== undefined) {
+      source = bakeGlyph(kind, colours, ICON_PIXELS_PER_UNIT);
+      glyphs.set(sprite, source);
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = source?.width ?? 8;
+    canvas.height = source?.height ?? 8;
+    const ctx = canvas.getContext('2d');
+    if (ctx !== null && source !== undefined) ctx.drawImage(source, 0, 0);
+    return canvas;
+  };
 
   const panels: Partial<Record<Screen, Panel>> = {};
   const elements: HTMLElement[] = [style];
@@ -2466,27 +2558,56 @@ export function makeChrome(
       for (const pickup of PICKUP_KINDS) {
         const row = PICKUPS[pickup];
         /*
-          ⚠️ **ONE ROW PER FACE, since 0233.** A cycling pickup is several offers wearing one
-          silhouette in turn, and the key exists so a player knows a shape is good before they cross
-          a lane for it — so every face gets its glyph and its own name, read off the kind's row via
-          `faceOf`, rather than the pickup's row once. A shield and a bomb have one face and get one
-          line, exactly as before.
+          ⚠️ **ONE ROW PER PICKUP, AND IT CYCLES AS THE PICKUP DOES — 0432.** *"Condense them to match
+          the pickups in game, but cycle through like they do in game and as they cycle, show the
+          relevant info."* It was one row per FACE since 0233 — six lines for three things on the
+          field. Now each pickup is one row whose glyph, name and hint turn together through its faces
+          at the field's own `PICKUP_CYCLE_STEPS`, so the key teaches the thing the player will meet —
+          a shape that changes its offer — and gives the title back half its column.
+
+          ⚠️ **EVERY FACE STAYS IN THE PAGE, STACKED IN ONE CELL**, and the stylesheet shows one at a
+          time: the cell is as wide as its widest face, so nothing reflows as it turns. The row is
+          labelled with every face for a reader, who cannot wait for a picture to change. The cost the
+          ask names and accepts: a player who looks away misses a face until it comes round again.
         */
+        const icons = document.createElement('span');
+        icons.className = prefix + 'key-cell';
+        const names = document.createElement('span');
+        names.className = prefix + 'key-cell ' + prefix + 'key-name';
+        const hints = document.createElement('span');
+        hints.className = prefix + 'key-cell ' + prefix + 'key-hint';
+        const told: string[] = [];
+        const count = row.faces.length;
         row.faces.forEach((sprite, face) => {
           const said = faceOf(pickup, face);
+          told.push(said.label + ': ' + said.hint);
           const icon = iconOf(sprite);
           icon.className = prefix + 'key-icon';
-          // Decorative: the name beside it is the accessible text, and a screen reader announcing
-          // "canvas" before every row would be noise rather than information.
-          icon.setAttribute('aria-hidden', 'true');
           const name = document.createElement('span');
-          name.className = prefix + 'key-name';
           name.textContent = said.label;
           const hint = document.createElement('span');
-          hint.className = prefix + 'key-hint';
           hint.textContent = said.hint;
-          key.append(icon, name, hint);
+          if (count > 1) {
+            for (const turn of [icon, name, hint]) {
+              turn.classList.add(prefix + 'key-face');
+              turn.style.animationName = prefix + 'key-face-' + String(count);
+              turn.style.animationDuration = String((count * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
+              // Face `face` is up for the `face`th share of the turn, so its clock is run that far on.
+              turn.style.animationDelay = String((-((count - face) % count) * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
+            }
+          }
+          icons.appendChild(icon);
+          names.appendChild(name);
+          hints.appendChild(hint);
         });
+        // The row's label is the accessible text and says every face; the moving parts are decoration.
+        for (const cell of [icons, names, hints]) cell.setAttribute('aria-hidden', 'true');
+        const line = document.createElement('span');
+        line.className = prefix + 'key-row';
+        line.setAttribute('role', 'img');
+        line.setAttribute('aria-label', told.join('; or '));
+        line.append(icons, names, hints);
+        key.appendChild(line);
       }
       const column = document.createElement('div');
       column.className = prefix + 'column';
@@ -2703,7 +2824,8 @@ export function makeChrome(
     never a frame.
   */
   const hudIcon = (sprite: number): HTMLElement => {
-    const icon = iconOf(sprite);
+    // Bare since 0433: the bubble means *fly into me*, and a counter is not a thing on the field.
+    const icon = glyphOf(sprite);
     icon.className = 'itc-playing-hud-icon';
     icon.setAttribute('aria-hidden', 'true');
     return icon;
@@ -2912,6 +3034,22 @@ export function makeChrome(
     }
   };
 
+  /** What the readout last said, so a change can be told from a layout — 0433. −1 before the first. */
+  let shownHealth = -1;
+  let shownLives = -1;
+  /**
+   * Play a readout event on an element — 0433. Two classes that run the same animation, swapped on
+   * every kick, because re-adding the class an animation already ran under does not run it again; the
+   * score's pop is built the same way (0428), and it needs no timer and no forced layout.
+   */
+  const kick = (el: HTMLElement, event: 'lost' | 'gained'): void => {
+    const a = 'itc-playing-hud-' + event + '-a';
+    const b = 'itc-playing-hud-' + event + '-b';
+    const next = el.classList.contains(a) ? b : a;
+    el.classList.remove(a, b);
+    el.classList.add(next);
+  };
+
   return {
     elements,
     setShip(sprite: number): void {
@@ -2955,9 +3093,20 @@ export function makeChrome(
         nothing is a promise of something the tier withholds.
       */
       for (let i = 0; i < pips.length; i++) {
+        const was = !pips[i]!.classList.contains('itc-playing-hud-spent');
         pips[i]!.classList.toggle('itc-playing-hud-spent', i >= health);
         pips[i]!.style.display = i < maxHealth ? '' : 'none';
+        /*
+          ⚠️ **A SHIELD LOST OR GAINED IS AN EVENT, SO THE READOUT SAYS SO — 0433**, on 0036's rule
+          that what the model resolves the picture mentions. It toggled a class and nothing moved: a
+          shield could go while the player's eyes were on the lane and the row would never tell them.
+          Not on the first call, which is a life being laid out rather than anything happening.
+        */
+        if (shownHealth >= 0 && was !== i < health) kick(pips[i]!, was ? 'lost' : 'gained');
       }
+      if (shownLives >= 0 && lives < shownLives) kick(livesGroup, 'lost');
+      shownHealth = health;
+      shownLives = lives;
       shieldGroup.style.display = maxHealth > 0 ? '' : 'none';
       shieldGroup.setAttribute('aria-label', 'Shield ' + String(Math.max(0, health)) + ' of ' + String(maxHealth));
     },
@@ -2981,7 +3130,8 @@ export function makeChrome(
             container's own short-edge units.
           */
           band.style.bottom = String((TRIGGER_BUTTON.inset + i * (TRIGGER_BUTTON.size + TRIGGER_BUTTON.gap)) * 100) + 'cqmin';
-          const icon = iconOf(row.sprite);
+          // Bare, as the readout's are — 0433: the disc round it is already the button's shape.
+          const icon = glyphOf(row.sprite);
           icon.className = 'itc-playing-trigger-icon';
           const count = document.createElement('span');
           band.append(icon, count);

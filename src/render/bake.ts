@@ -1547,7 +1547,16 @@ function seam(
   lit in the colour it will give the ship (0239's reason for the glyph's ink, reaching the bubble).
   `destination-over` lays each under what is already there, so the first drawn is the top.
 */
+/** Whether `bubble` paints — false only inside `bakeGlyph`, which bakes the readout's bare faces. 0433. */
+let bubbled = true;
+/** Whether a bake with `bubbled` off asked for one — so `bakeGlyph` knows the face was drawn small. */
+let bubbleRefused = false;
+
 function bubble(ctx: Pen, f: Frame, palette: Palette, ink: string): void {
+  if (!bubbled) {
+    bubbleRefused = true;
+    return;
+  }
   ctx.globalCompositeOperation = 'destination-over';
   // 0.85 and not solid: it is light round the body rather than a part of it, and at 0.9 the paint
   // guard in tests/accents.test.ts would rightly read it as a mark off the hull (0149).
@@ -15079,6 +15088,40 @@ function bakeOne(
  * This file is on `tests/budget.test.ts`'s DELIBERATELY_COLD list: it allocates freely because it
  * runs at load and on rotation, never in a frame. Two `map`s here cost nothing.
  */
+/**
+ * One sprite baked WITHOUT its pickup bubble — 0433: the readout's icons.
+ *
+ * ⚠️ **THE BUBBLE IS A FIELD WORD.** On the field it says *fly into me* (0236); in the readout it said
+ * the same about a counter, beside a ship and a bomb drawn bare. The glyph is the pickup's own art,
+ * baked once more with `bubble` switched off for this one call — a second drawing of the glyph would
+ * drift from the first the day an art pass touched it.
+ */
+export function bakeGlyph(kind: SpriteKind, palette: Palette, pixelsPerUnit: number): HTMLCanvasElement {
+  bubbled = false;
+  bubbleRefused = false;
+  let baked: HTMLCanvasElement;
+  try {
+    baked = bakeOne(kind, palette, 'side', pixelsPerUnit, 'approach');
+  } finally {
+    bubbled = true;
+  }
+  if (!bubbleRefused) return baked;
+  /*
+    ⚠️ **AND A BARE GLYPH IS GROWN BACK TO THE BOX**, because the glyph is drawn at `PICKUP_GLYPH` of
+    it to leave the bubble room (0236). Left at that share, a pickup's face in the readout would be
+    three quarters the size of the bomb beside it — one row, two optical sizes.
+  */
+  const out = document.createElement('canvas');
+  out.width = baked.width;
+  out.height = baked.height;
+  const ctx = out.getContext('2d');
+  if (ctx === null) return baked;
+  const grown = baked.width / PICKUP_GLYPH;
+  const inset = (baked.width - grown) / 2;
+  ctx.drawImage(baked, inset, inset, grown, grown);
+  return out;
+}
+
 export function bakeAtlas(
   palette: Palette,
   view: SpriteView,
