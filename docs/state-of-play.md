@@ -252,6 +252,7 @@ last run's shard times before choosing.
 | **the VIPER HAS A PILOT: Venoma runs hooded for her ship, every launch surges where it is heard, the chase flies the first level's sky at its own rate, framed smaller, and every fade is to the backdrop** | [0416](decisions/0416-the-viper-has-a-pilot.md) — amends [0411](decisions/0411-the-chase-begins-at-the-port.md) and [0414](decisions/0414-the-chase-is-a-chase.md) |
 | **a PLACE IS BAKED BY ITS NAME: the sky's memo is the place, not the backdrop colour two places share — so level 1 and the intro are drawn in The Approach's own nebula and glow for the first time** | [0417](decisions/0417-a-place-is-baked-by-its-name.md) — amends [0416](decisions/0416-the-viper-has-a-pilot.md) |
 | **the HEART LETS GO: the finale after the last boss — the heart bursts, a golfer not chosen is found in the Viper and says so, the chosen one answers, and the two leave together; and the music leaves the run when the run is over** | [0418](decisions/0418-the-heart-lets-go.md) |
+| **the FINALE IS THE FIGHT GOING ON: no cut — the heart outlives the jellyfish, races and bursts where she left it, and the two ships fly off with named bubbles coming out of them; the lines are about being found** | [0426](decisions/0426-the-finale-is-the-fight-going-on.md) — amends 0418 |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -893,9 +894,10 @@ it changes the picture level 1 was the reference for**; 0417 also names the intr
 write. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
 `docs/game.md` asks for each ship to differ on an axis the player can feel.
 
-And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md)): the finale, then the
-victory screen — **owed a look at its four shots and a listen to the voices against their bubbles**,
-on the bench at `rig/bench.html?finale&pilot=…`. The lines are on each golfer's row in
+And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md), one shot since
+[0426](decisions/0426-the-finale-is-the-fight-going-on.md)): the finale, then the victory screen —
+**owed a play at speed and a listen to the voices against their moving bubbles**, on the bench at
+`rig/bench.html?finale&proof&pilot=…`, which now kills the jellyfish for real. The lines are on each golfer's row in
 `src/content/golfers.ts`. **Next on the ending is the victory piece**, which 0418 says it is not: the
 music is keyed by place from the bake to the hand-over, and a piece that is not a place is the work.
 

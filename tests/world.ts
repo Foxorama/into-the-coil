@@ -40,6 +40,7 @@ import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type World } from '../
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
+import { makeFinaleScene } from '../src/render/finale.ts';
 import { viewOf } from '../src/sim/camera.ts';
 
 /**
@@ -443,6 +444,7 @@ export function playableWorld(
     pictureSteps: null,
     intro: null,
     outro: null,
+    finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
     heartBeat: 0,
     cameraAlong: 0,

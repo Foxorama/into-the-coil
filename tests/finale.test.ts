@@ -1,41 +1,52 @@
 /**
- * The finale — `docs/decisions/0418-the-heart-lets-go.md`.
+ * The finale — `docs/decisions/0418-the-heart-lets-go.md`, reshaped by
+ * `docs/decisions/0426-the-finale-is-the-fight-going-on.md`.
  *
  * ⚠️ **THE PICTURE, IN PIXELS, ON `tests/intro.test.ts`'s TERMS.** The painter is a pure function of one
  * clock (`src/render/finale.ts`), so it is drawn into a surface that writes down every blit and asked
  * where things landed — and what the golfers say is asked in seconds, which is what a player reads in.
+ * The one thing asked of the sim is the one thing 0426 is about: that the heart is still there, where
+ * the fight had it, when the finale takes it.
  */
 
 import { describe, expect, it } from 'vitest';
+import { BOSS_DEATH_STEPS, GameFrame, advanceLevel, holdFinale } from '../src/app/frame.ts';
+import { SKY } from '../src/app/mount.ts';
+import { musicPlaceFor, placeFor } from '../src/app/music.ts';
+import { THRUST } from '../src/content/exhaust.ts';
 import {
   FINALE_BEATS,
   FINALE_CUES,
-  FINALE_FADE,
   FINALE_KINDS,
   LETTER_STEPS,
   LINE_LETTERS,
   OUTRO_STEPS,
-  SAVED_CLOSE,
-  SAVING_CLOSE,
+  SAVED_BUBBLE,
+  SAVED_MOUTH,
+  SAVING_BUBBLE,
+  SAVING_MOUTH,
+  VIPER_GROW,
   blipsAt,
-  closeAlong,
+  fighterAt,
   lettersSaid,
+  viperAt,
+  type FinaleFrom,
   type FinaleKind,
 } from '../src/content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, rescuable } from '../src/content/golfers.ts';
+import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 import { PORT_EXTENT, PORT_SPRITE, type PortKind } from '../src/content/port.ts';
 import { SPRITE } from '../src/content/sprites.ts';
-import { LEVEL_KINDS } from '../src/content/levels.ts';
-import { SKY } from '../src/app/mount.ts';
-import { musicPlaceFor, placeFor } from '../src/app/music.ts';
-import { FINALE_BASE, GAME_BASE, paintFinale } from '../src/render/finale.ts';
-import type { Surface } from '../src/render/surface.ts';
+import { FINALE_BASE, PORT_BASE, makeFinaleScene, paintFinale, type FinaleScene } from '../src/render/finale.ts';
+import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
 import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { NO_SECTIONS, playableWorld } from './world.ts';
 
 interface Blit {
   sprite: number;
   x: number;
+  y: number;
   scale: number;
   alpha: number;
 }
@@ -45,8 +56,8 @@ class RecordingSurface implements Surface {
   clear(): void {
     this.blits = [];
   }
-  blit(sprite: number, x: number, _y: number, scale: number, _turn = 0, alpha = 1): void {
-    this.blits.push({ sprite, x, scale, alpha });
+  blit(sprite: number, x: number, y: number, scale: number, _turn = 0, alpha = 1): void {
+    this.blits.push({ sprite, x, y, scale, alpha });
   }
   bolt(): void {}
 }
@@ -55,16 +66,33 @@ class RecordingSurface implements Surface {
 const WIDE = { width: Math.round(1000 * MAX_ASPECT), height: 1000 };
 const NARROW = { width: 1920, height: 1080 };
 
-function drawAt(t: number, size = NARROW): { blits: Blit[]; view: View } {
+/** Where fights can leave the heart and the fighter: the no-seat stand-in, and a spread either side of it. */
+const FROMS: readonly FinaleFrom[] = [
+  makeFinaleScene().from,
+  { heartAlong: 100, heartAcross: 44, shipAlong: 30, shipAcross: 70 },
+  { heartAlong: 190, heartAcross: 56, shipAlong: 60, shipAcross: 20 },
+];
+
+function sceneFor(from: FinaleFrom): FinaleScene {
+  const scene = makeFinaleScene();
+  scene.sky = SKY;
+  scene.throb = 0.07;
+  scene.from = from;
+  return scene;
+}
+
+function drawAt(t: number, size = NARROW, from: FinaleFrom = FROMS[0]!): { blits: Blit[]; view: View } {
   const view = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
-  paintFinale(surface, view, t, SKY);
+  paintFinale(surface, view, t, sceneFor(from));
   return { blits: surface.blits, view };
 }
 
 const own = (kind: FinaleKind): number => FINALE_BASE + FINALE_KINDS.indexOf(kind);
-const port = (kind: PortKind): number => PORT_SPRITE[kind];
-const drawn = (t: number, sprite: number, size = NARROW): Blit | undefined => drawAt(t, size).blits.find((b) => b.sprite === sprite);
+const port = (kind: PortKind): number => PORT_BASE + PORT_SPRITE[kind];
+const drawn = (t: number, sprite: number, size = NARROW, from?: FinaleFrom): Blit | undefined => drawAt(t, size, from).blits.find((b) => b.sprite === sprite);
+const FIRE = [SPRITE.burst0, SPRITE.burst1, SPRITE.burst2, SPRITE.burst3];
+const AT = new Float64Array(2);
 
 describe('the finale is the run ending, and it ends on the victory screen', () => {
   it('has no panel, steps nothing, skips, and expires into the victory screen', () => {
@@ -85,7 +113,101 @@ describe('the finale is the run ending, and it ends on the victory screen', () =
   });
 });
 
-describe('who was in the Viper — 0418', () => {
+describe('the finale goes on from the fight — 0426', () => {
+  /*
+    Played: *"it doesn't flow nicely."* The jellyfish's death cleared the heart on its first step, and the
+    finale faded up out of the backdrop on a heart staged somewhere else, with her back on it.
+  */
+  const MEDUSA_ONLY: LevelRow = {
+    waves: [],
+    pickups: [],
+    landmarks: [],
+    bossAt: 200,
+    midBoss: null,
+    sections: NO_SECTIONS,
+    boss: 'medusa',
+    theme: 'core',
+  };
+
+  it('keeps the heart where she left it, holding station, through her whole death beat — and hands it over from there', () => {
+    const { world } = playableWorld(MEDUSA_ONLY);
+    const frame = new GameFrame(world);
+    for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      frame.step();
+    }
+    expect(world.bossPool.size, 'the jellyfish never arrived').toBe(1);
+    expect(world.bossAura.size, 'the jellyfish has no heart under her').toBeGreaterThan(0);
+    const seat = (): { along: number; across: number } => ({ along: world.bossAura.at(0).along - world.cameraAlong, across: world.bossAura.at(0).across });
+    const was = seat();
+    world.bossPool.clear();
+    let cleared = false;
+    world.onCleared = (): void => {
+      cleared = true;
+    };
+    for (let i = 0; i < BOSS_DEATH_STEPS + 2 && !cleared; i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+      expect(world.bossAura.size, `the heart went with her, ${i} steps into her death`).toBe(1);
+      expect(Math.abs(seat().along - was.along), 'the heart drifted off its place in the view as she died').toBeLessThan(1e-6);
+    }
+    expect(cleared, 'her death beat never ended').toBe(true);
+    holdFinale(world);
+    expect(world.finale.from.heartAlong, 'the finale was handed a heart somewhere else').toBeCloseTo(was.along, 6);
+    expect(world.finale.from.heartAcross).toBeCloseTo(was.across, 6);
+    expect(world.finale.from.shipAlong).toBeCloseTo(world.ship.along - world.cameraAlong, 6);
+    expect(world.finale.camera).toBe(world.cameraAlong);
+    // And it is the place's, not the next one's: a new level takes it.
+    advanceLevel(world, LEVELS[LEVEL_KINDS[0]!], 0);
+    frame.step();
+    expect(world.bossAura.size, 'the heart outlived its level').toBe(0);
+  });
+
+  it('opens on the fight’s last frame: no backdrop over it, the heart and the fighter exactly where the fight had them', () => {
+    for (const size of [NARROW, WIDE]) {
+      for (const from of FROMS) {
+        const { blits, view } = drawAt(0, size, from);
+        expect(blits.some((b) => b.sprite === port('veil')), 'the finale opens out of the backdrop, which is a cut').toBe(false);
+        const heart = blits.find((b) => b.sprite === SPRITE.heart)!;
+        expect(heart, 'no heart on the finale’s first frame').toBeDefined();
+        expect(Math.hypot(heart.x - screenX(view, from.heartAlong, from.heartAcross), heart.y - screenY(view, from.heartAlong, from.heartAcross)), 'the heart jumped on the first frame').toBeLessThan(0.5);
+        expect(heart.scale / view.scale, 'the heart changed size on the first frame').toBeLessThanOrEqual(1.08);
+        const ship = blits.find((b) => b.sprite === SPRITE.ship)!;
+        expect(ship, 'no fighter on the finale’s first frame').toBeDefined();
+        expect(Math.hypot(ship.x - screenX(view, from.shipAlong, from.shipAcross), ship.y - screenY(view, from.shipAlong, from.shipAcross)), 'the fighter jumped on the first frame').toBeLessThan(0.5);
+      }
+    }
+  });
+
+  it('races the heart, sets it on fire, and bursts it — with the Viper where it was', () => {
+    expect(FIRE.some((s) => drawn(FINALE_BEATS.burst - 20, s) !== undefined), 'the heart bursts without fire breaking out of it first').toBe(true);
+    expect(drawn(FINALE_BEATS.burst - 1, SPRITE.heart), 'no heart before it bursts').toBeDefined();
+    expect(drawn(FINALE_BEATS.burst, SPRITE.heart), 'the heart outlasts its burst').toBeUndefined();
+    expect(drawn(FINALE_BEATS.burst + 10, own('shard')), 'the heart bursts into nothing').toBeDefined();
+    expect(drawn(FINALE_BEATS.burst + 10, own('ring')), 'the burst sends nothing out').toBeDefined();
+    expect(drawn(FINALE_BEATS.burst - 1, port('viper')), 'the Viper is seen before the heart gives her up').toBeUndefined();
+    const { blits, view } = drawAt(FINALE_BEATS.burst);
+    const freed = blits.find((b) => b.sprite === port('viper'));
+    const from = FROMS[0]!;
+    expect(freed, 'the Viper is not there when the heart bursts').toBeDefined();
+    expect(Math.hypot(freed!.x - screenX(view, from.heartAlong, from.heartAcross), freed!.y - screenY(view, from.heartAlong, from.heartAcross)), 'the Viper is not where the heart was').toBeLessThan(1);
+  });
+
+  it('has both ships leave the widest screen before the picture goes, and goes into the backdrop at the end', () => {
+    for (const from of FROMS) {
+      const { blits, view } = drawAt(FINALE_BEATS.fadeOut, WIDE, from);
+      const viper = blits.find((b) => b.sprite === port('viper'))!;
+      const fighter = blits.find((b) => b.sprite === SPRITE.ship)!;
+      expect(viper.x - 0.42 * PORT_EXTENT.viper * viper.scale, 'the Viper is still on the screen as the picture goes').toBeGreaterThan(WIDE.width);
+      expect(fighter.x - 0.5 * 7 * view.scale, 'the fighter is still on the screen as the picture goes').toBeGreaterThan(WIDE.width);
+    }
+    expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.sprite).toBe(port('veil'));
+    expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.alpha).toBeGreaterThan(0.99);
+  });
+});
+
+describe('who was in the Viper, and what the two of them say — 0418, 0426', () => {
   it('is any golfer but the one flying, whoever is flying, and fits every golfer the table grows', () => {
     /*
       *"the random rescued character slot needs to fit for other characters as well when we add more
@@ -98,13 +220,9 @@ describe('who was in the Viper — 0418', () => {
     }
   });
 
-  it('gives every golfer lines of their own to say either way, each short enough to be read before its shot ends', () => {
-    /*
-      In SECONDS, which is what a player reads in: a line types out at `LETTER_STEPS` a letter and must
-      then stay up at least a second and a half before its bubble goes with the shot.
-    */
-    const heldFor = (says: number, cut: number, line: string): number =>
-      (cut - FINALE_FADE - (says + line.length * LETTER_STEPS)) / STEPS_PER_SECOND;
+  it('gives every golfer lines of their own to say either way, each short enough to be read before its bubble goes', () => {
+    // In SECONDS: a line types out at `LETTER_STEPS` a letter and must then stay up a second and a half.
+    const heldFor = (bubble: { from: number; to: number }, line: string): number => (bubble.to - (bubble.from + line.length * LETTER_STEPS)) / STEPS_PER_SECOND;
     for (const kind of GOLFER_KINDS) {
       const row = GOLFERS[kind];
       expect(row.saved.length, `${row.name} has nothing to say when found`).toBeGreaterThanOrEqual(3);
@@ -113,12 +231,8 @@ describe('who was in the Viper — 0418', () => {
         expect(line.length, `${row.name}: "${line}" is longer than a bubble holds`).toBeLessThanOrEqual(LINE_LETTERS);
         expect(line.trim(), `${row.name} has an empty line`).not.toBe('');
       }
-      for (const line of row.saved) {
-        expect(heldFor(FINALE_BEATS.savedSays, FINALE_BEATS.cutSaved, line), `${row.name}: "${line}" is gone before it can be read`).toBeGreaterThanOrEqual(1.5);
-      }
-      for (const line of row.saving) {
-        expect(heldFor(FINALE_BEATS.savingSays, FINALE_BEATS.cutSaving, line), `${row.name}: "${line}" is gone before it can be read`).toBeGreaterThanOrEqual(1.5);
-      }
+      for (const line of row.saved) expect(heldFor(SAVED_BUBBLE, line), `${row.name}: "${line}" is gone before it can be read`).toBeGreaterThanOrEqual(1.5);
+      for (const line of row.saving) expect(heldFor(SAVING_BUBBLE, line), `${row.name}: "${line}" is gone before it can be read`).toBeGreaterThanOrEqual(1.5);
     }
   });
 
@@ -141,68 +255,48 @@ describe('who was in the Viper — 0418', () => {
       }
     }
   });
-});
 
-describe('the picture — 0418', () => {
-  it('melts the jellyfish off the heart, bursts the heart, and has the Viper where it was', () => {
-    const jelly = GAME_BASE + SPRITE.boss14Open;
-    const heart = GAME_BASE + SPRITE.heart;
-    expect(drawn(FINALE_BEATS.melt, jelly), 'no jellyfish on the heart as the finale opens').toBeDefined();
-    const going = drawn((FINALE_BEATS.melt + FINALE_BEATS.melted) / 2, jelly)!;
-    expect(going.alpha, 'the jellyfish is not going as she melts').toBeLessThan(0.9);
-    expect(drawn(FINALE_BEATS.melted + 1, jelly), 'the jellyfish outlasts her melt').toBeUndefined();
-    expect(drawn(FINALE_BEATS.melt + 30, own('drip')), 'she melts without a drop').toBeDefined();
-    expect(drawn(FINALE_BEATS.burst - 1, heart), 'no heart before it bursts').toBeDefined();
-    expect(drawn(FINALE_BEATS.burst, heart), 'the heart outlasts its burst').toBeUndefined();
-    expect(drawn(FINALE_BEATS.burst + 10, own('shard')), 'the heart bursts into nothing').toBeDefined();
-    expect(drawn(FINALE_BEATS.burst - 1, port('viper')), 'the Viper is seen before the heart gives her up').toBeUndefined();
-    const freed = drawn(FINALE_BEATS.burst, port('viper'));
-    const was = drawn(FINALE_BEATS.burst - 1, heart);
-    expect(freed, 'the Viper is not there when the heart bursts').toBeDefined();
-    expect(Math.abs(freed!.x - was!.x), 'the Viper is not where the heart was').toBeLessThan(1);
-  });
-
-  it('shows each cockpit close, with its hull running off its own edge of the screen on every screen', () => {
+  it('says each line from its own ship, on the screen, with the other ship clear of the bubble — in pixels', () => {
     /*
-      In pixels: a close-up's box is `FINALE_EXTENT` wide, and its hull reaches the box's outer side.
-      The first photograph had the fighter's placed for the narrowest screen and stopping in mid-air.
+      *"the speech bubbles come out of the ships as they fly away."* Every step a bubble is up: the ship it
+      comes out of is on the screen and within a hull's length of its tail, and the other ship is on the
+      far side of the tail from the way the bubble hangs. ⚠️ The first photograph hung both bubbles above,
+      and the fighter's covered the Viper for the whole of its line.
     */
     for (const size of [NARROW, WIDE]) {
-      const saved = drawn(FINALE_BEATS.savedSays, own('savedClose'), size);
-      const saving = drawn(FINALE_BEATS.savingSays, own('savingClose'), size);
-      expect(saved, 'no close-up of the Viper while its golfer speaks').toBeDefined();
-      expect(saving, 'no close-up of the fighter while its golfer speaks').toBeDefined();
-      const half = (b: Blit): number => (b.scale * 124) / 2;
-      expect(saved!.x - half(saved!), `the Viper's hull stops short of the screen's near side at ${size.width}px`).toBeLessThanOrEqual(0);
-      expect(saving!.x + half(saving!), `the fighter's hull stops short of the screen's far side at ${size.width}px`).toBeGreaterThanOrEqual(size.width);
-      const { view } = drawAt(0, size);
-      expect(closeAlong(view.alongSpan, true, SAVING_CLOSE.edge)).toBeGreaterThan(closeAlong(view.alongSpan, false, SAVED_CLOSE.edge));
-    }
-  });
-
-  it('has both ships leave the widest screen before the picture goes', () => {
-    const { blits } = drawAt(FINALE_BEATS.fadeOut, WIDE);
-    for (const kind of ['viper', 'blue'] as const) {
-      const ship = blits.find((b) => b.sprite === port(kind));
-      if (ship !== undefined) {
-        const tail = ship.x - 0.42 * PORT_EXTENT[kind] * ship.scale;
-        expect(tail, `${kind} is still on the screen as the picture goes`).toBeGreaterThan(WIDE.width);
+      for (const from of FROMS) {
+        for (const [bubble, mouth, speaker] of [
+          [SAVED_BUBBLE, SAVED_MOUTH, 'viper'],
+          [SAVING_BUBBLE, SAVING_MOUTH, 'fighter'],
+        ] as const) {
+          for (let t = bubble.from; t < bubble.to; t += 6) {
+            const { blits, view } = drawAt(t, size, from);
+            const viper = blits.find((b) => b.sprite === port('viper'))!;
+            const fighter = blits.find((b) => b.sprite === SPRITE.ship)!;
+            const own = speaker === 'viper' ? viper : fighter;
+            const other = speaker === 'viper' ? fighter : viper;
+            (speaker === 'viper' ? viperAt : fighterAt)(t, from, AT);
+            const x = screenX(view, AT[0]! + mouth.ahead, AT[1]! + mouth.across);
+            const y = screenY(view, AT[0]! + mouth.ahead, AT[1]! + mouth.across);
+            const where = `${speaker} at step ${t}, ${size.width}px, heart at ${from.heartAlong}`;
+            expect(own.x >= 0 && own.x <= size.width && own.y >= 0 && own.y <= size.height, `the ${where} is speaking off the screen`).toBe(true);
+            expect(Math.hypot(own.x - x, own.y - y) / view.scale, `the bubble of the ${where} is not on its ship`).toBeLessThan(8);
+            const otherHalf = speaker === 'viper' ? 5 : 0.42 * PORT_EXTENT.viper * VIPER_GROW;
+            if (mouth.hang === 'above') expect(other.y - otherHalf * view.scale, `the bubble of the ${where} hangs over the other ship`).toBeGreaterThan(y);
+            else expect(other.y + otherHalf * view.scale, `the bubble of the ${where} hangs over the other ship`).toBeLessThan(y);
+          }
+        }
       }
     }
-  });
-
-  it('opens out of the backdrop and ends in it', () => {
-    expect(drawAt(0).blits.at(-1)!.sprite).toBe(port('veil'));
-    expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.alpha).toBeGreaterThan(0.99);
-    expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.sprite).toBe(port('veil'));
   });
 });
 
 describe('the finale is heard where it is seen — 0418', () => {
   const TWINS: Record<(typeof FINALE_CUES)[number]['cue'], readonly number[]> = {
-    bossDown: [own('shard'), port('flash')],
+    kill: FIRE,
+    bossDown: [own('shard'), own('ring'), port('flash')],
     ignite: [port('viperIdle')],
-    launch: [port('viperSurge'), port('blueSurge')],
+    launch: [port('viperSurge'), ...THRUST.burn.frames.level],
   };
 
   it('plays every cue on a step that draws its twin', () => {

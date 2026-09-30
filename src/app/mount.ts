@@ -86,8 +86,9 @@ import {
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
 import { INTRO_CUES, SPLASH_STEPS } from '../content/port.ts';
-import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, rescuable, type GolferKind } from '../content/golfers.ts';
-import { FINALE_BEATS, FINALE_CUES, FINALE_FADE, SAVED_CLOSE, SAVING_CLOSE, blipsAt, closeAlong, lettersSaid } from '../content/finale.ts';
+import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
+import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
+import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
@@ -99,6 +100,7 @@ import {
   detonateArsenal,
   landmarksFor,
   canThrow,
+  holdFinale,
   hushed,
   launchSpecial,
   respawn,
@@ -894,10 +896,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const showPort = (): void => {
     if (port !== null && world.intro !== null) surface.setAtlas(withTheGame(port, atlas));
-    // And the finale, on the same terms: the port's pieces and its own, then the game's — 0418.
-    if (finale !== null && world.outro !== null) surface.setAtlas(withTheGame(finale, atlas));
+    /*
+      And the finale — 0418 — but the GAME's pieces first since 0426: it paints the fight's own scene
+      with `paintScene`, which blits by the game's indices, and the port's and its own come after.
+    */
+    if (finale !== null && world.outro !== null) surface.setAtlas(withTheGame(atlas, finale));
   };
-  // The finale's atlas while it is up, less the game's — 0418; baked by `applyScreen`.
+  // The finale's atlas while it is up, less the game's: the port's pieces, then its own — 0418; baked by `applyScreen`.
   let finale: Atlas | null = null;
   /*
     ⚠️ **WHO WAS IN THE VIPER, AND WHAT THE TWO OF THEM SAY, IS DRAWN ONCE WHEN THE FINALE STARTS** —
@@ -1041,6 +1046,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pictureSteps: null,
     intro: null,
     outro: null,
+    finale: makeFinaleScene(),
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
     heartBeat: 0,
     cameraAlong: 0,
@@ -1309,7 +1315,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       savedLine = pick.pick(GOLFERS[finaleSaved].saved);
       savingLine = pick.pick(GOLFERS[chosen].saving);
       const resolution = view.scale * dpr;
-      finale = withTheGame(bakePort(colours, resolution, GOLFERS[chosen]), bakeFinale(colours, resolution, GOLFERS[finaleSaved], GOLFERS[chosen]));
+      finale = withTheGame(bakePort(colours, resolution, GOLFERS[chosen]), bakeFinale(resolution));
+      // And it goes on from the fight's last frame — 0426: nothing has stepped since the death beat ended.
+      holdFinale(world);
       world.outro = 0;
       finaleCueNext = 0;
       // Always skippable: the game behind it loaded long ago.
@@ -1318,7 +1326,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (world.outro !== null) {
       world.outro = null;
       finale = null;
-      chrome.setBubble(null, 0, 0, 0, 'left');
+      chrome.setBubble(null, 0, 0, 0, 'above');
       surface.setAtlas(atlas);
     }
     // The splash counts from when it appears — 0415.
@@ -2783,13 +2791,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   /**
    * One step of a golfer saying `line`, begun at `from`, from the mouth at (`along`, `across`) — 0418:
-   * the bubble placed there in the canvas's pixels, the letters said by now, and a blip in their voice
-   * on each syllable's first letter.
+   * the bubble placed there in the canvas's pixels under their name (0426), the letters said by now, and
+   * a blip in their voice on each syllable's first letter.
    */
-  const speak = (line: string, t: number, from: number, along: number, across: number, tail: 'left' | 'right', voice: number): void => {
-    chrome.setBubble(line, lettersSaid(t, from), screenX(view, along, across), screenY(view, along, across), tail);
-    if (blipsAt(line, t, from) && audioOut.ready()) speaker.play('talk', across, voice);
+  const speak = (line: string, t: number, from: number, along: number, across: number, hang: 'above' | 'below', golfer: GolferRow): void => {
+    chrome.setBubble(line, lettersSaid(t, from), screenX(view, along, across), screenY(view, along, across), hang, golfer.name, golfer.cap);
+    if (blipsAt(line, t, from) && audioOut.ready()) speaker.play('talk', across, golfer.voice);
   };
+  // Where the ship speaking is this step, in the view — 0426; written, never allocated.
+  const SPEAKER_AT = new Float64Array(2);
   /** Whether a key may skip now: the intro once the game behind it has loaded, any other that skips at once. */
   const skipsNow = (): boolean => SCREENS[state.screen.current].skips && (state.screen.current !== 'intro' || introReady);
   const introKey = (e: KeyboardEvent): void => {
@@ -2988,17 +2998,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         finaleCueNext++;
       }
       /*
-        Each golfer speaks in their own shot, and the bubble goes before the shot fades — the found one
-        first, beside the Viper's canopy, then the one who came for them, beside the fighter's.
+        Each golfer speaks from their own ship as the two fly — 0426: *"the speech bubbles come out of
+        the ships as they fly away."* The found one first, from the Viper, then the one who came for
+        them, from the fighter; each bubble rides its ship, placed off the same functions it is drawn by.
       */
-      if (t >= FINALE_BEATS.savedSays && t < FINALE_BEATS.cutSaved - FINALE_FADE) {
-        const along = closeAlong(view.alongSpan, false, SAVED_CLOSE.mouth);
-        speak(savedLine, t, FINALE_BEATS.savedSays, along, SAVED_CLOSE.mouthAcross, 'left', GOLFERS[finaleSaved].voice);
-      } else if (t >= FINALE_BEATS.savingSays && t < FINALE_BEATS.cutSaving - FINALE_FADE) {
-        const along = closeAlong(view.alongSpan, true, SAVING_CLOSE.mouth);
-        speak(savingLine, t, FINALE_BEATS.savingSays, along, SAVING_CLOSE.mouthAcross, 'right', GOLFERS[state.settings.pilot].voice);
+      if (t >= SAVED_BUBBLE.from && t < SAVED_BUBBLE.to) {
+        viperAt(t, world.finale.from, SPEAKER_AT);
+        speak(savedLine, t, SAVED_BUBBLE.from, SPEAKER_AT[0]! + SAVED_MOUTH.ahead, SPEAKER_AT[1]! + SAVED_MOUTH.across, SAVED_MOUTH.hang, GOLFERS[finaleSaved]);
+      } else if (t >= SAVING_BUBBLE.from && t < SAVING_BUBBLE.to) {
+        fighterAt(t, world.finale.from, SPEAKER_AT);
+        speak(savingLine, t, SAVING_BUBBLE.from, SPEAKER_AT[0]! + SAVING_MOUTH.ahead, SPEAKER_AT[1]! + SAVING_MOUTH.across, SAVING_MOUTH.hang, GOLFERS[state.settings.pilot]);
       } else {
-        chrome.setBubble(null, 0, 0, 0, 'left');
+        chrome.setBubble(null, 0, 0, 0, 'above');
       }
     }
     if (timeoutLeft <= 0) return;

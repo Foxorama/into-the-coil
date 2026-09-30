@@ -59,11 +59,16 @@ export interface GolferRow extends RunnerRow {
   voice: number;
   /**
    * What they might say when they are the one found in the Viper — 0418, *"a speech bubble voice line
-   * about being saved"*. One is picked when the finale starts. In their own voice: the predecessor's
-   * lore for them, read for this.
+   * about being saved"*. One is picked when the finale starts.
+   *
+   * ⚠️ **ABOUT BEING FOUND FIRST, AND WHO THEY ARE SECOND — 0426.** The first set was the predecessor's
+   * lore — a 439-yard carry, a hook into Gwangalli harbour — and *"only works if you played the first
+   * game a lot."* Each line has to land for a player who has never heard of the golf: it says *you
+   * came, I'm out, thank you*, in a voice that is theirs. Any `saved` line may be answered by any
+   * `saving` line of any golfer, so neither may answer something only one line says.
    */
   saved: readonly string[];
-  /** And what they might say when they are the one who came for them — *"relatable to their character"*. */
+  /** And what they might say when they are the one who came for them — *"relatable to their character"*, on the same terms. */
   saving: readonly string[];
 }
 
@@ -90,18 +95,18 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     // Reads wind off kites over the Ngong Hills, a feather in her cap; a controlled fade on every shot.
     voice: 1.14,
     saved: [
-      'I felt the wind change in here. I knew it would be you.',
-      'My feather’s still in my cap. So it’s a good day after all.',
+      'You found me! I felt the wind change, and I hoped it was you.',
+      'I was starting to think nobody was coming. Thank you.',
+      'Open sky! I never thought I’d be so glad to see it.',
       'I counted every beat of that thing. Thank you for making it stop.',
-      'Remind me never to play a course that has a pulse again.',
-      'You came all this way? Tell me you aimed a little left.',
+      'You came all this way for me? I won’t forget it.',
     ],
     saving: [
-      'Aimed a touch left, let it drift in. Same shape as always.',
-      'Kept my line. That’s all it ever takes.',
-      'The wind was with us. My feather says so.',
-      'Tidy. Now let’s go home before it gets messy.',
-      'Predictable, they call me. You’re welcome.',
+      'Found you. Stay on my wing and I’ll take us home.',
+      'Nobody gets left behind. Not while I’m flying.',
+      'The wind brought me right to you. Let’s go.',
+      'You’re safe now. Breathe, and follow my line.',
+      'Told you I’d find you. Now let’s get out of here.',
     ],
   },
   woo: {
@@ -118,18 +123,18 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     // Names a club by the sound of the strike, blindfold; striped irons, and a hook into Gwangalli harbour.
     voice: 1.03,
     saved: [
-      'I heard that strike from inside the heart. Pure. It had to be you.',
-      'Still in one piece. Better than my tee shots at Gwangalli.',
-      'That heart kept terrible tempo. Thank you for ending it.',
-      'I couldn’t see a thing in there. Good thing I practise blind.',
-      'Next time I get swallowed, you pick the club.',
+      'I heard your guns through the walls. I knew someone had come.',
+      'It was so dark in there. Thank you for finding me.',
+      'Out! I thought I’d hear that heartbeat forever.',
+      'You came in after me? I don’t know what to say. Thank you.',
+      'Take me somewhere quiet. That thing never stopped beating.',
     ],
     saving: [
-      'Straight at the pin. No hook this time.',
-      'I heard it crack before I saw it. Sweet spot.',
-      'Irons don’t lie. Neither do these guns.',
-      'That’s why I practise with my eyes closed.',
-      'Pin high. Let’s get out of here.',
+      'I heard you in there, every beat. I wasn’t leaving without you.',
+      'Found you. Stay close, and listen for my engines.',
+      'Quiet now. It’s over. Let’s go home.',
+      'You’re free. Keep your eyes on me and fly.',
+      'I followed the sound all the way here. Worth it.',
     ],
   },
   larry: {
@@ -146,18 +151,18 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     // Three long-drive titles, a dented driver on the mantel, two kids and a kelpie, and a road train.
     voice: 0.8,
     saved: [
-      'Mate! Thought I’d be stuck in here longer than a Perth summer.',
-      'I owe you a cold one. Maybe the whole esky.',
-      'Tell the kids, and the dog, I’m coming home.',
-      'Big hitter like me needing a rescue? Don’t tell anyone.',
-      'That was a longer carry than my 439, and I’m not even jealous.',
+      'Mate! You came for me! Thought I was a goner in there.',
+      'Get me home to the kids and the dog. I owe you a cold one.',
+      'Out at last! First round’s on me. Every round, actually.',
+      'You flew all the way in here for me? You’re a legend.',
+      'Big fella like me needing a rescue? Don’t tell anyone.',
     ],
     saving: [
-      'Wasn’t sure where that last one would land. Worked out, though.',
-      'Went at it with the big stick. Bit of spray. Job done.',
-      'That’s going on the mantelpiece, next to the driver.',
-      'Longest carry of my life, that. Let’s go home.',
-      'No road trains harmed this time. Beauty.',
+      'Gotcha, mate! Hang on, we’re going home.',
+      'Nobody gets left out here. Not on my watch.',
+      'There you are! Right, stick close and give it everything.',
+      'Told the kids I’d bring you back. Can’t break a promise.',
+      'Took the long way round, but I got here. Let’s go.',
     ],
   },
   bo: {
@@ -174,18 +179,18 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     // Spins it back on a string; roasts coffee named for its spin rate; once lost a playoff to backspin.
     voice: 0.95,
     saved: [
-      'You came back for me. I’m naming my next roast after you.',
-      'I thought I’d spun out for good this time.',
-      'It’s complicated. But thank you. Really.',
-      'That heart had more spin on it than my wedges ever did.',
-      'I haven’t had coffee in days. Please tell me you packed some.',
+      'You came back for me. I’m naming my next coffee roast after you.',
+      'I thought I’d be stuck in there forever. Thank you. Really.',
+      'Free! Somebody please tell me there’s coffee back home.',
+      'I heard someone fighting out there. I hoped it was you.',
+      'You found me. I don’t even know how to thank you.',
     ],
     saving: [
-      'Landed it soft and it stopped dead. Right where I wanted.',
-      'Zipped it back on a string. Told you I could.',
-      'Call that one a ten-thousand-RPM finish.',
-      'Bit and held. And nobody spun back into the water.',
-      'Checked up nicely, didn’t it?',
+      'Found you. Easy now, I’ve got you.',
+      'Hey. You’re safe. Let’s go get a coffee.',
+      'I wasn’t leaving without you. Not a chance.',
+      'Hold on to my wing. We’re going home.',
+      'All that way, and worth every second. Let’s go.',
     ],
   },
 };

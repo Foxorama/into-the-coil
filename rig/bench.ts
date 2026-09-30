@@ -24,7 +24,7 @@
  */
 
 import { mount } from '../src/app/mount.ts';
-import { advanceLevel } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, advanceLevel } from '../src/app/frame.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
@@ -190,9 +190,14 @@ if (crossTo !== null) {
   ── THE FINALE, FROM THE QUERY — 0418 ───────────────────────────────────────────────────────────
 
   `?finale` plays what follows the last boss; `&pilot=larry` (any of `GOLFER_KINDS`) flies it as that
-  golfer, so each of them can be heard answering. On `?cross=`'s terms exactly: the last place with its
-  boss beaten, every level cleared, and the level break shown — which the reducer's own agreement turns
-  into the finale, as it does when the boss really dies. Without it the finale is seven boss fights away.
+  golfer, so each of them can be heard answering. Without it the finale is seven boss fights away.
+
+  ⚠️ **THE LAST BOSS REALLY DIES, SINCE 0426.** The finale goes on from the fight's last frame — the
+  heart where the jellyfish left it, the ship where it was — so a bench that dispatched its way past the
+  fight photographed a finale with nothing to go on from. Now the six places before it are cleared by
+  `levelCleared`, the camera is stood short of the jellyfish's arrival, and once she has settled the
+  health scrub is put to one in a hundred: the parked ship's own fire finishes her, and her death beat and the reducer's
+  own agreement bring the finale up exactly as they do in play. Add `&proof` to keep the ship parked.
 */
 if (query.has('finale')) {
   const last = LEVEL_KINDS[LEVEL_KINDS.length - 1]!;
@@ -200,10 +205,15 @@ if (query.has('finale')) {
   if (pilot !== null && (GOLFER_KINDS as readonly string[]).includes(pilot)) {
     dispatch({ slice: 'settings', type: 'pilot', pilot: pilot as GolferKind });
   }
-  goTo(last, LEVELS[last].bossAt + 1);
-  world.bossBeaten = true;
-  for (let i = 0; i < LEVEL_KINDS.length; i++) dispatch({ slice: 'run', type: 'levelCleared' });
-  dispatch({ slice: 'screen', type: 'show', screen: 'cleared' });
+  for (let i = 0; i < LEVEL_KINDS.length - 1; i++) dispatch({ slice: 'run', type: 'levelCleared' });
+  goTo(last, Math.max(0, LEVELS[last].bossAt - 30));
+  // Where a ship starts, behind where she settles, so its own fire meets her — a jump leaves it wherever it was.
+  world.ship.along = world.cameraAlong + SHIP_START_ALONG;
+  world.ship.prevAlong = world.ship.along;
+  // Once she has come in and settled on the heart — she dies where she fights, not on the way in.
+  setTimeout(() => {
+    bossHp.value = '1';
+  }, 9000);
 }
 
 /*
