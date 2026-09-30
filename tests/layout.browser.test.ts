@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { pastIntro } from './intro.ts';
+import { CANVAS_MS, pastIntro } from './intro.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 // 0212: the music room's readout is the one part of a screen that appears after the screen does.
 import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
@@ -71,7 +71,7 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   const page = await context.newPage();
   await page.goto(dist);
-  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   await pastIntro(page);
   return page;
 }

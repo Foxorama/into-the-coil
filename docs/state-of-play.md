@@ -99,12 +99,12 @@ proof's baseline is the suite's own sealed run) and
 [0420](decisions/0420-the-ci-is-sharded-and-joined.md) (suite and probes dealt across runner jobs,
 joined by the required `test` job); the run time is whatever `gh run list` says.
 [0421](decisions/0421-the-hull-is-asked-near.md) made the 0149 hull guard cheap without measuring
-less, and [0422](decisions/0422-a-place-is-baked-on-every-core.md) bakes the music on every core.
-**Next toward five: the longest single file in a suite shard**, because a shard runs whole files — on
-the development box after 0422 that is `tests/sound.test.ts` (its boundary-bake guard), then the long
-browser suites. Each is measured against what the one before it leaves, so read the last run's shard
-times before choosing; `tests/arc.ts` and `tests/pace.ts` still bake one layer at a time, and
-`bakeInPool` is what they would ask if either is ever the pole.
+less. [0422](decisions/0422-a-place-is-baked-on-every-core.md) baked the music in a thread pool inside
+the tests, and [0423](decisions/0423-the-pool-is-taken-out-and-a-page-boot-is-sized-under-the-suite.md)
+took it back out — read 0423 before adding threads to anything the suite runs — and sized the page-boot
+waits under the suite. **Next: each bake done once for a source tree and read by every file**, which
+the user chose over putting the pool back (0423 says why); then the longest file in a suite shard,
+`tests/sound.test.ts`, then the long browser suites. Read the last run's shard times before choosing.
 
 ---
 

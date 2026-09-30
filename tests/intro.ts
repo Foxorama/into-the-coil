@@ -31,8 +31,24 @@ import { afterFrames } from './frames.ts';
  * 1.1–4.1 s while the whole suite ran** (ten loads). Three times the worst. It was 50 s against 0412's
  * 6.2 s walk; a slower load now is a prewarm back on the page's own thread, and a player who waits
  * that long for a Skip has been told the game is not ready.
+ *
+ * ⚠️ **RE-SIZED BY 0423, BECAUSE THE LOAD GREW AND SO DID THE SUITE BESIDE IT.** Measured 2026-09-30
+ * from the canvas to the golfers, the screen that now waits for the load (0415): **2.2 s alone**, and
+ * **7.5 s and 13.7 s at worst in two whole-suite runs** (76 loads, medians 3.0 and 3.9 s). Three times
+ * the worst. The regression it used to double as — a prewarm back on the page's own thread — has its
+ * own guard that counts what is posted to the bake pool, and does not depend on a clock.
  */
-export const INTRO_READY_MS = 12_500;
+export const INTRO_READY_MS = 42_000;
+
+/**
+ * How long a page may take from `goto` to its canvas — every browser suite's first wait.
+ *
+ * ⚠️ **ONE NUMBER, AND IT WAS TEN LITERALS** — 0423. Every suite spelled `15_000` for the same
+ * quantity, none beside a measurement. Measured 2026-09-30: **0.44 s alone, and 4.3 s and 8.2 s at
+ * worst in two whole-suite runs** (76 loads, medians 0.73 and 0.90 s). Three times the worst, per
+ * `docs/decisions/0245-a-budget-is-sized-under-load.md`.
+ */
+export const CANVAS_MS = 25_000;
 
 export async function pastIntro(page: Page): Promise<void> {
   await page.keyboard.press('Escape');

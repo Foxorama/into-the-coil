@@ -48,7 +48,6 @@ import {
 import { THEMES, auraCeilingOf, mixOf, revoicedBy, rungIn, rungOf, type ThemeKind } from '../src/content/themes.ts';
 import { compressBuffer } from './compress.ts';
 import { loudnessOf } from './loudness.ts';
-import { bakeInPool } from './bakes.ts';
 
 /** Which layers the aura scales, so a fight is measured at the loudness a fight reaches. */
 const FOLLOWS_THE_BOSS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
@@ -63,36 +62,14 @@ const cache = new Map<string, Float32Array>();
  * because a place re-voices nearly everything.
  */
 function layerOf(theme: ThemeKind, layer: MusicLayer, rate: number): Float32Array {
-  const { key, place } = slotOf(theme, layer, rate);
+  const own = revoicedBy(theme).includes(layer);
+  const key = `${own ? theme : ''}/${layer}@${rate}`;
   let buffer = cache.get(key);
   if (buffer === undefined) {
-    buffer = bakeLayer(layer, rate, place);
+    buffer = bakeLayer(layer, rate, own ? theme : undefined);
     cache.set(key, buffer);
   }
   return buffer;
-}
-
-/** Which bake a (place, layer) reads, and under what key — the one rule `layerOf` and the prime share. */
-function slotOf(theme: ThemeKind, layer: MusicLayer, rate: number): { key: string; place: ThemeKind | undefined } {
-  const own = revoicedBy(theme).includes(layer);
-  return { key: `${own ? theme : ''}/${layer}@${rate}`, place: own ? theme : undefined };
-}
-
-/**
- * Every layer `driveAt` will read for these places, baked on every core at once — 0422. Only what the
- * cache is missing is asked, so it costs nothing to call before a loop that would have baked the same
- * layers one at a time.
- */
-export function primeDrive(themes: readonly ThemeKind[], rate = SAMPLE_RATE): void {
-  const missing = new Map<string, { layer: MusicLayer; theme: ThemeKind | undefined }>();
-  for (const theme of themes) {
-    for (const layer of MUSIC_LAYERS) {
-      const { key, place } = slotOf(theme, layer, rate);
-      if (!cache.has(key)) missing.set(key, { layer, theme: place });
-    }
-  }
-  const keys = [...missing.keys()];
-  bakeInPool(rate, [...missing.values()]).forEach((buffer, i) => cache.set(keys[i]!, buffer));
 }
 
 export interface DriveAt {

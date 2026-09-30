@@ -18,7 +18,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { INTRO_READY_MS } from './intro.ts';
+import { CANVAS_MS, INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
@@ -124,7 +124,7 @@ async function open(): Promise<Page> {
     };
   });
   await page.goto(dist);
-  await page.waitForSelector('#app canvas', { timeout: 15_000 });
+  await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
   return page;
 }
 
