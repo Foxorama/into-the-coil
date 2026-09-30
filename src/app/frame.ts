@@ -84,7 +84,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS, SHIELD_MARK, fullHealthFor, hullFor, openingHealthFor, shieldsOf } from '../content/ships.ts';
+import { INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
@@ -748,25 +748,17 @@ const DEATH_STEPS = 48;
 const DEATH_PULSE = 8;
 
 /**
- * How far from the ship's centre a shield mark orbits, in world units.
- *
- * The ship is 7 units across, so this puts the shell clear of the hull with a visible gap — close
- * enough to read as *worn* rather than as a formation flying alongside.
- */
-const SHIELD_ORBIT = 5.6;
-
-/**
- * How fast the shell turns, in radians per world unit the CAMERA travels.
+ * How far the camera travels between one frame of the shell's shimmer and the next, in world units.
  *
  * ⚠️ **A function of the camera and not of a step count, for the reason `src/content/enemies.ts`
- * gives about the weave**: a shape in the world can be authored against and a wobble in time cannot.
- * It also means the shell is stationary on screen when the game is not scrolling, which is what
- * everything else the player watches does.
- *
- * At the scroll rate this is a turn every eight seconds or so — slow enough that it never competes
- * with the lane for attention, fast enough that a mark hidden behind the hull comes back out.
+ * gives about the weave** — and the reason the rings' spin was one before 0430 stopped the shell
+ * turning: a shape in the world can be authored against and a wobble in time cannot, and the shell
+ * stands still on screen when the game is not scrolling, which is what everything else the player
+ * watches does. At the scroll rate this is a frame about every seventh of a second, so the light runs
+ * through the lattice a couple of times a second — alive, and never quick enough to pull the eye off
+ * the lane.
  */
-const SHIELD_SPIN = 0.02;
+const SHIELD_SHIMMER = 6;
 
 /**
  * Where the ship sits in its box, in world units ahead of the camera's trailing edge.
@@ -4288,24 +4280,29 @@ function stepShields(w: World): void {
     reset(orb, w.ship.along, w.ship.across, SHIELD_MARK);
   }
   /*
-    Placed evenly about the ship, turning with the camera.
+    Stood at the places `SHIELD_LAYOUT` gives the CURRENT count — 0430.
 
-    ⚠️ **Evenly about the CURRENT count, so three marks are a triangle and two are opposite each
-    other.** Fixing each mark to a slot of three would leave one shield sitting alone at an arbitrary
-    angle, which reads as a piece having fallen off rather than as a shell.
+    ⚠️ **Evenly about the current count, so three plates are a shell and two are fore and aft.**
+    Fixing each plate to a slot of three would leave one shield alone at an arbitrary angle, which
+    reads as a piece having fallen off rather than as a shell. The slot released on a hit is the last,
+    and the layout puts the last one furthest back, so the fore plate is the one that outlives the rest.
   */
   const count = w.shieldOrbs.size;
   if (count === 0) return;
-  const base = w.cameraAlong * SHIELD_SPIN;
-  const step = TAU / count;
+  const layout = SHIELD_LAYOUT[count] ?? SHIELD_LAYOUT[SHIELD_LAYOUT.length - 1]!;
+  const shimmer = Math.floor(w.cameraAlong / SHIELD_SHIMMER) % 3;
   for (let i = 0; i < count; i++) {
     const orb = w.shieldOrbs.at(i);
-    const angle = base + step * i;
+    const place = SHIELD_PLACES[layout[i] ?? 0]!;
+    const sprite = place.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];
+    orb.sprite = sprite;
+    orb.spriteBase = sprite;
+    orb.spriteHit = sprite;
     // Carried by hand, because nothing else steps this pool — and the renderer interpolates from it.
     orb.prevAlong = orb.along;
     orb.prevAcross = orb.across;
-    orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
-    orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
+    orb.along = w.ship.along + Math.cos(place.angle) * SHIELD_ORBIT;
+    orb.across = w.ship.across + Math.sin(place.angle) * SHIELD_ORBIT;
   }
 }
 
@@ -6530,6 +6527,20 @@ function keepInside(corridor: Corridor | null, e: Entity): void {
 }
 
 /**
+ * How much bigger a pickup is drawn at the top of its breath — `docs/decisions/0431-a-pickup-glows-in-what-it-offers.md`.
+ *
+ * ⚠️ **A SHARE OF ITS SIZE, AND IT ONLY EVER GROWS.** At rest a pickup is exactly the size its hurtbox
+ * was sized against (0035), so the breath never draws it SMALLER than what the player can touch; at
+ * the top it is 7% over, which `COLLECT_REACH`'s 1.8 swallows many times — the picture never promises
+ * a touch the collection refuses. No enemy breathes, so it is a second cue beside the bubble that this
+ * is a thing to fly into, and it costs nothing: `swell` is a number the one blit already takes.
+ */
+const PICKUP_BREATH = 0.07;
+
+/** Steps in one breath: a second and a half, slow enough to read as alive and never as a warning. */
+const PICKUP_BREATH_STEPS = 90;
+
+/**
  * Everything lying about, wandering.
  *
  * Asked for in play: *"power ups and buffs should also have a drifting, moving flight rather than a
@@ -6545,8 +6556,11 @@ function keepInside(corridor: Corridor | null, e: Entity): void {
  * about a moving target rather than to turn it into a reflex.
  */
 function driftPickups(w: World): void {
+  // The breath every pickup shares this step — 0431. One sine for the field, so they breathe together.
+  const breath = 1 + PICKUP_BREATH * (0.5 + 0.5 * Math.sin((w.steps * TAU) / PICKUP_BREATH_STEPS));
   for (let i = w.pickups.size - 1; i >= 0; i--) {
     const item = w.pickups.at(i);
+    item.swell = breath;
     /*
       ── THE CYCLE — 0233 ─────────────────────────────────────────────────────────────────────────
 

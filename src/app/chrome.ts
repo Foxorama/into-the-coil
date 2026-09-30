@@ -798,6 +798,8 @@ ${each('-action-cursor')} {
 .itc-playing-hud-shown { display: flex; }
 .itc-playing-hud-group { display: flex; gap: 0.4em; align-items: center; }
 .itc-playing-hud-icon { display: block; width: 1.7em; height: 1.7em; filter: drop-shadow(0 0 0.15em var(--itc-void, #000)); }
+/* The ship in reserve — 0430. A hull is long and thin where a pickup's face is round, so it is given the room a round face spends on its bubble. */
+.itc-playing-hud-ship { width: 2.2em; height: 2.2em; margin: -0.25em -0.1em; }
 /*
   ── WHAT THE BOSS HAS LEFT ──────────────────────────────────────────────────────────────────────
 
@@ -1158,19 +1160,37 @@ ${each('-action-cursor')} {
 .itc-outro-bubble.itc-outro-face-pixel { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
 @keyframes itc-outro-bubble-in { from { opacity: 0; } to { opacity: 1; } }
 /*
-  ⚠️ A filled disc against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
+  ⚠️ A filled shield against a HOLLOW one, not two colours. Decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and a shield readout is the most tempting place in the
   game to break it — full and empty are the same shape in two inks everywhere else in the genre.
+
+  ⚠️ A SHIELD AND NOT A DISC, since 0430: *"the shields should look like shields."* A disc was also the
+  bullet's shape. Two masks cut from one outline: the pip's own mask is the rim and a core inset from
+  it, and its background fills them — the ink when the shield is held, nothing when it is spent. The
+  rim is the pseudo-element, in the ink in both states, so a spent shield is an empty outline of the
+  same shape. The halo is on the row, because a filter on a masked box is masked away with it. The
+  namespace's dots are escaped as %2E, because a dot before a letter anywhere in this sheet is a class
+  name to the chrome guard's scan, and a data URL's host is not one.
 
   ⚠️ No backticks anywhere in this stylesheet. It is a template literal, and the house style's
   backtick-quoted file paths end the string — twice, while this block was being written.
 */
+.itc-playing-hud-shields { gap: 0.3em; filter: drop-shadow(0 0 0.15em var(--itc-void, #000)); }
 .itc-playing-hud-pip {
-  width: 0.7em;
-  height: 0.7em;
-  border-radius: 50%;
-  border: 2px solid currentColor;
+  position: relative;
+  width: 1.05em;
+  height: 1.25em;
   background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 20 24'><path d='M4 1H16L19 4V12C19 17 15 20.5 10 23C5 20.5 1 17 1 12V4Z' fill='none' stroke='black' stroke-width='2'/><path d='M6 5H14L15.5 6.5V12C15.5 15 13 17.5 10 19C7 17.5 4.5 15 4.5 12V6.5Z'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 20 24'><path d='M4 1H16L19 4V12C19 17 15 20.5 10 23C5 20.5 1 17 1 12V4Z' fill='none' stroke='black' stroke-width='2'/><path d='M6 5H14L15.5 6.5V12C15.5 15 13 17.5 10 19C7 17.5 4.5 15 4.5 12V6.5Z'/></svg>") center / contain no-repeat;
+}
+.itc-playing-hud-pip::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 20 24'><path d='M4 1H16L19 4V12C19 17 15 20.5 10 23C5 20.5 1 17 1 12V4Z' fill='none' stroke='black' stroke-width='2'/></svg>") center / contain no-repeat;
+  mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 20 24'><path d='M4 1H16L19 4V12C19 17 15 20.5 10 23C5 20.5 1 17 1 12V4Z' fill='none' stroke='black' stroke-width='2'/></svg>") center / contain no-repeat;
 }
 .itc-playing-hud-spent { background: transparent; }
 /*
@@ -1777,6 +1797,11 @@ const PORTRAIT_PIXELS = 320;
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
+  /**
+   * Which ship the lives counter shows — 0430. A life is a ship, so the counter is the one the pilot
+   * flies; called when the shell knows it, and a no-op when it has not changed.
+   */
+  setShip(sprite: number): void;
   /**
    * Redraw the in-game readout. Called on a change, never per frame.
    *
@@ -2658,11 +2683,16 @@ export function makeChrome(
 
   const livesGroup = document.createElement('div');
   livesGroup.className = 'itc-playing-hud-group';
-  // ⚠️ `SPRITE.lifeIcon` and it was `PICKUPS.extraLife.sprite` — 0082 took the extra life off the
-  // field, and the plus survives as this readout's icon and nothing else. It sits beside the bomb
-  // group, which has always read its face straight off `SPRITE` for the same reason.
-  const livesIcon = iconOf(SPRITE.lifeIcon);
-  livesIcon.className = 'itc-playing-hud-icon';
+  /*
+    ⚠️ **A LIFE IS A SHIP, SO THE COUNTER IS THE SHIP** — 0430: *"the top left row of 'life' should be
+    the ship with an x and the number of lives."* It was a plus, left over from the extra-life pickup
+    0082 took off the field, and a plus is the genre's word for HEALTH — the one thing this counter is
+    not. The ship in reserve is the arcade's own picture of a life. `SPRITE.ship` until the shell says
+    which ship is flying (`setShip`), so the readout is never blank while it boots.
+  */
+  let livesSprite: number = SPRITE.ship;
+  let livesIcon: HTMLElement = iconOf(livesSprite);
+  livesIcon.className = 'itc-playing-hud-icon itc-playing-hud-ship';
   livesIcon.setAttribute('aria-hidden', 'true');
   const livesCount = document.createElement('span');
   livesGroup.append(livesIcon, livesCount);
@@ -2689,7 +2719,7 @@ export function makeChrome(
   }
 
   const shieldGroup = document.createElement('div');
-  shieldGroup.className = 'itc-playing-hud-group';
+  shieldGroup.className = 'itc-playing-hud-group itc-playing-hud-shields';
   // `role="img"` with a label, because a row of divs is not something a screen reader can read and
   // the number is what matters — 0024's floor is that every cue has a twin, not that it is visual.
   shieldGroup.setAttribute('role', 'img');
@@ -2884,6 +2914,15 @@ export function makeChrome(
 
   return {
     elements,
+    setShip(sprite: number): void {
+      if (sprite === livesSprite) return;
+      const fresh = iconOf(sprite);
+      fresh.className = livesIcon.className;
+      fresh.setAttribute('aria-hidden', 'true');
+      livesIcon.replaceWith(fresh);
+      livesIcon = fresh;
+      livesSprite = sprite;
+    },
     setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));
       stackGroups.forEach((slot, i) => {

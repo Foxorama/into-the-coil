@@ -170,11 +170,46 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
 export const MAX_SHIELDS = 3;
 
 /**
+ * How far from the ship's centre the deflector shell stands, in world units — the middle of its strip.
+ *
+ * The ship is 7 units across, so this puts the shell clear of the hull with a visible gap — close
+ * enough to read as *worn* rather than as a formation flying alongside. It was the rings' orbit, and
+ * it is here rather than in `src/app/frame.ts` since 0430 because the plates are baked round it too.
+ */
+export const SHIELD_ORBIT = 5.6;
+
+/**
+ * Where a plate of the deflector shell may stand, in radians from the nose, and its three shimmer
+ * frames — `docs/decisions/0430-the-readout-counts-ships-and-shields.md`.
+ *
+ * ⚠️ **FOUR PLACES, BECAUSE A BITMAP CANNOT TURN.** Each is baked curving round the ship from where it
+ * stands, so the shell no longer spins: a deflector is worn facing the fire, and a plate that turned
+ * would need a picture for every angle it passed through.
+ */
+export const SHIELD_PLACES: readonly { readonly angle: number; readonly frames: readonly [number, number, number] }[] = [
+  { angle: 0, frames: [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c] },
+  { angle: (Math.PI * 2) / 3, frames: [SPRITE.shield120a, SPRITE.shield120b, SPRITE.shield120c] },
+  { angle: Math.PI, frames: [SPRITE.shield180a, SPRITE.shield180b, SPRITE.shield180c] },
+  { angle: (Math.PI * 4) / 3, frames: [SPRITE.shield240a, SPRITE.shield240b, SPRITE.shield240c] },
+];
+
+/**
+ * Which places a shell of each size stands on, indexed by how many shields the ship carries.
+ *
+ * ⚠️ **EVENLY ROUND THE SHIP, AND THE NOSE IS ALWAYS COVERED.** One plate is a forward deflector; two
+ * are fore and aft; three are a shell with its gaps at the quarters and one straight behind, where the
+ * exhaust burns through it. Even spacing is the rings' own argument — a lone plate at an odd angle
+ * reads as a piece fallen off — and the nose is where the fire comes from. So the last plate to go is
+ * the fore one: a hit takes the shell from the back.
+ */
+export const SHIELD_LAYOUT: readonly (readonly number[])[] = [[], [0], [0, 2], [0, 1, 3]];
+
+/**
  * How many shields a ship at this health is carrying — the health above its hull, floored at zero.
  *
  * ⚠️ **THE single description of *shields are health above the hull*, and it is a function because
- * three callers need it.** The readout draws a pip per shield, the shell spawns an orbiting mark per
- * shield, and the pickup refuses a fourth; `health - 1` written out three times is the shape of
+ * three callers need it.** The readout draws a pip per shield, the shell stands a plate per shield,
+ * and the pickup refuses a fourth; `health - 1` written out three times is the shape of
  * second description `src/content/sprites.ts` records the cost of, and it would also silently bake in
  * *the hull is worth exactly one* at every one of those sites.
  */
@@ -208,8 +243,9 @@ export function openingHealthFor(ship: ShipRow, tier: { readonly shellOpen: numb
  * time somebody adds a pairing.
  */
 export const SHIELD_MARK: Body = {
-  sprite: SPRITE.shieldOrb,
-  spriteHit: SPRITE.shieldOrb,
+  // The fore plate's first frame; `src/app/frame.ts` writes the place and the shimmer every step.
+  sprite: SPRITE.shield0a,
+  spriteHit: SPRITE.shield0a,
   radius: 0,
   health: 1,
   damage: 0,

@@ -77,21 +77,52 @@ export const PROBES = [
     guard: 'spaces its marks evenly',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const step = TAU / count;',
-      replace: '  const step = TAU / 3;',
+      // ⚠️ Re-anchored by 0430: the plates stand at a layout per count rather than a turn divided by it.
+      find: '  const layout = SHIELD_LAYOUT[count] ?? SHIELD_LAYOUT[SHIELD_LAYOUT.length - 1]!;',
+      replace: '  const layout = SHIELD_LAYOUT[SHIELD_LAYOUT.length - 1]!;',
     },
   },
   {
     decision: '0050',
     suite: 'tests/shields.test.ts',
-    // The shell turning on a step counter instead of on the camera. It looks right in every still
-    // image and in most motion — and it keeps turning while the game is paused behind a menu.
-    broke: 'the shell turned by a clock rather than by the camera',
-    guard: 'turns as the camera travels',
+    // The shell moving on a step counter instead of on the camera. It looks right in every still
+    // image and in most motion — and it keeps moving while the game is paused behind a menu. Since
+    // 0430 what moves is the shimmer rather than the spin, and the break is the same one.
+    broke: 'the shell shimmered by a clock rather than by the camera',
+    guard: 'stands still on the ship and shimmers with the camera',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const base = w.cameraAlong * SHIELD_SPIN;',
-      replace: '  const base = (w.shieldTurn = (w.shieldTurn ?? 0) + SHIELD_SPIN);',
+      find: '  const shimmer = Math.floor(w.cameraAlong / SHIELD_SHIMMER) % 3;',
+      replace: '  const shimmer = Math.floor((w.shieldTick = (w.shieldTick ?? 0) + 1) / SHIELD_SHIMMER) % 3;',
+    },
+  },
+  {
+    decision: '0430',
+    suite: 'tests/shields.test.ts',
+    /*
+      Every plate wearing the fore plate's picture. The model is perfect — three plates, evenly round
+      the ship — and the picture is three copies of one arc, two of them curving round a point that is
+      not the ship. Only a guard that asks which picture stands where can see it.
+    */
+    broke: 'every plate drawn as the fore plate, wherever it stands',
+    guard: 'is drawn curving round the ship from where each plate actually stands',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '    const sprite = place.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
+      replace: '    const sprite = SHIELD_PLACES[0]!.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
+    },
+  },
+  {
+    decision: '0430',
+    suite: 'tests/shields.test.ts',
+    // A lone shield stood behind the engines. Still evenly spaced, still one plate per shield — and
+    // the last shield is covering the one side nothing shoots at.
+    broke: 'a lone plate stood aft rather than on the nose',
+    guard: 'always covers the nose',
+    edit: {
+      path: 'src/content/ships.ts',
+      find: 'export const SHIELD_LAYOUT: readonly (readonly number[])[] = [[], [0], [0, 2], [0, 1, 3]];',
+      replace: 'export const SHIELD_LAYOUT: readonly (readonly number[])[] = [[], [2], [0, 2], [0, 1, 3]];',
     },
   },
   {
