@@ -47,8 +47,10 @@ export const PROBES = [
     guard: 'and its weight is not in the top octave, which is what a filter is for',
     edit: {
       path: 'src/app/sound.ts',
-      find: '    if (layer.lowFrom) value = low(value, sweep(layer.lowFrom, layer.lowTo, u), layer.q ?? LOW_Q).low;',
-      replace: '    if (false && layer.lowFrom) value = low(value, 0, LOW_Q).low;',
+      // ⚠️ Re-anchored by 0425, which reads a note's filter from its shape: no lowpass ramp is built,
+      // so no lowpass runs — the same break.
+      find: '    low: layer.lowFrom ? rampOf(layer.lowFrom, layer.lowTo, layer.q ?? LOW_Q, length) : null,',
+      replace: '    low: null,',
     },
   },
   {

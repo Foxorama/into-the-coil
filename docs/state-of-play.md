@@ -104,9 +104,11 @@ the tests, and [0423](decisions/0423-the-pool-is-taken-out-and-a-page-boot-is-si
 took it back out — read 0423 before adding threads to anything the suite runs — and sized the page-boot
 waits under the suite. [0424](decisions/0424-a-bake-is-kept-for-its-source.md) keeps each bake once
 for its source tree, which makes local runs and proofs cheap and, it says plainly, does not shorten CI.
-**Next toward five in CI: its longest files** — after 0423 that is `tests/themes.test.ts` (287 s, a cold
-bake every shard pays), `tests/sound.test.ts` (239 s, whose subject is the bake) and
-`tests/hud.browser.test.ts` (190 s). Read the last run's shard times before choosing.
+[0425](decisions/0425-a-note-shares-its-shape.md) makes the cold bake itself 2.7× cheaper,
+byte-identically — the synth computes a note's shape once for every note of it. **Next toward five in
+CI: whatever its last run says is longest** — before 0425 that was `tests/themes.test.ts`,
+`tests/sound.test.ts` and `tests/hud.browser.test.ts`, and the first two were mostly the bake. Read the
+last run's shard times before choosing.
 
 ---
 

@@ -15,12 +15,15 @@ export const PROBES = [
   {
     decision: '0169',
     suite: 'tests/menu.browser.test.ts',
-    broke: 'the HUD budget shrunk under the measured 4.2 s transition, so the press cannot finish in time',
+    // ⚠️ Re-aimed by 0425, whose cheaper synth took the transition from 3.6 s to 1.2 s: shrunk to 2 s
+    // the budget stopped being short of it and this came back STILL GREEN. The claim is unchanged —
+    // the budget is not slack over a broken path — so it shrinks under the transition as measured now.
+    broke: 'the HUD budget shrunk under the measured 1.2 s transition, so the press cannot finish in time',
     guard: 'starts a run without also throwing the bomb that button is bound to',
     edit: {
       path: 'tests/menu.browser.test.ts',
       find: 'const HUD_MS = 30_000;',
-      replace: 'const HUD_MS = 2_000;',
+      replace: 'const HUD_MS = 500;',
     },
   },
 ];
