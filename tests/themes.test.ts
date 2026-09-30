@@ -43,7 +43,7 @@ import { AURA_LAYERS, LAYER_PAN, type MusicLevel } from '../src/content/music.ts
 import { addRoom, bakeLayer } from '../src/app/music.ts';
 import { BANDS, bandEnergy } from './spectrum.ts';
 // 0218: the through-shaper loudness, which is the only place a CONTRAST between rungs can be read.
-import { driveAt } from './clean.ts';
+import { driveAt, primeDrive } from './clean.ts';
 // 0226: the listener's unit, and the check that the filter design is the standard's.
 import { kWeighting } from './loudness.ts';
 import {
@@ -75,7 +75,7 @@ import {
 } from '../scripts/solve-mix.mjs';
 import { DECOR_INKS, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
-import { loopsAt } from './bakes.ts';
+import { loopsAt, primeLoops } from './bakes.ts';
 import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
 
 /**
@@ -290,7 +290,15 @@ describe('a theme mixes the music and cannot break it', () => {
       samples, the same shaper, the same `≤ 1` per (theme, rung) — which is the distinction that makes
       this a budget and not the *widen the number until it goes quiet* move that
       `docs/decisions/0140-no-layer-is-inaudible.md`'s second probe is written against.
+
+      ── AND THE SEVEN ARE BAKED AT ONCE, WHICH IS NOT MEASURING LESS — 0422 ──────────────────────
+
+      ⚠️ **55 OF THIS GUARD'S 61 SECONDS WERE THE SEVEN BAKES, ONE LAYER AT A TIME**, and the Black
+      Heart's were 29 of them. Every layer has its own stream (0021), so the 161 are independent jobs,
+      and `primeLoops` runs them on every core with the game's own `layerNotes` — the same samples,
+      held to an in-process bake byte for byte by `tests/bakes.test.ts`.
     */
+    primeLoops(SAMPLE_RATE, THEME_KINDS);
     for (const theme of THEME_KINDS) {
       const loops = loopsAt(SAMPLE_RATE, theme);
       const buffers = MUSIC_LAYERS.map((layer) => loops[layer]);
@@ -428,8 +436,12 @@ describe('a theme mixes the music and cannot break it', () => {
       measured loaded cost, three times over, because the loaded cost is a range and not a number
       (`docs/decisions/0245-a-budget-is-sized-under-load.md`). Still short enough that a genuinely
       hung bake fails rather than hanging CI.
+
+      ⚠️ **FOUR MINUTES SINCE 0422, BY THE SAME RULE.** The seven places bake on every core now: 22 s
+      alone, **79.4 s under the whole suite** on the development box (2026-09-30), where it was 275 s.
+      Three times that.
     */
-  }, 420_000);
+  }, 240_000);
 
   /*
     ── A LEVEL HOLDS ONE LOUDNESS — 0226 ──────────────────────────────────────────────────────────
@@ -558,6 +570,8 @@ const ARC_RATE = 22050;
     */
     const offenders: string[] = [];
     const said: string[] = [];
+    // 0422: every layer `driveAt` will read, baked on every core before the walk rather than in it.
+    primeDrive(THEME_KINDS, ARC_RATE);
     for (const theme of THEME_KINDS) {
       const run = driveAt(theme, 'run', ARC_RATE).loud;
       for (const rung of MUSIC_LEVELS) {
@@ -575,7 +589,9 @@ const ARC_RATE = 22050;
       `a level's loudness is not where its contour puts it — the climb was reported six times as the ` +
         `volume going up at 41 seconds. node scripts/solve-hold.mjs re-solves LEVEL_HOLD. ${said.join(', ')}`,
     ).toEqual([]);
-  }, 600_000);
+    // 0245, re-sized by 0422: 10.4 s alone and 24.8 s under the whole suite once its layers bake on
+    // every core (development box, 2026-09-30); three times that. It was ten minutes.
+  }, 75_000);
 
   it('the K-weighting designed for a rate reproduces the standard’s table at 48 kHz', () => {
     /*

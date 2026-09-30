@@ -67,8 +67,10 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0331, which made this `let` so a vibrato and a scoop can bend it — the break
       // is unchanged, and the two lines that bend it below are left in place deliberately: they multiply
       // a step that no longer moves, which is exactly the shape a hand's optimisation would have.
-      find: '    let step = (layer.from * Math.pow((layer.to || layer.from) / layer.from, u)) / rate;',
-      replace: '    let step = layer.from / rate;',
+      // ⚠️ And again by 0422, which skips the `pow` when the ratio is exactly 1: the ratio forced to 1
+      // is the same break, every glide held, now on the line that decides it.
+      find: '    const glide = (layer.to || layer.from) / layer.from;',
+      replace: '    const glide = 1;',
     },
   },
   {
