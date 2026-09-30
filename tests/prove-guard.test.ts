@@ -371,6 +371,9 @@ const WITHOUT_PROBES: Record<string, string> = {
     all three until they did, which is the re-running its table is about.
   */
   '0284': 'it adds no guard: every claim is held by one 0264, 0149, 0277 or 0283 already wrote, and what it changed is where three of their probes point — all three refused by prove until they were re-aimed',
+  // 0423 removes a mechanism and re-sizes two wall-clock budgets. A probe cannot make a page slow —
+  // 0115's reason — so its evidence is the five whole-suite runs in its table, not a break.
+  '0423': 'it adds no guard: it takes a test-side pool back out and re-sizes two page-boot budgets from whole-suite measurements, and a probe cannot redden a test for being slow',
 };
 
 describe('the probe set stays honest', () => {
