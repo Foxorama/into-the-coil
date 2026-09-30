@@ -589,9 +589,9 @@ const ARC_RATE = 22050;
       `a level's loudness is not where its contour puts it — the climb was reported six times as the ` +
         `volume going up at 41 seconds. node scripts/solve-hold.mjs re-solves LEVEL_HOLD. ${said.join(', ')}`,
     ).toEqual([]);
-    // 0245, re-sized by 0422: 10.4 s alone and 24.8 s under the whole suite once its layers bake on
-    // every core (development box, 2026-09-30); three times that. It was ten minutes.
-  }, 75_000);
+    // 0245, re-sized by 0422: 10.4 s alone, and 24.8 s and 37.5 s in two whole-suite runs once its
+    // layers bake in the pool (development box, 2026-09-30); three times the worst. It was ten minutes.
+  }, 115_000);
 
   it('the K-weighting designed for a rate reproduces the standard’s table at 48 kHz', () => {
     /*

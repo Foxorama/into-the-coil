@@ -104,7 +104,13 @@ export function bakeInPool(rate: number, asked: readonly { layer: MusicLayer; th
   const next = new SharedArrayBuffer(4);
   const status = new SharedArrayBuffer(4 * jobs.length);
   const done = new Int32Array(status);
-  const threads = Math.max(1, Math.min(availableParallelism(), jobs.length));
+  /*
+    ⚠️ **HALF THE CORES, BECAUSE THE SUITE IS RUNNING BESIDE IT.** Every core made each bake a burst that
+    took the whole machine while four suites baked at once — and the browser suites' page boots are
+    wall-clock waits that a starved machine misses (0044's class). The floor is one layer, 13.5 s, and
+    half the cores already reach within a few seconds of it.
+  */
+  const threads = Math.max(1, Math.min(Math.floor(availableParallelism() / 2), jobs.length));
   const pool = Array.from(
     { length: threads },
     () =>

@@ -34,8 +34,9 @@ describe('0422 — a place baked on every core is the place baked here', () => {
       'nebula bakes the base composition, so it cannot tell a place from the base',
     ).toBe(true);
     expect(wrong, 'layers the pool baked differently from this thread').toEqual([]);
-    // 0245: 13.5 s alone, 33.6 s under the whole suite on the development box (2026-09-30); three times that.
-  }, 105_000);
+    // 0245: 13.5 s alone; 33.6 s and 38.8 s in two whole-suite runs on the development box
+    // (2026-09-30); three times the worst.
+  }, 120_000);
 
   it('and what it hands out is a copy, so one test cannot move another’s subject', () => {
     const first = loopsAt(SAMPLE_RATE);

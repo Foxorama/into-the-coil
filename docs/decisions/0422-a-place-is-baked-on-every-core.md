@@ -70,9 +70,30 @@ that decides it.
 | its one long test, whole suite | 261 s | **57 s** |
 | the new identity guard, alone / whole suite | — | 13.5 s / 33.6 s |
 
-**Budgets, per [0245](0245-a-budget-is-sized-under-load.md), three times the whole-suite measurement:**
-the clip guard 420 s → **240 s**, the loudness guard 600 s → **75 s**, the identity guard **105 s**.
-One whole-suite run each; this PR's CI run is the second.
+**Budgets, per [0245](0245-a-budget-is-sized-under-load.md), three times the worst whole-suite
+measurement:** the clip guard 420 s → **240 s** (79.4 s, 58.9 s), the loudness guard 600 s → **115 s**
+(24.8 s, 37.5 s), the identity guard **120 s** (33.6 s, 38.8 s).
+
+## ⚠️ Half the cores, and a neighbour it may have been making worse
+
+**The first version used every core, and the whole-suite runs after it failed a browser test both
+times** — `room.browser` and an `intro.browser` boot, each a wall-clock wait for the page. None is a
+guard this touches, and the class was already failing on the development box without it. But a pool
+that takes the whole machine while four suites bake at once is exactly what makes a page boot miss a
+wall-clock wait, so it was not a neighbour's problem to wave at:
+
+| the pool | whole-suite runs on the development box with a page-boot timeout |
+|---|---|
+| none, before this change | 2 of 5 |
+| every core | 2 of 2 |
+| half the cores | 1 of 2 |
+
+**Half the cores, then**, because the floor is one 13.5 s layer and half already reaches within a few
+seconds of it. ⚠️ **The table cannot tell the capped pool from the flake that was already there, and
+this decision does not claim it can** — five runs against two is not a rate. The page-boot waits are
+[0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)'s class and a change of their own:
+they were never sized under the whole suite, and that is what fails. CI's suite shards have not failed
+one yet.
 
 ## What was rejected
 
