@@ -33,6 +33,7 @@ import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
+import { SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -644,9 +645,6 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // its place's colour. What tells them from the spit and the slab is the shape and the path.
   ripple: 'enemy',
   curl: 'enemy',
-  // The HUD's lives counter rather than a pickup, since 0082 — it keeps the pickup ink because the
-  // number beside it is drawn in the player's own colour and the icon has to sit with it.
-  lifeIcon: 'pickup',
   /*
     ⚠️ **EACH FACE OF A CYCLING PICKUP IN THE INK OF WHAT IT OFFERS — 0239, finished by 0240.** 0233
     gave every face the pickup ink (*the same pickup, so the same ink*) and the third play-test
@@ -714,8 +712,20 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   blastFire: 'hazard',
   blastSmoke: 'sky',
   // The player's own ink, because a shield IS the player — it is the last thing between a hit and
-  // the hull, and a shell drawn in the pickup ink would read as something to fly into.
-  shieldOrb: 'player',
+  // the hull, and a shell drawn in the pickup ink would read as something to fly into. 0430's plates
+  // keep it: a deflector is the ship's own energy.
+  shield0a: 'player',
+  shield0b: 'player',
+  shield0c: 'player',
+  shield120a: 'player',
+  shield120b: 'player',
+  shield120c: 'player',
+  shield180a: 'player',
+  shield180b: 'player',
+  shield180c: 'player',
+  shield240a: 'player',
+  shield240b: 'player',
+  shield240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -10022,6 +10032,94 @@ function drawGaze(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n:
   drawBody(ctx, f, skin, bent(GAZE_HULL, GAZE_POSES[n]!), (s) => paintGaze(ctx, f, s, theme, n));
 }
 
+/** Half the sweep of one deflector plate round the ship, in radians — a hundred degrees in all. 0430. */
+const PLATE_SWEEP = (50 * Math.PI) / 180;
+/** A honeycomb cell's corner radius, in world units: two zig-zagged rows of these make the strip. */
+const PLATE_CELL = 0.45;
+
+/**
+ * One plate of the deflector shell — `docs/decisions/0430-the-readout-counts-ships-and-shields.md`.
+ *
+ * *"Shields a starfighter spaceship would have."* A curved strip of energy honeycomb round the ship
+ * from where the plate stands, with a hard bright rim on its outside edge and a fainter one inside,
+ * over a soft band of light. `shimmer` is which third of the cells is lit: the three frames in turn
+ * are a light running through the lattice.
+ *
+ * ⚠️ **DRAWN ROUND THE SHIP'S CENTRE, NOT THE TILE'S.** The tile is centred on the plate, where the
+ * frame puts the body, so the ship sits `SHIELD_ORBIT` behind it along `angle` and every arc here is
+ * about that point. That is what makes four plates at four places one shell.
+ *
+ * ⚠️ **THE MIDDLE IS OPEN AND THE CELLS ARE TRANSLUCENT**, on 0379's rule for anything worn round
+ * the ship — *"nothing round the ship, so nothing hides a bullet beside it."* The only solid line is
+ * the rim, which is a hairline; a bullet crossing the strip is seen through it.
+ */
+function drawShieldPlate(ctx: Pen, size: number, extent: number, angle: number, shimmer: number, ink: string): void {
+  const half = size / 2;
+  const unit = size / extent;
+  const cx = half - Math.cos(angle) * SHIELD_ORBIT * unit;
+  const cy = half - Math.sin(angle) * SHIELD_ORBIT * unit;
+  const radius = SHIELD_ORBIT * unit;
+  const lit = shade(ink, 0.55);
+  const cell = PLATE_CELL * unit;
+  // The zig-zag: alternate columns sit a quarter of a cell's height either side of the orbit.
+  const offset = (Math.sqrt(3) / 4) * cell;
+  const edge = offset + (Math.sqrt(3) / 2) * cell;
+  const arc = (r: number, sweep: number, colour: string, width: number, alpha: number, cap: CanvasLineCap): void => {
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.lineCap = cap;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, angle - sweep, angle + sweep);
+    ctx.stroke();
+  };
+
+  // The light the strip sits in — square-ended and stepped shorter, so the plate's ends fade out
+  // rather than rounding off into a capsule, which is what armour looks like and energy does not.
+  arc(radius, PLATE_SWEEP, ink, edge * 2.8, 0.08, 'butt');
+  arc(radius, PLATE_SWEEP * 0.8, ink, edge * 2.2, 0.08, 'butt');
+  arc(radius, PLATE_SWEEP * 0.55, ink, edge * 1.6, 0.08, 'butt');
+
+  // The honeycomb. Columns one and a half cells apart along the arc, which is how flat-sided hexagons
+  // tile, fading towards the plate's ends so it reads as energy rather than a cut piece of armour.
+  const step = (1.5 * cell) / radius;
+  const columns = Math.floor((PLATE_SWEEP * 2) / step);
+  const first = angle - (columns * step) / 2;
+  for (let i = 0; i <= columns; i++) {
+    const at = first + i * step;
+    const r = radius + (i % 2 === 0 ? -offset : offset);
+    const hx = cx + Math.cos(at) * r;
+    const hy = cy + Math.sin(at) * r;
+    const reach = Math.abs(at - angle) / PLATE_SWEEP;
+    const fade = 1 - 0.75 * reach * reach;
+    const on = i % 3 === shimmer;
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) {
+      // Corners measured from the arc's tangent, so every cell sits flat along the strip.
+      const turn = at + Math.PI / 2 + (k * Math.PI) / 3;
+      const x = hx + Math.cos(turn) * cell * 0.94;
+      const y = hy + Math.sin(turn) * cell * 0.94;
+      if (k === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    // The cells in the ship's own ink and nearly clear; the lit third a charged, paler blue.
+    ctx.globalAlpha = (on ? 0.6 : 0.1) * fade;
+    ctx.fillStyle = on ? lit : ink;
+    ctx.fill();
+    ctx.globalAlpha = (on ? 1 : 0.7) * fade;
+    ctx.strokeStyle = on ? shade(ink, 0.75) : ink;
+    ctx.lineWidth = Math.max(1, 0.06 * unit);
+    ctx.stroke();
+  }
+
+  // The rims: the outer one hard and bright over a glow, because that is the edge a hit lands on.
+  arc(radius - edge, PLATE_SWEEP * 0.85, ink, Math.max(1, 0.07 * unit), 0.5, 'round');
+  arc(radius + edge, PLATE_SWEEP * 0.85, ink, 0.5 * unit, 0.3, 'round');
+  arc(radius + edge, PLATE_SWEEP * 0.8, lit, Math.max(1.5, 0.13 * unit), 1, 'round');
+  ctx.globalAlpha = 1;
+}
+
 function drawKite(ctx: Pen, f: Frame, skin: FoeSkin | null, n: number): void {
   /*
     ⚠️ **POSED AT ITS CORNERS AND NEVER DENSIFIED.** Straight edges are one of the two channels 0314
@@ -11872,20 +11970,6 @@ export function drawKind(
     case 'gazeCHit':
       drawGaze(ctx, f, skin, theme, 2);
       return;
-    case 'lifeIcon': {
-      /*
-        A PLUS. The one glyph that means *more of something* without any game having to teach it,
-        and four arms make a silhouette no enemy in the game shares — the diamond has four points
-        and no waist.
-
-        ⚠️ **It is only ever drawn in the HUD now** — 0082 took the extra life off the field — so the
-        thing it has to be legible against is a numeral rather than a lane full of bodies.
-      */
-      const arm = r * 0.34;
-      ctx.rect(half - arm, half - r, arm * 2, r * 2);
-      ctx.rect(half - r, half - arm, r * 2, arm * 2);
-      break;
-    }
     case 'pickupWeapon': {
       /*
         A CHEVRON, pointing the way the ship flies.
@@ -12504,18 +12588,28 @@ export function drawKind(
       disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);
       return;
     }
-    case 'shieldOrb':
-      /*
-        A ring. Two circles wound the same way and filled `evenodd`, which is how the hole survives
-        being two pixels across. Lit from inside now, so the shell reads as three beads rather than
-        three hoops.
-      */
-      ctx.arc(half, half, r, 0, Math.PI * 2);
-      ctx.moveTo(half + r * 0.45, half);
-      ctx.arc(half, half, r * 0.45, 0, Math.PI * 2);
-      seal(ctx);
-      glow(ctx, f, palette.player, 0, 0, 0.5, 0.7);
+    /*
+      A plate of the deflector shell — 0430. It was a ring, three of them orbiting the hull, and
+      *"the shields should look like shields"*. The place is the number in the name and the shimmer
+      frame is the letter; `SHIELD_PLACES` is the one list of angles, read here and by the frame.
+    */
+    case 'shield0a':
+    case 'shield0b':
+    case 'shield0c':
+    case 'shield120a':
+    case 'shield120b':
+    case 'shield120c':
+    case 'shield180a':
+    case 'shield180b':
+    case 'shield180c':
+    case 'shield240a':
+    case 'shield240b':
+    case 'shield240c': {
+      const place = SHIELD_PLACES.find((p) => p.frames.includes(SPRITE[kind]));
+      if (place === undefined) throw new Error(`${kind} stands at no place on the shell`);
+      drawShieldPlate(ctx, size, SPRITE_EXTENT[kind], place.angle, place.frames.indexOf(SPRITE[kind]), palette[INK_OF[kind]]);
       return;
+    }
     /*
       A surge's picture — THE PODS IT ADDS, since 0379.
 

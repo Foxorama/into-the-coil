@@ -1705,6 +1705,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
   () => leaveIntro());
   for (const element of chrome.elements) host.appendChild(element);
+  // The lives counter is the ship being flown — 0430 — read off its row rather than written in the chrome.
+  chrome.setShip(shipRow.sprite);
   /*
     ⚠️ **THE MENU'S *PILOT* SAYS WHO IS FLYING — 0415**, so the choice can be seen without opening the
     golfers. It is the control after the music room, on 0210's terms for the order.

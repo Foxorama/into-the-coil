@@ -98,6 +98,23 @@ const HULLLESS: readonly SpriteKind[] = [
   // A surge's aura is a halo round the ship, not a body of its own — 0373.
   'auraHunt',
   'auraOverdrive',
+  /*
+    A plate of the deflector shell is energy round the ship, not a body — 0430. It was a sealed ring
+    and was measured here as one; a honeycomb of light with an outline in the void's ink would be
+    armour, which is the one thing a starfighter's shield does not look like.
+  */
+  'shield0a',
+  'shield0b',
+  'shield0c',
+  'shield120a',
+  'shield120b',
+  'shield120c',
+  'shield180a',
+  'shield180b',
+  'shield180c',
+  'shield240a',
+  'shield240b',
+  'shield240c',
   // The serpent's aura is energy with no hull, on the exhaust's terms — 0305.
   'serpentAura0',
   'serpentAura1',

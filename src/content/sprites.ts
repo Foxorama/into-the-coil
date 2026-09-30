@@ -885,14 +885,7 @@ export const SPRITE_KINDS = [
   */
   'blastFire',
   'blastSmoke',
-  /*
-    ⚠️ **NOT A PICKUP ANY MORE, AND THE NAME SAYS SO** — `pickupLife` until
-    `docs/decisions/0082-a-pickup-is-rare-and-says-what-it-is.md` took the extra life off the field.
-    The plus survives because the HUD still counts lives with it (`src/app/chrome.ts`), and a sprite
-    named for a pickup nobody can pick up is the kind of stale name `src/content/levels.ts` records
-    the cost of.
-  */
-  'lifeIcon',
+  // `lifeIcon` stood here — the plus the HUD counted lives with — until 0430 counted them in ships.
   /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
     `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
@@ -950,17 +943,34 @@ export const SPRITE_KINDS = [
   'pickupShield',
   // `pickupBomb` stood here until 0372 took the bomb pickup off the field.
   /*
-    ⚠️ **A RING IN THE PLAYER'S OWN INK, and the ring is deliberately the warden's primitive.** The
-    two are never confusable in play — one is 9.5 units of enemy at the leading edge and this is 3
-    units of player ink orbiting the ship — and reusing the aperture shape says the right thing: a
-    shell with a hole in it, which is what a shield that is about to pop looks like.
+    ── THE SHELL IS A DEFLECTOR — `docs/decisions/0430-the-readout-counts-ships-and-shields.md` ──────
 
-    The alternative was a small disc, and it is rejected for the reason the pickups are three shapes
-    rather than three colours: a small disc is the BULLET, and *a dot near the ship* would then mean
-    two opposite things told apart by colour alone —
-    `docs/decisions/0024-the-accessibility-floor-is-settings.md`.
+    *"The shields around the ship also need to be upgraded to be ship thematic appropriate shields
+    that look like shields a starfighter spaceship would have."* They were three rings orbiting the
+    hull, which read as beads. A shield is now a PLATE of a deflector shell: a curved strip of energy
+    honeycomb at the shell's radius, with a bright outer rim, one per shield the ship carries.
+
+    ⚠️ **ONE PICTURE PER PLACE ON THE SHELL, because a bitmap cannot turn.** A plate stands at one of
+    four places, named by its angle from the nose — `SHIELD_PLACES` in `src/content/ships.ts` — and
+    each is baked curving round the ship from where it stands. ⚠️ **Three frames each, `a` to `c`,
+    and they are the shimmer**: a light running through the cells, stepped by the distance the camera
+    has come rather than by a clock, as the rings' spin was.
+
+    ⚠️ **Still never a disc**, for the reason the rings gave: a small disc is the BULLET, and *a dot
+    near the ship* would mean two opposite things told apart by colour alone — 0024.
   */
-  'shieldOrb',
+  'shield0a',
+  'shield0b',
+  'shield0c',
+  'shield120a',
+  'shield120b',
+  'shield120c',
+  'shield180a',
+  'shield180b',
+  'shield180c',
+  'shield240a',
+  'shield240b',
+  'shield240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -2108,9 +2118,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   blastFire: 68,
   blastSmoke: 68,
   blastWidest: 136,
-  // The HUD's lives counter, and nothing on the field. It keeps the size the pickups had when it was
-  // one of them, because the thing it has to be legible against is a line of text.
-  lifeIcon: 4.6,
   /*
     ── THREE PICKUPS, THREE SIZES, AND THEY WERE ALL 4.6 ──────────────────────────────────────────
 
@@ -2150,18 +2157,24 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupSeeker: 7.33,
   pickupShield: 6.67,
   /*
-    ⚠️ **Small enough to read as the ship's, not as a body of its own.** Three of these orbit a
-    7-unit ship at a 5.6-unit radius; at enemy size they would be a formation flying with the player
-    rather than a shell around it, and the whole point is that the player counts them at a glance
-    without looking away from the lane.
-
-    ⚠️ **It was 2.2 and that was too small, which is a thing only the picture could say.** At 640×360
-    — a phone's worth of pixels — a 2.2-unit ring is about seven pixels of hairline and the shell
-    read as three specks. `scripts/shot.mjs` at that size is what said so, which is
-    `docs/decisions/0027-measure-the-picture-not-the-model.md` doing its job: every number in the
-    model was correct at 2.2.
+    ⚠️ **A PLATE'S TILE IS CENTRED ON THE PLATE AND HOLDS ALL OF ITS ARC** — 0430. The plate stands
+    `SHIELD_ORBIT` (5.6) from the ship's centre and sweeps a hundred degrees of the shell, so its ends
+    are 4.7 units from its middle and the strip is 1.3 thick with a glow outside it: 12 is the
+    smallest tile that holds that at every one of the four places without clipping a corner. What
+    the player sees is the arc, not the tile — the rings were 3, and read as specks at 2.2 (0027).
   */
-  shieldOrb: 3,
+  shield0a: 12,
+  shield0b: 12,
+  shield0c: 12,
+  shield120a: 12,
+  shield120b: 12,
+  shield120c: 12,
+  shield180a: 12,
+  shield180b: 12,
+  shield180c: 12,
+  shield240a: 12,
+  shield240b: 12,
+  shield240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,

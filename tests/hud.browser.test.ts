@@ -448,7 +448,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
       `docs/decisions/0024-the-accessibility-floor-is-settings.md` puts *colour never carries meaning
       alone* in the unconditional tier, and a shield readout is the most tempting place in the game to
       break it — full and empty are the same shape in two inks in most of the genre. So the property
-      is stated directly: the two states differ by FILL, and they agree on their border colour, which
+      is stated directly: the two states differ by FILL, and they agree on their rim's colour, which
       is what makes the difference survive a palette swap.
     */
     const page = await open();
@@ -470,10 +470,13 @@ describe.runIf(chromePath)('the in-game readout', () => {
       pips[0]?.classList.remove('itc-playing-hud-spent');
       return pips.map((el) => {
         const computed = getComputedStyle(el);
+        // The rim is the pseudo-element since 0430, when the disc became a shield: a border cannot
+        // follow a shield's outline, so the outline is a masked layer in the ink in both states.
+        const rim = getComputedStyle(el, '::after');
         return {
           spent: el.classList.contains('itc-playing-hud-spent'),
           background: computed.backgroundColor,
-          border: computed.borderTopColor,
+          border: rim.content === 'none' ? 'no rim' : rim.backgroundColor,
         };
       });
     });
@@ -485,6 +488,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
     const transparent = /rgba\(0,\s*0,\s*0,\s*0\)|transparent/;
     expect(spent[0]!.background, `a spent pip is filled with ${spent[0]!.background}`).toMatch(transparent);
     expect(full[0]!.background, 'a full pip is not filled at all').not.toMatch(transparent);
+    expect(spent[0]!.border, 'a spent pip has no rim, so an empty shield is nothing at all').not.toMatch(/no rim|rgba\(0,\s*0,\s*0,\s*0\)/);
     expect(spent[0]!.border, 'spent and full pips differ by colour rather than by fill').toBe(full[0]!.border);
 
     /*

@@ -3,7 +3,7 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { GameFrame, advanceLevel, respawn, startLevel, takeShield, type World } from '../src/app/frame.ts';
-import { MAX_SHIELDS, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIELD_ORBIT, SHIELD_PLACES, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -18,7 +18,7 @@ import {
 } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
@@ -30,7 +30,7 @@ import { playableWorld, NO_LEVEL } from './world.ts';
  * at 3. Each absorbs one hit and is destroyed."*
  *
  * ⚠️ **The shell is a PICTURE of a number, and both halves are held here.** The number is the ship's
- * health above its hull; the picture is a mark per shield, orbiting. A guard over only the first
+ * health above its hull; the picture is a plate of a deflector per shield (0430). A guard over only the first
  * would pass while the ship wore three marks and could be killed by one bullet, which is exactly the
  * shape `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` is named for.
  *
@@ -187,7 +187,9 @@ describe('the shell says how many shields there are', () => {
     for (let i = 0; i < world.debris.size; i++) {
       const piece = world.debris.at(i);
       const d = Math.hypot(piece.along - where.along, piece.across - where.across);
-      if (d < SPRITE_EXTENT.shieldOrb * 2) near++;
+      // Nearer the plate than the ship's own middle — 0430's plates are a hull-wide tile, so the
+      // tile's size would let a burst at the ship's centre pass.
+      if (d < SHIELD_ORBIT / 2) near++;
     }
     expect(near, 'the burst was nowhere near the mark that was spent').toBeGreaterThan(0);
   });
@@ -258,47 +260,93 @@ describe('the shell is drawn where the player is looking', () => {
     }
   });
 
-  it('turns as the camera travels, so it is a shape in the world rather than a wobble in time', () => {
+  /*
+    ── A DEFLECTOR, NOT A RING OF BEADS — 0430 ────────────────────────────────────────────────────
+
+    *"Shields a starfighter spaceship would have."* The rings turned with the camera; a plate is
+    baked curving round the ship from one place and cannot turn, so the shell stands still and faces
+    the fire. Four properties, each one a way the picture could lie about the number.
+  */
+  const turnOf = (world: World, orb: Entity): number =>
+    (Math.atan2(orb.across - world.ship.across, orb.along - world.ship.along) + Math.PI * 2) % (Math.PI * 2);
+
+  it('is drawn curving round the ship from where each plate actually stands', () => {
+    /*
+      ⚠️ **THE ONE PLACE THE PICTURE AND THE MODEL CAN DISAGREE WITHOUT EITHER BEING WRONG.** A plate's
+      bitmap is baked for one angle; stood at another it would curve round a point that is not the
+      ship, and the shell would come apart into three arcs pointing nowhere. So the sprite each plate
+      wears is checked against the angle it is really at, for every size of shell.
+    */
+    for (let shields = 1; shields <= MAX_SHIELDS; shields++) {
+      const { world, frame } = quietWorld();
+      giveShields(world, shields);
+      frame.step();
+      for (let i = 0; i < world.shieldOrbs.size; i++) {
+        const orb = world.shieldOrbs.at(i);
+        const place = SHIELD_PLACES.find((p) => p.frames.includes(orb.sprite));
+        expect(place, `plate ${i} of ${shields} wears no plate's picture`).toBeDefined();
+        const off = Math.abs(turnOf(world, orb) - place!.angle);
+        expect(Math.min(off, Math.PI * 2 - off), `plate ${i} of ${shields} is drawn for another place`).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('always covers the nose, and a hit takes the shell from the back', () => {
+    const { world, frame } = quietWorld();
+    giveShields(world, MAX_SHIELDS);
+    frame.step();
+    for (let left = MAX_SHIELDS; left >= 1; left--) {
+      const turns = Array.from({ length: world.shieldOrbs.size }, (_, i) => turnOf(world, world.shieldOrbs.at(i)));
+      expect(
+        turns.some((t) => Math.min(t, Math.PI * 2 - t) < 1e-6),
+        `a shell of ${left} leaves the nose open, which is where the fire comes from`,
+      ).toBe(true);
+      if (left > 1) takeAHit(world, frame);
+    }
+  });
+
+  it('stands still on the ship and shimmers with the camera, so it is a shape in the world rather than a wobble in time', () => {
     /*
       ⚠️ **The property, not the rate.** `src/content/enemies.ts` argues it for the weave: a shape
       authored against the world plays the same on every device and in a headless test, and a
-      wall-clock wobble does not. What is asserted is that the shell moves with the camera and does
-      not move when the camera is still.
+      wall-clock wobble does not. The plates hold their places while the world moves; the light
+      running through them moves with the camera and stops when the camera does.
     */
     const { world, frame } = quietWorld();
-    giveShields(world, 1);
+    giveShields(world, MAX_SHIELDS);
     frame.step();
-    const first = world.shieldOrbs.at(0);
-    const startAngle = Math.atan2(first.across - world.ship.across, first.along - world.ship.along);
-
-    for (let i = 0; i < A_WHILE; i++) frame.step();
-    const moved = world.shieldOrbs.at(0);
-    const later = Math.atan2(moved.across - world.ship.across, moved.along - world.ship.along);
-    expect(Math.abs(later - startAngle), 'the shell never turned').toBeGreaterThan(0.01);
+    const places = Array.from({ length: world.shieldOrbs.size }, (_, i) => turnOf(world, world.shieldOrbs.at(i)));
+    const seen = new Set<number>();
+    for (let i = 0; i < A_WHILE; i++) {
+      frame.step();
+      seen.add(world.shieldOrbs.at(0).sprite);
+    }
+    for (let i = 0; i < world.shieldOrbs.size; i++) {
+      expect(turnOf(world, world.shieldOrbs.at(i)), `plate ${i} turned`).toBeCloseTo(places[i]!, 6);
+    }
+    expect(seen.size, 'the shell never shimmered while the world moved').toBe(3);
 
     /*
       ⚠️ **THE HALF THAT SEPARATES THE TWO, AND `npm run prove` IS WHY IT IS WRITTEN THIS WAY.** The
-      first version stopped the SIMULATION and asserted the shell held — which a step counter passes
-      just as happily, because a frame that does not step does not turn anything either. The camera
-      advances by a fixed amount every step, so *distance travelled* and *steps taken* are the same
-      number until something separates them. This separates them: the world stops moving while the
-      simulation keeps running.
-    */
-    const held = Math.atan2(moved.across - world.ship.across, moved.along - world.ship.along);
-    /*
+      rings' first version stopped the SIMULATION and asserted the shell held — which a step counter
+      passes just as happily, because a frame that does not step does not change anything either. The
+      camera advances by a fixed amount every step, so *distance travelled* and *steps taken* are the
+      same number until something separates them. This separates them: the world stops moving while
+      the simulation keeps running.
+
       ⚠️ **THE LEVEL'S RATE AND NOT THE STEP'S — 0335.** `scrollPerStep` is what the camera moved
-      THIS step and the frame writes it every step now, because a fight may be fought in a room and a
-      room is a camera coming to rest. What a fixture holding the world still wants is the input, and
-      that is `scrollRate`; writing the derived one was overwritten on the next step and this guard
-      said so within the hour of the split.
+      THIS step and the frame writes it every step, because a fight may be fought in a room and a room
+      is a camera coming to rest. What a fixture holding the world still wants is the input, and that
+      is `scrollRate`.
     */
     world.scrollRate = 0;
+    frame.step();
+    const held = world.shieldOrbs.at(0).sprite;
     for (let i = 0; i < A_WHILE; i++) frame.step();
-    const stillHeld = world.shieldOrbs.at(0);
     expect(
-      Math.atan2(stillHeld.across - world.ship.across, stillHeld.along - world.ship.along),
-      'the shell kept turning while the world stood still — it is reading a clock, not the camera',
-    ).toBeCloseTo(held, 6);
+      world.shieldOrbs.at(0).sprite,
+      'the shell kept shimmering while the world stood still — it is reading a clock, not the camera',
+    ).toBe(held);
   });
 });
 
@@ -318,7 +366,10 @@ describe('the shell costs nothing the budget did not already have', () => {
     for (let i = 0; i < world.shieldOrbs.size; i++) {
       expect(world.shieldOrbs.at(i).radius, 'a mark has a hurtbox').toBe(0);
       expect(world.shieldOrbs.at(i).damage, 'a mark can hurt something').toBe(0);
-      expect(world.shieldOrbs.at(i).sprite, 'a mark is drawn as something else').toBe(SPRITE.shieldOrb);
+      expect(
+        SHIELD_PLACES.some((p) => p.frames.includes(world.shieldOrbs.at(i).sprite)),
+        'a plate is drawn as something else',
+      ).toBe(true);
     }
   });
 
