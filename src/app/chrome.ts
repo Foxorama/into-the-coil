@@ -200,6 +200,24 @@ ${each('-panel')} {
   font: 600 clamp(0.85rem, 5.4cqh, 1.25rem)/1.35 system-ui, sans-serif;
 }
 .itc-title-heading { font-size: clamp(1.25rem, min(6cqw, 9cqh), 3.5rem); letter-spacing: 0.02em; margin: 0; }
+/*
+  ── THE WORDMARK — 0434 ──────────────────────────────────────────────────────────────────────────
+
+  The name was set as a heading in the panel's own type, the same cyan as every button under it, so
+  the one thing on the screen that is the game's name read as a label. Heavier, spaced, and run from
+  the ship's ink into the ally violet — the two inks of the player's side — with a halo in the first,
+  so it is lit the way the playfield is lit. Both inks come off the palette, so a high-contrast palette
+  still sets it in its own colours. The size is 0049's and untouched.
+*/
+.itc-title-heading, .itc-splash-heading {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  background: linear-gradient(100deg, var(--itc-ink) 15%, var(--itc-ally, var(--itc-ink)) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 0.3em color-mix(in srgb, var(--itc-ink) 40%, transparent));
+}
 .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
   margin: 0;
@@ -305,6 +323,32 @@ ${each('-choices')} {
 }
 .itc-select-shown { animation: itc-select-in 0.6s ease-out both; }
 @keyframes itc-splash-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
+/*
+  ⚠️ **THE SPLASH SAYS IT IS WORKING — 0434.** It was the name alone on the void for as long as the
+  load took, which on a slow machine is long enough to wonder whether anything is happening. A light
+  runs along a line under the name for as long as the splash is up. It is deliberately a sweep and not
+  a bar that fills: the boot does not know its own fraction, and a bar that guessed would be a claim.
+*/
+.itc-splash-panel::after {
+  content: '';
+  display: block;
+  width: min(60%, 24rem);
+  height: 3px;
+  border-radius: 2px;
+  /*
+    On the panel and not on the heading: the heading's fill is clipped to its letters (the wordmark),
+    and a line hung off it was clipped with them into a speck.
+  */
+  background:
+    linear-gradient(90deg, transparent, var(--itc-ink), transparent) no-repeat,
+    color-mix(in srgb, var(--itc-ink) 18%, transparent);
+  background-size: 35% 100%, auto;
+  animation: itc-splash-load 1.4s ease-in-out infinite;
+}
+@keyframes itc-splash-load { from { background-position: -60% 0, 0 0; } to { background-position: 160% 0, 0 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .itc-splash-panel::after { animation: none; background-position: 50% 0, 0 0; }
+}
 @keyframes itc-select-in { from { opacity: 0; } to { opacity: 1; } }
 .itc-select-heading { font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem); margin: 0; }
 .itc-select-choices {
@@ -721,6 +765,26 @@ ${each('-action')} {
   drawing a button the width of a table.
 */
 .itc-title-action { width: min(100%, 32ch); }
+/*
+  ── THE CHOICE IS THE TIERS — 0434 ───────────────────────────────────────────────────────────────
+
+  Five buttons at one weight made the music room and the pilot as loud as the three ways to start a
+  run. On a screen tall enough for the desktop's column the tiers keep the full width, and the two
+  that are not a run sit side by side under them, smaller and quieter: the column is a button shorter
+  and the thing a player came to press is the thing that looks pressable. The phone's own layout
+  (0370) is under its own query and is not touched; the nth-child count is the tiers', as it is there.
+*/
+@container (min-height: 461px) {
+  .itc-title-choices {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: min(100%, 32ch);
+    gap: min(1.1rem, 2.6cqh) min(0.8rem, 1.6cqw);
+  }
+  .itc-title-choices > .itc-title-action { width: 100%; }
+  .itc-title-choices > :nth-child(-n+3) { grid-column: 1 / -1; }
+  .itc-title-choices > :nth-child(n+4) { font-size: 0.8em; padding: 0.45em 0.8em; opacity: 0.85; }
+}
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1349,6 +1413,15 @@ ${faceTurns()}
   background: var(--itc-ink);
   color: var(--itc-void);
   opacity: 1;
+}
+/*
+  The settings on a desktop — 0434: a size a pointer finds without hunting, and the unchosen option at
+  a contrast that reads as a choice rather than as disabled. The phone's are under 0370's query.
+*/
+@container (min-height: 461px) {
+  .itc-title-settings { font-size: clamp(0.75rem, min(2cqw, 2.6cqh), 1rem); }
+  .itc-title-option { padding: 0.3em 0.8em; }
+  .itc-title-option:not(.itc-title-option-on) { opacity: 0.75; }
 }
 /*
   ── WHICH PLACE IS PLAYING — decision 0216, and no extension on that path ────────────────────────
@@ -2472,6 +2545,8 @@ export function makeChrome(
     // second stylesheet: the palette is chosen at runtime and a static rule cannot know it.
     root.style.setProperty('--itc-ink', colours.player);
     root.style.setProperty('--itc-void', colours.space);
+    // The coil's own second ink, for the title's wordmark — 0434. The ally violet is the ship's too.
+    root.style.setProperty('--itc-ally', colours.ally);
 
     /*
       THE PANEL — everything the screen says, in one box that the overlay centres.

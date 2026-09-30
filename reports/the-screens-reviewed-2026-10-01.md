@@ -6,11 +6,11 @@ points totals and displays and floating power pickups … suggest a list of impr
 highest quality that still fits the game aesthetic and then start working on improving them."*
 
 Looked at on `main` at `4834944` (0428/0429's score merged), 1280×720, with `scripts/shot.mjs` and
-3× crops. **A queue, highest value first. Items 1–4 and 10 are built** —
+3× crops. **A queue, highest value first. Every item is built or built in part** —
 [0430](../docs/decisions/0430-the-readout-counts-ships-and-shields.md),
 [0431](../docs/decisions/0431-a-pickup-glows-in-what-it-offers.md),
-[0433](../docs/decisions/0433-the-readout-is-one-voice.md); the rest are proposals, and several touch
-a decision that would have to be amended rather than worked around.
+[0433](../docs/decisions/0433-the-readout-is-one-voice.md),
+[0434](../docs/decisions/0434-the-title-has-a-voice.md); what is left is marked **Open** in its row.
 
 ## What the aesthetic is
 
@@ -28,11 +28,11 @@ list below is closing that gap without inventing a second style.
 | 2 | readout | the icons are framed three ways: the ship and the bomb are bare silhouettes, the missile stack wears the **pickup bubble** — which on the field means *fly into me* (0236) | **BUILT — 0433.** Every readout icon bare, at one optical size | — |
 | 3 | readout | a lost shield or life **changes silently**: a class toggles and nothing moves ([0036](../docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md)'s shape, in the chrome) | **BUILT — 0433.** A lost shield flares and drops, a gained one pops, a lost life shakes the ship | — |
 | 4 | readout | two type systems on one screen: counts in system-ui 600, the score in its own gold display digits | **BUILT — 0433.** The counts in the score's weight with fixed-width figures | — |
-| 5 | title | the name is plain system-ui text; the badge [0427](../docs/decisions/0427-the-icon-is-the-badge.md) made is nowhere on it | a logo lockup: the badge beside a display-weight wordmark, with the coil's own gradient | medium |
-| 6 | title | five buttons at one weight — three tiers, Music and Pilot — so the primary action is not primary; the pickup key floats centred against a top-aligned column; half the screen is empty void | tiers as one primary group, Music and Pilot as secondary; the key as a titled card aligned to the column; the attract sky (or a ship flying through) behind it | medium |
-| 7 | title | the settings chips are small, low-contrast and far from the controls they set | a larger row with the selected state marked by shape as well as fill (0024), and touch-sized targets | small |
-| 8 | splash | the name alone on black while the game loads, for up to seconds, with no sign it is working | a progress line or the coil turning under the name, tied to what the boot is actually waiting on | small |
-| 9 | pilot | *"Pilot"* as a heading is a label, not an instruction; nothing says which golfer is flying now | *"Choose your pilot"*; the current pilot marked; a hover lift on the cards | small |
+| 5 | title | the name is plain system-ui text; the badge [0427](../docs/decisions/0427-the-icon-is-the-badge.md) made is nowhere on it | **BUILT IN PART — [0434](../docs/decisions/0434-the-title-has-a-voice.md).** The wordmark, on the title and the splash. **Open**: the badge itself, which needs an image inlined into the one page (0003) or a new sidecar (0008) | small |
+| 6 | title | five buttons at one weight — three tiers, Music and Pilot — so the primary action is not primary; the pickup key floats centred against a top-aligned column; half the screen is empty void | **BUILT IN PART — 0434.** Tiers primary, Music and Pilot a quieter pair under them; the key is three rows since 0432. **Open**: a live sky or a ship flying through behind the title | medium |
+| 7 | title | the settings chips are small, low-contrast and far from the controls they set | **BUILT — 0434**, on the desktop; the phone's were already thumb-sized (0370). The chosen option was already told by fill, not by colour | — |
+| 8 | splash | the name alone on black while the game loads, for up to seconds, with no sign it is working | **BUILT — 0434.** A light sweeping a line under the name: a sweep, because the boot does not know its own fraction | — |
+| 9 | pilot | *"Pilot"* as a heading is a label, not an instruction; nothing says which golfer is flying now | **BUILT IN PART — 0434.** *Choose your pilot*. **Open**: the current pilot marked, a hover lift on the cards | small |
 | 10 | field | the pickup bubble is a dark disc with a grey hairline, which reads as a UI button more than as something to collect | **BUILT — 0431.** A full-strength pickup-ink ring, a second ring and the glow in the offered ink, and a breath on `swell`. The bob was not needed: pickups already drift ([0087](../docs/decisions/0087-a-pickup-never-parks.md)) | — |
 
 ## Asked for after the review
