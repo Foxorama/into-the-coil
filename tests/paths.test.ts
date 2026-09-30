@@ -207,10 +207,20 @@ describe('0421 — edgeIndex is the full walk, only faster', () => {
   it('THE ONE IT IS FOR: on every pass of every kind, inside and distance are the full walk’s, exactly', () => {
     const wrong: string[] = [];
     let asked = 0;
+    /*
+      ⚠️ **EACH SHAPE ONCE.** A hurt twin, a charged one and a charged hurt one are the same geometry
+      under a different ink — `boss10Gape`'s four are one hull of 2,401 edges — and asking it four
+      times asks the full walk four times for nothing. Keyed on the rule and every coordinate, so two
+      passes share a key only if every question put to them has the same answer.
+    */
+    const shapes = new Set<string>();
     for (const kind of SPRITE_KINDS) {
       const { pen, trace } = tracingPen();
       drawKind(pen, kind, ink, SPRITE_EXTENT[kind] * scale, 'approach');
       trace.passes.forEach((pass, n) => {
+        const shape = `${pass.rule}|${pass.subpaths.map((sp) => sp.map((p) => `${p[0]},${p[1]}`).join(';')).join('|')}`;
+        if (shapes.has(shape)) return;
+        shapes.add(shape);
         const index = edgeIndex(pass);
         for (const point of hardPoints(pass)) {
           asked++;
@@ -223,11 +233,16 @@ describe('0421 — edgeIndex is the full walk, only faster', () => {
         }
       });
     }
-    // 498,232 on 2026-09-30, over some eight thousand passes. A floor well under it, so a new kind
-    // costs nothing here and a sample that has quietly stopped reaching the passes does not pass.
-    expect(asked, 'the sample asked almost nothing, so it proves almost nothing').toBeGreaterThan(250_000);
+    // 278,504 on 2026-09-30, over every distinct shape. A floor well under it, so a new kind costs
+    // nothing here and a sample that has quietly stopped reaching the passes does not pass.
+    expect(asked, 'the sample asked almost nothing, so it proves almost nothing').toBeGreaterThan(150_000);
     expect(wrong.slice(0, 8), `${wrong.length} answer(s) the full walk would not have given`).toEqual([]);
-  }, 120_000);
+    /*
+      ⚠️ **ITS OWN BUDGET, PER 0245: THREE TIMES 45.1 s**, measured under a whole-suite run on the
+      development box on 2026-09-30; 7.9 s alone. It is the full walk's cost, paid once per distinct
+      shape instead of on every body in every place.
+    */
+  }, 140_000);
 
   it('and a hole is a hole: a point in an evenodd gap is outside, as the full walk says', () => {
     // The shape the guards rely on it for — a square with a square cut out of it.

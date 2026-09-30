@@ -26,6 +26,10 @@ import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
   MAKE THE WORK CHEAPER FOR, NOT TO RAISE THIS AGAIN FOR** — six bosses still ride the lifted kit
   undrawn, and each is a third of a minute. A bounding-box reject was tried at `distanceToEdge` and
   measured slower; the win left is fusing its edge walk with `inside`'s, which halves them.
+
+  ⚠️ **THE WIN TAKEN WAS NOT WALKING MOST EDGES AT ALL — 0421.** `edgeIndex` in `tests/paths.ts`
+  answers both questions exactly, from the edges near the point; the 0149 guard went 89 s → 8.6 s
+  alone. Its own budget beside it is re-sized from that.
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
@@ -412,8 +416,14 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
       rule is 3×. It timed out in two of three `npm run prove` baselines while 0342 and 0343 were being
       proven, with no assertion message — and passed every `npm run check`, which is what made it
       look like load. 0044: it was wall clock read where the subject is arithmetic that cannot hang.
+
+      ⚠️ **AND THEN THE WORK WAS MADE CHEAPER, AS THE FILE'S HEAD SAID IT SHOULD BE — 0421.** By
+      2026-09-30 the same test took 89 s alone and timed out at its 345 s under the suite on an idle
+      development box; 99.6% of it was the clearance search asking every edge. Asked of the edges near
+      the point: **8.6 s alone, 36.8 s and 51.0 s in two whole-suite runs** on the development box.
+      Three times the worst, per 0245.
     */
-  }, 345_000);
+  }, 155_000);
 
   it('and a translucent mark — a plume, a halo — stays inside the sprite’s own box', () => {
     for (const theme of THEME_KINDS) {
