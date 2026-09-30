@@ -37,9 +37,9 @@
  * `docs/decisions/0027-measure-the-picture-not-the-model.md` is named for.
  */
 
-import { bakeLoops } from '../src/app/music.ts';
 import { MUSIC_LAYERS, type MusicLayer } from '../src/content/music.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
+import { layerAt } from './bake-store.ts';
 
 /** One bake per rate and place, for the life of the process. A worker per suite, so it never spans files. */
 const cache = new Map<string, Record<MusicLayer, Float32Array>>();
@@ -71,7 +71,10 @@ export function loopsAt(rate: number, theme?: ThemeKind): Record<MusicLayer, Flo
   const key = `${rate}/${theme ?? ''}`;
   let baked = cache.get(key);
   if (baked === undefined) {
-    baked = bakeLoops(rate, theme);
+    // 0424: each layer read from this source tree's store, or baked once and kept there — the same
+    // bytes `bakeLoops(rate, theme)` hands back, which is a layer at a time in the same order.
+    baked = {} as Record<MusicLayer, Float32Array>;
+    for (const layer of MUSIC_LAYERS) baked[layer] = layerAt(layer, rate, theme);
     cache.set(key, baked);
   }
   const out = {} as Record<MusicLayer, Float32Array>;

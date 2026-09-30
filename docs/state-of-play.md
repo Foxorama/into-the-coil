@@ -102,9 +102,11 @@ joined by the required `test` job); the run time is whatever `gh run list` says.
 less. [0422](decisions/0422-a-place-is-baked-on-every-core.md) baked the music in a thread pool inside
 the tests, and [0423](decisions/0423-the-pool-is-taken-out-and-a-page-boot-is-sized-under-the-suite.md)
 took it back out — read 0423 before adding threads to anything the suite runs — and sized the page-boot
-waits under the suite. **Next: each bake done once for a source tree and read by every file**, which
-the user chose over putting the pool back (0423 says why); then the longest file in a suite shard,
-`tests/sound.test.ts`, then the long browser suites. Read the last run's shard times before choosing.
+waits under the suite. [0424](decisions/0424-a-bake-is-kept-for-its-source.md) keeps each bake once
+for its source tree, which makes local runs and proofs cheap and, it says plainly, does not shorten CI.
+**Next toward five in CI: its longest files** — after 0423 that is `tests/themes.test.ts` (287 s, a cold
+bake every shard pays), `tests/sound.test.ts` (239 s, whose subject is the bake) and
+`tests/hud.browser.test.ts` (190 s). Read the last run's shard times before choosing.
 
 ---
 
