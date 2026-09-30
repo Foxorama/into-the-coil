@@ -1140,11 +1140,10 @@ ONE MESSAGE.**
 
 [0428](decisions/0428-the-score-is-kept.md) (points, streak, the break's tally, the victory's) and
 [0429](decisions/0429-the-table-is-kept.md) (the first `itc_*` key, the table on the title), asked
-for as one overnight job. **Owed, in this order:** a play of a whole run for the numbers (rows'
-`points`, the bonuses, whether an S is reachable on each level: `RANKS` in `src/content/score.ts`),
-and the player's word on the two readings 0428 chose — *missile powerups* as the tubes' charges
-rather than the ladder, and a continue that keeps the score. `rig/score.html?seed&go=cleared` stands
-the game on each screen without flying to it.
+for as one overnight job. **Owed:** a play of a whole run for the numbers (rows' `points`, the
+bonuses, whether an S is reachable on each level: `RANKS` in `src/content/score.ts`). The two
+readings 0428 chose are confirmed by the player. `rig/score.html?seed&go=cleared` stands the game on
+each screen without flying to it.
 
 ### ⚠️ THE INTERFACE ANSWERED FOUR ASKS IN ONE PR, AND ALL FOUR ARE OWED A PLAY — 2026-09-23
 

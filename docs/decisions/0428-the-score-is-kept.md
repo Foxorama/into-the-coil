@@ -57,7 +57,8 @@ something the player had no choice about. The charges are what a player decides 
 paying for them at the clear is the classic shooter's bomb bonus. The gun's stack is *bombs* on the
 same reading — it holds the bomb and whatever the gun's own special is.
 [0376](0376-a-trigger-for-the-gun-and-one-for-the-tubes.md) is why there are two stacks to read.
-**If the other reading was meant, it is one line in `tallyAtClear`.**
+**Confirmed by the player, 2026-10-01**, together with the continue below: *"both of those are
+correct."*
 
 ## Why every body sent counts against the rank
 
@@ -97,6 +98,7 @@ all the same, and the victory is where it is added up.
   under a number that pretends they are one scale.
 - **A continue that costs the score.** Raiden marks a continue in the score's last digit. Here it is
   counted on the run and shown on the table, which says the same thing without making the number lie.
+  Confirmed by the player, 2026-10-01.
 
 ## Confirmed, not assumed
 
