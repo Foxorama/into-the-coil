@@ -36,7 +36,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type World } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -162,6 +162,10 @@ export function inertLevel(): {
   boundPress: number;
   shownBoss: number;
   onBoss: (fraction: number) => void;
+  score: LevelScore;
+  shownPoints: number;
+  shownStreak: number;
+  onScore: (points: number, streak: number) => void;
   onCue: (kind: CueKind) => void;
   bound: null;
   room: null;
@@ -198,6 +202,7 @@ export function inertLevel(): {
     boundPress: 0,
     shownBoss: -1,
     onBoss: (): void => {},
+    ...scoreParts(),
     // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
     // different one would say so; none does, and none should have to restate the base.
     weapon: weaponFor(SHIPS.proof, []),
@@ -262,6 +267,16 @@ export function inertLevel(): {
     onCleared: (): void => {},
     ...pickupParts(),
     onPickup: (): void => {},
+  };
+}
+
+/** The score half of a world: nothing counted, and a readout that has drawn nothing — 0428. */
+export function scoreParts(): { score: LevelScore; shownPoints: number; shownStreak: number; onScore: () => void } {
+  return {
+    score: { points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 },
+    shownPoints: 0,
+    shownStreak: 0,
+    onScore: (): void => {},
   };
 }
 
@@ -558,6 +573,7 @@ export function playableWorld(
     boundPress: 0,
     shownBoss: -1,
     onBoss: (): void => {},
+    ...scoreParts(),
     onPickup: (kind: PickupKind, face: number): void => {
       taken.push(kind);
       faces.push(face);

@@ -42,6 +42,7 @@ import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 import { TRIGGER_BUTTON } from './touch.ts';
 // The boss's phase table, so the bar can mark where the fight turns — 0360.
 import type { BossRow } from '../content/bosses.ts';
+import { MULTIPLIER_CAP, STREAK_STEP, multiplierFor } from '../content/score.ts';
 
 /**
  * The class prefix a screen's chrome owns.
@@ -839,6 +840,254 @@ ${each('-action-cursor')} {
   opacity: 0.8;
 }
 /*
+  ── THE SCORE — 0428 ─────────────────────────────────────────────────────────────────────────────
+
+  Asked for: *"points counter top right that should look flashy."* The third column of the row the
+  readout and the boss bar share, so nothing can run under it on any width.
+
+  ⚠️ **THE DIGITS ARE A CSS COUNTER OVER A REGISTERED INTEGER, AND THAT IS WHY THEY ROLL FOR FREE.**
+  The shell writes the new total into one custom property on a change; the property is registered as
+  an integer, so a transition interpolates it and the counter redraws every frame the browser paints —
+  the count-up costs no script at all, and nothing is written per frame. Padded to eight places, as a
+  cabinet pads a score. The number is also the element's label, which is its twin for a reader (0024).
+
+  Flash: a sweep of light through gold, a pop on every gain, the multiplier in a badge that heats as
+  the streak climbs and a bar that fills toward the next step, and a shake when a hit breaks it.
+*/
+@property --itc-playing-points { syntax: '<integer>'; inherits: true; initial-value: 0; }
+@counter-style itc-playing-digits { system: extends decimal; pad: 8 "0"; }
+.itc-playing-score {
+  grid-column: 3;
+  justify-self: end;
+  display: none;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.25em;
+  padding: 0.7em 1.1em;
+  font: 800 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  pointer-events: none;
+}
+.itc-playing-score-shown { display: flex; }
+.itc-playing-score-label {
+  font-size: 0.55em;
+  letter-spacing: 0.35em;
+  opacity: 0.85;
+  text-shadow: 0 0 0.4em var(--itc-void, #000);
+}
+.itc-playing-score-pop { transform-origin: right center; }
+.itc-playing-score-gain-a { animation: itc-playing-score-gain-a 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+.itc-playing-score-gain-b { animation: itc-playing-score-gain-b 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
+@keyframes itc-playing-score-gain-a { from { transform: scale(1.22); filter: brightness(1.8); } to { transform: none; filter: none; } }
+@keyframes itc-playing-score-gain-b { from { transform: scale(1.22); filter: brightness(1.8); } to { transform: none; filter: none; } }
+.itc-playing-score-value {
+  display: block;
+  font-size: 1.75em;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+  counter-reset: itc-playing-points var(--itc-playing-points);
+  transition: --itc-playing-points 0.5s cubic-bezier(0.2, 0.7, 0.2, 1);
+  background: linear-gradient(100deg, var(--itc-hot, #ff9f1c) 0%, var(--itc-gold, #ffd23f) 38%, var(--itc-shine, #fff) 50%, var(--itc-gold, #ffd23f) 62%, var(--itc-hot, #ff9f1c) 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 0.18em var(--itc-hot, #ff9f1c)) drop-shadow(0 0 0.1em var(--itc-void, #000));
+  animation: itc-playing-score-shine 2.8s linear infinite;
+}
+.itc-playing-score-value::after { content: counter(itc-playing-points, itc-playing-digits); }
+@keyframes itc-playing-score-shine { from { background-position: 100% 0; } to { background-position: -50% 0; } }
+.itc-playing-score-streak {
+  display: flex;
+  align-items: center;
+  gap: 0.45em;
+  font-size: 0.8em;
+}
+.itc-playing-score-bar {
+  width: 4.5em;
+  height: 0.3em;
+  border: 1px solid currentColor;
+  border-radius: 0.2em;
+  overflow: hidden;
+  opacity: 0.85;
+}
+.itc-playing-score-fill {
+  height: 100%;
+  background: var(--itc-gold, #ffd23f);
+  transform-origin: left center;
+  transition: transform 0.2s ease-out;
+}
+.itc-playing-score-times {
+  padding: 0.12em 0.45em;
+  border: 2px solid currentColor;
+  border-radius: 0.4em;
+  background: var(--itc-void, #000);
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s, box-shadow 0.3s;
+}
+.itc-playing-score-hot .itc-playing-score-times { color: var(--itc-gold, #ffd23f); box-shadow: 0 0 0.5em var(--itc-hot, #ff9f1c); }
+.itc-playing-score-max .itc-playing-score-times { animation: itc-playing-score-throb 0.6s ease-in-out infinite alternate; }
+@keyframes itc-playing-score-throb { from { box-shadow: 0 0 0.3em var(--itc-hot, #ff9f1c); } to { box-shadow: 0 0 1.1em var(--itc-gold, #ffd23f); } }
+.itc-playing-score-broke .itc-playing-score-streak { animation: itc-playing-score-broke 0.45s ease-out; color: var(--itc-lost, #ff7286); }
+@keyframes itc-playing-score-broke {
+  0%, 100% { transform: none; }
+  20% { transform: translateX(-0.3em); }
+  40% { transform: translateX(0.3em); }
+  60% { transform: translateX(-0.2em); }
+  80% { transform: translateX(0.1em); }
+}
+/*
+  ── A LEVEL'S ACCOUNT, AND THE RUN'S — 0428 ──────────────────────────────────────────────────────
+
+  The same sheet on the break, the victory and the run over: a label and a number to a line, each
+  line arriving after the one above it and its number counting up from nothing on the counter trick
+  the score uses. The rank is stamped rather than counted. The real number is in the line as text for
+  a reader, clipped out of sight, and the counter draws what the eye sees.
+*/
+@property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
+.itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 0.3em 0;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000);
+}
+.itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label {
+  text-align: left;
+  padding-right: 2em;
+  font-weight: 500;
+  opacity: 0;
+  animation: itc-cleared-sheet-in 0.3s ease-out forwards;
+  animation-delay: calc(var(--itc-sheet-i, 0) * 0.28s);
+}
+.itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value {
+  text-align: right;
+  opacity: 0;
+  counter-reset: itc-sheet var(--itc-sheet-n);
+  animation: itc-cleared-sheet-in 0.3s ease-out forwards, itc-cleared-sheet-count 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: calc(var(--itc-sheet-i, 0) * 0.28s);
+}
+.itc-cleared-sheet-count::after, .itc-victory-sheet-count::after, .itc-gameover-sheet-count::after { content: counter(itc-sheet); }
+.itc-cleared-sheet-said, .itc-victory-sheet-said, .itc-gameover-sheet-said {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.itc-cleared-sheet-total, .itc-victory-sheet-total, .itc-gameover-sheet-total {
+  font-size: 1.25em;
+  font-weight: 800;
+  color: var(--itc-gold, #ffd23f);
+}
+/* A total under other lines is ruled off from them; a total that is the whole sheet is not. */
+.itc-cleared-sheet-total:nth-child(n+3), .itc-victory-sheet-total:nth-child(n+3), .itc-gameover-sheet-total:nth-child(n+3) {
+  padding-top: 0.25em;
+  border-top: 2px solid currentColor;
+}
+.itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank {
+  font-size: 2em;
+  font-weight: 900;
+  line-height: 0.9;
+  color: var(--itc-gold, #ffd23f);
+  filter: drop-shadow(0 0 0.2em var(--itc-hot, #ff9f1c));
+  animation: itc-cleared-sheet-in 0.01s linear forwards, itc-cleared-sheet-stamp 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.5) backwards;
+  animation-delay: calc(var(--itc-sheet-i, 0) * 0.28s);
+}
+/*
+  On a short screen the sheet is set tighter: the break's seven lines, its heading and *Onward* were
+  21 pixels past the smallest landscape phone at the panel's own size. The title's container query's
+  threshold, for its reason.
+*/
+@container (max-height: 460px) {
+  .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet { font-size: 0.82em; row-gap: 0.1em; }
+  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { font-size: 1.5em; }
+}
+@keyframes itc-cleared-sheet-in { from { opacity: 0; transform: translateY(0.4em); } to { opacity: 1; transform: none; } }
+@keyframes itc-cleared-sheet-count { from { --itc-sheet-n: 0; } }
+@keyframes itc-cleared-sheet-stamp { from { transform: scale(3); opacity: 0; } to { transform: none; opacity: 1; } }
+/*
+  ── THE TABLE ON THE TITLE — 0429 ────────────────────────────────────────────────────────────────
+
+  Asked for: *"rolling high score table on the game menu screen."* It ROLLS twice, as a cabinet's
+  title does: it takes turns with the pickup key, and its rows scroll up through a window in a loop.
+
+  ⚠️ **IT TAKES THE KEY'S BOX AND ADDS NOTHING TO IT.** Placed absolutely over the key's cell, so the
+  key alone decides how tall the column is and the table rolls through whatever height that is — the
+  layout guard's smallest landscape phone had 23 pixels to spare, and on a short screen the key folds
+  to a single strip. Eleven rows stacked in the cell put the title 128 pixels past a 480x320 display.
+  Two copies of the rows, and the second hidden from a reader, so the loop has no seam: the padding
+  under the rows is one row gap, which makes half the list exactly one copy. A score just set is lit.
+*/
+.itc-title-column-rolls { display: grid; position: relative; }
+.itc-title-column-rolls > .itc-title-key { grid-area: 1 / 1; align-self: center; }
+/*
+  On a tall screen the column stands beside five tall buttons with room to spare, so the cell is given
+  the height of the whole table — the rows still roll, and all ten are on the glass at once. On a short
+  screen it is the key's height and not a pixel more, which is the constraint above.
+*/
+@container (min-height: 461px) {
+  .itc-title-column-rolls { min-height: 17.5em; }
+}
+.itc-title-column-rolls > .itc-title-key { animation: itc-title-roll-first 18s ease-in-out infinite; }
+.itc-title-column-rolls > .itc-title-board { animation: itc-title-roll-second 18s ease-in-out infinite; }
+@keyframes itc-title-roll-first { 0%, 44% { opacity: 1; visibility: visible; } 50%, 94% { opacity: 0; visibility: hidden; } 100% { opacity: 1; visibility: visible; } }
+@keyframes itc-title-roll-second { 0%, 44% { opacity: 0; visibility: hidden; } 50%, 94% { opacity: 1; visibility: visible; } 100% { opacity: 0; visibility: hidden; } }
+.itc-title-board {
+  display: none;
+  position: absolute;
+  inset: 0;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  font-size: clamp(0.65rem, min(2cqw, 3.6cqh), 0.95rem);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.itc-title-column-rolls > .itc-title-board { display: flex; }
+.itc-title-board-heading {
+  flex: none;
+  margin: 0 0 0.2em;
+  font-size: 1.15em;
+  letter-spacing: 0.3em;
+  color: var(--itc-gold, #ffd23f);
+}
+.itc-title-board-window {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
+}
+.itc-title-board-rows {
+  display: grid;
+  grid-template-columns: auto auto auto auto;
+  justify-content: center;
+  gap: 0.2em 0.8em;
+  padding-bottom: 0.2em;
+  animation: itc-title-board-roll var(--itc-roll, 20s) linear infinite;
+}
+@keyframes itc-title-board-roll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+.itc-title-board-place { text-align: right; opacity: 0.6; }
+.itc-title-board-score { text-align: right; font-weight: 700; }
+.itc-title-board-pilot { text-align: left; }
+.itc-title-board-reached { text-align: left; opacity: 0.7; }
+.itc-title-board-fresh { color: var(--itc-gold, #ffd23f); animation: itc-title-board-lit 0.9s ease-in-out infinite alternate; }
+@keyframes itc-title-board-lit { from { text-shadow: none; } to { text-shadow: 0 0 0.6em var(--itc-hot, #ff9f1c); } }
+@media (prefers-reduced-motion: reduce) {
+  .itc-playing-score-value { transition: none; animation: none; background-position: 50% 0; }
+  .itc-playing-score-gain-a, .itc-playing-score-gain-b, .itc-playing-score-max .itc-playing-score-times,
+  .itc-playing-score-broke .itc-playing-score-streak, .itc-title-board-fresh { animation: none; }
+  .itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label,
+  .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value,
+  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { animation: none; opacity: 1; }
+  .itc-title-column-rolls > .itc-title-key { animation-timing-function: steps(1, end); }
+  .itc-title-column-rolls > .itc-title-board { animation-timing-function: steps(1, end); }
+  .itc-title-board-rows { animation: none; }
+}
+/*
   ── THE INTRO'S SKIP ─────────────────────────────────────────────────────────────────────────────
 
   Decision 0412. Bottom right, over the deck and the stars rather than over anything that moves, and
@@ -1297,6 +1546,28 @@ interface Panel {
   now: NowPlayingParts | null;
   /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
   crossing: CrossingParts | null;
+  /** A level's or a run's account — 0428. `null` on every screen that has none. */
+  sheet: HTMLElement | null;
+  /** The high scores and the column they roll in with the key — 0429. `null` off the title. */
+  board: { root: HTMLElement; column: HTMLElement } | null;
+}
+
+/**
+ * One line of an account — 0428: a label and what it says. A number counts up to itself; a string
+ * (a rank) is stamped. `tone` is how loud the line is: a total is ruled off and gold, a rank is big.
+ */
+export interface SheetLine {
+  label: string;
+  value: number | string;
+  tone: 'plain' | 'total' | 'rank';
+}
+
+/** One row of the high-score table as the title draws it — 0429. Words already, pushed in. */
+export interface BoardLine {
+  place: string;
+  score: string;
+  pilot: string;
+  reached: string;
 }
 
 /**
@@ -1565,6 +1836,22 @@ export interface Chrome {
    */
   setBoss(fraction: number, row: BossRow): void;
   /**
+   * Redraw the score — 0428: the run's points so far and the streak they are being scored on. Called
+   * on a change, never per frame, on `setHud`'s terms; the count-up between two values is the
+   * stylesheet's, so a call writes one property and a label.
+   */
+  setScore(points: number, streak: number): void;
+  /**
+   * Put an account on a screen that shows one — 0428: the break, the victory, the run over. `null`
+   * empties it. Rebuilt on each call, which is once per showing: every line animates in again.
+   */
+  setSheet(screen: Screen, lines: readonly SheetLine[] | null): void;
+  /**
+   * Put the high scores on the title — 0429, best first, with the row at `fresh` lit (a score just
+   * set) or `-1` for none. An empty table leaves the key alone on the title and nothing rolls.
+   */
+  setBoard(lines: readonly BoardLine[], fresh: number): void;
+  /**
    * Say how long the shown screen has left, in whole seconds, or `null` for a screen that waits.
    *
    * Called on a change of the displayed number — once a second at most — so it may be ordinary DOM
@@ -1634,6 +1921,18 @@ export interface Chrome {
  * not known until it starts, and no action on purpose; `ScreenRow.pushed` is the row saying so, and
  * has the story of the last screen that was shown correctly and was invisible.
  */
+/**
+ * The four inks the score's flash is drawn in, as custom properties on `el` — 0428. The player's own
+ * orange and the hazard's gold for the heat, the impact white for the sweep of light, the enemy's ink
+ * for a streak lost. Read off the palette at runtime, so the high-contrast palette gets its own.
+ */
+function paintScoreInks(el: HTMLElement, colours: Palette): void {
+  el.style.setProperty('--itc-hot', colours.bullet);
+  el.style.setProperty('--itc-gold', colours.hazard);
+  el.style.setProperty('--itc-shine', colours.impact);
+  el.style.setProperty('--itc-lost', colours.enemy);
+}
+
 function hasChrome(screen: Screen): boolean {
   const row = SCREENS[screen];
   return row.heading.length > 0 || row.actions.length > 0 || row.pushed;
@@ -2081,6 +2380,20 @@ export function makeChrome(
       heading.textContent = row.heading;
       panel.appendChild(heading);
     }
+    // The inks the score's gold is made of, on every overlay, where the palette is — 0428.
+    paintScoreInks(root, colours);
+
+    /*
+      ⚠️ **THE ACCOUNT, UNDER THE HEADING, ON THE THREE SCREENS A RUN STOPS TO ADD UP ON** — 0428.
+      Empty until the shell pushes it: what goes on it is the run's business and the shell's, not this
+      file's, on `setActionHint`'s terms.
+    */
+    let sheet: HTMLElement | null = null;
+    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver') {
+      sheet = document.createElement('div');
+      sheet.className = prefix + 'sheet';
+      panel.appendChild(sheet);
+    }
 
     /*
       The controls' own box. On the title screen it is a column BESIDE the key rather than under it —
@@ -2121,6 +2434,7 @@ export function makeChrome(
       Built by walking `PICKUP_KINDS`, so a pickup added to the table appears here without anybody
       remembering to come and add it.
     */
+    let board: Panel['board'] = null;
     if (screen === 'title') {
       const key = document.createElement('div');
       key.className = prefix + 'key';
@@ -2151,7 +2465,11 @@ export function makeChrome(
       }
       const column = document.createElement('div');
       column.className = prefix + 'column';
-      column.append(key);
+      // The high scores roll with the key in one cell — 0429; filled, and set rolling, by `setBoard`.
+      const boardRoot = document.createElement('div');
+      boardRoot.className = prefix + 'board';
+      column.append(key, boardRoot);
+      board = { root: boardRoot, column };
       const body = document.createElement('div');
       body.className = prefix + 'body';
       /*
@@ -2313,7 +2631,7 @@ export function makeChrome(
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer, options, now: nowPlaying, crossing };
+    panels[screen] = { root, controls, timer, options, now: nowPlaying, crossing, sheet, board };
     elements.push(root);
   }
 
@@ -2427,6 +2745,47 @@ export function makeChrome(
   /** The notches, grown once per row and reused. */
   const bossNotches: HTMLElement[] = [];
   top.appendChild(bossBar);
+
+  /*
+    ── THE SCORE — 0428 ────────────────────────────────────────────────────────────────────────────
+
+    Top right, the third column of the row, so it can meet neither the readout nor the bar. Built once
+    and mutated: `setScore` writes the total into the counter's property and the streak into the badge.
+  */
+  const scoreBox = document.createElement('div');
+  scoreBox.className = 'itc-playing-score';
+  scoreBox.style.color = colours.player;
+  paintScoreInks(scoreBox, colours);
+  scoreBox.setAttribute('role', 'img');
+  const scoreLabel = document.createElement('div');
+  scoreLabel.className = 'itc-playing-score-label';
+  scoreLabel.textContent = 'SCORE';
+  scoreLabel.setAttribute('aria-hidden', 'true');
+  const scorePop = document.createElement('div');
+  scorePop.className = 'itc-playing-score-pop';
+  const scoreValue = document.createElement('div');
+  scoreValue.className = 'itc-playing-score-value';
+  scorePop.appendChild(scoreValue);
+  const streakRow = document.createElement('div');
+  streakRow.className = 'itc-playing-score-streak';
+  streakRow.setAttribute('aria-hidden', 'true');
+  const streakBar = document.createElement('div');
+  streakBar.className = 'itc-playing-score-bar';
+  const streakFill = document.createElement('div');
+  streakFill.className = 'itc-playing-score-fill';
+  streakFill.style.transform = 'scaleX(0)';
+  streakBar.appendChild(streakFill);
+  const streakTimes = document.createElement('span');
+  streakTimes.className = 'itc-playing-score-times';
+  streakTimes.textContent = '×1';
+  streakRow.append(streakBar, streakTimes);
+  scoreBox.append(scoreLabel, scorePop, streakRow);
+  top.appendChild(scoreBox);
+  /** What the score last said, so a call that changed nothing animates nothing. */
+  let scoreShown = -1;
+  let streakShown = 0;
+  /** Which of the two pop animations is on, alternated so each gain restarts it without a reflow. */
+  let popB = false;
 
   /*
     ── THE INTRO'S SKIP — 0412 ───────────────────────────────────────────────────────────────────────
@@ -2628,6 +2987,107 @@ export function makeChrome(
       }
       paintBoss();
     },
+    setScore(points: number, streak: number): void {
+      const multiplier = multiplierFor(streak);
+      const pointsBefore = scoreShown;
+      if (points !== scoreShown) {
+        // A gain pops; the first write and a new run going back to nothing do not.
+        if (points > scoreShown && scoreShown >= 0) {
+          scorePop.classList.toggle('itc-playing-score-gain-a', !popB);
+          scorePop.classList.toggle('itc-playing-score-gain-b', popB);
+          popB = !popB;
+        }
+        scoreShown = points;
+        scoreValue.style.setProperty('--itc-playing-points', String(points));
+      }
+      // A streak that went back to nothing from a multiplier worth having is a hit, and it shakes.
+      // Not when the points went down with it: that is a new run starting, and nothing was hit.
+      const broke = streak < streakShown && multiplierFor(streakShown) > 1 && points >= pointsBefore;
+      if (broke) {
+        scoreBox.classList.remove('itc-playing-score-broke');
+        // Read back, so the class going on again is a new animation and not the old one continuing.
+        void scoreBox.offsetWidth;
+        scoreBox.classList.add('itc-playing-score-broke');
+      }
+      streakShown = streak;
+      streakTimes.textContent = '×' + String(multiplier);
+      const toNext = multiplier >= MULTIPLIER_CAP ? 1 : (streak % STREAK_STEP) / STREAK_STEP;
+      streakFill.style.transform = 'scaleX(' + String(toNext) + ')';
+      scoreBox.classList.toggle('itc-playing-score-hot', multiplier > 1);
+      scoreBox.classList.toggle('itc-playing-score-max', multiplier >= MULTIPLIER_CAP);
+      scoreBox.setAttribute('aria-label', 'Score ' + String(points) + ', times ' + String(multiplier));
+    },
+    setSheet(screen: Screen, lines: readonly SheetLine[] | null): void {
+      const sheet = panels[screen]?.sheet;
+      if (sheet === null || sheet === undefined) return;
+      sheet.replaceChildren();
+      if (lines === null) return;
+      const prefix = prefixFor(screen);
+      lines.forEach((line, index) => {
+        const label = document.createElement('span');
+        label.className = prefix + 'sheet-label';
+        label.textContent = line.label;
+        label.style.setProperty('--itc-sheet-i', String(index));
+        const value = document.createElement('span');
+        value.style.setProperty('--itc-sheet-i', String(index));
+        if (typeof line.value === 'number') {
+          value.className = prefix + 'sheet-value ' + prefix + 'sheet-count';
+          value.style.setProperty('--itc-sheet-n', String(Math.round(line.value)));
+          // What a reader hears, and what a test reads; the counter is what the eye sees.
+          const said = document.createElement('span');
+          said.className = prefix + 'sheet-said';
+          said.textContent = String(Math.round(line.value));
+          value.appendChild(said);
+        } else {
+          value.className = prefix + 'sheet-value';
+          value.textContent = line.value;
+        }
+        if (line.tone === 'rank') value.classList.add(prefix + 'sheet-rank');
+        if (line.tone === 'total') {
+          label.classList.add(prefix + 'sheet-total');
+          value.classList.add(prefix + 'sheet-total');
+        }
+        sheet.append(label, value);
+      });
+    },
+    setBoard(lines: readonly BoardLine[], fresh: number): void {
+      const board = panels.title?.board;
+      if (board === null || board === undefined) return;
+      const prefix = prefixFor('title');
+      board.root.replaceChildren();
+      board.column.classList.toggle(prefix + 'column-rolls', lines.length > 0);
+      if (lines.length === 0) return;
+      const heading = document.createElement('div');
+      heading.className = prefix + 'board-heading';
+      heading.textContent = 'HIGH SCORES';
+      const view = document.createElement('div');
+      view.className = prefix + 'board-window';
+      const rows = document.createElement('div');
+      rows.className = prefix + 'board-rows';
+      // Two seconds a row, so the roll reads at the same pace however long the table is.
+      rows.style.setProperty('--itc-roll', String(lines.length * 2) + 's');
+      // Twice over for a loop with no seam; the second copy is the picture's and not a reader's.
+      for (let copy = 0; copy < 2; copy++) {
+        lines.forEach((line, index) => {
+          const cells: [string, string][] = [
+            [line.place, 'board-place'],
+            [line.score, 'board-score'],
+            [line.pilot, 'board-pilot'],
+            [line.reached, 'board-reached'],
+          ];
+          for (const [text, part] of cells) {
+            const cell = document.createElement('span');
+            cell.className = prefix + part;
+            if (index === fresh) cell.classList.add(prefix + 'board-fresh');
+            if (copy > 0) cell.setAttribute('aria-hidden', 'true');
+            cell.textContent = text;
+            rows.appendChild(cell);
+          }
+        });
+      }
+      view.appendChild(rows);
+      board.root.append(heading, view);
+    },
     show(screen: Screen | null): void {
       /*
         ⚠️ **Shown while the SIMULATION runs, not while the screen is `playing`** — decision 0063. The
@@ -2636,6 +3096,8 @@ export function makeChrome(
         is invisible.
       */
       hud.classList.toggle('itc-playing-hud-shown', screen !== null && SCREENS[screen].steps);
+      // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
+      scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && SCREENS[screen].steps && SCREENS[screen].inRun);
       for (const name of Object.keys(panels) as Screen[]) {
         const panel = panels[name];
         if (panel === undefined) continue;
@@ -2724,6 +3186,7 @@ export function makeChrome(
       hud.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      scoreBox.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       skip.classList.toggle(prefixFor('intro') + 'face-pixel', face === 'pixel');
       bubble.classList.toggle(prefixFor('outro') + 'face-pixel', face === 'pixel');
     },

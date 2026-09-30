@@ -108,6 +108,7 @@ import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
+import { multiplierFor } from '../content/score.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
 export const MUZZLE_ALONG = 3;
@@ -817,6 +818,24 @@ const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;
 const IMPACT_FLASH_STEPS = 4;
 
 /** Everything a frame reads. Mutable, set up once, and updated on a resize — never reducer state. */
+/**
+ * A level's account as the frame counts it — 0428. Mutated in place, never reducer state, on 0022's
+ * terms for everything the frame counts; the shell banks it into the run at the level's clear.
+ */
+export interface LevelScore {
+  /** Points from kills, streaks and bosses, this level. */
+  points: number;
+  /** Kills since the last hit, carried across a level boundary. */
+  streak: number;
+  /** The longest streak this level has seen. */
+  best: number;
+  /** Bodies killed by the player, and bodies sent, this level — the rank's share. */
+  kills: number;
+  spawned: number;
+  /** Hits taken this level, a shield's or the hull's. */
+  hits: number;
+}
+
 export interface World {
   /**
    * Every pool, in draw order, back to front. Built once at mount.
@@ -1208,6 +1227,13 @@ export interface World {
    * times a second at the worst, so the chrome behind it may be ordinary DOM code.
    */
   onBoss: (fraction: number) => void;
+  /** The level's account so far, counted as it happens — 0428. Reset with the level's script. */
+  score: LevelScore;
+  /** The points and the streak the chrome last drew — `shownHealth`'s argument, 0428. */
+  shownPoints: number;
+  shownStreak: number;
+  /** The level's points or the streak moved. Fired on a change only — a kill or a hit. */
+  onScore: (points: number, streak: number) => void;
   /**
    * The resolved auto-fire, recomputed by the shell whenever the run's upgrade list changes.
    *
@@ -2229,6 +2255,15 @@ export class GameFrame implements Frame {
         other branch, and the two cues are deliberately opposite sweeps.
       */
       if (w.ship.health < healthBefore && w.ship.health > 0) w.onCue('shield', w.ship.across);
+      /*
+        ⚠️ **ANY HIT ENDS THE STREAK, A SHIELD'S AS MUCH AS THE HULL'S** — 0428, in the ask's words:
+        *"a shield taking a hit counts as a hit and resets the counter."* Here, after the one-hit cap,
+        so a step that met three bullets is one hit to the rank as it is one mark off the shell.
+      */
+      if (w.ship.health < healthBefore) {
+        w.score.hits += 1;
+        w.score.streak = 0;
+      }
     }
     /*
       A blast lands ONCE. Everything above has now seen it, so it spends itself here and what remains
@@ -2284,6 +2319,14 @@ export class GameFrame implements Frame {
       // says it was, which is why the log carries a kind and why the boss keeps its own.
       const shatter = w.enemyRows[w.deaths.kind[i]!]!.shatter;
       if (shatter !== null) shatterInto(w, w.deaths.along[i]!, w.deaths.across[i]!, shatter.shot, shatter.shots);
+      /*
+        And it is worth its row's points, times the streak it lands on — 0428. Only what reached this
+        log scores: a wall kill, a body the boss swallowed and one that flew off are not the player's.
+      */
+      w.score.kills += 1;
+      w.score.streak += 1;
+      if (w.score.streak > w.score.best) w.score.best = w.score.streak;
+      w.score.points += w.enemyRows[w.deaths.kind[i]!]!.points * multiplierFor(w.score.streak);
     }
     for (let i = 0; i < w.bossDeaths.count; i++) {
       burst(w, w.bossDeaths.along[i]!, w.bossDeaths.across[i]!, BURST.enemy);
@@ -2334,6 +2377,12 @@ export class GameFrame implements Frame {
     if (bossShown !== w.shownBoss) {
       w.shownBoss = bossShown;
       w.onBoss(bossShown);
+    }
+    // And the score, on the same terms — 0428: on a change, and after the hit that ended a streak.
+    if (w.score.points !== w.shownPoints || w.score.streak !== w.shownStreak) {
+      w.shownPoints = w.score.points;
+      w.shownStreak = w.score.streak;
+      w.onScore(w.score.points, w.score.streak);
     }
 
     // ⚠️ `flying &&`, or the wreck reports its own death again on every step of the beat. Nothing
@@ -2433,6 +2482,8 @@ export class GameFrame implements Frame {
     // from then until the next fight is set up or the screen changes.
     if (bossJustDied(w)) {
       w.bossBeaten = true;
+      // Flat, a mid-boss or the end one: the streak multiplies a wave and never a fight — 0428.
+      w.score.points += w.bossRow.points;
       // The one cue sized to fill a beat rather than to punctuate one: `BOSS_DEATH_STEPS` is 1.6
       // seconds of the level carrying on while the boss comes apart, and `src/content/cues.ts` sizes
       // `bossDown` against it.
@@ -5691,6 +5742,8 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
   for (let i = 0; i < count; i++) {
     const e = w.enemies.spawn();
     if (e === null) return;
+    // Every body sent counts against the level's rank, a boss's adds as much as a wave — 0428.
+    w.score.spawned += 1;
     if (lord !== null) {
       /*
         ⚠️ **THE FAN IS SKEWED HALF A SPACING TO THE CALL'S SIDE, SO NO MEMBER TAKES THE MOUTH'S OWN
@@ -5817,6 +5870,7 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
   for (let i = 0; i < count; i++) {
     const e = w.enemies.spawn();
     if (e === null) return;
+    w.score.spawned += 1;
     const along = w.cameraAlong + w.rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
     reset(e, along, -row.radius, row, kind);
     animate(e, row.cycle);
@@ -5885,6 +5939,7 @@ function spawnWave(w: World, index: number): void {
     // A wave one enemy short is dropped rather than grown — `src/sim/pool.ts` has the argument, and
     // it is the same one a burst that will not fit gets.
     if (e === null) return;
+    w.score.spawned += 1;
     /*
       ⚠️ **THE WAVE'S OWN BODY DECIDES ITS SPACING** — 0143. `row` is already in hand and a wave is a
       single kind, so this costs one multiply and allocates nothing: `gapAcross` returns a number and
@@ -9502,6 +9557,8 @@ export function startLevel(w: World, level: LevelRow): void {
     `advanceLevel` is the one that takes an index, because it is the one where the index varies.
   */
   w.levelIndex = 0;
+  // A run's streak starts here and nowhere else: a level boundary carries it on — 0428.
+  w.score.streak = 0;
   // The mid-boss's fight first, where the level has one — 0247.
   w.fight = level.midBoss === null ? 1 : 0;
   // The corridor, from the origin `resetScene` is about to put the level at, which is nought — 0348.
@@ -9780,6 +9837,22 @@ function beginScript(w: World): void {
   w.bossEscortSide = 1;
   w.chilledFor = 0;
   w.frozenFor = 0;
+  resetLevelScore(w.score);
+}
+
+/**
+ * A level's account, back to nothing — 0428. At a level's script and again once the shell has banked
+ * the clear into the run, so the HUD never counts one level twice across the break and the burn.
+ *
+ * ⚠️ **NOT THE STREAK.** A streak is kills without a hit, and a level boundary is not a hit: it
+ * carries on into the next level and only a hit or a new run (`startLevel`) ends it.
+ */
+export function resetLevelScore(score: LevelScore): void {
+  score.points = 0;
+  score.best = score.streak;
+  score.kills = 0;
+  score.spawned = 0;
+  score.hits = 0;
 }
 
 export function resetScene(w: World): void {

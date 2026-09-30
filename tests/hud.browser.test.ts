@@ -312,6 +312,54 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
     }
     await page.context().close();
   });
+
+  it('0428 — THE ASK: the score is top right, clear of the bar and the readout, and says its number', async () => {
+    /*
+      *"points counter top right."* In pixels on the glass, at every size the bar is held at, with the
+      bar raised and the score at the most digits the pad allows — so the three things in the top row
+      are measured at their widest together, which is the only arrangement in which they could meet.
+    */
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-score-shown');
+    const said = await page.getAttribute('.itc-playing-score', 'aria-label');
+    expect(said, 'the score does not say its number in words').toMatch(/^Score 0, times 1$/);
+    for (const [width, height] of [
+      [667, 375],
+      [844, 390],
+      [915, 412],
+      [1280, 720],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      const laid = await page.evaluate(() => {
+        const hud = document.querySelector<HTMLElement>('.itc-playing-hud')!;
+        const bar = document.querySelector<HTMLElement>('.itc-playing-boss')!;
+        const score = document.querySelector<HTMLElement>('.itc-playing-score')!;
+        hud.classList.add('itc-playing-face-pixel');
+        score.classList.add('itc-playing-face-pixel');
+        bar.classList.add('itc-playing-boss-shown');
+        score.querySelector<HTMLElement>('.itc-playing-score-value')!.style.setProperty('--itc-playing-points', '99999999');
+        const r = score.getBoundingClientRect();
+        return {
+          readoutRight: hud.getBoundingClientRect().right,
+          barRight: bar.getBoundingClientRect().right,
+          left: r.left,
+          right: r.right,
+          top: r.top,
+          width: r.width,
+        };
+      });
+      const at = `${width}×${height}`;
+      expect(laid.width, `at ${at} the score was laid out with no width`).toBeGreaterThan(0);
+      expect(laid.left, `at ${at} the score starts at ${laid.left.toFixed(0)} px, over the bar that ends at ${laid.barRight.toFixed(0)} px`).toBeGreaterThanOrEqual(laid.barRight);
+      expect(laid.left, `at ${at} the score runs over the readout`).toBeGreaterThanOrEqual(laid.readoutRight);
+      expect(laid.right, `at ${at} the score runs off the screen`).toBeLessThanOrEqual(width);
+      // Top right, in the player's units: its right edge in the last twentieth of the width, at the top.
+      expect(laid.right, `at ${at} the score is not at the right`).toBeGreaterThan(width * 0.95);
+      expect(laid.top, `at ${at} the score is not at the top`).toBeLessThan(height * 0.05);
+    }
+    await page.context().close();
+  });
 });
 
 describe.runIf(chromePath)('the in-game readout', () => {

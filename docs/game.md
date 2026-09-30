@@ -396,7 +396,27 @@ Hazards are environmental and must be dealt with, not only dodged. Asteroids are
 shoot one and the fragments become weapons that damage enemies — a hazard that stays playable under
 auto-fire and low-input control schemes.
 
+## Score
+
+**A kill is worth its enemy's points times the streak, a boss is worth its own points flat, and a
+cleared level pays a bonus for what the ship still holds** —
+[0428](decisions/0428-the-score-is-kept.md). The score is **not a currency**. It buys nothing, and
+the *no shop* below is untouched.
+
+| | |
+|---|---|
+| **the streak** | kills without a hit, ×1 up to ×8, one step every ten kills. **Any hit ends it, a shield's included.** A level boundary does not |
+| **in play** | top right: the run's score, the multiplier and the way to the next step |
+| **the break** | the level's points, its rank (S–D, by the share killed and the hits taken), the bonus for each shield, each bomb (the gun's charges) and each missile powerup (the tubes' charges) held, the level's total and the run's |
+| **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, which a continue keeps |
+| **the table** | the best ten runs, kept on the device, on the title, rolling with the pickup key — [0429](decisions/0429-the-table-is-kept.md) |
+
+⚠️ Every number in it is a play number, and none has been played.
+
 ## Save and resume
+
+**The high-score table is the one thing kept between visits today** —
+[0429](decisions/0429-the-table-is-kept.md). What follows is the run save, which does not exist yet.
 
 The save is an **interruption hedge and not a safety net** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser

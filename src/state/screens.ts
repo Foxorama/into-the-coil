@@ -384,10 +384,13 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   // it apart and shows it on every row that steps, which is why this row still has no panel.
   playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false, skips: false, inRun: true },
   /**
-   * ⚠️ **No score, no summary, no coaching.** `docs/game.md`: *players are assumed to be adaptable;
-   * hints are added where play proves they are needed, never pre-emptively.* What the player needs to
-   * know is that the run ended and how to carry on, and the frozen scene behind this says everything
-   * about why — `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`.
+   * ⚠️ **No summary and no coaching — and one number, since 0428.** `docs/game.md`: *players are
+   * assumed to be adaptable; hints are added where play proves they are needed, never pre-emptively.*
+   * What the player needs to know is that the run ended and how to carry on, and the frozen scene
+   * behind this says everything about why —
+   * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`. The score was asked
+   * for (`docs/decisions/0428-the-score-is-kept.md`), and it is the one thing the frozen scene cannot
+   * say: what the run is worth, which a continue keeps and the table takes if it runs out.
    */
   /*
    * ⚠️ **"Continue", not "Again", and the two words describe different games** —
@@ -462,7 +465,12 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     dims: false,
     // ⚠️ **`then: null` — the one screen that genuinely presses its own button.** *Onward* is not a
     // screen, it is `continueRun`, so there is nothing here a destination could have been written as.
-    timeout: { steps: 3 * STEPS_PER_SECOND, then: null },
+    /*
+      ⚠️ **SIX SECONDS AND IT WAS THREE — 0428.** The break carries the level's account now, seven
+      lines that arrive one after another over two seconds, and three seconds was one second of reading
+      them. The world still never stops (0063), and *Onward* is still there for a hand that has read.
+    */
+    timeout: { steps: 6 * STEPS_PER_SECOND, then: null },
     pushed: false,
     skips: false,
     inRun: true,

@@ -11,7 +11,9 @@ import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 // 0415: the title's Pilot card is as wide as whoever was picked.
-import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../src/content/golfers.ts';
+// 0429: the title is measured with a full high-score table on it.
+import { SCORES_KEY, TABLE_SIZE, serialiseScores, type ScoreEntry } from '../src/save/scores.ts';
 
 /**
  * EVERY SCREEN FITS THE SCREEN IT IS DRAWN ON.
@@ -69,6 +71,18 @@ afterAll(async () => {
 async function open(viewport: { width: number; height: number }): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  /*
+    ⚠️ **A FULL HIGH-SCORE TABLE, WRITTEN BEFORE THE PAGE LOADS — 0429.** The title rolls the table
+    with the key in one cell, so the title's height is whichever of the two is taller; a guard that
+    loaded a browser with nothing kept would be measuring the title every first-time player sees and
+    no returning one does. The widest rows the content allows, through the real save layer.
+  */
+  await context.addInitScript(
+    ([key, table]: [string, string]) => {
+      localStorage.setItem(key, table);
+    },
+    [SCORES_KEY, widestTable()] as [string, string],
+  );
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
@@ -104,6 +118,59 @@ async function showOnly(page: Page, screen: Screen): Promise<void> {
   );
   if (screen === 'music') await fillTheRoom(page);
   if (screen === 'title') await nameTheWidestPilot(page);
+  if (screen === 'title') {
+    // The table has to be there to be measured, or every title below is the first-time player's.
+    const rolls = await page.$('.' + prefixFor('title') + 'column-rolls');
+    expect(rolls, 'the title has no high-score table to measure — the seeded table was not read').not.toBeNull();
+  }
+  if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver') await fillTheSheet(page, screen);
+}
+
+/** Ten runs, as wide as the table can be: the longest first name, seven digits, and every one clear. */
+function widestTable(): string {
+  const first = (kind: GolferKind): string => GOLFERS[kind].name.split(' ')[0] ?? '';
+  const widest = GOLFER_KINDS.reduce((a, b) => (first(b).length > first(a).length ? b : a));
+  const table: ScoreEntry[] = [];
+  for (let i = 0; i < TABLE_SIZE; i++) {
+    table.push({ score: 9_999_999 - i, bonus: 0, pilot: widest, difficulty: 'savior', levels: 7, cleared: true, continues: 0, when: i });
+  }
+  return serialiseScores(table);
+}
+
+/**
+ * Put an account on a screen that shows one, at its LONGEST — 0428, on `fillTheRoom`'s terms: the
+ * sheet is pushed by the shell mid-run, so `showOnly` would otherwise measure it empty. The break's
+ * seven lines, the victory's five and the run over's one, each value seven digits wide, written in
+ * the classes `setSheet` writes.
+ */
+async function fillTheSheet(page: Page, screen: 'cleared' | 'victory' | 'gameOver'): Promise<void> {
+  const lines: Record<typeof screen, string[]> = {
+    cleared: ['Points', 'Rank', 'Shields ×3', 'Bombs ×12', 'Missiles ×12', 'Level total', 'Score'],
+    victory: ['Ranks', 'Points', 'Bonuses', 'Final score', 'High score'],
+    gameOver: ['Score'],
+  };
+  await page.evaluate(
+    ({ prefix, labels }: { prefix: string; labels: string[] }) => {
+      const sheet = document.querySelector('.' + prefix + 'sheet');
+      if (!(sheet instanceof HTMLElement)) throw new Error('the screen has no sheet to fill');
+      sheet.replaceChildren();
+      for (const text of labels) {
+        const label = document.createElement('span');
+        label.className = prefix + 'sheet-label';
+        label.textContent = text;
+        const value = document.createElement('span');
+        value.className = prefix + 'sheet-value';
+        value.textContent = text === 'Ranks' ? 'S S S S S S S' : '9999999';
+        // Settled, as the eye sees it once the lines have arrived.
+        label.style.animation = 'none';
+        label.style.opacity = '1';
+        value.style.animation = 'none';
+        value.style.opacity = '1';
+        sheet.append(label, value);
+      }
+    },
+    { prefix: prefixFor(screen), labels: lines[screen] },
+  );
 }
 
 /**
@@ -204,12 +271,37 @@ function boxesOf(page: Page, screen: Screen): Promise<Box[]> {
       if (!leaf) continue;
       const r = el.getBoundingClientRect();
       if (r.width === 0 && r.height === 0) continue;
+      /*
+        ⚠️ **WHAT A CLIPPING BOX INSIDE THE PANEL HIDES IS NOT DRAWN — 0429.** The title's table rolls
+        its rows through a window that clips them, so most of its rows are, at any moment, boxes
+        outside the window and outside the display that nobody can see. Measured as the part of the
+        box its clipping ancestors let through; a box they hide entirely is not a box on the screen.
+        The panel itself and the overlay above it are not clipping boxes here — they are the scroll
+        container whose overflow this guard exists to catch. ⚠️ **Never a control**: a button a clip
+        hides is a button the player cannot press, which is this guard's subject, so it is measured
+        whole wherever it is.
+      */
+      let left = r.left;
+      let top = r.top;
+      let right = r.right;
+      let bottom = r.bottom;
+      const clips = !(el instanceof HTMLButtonElement);
+      for (let up = el.parentElement; clips && up !== null && up !== panel; up = up.parentElement) {
+        const overflow = getComputedStyle(up).overflow;
+        if (overflow === 'visible') continue;
+        const clip = up.getBoundingClientRect();
+        left = Math.max(left, clip.left);
+        top = Math.max(top, clip.top);
+        right = Math.min(right, clip.right);
+        bottom = Math.min(bottom, clip.bottom);
+      }
+      if (right <= left || bottom <= top) continue;
       out.push({
         what: (el.textContent ?? el.className).trim().slice(0, 40) || el.className,
-        left: r.left,
-        top: r.top,
-        right: r.right,
-        bottom: r.bottom,
+        left,
+        top,
+        right,
+        bottom,
       });
     }
     return out;

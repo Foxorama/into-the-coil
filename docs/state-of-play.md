@@ -1136,6 +1136,15 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE SCORE AND THE TABLE ARE BUILT, AND NOTHING IN THEM HAS BEEN PLAYED — 2026-09-30
+
+[0428](decisions/0428-the-score-is-kept.md) (points, streak, the break's tally, the victory's) and
+[0429](decisions/0429-the-table-is-kept.md) (the first `itc_*` key, the table on the title), asked
+for as one overnight job. **Owed:** a play of a whole run for the numbers (rows' `points`, the
+bonuses, whether an S is reachable on each level: `RANKS` in `src/content/score.ts`). The two
+readings 0428 chose are confirmed by the player. `rig/score.html?seed&go=cleared` stands the game on
+each screen without flying to it.
+
 ### ⚠️ THE INTERFACE ANSWERED FOUR ASKS IN ONE PR, AND ALL FOUR ARE OWED A PLAY — 2026-09-23
 
 ⚠️ **Four decisions, one branch, on the player's own list:** *"make the interface better, add end

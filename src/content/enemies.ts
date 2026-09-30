@@ -320,6 +320,12 @@ export type Motion =
 
 export interface EnemyRow extends Body {
   /**
+   * What a kill is worth before the streak multiplies it — 0428. Every row authors its own: it
+   * starts from a hundred a point of health and moves for what the body is to kill — a weaver or a
+   * charger is harder to pin than its health says, a minnow comes in a shoal. Play numbers.
+   */
+  points: number;
+  /**
    * How it moves while it flies — 0410: its drawings in order, each lit twin, and how long each holds.
    *
    * ⚠️ **REPORTED FROM PLAY:** *"none of them feel alive because while their location changes, the
@@ -464,6 +470,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * player feels rather than only sees.
    */
   drifter: {
+    points: 100,
     sprite: SPRITE.drifter,
     spriteHit: SPRITE.drifterHit,
     // It holds station, so it swims in place, slowly: a ray's beat, looking about — 0410.
@@ -500,6 +507,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * fact about the lancer specifically, told by a silhouette the player can read before firing.
    */
   lancer: {
+    points: 200,
     sprite: SPRITE.lancer,
     spriteHit: SPRITE.lancerHit,
     cycle: cycleOf([[SPRITE.lancer, SPRITE.lancerHit], [SPRITE.lancerB, SPRITE.lancerBHit], [SPRITE.lancerC, SPRITE.lancerCHit]], BEAT, 7),
@@ -554,6 +562,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * every authored wave against that bound rather than trusting the author to have done the algebra.
    */
   weaver: {
+    points: 150,
     sprite: SPRITE.weaver,
     spriteHit: SPRITE.weaverHit,
     cycle: cycleOf([[SPRITE.weaver, SPRITE.weaverHit], [SPRITE.weaverB, SPRITE.weaverBHit], [SPRITE.weaverC, SPRITE.weaverCHit]], BEAT, 8),
@@ -600,6 +609,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * always on screen for a known amount of time, and a formation can be authored around that.
    */
   turret: {
+    points: 300,
     sprite: SPRITE.turret,
     spriteHit: SPRITE.turretHit,
     // A slow breath through the gun face: the heaviest thing on the shared roster moves least often.
@@ -643,6 +653,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * skill is *surviving the onslaught, not mashing a fire button*.
    */
   charger: {
+    points: 150,
     sprite: SPRITE.charger,
     spriteHit: SPRITE.chargerHit,
     // It charges, so its tail flicks fast — the quickest cycle on the roster.
@@ -692,6 +703,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * also shoots, at a turret's rate would be a wall rather than an enemy.
    */
   warden: {
+    points: 400,
     sprite: SPRITE.warden,
     spriteHit: SPRITE.wardenHit,
     // An iris dilates slowly, and lingers shut and open rather than passing through.
@@ -739,6 +751,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * *arrives with the world*.
    */
   spinner: {
+    points: 300,
     sprite: SPRITE.spinner,
     spriteHit: SPRITE.spinnerHit,
     cycle: cycleOf([[SPRITE.spinner, SPRITE.spinnerHit], [SPRITE.spinnerB, SPRITE.spinnerBHit], [SPRITE.spinnerC, SPRITE.spinnerCHit]], BEAT, 5),
@@ -790,6 +803,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * to survive, which is the opposite reading from the spinner's three.
    */
   sower: {
+    points: 250,
     sprite: SPRITE.sower,
     spriteHit: SPRITE.sowerHit,
     cycle: cycleOf([[SPRITE.sower, SPRITE.sowerHit], [SPRITE.sowerB, SPRITE.sowerBHit], [SPRITE.sowerC, SPRITE.sowerCHit]], BEAT, 7),
@@ -831,6 +845,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     signature no other kind sends (`tests/legibility.test.ts`).
   */
   picket: {
+    points: 200,
     sprite: SPRITE.picket,
     spriteHit: SPRITE.picketHit,
     cycle: cycleOf([[SPRITE.picket, SPRITE.picketHit], [SPRITE.picketB, SPRITE.picketBHit], [SPRITE.picketC, SPRITE.picketCHit]], BEAT, 8),
@@ -866,6 +881,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'hunt', agility: 0.35 },
   },
   moth: {
+    points: 200,
     sprite: SPRITE.moth,
     spriteHit: SPRITE.mothHit,
     cycle: cycleOf([[SPRITE.moth, SPRITE.mothHit], [SPRITE.mothB, SPRITE.mothBHit], [SPRITE.mothC, SPRITE.mothCHit]], BEAT, 5),
@@ -883,6 +899,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'circle', agility: 0.5, radius: 28 },
   },
   raptor: {
+    points: 250,
     sprite: SPRITE.raptor,
     spriteHit: SPRITE.raptorHit,
     cycle: cycleOf([[SPRITE.raptor, SPRITE.raptorHit], [SPRITE.raptorB, SPRITE.raptorBHit], [SPRITE.raptorC, SPRITE.raptorCHit]], BEAT, 6),
@@ -905,6 +922,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * at the hardest tier clears 0105's floor with room, which `tests/pilots.test.ts` holds.
    */
   kite: {
+    points: 150,
     sprite: SPRITE.kite,
     spriteHit: SPRITE.kiteHit,
     cycle: cycleOf([[SPRITE.kite, SPRITE.kiteHit], [SPRITE.kiteB, SPRITE.kiteBHit], [SPRITE.kiteC, SPRITE.kiteCHit]], BEAT, 5),
@@ -948,6 +966,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * on the screen clears 0105's floor with room (`tests/pilots.test.ts`).
    */
   minnow: {
+    points: 50,
     sprite: SPRITE.minnow,
     spriteHit: SPRITE.minnowHit,
     cycle: cycleOf([[SPRITE.minnow, SPRITE.minnowHit], [SPRITE.minnowB, SPRITE.minnowBHit], [SPRITE.minnowC, SPRITE.minnowCHit]], BEAT, 5),
@@ -994,6 +1013,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * `tests/level.test.ts` reads the reach off the row and refuses a lane it would leave the band from.
    */
   swift: {
+    points: 250,
     sprite: SPRITE.swift,
     spriteHit: SPRITE.swiftHit,
     cycle: cycleOf([[SPRITE.swift, SPRITE.swiftHit], [SPRITE.swiftB, SPRITE.swiftBHit], [SPRITE.swiftC, SPRITE.swiftCHit]], BEAT, 4),
@@ -1017,6 +1037,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
    * giving it the flanker's steer. It has no gun: a rain that shot would be a wall.
    */
   moonJelly: {
+    points: 100,
     sprite: SPRITE.moonJelly,
     spriteHit: SPRITE.moonJellyHit,
     cycle: cycleOf([[SPRITE.moonJelly, SPRITE.moonJellyHit], [SPRITE.moonJellyB, SPRITE.moonJellyBHit], [SPRITE.moonJellyC, SPRITE.moonJellyCHit]], JELLY_PULSE, 8),
@@ -1041,6 +1062,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'drift', roam: 0.06 },
   },
   sentry: {
+    points: 300,
     sprite: SPRITE.sentry,
     spriteHit: SPRITE.sentryHit,
     // The slot works like a jaw that holds shut a while between bites.
@@ -1063,6 +1085,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'hunt', agility: 0.25 },
   },
   shard: {
+    points: 300,
     sprite: SPRITE.shard,
     spriteHit: SPRITE.shardHit,
     // A crystal turning: one way round, through its face, and on — so it rolls rather than rocks.
@@ -1081,6 +1104,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'circle', agility: 0.4, radius: 22 },
   },
   spore: {
+    points: 300,
     sprite: SPRITE.spore,
     spriteHit: SPRITE.sporeHit,
     cycle: cycleOf([[SPRITE.spore, SPRITE.sporeHit], [SPRITE.sporeB, SPRITE.sporeBHit], [SPRITE.sporeC, SPRITE.sporeCHit]], BEAT, 11),
@@ -1099,6 +1123,7 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     motion: { kind: 'hunt', agility: 0.15 },
   },
   gaze: {
+    points: 400,
     sprite: SPRITE.gaze,
     spriteHit: SPRITE.gazeHit,
     // Open most of the time: it glances, looks back, and now and then blinks.

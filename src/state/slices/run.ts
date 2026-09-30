@@ -17,6 +17,7 @@ import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS } from '../../content/ships.ts';
 import type { WeaponKind } from '../../content/weapons.ts';
 import type { MissileKind } from '../../content/missiles.ts';
+import type { LevelTally } from '../../content/score.ts';
 
 /**
  * The ship a run is flown in, and therefore the kinds an empty run resolves to — 0233.
@@ -128,6 +129,30 @@ export interface RunState {
    */
   weapon: WeaponKind;
   missile: MissileKind;
+  /**
+   * Every cleared level's account, in the order they were cleared — 0428. The run's score is these
+   * added up (`bankedScore`); the level being flown counts on the frame and joins them at its clear.
+   *
+   * ⚠️ **A death and a continue keep them**: the score is the run's, and a continue is counted in
+   * `continues` rather than paid for out of the score.
+   */
+  tallies: readonly LevelTally[];
+  /** Continues taken this run — 0428. */
+  continues: number;
+}
+
+/** Every cleared level's total added up — the score before the level being flown. */
+export function bankedScore(run: RunState): number {
+  let sum = 0;
+  for (const tally of run.tallies) sum += tally.total;
+  return sum;
+}
+
+/** Every cleared level's bonus added up. */
+export function bankedBonus(run: RunState): number {
+  let sum = 0;
+  for (const tally of run.tallies) sum += tally.bonus;
+  return sum;
 }
 
 export type RunAction =
@@ -143,7 +168,9 @@ export type RunAction =
   */
   | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
   | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
-  | { slice: 'run'; type: 'levelCleared' };
+  | { slice: 'run'; type: 'levelCleared' }
+  // A cleared level's account, banked — 0428. Before `levelCleared`, which moves the level on.
+  | { slice: 'run'; type: 'scored'; tally: LevelTally };
 
 /**
  * No run in progress.
@@ -160,6 +187,8 @@ export const initialRun: RunState = {
   weapon: BASE_SHIP.weapon,
   missile: BASE_SHIP.missile,
   difficulty: DEFAULT_DIFFICULTY,
+  tallies: [],
+  continues: 0,
 };
 
 export function reduceRun(state: RunState, action: RunAction): RunState {
@@ -173,6 +202,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: BASE_SHIP.weapon,
         missile: BASE_SHIP.missile,
         difficulty: action.difficulty,
+        tallies: [],
+        continues: 0,
       };
     case 'continued':
       /*
@@ -204,6 +235,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: state.weapon,
         missile: state.missile,
         difficulty: state.difficulty,
+        tallies: state.tallies,
+        // Counted, and the score is kept — 0428: the table says how many a score cost.
+        continues: state.continues + 1,
       };
     case 'lifeLost':
       /*
@@ -228,6 +262,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             weapon: state.weapon,
             missile: state.missile,
             difficulty: state.difficulty,
+            tallies: state.tallies,
+            continues: state.continues,
           };
     case 'took': {
       // Its charges go on TOP of its own side's stack, so what was earned last is thrown first — 0373, 0376.
@@ -243,6 +279,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: state.weapon,
         missile: state.missile,
         difficulty: state.difficulty,
+        tallies: state.tallies,
+        continues: state.continues,
       };
     }
     case 'spent': {
@@ -262,6 +300,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: state.weapon,
         missile: state.missile,
         difficulty: state.difficulty,
+        tallies: state.tallies,
+        continues: state.continues,
       };
     }
     /*
@@ -313,6 +353,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: action.upgrade === 'weapon' ? action.kind : state.weapon,
         missile: action.upgrade === 'missile' ? action.kind : state.missile,
         difficulty: state.difficulty,
+        tallies: state.tallies,
+        continues: state.continues,
       };
     }
     case 'levelCleared':
@@ -335,6 +377,21 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: state.weapon,
         missile: state.missile,
         difficulty: state.difficulty,
+        tallies: state.tallies,
+        continues: state.continues,
+      };
+    case 'scored':
+      // Appended and nothing else moves: the account is the frame's, the run only keeps it — 0428.
+      return {
+        lives: state.lives,
+        level: state.level,
+        arsenal: state.arsenal,
+        upgrades: state.upgrades,
+        weapon: state.weapon,
+        missile: state.missile,
+        difficulty: state.difficulty,
+        tallies: [...state.tallies, action.tally],
+        continues: state.continues,
       };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per
