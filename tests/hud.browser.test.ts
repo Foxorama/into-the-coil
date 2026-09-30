@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { PICKUPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
+import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { triggerRadius, triggerX, triggerY } from '../src/app/touch.ts';
@@ -132,6 +132,41 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
       expect(icon.canvas, 'a key icon is not a baked sprite').toBe(true);
       expect(icon.inked, 'a key icon was baked empty').toBeGreaterThan(0);
     }
+    await page.context().close();
+  });
+
+  it('0432 — one row per pickup, turning through its faces at the field’s own pace, one face up at a time', async () => {
+    /*
+      *"Condense them to match the pickups in game, but cycle through like they do in game."* Three
+      properties, each a way the key could lie: a row per pickup rather than per face; every face of a
+      row given its own share of the turn, so none is shown twice and none never; and the turn is the
+      field's (`PICKUP_CYCLE_STEPS`), so the key teaches the pace the player will meet.
+    */
+    const page = await open();
+    const rows = await page.evaluate((prefix: string) =>
+      [...document.querySelectorAll('.' + prefix + 'key-row')].map((row) => {
+        const faces = [...row.querySelectorAll<HTMLElement>('.' + prefix + 'key-icon')];
+        const shown = faces.filter((f) => getComputedStyle(f).visibility === 'visible').length;
+        return {
+          faces: faces.length,
+          shown,
+          delays: faces.map((f) => getComputedStyle(f).animationDelay),
+          duration: faces.map((f) => getComputedStyle(f).animationDuration)[0] ?? '',
+        };
+      }),
+    prefixFor('title'));
+    expect(rows.length, 'the key is not one row per pickup').toBe(PICKUP_KINDS.length);
+    rows.forEach((row, i) => {
+      const kind = PICKUP_KINDS[i]!;
+      expect(row.faces, `${kind}'s row does not carry every face`).toBe(PICKUPS[kind].faces.length);
+      expect(row.shown, `${kind}'s row shows ${row.shown} faces at once`).toBe(1);
+      if (row.faces < 2) return;
+      expect(new Set(row.delays).size, `two of ${kind}'s faces share a turn, so one is never shown`).toBe(row.faces);
+      expect(parseFloat(row.duration), `${kind} turns at a pace the field does not`).toBeCloseTo(
+        (row.faces * PICKUP_CYCLE_STEPS) / 60,
+        5,
+      );
+    });
     await page.context().close();
   });
 

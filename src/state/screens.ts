@@ -257,7 +257,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * ⚠️ **Built by walking `GOLFER_KINDS`, so the buttons ARE the table**, on the tiers' own terms.
    */
   select: {
-    heading: 'Pilot',
+    // An instruction rather than a label — 0436: the screen is a question, so its heading asks it.
+    heading: 'Choose your pilot',
     actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: GOLFERS[kind].home })),
     choices: [],
     steps: false,
