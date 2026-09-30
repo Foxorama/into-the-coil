@@ -820,7 +820,19 @@ function rebuild(tree) {
  */
 const longestFirst = (a, b) => Number(b.suite.includes('.browser.')) - Number(a.suite.includes('.browser.'));
 
+/**
+ * What every vitest this harness starts is told about the bake store — `tests/bake-store.ts`, 0424.
+ *
+ * ⚠️ **A PROOF READS THE STORE AND NEVER WRITES IT.** Most music probes break `src/`, and a broken
+ * `src/` is a new key: writing would keep a whole set of bakes per probe, sixteen hundred of them. So a
+ * probe of an untouched `src/` reads the tree's bakes, and one that breaks it bakes in its own process
+ * as it always did. Exported so `tests/bake-store.test.ts` can hold it.
+ */
+export const PROOF_BAKE_STORE = 'read';
+
 async function main(filter) {
+  // Inherited by every vitest `runSuite` spawns and every warm worker `startWarm` forks.
+  process.env.ITC_BAKE_STORE = PROOF_BAKE_STORE;
   /*
     ⚠️ **A SHARD IS TWO VARIABLES OR NONE** — 0420. `PROVE_SHARD` picks the probes and `PROVE_RESULT`
     is where the join reads which ones came back red; a shard that wrote nowhere would be proven by

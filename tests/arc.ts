@@ -30,7 +30,6 @@ import {
   auditionAura,
   auditionLength,
   auditionRung,
-  bakeLayer,
   levelOfPlace,
   levelWrites,
   UNITS_PER_SECOND,
@@ -39,6 +38,7 @@ import { SAMPLE_RATE } from '../src/app/sound.ts';
 import { AURA_LAYERS, BAR_SECONDS, MUSIC_LAYERS, type MusicLayer, type MusicLevel } from '../src/content/music.ts';
 import { revoicedBy, type ThemeKind } from '../src/content/themes.ts';
 import { kWeighted } from './loudness.ts';
+import { layerAt } from './bake-store.ts';
 
 /**
  * How big a move, inside one sample, this calls sudden — in dB.
@@ -103,7 +103,8 @@ function rmsOf(theme: ThemeKind, rate = SAMPLE_RATE): Record<MusicLayer, number>
         the ear meets a dip a third the size. `tests/loudness.ts` is the same weighting `driveAt`
         measures the settled rungs with, so a hole and a hold are now in one unit.
       */
-      const buffer = kWeighted(bakeLayer(layer, rate, own.includes(layer) ? theme : undefined), rate);
+      // 0424: this source tree's bake of it — a fresh array every call, so weighting it in place is ours.
+      const buffer = kWeighted(layerAt(layer, rate, own.includes(layer) ? theme : undefined), rate);
       let sum = 0;
       for (let i = 0; i < buffer.length; i++) sum += buffer[i]! * buffer[i]!;
       value = Math.sqrt(sum / buffer.length);

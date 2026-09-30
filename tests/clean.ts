@@ -34,7 +34,6 @@
  * definition of non-linear distortion and it needs no reference tone.
  */
 
-import { bakeLayer } from '../src/app/music.ts';
 import { SAMPLE_RATE, saturate } from '../src/app/sound.ts';
 import {
   MUSIC_COMPRESSOR,
@@ -48,6 +47,7 @@ import {
 import { THEMES, auraCeilingOf, mixOf, revoicedBy, rungIn, rungOf, type ThemeKind } from '../src/content/themes.ts';
 import { compressBuffer } from './compress.ts';
 import { loudnessOf } from './loudness.ts';
+import { layerAt } from './bake-store.ts';
 
 /** Which layers the aura scales, so a fight is measured at the loudness a fight reaches. */
 const FOLLOWS_THE_BOSS: readonly MusicLayer[] = ['auraSlow', 'auraFast'];
@@ -66,7 +66,8 @@ function layerOf(theme: ThemeKind, layer: MusicLayer, rate: number): Float32Arra
   const key = `${own ? theme : ''}/${layer}@${rate}`;
   let buffer = cache.get(key);
   if (buffer === undefined) {
-    buffer = bakeLayer(layer, rate, own ? theme : undefined);
+    // 0424: this source tree's bake of it, read or baked once and kept.
+    buffer = layerAt(layer, rate, own ? theme : undefined);
     cache.set(key, buffer);
   }
   return buffer;
