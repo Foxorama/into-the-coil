@@ -1707,6 +1707,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   for (const element of chrome.elements) host.appendChild(element);
   // The lives counter is the ship being flown — 0430 — read off its row rather than written in the chrome.
   chrome.setShip(shipRow.sprite);
+  // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
+  chrome.setTouch(touchable);
   /*
     ⚠️ **THE MENU'S *PILOT* SAYS WHO IS FLYING — 0415**, so the choice can be seen without opening the
     golfers. It is the control after the music room, on 0210's terms for the order.
@@ -1714,6 +1716,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const PILOT_ACTION = DIFFICULTY_KINDS.length + 1;
   function showPilot(): void {
     chrome.setActionHint('title', PILOT_ACTION, GOLFERS[state.settings.pilot].name);
+    // 0437: and the golfers' screen marks the one flying, so changing golfer starts from who it is.
+    chrome.setCurrent('select', GOLFER_KINDS.indexOf(state.settings.pilot));
   }
   showPilot();
 

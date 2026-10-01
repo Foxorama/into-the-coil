@@ -397,6 +397,59 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
   });
 });
 
+describe.runIf(chromePath)('0437 — the open items', () => {
+  /*
+    `docs/decisions/0437-the-title-is-lit.md`. *"Hide the duplicate counts on mobile"*: on a touch
+    screen the discs say the stacks, so the readout's stack groups leave the glass — and stay in the
+    page, because the discs are hidden from a reader and these labels are the only place the charges
+    are said. Measured on both kinds of page, so a rule that hid them everywhere fails as well.
+  */
+  const stacks = (page: Page): Promise<{ clipped: boolean; inPage: boolean }[]> =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-stack')].map((el) => ({
+        clipped: getComputedStyle(el).clipPath !== 'none',
+        inPage: getComputedStyle(el).display !== 'none' && !el.hidden,
+      })),
+    );
+
+  it('takes the stack counts off the glass on a touch screen, and keeps them for a reader', async () => {
+    const page = await open(true);
+    const seen = await stacks(page);
+    expect(seen.length, 'the readout has no stack groups to hide').toBe(2);
+    for (const group of seen) {
+      expect(group.clipped, 'a touch screen still draws the count its disc already says').toBe(true);
+      expect(group.inPage, 'the count was taken out of the page, so a reader never hears it').toBe(true);
+    }
+    await page.context().close();
+  });
+
+  it('and leaves them on the glass where there are no discs', async () => {
+    const page = await open(false);
+    for (const group of await stacks(page)) {
+      expect(group.clipped, 'a desktop with no discs lost its stack counts').toBe(false);
+    }
+    await page.context().close();
+  });
+
+  it('marks the golfer flying now on the golfers’ screen, once, in words as well as a picture', async () => {
+    const page = await open();
+    const marked = await page.evaluate((prefix: string) => {
+      const pilot = document.querySelector('.itc-title-action:nth-child(5) .itc-title-action-hint')?.textContent ?? '';
+      return [...document.querySelectorAll<HTMLElement>('.' + prefix + 'action')].map((el) => ({
+        current: el.getAttribute('aria-current') === 'true',
+        tick: getComputedStyle(el, '::after').content !== 'none',
+        named: (el.textContent ?? '').includes(pilot) && pilot.length > 0,
+      }));
+    }, prefixFor('select'));
+    const current = marked.filter((m) => m.current);
+    expect(current.length, 'not exactly one golfer is marked as flying').toBe(1);
+    expect(current[0]!.tick, 'the flying golfer is said to a reader and not drawn').toBe(true);
+    expect(current[0]!.named, 'the golfer marked is not the one the menu says is flying').toBe(true);
+    expect(marked.filter((m) => m.tick).length, 'a golfer not flying wears the tick').toBe(1);
+    await page.context().close();
+  });
+});
+
 describe.runIf(chromePath)('the in-game readout', () => {
   it('is hidden until a run starts, and shows while playing', async () => {
     const page = await open();
