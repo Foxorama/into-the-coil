@@ -905,6 +905,9 @@ each decision's *Owed* says what to look at. And every boss fires from its guns
 ([0452](decisions/0452-a-boss-fires-from-its-guns.md)): the pterodactyl's barrels and throat, the
 serpent's jaw, the fish's mouth, the mid-bosses' fronts, the hydra's lance held in its jaw, the redoubt
 turned to face the lane — **owed a play of each fight**, since several volleys now leave nearer the ship.
+And the lasers fan out ([0453](decisions/0453-the-laser-fans-out.md)): each beam row says a path a
+root, so one beam is a wide central zigzag, two keep their middle, three and five fan — **owed a play
+of the pterodactyl and the jellyfish**, the throat's beam above all.
 
 And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md), one shot since
 [0426](decisions/0426-the-finale-is-the-fight-going-on.md)): the finale, then the victory screen —
