@@ -14153,6 +14153,50 @@ export interface StructureMark {
    * lit mark at the glow, the brighter of the two, which over-counts — the direction a floor may err.
    */
   gas?: boolean;
+  /**
+   * A soft band rather than a hard-edged shape — 0445. Columns at `x` (pixels, in order), each with
+   * the band's centre and half-width there; the mark is drawn column by column in ONE gradient fill,
+   * `alpha` at the centre falling to nothing at `half` by `bandProfile`, and `points` is its envelope.
+   *
+   * ⚠️ **ONE FILL, BECAUSE STACKED FAINT FILLS ARE A DIFFERENT PICTURE ON EVERY RENDERER.** The first
+   * soft band was twenty ribbons from 0.012, and a ribbon that faint adds under a level of red to The
+   * Approach's void: rounded per fill, the CI runner drew it a fraction as bright and bluer. A
+   * gradient is computed once per pixel and rounded once.
+   */
+  band?: { x: number[]; centre: number[]; half: number[] };
+}
+
+/**
+ * How much of a soft band's peak lies at `u`, the share of its half-width from its centre — 0445. A
+ * bell with no slope at its edge, so the light thins into the dark without a line where it stops.
+ * One description, read by the painter and by `skyCover` alike.
+ */
+export function bandProfile(u: number): number {
+  const v = u < 0 ? -u : u;
+  if (v >= 1) return 0;
+  const w = 1 - v * v;
+  return w * w;
+}
+
+/** Pixels a soft band is drawn in, one gradient a column — 0445. */
+const BAND_COLUMN = 4;
+
+/** A soft band's centre and half-width at `x`, interpolated between its samples. */
+function bandColumn(band: NonNullable<StructureMark['band']>, x: number): [number, number] {
+  const xs = band.x;
+  let i = 0;
+  while (i < xs.length - 2 && x > xs[i + 1]!) i += 1;
+  const span = xs[i + 1]! - xs[i]!;
+  const f = span > 0 ? Math.min(1, Math.max(0, (x - xs[i]!) / span)) : 0;
+  return [band.centre[i]! + (band.centre[i + 1]! - band.centre[i]!) * f, band.half[i]! + (band.half[i + 1]! - band.half[i]!) * f];
+}
+
+/** The share of a soft band's peak at `(x, y)`: its column's centre and half-width, read by profile. */
+function bandAt(band: NonNullable<StructureMark['band']>, x: number, y: number): number {
+  const xs = band.x;
+  if (x < xs[0]! || x > xs[xs.length - 1]!) return 0;
+  const [centre, half] = bandColumn(band, x);
+  return bandProfile((y - centre) / half);
 }
 
 
@@ -14240,29 +14284,45 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       rose and fell a ninth of the lane once a screen: a hard-edged sheet billowing in front of the
       stars. Far light has neither — a galaxy seen edge-on is long, nearly level and has no edge at
       all. So the wander and the swell are about half what they were, and the same light at the core
-      (0.41 of the glow, against 0.42) is laid in **twenty** ribbons whose alpha falls towards the
-      outside, so no step is big enough to be a line.
+      (0.41 of the glow, against 0.42) falls away to nothing at its flanks with no step at all.
     */
     const centre = (t: number): number =>
       0.45 + 0.012 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.005 * Math.sin(Math.PI * 4 * t + phase[1]!);
     // It swells and narrows along its length, which is what stops it reading as a stripe.
     const swell = (t: number): number => 1 + 0.16 * Math.sin(Math.PI * 4 * t + phase[2]!);
     const out: StructureMark[] = [];
-    const RIBBONS = 20;
-    for (let k = 0; k < RIBBONS; k += 1) {
-      // Wider at the outside than 0343's, so the light thins into the dark rather than stopping.
-      const half = 0.095 * Math.pow(1 - k / RIBBONS, 1.4) + 0.004;
-      const upper: number[][] = [];
-      const lower: number[][] = [];
-      for (let s = 0; s <= SAMPLES; s += 1) {
-        const t = s / SAMPLES;
-        upper.push([t * size, (centre(t) - half * swell(t)) * size]);
-        lower.push([t * size, (centre(t) + half * swell(t)) * size]);
-      }
-      // The outermost ribbon is the faintest: a step of 0.01 is under what an eye reads as an edge.
-      const alpha = 0.012 + 0.028 * (k / (RIBBONS - 1));
-      out.push({ points: [...upper, ...lower.reverse()], width: 0, alpha, crosses: true, taper: false, lit: true });
+    /*
+      ⚠️ **ONE SOFT BAND, AND IT WAS TWENTY FAINT RIBBONS FOR ONE PUSH.** The faintest of them, at
+      0.012, added 0.6 of a level of this glow's red over the void, and the CI runner's renderer rounds
+      every fill: the band came out a fraction as bright and bluer there, and
+      `tests/place.browser.test.ts` counted 3,089 pixels of it against 161,239 on this machine, twice.
+      A backdrop whose light depends on whose rounding draws it is a different picture on every screen,
+      so it is one gradient fill (`StructureMark.band`), rounded once. Wider at the flanks than 0343's,
+      so the light thins into the dark rather than stopping.
+    */
+    const HALF = 0.1;
+    const xs: number[] = [];
+    const centres: number[] = [];
+    const halves: number[] = [];
+    const upper: number[][] = [];
+    const lower: number[][] = [];
+    for (let s = 0; s <= SAMPLES; s += 1) {
+      const t = s / SAMPLES;
+      xs.push(t * size);
+      centres.push(centre(t) * size);
+      halves.push(HALF * swell(t) * size);
+      upper.push([t * size, (centre(t) - HALF * swell(t)) * size]);
+      lower.push([t * size, (centre(t) + HALF * swell(t)) * size]);
     }
+    out.push({
+      points: [...upper, ...lower.reverse()],
+      width: 0,
+      alpha: 0.41,
+      crosses: true,
+      taper: false,
+      lit: true,
+      band: { x: xs, centre: centres, half: halves },
+    });
     /*
       And dust in front of it: two dark rifts wandering along the band, which is what makes a band of
       far light read as a galaxy seen edge-on rather than as a smear. Dark, so they cost nothing.
@@ -14833,6 +14893,34 @@ export function paintStructure(ctx: Pen, glow: string, space: string, size: numb
     ctx.strokeStyle = ink;
     ctx.globalAlpha = mark.alpha;
     for (const dx of [-size, 0, size]) {
+      /*
+        A soft band — 0445: one column at a time, each one vertical gradient sampled from
+        `bandProfile`, on whole pixels so two columns never share one and composite against each
+        other into a seam.
+      */
+      if (mark.band !== undefined) {
+        /*
+          ⚠️ **FOUR PIXELS A COLUMN, AND THE FIRST BAKE'S FORTY-EIGHT SHOWED AS STRIPES.** One gradient
+          per sample put a step of about two levels between neighbouring columns on the band's flank,
+          and the photograph showed it as vertical banding. Interpolated every four pixels the step is a
+          fifth of a level, which nothing can see. A cold bake, once a place: a few hundred fills.
+        */
+        const band = mark.band;
+        const first = band.x[0]!;
+        const last = band.x[band.x.length - 1]!;
+        for (let x = first; x < last; x += BAND_COLUMN) {
+          const x0 = Math.round(x + dx);
+          const x1 = Math.round(Math.min(x + BAND_COLUMN, last) + dx);
+          if (x1 <= x0) continue;
+          const [centre, half] = bandColumn(band, x + BAND_COLUMN / 2);
+          const fade = ctx.createLinearGradient(0, centre - half, 0, centre + half);
+          for (let s = 0; s <= 16; s += 1) fade.addColorStop(s / 16, rgba(ink, bandProfile(s / 8 - 1)));
+          ctx.fillStyle = fade;
+          ctx.fillRect(x0, centre - half, x1 - x0, half * 2);
+        }
+        ctx.fillStyle = ink;
+        continue;
+      }
       if (mark.width === 0) {
         ctx.beginPath();
         ctx.moveTo(mark.points[0]![0]! + dx, mark.points[0]![1]!);
@@ -15106,6 +15194,8 @@ export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4
 
   /** How much gas one lit mark lays on a point: its own alpha inside it, nothing outside. */
   const markAt = (mark: StructureMark, x: number, y: number): number => {
+    // A soft band lays its own profile, as the painter draws it — 0445.
+    if (mark.band !== undefined) return mark.alpha * bandAt(mark.band, x, y);
     if (mark.width === 0) return insidePolygon(mark.points, x, y) ? mark.alpha : 0;
     const reach = mark.width / 2;
     for (let i = 1; i < mark.points.length; i += 1) {

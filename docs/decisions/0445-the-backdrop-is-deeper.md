@@ -30,9 +30,19 @@ things in front. Each was checked against the 1080p photographs (`scripts/shot-p
 
 ## What changed, per place
 
-**The Approach** (`STRUCTURE_OF.approach`): the band is laid in **twenty** ribbons whose alpha rises
-from 0.012 at the outside to 0.04 at the core — the same light at its centre (0.41 against 0.42), no
-step big enough to be a line, and wider at its flanks so it thins into the dark. Its wander and swell
+**The Approach** (`STRUCTURE_OF.approach`): the band is **one soft fill** (`StructureMark.band`) —
+0.41 of the glow at its centre, against 0.42, falling by `bandProfile` to nothing at its flanks with
+no step at all, and wider at those flanks so it thins into the dark. `skyCover` reads the same profile
+the painter draws, so the floor guards charge the band at the light it actually lays.
+
+⚠️ **It was twenty ribbons from 0.012 for one push, and CI's renderer could not draw it.** This
+glow is only 52 levels of red above its void, so a ribbon at 0.012 adds six tenths of a level, and a
+renderer that rounds each fill to 8 bits drops it: on the runner the band came out a fraction as
+bright and bluer, and `tests/place.browser.test.ts` counted 3,089 pixels of it against the 161,239
+this machine drew — twice, so not an intermittency (0044). Bake time was measured and was not it
+(the same 0.3 to 1.1 s to the place's sky on both builds, and the same at a sixfold CPU throttle). A
+backdrop whose brightness depends on whose rounding draws it is a different picture on every
+machine. A gradient is computed once a pixel and rounded once, so the band is one fill now. Its wander and swell
 are about half what they were (0.022 → 0.012, 0.3 → 0.16): a galaxy seen edge-on is long and nearly
 level. Each rift is three strokes, widest and faintest first, 0.29 dark at its core against 0.42.
 
