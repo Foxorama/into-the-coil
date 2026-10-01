@@ -16,8 +16,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
     edit: {
       path: 'scripts/weigh-fight.mjs',
-      find: '    if (level === kind) return { weaponTier, missileTier };',
-      replace: '    if (level === kind) return { weaponTier: 1, missileTier: 1 };',
+      // ⚠️ Re-anchored by 0441: the gun is whole from the first second, so the tubes are all a run
+      // carries in that a level can change.
+      find: '    if (level === kind) return { missileTier };',
+      replace: '    if (level === kind) return { missileTier: 1 };',
     },
   },
   {

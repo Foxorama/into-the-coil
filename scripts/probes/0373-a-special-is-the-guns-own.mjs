@@ -11,10 +11,12 @@ export const PROBES = [
     suite: 'tests/surge.test.ts',
     // What the overflow was until this decision: a bomb whatever the face.
     broke: 'every overflow a bomb again, whatever the face',
-    guard: 'THE ASK: every gun and every tube, overflowed, stocks the special its row names',
+    // ⚠️ Renamed and re-anchored by 0441: a gun cannot overflow, so the guard holds the tubes, and the
+    // lookup's other arm is the bomb pickup's face rather than a gun's.
+    guard: 'THE ASK: every tube, overflowed, stocks the special its row names',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "  return kind === 'weapon' ? WEAPONS[weaponFaceOf(face)].special : MISSILES[missileFaceOf(face)].special;",
+      find: "  return kind === 'bomb' ? bombFaceOf(face) : MISSILES[missileFaceOf(face)].special;",
       replace: "  return 'bomb';",
     },
   },
@@ -40,8 +42,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/specials.ts',
       // ⚠️ Re-anchored by 0376, which put the trigger's side on every row.
-      find: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: null,\n    becomes: null,",
-      replace: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: 'bomb',\n    becomes: 'blast',",
+      // ⚠️ Re-anchored by 0441, which took `charges` off the row (a take is one) and added `hint`.
+      find: "    label: 'Hunt',\n    hint: 'Ten seconds of hunting pods',\n    side: 'tubes',\n    shot: null,\n    becomes: null,",
+      replace: "    label: 'Hunt',\n    hint: 'Ten seconds of hunting pods',\n    side: 'tubes',\n    shot: 'bomb',\n    becomes: 'blast',",
     },
   },
   /*

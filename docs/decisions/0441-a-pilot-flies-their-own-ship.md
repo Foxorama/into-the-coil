@@ -30,6 +30,11 @@ pickup and every gun's ladder; amends [0081](0081-what-the-player-must-tell-apar
 | **the hull** | three tiers per gun, climbed by either ladder | each ship at no tubes, one tube and two, all in one 9.4-unit box |
 | **the dial** | levels plus weapon pickups offered, spent only on level one's one-hit opening | gone, with that opening |
 | **the level-one fights** | the sentinel 120, the serpent 700 | 211 and 900, measured |
+| **the later bosses** | held to forty seconds by arithmetic at the third rung | flown at the cap in every ship; the fish 1400, the frost ship 1800, the hydra 1860, the jellyfish 1890, and the arc at 1.1 on the pterodactyl |
+| **level one, 956–1,594** | a quiet one-health run-up for the one-hit clamp | five of its waves fire |
+| **the exhaust** | measured from the fighter's centre | from each ship's own nozzles (`tail`) |
+| **the arc's and the shuriken's cues** | 0.26 and 0.25 | 0.24, under the outcomes as the pulse is |
+| **the pilot card's line** | the golfer's home town | the ship and its gun |
 
 ## Why it is built the way it is
 
@@ -89,6 +94,43 @@ for 10 s against 17. The serpent was flown in every gun's own ship by `scripts/w
 These are the quickest fights from any place, at Savior. At 900 every gun is back over the 28-second
 floor `tests/serpent.test.ts` holds. From level two on, every mid-boss was already met at the cap, so
 none of their figures moved.
+
+**The later bosses were already under their floor, and the guard could not see it.** 0260 holds every
+real boss to forty seconds against the fastest kill, and `tests/level.test.ts` computed that kill by
+arithmetic at `UPGRADE_TIERS − 1`. That was 0124's *tier 4* from before the ladder gained its fifth
+rung, so it described a weaker gun than anyone flew from level two on. Flown at the cap, on `main` as
+well as here, the arc took the pterodactyl in 33 s and the hydra in 36. The guard now flies every boss
+in every ship, as the serpent's already did. The player chose the fixes:
+
+| boss | the arc at the cap, before | fix | quickest gun after |
+|---|---|---|---|
+| fish | 38 s (the ray too) | 1300 → 1400 | 40 s |
+| pterodactyl | 30 s | the arc's weight 1.5 → 1.1 on its row | 41 s |
+| frost ship | 36 s | 1600 → 1800 | 40 s |
+| hydra | 37 s | 1700 → 1860 | 40 s |
+| jellyfish | 40 s | 1870 → 1890 | 40 s |
+
+**The pterodactyl is answered with the arc's weight and not its health.** It patrols the lane 150
+units out. There, the pulse's fan is wider than its body, and the ray's one ring is off its line much
+of the time, so those two took 99 and 80 seconds against the arc's 30. Raising its health would have
+made every other ship's fight a third longer to slow one gun down. This is the serpent's own pattern
+(0372).
+
+**Level one's run-up had no subject left.** 956 to 1,594 was authored as one-health, non-firing
+waves for 0086, which kept the teeth off the field until the second weapon had been taken. With the
+clamp gone it was 12.1 seconds without a bullet, against 0259's nine. The player chose shooters: a
+picket line, the swifts, two lancer waves and a picket vee, at the places and lanes the quiet waves
+had.
+
+**A player ship's hurtbox is held to its core.** `tests/combat.test.ts` holds a hurtbox to between a
+quarter and a half of the drawn box. The fighter's 2 against its 7-unit hull was 0.29. But the
+capped fighter has always flown a 9.4-unit box with the same hurtbox, at 0.21, unchecked. 0441 puts
+every ship in that box and keeps the hurtbox, so the band now reads a ship against its 7-unit core,
+and says so in the test.
+
+**The flame burns from each ship's own nozzles.** `THRUST`'s trails were the fighter's, measured from
+its centre, so the saucer's and the cars' flames burned under their own hulls. They are now measured
+from the nozzles, and each ship row says where its nozzles are.
 
 ## What was rejected
 

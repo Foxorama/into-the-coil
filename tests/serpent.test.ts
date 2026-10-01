@@ -13,7 +13,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { GameFrame } from '../src/app/frame.ts';
+import { GameFrame, wearHull } from '../src/app/frame.ts';
+import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
@@ -21,9 +22,9 @@ import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from 
 import { CUES, type CueKind } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS, weaponsOfferedBy, type LevelRow } from '../src/content/levels.ts';
+import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS, SHOT_INDEX, SHOT_KINDS } from '../src/content/shots.ts';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
@@ -634,7 +635,17 @@ describe('0248 — the serpent strikes', () => {
     const behind = world.enemies.spawn()!;
     reset(behind, world.ship.along + 20, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
     const whole = behind.health;
-    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon'], 'arc');
+    /*
+      The arc is the estate's since 0441, and it flies it at what its last rung was.
+
+      ⚠️ **AND THE FIXTURE'S OWN SHOTS ARE CLEARED FIRST — 0441 IS WHY.** `serpentAt` flies the
+      fighter, which fires while it waits; at the bottom rung that left a pulse or two in the air, and
+      since every ship opens at its cap it leaves a fan of them, which ate four off the void and killed
+      the drifter on this step with the arc never fired. The question is what the BOLT does.
+    */
+    world.playerShots.clear();
+    world.shipRow = SHIPS[shipCarrying('arc')];
+    world.weapon = weaponFor(world.shipRow, []);
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.fireIn = 0;
     frame.step();
@@ -670,7 +681,17 @@ describe('0248 — the serpent strikes', () => {
     const ahead = world.enemies.spawn()!;
     reset(ahead, world.ship.along + 20, world.ship.across, ENEMIES.drifter, world.enemyKinds.drifter);
     const whole = ahead.health;
-    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon'], 'arc');
+    /*
+      The arc is the estate's since 0441, and it flies it at what its last rung was.
+
+      ⚠️ **AND THE FIXTURE'S OWN SHOTS ARE CLEARED FIRST — 0441 IS WHY.** `serpentAt` flies the
+      fighter, which fires while it waits; at the bottom rung that left a pulse or two in the air, and
+      since every ship opens at its cap it leaves a fan of them, which ate four off the void and killed
+      the drifter on this step with the arc never fired. The question is what the BOLT does.
+    */
+    world.playerShots.clear();
+    world.shipRow = SHIPS[shipCarrying('arc')];
+    world.weapon = weaponFor(world.shipRow, []);
     world.missileIn = Number.MAX_SAFE_INTEGER;
     world.fireIn = 0;
     frame.step();
@@ -2219,7 +2240,7 @@ describe('0306 — the serpent coils in', () => {
 });
 
 describe('0307 — the serpent is armoured', () => {
-  it('flown at the most a player can carry to it on the tuned tier, no gun kills the serpent inside its floor from any place, and every phase gets eight volleys away', () => {
+  it('flown in every ship with its own gun on the tuned tier, no gun kills the serpent inside its floor from any place, and every phase gets eight volleys away', () => {
     /*
       ⚠️ **0260's FLOOR, IN THE FIGHT RATHER THAN IN THE ARITHMETIC.** *"I think I only saw about 50%
       of their attacks before they died"* — so a real boss lasts forty seconds at max weapons on the
@@ -2254,26 +2275,28 @@ describe('0307 — the serpent is armoured', () => {
       checked in the case it is applied to*. Asked: *"you can't have max tier lightning gun for the
       level 1 serpent so is that even a problem?"* — and at tier three it still was: the arc's 1.5
       took the quickest fight to 24 s, which is why the serpent authors the arc at 1 on its own row.
+
+      ⚠️ **AND SINCE 0441 THE GUN THE PLAYER CAN HAVE HERE IS THE CAP, IN ITS OWN SHIP.** The gun has
+      no ladder: every ship opens on its own gun at what its last rung was, so the reachable tier the
+      paragraph above measured is no longer a quantity, and the expectation that it sat under the cap
+      went with it. `flyFight` flies each gun in the ship that carries it (`shipCarrying`), and the
+      serpent went to 900 health in 0441 so that every gun clears the same twenty-eight seconds there.
     */
     const FLOOR_SECONDS = 28;
     const row = BOSSES.jormungandr;
     const tuned = DIFFICULTIES.savior;
-    // Every weapon the run can have been offered by the end of the serpent's level, clamped at the cap.
-    const home = LEVEL_KINDS.findIndex((kind) => LEVELS[kind].boss === 'jormungandr');
-    let offered = 0;
-    for (let i = 0; i <= home; i++) offered += weaponsOfferedBy(LEVELS[LEVEL_KINDS[i]!]);
-    const tier = Math.min(UPGRADE_TIERS, offered);
-    expect(tier, 'the serpent is met at the cap, so flying the reachable tier changes nothing').toBeLessThan(UPGRADE_TIERS);
+    // Every gun is some ship's, so flying every gun is flying every ship — 0441.
+    expect(WEAPON_KINDS.map((gun) => shipCarrying(gun)).sort(), 'a ship flies no gun here, so it was never flown').toEqual([...SHIP_KINDS].sort());
     for (const gun of WEAPON_KINDS) {
       let quickest: ReturnType<typeof flyFight> | null = null;
       for (const lane of [...LANES, 'boss' as const]) {
         for (const short of DISTANCES) {
-          const fight = flyFight('jormungandr', gun, { tier, lane, short, cap: 240 });
+          const fight = flyFight('jormungandr', gun, { lane, short, cap: 240 });
           if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
         }
       }
       expect(quickest, `the ${gun} never killed the serpent from any place, so this measured nothing`).not.toBeNull();
-      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s at gun tier ${tier} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
+      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s in the ${shipCarrying(gun)} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
       expect(
         quickest!.phaseAt.map((p) => p.phase),
         `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,
@@ -2692,10 +2715,16 @@ describe('0322 — the ball is worth shooting', () => {
       weapon and the frame fires it, so nothing here models a rate of fire. The ship is pinned to the ball's
       lane because that is the player who is dealing with it; dodging instead is the other half of the same
       round and is what the lightning is for.
+
+      ⚠️ **EVERY SHIP'S OPENING GUN SINCE 0441.** Each pilot opens on their own gun and keeps it, so
+      *every player who has not upgraded* is four players, and the ball is met by each of them.
     */
-    for (const tier of DIFFICULTY_KINDS) {
+    for (const kind of SHIP_KINDS) for (const tier of DIFFICULTY_KINDS) {
       const made = serpentAt(0.2, tier);
       const { world, frame } = made;
+      world.shipRow = SHIPS[kind];
+      world.weapon = weaponFor(world.shipRow, []);
+      wearHull(world);
       world.bossPool.at(0).fireIn = 999;
       world.enemyShots.clear();
       const boss = world.bossPool.at(0);
@@ -2717,8 +2746,8 @@ describe('0322 — the ball is worth shooting', () => {
           break;
         }
       }
-      expect(died, `on ${tier} the opening gun never finished the ball at all`).toBeGreaterThanOrEqual(0);
-      expect(hit, `on ${tier} the ball reached the ship before the opening gun emptied it`).toBe(false);
+      expect(died, `on ${tier} the ${kind}'s opening gun never finished the ball at all`).toBeGreaterThanOrEqual(0);
+      expect(hit, `on ${tier} the ball reached the ${kind} before its opening gun emptied it`).toBe(false);
     }
   });
 

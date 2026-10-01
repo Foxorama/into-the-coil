@@ -25,8 +25,10 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0084: the dial's opening clamp shares this line now, and the break is
       // unchanged — the TIER dropped from the spawn while the clamp stays, so all three buttons start
       // the same run and the dial goes on working.
-      find: '    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : toughnessFor(row.health, w.difficulty);',
-      replace: '    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : row.health;',
+      // ⚠️ Re-anchored by 0441, which took the dial and its clamp off this line: the tier is all it
+      // reads again, and the break is the same one.
+      find: '    e.health = toughnessFor(row.health, w.difficulty);',
+      replace: '    e.health = row.health;',
     },
   },
   {
@@ -98,8 +100,10 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // ⚠️ Re-anchored by 0233: the `upgraded` arm carries the fitted kinds now, so the line before
       // its `difficulty` is the missile's.
-      find: "        missile: action.upgrade === 'missile' ? action.kind : state.missile,\n        difficulty: state.difficulty,",
-      replace: "        missile: action.upgrade === 'missile' ? action.kind : state.missile,\n        difficulty: 'legendary',",
+      // ⚠️ Re-anchored by 0441: the tubes are the only thing upgraded, so the arm sets the missile
+      // outright.
+      find: '        missile: action.kind,\n        difficulty: state.difficulty,',
+      replace: "        missile: action.kind,\n        difficulty: 'legendary',",
     },
   },
 ];

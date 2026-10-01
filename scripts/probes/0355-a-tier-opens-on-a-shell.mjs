@@ -64,8 +64,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0373, which counts the stack where `chargesOf` totalled the entries.
-      find: 'shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf()',
-      replace: 'shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, stacksOf()',
+      // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
+      find: 'shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf()',
+      replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, stacksOf()',
     },
   },
   {

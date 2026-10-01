@@ -61,6 +61,12 @@ export interface ShipRow extends Body {
    * ship says where its own are — 0282's *every instance authors its Y*.
    */
   wingtip: number;
+  /**
+   * How far behind the ship's centre its engines burn, in world units — where the exhaust's root
+   * meets the hull (`src/content/exhaust.ts`) — 0441. A saucer's drive is on its rim and a car's
+   * exhaust at its bumper, where the fighter's nacelles are halfway down its hull.
+   */
+  tail: number;
 }
 
 /** One bake of a ship and its hurt twin. */
@@ -123,6 +129,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The tips of its wingtip pods: 1.48 of the 7-unit hull's radius (`SHIP_POD_MK3` in the bake).
     wingtip: 4.35,
+    // Its nacelles: 0.78 of the 7-unit hull's radius (`SHIP_CORE` in the bake).
+    tail: 2.29,
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -144,6 +152,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The saucer's rim: the whole of the box's radius.
     wingtip: 3.95,
+    // Its drive, on the back of the rim.
+    tail: 3.95,
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -163,8 +173,11 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
-    // The front hubcaps, which are the shuriken launchers — the blades leave from the wheels.
-    wingtip: 2.05,
+    // The front hubcaps, which are the shuriken launchers — the blades leave from the wheels: 0.56 of
+    // the box's radius out (`drawFirebird` in the bake).
+    wingtip: 2.21,
+    // Its twin exhausts, at the ducktail.
+    tail: 4.42,
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -186,6 +199,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
+    // Its twin exhausts, under the tailgate.
+    tail: 4.42,
   },
 };
 

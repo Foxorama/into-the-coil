@@ -46,6 +46,15 @@ places, its cue and its arrival. 0016's *the frame switches on how it flies* mak
 It sits inside the band. On a pack it does more than its boss figure says, because the burst reaches
 a body beside the one the ring found.
 
+**A boss's weight for the ray scales the ring and not the burst.** The burst rides the blast pool,
+which takes the boss's window (0150) and not the gun's weight (0372). No boss authors a weight for
+the ray, and the ray's own `bossWeight` is 1, so this is latent. A row that ever gives the ray a
+weight should know the burst will not follow it.
+
+**The jellyfish is its slow fight**: 103 s from its best place, against 40 to 66 for the others.
+That is a floor kept, not a ceiling broken, and it is the first thing a play of the caddie should
+look at.
+
 ## Owed
 
 - **Its special.** The player chose the nova ring: a huge ring bursting out from the ship that pops

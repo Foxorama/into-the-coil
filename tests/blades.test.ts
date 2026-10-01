@@ -5,12 +5,13 @@
  * The shuriken is the third gun and the first shot that is not spent by arriving: a pair of blades
  * leaves the wingtips, each going up the lane and swinging across it, the two a half-turn apart so
  * they cross ahead of the nose — the two strands of a helix that lands on everything it crosses
- * once per impact flash and is gone at the leading edge of the screen. The kind's ladders, face
- * and hulls are held by `tests/weapons.test.ts` over every gun; what is held here is the flight.
+ * once per impact flash and is gone at the leading edge of the screen. Since 0441 it is the
+ * Firebird's gun and has no ladder; the kind's row is held by `tests/weapons.test.ts` over every
+ * gun, and what is held here is the flight, from the ship that throws it.
  *
  * ⚠️ **Almost nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms — the strand
  * keeps its width and never loses ground, the pair crosses, the blade survives, the second landing
- * waits for the flash to finish, the leading edge is the end, and a rung is a wider band. The two
+ * waits for the flash to finish, and the leading edge is the end. The two
  * that do are in the player's units and are the player's numbers: seconds to cross the screen
  * (`THE PACE`) and a share of the lane (`THE SIZE`).
  */
@@ -20,7 +21,8 @@ import { GameFrame, wearHull, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
-import { UPGRADE_TIERS, weaponFor, type UpgradeKind } from '../src/content/pickups.ts';
+import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, SHIP_KINDS, shipCarrying, type ShipKind } from '../src/content/ships.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -55,12 +57,14 @@ const MEDUSA_ALONE: LevelRow = {
  */
 const LONGER_THAN_A_BLADE = 1200;
 
-/** A world with the shuriken fitted at `tier` rungs, nothing else in the air, the launcher about to throw. */
-function armed(tier: number): { world: World; frame: GameFrame; cues: string[] } {
+/**
+ * A world flying `ship` — whose gun is a coil — nothing else in the air, the launcher about to throw.
+ * Since 0441 the gun has no rungs: it is its old cap, in the ship it is keyed to.
+ */
+function armed(ship: ShipKind = shipCarrying('shuriken')): { world: World; frame: GameFrame; cues: string[] } {
   const built = playableWorld(NO_LEVEL);
-  const carried: UpgradeKind[] = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, 'shuriken');
+  built.world.shipRow = SHIPS[ship];
+  built.world.weapon = weaponFor(built.world.shipRow, []);
   wearHull(built.world);
   built.world.fireIn = 1;
   built.world.missileIn = NEVER;
@@ -108,12 +112,12 @@ function alive(world: World, blade: Entity): boolean {
 }
 
 /**
- * One throw at `tier` — a PAIR — watched alone until both are gone: where each was on every step,
+ * One throw from `ship` — a PAIR — watched alone until both are gone: where each was on every step,
  * and where each was THROWN from, across the ship (the place before its first step, which the
  * painter keeps as `prevAcross`).
  */
-function flights(tier: number): { world: World; pair: [Place[], Place[]]; thrown: [number, number] } {
-  const { world, frame } = armed(tier);
+function flights(ship?: ShipKind): { world: World; pair: [Place[], Place[]]; thrown: [number, number] } {
+  const { world, frame } = armed(ship);
   frame.step();
   expect(world.playerShots.size, 'a throw is not a pair').toBe(2);
   // One pair, watched alone: the launcher is held off after the first throw.
@@ -140,10 +144,12 @@ function flights(tier: number): { world: World; pair: [Place[], Place[]]; thrown
   return { world, pair, thrown };
 }
 
-/** Half the drawn width of the hull the ship is wearing, in world units: where a wingtip is. */
-function wingtipOf(world: World): number {
-  return SPRITE_EXTENT[SPRITE_KINDS[world.ship.spriteBase]!] / 2;
-}
+/*
+  ⚠️ **THE WINGTIP IS THE SHIP'S OWN SINCE 0441, AND IT WAS HALF THE DRAWN HULL.** On the one fighter
+  the blade fins were the box's edge; the Firebird throws from its front hubcaps, well inside its box,
+  so each ship authors where its hardpoints stand (`wingtip` on `src/content/ships.ts`'s row) and this
+  reads that.
+*/
 
 /**
  * A blade's swings, read off the picture: each stretch of its track between two crossings of the
@@ -184,7 +190,7 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
   }
 
   it('THE BITE: a blade goes on with one less edge, and the blast has eaten its damage', () => {
-    const { world, frame } = armed(2);
+    const { world, frame } = armed();
     frame.step();
     world.fireIn = NEVER;
     const blade = world.playerShots.at(0);
@@ -202,13 +208,18 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     // health per arrival, and a shot with one is gone. This is that same sentence, at the void.
     const built = playableWorld(NO_LEVEL);
     const world = built.world;
-    world.weapon = weaponFor(world.shipRow, [], 'pulse');
+    // The fighter, whose gun is the pulse — 0441.
+    world.shipRow = SHIPS[shipCarrying('pulse')];
+    world.weapon = weaponFor(world.shipRow, []);
     wearHull(world);
     world.fireIn = 1;
     world.missileIn = NEVER;
     const frame = new GameFrame(world);
     frame.step();
     expect(world.playerShots.size, 'nothing was fired').toBeGreaterThan(0);
+    // One pulse alone: since 0441 the fighter opens on all four barrels, and the fan leaves the nose
+    // close enough together that a void planted on one takes its neighbours too.
+    while (world.playerShots.size > 1) world.playerShots.releaseAt(world.playerShots.size - 1);
     const shot = world.playerShots.at(0);
     expect(shot.health, 'a pulse carries more than one arrival').toBe(1);
     world.fireIn = NEVER;
@@ -226,10 +237,18 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
       only warning there was — which is the argument the bomb's own loop in `feedVoids` already makes.
       `landIn` is the same field, so the rule is stated once and read twice.
     */
-    const { world, frame } = armed(2);
+    const { world, frame } = armed();
     frame.step();
     world.fireIn = NEVER;
     const blade = world.playerShots.at(0);
+    /*
+      ⚠️ **CLEAR OF THE HULL FIRST, SINCE 0441.** The Firebird throws from its hubcaps, two units out,
+      so a void planted on a blade the step it leaves is inside the ship's own reach and is spent on the
+      ship before the blade can bite twice. The bite is what is measured, so the blade flies a dozen
+      steps up the lane before the void is put on it.
+    */
+    for (let i = 0; i < 12; i++) frame.step();
+    expect(alive(world, blade), 'the blade was gone before the void was planted').toBe(true);
     const blast = voidOn(world, blade);
     let last = blast.health;
     let bitOn: number[] = [];
@@ -270,7 +289,8 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
         heart, at its own rate; the tentacles' part in the fight is `tests/medusa.test.ts`'s.
       */
       world.bossRow = { ...world.bossRow, tendrils: undefined };
-      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+      world.shipRow = SHIPS[shipCarrying('shuriken')];
+      world.weapon = weaponFor(world.shipRow, []);
       wearHull(world);
       const frame = new GameFrame(world);
       let taken = 0;
@@ -332,22 +352,36 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       start and wingtips."* The first draft threw from the crest, `coil` out; the blade is thrown
       from where the wing's drawn edge is, within a blade of it, and swings wider from there.
     */
-    const { world, pair, thrown } = flights(1);
-    const places = pair[0];
-    expect(Math.abs(places[0]!.fromShipAlong), 'the blade did not leave from the ship').toBeLessThan(SHOTS.shuriken.radius);
-    const wingtip = wingtipOf(world);
-    expect(Math.abs(Math.abs(thrown[0]) - wingtip), `the blade was thrown ${Math.abs(thrown[0]).toFixed(1)} out, and the wingtip is ${wingtip.toFixed(1)}`).toBeLessThan(
-      SHOTS.shuriken.radius / 2,
-    );
-    expect(Math.max(...places.map((p) => Math.abs(p.fromShipAcross))), 'the blade never swung wider than the wingtip').toBeGreaterThan(wingtip + SHOTS.shuriken.radius);
-    for (let i = 1; i < places.length; i++) {
-      expect(places[i]!.fromShipAlong, `the blade lost ground on step ${i}, which is a loop and not a helix`).toBeGreaterThan(places[i - 1]!.fromShipAlong);
-    }
-    const strand = swings(places);
-    expect(strand.length, 'the blade crossed the ship’s line fewer than four times before the edge').toBeGreaterThanOrEqual(4);
-    for (let k = 1; k < strand.length; k++) {
-      expect(strand[k], `swing ${k} is a different width from the first`).toBeGreaterThan(strand[0]! * 0.85);
-      expect(strand[k], `swing ${k} is a different width from the first`).toBeLessThan(strand[0]! * 1.15);
+    /*
+      ⚠️ **EVERY SHIP WHOSE GUN IS A COIL, SINCE 0441** — the Firebird today. Each ship authors its own
+      `wingtip`, so the clearance is held per ship that throws, never on the one fighter it was found on
+      (0282): a second coil ship joins this loop as a row.
+    */
+    const coiling = SHIP_KINDS.filter((kind) => WEAPONS[SHIPS[kind].weapon].flight === 'coil');
+    expect(coiling.length, 'no ship throws blades, so this held nothing').toBeGreaterThan(0);
+    for (const ship of coiling) {
+      const { pair, thrown } = flights(ship);
+      const places = pair[0];
+      expect(Math.abs(places[0]!.fromShipAlong), `${ship}: the blade did not leave from the ship`).toBeLessThan(SHOTS.shuriken.radius);
+      const wingtip = SHIPS[ship].wingtip;
+      expect(
+        Math.abs(Math.abs(thrown[0]) - wingtip),
+        `${ship}: the blade was thrown ${Math.abs(thrown[0]).toFixed(1)} out, and the wingtip is ${wingtip.toFixed(1)}`,
+      ).toBeLessThan(SHOTS.shuriken.radius / 2);
+      expect(Math.max(...places.map((p) => Math.abs(p.fromShipAcross))), `${ship}: the blade never swung wider than the wingtip`).toBeGreaterThan(
+        wingtip + SHOTS.shuriken.radius,
+      );
+      for (let i = 1; i < places.length; i++) {
+        expect(places[i]!.fromShipAlong, `${ship}: the blade lost ground on step ${i}, which is a loop and not a helix`).toBeGreaterThan(
+          places[i - 1]!.fromShipAlong,
+        );
+      }
+      const strand = swings(places);
+      expect(strand.length, `${ship}: the blade crossed the ship’s line fewer than four times before the edge`).toBeGreaterThanOrEqual(4);
+      for (let k = 1; k < strand.length; k++) {
+        expect(strand[k], `${ship}: swing ${k} is a different width from the first`).toBeGreaterThan(strand[0]! * 0.85);
+        expect(strand[k], `${ship}: swing ${k} is a different width from the first`).toBeLessThan(strand[0]! * 1.15);
+      }
     }
   });
 
@@ -359,7 +393,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       Measured at the 0244 speed: 2.3 s; at 0242's it was 2.9 s, which is what *"slightly faster"*
       was said about.
     */
-    const { world, pair } = flights(0);
+    const { world, pair } = flights();
     const steps = pair[0].length;
     expect(world.view.alongSpan, 'this is not the widest screen, so the seconds mean nothing').toBeCloseTo(ACROSS_SPAN * (16 / 9), 3);
     expect(steps / STEPS_PER_SECOND, `a blade takes ${(steps / STEPS_PER_SECOND).toFixed(2)} s to reach the leading edge`).toBeLessThan(2.5);
@@ -389,7 +423,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       two a quarter-turn apart cross the ship's line at different places. Only a half-turn brings
       them to one point, which is the helix.
     */
-    const { pair, thrown } = flights(2);
+    const { pair, thrown } = flights();
     const [a, b] = pair;
     expect(thrown[0], 'the pair left from one side').toBeCloseTo(-thrown[1], 3);
     expect(a[0]!.fromShipAcross, 'the pair left from one side').toBeCloseTo(-b[0]!.fromShipAcross, 3);
@@ -412,7 +446,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       `SHOTS.shuriken.radius` is the blade's own drawn half-size, the one allowance over the edge;
       the distance that counts as *at* the edge is what a blade covers in a step plus that half-size.
     */
-    const { world, pair } = flights(0);
+    const { world, pair } = flights();
     const halfSize = SHOTS.shuriken.radius;
     for (const places of pair) {
       for (let i = 0; i < places.length; i++) {
@@ -430,18 +464,11 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
     */
   });
 
-  it('THE LADDER: a rung is a wider band, so the cap sweeps more of the lane than the first rung', () => {
-    /*
-      ⚠️ Every coil reaches the same edge, so what an upgrade buys is how wide a band it sweeps:
-      *"upgrades make the shuriken's arc… bigger."* Held as WIDER by half and never as the width;
-      the ladder in `src/content/weapons.ts` is a hand's.
-    */
-    const width = (tier: number): number => Math.max(...flights(tier).pair[0].map((p) => Math.abs(p.fromShipAcross)));
-    const first = width(0);
-    const cap = width(UPGRADE_TIERS);
-    expect(first, 'the first rung sweeps no band at all').toBeGreaterThan(SHOTS.shuriken.radius);
-    expect(cap, `the cap sweeps ${cap.toFixed(0)} across against the first rung’s ${first.toFixed(0)}`).toBeGreaterThan(first * 1.5);
-  });
+  /*
+    ⚠️ **`THE LADDER: a rung is a wider band` WAS HERE.** Its subject was the shuriken's ladder, which
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted with every gun's: the Firebird opens on
+    what the cap was. That the one band is wider than the wingtip it leaves is THE HELIX's.
+  */
 
   it('THE SWEEP: a blade lands on a body it crosses without being spent, and lands again only once the flash has cleared', () => {
     /*
@@ -452,7 +479,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       is the same rule the pulse's rate is held to (0035: a hit finishes flashing before the next one
       lands).
     */
-    const { world, frame } = armed(2);
+    const { world, frame } = armed();
     const body = target(world, 60, 0, 10);
     frame.step();
     expect(world.playerShots.size).toBe(2);
@@ -486,8 +513,8 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
       ended it. Held as SOONER than a blade that lands on nothing lives, in steps, so nothing here
       names the edge or the flash.
     */
-    const untouched = flights(UPGRADE_TIERS).pair[0].length;
-    const { world, frame } = armed(UPGRADE_TIERS);
+    const untouched = flights().pair[0].length;
+    const { world, frame } = armed();
     target(world, 0, 0, ACROSS_SPAN);
     frame.step();
     world.fireIn = NEVER;
@@ -504,7 +531,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
   });
 
   it('THE SPIN: a blade shows its two turns in turn, so a bitmap that cannot rotate still spins', () => {
-    const { world, frame } = armed(1);
+    const { world, frame } = armed();
     frame.step();
     world.fireIn = NEVER;
     const blade = world.playerShots.at(0);
@@ -536,7 +563,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
   it('THE CUES: a throw sounds as its own cue, and a bite sounds as a hit', () => {
     expect(CUES.throw.twin).toBe('blade-appears');
     expect(TWIN_KINDS).toContain(CUES.throw.twin);
-    const { world, frame, cues } = armed(2);
+    const { world, frame, cues } = armed();
     target(world, 60, 0, 10);
     frame.step();
     expect(cues, 'the throw made no sound').toContain('throw');
@@ -545,8 +572,8 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
     expect(cues, 'a blade bit a body and nothing sounded').toContain('hit');
   });
 
-  it('and at the cap the pulse’s pool never fills with blades, however long the fight', () => {
-    const { world, frame } = armed(UPGRADE_TIERS);
+  it('and the player-shot pool never fills with blades, however long the fight', () => {
+    const { world, frame } = armed();
     world.fireIn = world.weapon.fireEvery;
     let peak = 0;
     // Long enough for more blades to have been thrown than the pool holds, if none of them ever

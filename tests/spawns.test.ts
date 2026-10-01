@@ -435,6 +435,11 @@ describe('a wave may arrive from the side, and never behind the player', () => {
     */
     for (const [origin, lane] of [['acrossMinus', 35] as const, ['acrossPlus', 70] as const]) {
       const { world } = playableWorld(oneFlank(origin, lane));
+      /*
+        ⚠️ **The ship's gun is held — 0441.** Every run flies the old cap now, and the fighter's
+        four-barrel fan shot the flanker down before it reached its lane. The motion is the subject.
+      */
+      world.fireIn = Number.MAX_SAFE_INTEGER;
       const frame = new GameFrame(world);
       while (world.enemies.size === 0) frame.step();
       let settled = false;
@@ -671,7 +676,7 @@ describe('a pickup wanders', () => {
     // static straight line."*
     const level: LevelRow = {
       waves: [],
-      pickups: [{ at: 200, kind: 'weapon', lane: 50 }],
+      pickups: [{ at: 200, kind: 'bomb', lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -705,8 +710,8 @@ describe('a pickup wanders', () => {
     const level: LevelRow = {
       waves: [],
       pickups: [
-        { at: 240, kind: 'weapon', lane: 6 },
-        { at: 312, kind: 'weapon', lane: 94 },
+        { at: 240, kind: 'bomb', lane: 6 },
+        { at: 312, kind: 'bomb', lane: 94 },
       ],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,

@@ -4,11 +4,11 @@ import { GameFrame, SHIP_START_ALONG, dropPickups, respawn } from '../src/app/fr
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
-import { INVULN_STEPS, openingHealthFor } from '../src/content/ships.ts';
+import { INVULN_STEPS, SHIPS, SHIP_KINDS, openingHealthFor, type ShipKind } from '../src/content/ships.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { livesFor, startingArsenal } from '../src/state/slices/run.ts';
+import { initialRun, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { playableWorld } from './world.ts';
 
 /**
@@ -32,6 +32,12 @@ import { playableWorld } from './world.ts';
 
 /** The tier the fixtures run at. Nothing here asserts on the numbers it carries — 0039's rule. */
 const TIER = DIFFICULTY_KINDS[0]!;
+
+/**
+ * The ship the fixtures fly — 0441. Not the one a run that has not begun carries, so a continue that
+ * put the default ship back would be a different answer from keeping this one.
+ */
+const SHIP: ShipKind = SHIP_KINDS.find((kind) => kind !== initialRun.ship)!;
 
 const DIE: Action = { slice: 'run', type: 'lifeLost' };
 
@@ -125,11 +131,11 @@ describe('a new run opens on an empty field', () => {
   */
   it('THE REPORTED ONE: a run started from the title does not inherit the last one’s field', () => {
     const built = shell();
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     intoAFight(built);
     const fought = built.world.enemies.size;
 
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     expect(
       built.world.enemies.size,
       `a new run opened on ${fought} enemies from the last one, which is what reads as resuming it`,
@@ -139,13 +145,13 @@ describe('a new run opens on an empty field', () => {
 
   it('and starts at the beginning of level one, however deep the last run got', () => {
     const built = shell();
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     intoAFight(built);
     built.dispatch({ slice: 'run', type: 'levelCleared' });
     built.lifecycle.onward();
     expect(built.state().run.level, 'the fixture never left level one, so this asserts nothing').toBeGreaterThan(0);
 
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     expect(built.state().run.level, 'a new run began part-way through the sequence').toBe(0);
     expect(secondsIn(built.world.cameraAlong), 'a new run began part-way through a level').toBe(0);
     expect(built.world.nextWave, 'a new run began part-way through the wave table').toBe(0);
@@ -159,7 +165,7 @@ describe('a new run opens on an empty field', () => {
       `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`.
     */
     const built = shell();
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     intoAFight(built);
     /*
       ⚠️ **`onward` THEN `arrive`, AND THE INVARIANT DID NOT MOVE — 0340.** The next level used to be
@@ -180,9 +186,9 @@ describe('a new run opens on an empty field', () => {
       pickup is the player's to catch, not the level's — so `arrive` keeps it and `begin` does not.
     */
     const built = shell();
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     intoAFight(built);
-    dropPickups(built.world, built.world.ship.along + 40, 50, ['weapon', 'shield', 'missile']);
+    dropPickups(built.world, built.world.ship.along + 40, 50, ['bomb', 'shield', 'missile']);
     const thrown = built.world.pickups.size;
     expect(thrown, 'the drop threw nothing, so this asserts nothing').toBeGreaterThan(0);
 
@@ -190,7 +196,7 @@ describe('a new run opens on an empty field', () => {
     built.lifecycle.arrive();
     expect(built.world.pickups.size, 'level two opened with what was still floating swept away').toBe(thrown);
 
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     expect(built.world.pickups.size, 'a new run opened on the last one’s pickups').toBe(0);
   });
 });
@@ -199,10 +205,11 @@ describe('a run over is a continue', () => {
   /** A run flown into a fight, upgraded, and then flown out of lives: a run-over screen with a level behind it. */
   function ranOut(): Shell {
     const built = shell();
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, SHIP);
     intoAFight(built);
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
+    // The tubes, the one ladder since 0441.
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
+    built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
     // Banked past the starting kit, or a continue resetting the arsenal could not be seen — 0372.
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     dieOutTheRun(built);
@@ -257,7 +264,7 @@ describe('a run over is a continue', () => {
     const built = ranOut();
     const carried = built.state().run;
     expect(carried.arsenal, 'the run reached the continue screen with a fresh kit, so a reset proves nothing').not.toEqual(
-      startingArsenal(),
+      startingArsenal(SHIP),
     );
     expect(carried.upgrades.length, 'the run reached the continue screen with no ladder to keep').toBeGreaterThan(0);
     built.lifecycle.resume();
@@ -265,6 +272,8 @@ describe('a run over is a continue', () => {
     expect(built.state().run.arsenal, 'the continue reset the arsenal').toEqual(carried.arsenal);
     expect(built.state().run.upgrades, 'the continue took the ladders').toEqual(carried.upgrades);
     expect(built.state().run.difficulty, 'the continue changed the tier under the player').toBe(TIER);
+    expect(built.state().run.ship, 'the continue changed the ship under the player').toBe(SHIP);
+    expect(built.world.shipRow, 'the continue flew a different ship’s row').toBe(SHIPS[SHIP]);
   });
 
   it('and the ship is the one a death the run survives would have given them', () => {

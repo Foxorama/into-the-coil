@@ -31,6 +31,8 @@ import {
   type PortKind,
 } from '../src/content/port.ts';
 import { SPRITE } from '../src/content/sprites.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { SKY } from '../src/app/mount.ts';
 import { paintPort } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
@@ -66,10 +68,11 @@ const NARROW = { width: 1920, height: 1080 };
  * Draw the intro at `t`, flying the sky the game builds for a place in space — `SKY`, exactly as
  * `src/app/mount.ts` builds it — whose sprites land at `GAME_BASE` on in the intro's atlas (0416).
  */
-function drawAt(t: number, size = WIDE): { blits: Blit[]; view: View } {
+function drawAt(t: number, size = WIDE, ship: ShipKind = GOLFERS[DEFAULT_GOLFER].ship): { blits: Blit[]; view: View } {
   const view = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
-  paintPort(surface, view, t, SKY);
+  // The pilot's ship's own wingtip, which is where its contrails leave from — 0441.
+  paintPort(surface, view, t, SKY, SHIPS[ship].wingtip);
   return { blits: surface.blits, view };
 }
 
@@ -79,10 +82,15 @@ const GAME_BASE = PORT_KINDS.length;
 const of = (blits: readonly Blit[], kind: PortKind): Blit | undefined => blits.find((b) => b.sprite === PORT_SPRITE[kind]);
 
 /**
- * How far behind its centre a ship's hull ends, as a fraction of its box — the fighter's tail is at
- * `-0.78 r` and the Viper's nozzle at `-0.88 r`, with `r` 0.42 of the box (`src/render/bake.ts`).
+ * How far behind its centre a ship's hull ends, as a fraction of its box — the Viper's nozzle at
+ * `-0.88 r`, with `r` 0.42 of the box (`src/render/bake.ts`).
+ *
+ * ⚠️ **The pilot's ship is the box's own edge, half of it, since 0441.** It was the fighter's tail at
+ * `-0.78 r`; now `blue` is whichever ship the golfer flies, each shaped differently inside the one box
+ * (the fighter at `FIGHTER_HULL / SHIP_BOX` of it), and the only bound that holds for all four is the
+ * box. Every use below asks whether the tail is PAST a line, so the box's edge is the strict answer.
  */
-const TAIL: Partial<Record<PortKind, number>> = { blue: 0.78 * 0.42, viper: 0.88 * 0.42 };
+const TAIL: Partial<Record<PortKind, number>> = { blue: 0.5, viper: 0.88 * 0.42 };
 
 /** Where a drawn ship's tail is, in pixels. */
 function tailPx(b: Blit, kind: 'blue' | 'viper'): number {
@@ -272,17 +280,23 @@ describe('the chase is a chase — 0414', () => {
   });
 
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {
-    const trails = (t: number): number => drawAt(t, NARROW).blits.filter((b) => b.sprite === PORT_SPRITE.contrail).length;
-    expect(trails(BEATS.viperRuns - 1), 'a trail before anyone jetted off').toBe(0);
-    /*
-      ⚠️ **AND WHILE THE FIGHTER IS STILL COMING OUT OF THE BAY**, which is the one time before the
-      throttle that a ship is moving forward on screen — a trail sample is invisible where it is not, so
-      the step above could not see trails drawn early, and `npm run prove` said so.
-    */
-    expect(trails(BEATS.outside + 40), 'a trail behind the fighter as it leaves the station').toBe(0);
-    const hers = trails(BEATS.viperRuns + 30);
-    expect(hers, 'no trail behind her as she jets off').toBeGreaterThan(8);
-    expect(trails(BEATS.blueRuns + 30), 'no trail behind the fighter as it jets off').toBeGreaterThan(trails(BEATS.blueRuns - 1));
+    // Whichever ship the pilot runs out to — 0441: each trails from its own wingtips.
+    for (const ship of SHIP_KINDS) {
+      const trails = (t: number): number =>
+        drawAt(t, NARROW, ship).blits.filter((b) => b.sprite === PORT_SPRITE.contrail).length;
+      expect(trails(BEATS.viperRuns - 1), `${ship}: a trail before anyone jetted off`).toBe(0);
+      /*
+        ⚠️ **AND WHILE THE FIGHTER IS STILL COMING OUT OF THE BAY**, which is the one time before the
+        throttle that a ship is moving forward on screen — a trail sample is invisible where it is not, so
+        the step above could not see trails drawn early, and `npm run prove` said so.
+      */
+      expect(trails(BEATS.outside + 40), `${ship}: a trail behind it as it leaves the station`).toBe(0);
+      const hers = trails(BEATS.viperRuns + 30);
+      expect(hers, `${ship}: no trail behind her as she jets off`).toBeGreaterThan(8);
+      expect(trails(BEATS.blueRuns + 30), `${ship}: no trail behind it as it jets off`).toBeGreaterThan(
+        trails(BEATS.blueRuns - 1),
+      );
+    }
   });
 });
 

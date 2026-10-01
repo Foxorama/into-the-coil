@@ -512,12 +512,8 @@ const DROP_SPREAD_MAX = 1.3;
  * now holds the wait against the time it takes to cross the lane, which is the thing the player is
  * actually doing, rather than against a cycle that no longer exists.
  *
- * ⚠️ **EXPORTED so a guard in another decision can name it** —
- * `docs/decisions/0086-the-teeth-wait-for-the-gun.md`. `MULTI_HIT_RUNUP` is how long level one waits
- * before it sends anything tough after the pickup that lifts the clamp, and the only honest statement
- * of *long enough* is *longer than the pickup itself waits to be taken*. Two independent constants
- * agreeing, which `docs/decisions/0027-measure-the-picture-not-the-model.md` allows and a guard
- * written in terms of one of them would not be.
+ * ⚠️ **EXPORTED so a guard in another decision can name it.** 0086's run-up was held against it
+ * until 0441 took the run-up away with the one-hit clamp.
  *
  * ⚠️ **420 → 600, so the wander reaches the back wall and turns inside the wait** — 0233. At a
  * wander held under half the scroll rate, the box takes a little over eight seconds to cross, and a
@@ -2662,6 +2658,7 @@ export function holdFinale(w: World): void {
   scene.from.shipAlong = w.ship.along - w.cameraAlong;
   scene.from.shipAcross = w.ship.across;
   scene.ship = w.ship.spriteBase;
+  scene.tail = w.shipRow.tail;
 }
 
 /** Where the finale's heart stands when the fight had none — `holdFinale`. */
@@ -4439,7 +4436,8 @@ function stepExhaust(w: World): void {
   flame.swell = swell;
   flame.prevAlong = flame.along;
   flame.prevAcross = flame.across;
-  flame.along = w.ship.along - row.trail - BURN_HALF * (swell - 1);
+  // From the ship's own nozzles — 0441: `trail` is measured from them, and `tail` is where they are.
+  flame.along = w.ship.along - w.shipRow.tail - row.trail - BURN_HALF * (swell - 1);
   flame.across = w.ship.across;
 }
 

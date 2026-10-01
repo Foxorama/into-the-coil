@@ -6,7 +6,8 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, MUZZLE_ALONG, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
-import { UPGRADE_TIERS, effectOf, overflowOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
+import { BOMB_KINDS, UPGRADE_TIERS, effectOf, specialOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, podSide, type Surge } from '../src/content/specials.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
@@ -32,10 +33,14 @@ function full(kind: UpgradeKind): UpgradeKind[] {
   return out;
 }
 
-/** A world with the gun and the tubes fitted at the cap, both silenced until the test says. */
+/**
+ * A world flying the ship `gun` is keyed to (0441), its tubes fitted at the cap, both silenced until
+ * the test says.
+ */
 function fitted(gun: (typeof WEAPON_KINDS)[number], tube: (typeof MISSILE_KINDS)[number]): { world: World; frame: GameFrame } {
   const { world } = playableWorld(NO_LEVEL);
-  world.weapon = weaponFor(world.shipRow, [...full('weapon'), ...full('missile')], gun, tube);
+  world.shipRow = SHIPS[shipCarrying(gun)];
+  world.weapon = weaponFor(world.shipRow, full('missile'), tube);
   wearHull(world);
   world.fireIn = NEVER;
   world.missileIn = NEVER;
@@ -43,18 +48,27 @@ function fitted(gun: (typeof WEAPON_KINDS)[number], tube: (typeof MISSILE_KINDS)
 }
 
 describe('0373 — a full ladder buys the face’s own special', () => {
-  it('THE ASK: every gun and every tube, overflowed, stocks the special its row names', () => {
-    for (const gun of WEAPON_KINDS) {
-      const loadout: Loadout = { upgrades: full('weapon'), weapon: gun, missile: 'straight' };
-      const face = WEAPON_KINDS.indexOf(gun);
-      expect(effectOf('weapon', face, loadout), `a full ${gun} did not overflow`).toBe('special');
-      expect(overflowOf('weapon', face), `a full ${gun} bought somebody else's special`).toBe(WEAPONS[gun].special);
-    }
+  /*
+    ⚠️ **A GUN'S HALF OF `THE ASK` — every gun, overflowed, stocks its own special — WAS HERE.**
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` took the gun's ladder, so a gun cannot
+    overflow; its special is bought from the bomb pickup's face instead, held below and in
+    `tests/pickups.test.ts`.
+  */
+  it('THE ASK: every tube, overflowed, stocks the special its row names', () => {
     for (const tube of MISSILE_KINDS) {
-      const loadout: Loadout = { upgrades: full('missile'), weapon: 'pulse', missile: tube };
+      const loadout: Loadout = { upgrades: full('missile'), missile: tube };
       const face = MISSILE_KINDS.indexOf(tube);
       expect(effectOf('missile', face, loadout), `full ${tube} tubes did not overflow`).toBe('special');
-      expect(overflowOf('missile', face), `full ${tube} tubes bought somebody else's special`).toBe(MISSILES[tube].special);
+      expect(specialOf('missile', face), `full ${tube} tubes bought somebody else's special`).toBe(MISSILES[tube].special);
+    }
+  });
+
+  it('and every gun’s own special is a face the bomb pickup shows, so any ship can buy it — 0441', () => {
+    for (const gun of WEAPON_KINDS) {
+      const face = BOMB_KINDS.indexOf(WEAPONS[gun].special);
+      expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the bomb pickup`).toBeGreaterThanOrEqual(0);
+      expect(effectOf('bomb', face, { upgrades: [], missile: 'straight' }), `a bomb pickup showing the ${gun}'s special is not a special`).toBe('special');
+      expect(specialOf('bomb', face), `a bomb pickup showing the ${gun}'s special bought somebody else's`).toBe(WEAPONS[gun].special);
     }
   });
 

@@ -18,8 +18,10 @@ export const PROBES = [
     guard: 'dies to a single contact',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    radius: 2,\n    health: 1,',
-      replace: '    radius: 2,\n    health: 3,',
+      // ⚠️ Re-anchored by 0441: four ships share this pair, and the fighter's own hit sprite above it
+      // is what makes it the fighter's — the one the guard's quiet world flies.
+      find: '    spriteHit: SPRITE.fighterHit,\n    radius: 2,\n    health: 1,',
+      replace: '    spriteHit: SPRITE.fighterHit,\n    radius: 2,\n    health: 3,',
     },
   },
   {
@@ -164,8 +166,10 @@ export const PROBES = [
         the upgrade list still calls it an upgrade. That is also the likelier real mistake now — 0082
         added a `special` effect and a bomb pickup in the same change.
       */
-      find: "    hint: 'Guns up a tier',\n    effect: 'upgrade',",
-      replace: "    hint: 'Guns up a tier',\n    effect: 'special',",
+      // ⚠️ Re-anchored by 0441, whose one upgrade is the tubes: the weapon pickup is a special now, so
+      // the missile pickup is the upgrade the table can disagree about.
+      find: "    hint: 'Tubes up a tier',\n    effect: 'upgrade',",
+      replace: "    hint: 'Tubes up a tier',\n    effect: 'special',",
     },
   },
   {
@@ -196,10 +200,11 @@ export const PROBES = [
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0355, which sizes the row by the tier's cap rather than by `MAX_SHIELDS`, and
       // by 0373, which counts the stack and names what it throws next.
+      // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
       find:
-        '    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());',
+        '    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());',
       replace:
-        '    chrome.setHud(state.run.lives, world.ship.health, shipRow.health, stacksOf());',
+        '    chrome.setHud(state.run.lives, world.ship.health, world.shipRow.health, stacksOf());',
     },
   },
 ];

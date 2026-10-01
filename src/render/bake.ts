@@ -1956,42 +1956,74 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): v
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
 type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate';
 
+/** One tube's place on a hull: where its casing ends at the front, and how long the casing is. */
+interface TubeAt {
+  at: Pt;
+  length: number;
+}
+
 /**
  * Where each ship carries one tube and where it carries two, in the box's radius — 0441. Authored per
- * ship, on 0282's terms: a saucer's tubes are on its rim and a wagon's are on its roof rack.
+ * ship, on 0282's terms: a saucer's tubes are on its rim, a wagon's on its roof rack, and the fighter's
+ * on its chin and in the narrow room each wing has between its leading and trailing edge — so each
+ * ship says its own length too, and `tests/accents.test.ts` holds every one of them on the hull.
  */
-const TUBES_ON: Record<ShipArt, { one: Pt; two: readonly [Pt, Pt] }> = {
-  fighter: { one: [-0.42, 0], two: [[-0.2, -0.46], [-0.2, 0.46]] },
-  caddie: { one: [-0.66, 0], two: [[-0.08, -0.66], [-0.08, 0.66]] },
-  firebird: { one: [-0.5, 0], two: [[-0.66, -0.3], [-0.66, 0.3]] },
-  estate: { one: [-0.3, 0], two: [[-0.3, -0.26], [-0.3, 0.26]] },
+const TUBES_ON: Record<ShipArt, { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
+  fighter: {
+    one: { at: [0.52, 0], length: 0.2 },
+    // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more.
+    two: [
+      { at: [-0.31, -0.47], length: 0.11 },
+      { at: [-0.31, 0.47], length: 0.11 },
+    ],
+  },
+  caddie: {
+    one: { at: [-0.52, 0], length: 0.32 },
+    two: [
+      { at: [-0.08, -0.64], length: 0.36 },
+      { at: [-0.08, 0.64], length: 0.36 },
+    ],
+  },
+  firebird: {
+    one: { at: [-0.56, 0], length: 0.34 },
+    two: [
+      { at: [-0.62, -0.26], length: 0.3 },
+      { at: [-0.62, 0.26], length: 0.3 },
+    ],
+  },
+  estate: {
+    one: { at: [-0.3, 0], length: 0.4 },
+    two: [
+      { at: [-0.3, -0.25], length: 0.4 },
+      { at: [-0.3, 0.25], length: 0.4 },
+    ],
+  },
 };
 
 /**
- * One missile tube, lying along the hull with its warhead forward: a slate casing, the missile's own
- * orange at the nose, and two fins. Painted on a sealed hull, so it can move neither the outline nor
- * the hurtbox.
+ * One missile tube, lying along the hull with its warhead forward: fins at the back, a slate casing,
+ * and the missile's own orange at the nose. Every part is at least 0.12 of the box's radius across, so
+ * each clears 0106's floor at the shipped camera. Painted on a sealed hull, so it can move neither the
+ * outline nor the hurtbox.
  */
-function paintTube(ctx: Pen, f: Frame, palette: Palette, [x, y]: Pt): void {
-  const casing = shade(palette.trim, 0.3);
+function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }: TubeAt): void {
+  const back = x - length;
   poly(ctx, f, shade(palette.trim, -0.2), [
-    [x - 0.46, y - 0.12],
-    [x - 0.34, y - 0.12],
-    [x - 0.3, y - 0.06],
-    [x - 0.3, y + 0.06],
-    [x - 0.34, y + 0.12],
-    [x - 0.46, y + 0.12],
+    [back, y - 0.1],
+    [back + 0.12, y - 0.1],
+    [back + 0.12, y + 0.1],
+    [back, y + 0.1],
   ]);
-  poly(ctx, f, casing, [
-    [x - 0.4, y - 0.07],
-    [x + 0.12, y - 0.07],
-    [x + 0.12, y + 0.07],
-    [x - 0.4, y + 0.07],
+  poly(ctx, f, shade(palette.trim, 0.3), [
+    [back, y - 0.07],
+    [x, y - 0.07],
+    [x, y + 0.07],
+    [back, y + 0.07],
   ]);
   poly(ctx, f, palette.bullet, [
-    [x + 0.12, y - 0.07],
-    [x + 0.28, y],
-    [x + 0.12, y + 0.07],
+    [x, y - 0.07],
+    [x + 0.12, y],
+    [x, y + 0.07],
   ]);
 }
 
@@ -2047,12 +2079,13 @@ const FIREBIRD_UPPER: readonly Pt[] = [
   [1.08, -0.2],
   [0.96, -0.38],
   [0.82, -0.44],
-  [0.8, -0.58],
-  [0.4, -0.58],
+  // The front tyres are fat — they carry the shuriken hubcaps, and a hub needs room to be a star.
+  [0.8, -0.68],
+  [0.4, -0.68],
   [0.38, -0.46],
   [-0.4, -0.46],
-  [-0.42, -0.6],
-  [-0.82, -0.6],
+  [-0.42, -0.62],
+  [-0.82, -0.62],
   [-0.84, -0.46],
   [-1.06, -0.42],
   [-1.12, -0.28],
@@ -2066,12 +2099,12 @@ const ESTATE_UPPER: readonly Pt[] = [
   [1.08, -0.34],
   [0.98, -0.46],
   [0.86, -0.46],
-  [0.84, -0.56],
-  [0.46, -0.56],
+  [0.84, -0.6],
+  [0.46, -0.6],
   [0.44, -0.48],
   [-0.46, -0.48],
-  [-0.48, -0.56],
-  [-0.86, -0.56],
+  [-0.48, -0.6],
+  [-0.86, -0.6],
   [-0.88, -0.48],
   [-1.06, -0.46],
   [-1.12, -0.34],
@@ -2085,7 +2118,7 @@ const ESTATE_HULL: readonly Pt[] = [...ESTATE_UPPER, ...mirrored(ESTATE_UPPER).s
  */
 export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number): void {
   const at = TUBES_ON[ship];
-  const tubes: readonly Pt[] = stage >= 2 ? at.two : stage === 1 ? [at.one] : [];
+  const tubes: readonly TubeAt[] = stage >= 2 ? at.two : stage === 1 ? [at.one] : [];
   ctx.beginPath();
   switch (ship) {
     case 'fighter': {
@@ -2150,7 +2183,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette): void {
     [0.8, 0.1],
   ]);
   disc(ctx, f, palette.ally, 1.0, 0, 0.11);
-  glow(ctx, f, palette.ally, 1.0, 0, 0.2, 0.6);
+  // Inside the box: a glow past 1.16 of the radius is cut off by the bitmap's edge.
+  glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
 }
 
 /**
@@ -2166,51 +2200,48 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette): void {
   ctx.fillStyle = body;
   trace(ctx, f, FIREBIRD_HULL);
   seal(ctx);
-  // The tyres: rubber, a gold rim inside each.
-  for (const [x0, x1] of [
-    [0.4, 0.8],
-    [-0.82, -0.42],
-  ] as const) {
-    for (const side of [1, -1] as const) {
-      // Rubber in the slate trim: the void's own black left the wheels floating off the body.
-      poly(ctx, f, palette.trim, [
-        [x0, 0.46 * side],
-        [x1, 0.46 * side],
-        [x1, 0.58 * side],
-        [x0, 0.58 * side],
-      ]);
-      poly(ctx, f, gold, [
-        [x0 + 0.08, 0.47 * side],
-        [x1 - 0.08, 0.47 * side],
-        [x1 - 0.08, 0.53 * side],
-        [x0 + 0.08, 0.53 * side],
-      ], 0.85);
-    }
-  }
-  // The shuriken hubcaps on the front wheels — the gun, in steel, as the blades it throws.
+  /*
+    ⚠️ **EVERY MARK 0.11 OF THE BOX OR MORE, AND ON THE BODY — `tests/accents.test.ts`.** The first
+    drawing had gold rims, blade tips and lamps three hundredths across, which the shipped camera draws
+    at under a pixel and a half, and hubcap blades that reached past the tyre.
+  */
+  // The rear tyres: rubber in the slate trim — the void's own black left them floating off the body.
   for (const side of [1, -1] as const) {
-    const cy = 0.52 * side;
-    // Four hooked blades about the hub, then the hub itself.
-    for (let k = 0; k < 4; k++) {
-      const a = Math.PI / 4 + (k * Math.PI) / 2;
-      const c = Math.cos(a);
-      const s = Math.sin(a);
-      poly(ctx, f, palette.blade, [
-        [0.6 + c * 0.05 - s * 0.05, cy + s * 0.05 + c * 0.05],
-        [0.6 + c * 0.2, cy + s * 0.2],
-        [0.6 + c * 0.05 + s * 0.07, cy + s * 0.05 - c * 0.07],
-      ]);
+    poly(ctx, f, palette.trim, [
+      [-0.82, 0.46 * side],
+      [-0.42, 0.46 * side],
+      [-0.42, 0.6 * side],
+      [-0.82, 0.6 * side],
+    ]);
+  }
+  /*
+    The front tyres, fat, and their hubcaps are the shuriken launchers: a four-pointed steel star on
+    each, which is where the blades leave from — the ship's `wingtip` (`src/content/ships.ts`). One
+    polygon a star, so the star is one mark as wide as the hub and not four slivers.
+  */
+  for (const side of [1, -1] as const) {
+    poly(ctx, f, palette.trim, [
+      [0.4, 0.46 * side],
+      [0.8, 0.46 * side],
+      [0.8, 0.66 * side],
+      [0.4, 0.66 * side],
+    ]);
+    const cy = 0.56 * side;
+    const star: Pt[] = [];
+    for (let k = 0; k < 8; k++) {
+      const a = (k * Math.PI) / 4;
+      const reach = k % 2 === 0 ? 0.095 : 0.04;
+      star.push([0.6 + Math.cos(a) * reach * 1.6, cy + Math.sin(a) * reach]);
     }
-    disc(ctx, f, palette.blade, 0.6, cy, 0.09);
-    disc(ctx, f, shade(palette.blade, -0.45), 0.6, cy, 0.045);
+    poly(ctx, f, palette.blade, star);
   }
   // A cyan pinstripe down each flank — the player's own ink, where the predecessor's was gold.
   for (const side of [1, -1] as const) {
     poly(ctx, f, palette.player, [
-      [0.86, 0.36 * side],
-      [-0.98, 0.36 * side],
+      [0.8, 0.31 * side],
+      [-0.98, 0.31 * side],
       [-0.98, 0.42 * side],
-      [0.86, 0.42 * side],
+      [0.8, 0.42 * side],
     ]);
   }
   // The canopy: gold glass under a T-top, the bar across it in the body's lacquer.
@@ -2240,27 +2271,28 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette): void {
   for (const side of [1, -1] as const) {
     poly(ctx, f, gold, [
       [0.7, 0.06 * side],
-      [0.42, 0.34 * side],
-      [0.16, 0.34 * side],
+      [0.44, 0.36 * side],
+      [0.16, 0.36 * side],
       [0.3, 0.2 * side],
       [0.2, 0.22 * side],
       [0.4, 0.06 * side],
     ]);
+    // Flame at the wingtip, tall enough to be drawn.
     poly(ctx, f, palette.bullet, [
-      [0.42, 0.34 * side],
-      [0.22, 0.34 * side],
-      [0.28, 0.27 * side],
+      [0.44, 0.36 * side],
+      [0.18, 0.36 * side],
+      [0.3, 0.24 * side],
     ]);
   }
-  disc(ctx, f, palette.space, 0.88, 0, 0.05);
-  // Headlamps in the impact ink, tail lamps in the shot's orange — never the enemy's red.
+  disc(ctx, f, palette.space, 0.88, 0, 0.06);
+  // Headlamps in the impact ink inside the nose's curve, tail lamps in the shot's orange — never red.
   for (const side of [1, -1] as const) {
-    disc(ctx, f, palette.impact, 1.0, 0.24 * side, 0.07);
+    disc(ctx, f, palette.impact, 0.95, 0.24 * side, 0.06);
     poly(ctx, f, palette.bullet, [
-      [-1.08, 0.18 * side],
-      [-1.0, 0.18 * side],
-      [-1.0, 0.36 * side],
-      [-1.06, 0.36 * side],
+      [-1.07, 0.18 * side],
+      [-0.96, 0.18 * side],
+      [-0.96, 0.34 * side],
+      [-1.07, 0.34 * side],
     ]);
   }
 }
@@ -2277,7 +2309,11 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette): void {
   ctx.fillStyle = gilt;
   trace(ctx, f, ESTATE_HULL);
   seal(ctx);
-  // The tyres.
+  /*
+    ⚠️ **EVERY MARK 0.11 OF THE BOX OR MORE — `tests/accents.test.ts`.** The first drawing had hubs,
+    rails and a running light four to seven hundredths across, which the shipped camera draws at one
+    pixel; the tyres are wider now and the hubs gone.
+  */
   for (const [x0, x1] of [
     [0.46, 0.84],
     [-0.86, -0.48],
@@ -2286,15 +2322,8 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette): void {
       poly(ctx, f, palette.trim, [
         [x0, 0.48 * side],
         [x1, 0.48 * side],
-        [x1, 0.56 * side],
-        [x0, 0.56 * side],
-      ]);
-      // A gilt hub on each, so the wheel reads as a wheel and not a slot in the sill.
-      poly(ctx, f, shade(gilt, 0.2), [
-        [x0 + 0.12, 0.5 * side],
-        [x1 - 0.12, 0.5 * side],
-        [x1 - 0.12, 0.54 * side],
-        [x0 + 0.12, 0.54 * side],
+        [x1, 0.6 * side],
+        [x0, 0.6 * side],
       ]);
     }
   }
@@ -2303,52 +2332,52 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette): void {
     poly(ctx, f, burl, [
       [0.86, 0.34 * side],
       [-1.0, 0.34 * side],
-      [-1.0, 0.46 * side],
-      [0.86, 0.46 * side],
+      [-1.0, 0.47 * side],
+      [0.86, 0.47 * side],
     ]);
     poly(ctx, f, palette.player, [
-      [0.86, 0.29 * side],
-      [-1.0, 0.29 * side],
+      [0.86, 0.23 * side],
+      [-1.0, 0.23 * side],
       [-1.0, 0.34 * side],
       [0.86, 0.34 * side],
     ]);
   }
   // The roof, a shade down, with the windscreen ahead of it and the tailgate glass behind.
   poly(ctx, f, shade(gilt, -0.18), [
-    [0.5, -0.29],
-    [-0.98, -0.29],
-    [-0.98, 0.29],
-    [0.5, 0.29],
+    [0.5, -0.23],
+    [-0.98, -0.23],
+    [-0.98, 0.23],
+    [0.5, 0.23],
   ]);
   poly(ctx, f, palette.glass, [
-    [0.74, -0.27],
-    [0.5, -0.27],
-    [0.5, 0.27],
-    [0.74, 0.27],
+    [0.74, -0.22],
+    [0.5, -0.22],
+    [0.5, 0.22],
+    [0.74, 0.22],
   ]);
   poly(ctx, f, palette.glass, [
-    [-0.9, -0.24],
-    [-1.04, -0.24],
-    [-1.04, 0.24],
-    [-0.9, 0.24],
+    [-0.9, -0.2],
+    [-1.04, -0.2],
+    [-1.04, 0.2],
+    [-0.9, 0.2],
   ]);
-  disc(ctx, f, palette.impact, 0.66, -0.16, 0.05, 0.8);
+  disc(ctx, f, palette.impact, 0.66, -0.12, 0.06, 0.8);
   // The rack: two rails and the crossbars, in a pale gilt.
   const rail = shade(gilt, 0.45);
   for (const side of [1, -1] as const) {
     poly(ctx, f, rail, [
-      [0.42, 0.18 * side],
-      [-0.9, 0.18 * side],
-      [-0.9, 0.25 * side],
-      [0.42, 0.25 * side],
+      [0.42, 0.1 * side],
+      [-0.9, 0.1 * side],
+      [-0.9, 0.21 * side],
+      [0.42, 0.21 * side],
     ]);
   }
-  for (const x of [0.3, -0.78]) {
+  for (const x of [0.3, -0.76]) {
     poly(ctx, f, rail, [
-      [x, -0.25],
-      [x - 0.07, -0.25],
-      [x - 0.07, 0.25],
-      [x, 0.25],
+      [x, -0.21],
+      [x - 0.11, -0.21],
+      [x - 0.11, 0.21],
+      [x, 0.21],
     ]);
   }
   // The lightning rod at the front of the rack: a slate coil, a lit ball, and its sparks.
@@ -2366,14 +2395,14 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette): void {
       [0.12 + dx * 0.1 + dy * 0.03, dy * 0.1 - dx * 0.03],
     ], 0.8);
   }
-  // Headlamps and tail lamps, as the Firebird's.
+  // Headlamps and tail lamps, as the Firebird's — inside the bumpers.
   for (const side of [1, -1] as const) {
-    disc(ctx, f, palette.impact, 1.0, 0.3 * side, 0.07);
+    disc(ctx, f, palette.impact, 0.98, 0.3 * side, 0.07);
     poly(ctx, f, palette.bullet, [
-      [-1.1, 0.24 * side],
-      [-1.04, 0.24 * side],
-      [-1.04, 0.4 * side],
-      [-1.1, 0.4 * side],
+      [-1.07, 0.2 * side],
+      [-0.96, 0.2 * side],
+      [-0.96, 0.34 * side],
+      [-1.07, 0.34 * side],
     ]);
   }
 }
@@ -12765,20 +12794,27 @@ export function drawKind(
       seal(ctx);
       const casing = palette[INK_OF[kind]];
       if (pickup) bubble(ctx, f, palette, casing);
-      // The lit upper half of the casing, then the two bands, then the warhead's glass eye.
+      /*
+        The lit upper half of the casing, then the two bands, then the warhead's glass eye. On the
+        pickup's face the glyph is drawn smaller inside its bubble, so the lit half and the bands are
+        drawn wider there to stay over 2.5 px (`tests/accents.test.ts`) — 0441.
+      */
+      const litTop = pickup ? -0.2 : -0.18;
+      const litBottom = pickup ? 0.02 : -0.03;
+      const bandWide = pickup ? 0.18 : 0.12;
       poly(ctx, fb, shade(casing, 0.35), [
-        [0.66, -0.18],
-        [-0.52, -0.18],
-        [-0.52, -0.03],
-        [0.66, -0.03],
+        [0.66, litTop],
+        [-0.52, litTop],
+        [-0.52, litBottom],
+        [0.66, litBottom],
       ]);
       // A band an eighth of the drawing wide: the thinner first draw was under 2.5px at game size
       // and `tests/accents.test.ts` refused it as not drawn at all.
-      for (const at of [0.46, 0.24]) {
+      for (const at of pickup ? [0.5, 0.18] : [0.46, 0.24]) {
         poly(ctx, fb, shade(casing, -0.45), [
           [at, -0.2],
-          [at - 0.12, -0.2],
-          [at - 0.12, 0.2],
+          [at - bandWide, -0.2],
+          [at - bandWide, 0.2],
           [at, 0.2],
         ]);
       }

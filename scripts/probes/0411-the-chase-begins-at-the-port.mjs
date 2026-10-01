@@ -145,7 +145,8 @@ export const PROBES = [
     guard: 'runs the golfer who was picked out of the bar',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      paintPort(w.surface, w.view, w.intro + alpha, w.sky);',
+      // ⚠️ Re-anchored by 0441, which hands the port the ship's own wingtip.
+      find: '      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow.wingtip);',
       replace: '      w.surface.clear();',
     },
   },

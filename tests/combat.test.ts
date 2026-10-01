@@ -34,12 +34,12 @@ import { Pool } from '../src/sim/pool.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { BURST } from '../src/content/debris.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyRow } from '../src/content/enemies.ts';
-import { INVULN_STEPS, MAX_SHIELDS, SHIPS } from '../src/content/ships.ts';
+import { INVULN_STEPS, MAX_SHIELDS, SHIP_KINDS, SHIPS } from '../src/content/ships.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHOT_KINDS, SHOTS } from '../src/content/shots.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { FIGHTER_HULL, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { GameFrame, SHIP_START_ALONG, respawn, type World } from '../src/app/frame.ts';
 import { STEP_MS } from '../src/app/loop.ts';
 import type { InputSource } from '../src/app/input.ts';
@@ -182,8 +182,19 @@ describe('a hurtbox is smaller than the art and not very much smaller', () => {
     const extentOf: number[] = [];
     for (const k of SPRITE_KINDS) extentOf[SPRITE[k]] = SPRITE_EXTENT[k];
 
+    /*
+      Every ship, against the CORE every ship shares — 0441, and the band said so rather than drifting.
+
+      ⚠️ **THE BOX IS KIT ROUND A CORE, AND THE CAPPED FIGHTER WAS ALWAYS THIS.** The one fighter's
+      bare hull stood here, 7 units — and from 0229 on, a capped fighter flew a 9.4-unit box of pods
+      and canards round that 7-unit hull with the same hurtbox, which this test never looked at: 2/9.4
+      is 0.21, under the band. 0441 puts every ship in that box from the first second, and the ask
+      fixed the box and kept the hurtbox, so a player ship is the one body whose hurtbox is held to
+      its core rather than its drawing: what a hit in the outer ring of a saucer or on a car's wheel
+      does not do is the genre's forgiving ship, played for months, said here instead of hidden.
+    */
     const bodies: [string, number, number][] = [
-      ['ship', SHIPS.proof.radius, extentOf[SHIPS.proof.sprite]!],
+      ...SHIP_KINDS.map((k): [string, number, number] => [k, SHIPS[k].radius, FIGHTER_HULL]),
       ...ENEMY_KINDS.map((k): [string, number, number] => [k, ENEMIES[k].radius, extentOf[ENEMIES[k].sprite]!]),
       ...SHOT_KINDS.map((k): [string, number, number] => [k, SHOTS[k].radius, extentOf[SHOTS[k].sprite]!]),
     ];
@@ -248,7 +259,7 @@ describe('who can hit whom is the caller’s decision, and it is the whole guard
     const enemy = enemies.spawn()!;
     reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 2, 2));
     const ship = makeEntity();
-    reset(ship, 100, 50, SHIPS.proof);
+    reset(ship, 100, 50, SHIPS.fighter);
     expect(collideIntoOne(enemies, ship, 1, 1, INVULN_STEPS, INVULN_STEPS, false)).toBe(2);
     expect(enemies.size, 'the enemy died of being touched').toBe(1);
   });
@@ -266,7 +277,7 @@ describe('health is a number of hits and not a number of steps', () => {
     const enemy = enemies.spawn()!;
     reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 99, 1));
     const ship = makeEntity();
-    reset(ship, 100, 50, SHIPS.proof);
+    reset(ship, 100, 50, SHIPS.fighter);
 
     const start = ship.health;
     for (let step = 0; step < INVULN_STEPS; step++) {
@@ -281,7 +292,7 @@ describe('health is a number of hits and not a number of steps', () => {
     const enemy = enemies.spawn()!;
     reset(enemy, 100, 50, bodyOf(SPRITE.drifter, 2.6, 99, 1));
     const ship = makeEntity();
-    reset(ship, 100, 50, SHIPS.proof);
+    reset(ship, 100, 50, SHIPS.fighter);
 
     let hits = 0;
     for (let step = 0; step < INVULN_STEPS * 3; step++) {
@@ -331,7 +342,7 @@ function damageUnder(assists: Assists): number {
   const tuning = tuningFor(assists);
   const threats = new Pool<Entity>(4, makeEntity);
   const ship = makeEntity();
-  reset(ship, 100, 50, SHIPS.proof);
+  reset(ship, 100, 50, SHIPS.fighter);
   // Inside both circles: reach is 2.6 + 2 exact, 2.6 + 1.4 forgiving, against a distance of 1.
   const heavy = threats.spawn()!;
   reset(heavy, 101, 50, bodyOf(SPRITE.drifter, 2.6, 1, 3));
@@ -384,13 +395,13 @@ describe('no assist makes the game harder, and now that is a claim about the COD
     const threats = new Pool<Entity>(1, makeEntity);
     const grazing = threats.spawn()!;
     const ship = makeEntity();
-    reset(ship, 100, 50, SHIPS.proof);
+    reset(ship, 100, 50, SHIPS.fighter);
     const exact = tuningFor(DEFAULT_ASSISTS).hurtbox;
     const forgiving = tuningFor({ ...DEFAULT_ASSISTS, hurtbox: 'forgiving' }).hurtbox;
     expect(forgiving, 'the forgiving hurtbox is not actually smaller').toBeLessThan(exact);
 
     // Just inside the exact circle, outside the forgiving one.
-    const between = (SHIPS.proof.radius * exact + SHIPS.proof.radius * forgiving) / 2 + 0.9;
+    const between = (SHIPS.fighter.radius * exact + SHIPS.fighter.radius * forgiving) / 2 + 0.9;
     reset(grazing, 100 + between, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
     expect(overlaps(grazing, ship, exact), 'the graze is not inside the exact hurtbox').toBe(true);
     expect(overlaps(grazing, ship, forgiving), 'the forgiving hurtbox did not refuse it').toBe(false);
@@ -414,7 +425,7 @@ function firingAt(row: EnemyRow, distance: number): World {
   const enemies = new Pool<Entity>(1, makeEntity);
   const playerShots = new Pool<Entity>(16, makeEntity);
   const enemyShots = new Pool<Entity>(8, makeEntity);
-  const shipRow = SHIPS.proof;
+  const shipRow = SHIPS.fighter;
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   ship.velAlong = SCROLL_PER_STEP;
@@ -458,6 +469,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     deaths: makeDeaths(8),
     bossDeaths: makeDeaths(1),
     hits: makeDeaths(8),
+    // 0442: the rings that arrived this step, each a burst before the blast pairing.
+    landed: makeDeaths(16),
     burstRng: makeRng('combat').stream('burst'),
     arcRng: makeRng('combat').stream('arc'),
     stormRng: makeRng('combat').stream('storm'),
@@ -532,7 +545,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
   const enemies = new Pool<Entity>(1, makeEntity);
   const playerShots = new Pool<Entity>(4, makeEntity);
   const enemyShots = new Pool<Entity>(4, makeEntity);
-  const shipRow = SHIPS.proof;
+  const shipRow = SHIPS.fighter;
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   ship.velAlong = SCROLL_PER_STEP;
@@ -597,6 +610,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     deaths: makeDeaths(8),
     bossDeaths: makeDeaths(1),
     hits: makeDeaths(8),
+    // 0442: the rings that arrived this step, each a burst before the blast pairing.
+    landed: makeDeaths(16),
     burstRng: makeRng('combat').stream('burst'),
     arcRng: makeRng('combat').stream('arc'),
     stormRng: makeRng('combat').stream('storm'),
@@ -754,24 +769,9 @@ describe('0094 — the gun keeps a PHASE and not only a tempo', () => {
     }
   });
 
-  it('and an UPGRADE moves the cadence without moving the phase, because every rung divides the beat', () => {
-    /*
-      ⚠️ **This is what 0093's divisor rule buys and it is worth stating as its own assertion.** The
-      rungs are 8, 6 and 4 steps and all three divide `VOLLEY_CYCLE`, so a multiple of any of them
-      is a subdivision of the beat — the gun changes rate mid-level and never leaves the grid. A rung
-      that divided nothing would pass every guard in 0093 except the divisor one and fail here.
-    */
-    const world = firingAt(ENEMIES.drifter, 400);
-    volleyStepsOf(world, 100);
-    world.weapon = weaponFor(SHIPS.proof, ['weapon', 'weapon', 'weapon', 'weapon']);
-    const faster = world.weapon.fireEvery;
-    expect(faster, 'the upgrade did not change the cadence, so this measures nothing').not.toBe(
-      weaponFor(SHIPS.proof, []).fireEvery,
-    );
-    for (const step of volleyStepsOf(world, 200)) {
-      expect(step % faster, `after an upgrade a volley left on step ${step}, off the grid`).toBe(0);
-    }
-  });
+  // *An upgrade moves the cadence without moving the phase* stood here. A gun has one cadence for the
+  // whole run since `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted the ladders, so
+  // nothing changes it mid-level for the phase to survive.
 });
 
 describe('an aimed shot arrives, and a player who moves is not there when it does', () => {
@@ -812,7 +812,7 @@ describe('an aimed shot arrives, and a player who moves is not there when it doe
     /** How far across the ship can travel before the shot arrives, in CSS pixels. */
     const roomPx = SHIP_SPEED * steps * view.scale;
     /** How far it has to travel to be out of the way, in CSS pixels. */
-    const clearancePx = (SHIPS.proof.radius + SHOTS[ENEMIES.moth.shot].radius) * view.scale;
+    const clearancePx = (SHIPS.fighter.radius + SHOTS[ENEMIES.moth.shot].radius) * view.scale;
 
     expect(
       roomPx,
@@ -934,7 +934,7 @@ describe('damage is legible on the body that took it', () => {
     */
     const pool = new Pool<Entity>(1, makeEntity);
     const ship = pool.spawn()!;
-    reset(ship, 100, 50, SHIPS.proof);
+    reset(ship, 100, 50, SHIPS.fighter);
     ship.invulnFor = INVULN_STEPS;
 
     /*
@@ -957,11 +957,11 @@ describe('damage is legible on the body that took it', () => {
     for (let step = 0; step < INVULN_STEPS; step++) {
       stepEntities(pool, 0);
       seen.add(ship.sprite);
-      const lit = ship.sprite === SHIPS.proof.spriteHit;
+      const lit = ship.sprite === SHIPS.fighter.spriteHit;
       if (lit && !wasLit) litRuns++;
       wasLit = lit;
     }
-    expect(seen.has(SHIPS.proof.sprite) && seen.has(SHIPS.proof.spriteHit)).toBe(true);
+    expect(seen.has(SHIPS.fighter.sprite) && seen.has(SHIPS.fighter.spriteHit)).toBe(true);
     expect(
       litRuns,
       'the ship lit up once and stayed lit for the whole invulnerable window — that is a colour ' +
@@ -971,7 +971,7 @@ describe('damage is legible on the body that took it', () => {
     // And it ends: an invulnerability that never expired would also show two sprites forever.
     stepEntities(pool, 0);
     expect(ship.invulnFor, 'the invulnerable window never closed').toBe(0);
-    expect(ship.sprite, 'the ship is still blinking after it stopped being invulnerable').toBe(SHIPS.proof.sprite);
+    expect(ship.sprite, 'the ship is still blinking after it stopped being invulnerable').toBe(SHIPS.fighter.sprite);
   });
 
   it('THE CLAIM: a shot that lands while the target is flashing still counts', () => {
@@ -1087,61 +1087,18 @@ describe('damage is legible on the body that took it', () => {
     expect(targets.size).toBe(0);
   });
 
-  it('THE ONE THAT EXPLAINS THE REPORT: a hit finishes flashing before the next one lands', () => {
-    /*
-      ⚠️ **The mechanism the play-test was actually describing**, once measured. Successive shots
-      connect on the same enemy 6–7 steps apart (100–117ms) at every distance — the gap between shots
-      in flight is fixed, and the closing speed turns it into a time. The flash was 8 steps, so it
-      never finished: a lancer went white once and died still white, and the SECOND hit produced no
-      picture of its own because it landed inside the first one's flash.
+  /*
+    ── *"A HIT FINISHES FLASHING BEFORE THE NEXT ONE LANDS"* WAS HERE — 0035's, AND 0441 ENDED IT ─────
 
-      One hit and two hits looked the same. That is why *"sometimes they'd get hit, go white, then
-      need a second shot and other times they appeared to just die straight away"* reads as the game
-      being inconsistent — the player could not count hits, so the count looked random.
-
-      ⚠️ **This asserts a RELATIONSHIP and not a duration.** Nothing here pins the flash at four
-      steps or the fire rate at nine; what has to hold at any values is that a player can tell two
-      hits from one. Raising the fire rate later fails this, which is correct — it would have to be
-      paid for with a shorter flash.
-    */
-    // A lancer held on its lane: since 0258 it weaves, and a body that swings off the ship's line
-    // is not what a test about hits landing in sequence is measuring. The frame steers by the
-    // TABLE's row for the kind, so the held row goes into the table the fixture hands the frame.
-    const world = firingAt(HELD_LANCER, 120);
-    world.enemyRows = ENEMY_KINDS.map((k) => (k === 'lancer' ? HELD_LANCER : ENEMIES[k]));
-    const frame = new GameFrame(world);
-    const enemy = world.enemies.at(0);
-
-    let previous = enemy.health;
-    let firstHit = -1;
-    let flashEndedAt = -1;
-    let secondHit = -1;
-    for (let step = 1; step <= 900 && secondHit === -1; step++) {
-      frame.step();
-      const alive = world.enemies.size > 0;
-      if (firstHit !== -1 && flashEndedAt === -1 && (!alive || enemy.flashFor === 0)) flashEndedAt = step;
-      if (!alive) {
-        secondHit = step;
-        break;
-      }
-      if (enemy.health < previous) {
-        if (firstHit === -1) firstHit = step;
-        else secondHit = step;
-        previous = enemy.health;
-      }
-    }
-
-    expect(firstHit, 'nothing ever hit the enemy').toBeGreaterThan(0);
-    expect(secondHit, 'the enemy never took a second hit').toBeGreaterThan(firstHit);
-    expect(flashEndedAt, 'the flash never ended at all').toBeGreaterThan(0);
-    expect(
-      flashEndedAt,
-      `the enemy was hit at step ${firstHit} and again at step ${secondHit}, ` +
-        `${(secondHit - firstHit) * STEP_MS}ms later, while its flash from the first hit was still ` +
-        'running. The second hit draws nothing of its own, so one hit and two hits look identical ' +
-        'and the player cannot count them.',
-    ).toBeLessThan(secondHit);
-  });
+    It flew the fixture's opening gun — the pulse's bottom rung, one barrel every eight steps — and held
+    that a lancer's flash from one hit ended before the next arrived, so a player could count two hits.
+    Its own note said *"raising the fire rate later fails this, which is correct — it would have to be
+    paid for with a shorter flash."* The cap always did fail it: four barrels every four steps land
+    faster than any flash can finish, and 0334 paid for that with a refractory gap rather than a
+    shorter flash — `0334` above holds that a body hit every step still lights often enough to count,
+    and that one hit still lights for its whole window. Since 0441 every ship opens at the cap, so the
+    rung this flew is not one anybody can fly, and 0334's two guards are the claim's whole.
+  */
 
   it('an enemy takes exactly as many connecting shots as it has health, at the real fire rate', () => {
     /*
@@ -1151,8 +1108,14 @@ describe('damage is legible on the body that took it', () => {
       ⚠️ Counts CONNECTIONS, not steps and not shots fired. The claim under test is that a shot can
       be spent without counting, so what has to be pinned is that the number of times health moves
       equals the number of hits the enemy is built to survive — no more.
+
+      ⚠️ **ONE BARREL, AT THE GUN'S OWN CADENCE — 0441.** The fighter opens on four barrels since 0441,
+      and two of a volley land on one step, which is one health move for two connections: the count
+      this test reads cannot see them apart. So the fixture fires one barrel of the real gun; the claim
+      — a shot is never spent without counting — is about each shot, not about the fan.
     */
     const world = firingAt(HELD_LANCER, 60);
+    world.weapon = { ...world.weapon, shots: 1, spread: 0 };
     world.enemyRows = ENEMY_KINDS.map((k) => (k === 'lancer' ? HELD_LANCER : ENEMIES[k]));
     const frame = new GameFrame(world);
     const enemy = world.enemies.at(0);
@@ -1218,7 +1181,13 @@ describe('damage is legible on the body that took it', () => {
     for (const kind of ENEMY_KINDS) {
       expect(ENEMIES[kind].spriteHit, `${kind} flashes to the sprite it already was`).not.toBe(ENEMIES[kind].sprite);
     }
-    expect(SHIPS.proof.spriteHit).not.toBe(SHIPS.proof.sprite);
+    // And every ship at every stage of its tubes — 0441: each hull is a pair, and each pair differs.
+    for (const kind of SHIP_KINDS) {
+      expect(SHIPS[kind].spriteHit, `the ${kind} flashes to the sprite it already was`).not.toBe(SHIPS[kind].sprite);
+      SHIPS[kind].hulls.forEach((hull, stage) => {
+        expect(hull.hit, `the ${kind} at stage ${stage} flashes to the sprite it already was`).not.toBe(hull.base);
+      });
+    }
   });
 });
 
@@ -1419,13 +1388,13 @@ describe('layers are drawn in the order they are given', () => {
     const back = new Pool<Entity>(2, makeEntity);
     const front = new Pool<Entity>(1, makeEntity);
     for (let i = 0; i < 2; i++) reset(back.spawn()!, 100 + i, 50, bodyOf(SPRITE.drifter, 1, 1, 0));
-    reset(front.spawn()!, 100, 50, SHIPS.proof);
+    reset(front.spawn()!, 100, 50, SHIPS.fighter);
 
     paintScene(recording, viewOf(VIEWPORT.width, VIEWPORT.height), [back, front], 90, 1);
     expect(order, 'the ship was not drawn last, so it is underneath everything else').toEqual([
       SPRITE.drifter,
       SPRITE.drifter,
-      SPRITE.ship,
+      SPRITE.fighter,
     ]);
   });
 });

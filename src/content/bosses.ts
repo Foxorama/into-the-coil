@@ -3402,8 +3402,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss9Hit,
     // Grown with the drawing in 0381 (42 → 50 across): the same share of the tile it always was.
     radius: 18,
-    // Doubled by 0260, from 760.
-    health: 1300,
+    // Doubled by 0260, from 760. 1400 from 1300 — 0441: flown at the true cap in each gun's own ship
+    // (`scripts/weigh-boss.mjs`), the arc and the ray took it in 38 s, under 0260's forty.
+    health: 1400,
     damage: 3,
     station: 155,
     drift: 5,
@@ -3500,8 +3501,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
-    // Doubled by 0260, from 820.
-    health: 1390,
+    // Doubled by 0260, from 820. 1410 from 1390 — 0441: over the fish's new 1400, because a later boss
+    // is a tougher one (`tests/level.test.ts`); its quickest gun is held by the arc's weight below.
+    health: 1410,
+    /*
+      ⚠️ **THE LIGHTNING AT 1.1 HERE, NOT ITS 1.5 — 0441, on the serpent's own pattern (0372).** Flown
+      at the true cap, the arc took this animal in 30 s against 0260's forty, while the pulse took 99:
+      the bird patrols the lane at 150 out, where the pulse's four-barrel fan is wider than its body and
+      the ray's one ring is off its line half the time, and the arc cannot miss. Health would have fixed
+      the arc and made every other ship's fight a third longer, so the player chose the arc's weight.
+    */
+    gunWeights: { arc: 1.1 },
     damage: 3,
     station: 154,
     drift: 6,
@@ -3744,8 +3754,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     spriteHit: SPRITE.boss12Hit,
     // 21 since 0399, from 13: the same share of a drawing grown from 33 to 54.
     radius: 21,
-    // Doubled by 0260, from 940.
-    health: 1600,
+    // Doubled by 0260, from 940. 1800 from 1600 — 0441: the arc at the true cap took it in 36 s.
+    health: 1800,
     damage: 3,
     station: 157,
     drift: 5,
@@ -3874,8 +3884,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 21,
-    // Doubled by 0260, from 1000.
-    health: 1700,
+    // Doubled by 0260, from 1000. 1860 from 1700 — 0441: the arc at the true cap took it in 37 s.
+    health: 1860,
     damage: 3,
     station: 154,
     drift: 5,
@@ -4042,8 +4052,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
-    // Doubled by 0260, from 1100.
-    health: 1870,
+    // Doubled by 0260, from 1100. 1890 from 1870 — 0441: the arc at the true cap sat on the forty.
+    health: 1890,
     damage: 3,
     station: 152,
     // Zero, on the gyre's terms (0332): a thing hung over a heart set into the place does not drift along it.

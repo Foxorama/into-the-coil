@@ -54,7 +54,11 @@ export interface GolferRow extends RunnerRow {
    * a ship that already exists.
    */
   ship: ShipKind;
-  /** Where they are from — the one line under the name, because `docs/game.md`'s voice is terse. */
+  /**
+   * Where they are from. It was the select card's line under the name (0415) until 0441 gave that line
+   * to the ship and its gun, which is what the choice decides; it is the golfer's fiction, kept for
+   * whatever speaks of them next.
+   */
   home: string;
   /** Their pronouns, as the predecessor gives them. */
   pronouns: string;

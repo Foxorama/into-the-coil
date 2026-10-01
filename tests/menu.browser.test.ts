@@ -10,7 +10,7 @@ import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { SPECIALS } from '../src/content/specials.ts';
+import { OPENING_CHARGES } from '../src/content/specials.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 
 /**
@@ -235,10 +235,11 @@ describe.runIf(chromePath)('a press belongs to one screen', () => {
     await setPad(page, [0, 0], []);
 
     expect(carried, 'the readout does not say how many charges are carried').toMatch(/\d+ charges?/);
+    // A run opens on `OPENING_CHARGES` of its ship's own gun special — 0441; the row's `charges` went with it.
     expect(
       Number(/(\d+) charges?/.exec(carried ?? '')?.[1]),
       'the press that started the run was read a second time and spent a bomb',
-    ).toBe(SPECIALS.bomb.charges);
+    ).toBe(OPENING_CHARGES);
     await page.context().close();
   });
 });

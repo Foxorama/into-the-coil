@@ -846,7 +846,12 @@ export const CUES: Record<CueKind, CueRow> = {
   arc: {
     twin: 'bolt-appears',
     hold: 2,
-    gain: 0.26,
+    /*
+      ⚠️ **0.24, AND IT WAS 0.26 — 0441.** The arc is the estate's whole gun now and never stops, so it
+      is held where 0145 holds the pulse: under every outcome cue — a bomb, a step, an alarm. It sat
+      over three of them while it was a pickup the run might never take. The ear on it is owed.
+    */
+    gain: 0.24,
     glue: 0.12,
     figure: [1, 0.7, 0.86, 0.7],
     layers: [
@@ -940,7 +945,8 @@ export const CUES: Record<CueKind, CueRow> = {
     // Struck by where in the beat it lands — 0104, as the pulse is: the downbeat hardest.
     figure: [1, 0.72, 0.86, 0.74],
     hold: 3,
-    gain: 0.25,
+    // 0.24 from 0.25 — 0441: the Firebird's whole gun, held under the outcomes as the pulse is (0145).
+    gain: 0.24,
     glue: 0.1,
     /*
       ⚠️ **A BLADE, WHERE IT WAS A BREATH** — asked for with the album: *"we also need to make a lot better…

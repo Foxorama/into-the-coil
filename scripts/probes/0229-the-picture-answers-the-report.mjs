@@ -66,19 +66,11 @@ export const PROBES = [
       replace: '  burst2: 8,\n  burst3: 9,',
     },
   },
-  {
-    decision: '0229',
-    suite: 'tests/legibility.test.ts',
-    /*
-      ⚠️ A TIER GIVEN THE PREVIOUS TIER'S BOX, which is the copy-paste that lost the pods the first
-      time: the parts are drawn in the hull's radius and the box decides whether they fit.
-    */
-    broke: 'the third tier’s sprite made the second’s size, so its canards have no room',
-    guard: '0229 — a hull tier is a wider sprite than the one before it',
-    edit: {
-      path: 'src/content/sprites.ts',
-      find: '  shipMk3: 9.4,\n  shipMk3Hit: 9.4,',
-      replace: '  shipMk3: 8.2,\n  shipMk3Hit: 8.2,',
-    },
-  },
+  /*
+    ⚠️ `the third tier’s sprite made the second’s size, so its canards have no room` WAS HERE, and it
+    went with its guard: docs/decisions/0441-a-pilot-flies-their-own-ship.md draws every stage of every
+    ship in the one `SHIP_BOX` (*"the same overall space"*), so a stage's room no longer grows with it
+    and *a hull tier is a wider sprite than the one before it* was deleted from
+    tests/legibility.test.ts.
+  */
 ];

@@ -130,7 +130,6 @@ describe('0247 — a level has a mid-boss and a real one', () => {
     for (let i = 0; i < 400 && world.bossPool.size === 0; i++) frame.step();
     expect(world.bossPool.size, 'the mid-boss never arrived').toBe(1);
     expect(world.pickups.size, 'something was on the field before the mid-boss died').toBe(0);
-    const offered = world.weaponsOffered;
     expect(slay(world, frame, 3000), 'the mid-boss could not be killed').toBeGreaterThanOrEqual(0);
     expect(world.pickups.size, 'the mid-boss’s death did not drop one piece per kind in the list').toBe(MID_BOSS_DROP.length);
     // Where the hull died, in the camera's frame — the same offset its burst is drawn at (0062).
@@ -143,7 +142,8 @@ describe('0247 — a level has a mid-boss and a real one', () => {
       expect(Math.hypot(item.along - hull.along, item.across - hull.across), 'a piece was thrown from somewhere other than the hull').toBeLessThan(4);
     }
     expect(kinds.sort(), 'the drop is not the list').toEqual([...MID_BOSS_DROP].sort());
-    expect(world.weaponsOffered, 'the dropped weapon did not turn the dial').toBe(offered + 1);
+    // *The dropped weapon turns the dial* stood here: the dial went with the weapon pickup in
+    // `docs/decisions/0441-a-pilot-flies-their-own-ship.md`, so nothing is counted for it.
 
     // The end boss: killed, and nothing thrown.
     world.pickups.clear();

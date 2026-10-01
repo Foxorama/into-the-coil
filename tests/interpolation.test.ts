@@ -79,7 +79,7 @@ function stationKeepingWorld(surface: Surface): World {
   // harder to read for no gain.
   // 0093 took `fireEvery` off the row. `fireIn: NEVER` below is what actually holds the trigger off,
   // and always was — the row's copy of it was doing nothing this fixture depended on.
-  const shipRow = SHIPS.proof;
+  const shipRow = SHIPS.fighter;
   const ship = shipPool.spawn()!;
   reset(ship, 40, 50, shipRow);
   /*
@@ -126,6 +126,8 @@ function stationKeepingWorld(surface: Surface): World {
     deaths: makeDeaths(8),
     bossDeaths: makeDeaths(1),
     hits: makeDeaths(8),
+    // 0442: the rings that arrived this step. Nothing fires here, so it stays empty.
+    landed: makeDeaths(8),
     burstRng: makeRng('interp').stream('burst'),
     arcRng: makeRng('interp').stream('arc'),
     stormRng: makeRng('interp').stream('storm'),
@@ -182,7 +184,7 @@ describe('the camera interpolates on the same alpha as everything it is subtract
     const seen: { x: number; y: number }[] = [];
     for (const alpha of [0, 0.25, 0.5, 0.75, 1]) {
       frame.draw(alpha);
-      const drawn = drawnAt(surface, SPRITE.ship);
+      const drawn = drawnAt(surface, SPRITE.fighter);
       expect(drawn, `the ship was not drawn at alpha ${alpha}`).toBeDefined();
       seen.push({ x: drawn!.x, y: drawn!.y });
     }
@@ -199,13 +201,13 @@ describe('the camera interpolates on the same alpha as everything it is subtract
     const frame = new GameFrame(stationKeepingWorld(surface));
     frame.step();
     frame.draw(0.5);
-    const start = { ...drawnAt(surface, SPRITE.ship)! };
+    const start = { ...drawnAt(surface, SPRITE.fighter)! };
 
     for (let i = 0; i < 600; i++) {
       frame.step();
       frame.draw(0.5);
     }
-    const end = drawnAt(surface, SPRITE.ship)!;
+    const end = drawnAt(surface, SPRITE.fighter)!;
     expect(end.x, 'the ship drifted along over ten seconds of station-keeping').toBeCloseTo(start.x, 6);
     expect(end.y, 'the ship drifted across over ten seconds of station-keeping').toBeCloseTo(start.y, 6);
   });

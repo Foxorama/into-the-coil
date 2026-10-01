@@ -532,36 +532,11 @@ export interface LevelRow {
   this particular one what it is.
   `docs/decisions/0040-a-level-is-a-script-and-a-boss-is-its-clock.md`.
 */
-/**
- * How far past the pickup that lifts the single-hit clamp level one waits before it sends anything
- * that takes more than one shot. World units.
- *
- * ── WHY A CLAMP IS NOT ENOUGH ON ITS OWN ────────────────────────────────────────────────────────
- *
- * ⚠️ **`docs/decisions/0086-the-teeth-wait-for-the-gun.md`, and it exists because the clamp lifts on
- * a SPAWN.** `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` turns the dial when a weapon
- * pickup reaches the field, which is the only version of it that can sawtooth — but *the level has
- * offered you a gun* and *you are flying one* are separated by a crossing of the lane, and level one
- * had a three-health turret ten units behind the pickup. The clamp is what covers the opening; this
- * is what covers the handover.
- *
- * ⚠️ **600 units is 16.7 seconds at `SCROLL_PER_STEP`, and it is chosen against the pickup rather
- * than against the enemy.** A pickup waits 420 steps to be taken
- * (`docs/decisions/0064-a-pickup-waits-to-be-taken.md`) — so a run-up shorter than that could put a
- * multi-hit wave in front of a player who is still legitimately flying towards the thing that would
- * answer it. `tests/dial.test.ts` holds that relationship between the two constants rather than
- * either number.
- *
- * ⚠️ **A FLOOR THE CONTENT SITS ABOVE, not a place a wave is authored at.** Level one's first
- * multi-hit wave is at 1,652 against a pickup at 1,000 — 652 units, since 0256 moved both — and the
- * guard is written as a minimum so that tuning either number is a content change rather than a
- * broken promise.
- *
- * ⚠️ **Level one only, because the clamp is.** Every other level opens past `MULTI_HIT_DIAL` and is
- * meant to: 0084's whole argument for the `levelIndex === 0` term is that a game whose every opening
- * had no teeth in it would be a game with teeth nowhere.
- */
-export const MULTI_HIT_RUNUP = 600;
+/*
+  ── `MULTI_HIT_RUNUP` WAS HERE — 0086's run-up after the pickup that lifted the one-hit clamp — AND
+  0441 TOOK IT WITH THE CLAMP. Every ship opens on its whole gun, so there is no second weapon for the
+  teeth to wait for; nothing read it once the dial went.
+*/
 
 const APPROACH: readonly WaveEntry[] = [
   /*
@@ -598,8 +573,8 @@ const APPROACH: readonly WaveEntry[] = [
   /*
     ── THE RUN-UP: THE STRETCH THE SECOND WEAPON GETS TO ITSELF ─────────────────────────────────────
 
-    `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, and `MULTI_HIT_RUNUP` above is the promise
-    these ten lines keep. Reported from play: *"we need to remove the enemies that take multiple
+    `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, and the run-up 0441 removed was the promise
+    these ten lines kept. Reported from play: *"we need to remove the enemies that take multiple
     shots to kill from the 1st level, they can't start appearing till after the second weapon
     pickup… they're too difficult to kill with the default fire mode."*
 
@@ -619,16 +594,27 @@ const APPROACH: readonly WaveEntry[] = [
     1,000 the clamp is off and every health in the table is real, so this band is a band of
     ONE-HEALTH KINDS — drifters and weavers. The clamp and this stretch answer the same complaint at
     two different times and neither covers the other's.
+
+    ── AND SINCE 0441 IT HAS SHOOTERS IN IT ─────────────────────────────────────────────────────────
+
+    ⚠️ **THE RUN-UP'S PREMISE WENT WITH THE CLAMP.** Every ship opens on its whole gun, so there is no
+    second weapon for this stretch to wait for, and with nothing in it that fired, level one flew 12.1
+    seconds without a bullet on the screen against 0259's nine (`tests/bullets.test.ts`). Asked, the
+    player chose shooters: five waves here are the level's own firing kinds at the places and lanes
+    the quiet ones stood — a picket line at 1,015, the swifts it met at 870 again at 1,073, a lancer
+    line at 1,130, a picket vee at 1,305, a lancer column at 1,479 — so no more than two that do not
+    fire come in a row, and no more than three that do (`MIX_RUN`). The first draft swapped three and
+    the stretch from 956 to 1,130 still ran dry for twelve seconds; four left it at 9.02 against nine.
   */
-  { at: 1015, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
-  { at: 1073, enemy: 'weaver', formation: 'line', count: 5, lane: 65 },
-  { at: 1130, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
+  { at: 1015, enemy: 'picket', formation: 'line', count: 8, lane: 40 },
+  { at: 1073, enemy: 'swift', formation: 'vee', count: 5, lane: 65 },
+  { at: 1130, enemy: 'lancer', formation: 'line', count: 8, lane: 35 },
   { at: 1189, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
   { at: 1246, enemy: 'drifter', formation: 'vee', count: 5, lane: 55 },
-  { at: 1305, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 1305, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
   { at: 1362, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
   { at: 1420, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 1479, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
+  { at: 1479, enemy: 'lancer', formation: 'column', count: 8, lane: 30 },
   { at: 1536, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   { at: 1594, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
 

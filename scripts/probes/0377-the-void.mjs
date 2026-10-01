@@ -23,8 +23,9 @@ export const PROBES = [
     guard: 'the void goes on the tubes’ stack',
     edit: {
       path: 'src/content/specials.ts',
-      find: "    label: 'Void',\n    side: 'tubes',",
-      replace: "    label: 'Void',\n    side: 'gun',",
+      // ⚠️ Re-anchored by 0441, which gave every special row a `hint`.
+      find: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'tubes',",
+      replace: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'gun',",
     },
   },
   {

@@ -70,7 +70,7 @@ import {
   rungIn,
   type ThemeKind,
 } from '../src/content/themes.ts';
-import { MISSILE_BEAT_RATIO, fireEveryAt, missileEveryAt } from '../src/content/pickups.ts';
+import { MISSILE_BEAT_RATIO, missileEveryAt } from '../src/content/pickups.ts';
 import { BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
@@ -1607,15 +1607,15 @@ describe('the synthesiser', () => {
       and each gun has its own cue — `cueOfFlight` is the frame's own mapping, so a third gun
       added with a cue that overlaps its own cadence fails here without anybody extending a list.
     */
+    // One cadence a gun since 0441: the row's `fireEvery` is what its last rung was, and nothing climbs it.
     for (const kind of WEAPON_KINDS) {
       const row = WEAPONS[kind];
       const cue = cueOfFlight(row.flight);
-      const fastest = Math.min(...row.fireEvery.map((_unused, tier) => fireEveryAt(row, tier)));
-      const gap = fastest / STEPS_PER_SECOND;
+      const gap = row.fireEvery / STEPS_PER_SECOND;
       expect(
         cueSeconds(CUES[cue]),
-        `the ${kind} sounds for ${cueSeconds(CUES[cue]).toFixed(3)}s and fires every ${gap.toFixed(3)}s at its ` +
-          `fastest rung, so the gun never stops making a noise`,
+        `the ${kind} sounds for ${cueSeconds(CUES[cue]).toFixed(3)}s and fires every ${gap.toFixed(3)}s, ` +
+          `so the gun never stops making a noise`,
       ).toBeLessThanOrEqual(gap);
     }
     for (const kind of MISSILE_KINDS) {
@@ -2292,7 +2292,7 @@ describe('the sound setting on the settings slice', () => {
 
   it('is untouched by a run, on the same terms the style is', () => {
     const chosen = reduce(initialState, pick('off'));
-    const played = reduce(reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior' }), {
+    const played = reduce(reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship }), {
       slice: 'screen',
       type: 'show',
       screen: 'playing',
@@ -2550,9 +2550,16 @@ describe('0109 — a death punctuates the music rather than getting it out of th
       thing about to happen, not a thing the player did or suffered — and it is frequent for the same
       reason the gun is. Holding the gun under it would be asking the warning to shout.
     */
-    const outcomes = CUE_KINDS.filter((k) => k !== 'pulse' && k !== 'missile' && k !== 'threat');
+    /*
+      ⚠️ **EVERY GUN'S CUE, SINCE 0441.** This named the pulse, which was the gun every run opened on;
+      each pilot's own gun is the one that never stops in their run now, so each gun's cue is held
+      under the outcomes and none of them is counted as one. It is read off the frame's own mapping,
+      so the ray's cue (0442) is a gun's and not an outcome's — it sat AT the pulse's gain.
+    */
+    const guns: readonly CueKind[] = [...new Set(WEAPON_KINDS.map((k) => cueOfFlight(WEAPONS[k].flight))), 'missile'];
+    const outcomes = CUE_KINDS.filter((k) => !guns.includes(k) && k !== 'threat');
     expect(outcomes.length, 'the table has no outcome cues, so this measured nothing').toBeGreaterThan(6);
-    for (const weapon of ['pulse', 'missile'] as const) {
+    for (const weapon of guns) {
       for (const kind of outcomes) {
         expect(
           CUES[weapon].gain,
@@ -3043,7 +3050,8 @@ describe('0173 — a cue happens somewhere', () => {
     // ⚠️ `throw` LEFT THIS LIST — asked for of the shuriken: *"need reverb."* Its fastest cadence is 0.2 s, three
     // times the pulse's 0.067, and its send is the smallest in the table; the rule is about a tail under a
     // REPEAT, and what it protects is the gun that never stops.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap'];
+    // And the ray's, since 0442: one ring every eight steps, the arc's own cadence, and authored dry.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

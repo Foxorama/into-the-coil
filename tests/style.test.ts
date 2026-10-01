@@ -137,7 +137,7 @@ describe('the settings slice', () => {
     */
     const chosen = reduce(initialState, pick(STYLE_KINDS[0]!));
     const played = reduce(
-      reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior' }),
+      reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship }),
       { slice: 'screen', type: 'show', screen: 'playing' },
     );
     expect(styleOf(played), 'starting a run reset the style').toBe(STYLE_KINDS[0]);

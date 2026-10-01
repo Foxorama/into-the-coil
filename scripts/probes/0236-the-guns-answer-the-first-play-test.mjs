@@ -10,8 +10,14 @@ export const PROBES = [
   {
     decision: '0236',
     suite: 'tests/guns-played.test.ts',
-    broke: 'the arc’s reach authored flat across the ladder',
-    guard: 'THE REACH: the arc reaches further',
+    /*
+      ⚠️ **RE-AIMED BY 0441, WHICH TOOK THE LADDER THIS BROKE.** *Every rung further than the last*
+      went with every gun's ladder, so a flat ladder is no longer a thing a hand can author. What
+      survives of the item is its ceiling — the reach the arc was lengthened towards stops short of
+      the narrowest view — and the break is the lengthening overshooting it.
+    */
+    broke: 'the arc’s reach lengthened past the narrowest view',
+    guard: 'THE REACH: the arc stays short of the narrowest view',
     /*
       ⚠️ Re-anchored by 0239 (the ladder's top cut back a tenth), 0241 (the whole of it a twentieth),
       **0297**, which rescaled it to about 0.4 — the reach had been sized against the view's long
@@ -25,8 +31,8 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    reach: [34, 40, 47, 55, 68],',
-      replace: '    reach: [34, 34, 34, 34, 34],',
+      find: '    reach: 82,',
+      replace: '    reach: 200,',
     },
   },
   {
