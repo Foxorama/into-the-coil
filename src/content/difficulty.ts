@@ -46,6 +46,7 @@
  */
 
 import { onFireGrid } from './cadence.ts';
+import type { SpecialKind } from './specials.ts';
 
 /**
  * Every tier, **easiest first**.
@@ -108,6 +109,16 @@ export interface DifficultyRow extends Multipliers, CorridorLimit {
    * carry is withheld rather than thrown — 0355.
    */
   shellCap: number;
+  /**
+   * Ward charges a run opens with on this tier, beside its ship's own — 0447. Empty on a tier that
+   * gives none.
+   *
+   * ⚠️ **Burn's void, and the condition is the caddie's.** *"Let's also let them start with 1 void
+   * bomb as well"*, and answered: *"only burn, and if the player starts as feather with the nova ring
+   * that pops bullets, they don't get a bonus void bomb on top."* So a ship whose own special is
+   * already on the ward's trigger opens without these — `startingArsenal` reads the side, not a name.
+   */
+  opensWith: readonly SpecialKind[];
 }
 
 /**
@@ -394,6 +405,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
     shellCap: 3,
+    opensWith: [],
     ...multipliersFor('legendary'),
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
@@ -408,6 +420,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
     shellOpen: 0,
     shellCap: 3,
+    opensWith: [],
     ...multipliersFor('savior'),
     // Never narrower than 44, turns at about 19° — 0350, the player's number.
     corridor: { narrowest: 44, slope: 0.35 },
@@ -430,9 +443,15 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Let the Galaxy Burn',
     hint: 'Best of luck mate',
     lives: 2,
-    // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
+    /*
+      *"No shields"* — 0355. The mid-boss threw none — *"no replacement pickups, just remove them"* —
+      until the shield pickup cycled; since 0447 it throws the ward pickup, the void and the nova, in
+      the shield's place: *"it'll spit out a void bomb pickup in place of the shield."*
+    */
     shellOpen: 0,
     shellCap: 0,
+    // One void to open on — 0447 — unless the ship's own special is already the ward's.
+    opensWith: ['voidMissile'],
     ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
@@ -461,6 +480,7 @@ export const AUTHORED: DifficultyRow = {
   lives: 5,
   shellOpen: 0,
   shellCap: 3,
+  opensWith: [],
   toughness: 1,
   fireGap: 1,
   closing: 1,
@@ -493,113 +513,17 @@ export const AUTHORED: DifficultyRow = {
   and both have to be reachable, which is why this is not a fourth tier.
 */
 
-/** Where a run opens. The first level's first screen, before anything has been offered. */
-export const DIAL_MIN = 1;
+/*
+  ── THE DIAL STOPPED HERE: `dialFor`, `MULTI_HIT_DIAL` AND `singleHitOnly` — 0441 ───────────────────
 
-/**
- * Where the last boss sits, and it is the ask's own number.
- *
- * ⚠️ **REACHED EXACTLY, and that is arithmetic rather than luck** — see `dialFor`. A ceiling the
- * content stops short of would make the top of the dial a thing nobody ever sees, and one the content
- * runs past would make the clamp the real ending.
- */
-export const DIAL_MAX = 11;
-
-/**
- * What a level boundary adds, and what each weapon pickup the level OFFERS adds.
- *
- * ── THE SAWTOOTH IS THESE TWO NUMBERS AND NOTHING ELSE ──────────────────────────────────────────
- *
- * A level ends `DIAL_PER_WEAPON × weapons` above where it began, and the next begins
- * `DIAL_PER_LEVEL` above where the last one BEGAN — which is the *"dial it back a couple of notches
- * to give the player a breathing space"* the ask describes, expressed as a rise rather than as a drop
- * so that nothing has to remember where the previous level ended.
- *
- * ⚠️ **Both are derived rather than chosen, and the level's step is a fraction since 0256.** They
- * were both 1 while `src/content/levels.ts` offered four weapon pickups a level:
- * `DIAL_MIN + 6×DIAL_PER_LEVEL + 4×DIAL_PER_WEAPON` = **11**, the ask's number to the notch.
- * `docs/decisions/0256-a-pickup-keeps-the-count.md` cut a level to two weapons — one authored and
- * one the mid-boss drops — and three in level one, so the last boss would have sat at 9. The weapon's
- * step stays 1, because `MULTI_HIT_DIAL` is written in it; the level's step is what is left over:
- * `(DIAL_MAX − DIAL_MIN − 2×DIAL_PER_WEAPON) / 6` = **4/3**, and the sawtooth still holds — level
- * one's boss at 4, level two opening at 2⅓ and its boss at 4⅓ — with every boss harder than the last
- * only because level one's third weapon is worth less than a level's step. `tests/dial.test.ts`
- * recomputes all of it from the content rather than restating it, so a level that gains a weapon
- * pickup fails there rather than silently moving the top of the dial.
- */
-export const DIAL_PER_LEVEL = 4 / 3;
-export const DIAL_PER_WEAPON = 1;
-
-/**
- * Where the dial is, given how far into the run and how much the level has already put on the field.
- *
- * ── OFFERED, NOT HELD — AND THE ASK SAYS BOTH ───────────────────────────────────────────────────
- *
- * ⚠️ **This counts what the LEVEL HAS SPAWNED, not what the player picked up**, and the ask uses both
- * words: *"increases to 2 when the player **gets** their first weapon power up"* and *"dials it up
- * **per power up spawn**"*. They are different mechanisms and only one of them can sawtooth.
- *
- * **Held cannot.** Upgrades cross a level boundary
- * (`docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`), so a player entering level
- * two with four weapon tiers would carry those four notches with them and the dial would climb
- * monotonically to the end of the run — no breathing space, ever. Offered restarts with the script,
- * which is what makes the shape the ask drew possible at all.
- *
- * ⚠️ **What that costs is written down rather than hidden**: a player who ignores every pickup still
- * faces a rising dial. 0084 argues that the gap is small — a pickup waits seven seconds and reaches
- * 6% of the lane (0064, 0056), and a death now hands everything back (0083) — and names it as the
- * first thing a play-test should disagree with.
- *
- * ⚠️ **Clamped at both ends.** A level index past the roster is a shell bug and a black screen is a
- * worse way to report it than a hard fight — `src/app/lifecycle.ts` clamps the index for the same
- * reason.
- */
-export function dialFor(levelIndex: number, weaponsOffered: number): number {
-  const raw = DIAL_MIN + levelIndex * DIAL_PER_LEVEL + weaponsOffered * DIAL_PER_WEAPON;
-  return raw < DIAL_MIN ? DIAL_MIN : raw > DIAL_MAX ? DIAL_MAX : raw;
-}
-
-/**
- * The dial below which nothing the player meets takes more than one hit.
- *
- * ⚠️ **THE SMALLEST PROOF THE DIAL CAN CARRY, and it is a reported defect rather than a demo.**
- * *"At the start of the game there should be no multiple hit enemies until after the 2nd upgrade has
- * been spawned — the difficulty curve currently has a massive spike at the start, then it also
- * immediately scales out and then drops off to super easy based on buffs the player has."*
- *
- * ⚠️ **Three, and it is the ask's *after the 2nd upgrade has been spawned* in dial units.** Level one
- * opens at `DIAL_MIN` = 1; the second weapon pickup puts it at 3. Written as a dial threshold rather
- * than as *two pickups* so that it means the same thing in every level — the clamp is a property of
- * how far into the run the player is, and level two opens past it.
- */
-export const MULTI_HIT_DIAL = 3;
-
-/**
- * Whether the run is still in the opening stretch where everything dies to one shot.
- *
- * ── THE `levelIndex === 0` TERM IS NOT BELT AND BRACES, AND A GUARD CAUGHT ITS ABSENCE ───────────
- *
- * ⚠️ **A dial threshold ALONE cannot express this, and the first draft assumed it could.** The
- * sawtooth reuses low dial values by construction: level two opens at `DIAL_MIN + 1` = 2, which is
- * under `MULTI_HIT_DIAL` — so a plain `dial < MULTI_HIT_DIAL` brings the clamp back at the start of
- * level two, and again at the start of level three's first weapon. The opening of most of the game
- * would have had no multi-hit enemies in it.
- *
- * ⚠️ **And no threshold fixes it, which is worth writing down so nobody tries.** The clamp must be
- * OFF at dial 2 (level two's opening) and ON at dial 2 (level one, one weapon in). Those are the same
- * number. The dial says *how hard*; it does not say *how far in*, and this rule is about the second.
- *
- * ⚠️ **It still reads the dial rather than counting pickups**, so the threshold stays a dial fact and
- * moves with it. What the level term adds is *and only during the opening*.
- *
- * ⚠️ **A predicate rather than an arm inside `toughnessFor`, because it must not reach a BOSS.** The
- * dial at every boss is far past the threshold, so folding it in would be dead code that only looked
- * safe — and the day somebody authored a boss earlier, a one-health boss would be the result.
- * `src/app/frame.ts` applies it at the one spawn site that is an enemy in a wave.
- */
-export function singleHitOnly(levelIndex: number, weaponsOffered: number): boolean {
-  return levelIndex === 0 && dialFor(levelIndex, weaponsOffered) < MULTI_HIT_DIAL;
-}
+  The dial counted the levels and the weapon pickups each had offered, and the one thing it spent was
+  `singleHitOnly`: nothing in level one took more than one hit until two weapon pickups had been
+  offered, because the gun the run opened with was the bottom rung of its ladder (0084, 0086). *"Each
+  ship will start with max weapons"* removes that premise, and the player answered the rule itself
+  when asked: delete it. With it gone nothing read the dial at all, so it went too rather than staying
+  as a number nobody spends — `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. What a rising dial
+  would SEND was always owed and never authored; the levels' own scripts are what climbs.
+*/
 
 /**
  * The health a body of `base` health has on a given tier — at least one, always.

@@ -27,6 +27,8 @@ import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
+import { SHIPS } from '../content/ships.ts';
+import { WEAPONS } from '../content/weapons.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = ['splash', 'select', 'intro', 'title', 'playing', 'gameOver', 'cleared', 'outro', 'victory', 'music', 'travel'] as const;
@@ -259,7 +261,16 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   select: {
     // An instruction rather than a label — 0436: the screen is a question, so its heading asks it.
     heading: 'Choose your pilot',
-    actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: GOLFERS[kind].home })),
+    /*
+      ⚠️ **THE HINT IS THE SHIP AND ITS GUN SINCE 0441, AND IT WAS THE GOLFER'S HOME.** Picking a pilot
+      picks a ship and a gun for the whole run, which is the one thing about the choice that changes
+      how it plays; a home town does not. One line, because the card's height is what 0415's layout
+      guard measures on a phone.
+    */
+    actions: GOLFER_KINDS.map((kind) => {
+      const ship = SHIPS[GOLFERS[kind].ship];
+      return { label: GOLFERS[kind].name, hint: `${ship.label} · ${WEAPONS[ship.weapon].label}` };
+    }),
     choices: [],
     steps: false,
     dims: true,

@@ -3,13 +3,18 @@
  * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
  *
  * Three things landed together and each has its guard here: the AXIS (a gun and a tube are kinds
- * with their own ladders, faces and hulls, and the run remembers which is fitted), the CYCLE (a
- * pickup turns between the kinds of its ladder and hands over the face it was showing), and the ARC
- * (chain lightning, the second gun, resolved on the step it fires and stroked rather than blitted).
+ * with their own rows and faces), the CYCLE (a pickup turns between its faces and hands over the face
+ * it was showing), and the ARC (chain lightning, resolved on the step it fires and stroked rather than
+ * blitted).
+ *
+ * ⚠️ **SINCE 0441 A GUN IS ITS SHIP'S AND HAS NO LADDER** —
+ * `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. The weapon pickup is the bomb pickup, a hull
+ * is a ship's at each tube stage, and every gun here is flown in the ship it is keyed to. The guards
+ * whose subject was a gun's ladder are gone, each with a note where it stood.
  *
  * ⚠️ **Nothing here asserts on a VALUE**, on `src/content/shots.ts`'s terms. What is held is the
- * relationships that must be true at any tuning: every rung changes something, a chain runs from the
- * nose through each body, a bolt ends on the thing it struck in pixels.
+ * relationships that must be true at any tuning: every tube rung changes something, a chain runs from
+ * the nose through each body, a bolt ends on the thing it struck in pixels.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -17,29 +22,25 @@ import { GameFrame, MUZZLE_ALONG, cueOfFlight, wearHull, type World } from '../s
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS, WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
-import { SHIPS, hullFor } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS, hullFor, shipCarrying } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPECIALS } from '../src/content/specials.ts';
+import { SHIP_BOX, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import {
+  BOMB_KINDS,
   FASTEST_FIRE,
-  MAX_HULL_TIER,
   PICKUPS,
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
   PICKUP_REPEATS,
   UPGRADE_TIERS,
-  effectOf,
   faceOf,
-  tiersOf,
   weaponFor,
-  type Loadout,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
 import { CUES, TWIN_KINDS } from '../src/content/cues.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES, gunWeightOn } from '../src/content/bosses.ts';
-import { initialState, reduce, type State } from '../src/state/root.ts';
-import { DEFAULT_DIFFICULTY } from '../src/state/slices/run.ts';
 import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
@@ -50,12 +51,14 @@ import { NO_LEVEL, NO_SECTIONS, playableWorld } from './world.ts';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
 
-/** A world with `kind` fitted at `tier` rungs, nothing else in the air, and the gun about to fire. */
-function armed(kind: WeaponKind, tier: number): { world: World; frame: GameFrame; cues: string[] } {
+/**
+ * A world flying the ship `kind` is keyed to (0441), nothing else in the air, and the gun about to
+ * fire. The gun has no rungs since 0441: it is what its ladder's cap was.
+ */
+function armed(kind: WeaponKind): { world: World; frame: GameFrame; cues: string[] } {
   const built = playableWorld(NO_LEVEL);
-  const carried: UpgradeKind[] = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, kind);
+  built.world.shipRow = SHIPS[shipCarrying(kind)];
+  built.world.weapon = weaponFor(built.world.shipRow, []);
   wearHull(built.world);
   built.world.fireIn = 1;
   built.world.missileIn = NEVER;
@@ -89,17 +92,16 @@ class Recorder implements Surface {
 }
 
 describe('0233 — a weapon is a kind', () => {
-  it('every gun and every tube has a ladder per rung, in whole steps that never slow, and every rung changes the ship', () => {
-    /*
-      `docs/game.md`'s rule — every rung is worth taking — held over EVERY kind rather than over the
-      two ladders `tests/missiles.test.ts` grew up with. A kind added with a rung that buys nothing
-      is a pickup the level handed out that did not land.
-    */
+  /*
+    ⚠️ **THE GUN'S HALF OF `every rung changes the ship` WAS HERE** — a ladder per field, one rung
+    per tier, in whole steps that never slow, each rung changing the gun, and the clamp past the cap.
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted every gun's ladder: each field is
+    the value its last rung was. What survives for a gun is what was true at ANY rung, held below on
+    the one value; the tubes still climb and keep the whole of it.
+  */
+  it('every gun fires in whole steps no faster than the flash, and every tube has a ladder per rung that changes the tubes', () => {
     for (const kind of WEAPON_KINDS) {
       const row = WEAPONS[kind];
-      for (const ladder of [row.fireEvery, row.barrels, row.links, row.weight]) {
-        expect(ladder.length, `${kind} has a ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
-      }
       /*
         0302 — a chain SPENDS itself, and a weapon that does not chain has nothing to spend. A
         `falloff` of 1 or more is the search-the-whole-screen chain
@@ -110,87 +112,84 @@ describe('0233 — a weapon is a kind', () => {
         row.falloff > 0 && row.falloff < 1,
         `${kind} authors a falloff of ${row.falloff} and ${row.flight === 'chain' ? 'chains' : 'does not chain'}`,
       ).toBe(row.flight === 'chain');
-      for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-        const steps = row.fireEvery[tier]!;
-        expect(Number.isInteger(steps) && steps > 0, `${kind} tier ${tier} fires every ${steps} steps`).toBe(true);
-        expect(steps, `${kind} tier ${tier} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
-        if (tier > 0) expect(steps, `${kind} tier ${tier} is slower than tier ${tier - 1}`).toBeLessThanOrEqual(row.fireEvery[tier - 1]!);
-      }
-      const carried: UpgradeKind[] = [];
-      let previous = gunOf(weaponFor(SHIPS.proof, carried, kind));
-      for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
-        carried.push('weapon');
-        const now = gunOf(weaponFor(SHIPS.proof, carried, kind));
-        expect(now, `tier ${tier} of the ${kind} changed nothing about the gun`).not.toBe(previous);
-        previous = now;
-      }
-      const past = gunOf(weaponFor(SHIPS.proof, [...carried, 'weapon'], kind));
-      expect(past, `a ${kind} past tier ${UPGRADE_TIERS} still changed the gun`).toBe(previous);
+      const steps = row.fireEvery;
+      expect(Number.isInteger(steps) && steps > 0, `${kind} fires every ${steps} steps`).toBe(true);
+      expect(steps, `${kind} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
+      // And the gun a ship resolves to is its row's, whatever tubes it carries — 0441.
+      const ship = SHIPS[shipCarrying(kind)];
+      expect(weaponFor(ship, []).kind, `the ${kind}'s ship does not fly the ${kind}`).toBe(kind);
     }
     for (const kind of MISSILE_KINDS) {
       const row = MISSILES[kind];
       expect(row.missileEvery.length, `${kind} has a cadence ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
       expect(row.launchers.length, `${kind} has a tube ladder that is not one rung per tier`).toBe(UPGRADE_TIERS + 1);
       const carried: UpgradeKind[] = [];
-      let previous = tubesOf(weaponFor(SHIPS.proof, carried, SHIPS.proof.weapon, kind));
+      let previous = tubesOf(weaponFor(SHIPS.fighter, carried, kind));
       for (let tier = 1; tier <= UPGRADE_TIERS; tier++) {
         carried.push('missile');
-        const now = tubesOf(weaponFor(SHIPS.proof, carried, SHIPS.proof.weapon, kind));
+        const now = tubesOf(weaponFor(SHIPS.fighter, carried, kind));
         expect(now, `tier ${tier} of the ${kind} missile changed nothing about the tubes`).not.toBe(previous);
         previous = now;
       }
     }
   });
 
-  /**
-   * The gun's half of a resolved weapon and the tubes' half, WITHOUT the hull tier.
-   *
-   * ⚠️ **The hull climbs every two rungs whatever the ladder did**, so a comparison of the whole
-   * resolved weapon is vacuous on half the rungs — a rung that bought nothing but a bigger hull
-   * would pass it. `npm run prove` found exactly that: the arc's last rung authored to change
-   * nothing stayed green until this was written.
-   */
-  function gunOf(w: ReturnType<typeof weaponFor>): string {
-    // ⚠️ AND THE COIL, which this could not see: the size of the spiral is what the shuriken's own brief says an
-    // upgrade buys (*"upgrades make the shuriken's arc last longer"*), and it climbs on every rung. While the
-    // cadence also changed on every rung nothing noticed; the cadence went onto beat divisions, two rungs share
-    // one as two of the pulse's do, and the rung that buys only a bigger spiral is a rung that buys something.
-    return JSON.stringify([w.fireEvery, w.shots, w.spread, w.damage, w.links, w.reach, w.flight, w.coil]);
-  }
+  /** The tubes' half of a resolved weapon. */
   function tubesOf(w: ReturnType<typeof weaponFor>): string {
     return JSON.stringify([w.missileEvery, w.launchers, w.missileDamage, w.guidance]);
   }
 
-  it('a link is worth one pulse at weight one, and the weight ladder stops at its last rung', () => {
+  /*
+    ⚠️ **`the weight ladder stops at its last rung` WAS THE SECOND HALF OF THIS** — the arc clamped
+    past its tiers and the pulse never gaining damage from its own. Both were about the gun's ladder,
+    which 0441 deleted; the tubes' clamp is `tests/missiles.test.ts`'s *THE FLOORS*.
+  */
+  it('a link is worth one pulse at weight one', () => {
     // A relationship, not a number — the same shape 0051 gave the missile.
     expect(SHOTS[WEAPONS.arc.shot].damage, 'a link is no longer one pulse').toBe(SHOTS[WEAPONS.pulse.shot].damage);
-    const capped: UpgradeKind[] = [];
-    for (let i = 0; i < UPGRADE_TIERS; i++) capped.push('weapon');
-    const absurd = [...capped, ...capped, ...capped];
-    expect(weaponFor(SHIPS.proof, absurd, 'arc'), 'the arc keeps climbing past its tiers').toEqual(weaponFor(SHIPS.proof, capped, 'arc'));
-    expect(weaponFor(SHIPS.proof, capped, 'pulse').damage, 'the pulse gains damage without a ceiling again').toBe(
-      weaponFor(SHIPS.proof, [], 'pulse').damage,
-    );
   });
 
-  it('THE FACES: the weapon pickup offers every gun in the guns’ own order, and a row’s sprite is its first face', () => {
-    expect(PICKUPS.weapon.faces, 'the weapon pickup does not offer the guns in their table order').toEqual(
-      WEAPON_KINDS.map((k) => WEAPONS[k].pickup),
+  it('THE FACES: the bomb pickup offers every gun special in the specials’ own order, and a row’s sprite is its first face', () => {
+    /*
+      ⚠️ **THE BOMB PICKUP, AND IT WAS THE WEAPON PICKUP OFFERING THE GUNS — 0441.** *"The pickup will
+      still cycle, but a player can pick up any type and get a bomb of that type."* Its faces are the
+      gun-side specials, and every gun's own special is one of them, so any ship can buy any gun's.
+    */
+    expect(PICKUPS.bomb.faces, 'the bomb pickup does not offer the gun specials in their table order').toEqual(
+      BOMB_KINDS.map((k) => SPECIALS[k].face),
     );
+    for (const gun of WEAPON_KINDS) {
+      // A ward special is the shield pickup's face rather than the bomb's — 0447; `tests/surge.test.ts`.
+      if (SPECIALS[WEAPONS[gun].special].side === 'ward') continue;
+      expect(BOMB_KINDS, `the ${gun}'s own special is not a face of the bomb pickup`).toContain(WEAPONS[gun].special);
+    }
     expect(PICKUPS.missile.faces, 'the missile pickup does not offer the tubes in their table order').toEqual(
       MISSILE_KINDS.map((k) => MISSILES[k].pickup),
     );
+    /*
+      ⚠️ **EXCEPT A ROW'S `bare`, WHICH IS THE SAME OFFER WITHOUT ITS FIRST FACE — 0447.** The ward
+      pickup is the shield pickup's void and nova, and it is only ever thrown where the shield would
+      have been and the tier can wear no shell — so the two are never on one field, and a ward face
+      that differed from the shield's would be one special drawn two ways.
+    */
     const everyFace: number[] = [];
+    const bares = new Set(PICKUP_KINDS.map((kind) => PICKUPS[kind].bare).filter((bare) => bare !== null));
     for (const kind of PICKUP_KINDS) {
       const row = PICKUPS[kind];
       expect(row.faces.length, `${kind} has no face`).toBeGreaterThan(0);
       expect(row.faces[0], `${kind}'s sprite is not its first face, so it changes on the step after it appears`).toBe(row.sprite);
       expect(new Set(row.faces).size, `${kind} shows one face twice`).toBe(row.faces.length);
+      if (bares.has(kind)) continue;
       everyFace.push(...row.faces);
     }
+    for (const kind of PICKUP_KINDS) {
+      const bare = PICKUPS[kind].bare;
+      if (bare === null) continue;
+      expect(PICKUPS[kind].faces.slice(1), `${bare} is not ${kind} without its first face`).toEqual(PICKUPS[bare].faces);
+    }
     expect(new Set(everyFace).size, 'two pickups share a face and can only be told apart by ink').toBe(everyFace.length);
-    WEAPON_KINDS.forEach((kind, face) => {
-      expect(faceOf('weapon', face).label, `face ${face} of the weapon pickup is not named for its gun`).toBe(WEAPONS[kind].label);
+    BOMB_KINDS.forEach((kind, face) => {
+      expect(faceOf('bomb', face).label, `face ${face} of the bomb pickup is not named for its special`).toBe(SPECIALS[kind].label);
     });
   });
 
@@ -214,78 +213,65 @@ describe('0233 — a weapon is a kind', () => {
     }
   });
 
-  it('THE HULLS: every gun has its own three-tier hull ladder, with hit twins and widening boxes, shared with no other gun', () => {
+  /*
+    ⚠️ **`THE HULLS: every gun has its own three-tier hull ladder … widening boxes` WAS HERE.** 0441
+    took the gun's tiers and the hull that climbed with them: a hull belongs to a SHIP now, at no tubes,
+    one and two, all in one box — *"the same overall space needs to be taken up by them."* What a hull
+    must be is held per ship below.
+  */
+  it('THE HULLS: every ship has a hull at each tube stage, with hit twins, in one box, shared with no other ship', () => {
     const extentOf = (sprite: number): number => SPRITE_EXTENT[SPRITE_KINDS[sprite]!];
     const bases = new Set<number>();
-    for (const kind of WEAPON_KINDS) {
-      for (let tier = 0; tier <= MAX_HULL_TIER; tier++) {
-        const hull = hullFor(kind, tier);
-        expect(hull.hit, `the ${kind} hull at tier ${tier} flashes as itself`).not.toBe(hull.base);
-        expect(extentOf(hull.hit), `the ${kind} hull at tier ${tier} changes size when hit`).toBe(extentOf(hull.base));
-        if (tier > 0) {
-          expect(extentOf(hull.base), `the ${kind} hull at tier ${tier} has no more room than tier ${tier - 1}`).toBeGreaterThan(
-            extentOf(hullFor(kind, tier - 1).base),
-          );
-        }
+    for (const kind of SHIP_KINDS) {
+      const ship = SHIPS[kind];
+      expect(ship.hulls[0].base, `the ${kind} is not drawn as its own row says`).toBe(ship.sprite);
+      expect(ship.hulls[0].hit, `the ${kind} does not flash as its own row says`).toBe(ship.spriteHit);
+      for (let stage = 0; stage < ship.hulls.length; stage++) {
+        const hull = ship.hulls[stage]!;
+        expect(hull.hit, `the ${kind} at ${stage} tubes flashes as itself`).not.toBe(hull.base);
+        expect(extentOf(hull.hit), `the ${kind} at ${stage} tubes changes size when hit`).toBe(extentOf(hull.base));
+        // *"The same overall space"* — 0441: every hull of every ship in the one box.
+        expect(extentOf(hull.base), `the ${kind} at ${stage} tubes is not in the one box`).toBe(SHIP_BOX);
+        expect(hullFor(ship, stage), `the ${kind} with ${stage} tubes is not drawn as stage ${stage}`).toBe(hull);
         bases.add(hull.base);
       }
     }
-    expect(bases.size, 'two guns share a hull at some tier, so switching guns is invisible there').toBe(
-      WEAPON_KINDS.length * (MAX_HULL_TIER + 1),
-    );
-    expect(hullFor(SHIPS.proof.weapon, 0).base, 'the base ship is not drawn as its own row says').toBe(SHIPS.proof.sprite);
+    // Every stage differs from every other, so a tube taken changes the picture (0081) and no two
+    // ships are the same drawing at any stage.
+    expect(bases.size, 'two hulls are one drawing, so a tube or a ship is invisible there').toBe(SHIP_KINDS.length * 3);
   });
 
-  it('and the ship wears the gun it is carrying, in the frame that blits it', () => {
-    const { world, frame } = armed('arc', 0);
-    expect(world.ship.spriteBase, 'a ship carrying the arc wears the pulse hull').toBe(hullFor('arc', 0).base);
-    const recorder = new Recorder();
-    world.surface = recorder;
-    frame.draw(0);
-    expect(recorder.blits.some((b) => b.sprite === hullFor('arc', 0).base), 'the arc hull was never drawn').toBe(true);
-    expect(recorder.blits.some((b) => b.sprite === SPRITE.ship), 'the pulse hull is still drawn under the arc').toBe(false);
+  it('and the ship wears its own hull, in the frame that blits it', () => {
+    for (const gun of WEAPON_KINDS) {
+      const { world, frame } = armed(gun);
+      const own = hullFor(world.shipRow, 0).base;
+      expect(world.ship.spriteBase, `the ship carrying the ${gun} wears another hull`).toBe(own);
+      const recorder = new Recorder();
+      world.surface = recorder;
+      frame.draw(0);
+      expect(recorder.blits.some((b) => b.sprite === own), `the ${gun}'s ship was never drawn`).toBe(true);
+      for (const other of SHIP_KINDS) {
+        if (SHIPS[other] === world.shipRow) continue;
+        expect(recorder.blits.some((b) => b.sprite === SHIPS[other].sprite), `the ${other} is drawn under the ${gun}'s ship`).toBe(false);
+      }
+    }
   });
 
-  it('THE SWITCH: another gun is an upgrade even when the fitted gun is full, and taking it keeps the count', () => {
-    /*
-      Asked for: *"if they collect a different weapon upgrade power up, they start from level one with
-      that weapon upgrade."* — and then, played with the mid-bosses in: *"picking up a new
-      weapon/missile type doesn't reset your power count."*
-      `docs/decisions/0256-a-pickup-keeps-the-count.md` amends 0233: the switch is kept and the
-      missile ladder is untouched.
-
-      ⚠️ **THE DEATH HALF IS 0372's**: a death keeps the switched gun and its whole ladder, so the
-      switch is never undone by anything but another pickup.
-    */
-    const full: UpgradeKind[] = [];
-    for (let i = 0; i < UPGRADE_TIERS; i++) full.push('weapon');
-    const loadout: Loadout = { upgrades: full, weapon: 'pulse', missile: SHIPS.proof.missile };
-    expect(effectOf('weapon', WEAPON_KINDS.indexOf('pulse'), loadout), 'a full pulse is still filed as an upgrade').toBe('special');
-    expect(effectOf('weapon', WEAPON_KINDS.indexOf('arc'), loadout), 'the other gun is refused by the fitted gun’s cap').toBe('upgrade');
-
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
-    for (let i = 0; i < UPGRADE_TIERS - 1; i++) state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' });
-    expect(state.run.weapon, 'the run did not switch guns').toBe('arc');
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'a switched gun lost the count').toBe(UPGRADE_TIERS);
-    expect(tiersOf(state.run.upgrades, 'missile'), 'switching guns touched the missile ladder').toBe(2);
-    const fitted = weaponFor(SHIPS.proof, state.run.upgrades, state.run.weapon, state.run.missile);
-    expect(fitted.kind).toBe('arc');
-    expect(fitted.links, 'the switched gun is not resolved at the rung the count says').toBe(WEAPONS.arc.links[UPGRADE_TIERS]);
-    state = reduce(state, { slice: 'run', type: 'lifeLost' });
-    expect(state.run.weapon, 'a death put the base gun back on the ship').toBe('arc');
-    expect(tiersOf(state.run.upgrades, 'weapon'), 'a death took rungs off the ladder').toBe(UPGRADE_TIERS);
-  });
+  /*
+    ⚠️ **`THE SWITCH: another gun is an upgrade even when the fitted gun is full, and taking it keeps
+    the count` WAS HERE** (0233, 0256, 0372). Its subject was a weapon pickup switching the gun, which
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` removed: a gun is keyed to its ship for the
+    whole run, and the pickup in that place buys a special.
+  */
 });
 
 describe('0233 — a pickup cycles', () => {
-  function oneWeaponPickup(): ReturnType<typeof playableWorld> {
+  // The bomb pickup since 0441 — the cycling pickup in the weapon's place.
+  function oneBombPickup(): ReturnType<typeof playableWorld> {
     return playableWorld({
       waves: [],
       // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
-      pickups: [{ at: 200, kind: 'weapon', lane: 50 }],
+      pickups: [{ at: 200, kind: 'bomb', lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -325,33 +311,33 @@ describe('0233 — a pickup cycles', () => {
     return { sprites, inView, waiting };
   }
 
-  it('THE CYCLE, in the real frame: a weapon pickup turns every PICKUP_CYCLE_STEPS, and is only ever drawn as one of its faces', () => {
-    const { sprites } = watch(oneWeaponPickup());
+  it('THE CYCLE, in the real frame: a bomb pickup turns every PICKUP_CYCLE_STEPS, and is only ever drawn as one of its faces', () => {
+    const { sprites } = watch(oneBombPickup());
     const turns: number[] = [];
     for (let i = 1; i < sprites.length; i++) {
-      expect(PICKUPS.weapon.faces, 'the pickup was drawn as something that is not one of its faces').toContain(sprites[i]);
+      expect(PICKUPS.bomb.faces, 'the pickup was drawn as something that is not one of its faces').toContain(sprites[i]);
       if (sprites[i] !== sprites[i - 1]) turns.push(i);
     }
     expect(turns.length, 'the pickup never turned').toBeGreaterThan(1);
     for (let t = 1; t < turns.length; t++) {
       expect(turns[t]! - turns[t - 1]!, `turn ${t} came a different number of steps after the last`).toBe(PICKUP_CYCLE_STEPS);
     }
-    // In the guns' own order, round and round.
-    const faces = PICKUPS.weapon.faces;
+    // In the specials' own order, round and round.
+    const faces = PICKUPS.bomb.faces;
     for (const at of turns) {
       const before = faces.indexOf(sprites[at - 1]!);
       expect(sprites[at], 'the faces did not turn in table order').toBe(faces[(before + 1) % faces.length]);
     }
   });
 
-  it('and it waits for at least PICKUP_REPEATS full turns of its faces, so the player sees every gun twice', () => {
+  it('and it waits for at least PICKUP_REPEATS full turns of its faces, so the player sees every face twice', () => {
     // Turns DURING THE WAIT. A pickup keeps turning on its way back out of the view once the wait
     // is over, and those turns are ones the player has already decided against.
-    const { sprites, waiting } = watch(oneWeaponPickup());
+    const { sprites, waiting } = watch(oneBombPickup());
     let turns = 0;
     for (let i = 1; i < sprites.length; i++) if (sprites[i] !== sprites[i - 1] && waiting[i]) turns++;
-    expect(turns, 'the pickup left before every gun had been shown twice').toBeGreaterThanOrEqual(
-      PICKUP_REPEATS * PICKUPS.weapon.faces.length - 1,
+    expect(turns, 'the pickup left before every face had been shown twice').toBeGreaterThanOrEqual(
+      PICKUP_REPEATS * PICKUPS.bomb.faces.length - 1,
     );
   });
 
@@ -380,7 +366,7 @@ describe('0233 — a pickup cycles', () => {
       not follow.
     */
     // Held long enough to cross the box and back twice, whatever the wait is tuned to.
-    const { inView, waiting } = watch(oneWeaponPickup(), 3000);
+    const { inView, waiting } = watch(oneBombPickup(), 3000);
     let low = Infinity;
     let lowAt = 0;
     for (let i = 0; i < inView.length; i++) {
@@ -411,14 +397,15 @@ describe('0233 — a pickup cycles', () => {
       ⚠️ **THE HARDEST THING 0052 HAD TO GET RIGHT, and the whole reason `Collected` logs a face.**
       A pickup drawn as one gun and collected as another is the failure the player reads as *the
       game took my choice away*. Driven through the real frame: the ship flies into the pickup on a
-      step it is showing the arc, and the shell is handed the arc.
+      step it is showing the storm — not its first face — and the shell is handed the storm.
     */
-    const built = oneWeaponPickup();
+    const built = oneBombPickup();
     const frame = new GameFrame(built.world);
     built.world.fireIn = NEVER;
     while (built.world.pickups.size === 0) frame.step();
     const item = built.world.pickups.at(0);
-    const wanted = WEAPONS.arc.pickup;
+    expect(BOMB_KINDS.indexOf('storm'), 'the storm is the bomb pickup’s first face, so this proves nothing').toBeGreaterThan(0);
+    const wanted = SPECIALS.storm.face;
     let steps = 0;
     while (built.world.pickups.size > 0 && steps < 4000) {
       if (item.sprite === wanted && item.along - built.world.cameraAlong < PLAYER_LEAD) {
@@ -428,14 +415,14 @@ describe('0233 — a pickup cycles', () => {
       frame.step();
       steps++;
     }
-    expect(built.taken, 'the pickup was never taken').toEqual(['weapon']);
-    expect(built.faces, 'the shell was handed a face other than the one drawn').toEqual([WEAPON_KINDS.indexOf('arc')]);
+    expect(built.taken, 'the pickup was never taken').toEqual(['bomb']);
+    expect(built.faces, 'the shell was handed a face other than the one drawn').toEqual([BOMB_KINDS.indexOf('storm')]);
   });
 });
 
 describe('0233 — the arc is chain lightning', () => {
   it('THE CHAIN: a volley lands on the nearest bodies in reach, one link each, from the nose through each body in turn', () => {
-    const { world, frame, cues } = armed('arc', 2);
+    const { world, frame, cues } = armed('arc');
     const links = world.weapon.links;
     expect(links, 'the fixture has no chain to test').toBeGreaterThanOrEqual(3);
     /*
@@ -474,7 +461,7 @@ describe('0233 — the arc is chain lightning', () => {
   });
 
   it('and beyond its reach it fires dry: one link into nothing, the discharge without the strike', () => {
-    const { world, frame, cues } = armed('arc', 2);
+    const { world, frame, cues } = armed('arc');
     const far = target(world, world.weapon.reach + 40, 0);
     frame.step();
     expect(far.health, 'a body beyond reach was struck').toBe(99);
@@ -489,7 +476,7 @@ describe('0233 — the arc is chain lightning', () => {
       on decreasing distance."* Held as the RELATIONSHIP: the second body stands a gap the first hit
       would have crossed and the jump cannot, whatever the ladder says either of them is.
     */
-    const { world, frame } = armed('arc', 2);
+    const { world, frame } = armed('arc');
     expect(world.weapon.links, 'the fixture has no second link to shorten').toBeGreaterThanOrEqual(2);
     expect(world.weapon.falloff, 'the arc no longer spends its chain').toBeLessThan(1);
     const first = target(world, 20, 0);
@@ -510,7 +497,7 @@ describe('0233 — the arc is chain lightning', () => {
       — *"so a miss does not look like a range"* — and the report is the other way round: *"the first
       hit should have the range displayed on screen."*
     */
-    const { world, frame } = armed('arc', UPGRADE_TIERS);
+    const { world, frame } = armed('arc');
     const recorder = new Recorder();
     world.surface = recorder;
     frame.step();
@@ -534,7 +521,7 @@ describe('0233 — the arc is chain lightning', () => {
       spare and a body left standing beside another would be jumped to rather than missed.
     */
     const healthAt = (past: number): number => {
-      const built = armed('arc', UPGRADE_TIERS);
+      const built = armed('arc');
       const body = target(built.world, MUZZLE_ALONG + built.world.weapon.reach + ENEMIES.turret.radius + past, 0);
       built.frame.step();
       return body.health;
@@ -543,27 +530,26 @@ describe('0233 — the arc is chain lightning', () => {
     expect(healthAt(2), 'a body two units past the drawn tip was struck').toBe(99);
   });
 
-  it('0257 — THE SCREEN: from the front of the box, at every tier, a body whose hull is on the screen is struck and one crossing the leading edge is not', () => {
+  it('0257 — THE SCREEN: from the front of the box, a body whose hull is on the screen is struck and one crossing the leading edge is not', () => {
     /*
       `docs/decisions/0257-the-arc-lands-on-the-screen.md`. Reported from the alpha play: *"chain
       lightning jumps too far, enemies don't even get a chance to get on screen."* The ship is put
-      at the very front of its box, where the cap's reach runs ninety units past the view; a body a
-      unit inside the leading edge, hull and all, is struck, and a body whose hull crosses it is
-      not — in the player's own units, the screen's edge, at every rung of the ladder.
+      at the very front of its box, where the reach runs past the view; a body a unit inside the
+      leading edge, hull and all, is struck, and a body whose hull crosses it is not — in the
+      player's own units, the screen's edge. It was walked over every rung of the ladder until 0441
+      left the one; 0443's longer reach runs further past the edge, which is the case this holds.
     */
-    for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-      const { world, frame } = armed('arc', tier);
-      world.ship.along = world.cameraAlong + PLAYER_LEAD;
-      world.ship.prevAlong = world.ship.along;
-      const edge = world.cameraAlong + world.view.alongSpan;
-      const radius = ENEMIES.turret.radius;
-      const inside = target(world, edge - radius - 1 - world.ship.along, 6);
-      const crossing = target(world, edge - radius + 2 - world.ship.along, -6);
-      expect(edge - world.ship.along, 'the fixture put the ship somewhere the reach does not cross the edge').toBeLessThan(world.weapon.reach);
-      frame.step();
-      expect(inside.health, `at tier ${tier} a body whose whole hull is on the screen was not struck`).toBe(99 - world.weapon.damage);
-      expect(crossing.health, `at tier ${tier} a body still crossing the leading edge was struck`).toBe(99);
-    }
+    const { world, frame } = armed('arc');
+    world.ship.along = world.cameraAlong + PLAYER_LEAD;
+    world.ship.prevAlong = world.ship.along;
+    const edge = world.cameraAlong + world.view.alongSpan;
+    const radius = ENEMIES.turret.radius;
+    const inside = target(world, edge - radius - 1 - world.ship.along, 6);
+    const crossing = target(world, edge - radius + 2 - world.ship.along, -6);
+    expect(edge - world.ship.along, 'the fixture put the ship somewhere the reach does not cross the edge').toBeLessThan(world.weapon.reach);
+    frame.step();
+    expect(inside.health, 'a body whose whole hull is on the screen was not struck').toBe(99 - world.weapon.damage);
+    expect(crossing.health, 'a body still crossing the leading edge was struck').toBe(99);
   });
 
   it('ON A BOSS ALONE, every link lands on the boss, each at a different point inside it', () => {
@@ -572,7 +558,7 @@ describe('0233 — the arc is chain lightning', () => {
       different parts of the boss."* A boss is one body with one radius, so the parts are a picture:
       each link after the first lands somewhere else inside the disc, and each is a strike.
     */
-    const { world, frame } = armed('arc', 2);
+    const { world, frame } = armed('arc');
     const boss = world.bossPool.spawn();
     if (boss === null) throw new Error('no boss pool');
     reset(boss, world.ship.along + 30, world.ship.across, BOSSES.sentinel);
@@ -608,7 +594,7 @@ describe('0233 — the arc is chain lightning', () => {
       units the player experiences. The chain above is world units the model chose; this is what the
       surface was asked to stroke, against where it was asked to blit the body.
     */
-    const { world, frame } = armed('arc', 1);
+    const { world, frame } = armed('arc');
     const body = target(world, 24, 6);
     const recorder = new Recorder();
     world.surface = recorder;
@@ -634,7 +620,7 @@ describe('0233 — the arc is chain lightning', () => {
   });
 
   it('and at the cap the bolt pool never fills, and the picture is counted per link', () => {
-    const { world, frame } = armed('arc', UPGRADE_TIERS);
+    const { world, frame } = armed('arc');
     world.fireIn = world.weapon.fireEvery;
     let peak = 0;
     let strokes = 0;
@@ -667,6 +653,8 @@ describe('0233 — the arc is chain lightning', () => {
   it('THE CUES: the arc discharges as its own cue and lands as its own, both in the table with twins', () => {
     expect(cueOfFlight('chain'), 'the arc fires with the pulse’s cue').toBe('arc');
     expect(cueOfFlight('straight')).toBe('pulse');
+    // And the ray's ring is not the pulse either — 0442.
+    expect(cueOfFlight('burst'), 'the ray fires with another gun’s cue').toBe('ray');
     expect(TWIN_KINDS, 'the discharge has no picture to be the twin of').toContain(CUES.arc.twin);
     expect(TWIN_KINDS).toContain(CUES.zap.twin);
     expect(CUES.arc.twin, 'the discharge claims a picture that is not the bolt').toBe('bolt-appears');

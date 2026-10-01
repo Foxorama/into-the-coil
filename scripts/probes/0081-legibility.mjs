@@ -76,8 +76,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a hull that has taken upgrades is not the hull that has not',
     edit: {
       path: 'src/content/ships.ts',
-      find: '  { base: SPRITE.shipMk2, hit: SPRITE.shipMk2Hit },',
-      replace: '  { base: SPRITE.ship, hit: SPRITE.shipHit },',
+      // ⚠️ Re-anchored by 0441: every ship authors three stages by its tubes, and the fighter's first
+      // tube stage drawn as its bare hull is the same collapse.
+      find: '      { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },',
+      replace: '      { base: SPRITE.fighter, hit: SPRITE.fighterHit },',
     },
   },
   {
@@ -99,39 +101,22 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0233: the hull is looked up by the weapon kind as well as the tier.
+      // ⚠️ Re-anchored by 0441: by the ship's row and the tubes it carries.
       find:
-        '  const hull = hullFor(w.weapon.kind, w.weapon.tier);\n' +
+        '  const hull = hullFor(w.shipRow, w.weapon.launchers);\n' +
         '  w.ship.spriteBase = hull.base;\n' +
         '  w.ship.spriteHit = hull.hit;',
-      replace: '  const hull = hullFor(w.weapon.kind, 0);\n  void hull;',
+      replace: '  const hull = hullFor(w.shipRow, 0);\n  void hull;',
     },
   },
-  {
-    decision: '0081',
-    suite: 'tests/legibility.test.ts',
-    /*
-      ⚠️ THE TIER KEYED TO BARRELS, which is the reading a hand reaches for first — and it tells a
-      player who spent every upgrade on missiles that they have upgraded nothing.
-    */
-    broke: 'the hull keyed to barrels, so a missile loadout is drawn as a bare ship',
-    guard: 'climbs with the upgrade list whatever the upgrades were spent on',
-    edit: {
-      path: 'src/content/pickups.ts',
-      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor((gun + tubes) / UPGRADES_PER_TIER)),',
-      replace: '    tier: Math.min(MAX_HULL_TIER, shots - 1),',
-    },
-  },
-  {
-    decision: '0081',
-    suite: 'tests/legibility.test.ts',
-    // The clamp let off its leash: past the last hull the index is `undefined`, and an undefined
-    // sprite is a blit of nothing rather than an error anybody would see.
-    broke: 'the hull ladder unclamped, so a long run runs off the end of the hulls there are',
-    guard: 'climbs with the upgrade list whatever the upgrades were spent on',
-    edit: {
-      path: 'src/content/pickups.ts',
-      find: '    tier: Math.min(MAX_HULL_TIER, Math.floor((gun + tubes) / UPGRADES_PER_TIER)),',
-      replace: '    tier: Math.floor((gun + tubes) / UPGRADES_PER_TIER),',
-    },
-  },
+  /*
+    ⚠️ TWO PROBES STOOD HERE AND 0441 RETIRED THEM WITH THEIR SUBJECT —
+    docs/decisions/0441-a-pilot-flies-their-own-ship.md. Both broke `Weapon.tier`, the hull tier
+    read off guns and tubes together: *the hull keyed to barrels* and *the hull ladder unclamped*
+    (`MAX_HULL_TIER`). The gun has no ladder now, so there are no barrels to key it to, and the tier
+    and its clamp are gone; a ship's stage is its tube count, clamped by `MAX_LAUNCHERS` in
+    `weaponFor` and again in `hullFor`. Removing either clamp alone leaves the guard green, because
+    no tube ladder authors past two — the clamps are a second description of the content, not a
+    break a single edit can stage.
+  */
 ];

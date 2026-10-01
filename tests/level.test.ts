@@ -63,8 +63,10 @@ const rearOf = (row: (typeof BOSSES)[keyof typeof BOSSES]): number => (row.move.
  * ⚠️ **Read off the levels rather than listed**, so a roster change cannot leave this behind.
  */
 const REAL_BOSSES = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
+import { DISTANCES, LANES, flyFight } from '../scripts/weigh-boss.mjs';
+import { WEAPON_KINDS } from '../src/content/weapons.ts';
 
 /**
  * WHAT MUST BE TRUE OF ANY AUTHORED LEVEL — never of this particular one.
@@ -449,44 +451,13 @@ describe('0100 — a level that is not the first one still puts its script on th
     }
   });
 
-  it('0100 — and the dial only counts a weapon the player was actually shown', () => {
-    /*
-      ⚠️ **THE HALF OF THIS DEFECT NOBODY COULD SEE, and it is a difficulty bug rather than a pickup
-      one.** `weaponsOffered` increments where a pickup is placed, and
-      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` reads it as *what this level has
-      offered*. With the placement wrong, the counter climbed on schedule for weapons that were never
-      on the screen — so from level two onward the game raised its own difficulty for pickups the
-      player never got the chance to take.
+  /*
+    ── 0100's SECOND HALF — *the dial only counts a weapon the player was shown* — WAS HERE ────────
 
-      ⚠️ **Held as *the dial's count and the visible count agree***, which is the property rather
-      than the arithmetic: 0084's own comment says a pickup the field had no room for was not
-      offered, and one placed behind the camera is the same thing said louder.
-    */
-    const { world } = playableWorld(LEVELS.approach);
-    const frame = new GameFrame(world);
-    for (let i = 0; i < 3000; i++) {
-      world.fireIn = Number.MAX_SAFE_INTEGER;
-      frame.step();
-    }
-    advanceLevel(world, LEVELS.descent, 1);
-    let shown = 0;
-    let before = world.pickups.size;
-    for (let i = 0; i < 30000; i++) {
-      world.fireIn = Number.MAX_SAFE_INTEGER;
-      frame.step();
-      if (world.pickups.size > before) {
-        const item = world.pickups.at(world.pickups.size - 1);
-        if (item.kind === world.pickupKinds.weapon && item.along - world.cameraAlong > 0) shown++;
-      }
-      before = world.pickups.size;
-      if (world.nextPickup === LEVELS.descent.pickups.length && world.pickups.size === 0 && i > 100) break;
-    }
-    expect(world.weaponsOffered, 'the dial counted nothing, so this measured nothing').toBeGreaterThan(0);
-    expect(
-      shown,
-      `the dial counted ${world.weaponsOffered} weapon pickups and ${shown} of them were placed where the player could see one`,
-    ).toBe(world.weaponsOffered);
-  });
+    Its subject was `weaponsOffered`, the dial's count of weapon pickups, and
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted the dial and the weapon pickup
+    together. The placement half above still holds every pickup a level authors.
+  */
 });
 
 describe('every level has a boss of its own, and no two of them are the same object', () => {
@@ -666,10 +637,20 @@ describe('a boss fight can reach all of its phases', () => {
       */
       const { world } = playableWorld(soloBoss);
       const frame = new GameFrame(world);
-      for (let i = 0; i < 960; i++) frame.step();
+      /*
+        ⚠️ **THE SHIP HOLDS ITS FIRE — 0269, AND 0441 IS WHY IT HAS TO HERE.** This measures how a
+        hull flies. The fixture's gun was the bottom rung and left the sentinel alive for the whole
+        window; every ship opens at its old cap now, and the fighter's pulse killed it before the
+        window began, so the guard was measuring a boss that was not there.
+      */
+      for (let i = 0; i < 960; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
       let nearest = Number.POSITIVE_INFINITY;
       let furthest = Number.NEGATIVE_INFINITY;
       for (let i = 0; i < 900 && world.bossPool.size > 0; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
         frame.step();
         if (world.bossPool.size === 0) break;
         const onScreen = world.bossPool.at(0).along - world.cameraAlong;
@@ -868,7 +849,13 @@ describe('a boss fight can reach all of its phases', () => {
     it('shoots back, and harder as it dies', () => {
       const { world } = playableWorld(soloBoss);
       const frame = new GameFrame(world);
-      for (let i = 0; i < 1200; i++) frame.step();
+      // The ship holds its fire, on the guard above's reasoning — 0269, 0441: the opening gun is the
+      // old cap now and killed the sentinel before it could be seen shooting.
+      for (let i = 0; i < 1200; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+      expect(world.bossPool.size, 'the boss is not on the field, so its shooting measured nothing').toBe(1);
       expect(world.enemyShots.size, 'the boss never fired at anything').toBeGreaterThan(0);
 
       // Drop it into its last phase by hand and count what a volley costs, in shots per step. This is
@@ -929,6 +916,42 @@ describe('a boss fight can reach all of its phases', () => {
       // And it stays reported once, however long the frame runs on afterwards.
       for (let i = 0; i < 300; i++) frame.step();
       expect(cleared.count, 'the level kept being cleared, every step, forever').toBe(1);
+    });
+
+    it('and so can every ship, each with the gun it opens on — 0441', () => {
+      /*
+        ⚠️ **THE BASE WEAPON IS FOUR GUNS NOW.** Every ship opens on its own gun and never changes it,
+        so *winnable with no loadout* is a claim about each ship, and a ring that never connected or a
+        chain that never found the hull would be a run that cannot be finished in that ship alone.
+
+        ⚠️ **FLOWN 45 UNITS SHORT OF THE HULL ON ITS LANE**, as `scripts/weigh-boss.mjs` flies it. The
+        guard above leaves the ship where it starts, which is over a hundred units from the sentinel's
+        near edge — past the arc's 82, so a chain gun parked there never fires at it. A pilot flies up;
+        a ship that cannot finish the fight from where a pilot can stand is the softlock this is for.
+      */
+      for (const kind of SHIP_KINDS) {
+        const { world, cleared } = playableWorld(soloBoss);
+        const frame = new GameFrame(world);
+        world.shipRow = SHIPS[kind];
+        world.weapon = weaponFor(world.shipRow, []);
+        wearHull(world);
+        let steps = 0;
+        while (cleared.count === 0 && steps < 30_000) {
+          world.ship.health = world.shipRow.health;
+          if (world.bossPool.size > 0 && !world.bossBeaten) {
+            const boss = world.bossPool.at(0);
+            world.ship.prevAcross = world.ship.across;
+            world.ship.across = boss.across;
+            world.ship.prevAlong = world.ship.along;
+            world.ship.along = boss.along - boss.radius - 45;
+          }
+          frame.step();
+          steps++;
+        }
+        expect(world.bossSpawned, `the ${kind}'s boss never arrived, so nothing was fought`).toBe(true);
+        expect(world.bossPool.size, `the ${kind}'s ${SHIPS[kind].weapon} cannot kill the boss at all — the run is stuck`).toBe(0);
+        expect(cleared.count, `the ${kind}'s clear was reported the wrong number of times`).toBe(1);
+      }
     });
 
     /**
@@ -1608,25 +1631,31 @@ describe('0121 — a wave is close enough to die together', () => {
 });
 
 /**
- * Damage a second, everything landing, at `tier` of each upgrade ladder.
+ * Damage a second, everything landing, at `tier` of the missile ladder — the most of it any ship
+ * puts out.
  *
  * ⚠️ **Hoisted out of 0124's block and shared with 0150's**, because the two ask the same question
  * about the same fight — *how long does this band of health last* — and two descriptions of the
  * player's damage would disagree the first time either moved.
+ *
+ * ⚠️ **THE TUBES ONLY, AND EVERY SHIP — 0441.** The gun has no ladder now: every ship flies its own
+ * at what its last rung was, so `tier` climbs the one ladder left. And it was the first row of
+ * `SHIPS`, which was the only ship; it is the quickest of four now, because *"the fastest the game
+ * can kill"* is a claim about all of them. Direct hits only — a chain's links and a ring's burst are
+ * not in it, and `tests/serpent.test.ts` flies every gun for the fights where those count.
  */
-const dpsAt = (tier: number): number => {
-  const ship = Object.values(SHIPS)[0]!;
-  const upgrades: ('weapon' | 'missile')[] = [];
-  for (let i = 0; i < tier; i++) {
-    upgrades.push('weapon');
-    upgrades.push('missile');
-  }
-  const w = weaponFor(ship, upgrades);
-  return (
-    (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
-    (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
+const dpsAt = (tier: number): number =>
+  Math.max(
+    ...SHIP_KINDS.map((kind) => {
+      const upgrades: 'missile'[] = [];
+      for (let i = 0; i < tier; i++) upgrades.push('missile');
+      const w = weaponFor(SHIPS[kind], upgrades);
+      return (
+        (w.shots * w.damage) / (w.fireEvery / STEPS_PER_SECOND) +
+        (w.launchers > 0 ? (w.launchers * w.missileDamage) / (w.missileEvery / STEPS_PER_SECOND) : 0)
+      );
+    }),
   );
-};
 
 /**
  * THE UNCOIL AND THE EYE — `docs/decisions/0150-the-uncoil-and-the-eye.md`.
@@ -1702,22 +1731,25 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       What it is compared against is the ship's radius and the bullet's, which that file has never
       heard of.
     */
+    // Every ship, since 0441: the hole is sized against each hurtbox the roster flies with.
     for (const kind of uncoilers) {
-      const uncoil = BOSSES[kind].uncoil!;
-      const shot = SHOTS[BOSSES[kind].shot].radius;
-      const fits = 2 * (SHIPS.proof.radius + shot);
-      expect(
-        uncoil.hole,
-        `${kind}'s hole is ${uncoil.hole} across and a ship needs ${fits.toFixed(2)} to pass — it is not a way out`,
-      ).toBeGreaterThan(fits);
+      for (const ship of SHIP_KINDS) {
+        const uncoil = BOSSES[kind].uncoil!;
+        const shot = SHOTS[BOSSES[kind].shot].radius;
+        const fits = 2 * (SHIPS[ship].radius + shot);
+        expect(
+          uncoil.hole,
+          `${kind}'s hole is ${uncoil.hole} across and the ${ship} needs ${fits.toFixed(2)} to pass — it is not a way out`,
+        ).toBeGreaterThan(fits);
 
-      const spacing = curtainSpacing(uncoil.gap);
-      const slips = 2 * (SHIPS.proof.radius * smallestHurtbox + shot);
-      expect(
-        spacing,
-        `${kind}'s curtain stands its shots ${spacing.toFixed(2)} apart and a forgiving ship slips through ` +
-          `${slips.toFixed(2)} — so it has holes nobody authored`,
-      ).toBeLessThan(slips);
+        const spacing = curtainSpacing(uncoil.gap);
+        const slips = 2 * (SHIPS[ship].radius * smallestHurtbox + shot);
+        expect(
+          spacing,
+          `${kind}'s curtain stands its shots ${spacing.toFixed(2)} apart and a forgiving ${ship} slips through ` +
+            `${slips.toFixed(2)} — so it has holes nobody authored`,
+        ).toBeLessThan(slips);
+      }
     }
   });
 
@@ -1935,8 +1967,12 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
         throws nine over thirty seconds (`scripts/weigh-walls.mjs`), so the queue is carrying a
         backlog the whole way. The shuriken at four rungs kills in nine seconds and the gyre's three
         pinwheels fill most of it, so it now throws ONE wall — a fixture that measured almost nothing.
+
+        ⚠️ **FOUR RUNGS IS THE PULSE ITSELF SINCE 0441** — the gun has no ladder and every fighter
+        flies its last rung, so the fixture's own ship with no tubes is that gun.
       */
-      world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
+      world.shipRow = SHIPS.fighter;
+      world.weapon = weaponFor(world.shipRow, []);
       wearHull(world);
       world.fireIn = 1;
       for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
@@ -2013,8 +2049,10 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
     */
     const { world } = playableWorld(solo('gyre'));
     const frame = new GameFrame(world);
-    // The pulse at four rungs, on the guard above's own reasoning — 0336.
-    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
+    // The pulse at four rungs, on the guard above's own reasoning — 0336 — which is the fighter's
+    // gun with no tubes since 0441.
+    world.shipRow = SHIPS.fighter;
+    world.weapon = weaponFor(world.shipRow, []);
     wearHull(world);
     world.fireIn = 1;
     for (let i = 0; i < 1500 && world.bossPool.size === 0; i++) frame.step();
@@ -2336,7 +2374,13 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
     }
   });
 
-  it('0260 — a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen', () => {
+  /*
+    ⚠️ **ONE CASE PER GUN, SINCE IT FLEW FOUR — 0447's proof.** Flying every gun in one case was
+    four times the work under one timeout, and it ran out at 180 s under the load of the whole suite
+    having passed alone in fifty. The guard is the same and the work is the same; it is split so each
+    gun's share of it is a case, rather than the budget raised until it went quiet (0245).
+  */
+  for (const gun of WEAPON_KINDS) it(`0260 — a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen — the ${gun}`, () => {
     /*
       `docs/decisions/0260-a-boss-is-fought-to-the-end.md`. Reported from the alpha play: *"level
       bosses need a lot more health, I think I only saw about 50% of their attacks before they
@@ -2367,23 +2411,43 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       twenty-five and 0307's own guard holds it in the fight itself. `FASTEST` was never a model of a
       body a blade lands on thirty times a second at most and a pulse meets only at the skull; the
       armour was one way it was wrong, and the ceiling is another. The flown floor is the measure.
+
+      ── AND NOW EVERY BOSS IS FLOWN, IN EVERY SHIP — 0441 ─────────────────────────────────────────
+
+      ⚠️ **THE ARITHMETIC WAS READING THE THIRD RUNG FOR MONTHS.** `FASTEST` was `dpsAt(UPGRADE_TIERS
+      − 1)`, 0124's *"tier 4"* from before the ladder gained its fifth rung, so from level two on —
+      where every run has been at the cap since 0372 — it described a weaker gun than anyone flew,
+      and passed while the arc took the pterodactyl in 33 s. 0441 put every ship at the cap from the
+      first second, which made the gap impossible to miss. So the six are flown here as the serpent
+      is in `tests/serpent.test.ts`: every gun in its own ship, every held lane and distance, the
+      quickest fight held to forty seconds and every phase of it to eight volleys. The player chose
+      the fixes: three small health rises, and the arc's weight on the pterodactyl.
     */
     for (const level of LEVEL_KINDS) {
       const kind = LEVELS[level].boss;
       const row = BOSSES[kind];
       if (row.chain !== null) continue;
-      const total = (row.health * TUNED.toughness) / FASTEST;
-      expect(total, `${kind} is over in ${total.toFixed(1)}s at max weapons on the tuned tier`).toBeGreaterThanOrEqual(40);
-      const ups = row.phases.map((p) => p.upTo);
-      row.phases.forEach((phase, i) => {
-        if (phase.stance.kind === 'bare') return;
-        const seconds = ((ups[i]! - (ups[i + 1] ?? 0)) / openBy(phase)) * total;
-        const volleys = (seconds * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
-        expect(
-          volleys,
-          `${kind}'s phase ${i + 1} lasts ${seconds.toFixed(1)}s at max weapons and gets ${volleys.toFixed(1)} volleys away`,
-        ).toBeGreaterThanOrEqual(8);
-      });
+      {
+        let quickest: ReturnType<typeof flyFight> | null = null;
+        for (const lane of [...LANES, 'boss' as const]) {
+          for (const short of DISTANCES) {
+            const fight = flyFight(kind, gun, { lane, short, cap: 240 });
+            if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
+          }
+        }
+        expect(quickest, `the ${gun} never killed ${kind} from any place, so this measured nothing`).not.toBeNull();
+        expect(quickest!.seconds!, `the ${gun} kills ${kind} in ${quickest!.seconds!.toFixed(1)}s on the tuned tier`).toBeGreaterThanOrEqual(40);
+        quickest!.phaseAt.forEach((entered, i) => {
+          const phase = row.phases[entered.phase]!;
+          if (phase.stance.kind === 'bare') return;
+          const ends = quickest!.phaseAt[i + 1]?.at ?? quickest!.seconds!;
+          const volleys = ((ends - entered.at) * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
+          expect(
+            volleys,
+            `against the ${gun}, ${kind}'s phase ${entered.phase + 1} lasts ${(ends - entered.at).toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
+          ).toBeGreaterThanOrEqual(8);
+        });
+      }
     }
   });
 

@@ -38,8 +38,10 @@ export const PROBES = [
     guard: 'the mid-boss’s death throws every piece the tier can carry',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  return row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0;",
-      replace: '  return true;',
+      // ⚠️ Re-anchored by 0447, which offers the row's `bare` where the shield was withheld; the break
+      // is still the shield thrown as itself to a tier that can carry none.
+      find: '  return row.bare;\n}',
+      replace: '  return kind;\n}',
     },
   },
   {
@@ -64,8 +66,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0373, which counts the stack where `chargesOf` totalled the entries.
-      find: 'shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf()',
-      replace: 'shieldsOf(shipRow, world.ship.health), MAX_SHIELDS, stacksOf()',
+      // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
+      find: 'shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf()',
+      replace: 'shieldsOf(world.shipRow, world.ship.health), MAX_SHIELDS, stacksOf()',
     },
   },
   {

@@ -33,38 +33,12 @@ export const PROBES = [
     edit: {
       path: 'src/content/port.ts',
       /*
-        ⚠️ **BOTH DOORS, SINCE 0416**, which opened the bar a second time for Venoma: taking out the
-        golfer's door left hers playing the cue, and the full proof on #443 reported this STILL GREEN.
-        One edit spans the two rows and keeps everything between them.
+        ⚠️ **ONE DOOR AGAIN SINCE 0444.** 0416 opened the bar a second time for Venoma, and this edit
+        spanned both rows because taking out only the golfer's left hers playing the cue (the full proof
+        on #443 reported it STILL GREEN). 0444 took her run and her door out, so the one row is the break.
       */
-      find:
-        "  { at: BEATS.rivalDoor, cue: 'door' },\n" +
-        '  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({\n' +
-        '    at: BEATS.rivalOut + i * RIVAL_STRIDE,\n' +
-        "    cue: 'step' as const,\n" +
-        '  })),\n' +
-        "  { at: BEATS.rivalLeap, cue: 'step' },\n" +
-        "  { at: BEATS.viperLit, cue: 'ignite' },\n" +
-        "  { at: BEATS.viperGo, cue: 'launch' },\n" +
-        '  // The alarm on every turn of the beacon, from its first until the hangar goes dark.\n' +
-        '  ...Array.from({ length: Math.ceil((BEATS.cut - FADE - BEATS.alarm) / ALARM_PERIOD) }, (_, i) => ({\n' +
-        '    at: BEATS.alarm + i * ALARM_PERIOD,\n' +
-        "    cue: 'alarm' as const,\n" +
-        '  })),\n' +
-        "  { at: BEATS.door, cue: 'door' },\n",
-      replace:
-        '  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({\n' +
-        '    at: BEATS.rivalOut + i * RIVAL_STRIDE,\n' +
-        "    cue: 'step' as const,\n" +
-        '  })),\n' +
-        "  { at: BEATS.rivalLeap, cue: 'step' },\n" +
-        "  { at: BEATS.viperLit, cue: 'ignite' },\n" +
-        "  { at: BEATS.viperGo, cue: 'launch' },\n" +
-        '  // The alarm on every turn of the beacon, from its first until the hangar goes dark.\n' +
-        '  ...Array.from({ length: Math.ceil((BEATS.cut - FADE - BEATS.alarm) / ALARM_PERIOD) }, (_, i) => ({\n' +
-        '    at: BEATS.alarm + i * ALARM_PERIOD,\n' +
-        "    cue: 'alarm' as const,\n" +
-        '  })),\n',
+      find: "  { at: BEATS.door, cue: 'door' },\n",
+      replace: '',
     },
   },
   {

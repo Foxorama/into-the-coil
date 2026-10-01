@@ -49,8 +49,9 @@ export const PROBES = [
     guard: '0307 — and the body is armour',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'armoured ? w.hits : bladeHits, bladeGap, hull);',
-      replace: 'bladeHits, bladeGap, hull);',
+      // ⚠️ Re-anchored by 0442, which puts the ray's own log in front of this choice.
+      find: 'rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);',
+      replace: 'rayHits ?? bladeHits, bladeGap, hull);',
     },
   },
   {
@@ -81,12 +82,14 @@ export const PROBES = [
     // end — tier three — rather than the cap. 540 is still a 26-second fight there
     // (`scripts/weigh-boss.mjs jormungandr --tier=3 --health=540`), so the break is unchanged.
     broke: 'the serpent at 540, where the lightning a player can carry to it kills it in twenty-six seconds',
-    guard: 'flown at the most a player can carry to it on the tuned tier',
+    // ⚠️ Renamed by 0441, which flies every ship with its own gun, at the cap from the first second.
+    guard: 'flown in every ship with its own gun on the tuned tier',
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0322, which put the health at 1100 to pay for the ball's smaller appetite. And
       // by 0365, which took a tenth off each phase: 540 is still under the floor it set, at twenty-eight.
-      find: '    health: 700,',
+      // And by 0441, which raised it to 900 for guns flown at the cap; 540 is further under it there.
+      find: '    health: 900,',
       replace: '    health: 540,',
     },
   },

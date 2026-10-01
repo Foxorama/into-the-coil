@@ -32,7 +32,7 @@
  */
 
 /** Every action, closed. A new one fails the tables below to BUILD until it is given a row. */
-export type Action = 'alongMinus' | 'alongPlus' | 'acrossMinus' | 'acrossPlus' | 'special1' | 'special2';
+export type Action = 'alongMinus' | 'alongPlus' | 'acrossMinus' | 'acrossPlus' | 'special1' | 'special2' | 'special3';
 
 /**
  * How an action is read.
@@ -66,6 +66,8 @@ export const ACTIONS: Record<Action, ActionRow> = {
   acrossPlus: { kind: 'axis', sign: 1, slot: null, label: 'Down' },
   special1: { kind: 'edge', sign: null, slot: 0, label: 'Special 1' },
   special2: { kind: 'edge', sign: null, slot: 1, label: 'Special 2' },
+  // The ward's — the void and the nova, 0447.
+  special3: { kind: 'edge', sign: null, slot: 2, label: 'Special 3' },
 };
 
 /** Written out rather than derived, so the table above cannot quietly lose a row. */
@@ -76,6 +78,7 @@ export const ACTION_NAMES: readonly Action[] = [
   'acrossPlus',
   'special1',
   'special2',
+  'special3',
 ];
 
 /**
@@ -116,4 +119,10 @@ export const DEFAULT_BINDINGS: Record<Action, readonly string[]> = {
   acrossPlus: ['KeyS', 'ArrowDown'],
   special1: ['Space'],
   special2: ['ShiftLeft', 'ShiftRight'],
+  /*
+    ⚠️ **E AND X, THE PLAYER'S CHOICE — 0447.** E sits above the WASD hand's middle finger and X below
+    it, so either hand position reaches the ward without leaving the stick keys; an arrows player has
+    neither under a finger and keeps Space and Shift.
+  */
+  special3: ['KeyE', 'KeyX'],
 };

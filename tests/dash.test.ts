@@ -41,7 +41,7 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 
 /**
@@ -309,10 +309,14 @@ describe('how long a layer is open, against how long its own loop is', () => {
 });
 
 describe('what plays over the top of it', () => {
-  it('A TIER IS BOTH LADDERS, and it is the game’s own resolution of them', () => {
+  it('A TIER IS THE TUBES’ LADDER, and it is the game’s own resolution of it', () => {
+    // Both ladders until 0441, which took the gun's away: the gun is the ship's, at its old cap. The
+    // dashboard sounds the pulse, so it is the pulse's ship.
     for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
-      const carried = Array.from({ length: tier }, () => ['weapon', 'missile'] as const).flat();
-      expect(weaponAtTier(tier), `tier ${tier} is not what weaponFor resolves`).toEqual(weaponFor(SHIPS.proof, carried));
+      const carried = Array.from({ length: tier }, () => 'missile' as const);
+      expect(weaponAtTier(tier), `tier ${tier} is not what weaponFor resolves`).toEqual(
+        weaponFor(SHIPS[shipCarrying('pulse')], carried),
+      );
     }
   });
 

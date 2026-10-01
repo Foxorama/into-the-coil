@@ -435,6 +435,11 @@ describe('a wave may arrive from the side, and never behind the player', () => {
     */
     for (const [origin, lane] of [['acrossMinus', 35] as const, ['acrossPlus', 70] as const]) {
       const { world } = playableWorld(oneFlank(origin, lane));
+      /*
+        ⚠️ **The ship's gun is held — 0441.** Every run flies the old cap now, and the fighter's
+        four-barrel fan shot the flanker down before it reached its lane. The motion is the subject.
+      */
+      world.fireIn = Number.MAX_SAFE_INTEGER;
       const frame = new GameFrame(world);
       while (world.enemies.size === 0) frame.step();
       let settled = false;
@@ -589,6 +594,10 @@ describe('a threat uses the whole area, and the player does not', () => {
       while (world.enemies.size === 0) frame.step();
       let steps = 0;
       for (; steps < 2400 && world.enemies.size > 0; steps++) {
+        // The ship's fire held: every ship opens at the cap since 0441, and the gun would kill the
+        // body before it ever roams — the probe that breaks the turn went STILL GREEN on exactly that.
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
         frame.step();
         if (world.enemies.size === 0) break;
         const e = world.enemies.at(0);
@@ -653,6 +662,9 @@ describe('a threat uses the whole area, and the player does not', () => {
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
     for (let step = 0; step < 2400 && world.enemies.size > 0; step++) {
+      // Held fire, as above: a turret the cap gun kills never wanders far enough to be asked.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       const before = world.enemyShots.size;
       frame.step();
       if (world.enemies.size === 0) break;
@@ -671,7 +683,7 @@ describe('a pickup wanders', () => {
     // static straight line."*
     const level: LevelRow = {
       waves: [],
-      pickups: [{ at: 200, kind: 'weapon', lane: 50 }],
+      pickups: [{ at: 200, kind: 'bomb', lane: 50 }],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -705,8 +717,8 @@ describe('a pickup wanders', () => {
     const level: LevelRow = {
       waves: [],
       pickups: [
-        { at: 240, kind: 'weapon', lane: 6 },
-        { at: 312, kind: 'weapon', lane: 94 },
+        { at: 240, kind: 'bomb', lane: 6 },
+        { at: 312, kind: 'bomb', lane: 94 },
       ],
       landmarks: [],
       bossAt: Number.POSITIVE_INFINITY,

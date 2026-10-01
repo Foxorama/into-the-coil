@@ -28,13 +28,15 @@ export const PROBES = [
       scripts/probes/0093-gun-on-the-grid.mjs, which broke the same table to prove a claim about the
       beat that no longer exists.
     */
-    broke: 'the fire ladder authored so an upgrade slows the gun down',
+    broke: 'the fire ladder authored so an upgrade slows the missiles down',
     guard: 'every rung is a whole number of steps, and the ladder never gets SLOWER',
     edit: {
       // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
-      path: 'src/content/weapons.ts',
-      find: '    fireEvery: [8, 8, 6, 6, 4],',
-      replace: '    fireEvery: [8, 8, 6, 6, 7],',
+      // ⚠️ Re-anchored by 0441, which took the gun's ladder: the tubes' is the one an upgrade climbs,
+      // and the never-SLOWER half of the guard now walks only it. The same slip, one table over.
+      path: 'src/content/missiles.ts',
+      find: '    missileEvery: [8, 8, 8, 6, 4],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
+      replace: '    missileEvery: [8, 8, 8, 6, 7],\n    launchers: [0, 1, 2, 2, 2],\n    seek: 0,',
     },
   },
   {

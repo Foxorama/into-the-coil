@@ -26,7 +26,9 @@ export const PROBES = [
     suite: 'tests/missiles.test.ts',
     // A second weapon that fires as fast as the first is not a second weapon.
     broke: 'the missile cadence dropped to the pulse’s, so the two weapons stop being different',
-    guard: 'fires less often than the pulse does',
+    // ⚠️ Renamed by 0441: held against whichever gun each ship flies. At a ratio of one the missile
+    // ties the arc's and the ray's eight steps, so the break still lands.
+    guard: 'fires less often than the gun does, in every ship',
     edit: {
       // ⚠️ RE-ANCHORED BY 0093, and the break moved file. `missileEvery` is gone from the row: the
       // missile's cadence is `MISSILE_BEAT_RATIO` times the pulse's on the same rung, which is the
@@ -112,8 +114,14 @@ export const PROBES = [
       probe tied to a decision looks like when the decision moves. Worth reading before assuming an
       inverted assertion is a mistake.
     */
-    broke: 'the weapon ladder wired into the missile cadence, so one pickup moves both again',
-    guard: 'THE SPLIT: a weapon pickup never touches the missiles',
+    /*
+      ⚠️ AND TURNED ROUND A THIRD TIME BY 0441, which took the gun's ladder: there is no weapon pickup
+      left to reach into the missiles, so the guard holds the one direction that still has a pickup in
+      it — the tubes reaching into the gun. The break is the same copy-paste the other way: the gun's
+      cadence read off the tube count.
+    */
+    broke: 'the tube ladder wired into the gun’s cadence, so one pickup moves both again',
+    guard: 'THE SPLIT: a missile pickup never touches the gun, in any ship',
     edit: {
       path: 'src/content/pickups.ts',
       /*
@@ -125,8 +133,9 @@ export const PROBES = [
         the guard and prove nothing about the separation.
       */
       // ⚠️ Re-anchored by 0233: the ladder read is the missile kind's row rather than the ship's.
-      find: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(tubeRow, tubes);',
-      replace: '  const missileEvery = MISSILE_BEAT_RATIO * missileEveryAt(tubeRow, gun);',
+      // ⚠️ Re-anchored by 0441: the gun's one cadence, with the tubes added to it.
+      find: '  const fireEvery = gunRow.fireEvery;',
+      replace: '  const fireEvery = gunRow.fireEvery + tubes;',
     },
   },
   {

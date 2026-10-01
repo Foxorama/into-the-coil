@@ -9,6 +9,7 @@ import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { BURN_HALF, THRUST, WARP_FLAME, WARP_SCROLL } from '../src/content/exhaust.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import {
   DEFAULT_TRAVEL,
   TRAVELS,
@@ -269,8 +270,9 @@ describe('the frame burns by that number, and the player keeps the ship', () => 
     // Burning at nought is the ordinary hard-forward flame, which a parked fixture is not asking for;
     // a whisker of burn forces the same row at the same size, so the two compare like with like.
     expect(rootBehind(1), 'the flame’s root left the tail as it grew').toBeCloseTo(rootBehind(1e-9), 6);
+    // From the flown ship's own nozzles — 0441: `trail` is measured from them, and `tail` is where they are.
     expect(rootBehind(1e-9), 'the burn’s root is not where the burn row puts it').toBeCloseTo(
-      THRUST.burn.trail - BURN_HALF,
+      flown(1e-9).shipRow.tail + THRUST.burn.trail - BURN_HALF,
       6,
     );
   });
@@ -292,7 +294,9 @@ describe('a crossing carries the run forward exactly once', () => {
     const dispatch = (action: Action): void => {
       current = reduce(current, action);
     };
-    dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]! });
+    // The ship the world was built flying, so the run and the world agree on it — 0441.
+    const ship = SHIP_KINDS.find((kind) => SHIPS[kind] === built.world.shipRow)!;
+    dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]!, ship });
     return {
       world: built.world,
       state: (): State => current,

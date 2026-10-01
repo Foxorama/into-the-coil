@@ -117,7 +117,9 @@ export const PROBES = [
       path: 'src/content/enemies.ts',
       // ⚠️ Re-anchored by 0073: the weave's two numbers are the parameters of one arm of a union now.
       find: "    motion: { kind: 'weave', amplitude: 16, wavelength: 130 },",
-      replace: "    motion: { kind: 'weave', amplitude: 26, wavelength: 130 },",
+      // 40 since 0441, and it was 26: the weaver waves nearest the band's edge were in level one's quiet
+      // stretch, which fires now, and 26 left every remaining weaver inside it — STILL GREEN.
+      replace: "    motion: { kind: 'weave', amplitude: 40, wavelength: 130 },",
     },
   },
 ];

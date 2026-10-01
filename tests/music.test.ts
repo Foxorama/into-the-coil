@@ -66,7 +66,7 @@ import { MUSIC_ROLES } from '../src/content/arrangement.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
 import { CUES } from '../src/content/cues.ts';
-import { fireEveryAt } from '../src/content/pickups.ts';
+import { cueOfFlight } from '../src/app/frame.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
@@ -944,19 +944,26 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
     for (const v of bed) bedSq += v * v;
     const bedRms = Math.sqrt(bedSq / bed.length);
 
-    // The gun at its fastest rung, laid down over the same stretch at the cadence the ladder reaches.
-    const gunRow = WEAPONS[SHIPS.proof.weapon];
-    const fastest = Math.min(...gunRow.fireEvery.map((_unused, tier) => fireEveryAt(gunRow, tier)));
-    const shot = sampleCue(CUES.pulse, SAMPLE_RATE, makeRng('cues').stream('pulse'));
-    const gun = new Float32Array(bed.length);
+    /*
+      Every ship's gun, with its own cue, laid down over the same stretch at its own cadence — 0441.
+      Each pilot's gun is the one sound present continuously in that pilot's run, and it has one
+      cadence now, what its last rung was.
+    */
     const perStep = SAMPLE_RATE / STEPS_PER_SECOND;
-    for (let at = 0; at * fastest * perStep < gun.length; at++) {
-      const start = Math.round(at * fastest * perStep);
-      for (let i = 0; i < shot.length && start + i < gun.length; i++) gun[start + i] = (gun[start + i] ?? 0) + shot[i]!;
-    }
-    let gunSq = 0;
-    for (const v of gun) gunSq += v * v;
-    const gunRms = Math.sqrt(gunSq / gun.length);
+    const guns = SHIP_KINDS.map((ship) => {
+      const gunRow = WEAPONS[SHIPS[ship].weapon];
+      const cue = cueOfFlight(gunRow.flight);
+      const fastest = gunRow.fireEvery;
+      const shot = sampleCue(CUES[cue], SAMPLE_RATE, makeRng('cues').stream(cue));
+      const gun = new Float32Array(bed.length);
+      for (let at = 0; at * fastest * perStep < gun.length; at++) {
+        const start = Math.round(at * fastest * perStep);
+        for (let i = 0; i < shot.length && start + i < gun.length; i++) gun[start + i] = (gun[start + i] ?? 0) + shot[i]!;
+      }
+      let gunSq = 0;
+      for (const v of gun) gunSq += v * v;
+      return { ship, cue, fastest, gunRms: Math.sqrt(gunSq / gun.length) };
+    });
 
     /*
       ⚠️ **SIX DECIBELS, WHICH IS THE BED AT TWICE THE GUN'S AMPLITUDE, AND IT IS MEASURED RATHER
@@ -993,12 +1000,14 @@ describe('0095 — the level has a piece of its own, and it covers the band', ()
       deliberately thin: this is a floor the mix has to keep clearing, not a description of where it
       happens to be.
     */
-    const ratio = 20 * Math.log10(bedRms / gunRms);
-    expect(
-      ratio,
-      `the level's music sits ${ratio.toFixed(1)}dB over a gun firing every ${fastest} steps — ` +
-        `the background is not twice the thing playing continuously over it`,
-    ).toBeGreaterThan(6);
+    for (const { ship, cue, fastest, gunRms } of guns) {
+      const ratio = 20 * Math.log10(bedRms / gunRms);
+      expect(
+        ratio,
+        `the level's music sits ${ratio.toFixed(1)}dB over the ${ship}'s ${cue} firing every ${fastest} steps — ` +
+          `the background is not twice the thing playing continuously over it`,
+      ).toBeGreaterThan(6);
+    }
   }, DSP_MS);
 });
 

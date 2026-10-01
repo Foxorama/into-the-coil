@@ -41,37 +41,18 @@ export const PROBES = [
       absurd value, it is a reasonable one.
     */
     broke: 'the missile put on a ratio that lands on the pulse’s beats instead of across them',
-    guard: 'THE COUNTER-BEAT: the missile is an exact ratio of the pulse at every rung, and was an accident',
+    // ⚠️ Re-titled by 0441: the guard walks the tube rungs in every ship, against each ship's own gun.
+    guard: 'THE COUNTER-BEAT: the missile crosses the gun at every tube rung, in every ship',
     edit: {
       path: 'src/content/pickups.ts',
       find: 'export const MISSILE_BEAT_RATIO = 5;',
       replace: 'export const MISSILE_BEAT_RATIO = 4;',
     },
   },
-  {
-    decision: '0093',
-    // ⚠️ The guard lives with the LADDERS rather than with the grid — `every upgrade is worth taking`
-    // in `tests/pickups.test.ts` compares the base against one upgrade and would not see two middle
-    // tiers collapsing into each other. A first draft pointed there and `npm run prove` reported
-    // STILL GREEN.
-    suite: 'tests/missiles.test.ts',
-    /*
-      ⚠️ THE BARRELS PUT BACK TO WHAT `rung(1, MAX_BARRELS, gun)` PRODUCED — 1, 2, 3, 3, 4. That was
-      correct while the cadence moved at every tier, and it is not now: the rate can only step where
-      the beat has a subdivision, so tiers 2 and 3 share one. With the old barrels beside it they
-      would share a WEAPON, and `docs/game.md`'s *every upgrade is worth taking* would be false for
-      the third weapon pickup of a run.
-
-      ⚠️ This is the coupling the decision is most likely to be broken by later, because the two
-      ladders look independent and are not.
-    */
-    broke: 'the barrels interpolated again, so the tier that cannot buy rate buys nothing at all',
-    guard: 'THE TIERS: each ladder is exactly UPGRADE_TIERS long, and every tier changes something',
-    edit: {
-      // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
-      path: 'src/content/weapons.ts',
-      find: '    barrels: [1, 2, 3, 4, 4],',
-      replace: '    barrels: [1, 2, 3, 3, 4],',
-    },
-  },
+  /*
+    ⚠️ `the barrels interpolated again, so the tier that cannot buy rate buys nothing at all` WAS
+    HERE, and it is retired with its subject: docs/decisions/0441-a-pilot-flies-their-own-ship.md
+    took the gun's ladder, so there is no tier of barrels left to collapse into its neighbour. THE
+    TIERS in tests/missiles.test.ts walks the tubes now, which are the one ladder left.
+  */
 ];

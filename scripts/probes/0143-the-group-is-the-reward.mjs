@@ -54,8 +54,10 @@ export const PROBES = [
     guard: '0145 — AN AUTO-WEAPON SOUNDS UNDER THE EVENTS IT CAUSES, because it is the one that never stops',
     edit: {
       path: 'src/content/cues.ts',
-      find: "    twin: 'shot-appears',\n    hold: 2,\n    gain: 0.24,",
-      replace: "    twin: 'shot-appears',\n    hold: 2,\n    gain: 0.3,",
+      // ⚠️ Made unique by 0442, whose ray shares the pulse's first three lines: the pulse's glue is
+      // what makes it the pulse's.
+      find: "    twin: 'shot-appears',\n    hold: 2,\n    gain: 0.24,\n    glue: 0.3,",
+      replace: "    twin: 'shot-appears',\n    hold: 2,\n    gain: 0.3,\n    glue: 0.3,",
     },
   },
 ];

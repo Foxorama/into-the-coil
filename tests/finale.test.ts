@@ -36,7 +36,8 @@ import {
 import { GOLFERS, GOLFER_KINDS, rescuable } from '../src/content/golfers.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
 import { PORT_EXTENT, PORT_SPRITE, type PortKind } from '../src/content/port.ts';
-import { SPRITE } from '../src/content/sprites.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
+import { SHIP_BOX, SPRITE } from '../src/content/sprites.ts';
 import { FINALE_BASE, PORT_BASE, makeFinaleScene, paintFinale, type FinaleScene } from '../src/render/finale.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
@@ -73,18 +74,20 @@ const FROMS: readonly FinaleFrom[] = [
   { heartAlong: 190, heartAcross: 56, shipAlong: 60, shipAcross: 20 },
 ];
 
-function sceneFor(from: FinaleFrom): FinaleScene {
+function sceneFor(from: FinaleFrom, ship: number): FinaleScene {
   const scene = makeFinaleScene();
   scene.sky = SKY;
   scene.throb = 0.07;
   scene.from = from;
+  // The pilot's own ship — 0441. The scene opens on the fighter, and a run writes the one it flew.
+  scene.ship = ship;
   return scene;
 }
 
-function drawAt(t: number, size = NARROW, from: FinaleFrom = FROMS[0]!): { blits: Blit[]; view: View } {
+function drawAt(t: number, size = NARROW, from: FinaleFrom = FROMS[0]!, ship: number = SPRITE.fighter): { blits: Blit[]; view: View } {
   const view = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
-  paintFinale(surface, view, t, sceneFor(from));
+  paintFinale(surface, view, t, sceneFor(from, ship));
   return { blits: surface.blits, view };
 }
 
@@ -173,7 +176,7 @@ describe('the finale goes on from the fight — 0426', () => {
         expect(heart, 'no heart on the finale’s first frame').toBeDefined();
         expect(Math.hypot(heart.x - screenX(view, from.heartAlong, from.heartAcross), heart.y - screenY(view, from.heartAlong, from.heartAcross)), 'the heart jumped on the first frame').toBeLessThan(0.5);
         expect(heart.scale / view.scale, 'the heart changed size on the first frame').toBeLessThanOrEqual(1.08);
-        const ship = blits.find((b) => b.sprite === SPRITE.ship)!;
+        const ship = blits.find((b) => b.sprite === SPRITE.fighter)!;
         expect(ship, 'no fighter on the finale’s first frame').toBeDefined();
         expect(Math.hypot(ship.x - screenX(view, from.shipAlong, from.shipAcross), ship.y - screenY(view, from.shipAlong, from.shipAcross)), 'the fighter jumped on the first frame').toBeLessThan(0.5);
       }
@@ -195,12 +198,17 @@ describe('the finale goes on from the fight — 0426', () => {
   });
 
   it('has both ships leave the widest screen before the picture goes, and goes into the backdrop at the end', () => {
-    for (const from of FROMS) {
-      const { blits, view } = drawAt(FINALE_BEATS.fadeOut, WIDE, from);
-      const viper = blits.find((b) => b.sprite === port('viper'))!;
-      const fighter = blits.find((b) => b.sprite === SPRITE.ship)!;
-      expect(viper.x - 0.42 * PORT_EXTENT.viper * viper.scale, 'the Viper is still on the screen as the picture goes').toBeGreaterThan(WIDE.width);
-      expect(fighter.x - 0.5 * 7 * view.scale, 'the fighter is still on the screen as the picture goes').toBeGreaterThan(WIDE.width);
+    // Every pilot's ship, in the one box every ship is drawn in — 0441. It was the fighter's 7-unit
+    // hull; the box is the whole picture each ship may fill, so the box is what must be off the screen.
+    for (const kind of SHIP_KINDS) {
+      for (const from of FROMS) {
+        const { blits, view } = drawAt(FINALE_BEATS.fadeOut, WIDE, from, SHIPS[kind].sprite);
+        const viper = blits.find((b) => b.sprite === port('viper'))!;
+        const fighter = blits.find((b) => b.sprite === SHIPS[kind].sprite)!;
+        expect(fighter, `the ${kind} was not drawn, so this measures nothing`).toBeDefined();
+        expect(viper.x - 0.42 * PORT_EXTENT.viper * viper.scale, 'the Viper is still on the screen as the picture goes').toBeGreaterThan(WIDE.width);
+        expect(fighter.x - 0.5 * SHIP_BOX * view.scale, `the ${kind} is still on the screen as the picture goes`).toBeGreaterThan(WIDE.width);
+      }
     }
     expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.sprite).toBe(port('veil'));
     expect(drawAt(OUTRO_STEPS - 0.001).blits.at(-1)!.alpha).toBeGreaterThan(0.99);
@@ -272,7 +280,7 @@ describe('who was in the Viper, and what the two of them say — 0418, 0426', ()
           for (let t = bubble.from; t < bubble.to; t += 6) {
             const { blits, view } = drawAt(t, size, from);
             const viper = blits.find((b) => b.sprite === port('viper'))!;
-            const fighter = blits.find((b) => b.sprite === SPRITE.ship)!;
+            const fighter = blits.find((b) => b.sprite === SPRITE.fighter)!;
             const own = speaker === 'viper' ? viper : fighter;
             const other = speaker === 'viper' ? fighter : viper;
             (speaker === 'viper' ? viperAt : fighterAt)(t, from, AT);

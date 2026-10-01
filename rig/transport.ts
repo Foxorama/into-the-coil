@@ -746,8 +746,9 @@ export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
 export function weaponAtTier(tier: number): Weapon {
   const carried: UpgradeKind[] = [];
   const clamped = tier < 0 ? 0 : tier > UPGRADE_TIERS ? UPGRADE_TIERS : Math.floor(tier);
-  for (let i = 0; i < clamped; i++) carried.push('weapon', 'missile');
-  return weaponFor(SHIPS.proof, carried);
+  // The tubes only since 0441: the gun is the ship's, at the top of what was its ladder.
+  for (let i = 0; i < clamped; i++) carried.push('missile');
+  return weaponFor(SHIPS.fighter, carried);
 }
 
 /** One thing the player will hear over the bed, and how often. */

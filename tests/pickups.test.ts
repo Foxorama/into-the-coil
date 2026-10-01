@@ -9,15 +9,14 @@ import {
   PICKUP_KINDS,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
-  fireEveryAt,
   weaponFor,
   type PickupKind,
   type UpgradeKind,
 } from '../src/content/pickups.ts';
 
-import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, weaponsOfferedBy } from '../src/content/levels.ts';
-import { SHIPS } from '../src/content/ships.ts';
-import { WEAPONS } from '../src/content/weapons.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
+import { WEAPONS, WEAPON_KINDS } from '../src/content/weapons.ts';
 import { MISSILES } from '../src/content/missiles.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
@@ -61,9 +60,11 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
 
     ⚠️ **NOTHING HERE ASSERTS ON A CADENCE'S VALUE**, on `src/content/shots.ts`'s terms: which rung a
     ship opens on is a hand's job. What is held is that every rung, whatever it is, lands on the beat.
+
+    ⚠️ **SINCE 0441 A GUN HAS ONE CADENCE AND NO RUNGS** —
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. What was held over the pulse's ladder is held
+    over every gun's one value, each in its own ship; the tubes still climb, and keep their ladder.
   */
-  /** Every rung of the pulse's ladder, in steps between volleys. */
-  const RUNGS = Array.from({ length: UPGRADE_TIERS + 1 }, (_, tier) => fireEveryAt(WEAPONS.pulse,tier));
 
   /*
     ── TWO GUARDS ABOUT THE MUSIC USED TO LIVE HERE AND 0159 DELETED THEM ─────────────────────────
@@ -101,9 +102,15 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       exactly as unheld as the pulse was before 0093.
     */
     const perSecond = (steps: number): number => STEPS_PER_SECOND / steps;
+    // Every gun's one cadence — 0441 took their ladders, so there is nothing to be slower than.
+    for (const gun of WEAPON_KINDS) {
+      const steps = WEAPONS[gun].fireEvery;
+      expect(Number.isInteger(steps), `the ${gun} fires every ${steps} steps, which the clock cannot do`).toBe(true);
+      expect(steps, `the ${gun} fires every ${steps} steps, which is not a cadence`).toBeGreaterThan(0);
+    }
     const ladders = [
-      ['pulse', WEAPONS.pulse.fireEvery],
-      ['missile', MISSILES.straight.missileEvery],
+      ['straight missile', MISSILES.straight.missileEvery],
+      ['homing missile', MISSILES.homing.missileEvery],
     ] as const;
     for (const [name, ladder] of ladders) {
       for (let tier = 0; tier < ladder.length; tier++) {
@@ -124,25 +131,22 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
     }
   });
 
-  it('and the ladder respects the two floors it did not used to have to', () => {
+  it('and every gun respects the two floors', () => {
     /*
       ⚠️ **These were ENDPOINTS of an interpolation and are now constraints on a table**, which is the
       one thing a hand-written ladder loses: `rung(base, FASTEST_FIRE, tier)` could not overshoot the
       floor, and a list can. Both floors are unchanged and both are still what they were —
       `FASTEST_FIRE` is legibility (`src/app/frame.ts` needs the impact flash to finish between hits)
-      and `MAX_BARRELS` is the pool budget.
+      and `MAX_BARRELS` is the pool budget. Since 0441 each gun has one value per field rather than a
+      rung per tier, and every gun is held, the ray among them.
     */
-    expect(WEAPONS.pulse.fireEvery.length, 'the cadence ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
-    expect(WEAPONS.pulse.barrels.length, 'the barrel ladder is not one rung per tier').toBe(UPGRADE_TIERS + 1);
-    for (let tier = 0; tier < RUNGS.length; tier++) {
-      expect(RUNGS[tier], `tier ${tier} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
-      expect(WEAPONS.pulse.barrels[tier], `tier ${tier} asks for more barrels than the pool budgets`).toBeLessThanOrEqual(
-        MAX_BARRELS,
-      );
+    for (const gun of WEAPON_KINDS) {
+      expect(WEAPONS[gun].fireEvery, `the ${gun} outruns the impact flash`).toBeGreaterThanOrEqual(FASTEST_FIRE);
+      expect(WEAPONS[gun].barrels, `the ${gun} asks for more barrels than the pool budgets`).toBeLessThanOrEqual(MAX_BARRELS);
     }
   });
 
-  it('THE COUNTER-BEAT: the missile is an exact ratio of the pulse at every rung, and was an accident', () => {
+  it('THE COUNTER-BEAT: the missile crosses the gun at every tube rung, in every ship, and was an accident', () => {
     /*
       ⚠️ **Reported from play as something that already worked** — *"the missile fire provided a great
       counter-beat"* — and nobody had chosen it. Two unrelated interpolations happened to start about
@@ -173,19 +177,24 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       to*, which is where the counter-rhythm the play-test heard actually lives — between the ship's
       two weapons, not between the ship and the tune.
     */
-    const ratios: number[] = [];
-    for (let tier = 0; tier < RUNGS.length; tier++) {
-      const missiles = Array.from({ length: tier }, () => 'missile' as const);
-      const weapon = weaponFor(SHIPS.proof, missiles);
-      const cycles = weapon.missileEvery / VOLLEY_CYCLE;
-      expect(
-        Number.isInteger(cycles),
-        `at tier ${tier} a missile leaves every ${cycles} cycles exactly, which is ON the lattice rather than across it`,
-      ).toBe(false);
-      ratios.push(weapon.missileEvery / fireEveryAt(WEAPONS.pulse,tier));
-      expect(weapon.missileEvery, `at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
-        weaponFor(SHIPS.proof, Array.from({ length: tier }, () => 'weapon' as const)).fireEvery,
-      );
+    /*
+      ⚠️ **IN EVERY SHIP, SINCE 0441.** The rungs walked are the tubes', the only ladder left; the gun
+      it plays against is each ship's own, at its one cadence. The counter-beat was heard against the
+      pulse, and it is held against every gun a ship can fly.
+    */
+    for (const ship of SHIP_KINDS) {
+      for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
+        const missiles = Array.from({ length: tier }, () => 'missile' as const);
+        const weapon = weaponFor(SHIPS[ship], missiles);
+        const cycles = weapon.missileEvery / VOLLEY_CYCLE;
+        expect(
+          Number.isInteger(cycles),
+          `${ship}: at tier ${tier} a missile leaves every ${cycles} cycles exactly, which is ON the lattice rather than across it`,
+        ).toBe(false);
+        expect(weapon.missileEvery, `${ship}: at tier ${tier} the second weapon fires as often as the first`).toBeGreaterThan(
+          weapon.fireEvery,
+        );
+      }
     }
     /*
       ── THE CLAIM HERE USED TO BE *THE RATIO IS IDENTICAL AT EVERY RUNG*, AND IT WAS AN ARTEFACT ───
@@ -213,17 +222,20 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       five beats — instead. Still a cross-rhythm, and a wider one. **Nobody has heard it**, and it is
       the first thing to listen for if the counter-beat stops reading.
     */
-    for (let tier = 0; tier < RUNGS.length; tier++) {
-      const missiles = Array.from({ length: tier }, () => 'missile' as const);
-      const missileEvery = weaponFor(SHIPS.proof, missiles).missileEvery;
-      const pulseEvery = fireEveryAt(WEAPONS.pulse,tier);
-      // Both are whole steps, so the instant they next share is their least common multiple.
-      const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
-      const together = (missileEvery * pulseEvery) / gcd(missileEvery, pulseEvery);
-      expect(
-        together / pulseEvery,
-        `at tier ${tier} a missile lands with a pulse every ${together / pulseEvery} volleys, which is with it rather than across it`,
-      ).toBeGreaterThanOrEqual(MISSILE_BEAT_RATIO);
+    for (const ship of SHIP_KINDS) {
+      for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
+        const missiles = Array.from({ length: tier }, () => 'missile' as const);
+        const weapon = weaponFor(SHIPS[ship], missiles);
+        const missileEvery = weapon.missileEvery;
+        const gunEvery = weapon.fireEvery;
+        // Both are whole steps, so the instant they next share is their least common multiple.
+        const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
+        const together = (missileEvery * gunEvery) / gcd(missileEvery, gunEvery);
+        expect(
+          together / gunEvery,
+          `${ship}: at tier ${tier} a missile lands with a volley of the ${weapon.kind} every ${together / gunEvery} volleys, which is with it rather than across it`,
+        ).toBeGreaterThanOrEqual(MISSILE_BEAT_RATIO);
+      }
     }
   });
 
@@ -249,14 +261,17 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       compared have to be every field a weapon has, or the next upgrade to change a NEW field passes
       this while doing nothing the player can feel.
     */
-    const base = weaponFor(SHIPS.proof, []);
-    const fields = Object.keys(base) as (keyof typeof base)[];
-    for (const upgrade of UPGRADE_KINDS) {
-      const after = weaponFor(SHIPS.proof, [upgrade]);
-      expect(
-        fields.some((field) => after[field] !== base[field]),
-        `taking a ${upgrade} changes nothing about the ship`,
-      ).toBe(true);
+    // In every ship since 0441, because each flies its own gun and the upgrade must reach all four.
+    for (const ship of SHIP_KINDS) {
+      const base = weaponFor(SHIPS[ship], []);
+      const fields = Object.keys(base) as (keyof typeof base)[];
+      for (const upgrade of UPGRADE_KINDS) {
+        const after = weaponFor(SHIPS[ship], [upgrade]);
+        expect(
+          fields.some((field) => after[field] !== base[field]),
+          `${ship}: taking a ${upgrade} changes nothing about the ship`,
+        ).toBe(true);
+      }
     }
   });
 
@@ -269,37 +284,27 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       because a resolver handed a hand-built array cannot see what the thing building the array did.
       Two layers, two assertions — a guard over one of them is a guard over neither.
     */
-    const one = weaponFor(SHIPS.proof, ['weapon']);
-    const two = weaponFor(SHIPS.proof, ['weapon', 'weapon']);
-    expect(two.fireEvery, 'a second rapid did nothing').toBeLessThan(one.fireEvery);
-    expect(weaponFor(SHIPS.proof, ['weapon', 'weapon']).shots).toBeGreaterThan(
-      weaponFor(SHIPS.proof, ['weapon']).shots,
-    );
-
-    let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    expect(state.run.upgrades, 'the run kept one rapid where two were taken').toEqual(['weapon', 'weapon']);
-  });
-
-  it('never fires faster than a hit can be read, however many are taken', () => {
     /*
-      ⚠️ **The other end of "worth taking".** `src/app/frame.ts` records that successive shots connect
-      6 to 7 steps apart and that the impact flash must END before the next one lands, or two hits
-      produce one picture and the player cannot count them —
-      `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`. A weapon that outruns that
-      makes damage unreadable, which is a bug that was already reported once.
-
-      Twenty of them: far past anything a level would hand out, which is the point of a floor.
-      Asserted against the flash's own length rather than a number typed here, so raising the flash
-      raises the floor.
+      ⚠️ **ON THE TUBES SINCE 0441, AND IT WAS ON THE GUN.** The gun has no ladder to stack on; the
+      tubes are the one that does, so the second missile is what must not be swallowed by the first.
     */
-    const many: UpgradeKind[] = [];
-    for (let i = 0; i < 20; i++) many.push('weapon');
-    const weapon = weaponFor(SHIPS.proof, many);
-    expect(weapon.fireEvery, 'auto-fire outruns the impact flash and hits stop being countable').toBeGreaterThanOrEqual(4);
-    expect(Number.isFinite(weapon.fireEvery)).toBe(true);
+    const one = weaponFor(SHIPS.fighter, ['missile']);
+    const two = weaponFor(SHIPS.fighter, ['missile', 'missile']);
+    expect(JSON.stringify(two), 'a second missile did nothing').not.toBe(JSON.stringify(one));
+
+    let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: 'fighter' });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
+    expect(state.run.upgrades, 'the run kept one missile where two were taken').toEqual(['missile', 'missile']);
   });
+
+  /*
+    ⚠️ **`never fires faster than a hit can be read, however many are taken` WAS HERE.** It stacked
+    twenty weapon pickups and held the gun's cadence at the flash's floor — a clamp on the gun's
+    ladder, which `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted. No pickup moves a
+    gun now; every gun's one cadence is held to `FASTEST_FIRE` above, in `and every gun respects the
+    two floors`.
+  */
 
   it('a volley is never truncated, however heavily the ship is loaded', () => {
     /*
@@ -329,62 +334,78 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
       for (let i = 0; i < 15; i++) everything.push(kind);
     }
 
-    const { world } = playableWorld({
-      waves: [],
-      pickups: [],
-      landmarks: [],
-      bossAt: Number.POSITIVE_INFINITY,
-      midBoss: null,
-      sections: NO_SECTIONS,
-      boss: 'sentinel',
-      theme: 'approach',
-    });
-    world.weapon = weaponFor(SHIPS.proof, everything);
     /*
-      ⚠️ **THE WIDEST VIEW THE CLAMP ALLOWS, because the pool arithmetic depends on it.** A shot is
-      culled at the edge of the screen in front of the player (0048), so a 21:9 monitor keeps a shot
-      in flight nearly half as long again as a 16:9 one — and the fixture's default view is 16:9.
-      Measured there, this test reports a peak the widest device never sees, which is the shape of
-      guard that passes while the thing it guards is broken for a third of the players.
+      ⚠️ **EVERY SHIP, SINCE 0441.** The strongest loadout is a ship's own gun with every tube, and
+      there are four guns; the pool has to hold the heaviest of them, so each is flown. A shot that is
+      not spent by arriving — the blade — and one that bursts where it lands — the ring — fill the pool
+      differently from a fan, and the arc fills the bolts rather than it.
     */
-    world.view = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
-    const frame = new GameFrame(world);
+    for (const ship of SHIP_KINDS) {
+      const { world } = playableWorld({
+        waves: [],
+        pickups: [],
+        landmarks: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        midBoss: null,
+        sections: NO_SECTIONS,
+        boss: 'sentinel',
+        theme: 'approach',
+      });
+      world.shipRow = SHIPS[ship];
+      world.weapon = weaponFor(SHIPS[ship], everything);
+      /*
+        ⚠️ **THE WIDEST VIEW THE CLAMP ALLOWS, because the pool arithmetic depends on it.** A shot is
+        culled at the edge of the screen in front of the player (0048), so a 21:9 monitor keeps a shot
+        in flight nearly half as long again as a 16:9 one — and the fixture's default view is 16:9.
+        Measured there, this test reports a peak the widest device never sees, which is the shape of
+        guard that passes while the thing it guards is broken for a third of the players.
+      */
+      world.view = viewOf(ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10);
+      const frame = new GameFrame(world);
 
-    let peak = 0;
-    let missilePeak = 0;
-    // Long enough that anything accumulating has accumulated: fifteen seconds of continuous fire.
-    for (let i = 0; i < 900; i++) {
-      frame.step();
-      if (world.playerShots.size > peak) peak = world.playerShots.size;
-      if (world.missiles.size > missilePeak) missilePeak = world.missiles.size;
+      let peak = 0;
+      let missilePeak = 0;
+      // Long enough that anything accumulating has accumulated: fifteen seconds of continuous fire.
+      for (let i = 0; i < 900; i++) {
+        frame.step();
+        if (world.playerShots.size > peak) peak = world.playerShots.size;
+        if (world.missiles.size > missilePeak) missilePeak = world.missiles.size;
+      }
+      expect(
+        peak,
+        `${ship}: a fully loaded weapon puts ${peak} shots in flight against a pool of ${CAPACITY.playerShots}. ` +
+          'The pool refuses the later barrels of every volley, so the fan fires unevenly — which is ' +
+          'what the player sees as some streams stuttering.',
+      ).toBeLessThan(CAPACITY.playerShots);
+      // A gun that fires bodies must have put some in the air, or the pool was never asked.
+      if (WEAPONS[SHIPS[ship].weapon].flight !== 'chain') {
+        expect(peak, `${ship}: the gun never fired, so this measured nothing`).toBeGreaterThan(0);
+      }
+      /*
+        ⚠️ **The same arithmetic for the second weapon, and it is why the missiles have a pool of their
+        own.** Launchers, the missile fire floor, the flight time and the pool size are four numbers
+        that have to agree; this is the only place they are checked against each other.
+      */
+      expect(
+        missilePeak,
+        `${ship}: a fully loaded weapon puts ${missilePeak} missiles in flight against a pool of ${CAPACITY.missiles}. ` +
+          'A full pool drops the later tubes of every volley, so a three-launcher ship fires like a ' +
+          'one-launcher ship at exactly the moment the player has earned otherwise.',
+      ).toBeLessThan(CAPACITY.missiles);
+      expect(missilePeak, `${ship}: no missile was ever fired, so this measured nothing`).toBeGreaterThan(0);
     }
-    expect(
-      peak,
-      `a fully loaded weapon puts ${peak} bullets in flight against a pool of ${CAPACITY.playerShots}. ` +
-        'The pool refuses the later barrels of every volley, so the fan fires unevenly — which is ' +
-        'what the player sees as some streams stuttering.',
-    ).toBeLessThan(CAPACITY.playerShots);
-    /*
-      ⚠️ **The same arithmetic for the second weapon, and it is why the missiles have a pool of their
-      own.** Launchers, the missile fire floor, the flight time and the pool size are four numbers
-      that have to agree; this is the only place they are checked against each other.
-    */
-    expect(
-      missilePeak,
-      `a fully loaded weapon puts ${missilePeak} missiles in flight against a pool of ${CAPACITY.missiles}. ` +
-        'A full pool drops the later tubes of every volley, so a three-launcher ship fires like a ' +
-        'one-launcher ship at exactly the moment the player has earned otherwise.',
-    ).toBeLessThan(CAPACITY.missiles);
-    expect(missilePeak, 'no missile was ever fired, so this measured nothing').toBeGreaterThan(0);
   });
 
   it('an empty list IS the base weapon, so a death needs no second description of one', () => {
     // 0039 says a death goes "back to the ship's base weapon". That sentence is only cheap because
-    // the base weapon is what an empty list resolves to.
-    const base = weaponFor(SHIPS.proof, []);
-    // 0093: the base cadence is rung 0 of the ship's own ladder rather than a field beside it.
-    expect(base.fireEvery).toBe(fireEveryAt(WEAPONS.pulse,0));
-    expect(base.shots).toBe(WEAPONS.pulse.barrels[0]);
+    // the base weapon is what an empty list resolves to — and since 0441 that is the ship's own gun,
+    // its row's one value, in every ship.
+    for (const ship of SHIP_KINDS) {
+      const base = weaponFor(SHIPS[ship], []);
+      const gun = WEAPONS[SHIPS[ship].weapon];
+      expect(base.fireEvery, `${ship}: the base cadence is not its gun's`).toBe(gun.fireEvery);
+      expect(base.shots, `${ship}: the base barrels are not its gun's`).toBe(gun.barrels);
+    }
   });
 });
 
@@ -444,24 +465,12 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     so the premise of the first is gone and the second is the design inverted: the guns cap across
     the run. Deleted, on 0192's terms: a guard whose premise has gone is not a guard to widen.
   */
-  it('THE OPENING: every level’s first pickup is a weapon, inside the first tenth of the level', () => {
-    /*
-      *"1 near the start of the level."* The first thing a level offers is a gun, since the
-      compressed levels — *"this might need the first pickup changed to a weapon increase instead of
-      a shield"* — and *near the start* is held as a share of the level rather than a distance, so
-      a longer level does not push it later.
-    */
-    for (const kind of LEVEL_KINDS) {
-      const level = LEVELS[kind];
-      const first = level.pickups[0];
-      expect(first, `${kind} offers nothing at all`).toBeDefined();
-      expect(first!.kind, `${kind} opens with a ${first!.kind} rather than a weapon`).toBe('weapon');
-      expect(
-        first!.at / level.bossAt,
-        `${kind}'s first weapon is ${((first!.at / level.bossAt) * 100).toFixed(0)}% of the way in, which is not near the start`,
-      ).toBeLessThan(0.1);
-    }
-  });
+  /*
+    ⚠️ **`THE OPENING: every level’s first pickup is a weapon, inside the first tenth` WAS HERE.**
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md`: *"we'll remove the first weapon pick up
+    from each level."* A ship opens on its whole gun, so the opening weapon had nothing left to give.
+    The first thing a level offers is now its tube, held below.
+  */
 
   it('THE TUBE: every level offers a missile about a fifth of the way in', () => {
     /*
@@ -478,18 +487,23 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     }
   });
 
-  it('THE BUDGET: a level authors one weapon and one missile and nothing else, and level one a second of each where the ask put them', () => {
+  it('THE BUDGET: a level authors one missile and nothing else, and level one a bomb and a second missile where the ask put them', () => {
+    /*
+      ⚠️ **THE WEAPON COUNT IS GONE, AND LEVEL ONE'S EXTRA IS A BOMB — 0441.** Each level's first
+      weapon was removed; level one's second, before its mid-boss, is the bomb pickup in its place.
+    */
     for (let i = 0; i < LEVEL_KINDS.length; i++) {
       const kind = LEVEL_KINDS[i]!;
       const level = LEVELS[kind];
-      const counts = { weapon: 0, missile: 0, shield: 0, bomb: 0 };
+      const counts = { bomb: 0, missile: 0, shield: 0, ward: 0 };
       for (const entry of level.pickups) counts[entry.kind]++;
+      // The ward is only ever a shield's `bare` — 0447 — so no level authors one.
+      expect(counts.ward, `${kind} authors a ward pickup, which only stands in for a shield`).toBe(0);
       const extra = i === 0 ? 1 : 0;
-      expect(counts.weapon, `${kind} authors ${counts.weapon} weapons`).toBe(1 + extra);
+      expect(counts.bomb, `${kind} authors ${counts.bomb} bombs, and the charge is the mid-boss's but for level one's`).toBe(extra);
       expect(counts.missile, `${kind} authors ${counts.missile} missiles`).toBe(1 + extra);
-      // The shield and the charge are the fights' — `MID_BOSS_DROP` and the clear (0053).
+      // The shield is the fight's — `MID_BOSS_DROP`.
       expect(counts.shield, `${kind} authors a shield, which is the mid-boss's to drop`).toBe(0);
-      expect(counts.bomb, `${kind} authors a bomb, which is the mid-boss's and the clear's`).toBe(0);
     }
     /*
       ⚠️ **LEVEL ONE'S TWO EXTRAS ARE PLACED, NOT JUST COUNTED.** *"Before the miniboss appears"* and
@@ -498,8 +512,8 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     */
     const one = LEVELS[LEVEL_KINDS[0]!];
     expect(one.midBoss, 'level one has no mid-boss to place its extras against').not.toBeNull();
-    const weapons = one.pickups.filter((p) => p.kind === 'weapon');
-    expect(weapons[1]!.at, `level one's second weapon at ${weapons[1]!.at} is not before its mid-boss at ${one.midBoss!.at}`).toBeLessThan(one.midBoss!.at);
+    const bombs = one.pickups.filter((p) => p.kind === 'bomb');
+    expect(bombs[0]!.at, `level one's bomb at ${bombs[0]!.at} is not before its mid-boss at ${one.midBoss!.at}`).toBeLessThan(one.midBoss!.at);
     const missiles = one.pickups.filter((p) => p.kind === 'missile');
     const midpoint = (one.midBoss!.at + one.bossAt) / 2;
     expect(
@@ -508,21 +522,22 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     ).toBeLessThan(one.bossAt / 10);
   });
 
-  it('and the fights offer the rest: a mid-boss drops one weapon, one shield and one missile, and every level has one', () => {
+  it('and the fights offer the rest: a mid-boss drops one bomb, one shield and one missile, and every level has one', () => {
     /*
       *"1 from the miniboss death"* three times over, and the third is a missile since 0372 took the
-      bomb pickup away. One list for every mid-boss (0083's one budget for every level), and the dial
-      counts its weapon — `weaponsOfferedBy` is what `tests/dial.test.ts` recomputes the top of the
-      dial from, so it has to agree with the list.
+      bomb pickup away. One list for every mid-boss (0083's one budget for every level).
+
+      ⚠️ **A BOMB WHERE THE WEAPON WAS, AND THE DIAL'S HALF IS GONE — 0441.** The weapon pickup is
+      the bomb pickup, and the dial that counted the dropped weapon went with the gun's ladder, so
+      `weaponsOfferedBy` and its agreement with this list have no subject.
     */
-    const counts = { weapon: 0, missile: 0, shield: 0 };
+    const counts = { bomb: 0, missile: 0, shield: 0, ward: 0 };
     for (const kind of MID_BOSS_DROP) counts[kind]++;
-    expect(counts, 'the mid-boss drops something other than a weapon, a shield and a missile').toEqual({ weapon: 1, missile: 1, shield: 1 });
+    // The ward on Burn is the shield offered as its `bare` — 0447 — not a fourth piece in the list.
+    expect(counts, 'the mid-boss drops something other than a bomb, a shield and a missile').toEqual({ bomb: 1, missile: 1, shield: 1, ward: 0 });
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
       expect(level.midBoss, `${kind} has no mid-boss, so nothing drops its shield`).not.toBeNull();
-      const authored = level.pickups.filter((p) => p.kind === 'weapon').length;
-      expect(weaponsOfferedBy(level), `${kind}'s dial does not count the mid-boss's weapon`).toBe(authored + 1);
     }
   });
 
@@ -769,12 +784,13 @@ describe('collecting one, in the real frame', () => {
     /** Where the drop is thrown from — the ship's start, in the camera's frame. */
     const dropAlong = SHIP_START_ALONG;
 
-    it('THE DROP: one piece per kind in the list, thrown from where the hull died, and the weapon turns the dial', () => {
+    it('THE DROP: one piece per kind in the list, thrown from where the hull died', () => {
       /*
         *"Weapons → 1 from the miniboss death; shields → 1 from the miniboss death; bombs → 1 from
-        the miniboss death."* The set is the list's, exactly; the place is the hull's; and the dial
-        counts the weapon as `spawnPickup` would (0084), which `tests/dial.test.ts` recomputes the
-        top of the dial from.
+        the miniboss death."* The set is the list's, exactly; and the place is the hull's.
+
+        ⚠️ **AND THE DROPPED WEAPON TURNED THE DIAL, UNTIL 0441 TOOK THE DIAL.** Nothing counts what
+        is offered now, so the dial's half of this is gone with it.
       */
       const { world } = dropped('drop:the-set');
       expect(world.pickups.size, 'the drop is not one piece per kind in the list').toBe(MID_BOSS_DROP.length);
@@ -786,31 +802,29 @@ describe('collecting one, in the real frame', () => {
         expect(Math.abs(item.across - ACROSS_SPAN / 2), 'a piece was thrown from somewhere else').toBeLessThan(1);
       }
       expect(thrown.sort(), 'the drop is not the list').toEqual([...MID_BOSS_DROP].sort());
-      expect(world.weaponsOffered, 'the dropped weapon did not turn the dial').toBe(1);
-      // A list with no weapon in it turns nothing, and an empty list throws nothing.
-      expect(dropped('drop:no-weapon', ['shield', 'missile']).world.weaponsOffered).toBe(0);
+      // And an empty list throws nothing.
       expect(dropped('drop:nothing', []).world.pickups.size).toBe(0);
     });
 
-    it('and a dropped weapon cycles like an authored one, so it is an offer and not a return', () => {
+    it('and a dropped bomb cycles like an authored one, so it is an offer and not a return', () => {
       /*
         0243 had a scattered piece hold the face the player just lost, because what a death threw
-        back was what it took. A drop is the fight's offer, and since 0256 a switch keeps the count,
-        so the cycle costs the player nothing but the choice — held here so the two rules cannot
-        quietly swap back.
+        back was what it took. A drop is the fight's offer, so the cycle costs the player nothing but
+        the choice — held here so the two rules cannot quietly swap back. The cycling piece is the
+        bomb since 0441, in the weapon's place.
       */
       const { world } = dropped('drop:cycles');
-      let weapon: Entity | null = null;
-      for (let i = 0; i < world.pickups.size; i++) if (world.pickups.at(i).kind === world.pickupKinds.weapon) weapon = world.pickups.at(i);
-      expect(weapon, 'no weapon was dropped').not.toBeNull();
-      const shown = weapon!.sprite;
+      let bomb: Entity | null = null;
+      for (let i = 0; i < world.pickups.size; i++) if (world.pickups.at(i).kind === world.pickupKinds.bomb) bomb = world.pickups.at(i);
+      expect(bomb, 'no bomb was dropped').not.toBeNull();
+      const shown = bomb!.sprite;
       const frame = new GameFrame(world);
       let turned = false;
       for (let i = 0; i < PICKUP_CYCLE_STEPS * 2 && !turned; i++) {
         frame.step();
-        if (weapon!.sprite !== shown) turned = true;
+        if (bomb!.sprite !== shown) turned = true;
       }
-      expect(turned, 'a dropped weapon never turned to another face').toBe(true);
+      expect(turned, 'a dropped bomb never turned to another face').toBe(true);
     });
 
     it('0100 — THE REPORTED ONE: a scatter never leaves a piece where the ship cannot reach it', () => {
@@ -1068,7 +1082,7 @@ describe('collecting one, in the real frame', () => {
         authored one does and leaves by falling back through the view, which is an event the picture
         already tells (0036) — the burst it used to leave went with the timer.
       */
-      const { world } = dropped('drop:stays', ['weapon']);
+      const { world } = dropped('drop:stays', ['bomb']);
       world.shipPool.clear();
       const frame = new GameFrame(world);
       let steps = 0;
@@ -1087,7 +1101,7 @@ describe('collecting one, in the real frame', () => {
         the cap is a cap, and the ring is spaced over what reaches the field.
       */
       const many: PickupKind[] = [];
-      for (let i = 0; i < CAPACITY.pickups * 6; i++) many.push('weapon');
+      for (let i = 0; i < CAPACITY.pickups * 6; i++) many.push('bomb');
       for (let seed = 0; seed < 8; seed++) {
         const { world } = dropped(`overrun:${seed}`, many);
         expect(world.pickups.size, 'the drop overran the pool').toBeLessThanOrEqual(CAPACITY.pickups);
@@ -1109,26 +1123,31 @@ describe('collecting one, in the real frame', () => {
         obvious in play. Nothing else in the suite watches one sprite over a whole lifetime.
       */
       /*
-        ⚠️ **A ONE-FACED PICKUP, since 0233.** The weapon pickup cycles now — that is the design, and
+        ⚠️ **A ONE-FACED PICKUP, since 0233.** The cycling pickup turns — that is the design, and
         `tests/weapons.test.ts` holds the cycle — so the property this watches is asked of the shield,
-        which has one face and must never be drawn as anything else. The weapon's half of the same
-        property is below: whatever it is drawn as is one of ITS OWN faces, never a neighbour's row.
+        which has one face and must never be drawn as anything else. The cycling half of the same
+        property is below, on the bomb since 0441: whatever it is drawn as is one of ITS OWN faces,
+        never a neighbour's row.
+      */
+      /*
+        ⚠️ **AND THE SHIELD TURNS TOO, SINCE 0447** — shield, void, nova — so there is no one-faced
+        pickup left to watch hold still. What is asked of it is the cycling half: whatever it is drawn
+        as is one of its own three faces, all the way to the cull.
       */
       const { world } = onePickup('shield');
       const frame = new GameFrame(world);
       while (world.pickups.size === 0) frame.step();
       const item = world.pickups.at(0);
-      const drawn = item.sprite;
       let steps = 0;
       while (world.pickups.size > 0 && steps < 2000) {
         frame.step();
         steps++;
         if (world.pickups.size === 0) break;
-        expect(item.sprite, 'an authored pickup changed what it was drawn as').toBe(drawn);
+        expect(PICKUPS.shield.faces, 'an authored shield was drawn as something that is not one of its faces').toContain(item.sprite);
       }
       expect(steps, 'the pickup never reached the field, so nothing was watched').toBeGreaterThan(100);
 
-      const cycling = onePickup('weapon');
+      const cycling = onePickup('bomb');
       const turning = new GameFrame(cycling.world);
       while (cycling.world.pickups.size === 0) turning.step();
       const turned = cycling.world.pickups.at(0);
@@ -1137,11 +1156,11 @@ describe('collecting one, in the real frame', () => {
         turning.step();
         watched++;
         if (cycling.world.pickups.size === 0) break;
-        expect(PICKUPS.weapon.faces, 'a weapon pickup was drawn as something that is not one of its faces').toContain(
+        expect(PICKUPS.bomb.faces, 'a bomb pickup was drawn as something that is not one of its faces').toContain(
           turned.sprite,
         );
       }
-      expect(watched, 'the weapon pickup never reached the field').toBeGreaterThan(100);
+      expect(watched, 'the bomb pickup never reached the field').toBeGreaterThan(100);
     });
   });
 
@@ -1158,7 +1177,7 @@ describe('collecting one, in the real frame', () => {
   describe('and it waits where the player can reach it', () => {
     /** Where a pickup is on screen, in world units ahead of the camera, over its whole life. */
     function trackOffset(steps: number): { world: ReturnType<typeof playableWorld>['world']; offsets: number[] } {
-      const { world } = onePickup('weapon');
+      const { world } = onePickup('bomb');
       /*
         ⚠️ **NO SHIP, since 0233.** The wait is a wander of the whole box now, so a pickup comes down
         to where the fixture parks the ship and is TAKEN there — which ends the wait these tests are
@@ -1254,7 +1273,7 @@ describe('collecting one, in the real frame', () => {
       const { world } = playableWorld({
         waves: [],
         // Lane 50 — the middle, as a share of the lane since 0364 (`laneAcross`).
-        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'weapon' as const, lane: 50 })),
+        pickups: [200, 400, 600, 800, 1000, 1200].map((at) => ({ at, kind: 'bomb' as const, lane: 50 })),
         landmarks: [],
         bossAt: Number.POSITIVE_INFINITY,
       midBoss: null,
@@ -1359,7 +1378,7 @@ describe('collecting one, in the real frame', () => {
         ⚠️ **MEASURED WHILE WAITING ONLY.** The approach is a different motion with its own job and its
         speed is meant to change; what is claimed is that once a pickup is floating it keeps one.
       */
-      const { world } = onePickup('weapon');
+      const { world } = onePickup('bomb');
       world.shipPool.clear();
       const frame = new GameFrame(world);
       const speeds: number[] = [];
@@ -1582,7 +1601,7 @@ describe('collecting one, in the real frame', () => {
         GREEN against this test. Releasing the ship leaves exactly one way for the pool to empty,
         which is the one the test is named for.
       */
-      const { world } = onePickup('weapon');
+      const { world } = onePickup('bomb');
       // Index 0, because `CAPACITY.ship` is 1 — the same line `wreckShip` uses to take it away.
       world.shipPool.releaseAt(0);
       const frame = new GameFrame(world);
@@ -1593,7 +1612,7 @@ describe('collecting one, in the real frame', () => {
     it('bounces across the lane while it waits, rather than sitting on one line', () => {
       // *"They need to bounce and move around the screen."* Measured as how much of the lane it
       // covered, which is the thing the player sees.
-      const { world } = onePickup('weapon');
+      const { world } = onePickup('bomb');
       const frame = new GameFrame(world);
       let lowest = Number.POSITIVE_INFINITY;
       let highest = Number.NEGATIVE_INFINITY;
@@ -1627,7 +1646,7 @@ describe('collecting one, in the real frame', () => {
       most likely to be flying through things, and a pickup that silently passed through them would
       read as the collection being broken.
     */
-    const { world, taken } = onePickup('weapon');
+    const { world, taken } = onePickup('bomb');
     // Held permanently invulnerable, which is the state under test rather than an incidental one.
     flyInto(world, 600, () => {
       world.ship.invulnFor = 60;

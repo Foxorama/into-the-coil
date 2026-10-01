@@ -19,6 +19,7 @@ import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { playableWorld } from '../tests/world.ts';
 
 const HZ = 60;
@@ -38,9 +39,9 @@ function levelFor(boss) {
 
 function fight(boss, kind, tier) {
   const built = playableWorld(levelFor(boss));
-  const carried = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, kind);
+  // In the ship the gun is keyed to, whole — 0441: `tier` is what the gun was, and is not read.
+  built.world.shipRow = SHIPS[shipCarrying(kind)];
+  built.world.weapon = weaponFor(built.world.shipRow, []);
   wearHull(built.world);
   built.world.fireIn = 1;
   const { world } = built;

@@ -21,7 +21,7 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { POOLS_OF } from '../src/content/pools.ts';
-import { MIRE_BANK_CAPS, MIRE_BED, SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { FIGHTER_HULL, MIRE_BANK_CAPS, MIRE_BED, SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -102,7 +102,7 @@ describe('0383 — the Mire’s floor is a wall', () => {
     expect(lower.length, 'no pool is off the screen, so there is no lower row below it').toBeGreaterThan(0);
     expect(upper.length, 'no pool is on the screen at all').toBeGreaterThan(0);
     const highest = Math.min(...lower.map((p) => p.top));
-    expect(highest, `the lower row is drawn from lane ${highest.toFixed(1)} — not just off the screen but sunk below it`).toBeLessThan(ACROSS_SPAN + SPRITE_EXTENT.ship / 4);
+    expect(highest, `the lower row is drawn from lane ${highest.toFixed(1)} — not just off the screen but sunk below it`).toBeLessThan(ACROSS_SPAN + FIGHTER_HULL / 4);
     for (const p of upper) {
       expect(p.surface, `an upper-row pool's surface is at lane ${p.surface.toFixed(1)}, off the screen`).toBeLessThan(ACROSS_SPAN);
       expect(p.floor, `an upper-row pool ends at lane ${p.floor.toFixed(1)}, leaving ground under it on the screen — the black layer`).toBeGreaterThanOrEqual(ACROSS_SPAN);

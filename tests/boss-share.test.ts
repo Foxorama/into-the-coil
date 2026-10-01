@@ -5,7 +5,7 @@ import { openBy, phaseFor } from '../src/app/boss.ts';
 import { BOSSES, gunWeightOn } from '../src/content/bosses.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPECIALS } from '../src/content/specials.ts';
-import { WEAPONS, type WeaponKind } from '../src/content/weapons.ts';
+import { WEAPONS, WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { reset } from '../src/sim/entity.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -133,8 +133,12 @@ describe('a gun on a boss is weighed by its own row', () => {
     }
   }
 
-  // The arc strikes the boss by hand and the pulse through the collision pairing: two paths.
-  for (const gun of ['arc', 'pulse'] as const) {
+  /*
+    The arc strikes the boss by hand and the pulse through the collision pairing: two paths. Every gun
+    since 0442, because the ray is a ring through the pairing AND a burst through the blast pool, and
+    a row that reached one and not the other would be a gun weighed by half of itself.
+  */
+  for (const gun of WEAPON_KINDS) {
     it(`${gun}: doubling the row’s bossWeight shortens the fight`, () => {
       const one = fightAt(gun, 1);
       const two = fightAt(gun, 2);

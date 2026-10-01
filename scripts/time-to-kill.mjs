@@ -32,6 +32,7 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { reset } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from '../tests/world.ts';
 
@@ -48,9 +49,9 @@ const has = (flag) => process.argv.includes(`--${flag}`);
 /** A world with one gun fitted at `tier`, firing, with the missiles silenced. */
 function armed(kind, tier) {
   const built = playableWorld(NO_LEVEL);
-  const carried = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, kind);
+  // In the ship the gun is keyed to, whole — 0441: `tier` is what the gun was, and is not read.
+  built.world.shipRow = SHIPS[shipCarrying(kind)];
+  built.world.weapon = weaponFor(built.world.shipRow, []);
   wearHull(built.world);
   built.world.fireIn = 1;
   built.world.missileIn = NEVER;
@@ -144,7 +145,7 @@ const secs = (s) => (s === null ? '—' : `${s.toFixed(2)}s`);
  * weight[tier]`, never a number that keeps going."* Read as a damage it would say the blade hits for
  * one at every rung, which is the shape of mistake this whole instrument exists to stop.
  */
-const hitOf = (kind, tier) => SHOTS[WEAPONS[kind].shot].damage * WEAPONS[kind].weight[tier];
+const hitOf = (kind) => SHOTS[WEAPONS[kind].shot].damage * WEAPONS[kind].weight;
 
 if (has('voids')) {
   /*
@@ -156,7 +157,7 @@ if (has('voids')) {
   console.log('A VOID BLAST EATS\n');
   console.log(`  appetite            ${row.health} points of the player's fire`);
   for (const kind of WEAPON_KINDS) {
-    const hit = hitOf(kind, WEAPONS[kind].weight.length - 1);
+    const hit = hitOf(kind);
     console.log(`  ${kind.padEnd(10)} ${String(hit).padEnd(4)} a hit → ${Math.ceil(row.health / hit)} hit(s) spent on one blast`);
   }
   console.log(`\n  the serpent's health  ${BOSSES.jormungandr.health}`);
@@ -164,8 +165,9 @@ if (has('voids')) {
 }
 
 if (has('enemies')) {
-  const tier = WEAPONS.pulse.weight.length - 1;
-  console.log(`EVERY ENEMY AT ITS OWN HEALTH, top tier, 8 units ahead, in seconds\n`);
+  // A gun has no tiers since 0441: every gun is its ship's, whole.
+  const tier = 0;
+  console.log(`EVERY ENEMY AT ITS OWN HEALTH, each gun in its own ship, 8 units ahead, in seconds\n`);
   console.log(`${'enemy'.padEnd(12)}${'hp'.padStart(3)}   ${WEAPON_KINDS.map((k) => k.padStart(8)).join('')}`);
   for (const kind of ENEMY_KINDS) {
     const row = ENEMIES[kind];
@@ -187,31 +189,14 @@ const DISTANCES = [2, 4, 6, 8, 11, 14, 20, 30];
 const HEALTH = 6;
 console.log(`TIME TO KILL a ${HEALTH}-health body held ahead of the ship, in seconds`);
 console.log(`measured as damage landed over ${WINDOW / HZ}s through the real frame; — means the gun never touched it\n`);
+console.log(`  ${'gun'.padEnd(10)}${DISTANCES.map((d) => `${d}u`.padStart(9)).join('')}${'NEAR FIELD'.padStart(13)}`);
 for (const kind of WEAPON_KINDS) {
-  const w = WEAPONS[kind];
-  console.log(
-    `${kind.toUpperCase()}   coil ${JSON.stringify(w.coil)}  reach ${JSON.stringify(w.reach)}  ` +
-      `hit ${w.weight.map((_unused, t) => hitOf(kind, t)).join(',')}  every ${JSON.stringify(w.fireEvery)}`,
-  );
-  console.log(`  ${'tier'.padEnd(6)}${DISTANCES.map((d) => `${d}u`.padStart(9)).join('')}${'NEAR FIELD'.padStart(13)}`);
-  for (let tier = 0; tier < w.weight.length; tier++) {
-    const cells = DISTANCES.map((d) => secs(secondsToKill(damagePerSecond(kind, tier, d), HEALTH)).padStart(9));
-    const mean = secs(secondsToKill(nearFieldDps(kind, tier), HEALTH)).padStart(13);
-    console.log(`  ${String(tier).padEnd(6)}${cells.join('')}${mean}`);
-  }
-  console.log();
-}
-
-/*
-  ⚠️ **THE COMPARISON THE REPORT IS ABOUT**, on the near-field mean rather than on any one point:
-  what an upgrade actually buys each gun, from a bare ship to a full one.
-*/
-console.log('WHAT THE LADDER BUYS  — near-field mean, tier 0 against the cap\n');
-for (const kind of WEAPON_KINDS) {
-  const bare = nearFieldDps(kind, 0);
-  const full = nearFieldDps(kind, WEAPONS[kind].weight.length - 1);
-  console.log(
-    `  ${kind.padEnd(10)} ${bare.toFixed(1).padStart(5)} → ${full.toFixed(1).padStart(6)} damage a second` +
-      `   ×${(full / bare).toFixed(1)}`,
-  );
+  /*
+    ⚠️ **ONE ROW A GUN SINCE 0441**, which took the tiers: each gun is its ship's, whole, so the matrix
+    over tier this was is one line, and *what the ladder buys* — the comparison that closed it — has no
+    ladder to read.
+  */
+  const cells = DISTANCES.map((d) => secs(secondsToKill(damagePerSecond(kind, 0, d), HEALTH)).padStart(9));
+  const mean = secs(secondsToKill(nearFieldDps(kind, 0), HEALTH)).padStart(13);
+  console.log(`  ${kind.padEnd(10)}${cells.join('')}${mean}   hit ${hitOf(kind)} every ${WEAPONS[kind].fireEvery}`);
 }

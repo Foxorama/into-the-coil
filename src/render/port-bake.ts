@@ -18,11 +18,16 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VENOMA, VIPER, type PortKind } from '../content/port.ts';
+import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, glow, paintShip, poly, rgba, seal, shade, SHIP_HULL, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import { paintRunner, type RunnerPose } from './golfer-art.ts';
+import { bakeSize, disc, drawPlayerShip, glow, mix, poly, rgba, shade, SHIP_JETS, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import type { ShipKind } from '../content/ships.ts';
+import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
+
+/** A flame's length and width against the fight's box, where they were against the fighter's hull. */
+const JET = FIGHTER_HULL / SHIP_BOX;
+import { paintRunner } from './golfer-art.ts';
 
 /**
  * Bake every piece of the port for one palette, at the resolution it will be blitted at, with the
@@ -53,15 +58,6 @@ export function withTheGame(port: Atlas, game: Atlas): Atlas {
   };
 }
 
-/** Her poses, by the runner's names for them — 0416. */
-const RIVAL_POSE: Record<'rivalRun0' | 'rivalRun1' | 'rivalRun2' | 'rivalRun3' | 'rivalLeap', RunnerPose> = {
-  rivalRun0: 'pilotRun0',
-  rivalRun1: 'pilotRun1',
-  rivalRun2: 'pilotRun2',
-  rivalRun3: 'pilotRun3',
-  rivalLeap: 'pilotLeap',
-};
-
 function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {
   const extent = PORT_EXTENT[kind];
   const size = bakeSize(extent, pixelsPerUnit);
@@ -76,17 +72,37 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
   // And a surge's is `SURGE_BOX` times, on the same terms — 0416.
   const surge: Frame = { half: size / 2, r: (size * 0.42) / SURGE_BOX };
   switch (kind) {
+    /*
+      ⚠️ **THE PILOT'S OWN SHIP SINCE 0441**, and its own nozzles. Its frame is the fight's box rather
+      than the fighter's bare hull, so every flame's length and width below is scaled by `JET` to stay
+      the size the fighter's always were.
+    */
     case 'blue':
-      paintBlue(ctx, f, palette, size);
+      paintBlue(ctx, f, palette, size, pilot.ship);
       return canvas;
+    /*
+      ⚠️ **THE HANGAR'S VIEW AND THE TILT OUT OF IT — 0444.** A ship with hangar art of its own is drawn
+      by it, leaning `LEAN` of the way from side-on to above; one without is the fight's drawing in every
+      frame, so it neither turns nor needs to.
+    */
+    case 'blueSide':
+    case 'blueTilt0':
+    case 'blueTilt1':
+    case 'blueTilt2':
+    case 'blueTilt3': {
+      const art = HANGAR_ART[pilot.ship];
+      if (art === null) paintBlue(ctx, f, palette, size, pilot.ship);
+      else art(ctx, f, palette, size, LEAN[kind]);
+      return canvas;
+    }
     case 'blueIdle':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 0.4, 0.07, 0.22);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.4 * JET, 0.07 * JET, 0.22 * JET);
       return canvas;
     case 'blueBurn':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 0.95, 0.09, 0.4);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.95 * JET, 0.09 * JET, 0.4 * JET);
       return canvas;
     case 'blueFlare':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 1.35, 0.115, 0.55);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 1.35 * JET, 0.115 * JET, 0.55 * JET);
       return canvas;
     /*
       ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
@@ -95,7 +111,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       and lets it die back into it (`SURGE_STEPS`).
     */
     case 'blueSurge':
-      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', BLUE_JETS, 2.3, 0.17, 0.95);
+      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', SHIP_JETS[pilot.ship], 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
@@ -131,11 +147,6 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'pilotRun2':
     case 'pilotRun3':
     case 'pilotLeap':
-    case 'rivalRun0':
-    case 'rivalRun1':
-    case 'rivalRun2':
-    case 'rivalRun3':
-    case 'rivalLeap':
     case 'station':
     case 'flash':
     case 'pool':
@@ -376,14 +387,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       // The chosen golfer, at the pilot's size — 0415; the figure is `src/render/golfer-art.ts`'s.
       paintRunner(ctx, pilot, kind, PILOT_STANDS / 5);
       return;
-    // Venoma, hooded, at the same size — 0416.
-    case 'rivalRun0':
-    case 'rivalRun1':
-    case 'rivalRun2':
-    case 'rivalRun3':
-    case 'rivalLeap':
-      paintRunner(ctx, VENOMA, RIVAL_POSE[kind], PILOT_STANDS / 5);
-      return;
+    // Venoma ran here at the same size — 0416 — until 0444 took her run out.
     case 'station':
       paintStation(ctx, palette, h);
       return;
@@ -420,6 +424,11 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
       ctx.fillStyle = palette.space;
       ctx.fillRect(-h, -h, extent, extent);
       return;
+    case 'blueSide':
+    case 'blueTilt0':
+    case 'blueTilt1':
+    case 'blueTilt2':
+    case 'blueTilt3':
     case 'blue':
     case 'blueIdle':
     case 'blueBurn':
@@ -669,27 +678,202 @@ function paintStation(ctx: CanvasRenderingContext2D, palette: Palette, h: number
   ── THE SHIPS ────────────────────────────────────────────────────────────────────────────────────
 */
 
-/** Where the fighter's two nacelles end, in its own frame — `SHIP_NACELLE` and `SHIP_CORE` in `bake.ts`. */
-const BLUE_JETS: readonly Pt[] = [
-  [-0.78, -0.21],
-  [-0.78, 0.21],
-];
+/*
+  `BLUE_JETS` stood here — the fighter's two nacelles — until 0441 gave every pilot a ship of their own.
+  Where each ship's nozzles are is `SHIP_JETS` in `bake.ts`, beside the drawing they come out of.
+*/
 
 /** The Viper's single nozzle, at the end of her tail. */
 const VIPER_JETS: readonly Pt[] = [[-0.87, 0.025]];
 
 /**
- * The fighter the player flies, at hangar size: the same hull and the same livery, and an outline
- * thinned to suit a ship this near — at the game's proportion it would be a finger's width.
+ * The pilot's own ship, at hangar size — 0441: the same drawing the fight blits, bare of tubes, with an
+ * outline thinned to suit a ship this near — at the game's proportion it would be a finger's width.
  */
-function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number): void {
-  ctx.fillStyle = palette.player;
+function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, ship: ShipKind): void {
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.014);
+  drawPlayerShip(ctx, f, palette, ship, 0);
+}
+
+/*
+  ── THE HANGAR'S VIEW OF A SHIP, AND THE TILT OUT OF IT — 0444 ─────────────────────────────────────
+
+  *"the little caddie looks pretty dece top down in game, but in the intro movie it really needs to be
+  sideview, lifts up and flies out of the hanger then tilts so it's topdown view."* The hangar is a side
+  section (0031), and a saucer drawn from above in it is a green coin standing on its edge.
+*/
+
+/** A ship drawn as the hangar sees it, leaning `lean` of the way from side-on (0) to from above (1). */
+type HangarArt = (ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, lean: number) => void;
+
+/**
+ * Each ship's own hangar picture — or null, for a ship the hangar sees as the fight does: the fighter,
+ * which was always drawn from above there, and the two cars, which the fight draws side-on already. A
+ * row, so a fifth ship says its own; the fallback is the shared `paintBlue` (0282).
+ */
+const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
+  fighter: null,
+  caddie: paintSaucer,
+  firebird: null,
+  estate: null,
+};
+
+/** How far over each frame of the tilt leans — side-on, then a fifth of the way at a time; `blue` is all of it. */
+const LEAN: Record<'blueSide' | 'blueTilt0' | 'blueTilt1' | 'blueTilt2' | 'blueTilt3', number> = {
+  blueSide: 0,
+  blueTilt0: 0.2,
+  blueTilt1: 0.4,
+  blueTilt2: 0.6,
+  blueTilt3: 0.8,
+};
+
+/** The saucer's lens above its rim, below it, and its dome — fractions of the box's radius. */
+const SAUCER_TOP = 0.2;
+const SAUCER_BELLY = 0.24;
+const SAUCER_DOME = 0.44;
+const SAUCER_DOME_HIGH = 0.36;
+const SAUCER_DOME_SITS = 0.17;
+
+/**
+ * The Little Green Caddie, from the side and leaning over to above — 0444. The predecessor's side art
+ * (`shipArt.ts`, `saucer`): a flat lens on its edge with a glass dome on top and lights along its rim;
+ * in the fight's colours (`drawCaddie` in `bake.ts`): the player's cyan turned toward `acid`, the cyan
+ * running lights, the slate barrel and the lavender lens of the ray dish at its nose.
+ *
+ * ⚠️ **ONE DRAWING AT EVERY LEAN, AND NOT FIVE.** The saucer is modelled as a lens — two flattened
+ * half-spheroids on one rim — and a dome on it, and each is drawn as its outline from `lean`: a
+ * spheroid seen from `φ` above its rim is an ellipse `sqrt(sin²φ + cos²φ·h²)` tall. At 0 that is the
+ * side view; at 1 it is the disc `drawCaddie` draws, so the last frame hands over to the fight's own
+ * picture without a jump. The lights and rings are the top view's, laid on the tilted rim.
+ */
+function paintSaucer(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, lean: number): void {
+  const X = (x: number): number => f.half + x * f.r;
+  const Y = (y: number): number => f.half + y * f.r;
+  const R = f.r;
+  const phi = (lean * Math.PI) / 2;
+  const c = Math.sin(phi);
+  const e = Math.cos(phi);
+  const body = mix(palette.player, palette.acid, 0.55);
+  const dark = shade(body, -0.5);
+  const outline = Math.max(1, size * 0.014);
+  // Never a zero radius, which an ellipse draws as nothing and a path joins as a spike.
+  const rim = Math.max(0.004, c);
+  const over = Math.sqrt(c * c + (e * SAUCER_TOP) ** 2);
+  const under = Math.sqrt(c * c + (e * SAUCER_BELLY) ** 2);
+  const half = (cx: number, cy: number, rx: number, ry: number, from: number, to: number): void => {
+    ctx.ellipse(X(cx), Y(cy), rx * R, Math.max(0.004, ry) * R, 0, from, to);
+  };
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = palette.space;
+  ctx.lineWidth = outline;
+  // The hover light under its belly, seen only from the side — the beam it rides is under it.
+  if (e > 0.3) glow(ctx, f, palette.player, 0, SAUCER_BELLY * e + 0.08, 0.42, 0.45 * e);
+  // The ray dish's barrel, run out through the rim at the nose.
+  poly(ctx, f, palette.trim, [
+    [0.8, -0.1],
+    [1.12, -0.1],
+    [1.12, 0.1],
+    [0.8, 0.1],
+  ]);
   ctx.beginPath();
-  trace(ctx, f, SHIP_HULL);
-  seal(ctx);
-  paintShip(ctx, f, palette, 0, 'pulse');
+  trace(ctx, f, [
+    [0.8, -0.1],
+    [1.12, -0.1],
+    [1.12, 0.1],
+    [0.8, 0.1],
+  ]);
+  ctx.stroke();
+  // The belly: under the rim, in shadow.
+  const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
+  belly.addColorStop(0, shade(body, -0.25));
+  belly.addColorStop(1, dark);
+  ctx.fillStyle = belly;
+  ctx.beginPath();
+  half(0, 0, 1, under, 0, Math.PI);
+  half(0, 0, 1, rim, Math.PI, Math.PI * 2);
+  ctx.closePath();
+  ctx.fill();
+  // The upper face, lit from above: everything above the rim, and the near half of the rim's own face.
+  const face = ctx.createLinearGradient(0, Y(-over), 0, Y(rim));
+  face.addColorStop(0, shade(body, 0.3));
+  face.addColorStop(1, body);
+  ctx.fillStyle = face;
+  ctx.beginPath();
+  half(0, 0, 1, over, Math.PI, Math.PI * 2);
+  half(0, 0, 1, rim, 0, Math.PI);
+  ctx.closePath();
+  ctx.fill();
+  // The dark band round the rim — the top view's ring, tilted; from the side, the rim's own edge.
+  ctx.strokeStyle = dark;
+  if (c > 0.05) {
+    ctx.globalAlpha = Math.min(1, c * 1.5);
+    ctx.lineWidth = 0.12 * R;
+    ctx.beginPath();
+    half(0, 0, 0.91, 0.91 * c, 0, Math.PI * 2);
+    ctx.stroke();
+    // And the inner ring, on the face, at its height above the rim.
+    ctx.strokeStyle = shade(body, -0.22);
+    ctx.lineWidth = 0.08 * R;
+    ctx.beginPath();
+    half(0, -e * SAUCER_TOP * 0.77, 0.64, 0.64 * c, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  ctx.strokeStyle = dark;
+  ctx.lineWidth = Math.max(0.05, 0.1 * e) * R;
+  ctx.beginPath();
+  half(0, 0, 0.97, rim, 0.05, Math.PI - 0.05);
+  ctx.stroke();
+  // The six running lights, at the top view's places on the rim: the far three only once the face shows.
+  const far = Math.min(1, Math.max(0, (c - 0.3) / 0.4));
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 6 + (k * Math.PI) / 3;
+    if (Math.sin(a) >= 0 || far === 0) continue;
+    disc(ctx, f, palette.player, Math.cos(a) * 0.91, Math.sin(a) * 0.91 * c, 0.085, far);
+  }
+  // The whole silhouette, outlined once.
+  ctx.strokeStyle = palette.space;
+  ctx.lineWidth = outline;
+  ctx.beginPath();
+  half(0, 0, 1, over, Math.PI, Math.PI * 2);
+  half(0, 0, 1, under, 0, Math.PI);
+  ctx.closePath();
+  ctx.stroke();
+  // The near three, over the rim, with a light round each so they read as lit from the side.
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 6 + (k * Math.PI) / 3;
+    if (Math.sin(a) < 0) continue;
+    const x = Math.cos(a) * 0.91;
+    const y = Math.sin(a) * 0.91 * c;
+    glow(ctx, f, palette.player, x, y, 0.17, 0.55 * e);
+    disc(ctx, f, palette.player, x, y, 0.085);
+  }
+  // The ray dish's lavender lens, at the nose.
+  disc(ctx, f, palette.ally, 1.0, 0, 0.11);
+  glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
+  // The dome: glass on the hub, its base on the face and its crown above it.
+  const domeAt = -e * SAUCER_DOME_SITS;
+  const domeHigh = Math.sqrt((SAUCER_DOME * c) ** 2 + (SAUCER_DOME_HIGH * e) ** 2);
+  const domePath = (): void => {
+    ctx.beginPath();
+    half(0, domeAt, SAUCER_DOME, domeHigh, Math.PI, Math.PI * 2);
+    half(0, domeAt, SAUCER_DOME, SAUCER_DOME * c, 0, Math.PI);
+    ctx.closePath();
+  };
+  ctx.fillStyle = palette.glass;
+  domePath();
+  ctx.fill();
+  ctx.save();
+  domePath();
+  ctx.clip();
+  disc(ctx, f, shade(palette.glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, 0.8);
+  disc(ctx, f, palette.impact, -0.14, domeAt - 0.36 * domeHigh, 0.11, 0.85);
+  ctx.restore();
+  ctx.strokeStyle = palette.space;
+  ctx.lineWidth = outline;
+  domePath();
+  ctx.stroke();
 }
 
 /**

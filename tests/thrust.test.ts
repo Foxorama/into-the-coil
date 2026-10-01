@@ -64,10 +64,10 @@ describe('0230 — the ship flies', () => {
     expect(w.exhaust.size, 'the ship is flying and has no exhaust').toBe(1);
     const flame = w.exhaust.at(0);
     expect(flame.along, 'the flame is not behind the ship').toBeLessThan(w.ship.along);
-    expect(w.ship.along - flame.along, 'the flame is not at the tail').toBeCloseTo(THRUST.idle.trail, 6);
-    // The hull is 7 units and its tail is at 0.78 of its radius: the flame's root has to reach it.
+    expect(w.ship.along - flame.along, 'the flame is not at the tail').toBeCloseTo(w.shipRow.tail + THRUST.idle.trail, 6);
+    // The flame's root has to reach the ship's own nozzles — its row's `tail`, since 0441.
     const root = flame.along + SPRITE_EXTENT[SPRITE_KINDS[flame.sprite]!] * 0.42 * 0.9;
-    expect(root, 'the flame’s root does not reach the tail, so it floats behind the ship').toBeGreaterThan(w.ship.along - 7 * 0.42 * 0.78 - 0.5);
+    expect(root, 'the flame’s root does not reach the tail, so it floats behind the ship').toBeGreaterThan(w.ship.along - w.shipRow.tail - 0.5);
     // A wreck has no engines.
     w.ship.health = 0;
     frame.step();

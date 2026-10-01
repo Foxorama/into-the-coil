@@ -37,6 +37,7 @@ import { DUCK_FLOOR_DB, carriedThrough, soundingAt } from './pace.ts';
 import { AA_FLOOR, contrast } from './contrast.ts';
 import { DECOR_INKS, DEFAULT_PALETTE, PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { BOSSES, BOSS_KINDS, type BossAttack, type BossPhase, type BossRow } from '../src/content/bosses.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { CUES, type CueKind } from '../src/content/cues.ts';
@@ -150,7 +151,8 @@ function measureCycle(): void {
  * *"shuriken stars need to be a lot bigger."* Nothing breaks at half the size, so it is a taste.
  */
 function measureBlade(): void {
-  const share = SPRITE_EXTENT.shuriken / SPRITE_EXTENT.shipStar;
+  // The ship that throws them — the Firebird since 0441, which wore the blade-tier hulls' place.
+  const share = SPRITE_EXTENT.shuriken / SPRITE_EXTENT[SPRITE_KINDS[SHIPS[shipCarrying('shuriken')].sprite]!];
   observe('0237-blade', share >= 0.9, share >= 0.9 ? [] : [`a blade is ${(share * 100).toFixed(0)}% of the ship`]);
 }
 

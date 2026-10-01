@@ -109,6 +109,7 @@ export const CUE_KINDS = [
   'arc',
   'zap',
   'throw',
+  'ray',
   'threat',
   'hit',
   'kill',
@@ -131,6 +132,7 @@ export const CUE_KINDS = [
   'whirlpool',
   'voidThrow',
   'rift',
+  'nova',
   'shield',
   'death',
   'pickup',
@@ -234,6 +236,8 @@ export const TWIN_KINDS = [
   'whirl-appears',
   /** A rift opens where the void went off, drawn at the radius it negates at — `openRift`, 0377. */
   'rift-opens',
+  /** A nova's ring appears round the ship and bursts outward, drawn at the radius it lands at — `openNova`, 0447. */
+  'nova-appears',
   /** A mark leaves the shell and a pip leaves the readout — 0050, 0045. */
   'shell-mark',
   /** The ship scatters `BURST.ship` fragments, and its upgrades with them — 0036, 0066. */
@@ -845,7 +849,12 @@ export const CUES: Record<CueKind, CueRow> = {
   arc: {
     twin: 'bolt-appears',
     hold: 2,
-    gain: 0.26,
+    /*
+      ⚠️ **0.24, AND IT WAS 0.26 — 0441.** The arc is the estate's whole gun now and never stops, so it
+      is held where 0145 holds the pulse: under every outcome cue — a bomb, a step, an alarm. It sat
+      over three of them while it was a pickup the run might never take. The ear on it is owed.
+    */
+    gain: 0.24,
     glue: 0.12,
     figure: [1, 0.7, 0.86, 0.7],
     layers: [
@@ -939,7 +948,8 @@ export const CUES: Record<CueKind, CueRow> = {
     // Struck by where in the beat it lands — 0104, as the pulse is: the downbeat hardest.
     figure: [1, 0.72, 0.86, 0.74],
     hold: 3,
-    gain: 0.25,
+    // 0.24 from 0.25 — 0441: the Firebird's whole gun, held under the outcomes as the pulse is (0145).
+    gain: 0.24,
     glue: 0.1,
     /*
       ⚠️ **A BLADE, WHERE IT WAS A BREATH** — asked for with the album: *"we also need to make a lot better…
@@ -959,6 +969,41 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'tri', from: inKey(33), to: inKey(32), seconds: 0.11, gain: 0.116, attack: 0.0008, curve: 3.4, pan: 0.45 },
       // The edge on the front of it: a tick of steel on steel.
       { wave: 'square', from: inKey(39), to: inKey(35), seconds: 0.025, gain: 0.082, attack: 0.0005, curve: 7, highFrom: 2500 },
+    ],
+  },
+  /**
+   * The ray gun's rings leaving the dish — `docs/decisions/0442-the-ray-gun.md`.
+   *
+   * A RAY GUN, and the sound everybody already knows for one: a pure tone falling fast through an
+   * octave, *pew*, with a second voice a fifth under it ringing on as the rings spread. Where the pulse
+   * clicks, the arc crackles and the blade rings steel, this is the one gun that is a pitch rather than
+   * a noise — which is also what tells it from the seeker's launch, the other lavender thing the player
+   * fires. The sub every player weapon has (0102) is the guns' shared bottom.
+   *
+   * ⚠️ **SHORTER THAN ITS OWN CADENCE**, on 0104's terms: eight steps, 0.133 s, and every layer is under
+   * it, so a volley is an event and not a drone. Dry, like the pulse, for the same reason.
+   *
+   * ⚠️ **IN THE KEY** — 0099. The tone falls from the fourth degree two octaves up to the fourth an
+   * octave down, and the ring a fifth under it, so the ray lands on the scale the music is in.
+   */
+  ray: {
+    twin: 'shot-appears',
+    hold: 2,
+    gain: 0.24,
+    glue: 0.12,
+    figure: [1, 0.7, 0.86, 0.7],
+    layers: [
+      // The click of the dish discharging, a hair either side.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: -0.3, panTo: -0.45 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: 0.3, panTo: 0.45 },
+      // The pew: a sine falling an octave and more, the whole of what says *ray gun*.
+      { wave: 'sine', from: inKey(31), to: inKey(17), seconds: 0.1, gain: 0.42, attack: 0.001, curve: 3.5, drive: 0.2 },
+      // The ring: a triangle a fifth under it, falling with it, spread across the field as the rings do.
+      { wave: 'tri', from: inKey(27), to: inKey(13), seconds: 0.11, gain: 0.2, attack: 0.002, curve: 3, pan: -0.5, panTo: 0.5 },
+      // A square an octave over the pew, quiet and short — the edge on the front of the beam.
+      { wave: 'square', from: inKey(38), to: inKey(31), seconds: 0.03, gain: 0.06, attack: 0.0005, curve: 6, highFrom: 2500 },
+      // The guns' shared bottom — 0102.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.08, gain: 0.4, attack: 0.002, curve: 3.5, drive: 0.25 },
     ],
   },
   threat: {
@@ -2021,6 +2066,35 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.9, seconds: 0.34, gain: 0.4, attack: 0.05, curve: 1.6, lowFrom: 380, lowTo: 130, highFrom: 30, q: 1.4, drive: 0.3 },
       { wave: 'saw', from: inKey(0), to: inKey(0), at: 1.22, seconds: 0.28, gain: 0.28, attack: 0.05, curve: 1.6, lowFrom: 340, lowTo: 120, highFrom: 30, q: 1.4, drive: 0.3 },
       { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 1.5, gain: 0.34, attack: 0.04, curve: 1.8 },
+    ],
+  },
+  /**
+   * The nova bursts — 0447. The ray's own pew grown into a whole-screen event: a bright tone sweeping
+   * UP two octaves while a ring of noise opens across the field from the middle out, over a struck
+   * kick on the root. The void sinks into the hush; the nova rises out of the ship, so the two ward
+   * specials are told apart by ear as by shape.
+   *
+   * ⚠️ **IN THE KEY** — 0099: the sweep runs root to root and the shimmer over it a fifth above, so it
+   * lands on the scale whatever the music is doing.
+   */
+  nova: {
+    // A press, like the whirlpool's: a thing fired, so it never ducks the bed (0308's rule).
+    twin: 'nova-appears',
+    air: 0.3,
+    hold: 6,
+    gain: 0.36,
+    glue: 0.1,
+    layers: [
+      // The kick it goes off on.
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.22, gain: 0.7, attack: 0.002, curve: 3, drive: 0.4 },
+      // The ring itself: a bright sine climbing two octaves as it opens.
+      { wave: 'sine', from: inKey(14), to: inKey(28), seconds: 0.5, gain: 0.4, attack: 0.004, curve: 2.2 },
+      // A fifth over it, shimmering, spread from the middle out as the ring is.
+      { wave: 'tri', from: inKey(18), to: inKey(32), seconds: 0.55, gain: 0.2, attack: 0.006, curve: 2, vibrato: 7, pan: -0.15, panTo: -0.8 },
+      { wave: 'tri', from: inKey(18), to: inKey(32), seconds: 0.55, gain: 0.2, attack: 0.006, curve: 2, vibrato: 7, pan: 0.15, panTo: 0.8 },
+      // The air the ring pushes: noise opening upward, either side.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: -0.5, panTo: -0.9 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: 0.5, panTo: 0.9 },
     ],
   },
   /**

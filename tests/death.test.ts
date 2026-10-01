@@ -8,10 +8,10 @@ import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { SHIPS, openingHealthFor } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS, openingHealthFor, type ShipKind } from '../src/content/ships.ts';
 import { PYRES, pyreFor } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { reset } from '../src/sim/entity.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -62,6 +62,14 @@ class Recorder implements Surface {
     this.blits.push({ sprite, x, y });
   }
   bolt(): void {}
+}
+
+/**
+ * The ship a world is flying, by name — so a `begin` dispatched through the reducer alone (which does
+ * not touch the world, unlike `lifecycle.begin`) names the ship the world already has — 0441.
+ */
+function shipOf(world: World): ShipKind {
+  return SHIP_KINDS.find((kind) => SHIPS[kind] === world.shipRow)!;
 }
 
 /** A world with no level in it, so nothing arrives except what a test puts there. */
@@ -166,13 +174,15 @@ describe('the ship comes apart, and the player watches it happen', () => {
     const built = quietWorld();
     const recorder = new Recorder();
     built.world.surface = recorder;
+    const hullSprites = new Set(built.world.shipRow.hulls.flatMap((hull) => [hull.base, hull.hit]));
     killShip(built.world, built.frame);
 
     let gone = 0;
     let backAfter = -1;
     for (let i = 0; i < A_WHILE; i++) {
       built.frame.draw(0);
-      const drawn = recorder.blits.some((b) => b.sprite === SPRITE.ship || b.sprite === SPRITE.shipHit);
+      // Any of the flown ship's hulls, base or hurt — 0441 gave every ship three stages.
+      const drawn = recorder.blits.some((b) => hullSprites.has(b.sprite));
       if (drawn) {
         if (backAfter < 0) backAfter = i;
       } else if (backAfter < 0) gone++;
@@ -237,10 +247,10 @@ describe('the ship comes apart, and the player watches it happen', () => {
       running would be handing the player a second copy of what they still have.
     */
     const built = shell(NO_LEVEL);
-    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
+    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER, ship: shipOf(built.world) });
+    // The tubes, the one ladder since 0441.
     for (let i = 0; i < 3; i++) {
-      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: SHIPS.proof.weapon });
-      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.proof.missile });
+      built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: built.world.shipRow.missile });
     }
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const before = built.state().run.upgrades;
@@ -268,7 +278,7 @@ describe('the ship comes apart, and the player watches it happen', () => {
       Driven through the real reducer, because the rule is not in the frame.
     */
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     for (let i = 0; i < A_WHILE && built.state().run.lives > 1; i++) {
       built.dispatch({ slice: 'run', type: 'lifeLost' });
     }
@@ -304,7 +314,7 @@ describe('a wreck is not a ship, and every step that touches one says so', () =>
       second life this is watching for would be spent on an ordinary wave instead of on the wreck.
     */
     const built = shell(NO_LEVEL);
-    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
+    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER, ship: shipOf(built.world) });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const lives = built.state().run.lives;
     killShip(built.world, built.frame);
@@ -382,11 +392,11 @@ describe('a wreck is not a ship, and every step that touches one says so', () =>
     // `docs/decisions/0067-a-new-run-opens-on-an-empty-field.md` exists because exactly this kind of
     // field was missed once already and the suite could not see it.
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     killShip(built.world, built.frame);
     expect(built.world.dyingIn, 'the fixture is not mid-beat, so this measures nothing').toBeGreaterThan(0);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     expect(built.world.dyingIn, 'a new run opened with the last one still exploding').toBe(0);
     expect(built.world.shipPool.size, 'a new run opened with no ship in it').toBe(1);
   });
@@ -429,7 +439,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
 
   it('goes off where the ship died, at the size the arsenal was carrying', () => {
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const charges = chargesIn(built.state().run.arsenal);
     expect(charges, 'a run opens with nothing to light, so this measures nothing').toBeGreaterThan(0);
@@ -452,7 +462,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
       `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md` read straight.
     */
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     const charges = built.state().run.arsenal.gun.length;
     for (let i = 0; i < charges; i++) built.dispatch({ slice: 'run', type: 'spent', side: 'gun' });
     expect(chargesIn(built.state().run.arsenal), 'the arsenal was not emptied').toBe(0);
@@ -476,7 +486,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
       making the picture honest and the reported bug come back. This is what says the trade was taken.
     */
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     built.dispatch({ slice: 'run', type: 'took', special: 'bomb' });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const carried = built.state().run.arsenal;
@@ -491,7 +501,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     // The stated purpose, in the player's words: *"a way to give the player some breathing space for
     // when they respawn."*
     const built = shell(NO_LEVEL);
-    built.lifecycle.begin(TIER);
+    built.lifecycle.begin(TIER, shipOf(built.world));
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     // Held off, so what kills these is the pyre and not the ship's own auto-fire.
     built.world.fireIn = Number.MAX_SAFE_INTEGER;
@@ -525,7 +535,7 @@ describe('the pyre: what the ship was carrying goes up with it', () => {
     // Through the reducer rather than the lifecycle, so nothing but the pyre is on the field to kill
     // the replacement — the same reason the wreck's own guard above gives.
     const built = shell(NO_LEVEL);
-    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER });
+    built.dispatch({ slice: 'run', type: 'begin', difficulty: TIER, ship: shipOf(built.world) });
     built.dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
     const lives = built.state().run.lives;
     killShip(built.world, built.frame);

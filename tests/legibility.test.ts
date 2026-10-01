@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import {
-  MAX_HULL_TIER,
+  MAX_LAUNCHERS,
   UPGRADE_KINDS,
   UPGRADE_TIERS,
   type UpgradeKind,
   weaponFor,
 } from '../src/content/pickups.ts';
-import { SHIPS, hullFor } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS, hullFor } from '../src/content/ships.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
@@ -261,17 +261,15 @@ describe('every body that can be hurt is drawn as hurt', () => {
   const pairs: { what: string; base: number; hit: number }[] = [
     ...ENEMY_KINDS.map((kind) => ({ what: kind, base: ENEMIES[kind].sprite, hit: ENEMIES[kind].spriteHit })),
     ...BOSS_KINDS.map((kind) => ({ what: `the ${kind} boss`, base: BOSSES[kind].sprite, hit: BOSSES[kind].spriteHit })),
-    ...Object.keys(SHIPS).map((kind) => ({
+    ...SHIP_KINDS.map((kind) => ({
       what: `the ${kind} ship`,
-      base: SHIPS[kind as keyof typeof SHIPS].sprite,
-      hit: SHIPS[kind as keyof typeof SHIPS].spriteHit,
+      base: SHIPS[kind].sprite,
+      hit: SHIPS[kind].spriteHit,
     })),
-    // The hull ladder, which is three more pairs nothing else here reaches — 0081.
-    ...Array.from({ length: MAX_HULL_TIER + 1 }, (_unused, tier) => ({
-      what: `hull tier ${tier}`,
-      base: hullFor('pulse', tier).base,
-      hit: hullFor('pulse', tier).hit,
-    })),
+    // Every ship's hulls, which are three more pairs each that nothing else here reaches — 0081, 0441.
+    ...SHIP_KINDS.flatMap((kind) =>
+      SHIPS[kind].hulls.map((hull, stage) => ({ what: `the ${kind} hull at stage ${stage}`, base: hull.base, hit: hull.hit })),
+    ),
   ];
 
   it('THE REPORTED ONE: no body flashes into a bitmap identical to itself', () => {
@@ -298,10 +296,12 @@ describe('every body that can be hurt is drawn as hurt', () => {
       channel carrying two meanings, which is 0024's own failure mode. It held by hand across eleven
       entries and five of them were in the wrong block, so it is held here instead.
     */
-    const ship = INK_OF[SPRITE_KINDS[SHIPS.proof.spriteHit]!];
+    // Every ship's hurt ink, at every stage — 0441: four ships, and each authors its own blink.
+    const safe = new Set(SHIP_KINDS.flatMap((kind) => SHIPS[kind].hulls.map((hull) => INK_OF[SPRITE_KINDS[hull.hit]!])));
+    for (const kind of SHIP_KINDS) safe.add(INK_OF[SPRITE_KINDS[SHIPS[kind].spriteHit]!]);
     for (const { what, hit } of pairs) {
-      if (what.endsWith('ship') || what.startsWith('hull tier')) continue;
-      expect(INK_OF[SPRITE_KINDS[hit]!], `a hurt ${what} is drawn in the ink that means *you are safe*`).not.toBe(ship);
+      if (what.endsWith(' ship') || what.includes(' hull at stage ')) continue;
+      expect(safe.has(INK_OF[SPRITE_KINDS[hit]!]), `a hurt ${what} is drawn in the ink that means *you are safe*`).toBe(false);
     }
   });
 });
@@ -313,36 +313,28 @@ describe('the ship wears what it is carrying', () => {
       player's ship."* `docs/game.md` states it as a rule — *"every upgrade changes how the ship looks
       on screen"* — and the ship had one silhouette from the first pickup to the last.
     */
-    const bases = new Set<number>();
-    for (let tier = 0; tier <= MAX_HULL_TIER; tier++) bases.add(hullFor('pulse', tier).base);
-    expect(bases.size, 'two hull tiers are drawn as the same ship').toBe(MAX_HULL_TIER + 1);
-  });
-
-  it('0229 — a hull tier is a wider sprite than the one before it', () => {
-    /*
-      ⚠️ **"WE LOST THE SHIP UPGRADE GRAPHICS IN THE GRAPHICS UPGRADE."** 0227's pods and canards
-      were authored inside the bare hull's own 7-unit box and came out four pixels tall. A tier's
-      parts are drawn in the hull's radius, so the room they have is the extent — a number here, not
-      a fraction in a drawing. Each tier's box is wider than the last; the hurtbox does not move.
-    */
-    for (let tier = 1; tier <= MAX_HULL_TIER; tier++) {
-      const wider = SPRITE_EXTENT[SPRITE_KINDS[hullFor('pulse', tier).base]!];
-      const narrower = SPRITE_EXTENT[SPRITE_KINDS[hullFor('pulse', tier - 1).base]!];
-      expect(wider, `hull tier ${tier} has no more room than tier ${tier - 1}, so its parts have nowhere to be seen`).toBeGreaterThan(
-        narrower,
-      );
+    // ⚠️ Every ship, at no tubes, one and two — 0441: the gun's tiers are gone, so the tubes are what
+    // changes the picture, and each ship authors its own three.
+    for (const kind of SHIP_KINDS) {
+      const bases = new Set(SHIPS[kind].hulls.map((hull) => hull.base));
+      expect(bases.size, `two of the ${kind}'s hull stages are drawn as the same ship`).toBe(SHIPS[kind].hulls.length);
     }
   });
 
-  it('and every tier has its own hit silhouette, so a flash never changes the shape', () => {
-    // `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`, so a tier without its own
-    // twin flashes back to the tier-0 hull — a silhouette changing at the worst possible moment.
-    for (let tier = 0; tier <= MAX_HULL_TIER; tier++) {
-      const hull = hullFor('pulse', tier);
-      expect(hull.hit, `hull tier ${tier} flashes as itself, so a hit is invisible`).not.toBe(hull.base);
-      expect(SPRITE_EXTENT[SPRITE_KINDS[hull.hit]!], `hull tier ${tier} changes size when it is hit`).toBe(
-        SPRITE_EXTENT[SPRITE_KINDS[hull.base]!],
-      );
+  // *0229 — a hull tier is a wider sprite than the one before it* stood here. Every stage of every
+  // ship is drawn in the one `SHIP_BOX` since `docs/decisions/0441-a-pilot-flies-their-own-ship.md`
+  // (*"the same overall space"*), so a stage's room no longer grows with it.
+
+  it('and every stage has its own hit silhouette, so a flash never changes the shape', () => {
+    // `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`, so a stage without its own
+    // twin flashes back to the bare hull — a silhouette changing at the worst possible moment.
+    for (const kind of SHIP_KINDS) {
+      SHIPS[kind].hulls.forEach((hull, stage) => {
+        expect(hull.hit, `the ${kind} at stage ${stage} flashes as itself, so a hit is invisible`).not.toBe(hull.base);
+        expect(SPRITE_EXTENT[SPRITE_KINDS[hull.hit]!], `the ${kind} at stage ${stage} changes size when it is hit`).toBe(
+          SPRITE_EXTENT[SPRITE_KINDS[hull.base]!],
+        );
+      });
     }
   });
 
@@ -367,73 +359,32 @@ describe('the ship wears what it is carrying', () => {
       the whole difference and it is asserted directly, because a property written loosely enough to
       survive the merge is what let the probe go green in the first place.
     */
-    expect(weaponFor(SHIPS.proof, []).tier, 'a run opens on an upgraded hull').toBe(0);
-    for (const only of UPGRADE_KINDS) {
-      const many = Array.from({ length: 12 }, () => only);
-      expect(weaponFor(SHIPS.proof, many).tier, `a ship carrying twelve ${only}s is drawn as a bare hull`).toBe(
-        MAX_HULL_TIER,
-      );
-    }
-
     /*
-      THE PROPERTY THAT SEPARATES *counted over the list* FROM *counted over barrels*, and it is an
-      existence rather than a number.
+      ── SINCE 0441 THERE IS ONE LADDER, AND THE HULL IS ITS TUBES ─────────────────────────────────
 
-      ⚠️ **Stated as *the tier is not a function of the barrel count*.** A first attempt asserted the
-      tier at four upgrades against `floor(shots / 2)`, which is one rival formula out of many — the
-      probe uses `shots - 1`, so the guard passed while the hull was keyed to barrels and 0081's probe
-      went STILL GREEN a second time. Naming the rival is guessing; naming the property is not.
-
-      The ladder spends rung four on a launcher, so a ship with three upgrades and a ship with four
-      have **the same three barrels and different tiers**. Any rule computed from `shots` alone must
-      draw them identically, and this is what notices.
+      `docs/decisions/0441-a-pilot-flies-their-own-ship.md` took the gun's ladder away, so the barrels
+      never move and *the hull is not a function of the barrel count* has no rival left to separate
+      it from: the property that stood here, and the scan over both ladders it was written for, went
+      with the gun's tiers. What survives is the half a run can still break — the stage the ship is
+      drawn at climbs with the tubes it carries, never goes backwards, and stops at the last hull.
     */
-    const byBarrelCount = new Map<number, Set<number>>();
-    for (let guns = 0; guns <= 6; guns++) {
-      for (let tubes = 0; tubes <= 6; tubes++) {
-        /*
-          ⚠️ **BOTH LADDERS, and scanning one of them is what let this pass while broken.** 0083 split
-          the missiles back out, and a loadout of nothing but weapons moves the barrels on almost every
-          tier — so over that axis alone the barrel count and the hull climb together and a hull keyed
-          to barrels is indistinguishable. The whole point is the ship that spent its upgrades on
-          MISSILES: same one barrel as a bare ship, and it has upgraded four times.
-        */
+    for (const kind of SHIP_KINDS) {
+      const row = SHIPS[kind];
+      const stageOf = (carried: readonly UpgradeKind[]): number => row.hulls.indexOf(hullFor(row, weaponFor(row, carried).launchers));
+      expect(stageOf([]), `the ${kind} opens on a hull with tubes it has not taken`).toBe(0);
+      let last = -1;
+      for (let n = 0; n <= UPGRADE_TIERS * UPGRADE_KINDS.length + 6; n++) {
         const carried: UpgradeKind[] = [];
-        for (let i = 0; i < guns; i++) carried.push('weapon');
-        for (let i = 0; i < tubes; i++) carried.push('missile');
-        const resolved = weaponFor(SHIPS.proof, carried);
-        const seen = byBarrelCount.get(resolved.shots) ?? new Set<number>();
-        seen.add(resolved.tier);
-        byBarrelCount.set(resolved.shots, seen);
+        for (let i = 0; i < n; i++) carried.push(UPGRADE_KINDS[i % UPGRADE_KINDS.length]!);
+        const launchers = weaponFor(row, carried).launchers;
+        // ⚠️ The resolved count against the hulls there are, BEFORE `hullFor`'s clamp hides it.
+        expect(launchers, `the ${kind} resolved more tubes than it has hulls for`).toBeLessThanOrEqual(row.hulls.length - 1);
+        const stage = stageOf(carried);
+        expect(stage, `the ${kind}'s hull went backwards as it upgraded`).toBeGreaterThanOrEqual(last);
+        last = stage;
       }
+      expect(last, `a fully upgraded ${kind} never reaches its last hull`).toBe(MAX_LAUNCHERS);
     }
-    const splits = [...byBarrelCount.values()].filter((tiers) => tiers.size > 1);
-    expect(
-      splits.length,
-      'every barrel count maps to exactly one hull, so the hull is a function of the barrels rather ' +
-        'than of the upgrade list — a ship that spent a rung on a launcher is drawn as one that spent nothing',
-    ).toBeGreaterThan(0);
-    /*
-      Monotone, and it stops. An unbounded list may not run off the end of the hulls.
-
-      ⚠️ **WALKED OVER BOTH LADDERS, AND ONE LADDER COULD NOT REACH THE CLAMP.** This used to add
-      `UPGRADE_KINDS[0]` twenty times, and since 0083 a single ladder caps at `UPGRADE_TIERS` — so the
-      most tiers one kind can contribute is four, the hull reads two, and the clamp is never tested.
-      `npm run prove` removed the clamp entirely and this stayed **STILL GREEN**.
-
-      Both ladders full is eight tiers, which is four hulls' worth against the three that exist. That
-      is the only loadout in the game that can reach the ceiling, and it is one a real run can build.
-    */
-    let last = -1;
-    for (let n = 0; n <= UPGRADE_TIERS * UPGRADE_KINDS.length + 6; n++) {
-      const carried: UpgradeKind[] = [];
-      for (let i = 0; i < n; i++) carried.push(UPGRADE_KINDS[i % UPGRADE_KINDS.length]!);
-      const tier = weaponFor(SHIPS.proof, carried).tier;
-      expect(tier, 'the hull went backwards as the ship upgraded').toBeGreaterThanOrEqual(last);
-      expect(tier, 'the hull ran off the end of the hulls there are').toBeLessThanOrEqual(MAX_HULL_TIER);
-      last = tier;
-    }
-    expect(last, 'a fully upgraded ship never reaches the last hull, so the clamp is untested').toBe(MAX_HULL_TIER);
   });
 
   it('is the hull the painter actually blits, and a death puts it back', () => {
@@ -442,30 +393,40 @@ describe('the ship wears what it is carrying', () => {
       a resolved number nobody drew: `weaponFor` could have carried a tier for months with the ship
       still blitting `SPRITE.ship` every frame, and every assertion above would have been green.
     */
-    const built = playableWorld(NO_LEVEL);
-    const recorder = new Recorder();
-    built.world.surface = recorder;
-    const frame = new GameFrame(built.world);
-    frame.draw(0);
-    const bare = recorder.blits.find((b) => b.sprite === SPRITE.ship);
-    expect(bare, 'the bare ship was not drawn, so this measures nothing').toBeDefined();
+    // Every ship, each flown as a run flies it: its row on the world and its bare hull worn — 0441.
+    for (const kind of SHIP_KINDS) {
+      const row = SHIPS[kind];
+      const built = playableWorld(NO_LEVEL);
+      const recorder = new Recorder();
+      built.world.surface = recorder;
+      built.world.shipRow = row;
+      built.world.weapon = weaponFor(row, []);
+      wearHull(built.world);
+      const frame = new GameFrame(built.world);
+      frame.draw(0);
+      const bare = row.hulls[0].base;
+      expect(recorder.blits.some((b) => b.sprite === bare), `the bare ${kind} was not drawn, so this measures nothing`).toBe(true);
 
-    built.world.weapon = weaponFor(built.world.shipRow, [UPGRADE_KINDS[0]!, UPGRADE_KINDS[0]!]);
-    wearHull(built.world);
-    frame.draw(0);
-    expect(
-      recorder.blits.some((b) => b.sprite === SPRITE.ship),
-      'the ship is still drawn as a bare hull after two upgrades',
-    ).toBe(false);
-    expect(recorder.blits.some((b) => b.sprite === hullFor('pulse', 1).base), 'the upgraded hull was never drawn').toBe(true);
+      built.world.weapon = weaponFor(row, [UPGRADE_KINDS[0]!, UPGRADE_KINDS[0]!]);
+      wearHull(built.world);
+      frame.draw(0);
+      expect(
+        recorder.blits.some((b) => b.sprite === bare),
+        `the ${kind} is still drawn as a bare hull after two upgrades`,
+      ).toBe(false);
+      expect(
+        recorder.blits.some((b) => b.sprite === hullFor(row, built.world.weapon.launchers).base),
+        `the upgraded ${kind} hull was never drawn`,
+      ).toBe(true);
 
-    // A death empties the upgrade list (0039), so the hull goes back with the weapon.
-    built.world.weapon = weaponFor(built.world.shipRow, []);
-    wearHull(built.world);
-    frame.draw(0);
-    expect(
-      recorder.blits.some((b) => b.sprite === SPRITE.ship),
-      'a death took the upgrades and left the ship wearing them',
-    ).toBe(true);
+      // An empty upgrade list puts the hull back with the weapon.
+      built.world.weapon = weaponFor(row, []);
+      wearHull(built.world);
+      frame.draw(0);
+      expect(
+        recorder.blits.some((b) => b.sprite === bare),
+        `the ${kind} lost its upgrades and kept wearing them`,
+      ).toBe(true);
+    }
   });
 });

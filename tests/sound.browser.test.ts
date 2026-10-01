@@ -422,7 +422,29 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
 
       ⚠️ **AND WHOLE SETS ONLY**, so a stray source that is neither a cue nor a layer is still caught.
     */
-    expect(after.into, 'sound is off and the game played a cue anyway').toEqual([]);
+    /*
+      ⚠️ **AND THE RUN HAS TO HAVE FIRED, OR "NO CUE" IS NOTHING HAPPENING YET — found by the proof,
+      0447.** With the speaker forced on, the break went red on the whole file and stayed green under
+      the filtered run on a loaded runner: `settled` waits for the BAKE, and a bake can finish before
+      the game has stepped far enough for the gun to fire once, so no cue was asked for and none was
+      heard. Two hundred painted frames is past every gun's first volley at any cadence a ship has —
+      counted in frames, not milliseconds, on 0044's terms — so the silence below is silence over a
+      run that was making noise, and the tally is read again after it.
+    */
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          let painted = 0;
+          const tick = (): void => {
+            painted++;
+            if (painted >= 200) done();
+            else requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+    const heard = await tally(page);
+    expect(heard.into, 'sound is off and the game played a cue anyway').toEqual([]);
     expect(
       after.voices % MUSIC_LAYERS.length,
       `sound is off and ${after.voices} sources exist, which is not a whole number of music sets — something else sounded`,
