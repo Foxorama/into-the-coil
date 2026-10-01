@@ -142,11 +142,20 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
       row given its own share of the turn, so none is shown twice and none never; and the turn is the
       field's (`PICKUP_CYCLE_STEPS`), so the key teaches the pace the player will meet.
     */
+    /*
+      ⚠️ **HOW MUCH FACE IS UP, NOT HOW MANY FACES ARE — and the count was an intermittent guard.** It
+      counted faces whose visibility was `visible`, and for the few percent of every turn the outgoing
+      face fades out under the incoming one both are visible: CI caught it mid-crossfade, under a probe
+      that had nothing to do with the key, and reported *2 faces at once*. The property is that the row
+      shows one face's worth: the opacities sum to one at every moment — the two halves of a crossfade
+      are complementary, since both run linear over the same window — and a row whose turns never
+      started, or whose faces all run on one clock, sums to its face count or to nothing. 0044.
+    */
     const page = await open();
     const rows = await page.evaluate((prefix: string) =>
       [...document.querySelectorAll('.' + prefix + 'key-row')].map((row) => {
         const faces = [...row.querySelectorAll<HTMLElement>('.' + prefix + 'key-icon')];
-        const shown = faces.filter((f) => getComputedStyle(f).visibility === 'visible').length;
+        const shown = faces.reduce((sum, f) => sum + parseFloat(getComputedStyle(f).opacity), 0);
         return {
           faces: faces.length,
           shown,
@@ -159,7 +168,7 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
     rows.forEach((row, i) => {
       const kind = PICKUP_KINDS[i]!;
       expect(row.faces, `${kind}'s row does not carry every face`).toBe(PICKUPS[kind].faces.length);
-      expect(row.shown, `${kind}'s row shows ${row.shown} faces at once`).toBe(1);
+      expect(row.shown, `${kind}'s row shows ${row.shown.toFixed(2)} faces' worth at once`).toBeCloseTo(1, 1);
       if (row.faces < 2) return;
       expect(new Set(row.delays).size, `two of ${kind}'s faces share a turn, so one is never shown`).toBe(row.faces);
       expect(parseFloat(row.duration), `${kind} turns at a pace the field does not`).toBeCloseTo(
@@ -311,8 +320,14 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
       ⚠️ **ONE PAGE, RESIZED, rather than a page per size.** Four page loads each waiting on a run to
       start took twenty seconds alone and timed out under `npm run check`; the layout is CSS, and a
       resize reflows it exactly as a different phone would.
+
+      ⚠️ **A PAGE WITHOUT TOUCH, SINCE 0437, AND THAT IS WHAT KEEPS THIS THE WIDEST READOUT.** A touch
+      screen's readout now drops its two stack counts, which its discs already say, so it is narrower
+      than a mouse's — and measured on it, a bar put back at 31% cleared the readout and this guard went
+      green over the exact break it is named for (0360's probe said so). The readout with every group in
+      it, at a phone's width, is the one any bar has to clear; a narrower one clears by more.
     */
-    const page = await open(true);
+    const page = await open(false);
     await page.click('.' + prefixFor('title') + 'action');
     await page.waitForSelector('.itc-playing-hud-shown');
     for (const [width, height] of [

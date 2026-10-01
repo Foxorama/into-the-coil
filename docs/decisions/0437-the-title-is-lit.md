@@ -46,6 +46,21 @@ present in it, unclipped on a desktop one, and exactly one golfer marked — the
 in the picture. The probes in `scripts/probes/0437-the-title-is-lit.mjs` throw the touch switch each
 wrong way and point the mark at nobody.
 
+## What it cost two other guards
+
+**Dropping the touch counts blinded 0360's.** *The bar never lies over the readout* measured the
+readout on a touch page, as *the widest the game can show* — which it stopped being here, so a bar put
+back at 31% cleared it and 0360's probe went green. It measures a page without touch now, which is the
+widest. Found by CI, where it showed up as the next item.
+
+**And 0432's key guard was intermittent, which is how CI found the first.** It counted faces whose
+visibility was `visible`, and for a few percent of each turn the outgoing face fades under the
+incoming one with both visible: CI caught it mid-crossfade while 0360's probe was running, and
+reported that probe as red on the wrong test. It sums the faces' opacities now, which is exactly one
+at every moment of a turn — sampled 343 times over two full turns before it was trusted — and a row
+whose turns never start or all share one clock sums to its face count or to nothing.
+([0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)).
+
 ## Rollback
 
 Nothing irreversible.
