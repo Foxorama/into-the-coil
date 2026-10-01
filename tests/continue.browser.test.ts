@@ -7,6 +7,7 @@ import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCREENS } from '../src/state/screens.ts';
+import { SCORES_KEY, parseScores } from '../src/save/scores.ts';
 
 /**
  * THE BUTTON ON THE RUN-OVER SCREEN, PRESSED.
@@ -84,8 +85,23 @@ describe.runIf(chromePath)('the run-over screen offers to continue, and the offe
       ⚠️ **Pressed promptly, because the screen expires.** Seven seconds and the run is gone
       (`src/state/screens.ts`) — which is the cost 0068 gives the offer, and here it is a deadline.
     */
+    // What the run over said the credit scored, read before the press — 0438.
+    const shownScore = Number(await page.textContent('.' + prefixFor('gameOver') + 'sheet-said'));
+    const tableBefore = await page.evaluate((key) => localStorage.getItem(key), SCORES_KEY);
+    expect(tableBefore, 'the table was written before the credit ended').toBeNull();
+
     await page.click('.' + prefixFor('gameOver') + 'action');
     await page.waitForTimeout(300);
+
+    /*
+      0438: *"the score … needs to reset on a continue with highscores tracking score and level
+      reached."* The credit that ran out is on the table at exactly the score the screen said, on the
+      level it ended on, and it is there from the press — not only once the next credit ends.
+    */
+    const kept = parseScores(await page.evaluate((key) => localStorage.getItem(key), SCORES_KEY));
+    expect(kept.length, 'the continue did not put the credit that ran out on the table').toBe(1);
+    expect(kept[0]!.score, 'the table kept a different score from the one the run over showed').toBe(shownScore);
+    expect(kept[0]!.levels).toBe(0);
 
     const state = await page.evaluate(
       (selectors: string[]) => selectors.map((s) => document.querySelector(s) !== null),

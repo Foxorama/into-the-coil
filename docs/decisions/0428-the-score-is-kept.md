@@ -6,6 +6,10 @@ coaching and restating, and a score is neither: it is the one thing the frozen f
 screen cannot say. **Its companion is [0429](0429-the-table-is-kept.md)**, the high-score table that
 the finished runs go on.
 
+⚠️ **Its continue row is reversed by [0438](0438-the-score-is-the-credits.md)**, on the player's
+word a day after confirming it: a continue starts the score again, and the credit that ran out goes on
+the table with the level it reached. The rest stands.
+
 ## The ask
 
 > *"starting a points system and total … points counter top right that should look flashy.

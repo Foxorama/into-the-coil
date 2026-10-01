@@ -48,6 +48,12 @@ list below is closing that gap without inventing a second style.
   neither. On a phone the discs and the readout's two stack counts said the same numbers twice;
   **since [0437](../docs/decisions/0437-the-title-is-lit.md) a touch screen's readout drops them** from
   the glass and keeps them for a reader.
+- **The rest of the screens in the title's voice, in the banner's order** —
+  [0440](../docs/decisions/0440-every-screen-speaks-with-the-titles-voice.md). BUILT.
+- **The top of the screen on one line** — [0439](../docs/decisions/0439-the-top-is-one-strip.md).
+  BUILT. This reached the boss bar, which the list below had not.
+- **The score reset on a continue** — [0438](../docs/decisions/0438-the-score-is-the-credits.md).
+  BUILT.
 
 ## Not looked at
 

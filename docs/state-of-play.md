@@ -1168,7 +1168,10 @@ the music room's flythrough.
 for as one overnight job. **Owed:** a play of a whole run for the numbers (rows' `points`, the
 bonuses, whether an S is reachable on each level: `RANKS` in `src/content/score.ts`). The two
 readings 0428 chose are confirmed by the player. `rig/score.html?seed&go=cleared` stands the game on
-each screen without flying to it.
+each screen without flying to it. **The continue half was then reversed by the player**:
+[0438](decisions/0438-the-score-is-the-credits.md). [0439](decisions/0439-the-top-is-one-strip.md)
+(the top on one line) and [0440](decisions/0440-every-screen-speaks-with-the-titles-voice.md) (every
+screen in the banner's violet into cyan) landed with it. All three are owed a play.
 
 ### ⚠️ THE INTERFACE ANSWERED FOUR ASKS IN ONE PR, AND ALL FOUR ARE OWED A PLAY — 2026-09-23
 

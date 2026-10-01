@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { GameFrame, resetLevelScore } from '../src/app/frame.ts';
+import { GameFrame, resetCreditScore, resetLevelScore } from '../src/app/frame.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { BONUSES, MULTIPLIER_CAP, STREAK_STEP, bonusFor, multiplierFor, rankFor, tallyOf } from '../src/content/score.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { bankedBonus, bankedScore } from '../src/state/slices/run.ts';
-import { boardLines, entryOf, levelSheet, runSheet, tallyAtClear } from '../src/app/score.ts';
+import { boardLines, entryOf, levelSheet, overSheet, runSheet, tallyAtClear } from '../src/app/score.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -149,8 +149,8 @@ describe('0428 — a level’s rank and its bonuses', () => {
   });
 });
 
-describe('0428 — the run banks each level, and a death and a continue keep it', () => {
-  it('banks in order, keeps the score through a death and a continue, and a new run starts from nothing', () => {
+describe('0428 — the run banks each level, and a death keeps it', () => {
+  it('banks in order, keeps the score through a death, and a new run starts from nothing', () => {
     let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior' });
     const one = tallyOf(0, 1000, 10, 10, 0, { shield: 1, bomb: 0, missile: 0 });
     const two = tallyOf(1, 2000, 10, 20, 2, { shield: 0, bomb: 1, missile: 0 });
@@ -162,9 +162,6 @@ describe('0428 — the run banks each level, and a death and a continue keep it'
     expect(bankedBonus(state.run)).toBe(one.bonus + two.bonus);
     state = reduce(state, { slice: 'run', type: 'lifeLost' });
     expect(bankedScore(state.run), 'a death cost the score').toBe(one.total + two.total);
-    state = reduce(state, { slice: 'run', type: 'continued' });
-    expect(bankedScore(state.run), 'a continue cost the score').toBe(one.total + two.total);
-    expect(state.run.continues).toBe(1);
     state = reduce(state, { slice: 'run', type: 'begin', difficulty: 'burn' });
     expect(state.run.tallies).toEqual([]);
     expect(state.run.continues).toBe(0);
@@ -210,5 +207,52 @@ describe('0428 — the run banks each level, and a death and a continue keep it'
       { place: '1.', score: '1450', pilot: 'Backspin', reached: 'L2' },
       { place: '2.', score: '1450', pilot: 'Backspin', reached: 'Clear' },
     ]);
+  });
+});
+
+describe('0438 — a continue starts the score again, and the table keeps the credit that ran out', () => {
+  /** A run that banked two levels and ran out of lives on the third. */
+  function ranOutOnThree(): State {
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior' });
+    for (let i = 0; i < 2; i++) {
+      state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(i, 1000, 10, 10, 0, { shield: 1, bomb: 0, missile: 0 }) });
+      state = reduce(state, { slice: 'run', type: 'levelCleared' });
+    }
+    expect(bankedScore(state.run), 'the fixture banked nothing, so a reset would prove nothing').toBeGreaterThan(0);
+    return state;
+  }
+
+  it('THE ASK: the score resets on a continue — and the level, the lives and the count of continues do not', () => {
+    const before = ranOutOnThree();
+    const after = reduce(before, { slice: 'run', type: 'continued' });
+    expect(bankedScore(after.run), 'a continue kept the last credit’s score').toBe(0);
+    expect(bankedBonus(after.run)).toBe(0);
+    expect(after.run.level, 'a continue moved the level').toBe(before.run.level);
+    expect(after.run.continues).toBe(1);
+  });
+
+  it('THE ASK: the table tracks the score and the level reached, for a credit that cleared nothing of its own', () => {
+    const after = reduce(ranOutOnThree(), { slice: 'run', type: 'continued' });
+    const flying = { points: 700, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
+    const entry = entryOf(after.run, flying, 'larry', false, 9);
+    expect(entry.score, 'the new credit carried the last one’s score').toBe(700);
+    expect(entry.levels, 'the credit bought on level three was recorded as reaching level one').toBe(2);
+    expect(boardLines([entry])[0]!.reached).toBe('L3');
+  });
+
+  it('the run over says the score, how far the credit got, and where it lands on the table', () => {
+    const state = ranOutOnThree();
+    const flying = { points: 500, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
+    const said = Object.fromEntries(overSheet(state.run, flying, 4).map((l) => [l.label, l.value]));
+    expect(said.Score).toBe(bankedScore(state.run) + 500);
+    expect(said.Reached).toBe('Level 3');
+    expect(said['High score']).toBe('#5');
+    expect(Object.fromEntries(overSheet(state.run, flying, null).map((l) => [l.label, l.value]))['High score']).toBe('—');
+  });
+
+  it('the frame’s count starts again with the credit, streak and all', () => {
+    const score = { points: 4200, streak: 33, best: 40, kills: 30, spawned: 40, hits: 2 };
+    resetCreditScore(score);
+    expect(score).toEqual({ points: 0, streak: 0, best: 0, kills: 0, spawned: 0, hits: 0 });
   });
 });

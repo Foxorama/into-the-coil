@@ -9869,6 +9869,16 @@ export function resetLevelScore(score: LevelScore): void {
   score.hits = 0;
 }
 
+/**
+ * A new credit's account — 0438. A continue starts the score again, so the level being flown starts
+ * counting from the moment the credit was bought, and the streak with it: the last credit's streak
+ * ended in the death that ran it out.
+ */
+export function resetCreditScore(score: LevelScore): void {
+  score.streak = 0;
+  resetLevelScore(score);
+}
+
 export function resetScene(w: World): void {
   w.cameraAlong = 0;
   w.prevCameraAlong = 0;

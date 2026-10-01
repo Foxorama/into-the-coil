@@ -242,8 +242,8 @@ ${each('-panel')} {
 
   The name was set as a heading in the panel's own type, the same cyan as every button under it, so
   the one thing on the screen that is the game's name read as a label. Heavier, spaced, and run from
-  the ship's ink into the ally violet — the two inks of the player's side — with a halo in the first,
-  so it is lit the way the playfield is lit. Both inks come off the palette, so a high-contrast palette
+  the ally violet into the ship's ink — the two inks of the player's side, in the studio banner's
+  order since 0440 — with a halo in the cyan, so it is lit the way the playfield is lit. Both inks come off the palette, so a high-contrast palette
   still sets it in its own colours. The size is 0049's and untouched.
 */
 /*
@@ -300,15 +300,22 @@ ${starSky()}
   The buttons only. The settings stay hollow, because hollow against filled is how the chosen one is
   told (0024, and the style suite holds it), and the ship's lane is below them.
 */
-.itc-title-panel .itc-title-action { background: color-mix(in srgb, var(--itc-void) 82%, transparent); }
+.itc-title-panel .itc-title-action { background-color: color-mix(in srgb, var(--itc-void) 82%, transparent); }
 @media (prefers-reduced-motion: reduce) {
   .itc-title-sky { animation: none; }
   .itc-title-flyer { display: none; }
 }
-.itc-title-heading, .itc-splash-heading {
+/*
+  ⚠️ **VIOLET INTO CYAN, AND IT RAN THE OTHER WAY — 0440.** The studio's banner runs its name from the
+  ally violet on the left into the ship's cyan on the right; 0436 had it backwards. Every screen's
+  heading wears it since 0440, not only the name's: the golfers', the break's, the run over's, the
+  victory's and the music room's were the panel's plain cyan, a second voice beside the title's.
+*/
+.itc-title-heading, .itc-splash-heading,
+.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-weight: 800;
   letter-spacing: 0.06em;
-  background: linear-gradient(100deg, var(--itc-ink) 15%, var(--itc-ally, var(--itc-ink)) 85%);
+  background: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)) 15%, var(--itc-ink) 85%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -1106,12 +1113,6 @@ ${faceTurns()}
   pointer-events: none;
 }
 .itc-playing-score-shown { display: flex; }
-.itc-playing-score-label {
-  font-size: 0.55em;
-  letter-spacing: 0.35em;
-  opacity: 0.85;
-  text-shadow: 0 0 0.4em var(--itc-void, #000);
-}
 .itc-playing-score-pop { transform-origin: right center; }
 .itc-playing-score-gain-a { animation: itc-playing-score-gain-a 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
 .itc-playing-score-gain-b { animation: itc-playing-score-gain-b 0.32s cubic-bezier(0.2, 0.9, 0.3, 1.4); }
@@ -1816,6 +1817,175 @@ ${faceTurns()}
   */
   .itc-music-now-legend { display: none; }
   .itc-music-now { width: 100%; }
+}
+/*
+  ── ONE VOICE — 0440 ─────────────────────────────────────────────────────────────────────────────
+
+  The title was lit (0436, 0437) and the screens around it were not: every control was a 2px outline
+  of the cyan on nothing, the golfers' cards and the break's *Onward* and the run over's *Continue* the
+  same scaffold the review called out. The studio's banner is the reference — a name run from violet
+  into cyan with a glow, a rule with a diamond at each end — and every control now speaks it.
+
+  **A plate**: a glass of the void, a rim run violet into cyan, and a halo of the cyan that rises
+  under the pointer. **A chosen option**: filled with the same run, so it is still told by fill and not
+  by hue (0024). **A heading**: the wordmark, and under it the banner's diamond-tipped rule, drawn out
+  of flow so no screen gains a pixel of height (0049's guard is the arbiter of that, not this note).
+
+  ⚠️ **LAST IN THE SHEET, AND IT SETS NO SIZE.** It wins on source order over the rules it restyles and
+  touches only paint — rims, fills, shadows — so the phone's own sizes under 0370's query stand, and
+  the probes that anchor on the rules above still find them.
+
+  ⚠️ **The rim is a second background clipped to the border box**, because a border cannot hold a
+  gradient and keep its radius. That is also why the glass is a background IMAGE: background-color
+  stays whatever the rule above set, which is what 0070's guard reads to tell filled from hollow.
+*/
+${each('-action')}, .itc-intro-skip {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 80%, transparent);
+  border-color: transparent;
+  background-image:
+    linear-gradient(var(--itc-glass), var(--itc-glass)),
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow: 0 0 0.8em color-mix(in srgb, var(--itc-ink) 16%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 10%, transparent);
+  transition: box-shadow 0.15s ease-out, filter 0.15s ease-out;
+}
+${each('-action:hover')}, .itc-intro-skip:hover {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 70%, var(--itc-ally, var(--itc-ink)));
+  box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 38%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 18%, transparent);
+}
+/* The tiers are the screen's one choice: their rim glows brighter than the quieter pair beside them. */
+.itc-title-action { box-shadow: 0 0 1em color-mix(in srgb, var(--itc-ink) 24%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 12%, transparent); }
+/* A chosen setting and the place that is playing are filled with the run, the void's ink on it. */
+.itc-title-option-on, .itc-music-action-playing {
+  background-image: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  border-color: transparent;
+  background-clip: border-box;
+}
+.itc-title-option:not(.itc-title-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
+/* The golfer flying now: the tick is filled with the run as well. */
+.itc-select-action-current::after { background: linear-gradient(135deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)); }
+/* A golfer's card lights under the pointer, as it lifts. */
+.itc-select-action:hover { box-shadow: 0 0.4em 1.4em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, transparent), 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent); }
+.itc-select-portrait { filter: drop-shadow(0 0.15em 0.5em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
+/*
+  The banner's rule, under every heading but the name's — which has the badge, and on the splash the
+  loading light, as its line. Out of flow, hung from the heading, so the panel is the height it was.
+*/
+.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading { position: relative; }
+.itc-select-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -0.32em;
+  width: min(14em, 120%);
+  height: 0.32em;
+  transform: translateX(-50%);
+  pointer-events: none;
+  /*
+    The run of the two inks, cut by a mask into a line with a diamond at each end — so the whole rule is
+    one pseudo-element and the palette still colours it. A gradient cannot draw a diamond (a conic one
+    draws a bow tie, which is what the first version shipped to the screenshot); the mask's diamond is
+    an SVG, and its colour is irrelevant because a mask reads only coverage. The namespace's dots are
+    escaped because the prefix guard reads a dotted token here as a class.
+  */
+  --itc-diamond: url("data:image/svg+xml,%3Csvg xmlns='http://www%2Ew3%2Eorg/2000/svg' viewBox='0 0 2 2'%3E%3Cpath d='M1 0 2 1 1 2 0 1z'/%3E%3C/svg%3E");
+  background: linear-gradient(90deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  -webkit-mask:
+    var(--itc-diamond) left center / 0.32em 0.32em no-repeat,
+    var(--itc-diamond) right center / 0.32em 0.32em no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 0.5em) 1.5px no-repeat;
+  mask:
+    var(--itc-diamond) left center / 0.32em 0.32em no-repeat,
+    var(--itc-diamond) right center / 0.32em 0.32em no-repeat,
+    linear-gradient(#000, #000) center / calc(100% - 0.5em) 1.5px no-repeat;
+  opacity: 0.85;
+}
+/* The splash's loading line runs the same two inks. */
+.itc-splash-panel::after {
+  background:
+    linear-gradient(90deg, transparent, var(--itc-ink), transparent) no-repeat,
+    linear-gradient(90deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, transparent), color-mix(in srgb, var(--itc-ink) 30%, transparent));
+  background-size: 35% 100%, auto;
+}
+/* The title's void carries the banner's two washes: violet in from the left, the deep blue from the right. */
+.itc-title-sky {
+  background:
+    radial-gradient(60% 90% at 0% 40%, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 16%, transparent), transparent 70%),
+    radial-gradient(55% 90% at 100% 60%, color-mix(in srgb, var(--itc-ink) 10%, transparent), transparent 70%);
+}
+/* A touch screen's trigger discs are controls under the thumb, so they wear the rim too. */
+.itc-playing-trigger-button {
+  border-color: transparent;
+  background:
+    linear-gradient(color-mix(in srgb, var(--itc-void) 55%, transparent), color-mix(in srgb, var(--itc-void) 55%, transparent)) padding-box,
+    linear-gradient(135deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 25%, transparent);
+}
+/*
+  ── ONE STRIP ACROSS THE TOP — 0439 ──────────────────────────────────────────────────────────────
+
+  Asked for: *"the top in game elements, ship info etc boss bars and score aren't cohesive design and
+  don't all sit on the same line across the top of the screen."* They did not: the readout was a row
+  of bare icons, the bar a 0.6em pill hung 0.9em down, the score three lines tall with its caption over
+  it. Now each is a plate of ONE height on ONE centre line — the strip's height, set once below —
+  with one rim, the studio's, and each keeps its own ink inside: the cyan readout, the enemy's bar,
+  the gold score. The grid, its columns and its guards are 0360's and 0428's and are untouched.
+*/
+.itc-playing-top {
+  --itc-strip: 2.6em;
+  padding: 0.5em 0.6em 0;
+  align-items: center;
+}
+.itc-playing-hud, .itc-playing-boss, .itc-playing-score {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 66%, transparent);
+  box-sizing: border-box;
+  height: var(--itc-strip);
+  margin: 0;
+  border: 1.5px solid transparent;
+  border-radius: 0.75em;
+  background:
+    linear-gradient(var(--itc-glass), var(--itc-glass)) padding-box,
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 14%, transparent);
+}
+.itc-playing-hud { padding: 0 0.9em; gap: 1.1em; }
+.itc-playing-boss { filter: none; padding: 0 0.9em; }
+.itc-playing-boss-shown { display: flex; align-items: center; }
+.itc-playing-boss-track {
+  position: relative;
+  flex: 1;
+  height: 0.55em;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 55%, transparent);
+}
+.itc-playing-boss-fill {
+  inset: 0;
+  border-radius: 999px;
+  opacity: 1;
+  background: linear-gradient(180deg, color-mix(in srgb, currentColor 55%, white), currentColor 55%);
+  box-shadow: 0 0 0.5em color-mix(in srgb, currentColor 60%, transparent);
+  transition: transform 0.2s ease-out;
+}
+/* A notch is cut through the track, in the void, so it reads over the fill and over the empty part alike. */
+.itc-playing-boss-notch {
+  top: -0.2em;
+  height: calc(100% + 0.4em);
+  width: 2px;
+  background: var(--itc-void, #000);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 70%, transparent);
+  opacity: 1;
+}
+.itc-playing-score { flex-direction: row; align-items: center; gap: 0.6em; padding: 0 0.8em; }
+.itc-playing-score-value { font-size: 1.45em; }
+/* The multiplier over the bar that fills toward its next step, as one small column beside the digits. */
+.itc-playing-score-streak { flex-direction: column; align-items: stretch; gap: 0.2em; font-size: 0.7em; }
+.itc-playing-score-bar { width: auto; height: 0.28em; }
+.itc-playing-score-times { text-align: center; }
+@media (prefers-reduced-motion: reduce) {
+  .itc-playing-boss-fill { transition: none; }
+  ${each('-action')}, .itc-intro-skip { transition: none; }
 }
 `;
 
@@ -3118,6 +3288,10 @@ export function makeChrome(
   // The row the readout shares with the boss bar — a grid, so the two cannot overlap on any width.
   const top = document.createElement('div');
   top.className = 'itc-playing-top';
+  // The studio's two inks for the plates' rims, violet into cyan — 0439, as the banner runs.
+  top.style.setProperty('--itc-ink', colours.player);
+  top.style.setProperty('--itc-ally', colours.ally);
+  top.style.setProperty('--itc-void', colours.space);
   top.appendChild(hud);
   elements.push(top);
 
@@ -3131,6 +3305,9 @@ export function makeChrome(
   const trigger = document.createElement('div');
   trigger.className = 'itc-playing-trigger';
   trigger.style.color = colours.player;
+  trigger.style.setProperty('--itc-ink', colours.player);
+  trigger.style.setProperty('--itc-ally', colours.ally);
+  trigger.style.setProperty('--itc-void', colours.space);
   // Decorative twice over: it is a picture of a hit region, and the HUD already announces the
   // charges. A screen reader user is not tapping a disc they cannot see the rim of.
   trigger.setAttribute('aria-hidden', 'true');
@@ -3159,9 +3336,16 @@ export function makeChrome(
   bossBar.setAttribute('aria-label', 'Boss');
   bossBar.setAttribute('aria-valuemin', '0');
   bossBar.setAttribute('aria-valuemax', '100');
+  /*
+    The bar is a plate since 0439, the readout's and the score's, so the three sit on one line at one
+    height; the track inside it is what fills, and the notches are cut into the track.
+  */
+  const bossTrack = document.createElement('div');
+  bossTrack.className = 'itc-playing-boss-track';
   const bossFill = document.createElement('div');
   bossFill.className = 'itc-playing-boss-fill';
-  bossBar.appendChild(bossFill);
+  bossTrack.appendChild(bossFill);
+  bossBar.appendChild(bossTrack);
   /** The notches, grown once per row and reused. */
   const bossNotches: HTMLElement[] = [];
   top.appendChild(bossBar);
@@ -3177,10 +3361,13 @@ export function makeChrome(
   scoreBox.style.color = colours.player;
   paintScoreInks(scoreBox, colours);
   scoreBox.setAttribute('role', 'img');
-  const scoreLabel = document.createElement('div');
-  scoreLabel.className = 'itc-playing-score-label';
-  scoreLabel.textContent = 'SCORE';
-  scoreLabel.setAttribute('aria-hidden', 'true');
+  /*
+    ⚠️ **NO CAPTION SINCE 0439.** *SCORE* sat over the digits and the streak under them, so the score
+    stood three lines tall beside a readout one line tall, and the top of the screen had three heights
+    in it. One line now: the digits, then the multiplier with its bar under it. Eight rolling gold
+    digits top right are the genre's own picture of a score, and the label is still the number in
+    words for a reader.
+  */
   const scorePop = document.createElement('div');
   scorePop.className = 'itc-playing-score-pop';
   const scoreValue = document.createElement('div');
@@ -3198,8 +3385,8 @@ export function makeChrome(
   const streakTimes = document.createElement('span');
   streakTimes.className = 'itc-playing-score-times';
   streakTimes.textContent = '×1';
-  streakRow.append(streakBar, streakTimes);
-  scoreBox.append(scoreLabel, scorePop, streakRow);
+  streakRow.append(streakTimes, streakBar);
+  scoreBox.append(scorePop, streakRow);
   top.appendChild(scoreBox);
   /** What the score last said, so a call that changed nothing animates nothing. */
   let scoreShown = -1;
@@ -3220,6 +3407,9 @@ export function makeChrome(
   skip.textContent = 'Skip';
   skip.style.color = colours.player;
   skip.style.setProperty('--itc-void', colours.space);
+  // A control like every other, so it wears their rim — 0440.
+  skip.style.setProperty('--itc-ink', colours.player);
+  skip.style.setProperty('--itc-ally', colours.ally);
   skip.addEventListener('click', () => onSkip());
   elements.push(skip);
   let skipReady = false;
@@ -3453,7 +3643,7 @@ export function makeChrome(
             const notch = document.createElement('div');
             notch.className = 'itc-playing-boss-notch';
             notch.style.left = String(phase.upTo * 100) + '%';
-            bossBar.appendChild(notch);
+            bossTrack.appendChild(notch);
             bossNotches.push(notch);
           }
         }

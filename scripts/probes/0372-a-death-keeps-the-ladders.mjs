@@ -51,9 +51,9 @@ export const PROBES = [
     guard: 'refills the lives and keeps everything the run was carrying',
     edit: {
       path: 'src/state/slices/run.ts',
-      // Anchored on the continue's own count (0428), the one line no other case has.
-      find: '        upgrades: state.upgrades,\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        tallies: state.tallies,\n        // Counted, and the score is kept',
-      replace: '        upgrades: [],\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        tallies: state.tallies,\n        // Counted, and the score is kept',
+      // Anchored on the continue's own note on the score (0438), the one text no other case has.
+      find: '        upgrades: state.upgrades,\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      replace: '        upgrades: [],\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
     },
   },
   {

@@ -410,6 +410,49 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
     }
     await page.context().close();
   });
+
+  it('0439 — THE ASK: the readout, the boss bar and the score sit on one line, at one height', async () => {
+    /*
+      `docs/decisions/0439-the-top-is-one-strip.md`: *"the top in game elements, ship info etc boss
+      bars and score … don't all sit on the same line across the top of the screen."* In pixels on the
+      glass, with the bar raised and the score at its widest, at every size the row is held at: the
+      three boxes share a centre line and a height, to a pixel.
+    */
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-score-shown');
+    for (const [width, height] of [
+      [667, 375],
+      [844, 390],
+      [915, 412],
+      [1280, 720],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      const boxes = await page.evaluate(() => {
+        document.querySelector<HTMLElement>('.itc-playing-boss')!.classList.add('itc-playing-boss-shown');
+        const score = document.querySelector<HTMLElement>('.itc-playing-score')!;
+        score.querySelector<HTMLElement>('.itc-playing-score-value')!.style.setProperty('--itc-playing-points', '99999999');
+        return ['.itc-playing-hud', '.itc-playing-boss', '.itc-playing-score'].map((s) => {
+          const el = document.querySelector<HTMLElement>(s)!;
+          const r = el.getBoundingClientRect();
+          // A plate is a fixed height, so a box measured alone is on the line whatever spills out of it.
+          return { name: s.slice(13), centre: r.top + r.height / 2, height: r.height, spill: el.scrollHeight - el.clientHeight };
+        });
+      });
+      const at = `${width}×${height}`;
+      const [readout] = boxes;
+      for (const box of boxes) {
+        expect(box.height, `at ${at} the ${box.name} has no height`).toBeGreaterThan(0);
+        expect(box.spill, `at ${at} the ${box.name} runs ${box.spill} px out of its plate`).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(box.centre - readout!.centre),
+          `at ${at} the ${box.name} sits ${(box.centre - readout!.centre).toFixed(1)} px off the readout's line`,
+        ).toBeLessThanOrEqual(1);
+        expect(Math.abs(box.height - readout!.height), `at ${at} the ${box.name} is ${box.height.toFixed(1)} px tall and the readout ${readout!.height.toFixed(1)}`).toBeLessThanOrEqual(1);
+      }
+    }
+    await page.context().close();
+  });
 });
 
 describe.runIf(chromePath)('0437 — the open items', () => {
