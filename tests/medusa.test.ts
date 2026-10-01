@@ -382,8 +382,10 @@ describe('0403 — the tentacles pull out of the heart', () => {
     expect(Math.abs(ends[2]!), 'the middle laser leans').toBeLessThan(4);
     expect(-ends[1]!, 'the inner left laser does not lean out').toBeGreaterThan(5);
     expect(ends[3]!, 'the inner right laser does not lean out').toBeGreaterThan(5);
-    expect(-ends[0]! + ends[1]!, 'the outer left laser leans out no further than the inner').toBeGreaterThan(5);
-    expect(ends[4]! - ends[3]!, 'the outer right laser leans out no further than the inner').toBeGreaterThan(5);
+    // Ten and not nothing: an outer laser's deep outside swing alone stands its far end about five further
+    // out on average (measured, the leans made equal), and that is the zigzag, not the fan.
+    expect(-ends[0]! + ends[1]!, 'the outer left laser leans out no further than the inner').toBeGreaterThan(10);
+    expect(ends[4]! - ends[3]!, 'the outer right laser leans out no further than the inner').toBeGreaterThan(10);
     expect(deep[0]!, 'the outer left laser swings no deeper outside than the inner').toBeGreaterThan(deep[1]! + 4);
     expect(deep[4]!, 'the outer right laser swings no deeper outside than the inner').toBeGreaterThan(deep[3]! + 4);
   });
