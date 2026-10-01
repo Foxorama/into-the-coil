@@ -70,7 +70,8 @@ export const PROBES = [
     suite: 'tests/medusa.test.ts',
     // The tips back at the old beams' six apart, which leaves no room between two neighbours.
     broke: 'the tips six apart',
-    guard: 'IN LANE UNITS: the room between two neighbouring lasers',
+    // Re-pointed by 0453, which measures the room to the nearest leg on volleys the game fires.
+    guard: 'IN LANE UNITS: between every two neighbouring lasers there is room for a ship',
     edit: {
       path: 'src/content/bosses.ts',
       find: 'const MEDUSA_TIPS = [-26, -13, 0, 13, 26] as const;',
