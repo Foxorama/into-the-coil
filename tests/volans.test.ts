@@ -626,7 +626,8 @@ describe('0314 — the escort', () => {
     */
     const { world } = playableWorld(VOLANS_ONLY, 'savior');
     const frame = new GameFrame(world);
-    world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'pulse');
+    // The fighter's pulse, which is the cap's since 0441 deleted the gun's ladder; no tubes, as before.
+    world.weapon = weaponFor(world.shipRow, []);
     wearHull(world);
     const born = new Map<object, number>();
     const lived: number[] = [];

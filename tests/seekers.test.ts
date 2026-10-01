@@ -27,7 +27,7 @@ function armed(tier: number): { world: World; frame: GameFrame } {
   const built = playableWorld(NO_LEVEL);
   const carried: UpgradeKind[] = [];
   for (let i = 0; i < tier; i++) carried.push('missile');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, built.world.shipRow.weapon, 'homing');
+  built.world.weapon = weaponFor(built.world.shipRow, carried, 'homing');
   built.world.fireIn = NEVER;
   built.world.missileIn = 1;
   return { world: built.world, frame: new GameFrame(built.world) };
@@ -215,7 +215,7 @@ describe('0246 — a seeker hunts on the screen, and burns out', () => {
 
   it('and the straight missile has no fuse: it lives to the far edge of the widest view', () => {
     const built = playableWorld(NO_LEVEL);
-    built.world.weapon = weaponFor(built.world.shipRow, ['missile'], built.world.shipRow.weapon, 'straight');
+    built.world.weapon = weaponFor(built.world.shipRow, ['missile'], 'straight');
     built.world.fireIn = NEVER;
     built.world.missileIn = 1;
     const frame = new GameFrame(built.world);

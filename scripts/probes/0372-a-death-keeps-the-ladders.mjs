@@ -15,20 +15,23 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       // The twelve-space indent is the `lifeLost` arm; every other arm has these at eight.
-      find: '            upgrades: state.upgrades,\n            weapon: state.weapon,',
-      replace: '            upgrades: [],\n            weapon: state.weapon,',
+      // ⚠️ Re-anchored by 0441: the run carries its ship where it carried a gun.
+      find: '            upgrades: state.upgrades,\n            ship: state.ship,',
+      replace: '            upgrades: [],\n            ship: state.ship,',
     },
   },
   {
     decision: '0372',
     suite: 'tests/run.test.ts',
     // 0233's half of it: the ladder kept and the gun put back to the base — a switch undone by dying.
-    broke: 'a death that keeps the ladder and puts the base gun back',
+    // ⚠️ Re-aimed by 0441: the gun is the ship's, so the base gun is the base ship — the fighter and
+    // its straight tube, which is what the guard's fixture is flown away from.
+    broke: 'a death that keeps the ladder and puts the base ship back',
     guard: 'a death costs the life and nothing else: both ladders, both kinds and the arsenal stay',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            weapon: state.weapon,\n            missile: state.missile,',
-      replace: "            weapon: 'pulse',\n            missile: 'straight',",
+      find: '            ship: state.ship,\n            missile: state.missile,',
+      replace: "            ship: 'fighter',\n            missile: 'straight',",
     },
   },
   {
@@ -40,7 +43,8 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       find: '        lives: livesFor(state.difficulty),\n        level: state.level,\n        arsenal: state.arsenal,',
-      replace: '        lives: livesFor(state.difficulty),\n        level: state.level,\n        arsenal: startingArsenal(),',
+      // ⚠️ Re-aimed by 0441: the starting kit is the ship's own, so it is asked of the run's ship.
+      replace: '        lives: livesFor(state.difficulty),\n        level: state.level,\n        arsenal: startingArsenal(state.ship),',
     },
   },
   {
@@ -52,8 +56,9 @@ export const PROBES = [
     edit: {
       path: 'src/state/slices/run.ts',
       // Anchored on the continue's own note on the score (0438), the one text no other case has.
-      find: '        upgrades: state.upgrades,\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
-      replace: '        upgrades: [],\n        weapon: state.weapon,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      // ⚠️ Re-anchored by 0441: the run carries its ship where it carried a gun.
+      find: '        upgrades: state.upgrades,\n        ship: state.ship,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      replace: '        upgrades: [],\n        ship: state.ship,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
     },
   },
   {

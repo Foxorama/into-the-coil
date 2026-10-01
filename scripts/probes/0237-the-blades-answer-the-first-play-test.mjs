@@ -28,19 +28,9 @@ export const PROBES = [
       replace: '  blade.lifeFor = 40;',
     },
   },
-  {
-    decision: '0237',
-    suite: 'tests/blades.test.ts',
-    // The ladder authored flat, so a rung buys a fire-rate step and nothing about the spiral.
-    broke: 'the loop the same size at every rung, so an upgrade buys no more band',
-    guard: 'THE LADDER: a rung is a wider band',
-    // ⚠️ Re-anchored by 0239 and 0240 as the spiral was rewound, and re-aimed by 0242: the ladder
-    // is the loop's radius now, and a rung buys a wider band rather than more of a turn.
-    edit: {
-      path: 'src/content/weapons.ts',
-      // ⚠️ Re-anchored by 0294, which cut the ladder to two thirds at the cap.
-      find: '    coil: [6.5, 7.5, 9, 10.5, 12],',
-      replace: '    coil: [7, 7, 7, 7, 7],',
-    },
-  },
+  /*
+    ⚠️ `the loop the same size at every rung` WAS HERE, and it went with its guard: `THE LADDER: a
+    rung is a wider band` had the shuriken's coil ladder for its subject, which
+    docs/decisions/0441-a-pilot-flies-their-own-ship.md deleted with every gun's ladder.
+  */
 ];

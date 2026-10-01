@@ -18,7 +18,7 @@ whole game.
 
 | | |
 |---|---|
-| **The way in** | the page opens on the name while the game loads, then offers the four *Far Carry* golfers; the pick turns the sound on and plays the intro, in which Venoma Krait runs out of the bar to the Viper and blasts out of the spaceport, and the chosen golfer runs out after her to the blue fighter and chases her through the first level's sky. The title comes up when they are gone; the intro's Skip is up throughout, Escape goes to the menu from anywhere before it, and the menu's *Pilot* changes golfer — [0415](decisions/0415-the-golfer-is-chosen.md), [0416](decisions/0416-the-viper-has-a-pilot.md), [0411](decisions/0411-the-chase-begins-at-the-port.md), [0412](decisions/0412-the-port-is-heard.md). ⚠️ A golfer is who flies, not yet what: every golfer flies the one fighter for now |
+| **The way in** | the page opens on the name while the game loads, then offers the four *Far Carry* golfers; the pick turns the sound on and plays the intro, in which Venoma Krait's Viper lights on its pad and blasts out of the spaceport, and the chosen golfer runs out of the bar to their own ship and chases her through the first level's sky. The title comes up when they are gone; the intro's Skip is up throughout, Escape goes to the menu from anywhere before it, and the menu's *Pilot* changes golfer — [0415](decisions/0415-the-golfer-is-chosen.md), [0416](decisions/0416-the-viper-has-a-pilot.md), [0411](decisions/0411-the-chase-begins-at-the-port.md), [0412](decisions/0412-the-port-is-heard.md). Each golfer flies their own ship — [0441](decisions/0441-a-pilot-flies-their-own-ship.md) |
 | **The way out** | the last boss beaten, the finale — and no cut into it: the heart the jellyfish died on races, catches fire and bursts, and the Viper is thrown out of it with one of the golfers who was not chosen in her cockpit — Venoma's captive all along, and the heart took her. The fighter comes up beside her and the two fly off together, each golfer speaking from their own ship — the found one about being found, the chosen one answering, a named speech bubble each with a voice of their own — until they open up and go. Then the victory screen. Skip is up throughout — [0418](decisions/0418-the-heart-lets-go.md), [0426](decisions/0426-the-finale-is-the-fight-going-on.md). ⚠️ No victory piece of music yet |
 | **Prologue** | choose 1 of the 4 *Far Carry* golfers. Short stage → the Jörmungandr fight. One of the three unchosen characters betrays you |
 | **Level 1 choice** | keep your prologue character, or swap to one of 3 others drawn from the unlocked pool |
@@ -105,6 +105,20 @@ front. The constraint is that adding one stays a table edit.
 **Prologue roster — the four *Far Carry* golfers:** Feather Fade, Huang-Woo Hook, Longshot Larry,
 Backspin Bo.
 
+**Each flies their own ship, and the ship owns the gun** —
+[0441](decisions/0441-a-pilot-flies-their-own-ship.md). All four are drawn from above in one square
+box, with one hurtbox, so what tells them apart is the gun:
+
+| golfer | ship | gun |
+|---|---|---|
+| Huang-Woo Hook | the fighter | **pulse** |
+| Feather Fade | the Little Green Caddie, a saucer | **ray** — [0442](decisions/0442-the-ray-gun.md) |
+| Backspin Bo | the Firebird, the black car with the gold phoenix | **shuriken**, thrown from its hubcaps |
+| Longshot Larry | the Gilded Estate, the gold wagon | **arc**, from a lightning rod on the roof rack |
+
+A ship opens a run on its whole gun and two charges of that gun's special, and carries its missile
+tubes on its own hull.
+
 **Level 1 roster:** your prologue pick, plus three drawn from the unlocked pool. Always four on
 offer. The draw is seeded from the run seed, so resuming does not reroll it.
 
@@ -135,7 +149,7 @@ no device is faster than another — see
 
 | | movement | specials |
 |---|---|---|
-| keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift |
+| keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift, and E or X for the ward |
 | touch | **relative drag** — the ship moves by however far the thumb moved, not to where it is | a tap strip along the leading edge, one band per special |
 | gamepad | left stick, analog, with a radial deadzone | face buttons |
 
@@ -154,20 +168,22 @@ same ceiling, so no device can outrun another, and none of this is allowed anywh
 
 Each ship carries:
 
-- **Auto-fire** — the base weapon **and every upgrade to it**. Always on, requires no input, and it
-  is the only thing that fires itself.
-- **A starting special** — limited capacity, unique to the ship. May be offensive, may be shields.
-  **Manual.**
-- **More specials, earned during the run.** Each gun and each tube has its own, and a full ladder's
-  pickup buys one charge-worth of it. Kept to the end of the run, like every other upgrade.
+- **Auto-fire**: the ship's own gun, whole from the first second
+  ([0441](decisions/0441-a-pilot-flies-their-own-ship.md)), and the missile tubes the run has
+  found. Always on, requires no input, and the only thing that fires itself.
+- **A starting special**: two charges of the ship's own gun's special. **Manual.**
+- **More specials, earned during the run.** The bomb pickup offers every gun's special to every ship,
+  and a full missile ladder's pickup buys a charge of that tube's own. Kept to the end of the run.
 
 ⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials are triggered by the player — the
 Raiden II relationship between the shot you never think about and the bomb you have to spend.
-Straight from the Jörmungandr fight. **There are TWO triggers, the gun's and the tubes', and each
-throws the charge of its own side earned most recently** —
+Straight from the Jörmungandr fight. **There are THREE triggers, the gun's, the tubes' and the
+ward's, and each throws the charge of its own side earned most recently** —
 [0376](decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md), correcting
 [0373](decisions/0373-a-special-is-the-guns-own.md)'s single queue, which let a charge be thrown
-through a weapon it was not earned from.
+through a weapon it was not earned from; the ward — the void and the nova, the two that unmake enemy
+fire — is its own button so a press meant to save the ship never throws a bomb
+([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
 
 ⚠️ **The arsenal is a STACK, never a slot**, and this is a code constraint rather than a flourish. A
 ship modelled with one special field or a save storing one special kind would make a second special a
@@ -194,41 +210,35 @@ level authors is what the player gets.
 
 | | a tier buys | tiers | a level authors | the mid-boss drops | the end boss |
 |---|---|---|---|---|---|
-| **`weapon`** | a barrel **and** a fire-rate step | 4 | 1 near the start; level one a second before its mid-boss | 1 | — |
+| **`bomb`** | one charge of the gun special its face shows — bomb, storm or whirlpool | — | none; level one one before its mid-boss | 1 | — |
 | **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
-| **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn | — | — | 1, not on Burn | — |
+| **`shield`** | cycles: one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | — | 1; on Burn the `ward` in its place | — |
+| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | — | on Burn only, as the shield | — |
 
-The mid-boss also drops a **`missile`** since [0372](decisions/0372-a-death-keeps-the-ladders.md) took
-the **`bomb`** pickup off the field, along with the charge a level clear used to pay. A run starts
-with two bomb charges and earns more only by overflowing a ladder.
+A run starts with two charges of its own gun's special. **The bomb pickup is where the weapon pickup
+was, and it cycles the gun specials the way the weapon pickup cycled the guns**
+([0441](decisions/0441-a-pilot-flies-their-own-ship.md), on
+[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)'s clock). Any ship can take any face
+for one charge of it, so a choice of special is made under fire. A missile pickup taken once its own
+ladder is full becomes a charge of that tube's special
+([0373](decisions/0373-a-special-is-the-guns-own.md)). That is how *every upgrade is worth taking*
+survives a cap.
 
-**The guns cap across the run rather than inside a level**, and a death never takes a rung back.
+**The missile pickup cycles over the tubes**, and taking a different tube switches it and keeps the
+count ([0256](decisions/0256-a-pickup-keeps-the-count.md)). **Every face of a cycling pickup is its
+own glyph in its own ink**, inside the one bubble that says *pickup*:
+[0239](decisions/0239-the-guns-answer-the-third-play-test.md) and
+[0240](decisions/0240-the-blades-reach-the-boss.md).
 
-⚠️ **An upgrade pickup taken once its own ladder is full becomes a charge of that face's special** —
-per ladder, which is what makes specials uncapped
-([0373](decisions/0373-a-special-is-the-guns-own.md)). That is how *every upgrade is worth taking* survives having a cap; before
-0082 it became unbounded damage instead, which was the reported defect: *"when you get max speed
-nothing is a challenge, bosses die in less a second."*
+⚠️ **A gun has no tiers.** Each is its ship's, at what its old ladder's top rung was. **The ship
+wears its gun and its tubes**: each ship is drawn bare, with one tube, and with two.
 
-⚠️ **A weapon is a kind, and the weapon pickup cycles between the guns** —
-[0233](decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md). Each gun carries its own four-tier
-ladder, its own pickup face and its own three hulls, so **the ship wears the gun it is carrying**. A
-weapon pickup turns to the next gun every two seconds, waits long enough to show every gun twice, and
-wanders the player's box while it does; what the player is handed is the face it was showing.
-**Taking a different gun switches the gun and keeps the count** — the ladder is the ship's, and the
-gun is what it is fitted to ([0256](decisions/0256-a-pickup-keeps-the-count.md), amending 0233's
-*starts at one rung*) — and leaves the missile ladder alone. The missile pickup cycles the same way
-over the tubes. **Every face of a cycling pickup is its own
-glyph in its own ink** inside the one bubble that says *pickup* —
-[0239](decisions/0239-the-guns-answer-the-third-play-test.md),
-[0240](decisions/0240-the-blades-reach-the-boss.md): the pulse and the missile in their
-projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in the ally ink.
-
-| gun | what it does | a tier buys |
+| gun | whose | what it does |
 |---|---|---|
-| **pulse** | the base weapon: fast, small, reaches the edge of the screen and can miss | a barrel **and** a fire-rate step |
-| **arc** | chain lightning: from the nose to the nearest body in reach whose whole hull is on the screen, then the next, three links at most; on a lone boss it jumps around the hull. Cannot miss, cannot reach — its reach has been cut back twice from play, [0239](decisions/0239-the-guns-answer-the-third-play-test.md), [0241](decisions/0241-the-ship-wears-its-colours.md), and bounded by the screen, [0257](decisions/0257-the-arc-lands-on-the-screen.md) | a link, a fire-rate step, and weight |
-| **shuriken** | steel blades about the ship's size, thrown in pairs from the wingtips: each goes up the lane and swings across it, the two a half-turn apart and crossing ahead of the nose, so their tracks are the two strands of a helix to the leading edge of the screen, landing on everything they cross once per impact flash; not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0238](decisions/0238-the-picture-answers-the-second-play-test.md), [0244](decisions/0244-a-blade-rides-a-helix.md) | a wider band **and** a fire-rate step |
+| **pulse** | the fighter | fast, small, four barrels; reaches the edge of the screen and can miss |
+| **arc** | the Gilded Estate | chain lightning. From the nose to the nearest body in reach whose whole hull is on the screen, then the next, three links at most, each jump shorter; on a lone boss it jumps around the hull. Cannot miss, cannot reach. Its first jump is 82, zoomed with the view — [0443](decisions/0443-the-arc-is-zoomed-with-the-view.md), [0257](decisions/0257-the-arc-lands-on-the-screen.md) |
+| **shuriken** | the Firebird | steel blades, thrown in pairs from the front wheels. Each goes up the lane and swings across it, the two a half-turn apart, so their tracks are the two strands of a helix; they land on everything they cross, once per impact flash, and are not spent by arriving — [0234](decisions/0234-a-blade-circles-the-ship.md), [0244](decisions/0244-a-blade-rides-a-helix.md) |
+| **ray** | the Little Green Caddie | four concentric lavender rings, one volley every eight steps, which burst where they land and hurt everything close by — [0442](decisions/0442-the-ray-gun.md) |
 
 | tube | what it does | a tier buys |
 |---|---|---|
@@ -242,7 +252,8 @@ projectiles' orange, the arc in the ship's, the shuriken in steel, the seeker in
 | **overdrive** | missiles | ten seconds of two golden pods, each volley firing a straight missile of their own beside the fitted tubes: three times the damage, piercing like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md), moved off the gun by [0375](decisions/0375-the-bomb-is-a-missile.md), [0379](decisions/0379-the-specials-are-seen.md) |
 | **storm** | arc | thrown like the bomb; goes off as six strikes to the nearest bodies on the screen, each chaining to two more, a twentieth of a boss once, and bolts flickering across the screen for half a second — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
 | **whirlpool** | shuriken | three spiral arms of eight big blades opened ahead of the ship, turning and growing, landing on a boss again and again, and gone once none of it is on the screen — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
-| **void** | a shield at a full shell | thrown up the lane on the tubes' trigger; opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
+| **nova** | ray, and the shield pickup's third face | on the ward's trigger: a lavender ring bursting from the ship to past every edge of the screen, popping every shot it touches, striking every body it crosses once and a boss once for a twentieth — [0447](decisions/0447-the-ward-is-a-third-trigger.md) |
+| **void** | the shield pickup's second face, and a shield at a full shell; one to open a Burn run unless the ship opens on novas | thrown up the lane on the ward's trigger as a turning swirl ([0447](decisions/0447-the-ward-is-a-third-trigger.md)); opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
 A thrown special that reaches the edge of the screen goes off there
 ([0377](decisions/0377-the-void.md)). Every special is heard as itself — its press, and for a
@@ -278,25 +289,23 @@ capped loadout, by the instrument that measured the report.
 Themed on the fourteen *Far Carry* biomes, split into difficulty tiers. Each level gets its own
 enemies, upgrade flavour and bosses.
 
-**Difficulty has two axes.** A **tier** is chosen before a run and fixed for its length
+**Difficulty is a tier, chosen before a run and fixed for its length**
 ([0047](decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md)). *Savior of the
 Galaxy* is the tier the game is tuned for, and the other two are **a margin either side of it, axis by
 axis**, so a change to Savior moves both —
-[0356](decisions/0356-the-tuned-tier-is-savior.md). A **dial** moves
-during one: it is `1 + 4/3 × the level's index + the weapon pickups that level has already offered`
-— the mid-boss's dropped weapon counts — so it climbs through a level, drops back at a boundary
-without losing the run's progress, and reaches **11 at the last boss** —
-[0084](decisions/0084-the-dial-is-the-level-and-the-guns.md),
-[0256](decisions/0256-a-pickup-keeps-the-count.md). The two multiply; neither replaces the other.
+[0356](decisions/0356-the-tuned-tier-is-savior.md). Within a run, what climbs is the levels' own
+scripts.
 
 **A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
 Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* a
 life opens on the hull and a shield is flown for, as it always was; on *Let the Galaxy Burn* the ship
-carries none, and the mid-boss throws none.
+carries none, the mid-boss throws the ward pickup where the shield would be, and a run opens with one
+void unless its ship opens on novas ([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
 
-⚠️ **What the dial spends today is one rule**: nothing takes more than one hit until the first level
-has offered two weapon pickups. That is the reported spike at the start of the game, and the dial was
-landed with the smallest content on it on purpose — what a rising dial *sends* is still to be authored.
+⚠️ **The dial is gone** — [0441](decisions/0441-a-pilot-flies-their-own-ship.md). It was a second
+axis that moved through a run ([0084](decisions/0084-the-dial-is-the-level-and-the-guns.md)), and the
+one thing it spent was level one's one-hit opening. That opening existed because the starting gun was
+weak. Every ship now opens on its whole gun, so the opening went, and the dial with it.
 
 A level is **an authored script** — a list of waves, each a place, an enemy kind, a formation and a
 lane — plus one boss at the end of it. Decided,

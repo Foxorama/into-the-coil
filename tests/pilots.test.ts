@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ATTACK_KINDS, ENEMIES, ENEMY_KINDS, MOTION_KINDS, shotsPerVolley, type EnemyKind } from '../src/content/enemies.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVELS } from '../src/content/levels.ts';
@@ -565,12 +565,13 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       /*
         ⚠️ **The hole has to be wider than the ship, and the bound is the ship's own hurtbox rather
         than a number typed here** — `docs/decisions/0027-measure-the-picture-not-the-model.md`: a gap
-        measured against the constant that authored it proves the code agrees with itself.
+        measured against the constant that authored it proves the code agrees with itself. The widest
+        of them since 0441, because the hole is for whichever ship is being flown.
       */
       expect(
         nearest,
         `a ${kind}'s nearest bullet is ${nearest.toFixed(1)} units from where it fired — that is not a hole`,
-      ).toBeGreaterThan(SHIPS.proof.radius * 2);
+      ).toBeGreaterThan(Math.max(...SHIP_KINDS.map((ship) => SHIPS[ship].radius)) * 2);
       // And the wall is actually a wall: shots on both sides of the body, not a lopsided fan.
       expect(lanes.some((a) => a < firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
       expect(lanes.some((a) => a > firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);

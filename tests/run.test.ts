@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 
 import { type Action, type State, initialState, reduce } from '../src/state/root.ts';
-import { DEFAULT_DIFFICULTY, chargesIn, livesFor, startingArsenal } from '../src/state/slices/run.ts';
+import { DEFAULT_DIFFICULTY, chargesIn, initialRun, livesFor, startingArsenal } from '../src/state/slices/run.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
+import { OPENING_CHARGES, SIDES, SPECIALS, SPECIAL_KINDS } from '../src/content/specials.ts';
+import { UPGRADE_TIERS } from '../src/content/pickups.ts';
+import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 
 /**
  * WHAT A RUN COSTS — `docs/decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md`.
@@ -26,7 +31,12 @@ function play(...actions: Action[]): State {
   return state;
 }
 
-const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY };
+/**
+ * The ship the fixtures fly — 0441. **Not the one a run that has not begun carries**, so a death or a
+ * continue that put the default ship back is a different answer from keeping this one.
+ */
+const SHIP: ShipKind = SHIP_KINDS.find((kind) => kind !== initialRun.ship)!;
+const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP };
 
 /** Lives the tier BEGIN picks starts with. Read from the table, never written down here. */
 const STARTING_LIVES_OF_THE_TIER = livesFor(DEFAULT_DIFFICULTY);
@@ -46,11 +56,8 @@ function armed(): State {
     PLAY,
     { slice: 'run', type: 'took', special: 'bomb' },
     { slice: 'run', type: 'took', special: 'hunt' },
-    // On the OTHER kinds, not the ship's own: a fixture on the base kinds could not see a death or a
-    // continue putting them back to the base. `npm run prove` said so.
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
-    { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' },
-    // And both ladders, so a rule that spared one would show.
+    // On the OTHER tube, not the ship's own: a fixture on the base kind could not see a death or a
+    // continue putting it back to the base. `npm run prove` said so. The gun's ladder went with 0441.
     { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
     { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
   );
@@ -87,20 +94,22 @@ describe('a run is lives', () => {
       decision does; the alternative is a guard loose enough to hold neither.
     */
     const before = armed();
-    expect(before.run.arsenal, 'the fixture has nothing to lose, so this proves nothing').toEqual({
-      gun: ['bomb', 'bomb', 'bomb', 'bomb'],
-      tubes: ['hunt'],
-    });
+    expect(before.run.arsenal.tubes, 'the fixture has nothing to lose, so this proves nothing').toEqual(['hunt']);
+    expect(before.run.arsenal.gun.at(-1), 'the bomb taken is not on top of the gun stack').toBe('bomb');
     expect(
       chargesIn(before.run.arsenal),
       'the fixture never banked a charge, so a death cannot be seen to spare one',
-    ).toBeGreaterThan(chargesIn(startingArsenal()));
+    ).toBeGreaterThan(chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)));
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
-      'weapon',
-      'weapon',
       'missile',
       'missile',
     ]);
+    expect(before.run.ship, 'the fixture flies the default ship, so a death putting it back would not show').not.toBe(
+      initialRun.ship,
+    );
+    expect(SHIPS[SHIP].missile, 'the fixture took its ship’s own tube, so a death putting it back would not show').not.toBe(
+      before.run.missile,
+    );
 
     const after = reduce(before, DIE);
     expect(after.run.arsenal, 'a death moved the arsenal').toEqual(before.run.arsenal);
@@ -109,10 +118,10 @@ describe('a run is lives', () => {
       not say.** The old rule and the new one agree about a run that never banked anything; the fixture
       is armed past the starting kit precisely so the two answers are different objects.
     */
-    expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal());
-    // On the OTHER kinds, so a death that put the base gun back is a different answer from this one.
+    expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
+    // On the OTHER tube, so a death that put the base tube back is a different answer from this one.
     expect(after.run.upgrades, 'a death took rungs off a ladder').toEqual(before.run.upgrades);
-    expect(after.run.weapon, 'a death put the base gun back on the ship').toBe('arc');
+    expect(after.run.ship, 'a death changed the ship').toBe(SHIP);
     expect(after.run.missile, 'a death put the base tube back on the ship').toBe('homing');
   });
 
@@ -131,22 +140,80 @@ describe('a run is lives', () => {
     /*
       *"Picking up a new weapon/missile type doesn't reset your power count → it's too punishing when
       you accidentally get a pickup with a lot of enemies on screen or right before a boss."* 0233
-      started the new gun at one rung; the ladder is the ship's now and the kind is what it is
-      fitted to. Held on both ladders, and at the cap — where a switch adds nothing and the list
-      stays the tier.
+      started the new kind at one rung; the ladder is the ship's now and the kind is what it is
+      fitted to. Held at the cap too — where a switch adds nothing and the list stays the tier.
+
+      ⚠️ **The gun's half was deleted with 0441** (`docs/decisions/0441-a-pilot-flies-their-own-ship.md`):
+      the gun is the ship's and nothing switches it, so the tubes are the one ladder this can hold.
     */
     let state = play(BEGIN, PLAY);
-    for (let i = 0; i < 3; i++) state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' });
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'arc' });
-    expect(state.run.weapon, 'the run did not switch guns').toBe('arc');
-    expect(state.run.upgrades.filter((u) => u === 'weapon').length, 'a switch reset the count').toBe(4);
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'shuriken' });
-    expect(state.run.weapon).toBe('shuriken');
-    expect(state.run.upgrades.filter((u) => u === 'weapon').length, 'a switch at the cap grew the list past the tier').toBe(4);
-    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' });
+    for (let i = 0; i < UPGRADE_TIERS - 1; i++) {
+      state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' });
+    }
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });
-    expect(state.run.missile).toBe('homing');
-    expect(state.run.upgrades.filter((u) => u === 'missile').length, 'a tube switch reset the count').toBe(2);
+    expect(state.run.missile, 'the run did not switch tubes').toBe('homing');
+    expect(state.run.upgrades.length, 'a tube switch reset the count').toBe(UPGRADE_TIERS);
+    state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'straight' });
+    expect(state.run.missile).toBe('straight');
+    expect(state.run.upgrades.length, 'a switch at the cap grew the list past the tier').toBe(UPGRADE_TIERS);
+    expect(state.run.ship, 'a tube pickup changed the ship').toBe(SHIP);
+  });
+
+  it('a run begins in the ship it is given, on OPENING_CHARGES of that ship’s own gun special — 0441', () => {
+    /*
+      *"A game starts with two bombs"*, a bomb being what the ask calls every gun's special. Over every
+      ship, so a ship whose special sits on the other trigger, or whose gun opens on somebody else's
+      special, is a different answer — 0282: the opening differs per ship.
+    */
+    for (const ship of SHIP_KINDS) {
+      const run = play({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship }).run;
+      expect(run.ship, `a run begun in the ${ship} flies something else`).toBe(ship);
+      expect(run.missile, `the ${ship} opened on somebody else's tube`).toBe(SHIPS[ship].missile);
+      const own = WEAPONS[SHIPS[ship].weapon].special;
+      const side = SPECIALS[own].side;
+      expect(run.arsenal[side], `the ${ship} did not open on ${OPENING_CHARGES} of its own ${own}`).toEqual(
+        Array.from({ length: OPENING_CHARGES }, () => own),
+      );
+      for (const other of SIDES) {
+        if (other !== side) expect(run.arsenal[other], `the ${ship} opened with something on its ${other} trigger`).toEqual([]);
+      }
+    }
+  });
+
+  it('every golfer flies a ship, and every ship has a golfer to fly it — 0441', () => {
+    /*
+      *"Each pilot has their own ship."* The run begins in the chosen golfer's ship (`src/app/mount.ts`
+      resolves the pilot setting to `GOLFERS[pilot].ship`), so a golfer naming no ship is a run that
+      cannot begin, and a ship no golfer names is one nobody can fly.
+
+      ⚠️ **NOT *no two golfers share a ship*, though the four do not today.** 0441 says why the ship is
+      on the golfer's row: *"so a fifth golfer can be given a ship that already exists."* That change
+      is correct and a distinctness guard would redden on it — 0192's test for a guard. Every ship
+      flown is what the four distinct ships rest on, and it stays true when the fifth golfer arrives.
+    */
+    for (const golfer of GOLFER_KINDS) {
+      expect(SHIP_KINDS, `${golfer} flies a ship that is not on the roster`).toContain(GOLFERS[golfer].ship);
+    }
+    for (const ship of SHIP_KINDS) {
+      expect(
+        GOLFER_KINDS.filter((golfer) => GOLFERS[golfer].ship === ship),
+        `no golfer flies the ${ship}`,
+      ).not.toEqual([]);
+    }
+  });
+
+  it('a take pushes exactly one charge of what was taken, on its own side — 0441', () => {
+    // *"A player can pick up any type and get a bomb of that type."* One a take, of every kind:
+    // 0373's per-row `charges` went with 0441.
+    for (const special of SPECIAL_KINDS) {
+      const before = play(BEGIN, PLAY).run.arsenal;
+      const after = reduce(play(BEGIN, PLAY), { slice: 'run', type: 'took', special }).run.arsenal;
+      const side = SPECIALS[special].side;
+      expect(after[side], `a ${special} take did not push exactly one charge`).toEqual([...before[side], special]);
+      for (const other of SIDES) {
+        if (other !== side) expect(after[other], `a ${special} take moved the ${other} stack`).toEqual(before[other]);
+      }
+    }
   });
 
   it('the last life ends the run', () => {
@@ -189,7 +256,7 @@ describe('a run is lives', () => {
     expect(state.screen.current).toBe('gameOver');
     const again = reduce(reduce(state, BEGIN), PLAY);
     expect(again.run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
-    expect(again.run.arsenal).toEqual(startingArsenal());
+    expect(again.run.arsenal).toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
     expect(again.screen.current).toBe('playing');
   });
 });
@@ -232,10 +299,10 @@ describe('a run over is a continue', () => {
     expect(resumed.lives, 'the continue did not restock the lives').toBe(fresh.lives);
     expect(resumed.arsenal, 'the continue reset the charges').toEqual(before.arsenal);
     expect(resumed.arsenal, 'the fixture holds the starting kit, so a reset would look the same').not.toEqual(
-      startingArsenal(),
+      startingArsenal(SHIP, DEFAULT_DIFFICULTY),
     );
     expect(resumed.upgrades, 'the continue took the ladders').toEqual(before.upgrades);
-    expect(resumed.weapon, 'the continue put the base gun back').toBe(before.weapon);
+    expect(resumed.ship, 'the continue changed the ship').toBe(before.ship);
     expect(resumed.missile, 'the continue put the base tube back').toBe(before.missile);
   });
 
@@ -243,7 +310,7 @@ describe('a run over is a continue', () => {
     // A property of the RUN (0047), and this is still the same run. A continue that dropped the
     // player onto the default tier would be the game quietly changing the game.
     for (const difficulty of DIFFICULTY_KINDS) {
-      let state = reduce(play({ slice: 'run', type: 'begin', difficulty }), PLAY);
+      let state = reduce(play({ slice: 'run', type: 'begin', difficulty, ship: SHIP }), PLAY);
       for (let i = 0; i < livesFor(difficulty); i++) state = reduce(state, DIE);
       const resumed = reduce(state, CONTINUE).run;
       expect(resumed.difficulty, `a continue on ${difficulty} changed the tier`).toBe(difficulty);

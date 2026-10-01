@@ -20,8 +20,12 @@ export const PROBES = [
     suite: 'tests/pickups.test.ts',
     // A constant subtraction is the obvious way to write "fires faster", and it reads better than a
     // multiply right up until the sixth one, when the gap between shots is zero.
-    broke: 'rapid fire made a constant subtraction, so enough of them reach zero',
-    guard: 'never fires faster than a hit can be read',
+    broke: 'a gun authored past the fire floor, so its hits land faster than they can be read',
+    // ⚠️ Re-pointed by 0441, which took the gun's ladder and with it `never fires faster than a hit
+    // can be read, however many are taken`: no pickup moves a gun, so nothing stacks towards the
+    // floor. The floor itself stands, held per gun by the guard named here, and the break is the one
+    // this probe has made since 0093 — a cadence authored past it.
+    guard: 'and every gun respects the two floors',
     edit: {
       // ⚠️ The FLOOR removed, not the factor changed. A first attempt subtracted a constant instead
       // and `npm run prove` reported WRONG TEST: it broke stacking rather than the floor, because the
@@ -34,9 +38,10 @@ export const PROBES = [
       // authored past the floor* — which is the same failure the guard names, reached from content
       // instead of from arithmetic, and is the honest shape of it now that the rungs are a table.
       // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      // ⚠️ Re-anchored by 0441: one cadence a gun, and the pulse's is the fastest there is.
       path: 'src/content/weapons.ts',
-      find: '    fireEvery: [8, 8, 6, 6, 4],',
-      replace: '    fireEvery: [8, 8, 6, 6, 1],',
+      find: "    flight: 'straight',\n    fireEvery: 4,",
+      replace: "    flight: 'straight',\n    fireEvery: 1,",
     },
   },
   {
@@ -95,7 +100,9 @@ export const PROBES = [
       // third of the game's pickups unreadable rather than a sixth.
       // ⚠️ Re-anchored by 0372, which took the bomb pickup away: the shield wears the weapon's face.
       find: '    sprite: SPRITE.pickupShield,\n    spriteHit: SPRITE.pickupShield,',
-      replace: '    sprite: SPRITE.pickupWeapon,\n    spriteHit: SPRITE.pickupWeapon,',
+      // ⚠️ Re-pointed by 0441, which renamed the weapon pickup's face `pickupBomb`: a replace naming
+      // a sprite that no longer exists writes `undefined`, which is a different break.
+      replace: '    sprite: SPRITE.pickupBomb,\n    spriteHit: SPRITE.pickupBomb,',
     },
   },
 ];

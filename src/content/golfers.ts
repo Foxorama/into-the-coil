@@ -2,15 +2,15 @@
  * The four golfers — `docs/decisions/0415-the-golfer-is-chosen.md`.
  *
  * `docs/game.md` puts the four *Far Carry* golfers in the prologue: *"choose 1 of the 4"*. This is
- * who they are — a name, a home, their colours and their hair — and not yet what they fly: every
- * golfer flies the one fighter in `src/content/ships.ts` until the ships are a table of their own, and
- * the decision says so rather than letting a portrait stand in for a ship.
+ * who they are — a name, a home, their colours and their hair — and, since 0441, the ship they fly.
  *
  * The colours are the predecessor's own roster rows (`C:\Golf-Stars\src\sim\rpg\characters.ts`, read
  * for this and nothing else) — cap, shirt, skin, hair and build — with the trousers, shoes and carry
  * bag its intro dressed every golfer in. Pronouns are the predecessor's too, and ride the row so the
  * words about a golfer can never be guessed from a name.
  */
+
+import type { ShipKind } from './ships.ts';
 
 /** Every golfer, in the predecessor's roster order — the order the select screen offers them in. Closed. */
 export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo'] as const;
@@ -48,7 +48,17 @@ export interface RunnerRow {
 export interface GolferRow extends RunnerRow {
   /** Their name, as the select screen and the menu say it. */
   name: string;
-  /** Where they are from — the one line under the name, because `docs/game.md`'s voice is terse. */
+  /**
+   * The ship they fly, and with it the gun — 0441: *"each pilot has their own ship."* On the golfer
+   * and not on the ship, because who flies what is a fact about the pilot: a fifth golfer may be given
+   * a ship that already exists.
+   */
+  ship: ShipKind;
+  /**
+   * Where they are from. It was the select card's line under the name (0415) until 0441 gave that line
+   * to the ship and its gun, which is what the choice decides; it is the golfer's fiction, kept for
+   * whatever speaks of them next.
+   */
   home: string;
   /** Their pronouns, as the predecessor gives them. */
   pronouns: string;
@@ -83,6 +93,7 @@ export const KIT = {
 export const GOLFERS: Record<GolferKind, GolferRow> = {
   feather: {
     name: 'Feather Fade',
+    ship: 'caddie',
     home: 'Nairobi',
     pronouns: 'she/her',
     cap: '#19b2a6',
@@ -111,6 +122,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   woo: {
     name: 'Huang-Woo Hook',
+    ship: 'fighter',
     home: 'Busan',
     pronouns: 'he/she/they',
     cap: '#d23f4f',
@@ -139,6 +151,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   larry: {
     name: 'Longshot Larry',
+    ship: 'estate',
     home: 'Perth',
     pronouns: 'he/him',
     cap: '#e0a83f',
@@ -167,6 +180,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   bo: {
     name: 'Backspin Bo',
+    ship: 'firebird',
     home: 'Portland',
     pronouns: 'they/them',
     cap: '#9b5fd4',

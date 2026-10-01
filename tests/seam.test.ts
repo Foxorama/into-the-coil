@@ -86,7 +86,7 @@ function partWayThrough(): ReturnType<typeof playableWorld> & { frame: GameFrame
  * here; what it caught this time was the lookup, not the fixture.
  */
 const shipAt = (recorder: Recorder): { x: number; y: number } | undefined =>
-  recorder.blits.find((b) => b.sprite === SPRITE.ship || b.sprite === SPRITE.shipHit);
+  recorder.blits.find((b) => b.sprite === SPRITE.fighter || b.sprite === SPRITE.fighterHit);
 
 describe('a level boundary is a change of script, not a change of scene', () => {
   it('THE REPORTED ONE: the ship is drawn in the same place across the boundary', () => {

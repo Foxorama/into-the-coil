@@ -86,28 +86,13 @@ export const PROBES = [
       replace: '  const launchers = tubesAt > MAX_LAUNCHERS - 1 ? MAX_LAUNCHERS - 1 : tubesAt;',
     },
   },
-  {
-    decision: '0083',
-    suite: 'tests/shields.test.ts',
-    /*
-      ⚠️ ONE LADDER'S CEILING STEALING THE OTHER'S UPGRADES, and it is the mistake the split invites.
-      Asking *how many upgrades has this player taken* instead of *how many of THIS kind* is the
-      shorter line and reads fine — until a player who spent four on the guns finds every missile
-      pickup turning into a bomb charge, with the missile rack still empty.
+  /*
+    ── *"THE BOMB CONVERSION ASKED ABOUT THE WHOLE LIST"* WAS HERE, AND 0441 LEFT ONE LADDER ─────────
 
-      ⚠️ This is the assertion 0083 exists for. Nothing before it could have made one: there was only
-      ever one ladder to be full.
-    */
-    broke: 'the bomb conversion asked about the whole list, so a full gun ladder caps the missiles too',
-    guard: 'an upgrade pickup taken at its cap becomes a bomb charge',
-    edit: {
-      path: 'src/content/pickups.ts',
-      // ⚠️ Re-anchored by 0233: the narrowing is the last line of `effectOf` now, and it asks the
-      // loadout. The break is the same — the whole list where the kind's own ladder should be.
-      find: "  return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';",
-      replace: "  return loadout.upgrades.length < UPGRADE_TIERS ? 'upgrade' : 'special';",
-    },
-  },
+    It broke the one mistake two ladders invite: a full gun ladder capping the missiles. Since 0441
+    the tubes are the only ladder, so the whole list and the kind's own are the same list and the break
+    changes nothing — CI reported STILL GREEN, correctly.
+  */
   /*
     ── TWO PROBES ABOUT THE DEATH SCATTER WERE HERE ────────────────────────────────────────────────
 

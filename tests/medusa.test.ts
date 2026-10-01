@@ -337,6 +337,12 @@ describe('0404 — the rain feeds it', () => {
     if (fall.kind !== 'body') return;
     expect(fall.feeds).toBe(0.05);
     const d = medusaAt(0.5);
+    // The ship's fire held while the feed is weighed: the fighter's four-barrel fan opens at the cap
+    // since 0441, and from lane 5 its outer barrels reach the bell inside the five steps measured.
+    d.world.fireIn = Number.MAX_SAFE_INTEGER;
+    d.world.missileIn = Number.MAX_SAFE_INTEGER;
+    d.world.playerShots.clear();
+    d.world.missiles.clear();
     const boss = d.world.bossPool.at(0);
     const before = boss.health;
     dropJelly(d, boss.along, boss.across);

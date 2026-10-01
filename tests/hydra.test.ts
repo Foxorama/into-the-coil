@@ -201,6 +201,10 @@ describe('0384 — the hydra stands in the acid and grows its heads', () => {
     const d = { world, frame };
     for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
       world.ship.health = world.shipRow.health;
+      // The ship's fire held for the wait: every ship opens at the cap since 0441, and the fixture's
+      // gun would otherwise take the hydra past the first head's threshold before the test puts it there.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
       frame.step();
     }

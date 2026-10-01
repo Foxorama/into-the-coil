@@ -4,7 +4,7 @@ import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
-import { MAX_SHIELDS, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shieldsOf } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { reset } from '../src/sim/entity.ts';
 import { initialState, reduce, type Action, type State } from '../src/state/root.ts';
@@ -99,15 +99,18 @@ describe('0355 — a life opens on its tier’s shell', () => {
   }
 
   it('at the run’s start, after a death and after a continue — the number and the marks', () => {
-    for (const tier of DIFFICULTY_KINDS) {
+    // In every ship — 0441: the shell is the tier's, and a ship whose row opened on its own would be
+    // a different answer here.
+    for (const tier of DIFFICULTY_KINDS) for (const ship of SHIP_KINDS) {
       const row = DIFFICULTIES[tier];
       const run = shell(tier);
       const { world, frame } = run;
 
-      run.lifecycle.begin(tier);
+      run.lifecycle.begin(tier, ship);
+      expect(world.shipRow, `a ${tier} run begun in the ${ship} flies another ship`).toBe(SHIPS[ship]);
       frame.step();
-      expect(shields(world), `a ${tier} run opens on the wrong shell`).toBe(row.shellOpen);
-      expect(world.shieldOrbs.size, `a ${tier} run opens wearing the wrong number of marks`).toBe(row.shellOpen);
+      expect(shields(world), `a ${tier} ${ship} run opens on the wrong shell`).toBe(row.shellOpen);
+      expect(world.shieldOrbs.size, `a ${tier} ${ship} run opens wearing the wrong number of marks`).toBe(row.shellOpen);
 
       // A DEATH: the shell spent first, so the life ends on the hull and a respawn that kept what the
       // dead ship wore could not pass for one that opens on the tier's.
@@ -117,8 +120,8 @@ describe('0355 — a life opens on its tier’s shell', () => {
       for (let i = 0; i < 600 && run.deaths.count === died; i++) frame.step();
       expect(run.deaths.count, 'the ship was hit on its hull and never died').toBe(died + 1);
       frame.step();
-      expect(shields(world), `a ${tier} life after a death opens on the wrong shell`).toBe(row.shellOpen);
-      expect(world.shieldOrbs.size, `a ${tier} life after a death wears the wrong number of marks`).toBe(row.shellOpen);
+      expect(shields(world), `a ${tier} ${ship} life after a death opens on the wrong shell`).toBe(row.shellOpen);
+      expect(world.shieldOrbs.size, `a ${tier} ${ship} life after a death wears the wrong number of marks`).toBe(row.shellOpen);
 
       // A CONTINUE: every life spent the way `mount` spends them, then the offer taken.
       for (let lives = run.state().run.lives; lives > 0; lives--) {
@@ -129,8 +132,8 @@ describe('0355 — a life opens on its tier’s shell', () => {
       world.ship.health = 0;
       run.lifecycle.resume();
       frame.step();
-      expect(shields(world), `a ${tier} continue opens on the wrong shell`).toBe(row.shellOpen);
-      expect(world.shieldOrbs.size, `a ${tier} continue wears the wrong number of marks`).toBe(row.shellOpen);
+      expect(shields(world), `a ${tier} ${ship} continue opens on the wrong shell`).toBe(row.shellOpen);
+      expect(world.shieldOrbs.size, `a ${tier} ${ship} continue wears the wrong number of marks`).toBe(row.shellOpen);
     }
   });
 });
@@ -166,8 +169,19 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
     theme: 'approach',
   };
 
+  /*
+    ⚠️ **A SHIELD THE TIER CANNOT CARRY IS ITS ROW'S `bare` SINCE 0447, AND WITHHELD ONLY WHERE THAT
+    IS NULL.** *"In Burn difficulty, when a miniboss dies it'll spit out a void bomb pickup in place of
+    the shield."* So the drop on Burn is the ward where the shield was; `withheldSomewhere` below now
+    asks whether any tier REPLACED anything, which is the half the rule exists for.
+  */
   function carriable(row: DifficultyRow): string[] {
-    return MID_BOSS_DROP.filter((kind) => PICKUPS[kind].effect !== 'shield' || row.shellCap > 0);
+    const out: string[] = [];
+    for (const kind of MID_BOSS_DROP) {
+      if (PICKUPS[kind].effect !== 'shield' || row.shellCap > 0) out.push(kind);
+      else if (PICKUPS[kind].bare !== null) out.push(PICKUPS[kind].bare);
+    }
+    return out;
   }
 
   it('the mid-boss’s death throws every piece the tier can carry and no other, through the real frame', () => {
@@ -188,7 +202,7 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
       const thrown: string[] = [];
       for (let i = 0; i < world.pickups.size; i++) thrown.push(PICKUP_KINDS[world.pickups.at(i).kind]!);
       const want = carriable(DIFFICULTIES[tier]);
-      if (want.length < MID_BOSS_DROP.length) withheldSomewhere = true;
+      if (want.some((kind, i) => kind !== MID_BOSS_DROP[i]) || want.length < MID_BOSS_DROP.length) withheldSomewhere = true;
       expect(thrown.sort(), `${tier}: the drop is not what the tier can carry`).toEqual([...want].sort());
     }
     // Otherwise the withholding half was never exercised and this is a copy of 0256's guard.

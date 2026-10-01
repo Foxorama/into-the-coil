@@ -3,7 +3,7 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { GameFrame, advanceLevel, respawn, startLevel, takeShield, type World } from '../src/app/frame.ts';
-import { MAX_SHIELDS, SHIELD_ORBIT, SHIELD_PLACES, SHIPS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIELD_ORBIT, SHIELD_PLACES, SHIPS, SHIP_KINDS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -18,7 +18,7 @@ import {
 } from '../src/content/pickups.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
@@ -118,7 +118,7 @@ describe('the hull is one hit', () => {
     // walks every tier, and this is the baseline's full three.
     const { world } = quietWorld();
     for (let i = 0; i < MAX_SHIELDS + 3; i++) takeShield(world);
-    expect(shieldsOf(SHIPS.proof, world.ship.health), 'the cap let a fourth shield on').toBe(MAX_SHIELDS);
+    expect(shieldsOf(world.shipRow, world.ship.health), 'the cap let a fourth shield on').toBe(MAX_SHIELDS);
   });
 });
 
@@ -230,7 +230,15 @@ describe('the shell is drawn where the player is looking', () => {
     giveShields(world, MAX_SHIELDS);
     frame.step();
 
-    const hullPixels = (SPRITE_EXTENT.ship / 2) * view.scale;
+    /*
+      ⚠️ **THE WIDEST HULL ANY SHIP WEARS, SINCE 0441.** The shell's orbit is one number and there are
+      four ships at three stages each, so it is held clear of every one of them rather than the
+      fighter it was found on.
+    */
+    let widest = 0;
+    for (const kind of SHIP_KINDS) for (const hull of SHIPS[kind].hulls) widest = Math.max(widest, SPRITE_EXTENT[SPRITE_KINDS[hull.base]!]);
+    expect(widest, 'no hull was measured').toBeGreaterThan(0);
+    const hullPixels = (widest / 2) * view.scale;
     const lanePixels = ACROSS_SPAN * view.scale;
     for (let i = 0; i < world.shieldOrbs.size; i++) {
       const orb = world.shieldOrbs.at(i);
@@ -504,12 +512,13 @@ describe('a pickup says which field it lands in', () => {
       last one is a bomb*.
     */
     /*
-      ⚠️ **ON THE BASE KINDS' OWN FACE, since 0233.** `effectOf` takes the face the pickup was showing
-      and the loadout it lands on; face 0 is the base gun and the base tube, so these are the
-      questions this test always asked — a pickup of the FITTED kind at its cap. A pickup of another
-      kind is never capped, and `tests/weapons.test.ts` holds that half.
+      ⚠️ **ON THE BASE KIND'S OWN FACE, since 0233.** `effectOf` takes the face the pickup was showing
+      and the loadout it lands on; face 0 is the base tube, so these are the questions this test always
+      asked — a pickup of the FITTED kind at its cap. A pickup of another kind is never capped, and
+      `tests/weapons.test.ts` holds that half. The gun's ladder is gone since 0441, so the tubes are
+      the one ladder this walks; the loop stays over the kinds so a second ladder joins it as a row.
     */
-    const fitted = (upgrades: readonly UpgradeKind[]): Loadout => ({ upgrades, weapon: SHIPS.proof.weapon, missile: SHIPS.proof.missile });
+    const fitted = (upgrades: readonly UpgradeKind[]): Loadout => ({ upgrades, missile: SHIPS.fighter.missile });
     for (const kind of UPGRADE_KINDS) {
       expect(effectOf(kind, 0, fitted([])), `a ship with nothing on it was refused a ${kind}`).toBe('upgrade');
 
@@ -533,17 +542,20 @@ describe('a pickup says which field it lands in', () => {
       three while `effectOf` switched at tier five would leave two dead pickups, which is the defect
       wearing a smaller number.
     */
-    for (const kind of UPGRADE_KINDS) {
-      for (let n = 0; n < UPGRADE_TIERS + 3; n++) {
-        const carried: UpgradeKind[] = [];
-        for (let i = 0; i < n; i++) carried.push(kind);
-        const now = weaponFor(SHIPS.proof, carried);
-        const next = weaponFor(SHIPS.proof, [...carried, kind]);
-        const grew = JSON.stringify(next) !== JSON.stringify(now);
-        expect(
-          effectOf(kind, 0, fitted(carried)),
-          `at ${n} ${kind}s the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
-        ).toBe(grew ? 'upgrade' : 'special');
+    // In every ship, since 0441: the ladder is the ship's tubes whatever gun it flies.
+    for (const ship of SHIP_KINDS) {
+      for (const kind of UPGRADE_KINDS) {
+        for (let n = 0; n < UPGRADE_TIERS + 3; n++) {
+          const carried: UpgradeKind[] = [];
+          for (let i = 0; i < n; i++) carried.push(kind);
+          const now = weaponFor(SHIPS[ship], carried);
+          const next = weaponFor(SHIPS[ship], [...carried, kind]);
+          const grew = JSON.stringify(next) !== JSON.stringify(now);
+          expect(
+            effectOf(kind, 0, { upgrades: carried, missile: SHIPS[ship].missile }),
+            `${ship}: at ${n} ${kind}s the next one ${grew ? 'does' : 'does not'} change the ship, and the effect disagrees`,
+          ).toBe(grew ? 'upgrade' : 'special');
+        }
       }
     }
   });
@@ -558,14 +570,15 @@ describe('a pickup says which field it lands in', () => {
       What is held is the property that made moving it worthwhile: **every effect a pickup can report
       is one the table already names, or the overflow**, so the shell's job is a routing table over
       `PickupEffect` and never a decision about what a pickup is worth. The overflow is named here
-      because 0372 took away the bomb pickup, which was the one row that said `special` itself.
+      because 0372 took away the bomb pickup, which was the one row that said `special` itself; 0441
+      brought it back in the weapon's place, and the overflow stays named for the tubes.
     */
     const named = new Set<string>([...PICKUP_KINDS.map((k) => PICKUPS[k].effect), 'special']);
     const everything: UpgradeKind[] = [];
     for (let i = 0; i < UPGRADE_TIERS; i++) for (const k of UPGRADE_KINDS) everything.push(k);
     for (const kind of PICKUP_KINDS) {
       for (const carried of [[], everything]) {
-        const loadout: Loadout = { upgrades: carried, weapon: SHIPS.proof.weapon, missile: SHIPS.proof.missile };
+        const loadout: Loadout = { upgrades: carried, missile: SHIPS.fighter.missile };
         expect(named.has(effectOf(kind, 0, loadout)), `${kind} can report an effect no row in the table names`).toBe(true);
       }
     }

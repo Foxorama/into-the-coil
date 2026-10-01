@@ -11,11 +11,14 @@ export const PROBES = [
     suite: 'tests/surge.test.ts',
     // What the overflow was until this decision: a bomb whatever the face.
     broke: 'every overflow a bomb again, whatever the face',
-    guard: 'THE ASK: every gun and every tube, overflowed, stocks the special its row names',
+    // ⚠️ Renamed and re-anchored by 0441: a gun cannot overflow, so the guard holds the tubes, and the
+    // lookup's other arm is the bomb pickup's face rather than a gun's.
+    guard: 'THE ASK: every tube, overflowed, stocks the special its row names',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "  return kind === 'weapon' ? WEAPONS[weaponFaceOf(face)].special : MISSILES[missileFaceOf(face)].special;",
-      replace: "  return 'bomb';",
+      // ⚠️ And by 0447, whose ward faces put two more arms ahead of the tubes'.
+      find: '  return MISSILES[missileFaceOf(face)].special;\n}',
+      replace: "  return 'bomb';\n}",
     },
   },
   {
@@ -40,8 +43,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/specials.ts',
       // ⚠️ Re-anchored by 0376, which put the trigger's side on every row.
-      find: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: null,\n    becomes: null,",
-      replace: "    label: 'Hunt',\n    side: 'tubes',\n    charges: 1,\n    shot: 'bomb',\n    becomes: 'blast',",
+      // ⚠️ Re-anchored by 0441, which took `charges` off the row (a take is one) and added `hint`.
+      find: "    label: 'Hunt',\n    hint: 'Ten seconds of hunting pods',\n    side: 'tubes',\n    shot: null,\n    becomes: null,",
+      replace: "    label: 'Hunt',\n    hint: 'Ten seconds of hunting pods',\n    side: 'tubes',\n    shot: 'bomb',\n    becomes: 'blast',",
     },
   },
   /*
@@ -120,9 +124,9 @@ export const PROBES = [
     guard: 'and is drawn under every shot',
     edit: {
       path: 'src/app/mount.ts',
-      // ⚠️ Re-anchored by 0374, which put the whirlpool in the order beside the shots.
-      find: 'debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust,',
-      replace: 'debris, enemyShots, playerShots, whirl, missiles, bombs, bolts, aura, exhaust,',
+      // ⚠️ Re-anchored by 0374, which put the whirlpool in the order beside the shots, and 0447 the nova.
+      find: 'debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust,',
+      replace: 'debris, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, aura, exhaust,',
     },
   },
   {

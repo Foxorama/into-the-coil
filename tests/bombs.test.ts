@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { reset } from '../src/sim/entity.ts';
 import { ACROSS_SPAN, REFERENCE_ASPECT } from '../src/sim/camera.ts';
 import { GameFrame, canThrow, launchSpecial, respawn, type World } from '../src/app/frame.ts';
-import { SPECIALS, SPECIAL_KINDS, type SpecialKind } from '../src/content/specials.ts';
+import { OPENING_CHARGES, SPECIALS, SPECIAL_KINDS, type SpecialKind } from '../src/content/specials.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { MAX_SHIELDS, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, shieldsOf, shipCarrying } from '../src/content/ships.ts';
+import { WEAPON_KINDS, WEAPONS } from '../src/content/weapons.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { DEFAULT_DIFFICULTY, chargesIn, startingArsenal } from '../src/state/slices/run.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
@@ -23,6 +24,9 @@ import { playableWorld, NO_LEVEL } from './world.ts';
  * reasonable person would remove by accident: every other collision in the game is a threat meeting
  * the ship, and this is the ship's own weapon doing it.
  */
+
+/** A gun whose own special is the bomb — what a ship carrying it opens a run on (0441). */
+const WEAPON_OF_THE_BOMB = WEAPON_KINDS.find((kind) => WEAPONS[kind].special === 'bomb')!;
 
 /** Long enough for a fuse and a blast at any numbers anybody would author. */
 const A_WHILE = 200;
@@ -208,14 +212,21 @@ describe('a blast is an area, and it lands once', () => {
 });
 
 describe('what a run may spend', () => {
+  /*
+    The ship that carries the bomb's gun — 0441 — so the opening charges are a different kind from the
+    storm and the whirlpool the ordering tests below take on top of them.
+  */
+  const SHIP = shipCarrying(WEAPON_OF_THE_BOMB);
   const begin = (): State =>
-    reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY });
+    reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP });
 
   it('starts with the ship’s own kit and no more', () => {
-    expect(begin().run.arsenal).toEqual(startingArsenal());
-    expect(startingArsenal(), 'a run does not start with what the ask says').toEqual({
-      gun: Array<SpecialKind>(SPECIALS.bomb.charges).fill('bomb'),
+    expect(begin().run.arsenal).toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
+    // *"A game starts with two bombs"* — 0441, a bomb being what the ask calls every gun's special.
+    expect(startingArsenal(SHIP, DEFAULT_DIFFICULTY), 'a run does not start with what the ask says').toEqual({
+      gun: Array<SpecialKind>(OPENING_CHARGES).fill('bomb'),
       tubes: [],
+      ward: [],
     });
   });
 
@@ -282,7 +293,7 @@ describe('what a run may spend', () => {
     state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
     const banked = state.run.arsenal;
     expect(chargesIn(banked), 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
-      chargesIn(startingArsenal()),
+      chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)),
     );
 
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
@@ -307,11 +318,13 @@ describe('what a run may spend', () => {
     expect(chargesIn(dead.run.arsenal), 'a death handed back charges the player had already spent').toBe(0);
   });
 
-  it('a taking pushes the row’s own charges, each one press', () => {
+  it('a taking pushes one charge, each one press', () => {
+    // The row's own `charges` went with 0441 (`docs/decisions/0441-a-pilot-flies-their-own-ship.md`):
+    // *"a player can pick up any type and get a bomb of that type"* — one a take, of every kind.
     for (const kind of SPECIAL_KINDS) {
       const state = reduce(begin(), { slice: 'run', type: 'took', special: kind });
-      expect(chargesIn(state.run.arsenal) - chargesIn(startingArsenal()), `${kind} pushed the wrong number of charges`).toBe(
-        SPECIALS[kind].charges,
+      expect(chargesIn(state.run.arsenal) - chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)), `${kind} pushed the wrong number of charges`).toBe(
+        1,
       );
     }
   });
@@ -354,11 +367,11 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     expect(world.bombs.size, 'a surge threw something').toBe(0);
     // And since 0374 a thrown special may go off as a storm instead of a blast, and a whirlpool is
     // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
-    // which is thrown and opens where it lands: five.
+    // which is thrown and opens where it lands: five. 0447 adds the nova, burst from the ship: six.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool and a rift`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift and a nova`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,

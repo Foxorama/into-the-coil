@@ -4,7 +4,7 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LandmarkEntry } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { PALETTES, type PaletteName } from '../src/content/palette.ts';
-import { LANDMARK_SLOTS, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { LANDMARK_SLOTS, SHIP_BOX, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { THEMES, THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import {
@@ -256,7 +256,9 @@ describe('0221 — a planet is not a space', () => {
     const hangsTo = Math.max(...roof);
     const risesTo = Math.min(...shore!);
     const gap = risesTo - hangsTo;
-    const ship = SPRITE_EXTENT.ship;
+    // The box every ship is drawn in — 0441. It was the fighter's bare 7-unit hull; the widest ship a
+    // pilot can fly through this is now drawn across the whole box.
+    const ship = SHIP_BOX;
     expect(
       gap,
       `the mire's corridor is ${gap.toFixed(0)} lane units at its tightest against a ship ${ship} across — ` +

@@ -100,8 +100,13 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * ⚠️ **AND 646 SINCE 0403, ON 0286's LINE — ONE BOSS THAT IS MANY.** The jellyfish's five tentacles are
  * eight lengths each, and the body pool that held the serpent's twenty-six holds forty: fourteen more
  * blits of a baked bitmap on a desktop target. The particle share was not touched.
+ *
+ * ⚠️ **AND 686 SINCE 0447, ON THE PLAYER-PROJECTILE LINE.** The nova is a ring laid in pieces round
+ * a radius that crosses the whole screen, and only the pieces the view can show are laid: about thirty
+ * at their most, forty with the shots' headroom — forty blits of a baked bitmap for the second a
+ * charge is spent, on a desktop target. The particle share was not touched.
  */
-const WORST_CASE = 646;
+const WORST_CASE = 686;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

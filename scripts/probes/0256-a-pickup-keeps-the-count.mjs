@@ -21,8 +21,9 @@ export const PROBES = [
       // clamp, asked once against the room left on the ladder rather than once per event.
       // ⚠️ Re-anchored by 0372, which took the count away again: one rung a pickup.
       find: '      const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;',
+      // ⚠️ Re-aimed by 0441: the tubes are the one ladder, so the fitted kind is the missile's.
       replace:
-        '      const fitted = action.upgrade === \'weapon\' ? state.weapon : state.missile;\n' +
+        '      const fitted = state.missile;\n' +
         '      const upgrades = action.kind === fitted ? (room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades) : [...state.upgrades.filter((u) => u !== action.upgrade), action.upgrade];',
     },
   },
@@ -53,12 +54,18 @@ export const PROBES = [
     decision: '0256',
     suite: 'tests/pickups.test.ts',
     // A level quietly given a second authored weapon — 0083's nine, one pickup at a time.
-    broke: 'a level authoring a second weapon, which is how nine a level came back',
-    guard: 'THE BUDGET: a level authors one weapon and one missile and nothing else',
+    /*
+      ⚠️ RE-AIMED BY 0441, which removed every level's weapon and made the weapon pickup the bomb
+      pickup: the budget is one missile a level, and the bomb is the mid-boss's but for level one's.
+      A `kind: 'weapon'` here names no kind any more and nothing in the guard counts it, so it could
+      not redden — the extra is a bomb, the pickup that took the weapon's place.
+    */
+    broke: 'a level authoring a bomb of its own, which is how nine a level came back',
+    guard: 'THE BUDGET: a level authors one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 864, kind: 'missile', lane: 28 },",
-      replace: "  { at: 864, kind: 'missile', lane: 28 },\n  { at: 1700, kind: 'weapon', lane: 40 },",
+      replace: "  { at: 864, kind: 'missile', lane: 28 },\n  { at: 1700, kind: 'bomb', lane: 40 },",
     },
   },
   {
@@ -66,7 +73,8 @@ export const PROBES = [
     suite: 'tests/pickups.test.ts',
     // The shield authored back into a level, where it is the mid-boss's to drop.
     broke: 'a shield authored into a level rather than dropped by its mid-boss',
-    guard: 'THE BUDGET: a level authors one weapon and one missile and nothing else',
+    // ⚠️ Renamed by 0441, which took the levels' weapons.
+    guard: 'THE BUDGET: a level authors one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
       find: "  { at: 854, kind: 'missile', lane: 56 },",
@@ -91,11 +99,12 @@ export const PROBES = [
     // The shield dropped from the mid-boss's list, so nothing in the game offers armour.
     broke: 'the shield taken out of the mid-boss’s drop',
     // ⚠️ Re-anchored and renamed by 0372, which put a missile where the bomb was.
-    guard: 'the fights offer the rest: a mid-boss drops one weapon, one shield and one missile',
+    // ⚠️ And by 0441, which put the bomb pickup where the weapon was.
+    guard: 'the fights offer the rest: a mid-boss drops one bomb, one shield and one missile',
     edit: {
       path: 'src/content/levels.ts',
-      find: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'missile'];",
-      replace: "export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'missile'];",
+      find: "export const MID_BOSS_DROP: readonly PickupKind[] = ['bomb', 'shield', 'missile'];",
+      replace: "export const MID_BOSS_DROP: readonly PickupKind[] = ['bomb', 'missile'];",
     },
   },
   {
@@ -122,36 +131,20 @@ export const PROBES = [
       replace: '      } else {\n        dropPickups(w, w.cameraAlong + w.bossOffset, w.bossAcross, MID_BOSS_DROP);\n        w.clearedIn = BOSS_DEATH_STEPS;',
     },
   },
-  {
-    decision: '0256',
-    suite: 'tests/pickups.test.ts',
-    // The dial not turned by a dropped weapon, so the top of the dial is 9 and nothing says so.
-    broke: 'the dropped weapon not counted on the dial',
-    guard: 'THE DROP: one piece per kind in the list, thrown from where the hull died, and the weapon turns the dial',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: "  if (kind === 'weapon') w.weaponsOffered++;\n  /*\n    ⚠️ **A DROPPED PIECE CYCLES",
-      replace: "  /*\n    ⚠️ **A DROPPED PIECE CYCLES",
-    },
-  },
-  {
-    decision: '0256',
-    suite: 'tests/dial.test.ts',
-    // The content function reading the list alone, so the dial's top is recomputed wrong.
-    broke: 'the level’s weapon count read off the list alone, without the drop',
-    guard: 'THE ENDPOINT: the last boss is fought at exactly the top of the dial',
-    edit: {
-      path: 'src/content/levels.ts',
-      find: "  if (level.midBoss !== null) for (const kind of MID_BOSS_DROP) if (kind === 'weapon') offered++;\n",
-      replace: '',
-    },
-  },
+  /*
+    ⚠️ TWO PROBES STOOD HERE AND 0441 RETIRED THEM WITH THE DIAL —
+    docs/decisions/0441-a-pilot-flies-their-own-ship.md. *The dropped weapon not counted on the dial*
+    and *the level's weapon count read off the list alone* broke `w.weaponsOffered` and
+    `weaponsOfferedBy`, which went with the gun's ladder; their guards went with tests/dial.test.ts
+    and with the dial's half of `THE DROP`.
+  */
   {
     decision: '0256',
     suite: 'tests/pickups.test.ts',
     // A dropped weapon holding its face, which was 0243's rule for a scattered piece.
-    broke: 'a dropped weapon holding one face, as a scattered piece did',
-    guard: 'a dropped weapon cycles like an authored one',
+    // ⚠️ Renamed by 0441: the piece that cycles is the bomb pickup now.
+    broke: 'a dropped bomb holding one face, as a scattered piece did',
+    guard: 'and a dropped bomb cycles like an authored one',
     edit: {
       path: 'src/app/frame.ts',
       find: '  startCycle(item, row, index % row.faces.length);\n  item.bobPhase = index * GOLDEN_ANGLE;',

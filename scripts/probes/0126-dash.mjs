@@ -145,12 +145,14 @@ export const PROBES = [
       weapon tiers over it"). A slider that moved the gun and left the tubes behind would put the
       wrong ship over every mix judged with it.
     */
-    broke: 'a tier raised the guns and not the tubes',
-    guard: 'A TIER IS BOTH LADDERS, and it is the game’s own resolution of them',
+    // ⚠️ Re-aimed by 0441, which took the gun's ladder: the tubes are the one a tier climbs, so the
+    // slider leaving them behind is a slider that moves nothing — the wrong ship over every mix.
+    broke: 'a tier that leaves the tubes behind',
+    guard: 'A TIER IS THE TUBES’ LADDER, and it is the game’s own resolution of it',
     edit: {
       path: 'rig/transport.ts',
-      find: "  for (let i = 0; i < clamped; i++) carried.push('weapon', 'missile');",
-      replace: "  for (let i = 0; i < clamped; i++) carried.push('weapon');",
+      find: "  for (let i = 0; i < clamped; i++) carried.push('missile');",
+      replace: '  for (let i = 0; i < clamped; i++) void carried;',
     },
   },
   {
