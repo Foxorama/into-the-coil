@@ -89,7 +89,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/actions.ts',
       find: "export const SPECIAL_BINDINGS: number = ACTION_NAMES.filter((a) => ACTIONS[a].kind === 'edge').length;",
-      replace: 'export const SPECIAL_BINDINGS: number = 3;',
+      // ⚠️ Two since 0447: three is now the true count, so a literal 3 broke nothing and went STILL
+      // GREEN. The stale two is the drift the guard exists for — written before the third trigger.
+      replace: 'export const SPECIAL_BINDINGS: number = 2;',
     },
   },
   {
