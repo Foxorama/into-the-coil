@@ -484,9 +484,11 @@ export type BossAttack =
    * from the tentacles is a jagged formation like the updated pteradactyl and hydra, there's still 5
    * that fire, but they need to be jagged so that there's a safe gap."* Five beams each jagged their
    * own way close on each other wherever two knots swing inward, and the gap between them is whatever
-   * the dice left. One seed for the volley puts the same knots on every beam: they bend as one, and the
-   * room between two neighbours is their spacing less their widths along the whole of their length.
-   * Absent is a seed a beam, which is the pterodactyl's and the hydra's.
+   * the dice left. One seed for the volley puts the same knots on every beam: they bend as one, and
+   * across the lane two neighbours stay their spacing apart. ⚠️ **Across the lane is not where a ship
+   * is hurt** — 0453 measured the room beside a steep leg, which is less, and found 0403's twelve knots
+   * left less than a ship of it; the jellyfish's fan is shaped to keep it, and `tests/medusa.test.ts`
+   * flies the volleys and measures. Absent is a seed a beam, which is the pterodactyl's and the hydra's.
    */
   | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly (readonly [number, number])[]; jag?: BeamJag; together?: boolean }
   /**
@@ -2266,9 +2268,10 @@ const WINGS: readonly (readonly [number, number])[] = [
 /**
  * Where the jellyfish's tentacles hang at rest, across the lane from its centre — 0403: fanned wider
  * than the bell, because a laser leaves each tip and the room between two neighbours is the room the
- * player has. Thirteen apart, less two half-widths, is at least nine lane units at every point of a volley
- * (`together`), against a ship two across — eleven was tried first, and photographed, the beams' glow
- * closed most of each gap on the screen even where the hurtbox left it open.
+ * player has. Eleven was tried first, and photographed, the beams' glow closed most of each gap on the
+ * screen even where the hurtbox left it open. ⚠️ *Thirteen apart less two half-widths is nine lane units
+ * at every point* was said here until 0453 measured it to the nearest leg: across the lane, yes; beside a
+ * steep leg, less than a ship. `MEDUSA_FAN` below is what keeps the room now.
  */
 const MEDUSA_TIPS = [-26, -13, 0, 13, 26] as const;
 
