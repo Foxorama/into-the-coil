@@ -74,8 +74,8 @@ nothing to a whole leg. A whole swing over almost nothing is a near-flat leg, an
 first fan (down to −2.9) was at that one leg, 2% from the tips. Now the last knot swings only as far as
 its leg is long, up to the full swing at half a leg.
 
-**The lane is 120 across, not 100** (`ACROSS_SPAN`). `CLAUDE.md`'s *"`across` is a fixed 100"* is
-stale. Two thresholds sized against 100 failed on first run.
+**The lane is 120 across, not 100** (`ACROSS_SPAN`, since
+[0364](0364-the-view-zooms-out.md)). Two thresholds sized against 100 failed on first run.
 
 ## What was rejected
 
