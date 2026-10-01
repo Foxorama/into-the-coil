@@ -24,9 +24,9 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0364, which re-solved every mid-boss after the zoom, and by 0406, which
       // solved it at the loadout the run carries in: 120, so 0247's 240 is twice it now, not four times.
       // ⚠️ And by 0441, which re-solved it at 211 for a ship that carries its own gun from the start;
-      // the break is still twice what its level asks.
-      find: '    health: 211,',
-      replace: '    health: 422,',
+      // the break is still twice what its level asks. And by 0452, which re-solved it at 262.
+      find: '    health: 262,',
+      replace: '    health: 524,',
     },
   },
   {
