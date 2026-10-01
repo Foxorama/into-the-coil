@@ -51,14 +51,19 @@ export const PROBES = [
       202-step flight on every tier, and the named guard stayed green (the ATE guard went red instead, on
       its own fixture: 15 is not a whole number of bites of 2 or 6). At 36 the ball reaches the ship full
       on every tier, and 18 is whole in every bite the ATE guard feeds, so only the claim reddens.
+
+      ⚠️ **AND 0441 MADE THE OPENING GUN THE CAP, SO THIRTY-SIX IS EMPTIED TOO.** Every ship opens at
+      what was the top of its ladder — the pulse lands about a point a step — so the break has to be
+      an appetite no opening gun can eat in a two-hundred-step flight: 240, whose half, 120, is still
+      whole in every bite of 2 or 6 the ATE guard feeds.
     */
-    broke: 'the appetite at thirty-six, so the opening gun cannot empty a ball before it arrives',
+    broke: 'the appetite at two hundred and forty, so the opening gun cannot empty a ball before it arrives',
     guard: 'THE REPORTED ONE: the OPENING gun clears a ball before it reaches the ship',
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0324, which took the appetite to 13.2 — *"about 10% more health."*
       find: '    radius: 3.6,\n    health: 13.2,',
-      replace: '    radius: 3.6,\n    health: 36,',
+      replace: '    radius: 3.6,\n    health: 240,',
     },
   },
   {

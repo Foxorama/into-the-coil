@@ -594,6 +594,10 @@ describe('a threat uses the whole area, and the player does not', () => {
       while (world.enemies.size === 0) frame.step();
       let steps = 0;
       for (; steps < 2400 && world.enemies.size > 0; steps++) {
+        // The ship's fire held: every ship opens at the cap since 0441, and the gun would kill the
+        // body before it ever roams — the probe that breaks the turn went STILL GREEN on exactly that.
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        world.missileIn = Number.MAX_SAFE_INTEGER;
         frame.step();
         if (world.enemies.size === 0) break;
         const e = world.enemies.at(0);
@@ -658,6 +662,9 @@ describe('a threat uses the whole area, and the player does not', () => {
     const frame = new GameFrame(world);
     while (world.enemies.size === 0) frame.step();
     for (let step = 0; step < 2400 && world.enemies.size > 0; step++) {
+      // Held fire, as above: a turret the cap gun kills never wanders far enough to be asked.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
       const before = world.enemyShots.size;
       frame.step();
       if (world.enemies.size === 0) break;

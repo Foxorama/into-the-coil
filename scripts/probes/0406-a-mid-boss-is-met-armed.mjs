@@ -22,16 +22,13 @@ export const PROBES = [
       replace: '    if (level === kind) return { missileTier: 1 };',
     },
   },
-  {
-    decision: '0406',
-    suite: 'tests/midboss.test.ts',
-    // A clear that carries nothing, which is what 0269's one rung silently assumed.
-    broke: 'the loadout forgetting every earlier level, as though a clear reset the ladders',
-    guard: 'THE REPORTED ONE: a mid-boss fight lasts what its level asks',
-    edit: {
-      path: 'scripts/weigh-fight.mjs',
-      find: '    for (const p of row.pickups) if (level !== kind || p.at < midAt) take(p.kind);',
-      replace: '    for (const p of row.pickups) if (level === kind && p.at < midAt) take(p.kind);',
-    },
-  },
+  /*
+    ── *"THE LOADOUT FORGETTING EVERY EARLIER LEVEL"* WAS HERE, AND 0441 TOOK WHAT IT COULD SEE ──────
+
+    It dropped every earlier level's pickups from the walk. While the gun had a ladder that cost a
+    mid-boss most of a ship; since 0441 the walk counts the tubes alone, and the mid-boss drops still
+    hand one over, so forgetting the earlier levels' authored tubes moves a fight by less than the band
+    allows — CI reported STILL GREEN. The probe above, which drops every tube, is the break that still
+    shows.
+  */
 ];

@@ -261,8 +261,16 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
       last = blast.health;
     }
     expect(bitOn.length, 'the blade never bit, so the spacing is not being measured').toBeGreaterThan(1);
+    /*
+      ⚠️ **A WHOLE FLASH APART, AND IT WAS *more than one step* — 0441.** The Firebird's blade swings
+      from its hubcaps, and the void held on it misses every other step, so a blade biting every step
+      it overlapped still bit two steps apart and this stayed green (CI: STILL GREEN). The rule is
+      once per flash, `IMPACT_FLASH_STEPS` in `src/app/frame.ts`, four steps; measured, the bites
+      land eight apart.
+    */
+    const FLASH_STEPS = 4;
     for (let i = 1; i < bitOn.length; i++) {
-      expect(bitOn[i]! - bitOn[i - 1]!, `two bites ${bitOn[i]! - bitOn[i - 1]!} steps apart, which is inside one flash`).toBeGreaterThan(1);
+      expect(bitOn[i]! - bitOn[i - 1]!, `two bites ${bitOn[i]! - bitOn[i - 1]!} steps apart, which is inside one flash`).toBeGreaterThanOrEqual(FLASH_STEPS);
     }
   });
 
