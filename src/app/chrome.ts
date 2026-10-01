@@ -103,6 +103,43 @@ const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(ha
 const each = (part = ''): string => PANELLED.map((screen) => `.${prefixFor(screen).slice(0, -1)}${part}`).join(', ');
 
 /**
+ * The title's star sky — 0437: three layers, far to near, each a handful of soft dots on a tile of
+ * its own size, drifting a whole number of tiles per loop at its own speed. Placed by a fixed hash
+ * rather than a stream: it is the stylesheet's, written once at load, and the same sky every time.
+ */
+function starSky(): string {
+  const layers = [
+    { tile: 320, count: 9, size: 1, alpha: 45, tiles: 1 },
+    { tile: 240, count: 6, size: 1.5, alpha: 65, tiles: 2 },
+    { tile: 180, count: 3, size: 2, alpha: 85, tiles: 5 },
+  ];
+  const images: string[] = [];
+  const sizes: string[] = [];
+  const from: string[] = [];
+  const to: string[] = [];
+  let n = 0;
+  for (const layer of layers) {
+    for (let i = 0; i < layer.count; i++) {
+      n++;
+      const x = Math.round((((n * 7919) % 997) / 997) * layer.tile);
+      const y = Math.round((((n * 104729) % 991) / 991) * layer.tile);
+      images.push(
+        `radial-gradient(${layer.size}px ${layer.size}px at ${x}px ${y}px, ` +
+          `color-mix(in srgb, var(--itc-shine, #fff) ${layer.alpha}%, transparent), transparent)`,
+      );
+      sizes.push(`${layer.tile}px ${layer.tile}px`);
+      from.push('0 0');
+      to.push(`${-layer.tile * layer.tiles}px 0`);
+    }
+  }
+  return (
+    `.${prefixFor('title')}sky { background-image: ${images.join(', ')}; background-size: ${sizes.join(', ')}; ` +
+    `animation: ${prefixFor('title')}drift 60s linear infinite; }\n` +
+    `@keyframes ${prefixFor('title')}drift { from { background-position: ${from.join(', ')}; } to { background-position: ${to.join(', ')}; } }`
+  );
+}
+
+/**
  * The title key's turns — 0432: one keyframe set per number of faces a pickup has, read off the table,
  * so a pickup given a fourth face turns through four without an edit here. Each face is up for its
  * share of the turn and crossfades over the last few percent of it.
@@ -209,6 +246,65 @@ ${each('-panel')} {
   so it is lit the way the playfield is lit. Both inks come off the palette, so a high-contrast palette
   still sets it in its own colours. The size is 0049's and untouched.
 */
+/*
+  The badge beside the name — 0437. As tall as the name's cap height and a little more, so it reads
+  as one lockup rather than an icon standing next to a heading; its ring is the painting's own.
+*/
+.itc-title-mark, .itc-splash-mark { display: flex; align-items: center; justify-content: center; gap: 0.4em; }
+.itc-title-badge { width: clamp(1.8rem, min(9cqw, 13cqh), 5rem); height: auto; aspect-ratio: 1; }
+.itc-splash-badge { width: clamp(2.6rem, min(13cqw, 20cqh), 7rem); height: auto; aspect-ratio: 1; animation: itc-splash-in 1.2s ease-out both; }
+/*
+  ── THE TITLE'S SKY — 0437 ───────────────────────────────────────────────────────────────────────
+
+  Three layers of stars drifting left at three speeds, as the game's own sky scrolls, and the pilot's
+  ship crossing low every sixteen seconds with its exhaust lit. Behind the panel, taking no pointer.
+  Each layer moves a whole number of its own tiles per loop, so the loop has no seam. The buttons get a
+  backing of the void, because a ship passing behind a label is a label nobody can read.
+*/
+.itc-title-sky {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+${starSky()}
+.itc-title-panel { position: relative; z-index: 1; }
+.itc-title-flyer {
+  position: absolute;
+  left: 0;
+  top: 88%;
+  width: clamp(2.2rem, 7cqmin, 4rem);
+  height: clamp(2.2rem, 7cqmin, 4rem);
+  transform: translateX(-20cqw);
+  animation: itc-title-fly 16s linear infinite;
+  filter: drop-shadow(0 0 0.35em var(--itc-ink));
+}
+.itc-title-flyer > canvas { display: block; width: 100%; height: 100%; }
+/* The exhaust: a streak of the bullet's orange running back from the tail. */
+.itc-title-flyer::before {
+  content: '';
+  position: absolute;
+  right: 72%;
+  top: 46%;
+  width: 180%;
+  height: 8%;
+  border-radius: 999px;
+  background: linear-gradient(to left, var(--itc-hot, #ff9f1c), transparent);
+}
+@keyframes itc-title-fly {
+  0% { transform: translate(-20cqw, 0); }
+  40% { transform: translate(120cqw, -5cqh); }
+  100% { transform: translate(120cqw, -5cqh); }
+}
+/*
+  The buttons only. The settings stay hollow, because hollow against filled is how the chosen one is
+  told (0024, and the style suite holds it), and the ship's lane is below them.
+*/
+.itc-title-panel .itc-title-action { background: color-mix(in srgb, var(--itc-void) 82%, transparent); }
+@media (prefers-reduced-motion: reduce) {
+  .itc-title-sky { animation: none; }
+  .itc-title-flyer { display: none; }
+}
 .itc-title-heading, .itc-splash-heading {
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -366,6 +462,32 @@ ${each('-choices')} {
   height: 100%;
 }
 .itc-select-action-hint { display: block; font-size: 0.8em; font-weight: 500; opacity: 0.7; }
+/*
+  The golfer flying now — 0437. A filled badge in the card's corner with a tick in the void's ink: a
+  shape and a fill, never the card's colour alone (0024), and away from the focus ring's outline so the
+  two never read as one mark.
+*/
+.itc-select-action { position: relative; transition: transform 0.15s ease-out; }
+/* A card lifts under the pointer, so the choice under the hand is the one that moved. */
+.itc-select-action:hover { transform: translateY(-0.25em); }
+@media (prefers-reduced-motion: reduce) {
+  .itc-select-action, .itc-select-action:hover { transition: none; transform: none; }
+}
+.itc-select-action-current::after {
+  content: '\\2713';
+  position: absolute;
+  top: 0.35em;
+  right: 0.35em;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.85em;
+  font-weight: 800;
+  background: var(--itc-ink);
+  color: var(--itc-void);
+}
 .itc-select-portrait {
   width: clamp(3rem, min(24cqh, 14cqw), 9rem);
   height: clamp(3rem, min(24cqh, 14cqw), 9rem);
@@ -893,6 +1015,19 @@ ${faceTurns()}
 }
 .itc-playing-hud-shown { display: flex; }
 .itc-playing-hud-group { display: flex; gap: 0.4em; align-items: center; }
+/*
+  On a touch screen the discs say the stacks' counts, so the readout's two say nothing new — 0437.
+  Taken off the glass and NOT out of the page: the discs are a picture (0060) and hidden from a reader,
+  so these labels are the only place a screen reader hears the charges.
+*/
+.itc-playing-hud-touch > .itc-playing-hud-stack {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 /*
   The counts in the score's type — 0433: its weight, its spacing and its fixed-width figures, so the
   corner and the score read as one readout and a count going from 9 to 10 does not shove the row.
@@ -1934,6 +2069,13 @@ export interface NowPlaying {
 const ICON_PIXELS_PER_UNIT = 28;
 
 /**
+ * The studio's badge, as the shell already ships it — 0437. A sidecar of 0008's closed list and the
+ * service worker's precache, so naming it here adds no file to the build and nothing that fails
+ * offline. Relative, as the manifest's own icons are, so a branch preview's path finds it too.
+ */
+const BADGE_SRC = 'icon-192.png';
+
+/**
  * How many pixels square a golfer's portrait is baked at — 0415. Above the largest it is ever drawn
  * (9rem) at a pixel ratio of two, on the icons' own argument: a few kilobytes once, and no pixel steps.
  */
@@ -1947,6 +2089,16 @@ export interface Chrome {
    * flies; called when the shell knows it, and a no-op when it has not changed.
    */
   setShip(sprite: number): void;
+  /**
+   * Mark which control on a screen is the one already chosen — 0437: the golfer flying now, on the
+   * screen that changes golfer. The focus ring stays where `show` puts it; this is a mark, not a cursor.
+   */
+  setCurrent(screen: Screen, index: number): void;
+  /**
+   * Whether the trigger discs are up — 0437. On a touch screen each disc says its stack's count, so the
+   * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
+   */
+  setTouch(touch: boolean): void;
   /**
    * Redraw the in-game readout. Called on a change, never per frame.
    *
@@ -2522,6 +2674,8 @@ export function makeChrome(
   };
 
   const panels: Partial<Record<Screen, Panel>> = {};
+  /** The ship that crosses the title's sky — 0437 — kept so `setShip` can put the pilot's own in it. */
+  let titleFlyer: HTMLElement | null = null;
   const elements: HTMLElement[] = [style];
   const listeners: (() => void)[] = [];
 
@@ -2570,7 +2724,46 @@ export function makeChrome(
       const heading = document.createElement('h1');
       heading.className = prefix + 'heading';
       heading.textContent = row.heading;
-      panel.appendChild(heading);
+      /*
+        ⚠️ **THE BADGE BESIDE THE NAME, ON THE TWO SCREENS WHOSE HEADING IS THE NAME — 0437.** The
+        studio's badge (0427) was the launcher icon and nowhere in the game. It is the shell's own
+        `icon-192.png`, which already ships beside the page and which the service worker already
+        precaches for the install splash — so the page gains no file, no inlined bytes and nothing that
+        fails offline. Decorative: the heading beside it is the name.
+      */
+      if (screen === 'title' || screen === 'splash') {
+        const mark = document.createElement('div');
+        mark.className = prefix + 'mark';
+        const badge = document.createElement('img');
+        badge.className = prefix + 'badge';
+        badge.src = BADGE_SRC;
+        badge.alt = '';
+        badge.decoding = 'async';
+        mark.append(badge, heading);
+        panel.appendChild(mark);
+      } else {
+        panel.appendChild(heading);
+      }
+    }
+    /*
+      ── A LIVE SKY BEHIND THE TITLE — 0437 ─────────────────────────────────────────────────────────
+
+      The title was the space colour, flat, for as long as anybody sat on it. Behind the panel now: three
+      layers of stars drifting at three speeds the way the game's own sky does, and every so often the
+      pilot's ship crossing low under the buttons. All of it is the stylesheet's and none of it the
+      game's — see 0437 for why the music room's flythrough is not what draws it.
+    */
+    if (screen === 'title') {
+      const sky = document.createElement('div');
+      sky.className = prefix + 'sky';
+      sky.setAttribute('aria-hidden', 'true');
+      const flyer = document.createElement('span');
+      flyer.className = prefix + 'flyer';
+      const hull = iconOf(SPRITE.ship);
+      flyer.appendChild(hull);
+      sky.appendChild(flyer);
+      root.insertBefore(sky, panel);
+      titleFlyer = flyer;
     }
     // The inks the score's gold is made of, on every overlay, where the palette is — 0428.
     paintScoreInks(root, colours);
@@ -2908,7 +3101,7 @@ export function makeChrome(
   const stackGroups: { group: HTMLElement; icon: HTMLElement; sprite: number; count: HTMLElement }[] = [];
   for (let i = 0; i < 2; i++) {
     const group = document.createElement('div');
-    group.className = 'itc-playing-hud-group';
+    group.className = 'itc-playing-hud-group itc-playing-hud-stack';
     const icon = hudIcon(SPRITE.bomb);
     const count = document.createElement('span');
     group.append(icon, count);
@@ -3135,6 +3328,22 @@ export function makeChrome(
       livesIcon.replaceWith(fresh);
       livesIcon = fresh;
       livesSprite = sprite;
+      // And the one crossing the title's sky — 0437: the ship the pilot will fly.
+      if (titleFlyer !== null) titleFlyer.replaceChildren(iconOf(sprite));
+    },
+    setCurrent(screen: Screen, index: number): void {
+      const panel = panels[screen];
+      if (panel === undefined) return;
+      panel.controls.forEach((control, i) => {
+        const current = i === index;
+        control.classList.toggle(prefixFor(screen) + 'action-current', current);
+        // Said in words as well as drawn — 0024: the mark is a picture, and a reader needs the fact.
+        if (current) control.setAttribute('aria-current', 'true');
+        else control.removeAttribute('aria-current');
+      });
+    },
+    setTouch(touch: boolean): void {
+      hud.classList.toggle('itc-playing-hud-touch', touch);
     },
     setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));
