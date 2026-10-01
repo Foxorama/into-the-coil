@@ -3,6 +3,11 @@
 **Accepted 2026-08-04**, before the first frame is drawn, as `docs/game.md` said it had to be. Lands
 `src/sim/camera.ts` and changes a shipped surface — the manifest's `orientation`.
 
+⚠️ **Superseded in part by [0364](0364-the-view-zooms-out.md)**: *the number*. `across` is
+`ACROSS_SPAN`, 120 since 2026-09-24, and a place across the lane is a share of it. Every rule this
+decision hangs on the number stands; every 100 below, and in the decisions written before 0364, is
+the lane as it was then.
+
 ## The rule
 
 **The long axis of the screen is always the scroll axis.** Landscape scrolls horizontally, portrait

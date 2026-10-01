@@ -161,13 +161,15 @@ decision needs no rule.
   — [0021](docs/decisions/0021-one-stream-per-concern.md)
 
 - **The long axis of the screen is the scroll axis, and nothing is authored in screen space.** One
-  level, in `along` × `across` world units; `across` is a fixed 100 and is the difficulty axis, so
-  only lookahead varies by device and it is clamped at both ends. Spawns are placed against the
+  level, in `along` × `across` world units; `across` is one constant, `ACROSS_SPAN`, and is the
+  difficulty axis, so only lookahead varies by device and it is clamped at both ends. **A place
+  across the lane is a share of it, never a count of units.** Spawns are placed against the
   widest view any device can have, never the current one. The camera does not follow the player.
   **Every speed is in the camera's frame**, which is the one the ship already flies in — a shot aimed
   in world coordinates arrives where the ship *was*, and does it only off the lane, so it hides.
   — [0023](docs/decisions/0023-the-long-axis-is-the-scroll-axis.md),
-  [0034](docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md)
+  [0034](docs/decisions/0034-a-threat-is-absolute-and-a-pool-is-the-pairing.md),
+  [0364](docs/decisions/0364-the-view-zooms-out.md)
 
 - **The sim steps at a fixed 60Hz and the renderer interpolates; art is baked to bitmaps and blitted;
   nothing allocates in the frame loop.** A sim stepped by wall-clock delta teleports bullets through
