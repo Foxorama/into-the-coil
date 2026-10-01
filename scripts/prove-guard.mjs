@@ -48,7 +48,18 @@
 // It exits non-zero if any probe fails to apply, fails to go red, reddens the WRONG test, or leaves
 // its tree changed — and it prints the markdown table a decision's "Confirmed, not assumed" wants.
 
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  copyFileSync,
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { createHash } from 'node:crypto';
 import { fork, spawn, spawnSync } from 'node:child_process';
 import { availableParallelism, tmpdir } from 'node:os';
@@ -344,12 +355,14 @@ function apply(probe, treeRoot) {
  * COMMITTED; `prove` has to judge the code you actually have, uncommitted edits included. So the
  * copy is taken off the disk.
  *
- * ⚠️ **And it copies gitignored files too.** 0038's second probe breaks a tracked document by
- * pointing it at `docs/scaffold-plan.md` — a file that must be PRESENT and UNTRACKED for the guard
- * to fire on the right thing. A tracked-files-only copy leaves it absent, the guard still goes red
- * (*"nothing there"* rather than *"gitignored"*), and the probe passes having proven the other half
- * of the test. That is 0019's blind spot exactly: a break and its guard agreeing for the wrong
- * reason.
+ * ⚠️ **And what is copied is the checkout: what git tracks, and what git would add — never what it
+ * ignores.** It used to be the whole directory minus `node_modules` and `dist`, which on this machine
+ * was 650MB of `.wav` renders, 60MB of `shots/` and every other session's git worktree per worker —
+ * and a worktree's own `node_modules` junction, which Windows refused to copy, so no probe ran at
+ * all. **The gate has never had any of it**: CI's checkout is a clone, so a guard that needed an
+ * ignored file would already be red on `main`. See
+ * `docs/decisions/0454-a-worker-tree-is-the-checkout.md`, which amends 0054's reason for copying
+ * ignored files.
  *
  * `.git` comes with it, so `git ls-files` answers inside a worker and answers about the worker.
  * Copied rather than shared, because `git ls-files` refreshes the index — six workers sharing one
@@ -358,13 +371,53 @@ function apply(probe, treeRoot) {
 const NOT_COPIED = ['node_modules', 'dist'];
 
 /**
+ * Every file a worker tree holds, relative to `treeRoot`: the tracked, and the untracked that are not
+ * ignored. Exported for `tests/prove-guard.test.ts`, which asks it of a real repository.
+ *
+ * ⚠️ **ONLY A FILE IS COPIED, AND THAT ONE CHECK DOES TWO JOBS.** `--others` reports a checkout nested
+ * inside this one — a `git worktree`, a clone — as its directory, `nested/`, and does not descend,
+ * because its files are not this repository's; copying it is what this function replaced. And a
+ * tracked file deleted and not yet committed is still listed by `--cached`, though the tree being
+ * judged no longer has it. Neither is a file on disk.
+ *
+ * @param {string} treeRoot
+ * @returns {string[]}
+ */
+export function checkoutFiles(treeRoot) {
+  const listed = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: treeRoot,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (listed.status !== 0) {
+    throw new Error(
+      `git ls-files failed in ${treeRoot}:\n${listed.stderr ?? listed.error}\n` +
+        'A worker tree is what git says this checkout holds, so without git there is no tree to prove in.',
+    );
+  }
+  const out = new Set();
+  for (const path of listed.stdout.split('\0')) {
+    if (path === '') continue;
+    if (!statSync(resolve(treeRoot, path), { throwIfNoEntry: false })?.isFile()) continue;
+    out.add(path);
+  }
+  return [...out];
+}
+
+/**
  * ⚠️ `node_modules` is a JUNCTION, not a copy: 95MB per worker is not a trade, and nothing in a
  * probe run writes to it. Which is also why no report file may be written inside it — six workers
  * would share one path. They go in the temp base instead.
+ *
+ * @param {string} work
+ * @param {string[]} files   `checkoutFiles(root)`, taken once so every worker is offered the same list
  */
-function makeTree(work) {
-  const skip = new Set(NOT_COPIED.map((d) => resolve(root, d)));
-  cpSync(root, work, { recursive: true, filter: (src) => !skip.has(resolve(src)) });
+function makeTree(work, files) {
+  for (const path of files) {
+    mkdirSync(dirname(resolve(work, path)), { recursive: true });
+    copyFileSync(resolve(root, path), resolve(work, path));
+  }
+  cpSync(resolve(root, '.git'), resolve(work, '.git'), { recursive: true });
   linkModules(work);
 }
 
@@ -929,9 +982,10 @@ async function main(filter) {
     );
     process.stdout.write(`Copying ${workers} disposable ${workers === 1 ? 'tree' : 'trees'} to prove in ... `);
     const paths = [];
+    const files = checkoutFiles(root);
     for (let i = 0; i < workers; i++) {
       const work = join(base, `w${i}`);
-      makeTree(work);
+      makeTree(work, files);
       paths.push(work);
     }
     const trees = fingerprintTrees(paths);
