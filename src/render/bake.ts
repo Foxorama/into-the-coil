@@ -2682,6 +2682,12 @@ export const LANDMARK_OF: Record<
   core: (ctx, ink, _glow, space, size, seed) => drawHeart(ctx, ink, space, size, seed),
 };
 
+/**
+ * How far the Pillars' dust is lifted from the bare backdrop towards the place's gas — 0445: the
+ * glow of the nebula between the player and the columns. Theirs alone; no other landmark reads it.
+ */
+const PILLAR_HAZE = 0.3;
+
 function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number): void {
   /*
     ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
@@ -2874,7 +2880,8 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
     const crownY = tip + wanted * 0.45;
     const reachOf = Math.min(wanted, crownY, crownX, size - crownX);
     const crown = ctx.createRadialGradient(crownX, crownY, 0, crownX, crownY, reachOf);
-    crown.addColorStop(0, rgba(glow, column.far ? 0.3 : 0.55));
+    // Fainter since 0445: a crown at 0.55 was the hottest orange on the screen, the enemies' own hue.
+    crown.addColorStop(0, rgba(glow, column.far ? 0.22 : 0.4));
     crown.addColorStop(1, rgba(glow, 0));
     ctx.globalAlpha = 1;
     ctx.fillStyle = crown;
@@ -2884,7 +2891,16 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
 
     // A hole in the gas, not a shape on top of it — and a PARTIAL hole for the two standing behind.
     ctx.globalAlpha = column.far ? 0.6 : 1;
-    ctx.fillStyle = space;
+    /*
+      ⚠️ **NOT THE BARE BACKDROP, BUT THE BACKDROP SEEN THROUGH THE GAS IN FRONT OF IT — 0445.** Played:
+      *"too close to the screen … it needs to feel like it's set deeper in the background."* Filled in
+      `space` the columns were the darkest thing on the screen, darker than the empty sky between the
+      clouds — and the darkest, hardest-edged thing in a picture is the nearest thing in it. A real
+      column a few light-years off has the nebula's own glow scattered across it, so it is lifted a
+      fixed share of the way to the gas: still a silhouette against the lobes behind it (they are the
+      gas at up to 0.95), no longer a hole in the screen.
+    */
+    ctx.fillStyle = mix(space, ink, PILLAR_HAZE);
     trace();
     /*
       The blunt fingers at the top, which are the thing that makes it THESE pillars. **Two fingers and
@@ -2931,13 +2947,24 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
 
     // A rim on the windward edge — the gas lit up where it meets the dust. It is the brightest thing
     // on the column and is what stops the silhouette reading as a flat cut-out.
-    ctx.globalAlpha = column.far ? 0.4 : 0.85;
-    ctx.lineWidth = Math.max(1, size * (column.far ? 0.005 : 0.01));
     // The rim is the ember and the face behind it is the gas — 0346, and 0223's rule that every lit
     // EDGE in a place takes its accent, which this one edge had been missing since it was written.
+    /*
+      ⚠️ **LIGHT ON AN EDGE, NOT A LINE ALONG IT — 0445.** One stroke at 0.85 was a crisp orange line
+      five pixels wide at 1.7×, the sharpest edge and the most saturated orange on the screen, in the
+      raiders' own hue: it pulled the Pillars up to the glass. Six strokes, widest and faintest first,
+      so the edge glows and the light falls away into the gas the way 0345's dust does, at a peak about
+      half what the one stroke had. **Six and not three because the photograph of three showed three
+      stripes** — a step of 0.14 at a stroke's edge is a line; the largest step here is the core's.
+    */
     ctx.strokeStyle = glow;
-    trace();
-    ctx.stroke();
+    const rim = size * (column.far ? 0.005 : 0.01);
+    for (const [grow, alpha] of [[4, 0.035], [3, 0.045], [2.2, 0.06], [1.6, 0.08], [1.1, 0.1], [0.7, 0.16]] as const) {
+      ctx.globalAlpha = alpha * (column.far ? 0.5 : 1);
+      ctx.lineWidth = Math.max(1, rim * grow);
+      trace();
+      ctx.stroke();
+    }
     ctx.strokeStyle = ink;
 
     /*
@@ -2957,7 +2984,8 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
     */
     if (!column.far) {
       ctx.lineWidth = Math.max(1, size * 0.004);
-      ctx.globalAlpha = 0.3;
+      // 0.3 until 0445: fine bright hairlines are detail at a distance the rest no longer claims.
+      ctx.globalAlpha = 0.18;
       for (let i = 0; i < 3; i += 1) {
         const from = mid + rng.range(-0.6, 0.9) * tipHalf + drift;
         const reach = rng.range(0.06, 0.15) * size;
@@ -14125,6 +14153,50 @@ export interface StructureMark {
    * lit mark at the glow, the brighter of the two, which over-counts — the direction a floor may err.
    */
   gas?: boolean;
+  /**
+   * A soft band rather than a hard-edged shape — 0445. Columns at `x` (pixels, in order), each with
+   * the band's centre and half-width there; the mark is drawn column by column in ONE gradient fill,
+   * `alpha` at the centre falling to nothing at `half` by `bandProfile`, and `points` is its envelope.
+   *
+   * ⚠️ **ONE FILL, BECAUSE STACKED FAINT FILLS ARE A DIFFERENT PICTURE ON EVERY RENDERER.** The first
+   * soft band was twenty ribbons from 0.012, and a ribbon that faint adds under a level of red to The
+   * Approach's void: rounded per fill, the CI runner drew it a fraction as bright and bluer. A
+   * gradient is computed once per pixel and rounded once.
+   */
+  band?: { x: number[]; centre: number[]; half: number[] };
+}
+
+/**
+ * How much of a soft band's peak lies at `u`, the share of its half-width from its centre — 0445. A
+ * bell with no slope at its edge, so the light thins into the dark without a line where it stops.
+ * One description, read by the painter and by `skyCover` alike.
+ */
+export function bandProfile(u: number): number {
+  const v = u < 0 ? -u : u;
+  if (v >= 1) return 0;
+  const w = 1 - v * v;
+  return w * w;
+}
+
+/** Pixels a soft band is drawn in, one gradient a column — 0445. */
+const BAND_COLUMN = 4;
+
+/** A soft band's centre and half-width at `x`, interpolated between its samples. */
+function bandColumn(band: NonNullable<StructureMark['band']>, x: number): [number, number] {
+  const xs = band.x;
+  let i = 0;
+  while (i < xs.length - 2 && x > xs[i + 1]!) i += 1;
+  const span = xs[i + 1]! - xs[i]!;
+  const f = span > 0 ? Math.min(1, Math.max(0, (x - xs[i]!) / span)) : 0;
+  return [band.centre[i]! + (band.centre[i + 1]! - band.centre[i]!) * f, band.half[i]! + (band.half[i + 1]! - band.half[i]!) * f];
+}
+
+/** The share of a soft band's peak at `(x, y)`: its column's centre and half-width, read by profile. */
+function bandAt(band: NonNullable<StructureMark['band']>, x: number, y: number): number {
+  const xs = band.x;
+  if (x < xs[0]! || x > xs[xs.length - 1]!) return 0;
+  const [centre, half] = bandColumn(band, x);
+  return bandProfile((y - centre) / half);
 }
 
 
@@ -14205,23 +14277,52 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     const rng = makeRng('sky').stream('approach/band');
     const phase = [rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2)];
     const SAMPLES = 48;
+    /*
+      ⚠️ **FLATTER AND SOFTER THAN 0343 DREW IT, BECAUSE IT READ AS A CURTAIN ON THE GLASS — 0445.**
+      Played: *"feels too close to the screen."* The 1080p photograph had eight ribbons at 0.065 each,
+      so the band's flank was eight ruled contour lines a visible step of light apart, and its centre
+      rose and fell a ninth of the lane once a screen: a hard-edged sheet billowing in front of the
+      stars. Far light has neither — a galaxy seen edge-on is long, nearly level and has no edge at
+      all. So the wander and the swell are about half what they were, and the same light at the core
+      (0.41 of the glow, against 0.42) falls away to nothing at its flanks with no step at all.
+    */
     const centre = (t: number): number =>
-      0.45 + 0.022 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.009 * Math.sin(Math.PI * 4 * t + phase[1]!);
+      0.45 + 0.012 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.005 * Math.sin(Math.PI * 4 * t + phase[1]!);
     // It swells and narrows along its length, which is what stops it reading as a stripe.
-    const swell = (t: number): number => 1 + 0.3 * Math.sin(Math.PI * 4 * t + phase[2]!);
+    const swell = (t: number): number => 1 + 0.16 * Math.sin(Math.PI * 4 * t + phase[2]!);
     const out: StructureMark[] = [];
-    const RIBBONS = 8;
-    for (let k = 0; k < RIBBONS; k += 1) {
-      const half = 0.075 * Math.pow(1 - k / RIBBONS, 1.6) + 0.004;
-      const upper: number[][] = [];
-      const lower: number[][] = [];
-      for (let s = 0; s <= SAMPLES; s += 1) {
-        const t = s / SAMPLES;
-        upper.push([t * size, (centre(t) - half * swell(t)) * size]);
-        lower.push([t * size, (centre(t) + half * swell(t)) * size]);
-      }
-      out.push({ points: [...upper, ...lower.reverse()], width: 0, alpha: 0.065, crosses: true, taper: false, lit: true });
+    /*
+      ⚠️ **ONE SOFT BAND, AND IT WAS TWENTY FAINT RIBBONS FOR ONE PUSH.** The faintest of them, at
+      0.012, added 0.6 of a level of this glow's red over the void, and the CI runner's renderer rounds
+      every fill: the band came out a fraction as bright and bluer there, and
+      `tests/place.browser.test.ts` counted 3,089 pixels of it against 161,239 on this machine, twice.
+      A backdrop whose light depends on whose rounding draws it is a different picture on every screen,
+      so it is one gradient fill (`StructureMark.band`), rounded once. Wider at the flanks than 0343's,
+      so the light thins into the dark rather than stopping.
+    */
+    const HALF = 0.1;
+    const xs: number[] = [];
+    const centres: number[] = [];
+    const halves: number[] = [];
+    const upper: number[][] = [];
+    const lower: number[][] = [];
+    for (let s = 0; s <= SAMPLES; s += 1) {
+      const t = s / SAMPLES;
+      xs.push(t * size);
+      centres.push(centre(t) * size);
+      halves.push(HALF * swell(t) * size);
+      upper.push([t * size, (centre(t) - HALF * swell(t)) * size]);
+      lower.push([t * size, (centre(t) + HALF * swell(t)) * size]);
     }
+    out.push({
+      points: [...upper, ...lower.reverse()],
+      width: 0,
+      alpha: 0.41,
+      crosses: true,
+      taper: false,
+      lit: true,
+      band: { x: xs, centre: centres, half: halves },
+    });
     /*
       And dust in front of it: two dark rifts wandering along the band, which is what makes a band of
       far light read as a galaxy seen edge-on rather than as a smear. Dark, so they cost nothing.
@@ -14231,16 +14332,25 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       is a random walk in straight segments, which is right for a corridor wall and drew these as
       zigzags with a kink in the middle of the screen. Dust along a band of light is a slow curve.
     */
+    /*
+      ⚠️ **AND EACH RIFT IS THREE STROKES, WIDEST AND FAINTEST FIRST — 0445.** One stroke at 0.42 was a
+      crisp dark line a few pixels wide across the whole screen, which is a scratch on the glass rather
+      than dust a long way off. Ember Nebula's lanes found the answer in 0345; this is it at this
+      place's own weights, lighter at the core than the one stroke was.
+    */
     for (let r = 0; r < 2; r += 1) {
       const off = rng.range(-0.012, 0.012);
-      const sway = rng.range(0.006, 0.012);
+      const sway = rng.range(0.004, 0.008);
       const turn = rng.range(0, Math.PI * 2);
       const points: number[][] = [];
       for (let s = 0; s <= SAMPLES; s += 1) {
         const t = s / SAMPLES;
         points.push([t * size, (centre(t) + off + sway * Math.sin(Math.PI * 2 * (2 + r) * t + turn)) * size]);
       }
-      out.push({ points, width: rng.range(0.008, 0.014) * size, alpha: 0.42, crosses: true, taper: false, lit: false });
+      const width = rng.range(0.008, 0.014) * size;
+      for (const [grow, alpha] of [[2.6, 0.08], [1.6, 0.1], [0.8, 0.14]] as const) {
+        out.push({ points, width: width * grow, alpha, crosses: true, taper: false, lit: false });
+      }
     }
     return out;
   },
@@ -14293,7 +14403,12 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         at + bend[0]! * Math.sin(Math.PI * 2 * t + turn[0]!) + bend[1]! * Math.sin(Math.PI * 6 * t + turn[1]!);
       // Pinches nearly shut and opens out again, twice a tile: a lane of dust is not a pipe.
       const half = (t: number): number => body * (0.55 + 0.45 * Math.sin(Math.PI * 4 * t + turn[2]!));
-      for (const [grow, alpha] of [[1.7, 0.16], [1.25, 0.2], [0.8, 0.3]] as const) {
+      /*
+        ⚠️ **FIVE PASSES, NOT THREE, AND A LITTLE LIGHTER AT THE CORE — 0445.** Three steps of 0.16 to
+        0.3 left each lane with three ruled contours at 1080p, and an edge you can count is an edge
+        close enough to focus on. Five smaller steps over a wider spread is the same dust further off.
+      */
+      for (const [grow, alpha] of [[2.1, 0.06], [1.7, 0.08], [1.3, 0.1], [0.95, 0.12], [0.6, 0.14]] as const) {
         const upper: number[][] = [];
         const lower: number[][] = [];
         for (let s = 0; s <= SAMPLES; s += 1) {
@@ -14319,7 +14434,15 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           (at + sway[0]! * Math.sin(Math.PI * 2 * waves * t + turn[0]!) + sway[1]! * Math.sin(Math.PI * 2 * (waves + 3) * t + turn[1]!)) * size,
         ]);
       }
-      filaments.push({ points, width: flow.range(0.002, 0.006) * size, alpha: 0.3, crosses: true, taper: false, lit: false });
+      /*
+        ⚠️ **A HALO AND A FAINTER CORE, WHERE THERE WAS ONE CRISP LINE AT 0.3 — 0445.** Nine hard dark
+        hairlines running the width of the screen were the nearest-looking thing in the sky: a sharp
+        thin line has no size to be far away at, so it reads as on the glass. The same thread, soft.
+      */
+      const width = flow.range(0.002, 0.006) * size;
+      filaments.push({ points, width: width * 3, alpha: 0.06, crosses: true, taper: false, lit: false });
+      filaments.push({ points, width: width * 1.5, alpha: 0.08, crosses: true, taper: false, lit: false });
+      filaments.push({ points, width, alpha: 0.1, crosses: true, taper: false, lit: false });
     }
     /*
       ── THE GLOBULES ────────────────────────────────────────────────────────────────────────────
@@ -14380,7 +14503,8 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         }
         // Three times about its own centre, so a knot of dust has a soft edge like the lanes it sits in
         // — 0345. Scaled evenly, so its proportions (and 0203's band, which reads them) are unchanged.
-        for (const [grow, alpha] of [[1.5, 0.14], [1.2, 0.2], [0.85, 0.3]] as const) {
+        // Five since 0445: three steps of up to 0.1 still drew the nine sides as facets at 1080p.
+        for (const [grow, alpha] of [[1.6, 0.06], [1.35, 0.08], [1.12, 0.1], [0.92, 0.12], [0.72, 0.15]] as const) {
           knots.push({
             points: points.map((p) => [x + (p[0]! - x) * grow, y + (p[1]! - y) * grow]),
             width: 0,
@@ -14769,6 +14893,34 @@ export function paintStructure(ctx: Pen, glow: string, space: string, size: numb
     ctx.strokeStyle = ink;
     ctx.globalAlpha = mark.alpha;
     for (const dx of [-size, 0, size]) {
+      /*
+        A soft band — 0445: one column at a time, each one vertical gradient sampled from
+        `bandProfile`, on whole pixels so two columns never share one and composite against each
+        other into a seam.
+      */
+      if (mark.band !== undefined) {
+        /*
+          ⚠️ **FOUR PIXELS A COLUMN, AND THE FIRST BAKE'S FORTY-EIGHT SHOWED AS STRIPES.** One gradient
+          per sample put a step of about two levels between neighbouring columns on the band's flank,
+          and the photograph showed it as vertical banding. Interpolated every four pixels the step is a
+          fifth of a level, which nothing can see. A cold bake, once a place: a few hundred fills.
+        */
+        const band = mark.band;
+        const first = band.x[0]!;
+        const last = band.x[band.x.length - 1]!;
+        for (let x = first; x < last; x += BAND_COLUMN) {
+          const x0 = Math.round(x + dx);
+          const x1 = Math.round(Math.min(x + BAND_COLUMN, last) + dx);
+          if (x1 <= x0) continue;
+          const [centre, half] = bandColumn(band, x + BAND_COLUMN / 2);
+          const fade = ctx.createLinearGradient(0, centre - half, 0, centre + half);
+          for (let s = 0; s <= 16; s += 1) fade.addColorStop(s / 16, rgba(ink, bandProfile(s / 8 - 1)));
+          ctx.fillStyle = fade;
+          ctx.fillRect(x0, centre - half, x1 - x0, half * 2);
+        }
+        ctx.fillStyle = ink;
+        continue;
+      }
       if (mark.width === 0) {
         ctx.beginPath();
         ctx.moveTo(mark.points[0]![0]! + dx, mark.points[0]![1]!);
@@ -15042,6 +15194,8 @@ export function skyCover(size: number, theme: ThemeKind, share = 0.005, step = 4
 
   /** How much gas one lit mark lays on a point: its own alpha inside it, nothing outside. */
   const markAt = (mark: StructureMark, x: number, y: number): number => {
+    // A soft band lays its own profile, as the painter draws it — 0445.
+    if (mark.band !== undefined) return mark.alpha * bandAt(mark.band, x, y);
     if (mark.width === 0) return insidePolygon(mark.points, x, y) ? mark.alpha : 0;
     const reach = mark.width / 2;
     for (let i = 1; i < mark.points.length; i += 1) {
