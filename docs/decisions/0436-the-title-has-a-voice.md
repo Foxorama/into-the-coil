@@ -3,6 +3,9 @@
 **Accepted 2026-10-01.** Items 5–9 of [the screens review](../../reports/the-screens-reviewed-2026-10-01.md),
 as far as each could go without a decision this one is not entitled to make.
 
+⚠️ **The wordmark's gradient runs the other way since [0440](0440-every-screen-speaks-with-the-titles-voice.md)**:
+violet into cyan, as the studio's banner does. 0440 also gives every other screen the same voice.
+
 ## The rule
 
 | | was | is |

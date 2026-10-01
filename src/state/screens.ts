@@ -391,7 +391,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * behind this says everything about why —
    * `docs/decisions/0036-an-event-the-model-knows-about-the-picture-mentions.md`. The score was asked
    * for (`docs/decisions/0428-the-score-is-kept.md`), and it is the one thing the frozen scene cannot
-   * say: what the run is worth, which a continue keeps and the table takes if it runs out.
+   * say: what the credit is worth, how far it got and where the table puts it — which it does when
+   * the player continues and when the offer runs out alike, since a continue starts the score again
+   * (`docs/decisions/0438-the-score-is-the-credits.md`).
    */
   /*
    * ⚠️ **"Continue", not "Again", and the two words describe different games** —

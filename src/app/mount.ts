@@ -104,6 +104,7 @@ import {
   hushed,
   launchSpecial,
   resetLevelScore,
+  resetCreditScore,
   respawn,
   takeShield,
   TENDRIL_SLOTS,
@@ -115,7 +116,7 @@ import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../sta
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { makeChrome } from './chrome.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
-import { browserStore, readScores, recordScore } from '../save/scores.ts';
+import { browserStore, placeScore, readScores, recordScore } from '../save/scores.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1462,10 +1463,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /*
     ── THE SCORE AND THE TABLE — 0428, 0429 ──────────────────────────────────────────────────────────
 
-    The frame counts a level; the run banks each cleared one; this shows both and, when a run ends,
-    puts it on the table. A run ends in exactly two places — the victory, and a run over whose
-    continue ran out onto the title — and `runRecorded` is what makes each run one row however it
-    got there.
+    The frame counts a level; the run banks each cleared one; this shows both and, when a credit
+    ends, puts it on the table. A credit ends in three places — the victory, a run over whose offer
+    ran out onto the title, and since 0438 a run over the player continued from, which starts the
+    score again — and `runRecorded` is what makes each credit one row however it got there.
   */
   const scoreStore = browserStore();
   let scoreTable = readScores(scoreStore);
@@ -1490,7 +1491,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const tally = state.run.tallies[state.run.tallies.length - 1];
       chrome.setSheet('cleared', tally === undefined ? null : levelSheet(tally, state.run));
     } else if (now === 'gameOver') {
-      chrome.setSheet('gameOver', overSheet(state.run, world.score));
+      // Where it would land, read off the table without writing it — 0438. It is written on the way out.
+      const would = placeScore(scoreTable, entryOf(state.run, world.score, state.settings.pilot, false, Date.now()));
+      chrome.setSheet('gameOver', overSheet(state.run, world.score, would.place));
     } else if (now === 'victory') {
       chrome.setSheet('victory', runSheet(state.run, recordRun(true)));
     } else if (now === 'title' && was === 'gameOver') {
@@ -1511,6 +1514,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         freshPlace = -1;
         chrome.setBoard(boardLines(scoreTable), -1);
       }
+    }
+    /*
+      A continue — 0438. The credit that ran out goes on the table as it stands, BEFORE the reducer
+      empties its tallies, and the frame's count of the level being flown starts again with the new
+      credit: its points, its streak, and the share the level's rank is read from.
+    */
+    if (action.slice === 'run' && action.type === 'continued') {
+      recordRun(false);
+      runRecorded = false;
+      resetCreditScore(world.score);
     }
     // The list, or either KIND — 0233. `upgraded` replaces the list on a switch too, so the first
     // test would do alone; the other two are the claim written out rather than relied on.

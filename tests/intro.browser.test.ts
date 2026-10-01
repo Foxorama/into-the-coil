@@ -22,7 +22,7 @@ import { CANVAS_MS, INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
 import { prefixFor } from '../src/app/chrome.ts';
-import { INTRO_STEPS } from '../src/content/port.ts';
+import { INTRO_STEPS, SPLASH_STEPS } from '../src/content/port.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -83,6 +83,20 @@ async function open(): Promise<Page> {
     Count every audio context the page builds — the unlock is the only thing that builds one — and
     every CUE that starts: a source whose buffer is short, which the music's loops never are.
   */
+  // Each screen as it is first shown, in order, by the page's own clock — the splash test reads it.
+  await page.addInitScript(
+    (selectors: Record<string, string>) => {
+      const first: { screen: string; at: number }[] = [];
+      (window as unknown as { __itcFirstShown: typeof first }).__itcFirstShown = first;
+      new MutationObserver(() => {
+        for (const [screen, selector] of Object.entries(selectors)) {
+          if (first.some((f) => f.screen === screen)) continue;
+          if (document.querySelector(selector) !== null) first.push({ screen, at: performance.now() });
+        }
+      }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    },
+    { splash: SPLASH, select: SELECT },
+  );
   await page.addInitScript(() => {
     const Real = window.AudioContext;
     window.__itcContexts = 0;
@@ -161,11 +175,26 @@ const longestGap = async (page: Page): Promise<number> => {
 
 describe.runIf(chromePath)('the page opens on the name, and offers the golfers once it has loaded', () => {
   it('shows the splash first, and the golfers only after it', async () => {
+    /*
+      ⚠️ **THE ORDER THE PAGE SHOWED ITS SCREENS IN, RECORDED BY THE PAGE — and it was a 300 ms wait.**
+      It looked 300 ms after Playwright saw the canvas and asked whether the splash was still up. The
+      splash holds for `SPLASH_STEPS` and the prewarm, about a second and a half, but under the whole
+      suite the gap between the canvas appearing and Playwright hearing of it ran past that, and the
+      splash had rightly given way: red on 0440's run, green three times alone. Wall clock standing in
+      for *what came first* (0044). Now an observer installed before the page's own script writes down
+      each screen as it is first shown, and the test reads the order and the time between them.
+    */
     const page = await open();
-    await page.waitForTimeout(300);
-    expect(await shown(page, SPLASH), 'the page did not open on the splash').toBe(true);
-    expect(await shown(page, SELECT), 'the golfers were offered before the game behind them had loaded').toBe(false);
     await page.waitForSelector(SELECT, { timeout: INTRO_READY_MS });
+    const order = await page.evaluate(() => (window as unknown as { __itcFirstShown: { screen: string; at: number }[] }).__itcFirstShown);
+    expect(order[0]?.screen, 'the page did not open on the splash').toBe('splash');
+    const splashAt = order.find((o) => o.screen === 'splash')!.at;
+    const selectAt = order.find((o) => o.screen === 'select')?.at;
+    expect(selectAt, 'the golfers were never recorded as shown').toBeDefined();
+    // In seconds the player sees: the name is up for at least the steps it is owed, so it is read.
+    expect((selectAt! - splashAt) / 1000, 'the golfers were offered before the name had been on the screen its time').toBeGreaterThanOrEqual(
+      (SPLASH_STEPS / STEPS_PER_SECOND) * 0.95,
+    );
     expect(await page.locator(GOLFER).count(), 'the golfers are not the table').toBe(GOLFER_KINDS.length);
     // Every card carries its golfer's face, drawn — not an empty box beside a name.
     const faces = await page.evaluate((selector: string) => {

@@ -77,9 +77,18 @@ export function runSheet(run: RunState, place: number | null): SheetLine[] {
   return lines;
 }
 
-/** The run over's account: the score as it stands, which a continue keeps — 0428. */
-export function overSheet(run: RunState, score: LevelScore): SheetLine[] {
-  return [{ label: 'Score', value: runScore(run, score), tone: 'total' }];
+/**
+ * The run over's account — 0428, and since 0438 the credit's last word: a continue starts the score
+ * again, so this screen is where the one that ran out is read. Its score, how far it got, and where it
+ * lands on the table — `place` is where it WOULD land, because it is put there only when the player
+ * continues or the offer runs out, and either way it lands exactly there.
+ */
+export function overSheet(run: RunState, score: LevelScore, place: number | null): SheetLine[] {
+  return [
+    { label: 'Score', value: runScore(run, score), tone: 'total' },
+    { label: 'Reached', value: 'Level ' + String(run.level + 1), tone: 'plain' },
+    { label: 'High score', value: placeLabel(place), tone: 'plain' },
+  ];
 }
 
 /** Where a run landed, in words. */
@@ -87,14 +96,22 @@ export function placeLabel(place: number | null): string {
   return place === null ? '—' : '#' + String(place + 1);
 }
 
-/** A finished run as the table keeps it — 0429. `when` is the shell's clock. */
+/**
+ * A finished credit as the table keeps it — 0429, and a credit rather than a run since 0438: a continue
+ * puts the credit that ran out on the table and starts the score again. `when` is the shell's clock.
+ *
+ * ⚠️ **`levels` is the RUN's level, not the credit's tallies.** They were one number while a continue
+ * kept the tallies; since 0438 a credit bought on level five has cleared nothing of its own, and the
+ * table's *how far they got* would say level one. The field's meaning — levels cleared, so the one
+ * being flown is the next — is unchanged, which is why the shape's version is too.
+ */
 export function entryOf(run: RunState, score: LevelScore, pilot: GolferKind, cleared: boolean, when: number): ScoreEntry {
   return {
     score: runScore(run, score),
     bonus: bankedBonus(run),
     pilot,
     difficulty: run.difficulty,
-    levels: run.tallies.length,
+    levels: run.level,
     cleared,
     continues: run.continues,
     when,

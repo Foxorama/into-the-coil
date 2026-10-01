@@ -133,11 +133,12 @@ export interface RunState {
    * Every cleared level's account, in the order they were cleared — 0428. The run's score is these
    * added up (`bankedScore`); the level being flown counts on the frame and joins them at its clear.
    *
-   * ⚠️ **A death and a continue keep them**: the score is the run's, and a continue is counted in
-   * `continues` rather than paid for out of the score.
+   * ⚠️ **A death keeps them and a continue empties them — 0438.** The score is the CREDIT's, as a
+   * cabinet's is: the credit that ran out goes on the table with the level it reached, and the one
+   * the continue buys starts from nothing on the level where the last one ended.
    */
   tallies: readonly LevelTally[];
-  /** Continues taken this run — 0428. */
+  /** Continues taken this run — 0428. Since 0438, which credit this is, counting from nought. */
   continues: number;
 }
 
@@ -235,8 +236,13 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         weapon: state.weapon,
         missile: state.missile,
         difficulty: state.difficulty,
-        tallies: state.tallies,
-        // Counted, and the score is kept — 0428: the table says how many a score cost.
+        /*
+          ⚠️ **THE SCORE STARTS AGAIN — 0438**, reversing 0428's *a continue keeps it*: *"the score
+          … needs to reset on a continue with highscores tracking score and level reached."* The
+          credit that ran out was put on the table by the shell before this landed, so nothing it
+          scored is lost; it is just no longer this credit's.
+        */
+        tallies: [],
         continues: state.continues + 1,
       };
     case 'lifeLost':

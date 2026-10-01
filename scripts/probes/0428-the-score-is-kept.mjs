@@ -2,8 +2,7 @@
 //
 // ⚠️ Every way the score goes wrong is a tidy-looking edit: a multiplier dropped, a hit that only
 // counts when it kills, a boss run through the streak, a level boundary that breaks the streak, a
-// bonus read off the wrong stack, a continue that throws the score away, the break's two totals made
-// one, a body sent that is never counted, and the counter put back in the readout's column.
+// bonus read off the wrong stack, the break's two totals made one, a body sent that is never counted, and the counter put back in the readout's column.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -62,17 +61,6 @@ export const PROBES = [
       path: 'src/app/score.ts',
       find: '    held[kind] = side === null ? shields : run.arsenal[side].length;',
       replace: '    held[kind] = side === null ? shields : run.arsenal.gun.length;',
-    },
-  },
-  {
-    decision: '0428',
-    suite: 'tests/score.test.ts',
-    broke: 'a continue that throws the banked levels away',
-    guard: 'banks in order, keeps the score through a death and a continue',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: '        tallies: state.tallies,\n        // Counted, and the score is kept',
-      replace: '        tallies: [],\n        // Counted, and the score is kept',
     },
   },
   {

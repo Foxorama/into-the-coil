@@ -408,7 +408,8 @@ the *no shop* below is untouched.
 | **the streak** | kills without a hit, ×1 up to ×8, one step every ten kills. **Any hit ends it, a shield's included.** A level boundary does not |
 | **in play** | top right: the run's score, the multiplier and the way to the next step |
 | **the break** | the level's points, its rank (S–D, by the share killed and the hits taken), the bonus for each shield, each bomb (the gun's charges) and each missile powerup (the tubes' charges) held, the level's total and the run's |
-| **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, which a continue keeps |
+| **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, the level reached and where it lands on the table |
+| **a continue** | starts the score again: the credit that ran out goes on the table with its score and the level it reached — [0438](decisions/0438-the-score-is-the-credits.md) |
 | **the table** | the best ten runs, kept on the device, on the title, rolling with the pickup key — [0429](decisions/0429-the-table-is-kept.md) |
 
 ⚠️ Every number in it is a play number, and none has been played.
