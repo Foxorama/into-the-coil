@@ -61,6 +61,14 @@ at every moment of a turn — sampled 343 times over two full turns before it wa
 whose turns never start or all share one clock sums to its face count or to nothing.
 ([0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md)).
 
+**And 0169's probe was reading a race, which CI drew on the second run.** It shrank `HUD_MS` to 500 ms
+on the claim that a press takes 1.2 s, but [0169](0169-a-browser-budget-is-measured.md)'s own note is
+that a press pays for whatever is left of the prewarm when it lands. Five pages each, pressed the moment
+the title showed and pressed a second later: 917–1419 ms and 99–153 ms, the same on #458's build and
+this one, so 0437 did not cause it — the cheaper bake of 0425 made the warm case reachable on a runner
+slow to the title. The probe shrinks to 30 ms now, under the fastest press measured, and is red
+whatever the prewarm has done; it was red three times in three locally.
+
 ## Rollback
 
 Nothing irreversible.
