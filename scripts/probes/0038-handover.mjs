@@ -27,13 +27,19 @@ export const PROBES = [
     // ⚠️ THE ONE CI FOUND AND THE FILESYSTEM COULD NOT. `docs/milestones/` is gitignored, so a tracked
     // document citing it resolves on this machine and in no clone. Four decisions had been doing
     // exactly this, undetected, and the first version of this very test was blind to it.
-    broke: 'a tracked document citing gitignored working material, which resolves here and nowhere else',
+    //
+    // ⚠️ THE TARGET IS THE BUILD, AND IT USED TO BE `docs/scaffold-plan.md` — 0454. The guard has two
+    // halves, *"nothing there"* and *"exists here, GITIGNORED"*, and only an ignored file that is
+    // PRESENT reaches the second. The plan was present on one machine and in no worker since 0454,
+    // and in no CI run ever, so the gate had only ever proven the first half. `dist/` is ignored and
+    // is built in every worker before a probe runs, here and in CI alike.
+    broke: 'a tracked document citing a gitignored file that exists here, which resolves here and in no clone',
     guard: 'every relative link in every markdown file resolves, in a clean checkout',
     edit: {
       path: 'docs/state-of-play.md',
       find: '- **itch**: `BUTLER_API_KEY`, the *played in the browser* flag, and the channel. `docs/scaffold-plan.md`',
       replace:
-        '- **itch**: see [the plan](scaffold-plan.md). `docs/scaffold-plan.md`',
+        '- **itch**: see [the page](../dist/index.html). `docs/scaffold-plan.md`',
     },
   },
   {

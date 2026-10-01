@@ -1,10 +1,13 @@
-import { describe, it, expect } from 'vitest';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { afterAll, beforeAll, describe, it, expect } from 'vitest';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import {
   anchorFailures,
   asPattern,
+  checkoutFiles,
   drift,
   fingerprintTrees,
   firstLine,
@@ -861,5 +864,69 @@ describe('0420 — the shards are dealt, and the join is the verdict', () => {
   it('and a shard that came back without every guard red fails the join', () => {
     const failed = { ...whole, results: [whole.results[0]!, { ...whole.results[1]!, ok: false }] };
     expect(joinProblems(failed).join('\n')).toMatch(/probe shard 2\/2 did not see every one of its guards go red/);
+  });
+});
+
+describe('0454 — a worker tree is the checkout, and nothing beside it', () => {
+  /*
+    A real repository, because the question is what GIT says this checkout holds — a model of
+    `ls-files` would agree with whatever this function was written to expect. It holds one of each
+    kind of thing that sat in the real one: a tracked file, new work not yet added, a tracked file
+    deleted in the work, ignored renders, and another checkout of the same repository inside it.
+  */
+  let repo = '';
+  let files: string[] = [];
+
+  const git = (cwd: string, ...args: string[]): void => {
+    const run = spawnSync('git', ['-c', 'user.name=probe', '-c', 'user.email=probe@example.invalid', ...args], {
+      cwd,
+      encoding: 'utf8',
+    });
+    if (run.status !== 0) throw new Error(`git ${args.join(' ')}: ${run.stderr}`);
+  };
+  const put = (path: string, text = path): void => {
+    mkdirSync(resolve(repo, path, '..'), { recursive: true });
+    writeFileSync(resolve(repo, path), text);
+  };
+
+  beforeAll(() => {
+    repo = mkdtempSync(join(tmpdir(), 'itc-checkout-'));
+    git(repo, 'init', '-q');
+    put('.gitignore', '/shots/\n/*.wav\n');
+    put('src/kept.ts');
+    put('docs/gone.md');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-qm', 'fixture');
+    git(repo, 'worktree', 'add', '-q', '--detach', 'nested');
+    put('src/new work.ts');
+    put('render.wav');
+    put('shots/frame.png');
+    rmSync(resolve(repo, 'docs/gone.md'));
+    files = checkoutFiles(repo).sort();
+  });
+  afterAll(() => rmSync(repo, { recursive: true, force: true }));
+
+  it('copies what is tracked', () => {
+    expect(files).toContain('src/kept.ts');
+  });
+
+  it('and the work not yet added, which is what the proof exists to judge', () => {
+    expect(files).toContain('src/new work.ts');
+  });
+
+  it('THE ONE THIS IS FOR: another checkout inside this one is another repository, and is not copied', () => {
+    expect(files.filter((path) => path.startsWith('nested'))).toEqual([]);
+  });
+
+  it('and nothing gitignored is copied — no render, no shot', () => {
+    expect(files.filter((path) => path.endsWith('.wav') || path.startsWith('shots'))).toEqual([]);
+  });
+
+  it('and a tracked file deleted in the work is not offered for copying', () => {
+    expect(files).not.toContain('docs/gone.md');
+  });
+
+  it('and that is the whole list', () => {
+    expect(files).toEqual(['.gitignore', 'src/kept.ts', 'src/new work.ts']);
   });
 });

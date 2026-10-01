@@ -72,6 +72,9 @@ true, filtering is how it would be found.
 A worktree carries what is **committed**. `prove` has to judge the code you actually have, so the
 copy is taken off the disk, uncommitted edits included.
 
+*(Superseded by [0454](0454-a-worker-tree-is-the-checkout.md), which copies nothing ignored: the gate
+never had the file below, and that probe now cites `dist/` instead.)*
+
 ⚠️ **And it copies gitignored files too, which is load-bearing.** 0038's second probe breaks a
 tracked document by pointing it at `docs/scaffold-plan.md` — a file that must be **present and
 untracked** for the guard to fire on the right half of its assertion. A tracked-files-only copy
