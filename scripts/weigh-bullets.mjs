@@ -31,7 +31,7 @@
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -55,7 +55,6 @@ function bulletOnScreen(world) {
  * hold the rest.
  */
 export function weighLevel(kind, options = {}) {
-  const weaponTier = options.weaponTier ?? UPGRADE_TIERS;
   const missileTier = options.missileTier ?? 2;
   const sweepSeconds = options.sweepSeconds ?? 8;
   const windowSeconds = options.windowSeconds ?? 2;
@@ -65,7 +64,7 @@ export function weighLevel(kind, options = {}) {
   const { world } = options.tier === undefined ? playableWorld(level) : playableWorld(level, options.tier);
   const frame = new GameFrame(world);
   const carried = [];
-  for (let i = 0; i < weaponTier; i++) carried.push('weapon');
+  // The tubes only: the gun is the ship's and whole since 0441.
   for (let i = 0; i < missileTier; i++) carried.push('missile');
   world.weapon = weaponFor(world.shipRow, carried);
   wearHull(world);
@@ -177,7 +176,6 @@ if (isMain) {
     return found === undefined ? fallback : Number(found.slice(name.length + 3));
   };
   const options = {
-    weaponTier: flag('weapon', UPGRADE_TIERS),
     missileTier: flag('missiles', 2),
     sweepSeconds: flag('sweep', 8),
     windowSeconds: flag('seconds', 2),

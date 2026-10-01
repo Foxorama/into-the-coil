@@ -27,7 +27,8 @@ export const PROBES = [
       time, which is how it got to twenty-four in the first place.
     */
     broke: 'a level quietly given more missiles than the ask allows',
-    guard: 'THE BUDGET: a level authors one weapon and one missile and nothing else',
+    // ⚠️ Renamed by 0441, which took every level's weapon.
+    guard: 'THE BUDGET: a level authors one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
       /*

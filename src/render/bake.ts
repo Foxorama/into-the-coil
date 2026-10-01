@@ -26,12 +26,11 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
-import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
-import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
 import { SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
@@ -387,7 +386,7 @@ const BOUND_ALPHA = 0.35;
  * palette, which is the same fact twice.
  */
 export const INK_OF: Record<SpriteKind, keyof Palette> = {
-  ship: 'player',
+  fighter: 'player',
   drifter: 'enemy',
   lancer: 'enemy',
   weaver: 'enemy',
@@ -660,12 +659,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     carries the role on its own. `tests/weapons.test.ts` holds that no two faces of one pickup share
     an ink.
   */
-  pickupWeapon: 'bullet',
+  pickupBomb: 'bullet',
   pickupMissile: 'bullet',
   pickupSeeker: 'ally',
   pickupArc: 'player',
   pickupShuriken: 'blade',
   pickupShield: 'pickup',
+  /*
+    The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
+    bursts from, because no two faces of one pickup share an ink (`tests/weapons.test.ts`) and the
+    shield pickup shows both. Its ring is painted in the ray's lavender over it.
+  */
+  pickupVoid: 'ally',
+  pickupNova: 'impact',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
   /*
@@ -739,6 +745,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shuriken: 'blade',
   shurikenTurn: 'blade',
   /*
+    ⚠️ **THE RAY'S RINGS ARE THE ALLY INK — 0442** — *"purple energy rings"*, and the player's own
+    purple is `ally`, the seekers' lavender. Never `void`, which is the serpent's hostile violet: the
+    ship's fire is never in the ink of the things trying to kill it (0081). What tells a ring from a
+    seeker is the silhouette — rings about a centre, against a dart.
+  */
+  ray: 'ally',
+  rayRipple: 'ally',
+  raySwell: 'ally',
+  rayBurst: 'ally',
+  rayFade: 'ally',
+  // The nova is the ray's, so it is the ray's lavender — 0447.
+  novaArc: 'ally',
+  /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
     Same shape is what makes it read as *that thing being hurt* rather than as a second object
@@ -759,26 +778,35 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     does not exist yet is the shape of mistake this project has already made once with the ship
     roster. `docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md`.
   */
-  shipHit: 'hazard',
-  // The upgraded hulls are the same ship — 0081 — so they carry the same two inks as the first one.
-  shipMk2: 'player',
-  shipMk2Hit: 'hazard',
-  shipMk3: 'player',
-  shipMk3Hit: 'hazard',
-  // The arc's hulls are the same ship carrying a different gun — 0233 — so the same two inks again.
-  shipArc: 'player',
-  shipArcHit: 'hazard',
-  shipArcMk2: 'player',
-  shipArcMk2Hit: 'hazard',
-  shipArcMk3: 'player',
-  shipArcMk3Hit: 'hazard',
-  // And the shuriken's — 0234.
-  shipStar: 'player',
-  shipStarHit: 'hazard',
-  shipStarMk2: 'player',
-  shipStarMk2Hit: 'hazard',
-  shipStarMk3: 'player',
-  shipStarMk3Hit: 'hazard',
+  fighterHit: 'hazard',
+  /*
+    ⚠️ **EVERY SHIP IS THE PLAYER'S, AND EVERY STAGE IS THE SAME SHIP — 0081, 0441** — so all four
+    carry the fighter's two inks as their ROLE. What each is painted in is its own livery
+    (`drawPlayerShip`), which is a role moved rather than a role changed: the saucer's green is the
+    player's cyan turned toward acid, and every ship wears the cyan somewhere.
+  */
+  fighterTube: 'player',
+  fighterTubeHit: 'hazard',
+  fighterTubes: 'player',
+  fighterTubesHit: 'hazard',
+  caddie: 'player',
+  caddieHit: 'hazard',
+  caddieTube: 'player',
+  caddieTubeHit: 'hazard',
+  caddieTubes: 'player',
+  caddieTubesHit: 'hazard',
+  firebird: 'player',
+  firebirdHit: 'hazard',
+  firebirdTube: 'player',
+  firebirdTubeHit: 'hazard',
+  firebirdTubes: 'player',
+  firebirdTubesHit: 'hazard',
+  estate: 'player',
+  estateHit: 'hazard',
+  estateTube: 'player',
+  estateTubeHit: 'hazard',
+  estateTubes: 'player',
+  estateTubesHit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -1334,6 +1362,30 @@ function billow(ctx: Pen, centre: number, outer: number, wobble: number, lobes: 
 }
 
 /**
+ * Spiral arms about the frame's centre — 0447's void. Each arm runs from `inner` to `outer` while
+ * turning `twist` radians, widest in its middle and pointed at both ends, at `alpha`: light falling
+ * into a dark heart. The painter spins the whole bitmap, so one bake is every moment of the swirl.
+ */
+function spiralArms(ctx: Pen, f: Frame, colour: string, arms: number, inner: number, outer: number, twist: number, width: number, alpha: number): void {
+  const samples = 14;
+  for (let k = 0; k < arms; k++) {
+    const start = (k / arms) * Math.PI * 2;
+    const edge: Pt[] = [];
+    const back: Pt[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const radius = inner + (outer - inner) * t;
+      const angle = start + twist * t;
+      // Half its width as an angle at this radius, so the arm keeps its width as it curls in.
+      const spread = (width * Math.sin(Math.PI * t)) / radius;
+      edge.push([Math.cos(angle - spread) * radius, Math.sin(angle - spread) * radius]);
+      back.push([Math.cos(angle + spread) * radius, Math.sin(angle + spread) * radius]);
+    }
+    poly(ctx, f, colour, [...edge, ...back.reverse()], alpha);
+  }
+}
+
+/**
  * A ragged circle: `count` points around `(x, y)` at a radius jittered between `from` and `to`.
  *
  * ⚠️ **SEEDED, PER `docs/decisions/0021-one-stream-per-concern.md`**, so a fireball is the same
@@ -1793,67 +1845,13 @@ const SHIP_CORE: readonly Pt[] = [
  * one — `docs/game.md`: *"every upgrade changes how the ship looks on screen."*
  */
 /*
-  ── THE ARC'S NOSE — 0233 ─────────────────────────────────────────────────────────────────────────
+  ── THE ARC'S NOSE AND THE SHURIKEN'S FINS WERE HERE — 0233, 0234 — AND 0441 TOOK THEM ──────────────
 
-  Asked for: *"each new weapon needs thematically change the style of the ship so you have a visual
-  indicator of the weapon equipped."* A ship carrying the arc wears a two-pronged coil at the nose,
-  with a spark across the gap; its pods carry coil bands where the pulse's carry a muzzle. The prongs
-  are SILHOUETTE — 0081's rule that what the player must tell apart is told apart by more than ink —
-  and each shares the hull's own nose edge and no area, on the pods' `evenodd` terms.
-
-  ⚠️ **The tip stays inside the box.** The hull is drawn at the bare ship's size in a wider box
-  (`src/content/sprites.ts`), and at 7/7.8 of the box a prong reaching 1.06 of the hull's radius
-  lands at 0.95 of the box, stroke included. `tests/accents.test.ts` measures every mark's size on
-  the play-test screen; a prong is well above its floor.
+  While a weapon pickup could switch the gun, the fighter wore the gun it carried: a forked coil at
+  the nose for the arc, blade fins on the wingtips for the shuriken. Each gun is a ship of its own now
+  (`src/content/ships.ts`), so the arc is the estate's lightning rod and the shuriken the Firebird's
+  fender mounts, drawn by `drawPlayerShip` below; the fighter is only ever the pulse.
 */
-const SHIP_PRONG: readonly Pt[] = [
-  [1, 0],
-  [0.72, -0.14],
-  [0.86, -0.3],
-  [1.06, -0.2],
-];
-
-/** The spark between the prongs: a zigzag strip in the impact ink, the width of a coil's gap. */
-const SHIP_SPARK: readonly Pt[] = [
-  [0.96, -0.2],
-  [1.0, -0.08],
-  [0.94, 0.02],
-  [1.02, 0.11],
-  [0.96, 0.2],
-  [0.91, 0.19],
-  [0.97, 0.11],
-  [0.87, 0.02],
-  [0.95, -0.08],
-  [0.91, -0.19],
-];
-
-/*
-  ── THE SHURIKEN'S BLADES — 0234 ──────────────────────────────────────────────────────────────────
-
-  A ship carrying the shuriken launcher wears a blade on each wingtip — and, once it has pods, on
-  each pod's outer edge instead, because a fin on the wing and a pod on the same edge would overlap
-  and cancel under `evenodd` (0194's trap). Each shares its host's outer edge and no area.
-*/
-const SHIP_FIN: readonly Pt[] = [
-  [-0.42, -0.95],
-  [-0.72, -0.95],
-  [-0.64, -1.2],
-  [-0.3, -1.1],
-];
-
-const SHIP_FIN_MK2: readonly Pt[] = [
-  [-0.26, -1.32],
-  [-0.9, -1.32],
-  [-0.74, -1.44],
-  [-0.2, -1.42],
-];
-
-const SHIP_FIN_MK3: readonly Pt[] = [
-  [-0.14, -1.48],
-  [-0.96, -1.48],
-  [-0.78, -1.6],
-  [-0.08, -1.58],
-];
 
 /** A four-bladed star, hooked — the shuriken's own silhouette, traced at `scale` of the frame. */
 function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
@@ -1874,7 +1872,7 @@ function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
   ctx.closePath();
 }
 
-export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, weapon: WeaponKind): void {
+export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
@@ -1914,62 +1912,11 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, we
     [-0.1, 0.075],
     [-0.34, 0.075],
   ]);
-  if (weapon === 'arc') {
-    // The coil: a glass core at the nose where the light was, a dark band down each prong so it
-    // reads as a fitted part, and the spark across the gap in the one ink brighter than the hull.
-    disc(ctx, f, palette.glass, 0.8, 0, 0.11);
-    for (const side of [1, -1] as const) {
-      poly(ctx, f, dark, [
-        [0.8, -0.13 * side],
-        [0.88, -0.27 * side],
-        [1.0, -0.21 * side],
-        [0.9, -0.1 * side],
-      ]);
-    }
-    poly(ctx, f, palette.impact, SHIP_SPARK, 0.9);
-    // Two coil bands across each wing panel, lit — the arc's livery where the pulse has none.
-    for (const side of [1, -1] as const) {
-      poly(ctx, f, palette.impact, [
-        [-0.34, -0.56 * side],
-        [-0.28, -0.56 * side],
-        [-0.4, -0.84 * side],
-        [-0.46, -0.84 * side],
-      ], 0.7);
-      poly(ctx, f, palette.impact, [
-        [-0.5, -0.5 * side],
-        [-0.44, -0.5 * side],
-        [-0.56, -0.78 * side],
-        [-0.62, -0.78 * side],
-      ], 0.7);
-    }
-  } else {
-    poly(ctx, f, light, [
-      [0.94, 0],
-      [0.72, -0.09],
-      [0.72, 0.09],
-    ]);
-  }
-  if (weapon === 'shuriken') {
-    // A star on the keel behind the canopy, in the trim ink with a lit centre, and a dark edge along
-    // each blade so the fin reads as ground steel rather than as more wing.
-    ctx.fillStyle = palette.trim;
-    ctx.beginPath();
-    traceStar(ctx, { half: f.half - 0.26 * f.r, r: f.r }, 0.2, Math.PI / 4);
-    ctx.fill('evenodd');
-    disc(ctx, f, shade(palette.glass, 0.5), -0.26, 0, 0.075);
-    const fin = tier >= 2 ? SHIP_FIN_MK3 : tier >= 1 ? SHIP_FIN_MK2 : SHIP_FIN;
-    for (const side of [1, -1] as const) {
-      // The edge's root steps 0.03 into the host, because a pod's fin is only 0.12 tall and 0106's
-      // floor is 0.145 of this radius since the view zoomed out (0364).
-      poly(ctx, f, dark, [
-        [fin[1]![0] + 0.03, (fin[1]![1] + 0.03) * side],
-        [fin[2]![0], fin[2]![1] * side],
-        [fin[3]![0], fin[3]![1] * side],
-        [fin[3]![0] - 0.1, (fin[3]![1] + 0.08) * side],
-        [fin[2]![0] + 0.06, (fin[2]![1] + 0.08) * side],
-      ]);
-    }
-  }
+  poly(ctx, f, light, [
+    [0.94, 0],
+    [0.72, -0.09],
+    [0.72, 0.09],
+  ]);
   poly(ctx, f, palette.glass, SHIP_CANOPY);
   // The canopy's light in the impact ink since 0241: a glint, not a paler pane.
   poly(ctx, f, palette.impact, SHIP_CANOPY_LIGHT, 0.85);
@@ -1986,29 +1933,13 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, we
         [-0.72, -1.02 * side],
         [-0.46, -1.02 * side],
       ]);
-      if (weapon === 'arc') {
-        // A coil band across the pod rather than a muzzle: the pod is a capacitor, not a gun.
-        poly(ctx, f, palette.impact, [
-          [-0.36, (tip + 0.06) * side],
-          [-0.3, (tip + 0.06) * side],
-          [-0.34, (tip + 0.3) * side],
-          [-0.4, (tip + 0.3) * side],
-        ], 0.8);
-        poly(ctx, f, palette.impact, [
-          [-0.6, (tip + 0.06) * side],
-          [-0.54, (tip + 0.06) * side],
-          [-0.58, (tip + 0.3) * side],
-          [-0.64, (tip + 0.3) * side],
-        ], 0.8);
-      } else {
-        // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
-        poly(ctx, f, palette.hazard, [
-          [-0.3, (tip + 0.04) * side],
-          [-0.46, (tip + 0.04) * side],
-          [-0.48, (tip + 0.2) * side],
-          [-0.34, (tip + 0.2) * side],
-        ]);
-      }
+      // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
+      poly(ctx, f, palette.hazard, [
+        [-0.3, (tip + 0.04) * side],
+        [-0.46, (tip + 0.04) * side],
+        [-0.48, (tip + 0.2) * side],
+        [-0.34, (tip + 0.2) * side],
+      ]);
     }
   }
   if (tier >= 2) {
@@ -2028,6 +1959,546 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, we
       ]);
     }
   }
+}
+
+/*
+  ── THE FOUR SHIPS — `docs/decisions/0441-a-pilot-flies-their-own-ship.md` ─────────────────────────
+
+  *"Ships from the Far Carry (Golf-Stars) to add: the little green caddie, the firebird, the gilded
+  estate … the ships need to be side view or top down, depending on which looks better as the side
+  scroller and they'll need to have weapons equipped to them."* Every hull in this game is drawn from
+  above (the fighter's wing is mirrored across its centreline), and the predecessor drew all three for
+  its portrait fights from above too (`C:\Golf-Stars\src\render\shipTopArt.ts`, read for this), so
+  they are top-down, nose +x, every coordinate in the box's own radius.
+
+  ⚠️ **EACH IS ITS OWN COLOUR, AND EVERY COLOUR IS A ROLE MOVED.** A hex typed here would be a colour
+  the high-contrast palette could not answer (`shade`'s own warning), so the saucer's green is the
+  player's cyan turned toward `acid`, the estate's gilt is `hazard`, and the Firebird's lacquer is the
+  void lifted toward the player's ink. **And every ship carries the player's cyan somewhere** — the
+  fighter all over, the others as running lights round the rim — so the one colour the player has
+  learned means *me* is on whichever ship they chose.
+
+  ⚠️ **EACH WEARS ITS GUN** — the fighter its pulse pods, the saucer a ray dish at the nose, the
+  Firebird its shuriken hubcaps on the front wheels, the estate a lightning rod on the roof rack —
+  and each carries its tubes where it authored them (`TUBES_ON`), because where a tube sits on a
+  saucer is not where it sits on a car.
+
+  ⚠️ **NO MARK BELOW 0.11 OF THE BOX'S RADIUS**, which is 0106's 2.5-pixel floor at the shipped camera
+  (`SHIP_WING_PANEL`'s note has the arithmetic for the fighter's 7-unit hull; the box is 9.4).
+*/
+
+/** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
+type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate';
+
+/** One tube's place on a hull: where its casing ends at the front, and how long the casing is. */
+interface TubeAt {
+  at: Pt;
+  length: number;
+}
+
+/**
+ * Where each ship seen from above carries one tube and where it carries two, in the box's radius —
+ * 0441. Authored per ship, on 0282's terms: a saucer's tubes are on its rim, and the fighter's on its
+ * chin and in the narrow room each wing has between its leading and trailing edge — so each ship says
+ * its own length too, and `tests/accents.test.ts` holds every one of them on the hull. The two cars are
+ * drawn from the side, and carry their tubes as turrets in their own rooflines (`FIREBIRD_TURRETS`).
+ */
+const TUBES_ON: Record<'fighter' | 'caddie', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
+  fighter: {
+    one: { at: [0.52, 0], length: 0.2 },
+    // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more.
+    two: [
+      { at: [-0.31, -0.47], length: 0.11 },
+      { at: [-0.31, 0.47], length: 0.11 },
+    ],
+  },
+  caddie: {
+    one: { at: [-0.52, 0], length: 0.32 },
+    two: [
+      { at: [-0.08, -0.64], length: 0.36 },
+      { at: [-0.08, 0.64], length: 0.36 },
+    ],
+  },
+};
+
+/**
+ * One missile tube, lying along the hull with its warhead forward: fins at the back, a slate casing,
+ * and the missile's own orange at the nose. Every part is at least 0.12 of the box's radius across, so
+ * each clears 0106's floor at the shipped camera. Painted on a sealed hull, so it can move neither the
+ * outline nor the hurtbox.
+ */
+function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }: TubeAt): void {
+  const back = x - length;
+  poly(ctx, f, shade(palette.trim, -0.2), [
+    [back, y - 0.1],
+    [back + 0.12, y - 0.1],
+    [back + 0.12, y + 0.1],
+    [back, y + 0.1],
+  ]);
+  poly(ctx, f, shade(palette.trim, 0.3), [
+    [back, y - 0.07],
+    [x, y - 0.07],
+    [x, y + 0.07],
+    [back, y + 0.07],
+  ]);
+  poly(ctx, f, palette.bullet, [
+    [x, y - 0.07],
+    [x + 0.12, y],
+    [x, y + 0.07],
+  ]);
+}
+
+/**
+ * Where each ship's engines burn, in the box's radius — the port's flames come out of these (0441).
+ * The fighter's are its two nacelles (`SHIP_CORE`) at its hull's size in the box; the saucer burns
+ * from one drive at its tail; the two cars from their twin exhausts.
+ */
+export const SHIP_JETS: Record<ShipArt, readonly Pt[]> = {
+  fighter: [
+    [-0.78 * (FIGHTER_HULL / SHIP_BOX), -0.21 * (FIGHTER_HULL / SHIP_BOX)],
+    [-0.78 * (FIGHTER_HULL / SHIP_BOX), 0.21 * (FIGHTER_HULL / SHIP_BOX)],
+  ],
+  caddie: [[-1, 0]],
+  // The cars, from the side: one exhaust each, low at the tail.
+  firebird: [[-1.12, 0.12]],
+  estate: [[-1.12, 0.19]],
+};
+
+/** A ring of `count` points about a centre — the saucer's rim, or anything else that is round. */
+function roundel(cx: number, cy: number, radius: number, count: number, from: number, to: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i <= count; i++) {
+    const a = from + ((to - from) * i) / count;
+    out.push([cx + Math.cos(a) * radius, cy + Math.sin(a) * radius]);
+  }
+  return out;
+}
+
+/**
+ * The saucer's silhouette: a disc, with the ray dish's barrel run out through its rim at the nose.
+ * One path, so the barrel and the disc share an edge and no area — 0194's `evenodd` trap.
+ */
+const CADDIE_RIM = 1;
+const CADDIE_BARREL = 0.13;
+const CADDIE_HULL: readonly Pt[] = (() => {
+  const gap = Math.asin(CADDIE_BARREL / CADDIE_RIM);
+  return [
+    ...roundel(0, 0, CADDIE_RIM, 44, gap, Math.PI * 2 - gap),
+    [1.12, -CADDIE_BARREL],
+    [1.12, CADDIE_BARREL],
+  ];
+})();
+
+/*
+  ── THE TWO CARS ARE DRAWN FROM THE SIDE — 0441, played ─────────────────────────────────────────
+
+  *"The topdown firebird and station wagon look really bad … let's change them to sideview instead of
+  top down and chuck the weapons on the hood and missiles turrets on the roof."* They are drawn the way
+  the predecessor drew them for its landscape fights (`C:\Golf-Stars\src\render\shipArt.ts`, `wagon` and
+  `firebird`), in that art's own ±20 frame and carried into the box by `inBox` below, so its proportions
+  survive the move. The outline is ONE path that takes in the wheels, the gun on the hood and the
+  turrets on the roof — so every one is silhouette, on the hull, and a stage of tubes is a different
+  roofline rather than a mark that hangs off it.
+*/
+
+/** The predecessor's ±20 frame, carried into the box's radius about `(cx, cy)` in that frame. */
+function inBox(points: readonly Pt[], cx: number, cy: number): Pt[] {
+  return points.map(([x, y]) => [(x - cx) * 0.062, (y - cy) * 0.062] as const);
+}
+
+/**
+ * The bottom of a wheel that stands below a sill at `sill`, as outline points from front to back:
+ * the arc of a circle at `(x, y)` of `radius` from where it leaves the sill round its underside.
+ */
+function wheelUnder(x: number, y: number, radius: number, sill: number): Pt[] {
+  const lift = Math.asin(Math.max(-1, Math.min(1, (sill - y) / radius)));
+  const out: Pt[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const a = lift + ((Math.PI - 2 * lift) * i) / 10;
+    out.push([x + Math.cos(a) * radius, y + Math.sin(a) * radius]);
+  }
+  return out;
+}
+
+/** Turret tops along a roof, as outline points from back to front: `[from, to]` spans at `top`. */
+function turretsOn(spans: readonly (readonly [number, number])[], roofAt: (x: number) => number, top: number): Pt[] {
+  const out: Pt[] = [];
+  for (const [from, to] of spans) out.push([from, roofAt(from)], [from, top], [to, top], [to, roofAt(to)]);
+  return out;
+}
+
+/** Where each car's roof turrets stand, in the predecessor's frame, at one tube and two. */
+const FIREBIRD_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[0.4, 4.2]], [[-1.6, 1.4], [2.4, 5.4]]];
+const ESTATE_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[-8.5, -4.9]], [[-12.4, -8.8], [-6.2, -2.6]]];
+
+/**
+ * How high each car's turrets stand, in the predecessor's frame: tall enough that the missile's orange
+ * inside one clears 2.5 pixels at the shipped camera (`tests/accents.test.ts`).
+ */
+const FIREBIRD_TURRET_TOP = -7.8;
+const ESTATE_TURRET_TOP = -8.8;
+
+/** The Firebird's roof, a straight line from the back of the greenhouse to its front. */
+const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
+
+/**
+ * The Firebird from the side, in the predecessor's frame: ducktail, cabin, long hood to a pointed nose,
+ * the shuriken launcher standing on the hood, turrets on the roof, and fat tyres under the sills.
+ */
+function firebirdOutline(stage: number): Pt[] {
+  return [
+    [-17, 5],
+    [-17, 2.4],
+    [-12.5, 1.6],
+    [-8, -2],
+    [-2, -4.6],
+    ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
+    [6, -4.8],
+    [11, -2.2],
+    // The launcher on the hood: a block the blades leave from.
+    [11.6, -2.11],
+    [11.6, -4.8],
+    [15.6, -4.8],
+    [15.6, -1.52],
+    [19, -1],
+    [19, 2.6],
+    [16.5, 5],
+    ...wheelUnder(12, 6, 3.6, 5),
+    ...wheelUnder(-10, 6, 3.6, 5),
+  ];
+}
+
+/** The estate's roof rack top, and its roof under it. */
+const ESTATE_RACK = -5.9;
+const estateRoof = (): number => ESTATE_RACK;
+
+/**
+ * The gilded estate from the side, in the predecessor's frame: the long wagon roof with its rack, the
+ * windscreen sloping to the bonnet, the lightning rod standing on the bonnet with its ball, turrets on
+ * the rack, and its wheels under the sills.
+ */
+function estateOutline(stage: number): Pt[] {
+  // The rod's ball, an octagon about (14, −3.8), from its lower left round the top to its lower right.
+  const ball: Pt[] = [];
+  for (let i = 0; i <= 6; i++) {
+    const a = Math.PI * 0.75 + (i * Math.PI * 1.5) / 6;
+    ball.push([14 + Math.cos(a) * 2.1, -3.8 + Math.sin(a) * 2.1]);
+  }
+  return [
+    [-18, 6],
+    [-18, 3],
+    [-14, -4],
+    // The rack: a strip along the roof, and the turrets on it.
+    [-13.5, -4.03],
+    [-13.5, ESTATE_RACK],
+    ...turretsOn(ESTATE_TURRETS[stage]!, estateRoof, ESTATE_TURRET_TOP),
+    [0.5, ESTATE_RACK],
+    [0.5, -4.76],
+    [4, -5],
+    [11, 1],
+    // The lightning rod on the bonnet, its ball above it.
+    [12.9, 1.27],
+    [12.9, -2.3],
+    ...ball,
+    [15.1, -2.3],
+    [15.1, 1.59],
+    [18, 2],
+    [18, 6],
+    ...wheelUnder(9, 6.4, 2.9, 6),
+    ...wheelUnder(-9, 6.4, 2.9, 6),
+  ];
+}
+
+/**
+ * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
+ * at its own hull's size inside it, as its capped tier always was (0229).
+ */
+export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number): void {
+  const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
+    stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
+  let tubes: readonly TubeAt[] = [];
+  ctx.beginPath();
+  switch (ship) {
+    case 'fighter': {
+      tubes = tubesOf(TUBES_ON.fighter);
+      const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
+      ctx.fillStyle = palette.player;
+      trace(ctx, fh, SHIP_HULL);
+      trace(ctx, fh, SHIP_POD_MK3);
+      trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      trace(ctx, fh, SHIP_CANARD);
+      trace(ctx, fh, mirrored(SHIP_CANARD));
+      seal(ctx);
+      paintShip(ctx, fh, palette, 2);
+      break;
+    }
+    case 'caddie':
+      tubes = tubesOf(TUBES_ON.caddie);
+      drawCaddie(ctx, f, palette);
+      break;
+    // The cars carry their tubes as turrets in their own rooflines.
+    case 'firebird':
+      drawFirebird(ctx, f, palette, stage);
+      break;
+    case 'estate':
+      drawEstate(ctx, f, palette, stage);
+      break;
+    default: {
+      const unhandled: never = ship;
+      return unhandled;
+    }
+  }
+  for (const tube of tubes) paintTube(ctx, f, palette, tube);
+}
+
+/**
+ * Feather Fade's Little Green Caddie — *"a flying saucer with a 7-iron. They come in peace."* The
+ * predecessor's top view (`shipTopArt.ts`, `saucer`): a green disc, an accent rim, an inner ring, a
+ * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
+ * ray gun's dish, its lens in the rings' own lavender.
+ */
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette): void {
+  const body = mix(palette.player, palette.acid, 0.55);
+  const dark = shade(body, -0.5);
+  ctx.fillStyle = body;
+  trace(ctx, f, CADDIE_HULL);
+  seal(ctx);
+  // The upper face lit, the lower in shadow, so the disc has a top.
+  disc(ctx, f, shade(body, 0.3), -0.1, -0.12, 0.78, 0.45);
+  band(ctx, f, dark, 0, 0, 0.97, 0.85);
+  band(ctx, f, shade(body, -0.22), 0, 0, 0.68, 0.6);
+  // Six running lights round the rim, between the barrel and the tail.
+  for (let k = 0; k < 6; k++) {
+    const a = Math.PI / 6 + (k * Math.PI) / 3;
+    disc(ctx, f, palette.player, Math.cos(a) * 0.91, Math.sin(a) * 0.91, 0.085);
+  }
+  // The dome: glass, a lit crown, and a glint.
+  disc(ctx, f, palette.glass, 0, 0, 0.44);
+  disc(ctx, f, shade(palette.glass, 0.35), -0.06, -0.08, 0.3, 0.8);
+  disc(ctx, f, palette.impact, -0.14, -0.16, 0.11, 0.85);
+  // The ray dish: a slate barrel through the rim and a lavender lens at its mouth.
+  poly(ctx, f, palette.trim, [
+    [0.8, -0.1],
+    [1.1, -0.1],
+    [1.1, 0.1],
+    [0.8, 0.1],
+  ]);
+  disc(ctx, f, palette.ally, 1.0, 0, 0.11);
+  // Inside the box: a glow past 1.16 of the radius is cut off by the bitmap's edge.
+  glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
+}
+
+/** A steel star about `(x, y)` in the predecessor's frame, `reach` out: one polygon, one mark. */
+function steelStar(x: number, y: number, reach: number): Pt[] {
+  const out: Pt[] = [];
+  for (let k = 0; k < 8; k++) {
+    const a = (k * Math.PI) / 4 + Math.PI / 8;
+    const r = k % 2 === 0 ? reach : reach * 0.42;
+    out.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+  }
+  return out;
+}
+
+/** A car's roof turrets, painted: a slate casing filling each, and the missile's orange at its front. */
+function paintTurrets(
+  ctx: Pen,
+  f: Frame,
+  palette: Palette,
+  spans: readonly (readonly [number, number])[],
+  top: number,
+  base: number,
+  box: (points: readonly Pt[]) => Pt[],
+): void {
+  for (const [from, to] of spans) {
+    poly(ctx, f, shade(palette.trim, 0.3), box([
+      [from, top],
+      [to, top],
+      [to, base],
+      [from, base],
+    ]));
+    poly(ctx, f, palette.bullet, box([
+      [to - 2, top + 0.3],
+      [to - 0.1, (top + base) / 2],
+      [to - 2, base - 0.3],
+    ]));
+  }
+}
+
+/**
+ * Backspin Bo's Firebird — *"a jet-black muscle-car cruiser, a golden phoenix blazing across the
+ * hood."* From the side since it was played (0441): the predecessor's landscape art — fat gold-rimmed
+ * tyres under the sills, a gold greenhouse under a T-top, a cyan beltline where its was gold, and the
+ * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
+ * blades leave from (the ship's `wingtip`), and its turrets on the roof.
+ */
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const body = mix(palette.space, palette.player, 0.2);
+  const gold = palette.hazard;
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  ctx.fillStyle = body;
+  trace(ctx, f, box(firebirdOutline(stage)));
+  seal(ctx);
+  // The tyres, rubber in the slate trim, a gold rim in each.
+  for (const x of [12, -10]) {
+    const [cx, cy] = at(x, 6);
+    disc(ctx, f, palette.trim, cx, cy, 3.6 * 0.062);
+    disc(ctx, f, gold, cx, cy, 2.3 * 0.062);
+    disc(ctx, f, palette.trim, cx, cy, 1.2 * 0.062);
+  }
+  // The greenhouse: gold glass, the side window and the windscreen, the T-top bar between them.
+  poly(ctx, f, shade(gold, -0.3), box([
+    [-7, -1.9],
+    [-2.2, -4.2],
+    [-2.2, -1.9],
+  ]));
+  poly(ctx, f, shade(gold, -0.3), box([
+    [-0.4, -4.2],
+    [5.4, -4.4],
+    [9.4, -2.2],
+    [-0.4, -2],
+  ]));
+  poly(ctx, f, body, box([
+    [1.2, -4.5],
+    [3, -4.5],
+    [3, -1.9],
+    [1.2, -1.9],
+  ]));
+  // The beltline, in the player's cyan where the predecessor's was gold.
+  poly(ctx, f, palette.player, box([
+    [-11, 1.6],
+    [16, -0.4],
+    [16, 1.4],
+    [-11, 3.4],
+  ]));
+  // The phoenix across the flank: a body and crested head toward the nose, two wings swept back, its
+  // tail feathers in flame.
+  poly(ctx, f, gold, box([
+    [3, 0.6],
+    [8, -0.8],
+    [14, -0.6],
+    [11.6, 0.6],
+    [14, 1.8],
+    [8, 1.4],
+  ]));
+  poly(ctx, f, gold, box([
+    [6, 0.2],
+    [0, -1.2],
+    [-5, 0.2],
+    [-1.4, 0.6],
+    [-3.4, 2],
+    [2, 1.4],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [3, 1.2],
+    [-3, 3.4],
+    [-1, 1.6],
+  ]));
+  // The launcher on the hood: a slate block, and the steel star the blades leave from.
+  poly(ctx, f, palette.trim, box([
+    [11.6, -4.8],
+    [15.6, -4.8],
+    [15.6, -2],
+    [11.6, -2],
+  ]));
+  poly(ctx, f, palette.blade, box(steelStar(13.6, -3.3, 1.35)));
+  // Its turrets on the roof.
+  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, -4.9, box);
+  // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red.
+  poly(ctx, f, palette.impact, box([
+    [16.8, -0.7],
+    [18.7, -0.7],
+    [18.7, 1.2],
+    [16.8, 1.2],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [-16.8, 2.6],
+    [-15, 2.6],
+    [-15, 4.6],
+    [-16.8, 4.6],
+  ]));
+}
+
+/**
+ * Longshot Larry's Gilded Estate — *"solid-gold trim, fuzzy dice, the works."* From the side since it was
+ * played (0441): the predecessor's landscape wagon — the long roof, the windscreen sloping to a short
+ * bonnet, two glasshouses split by a pillar, its wheels under the sills — gilt all over, burl panelling
+ * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
+ * the bonnet, and its turrets on the roof rack.
+ */
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const gilt = palette.hazard;
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  ctx.fillStyle = gilt;
+  trace(ctx, f, box(estateOutline(stage)));
+  seal(ctx);
+  // The burl panelling along the doors, and the cyan running light along its top.
+  poly(ctx, f, shade(gilt, -0.55), box([
+    [-16.4, 3.2],
+    [16, 3.2],
+    [16, 5.4],
+    [-16.4, 5.4],
+  ]));
+  poly(ctx, f, palette.player, box([
+    [-16, 1.4],
+    [11.4, 1.4],
+    [11.4, 3.2],
+    [-16, 3.2],
+  ]));
+  // The wheels over the sills: rubber in the slate trim, a gilt hub.
+  for (const x of [9, -9]) {
+    const [cx, cy] = at(x, 6.4);
+    disc(ctx, f, palette.trim, cx, cy, 2.9 * 0.062);
+    disc(ctx, f, shade(gilt, 0.2), cx, cy, 1.2 * 0.062);
+  }
+  // The glasshouses, split by a pillar in the gilt.
+  poly(ctx, f, palette.glass, box([
+    [-12.8, -3.4],
+    [-2.2, -3.9],
+    [-2.2, -0.4],
+    [-12.8, -0.4],
+  ]));
+  poly(ctx, f, palette.glass, box([
+    [-0.4, -4],
+    [3.4, -4.2],
+    [8.6, 0.1],
+    [-0.4, 0.1],
+  ]));
+  // The rack along the roof, in a pale gilt.
+  poly(ctx, f, shade(gilt, 0.45), box([
+    [-13.5, ESTATE_RACK],
+    [0.5, ESTATE_RACK],
+    [0.5, -4.1],
+    [-13.5, -4.1],
+  ]));
+  paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box);
+  // The lightning rod on the bonnet: a slate rod, a lit ball, and its light.
+  poly(ctx, f, palette.trim, box([
+    [12.9, -2.3],
+    [15.1, -2.3],
+    [15.1, 1.2],
+    [12.9, 1.2],
+  ]));
+  {
+    const [bx, by] = at(14, -3.8);
+    disc(ctx, f, palette.player, bx, by, 1.9 * 0.062);
+    glow(ctx, f, palette.player, bx, by, 3.4 * 0.062, 0.6);
+    disc(ctx, f, palette.impact, bx, by, 0.9 * 0.062);
+  }
+  // A headlamp at the bumper, a tail lamp at the tailgate — the shot's orange, never the enemy's red.
+  poly(ctx, f, palette.impact, box([
+    [16, 2.4],
+    [17.8, 2.4],
+    [17.8, 4.4],
+    [16, 4.4],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [-17.8, 3.6],
+    [-16, 3.6],
+    [-16, 5.6],
+    [-17.8, 5.6],
+  ]));
 }
 
 /** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */
@@ -10295,127 +10766,60 @@ export function drawKind(
   ctx.globalAlpha = 1;
   ctx.beginPath();
   switch (kind) {
-    case 'ship':
-    case 'shipHit':
-      trace(ctx, f, SHIP_HULL);
-      seal(ctx);
-      if (!hurt) paintShip(ctx, f, palette, 0, 'pulse');
-      return;
     /*
-      ── THE SAME FIGHTER, WITH MORE OF IT — 0081 ────────────────────────────────────────────────
+      ── FOUR SHIPS, EACH AT NO TUBES, ONE AND TWO — 0441 ─────────────────────────────────────────
 
-      Each tier keeps the hull above and adds a part outside it, so what the player reads is *the
-      same ship, further along* rather than *a different ship*. A pod on each wingtip, then a canard
-      on each leading edge. Each shares an edge with the hull and no area, so `evenodd` unites them
-      and the outline runs round the lot — see the SHIP block above.
-
-      ⚠️ **The nose is untouched at every tier.** It is the one part of this silhouette the player
-      aims with, and it is what makes the three read as one object.
+      Every ship is drawn by `drawPlayerShip` in the one box (`SHIP_BOX`), at the stage its tubes
+      say. A hurt twin is the base redrawn and washed, above, so the arms here are only ever bases.
     */
-    case 'shipMk2':
-    case 'shipMk2Hit': {
-      // The hull at the bare ship's own size, in a wider box; the pods take the room — 0229.
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipMk2) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_POD);
-      trace(ctx, fh, mirrored(SHIP_POD));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 1, 'pulse');
+    case 'fighter':
+    case 'fighterHit':
+      drawPlayerShip(ctx, f, palette, 'fighter', 0);
       return;
-    }
-    case 'shipMk3':
-    case 'shipMk3Hit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipMk3) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_POD_MK3);
-      trace(ctx, fh, mirrored(SHIP_POD_MK3));
-      trace(ctx, fh, SHIP_CANARD);
-      trace(ctx, fh, mirrored(SHIP_CANARD));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 2, 'pulse');
+    case 'fighterTube':
+    case 'fighterTubeHit':
+      drawPlayerShip(ctx, f, palette, 'fighter', 1);
       return;
-    }
-    /*
-      ── THE SAME THREE HULLS, CARRYING THE ARC — 0233 ───────────────────────────────────────────
-
-      Each tier is the pulse's tier with the nose forked: two prongs sharing the hull's own nose
-      edges, on the pods' `evenodd` terms, and `paintShip` painting the coil where the pulse's
-      light was. The box is wider than the pulse's at the same tier (`src/content/sprites.ts`) and
-      the hull is drawn at the bare ship's size inside it, so the hurtbox is exactly the pulse's.
-    */
-    case 'shipArc':
-    case 'shipArcHit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArc) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_PRONG);
-      trace(ctx, fh, mirrored(SHIP_PRONG));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 0, 'arc');
+    case 'fighterTubes':
+    case 'fighterTubesHit':
+      drawPlayerShip(ctx, f, palette, 'fighter', 2);
       return;
-    }
-    case 'shipArcMk2':
-    case 'shipArcMk2Hit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArcMk2) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_PRONG);
-      trace(ctx, fh, mirrored(SHIP_PRONG));
-      trace(ctx, fh, SHIP_POD);
-      trace(ctx, fh, mirrored(SHIP_POD));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 1, 'arc');
+    case 'caddie':
+    case 'caddieHit':
+      drawPlayerShip(ctx, f, palette, 'caddie', 0);
       return;
-    }
-    case 'shipArcMk3':
-    case 'shipArcMk3Hit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipArcMk3) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_PRONG);
-      trace(ctx, fh, mirrored(SHIP_PRONG));
-      trace(ctx, fh, SHIP_POD_MK3);
-      trace(ctx, fh, mirrored(SHIP_POD_MK3));
-      trace(ctx, fh, SHIP_CANARD);
-      trace(ctx, fh, mirrored(SHIP_CANARD));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 2, 'arc');
+    case 'caddieTube':
+    case 'caddieTubeHit':
+      drawPlayerShip(ctx, f, palette, 'caddie', 1);
       return;
-    }
-    // ── AND CARRYING THE SHURIKEN LAUNCHER — 0234: a blade on each wingtip, then on each pod. ──
-    case 'shipStar':
-    case 'shipStarHit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStar) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_FIN);
-      trace(ctx, fh, mirrored(SHIP_FIN));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 0, 'shuriken');
+    case 'caddieTubes':
+    case 'caddieTubesHit':
+      drawPlayerShip(ctx, f, palette, 'caddie', 2);
       return;
-    }
-    case 'shipStarMk2':
-    case 'shipStarMk2Hit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStarMk2) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_POD);
-      trace(ctx, fh, mirrored(SHIP_POD));
-      trace(ctx, fh, SHIP_FIN_MK2);
-      trace(ctx, fh, mirrored(SHIP_FIN_MK2));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 1, 'shuriken');
+    case 'firebird':
+    case 'firebirdHit':
+      drawPlayerShip(ctx, f, palette, 'firebird', 0);
       return;
-    }
-    case 'shipStarMk3':
-    case 'shipStarMk3Hit': {
-      const fh: Frame = { half, r: r * (SPRITE_EXTENT.ship / SPRITE_EXTENT.shipStarMk3) };
-      trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_POD_MK3);
-      trace(ctx, fh, mirrored(SHIP_POD_MK3));
-      trace(ctx, fh, SHIP_FIN_MK3);
-      trace(ctx, fh, mirrored(SHIP_FIN_MK3));
-      trace(ctx, fh, SHIP_CANARD);
-      trace(ctx, fh, mirrored(SHIP_CANARD));
-      seal(ctx);
-      if (!hurt) paintShip(ctx, fh, palette, 2, 'shuriken');
+    case 'firebirdTube':
+    case 'firebirdTubeHit':
+      drawPlayerShip(ctx, f, palette, 'firebird', 1);
       return;
-    }
+    case 'firebirdTubes':
+    case 'firebirdTubesHit':
+      drawPlayerShip(ctx, f, palette, 'firebird', 2);
+      return;
+    case 'estate':
+    case 'estateHit':
+      drawPlayerShip(ctx, f, palette, 'estate', 0);
+      return;
+    case 'estateTube':
+    case 'estateTubeHit':
+      drawPlayerShip(ctx, f, palette, 'estate', 1);
+      return;
+    case 'estateTubes':
+    case 'estateTubesHit':
+      drawPlayerShip(ctx, f, palette, 'estate', 2);
+      return;
     /*
       ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index
       off the kind's name would be discovery by spelling, the first of the ways
@@ -12026,58 +12430,6 @@ export function drawKind(
     case 'gazeCHit':
       drawGaze(ctx, f, skin, theme, 2);
       return;
-    case 'pickupWeapon': {
-      /*
-        A CHEVRON, pointing the way the ship flies.
-
-        ⚠️ **A new shape rather than one of the four it replaces**, and that is worth the drawing.
-        0082 merged `rapid`, `spread`, `missileRate` and `missileSpread` into one kind, and every one
-        of those four silhouettes belonged to a scheme — a family with an inverted fill for its
-        partner — that no longer has a partner to invert. Keeping the holed square would have kept a
-        shape whose whole meaning was *the other one is the solid version*.
-
-        ⚠️ **It points, which none of the other pickups does.** A chevron aimed along the scroll axis
-        reads as *forward, more, faster* without teaching, and it is the only pickup that is
-        asymmetric along `along` — so it is told apart from the shield and the bomb by orientation as
-        well as by outline, at the size where outlines start to fail.
-
-        ⚠️ **ONE simple polygon, and the first draft was two overlapping ones.** Two nested chevrons
-        wound so `evenodd` left a gap between them is the obvious way to draw a `»`, and it is a
-        silhouette that self-intersects: wherever the two overlap the fill rule cancels them, so the
-        shape depends on arithmetic nobody checked rather than on the drawing. This is the same
-        chevron with the gap cut out of its TAIL, which needs no fill rule at all — the notch is also
-        what keeps it off the lancer, the one enemy silhouette that also comes to a forward point.
-      */
-      const fg: Frame = { half, r: r * PICKUP_GLYPH };
-      const g = fg.r;
-      ctx.moveTo(half + g, half);
-      ctx.lineTo(half - g * 0.2, half - g * 0.85);
-      ctx.lineTo(half - g, half - g * 0.85);
-      ctx.lineTo(half - g * 0.25, half);
-      ctx.lineTo(half - g, half + g * 0.85);
-      ctx.lineTo(half - g * 0.2, half + g * 0.85);
-      ctx.closePath();
-      seal(ctx);
-      bubble(ctx, f, palette, palette[INK_OF[kind]]);
-      // The lower arm in shadow, so the chevron has a top and an underside — in the pulse's own
-      // orange since 0240, like the fill `INK_OF` gave the seal.
-      poly(ctx, fg, shade(palette.bullet, -0.28), [
-        [0.72, 0.1],
-        [-0.16, 0.7],
-        [-0.72, 0.7],
-        [-0.14, 0.1],
-      ]);
-      // A shaft down the middle and a lit head — 0194's livery, painted rather than tabled.
-      poly(ctx, fg, palette.trim, [
-        [-0.08, -0.085],
-        [0.35, -0.085],
-        [0.35, 0.085],
-        [-0.08, 0.085],
-      ]);
-      disc(ctx, fg, palette.glass, 0.14, 0, 0.18);
-      disc(ctx, fg, shade(palette.glass, 0.5), 0.18, -0.04, 0.085);
-      return;
-    }
     case 'pickupShuriken': {
       /*
         A HOOKED FOUR-BLADED STAR WITH A HOLE — the weapon pickup's third face, 0234. The hook is
@@ -12101,6 +12453,53 @@ export function drawKind(
           [Math.cos(a + 0.45) * 0.34, Math.sin(a + 0.45) * 0.34],
         ]);
       }
+      return;
+    }
+    /*
+      ── THE RAY GUN'S RINGS — 0442 ──────────────────────────────────────────────────────────────
+
+      *"Four concentric purple energy rings."* The hull is the whole disc in a deep shade of the ring
+      ink — the field the rings ride in, and what keeps a lavender ring legible over a pale sky — and
+      four rings are lit on it about the one centre. One ring a page is brighter than the others, and
+      the bright one steps outward page by page (`stepRays` in `src/app/frame.ts` turns them), so the
+      volley ripples outward as it flies, which is what a ray gun's rings do.
+    */
+    case 'ray':
+    case 'rayRipple':
+    case 'raySwell': {
+      const page = kind === 'ray' ? 0 : kind === 'rayRipple' ? 1 : 2;
+      const ring = palette[INK_OF[kind]];
+      ctx.fillStyle = shade(ring, -0.62);
+      ctx.arc(half, half, r * 1.0, 0, Math.PI * 2);
+      seal(ctx);
+      const radii = [0.24, 0.47, 0.7, 0.92] as const;
+      radii.forEach((at, k) => {
+        const lit = k === page + 1 || k === 3;
+        band(ctx, f, lit ? shade(ring, 0.35) : ring, 0, 0, at + 0.07, at - 0.07, lit ? 1 : 0.75);
+      });
+      disc(ctx, f, palette.impact, 0, 0, 0.12);
+      return;
+    }
+    /*
+      Where a ring lands — 0442: *"a small energy explosion."* Drawn to the edge of its box, on the
+      blast's rule, because the edge is what it hits: a flash of the ring ink with a bright rim and a
+      white heart, then its fading rim.
+    */
+    case 'rayBurst':
+    case 'rayFade': {
+      const ring = palette[INK_OF[kind]];
+      const edge = half - ctx.lineWidth / 2;
+      const fading = kind === 'rayFade';
+      // Translucent inside: a burst of light, not an orb — the first bake was a solid ball.
+      ctx.fillStyle = shade(ring, fading ? -0.7 : -0.45);
+      ctx.globalAlpha = fading ? 0.3 : 0.5;
+      ctx.arc(half, half, edge, 0, Math.PI * 2);
+      seal(ctx);
+      ctx.globalAlpha = 1;
+      const rim = edge / r;
+      band(ctx, f, fading ? ring : shade(ring, 0.4), 0, 0, rim, rim - 0.16, fading ? 0.55 : 0.95);
+      glow(ctx, f, ring, 0, 0, rim * 0.8, fading ? 0.3 : 0.7);
+      if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.4, 0.8);
       return;
     }
     case 'shuriken':
@@ -12399,36 +12798,42 @@ export function drawKind(
     // The void missile — 0377: a purple hull with a dark heart, which is what it opens into.
     case 'voidBall': {
       /*
-        ⚠️ **AND A TRAIL BEHIND IT SINCE 0379** — *"all the bomb launch effects need to be more
-        visible."* Twice the size it was, and a wake of the same purple thinning out behind (−x, the
-        way it came), translucent because it is where the ball has been rather than the ball: the
-        silhouette stays the round hull.
+        ── A SWIRL, AND IT TURNS — 0447 ──────────────────────────────────────────────────────────────
+
+        *"The void bomb also needs updated graphics to make it look cooler, some kind of animation and
+        a swirl."* A round hull with a dark heart, and three arms of its own light curling into it —
+        outside the hull as well as on it, translucent, because they are light being pulled in and not
+        body. The frame turns the bitmap a little every step (`stepVoids`), so the arms wind inward as
+        it flies: one bake, every moment of the swirl.
+
+        ⚠️ **THE WAKE 0379 GAVE IT IS GONE**, because a turning bitmap would have swung it round the
+        ball. The arms reaching past the hull are what is bigger and brighter now, and the turning is
+        what says it is moving.
       */
       // The hull first, because the first fill IS the hull and everything after it is paint.
-      ctx.arc(half, half, r * 0.4, 0, Math.PI * 2);
+      ctx.arc(half, half, r * 0.42, 0, Math.PI * 2);
       seal(ctx);
-      for (const [x, size, alpha] of [
-        [-0.95, 0.12, 0.14],
-        [-0.78, 0.18, 0.22],
-        [-0.58, 0.24, 0.32],
-      ] as const) {
-        disc(ctx, f, shade(palette.ally, 0.2), x, 0, size, alpha);
-      }
-      glow(ctx, f, shade(palette.ally, 0.4), -0.2, 0, 0.75, 0.38);
-      disc(ctx, f, palette.space, 0, 0, 0.26);
+      glow(ctx, f, shade(palette.ally, 0.3), 0, 0, 0.95, 0.4);
+      spiralArms(ctx, f, shade(palette.ally, 0.45), 3, 0.18, 0.95, 2.6, 0.12, 0.8);
+      disc(ctx, f, palette.space, 0, 0, 0.22);
       return;
     }
     /*
       The rift — 0377. Its hull is the whole disc at exactly the radius that negates (drawn to the edge
       of its box, on the blast's own rule), and the inside is the dark it swallows into, with a glow at
       the rim so the edge reads over any sky.
+
+      ⚠️ **AND IT SWIRLS SINCE 0447**: five arms of lifted lavender winding into the dark, turned by
+      the frame a little every step while it is open, so the hole in the sky is visibly pulling.
     */
     case 'riftZone': {
       const edge = half - ctx.lineWidth / 2;
       ctx.arc(half, half, edge, 0, Math.PI * 2);
       seal(ctx);
       billow(ctx, half, edge * 0.93, 0.05, 6, 0.8, palette.space, 0.82);
-      billow(ctx, half, edge * 0.55, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
+      spiralArms(ctx, f, shade(palette.ally, 0.1), 5, 0.12, (edge * 0.9) / r, 2.2, 0.16, 0.42);
+      billow(ctx, half, edge * 0.42, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
+      disc(ctx, f, palette.space, 0, 0, (edge * 0.18) / r, 0.85);
       return;
     }
     case 'stormBall': {
@@ -12484,8 +12889,14 @@ export function drawKind(
       glow(ctx, f, '#ffffff', 0, 0, 0.24, 0.7);
       return;
     }
-    // What leaves the ship. It shared this drawing with `pickupBomb` until 0372 removed the pickup.
-    case 'bomb': {
+    /*
+      What leaves the ship — and, since 0441, the bomb pickup's face again: the same H-bomb at the
+      glyph's size inside the bubble, as it shared this drawing before 0372 took the pickup away.
+    */
+    case 'bomb':
+    case 'pickupBomb': {
+      const pickup = kind === 'pickupBomb';
+      const fb: Frame = pickup ? { half, r: r * PICKUP_GLYPH } : f;
       /*
         ── A LARGE FORWARD-FIRING MISSILE — `docs/decisions/0375-the-bomb-is-a-missile.md` ─────────
 
@@ -12498,7 +12909,7 @@ export function drawKind(
         ⚠️ **TWO DARK BANDS ON A LIT CASING**, which is the H-bomb's own graphic language and what
         keeps it from reading as a bigger missile at twenty pixels on the trigger button.
       */
-      trace(ctx, f, [
+      trace(ctx, fb, [
         [1, 0],
         [0.86, -0.14],
         [0.66, -0.22],
@@ -12517,26 +12928,34 @@ export function drawKind(
       ]);
       seal(ctx);
       const casing = palette[INK_OF[kind]];
-      // The lit upper half of the casing, then the two bands, then the warhead's glass eye.
-      poly(ctx, f, shade(casing, 0.35), [
-        [0.66, -0.18],
-        [-0.52, -0.18],
-        [-0.52, -0.03],
-        [0.66, -0.03],
+      if (pickup) bubble(ctx, f, palette, casing);
+      /*
+        The lit upper half of the casing, then the two bands, then the warhead's glass eye. On the
+        pickup's face the glyph is drawn smaller inside its bubble, so the lit half and the bands are
+        drawn wider there to stay over 2.5 px (`tests/accents.test.ts`) — 0441.
+      */
+      const litTop = pickup ? -0.2 : -0.18;
+      const litBottom = pickup ? 0.02 : -0.03;
+      const bandWide = pickup ? 0.18 : 0.12;
+      poly(ctx, fb, shade(casing, 0.35), [
+        [0.66, litTop],
+        [-0.52, litTop],
+        [-0.52, litBottom],
+        [0.66, litBottom],
       ]);
       // A band an eighth of the drawing wide: the thinner first draw was under 2.5px at game size
       // and `tests/accents.test.ts` refused it as not drawn at all.
-      for (const at of [0.46, 0.24]) {
-        poly(ctx, f, shade(casing, -0.45), [
+      for (const at of pickup ? [0.5, 0.18] : [0.46, 0.24]) {
+        poly(ctx, fb, shade(casing, -0.45), [
           [at, -0.2],
-          [at - 0.12, -0.2],
-          [at - 0.12, 0.2],
+          [at - bandWide, -0.2],
+          [at - bandWide, 0.2],
           [at, 0.2],
         ]);
       }
-      disc(ctx, f, palette.glass, 0.76, 0, 0.09);
+      disc(ctx, fb, palette.glass, 0.76, 0, 0.09);
       // The burn behind it — light, not body, so translucent (0227), and inside its own box.
-      glow(ctx, f, palette.flame, -0.84, 0, 0.28, 0.8);
+      glow(ctx, fb, palette.flame, -0.84, 0, 0.28, 0.8);
       return;
     }
     // The pyre's rungs are the SAME drawing at a different extent — 0079. Four bitmaps, one shape.
@@ -12642,6 +13061,83 @@ export function drawKind(
       ]);
       disc(ctx, fg, palette.glass, 0, 0.1, 0.22);
       disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);
+      return;
+    }
+    /*
+      The void's face — 0447: the ball's own swirl at the glyph's size in its bubble, a round lavender
+      body with three arms curling into a dark heart. Light going IN.
+    */
+    case 'pickupVoid': {
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const ink = palette[INK_OF[kind]];
+      ctx.arc(half, half, fg.r * 0.9, 0, Math.PI * 2);
+      seal(ctx);
+      bubble(ctx, f, palette, ink);
+      disc(ctx, fg, shade(ink, -0.45), 0, 0, 0.62);
+      spiralArms(ctx, fg, shade(ink, 0.5), 3, 0.2, 0.8, 2.4, 0.16, 0.85);
+      disc(ctx, fg, palette.space, 0, 0, 0.26);
+      return;
+    }
+    /*
+      The nova's face — 0447: an eight-pointed burst with a lit ring round a white heart. Light going
+      OUT, and pointed where the void is round, so the two ward faces are told apart by silhouette.
+    */
+    case 'pickupNova': {
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const ink = palette[INK_OF[kind]];
+      const points: Pt[] = [];
+      for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2 - Math.PI / 2;
+        const reach = i % 2 === 0 ? 0.95 : 0.6;
+        points.push([Math.cos(angle) * reach, Math.sin(angle) * reach]);
+      }
+      trace(ctx, fg, points);
+      seal(ctx);
+      bubble(ctx, f, palette, ink);
+      band(ctx, fg, palette.ally, 0, 0, 0.52, 0.34);
+      disc(ctx, fg, shade(ink, 0.3), 0, 0, 0.22);
+      return;
+    }
+    /*
+      One piece of the nova's band — 0447, laid along x so the frame turns it to lie along the ring.
+      A thin hull the whole length of the box, a bright core down it, and a wide glow that is brightest
+      in the middle and gone at both ends: pieces laid every half-length overlap to an even band.
+    */
+    case 'novaArc': {
+      const ink = palette[INK_OF[kind]];
+      // Short of the box's edge by the margin `tests/accents.test.ts` keeps for every translucent mark.
+      const long = half * 0.96;
+      const thick = half * 0.11;
+      ctx.moveTo(half - long, half - thick);
+      ctx.lineTo(half + long, half - thick);
+      ctx.lineTo(half + long, half + thick);
+      ctx.lineTo(half - long, half + thick);
+      ctx.closePath();
+      /*
+        ⚠️ **OUTLINED IN ITS OWN INK**, the one hull in the atlas that is. A piece is never seen alone —
+        it is a length of one band laid end to end with its neighbours — and the dark outline drew a
+        tick at every join, so the first photograph was a dashed ring. Sealed as every hull is, so the
+        outline is still the silhouette; it is only the colour of the band it bounds.
+      */
+      ctx.strokeStyle = ink;
+      seal(ctx);
+      // The glow: a triangle window along the piece, so two halves overlapping sum to one.
+      const window = ctx.createLinearGradient(half - long, 0, half + long, 0);
+      window.addColorStop(0, rgba(ink, 0));
+      window.addColorStop(0.5, ink);
+      window.addColorStop(1, rgba(ink, 0));
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = window;
+      ctx.beginPath();
+      ctx.rect(half - long, half - thick * 4, long * 2, thick * 8);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      poly(ctx, f, shade(ink, 0.6), [
+        [-long / r, -thick / (2 * r)],
+        [long / r, -thick / (2 * r)],
+        [long / r, thick / (2 * r)],
+        [-long / r, thick / (2 * r)],
+      ]);
       return;
     }
     /*

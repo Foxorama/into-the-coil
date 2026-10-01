@@ -11,23 +11,20 @@
  * error anywhere.
  */
 
-import { SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
+import { OPENING_CHARGES, SIDES, SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
 import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
-import { SHIPS } from '../../content/ships.ts';
-import type { WeaponKind } from '../../content/weapons.ts';
+import { SHIPS, type ShipKind } from '../../content/ships.ts';
+import { WEAPONS } from '../../content/weapons.ts';
 import type { MissileKind } from '../../content/missiles.ts';
 import type { LevelTally } from '../../content/score.ts';
+import { DEFAULT_GOLFER, GOLFERS } from '../../content/golfers.ts';
 
 /**
- * The ship a run is flown in, and therefore the kinds an empty run resolves to — 0233.
- *
- * ⚠️ **One ship, named once.** `docs/game.md`'s roster is a table with one row, and the day it has
- * two the run will carry a `ship` field and this becomes `SHIPS[state.ship]`; until then a constant
- * beside the reducer is the honest shape, on `src/content/ships.ts`'s own refusal to invent a
- * roster for content that does not exist.
+ * The ship a run that has not begun is carrying — the default pilot's, so a state nobody is playing
+ * resolves to a real ship rather than a sentinel. `begin` always sets one.
  */
-const BASE_SHIP = SHIPS.proof;
+const DEFAULT_SHIP: ShipKind = GOLFERS[DEFAULT_GOLFER].ship;
 
 /**
  * The tier a run that has not begun is carrying.
@@ -59,13 +56,26 @@ export function livesFor(difficulty: DifficultyKind): number {
  */
 export type Arsenal = Readonly<Record<Side, readonly SpecialKind[]>>;
 
-/** Every charge on both stacks — what goes up with the ship (0079) and what the readout totals. */
+/** Every charge on every stack — what goes up with the ship (0079) and what the readout totals. */
 export function chargesIn(arsenal: Arsenal): number {
-  return arsenal.gun.length + arsenal.tubes.length;
+  let sum = 0;
+  for (const side of SIDES) sum += arsenal[side].length;
+  return sum;
+}
+
+/** `arsenal` with `side`'s stack replaced by `stack` and every other stack as it was. */
+function withStack(arsenal: Arsenal, side: Side, stack: readonly SpecialKind[]): Arsenal {
+  return {
+    gun: side === 'gun' ? stack : arsenal.gun,
+    tubes: side === 'tubes' ? stack : arsenal.tubes,
+    ward: side === 'ward' ? stack : arsenal.ward,
+  };
 }
 
 /**
- * What a run begins with: the bomb's charges on the gun's stack, and nothing else — 0053, 0373, 0376.
+ * What a run begins with: `OPENING_CHARGES` of the ship's own gun's special on that special's
+ * trigger, and nothing else — 0053, 0373, 0376, and 0441's *"a game starts with two bombs"*, a bomb
+ * being what the ask calls every gun's special.
  *
  * ⚠️ **ONE CALLER, `begin`.** A death stopped calling it in
  * `docs/decisions/0085-a-death-does-not-cost-the-bombs.md` and a continue in
@@ -74,10 +84,19 @@ export function chargesIn(arsenal: Arsenal): number {
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
  */
-export function startingArsenal(): Arsenal {
-  const gun: SpecialKind[] = [];
-  for (let i = 0; i < SPECIALS.bomb.charges; i++) gun.push('bomb');
-  return { gun, tubes: [] };
+/*
+  ⚠️ **AND THE TIER'S OWN WARD, SINCE 0447** — Burn's void, under the ship's own pair so the ship's
+  own is thrown first. Not for a ship whose own special is already the ward's: *"if the player starts
+  as feather with the nova ring … they don't get a bonus void bomb on top."*
+*/
+export function startingArsenal(ship: ShipKind, difficulty: DifficultyKind): Arsenal {
+  const own = WEAPONS[SHIPS[ship].weapon].special;
+  const side = SPECIALS[own].side;
+  const opening: SpecialKind[] = [];
+  for (let i = 0; i < OPENING_CHARGES; i++) opening.push(own);
+  const ward: SpecialKind[] = [];
+  if (side !== 'ward') for (const kind of DIFFICULTIES[difficulty].opensWith) ward.push(kind);
+  return withStack({ gun: [], tubes: [], ward }, side, side === 'ward' ? [...ward, ...opening] : opening);
 }
 
 export interface RunState {
@@ -118,16 +137,18 @@ export interface RunState {
    */
   upgrades: readonly UpgradeKind[];
   /**
-   * Which gun and which tube the upgrades are on — 0233.
-   *
-   * ⚠️ **In the RUN, beside the list, because the save has to hold them.** A weapon pickup of a
-   * kind the ship is not carrying switches the gun, so *which gun* is a thing the list alone cannot
-   * say. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
-   *
-   * ⚠️ **Nothing but a pickup changes them — 0372.** A death and a continue both keep the kinds
-   * with the ladder, so the base kinds are only ever what `begin` issues.
+   * The ship this run is flown in — 0441, and with it the gun, which nothing changes.
    */
-  weapon: WeaponKind;
+  ship: ShipKind;
+  /**
+   * Which tube the missile ladder is on — 0233.
+   *
+   * ⚠️ **In the RUN, beside the list, because the save has to hold it.** A missile pickup of a kind
+   * the ship is not carrying switches the tube, so *which tube* is a thing the list alone cannot say.
+   *
+   * ⚠️ **Nothing but a pickup changes it — 0372.** A death and a continue both keep the kind with the
+   * ladder, so the ship's own tube is only ever what `begin` issues.
+   */
   missile: MissileKind;
   /**
    * Every cleared level's account, in the order they were cleared — 0428. The run's score is these
@@ -157,17 +178,20 @@ export function bankedBonus(run: RunState): number {
 }
 
 export type RunAction =
-  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind }
+  /*
+    ⚠️ **A RUN BEGINS IN A SHIP — 0441.** The pilot is a setting, chosen before the run, and the shell
+    resolves it to the ship it flies; the run keeps the ship rather than the pilot, because the ship is
+    what the reducer and the frame read.
+  */
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind }
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
   | { slice: 'run'; type: 'spent'; side: Side }
   /*
     ⚠️ **AN UPGRADE NAMES ITS KIND SINCE 0233.** The pickup that was taken was showing one face of
-    its ladder, and the face is which gun or which tube it was offering; a reducer that only heard
-    *weapon* could not tell a fifth pulse from a first arc.
+    its ladder, and the face is which tube it was offering. The gun's half went with its ladder (0441).
   */
-  | { slice: 'run'; type: 'upgraded'; upgrade: 'weapon'; kind: WeaponKind }
   | { slice: 'run'; type: 'upgraded'; upgrade: 'missile'; kind: MissileKind }
   | { slice: 'run'; type: 'levelCleared' }
   // A cleared level's account, banked — 0428. Before `levelCleared`, which moves the level on.
@@ -183,10 +207,10 @@ export type RunAction =
 export const initialRun: RunState = {
   lives: 0,
   level: 0,
-  arsenal: { gun: [], tubes: [] },
+  arsenal: { gun: [], tubes: [], ward: [] },
   upgrades: [],
-  weapon: BASE_SHIP.weapon,
-  missile: BASE_SHIP.missile,
+  ship: DEFAULT_SHIP,
+  missile: SHIPS[DEFAULT_SHIP].missile,
   difficulty: DEFAULT_DIFFICULTY,
   tallies: [],
   continues: 0,
@@ -198,10 +222,10 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: livesFor(action.difficulty),
         level: 0,
-        arsenal: startingArsenal(),
+        arsenal: startingArsenal(action.ship, action.difficulty),
         upgrades: [],
-        weapon: BASE_SHIP.weapon,
-        missile: BASE_SHIP.missile,
+        ship: action.ship,
+        missile: SHIPS[action.ship].missile,
         difficulty: action.difficulty,
         tallies: [],
         continues: 0,
@@ -233,7 +257,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal: state.arsenal,
         upgrades: state.upgrades,
-        weapon: state.weapon,
+        ship: state.ship,
         missile: state.missile,
         difficulty: state.difficulty,
         /*
@@ -265,7 +289,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             level: state.level,
             arsenal: state.arsenal,
             upgrades: state.upgrades,
-            weapon: state.weapon,
+            ship: state.ship,
             missile: state.missile,
             difficulty: state.difficulty,
             tallies: state.tallies,
@@ -274,15 +298,15 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
     case 'took': {
       // Its charges go on TOP of its own side's stack, so what was earned last is thrown first — 0373, 0376.
       const side = SPECIALS[action.special].side;
-      const stack = [...state.arsenal[side]];
-      for (let i = 0; i < SPECIALS[action.special].charges; i++) stack.push(action.special);
-      const arsenal: Arsenal = side === 'gun' ? { gun: stack, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: stack };
+      // One charge a take, of every kind, since 0441: *"a player can pick up any type and get a bomb
+      // of that type."*
+      const arsenal = withStack(state.arsenal, side, [...state.arsenal[side], action.special]);
       return {
         lives: state.lives,
         level: state.level,
         arsenal,
         upgrades: state.upgrades,
-        weapon: state.weapon,
+        ship: state.ship,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -301,9 +325,9 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: state.lives,
         level: state.level,
-        arsenal: action.side === 'gun' ? { gun: left, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: left },
+        arsenal: withStack(state.arsenal, action.side, left),
         upgrades: state.upgrades,
-        weapon: state.weapon,
+        ship: state.ship,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -349,6 +373,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         the list is the tier and the save holds nothing the ladder cannot read.
       */
       // One rung a pickup: 0243's `count` went with the scatter that was its only sender — 0372.
+      // The tubes are the one ladder since 0441; the gun is the ship's.
       const room = UPGRADE_TIERS - tiersOf(state.upgrades, action.upgrade);
       const upgrades = room > 0 ? [...state.upgrades, action.upgrade] : state.upgrades;
       return {
@@ -356,8 +381,8 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal: state.arsenal,
         upgrades,
-        weapon: action.upgrade === 'weapon' ? action.kind : state.weapon,
-        missile: action.upgrade === 'missile' ? action.kind : state.missile,
+        ship: state.ship,
+        missile: action.kind,
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
@@ -380,7 +405,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level + 1,
         arsenal: state.arsenal,
         upgrades: state.upgrades,
-        weapon: state.weapon,
+        ship: state.ship,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -393,7 +418,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         level: state.level,
         arsenal: state.arsenal,
         upgrades: state.upgrades,
-        weapon: state.weapon,
+        ship: state.ship,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: [...state.tallies, action.tally],

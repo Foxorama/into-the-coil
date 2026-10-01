@@ -139,7 +139,8 @@ describe('an intent is a value the model reads and the shell writes', () => {
     const intent = makeIntent(SPECIAL_BINDINGS);
     expect(intent.along).toBe(0);
     expect(intent.across).toBe(0);
-    expect(intent.specials).toEqual([0, 0]);
+    // One per trigger, three since 0447's ward.
+    expect(intent.specials).toEqual([0, 0, 0]);
   });
 
   it('refuses a budget that would silently drop every press', () => {
@@ -250,7 +251,7 @@ describe('the shell fills an intent without ever telling the model about a key',
     kb.down('F13');
     src.contribute(intent);
     expect(intent.along).toBe(0);
-    expect(intent.specials).toEqual([0, 0]);
+    expect(intent.specials).toEqual([0, 0, 0]);
   });
 
   it('detaches on release', () => {

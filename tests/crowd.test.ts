@@ -109,7 +109,7 @@ function widestReachableRun(w: World, speed: number): { run: number; middle: num
       const steps = (e.along - w.ship.along) / closing;
       if (steps < 0 || steps > HORIZON) continue;
       const at = e.across + e.velAcross * steps;
-      const reach = e.radius + SHIPS.proof.radius;
+      const reach = e.radius + SHIPS.fighter.radius;
       const lo = Math.max(0, Math.floor((at - reach) / CELL));
       const hi = Math.min(CELLS - 1, Math.ceil((at + reach) / CELL));
       for (let c = lo; c <= hi; c++) unsafe[c] = 1;
@@ -117,8 +117,8 @@ function widestReachableRun(w: World, speed: number): { run: number; middle: num
   }
   // The floor bites (0383), so the lane past its face is no place to be — 0384.
   if (w.corridor !== null) {
-    const near = faceAt(w.corridor, w.ship.along, -1) + SHIPS.proof.radius;
-    const far = faceAt(w.corridor, w.ship.along, 1) - SHIPS.proof.radius;
+    const near = faceAt(w.corridor, w.ship.along, -1) + SHIPS.fighter.radius;
+    const far = faceAt(w.corridor, w.ship.along, 1) - SHIPS.fighter.radius;
     for (let c = 0; c < CELLS; c++) if (c * CELL < near || c * CELL > far) unsafe[c] = 1;
   }
   let best = 0;
@@ -189,12 +189,19 @@ const SUMMONS = BOSS_KINDS.flatMap((kind) =>
 function fly(kind: BossKind, phaseIndex: number, tier: (typeof DIFFICULTY_KINDS)[number], seconds: number) {
   const { world, stick } = playableWorld(solo(kind), tier);
   const frame = new GameFrame(world);
+  const at = Math.max(0.02, BOSSES[kind].phases[phaseIndex]!.upTo - 0.01);
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
+    /*
+      ⚠️ **PINNED FROM ARRIVAL, AND IT WAS PINNED ONLY AFTER THE WAIT.** Since 0441 every run flies
+      its gun at the old cap, and the fighter's four-barrel pulse killed the harrow inside the 700
+      steps this waits — so the phase was never stood in at all. The phase is the subject; the gun
+      that would otherwise end it is not.
+    */
+    if (world.bossPool.size > 0) world.bossPool.at(0).health = world.bossFullHealth * at;
     frame.step();
   }
   expect(world.bossPool.size, `${kind} never arrived`).toBe(1);
-  const at = Math.max(0.02, BOSSES[kind].phases[phaseIndex]!.upTo - 0.01);
 
   let worstRun = ACROSS_SPAN;
   let peakShots = 0;
@@ -300,7 +307,7 @@ describe('0270 — a shattering volley is counted in shards', () => {
       tight the tuned tier should get is a hand's question and 0192 says a taste may not fail a suite;
       what is not a taste, on any tier, is the assertion above.
     */
-    const fits = 2 * SHIPS.proof.radius;
+    const fits = 2 * SHIPS.fighter.radius;
     for (const kind of BOSS_KINDS) {
       for (let phase = 0; phase < BOSSES[kind].phases.length; phase++) {
         const { worstRun } = fly(kind, phase, 'legendary', 10);

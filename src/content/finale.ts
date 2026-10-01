@@ -17,7 +17,7 @@
  */
 
 import { LAUNCH_ACCEL, PORT_EXTENT } from './port.ts';
-import { SPRITE_EXTENT } from './sprites.ts';
+import { SHIP_BOX } from './sprites.ts';
 
 /** The finale's own pieces, in the order its atlas holds them after the game's and the port's. Closed — 0016. */
 export const FINALE_KINDS = ['shard', 'heartGlow', 'ring'] as const;
@@ -71,8 +71,12 @@ export const FINALE_BEATS = {
   viperRuns: 1020,
   /** And the fighter with her. 17.3 s. */
   blueRuns: 1038,
-  /** The picture fades into the backdrop the victory screen is drawn on, once both are gone. 18.6 s. */
-  fadeOut: 1116,
+  /**
+   * The picture fades into the backdrop the victory screen is drawn on, once both are gone. 18.7 s.
+   * 1120 from 1116 — 0441: every pilot's ship fills the one 9.4-unit box, wider than the fighter's
+   * 7-unit hull, and at 1116 its edge was still five pixels on the widest screen.
+   */
+  fadeOut: 1120,
   /** The finale is over. 19.2 s. */
   end: 1152,
 } as const;
@@ -180,10 +184,10 @@ export const AFTER_FIRE_STEPS = 72;
 */
 
 /**
- * How big the Viper is drawn against the port's bitmap of her: at the game's scale, the fighter's own
- * (`SPRITE_EXTENT.ship` is the port's `blue` in the fight), and a touch bigger, because she is.
+ * How big the Viper is drawn against the port's bitmap of her: at the game's scale, the pilot's ship's
+ * own (`SHIP_BOX` is the port's `blue` in the fight, since 0441), and a touch bigger, because she is.
  */
-export const VIPER_GROW = (SPRITE_EXTENT.ship / PORT_EXTENT.blue) * 1.2;
+export const VIPER_GROW = (SHIP_BOX / PORT_EXTENT.blue) * 1.2;
 
 /** How far the Viper rolls as the heart throws her out, in radians, and how fast she rocks back. */
 export const VIPER_TUMBLE = 0.9;

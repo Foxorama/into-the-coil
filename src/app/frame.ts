@@ -90,7 +90,7 @@ import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKin
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
-import { type DifficultyRow, crowdFor, fireGapFor, singleHitOnly, toughnessFor } from '../content/difficulty.ts';
+import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
@@ -103,7 +103,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -512,12 +512,8 @@ const DROP_SPREAD_MAX = 1.3;
  * now holds the wait against the time it takes to cross the lane, which is the thing the player is
  * actually doing, rather than against a cycle that no longer exists.
  *
- * ⚠️ **EXPORTED so a guard in another decision can name it** —
- * `docs/decisions/0086-the-teeth-wait-for-the-gun.md`. `MULTI_HIT_RUNUP` is how long level one waits
- * before it sends anything tough after the pickup that lifts the clamp, and the only honest statement
- * of *long enough* is *longer than the pickup itself waits to be taken*. Two independent constants
- * agreeing, which `docs/decisions/0027-measure-the-picture-not-the-model.md` allows and a guard
- * written in terms of one of them would not be.
+ * ⚠️ **EXPORTED so a guard in another decision can name it.** 0086's run-up was held against it
+ * until 0441 took the run-up away with the one-hit clamp.
  *
  * ⚠️ **420 → 600, so the wander reaches the back wall and turns inside the wait** — 0233. At a
  * wander held under half the scroll rate, the box takes a little over eight seconds to cross, and a
@@ -643,15 +639,64 @@ export function canThrow(w: World, kind: SpecialKind): boolean {
   return SPECIALS[kind].shot === null || w.throwIn <= 0;
 }
 
-/** Step a thrown bomb's explosion through its three pictures, by how much of it is left. */
+/**
+ * How long a ray ring's burst is on screen — a fifth of a second, the flash and then its fading rim —
+ * 0442. The damage lands on the first step, as every blast's does.
+ */
+const RAY_BURST_STEPS = 12;
+/** The kind a ray ring's burst carries in the blast pool, beside a bomb's explosion and a rift. */
+const RAY_BURST_KIND = 3;
+/** The kind a ray ring carries in `playerShots`, so `stepRays` can find it — 0442. */
+const RAY_KIND = 2;
+/** Steps between one page of a ring's ripple and the next — 0442. */
+const RAY_PAGE_STEPS = 4;
+// @setup: the ring's three pages, in the order the bright ring steps outward.
+const RAY_PAGES = [SPRITE.ray, SPRITE.rayRipple, SPRITE.raySwell] as const;
+
+/** Step a thrown bomb's explosion through its three pictures, and a ray's burst through its two. */
 function stepExplosions(w: World): void {
   for (let i = 0; i < w.blasts.size; i++) {
     const blast = w.blasts.at(i);
-    if (blast.kind !== EXPLOSION_KIND) continue;
-    const sprite = blast.lifeFor > 22 ? SPRITE.blast : blast.lifeFor > 10 ? SPRITE.blastFire : SPRITE.blastSmoke;
+    let sprite: number;
+    if (blast.kind === EXPLOSION_KIND) sprite = blast.lifeFor > 22 ? SPRITE.blast : blast.lifeFor > 10 ? SPRITE.blastFire : SPRITE.blastSmoke;
+    else if (blast.kind === RAY_BURST_KIND) sprite = blast.lifeFor > RAY_BURST_STEPS / 2 ? SPRITE.rayBurst : SPRITE.rayFade;
+    else continue;
     blast.sprite = sprite;
     blast.spriteBase = sprite;
     blast.spriteHit = sprite;
+  }
+}
+
+/**
+ * Turn every ray ring's page, so the bright ring steps outward as it flies — 0442. The blade's two
+ * turns are the same idea (`steerBlades`); a ring has three pages and no steering.
+ */
+function stepRays(w: World): void {
+  if (w.steps % RAY_PAGE_STEPS !== 0) return;
+  const page = RAY_PAGES[(w.steps / RAY_PAGE_STEPS) % RAY_PAGES.length]!;
+  for (let i = 0; i < w.playerShots.size; i++) {
+    const shot = w.playerShots.at(i);
+    if (shot.kind !== RAY_KIND) continue;
+    shot.sprite = page;
+    shot.spriteBase = page;
+    shot.spriteHit = page;
+  }
+}
+
+/**
+ * Every ray ring that landed this step goes off where it did — 0442: *"explode on impact with a small
+ * energy explosion."* A blast in the blast pool, so it lands through the same pairing as a bomb's — on
+ * every body inside it, once, and on a boss once — and is drawn at exactly its reach.
+ */
+function burstRays(w: World, landed: Deaths): void {
+  const row = SHOTS[WEAPONS[w.weapon.kind].bursts ?? 'rayBurst'];
+  for (let i = 0; i < landed.count; i++) {
+    const blast = w.blasts.spawn();
+    // A burst the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+    if (blast === null) return;
+    reset(blast, landed.along[i]!, landed.across[i]!, row, RAY_BURST_KIND);
+    // It holds station in the world, as a bomb's blast does.
+    blast.lifeFor = RAY_BURST_STEPS;
   }
 }
 
@@ -948,6 +993,11 @@ export interface World {
    */
   hits: Deaths;
   /**
+   * Where the ship's ray rings landed this step, so each can go off there — 0442. Sized to the
+   * player-shot pool, because no more than every ring in flight can land in one step.
+   */
+  landed: Deaths;
+  /**
    * The burst stream, and it is SEPARATE from `rng` on purpose.
    *
    * `docs/decisions/0021-one-stream-per-concern.md`: one shared generator couples every draw to
@@ -993,6 +1043,18 @@ export interface World {
   whirlAge: number;
   whirlOffset: number;
   whirlAcross: number;
+  /**
+   * The nova's ring, in pieces — 0447. Its own pool, emptied and laid again every step with only the
+   * pieces the view can show, because a ring a screen wide is mostly off it.
+   */
+  nova: Pool<Entity>;
+  /** Which special burst it, how many steps it has grown for, its centre in the camera, and whether
+   * it has reached the boss yet — once a nova. */
+  novaKind: SpecialKind | null;
+  novaAge: number;
+  novaOffset: number;
+  novaAcross: number;
+  novaBossHit: boolean;
   /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
   throwIn: number;
   /**
@@ -1123,18 +1185,7 @@ export interface World {
    * `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
    */
   levelIndex: number;
-  /**
-   * How many `weapon` pickups this level has put on the field so far. Reset with the script.
-   *
-   * ⚠️ **OFFERED rather than held, which is the whole of why the dial can sawtooth** —
-   * `src/content/difficulty.ts`'s `dialFor` has the argument. Held upgrades cross a level boundary
-   * (0039) and would carry their notches with them.
-   *
-   * ⚠️ **Counted here rather than by walking `level.pickups` up to `nextPickup`.** That walk is O(n)
-   * at every read and this is read at every wave spawn; a counter incremented at the one place a
-   * pickup is placed costs nothing and cannot disagree with itself.
-   */
-  weaponsOffered: number;
+  // `weaponsOffered` stood here — what turned 0084's dial — until 0441 took the dial with the ladders.
   /** Index of the next wave in `level.waves` that has not spawned yet. Only ever goes up. */
   nextWave: number;
   /**
@@ -1619,6 +1670,8 @@ export interface World {
   heartBeat: number;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
+  /** Volleys fired in the gun's current burst, for a gun that fires in bursts — 0442. */
+  burstFired: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
   missileIn: number;
   /**
@@ -1916,6 +1969,8 @@ export class GameFrame implements Frame {
     steerMissiles(w);
     // After the ship has flown this step, so a blade circles where the ship now is — 0234.
     steerBlades(w);
+    // And a ring's ripple — 0442.
+    stepRays(w);
     steerEnemies(w);
     driftPickups(w);
     fireEnemies(w);
@@ -1973,6 +2028,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
     stepExplosions(w);
+    // After both pools have stepped, so the turn is this step's and `prevTurn` the last — 0447.
+    turnVoids(w);
     // The storm's flicker and the whirlpool, both placed by hand — 0374.
     stepStorm(w);
     stepWhirl(w);
@@ -2010,6 +2067,8 @@ export class GameFrame implements Frame {
     // An open rift before anything else lands, so what it negates never gets there — 0377. Its kills
     // are in the log the deaths below are read from.
     stepRift(w);
+    // And a nova's edge, on the rift's terms: what it pops never lands — 0447.
+    stepNova(w);
     // The stone first, so nothing it stopped goes on to land — 0349.
     stoneStops(w);
     // A body that fell from the boss and drifted back into it feeds it, before anything can shoot it — 0404.
@@ -2037,6 +2096,15 @@ export class GameFrame implements Frame {
     */
     const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
     /*
+      ⚠️ **AND THE RAY'S, IN A LOG OF ITS OWN — 0442.** A ring is spent by arriving like a pulse, so
+      nothing tells anyone where; it goes off where it landed, so it needs the place. Its own log rather
+      than `hits`, because `hits` is read for sparks and for the blade's cue, and a ring's picture of
+      its own landing is the burst.
+    */
+    w.landed.count = 0;
+    const rayHits = w.weapon.flight === 'burst' ? w.landed : null;
+    const shotLog = bladeHits ?? rayHits;
+    /*
       ⚠️ **A TARGET TAKES THE GUN'S BLADES ONLY SO OFTEN — 0391**: the row's `landGap`, a clock on each
       enemy and one on the boss's hull that its body shares. Counted down here, once a step, before
       anything lands; nothing allocates.
@@ -2051,7 +2119,7 @@ export class GameFrame implements Frame {
     // A surge whose pods pierce: a blade's arrival on a missile, so it is told by the log — 0375, 0379.
     const surging = surgeOf(w);
     const tubesPierce = surging !== null && surging.pods.pierce > 1;
-    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, bladeHits, bladeGap);
+    killedByShots += collideInto(w.playerShots, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, shotLog, bladeGap);
     killedByShots += collideInto(w.missiles, w.enemies, 1, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits);
     // The boss is its own pairing rather than another enemy, and the reason is the pool: it is the
     // only body in the game that must survive a hundred and fifty hits, so it cannot share a pool
@@ -2088,7 +2156,7 @@ export class GameFrame implements Frame {
       when the wreck lands, and a wreck that was shot never landed. Found by photographing it.
     */
     const shootable = w.bossEntering < 0 && !w.bossBeaten;
-    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, bladeHits, bladeGap, hull);
+    if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
       because a void blast is in front of the animal that threw it and a pulse meets it first; and
@@ -2112,7 +2180,8 @@ export class GameFrame implements Frame {
       log too.
     */
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
-    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, armoured ? w.hits : bladeHits, bladeGap, hull);
+    // A ring on armour still goes off where it landed — the burst is the ring's, not the wound's.
+    if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     let bites = bladeHits === null ? 0 : w.hits.count;
@@ -2132,6 +2201,9 @@ export class GameFrame implements Frame {
       collideInto(w.whirl, w.bossPool, 1, open, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits);
       collideInto(w.whirl, w.bossBody, 1, open, IMPACT_FLASH_STEPS, null, w.hits);
     }
+    // Every ring that landed this step goes off where it did, so its burst lands on this step's
+    // blast pairing below with everything else's — 0442.
+    if (rayHits !== null) burstRays(w, rayHits);
     // An area rather than an arrival: everything inside it, once, and nothing consumes it.
     // Only what it can see — 0349: stone stops a blast.
     blastInto(w.blasts, w.enemies, 1, IMPACT_FLASH_STEPS, w.deaths, w.corridor);
@@ -2536,7 +2608,7 @@ export class GameFrame implements Frame {
     // The intro is its own picture on its own atlas, and none of the scene below is in it — 0411 —
     // but the sky it flies through is the first level's, from the game's sprites in that atlas (0416).
     if (w.intro !== null) {
-      paintPort(w.surface, w.view, w.intro + alpha, w.sky);
+      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.
@@ -2604,6 +2676,7 @@ export function holdFinale(w: World): void {
   scene.from.shipAlong = w.ship.along - w.cameraAlong;
   scene.from.shipAcross = w.ship.across;
   scene.ship = w.ship.spriteBase;
+  scene.tail = w.shipRow.tail;
 }
 
 /** Where the finale's heart stands when the fight had none — `holdFinale`. */
@@ -3089,6 +3162,8 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'arc';
     case 'coil':
       return 'throw';
+    case 'burst':
+      return 'ray';
     default: {
       const unhandled: never = flight;
       return unhandled;
@@ -3099,6 +3174,22 @@ export function cueOfFlight(flight: FlightKind): CueKind {
 function fireShip(w: World): void {
   w.fireIn--;
   if (w.fireIn > 0) return;
+  fireVolley(w);
+  /*
+    ⚠️ **AND A GUN THAT FIRES IN BURSTS RESTS AFTER ONE — 0442**, played: *"four shot bursts … 4 (at
+    current speed) brief pause, 4 etc."* Counted here, after the volley has set its own reload on the
+    grid, so the rest is added to a reload that is already on the beat and a burst never drifts off it.
+  */
+  const burst = WEAPONS[w.weapon.kind].burst;
+  if (burst === undefined) return;
+  w.burstFired++;
+  if (w.burstFired < burst.volleys) return;
+  w.burstFired = 0;
+  w.fireIn += burst.rest;
+}
+
+/** One volley of whatever gun the ship flies. */
+function fireVolley(w: World): void {
   /*
     ⚠️ **THE FLIGHT DECIDES, AND A NAME NEVER DOES** — 0233, on 0016's terms. A weapon kind is a row;
     what the frame switches on is the closed union of ways a shot can travel, so a third gun that
@@ -3113,6 +3204,10 @@ function fireShip(w: World): void {
       return;
     case 'coil':
       throwBlades(w);
+      return;
+    // A ring flies as a pulse does; what it does on arriving is the collision step's — 0442.
+    case 'burst':
+      firePulse(w);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -3163,12 +3258,13 @@ function throwBlades(w: World): void {
   /*
     ⚠️ **FROM THE WINGTIP ITSELF, HEADING OUT** — 0244's second photograph: *"there's a big gap
     between helix start and wingtips."* The first draft threw each blade at its crest, `coil` off
-    the axis, which at the cap is eighteen units from a wingtip four out. The wingtip is half the
-    drawn width of the hull the ship is wearing — whichever rung's hull — and the strand's phase at
-    the throw is the one at which a sine of `coil` passes that width on its way out, so the blade
-    leaves the wing and swings wider before it comes back across the nose.
+    the axis, which at the cap is eighteen units from a wingtip four out. The wingtip is the ship's
+    own (`wingtip` on its row — the Firebird's front hubcaps, since 0441; it was half the drawn width
+    of the hull) and the strand's phase at the throw is the one at which a sine of `coil` passes that
+    width on its way out, so the blade leaves the wing and swings wider before it comes back across
+    the nose.
   */
-  const wingtip = SPRITE_EXTENT[SPRITE_KINDS[w.ship.spriteBase]!] / 2;
+  const wingtip = w.shipRow.wingtip;
   const lift = Math.asin(Math.min(1, wingtip / w.weapon.coil));
   for (let s = 0; s < BLADE_SIDES.length; s++) {
     const side = BLADE_SIDES[s]!;
@@ -3490,7 +3586,8 @@ function firePulse(w: World): void {
     */
     if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
     const angle = first + step * i;
-    reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row);
+    // A ring is marked so `stepRays` can turn its pages — 0442; every other straight shot carries zero.
+    reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row, w.weapon.flight === 'burst' ? RAY_KIND : 0);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
     shot.velAcross = Math.sin(angle) * row.speed;
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
@@ -3955,6 +4052,159 @@ function stepWhirl(w: World): void {
   }
 }
 
+/*
+  ── THE NOVA — `docs/decisions/0447-the-ward-is-a-third-trigger.md` ─────────────────────────────
+
+  *"A huge purple ring bursting out from the ship across the screen, popping what it passes."* A ring
+  centred where the ship was when it was pressed, held in the camera as the whirlpool's centre is,
+  growing by `grow` a step until it is past every corner of the view. As its edge crosses a thing:
+    - every enemy shot its band touches is gone;
+    - every body whose centre it crosses takes `damage`, once, through the kill log;
+    - the boss takes its share, once, the first step the ring crosses its head or any of its body.
+  Nothing is struck twice, because the radius only grows and a crossing is `prev < d ≤ now`.
+
+  ⚠️ **ITS PICTURE IS ITS RADIUS.** The pieces are laid at exactly the radius that lands this step,
+  so what the player sees the ring pass is what it popped — 0036.
+*/
+
+/** The steps a nova's ring has grown, as a radius. */
+function novaRadius(nova: Nova, age: number): number {
+  return nova.start + age * nova.grow;
+}
+
+// @setup: one body, read by `reset` for every piece of the ring; the turn is set after.
+const NOVA_PIECE = { sprite: SPRITE.novaArc, spriteHit: SPRITE.novaArc, radius: 0, health: 1, damage: 0 };
+
+/** How far apart the pieces lie round the ring: half a piece, so the glows overlap to an even band. */
+const NOVA_SPACING = SPRITE_EXTENT.novaArc / 2;
+
+/** The fewest pieces a ring is laid in, so the first steps are a ring and not a stroke. */
+const NOVA_LEAST_PIECES = 8;
+
+/** Lay the ring's pieces where this step's radius puts them, only those the view can show. */
+function placeNova(w: World, nova: Nova): void {
+  w.nova.clear();
+  const radius = novaRadius(nova, w.novaAge);
+  const was = novaRadius(nova, w.novaAge > 0 ? w.novaAge - 1 : 0);
+  const centreAlong = w.cameraAlong + w.novaOffset;
+  const wasAlong = w.prevCameraAlong + w.novaOffset;
+  const around = Math.ceil((TAU * radius) / NOVA_SPACING);
+  const pieces = around > NOVA_LEAST_PIECES ? around : NOVA_LEAST_PIECES;
+  const margin = SPRITE_EXTENT.novaArc;
+  for (let i = 0; i < pieces; i++) {
+    const angle = (i * TAU) / pieces;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const along = centreAlong + cos * radius;
+    const across = w.novaAcross + sin * radius;
+    if (along < w.cameraAlong - margin || along > w.cameraAlong + w.view.alongSpan + margin) continue;
+    if (across < -margin || across > ACROSS_SPAN + margin) continue;
+    const piece = w.nova.spawn();
+    // A ring the pool has no room for is laid short rather than grown — `src/sim/pool.ts`.
+    if (piece === null) return;
+    reset(piece, along, across, NOVA_PIECE);
+    piece.prevAlong = wasAlong + cos * was;
+    piece.prevAcross = w.novaAcross + sin * was;
+    // Lying along the ring: a quarter turn on from the way out to it.
+    piece.turn = turnFor(angle + Math.PI * 1.5);
+    piece.prevTurn = piece.turn;
+  }
+}
+
+/** Burst a nova from where the ship is. A second one replaces the first. */
+function openNova(w: World, kind: SpecialKind, nova: Nova): void {
+  w.novaKind = kind;
+  w.novaAge = 0;
+  w.novaOffset = w.ship.along - w.cameraAlong;
+  w.novaAcross = w.ship.across;
+  w.novaBossHit = false;
+  placeNova(w, nova);
+}
+
+/** Whether a ring that grew from `was` to `now` this step crossed a point `d` from its centre. */
+function crossed(d: number, was: number, now: number, first: boolean): boolean {
+  return d <= now && (first || d > was);
+}
+
+/** Grow the nova, land what its edge crossed this step, and close it once it is past the view. */
+function stepNova(w: World): void {
+  if (w.novaKind === null) return;
+  const nova = SPECIALS[w.novaKind].nova;
+  if (nova === null) return;
+  const first = w.novaAge === 0;
+  const was = novaRadius(nova, w.novaAge);
+  w.novaAge++;
+  const now = novaRadius(nova, w.novaAge);
+  const centreAlong = w.cameraAlong + w.novaOffset;
+  const centreAcross = w.novaAcross;
+  // Every hostile shot its band touches.
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const shot = w.enemyShots.at(i);
+    const d = Math.hypot(shot.along - centreAlong, shot.across - centreAcross);
+    if (crossed(d - shot.radius - nova.band, was, now + nova.band, first) || crossed(d, was, now, first)) w.enemyShots.releaseAt(i);
+  }
+  // Every body whose centre it crossed, once — through the kill log, so a pop bursts and is heard.
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const body = w.enemies.at(i);
+    const d = Math.hypot(body.along - centreAlong, body.across - centreAcross);
+    if (crossed(d, was, now, first)) strike(w.enemies, i, nova.damage, IMPACT_FLASH_STEPS, w.deaths);
+  }
+  // The boss, once a nova, the first step it crosses the head or any of the body.
+  if (!w.novaBossHit && w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
+    const head = w.bossPool.at(0);
+    let reaches = crossed(Math.hypot(head.along - centreAlong, head.across - centreAcross) - head.radius, was, now, first);
+    for (let i = 0; !reaches && i < w.bossBody.size; i++) {
+      const node = w.bossBody.at(i);
+      reaches = crossed(Math.hypot(node.along - centreAlong, node.across - centreAcross) - node.radius, was, now, first);
+    }
+    if (reaches) {
+      w.novaBossHit = true;
+      if (head.invulnFor <= 0) {
+        const open = openBy(phaseFor(w.bossRow, head.health, w.bossFullHealth));
+        const share = nova.bossShare * w.bossFullHealth;
+        strike(w.bossPool, 0, (share > nova.damage ? share : nova.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+      }
+    }
+  }
+  // Past the farthest corner of the view, it is gone.
+  const inView = w.novaOffset;
+  const farAlong = inView > w.view.alongSpan - inView ? inView : w.view.alongSpan - inView;
+  const farAcross = centreAcross > ACROSS_SPAN - centreAcross ? centreAcross : ACROSS_SPAN - centreAcross;
+  if (now - SPRITE_EXTENT.novaArc > Math.sqrt(farAlong * farAlong + farAcross * farAcross)) {
+    w.nova.clear();
+    w.novaKind = null;
+    return;
+  }
+  placeNova(w, nova);
+}
+
+/*
+  ── THE VOID TURNS — 0447 ────────────────────────────────────────────────────────────────────────
+
+  *"Some kind of animation and a swirl."* The ball and the rift are each one swirl, baked once, and
+  turned a little every step: the ball fast, so it reads as winding in as it flies, and the rift
+  slowly, so the hole in the sky is pulling and not spinning. Arms that wind inward turn against
+  their own twist, so both turn the negative way.
+*/
+/** Radians the void ball turns a step: about a turn every second and a half. */
+const VOID_BALL_SPIN = -0.07;
+/** Radians an open rift turns a step: about a turn every five seconds. */
+const RIFT_SPIN = -0.02;
+
+/** Turn every void in the air and every rift that is open, after their pools have stepped. */
+function turnVoids(w: World): void {
+  for (let i = 0; i < w.bombs.size; i++) {
+    const ball = w.bombs.at(i);
+    if (SPECIALS[SPECIAL_KINDS[ball.kind] ?? 'bomb'].rift === null) continue;
+    ball.turn = foldTurn(ball.turn + VOID_BALL_SPIN);
+  }
+  for (let i = 0; i < w.blasts.size; i++) {
+    const rift = w.blasts.at(i);
+    if (rift.kind !== RIFT_KIND) continue;
+    rift.turn = foldTurn(rift.turn + RIFT_SPIN);
+  }
+}
+
 /**
  * Throw the special in `slot`, having been told by the shell that there was a charge for it.
  *
@@ -3982,6 +4232,13 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   if (row.whirl !== null) {
     openWhirl(w, kind, row.whirl);
     w.onCue(row.cue, w.whirlAcross);
+    return;
+  }
+  // A nova bursts from the ship rather than being thrown — 0447. Pressed, not aimed, so it is under
+  // no throw gap: its ring is a band and not a filled flash, which is what 0375's gap is for.
+  if (row.nova !== null) {
+    openNova(w, kind, row.nova);
+    w.onCue(row.cue, w.novaAcross);
     return;
   }
   if (row.shot === null) return;
@@ -4373,7 +4630,8 @@ function stepExhaust(w: World): void {
   flame.swell = swell;
   flame.prevAlong = flame.along;
   flame.prevAcross = flame.across;
-  flame.along = w.ship.along - row.trail - BURN_HALF * (swell - 1);
+  // From the ship's own nozzles — 0441: `trail` is measured from them, and `tail` is where they are.
+  flame.along = w.ship.along - w.shipRow.tail - row.trail - BURN_HALF * (swell - 1);
   flame.across = w.ship.across;
 }
 
@@ -6058,21 +6316,11 @@ function spawnWave(w: World, index: number): void {
       allocation, in the frame, which is the one thing 0022 bans outright.
     */
     /*
-      ⚠️ **THE DIAL, and it is the first thing in the game that spawns differently depending on how
-      far into the run the player is** — `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
-      Reported from play: *"at the start of the game there should be no multiple hit enemies until
-      after the 2nd upgrade has been spawned — the difficulty curve currently has a massive spike at
-      the start."*
-
-      ⚠️ **It clamps to one rather than scaling towards one.** A turret with three health at the
-      opening of level one is the spike; two would be a smaller spike. The ask is a floor on the
-      *number of shots*, which is what the player actually counts.
-
-      ⚠️ **The TIER is still applied everywhere the dial is not**, and the two multiply rather than
-      compete: past `MULTI_HIT_DIAL` this line is exactly what it was, so a hard tier is hard from the
-      first wave of level two.
+      ⚠️ **THE TIER, AND NOTHING ELSE SINCE 0441.** Level one's opening clamped every body to one hit
+      until two weapon pickups had been offered (0084's dial), because the gun the run opened with was
+      the bottom of its ladder. Every ship opens on its whole gun now, and the clamp went with that.
     */
-    e.health = singleHitOnly(w.levelIndex, w.weaponsOffered) ? 1 : toughnessFor(row.health, w.difficulty);
+    e.health = toughnessFor(row.health, w.difficulty);
     // ⚠️ NEGATED here rather than stored negative. `closing` is "towards the player" in the table, so a
     // typo produces a slow enemy rather than one that silently flees off the leading edge.
     e.velAlong = -row.closing * w.difficulty.closing;
@@ -6923,35 +7171,42 @@ export function dropPickups(w: World, along: number, across: number, kinds: read
     that remain are an even ring of two rather than three with a gap where the shield was — the
     divisor argument `throwPiece` makes, one step earlier.
   */
+  /*
+    ⚠️ **AND SINCE 0447 THE SHIELD IS NOT WITHHELD BUT REPLACED** — by its row's `bare`, the ward
+    pickup: *"it'll spit out a void bomb pickup in place of the shield."* The count is still taken
+    first, so a row whose `bare` is null is still a gap closed rather than a gap left.
+  */
   let carried = 0;
-  for (let i = 0; i < kinds.length; i++) if (carries(w, kinds[i]!)) carried++;
+  for (let i = 0; i < kinds.length; i++) if (offeredAs(w, kinds[i]!) !== null) carried++;
   const room = w.pickups.capacity - w.pickups.size;
   const pieces = carried < room ? carried : room;
   let thrown = 0;
   for (let i = 0; i < kinds.length && thrown < pieces; i++) {
-    const kind = kinds[i]!;
-    if (!carries(w, kind)) continue;
+    const kind = offeredAs(w, kinds[i]!);
+    if (kind === null) continue;
     throwPiece(w, along, across, kind, thrown, pieces);
     thrown++;
   }
 }
 
 /**
- * Whether the ship on this tier can use a pickup of `kind` at all — false for a shield where the tier
- * lets it carry none.
+ * What a pickup of `kind` is offered as on this tier: itself, or — for a shield where the tier lets
+ * the ship carry none — its row's `bare`, which is `null` for withheld.
  *
  * ⚠️ **Read off the pickup's EFFECT and the tier's ROW, never a name on either** — 0016's *behaviour
- * rides the row*. So a fourth tier with a cap of zero is withheld its shields without anything being
- * switched on, and a second pickup that shields would be withheld with them.
+ * rides the row*. So a fourth tier with a cap of zero is offered the ward in its shields' place
+ * without anything being switched on, and a second pickup that shields would be answered by its own
+ * row.
  *
- * ⚠️ **Withholding is the one thing a tier may do to what a level sends**, and 0355 amends 0047 by
- * exactly that sentence: a pickup the ship cannot carry is not an offer. Nothing a tier CAN use is
- * ever withheld, so the lane, ordering and pacing guards over the script are untouched, and the
- * dial is unmoved because it counts weapons only.
+ * ⚠️ **Withholding was the one thing a tier could do to what a level sends** — 0355, amending 0047 —
+ * and 0447 adds the other half: a pickup the ship cannot carry may name what it is offered as
+ * instead. Nothing a tier CAN use is ever changed, so the lane, ordering and pacing guards over the
+ * script are untouched.
  */
-function carries(w: World, kind: PickupKind): boolean {
+function offeredAs(w: World, kind: PickupKind): PickupKind | null {
   const row = w.pickupRows[w.pickupKinds[kind]];
-  return row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0;
+  if (row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0) return kind;
+  return row.bare;
 }
 
 /**
@@ -6987,13 +7242,6 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   // A drop one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
   if (item === null) return;
   reset(item, along, across, row, slot);
-  /*
-    ⚠️ **THE DIAL TURNS HERE TOO — 0084, and it turns on the SPAWN**, exactly as `spawnPickup`'s does
-    and after the pool has answered for the same reason: a weapon the field had no room for was not
-    offered. `weaponsOfferedBy` in `src/content/levels.ts` counts the drop beside the list, so the top
-    of the dial is still recomputed from the content.
-  */
-  if (kind === 'weapon') w.weaponsOffered++;
   /*
     ⚠️ **A DROPPED PIECE CYCLES LIKE AN AUTHORED ONE — 0233.** 0243 had a scattered piece hold the
     face the player just lost, because what a death threw back was what it took and a switch under
@@ -7045,29 +7293,14 @@ function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces:
 function spawnPickup(w: World, index: number): void {
   const entry = w.level.pickups[index];
   if (entry === undefined) return;
-  const kind = w.pickupKinds[entry.kind];
+  // No level authors a shield today; one that did would be offered as the drop's is — 0355, 0447.
+  const offered = offeredAs(w, entry.kind);
+  if (offered === null) return;
+  const kind = w.pickupKinds[offered];
   const row = w.pickupRows[kind];
   if (row === undefined) return;
-  // No level authors a shield today; one that did would be withheld on Burn as the drop's is — 0355.
-  if (!carries(w, entry.kind)) return;
   const item = w.pickups.spawn();
   if (item === null) return;
-  /*
-    ⚠️ **THE DIAL TURNS HERE, and it turns on the SPAWN rather than on the collection** —
-    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`, and the ask's own words: *"dials it up
-    per power up spawn."* The alternative — counting what the player picked up — cannot sawtooth,
-    because upgrades cross a level boundary and their notches would cross with them.
-
-    ⚠️ **After the pool has answered, so a pickup the field had no room for does not turn it.** The
-    dial is *what this level has offered*, and something the player never saw was not offered. It is
-    the same reason the counter is not incremented alongside `nextPickup`, which advances whether or
-    not a slot was free.
-
-    ⚠️ **`weapon` only.** The ask keys the dial to *weapon* power-ups specifically, and the arithmetic
-    depends on it: four a level over seven levels is what puts the last boss at exactly `DIAL_MAX`.
-    Counting missiles too would take it to 17.
-  */
-  if (entry.kind === 'weapon') w.weaponsOffered++;
   /*
     ⚠️ **`+ w.levelOrigin`, AND IT WAS MISSING FOR AS LONG AS THE ORIGIN HAS EXISTED** —
     `docs/decisions/0100-a-level-places-its-pickups-too.md`. Reported from play: *"I didn't get a
@@ -7082,11 +7315,9 @@ function spawnPickup(w: World, index: number): void {
 
     ⚠️ **The SCHEDULING side was always right, and that is what made it silent.** `stepSpawns` asks
     `pickups[next].at <= spawnAlong(camera) - levelOrigin`, which is in level coordinates and correct
-    — so `nextPickup` advanced normally and the model believed it had offered nine pickups. **So did
-    the dial**: `weaponsOffered` increments here, and
-    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` reads it, so from level two onward the
-    game raised its own difficulty on schedule for weapons the player was never shown. It is a
-    difficulty defect as much as a pickup one.
+    — so `nextPickup` advanced normally and the model believed it had offered nine pickups. So did
+    0084's dial, while there was one, so from level two onward the game raised its own difficulty on
+    schedule for weapons the player was never shown.
   */
   reset(item, entry.at + w.levelOrigin, laneAcross(entry.lane), row, kind);
   // Read against the corridor where it lies, as a wave is — 0350. The identity where there is none.
@@ -9388,9 +9619,9 @@ function spawnBoss(w: World): void {
  * times a second to answer a question that changes a few times a run.
  */
 export function wearHull(w: World): void {
-  // The kind AND the tier — 0233. The ship wears what it is carrying, and what it is carrying is
-  // both how much and which.
-  const hull = hullFor(w.weapon.kind, w.weapon.tier);
+  // The ship and the tubes it carries — 0441. The gun is the ship's and has no tiers, so the tubes are
+  // what changes the picture.
+  const hull = hullFor(w.shipRow, w.weapon.launchers);
   w.ship.spriteBase = hull.base;
   w.ship.spriteHit = hull.hit;
   // `sprite` is derived by `stepEntities`, but the frame between now and the next step draws from it.
@@ -9434,6 +9665,9 @@ export function respawn(w: World): void {
   */
   w.bombs.clear();
   w.blasts.clear();
+  // And a nova still growing, on the same terms — 0447.
+  w.nova.clear();
+  w.novaKind = null;
   // A surge went with the ship that wore it — 0373. `stepSurge` ends it at the wreck; this is sure.
   w.surgeFor = 0;
   w.aura.clear();
@@ -9812,17 +10046,6 @@ function beginScript(w: World): void {
   // back with the level's script.
   w.fightFiring = 0;
   w.nextPickup = 0;
-  /*
-    ⚠️ **THE SAWTOOTH IS THIS LINE.** The dial is `levelIndex + weaponsOffered`, so zeroing the second
-    at a level boundary is what drops it back — *"level 2 starts by dialing it back a couple of notches
-    to give the player a breathing space"* — while the first keeps it above where the last level began.
-    `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`.
-
-    ⚠️ **In `beginScript` rather than in `advanceLevel`, so a RUN beginning resets it too.** Both paths
-    come through here, which is the whole reason this function exists — `npm run prove` found the
-    duplicate the last time something belonged in both.
-  */
-  w.weaponsOffered = 0;
   w.bossSpawned = false;
   w.bossBeaten = false;
   // The new level's own room, or none — 0335. Laid here rather than at the fight, because a room is a

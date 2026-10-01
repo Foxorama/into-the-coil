@@ -9,7 +9,6 @@ import {
   DIFFICULTY_KINDS,
   HARDER,
   MARGIN,
-  MULTI_HIT_DIAL,
   PINNED,
   SAVIOR,
   TUNED,
@@ -482,7 +481,8 @@ describe('a tier is a property of the run, and never an assist', () => {
       can take is walked, so a new one that forgets to carry the field fails here.
     */
     const during: Action[] = [
-      { slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: 'pulse' },
+      // The tubes, the one ladder since 0441.
+      { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' },
       // ⚠️ `gainedLife` was here and 0082 deleted the action — nothing grants a life any more.
       // `src/state/slices/run.ts` has why, and what it leaves owed to 0039.
       { slice: 'run', type: 'took', special: 'bomb' },
@@ -491,7 +491,7 @@ describe('a tier is a property of the run, and never an assist', () => {
       { slice: 'run', type: 'lifeLost' },
     ];
     for (const tier of DIFFICULTY_KINDS) {
-      let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: tier });
+      let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: tier, ship: initialState.run.ship });
       expect(state.run.difficulty, 'a run did not begin on the tier it was given').toBe(tier);
       expect(state.run.lives, 'a run did not start on its tier\'s lives').toBe(livesFor(tier));
       for (const action of during) {
@@ -525,22 +525,17 @@ describe('the tier reaches the field, and not only the table', () => {
   function firstWave(tier?: DifficultyKind): { health: number; closing: number; shotSpeed: number } {
     const { world } = playableWorld(ONE_WAVE, tier);
     /*
-      ⚠️ **PAST THE OPENING CLAMP, and this fixture went red the day the dial landed.**
-      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md` holds every enemy to one hit until
-      the first level has offered two weapon pickups, so a turret spawned at dial 1 arrives at one
-      health **on every tier** — which is the dial working and this test measuring nothing.
+      ⚠️ **This fixture used to turn the dial past 0084's one-hit opening before it measured.** The
+      dial and its clamp went with 0441 (`docs/decisions/0441-a-pilot-flies-their-own-ship.md`), so a
+      turret arrives at the tier's own toughness from the first step and there is nothing to turn.
 
-      ⚠️ **The two axes deliberately do not commute, and that is the finding rather than the fix.**
-      The clamp is a floor on *shots to kill* and it wins over the tier's multiplier while it is on, so
-      **the hardest tier is no tougher than the easiest for the opening of level one.** That is
-      intended — the report's complaint was a spike *at the start of the game*, and a spike is no less
-      of one for having been chosen on the title screen — but it is a real thing about what the three
-      buttons do, and nothing else in the repository says it.
-
-      The subject here is the tier, so the fixture turns the dial past the clamp rather than the clamp
-      being weakened to suit it. `tests/dial.test.ts` owns the other direction.
+      ⚠️ **The ship holds its fire instead, and since 0441 it has to.** What is measured is what
+      ARRIVED, and every ship now opens on its gun's old cap: the fighter's pulse at the cap shoots the
+      wave down inside the 400 steps, and a dead turret reads as zero health on every tier. Fire held
+      is the subject isolated, not weakened — the tier is a property of the spawn.
     */
-    world.weaponsOffered = MULTI_HIT_DIAL;
+    world.fireIn = Number.MAX_SAFE_INTEGER;
+    world.missileIn = Number.MAX_SAFE_INTEGER;
     const frame = new GameFrame(world);
     // Long enough for the wave to spawn and for a turret to have fired at least once on any tier.
     for (let step = 0; step < 400; step++) frame.step();

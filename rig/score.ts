@@ -13,7 +13,6 @@
 
 import { mount } from '../src/app/mount.ts';
 import { LEVEL_KINDS } from '../src/content/levels.ts';
-import { SHIPS } from '../src/content/ships.ts';
 import { SCORES_KEY, serialiseScores, type ScoreEntry } from '../src/save/scores.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
 
@@ -41,7 +40,7 @@ const mounted = mount(stage, 'vivid');
 if (mounted === null) throw new Error('score bench: the game would not mount');
 const { world, dispatch, lifecycle, stateOf } = mounted.rig;
 
-lifecycle.begin('savior');
+lifecycle.begin('savior', 'fighter');
 dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 
 /** A level flown well: most of it killed, one shield lost, a streak going. */
@@ -81,7 +80,7 @@ const go: Record<string, () => void> = {
   cleared: () => {
     flown();
     // Two shields on the hull as it clears.
-    world.ship.health = SHIPS.proof.health + 2;
+    world.ship.health = world.shipRow.health + 2;
     world.onCleared();
   },
   gameOver: () => {

@@ -21,6 +21,7 @@ import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { curtainSpacing, curtainStance } from '../src/app/boss.ts';
 import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { playableWorld } from '../tests/world.ts';
@@ -52,9 +53,9 @@ function levelFor(boss) {
 
 function armed(boss, kind, tier, tierName) {
   const built = playableWorld(levelFor(boss), tierName);
-  const carried = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  built.world.weapon = weaponFor(built.world.shipRow, carried, kind);
+  // In the ship the gun is keyed to, whole — 0441: `tier` is what the gun was, and is not read.
+  built.world.shipRow = SHIPS[shipCarrying(kind)];
+  built.world.weapon = weaponFor(built.world.shipRow, []);
   wearHull(built.world);
   built.world.fireIn = 1;
   return { world: built.world, frame: new GameFrame(built.world) };

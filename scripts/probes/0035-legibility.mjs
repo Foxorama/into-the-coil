@@ -97,20 +97,14 @@ export const PROBES = [
     probe pointed at something it never protected reads as cover — the reasoning
     `scripts/probes/0087-never-parks.mjs` already records for the bob.
   */
-  {
-    decision: '0035',
-    suite: 'tests/combat.test.ts',
-    // ⚠️ THE MEASURED ONE. Eight steps is what shipped, and at the real fire rate the second hit
-    // lands 6–7 steps after the first — inside the flash, drawing nothing of its own. One hit and
-    // two hits produced the same picture, which is why the hit count looked random.
-    broke: 'the impact flash lasting longer than the gap between connecting shots, so two hits look like one',
-    guard: 'a hit finishes flashing before the next one lands',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: 'const IMPACT_FLASH_STEPS = 4;',
-      replace: 'const IMPACT_FLASH_STEPS = 8;',
-    },
-  },
+  /*
+    ── `the impact flash lasting longer than the gap between connecting shots` WAS HERE ─────────────
+
+    Its guard, *a hit finishes flashing before the next one lands*, flew the pulse's bottom rung and
+    was deleted from tests/combat.test.ts with docs/decisions/0441-a-pilot-flies-their-own-ship.md:
+    every ship opens at the cap, so the rung it flew is not one anybody can fly, and the tombstone
+    there names 0334's two guards as the claim's whole.
+  */
   {
     decision: '0035',
     suite: 'tests/combat.test.ts',

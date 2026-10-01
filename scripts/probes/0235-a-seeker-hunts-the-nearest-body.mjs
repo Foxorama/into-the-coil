@@ -61,7 +61,9 @@ export const PROBES = [
     suite: 'tests/weapons.test.ts',
     // The seekers offered under the straight missile's face — 0233's guard over every tube sees it.
     broke: 'the seekers’ pickup face given the straight missile’s chevron',
-    guard: 'THE FACES: the weapon pickup offers every gun',
+    // ⚠️ Re-titled by 0441: the guard's first pickup is the bomb pickup now; the missile's faces are
+    // still held there.
+    guard: 'THE FACES: the bomb pickup offers every gun special',
     edit: {
       path: 'src/content/missiles.ts',
       find: '    pickup: SPRITE.pickupSeeker,',

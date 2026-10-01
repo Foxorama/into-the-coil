@@ -68,8 +68,8 @@ export const PROBES = [
     guard: 'every enemy kind has a hit sprite that is not its ordinary one',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    spriteHit: SPRITE.shipHit,',
-      replace: '    spriteHit: SPRITE.ship,',
+      find: '    spriteHit: SPRITE.fighterHit,',
+      replace: '    spriteHit: SPRITE.fighter,',
     },
   },
 ];

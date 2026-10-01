@@ -21,19 +21,14 @@ import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { tracingPen } from './paths.ts';
 
 describe('0236 — the guns answer the first play-test', () => {
-  it('THE REACH: the arc reaches further at every rung, by at least a sixth', () => {
-    /*
-      *"The reach of the lightning needs to be extended by about 20% per power up tier."* Held as
-      the relationship — every rung further than the last, by a fifth or near it — rather than as
-      the numbers, on `src/content/shots.ts`'s terms.
-    */
-    const reach = WEAPONS.arc.reach;
-    for (let tier = 1; tier < reach.length; tier++) {
-      expect(reach[tier]!, `the arc's reach at tier ${tier} is not a sixth further than tier ${tier - 1}`).toBeGreaterThanOrEqual(
-        reach[tier - 1]! * 1.16,
-      );
-    }
-    expect(reach[reach.length - 1]!, 'the arc at its cap reaches past the narrowest view').toBeLessThan(ACROSS_SPAN * (16 / 9));
+  /*
+    ⚠️ **`every rung further than the last, by at least a sixth` WAS HERE.** *"The reach of the
+    lightning needs to be extended by about 20% per power up tier"* had a ladder for its subject, and
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md` took every gun's ladder: the arc is its old
+    cap and nothing else. What survives of the item is the ceiling below.
+  */
+  it('THE REACH: the arc stays short of the narrowest view', () => {
+    expect(WEAPONS.arc.reach, 'the arc reaches past the narrowest view').toBeLessThan(ACROSS_SPAN * (16 / 9));
   });
 
   /*

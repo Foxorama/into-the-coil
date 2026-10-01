@@ -2,7 +2,10 @@
 //
 // Usage:
 //   node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-boss.mjs
-//        [bossKind …] [--difficulty=savior] [--tier=4] [--health=N]
+//        [bossKind …] [--difficulty=savior] [--health=N]
+//
+// Every gun is flown in the ship it is keyed to, at what was the top of its ladder — 0441: a gun
+// has no tiers since, so `--tier` went with them.
 //
 // `--difficulty=authored` flies the content multiplied by nothing, which no tier is since 0356.
 //
@@ -42,6 +45,7 @@ import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -73,17 +77,17 @@ function arena(kind) {
  *
  * @param {import('../src/content/bosses.ts').BossKind} kind
  * @param {import('../src/content/weapons.ts').WeaponKind} gun
- * @param {{ tier?: number, difficulty?: import('../src/content/difficulty.ts').DifficultyKind,
+ * @param {{ difficulty?: import('../src/content/difficulty.ts').DifficultyKind,
  *   lane?: number | 'boss', short?: number | null, cap?: number }} [options]
  * @returns {{ seconds: number | null, killed?: number, phaseAt: { phase: number, at: number }[] }}
  */
-export function flyFight(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
+export function flyFight(kind, gun, { difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
   const { world, wrecks } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
-  const carried = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  world.weapon = weaponFor(world.shipRow, carried, gun);
+  // In the ship the gun is keyed to — 0441 — so the gun is the one it flies with.
+  world.shipRow = SHIPS[shipCarrying(gun)];
+  world.weapon = weaponFor(world.shipRow, []);
   wearHull(world);
   const row = BOSSES[kind];
   let start = -1;
@@ -153,7 +157,6 @@ if (isMain) {
   const named = args.filter((a) => !a.startsWith('--'));
   const kinds = named.length > 0 ? named : LEVEL_KINDS.map((level) => LEVELS[level].boss);
   const difficulty = flag('difficulty', 'savior');
-  const tier = Number(flag('tier', 4));
   const health = flag('health', null);
   const secs = (s) => (s === null ? 'never' : `${s.toFixed(0)}s`);
   const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
@@ -162,18 +165,18 @@ if (isMain) {
     // ⚠️ A WHAT-IF, NOT A SETTING: the row is patched in this process only, so a candidate number
     // can be flown before anybody types it into `src/content/bosses.ts`.
     if (health !== null) BOSSES[kind].health = Number(health);
-    console.log(`\n${kind} — health ${BOSSES[kind].health}, ${difficulty}, tier ${tier}, missiles silenced, ship unhittable`);
+    console.log(`\n${kind} — health ${BOSSES[kind].health}, ${difficulty}, each gun in its own ship, missiles silenced, ship unhittable`);
     for (const gun of WEAPON_KINDS) {
       const held = [];
       let best = null;
       for (const lane of LANES) {
         for (const short of DISTANCES) {
-          const fight = flyFight(kind, gun, { tier, difficulty, lane, short });
+          const fight = flyFight(kind, gun, { difficulty, lane, short });
           held.push(fight.seconds ?? Number.POSITIVE_INFINITY);
           if (fight.seconds !== null && (best === null || fight.seconds < best.seconds)) best = fight;
         }
       }
-      const onLane = DISTANCES.map((short) => secs(flyFight(kind, gun, { tier, difficulty, lane: 'boss', short }).seconds));
+      const onLane = DISTANCES.map((short) => secs(flyFight(kind, gun, { difficulty, lane: 'boss', short }).seconds));
       const finite = (s) => (Number.isFinite(s) ? s : null);
       const phases = best === null ? '' : `   phases begin at ${best.phaseAt.map((p) => `${p.at.toFixed(0)}s`).join(', ')}`;
       console.log(

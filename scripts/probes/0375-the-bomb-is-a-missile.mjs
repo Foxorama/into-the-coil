@@ -14,8 +14,10 @@ export const PROBES = [
     guard: 'and the ask’s own pairings, as 0375 swapped them',
     edit: {
       path: 'src/content/weapons.ts',
-      find: "    // The bomb since 0375; it was the golden aura (0373).\n    special: 'bomb',",
-      replace: "    // The bomb since 0375; it was the golden aura (0373).\n    special: 'overdrive',",
+      // ⚠️ Re-anchored by 0441, which rewrote the row's note; the pulse's weight two lines up is what
+      // makes it the pulse's, since the ray opens on the bomb too.
+      find: "    bossWeight: 1,\n    special: 'bomb',\n    bursts: null,",
+      replace: "    bossWeight: 1,\n    special: 'overdrive',\n    bursts: null,",
     },
   },
   {

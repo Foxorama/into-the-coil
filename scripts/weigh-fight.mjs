@@ -1,7 +1,9 @@
 // What the field is carrying while a mid-boss is on it.
 //
 // Usage:  node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-fight.mjs
-//              [levelKind] [--weapon=1] [--missiles=1] [--sweep=8] [--gun=pulse|arc|shuriken]
+//              [levelKind] [--missiles=1] [--sweep=8] [--gun=pulse|arc|shuriken|ray]
+//
+// A gun is flown in the ship it is keyed to, whole — 0441; `--weapon=N` went with the gun's tiers.
 //
 // ⚠️ THE INSTRUMENT FOR THE MID-BOSS WAVE ITEM, built before the tuning pass on it —
 // docs/decisions/0027-measure-the-picture-not-the-model.md. Reported: *"when the minibosses are on
@@ -36,6 +38,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP } from '../src/content/levels.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld } from '../tests/world.ts';
@@ -51,21 +54,22 @@ import { playableWorld } from '../tests/world.ts';
  * in order — every earlier level's pickups and its mid-boss's drop, then this level's up to its
  * mid-boss — and clamps at the ladder, and a pickup moved in any level moves the answer with it.
  *
+ * ⚠️ **THE TUBES ALONE SINCE 0441.** The gun is the ship's, whole from the first second, so what a
+ * player carries in that the level can change is the missile ladder.
+ *
  * @param {import('../src/content/levels.ts').LevelKind} kind
- * @returns {{ weaponTier: number, missileTier: number }}
+ * @returns {{ missileTier: number }}
  */
 export function carriedAt(kind) {
-  let weaponTier = 0;
   let missileTier = 0;
   const take = (pickup) => {
-    if (pickup === 'weapon') weaponTier = Math.min(UPGRADE_TIERS, weaponTier + 1);
     if (pickup === 'missile') missileTier = Math.min(UPGRADE_TIERS, missileTier + 1);
   };
   for (const level of LEVEL_KINDS) {
     const row = LEVELS[level];
     const midAt = row.midBoss === null ? Number.POSITIVE_INFINITY : row.midBoss.at;
     for (const p of row.pickups) if (level !== kind || p.at < midAt) take(p.kind);
-    if (level === kind) return { weaponTier, missileTier };
+    if (level === kind) return { missileTier };
     if (row.midBoss !== null) for (const p of MID_BOSS_DROP) take(p);
   }
   throw new Error(`${kind} is not a level`);
@@ -144,17 +148,16 @@ const shaped = (s) => ({
  * there, so the fight ends when the guns end it.
  */
 export function weighFight(kind, options = {}) {
-  const weaponTier = options.weaponTier ?? 1;
   const missileTier = options.missileTier ?? 1;
   const sweepSeconds = options.sweepSeconds ?? 8;
   const level = LEVELS[kind];
   const { world } = playableWorld(level);
   const frame = new GameFrame(world);
   const carried = [];
-  for (let i = 0; i < weaponTier; i++) carried.push('weapon');
   for (let i = 0; i < missileTier; i++) carried.push('missile');
-  // The ship's own gun unless one is named — 0406, because what a fight lands depends on it.
-  world.weapon = weaponFor(world.shipRow, carried, options.gun);
+  // The fighter's pulse unless a gun is named, flown in the ship it is keyed to — 0406, 0441.
+  if (options.gun !== undefined) world.shipRow = SHIPS[shipCarrying(options.gun)];
+  world.weapon = weaponFor(world.shipRow, carried);
   wearHull(world);
   const armed = world.weapon;
 
@@ -242,7 +245,6 @@ if (isMain) {
   const kinds = named.length > 0 ? named : LEVEL_KINDS;
   const gun = args.find((a) => a.startsWith('--gun='));
   const options = {
-    weaponTier: flag('weapon', 1),
     missileTier: flag('missiles', 1),
     sweepSeconds: flag('sweep', 8),
     gun: gun === undefined ? undefined : gun.slice('--gun='.length),

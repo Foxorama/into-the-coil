@@ -47,8 +47,13 @@ export interface ThrustRow {
    */
   frames: Record<LeanKind, readonly number[]>;
   /**
-   * World units from the ship's centre back to the sprite's centre, so the flame's root meets the
+   * World units from the ship's NOZZLES back to the sprite's centre, so the flame's root meets the
    * tail. Longer for a longer flame, because the root is drawn at the sprite's forward edge.
+   *
+   * ⚠️ **FROM THE NOZZLES SINCE 0441, AND IT WAS FROM THE SHIP'S CENTRE.** The numbers were the
+   * fighter's, whose nozzles are 2.29 units back; a saucer burns from its rim and a car from its
+   * bumper, so measured from the centre every other ship's flame burned under its own hull. Where the
+   * nozzles are is the ship's (`tail` on its row), and these are the old figures less the fighter's.
    */
   trail: number;
 }
@@ -60,7 +65,7 @@ export const THRUST: Record<ThrustKind, ThrustRow> = {
       climb: [SPRITE.thrustIdle0Climb, SPRITE.thrustIdle1Climb],
       dive: [SPRITE.thrustIdle0Dive, SPRITE.thrustIdle1Dive],
     },
-    trail: 3.6,
+    trail: 1.31,
   },
   burn: {
     frames: {
@@ -68,11 +73,11 @@ export const THRUST: Record<ThrustKind, ThrustRow> = {
       climb: [SPRITE.thrustBurn0Climb, SPRITE.thrustBurn1Climb],
       dive: [SPRITE.thrustBurn0Dive, SPRITE.thrustBurn1Dive],
     },
-    trail: 4.7,
+    trail: 2.41,
   },
   ease: {
     frames: { level: [SPRITE.thrustEase], climb: [SPRITE.thrustEaseClimb], dive: [SPRITE.thrustEaseDive] },
-    trail: 3.2,
+    trail: 0.91,
   },
 };
 

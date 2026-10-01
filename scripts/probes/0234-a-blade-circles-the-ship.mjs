@@ -102,24 +102,27 @@ export const PROBES = [
     decision: '0234',
     suite: 'tests/weapons.test.ts',
     // The shuriken's hull ladder pointed at the pulse's — 0233's guard over every gun sees it.
+    // ⚠️ Re-anchored by 0441: the shuriken flies in the firebird, and a hull is the ship's.
     broke: 'the shuriken’s first hull made the pulse’s',
-    guard: 'THE HULLS: every gun has its own',
+    guard: 'THE HULLS: every ship has a hull at each tube stage',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    { base: SPRITE.shipStar, hit: SPRITE.shipStarHit },',
-      replace: '    { base: SPRITE.ship, hit: SPRITE.shipHit },',
+      find: '      { base: SPRITE.firebird, hit: SPRITE.firebirdHit },',
+      replace: '      { base: SPRITE.fighter, hit: SPRITE.fighterHit },',
     },
   },
   {
     decision: '0234',
     suite: 'tests/weapons.test.ts',
     // The shuriken offered under the arc's face.
-    broke: 'the shuriken’s pickup face given the arc’s bolt',
-    guard: 'THE FACES: the weapon pickup offers every gun',
+    // ⚠️ Re-aimed by 0441: the cycling pickup offers the gun-side specials, and the shuriken's is the
+    // whirlpool — shown under the arc's storm's bolt, the same break on that pickup.
+    broke: 'the shuriken’s whirlpool offered under the arc’s bolt',
+    guard: 'THE FACES: the bomb pickup offers every gun special',
     edit: {
-      path: 'src/content/weapons.ts',
-      find: '    pickup: SPRITE.pickupShuriken,',
-      replace: '    pickup: SPRITE.pickupArc,',
+      path: 'src/content/specials.ts',
+      find: '    face: SPRITE.pickupShuriken,',
+      replace: '    face: SPRITE.pickupArc,',
     },
   },
   {

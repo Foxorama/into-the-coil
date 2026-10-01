@@ -298,6 +298,10 @@ const WITHOUT_PROBES: Record<string, string> = {
   // its badge are gone from the tree. 0372's own probes break the rule that replaced them.
   '0243': 'its one-piece-per-kind scatter and ×N badge were deleted by 0372 — a death throws nothing, and 0372 has its own table and probes',
   '0266': 'its restored scatter was deleted by 0372 — a death keeps the ladders, and 0372 has its own table and probes for the reversed rule',
+  // Two more of the same kind: 0441 opens every ship on its whole gun, so the one-hit clamp, the dial
+  // that turned it and the run-up after it are gone from the tree with `tests/dial.test.ts`.
+  '0084': 'its dial and the one-hit clamp it turned were deleted by 0441 — every ship opens on its whole gun, and nothing reads a dial',
+  '0086': 'its run-up after the pickup that lifted the clamp was deleted by 0441 with the clamp — there is no second weapon for the teeth to wait for',
   '0007': 'every row needs `npm run build` and a browser run first, and the harness runs vitest against the tree rather than a built dist/',
   '0008': 'the manifest and `_headers` rows assert on a built dist/, which the harness does not produce',
   '0009': "the cache-sweep rows drive a real page against a built dist/ with a stranger's cache seeded on the origin",

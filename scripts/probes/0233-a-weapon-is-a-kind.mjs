@@ -8,68 +8,39 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0233',
-    suite: 'tests/weapons.test.ts',
-    // A rung buying nothing. ⚠️ Re-aimed by 0236: the arc's reach became a ladder, so every one of
-    // its rungs now buys reach whatever else is flattened; the pulse's third rung buys only its
-    // fourth barrel, and the barrel held is the rung that changes nothing.
-    broke: 'the pulse’s third rung authored so it changes nothing about the gun',
-    guard: 'every rung changes the ship',
-    edit: {
-      path: 'src/content/weapons.ts',
-      find: '    barrels: [1, 2, 3, 4, 4],',
-      replace: '    barrels: [1, 2, 3, 3, 4],',
-    },
-  },
+  /*
+    ⚠️ THREE PROBES STOOD HERE AND 0441 RETIRED THEM WITH THEIR SUBJECT —
+    docs/decisions/0441-a-pilot-flies-their-own-ship.md. *The pulse's third rung changing nothing*
+    broke a gun ladder, and no gun has one; *the switch removed from `effectOf`* and *a switch not
+    switching* broke a weapon pickup changing the gun, and a gun is its ship's for the whole run.
+    Their guards — the gun's half of `every rung changes the ship`, and `THE SWITCH` — were deleted
+    from tests/weapons.test.ts with tombstones naming 0441.
+  */
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',
     // The other gun offered under the pulse's own glyph, so the cycle turns between two of one face.
-    broke: 'the arc’s pickup face given the pulse’s chevron',
-    guard: 'THE FACES: the weapon pickup offers every gun',
+    // ⚠️ Re-aimed by 0441: the pickup that cycles offers the gun-side specials now, the arc's storm
+    // among them, and the storm shown under the bomb's face is the same break on that pickup.
+    broke: 'the arc’s storm offered under the bomb’s face',
+    guard: 'THE FACES: the bomb pickup offers every gun special',
     edit: {
-      path: 'src/content/weapons.ts',
-      find: '    pickup: SPRITE.pickupArc,',
-      replace: '    pickup: SPRITE.pickupWeapon,',
+      path: 'src/content/specials.ts',
+      find: '    face: SPRITE.pickupArc,',
+      replace: '    face: SPRITE.pickupBomb,',
     },
   },
   {
     decision: '0233',
     suite: 'tests/weapons.test.ts',
     // The arc's bare hull pointed at the pulse's bitmap — the ship stops saying which gun it carries.
-    broke: 'the arc’s first hull made the pulse’s, so switching guns is invisible on a bare ship',
-    guard: 'THE HULLS: every gun has its own',
+    // ⚠️ Re-anchored by 0441: the arc flies in the estate, and a hull is the ship's.
+    broke: 'the arc’s first hull made the pulse’s, so the ship stops saying which gun it carries',
+    guard: 'THE HULLS: every ship has a hull at each tube stage',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    { base: SPRITE.shipArc, hit: SPRITE.shipArcHit },',
-      replace: '    { base: SPRITE.ship, hit: SPRITE.shipHit },',
-    },
-  },
-  {
-    decision: '0233',
-    suite: 'tests/weapons.test.ts',
-    // The face never consulted, so a full pulse refuses the arc as it refuses a fifth pulse.
-    broke: 'the switch removed from `effectOf`, so the fitted gun’s cap refuses every other gun',
-    guard: 'THE SWITCH: another gun is an upgrade',
-    edit: {
-      path: 'src/content/pickups.ts',
-      find: "  if (kind === 'weapon' && weaponFaceOf(face) !== loadout.weapon) return 'upgrade';\n",
-      replace: '',
-    },
-  },
-  {
-    decision: '0233',
-    suite: 'tests/weapons.test.ts',
-    // ⚠️ INVERTED BY 0256. This broke *a switch keeping the old gun's rungs*, which is the rule
-    // now: a switch keeps the count. What 0233 still owns is that a switch SWITCHES — the kind
-    // on the run follows the pickup's face — and that is the break here.
-    broke: 'a switch not switching, so the run keeps the fitted gun whatever face was taken',
-    guard: 'THE SWITCH: another gun is an upgrade',
-    edit: {
-      path: 'src/state/slices/run.ts',
-      find: "        weapon: action.upgrade === 'weapon' ? action.kind : state.weapon,",
-      replace: '        weapon: state.weapon,',
+      find: '      { base: SPRITE.estate, hit: SPRITE.estateHit },',
+      replace: '      { base: SPRITE.fighter, hit: SPRITE.fighterHit },',
     },
   },
   {

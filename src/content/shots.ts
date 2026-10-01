@@ -33,6 +33,9 @@ export type ShotKind =
   | 'pulse'
   | 'arc'
   | 'shuriken'
+  // The ray gun's rings and what they go off as where they land — 0442.
+  | 'ray'
+  | 'rayBurst'
   | 'spit'
   | 'lance'
   | 'flak'
@@ -348,6 +351,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'pulse',
   'arc',
   'shuriken',
+  'ray',
+  'rayBurst',
   'spit',
   'lance',
   'flak',
@@ -482,6 +487,22 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     settled on, and the helix's pitch grows with it, so on the glass it is the same helix.
   */
   shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1.2, fission: SPENT_BY_ARRIVING },
+  /**
+   * The ray gun's rings — 0442: four concentric rings about one centre, one body, spent by arriving.
+   * Slower than the pulse, so a volley reads as a thing thrown rather than a stream, and bigger than
+   * it, because one ring a volley has to be seen to be aimed. `spriteHit` is a later frame of the
+   * same rings: `stepRays` in `src/app/frame.ts` turns the pages so the rings ripple outward.
+   */
+  // 9, and it was 6: the gun fires in fours with a rest since it was played (0442), so a cycle is four
+  // rings in forty-eight steps where it was six — and 4 × (9 + 4) over 48 is the 9/8 a step it had.
+  ray: { sprite: SPRITE.ray, spriteHit: SPRITE.ray, radius: 1.8, health: 1, damage: 9, speed: 2, fission: SPENT_BY_ARRIVING },
+  /**
+   * Where a ring lands — 0442: *"explode on impact with a small energy explosion."* A blast: it lands
+   * on everything inside it on the step it appears, once, and is drawn at exactly its reach, on
+   * `blast`'s rule. A tenth of the lane across, so it reaches a body beside the one the ring found and
+   * never the next rank of a wave.
+   */
+  rayBurst: { sprite: SPRITE.rayBurst, spriteHit: SPRITE.rayBurst, radius: 5, health: 1, damage: 4, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

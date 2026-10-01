@@ -27,7 +27,7 @@ import { mount } from '../src/app/mount.ts';
 import { SHIP_START_ALONG, advanceLevel } from '../src/app/frame.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
-import { WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 import { MISSILE_KINDS, type MissileKind } from '../src/content/missiles.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -123,24 +123,23 @@ along.addEventListener('input', () => {
   `?difficulty=burn` begins at that tier instead — 0350, whose corridor is a different shape on each
   one, so a bench that could only stand on Savior could photograph a third of it.
 */
-const askedTier = new URLSearchParams(location.search).get('difficulty');
-lifecycle.begin((DIFFICULTY_KINDS as readonly string[]).includes(askedTier ?? '') ? (askedTier as DifficultyKind) : 'savior');
-dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
-
-/*
-  ── THE GUN, FROM THE QUERY — 0233 ──────────────────────────────────────────────────────────────
-
-  `?weapon=arc&tier=3` fits the arc at three rungs before the level is put on the field, through the
-  same `upgraded` action a pickup dispatches — so the hull, the ladder and the cue are the game's own
-  and not a copy. A weapon is a kind now and a bench that could only fly the base gun could not show
-  the other one at all; this is the bench jumping to where the thing is, one axis over.
-*/
 const query = new URLSearchParams(location.search);
-const fitted = query.get('weapon');
-if (fitted !== null && (WEAPON_KINDS as readonly string[]).includes(fitted)) {
-  const rungs = Math.max(1, Number(query.get('tier') ?? '1'));
-  for (let i = 0; i < rungs; i++) dispatch({ slice: 'run', type: 'upgraded', upgrade: 'weapon', kind: fitted as WeaponKind });
-}
+const askedTier = query.get('difficulty');
+/*
+  ── THE SHIP, FROM THE QUERY — 0233, 0441 ───────────────────────────────────────────────────────
+
+  `?ship=caddie` flies that ship, and `?weapon=arc` the ship that carries the arc — the gun is the
+  ship's since 0441, so asking for a gun is asking for its ship. Both go through `begin`, as a run does,
+  so the hull, the gun and the opening charges are the game's own and not a copy.
+*/
+const askedShip = query.get('ship');
+const askedGun = query.get('weapon');
+const ship: ShipKind =
+  askedShip !== null && (SHIP_KINDS as readonly string[]).includes(askedShip)
+    ? (askedShip as ShipKind)
+    : (SHIP_KINDS.find((kind) => SHIPS[kind].weapon === askedGun) ?? 'fighter');
+lifecycle.begin((DIFFICULTY_KINDS as readonly string[]).includes(askedTier ?? '') ? (askedTier as DifficultyKind) : 'savior', ship);
+dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 // And the tubes, the same way: `?missile=homing&tubes=2` — 0235.
 const tubes = query.get('missile');
 if (tubes !== null && (MISSILE_KINDS as readonly string[]).includes(tubes)) {

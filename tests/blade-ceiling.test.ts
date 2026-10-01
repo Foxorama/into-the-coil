@@ -12,6 +12,7 @@ import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { collideInto } from '../src/sim/collide.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
@@ -36,13 +37,15 @@ const solo = (boss: 'gyre' | 'hydra', place: 'shoal' | 'gauntlet'): LevelRow => 
 });
 
 /**
- * The shuriken at its last rung on a boss held at `fraction`, the ship held on `lane` and short of the
+ * The shuriken in its own ship on a boss held at `fraction`, the ship held on `lane` and short of the
  * hull, and the blade landings counted a second at a time for ten seconds after three to warm up.
  */
 function landingsASecond(level: LevelRow, fraction: number, lane: number): number[] {
   const { world } = playableWorld(level, 'savior');
   const frame = new GameFrame(world);
-  world.weapon = weaponFor(world.shipRow, ['weapon', 'weapon', 'weapon', 'weapon'], 'shuriken');
+  // The shuriken in the ship it is keyed to — 0441: the Firebird, whose gun is the old cap.
+  world.shipRow = SHIPS[shipCarrying('shuriken')];
+  world.weapon = weaponFor(world.shipRow, []);
   wearHull(world);
   const seconds: number[] = [];
   let start = -1;

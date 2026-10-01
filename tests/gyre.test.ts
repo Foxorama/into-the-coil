@@ -69,9 +69,17 @@ function gyreOnStation(tier: DifficultyKind = DIFFICULTY_KINDS[0]!): Driven {
   for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
     world.ship.health = world.shipRow.health;
     if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+    /*
+      ⚠️ **THE SHIP HOLDS ITS FIRE UNTIL THE FIGHT IS HANDED OVER — 0441.** Every run flies the old
+      cap now, and four barrels every four steps through the 700 steps of this wait crossed the first
+      notch before any test had begun: wall 0 was thrown, and cleared, inside the fixture. The gun is
+      given back below, on the grid, for the tests that fly the fight to its end.
+    */
+    world.fireIn = Number.MAX_SAFE_INTEGER;
     frame.step();
   }
   expect(world.bossPool.size, 'the gyre never arrived').toBe(1);
+  world.fireIn = world.weapon.fireEvery;
   world.enemyShots.clear();
   return { world, frame, cleared };
 }
@@ -108,6 +116,14 @@ const flak = SHOTS[BOSSES.gyre.shot];
 function walls(n: number): Wall[] {
   const { world, frame } = gyreOnStation();
   const boss = world.bossPool.at(0);
+  /*
+    ⚠️ **THE SHIP'S GUN IS HELD, AND UNTIL 0441 IT DID NOT HAVE TO BE.** The bleed below is what walks
+    the fight through its notches; the ship's own fire was the bottom rung's single pulse, a trickle
+    beside it. Since 0441 every run flies the old cap — four barrels every four steps — which crossed
+    two notches in a step and laid walls out of their order. The walls are the subject, so the bleed
+    alone is what moves the health.
+  */
+  world.fireIn = Number.MAX_SAFE_INTEGER;
   const out: Wall[] = [];
   // Slow enough that two notches never fall on one step, at any rung of the quickening ladder.
   const bleed = world.bossFullHealth / 4000;
@@ -205,7 +221,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     // *"The bullet gaps will be close so you can't fit through them"*: the room between two
     // neighbouring bullets is under the ship's own width, at the standard hurtbox.
     const room = spacing - 2 * flak.radius;
-    expect(room, `a ship ${2 * SHIPS.proof.radius} wide fits between bullets ${room.toFixed(2)} apart`).toBeLessThan(2 * SHIPS.proof.radius);
+    expect(room, `a ship ${2 * SHIPS.fighter.radius} wide fits between bullets ${room.toFixed(2)} apart`).toBeLessThan(2 * SHIPS.fighter.radius);
     // *"The spaceship gaps will be the same size"*: no other wall's hole is wider than this one.
     for (const kind of BOSS_KINDS) {
       const u = BOSSES[kind].uncoil;
@@ -496,6 +512,8 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       const { world, frame } = gyreOnStation();
       const boss = world.bossPool.at(0);
       const bleed = world.bossFullHealth / 4000;
+      // Held as `walls` holds it — 0441 — so this flies the same fight the hole was measured in.
+      world.fireIn = Number.MAX_SAFE_INTEGER;
       let thrown = -1;
       for (let step = 0; step < 6000 && world.bossPool.size > 0; step++) {
         world.ship.along = world.cameraAlong + offsetInView + offsetFromHole;
@@ -595,6 +613,9 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       the arm doing its job: closing at the row's rate and stopping dead on the number.
     */
     boss.across = 10;
+    // ⚠️ The ship's gun held — 0441 flies every run at the old cap, which killed the gyre inside the
+    // thirty seconds this watches its seat for, and the housing went with it.
+    world.fireIn = Number.MAX_SAFE_INTEGER;
     let seated = -1;
     let wander = 0;
     let stationSwing = 0;

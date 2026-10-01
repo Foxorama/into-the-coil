@@ -17,7 +17,7 @@ import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY } from '../src
 import { BOSSES } from '../src/content/bosses.ts';
 import { ENEMIES, type EnemyKind } from '../src/content/enemies.ts';
 import { abreastCap, gapAcross } from '../src/content/formations.ts';
-import { LEVELS, LEVEL_KINDS, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { MAX_ALONG_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -78,24 +78,27 @@ const DRY_BUDGET_SECONDS = 9;
 const COVERED_FLOOR = 0.3;
 
 /**
- * Where level one's second weapon lies — the place its capped walk starts meaning anything.
+ * Where level one can first be carrying two tubes — the place its capped walk starts meaning anything.
  *
  * ⚠️ **LEVEL ONE CANNOT CARRY THE CAPPED LOADOUT BEFORE THIS, SO THE CAPPED WALK MEASURES NOTHING
- * REAL THERE** — 0326, on 0280's terms: a quantity is checked in the case it is applied to. 0256 hands
- * level one the base gun and one weapon before its mid-boss; four rungs and two tubes is what a player
- * carries from the SECOND level on, which is what 0259 said the walk was for. With the seen window in,
- * level one's first half at the capped loadout goes eleven seconds dry at 716 — a stretch no player can
- * ever be in with those guns. Its stretches before this place are judged on a walk at one rung and one
- * tube; everything after it on the capped walk, as before.
+ * REAL THERE** — 0326, on 0280's terms: a quantity is checked in the case it is applied to. Four rungs
+ * and two tubes is what a player carries from the SECOND level on, which is what 0259 said the walk
+ * was for.
+ *
+ * ⚠️ **THE TUBES ARE THE HALF OF THAT LEFT, SINCE 0441.** This was level one's second weapon, because
+ * the gun was the ladder that was short there. Every ship opens on its whole gun now, so the gun half
+ * has no subject; the tubes still climb, and level one offers one at 720 and can offer the second no
+ * earlier than its mid-boss, whose drop cycles through a missile. Before that the walk is at the whole
+ * gun and one tube; from it on, the capped walk.
  */
-const secondWeaponOf = (kind: (typeof LEVEL_KINDS)[number]): number =>
-  kind === LEVEL_KINDS[0] ? LEVELS[kind].pickups.filter((p) => p.kind === 'weapon')[1]!.at : Number.NaN;
+const secondTubeOf = (kind: (typeof LEVEL_KINDS)[number]): number =>
+  kind === LEVEL_KINDS[0] ? LEVELS[kind].midBoss!.at : Number.NaN;
 
 describe('0259 — the bullets stay on the screen', () => {
   const measured = new Map(LEVEL_KINDS.map((kind) => [kind, weighLevel(kind)] as const));
-  const levelOneEarly = weighLevel(LEVEL_KINDS[0], { weaponTier: 1, missileTier: 1 });
+  const levelOneEarly = weighLevel(LEVEL_KINDS[0], { missileTier: 1 });
 
-  it('THE REPORTED ONE: at the capped loadout, no level goes DRY_BUDGET_SECONDS without a bullet on the screen, outside the opening and level one’s run-up', () => {
+  it('THE REPORTED ONE: at the capped loadout, no level goes DRY_BUDGET_SECONDS without a bullet on the screen, outside the opening', () => {
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
       const r = measured.get(kind)!;
@@ -103,14 +106,17 @@ describe('0259 — the bullets stay on the screen', () => {
       expect(r.sawBullet, `${kind} never put a bullet on the screen, so this measured nothing`).toBe(true);
       /*
         The opening is the level's own quiet — nothing before 300 (0043) and a view's crossing for the
-        first firing body to arrive — and level one's run-up is 0086's: a one-health band after the
-        second weapon, which by decision cannot fire. Every other dry stretch is the report's.
+        first firing body to arrive. Every other dry stretch is the report's.
+
+        ⚠️ **LEVEL ONE'S RUN-UP WAS EXEMPT HERE TOO, AND 0441 TOOK ITS SUBJECT.** It was 0086's: a
+        one-health band after the weapon that lifted the one-hit clamp, which by decision could not
+        fire. The clamp went with the gun ladder, so nothing authors that stretch quiet any more and it
+        is held like every other.
       */
       const opening = level.waves[0]!.at + MAX_ALONG_SPAN;
-      const lifts = secondWeaponOf(kind);
-      const authoredQuiet = (endsAt: number): boolean =>
-        endsAt <= opening || (!Number.isNaN(lifts) && endsAt >= lifts && endsAt <= lifts + MULTI_HIT_RUNUP + MAX_ALONG_SPAN);
-      // Level one before its second weapon is the one-rung walk's — see `secondWeaponOf`.
+      const lifts = secondTubeOf(kind);
+      const authoredQuiet = (endsAt: number): boolean => endsAt <= opening;
+      // Level one before it can carry a second tube is the one-tube walk's — see `secondTubeOf`.
       const stretches = Number.isNaN(lifts)
         ? r.dryStretches
         : [...levelOneEarly.dryStretches.filter((s) => s.endsAt < lifts), ...r.dryStretches.filter((s) => s.endsAt >= lifts)];

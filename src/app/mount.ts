@@ -48,7 +48,7 @@ import { chargesIn } from '../state/slices/run.ts';
  * The face a trigger's button and readout wear over an empty stack, so the icon never goes: the gun's
  * is the bomb, which every run starts with, and the tubes' is the golden surge they overflow to — 0376.
  */
-const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive' };
+const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive', ward: 'voidMissile' };
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
@@ -57,10 +57,8 @@ import {
   PICKUPS,
   PICKUP_KINDS,
   effectOf,
-  isUpgrade,
-  overflowOf,
+  specialOf,
   missileFaceOf,
-  weaponFaceOf,
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
@@ -282,6 +280,14 @@ export const CAPACITY = {
   bolts: 42,
   // The whirlpool's blades — 0374: three arms of eight. The ceiling moved for them too.
   whirl: 24,
+  /*
+    ⚠️ **THE NOVA'S PIECES — 0447, AND THE CEILING MOVED FOR THEM AS IT DID FOR THE BLADES.** Only the
+    pieces the view can show are laid, every half-piece round the ring: about thirty when the ring is
+    the height of the lane and its whole round is on screen, fewer as it grows past the edges. Forty
+    keeps the tenth of headroom the shots keep, paid out of the worst case on 0153's terms — a desktop
+    target and a baked bitmap each — rather than out of a pool that is already measured full.
+  */
+  nova: 40,
   boss: 1,
   /*
     ⚠️ **ELEVEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
@@ -760,6 +766,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
   const whirl = new Pool<Entity>(CAPACITY.whirl, makeEntity);
+  const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -799,7 +806,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // level the run opens on.
   const bossRow = BOSSES[level.midBoss === null ? level.boss : level.midBoss.kind];
 
-  const shipRow = SHIPS.proof;
+  // The default pilot's ship until a pilot is chosen; `fitPilot` refits the world when one is — 0441.
+  const shipRow = SHIPS[GOLFERS[DEFAULT_GOLFER].ship];
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   holdStation(ship, SCROLL_PER_STEP);
@@ -962,7 +970,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
     // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -1006,6 +1014,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     whirlAge: 0,
     whirlOffset: 0,
     whirlAcross: 0,
+    nova,
+    novaKind: null,
+    novaAge: 0,
+    novaOffset: 0,
+    novaAcross: 0,
+    novaBossHit: false,
     throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,
@@ -1021,6 +1035,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     deaths: makeDeaths(CAPACITY.enemies),
     bossDeaths: makeDeaths(CAPACITY.boss),
     hits: makeDeaths(CAPACITY.missiles),
+    landed: makeDeaths(CAPACITY.playerShots),
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),
@@ -1066,6 +1081,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
     fireIn: weaponFor(shipRow, []).fireEvery,
+    burstFired: 0,
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
@@ -1074,10 +1090,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     level,
     // A run begins at the beginning, so the script and the camera share an origin — 0076.
     levelOrigin: 0,
-    // ⚠️ The bottom of the difficulty dial — 0084. A run always begins at the first level with
-    // nothing offered yet, and `startLevel` restates the first of these for the same reason.
+    // A run always begins at the first level, and `startLevel` restates this for the same reason.
     levelIndex: 0,
-    weaponsOffered: 0,
     nextWave: 0,
     nextFlank: 0,
     fightFiring: 0,
@@ -1401,7 +1415,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());
+    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());
     chrome.setTriggers(triggers());
   };
 
@@ -1525,10 +1539,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       runRecorded = false;
       resetCreditScore(world.score);
     }
-    // The list, or either KIND — 0233. `upgraded` replaces the list on a switch too, so the first
-    // test would do alone; the other two are the claim written out rather than relied on.
+    // The list, the tube, or the SHIP — 0233, 0441. `upgraded` replaces the list on a switch too, so
+    // the first test would do alone; the other two are the claim written out rather than relied on.
     const rearmed =
-      next.run.upgrades !== state.run.upgrades || next.run.weapon !== state.run.weapon || next.run.missile !== state.run.missile;
+      next.run.upgrades !== state.run.upgrades || next.run.ship !== state.run.ship || next.run.missile !== state.run.missile;
     const runChanged = next.run !== state.run;
     /*
       ⚠️ **Per FIELD rather than per slice, and it stopped being the same question at the second
@@ -1551,7 +1565,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       (`tests/run.test.ts` holds that), which is what makes `!==` the whole test.
     */
     if (rearmed) {
-      world.weapon = weaponFor(shipRow, state.run.upgrades, state.run.weapon, state.run.missile);
+      world.shipRow = SHIPS[state.run.ship];
+      world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
+      // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
+      chrome.setShip(world.shipRow.sprite);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -1663,7 +1680,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     else if (screen === 'title') {
       const tier = DIFFICULTY_KINDS[index];
-      if (tier !== undefined) lifecycle.begin(tier);
+      // In the pilot's ship — 0441.
+      if (tier !== undefined) lifecycle.begin(tier, GOLFERS[state.settings.pilot].ship);
       else if (index === DIFFICULTY_KINDS.length) {
         // 0213: the field is swept and the dust is dealt as the room OPENS, because the enemies were
         // visible before anything was pressed — which is what the report is about.
@@ -1718,8 +1736,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
   () => leaveIntro());
   for (const element of chrome.elements) host.appendChild(element);
-  // The lives counter is the ship being flown — 0430 — read off its row rather than written in the chrome.
-  chrome.setShip(shipRow.sprite);
   // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
   chrome.setTouch(touchable);
   /*
@@ -1731,6 +1747,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setActionHint('title', PILOT_ACTION, GOLFERS[state.settings.pilot].name);
     // 0437: and the golfers' screen marks the one flying, so changing golfer starts from who it is.
     chrome.setCurrent('select', GOLFER_KINDS.indexOf(state.settings.pilot));
+    fitPilot();
+  }
+  /*
+    ⚠️ **AND THE WORLD FLIES THE PILOT'S SHIP BEFORE A RUN DOES — 0441.** The title's sky, the lives
+    counter (0430) and the field behind the menu all show the ship the chosen golfer flies, with its
+    own gun, so the pick is seen before it is played. A run's own ship is the run's (`begin`); outside
+    one, this is what the world is carrying.
+  */
+  function fitPilot(): void {
+    const row = SHIPS[GOLFERS[state.settings.pilot].ship];
+    chrome.setShip(row.sprite);
+    if (state.run.lives > 0) return;
+    world.shipRow = row;
+    world.weapon = weaponFor(row, [], row.missile);
+    wearHull(world);
   }
   showPilot();
 
@@ -2376,7 +2407,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * leaves is a still frame of the ship in an empty lane, which is the room before anything plays.
    *
    * ⚠️ **THE POOLS ARE CLEARED RATHER THAN THE FIELD BEING RE-SEEDED EMPTY.** `beginScript` would do
-   * most of this and would also reset `nextWave`, `weaponsOffered` and the boss latches — run state,
+   * most of this and would also reset `nextWave`, `nextPickup` and the boss latches — run state,
    * which the room has no business touching. Clearing what is DRAWN is the whole of what the room
    * needs, and `src/app/frame.ts` re-establishes all of it at `startLevel`.
    */
@@ -3140,7 +3171,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       count starts again from nothing, so the break and the burn do not count this level twice; the
       streak is not a level's and carries on.
     */
-    dispatch({ slice: 'run', type: 'scored', tally: tallyAtClear(state.run, world.score, shieldsOf(shipRow, world.ship.health)) });
+    dispatch({ slice: 'run', type: 'scored', tally: tallyAtClear(state.run, world.score, shieldsOf(world.shipRow, world.ship.health)) });
     resetLevelScore(world.score);
     syncScore();
     dispatch({ slice: 'run', type: 'levelCleared' });
@@ -3216,7 +3247,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       pickup of the kind already fitted, taken by a ship whose ladder is full — and since 0373 it
       buys that face's own special, `overflowOf`.
     */
-    if (effect === 'special' && isUpgrade(kind)) dispatch({ slice: 'run', type: 'took', special: overflowOf(kind, face) });
+    /*
+      ⚠️ **AND THE BOMB PICKUP SINCE 0441, WHICH IS A SPECIAL EVERY TIME** — the face is the special.
+      `specialOf` answers both: a full tube's overflow and a bomb face.
+    */
+    /*
+      ⚠️ **AND THE WARD'S, SINCE 0447**: a ward pickup's face, and a shield pickup showing its void or
+      its nova rather than its shield. `specialOf` answers every pickup that can be a charge.
+    */
+    if (effect === 'special') dispatch({ slice: 'run', type: 'took', special: specialOf(kind, face) });
     /*
       ⚠️ **A shield goes on the SHIP and not through the reducer**, and it is the one pickup that
       does. `docs/decisions/0017-the-state-is-slices.md` puts the run's own numbers in state — lives,
@@ -3235,13 +3274,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (spilled !== null) dispatch({ slice: 'run', type: 'took', special: spilled });
     }
     /*
-      ⚠️ **ONE ARM PER UPGRADE KIND, since 0233, because each names its own kind of face.** This
-      was one `isUpgrade(kind)` arm dispatching the pickup's name; an `upgraded` action now says
-      WHICH gun or WHICH tube, and the two unions are different, so the narrowing has to be by name.
-      `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's `effect: 'upgrade'` rows,
-      and the reducer's action union fails to compile for a kind added there and not here.
+      ⚠️ **ONE ARM PER UPGRADE KIND, since 0233, because each names its own kind of face** — and one
+      kind since 0441, the tubes. `tests/shields.test.ts` still holds `UPGRADE_KINDS` to the table's
+      `effect: 'upgrade'` rows, and the reducer's action union fails to compile for a kind added there
+      and not here.
     */
-    else if (kind === 'weapon') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: weaponFaceOf(face) });
     else if (kind === 'missile') dispatch({ slice: 'run', type: 'upgraded', upgrade: kind, kind: missileFaceOf(face) });
   };
 

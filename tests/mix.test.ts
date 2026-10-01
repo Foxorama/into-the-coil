@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { ENEMIES } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS, MIX_RUN, MULTI_HIT_RUNUP } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MIX_RUN } from '../src/content/levels.ts';
 
 /**
  * A LEVEL IS A MIX — 0231.
@@ -20,34 +20,23 @@ import { LEVELS, LEVEL_KINDS, MIX_RUN, MULTI_HIT_RUNUP } from '../src/content/le
 /** Whether a wave's kind fires — the class the report is about. */
 const fires = (enemy: keyof typeof ENEMIES): boolean => ENEMIES[enemy].fireEvery > 0;
 
-/**
- * The one stretch a level may send one class through: level one's run-up.
- *
- * ⚠️ **0086 AND THIS RULE MEET HERE, AND 0086 WINS.** Every firing kind has two or more hits of
- * health and `docs/decisions/0086-the-teeth-wait-for-the-gun.md` forbids anything with more than one
- * between the second weapon pickup and the end of the run-up — so that stretch cannot fire, by a
- * decision older than this one. It is skipped, and the run resets on either side of it.
- */
-function runUpOf(kind: (typeof LEVEL_KINDS)[number]): { from: number; to: number } | null {
-  if (kind !== LEVEL_KINDS[0]) return null;
-  const weapons = LEVELS[kind].pickups.filter((p) => p.kind === 'weapon');
-  const lifts = weapons[1]?.at;
-  return lifts === undefined ? null : { from: lifts, to: lifts + MULTI_HIT_RUNUP };
-}
+/*
+  ── `runUpOf` WAS HERE — LEVEL ONE'S RUN-UP, THE ONE STRETCH A LEVEL MAY SEND ONE CLASS THROUGH ────
+
+  0086 forbade anything with more than one hit between the weapon pickup that lifted the one-hit clamp
+  and the end of `MULTI_HIT_RUNUP`, so that stretch could not fire and this rule skipped it.
+  `docs/decisions/0441-a-pilot-flies-their-own-ship.md` deleted the clamp with the gun ladder — every
+  ship opens on its whole gun — so nothing forbids a firing wave there any more, and level one is
+  mixed like every other level.
+*/
 
 describe('0231 — a level is a mix of what shoots and what does not', () => {
   it('THE REPORTED ONE: no level sends more than MIX_RUN waves of one class in a row', () => {
     for (const kind of LEVEL_KINDS) {
       const waves = [...LEVELS[kind].waves].sort((a, b) => a.at - b.at);
-      const runUp = runUpOf(kind);
       let run = 0;
       let last: boolean | null = null;
       for (const wave of waves) {
-        if (runUp !== null && wave.at >= runUp.from && wave.at <= runUp.to) {
-          last = null;
-          run = 0;
-          continue;
-        }
         const cls = fires(wave.enemy);
         run = cls === last ? run + 1 : 1;
         last = cls;

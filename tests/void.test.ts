@@ -115,11 +115,14 @@ describe('0377 — the shield’s own', () => {
     expect(PICKUPS.shield.spills).toBe('voidMissile');
   });
 
-  it('and the void goes on the tubes’ stack, the trigger the missiles fire', () => {
+  // ⚠️ **ON THE WARD'S STACK SINCE 0447, AND IT WAS THE TUBES'** — *"the void bomb will need to have
+  // its own unique button."*
+  it('and the void goes on the ward’s stack, its own trigger', () => {
     const state = reduce(initialState, { slice: 'run', type: 'took', special: 'voidMissile' });
-    const tubes = state.run.arsenal.tubes;
-    expect(tubes[tubes.length - 1], 'the void is not the next thing the tubes throw').toBe('voidMissile');
+    const ward = state.run.arsenal.ward;
+    expect(ward[ward.length - 1], 'the void is not the next thing the ward throws').toBe('voidMissile');
     expect(state.run.arsenal.gun.includes('voidMissile'), 'the void went on the gun').toBe(false);
+    expect(state.run.arsenal.tubes.includes('voidMissile'), 'the void went on the tubes').toBe(false);
   });
 });
 

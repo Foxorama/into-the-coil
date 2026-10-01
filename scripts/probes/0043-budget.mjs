@@ -11,7 +11,14 @@ export const PROBES = [
     decision: '0043',
     suite: 'tests/pickups.test.ts',
     broke: 'the barrel cap removed, which is the shipped bug exactly',
-    guard: 'a volley is never truncated, however heavily the ship is loaded',
+    /*
+      ⚠️ RE-POINTED BY 0441, AND `npm run prove` SAID WHY: WRONG TEST. With one value a gun, forty
+      barrels on the pulse's row never reach the pool — `weaponFor` clamps `shots` at `MAX_BARRELS`,
+      so the volley guard stays green — and what reddens is the budget stated on the row, which is the
+      guard that holds this half of the bug now. Removing the clamp instead is green too, because no
+      row authors past four. The pool half of the volley guard is the shot-life probe below.
+    */
+    guard: 'and every gun respects the two floors',
     edit: {
       // ⚠️ RE-ANCHORED BY 0093, AND THE LEVER MOVED FROM ARITHMETIC TO CONTENT. `MAX_BARRELS` used to
       // be the endpoint `rung(1, MAX_BARRELS, gun)` interpolated towards, so raising it raised the
@@ -20,9 +27,10 @@ export const PROBES = [
       // The BREAK is unchanged — the shipped bug was a volley wider than the pool can hold — and it
       // is now spelled where the barrels actually come from.
       // ⚠️ Re-anchored by 0233: the ladder is the weapon kind's now, not the ship's.
+      // ⚠️ Re-anchored by 0441: one value a gun, the old last rung — the pulse's four barrels.
       path: 'src/content/weapons.ts',
-      find: '    barrels: [1, 2, 3, 4, 4],',
-      replace: '    barrels: [1, 2, 3, 4, 40],',
+      find: '    fireEvery: 4,\n    barrels: 4,',
+      replace: '    fireEvery: 4,\n    barrels: 40,',
     },
   },
   {

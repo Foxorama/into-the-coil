@@ -91,7 +91,7 @@ describe('the wall the ship meets is the line that is drawn', () => {
     for (let i = 0; i < 240; i++) frame.step();
     frame.draw(0);
 
-    const ship = recorder.blits.find((b) => b.sprite === SPRITE.ship);
+    const ship = recorder.blits.find((b) => b.sprite === SPRITE.fighter);
     const marks = marksOf(recorder);
     expect(ship, 'the ship was not drawn, so this measures nothing').toBeDefined();
     expect(marks.length, 'the boundary was not drawn at all').toBeGreaterThan(0);
@@ -100,7 +100,7 @@ describe('the wall the ship meets is the line that is drawn', () => {
     const lineX = marks[0]!.x;
     for (const mark of marks) expect(mark.x, 'the boundary is not a straight line').toBeCloseTo(lineX, 6);
 
-    const hullPx = SHIPS.proof.radius * world.view.scale;
+    const hullPx = SHIPS.fighter.radius * world.view.scale;
     expect(hullPx, 'the fixture has no scale, so a pixel tolerance means nothing').toBeGreaterThan(1);
     expect(
       Math.abs(ship!.x - lineX),
@@ -143,7 +143,7 @@ describe('the wall is drawn while it is met', () => {
     const { recorder, frame } = pushingForward(1280, 720, 0);
     for (let i = 0; i < 240; i++) frame.step();
     frame.draw(0);
-    expect(recorder.blits.some((b) => b.sprite === SPRITE.ship), 'the ship was not drawn, so this measures nothing').toBe(true);
+    expect(recorder.blits.some((b) => b.sprite === SPRITE.fighter), 'the ship was not drawn, so this measures nothing').toBe(true);
     expect(marksOf(recorder).length, 'the wall is drawn while nothing is anywhere near it').toBe(0);
   });
 
@@ -281,7 +281,7 @@ describe('what the boundary costs the frame', () => {
     for (let i = 0; i < 240; i++) frame.step();
     frame.draw(0);
     const lastMark = recorder.blits.map((b) => b.sprite).lastIndexOf(SPRITE.bound);
-    const firstShip = recorder.blits.map((b) => b.sprite).indexOf(SPRITE.ship);
+    const firstShip = recorder.blits.map((b) => b.sprite).indexOf(SPRITE.fighter);
     expect(lastMark, 'the boundary was not drawn').toBeGreaterThanOrEqual(0);
     expect(firstShip, 'the ship was not drawn').toBeGreaterThanOrEqual(0);
     expect(lastMark, 'the boundary is drawn over the top of the ship').toBeLessThan(firstShip);
