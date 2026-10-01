@@ -928,6 +928,14 @@ export const SPRITE_KINDS = [
     point at the top where this has an edge.
   */
   'pickupShield',
+  /*
+    The shield pickup's two other faces, and the ward pickup's only two — 0447: the void, a swirl
+    falling into a dark heart, and the nova, a ring bursting from a bright one. Told apart from the
+    shield by being round where it is pointed, and from each other by which way the light goes — in,
+    or out.
+  */
+  'pickupVoid',
+  'pickupNova',
   // `pickupBomb` stood here until 0372 took the bomb pickup off the field.
   /*
     ── THE SHELL IS A DEFLECTOR — `docs/decisions/0430-the-readout-counts-ships-and-shields.md` ──────
@@ -1000,6 +1008,16 @@ export const SPRITE_KINDS = [
   'raySwell',
   'rayBurst',
   'rayFade',
+  /*
+    ── THE NOVA'S RING, AS A PIECE OF ITSELF — 0447 ─────────────────────────────────────────────────
+
+    A ring that grows from the ship to past every corner of the screen is a shape no bitmap can hold
+    at every size, and it is not a bolt: it is round, it is lavender, and it is drawn for a second. So
+    it is one short curved piece of band, blitted round the ring at the radius of the step and turned
+    to lie along it, as many pieces as the ring's length needs — the whirlpool's own way of drawing a
+    thing that grows (0374), counted as blits.
+  */
+  'novaArc',
   'debris',
   /*
     ── A DEATH IS A FIREBALL, AND A FIREBALL IS FOUR BITMAPS ───────────────────────────────────────
@@ -2159,6 +2177,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,
+  // The ward's two faces, at the missile pickup's size: round faces fill more of their box than a
+  // shield's point does, so the same extent would read larger — 0447.
+  pickupVoid: 7.33,
+  pickupNova: 7.33,
   /*
     ⚠️ **A PLATE'S TILE IS CENTRED ON THE PLATE AND HOLDS ALL OF ITS ARC** — 0430. The plate stands
     `SHIELD_ORBIT` (5.6) from the ship's centre and sweeps a hundred degrees of the shell, so its ends
@@ -2228,6 +2250,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // Twice the burst's reach, on `blast`'s rule: drawn to the edge of its box, which is what it hits.
   rayBurst: 10,
   rayFade: 10,
+  /*
+    One piece of the nova's band — 0447. Laid every half-length round the ring, so its glow (a
+    triangle window, bright in the middle and gone at both ends) sums to an even band where two
+    overlap. Twenty units keeps the widest ring the screen sees to a few dozen pieces on screen; on
+    the first few steps, while the ring is smaller than a piece, it is a flash at the ship.
+  */
+  novaArc: 20,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*

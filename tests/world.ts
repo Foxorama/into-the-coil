@@ -375,6 +375,7 @@ export function playableWorld(
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
   const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
+  const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
   // The fighter, Huang-Woo Hook's: the ship the game was built on, and the pulse — 0441.
@@ -394,7 +395,7 @@ export function playableWorld(
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -417,6 +418,12 @@ export function playableWorld(
     whirlAge: 0,
     whirlOffset: 0,
     whirlAcross: 0,
+    nova,
+    novaKind: null,
+    novaAge: 0,
+    novaOffset: 0,
+    novaAcross: 0,
+    novaBossHit: false,
     throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,

@@ -159,18 +159,33 @@ describe('0233 — a weapon is a kind', () => {
       BOMB_KINDS.map((k) => SPECIALS[k].face),
     );
     for (const gun of WEAPON_KINDS) {
+      // A ward special is the shield pickup's face rather than the bomb's — 0447; `tests/surge.test.ts`.
+      if (SPECIALS[WEAPONS[gun].special].side === 'ward') continue;
       expect(BOMB_KINDS, `the ${gun}'s own special is not a face of the bomb pickup`).toContain(WEAPONS[gun].special);
     }
     expect(PICKUPS.missile.faces, 'the missile pickup does not offer the tubes in their table order').toEqual(
       MISSILE_KINDS.map((k) => MISSILES[k].pickup),
     );
+    /*
+      ⚠️ **EXCEPT A ROW'S `bare`, WHICH IS THE SAME OFFER WITHOUT ITS FIRST FACE — 0447.** The ward
+      pickup is the shield pickup's void and nova, and it is only ever thrown where the shield would
+      have been and the tier can wear no shell — so the two are never on one field, and a ward face
+      that differed from the shield's would be one special drawn two ways.
+    */
     const everyFace: number[] = [];
+    const bares = new Set(PICKUP_KINDS.map((kind) => PICKUPS[kind].bare).filter((bare) => bare !== null));
     for (const kind of PICKUP_KINDS) {
       const row = PICKUPS[kind];
       expect(row.faces.length, `${kind} has no face`).toBeGreaterThan(0);
       expect(row.faces[0], `${kind}'s sprite is not its first face, so it changes on the step after it appears`).toBe(row.sprite);
       expect(new Set(row.faces).size, `${kind} shows one face twice`).toBe(row.faces.length);
+      if (bares.has(kind)) continue;
       everyFace.push(...row.faces);
+    }
+    for (const kind of PICKUP_KINDS) {
+      const bare = PICKUPS[kind].bare;
+      if (bare === null) continue;
+      expect(PICKUPS[kind].faces.slice(1), `${bare} is not ${kind} without its first face`).toEqual(PICKUPS[bare].faces);
     }
     expect(new Set(everyFace).size, 'two pickups share a face and can only be told apart by ink').toBe(everyFace.length);
     BOMB_KINDS.forEach((kind, face) => {

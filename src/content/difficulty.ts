@@ -46,6 +46,7 @@
  */
 
 import { onFireGrid } from './cadence.ts';
+import type { SpecialKind } from './specials.ts';
 
 /**
  * Every tier, **easiest first**.
@@ -108,6 +109,16 @@ export interface DifficultyRow extends Multipliers, CorridorLimit {
    * carry is withheld rather than thrown — 0355.
    */
   shellCap: number;
+  /**
+   * Ward charges a run opens with on this tier, beside its ship's own — 0447. Empty on a tier that
+   * gives none.
+   *
+   * ⚠️ **Burn's void, and the condition is the caddie's.** *"Let's also let them start with 1 void
+   * bomb as well"*, and answered: *"only burn, and if the player starts as feather with the nova ring
+   * that pops bullets, they don't get a bonus void bomb on top."* So a ship whose own special is
+   * already on the ward's trigger opens without these — `startingArsenal` reads the side, not a name.
+   */
+  opensWith: readonly SpecialKind[];
 }
 
 /**
@@ -394,6 +405,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Every life opens on a full shell and every level renews it — 0355, the player's words.
     shellOpen: 3,
     shellCap: 3,
+    opensWith: [],
     ...multipliersFor('legendary'),
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
@@ -408,6 +420,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // *"No change to behaviour"*: a life opens on the hull and a shield is flown for — 0050, 0355.
     shellOpen: 0,
     shellCap: 3,
+    opensWith: [],
     ...multipliersFor('savior'),
     // Never narrower than 44, turns at about 19° — 0350, the player's number.
     corridor: { narrowest: 44, slope: 0.35 },
@@ -430,9 +443,15 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     title: 'Let the Galaxy Burn',
     hint: 'Best of luck mate',
     lives: 2,
-    // *"No shields"*, and the mid-boss throws none: *"no replacement pickups, just remove them"* — 0355.
+    /*
+      *"No shields"* — 0355. The mid-boss threw none — *"no replacement pickups, just remove them"* —
+      until the shield pickup cycled; since 0447 it throws the ward pickup, the void and the nova, in
+      the shield's place: *"it'll spit out a void bomb pickup in place of the shield."*
+    */
     shellOpen: 0,
     shellCap: 0,
+    // One void to open on — 0447 — unless the ship's own special is already the ward's.
+    opensWith: ['voidMissile'],
     ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
@@ -461,6 +480,7 @@ export const AUTHORED: DifficultyRow = {
   lives: 5,
   shellOpen: 0,
   shellCap: 3,
+  opensWith: [],
   toughness: 1,
   fireGap: 1,
   closing: 1,

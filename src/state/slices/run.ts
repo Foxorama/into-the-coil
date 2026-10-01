@@ -11,7 +11,7 @@
  * error anywhere.
  */
 
-import { OPENING_CHARGES, SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
+import { OPENING_CHARGES, SIDES, SPECIALS, type Side, type SpecialKind } from '../../content/specials.ts';
 import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS, type ShipKind } from '../../content/ships.ts';
@@ -56,9 +56,20 @@ export function livesFor(difficulty: DifficultyKind): number {
  */
 export type Arsenal = Readonly<Record<Side, readonly SpecialKind[]>>;
 
-/** Every charge on both stacks — what goes up with the ship (0079) and what the readout totals. */
+/** Every charge on every stack — what goes up with the ship (0079) and what the readout totals. */
 export function chargesIn(arsenal: Arsenal): number {
-  return arsenal.gun.length + arsenal.tubes.length;
+  let sum = 0;
+  for (const side of SIDES) sum += arsenal[side].length;
+  return sum;
+}
+
+/** `arsenal` with `side`'s stack replaced by `stack` and every other stack as it was. */
+function withStack(arsenal: Arsenal, side: Side, stack: readonly SpecialKind[]): Arsenal {
+  return {
+    gun: side === 'gun' ? stack : arsenal.gun,
+    tubes: side === 'tubes' ? stack : arsenal.tubes,
+    ward: side === 'ward' ? stack : arsenal.ward,
+  };
 }
 
 /**
@@ -73,11 +84,19 @@ export function chargesIn(arsenal: Arsenal): number {
  * ⚠️ **A function rather than a constant**, so nothing can hold a reference to the array a run is
  * using and mutate the next run's starting kit through it.
  */
-export function startingArsenal(ship: ShipKind): Arsenal {
+/*
+  ⚠️ **AND THE TIER'S OWN WARD, SINCE 0447** — Burn's void, under the ship's own pair so the ship's
+  own is thrown first. Not for a ship whose own special is already the ward's: *"if the player starts
+  as feather with the nova ring … they don't get a bonus void bomb on top."*
+*/
+export function startingArsenal(ship: ShipKind, difficulty: DifficultyKind): Arsenal {
   const own = WEAPONS[SHIPS[ship].weapon].special;
+  const side = SPECIALS[own].side;
   const opening: SpecialKind[] = [];
   for (let i = 0; i < OPENING_CHARGES; i++) opening.push(own);
-  return SPECIALS[own].side === 'gun' ? { gun: opening, tubes: [] } : { gun: [], tubes: opening };
+  const ward: SpecialKind[] = [];
+  if (side !== 'ward') for (const kind of DIFFICULTIES[difficulty].opensWith) ward.push(kind);
+  return withStack({ gun: [], tubes: [], ward }, side, side === 'ward' ? [...ward, ...opening] : opening);
 }
 
 export interface RunState {
@@ -188,7 +207,7 @@ export type RunAction =
 export const initialRun: RunState = {
   lives: 0,
   level: 0,
-  arsenal: { gun: [], tubes: [] },
+  arsenal: { gun: [], tubes: [], ward: [] },
   upgrades: [],
   ship: DEFAULT_SHIP,
   missile: SHIPS[DEFAULT_SHIP].missile,
@@ -203,7 +222,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: livesFor(action.difficulty),
         level: 0,
-        arsenal: startingArsenal(action.ship),
+        arsenal: startingArsenal(action.ship, action.difficulty),
         upgrades: [],
         ship: action.ship,
         missile: SHIPS[action.ship].missile,
@@ -281,8 +300,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       const side = SPECIALS[action.special].side;
       // One charge a take, of every kind, since 0441: *"a player can pick up any type and get a bomb
       // of that type."*
-      const stack = [...state.arsenal[side], action.special];
-      const arsenal: Arsenal = side === 'gun' ? { gun: stack, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: stack };
+      const arsenal = withStack(state.arsenal, side, [...state.arsenal[side], action.special]);
       return {
         lives: state.lives,
         level: state.level,
@@ -307,7 +325,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: state.lives,
         level: state.level,
-        arsenal: action.side === 'gun' ? { gun: left, tubes: state.arsenal.tubes } : { gun: state.arsenal.gun, tubes: left },
+        arsenal: withStack(state.arsenal, action.side, left),
         upgrades: state.upgrades,
         ship: state.ship,
         missile: state.missile,

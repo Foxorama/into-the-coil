@@ -29,7 +29,7 @@ import { SPRITE } from './sprites.ts';
  *
  * ⚠️ **All six** (`reports/the-arsenal-planned-2026-09-26.md`); the shield's void is the last, 0377.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -46,8 +46,13 @@ export type SpecialKind = (typeof SPECIAL_KINDS)[number];
  * *"having one bomb queue means that you might not even have the autofire gun equipped when you try to
  * use that bomb."* The gun's specials are on the first trigger and the tubes' on the second, each its
  * own newest-first stack. Order is the binding order: `special1` is the gun, `special2` the tubes.
+ *
+ * ⚠️ **AND `special3` THE WARD — 0447.** *"The void bomb will need to have its own unique button as
+ * well because it can be used strategically to avoid enemy fire."* The two specials that unmake enemy
+ * fire — the void and the nova — are a third stack on a third trigger, so a press meant to save the
+ * ship never throws a bomb and a bomb press never spends the escape.
  */
-export const SIDES = ['gun', 'tubes'] as const;
+export const SIDES = ['gun', 'tubes', 'ward'] as const;
 export type Side = (typeof SIDES)[number];
 
 /**
@@ -165,6 +170,23 @@ export interface Whirl {
   swell: number;
 }
 
+/**
+ * A nova: a ring bursting out from where the ship was, across the whole screen, that pops what it
+ * passes — 0447. *"A huge purple ring bursting out from the ship across the screen."*
+ */
+export interface Nova {
+  /** Its radius as it leaves the ship, in world units. */
+  start: number;
+  /** World units it grows by, per step. It is gone when it is past every corner of the view. */
+  grow: number;
+  /** How thick the band that lands is, in world units — what it reaches either side of its radius. */
+  band: number;
+  /** What it takes off a body it crosses, once. Every enemy shot it crosses is gone. */
+  damage: number;
+  /** What it lands on a boss it reaches, as a share of the boss's full health, once — 0372's shape. */
+  bossShare: number;
+}
+
 export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
@@ -219,6 +241,8 @@ export interface SpecialRow {
   whirl: Whirl | null;
   /** The rift a thrown special opens in place of a blast, or `null` — 0377. */
   rift: Rift | null;
+  /** The ring it bursts from the ship, or `null` — 0447. */
+  nova: Nova | null;
   /*
     ── `charges` WAS HERE, AND IT WAS ONE ON EVERY ROW BUT THE BOMB'S — 0441 ─────────────────────
 
@@ -288,6 +312,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: null,
+    nova: null,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
     cue: 'bomb',
@@ -313,6 +338,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: null,
+    nova: null,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
     lands: null,
@@ -336,6 +362,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: null,
+    nova: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
     cue: 'overdrive',
@@ -365,6 +392,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: { strikes: 6, chains: 2, reach: 45, damage: 12, bossShare: 0.05, flicker: 8, flickerSteps: 64 },
     whirl: null,
     rift: null,
+    nova: null,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
     lands: 'storm',
@@ -400,6 +428,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     */
     whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.6, spin: 0.05, damage: 4, swell: 2.2 },
     rift: null,
+    nova: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
     lands: null,
@@ -408,13 +437,17 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
   /**
    * The shields' — *"if you cap shields, you get a void missile -> it flies forward and creates a
    * massive void zone that negates everything but your ship and bosses (does 10% max boss health
-   * damage)."* On the tubes' trigger, because it is a missile. Thrown to the bomb's reach; the rift is
-   * seventy-two units across — most of the lane — and open for a second and a half.
+   * damage)."* Thrown to the bomb's reach; the rift is seventy-two units across — most of the lane —
+   * and open for a second and a half.
+   *
+   * ⚠️ **ON THE WARD'S TRIGGER SINCE 0447, AND IT WAS THE TUBES'** because it is a missile. *"The void
+   * bomb will need to have its own unique button."* It is earned off the shield pickup's void face now,
+   * and a full shell still spills into one.
    */
   voidMissile: {
     label: 'Void',
     hint: 'A rift that swallows fire',
-    side: 'tubes',
+    side: 'ward',
     shot: 'voidBall',
     becomes: null,
     reach: 80,
@@ -423,12 +456,54 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: { radius: 36, steps: 90, bossShare: 0.1 },
-    face: SPRITE.pickupShield,
+    nova: null,
+    // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
+    // only way to earn one.
+    face: SPRITE.pickupVoid,
     cue: 'voidThrow',
     lands: 'rift',
     hushes: true,
   },
+  /**
+   * The ray's — 0447. *"Nova ring … a huge purple ring bursting out from the ship across the screen,
+   * popping what it passes."* Played into place before it was built: *"at burn difficulty seems like
+   * it's going to be the default choice if it pops bullets. It should probably share the shield/void
+   * cycle instead of the regular weapon cycle"* — so it is the ward's, beside the void, and the bomb
+   * pickup never offers it.
+   *
+   * ⚠️ **THE VOID HOLDS A PLACE; THE NOVA CLEARS A MOMENT.** A rift is a disc that eats everything
+   * that enters it for a second and a half; a nova crosses each thing once, the whole screen over in
+   * about a second, and leaves nothing behind it. One is where to fly, the other is when to press.
+   *
+   * ⚠️ **A twentieth of a boss, the bomb's share**, where the void lands a tenth: it reaches the boss
+   * whatever the aim, and it is the caddie's opening pair.
+   */
+  nova: {
+    label: 'Nova',
+    hint: 'A ring that pops everything',
+    side: 'ward',
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: null,
+    // 3.5 a step crosses the reference view's diagonal from the ship's station in about a second.
+    nova: { start: 6, grow: 3.5, band: 3, damage: 12, bossShare: 0.05 },
+    face: SPRITE.pickupNova,
+    cue: 'nova',
+    lands: null,
+    hushes: false,
+  },
 };
+
+/**
+ * The specials the ward's trigger throws, in the shield pickup's cycle order after the shield itself
+ * — 0447. Derived from the table, so a third ward special is a face on both pickups.
+ */
+export const WARD_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SPECIALS[k].side === 'ward');
 
 /**
  * WHAT AN UNSPENT ARSENAL BECOMES WHEN THE SHIP CARRYING IT COMES APART — one rung per charge.

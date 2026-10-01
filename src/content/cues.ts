@@ -132,6 +132,7 @@ export const CUE_KINDS = [
   'whirlpool',
   'voidThrow',
   'rift',
+  'nova',
   'shield',
   'death',
   'pickup',
@@ -235,6 +236,8 @@ export const TWIN_KINDS = [
   'whirl-appears',
   /** A rift opens where the void went off, drawn at the radius it negates at — `openRift`, 0377. */
   'rift-opens',
+  /** A nova's ring appears round the ship and bursts outward, drawn at the radius it lands at — `openNova`, 0447. */
+  'nova-appears',
   /** A mark leaves the shell and a pip leaves the readout — 0050, 0045. */
   'shell-mark',
   /** The ship scatters `BURST.ship` fragments, and its upgrades with them — 0036, 0066. */
@@ -2063,6 +2066,35 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'saw', from: inKey(0), to: inKey(0), at: 0.9, seconds: 0.34, gain: 0.4, attack: 0.05, curve: 1.6, lowFrom: 380, lowTo: 130, highFrom: 30, q: 1.4, drive: 0.3 },
       { wave: 'saw', from: inKey(0), to: inKey(0), at: 1.22, seconds: 0.28, gain: 0.28, attack: 0.05, curve: 1.6, lowFrom: 340, lowTo: 120, highFrom: 30, q: 1.4, drive: 0.3 },
       { wave: 'sine', from: inKey(0), to: inKey(0), seconds: 1.5, gain: 0.34, attack: 0.04, curve: 1.8 },
+    ],
+  },
+  /**
+   * The nova bursts — 0447. The ray's own pew grown into a whole-screen event: a bright tone sweeping
+   * UP two octaves while a ring of noise opens across the field from the middle out, over a struck
+   * kick on the root. The void sinks into the hush; the nova rises out of the ship, so the two ward
+   * specials are told apart by ear as by shape.
+   *
+   * ⚠️ **IN THE KEY** — 0099: the sweep runs root to root and the shimmer over it a fifth above, so it
+   * lands on the scale whatever the music is doing.
+   */
+  nova: {
+    // A press, like the whirlpool's: a thing fired, so it never ducks the bed (0308's rule).
+    twin: 'nova-appears',
+    air: 0.3,
+    hold: 6,
+    gain: 0.36,
+    glue: 0.1,
+    layers: [
+      // The kick it goes off on.
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.22, gain: 0.7, attack: 0.002, curve: 3, drive: 0.4 },
+      // The ring itself: a bright sine climbing two octaves as it opens.
+      { wave: 'sine', from: inKey(14), to: inKey(28), seconds: 0.5, gain: 0.4, attack: 0.004, curve: 2.2 },
+      // A fifth over it, shimmering, spread from the middle out as the ring is.
+      { wave: 'tri', from: inKey(18), to: inKey(32), seconds: 0.55, gain: 0.2, attack: 0.006, curve: 2, vibrato: 7, pan: -0.15, panTo: -0.8 },
+      { wave: 'tri', from: inKey(18), to: inKey(32), seconds: 0.55, gain: 0.2, attack: 0.006, curve: 2, vibrato: 7, pan: 0.15, panTo: 0.8 },
+      // The air the ring pushes: noise opening upward, either side.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: -0.5, panTo: -0.9 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: 0.5, panTo: 0.9 },
     ],
   },
   /**

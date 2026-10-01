@@ -664,6 +664,13 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupArc: 'player',
   pickupShuriken: 'blade',
   pickupShield: 'pickup',
+  /*
+    The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
+    bursts from, because no two faces of one pickup share an ink (`tests/weapons.test.ts`) and the
+    shield pickup shows both. Its ring is painted in the ray's lavender over it.
+  */
+  pickupVoid: 'ally',
+  pickupNova: 'impact',
   // The bullet ink, because it is a bullet. What separates it from the pulse is shape and size.
   missile: 'bullet',
   /*
@@ -747,6 +754,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   raySwell: 'ally',
   rayBurst: 'ally',
   rayFade: 'ally',
+  // The nova is the ray's, so it is the ray's lavender — 0447.
+  novaArc: 'ally',
   /*
     THE HURT SILHOUETTES: the SAME shape in a different ink.
 
@@ -1349,6 +1358,30 @@ function billow(ctx: Pen, centre: number, outer: number, wobble: number, lobes: 
   ctx.closePath();
   ctx.fill();
   ctx.globalAlpha = 1;
+}
+
+/**
+ * Spiral arms about the frame's centre — 0447's void. Each arm runs from `inner` to `outer` while
+ * turning `twist` radians, widest in its middle and pointed at both ends, at `alpha`: light falling
+ * into a dark heart. The painter spins the whole bitmap, so one bake is every moment of the swirl.
+ */
+function spiralArms(ctx: Pen, f: Frame, colour: string, arms: number, inner: number, outer: number, twist: number, width: number, alpha: number): void {
+  const samples = 14;
+  for (let k = 0; k < arms; k++) {
+    const start = (k / arms) * Math.PI * 2;
+    const edge: Pt[] = [];
+    const back: Pt[] = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const radius = inner + (outer - inner) * t;
+      const angle = start + twist * t;
+      // Half its width as an angle at this radius, so the arm keeps its width as it curls in.
+      const spread = (width * Math.sin(Math.PI * t)) / radius;
+      edge.push([Math.cos(angle - spread) * radius, Math.sin(angle - spread) * radius]);
+      back.push([Math.cos(angle + spread) * radius, Math.sin(angle + spread) * radius]);
+    }
+    poly(ctx, f, colour, [...edge, ...back.reverse()], alpha);
+  }
 }
 
 /**
@@ -12729,36 +12762,42 @@ export function drawKind(
     // The void missile — 0377: a purple hull with a dark heart, which is what it opens into.
     case 'voidBall': {
       /*
-        ⚠️ **AND A TRAIL BEHIND IT SINCE 0379** — *"all the bomb launch effects need to be more
-        visible."* Twice the size it was, and a wake of the same purple thinning out behind (−x, the
-        way it came), translucent because it is where the ball has been rather than the ball: the
-        silhouette stays the round hull.
+        ── A SWIRL, AND IT TURNS — 0447 ──────────────────────────────────────────────────────────────
+
+        *"The void bomb also needs updated graphics to make it look cooler, some kind of animation and
+        a swirl."* A round hull with a dark heart, and three arms of its own light curling into it —
+        outside the hull as well as on it, translucent, because they are light being pulled in and not
+        body. The frame turns the bitmap a little every step (`stepVoids`), so the arms wind inward as
+        it flies: one bake, every moment of the swirl.
+
+        ⚠️ **THE WAKE 0379 GAVE IT IS GONE**, because a turning bitmap would have swung it round the
+        ball. The arms reaching past the hull are what is bigger and brighter now, and the turning is
+        what says it is moving.
       */
       // The hull first, because the first fill IS the hull and everything after it is paint.
-      ctx.arc(half, half, r * 0.4, 0, Math.PI * 2);
+      ctx.arc(half, half, r * 0.42, 0, Math.PI * 2);
       seal(ctx);
-      for (const [x, size, alpha] of [
-        [-0.95, 0.12, 0.14],
-        [-0.78, 0.18, 0.22],
-        [-0.58, 0.24, 0.32],
-      ] as const) {
-        disc(ctx, f, shade(palette.ally, 0.2), x, 0, size, alpha);
-      }
-      glow(ctx, f, shade(palette.ally, 0.4), -0.2, 0, 0.75, 0.38);
-      disc(ctx, f, palette.space, 0, 0, 0.26);
+      glow(ctx, f, shade(palette.ally, 0.3), 0, 0, 0.95, 0.4);
+      spiralArms(ctx, f, shade(palette.ally, 0.45), 3, 0.18, 0.95, 2.6, 0.12, 0.8);
+      disc(ctx, f, palette.space, 0, 0, 0.22);
       return;
     }
     /*
       The rift — 0377. Its hull is the whole disc at exactly the radius that negates (drawn to the edge
       of its box, on the blast's own rule), and the inside is the dark it swallows into, with a glow at
       the rim so the edge reads over any sky.
+
+      ⚠️ **AND IT SWIRLS SINCE 0447**: five arms of lifted lavender winding into the dark, turned by
+      the frame a little every step while it is open, so the hole in the sky is visibly pulling.
     */
     case 'riftZone': {
       const edge = half - ctx.lineWidth / 2;
       ctx.arc(half, half, edge, 0, Math.PI * 2);
       seal(ctx);
       billow(ctx, half, edge * 0.93, 0.05, 6, 0.8, palette.space, 0.82);
-      billow(ctx, half, edge * 0.55, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
+      spiralArms(ctx, f, shade(palette.ally, 0.1), 5, 0.12, (edge * 0.9) / r, 2.2, 0.16, 0.42);
+      billow(ctx, half, edge * 0.42, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
+      disc(ctx, f, palette.space, 0, 0, (edge * 0.18) / r, 0.85);
       return;
     }
     case 'stormBall': {
@@ -12986,6 +13025,83 @@ export function drawKind(
       ]);
       disc(ctx, fg, palette.glass, 0, 0.1, 0.22);
       disc(ctx, fg, shade(palette.glass, 0.5), -0.06, 0.04, 0.11);
+      return;
+    }
+    /*
+      The void's face — 0447: the ball's own swirl at the glyph's size in its bubble, a round lavender
+      body with three arms curling into a dark heart. Light going IN.
+    */
+    case 'pickupVoid': {
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const ink = palette[INK_OF[kind]];
+      ctx.arc(half, half, fg.r * 0.9, 0, Math.PI * 2);
+      seal(ctx);
+      bubble(ctx, f, palette, ink);
+      disc(ctx, fg, shade(ink, -0.45), 0, 0, 0.62);
+      spiralArms(ctx, fg, shade(ink, 0.5), 3, 0.2, 0.8, 2.4, 0.16, 0.85);
+      disc(ctx, fg, palette.space, 0, 0, 0.26);
+      return;
+    }
+    /*
+      The nova's face — 0447: an eight-pointed burst with a lit ring round a white heart. Light going
+      OUT, and pointed where the void is round, so the two ward faces are told apart by silhouette.
+    */
+    case 'pickupNova': {
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      const ink = palette[INK_OF[kind]];
+      const points: Pt[] = [];
+      for (let i = 0; i < 16; i++) {
+        const angle = (i / 16) * Math.PI * 2 - Math.PI / 2;
+        const reach = i % 2 === 0 ? 0.95 : 0.6;
+        points.push([Math.cos(angle) * reach, Math.sin(angle) * reach]);
+      }
+      trace(ctx, fg, points);
+      seal(ctx);
+      bubble(ctx, f, palette, ink);
+      band(ctx, fg, palette.ally, 0, 0, 0.52, 0.34);
+      disc(ctx, fg, shade(ink, 0.3), 0, 0, 0.22);
+      return;
+    }
+    /*
+      One piece of the nova's band — 0447, laid along x so the frame turns it to lie along the ring.
+      A thin hull the whole length of the box, a bright core down it, and a wide glow that is brightest
+      in the middle and gone at both ends: pieces laid every half-length overlap to an even band.
+    */
+    case 'novaArc': {
+      const ink = palette[INK_OF[kind]];
+      // Short of the box's edge by the margin `tests/accents.test.ts` keeps for every translucent mark.
+      const long = half * 0.96;
+      const thick = half * 0.11;
+      ctx.moveTo(half - long, half - thick);
+      ctx.lineTo(half + long, half - thick);
+      ctx.lineTo(half + long, half + thick);
+      ctx.lineTo(half - long, half + thick);
+      ctx.closePath();
+      /*
+        ⚠️ **OUTLINED IN ITS OWN INK**, the one hull in the atlas that is. A piece is never seen alone —
+        it is a length of one band laid end to end with its neighbours — and the dark outline drew a
+        tick at every join, so the first photograph was a dashed ring. Sealed as every hull is, so the
+        outline is still the silhouette; it is only the colour of the band it bounds.
+      */
+      ctx.strokeStyle = ink;
+      seal(ctx);
+      // The glow: a triangle window along the piece, so two halves overlapping sum to one.
+      const window = ctx.createLinearGradient(half - long, 0, half + long, 0);
+      window.addColorStop(0, rgba(ink, 0));
+      window.addColorStop(0.5, ink);
+      window.addColorStop(1, rgba(ink, 0));
+      ctx.globalAlpha = 0.5;
+      ctx.fillStyle = window;
+      ctx.beginPath();
+      ctx.rect(half - long, half - thick * 4, long * 2, thick * 8);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      poly(ctx, f, shade(ink, 0.6), [
+        [-long / r, -thick / (2 * r)],
+        [long / r, -thick / (2 * r)],
+        [long / r, thick / (2 * r)],
+        [-long / r, thick / (2 * r)],
+      ]);
       return;
     }
     /*

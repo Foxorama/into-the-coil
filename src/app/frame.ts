@@ -103,7 +103,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -1043,6 +1043,18 @@ export interface World {
   whirlAge: number;
   whirlOffset: number;
   whirlAcross: number;
+  /**
+   * The nova's ring, in pieces — 0447. Its own pool, emptied and laid again every step with only the
+   * pieces the view can show, because a ring a screen wide is mostly off it.
+   */
+  nova: Pool<Entity>;
+  /** Which special burst it, how many steps it has grown for, its centre in the camera, and whether
+   * it has reached the boss yet — once a nova. */
+  novaKind: SpecialKind | null;
+  novaAge: number;
+  novaOffset: number;
+  novaAcross: number;
+  novaBossHit: boolean;
   /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
   throwIn: number;
   /**
@@ -2016,6 +2028,8 @@ export class GameFrame implements Frame {
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
     stepExplosions(w);
+    // After both pools have stepped, so the turn is this step's and `prevTurn` the last — 0447.
+    turnVoids(w);
     // The storm's flicker and the whirlpool, both placed by hand — 0374.
     stepStorm(w);
     stepWhirl(w);
@@ -2053,6 +2067,8 @@ export class GameFrame implements Frame {
     // An open rift before anything else lands, so what it negates never gets there — 0377. Its kills
     // are in the log the deaths below are read from.
     stepRift(w);
+    // And a nova's edge, on the rift's terms: what it pops never lands — 0447.
+    stepNova(w);
     // The stone first, so nothing it stopped goes on to land — 0349.
     stoneStops(w);
     // A body that fell from the boss and drifted back into it feeds it, before anything can shoot it — 0404.
@@ -4036,6 +4052,159 @@ function stepWhirl(w: World): void {
   }
 }
 
+/*
+  ── THE NOVA — `docs/decisions/0447-the-ward-is-a-third-trigger.md` ─────────────────────────────
+
+  *"A huge purple ring bursting out from the ship across the screen, popping what it passes."* A ring
+  centred where the ship was when it was pressed, held in the camera as the whirlpool's centre is,
+  growing by `grow` a step until it is past every corner of the view. As its edge crosses a thing:
+    - every enemy shot its band touches is gone;
+    - every body whose centre it crosses takes `damage`, once, through the kill log;
+    - the boss takes its share, once, the first step the ring crosses its head or any of its body.
+  Nothing is struck twice, because the radius only grows and a crossing is `prev < d ≤ now`.
+
+  ⚠️ **ITS PICTURE IS ITS RADIUS.** The pieces are laid at exactly the radius that lands this step,
+  so what the player sees the ring pass is what it popped — 0036.
+*/
+
+/** The steps a nova's ring has grown, as a radius. */
+function novaRadius(nova: Nova, age: number): number {
+  return nova.start + age * nova.grow;
+}
+
+// @setup: one body, read by `reset` for every piece of the ring; the turn is set after.
+const NOVA_PIECE = { sprite: SPRITE.novaArc, spriteHit: SPRITE.novaArc, radius: 0, health: 1, damage: 0 };
+
+/** How far apart the pieces lie round the ring: half a piece, so the glows overlap to an even band. */
+const NOVA_SPACING = SPRITE_EXTENT.novaArc / 2;
+
+/** The fewest pieces a ring is laid in, so the first steps are a ring and not a stroke. */
+const NOVA_LEAST_PIECES = 8;
+
+/** Lay the ring's pieces where this step's radius puts them, only those the view can show. */
+function placeNova(w: World, nova: Nova): void {
+  w.nova.clear();
+  const radius = novaRadius(nova, w.novaAge);
+  const was = novaRadius(nova, w.novaAge > 0 ? w.novaAge - 1 : 0);
+  const centreAlong = w.cameraAlong + w.novaOffset;
+  const wasAlong = w.prevCameraAlong + w.novaOffset;
+  const around = Math.ceil((TAU * radius) / NOVA_SPACING);
+  const pieces = around > NOVA_LEAST_PIECES ? around : NOVA_LEAST_PIECES;
+  const margin = SPRITE_EXTENT.novaArc;
+  for (let i = 0; i < pieces; i++) {
+    const angle = (i * TAU) / pieces;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    const along = centreAlong + cos * radius;
+    const across = w.novaAcross + sin * radius;
+    if (along < w.cameraAlong - margin || along > w.cameraAlong + w.view.alongSpan + margin) continue;
+    if (across < -margin || across > ACROSS_SPAN + margin) continue;
+    const piece = w.nova.spawn();
+    // A ring the pool has no room for is laid short rather than grown — `src/sim/pool.ts`.
+    if (piece === null) return;
+    reset(piece, along, across, NOVA_PIECE);
+    piece.prevAlong = wasAlong + cos * was;
+    piece.prevAcross = w.novaAcross + sin * was;
+    // Lying along the ring: a quarter turn on from the way out to it.
+    piece.turn = turnFor(angle + Math.PI * 1.5);
+    piece.prevTurn = piece.turn;
+  }
+}
+
+/** Burst a nova from where the ship is. A second one replaces the first. */
+function openNova(w: World, kind: SpecialKind, nova: Nova): void {
+  w.novaKind = kind;
+  w.novaAge = 0;
+  w.novaOffset = w.ship.along - w.cameraAlong;
+  w.novaAcross = w.ship.across;
+  w.novaBossHit = false;
+  placeNova(w, nova);
+}
+
+/** Whether a ring that grew from `was` to `now` this step crossed a point `d` from its centre. */
+function crossed(d: number, was: number, now: number, first: boolean): boolean {
+  return d <= now && (first || d > was);
+}
+
+/** Grow the nova, land what its edge crossed this step, and close it once it is past the view. */
+function stepNova(w: World): void {
+  if (w.novaKind === null) return;
+  const nova = SPECIALS[w.novaKind].nova;
+  if (nova === null) return;
+  const first = w.novaAge === 0;
+  const was = novaRadius(nova, w.novaAge);
+  w.novaAge++;
+  const now = novaRadius(nova, w.novaAge);
+  const centreAlong = w.cameraAlong + w.novaOffset;
+  const centreAcross = w.novaAcross;
+  // Every hostile shot its band touches.
+  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+    const shot = w.enemyShots.at(i);
+    const d = Math.hypot(shot.along - centreAlong, shot.across - centreAcross);
+    if (crossed(d - shot.radius - nova.band, was, now + nova.band, first) || crossed(d, was, now, first)) w.enemyShots.releaseAt(i);
+  }
+  // Every body whose centre it crossed, once — through the kill log, so a pop bursts and is heard.
+  for (let i = w.enemies.size - 1; i >= 0; i--) {
+    const body = w.enemies.at(i);
+    const d = Math.hypot(body.along - centreAlong, body.across - centreAcross);
+    if (crossed(d, was, now, first)) strike(w.enemies, i, nova.damage, IMPACT_FLASH_STEPS, w.deaths);
+  }
+  // The boss, once a nova, the first step it crosses the head or any of the body.
+  if (!w.novaBossHit && w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
+    const head = w.bossPool.at(0);
+    let reaches = crossed(Math.hypot(head.along - centreAlong, head.across - centreAcross) - head.radius, was, now, first);
+    for (let i = 0; !reaches && i < w.bossBody.size; i++) {
+      const node = w.bossBody.at(i);
+      reaches = crossed(Math.hypot(node.along - centreAlong, node.across - centreAcross) - node.radius, was, now, first);
+    }
+    if (reaches) {
+      w.novaBossHit = true;
+      if (head.invulnFor <= 0) {
+        const open = openBy(phaseFor(w.bossRow, head.health, w.bossFullHealth));
+        const share = nova.bossShare * w.bossFullHealth;
+        strike(w.bossPool, 0, (share > nova.damage ? share : nova.damage) * open, IMPACT_FLASH_STEPS, w.bossDeaths);
+      }
+    }
+  }
+  // Past the farthest corner of the view, it is gone.
+  const inView = w.novaOffset;
+  const farAlong = inView > w.view.alongSpan - inView ? inView : w.view.alongSpan - inView;
+  const farAcross = centreAcross > ACROSS_SPAN - centreAcross ? centreAcross : ACROSS_SPAN - centreAcross;
+  if (now - SPRITE_EXTENT.novaArc > Math.sqrt(farAlong * farAlong + farAcross * farAcross)) {
+    w.nova.clear();
+    w.novaKind = null;
+    return;
+  }
+  placeNova(w, nova);
+}
+
+/*
+  ── THE VOID TURNS — 0447 ────────────────────────────────────────────────────────────────────────
+
+  *"Some kind of animation and a swirl."* The ball and the rift are each one swirl, baked once, and
+  turned a little every step: the ball fast, so it reads as winding in as it flies, and the rift
+  slowly, so the hole in the sky is pulling and not spinning. Arms that wind inward turn against
+  their own twist, so both turn the negative way.
+*/
+/** Radians the void ball turns a step: about a turn every second and a half. */
+const VOID_BALL_SPIN = -0.07;
+/** Radians an open rift turns a step: about a turn every five seconds. */
+const RIFT_SPIN = -0.02;
+
+/** Turn every void in the air and every rift that is open, after their pools have stepped. */
+function turnVoids(w: World): void {
+  for (let i = 0; i < w.bombs.size; i++) {
+    const ball = w.bombs.at(i);
+    if (SPECIALS[SPECIAL_KINDS[ball.kind] ?? 'bomb'].rift === null) continue;
+    ball.turn = foldTurn(ball.turn + VOID_BALL_SPIN);
+  }
+  for (let i = 0; i < w.blasts.size; i++) {
+    const rift = w.blasts.at(i);
+    if (rift.kind !== RIFT_KIND) continue;
+    rift.turn = foldTurn(rift.turn + RIFT_SPIN);
+  }
+}
+
 /**
  * Throw the special in `slot`, having been told by the shell that there was a charge for it.
  *
@@ -4063,6 +4232,13 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   if (row.whirl !== null) {
     openWhirl(w, kind, row.whirl);
     w.onCue(row.cue, w.whirlAcross);
+    return;
+  }
+  // A nova bursts from the ship rather than being thrown — 0447. Pressed, not aimed, so it is under
+  // no throw gap: its ring is a band and not a filled flash, which is what 0375's gap is for.
+  if (row.nova !== null) {
+    openNova(w, kind, row.nova);
+    w.onCue(row.cue, w.novaAcross);
     return;
   }
   if (row.shot === null) return;
@@ -6995,35 +7171,42 @@ export function dropPickups(w: World, along: number, across: number, kinds: read
     that remain are an even ring of two rather than three with a gap where the shield was — the
     divisor argument `throwPiece` makes, one step earlier.
   */
+  /*
+    ⚠️ **AND SINCE 0447 THE SHIELD IS NOT WITHHELD BUT REPLACED** — by its row's `bare`, the ward
+    pickup: *"it'll spit out a void bomb pickup in place of the shield."* The count is still taken
+    first, so a row whose `bare` is null is still a gap closed rather than a gap left.
+  */
   let carried = 0;
-  for (let i = 0; i < kinds.length; i++) if (carries(w, kinds[i]!)) carried++;
+  for (let i = 0; i < kinds.length; i++) if (offeredAs(w, kinds[i]!) !== null) carried++;
   const room = w.pickups.capacity - w.pickups.size;
   const pieces = carried < room ? carried : room;
   let thrown = 0;
   for (let i = 0; i < kinds.length && thrown < pieces; i++) {
-    const kind = kinds[i]!;
-    if (!carries(w, kind)) continue;
+    const kind = offeredAs(w, kinds[i]!);
+    if (kind === null) continue;
     throwPiece(w, along, across, kind, thrown, pieces);
     thrown++;
   }
 }
 
 /**
- * Whether the ship on this tier can use a pickup of `kind` at all — false for a shield where the tier
- * lets it carry none.
+ * What a pickup of `kind` is offered as on this tier: itself, or — for a shield where the tier lets
+ * the ship carry none — its row's `bare`, which is `null` for withheld.
  *
  * ⚠️ **Read off the pickup's EFFECT and the tier's ROW, never a name on either** — 0016's *behaviour
- * rides the row*. So a fourth tier with a cap of zero is withheld its shields without anything being
- * switched on, and a second pickup that shields would be withheld with them.
+ * rides the row*. So a fourth tier with a cap of zero is offered the ward in its shields' place
+ * without anything being switched on, and a second pickup that shields would be answered by its own
+ * row.
  *
- * ⚠️ **Withholding is the one thing a tier may do to what a level sends**, and 0355 amends 0047 by
- * exactly that sentence: a pickup the ship cannot carry is not an offer. Nothing a tier CAN use is
- * ever withheld, so the lane, ordering and pacing guards over the script are untouched, and the
- * dial is unmoved because it counts weapons only.
+ * ⚠️ **Withholding was the one thing a tier could do to what a level sends** — 0355, amending 0047 —
+ * and 0447 adds the other half: a pickup the ship cannot carry may name what it is offered as
+ * instead. Nothing a tier CAN use is ever changed, so the lane, ordering and pacing guards over the
+ * script are untouched.
  */
-function carries(w: World, kind: PickupKind): boolean {
+function offeredAs(w: World, kind: PickupKind): PickupKind | null {
   const row = w.pickupRows[w.pickupKinds[kind]];
-  return row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0;
+  if (row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0) return kind;
+  return row.bare;
 }
 
 /**
@@ -7110,11 +7293,12 @@ function throwArc(w: World, item: Entity, row: PickupRow, index: number, pieces:
 function spawnPickup(w: World, index: number): void {
   const entry = w.level.pickups[index];
   if (entry === undefined) return;
-  const kind = w.pickupKinds[entry.kind];
+  // No level authors a shield today; one that did would be offered as the drop's is — 0355, 0447.
+  const offered = offeredAs(w, entry.kind);
+  if (offered === null) return;
+  const kind = w.pickupKinds[offered];
   const row = w.pickupRows[kind];
   if (row === undefined) return;
-  // No level authors a shield today; one that did would be withheld on Burn as the drop's is — 0355.
-  if (!carries(w, entry.kind)) return;
   const item = w.pickups.spawn();
   if (item === null) return;
   /*
@@ -9481,6 +9665,9 @@ export function respawn(w: World): void {
   */
   w.bombs.clear();
   w.blasts.clear();
+  // And a nova still growing, on the same terms — 0447.
+  w.nova.clear();
+  w.novaKind = null;
   // A surge went with the ship that wore it — 0373. `stepSurge` ends it at the wreck; this is sure.
   w.surgeFor = 0;
   w.aura.clear();

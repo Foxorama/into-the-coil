@@ -38,8 +38,10 @@ export const PROBES = [
     guard: 'the mid-boss’s death throws every piece the tier can carry',
     edit: {
       path: 'src/app/frame.ts',
-      find: "  return row === undefined || row.effect !== 'shield' || w.difficulty.shellCap > 0;",
-      replace: '  return true;',
+      // ⚠️ Re-anchored by 0447, which offers the row's `bare` where the shield was withheld; the break
+      // is still the shield thrown as itself to a tier that can carry none.
+      find: '  return row.bare;\n}',
+      replace: '  return kind;\n}',
     },
   },
   {

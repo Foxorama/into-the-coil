@@ -48,7 +48,7 @@ import { chargesIn } from '../state/slices/run.ts';
  * The face a trigger's button and readout wear over an empty stack, so the icon never goes: the gun's
  * is the bomb, which every run starts with, and the tubes' is the golden surge they overflow to — 0376.
  */
-const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive' };
+const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive', ward: 'voidMissile' };
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
@@ -57,7 +57,6 @@ import {
   PICKUPS,
   PICKUP_KINDS,
   effectOf,
-  isUpgrade,
   specialOf,
   missileFaceOf,
   type PickupKind,
@@ -281,6 +280,14 @@ export const CAPACITY = {
   bolts: 42,
   // The whirlpool's blades — 0374: three arms of eight. The ceiling moved for them too.
   whirl: 24,
+  /*
+    ⚠️ **THE NOVA'S PIECES — 0447, AND THE CEILING MOVED FOR THEM AS IT DID FOR THE BLADES.** Only the
+    pieces the view can show are laid, every half-piece round the ring: about thirty when the ring is
+    the height of the lane and its whole round is on screen, fewer as it grows past the edges. Forty
+    keeps the tenth of headroom the shots keep, paid out of the worst case on 0153's terms — a desktop
+    target and a baked bitmap each — rather than out of a pool that is already measured full.
+  */
+  nova: 40,
   boss: 1,
   /*
     ⚠️ **ELEVEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
@@ -759,6 +766,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const exhaust = new Pool<Entity>(CAPACITY.exhaust, makeEntity);
   const aura = new Pool<Entity>(CAPACITY.aura, makeEntity);
   const whirl = new Pool<Entity>(CAPACITY.whirl, makeEntity);
+  const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
   const enemies = new Pool<Entity>(CAPACITY.enemies, makeEntity);
   const playerShots = new Pool<Entity>(CAPACITY.playerShots, makeEntity);
   const missiles = new Pool<Entity>(CAPACITY.missiles, makeEntity);
@@ -962,7 +970,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
     // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -1006,6 +1014,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     whirlAge: 0,
     whirlOffset: 0,
     whirlAcross: 0,
+    nova,
+    novaKind: null,
+    novaAge: 0,
+    novaOffset: 0,
+    novaAcross: 0,
+    novaBossHit: false,
     throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,
@@ -3237,7 +3251,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       ⚠️ **AND THE BOMB PICKUP SINCE 0441, WHICH IS A SPECIAL EVERY TIME** — the face is the special.
       `specialOf` answers both: a full tube's overflow and a bomb face.
     */
-    if (effect === 'special' && (kind === 'bomb' || isUpgrade(kind))) dispatch({ slice: 'run', type: 'took', special: specialOf(kind, face) });
+    /*
+      ⚠️ **AND THE WARD'S, SINCE 0447**: a ward pickup's face, and a shield pickup showing its void or
+      its nova rather than its shield. `specialOf` answers every pickup that can be a charge.
+    */
+    if (effect === 'special') dispatch({ slice: 'run', type: 'took', special: specialOf(kind, face) });
     /*
       ⚠️ **A shield goes on the SHIP and not through the reducer**, and it is the one pickup that
       does. `docs/decisions/0017-the-state-is-slices.md` puts the run's own numbers in state — lives,

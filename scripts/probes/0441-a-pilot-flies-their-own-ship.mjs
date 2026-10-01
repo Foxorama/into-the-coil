@@ -38,8 +38,9 @@ export const PROBES = [
     guard: 'a take pushes exactly one charge',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '      const stack = [...state.arsenal[side], action.special];',
-      replace: '      const stack = [...state.arsenal[side], action.special, action.special];',
+      // ⚠️ Re-anchored by 0447, which builds every side's stack through `withStack`.
+      find: '      const arsenal = withStack(state.arsenal, side, [...state.arsenal[side], action.special]);',
+      replace: '      const arsenal = withStack(state.arsenal, side, [...state.arsenal[side], action.special, action.special]);',
     },
   },
   {

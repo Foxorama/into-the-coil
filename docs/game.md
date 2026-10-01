@@ -149,7 +149,7 @@ no device is faster than another — see
 
 | | movement | specials |
 |---|---|---|
-| keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift |
+| keyboard | arrows or WASD, by **physical key position** so a non-QWERTY layout keeps the shape | Space, Shift, and E or X for the ward |
 | touch | **relative drag** — the ship moves by however far the thumb moved, not to where it is | a tap strip along the leading edge, one band per special |
 | gamepad | left stick, analog, with a radial deadzone | face buttons |
 
@@ -177,11 +177,13 @@ Each ship carries:
 
 ⚠️ **Auto-fire is the base weapon, not the arsenal.** Specials are triggered by the player — the
 Raiden II relationship between the shot you never think about and the bomb you have to spend.
-Straight from the Jörmungandr fight. **There are TWO triggers, the gun's and the tubes', and each
-throws the charge of its own side earned most recently** —
+Straight from the Jörmungandr fight. **There are THREE triggers, the gun's, the tubes' and the
+ward's, and each throws the charge of its own side earned most recently** —
 [0376](decisions/0376-a-trigger-for-the-gun-and-one-for-the-tubes.md), correcting
 [0373](decisions/0373-a-special-is-the-guns-own.md)'s single queue, which let a charge be thrown
-through a weapon it was not earned from.
+through a weapon it was not earned from; the ward — the void and the nova, the two that unmake enemy
+fire — is its own button so a press meant to save the ship never throws a bomb
+([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
 
 ⚠️ **The arsenal is a STACK, never a slot**, and this is a code constraint rather than a flourish. A
 ship modelled with one special field or a save storing one special kind would make a second special a
@@ -210,7 +212,8 @@ level authors is what the player gets.
 |---|---|---|---|---|---|
 | **`bomb`** | one charge of the gun special its face shows — bomb, storm or whirlpool | — | none; level one one before its mid-boss | 1 | — |
 | **`missile`** | a tube **and** a rate step, max 2 tubes | 4 | 1 a fifth of the way in; level one a second between the fights | — | — |
-| **`shield`** | one hit that never reaches the hull, capped by the tier — 3, or none on Burn | — | — | 1, not on Burn | — |
+| **`shield`** | cycles: one hit that never reaches the hull, capped by the tier — 3, or none on Burn — or a charge of the void or the nova on the ward's trigger | — | — | 1; on Burn the `ward` in its place | — |
+| **`ward`** | the shield pickup without its shield: a charge of the void or the nova — [0447](decisions/0447-the-ward-is-a-third-trigger.md) | — | — | on Burn only, as the shield | — |
 
 A run starts with two charges of its own gun's special. **The bomb pickup is where the weapon pickup
 was, and it cycles the gun specials the way the weapon pickup cycled the guns**
@@ -249,7 +252,8 @@ wears its gun and its tubes**: each ship is drawn bare, with one tube, and with 
 | **overdrive** | missiles | ten seconds of two golden pods, each volley firing a straight missile of their own beside the fitted tubes: three times the damage, piercing like a blade — [0373](decisions/0373-a-special-is-the-guns-own.md), moved off the gun by [0375](decisions/0375-the-bomb-is-a-missile.md), [0379](decisions/0379-the-specials-are-seen.md) |
 | **storm** | arc | thrown like the bomb; goes off as six strikes to the nearest bodies on the screen, each chaining to two more, a twentieth of a boss once, and bolts flickering across the screen for half a second — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
 | **whirlpool** | shuriken | three spiral arms of eight big blades opened ahead of the ship, turning and growing, landing on a boss again and again, and gone once none of it is on the screen — [0374](decisions/0374-the-storm-and-the-whirlpool.md) |
-| **void** | a shield at a full shell | thrown up the lane on the tubes' trigger; opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
+| **nova** | ray, and the shield pickup's third face | on the ward's trigger: a lavender ring bursting from the ship to past every edge of the screen, popping every shot it touches, striking every body it crosses once and a boss once for a twentieth — [0447](decisions/0447-the-ward-is-a-third-trigger.md) |
+| **void** | the shield pickup's second face, and a shield at a full shell; one to open a Burn run unless the ship opens on novas | thrown up the lane on the ward's trigger as a turning swirl ([0447](decisions/0447-the-ward-is-a-third-trigger.md)); opens a rift 72 units across for a second and a half that removes every hostile shot, body and boss lightning inside it, carves the Labyrinth stone it covers for the rest of the level, and lands a tenth of a boss once. The ship, the boss and the player's own fire are untouched — [0377](decisions/0377-the-void.md) |
 
 A thrown special that reaches the edge of the screen goes off there
 ([0377](decisions/0377-the-void.md)). Every special is heard as itself — its press, and for a
@@ -295,7 +299,8 @@ scripts.
 **A tier also sets the shell** — [0355](decisions/0355-a-tier-opens-on-a-shell.md). On *Legendary
 Pilot* every life opens on three shields and every level renews them; on *Savior of the Galaxy* a
 life opens on the hull and a shield is flown for, as it always was; on *Let the Galaxy Burn* the ship
-carries none, and the mid-boss throws none.
+carries none, the mid-boss throws the ward pickup where the shield would be, and a run opens with one
+void unless its ship opens on novas ([0447](decisions/0447-the-ward-is-a-third-trigger.md)).
 
 ⚠️ **The dial is gone** — [0441](decisions/0441-a-pilot-flies-their-own-ship.md). It was a second
 axis that moved through a run ([0084](decisions/0084-the-dial-is-the-level-and-the-guns.md)), and the

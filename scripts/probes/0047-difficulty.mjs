@@ -68,8 +68,9 @@ export const PROBES = [
     guard: 'THE BASELINE',
     edit: {
       path: 'src/content/difficulty.ts',
-      find: "  shellCap: 3,\n  toughness: 1,\n  fireGap: 1,",
-      replace: "  shellCap: 3,\n  toughness: 0.9,\n  fireGap: 1,",
+      // ⚠️ Re-anchored by 0447, which put the tier's opening ward between the shell and the multipliers.
+      find: "  opensWith: [],\n  toughness: 1,\n  fireGap: 1,",
+      replace: "  opensWith: [],\n  toughness: 0.9,\n  fireGap: 1,",
     },
   },
   {

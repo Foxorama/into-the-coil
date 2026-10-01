@@ -2374,7 +2374,13 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
     }
   });
 
-  it('0260 — a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen', () => {
+  /*
+    ⚠️ **ONE CASE PER GUN, SINCE IT FLEW FOUR — 0447's proof.** Flying every gun in one case was
+    four times the work under one timeout, and it ran out at 180 s under the load of the whole suite
+    having passed alone in fifty. The guard is the same and the work is the same; it is split so each
+    gun's share of it is a case, rather than the budget raised until it went quiet (0245).
+  */
+  for (const gun of WEAPON_KINDS) it(`0260 — a real boss lasts forty seconds at max weapons, and every phase gets eight volleys away, so every attack is seen — the ${gun}`, () => {
     /*
       `docs/decisions/0260-a-boss-is-fought-to-the-end.md`. Reported from the alpha play: *"level
       bosses need a lot more health, I think I only saw about 50% of their attacks before they
@@ -2421,7 +2427,7 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       const kind = LEVELS[level].boss;
       const row = BOSSES[kind];
       if (row.chain !== null) continue;
-      for (const gun of WEAPON_KINDS) {
+      {
         let quickest: ReturnType<typeof flyFight> | null = null;
         for (const lane of [...LANES, 'boss' as const]) {
           for (const short of DISTANCES) {

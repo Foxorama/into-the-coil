@@ -38,7 +38,7 @@ import type { Body } from '../sim/entity.ts';
 
 import type { ShipRow } from './ships.ts';
 import { SHOTS } from './shots.ts';
-import { SPECIALS, SPECIAL_KINDS, type SpecialKind } from './specials.ts';
+import { SPECIALS, SPECIAL_KINDS, WARD_KINDS, type SpecialKind } from './specials.ts';
 import { SPRITE } from './sprites.ts';
 import { WEAPONS, type FlightKind, type WeaponKind } from './weapons.ts';
 import { MISSILES, MISSILE_KINDS, type GuidanceKind, type MissileKind, type MissileRow } from './missiles.ts';
@@ -90,7 +90,7 @@ export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SP
  * gun is the ship's and has no ladder now, so the pickup that climbed it buys a charge of whichever
  * gun's special it is showing — a bomb, a storm or a whirlpool — whatever gun the ship flies.
  */
-export const PICKUP_KINDS = ['bomb', 'missile', 'shield'] as const;
+export const PICKUP_KINDS = ['bomb', 'missile', 'shield', 'ward'] as const;
 
 /** Derived from the list, so a pickup cannot exist in the union and be missing from the table. */
 export type PickupKind = (typeof PICKUP_KINDS)[number];
@@ -168,6 +168,18 @@ export interface PickupRow extends Body {
    * so its spill is named here, on its row, and `takeShield` reads it rather than a branch in the shell.
    */
   spills: SpecialKind | null;
+  /**
+   * What is offered in its place on a tier whose ship can wear none of what it gives — 0447, or `null`
+   * for a pickup every tier can take.
+   *
+   * ⚠️ **It was WITHHELD, and that was 0355's answer before the shield cycled.** A shield on Burn,
+   * where the shell is zero, could only ever have been nothing, so nothing was thrown. Since the shield
+   * pickup also offers the ward's specials, a Burn ship can take two of its three faces — and the ask
+   * says what should go there: *"in Burn difficulty, when a miniboss dies it'll spit out a void bomb
+   * pickup in place of the shield."* So the shield's row names the ward pickup, which is its other two
+   * faces, and the frame throws that.
+   */
+  bare: PickupKind | null;
 }
 
 /**
@@ -220,6 +232,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     // Every gun special, in the specials' own order — 0441. The key lists each face by name.
     faces: BOMB_KINDS.map((k) => SPECIALS[k].face),
     spills: null,
+    bare: null,
   },
   /**
    * THE MISSILES, AND EVERY REPEAT RAISES TUBES AND RATE TOGETHER.
@@ -245,6 +258,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     effect: 'upgrade',
     faces: MISSILE_KINDS.map((k) => MISSILES[k].pickup),
     spills: null,
+    bare: null,
   },
   /**
    * One more hit that never reaches the hull.
@@ -257,6 +271,12 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
    * the extra life away on the grounds that this is the better version of one. Reported from play:
    * *"shields in particular are so much more stronger than I had anticipated."* That is the reason it
    * survived the cut and the reason a level may only author two.
+   *
+   * ⚠️ **IT CYCLES SINCE 0447: THE SHIELD, THE VOID, THE NOVA.** *"For shields → instead of void bombs
+   * at shield cap, the void bomb will be on rotation with the shield on that pickup so a player can
+   * choose to pick up a void bomb or a shield."* The nova joined because it pops bullets, which makes it
+   * the ward's and not the gun's. The first face is the shield; the rest are `WARD_KINDS` in order, and
+   * a ward face is a charge on the third trigger (`effectOf`, `specialOf`).
    */
   shield: {
     sprite: SPRITE.pickupShield,
@@ -267,8 +287,30 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     label: 'Shield',
     hint: 'One hit absorbed',
     effect: 'shield',
-    faces: [SPRITE.pickupShield],
+    faces: [SPRITE.pickupShield, ...WARD_KINDS.map((k) => SPECIALS[k].face)],
+    // A shield face taken at a full shell is still a void — the cycle is the choice, and a face the
+    // player flew for should never be a dead pickup.
     spills: 'voidMissile',
+    bare: 'ward',
+  },
+  /**
+   * THE SHIELD PICKUP WITHOUT ITS SHIELD — 0447: what a tier that wears no shell is offered where a
+   * shield would be. *"In Burn difficulty, when a miniboss dies it'll spit out a void bomb pickup in
+   * place of the shield."* It cycles the ward's specials, the void and the nova, and never authors a
+   * level slot of its own: it only ever arrives as a shield's `bare`.
+   */
+  ward: {
+    sprite: SPRITE.pickupVoid,
+    spriteHit: SPRITE.pickupVoid,
+    radius: 2.5,
+    health: 1,
+    damage: 0,
+    label: 'Ward',
+    hint: 'A charge of the face it shows',
+    effect: 'special',
+    faces: WARD_KINDS.map((k) => SPECIALS[k].face),
+    spills: null,
+    bare: null,
   },
 };
 
@@ -300,12 +342,23 @@ export function missileFaceOf(face: number): MissileKind {
 }
 
 /**
+ * The ward special a ward pickup showing `face` is offering — 0447. The shield pickup's ward faces
+ * come after its shield, so it asks with `face - 1`.
+ */
+export function wardFaceOf(face: number): SpecialKind {
+  return WARD_KINDS[face < 0 ? 0 : face >= WARD_KINDS.length ? WARD_KINDS.length - 1 : face]!;
+}
+
+/**
  * What a pickup showing `face` is called and what it does — for the title screen's key, which lists
  * every face of a cycling pickup rather than the row once.
  */
 export function faceOf(kind: PickupKind, face: number): { label: string; hint: string } {
   if (kind === 'bomb') return SPECIALS[bombFaceOf(face)];
   if (kind === 'missile') return MISSILES[missileFaceOf(face)];
+  if (kind === 'ward') return SPECIALS[wardFaceOf(face)];
+  // The shield's first face is the shield and the rest are the ward's — 0447.
+  if (face > 0) return SPECIALS[wardFaceOf(face - 1)];
   return PICKUPS[kind];
 }
 
@@ -370,8 +423,15 @@ export const UPGRADE_TIERS = 4;
   every take: the face is the special. So this answers *what special does a pickup showing `face` give
   when its effect is `special`* — a full tube's overflow, or a bomb face — and was `overflowOf`.
 */
-export function specialOf(kind: 'bomb' | UpgradeKind, face: number): SpecialKind {
-  return kind === 'bomb' ? bombFaceOf(face) : MISSILES[missileFaceOf(face)].special;
+/*
+  ⚠️ **AND THE WARD'S, SINCE 0447**: a ward pickup's face, and a shield pickup showing anything but
+  its shield, which is the same list one place on.
+*/
+export function specialOf(kind: PickupKind, face: number): SpecialKind {
+  if (kind === 'bomb') return bombFaceOf(face);
+  if (kind === 'ward') return wardFaceOf(face);
+  if (kind === 'shield') return wardFaceOf(face - 1);
+  return MISSILES[missileFaceOf(face)].special;
 }
 
 /**
@@ -513,6 +573,8 @@ export function upgradeGrows(upgrades: readonly UpgradeKind[], kind: UpgradeKind
 */
 export function effectOf(kind: PickupKind, face: number, loadout: Loadout): PickupEffect {
   const effect = PICKUPS[kind].effect;
+  // A shield pickup showing a ward face is a charge, not armour — 0447.
+  if (effect === 'shield') return face > 0 ? 'special' : 'shield';
   if (effect !== 'upgrade' || !isUpgrade(kind)) return effect;
   if (missileFaceOf(face) !== loadout.missile) return 'upgrade';
   return upgradeGrows(loadout.upgrades, kind) ? 'upgrade' : 'special';

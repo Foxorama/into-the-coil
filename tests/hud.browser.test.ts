@@ -473,7 +473,8 @@ describe.runIf(chromePath)('0437 — the open items', () => {
   it('takes the stack counts off the glass on a touch screen, and keeps them for a reader', async () => {
     const page = await open(true);
     const seen = await stacks(page);
-    expect(seen.length, 'the readout has no stack groups to hide').toBe(2);
+    // One per trigger — three since 0447's ward.
+    expect(seen.length, 'the readout has no stack groups to hide').toBe(SIDES.length);
     for (const group of seen) {
       expect(group.clipped, 'a touch screen still draws the count its disc already says').toBe(true);
       expect(group.inPage, 'the count was taken out of the page, so a reader never hears it').toBe(true);

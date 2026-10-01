@@ -19,13 +19,15 @@ export const PROBES = [
   {
     decision: '0377',
     suite: 'tests/void.test.ts',
-    broke: 'the void on the gun’s trigger rather than the tubes’',
-    guard: 'the void goes on the tubes’ stack',
+    // ⚠️ Re-aimed by 0447: the void's trigger is the ward's now, so the break is the void back on the
+    // tubes' — the trigger 0447 took it off.
+    broke: 'the void on the tubes’ trigger rather than the ward’s',
+    guard: 'the void goes on the ward’s stack',
     edit: {
       path: 'src/content/specials.ts',
       // ⚠️ Re-anchored by 0441, which gave every special row a `hint`.
-      find: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'tubes',",
-      replace: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'gun',",
+      find: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'ward',",
+      replace: "    label: 'Void',\n    hint: 'A rift that swallows fire',\n    side: 'tubes',",
     },
   },
   {

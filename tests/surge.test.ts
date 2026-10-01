@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, MUZZLE_ALONG, launchSpecial, respawn, wearHull, type World } from '../src/app/frame.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
-import { BOMB_KINDS, UPGRADE_TIERS, effectOf, specialOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
+import { BOMB_KINDS, PICKUPS, UPGRADE_TIERS, effectOf, specialOf, weaponFor, type Loadout, type UpgradeKind } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, podSide, type Surge } from '../src/content/specials.ts';
 import { CAPACITY } from '../src/app/mount.ts';
@@ -65,6 +65,18 @@ describe('0373 — a full ladder buys the face’s own special', () => {
 
   it('and every gun’s own special is a face the bomb pickup shows, so any ship can buy it — 0441', () => {
     for (const gun of WEAPON_KINDS) {
+      /*
+        ⚠️ **BUT A WARD SPECIAL IS THE SHIELD PICKUP'S — 0447.** The ray's nova pops bullets, so it was
+        put in the shield's cycle rather than the bomb's, at the player's word; any ship can still buy
+        it, off the shield pickup's face.
+      */
+      if (SPECIALS[WEAPONS[gun].special].side === 'ward') {
+        const face = PICKUPS.shield.faces.indexOf(SPECIALS[WEAPONS[gun].special].face);
+        expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the shield pickup`).toBeGreaterThan(0);
+        expect(effectOf('shield', face, { upgrades: [], missile: 'straight' })).toBe('special');
+        expect(specialOf('shield', face), `a shield pickup showing the ${gun}'s special bought somebody else's`).toBe(WEAPONS[gun].special);
+        continue;
+      }
       const face = BOMB_KINDS.indexOf(WEAPONS[gun].special);
       expect(face, `the ${gun}'s ${WEAPONS[gun].special} is on no face of the bomb pickup`).toBeGreaterThanOrEqual(0);
       expect(effectOf('bomb', face, { upgrades: [], missile: 'straight' }), `a bomb pickup showing the ${gun}'s special is not a special`).toBe('special');

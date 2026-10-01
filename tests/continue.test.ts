@@ -264,7 +264,7 @@ describe('a run over is a continue', () => {
     const built = ranOut();
     const carried = built.state().run;
     expect(carried.arsenal, 'the run reached the continue screen with a fresh kit, so a reset proves nothing').not.toEqual(
-      startingArsenal(SHIP),
+      startingArsenal(SHIP, TIER),
     );
     expect(carried.upgrades.length, 'the run reached the continue screen with no ladder to keep').toBeGreaterThan(0);
     built.lifecycle.resume();

@@ -300,8 +300,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     links: 1,
     weight: 1,
     bossWeight: 1,
-    // ⚠️ The bomb until the nova lands — `reports/the-roster-planned-2026-10-01.md`'s second change.
-    special: 'bomb',
+    // The nova, on the ward's trigger — 0447. It was the bomb until the nova landed.
+    special: 'nova',
     bursts: 'rayBurst',
     reach: 0,
     falloff: 0,

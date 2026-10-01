@@ -16,8 +16,9 @@ export const PROBES = [
     guard: 'THE ASK: every tube, overflowed, stocks the special its row names',
     edit: {
       path: 'src/content/pickups.ts',
-      find: "  return kind === 'bomb' ? bombFaceOf(face) : MISSILES[missileFaceOf(face)].special;",
-      replace: "  return 'bomb';",
+      // ⚠️ And by 0447, whose ward faces put two more arms ahead of the tubes'.
+      find: '  return MISSILES[missileFaceOf(face)].special;\n}',
+      replace: "  return 'bomb';\n}",
     },
   },
   {
@@ -123,9 +124,9 @@ export const PROBES = [
     guard: 'and is drawn under every shot',
     edit: {
       path: 'src/app/mount.ts',
-      // ⚠️ Re-anchored by 0374, which put the whirlpool in the order beside the shots.
-      find: 'debris, aura, enemyShots, playerShots, whirl, missiles, bombs, bolts, exhaust,',
-      replace: 'debris, enemyShots, playerShots, whirl, missiles, bombs, bolts, aura, exhaust,',
+      // ⚠️ Re-anchored by 0374, which put the whirlpool in the order beside the shots, and 0447 the nova.
+      find: 'debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust,',
+      replace: 'debris, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, aura, exhaust,',
     },
   },
   {

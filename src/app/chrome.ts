@@ -32,6 +32,7 @@
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
+import { SIDES } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
 import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
@@ -3271,7 +3272,8 @@ export function makeChrome(
     return icon;
   };
   const stackGroups: { group: HTMLElement; icon: HTMLElement; sprite: number; count: HTMLElement }[] = [];
-  for (let i = 0; i < 2; i++) {
+  // One per trigger, three since 0447's ward — read off `SIDES`, so a fourth is a row and not an edit.
+  for (let i = 0; i < SIDES.length; i++) {
     const group = document.createElement('div');
     group.className = 'itc-playing-hud-group itc-playing-hud-stack';
     const icon = hudIcon(SPRITE.bomb);

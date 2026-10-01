@@ -221,11 +221,12 @@ describe('what a run may spend', () => {
     reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP });
 
   it('starts with the ship’s own kit and no more', () => {
-    expect(begin().run.arsenal).toEqual(startingArsenal(SHIP));
+    expect(begin().run.arsenal).toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
     // *"A game starts with two bombs"* — 0441, a bomb being what the ask calls every gun's special.
-    expect(startingArsenal(SHIP), 'a run does not start with what the ask says').toEqual({
+    expect(startingArsenal(SHIP, DEFAULT_DIFFICULTY), 'a run does not start with what the ask says').toEqual({
       gun: Array<SpecialKind>(OPENING_CHARGES).fill('bomb'),
       tubes: [],
+      ward: [],
     });
   });
 
@@ -292,7 +293,7 @@ describe('what a run may spend', () => {
     state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
     const banked = state.run.arsenal;
     expect(chargesIn(banked), 'the fixture never banked a charge, so neither arm can be seen to move').toBeGreaterThan(
-      chargesIn(startingArsenal(SHIP)),
+      chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)),
     );
 
     const dead = reduce(state, { slice: 'run', type: 'lifeLost' });
@@ -322,7 +323,7 @@ describe('what a run may spend', () => {
     // *"a player can pick up any type and get a bomb of that type"* — one a take, of every kind.
     for (const kind of SPECIAL_KINDS) {
       const state = reduce(begin(), { slice: 'run', type: 'took', special: kind });
-      expect(chargesIn(state.run.arsenal) - chargesIn(startingArsenal(SHIP)), `${kind} pushed the wrong number of charges`).toBe(
+      expect(chargesIn(state.run.arsenal) - chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)), `${kind} pushed the wrong number of charges`).toBe(
         1,
       );
     }
@@ -366,11 +367,11 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     expect(world.bombs.size, 'a surge threw something').toBe(0);
     // And since 0374 a thrown special may go off as a storm instead of a blast, and a whirlpool is
     // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
-    // which is thrown and opens where it lands: five.
+    // which is thrown and opens where it lands: five. 0447 adds the nova, burst from the ship: six.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool and a rift`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift and a nova`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,

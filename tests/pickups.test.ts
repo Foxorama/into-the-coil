@@ -495,8 +495,10 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
     for (let i = 0; i < LEVEL_KINDS.length; i++) {
       const kind = LEVEL_KINDS[i]!;
       const level = LEVELS[kind];
-      const counts = { bomb: 0, missile: 0, shield: 0 };
+      const counts = { bomb: 0, missile: 0, shield: 0, ward: 0 };
       for (const entry of level.pickups) counts[entry.kind]++;
+      // The ward is only ever a shield's `bare` — 0447 — so no level authors one.
+      expect(counts.ward, `${kind} authors a ward pickup, which only stands in for a shield`).toBe(0);
       const extra = i === 0 ? 1 : 0;
       expect(counts.bomb, `${kind} authors ${counts.bomb} bombs, and the charge is the mid-boss's but for level one's`).toBe(extra);
       expect(counts.missile, `${kind} authors ${counts.missile} missiles`).toBe(1 + extra);
@@ -529,9 +531,10 @@ describe('0256 — a level authors its upgrades, and the fights offer the rest',
       the bomb pickup, and the dial that counted the dropped weapon went with the gun's ladder, so
       `weaponsOfferedBy` and its agreement with this list have no subject.
     */
-    const counts = { bomb: 0, missile: 0, shield: 0 };
+    const counts = { bomb: 0, missile: 0, shield: 0, ward: 0 };
     for (const kind of MID_BOSS_DROP) counts[kind]++;
-    expect(counts, 'the mid-boss drops something other than a bomb, a shield and a missile').toEqual({ bomb: 1, missile: 1, shield: 1 });
+    // The ward on Burn is the shield offered as its `bare` — 0447 — not a fourth piece in the list.
+    expect(counts, 'the mid-boss drops something other than a bomb, a shield and a missile').toEqual({ bomb: 1, missile: 1, shield: 1, ward: 0 });
     for (const kind of LEVEL_KINDS) {
       const level = LEVELS[kind];
       expect(level.midBoss, `${kind} has no mid-boss, so nothing drops its shield`).not.toBeNull();
@@ -1126,17 +1129,21 @@ describe('collecting one, in the real frame', () => {
         property is below, on the bomb since 0441: whatever it is drawn as is one of ITS OWN faces,
         never a neighbour's row.
       */
+      /*
+        ⚠️ **AND THE SHIELD TURNS TOO, SINCE 0447** — shield, void, nova — so there is no one-faced
+        pickup left to watch hold still. What is asked of it is the cycling half: whatever it is drawn
+        as is one of its own three faces, all the way to the cull.
+      */
       const { world } = onePickup('shield');
       const frame = new GameFrame(world);
       while (world.pickups.size === 0) frame.step();
       const item = world.pickups.at(0);
-      const drawn = item.sprite;
       let steps = 0;
       while (world.pickups.size > 0 && steps < 2000) {
         frame.step();
         steps++;
         if (world.pickups.size === 0) break;
-        expect(item.sprite, 'an authored pickup changed what it was drawn as').toBe(drawn);
+        expect(PICKUPS.shield.faces, 'an authored shield was drawn as something that is not one of its faces').toContain(item.sprite);
       }
       expect(steps, 'the pickup never reached the field, so nothing was watched').toBeGreaterThan(100);
 

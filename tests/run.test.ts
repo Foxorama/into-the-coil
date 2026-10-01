@@ -99,7 +99,7 @@ describe('a run is lives', () => {
     expect(
       chargesIn(before.run.arsenal),
       'the fixture never banked a charge, so a death cannot be seen to spare one',
-    ).toBeGreaterThan(chargesIn(startingArsenal(SHIP)));
+    ).toBeGreaterThan(chargesIn(startingArsenal(SHIP, DEFAULT_DIFFICULTY)));
     expect(before.run.upgrades, 'the fixture has no upgrades to lose, so this proves half of nothing').toEqual([
       'missile',
       'missile',
@@ -118,7 +118,7 @@ describe('a run is lives', () => {
       not say.** The old rule and the new one agree about a run that never banked anything; the fixture
       is armed past the starting kit precisely so the two answers are different objects.
     */
-    expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal(SHIP));
+    expect(after.run.arsenal, 'a death restocked the arsenal to the starting kit').not.toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
     // On the OTHER tube, so a death that put the base tube back is a different answer from this one.
     expect(after.run.upgrades, 'a death took rungs off a ladder').toEqual(before.run.upgrades);
     expect(after.run.ship, 'a death changed the ship').toBe(SHIP);
@@ -256,7 +256,7 @@ describe('a run is lives', () => {
     expect(state.screen.current).toBe('gameOver');
     const again = reduce(reduce(state, BEGIN), PLAY);
     expect(again.run.lives).toBe(STARTING_LIVES_OF_THE_TIER);
-    expect(again.run.arsenal).toEqual(startingArsenal(SHIP));
+    expect(again.run.arsenal).toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));
     expect(again.screen.current).toBe('playing');
   });
 });
@@ -299,7 +299,7 @@ describe('a run over is a continue', () => {
     expect(resumed.lives, 'the continue did not restock the lives').toBe(fresh.lives);
     expect(resumed.arsenal, 'the continue reset the charges').toEqual(before.arsenal);
     expect(resumed.arsenal, 'the fixture holds the starting kit, so a reset would look the same').not.toEqual(
-      startingArsenal(SHIP),
+      startingArsenal(SHIP, DEFAULT_DIFFICULTY),
     );
     expect(resumed.upgrades, 'the continue took the ladders').toEqual(before.upgrades);
     expect(resumed.ship, 'the continue changed the ship').toBe(before.ship);

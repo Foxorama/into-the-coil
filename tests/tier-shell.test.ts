@@ -169,8 +169,19 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
     theme: 'approach',
   };
 
+  /*
+    ⚠️ **A SHIELD THE TIER CANNOT CARRY IS ITS ROW'S `bare` SINCE 0447, AND WITHHELD ONLY WHERE THAT
+    IS NULL.** *"In Burn difficulty, when a miniboss dies it'll spit out a void bomb pickup in place of
+    the shield."* So the drop on Burn is the ward where the shield was; `withheldSomewhere` below now
+    asks whether any tier REPLACED anything, which is the half the rule exists for.
+  */
   function carriable(row: DifficultyRow): string[] {
-    return MID_BOSS_DROP.filter((kind) => PICKUPS[kind].effect !== 'shield' || row.shellCap > 0);
+    const out: string[] = [];
+    for (const kind of MID_BOSS_DROP) {
+      if (PICKUPS[kind].effect !== 'shield' || row.shellCap > 0) out.push(kind);
+      else if (PICKUPS[kind].bare !== null) out.push(PICKUPS[kind].bare);
+    }
+    return out;
   }
 
   it('the mid-boss’s death throws every piece the tier can carry and no other, through the real frame', () => {
@@ -191,7 +202,7 @@ describe('0355 — a pickup the tier cannot carry is withheld, and nothing else 
       const thrown: string[] = [];
       for (let i = 0; i < world.pickups.size; i++) thrown.push(PICKUP_KINDS[world.pickups.at(i).kind]!);
       const want = carriable(DIFFICULTIES[tier]);
-      if (want.length < MID_BOSS_DROP.length) withheldSomewhere = true;
+      if (want.some((kind, i) => kind !== MID_BOSS_DROP[i]) || want.length < MID_BOSS_DROP.length) withheldSomewhere = true;
       expect(thrown.sort(), `${tier}: the drop is not what the tier can carry`).toEqual([...want].sort());
     }
     // Otherwise the withholding half was never exercised and this is a copy of 0256's guard.
