@@ -504,6 +504,7 @@ function firingAt(row: EnemyRow, distance: number): World {
     // ⚠️ This fixture is *"how many shots does this take"* and its gun MUST fire — see `aimedAtTheShip`
     // below for the one that must not.
     fireIn: weaponFor(shipRow, []).fireEvery,
+    burstFired: 0,
     ship,
     shipRow,
     enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),
@@ -642,6 +643,7 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     warp: 0,
     ...inertLevel(),
     fireIn: NEVER,
+    burstFired: 0,
     ship,
     shipRow,
     enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),

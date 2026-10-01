@@ -1963,12 +1963,13 @@ interface TubeAt {
 }
 
 /**
- * Where each ship carries one tube and where it carries two, in the box's radius — 0441. Authored per
- * ship, on 0282's terms: a saucer's tubes are on its rim, a wagon's on its roof rack, and the fighter's
- * on its chin and in the narrow room each wing has between its leading and trailing edge — so each
- * ship says its own length too, and `tests/accents.test.ts` holds every one of them on the hull.
+ * Where each ship seen from above carries one tube and where it carries two, in the box's radius —
+ * 0441. Authored per ship, on 0282's terms: a saucer's tubes are on its rim, and the fighter's on its
+ * chin and in the narrow room each wing has between its leading and trailing edge — so each ship says
+ * its own length too, and `tests/accents.test.ts` holds every one of them on the hull. The two cars are
+ * drawn from the side, and carry their tubes as turrets in their own rooflines (`FIREBIRD_TURRETS`).
  */
-const TUBES_ON: Record<ShipArt, { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
+const TUBES_ON: Record<'fighter' | 'caddie', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
   fighter: {
     one: { at: [0.52, 0], length: 0.2 },
     // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more.
@@ -1982,20 +1983,6 @@ const TUBES_ON: Record<ShipArt, { one: TubeAt; two: readonly [TubeAt, TubeAt] }>
     two: [
       { at: [-0.08, -0.64], length: 0.36 },
       { at: [-0.08, 0.64], length: 0.36 },
-    ],
-  },
-  firebird: {
-    one: { at: [-0.56, 0], length: 0.34 },
-    two: [
-      { at: [-0.62, -0.26], length: 0.3 },
-      { at: [-0.62, 0.26], length: 0.3 },
-    ],
-  },
-  estate: {
-    one: { at: [-0.3, 0], length: 0.4 },
-    two: [
-      { at: [-0.3, -0.25], length: 0.4 },
-      { at: [-0.3, 0.25], length: 0.4 },
     ],
   },
 };
@@ -2038,14 +2025,9 @@ export const SHIP_JETS: Record<ShipArt, readonly Pt[]> = {
     [-0.78 * (FIGHTER_HULL / SHIP_BOX), 0.21 * (FIGHTER_HULL / SHIP_BOX)],
   ],
   caddie: [[-1, 0]],
-  firebird: [
-    [-1.12, -0.2],
-    [-1.12, 0.2],
-  ],
-  estate: [
-    [-1.12, -0.28],
-    [-1.12, 0.28],
-  ],
+  // The cars, from the side: one exhaust each, low at the tail.
+  firebird: [[-1.12, 0.12]],
+  estate: [[-1.12, 0.19]],
 };
 
 /** A ring of `count` points about a centre — the saucer's rim, or anything else that is round. */
@@ -2073,55 +2055,138 @@ const CADDIE_HULL: readonly Pt[] = (() => {
   ];
 })();
 
-/** The Firebird's upper half, nose first: hood, front tyre, flank, rear tyre, the ducktail. */
-const FIREBIRD_UPPER: readonly Pt[] = [
-  [1.12, 0],
-  [1.08, -0.2],
-  [0.96, -0.38],
-  [0.82, -0.44],
-  // The front tyres are fat — they carry the shuriken hubcaps, and a hub needs room to be a star.
-  [0.8, -0.68],
-  [0.4, -0.68],
-  [0.38, -0.46],
-  [-0.4, -0.46],
-  [-0.42, -0.62],
-  [-0.82, -0.62],
-  [-0.84, -0.46],
-  [-1.06, -0.42],
-  [-1.12, -0.28],
-  [-1.12, 0],
-];
-const FIREBIRD_HULL: readonly Pt[] = [...FIREBIRD_UPPER, ...mirrored(FIREBIRD_UPPER).slice(1, -1).reverse()];
+/*
+  ── THE TWO CARS ARE DRAWN FROM THE SIDE — 0441, played ─────────────────────────────────────────
 
-/** The estate's upper half: a long boxy wagon, a short bonnet, two tyres out past the sills. */
-const ESTATE_UPPER: readonly Pt[] = [
-  [1.1, 0],
-  [1.08, -0.34],
-  [0.98, -0.46],
-  [0.86, -0.46],
-  [0.84, -0.6],
-  [0.46, -0.6],
-  [0.44, -0.48],
-  [-0.46, -0.48],
-  [-0.48, -0.6],
-  [-0.86, -0.6],
-  [-0.88, -0.48],
-  [-1.06, -0.46],
-  [-1.12, -0.34],
-  [-1.12, 0],
-];
-const ESTATE_HULL: readonly Pt[] = [...ESTATE_UPPER, ...mirrored(ESTATE_UPPER).slice(1, -1).reverse()];
+  *"The topdown firebird and station wagon look really bad … let's change them to sideview instead of
+  top down and chuck the weapons on the hood and missiles turrets on the roof."* They are drawn the way
+  the predecessor drew them for its landscape fights (`C:\Golf-Stars\src\render\shipArt.ts`, `wagon` and
+  `firebird`), in that art's own ±20 frame and carried into the box by `inBox` below, so its proportions
+  survive the move. The outline is ONE path that takes in the wheels, the gun on the hood and the
+  turrets on the roof — so every one is silhouette, on the hull, and a stage of tubes is a different
+  roofline rather than a mark that hangs off it.
+*/
+
+/** The predecessor's ±20 frame, carried into the box's radius about `(cx, cy)` in that frame. */
+function inBox(points: readonly Pt[], cx: number, cy: number): Pt[] {
+  return points.map(([x, y]) => [(x - cx) * 0.062, (y - cy) * 0.062] as const);
+}
+
+/**
+ * The bottom of a wheel that stands below a sill at `sill`, as outline points from front to back:
+ * the arc of a circle at `(x, y)` of `radius` from where it leaves the sill round its underside.
+ */
+function wheelUnder(x: number, y: number, radius: number, sill: number): Pt[] {
+  const lift = Math.asin(Math.max(-1, Math.min(1, (sill - y) / radius)));
+  const out: Pt[] = [];
+  for (let i = 0; i <= 10; i++) {
+    const a = lift + ((Math.PI - 2 * lift) * i) / 10;
+    out.push([x + Math.cos(a) * radius, y + Math.sin(a) * radius]);
+  }
+  return out;
+}
+
+/** Turret tops along a roof, as outline points from back to front: `[from, to]` spans at `top`. */
+function turretsOn(spans: readonly (readonly [number, number])[], roofAt: (x: number) => number, top: number): Pt[] {
+  const out: Pt[] = [];
+  for (const [from, to] of spans) out.push([from, roofAt(from)], [from, top], [to, top], [to, roofAt(to)]);
+  return out;
+}
+
+/** Where each car's roof turrets stand, in the predecessor's frame, at one tube and two. */
+const FIREBIRD_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[0.4, 4.2]], [[-1.6, 1.4], [2.4, 5.4]]];
+const ESTATE_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[], [[-8.5, -4.9]], [[-12.4, -8.8], [-6.2, -2.6]]];
+
+/**
+ * How high each car's turrets stand, in the predecessor's frame: tall enough that the missile's orange
+ * inside one clears 2.5 pixels at the shipped camera (`tests/accents.test.ts`).
+ */
+const FIREBIRD_TURRET_TOP = -7.8;
+const ESTATE_TURRET_TOP = -8.8;
+
+/** The Firebird's roof, a straight line from the back of the greenhouse to its front. */
+const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
+
+/**
+ * The Firebird from the side, in the predecessor's frame: ducktail, cabin, long hood to a pointed nose,
+ * the shuriken launcher standing on the hood, turrets on the roof, and fat tyres under the sills.
+ */
+function firebirdOutline(stage: number): Pt[] {
+  return [
+    [-17, 5],
+    [-17, 2.4],
+    [-12.5, 1.6],
+    [-8, -2],
+    [-2, -4.6],
+    ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
+    [6, -4.8],
+    [11, -2.2],
+    // The launcher on the hood: a block the blades leave from.
+    [11.6, -2.11],
+    [11.6, -4.8],
+    [15.6, -4.8],
+    [15.6, -1.52],
+    [19, -1],
+    [19, 2.6],
+    [16.5, 5],
+    ...wheelUnder(12, 6, 3.6, 5),
+    ...wheelUnder(-10, 6, 3.6, 5),
+  ];
+}
+
+/** The estate's roof rack top, and its roof under it. */
+const ESTATE_RACK = -5.9;
+const estateRoof = (): number => ESTATE_RACK;
+
+/**
+ * The gilded estate from the side, in the predecessor's frame: the long wagon roof with its rack, the
+ * windscreen sloping to the bonnet, the lightning rod standing on the bonnet with its ball, turrets on
+ * the rack, and its wheels under the sills.
+ */
+function estateOutline(stage: number): Pt[] {
+  // The rod's ball, an octagon about (14, −3.8), from its lower left round the top to its lower right.
+  const ball: Pt[] = [];
+  for (let i = 0; i <= 6; i++) {
+    const a = Math.PI * 0.75 + (i * Math.PI * 1.5) / 6;
+    ball.push([14 + Math.cos(a) * 2.1, -3.8 + Math.sin(a) * 2.1]);
+  }
+  return [
+    [-18, 6],
+    [-18, 3],
+    [-14, -4],
+    // The rack: a strip along the roof, and the turrets on it.
+    [-13.5, -4.03],
+    [-13.5, ESTATE_RACK],
+    ...turretsOn(ESTATE_TURRETS[stage]!, estateRoof, ESTATE_TURRET_TOP),
+    [0.5, ESTATE_RACK],
+    [0.5, -4.76],
+    [4, -5],
+    [11, 1],
+    // The lightning rod on the bonnet, its ball above it.
+    [12.9, 1.27],
+    [12.9, -2.3],
+    ...ball,
+    [15.1, -2.3],
+    [15.1, 1.59],
+    [18, 2],
+    [18, 6],
+    ...wheelUnder(9, 6.4, 2.9, 6),
+    ...wheelUnder(-9, 6.4, 2.9, 6),
+  ];
+}
 
 /**
  * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
  * at its own hull's size inside it, as its capped tier always was (0229).
  */
 export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number): void {
-  const at = TUBES_ON[ship];
-  const tubes: readonly TubeAt[] = stage >= 2 ? at.two : stage === 1 ? [at.one] : [];
+  const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
+    stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
+  let tubes: readonly TubeAt[] = [];
   ctx.beginPath();
   switch (ship) {
     case 'fighter': {
+      tubes = tubesOf(TUBES_ON.fighter);
       const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
       ctx.fillStyle = palette.player;
       trace(ctx, fh, SHIP_HULL);
@@ -2134,13 +2199,15 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
       break;
     }
     case 'caddie':
+      tubes = tubesOf(TUBES_ON.caddie);
       drawCaddie(ctx, f, palette);
       break;
+    // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette);
+      drawFirebird(ctx, f, palette, stage);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette);
+      drawEstate(ctx, f, palette, stage);
       break;
     default: {
       const unhandled: never = ship;
@@ -2187,224 +2254,217 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette): void {
   glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
 }
 
-/**
- * Backspin Bo's Firebird — *"a jet-black muscle-car cruiser, a golden phoenix blazing across the
- * hood."* The predecessor's top view (`shipTopArt.ts`, its `default` arm): four tyres with gold rims, a
- * gold-glass canopy under a T-top, a hood scoop, and the phoenix spread across the hood. Its front
- * hubcaps are the shuriken launchers — the blades leave from the front tyres, which is the ship's
- * `wingtip` (`src/content/ships.ts`).
- */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette): void {
-  const body = mix(palette.space, palette.player, 0.2);
-  const gold = palette.hazard;
-  ctx.fillStyle = body;
-  trace(ctx, f, FIREBIRD_HULL);
-  seal(ctx);
-  /*
-    ⚠️ **EVERY MARK 0.11 OF THE BOX OR MORE, AND ON THE BODY — `tests/accents.test.ts`.** The first
-    drawing had gold rims, blade tips and lamps three hundredths across, which the shipped camera draws
-    at under a pixel and a half, and hubcap blades that reached past the tyre.
-  */
-  // The rear tyres: rubber in the slate trim — the void's own black left them floating off the body.
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, palette.trim, [
-      [-0.82, 0.46 * side],
-      [-0.42, 0.46 * side],
-      [-0.42, 0.6 * side],
-      [-0.82, 0.6 * side],
-    ]);
+/** A steel star about `(x, y)` in the predecessor's frame, `reach` out: one polygon, one mark. */
+function steelStar(x: number, y: number, reach: number): Pt[] {
+  const out: Pt[] = [];
+  for (let k = 0; k < 8; k++) {
+    const a = (k * Math.PI) / 4 + Math.PI / 8;
+    const r = k % 2 === 0 ? reach : reach * 0.42;
+    out.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
   }
-  /*
-    The front tyres, fat, and their hubcaps are the shuriken launchers: a four-pointed steel star on
-    each, which is where the blades leave from — the ship's `wingtip` (`src/content/ships.ts`). One
-    polygon a star, so the star is one mark as wide as the hub and not four slivers.
-  */
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, palette.trim, [
-      [0.4, 0.46 * side],
-      [0.8, 0.46 * side],
-      [0.8, 0.66 * side],
-      [0.4, 0.66 * side],
-    ]);
-    const cy = 0.56 * side;
-    const star: Pt[] = [];
-    for (let k = 0; k < 8; k++) {
-      const a = (k * Math.PI) / 4;
-      const reach = k % 2 === 0 ? 0.095 : 0.04;
-      star.push([0.6 + Math.cos(a) * reach * 1.6, cy + Math.sin(a) * reach]);
-    }
-    poly(ctx, f, palette.blade, star);
-  }
-  // A cyan pinstripe down each flank — the player's own ink, where the predecessor's was gold.
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, palette.player, [
-      [0.8, 0.31 * side],
-      [-0.98, 0.31 * side],
-      [-0.98, 0.42 * side],
-      [0.8, 0.42 * side],
-    ]);
-  }
-  // The canopy: gold glass under a T-top, the bar across it in the body's lacquer.
-  poly(ctx, f, shade(gold, -0.35), [
-    [-0.04, -0.3],
-    [-0.5, -0.28],
-    [-0.5, 0.28],
-    [-0.04, 0.3],
-    [0.08, 0.2],
-    [0.08, -0.2],
-  ]);
-  poly(ctx, f, body, [
-    [-0.18, -0.3],
-    [-0.3, -0.3],
-    [-0.3, 0.3],
-    [-0.18, 0.3],
-  ]);
-  // The phoenix across the hood: a body toward the nose, two wings swept back over the fenders, flame
-  // at the tips — the one picture the predecessor said this angle was born for.
-  poly(ctx, f, gold, [
-    [0.98, 0],
-    [0.86, -0.07],
-    [0.52, -0.08],
-    [0.52, 0.08],
-    [0.86, 0.07],
-  ]);
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, gold, [
-      [0.7, 0.06 * side],
-      [0.44, 0.36 * side],
-      [0.16, 0.36 * side],
-      [0.3, 0.2 * side],
-      [0.2, 0.22 * side],
-      [0.4, 0.06 * side],
-    ]);
-    // Flame at the wingtip, tall enough to be drawn.
-    poly(ctx, f, palette.bullet, [
-      [0.44, 0.36 * side],
-      [0.18, 0.36 * side],
-      [0.3, 0.24 * side],
-    ]);
-  }
-  disc(ctx, f, palette.space, 0.88, 0, 0.06);
-  // Headlamps in the impact ink inside the nose's curve, tail lamps in the shot's orange — never red.
-  for (const side of [1, -1] as const) {
-    disc(ctx, f, palette.impact, 0.95, 0.24 * side, 0.06);
-    poly(ctx, f, palette.bullet, [
-      [-1.07, 0.18 * side],
-      [-0.96, 0.18 * side],
-      [-0.96, 0.34 * side],
-      [-1.07, 0.34 * side],
-    ]);
+  return out;
+}
+
+/** A car's roof turrets, painted: a slate casing filling each, and the missile's orange at its front. */
+function paintTurrets(
+  ctx: Pen,
+  f: Frame,
+  palette: Palette,
+  spans: readonly (readonly [number, number])[],
+  top: number,
+  base: number,
+  box: (points: readonly Pt[]) => Pt[],
+): void {
+  for (const [from, to] of spans) {
+    poly(ctx, f, shade(palette.trim, 0.3), box([
+      [from, top],
+      [to, top],
+      [to, base],
+      [from, base],
+    ]));
+    poly(ctx, f, palette.bullet, box([
+      [to - 2, top + 0.3],
+      [to - 0.1, (top + base) / 2],
+      [to - 2, base - 0.3],
+    ]));
   }
 }
 
 /**
- * Longshot Larry's Gilded Estate — *"solid-gold trim, fuzzy dice, the works."* The predecessor's top
- * view (`shipTopArt.ts`, `wagon`): a long roof with rack rails down both sides, panelling, a windscreen
- * and a rear glass. Gilt all over, burl panelling at the sills, the player's cyan in its running
- * lights, and the lightning gun as a tesla rod on the roof rack.
+ * Backspin Bo's Firebird — *"a jet-black muscle-car cruiser, a golden phoenix blazing across the
+ * hood."* From the side since it was played (0441): the predecessor's landscape art — fat gold-rimmed
+ * tyres under the sills, a gold greenhouse under a T-top, a cyan beltline where its was gold, and the
+ * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
+ * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette): void {
-  const gilt = palette.hazard;
-  const burl = shade(gilt, -0.55);
-  ctx.fillStyle = gilt;
-  trace(ctx, f, ESTATE_HULL);
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const body = mix(palette.space, palette.player, 0.2);
+  const gold = palette.hazard;
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  ctx.fillStyle = body;
+  trace(ctx, f, box(firebirdOutline(stage)));
   seal(ctx);
-  /*
-    ⚠️ **EVERY MARK 0.11 OF THE BOX OR MORE — `tests/accents.test.ts`.** The first drawing had hubs,
-    rails and a running light four to seven hundredths across, which the shipped camera draws at one
-    pixel; the tyres are wider now and the hubs gone.
-  */
-  for (const [x0, x1] of [
-    [0.46, 0.84],
-    [-0.86, -0.48],
-  ] as const) {
-    for (const side of [1, -1] as const) {
-      poly(ctx, f, palette.trim, [
-        [x0, 0.48 * side],
-        [x1, 0.48 * side],
-        [x1, 0.6 * side],
-        [x0, 0.6 * side],
-      ]);
-    }
+  // The tyres, rubber in the slate trim, a gold rim in each.
+  for (const x of [12, -10]) {
+    const [cx, cy] = at(x, 6);
+    disc(ctx, f, palette.trim, cx, cy, 3.6 * 0.062);
+    disc(ctx, f, gold, cx, cy, 2.3 * 0.062);
+    disc(ctx, f, palette.trim, cx, cy, 1.2 * 0.062);
   }
-  // The burl panelling down each side, and the cyan running light along its top edge.
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, burl, [
-      [0.86, 0.34 * side],
-      [-1.0, 0.34 * side],
-      [-1.0, 0.47 * side],
-      [0.86, 0.47 * side],
-    ]);
-    poly(ctx, f, palette.player, [
-      [0.86, 0.23 * side],
-      [-1.0, 0.23 * side],
-      [-1.0, 0.34 * side],
-      [0.86, 0.34 * side],
-    ]);
+  // The greenhouse: gold glass, the side window and the windscreen, the T-top bar between them.
+  poly(ctx, f, shade(gold, -0.3), box([
+    [-7, -1.9],
+    [-2.2, -4.2],
+    [-2.2, -1.9],
+  ]));
+  poly(ctx, f, shade(gold, -0.3), box([
+    [-0.4, -4.2],
+    [5.4, -4.4],
+    [9.4, -2.2],
+    [-0.4, -2],
+  ]));
+  poly(ctx, f, body, box([
+    [1.2, -4.5],
+    [3, -4.5],
+    [3, -1.9],
+    [1.2, -1.9],
+  ]));
+  // The beltline, in the player's cyan where the predecessor's was gold.
+  poly(ctx, f, palette.player, box([
+    [-11, 1.6],
+    [16, -0.4],
+    [16, 1.4],
+    [-11, 3.4],
+  ]));
+  // The phoenix across the flank: a body and crested head toward the nose, two wings swept back, its
+  // tail feathers in flame.
+  poly(ctx, f, gold, box([
+    [3, 0.6],
+    [8, -0.8],
+    [14, -0.6],
+    [11.6, 0.6],
+    [14, 1.8],
+    [8, 1.4],
+  ]));
+  poly(ctx, f, gold, box([
+    [6, 0.2],
+    [0, -1.2],
+    [-5, 0.2],
+    [-1.4, 0.6],
+    [-3.4, 2],
+    [2, 1.4],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [3, 1.2],
+    [-3, 3.4],
+    [-1, 1.6],
+  ]));
+  // The launcher on the hood: a slate block, and the steel star the blades leave from.
+  poly(ctx, f, palette.trim, box([
+    [11.6, -4.8],
+    [15.6, -4.8],
+    [15.6, -2],
+    [11.6, -2],
+  ]));
+  poly(ctx, f, palette.blade, box(steelStar(13.6, -3.3, 1.35)));
+  // Its turrets on the roof.
+  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, -4.9, box);
+  // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red.
+  poly(ctx, f, palette.impact, box([
+    [16.8, -0.7],
+    [18.7, -0.7],
+    [18.7, 1.2],
+    [16.8, 1.2],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [-16.8, 2.6],
+    [-15, 2.6],
+    [-15, 4.6],
+    [-16.8, 4.6],
+  ]));
+}
+
+/**
+ * Longshot Larry's Gilded Estate — *"solid-gold trim, fuzzy dice, the works."* From the side since it was
+ * played (0441): the predecessor's landscape wagon — the long roof, the windscreen sloping to a short
+ * bonnet, two glasshouses split by a pillar, its wheels under the sills — gilt all over, burl panelling
+ * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
+ * the bonnet, and its turrets on the roof rack.
+ */
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+  const gilt = palette.hazard;
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  ctx.fillStyle = gilt;
+  trace(ctx, f, box(estateOutline(stage)));
+  seal(ctx);
+  // The burl panelling along the doors, and the cyan running light along its top.
+  poly(ctx, f, shade(gilt, -0.55), box([
+    [-16.4, 3.2],
+    [16, 3.2],
+    [16, 5.4],
+    [-16.4, 5.4],
+  ]));
+  poly(ctx, f, palette.player, box([
+    [-16, 1.4],
+    [11.4, 1.4],
+    [11.4, 3.2],
+    [-16, 3.2],
+  ]));
+  // The wheels over the sills: rubber in the slate trim, a gilt hub.
+  for (const x of [9, -9]) {
+    const [cx, cy] = at(x, 6.4);
+    disc(ctx, f, palette.trim, cx, cy, 2.9 * 0.062);
+    disc(ctx, f, shade(gilt, 0.2), cx, cy, 1.2 * 0.062);
   }
-  // The roof, a shade down, with the windscreen ahead of it and the tailgate glass behind.
-  poly(ctx, f, shade(gilt, -0.18), [
-    [0.5, -0.23],
-    [-0.98, -0.23],
-    [-0.98, 0.23],
-    [0.5, 0.23],
-  ]);
-  poly(ctx, f, palette.glass, [
-    [0.74, -0.22],
-    [0.5, -0.22],
-    [0.5, 0.22],
-    [0.74, 0.22],
-  ]);
-  poly(ctx, f, palette.glass, [
-    [-0.9, -0.2],
-    [-1.04, -0.2],
-    [-1.04, 0.2],
-    [-0.9, 0.2],
-  ]);
-  disc(ctx, f, palette.impact, 0.66, -0.12, 0.06, 0.8);
-  // The rack: two rails and the crossbars, in a pale gilt.
-  const rail = shade(gilt, 0.45);
-  for (const side of [1, -1] as const) {
-    poly(ctx, f, rail, [
-      [0.42, 0.1 * side],
-      [-0.9, 0.1 * side],
-      [-0.9, 0.21 * side],
-      [0.42, 0.21 * side],
-    ]);
+  // The glasshouses, split by a pillar in the gilt.
+  poly(ctx, f, palette.glass, box([
+    [-12.8, -3.4],
+    [-2.2, -3.9],
+    [-2.2, -0.4],
+    [-12.8, -0.4],
+  ]));
+  poly(ctx, f, palette.glass, box([
+    [-0.4, -4],
+    [3.4, -4.2],
+    [8.6, 0.1],
+    [-0.4, 0.1],
+  ]));
+  // The rack along the roof, in a pale gilt.
+  poly(ctx, f, shade(gilt, 0.45), box([
+    [-13.5, ESTATE_RACK],
+    [0.5, ESTATE_RACK],
+    [0.5, -4.1],
+    [-13.5, -4.1],
+  ]));
+  paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box);
+  // The lightning rod on the bonnet: a slate rod, a lit ball, and its light.
+  poly(ctx, f, palette.trim, box([
+    [12.9, -2.3],
+    [15.1, -2.3],
+    [15.1, 1.2],
+    [12.9, 1.2],
+  ]));
+  {
+    const [bx, by] = at(14, -3.8);
+    disc(ctx, f, palette.player, bx, by, 1.9 * 0.062);
+    glow(ctx, f, palette.player, bx, by, 3.4 * 0.062, 0.6);
+    disc(ctx, f, palette.impact, bx, by, 0.9 * 0.062);
   }
-  for (const x of [0.3, -0.76]) {
-    poly(ctx, f, rail, [
-      [x, -0.21],
-      [x - 0.11, -0.21],
-      [x - 0.11, 0.21],
-      [x, 0.21],
-    ]);
-  }
-  // The lightning rod at the front of the rack: a slate coil, a lit ball, and its sparks.
-  disc(ctx, f, palette.trim, 0.12, 0, 0.17);
-  disc(ctx, f, palette.player, 0.12, 0, 0.1);
-  glow(ctx, f, palette.player, 0.12, 0, 0.3, 0.55);
-  for (const [dx, dy] of [
-    [1, 0.4],
-    [-0.3, 1],
-    [-0.3, -1],
-  ] as const) {
-    poly(ctx, f, palette.impact, [
-      [0.12 + dx * 0.1 - dy * 0.03, dy * 0.1 + dx * 0.03],
-      [0.12 + dx * 0.26, dy * 0.26],
-      [0.12 + dx * 0.1 + dy * 0.03, dy * 0.1 - dx * 0.03],
-    ], 0.8);
-  }
-  // Headlamps and tail lamps, as the Firebird's — inside the bumpers.
-  for (const side of [1, -1] as const) {
-    disc(ctx, f, palette.impact, 0.98, 0.3 * side, 0.07);
-    poly(ctx, f, palette.bullet, [
-      [-1.07, 0.2 * side],
-      [-0.96, 0.2 * side],
-      [-0.96, 0.34 * side],
-      [-1.07, 0.34 * side],
-    ]);
-  }
+  // A headlamp at the bumper, a tail lamp at the tailgate — the shot's orange, never the enemy's red.
+  poly(ctx, f, palette.impact, box([
+    [16, 2.4],
+    [17.8, 2.4],
+    [17.8, 4.4],
+    [16, 4.4],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [-17.8, 3.6],
+    [-16, 3.6],
+    [-16, 5.6],
+    [-17.8, 5.6],
+  ]));
 }
 
 /** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */

@@ -493,14 +493,16 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * it, because one ring a volley has to be seen to be aimed. `spriteHit` is a later frame of the
    * same rings: `stepRays` in `src/app/frame.ts` turns the pages so the rings ripple outward.
    */
-  ray: { sprite: SPRITE.ray, spriteHit: SPRITE.ray, radius: 1.8, health: 1, damage: 6, speed: 2, fission: SPENT_BY_ARRIVING },
+  // 9, and it was 6: the gun fires in fours with a rest since it was played (0442), so a cycle is four
+  // rings in forty-eight steps where it was six — and 4 × (9 + 4) over 48 is the 9/8 a step it had.
+  ray: { sprite: SPRITE.ray, spriteHit: SPRITE.ray, radius: 1.8, health: 1, damage: 9, speed: 2, fission: SPENT_BY_ARRIVING },
   /**
    * Where a ring lands — 0442: *"explode on impact with a small energy explosion."* A blast: it lands
    * on everything inside it on the step it appears, once, and is drawn at exactly its reach, on
    * `blast`'s rule. A tenth of the lane across, so it reaches a body beside the one the ring found and
    * never the next rank of a wave.
    */
-  rayBurst: { sprite: SPRITE.rayBurst, spriteHit: SPRITE.rayBurst, radius: 5, health: 1, damage: 3, speed: 0, fission: SPENT_BY_ARRIVING },
+  rayBurst: { sprite: SPRITE.rayBurst, spriteHit: SPRITE.rayBurst, radius: 5, health: 1, damage: 4, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * What an enemy sends back. **Slower than the ship**, which is the whole of what makes it
    * dodgeable rather than a coin flip: a player who reacts can always leave the line it is on.

@@ -1067,6 +1067,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
     fireIn: weaponFor(shipRow, []).fireEvery,
+    burstFired: 0,
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,

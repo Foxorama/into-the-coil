@@ -55,6 +55,20 @@ weight should know the burst will not follow it.
 That is a floor kept, not a ceiling broken, and it is the first thing a play of the caddie should
 look at.
 
+## Amended after the first play: four rings, then a breath
+
+> *"let's make the little caddie's weapons fire in four shot bursts as well so it's 4 (at current
+> speed) brief pause, 4 etc."*
+
+**`burst` on the gun's row: `{ volleys: 4, rest: 16 }`.** Four volleys at the gun's own eight steps,
+then sixteen more before the next four — a rhythm the player can hear and a gap they can see. It is
+optional on `WeaponRow`, so the other three guns author nothing and fire as they did; the frame
+counts volleys in `World.burstFired` and adds the rest when a burst completes.
+
+**The damage went up to pay for the breath.** Four in every six slots fire, so the same rings would
+lose a third of their rate. Ring 6 → 9 and burst 3 → 4 put it back, and `tests/level.test.ts`'s
+0260 floor, which flies every gun in its own ship against every boss, holds with the bursts.
+
 ## Owed
 
 - **Its special.** The player chose the nova ring: a huge ring bursting out from the ship that pops

@@ -242,6 +242,13 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     world.fireIn = NEVER;
     const blade = world.playerShots.at(0);
     /*
+      ⚠️ **ONE BLADE, SINCE THE FIREBIRD THROWS FROM ITS HOOD.** The pair leaves a launcher two units
+      wide, so the other blade of the pair rides inside the same void and bites on the steps between
+      this one's — two blades, each once per flash, read as one blade biting every step. The rule is
+      per blade, so the other is taken off the field.
+    */
+    while (world.playerShots.size > 1) world.playerShots.releaseAt(1);
+    /*
       ⚠️ **CLEAR OF THE HULL FIRST, SINCE 0441.** The Firebird throws from its hubcaps, two units out,
       so a void planted on a blade the step it leaves is inside the ship's own reach and is spent on the
       ship before the blade can bite twice. The bite is what is measured, so the blade flies a dozen

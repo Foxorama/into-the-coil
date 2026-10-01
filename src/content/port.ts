@@ -20,7 +20,9 @@
  * ⚠️ **The Viper is Venoma Krait**, the Coil's prodigy and the predecessor's recurring rival, and her
  * ship wears the livery the predecessor gave the Coil's own hull — the *Coil Wyrm-Ship*: a dark green
  * body, acid glass and a violet flame. `VIPER` below carries those colours on the row, since they are
- * hers and no ink of this game's palette means them.
+ * hers and no ink of this game's palette means them. She is aboard before the picture starts: 0416
+ * ran her out of the bar to it, and 0444 took the run out again
+ * (`docs/decisions/0444-the-intro-is-the-pilots.md`).
  *
  * ── WORLD UNITS, AND NOTHING IN SCREEN SPACE ────────────────────────────────────────────────────
  *
@@ -33,7 +35,6 @@
  * a layer up in `src/state/screens.ts`, so the seconds are in the comment beside each number.
  */
 
-import type { RunnerRow } from './golfers.ts';
 import { FIGHTER_HULL, SHIP_BOX } from './sprites.ts';
 
 /**
@@ -61,6 +62,13 @@ export const PORT_KINDS = [
   'bayBottom',
   'field',
   'beacon',
+  // The pilot's ship as the hangar sees it, the four frames it tilts through outside, and as the fight
+  // sees it — in that order, so a tilt is an index (0444).
+  'blueSide',
+  'blueTilt0',
+  'blueTilt1',
+  'blueTilt2',
+  'blueTilt3',
   'blue',
   'blueIdle',
   'blueBurn',
@@ -76,11 +84,6 @@ export const PORT_KINDS = [
   'pilotRun2',
   'pilotRun3',
   'pilotLeap',
-  'rivalRun0',
-  'rivalRun1',
-  'rivalRun2',
-  'rivalRun3',
-  'rivalLeap',
   'station',
   'flash',
   'pool',
@@ -121,6 +124,12 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   field: 80,
   beacon: 14,
   // The pilot's ship, in the fight's one box at hangar scale — 0441; it was the fighter's bare hull at 30.
+  // Seen side-on and tilting in the same box, so a frame swapped for the next does not change size (0444).
+  blueSide: HANGAR_SHIP,
+  blueTilt0: HANGAR_SHIP,
+  blueTilt1: HANGAR_SHIP,
+  blueTilt2: HANGAR_SHIP,
+  blueTilt3: HANGAR_SHIP,
   blue: HANGAR_SHIP,
   blueIdle: HANGAR_SHIP * 2,
   blueBurn: HANGAR_SHIP * 2,
@@ -136,11 +145,6 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   pilotRun2: 16,
   pilotRun3: 16,
   pilotLeap: 16,
-  rivalRun0: 16,
-  rivalRun1: 16,
-  rivalRun2: 16,
-  rivalRun3: 16,
-  rivalLeap: 16,
   station: 110,
   flash: 40,
   pool: 40,
@@ -209,26 +213,12 @@ export const PORT_INK = {
   `src/content/golfers.ts`, because the pilot is whoever was chosen and Bo is one row of four.
 */
 
-/**
- * Venoma Krait, running for her ship — 0416: *"can we add a viper hooded character running to the
- * viper ship as well? with a viper coloured golf bag too"*. Hooded in the Wyrm-Ship's green, the bag
- * in its acid, and the rest of her in its dark. Hers and nobody else's, so it is a row here beside
- * `VIPER` rather than a fifth golfer: she is not offered.
- */
-export const VENOMA: RunnerRow = {
-  cap: VIPER.body,
-  shirt: VIPER.body,
-  skin: '#c89a74',
-  hair: '#0d1a12',
-  cut: 'sweep',
-  stubble: false,
-  build: 0.97,
-  bag: VIPER.accent,
-  hood: '#2a5a40',
-  pants: VIPER.belly,
-  // A hoodie's, to the wrist — the first photograph had bare forearms under a hood.
-  longSleeves: true,
-};
+/*
+  ⚠️ **VENOMA STOOD HERE, A RUNNER ROW OF HER OWN — 0416 — UNTIL 0444 TOOK HER RUN OUT.** *"lets remove
+  venoma running from the intro, it doesn't add anything and makes the ending worse when you see the
+  villain running with no captive."* With her went her four run frames and her leap, the beats that
+  drove them and the three-second wait for her. Her hood and her bag are in git.
+*/
 
 /**
  * Where the room's fixed things stand, in world units — along from the view's trailing edge, across
@@ -270,59 +260,50 @@ export const STAGE = {
  * WITH the two ships, so the stars run and the chase is the thing that is still.
  */
 export const BEATS = {
-  /** The bar's door slides back for her while the room is still coming up. 0.3 s. */
-  rivalDoor: 18,
   /** The room has faded up out of the backdrop. 0.6 s. */
   fadeIn: 36,
-  /** She is out, running for the Viper. 0.7 s. */
-  rivalOut: 42,
-  /** The door slides shut behind her. 1.2 s. */
-  rivalShut: 72,
-  /** She has reached her ship and leaps. 3.3 s. */
-  rivalLeap: 198,
-  /** She is in. 3.8 s. */
-  rivalIn: 228,
   /**
-   * The Viper's engines light at idle. 4.1 s — ⚠️ **186 steps later than 0414's 1.2**, because she has
-   * to get to the ship first (0416). Everything after this beat moved by the same 186 and nothing else
-   * about it changed: the chase is the same chase, begun three seconds later.
+   * The Viper's engines light at idle, with her already aboard. 1.0 s — ⚠️ **0414's beat again.** 0416
+   * put this 186 steps later so she could run to the ship first; 0444 took the run out, and everything
+   * after this beat moved back by the same 186 and nothing else about it changed: the chase is the same
+   * chase, begun three seconds sooner.
    */
-  viperLit: 246,
-  /** She lifts off her pad. 4.9 s. */
-  viperLift: 294,
-  /** Full burn, and she goes — through the bay a second later. 5.6 s. */
-  viperGo: 336,
-  /** The bay's alarm starts to turn. 7.0 s. */
-  alarm: 420,
+  viperLit: 60,
+  /** She lifts off her pad. 1.8 s. */
+  viperLift: 108,
+  /** Full burn, and she goes — through the bay a second later. 2.5 s. */
+  viperGo: 150,
+  /** The bay's alarm starts to turn. 3.9 s. */
+  alarm: 234,
   /**
-   * The bar's door opens. 8.4 s — ⚠️ **a beat later than 0411's**, asked for as *"slightly more
+   * The bar's door opens. 5.3 s — ⚠️ **a beat later than 0411's**, asked for as *"slightly more
    * delay on the chase"* (0414): the room stands empty with the alarm turning before anyone comes.
    */
-  door: 504,
-  /** The door is open and the pilot is out. 8.8 s. */
-  pilotOut: 528,
-  /** The pilot has reached the ship and leaps. 10.8 s. */
-  pilotLeap: 648,
-  /** The pilot is in. 11.3 s. */
-  pilotIn: 678,
-  /** The blue fighter's engines light. 11.6 s. */
-  blueLit: 696,
-  /** It lifts — a longer spool than hers, 0414's *"slightly slower off the mark"*. 12.3 s. */
-  blueLift: 734,
-  /** Full burn, and it goes, slower than she did (`BLUE_LAUNCH_ACCEL`). 13.1 s. */
-  blueGo: 786,
-  /** The hangar has faded into the backdrop, from 14.4 s. 14.8 s. */
-  cut: 886,
-  /** The dark outside comes up. 15.2 s. */
-  outside: 910,
-  /** The Viper opens her throttle and leaves the frame. 19.2 s. */
-  viperRuns: 1150,
-  /** The fighter goes after her, further behind than 0411 had it. 20.4 s. */
-  blueRuns: 1222,
-  /** The picture fades into the backdrop the title is drawn on. 22.4 s. */
-  fadeOut: 1342,
-  /** The intro is over and the title comes up. 23.0 s. */
-  end: 1378,
+  door: 318,
+  /** The door is open and the pilot is out. 5.7 s. */
+  pilotOut: 342,
+  /** The pilot has reached the ship and leaps. 7.7 s. */
+  pilotLeap: 462,
+  /** The pilot is in. 8.2 s. */
+  pilotIn: 492,
+  /** The pilot's ship's engines light. 8.5 s. */
+  blueLit: 510,
+  /** It lifts — a longer spool than hers, 0414's *"slightly slower off the mark"*. 9.1 s. */
+  blueLift: 548,
+  /** Full burn, and it goes, slower than she did (`BLUE_LAUNCH_ACCEL`). 10.0 s. */
+  blueGo: 600,
+  /** The hangar has faded into the backdrop, from 11.3 s. 11.7 s. */
+  cut: 700,
+  /** The dark outside comes up. 12.1 s. */
+  outside: 724,
+  /** The Viper opens her throttle and leaves the frame. 16.1 s. */
+  viperRuns: 964,
+  /** The pilot's ship goes after her, further behind than 0411 had it. 17.3 s. */
+  blueRuns: 1036,
+  /** The picture fades into the backdrop the title is drawn on. 19.3 s. */
+  fadeOut: 1156,
+  /** The intro is over and the title comes up. 19.9 s. */
+  end: 1192,
 } as const;
 
 /** How long the intro runs, in steps — the screen's own countdown (`src/state/screens.ts`). */
@@ -360,22 +341,6 @@ export const LEAP_FROM = STAGE.bluePad - 16;
 
 /** The pilot's running speed, in world units per step — the doorway to the leap in two seconds. */
 export const RUN_SPEED = (LEAP_FROM - STAGE.doorway.along) / (BEATS.pilotLeap - BEATS.pilotOut);
-
-/**
- * Where her run ends and her leap begins, along — short of the Viper's tail, which sits about 15 units
- * aft of its pad, on `LEAP_FROM`'s terms.
- */
-export const RIVAL_LEAP_FROM = STAGE.viperPad - 20;
-
-/**
- * Her running speed: the doorway to her leap in two and a half seconds, which is 0.5 units a step —
- * nearly twice the pilot's. She is the one leaving before anyone can stop her, and she is not running
- * after anybody.
- */
-export const RIVAL_SPEED = (RIVAL_LEAP_FROM - STAGE.doorway.along) / (BEATS.rivalLeap - BEATS.rivalOut);
-
-/** Steps per frame of her run cycle: the longer stride of a faster run turns over faster. */
-export const RIVAL_FRAME_STEPS = 4;
 
 /** How far above the deck the pilot's sprite centre stands: their feet are at the bottom of it. */
 export const PILOT_STANDS = 6.5;
@@ -434,6 +399,23 @@ export const JINKS: readonly { at: number; to: number }[] = [
   { at: 176, to: 46 },
 ];
 
+/**
+ * When the pilot's ship tilts from the hangar's view to the fight's, in steps into the dark outside —
+ * `docs/decisions/0444-the-intro-is-the-pilots.md`: *"lifts up and flies out of the hanger then tilts
+ * so it's topdown view."* It comes out of the station's bay at step 6 as the hangar saw it, flies a
+ * half-second side-on in front of the station's flank, and is over onto the fight's view as it settles
+ * onto her line at 72 — so the chase that follows is flown in the picture the game is.
+ *
+ * ⚠️ **PHOTOGRAPHED, AND MOVED LATER.** The first build began at 20, and the saucer was lying flat
+ * before it was out of the bay's own light: a turn made in the doorway reads as a sprite swap, not as
+ * a ship banking over once it has room.
+ *
+ * ⚠️ **For every ship, and only one moves.** A ship whose hangar picture IS the fight's bakes the same
+ * drawing into every frame of the tilt, so the shared timing is a default and the picture is the row's
+ * (`HANGAR_ART` in `src/render/port-bake.ts`) — 0282.
+ */
+export const TILT = { from: 36, steps: 36 } as const;
+
 /** How long a jink takes, in steps — quick, so it reads as a decision rather than a drift. */
 export const JINK_STEPS = 22;
 
@@ -466,20 +448,11 @@ export interface IntroCue {
   cue: 'ignite' | 'launch' | 'alarm' | 'door' | 'step';
 }
 
-/** Bo's feet strike twice a run cycle — on the first and third of its four frames. */
+/** The pilot's feet strike twice a run cycle — on the first and third of its four frames. */
 const STRIDE = 2 * RUN_FRAME_STEPS;
 
-/** Her feet, on her own faster cycle — 0416. */
-const RIVAL_STRIDE = 2 * RIVAL_FRAME_STEPS;
-
 const UNSORTED_CUES: IntroCue[] = [
-  // Venoma out of the bar and across the deck to her ship — 0416.
-  { at: BEATS.rivalDoor, cue: 'door' },
-  ...Array.from({ length: Math.floor((BEATS.rivalLeap - BEATS.rivalOut) / RIVAL_STRIDE) }, (_, i) => ({
-    at: BEATS.rivalOut + i * RIVAL_STRIDE,
-    cue: 'step' as const,
-  })),
-  { at: BEATS.rivalLeap, cue: 'step' },
+  // Venoma's door, feet and leap were heard here — 0416 — until 0444 took her run out.
   { at: BEATS.viperLit, cue: 'ignite' },
   { at: BEATS.viperGo, cue: 'launch' },
   // The alarm on every turn of the beacon, from its first until the hangar goes dark.

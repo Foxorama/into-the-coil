@@ -1658,6 +1658,8 @@ export interface World {
   heartBeat: number;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
+  /** Volleys fired in the gun's current burst, for a gun that fires in bursts — 0442. */
+  burstFired: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
   missileIn: number;
   /**
@@ -2590,7 +2592,7 @@ export class GameFrame implements Frame {
     // The intro is its own picture on its own atlas, and none of the scene below is in it — 0411 —
     // but the sky it flies through is the first level's, from the game's sprites in that atlas (0416).
     if (w.intro !== null) {
-      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow.wingtip);
+      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.
@@ -3156,6 +3158,22 @@ export function cueOfFlight(flight: FlightKind): CueKind {
 function fireShip(w: World): void {
   w.fireIn--;
   if (w.fireIn > 0) return;
+  fireVolley(w);
+  /*
+    ⚠️ **AND A GUN THAT FIRES IN BURSTS RESTS AFTER ONE — 0442**, played: *"four shot bursts … 4 (at
+    current speed) brief pause, 4 etc."* Counted here, after the volley has set its own reload on the
+    grid, so the rest is added to a reload that is already on the beat and a burst never drifts off it.
+  */
+  const burst = WEAPONS[w.weapon.kind].burst;
+  if (burst === undefined) return;
+  w.burstFired++;
+  if (w.burstFired < burst.volleys) return;
+  w.burstFired = 0;
+  w.fireIn += burst.rest;
+}
+
+/** One volley of whatever gun the ship flies. */
+function fireVolley(w: World): void {
   /*
     ⚠️ **THE FLIGHT DECIDES, AND A NAME NEVER DOES** — 0233, on 0016's terms. A weapon kind is a row;
     what the frame switches on is the closed union of ways a shot can travel, so a third gun that

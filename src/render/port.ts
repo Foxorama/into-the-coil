@@ -9,11 +9,11 @@
  * ⚠️ **ON `tests/budget.test.ts`'s HOT LIST.** It runs every frame the intro is up, so it holds the
  * frame loop's rules: no allocation, blits only. Every loop below is an index over a constant table.
  *
- * Two shots. **The hangar** is held still, as a stage: Venoma runs out of the bar and boards the Viper
- * (0416), the Viper lifts and goes, the alarm turns, the bar's door slides back, the pilot runs to the
- * fighter and leaps in, and it goes after her. **The dark outside** flies with the two ships, so the
- * first level's sky runs past and the chase holds still — until she opens her throttle and leaves the
- * frame, and the fighter follows.
+ * Two shots. **The hangar** is held still, as a stage: the Viper, with Venoma already aboard, lifts and
+ * goes, the alarm turns, the bar's door slides back, the pilot runs to their own ship and leaps in, and
+ * it goes after her. **The dark outside** flies with the two ships, so the first level's sky runs past
+ * and the chase holds still — the pilot's ship tilting over from the hangar's view into the fight's as
+ * it clears the station (0444) — until she opens her throttle and leaves the frame, and it follows.
  */
 
 import {
@@ -35,18 +35,17 @@ import {
   PORT_EXTENT,
   PORT_KINDS,
   PORT_SPRITE,
-  RIVAL_FRAME_STEPS,
-  RIVAL_LEAP_FROM,
-  RIVAL_SPEED,
   RUN_FRAME_STEPS,
   RUN_SPEED,
   STAGE,
   SURGE_CURVE,
   SURGE_STEPS,
+  TILT,
   TRACK_DELAY,
   TRAIL_EVERY,
   TRAIL_SAMPLES,
 } from '../content/port.ts';
+import type { ShipRow } from '../content/ships.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { SCROLL_PER_STEP } from '../sim/flight.ts';
 import { paintSky, type Sky } from './scene.ts';
@@ -59,15 +58,14 @@ const TILE_OVERLAP = 1.03;
 const FLASH_STEPS = 20;
 const FLASH_GROW = 0.55;
 
-/** Where the fighter's cockpit is, along from its centre — the point the pilot leaps for. */
-const COCKPIT = 3;
+/*
+  `COCKPIT` stood here, the fighter's canopy three units ahead of its centre, until 0444 put where a
+  pilot boards on each ship's row (`cockpit` in `src/content/ships.ts`) — the saucer is boarded at its
+  dome, above its rim. Venoma's canopy beside it went with her run.
+*/
 
-/**
- * Where the Viper's canopy is from her centre — the acid-glass bubble on her back that `paintViper` in
- * `port-bake.ts` draws at (0.12, −0.19) of her radius — which is what Venoma leaps for (0416).
- */
-const VIPER_COCKPIT_ALONG = 2;
-const VIPER_COCKPIT_ACROSS = -3.2;
+/** How many pictures the pilot's ship tilts through outside, from the hangar's view to the fight's. */
+const TILT_FRAMES = PORT_SPRITE.blue - PORT_SPRITE.blueSide + 1;
 
 /**
  * ⚠️ **THE SKY GOES PAST AT THE FIRST LEVEL'S OWN RATE — 0416**, *"it should kinda lead straight into
@@ -81,9 +79,6 @@ export const SKY_SPEED = SCROLL_PER_STEP;
 /** And through the bay while the room is held still, a tenth of that: the same sky, moving. */
 const HANGAR_DRIFT = SKY_SPEED / 10;
 
-/** How long the bar's door takes to slide shut behind her, in steps — 0416. */
-const DOOR_SHUT_STEPS = 24;
-
 /**
  * Where the game's sprites start in the atlas the intro draws from — `withTheGame` in `port-bake.ts`:
  * the port's own kinds, then every one of the game's.
@@ -93,13 +88,14 @@ const GAME_BASE = PORT_KINDS.length;
 /**
  * Draw the intro at `t` steps since its first frame — a fractional step between two, so the motion is
  * interpolated like everything else the renderer draws. `sky` is the first level's (0416), whose
- * sprites are the game's, at `GAME_BASE` on in this atlas; empty in a style with no sky. `wingtip` is
- * the pilot's ship's, in the fight's units — where its contrails trail from (0441).
+ * sprites are the game's, at `GAME_BASE` on in this atlas; empty in a style with no sky. `ship` is the
+ * pilot's: its `wingtip` is where its contrails trail from (0441), and its `cockpit` where the pilot
+ * drops in (0444), both in the fight's units.
  */
-export function paintPort(surface: Surface, view: View, t: number, sky: Sky, wingtip: number): void {
+export function paintPort(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
   surface.clear();
-  if (t < BEATS.cut) paintHangar(surface, view, t, sky);
-  else paintOutside(surface, view, t - BEATS.outside, sky, wingtip * HANGAR_SCALE);
+  if (t < BEATS.cut) paintHangar(surface, view, t, sky, ship.cockpit.along * HANGAR_SCALE, ship.cockpit.across * HANGAR_SCALE);
+  else paintOutside(surface, view, t - BEATS.outside, sky, ship.wingtip * HANGAR_SCALE);
   // The fades: up out of the backdrop at the start, down and up again across the cut, and down at the end.
   let veil = 0;
   if (t < BEATS.fadeIn) veil = 1 - t / BEATS.fadeIn;
@@ -161,7 +157,7 @@ function surgeAt(t: number, go: number): number {
   ── THE HANGAR ───────────────────────────────────────────────────────────────────────────────────
 */
 
-function paintHangar(surface: Surface, view: View, t: number, sky: Sky): void {
+function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number): void {
   // The first level's sky past the bay, drifting — the room covers the rest of it (0416).
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
   // The back wall, the truss and the lamps.
@@ -191,10 +187,9 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky): void {
   }
   /*
     The bar: the light inside it and the door that slides back across it, then the front of it. It
-    opens twice — for her, and shut behind her (0416); then for the pilot, and it stays open.
+    opens once, for the pilot, and stays open — it opened for Venoma too from 0416 until 0444.
   */
-  const hers = ease(t, BEATS.rivalDoor, BEATS.rivalOut) * (1 - ease(t, BEATS.rivalShut, BEATS.rivalShut + DOOR_SHUT_STEPS));
-  const open = Math.max(hers, ease(t, BEATS.door, BEATS.pilotOut));
+  const open = ease(t, BEATS.door, BEATS.pilotOut);
   if (open > 0) put(surface, view, PORT_SPRITE.spill, STAGE.doorway.along, STAGE.doorway.across, open);
   put(surface, view, PORT_SPRITE.door, STAGE.doorway.along - 13 * open, STAGE.doorway.across);
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
@@ -222,30 +217,10 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky): void {
   const blueAcross = STAGE.blueRide - LIFT * ease(t, BEATS.blueLift, BEATS.blueGo) + blueBob;
   paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo);
   /*
-    Venoma: out of the door, past the fighter's pad and up into the Viper — 0416. In front of both
-    ships, for the reason the pilot is below: the deck is nearer the viewer than either beam.
+    ⚠️ **VENOMA RAN HERE — 0416 — OUT OF THE DOOR AND UP INTO THE VIPER, UNTIL 0444.** *"it doesn't add
+    anything and makes the ending worse when you see the villain running with no captive."* She is
+    aboard before the picture starts.
   */
-  if (t >= BEATS.rivalOut && t < BEATS.rivalIn) {
-    if (t < BEATS.rivalLeap) {
-      const run = t - BEATS.rivalOut;
-      const frame = Math.floor(run / RIVAL_FRAME_STEPS) % 4;
-      const bob = Math.abs(Math.sin((run / RIVAL_FRAME_STEPS) * (Math.PI / 2))) * 0.5;
-      put(surface, view, PORT_SPRITE.rivalRun0 + frame, STAGE.doorway.along + RIVAL_SPEED * run, STAGE.deck - PILOT_STANDS - bob);
-    } else {
-      const u = (t - BEATS.rivalLeap) / (BEATS.rivalIn - BEATS.rivalLeap);
-      const fromAcross = STAGE.deck - PILOT_STANDS;
-      const toAlong = viperAlong + VIPER_COCKPIT_ALONG;
-      const toAcross = viperAcross + VIPER_COCKPIT_ACROSS;
-      const along = RIVAL_LEAP_FROM + (toAlong - RIVAL_LEAP_FROM) * u;
-      const across = fromAcross + (toAcross - fromAcross) * u - 14 * u * (1 - u);
-      put(surface, view, PORT_SPRITE.rivalLeap, along, across, 1 - ease(u, 0.6, 1), 0, 1 - 0.45 * u);
-    }
-  }
-  // Her canopy catching the light as she drops in.
-  if (t >= BEATS.rivalIn - 6 && t < BEATS.rivalIn + 18) {
-    const blink = 1 - Math.abs(t - (BEATS.rivalIn + 4)) / 14;
-    if (blink > 0) put(surface, view, PORT_SPRITE.flash, viperAlong + VIPER_COCKPIT_ALONG, viperAcross + VIPER_COCKPIT_ACROSS, blink * 0.5, 0, 0.25);
-  }
   /*
     The pilot: out of the door, across the deck, and up into the cockpit — in FRONT of the fighter,
     because the deck they run along is nearer the viewer than the pad's beam, and a pilot that ran
@@ -261,16 +236,17 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky): void {
     } else {
       const u = (t - BEATS.pilotLeap) / (BEATS.pilotIn - BEATS.pilotLeap);
       const fromAcross = STAGE.deck - PILOT_STANDS;
-      const toAlong = blueAlong + COCKPIT;
+      const toAlong = blueAlong + cockpitAlong;
+      const toAcross = blueAcross + cockpitAcross;
       const along = LEAP_FROM + (toAlong - LEAP_FROM) * u;
-      const across = fromAcross + (blueAcross - fromAcross) * u - 14 * u * (1 - u);
+      const across = fromAcross + (toAcross - fromAcross) * u - 14 * u * (1 - u);
       put(surface, view, PORT_SPRITE.pilotLeap, along, across, 1 - ease(u, 0.6, 1), 0, 1 - 0.45 * u);
     }
   }
   // The canopy catching the light as the pilot drops in.
   if (t >= BEATS.pilotIn - 6 && t < BEATS.pilotIn + 18) {
     const blink = 1 - Math.abs(t - (BEATS.pilotIn + 4)) / 14;
-    if (blink > 0) put(surface, view, PORT_SPRITE.flash, blueAlong + COCKPIT, blueAcross, blink * 0.5, 0, 0.25);
+    if (blink > 0) put(surface, view, PORT_SPRITE.flash, blueAlong + cockpitAlong, blueAcross + cockpitAcross, blink * 0.5, 0, 0.25);
   }
   // The edge of the room, over everything that flies out through it.
   put(surface, view, PORT_SPRITE.field, STAGE.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
@@ -290,13 +266,16 @@ function paintViper(surface: Surface, view: View, t: number, along: number, acro
   }
 }
 
-/** The fighter and its engine — the surge its launch is heard in — and the flash it leaves the pad in. */
+/**
+ * The pilot's ship as the hangar sees it — side-on, for a ship whose fight picture is from above (0444)
+ * — its engine, the surge its launch is heard in, and the flash it leaves the pad in.
+ */
 function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number): void {
   const flame = flameOf(t, lit, go, PORT_SPRITE.blueIdle, PORT_SPRITE.blueBurn, PORT_SPRITE.blueFlare);
   if (flame >= 0) put(surface, view, flame, along, across);
   const surge = surgeAt(t, go);
   if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge);
-  put(surface, view, PORT_SPRITE.blue, along, across);
+  put(surface, view, PORT_SPRITE.blueSide, along, across);
   if (t >= go && t < go + FLASH_STEPS) {
     put(surface, view, PORT_SPRITE.flash, along - 12, across, 0.8 * (1 - (t - go) / FLASH_STEPS), 0, FLASH_GROW);
   }
@@ -435,5 +414,13 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
   putOut(surface, view, blueFlame, blueAlong, blueAcross, 1, blueTurn);
   const blueSurge = surgeAt(s, BLUE_RUNS);
   if (blueSurge > 0) putOut(surface, view, PORT_SPRITE.blueSurge, blueAlong, blueAcross, blueSurge, blueTurn);
-  putOut(surface, view, PORT_SPRITE.blue, blueAlong, blueAcross, 1, blueTurn);
+  /*
+    ⚠️ **THE TILT — 0444: out of the bay as the hangar saw it, and over onto the fight's view.** The
+    frames are consecutive in the atlas, side-on to from above; each is laid over the one before it at
+    the share of the way between them, so six pictures turn without a step between any two.
+  */
+  const tilt = ease(s, TILT.from, TILT.from + TILT.steps) * (TILT_FRAMES - 1);
+  const frame = Math.min(TILT_FRAMES - 1, Math.floor(tilt));
+  putOut(surface, view, PORT_SPRITE.blueSide + frame, blueAlong, blueAcross, 1, blueTurn);
+  if (tilt > frame) putOut(surface, view, PORT_SPRITE.blueSide + frame + 1, blueAlong, blueAcross, tilt - frame, blueTurn);
 }

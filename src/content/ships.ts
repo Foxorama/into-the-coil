@@ -67,6 +67,13 @@ export interface ShipRow extends Body {
    * exhaust at its bumper, where the fighter's nacelles are halfway down its hull.
    */
   tail: number;
+  /**
+   * Where its pilot drops in, in world units about the ship's centre, as the intro's hangar draws the
+   * ship — `docs/decisions/0444-the-intro-is-the-pilots.md`. The saucer is seen side-on there, so its
+   * dome stands above its rim; a ship the hangar draws as the fight does is boarded where the fighter's
+   * cockpit always was.
+   */
+  cockpit: { readonly along: number; readonly across: number };
 }
 
 /** One bake of a ship and its hurt twin. */
@@ -131,6 +138,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wingtip: 4.35,
     // Its nacelles: 0.78 of the 7-unit hull's radius (`SHIP_CORE` in the bake).
     tail: 2.29,
+    // Its canopy, just ahead of the centre — 0411's three hangar units.
+    cockpit: { along: 0.7, across: 0 },
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -154,6 +163,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wingtip: 3.95,
     // Its drive, on the back of the rim.
     tail: 3.95,
+    // The middle of its glass dome, seen side-on above the rim (`paintSaucer` in the port's bake).
+    cockpit: { along: 0, across: -1.3 },
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -173,11 +184,14 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
-    // The front hubcaps, which are the shuriken launchers — the blades leave from the wheels: 0.56 of
-    // the box's radius out (`drawFirebird` in the bake).
-    wingtip: 2.21,
+    // The launcher on its hood, seen from the side since it was played — its star sits 0.29 of the box's
+    // radius above the centreline (`drawFirebird` in the bake), and the pair leaves from there and its
+    // mirror.
+    wingtip: 1.13,
     // Its twin exhausts, at the ducktail.
     tail: 4.42,
+    // Its greenhouse, seen from the side: under the T-top, above the beltline (`drawFirebird` in the bake).
+    cockpit: { along: 0.25, across: -1.1 },
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -201,6 +215,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wingtip: 2.2,
     // Its twin exhausts, under the tailgate.
     tail: 4.42,
+    // Its front glasshouse, seen from the side, behind the pillar (`drawEstate` in the bake).
+    cockpit: { along: 0.4, across: -0.7 },
   },
 };
 

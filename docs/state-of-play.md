@@ -888,8 +888,8 @@ animal reads at speed and whether any is too busy**; the holds on the rows are t
 And the page opens on the way in ([0415](decisions/0415-the-golfer-is-chosen.md)): the splash, the four
 golfers, and the intro the pick plays ([0411](decisions/0411-the-chase-begins-at-the-port.md),
 [0412](decisions/0412-the-port-is-heard.md), [0414](decisions/0414-the-chase-is-a-chase.md),
-[0416](decisions/0416-the-viper-has-a-pilot.md)) — **owed a look at the portraits, the runners and
-Venoma, the jinks, the trails and the surges, and a listen to the intro's five cues**; the beats, the
+[0416](decisions/0416-the-viper-has-a-pilot.md), [0444](decisions/0444-the-intro-is-the-pilots.md)) —
+**owed a look at the portraits, the runner, the saucer's tilt out of the bay, the jinks, the trails and the surges, and a listen to the intro's five cues**; the beats, the
 jinks and the cues are tables in `src/content/port.ts`, the golfers in `src/content/golfers.ts`.
 Level 1 is drawn in its own sky colours now, and the intro with it
 ([0417](decisions/0417-a-place-is-baked-by-its-name.md)) — **owed a look against the old grey, since

@@ -464,6 +464,7 @@ export function playableWorld(
     warp: 0,
     // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
     fireIn: weaponFor(shipRow, []).fireEvery,
+    burstFired: 0,
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,

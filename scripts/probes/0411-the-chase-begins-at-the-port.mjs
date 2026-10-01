@@ -27,9 +27,9 @@ export const PROBES = [
     guard: 'runs its beats in the order they are written',
     edit: {
       path: 'src/content/port.ts',
-      // Re-anchored by 0414 and 0416, which moved the beat.
-      find: '  blueRuns: 1222,',
-      replace: '  blueRuns: 1074,',
+      // Re-anchored by 0414, 0416 and 0444, which moved the beat.
+      find: '  blueRuns: 1036,',
+      replace: '  blueRuns: 888,',
     },
   },
   {
@@ -111,8 +111,9 @@ export const PROBES = [
     guard: 'never lets the fighter cover the pilot',
     edit: {
       path: 'src/render/port.ts',
+      // Re-anchored by 0444: the hangar draws the ship as it sees it, which is `blueSide`.
       find: '  // The canopy catching the light as the pilot drops in.',
-      replace: '  put(surface, view, PORT_SPRITE.blue, blueAlong, blueAcross);\n  // The canopy catching the light as the pilot drops in.',
+      replace: '  put(surface, view, PORT_SPRITE.blueSide, blueAlong, blueAcross);\n  // The canopy catching the light as the pilot drops in.',
     },
   },
   {
@@ -145,8 +146,9 @@ export const PROBES = [
     guard: 'runs the golfer who was picked out of the bar',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0441, which hands the port the ship's own wingtip.
-      find: '      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow.wingtip);',
+      // ⚠️ Re-anchored by 0441, which hands the port the ship's own wingtip, and by 0444, which hands
+      // it the ship's row for its cockpit too.
+      find: '      paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow);',
       replace: '      w.surface.clear();',
     },
   },

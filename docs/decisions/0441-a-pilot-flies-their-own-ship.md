@@ -51,9 +51,20 @@ fighter's box at its capped kit, 9.4 units. That is the hull every run used to r
 now opens on it. A saucer fills more of the box than a car does. Since the hurtbox does not change
 with shape, neither is easier to hit or to thread.
 
-**Drawn from above.** The fighter was always drawn from above: its wing is mirrored across its
-centreline. The predecessor drew all three new ships from above for its portrait fights, so the
-roster joins the view the game already uses.
+**Drawn from above — except the two cars, since the first play.** The fighter was always drawn from
+above: its wing is mirrored across its centreline. The predecessor drew all three new ships from
+above for its portrait fights, so the roster joined the view the game already uses.
+
+⚠️ **The cars did not survive it.** Played on the branch preview: *"the topdown firebird and station
+wagon look really bad if we can't make them look really good, let's change them to sideview instead
+of top down and chuck the weapons on the hood and missiles turrets on the roof."* A car seen from
+above is a rounded rectangle; what makes it a Firebird or an estate — the roofline, the wheels, the
+long bonnet — is only visible from the side. So both are drawn side-on, nose up the lane: the
+Firebird's launcher block and the estate's tesla rod on the bonnet, and the tubes as turrets on the
+roof (the estate's on a rack), so a tube still changes how the hull looks. The saucer stays top-down
+in play — *"pretty dece"* — and is side-on only in the hangar
+([0444](0444-the-intro-is-the-pilots.md)). Each car's `wingtip`, `tail` and `cockpit` were re-read off
+the side drawing, and each exhausts from one pipe at its back bumper.
 
 **Every colour is a role moved.** The saucer is the player's cyan turned toward `acid`. The estate is
 `hazard`'s gilt. The Firebird is the void lifted toward the player's ink. Every ship carries the

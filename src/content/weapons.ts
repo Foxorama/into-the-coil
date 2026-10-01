@@ -62,6 +62,13 @@ export interface WeaponRow {
   /** Sim steps between volleys. */
   fireEvery: number;
   /**
+   * Volleys in a burst and the steps the gun rests after one, or absent for a gun that never pauses —
+   * 0442, played: *"let's make the little caddie's weapons fire in four shot bursts as well so it's 4 (at
+   * current speed) brief pause, 4 etc."* Optional, on 0282's default shape: a row says its version and
+   * shared code holds *continuous*.
+   */
+  burst?: { volleys: number; rest: number };
+  /**
    * How many barrels fire at once. A `chain` weapon has one barrel: a bolt is one thing, and what it
    * has instead is `links` and `weight`.
    */
@@ -282,6 +289,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     shot: 'ray',
     flight: 'burst',
     fireEvery: 8,
+    /*
+      ⚠️ **FOUR AND A REST, PLAYED.** *"Four shot bursts … so it's 4 (at current speed) brief pause, 4
+      etc."* Four rings eight steps apart and sixteen steps' rest — a sixth of a second more than the
+      gap — so a burst is a figure: two beats of rings and a breath. What the rest takes off the gun the
+      ring's damage pays back (`SHOTS.ray`), so the bosses' floors measured in 0441 still hold.
+    */
+    burst: { volleys: 4, rest: 16 },
     barrels: 1,
     links: 1,
     weight: 1,

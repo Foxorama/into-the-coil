@@ -23,9 +23,9 @@ import {
   PORT_EXTENT,
   PORT_KINDS,
   PORT_SPRITE,
-  RIVAL_LEAP_FROM,
   STAGE,
   SURGE_STEPS,
+  TILT,
   TRACK_DELAY,
   type IntroCue,
   type PortKind,
@@ -71,8 +71,8 @@ const NARROW = { width: 1920, height: 1080 };
 function drawAt(t: number, size = WIDE, ship: ShipKind = GOLFERS[DEFAULT_GOLFER].ship): { blits: Blit[]; view: View } {
   const view = viewOf(size.width, size.height);
   const surface = new RecordingSurface();
-  // The pilot's ship's own wingtip, which is where its contrails leave from — 0441.
-  paintPort(surface, view, t, SKY, SHIPS[ship].wingtip);
+  // The pilot's ship's own row: its wingtips, where its contrails leave from (0441), and its cockpit (0444).
+  paintPort(surface, view, t, SKY, SHIPS[ship]);
   return { blits: surface.blits, view };
 }
 
@@ -88,12 +88,13 @@ const of = (blits: readonly Blit[], kind: PortKind): Blit | undefined => blits.f
  * ⚠️ **The pilot's ship is the box's own edge, half of it, since 0441.** It was the fighter's tail at
  * `-0.78 r`; now `blue` is whichever ship the golfer flies, each shaped differently inside the one box
  * (the fighter at `FIGHTER_HULL / SHIP_BOX` of it), and the only bound that holds for all four is the
- * box. Every use below asks whether the tail is PAST a line, so the box's edge is the strict answer.
+ * box. Every use below asks whether the tail is PAST a line, so the box's edge is the strict answer —
+ * and the hangar's side-on picture of it (`blueSide`, 0444) is baked in the same box.
  */
-const TAIL: Partial<Record<PortKind, number>> = { blue: 0.5, viper: 0.88 * 0.42 };
+const TAIL: Partial<Record<PortKind, number>> = { blue: 0.5, blueSide: 0.5, viper: 0.88 * 0.42 };
 
 /** Where a drawn ship's tail is, in pixels. */
-function tailPx(b: Blit, kind: 'blue' | 'viper'): number {
+function tailPx(b: Blit, kind: 'blue' | 'blueSide' | 'viper'): number {
   return b.x - TAIL[kind]! * PORT_EXTENT[kind] * b.scale;
 }
 
@@ -129,7 +130,7 @@ describe('the picture', () => {
   });
 
   it('is never veiled in the middle of a shot', () => {
-    for (const t of [BEATS.rivalLeap, BEATS.viperGo, BEATS.pilotOut, BEATS.blueGo, BEATS.viperRuns, BEATS.blueRuns]) {
+    for (const t of [BEATS.viperLit, BEATS.viperGo, BEATS.pilotOut, BEATS.blueGo, BEATS.viperRuns, BEATS.blueRuns]) {
       expect(of(drawAt(t).blits, 'veil'), `the picture is veiled at step ${t}`).toBeUndefined();
     }
   });
@@ -149,10 +150,11 @@ describe('the picture', () => {
   });
 
   it('has the fighter through the bay before the hangar fades', () => {
+    // The hangar draws the pilot's ship as it sees it — `blueSide` since 0444.
     const { blits, view } = drawAt(BEATS.cut - FADE);
-    const blue = of(blits, 'blue');
+    const blue = of(blits, 'blueSide');
     const bay = screenX(view, STAGE.bay, 0);
-    if (blue !== undefined) expect(tailPx(blue, 'blue'), 'the fighter is still in the hangar as it goes dark').toBeGreaterThan(bay);
+    if (blue !== undefined) expect(tailPx(blue, 'blueSide'), 'the fighter is still in the hangar as it goes dark').toBeGreaterThan(bay);
   });
 
   it('has both ships off the widest screen before the last fade', () => {
@@ -172,10 +174,10 @@ describe('the picture', () => {
     for (let t = BEATS.pilotOut; t < BEATS.pilotIn; t += 3) {
       const { blits } = drawAt(t);
       const pilot = blits.findIndex((b) => b.sprite >= PORT_SPRITE.pilotRun0 && b.sprite <= PORT_SPRITE.pilotLeap);
-      // The LAST fighter blit, so one drawn over the pilot anywhere in the frame is found.
+      // The LAST blit of the ship, in any of its pictures, so one drawn over the pilot anywhere is found.
       let blue = -1;
       blits.forEach((b, i) => {
-        if (b.sprite === PORT_SPRITE.blue) blue = i;
+        if (b.sprite >= PORT_SPRITE.blueSide && b.sprite <= PORT_SPRITE.blue) blue = i;
       });
       expect(pilot, `no pilot at step ${t}`).toBeGreaterThanOrEqual(0);
       expect(pilot, `the fighter is drawn over the pilot at step ${t}`).toBeGreaterThan(blue);
@@ -206,7 +208,7 @@ describe('the intro is heard where it is seen — 0412', () => {
     launch: ['flash', 'viperFlare', 'blueFlare', 'viperSurge', 'blueSurge'],
     alarm: ['beacon'],
     door: ['spill'],
-    step: ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap', 'rivalRun0', 'rivalRun1', 'rivalRun2', 'rivalRun3', 'rivalLeap'],
+    step: ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap'],
   };
 
   it('plays every cue on a step that draws its twin', () => {
@@ -267,16 +269,44 @@ describe('the chase is a chase — 0414', () => {
   });
 
   it('leaves the pad slower off the mark than she did', () => {
-    const moved = (t: number, kind: 'viper' | 'blue'): number => {
+    const moved = (t: number, kind: 'viper' | 'blueSide'): number => {
       const blits = drawAt(t, NARROW).blits;
       return of(blits, kind)!.x;
     };
     const after = 40;
     const hers = moved(BEATS.viperGo + after, 'viper') - moved(BEATS.viperGo, 'viper');
-    const theirs = moved(BEATS.blueGo + after, 'blue') - moved(BEATS.blueGo, 'blue');
+    // The hangar's picture of the pilot's ship — 0444.
+    const theirs = moved(BEATS.blueGo + after, 'blueSide') - moved(BEATS.blueGo, 'blueSide');
     // With a margin: two equal launches differ only by rounding, and `npm run prove` found a bare
     // less-than passing over one. The fighter's is three quarters of hers by design.
     expect(theirs, 'the fighter left its pad as fast as she did').toBeLessThan(hers * 0.9);
+  });
+
+  it('flies the pilot’s ship out of the hangar as the hangar sees it, and tilts it into the fight’s view outside — 0444', () => {
+    /*
+      *"in the intro movie it really needs to be sideview, lifts up and flies out of the hanger then tilts
+      so it's topdown view."* Held for every ship, since the picture is each ship's own (`HANGAR_ART`) and
+      the order is the painter's: never the fight's picture in the hangar, the hangar's out of the bay,
+      every frame of the tilt in order and none of them twice, and the fight's alone once it is over.
+    */
+    for (const ship of SHIP_KINDS) {
+      const pictures = (t: number): Blit[] =>
+        drawAt(t, NARROW, ship).blits.filter((b) => b.sprite >= PORT_SPRITE.blueSide && b.sprite <= PORT_SPRITE.blue);
+      for (let t = BEATS.pilotIn; t < BEATS.cut - FADE; t += 5) {
+        expect(pictures(t).map((b) => b.sprite), `${ship}: the hangar draws the fight's picture at step ${t}`).toEqual([PORT_SPRITE.blueSide]);
+      }
+      expect(pictures(BEATS.outside + TILT.from - 1).map((b) => b.sprite), `${ship}: tilting before it is clear of the bay`).toEqual([PORT_SPRITE.blueSide]);
+      let reached = PORT_SPRITE.blueSide;
+      for (let s = TILT.from; s <= TILT.from + TILT.steps; s += 1) {
+        const under = pictures(BEATS.outside + s)[0]!.sprite;
+        expect(under, `${ship}: the tilt went back a frame at step ${s} of the shot`).toBeGreaterThanOrEqual(reached);
+        expect(under - reached, `${ship}: the tilt skipped a frame at step ${s} of the shot`).toBeLessThanOrEqual(1);
+        reached = under;
+      }
+      const over = pictures(BEATS.outside + TILT.from + TILT.steps);
+      expect(over.map((b) => b.sprite), `${ship}: still tilting when the tilt is over`).toEqual([PORT_SPRITE.blue]);
+      expect(over[0]!.alpha).toBe(1);
+    }
   });
 
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {
@@ -300,35 +330,13 @@ describe('the chase is a chase — 0414', () => {
   });
 });
 
-describe('the Viper has a pilot, the jets surge, and the sky is the first level’s — 0416', () => {
-  const rival = (blits: readonly Blit[]): Blit | undefined =>
-    blits.find((b) => b.sprite >= PORT_SPRITE.rivalRun0 && b.sprite <= PORT_SPRITE.rivalLeap);
-
-  it('runs Venoma out of the bar and into the Viper before its engines light', () => {
-    const { view } = drawAt(0);
-    const out = rival(drawAt(BEATS.rivalOut + 1).blits);
-    expect(out, 'nobody comes out of the bar for the Viper').toBeDefined();
-    expect(Math.abs(out!.x - screenX(view, STAGE.doorway.along, 0)), 'she does not come out of the bar door').toBeLessThan(view.scale * 2);
-    for (let t = BEATS.rivalOut; t < BEATS.rivalIn; t += 4) expect(rival(drawAt(t).blits), `she is not drawn at step ${t}`).toBeDefined();
-    expect(rival(drawAt(BEATS.viperLit).blits), 'she is still outside the Viper when its engines light').toBeUndefined();
-    // From the run into the leap without a jump, on the pilot's terms.
-    const ran = rival(drawAt(BEATS.rivalLeap - 0.001).blits)!;
-    const leapt = rival(drawAt(BEATS.rivalLeap).blits)!;
-    expect(Math.abs(leapt.x - ran.x), 'she jumped along the deck between the run and the leap').toBeLessThan(2);
-    expect(leapt.x).toBeCloseTo(screenX(view, RIVAL_LEAP_FROM, 0), 0);
-  });
-
-  it('never lets either ship cover her', () => {
-    for (let t = BEATS.rivalOut; t < BEATS.rivalIn; t += 3) {
-      const { blits } = drawAt(t);
-      const her = blits.findIndex((b) => b.sprite >= PORT_SPRITE.rivalRun0 && b.sprite <= PORT_SPRITE.rivalLeap);
-      let ship = -1;
-      blits.forEach((b, i) => {
-        if (b.sprite === PORT_SPRITE.blue || b.sprite === PORT_SPRITE.viper) ship = i;
-      });
-      expect(her, `a ship is drawn over her at step ${t}`).toBeGreaterThan(ship);
-    }
-  });
+describe('the jets surge, and the sky is the first level’s — 0416', () => {
+  /*
+    ⚠️ **TWO GUARDS ON VENOMA'S RUN STOOD HERE — *runs Venoma out of the bar and into the Viper before
+    its engines light* and *never lets either ship cover her* — UNTIL 0444 TOOK THE RUN OUT.** Their
+    subject is gone, so they went with it rather than being pointed at something else:
+    `docs/decisions/0444-the-intro-is-the-pilots.md`.
+  */
 
   it('surges the jets on the step each launch is heard, and settles them into the burn', () => {
     /*

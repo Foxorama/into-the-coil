@@ -1,33 +1,15 @@
 // The breaks behind docs/decisions/0416-the-viper-has-a-pilot.md.
 //
-// One per claim in tests/intro.test.ts's 0416 block: Venoma never drawn, a ship drawn over her, a surge
+// One per claim in tests/intro.test.ts's 0416 block (Venoma's two went with her run in 0444): a surge
 // that is not there on the step its launch is heard, a surge that never settles, no sky outside, and a
 // sky that goes past at a rate of its own rather than the level's.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0416',
-    suite: 'tests/intro.test.ts',
-    broke: 'nobody running for the Viper',
-    guard: 'runs Venoma out of the bar and into the Viper before its engines light',
-    edit: {
-      path: 'src/render/port.ts',
-      find: '  if (t >= BEATS.rivalOut && t < BEATS.rivalIn) {',
-      replace: '  if (t < 0) {',
-    },
-  },
-  {
-    decision: '0416',
-    suite: 'tests/intro.test.ts',
-    broke: 'the Viper drawn again over her as she runs',
-    guard: 'never lets either ship cover her',
-    edit: {
-      path: 'src/render/port.ts',
-      find: '  // Her canopy catching the light as she drops in.\n',
-      replace: '  put(surface, view, PORT_SPRITE.viper, viperAlong, viperAcross);\n',
-    },
-  },
+  /*
+    The two breaks on Venoma's run — nobody running for the Viper, and the Viper drawn over her — went
+    with the run and the two guards they broke: docs/decisions/0444-the-intro-is-the-pilots.md.
+  */
   {
     decision: '0416',
     suite: 'tests/intro.test.ts',
