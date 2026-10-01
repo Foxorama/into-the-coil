@@ -34,6 +34,7 @@ import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { ThrustKind } from '../content/exhaust.ts';
 import { SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
+import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
 export type SpriteView = 'side' | 'top';
@@ -1150,13 +1151,13 @@ export type Pt = readonly [number, number];
   was written about. Every pose below is weighted by where on the body a point is, so the core holds
   still and something attached to it moves.
 */
-type Pose = (p: Pt) => Pt;
+export type Pose = (p: Pt) => Pt;
 
 /** The rest drawing: every enemy's first frame. */
-const REST: Pose = (p) => p;
+export const REST: Pose = (p) => p;
 
 /** Smooth from 0 at `from` to 1 at `to`, and flat either side. */
-function ramp(v: number, from: number, to: number): number {
+export function ramp(v: number, from: number, to: number): number {
   const t = Math.min(1, Math.max(0, (v - from) / (to - from)));
   return t * t * (3 - 2 * t);
 }
@@ -1165,31 +1166,31 @@ function ramp(v: number, from: number, to: number): number {
  * What is aft of `from` swings: its spread across the lane scaled by `spread` and pushed along by
  * `back`, growing from nothing at `from` to all of it at the tail. A wing, a blade, a horn.
  */
-const aftSwings = (from: number, spread: number, back: number): Pose => ([x, y]) => {
+export const aftSwings = (from: number, spread: number, back: number): Pose => ([x, y]) => {
   const t = ramp(x, from, 1);
   return [x + back * t, y * (1 + (spread - 1) * t)];
 };
 
 /** What is FORE of `from` swings, the same way: jaws, horns and a bell's rim, which lead. */
-const foreSwings = (from: number, spread: number, fore: number): Pose => ([x, y]) => {
+export const foreSwings = (from: number, spread: number, fore: number): Pose => ([x, y]) => {
   const t = ramp(-x, -from, 1);
   return [x - fore * t, y * (1 + (spread - 1) * t)];
 };
 
 /** What is aft of `from` is carried across by `across` at the tail, on a curve: a tail wagging. */
-const wags = (from: number, across: number): Pose => ([x, y]) => {
+export const wags = (from: number, across: number): Pose => ([x, y]) => {
   const t = ramp(x, from, 1);
   return [x, y + across * t * t];
 };
 
 /** Every point turned about the centre by `twist` radians at the rim and none at the heart: a rotor. */
-const curls = (twist: number): Pose => ([x, y]) => {
+export const curls = (twist: number): Pose => ([x, y]) => {
   const a = twist * Math.min(1, Math.hypot(x, y));
   return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
 };
 
 /** The rest drawing's points, posed. */
-const posed = (points: readonly Pt[], pose: Pose): Pt[] => points.map(pose);
+export const posed = (points: readonly Pt[], pose: Pose): Pt[] => points.map(pose);
 
 /**
  * How much of the flash ink a hurt twin wears — 0278.
@@ -1272,7 +1273,7 @@ export function disc(ctx: Pen, f: Frame, colour: string, x: number, y: number, r
 }
 
 /** A band between two radii — a halo, a shockwave's inner rim, a smoke ring. */
-function band(ctx: Pen, f: Frame, colour: string, x: number, y: number, outer: number, inner: number, alpha = 1): void {
+export function band(ctx: Pen, f: Frame, colour: string, x: number, y: number, outer: number, inner: number, alpha = 1): void {
   ctx.globalAlpha = alpha;
   ctx.fillStyle = colour;
   ctx.beginPath();
@@ -1437,7 +1438,7 @@ function curveThrough(ctx: Pen, f: Frame, points: readonly Pt[]): void {
  * that corner lands under the jaw where the belly meets the skull. Indices wrap here instead, so the
  * tangent is continuous all the way round and there is no seam to find.
  */
-function curveLoop(ctx: Pen, f: Frame, points: readonly Pt[]): void {
+export function curveLoop(ctx: Pen, f: Frame, points: readonly Pt[]): void {
   const n = points.length;
   const at = (i: number): Pt => points[((i % n) + n) % n]!;
   const px = (x: number): number => f.half + x * f.r;
@@ -1471,7 +1472,7 @@ function curveLoop(ctx: Pen, f: Frame, points: readonly Pt[]): void {
  * the containment guards make is about geometry and alpha, so a gradient fill is measured exactly as
  * the flat fill it replaces — 0227's *paint on the hull* rather than *a hole cut in the void's ink*.
  */
-function shaded(
+export function shaded(
   ctx: Pen,
   f: Frame,
   from: Pt,
@@ -1515,7 +1516,7 @@ function shaded(
  * ⚠️ **Round caps, always.** A butt cap ends a contour in a flat chisel edge, which reads as a cut
  * rather than as a line running out — and a round cap is also the shape `strokeOutside` measures.
  */
-function seam(
+export function seam(
   ctx: Pen,
   f: Frame,
   colour: string,
@@ -4075,7 +4076,7 @@ export function mix(from: string, to: string, by: number): string {
 */
 
 /** A polygon well inside a hull, that a motif may be scattered over. In fractions of `r`. */
-type Belly = readonly Pt[];
+export type Belly = readonly Pt[];
 
 /** Whether a point is inside a simple polygon, by ray casting. Cold code, for the motif's clip. */
 function within(belly: Belly, x: number, y: number): boolean {
@@ -4109,7 +4110,7 @@ function boundsOfBelly(belly: Belly): { x0: number; y0: number; x1: number; y1: 
 }
 
 /** A square mark of half-width `h` at `(x, y)`, as a polygon. */
-const square = (x: number, y: number, h: number): Pt[] => [
+export const square = (x: number, y: number, h: number): Pt[] => [
   [x - h, y - h],
   [x + h, y - h],
   [x + h, y + h],
@@ -4130,7 +4131,7 @@ const diamond = (x: number, y: number, h: number): Pt[] => [
  * ⚠️ **SEVEN ARMS OVER A CLOSED UNION, WITH A `never` ARM**, so an eighth place has to say what it
  * puts on its enemies before it can bake — `docs/decisions/0016-a-hub-enumerates-kinds.md`.
  */
-function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, rest: Belly, seed: string, pose: Pose = REST): void {
+export function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, rest: Belly, seed: string, pose: Pose = REST): void {
   const rng = makeRng('art').stream(`${theme}/${seed}`);
   /*
     ⚠️ **THE GRID IS LAID ON THE REST BELLY AND EACH MARK IS POSED WITH IT — 0410**, so every frame of
@@ -4223,13 +4224,13 @@ function motif(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, rest: Belly,
 }
 
 /** The underside in shadow: a polygon in the plate colour. */
-const plate = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.plate, points);
+export const plate = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.plate, points);
 
 /** A lit strip. */
-const lit = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.lit, points);
+export const lit = (ctx: Pen, f: Frame, skin: FoeSkin, points: readonly Pt[]): void => poly(ctx, f, skin.lit, points);
 
 /** An eye: a dark socket and the eye colour inside it, looking down the lane. */
-function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: number, gaze = 0): void {
+export function eye(ctx: Pen, f: Frame, skin: FoeSkin, x: number, y: number, radius: number, gaze = 0): void {
   disc(ctx, f, shade(skin.plate, -0.5), x, y, radius);
   /*
     ⚠️ **`gaze` MOVES THE PUPIL WITHIN THE EYE AND NOTHING ELSE** — 0319. It is `-1`, `0` or `1`: which
@@ -4266,7 +4267,7 @@ const DRIFTER_BELLY: Belly = [
 */
 
 /** Straight edges cut into short ones, so a pose can bend a side rather than only move its ends. */
-function densify(points: readonly Pt[], pieces = 6): Pt[] {
+export function densify(points: readonly Pt[], pieces = 6): Pt[] {
   const out: Pt[] = [];
   points.forEach(([ax, ay], i) => {
     const [bx, by] = points[(i + 1) % points.length]!;
@@ -4280,7 +4281,7 @@ function densify(points: readonly Pt[], pieces = 6): Pt[] {
  * finely: a pose that curves a whole side, as the weaver's does, needs more than one that swings a
  * corner, or the chord between two samples cuts inside the paint laid along it.
  */
-const bent = (points: readonly Pt[], pose: Pose, pieces = 6): Pt[] => posed(densify(points, pieces), pose);
+export const bent = (points: readonly Pt[], pose: Pose, pieces = 6): Pt[] => posed(densify(points, pieces), pose);
 
 /** One pose after another. */
 const andThen = (a: Pose, b: Pose): Pose => (p) => b(a(p));
@@ -4489,7 +4490,7 @@ function paintCharger(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind, n = 0
 }
 
 /** Points along an arc of a ring between two radii, as a closed polygon — a sector of a band. */
-function sector(r0: number, r1: number, a0: number, a1: number, steps = 12): Pt[] {
+export function sector(r0: number, r1: number, a0: number, a1: number, steps = 12): Pt[] {
   const out: Pt[] = [];
   for (let i = 0; i <= steps; i++) {
     const a = a0 + ((a1 - a0) * i) / steps;
@@ -4619,46 +4620,81 @@ function drawBody(ctx: Pen, f: Frame, skin: FoeSkin | null, hull: readonly Pt[],
   if (skin !== null) paint(skin);
 }
 
+/*
+  ── THE APPROACH'S EIGHT, AS ROWS OF A TABLE THAT HAS SEVEN COLUMNS — 0446 ─────────────────────────
+
+  ⚠️ **ASKED FOR**: *"thematic sprites per level for the enemies so that we actually have interesting
+  levels instead of the same model being used 7 times with a different colour."* The eight bodies
+  above are The Approach's own, and stay its own; every other place authors its version of each in
+  `src/render/foes.ts`, where `bodyOf` is a `Record<ThemeKind, FoeBody>` per kind — so a place that
+  has not said what its drifter is cannot compile, rather than quietly flying level one's.
+*/
+export const APPROACH_BODIES: Record<SharedKind, FoeBody> = {
+  drifter: { outline: (ctx, f, n) => trace(ctx, f, bent(DRIFTER_HULL, DRIFTER_POSES[n]!)), paint: paintDrifter },
+  lancer: { outline: (ctx, f, n) => trace(ctx, f, bent(LANCER_HULL, LANCER_POSES[n]!)), paint: paintLancer },
+  weaver: { outline: (ctx, f, n) => trace(ctx, f, bent(WEAVER_HULL, WEAVER_POSES[n]!, WEAVER_PIECES)), paint: paintWeaver },
+  turret: { outline: (ctx, f, n) => trace(ctx, f, posed(TURRET_HULL, TURRET_POSES[n]!)), paint: paintTurret },
+  charger: { outline: (ctx, f, n) => trace(ctx, f, bent(CHARGER_HULL, CHARGER_POSES[n]!)), paint: paintCharger },
+  warden: {
+    /*
+      A RING. Filled with `evenodd`, so the inner circle is a hole rather than a second disc — which is
+      what makes it read as an aperture rather than as a fat bullet, and what lets it dilate (0410).
+    */
+    outline: (ctx, f, n) => {
+      const bore = WARDEN_BORE[n]!;
+      ctx.arc(f.half, f.half, f.r, 0, Math.PI * 2);
+      ctx.moveTo(f.half + f.r * bore, f.half);
+      ctx.arc(f.half, f.half, f.r * bore, 0, Math.PI * 2);
+    },
+    paint: paintWarden,
+  },
+  spinner: { outline: (ctx, f, n) => trace(ctx, f, bent(SPINNER_HULL, SPINNER_POSES[n]!)), paint: paintSpinner },
+  sower: { outline: (ctx, f, n) => trace(ctx, f, bent(SOWER_HULL, SOWER_POSES[n]!)), paint: paintSower },
+};
+
+/**
+ * A shared kind's body in the place it is baked for, in pose `n`: its outline sealed in the place's
+ * hull, and its paint on it — 0446. `skin` is null for a hurt twin and for the high-contrast palette,
+ * which get the outline alone.
+ */
+function drawShared(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, kind: SharedKind, n: number): void {
+  const body = bodyOf(kind, theme);
+  body.outline(ctx, f, n);
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin !== null) body.paint(ctx, f, skin, theme, n);
+}
+
 function drawDrifter(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(DRIFTER_HULL, DRIFTER_POSES[n]!), (s) => paintDrifter(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'drifter', n);
 }
 
 function drawLancer(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(LANCER_HULL, LANCER_POSES[n]!), (s) => paintLancer(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'lancer', n);
 }
 
 function drawWeaver(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(WEAVER_HULL, WEAVER_POSES[n]!, WEAVER_PIECES), (s) => paintWeaver(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'weaver', n);
 }
 
 function drawTurret(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, posed(TURRET_HULL, TURRET_POSES[n]!), (s) => paintTurret(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'turret', n);
 }
 
 function drawCharger(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(CHARGER_HULL, CHARGER_POSES[n]!), (s) => paintCharger(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'charger', n);
 }
 
 function drawWarden(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  /*
-    A RING. Filled with `evenodd`, so the inner circle is a hole rather than a second disc — which is
-    what makes it read as an aperture rather than as a fat bullet, and what lets it dilate (0410).
-  */
-  const bore = WARDEN_BORE[n]!;
-  ctx.arc(f.half, f.half, f.r, 0, Math.PI * 2);
-  ctx.moveTo(f.half + f.r * bore, f.half);
-  ctx.arc(f.half, f.half, f.r * bore, 0, Math.PI * 2);
-  if (skin !== null) ctx.fillStyle = skin.hull;
-  seal(ctx);
-  if (skin !== null) paintWarden(ctx, f, skin, theme, n);
+  drawShared(ctx, f, skin, theme, 'warden', n);
 }
 
 function drawSpinner(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(SPINNER_HULL, SPINNER_POSES[n]!), (s) => paintSpinner(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'spinner', n);
 }
 
 function drawSower(ctx: Pen, f: Frame, skin: FoeSkin | null, theme: ThemeKind, n: number): void {
-  drawBody(ctx, f, skin, bent(SOWER_HULL, SOWER_POSES[n]!), (s) => paintSower(ctx, f, s, theme, n));
+  drawShared(ctx, f, skin, theme, 'sower', n);
 }
 /*
   ── THE BOSSES, PAINTED IN THEIR PLACE — 0228 ───────────────────────────────────────────────────

@@ -27,9 +27,9 @@ const DESKTOP = viewOf(1280, 720);
 const SIGNATURES: readonly EnemyKind[] = THEME_KINDS.map((t) => SIGNATURE_OF[t]);
 
 /** The hull of a kind, as its first traced pass, in CSS pixels of a 1280×720 screen. */
-function hullOf(kind: SpriteKind): string {
+function hullOf(kind: SpriteKind, theme: ThemeKind): string {
   const { pen, trace } = tracingPen();
-  drawKind(pen, kind, PALETTES.vivid, SPRITE_EXTENT[kind] * DESKTOP.scale, 'approach');
+  drawKind(pen, kind, PALETTES.vivid, SPRITE_EXTENT[kind] * DESKTOP.scale, theme);
   const hull = trace.passes[0]!;
   // Normalised to the sprite's own radius, so two hulls of different extents are compared as shapes.
   const r = SPRITE_EXTENT[kind] * DESKTOP.scale * 0.42;
@@ -58,12 +58,19 @@ describe('0232 — each place has its own enemy', () => {
   });
 
   it('and every signature is a new silhouette against every other enemy hull', () => {
-    const hulls = new Map<string, EnemyKind>();
-    for (const kind of ENEMY_KINDS) {
-      const hull = hullOf(SPRITE_KINDS[ENEMIES[kind].sprite]!);
-      const twin = hulls.get(hull);
-      expect(twin, `${kind} and ${twin} are the same silhouette`).toBeUndefined();
-      hulls.set(hull, kind);
+    /*
+      ⚠️ **IN EVERY PLACE SINCE 0446**, which drew the eight shared kinds afresh in each: a place's new
+      drifter must not come out as its own signature, and The Approach is no longer the only place
+      whose silhouettes are the ones the player meets.
+    */
+    for (const theme of THEME_KINDS) {
+      const hulls = new Map<string, EnemyKind>();
+      for (const kind of ENEMY_KINDS) {
+        const hull = hullOf(SPRITE_KINDS[ENEMIES[kind].sprite]!, theme);
+        const twin = hulls.get(hull);
+        expect(twin, `${kind} and ${twin} are the same silhouette at ${theme}`).toBeUndefined();
+        hulls.set(hull, kind);
+      }
     }
   });
 

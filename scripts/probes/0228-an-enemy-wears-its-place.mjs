@@ -100,13 +100,15 @@ export const PROBES = [
       ⚠️ ONE ENEMY LEFT UNPAINTED, which is what the charger — a needle five times longer than it is
       wide — invites: the arm that seals it and returns, exactly as it did before 0227.
     */
-    broke: 'the charger sealed and left flat in every place',
+    broke: 'the charger sealed and left flat at The Approach',
     guard: 'and every enemy and boss is painted in the vivid palette, in every place',
     edit: {
       path: 'src/render/bake.ts',
-      // ⚠️ Re-anchored by 0410, which draws the charger in `drawCharger` so each frame of its cycle can.
-      find: '(s) => paintCharger(ctx, f, s, theme, n));',
-      replace: '() => undefined);',
+      // ⚠️ Re-anchored by 0410, which draws the charger in `drawCharger` so each frame of its cycle can,
+      // and again by 0446, which made each place's charger its own row of a table: this is The
+      // Approach's, the one the other six places' bodies were drawn against.
+      find: 'paint: paintCharger },',
+      replace: 'paint: () => undefined },',
     },
   },
 ];
