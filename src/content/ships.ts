@@ -20,6 +20,7 @@
  */
 
 import type { Body } from '../sim/entity.ts';
+import type { Ink } from './palette.ts';
 import { SPRITE } from './sprites.ts';
 import type { WeaponKind } from './weapons.ts';
 import type { MissileKind } from './missiles.ts';
@@ -62,18 +63,112 @@ export interface ShipRow extends Body {
    */
   wingtip: number;
   /**
-   * How far behind the ship's centre its engines burn, in world units — where the exhaust's root
-   * meets the hull (`src/content/exhaust.ts`) — 0441. A saucer's drive is on its rim and a car's
-   * exhaust at its bumper, where the fighter's nacelles are halfway down its hull.
+   * Where its gun's shot leaves the hull — `docs/decisions/0448-each-ship-fires-from-its-own-guns.md`.
+   * The pulse's fan, the ray's ring and the arc's first link all start here, and a blade starts here and
+   * flies out to its strand. Played: *"the firebird and station wagon don't fire weapons from the actual
+   * gun on the hood."* It was `MUZZLE_ALONG` on the centreline for every ship, which on a car seen from
+   * the side is the middle of its door.
    */
-  tail: number;
+  muzzle: Mount;
+  /**
+   * Where each missile leaves, with one tube fitted and with two — 0448. The first of a pair still pops
+   * to the top of the lane and the second to the bottom (`fireMissiles`), so a pair from two turrets on
+   * one roof still opens into the two paths a pair always flew. The cars' are their roof turrets; the
+   * fighter's and the saucer's are where 0097 put every ship's.
+   */
+  tubes: readonly [readonly [], readonly [Mount], readonly [Mount, Mount]];
+  /**
+   * Its engines: where each flame's root meets the hull — 0448, and it was one `tail` behind the centre.
+   * The flame is baked as ONE jet and laid once per nozzle (`stepExhaust`), so the fighter and the saucer
+   * burn two and a car burns one, at its pipe, low at its back bumper. Played: *"one thruster is fine for
+   * the station wagon and firebird but they need to have one thruster in game as well."* At most
+   * `MAX_NOZZLES`, which sizes the exhaust's pool.
+   */
+  nozzles: readonly Mount[];
   /**
    * Where its pilot drops in, in world units about the ship's centre, as the intro's hangar draws the
    * ship — `docs/decisions/0444-the-intro-is-the-pilots.md`. The saucer is seen side-on there, so its
    * dome stands above its rim; a ship the hangar draws as the fight does is boarded where the fighter's
    * cockpit always was.
    */
-  cockpit: { readonly along: number; readonly across: number };
+  cockpit: Mount;
+  /**
+   * How big the intro draws it, against the fight's box at the hangar's scale — in the hangar, and out in
+   * the chase — 0448. Played: *"the intro movie for the lil caddie has the caddie too big, needs a 20%
+   * reduction in the hanger and probably a 40% reduction in the space chase."* A saucer fills its whole
+   * box where the fighter's hull is three quarters of it, so at one scale for every ship it stood a head
+   * taller than the fighter ever did beside the bar door.
+   */
+  intro: { readonly hangar: number; readonly outside: number };
+  /**
+   * How the readout in the top left wears this ship — `docs/decisions/0451-the-readout-wears-the-ship.md`.
+   * Asked for: *"we also need to do the hud theme on the top left row of icons in game. Golf-Stars has
+   * hud theming for all the spaceships already."* Its ink (the counts, the pips, the glow), the trim its
+   * rim runs from into that ink, and the dressing the plate wears — the predecessor's bridges, carried.
+   */
+  hud: HudTheme;
+}
+
+/**
+ * A colour the readout wears: a palette role, moved toward another and lifted or shaded — never a hex,
+ * so the high-contrast palette answers it as it answers the hulls (0441).
+ */
+export interface HudInk {
+  readonly from: Ink;
+  readonly toward?: Ink;
+  readonly by?: number;
+  /** Lighter above nought and darker below, as `shade` takes it. */
+  readonly lift?: number;
+}
+
+/**
+ * What the readout's plate is dressed in. Closed, per 0016 — each is a class in `src/app/chrome.ts`.
+ *
+ *   **bracket**  lit corner brackets: a fighter's gunsight, the studio's own frame
+ *   **orbit**    a dashed orbit about the plate and a slow bio-pulse: the saucer's probe deck
+ *   **checker**  a chequered flag down its leading end and a carbon weave: a racer's dash
+ *   **walnut**   walnut grain, a chrome lip and fuzzy dice: the wagon's woody dash
+ */
+export type HudMotif = 'bracket' | 'orbit' | 'checker' | 'walnut';
+
+/** Written out rather than derived, so the chrome can take every motif's class off before it puts one on. */
+export const HUD_MOTIFS: readonly HudMotif[] = ['bracket', 'orbit', 'checker', 'walnut'];
+
+export interface HudTheme {
+  readonly motif: HudMotif;
+  readonly ink: HudInk;
+  readonly trim: HudInk;
+}
+
+/** A point on a ship, in world units about its centre: `along` toward its nose, `across` down the lane. */
+export interface Mount {
+  readonly along: number;
+  readonly across: number;
+}
+
+/**
+ * Where a gun on the centreline fires from: three units ahead of the centre, clear of the hurtbox. It was
+ * `MUZZLE_ALONG` in `src/app/frame.ts` for every ship until 0448.
+ */
+const NOSE: Mount = { along: 3, across: 0 };
+
+/**
+ * 0097's tubes, the fighter's and the saucer's: a single on the top of the hull, a pair top and bottom,
+ * at the nose. *"Yes it will look off balance, that's the point when you only have one."*
+ */
+const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: -1.8 }], [{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]];
+
+/** The most engines any ship burns — the size of the exhaust's pool (`src/app/mount.ts`). */
+export const MAX_NOZZLES = 2;
+
+/**
+ * Where the `index`th missile of a volley from `launchers` tubes leaves, about the ship's centre — 0448.
+ * Clamped as `hullFor` is, and for the same reason.
+ */
+export function tubeOf(ship: ShipRow, launchers: number, index: number): Mount {
+  const stage = launchers < 1 ? 1 : launchers > 2 ? 2 : Math.floor(launchers);
+  const mounts: readonly Mount[] = stage === 1 ? ship.tubes[1] : ship.tubes[2];
+  return mounts[Math.min(index, mounts.length - 1)]!;
 }
 
 /** One bake of a ship and its hurt twin. */
@@ -134,12 +229,21 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
-    // The tips of its wingtip pods: 1.48 of the 7-unit hull's radius (`SHIP_POD_MK3` in the bake).
-    wingtip: 4.35,
-    // Its nacelles: 0.78 of the 7-unit hull's radius (`SHIP_CORE` in the bake).
-    tail: 2.29,
+    // The tips of its wingtip pods: 1.31 of the 7-unit hull's radius (`SHIP_POD_MK3` in the bake), since
+    // the wings were trimmed (0449); it was 1.48.
+    wingtip: 3.85,
+    muzzle: NOSE,
+    tubes: SIDE_TUBES,
+    // Its two nacelles: 0.78 of the 7-unit hull's radius back, 0.21 of it out (`SHIP_CORE` in the bake).
+    nozzles: [
+      { along: -2.29, across: -0.62 },
+      { along: -2.29, across: 0.62 },
+    ],
     // Its canopy, just ahead of the centre — 0411's three hangar units.
     cockpit: { along: 0.7, across: 0 },
+    intro: { hangar: 1, outside: 1 },
+    // The studio's own readout, violet into cyan (0439), in a gunsight's corners.
+    hud: { motif: 'bracket', ink: { from: 'player' }, trim: { from: 'ally' } },
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -161,10 +265,25 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The saucer's rim: the whole of the box's radius.
     wingtip: 3.95,
-    // Its drive, on the back of the rim.
-    tail: 3.95,
+    muzzle: NOSE,
+    tubes: SIDE_TUBES,
+    // Its two drives, on the back of the rim either side of the centreline — the pair it burns in the
+    // fight, and since 0450 in the intro's chase too.
+    nozzles: [
+      { along: -3.95, across: -0.62 },
+      { along: -3.95, across: 0.62 },
+    ],
     // The middle of its glass dome, seen side-on above the rim (`paintSaucer` in the port's bake).
     cockpit: { along: 0, across: -1.3 },
+    /*
+      ⚠️ **SMALLER THAN THE SHARED SCALE OUT IN THE CHASE — 0450.** *"Needs a 20% reduction in the hanger
+      and probably a 40% reduction in the space chase."* The shared scale (`HANGAR_SCALE`) took every
+      ship down by a quarter, which is the hangar's twenty per cent; the chase's forty is this 0.8 on top
+      of it. A saucer is a disc the width of its box where every other ship is narrower than its own.
+    */
+    intro: { hangar: 1, outside: 0.8 },
+    // The saucer's own green, lifted to read as text, and its ray dish's lavender — the probe deck.
+    hud: { motif: 'orbit', ink: { from: 'player', toward: 'acid', by: 0.55, lift: 0.2 }, trim: { from: 'ally' } },
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -184,14 +303,21 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
       { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
     ],
-    // The launcher on its hood, seen from the side since it was played — its star sits 0.29 of the box's
-    // radius above the centreline (`drawFirebird` in the bake), and the pair leaves from there and its
-    // mirror.
+    // How far either side of the nose its helix's two strands open from — the height of the launcher's
+    // star above the centreline. Since 0448 the pair leaves the star itself and flies out to here.
     wingtip: 1.13,
-    // Its twin exhausts, at the ducktail.
-    tail: 4.42,
+    // The launcher on its hood: the steel star's centre (`drawFirebird` in the bake; `CAR_MOUNTS` holds
+    // these to the drawing).
+    muzzle: { along: 3.08, across: -1.18 },
+    // The orange nose of the missile in each roof turret.
+    tubes: [[], [{ along: 0.76, across: -1.92 }], [{ along: 0.07, across: -1.92 }, { along: 1.05, across: -1.92 }]],
+    // One pipe, low at the back bumper.
+    nozzles: [{ along: -4.42, across: 0.47 }],
     // Its greenhouse, seen from the side: under the T-top, above the beltline (`drawFirebird` in the bake).
     cockpit: { along: 0.25, across: -1.1 },
+    intro: { hangar: 1, outside: 1 },
+    // Its phoenix's gold on its black lacquer, the rim running from its tail lamp's orange.
+    hud: { motif: 'checker', ink: { from: 'hazard' }, trim: { from: 'bullet' } },
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -213,10 +339,17 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
-    // Its twin exhausts, under the tailgate.
-    tail: 4.42,
+    // The lightning rod's ball on its bonnet (`drawEstate` in the bake): the arc's first link leaves it.
+    muzzle: { along: 3.43, across: -1.18 },
+    // The orange nose of the missile in each turret on the roof rack.
+    tubes: [[], [{ along: -1.22, across: -2.04 }], [{ along: -2.18, across: -2.04 }, { along: -0.66, across: -2.04 }]],
+    // One pipe, under the tailgate.
+    nozzles: [{ along: -4.42, across: 0.75 }],
     // Its front glasshouse, seen from the side, behind the pillar (`drawEstate` in the bake).
     cockpit: { along: 0.4, across: -0.7 },
+    intro: { hangar: 1, outside: 1 },
+    // The gilt, a shade paler to read as text, and the burl of its doors for the rim's dark end.
+    hud: { motif: 'walnut', ink: { from: 'hazard', lift: 0.25 }, trim: { from: 'hazard', lift: -0.45 } },
   },
 };
 

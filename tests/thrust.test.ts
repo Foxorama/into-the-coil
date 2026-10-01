@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { GameFrame, type World } from '../src/app/frame.ts';
-import { BURN_ASK, EASE_ASK, LEAN_KINDS, PULSE_STEPS, THRUST, THRUST_KINDS, type LeanKind } from '../src/content/exhaust.ts';
+import { BURN_ASK, BURN_ROOT, EASE_ASK, LEAN_KINDS, PULSE_STEPS, THRUST, THRUST_KINDS, type LeanKind } from '../src/content/exhaust.ts';
 
 /** Every bitmap a thrust state can show, whichever way it leans. */
 function frames(kind: 'idle' | 'burn' | 'ease'): number[] {
@@ -21,6 +21,7 @@ function leanOf(sprite: number): LeanKind | null {
   return null;
 }
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { MAX_NOZZLES, SHIP_KINDS, SHIPS } from '../src/content/ships.ts';
 import { SHIP_SPEED } from '../src/sim/flight.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
@@ -61,13 +62,14 @@ describe('0230 — the ship flies', () => {
   it('THE REPORTED ONE: a flying ship has a flame behind its tail, and a wreck has none', () => {
     const { world: w, frame } = piloted();
     frame.step();
-    expect(w.exhaust.size, 'the ship is flying and has no exhaust').toBe(1);
+    expect(w.exhaust.size, 'the ship is flying and has no exhaust').toBe(w.shipRow.nozzles.length);
     const flame = w.exhaust.at(0);
+    const nozzle = w.shipRow.nozzles[0]!;
     expect(flame.along, 'the flame is not behind the ship').toBeLessThan(w.ship.along);
-    expect(w.ship.along - flame.along, 'the flame is not at the tail').toBeCloseTo(w.shipRow.tail + THRUST.idle.trail, 6);
-    // The flame's root has to reach the ship's own nozzles — its row's `tail`, since 0441.
+    expect(w.ship.along - flame.along, 'the flame is not at the tail').toBeCloseTo(-nozzle.along + THRUST.idle.trail, 6);
+    // The flame's root has to reach the ship's own nozzles — its row's, since 0441.
     const root = flame.along + SPRITE_EXTENT[SPRITE_KINDS[flame.sprite]!] * 0.42 * 0.9;
-    expect(root, 'the flame’s root does not reach the tail, so it floats behind the ship').toBeGreaterThan(w.ship.along - w.shipRow.tail - 0.5);
+    expect(root, 'the flame’s root does not reach the tail, so it floats behind the ship').toBeGreaterThan(w.ship.along + nozzle.along - 0.5);
     // A wreck has no engines.
     w.ship.health = 0;
     frame.step();
@@ -141,21 +143,58 @@ describe('0230 — the ship flies', () => {
     */
     const { world: w, frame, ask } = piloted();
     frame.step();
-    expect(w.exhaust.at(0).across, 'a ship going straight has a flame off its centreline').toBeCloseTo(w.ship.across, 6);
+    // On its nozzle across, since 0448 — the fighter's first is a nacelle off the centreline.
+    const off = w.shipRow.nozzles[0]!.across;
+    expect(w.exhaust.at(0).across, 'a ship going straight has a flame off its nozzle').toBeCloseTo(w.ship.across + off, 6);
     expect(leanOf(w.exhaust.at(0).sprite), 'a ship going straight has a leaning flame').toBe('level');
     ask.across = -1;
     for (let i = 0; i < 20; i++) frame.step();
     expect(w.ship.velAcross, 'the ship is not climbing, so this measured nothing').toBeLessThan(0);
-    expect(w.exhaust.at(0).across, 'the flame slid off the tail in a climb').toBeCloseTo(w.ship.across, 6);
+    expect(w.exhaust.at(0).across, 'the flame slid off the tail in a climb').toBeCloseTo(w.ship.across + off, 6);
     expect(leanOf(w.exhaust.at(0).sprite), 'the flame does not lean in a climb').toBe('climb');
     ask.across = 1;
     for (let i = 0; i < 40; i++) frame.step();
     expect(w.ship.velAcross, 'the ship is not diving, so this measured nothing').toBeGreaterThan(0);
-    expect(w.exhaust.at(0).across, 'the flame slid off the tail in a dive').toBeCloseTo(w.ship.across, 6);
+    expect(w.exhaust.at(0).across, 'the flame slid off the tail in a dive').toBeCloseTo(w.ship.across + off, 6);
     expect(leanOf(w.exhaust.at(0).sprite), 'the flame does not lean in a dive').toBe('dive');
     ask.across = 0;
     for (let i = 0; i < 120; i++) frame.step();
     expect(leanOf(w.exhaust.at(0).sprite), 'the flame never rights itself').toBe('level');
+  });
+
+  it('0448 — burns one flame on each of its own nozzles, in every ship, and swells on them at full burn', () => {
+    /*
+      ⚠️ **THE ASK, IN WORLD UNITS ON THE PICTURE'S OWN AXES.** *"One thruster is fine for the station
+      wagon and firebird but they need to have one thruster in game as well"*, and *"the engines on the
+      two don't fit properly when they do the full blast."* The fighter's two flames were one bitmap laid
+      on every ship's centreline, so a car burned two, both into the slope of its boot. Each flame is
+      measured against where the row says the nozzle is, so a car with one pipe has one flame on it.
+    */
+    for (const kind of SHIP_KINDS) {
+      const { world: w, frame } = piloted();
+      w.shipRow = SHIPS[kind];
+      for (const warp of [0, 1]) {
+        w.warp = warp;
+        frame.step();
+        const row = warp > 0 ? THRUST.burn : THRUST.idle;
+        expect(w.exhaust.size, `the ${kind} does not burn one flame per nozzle`).toBe(SHIPS[kind].nozzles.length);
+        for (let i = 0; i < w.exhaust.size; i++) {
+          const flame = w.exhaust.at(i);
+          const at = SHIPS[kind].nozzles[i]!;
+          expect(flame.across - w.ship.across, `the ${kind}'s flame ${i} is off its nozzle at warp ${warp}`).toBeCloseTo(at.across, 6);
+          // The root, the sprite's forward edge at the size drawn, stays on the nozzle as the flame swells.
+          if (warp > 0) {
+            const root = flame.along + BURN_ROOT * flame.swell;
+            expect(root - w.ship.along, `the ${kind}'s full-burn flame ${i} leaves its nozzle`).toBeCloseTo(at.along - row.trail + BURN_ROOT, 6);
+          }
+        }
+      }
+    }
+    expect(Math.max(...SHIP_KINDS.map((k) => SHIPS[k].nozzles.length)), 'a ship burns more flames than the pool holds').toBeLessThanOrEqual(MAX_NOZZLES);
+    expect(SHIPS.firebird.nozzles.length, 'the Firebird burns other than its one pipe').toBe(1);
+    expect(SHIPS.estate.nozzles.length, 'the estate burns other than its one pipe').toBe(1);
+    expect(SHIPS.caddie.nozzles.length, 'the caddie burns other than its two drives').toBe(2);
+    expect(SHIPS.fighter.nozzles.length, 'the fighter burns other than its two nacelles').toBe(2);
   });
 
   it('is drawn under the shell and the ship and over every shot, and every thrust row has frames and a trail', () => {

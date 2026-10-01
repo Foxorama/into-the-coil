@@ -31,7 +31,7 @@ import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
-import type { ThrustKind } from '../content/exhaust.ts';
+import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
 import { SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -1735,6 +1735,16 @@ const BOSS7_EYE: readonly Mark[] = [
   nothing to cancel and the outline runs round both — which also draws the panel line between them.
 */
 
+/*
+  ⚠️ **THE WINGTIP IS AT 0.78 OF `r`, NOT 0.95 — `docs/decisions/0449-the-wings-are-trimmed.md`.**
+  Played: *"they jut out a bit too much and make the ship just a bit too big to get through a few holes
+  in bullet walls."* The span is 18% narrower; the tip keeps its chord and its place along the hull, so
+  the wing sweeps harder rather than getting stubby. Every part that sits on the tip edge — pods, the
+  panel and the livery below — moved in with it by the same 0.17. (It was built on 2026-10-01 and its
+  branch never merged, so 0441's roster flew the old span until 0449 carried it over.) ⚠️ **The hurtbox did not move**: it is `radius` in
+  `src/content/ships.ts`, 2 units, and the old tip was already 2.79 out. What this changed is the
+  picture the player judges a gap by.
+*/
 /** The upper half of the fighter, nose first. The lower half is its mirror. */
 const SHIP_UPPER: readonly Pt[] = [
   [1, 0],
@@ -1742,8 +1752,8 @@ const SHIP_UPPER: readonly Pt[] = [
   [0.34, -0.26],
   [0, -0.34],
   [-0.15, -0.48],
-  [-0.42, -0.95],
-  [-0.72, -0.95],
+  [-0.42, -0.78],
+  [-0.72, -0.78],
   [-0.55, -0.42],
   [-0.78, -0.3],
   [-0.78, -0.12],
@@ -1765,18 +1775,18 @@ export const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).
 
 /** A wingtip pod, the second tier's addition. Its base lies exactly on the wingtip edge. */
 const SHIP_POD: readonly Pt[] = [
-  [-0.4, -0.95],
-  [-0.26, -1.32],
-  [-0.9, -1.32],
-  [-0.74, -0.95],
+  [-0.4, -0.78],
+  [-0.26, -1.15],
+  [-0.9, -1.15],
+  [-0.74, -0.78],
 ];
 
 /** The third tier's pod: longer, and it carries a lit muzzle. */
 const SHIP_POD_MK3: readonly Pt[] = [
-  [-0.36, -0.95],
-  [-0.14, -1.48],
-  [-0.96, -1.48],
-  [-0.76, -0.95],
+  [-0.36, -0.78],
+  [-0.14, -1.31],
+  [-0.96, -1.31],
+  [-0.76, -0.78],
 ];
 
 /** A canard on the leading edge, the third tier's. Both base points sit on one hull edge. */
@@ -1797,8 +1807,8 @@ const SHIP_CANARD: readonly Pt[] = [
 /** The wing's inboard panel, in the hull's own shadow. */
 const SHIP_WING_PANEL: readonly Pt[] = [
   [-0.2, -0.5],
-  [-0.44, -0.88],
-  [-0.66, -0.88],
+  [-0.42, -0.71],
+  [-0.62, -0.71],
   [-0.52, -0.46],
 ];
 
@@ -1892,16 +1902,17 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): v
   for (const side of [1, -1] as const) {
     poly(ctx, f, palette.bullet, [
       [-0.17, -0.47 * side],
-      [-0.43, -0.93 * side],
-      [-0.57, -0.93 * side],
+      [-0.42, -0.76 * side],
+      [-0.56, -0.76 * side],
       [-0.31, -0.47 * side],
     ]);
-    // Tall enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor.
+    // Tall enough to be drawn at the shipped camera — `tests/accents.test.ts` holds the floor. Its
+    // inboard aft corner is pulled in to stay under the trailing edge, which rakes harder since 0449.
     poly(ctx, f, palette.hazard, [
-      [-0.45, -0.93 * side],
-      [-0.69, -0.93 * side],
-      [-0.65, -0.78 * side],
-      [-0.47, -0.78 * side],
+      [-0.45, -0.76 * side],
+      [-0.69, -0.76 * side],
+      [-0.63, -0.61 * side],
+      [-0.47, -0.61 * side],
     ]);
   }
   // The keel, behind the canopy, in the trim ink — the seam down the hull.
@@ -1929,8 +1940,8 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): v
       poly(ctx, f, dark, [
         [-0.44, (tip + 0.06) * side],
         [-0.76, (tip + 0.06) * side],
-        [-0.72, -1.02 * side],
-        [-0.46, -1.02 * side],
+        [-0.72, -0.85 * side],
+        [-0.46, -0.85 * side],
       ]);
       // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
       poly(ctx, f, palette.hazard, [
@@ -2005,10 +2016,11 @@ interface TubeAt {
 const TUBES_ON: Record<'fighter' | 'caddie', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
   fighter: {
     one: { at: [0.52, 0], length: 0.2 },
-    // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more.
+    // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more. A
+    // little further in since the wings were trimmed (0449), which rakes the trailing edge harder.
     two: [
-      { at: [-0.31, -0.47], length: 0.11 },
-      { at: [-0.31, 0.47], length: 0.11 },
+      { at: [-0.3, -0.4], length: 0.11 },
+      { at: [-0.3, 0.4], length: 0.11 },
     ],
   },
   caddie: {
@@ -2047,21 +2059,28 @@ function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }:
   ]);
 }
 
+/*
+  `SHIP_JETS` stood here — where each ship's engines burn, for the intro's flames — beside `tail` on the
+  ship's row, two descriptions of one fact, and they disagreed: the saucer had one drive here and two in
+  the fight. Since 0448 both read `nozzles` on the row (`jetsOf` in `port-bake.ts`).
+*/
+
 /**
- * Where each ship's engines burn, in the box's radius — the port's flames come out of these (0441).
- * The fighter's are its two nacelles (`SHIP_CORE`) at its hull's size in the box; the saucer burns
- * from one drive at its tail; the two cars from their twin exhausts.
+ * Where each car's guns are DRAWN, in the box's radius: the hood gun the shot leaves, and the nose of
+ * the missile in each roof turret at one tube and two — 0448. `tests/mounts.test.ts` holds the ship rows'
+ * `muzzle` and `tubes` to these, so a turret moved in the drawing cannot leave its missiles behind.
  */
-export const SHIP_JETS: Record<ShipArt, readonly Pt[]> = {
-  fighter: [
-    [-0.78 * (FIGHTER_HULL / SHIP_BOX), -0.21 * (FIGHTER_HULL / SHIP_BOX)],
-    [-0.78 * (FIGHTER_HULL / SHIP_BOX), 0.21 * (FIGHTER_HULL / SHIP_BOX)],
-  ],
-  caddie: [[-1, 0]],
-  // The cars, from the side: one exhaust each, low at the tail.
-  firebird: [[-1.12, 0.12]],
-  estate: [[-1.12, 0.19]],
-};
+export function carMounts(ship: 'firebird' | 'estate'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
+  const firebird = ship === 'firebird';
+  const box = (x: number, y: number): Pt => (firebird ? inBox([[x, y]], 1, 1.5) : inBox([[x, y]], 0, 1))[0]!;
+  const spans = firebird ? FIREBIRD_TURRETS : ESTATE_TURRETS;
+  const mid = firebird ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2 : (ESTATE_TURRET_TOP + ESTATE_RACK) / 2;
+  return {
+    muzzle: firebird ? box(FIREBIRD_STAR[0], FIREBIRD_STAR[1]) : box(ESTATE_BALL[0], ESTATE_BALL[1]),
+    // The orange nose `paintTurrets` draws runs to a tenth short of the turret's front.
+    tubes: spans.map((stage) => stage.map(([, to]) => box(to - 0.1, mid))),
+  };
+}
 
 /** A ring of `count` points about a centre — the saucer's rim, or anything else that is round. */
 function roundel(cx: number, cy: number, radius: number, count: number, from: number, to: number): Pt[] {
@@ -2137,6 +2156,13 @@ const ESTATE_TURRETS: readonly (readonly (readonly [number, number])[])[] = [[],
 const FIREBIRD_TURRET_TOP = -7.8;
 const ESTATE_TURRET_TOP = -8.8;
 
+/** Where the Firebird's turrets sit on its roof, in the predecessor's frame. */
+const FIREBIRD_TURRET_BASE = -4.9;
+
+/** The centre of the Firebird's launcher star, and of the estate's rod ball — where each gun fires from. */
+const FIREBIRD_STAR: Pt = [13.6, -3.3];
+const ESTATE_BALL: Pt = [14, -3.8];
+
 /** The Firebird's roof, a straight line from the back of the greenhouse to its front. */
 const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
 
@@ -2181,7 +2207,7 @@ function estateOutline(stage: number): Pt[] {
   const ball: Pt[] = [];
   for (let i = 0; i <= 6; i++) {
     const a = Math.PI * 0.75 + (i * Math.PI * 1.5) / 6;
-    ball.push([14 + Math.cos(a) * 2.1, -3.8 + Math.sin(a) * 2.1]);
+    ball.push([ESTATE_BALL[0] + Math.cos(a) * 2.1, ESTATE_BALL[1] + Math.sin(a) * 2.1]);
   }
   return [
     [-18, 6],
@@ -2400,9 +2426,9 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [15.6, -2],
     [11.6, -2],
   ]));
-  poly(ctx, f, palette.blade, box(steelStar(13.6, -3.3, 1.35)));
+  poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.35)));
   // Its turrets on the roof.
-  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, -4.9, box);
+  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box);
   // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red.
   poly(ctx, f, palette.impact, box([
     [16.8, -0.7],
@@ -2480,7 +2506,7 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
     [12.9, 1.2],
   ]));
   {
-    const [bx, by] = at(14, -3.8);
+    const [bx, by] = at(ESTATE_BALL[0], ESTATE_BALL[1]);
     disc(ctx, f, palette.player, bx, by, 1.9 * 0.062);
     glow(ctx, f, palette.player, bx, by, 3.4 * 0.062, 0.6);
     disc(ctx, f, palette.impact, bx, by, 0.9 * 0.062);
@@ -2512,8 +2538,11 @@ function leanOf(kind: SpriteKind): number {
  */
 const THRUST_LEAN = 0.35;
 
-/** Where the flame's root sits in the frame — the sprite's forward edge — and the shear's pivot. */
-const THRUST_ROOT = 0.92;
+/*
+  `THRUST_ROOT` — where the flame's root sits in the frame, and the shear's pivot — is in
+  `src/content/exhaust.ts` since 0448, because the frame holds the root on the nozzle and has to know
+  where the bake put it.
+*/
 
 /**
  * The exhaust, one state at a time — 0230's three flames, each baked level and leaning both ways
@@ -2524,14 +2553,17 @@ const THRUST_ROOT = 0.92;
  * swings, and the two nozzles' flames stay the same length. A rotation would swing the root too and
  * shorten the flame in the box; a shear is what a flame bent by the airflow looks like.
  *
- * ⚠️ **THE NACELLES ARE 0.62 UNITS OFF THE CENTRELINE ON THE HULL**, and each kind's box is a
- * different size, so the offset is stated in units and divided by the kind's own radius here.
+ * ⚠️ **ONE JET, ON THE CENTRELINE OF ITS OWN BOX, SINCE 0448.** It was the fighter's two nacelles,
+ * 0.62 units either side, baked into one bitmap and laid on every ship's centreline — so a car whose
+ * one pipe is low at its bumper burned two flames into the slope of its boot. The frame now lays one
+ * of these on each of the ship's own `nozzles` (`stepExhaust`), and the fighter's pair is two blits.
  */
-function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number, extent: number): void {
-  const y = 0.62 / (extent * 0.42);
+function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number): void {
+  const y = 0;
+  const side = 1;
   const at = (x: number, off: number, side: 1 | -1): Pt => [x, off * side + lean * THRUST_LEAN * (THRUST_ROOT - x)];
   const shift = (x: number): number => lean * THRUST_LEAN * (THRUST_ROOT - x);
-  for (const side of [1, -1] as const) {
+  {
     switch (state) {
       case 'idle':
         glow(ctx, f, palette.hazard, 0.55, y * side + shift(0.55), 0.5, 0.6);
@@ -7641,8 +7673,11 @@ const QUETZAL_UPPER: readonly Pt[] = [
   [0.96, 0],
 ];
 
-/** The two beaks, each lower jaw → tip → upper jaw, which is the order the hull meets them in. */
-const QUETZAL_BEAKS: Record<'shut' | 'open', readonly Pt[]> = {
+/**
+ * The two beaks, each lower jaw → tip → upper jaw, which is the order the hull meets them in. The open
+ * one's tips are where the mouth's laser leaves — `BOSSES.quetzal`'s `BEAK`, 0431.
+ */
+export const QUETZAL_BEAKS: Record<'shut' | 'open', readonly Pt[]> = {
   shut: [
     [-0.62, 0.075],
     [-1, 0.012],
@@ -12287,13 +12322,13 @@ export function drawKind(
     /*
       ── THE EXHAUST — 0230 ──────────────────────────────────────────────────────────────────────
 
-      Two flames, one per nacelle, with their roots at the sprite's forward edge and their tips at
-      its back. No hull and no outline, on the burst's own terms: fire has no edge. The two idle
+      One flame — one per nozzle since 0448, each its own blit — with its root at the sprite's forward
+      edge and its tip at its back. No hull and no outline, on the burst's own terms: fire has no edge. The two idle
       frames and the two burning frames differ in length and in where the flicker is, so alternating
       them on the step clock reads as a flame that is alive; the ease frame is a wisp.
 
-      ⚠️ **THE NACELLES ARE 0.62 UNITS OFF THE CENTRELINE ON THE HULL**, and each kind's box is a
-      different size, so the offset is stated in units and divided by the kind's own radius here.
+      ⚠️ **ON THE CENTRELINE OF ITS BOX.** Where the nozzles are is the ship's row (`nozzles`), and the
+      frame lays a flame on each.
     */
     case 'thrustIdle0':
     case 'thrustIdle1':
@@ -12301,7 +12336,7 @@ export function drawKind(
     case 'thrustIdle0Dive':
     case 'thrustIdle1Climb':
     case 'thrustIdle1Dive':
-      paintThrust(ctx, f, palette, 'idle', kind.startsWith('thrustIdle1'), leanOf(kind), SPRITE_EXTENT[kind]);
+      paintThrust(ctx, f, palette, 'idle', kind.startsWith('thrustIdle1'), leanOf(kind));
       return;
     case 'thrustBurn0':
     case 'thrustBurn1':
@@ -12309,12 +12344,12 @@ export function drawKind(
     case 'thrustBurn0Dive':
     case 'thrustBurn1Climb':
     case 'thrustBurn1Dive':
-      paintThrust(ctx, f, palette, 'burn', kind.startsWith('thrustBurn1'), leanOf(kind), SPRITE_EXTENT[kind]);
+      paintThrust(ctx, f, palette, 'burn', kind.startsWith('thrustBurn1'), leanOf(kind));
       return;
     case 'thrustEase':
     case 'thrustEaseClimb':
     case 'thrustEaseDive':
-      paintThrust(ctx, f, palette, 'ease', false, leanOf(kind), SPRITE_EXTENT[kind]);
+      paintThrust(ctx, f, palette, 'ease', false, leanOf(kind));
       return;
     /*
       ── THE SIGNATURE ENEMIES, ONE PER PLACE — 0232 ────────────────────────────────────────────

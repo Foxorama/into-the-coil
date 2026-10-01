@@ -8,7 +8,7 @@ export const PROBES = [
     suite: 'tests/blades.test.ts',
     // 0242's loop put back: the along swings about the axis too, so the track comes back on itself.
     broke: 'the blade’s along swinging with its across, so its track is a chain of loops again',
-    guard: 'THE HELIX: a blade leaves the wingtip',
+    guard: 'THE HELIX: a blade leaves the gun for the wingtip',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const along = b.fromAlong;\n',
@@ -37,7 +37,7 @@ export const PROBES = [
     suite: 'tests/blades.test.ts',
     // The first draft's throw: from the crest, `coil` out, rather than from the wingtip.
     broke: 'the pair thrown from its crests, a coil out, rather than from the wingtips',
-    guard: 'THE HELIX: a blade leaves the wingtip',
+    guard: 'THE HELIX: a blade leaves the gun for the wingtip',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const angle = side > 0 ? lift : Math.PI + lift;',

@@ -134,8 +134,9 @@ export const PROBES = [
     guard: 'no hot file allocates',
     edit: {
       path: 'src/render/port.ts',
-      find: '  surface.clear();\n  if (t < BEATS.cut)',
-      replace: '  surface.clear();\n  void [t].map((n) => n);\n  if (t < BEATS.cut)',
+      // ⚠️ Re-anchored by 0450, which reads each ship's intro size between the two.
+      find: '  surface.clear();\n  // Each ship at its own size',
+      replace: '  surface.clear();\n  void [t].map((n) => n);\n  // Each ship at its own size',
     },
   },
   {

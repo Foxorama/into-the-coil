@@ -148,9 +148,21 @@ export const WARP_SCROLL = 12;
 export const WARP_FLAME = 2.8;
 
 /**
- * Half the burning flame's extent, in world units — how far its root is from its centre.
- *
- * ⚠️ **DERIVED FROM THE SPRITE TABLE, SO A REDRAWN FLAME MOVES IT.** `src/app/frame.ts` holds the
- * root on the tail while the flame swells, and needs this to know where the root is.
+ * Where a flame's root is drawn in its sprite, as a share of the frame's radius — the forward edge of
+ * the flame, and the pivot its lean shears about. The bake draws to it (`paintThrust`), so it is here,
+ * where the frame can read it too.
  */
-export const BURN_HALF = SPRITE_EXTENT.thrustBurn0 / 2;
+export const THRUST_ROOT = 0.92;
+
+/**
+ * How far the burning flame's root is from its centre, in world units — 0448, and it was half the
+ * sprite's extent (`BURN_HALF`).
+ *
+ * ⚠️ **THE ROOT IS WHERE THE BAKE DRAWS IT, AND HALF THE BOX IS NOT THERE.** A sprite's frame puts its
+ * radius at 0.42 of the extent, and the flame's root at `THRUST_ROOT` of that — 0.39 of the extent, not
+ * 0.5. Held on the half, a flame swollen 2.8 times slid its root a unit back off the nozzle at full
+ * burn: on the fighter that gap was under its wings, and on a car's flat bumper it was the reported
+ * *"the engines on the two don't fit properly when they do the full blast."* Derived from the sprite
+ * table, so a redrawn flame moves it.
+ */
+export const BURN_ROOT = SPRITE_EXTENT.thrustBurn0 * 0.42 * THRUST_ROOT;

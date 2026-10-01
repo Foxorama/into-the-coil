@@ -17,7 +17,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame, wearHull, type World } from '../src/app/frame.ts';
+import { BLADE_OUT_STEPS, GameFrame, wearHull, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
 import { SHOTS, SHOT_INDEX } from '../src/content/shots.ts';
@@ -56,6 +56,12 @@ const MEDUSA_ALONE: LevelRow = {
  * of the screen, which is the defect 0237 is about.
  */
 const LONGER_THAN_A_BLADE = 1200;
+
+/**
+ * The first place a blade is recorded on its strand, having left the gun — 0448. `flights` records a
+ * place after every step from the throw's own, which already moved the blade once.
+ */
+const OUT = BLADE_OUT_STEPS - 1;
 
 /**
  * A world flying `ship` — whose gun is a coil — nothing else in the air, the launcher about to throw.
@@ -193,6 +199,8 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
     const { world, frame } = armed();
     frame.step();
     world.fireIn = NEVER;
+    // One blade alone: since 0448 the pair leaves the one gun, so a void planted on one takes both.
+    while (world.playerShots.size > 1) world.playerShots.releaseAt(world.playerShots.size - 1);
     const blade = world.playerShots.at(0);
     expect(blade.health, 'a blade does not carry an edge to lose').toBe(SHOTS.shuriken.health);
     const blast = voidOn(world, blade);
@@ -354,7 +362,7 @@ describe('0357 — a void blunts a blade rather than eating it', () => {
 });
 
 describe('0234 — a blade rides a helix ahead of the ship', () => {
-  it('THE HELIX: a blade leaves the wingtip, never loses ground up the lane, and swings across the ship’s line again and again at one width', () => {
+  it('THE HELIX: a blade leaves the gun for the wingtip, never loses ground up the lane, and swings across the ship’s line again and again at one width', () => {
     /*
       0244, from the sixth play-test: *"I want the two wingtips firing to form a helix pattern with
       the shurikens."* A swing is read off the picture — the track between two crossings of the
@@ -377,12 +385,26 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
     for (const ship of coiling) {
       const { pair, thrown } = flights(ship);
       const places = pair[0];
-      expect(Math.abs(places[0]!.fromShipAlong), `${ship}: the blade did not leave from the ship`).toBeLessThan(SHOTS.shuriken.radius);
+      /*
+        ⚠️ **FROM THE GUN, SINCE 0448** — *"shurikens should be fired from the gun and then go out to their
+        current distance and helix from there."* Both blades leave the launcher on the hood (`muzzle` on
+        the row), and by `BLADE_OUT_STEPS` each has gone out to the wingtip width on its own side of the
+        ship's line, where its strand starts. (`places[k]` is where it was after the throw and k steps.)
+      */
+      const muzzle = SHIPS[ship].muzzle;
+      expect(Math.abs(places[0]!.fromShipAlong - muzzle.along), `${ship}: the blade did not leave from the gun`).toBeLessThan(SHOTS.shuriken.radius);
+      for (const out of thrown) {
+        expect(Math.abs(out - muzzle.across), `${ship}: a blade was thrown ${out.toFixed(1)} across, and the gun is at ${muzzle.across.toFixed(1)}`).toBeLessThan(
+          SHOTS.shuriken.radius / 2,
+        );
+      }
       const wingtip = SHIPS[ship].wingtip;
-      expect(
-        Math.abs(Math.abs(thrown[0]) - wingtip),
-        `${ship}: the blade was thrown ${Math.abs(thrown[0]).toFixed(1)} out, and the wingtip is ${wingtip.toFixed(1)}`,
-      ).toBeLessThan(SHOTS.shuriken.radius / 2);
+      for (const strand of pair) {
+        const opened = Math.abs(strand[OUT]!.fromShipAcross);
+        expect(Math.abs(opened - wingtip), `${ship}: a blade has gone ${opened.toFixed(1)} out from the gun, and the wingtip is ${wingtip.toFixed(1)}`).toBeLessThan(
+          SHOTS.shuriken.radius / 2,
+        );
+      }
       expect(Math.max(...places.map((p) => Math.abs(p.fromShipAcross))), `${ship}: the blade never swung wider than the wingtip`).toBeGreaterThan(
         wingtip + SHOTS.shuriken.radius,
       );
@@ -427,7 +449,7 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
     }
   });
 
-  it('THE PAIR: a throw is two blades from opposite wingtips, and they cross in front of the nose', () => {
+  it('THE PAIR: a throw is two blades out of one gun, split to opposite sides, and they cross in front of the nose', () => {
     /*
       *"cross the blades in front of the nose."* Two blades, one at each crest, a half-turn apart,
       cross the band's centre line together — which is where a boss sits. Held from the picture:
@@ -440,8 +462,10 @@ describe('0234 — a blade rides a helix ahead of the ship', () => {
     */
     const { pair, thrown } = flights();
     const [a, b] = pair;
-    expect(thrown[0], 'the pair left from one side').toBeCloseTo(-thrown[1], 3);
-    expect(a[0]!.fromShipAcross, 'the pair left from one side').toBeCloseTo(-b[0]!.fromShipAcross, 3);
+    // Out of the one gun, and then split to opposite sides — 0448: once each is on its strand the two
+    // are mirrors about the ship's line, which is what the old throw from opposite wingtips gave.
+    expect(thrown[0], 'the pair did not leave the one gun').toBeCloseTo(thrown[1], 3);
+    expect(a[OUT]!.fromShipAcross, 'the pair never split to opposite sides').toBeCloseTo(-b[OUT]!.fromShipAcross, 3);
     for (const places of pair) {
       expect(Math.min(...places.map((p) => p.fromShipAcross)), 'a blade never crossed to the other side').toBeLessThan(0);
       expect(Math.max(...places.map((p) => p.fromShipAcross)), 'a blade never crossed to the other side').toBeGreaterThan(0);

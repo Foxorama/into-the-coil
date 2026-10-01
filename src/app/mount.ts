@@ -89,7 +89,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -169,8 +169,12 @@ import { runLoop } from './loop.ts';
 export const CAPACITY = {
   ship: 1,
   shieldOrbs: MAX_SHIELDS,
-  // The ship's exhaust — 0230. One, out of the particle share, on the shell's own terms.
-  exhaust: 1,
+  /*
+    The ship's exhaust — 0230, one out of the particle share. ⚠️ **A FLAME PER NOZZLE SINCE 0448**, and
+    the second is the pickups' — the particle share is measured full (`tests/flares.test.ts`'s 148.9
+    against the 149 `debris` keeps), and the pickups had four spare, as they had when 0373 took the aura.
+  */
+  exhaust: MAX_NOZZLES,
   // A surge's aura — 0373. One, out of the four pickup slots 0066's deleted scatter was given.
   aura: 1,
   enemies: 40,
@@ -290,12 +294,13 @@ export const CAPACITY = {
   nova: 40,
   boss: 1,
   /*
-    ⚠️ **ELEVEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
-    `docs/decisions/0372-a-death-keeps-the-ladders.md` deleted. 0373 takes one for the surge's aura.
-    Eleven still covers everything a level can have out at once: it authors four at most and the
-    mid-boss throws three, which is seven even if nobody takes any of them.
+    ⚠️ **TEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which
+    `docs/decisions/0372-a-death-keeps-the-ladders.md` deleted. 0373 takes one for the surge's aura,
+    and 0448 one for the second engine flame (`exhaust`). Ten still covers everything a level can have
+    out at once: it authors four at most and the mid-boss throws three, which is seven even if nobody
+    takes any of them.
   */
-  pickups: 11,
+  pickups: 12 - 1 - (MAX_NOZZLES - 1),
 };
 
 /**
@@ -1081,7 +1086,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
     fireIn: weaponFor(shipRow, []).fireEvery,
-    burstFired: 0,
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
@@ -1568,7 +1572,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world.shipRow = SHIPS[state.run.ship];
       world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
-      chrome.setShip(world.shipRow.sprite);
+      chrome.setShip(world.shipRow);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -1757,7 +1761,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   function fitPilot(): void {
     const row = SHIPS[GOLFERS[state.settings.pilot].ship];
-    chrome.setShip(row.sprite);
+    chrome.setShip(row);
     if (state.run.lives > 0) return;
     world.shipRow = row;
     world.weapon = weaponFor(row, [], row.missile);

@@ -103,10 +103,11 @@ export const PROBES = [
     guard: 'and the flame swells with the burn while its ROOT stays on the tail',
     edit: {
       path: 'src/app/frame.ts',
-      // ⚠️ Re-anchored by 0441, which measures the trail from each ship's own nozzles (`tail`); the
-      // break leaves that in place and takes only the swell's correction away.
-      find: '  flame.along = w.ship.along - w.shipRow.tail - row.trail - BURN_HALF * (swell - 1);',
-      replace: '  flame.along = w.ship.along - w.shipRow.tail - row.trail;',
+      // ⚠️ Re-anchored by 0441, which measures the trail from each ship's own nozzles (`tail`), and by
+      // 0448, which lays a flame per nozzle and holds the true root; the break takes only the swell's
+      // correction away.
+      find: '  const back = row.trail + BURN_ROOT * (swell - 1);',
+      replace: '  const back = row.trail;',
     },
   },
   {

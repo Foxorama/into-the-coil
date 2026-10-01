@@ -19,8 +19,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: a flying ship has a flame behind its tail, and a wreck has none',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (!flying) {\n    // A wreck has no engines. The flame goes out on the step the hull does.\n    if (w.exhaust.size > 0) w.exhaust.releaseAt(0);\n    return;\n  }',
-      replace: '  if (!flying) {\n    return;\n  }',
+      // ⚠️ Re-anchored by 0448, which lays a flame per nozzle and lets them all go on a wreck.
+      find: '  const want = flying ? nozzles.length : 0;',
+      replace: '  const want = nozzles.length;',
     },
   },
   {

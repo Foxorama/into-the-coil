@@ -164,7 +164,6 @@ function stationKeepingWorld(surface: Surface): World {
     warp: 0,
     ...inertLevel(),
     fireIn: NEVER,
-    burstFired: 0,
     ship,
     shipRow,
     enemyRows: ENEMY_KINDS.map((k) => ENEMIES[k]),

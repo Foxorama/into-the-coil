@@ -50,7 +50,7 @@ import { THRUST } from '../content/exhaust.ts';
 import type { Pools } from '../content/pools.ts';
 import { FLICKER_STEPS, PORT_KINDS, PORT_SPRITE, SURGE_CURVE, SURGE_STEPS } from '../content/port.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
-import { SHIPS } from '../content/ships.ts';
+import { SHIPS, type Mount } from '../content/ships.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import type { Corridor } from '../sim/corridor.ts';
 import type { Entity } from '../sim/entity.ts';
@@ -88,8 +88,8 @@ export interface FinaleScene {
   throb: number;
   /** The fighter as the fight last drew it: its sprite in the game's atlas. */
   ship: number;
-  /** And where its engines burn, behind its centre — the ship row's `tail` (0441). */
-  tail: number;
+  /** And where its engines burn, about its centre — the ship row's `nozzles` (0448). */
+  nozzles: readonly Mount[];
   from: FinaleFrom;
 }
 
@@ -107,7 +107,7 @@ export function makeFinaleScene(): FinaleScene {
     time: 0,
     throb: 0,
     ship: SPRITE.fighter,
-    tail: SHIPS.fighter.tail,
+    nozzles: SHIPS.fighter.nozzles,
     from: { heartAlong: 150, heartAcross: ACROSS_SPAN / 2, shipAlong: 40, shipAcross: ACROSS_SPAN / 2 },
   };
 }
@@ -158,7 +158,7 @@ export function paintFinale(surface: Surface, view: View, t: number, scene: Fina
   if (alive) paintHeart(surface, view, t, beat, heartAlong, heartAcross, scene.throb);
   else paintBurst(surface, view, t - FINALE_BEATS.burst, from.heartAlong - (gone - cameraAt(FINALE_BEATS.burst, scene.scroll)), from.heartAcross);
   if (!alive) paintViper(surface, view, t, from);
-  paintFighter(surface, view, t, from, scene.ship, scene.tail);
+  paintFighter(surface, view, t, from, scene.ship, scene.nozzles);
   if (!alive && t < FINALE_BEATS.burst + FLASH_STEPS) {
     const u = (t - FINALE_BEATS.burst) / FLASH_STEPS;
     put(surface, view, PORT_BASE + PORT_SPRITE.flash, from.heartAlong, from.heartAcross, 1 - u, 0, 1.2 + FLASH_GROW * u);
@@ -325,7 +325,7 @@ function paintViper(surface: Surface, view: View, t: number, from: FinaleFrom): 
  * `src/content/exhaust.ts`: idling while it waits, burning as it comes up beside her, and burning long
  * as it opens up and goes.
  */
-function paintFighter(surface: Surface, view: View, t: number, from: FinaleFrom, ship: number, tail: number): void {
+function paintFighter(surface: Surface, view: View, t: number, from: FinaleFrom, ship: number, nozzles: readonly Mount[]): void {
   fighterAt(t, from, FIGHTER_AT);
   const along = FIGHTER_AT[0]!;
   const across = FIGHTER_AT[1]!;
@@ -333,7 +333,10 @@ function paintFighter(surface: Surface, view: View, t: number, from: FinaleFrom,
   const pushing = (t >= FINALE_BEATS.formUp && t < FINALE_BEATS.formed - 30) || t >= FINALE_BEATS.blueRuns;
   const row = pushing ? THRUST.burn : THRUST.idle;
   const long = 1 + 1.6 * ease(t, FINALE_BEATS.blueRuns, FINALE_BEATS.blueRuns + 30);
-  // From the ship's own nozzles — 0441.
-  put(surface, view, row.frames.level[pulse]!, along - tail - row.trail * long, across, 1, 0, long);
+  // From the ship's own nozzles, one flame each — 0441, 0448.
+  for (let i = 0; i < nozzles.length; i++) {
+    const at = nozzles[i]!;
+    put(surface, view, row.frames.level[pulse]!, along + at.along - row.trail * long, across + at.across, 1, 0, long);
+  }
   put(surface, view, ship, along, across);
 }

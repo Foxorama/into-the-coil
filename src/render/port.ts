@@ -94,8 +94,11 @@ const GAME_BASE = PORT_KINDS.length;
  */
 export function paintPort(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
   surface.clear();
-  if (t < BEATS.cut) paintHangar(surface, view, t, sky, ship.cockpit.along * HANGAR_SCALE, ship.cockpit.across * HANGAR_SCALE);
-  else paintOutside(surface, view, t - BEATS.outside, sky, ship.wingtip * HANGAR_SCALE);
+  // Each ship at its own size in the shot, against the shared scale — 0450; its cockpit and its wingtips with it.
+  const inside = ship.intro.hangar;
+  const outside = ship.intro.outside;
+  if (t < BEATS.cut) paintHangar(surface, view, t, sky, ship.cockpit.along * HANGAR_SCALE * inside, ship.cockpit.across * HANGAR_SCALE * inside, inside);
+  else paintOutside(surface, view, t - BEATS.outside, sky, ship.wingtip * HANGAR_SCALE * outside, outside);
   // The fades: up out of the backdrop at the start, down and up again across the cut, and down at the end.
   let veil = 0;
   if (t < BEATS.fadeIn) veil = 1 - t / BEATS.fadeIn;
@@ -157,7 +160,7 @@ function surgeAt(t: number, go: number): number {
   ── THE HANGAR ───────────────────────────────────────────────────────────────────────────────────
 */
 
-function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number): void {
+function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number): void {
   // The first level's sky past the bay, drifting — the room covers the rest of it (0416).
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
   // The back wall, the truss and the lamps.
@@ -215,7 +218,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   const blueBob = t < BEATS.blueGo ? Math.sin(t * 0.06 + 1.7) * 0.6 : 0;
   const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL);
   const blueAcross = STAGE.blueRide - LIFT * ease(t, BEATS.blueLift, BEATS.blueGo) + blueBob;
-  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo);
+  paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size);
   /*
     ⚠️ **VENOMA RAN HERE — 0416 — OUT OF THE DOOR AND UP INTO THE VIPER, UNTIL 0444.** *"it doesn't add
     anything and makes the ending worse when you see the villain running with no captive."* She is
@@ -270,12 +273,12 @@ function paintViper(surface: Surface, view: View, t: number, along: number, acro
  * The pilot's ship as the hangar sees it — side-on, for a ship whose fight picture is from above (0444)
  * — its engine, the surge its launch is heard in, and the flash it leaves the pad in.
  */
-function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number): void {
+function paintBlue(surface: Surface, view: View, t: number, along: number, across: number, lit: number, go: number, size: number): void {
   const flame = flameOf(t, lit, go, PORT_SPRITE.blueIdle, PORT_SPRITE.blueBurn, PORT_SPRITE.blueFlare);
-  if (flame >= 0) put(surface, view, flame, along, across);
+  if (flame >= 0) put(surface, view, flame, along, across, 1, 0, size);
   const surge = surgeAt(t, go);
-  if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge);
-  put(surface, view, PORT_SPRITE.blueSide, along, across);
+  if (surge > 0) put(surface, view, PORT_SPRITE.blueSurge, along, across, surge, 0, size);
+  put(surface, view, PORT_SPRITE.blueSide, along, across, 1, 0, size);
   if (t >= go && t < go + FLASH_STEPS) {
     put(surface, view, PORT_SPRITE.flash, along - 12, across, 0.8 * (1 - (t - go) / FLASH_STEPS), 0, FLASH_GROW);
   }
@@ -308,10 +311,10 @@ const STATION_ACROSS = 58;
  * One blit in the dark outside, framed `OUTSIDE_ZOOM` about the middle of the view — 0414. The shot is
  * authored in the same world units as the hangar; only where they land and how big is scaled.
  */
-function putOut(surface: Surface, view: View, sprite: number, along: number, across: number, alpha = 1, turn = 0): void {
+function putOut(surface: Surface, view: View, sprite: number, along: number, across: number, alpha = 1, turn = 0, grow = 1): void {
   const midAlong = view.alongSpan / 2;
   const midAcross = ACROSS_SPAN / 2;
-  put(surface, view, sprite, midAlong + (along - midAlong) * OUTSIDE_ZOOM, midAcross + (across - midAcross) * OUTSIDE_ZOOM, alpha, turn, OUTSIDE_ZOOM);
+  put(surface, view, sprite, midAlong + (along - midAlong) * OUTSIDE_ZOOM, midAcross + (across - midAcross) * OUTSIDE_ZOOM, alpha, turn, OUTSIDE_ZOOM * grow);
 }
 
 /** Steps into the shot at which each ship opens her throttle. */
@@ -379,7 +382,7 @@ function paintTrail(surface: Surface, view: View, s: number, runs: number, blue:
   }
 }
 
-function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip: number): void {
+function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip: number, size: number): void {
   if (s < 0) return;
   /*
     ⚠️ **THE FIRST LEVEL'S SKY, AT THE FIRST LEVEL'S SPEED, AND AT ITS OWN SIZE — 0416.** The camera
@@ -408,12 +411,8 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
   const blueAcross = blueAcrossAt(s);
   const blueTurn = bank(blueAcross, blueAcrossAt(s + 1));
   // Off the pilot's ship's own wingtips — 0441: a saucer's rim is not a car's wheels.
-  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, -wingtip);
-  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, wingtip);
-  const blueFlame = s < BLUE_OUT + 24 || s >= BLUE_RUNS || Math.floor(s / FLICKER_STEPS) % 2 === 1 ? PORT_SPRITE.blueFlare : PORT_SPRITE.blueBurn;
-  putOut(surface, view, blueFlame, blueAlong, blueAcross, 1, blueTurn);
-  const blueSurge = surgeAt(s, BLUE_RUNS);
-  if (blueSurge > 0) putOut(surface, view, PORT_SPRITE.blueSurge, blueAlong, blueAcross, blueSurge, blueTurn);
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5 * size, -wingtip);
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5 * size, wingtip);
   /*
     ⚠️ **THE TILT — 0444: out of the bay as the hangar saw it, and over onto the fight's view.** The
     frames are consecutive in the atlas, side-on to from above; each is laid over the one before it at
@@ -421,6 +420,22 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip
   */
   const tilt = ease(s, TILT.from, TILT.from + TILT.steps) * (TILT_FRAMES - 1);
   const frame = Math.min(TILT_FRAMES - 1, Math.floor(tilt));
-  putOut(surface, view, PORT_SPRITE.blueSide + frame, blueAlong, blueAcross, 1, blueTurn);
-  if (tilt > frame) putOut(surface, view, PORT_SPRITE.blueSide + frame + 1, blueAlong, blueAcross, tilt - frame, blueTurn);
+  /*
+    ⚠️ **AND THE FLAMES TURN WITH IT — 0450.** The hangar's set burns where the ship's engines are seen
+    side-on and the fight's where they are seen from above — one drive on a saucer's rim, then two — so
+    each is laid at its share of the tilt, and only one is drawn once the turn is over.
+  */
+  const over = tilt / (TILT_FRAMES - 1);
+  const flare = s < BLUE_OUT + 24 || s >= BLUE_RUNS || Math.floor(s / FLICKER_STEPS) % 2 === 1;
+  const blueSurge = surgeAt(s, BLUE_RUNS);
+  if (over < 1) {
+    putOut(surface, view, flare ? PORT_SPRITE.blueFlare : PORT_SPRITE.blueBurn, blueAlong, blueAcross, 1 - over, blueTurn, size);
+    if (blueSurge > 0) putOut(surface, view, PORT_SPRITE.blueSurge, blueAlong, blueAcross, blueSurge * (1 - over), blueTurn, size);
+  }
+  if (over > 0) {
+    putOut(surface, view, flare ? PORT_SPRITE.blueTopFlare : PORT_SPRITE.blueTopBurn, blueAlong, blueAcross, over, blueTurn, size);
+    if (blueSurge > 0) putOut(surface, view, PORT_SPRITE.blueTopSurge, blueAlong, blueAcross, blueSurge * over, blueTurn, size);
+  }
+  putOut(surface, view, PORT_SPRITE.blueSide + frame, blueAlong, blueAcross, 1, blueTurn, size);
+  if (tilt > frame) putOut(surface, view, PORT_SPRITE.blueSide + frame + 1, blueAlong, blueAcross, tilt - frame, blueTurn, size);
 }
