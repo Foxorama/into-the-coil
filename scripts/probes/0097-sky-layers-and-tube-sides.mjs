@@ -117,9 +117,11 @@ export const PROBES = [
     broke: 'the single tube put back on the centreline, which is the picture that was reported',
     guard: '0097 — puts the first tube on the across-minus side and the second on the across-plus side',
     edit: {
-      path: 'src/app/frame.ts',
-      find: '    const side = i === 0 ? -1 : 1;',
-      replace: '    const side = w.weapon.launchers === 1 ? 0 : i === 0 ? -1 : 1;',
+      // ⚠️ Re-anchored by 0448, which puts where each tube is on the ship's row; `side` in the frame
+      // is only which path the missile pops to now. The fighter's single tube, put on the centreline.
+      path: 'src/content/ships.ts',
+      find: "const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: -1.8 }],",
+      replace: "const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: 0 }],",
     },
   },
 ];
