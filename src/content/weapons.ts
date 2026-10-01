@@ -1,40 +1,32 @@
 /**
- * The guns — every kind the ship's base weapon can be, and what each tier of it buys.
+ * The guns — every kind the ship's base weapon can be, and what it fires.
  *
  * A `Record` over a closed union, per `docs/decisions/0016-a-hub-enumerates-kinds.md`. Behaviour
  * rides the row: `src/app/frame.ts` reads the resolved numbers off `Weapon` and switches on `flight`
  * with a `never` arm, and nothing anywhere switches on a weapon's NAME.
  *
- * ── A WEAPON IS A KIND, AND THE LADDER IS THE KIND'S ────────────────────────────────────────────
+ * ── A GUN IS THE SHIP'S, AND IT HAS NO LADDER — 0441 ─────────────────────────────────────────────
  *
- * `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`. Until this table the ship row
- * carried `fireEvery` and `barrels`, on the argument that *a ship is where a weapon's character
- * lives*. That was true while there was one weapon; with two, the character is the weapon's and the
- * ship names which one it starts with. A second ship with a chunkier pulse is a second row HERE,
- * not a retune of `pulse`.
- *
- * ⚠️ **Every ladder is `UPGRADE_TIERS + 1` entries long and every rung changes something** —
- * `docs/game.md`'s rule, held by `tests/weapons.test.ts` for every kind rather than for the two
- * ladders `tests/missiles.test.ts` grew up holding. A rung that buys nothing is a pickup the level
- * handed out that did not land.
+ * `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. Asked for: *"each pilot has their own ship
+ * and a weapon will be keyed to that ship only … each ship will start with max weapons, so we're
+ * effectively removing the weapon tier from each default weapon."* From 0233 to 0441 every number
+ * below was a five-rung ladder climbed by a weapon pickup, and the pickup cycled between the guns; the
+ * pickup buys a special now and the gun is the one `src/content/ships.ts` fits. **Every number here is
+ * what its ladder's last rung was**, so a gun flies exactly as it did at its cap — the decision has
+ * the table, and the rungs below the cap are in git, not in a field nobody can reach.
  *
  * ⚠️ **Nothing may assert on the VALUES below**, on `src/content/shots.ts`'s terms: they are
  * starting points, and what settles them is a hand on a deployed build. What the tests hold are the
  * relationships that must be true at any value.
  */
 
-import { SPRITE } from './sprites.ts';
 import type { ShotKind } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
 
 /**
- * Every gun. Closed.
- *
- * ⚠️ **`pulse` is first, and the order is the CYCLE ORDER of the weapon pickup** — a face index on a
- * pickup entity is an index into this list, so the title screen's key, the pickup's faces and the
- * run slice all read one order. Moving a kind here moves it everywhere at once, which is the point.
+ * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
  */
-export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -54,45 +46,40 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *                 the lane at `speed` and swinging across it in a sine — the two strands of a helix,
  *                 crossing ahead of the nose. Not spent by arriving: it lands on everything it
  *                 crosses, once per impact flash, and is gone at the edge of the screen. 0234, 0244
+ *   **burst**     a body in flight like `straight`, spent by arriving — and where it arrives it goes
+ *                 off as the row's `bursts`, a small blast that lands on everything inside it. 0442
  */
-export type FlightKind = 'straight' | 'chain' | 'coil';
+export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst';
 
 export interface WeaponRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
-  /** What taking its pickup does, in the fewest words that say it — the title screen's key. */
+  /** What it does, in the fewest words that say it — the pilot select's line under the ship. */
   hint: string;
   /** The row in `SHOTS` this kind fires: its damage, its size and, for a body in flight, its speed. */
   shot: ShotKind;
   flight: FlightKind;
-  /** Sim steps between volleys, one entry per rung. */
-  fireEvery: readonly number[];
+  /** Sim steps between volleys. */
+  fireEvery: number;
   /**
-   * How many barrels fire at once, one entry per rung. A `chain` weapon has one barrel: a bolt is
-   * one thing, and the rungs it climbs are `links` and `weight`.
+   * How many barrels fire at once. A `chain` weapon has one barrel: a bolt is one thing, and what it
+   * has instead is `links` and `weight`.
    */
-  barrels: readonly number[];
+  barrels: number;
+  /** How many targets a bolt lands on per volley. One for a weapon that does not chain. */
+  links: number;
   /**
-   * How many targets a bolt lands on per volley, one entry per rung. Ignored by a `straight` weapon,
-   * which is why it is a ladder of ones there rather than absent — a resolved `Weapon` has one shape.
+   * What one hit is worth as a MULTIPLE of the shot row's damage. The resolved damage is
+   * `SHOTS[shot].damage × weight`.
    */
-  links: readonly number[];
-  /**
-   * What one hit is worth as a MULTIPLE of the shot row's damage, one entry per rung.
-   *
-   * ⚠️ **The pulse's is a ladder of ones, and that is 0082's max-speed nerf kept on purpose** — the
-   * pulse buys barrels and rate and its damage never climbs. A bolt buys links and weight instead,
-   * because a bolt cannot buy barrels; either way the ceiling is the last rung and the resolved
-   * damage is `SHOTS[shot].damage × weight[tier]`, never a number that keeps going.
-   */
-  weight: readonly number[];
+  weight: number;
   /**
    * What a hit on a BOSS is worth, as a multiple of what it is worth on anything else — 0372.
    *
    * ⚠️ **Every row authors it, and only the arc's is not one.** The arc cannot be flown faster: its
    * reach and its landing are the same at sixty units as at forty-five, so the closing-in that pays
-   * the pulse and the blade never pays the bolt, and measured it ran about 1.4 times the other two
-   * guns flown close. `docs/decisions/0372-a-death-keeps-the-ladders.md` has the table.
+   * the pulse and the blade never pays the bolt. `docs/decisions/0372-a-death-keeps-the-ladders.md`
+   * has the table.
    */
   bossWeight: number;
   /**
@@ -103,295 +90,208 @@ export interface WeaponRow {
    */
   landGap?: number;
   /**
-   * What a pickup of this gun buys once its ladder is full — `docs/decisions/0373-a-special-is-the-guns-own.md`.
-   * *"It increases your bomb count for that weapon/missile type."* Every row authors it — 0373, 0374.
+   * The gun's own special: what a ship fitted with it opens a run with two of — 0441. Since 0441 no
+   * pickup overflows into it; the bomb pickup offers every gun's special to every ship.
    */
   special: SpecialKind;
   /**
-   * How far the FIRST hit reaches, in world units, one entry per rung — from the nose to the body
-   * the bolt lands on. Zeros for a weapon that does not chain. What each jump AFTER it reaches is
-   * this times `falloff`, again per jump.
+   * What a `burst` shot goes off as where it arrives — a row in `SHOTS`, landed through the blast
+   * pairings — or `null` for every other flight. 0442.
+   */
+  bursts: ShotKind | null;
+  /**
+   * How far the FIRST hit reaches, in world units — from the nose to the body the bolt lands on.
+   * Zero for a weapon that does not chain. What each jump AFTER it reaches is this times `falloff`,
+   * again per jump.
    *
    * ⚠️ **AND IT IS THE LENGTH THE PLAYER SEES, SINCE 0302** — a bolt with nothing in front of it
-   * draws exactly this, so the gun states its own range on screen every time it fires dry. It used
-   * to draw 0.55 of it *"so a miss does not look like a range"*, which is a decision to make the
-   * one number the player must judge by eye the one number the picture would not show them.
-   * Reported: *"the first hit should have the range displayed on screen."*
+   * draws exactly this, so the gun states its own range on screen every time it fires dry.
    *
    * ⚠️ **In the lane's own units and well under the view**, because a bolt that reached the leading
    * edge would be a gun that never has to aim. It is the whole of what makes the arc a different
    * weapon rather than a better one: the pulse reaches the edge of the screen and can miss; the arc
    * cannot miss and cannot reach.
-   *
-   * ⚠️ **A LADDER SINCE 0236, AND IT WAS ONE NUMBER.** Reported from the first play-test: *"the
-   * reach of the lightning needs to be extended by about 20% per power up tier, the chain is good,
-   * but the initial hit requires you to be way too close to bosses and enemies. you can't
-   * effectively dodge."* Each rung reaches a fifth further than the one before, held by
-   * `tests/weapons.test.ts` as *climbs at every rung* rather than as the fraction.
    */
-  reach: readonly number[];
+  reach: number;
   /**
    * What a jump is worth as a share of the jump before it — 0302. Zero for a weapon that does not
    * chain. The first hit gets `reach`; the second `reach × falloff`, the third that times it again.
    *
-   * ⚠️ **A CHAIN SPENDS ITSELF, AND THAT IS THE ASK.** Reported: *"the additional jumps from the
-   * first hit and the reach it had on the first hit was wrong… the additional jumps should then be
+   * ⚠️ **A CHAIN SPENDS ITSELF, AND THAT IS THE ASK.** Reported: *"the additional jumps should then be
    * based on decreasing distance."* Every link jumping a full reach made a volley a search of the
-   * whole screen from wherever the last body happened to be, which is the auto-pilot
-   * `docs/decisions/0297-a-reach-is-measured-on-both-axes.md` answered by shrinking the FIRST hit —
-   * the one thing the player aims. This shrinks the search instead, so the aimed hit can be long.
-   *
-   * ⚠️ **A NUMBER AND NOT A LADDER, because it is not what an upgrade buys** — a rung buys links,
-   * weight, rate and reach, and the shape of the chain is the weapon's character rather than its
-   * tier. A row that wanted it per rung would say so on its own row; nothing shared decides that.
+   * whole screen from wherever the last body happened to be — 0297's auto-pilot.
    */
   falloff: number;
   /**
-   * How far across the lane a `coil` shot swings from its axis, in world units, one entry per rung
-   * — the half-width of the helix. Zeros for a weapon whose shots are spent by arriving.
-   *
-   * ⚠️ **A LADDER, because it is the thing an upgrade buys** — *"upgrades make the shuriken's arc
-   * last longer, so it ends up with a bigger spiral."* Since 0242 a blade's reach is the screen's
-   * at every rung, so what a rung buys is the swing: a wider band swept ahead of the ship. Before
-   * 0242 this was `orbit` — first a clock (0234), then how tightly a spiral about the ship was
-   * wound (0237, 0239, 0240); 0242 made it a loop's radius, and 0244 a sine's.
+   * How far across the lane a `coil` shot swings from its axis, in world units — the half-width of
+   * the helix. Zero for a weapon whose shots are spent by arriving.
    */
-  coil: readonly number[];
+  coil: number;
   /**
    * Radians a `coil` shot's swing advances per step. Zero for every other flight.
    *
    * ⚠️ **In the camera's frame, like every speed.** A turn of 0.21 is a full swing every thirty
-   * steps, half a second, which at the shot's speed up the lane is a helix with a pitch of thirty
-   * units — under twice its width at the cap and four times it at the first rung. Played at 0.16
-   * (a pitch of thirty-nine): *"it needs to be a tighter helix"* (0244).
+   * steps, half a second — a helix with a pitch of thirty units at the shot's speed up the lane.
    *
-   * ⚠️ **AND NOT A DIVISOR OF ANY RUNG'S CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT (0242).** Every
-   * pair advances at this rate from the same starting phase, so where pair *n+1* is in its swing
-   * when pair *n* is at a crest is `turn × fireEvery`, and a rung where that is a whole number of
-   * turns puts every blade on the screen at the same point of its swing: two rows that breathe
-   * rather than a helix. The cadence runs over an octave (twenty-four steps to twelve), so for the
-   * gap to be a fifth of a turn or more at EVERY rung the pitch has to be more than the slowest
-   * spacing and less than five times the quickest — which is why the pitch and the cadence were
-   * set together: at 0.21 over `[24, 21, 18, 15, 12]` the gap is 0.20, 0.30, 0.40, 0.50 and 0.40
-   * of a turn. Over 0242's `[30, 26, 22, 18, 15]` no pitch under thirty-seven cleared every rung.
+   * ⚠️ **AND NOT A DIVISOR OF THE CADENCE, WHICH THE FIRST PHOTOGRAPH TAUGHT (0242).** Every pair
+   * advances at this rate from the same starting phase, so where pair *n+1* is in its swing when pair
+   * *n* is at a crest is `turn × fireEvery`; a whole number of turns there puts every blade on the
+   * screen at the same point of its swing — two rows that breathe rather than a helix. At 0.21 over
+   * twelve steps the gap is 0.4 of a turn.
    */
   turn: number;
-  /** The face the weapon pickup shows when it is offering this kind — an index into the atlas. */
-  pickup: number;
 }
 
 export const WEAPONS: Record<WeaponKind, WeaponRow> = {
   /**
-   * The gun the ship opens with: fast, small, and cheap to survive being wrong about.
+   * Huang-Woo Hook's gun on the fighter — 0441: fast, small, and cheap to survive being wrong about.
    *
-   * ⚠️ **These ladders are `SHIPS.proof`'s own, moved here unchanged** — 0233 moved the table, not
-   * the numbers. `fireEvery` steps twice and `barrels` steps four times, which
-   * `docs/decisions/0159-the-two-clocks-come-apart.md` made a choice rather than a constraint.
+   * ⚠️ **Four barrels every four steps, which was the cap of 0083's ladder** — and both are budgets
+   * rather than tastes: `MAX_BARRELS` and `FASTEST_FIRE` in `src/content/pickups.ts` say why the pool
+   * and the impact flash allow no more. The damage never climbed: 0082's max-speed nerf.
    */
   pulse: {
     label: 'Pulse',
-    hint: 'Guns up a tier',
+    hint: 'Four barrels of auto-fire',
     shot: 'pulse',
     flight: 'straight',
-    fireEvery: [8, 8, 6, 6, 4],
-    barrels: [1, 2, 3, 4, 4],
-    links: [1, 1, 1, 1, 1],
-    weight: [1, 1, 1, 1, 1],
+    fireEvery: 4,
+    barrels: 4,
+    links: 1,
+    weight: 1,
     bossWeight: 1,
-    // The bomb since 0375; it was the golden aura (0373).
     special: 'bomb',
-    reach: [0, 0, 0, 0, 0],
+    bursts: null,
+    reach: 0,
     falloff: 0,
-    coil: [0, 0, 0, 0, 0],
+    coil: 0,
     turn: 0,
-    pickup: SPRITE.pickupWeapon,
   },
   /**
-   * Chain lightning. Asked for, 2026-09-05: *"a chain lightning gun, that jumps to more targets and
-   * gets more powerful with each upgrade… for single target bosses it needs to arc and bounce and
-   * jump around to hit different parts of the boss."*
+   * Longshot Larry's gun on the gilded estate — chain lightning. Asked for, 2026-09-05: *"a chain
+   * lightning gun … for single target bosses it needs to arc and bounce and jump around to hit
+   * different parts of the boss."*
    *
-   * ⚠️ **It cannot miss, so it must be slower and shorter than the pulse** — every rung here fires
-   * less often than the pulse's same rung, and `reach` keeps it inside a third of the lane's length.
-   * At the cap it lands four bolts of two every eight steps; the pulse at its cap lands four bullets
-   * of one every four. Against a single boss the two are close, which is the balance a hand will
-   * settle rather than this file.
-   *
-   * ⚠️ **Tier 1 is what a player gets for SWITCHING to it** — a pickup of a different kind resets the
-   * ladder to one rung (`src/state/slices/run.ts`), so the first rung is the one most players meet
-   * first and it has to be a gun worth having: two links.
+   * ⚠️ **It cannot miss, so it is slower and shorter than the pulse** — a volley every eight steps
+   * against the pulse's four, and `reach` keeps the first hit well inside the view. Three links at the
+   * cap, not four — 0241: *"1 less max hit."*
    */
   arc: {
     label: 'Arc',
-    hint: 'Chains between foes',
+    hint: 'Lightning that chains between foes',
     shot: 'arc',
     flight: 'chain',
-    fireEvery: [12, 12, 10, 10, 8],
-    barrels: [1, 1, 1, 1, 1],
-    // Three links at the cap, not four — 0241: *"1 less max hit."* The last two rungs still buy
-    // weight and rate, so every rung changes something.
-    links: [1, 2, 3, 3, 3],
-    weight: [1, 1, 1, 2, 2],
+    fireEvery: 8,
+    barrels: 1,
+    links: 3,
+    /*
+      ⚠️ **2.2, AND IT WAS 2 — 0443.** *"Do just slightly more damage."* A tenth, which is what
+      *slightly* is beside the first jump's fifth; the boss weight is untouched, so the serpent's own
+      weight of one (0372) still holds the arc there.
+    */
+    weight: 2.2,
     // *"lightning needs to do a bit more damage on bosses, it's currently too slow"* — 0372.
     bossWeight: 1.5,
     // The lightning blast — 0374.
     special: 'storm',
+    bursts: null,
     /*
-      A sixth further at every rung — 0236's ladder. `tests/guns-played.test.ts` holds the CLIMB,
-      never the numbers.
+      ── THE FIRST JUMP IS 82, AND IT WAS 68 — 0443 ──────────────────────────────────────────────────
 
-      ── AND THE NUMBERS WERE MEASURED AGAINST THE WRONG AXIS FOR THREE PASSES — 0297 ───────────────
+      ⚠️ **0364 ZOOMED THE VIEW OUT BY 1.2 AND THIS DID NOT MOVE.** *"When we zoomed out the screen we
+      didn't make the lightning gun proportionally longer and so we accidentally stealth nerfed it."*
+      Exactly so: `ACROSS_SPAN` went from 100 to 120 and every speed and station the player watches
+      went with it, and the decision never mentions the arc. A reach of 68 drawn at the new scale was
+      a bolt a sixth shorter on the screen than the one 0303 settled by playing. So it is 68 × 1.2:
+      the length the player played, on the screen they now play on.
 
-      ⚠️ **THE OLD LADDER WAS 52 → 98, AND ITS OWN COMMENT SAID WHY: *the cap reaches a shade over
-      half of the narrowest view*.** That is the view's LONG axis, 177.8 units. A reach is a
-      Euclidean radius (`nearestFrom`), so it spans the short axis too — and the short axis is
-      `ACROSS_SPAN`, a fixed 100, which
-      `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` names as **the difficulty axis**. At
-      98 the cap covered the whole lane from anywhere in it. Reported: *"chain lightning jumps too
-      far, you can almost auto-pilot just sitting in the center of the screen and kill everything
-      before it gets a shot off."*
+      ⚠️ **THE SHAPE IS 0302's AND IS UNTOUCHED.** A jump keeps `falloff` of the one before it, so the
+      chain is 82 → 49 → 29.5; the first hit is the one the player aims and the one the zoom cut.
 
-      ⚠️ **AND IT HAD ALREADY BEEN CUT TWICE, A TENTH BY 0239 AND A TWENTIETH BY 0241** — *"still
-      being too strong. 5% reduction on the range."* Two passes shaving percentages off a quantity
-      that was never wrong by a percentage: it was reasoned in one frame and applied in another,
-      which is `CLAUDE.md`'s own rule — *a quantity solved from one case is checked in every case it
-      runs in*. A third 5% would have bought another report.
-
-      ⚠️ **SO THE SCALE MOVED AND THE SHAPE DID NOT.** Every rung went to about 0.4 of the old one,
-      and each still buys at least the sixth `tests/guns-played.test.ts` holds — that guard went red
-      on the first draft of that ladder, at 24 → 27, and it was right: a rung that buys an eighth is
-      a rung 0233 already refused.
-
-      ── AND WHAT IT CUT WITH THE NUMBER WAS THE PICTURE — 0302 ────────────────────────────────────
-
-      ⚠️ **THIS LADDER IS THE LENGTH THE PLAYER WAS ALREADY SEEING.** Reported: *"the initial length
-      of the weapon was fun… but the additional jumps from the first hit and the reach it had on the
-      first hit was wrong. The first hit should have the range displayed on screen, the additional
-      jumps should then be based on decreasing distance."* A bolt fired dry drew 0.55 of its reach,
-      so what the old ladder actually put on screen was 0.55 × [52, 61, 71, 84, 98] — **28.6 to 53.9
-      units, and never 98.** 0297 cut the number and the picture came with it: the dry bolt fell to
-      11 units, a stub. **So 0302's rungs were that drawn length** — `[29, 34, 40, 47, 55]` — and
-      `src/app/frame.ts` now draws the whole of whatever they say: the length the player sees is the
-      range, for the first time. That is the mechanism; what the numbers are is a play-test's.
-
-      ⚠️ **THE CAP IS NOT 98, WHICH IS WHY 0297'S REPORT DOES NOT COME BACK WHOLE.** Two things
-      carried the auto-pilot and only one of them was the first hit: a chain of three, each jumping
-      a full 98, searched the entire screen from wherever the last body stood. `falloff` takes that
-      half — at the cap a volley reaches 68, then 40.8, then 24.5, a span of 133 against the old
-      294. **What is honestly true is that the top rungs cross the lane's width from its centre**
-      (`ACROSS_SPAN` is 100), so a player parked in the middle can reach either edge with the FIRST
-      hit. That is one strike per volley rather than three, and it is now a length they can see.
-
-      ── AND THEN IT WENT UP A RUNG, PLAYED — 0303 ─────────────────────────────────────────────────
-
-      ⚠️ **`[29, 34, 40, 47, 55]` → `[34, 40, 47, 55, 68]`.** Reported after playing 0302: *"reach
-      needs to be about 1 tier up and slightly further for the last tier."* Every rung is the one
-      above it, and the cap is a fifth past where the shift alone would have put it. **The shape is
-      untouched** — this is the ladder sliding along itself, which is what *one tier up* means, and
-      it is the first move of this number that was made by playing rather than by arithmetic.
-
-      ⚠️ **AND 0257 STILL HAS SOMETHING TO BITE ON — MORE OF IT AT EVERY RUNG.** On a 1280×720
-      screen the nose at the front of its box sits 10.7 units from the leading edge, so every rung
-      reaches past it and the guard that a link lands only on a body whose whole hull is on screen
-      does the clamping. That is a positioning rule the longer ladder makes LOUDER rather than
-      quieter: fly to the front of the box and the gun's forward reach is whatever the screen has
-      left, wherever this ladder sits.
+      ⚠️ **AND IT WAS A FIVE-RUNG LADDER UNTIL 0441** — 0236, 0297, 0302 and 0303 each moved it, and
+      their reasoning is theirs. A ship opens at the cap now, so the cap is the only rung there is.
     */
-    reach: [34, 40, 47, 55, 68],
+    reach: 82,
     /*
-      Three fifths of the jump before it — 0302. At the cap that is 55 → 33 → 19.8, so a chain
-      shortens as it goes and the picture says so: each link is visibly stubbier than the last.
-
-      ⚠️ **A share and not a subtraction**, on `src/content/pickups.ts`'s own argument about
-      `RAPID_FACTOR`: a constant taken off a reach reaches zero and then negative, where a fraction
-      approaches a floor. Three links deep it is 0.36 of the first hit, which is still 19.8 units at
-      the cap — a jump, not a nothing.
+      Three fifths of the jump before it — 0302. A share and not a subtraction, on
+      `src/content/pickups.ts`'s own argument: a constant taken off a reach reaches zero and then
+      negative, where a fraction approaches a floor.
     */
     falloff: 0.6,
-    coil: [0, 0, 0, 0, 0],
+    coil: 0,
     turn: 0,
-    pickup: SPRITE.pickupArc,
   },
   /**
-   * The shuriken launcher — `docs/decisions/0234-a-blade-circles-the-ship.md`. Asked for: *"it fires
-   * shurikens that circle around the ship in an increasingly large arc and hits everything that it
-   * comes into contact with on that arc. Upgrades make the shuriken's arc last longer, so it ends
-   * up with a bigger spiral and increase the shuriken fire rate."*
+   * Backspin Bo's gun on the Firebird — the shuriken launcher,
+   * `docs/decisions/0234-a-blade-circles-the-ship.md` and 0244's helix: a pair of blades from the
+   * wingtips, each going up the lane and swinging across it, the two a half-turn apart so they cross
+   * ahead of the nose.
    *
    * ⚠️ **The slowest cadence in the game and the only shot that is not spent by arriving.** A blade
    * lives until it leaves the screen and lands on everything it crosses, so its worth is the sweep
-   * and not the shot: at the cap a pair of blades every fifth of a second, each in the air for two
-   * seconds — over twenty blades riding up the lane at once. `tests/blades.test.ts` fires the cap
-   * for fifteen seconds and holds the pool. The cadence is a fifth quicker than 0242's, and that
-   * is the helix's pitch and not a balance change — the `turn` above says why they go together.
-   *
-   * ⚠️ **A HELIX UP THE LANE, SINCE 0244 — NOT A RING ABOUT THE SHIP, AND NOT A CHAIN OF LOOPS.**
-   * Four decisions wound a spiral about the ship (0234, 0237, 0239, 0240); the fourth play-test drew
-   * a path from the wingtips forward and 0242 read it as a chain of loops; the sixth said what it
-   * had meant: *"I want the two wingtips firing to form a helix pattern with the shurikens."* A pair
-   * of blades leaves the wingtips themselves, each going up the lane at the shot's `speed` and
-   * swinging across it in a sine `coil` wide, the two a half-turn apart so they cross ahead of the
-   * nose — the two strands of a helix, the same everywhere on the screen, aimed by where the ship
-   * sits across the lane. A wide slow band against the pulse's narrow fast line, which is what makes it a third gun
-   * rather than a third shape.
-   *
-   * ⚠️ **`coil` is the swing's half-width**: a rung buys a wider band. The turn is fixed, so a
-   * wider swing is a faster blade across the lane — at the cap a blade crossing the axis covers
-   * three units a step across, on top of the row's one up the lane.
+   * and not the shot: a pair every fifth of a second, each in the air for two seconds.
+   * `tests/blades.test.ts` fires it for fifteen seconds and holds the pool.
    */
   shuriken: {
     label: 'Shuriken',
-    hint: 'Blades helix ahead',
+    hint: 'Blades in a helix ahead',
     shot: 'shuriken',
     flight: 'coil',
-    /*
-      ⚠️ **EVERY RUNG DIVIDES THE BEAT NOW, WHERE TWO OF THEM DID NOT** — asked for with the sounds: *"shurikens
-      need to be on the beat to fit in with the music and background tracks."* A beat is 24 steps and the gun
-      fires on the step grid (`stepsToGrid`), so a cadence is a rhythm: 24 is a quarter note and 12 an eighth,
-      but **21 and 15 are seven and five thirty-seconds** — figures that walk round the bar and land on a
-      different part of the beat every time, which is what *not fitting the music* is. The pulse's own ladder
-      (8, 8, 6, 6, 4) has always divided the beat. This one is a quarter, a quarter, a dotted eighth, a
-      quarter-note triplet and an eighth; the two ends are unchanged, the second rung waits for the third to
-      get faster (as the pulse's does), and the fourth is a sixteenth of a second slower than it was.
-    */
-    fireEvery: [24, 24, 18, 16, 12],
-    barrels: [1, 1, 1, 1, 1],
-    links: [1, 1, 1, 1, 1],
-    weight: [1, 1, 1, 1, 1],
+    // An eighth of the beat: *"shurikens need to be on the beat to fit in with the music."*
+    fireEvery: 12,
+    barrels: 1,
+    links: 1,
+    weight: 1,
     bossWeight: 1,
     /*
       ⚠️ **THIRTY LANDINGS A SECOND ON ANY ONE TARGET — 0391.** *"Cap the max number of shuriken hits on
-      any one target."* Measured flown at the cap: on the level 2 mid-boss the shuriken lands 28 a
-      second, which this leaves alone; on the hydra's five heads 151 and on the gyre 89, which it brings
-      to about the damage the pulse and the arc do on the same boss.
+      any one target."* Measured at the cap: the hydra's five heads took 151 a second and the gyre 89,
+      which this brings to about what the pulse and the arc do on the same boss.
     */
     landGap: 2,
     // The whirlpool — 0374.
     special: 'whirlpool',
-    reach: [0, 0, 0, 0, 0],
+    bursts: null,
+    reach: 0,
     falloff: 0,
     /*
-      ⚠️ **TWO THIRDS, AND THE PLAYER GAVE THE FRACTION — 0294.** *"The shuriken guns have a parabola
-      that's too high, they need bounce out from the ship about 2/3rds the distance they do now and
-      then have that as the helix path going ahead."* `coil` is the swing's half-width and it is BOTH
-      of the things that sentence names: how far the blade bounces out from the wingtip, and how wide
-      the helix is afterwards. So the whole ladder is two thirds of what it was — 7, 9, 12, 15, 18
-      became 5, 6, 8, 10, 12 — and nothing else has to move for the two halves to agree, because they
-      were never two numbers.
-
-      ⚠️ **AND THE BOTTOM OF THE LADDER HAS A FLOOR THE TOP DOES NOT, WHICH A GUARD FOUND.** A flat
-      two thirds put the first two rungs at 4.7 and 6 — and the ship's own wingtip is at **6.04**, so
-      the blade would have left the hull and swung back inside it without ever clearing the wing. *"A
-      blade leaves the wingtip"* is 0244's, from the photograph that reported *"there's a big gap
-      between helix start and wingtips"*, and it fails the other way just as hard.
-
-      ⚠️ **SO THE CUT IS TWO THIRDS AT THE CAP AND TAPERS TO NOTHING AT THE BOTTOM** — 0.93, 0.83,
-      0.75, 0.70, 0.67 of what each rung was. That is where the report is pointing anyway: a parabola
-      *too high* is a complaint about the widest arc the player sees, and the first rung was already
-      sitting on its floor.
+      ⚠️ **TWELVE, THE PLAYER'S TWO THIRDS — 0294.** *"They need bounce out from the ship about 2/3rds
+      the distance they do now and then have that as the helix path going ahead."* The swing's
+      half-width is both of those: how far the blade bounces out and how wide the helix is after.
+      `tests/blades.test.ts` holds it clear of every hull's wingtip.
     */
-    coil: [6.5, 7.5, 9, 10.5, 12],
+    coil: 12,
     turn: 0.21,
-    pickup: SPRITE.pickupShuriken,
+  },
+  /**
+   * Feather Fade's gun on the little green caddie — the ray gun, 0442. Asked for: *"a ray gun that
+   * fires four concentric purple energy rings that explode on impact with a small energy explosion."*
+   *
+   * ⚠️ **ONE BODY A VOLLEY, DRAWN AS FOUR RINGS ABOUT ONE CENTRE**, and what it does that no other gun
+   * does is the burst: a ring is spent where it arrives, and goes off there as `rayBurst`, landing on
+   * everything inside a few units — so a ring into a pack hurts the pack, and a ring into a boss lands
+   * twice. One barrel straight up the lane, so unlike the pulse's fan it must be aimed.
+   *
+   * ⚠️ **A TRIPLET EIGHTH — EIGHT STEPS**, the arc's cadence and a third of the beat, so it is on the
+   * grid the music's guns are (`fireShip`'s reload). The damage is measured against the other three
+   * guns on the bosses, not asked for: `docs/decisions/0442-the-ray-gun.md` has the table.
+   */
+  ray: {
+    label: 'Ray',
+    hint: 'Energy rings that burst where they land',
+    shot: 'ray',
+    flight: 'burst',
+    fireEvery: 8,
+    barrels: 1,
+    links: 1,
+    weight: 1,
+    bossWeight: 1,
+    // ⚠️ The bomb until the nova lands — `reports/the-roster-planned-2026-10-01.md`'s second change.
+    special: 'bomb',
+    bursts: 'rayBurst',
+    reach: 0,
+    falloff: 0,
+    coil: 0,
+    turn: 0,
   },
 };

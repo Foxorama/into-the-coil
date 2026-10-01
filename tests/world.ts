@@ -97,7 +97,6 @@ export function inertLevel(): {
   level: LevelRow;
   levelOrigin: number;
   levelIndex: number;
-  weaponsOffered: number;
   nextWave: number;
   nextFlank: number;
   // The fight's count of firing waves offered — 0267. A fixture with no level never advances it.
@@ -196,27 +195,21 @@ export function inertLevel(): {
     onCue: (): void => {},
     // A fixture has no readout to update; what it needs is a starting value that matches the ship, so
     // the frame does not report a change on its very first step.
-    shownHealth: SHIPS.proof.health,
+    shownHealth: SHIPS.fighter.health,
     onHealth: (): void => {},
     // The wall is not pressed, and no boss is on the bar, until a fixture flies there — 0359, 0360.
     boundPress: 0,
     shownBoss: -1,
     onBoss: (): void => {},
     ...scoreParts(),
-    // The base weapon, which is what an empty upgrade list resolves to. A fixture that wanted a
-    // different one would say so; none does, and none should have to restate the base.
-    weapon: weaponFor(SHIPS.proof, []),
+    // The fighter's weapon with no tubes, which is what an empty upgrade list resolves to. A fixture
+    // that wanted a different ship would say so — 0441.
+    weapon: weaponFor(SHIPS.fighter, []),
     enemyKinds: enemyKindIndices(),
     level: NO_LEVEL,
     levelOrigin: 0,
-    /*
-      ⚠️ **The FIRST level and nothing offered, which is the bottom of the difficulty dial** —
-      `docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`. A fixture is the content as
-      authored at its gentlest, on the same terms as `legendary` being the tier that multiplies
-      nothing: a collision test that silently ran at dial 11 would be measuring a different game.
-    */
+    // The first level: a fixture is the content as authored at its gentlest.
     levelIndex: 0,
-    weaponsOffered: 0,
     nextWave: 0,
     nextFlank: 0,
     fightFiring: 0,
@@ -384,7 +377,8 @@ export function playableWorld(
   const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
-  const shipRow = SHIPS.proof;
+  // The fighter, Huang-Woo Hook's: the ship the game was built on, and the pulse — 0441.
+  const shipRow = SHIPS.fighter;
   const ship = shipPool.spawn()!;
   reset(ship, SHIP_START_ALONG, ACROSS_SPAN / 2, shipRow);
   holdStation(ship, SCROLL_PER_STEP);
@@ -440,6 +434,7 @@ export function playableWorld(
     deaths: makeDeaths(CAPACITY.enemies),
     bossDeaths: makeDeaths(CAPACITY.boss),
     hits: makeDeaths(CAPACITY.missiles),
+    landed: makeDeaths(CAPACITY.playerShots),
     burstRng: makeRng('test').stream('burst'),
     dropRng: makeRng('test').stream('drop'),
     arcRng: makeRng('test').stream('arc'),
@@ -512,7 +507,6 @@ export function playableWorld(
     level,
     levelOrigin: 0,
     levelIndex: 0,
-    weaponsOffered: 0,
     nextWave: 0,
     nextFlank: 0,
     fightFiring: 0,

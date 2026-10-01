@@ -103,7 +103,7 @@ export function makeFinaleScene(): FinaleScene {
     scroll: 0,
     time: 0,
     throb: 0,
-    ship: SPRITE.ship,
+    ship: SPRITE.fighter,
     from: { heartAlong: 150, heartAcross: ACROSS_SPAN / 2, shipAlong: 40, shipAcross: ACROSS_SPAN / 2 },
   };
 }

@@ -2228,7 +2228,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 42 from 83 — re-solved after 0364's zoom put it a fifth further off (`scripts/solve-mid-health.mjs`,
     // which overshoots both ways here, so the last step is read between its two passes).
     // 120 from 42 — 0406: solved at the loadout the run carries in (`carriedAt`), two weapon rungs here.
-    health: 120,
+    // 211 from 120 — 0441: every ship opens on its whole gun, so the fighter's pulse met it at the cap
+    // and fought it for 10 s against the level's 17; re-solved by the same script.
+    health: 211,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -3003,7 +3005,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       phase's own share: 253, 242 and 363 before, **231, 231 and 308** now, which is 9, 5 and 15 per
       cent off. The last phase gives up the most, and it is the one with the ball eating the fire.
     */
-    health: 700,
+    /*
+      ⚠️ **700 → 900 — 0441.** *"Each ship will start with max weapons … we'll need to buff the 1st level
+      miniboss and end boss health a bit to account for the upgraded weapons the player has at that
+      level."* At 700 the serpent was met at the third weapon rung; at the cap the quickest guns took it
+      from 29 s (shuriken) and 33 s (arc) to 25 and 24, under the 28-second floor
+      `tests/serpent.test.ts` holds. At 900, flown by `scripts/weigh-boss.mjs` in each gun's own ship:
+      the arc 31 s from its best place, the shuriken 33, the ray 53 and the pulse 68 — every gun back
+      over the floor, and the pulse still quicker than the 79 s it took at the third rung.
+    */
+    health: 900,
     damage: 3,
     // The lightning at its own 1, not the arc's 1.5 — 0372: it was already this animal's quickest gun.
     gunWeights: { arc: 1 },

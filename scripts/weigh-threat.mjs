@@ -38,6 +38,7 @@ import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { weaponFor } from '../src/content/pickups.ts';
+import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from '../tests/world.ts';
@@ -83,9 +84,9 @@ export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 5
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
   const { world } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
-  const carried = [];
-  for (let i = 0; i < tier; i++) carried.push('weapon');
-  world.weapon = weaponFor(world.shipRow, carried, gun);
+  // In the ship the gun is keyed to, whole — 0441: `tier` is what the gun was, and is not read.
+  world.shipRow = SHIPS[shipCarrying(gun)];
+  world.weapon = weaponFor(world.shipRow, []);
   wearHull(world);
   let start = -1;
   let steps = 0;

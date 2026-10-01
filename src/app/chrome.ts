@@ -2929,7 +2929,8 @@ export function makeChrome(
       sky.setAttribute('aria-hidden', 'true');
       const flyer = document.createElement('span');
       flyer.className = prefix + 'flyer';
-      const hull = iconOf(SPRITE.ship);
+      // The default pilot's fighter until the shell says whose ship it is (`setShip`) — 0441.
+      const hull = iconOf(SPRITE.fighter);
       flyer.appendChild(hull);
       sky.appendChild(flyer);
       root.insertBefore(sky, panel);
@@ -3246,10 +3247,11 @@ export function makeChrome(
     ⚠️ **A LIFE IS A SHIP, SO THE COUNTER IS THE SHIP** — 0430: *"the top left row of 'life' should be
     the ship with an x and the number of lives."* It was a plus, left over from the extra-life pickup
     0082 took off the field, and a plus is the genre's word for HEALTH — the one thing this counter is
-    not. The ship in reserve is the arcade's own picture of a life. `SPRITE.ship` until the shell says
-    which ship is flying (`setShip`), so the readout is never blank while it boots.
+    not. The ship in reserve is the arcade's own picture of a life. `SPRITE.fighter` until the shell
+    says which ship is flying (`setShip`, the pilot's since 0441), so the readout is never blank while
+    it boots.
   */
-  let livesSprite: number = SPRITE.ship;
+  let livesSprite: number = SPRITE.fighter;
   let livesIcon: HTMLElement = iconOf(livesSprite);
   livesIcon.className = 'itc-playing-hud-icon itc-playing-hud-ship';
   livesIcon.setAttribute('aria-hidden', 'true');

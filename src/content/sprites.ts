@@ -44,61 +44,47 @@ import { ACROSS_SPAN } from '../sim/camera.ts';
  * [0035](../../docs/decisions/0035-damage-is-legible-on-the-body-that-took-it.md).
  */
 export const SPRITE_KINDS = [
-  'ship',
-  'shipHit',
   /*
-    ── TWO MORE HULLS, BECAUSE AN UPGRADE HAS TO SHOW ─────────────────────────────────────────────
+    ── FOUR SHIPS, EACH AT NO TUBES, ONE AND TWO — 0441 ───────────────────────────────────────────
 
-    Reported from play, as the last of five defects: *"additional autofire and missile upgrades don't
-    change the look of the player's ship."* `docs/game.md` states it as a rule rather than a wish —
-    *"every upgrade changes how the ship looks on screen"* — and the ship had exactly one silhouette
-    from the first pickup to the last.
-    `docs/decisions/0081-what-the-player-must-tell-apart-is-told-apart-by-more-than-ink.md`.
+    `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. *"Each pilot has their own ship and a
+    weapon will be keyed to that ship only."* Until 0441 there was one fighter wearing the gun it
+    carried at three tiers — nine hulls, 0081's *every upgrade changes how the ship looks* times 0233's
+    *the ship wears its gun*. The gun is the ship's now and has no tiers, so what is left to show is the
+    missile tubes: each ship is baked bare, with one tube on its keel and with two on its wings, so a
+    missile pickup still changes the picture.
 
-    ⚠️ **The same wedge with more of it, and not three different ships.** What the player has to read
-    is *I am further along than I was*, and a hull that changed KIND would say *I am flying something
-    else* — the one thing that is not true. Each tier adds a pair of swept fins to the one before it,
-    so the growth is legible at a glance and the ship is recognisably the same object.
-
-    ⚠️ **Three tiers and not one per upgrade.** `weaponFor` already caps barrels, launchers and both
-    fire rates, and past those an upgrade becomes weight — so a hull per upgrade would need an
-    unbounded number of them. Three is what a player can tell apart at ship size.
+    ⚠️ **One bake per ship per stage, because a blit is one bitmap** (`src/render/surface.ts`) — the
+    same reason 0233 gave for nine. A hurt twin each, on 0035's terms.
   */
-  'shipMk2',
-  'shipMk2Hit',
-  'shipMk3',
-  'shipMk3Hit',
-  /*
-    ── THE SAME THREE HULLS, WEARING THE ARC — 0233 ───────────────────────────────────────────────
-
-    Asked for: *"each new weapon needs thematically change the style of the ship so you have a visual
-    indicator of the weapon equipped."* A weapon is a kind now (`src/content/weapons.ts`) and the
-    ship wears the kind it carries at every tier: the nose becomes a two-pronged coil with a spark
-    across it, and the pods carry coil bands where the pulse's pods carry a muzzle.
-
-    ⚠️ **Three MORE hulls rather than a nose drawn over the three that exist**, because `blit` is one
-    bitmap per entity (`src/render/surface.ts`) — there is no compositing at draw time, so every
-    combination of tier and weapon that can be on screen is its own bake. A hurt twin each, on the
-    same terms as the pulse's hulls.
-  */
-  'shipArc',
-  'shipArcHit',
-  'shipArcMk2',
-  'shipArcMk2Hit',
-  'shipArcMk3',
-  'shipArcMk3Hit',
-  /*
-    ── AND WEARING THE SHURIKEN LAUNCHER — 0234 ───────────────────────────────────────────────────
-
-    The same three hulls a third time: blade-tipped wings and a star on the keel, on 0233's terms
-    (one bake per combination of tier and gun, because a blit is one bitmap).
-  */
-  'shipStar',
-  'shipStarHit',
-  'shipStarMk2',
-  'shipStarMk2Hit',
-  'shipStarMk3',
-  'shipStarMk3Hit',
+  // Huang-Woo Hook's fighter — the blue fighter the game always had, at its capped kit.
+  'fighter',
+  'fighterHit',
+  'fighterTube',
+  'fighterTubeHit',
+  'fighterTubes',
+  'fighterTubesHit',
+  // Feather Fade's little green caddie — a flying saucer, from above.
+  'caddie',
+  'caddieHit',
+  'caddieTube',
+  'caddieTubeHit',
+  'caddieTubes',
+  'caddieTubesHit',
+  // Backspin Bo's Firebird — the black muscle car with the gold phoenix on the hood, from above.
+  'firebird',
+  'firebirdHit',
+  'firebirdTube',
+  'firebirdTubeHit',
+  'firebirdTubes',
+  'firebirdTubesHit',
+  // Longshot Larry's gilded estate — the gold station wagon with its roof rack, from above.
+  'estate',
+  'estateHit',
+  'estateTube',
+  'estateTubeHit',
+  'estateTubes',
+  'estateTubesHit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -901,7 +887,8 @@ export const SPRITE_KINDS = [
     essentially the same size, they're all the same."* 0081 answered it for the two bullets and the
     hull; the extents below answer it here.
   */
-  'pickupWeapon',
+  // The bomb pickup's bomb face — the H-bomb in the bubble, where the weapon's chevron was. 0441.
+  'pickupBomb',
   /*
     ⚠️ **THE MISSILE PICKUP, AND IT IS THE WEAPON'S SILHOUETTE ROTATED A QUARTER TURN.** 0083 split
     the missiles back out of `weapon`, and the two are the same *kind* of thing — a ladder of four
@@ -1000,6 +987,19 @@ export const SPRITE_KINDS = [
   */
   'shuriken',
   'shurikenTurn',
+  /*
+    ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
+
+    *"Four concentric purple energy rings that explode on impact with a small energy explosion."* Four
+    rings about one centre, and the brightest of them steps outward a page at a time, so the rings
+    ripple as they fly — three bitmaps, because `blit` cannot animate (the blade's two turns, on the
+    same terms). The burst is a flash of the same purple and then its fading rim.
+  */
+  'ray',
+  'rayRipple',
+  'raySwell',
+  'rayBurst',
+  'rayFade',
   'debris',
   /*
     ── A DEATH IS A FIREBALL, AND A FIREBALL IS FOUR BITMAPS ───────────────────────────────────────
@@ -1364,6 +1364,18 @@ export const EMBER_HEAD = 0.34;
 export const BEAD_HEAD = 0.28;
 
 /**
+ * The square every ship is drawn in, in world units — 0441. 9.4 is the fighter's box at the top of
+ * 0229's tier ladder, which is the kit every ship now opens with.
+ */
+export const SHIP_BOX = 9.4;
+
+/**
+ * The bare fighter's hull, in world units — the 0081 wedge every other part of the fighter is drawn
+ * round. The fighter is drawn at this size inside `SHIP_BOX`, as its capped tier always was (0229).
+ */
+export const FIGHTER_HULL = 7;
+
+/**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
  *
  * ⚠️ **This is the DRAWN size and it is not the hurtbox.** A `Body.radius` in `src/sim/entity.ts` is
@@ -1374,47 +1386,38 @@ export const BEAD_HEAD = 0.28;
  * the band between them rather than leaving the pair to drift.
  */
 export const SPRITE_EXTENT: Record<SpriteKind, number> = {
-  ship: 7,
-  shipHit: 7,
   /*
-    ⚠️ **The same extent at every tier, and the growth is in the DRAWING.** A bigger hull is a bigger
-    hurtbox's worth of picture — `tests/combat.test.ts` holds the band between `radius` and extent —
-    and a ship that got physically larger as it upgraded would be a ship that got easier to hit for
-    picking things up, which is the opposite of a reward. What grows is how much of the box the
-    silhouette fills. 0081.
+    ⚠️ **EVERY SHIP IN ONE BOX, AT EVERY STAGE — 0441.** *"The same overall space needs to be taken up
+    by them in square screen space of size, but within that box they can be any shape."* The box is
+    the fighter's at its capped kit, which is what it flew at the top of 0229's ladder, and a stage
+    adds tubes inside it rather than growing it: a ship that got bigger for picking up missiles would
+    be a ship that got easier to hit for it. The hurtbox is the row's (`src/content/ships.ts`) and is
+    the same for all four.
   */
-  /*
-    ⚠️ **A TIER IS A BIGGER SHIP, IN WORLD UNITS — 0229.** *"We lost the ship upgrade graphics in the
-    graphics upgrade."* 0227's pods and canards were authored inside the same 7-unit box as the bare
-    hull and came out at three and four pixels on a 1280×720 screen — correct by every guard, and
-    invisible. A part that has to be seen needs room, and the room is the extent: each tier's box is
-    wider than the last, and the parts fill what it gains. The hurtbox does not move
-    (`src/content/ships.ts`); what grows is what the player is shown they are carrying.
-  */
-  shipMk2: 8.2,
-  shipMk2Hit: 8.2,
-  shipMk3: 9.4,
-  shipMk3Hit: 9.4,
-  /*
-    ⚠️ **EACH A LITTLE WIDER THAN THE PULSE'S HULL AT THE SAME TIER, AND THE HULL INSIDE IS THE SAME
-    SIZE** — 0233, on 0229's terms. The coil's prongs reach past the nose, so the box grows to hold
-    them and the hull is drawn at the bare ship's own size inside it; the hurtbox does not move. The
-    tiers still climb, so 0229's rule — a tier is a wider sprite than the one before it — holds
-    along the arc's ladder as it holds along the pulse's.
-  */
-  shipArc: 7.8,
-  shipArcHit: 7.8,
-  shipArcMk2: 9,
-  shipArcMk2Hit: 9,
-  shipArcMk3: 10.2,
-  shipArcMk3Hit: 10.2,
-  // The blade tips reach a little past the wingtips, so the box grows as the arc's did — 0234.
-  shipStar: 7.6,
-  shipStarHit: 7.6,
-  shipStarMk2: 9,
-  shipStarMk2Hit: 9,
-  shipStarMk3: 10,
-  shipStarMk3Hit: 10,
+  fighter: SHIP_BOX,
+  fighterHit: SHIP_BOX,
+  fighterTube: SHIP_BOX,
+  fighterTubeHit: SHIP_BOX,
+  fighterTubes: SHIP_BOX,
+  fighterTubesHit: SHIP_BOX,
+  caddie: SHIP_BOX,
+  caddieHit: SHIP_BOX,
+  caddieTube: SHIP_BOX,
+  caddieTubeHit: SHIP_BOX,
+  caddieTubes: SHIP_BOX,
+  caddieTubesHit: SHIP_BOX,
+  firebird: SHIP_BOX,
+  firebirdHit: SHIP_BOX,
+  firebirdTube: SHIP_BOX,
+  firebirdTubeHit: SHIP_BOX,
+  firebirdTubes: SHIP_BOX,
+  firebirdTubesHit: SHIP_BOX,
+  estate: SHIP_BOX,
+  estateHit: SHIP_BOX,
+  estateTube: SHIP_BOX,
+  estateTubeHit: SHIP_BOX,
+  estateTubes: SHIP_BOX,
+  estateTubesHit: SHIP_BOX,
   drifter: 5.5,
   drifterHit: 5.5,
   /*
@@ -2149,8 +2152,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     and the room the box gained is a glow and a ring in the pickup ink. The hurtbox is the row's and
     did not move; `tests/pickups.test.ts` still holds every face under the biggest enemy.
   */
-  pickupWeapon: 8,
-  // The same pickup, offering the other gun — the same size on purpose. 0233.
+  pickupBomb: 8,
+  // The same pickup, offering another gun's special — the same size on purpose. 0233, 0441.
   pickupArc: 8,
   pickupShuriken: 8,
   pickupMissile: 7.33,
@@ -2213,6 +2216,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     commit and every guard was green about it: the pair is never compared anywhere.
   */
   shurikenTurn: 5.6,
+  /*
+    ⚠️ **A LITTLE UNDER HALF THE SHIP, AND THREE PAGES OF ONE SIZE** — 0442. Bigger than a pulse,
+    because it is one body a volley and has to be seen to be aimed; well under the blade, because it
+    is spent by arriving and leaves no path to read. A size on one page and not the others would be a
+    ring that throbs, which is the blade's turn face's lesson.
+  */
+  ray: 4.4,
+  rayRipple: 4.4,
+  raySwell: 4.4,
+  // Twice the burst's reach, on `blast`'s rule: drawn to the edge of its box, which is what it hits.
+  rayBurst: 10,
+  rayFade: 10,
   // Small: a fragment reads as a piece of something, and eight of them at enemy size is a wall.
   debris: 1.4,
   /*

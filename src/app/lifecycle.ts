@@ -48,14 +48,18 @@
 
 import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
+import { SHIPS, type ShipKind } from '../content/ships.ts';
 import { makeRng } from '../sim/rng.ts';
 import type { Action } from '../state/root.ts';
 import type { RunState } from '../state/slices/run.ts';
 import { advanceLevel, respawn, startLevel, type World } from './frame.ts';
 
 export interface Lifecycle {
-  /** A run at a chosen tier, from the top: level one, an empty field, a full complement of lives. */
-  begin(difficulty: DifficultyKind): void;
+  /**
+   * A run at a chosen tier in a chosen ship, from the top: level one, an empty field, a full
+   * complement of lives. The ship is the pilot's (0441), resolved by the shell.
+   */
+  begin(difficulty: DifficultyKind, ship: ShipKind): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
   /**
@@ -78,11 +82,8 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
    */
   const enterLevel = (seamless: boolean): void => {
     /*
-      ⚠️ **The clamped index is now handed to the frame as well as used to pick the row** — the
-      difficulty dial is `levelIndex + weaponsOffered`
-      (`docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`), so this is where a level's place
-      in the run reaches the field. The clamp matters twice over: past the roster it keeps the dial at
-      the last level's rather than running off the top.
+      ⚠️ **The clamped index is handed to the frame as well as used to pick the row**, so this is where
+      a level's place in the run reaches the field. Past the roster it keeps the last level's.
     */
     const index = Math.min(runOf().level, LEVEL_KINDS.length - 1);
     const kind = LEVEL_KINDS[index]!;
@@ -99,13 +100,16 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
   };
 
   return {
-    begin(difficulty: DifficultyKind): void {
+    begin(difficulty: DifficultyKind, ship: ShipKind): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
         argument `enemyRows` and `pickupRows` make in `mount`: a per-spawn lookup by string key is a
         cost paid forever to avoid one line at the start of a run.
       */
       world.difficulty = DIFFICULTIES[difficulty];
+      // And the ship, resolved to its row once, on the same terms — 0441. `startLevel` respawns it,
+      // so its hull and hurtbox are this row's from the first frame.
+      world.shipRow = SHIPS[ship];
       /*
         ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
         answer for a scene proving the page draws and the wrong one for an authored level: it puts
@@ -132,7 +136,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
       // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
-      dispatch({ slice: 'run', type: 'begin', difficulty });
+      dispatch({ slice: 'run', type: 'begin', difficulty, ship });
       // ⚠️ `false`: not seamless. A run begins on a swept field with the camera at zero, whatever
       // the last one ended as — 0058 and 0067.
       enterLevel(false);

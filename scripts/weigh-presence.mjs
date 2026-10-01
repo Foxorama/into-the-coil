@@ -39,7 +39,7 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
+import { weaponFor } from '../src/content/pickups.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { playableWorld } from '../tests/world.ts';
@@ -57,7 +57,6 @@ const MUZZLE_ACROSS = Math.max(
  * Returns rows keyed `kind:origin`, over the waves' time only.
  */
 export function weighPresence(kind, options = {}) {
-  const weaponTier = options.weaponTier ?? UPGRADE_TIERS;
   const missileTier = options.missileTier ?? 2;
   const sweepSeconds = options.sweepSeconds ?? 8;
   const level = LEVELS[kind];
@@ -65,7 +64,7 @@ export function weighPresence(kind, options = {}) {
   const { world } = options.tier === undefined ? playableWorld(level) : playableWorld(level, options.tier);
   const frame = new GameFrame(world);
   const carried = [];
-  for (let i = 0; i < weaponTier; i++) carried.push('weapon');
+  // The tubes only: the gun is the ship's and whole since 0441.
   for (let i = 0; i < missileTier; i++) carried.push('missile');
   world.weapon = weaponFor(world.shipRow, carried);
   wearHull(world);
@@ -193,7 +192,6 @@ if (isMain) {
   };
   const tierArg = args.find((a) => a.startsWith('--tier='));
   const options = {
-    weaponTier: flag('weapon', UPGRADE_TIERS),
     missileTier: flag('missiles', 2),
     sweepSeconds: flag('sweep', 8),
     tier: tierArg === undefined ? undefined : tierArg.slice('--tier='.length),
@@ -202,7 +200,7 @@ if (isMain) {
   for (const kind of only ? [only] : LEVEL_KINDS) {
     const r = weighPresence(kind, options);
     console.log(
-      `\n${kind}  weapon=${options.weaponTier} missiles=${options.missileTier}${options.tier === undefined ? '' : ` tier=${options.tier}`}  peak bodies alive ${r.peak}`,
+      `\n${kind}  missiles=${options.missileTier}${options.tier === undefined ? '' : ` tier=${options.tier}`}  peak bodies alive ${r.peak}`,
     );
     console.log('  kind:origin           seen  unseen  visible(s)  volleys/body  zero-volley  first-seen');
     for (const key of Object.keys(r.rows).sort()) {

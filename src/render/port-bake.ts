@@ -21,7 +21,12 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VENOMA, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, glow, paintShip, poly, rgba, seal, shade, SHIP_HULL, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeSize, disc, drawPlayerShip, glow, poly, rgba, shade, SHIP_JETS, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import type { ShipKind } from '../content/ships.ts';
+import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
+
+/** A flame's length and width against the fight's box, where they were against the fighter's hull. */
+const JET = FIGHTER_HULL / SHIP_BOX;
 import { paintRunner, type RunnerPose } from './golfer-art.ts';
 
 /**
@@ -76,17 +81,22 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
   // And a surge's is `SURGE_BOX` times, on the same terms — 0416.
   const surge: Frame = { half: size / 2, r: (size * 0.42) / SURGE_BOX };
   switch (kind) {
+    /*
+      ⚠️ **THE PILOT'S OWN SHIP SINCE 0441**, and its own nozzles. Its frame is the fight's box rather
+      than the fighter's bare hull, so every flame's length and width below is scaled by `JET` to stay
+      the size the fighter's always were.
+    */
     case 'blue':
-      paintBlue(ctx, f, palette, size);
+      paintBlue(ctx, f, palette, size, pilot.ship);
       return canvas;
     case 'blueIdle':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 0.4, 0.07, 0.22);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.4 * JET, 0.07 * JET, 0.22 * JET);
       return canvas;
     case 'blueBurn':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 0.95, 0.09, 0.4);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.95 * JET, 0.09 * JET, 0.4 * JET);
       return canvas;
     case 'blueFlare':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, BLUE_JETS, 1.35, 0.115, 0.55);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 1.35 * JET, 0.115 * JET, 0.55 * JET);
       return canvas;
     /*
       ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
@@ -95,7 +105,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       and lets it die back into it (`SURGE_STEPS`).
     */
     case 'blueSurge':
-      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', BLUE_JETS, 2.3, 0.17, 0.95);
+      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', SHIP_JETS[pilot.ship], 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
@@ -669,27 +679,22 @@ function paintStation(ctx: CanvasRenderingContext2D, palette: Palette, h: number
   ── THE SHIPS ────────────────────────────────────────────────────────────────────────────────────
 */
 
-/** Where the fighter's two nacelles end, in its own frame — `SHIP_NACELLE` and `SHIP_CORE` in `bake.ts`. */
-const BLUE_JETS: readonly Pt[] = [
-  [-0.78, -0.21],
-  [-0.78, 0.21],
-];
+/*
+  `BLUE_JETS` stood here — the fighter's two nacelles — until 0441 gave every pilot a ship of their own.
+  Where each ship's nozzles are is `SHIP_JETS` in `bake.ts`, beside the drawing they come out of.
+*/
 
 /** The Viper's single nozzle, at the end of her tail. */
 const VIPER_JETS: readonly Pt[] = [[-0.87, 0.025]];
 
 /**
- * The fighter the player flies, at hangar size: the same hull and the same livery, and an outline
- * thinned to suit a ship this near — at the game's proportion it would be a finger's width.
+ * The pilot's own ship, at hangar size — 0441: the same drawing the fight blits, bare of tubes, with an
+ * outline thinned to suit a ship this near — at the game's proportion it would be a finger's width.
  */
-function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number): void {
-  ctx.fillStyle = palette.player;
+function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, ship: ShipKind): void {
   ctx.strokeStyle = palette.space;
   ctx.lineWidth = Math.max(1, size * 0.014);
-  ctx.beginPath();
-  trace(ctx, f, SHIP_HULL);
-  seal(ctx);
-  paintShip(ctx, f, palette, 0, 'pulse');
+  drawPlayerShip(ctx, f, palette, ship, 0);
 }
 
 /**

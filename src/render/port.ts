@@ -23,6 +23,7 @@ import {
   CHASE,
   FADE,
   FLICKER_STEPS,
+  HANGAR_SCALE,
   JINKS,
   JINK_STEPS,
   LAUNCH_ACCEL,
@@ -92,12 +93,13 @@ const GAME_BASE = PORT_KINDS.length;
 /**
  * Draw the intro at `t` steps since its first frame — a fractional step between two, so the motion is
  * interpolated like everything else the renderer draws. `sky` is the first level's (0416), whose
- * sprites are the game's, at `GAME_BASE` on in this atlas; empty in a style with no sky.
+ * sprites are the game's, at `GAME_BASE` on in this atlas; empty in a style with no sky. `wingtip` is
+ * the pilot's ship's, in the fight's units — where its contrails trail from (0441).
  */
-export function paintPort(surface: Surface, view: View, t: number, sky: Sky): void {
+export function paintPort(surface: Surface, view: View, t: number, sky: Sky, wingtip: number): void {
   surface.clear();
   if (t < BEATS.cut) paintHangar(surface, view, t, sky);
-  else paintOutside(surface, view, t - BEATS.outside, sky);
+  else paintOutside(surface, view, t - BEATS.outside, sky, wingtip * HANGAR_SCALE);
   // The fades: up out of the backdrop at the start, down and up again across the cut, and down at the end.
   let veil = 0;
   if (t < BEATS.fadeIn) veil = 1 - t / BEATS.fadeIn;
@@ -398,7 +400,7 @@ function paintTrail(surface: Surface, view: View, s: number, runs: number, blue:
   }
 }
 
-function paintOutside(surface: Surface, view: View, s: number, sky: Sky): void {
+function paintOutside(surface: Surface, view: View, s: number, sky: Sky, wingtip: number): void {
   if (s < 0) return;
   /*
     ⚠️ **THE FIRST LEVEL'S SKY, AT THE FIRST LEVEL'S SPEED, AND AT ITS OWN SIZE — 0416.** The camera
@@ -426,8 +428,9 @@ function paintOutside(surface: Surface, view: View, s: number, sky: Sky): void {
   const blueAlong = blueAlongAt(s);
   const blueAcross = blueAcrossAt(s);
   const blueTurn = bank(blueAcross, blueAcrossAt(s + 1));
-  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, -12);
-  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, 12);
+  // Off the pilot's ship's own wingtips — 0441: a saucer's rim is not a car's wheels.
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, -wingtip);
+  paintTrail(surface, view, s, BLUE_RUNS, true, -7.5, wingtip);
   const blueFlame = s < BLUE_OUT + 24 || s >= BLUE_RUNS || Math.floor(s / FLICKER_STEPS) % 2 === 1 ? PORT_SPRITE.blueFlare : PORT_SPRITE.blueBurn;
   putOut(surface, view, blueFlame, blueAlong, blueAcross, 1, blueTurn);
   const blueSurge = surgeAt(s, BLUE_RUNS);

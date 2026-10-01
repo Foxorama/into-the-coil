@@ -34,6 +34,17 @@
  */
 
 import type { RunnerRow } from './golfers.ts';
+import { FIGHTER_HULL, SHIP_BOX } from './sprites.ts';
+
+/**
+ * How much bigger a ship is in the hangar than in flight — 0441. The fighter's bare hull was baked at
+ * 30 units here (its 7 in the fight), and the four ships share the fight's one box (`SHIP_BOX`), so the
+ * box is baked at this scale and the fighter is the size it always was beside the bar door.
+ */
+export const HANGAR_SCALE = 30 / FIGHTER_HULL;
+
+/** The pilot's ship's box at hangar size — every ship, so each is the size it is in the fight, scaled. */
+const HANGAR_SHIP = SHIP_BOX * HANGAR_SCALE;
 
 /** Everything the port is drawn from, in the order its atlas holds them. Closed — 0016. */
 export const PORT_KINDS = [
@@ -109,11 +120,12 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   bayBottom: 30,
   field: 80,
   beacon: 14,
-  blue: 30,
-  blueIdle: 60,
-  blueBurn: 60,
-  blueFlare: 60,
-  blueSurge: 90,
+  // The pilot's ship, in the fight's one box at hangar scale — 0441; it was the fighter's bare hull at 30.
+  blue: HANGAR_SHIP,
+  blueIdle: HANGAR_SHIP * 2,
+  blueBurn: HANGAR_SHIP * 2,
+  blueFlare: HANGAR_SHIP * 2,
+  blueSurge: HANGAR_SHIP * 3,
   viper: 40,
   viperIdle: 80,
   viperBurn: 80,

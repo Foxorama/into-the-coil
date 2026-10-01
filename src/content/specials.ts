@@ -168,6 +168,11 @@ export interface Whirl {
 export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
+  /**
+   * What it does, in the fewest words — the title key's line beside its face, since the bomb pickup
+   * offers the gun specials by face (0441). Terse, per `docs/game.md`'s voice rule.
+   */
+  hint: string;
   /** Which trigger throws it — 0376. The gun's overflow buys a gun special, the tubes' a tube one. */
   side: Side;
   /**
@@ -214,11 +219,15 @@ export interface SpecialRow {
   whirl: Whirl | null;
   /** The rift a thrown special opens in place of a blast, or `null` — 0377. */
   rift: Rift | null;
-  /**
-   * Charges pushed onto the stack each time `took` stocks it — an overflowing ladder, and the run's
-   * start. Each is one press of the trigger.
-   */
-  charges: number;
+  /*
+    ── `charges` WAS HERE, AND IT WAS ONE ON EVERY ROW BUT THE BOMB'S — 0441 ─────────────────────
+
+    It said how many charges a take pushed: two for the bomb, because the run opened on what the
+    bomb's row said, and one for the rest. *"A player can pick up any type and get a bomb of that
+    type"* makes a take one charge of every kind, and a field that is one on every row is 0282's tell
+    — a mechanism whose output is identical for every kind. A take is one charge; what a run opens
+    on is `OPENING_CHARGES` of the ship's own gun's special.
+  */
   /**
    * Which baked bitmap says *this one*, wherever the player is shown what the trigger throws next.
    *
@@ -251,13 +260,17 @@ export interface SpecialRow {
 /** Ten seconds of the sim's own clock — 0022. The seeker surge's length is the ask's. */
 const SURGE_STEPS = 600;
 
+/**
+ * How many charges of its own gun's special a ship opens a run with — 0441: *"a game starts with two
+ * bombs."* The fighter opens on two bombs, as every run did; the estate on two storms and the Firebird
+ * on two whirlpools, because a bomb is what the ask calls every gun's special.
+ */
+export const OPENING_CHARGES = 2;
+
 export const SPECIALS: Record<SpecialKind, SpecialRow> = {
   /**
    * The pulse's since 0375 — *"let's make the auto-gun pickup the regular bomb"* — and the straight
    * tube's before it. A large forward-firing missile that goes off as the bomb's explosion.
-   *
-   * ⚠️ **`charges` is 2 and it was 3**, because the ask says so: *"the player starts with 2 and
-   * gains one per level cleared."* It is the number a run BEGINS with; 0372 took away the clear's.
    *
    * ⚠️ **A TWENTIETH OF A BOSS — 0372**: *"increase its damage so it does 5% of max boss health
    * damage."* The larger of that and the blast's own six, so a small mid-boss is not hit softer
@@ -265,8 +278,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   bomb: {
     label: 'Bomb',
+    hint: 'A big blast up the lane',
     side: 'gun',
-    charges: 2,
     shot: 'bomb',
     becomes: 'blast',
     reach: 80,
@@ -275,7 +288,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: null,
-    face: SPRITE.bomb,
+    // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
+    face: SPRITE.pickupBomb,
     cue: 'bomb',
     lands: 'blast',
     hushes: false,
@@ -287,8 +301,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   hunt: {
     label: 'Hunt',
+    hint: 'Ten seconds of hunting pods',
     side: 'tubes',
-    charges: 1,
     shot: null,
     becomes: null,
     reach: 0,
@@ -311,8 +325,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   overdrive: {
     label: 'Overdrive',
+    hint: 'Ten seconds of piercing pods',
     side: 'tubes',
-    charges: 1,
     shot: null,
     becomes: null,
     reach: 0,
@@ -339,8 +353,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   storm: {
     label: 'Storm',
+    hint: 'Lightning across the screen',
     side: 'gun',
-    charges: 1,
     shot: 'stormBall',
     becomes: null,
     reach: 80,
@@ -366,8 +380,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   whirlpool: {
     label: 'Whirlpool',
+    hint: 'A spiral of giant blades',
     side: 'gun',
-    charges: 1,
     shot: null,
     becomes: null,
     reach: 0,
@@ -399,8 +413,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    */
   voidMissile: {
     label: 'Void',
+    hint: 'A rift that swallows fire',
     side: 'tubes',
-    charges: 1,
     shot: 'voidBall',
     becomes: null,
     reach: 80,

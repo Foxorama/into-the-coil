@@ -109,6 +109,7 @@ export const CUE_KINDS = [
   'arc',
   'zap',
   'throw',
+  'ray',
   'threat',
   'hit',
   'kill',
@@ -959,6 +960,41 @@ export const CUES: Record<CueKind, CueRow> = {
       { wave: 'tri', from: inKey(33), to: inKey(32), seconds: 0.11, gain: 0.116, attack: 0.0008, curve: 3.4, pan: 0.45 },
       // The edge on the front of it: a tick of steel on steel.
       { wave: 'square', from: inKey(39), to: inKey(35), seconds: 0.025, gain: 0.082, attack: 0.0005, curve: 7, highFrom: 2500 },
+    ],
+  },
+  /**
+   * The ray gun's rings leaving the dish — `docs/decisions/0442-the-ray-gun.md`.
+   *
+   * A RAY GUN, and the sound everybody already knows for one: a pure tone falling fast through an
+   * octave, *pew*, with a second voice a fifth under it ringing on as the rings spread. Where the pulse
+   * clicks, the arc crackles and the blade rings steel, this is the one gun that is a pitch rather than
+   * a noise — which is also what tells it from the seeker's launch, the other lavender thing the player
+   * fires. The sub every player weapon has (0102) is the guns' shared bottom.
+   *
+   * ⚠️ **SHORTER THAN ITS OWN CADENCE**, on 0104's terms: eight steps, 0.133 s, and every layer is under
+   * it, so a volley is an event and not a drone. Dry, like the pulse, for the same reason.
+   *
+   * ⚠️ **IN THE KEY** — 0099. The tone falls from the fourth degree two octaves up to the fourth an
+   * octave down, and the ring a fifth under it, so the ray lands on the scale the music is in.
+   */
+  ray: {
+    twin: 'shot-appears',
+    hold: 2,
+    gain: 0.24,
+    glue: 0.12,
+    figure: [1, 0.7, 0.86, 0.7],
+    layers: [
+      // The click of the dish discharging, a hair either side.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: -0.3, panTo: -0.45 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: 0.3, panTo: 0.45 },
+      // The pew: a sine falling an octave and more, the whole of what says *ray gun*.
+      { wave: 'sine', from: inKey(31), to: inKey(17), seconds: 0.1, gain: 0.42, attack: 0.001, curve: 3.5, drive: 0.2 },
+      // The ring: a triangle a fifth under it, falling with it, spread across the field as the rings do.
+      { wave: 'tri', from: inKey(27), to: inKey(13), seconds: 0.11, gain: 0.2, attack: 0.002, curve: 3, pan: -0.5, panTo: 0.5 },
+      // A square an octave over the pew, quiet and short — the edge on the front of the beam.
+      { wave: 'square', from: inKey(38), to: inKey(31), seconds: 0.03, gain: 0.06, attack: 0.0005, curve: 6, highFrom: 2500 },
+      // The guns' shared bottom — 0102.
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.08, gain: 0.4, attack: 0.002, curve: 3.5, drive: 0.25 },
     ],
   },
   threat: {

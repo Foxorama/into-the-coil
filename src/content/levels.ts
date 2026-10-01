@@ -236,24 +236,22 @@ export interface PickupEntry {
  *
  * ⚠️ **ONE LIST FOR EVERY MID-BOSS**, on 0083's argument for one budget for every level: a fight
  * that quietly dropped a second shield would be authoring a difficulty curve in the one file that
- * must not. The weapon piece turns the dial exactly as an authored one does (`dropPickups` in
- * `src/app/frame.ts`), so `weaponsOfferedBy` counts it.
- */
-export const MID_BOSS_DROP: readonly PickupKind[] = ['weapon', 'shield', 'missile'];
-
-/**
- * How many weapon pickups a level puts on the field, counting the mid-boss's drop — which is what
- * turns the dial (`docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`).
+ * must not.
  *
- * The one description, read by `tests/dial.test.ts` so the top of the dial is recomputed from the
- * content rather than restated.
+ * ⚠️ **A BOMB WHERE THE WEAPON WAS — 0441.** The weapon pickup is the bomb pickup, so the fight throws
+ * a charge, a shield and a tube; and since the level authors no bomb after the first, the fight is
+ * where a level's charge comes from.
  */
-export function weaponsOfferedBy(level: LevelRow): number {
-  let offered = 0;
-  for (const entry of level.pickups) if (entry.kind === 'weapon') offered++;
-  if (level.midBoss !== null) for (const kind of MID_BOSS_DROP) if (kind === 'weapon') offered++;
-  return offered;
-}
+export const MID_BOSS_DROP: readonly PickupKind[] = ['bomb', 'shield', 'missile'];
+
+/*
+  ── `weaponsOfferedBy` WAS HERE, AND 0441 TOOK IT WITH THE DIAL'S WEAPON TERM ─────────────────────
+
+  It counted the weapon pickups a level put on the field, because a weapon pickup turned the dial
+  (`docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`): a gun one rung up was a player who
+  could take more. A gun has no rungs now, and a bomb pickup is a charge rather than a stronger ship,
+  so the dial counts the levels and nothing else (`src/content/difficulty.ts`).
+*/
 
 /**
  * One of a place's landmarks, and where along the level it goes past.
@@ -746,17 +744,12 @@ const APPROACH: readonly WaveEntry[] = [
 */
 const APPROACH_PICKUPS: readonly PickupEntry[] = [
   /*
-    ⚠️ **THE FIRST THING THE LEVEL OFFERS IS A WEAPON**, since the compressed levels: *"this might
-    need the first pickup changed to a weapon increase instead of a shield."* The stretch it sits in
-    is still empty — `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md` gave the
-    player that quiet so the first thing that happens to them is not a death. Reaching this is a
-    decision made against an empty screen.
+    ── THE WEAPON AT 267 WAS HERE, AND 0441 TOOK IT ───────────────────────────────────────────────
 
-    ⚠️ **What it costs is stated rather than discovered: the dial climbs here.** `weaponsOffered`
-    increments where a weapon is PLACED (`docs/decisions/0084-the-dial-is-the-level-and-the-guns.md`).
-    0086's run-up still holds the multi-hit kinds back until the second weapon.
+    *"We'll remove the first weapon pick up from each level so that the player doesn't end up with too
+    many bombs."* It was the first thing the level offered, against an empty screen. A ship opens on
+    its whole gun now, so the first crossing the level asks for is the tube below.
   */
-  { at: 267, kind: 'weapon', lane: 40 },
   /*
     ⚠️ **THE MISSILE PICKUP IS THE SECOND WEAPON ARRIVING AT ALL.** The base ship has no tube
     (`docs/decisions/0056-the-missile-is-earned-and-a-pickup-is-easier-to-reach.md`) and the ladder
@@ -766,14 +759,12 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
   */
   { at: 720, kind: 'missile', lane: 62 },
   /*
-    ⚠️ **LEVEL ONE'S EXTRA WEAPON, BEFORE THE MID-BOSS — and it is the pickup that lifts the clamp.**
-    The second weapon is what the clamp (0084) and the run-up (0086) are keyed to, so the stretch
-    after it is the one-health band and the first multi-hit WAVE is `MULTI_HIT_RUNUP` beyond it —
-    `tests/dial.test.ts`. The sentinel arrives at 1549, inside that band and 549 units after the gun
-    that answers it; the missile above sits a shade earlier than the other levels' fifth so the two
-    are not one crossing.
+    ⚠️ **LEVEL ONE'S EXTRA PICKUP, BEFORE THE MID-BOSS — a bomb since 0441, and a weapon before it.**
+    It was the pickup that lifted the one-hit clamp (0084, 0086); the clamp went with the weapon
+    ladder, because its premise was a gun one rung up. What is left is a charge to bring into the
+    first fight, 549 units before the sentinel arrives.
   */
-  { at: 1000, kind: 'weapon', lane: 34 },
+  { at: 1000, kind: 'bomb', lane: 34 },
   /*
     ⚠️ **AND ITS EXTRA MISSILE, HALFWAY BETWEEN THE FIGHTS** — *"halfway between miniboss and level
     boss"*: the sentinel at 1549 and the serpent at 4270, so the midpoint is 2910. The second tube,
@@ -910,9 +901,9 @@ const DESCENT: readonly WaveEntry[] = [
  * placement, and the lane.
  */
 const DESCENT_PICKUPS: readonly PickupEntry[] = [
-  // The opening weapon, on the same terms as level one's — and level two opens on the same empty
-  // stretch for the same reason, so it is the same answer to the same question.
-  { at: 267, kind: 'weapon', lane: 62 },
+  // The opening weapon was here, as level one's was, and 0441 took both: *"we'll remove the first
+  // weapon pick up from each level."* Every level after the first authors its tube and nothing else;
+  // its charge is the mid-boss's.
   { at: 864, kind: 'missile', lane: 28 },
 ];
 
@@ -1012,7 +1003,6 @@ const COILWARD: readonly WaveEntry[] = [
  * what changes is what it costs to reach them.
  */
 const COILWARD_PICKUPS: readonly PickupEntry[] = [
-  { at: 300, kind: 'weapon', lane: 44 },
   { at: 854, kind: 'missile', lane: 56 },
 ];
 
@@ -1105,7 +1095,6 @@ const SHOAL: readonly WaveEntry[] = [
  * that stretch.
  */
 const SHOAL_PICKUPS: readonly PickupEntry[] = [
-  { at: 292, kind: 'weapon', lane: 52 },
   { at: 848, kind: 'missile', lane: 36 },
 ];
 
@@ -1196,7 +1185,6 @@ const BATTERIES: readonly WaveEntry[] = [
  * up. The charge is the redoubt's to drop now (0256), a third of the way in.
  */
 const BATTERIES_PICKUPS: readonly PickupEntry[] = [
-  { at: 292, kind: 'weapon', lane: 36 },
   { at: 848, kind: 'missile', lane: 60 },
 ];
 
@@ -1292,7 +1280,6 @@ const GAUNTLET: readonly WaveEntry[] = [
  * is too mean — if any level leaves the player unable to reach what it offers, it is this one.
  */
 const GAUNTLET_PICKUPS: readonly PickupEntry[] = [
-  { at: 284, kind: 'weapon', lane: 58 },
   { at: 868, kind: 'missile', lane: 42 },
 ];
 
@@ -1392,7 +1379,6 @@ const EYE: readonly WaveEntry[] = [
  * makes level seven harder than level one is the script above it, not what it withholds.
  */
 const EYE_PICKUPS: readonly PickupEntry[] = [
-  { at: 284, kind: 'weapon', lane: 48 },
   { at: 892, kind: 'missile', lane: 64 },
 ];
 

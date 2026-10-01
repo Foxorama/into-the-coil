@@ -1,19 +1,22 @@
 /**
  * What the player flies.
  *
- * ⚠️ **One row, and it is deliberately not a character.** `docs/game.md` names the roster — four
- * *Far Carry* golfers in the prologue, nine caddies in the unlock pool — and says every ship must
- * differ on at least one axis the player can feel. Authoring one of them here, in a PR whose subject
- * is whether the ship can be killed, would be inventing product to satisfy a shape: the roster is a
- * table edit against this file, and it is owed a hand on the controls rather than a guess.
+ * ── FOUR SHIPS, ONE PER PILOT — 0441 ─────────────────────────────────────────────────────────────
  *
- * What IS real here is the shape: a `Record` over a closed union per
- * `docs/decisions/0016-a-hub-enumerates-kinds.md`, with the base weapon on the row, so a second ship
- * changes no type and no code.
+ * `docs/decisions/0441-a-pilot-flies-their-own-ship.md`. *"Each pilot has their own ship and a
+ * weapon will be keyed to that ship only."* The fighter the game always had is Huang-Woo Hook's; the
+ * other three are *The Far Carry*'s, drawn from above as that game drew them for its portrait fights.
+ * Which golfer flies which ship is on the golfer's row (`src/content/golfers.ts`), because a ship is
+ * what is flown and a golfer is who flies it.
+ *
+ * ⚠️ **What tells them apart is the gun, and that is `docs/game.md`'s cheapest axis** — *every ship
+ * must differ on at least one axis the player can feel.* The hurtbox, the speed and the handling are
+ * the same for all four, on purpose: the ask fixed the box, and a ship that was also easier to thread
+ * would be a second difference nobody asked for.
  *
  * ⚠️ **Auto-fire is on the row and has no trigger, anywhere.** `src/content/actions.ts` says it: there
- * is no `fire` action and there must never be one. The base weapon fires itself; the arsenal — which
- * is a list and not a slot — is what the player spends. Nothing in this file is that arsenal yet.
+ * is no `fire` action and there must never be one. The base weapon fires itself; the arsenal is what
+ * the player spends.
  */
 
 import type { Body } from '../sim/entity.ts';
@@ -21,129 +24,168 @@ import { SPRITE } from './sprites.ts';
 import type { WeaponKind } from './weapons.ts';
 import type { MissileKind } from './missiles.ts';
 
-/** Every flyable ship. Closed, and one entry long until the roster is played rather than designed. */
-export type ShipKind = 'proof';
+/** Every flyable ship. Closed. */
+export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate';
 
 export interface ShipRow extends Body {
+  /** What the player would call it — the pilot select's line under the golfer. */
+  label: string;
   /**
-   * The gun this ship opens a run with, and goes back to on a death.
-   *
-   * ── THE LADDERS WERE HERE, AND 0233 MOVED THEM ONTO THE KIND ────────────────────────────────────
-   *
-   * `fireEvery`, `barrels` and `missileEvery` lived on this row from 0093 to 0233, on the argument
-   * *a ship is where a weapon's character lives* — kept so that the chunky alternative the play-test
-   * asked to have on record could be a second ship. **A weapon is a kind now**
-   * (`src/content/weapons.ts`), and the character is the kind's: the chunky gun is a second row
-   * there, and a ship names which row it starts on. Nothing about the numbers moved; what moved is
-   * whose they are. `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
-   *
-   * ⚠️ **The BASE, not the fitted one.** Which gun the ship is carrying right now is the run's
-   * (`src/state/slices/run.ts`), because it changes when a pickup of another kind is taken and is
-   * lost on a death — exactly as the upgrade list is. This is what an empty run resolves to.
+   * The gun this ship flies with, for the whole run — 0441. *"A weapon will be keyed to that ship
+   * only."* Nothing changes it: the pickup that once switched guns (0233) buys a special now.
    */
   weapon: WeaponKind;
   /**
-   * The second auto-weapon this ship opens with.
-   *
-   * ⚠️ **On the ROW beside the first, because `docs/game.md` says the ship owns its base weapon** —
-   * and a missile is a base weapon rather than an arsenal entry: it fires itself, it needs no input,
-   * and `src/content/actions.ts`'s *there is no `fire` action and there must never be one* covers
-   * every auto-weapon rather than only the pulse. A second ship that carries a different missile is a
-   * table edit; its ladders are `src/content/missiles.ts`'s, on the same terms as the gun's.
+   * The tube this ship opens with. The missile pickup still cycles the tubes and still switches
+   * them — *"missiles have no change currently"* — so which tube is fitted is the run's
+   * (`src/state/slices/run.ts`), and this is what a run begins on.
    */
   missile: MissileKind;
+  /**
+   * The ship at no tubes, one tube and two, each with its hurt twin — 0441. A missile pickup changes
+   * the picture by moving the ship along this, which is how 0081's *every upgrade changes how the ship
+   * looks* survives the guns losing their tiers.
+   *
+   * ⚠️ **A pair per stage, because `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`
+   * every step** (`src/sim/entity.ts`). Handing back only the base would leave a ship with tubes
+   * flashing as the bare hull on every hit.
+   */
+  hulls: readonly [Hull, Hull, Hull];
+  /**
+   * How far across from the ship's centre its outboard hardpoints stand, in world units — where a
+   * coil gun's blades leave from, and where the intro's contrails trail from — 0441.
+   *
+   * ⚠️ **ON THE ROW, AND IT WAS HALF THE BOX.** `throwBlades` read the hull's extent, which was the
+   * blade fins' reach on the one fighter; the Firebird's blades leave its front hubcaps, well inside
+   * the box, and a blade that left from the box's edge would leave from the air beside the car. Each
+   * ship says where its own are — 0282's *every instance authors its Y*.
+   */
+  wingtip: number;
+}
+
+/** One bake of a ship and its hurt twin. */
+export interface Hull {
+  base: number;
+  hit: number;
 }
 
 /** Written out rather than derived, so the table below cannot quietly lose a row. */
-export const SHIP_KINDS: readonly ShipKind[] = ['proof'];
+export const SHIP_KINDS: readonly ShipKind[] = ['fighter', 'caddie', 'firebird', 'estate'];
 
 /**
- * The hulls, in tier order — and their hit twins beside them.
+ * Which hull a ship carrying `launchers` missile tubes is drawn as.
  *
- * ⚠️ **Here rather than on the row, because a tier is not a property of THIS ship** — 0081. Every
- * ship in the roster `docs/game.md` describes will have three of these, and the day a second row is
- * added the alternative is three more fields on it that all say *the same wedge with more of it*.
- *
- * ⚠️ **A pair per tier, because `stepEntities` derives `sprite` from `spriteBase` AND `spriteHit`
- * every step** (`src/sim/entity.ts`). Handing back only the base would leave an upgraded ship
- * flashing as the tier-0 hull on every hit, which is a silhouette changing at the one moment the
- * player is least able to read it.
+ * ⚠️ **Clamped rather than trusted.** `weaponFor` already caps the launchers, so this can only fire
+ * if the two ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`,
+ * which is a blit of nothing rather than an error anybody would see.
  */
-/**
- * ⚠️ **A LADDER PER WEAPON KIND SINCE 0233, AND THE TIERS ARE THE SAME THREE.** Asked for: *"each
- * new weapon needs thematically change the style of the ship so you have a visual indicator of the
- * weapon equipped."* The tier says how much kit the ship carries and the kind says what the kit IS,
- * and both have to show — so the table is two-dimensional and every cell is its own bake, because
- * a blit is one bitmap per entity (`src/render/surface.ts`). `tests/weapons.test.ts` holds every
- * kind to three tiers, three twins, and widening boxes, on 0229's terms.
- */
-const HULLS: Record<WeaponKind, readonly { base: number; hit: number }[]> = {
-  pulse: [
-    { base: SPRITE.ship, hit: SPRITE.shipHit },
-    { base: SPRITE.shipMk2, hit: SPRITE.shipMk2Hit },
-    { base: SPRITE.shipMk3, hit: SPRITE.shipMk3Hit },
-  ],
-  arc: [
-    { base: SPRITE.shipArc, hit: SPRITE.shipArcHit },
-    { base: SPRITE.shipArcMk2, hit: SPRITE.shipArcMk2Hit },
-    { base: SPRITE.shipArcMk3, hit: SPRITE.shipArcMk3Hit },
-  ],
-  shuriken: [
-    { base: SPRITE.shipStar, hit: SPRITE.shipStarHit },
-    { base: SPRITE.shipStarMk2, hit: SPRITE.shipStarMk2Hit },
-    { base: SPRITE.shipStarMk3, hit: SPRITE.shipStarMk3Hit },
-  ],
-};
-
-/**
- * Which hull a ship carrying `weapon` and `tier` upgrades' worth of kit is drawn as.
- *
- * ⚠️ **Clamped rather than trusted.** `weaponFor` already clamps, so this can only fire if the two
- * ever disagree — and the failure it prevents is an `undefined` reaching `Entity.sprite`, which is a
- * blit of nothing rather than an error anybody would see.
- */
-export function hullFor(weapon: WeaponKind, tier: number): { base: number; hit: number } {
-  const ladder = HULLS[weapon];
-  const rung = tier < 0 ? 0 : tier > ladder.length - 1 ? ladder.length - 1 : Math.floor(tier);
-  return ladder[rung] ?? ladder[0]!;
+export function hullFor(ship: ShipRow, launchers: number): Hull {
+  const stage = launchers < 0 ? 0 : launchers > 2 ? 2 : Math.floor(launchers);
+  return ship.hulls[stage]!;
 }
 
+/**
+ * The ship a gun is keyed to — 0441: *"a weapon will be keyed to that ship only."* One each, so asking
+ * for a gun is asking for its ship; the instruments that fly every gun against a boss fly every ship.
+ */
+export function shipCarrying(weapon: WeaponKind): ShipKind {
+  const found = SHIP_KINDS.find((kind) => SHIPS[kind].weapon === weapon);
+  if (found === undefined) throw new Error(`no ship carries the ${weapon}`);
+  return found;
+}
+
+/**
+ * ⚠️ **`health` is 1 on every row, and it was 5.** Asked for after playing the two-level build: *"one
+ * hit destroys the ship."* It is still the number of HITS the entity survives, and shields are counted
+ * in the same field — a ship carrying two shields has `health` 3 —
+ * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`.
+ *
+ * ⚠️ **`radius` is 2 on every row** — the fighter's hurtbox, which the ask's one box keeps for all
+ * four, so no ship is easier to thread than another (0441).
+ */
 export const SHIPS: Record<ShipKind, ShipRow> = {
   /**
-   * The proof scene's ship.
-   *
-   * ⚠️ **`health` is 1, and it was 5.** Asked for after playing the two-level build: *"one hit
-   * destroys the ship."* Five hits meant a player could fly through a wave, take four of them, and
-   * arrive at the boss with no idea which of the four had been avoidable — the number was a buffer
-   * against learning rather than a resource to spend.
-   *
-   * ⚠️ **It is still the number of HITS the entity survives, and shields are counted in the same
-   * field.** A ship carrying two shields has `health` 3: two absorbed hits, then the hull. That is
-   * one description of *what is left between this ship and the end of the life*, which is what makes
-   * the collision, the readout and the orbiting shell agree without any of them being told twice —
-   * `docs/decisions/0050-the-ship-is-one-hit-and-the-shield-is-what-stands-in-front-of-it.md`.
+   * Huang-Woo Hook's — the blue fighter the game was built on, and its pulse.
    */
-  proof: {
-    sprite: SPRITE.ship,
-    spriteHit: SPRITE.shipHit,
+  fighter: {
+    label: 'Fighter',
+    sprite: SPRITE.fighter,
+    spriteHit: SPRITE.fighterHit,
     radius: 2,
     health: 1,
     damage: 0,
-    /*
-      ── THE LADDERS WERE HERE — 0233 MOVED THEM ONTO THE KINDS ──────────────────────────────────
-
-      `fireEvery: [8, 8, 6, 6, 4]`, `barrels: [1, 2, 3, 4, 4]` and `missileEvery: [8, 8, 8, 6, 4]`
-      are `WEAPONS.pulse`'s and `MISSILES.straight`'s now (`src/content/weapons.ts`,
-      `src/content/missiles.ts`), unchanged. What this row says is which kind the ship opens on.
-
-      ⚠️ **AND THE CHUNKY ALTERNATIVE IS STILL RECORDED RATHER THAN BUILT**, asked for during 0093:
-      *"keep the chunky slower fire rate on record, we could use that for a different ship later."*
-      It is `fireEvery: [12, 8, 8, 6, 6]` with `barrels: [2, 3, 4, 5, 6]` — a gun that opens slow
-      and wide and never reaches the fastest rung — and since 0233 it is a second WEAPON KIND that a
-      second ship would open on, rather than a retune of this one.
-    */
     weapon: 'pulse',
     missile: 'straight',
+    hulls: [
+      { base: SPRITE.fighter, hit: SPRITE.fighterHit },
+      { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
+      { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
+    ],
+    // The tips of its wingtip pods: 1.48 of the 7-unit hull's radius (`SHIP_POD_MK3` in the bake).
+    wingtip: 4.35,
+  },
+  /**
+   * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
+   * in peace."* Its ray gun is the one gun no other ship has (0442).
+   */
+  caddie: {
+    label: 'Little Green Caddie',
+    sprite: SPRITE.caddie,
+    spriteHit: SPRITE.caddieHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'ray',
+    missile: 'straight',
+    hulls: [
+      { base: SPRITE.caddie, hit: SPRITE.caddieHit },
+      { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
+      { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
+    ],
+    // The saucer's rim: the whole of the box's radius.
+    wingtip: 3.95,
+  },
+  /**
+   * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
+   * hood, and the shuriken launcher.
+   */
+  firebird: {
+    label: 'The Firebird',
+    sprite: SPRITE.firebird,
+    spriteHit: SPRITE.firebirdHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'shuriken',
+    missile: 'straight',
+    hulls: [
+      { base: SPRITE.firebird, hit: SPRITE.firebirdHit },
+      { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
+      { base: SPRITE.firebirdTubes, hit: SPRITE.firebirdTubesHit },
+    ],
+    // The front hubcaps, which are the shuriken launchers — the blades leave from the wheels.
+    wingtip: 2.05,
+  },
+  /**
+   * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
+   * and the lightning.
+   */
+  estate: {
+    label: 'Gilded Estate',
+    sprite: SPRITE.estate,
+    spriteHit: SPRITE.estateHit,
+    radius: 2,
+    health: 1,
+    damage: 0,
+    weapon: 'arc',
+    missile: 'straight',
+    hulls: [
+      { base: SPRITE.estate, hit: SPRITE.estateHit },
+      { base: SPRITE.estateTube, hit: SPRITE.estateTubeHit },
+      { base: SPRITE.estateTubes, hit: SPRITE.estateTubesHit },
+    ],
+    // The outside of its tyres, which is as wide as a wagon is.
+    wingtip: 2.2,
   },
 };
 
