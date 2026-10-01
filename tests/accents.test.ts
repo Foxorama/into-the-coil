@@ -33,6 +33,7 @@ import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
 */
 vi.setConfig({ testTimeout: 150_000 });
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -878,28 +879,43 @@ describe('paint costs nothing to draw', () => {
       ⚠️ **THE CLAIM IS THEREFORE `0` AND NOT `≤ 1`.** An exemption that merely permitted the outline
       would let the defect back in silently; what is asserted is that a node does not have one.
     */
-    for (const kind of BODIES) {
-      const traced = trace(kind);
-      const hull = traced.passes[0]!;
-      const outlines = traced.inks.filter((ink) => same(ink.subpaths, hull.subpaths));
-      if (CHAIN_BODIES.includes(kind)) {
-        expect(
-          outlines.length,
-          `the ${kind} is outlined ${outlines.length} times, and a node of a body may not be outlined at all — ` +
-            'its rim is drawn over the flesh of the node beside it, which is a scallop ruled across the animal',
-        ).toBe(0);
-        continue;
-      }
-      expect(outlines.length, `the ${kind} is outlined ${outlines.length} times`).toBe(1);
-      expect(traced.inks[0], `the ${kind} paints a stroke before it is sealed`).toBe(outlines[0]);
-      for (const [i, ink] of traced.inks.entries()) {
-        if (i === 0 || ink.alpha < SOLID) continue;
-        const over = strokeOutside(hull, ink);
-        expect(
-          over,
-          `stroke ${i} on the ${kind} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
-            'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
-        ).toBe(0);
+    /*
+      ⚠️ **AND EVERY ENEMY IN EVERY PLACE, SINCE 0446.** This ran at The Approach, which was every
+      place's drawing of every shared body until 0446 gave each place its own — with their own seams,
+      a suture on an ammonite and lava in a vent's cracks. A stroke off one of those would be over the
+      edge of a body the player meets in that place and nowhere else.
+
+      ⚠️ **ENEMIES, AND NOT EVERY BODY, IN THE SIX OTHER PLACES — BECAUSE OF WHAT IT COSTS.** Every
+      body in every place took 153 s alone and timed out at this file's 150 s; the bosses' curved
+      hulls are almost all of that, and their outlines and strokes are one drawing in every place —
+      only their skin moves, and a skin is fills. What 0446 made per place is the enemies' drawings.
+    */
+    const placed = new Set(ENEMY_KINDS.flatMap((k) => [...ENEMIES[k].cycle.frames, ...ENEMIES[k].cycle.hurt]).map((i) => SPRITE_KINDS[i]!));
+    for (const theme of THEME_KINDS) {
+      for (const kind of BODIES) {
+        if (theme !== 'approach' && !placed.has(kind)) continue;
+        const traced = trace(kind, theme);
+        const hull = traced.passes[0]!;
+        const outlines = traced.inks.filter((ink) => same(ink.subpaths, hull.subpaths));
+        if (CHAIN_BODIES.includes(kind)) {
+          expect(
+            outlines.length,
+            `the ${kind} is outlined ${outlines.length} times, and a node of a body may not be outlined at all — ` +
+              'its rim is drawn over the flesh of the node beside it, which is a scallop ruled across the animal',
+          ).toBe(0);
+          continue;
+        }
+        expect(outlines.length, `the ${kind} at ${theme} is outlined ${outlines.length} times`).toBe(1);
+        expect(traced.inks[0], `the ${kind} at ${theme} paints a stroke before it is sealed`).toBe(outlines[0]);
+        for (const [i, ink] of traced.inks.entries()) {
+          if (i === 0 || ink.alpha < SOLID) continue;
+          const over = strokeOutside(hull, ink);
+          expect(
+            over,
+            `stroke ${i} on the ${kind} at ${theme} reaches ${over.toFixed(2)}px past its hull — a mark painted ` +
+              'with a stroke is held to the silhouette exactly as a mark painted with a fill is',
+          ).toBe(0);
+        }
       }
     }
   });

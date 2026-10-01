@@ -14,6 +14,7 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS } from '../src/content/levels.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
+import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
 import { drawKind } from '../src/render/bake.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { animate, type Entity, makeEntity, reset, stepEntities } from '../src/sim/entity.ts';
@@ -94,10 +95,14 @@ describe('0410: an enemy is an animal, not a prop', () => {
       ⚠️ **2 PX AND NOT LESS, BECAUSE BELOW IT THE MOTION IS A SHIMMER.** 0106 puts the smallest mark
       that is drawn at all at 2.5 px; a part moving less than that is anti-aliasing changing its mind.
       The furthest any point of the outline gets from the rest outline is what the eye can follow.
+
+      ⚠️ **IN EVERY PLACE SINCE 0446**, which gave each place its own body for the eight shared kinds
+      and so its own three poses of each. Measured at The Approach alone, six places' worth of new
+      animals could be three drawings of one picture and this would never see them.
     */
-    const outline = (kind: SpriteKind): readonly (readonly Point[])[] => {
+    const outline = (kind: SpriteKind, theme: ThemeKind): readonly (readonly Point[])[] => {
       const { pen, trace } = tracingPen();
-      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * DESKTOP.scale);
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * DESKTOP.scale, theme);
       return trace.passes[0]!.subpaths;
     };
     const nearest = (p: Point, shape: readonly (readonly Point[])[]): number => {
@@ -115,14 +120,16 @@ describe('0410: an enemy is an animal, not a prop', () => {
       return best;
     };
     const still: string[] = [];
-    for (const kind of ENEMY_KINDS) {
-      for (const cycle of cyclesOf(kind)) {
-        const rest = outline(SPRITE_KINDS[cycle.frames[0]!]!);
-        let furthest = 0;
-        for (const frame of new Set(cycle.frames)) {
-          for (const ring of outline(SPRITE_KINDS[frame]!)) for (const p of ring) furthest = Math.max(furthest, nearest(p, rest));
+    for (const theme of THEME_KINDS) {
+      for (const kind of ENEMY_KINDS) {
+        for (const cycle of cyclesOf(kind)) {
+          const rest = outline(SPRITE_KINDS[cycle.frames[0]!]!, theme);
+          let furthest = 0;
+          for (const frame of new Set(cycle.frames)) {
+            for (const ring of outline(SPRITE_KINDS[frame]!, theme)) for (const p of ring) furthest = Math.max(furthest, nearest(p, rest));
+          }
+          if (furthest < 2) still.push(`the ${kind}'s outline at ${theme} moves ${furthest.toFixed(2)} px across its cycle`);
         }
-        if (furthest < 2) still.push(`the ${kind}'s outline moves ${furthest.toFixed(2)} px across its cycle`);
       }
     }
     expect(still, 'a body whose parts move by less than a mark is wide is one picture shimmering').toEqual([]);
