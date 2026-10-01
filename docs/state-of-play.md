@@ -894,8 +894,14 @@ jinks and the cues are tables in `src/content/port.ts`, the golfers in `src/cont
 Level 1 is drawn in its own sky colours now, and the intro with it
 ([0417](decisions/0417-a-place-is-baked-by-its-name.md)) — **owed a look against the old grey, since
 it changes the picture level 1 was the reference for**; 0417 also names the intro guard it did not
-write. **Next on it is the golfers' ships**: a golfer is who flies, not yet what, and
-`docs/game.md` asks for each ship to differ on an axis the player can feel.
+write. **Each golfer flies their own ship** ([0441](decisions/0441-a-pilot-flies-their-own-ship.md)),
+and the first play of the roster is answered by four:
+[0448](decisions/0448-each-ship-fires-from-its-own-guns.md) (each ship fires from its own guns and
+burns its own engines; the ray is continuous again), [0449](decisions/0449-the-wings-are-trimmed.md)
+(the fighter's trimmed wings, which had never merged), [0450](decisions/0450-the-intro-ships-are-their-size.md)
+(the intro's ships at their size, the saucer's two drives) and
+[0451](decisions/0451-the-readout-wears-the-ship.md) (the readout wears the ship). **All owed a play**;
+each decision's *Owed* says what to look at.
 
 And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md), one shot since
 [0426](decisions/0426-the-finale-is-the-fight-going-on.md)): the finale, then the victory screen —

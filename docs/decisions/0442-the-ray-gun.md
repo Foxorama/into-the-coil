@@ -57,6 +57,10 @@ look at.
 
 ## Amended after the first play: four rings, then a breath
 
+⚠️ **Taken back out by [0448](0448-each-ship-fires-from-its-own-guns.md)**, played: *"it feels bad and
+sounds worse, the full autofire felt much better."* The ray fires every eight steps at ring 6 and
+burst 3 again; what follows is the record of what was tried.
+
 > *"let's make the little caddie's weapons fire in four shot bursts as well so it's 4 (at current
 > speed) brief pause, 4 etc."*
 

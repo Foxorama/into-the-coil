@@ -35,14 +35,19 @@
  * a layer up in `src/state/screens.ts`, so the seconds are in the comment beside each number.
  */
 
-import { FIGHTER_HULL, SHIP_BOX } from './sprites.ts';
+import { SHIP_BOX } from './sprites.ts';
 
 /**
- * How much bigger a ship is in the hangar than in flight — 0441. The fighter's bare hull was baked at
- * 30 units here (its 7 in the fight), and the four ships share the fight's one box (`SHIP_BOX`), so the
- * box is baked at this scale and the fighter is the size it always was beside the bar door.
+ * How much bigger a ship is in the hangar than in flight — 0441, as 0450 corrected it.
+ *
+ * ⚠️ **THE WHOLE BOX IS 30 UNITS, WHICH THE FIGHTER'S BARE HULL WAS.** Before 0441 the hangar baked the
+ * bare fighter — 7 units in the fight — at 30. 0441 put every ship in the fight's 9.4-unit box and baked
+ * the box at the same 30/7, so the box came out 40 units and every ship a third bigger beside the bar
+ * door than the fighter had ever been: played, *"all the player ships are really large in the intro
+ * movie."* The fighter fills the box with its pods since it flies its capped kit, and the saucer fills it
+ * with its rim, so it is the box that is held to the old size. The fighter's span is now what it was.
  */
-export const HANGAR_SCALE = 30 / FIGHTER_HULL;
+export const HANGAR_SCALE = 30 / SHIP_BOX;
 
 /** The pilot's ship's box at hangar size — every ship, so each is the size it is in the fight, scaled. */
 const HANGAR_SHIP = SHIP_BOX * HANGAR_SCALE;
@@ -74,6 +79,11 @@ export const PORT_KINDS = [
   'blueBurn',
   'blueFlare',
   'blueSurge',
+  // Its flames as the fight sees it, for the chase once it has tilted over — 0450. The four above are
+  // the hangar's.
+  'blueTopBurn',
+  'blueTopFlare',
+  'blueTopSurge',
   'viper',
   'viperIdle',
   'viperBurn',
@@ -135,6 +145,9 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueBurn: HANGAR_SHIP * 2,
   blueFlare: HANGAR_SHIP * 2,
   blueSurge: HANGAR_SHIP * 3,
+  blueTopBurn: HANGAR_SHIP * 2,
+  blueTopFlare: HANGAR_SHIP * 2,
+  blueTopSurge: HANGAR_SHIP * 3,
   viper: 40,
   viperIdle: 80,
   viperBurn: 80,

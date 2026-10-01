@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { GameFrame } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
-import { BURN_HALF, THRUST, WARP_FLAME, WARP_SCROLL } from '../src/content/exhaust.ts';
+import { BURN_ROOT, THRUST, WARP_FLAME, WARP_SCROLL } from '../src/content/exhaust.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
@@ -258,8 +258,9 @@ describe('the frame burns by that number, and the player keeps the ship', () => 
     const rootBehind = (warp: number): number => {
       const world = flown(warp);
       const flame = world.exhaust.at(0);
-      // The sprite's forward edge: its centre, plus half its extent at the size it is drawn.
-      return world.ship.along - (flame.along + BURN_HALF * flame.swell);
+      // The flame's root: its centre, plus where the bake draws the root at the size it is drawn —
+      // `THRUST_ROOT` of the frame's radius since 0448, where it was taken to be half the extent.
+      return world.ship.along - (flame.along + BURN_ROOT * flame.swell);
     };
     const swellAt = (warp: number): number => flown(warp).exhaust.at(0).swell;
     expect(swellAt(1), 'the flame is not at its full size at full burn').toBeCloseTo(WARP_FLAME, 9);
@@ -270,9 +271,9 @@ describe('the frame burns by that number, and the player keeps the ship', () => 
     // Burning at nought is the ordinary hard-forward flame, which a parked fixture is not asking for;
     // a whisker of burn forces the same row at the same size, so the two compare like with like.
     expect(rootBehind(1), 'the flame’s root left the tail as it grew').toBeCloseTo(rootBehind(1e-9), 6);
-    // From the flown ship's own nozzles — 0441: `trail` is measured from them, and `tail` is where they are.
+    // From the flown ship's own nozzles — 0441, 0448: `trail` is measured from them.
     expect(rootBehind(1e-9), 'the burn’s root is not where the burn row puts it').toBeCloseTo(
-      flown(1e-9).shipRow.tail + THRUST.burn.trail - BURN_HALF,
+      -flown(1e-9).shipRow.nozzles[0]!.along + THRUST.burn.trail - BURN_ROOT,
       6,
     );
   });

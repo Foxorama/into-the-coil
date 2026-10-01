@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame, MUZZLE_ALONG, cueOfFlight, wearHull, type World } from '../src/app/frame.ts';
+import { GameFrame, cueOfFlight, wearHull, type World } from '../src/app/frame.ts';
 import { CAPACITY } from '../src/app/mount.ts';
 import { WEAPONS, WEAPON_KINDS, type WeaponKind } from '../src/content/weapons.ts';
 import { MISSILES, MISSILE_KINDS } from '../src/content/missiles.ts';
@@ -433,7 +433,7 @@ describe('0233 — the arc is chain lightning', () => {
     */
     const near = [target(world, 20, 0), target(world, 34, 8), target(world, 42, 2)];
     const far = target(world, near[2]!.along - world.ship.along + world.weapon.reach + 40, 0);
-    const nose = { along: world.ship.along + MUZZLE_ALONG, across: world.ship.across };
+    const nose = { along: world.ship.along + world.shipRow.muzzle.along, across: world.ship.across + world.shipRow.muzzle.across };
     // And the fixture says so out loud, so a ladder that moves under it fails HERE rather than
     // quietly testing a chain of one — every gap inside the reach the link that jumps it is given.
     let from = nose;
@@ -507,8 +507,8 @@ describe('0233 — the arc is chain lightning', () => {
       screenX(world.view, along - world.cameraAlong, across),
       screenY(world.view, along - world.cameraAlong, across),
     ];
-    const nose = at(world.ship.along + MUZZLE_ALONG, world.ship.across);
-    const tip = at(world.ship.along + MUZZLE_ALONG + world.weapon.reach, world.ship.across);
+    const nose = at(world.ship.along + world.shipRow.muzzle.along, world.ship.across + world.shipRow.muzzle.across);
+    const tip = at(world.ship.along + world.shipRow.muzzle.along + world.weapon.reach, world.ship.across + world.shipRow.muzzle.across);
     expect(world.bolts.size, 'the fixture did not fire dry').toBe(1);
     const main = recorder.bolts.find((p) => Math.hypot(p[0]! - nose[0], p[1]! - nose[1]) < 1.5 * px);
     expect(main, `no stroke leaves the nose at ${nose.map((n) => n.toFixed(0)).join(',')}`).toBeDefined();
@@ -522,7 +522,8 @@ describe('0233 — the arc is chain lightning', () => {
     */
     const healthAt = (past: number): number => {
       const built = armed('arc');
-      const body = target(built.world, MUZZLE_ALONG + built.world.weapon.reach + ENEMIES.turret.radius + past, 0);
+      const muzzle = built.world.shipRow.muzzle;
+      const body = target(built.world, muzzle.along + built.world.weapon.reach + ENEMIES.turret.radius + past, muzzle.across);
       built.frame.step();
       return body.health;
     };
@@ -605,7 +606,7 @@ describe('0233 — the arc is chain lightning', () => {
       screenX(world.view, along - cameraAlong, across),
       screenY(world.view, along - cameraAlong, across),
     ];
-    const nose = at(world.ship.along + MUZZLE_ALONG, world.ship.across);
+    const nose = at(world.ship.along + world.shipRow.muzzle.along, world.ship.across + world.shipRow.muzzle.across);
     // Flashing, because it was just struck (0035) — so it is drawn as its hurt twin.
     const struck = recorder.blits.find((b) => b.sprite === ENEMIES.turret.spriteHit);
     expect(struck, 'the body was never blitted').toBeDefined();

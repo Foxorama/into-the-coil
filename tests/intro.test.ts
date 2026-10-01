@@ -309,6 +309,34 @@ describe('the chase is a chase — 0414', () => {
     }
   });
 
+  it('draws every pilot’s ship no bigger than the fighter was beside the bar door, and the saucer smaller again — 0450', () => {
+    /*
+      ⚠️ **IN PIXELS ON A 16:9 SCREEN.** Played: *"all the player ships are really large in the intro
+      movie"*, and of the saucer, *"needs a 20% reduction in the hanger and probably a 40% reduction in
+      the space chase."* Before 0441 the hangar drew the fighter's bare hull 30 units long; 0441 baked the
+      whole 9.4-unit box at that hull's scale, 40 units, so every ship stood a third bigger. Each box is
+      measured as drawn: its baked extent times the scale it was blitted at.
+    */
+    const view = viewOf(NARROW.width, NARROW.height);
+    const was = (30 / 7) * 9.4;
+    const drawn = (t: number, ship: ShipKind, kind: PortKind): number => {
+      const b = drawAt(t, NARROW, ship).blits.find((x) => x.sprite === PORT_SPRITE[kind]);
+      expect(b, `${ship}: no ${kind} at step ${t}`).toBeDefined();
+      return (PORT_EXTENT[kind] * b!.scale) / view.scale;
+    };
+    for (const ship of SHIP_KINDS) {
+      expect(drawn(BEATS.pilotIn, ship, 'blueSide'), `${ship}: drawn bigger in the hangar than the fighter ever was`).toBeLessThanOrEqual(30 + 1e-9);
+    }
+    const hangar = drawn(BEATS.pilotIn, 'caddie', 'blueSide') / was;
+    const chase = drawn(BEATS.outside + TILT.from + TILT.steps + 10, 'caddie', 'blue') / (was * OUTSIDE_ZOOM);
+    expect(hangar, `the saucer is ${hangar.toFixed(2)} of its size in the hangar, and was asked to lose a fifth`).toBeLessThanOrEqual(0.8 + 1e-9);
+    expect(chase, `the saucer is ${chase.toFixed(2)} of its size in the chase, and was asked to lose two fifths`).toBeCloseTo(0.6, 2);
+    // And outside, once it has tilted over, it burns from the fight's nozzles alone: two drives on a saucer.
+    const lit = drawAt(BEATS.outside + TILT.from + TILT.steps + 10, NARROW, 'caddie').blits.map((b) => b.sprite);
+    expect(lit.includes(PORT_SPRITE.blueTopFlare) || lit.includes(PORT_SPRITE.blueTopBurn), 'the chase burns the hangar’s flames').toBe(true);
+    expect(lit.includes(PORT_SPRITE.blueFlare) || lit.includes(PORT_SPRITE.blueBurn), 'the hangar’s flames are still lit in the chase').toBe(false);
+  });
+
   it('draws no trail before a ship jets off, and trails off its wingtips after', () => {
     // Whichever ship the pilot runs out to — 0441: each trails from its own wingtips.
     for (const ship of SHIP_KINDS) {
@@ -344,8 +372,11 @@ describe('the jets surge, and the sky is the first level’s — 0416', () => {
       well to match the blast off sound they have"*. Held against the cue table rather than the beats, so
       a launch moved in either one without the other fails here.
     */
+    // The pilot's ship surges in the hangar's flames or the fight's, whichever view it is in — 0450.
     const surges = (t: number): Blit[] =>
-      drawAt(t, NARROW).blits.filter((b) => b.sprite === PORT_SPRITE.viperSurge || b.sprite === PORT_SPRITE.blueSurge);
+      drawAt(t, NARROW).blits.filter(
+        (b) => b.sprite === PORT_SPRITE.viperSurge || b.sprite === PORT_SPRITE.blueSurge || b.sprite === PORT_SPRITE.blueTopSurge,
+      );
     const launches = INTRO_CUES.filter((row) => row.cue === 'launch');
     expect(launches.length, 'the intro has no launches to surge on').toBe(4);
     for (const row of launches) {

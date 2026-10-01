@@ -74,7 +74,7 @@ export const POD_ACROSS = 4.5;
 
 /**
  * How far ahead of the ship's centre a pod ON THE CENTRELINE launches, in world units — 0405. The
- * fitted tubes launch at `MUZZLE_ALONG`, which is under the nose; a pod there would leave from inside
+ * side pods launch at `MUZZLE_ALONG`, which is under the nose; a pod there would leave from inside
  * the hull and be drawn where the hull covers it. So its barrel runs out past the longest nose any
  * ship has (7.8 units, half of it 3.9) and it launches from the barrel's tip. One number for the frame
  * and the bake, on 0036's terms, as `POD_ACROSS` is.

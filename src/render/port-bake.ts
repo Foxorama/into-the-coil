@@ -21,12 +21,25 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, drawPlayerShip, glow, mix, poly, rgba, shade, SHIP_JETS, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import type { ShipKind } from '../content/ships.ts';
+import { bakeSize, disc, drawPlayerShip, glow, mix, poly, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { SHIPS, type ShipKind } from '../content/ships.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
 /** A flame's length and width against the fight's box, where they were against the fighter's hull. */
 const JET = FIGHTER_HULL / SHIP_BOX;
+
+/**
+ * Where a ship's engines burn, in its box's radius — its row's `nozzles`, which the fight's flames burn
+ * from too (0448). A sprite's frame puts the box's radius at 0.42 of its extent.
+ */
+function jetsOf(ship: ShipKind): Pt[] {
+  return SHIPS[ship].nozzles.map(({ along, across }) => [along / (SHIP_BOX * 0.42), across / (SHIP_BOX * 0.42)] as const);
+}
+
+/** Where a ship's engines burn as the hangar sees it — its own side view's, or the fight's. */
+function hangarJetsOf(ship: ShipKind): readonly Pt[] {
+  return HANGAR_ART[ship]?.jets ?? jetsOf(ship);
+}
 import { paintRunner } from './golfer-art.ts';
 
 /**
@@ -92,17 +105,34 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'blueTilt3': {
       const art = HANGAR_ART[pilot.ship];
       if (art === null) paintBlue(ctx, f, palette, size, pilot.ship);
-      else art(ctx, f, palette, size, LEAN[kind]);
+      else art.paint(ctx, f, palette, size, LEAN[kind]);
       return canvas;
     }
+    /*
+      ⚠️ **TWO SETS OF FLAMES, AS THE HANGAR SEES THE SHIP AND AS THE FIGHT DOES — 0450.** Played: *"in the
+      intro movie all the new ships only have one thruster instead of two … lil caddie and og ship should
+      have two."* The fight's set burns from the row's `nozzles`, so the saucer flies the chase on the two
+      drives it flies the game on; side-on in the hangar those two drives are one behind the other, so its
+      hangar picture says where its one visible flame is (`HANGAR_ART`). The painter crosses from one set
+      to the other as the ship tilts.
+    */
     case 'blueIdle':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.4 * JET, 0.07 * JET, 0.22 * JET);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 0.4 * JET, 0.07 * JET, 0.22 * JET);
       return canvas;
     case 'blueBurn':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
       return canvas;
     case 'blueFlare':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, SHIP_JETS[pilot.ship], 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      return canvas;
+    case 'blueTopBurn':
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, jetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      return canvas;
+    case 'blueTopFlare':
+      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, jetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      return canvas;
+    case 'blueTopSurge':
+      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', jetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     /*
       ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
@@ -111,7 +141,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       and lets it die back into it (`SURGE_STEPS`).
     */
     case 'blueSurge':
-      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', SHIP_JETS[pilot.ship], 2.3 * JET, 0.17 * JET, 0.95 * JET);
+      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', hangarJetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
@@ -434,6 +464,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'blueBurn':
     case 'blueFlare':
     case 'blueSurge':
+    case 'blueTopBurn':
+    case 'blueTopFlare':
+    case 'blueTopSurge':
     case 'viper':
     case 'viperIdle':
     case 'viperBurn':
@@ -680,7 +713,7 @@ function paintStation(ctx: CanvasRenderingContext2D, palette: Palette, h: number
 
 /*
   `BLUE_JETS` stood here — the fighter's two nacelles — until 0441 gave every pilot a ship of their own.
-  Where each ship's nozzles are is `SHIP_JETS` in `bake.ts`, beside the drawing they come out of.
+  Where each ship's nozzles are is `nozzles` on its row since 0448 (`jetsOf`, above).
 */
 
 /** The Viper's single nozzle, at the end of her tail. */
@@ -704,17 +737,24 @@ function paintBlue(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, si
   section (0031), and a saucer drawn from above in it is a green coin standing on its edge.
 */
 
-/** A ship drawn as the hangar sees it, leaning `lean` of the way from side-on (0) to from above (1). */
-type HangarArt = (ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, lean: number) => void;
+/**
+ * A ship as the hangar sees it: drawn leaning `lean` of the way from side-on (0) to from above (1), and
+ * where its engines burn side-on, in its box's radius — 0450.
+ */
+interface HangarArt {
+  paint: (ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, lean: number) => void;
+  jets: readonly Pt[];
+}
 
 /**
  * Each ship's own hangar picture — or null, for a ship the hangar sees as the fight does: the fighter,
  * which was always drawn from above there, and the two cars, which the fight draws side-on already. A
- * row, so a fifth ship says its own; the fallback is the shared `paintBlue` (0282).
+ * row, so a fifth ship says its own; the fallback is the shared `paintBlue` and the row's nozzles (0282).
  */
 const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   fighter: null,
-  caddie: paintSaucer,
+  // Side-on, the saucer's two drives are one behind the other: one flame, on the back of its rim.
+  caddie: { paint: paintSaucer, jets: [[-1, 0]] },
   firebird: null,
   estate: null,
 };

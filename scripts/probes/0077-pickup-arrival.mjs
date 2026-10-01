@@ -104,9 +104,11 @@ export const PROBES = [
     broke: 'the tube positions left in their old order, so a two-tube ship fires off-centre',
     guard: '0097 — puts the first tube on the across-minus side and the second on the across-plus side',
     edit: {
-      path: 'src/app/frame.ts',
-      find: '    const side = i === 0 ? -1 : 1;',
-      replace: '    const side = i === 0 ? 0 : i === 1 ? -1 : 1;',
+      // ⚠️ Re-anchored by 0448, which puts where each tube is on the ship's row: the fighter's pair,
+      // one down the nose and one off the left wing.
+      path: 'src/content/ships.ts',
+      find: '[{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]];',
+      replace: '[{ along: 3, across: 0 }, { along: 3, across: -1.8 }]];',
     },
   },
 ];

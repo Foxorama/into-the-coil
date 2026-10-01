@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'flies the pilot’s ship out of the hangar as the hangar sees it',
     edit: {
       path: 'src/render/port.ts',
-      find: '  put(surface, view, PORT_SPRITE.blueSide, along, across);',
-      replace: '  put(surface, view, PORT_SPRITE.blue, along, across);',
+      // ⚠️ Re-anchored by 0450, which draws each ship at its own size in the hangar.
+      find: '  put(surface, view, PORT_SPRITE.blueSide, along, across, 1, 0, size);',
+      replace: '  put(surface, view, PORT_SPRITE.blue, along, across, 1, 0, size);',
     },
   },
   {

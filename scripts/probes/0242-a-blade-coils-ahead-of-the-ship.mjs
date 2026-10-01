@@ -26,7 +26,7 @@ export const PROBES = [
     suite: 'tests/blades.test.ts',
     // The pair thrown from the nose rather than the wingtips: both strands in phase, one line drawn twice.
     broke: 'the pair thrown from the nose rather than the wingtips',
-    guard: 'THE HELIX: a blade leaves the wingtip',
+    guard: 'THE HELIX: a blade leaves the gun for the wingtip',
     edit: {
       path: 'src/app/frame.ts',
       find: '    const angle = side > 0 ? lift : Math.PI + lift;',

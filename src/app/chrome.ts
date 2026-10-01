@@ -34,7 +34,8 @@ import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
-import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart } from '../render/bake.ts';
+import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
+import { HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
@@ -1951,6 +1952,110 @@ ${each('-action:hover')}, .itc-intro-skip:hover {
   box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 14%, transparent);
 }
 .itc-playing-hud { padding: 0 0.9em; gap: 1.1em; }
+/*
+  ── THE READOUT WEARS THE SHIP — 0451 ──────────────────────────────────────────────────────────────
+
+  The predecessor's bridges, carried to the one plate: the fighter's gunsight corners, the saucer's
+  probe deck, the Firebird's racing dash and the estate's woody one. The ship's inks are set on the
+  plate by the shell (--itc-ink, --itc-ally for the trim, --itc-lit for the light); the dressing is
+  painted under the counts, so it can never cover a number, and every moving part holds still for a
+  player who has asked the system for less motion.
+*/
+.itc-playing-hud { position: relative; isolation: isolate; }
+.itc-playing-hud::before, .itc-playing-hud::after {
+  content: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+}
+/* The fighter: four lit corners, a gunsight's, just outside the rim. */
+.itc-playing-hud-bracket::before {
+  content: '';
+  inset: -0.3em;
+  --itc-arm: 0.8em;
+  --itc-bar: 2px;
+  background:
+    linear-gradient(var(--itc-ink), var(--itc-ink)) left top / var(--itc-arm) var(--itc-bar) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) left top / var(--itc-bar) var(--itc-arm) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) right top / var(--itc-arm) var(--itc-bar) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) right top / var(--itc-bar) var(--itc-arm) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) left bottom / var(--itc-arm) var(--itc-bar) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) left bottom / var(--itc-bar) var(--itc-arm) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) right bottom / var(--itc-arm) var(--itc-bar) no-repeat,
+    linear-gradient(var(--itc-ink), var(--itc-ink)) right bottom / var(--itc-bar) var(--itc-arm) no-repeat;
+  filter: drop-shadow(0 0 0.25em var(--itc-ink));
+}
+/* The saucer: a rounder plate, a dashed orbit about it, and a bloom that breathes. */
+.itc-playing-hud-orbit { border-radius: 1.3em; }
+.itc-playing-hud-orbit::before {
+  content: '';
+  inset: -0.45em -0.9em;
+  border: 1.5px dashed color-mix(in srgb, var(--itc-ink) 62%, transparent);
+  border-radius: 50%;
+  opacity: 0.55;
+  transform: rotate(-3deg);
+  animation: itc-hud-orbit 11s ease-in-out infinite alternate;
+}
+.itc-playing-hud-orbit::after {
+  content: '';
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 18% 50%, color-mix(in srgb, var(--itc-ink) 22%, transparent), transparent 70%);
+  animation: itc-hud-bloom 3.4s ease-in-out infinite;
+}
+@keyframes itc-hud-orbit { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes itc-hud-bloom { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+/* The Firebird: a sharper plate, a chequered flag fading off its leading end, and a carbon weave. */
+.itc-playing-hud-checker { border-radius: 0.45em; padding-left: 1.5em; --itc-glass: color-mix(in srgb, var(--itc-void) 88%, transparent); }
+.itc-playing-hud-checker::before {
+  content: '';
+  inset: 0 auto 0 0;
+  width: 1.2em;
+  border-radius: 0.45em 0 0 0.45em;
+  background: repeating-conic-gradient(var(--itc-lit) 0 25%, var(--itc-void) 0 50%) 0 0 / 0.5em 0.5em;
+  -webkit-mask-image: linear-gradient(90deg, #000 30%, transparent);
+  mask-image: linear-gradient(90deg, #000 30%, transparent);
+  opacity: 0.8;
+}
+.itc-playing-hud-checker::after {
+  content: '';
+  inset: 0;
+  border-radius: inherit;
+  background:
+    repeating-linear-gradient(45deg, color-mix(in srgb, var(--itc-lit) 6%, transparent) 0 2px, transparent 2px 5px),
+    repeating-linear-gradient(-45deg, color-mix(in srgb, var(--itc-lit) 4%, transparent) 0 2px, transparent 2px 5px);
+}
+/* The estate: walnut grain under the counts, a chrome lip along its top, and fuzzy dice off its end. */
+.itc-playing-hud-walnut {
+  border-radius: 0.6em;
+  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 14%, transparent), inset 0 0.14em 0 color-mix(in srgb, var(--itc-lit) 55%, transparent);
+}
+.itc-playing-hud-walnut::after {
+  content: '';
+  inset: 0;
+  border-radius: inherit;
+  background: repeating-linear-gradient(
+    96deg,
+    color-mix(in srgb, var(--itc-ally) 30%, transparent) 0 0.4em,
+    color-mix(in srgb, var(--itc-ally) 12%, transparent) 0.4em 0.85em
+  );
+}
+.itc-playing-hud-walnut::before {
+  content: '';
+  right: 1.4em;
+  top: calc(100% + 0.05em);
+  width: 0.55em;
+  height: 0.55em;
+  border-radius: 0.14em;
+  background: var(--itc-lit);
+  box-shadow: 0.7em 0.18em 0 var(--itc-lit), 0 0 0.25em color-mix(in srgb, var(--itc-lit) 60%, transparent);
+  transform-origin: 50% -0.4em;
+  animation: itc-hud-dice 4s ease-in-out infinite alternate;
+}
+@keyframes itc-hud-dice { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-walnut::before { animation: none; }
+}
 .itc-playing-boss { filter: none; padding: 0 0.9em; }
 .itc-playing-boss-shown { display: flex; align-items: center; }
 .itc-playing-boss-track {
@@ -2256,10 +2361,11 @@ export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
   elements: readonly HTMLElement[];
   /**
-   * Which ship the lives counter shows — 0430. A life is a ship, so the counter is the one the pilot
-   * flies; called when the shell knows it, and a no-op when it has not changed.
+   * Which ship the lives counter shows — 0430 — and the theme the readout wears for it (0451). A life
+   * is a ship, so the counter is the one the pilot flies; called when the shell knows it, and a no-op
+   * when it has not changed.
    */
-  setShip(sprite: number): void;
+  setShip(ship: ShipRow): void;
   /**
    * Mark which control on a screen is the one already chosen — 0437: the golfer flying now, on the
    * screen that changes golfer. The focus ring stays where `show` puts it; this is a mark, not a cursor.
@@ -3300,6 +3406,30 @@ export function makeChrome(
   elements.push(top);
 
   /*
+    ── THE READOUT WEARS THE SHIP — 0451 ─────────────────────────────────────────────────────────────
+
+    *"We also need to do the hud theme on the top left row of icons in game. Golf-Stars has hud theming
+    for all the spaceships already."* The plate takes the ship's ink for its counts, its pips and its
+    glow, runs its rim from the ship's trim into that ink, and wears the ship's dressing as a class —
+    the row says which (`hud` in `src/content/ships.ts`). Only the readout: the boss bar and the score
+    keep the studio's rim, which is theirs. Every colour is a palette role moved, so the high-contrast
+    palette answers each one.
+  */
+  const inkOf = (ink: HudInk): string => {
+    const base = ink.toward === undefined ? colours[ink.from] : mix(colours[ink.from], colours[ink.toward], ink.by ?? 0.5);
+    return ink.lift === undefined ? base : shade(base, ink.lift);
+  };
+  const wearShip = (ship: ShipRow): void => {
+    const ink = inkOf(ship.hud.ink);
+    hud.style.color = ink;
+    hud.style.setProperty('--itc-ink', ink);
+    hud.style.setProperty('--itc-ally', inkOf(ship.hud.trim));
+    hud.style.setProperty('--itc-lit', colours.impact);
+    for (const motif of HUD_MOTIFS) hud.classList.toggle('itc-playing-hud-' + motif, motif === ship.hud.motif);
+  };
+  wearShip(SHIPS.fighter);
+
+  /*
     ── WHERE TO PRESS, ON A DEVICE WHERE THAT IS A PLACE RATHER THAN A KEY ─────────────────────────
 
     Decision 0060. Its width is `TAP_STRIP`, imported from the file that hit-tests it rather than
@@ -3514,8 +3644,10 @@ export function makeChrome(
 
   return {
     elements,
-    setShip(sprite: number): void {
+    setShip(ship: ShipRow): void {
+      const sprite = ship.sprite;
       if (sprite === livesSprite) return;
+      wearShip(ship);
       const fresh = iconOf(sprite);
       fresh.className = livesIcon.className;
       fresh.setAttribute('aria-hidden', 'true');

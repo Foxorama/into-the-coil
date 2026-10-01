@@ -447,6 +447,14 @@ export interface Entity extends Body {
   orbitTurn: number;
   orbitGrow: number;
   /**
+   * How far across a blade still is from its strand, and for how many more steps it closes on it —
+   * `docs/decisions/0448-each-ship-fires-from-its-own-guns.md`. A blade is thrown from the gun and flies
+   * out to its strand, so for its first `BLADE_OUT_STEPS` (`src/app/frame.ts`) it is drawn and hurts at
+   * its strand's place plus this, shrinking to nothing. Zero for anything that is not a blade just thrown.
+   */
+  outAcross: number;
+  outFor: number;
+  /**
    * How big this is drawn against the size its bitmap was baked at. `1` for everything but a chain's
    * body — `docs/decisions/0283-the-serpent-is-a-chain.md`.
    *
@@ -590,6 +598,8 @@ export function makeEntity(): Entity {
     orbitRadius: 0,
     orbitTurn: 0,
     orbitGrow: 0,
+    outAcross: 0,
+    outFor: 0,
     swell: 1,
     throb: 0,
     turn: 0,
@@ -662,6 +672,8 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.orbitRadius = 0;
   e.orbitTurn = 0;
   e.orbitGrow = 0;
+  e.outAcross = 0;
+  e.outFor = 0;
   // A body is drawn at the size it was baked unless a chain says otherwise — 0283.
   e.swell = 1;
   // And does not beat unless it is a heart — 0400.

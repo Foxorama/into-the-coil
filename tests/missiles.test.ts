@@ -208,12 +208,17 @@ describe('a launcher is a position on the ship', () => {
     one.world.missileIn = 1;
     one.frame.step();
     expect(one.world.missiles.size).toBe(1);
-    const single = one.world.missiles.at(0).across - one.world.ship.across;
+    /*
+      ⚠️ **WHERE IT LEAVES, SINCE 0448 — the place before its first step, which the painter keeps as
+      `prevAcross`.** Where a tube is became the ship's row (`tubes`), and the frame's `side` became only
+      which path a missile pops onto. This read the missile a step into its pop, and the pop alone
+      carries a missile off the centreline, so a tube put back on it read as off it.
+    */
+    const single = one.world.missiles.at(0).prevAcross - one.world.ship.prevAcross;
     expect(single, 'the single tube is on the centreline, which is the picture that was reported').toBeLessThan(0);
     /*
       ⚠️ **And it comes out of the HULL rather than beside it**, which is the other half of *a tube is
-      a place on the ship*. Measured against the drawn hull, on 0027's terms: one step of the pop has
-      already happened by the time this reads, so the bound is the hull's own half-width plus that.
+      a place on the ship*. Measured against the drawn hull, on 0027's terms.
     */
     expect(Math.abs(single), 'the single tube fires from beside the ship rather than off it').toBeLessThan(NARROWEST_HULL / 2);
 
@@ -225,7 +230,7 @@ describe('a launcher is a position on the ship', () => {
     world.missileIn = 1;
     frame.step();
     const across: number[] = [];
-    for (let i = 0; i < world.missiles.size; i++) across.push(world.missiles.at(i).across - world.ship.across);
+    for (let i = 0; i < world.missiles.size; i++) across.push(world.missiles.at(i).prevAcross - world.ship.prevAcross);
     expect(across.length).toBe(2);
     expect(across.some((a) => a < 0), 'nothing fired from the acrossMinus side').toBe(true);
     expect(across.some((a) => a > 0), 'nothing fired from the acrossPlus side').toBe(true);

@@ -58,7 +58,7 @@ import { animate, type Body, type Entity, reset, stepEntities, turnFor } from '.
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
 import {
   BURN_ASK,
-  BURN_HALF,
+  BURN_ROOT,
   EASE_ASK,
   EXHAUST,
   LEAN_AT,
@@ -84,7 +84,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf } from '../content/ships.ts';
+import { INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
@@ -565,12 +565,10 @@ const COLLECT_REACH = 1.8;
  */
 const RESPAWN_INVULN_STEPS = 120;
 
-/**
- * How far off the ship's centreline the side launchers sit, in world units.
- *
- * The hull is 7 units across, so this is inside it: the tubes are ON the ship rather than beside it.
- */
-const LAUNCHER_ACROSS = 1.8;
+/*
+  `LAUNCHER_ACROSS` stood here, 1.8 units either side of the centreline for every ship, until 0448 put
+  each ship's tubes on its own row (`tubes` in `src/content/ships.ts`): a car's are turrets on its roof.
+*/
 
 /**
  * How far a side launcher's missile drifts out before it straightens, in world units from the ship.
@@ -1670,8 +1668,6 @@ export interface World {
   heartBeat: number;
   /** Steps until the ship's auto-fire goes again. */
   fireIn: number;
-  /** Volleys fired in the gun's current burst, for a gun that fires in bursts — 0442. */
-  burstFired: number;
   /** Steps until the ship's missiles go again. Their own clock, because their own cadence. */
   missileIn: number;
   /**
@@ -2676,7 +2672,7 @@ export function holdFinale(w: World): void {
   scene.from.shipAlong = w.ship.along - w.cameraAlong;
   scene.from.shipAcross = w.ship.across;
   scene.ship = w.ship.spriteBase;
-  scene.tail = w.shipRow.tail;
+  scene.nozzles = w.shipRow.nozzles;
 }
 
 /** Where the finale's heart stands when the fight had none — `holdFinale`. */
@@ -3176,16 +3172,10 @@ function fireShip(w: World): void {
   if (w.fireIn > 0) return;
   fireVolley(w);
   /*
-    ⚠️ **AND A GUN THAT FIRES IN BURSTS RESTS AFTER ONE — 0442**, played: *"four shot bursts … 4 (at
-    current speed) brief pause, 4 etc."* Counted here, after the volley has set its own reload on the
-    grid, so the rest is added to a reload that is already on the beat and a burst never drifts off it.
+    0442's four-ring bursts rested here, and were taken out when they were played: *"it feels bad and
+    sounds worse, the full autofire felt much better"* —
+    `docs/decisions/0448-each-ship-fires-from-its-own-guns.md`.
   */
-  const burst = WEAPONS[w.weapon.kind].burst;
-  if (burst === undefined) return;
-  w.burstFired++;
-  if (w.burstFired < burst.volleys) return;
-  w.burstFired = 0;
-  w.fireIn += burst.rest;
 }
 
 /** One volley of whatever gun the ship flies. */
@@ -3233,6 +3223,13 @@ const BLADE_SIDES = [-1, 1] as const;
 const BLADE_TURN_STEPS = 4;
 
 /**
+ * Steps a blade takes from the gun out to its strand — 0448. A sixth of a second: long enough that the
+ * pair is seen to leave the one launcher and split, short enough that the helix is the helix by the
+ * time the blades are a body's length up the lane.
+ */
+export const BLADE_OUT_STEPS = 10;
+
+/**
  * A pair of shurikens thrown — `docs/decisions/0234-a-blade-circles-the-ship.md`, as
  * `docs/decisions/0244-a-blade-rides-a-helix.md` left it.
  *
@@ -3266,6 +3263,14 @@ function throwBlades(w: World): void {
   */
   const wingtip = w.shipRow.wingtip;
   const lift = Math.asin(Math.min(1, wingtip / w.weapon.coil));
+  /*
+    ⚠️ **AND OUT OF THE GUN FIRST — 0448.** Played: *"shurikens should be fired from the gun and then go
+    out to their current distance and helix from there."* Both blades leave the launcher's star on the
+    hood (`muzzle` on the row), and each closes on its own strand over `BLADE_OUT_STEPS` — so the pair
+    splits from the one gun and is on the helix 0244 drew by the time it has opened to the wingtip
+    width. The strand starts at the muzzle's place along, so nothing about it is pulled back.
+  */
+  const muzzle = w.shipRow.muzzle;
   for (let s = 0; s < BLADE_SIDES.length; s++) {
     const side = BLADE_SIDES[s]!;
     const blade = w.playerShots.spawn();
@@ -3273,13 +3278,17 @@ function throwBlades(w: World): void {
     // The two strands are a half-turn apart: the other side is the same phase, half a turn on.
     // Which way the phase runs makes no difference to a sine, so both run one way.
     const angle = side > 0 ? lift : Math.PI + lift;
-    reset(blade, w.ship.along, w.ship.across + Math.sin(angle) * w.weapon.coil, row, BLADE_KIND);
+    const strand = w.ship.across + Math.sin(angle) * w.weapon.coil;
+    reset(blade, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, BLADE_KIND);
     blade.velAlong = w.scrollPerStep + row.speed;
     blade.damage = w.weapon.damage;
     // No clock — 0237. The edge of the screen ends a blade (`steerBlades`); zero is *never*.
     blade.lifeFor = 0;
-    // The strand's axis: the nose now, and up the lane at the row's speed from here on.
-    blade.fromAlong = w.ship.along;
+    // Where it is against where its strand is, closed over the next few steps.
+    blade.outAcross = w.ship.across + muzzle.across - strand;
+    blade.outFor = BLADE_OUT_STEPS;
+    // The strand's axis: the gun now, and up the lane at the row's speed from here on.
+    blade.fromAlong = w.ship.along + muzzle.along;
     blade.fromAcross = w.ship.across;
     blade.orbitGrow = row.speed;
     blade.orbitRadius = w.weapon.coil;
@@ -3309,10 +3318,17 @@ function steerBlades(w: World): void {
   for (let i = w.playerShots.size - 1; i >= 0; i--) {
     const b = w.playerShots.at(i);
     if (b.kind !== BLADE_KIND) continue;
-    b.orbitAngle += b.orbitTurn;
+    /*
+      Out of the gun first — 0448: *"go out to their current distance and helix from there."* While it
+      is still leaving the gun the strand does not turn, so the place it closes on is the wingtip width
+      the helix starts from; the offset eases to nothing, fast at first, and the swing begins there.
+    */
+    if (b.outFor > 0) b.outFor--;
+    else b.orbitAngle += b.orbitTurn;
     b.fromAlong += w.scrollPerStep + b.orbitGrow;
     const along = b.fromAlong;
-    const across = b.fromAcross + Math.sin(b.orbitAngle) * b.orbitRadius;
+    const left = b.outFor / BLADE_OUT_STEPS;
+    const across = b.fromAcross + Math.sin(b.orbitAngle) * b.orbitRadius + b.outAcross * left * left;
     /*
       ⚠️ **GONE THE STEP IT LEAVES THE SCREEN, AND NOT BEFORE — 0237.** A loop that touched an edge
       would leave by it and come back in, and a blade that is off the screen is off the game. The
@@ -3385,8 +3401,13 @@ function fireArc(w: World): void {
   // On the grid, like the pulse — 0094: the same phase at every tier and after every death.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   w.onCue('arc', w.ship.across);
-  let fromAlong = w.ship.along + MUZZLE_ALONG;
-  let fromAcross = w.ship.across;
+  /*
+    ⚠️ **FROM THE ROD ON THE BONNET — 0448.** Played: *"lightning should fire from the gun on the hood of
+    the station wagon."* It left the centreline three units ahead, which on a car seen side-on is the air
+    in front of its door. The row says where its gun is.
+  */
+  let fromAlong = w.ship.along + w.shipRow.muzzle.along;
+  let fromAcross = w.ship.across + w.shipRow.muzzle.across;
   let struck = false;
   // Once a chain has reached the boss it stays on the boss: the rest of its links jump around the
   // hull rather than back out to something small behind it.
@@ -3587,7 +3608,9 @@ function firePulse(w: World): void {
     if (i === 0) w.onCue(cueOfFlight(w.weapon.flight), w.ship.across);
     const angle = first + step * i;
     // A ring is marked so `stepRays` can turn its pages — 0442; every other straight shot carries zero.
-    reset(shot, w.ship.along + MUZZLE_ALONG, w.ship.across, row, w.weapon.flight === 'burst' ? RAY_KIND : 0);
+    // From the ship's own gun — 0448: its `muzzle`, which on the fighter and the saucer is the nose.
+    const muzzle = w.shipRow.muzzle;
+    reset(shot, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, w.weapon.flight === 'burst' ? RAY_KIND : 0);
     shot.velAlong = Math.cos(angle) * row.speed + w.scrollPerStep;
     shot.velAcross = Math.sin(angle) * row.speed;
     // Weight, once barrels and rate have nowhere left to go — `src/content/pickups.ts`.
@@ -4319,7 +4342,14 @@ function fireMissiles(w: World): void {
       and plus.
     */
     const side = i === 0 ? -1 : 1;
-    reset(missile, w.ship.along + MUZZLE_ALONG, w.ship.across + LAUNCHER_ACROSS * side, row);
+    /*
+      ⚠️ **FROM THE SHIP'S OWN TUBES — 0448**, and the side above is still the path it pops onto. Played:
+      *"missiles should fire from the tubes on top and then go into the two paths they use now."* A car's
+      tubes are both turrets on its roof, so the second of a pair leaves the roof and crosses under the
+      hull to the bottom path; the fighter's and the saucer's are where 0097 put them.
+    */
+    const tube = tubeOf(w.shipRow, w.weapon.launchers, i);
+    reset(missile, w.ship.along + tube.along, w.ship.across + tube.across, row);
     missile.velAlong = row.speed + w.scrollPerStep;
     missile.damage = w.weapon.missileDamage;
     /*
@@ -4574,24 +4604,26 @@ function stepShields(w: World): void {
  * slid the flame across the tail instead, and 0241 answered the play-test that called it a bug.)
  *
  * ⚠️ **Carried by hand, exactly as the shell is**: nothing else steps this pool, and the renderer
- * interpolates from `prevAlong`. Nothing allocates — a row lookup, an integer divide and six writes.
+ * interpolates from `prevAlong`. Nothing allocates — a row lookup, an integer divide and eight writes a
+ * nozzle.
  */
 function stepExhaust(w: World): void {
   const flying = w.shipPool.size > 0;
-  if (!flying) {
-    // A wreck has no engines. The flame goes out on the step the hull does.
-    if (w.exhaust.size > 0) w.exhaust.releaseAt(0);
-    return;
-  }
-  let flame: Entity;
-  if (w.exhaust.size > 0) {
-    flame = w.exhaust.at(0);
-  } else {
+  /*
+    ⚠️ **ONE FLAME PER NOZZLE — 0448.** The bitmap is one jet, and the ship's row says how many it
+    burns and where: two for the fighter and the saucer, one at a car's pipe. A wreck has none, so its
+    flames go out on the step the hull does; a ship with fewer than the pool holds lets the rest go.
+  */
+  const nozzles = w.shipRow.nozzles;
+  const want = flying ? nozzles.length : 0;
+  while (w.exhaust.size > want) w.exhaust.releaseAt(w.exhaust.size - 1);
+  while (w.exhaust.size < want) {
     const lit = w.exhaust.spawn();
-    if (lit === null) return;
-    reset(lit, w.ship.along, w.ship.across, EXHAUST);
-    flame = lit;
+    if (lit === null) break;
+    const at = nozzles[w.exhaust.size - 1]!;
+    reset(lit, w.ship.along + at.along, w.ship.across + at.across, EXHAUST);
   }
+  if (w.exhaust.size === 0) return;
   const ask = w.intent.along;
   /*
     ⚠️ **A SHIP BETWEEN TWO PLACES IS BURNING WHATEVER THE STICK SAYS — 0340.** *"The player's engines
@@ -4611,9 +4643,6 @@ function stepExhaust(w: World): void {
   const frames = across < -LEAN_AT ? row.frames.climb : across > LEAN_AT ? row.frames.dive : row.frames.level;
   const page = Math.floor(w.steps / PULSE_STEPS) % frames.length;
   const sprite = frames[page]!;
-  flame.spriteBase = sprite;
-  flame.spriteHit = sprite;
-  flame.sprite = sprite;
   /*
     ⚠️ **AND THE FLAME SWELLS WITH THE BURN, WHICH IS WHAT MAKES IT TRAIL OFF RATHER THAN SWITCH OFF.**
     *"The hyper burn trails off as they arrive at the new level."* `swell` is the painter's one size
@@ -4627,12 +4656,24 @@ function stepExhaust(w: World): void {
     the centre goes back by half the extent times how much it grew. At `swell` one this is `trail`.
   */
   const swell = 1 + w.warp * (WARP_FLAME - 1);
-  flame.swell = swell;
-  flame.prevAlong = flame.along;
-  flame.prevAcross = flame.across;
-  // From the ship's own nozzles — 0441: `trail` is measured from them, and `tail` is where they are.
-  flame.along = w.ship.along - w.shipRow.tail - row.trail - BURN_HALF * (swell - 1);
-  flame.across = w.ship.across;
+  const back = row.trail + BURN_ROOT * (swell - 1);
+  for (let i = 0; i < w.exhaust.size; i++) {
+    const flame = w.exhaust.at(i);
+    const at = nozzles[i]!;
+    flame.spriteBase = sprite;
+    flame.spriteHit = sprite;
+    flame.sprite = sprite;
+    flame.swell = swell;
+    flame.prevAlong = flame.along;
+    flame.prevAcross = flame.across;
+    /*
+      From its own nozzle — 0441's `trail`, measured from it. ⚠️ **AND ACROSS ON IT TOO, SINCE 0448.** A
+      car's pipe is low at its bumper, and the one flame burning on the centreline met the slope of its
+      boot: played, *"the engines on the two don't fit properly when they do the full blast."*
+    */
+    flame.along = w.ship.along + at.along - back;
+    flame.across = w.ship.across + at.across;
+  }
 }
 
 /**

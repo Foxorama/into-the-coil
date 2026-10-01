@@ -66,9 +66,11 @@ export const PROBES = [
     broke: 'every launcher firing from the centreline, so a launcher upgrade is invisible',
     guard: '0097 — puts the first tube on the across-minus side and the second on the across-plus side',
     edit: {
-      path: 'src/app/frame.ts',
-      find: '    const side = i === 0 ? -1 : 1;',
-      replace: '    const side = 0;',
+      // ⚠️ Re-anchored by 0448, which puts where each tube is on the ship's row; `side` in the frame
+      // is only which path the missile pops to now. Every tube the fighter carries, on the centreline.
+      path: 'src/content/ships.ts',
+      find: "[[], [{ along: 3, across: -1.8 }], [{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]];",
+      replace: '[[], [{ along: 3, across: 0 }], [{ along: 3, across: 0 }, { along: 3, across: 0 }]];',
     },
   },
   {
