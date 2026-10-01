@@ -77,8 +77,10 @@ Consequences, all mandatory:
 - `manifest.webmanifest` is `"orientation": "landscape"`, and that is a **hint**: it binds an
   installed PWA only. The gate is the guarantee.
 
-Decided — [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md). `across` is a fixed 100 units
-everywhere; lookahead is clamped to 178–240; rotation is exact parity because aspect is long ÷ short.
+Decided — [0023](decisions/0023-the-long-axis-is-the-scroll-axis.md), at the scale
+[0364](decisions/0364-the-view-zooms-out.md) set. `across` is one constant, `ACROSS_SPAN` (120 units),
+everywhere; lookahead is clamped to 1.78–2.4 times it; rotation is exact parity because aspect is
+long ÷ short.
 
 ## Characters and ships
 
