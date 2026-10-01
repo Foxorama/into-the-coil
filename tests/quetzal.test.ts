@@ -340,8 +340,20 @@ describe('0250 — the quetzal screams', () => {
  * asked back, warned along the exact zigzag before it fires.
  */
 describe('0388 — the laser is jagged', () => {
-  /** Beams from volleys at the mouth's phase until one's zigzag stands clear of its root at the ship. */
+  /**
+   * Beams from volleys at the mouth's phase until one's zigzag stands clear of its root at the ship — on
+   * the step it begins to BURN, the warning already flown with the ship parked out of the way.
+   *
+   * ⚠️ **MEASURED WHEN IT BURNS, NOT WHEN IT IS THROWN — 0452.** The root is re-pinned to the hull every
+   * step, so the share of the beam's length the ship stands at moves and its zigzag at the ship moves
+   * with it: four units over a warning, measured. Picked at the throw with three to spare, a beam could
+   * drift into the straight line's own band before it burned, and then a frame that burned only along
+   * the straight line burned this ship too — the guard went green under its own probe the day 0452 moved
+   * the throat's root, which is a quantity the guard should never have rested on.
+   */
   function offTheLine(): { d: Driven; tries: number; root: number; zig: number } {
+    const attack = phaseFor(BOSSES.quetzal, BOSSES.quetzal.health * 0.3).attack!;
+    if (attack.kind !== 'beam') throw new Error('the mouth’s phase is not a beam');
     for (let tries = 1; tries <= 30; tries++) {
       const d = quetzalAt(0.3);
       for (let i = 1; i < tries; i++) {
@@ -349,6 +361,8 @@ describe('0388 — the laser is jagged', () => {
         d.world.bolts.clear();
       }
       const [beam] = volley(d);
+      // The warning flown with the ship on the far side of the lane, where nothing is yet lit to hurt it.
+      for (let step = 1; step < attack.warning; step++) stepShipAt(d, beam!.across < ACROSS_SPAN / 2 ? ACROSS_SPAN - 6 : 6);
       const zig = onBeam(d);
       if (Math.abs(zig - beam!.across) > beam!.radius + d.world.ship.radius + 3) return { d, tries, root: beam!.across, zig };
     }
@@ -388,7 +402,8 @@ describe('0388 — the laser is jagged', () => {
     const attack = phaseFor(BOSSES.quetzal, d.world.bossPool.at(0).health, d.world.bossFullHealth).attack!;
     if (attack.kind !== 'beam') throw new Error('the mouth’s phase is not a beam');
     let hurtOnZig = false;
-    for (let step = 1; step <= attack.warning + attack.hold; step++) if (stepShipAt(d, onBeam(d))) hurtOnZig = true;
+    // The warning is flown already (`offTheLine`); one step over the hold, for the step that lit it.
+    for (let step = 1; step <= attack.hold + 1; step++) if (stepShipAt(d, onBeam(d))) hurtOnZig = true;
     expect(hurtOnZig, `a ship on the zigzag, ${Math.abs(zig - root).toFixed(1)} units off the straight line, was never burned`).toBe(true);
   });
 
