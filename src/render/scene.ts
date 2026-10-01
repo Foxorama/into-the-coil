@@ -21,7 +21,7 @@ import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
 import { PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
-import { BEAM_POINTS, beamOffset, beamT, jag } from '../sim/jag.ts';
+import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
 
@@ -466,7 +466,7 @@ const LINK = new Float32Array(BOLT_VERTICES * 2);
 const TWIG = new Float32Array(TWIG_VERTICES * 2);
 
 // @setup: a jagged beam's knots, both ends included, refilled per beam — 0388.
-const BEAM_PATH = new Float32Array(BEAM_POINTS * 2);
+const BEAM_PATH = new Float32Array(BEAM_MAX_POINTS * 2);
 
 /**
  * Every live link, stroked. Called after `paintScene`, so a bolt is over everything it struck.
@@ -510,18 +510,21 @@ export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, ca
       `src/sim/jag.ts`'s, the ones the frame hurts along, from the far end (knot 0) to the mouth; the
       width and the fade are a straight beam's exactly, so only where it runs has changed.
     */
-    if (beam && e.jag > 0) {
-      for (let i = 0; i < BEAM_POINTS; i++) {
-        const inView = endAlong + e.fromAlong * beamT(e.spin, i) - cameraAlong;
-        const across = endAcross + beamOffset(e.spin, e.jag, i);
+    if (beam && e.knots > 0) {
+      // The row's own count since 0453; `tests/quetzal.test.ts` holds every row under the buffer's.
+      const points = beamPoints(e.knots);
+      for (let i = 0; i < points; i++) {
+        const inView = endAlong + e.fromAlong * beamT(e.spin, e.knots, i) - cameraAlong;
+        // Its zigzag and its lean — 0453's fan — from the one function the frame hurts along.
+        const across = endAcross + beamShift(e, i);
         BEAM_PATH[i * 2] = screenX(view, inView, across);
         BEAM_PATH[i * 2 + 1] = screenY(view, inView, across);
       }
       if (warning) {
-        surface.bolt(BEAM_PATH, BEAM_POINTS, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
       } else {
         const held = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
-        surface.bolt(BEAM_PATH, BEAM_POINTS, e.radius * BEAM_STROKE * view.scale, held, true);
+        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * view.scale, held, true);
       }
       continue;
     }

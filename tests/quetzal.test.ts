@@ -12,7 +12,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
-import { BEAM_BOLT_KIND, BOSSES } from '../src/content/bosses.ts';
+import { BEAM_BOLT_KIND, BOSSES, type BossAttack } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
@@ -21,7 +21,8 @@ import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
-import { BEAM_KNOTS, BEAM_POINTS, beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
+import type { Entity } from '../src/sim/entity.ts';
+import { BEAM_MAX_KNOTS, beamAcrossAt, beamDistance, beamPoints } from '../src/sim/jag.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 
@@ -92,6 +93,24 @@ function besideBeam(d: Driven): number {
     }
   }
   throw new Error('nowhere on the lane is clear of the beam');
+}
+
+/** Every laser a boss's table fires, its own phases' and its heads'. */
+const beams = (kind: 'quetzal' | 'hydra' | 'medusa'): Extract<BossAttack, { kind: 'beam' }>[] =>
+  BOSSES[kind].phases.flatMap((p) => {
+    const attack = p.attack ?? BOSSES[kind].attack;
+    if (attack.kind === 'beam') return [attack];
+    if (attack.kind === 'heads') return attack.heads.flatMap((h) => (h.attack.kind === 'beam' ? [h.attack] : []));
+    return [];
+  });
+
+/** One volley, thrown now: its beams as the bolts themselves, from smaller across to larger — 0453. */
+function thrown(d: Driven): Entity[] {
+  d.world.bolts.clear();
+  volley(d);
+  const out: Entity[] = [];
+  for (let i = 0; i < d.world.bolts.size; i++) if (d.world.bolts.at(i).kind === BEAM_BOLT_KIND) out.push(d.world.bolts.at(i));
+  return out.sort((a, b) => a.across - b.across);
 }
 
 /**
@@ -320,7 +339,7 @@ describe('0250 — the quetzal screams', () => {
     */
     const stroke = strokes.find((s) => s.width === widest)!;
     const warned = warnings.find((s) => s.count === stroke.count)!;
-    expect(stroke.count, 'the beam is not drawn on its knots').toBe(BEAM_POINTS);
+    expect(stroke.count, 'the beam is not drawn on its knots').toBe(beamPoints(bolt.knots));
     expect(warned, 'the warning was not drawn on the same knots as the beam').toBeDefined();
     // The view lays along on x and across on y, so y is the screen's across.
     const ys = (s: { points: number[] }): string[] => s.points.filter((_, i) => i % 2 === 1).map((v) => v.toFixed(2));
@@ -370,22 +389,17 @@ describe('0388 — the laser is jagged', () => {
   }
 
   it('THE ASK: every laser the pterodactyls fire jags — the quetzal’s and the hydra’s third head’s — and since 0403 the jellyfish’s, as one formation', () => {
+    // And since 0453 each says one path a root, or a beam would fire with no shape to burn along.
+    for (const kind of ['quetzal', 'hydra', 'medusa'] as const) for (const b of beams(kind)) expect(b.jag?.paths.length, `a ${kind} laser has a root with no path`).toBe(b.from.length);
     /*
       ⚠️ **THE JELLYFISH'S HALF WAS *STRAIGHT* UNTIL 0403**, which is when it was asked: *"the lazes fire
       from the tentacles is a jagged formation like the updated pteradactyl and hydra, there's still 5
       that fire, but they need to be jagged so that there's a safe gap."* So its lasers jag too, and fly
       `together` — one zigzag a volley — where the pterodactyls' each take their own.
     */
-    const beams = (kind: 'quetzal' | 'hydra' | 'medusa'): { jag?: number; together?: boolean }[] =>
-      BOSSES[kind].phases.flatMap((p) => {
-        const attack = p.attack ?? BOSSES[kind].attack;
-        if (attack.kind === 'beam') return [attack];
-        if (attack.kind === 'heads') return attack.heads.flatMap((h) => (h.attack.kind === 'beam' ? [h.attack] : []));
-        return [];
-      });
     for (const kind of ['quetzal', 'hydra', 'medusa'] as const) {
       expect(beams(kind).length, `${kind} fires no laser, so this checks nothing`).toBeGreaterThan(0);
-      for (const b of beams(kind)) expect(b.jag ?? 0, `a ${kind} laser is straight`).toBeGreaterThan(0);
+      for (const b of beams(kind)) expect(b.jag?.knots ?? 0, `a ${kind} laser is straight`).toBeGreaterThan(0);
     }
     for (const b of beams('medusa')) expect(b.together, 'the jellyfish’s five lasers each bend their own way, so the gaps between them close').toBe(true);
   });
@@ -416,11 +430,134 @@ describe('0388 — the laser is jagged', () => {
       // A hair short of the mouth, where the last leg arrives: AT it `beamAcrossAt` answers the root by construction.
       expect(Math.abs(beamAcrossAt(b, b.along + b.fromAlong * (1 - 1e-6)) - b.across), 'the zigzag does not leave the mouth').toBeLessThan(0.01);
       const knots: string[] = [];
-      for (let k = 0; k <= BEAM_KNOTS; k++) knots.push(beamAcrossAt(b, b.along + (b.fromAlong * k) / BEAM_KNOTS).toFixed(2));
+      for (let k = 0; k <= b.knots; k++) knots.push(beamAcrossAt(b, b.along + (b.fromAlong * k) / b.knots).toFixed(2));
       paths.push(knots.join(' '));
       d.world.bolts.clear();
     }
     expect(new Set(paths).size, 'two beams burned the same zigzag').toBe(paths.length);
+  });
+});
+
+/**
+ * The laser fans out — `docs/decisions/0453-the-laser-fans-out.md`.
+ *
+ * *"For the lazer attacks, I wanted them jagged, but also having wider peaks and lows so that they spread
+ * out more"* — and a shape for each count: one central with long deep legs, two whose middle never
+ * touches, three and five as fans. Every assertion is in lane units on beams the game fired; the
+ * jellyfish's half is `tests/medusa.test.ts`'s.
+ */
+describe('0453 — the laser fans out', () => {
+  /** The furthest a beam's line stands from its root, towards larger across and towards smaller. */
+  function reach(b: Entity): { up: number; down: number } {
+    let up = 0;
+    let down = 0;
+    for (let s = 0; s <= 1; s += 1 / 256) {
+      const off = beamAcrossAt(b, b.along + b.fromAlong * s) - b.across;
+      if (off > up) up = off;
+      if (-off > down) down = -off;
+    }
+    return { up, down };
+  }
+
+  it('THE ASK, IN LANE UNITS: the peaks spread out longer — every laser the pterodactyl fires turns at most once every eighth of a lane down it', () => {
+    /*
+      Twelve knots on a beam of a hundred and fifty was a leg every eleven units: even a deep swing read
+      as a straight beam with a fringe on it. Held on the beams the game fires, at the length they burn,
+      because a leg is the beam's length shared out and the row only says the count.
+    */
+    for (const fraction of [0.7, 0.3, 0.2]) {
+      const d = quetzalAt(fraction);
+      for (const b of thrown(d)) {
+        const leg = Math.abs(b.fromAlong) / (b.knots + 1);
+        expect(leg, `a laser at ${fraction} of the bar turns every ${leg.toFixed(1)} units down the lane`).toBeGreaterThanOrEqual(ACROSS_SPAN / 8);
+      }
+    }
+    for (const kind of ['quetzal', 'hydra', 'medusa'] as const) for (const b of beams(kind)) expect(b.jag!.knots, `a ${kind} laser has more knots than the painter holds`).toBeLessThanOrEqual(BEAM_MAX_KNOTS);
+  });
+
+  it('THE ASK, IN LANE UNITS: one beam is central, and its zigzag sweeps a third of the lane every time it fires', () => {
+    // At eighteen units a side, the most the throat's old zigzag could reach was thirty-six.
+    const d = quetzalAt(0.3);
+    let lean = 0;
+    for (let v = 0; v < 30; v++) {
+      const [b] = thrown(d);
+      const { up, down } = reach(b!);
+      expect(up + down, `the lone beam swept ${(up + down).toFixed(1)} lane units`).toBeGreaterThanOrEqual(ACROSS_SPAN / 3);
+      lean += beamAcrossAt(b!, b!.along) - b!.across;
+    }
+    expect(Math.abs(lean / 30), 'the lone beam leans to one side, so it is not central').toBeLessThan(5);
+  });
+
+  it('THE ASK, IN LANE UNITS: two beams never touch the line between them, from the mouths to the far end — and reach further outside than in', () => {
+    /*
+      *"The center of the two attacks shouldn't touch, but the outside jagged path should be longer to cover
+      more screen."* A ship parked on the line between the two roots is never inside either beam, at any
+      along a beam runs — measured to the nearest leg, because a steep leg is nearer than its across says.
+    */
+    const d = quetzalAt(0.7);
+    const r = d.world.ship.radius * d.world.tuning.hurtbox;
+    let out = 0;
+    let inward = 0;
+    for (let v = 0; v < 30; v++) {
+      const pair = thrown(d);
+      expect(pair.length, 'the shoulders did not fire two').toBe(2);
+      const mid = (pair[0]!.across + pair[1]!.across) / 2;
+      for (const b of pair) {
+        for (let s = 0; s < 1; s += 1 / 256) {
+          const along = b.along + b.fromAlong * s;
+          const clear = beamDistance(b, along, mid) - b.radius - r;
+          expect(clear, `a shoulder laser burned the middle, ${(s * 100).toFixed(0)}% of the way from its far end`).toBeGreaterThan(0);
+        }
+      }
+      const left = reach(pair[0]!);
+      const right = reach(pair[1]!);
+      out += left.down + right.up;
+      inward += left.up + right.down;
+    }
+    expect(out / inward, 'the pair reaches no further outside than it does towards the middle').toBeGreaterThan(2);
+  });
+
+  it('THE ASK, IN LANE UNITS: three beams are a fan — the centre straight down the lane, the shoulders leaning out', () => {
+    // At the far end, averaged over volleys: the zigzag is random either side, the lean is not.
+    const d = quetzalAt(0.2);
+    const ends = [0, 0, 0];
+    const volleys = 30;
+    for (let v = 0; v < volleys; v++) {
+      const fan = thrown(d);
+      expect(fan.length, 'the brace did not fire three').toBe(3);
+      fan.forEach((b, i) => (ends[i]! += (beamAcrossAt(b, b.along) - b.across) / volleys));
+    }
+    expect(Math.abs(ends[1]!), 'the centre beam leans').toBeLessThan(4);
+    expect(-ends[0]!, 'the left shoulder’s beam does not lean out').toBeGreaterThan(15);
+    expect(ends[2]!, 'the right shoulder’s beam does not lean out').toBeGreaterThan(15);
+  });
+
+  it('THE PICTURE: the fan is drawn where it burns — every point the painter strokes lies on a laser’s burning line', () => {
+    /*
+      0388's picture test holds that a beam burns where its warning was drawn, which a painter that left the
+      lean out of BOTH would pass. So this takes each stroke's points back through the view into the lane
+      and asks the frame's own measure how far each is from the nearest beam: on it, or the fan the player
+      sees is not the fan that burns.
+    */
+    const d = quetzalAt(0.2);
+    const recorder = new Recorder();
+    d.world.surface = recorder;
+    const fan = thrown(d);
+    while (fan[0]!.lifeFor > fan[0]!.holdFor) stepShipAt(d, ACROSS_SPAN / 2);
+    recorder.strokes.length = 0;
+    d.frame.draw(1);
+    const view = d.world.view;
+    expect(view.alongAxis, 'the view is not the one this reads back').toBe('x');
+    const drawn = recorder.strokes.filter((s) => s.hostile && s.count === beamPoints(fan[0]!.knots));
+    expect(drawn.length, 'the fan was not drawn as three beams').toBe(3);
+    for (const s of drawn) {
+      for (let i = 0; i < s.count; i++) {
+        const along = d.world.cameraAlong + (s.points[i * 2]! - view.gutterAlong) / view.scale;
+        const across = (s.points[i * 2 + 1]! - view.gutterAcross) / view.scale;
+        const off = Math.min(...fan.map((b) => beamDistance(b, Math.min(Math.max(along, b.along), b.along + b.fromAlong), across)));
+        expect(off, `a drawn point stands ${off.toFixed(2)} lane units off every burning line`).toBeLessThan(0.05);
+      }
+    }
   });
 });
 

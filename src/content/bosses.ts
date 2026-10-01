@@ -238,6 +238,16 @@ export const BOSS_ATTACK_KINDS = [
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type BossAttackKind = (typeof BOSS_ATTACK_KINDS)[number];
 
+/**
+ * One jagged beam's path — `docs/decisions/0453-the-laser-fans-out.md`, in lane units. `lean` is how
+ * far outward its far end stands from its root (a fan), `outward` and `inward` how deep its knots swing
+ * on either side of that leaning line. Every number is the row's: the shape is the boss's character.
+ */
+export type BeamPath = { readonly lean: number; readonly outward: number; readonly inward: number };
+
+/** A row's zigzag — 0453: how many knots its beams turn at, and one path per root in `from`'s order. */
+export type BeamJag = { readonly knots: number; readonly paths: readonly BeamPath[] };
+
 /*
   ── `aimed` WAS THE FIRST ARM — the fan centred on the ship, what all seven did — AND 0258 DELETED IT ─
 
@@ -459,9 +469,16 @@ export type BossAttack =
    *
    * The phase's `shots` and `spread` are carried and unused, on `summon`'s terms.
    *
-   * ⚠️ **`jag`, AND A BEAM WITH ONE IS A ZIGZAG — 0388.** How far either side of its line the beam's
-   * knots swing, in lane units: a new random zigzag every beam, warned along the path it will burn.
-   * Absent is straight.
+   * ⚠️ **`jag`, AND A BEAM WITH ONE IS A ZIGZAG — 0388.** A new random zigzag every beam, warned along
+   * the path it will burn. Absent is straight.
+   *
+   * ⚠️ **AND SINCE 0453 THE ROW SAYS EACH BEAM'S PATH, NOT ONE SWING FOR ALL OF THEM.** *"Wider peaks and
+   * lows so that they spread out more"*, and then a shape for every count: one beam central with long
+   * deep legs; two whose middle never touches and whose outsides reach; three and five as fans. One
+   * number a row could say none of that. `knots` is how many the row's beams turn at — fewer is longer
+   * legs — and `paths` is one `BeamPath` per root, in `from`'s order: how far its far end `lean`s out,
+   * and how deep it swings `outward` and `inward`. Outward is the side of the hull its root is on;
+   * a root on the centre line has no outside, and swings `outward` towards larger across.
    *
    * ⚠️ **`together`, AND A VOLLEY WITH IT IS ONE ZIGZAG LAID DOWN EVERY ROOT — 0403.** *"The lasers fire
    * from the tentacles is a jagged formation like the updated pteradactyl and hydra, there's still 5
@@ -471,7 +488,7 @@ export type BossAttack =
    * room between two neighbours is their spacing less their widths along the whole of their length.
    * Absent is a seed a beam, which is the pterodactyl's and the hydra's.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly (readonly [number, number])[]; jag?: number; together?: boolean }
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly (readonly [number, number])[]; jag?: BeamJag; together?: boolean }
   /**
    * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
    * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
@@ -2196,6 +2213,50 @@ const LEFT_CANNON = [SHOULDER_AHEAD, -SHOULDER] as const;
 const RIGHT_CANNON = [SHOULDER_AHEAD, SHOULDER] as const;
 const THROAT = [THROAT_AHEAD, 0] as const;
 
+/*
+  ⚠️ **THE PTERODACTYLS' ZIGZAGS, ONE SHAPE A COUNT — `docs/decisions/0453-the-laser-fans-out.md`.**
+  *"Wider peaks and lows so that they spread out more."* Twelve knots was a leg every dozen units down a
+  beam of a hundred and fifty, so even an eighteen-unit swing read as a straight beam with a fringe on
+  it; five or six knots is a leg the length of a ship's reaction, and every swing is deeper.
+*/
+
+/**
+ * One beam — *"centralised path over all, but the jagged high and low bits should spread out longer so
+ * it's harder to dodge."* The throat's: no lean, deep and the same either side, on five long legs.
+ */
+const QUETZAL_ONE: BeamJag = { knots: 5, paths: [{ lean: 0, outward: 30, inward: 30 }] };
+
+/**
+ * Two beams — *"the center of the two attacks shouldn't touch, but the outside jagged path should be
+ * longer to cover more screen."* Each swings deep on its own side and barely inward: eleven out, a
+ * half-width of 1.5 and an inward swing of six leaves the centre line three and a half clear of either,
+ * which is a ship's hurtbox and more (`tests/quetzal.test.ts` holds it).
+ */
+const QUETZAL_PAIR: BeamJag = {
+  knots: 6,
+  paths: [
+    { lean: 0, outward: 24, inward: 6 },
+    { lean: 0, outward: 24, inward: 6 },
+  ],
+};
+
+/**
+ * Three beams — *"a fan pattern where the center attack behaves like now, the two outside attacks are
+ * angled a bit more diagonally outwards and have a jagged path like when there's only two."* The centre
+ * is the swing of seven it had, on the new legs; the shoulders are the pair's path, leaning out.
+ */
+const QUETZAL_FAN: BeamJag = {
+  knots: 6,
+  paths: [
+    { lean: 30, outward: 24, inward: 6 },
+    { lean: 0, outward: 7, inward: 7 },
+    { lean: 30, outward: 24, inward: 6 },
+  ],
+};
+
+/** The hydra's pterodactyl head fires one beam, so it is the one-beam shape, on its narrower beam. */
+const HYDRA_LANCE: BeamJag = { knots: 5, paths: [{ lean: 0, outward: 24, inward: 24 }] };
+
 /** Where a quill leaves each wing, `[along, across]` — 0398: at the wrist, the wing's leading edge. */
 const WINGS: readonly (readonly [number, number])[] = [
   [-3, -20],
@@ -2221,6 +2282,41 @@ const MEDUSA_RIM = -10.8;
  * say its own along.
  */
 const MEDUSA_LASERS = MEDUSA_TIPS.map((tip) => [-MEDUSA_REACH, tip] as const);
+
+/**
+ * Five beams — 0453: *"a fan pattern where the inner two are angled but more contained path and the
+ * other two have a more deeper jagged penetration on the outside."* The middle tip keeps the swing it
+ * had; the inner two lean out and swing modestly; the outer two lean further and swing deep outside.
+ *
+ * ⚠️ **NO BEAM SWINGS IN FURTHER THAN THE ONE INSIDE IT SWINGS OUT ON THE SAME KNOT, OR THE GAP CLOSES.**
+ * The volley is one seed (`together`, 0403 — *"so that there's a safe gap"*), so neighbours turn on the
+ * same knots to the same side; across the lane the room between them is their spacing, plus how much
+ * further apart their leans have got, plus the difference in their swings on that side — which never
+ * goes below the spacing while each inward swing is no deeper than its inner neighbour's swing towards
+ * it. `tests/quetzal.test.ts` measures the gap a ship has, at its own along, beam by beam.
+ */
+const MEDUSA_FAN: BeamJag = {
+  knots: 5,
+  paths: [
+    { lean: 32, outward: 22, inward: 4 },
+    { lean: 14, outward: 12, inward: 5 },
+    { lean: 0, outward: 7, inward: 7 },
+    { lean: 14, outward: 12, inward: 5 },
+    { lean: 32, outward: 22, inward: 4 },
+  ],
+};
+
+/** The later, longer volley: the same fan, every swing and lean a little wider, as its 9 was to its 7. */
+const MEDUSA_WIDE_FAN: BeamJag = {
+  knots: 5,
+  paths: [
+    { lean: 36, outward: 26, inward: 4 },
+    { lean: 16, outward: 14, inward: 6 },
+    { lean: 0, outward: 9, inward: 9 },
+    { lean: 16, outward: 14, inward: 6 },
+    { lean: 36, outward: 26, inward: 4 },
+  ],
+};
 
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
@@ -3583,16 +3679,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // Four quills, two off each wing — 0398: three shared between two wings would throw lopsided.
       { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(5) }, shot: null, attack: null },
       // The shoulder cannons: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: 10 } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: QUETZAL_PAIR } },
       // The throat cannon: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },
       /*
         Everything: the throat and both shoulders, on the mouth's timing, each five units wide. 0398
         brought the shoulders in from eighteen to eleven, so what the three leave between them is two
         gaps of six units rather than two of thirteen — a thing a player can thread and not be sure of,
         with open lane either side of the brace for the player who would rather go round.
       */
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: 7 } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: QUETZAL_FAN } },
     ],
   },
   /**
@@ -3993,7 +4089,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: HYDRA_LANCE }, gap: 24 },
           ],
         },
       },
@@ -4011,7 +4107,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: HYDRA_LANCE }, gap: 24 },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
           ],
         },
@@ -4030,7 +4126,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: HYDRA_LANCE }, gap: 24 },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
             { shot: 'void', attack: { kind: 'ring' }, gap: 24 },
           ],
@@ -4137,9 +4233,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
         firing."* A fifth fewer, on the same cadence.
       */
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: 7, together: true } },
+      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
       { upTo: 0.6, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: 9, together: true } },
+      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
       { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },

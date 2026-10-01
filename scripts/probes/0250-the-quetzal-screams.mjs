@@ -25,9 +25,10 @@ export const PROBES = [
     guard: 'THE WARNING AND THE HOLD',
     edit: {
       path: 'src/content/bosses.ts',
-      // Re-anchored by 0388, which gave the mouth its zigzag, and 0452, which put its root in the throat.
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
-      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
+      // Re-anchored by 0388, which gave the mouth its zigzag, 0452, which put its root in the throat, and
+      // 0453, which gave it a path of its own.
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
+      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
     },
   },
   {
@@ -90,10 +91,10 @@ export const PROBES = [
       /*
         Re-anchored by 0388: the quetzal's beams are all jagged, so they are drawn by the jagged branch,
         and the straight one's stroke went STILL GREEN under the proof. The same break, on the line that
-        draws them.
+        draws them. And by 0453, whose beams say their own count of points.
       */
-      find: '        surface.bolt(BEAM_PATH, BEAM_POINTS, e.radius * BEAM_STROKE * view.scale, held, true);',
-      replace: '        surface.bolt(BEAM_PATH, BEAM_POINTS, BOLT_WIDTH * view.scale, held, true);',
+      find: '        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * view.scale, held, true);',
+      replace: '        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * view.scale, held, true);',
     },
   },
   {
@@ -109,8 +110,9 @@ export const PROBES = [
     guard: 'THE PICTURE: the warning is drawn dim',
     edit: {
       path: 'src/render/scene.ts',
-      find: '        const across = endAcross + beamOffset(e.spin, e.jag, i);',
-      replace: '        const across = endAcross + beamOffset(e.spin + Math.floor(e.lifeFor / BOLT_PAGE_STEPS), e.jag, i);',
+      // Re-anchored by 0453, whose path is `beamShift`: the flicker added on top, from the hash the painter imports.
+      find: '        const across = endAcross + beamShift(e, i);',
+      replace: '        const across = endAcross + beamShift(e, i) + jag(e.spin, i, Math.floor(e.lifeFor / BOLT_PAGE_STEPS)) * e.jag;',
     },
   },
 ];

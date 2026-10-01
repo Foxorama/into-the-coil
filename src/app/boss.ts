@@ -1369,7 +1369,18 @@ function throwAttack(
           it will burn. A row with no `jag` draws nothing from the stream and fires straight.
         */
         if (attack.jag !== undefined) {
-          bolt.jag = attack.jag;
+          /*
+            ⚠️ **AND ITS OWN PATH, TURNED TO ITS OWN SIDE — 0453.** The row says outward and inward;
+            the bolt keeps the side of larger across and the side of smaller, which is what `src/sim/jag.ts`
+            draws and hurts by. Outward is the side of the hull its root is on, so a fan's two halves
+            are one authored path each and mirror themselves.
+          */
+          const path = attack.jag.paths[i]!;
+          const out = place[1] < 0 ? -1 : 1;
+          bolt.knots = attack.jag.knots;
+          bolt.jag = out > 0 ? path.outward : path.inward;
+          bolt.jagLow = out > 0 ? path.inward : path.outward;
+          bolt.lean = out * path.lean;
           bolt.spin = attack.together === true ? volleySeed : beamRng.int(0, 0x7fffffff);
         }
       }

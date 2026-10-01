@@ -26,8 +26,9 @@ export const PROBES = [
     guard: 'THE PICTURE: the warning is drawn dim, the beam bright and as wide as it hurts, on the zigzag it warned',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    if (beam && e.jag > 0) {',
-      replace: '    if (beam && e.jag < 0) {',
+      // Re-anchored by 0453, whose beams are jagged when they have knots.
+      find: '    if (beam && e.knots > 0) {',
+      replace: '    if (beam && e.knots < 0) {',
     },
   },
   {
@@ -51,8 +52,9 @@ export const PROBES = [
     guard: 'and every one leaves the mouth that fired it',
     edit: {
       path: 'src/sim/jag.ts',
-      find: '  if (swing <= 0 || i >= BEAM_POINTS - 1) return 0;',
-      replace: '  if (swing <= 0) return 0;',
+      // Re-anchored by 0453, whose beams say their own count of knots.
+      find: '  if (knots <= 0 || i >= knots + 1) return 0;',
+      replace: '  if (knots <= 0) return 0;',
     },
   },
   {
@@ -63,8 +65,8 @@ export const PROBES = [
     guard: 'THE ASK: every laser the pterodactyls fire jags',
     edit: {
       path: 'src/content/bosses.ts',
-      // Re-anchored by 0452, which put the mouth's root in the throat.
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
+      // Re-anchored by 0452, which put the mouth's root in the throat, and 0453, which gave it a path.
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },",
       replace: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT] } },",
     },
   },
