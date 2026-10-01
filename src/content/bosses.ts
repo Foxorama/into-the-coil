@@ -2271,7 +2271,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 120 from 42 — 0406: solved at the loadout the run carries in (`carriedAt`), two weapon rungs here.
     // 211 from 120 — 0441: every ship opens on its whole gun, so the fighter's pulse met it at the cap
     // and fought it for 10 s against the level's 17; re-solved by the same script.
-    health: 211,
+    // 262 from 211 — 0452: main already fought it for 14.3 s, and the volley leaving its prow took
+    // 0.6 s more off, past the guard's three; re-solved by the same script, the other six left in band.
+    health: 262,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.

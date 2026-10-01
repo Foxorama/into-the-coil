@@ -79,6 +79,11 @@ across the fortress.
 ship drifts four over a warning as the root is re-pinned. Moving the throat's root picked a marginal
 beam and the guard went green under its own probe. It now measures when the beam starts burning.
 
+**Two serpent guards measured the mouth as the skull's centre** (0304's spray): they ask the row's
+muzzle now, which is the claim they were making. **The sentinel's health is 262, from 211**, by
+`scripts/solve-mid-health.mjs`: main already fought it for 14.3 s against 17, and this took 0.6 s more
+off, past `tests/midboss.test.ts`'s three. The other six mid-bosses stayed in band and were left.
+
 ## Rollback
 
 ⚠️ **None owed** — [0001](0001-revertability-not-risk-rating.md). Nothing persisted moves.

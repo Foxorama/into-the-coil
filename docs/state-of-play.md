@@ -901,7 +901,10 @@ burns its own engines; the ray is continuous again), [0449](decisions/0449-the-w
 (the fighter's trimmed wings, which had never merged), [0450](decisions/0450-the-intro-ships-are-their-size.md)
 (the intro's ships at their size, the saucer's two drives) and
 [0451](decisions/0451-the-readout-wears-the-ship.md) (the readout wears the ship). **All owed a play**;
-each decision's *Owed* says what to look at.
+each decision's *Owed* says what to look at. And every boss fires from its guns
+([0452](decisions/0452-a-boss-fires-from-its-guns.md)): the pterodactyl's barrels and throat, the
+serpent's jaw, the fish's mouth, the mid-bosses' fronts, the hydra's lance held in its jaw, the redoubt
+turned to face the lane — **owed a play of each fight**, since several volleys now leave nearer the ship.
 
 And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md), one shot since
 [0426](decisions/0426-the-finale-is-the-fight-going-on.md)): the finale, then the victory screen —
