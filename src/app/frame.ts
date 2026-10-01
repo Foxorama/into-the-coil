@@ -105,7 +105,7 @@ import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
-import { COG_TICK, beamRootOf, belch, cogTurn, curtainStance, foldTurn, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
+import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, muzzleAcrossOf, muzzleAlongOf, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import type { Frame } from './loop.ts';
 import { multiplierFor } from '../content/score.ts';
@@ -165,13 +165,6 @@ const ROAM_INWARD = 0.25;
  * screen when the leading edge reaches it, and no more, so it can still be seen at the very edge.
  */
 const ROAM_UNSEEN_MARGIN = 2;
-
-/**
- * Where a boss's mouth is, as a share of its drawn radius ahead of its centre — 0373. The painters
- * put the snout at the tile's edge (`src/render/bake.ts`, `VOLANS_SNOUTS` at −1); the adds appear a
- * shade inside the lip rather than on it, so the first frame of one is a body IN the mouth.
- */
-const MOUTH_REACH = 0.92;
 
 /**
  * How fast a boss flies to the start of its entrance for a mid-fight leap, in world units a step —
@@ -2927,11 +2920,13 @@ function pinBeams(w: World): void {
     const b = w.bolts.at(i);
     if (b.kind !== BEAM_BOLT_KIND) continue;
     if (alive) {
-      // Rooted in the mouth that fired it, on a boss with many — 0384; `muzzleAt` is still that head's.
+      /*
+        Rooted in the muzzle that fired it — the mouth of the head that did, on a boss with many (0384),
+        `muzzleAt` still being that head's — and on along it by its own root: a barrel's end, a throat,
+        the tips of the tentacles (0403, 0452).
+      */
       const boss = w.bossPool.at(0);
-      const mouth = w.bossRow.necks !== undefined && boss.muzzleAt >= 0 ? w.mouths[boss.muzzleAt * 2]! : 0;
-      // And at the tips of the tentacles, on a boss that has them — 0403.
-      b.fromAlong = boss.along + mouth + beamRootOf(w.bossRow) - b.along;
+      b.fromAlong = muzzleAlongOf(boss, w.bossRow, w.mouths) + b.rootAlong - b.along;
     } else if (b.lifeFor > b.holdFor) {
       // Still a warning on its last step — `lifeFor` above `holdFor` is what `strikeShip` reads.
       b.lifeFor = 1;
@@ -6121,25 +6116,19 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
 }
 
 /**
- * The along of a boss's mouth — 0373: its drawn radius ahead of its centre, along the heading it is
- * wearing. The sprite's +x is `(cos turn, sin turn)` in the world (`turnFor`), and the snout is at −x.
+ * The along of a boss's mouth — 0373: where the adds it spits leave. **Its muzzle, since 0452**: the fish
+ * kept its mouth here, as a share of its drawn radius, while its spines and its whip left its belly — two
+ * descriptions of one mouth, and the bullets had the wrong one. The row says where its mouth is now, and
+ * the bodies and the volleys leave the same place, turned with the heading the hull is wearing.
  */
 function mouthAlongOf(w: World, boss: Entity): number {
-  return boss.along - Math.cos(boss.turn) * SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! * DRAWING_RADIUS * MOUTH_REACH;
+  return muzzleAlongOf(boss, w.bossRow, w.mouths);
 }
 
 /** The across of a boss's mouth — the other half of `mouthAlongOf`. */
 function mouthAcrossOf(w: World, boss: Entity): number {
-  return boss.across - Math.sin(boss.turn) * SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! * DRAWING_RADIUS * MOUTH_REACH;
+  return muzzleAcrossOf(boss, w.bossRow, w.mouths);
 }
-
-/**
- * The radius a painter draws in, as a share of the tile — `drawKind` in `src/render/bake.ts` sets
- * `r = size * 0.42`, and every point of every hull is a fraction of that. Half the extent is the tile's
- * edge, not the drawing's; the first draft of `mouthAlongOf` used it and put the mouth two units
- * outside the snout.
- */
-const DRAWING_RADIUS = 0.42;
 
 /**
  * The picture and the sound of a horde leaving the mouth — 0373, on 0036's terms: the bodies are the
@@ -9326,7 +9315,14 @@ function layNecks(w: World, hull: Entity | null): void {
       turned by the ship's bearing less π.
     */
     const bearing = foldTurn(Math.atan2(w.ship.across - headAcross, w.ship.along - headAlong) - Math.PI);
-    const turn = bearing > necks.look ? necks.look : bearing < -necks.look ? -necks.look : bearing;
+    /*
+      ⚠️ **AND THE HEAD THAT IS FIRING A LASER HOLDS ITS AIM — 0452**, as the hull braces for one (0250).
+      A beam is fixed across the lane for as long as it is held, and the mouth it is rooted in went on
+      turning after the ship: twelve and a half units of snout swung through the look, so the lance ended
+      a few units beside the jaw it was drawn coming out of. Fresh heads have nothing to hold.
+    */
+    const holding = !fresh && hull.holdFor > 0 && hull.muzzleAt === k;
+    const turn = holding ? head.turn : bearing > necks.look ? necks.look : bearing < -necks.look ? -necks.look : bearing;
     placeAt(head, headAlong, headAcross, turn, fresh);
     head.radius = row.radius;
     head.spriteBase = row.head;

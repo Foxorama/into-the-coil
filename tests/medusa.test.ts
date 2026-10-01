@@ -105,8 +105,10 @@ describe('0255 — the jellyfish opens', () => {
       if (beams.kind !== 'beam') return;
       expect(beams.from.length, 'fewer than five tendrils').toBe(5);
       // Five tendrils, not one wearing five names: each from its own tentacle's tip — 0403.
-      expect([...beams.from], 'a laser does not leave from a tentacle’s tip').toEqual([...tendrils.tips]);
-      expect(new Set(beams.from).size, 'two lasers leave from one tip').toBe(beams.from.length);
+      // A root is a point since 0452: the tip's across, at the tips' reach down the lane.
+      expect(beams.from.map(([, across]) => across), 'a laser does not leave from a tentacle’s tip').toEqual([...tendrils.tips]);
+      for (const [along] of beams.from) expect(along, 'a laser does not leave from the tips’ reach').toBe(tendrils.reach);
+      expect(new Set(beams.from.map(([, across]) => across)).size, 'two lasers leave from one tip').toBe(beams.from.length);
       /*
         A pulse: on and off inside a second. 0.5 until 0403, which warns a zigzag for 0.4 s because it
         has to be read before it is dodged, as the pterodactyl's and the hydra's are.

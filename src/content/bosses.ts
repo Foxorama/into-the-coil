@@ -252,7 +252,8 @@ export type BossAttack =
    * The fan, centred on the lane — a pattern the player reads rather than a spread that follows.
    *
    * `from` throws it out of more than one place — `docs/decisions/0398-the-pterodactyl-is-feathered.md`:
-   * each entry an `[along, across]` offset from the hull's centre, and each throws its own fan of the
+   * each entry an `[along, across]` offset from the row's muzzle (the hull's centre where it names none,
+   * turned with the hull since 0452), and each throws its own fan of the
    * volley's shots dealt out between them, so a pair of wings throwing four throws two a wing. Absent is
    * the one place every other spray leaves from.
    */
@@ -436,10 +437,17 @@ export type BossAttack =
    * Lasers — `docs/decisions/0250-the-quetzal-screams.md`. Asked for: *"a flying pterodactyl with
    * lasers mounted on its wings and it opens its mouth to fire a huge laser blast."*
    *
-   * ⚠️ **A BEAM, NOT A BULLET, AND IT IS HELD.** One beam per entry of `from` — an across offset
-   * from the hull's centre, in world units, so the wings are two entries and the mouth is one at
-   * zero — each a bolt in the arc's pool running from the hull down the lane to the trailing edge
-   * of the screen. It warns for `warning` steps as a thin line, then strikes for `hold` steps,
+   * ⚠️ **A BEAM, NOT A BULLET, AND IT IS HELD.** One beam per entry of `from` — a root, `[along,
+   * across]` from the row's muzzle in world units, so the shoulders are two entries and the throat is
+   * one — each a bolt in the arc's pool running from its root down the lane to the trailing edge
+   * of the screen.
+   *
+   * ⚠️ **A ROOT IS A POINT, NOT AN ACROSS — `docs/decisions/0452-a-boss-fires-from-its-guns.md`.**
+   * Reported: *"the pteradactyl boss fires it lasers from the wrong spot, they don't fire from the end
+   * of the cannons or from it's mouth."* `from` was an across offset alone, so every root was level
+   * with the hull's centre: the shoulder beams began seven units behind their barrels' ends and the
+   * throat's ten behind its cannon, over the chest. Where along the lane a root is belongs to the
+   * thing it comes out of, which is the row's to say. It warns for `warning` steps as a thin line, then strikes for `hold` steps,
    * hurting a ship within `halfWidth` of it across the lane on ANY step it is held — the serpent's
    * lightning lands once; a laser is a wall for as long as it is on.
    *
@@ -463,7 +471,7 @@ export type BossAttack =
    * room between two neighbours is their spacing less their widths along the whole of their length.
    * Absent is a seed a beam, which is the pterodactyl's and the hydra's.
    */
-  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly number[]; jag?: number; together?: boolean }
+  | { kind: 'beam'; warning: number; hold: number; halfWidth: number; from: readonly (readonly [number, number])[]; jag?: number; together?: boolean }
   /**
    * The hydra's heads — `docs/decisions/0254-the-hydra-grows-heads.md`. Asked for: *"at 80, 60,
    * 40, 20% it spawns an extra head, the first head fires acid blasts, the second head adds flame
@@ -1746,13 +1754,18 @@ export interface BossRow extends Body {
    * to pass; on a serpent, whose skull is at the far down-lane end of the widest sprite in the game,
    * it is twenty-seven units behind the mouth and reads as the body coughing.
    *
-   * ⚠️ **`null` ON EVERY ROW BUT THE SERPENT'S, AND THAT IS AN ANSWER RATHER THAN A PLACEHOLDER.**
-   * A gyre throws from its own axis and a jellyfish from its bell; the centre is where those shots
-   * belong. Only a hull with its face at one end needs to say so.
+   * ⚠️ **`null` IS AN ANSWER RATHER THAN A PLACEHOLDER**, and it was on thirteen rows that had a face
+   * until 0452. A gyre throws from its own axis, a ring of eyes from its pupil and a frost ship from its
+   * heart; the centre is where those shots belong. A hull with its mouth, its eye or its prongs at one
+   * end says where — `docs/decisions/0452-a-boss-fires-from-its-guns.md`: *"do a full pass and make
+   * sure that bullets and attacks fire from the right place."* The serpent's own `null` was the one that
+   * said its centre was its mouth, and the picture had the acid leaving its cheek.
    *
-   * ⚠️ **A CONSTANT AND NOT A FUNCTION OF ANY HEADING, because a boss has none** — `src/sim/entity.ts`
-   * carries no rotation and `src/render/scene.ts` says *"`blit` cannot rotate"*. Every hull is baked
-   * facing down-lane, so a point in the sprite's frame is a point in the world's.
+   * ⚠️ **A POINT IN THE SPRITE'S FRAME, TURNED WITH THE HULL — 0452.** Every hull is baked facing
+   * down-lane, so unturned a point in the sprite's frame is a point in the world's; but a hull has
+   * carried a turn since 0306 (the serpent rears, an entrance banks, the fish swims up the lane), and
+   * a muzzle that stayed put while the head turned would leave the face it belongs to.
+   * `muzzleAlongOf` in `src/app/boss.ts` turns it.
    */
   muzzle: { along: number; across: number } | null;
   /**
@@ -2164,6 +2177,25 @@ const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_
  */
 const SHOULDER = 11;
 
+/**
+ * And how far down the lane of the hull's centre those muzzles are — 0452: the barrels' square ends,
+ * 0.4 of the drawing's radius forward. Before it the beams left level with the centre, seven units
+ * behind the barrels they were drawn coming out of.
+ */
+const SHOULDER_AHEAD = -7.4;
+
+/**
+ * Where the throat cannon is, down the lane of the hull's centre — 0452: `QUETZAL_THROAT`, the bore the
+ * beak opens on, 0.54 of the drawing's radius forward. The mouth's beam leaves it and runs out between
+ * the open beak.
+ */
+const THROAT_AHEAD = -10;
+
+/** The three roots a beam can leave, `[along, across]` from the hull's centre — 0452. */
+const LEFT_CANNON = [SHOULDER_AHEAD, -SHOULDER] as const;
+const RIGHT_CANNON = [SHOULDER_AHEAD, SHOULDER] as const;
+const THROAT = [THROAT_AHEAD, 0] as const;
+
 /** Where a quill leaves each wing, `[along, across]` — 0398: at the wrist, the wing's leading edge. */
 const WINGS: readonly (readonly [number, number])[] = [
   [-3, -20],
@@ -2182,6 +2214,13 @@ const MEDUSA_TIPS = [-26, -13, 0, 13, 26] as const;
 /** How far down the lane from its centre the tips hang, and where the roots leave the bell's rim. */
 const MEDUSA_REACH = 40;
 const MEDUSA_RIM = -10.8;
+
+/**
+ * Where its lasers leave, one a tip, `[along, across]` from its centre — 0452: the tips' own reach down
+ * the lane, which `beamRootOf` added to every beam of a row with tentacles until a beam's root could
+ * say its own along.
+ */
+const MEDUSA_LASERS = MEDUSA_TIPS.map((tip) => [-MEDUSA_REACH, tip] as const);
 
 export const BOSSES: Record<BossKind, BossRow> = {
   /**
@@ -2212,7 +2251,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
-    muzzle: null,
+    // The tip of its prow — 0452: a hull with no gun drawn fires from its nose, as the fighter does
+    // (0448). From the centre the fan was drawn coming out through the cockpit.
+    muzzle: { along: -10.9, across: 0 },
     chain: null,
     face: null,
     entrance: null,
@@ -2297,7 +2338,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
-    muzzle: null,
+    // The tip of its middle prong — 0452. The fan left the spine, twelve units back, and was drawn
+    // crossing the hull before it reached any of the three things it is built round.
+    muzzle: { along: -12.6, across: 0 },
     chain: null,
     face: null,
     entrance: null,
@@ -2437,7 +2480,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
-    muzzle: null,
+    // Its nose — 0452: the wall is laid level with the snout it is spat from, not beside its gills.
+    muzzle: { along: -13.4, across: 0 },
     chain: null,
     face: null,
     entrance: null,
@@ -2561,7 +2605,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
-    muzzle: null,
+    // Its middle eye, the one on the player's side of the middle lobe — 0452. The rake used to leave
+    // the spine; the curtain is a line across the whole lane and leaves nothing.
+    muzzle: { along: -5.8, across: 0 },
     chain: null,
     face: null,
     entrance: null,
@@ -2796,8 +2842,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       ⚠️ **So this is 0277's rule holding rather than being reversed.** A boss row says where its shots
       leave the hull; on this hull that place is the middle, exactly as it is for a gyre.
+
+      ⚠️ **AND THE PICTURE SAID OTHERWISE — 0452.** The skull's centre is two units behind the jaw's hinge
+      and level with the eye: photographed, the acid fan left the cheek under the eye while the jaw gaped
+      empty in front of it. The mouth is the opening between the lips with the jaw dropped to `gape`,
+      which is the face worn while a volley leaves — `serpentMouth` in `src/render/bake.ts`, held to
+      this by `tests/muzzles.test.ts`. It turns with the head when it rears.
     */
-    muzzle: null,
+    muzzle: { along: -8.6, across: 2.2 },
     /*
       ── THE BODY, AND IT IS THE ANATOMY OF A SNAKE — 0283 ──────────────────────────────────────────
 
@@ -3360,7 +3412,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     fall: null,
     chill: null,
-    muzzle: null,
+    /*
+      ⚠️ **ITS MOUTH, WHICH ITS ADDS ALREADY LEFT — 0452.** 0373 put the kites and minnows in the jaw at
+      0.92 of the drawing's radius, a shade inside the lip; the spines and the whip went on leaving the
+      belly, nineteen units back, while the face gaped for them. One mouth now, and `mouthAlongOf` in
+      `src/app/frame.ts` reads it here.
+    */
+    muzzle: { along: -19.3, across: 0 },
     chain: null,
     /*
       ⚠️ **THE SECOND CREATURE TO WEAR ONE — 0319, and `Face` was written for exactly this.** 0285 put
@@ -3523,16 +3581,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
       // Four quills, two off each wing — 0398: three shared between two wings would throw lopsided.
       { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(5) }, shot: null, attack: null },
       // The shoulder cannons: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [-SHOULDER, SHOULDER], jag: 10 } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: 10 } },
       // The throat cannon: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },
       /*
         Everything: the throat and both shoulders, on the mouth's timing, each five units wide. 0398
         brought the shoulders in from eighteen to eleven, so what the three leave between them is two
         gaps of six units rather than two of thirteen — a thing a player can thread and not be sure of,
         with open lane either side of the brace for the player who would rather go round.
       */
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [-SHOULDER, 0, SHOULDER], jag: 7 } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: 7 } },
     ],
   },
   /**
@@ -3933,7 +3991,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
           ],
         },
       },
@@ -3951,7 +4009,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
           ],
         },
@@ -3970,7 +4028,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
           heads: [
             { shot: 'acid', attack: { kind: 'spray' }, gap: 24 },
             { shot: 'flame', attack: { kind: 'spray' }, gap: 24 },
-            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [0], jag: 12 }, gap: 24 },
+            { shot: 'lance', attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 3, from: [[0, 0]], jag: 12 }, gap: 24 },
             { shot: 'frost', attack: { kind: 'wall', gap: 12 }, gap: 24 },
             { shot: 'void', attack: { kind: 'ring' }, gap: 24 },
           ],
@@ -4077,9 +4135,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
         firing."* A fifth fewer, on the same cadence.
       */
       { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_TIPS, jag: 7, together: true } },
+      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: 7, together: true } },
       { upTo: 0.6, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_TIPS, jag: 9, together: true } },
+      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: 9, together: true } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
       { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },

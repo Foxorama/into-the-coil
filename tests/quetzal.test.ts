@@ -16,7 +16,7 @@ import { BEAM_BOLT_KIND, BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
-import { QUETZAL_CANNON } from '../src/render/bake.ts';
+import { QUETZAL_CANNON, QUETZAL_THROAT } from '../src/render/bake.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
@@ -143,13 +143,15 @@ describe('0250 — the quetzal screams', () => {
       expect(attack.from.length, `the ${name} phase fires ${attack.from.length} beam(s)`).toBe(roots);
       // Every root is on the hull as it is DRAWN, or the laser comes from empty space beside it.
       const halfExtent = SPRITE_EXTENT[SPRITE_KINDS[row.sprite]!] / 2;
-      for (const from of attack.from) expect(Math.abs(from), `a ${name} beam leaves the hull ${from} units out, past its drawing`).toBeLessThanOrEqual(halfExtent);
+      for (const [along, across] of attack.from) expect(Math.hypot(along, across), `a ${name} beam leaves the hull at ${along}, ${across}, past its drawing`).toBeLessThanOrEqual(halfExtent);
     }
     const wingBeam = wings.attack!;
     const mouthBeam = mouth.attack!;
     if (wingBeam.kind !== 'beam' || mouthBeam.kind !== 'beam') return;
-    expect(mouthBeam.from[0], 'the mouth is not in the middle of the hull').toBe(0);
-    expect(Math.abs(wingBeam.from[0]!), 'a wing beam leaves from the middle of the hull').toBeGreaterThan(row.radius / 2);
+    expect(mouthBeam.from[0]![1], 'the mouth is not in the middle of the hull').toBe(0);
+    // 0452: and ahead of the centre, where the head is — the throat, not the chest.
+    expect(mouthBeam.from[0]![0], 'the mouth’s beam leaves level with the chest').toBeLessThan(-row.radius / 2);
+    expect(Math.abs(wingBeam.from[0]![1]), 'a wing beam leaves from the middle of the hull').toBeGreaterThan(row.radius / 2);
     expect(mouthBeam.halfWidth, '“a huge laser blast” is no wider than a wing’s').toBeGreaterThan(wingBeam.halfWidth * 2);
     // In the player's units: the mouth's beam takes a real slice of the lane, and not the lane.
     expect((mouthBeam.halfWidth * 2) / ACROSS_SPAN).toBeGreaterThan(0.08);
@@ -179,13 +181,14 @@ describe('0250 — the quetzal screams', () => {
       const attack = phase.attack!;
       if (attack.kind !== 'beam') return;
       const roots = beams.map((b) => b.across - hullAcross).sort((a, b) => a - b);
-      expect(roots.map((r) => Math.round(r)), `the beams at ${fraction} do not leave from the phase's roots`).toEqual([...attack.from].sort((a, b) => a - b));
-      for (const b of beams) {
+      expect(roots.map((r) => Math.round(r)), `the beams at ${fraction} do not leave from the phase's roots`).toEqual(attack.from.map(([, across]) => across).sort((a, b) => a - b));
+      beams.forEach((b, i) => {
         expect(b.radius, `a beam at ${fraction} is not the phase's width`).toBe(attack.halfWidth);
-        // From the hull to the trailing edge: its far end is behind the ship's box, its root on the hull.
+        // From the hull to the trailing edge: its far end is behind the ship's box, its root on the hull —
+        // at its own root's along since 0452, a barrel's end or the throat, and not the chest.
         expect(b.along - d.world.cameraAlong, 'the beam stops short of the trailing edge').toBeLessThanOrEqual(0);
-        expect(b.along + b.fromAlong, 'the beam does not reach back to the hull').toBeCloseTo(boss.along, 3);
-      }
+        expect(b.along + b.fromAlong, 'the beam does not reach back to its root on the hull').toBeCloseTo(boss.along + attack.from[i]![0], 3);
+      });
     }
   });
 
@@ -438,19 +441,32 @@ describe('0398 — the pterodactyl is feathered', () => {
     expect(SPRITE_EXTENT.quill * viewOf(1280, 720).scale, 'a quill is a speck on a 1280×720 screen').toBeGreaterThanOrEqual(30);
   });
 
-  it('THE SHOULDER CANNONS: every beam that is not the mouth’s leaves a cannon’s muzzle as it is drawn', () => {
-    const across = QUETZAL_CANNON[1] * SPRITE_EXTENT.boss10 * 0.42;
-    let checked = 0;
+  it('THE SHOULDER CANNONS: every beam that is not the mouth’s leaves a cannon’s muzzle as it is drawn, and the mouth’s leaves the throat cannon', () => {
+    /*
+      ⚠️ **ALONG AS WELL AS ACROSS — 0452.** *"They don't fire from the end of the cannons or from it's
+      mouth."* This held the across alone while every root sat level with the hull's centre, seven units
+      behind the barrels' ends and ten behind the throat: green, and the picture wrong.
+    */
+    const r = SPRITE_EXTENT.boss10 * 0.42;
+    const [cannonAlong, cannonAcross] = [QUETZAL_CANNON[0] * r, QUETZAL_CANNON[1] * r];
+    const [throatAlong, throatAcross] = [QUETZAL_THROAT[0] * r, QUETZAL_THROAT[1] * r];
+    let shoulders = 0;
+    let throats = 0;
     for (const phase of BOSSES.quetzal.phases) {
       const attack = phase.attack ?? BOSSES.quetzal.attack;
       if (attack.kind !== 'beam') continue;
-      for (const from of attack.from) {
-        if (from === 0) continue;
-        checked++;
-        expect(Math.abs(Math.abs(from) - across), `a beam leaves ${from} across, where the cannon's muzzle is drawn at ${across.toFixed(1)}`).toBeLessThanOrEqual(0.5);
+      for (const [along, across] of attack.from) {
+        if (across === 0) {
+          throats++;
+          expect(Math.hypot(along - throatAlong, across - throatAcross), `the mouth's beam leaves ${along}, ${across}, where the throat cannon is drawn at ${throatAlong.toFixed(1)}, ${throatAcross.toFixed(1)}`).toBeLessThanOrEqual(0.5);
+          continue;
+        }
+        shoulders++;
+        expect(Math.hypot(along - cannonAlong, Math.abs(across) - cannonAcross), `a beam leaves ${along}, ${across}, where the cannon's muzzle is drawn at ${cannonAlong.toFixed(1)}, ±${cannonAcross.toFixed(1)}`).toBeLessThanOrEqual(0.5);
       }
     }
-    expect(checked, 'no stage fires the shoulders, so nothing was held').toBeGreaterThanOrEqual(4);
+    expect(shoulders, 'no stage fires the shoulders, so nothing was held').toBeGreaterThanOrEqual(4);
+    expect(throats, 'no stage fires the throat, so nothing was held').toBeGreaterThanOrEqual(2);
   });
 
   it('THE TELL IS THE BODY: while a laser is on the screen the beak is open on its cannon, or the shoulders are lit, for every step of it', () => {

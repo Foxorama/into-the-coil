@@ -63,8 +63,9 @@ export const PROBES = [
     guard: 'THE ASK: every laser the pterodactyls fire jags',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },",
-      replace: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0] } },",
+      // Re-anchored by 0452, which put the mouth's root in the throat.
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
+      replace: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT] } },",
     },
   },
 ];

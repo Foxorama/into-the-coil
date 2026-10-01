@@ -35,9 +35,10 @@ export const PROBES = [
     broke: 'the lasers rooted at the hull’s centre rather than the tips',
     guard: 'THE LASERS FROM THE TIPS',
     edit: {
-      path: 'src/app/boss.ts',
-      find: '  return row.tendrils === undefined ? 0 : row.tendrils.reach;',
-      replace: '  return row.tendrils === undefined ? 0 : 0;',
+      // Re-anchored by 0452: the tips' reach is each root's own along now, not a sum on every beam.
+      path: 'src/content/bosses.ts',
+      find: 'const MEDUSA_LASERS = MEDUSA_TIPS.map((tip) => [-MEDUSA_REACH, tip] as const);',
+      replace: 'const MEDUSA_LASERS = MEDUSA_TIPS.map((tip) => [0, tip] as const);',
     },
   },
   {
