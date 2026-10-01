@@ -255,6 +255,7 @@ last run's shard times before choosing.
 | **a PLACE IS BAKED BY ITS NAME: the sky's memo is the place, not the backdrop colour two places share — so level 1 and the intro are drawn in The Approach's own nebula and glow for the first time** | [0417](decisions/0417-a-place-is-baked-by-its-name.md) — amends [0416](decisions/0416-the-viper-has-a-pilot.md) |
 | **the HEART LETS GO: the finale after the last boss — the heart bursts, a golfer not chosen is found in the Viper and says so, the chosen one answers, and the two leave together; and the music leaves the run when the run is over** | [0418](decisions/0418-the-heart-lets-go.md) |
 | **the FINALE IS THE FIGHT GOING ON: no cut — the heart outlives the jellyfish, races and bursts where she left it, and the two ships fly off with named bubbles coming out of them; the lines are about being found** | [0426](decisions/0426-the-finale-is-the-fight-going-on.md) — amends 0418 |
+| **the SCREENS REVIEWED: lives counted in ships, shields drawn as shields, a honeycomb deflector round the ship, pickups lit in what they offer, a title key that cycles, a readout that speaks in one voice, a lit title with the badge and a sky** | [0430](decisions/0430-the-readout-counts-ships-and-shields.md)–[0433](decisions/0433-the-readout-is-one-voice.md), [0436](decisions/0436-the-title-has-a-voice.md), [0437](decisions/0437-the-title-is-lit.md) |
 | **a difficulty DIAL that moves inside a level and sawtooths across the run** | [0084](decisions/0084-the-dial-is-the-level-and-the-guns.md) |
 | **a death costs the upgrades and NOT the bombs; a continue is what resets them** — ⚠️ both halves reversed by 0372: nothing is reset | [0085](decisions/0085-a-death-does-not-cost-the-bombs.md) → [0372](decisions/0372-a-death-keeps-the-ladders.md) |
 | **level one waits a run-up after the clamp lifts before anything takes two shots** | [0086](decisions/0086-the-teeth-wait-for-the-gun.md) |
@@ -1137,6 +1138,28 @@ ONE MESSAGE.**
   **Owed from the play, and it is the whole verdict again:** a hand on `npm run dash`. The decision says
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
+
+### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
+
+A UX pass over the way in, the menu, the readout and the pickups, asked for with three items named:
+lives as the ship, shields that look like shields, and a starfighter's shield round the ship. The
+review is [`the-screens-reviewed`](../reports/the-screens-reviewed-2026-10-01.md), and every row of it
+is built across three PRs:
+
+- [0430](decisions/0430-the-readout-counts-ships-and-shields.md) and
+  [0431](decisions/0431-a-pickup-glows-in-what-it-offers.md) — #457: the readout and the shell round
+  the ship; the pickups' bubble and breath.
+- [0432](decisions/0432-the-key-cycles.md), [0433](decisions/0433-the-readout-is-one-voice.md) and
+  [0436](decisions/0436-the-title-has-a-voice.md) — #458: the title's key, the readout's icons, events
+  and type, and the title, splash and golfers' screen.
+- [0437](decisions/0437-the-title-is-lit.md) — #459: the badge, the sky behind the title, the golfer
+  flying marked, and a touch screen's readout without the counts its discs say. Its *what it cost*
+  names the guards this work blinded or raced and how each was re-aimed.
+
+**Owed: a play of all of it on staging**, desktop and a phone — the shell's plates against fire, the
+pickups' breath among enemies, the key's pace, the title sky's motion. Each decision says what it chose
+that the player may veto: 0430 the shell standing still rather than turning, 0437 a CSS sky rather than
+the music room's flythrough.
 
 ### ⚠️ THE SCORE AND THE TABLE ARE BUILT, AND NOTHING IN THEM HAS BEEN PLAYED — 2026-09-30
 
