@@ -430,11 +430,20 @@ export interface Entity extends Body {
    */
   rootAlong: number;
   /**
-   * How far a beam's zigzag swings across the lane either side of its line, in lane units, or 0 for a
-   * straight one — `docs/decisions/0388-the-laser-is-jagged.md`. Its path is `src/sim/jag.ts`'s, from
-   * this and the bolt's `spin`, so the painter and the frame draw and hurt along the same zigzag.
+   * How many knots a beam's zigzag has, or 0 for a straight one — `docs/decisions/0388-the-laser-is-jagged.md`,
+   * and the row's own count since 0453. Its path is `src/sim/jag.ts`'s, from this, the three below and
+   * the bolt's `spin`, so the painter and the frame draw and hurt along the same zigzag.
+   */
+  knots: number;
+  /**
+   * How far a jagged beam's knots swing towards larger across, in lane units — and `jagLow` towards
+   * smaller. One swing either side until 0453, which split them so a beam can reach deep on its
+   * outside and stay contained on its inside.
    */
   jag: number;
+  jagLow: number;
+  /** How far across the lane a jagged beam's far end stands from its root, in lane units — 0453's fan. */
+  lean: number;
   /**
    * A blade's place on its strand — the phase of its swing, the swing's half-width, how much the
    * phase advances a step, and how fast the strand's AXIS goes up the lane (`orbitGrow`, in units a
@@ -600,7 +609,10 @@ export function makeEntity(): Entity {
     fromAlong: 0,
     fromAcross: 0,
     rootAlong: 0,
+    knots: 0,
     jag: 0,
+    jagLow: 0,
+    lean: 0,
     orbitAngle: 0,
     orbitRadius: 0,
     orbitTurn: 0,
@@ -675,7 +687,10 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.fromAlong = 0;
   e.fromAcross = 0;
   e.rootAlong = 0;
+  e.knots = 0;
   e.jag = 0;
+  e.jagLow = 0;
+  e.lean = 0;
   e.orbitAngle = 0;
   e.orbitRadius = 0;
   e.orbitTurn = 0;

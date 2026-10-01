@@ -26,7 +26,8 @@ import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { INK_OF } from '../src/render/bake.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
-import { reset } from '../src/sim/entity.ts';
+import { reset, type Entity } from '../src/sim/entity.ts';
+import { beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -305,17 +306,86 @@ describe('0403 — the tentacles pull out of the heart', () => {
     }
   });
 
-  it('IN LANE UNITS: the room between two neighbouring lasers is a ship’s width and more, the whole way down', () => {
-    const at = (f: number) => phaseFor(row, row.health * f).attack!;
-    const tips = [...tendrils.tips].sort((a, b) => a - b);
+  it('IN LANE UNITS: between every two neighbouring lasers there is room for a ship, at every along the ship can fly', () => {
+    /*
+      ⚠️ **MEASURED TO THE NEAREST LEG SINCE 0453, AND IT WAS NEVER TRUE UNTIL THEN.** This guard was the
+      tips' spacing less two half-widths, which assumed five lasers bending as one stay their spacing apart.
+      Across the lane they do; but a leg is steep, and the room a ship has beside a steep leg is the
+      spacing times the cosine of its angle — measured against 0403's own twelve-knot zigzag, the room
+      between two neighbours was less than a ship at the median along. So this flies volleys and asks the
+      question the player asks: at this along, is there a place between these two that neither burns?
+    */
     for (const f of [0.7, 0.25]) {
-      const beams = at(f);
-      if (beams.kind !== 'beam') continue;
-      for (let i = 1; i < tips.length; i++) {
-        const gap = tips[i]! - tips[i - 1]! - 2 * beams.halfWidth;
-        expect(gap, `the gap between lasers ${i - 1} and ${i} is ${gap} lane units`).toBeGreaterThan(4 * 2);
+      const d = medusaAt(f);
+      const boss = d.world.bossPool.at(0);
+      const r = d.world.ship.radius * d.world.tuning.hurtbox;
+      for (let v = 0; v < 12; v++) {
+        d.world.bolts.clear();
+        boss.fireIn = 1;
+        d.world.ship.across = 5;
+        d.world.ship.health = d.world.shipRow.health;
+        d.frame.step();
+        const fan: Entity[] = [];
+        for (let i = 0; i < d.world.bolts.size; i++) if (d.world.bolts.at(i).kind === BEAM_BOLT_KIND) fan.push(d.world.bolts.at(i));
+        fan.sort((a, b) => a.across - b.across);
+        expect(fan.length, 'the jellyfish did not fire five').toBe(5);
+        for (let along = d.world.cameraAlong + PLAYER_ALONG_MARGIN; along <= d.world.cameraAlong + PLAYER_LEAD; along += 2) {
+          for (let k = 1; k < fan.length; k++) {
+            const a = fan[k - 1]!;
+            const b = fan[k]!;
+            const from = beamAcrossAt(a, along);
+            const to = beamAcrossAt(b, along);
+            let room = -Infinity;
+            for (let across = from; across <= to; across += 0.25) {
+              const clear = Math.min(beamDistance(a, along, across) - a.radius, beamDistance(b, along, across) - b.radius) - r;
+              if (clear > room) room = clear;
+            }
+            expect(room, `no room between lasers ${k - 1} and ${k} at ${(along - d.world.cameraAlong).toFixed(0)} up the screen, ${f} of the bar`).toBeGreaterThan(0);
+          }
+        }
       }
     }
+  });
+
+  it('THE ASK, IN LANE UNITS: five lasers are a fan — the middle straight, the inner two leaning out, the outer two further — on long legs', () => {
+    /*
+      0453: *"a fan pattern where the inner two are angled but more contained path and the other two have
+      a more deeper jagged penetration on the outside."* At the far end, averaged over volleys: the zigzag
+      is random either side, the lean is not.
+    */
+    const d = medusaAt(0.7);
+    const boss = d.world.bossPool.at(0);
+    const ends = [0, 0, 0, 0, 0];
+    const deep = [0, 0, 0, 0, 0];
+    const volleys = 30;
+    for (let v = 0; v < volleys; v++) {
+      d.world.bolts.clear();
+      boss.fireIn = 1;
+      d.world.ship.across = 5;
+      d.world.ship.health = d.world.shipRow.health;
+      d.frame.step();
+      const fan: Entity[] = [];
+      for (let i = 0; i < d.world.bolts.size; i++) if (d.world.bolts.at(i).kind === BEAM_BOLT_KIND) fan.push(d.world.bolts.at(i));
+      fan.sort((a, b) => a.across - b.across);
+      fan.forEach((b, i) => {
+        ends[i]! += (beamAcrossAt(b, b.along) - b.across) / volleys;
+        // How far outside its own leaning line it ever swings: its side's, for a beam off the middle.
+        const side = i < 2 ? -1 : 1;
+        for (let s = 0; s <= 1; s += 1 / 128) {
+          const off = (beamAcrossAt(b, b.along + b.fromAlong * s) - b.across - b.lean * (1 - s)) * side;
+          if (off > deep[i]!) deep[i] = off;
+        }
+        // The leg, as the ask's "spread out longer": the beam's length shared out between its knots.
+        expect(Math.abs(b.fromAlong) / (b.knots + 1), 'the jellyfish’s lasers turn more often than once an eighth of a lane').toBeGreaterThanOrEqual(ACROSS_SPAN / 8);
+      });
+    }
+    expect(Math.abs(ends[2]!), 'the middle laser leans').toBeLessThan(4);
+    expect(-ends[1]!, 'the inner left laser does not lean out').toBeGreaterThan(5);
+    expect(ends[3]!, 'the inner right laser does not lean out').toBeGreaterThan(5);
+    expect(-ends[0]! + ends[1]!, 'the outer left laser leans out no further than the inner').toBeGreaterThan(5);
+    expect(ends[4]! - ends[3]!, 'the outer right laser leans out no further than the inner').toBeGreaterThan(5);
+    expect(deep[0]!, 'the outer left laser swings no deeper outside than the inner').toBeGreaterThan(deep[1]! + 4);
+    expect(deep[4]!, 'the outer right laser swings no deeper outside than the inner').toBeGreaterThan(deep[3]! + 4);
   });
 });
 
