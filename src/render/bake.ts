@@ -2211,6 +2211,12 @@ export const LANDMARK_OF: Record<
   core: (ctx, ink, _glow, space, size, seed) => drawHeart(ctx, ink, space, size, seed),
 };
 
+/**
+ * How far the Pillars' dust is lifted from the bare backdrop towards the place's gas — 0445: the
+ * glow of the nebula between the player and the columns. Theirs alone; no other landmark reads it.
+ */
+const PILLAR_HAZE = 0.3;
+
 function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: number, seed: number): void {
   /*
     ── THE PILLARS OF CREATION ─────────────────────────────────────────────────────────────────────
@@ -2403,7 +2409,8 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
     const crownY = tip + wanted * 0.45;
     const reachOf = Math.min(wanted, crownY, crownX, size - crownX);
     const crown = ctx.createRadialGradient(crownX, crownY, 0, crownX, crownY, reachOf);
-    crown.addColorStop(0, rgba(glow, column.far ? 0.3 : 0.55));
+    // Fainter since 0445: a crown at 0.55 was the hottest orange on the screen, the enemies' own hue.
+    crown.addColorStop(0, rgba(glow, column.far ? 0.22 : 0.4));
     crown.addColorStop(1, rgba(glow, 0));
     ctx.globalAlpha = 1;
     ctx.fillStyle = crown;
@@ -2413,7 +2420,16 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
 
     // A hole in the gas, not a shape on top of it — and a PARTIAL hole for the two standing behind.
     ctx.globalAlpha = column.far ? 0.6 : 1;
-    ctx.fillStyle = space;
+    /*
+      ⚠️ **NOT THE BARE BACKDROP, BUT THE BACKDROP SEEN THROUGH THE GAS IN FRONT OF IT — 0445.** Played:
+      *"too close to the screen … it needs to feel like it's set deeper in the background."* Filled in
+      `space` the columns were the darkest thing on the screen, darker than the empty sky between the
+      clouds — and the darkest, hardest-edged thing in a picture is the nearest thing in it. A real
+      column a few light-years off has the nebula's own glow scattered across it, so it is lifted a
+      fixed share of the way to the gas: still a silhouette against the lobes behind it (they are the
+      gas at up to 0.95), no longer a hole in the screen.
+    */
+    ctx.fillStyle = mix(space, ink, PILLAR_HAZE);
     trace();
     /*
       The blunt fingers at the top, which are the thing that makes it THESE pillars. **Two fingers and
@@ -2460,13 +2476,24 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
 
     // A rim on the windward edge — the gas lit up where it meets the dust. It is the brightest thing
     // on the column and is what stops the silhouette reading as a flat cut-out.
-    ctx.globalAlpha = column.far ? 0.4 : 0.85;
-    ctx.lineWidth = Math.max(1, size * (column.far ? 0.005 : 0.01));
     // The rim is the ember and the face behind it is the gas — 0346, and 0223's rule that every lit
     // EDGE in a place takes its accent, which this one edge had been missing since it was written.
+    /*
+      ⚠️ **LIGHT ON AN EDGE, NOT A LINE ALONG IT — 0445.** One stroke at 0.85 was a crisp orange line
+      five pixels wide at 1.7×, the sharpest edge and the most saturated orange on the screen, in the
+      raiders' own hue: it pulled the Pillars up to the glass. Six strokes, widest and faintest first,
+      so the edge glows and the light falls away into the gas the way 0345's dust does, at a peak about
+      half what the one stroke had. **Six and not three because the photograph of three showed three
+      stripes** — a step of 0.14 at a stroke's edge is a line; the largest step here is the core's.
+    */
     ctx.strokeStyle = glow;
-    trace();
-    ctx.stroke();
+    const rim = size * (column.far ? 0.005 : 0.01);
+    for (const [grow, alpha] of [[4, 0.035], [3, 0.045], [2.2, 0.06], [1.6, 0.08], [1.1, 0.1], [0.7, 0.16]] as const) {
+      ctx.globalAlpha = alpha * (column.far ? 0.5 : 1);
+      ctx.lineWidth = Math.max(1, rim * grow);
+      trace();
+      ctx.stroke();
+    }
     ctx.strokeStyle = ink;
 
     /*
@@ -2486,7 +2513,8 @@ function drawPillars(ctx: Pen, ink: string, glow: string, space: string, size: n
     */
     if (!column.far) {
       ctx.lineWidth = Math.max(1, size * 0.004);
-      ctx.globalAlpha = 0.3;
+      // 0.3 until 0445: fine bright hairlines are detail at a distance the rest no longer claims.
+      ctx.globalAlpha = 0.18;
       for (let i = 0; i < 3; i += 1) {
         const from = mid + rng.range(-0.6, 0.9) * tipHalf + drift;
         const reach = rng.range(0.06, 0.15) * size;
@@ -13709,14 +13737,25 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
     const rng = makeRng('sky').stream('approach/band');
     const phase = [rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2), rng.range(0, Math.PI * 2)];
     const SAMPLES = 48;
+    /*
+      ⚠️ **FLATTER AND SOFTER THAN 0343 DREW IT, BECAUSE IT READ AS A CURTAIN ON THE GLASS — 0445.**
+      Played: *"feels too close to the screen."* The 1080p photograph had eight ribbons at 0.065 each,
+      so the band's flank was eight ruled contour lines a visible step of light apart, and its centre
+      rose and fell a ninth of the lane once a screen: a hard-edged sheet billowing in front of the
+      stars. Far light has neither — a galaxy seen edge-on is long, nearly level and has no edge at
+      all. So the wander and the swell are about half what they were, and the same light at the core
+      (0.41 of the glow, against 0.42) is laid in **twenty** ribbons whose alpha falls towards the
+      outside, so no step is big enough to be a line.
+    */
     const centre = (t: number): number =>
-      0.45 + 0.022 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.009 * Math.sin(Math.PI * 4 * t + phase[1]!);
+      0.45 + 0.012 * Math.sin(Math.PI * 2 * t + phase[0]!) + 0.005 * Math.sin(Math.PI * 4 * t + phase[1]!);
     // It swells and narrows along its length, which is what stops it reading as a stripe.
-    const swell = (t: number): number => 1 + 0.3 * Math.sin(Math.PI * 4 * t + phase[2]!);
+    const swell = (t: number): number => 1 + 0.16 * Math.sin(Math.PI * 4 * t + phase[2]!);
     const out: StructureMark[] = [];
-    const RIBBONS = 8;
+    const RIBBONS = 20;
     for (let k = 0; k < RIBBONS; k += 1) {
-      const half = 0.075 * Math.pow(1 - k / RIBBONS, 1.6) + 0.004;
+      // Wider at the outside than 0343's, so the light thins into the dark rather than stopping.
+      const half = 0.095 * Math.pow(1 - k / RIBBONS, 1.4) + 0.004;
       const upper: number[][] = [];
       const lower: number[][] = [];
       for (let s = 0; s <= SAMPLES; s += 1) {
@@ -13724,7 +13763,9 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         upper.push([t * size, (centre(t) - half * swell(t)) * size]);
         lower.push([t * size, (centre(t) + half * swell(t)) * size]);
       }
-      out.push({ points: [...upper, ...lower.reverse()], width: 0, alpha: 0.065, crosses: true, taper: false, lit: true });
+      // The outermost ribbon is the faintest: a step of 0.01 is under what an eye reads as an edge.
+      const alpha = 0.012 + 0.028 * (k / (RIBBONS - 1));
+      out.push({ points: [...upper, ...lower.reverse()], width: 0, alpha, crosses: true, taper: false, lit: true });
     }
     /*
       And dust in front of it: two dark rifts wandering along the band, which is what makes a band of
@@ -13735,16 +13776,25 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
       is a random walk in straight segments, which is right for a corridor wall and drew these as
       zigzags with a kink in the middle of the screen. Dust along a band of light is a slow curve.
     */
+    /*
+      ⚠️ **AND EACH RIFT IS THREE STROKES, WIDEST AND FAINTEST FIRST — 0445.** One stroke at 0.42 was a
+      crisp dark line a few pixels wide across the whole screen, which is a scratch on the glass rather
+      than dust a long way off. Ember Nebula's lanes found the answer in 0345; this is it at this
+      place's own weights, lighter at the core than the one stroke was.
+    */
     for (let r = 0; r < 2; r += 1) {
       const off = rng.range(-0.012, 0.012);
-      const sway = rng.range(0.006, 0.012);
+      const sway = rng.range(0.004, 0.008);
       const turn = rng.range(0, Math.PI * 2);
       const points: number[][] = [];
       for (let s = 0; s <= SAMPLES; s += 1) {
         const t = s / SAMPLES;
         points.push([t * size, (centre(t) + off + sway * Math.sin(Math.PI * 2 * (2 + r) * t + turn)) * size]);
       }
-      out.push({ points, width: rng.range(0.008, 0.014) * size, alpha: 0.42, crosses: true, taper: false, lit: false });
+      const width = rng.range(0.008, 0.014) * size;
+      for (const [grow, alpha] of [[2.6, 0.08], [1.6, 0.1], [0.8, 0.14]] as const) {
+        out.push({ points, width: width * grow, alpha, crosses: true, taper: false, lit: false });
+      }
     }
     return out;
   },
@@ -13797,7 +13847,12 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         at + bend[0]! * Math.sin(Math.PI * 2 * t + turn[0]!) + bend[1]! * Math.sin(Math.PI * 6 * t + turn[1]!);
       // Pinches nearly shut and opens out again, twice a tile: a lane of dust is not a pipe.
       const half = (t: number): number => body * (0.55 + 0.45 * Math.sin(Math.PI * 4 * t + turn[2]!));
-      for (const [grow, alpha] of [[1.7, 0.16], [1.25, 0.2], [0.8, 0.3]] as const) {
+      /*
+        ⚠️ **FIVE PASSES, NOT THREE, AND A LITTLE LIGHTER AT THE CORE — 0445.** Three steps of 0.16 to
+        0.3 left each lane with three ruled contours at 1080p, and an edge you can count is an edge
+        close enough to focus on. Five smaller steps over a wider spread is the same dust further off.
+      */
+      for (const [grow, alpha] of [[2.1, 0.06], [1.7, 0.08], [1.3, 0.1], [0.95, 0.12], [0.6, 0.14]] as const) {
         const upper: number[][] = [];
         const lower: number[][] = [];
         for (let s = 0; s <= SAMPLES; s += 1) {
@@ -13823,7 +13878,15 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
           (at + sway[0]! * Math.sin(Math.PI * 2 * waves * t + turn[0]!) + sway[1]! * Math.sin(Math.PI * 2 * (waves + 3) * t + turn[1]!)) * size,
         ]);
       }
-      filaments.push({ points, width: flow.range(0.002, 0.006) * size, alpha: 0.3, crosses: true, taper: false, lit: false });
+      /*
+        ⚠️ **A HALO AND A FAINTER CORE, WHERE THERE WAS ONE CRISP LINE AT 0.3 — 0445.** Nine hard dark
+        hairlines running the width of the screen were the nearest-looking thing in the sky: a sharp
+        thin line has no size to be far away at, so it reads as on the glass. The same thread, soft.
+      */
+      const width = flow.range(0.002, 0.006) * size;
+      filaments.push({ points, width: width * 3, alpha: 0.06, crosses: true, taper: false, lit: false });
+      filaments.push({ points, width: width * 1.5, alpha: 0.08, crosses: true, taper: false, lit: false });
+      filaments.push({ points, width, alpha: 0.1, crosses: true, taper: false, lit: false });
     }
     /*
       ── THE GLOBULES ────────────────────────────────────────────────────────────────────────────
@@ -13884,7 +13947,8 @@ export const STRUCTURE_OF: Record<ThemeKind, (size: number) => StructureMark[]> 
         }
         // Three times about its own centre, so a knot of dust has a soft edge like the lanes it sits in
         // — 0345. Scaled evenly, so its proportions (and 0203's band, which reads them) are unchanged.
-        for (const [grow, alpha] of [[1.5, 0.14], [1.2, 0.2], [0.85, 0.3]] as const) {
+        // Five since 0445: three steps of up to 0.1 still drew the nine sides as facets at 1080p.
+        for (const [grow, alpha] of [[1.6, 0.06], [1.35, 0.08], [1.12, 0.1], [0.92, 0.12], [0.72, 0.15]] as const) {
           knots.push({
             points: points.map((p) => [x + (p[0]! - x) * grow, y + (p[1]! - y) * grow]),
             width: 0,
