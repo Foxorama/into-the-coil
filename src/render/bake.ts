@@ -21,7 +21,7 @@
 
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } from '../content/themes.ts';
-import { BOSSES } from '../content/bosses.ts';
+import { BOSSES, type BossKind } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
@@ -1701,7 +1701,7 @@ const BOSS4_STREAKS: readonly Mark[] = [
 ];
 
 /** Two bands across the slab, forward of the ports rather than through them. The hull as a wall. */
-const BOSS5_BANDS: readonly Mark[] = [box(-0.62, -0.78, -0.46, 0.78), box(-0.3, -0.78, -0.14, 0.78)];
+const BOSS5_BANDS: readonly Mark[] = [box(0.46, -0.78, 0.62, 0.78), box(0.14, -0.78, 0.3, 0.78)];
 
 /** An eye in each lobe, all three on the player's side. Three things that turned out to be one. */
 const BOSS6_EYES: readonly Mark[] = [dot(-0.46, -0.62, 0.095), dot(-0.46, 0, 0.095), dot(-0.46, 0.62, 0.095)];
@@ -5372,36 +5372,37 @@ function paintBoss4(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
 
 function paintBoss5(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   // The redoubt: the lower slab in shadow, the face lit between the ports, plating across the back.
+  // Facing −x since 0452, so every x here is the mirror of what it was.
   plate(ctx, f, skin, [
-    [-0.68, 0.62],
-    [0.3, 0.62],
-    [0.3, 0.9],
-    [-0.68, 0.9],
+    [0.68, 0.62],
+    [-0.3, 0.62],
+    [-0.3, 0.9],
+    [0.68, 0.9],
   ]);
   plate(ctx, f, skin, [
-    [-0.9, 0.06],
-    [-0.4, 0.06],
-    [-0.4, 0.5],
-    [-0.9, 0.36],
+    [0.9, 0.06],
+    [0.4, 0.06],
+    [0.4, 0.5],
+    [0.9, 0.36],
   ]);
   // Two lit seams across the stepped face, between the ports — the face is only the middle of
   // the slab, from ±0.55 at its root to ±0.4 at its front.
   for (const y of [-0.25, 0.25]) {
     lit(ctx, f, skin, [
-      [0.72, y - 0.07],
-      [0.94, y - 0.05],
-      [0.94, y + 0.05],
-      [0.72, y + 0.07],
+      [-0.72, y - 0.07],
+      [-0.94, y - 0.05],
+      [-0.94, y + 0.05],
+      [-0.72, y + 0.07],
     ]);
   }
   motif(ctx, f, skin, theme, [
-    [-0.68, -0.9],
-    [0.3, -0.9],
-    [0.3, -0.62],
-    [-0.68, -0.62],
+    [0.68, -0.9],
+    [-0.3, -0.9],
+    [-0.3, -0.62],
+    [0.68, -0.62],
   ], 'boss5');
   // A lamp beside each port, on the slab: the ports themselves are holes and stay holes.
-  for (const y of [-0.5, 0, 0.5]) disc(ctx, f, skin.eye, 0.14, y, 0.08);
+  for (const y of [-0.5, 0, 0.5]) disc(ctx, f, skin.eye, -0.14, y, 0.08);
 }
 
 function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
@@ -5874,6 +5875,18 @@ function hinged(p: Pt, turn: number, ref: Pt = p): Pt {
   const dx = p[0] - HINGE[0];
   const dy = p[1] - HINGE[1];
   return [HINGE[0] + dx * Math.cos(a) - dy * Math.sin(a), HINGE[1] + dx * Math.sin(a) + dy * Math.cos(a)];
+}
+
+/**
+ * Where the serpent's mouth is, in `r` — 0452: halfway between the tip of the upper lip and the tip of
+ * the lower with the jaw dropped to `gape`, which is the face it wears while a volley leaves. Built from
+ * the wedge the mouth is drawn with, so the two cannot part; `BOSSES.jormungandr.muzzle` is held to it
+ * by `tests/muzzles.test.ts`.
+ */
+export function serpentMouth(): Pt {
+  const upper = lean(MOUTH[1]!);
+  const lower = lean(hinged(MOUTH[2]!, JAWS.gape));
+  return [(upper[0] + lower[0]) / 2, (upper[1] + lower[1]) / 2];
 }
 
 /**
@@ -7147,6 +7160,45 @@ const VOLANS_SNOUTS: Record<VolansJaw, readonly Pt[]> = {
   ],
 };
 
+/**
+ * Where the fish's mouth is, in `r` — 0373's 0.92, named by 0452: between the throat of the `gape` snout
+ * (−0.85) and its mandibles' points (−0.99), so what leaves it is IN the mouth on its first frame. Its
+ * adds and, since 0452, its spines and its whip leave here.
+ */
+export const VOLANS_MOUTH: Pt = [-0.92, 0];
+
+/**
+ * Where each boss fires from, in its own drawing's `r`, or `null` for the centre — 0452: *"make sure that
+ * bullets and attacks fire from the right place."* Each row's `muzzle` in `src/content/bosses.ts` is
+ * held to this by `tests/muzzles.test.ts`, which is the half of the fact the content layer cannot import.
+ *
+ * ⚠️ **A RECORD OVER EVERY BOSS, SO A NEW ONE SAYS WHERE ITS GUN IS OR SAYS IT HAS NONE** — 0282: every
+ * instance authors its own. `null` is an answer: the lattice is a frame with a hole in it, the axis an
+ * eye that looks back, the redoubt a fortress whose ring bursts from its middle, the gyre an axle, the
+ * frost ship a heart, the jellyfish a bell; the pterodactyl's guns are its beams' own roots and its
+ * quills' wings, and the hydra's mouths are its heads'.
+ */
+export const BOSS_MUZZLES: Record<BossKind, Pt | null> = {
+  // The prow's tip — the outline's first point.
+  sentinel: [-1, 0],
+  // The middle prong's flat tip.
+  harrow: [-1, 0],
+  lattice: null,
+  // The teardrop's nose.
+  shoalMother: [-1, 0],
+  redoubt: null,
+  // The middle lobe's eye — `BOSS6_EYES`.
+  chorus: [-0.46, 0],
+  axis: null,
+  jormungandr: serpentMouth(),
+  volans: VOLANS_MOUTH,
+  quetzal: null,
+  gyre: null,
+  hoarfrost: null,
+  hydra: null,
+  medusa: null,
+};
+
 /** The fish's whole outline: one of its two bodies wearing one of its three mouths. */
 function volansHull(jaw: VolansJaw, barbed: boolean): readonly Pt[] {
   return [...(barbed ? VOLANS_BARBED : VOLANS_BODY), ...VOLANS_SNOUTS[jaw]];
@@ -7669,6 +7721,12 @@ function paintBoss9(
 /** Where a shoulder cannon's muzzle is, in `r` — 0398. The row's wing beams are fired from here. */
 export const QUETZAL_CANNON: Pt = [-0.4, 0.6];
 
+/**
+ * Where the throat cannon's bore is, in `r` — 0452. The mouth's beam leaves it and runs out between the
+ * open beak; the ring of metal round it, the bore and its charge are all drawn about this point.
+ */
+export const QUETZAL_THROAT: Pt = [-0.54, 0];
+
 /** The body's upper half, skull to tail — 0398. The lower half is its mirror, and the beak is a face's. */
 const QUETZAL_UPPER: readonly Pt[] = [
   [-0.5, -0.1],
@@ -7869,9 +7927,10 @@ function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, palette: Palette, kind: 
       through the gape. The notch the beak leaves is outside the hull, so what lies in it is light and
       is drawn under 0.9 (0227): a mouth that painted solid there would be paint on the sky.
     */
-    disc(ctx, f, shade(skin.plate, -0.2), -0.53, 0, 0.065);
-    disc(ctx, f, shade(skin.plate, -0.6), -0.54, 0, 0.045);
-    disc(ctx, f, palette.impact, -0.545, 0, 0.03, 0.85);
+    const [tx, ty] = QUETZAL_THROAT;
+    disc(ctx, f, shade(skin.plate, -0.2), tx + 0.01, ty, 0.065);
+    disc(ctx, f, shade(skin.plate, -0.6), tx, ty, 0.045);
+    disc(ctx, f, palette.impact, tx - 0.005, ty, 0.03, 0.85);
     glow(ctx, f, palette.enemy, -0.7, 0, 0.26, 0.7);
     for (const side of [-1, 1]) {
       poly(ctx, f, skin.lit, [
@@ -11152,22 +11211,26 @@ export function drawKind(
     case 'boss5Hit':
       // A REDOUBT: a squat slab with a stepped face, and the widest hull so far. Level five is about
       // things that must be killed, and this is what that looks like — a wall with gun ports.
-      ctx.moveTo(half - r * 0.72, half - r * 0.95);
-      ctx.lineTo(half + r * 0.35, half - r * 0.95);
-      ctx.lineTo(half + r * 0.35, half - r * 0.55);
-      ctx.lineTo(half + r, half - r * 0.4);
-      ctx.lineTo(half + r, half + r * 0.4);
-      ctx.lineTo(half + r * 0.35, half + r * 0.55);
-      ctx.lineTo(half + r * 0.35, half + r * 0.95);
-      ctx.lineTo(half - r * 0.72, half + r * 0.95);
-      ctx.lineTo(half - r * 0.95, half + r * 0.4);
-      ctx.lineTo(half - r * 0.95, half - r * 0.4);
+      //
+      // ⚠️ **THE FACE IS AT −x, TOWARD THE PLAYER — 0452.** It was drawn at +x, so the stepped face and
+      // its three ports looked up the lane away from the ship while the flak went down it: a fortress
+      // with its guns on its back. Mirrored, every point of it, the paint and the bands with it.
+      ctx.moveTo(half + r * 0.72, half - r * 0.95);
+      ctx.lineTo(half - r * 0.35, half - r * 0.95);
+      ctx.lineTo(half - r * 0.35, half - r * 0.55);
+      ctx.lineTo(half - r, half - r * 0.4);
+      ctx.lineTo(half - r, half + r * 0.4);
+      ctx.lineTo(half - r * 0.35, half + r * 0.55);
+      ctx.lineTo(half - r * 0.35, half + r * 0.95);
+      ctx.lineTo(half + r * 0.72, half + r * 0.95);
+      ctx.lineTo(half + r * 0.95, half + r * 0.4);
+      ctx.lineTo(half + r * 0.95, half - r * 0.4);
       ctx.closePath();
       // Three ports along the face, hollow, so the thing that shoots has somewhere it shoots from.
       for (let i = -1; i <= 1; i++) {
         const y = half + i * r * 0.5;
-        ctx.moveTo(half + r * 0.62, y);
-        ctx.arc(half + r * 0.45, y, r * 0.17, 0, Math.PI * 2);
+        ctx.moveTo(half - r * 0.28, y);
+        ctx.arc(half - r * 0.45, y, r * 0.17, 0, Math.PI * 2);
       }
       if (skin !== null) ctx.fillStyle = skin.hull;
       seal(ctx);

@@ -120,15 +120,6 @@ export function openBy(phase: BossPhase): number {
 }
 
 /**
- * How far down the lane from the muzzle a boss's beams leave — 0403: the tips of its tentacles, on a
- * boss that has them, and the muzzle itself on every other. One description, because the throw sets a
- * beam's root and `src/app/frame.ts` re-pins it there every step, and two copies would part.
- */
-export function beamRootOf(row: BossRow): number {
-  return row.tendrils === undefined ? 0 : row.tendrils.reach;
-}
-
-/**
  * How far apart a curtain's shots actually stand, in world units, for a stance authoring `gap`.
  *
  * ⚠️ **`gap` is a CEILING on the spacing rather than the spacing**, because the curtain has to span
@@ -866,18 +857,43 @@ export function stepBoss(
 /**
  * Where a volley leaves, along — the mouth of the head that throws it on a many-headed boss (0384),
  * else the row's muzzle, else the hull's centre.
+ *
+ * ⚠️ **THE ROW'S MUZZLE TURNS WITH THE HULL — 0452.** It is a point in the sprite's frame, and the sprite
+ * is blitted turned by `turn`: the serpent rears its head and the fish swims up the lane, and a muzzle
+ * that stayed where it was unturned would leave the face it belongs to. A head's mouth is already
+ * turned — `layNecks` writes it from the head's own turn.
+ *
+ * Exported for `src/app/frame.ts`, whose beams are re-pinned here every step and whose adds leave a
+ * mouth (0373) — one description of where a boss's mouth is, where there were two.
  */
-function muzzleAlongOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
+export function muzzleAlongOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
   const at = boss.muzzleAt * 2;
   if (at >= 0 && at + 1 < mouths.length) return boss.along + mouths[at]!;
-  return boss.along + (row.muzzle?.along ?? 0);
+  const muzzle = row.muzzle;
+  if (muzzle === null) return boss.along;
+  return boss.along + turnedAlong(muzzle.along, muzzle.across, boss.turn);
 }
 
 /** `muzzleAlongOf`'s other half. */
-function muzzleAcrossOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
+export function muzzleAcrossOf(boss: Entity, row: BossRow, mouths: Float64Array): number {
   const at = boss.muzzleAt * 2;
   if (at >= 0 && at + 1 < mouths.length) return boss.across + mouths[at + 1]!;
-  return boss.across + (row.muzzle?.across ?? 0);
+  const muzzle = row.muzzle;
+  if (muzzle === null) return boss.across;
+  return boss.across + turnedAcross(muzzle.along, muzzle.across, boss.turn);
+}
+
+/**
+ * A point in a sprite's frame, `(along, across)`, as an offset in the world's once the sprite is turned
+ * by `turn` — the rotation `blit` draws with. Along first, then across.
+ */
+function turnedAlong(along: number, across: number, turn: number): number {
+  return along * Math.cos(turn) - across * Math.sin(turn);
+}
+
+/** `turnedAlong`'s other half. */
+function turnedAcross(along: number, across: number, turn: number): number {
+  return along * Math.sin(turn) + across * Math.cos(turn);
 }
 
 /**
@@ -937,7 +953,7 @@ function throwAttack(
   /*
     ⚠️ **THE MOUTH, OR THE CENTRE WHERE A ROW DOES NOT NAME ONE.** `null` is not a placeholder — a
     gyre throws from its own axis and a jellyfish from its bell, and the centre is where those belong.
-    Only a hull with its face at one end has to say so, which today is the serpent alone.
+    A hull with its face at one end says so on its row — 0452, which found six that had not.
 
     ⚠️ **`rain` AND `belch` ARE DELIBERATELY UNTOUCHED**: neither leaves the hull. Rain falls from the
     top of the lane and a belch comes off the lane's edge, so a muzzle on the body would move a shot
@@ -1061,7 +1077,8 @@ function throwAttack(
             const shot = shots.spawn();
             if (shot === null) break;
             const angle = start + each * i;
-            reset(shot, boss.along + place[0], boss.across + place[1], bullet, kind);
+            // From the muzzle, turned with the hull — 0452, on the beam's terms below.
+            reset(shot, muzzleAlong + turnedAlong(place[0], place[1], boss.turn), muzzleAcross + turnedAcross(place[0], place[1], boss.turn), bullet, kind);
             shot.velAlong = Math.cos(angle) * speed + scrollPerStep;
             shot.velAcross = Math.sin(angle) * speed;
           }
@@ -1325,15 +1342,21 @@ function throwAttack(
       boss.fireIn += held;
       // One seed for the volley when it flies `together` — 0403, drawn once, so its beams bend as one.
       const volleySeed = attack.jag !== undefined && attack.together === true ? beamRng.int(0, 0x7fffffff) : 0;
-      // From the tips, on a boss with tentacles — 0403: the laser and the thing it comes out of are one place.
-      const root = muzzleAlong + beamRootOf(row);
       for (let i = 0; i < attack.from.length; i++) {
         const bolt = bolts.spawn();
         if (bolt === null) break;
+        /*
+          ⚠️ **FROM ITS OWN ROOT, ALONG AS WELL AS ACROSS — 0452.** The barrel's end, the throat, a
+          tentacle's tip (0403): each is a point, turned with the hull as the muzzle is. How far along
+          from the muzzle it is rides the bolt, because `src/app/frame.ts` re-pins the root to the
+          muzzle every step as the hull drifts, and the root has to come back to the same place on it.
+        */
+        const place = attack.from[i]!;
         const end = cameraAlong - BEAM_TAIL;
-        reset(bolt, end, muzzleAcross + attack.from[i]!, bullet, BEAM_BOLT_KIND);
+        reset(bolt, end, muzzleAcross + turnedAcross(place[0], place[1], boss.turn), bullet, BEAM_BOLT_KIND);
+        bolt.rootAlong = turnedAlong(place[0], place[1], boss.turn);
         bolt.velAlong = scrollPerStep;
-        bolt.fromAlong = root - end;
+        bolt.fromAlong = muzzleAlong + bolt.rootAlong - end;
         bolt.fromAcross = 0;
         bolt.radius = attack.halfWidth;
         bolt.damage = bullet.damage;

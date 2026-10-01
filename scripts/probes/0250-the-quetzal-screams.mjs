@@ -12,8 +12,9 @@ export const PROBES = [
     edit: {
       path: 'src/app/boss.ts',
       // From the muzzle since 0384, which is the hull's centre for every boss but a many-headed one.
-      find: '        reset(bolt, end, muzzleAcross + attack.from[i]!, bullet, BEAM_BOLT_KIND);',
-      replace: '        reset(bolt, end, muzzleAcross + 0 * attack.from[i]!, bullet, BEAM_BOLT_KIND);',
+      // Re-anchored by 0452, whose roots are points turned with the hull.
+      find: '        reset(bolt, end, muzzleAcross + turnedAcross(place[0], place[1], boss.turn), bullet, BEAM_BOLT_KIND);',
+      replace: '        reset(bolt, end, muzzleAcross + 0 * turnedAcross(place[0], place[1], boss.turn), bullet, BEAM_BOLT_KIND);',
     },
   },
   {
@@ -24,9 +25,9 @@ export const PROBES = [
     guard: 'THE WARNING AND THE HOLD',
     edit: {
       path: 'src/content/bosses.ts',
-      // Re-anchored by 0388, which gave the mouth its zigzag.
-      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [0], jag: 18 } },",
-      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [0], jag: 18 } },",
+      // Re-anchored by 0388, which gave the mouth its zigzag, and 0452, which put its root in the throat.
+      find: "attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
+      replace: "attack: { kind: 'beam', warning: 0, hold: 30, halfWidth: 6, from: [THROAT], jag: 18 } },",
     },
   },
   {

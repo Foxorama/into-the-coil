@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
-import { phaseFor } from '../src/app/boss.ts';
+import { muzzleAcrossOf, muzzleAlongOf, phaseFor } from '../src/app/boss.ts';
 import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
@@ -338,7 +338,10 @@ describe('0248 — the serpent strikes', () => {
         // Where it was thrown from is where it is less the one step it has flown, and the mouth on
         // that step is where the hull was before it moved. The round is held above, so no slot is
         // handed back out as a second globe inside the two seconds this watches.
-        const d = Math.hypot(s.along - s.velAlong - boss.prevAlong, s.across - s.velAcross - boss.prevAcross);
+        // The mouth is the row's muzzle since 0452 — the opening of the jaw, not the skull's centre — turned with the head.
+        const mouthAlong = boss.prevAlong + muzzleAlongOf(boss, BOSSES.jormungandr, world.mouths) - boss.along;
+        const mouthAcross = boss.prevAcross + muzzleAcrossOf(boss, BOSSES.jormungandr, world.mouths) - boss.across;
+        const d = Math.hypot(s.along - s.velAlong - mouthAlong, s.across - s.velAcross - mouthAcross);
         globes.push({ step, heading: Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep), fromHead: d });
       }
       // The gape the phase wears, which since 0305 is a longer-horned one than the row's.
@@ -775,12 +778,15 @@ describe('0248 — the serpent strikes', () => {
       world.ship.invulnFor = 2;
       boss.health = world.bossFullHealth * 0.5;
       frame.step();
-      // Thrown THIS step: where it is less the one step it has flown is exactly where the hull was.
+      // Thrown THIS step: where it is less the one step it has flown is exactly where the mouth was —
+      // the row's muzzle since 0452, on the hull where it stood before it moved.
+      const mouthAlong = boss.prevAlong + muzzleAlongOf(boss, BOSSES.jormungandr, world.mouths) - boss.along;
+      const mouthAcross = boss.prevAcross + muzzleAcrossOf(boss, BOSSES.jormungandr, world.mouths) - boss.across;
       const fresh: number[] = [];
       for (let i = 0; i < world.enemyShots.size; i++) {
         const s = world.enemyShots.at(i);
         if (s.sprite !== SHOTS.acid.sprite) continue;
-        if (Math.abs(s.along - s.velAlong - boss.prevAlong) > 1e-6 || Math.abs(s.across - s.velAcross - boss.prevAcross) > 1e-6) continue;
+        if (Math.abs(s.along - s.velAlong - mouthAlong) > 1e-6 || Math.abs(s.across - s.velAcross - mouthAcross) > 1e-6) continue;
         fresh.push(round(Math.atan2(s.velAcross, s.velAlong - world.scrollPerStep)));
       }
       // A spray's last globe and the next one's first can share a step; the last is the one furthest round.

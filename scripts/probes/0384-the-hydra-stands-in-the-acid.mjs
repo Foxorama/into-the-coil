@@ -62,9 +62,9 @@ export const PROBES = [
     guard: 'EVERY HEAD’S ATTACK LEAVES ITS OWN MOUTH',
     edit: {
       path: 'src/app/frame.ts',
-      // Re-anchored by 0403, whose tentacles root a beam at their tips.
-      find: '      b.fromAlong = boss.along + mouth + beamRootOf(w.bossRow) - b.along;',
-      replace: '      b.fromAlong = boss.along + 0 * mouth + beamRootOf(w.bossRow) - b.along;',
+      // Re-anchored by 0403, whose tentacles root a beam at their tips, and 0452, whose roots ride the bolt.
+      find: '      b.fromAlong = muzzleAlongOf(boss, w.bossRow, w.mouths) + b.rootAlong - b.along;',
+      replace: '      b.fromAlong = boss.along + b.rootAlong - b.along;',
     },
   },
   {
