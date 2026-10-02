@@ -7,7 +7,8 @@ import { afterFrames } from './frames.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { launch, openRoom, shown as shownScreen } from './title.ts';
-import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
+import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
+import { MAX_STEPS } from '../src/app/loop.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -379,9 +380,18 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
    * one; the press and the release then land between two polls and the menu never sees the edge.
    * `tests/frames.ts` has the measurement and why eight.
    */
+  /*
+    ⚠️ **A TAP IS SHORTER THAN THE REPEAT SINCE 0458, AND EIGHT FRAMES WAS NOT, ON CI.** A held direction
+    repeats after `MENU_REPEAT_AFTER` steps, and a loaded runner's frame catches up as many as
+    `MAX_STEPS` of them — so eight frames held could be forty steps, and one nudge up the title walked
+    three rows round to Settings. The hold is as many frames as cannot reach the repeat however many
+    steps each frame catches up, and it is still read on every one of them. The release is not a hold,
+    so it keeps its eight.
+  */
+  const TAP_FRAMES = Math.floor((MENU_REPEAT_AFTER - 1) / MAX_STEPS);
   async function nudge(page: Page, button: number): Promise<void> {
     await setPad(page, [0, 0], [button]);
-    await afterFrames(page, 8);
+    await afterFrames(page, TAP_FRAMES);
     await setPad(page, [0, 0], []);
     await afterFrames(page, 8);
   }
