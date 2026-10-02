@@ -414,6 +414,13 @@ describe('0227 — a sprite is painted, and the paint stays on the hull', () => 
         const { hull, paint } = hullAndPaint(kind, theme);
         paint.forEach((mark, i) => {
           if (mark.alpha < SOLID) return;
+          /*
+            ⚠️ **A MARK THAT TAKES INK AWAY CANNOT MAKE A BODY BIGGER — 0464.** A hydra's collar is its
+            neck's root drawn over the body and then taken back out at both ends, outline and all
+            (`destination-out`), and the region taken out runs past the hull because the outline does.
+            What this holds is that no INK lands off the silhouette; an erase lands none anywhere.
+          */
+          if (mark.composite === 'destination-out') return;
           const gap = clearance(hull, mark);
           if (!Number.isFinite(gap)) return;
           measured.push(`${kind}#${i + 1}: ${gap.toFixed(2)}px`);

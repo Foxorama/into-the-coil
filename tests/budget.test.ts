@@ -105,8 +105,12 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * a radius that crosses the whole screen, and only the pieces the view can show are laid: about thirty
  * at their most, forty with the shots' headroom — forty blits of a baked bitmap for the second a
  * charge is spent, on a desktop target. The particle share was not touched.
+ *
+ * ⚠️ **AND 691 SINCE 0464, ON 0286's LINE AGAIN.** The hydra's five collars — where each neck leaves its
+ * body, drawn again in front of it so the body's outline no longer crosses the join: five more blits of
+ * a baked bitmap, in one fight. The particle share was not touched.
  */
-const WORST_CASE = 686;
+const WORST_CASE = 691;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

@@ -108,6 +108,8 @@ export function inertLevel(): {
   bossBody: Pool<Entity>;
   // And its aura — 0305. Empty for every fixture whose boss's phase burns with none.
   bossAura: Pool<Entity>;
+  // And what stands in front of its body — 0464. Empty for every fixture whose boss has no necks.
+  bossFront: Pool<Entity>;
   // The mouths and births of a many-headed boss — 0384. Never read for a boss without necks.
   mouths: Float64Array;
   necksBorn: Float64Array;
@@ -226,6 +228,7 @@ export function inertLevel(): {
     bossPool: new Pool<Entity>(CAPACITY.boss, makeEntity),
     bossBody: new Pool<Entity>(CAPACITY.bossBody, makeEntity),
     bossAura: new Pool<Entity>(CAPACITY.bossAura, makeEntity),
+    bossFront: new Pool<Entity>(CAPACITY.bossFront, makeEntity),
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.
@@ -391,6 +394,7 @@ export function playableWorld(
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
   const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
+  const bossFront = new Pool<Entity>(CAPACITY.bossFront, makeEntity);
   const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
 
   const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
@@ -411,7 +415,7 @@ export function playableWorld(
 
   const world: World = {
     // The game's own order — `src/app/mount.ts` — with the pickups left out, because this fixture has none.
-    layers: [blasts, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     sky: [],
     landmarks: [],
     bound: null,
@@ -539,6 +543,7 @@ export function playableWorld(
     bossPool,
     bossBody,
     bossAura,
+    bossFront,
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.

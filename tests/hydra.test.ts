@@ -12,6 +12,9 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BEAM_BOLT_KIND, BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
@@ -21,7 +24,11 @@ import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
-import { NECK_SLOTS } from '../src/app/mount.ts';
+import { CAPACITY, NECK_SLOTS } from '../src/app/mount.ts';
+import { drawKind, hydraCollarOf, neckSpine } from '../src/render/bake.ts';
+import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { tracingPen } from './paths.ts';
 import { faceAt } from '../src/sim/corridor.ts';
 import { reset } from '../src/sim/entity.ts';
 
@@ -495,5 +502,70 @@ describe('0459 — the hydra stands at the edge, and the screen stops for it', (
       nearest = Math.min(nearest, d.world.bossPool.at(0).along - d.world.cameraAlong);
     }
     expect(nearest / narrow, `the hydra came ${nearest.toFixed(0)} units across a ${narrow.toFixed(0)}-unit screen`).toBeGreaterThanOrEqual(0.8);
+  });
+});
+
+describe('0464 — the hydra is one beast', () => {
+  it('every row’s necks fit the pool in front of the body', () => {
+    for (const kind of BOSS_KINDS) {
+      const necks = BOSSES[kind].necks;
+      if (necks !== undefined) expect(necks.necks.length, `${kind} grows more necks than there are collars`).toBeLessThanOrEqual(CAPACITY.bossFront);
+    }
+  });
+
+  it('THE ASK: every grown neck leaves the body IN FRONT of it — its collar drawn over the hull, at its own neck’s root and turn', () => {
+    /*
+      *"The extra heads don't really fit and blend into the body that well."* The body's outline crossed
+      every neck where they met, because every neck was drawn behind the body and nothing of it in front.
+      At each phase, stood: the layer the collars are in is drawn after the hull's, there is one for every
+      neck, and each is exactly where its neck is — a collar anywhere else is a second neck.
+    */
+    // Off the game's own draw order, which is composed inside `mount` and read as `tests/flares.test.ts` reads it.
+    const source = readFileSync(resolve(fileURLToPath(new URL('.', import.meta.url)), '../src/app/mount.ts'), 'utf8');
+    const order = (/layers: \[([^\]]+)\]/.exec(source)?.[1] ?? '').split(',').map((s) => s.trim());
+    expect(order.indexOf('bossPool'), 'mount.ts no longer draws the hull').toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('bossFront'), 'the collars are drawn under the body').toBeGreaterThan(order.indexOf('bossPool'));
+    expect(order.indexOf('bossFront'), 'the collars are drawn over what flies').toBeLessThan(order.indexOf('enemies'));
+    [1, 0.75, 0.55, 0.35, 0.15].forEach((fraction, phase) => {
+      const d = hydraAt(fraction);
+      settle(d);
+      const { world } = d;
+      expect(world.bossFront.size, `at ${fraction * 100}% the hydra has ${world.bossFront.size} collars for ${phase + 1} necks`).toBe(phase + 1);
+      for (let k = 0; k <= phase; k++) {
+        const row = NECKS.necks[k]!;
+        let collar = null;
+        for (let i = 0; i < world.bossFront.size; i++) if (world.bossFront.at(i).sprite === row.collar) collar = world.bossFront.at(i);
+        let neck = null;
+        for (let i = 0; i < world.bossAura.size; i++) if (world.bossAura.at(i).sprite === row.art) neck = world.bossAura.at(i);
+        expect(collar, `neck ${k} has no collar of its own`).not.toBeNull();
+        expect(neck, `neck ${k} is not drawn`).not.toBeNull();
+        expect(Math.hypot(collar!.along - neck!.along, collar!.across - neck!.across), `neck ${k}'s collar stands off its root`).toBeLessThan(1e-9);
+        expect(Math.abs(collar!.turn - neck!.turn), `neck ${k}'s collar is turned off its neck`).toBeLessThan(1e-9);
+      }
+    });
+  });
+
+  it('AND IT COVERS THE JOIN, IN WORLD UNITS: whole for a unit and a half past the body’s outline on every neck, and inside its own tile', () => {
+    /*
+      What a collar is FOR is the stretch of neck the body's outline crosses. Where its spine crosses the
+      outline at rest, it must still be whole a unit and a half further out — the outline's outer half and
+      the neck's sway at the join — or the line is back across the neck. And its drawing, to its cut, has
+      to fit the tile it is baked into, or the bake cuts it off square.
+    */
+    for (let k = 0; k < NECKS.necks.length; k++) {
+      const row = NECKS.necks[k]!;
+      const r = SPRITE_EXTENT[SPRITE_KINDS[row.art]!] * 0.42;
+      const spine = neckSpine(row.reach / r);
+      const collar = hydraCollarOf(k);
+      const whole = (spine[collar.out]![0] - collar.edge.at[0]) * r;
+      expect(whole, `neck ${k}'s collar fades ${whole.toFixed(2)} units past the body's outline`).toBeGreaterThanOrEqual(1.5);
+      const kind = SPRITE_KINDS[row.collar]!;
+      const size = SPRITE_EXTENT[kind] * 10;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'mire');
+      for (const [x, y] of trace.passes[0]!.subpaths.flat()) {
+        expect(Math.min(x, y, size - x, size - y), `${kind} is drawn off its tile`).toBeGreaterThan(0);
+      }
+    }
   });
 });

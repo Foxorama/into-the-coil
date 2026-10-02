@@ -269,6 +269,15 @@ export const CAPACITY = {
   */
   bossAura: 27,
   /*
+    ⚠️ **FIVE: WHERE EACH OF THE HYDRA'S NECKS LEAVES ITS BODY — 0464**, and 0286's line on the worst
+    case again: one boss that is many. *"The extra heads don't really fit and blend into the body."*
+    A neck is drawn behind the body (`bossAura`), so the body's outline crossed every neck where they
+    met; the root of each is drawn again over the body from here, in the one layer in front of it. Five
+    more blits of a baked bitmap on a desktop target (0153), for one fight only.
+    `tests/hydra.test.ts` holds every row's necks inside it.
+  */
+  bossFront: 5,
+  /*
     ⚠️ **THE `- 11` IS 0283's ELEVEN AND STAYS ELEVEN, THOUGH `bossBody` IS TWENTY-SIX — 0286.** This
     line is the record of what the particle share actually paid for, not a restatement of the pool
     above it. `tests/flares.test.ts` prices the fullest moment this pool ever sees at 148.9 against
@@ -788,6 +797,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const bossPool = new Pool<Entity>(CAPACITY.boss, makeEntity);
   const bossBody = new Pool<Entity>(CAPACITY.bossBody, makeEntity);
   const bossAura = new Pool<Entity>(CAPACITY.bossAura, makeEntity);
+  const bossFront = new Pool<Entity>(CAPACITY.bossFront, makeEntity);
   const pickupPool = new Pool<Entity>(CAPACITY.pickups, makeEntity);
   const bolts = new Pool<Entity>(CAPACITY.bolts, makeEntity);
 
@@ -978,7 +988,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The body draws UNDER the head, so the skull covers the neck rather than the neck the skull — 0283.
     // The aura before the body it burns behind — 0305.
     // The aura under every shot, so no halo can hide a bullet beside the ship — 0373.
-    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
+    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],
     /*
       THE SKY, back to front — `docs/decisions/0065-the-sky-is-baked-and-blitted.md`.
 
@@ -1107,6 +1117,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPool,
     bossBody,
     bossAura,
+    bossFront,
     // The mouths and births of a many-headed boss — 0384. @setup: built at mount, never in a frame.
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
@@ -2462,6 +2473,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossPool.clear();
     bossBody.clear();
     bossAura.clear();
+    bossFront.clear();
     shieldOrbs.clear();
     debris.clear();
     // Its own named stream, per 0021: dealing the dust must not move any draw the game makes.

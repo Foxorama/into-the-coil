@@ -695,6 +695,15 @@ export const SPRITE_KINDS = [
   'hydraNeck2',
   'hydraNeck3',
   'hydraNeck4',
+  /*
+    Where each neck leaves the body — 0464: the neck's own root, drawn again IN FRONT of the body so
+    no outline crosses the join, fading into the flesh it grows out of. Placed with its neck.
+  */
+  'hydraCollar0',
+  'hydraCollar1',
+  'hydraCollar2',
+  'hydraCollar3',
+  'hydraCollar4',
   'hydraHead0',
   'hydraHead0Hit',
   'hydraHead1',
@@ -1963,6 +1972,17 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   hydraNeck2: 99,
   hydraNeck3: 99,
   hydraNeck4: 99,
+  /*
+    ⚠️ **A COLLAR IS ROOTED ON THE BITMAP'S CENTRE AS ITS NECK IS, AND DRAWN AT ITS NECK'S SCALE — 0464**,
+    so this is only how much of the neck's root the tile can hold: the body's outline crosses each
+    neck about sixteen units up its spine, and a collar runs a few knots past that. `tests/hydra.test.ts`
+    holds that every collar's drawing is inside this tile.
+  */
+  hydraCollar0: 48,
+  hydraCollar1: 48,
+  hydraCollar2: 48,
+  hydraCollar3: 48,
+  hydraCollar4: 48,
   // One box for every head, so a head grows no bigger than the neck it is carried on.
   hydraHead0: 31,
   hydraHead0Hit: 31,
