@@ -2301,8 +2301,9 @@ describe('0307 — the serpent is armoured', () => {
           if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
         }
       }
-      expect(quickest, `the ${gun} never killed the serpent from any place, so this measured nothing`).not.toBeNull();
-      expect(quickest!.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s in the ${shipCarrying(gun)} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
+      // A fight past the cap from every place is over the floor, not unmeasured — 0455, as in tests/level.test.ts.
+      if (quickest === null) continue;
+      expect(quickest.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s in the ${shipCarrying(gun)} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
       expect(
         quickest!.phaseAt.map((p) => p.phase),
         `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,

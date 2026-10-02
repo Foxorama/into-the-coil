@@ -43,7 +43,7 @@
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES } from '../src/content/bosses.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
@@ -54,8 +54,17 @@ import { NO_SECTIONS, playableWorld } from '../tests/world.ts';
 const NEVER = Number.MAX_SAFE_INTEGER;
 /** Ten minutes. A fight longer than this is reported as never finishing, which is what it is. */
 const CAP_SECONDS = 600;
-/** Five lanes across the fixed 100 — 0023 — and never the edges, which no pilot fights from. */
-export const LANES = [20, 35, 50, 65, 80];
+/**
+ * Five places across the lane, as shares of it — `laneAcross`, 0364 — and never the edges, which no
+ * pilot fights from.
+ *
+ * ⚠️ **THEY WERE WORLD UNITS UNTIL 0455, AND FOR NINE DAYS THE LANE WAS 120.** Written as positions
+ * across a lane of 100, they flew every weighed fight from the near half of a lane of 120: the
+ * "centre" was ten units off it and the far edge's fifth was never stood in at all.
+ */
+export const LANES = [20, 35, 50, 65, 80].map(laneAcross);
+/** The lane's middle, where a fight is flown when nobody names a place. */
+const MIDDLE = laneAcross(50);
 /** At rest, then held this many units short of the hull's near edge. */
 export const DISTANCES = [null, 60, 45];
 
@@ -69,7 +78,7 @@ function arena(kind) {
 /**
  * One fight, flown to the end or to the cap.
  *
- * `lane` is a place across the lane or `'boss'` for the boss's own; `short` is how far short of the
+ * `lane` is a place across the lane in world units — one of `LANES` — or `'boss'` for the boss's own; `short` is how far short of the
  * hull the ship is held along the lane, or `null` to leave it where it rests. Returns the seconds
  * from the first step the boss could be hurt — its entrance is not the fight (0306) — or `null` if
  * it outlived `cap`, the second its health first reached nothing (`killed`, which the death then
@@ -81,7 +90,7 @@ function arena(kind) {
  *   lane?: number | 'boss', short?: number | null, cap?: number }} [options]
  * @returns {{ seconds: number | null, killed?: number, phaseAt: { phase: number, at: number }[] }}
  */
-export function flyFight(kind, gun, { difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS } = {}) {
+export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, short = null, cap = CAP_SECONDS } = {}) {
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
   const { world, wrecks } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);

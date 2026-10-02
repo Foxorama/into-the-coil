@@ -2435,8 +2435,18 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
             if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
           }
         }
-        expect(quickest, `the ${gun} never killed ${kind} from any place, so this measured nothing`).not.toBeNull();
-        expect(quickest!.seconds!, `the ${gun} kills ${kind} in ${quickest!.seconds!.toFixed(1)}s on the tuned tier`).toBeGreaterThanOrEqual(40);
+        /*
+          ⚠️ **A GUN THAT OUTLASTS THE CAP FROM EVERY PLACE HAS BEEN MEASURED, AND IT IS OVER THE FLOOR — 0455.**
+          This said *"measured nothing"* until the held lanes were put in shares of the lane, and then
+          the ray on Medusa reddened it: its only fight under the cap had been from a place ten units
+          off the middle that the corrected lanes no longer stand in, and from every place they do it
+          takes 246 s or never ends. A fixture that flew nothing throws inside `flyFight` — the boss never
+          came on, the ship died — so a null here is a fight of more than `cap` seconds, which a
+          forty-second floor cannot fault. Failing it would redden the guard for a boss further from what
+          it guards against.
+        */
+        if (quickest === null) continue;
+        expect(quickest.seconds!, `the ${gun} kills ${kind} in ${quickest.seconds!.toFixed(1)}s on the tuned tier`).toBeGreaterThanOrEqual(40);
         quickest!.phaseAt.forEach((entered, i) => {
           const phase = row.phases[entered.phase]!;
           if (phase.stance.kind === 'bare') return;

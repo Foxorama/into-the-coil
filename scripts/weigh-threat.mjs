@@ -35,20 +35,23 @@
 // which is the shape of the first draft of this file and is why it says so here.
 
 import { GameFrame, wearHull } from '../src/app/frame.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { SHIPS, shipCarrying } from '../src/content/ships.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from '../tests/world.ts';
+import { DISTANCES, LANES } from './weigh-boss.mjs';
 
 const NEVER = Number.MAX_SAFE_INTEGER;
 /** Ten minutes, as weigh-boss's cap is: a fight longer than this is not a fight. */
 const CAP_SECONDS = 600;
-/** The same five lanes and three distances weigh-boss flies, so the two tables describe one fight. */
-const LANES = [20, 35, 50, 65, 80];
-const DISTANCES = [null, 60, 45];
+/*
+  The same five lanes and three distances weigh-boss flies, so the two tables describe one fight —
+  imported since 0455, because the copy that was here kept weigh-boss's stale units with it.
+*/
+const MIDDLE = laneAcross(50);
 
 /** The boss alone at the end of a short level in its own place — weigh-boss's arena. */
 function arena(kind) {
@@ -80,7 +83,7 @@ function touching(world) {
  *
  * @returns hits a second on the parked ship, how many adds were called, and how many reached the boss.
  */
-export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = 50, short = null, cap = CAP_SECONDS, sweep = 0 } = {}) {
+export function flyThreat(kind, gun, { tier = 4, difficulty = 'savior', lane = MIDDLE, short = null, cap = CAP_SECONDS, sweep = 0 } = {}) {
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
   const { world } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);

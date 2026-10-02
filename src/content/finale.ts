@@ -12,10 +12,11 @@
  * ⚠️ **THE FIRST FRAME IS THE FIGHT'S LAST.** Nothing here is placed on its own: the heart and the
  * fighter start where the fight left them (`FinaleFrom`), the sky goes on at the rate the fight was
  * scrolling, and everything the finale moves is moved FROM there. What IS authored is in the view's own
- * units — along from its near edge, across the fixed 100 — on `src/content/port.ts`'s terms, every
+ * units — along from its near edge, across `ACROSS_SPAN` — on `src/content/port.ts`'s terms, every
  * time in steps at 60Hz, and the painter a pure function of one clock (`src/render/finale.ts`).
  */
 
+import { ACROSS_SPAN } from '../sim/camera.ts';
 import { LAUNCH_ACCEL, PORT_EXTENT } from './port.ts';
 import { SHIP_BOX } from './sprites.ts';
 
@@ -197,8 +198,11 @@ export const VIPER_ROCK = 0.09;
  * Where the two fly together, against the heart the Viper came out of: the pair's middle is `back`
  * behind where it stood — but never nearer the near edge than `least` — across the lane's middle, the
  * Viper `apart` above it and the fighter `below` it and `trail` behind her.
+ *
+ * ⚠️ **The middle is `ACROSS_SPAN / 2`, and until 0455 it was 50** — written after 0364 made the lane
+ * 120, as though it were still 100, so the pair flew ten units towards the near edge of the lane.
  */
-export const PAIR = { back: 24, least: 64, across: 50, apart: 12, below: 14, trail: 12 } as const;
+export const PAIR = { back: 24, least: 64, across: ACROSS_SPAN / 2, apart: 12, below: 14, trail: 12 } as const;
 
 /** How fast the pair gains on the view while they talk, in units a step, and how much they bob. */
 export const PAIR_DRIFT = 0.03;
