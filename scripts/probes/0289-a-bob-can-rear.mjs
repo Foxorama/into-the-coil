@@ -38,9 +38,13 @@ export const PROBES = [
         ⚠️ Re-anchored by 0309, which split the lunge's SIZE off the term that swings it so that a phase
         can scale one without the other. What this breaks is unchanged: the arc run off a clock of its
         own instead of the bob's own angle, which is two wobbles rather than one arc.
+
+        ⚠️ And on the PACED camera since 0459, which put the serpent in a room: the camera itself stops
+        there, so a rear run off it froze outright and reddened the size guards first. The paced one keeps
+        going, so the rear keeps its size and only the lock to the bob is broken, which is this probe.
       */
       find: '  const rear = lunge > 0 ? lunge * Math.cos(boss.bobPhase) : 0;',
-      replace: '  const rear = lunge > 0 ? lunge * Math.cos((cameraAlong * TAU) / 137) : 0;',
+      replace: '  const rear = lunge > 0 ? lunge * Math.cos((pacedAlong * TAU) / 137) : 0;',
     },
   },
   {

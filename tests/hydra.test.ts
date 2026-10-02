@@ -19,6 +19,7 @@ import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SHOTS, type ShotKind } from '../src/content/shots.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { NECK_SLOTS } from '../src/app/mount.ts';
 import { faceAt } from '../src/sim/corridor.ts';
@@ -470,5 +471,29 @@ describe('0392 — the heads take a breath', () => {
         `${tier} at ${hold}: a head threw ${(tightest / STEPS_PER_SECOND).toFixed(2)} s after the last one finished`,
       ).toBeGreaterThanOrEqual(floor);
     }
+  });
+});
+
+describe('0459 — the hydra stands at the edge, and the screen stops for it', () => {
+  it('THE ASK: the camera comes to rest for the fight, and the hull holds four fifths of the way across the narrowest screen or further', () => {
+    /*
+      *"Hydra needs to be closer to the right edge of the screen, it's too far in at the moment. Background
+      also needs to stop scrolling for this boss fight."* In the player's units: the camera's own step, and
+      where across the screen the hull stands for every step of a drift.
+    */
+    const row = BOSSES.hydra;
+    expect(row.room, 'the hydra’s fight scrolls on').not.toBeNull();
+    expect(row.room!.wall, 'the hydra’s room has walls, which nobody asked for').toBeNull();
+    const d = hydraAt(1);
+    const narrow = ACROSS_SPAN * (16 / 9);
+    let nearest = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < 300; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.bossPool.at(0).fireIn = 999;
+      d.frame.step();
+      expect(d.world.scrollPerStep, `the camera is still moving on step ${i} of the hydra’s fight`).toBe(0);
+      nearest = Math.min(nearest, d.world.bossPool.at(0).along - d.world.cameraAlong);
+    }
+    expect(nearest / narrow, `the hydra came ${nearest.toFixed(0)} units across a ${narrow.toFixed(0)}-unit screen`).toBeGreaterThanOrEqual(0.8);
   });
 });

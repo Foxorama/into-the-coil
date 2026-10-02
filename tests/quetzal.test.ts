@@ -561,6 +561,37 @@ describe('0453 — the laser fans out', () => {
   });
 });
 
+describe('0459 — the laser leaves from under its gun', () => {
+  it('THE REPORTED ONE: every beam is stroked before the hull is blitted, so the barrels and the beak stand over the root — and nothing else of the bolts moves under it', () => {
+    /*
+      *"The lazers are firing above the graphic sprites instead of below it."* The roots were already on
+      the barrels (0452); the stroke and its glow were drawn after the whole scene, so they lay over them.
+      Asked of the frame's own draw, in the order the surface was told to do things.
+    */
+    const d = quetzalAt(0.2);
+    const order: string[] = [];
+    d.world.surface = {
+      clear(): void {
+        order.length = 0;
+      },
+      blit(sprite: number): void {
+        order.push(`blit:${sprite}`);
+      },
+      bolt(_points: Float32Array, _count: number, _width: number, _alpha: number, hostile: boolean): void {
+        order.push(hostile ? 'beam' : 'bolt');
+      },
+    };
+    const fan = thrown(d);
+    while (fan[0]!.lifeFor > fan[0]!.holdFor) stepShipAt(d, ACROSS_SPAN / 2);
+    d.frame.draw(1);
+    const hull = order.indexOf(`blit:${d.world.bossPool.at(0).sprite}`);
+    const beams = order.flatMap((entry, i) => (entry === 'beam' ? [i] : []));
+    expect(hull, 'the hull was not drawn').toBeGreaterThanOrEqual(0);
+    expect(beams.length, 'the fan was not drawn').toBe(fan.length);
+    for (const at of beams) expect(at, 'a beam was stroked over the hull that fires it').toBeLessThan(hull);
+  });
+});
+
 /**
  * The pterodactyl is feathered — `docs/decisions/0398-the-pterodactyl-is-feathered.md`.
  *

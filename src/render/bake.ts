@@ -523,6 +523,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // The room's wall is the place, on the seat's own terms — 0335. `sky` is the ink nothing the
   // player must find is drawn in, and a wall is the thing they are found against.
   roomWall: 'sky',
+  // And the serpent's room is walled in roots, on the same terms — 0459.
+  rootWall: 'sky',
   // The wall's caps are the wall — 0350.
   wallRise0: 'sky',
   wallRise1: 'sky',
@@ -9675,12 +9677,26 @@ function medusaHalf(side: 1 | -1): Pt[] {
   return half.map(([x, y]) => flip(x, y, side));
 }
 
-/** The glass: what the bell is filled with, at a fifth — 0402. */
-const MEDUSA_GLASS = 0.22;
+/**
+ * The glass: what the bell is filled with — 0402, at a fifth until 0459 and at half since.
+ *
+ * ⚠️ **ASKED FOR**: *"the lightning and jellyfish at the end of the black heart look almost exactly the
+ * same colours as the level background."* At a fifth over the Black Heart's mauve the bell came out
+ * about 1.3 to 1 against it, and the canals, the rim and the beads were all that drew the animal. At
+ * half, in its cold glass, it is over the gameplay floor of three to one, and the heart still shows.
+ */
+const MEDUSA_GLASS = 0.5;
 
-/** The bell's body colour — the lord's red lifted towards its ice, so the glass is a violet. */
+/**
+ * The bell's body colour — its lord's ice, paled towards white — 0459.
+ *
+ * ⚠️ **IT WAS THE LORD'S RED LIFTED TOWARDS ITS ICE, A VIOLET, AND THAT WAS THE PLACE'S OWN HUE.** The
+ * Black Heart is a red-mauve sky with pink vessels in it; a violet glass over it is the sky again. The
+ * cold light was already the bell's — the rim, the lamp inside it — so the glass is now that light,
+ * and the tentacles, which are drawn in it, go with it.
+ */
 function medusaGlass(skin: FoeSkin): string {
-  return mix(skin.hull, skin.lit, 0.5);
+  return mix(skin.lit, '#ffffff', 0.25);
 }
 
 /**
@@ -9797,7 +9813,8 @@ const HEART_VESSELS: readonly { path: readonly Pt[]; width: number }[] = [
 ];
 /** The heart's fixed inks, as the bead's are: it is the place's, whatever the palette's body is. */
 const HEART_FLESH = '#0e0206';
-const HEART_ROSE = '#ff5c7a';
+// Exported so `tests/medusa.test.ts` can hold a hostile bolt against the vessels it lights — 0459.
+export const HEART_ROSE = '#ff5c7a';
 const HEART_VIOLET = '#a557ff';
 
 function drawHeartSeat(ctx: Pen, f: Frame, plain: string | null): void {
@@ -9853,7 +9870,8 @@ function drawTendril(ctx: Pen, f: Frame, skin: FoeSkin): void {
     body.push([-0.76 + 0.22 * Math.cos(t), 0.22 * Math.sin(t)]);
   }
   poly(ctx, f, glass, body, 0.9);
-  seam(ctx, f, mix(skin.lit, '#ffffff', 0.4), 0.1, [[-0.9, 0], [0.9, 0]], 0.7);
+  // Whiter than the glass it runs down, which is the lord's ice paled since 0459.
+  seam(ctx, f, mix(skin.lit, '#ffffff', 0.7), 0.1, [[-0.9, 0], [0.9, 0]], 0.7);
   for (const [x, y] of [[-0.5, 0.1], [0, -0.1], [0.5, 0.1]] as const) disc(ctx, f, mix(skin.hull, '#ffffff', 0.35), x, y, 0.065, 0.9);
 }
 
@@ -11589,6 +11607,53 @@ export function drawKind(
       // The coping, on both edges: whichever faces the lane is the wall's face.
       band(-edge, -edge + 0.07, shade(stone, 0.5));
       band(edge - 0.07, edge, shade(stone, 0.5));
+      return;
+    }
+    case 'rootWall': {
+      /*
+        THE WORLD TREE'S ROOTS — 0459. A bed of root in shadow, and over it roots running both ways
+        across the tile, thick and thin, each with its bark lit along one flank.
+
+        ⚠️ **EVERY ROOT IS ONE PERIODIC LINE, SO THE TILE HAS NO SEAM.** A root climbs or falls one
+        tile for every tile it crosses, and its wander is a sine whose period is the tile: so where it
+        leaves one edge, the copy one tile over or one tile up arrives on the same point at the same
+        angle. Each is drawn past the tile's edges and again a tile above and below, and the bitmap's
+        own edge is the clip — which is what makes the top wall, the bottom wall and the far wall
+        the same tile with no joint to see.
+
+        ⚠️ **NO OUTLINE AND NO FACE, UNLIKE THE MASONRY.** A root has no coping; the shadow under each
+        is what separates it from the one it crosses.
+      */
+      const edge = half / r;
+      const span = edge * 2;
+      const bark = mix(palette.sky, '#5e3e26', 0.62);
+      const bed = shade(bark, -0.62);
+      const under = shade(bark, -0.35);
+      const lit = shade(bark, 0.4);
+      poly(ctx, f, bed, [[-edge, -edge], [edge, -edge], [edge, edge], [-edge, edge]]);
+      // [climbs, where it crosses the middle, thickness, wander, wanders per tile]
+      const roots = [
+        [1, -0.5, 0.46, 0.1, 1],
+        [-1, 0.45, 0.38, 0.12, 1],
+        [1, 0.7, 0.26, 0.08, 2],
+        [-1, -0.75, 0.22, 0.1, 2],
+        [1, 0.05, 0.14, 0.12, 3],
+        [-1, -0.1, 0.11, 0.1, 3],
+      ] as const;
+      const steps = 32;
+      for (const [climbs, at, thick, wander, waves] of roots) {
+        for (const copy of [-span, 0, span]) {
+          const line: Pt[] = [];
+          for (let s = 0; s <= steps; s++) {
+            const x = -edge - 0.5 + ((span + 1) * s) / steps;
+            const y = climbs * x + at * edge + copy + wander * Math.sin((2 * Math.PI * waves * (x + edge)) / span);
+            line.push([x, y]);
+          }
+          seam(ctx, f, under, thick + 0.08, line, 1, true);
+          seam(ctx, f, bark, thick, line, 1, true);
+          seam(ctx, f, lit, thick * 0.28, line.map(([x, y]) => [x, y - thick * 0.22]), 0.6, true);
+        }
+      }
       return;
     }
     case 'wallRise0':

@@ -184,6 +184,8 @@ const HULLLESS: readonly SpriteKind[] = [
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.
   'roomWall',
+  // The serpent's roots tile into the next on the same terms — 0459.
+  'rootWall',
   // And its caps where the wall turns, on the same terms — 0350.
   'wallRise0',
   'wallRise1',
