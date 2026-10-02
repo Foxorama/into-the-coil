@@ -158,6 +158,12 @@ const NOSE: Mount = { along: 3, across: 0 };
  */
 const SIDE_TUBES: ShipRow['tubes'] = [[], [{ along: 3, across: -1.8 }], [{ along: 3, across: -1.8 }, { along: 3, across: 1.8 }]];
 
+/**
+ * The saucer's disc, in its box's radius — 0461; it was the whole of it. Here rather than in the bake
+ * because the caddie's row sizes its intro by it: the disc stands in the hangar where the box did.
+ */
+export const CADDIE_DISC = 0.72;
+
 /** The most engines any ship burns — the size of the exhaust's pool (`src/app/mount.ts`). */
 export const MAX_NOZZLES = 2;
 
@@ -263,25 +269,38 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
       { base: SPRITE.caddieTubes, hit: SPRITE.caddieTubesHit },
     ],
-    // The saucer's rim: the whole of the box's radius.
-    wingtip: 3.95,
-    muzzle: NOSE,
-    tubes: SIDE_TUBES,
+    /*
+      ⚠️ **ITS DISC IS 0.72 OF THE BOX SINCE 0461, AND EVERY MOUNT BELOW MOVED WITH IT.**
+      `docs/decisions/0461-the-ships-are-jazzed.md`: the pods hang off its sides now, and a disc the
+      box's width with a pod on each side would be a profile half as wide again. `caddieMounts` in the
+      bake holds the gun and the pods to these (`tests/mounts.test.ts`).
+    */
+    // The saucer's rim.
+    wingtip: 2.84,
+    // The ray gun's emitter, at the nose.
+    muzzle: { along: 4.46, across: 0 },
+    // The warhead in each pod, hung off its sides: the top one alone, then both.
+    tubes: [[], [{ along: 1.18, across: -3.55 }], [{ along: 1.18, across: -3.55 }, { along: 1.18, across: 3.55 }]],
     // Its two drives, on the back of the rim either side of the centreline — the pair it burns in the
     // fight, and since 0450 in the intro's chase too.
     nozzles: [
-      { along: -3.95, across: -0.62 },
-      { along: -3.95, across: 0.62 },
+      { along: -2.84, across: -0.62 },
+      { along: -2.84, across: 0.62 },
     ],
     // The middle of its glass dome, seen side-on above the rim (`paintSaucer` in the port's bake).
-    cockpit: { along: 0, across: -1.3 },
+    cockpit: { along: 0, across: -0.94 },
     /*
       ⚠️ **SMALLER THAN THE SHARED SCALE OUT IN THE CHASE — 0450.** *"Needs a 20% reduction in the hanger
       and probably a 40% reduction in the space chase."* The shared scale (`HANGAR_SCALE`) took every
       ship down by a quarter, which is the hangar's twenty per cent; the chase's forty is this 0.8 on top
       of it. A saucer is a disc the width of its box where every other ship is narrower than its own.
+
+      ⚠️ **OVER `CADDIE_DISC`, SINCE 0461 SHRANK THE DISC IN ITS BOX.** The pods hang off its sides now
+      and the disc is 0.72 of the box, so at the box's old factor the saucer came out a third smaller in
+      the intro than the fifth asked for. Over the disc, the disc stands where the box did, and the
+      shared scale's own fifth (`HANGAR_SCALE`) is the whole of the change.
     */
-    intro: { hangar: 1, outside: 0.8 },
+    intro: { hangar: 1 / CADDIE_DISC, outside: 0.8 / CADDIE_DISC },
     // The saucer's own green, lifted to read as text, and its ray dish's lavender — the probe deck.
     hud: { motif: 'orbit', ink: { from: 'player', toward: 'acid', by: 0.55, lift: 0.2 }, trim: { from: 'ally' } },
   },

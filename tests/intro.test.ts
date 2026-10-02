@@ -31,7 +31,7 @@ import {
   type PortKind,
 } from '../src/content/port.ts';
 import { SPRITE } from '../src/content/sprites.ts';
-import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { CADDIE_DISC, SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { SKY } from '../src/app/mount.ts';
 import { paintPort } from '../src/render/port.ts';
@@ -324,13 +324,29 @@ describe('the chase is a chase — 0414', () => {
       expect(b, `${ship}: no ${kind} at step ${t}`).toBeDefined();
       return (PORT_EXTENT[kind] * b!.scale) / view.scale;
     };
+    /*
+      ⚠️ **AND A FIFTH SMALLER AGAIN — 0461**: *"the player's ships seem large again, they should be about
+      20% smaller."* So every box is 24 where 0450 held it to 30, and the saucer's own two reductions ride
+      on top: four fifths of 0450's three quarters in the hangar, and its 0.8 more in the chase.
+    */
+    /*
+      ⚠️ **WHAT FILLS THE BOX, WHICH FOR THE SAUCER IS ITS DISC SINCE 0461.** Its pods hang off its sides,
+      so its disc is `CADDIE_DISC` of the box and its row draws the box bigger by as much; what was asked
+      to shrink is the saucer, and a box held to 24 would have held it a third under the ask.
+    */
+    const fills = (ship: ShipKind): number => (ship === 'caddie' ? CADDIE_DISC : 1);
     for (const ship of SHIP_KINDS) {
-      expect(drawn(BEATS.pilotIn, ship, 'blueSide'), `${ship}: drawn bigger in the hangar than the fighter ever was`).toBeLessThanOrEqual(30 + 1e-9);
+      expect(drawn(BEATS.pilotIn, ship, 'blueSide') * fills(ship), `${ship}: drawn bigger in the hangar than a fifth under 0450's`).toBeLessThanOrEqual(24 + 1e-9);
     }
-    const hangar = drawn(BEATS.pilotIn, 'caddie', 'blueSide') / was;
-    const chase = drawn(BEATS.outside + TILT.from + TILT.steps + 10, 'caddie', 'blue') / (was * OUTSIDE_ZOOM);
-    expect(hangar, `the saucer is ${hangar.toFixed(2)} of its size in the hangar, and was asked to lose a fifth`).toBeLessThanOrEqual(0.8 + 1e-9);
-    expect(chase, `the saucer is ${chase.toFixed(2)} of its size in the chase, and was asked to lose two fifths`).toBeCloseTo(0.6, 2);
+    const hangar = (drawn(BEATS.pilotIn, 'caddie', 'blueSide') * CADDIE_DISC) / was;
+    const chase = (drawn(BEATS.outside + TILT.from + TILT.steps + 10, 'caddie', 'blue') * CADDIE_DISC) / (was * OUTSIDE_ZOOM);
+    expect(hangar, `the saucer is ${hangar.toFixed(2)} of its size in the hangar, and was asked to lose a fifth and then a fifth again`).toBeCloseTo(0.6, 2);
+    expect(chase, `the saucer is ${chase.toFixed(2)} of its size in the chase, and was asked to lose two fifths and then a fifth again`).toBeCloseTo(0.48, 2);
+    // And beside her: the Viper lost a tenth with it, so she still stands taller than any pilot's ship.
+    const viper = drawn(BEATS.viperLit, 'fighter', 'viper');
+    for (const ship of SHIP_KINDS) {
+      expect(drawn(BEATS.pilotIn, ship, 'blueSide'), `${ship}: as big as the Viper in the hangar`).toBeLessThan(viper);
+    }
     // And outside, once it has tilted over, it burns from the fight's nozzles alone: two drives on a saucer.
     const lit = drawAt(BEATS.outside + TILT.from + TILT.steps + 10, NARROW, 'caddie').blits.map((b) => b.sprite);
     expect(lit.includes(PORT_SPRITE.blueTopFlare) || lit.includes(PORT_SPRITE.blueTopBurn), 'the chase burns the hangar’s flames').toBe(true);

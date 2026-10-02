@@ -1269,6 +1269,20 @@ export interface World {
   /** The level's points or the streak moved. Fired on a change only — a kill or a hit. */
   onScore: (points: number, streak: number) => void;
   /**
+   * The ship's speed along the lane in the camera's frame at the last step, which way the last jolt
+   * went (nought once it has eased), and whether the burn between two places was on —
+   * `docs/decisions/0461-the-ships-are-jazzed.md`. What `stepJolt` reads a hard push or a hard stop off.
+   */
+  joltVel: number;
+  joltWay: number;
+  joltWarp: boolean;
+  /**
+   * The ship lurched along the lane: `1` a hard push forward (or the burn between places lighting),
+   * `-1` a hard stop — 0461. Fired on the step it starts and not again until it has eased, so the
+   * chrome may be ordinary DOM code: it swings the estate's fuzzy dice.
+   */
+  onJolt: (way: number) => void;
+  /**
    * The resolved auto-fire, recomputed by the shell whenever the run's upgrade list changes.
    *
    * ⚠️ **Resolved once per change, not once per step.** `weaponFor` walks the whole upgrade list,
@@ -2457,6 +2471,8 @@ export class GameFrame implements Frame {
     // After the wreck check, so the flame goes out on the step the hull does and not one later —
     // 0230. It reads the pool rather than `flying`, which was true at the top of this step.
     stepExhaust(w);
+    // And whether the ship lurched, for the dice on the estate's dash — 0461.
+    stepJolt(w);
 
     /*
       The level script.
@@ -4708,6 +4724,51 @@ function stepExhaust(w: World): void {
     */
     flame.along = w.ship.along + at.along - back;
     flame.across = w.ship.across + at.across;
+  }
+}
+
+/**
+ * How much the ship's speed along the lane must change in one step to be a lurch, and how little before
+ * the next may fire — 0461, in world units a step in the camera's frame.
+ *
+ * ⚠️ **A FULL PUSH FROM REST IS 0.34, AND SO IS LETTING GO FROM FULL SPEED.** `flyShip` closes a fifth
+ * of the gap to the ask each step (`FLIGHT_RESPONSE`) and the ask is `SHIP_SPEED` at full stick, so the
+ * first step of a hard push or a hard stop changes the speed by 1.7 × 0.2; reversing is twice that, and
+ * a full diagonal is 0.24. A stick eased over stays under 0.2 and the dice only drift on their own sway. And it
+ * re-arms below 0.06, which a lurch decays to in eight steps, so one push is one swing — though a stop
+ * on the heels of a push swings them back at once.
+ */
+const JOLT_AT = 0.2;
+const JOLT_EASED = 0.06;
+
+/**
+ * Whether the ship lurched along the lane this step, for the fuzzy dice on the estate's dash — 0461.
+ * Asked for: *"have them sway when the ship accelerates or stops hard."* In the camera's frame, which is
+ * the one the player flies in (0023): the scroll carries the ship and is not a lurch — except the burn
+ * between two places, which is the hardest push the ship ever makes and is one.
+ *
+ * Nothing allocates: three reads, a compare, and a call on the steps it fires.
+ */
+function stepJolt(w: World): void {
+  const warping = w.warp > 0;
+  if (warping && !w.joltWarp) w.onJolt(1);
+  w.joltWarp = warping;
+  if (w.shipPool.size === 0) {
+    w.joltVel = 0;
+    return;
+  }
+  const vel = w.ship.velAlong - w.scrollPerStep;
+  const change = vel - w.joltVel;
+  w.joltVel = vel;
+  if (Math.abs(change) < JOLT_EASED) {
+    w.joltWay = 0;
+    return;
+  }
+  // A stop straight after a push is its own lurch, eased or not: only the same way twice waits.
+  const way = change > 0 ? 1 : -1;
+  if (Math.abs(change) >= JOLT_AT && way !== w.joltWay) {
+    w.joltWay = way;
+    w.onJolt(way);
   }
 }
 

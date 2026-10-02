@@ -21,8 +21,8 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, drawPlayerShip, glow, mix, poly, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
-import { SHIPS, type ShipKind } from '../content/ships.ts';
+import { bakeSize, disc, drawPlayerShip, glow, mix, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
 /** A flame's length and width against the fight's box, where they were against the fighter's hull. */
@@ -754,7 +754,7 @@ interface HangarArt {
 const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   fighter: null,
   // Side-on, the saucer's two drives are one behind the other: one flame, on the back of its rim.
-  caddie: { paint: paintSaucer, jets: [[-1, 0]] },
+  caddie: { paint: paintSaucer, jets: [[-CADDIE_DISC, 0]] },
   firebird: null,
   estate: null,
 };
@@ -787,7 +787,9 @@ const SAUCER_DOME_SITS = 0.17;
  * side view; at 1 it is the disc `drawCaddie` draws, so the last frame hands over to the fight's own
  * picture without a jump. The lights and rings are the top view's, laid on the tilted rim.
  */
-function paintSaucer(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, size: number, lean: number): void {
+function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette, size: number, lean: number): void {
+  // The disc in its own radius, which is `CADDIE_DISC` of the box's since 0461; the gun is in the box's.
+  const f: Frame = { half: box.half, r: box.r * CADDIE_DISC };
   const X = (x: number): number => f.half + x * f.r;
   const Y = (y: number): number => f.half + y * f.r;
   const R = f.r;
@@ -809,21 +811,14 @@ function paintSaucer(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, 
   ctx.lineWidth = outline;
   // The hover light under its belly, seen only from the side — the beam it rides is under it.
   if (e > 0.3) glow(ctx, f, palette.player, 0, SAUCER_BELLY * e + 0.08, 0.42, 0.45 * e);
-  // The ray dish's barrel, run out through the rim at the nose.
-  poly(ctx, f, palette.trim, [
-    [0.8, -0.1],
-    [1.12, -0.1],
-    [1.12, 0.1],
-    [0.8, 0.1],
-  ]);
+  // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
+  const gun = raygunProfile();
+  ctx.fillStyle = palette.trim;
   ctx.beginPath();
-  trace(ctx, f, [
-    [0.8, -0.1],
-    [1.12, -0.1],
-    [1.12, 0.1],
-    [0.8, 0.1],
-  ]);
+  trace(ctx, box, [[0.6, gun[0]![1]], ...gun, [0.6, gun[gun.length - 1]![1]]]);
+  ctx.fill();
   ctx.stroke();
+  paintRaygun(ctx, box, palette);
   // The belly: under the rim, in shadow.
   const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
   belly.addColorStop(0, shade(body, -0.25));
@@ -889,9 +884,6 @@ function paintSaucer(ctx: CanvasRenderingContext2D, f: Frame, palette: Palette, 
     glow(ctx, f, palette.player, x, y, 0.17, 0.55 * e);
     disc(ctx, f, palette.player, x, y, 0.085);
   }
-  // The ray dish's lavender lens, at the nose.
-  disc(ctx, f, palette.ally, 1.0, 0, 0.11);
-  glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
   // The dome: glass on the hub, its base on the face and its crown above it.
   const domeAt = -e * SAUCER_DOME_SITS;
   const domeHigh = Math.sqrt((SAUCER_DOME * c) ** 2 + (SAUCER_DOME_HIGH * e) ** 2);

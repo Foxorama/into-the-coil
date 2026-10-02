@@ -2062,7 +2062,7 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
     repeating-linear-gradient(45deg, color-mix(in srgb, var(--itc-lit) 6%, transparent) 0 2px, transparent 2px 5px),
     repeating-linear-gradient(-45deg, color-mix(in srgb, var(--itc-lit) 4%, transparent) 0 2px, transparent 2px 5px);
 }
-/* The estate: walnut grain under the counts, a chrome lip along its top, and fuzzy dice off its end. */
+/* The estate: walnut grain under the counts, a chrome lip along its top, and fuzzy dice hung from its middle. */
 .itc-playing-hud-walnut {
   border-radius: 0.6em;
   box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 14%, transparent), inset 0 0.14em 0 color-mix(in srgb, var(--itc-lit) 55%, transparent);
@@ -2077,21 +2077,70 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
     color-mix(in srgb, var(--itc-ally) 12%, transparent) 0.4em 0.85em
   );
 }
-.itc-playing-hud-walnut::before {
-  content: '';
-  right: 1.4em;
-  top: calc(100% + 0.05em);
-  width: 0.55em;
-  height: 0.55em;
-  border-radius: 0.14em;
-  background: var(--itc-lit);
-  box-shadow: 0.7em 0.18em 0 var(--itc-lit), 0 0 0.25em color-mix(in srgb, var(--itc-lit) 60%, transparent);
-  transform-origin: 50% -0.4em;
-  animation: itc-hud-dice 4s ease-in-out infinite alternate;
+/*
+  The dice — 0461: a pair on two strings from the middle of the plate's lower edge, each as big as a
+  count and showing its pips. The outer element drifts; the inner swings against a lurch, back from a
+  push and forward from a stop, and settles. Two classes a way, swapped, so a second lurch swings again.
+*/
+.itc-playing-hud-dice { display: none; position: absolute; left: 50%; top: 100%; width: 0; height: 0; pointer-events: none; }
+.itc-playing-hud-walnut .itc-playing-hud-dice { display: block; animation: itc-hud-dice 3.6s ease-in-out infinite alternate; }
+.itc-playing-hud-dice-swing { position: absolute; left: 0; top: 0; }
+.itc-playing-hud-dice-strand {
+  position: absolute;
+  left: -0.04em;
+  top: 0;
+  width: 0.08em;
+  min-width: 1.5px;
+  background: color-mix(in srgb, var(--itc-lit) 80%, transparent);
+  transform-origin: 50% 0;
 }
-@keyframes itc-hud-dice { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+.itc-playing-hud-dice-strand-a { height: 1em; transform: rotate(26deg); }
+.itc-playing-hud-dice-strand-b { height: 1.55em; transform: rotate(-16deg); }
+.itc-playing-hud-die {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 1.1em;
+  height: 1.1em;
+  margin-left: -0.55em;
+  border-radius: 0.24em;
+  --itc-pip: var(--itc-void);
+  box-shadow:
+    0 0 0 0.05em color-mix(in srgb, var(--itc-lit) 85%, transparent),
+    0 0 0.25em 0.1em color-mix(in srgb, var(--itc-lit) 45%, transparent),
+    inset -0.1em -0.12em 0.14em color-mix(in srgb, var(--itc-void) 30%, transparent),
+    0 0.2em 0.35em color-mix(in srgb, var(--itc-void) 70%, transparent);
+}
+.itc-playing-hud-dice-strand-a .itc-playing-hud-die { transform: rotate(-24deg); }
+.itc-playing-hud-dice-strand-b .itc-playing-hud-die { transform: rotate(18deg); }
+.itc-playing-hud-die-five {
+  background:
+    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 73% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 27% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    var(--itc-lit);
+}
+.itc-playing-hud-die-three {
+  background:
+    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
+    var(--itc-lit);
+}
+.itc-playing-hud-dice-back-a { animation: itc-hud-dice-back-a 1.8s ease-out; }
+.itc-playing-hud-dice-back-b { animation: itc-hud-dice-back-b 1.8s ease-out; }
+.itc-playing-hud-dice-fore-a { animation: itc-hud-dice-fore-a 1.8s ease-out; }
+.itc-playing-hud-dice-fore-b { animation: itc-hud-dice-fore-b 1.8s ease-out; }
+@keyframes itc-hud-dice { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+@keyframes itc-hud-dice-back-a { 0% { transform: none; } 14% { transform: rotate(34deg); } 34% { transform: rotate(-20deg); } 52% { transform: rotate(11deg); } 70% { transform: rotate(-5deg); } 86% { transform: rotate(2deg); } 100% { transform: none; } }
+@keyframes itc-hud-dice-back-b { 0% { transform: none; } 14% { transform: rotate(34deg); } 34% { transform: rotate(-20deg); } 52% { transform: rotate(11deg); } 70% { transform: rotate(-5deg); } 86% { transform: rotate(2deg); } 100% { transform: none; } }
+@keyframes itc-hud-dice-fore-a { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
+@keyframes itc-hud-dice-fore-b { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-walnut::before { animation: none; }
+  .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-walnut .itc-playing-hud-dice,
+  .itc-playing-hud-dice-back-a, .itc-playing-hud-dice-back-b, .itc-playing-hud-dice-fore-a, .itc-playing-hud-dice-fore-b { animation: none; }
 }
 .itc-playing-boss { filter: none; padding: 0 0.9em; }
 .itc-playing-boss-shown { display: flex; align-items: center; }
@@ -2445,6 +2494,11 @@ export interface Chrome {
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
    */
   setTouch(touch: boolean): void;
+  /**
+   * The ship lurched along the lane — `1` a hard push, `-1` a hard stop — so the fuzzy dice on the
+   * estate's dash swing against it (0461). Fired by the frame on the step it starts, never per frame.
+   */
+  swayDice(way: number): void;
   /**
    * Redraw the in-game readout. Called on a change, never per frame.
    *
@@ -3711,6 +3765,36 @@ export function makeChrome(
     hud.style.setProperty('--itc-lit', colours.impact);
     for (const motif of HUD_MOTIFS) hud.classList.toggle('itc-playing-hud-' + motif, motif === ship.hud.motif);
   };
+  /*
+    ── THE DICE ON THE DASH — 0461 ─────────────────────────────────────────────────────────────────
+
+    Played: *"for the station wagon, can we make the hanging fuzzy dice a bit bigger and clearer and
+    hanging from the center of the dashboard instead of right on the edge, and have them sway when the
+    ship accelerates or stops hard."* They were a pseudo-element: two blank squares off the plate's far
+    end, a third of the size of a count. They are a pair on two strings now, from the middle of the
+    plate's lower edge, each as big as a count and showing its pips, and the walnut plate is the only
+    one that shows them. The frame says when the ship lurches (`stepJolt`) and they swing against it —
+    back from a push, forward from a stop — over their own idle drift, which is the outer of the two
+    elements so the swing composes with it rather than cutting it off.
+  */
+  const dice = document.createElement('div');
+  dice.className = 'itc-playing-hud-dice';
+  dice.setAttribute('aria-hidden', 'true');
+  const swing = document.createElement('div');
+  swing.className = 'itc-playing-hud-dice-swing';
+  for (const [strand, face] of [
+    ['a', 'five'],
+    ['b', 'three'],
+  ] as const) {
+    const string = document.createElement('div');
+    string.className = 'itc-playing-hud-dice-strand itc-playing-hud-dice-strand-' + strand;
+    const die = document.createElement('div');
+    die.className = 'itc-playing-hud-die itc-playing-hud-die-' + face;
+    string.appendChild(die);
+    swing.appendChild(string);
+  }
+  dice.appendChild(swing);
+  hud.appendChild(dice);
   wearShip(SHIPS.fighter);
 
   /*
@@ -3994,6 +4078,13 @@ export function makeChrome(
     },
     setTouch(touch: boolean): void {
       hud.classList.toggle('itc-playing-hud-touch', touch);
+    },
+    swayDice(way: number): void {
+      // `kick`'s two classes, so a second lurch the same way runs the swing again.
+      const name = 'itc-playing-hud-dice-' + (way > 0 ? 'back' : 'fore');
+      const next = swing.classList.contains(name + '-a') ? name + '-b' : name + '-a';
+      swing.classList.remove('itc-playing-hud-dice-back-a', 'itc-playing-hud-dice-back-b', 'itc-playing-hud-dice-fore-a', 'itc-playing-hud-dice-fore-b');
+      swing.classList.add(next);
     },
     setHud(lives: number, health: number, maxHealth: number, stacks: readonly { label: string; sprite: number; charges: number }[]): void {
       livesCount.textContent = '×' + String(Math.max(0, lives));

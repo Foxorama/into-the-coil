@@ -46,11 +46,19 @@ import { SHIP_BOX } from './sprites.ts';
  * door than the fighter had ever been: played, *"all the player ships are really large in the intro
  * movie."* The fighter fills the box with its pods since it flies its capped kit, and the saucer fills it
  * with its rim, so it is the box that is held to the old size. The fighter's span is now what it was.
+ *
+ * ⚠️ **AND THEN A FIFTH SMALLER AGAIN — 0461.** Played: *"in the intro movie the player's ships seem
+ * large again, they should be about 20% smaller, if it makes them too much smaller than the viper ship
+ * it can be a bit smaller as well."* The box is 24 units where it was 30, and the Viper lost a tenth
+ * (`PORT_EXTENT.viper`), so she still stands a head taller without the pilot's ship looking a toy.
  */
-export const HANGAR_SCALE = 30 / SHIP_BOX;
+export const HANGAR_SCALE = 24 / SHIP_BOX;
 
 /** The pilot's ship's box at hangar size — every ship, so each is the size it is in the fight, scaled. */
 const HANGAR_SHIP = SHIP_BOX * HANGAR_SCALE;
+
+/** The Viper's box — 0461: it was 40, and lost a tenth when the pilots' ships lost a fifth. */
+const VIPER_BOX = 36;
 
 /** Everything the port is drawn from, in the order its atlas holds them. Closed — 0016. */
 export const PORT_KINDS = [
@@ -148,11 +156,12 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   blueTopBurn: HANGAR_SHIP * 2,
   blueTopFlare: HANGAR_SHIP * 2,
   blueTopSurge: HANGAR_SHIP * 3,
-  viper: 40,
-  viperIdle: 80,
-  viperBurn: 80,
-  viperFlare: 80,
-  viperSurge: 120,
+  // A tenth smaller since 0461, beside a pilot's ship a fifth smaller (`HANGAR_SCALE`); her flames with her.
+  viper: VIPER_BOX,
+  viperIdle: VIPER_BOX * 2,
+  viperBurn: VIPER_BOX * 2,
+  viperFlare: VIPER_BOX * 2,
+  viperSurge: VIPER_BOX * 3,
   pilotRun0: 16,
   pilotRun1: 16,
   pilotRun2: 16,
