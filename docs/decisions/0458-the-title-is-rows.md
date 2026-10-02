@@ -77,6 +77,11 @@ title's name pushed off the top of a window too short to hold it, where nothing 
 a change of direction* loosened the wrong condition, which the reset on a new push undid. It breaks the
 counter's reset now and goes red.
 
+**And [0369](0369-a-turn-leaves-nothing-behind-it.md)'s resize guard went blind, found by CI.** It saw a
+re-applied screen by the focus going back to the first control; a remembered cursor puts it back where
+it already was. It measures what a re-applied screen still does — take the focus — and is red under its
+probe again.
+
 **Thirteen other decisions' probes were re-anchored**, each to the line that carries the same break
 now and each with a note saying so. Four were re-pointed at a new guard because the thing they broke
 moved: [0415](0415-the-golfer-is-chosen.md)'s menu pick is the pilot band's, its phone-row break is
