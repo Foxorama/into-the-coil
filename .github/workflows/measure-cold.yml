@@ -20,4 +20,5 @@ jobs:
           start=$(date +%s%N)
           NODE_ENV=production node node_modules/vite/bin/vite.js build > /dev/null
           echo "MEASURE build $(( ($(date +%s%N) - start) / 1000000 )) ms"
+      - run: node scripts/warm-chromium.mjs
       - run: node scratch-measure/cold.mjs
