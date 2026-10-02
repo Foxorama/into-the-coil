@@ -24,7 +24,10 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { INK_OF } from '../src/render/bake.ts';
+import { HEART_ROSE, INK_OF, medusaSeal, mix } from '../src/render/bake.ts';
+import { PALETTES } from '../src/content/palette.ts';
+import { THEMES } from '../src/content/themes.ts';
+import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
 import { beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
@@ -403,6 +406,36 @@ describe('0402 — the jellyfish is glass, and it opens', () => {
     d.world.bossPool.at(0).health = d.world.bossFullHealth * 0.3;
     stepHeld(d, 5);
     expect(d.world.bossPool.at(0).spriteBase, 'healed back over its last fifth, the jellyfish is still drawn open').toBe(row.sprite);
+  });
+});
+
+describe('0459 — the Black Heart’s lightning and its jellyfish stand off it', () => {
+  /*
+    *"The lightning and jellyfish at the end of the black heart look almost exactly the same colours as the
+    level background so they can hardly be seen at all."* Held as the picture composes them: the glass over
+    the nebula as the canvas lays it, and a bolt's glow against the vessels' lit core as `bakeVeins` strokes it.
+  */
+  const nebula = THEMES.core.nebula.vivid;
+  const vessel = mix(mix(nebula, HEART_ROSE, 0.6), '#ffffff', 0.35);
+
+  it('THE JELLYFISH: its glass, laid over the place’s nebula, is over the gameplay floor against it', () => {
+    const m = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(medusaSeal(THEMES.core.lord));
+    expect(m, 'the seal is not an rgba this can read').not.toBeNull();
+    const [r, g, b, a] = [Number(m![1]), Number(m![2]), Number(m![3]), Number(m![4])];
+    const under = [1, 3, 5].map((i) => parseInt(nebula.slice(i, i + 2), 16));
+    const laid = `#${[r, g, b].map((c, i) => Math.round(under[i]! + (c - under[i]!) * a).toString(16).padStart(2, '0')).join('')}`;
+    expect(contrast(laid, nebula), `the bell is ${laid} over ${nebula}`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+    expect(a, 'the bell is no longer glass, and the heart behind it is lost').toBeLessThanOrEqual(0.6);
+  });
+
+  it('THE LIGHTNING: a hostile bolt here is not the enemy pink the vessels are lit in, and stands off them and the sky', () => {
+    const bolt = THEMES.core.bolt;
+    expect(bolt, 'the Black Heart strokes its bolts in the enemy ink, which is the colour of its light').not.toBeNull();
+    expect(contrast(bolt!, vessel), `a bolt in ${bolt} against the vessels' lit core ${vessel}`).toBeGreaterThanOrEqual(2);
+    expect(contrast(bolt!, vessel), 'the place’s bolt is no better than the enemy ink against its own vessels').toBeGreaterThan(
+      contrast(PALETTES.vivid.enemy, vessel) * 1.5,
+    );
+    expect(contrast(bolt!, nebula), `a bolt in ${bolt} against the nebula ${nebula}`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
   });
 });
 

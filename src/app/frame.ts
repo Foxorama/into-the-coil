@@ -89,7 +89,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -1578,6 +1578,16 @@ export interface World {
   bossEscortSide: number;
   /** Steps the ship has spent inside the boss's chill without a break — 0253; zero outside it. */
   chilledFor: number;
+  /** Steps the boss's cold has stood this fight, which is where in its pulse it is — 0459. */
+  chillClock: number;
+  /**
+   * How far a room has held the camera back of where the level's pace would have carried it this
+   * level, in world units — 0459. Nought outside a room, so `cameraAlong + restedBy` is the camera
+   * everywhere a boss has always flown, and keeps going where a room stops it.
+   */
+  restedBy: number;
+  /** How far the boss's cold reaches this step, `0` with none or while it is out — 0459. */
+  chillRadius: number;
   /** Steps the ship has left frozen — 0253; the stick asks for nothing while it is above zero. */
   frozenFor: number;
   /**
@@ -1932,6 +1942,8 @@ export class GameFrame implements Frame {
       repeated bursts, repeated beats, and a life lost per step until the run is over.
     */
     const flying = w.shipPool.size > 0;
+    // The cold's pulse runs whether or not there is a ship in it, so its drawing never stalls — 0459.
+    pulseChill(w);
     // The cold scales the stick's ask before the ship flies on it — 0253.
     if (flying) chillShip(w);
     if (flying) flyShip(w.ship, w.intent, w.cameraAlong, w.scrollPerStep);
@@ -2630,10 +2642,11 @@ export class GameFrame implements Frame {
       HEART_AT[1] = seat.prevAcross + (seat.across - seat.prevAcross) * alpha;
       heart = HEART_AT;
     }
-    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart);
+    paintScene(w.surface, w.view, w.layers, camera, alpha, w.sky, w.boundPress > 0 ? w.bound : null, w.landmarks, w.levelOrigin, w.room, w.warp, time, w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, w.layers.indexOf(w.bossBody), w.bolts);
     // After everything, so a bolt is over what it struck — 0233. The landing sparks are entities in
-    // `layers` and were blitted above; this strokes the lines between them.
-    paintBolts(w.surface, w.view, w.bolts, camera, alpha);
+    // `layers` and were blitted above; this strokes the lines between them. A boss's beams are not
+    // among them: they were stroked under the animal, above — 0459.
+    paintBolts(w.surface, w.view, w.bolts, camera, alpha, false);
   }
 }
 
@@ -2893,7 +2906,9 @@ function chillShip(w: World): void {
   const boss = w.bossPool.at(0);
   const dAlong = w.ship.along - boss.along;
   const dAcross = w.ship.across - boss.across;
-  if (dAlong * dAlong + dAcross * dAcross > chill.radius * chill.radius) {
+  // This step's reach, the one the field is drawn at — 0459. Out, it is nought and nothing is inside.
+  const radius = w.chillRadius;
+  if (radius <= 0 || dAlong * dAlong + dAcross * dAcross > radius * radius) {
     w.chilledFor = 0;
     return;
   }
@@ -2913,6 +2928,26 @@ function chillShip(w: World): void {
 
 /** Steps between one puff of frost at a chilled ship and the next — 0253. */
 const CHILL_PUFF_EVERY = 6;
+
+/**
+ * Where the boss's cold is in its pulse, and how far it reaches this step — 0459.
+ *
+ * ⚠️ **BEFORE `chillShip` AND `layAura`, WHICH BOTH READ `chillRadius`**, so the slow and the field
+ * drawn round the hull are one number on every step. The clock starts when the hull is on the field
+ * and is nought between fights, so every fight's cold opens at its row's `radius`.
+ *
+ * ⚠️ **Nothing allocates.**
+ */
+function pulseChill(w: World): void {
+  const chill = w.bossRow.chill;
+  if (chill === null || w.bossPool.size === 0) {
+    w.chillClock = 0;
+    w.chillRadius = 0;
+    return;
+  }
+  w.chillRadius = chillRadiusAt(chill, w.chillClock);
+  w.chillClock++;
+}
 
 function pinBeams(w: World): void {
   const alive = w.bossPool.size > 0;
@@ -3052,7 +3087,10 @@ function scrollFor(w: World): number {
   if (closing) {
     if (w.roomHold < room.settle) w.roomHold++;
   } else if (w.roomHold > 0) w.roomHold--;
-  return w.scrollRate * roomEase(1 - w.roomHold / room.settle) * burn;
+  const ease = roomEase(1 - w.roomHold / room.settle);
+  // What the room held the camera back by, which a boss's drift keeps time through — 0459.
+  w.restedBy += w.scrollRate * (1 - ease) * burn;
+  return w.scrollRate * ease * burn;
 }
 
 /**
@@ -3093,6 +3131,8 @@ function nextFight(w: World): void {
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
   w.chilledFor = 0;
+  w.chillClock = 0;
+  w.chillRadius = 0;
   w.frozenFor = 0;
 }
 
@@ -7959,7 +7999,18 @@ function layWreck(w: World): void {
 function stepWreck(w: World): void {
   const wreck = w.bossRow.wreck;
   const room = w.bossRow.room;
-  if (wreck === null || !w.bossBeaten) return;
+  if (!w.bossBeaten) return;
+  /*
+    ⚠️ **A WALLED ROOM WITH NO WRECK PARTS ON THE DEATH — 0459.** The serpent's roots: nothing lands,
+    the level's clear was armed on the death, and `scrollFor` brings the camera up on the same step —
+    so the far wall opens over the same steps, or it would scroll into the ship.
+  */
+  if (wreck === null) {
+    if (room === null || w.room === null) return;
+    if (w.roomOpen < room.opens) w.roomOpen++;
+    w.room.open = room.opens > 0 ? w.roomOpen / room.opens : 1;
+    return;
+  }
   /*
     ⚠️ **AN EMPTY POOL OPENS THE ROOM ANYWAY**, and this line is the difference between a wreck and a
     soft-lock. The way out is spent by the wreck LANDING, so every path that ends with no wreck on the
@@ -8073,6 +8124,9 @@ function driveBoss(w: World): void {
     w.corridor,
     // The mouths only for a boss that has them — 0384; every other throws from its row's muzzle.
     w.bossRow.necks !== undefined ? w.mouths : NO_MOUTHS,
+    // The pace the bob keeps time on, and the camera the drift does, which a room does not stop — 0459.
+    w.scrollRate,
+    w.cameraAlong + w.restedBy,
   );
   /*
     ⚠️ **Where it is, remembered every step, so that where it DIED is known on the step it stops
@@ -9147,7 +9201,8 @@ function layChill(w: World, head: Entity, chill: Chill): void {
     slot.across = head.across;
     slot.prevAlong = head.prevAlong;
     slot.prevAcross = head.prevAcross;
-    slot.swell = (2 * chill.radius) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];
+    // This step's reach, which the slow is read against — 0459. Nought while the cold is out.
+    slot.swell = (2 * w.chillRadius) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];
     // Taken off a whole turn first, so the fold is one pass however long the fight has run.
     slot.turn = foldTurn((w.steps * layer.spin) % TAU);
     slot.prevTurn = foldTurn(((w.steps - 1) * layer.spin) % TAU);
@@ -9612,6 +9667,8 @@ function spawnBoss(w: World): void {
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
   w.chilledFor = 0;
+  w.chillClock = 0;
+  w.chillRadius = 0;
   w.frozenFor = 0;
   /*
     ⚠️ **AND IF THE ROW AUTHORS AN ENTRANCE, IT STARTS HERE — 0306.** Where it was put on the field is
@@ -10035,6 +10092,8 @@ export function advanceLevel(w: World, level: LevelRow, levelIndex: number): voi
   */
   w.levelOrigin = w.cameraAlong;
   beginScript(w);
+  // A new level's bosses fly on its own camera from its first step — 0459.
+  w.restedBy = 0;
   /*
     ⚠️ **THE SHELL IS KEPT AND TOPPED UP TO THE TIER'S OPENING, NEVER LOWERED** —
     `docs/decisions/0355-a-tier-opens-on-a-shell.md`, on 0058. Asked of Legend: *"you start each level
@@ -10110,6 +10169,8 @@ function beginScript(w: World): void {
   w.bossEscortIn = 0;
   w.bossEscortSide = 1;
   w.chilledFor = 0;
+  w.chillClock = 0;
+  w.chillRadius = 0;
   w.frozenFor = 0;
   resetLevelScore(w.score);
 }

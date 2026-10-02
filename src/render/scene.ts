@@ -256,6 +256,8 @@ export function paintScene(
   frontAfter = -1,
   beat = 0,
   heart: Float64Array | null = null,
+  beamsBefore = -1,
+  bolts: Pool<Entity> | null = null,
 ): void {
   /*
     ⚠️ **`beat` IS HOW HARD THE HEART THE PLAYER HEARS IS BEATING THIS FRAME — 0401**, from nothing to
@@ -301,6 +303,13 @@ export function paintScene(
   */
   paintBound(surface, view, bound);
   for (let layer = 0; layer < layers.length; layer++) {
+    /*
+      ⚠️ **A BOSS'S BEAM LEAVES FROM UNDER ITS GUN — 0459.** *"The lazers are firing above the graphic
+      sprites instead of below it."* 0452 put every root on its barrel and the picture still read as a
+      line laid over the bird, because the stroke and its glow were drawn after the hull. Stroked
+      before the boss's body layers, the barrel, the beak and the head stand over the root.
+    */
+    if (layer === beamsBefore && bolts !== null) paintBolts(surface, view, bolts, cameraAlong, alpha, true);
     const entities = layers[layer]!;
     const count = entities.size;
     /*
@@ -474,11 +483,23 @@ const BEAM_PATH = new Float32Array(BEAM_MAX_POINTS * 2);
  * ⚠️ **One `bolt` call per link and one per twig, and `tests/budget.test.ts` counts them** — a bolt
  * is not hidden inside a blit's count and cannot be, which is the whole of why `Surface` grew a verb
  * rather than a polygon.
+ *
+ * ⚠️ **`beams` SAYS WHICH HALF — 0459.** A boss's laser is drawn UNDER the animal that fires it,
+ * from inside `paintScene`, and every other link over everything afterwards: `true` strokes the beams
+ * alone, `false` everything but, and `null` the lot, which is what a caller with no boss in it wants.
  */
-export function paintBolts(surface: Surface, view: View, bolts: Pool<Entity>, cameraAlong: number, alpha: number): void {
+export function paintBolts(
+  surface: Surface,
+  view: View,
+  bolts: Pool<Entity>,
+  cameraAlong: number,
+  alpha: number,
+  beams: boolean | null = null,
+): void {
   const count = bolts.size;
   for (let i = 0; i < count; i++) {
     const e = bolts.at(i);
+    if (beams !== null && (e.kind === BEAM_BOLT_KIND) !== beams) continue;
     const endAlong = e.prevAlong + (e.along - e.prevAlong) * alpha;
     const endAcross = e.prevAcross + (e.across - e.prevAcross) * alpha;
     const length = Math.sqrt(e.fromAlong * e.fromAlong + e.fromAcross * e.fromAcross);

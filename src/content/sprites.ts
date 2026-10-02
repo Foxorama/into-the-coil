@@ -610,6 +610,13 @@ export const SPRITE_KINDS = [
   */
   'roomWall',
   /*
+    ⚠️ **THE WORLD TREE'S ROOTS — 0459.** *"For the serpent on level one, we need the world tree's roots
+    framing that side of the screen to indicate it's lurking in the world tree's roots."* The serpent's
+    room is walled in them where the Labyrinth's is walled in stone: a tangle of roots that tiles
+    every way, so one tile is the top, the bottom and the far side.
+  */
+  'rootWall',
+  /*
     ── AND ITS COPING WHERE THE WALL TURNS — 0350 ───────────────────────────────────────────────────
 
     A corridor that turns has faces that rise or fall across each tile, and a square tile of masonry
@@ -1892,6 +1899,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     `tests/budget.test.ts` counts.
   */
   roomWall: 12,
+  // The roots on the masonry's terms and for its reason: half a tile is what shows past the box — 0459.
+  rootWall: 12,
   // The caps are the wall's own tile, so a cap and the masonry under it meet edge to edge — 0350.
   wallRise0: 12,
   wallRise1: 12,

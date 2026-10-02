@@ -915,8 +915,24 @@ export type Fall =
  * and a phase table cannot say that. `null` on every row but the frost ship's.
  */
 export interface Chill {
-  /** How far from the hull's centre the cold reaches, in world units. */
+  /** How far from the hull's centre the cold reaches at the start of a pulse, in world units. */
   radius: number;
+  /**
+   * How far it has swollen to at the top of a pulse — 0459.
+   *
+   * ⚠️ **ASKED FOR**: *"it needs to slowly increase in a pulse every 10 secs so that it takes up most
+   * of the screen, then flickers out and restarts. It's pretty at the moment but has no game effect
+   * at all as it's too small."* The cold grows from `radius` to this over a pulse, strobes for its
+   * last `flicker` steps and goes out, and starts again from `radius`. The model and the picture both
+   * read `chillRadiusAt`, so the slow is exactly as wide as what is drawn on every step of it.
+   */
+  reach: number;
+  /** Steps from one pulse's start to the next — 0459. */
+  pulse: number;
+  /** The last steps of a pulse, over which the cold strobes at `reach` and goes out — 0459. */
+  flicker: number;
+  /** Steps each strobe of the flicker is lit, and then dark — 0459. */
+  blink: number;
   /** What is left of the stick's ask inside it: `0.5` is half speed. */
   slow: number;
   /** Steps inside it before the ship freezes. */
@@ -937,6 +953,24 @@ export interface Chill {
    * the arithmetic and no opinion.
    */
   field: readonly ChillLayer[];
+}
+
+/**
+ * How far the cold reaches `clock` steps into its fight, or `0` while it is out — 0459.
+ *
+ * ⚠️ **ONE FUNCTION FOR THE SLOW AND THE DRAWING**, because a pulse is a moving edge, and an edge the
+ * model and the picture each computed would be two edges by the first tuning pass. A smoothstep from
+ * `radius` to `reach`, so the swell starts and lands gently; then lit and dark by turns, `blink` steps
+ * each, until the pulse ends.
+ */
+export function chillRadiusAt(chill: Chill, clock: number): number {
+  const t = clock % chill.pulse;
+  const grow = chill.pulse - chill.flicker;
+  if (t < grow) {
+    const s = t / grow;
+    return chill.radius + (chill.reach - chill.radius) * s * s * (3 - 2 * s);
+  }
+  return Math.floor((t - grow) / chill.blink) % 2 === 0 ? chill.reach : 0;
 }
 
 /** One layer of a cold's field — 0399: a bitmap, and how far it turns each step. */
@@ -1908,7 +1942,12 @@ export interface Room {
    * fight, stood still for its whole six-minute cap. A ramp over steps ends.
    */
   settle: number;
-  /** How far behind the resting camera the room's open side sits, in world units. */
+  /**
+   * How far behind the resting camera the room's open side sits, in world units.
+   *
+   * ⚠️ **NEGATIVE IS IN FRONT OF IT — 0459**: the side walls then start part of the way across the
+   * screen at rest, so they frame its far side and not the whole of it. The serpent's roots are.
+   */
   mouth: number;
   /**
    * The bitmap the walls are tiled from, or `null` for a room with none — 0400.
@@ -1925,6 +1964,9 @@ export interface Room {
    * ⚠️ **ASKED FOR**: *"and then the far right wall opens so the player can fly onwards."* It parts
    * from the middle outward, and the camera comes back up on the same number — so the room lets go
    * of the player and the level starts moving in one gesture rather than two.
+   *
+   * ⚠️ **WITH NO WRECK IT PARTS ON THE DEATH ITSELF — 0459**, because nothing has to land first and the
+   * camera comes back up on that step: a far wall that stayed shut would scroll into the ship.
    */
   opens: number;
 }
@@ -3009,7 +3051,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // The middle of the screen after 0364's zoom — 107 of a 16:9 view of 213, and half the lane across.
     entrance: { kind: 'coil', centre: { along: 107, across: ACROSS_SPAN / 2 }, radius: 24, turns: 1.25, speed: 1.5 },
     tail: null,
-    room: null,
+    /*
+      ⚠️ **IN THE WORLD TREE'S ROOTS — 0459.** *"We need the world tree's roots framing that side of
+      the screen around to indicate it's lurking in the world tree's roots — the background needs to
+      stop scrolling there as well."* The gyre's room, with the camera at rest on the same numbers, and
+      walled in roots instead of stone: along the top and bottom from a hundred units in, and down the
+      far side, where the body runs off the screen into them. `mouth` is in front of the camera rather
+      than behind it, which is what keeps the near half of the screen open sky. Nothing falls out of
+      them, so the far side parts on the death itself and the level carries on through it.
+    */
+    room: { stand: 60, settle: 150, mouth: -100, wall: SPRITE.rootWall, opens: 90 },
     burn: null,
     wreck: null,
     chain: {
@@ -3888,9 +3939,28 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       ⚠️ **AND IT IS SEEN** — 0399: a haze, and three rings of flakes twirling at different rates, the
       inner quickest. Every layer's edge is `radius`.
+
+      ⚠️ **38 → 46, AND IT PULSES OUT TO 108 EVERY TEN SECONDS — 0459.** *"Pretty at the moment but has
+      no game effect at all as it's too small"*: a fifth larger at rest, then swelling over nine and a
+      fifth seconds until it covers the lane from top to bottom and everything down-lane of 44 at the
+      nearest of its drift — three quarters of a 16:9 screen and more — then lit, dark, lit and dark a
+      fifth of a second each, and out.
+
+      ⚠️ **108 AND NOT 120, BECAUSE THE SHIP STARTS AT 40.** At 120 the top of the pulse reached past
+      where a ship is put on the field, so a life could begin frozen, and `tests/crowd.test.ts`'s pilot
+      — which holds its lane rather than retreating — was frozen under a volley with nowhere to go. The
+      strip behind 44 is the answer to the cold: *fall back*, and never *there is nowhere*.
+
+      ⚠️ **THE STROBE IS TWELVE STEPS A HALF, AND 0024'S CAP IS WHY.** Most of the screen going
+      dark and light is a general flash if anything is, and the cap is three a second: twelve and
+      twelve is two and a half. `tests/frost.test.ts` holds the arithmetic.
     */
     chill: {
-      radius: 38,
+      radius: 46,
+      reach: 108,
+      pulse: 600,
+      flicker: 48,
+      blink: 12,
       slow: 0.5,
       freezeAfter: 45,
       frozenFor: 30,
@@ -4037,7 +4107,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
         ],
       },
     },
-    room: null,
+    /*
+      ⚠️ **THE BLACK HEART'S ROOM WITH NO WALLS — 0459.** *"Background also needs to stop scrolling for
+      this boss fight."* The jellyfish's numbers: the camera settles over two and a half seconds sixty
+      units short of the fight and holds. The Mire's bank has no end (0383), so the shore under the
+      hull stops with it and the acid pool, which is laid round the hull every step, stays under it.
+    */
+    room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
     sprite: SPRITE.boss13,
@@ -4046,7 +4122,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 1000. 1860 from 1700 — 0441: the arc at the true cap took it in 37 s.
     health: 1860,
     damage: 3,
-    station: 154,
+    /*
+      ⚠️ **154 → 178 — 0459.** *"Hydra needs to be closer to the right edge of the screen, it's too far
+      in."* The heads reach back down the lane from the shoulders, so moving the body forward leaves
+      them in the fight and puts the mound and the tail against the leading edge. The hull's own front
+      is 178 + 5 + 21 = 204 against the narrowest screen's 213, which `tests/level.test.ts` holds.
+
+      ⚠️ **178 AND NOT FURTHER, AND THE MUSIC IS WHY.** The aura is the boss's own sound and fades
+      with the gap (0092); at 182 a player backed into the rear of the box heard 0.086 of it, under the
+      tenth `tests/music.test.ts` holds as *attenuated, not muted*. 178 leaves it at 0.104, which is
+      as far as the hull can come without the aura's range being retuned for every boss.
+    */
+    station: 178,
     drift: 5,
     driftWavelength: 240,
     patrol: 0.3,

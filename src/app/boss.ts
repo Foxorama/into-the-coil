@@ -553,6 +553,16 @@ export function stepBoss(
    * (0384). A volley leaves the mouth of the head that throws it.
    */
   mouths: Float64Array,
+  /**
+   * The level's own scroll rate, which a room brings the camera to rest from — 0459. The bob keeps
+   * time on this and not on `scrollPerStep`, or a serpent in a room would stop dead with the camera.
+   */
+  pace: number,
+  /**
+   * Where the camera would be had no room stopped it — 0459: `cameraAlong` everywhere else. The drift
+   * keeps time on it, for the reason the bob keeps time on `pace`.
+   */
+  pacedAlong: number,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -568,8 +578,9 @@ export function stepBoss(
     are: a shape in the world can be authored against and a wobble in time cannot, and the fight has
     to be the same fight on a machine dropping frames.
   */
+  // On the paced camera, which is the camera itself outside a room — 0459.
   const drift = row.drift > 0 && row.driftWavelength > 0
-    ? row.drift * Math.sin((cameraAlong * TAU) / row.driftWavelength)
+    ? row.drift * Math.sin((pacedAlong * TAU) / row.driftWavelength)
     : 0;
   /*
     ── AND THE REAR, WHICH IS THE ONLY THING THAT MOVES A HULL ALONG ITS OWN LANE — 0289 ───────────
@@ -687,7 +698,13 @@ export function stepBoss(
         agree with. `reset` starts it at zero, so a fight opens centred and moving.
       */
       const wavelength = move.wavelength / phase.patrolScale;
-      const rate = (TAU * scrollPerStep) / wavelength;
+      /*
+        ⚠️ **ON THE LEVEL'S PACE AND NOT THE CAMERA'S STEP — 0459.** The two were one number until a
+        bobbing boss fought in a room: the camera comes to rest there, and a wavelength in camera travel
+        becomes a wavelength nothing ever travels, so the serpent froze mid-coil in the world tree's
+        roots. The pace is what the camera WOULD cover, so out of a room nothing has changed.
+      */
+      const rate = (TAU * pace) / wavelength;
       boss.velAcross = move.amplitude * rate * Math.cos(boss.bobPhase);
       /*
         ⚠️ **AND NOT WHILE THE HULL IS BRACED, WHICH IS THE SAME DEFECT WITH A SECOND CAUSE** — the
