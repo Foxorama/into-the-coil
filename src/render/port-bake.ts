@@ -779,7 +779,7 @@ const SAUCER_DOME_SITS = 0.17;
  * The Little Green Caddie, from the side and leaning over to above — 0444. The predecessor's side art
  * (`shipArt.ts`, `saucer`): a flat lens on its edge with a glass dome on top and lights along its rim;
  * in the fight's colours (`drawCaddie` in `bake.ts`): the player's cyan turned toward `acid`, the cyan
- * running lights, the slate barrel and the lavender lens of the ray dish at its nose.
+ * running lights, and the ray gun's finned barrel and orb at its nose (0463).
  *
  * ⚠️ **ONE DRAWING AT EVERY LEAN, AND NOT FIVE.** The saucer is modelled as a lens — two flattened
  * half-spheroids on one rim — and a dome on it, and each is drawn as its outline from `lean`: a
@@ -818,7 +818,7 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   trace(ctx, box, [[0.6, gun[0]![1]], ...gun, [0.6, gun[gun.length - 1]![1]]]);
   ctx.fill();
   ctx.stroke();
-  paintRaygun(ctx, box, palette);
+  paintRaygun(ctx, box, palette, false);
   // The belly: under the rim, in shadow.
   const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
   belly.addColorStop(0, shade(body, -0.25));

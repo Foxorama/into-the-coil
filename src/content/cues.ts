@@ -974,36 +974,42 @@ export const CUES: Record<CueKind, CueRow> = {
   /**
    * The ray gun's rings leaving the dish — `docs/decisions/0442-the-ray-gun.md`.
    *
-   * A RAY GUN, and the sound everybody already knows for one: a pure tone falling fast through an
-   * octave, *pew*, with a second voice a fifth under it ringing on as the rings spread. Where the pulse
-   * clicks, the arc crackles and the blade rings steel, this is the one gun that is a pitch rather than
-   * a noise — which is also what tells it from the seeker's launch, the other lavender thing the player
-   * fires. The sub every player weapon has (0102) is the guns' shared bottom.
+   * ── THE PEW WAS A PITCH, AND THE MUSIC MOVES UNDER A PITCH — 0463 ──────────────────────────────
+   *
+   * Played: *"the noise from the caddies ray gun also doesn't fit the background music or the rest of
+   * the game, especially with it's high fire rate it needs to be not annoying and also be able to
+   * mostly fit in with the music on each level."* It was a pure sine falling two octaves from 1.2 kHz,
+   * on the FOURTH, seven and a half times a second — and measured (`scripts/weigh-cue.mjs --loud`) it
+   * sat **7 dB louder** A-weighted than every other gun, its weight piled in the band the ear is most
+   * sensitive to and almost none of it below 500 Hz. Over the C, F and G bars the fourth is a passing
+   * note at best, and the one note held the length of a run.
+   *
+   * ⚠️ **SO THE *PEW* IS A FILTER, NOT A NOTE.** What says *ray gun* is the vowel — a bright *ee*
+   * closing to an *oo* — and a lowpass sweeping down a saw says it while the pitch stays put on the
+   * ROOT, an octave falling to the root under it: the one note every chord in every place shares with
+   * the drone (the pulse's tail lands there for the same reason). A soft triangle an octave over it
+   * is the shimmer of the rings, and the guns' shared bottom (0102) is under all of it.
    *
    * ⚠️ **SHORTER THAN ITS OWN CADENCE**, on 0104's terms: eight steps, 0.133 s, and every layer is under
    * it, so a volley is an event and not a drone. Dry, like the pulse, for the same reason.
-   *
-   * ⚠️ **IN THE KEY** — 0099. The tone falls from the fourth degree two octaves up to the fourth an
-   * octave down, and the ring a fifth under it, so the ray lands on the scale the music is in.
    */
   ray: {
     twin: 'shot-appears',
     hold: 2,
     gain: 0.24,
     glue: 0.12,
-    figure: [1, 0.7, 0.86, 0.7],
+    figure: [1, 0.66, 0.84, 0.66],
     layers: [
-      // The click of the dish discharging, a hair either side.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: -0.3, panTo: -0.45 },
-      { wave: 'noise', from: 0, to: 0, seconds: 0.01, gain: 0.15, attack: 0.0004, curve: 9, highFrom: 2000, lowFrom: 10000, lowTo: 5000, pan: 0.3, panTo: 0.45 },
-      // The pew: a sine falling an octave and more, the whole of what says *ray gun*.
-      { wave: 'sine', from: inKey(31), to: inKey(17), seconds: 0.1, gain: 0.42, attack: 0.001, curve: 3.5, drive: 0.2 },
-      // The ring: a triangle a fifth under it, falling with it, spread across the field as the rings do.
-      { wave: 'tri', from: inKey(27), to: inKey(13), seconds: 0.11, gain: 0.2, attack: 0.002, curve: 3, pan: -0.5, panTo: 0.5 },
-      // A square an octave over the pew, quiet and short — the edge on the front of the beam.
-      { wave: 'square', from: inKey(38), to: inKey(31), seconds: 0.03, gain: 0.06, attack: 0.0005, curve: 6, highFrom: 2500 },
+      // The tick of the emitter, soft and dark — a breath of air, not a click to count.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.008, gain: 0.06, attack: 0.0006, curve: 9, highFrom: 1500, lowFrom: 6000, lowTo: 3000, pan: -0.25, panTo: -0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.008, gain: 0.06, attack: 0.0006, curve: 9, highFrom: 1500, lowFrom: 6000, lowTo: 3000, pan: 0.25, panTo: 0.4 },
+      // The pew: a saw an octave over the root falling to it, under a lowpass closing from bright to
+      // dark with a little resonance — the vowel is the ray, and the note is the drone's.
+      { wave: 'saw', from: inKey(14), to: inKey(7), seconds: 0.075, gain: 0.5, attack: 0.002, curve: 4.5, lowFrom: 2600, lowTo: 320, q: 2.2, drive: 0.25 },
+      // The rings' shimmer: a triangle an octave over that, quiet, spread across the field as they do.
+      { wave: 'tri', from: inKey(21), to: inKey(14), seconds: 0.06, gain: 0.11, attack: 0.003, curve: 4, pan: -0.4, panTo: 0.4 },
       // The guns' shared bottom — 0102.
-      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.08, gain: 0.4, attack: 0.002, curve: 3.5, drive: 0.25 },
+      { wave: 'sine', from: inKey(2), to: inKey(-7), seconds: 0.07, gain: 0.48, attack: 0.002, curve: 4, drive: 0.2 },
     ],
   },
   threat: {
