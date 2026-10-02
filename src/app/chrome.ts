@@ -1747,6 +1747,16 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
     ${each('-band')} { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
     ${each('-band-label')} { display: none; }
     ${each('-option')} { font-size: 0.85em; padding: 0.3em 0.4em; }
+    /*
+      ⚠️ **AND THE BAND'S OWN FURNITURE GIVES BACK ITS WIDTH — 0460.** Beside a table at 480x320 the
+      tier track had four pixels over its three longest words on this machine's fonts, and CI's put
+      *Legendary Pilot* and *Let the Galaxy Burn* under the step arrows. The arrows, the gaps and the
+      band's own padding were seventy pixels of a 294-pixel column; the words are the thing on the band
+      that cannot give, so these do.
+    */
+    ${each('-band')} { gap: 0.1em 0.15em; padding: 0.2em 0.15em; }
+    ${each('-band-step')} { padding: 0; }
+    ${each('-options')} { gap: 0.25em; }
     .itc-title-board { font-size: 0.85em; }
     .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
     .itc-title-board-reached { display: none; }

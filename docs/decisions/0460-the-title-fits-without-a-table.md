@@ -56,6 +56,24 @@ Each was seen red by [its probe](../../scripts/probes/0460-the-title-fits-withou
 1280×720: the empty title centred with every name whole, the seeded one unchanged, and twelve seconds
 of the sky with no edge moving in.
 
+## What CI found
+
+**The new guard found the same bug with a table, on CI's fonts.** At 480×320 beside the table the tier
+track had four pixels over its three longest words on this machine, and CI's wider fonts put *Legendary
+Pilot* and *Let the Galaxy Burn* under the steps — 0458's, never seen because nothing measured a
+segment against an arrow. On the narrowest container the band's arrows, gaps and padding give the width
+back instead of the words: the slack there is 55 px now, measured.
+
+**And the pad walk's tap was ended by the wall clock.** Both of 0458's title walks failed on this PR as
+they had on #475 and on three of 0458's own runs, each time with one tap walking the ring two or three
+rows round — the menu's held-direction repeat. The tap was counted in frames and released by a second
+message from the test, and the page kept stepping while that message travelled. With the release held
+back half a second, twelve taps of twelve repeated; released in the page after the same frames, none
+did. CPU throttling at 25× did not reproduce it, because a throttled page does not slow the round trip,
+which is why it only ever showed on a loaded runner. The tap is pressed and released inside one
+evaluate now ([0044](0044-an-intermittent-guard-is-measuring-the-wrong-thing.md): the guard was
+measuring the wrong quantity), and 0458's twelve probes still go red through it.
+
 **What it does not do.** Stars now pass behind the hollow tier segments, as they always were meant to
 and never did; they are dim points and 0437's backing was for the ship, which flies below the bands.
 If that reads as noise on play, the segments take the void backing the buttons have.
