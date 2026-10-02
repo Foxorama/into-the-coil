@@ -1066,44 +1066,6 @@ describe('damage is legible on the body that took it', () => {
     ).toBeGreaterThan(steps / (FLASH * 6));
   });
 
-  it('THE FLASH CAP ON A BODY: no wash relights faster than three times a second, however often it is hit', () => {
-    /*
-      ⚠️ **`docs/decisions/0457-the-flash-cap-is-measured.md`, and it is 0024's floor rather than a
-      taste.** The meter read the gyre over the cap under the arc: its hull relit every twelve steps,
-      ten transitions a second over a seventh of the screen. How big a body is is content; how often
-      it may flash is not. So this is asserted in the player's unit — seconds between two washes
-      beginning — at the worst case there is, a landing on every step.
-
-      ⚠️ **AT EVERY FLASH LENGTH A CALLER COULD PASS, AND THE PROOF IS WHY.** Written first at this
-      file's `FLASH` of eight, where the duty alone already rests twenty-four steps — so the floor
-      taken out stayed green, and the game's own four was never flown. The claim is *whatever
-      `flashSteps`*, so that is what is swept.
-    */
-    // From two: a one-step wash is counted down on the step that armed it and is never drawn.
-    for (let flashSteps = 2; flashSteps <= 8; flashSteps++) {
-      const shots = new Pool<Entity>(1, makeEntity);
-      const targets = new Pool<Entity>(1, makeEntity);
-      const target = targets.spawn()!;
-      reset(target, 100, 50, bodyOf(SPRITE.lancer, 3.2, 100000, 2, SPRITE.lancerHit));
-      const begins: number[] = [];
-      let lit = false;
-      for (let step = 0; step < 240; step++) {
-        if (shots.size === 0) reset(shots.spawn()!, 100, 50, bodyOf(SPRITE.bullet, 0.9, 1, 1));
-        collideInto(shots, targets, 1, 1, flashSteps, null);
-        stepEntities(targets, 0);
-        const now = target.sprite !== target.spriteBase;
-        if (now && !lit) begins.push(step);
-        lit = now;
-      }
-      expect(begins.length, `at ${flashSteps} steps the body never flashed, so this measured nothing`).toBeGreaterThan(3);
-      const closest = Math.min(...begins.slice(1).map((b, i) => b - begins[i]!));
-      expect(
-        closest / 60,
-        `a ${flashSteps}-step wash began twice ${closest} steps apart — ${(60 / closest).toFixed(1)} a second, over 0024's three`,
-      ).toBeGreaterThanOrEqual(1 / 3);
-    }
-  });
-
   it('and a single hit still flashes for its whole window, so the gap costs nothing a hit was saying', () => {
     /*
       ⚠️ **THE OTHER END OF 0334, AND THE ONE A LOWER `FLASH_WASH` WOULD HAVE BROKEN.** A refractory

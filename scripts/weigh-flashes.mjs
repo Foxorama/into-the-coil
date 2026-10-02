@@ -24,13 +24,20 @@
 //   - the cap is THREE flashes in any one second, so seven transitions in any sixty frames fail.
 //
 // The screen is cut into CELL x CELL pixel cells, each tracked as its own luminance over time with a
-// hysteresis of 0.1, so a slow ramp is one transition and not sixty. A frame's transitions are summed
+// hysteresis of 0.1, so a slow ramp is one transition and not sixty. A frame's transitions are gathered
 // over a few frames, because a ring sweeping outward crosses its threshold cell by cell.
+//
+// ⚠️ CELL IS 4 PIXELS, AND IT WAS 16. A cell is counted whole when its average moves, so a ten-pixel
+// line of light through a sixteen-pixel cell counted the whole cell — a jagged bolt read two to three
+// times its own area, and the storm's thin strokes read as a quarter of the screen. WCAG's area is the
+// area that changes; at four pixels a line counts about as wide as it is.
 //
 // Usage:
 //   node scripts/weigh-flashes.mjs --port=5301                       every scenario
 //   node scripts/weigh-flashes.mjs --port=5301 --only=storm,nova     some of them
 //   node scripts/weigh-flashes.mjs --port=5301 --seconds=6 --json=shots/flashes.json
+//   node scripts/weigh-flashes.mjs --port=5301 --cell=16 --gather=2         the instrument's own knobs,
+//                                                                           to ask whether a verdict is its
 //
 // ⚠️ IT FAILS LOUD (scripts/trace-frame.mjs's rule): no frames read is exit 2, a scenario over the
 // cap is exit 1.
@@ -59,7 +66,9 @@ const GENERAL_AREA = (341 * 256) / (1024 * 768);
 /** Most transitions any sixty frames may hold: three flashes are six, so seven is the fourth flash begun. */
 const MOST_TRANSITIONS = 6;
 /** Frames a sweeping change's transitions are gathered over before they are one event. */
-const GATHER = 4;
+const GATHER = Number(arg('gather', '4'));
+/** Pixels per side of a tracked cell — see the note on CELL above. */
+const CELL = Number(arg('cell', '4'));
 
 /**
  * Every scenario: a ship, a place, and what is done in it. A special is thrown as often as the game
@@ -278,7 +287,7 @@ async function run(browser, s, secs = seconds) {
   }
   // Let the field fill before anything is read.
   await page.clock.runFor(1500);
-  await page.evaluate(installMeter, [16, GATHER]);
+  await page.evaluate(installMeter, [CELL, GATHER]);
   const frames = [];
   for (let f = 0; f < secs * HZ; f++) {
     if (s.special !== undefined) await page.evaluate((kind) => window.__bench.throwSpecial(kind), s.special);
