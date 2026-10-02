@@ -48,3 +48,27 @@ describe('0420 — the required job joins every other job, whatever they did', (
     expect(required?.body, 'the join is not handed what the jobs did').toMatch(/NEEDS:\s*\$\{\{\s*toJSON\(needs\)\s*\}\}/);
   });
 });
+
+describe('0456 — a fresh runner pays its first Chrome start once, before any test is timed', () => {
+  /*
+    `docs/decisions/0456-a-fresh-runner-pays-its-first-chrome-start-once.md`. The first Chrome start
+    on a hosted runner measured 1.3–32.5 s over twenty fresh machines and under one second after, and
+    without this step it lands inside whichever browser test comes first. A job drives a browser if it
+    runs the suite or the proof; a job that does neither has nothing to warm.
+  */
+  const WARM = '- run: node scripts/warm-chromium.mjs';
+  const RUNS = /- run: (npm test\b|npm run prove\b)/;
+  const driving = jobs.filter((job) => RUNS.test(job.body));
+
+  it('every job that runs the suite or the proof starts Chrome once before it does', () => {
+    expect(
+      driving.map((job) => job.key).sort(),
+      'the jobs that drive a browser are not the ones this was written about, so it is reading the wrong shape',
+    ).toEqual(['prove', 'suite']);
+    for (const job of driving) {
+      const warm = job.body.indexOf(WARM);
+      expect(warm, `${job.key} never warms Chrome, so its first browser test pays the runner's cold start`).toBeGreaterThan(-1);
+      expect(warm, `${job.key} warms Chrome after the run it was meant to spare`).toBeLessThan(job.body.search(RUNS));
+    }
+  });
+});
