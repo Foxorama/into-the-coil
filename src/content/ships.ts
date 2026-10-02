@@ -277,7 +277,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     */
     // The saucer's rim.
     wingtip: 2.84,
-    // The ray gun's emitter, at the nose.
+    // The ray gun's orb, at the nose — its front, where the rings leave.
     muzzle: { along: 4.46, across: 0 },
     // The warhead in each pod, hung off its sides: the top one alone, then both.
     tubes: [[], [{ along: 1.18, across: -3.55 }], [{ along: 1.18, across: -3.55 }, { along: 1.18, across: 3.55 }]],
