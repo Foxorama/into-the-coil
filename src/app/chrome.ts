@@ -1714,6 +1714,16 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   }
   ${each('-band-label')} { text-align: right; }
   ${each('-option')} { padding: 0.35em min(0.7em, 1.2cqw); }
+  /*
+    ⚠️ **THE TITLE'S BANDS DROP THEIR LABEL ON EVERY PHONE, AND IT WAS ONLY THE NARROWEST.** CI's fonts
+    are wider than this machine's, and at 667x375 the label's column pushed *Let the Galaxy Burn* eight
+    pixels off the right edge — a segment's floor is its longest word, so the track cannot give. The
+    title's two bands say what they are without it: the tier's line names the tier, the faces are the
+    pilots, and each band still names itself to a reader. Settings keeps its labels while it is wide.
+  */
+  .itc-title-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  .itc-title-band-label { display: none; }
+  .itc-title-option { font-size: 0.92em; }
   .itc-title-option.itc-title-option-face { width: clamp(2.1rem, 11cqh, 2.8rem); height: clamp(2.1rem, 11cqh, 2.8rem); }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -1736,6 +1746,13 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   .itc-guide-body { gap: min(0.5rem, 1.6cqh) min(1.5rem, 3cqw); }
   .itc-guide-key, .itc-guide-controls { gap: 0.15em 0.6em; line-height: 1.2; }
   .itc-guide-key-icon { width: 1.8em; height: 1.8em; }
+  /*
+    ⚠️ **AND ON A PHONE, THE TWO SECTION HEADINGS GO.** At 480x320 How to play scrolled by nine
+    pixels on CI's fonts and fitted on this machine's. The headings are the one line on it that says
+    nothing the rows under them do not: the pickups are their icons, and the controls have a device in
+    every column's head.
+  */
+  .itc-guide-panel .itc-guide-section-heading { display: none; }
   /*
     The panel's own gap is the one thing above the rows with any give, and it is already authored
     against the short axis, so tightening it here is the same argument one step further.

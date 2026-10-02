@@ -488,6 +488,12 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
   */
   it('still steps a column when the layout has no answer for the axis', async () => {
     const page = await open();
+    /*
+      ⚠️ **AND LET THE TITLE TAKE A STEP FIRST — the room test's reason above, met on CI by 0458.** The
+      title appearing spends the pad reader, and a push made before that read is learned as held and
+      swallowed. It passed for as long as the press landed late enough; on a slow runner it did not.
+    */
+    await afterFrames(page, 8);
     const opened = await page.evaluate(
       (selector: string) => (document.querySelector(selector)?.textContent ?? '').trim(),
       '.' + prefixFor('title') + 'action-cursor',
@@ -514,6 +520,8 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
   */
   it('0458 — walks the title by rows, moves along a band, and B comes back to where it left', async () => {
     const page = await open();
+    // The title's first step before the first push, for the reason the test above gives.
+    await afterFrames(page, 8);
     const ring = (): Promise<string> =>
       page.evaluate((s: string) => {
         const el = document.querySelector(s);

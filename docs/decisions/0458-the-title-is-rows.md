@@ -82,6 +82,13 @@ re-applied screen by the focus going back to the first control; a remembered cur
 it already was. It measures what a re-applied screen still does — take the focus — and is red under its
 probe again.
 
+**CI's fonts found two more that this machine's fitted**, which is 0049's old lesson: *Let the Galaxy
+Burn* eight pixels off a 667x375 display, the band's label column taking the width; and How to play
+nine pixels into a scroll at 480x320. The title's bands drop their label on every phone, and How to
+play its two section headings; measured after, every screen keeps 29 px or more of height on every
+phone in the list. And the two title pad tests pressed before the title's first step and were swallowed
+on a slow runner — the room's test already waited for that, and they do now.
+
 **Thirteen other decisions' probes were re-anchored**, each to the line that carries the same break
 now and each with a note saying so. Four were re-pointed at a new guard because the thing they broke
 moved: [0415](0415-the-golfer-is-chosen.md)'s menu pick is the pilot band's, its phone-row break is
