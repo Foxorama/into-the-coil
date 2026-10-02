@@ -3,8 +3,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
+import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { choose, openRoom, openSettings } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
 // 0213: the sky is turned off so that ink in the lane means an entity and nothing else.
 import { STYLE_KINDS } from '../src/content/styles.ts';
@@ -165,7 +166,7 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     expect(SCREENS.music.steps, 'the music room started simulating a run the player did not begin').toBe(false);
 
     const page = await open();
-    await press(page, 'Music');
+    await openRoom(page);
     expect(await page.locator(NOW).isVisible(), 'the readout is up before anything is playing').toBe(false);
 
     await press(page, THEMES.approach.title);
@@ -202,7 +203,7 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
       feature not working.
     */
     const page = await open();
-    await press(page, 'Music');
+    await openRoom(page);
     await press(page, THEMES.approach.title);
     await waitForWalk(page);
 
@@ -235,7 +236,7 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
 
   it('says which place is playing, where in it, and what Play all moves to next', async () => {
     const page = await open();
-    await press(page, 'Music');
+    await openRoom(page);
     await press(page, 'Play all');
     await waitForWalk(page);
 
@@ -373,14 +374,20 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
       **Both readings are taken with the same bake history, so the only thing left that can move the
       picture is the camera.** That is the whole subject.
     */
-    await press(page, 'Music');
+    /*
+      ⚠️ **BACK TWICE SINCE 0458: THE ROOM IS LEFT FOR SETTINGS, AND SETTINGS FOR THE TITLE.** Settings
+      dims, so its space colour lies over the very sky this reads — stopping there would compare two
+      flat panels and pass however the camera was left.
+    */
+    await openRoom(page);
     await press(page, THEMES.nebula.title);
     await waitForWalk(page);
+    await press(page, 'Back');
     await press(page, 'Back');
     await page.waitForTimeout(500);
     const title = await patch(page);
 
-    await press(page, 'Music');
+    await openRoom(page);
     await press(page, THEMES.nebula.title);
     await waitForWalk(page);
     /*
@@ -394,6 +401,7 @@ describe.runIf(chromePath)('the music room walks the level it is auditioning', (
     await page.waitForTimeout(500);
     await press(page, 'Back');
     expect(await page.locator(NOW).isVisible(), 'the readout is still up after leaving the room').toBe(false);
+    await press(page, 'Back');
     /*
       0216: and nothing claims to be playing once nothing is. A mark left on is a lie about the room.
 
@@ -435,8 +443,10 @@ describe.runIf(chromePath)('the room flies the level rather than showing the boo
       (`docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`), so with it on, ink in the
       lane is **entities and nothing else**.
     */
-    await page.locator(`[${SETTING_ATTR}="style"] .${prefixFor('title')}option >> nth=${RETRO}`).click();
-    await press(page, 'Music');
+    // On Settings since 0458, which is also the room's door.
+    await openSettings(page);
+    await choose(page, 'style', RETRO);
+    await press(page, 'Music room');
 
     /*
       ⚠️ **A BAND WITH NO PANEL IN IT, NO SHIP, AND NOT THE BOX EDGE EITHER.** The ship holds station
@@ -499,7 +509,7 @@ describe.runIf(chromePath)('the room flies the level rather than showing the boo
   it('cannot hurt the ship, because it never runs a step to hurt it in', async () => {
     expect(SCREENS.music.steps, 'the music room began simulating — the dust can now hit the ship').toBe(false);
     const page = await open();
-    await press(page, 'Music');
+    await openRoom(page);
     await press(page, THEMES.mire.title);
     await waitForWalk(page);
     await page.locator(NOW + '-bar').focus();

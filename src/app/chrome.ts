@@ -32,12 +32,14 @@
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
-import { SIDES } from '../content/specials.ts';
+import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
 import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
 import { HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
-import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
+import { DEFAULT_BINDINGS } from '../content/actions.ts';
+import { PAD_SPECIAL_BUTTONS } from './pad.ts';
 // The trigger buttons' geometry, from the file that hit-tests them. One table, or the picture and the
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
@@ -142,7 +144,7 @@ function starSky(): string {
 }
 
 /**
- * The title key's turns — 0432: one keyframe set per number of faces a pickup has, read off the table,
+ * The pickup key's turns — 0432, on How to play since 0458: one keyframe set per number of faces a pickup has, read off the table,
  * so a pickup given a fourth face turns through four without an edit here. Each face is up for its
  * share of the turn and crossfades over the last few percent of it.
  */
@@ -153,7 +155,7 @@ function faceTurns(): string {
       const share = 100 / n;
       const fade = 3;
       return (
-        `@keyframes ${prefixFor('title')}key-face-${n} { ` +
+        `@keyframes ${prefixFor('guide')}key-face-${n} { ` +
         `0% { opacity: 1; visibility: visible; } ${share - fade}% { opacity: 1; visibility: visible; } ` +
         `${share}% { opacity: 0; visibility: hidden; } ${100 - fade}% { opacity: 0; visibility: hidden; } ` +
         `100% { opacity: 1; visibility: visible; } }`
@@ -313,7 +315,7 @@ ${starSky()}
   heading wears it since 0440, not only the name's: the golfers', the break's, the run over's, the
   victory's and the music room's were the panel's plain cyan, a second voice beside the title's.
 */
-.itc-title-heading, .itc-splash-heading,
+.itc-title-heading, .itc-splash-heading, .itc-settings-heading, .itc-guide-heading,
 .itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -323,44 +325,47 @@ ${starSky()}
   color: transparent;
   filter: drop-shadow(0 0 0.3em color-mix(in srgb, var(--itc-ink) 40%, transparent));
 }
-.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
+.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading {
   font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
   margin: 0;
 }
 /*
-  THE TITLE SCREEN'S TWO COLUMNS — the key beside the choice, not above it.
+  THE TITLE SCREEN'S TWO COLUMNS — the table beside the rows, not above them. 0458.
 
   ⚠️ **The long axis is where a list goes.** Landscape is the shipped orientation
   (docs/decisions/0031), so the screen the game is read on is wide and SHORT — a phone gives about
-  320 to 400 CSS pixels of height and two or three times that of width. Stacking six things down the
-  short axis is what put half of them off the screen; the key and the tiers are independent, so they
-  sit side by side and the scarce axis carries whichever is taller rather than their sum.
+  320 to 400 CSS pixels of height and two or three times that of width. The table and the rows are
+  independent, so they sit side by side and the scarce axis carries whichever is taller.
 
   ⚠️ **A GRID WITH FRACTIONAL COLUMNS, AND THE FIRST VERSION WAS A WRAPPING FLEX ROW THAT CI CAUGHT.**
   A flex row wraps when its items' NATURAL widths do not fit, and a natural width is a text
   measurement — so the layout held on the machine it was written on and stacked on the CI runner,
-  where system-ui is a different font with wider metrics. Sixty-seven pixels off the bottom of a
-  480x320 phone, from a font. Fractional tracks are a fraction of the container and cannot be pushed
-  wider by their contents, so the two columns are two columns on every font there will ever be.
+  where system-ui is a different font with wider metrics. Fractional tracks are a fraction of the
+  container and cannot be pushed wider by their contents. minmax(0, Nfr) and not a bare fr, because a
+  track's default floor is its content's min-content width. (No backticks in this block: it is a
+  template literal.)
 
-  ⚠️ **minmax(0, Nfr) and not a bare fr.** A track's default floor is its content's min-content
-  width, which is the same blowout wearing grid syntax. (No backticks in this block: it is a template
-  literal, and the house style's backtick quoting ends the string — twice now.)
+  With no table yet the rows stand alone in the middle: a column kept for nothing is a screen that
+  looks unfinished.
 */
 .itc-title-body {
   display: grid;
   grid-template-columns: minmax(0, 7fr) minmax(0, 11fr);
   align-items: center;
-  /*
-    ⚠️ **The ROW gap is small and the COLUMN gap is not, and they stopped being one number when the
-    settings became a row of their own.** There are exactly two rows here — the key beside the tiers,
-    and the settings strip under both — so the row gap applies to nothing except the space above that
-    strip. It is a subdued footer at 85% opacity and two thirds the type size, not a third peer, and
-    the space above it should say so. Measured at 480x320 it is the difference between fitting and a
-    scrollbar.
-  */
-  gap: min(0.4rem, 1.2cqh) min(2.5rem, 4cqw);
+  gap: min(1rem, 2.4cqh) min(2.5rem, 4cqw);
   width: 100%;
+}
+.itc-title-body-bare { grid-template-columns: minmax(0, 1fr); }
+.itc-title-body-bare > .itc-title-board { display: none; }
+/* The bands over Launch and Settings, as one column of rows: the order the pad walks them in. */
+.itc-title-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: min(1rem, 2.4cqh);
+  min-width: 0;
+  width: min(100%, 34em);
+  justify-self: center;
 }
 ${each('-choices')} {
   display: flex;
@@ -886,36 +891,17 @@ ${each('-action')} {
   margin-top: 0.3em;
 }
 /*
-  The tiers are a column and they are wider than a one-word button, so they get a shared width. The
-  order is the table's order, which is easiest first — see decision 0047.
+  ── ONE THING STARTS A RUN — 0458 ─────────────────────────────────────────────────────────────────
 
-  ⚠️ **A width rather than a min-width, and it is a fraction of its own COLUMN.** A minimum is a
-  floor that content can push past, which is the wrapping mistake above in miniature; a full-width
-  button is whatever the grid track turned out to be, so three tiers are always exactly as wide as
-  each other and never wider than the space there is. The character cap is what stops a desktop
-  drawing a button the width of a table.
+  Launch is the screen's one primary control: full width, the loudest rim, a size up. Settings sits
+  under it, quieter, because it is a place to go rather than the thing a player came to press. The
+  width is a fraction of the column with a character cap, so a desktop does not draw a button the
+  width of a table.
 */
-.itc-title-action { width: min(100%, 32ch); }
-/*
-  ── THE CHOICE IS THE TIERS — 0436 ───────────────────────────────────────────────────────────────
-
-  Five buttons at one weight made the music room and the pilot as loud as the three ways to start a
-  run. On a screen tall enough for the desktop's column the tiers keep the full width, and the two
-  that are not a run sit side by side under them, smaller and quieter: the column is a button shorter
-  and the thing a player came to press is the thing that looks pressable. The phone's own layout
-  (0370) is under its own query and is not touched; the nth-child count is the tiers', as it is there.
-*/
-@container (min-height: 461px) {
-  .itc-title-choices {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(100%, 32ch);
-    gap: min(1.1rem, 2.6cqh) min(0.8rem, 1.6cqw);
-  }
-  .itc-title-choices > .itc-title-action { width: 100%; }
-  .itc-title-choices > :nth-child(-n+3) { grid-column: 1 / -1; }
-  .itc-title-choices > :nth-child(n+4) { font-size: 0.8em; padding: 0.45em 0.8em; opacity: 0.85; }
-}
+.itc-title-choices { width: min(100%, 26em); gap: min(0.7rem, 1.8cqh); }
+.itc-title-action { width: 100%; }
+.itc-title-choices > :first-child { font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
+.itc-title-choices > :nth-child(n+2) { font-size: 0.85em; padding: 0.4em 0.9em; opacity: 0.9; }
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -954,32 +940,57 @@ ${each('-action-cursor')} {
   /* Reserves its own line so the button does not jump a pixel as the digit changes. */
   min-height: 1.4em;
 }
-.itc-title-key {
+/*
+  ── HOW TO PLAY — 0458 ────────────────────────────────────────────────────────────────────────────
+
+  The pickup key left the title for here, and grew the half it never had: HOW a pickup is taken, under
+  WHAT it gives. Two columns, the pickups and the controls, side by side on the long axis for 0049's
+  reason. Every word on it is a content row's.
+*/
+.itc-guide-body {
   display: grid;
-  grid-template-columns: auto auto auto;
-  /* Its own three columns centred inside whatever track it was given, so the two halves of the
-     screen read as balanced rather than as a block shoved against the left of a wide one. */
-  justify-content: center;
-  gap: 0.4em 0.8em;
-  align-items: center;
-  font-size: clamp(0.7rem, min(2.2cqw, 4cqh), 1rem);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: min(1rem, 2.4cqh) min(2.5rem, 4cqw);
+  align-items: start;
+  width: min(100%, 68em);
+  text-align: left;
+  font-size: clamp(0.62rem, min(1.9cqw, 3.4cqh), 0.95rem);
   font-weight: 400;
-  opacity: 0.85;
+}
+.itc-guide-lead { grid-column: 1 / -1; margin: 0; opacity: 0.85; text-align: center; }
+.itc-guide-section { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.itc-guide-section-heading { margin: 0; font-size: 1.05em; letter-spacing: 0.18em; color: var(--itc-gold, #ffd23f); }
+.itc-guide-key {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 0.35em 0.8em;
+  align-items: center;
 }
 /*
-  One row per pickup, cycling — 0432. The row is not a box of its own: its three cells sit in the
-  key's grid as the three siblings of each line did before, so the desktop's three columns and the
-  phone's column-per-pickup both read it unchanged. Each cell stacks its faces in one grid area, so it
-  is as wide as its widest face and a turn moves nothing beside it.
+  One row per pickup, cycling — 0432. The row is not a box of its own: its cells sit in the key's grid.
+  Each cell stacks its faces in one grid area, so it is as wide as its widest face and a turn moves
+  nothing beside it. The third cell carries what the face gives and, under it, how the pickup is taken.
 */
-.itc-title-key-row { display: contents; }
-.itc-title-key-cell { display: grid; align-items: center; }
-.itc-title-key-cell > * { grid-area: 1 / 1; }
-.itc-title-key-face { animation-timing-function: linear; animation-iteration-count: infinite; }
+.itc-guide-key-row { display: contents; }
+.itc-guide-key-cell { display: grid; align-items: center; }
+.itc-guide-key-cell > * { grid-area: 1 / 1; }
+.itc-guide-key-face { animation-timing-function: linear; animation-iteration-count: infinite; }
 ${faceTurns()}
-.itc-title-key-icon { display: block; width: 2em; height: 2em; }
-.itc-title-key-name { text-align: left; font-weight: 600; }
-.itc-title-key-hint { text-align: left; opacity: 0.7; }
+.itc-guide-key-icon { display: block; width: 2.2em; height: 2.2em; }
+.itc-guide-key-name { font-weight: 600; }
+.itc-guide-key-about { display: flex; flex-direction: column; min-width: 0; }
+.itc-guide-key-hint { font-weight: 600; opacity: 0.95; }
+.itc-guide-key-how { opacity: 0.7; }
+.itc-guide-controls {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: start;
+  gap: 0.35em 0.8em;
+  align-items: baseline;
+}
+.itc-guide-controls-head { font-weight: 600; opacity: 0.7; }
+.itc-guide-controls-what { font-weight: 600; }
+.itc-guide-controls-device-on { color: var(--itc-gold, #ffd23f); opacity: 1; }
 /*
   ⚠️ The HUD is NOT inside a screen's overlay. Those are absolutely positioned over the whole page
   and would swallow every pointer event on the playfield; this sits in a corner and takes no pointer
@@ -1249,68 +1260,35 @@ ${faceTurns()}
 @keyframes itc-cleared-sheet-count { from { --itc-sheet-n: 0; } }
 @keyframes itc-cleared-sheet-stamp { from { transform: scale(3); opacity: 0; } to { transform: none; opacity: 1; } }
 /*
-  ── THE TABLE ON THE TITLE — 0429 ────────────────────────────────────────────────────────────────
+  ── THE TABLE ON THE TITLE — 0429, and STILL since 0458 ──────────────────────────────────────────
 
-  Asked for: *"rolling high score table on the game menu screen."* It ROLLS twice, as a cabinet's
-  title does: it takes turns with the pickup key, and its rows scroll up through a window in a loop.
-
-  ⚠️ **IT TAKES THE KEY'S BOX AND ADDS NOTHING TO IT.** Placed absolutely over the key's cell, so the
-  key alone decides how tall the column is and the table rolls through whatever height that is — the
-  layout guard's smallest landscape phone had 23 pixels to spare, and on a short screen the key folds
-  to a single strip. Eleven rows stacked in the cell put the title 128 pixels past a 480x320 display.
-  Two copies of the rows, and the second hidden from a reader, so the loop has no seam: the padding
-  under the rows is one row gap, which makes half the list exactly one copy. A score just set is lit.
+  Asked for as a rolling table, and played: *"the high scores scroll too fast and are hard to read and
+  the flashing in and out is awkward, could just be the top 5."* So the best five, standing still, in
+  the column the key used to share with it: no roll, no seam, no cross-fade. The device still keeps
+  ten (TABLE_SIZE), so a run that drops into sixth is kept for the day it climbs back.
 */
-.itc-title-column-rolls { display: grid; position: relative; }
-.itc-title-column-rolls > .itc-title-key { grid-area: 1 / 1; align-self: center; }
-/*
-  On a tall screen the column stands beside five tall buttons with room to spare, so the cell is given
-  the height of the whole table — the rows still roll, and all ten are on the glass at once. On a short
-  screen it is the key's height and not a pixel more, which is the constraint above.
-*/
-@container (min-height: 461px) {
-  .itc-title-column-rolls { min-height: 17.5em; }
-}
-.itc-title-column-rolls > .itc-title-key { animation: itc-title-roll-first 18s ease-in-out infinite; }
-.itc-title-column-rolls > .itc-title-board { animation: itc-title-roll-second 18s ease-in-out infinite; }
-@keyframes itc-title-roll-first { 0%, 44% { opacity: 1; visibility: visible; } 50%, 94% { opacity: 0; visibility: hidden; } 100% { opacity: 1; visibility: visible; } }
-@keyframes itc-title-roll-second { 0%, 44% { opacity: 0; visibility: hidden; } 50%, 94% { opacity: 1; visibility: visible; } 100% { opacity: 0; visibility: hidden; } }
 .itc-title-board {
-  display: none;
-  position: absolute;
-  inset: 0;
+  display: flex;
   flex-direction: column;
   align-items: center;
-  overflow: hidden;
-  font-size: clamp(0.65rem, min(2cqw, 3.6cqh), 0.95rem);
+  font-size: clamp(0.7rem, min(2.1cqw, 3.8cqh), 1.05rem);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
 }
-.itc-title-column-rolls > .itc-title-board { display: flex; }
 .itc-title-board-heading {
   flex: none;
-  margin: 0 0 0.2em;
-  font-size: 1.15em;
+  margin: 0 0 0.4em;
+  font-size: 1.1em;
   letter-spacing: 0.3em;
   color: var(--itc-gold, #ffd23f);
-}
-.itc-title-board-window {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
-  mask-image: linear-gradient(transparent, #000 12%, #000 88%, transparent);
 }
 .itc-title-board-rows {
   display: grid;
   grid-template-columns: auto auto auto auto;
   justify-content: center;
-  gap: 0.2em 0.8em;
-  padding-bottom: 0.2em;
-  animation: itc-title-board-roll var(--itc-roll, 20s) linear infinite;
+  gap: 0.3em 0.9em;
 }
-@keyframes itc-title-board-roll { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 .itc-title-board-place { text-align: right; opacity: 0.6; }
 .itc-title-board-score { text-align: right; font-weight: 700; }
 .itc-title-board-pilot { text-align: left; }
@@ -1324,11 +1302,8 @@ ${faceTurns()}
   .itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label,
   .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value,
   .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { animation: none; opacity: 1; }
-  .itc-title-column-rolls > .itc-title-key { animation-timing-function: steps(1, end); }
   /* The key still turns — it is how a cycling pickup is told — but it cuts rather than fades. 0432. */
-  .itc-title-key-face { animation-timing-function: steps(1, end); }
-  .itc-title-column-rolls > .itc-title-board { animation-timing-function: steps(1, end); }
-  .itc-title-board-rows { animation: none; }
+  .itc-guide-key-face { animation-timing-function: steps(1, end); }
 }
 /*
   ── THE INTRO'S SKIP ─────────────────────────────────────────────────────────────────────────────
@@ -1480,66 +1455,73 @@ ${faceTurns()}
 */
 .itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }
 /*
-  ── A SETTING, OFFERED ──────────────────────────────────────────────────────────────────────────
+  ── A SETTING IS A BAND — 0458 ───────────────────────────────────────────────────────────────────
 
-  Decision 0070. A choice is not an action: it has a current value, the player can see which one is
-  on, and pressing it leaves them where they were. So it is drawn as a labelled row of small buttons
-  with the live one filled, rather than as another full-width control that looks like a way to start.
+  Decision 0070: a choice is not an action — it has a current value, the player can see which one is
+  on, and pressing it leaves them where they were. It was a labelled strip of small chips, which the pad
+  stopped on once per chip; it is a BAND now, one row the cursor stops on once and moves along: its
+  label over a track of segments with the live one filled, a step at each end, and the live option's
+  hint written under it, which a chip could only put in a tooltip.
 
-  ⚠️ Only the title screen has any, which is why only its prefix appears here. The builder is
-  general — a screen that grows a choice gets its rules the same way its actions did.
+  ⚠️ **Generic, by the each() list**, so a screen that grows a choice gets its band the way its actions
+  got their plates. The title's two and Settings' three are the same rule.
 */
-/*
-  ⚠️ **Sized against the SHORT axis first** — decision 0049. On the smallest landscape phone the
-  title screen is already within eleven pixels of needing a scrollbar, and a settings row is the kind
-  of thing that gets added at a comfortable desktop size and quietly pushes a phone over the edge.
-  It did, and the layout guard said so before anybody looked at a phone.
-*/
-/*
-  ⚠️ **THE SETTINGS SIT BESIDE EACH OTHER AND WRAP, AND THEY STACKED UNTIL THERE WERE TWO.** The box
-  had no rule of its own — one setting needs no arrangement — so the second one took a whole line of
-  the shortest axis on the screen and pushed the smallest landscape phone six pixels into a
-  scrollbar. The layout guard said so before a phone did, for the second time in two settings.
-
-  A wrapping ROW rather than a shorter stack, because the shape has to survive the queue: the palette,
-  reduced motion and flash intensity are all waiting, and five labelled rows down a 320px-tall screen
-  is not a layout that can be shaved into working. Wrapped, they cost a line only when a line is what
-  is left.
-*/
-.itc-title-settings-box {
+${each('-settings-box')} {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  grid-column: 1 / -1;
-  gap: 0.35em 1.2em;
+  flex-direction: column;
+  align-items: stretch;
+  gap: min(0.8rem, 2cqh);
+  width: 100%;
 }
-.itc-title-settings {
-  display: flex;
+${each('-band')} {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'label label label' 'less track more' 'hint hint hint';
   align-items: center;
-  gap: 0.5em;
-  flex-wrap: wrap;
-  font: 500 clamp(0.6rem, min(2cqw, 2.4cqh), 0.9rem)/1.1 system-ui, sans-serif;
-  opacity: 0.85;
+  gap: 0.25em 0.4em;
+  padding: 0.35em 0.5em;
+  border-radius: 0.6em;
+  min-width: 0;
 }
-.itc-title-setting-label { opacity: 0.7; }
-/* The key and the settings, stacked, as the left half of the title screen's two columns. */
-.itc-title-column { display: flex; flex-direction: column; gap: 0.6em; min-width: 0; }
-.itc-title-options { display: flex; gap: 0.4em; }
+${each('-band-label')} { grid-area: label; font-size: 0.72em; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.7; }
+${each('-band-hint')} { grid-area: hint; font-size: max(0.66em, 0.7rem); font-weight: 400; opacity: 0.75; min-height: 1.35em; }
+${each('-options')} { grid-area: track; display: flex; gap: 0.4em; justify-content: center; min-width: 0; }
+${each('-band-step')} {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  padding: 0 0.3em;
+  cursor: pointer;
+  font-size: 1.3em;
+  line-height: 1;
+  opacity: 0.8;
+}
+${each('-band-less')} { grid-area: less; }
+${each('-band-more')} { grid-area: more; }
+${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 /*
-  ⚠️ A FILLED button against a HOLLOW one, not two colours — decision 0024 puts "colour never carries
+  ⚠️ A FILLED segment against a HOLLOW one, not two colours — decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and which setting is on is exactly the kind of state a
   hue alone would hide.
 */
-.itc-title-option {
+${each('-option')} {
   font: inherit;
   color: inherit;
   background: transparent;
   border: 2px solid currentColor;
   border-radius: 0.4em;
-  padding: 0.15em 0.6em;
+  padding: 0.3em 0.7em;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.75;
+  /*
+    ⚠️ **A NAME WRAPS BETWEEN ITS WORDS, AND NEVER INSIDE ONE.** *Savior of the Galaxy* is the name of
+    the tier: an ellipsis made it *Savior of the Ga…* on the desktop and *Savio…* on a phone, and a
+    break anywhere made it *Legend / ary* — the band could no longer say what it offered. So a
+    segment's floor is its longest word (a flex item's own min-content), and it shares the rest.
+  */
+  flex: 1 1 0;
+  line-height: 1.15;
 }
 /*
   ⚠️ **The fill comes from a CUSTOM PROPERTY and not from currentColor, and the difference is a
@@ -1547,20 +1529,74 @@ ${faceTurns()}
   which this rule has just set to the void — so the two lines would cancel and the label would
   vanish. The pair is set on the overlay by the builder, where the palette is.
 */
-.itc-title-option-on {
+${each('-option-on')} {
   background: var(--itc-ink);
   color: var(--itc-void);
   opacity: 1;
 }
 /*
-  The settings on a desktop — 0436: a size a pointer finds without hunting, and the unchosen option at
-  a contrast that reads as a choice rather than as disabled. The phone's are under 0370's query.
+  ── THE PILOT BAND IS FACES — 0458 ───────────────────────────────────────────────────────────────
+
+  *"The pilots could be smaller with profile pics … it's going to be an expanded roster."* A segment is
+  the golfer's own portrait, round, at a thumbnail; the one flying is ringed, lifted and full strength,
+  and the rest wait at a lower contrast. Their name, ship and gun are the band's hint line. The track
+  scrolls sideways once a roster outgrows it, with the chosen face kept in view, so a longer table is
+  the same row and nothing else on the screen moves.
 */
-@container (min-height: 461px) {
-  .itc-title-settings { font-size: clamp(0.75rem, min(2cqw, 2.6cqh), 1rem); }
-  .itc-title-option { padding: 0.3em 0.8em; }
-  .itc-title-option:not(.itc-title-option-on) { opacity: 0.75; }
+.itc-title-options-faces { justify-content: center; overflow-x: auto; scrollbar-width: none; padding: 0.3em; gap: 0.7em; }
+/*
+  ⚠️ **SPELLED OUT AND NOT BY each(), AND THE FIRST VERSION WAS.** each() is a comma list, so a part
+  written after it — a child, a second class — binds to its LAST selector only, and the portraits drew
+  as 585-pixel ovals. Only the title has faces, so only its prefix is here.
+*/
+.itc-title-option.itc-title-option-face {
+  flex: 0 0 auto;
+  width: clamp(2.4rem, 11cqh, 3.6rem);
+  height: clamp(2.4rem, 11cqh, 3.6rem);
+  padding: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  opacity: 0.55;
+  transition: transform 0.15s ease-out, opacity 0.15s ease-out;
 }
+.itc-title-option-face > canvas { display: block; width: 100%; height: 100%; }
+.itc-title-option-face.itc-title-option-on { opacity: 1; transform: scale(1.12); }
+/*
+  The band the cursor is on. The ring is the shared focus outline further down (the -action-cursor
+  class is set on the band itself), and a faint glass behind the row says which row a step moves.
+*/
+.itc-title-band.itc-title-action-cursor, .itc-settings-band.itc-settings-action-cursor {
+  background: color-mix(in srgb, var(--itc-ink) 8%, transparent);
+}
+/*
+  ── TABS — 0458 ───────────────────────────────────────────────────────────────────────────────────
+
+  Settings and How to play are two tabs of one place. A strip under the heading, the open tab filled
+  as a chosen option is, so it is told by fill and not by hue.
+*/
+/*
+  The strip stands where the heading would, so it is set a size up and heavier: it is the screen's
+  name as well as its way across.
+*/
+${each('-tabs')} { display: flex; gap: 0.6em; justify-content: center; font-size: clamp(0.95rem, min(3cqw, 6cqh), 1.5rem); }
+${each('-tab')} {
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: inherit;
+  background: transparent;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  padding: 0.25em 1.1em;
+  cursor: pointer;
+  opacity: 0.75;
+}
+${each('-tab-on')} { background: var(--itc-ink); color: var(--itc-void); opacity: 1; }
+${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px solid currentColor; outline-offset: 3px; }
+/* Settings' bands and its two buttons, at the title's column width. */
+.itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
+.itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
+.itc-settings-action, .itc-guide-action { min-width: 9em; }
 /*
   ── WHICH PLACE IS PLAYING — decision 0216, and no extension on that path ────────────────────────
 
@@ -1593,6 +1629,8 @@ ${faceTurns()}
   ⚠️ No file paths in this stylesheet — the prefix guard reads every dotted token as a class name.
 */
 .itc-title-face-pixel,
+.itc-settings-face-pixel,
+.itc-guide-face-pixel,
 .itc-gameover-face-pixel,
 .itc-cleared-face-pixel,
 .itc-victory-face-pixel,
@@ -1659,103 +1697,50 @@ ${faceTurns()}
 .itc-playing-trigger-icon { display: block; width: 1.8em; height: 1.8em; }
 @container (max-height: 460px) {
   /*
-    ── THE TITLE ON A PHONE: THREE ROWS ACROSS THE LONG AXIS — 0370 ─────────────────────────────
+    ── THE TITLE ON A PHONE — 0370, and rows since 0458 ──────────────────────────────────────────
 
-    Asked for: *"it's all squished in and has no explanations for the different difficulties … needs
-    to be completely redesigned for mobile devices so it's a good mobile menu."* The two columns put
-    the seven-line key beside four stacked buttons, so the short axis carried the taller of two lists
-    and the tiers lost their hints to fit. Here every list runs ACROSS instead, which is the axis a
-    landscape phone has to spare:
-
-    the tiers are three cards side by side with the music room beside them, each card saying what it
-    is and what it gives; the key is one row of seven, each pickup a column of its icon, its name and
-    what it does; the settings are a row of buttons big enough for a thumb.
-
-    ⚠️ **THE HINTS STAY ON EVERY DEVICE NOW**, and this block used to take them away: that was the
-    report. A card is wide and short, where a stacked button was narrow and tall, so the two lines
-    under a name cost width, which is what a phone has.
-
-    ⚠️ **Rows by grid-row and not by DOM order.** The body is built key-column, choices, settings, and
-    the desktop reads it that way; the phone wants the choices first, and a second DOM for one layout
-    would be a second description of the screen.
+    The same two columns as the desktop, set tighter: a landscape phone has width to spare and height
+    to none, so the table keeps its column and the rows are what give. A band's label sits beside its
+    track rather than over it, which is a line of the short axis back per band; the step arrows and the
+    segments stay a thumb tall. The hint stays — 0370's report was a tier with no explanation.
   */
-  .itc-title-body {
-    grid-template-columns: minmax(0, 1fr);
-    gap: min(0.9rem, 3cqh);
+  .itc-title-body { grid-template-columns: minmax(0, 5fr) minmax(0, 11fr); gap: min(0.6rem, 2cqh) min(1.5rem, 3cqw); }
+  .itc-title-main, .itc-settings-settings-box { gap: min(0.45rem, 1.6cqh); }
+  ${each('-band')} {
+    grid-template-columns: max-content auto minmax(0, 1fr) auto;
+    grid-template-areas: 'label less track more' '. hint hint hint';
+    gap: 0.1em 0.4em;
+    padding: 0.2em 0.4em;
   }
-  .itc-title-choices {
-    grid-row: 1;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
-    grid-auto-flow: column;
-    grid-template-rows: auto auto;
-    align-items: stretch;
-    gap: min(0.6rem, 1.5cqw);
-    width: 100%;
+  ${each('-band-label')} { text-align: right; }
+  ${each('-option')} { padding: 0.35em min(0.7em, 1.2cqw); }
+  .itc-title-option.itc-title-option-face { width: clamp(2.1rem, 11cqh, 2.8rem); height: clamp(2.1rem, 11cqh, 2.8rem); }
+  /*
+    ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
+    column took the width three tier names needed, and they stacked a letter to a line. The hint under
+    the track says what the band is set to and the faces say what the pilot band is, and the row still
+    names itself to a reader (aria-label), so the word beside it is the one thing that can go.
+  */
+  @container (max-width: 620px) {
+    ${each('-band')} { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+    ${each('-band-label')} { display: none; }
+    ${each('-option')} { font-size: 0.85em; padding: 0.3em 0.4em; }
+    .itc-title-board { font-size: 0.85em; }
+    .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
+    .itc-title-board-reached { display: none; }
+    .itc-title-board-rows { grid-template-columns: auto auto auto; }
   }
+  .itc-title-choices { flex-direction: row; gap: min(0.6rem, 1.5cqw); }
+  .itc-title-choices > :first-child { flex: 2 1 0; font-size: 1.05em; padding: 0.4em 0.8em; }
+  .itc-title-choices > :nth-child(n+2) { flex: 1 1 0; }
+  .itc-guide-body { gap: min(0.5rem, 1.6cqh) min(1.5rem, 3cqw); }
+  .itc-guide-key, .itc-guide-controls { gap: 0.15em 0.6em; line-height: 1.2; }
+  .itc-guide-key-icon { width: 1.8em; height: 1.8em; }
   /*
-    ⚠️ **THE TIERS SPAN BOTH ROWS AND THE MUSIC ROOM AND THE PILOT SHARE THE FOURTH COLUMN — 0415.**
-    Pilot was a fifth card, and a fifth card in a four-column grid wraps onto a row of its own: 46
-    pixels of a 320-pixel screen, which fitted on Windows' fonts and scrolled by 9 on CI's. Two short
-    buttons stacked beside three tall cards cost the row nothing.
+    The panel's own gap is the one thing above the rows with any give, and it is already authored
+    against the short axis, so tightening it here is the same argument one step further.
   */
-  .itc-title-choices > :nth-child(-n+3) { grid-row: span 2; }
-  /*
-    A card's lines start at its top, so the three names sit on one line across the row whatever each
-    card has under it — centred, the name moved with the length of its hint.
-  */
-  .itc-title-action {
-    width: 100%;
-    padding: 0.5em 0.6em;
-    line-height: 1.15;
-    /*
-      Sized by the WIDTH as well as the height, because a card is a quarter of the row: at the
-      panel's height-only size a 480-wide phone set *Let the Galaxy Burn* on three lines. The floor is
-      the panel's own, so no phone gets smaller type than the desktop's smallest.
-    */
-    font-size: clamp(0.8rem, min(2.9cqw, 5.4cqh), 1.25rem);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-  }
-  /* The music room and the pilot are short, so each sits in the middle of its half of the column. */
-  .itc-title-choices > :nth-child(n+4) { justify-content: center; }
-  .itc-title-column { grid-row: 2; }
-  .itc-title-settings-box { grid-row: 3; }
-  /*
-    The key as one row of seven: its icon, name and hint are siblings in the flat order the builder
-    writes them, so flowing the grid down three rows and then across puts each pickup in a column of
-    its own, with no change to the DOM the desktop reads as three columns.
-  */
-  .itc-title-key {
-    grid-auto-flow: column;
-    grid-template-columns: none;
-    grid-template-rows: auto auto auto;
-    grid-auto-columns: minmax(0, 1fr);
-    justify-items: center;
-    align-items: start;
-    width: 100%;
-    gap: 0.15em 0.6em;
-    line-height: 1.2;
-    /* Quieter than the cards: it is the thing read once, and the cards are the thing chosen. */
-    font-size: clamp(0.65rem, min(1.9cqw, 3.4cqh), 0.85rem);
-  }
-  .itc-title-key-name, .itc-title-key-hint { text-align: center; }
-  /* A thumb's worth of button, where the desktop's are a pointer's. */
-  .itc-title-settings { font-size: clamp(0.75rem, min(2.4cqw, 4cqh), 0.95rem); }
-  /*
-    Tall for a thumb, and only as wide as the row allows: the width is what wrapped the three settings
-    onto two lines at 480 wide, and a second line is forty pixels of a 320-pixel screen.
-  */
-  .itc-title-option { padding: 0.4em min(0.9em, 1.4cqw); }
-  .itc-title-settings-box { gap: 0.35em min(1.2em, 2.5cqw); }
-  /*
-    The panel's own gap and the heading are the two things above the rows with any give, and both are
-    already authored against the short axis, so tightening them here is the same argument one step
-    further rather than a new one.
-  */
-  .itc-title-panel { gap: min(0.6rem, 1.6cqh); }
+  .itc-title-panel, .itc-settings-panel, .itc-guide-panel { gap: min(0.6rem, 1.6cqh); }
   /*
     ⚠️ **THE HEADING IS DELIBERATELY NOT OVERRIDDEN HERE, AND IT WAS AT FIRST.**
     docs/decisions/0049 has a probe that breaks the heading's own rule — typesetting it at a fixed
@@ -1856,15 +1841,17 @@ ${each('-action:hover')}, .itc-intro-skip:hover {
   --itc-glass: color-mix(in srgb, var(--itc-void) 70%, var(--itc-ally, var(--itc-ink)));
   box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 38%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 18%, transparent);
 }
-/* The tiers are the screen's one choice: their rim glows brighter than the quieter pair beside them. */
-.itc-title-action { box-shadow: 0 0 1em color-mix(in srgb, var(--itc-ink) 24%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 12%, transparent); }
-/* A chosen setting and the place that is playing are filled with the run, the void's ink on it. */
-.itc-title-option-on, .itc-music-action-playing {
+/* Launch is the screen's one way into a run: its rim glows brighter than Settings under it. 0458. */
+.itc-title-choices > :first-child { box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 14%, transparent); }
+/* A chosen setting, the open tab and the place that is playing are filled with the run, the void's ink on it. */
+${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   background-image: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
   border-color: transparent;
   background-clip: border-box;
 }
-.itc-title-option:not(.itc-title-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
+/* The face's ring is the run as well, drawn round the portrait rather than over it. */
+.itc-title-option-face.itc-title-option-on { background-image: none; box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
+.itc-title-option:not(.itc-title-option-on), .itc-settings-option:not(.itc-settings-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
 /* The golfer flying now: the tick is filled with the run as well. */
 .itc-select-action-current::after { background: linear-gradient(135deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)); }
 /* A golfer's card lights under the pointer, as it lifts. */
@@ -1874,8 +1861,9 @@ ${each('-action:hover')}, .itc-intro-skip:hover {
   The banner's rule, under every heading but the name's — which has the badge, and on the splash the
   loading light, as its line. Out of flow, hung from the heading, so the panel is the height it was.
 */
-.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading { position: relative; }
-.itc-select-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after {
+.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading { position: relative; }
+.itc-select-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after,
+.itc-settings-heading::after, .itc-guide-heading::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -2118,14 +2106,39 @@ interface Panel {
    * second description this file already refuses elsewhere.
    */
   options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
+  /** Each choice's band — 0458: the row the cursor stops on, its two steps and its hint line. */
+  bands: readonly Band[];
+  /** The tab strip's buttons, in the row's `tabs` order — 0458. Empty on a screen with no tabs. */
+  tabs: readonly HTMLButtonElement[];
+  /**
+   * The rows the cursor walks — 0458: the tabs, then each band, then the actions, in the order the
+   * screen draws them. A row of one band is one stop; a row of buttons is walked along by where they
+   * stand, which is how the music room's grid stays a grid.
+   */
+  rows: readonly (readonly HTMLElement[])[];
   /** The music room's readout — 0212. `null` on every other screen, which is all of them. */
   now: NowPlayingParts | null;
   /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
   crossing: CrossingParts | null;
   /** A level's or a run's account — 0428. `null` on every screen that has none. */
   sheet: HTMLElement | null;
-  /** The high scores and the column they roll in with the key — 0429. `null` off the title. */
-  board: { root: HTMLElement; column: HTMLElement } | null;
+  /** The high scores, and the body that drops their column while there are none — 0429, 0458. `null` off the title. */
+  board: { root: HTMLElement; body: HTMLElement } | null;
+}
+
+/** One choice, drawn as a band — 0458. */
+interface Band {
+  name: SettingName;
+  /** The row itself: what the cursor rings and what holds the keyboard's focus. */
+  root: HTMLElement;
+  less: HTMLButtonElement;
+  more: HTMLButtonElement;
+  /** The live option's hint, written under the track. */
+  hint: HTMLElement;
+  /** The options' hints, by position — the row's, so the band says what the live one means. */
+  hints: readonly string[];
+  /** Which option is on — written by `setChoice`, read by a step. */
+  index: number;
 }
 
 /**
@@ -2356,6 +2369,13 @@ const BADGE_SRC = 'icon-192.png';
  * (9rem) at a pixel ratio of two, on the icons' own argument: a few kilobytes once, and no pixel steps.
  */
 const PORTRAIT_PIXELS = 320;
+/** The pilot band's portraits — 0458: drawn at 3.6rem at most, so 128 covers a pixel ratio of two. */
+const FACE_PIXELS = 128;
+/**
+ * How many of the table's runs the title shows — 0458: *"could just be the top 5."* The device keeps
+ * `TABLE_SIZE`; this is what is worth reading standing still beside the rows.
+ */
+export const BOARD_SHOWN = 5;
 
 export interface Chrome {
   /** Everything to put on the page, in order. The stylesheet first. */
@@ -2396,20 +2416,20 @@ export interface Chrome {
    */
   show(screen: Screen | null): void;
   /**
-   * Move the focus by `delta` controls on the screen currently shown.
-   *
-   * ⚠️ **Wraps, and does not clamp.** A ring of controls has no end to get stuck against, which is
-   * what a player pushing a stick expects; a clamp makes the last control feel broken.
-   */
-  /**
-   * Move the focus by one control in `axis` — 0214.
+   * Move the focus by one control in `axis` — 0214, and by rows since 0458: up and down between the
+   * screen's rows, round its ends; left and right along a band (clamped at its ends) or a row of
+   * buttons (by where they stand).
    *
    * ⚠️ **The axis says which way the player pushed; the CHROME says what that means**, because the
    * chrome is what laid the controls out. `src/app/menu.ts` deliberately stops at the direction.
    */
   move(delta: number, axis?: 'x' | 'y'): void;
-  /** Press the focused control, exactly as a click would. */
+  /** Press the focused control, exactly as a click would — or step the focused band on (0458). */
   activate(): void;
+  /** Open the tab `delta` along from the shown one, round the ends — 0458: LB and RB on a pad. */
+  tab(delta: number): void;
+  /** Light the device in hand on How to play's controls — 0458. */
+  setDevice(device: GuideDevice): void;
   /**
    * Draw the trigger buttons: one per trigger that has a weapon behind it, in trigger order, stacked
    * up the leading edge from the low corner.
@@ -2447,7 +2467,8 @@ export interface Chrome {
   setSheet(screen: Screen, lines: readonly SheetLine[] | null): void;
   /**
    * Put the high scores on the title — 0429, best first, with the row at `fresh` lit (a score just
-   * set) or `-1` for none. An empty table leaves the key alone on the title and nothing rolls.
+   * set) or `-1` for none. The first `BOARD_SHOWN` stand still beside the rows (0458); an empty
+   * table drops the column and the rows stand alone.
    */
   setBoard(lines: readonly BoardLine[], fresh: number): void;
   /**
@@ -2583,6 +2604,12 @@ export function spatially(
   from: number,
   delta: number,
   axis: 'x' | 'y',
+  /*
+    0458: whether a push past the far end of a line comes round to its near end. Yes for a screen that
+    is one row of buttons, as the room is; no for a row among others, where the push past the end is
+    the player leaving the row and the caller takes them to the next one.
+  */
+  wraps = true,
 ): number | null {
   const here = boxes[from];
   if (here === undefined) return null;
@@ -2627,7 +2654,150 @@ export function spatially(
       }
     }
   }
-  return best ?? wrap;
+  return best ?? (wraps ? wrap : null);
+}
+
+/** The three things a player can be holding — 0458, How to play's columns. */
+export type GuideDevice = 'keyboard' | 'pad' | 'touch';
+const GUIDE_DEVICES: readonly GuideDevice[] = ['keyboard', 'pad', 'touch'];
+const GUIDE_DEVICE_LABELS: Record<GuideDevice, string> = { keyboard: 'Keyboard', pad: 'Pad', touch: 'Touch' };
+/** The standard mapping's face buttons by index, as an Xbox-style pad prints them. */
+const PAD_FACE_NAMES: readonly string[] = ['A', 'B', 'X', 'Y'];
+
+/** A key code as its cap says it: `KeyE` is E, `ShiftLeft` is Shift, `ArrowUp` is an arrow. */
+function keyCap(code: string): string {
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Arrow')) return { Up: '↑', Down: '↓', Left: '←', Right: '→' }[code.slice(5)] ?? code;
+  return code.replace(/(Left|Right)$/, '');
+}
+function keyCaps(codes: readonly string[]): string {
+  return [...new Set(codes.map(keyCap))].join(' / ');
+}
+
+/**
+ * How to play — 0458: the pickups, what each gives and how it is taken, and the controls on every
+ * device with the one in hand lit.
+ *
+ * ⚠️ **THE KEY IS THE ONE THE TITLE CARRIED (0045, 0432), AND IT IS THE UPGRADES AND NOT THE ENEMIES.**
+ * An enemy announces itself by shooting at you, so the game teaches it in the only way that sticks; a
+ * pickup announces nothing, and a player who does not know it is good will not fly across the lane to
+ * find out. What it never said was HOW a pickup is taken — that it turns through faces and the one
+ * showing is the one you get — and that is the lead line, and each row's `how`.
+ *
+ * ⚠️ **EVERY WORD IS A CONTENT ROW'S.** The faces' names and hints are `faceOf`'s, the lines under them
+ * the pickup rows' `how`, the triggers `SIDE_LABELS`, the keys `DEFAULT_BINDINGS` and the pad's buttons
+ * `PAD_SPECIAL_BUTTONS`. A binding changed in the table is changed here.
+ */
+function buildGuide(
+  prefix: string,
+  iconOf: (sprite: number) => HTMLCanvasElement,
+  devices: Record<GuideDevice, HTMLElement[]>,
+): HTMLElement {
+  const body = document.createElement('div');
+  body.className = prefix + 'body';
+  const lead = document.createElement('p');
+  lead.className = prefix + 'lead';
+  lead.textContent = 'Pickups drift in turning through what they offer. Fly into one to take the face it is showing.';
+  body.appendChild(lead);
+
+  const section = (title: string): HTMLElement => {
+    const box = document.createElement('section');
+    box.className = prefix + 'section';
+    const heading = document.createElement('h2');
+    heading.className = prefix + 'section-heading';
+    heading.textContent = title;
+    box.appendChild(heading);
+    body.appendChild(box);
+    return box;
+  };
+
+  const key = document.createElement('div');
+  key.className = prefix + 'key';
+  for (const pickup of PICKUP_KINDS) {
+    const row = PICKUPS[pickup];
+    /*
+      ⚠️ **ONE ROW PER PICKUP, AND IT CYCLES AS THE PICKUP DOES — 0432.** Each row's glyph, name and
+      hint turn together through its faces at the field's own `PICKUP_CYCLE_STEPS`, so the key teaches
+      the thing the player will meet — a shape that changes its offer. **Every face stays in the page,
+      stacked in one cell**, and the stylesheet shows one at a time, so nothing reflows as it turns; the
+      row is labelled with every face for a reader, who cannot wait for a picture to change.
+    */
+    const icons = document.createElement('span');
+    icons.className = prefix + 'key-cell';
+    const names = document.createElement('span');
+    names.className = prefix + 'key-cell ' + prefix + 'key-name';
+    const hints = document.createElement('span');
+    hints.className = prefix + 'key-cell ' + prefix + 'key-hint';
+    const told: string[] = [];
+    const count = row.faces.length;
+    row.faces.forEach((sprite, face) => {
+      const said = faceOf(pickup, face);
+      told.push(said.label + ': ' + said.hint);
+      const icon = iconOf(sprite);
+      icon.className = prefix + 'key-icon';
+      const name = document.createElement('span');
+      name.textContent = said.label;
+      const hint = document.createElement('span');
+      hint.textContent = said.hint;
+      if (count > 1) {
+        for (const turn of [icon, name, hint]) {
+          turn.classList.add(prefix + 'key-face');
+          turn.style.animationName = prefix + 'key-face-' + String(count);
+          turn.style.animationDuration = String((count * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
+          // Face `face` is up for the `face`th share of the turn, so its clock is run that far on.
+          turn.style.animationDelay = String((-((count - face) % count) * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
+        }
+      }
+      icons.appendChild(icon);
+      names.appendChild(name);
+      hints.appendChild(hint);
+    });
+    for (const cell of [icons, names, hints]) cell.setAttribute('aria-hidden', 'true');
+    const how = document.createElement('span');
+    how.className = prefix + 'key-how';
+    how.textContent = row.how;
+    const about = document.createElement('span');
+    about.className = prefix + 'key-about';
+    about.append(hints, how);
+    const line = document.createElement('span');
+    line.className = prefix + 'key-row';
+    line.setAttribute('role', 'img');
+    line.setAttribute('aria-label', row.label + ' — ' + told.join('; or ') + '. ' + row.how);
+    line.append(icons, names, about);
+    key.appendChild(line);
+  }
+  section('PICKUPS').appendChild(key);
+
+  /*
+    The controls: one row per thing a hand does, one column per device. The touch column names the
+    discs by where they stand — they stack up the leading edge from the low corner in trigger order
+    (0060), so the first trigger is the lowest.
+  */
+  const table = document.createElement('div');
+  table.className = prefix + 'controls';
+  const cell = (text: string, part: string, device: GuideDevice | null): void => {
+    const span = document.createElement('span');
+    span.className = prefix + part;
+    span.textContent = text;
+    if (device !== null) devices[device].push(span);
+    table.appendChild(span);
+  };
+  cell('', 'controls-head', null);
+  for (const device of GUIDE_DEVICES) cell(GUIDE_DEVICE_LABELS[device], 'controls-head', device);
+  const moves = [DEFAULT_BINDINGS.acrossMinus, DEFAULT_BINDINGS.alongMinus, DEFAULT_BINDINGS.acrossPlus, DEFAULT_BINDINGS.alongPlus];
+  cell('Fly', 'controls-what', null);
+  cell(moves.map((codes) => keyCap(codes[0] ?? '')).join('') + ' / arrows', 'controls-how', 'keyboard');
+  cell('Left stick', 'controls-how', 'pad');
+  cell('Drag anywhere', 'controls-how', 'touch');
+  const specials = [DEFAULT_BINDINGS.special1, DEFAULT_BINDINGS.special2, DEFAULT_BINDINGS.special3];
+  SIDES.forEach((side, slot) => {
+    cell(SIDE_LABELS[side], 'controls-what', null);
+    cell(keyCaps(specials[slot] ?? []), 'controls-how', 'keyboard');
+    cell(PAD_FACE_NAMES[PAD_SPECIAL_BUTTONS[slot] ?? -1] ?? '', 'controls-how', 'pad');
+    cell(slot === 0 ? 'Lowest disc' : slot === SIDES.length - 1 ? 'Top disc' : 'Middle disc', 'controls-how', 'touch');
+  });
+  section('CONTROLS').appendChild(table);
+  return body;
 }
 
 /** `m:ss`. A walk is minutes long, and 170.6 is not a thing anybody reads off a bar. */
@@ -2913,6 +3083,8 @@ export function makeChrome(
   onSeek: (through: number) => void,
   // 0412: the intro's skip, pressed.
   onSkip: () => void,
+  // 0458: a tab pressed — the screen it opens. The shell shows it, as it shows every screen.
+  onTab: (screen: Screen) => void,
 ): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -2949,6 +3121,23 @@ export function makeChrome(
     if (ctx !== null && source !== undefined) ctx.drawImage(source, 0, 0);
     return canvas;
   };
+
+  /**
+   * A golfer's portrait at the pilot band's size — 0458. The boot cards' painting, at a quarter of its
+   * pixels: a thumbnail drawn at the card's resolution is a quarter-megapixel nobody sees.
+   */
+  const portraitOf = (golfer: GolferKind, prefix: string): HTMLCanvasElement => {
+    const portrait = document.createElement('canvas');
+    portrait.width = FACE_PIXELS;
+    portrait.height = FACE_PIXELS;
+    portrait.className = prefix + 'face';
+    portrait.setAttribute('aria-hidden', 'true');
+    const pen = portrait.getContext('2d');
+    if (pen !== null) paintPortrait(pen, GOLFERS[golfer], FACE_PIXELS);
+    return portrait;
+  };
+  /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
+  const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
 
   const panels: Partial<Record<Screen, Panel>> = {};
   /** The ship that crosses the title's sky — 0437 — kept so `setShip` can put the pilot's own in it. */
@@ -2996,8 +3185,13 @@ export function makeChrome(
       crossing, whose heading is the place and is pushed. An empty `<h1>` is a flex child: it takes a
       gap above the words it was supposed to be, and a screen reader announces a heading with nothing
       in it.
+
+      ⚠️ **AND NOT DRAWN ON A SCREEN WITH TABS — 0458: THE TABS ARE ITS HEADING.** Settings said
+      *Settings* twice, once as a heading and once as the tab under it that was open, and on the
+      smallest phone that second line was the 24 pixels it scrolled by. The open tab is filled, and
+      the strip names the place for a reader.
     */
-    if (row.heading.length > 0) {
+    if (row.heading.length > 0 && row.tabs.length === 0) {
       const heading = document.createElement('h1');
       heading.className = prefix + 'heading';
       heading.textContent = row.heading;
@@ -3059,22 +3253,48 @@ export function makeChrome(
     }
 
     /*
-      The controls' own box. On the title screen it is a column BESIDE the key rather than under it —
+      The tab strip, under the heading, on a screen that shares one — 0458. Each tab is a button that
+      asks the shell to show its screen; the open one is filled and says so to a reader.
+    */
+    const tabs: HTMLButtonElement[] = [];
+    if (row.tabs.length > 0) {
+      const strip = document.createElement('div');
+      strip.className = prefix + 'tabs';
+      strip.setAttribute('role', 'tablist');
+      strip.setAttribute('aria-label', row.heading);
+      for (const tab of row.tabs) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = prefix + 'tab';
+        button.setAttribute('role', 'tab');
+        button.textContent = SCREENS[tab].heading;
+        const open = tab === screen;
+        button.classList.toggle(prefix + 'tab-on', open);
+        button.setAttribute('aria-selected', open ? 'true' : 'false');
+        const press = (): void => {
+          if (tab !== screen) onTab(tab);
+        };
+        button.addEventListener('click', press);
+        listeners.push(() => button.removeEventListener('click', press));
+        strip.appendChild(button);
+        tabs.push(button);
+      }
+      panel.appendChild(strip);
+    }
+
+    /*
+      The controls' own box. On the title it stands under the bands, in the column beside the table —
       see the stylesheet, and decision 0049 for why the short axis decides that. Every other screen
-      has one control and the box is a formality, which is the point: one description of where a
-      screen's controls go.
+      has one control or a few and the box is a formality, which is the point: one description of
+      where a screen's controls go.
     */
     const choices = document.createElement('div');
     choices.className = prefix + 'choices';
 
     /*
-      The settings' own box — decision 0070.
-
-      ⚠️ **It rides with the KEY and not with the controls, and that is a fit rather than a taste.**
-      On the title screen the two columns are the key and the tier buttons, and the buttons are the
-      taller of the two: a row added under them makes the panel taller and the smallest landscape
-      phone starts scrolling, which decision 0049 refuses. Under the key it costs nothing, because the
-      key column has the headroom. The layout guard is what found that, at nine pixels.
+      The bands' own box — decision 0070, and bands since 0458. Above the actions on every screen,
+      because a band is a thing set before the thing pressed: the title's tier and pilot over Launch,
+      Settings' three over its way out. The cursor walks them in that order too.
     */
     const settingsBox = document.createElement('div');
     settingsBox.className = prefix + 'settings-box';
@@ -3084,97 +3304,28 @@ export function makeChrome(
     // 0340: the crossing's words, on the line above's exact terms.
     const crossing = screen === 'travel' ? buildCrossing(prefix) : null;
 
-    /*
-      ⚠️ **THE KEY, ON THE TITLE SCREEN ONLY, AND IT IS THE UPGRADES AND NOT THE ENEMIES.** Asked for
-      in play: *"on the intro starting screen we need a quick user key of what each upgrade does. We
-      don't need a key for the enemies, but knowing that the upgrades are good pickups is important."*
-
-      That asymmetry is right and worth writing down: an enemy announces itself by shooting at you, so
-      the game teaches it in the only way that sticks. A pickup announces nothing — it is a small
-      shape in a lane, and a player who does not already know it is good will not fly across the lane
-      to find out.
-
-      Built by walking `PICKUP_KINDS`, so a pickup added to the table appears here without anybody
-      remembering to come and add it.
-    */
     let board: Panel['board'] = null;
     if (screen === 'title') {
-      const key = document.createElement('div');
-      key.className = prefix + 'key';
-      for (const pickup of PICKUP_KINDS) {
-        const row = PICKUPS[pickup];
-        /*
-          ⚠️ **ONE ROW PER PICKUP, AND IT CYCLES AS THE PICKUP DOES — 0432.** *"Condense them to match
-          the pickups in game, but cycle through like they do in game and as they cycle, show the
-          relevant info."* It was one row per FACE since 0233 — six lines for three things on the
-          field. Now each pickup is one row whose glyph, name and hint turn together through its faces
-          at the field's own `PICKUP_CYCLE_STEPS`, so the key teaches the thing the player will meet —
-          a shape that changes its offer — and gives the title back half its column.
-
-          ⚠️ **EVERY FACE STAYS IN THE PAGE, STACKED IN ONE CELL**, and the stylesheet shows one at a
-          time: the cell is as wide as its widest face, so nothing reflows as it turns. The row is
-          labelled with every face for a reader, who cannot wait for a picture to change. The cost the
-          ask names and accepts: a player who looks away misses a face until it comes round again.
-        */
-        const icons = document.createElement('span');
-        icons.className = prefix + 'key-cell';
-        const names = document.createElement('span');
-        names.className = prefix + 'key-cell ' + prefix + 'key-name';
-        const hints = document.createElement('span');
-        hints.className = prefix + 'key-cell ' + prefix + 'key-hint';
-        const told: string[] = [];
-        const count = row.faces.length;
-        row.faces.forEach((sprite, face) => {
-          const said = faceOf(pickup, face);
-          told.push(said.label + ': ' + said.hint);
-          const icon = iconOf(sprite);
-          icon.className = prefix + 'key-icon';
-          const name = document.createElement('span');
-          name.textContent = said.label;
-          const hint = document.createElement('span');
-          hint.textContent = said.hint;
-          if (count > 1) {
-            for (const turn of [icon, name, hint]) {
-              turn.classList.add(prefix + 'key-face');
-              turn.style.animationName = prefix + 'key-face-' + String(count);
-              turn.style.animationDuration = String((count * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
-              // Face `face` is up for the `face`th share of the turn, so its clock is run that far on.
-              turn.style.animationDelay = String((-((count - face) % count) * PICKUP_CYCLE_STEPS) / STEPS_PER_SECOND) + 's';
-            }
-          }
-          icons.appendChild(icon);
-          names.appendChild(name);
-          hints.appendChild(hint);
-        });
-        // The row's label is the accessible text and says every face; the moving parts are decoration.
-        for (const cell of [icons, names, hints]) cell.setAttribute('aria-hidden', 'true');
-        const line = document.createElement('span');
-        line.className = prefix + 'key-row';
-        line.setAttribute('role', 'img');
-        line.setAttribute('aria-label', told.join('; or '));
-        line.append(icons, names, hints);
-        key.appendChild(line);
-      }
-      const column = document.createElement('div');
-      column.className = prefix + 'column';
-      // The high scores roll with the key in one cell — 0429; filled, and set rolling, by `setBoard`.
+      /*
+        ⚠️ **THE TABLE BESIDE THE ROWS, AND THE KEY IS ON HOW TO PLAY — 0458.** *"The display for the
+        pickups and bombs isn't actually helpful anymore, it could be a tab in settings."* The key and
+        the table took turns in this column on an eighteen-second cross-fade; the table has it alone
+        now, still, five rows.
+      */
       const boardRoot = document.createElement('div');
       boardRoot.className = prefix + 'board';
-      column.append(key, boardRoot);
-      board = { root: boardRoot, column };
+      const main = document.createElement('div');
+      main.className = prefix + 'main';
+      main.append(settingsBox, choices);
       const body = document.createElement('div');
-      body.className = prefix + 'body';
-      /*
-        ⚠️ **THE SETTINGS ARE A FULL-WIDTH ROW UNDER BOTH COLUMNS, AND THEY RODE IN THE LEFT ONE
-        UNTIL THERE WERE TWO** — `docs/decisions/0072-a-cue-is-baked-and-played.md`. 0070 put the
-        style beside the pickup key because that column had the slack; measured at 480x320, the key
-        is 191px against the tiers' 214, so the slack is 23px and two stacked settings want 51.
-
-        Across the whole body they are 225px wide against 442 available, so they fit on one line —
-        the deficit was vertical and the space that was going spare was horizontal.
-      */
-      body.append(column, choices, settingsBox);
+      // Bare until `setBoard` has a run to show — the rows then stand alone in the middle.
+      body.className = prefix + 'body ' + prefix + 'body-bare';
+      body.append(boardRoot, main);
+      board = { root: boardRoot, body };
       panel.appendChild(body);
+    } else if (screen === 'guide') {
+      panel.appendChild(buildGuide(prefix, iconOf, guideDevices));
+      panel.appendChild(choices);
     } else {
       /*
         ── THE MUSIC ROOM'S READOUT, ABOVE ITS BUTTONS — 0212 ───────────────────────────────────────
@@ -3184,8 +3335,8 @@ export function makeChrome(
         decision 0049 is about, and the answer to *which one is playing* would be the thing furthest
         from the thing that asked.
 
-        ⚠️ **Built for this screen only, on the same terms the pickup key is built for the title.**
-        Every other panelled screen gets `now: null` and never learns this exists.
+        ⚠️ **Built for this screen only.** Every other panelled screen gets `now: null` and never
+        learns this exists.
       */
       if (nowPlaying !== null) panel.appendChild(nowPlaying.root);
       /*
@@ -3195,8 +3346,9 @@ export function makeChrome(
         reading it. Below the name is where a button that means *I have read this* belongs.
       */
       if (crossing !== null) panel.appendChild(crossing.root);
-      panel.appendChild(choices);
+      // 0458: the bands above the actions, which is the order the cursor walks them in.
       panel.appendChild(settingsBox);
+      panel.appendChild(choices);
     }
 
     /*
@@ -3250,26 +3402,55 @@ export function makeChrome(
     });
 
     /*
-      THE SETTINGS THIS SCREEN OFFERS — decision 0070.
+      THE SETTINGS THIS SCREEN OFFERS — decision 0070, and each one a BAND since 0458.
 
-      ⚠️ **Appended to `controls` AFTER the actions, so the focus ring reaches them and starts
-      nowhere near them.** `show` puts the cursor back on control zero every time a screen appears
-      (0046), so a pad user who presses confirm on arriving still starts a run; the settings are one
-      move further on, which is where a thing you change once belongs.
+      ⚠️ **A BAND IS ONE STOP FOR THE CURSOR, AND ITS OPTIONS ARE NOT STOPS AT ALL.** The chips were
+      each a control, so the title's three two-way settings were six stops for three decisions and
+      the pad walked them in whatever order the geometry guessed. The band's root takes the focus;
+      left and right move along it (`move`), a press steps it on (`activate`), and a pointer or a
+      thumb presses a segment or a step directly. The segments and the steps are out of the tab order
+      for the same reason.
 
       ⚠️ **Each option captures its own position and nothing else.** `src/state/screens.ts` says an
       option carries no value — the content hub's order IS the value — so the shell narrows an index
       against its own table rather than this file narrowing a string.
     */
     const options: Partial<Record<SettingName, HTMLButtonElement[]>> = {};
+    // Not `bands`: that name is the trigger discs', further down, and the two are different things.
+    const choiceBands: Band[] = [];
     for (const choice of row.choices) {
       const line = document.createElement('div');
-      line.className = prefix + 'settings';
+      line.className = prefix + 'band';
+      line.tabIndex = 0;
+      line.setAttribute('role', 'group');
+      line.setAttribute('aria-label', choice.label);
       const label = document.createElement('span');
-      label.className = prefix + 'setting-label';
+      label.className = prefix + 'band-label';
       label.textContent = choice.label;
+      label.setAttribute('aria-hidden', 'true');
+      const step = (towards: -1 | 1, glyph: string, said: string): HTMLButtonElement => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.tabIndex = -1;
+        button.className = prefix + 'band-step ' + prefix + (towards < 0 ? 'band-less' : 'band-more');
+        button.textContent = glyph;
+        button.setAttribute('aria-label', said + ' ' + choice.label.toLowerCase());
+        const press = (): void => {
+          const band = choiceBands.find((b) => b.root === line);
+          if (band !== undefined) stepBand(band, towards, false);
+        };
+        button.addEventListener('click', press);
+        listeners.push(() => button.removeEventListener('click', press));
+        return button;
+      };
+      const less = step(-1, '‹', 'Previous');
+      const more = step(1, '›', 'Next');
+      const hint = document.createElement('span');
+      hint.className = prefix + 'band-hint';
+      hint.setAttribute('aria-live', 'polite');
       const box = document.createElement('div');
       box.className = prefix + 'options';
+      if (choice.faces === 'portraits') box.classList.add(prefix + 'options-faces');
       /*
         ⚠️ **WHICH setting this strip belongs to, on the element rather than in a position** — added
         with the second setting (`docs/decisions/0072-a-cue-is-baked-and-played.md`), because with one
@@ -3285,22 +3466,45 @@ export function makeChrome(
       choice.options.forEach((option, index) => {
         const button = document.createElement('button');
         button.type = 'button';
+        button.tabIndex = -1;
         button.className = prefix + 'option';
-        button.textContent = option.label;
-        // The hint is the accessible description rather than visible text: the row is a strip of
-        // small buttons, and a sentence under each one would be a paragraph where a word will do.
-        if (option.hint.length > 0) button.title = option.hint;
+        if (choice.faces === 'portraits') {
+          /*
+            ⚠️ **THE GOLFER'S PORTRAIT, ROUND, AND THE NAME IS ITS LABEL — 0458.** The same painting the
+            boot cards carry (`src/render/golfer-art.ts`), at a thumbnail; the position IS the golfer,
+            because `src/state/screens.ts` walked `GOLFER_KINDS` to build the options.
+          */
+          button.classList.add(prefix + 'option-face');
+          button.setAttribute('aria-label', option.label);
+          button.title = option.label;
+          const golfer = GOLFER_KINDS[index];
+          if (golfer !== undefined) button.appendChild(portraitOf(golfer, prefix));
+        } else {
+          button.textContent = option.label;
+        }
         const press = (): void => onChoice(choice.name, index);
         button.addEventListener('click', press);
         listeners.push(() => button.removeEventListener('click', press));
         box.append(button);
         buttons.push(button);
-        controls.push(button);
       });
       options[choice.name] = buttons;
-      line.append(label, box);
+      const band: Band = {
+        name: choice.name,
+        root: line,
+        less,
+        more,
+        hint,
+        // The pilot's line is the name as well as what they fly: the face alone does not say who it is.
+        hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
+        index: 0,
+      };
+      choiceBands.push(band);
+      line.append(label, less, box, more, hint);
       settingsBox.appendChild(line);
     }
+    // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
+    if (choiceBands.length === 0) settingsBox.remove();
 
     /*
       The countdown, for a screen that expires.
@@ -3323,7 +3527,38 @@ export function makeChrome(
       panel.appendChild(timer);
     }
 
-    panels[screen] = { root, controls, timer, options, now: nowPlaying, crossing, sheet, board };
+    /*
+      THE ROWS THE CURSOR WALKS — 0458: the tabs, each band, the actions, which is the order they are
+      drawn in on every screen. Built once, from what was built, so the walk cannot list a control the
+      screen does not have or miss one it does.
+    */
+    const rows: HTMLElement[][] = [];
+    if (tabs.length > 0) rows.push(tabs);
+    for (const band of choiceBands) rows.push([band.root]);
+    if (controls.length > 0) rows.push(controls);
+    /*
+      ⚠️ **ONE CURSOR, WHOEVER MOVED IT.** A click, a tap or the Tab key puts the platform's focus on a
+      control without asking the chrome; read back here, so the next push of a stick starts from where
+      the player actually is rather than from where the pad last left the ring.
+    */
+    const follow = (e: FocusEvent): void => {
+      if (shownScreen !== screen) return;
+      const target = e.target;
+      for (let r = 0; r < rows.length; r++) {
+        const c = rows[r]!.indexOf(target as HTMLElement);
+        if (c < 0) continue;
+        if (r !== cursor.row || c !== cursor.col) {
+          cursor.row = r;
+          cursor.col = c;
+          paintFocus(false);
+        }
+        return;
+      }
+    };
+    panel.addEventListener('focusin', follow);
+    listeners.push(() => panel.removeEventListener('focusin', follow));
+
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board };
     elements.push(root);
   }
 
@@ -3590,7 +3825,16 @@ export function makeChrome(
     it survives anything the player does with another device.
   */
   let shownScreen: Screen | null = null;
-  let focused = 0;
+  /*
+    THE CURSOR — 0458: a row of the shown screen's `rows` and a column within it.
+
+    ⚠️ **REMEMBERED PER SCREEN, AND IT WAS RESET ON EVERY SHOW.** *"A remembered position on a screen the
+    player has left is a cursor sitting somewhere nobody put it"* — true of a screen the player was
+    sent to, and false of one they come BACK to: leaving the music room put the ring on the title's
+    first tier rather than on the button they had pressed to get there. The player put it there.
+  */
+  const cursor = { row: 0, col: 0 };
+  const remembered: Partial<Record<Screen, { row: number; col: number }>> = {};
   /** The faces the buttons are currently built from, so they are rebuilt on a change and not per call. */
   let bandFaces: number[] = [];
   /** What the bar last said: a fraction, or negative for no boss. */
@@ -3614,16 +3858,47 @@ export function makeChrome(
     bossBar.classList.toggle('itc-playing-boss-shown', shownScreen !== null && SCREENS[shownScreen].steps && bossFraction >= 0);
   };
 
-  const paintFocus = (): void => {
+  /** The control under the cursor on the shown screen, or `undefined` on a screen with none. */
+  const atCursor = (): HTMLElement | undefined => {
+    const panel = shownScreen === null ? undefined : panels[shownScreen];
+    return panel?.rows[cursor.row]?.[cursor.col];
+  };
+  /*
+    ⚠️ **`scroll` IS FALSE WHEN A SCREEN APPEARS — 0458.** Focusing an element scrolls it into view, and
+    the title now opens on *Launch*, below the bands: on a window too short for the title, showing it
+    scrolled the overlay down to Launch and put the name off the top where nothing scrolls back (0049's
+    bug, caught by its guard). A screen appearing does not scroll itself; a player moving the ring does.
+  */
+  const paintFocus = (focus = true, scroll = true): void => {
     const panel = shownScreen === null ? undefined : panels[shownScreen];
     if (panel === undefined) return;
-    for (let i = 0; i < panel.controls.length; i++) {
-      const control = panel.controls[i]!;
-      control.classList.toggle(prefixFor(shownScreen!) + 'action-cursor', i === focused);
-      // Focus the element as well, so the keyboard, the screen reader and the pad all agree about
-      // where the player is — one cursor, three devices.
-      if (i === focused) control.focus();
+    const here = atCursor();
+    const ring = prefixFor(shownScreen!) + 'action-cursor';
+    for (const row of panel.rows) {
+      for (const control of row) control.classList.toggle(ring, control === here);
     }
+    // Focus the element as well, so the keyboard, the screen reader and the pad all agree about where
+    // the player is — one cursor, three devices.
+    if (focus && here !== undefined && document.activeElement !== here) here.focus({ preventScroll: !scroll });
+  };
+  /**
+   * Move a band along — 0458. Clamped at its ends, because a band is a line with two ends the player
+   * can see, and a press past *Burn* that came round to *Legendary* is a tier nobody asked for; a press
+   * on the band itself (`activate`) is the one way round, because it has no direction to be wrong about.
+   */
+  const stepBand = (band: Band, delta: number, round: boolean): void => {
+    const count = band.hints.length;
+    if (count === 0) return;
+    let next = band.index + delta;
+    if (round) next = (next + count) % count;
+    else next = Math.max(0, Math.min(count - 1, next));
+    if (next !== band.index) onChoice(band.name, next);
+  };
+  /** The band whose row the cursor is on, or `undefined` on a row of buttons. */
+  const bandAtCursor = (): Band | undefined => {
+    const panel = shownScreen === null ? undefined : panels[shownScreen];
+    const here = atCursor();
+    return panel?.bands.find((band) => band.root === here);
   };
 
   /** What the readout last said, so a change can be told from a layout — 0433. −1 before the first. */
@@ -3854,38 +4129,31 @@ export function makeChrome(
       if (board === null || board === undefined) return;
       const prefix = prefixFor('title');
       board.root.replaceChildren();
-      board.column.classList.toggle(prefix + 'column-rolls', lines.length > 0);
+      // 0458: no runs yet, no column — the rows stand alone in the middle.
+      board.body.classList.toggle(prefix + 'body-bare', lines.length === 0);
       if (lines.length === 0) return;
       const heading = document.createElement('div');
       heading.className = prefix + 'board-heading';
       heading.textContent = 'HIGH SCORES';
-      const view = document.createElement('div');
-      view.className = prefix + 'board-window';
       const rows = document.createElement('div');
       rows.className = prefix + 'board-rows';
-      // Two seconds a row, so the roll reads at the same pace however long the table is.
-      rows.style.setProperty('--itc-roll', String(lines.length * 2) + 's');
-      // Twice over for a loop with no seam; the second copy is the picture's and not a reader's.
-      for (let copy = 0; copy < 2; copy++) {
-        lines.forEach((line, index) => {
-          const cells: [string, string][] = [
-            [line.place, 'board-place'],
-            [line.score, 'board-score'],
-            [line.pilot, 'board-pilot'],
-            [line.reached, 'board-reached'],
-          ];
-          for (const [text, part] of cells) {
-            const cell = document.createElement('span');
-            cell.className = prefix + part;
-            if (index === fresh) cell.classList.add(prefix + 'board-fresh');
-            if (copy > 0) cell.setAttribute('aria-hidden', 'true');
-            cell.textContent = text;
-            rows.appendChild(cell);
-          }
-        });
-      }
-      view.appendChild(rows);
-      board.root.append(heading, view);
+      // The best five, still — 0458. The table keeps ten; the title shows the five worth reading.
+      lines.slice(0, BOARD_SHOWN).forEach((line, index) => {
+        const cells: [string, string][] = [
+          [line.place, 'board-place'],
+          [line.score, 'board-score'],
+          [line.pilot, 'board-pilot'],
+          [line.reached, 'board-reached'],
+        ];
+        for (const [text, part] of cells) {
+          const cell = document.createElement('span');
+          cell.className = prefix + part;
+          if (index === fresh) cell.classList.add(prefix + 'board-fresh');
+          cell.textContent = text;
+          rows.appendChild(cell);
+        }
+      });
+      board.root.append(heading, rows);
     },
     show(screen: Screen | null): void {
       /*
@@ -3911,50 +4179,116 @@ export function makeChrome(
         */
         if (shown && panel.crossing !== null) panel.crossing.drawnFlown = -1;
       }
+      // 0458: the screen being left keeps where its cursor was, for the player who comes back to it.
+      if (shownScreen !== null && panels[shownScreen] !== undefined) remembered[shownScreen] = { row: cursor.row, col: cursor.col };
       shownScreen = screen;
       paintTriggers();
       paintBoss();
       paintSkip();
-      // Back to the first control every time a screen appears. A remembered position on a screen the
-      // player has left is a cursor sitting somewhere nobody put it.
-      focused = 0;
-      paintFocus();
+      /*
+        Where the cursor starts: where it was left, on a screen seen before; otherwise where the row
+        says — its first action (the title's Launch, a run over's Continue) or its first band.
+      */
+      const panel = screen === null ? undefined : panels[screen];
+      if (panel !== undefined && screen !== null) {
+        const kept = remembered[screen];
+        const bandsFrom = panel.tabs.length > 0 ? 1 : 0;
+        const opens = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0 ? bandsFrom : panel.rows.length - 1;
+        cursor.row = kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
+        cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : 0;
+      }
+      paintFocus(true, false);
     },
     move(delta: number, axis: 'x' | 'y' = 'y'): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
-      const count = panel?.controls.length ?? 0;
-      if (count === 0) return;
+      const rows = panel?.rows ?? [];
+      if (rows.length === 0) return;
+      const row = rows[cursor.row] ?? rows[0]!;
       /*
-        ⚠️ **THE MOVE IS RESOLVED AGAINST WHERE THE CONTROLS ACTUALLY ARE** —
-        `docs/decisions/0214-a-grid-is-not-a-list.md`. This was `focused + delta`, which is a list
-        walk, and it is right for a column and right for a row and wrong for the music room's nine
-        tiles: *"the menu itself is arranged in a nine-tile square layout order, but is functionally
-        an up/down menu on controller."*
+        ── ROWS FIRST, AND THE BOXES ONLY INSIDE ONE — 0458 ─────────────────────────────────────────
 
-        ⚠️ **OFF THE BOXES AND NOT OFF A DECLARED COLUMN COUNT.** The room's controls are a wrapping
-        row on a wide screen and an explicit three-column grid on a short one, so **how many are in a
-        row is a fact about the viewport** rather than about the screen. A number the chrome was told
-        would be wrong on one of those two, and a screen re-laid-out in an art pass would break it
-        silently. The rects are what the player is looking at.
+        ⚠️ **THE WHOLE SCREEN WAS ONE GEOMETRIC GUESS, AND ON THE TITLE IT GUESSED WRONG.** 0214 resolved
+        every push against every control's box, which is right for the music room's grid and was wrong
+        for a title of five box sizes: down from the last tier went to the middle settings chip and
+        wrapped, so *Music* and *Pilot* could not be reached by pressing down at all, and on a phone down
+        only ever toggled between two controls. `reports/the-menus-reviewed-2026-10-02.md` has the walk.
 
-        ⚠️ **A LAYOUT READ IS AFFORDABLE HERE AND NOWHERE NEAR A FRAME.** This runs on a press —
-        0022's budget is about the frame loop, and `tests/budget.test.ts` keeps this file off the hot
-        list precisely so the chrome may do DOM work when a player asks for something.
+        So the screen is ROWS, in the order it draws them: up and down move between rows, left and right
+        move along a band or along a row of buttons. **The boxes still decide inside a row of buttons** —
+        0214's argument is untouched there, because the music room's tiles are one row of buttons laid
+        out as a grid, and how many sit in a line is still a fact about the viewport.
       */
-      const next = spatially(
-        panel!.controls.map((control) => control.getBoundingClientRect()),
-        focused,
-        delta,
-        axis,
-      );
-      // `+ count` before the modulo: JavaScript's `%` keeps the sign of the left operand, so a
-      // backwards move off the first control would land on −1 and focus nothing.
-      focused = next === null ? (focused + delta + count) % count : next;
+      const band = bandAtCursor();
+      if (band !== undefined && axis === 'x') {
+        stepBand(band, delta, false);
+        return;
+      }
+      if (band === undefined) {
+        /*
+          ⚠️ **A LAYOUT READ IS AFFORDABLE HERE AND NOWHERE NEAR A FRAME.** This runs on a press —
+          0022's budget is about the frame loop, and `tests/budget.test.ts` keeps this file off the hot
+          list precisely so the chrome may do DOM work when a player asks for something.
+        */
+        const boxes = row.map((control) => control.getBoundingClientRect());
+        // A screen that is one row of buttons wraps inside it, as every screen did before 0458.
+        const next = spatially(boxes, cursor.col, delta, axis, rows.length === 1);
+        if (next !== null) {
+          cursor.col = next;
+          paintFocus();
+          return;
+        }
+        /*
+          A push along a row the layout has no opinion about still gets a move — 0214's note, and the
+          reason it existed: the player does not know which way the chrome laid a row out.
+        */
+        if (axis === 'x' || rows.length === 1) {
+          cursor.col = (cursor.col + delta + row.length) % row.length;
+          paintFocus();
+          return;
+        }
+      }
+      // Off the row, to the next one up or down, round the ends — a ring of rows, as the list was.
+      const from = atCursor()?.getBoundingClientRect();
+      cursor.row = (cursor.row + delta + rows.length) % rows.length;
+      const landing = rows[cursor.row]!;
+      // Into a row of several, onto the one standing nearest across from where the cursor was.
+      cursor.col = 0;
+      if (from !== undefined && landing.length > 1) {
+        const x = (from.left + from.right) / 2;
+        // Entering a grid from above lands on its top line, from below on its bottom one.
+        const lines = landing.map((control) => control.getBoundingClientRect().top);
+        const edge = delta > 0 ? Math.min(...lines) : Math.max(...lines);
+        let best = Number.POSITIVE_INFINITY;
+        landing.forEach((control, i) => {
+          const box = control.getBoundingClientRect();
+          if (Math.abs(box.top - edge) > box.height / 2) return;
+          const off = Math.abs((box.left + box.right) / 2 - x);
+          if (off < best) {
+            best = off;
+            cursor.col = i;
+          }
+        });
+      }
       paintFocus();
     },
     activate(): void {
+      // A band is pressed by stepping it on, round its end — 0458; a button is clicked, as ever.
+      const band = bandAtCursor();
+      if (band !== undefined) stepBand(band, 1, true);
+      else atCursor()?.click();
+    },
+    tab(delta: number): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
-      panel?.controls[focused]?.click();
+      if (panel === undefined || shownScreen === null || panel.tabs.length === 0) return;
+      const tabs = SCREENS[shownScreen].tabs;
+      const at = tabs.indexOf(shownScreen);
+      const next = tabs[(at + delta + tabs.length) % tabs.length];
+      if (next !== undefined && next !== shownScreen) onTab(next);
+    },
+    setDevice(device: GuideDevice): void {
+      for (const each of GUIDE_DEVICES) {
+        for (const cell of guideDevices[each]) cell.classList.toggle(prefixFor('guide') + 'controls-device-on', each === device);
+      }
     },
     setTimer(seconds: number | null): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -3966,10 +4300,35 @@ export function makeChrome(
     },
     setChoice(name: SettingName, index: number): void {
       for (const screen of Object.keys(panels) as Screen[]) {
-        const buttons = panels[screen]?.options[name];
-        if (buttons === undefined) continue;
+        const panel = panels[screen];
+        const buttons = panel?.options[name];
+        if (panel === undefined || buttons === undefined) continue;
         for (let i = 0; i < buttons.length; i++) {
-          buttons[i]!.classList.toggle(prefixFor(screen) + 'option-on', i === index);
+          const on = i === index;
+          buttons[i]!.classList.toggle(prefixFor(screen) + 'option-on', on);
+          buttons[i]!.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        // 0458: the band says the live one's hint, and a step that has nowhere to go is shown as such.
+        const band = panel.bands.find((b) => b.name === name);
+        if (band === undefined) continue;
+        band.index = index;
+        band.hint.textContent = band.hints[index] ?? '';
+        band.less.disabled = index <= 0;
+        band.more.disabled = index >= band.hints.length - 1;
+        /*
+          A face scrolled off a long roster's track is brought back into view when it is chosen.
+
+          ⚠️ **THE TRACK'S OWN scrollLeft, AND IT WAS scrollIntoView.** That scrolls every scrolling
+          ancestor too, and the overlay is one (0049): on a window too short for the title it scrolled
+          the whole screen to the band at boot, and the name went off the top where nothing scrolls
+          back to it — the bug 0049 exists for, which its own guard caught.
+        */
+        const chosen = buttons[index];
+        const track = chosen?.parentElement;
+        if (chosen !== undefined && track instanceof HTMLElement && track.scrollWidth > track.clientWidth) {
+          const left = chosen.offsetLeft - track.offsetLeft;
+          if (left < track.scrollLeft) track.scrollLeft = left;
+          else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
         }
       }
     },
@@ -4124,8 +4483,11 @@ export function makeChrome(
       for (let i = 0; i < controls.length; i++) {
         controls[i]!.classList.toggle(prefixFor('music') + 'action-playing', i === now.control);
       }
-      if (now.follow && now.control !== null && now.control !== focused && shownScreen === 'music') {
-        focused = now.control;
+      // The room's places are its one row of buttons, which is its last row — 0458's walk.
+      const actionsRow = (panels.music?.rows.length ?? 1) - 1;
+      if (now.follow && now.control !== null && (cursor.row !== actionsRow || now.control !== cursor.col) && shownScreen === 'music') {
+        cursor.row = actionsRow;
+        cursor.col = now.control;
         paintFocus();
       }
       parts.place.textContent = now.place;

@@ -109,7 +109,7 @@ the mouse and a thumb all read that one model.**
   cards stay** — that screen is the first meeting and the sound's press (0415), and it is not this
   ask.
 - **Launch is the one primary button**, and the focus starts on it, so a returning player's first
-  press starts a run with what they chose last time. A on either band launches too.
+  press starts a run with what they chose last time. A on a band steps it along, as on every band.
 - **The table is the top five, still.** No roll, no loop, no cross-fade; the score in the gold
   display digits, the pilot, how far. An empty table says nothing rather than a placeholder.
 - **The key leaves the title** for *How to play*.
@@ -177,12 +177,13 @@ Launch within a thumb's reach. The pause button sits in the top strip where no t
 
 One PR at a time, each from `main`, each played on its branch preview before the next.
 
-1. **The title is rows** — the difficulty band, the pilot band, Launch, Settings, the top-five table;
-   the row model for focus, back, repeat and remembered focus on every menu screen; the pilot
-   sub-screen and the title's key removed. *Settings* opens the existing strip in a panel until
-   item 2 replaces it, so nothing is lost in between.
-2. **Settings is a screen** — Options and How to play; the music room moved under it; `itc_settings`
-   with its rollback note.
+1. **BUILT — [0458](../docs/decisions/0458-the-title-is-rows.md).** **The title is rows, and Settings is a screen** — the difficulty band, the pilot band, Launch,
+   Settings, the top-five table; Settings with its Options and How to play tabs and the music room
+   under it; the row model for focus, back, repeat and remembered focus on every menu screen; the
+   pilot sub-screen and the title's key and strip removed. One PR, so `main` is never without the
+   key or the settings in between.
+2. **Settings are kept** — `itc_settings`, with its rollback note. ⚠️ **Not the pilot**: the settings
+   slice records it was asked for as *"pick each visit"*, and the boot's pick is the sound's press.
 3. **The run can be paused** — the button, the keys, the hidden tab, the suspended audio and the
    count-in, the pause screen with Settings, How to play and Quit.
 4. **The touch section** — trigger side and steering sensitivity.

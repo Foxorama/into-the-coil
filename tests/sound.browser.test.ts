@@ -19,7 +19,7 @@ import { PAN_BUCKETS, velocitiesOf } from '../src/app/sound.ts';
  */
 const BAKED_BUFFERS = CUE_KINDS.reduce((total, kind) => total + velocitiesOf(CUES[kind]).length, 0) + MUSIC_LAYERS.length;
 import { SOUND_KINDS } from '../src/content/sound.ts';
-import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { back, openSettings } from './title.ts';
 
 /**
  * SOUND, IN A REAL BROWSER, COUNTED AT THE PLATFORM.
@@ -208,11 +208,12 @@ const settled = async (page: Page): Promise<AudioTally> => {
   return now;
 };
 
+// On Settings since 0458 — every test that presses one opens Settings first, and that press is a gesture.
 const soundOption = (kind: (typeof SOUND_KINDS)[number]): string =>
-  `[${SETTING_ATTR}="sound"] .${prefixFor('title')}option >> nth=${SOUND_KINDS.indexOf(kind)}`;
+  `[${SETTING_ATTR}="sound"] .${prefixFor('settings')}option >> nth=${SOUND_KINDS.indexOf(kind)}`;
 
-/** The easiest tier's button, which is the first control on the title screen — 0047 walks the table. */
-const startButton = `.${prefixFor('title')}action >> nth=${DIFFICULTY_KINDS.indexOf(DIFFICULTY_KINDS[0]!)}`;
+/** *Launch*, the title's first control since 0458; it starts a run on the band's tier. */
+const startButton = `.${prefixFor('title')}action >> nth=0`;
 
 describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture', () => {
   it('builds no audio at all until the player touches something', async () => {
@@ -389,7 +390,9 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
     // ⚠️ `settled` rather than a fixed wait, on the terms the chain test above states: this assertion
     // is about a bake TOTAL, so waiting for that total is waiting for the thing it measures.
     const page = await open();
+    await openSettings(page);
     await page.click(soundOption('off'));
+    await back(page, 'settings');
     await page.click(startButton);
     const after = await settled(page);
     expect(
@@ -485,6 +488,7 @@ describe.runIf(chromePath)('sound reaches the speakers, and only after a gesture
       whole set of loops, from a guard whose subject is a single press.
     */
     const page = await open();
+    await openSettings(page);
     await page.click(soundOption('on'));
     await settled(page);
     await page.click(soundOption('off'));

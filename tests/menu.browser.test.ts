@@ -4,9 +4,10 @@ import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { afterFrames } from './frames.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
+import { launch, openRoom, shown as shownScreen } from './title.ts';
+import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS } from '../src/app/menu.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -264,7 +265,7 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
     const quickest = DIFFICULTY_KINDS.reduce((fewest, kind) =>
       DIFFICULTIES[kind].lives < DIFFICULTIES[fewest].lives ? kind : fewest,
     );
-    await page.locator('.' + prefixFor('title') + 'action').nth(DIFFICULTY_KINDS.indexOf(quickest)).click();
+    await launch(page, quickest);
     await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
     // Full forward on the stick: the ship flies up-lane into everything the level sends, which
     // spends its lives on contact damage without needing to aim at anything.
@@ -387,8 +388,8 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
 
   it('moves DOWN a column and RIGHT along a row, rather than one step either way', async () => {
     const page = await open();
-    await page.getByRole('button', { name: /^Music/ }).click();
-    await page.waitForSelector('.' + prefixFor('music').slice(0, -1) + '-shown', { timeout: 15_000 });
+    // Through Settings since 0458, which is the room's door now.
+    await openRoom(page);
     /*
       ⚠️ **AND LET THE ROOM TAKE A STEP BEFORE THE PAD PRESSES ANYTHING** — found by 0412. Opening a
       screen spends the pad reader (0055): its next read learns what is held as the baseline, so a
@@ -497,6 +498,68 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
       '.' + prefixFor('title') + 'action-cursor',
     );
     expect(moved, 'right did nothing on a column — a whole axis of the pad is dead here').not.toBe(opened);
+    await page.context().close();
+  });
+
+  /*
+    ── THE TITLE IS ROWS — 0458 ─────────────────────────────────────────────────────────────────────
+
+    THE REPORTED BUG, end to end: *"the menu navigation with game pad is atrocious."* Walked on `main`
+    at `5391d51` with this same stub, down from the last tier went to a settings chip and wrapped, so
+    *Music* and *Pilot* could not be reached by pressing down at all, and B did nothing.
+
+    ⚠️ **EVERY ASSERTION IS WHAT THE PLAYER SEES CHANGE**: which row the ring is on, and which option a
+    band shows filled. The expected values are read off the tables, so a tier or a pilot added moves
+    them without an edit here.
+  */
+  it('0458 — walks the title by rows, moves along a band, and B comes back to where it left', async () => {
+    const page = await open();
+    const ring = (): Promise<string> =>
+      page.evaluate((s: string) => {
+        const el = document.querySelector(s);
+        return (el?.getAttribute('aria-label') ?? el?.textContent ?? '').trim();
+      }, '.' + prefixFor('title') + 'action-cursor');
+    const filled = (setting: string): Promise<string> =>
+      page.evaluate(
+        ({ attr, name }: { attr: string; name: string }) => {
+          const on = document.querySelector(`[${attr}="${name}"] [aria-pressed="true"]`);
+          return (on?.getAttribute('aria-label') ?? on?.textContent ?? '').trim();
+        },
+        { attr: SETTING_ATTR, name: setting },
+      );
+    const tier = SCREENS.title.choices.find((c) => c.name === 'difficulty')!;
+    const pilot = SCREENS.title.choices.find((c) => c.name === 'pilot')!;
+
+    expect(await ring(), 'the title does not open on Launch').toBe(SCREENS.title.actions[0]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    expect(await ring(), 'up from Launch is not the pilot band').toBe(pilot.label);
+    const flying = await filled('pilot');
+    await nudge(page, MENU_DPAD_BUTTONS.left);
+    const pilots = pilot.options.map((o) => o.label);
+    expect(await filled('pilot'), 'left on the pilot band did not choose the pilot before').toBe(pilots[pilots.indexOf(flying) - 1]);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    expect(await ring(), 'up from the pilot band is not the difficulty band').toBe(tier.label);
+    const was = await filled('difficulty');
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    const tiers = tier.options.map((o) => o.label);
+    expect(await filled('difficulty'), 'right on the difficulty band did not choose the next tier').toBe(tiers[tiers.indexOf(was) + 1]);
+    expect(await ring(), 'a step along a band moved the ring off it').toBe(tier.label);
+
+    // Down through every row: the bands, Launch, then Settings — the one the old walk could not reach.
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    expect(await ring()).toBe(SCREENS.title.actions[0]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    expect(await ring(), 'down from Launch did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
+
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    await page.waitForSelector(shownScreen('settings'), { timeout: 15_000 });
+    await nudge(page, MENU_BACK_BUTTONS[0]!);
+    await page.waitForSelector(shownScreen('title'), { timeout: 15_000 });
+    expect(await ring(), 'B came back to the title with the ring somewhere the player did not leave it').toBe(
+      SCREENS.title.actions[1]!.label,
+    );
+    expect(await shown(page, '.itc-playing-hud'), 'a press on the title started a run').toBe(false);
     await page.context().close();
   });
 });

@@ -13,15 +13,16 @@ export const PROBES = [
     // A hand-kept legend is what the key exists to not be. Filtering one kind out is the shape of a
     // list that has gone stale — and the table is still complete, so nothing else notices.
     broke: 'a pickup dropped from the key while the table still carries it',
-    guard: 'lists every pickup, with its name and what it does',
+    guard: 'lists every pickup, with its name, what it does and how it is taken',
     edit: {
       path: 'src/app/chrome.ts',
       // ⚠️ `bomb` and it was `spread` — 0082 merged four kinds into one and `spread` stopped existing,
       // so the filter removed nothing and this went STILL GREEN. The break is unchanged in shape and
       // bigger in effect: the key is three rows now, so dropping one hides a third of the pickups.
       // ⚠️ And `shield` since 0372 took the bomb pickup away, which made the old filter a no-op again.
-      find: '      for (const pickup of PICKUP_KINDS) {',
-      replace: "      for (const pickup of PICKUP_KINDS.filter((k) => k !== 'shield')) {",
+      // ⚠️ Re-anchored by 0458, which moved the key into `buildGuide` on How to play: same loop, shallower.
+      find: '  for (const pickup of PICKUP_KINDS) {',
+      replace: "  for (const pickup of PICKUP_KINDS.filter((k) => k !== 'shield')) {",
     },
   },
   {

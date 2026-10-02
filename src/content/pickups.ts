@@ -138,6 +138,14 @@ export interface PickupRow extends Body {
    * already shows.* Three words is the target, not the limit anybody is pushing against.
    */
   hint: string;
+  /**
+   * How it is taken and where what it gives goes — 0458, the line How to play writes under the face.
+   *
+   * ⚠️ **ON THE ROW, AND EVERY ROW AUTHORS ITS OWN**, for `hint`'s reason one field up and on
+   * `CLAUDE.md`'s *every instance authors its Y*: the shield's line is about its shell and its spill,
+   * the tubes' about a full rack, and a shared sentence in the chrome would say neither.
+   */
+  how: string;
   effect: PickupEffect;
   /**
    * What it looks like, in cycle order — one sprite per thing it can be offering.
@@ -228,6 +236,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Bomb',
     hint: 'A charge of the face it shows',
+    how: 'Fly in on the face you want: one charge for your gun trigger',
     effect: 'special',
     // Every gun special, in the specials' own order — 0441. The key lists each face by name.
     faces: BOMB_KINDS.map((k) => SPECIALS[k].face),
@@ -255,6 +264,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Missiles',
     hint: 'Tubes up a tier',
+    how: 'Fly in on the tubes you want; at a full rack it is a surge for your missile trigger',
     effect: 'upgrade',
     faces: MISSILE_KINDS.map((k) => MISSILES[k].pickup),
     spills: null,
@@ -286,6 +296,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Shield',
     hint: 'One hit absorbed',
+    how: 'A plate for your shell, or a ward charge; at a full shell a plate becomes a void',
     effect: 'shield',
     faces: [SPRITE.pickupShield, ...WARD_KINDS.map((k) => SPECIALS[k].face)],
     // A shield face taken at a full shell is still a void — the cycle is the choice, and a face the
@@ -307,6 +318,7 @@ export const PICKUPS: Record<PickupKind, PickupRow> = {
     damage: 0,
     label: 'Ward',
     hint: 'A charge of the face it shows',
+    how: 'Where a shield would be, on Burn: one charge for your ward trigger',
     effect: 'special',
     faces: WARD_KINDS.map((k) => SPECIALS[k].face),
     spills: null,

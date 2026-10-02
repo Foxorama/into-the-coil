@@ -16,8 +16,9 @@ export const PROBES = [
     guard: 'follows the splash, has no panel',
     edit: {
       path: 'src/state/slices/screen.ts',
-      find: "export const initialScreen: ScreenState = { current: 'splash' };",
-      replace: "export const initialScreen: ScreenState = { current: 'title' };",
+      // ⚠️ And by 0458, whose screen slice also remembers who opened a menu.
+      find: "export const initialScreen: ScreenState = { current: 'splash', opener: 'title' };",
+      replace: "export const initialScreen: ScreenState = { current: 'title', opener: 'title' };",
     },
   },
   {

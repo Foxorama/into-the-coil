@@ -3,13 +3,14 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { BOARD_SHOWN, SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { choose } from './title.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 // 0212: the music room's readout is the one part of a screen that appears after the screen does.
 import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
 import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
-import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 // 0415: the title's Pilot card is as wide as whoever was picked.
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../src/content/golfers.ts';
 // 0429: the title is measured with a full high-score table on it.
@@ -72,10 +73,10 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   /*
-    ⚠️ **A FULL HIGH-SCORE TABLE, WRITTEN BEFORE THE PAGE LOADS — 0429.** The title rolls the table
-    with the key in one cell, so the title's height is whichever of the two is taller; a guard that
-    loaded a browser with nothing kept would be measuring the title every first-time player sees and
-    no returning one does. The widest rows the content allows, through the real save layer.
+    ⚠️ **A FULL HIGH-SCORE TABLE, WRITTEN BEFORE THE PAGE LOADS — 0429.** The title stands the table
+    beside its rows (0458), and drops the column while nothing is kept; a guard that loaded a browser
+    with nothing kept would be measuring the title every first-time player sees and no returning one
+    does. The widest rows the content allows, through the real save layer.
   */
   await context.addInitScript(
     ([key, table]: [string, string]) => {
@@ -120,8 +121,8 @@ async function showOnly(page: Page, screen: Screen): Promise<void> {
   if (screen === 'title') await nameTheWidestPilot(page);
   if (screen === 'title') {
     // The table has to be there to be measured, or every title below is the first-time player's.
-    const rolls = await page.$('.' + prefixFor('title') + 'column-rolls');
-    expect(rolls, 'the title has no high-score table to measure — the seeded table was not read').not.toBeNull();
+    const rows = await page.$('.' + prefixFor('title') + 'board-rows');
+    expect(rows, 'the title has no high-score table to measure — the seeded table was not read').not.toBeNull();
   }
   if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver') await fillTheSheet(page, screen);
 }
@@ -174,23 +175,27 @@ async function fillTheSheet(page: Page, screen: 'cleared' | 'victory' | 'gameOve
 }
 
 /**
- * Put the longest golfer's name under Pilot on the title — 0415, and 0212's argument again.
+ * Put the longest line each title band can say under it — 0415, 0458, and 0212's argument again.
  *
- * ⚠️ **THE PILOT CARD SAYS WHO WAS PICKED, SO IT IS AS WIDE AS THEIR NAME**, and the page opens on
- * the default golfer: a guard that took the title as it loads measured one name of four, and the
- * column it sits in on a phone is `auto`. Written into the DOM for the reason `fillTheRoom` gives.
+ * ⚠️ **A BAND'S HINT SAYS WHAT IS CHOSEN, SO IT IS AS WIDE AS THE LONGEST CHOICE**, and the page opens
+ * on the defaults: a guard that took the title as it loads measured one line of four. The pilot's is
+ * their name, ship and gun, which is the longest. Written into the DOM for the reason `fillTheRoom` gives.
  */
 async function nameTheWidestPilot(page: Page): Promise<void> {
-  const name = GOLFER_KINDS.map((kind) => GOLFERS[kind].name).reduce((a, b) => (b.length > a.length ? b : a), '');
-  const index = SCREENS.title.actions.findIndex((action) => action.label === 'Pilot');
+  const longest = (all: readonly string[]): string => all.reduce((a, b) => (b.length > a.length ? b : a), '');
+  const lines = SCREENS.title.choices.map((choice) => ({
+    name: choice.name,
+    line: longest(choice.options.map((o) => (choice.faces === 'portraits' ? o.label + ' — ' + o.hint : o.hint))),
+  }));
   await page.evaluate(
-    ({ prefix, index, name }: { prefix: string; index: number; name: string }) => {
-      const control = document.querySelectorAll('.' + prefix + 'action')[index];
-      const hint = control?.querySelector('.' + prefix + 'action-hint');
-      if (!(hint instanceof HTMLElement)) throw new Error('the title has no Pilot card saying who is picked');
-      hint.textContent = name;
+    ({ prefix, attr, lines }: { prefix: string; attr: string; lines: { name: string; line: string }[] }) => {
+      for (const { name, line } of lines) {
+        const hint = document.querySelector(`[${attr}="${name}"] ~ .${prefix}band-hint`);
+        if (!(hint instanceof HTMLElement)) throw new Error(`the title's ${name} band has no line saying what is chosen`);
+        hint.textContent = line;
+      }
     },
-    { prefix: prefixFor('title'), index, name },
+    { prefix: prefixFor('title'), attr: SETTING_ATTR, lines },
   );
 }
 
@@ -419,6 +424,32 @@ describe.runIf(chromePath)('every screen fits the screen it is drawn on', () => 
   });
 });
 
+describe.runIf(chromePath)('0458 — the table on the title is five rows that stay where they are', () => {
+  it('shows the best five of the table, standing still', async () => {
+    /*
+      Played: *"the high scores scroll too fast and are hard to read and the flashing in and out is
+      awkward, could just be the top 5."* Held as what the player sees: five scores, best first, and
+      nothing in the table moving — no roll, no cross-fade. The device keeps `TABLE_SIZE`, and the
+      table this page was seeded with is that long, so a title that showed them all would show more.
+    */
+    const page = await open({ width: 1280, height: 720 });
+    await page.waitForTimeout(1_000);
+    const board = await page.evaluate((p: string) => {
+      const root = document.querySelector('.' + p + 'board');
+      if (!(root instanceof HTMLElement)) return null;
+      const scores = [...root.querySelectorAll('.' + p + 'board-score')].map((el) => Number(el.textContent));
+      const moving = [root, ...root.querySelectorAll('*')].flatMap((el) => el.getAnimations()).length;
+      return { scores, moving };
+    }, prefixFor('title'));
+    expect(board, 'the title has no table').not.toBeNull();
+    expect(TABLE_SIZE, 'the device keeps no more than five, so this cannot tell five from all').toBeGreaterThan(BOARD_SHOWN);
+    expect(board!.scores, 'the title does not show the best five').toHaveLength(BOARD_SHOWN);
+    expect([...board!.scores].sort((a, b) => b - a), 'the five are not best first').toEqual(board!.scores);
+    expect(board!.moving, 'something in the table is still animating').toBe(0);
+    await page.context().close();
+  });
+});
+
 describe.runIf(chromePath)('0370 — the tiers explain themselves on every screen', () => {
   it('THE REPORTED ONE: every tier shows its line under its name, readably, on every device', async () => {
     /*
@@ -428,23 +459,39 @@ describe.runIf(chromePath)('0370 — the tiers explain themselves on every scree
       hint is drawn, whole on the display, and at eleven pixels or more — the floor under a line a
       player reads to decide something.
     */
+    /*
+      ⚠️ **ONE LINE UNDER THE BAND SINCE 0458, AND IT SAYS THE CHOSEN TIER'S.** The tiers were three
+      cards with a line each; they are three segments of one band, and the band writes the live one's
+      line under it. So each tier is CHOSEN, by a press on its segment as a player makes it, and its
+      line is measured then — the same three lines, in pixels, on every device.
+    */
     for (const viewport of VIEWPORTS) {
       const page = await open(viewport);
-      const lines = await page.evaluate((p: string) => {
-        return [...document.querySelectorAll<HTMLElement>('.' + p + 'action')].flatMap((control) =>
-          [...control.querySelectorAll<HTMLElement>('.' + p + 'action-hint')].map((line) => {
-            const r = line.getBoundingClientRect();
-            return {
-              tier: control.firstChild?.textContent ?? '',
-              text: line.textContent ?? '',
-              shown: getComputedStyle(line).display !== 'none' && r.width > 0 && r.height > 0,
-              inside: r.left >= -0.5 && r.top >= -0.5 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5,
-              px: parseFloat(getComputedStyle(line).fontSize),
-            };
-          }),
+      const lines: { tier: string; text: string; shown: boolean; inside: boolean; px: number }[] = [];
+      for (const tier of DIFFICULTY_KINDS) {
+        await choose(page, 'difficulty', DIFFICULTY_KINDS.indexOf(tier));
+        lines.push(
+          await page.evaluate(
+            ({ p, attr, tier }: { p: string; attr: string; tier: string }) => {
+              const line = document.querySelector<HTMLElement>(`[${attr}="difficulty"] ~ .${p}band-hint`);
+              const r = line?.getBoundingClientRect();
+              return {
+                tier,
+                text: line?.textContent ?? '',
+                shown: line !== null && r !== undefined && getComputedStyle(line).display !== 'none' && r.width > 0 && r.height > 0,
+                inside: r !== undefined && r.left >= -0.5 && r.top >= -0.5 && r.right <= innerWidth + 0.5 && r.bottom <= innerHeight + 0.5,
+                px: line === null ? 0 : parseFloat(getComputedStyle(line).fontSize),
+              };
+            },
+            { p: prefixFor('title'), attr: SETTING_ATTR, tier },
+          ),
         );
-      }, prefixFor('title'));
-      expect(lines.length, `${viewport.what}: a tier carries no line under its name`).toBeGreaterThanOrEqual(DIFFICULTY_KINDS.length);
+      }
+      for (const line of lines) {
+        expect(line.text, `${viewport.what}, ${line.tier}: the band does not say the chosen tier's line`).toBe(
+          DIFFICULTIES[line.tier as (typeof DIFFICULTY_KINDS)[number]].hint,
+        );
+      }
       for (const line of lines) {
         const at = `${viewport.what}, ${line.tier}: "${line.text}"`;
         expect(line.shown, `${at} is not drawn`).toBe(true);

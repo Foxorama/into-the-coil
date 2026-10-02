@@ -13,8 +13,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every tier shows its line under its name, readably, on every device',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  .itc-title-column { grid-row: 2; }',
-      replace: '  .itc-title-action-hint { display: none; }\n  .itc-title-column { grid-row: 2; }',
+      // ⚠️ Re-anchored by 0458: the tiers are a band, whose line is its hint, and the short-screen block
+      // is where a phone would lose it.
+      find: "  ${each('-band-label')} { text-align: right; }",
+      replace: "  ${each('-band-label')} { text-align: right; }\n  .itc-title-band-hint { display: none; }",
     },
   },
   {
@@ -26,8 +28,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: every tier shows its line under its name, readably, on every device',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  font-size: max(0.62em, 0.7rem);',
-      replace: '  font-size: 0.62em;',
+      // ⚠️ Re-anchored by 0458: the tier's line is the band's hint now, which carries its own floor.
+      find: "${each('-band-hint')} { grid-area: hint; font-size: max(0.66em, 0.7rem);",
+      replace: "${each('-band-hint')} { grid-area: hint; font-size: 0.6em;",
     },
   },
 ];

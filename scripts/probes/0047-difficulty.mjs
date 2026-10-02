@@ -85,9 +85,10 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0210, which appended the music room after the tiers so the map is now one
       // entry in a list rather than the whole `actions` array. The break is the same one it has
       // always been: the tiers in the wrong order, which reads hardest-first to a player.
-      find: '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),',
+      // ⚠️ Re-anchored by 0458, which made the tiers a band's options: same map, same break.
+      find: '        options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),',
       replace:
-        '      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })).reverse(),',
+        '        options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })).reverse(),',
     },
   },
   {

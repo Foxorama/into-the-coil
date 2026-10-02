@@ -5,6 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { launch } from './title.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { SCORES_KEY, parseScores } from '../src/save/scores.ts';
@@ -62,14 +63,8 @@ const QUICKEST = DIFFICULTY_KINDS.reduce((fewest, kind) =>
 describe.runIf(chromePath)('the run-over screen offers to continue, and the offer works', () => {
   it('says Continue, and puts the player back into the game rather than back to the title', async () => {
     const page = await open();
-    const title = '.' + prefixFor('title') + 'action';
-    await page.waitForSelector(title, { timeout: 15_000 });
-    /*
-      ⚠️ **The index is read off `DIFFICULTY_KINDS`, which is the order the buttons were built in**
-      (`src/state/screens.ts` walks it) — the same reason `src/app/mount.ts` reads the control's index
-      off it rather than matching on a label.
-    */
-    await page.locator(title).nth(DIFFICULTY_KINDS.indexOf(QUICKEST)).click();
+    // The tier on its band, then Launch — 0458; `tests/title.ts` reads the segment off `DIFFICULTY_KINDS`.
+    await launch(page, QUICKEST);
 
     // The fixture flies nothing, so the waves end the run on their own. Waited on, never timed.
     const over = '.' + prefixFor('gameOver') + 'shown';

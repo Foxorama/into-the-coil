@@ -5,6 +5,8 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { launch, openSettings, shown as shownScreen } from './title.ts';
+import { SCREENS } from '../src/state/screens.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -78,15 +80,18 @@ const shown = (page: Page, selector: string): Promise<boolean> =>
     return el instanceof HTMLElement && getComputedStyle(el).display !== 'none';
   }, selector);
 
-describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
-  it('lists every pickup, with its name and what it does', async () => {
+// ⚠️ How to play's since 0458, and it was the title's: the key moved behind a tab, and grew `how`.
+describe.runIf(chromePath)('How to play says what a pickup is for', () => {
+  it('lists every pickup, with its name, what it does and how it is taken', async () => {
     /*
       ⚠️ **Driven from `PICKUP_KINDS` rather than from a list typed here**, so a pickup added to the
       table fails this until it appears in the key. That is the whole reason the key is built by
       walking the hub: a legend maintained by hand goes stale the first time somebody is in a hurry.
     */
     const page = await open();
-    const text = (await page.textContent('.' + prefixFor('title') + 'key')) ?? '';
+    const text = (await page.textContent('.' + prefixFor('guide') + 'key')) ?? '';
+    // 0458: and how — the half the key never had: a pickup turns, and the face showing is the one taken.
+    for (const kind of PICKUP_KINDS) expect(text, `the key does not say how ${kind} is taken`).toContain(PICKUPS[kind].how);
     /*
       ⚠️ **EVERY FACE, since 0233.** A cycling pickup is several offers wearing one silhouette in
       turn, and the key names each — the gun rather than the pickup — so a player knows the shape
@@ -123,7 +128,7 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
         for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) inked++;
         return { canvas: true, inked };
       });
-    }, '.' + prefixFor('title') + 'key-icon');
+    }, '.' + prefixFor('guide') + 'key-icon');
 
     // One icon per FACE, since 0233 — a cycling pickup shows each of its glyphs.
     const faces = PICKUP_KINDS.reduce((sum, kind) => sum + PICKUPS[kind].faces.length, 0);
@@ -152,6 +157,10 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
       started, or whose faces all run on one clock, sums to its face count or to nothing. 0044.
     */
     const page = await open();
+    // On the screen, because a hidden screen runs no animation and every face would read as up.
+    await openSettings(page);
+    await page.locator('.' + prefixFor('settings') + 'tab', { hasText: SCREENS.guide.heading }).click();
+    await page.waitForSelector(shownScreen('guide'), { state: 'attached' });
     const rows = await page.evaluate((prefix: string) =>
       [...document.querySelectorAll('.' + prefix + 'key-row')].map((row) => {
         const faces = [...row.querySelectorAll<HTMLElement>('.' + prefix + 'key-icon')];
@@ -163,7 +172,7 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
           duration: faces.map((f) => getComputedStyle(f).animationDuration)[0] ?? '',
         };
       }),
-    prefixFor('title'));
+    prefixFor('guide'));
     expect(rows.length, 'the key is not one row per pickup').toBe(PICKUP_KINDS.length);
     rows.forEach((row, i) => {
       const kind = PICKUP_KINDS[i]!;
@@ -189,7 +198,7 @@ describe.runIf(chromePath)('the title screen says what a pickup is for', () => {
       Held so that a future well-meaning addition has to argue with this rather than slip past it.
     */
     const page = await open();
-    const text = (await page.textContent('.' + prefixFor('title') + 'key')) ?? '';
+    const text = (await page.textContent('.' + prefixFor('guide') + 'key')) ?? '';
     for (const enemy of ['drifter', 'lancer', 'weaver', 'turret', 'charger', 'warden']) {
       expect(text.toLowerCase(), `the key explains the ${enemy}, which play asked it not to`).not.toContain(enemy);
     }
@@ -493,7 +502,8 @@ describe.runIf(chromePath)('0437 — the open items', () => {
   it('marks the golfer flying now on the golfers’ screen, once, in words as well as a picture', async () => {
     const page = await open();
     const marked = await page.evaluate((prefix: string) => {
-      const pilot = document.querySelector('.itc-title-action:nth-child(5) .itc-title-action-hint')?.textContent ?? '';
+      // Who the title's pilot band says is flying — 0458; it was the *Pilot* button's hint.
+      const pilot = document.querySelector('.itc-title-option-face[aria-pressed="true"]')?.getAttribute('aria-label') ?? '';
       return [...document.querySelectorAll<HTMLElement>('.' + prefix + 'action')].map((el) => ({
         current: el.getAttribute('aria-current') === 'true',
         tick: getComputedStyle(el, '::after').content !== 'none',
@@ -559,10 +569,10 @@ describe.runIf(chromePath)('the in-game readout', () => {
       each page's renderer bakes on its own core.
     */
     await Promise.all(
-      DIFFICULTY_KINDS.map(async (tier, index) => {
+      DIFFICULTY_KINDS.map(async (tier) => {
         const row = DIFFICULTIES[tier];
         const page = await open();
-        await page.locator('.' + prefixFor('title') + 'action').nth(index).click();
+        await launch(page, tier);
         await page.waitForTimeout(200);
         const pips = await page.evaluate(() =>
           [...document.querySelectorAll<HTMLElement>('.itc-playing-hud-pip')]
@@ -602,7 +612,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
     // ⚠️ The first tier whose life opens on EMPTY sockets, by the row rather than by name — since 0355
     // a Legendary life opens full, so nothing on it would be spent to compare against.
     const empty = DIFFICULTY_KINDS.findIndex((k) => DIFFICULTIES[k].shellOpen === 0 && DIFFICULTIES[k].shellCap > 0);
-    await page.locator('.' + prefixFor('title') + 'action').nth(empty).click();
+    await launch(page, DIFFICULTY_KINDS[empty]!);
     await page.waitForTimeout(200);
     /*
       ⚠️ **BOTH PIP STATES ARE PUT ON SCREEN BY THE CHROME'S OWN CLASS, and that is deliberate.** A
