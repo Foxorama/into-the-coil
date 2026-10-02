@@ -1,8 +1,8 @@
 // The breaks behind docs/decisions/0437-the-title-is-lit.md.
 //
-// Two of these are one switch thrown the wrong way in each direction: the duplicate counts left on a
-// phone, and the counts taken off a desktop that has nothing else saying them. The third is the mark
-// on the golfers' screen pointing at nobody.
+// Both are one switch thrown the wrong way in each direction: the duplicate counts left on a phone,
+// and the counts taken off a desktop that has nothing else saying them. The third, the mark on the
+// golfers' screen, went with the mark — 0462.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -26,17 +26,6 @@ export const PROBES = [
       path: 'src/app/mount.ts',
       find: '  chrome.setTouch(touchable);',
       replace: '  chrome.setTouch(true);',
-    },
-  },
-  {
-    decision: '0437',
-    suite: 'tests/hud.browser.test.ts',
-    broke: 'the golfers’ screen marking nobody as flying',
-    guard: 'marks the golfer flying now',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "    chrome.setCurrent('select', GOLFER_KINDS.indexOf(state.settings.pilot));",
-      replace: "    chrome.setCurrent('select', -1);",
     },
   },
 ];

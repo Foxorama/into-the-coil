@@ -498,25 +498,6 @@ describe.runIf(chromePath)('0437 — the open items', () => {
     }
     await page.context().close();
   });
-
-  it('marks the golfer flying now on the golfers’ screen, once, in words as well as a picture', async () => {
-    const page = await open();
-    const marked = await page.evaluate((prefix: string) => {
-      // Who the title's pilot band says is flying — 0458; it was the *Pilot* button's hint.
-      const pilot = document.querySelector('.itc-title-option-face[aria-pressed="true"]')?.getAttribute('aria-label') ?? '';
-      return [...document.querySelectorAll<HTMLElement>('.' + prefix + 'action')].map((el) => ({
-        current: el.getAttribute('aria-current') === 'true',
-        tick: getComputedStyle(el, '::after').content !== 'none',
-        named: (el.textContent ?? '').includes(pilot) && pilot.length > 0,
-      }));
-    }, prefixFor('select'));
-    const current = marked.filter((m) => m.current);
-    expect(current.length, 'not exactly one golfer is marked as flying').toBe(1);
-    expect(current[0]!.tick, 'the flying golfer is said to a reader and not drawn').toBe(true);
-    expect(current[0]!.named, 'the golfer marked is not the one the menu says is flying').toBe(true);
-    expect(marked.filter((m) => m.tick).length, 'a golfer not flying wears the tick').toBe(1);
-    await page.context().close();
-  });
 });
 
 describe.runIf(chromePath)('the in-game readout', () => {

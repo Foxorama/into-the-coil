@@ -484,30 +484,15 @@ ${each('-choices')} {
 }
 .itc-select-action-hint { display: block; font-size: 0.8em; font-weight: 500; opacity: 0.7; }
 /*
-  The golfer flying now — 0437. A filled badge in the card's corner with a tick in the void's ink: a
-  shape and a fill, never the card's colour alone (0024), and away from the focus ring's outline so the
-  two never read as one mark.
+  ⚠️ **NO CARD IS MARKED — 0462.** 0437 ticked the golfer flying now, when this screen was also where
+  the golfer was changed; since 0458 it is only shown at boot, before anyone has chosen, so the tick
+  only ever named the default.
 */
 .itc-select-action { position: relative; transition: transform 0.15s ease-out; }
 /* A card lifts under the pointer, so the choice under the hand is the one that moved. */
 .itc-select-action:hover { transform: translateY(-0.25em); }
 @media (prefers-reduced-motion: reduce) {
   .itc-select-action, .itc-select-action:hover { transition: none; transform: none; }
-}
-.itc-select-action-current::after {
-  content: '\\2713';
-  position: absolute;
-  top: 0.35em;
-  right: 0.35em;
-  width: 1.4em;
-  height: 1.4em;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 0.85em;
-  font-weight: 800;
-  background: var(--itc-ink);
-  color: var(--itc-void);
 }
 .itc-select-portrait {
   width: clamp(3rem, min(24cqh, 14cqw), 9rem);
@@ -1891,8 +1876,6 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 /* The face's ring is the run as well, drawn round the portrait rather than over it. */
 .itc-title-option-face.itc-title-option-on { background-image: none; box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
 .itc-title-option:not(.itc-title-option-on), .itc-settings-option:not(.itc-settings-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
-/* The golfer flying now: the tick is filled with the run as well. */
-.itc-select-action-current::after { background: linear-gradient(135deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)); }
 /* A golfer's card lights under the pointer, as it lifts. */
 .itc-select-action:hover { box-shadow: 0 0.4em 1.4em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, transparent), 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent); }
 .itc-select-portrait { filter: drop-shadow(0 0.15em 0.5em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
@@ -2484,11 +2467,6 @@ export interface Chrome {
    * when it has not changed.
    */
   setShip(ship: ShipRow): void;
-  /**
-   * Mark which control on a screen is the one already chosen — 0437: the golfer flying now, on the
-   * screen that changes golfer. The focus ring stays where `show` puts it; this is a mark, not a cursor.
-   */
-  setCurrent(screen: Screen, index: number): void;
   /**
    * Whether the trigger discs are up — 0437. On a touch screen each disc says its stack's count, so the
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
@@ -4064,17 +4042,6 @@ export function makeChrome(
       livesSprite = sprite;
       // And the one crossing the title's sky — 0437: the ship the pilot will fly.
       if (titleFlyer !== null) titleFlyer.replaceChildren(iconOf(sprite));
-    },
-    setCurrent(screen: Screen, index: number): void {
-      const panel = panels[screen];
-      if (panel === undefined) return;
-      panel.controls.forEach((control, i) => {
-        const current = i === index;
-        control.classList.toggle(prefixFor(screen) + 'action-current', current);
-        // Said in words as well as drawn — 0024: the mark is a picture, and a reader needs the fact.
-        if (current) control.setAttribute('aria-current', 'true');
-        else control.removeAttribute('aria-current');
-      });
     },
     setTouch(touch: boolean): void {
       hud.classList.toggle('itc-playing-hud-touch', touch);
