@@ -81,9 +81,10 @@ describe('0193 — the sheet shows the whole atlas, and it cannot quietly show l
     /*
       ⚠️ **THE FINDING THIS GUARD IS MADE OF, AND IT IS NOT THE OBVIOUS ONE.** The first run of the
       sheet put 1280×800 at **7.19 px/unit** against 1920×1080's **10.79** — a third smaller for the
-      same world extent, on the screen that is *taller*. `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md`
-      clamps lookahead to 178–240 units, so a 16:10 view cannot show its natural 160 and buys the
-      extra span out of scale instead. **The binding legibility case is the narrow laptop, not the
+      same world extent, on the screen that is *taller*, measured when the lane was 100.
+      `docs/decisions/0023-the-long-axis-is-the-scroll-axis.md` clamps lookahead to 1.78–2.4 lane
+      widths — 213–288 units since `docs/decisions/0364-the-view-zooms-out.md` — so a 16:10 view
+      cannot show its natural 1.6 and buys the extra span out of scale instead. **The binding legibility case is the narrow laptop, not the
       ultrawide**, which is the opposite of what the aspect suggests.
     *
       ⚠️ **SO AN INSTRUMENT THAT ONLY OFFERED 16:9 AND WIDER WOULD BE ANSWERING THE EASY QUESTION.**
