@@ -1754,11 +1754,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   chrome.setDevice(touchable ? 'touch' : 'keyboard');
   /*
     ⚠️ **THE PILOT BAND SAYS WHO IS FLYING — 0458**, and their ship and gun under the faces; it was the
-    menu's *Pilot* button's hint (0415). The boot cards still mark the one flying (0437).
+    menu's *Pilot* button's hint (0415). The boot cards mark nobody (0462): they are shown before
+    anyone has chosen, so a mark there could only name the default.
   */
   function showPilot(): void {
     chrome.setChoice('pilot', GOLFER_KINDS.indexOf(state.settings.pilot));
-    chrome.setCurrent('select', GOLFER_KINDS.indexOf(state.settings.pilot));
     fitPilot();
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
