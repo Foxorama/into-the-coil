@@ -1275,6 +1275,12 @@ export interface Neck {
   reach: number;
   /** The neck's drawing, rooted on the bitmap's centre and running along its `+x` to `reach`. */
   art: number;
+  /**
+   * The neck's root drawn again IN FRONT of the hull — `docs/decisions/0464-the-hydra-is-one-beast.md`.
+   * Placed where the neck is and turned as it is, so the two are one picture: what it adds is that the
+   * body's outline no longer crosses the neck where it leaves the body. A picture, in no pairing.
+   */
+  collar: number;
   /** The head, and its hurt twin. Drawn snout to `−x`, as every head in the game is. */
   head: number;
   headHit: number;
@@ -4055,15 +4061,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     necks: {
       necks: [
-        { root: { along: -9, across: -19.5 }, angle: -0.78 * Math.PI, reach: 44, art: SPRITE.hydraNeck0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 11.5, mouth: 12.5, livery: 'mire' },
-        { root: { along: -17, across: -11.5 }, angle: -0.93 * Math.PI, reach: 41.5, art: SPRITE.hydraNeck1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 11.5, mouth: 12.5, livery: 'nebula' },
-        { root: { along: 1.5, across: -20 }, angle: -0.55 * Math.PI, reach: 47, art: SPRITE.hydraNeck2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 11.5, mouth: 12.5, livery: 'saurian' },
-        { root: { along: -13.5, across: -15.5 }, angle: -0.86 * Math.PI, reach: 28.5, art: SPRITE.hydraNeck3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 11.5, mouth: 12.5, livery: 'rime' },
+        { root: { along: -9, across: -19.5 }, angle: -0.78 * Math.PI, reach: 44, art: SPRITE.hydraNeck0, collar: SPRITE.hydraCollar0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 11.5, mouth: 12.5, livery: 'mire' },
+        { root: { along: -17, across: -11.5 }, angle: -0.93 * Math.PI, reach: 41.5, art: SPRITE.hydraNeck1, collar: SPRITE.hydraCollar1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 11.5, mouth: 12.5, livery: 'nebula' },
+        { root: { along: 1.5, across: -20 }, angle: -0.55 * Math.PI, reach: 47, art: SPRITE.hydraNeck2, collar: SPRITE.hydraCollar2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 11.5, mouth: 12.5, livery: 'saurian' },
+        { root: { along: -13.5, across: -15.5 }, angle: -0.86 * Math.PI, reach: 28.5, art: SPRITE.hydraNeck3, collar: SPRITE.hydraCollar3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 11.5, mouth: 12.5, livery: 'rime' },
         {
           root: { along: -4, across: -20 },
           angle: -0.66 * Math.PI,
           reach: 47,
           art: SPRITE.hydraNeck4,
+          collar: SPRITE.hydraCollar4,
           head: SPRITE.hydraHead4,
           headHit: SPRITE.hydraHead4Hit,
           radius: 11.5,

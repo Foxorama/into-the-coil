@@ -565,6 +565,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   hydraNeck2: 'enemy',
   hydraNeck3: 'enemy',
   hydraNeck4: 'enemy',
+  hydraCollar0: 'enemy',
+  hydraCollar1: 'enemy',
+  hydraCollar2: 'enemy',
+  hydraCollar3: 'enemy',
+  hydraCollar4: 'enemy',
   hydraHead0: 'enemy',
   hydraHead1: 'enemy',
   hydraHead2: 'enemy',
@@ -9479,23 +9484,74 @@ const HYDRA_TAIL_SPINE: readonly Pt[] = [
 ];
 const HYDRA_TAIL: readonly Pt[] = tube(HYDRA_TAIL_SPINE, 0.2, 0.035);
 
+/*
+  ── ONE BEAST, NOT A BODY WITH PIPES IN IT — 0464 ──────────────────────────────────────────────────
+
+  *"The hydra bosses heads and body are cool, but the extra heads don't really fit and blend into the
+  body that well, can we smooth that out a lot more?"* Photographed at five heads, every neck was a
+  pipe of one width, in its lord's colours from the first pixel, going in BEHIND the body — so the
+  body's outline ran straight across every neck where it met it, which is how a picture says *this is
+  behind that*, not *this grows out of that*.
+
+  ⚠️ **A NECK IS THICK WHERE IT LEAVES THE BODY.** The back runs on up the neck nearly straight and the
+  throat swells out into the chest, as a long-necked animal's do: the root is two and a half necks wide.
+
+  ⚠️ **A NECK IS THE BODY'S FLESH AT ITS ROOT AND ITS LORD'S AT ITS HEAD.** The body's skin is laid over
+  the root and fades out up the neck, so the lord's colours, bands, fin and crystals come through it;
+  each head keeps all of its own colours, and only the join is the body's.
+
+  ⚠️ **AND THE ROOT IS DRAWN AGAIN IN FRONT OF THE BODY** — the collar (`hydraCollar*`), the neck's own
+  drawing to just past where it leaves the body, faded into the flesh at its root and into the neck
+  behind it at its far end. Nothing can be laid over the body from the necks' layer, which is behind
+  it; the collar is in a layer in front of it (`bossFront`, `src/app/mount.ts`).
+*/
+
+/** Knots along a neck's spine — 0464: enough that the root's flare is a curve rather than a chamfer. */
+const NECK_KNOTS = 16;
+
+/** Where a neck's spine starts, in its `r`: behind its root and into the body, so the flare is too. */
+const NECK_FROM = -0.24;
+
 /** A neck's spine in its own frame: root on the bitmap's centre, the head's centre at `reach` on `+x`. */
-function neckSpine(reach: number): Pt[] {
+export function neckSpine(reach: number): Pt[] {
   const out: Pt[] = [];
-  const knots = 9;
-  for (let i = 0; i <= knots; i++) {
-    const t = i / knots;
-    // From just behind the root, which is inside the body, to the head's centre, which the head covers.
-    const x = -0.12 + (reach + 0.12) * t;
+  for (let i = 0; i <= NECK_KNOTS; i++) {
+    const t = i / NECK_KNOTS;
+    const x = NECK_FROM + (reach - NECK_FROM) * t;
     // A gentle S, so a neck is a serpent's and not a pole: nought at both ends.
     out.push([x, 0.07 * Math.sin(t * Math.PI * 2)]);
   }
   return out;
 }
 
-/** How wide a neck is at its root and at the head, in the neck's `r` — the head covers the thinner end. */
-const NECK_ROOT = 0.105;
-const NECK_TIP = 0.07;
+/**
+ * How wide a neck is, in its `r`: `NECK_TIP` each side at the head, which covers it, and at the root
+ * `NECK_BACK` on its back (`+y`) and `NECK_THROAT` on its throat — 0464. `NECK_FLARE` is how fast the
+ * root's width falls away up the neck.
+ */
+const NECK_TIP = 0.085;
+const NECK_BACK = 0.12;
+const NECK_THROAT = 0.26;
+const NECK_FLARE = 2.2;
+
+/** Half the neck's width at knot `i`, on its back for `s > 0` and its throat otherwise. */
+function neckHalf(i: number, s: number): number {
+  const root = s > 0 ? NECK_BACK : NECK_THROAT;
+  return NECK_TIP + (root - NECK_TIP) * Math.pow(1 - i / NECK_KNOTS, NECK_FLARE);
+}
+
+/** A point at share `s` of the way from the spine to the neck's edge at knot `i`: `+1` its back, `−1` its throat. */
+function neckAt(spine: readonly Pt[], i: number, s: number): Pt {
+  return offSpine(spine, i, s * neckHalf(i, s));
+}
+
+/** A band along the neck from knot `i` to knot `j`, between shares `a` and `b` of its width. */
+function neckBand(spine: readonly Pt[], i: number, j: number, a: number, b: number): Pt[] {
+  return [neckAt(spine, i, a), neckAt(spine, j, a), neckAt(spine, j, b), neckAt(spine, i, b)];
+}
+
+/** The first knot a fin ray or a crystal stands on: past the root, which is the body's flesh. */
+const CREST_FROM = 5;
 
 /** Which neck of the hydra a sprite is, and so its reach and whose colours it wears — off the row. */
 function hydraNeckOf(kind: SpriteKind): { k: number; reach: number; livery: ThemeKind } | null {
@@ -9503,43 +9559,196 @@ function hydraNeckOf(kind: SpriteKind): { k: number; reach: number; livery: Them
   for (let k = 0; k < necks.length; k++) {
     const neck = necks[k]!;
     const at = SPRITE[kind];
-    if (neck.art === at || neck.head === at || neck.headHit === at) {
-      return { k, reach: neck.reach / (SPRITE_EXTENT[kind] * 0.42), livery: neck.livery };
+    if (neck.art === at || neck.collar === at || neck.head === at || neck.headHit === at) {
+      // In the NECK's `r` whatever the tile — a collar is drawn at its neck's scale, so the two coincide.
+      return { k, reach: neck.reach / (SPRITE_EXTENT[SPRITE_KINDS[neck.art]!] * 0.42), livery: neck.livery };
     }
   }
   return null;
 }
 
-/** The outline of neck `k`: a tube, and a frill, a crest of spikes or a ridge where its head has one. */
-function hydraNeckHull(k: number, reach: number): Pt[] {
+/**
+ * The outline of neck `k` to knot `upto`: a tube, and a fin or a row of crystals along its back where
+ * its head has one — on every other length, from where the neck has left the body (`crests`).
+ */
+function hydraNeckHull(k: number, reach: number, upto = NECK_KNOTS): Pt[] {
   const spine = neckSpine(reach);
-  if (k !== 1 && k !== 3) return tube(spine, NECK_ROOT, NECK_TIP);
-  // The fish's neck carries a fin along its back and the ice's a row of crystals: the `+y` edge, out.
-  const last = spine.length - 1;
   const upper: Pt[] = [];
   const lower: Pt[] = [];
-  for (let i = 0; i <= last; i++) {
-    const h = NECK_ROOT + ((NECK_TIP - NECK_ROOT) * i) / last;
-    lower.push(offSpine(spine, i, -h));
-    const edge = offSpine(spine, i, h);
-    upper.push(edge);
-    if (i === 0 || i === last) continue;
-    // Between knots, a fin ray or a crystal: out from the back and down again before the next knot.
-    const mid: Pt = [(spine[i]![0] + spine[i + 1]![0]) / 2, (spine[i]![1] + spine[i + 1]![1]) / 2];
-    const [ux, uy] = headingAt(spine, i);
-    const tall = k === 1 ? 0.075 : 0.1;
-    const lean = k === 1 ? 0.03 : 0;
-    upper.push([mid[0] - uy * (h + tall) - ux * lean, mid[1] + ux * (h + tall) - uy * lean]);
+  for (let i = 0; i <= upto; i++) {
+    lower.push(neckAt(spine, i, -1));
+    // A crest's base is two lengths wide, so the back's own point under its peak is not on the outline.
+    if (i === 0 || !crests(k, i - 1, upto)) upper.push(neckAt(spine, i, 1));
+    if (crests(k, i, upto)) upper.push(neckCrest(spine, k, i));
   }
   return [...upper, ...lower.reverse()];
 }
+
+/**
+ * Whether a fin ray or a crystal stands on knots `i` to `i + 2` of neck `k` drawn to `upto` — one each
+ * two lengths from the first knot wholly out of the body (`hydraCollarOf`'s `out`), and never sooner than
+ * `CREST_FROM`: a crest on the body's flesh is a row of spikes on the hydra's back. Two lengths, so a
+ * crest is as broad as it was on 0384's nine-knot neck and a fin ray stands inside its fin.
+ */
+function crests(k: number, i: number, upto: number): boolean {
+  if (k !== 1 && k !== 3) return false;
+  const from = Math.max(CREST_FROM, hydraCollarOf(k).out);
+  return i >= from && (i - from) % 2 === 0 && i + 2 <= upto;
+}
+
+/** The point of the fin ray or the crystal standing off the back over knot `i + 1`, its base `i` to `i + 2`. */
+function neckCrest(spine: readonly Pt[], k: number, i: number): Pt {
+  const [x, y] = spine[i + 1]!;
+  const [ux, uy] = headingAt(spine, i + 1);
+  const h = neckHalf(i + 1, 1);
+  const tall = k === 1 ? 0.075 : 0.1;
+  const lean = k === 1 ? 0.03 : 0;
+  return [x - uy * (h + tall) - ux * lean, y + ux * (h + tall) - uy * lean];
+}
+
+/** Whether a point in the BODY's frame is inside its outline — 0464, the even-odd rule over `HYDRA_BODY`. */
+function insideBody([x, y]: Pt): boolean {
+  let inside = false;
+  for (let i = 0, j = HYDRA_BODY.length - 1; i < HYDRA_BODY.length; j = i++) {
+    const [xi, yi] = HYDRA_BODY[i]!;
+    const [xj, yj] = HYDRA_BODY[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** How high the body's back is at `x` in its frame — the topmost of `HYDRA_BODY`'s sides over `x`. */
+function backOf(x: number): number {
+  let top = 1;
+  for (let i = 0, j = HYDRA_BODY.length - 1; i < HYDRA_BODY.length; j = i++) {
+    const [xi, yi] = HYDRA_BODY[i]!;
+    const [xj, yj] = HYDRA_BODY[j]!;
+    if (xi > x === xj > x) continue;
+    top = Math.min(top, yi + ((yj - yi) * (x - xi)) / (xj - xi));
+  }
+  return top;
+}
+
+/** Where a neck meets the body — 0464. See `hydraCollarOf`. */
+export interface Collar {
+  /**
+   * The body's outline where the neck's spine crosses it, in the neck's frame at rest: a point on it,
+   * and the outward normal there. The collar is taken out of everything deeper in the body than a
+   * band just inside this line, so it fades in ALONG THE BODY'S EDGE rather than across the neck.
+   */
+  edge: { at: Pt; normal: Pt };
+  /** The first knot wholly out of the body: the collar is whole to here and gone a knot later. */
+  out: number;
+  /** Where the collar's own drawing stops — past `out + 1`, and even, so its marks are its neck's. */
+  cut: number;
+  /** Where the body's flesh has wholly given way to the lord's colours up the neck. */
+  livery: number;
+  /** The body's light, `from` lit and `to` in shadow, in the neck's own frame at rest. */
+  light: { from: Pt; to: Pt };
+}
+
+/**
+ * How far inside the body's outline a collar is whole, and how much deeper it has faded out, in world
+ * units — 0464. Whole past the outline's inner half (0.55) and a neck's sway at the join (about a
+ * unit and a half), so the body's outline is under it at every sway; faded over four more, which reads
+ * as the neck's throat running on into the chest and stopping.
+ */
+const COLLAR_WHOLE = 2;
+const COLLAR_FADE = 4;
+
+/**
+ * Where neck `k` leaves the body — 0464, solved from the row for EVERY neck rather than one, because
+ * the roots, angles and reaches all differ: the ice's short neck leaves the body three knots later than
+ * the others do.
+ *
+ * Every knot's back, spine and throat is put where the neck stands at rest, turned either way by its
+ * whole sway, and asked whether it is inside the body. `out` is the first knot with all of it out. The
+ * body's edge where the spine crosses it is found at rest, and its normal is the nearest side of
+ * `HYDRA_BODY`'s, pointed out of the body.
+ */
+export function hydraCollarOf(k: number): Collar {
+  const necks = BOSSES.hydra.necks;
+  const neck = necks?.necks[k];
+  const none = { edge: { at: [0, 0] as Pt, normal: [1, 0] as Pt }, out: 2, cut: 4, livery: 4, light: { from: [0, 0] as Pt, to: [1, 0] as Pt } };
+  if (necks === undefined || neck === undefined) return none;
+  const rn = SPRITE_EXTENT[SPRITE_KINDS[neck.art]!] * 0.42;
+  const rb = SPRITE_EXTENT.boss13 * 0.42;
+  const spine = neckSpine(neck.reach / rn);
+  const toBody = (turn: number): ((p: Pt) => Pt) => {
+    const c = Math.cos(turn);
+    const s = Math.sin(turn);
+    return ([x, y]) => [(neck.root.along + (x * c - y * s) * rn) / rb, (neck.root.across + (x * s + y * c) * rn) / rb];
+  };
+  let lastIn = 0;
+  for (const swing of [-necks.sway, 0, necks.sway]) {
+    const body = toBody(neck.angle + swing);
+    for (let i = 0; i <= NECK_KNOTS; i++) {
+      for (const p of [neckAt(spine, i, 1), spine[i]!, neckAt(spine, i, -1)]) if (insideBody(body(p))) lastIn = Math.max(lastIn, i);
+    }
+  }
+  const out = Math.max(3, lastIn + 1);
+  const cut = Math.min(NECK_KNOTS, out + 2 + (out % 2));
+  // Where the spine leaves the body at rest, to a hundredth of a knot, and the body's side nearest it.
+  const body = toBody(neck.angle);
+  let at: Pt = spine[out]!;
+  for (let n = 0; n <= NECK_KNOTS * 100; n++) {
+    const t = n / 100;
+    const i = Math.min(NECK_KNOTS - 1, Math.floor(t));
+    const u = t - i;
+    const p: Pt = [spine[i]![0] + (spine[i + 1]![0] - spine[i]![0]) * u, spine[i]![1] + (spine[i + 1]![1] - spine[i]![1]) * u];
+    if (!insideBody(body(p))) {
+      at = p;
+      break;
+    }
+  }
+  const [bx, by] = body(at);
+  let normal: Pt = [1, 0];
+  let nearest = Number.POSITIVE_INFINITY;
+  for (let i = 0, j = HYDRA_BODY.length - 1; i < HYDRA_BODY.length; j = i++) {
+    const [ax, ay] = HYDRA_BODY[j]!;
+    const [cx, cy] = HYDRA_BODY[i]!;
+    const len = Math.hypot(cx - ax, cy - ay);
+    const u = Math.max(0, Math.min(1, ((bx - ax) * (cx - ax) + (by - ay) * (cy - ay)) / (len * len)));
+    const d = Math.hypot(bx - (ax + (cx - ax) * u), by - (ay + (cy - ay) * u));
+    if (d >= nearest) continue;
+    nearest = d;
+    // The side's normal, whichever way leaves the body.
+    const nx = -(cy - ay) / len;
+    const ny = (cx - ax) / len;
+    normal = insideBody([bx + nx * 0.05, by + ny * 0.05]) ? [-nx, -ny] : [nx, ny];
+  }
+  /*
+    Into the neck's frame at rest: a point of the body's drawing is a world offset from the hull, less
+    the root, turned back by the neck's angle and over the neck's `r`; a direction is only turned.
+  */
+  const c = Math.cos(neck.angle);
+  const s = Math.sin(neck.angle);
+  const toNeck = ([x, y]: Pt): Pt => {
+    const along = x * rb - neck.root.along;
+    const across = y * rb - neck.root.across;
+    return [(along * c + across * s) / rn, (-along * s + across * c) / rn];
+  };
+  return {
+    edge: { at, normal: [normal[0] * c + normal[1] * s, -normal[0] * s + normal[1] * c] },
+    out,
+    cut,
+    livery: Math.min(NECK_KNOTS, out + Math.max(2, Math.round((NECK_KNOTS - out) * 0.3))),
+    light: { from: toNeck(HYDRA_LIGHT[0]), to: toNeck(HYDRA_LIGHT[1]) },
+  };
+}
+
+/** The body's light: lit at the first point, in shadow by the second — 0384, shared with its necks since 0464. */
+const HYDRA_LIGHT: readonly [Pt, Pt] = [
+  [-0.3, -0.9],
+  [0.2, 0.5],
+];
 /**
  * The body — 0384. Lit along the back and falling into shadow toward the acid, a ridge of plates down
  * the spine, scales in rows across the flank, the place's sacs, and the acid's own light on it low down,
  * where it stands in the stuff.
  */
 function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
-  shaded(ctx, f, [-0.3, -0.9], [0.2, 0.5], shade(skin.hull, 0.22), shade(skin.hull, -0.4), HYDRA_BODY, 1, true);
+  shaded(ctx, f, HYDRA_LIGHT[0], HYDRA_LIGHT[1], shade(skin.hull, 0.22), shade(skin.hull, -0.4), HYDRA_BODY, 1, true);
   // The back catches the light as one plane from the chest to the haunch.
   shaded(ctx, f, [-0.2, -0.86], [-0.1, -0.5], mix(skin.hull, skin.lit, 0.35), skin.hull, [
     [-0.72, -0.44],
@@ -9569,11 +9778,16 @@ function paintBoss13(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void 
       ], 0.5, true);
     }
   }
-  // The dorsal ridge: curved plates down the spine, each lit on its leading face.
-  for (let i = 0; i < 6; i++) {
-    const t = i / 5;
-    const x = -0.24 + t * 0.9;
-    const y = -0.74 + Math.pow((t + 0.1) * 0.95, 2) * 0.52;
+  /*
+    The dorsal ridge: curved plates down the spine, each lit on its leading face — and since 0464 from
+    BEHIND the shoulders, where the last neck leaves the body, to the haunch. Down the shoulders they
+    stood where every neck rises, and a neck rising out of the flesh half over a plate leaves a ghost
+    of one. Each stands a tenth of the body inside its back, wherever the back is.
+  */
+  for (let i = 0; i < 5; i++) {
+    const t = i / 4;
+    const x = 0.28 + t * 0.56;
+    const y = backOf(x) + 0.1;
     const tall = 0.13 - t * 0.04;
     poly(ctx, f, skin.plate, [
       [x - 0.07, y + 0.07],
@@ -9626,27 +9840,48 @@ function paintHydraTail(ctx: Pen, f: Frame, skin: FoeSkin): void {
  * Neck `k` — 0384, in the colours of the head it carries: a serpent's banded scales, a fish's finned
  * reds, a pterodactyl's leather, an ice crystal's facets, a clockwork's plated segments.
  */
-function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, k: number, reach: number): void {
+function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, flesh: FoeSkin, k: number, reach: number, upto = NECK_KNOTS): void {
   const spine = neckSpine(reach);
-  const last = spine.length - 1;
-  const half = (i: number): number => NECK_ROOT + ((NECK_TIP - NECK_ROOT) * i) / last;
+  const hull = hydraNeckHull(k, reach, upto);
+  const smooth = k !== 3;
   // Lit on `+y`, which is uppermost in the world once the neck is turned up and forward. Over the neck's
   // own outline, fin and crystals and all, drawn the way the outline is, so no wash leaves it.
-  shaded(ctx, f, [reach * 0.5, 0.14], [reach * 0.5, -0.14], shade(skin.hull, 0.2), shade(skin.hull, -0.38), hydraNeckHull(k, reach), 1, k !== 3);
-  for (let i = 0; i < last; i++) {
+  shaded(ctx, f, [reach * 0.5, 0.14], [reach * 0.5, -0.14], shade(skin.hull, 0.2), shade(skin.hull, -0.38), hull, 1, smooth);
+  // Every mark is laid two knots at a time, so a collar cut on an even knot carries its neck's marks exactly.
+  for (let i = 0; i + 2 <= upto; i += 2) {
     // A highlight along the upper side, the skin catching the light — not a stripe of the lord's lit.
-    poly(ctx, f, mix(skin.lit, skin.hull, 0.5), stripe(spine, i, half, 0.5, 0.82), 0.75);
+    poly(ctx, f, mix(skin.lit, skin.hull, 0.5), neckBand(spine, i, i + 2, 0.5, 0.82), 0.75);
     // The belly scutes, on the side that faces the player.
     const scute = k === 3 ? mix(skin.lit, skin.hull, 0.3) : k === 4 ? skin.plate : mix(skin.lit, skin.hull, 0.45);
-    poly(ctx, f, scute, stripe(spine, i, half, -0.25, -0.8), 0.9);
-    seam(ctx, f, shade(skin.hull, -0.5), 0.03, [offSpine(spine, i, -half(i) * 0.8), offSpine(spine, i, -half(i) * 0.25)], 0.8);
+    poly(ctx, f, scute, neckBand(spine, i, i + 2, -0.25, -0.8), 0.9);
+    seam(ctx, f, shade(skin.hull, -0.5), 0.03, [neckAt(spine, i, -0.8), neckAt(spine, i, -0.25)], 0.8);
   }
+  paintNeckOwn(ctx, f, skin, k, spine, upto);
+  /*
+    ⚠️ **AND THE BODY'S FLESH UNDER ITS ROOT — 0464**, the lord's colours fading out down the neck from
+    `livery` to where it leaves the body, and the body showing through as they go. Two gradients at
+    once, one along the neck and one across the body, which one fill cannot hold: so the neck's own
+    paint is taken back out along the neck (`destination-out`) and the body's light is laid UNDER what
+    is left (`destination-over`) — lit and shadowed exactly as the body is lit at that place, because
+    it is the body's own gradient carried into the neck's frame. Within the neck's own outline both, so
+    nothing leaves it.
+  */
+  const join = hydraCollarOf(k);
+  ctx.globalCompositeOperation = 'destination-out';
+  shaded(ctx, f, [spine[join.out]![0], 0], [spine[join.livery]![0], 0], rgba(flesh.hull, 1), rgba(flesh.hull, 0), hull, 1, smooth);
+  ctx.globalCompositeOperation = 'destination-over';
+  shaded(ctx, f, join.light.from, join.light.to, shade(flesh.hull, 0.22), shade(flesh.hull, -0.4), hull, 1, smooth);
+  ctx.globalCompositeOperation = 'source-over';
+}
+
+/** Neck `k`'s own marks, to knot `upto` — 0384, laid two knots at a time since 0464. */
+function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: readonly Pt[], upto: number): void {
   // One arm per neck, and an `if` chain because `k` is a number: there is no union for a `never` to close.
   if (k === 0) {
     // The serpent's own: dark bands down the neck and the place's acid in spots between them.
-    for (let i = 1; i < last; i += 2) poly(ctx, f, skin.plate, stripe(spine, i, half, -0.2, 0.5), 0.6);
-    for (let i = 2; i < last; i += 2) {
-      const at = offSpine(spine, i, half(i) * 0.15);
+    for (let i = 2; i + 2 <= upto; i += 4) poly(ctx, f, skin.plate, neckBand(spine, i, i + 2, -0.2, 0.5), 0.6);
+    for (let i = 4; i + 2 <= upto; i += 4) {
+      const at = neckAt(spine, i, 0.15);
       disc(ctx, f, skin.lit, at[0], at[1], 0.03, 0.9);
     }
     return;
@@ -9654,44 +9889,49 @@ function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, k: number, reach: num
   if (k === 1) {
     // The fish's: the fin along its back, rayed from the neck out toward each fin's point, in the
     // ember's gold and inside the fin; and scales as arcs down its side.
-    for (let i = 1; i < last; i++) {
-      const [ux, uy] = headingAt(spine, i);
-      const mid: Pt = [(spine[i]![0] + spine[i + 1]![0]) / 2, (spine[i]![1] + spine[i + 1]![1]) / 2];
-      const h = half(i);
-      const peak: Pt = [mid[0] - uy * (h + 0.075) - ux * 0.03, mid[1] + ux * (h + 0.075) - uy * 0.03];
-      const foot: Pt = [mid[0] - uy * h * 0.7, mid[1] + ux * h * 0.7];
+    for (let i = CREST_FROM; i + 2 <= upto; i++) {
+      if (!crests(k, i, upto)) continue;
+      const [ux, uy] = headingAt(spine, i + 1);
+      const h = neckHalf(i + 1, 1);
+      const peak = neckCrest(spine, k, i);
+      const foot: Pt = [spine[i + 1]![0] - uy * h * 0.7, spine[i + 1]![1] + ux * h * 0.7];
       seam(ctx, f, skin.lit, 0.025, [foot, [foot[0] + (peak[0] - foot[0]) * 0.7, foot[1] + (peak[1] - foot[1]) * 0.7]], 0.9);
-      const on = offSpine(spine, i, 0);
-      seam(ctx, f, shade(skin.hull, -0.4), 0.03, [offSpine(spine, i, h * 0.4), [on[0] + ux * 0.05, on[1] + uy * 0.05], offSpine(spine, i, -h * 0.1)], 0.6, true);
+    }
+    for (let i = 2; i + 2 <= upto; i += 2) {
+      const [ux, uy] = headingAt(spine, i);
+      const on = spine[i]!;
+      seam(ctx, f, shade(skin.hull, -0.4), 0.03, [neckAt(spine, i, 0.4), [on[0] + ux * 0.05, on[1] + uy * 0.05], neckAt(spine, i, -0.1)], 0.6, true);
     }
     return;
   }
   if (k === 2) {
     // The pterodactyl's: leather, with tendons down it and a knuckled ridge along its back.
-    seam(ctx, f, shade(skin.hull, -0.35), 0.03, spine.slice(1, last).map((_, j) => offSpine(spine, j + 1, half(j + 1) * 0.35)), 0.6, true);
-    seam(ctx, f, shade(skin.hull, -0.35), 0.03, spine.slice(1, last).map((_, j) => offSpine(spine, j + 1, -half(j + 1) * 0.05)), 0.5, true);
-    for (let i = 1; i < last; i += 2) {
+    const along = (s: number): Pt[] => spine.slice(1, upto).map((_, j) => neckAt(spine, j + 1, s));
+    seam(ctx, f, shade(skin.hull, -0.35), 0.03, along(0.35), 0.6, true);
+    seam(ctx, f, shade(skin.hull, -0.35), 0.03, along(-0.05), 0.5, true);
+    for (let i = 2; i + 2 <= upto; i += 4) {
       // Inside the neck's own edge at its thin end too: the knuckle and its radius both a share of it.
-      const at = offSpine(spine, i, half(i) * 0.5);
-      disc(ctx, f, skin.plate, at[0], at[1], half(i) * 0.32, 0.9);
+      const at = neckAt(spine, i, 0.5);
+      disc(ctx, f, skin.plate, at[0], at[1], neckHalf(i, 1) * 0.32, 0.9);
     }
     return;
   }
   if (k === 3) {
     // The ice's: faceted, each segment split into a lit and a cold face, and the crystals on its back.
-    for (let i = 0; i < last; i++) {
-      const a = offSpine(spine, i, half(i) * 0.85);
-      const b = offSpine(spine, i + 1, -half(i + 1) * 0.85);
-      const c = offSpine(spine, i + 1, half(i + 1) * 0.85);
-      poly(ctx, f, i % 2 === 0 ? mix(skin.hull, skin.lit, 0.3) : shade(skin.hull, -0.2), [a, b, c], 0.7);
+    for (let i = 0; i + 2 <= upto; i += 2) {
+      const a = neckAt(spine, i, 0.85);
+      const b = neckAt(spine, i + 2, -0.85);
+      const c = neckAt(spine, i + 2, 0.85);
+      poly(ctx, f, i % 4 === 0 ? mix(skin.hull, skin.lit, 0.3) : shade(skin.hull, -0.2), [a, b, c], 0.7);
       seam(ctx, f, skin.lit, 0.02, [a, b], 0.6);
     }
     return;
   }
   // The clockwork's: plated segments with a glowing seam between each, and a rivet on each plate.
-  for (let i = 1; i < last; i++) {
-    seam(ctx, f, skin.lit, 0.03, [offSpine(spine, i, half(i) * 0.9), offSpine(spine, i, -half(i) * 0.9)], 0.85);
-    const bolt = offSpine(spine, i, half(i) * 0.55);
+  for (let i = 2; i + 2 <= upto; i += 2) {
+    // To 0.8 of the edge: at 0.9 a seam's round end stood past the thinner back, a speck on the outline.
+    seam(ctx, f, skin.lit, 0.03, [neckAt(spine, i, 0.8), neckAt(spine, i, -0.8)], 0.85);
+    const bolt = neckAt(spine, i, 0.55);
     disc(ctx, f, shade(skin.plate, -0.3), bolt[0], bolt[1], 0.025, 1);
   }
 }
@@ -12218,8 +12458,49 @@ export function drawKind(
       if (own !== null) ctx.fillStyle = own.hull;
       seal(ctx);
       if (own === null) return;
-      if (isNeck) paintHydraNeck(ctx, f, own, neck.k, neck.reach);
+      // The neck's root in the body's own skin — 0464: the place's lord, as `boss13` is.
+      if (isNeck) paintHydraNeck(ctx, f, own, lordOf(theme, palette) ?? own, neck.k, neck.reach);
       else paintHydraHead(ctx, f, own, neck.k);
+      return;
+    }
+    case 'hydraCollar0':
+    case 'hydraCollar1':
+    case 'hydraCollar2':
+    case 'hydraCollar3':
+    case 'hydraCollar4': {
+      /*
+        WHERE A NECK LEAVES THE BODY — 0464: the neck's own drawing to `cut`, at the NECK's scale
+        whatever this tile is, so it lies exactly over the neck it is placed with — and then taken back
+        out of the bitmap at both ends. Over the root it fades in, so the neck rises out of the flesh;
+        past the body's outline it fades out into the identical neck behind it, so there is no end to see.
+        Both fades take the outline with them, which is the point: it is the line across the join.
+      */
+      const neck = hydraNeckOf(kind);
+      if (neck === null) return;
+      const own = lordOf(neck.livery, palette);
+      const { edge: join, out, cut } = hydraCollarOf(neck.k);
+      const at: Frame = { half, r: (size / SPRITE_EXTENT[kind]) * SPRITE_EXTENT.hydraNeck0 * 0.42 };
+      ctx.lineWidth = Math.max(1, size * HYDRA_OUTLINE / SPRITE_EXTENT[kind]);
+      ctx.beginPath();
+      if (neck.k !== 3) curveLoop(ctx, at, hydraNeckHull(neck.k, neck.reach, cut));
+      else trace(ctx, at, hydraNeckHull(neck.k, neck.reach, cut));
+      if (own !== null) ctx.fillStyle = own.hull;
+      seal(ctx);
+      if (own !== null) paintHydraNeck(ctx, at, own, lordOf(theme, palette) ?? own, neck.k, neck.reach, cut);
+      const spine = neckSpine(neck.reach);
+      const edge = half / at.r;
+      // Only how much is taken out matters to `destination-out`; the ink is the flash's for want of any.
+      ctx.globalCompositeOperation = 'destination-out';
+      // In from the body's edge: gone deeper than `COLLAR_WHOLE + COLLAR_FADE` inside it, whole from `COLLAR_WHOLE`.
+      const [nx, ny] = join.normal;
+      const deep = (COLLAR_WHOLE + COLLAR_FADE) / (SPRITE_EXTENT.hydraNeck0 * 0.42);
+      const shallow = COLLAR_WHOLE / (SPRITE_EXTENT.hydraNeck0 * 0.42);
+      const tile: Pt[] = [[-edge, -edge], [edge, -edge], [edge, edge], [-edge, edge]];
+      shaded(ctx, at, [join.at[0] - nx * deep, join.at[1] - ny * deep], [join.at[0] - nx * shallow, join.at[1] - ny * shallow], rgba(palette.impact, 1), rgba(palette.impact, 0), tile);
+      const c = spine[out]![0];
+      const d = spine[out + 1]![0];
+      shaded(ctx, at, [c, 0], [d, 0], rgba(palette.impact, 0), rgba(palette.impact, 1), [[c, -edge], [edge, -edge], [edge, edge], [c, edge]]);
+      ctx.globalCompositeOperation = 'source-over';
       return;
     }
     case 'boss14':

@@ -25,9 +25,9 @@ export const PROBES = [
       // `bossPool` in the order. The break below is unchanged in kind.
       // ⚠️ And by 0305: the serpent's aura draws under its body, so `bossAura` sits ahead of it.
       // ⚠️ And by 0373: a surge's aura sits over the debris and under every shot; and by 0374, the whirlpool.
-      // ⚠️ And by 0447, the nova beside the whirlpool.
-      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [debris, blasts, pickupPool, bossAura, bossPool, enemies, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ And by 0447, the nova beside the whirlpool; and by 0464, the hydra's collars over its body.
+      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [debris, blasts, pickupPool, bossAura, bossPool, bossFront, enemies, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {
@@ -48,9 +48,9 @@ export const PROBES = [
       // `bossPool` in the order. The break below is unchanged in kind.
       // ⚠️ And by 0305: the serpent's aura draws under its body, so `bossAura` sits ahead of it.
       // ⚠️ And by 0373: a surge's aura sits over the debris and under every shot; and by 0374, the whirlpool.
-      // ⚠️ And by 0447, the nova beside the whirlpool.
-      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
-      replace: '    layers: [blasts, pickupPool, bossAura, bossPool, enemies, aura, enemyShots, debris, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      // ⚠️ And by 0447, the nova beside the whirlpool; and by 0464, the hydra's collars over its body.
+      find: '    layers: [blasts, pickupPool, bossAura, bossBody, bossPool, bossFront, enemies, debris, aura, enemyShots, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
+      replace: '    layers: [blasts, pickupPool, bossAura, bossPool, bossFront, enemies, aura, enemyShots, debris, playerShots, whirl, nova, missiles, bombs, bolts, exhaust, shieldOrbs, shipPool],',
     },
   },
   {

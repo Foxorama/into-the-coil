@@ -1326,6 +1326,12 @@ export interface World {
    */
   bossAura: Pool<Entity>;
   /**
+   * What a boss shows IN FRONT of its body — 0464: where each of a hydra's necks leaves it, one collar
+   * a grown neck, placed with the neck. Empty for every boss without necks. Drawn straight after
+   * `bossPool` and before everything that flies, and in no pairing: a picture, as the aura is.
+   */
+  bossFront: Pool<Entity>;
+  /**
    * Where each of a many-headed boss's mouths is, along and across from the hull's centre, two numbers
    * a neck — `layNecks` writes them every step and `src/app/boss.ts` throws from them (0384). Built
    * once at `NECK_SLOTS`, so nothing allocates; only the first `2 × necks` are read.
@@ -9021,6 +9027,8 @@ function layChain(w: World): void {
  */
 function layAura(w: World): void {
   const head = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
+  // Only a boss with necks has anything in front of its body — 0464 — and `layNecks` lays all of it.
+  if (w.bossRow.necks === undefined) w.bossFront.clear();
   /*
     ── AND THE SAME LAYER CARRIES THE HOUSING A BOSS IS SET INTO — 0332 ───────────────────────────
 
@@ -9365,6 +9373,7 @@ function layNecks(w: World, hull: Entity | null): void {
   if (hull === null) {
     w.bossBody.clear();
     w.bossAura.clear();
+    w.bossFront.clear();
     w.necksBorn.fill(-1);
     return;
   }
@@ -9407,6 +9416,23 @@ function layNecks(w: World, hull: Entity | null): void {
   }
   while (w.bossAura.size > want) w.bossAura.releaseAt(w.bossAura.size - 1);
   if (w.bossAura.size < want || w.bossBody.size < shown) return;
+  /*
+    ⚠️ **AND IN FRONT OF THE BODY, WHERE EACH NECK LEAVES IT — 0464**: one collar a neck that has risen
+    to within its sway of its rest, laid with it below. A collar is drawn for the join AT REST — its fade
+    follows the body's outline where the neck crosses it there — so on a neck still swinging up out of
+    the acid it would draw that join across the chest. It comes on in the rise's last tenth.
+  */
+  let collars = 0;
+  for (let k = 0; k < shown; k++) if (collared(necks, k, w.steps - w.necksBorn[k]!)) collars++;
+  let fronting = false;
+  while (w.bossFront.size < collars) {
+    const slot = w.bossFront.spawn();
+    if (slot === null) break;
+    reset(slot, hull.along, hull.across, AURA_FLAME);
+    fronting = true;
+  }
+  while (w.bossFront.size > collars) w.bossFront.releaseAt(w.bossFront.size - 1);
+  let collar = 0;
   let flame = 0;
   for (let k = 0; k < shown; k++) {
     const row = necks.necks[k]!;
@@ -9422,6 +9448,19 @@ function layNecks(w: World, hull: Entity | null): void {
     neck.sprite = row.art;
     neck.spriteBase = row.art;
     neck.spriteHit = row.art;
+    /*
+      ⚠️ **THE COLLAR IS THE NECK'S ROOT, SO IT IS PLACED EXACTLY AS THE NECK IS — 0464**: the same root,
+      the same turn, the same step. Anywhere else and the body's outline is back across the join, and
+      a second neck stands beside the first.
+    */
+    if (collar < w.bossFront.size && collared(necks, k, w.steps - w.necksBorn[k]!)) {
+      const at = w.bossFront.at(collar++);
+      placeAt(at, rootAlong, rootAcross, foldTurn(angle), fresh || fronting);
+      at.swell = 1;
+      at.sprite = row.collar;
+      at.spriteBase = row.collar;
+      at.spriteHit = row.collar;
+    }
     const head = w.bossBody.at(k);
     const headAlong = rootAlong + Math.cos(angle) * row.reach;
     const headAcross = rootAcross + Math.sin(angle) * row.reach;
@@ -9480,6 +9519,16 @@ function layNecks(w: World, hull: Entity | null): void {
     }
   }
   if (tail !== null) layTail(w, hull, tail, tail.art, w.bossAura.at(want - 1), fresh);
+}
+
+/**
+ * Whether neck `k`, `age` steps after it was born, wears its collar — 0464: once its rise has brought it
+ * within its sway of its rest, where the collar's join was drawn. The rise is `layNecks`' own easing.
+ */
+function collared(necks: Necks, k: number, age: number): boolean {
+  const risen = Math.min(1, age / necks.rise);
+  const eased = 1 - (1 - risen) * (1 - risen);
+  return (1 - eased) * Math.abs(necks.necks[k]!.angle - NECK_RISE_FROM) <= necks.sway;
 }
 
 /**
