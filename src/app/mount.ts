@@ -1231,6 +1231,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownPoints: 0,
     shownStreak: 0,
     onScore: (): void => {},
+    // Standing still at mount, and replaced below with the chrome — 0461.
+    joltVel: 0,
+    joltWay: 0,
+    joltWarp: false,
+    onJolt: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
     // thing it calls, and the alternative — hoisting the whole reducer wiring above the world it
     // mutates — would put the shell's state machine in the middle of its entity pools.
@@ -3027,6 +3032,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   // The score — 0428: the frame says a kill or a hit moved it, and the run's banked levels are added here.
   world.onScore = syncScore;
+  // A lurch along the lane swings the dice on the estate's dash — 0461; on any other ship's plate there are none.
+  world.onJolt = chrome.swayDice;
   // And the table the title rolls, as this browser kept it — 0429.
   chrome.setBoard(boardLines(scoreTable), -1);
 

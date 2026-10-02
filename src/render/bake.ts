@@ -32,7 +32,7 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
+import { CADDIE_DISC, SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -2016,7 +2016,7 @@ interface TubeAt {
  * its own length too, and `tests/accents.test.ts` holds every one of them on the hull. The two cars are
  * drawn from the side, and carry their tubes as turrets in their own rooflines (`FIREBIRD_TURRETS`).
  */
-const TUBES_ON: Record<'fighter' | 'caddie', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
+const TUBES_ON: Record<'fighter', { one: TubeAt; two: readonly [TubeAt, TubeAt] }> = {
   fighter: {
     one: { at: [0.52, 0], length: 0.2 },
     // The wing between its swept edges is 0.32 of the box wide here, so a tube fits and no more. A
@@ -2026,13 +2026,10 @@ const TUBES_ON: Record<'fighter' | 'caddie', { one: TubeAt; two: readonly [TubeA
       { at: [-0.3, 0.4], length: 0.11 },
     ],
   },
-  caddie: {
-    one: { at: [-0.52, 0], length: 0.32 },
-    two: [
-      { at: [-0.08, -0.64], length: 0.36 },
-      { at: [-0.08, 0.64], length: 0.36 },
-    ],
-  },
+  /*
+    The saucer's were here — a slate tube lying across its face — until 0461 hung them off its sides on
+    pylons, as pods of its own make (`CADDIE_POD`). The cars carry theirs in their rooflines.
+  */
 };
 
 /**
@@ -2095,20 +2092,225 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
   return out;
 }
 
+/*
+  ── THE SAUCER IS SMALLER, AND ITS GUN AND ITS PODS STAND OFF IT — 0461 ──────────────────────────────
+
+  Played: *"the little caddies ray gun is just a purple blob and it doesn't look cool at all, also can we
+  have the missile turrets sticking out from the sides instead of weirdly placed on it? the ship space
+  will need to be smaller so that the tubes on the sides don't give it too large a profile."* The disc
+  was the whole box's radius, its gun a lavender dot on a slate stub, and its tubes two slate bars lying
+  across its face. The disc is now `CADDIE_DISC` of it, so a pod hung off each side on a pylon reaches
+  no further across than the old rim did; the gun is a retro ray gun — a chrome barrel through two
+  lavender rings, the rings it fires, to a white-hot emitter; and the pods are the saucer's own: pearl
+  seed-pods, a cyan drive ring round each, the missile's orange warhead in its mouth.
+*/
+
+/** The ray gun, in the box's radius: the barrel's half-width, its two rings and its emitter cone. */
+const RAYGUN = {
+  barrel: 0.075,
+  /** Each ring's back, front and half-height. The first stands half in the rim. */
+  rings: [
+    [0.66, 0.77, 0.17],
+    [0.84, 0.95, 0.23],
+  ] as const,
+  /** The emitter: its back's half-height, and its tip. */
+  cone: 0.11,
+  tip: 1.13,
+};
+
 /**
- * The saucer's silhouette: a disc, with the ray dish's barrel run out through its rim at the nose.
- * One path, so the barrel and the disc share an edge and no area — 0194's `evenodd` trap.
+ * One missile pod, in the box's radius: how far out its axis hangs, its tail and its mouth along it,
+ * its half-width at the widest and at the mouth, and the warhead's point beyond the mouth — 0461.
  */
-const CADDIE_RIM = 1;
-const CADDIE_BARREL = 0.13;
-const CADDIE_HULL: readonly Pt[] = (() => {
-  const gap = Math.asin(CADDIE_BARREL / CADDIE_RIM);
-  return [
-    ...roundel(0, 0, CADDIE_RIM, 44, gap, Math.PI * 2 - gap),
-    [1.12, -CADDIE_BARREL],
-    [1.12, CADDIE_BARREL],
+const CADDIE_POD = { y: 0.9, tail: -0.36, mouth: 0.26, wide: 0.12, lip: 0.07, point: 0.34 };
+
+/** The pylon each pod hangs from, along the disc: its back and its front. */
+const CADDIE_PYLON: readonly [number, number] = [-0.2, 0];
+
+/** The pod's half-width at `x` along it: a round tail, then a taper to the mouth. */
+function podHalf(x: number): number {
+  const { tail, mouth, wide, lip } = CADDIE_POD;
+  const round = tail + wide;
+  if (x <= round) return Math.sqrt(Math.max(0, wide * wide - (round - x) ** 2));
+  return wide + ((lip - wide) * (x - round)) / (mouth - round);
+}
+
+/**
+ * A pod's outline below the disc, as the disc's edge meets it going round from the nose: out along the
+ * pylon's front, forward down the pod's inner edge, round the warhead, back along its outer edge, round
+ * the tail, forward to the pylon's back and in to the disc. The top one is this mirrored.
+ */
+function podDetour(): Pt[] {
+  const { y, tail, mouth, wide, point } = CADDIE_POD;
+  const [back, front] = CADDIE_PYLON;
+  const D = CADDIE_DISC;
+  const out: Pt[] = [[front, Math.sqrt(D * D - front * front)]];
+  const steps = 8;
+  for (let i = 0; i <= steps; i++) {
+    const x = front + ((mouth - front) * i) / steps;
+    out.push([x, y - podHalf(x)]);
+  }
+  out.push([point, y]);
+  for (let i = 0; i <= 14; i++) {
+    const x = mouth + ((tail + wide - mouth) * i) / 14;
+    out.push([x, y + podHalf(x)]);
+  }
+  for (let i = 1; i < 10; i++) {
+    const a = Math.PI / 2 + (Math.PI * i) / 10;
+    out.push([tail + wide + Math.cos(a) * wide, y + Math.sin(a) * wide]);
+  }
+  for (let i = 0; i <= 4; i++) {
+    const x = tail + wide + ((back - tail - wide) * i) / 4;
+    out.push([x, y - podHalf(x)]);
+  }
+  out.push([back, Math.sqrt(D * D - back * back)]);
+  return out;
+}
+
+/**
+ * The saucer's silhouette with `stage` pods hung on it — none, the top one, or both — and the ray gun
+ * run out through its rim at the nose. One path, so the gun, the pylons and the disc share edges and no
+ * area: 0194's `evenodd` trap.
+ */
+function caddieHull(stage: number): Pt[] {
+  const D = CADDIE_DISC;
+  const meets = Math.asin(RAYGUN.rings[0][2] / D);
+  // The lower half, from where the gun leaves the rim round to the tail, a pod's detour in it at two.
+  const lower = (pod: boolean): Pt[] => {
+    const out: Pt[] = [];
+    const [back, front] = CADDIE_PYLON;
+    const from = Math.acos(front / D);
+    const to = Math.acos(back / D);
+    let hung = !pod;
+    for (const p of roundel(0, 0, D, 18, meets, Math.PI)) {
+      const a = Math.atan2(p[1], p[0]);
+      if (!hung && a > from - 1e-9) {
+        if (a <= to + 1e-9) continue;
+        out.push(...podDetour());
+        hung = true;
+      }
+      out.push(p);
+    }
+    return out;
+  };
+  const below = lower(stage >= 2);
+  const above = mirrored(lower(stage >= 1)).reverse().slice(1);
+  return [...below, ...above, ...raygunProfile()];
+}
+
+/**
+ * The ray gun's outline outside the rim, from the top of its first ring over the emitter to the bottom
+ * of it — the hull's, and the hangar's side view strokes it round a gun of its own.
+ */
+export function raygunProfile(): Pt[] {
+  const [ringA, ringB] = RAYGUN.rings;
+  const gun: Pt[] = [
+    [ringA[1], -ringA[2]],
+    [ringA[1], -RAYGUN.barrel],
+    [ringB[0], -RAYGUN.barrel],
+    [ringB[0], -ringB[2]],
+    [ringB[1], -ringB[2]],
+    [ringB[1], -RAYGUN.cone],
+    [RAYGUN.tip, -0.025],
   ];
-})();
+  return [...gun, ...mirrored(gun).reverse()];
+}
+
+/**
+ * Where the saucer's gun and pods are DRAWN, in the box's radius: the emitter's tip, and the warhead's
+ * point in each pod at one tube and two — 0461, on `carMounts`' terms. `tests/mounts.test.ts` holds the
+ * caddie's row to these.
+ */
+export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
+  const top: Pt = [CADDIE_POD.point - 0.04, -CADDIE_POD.y];
+  const bottom: Pt = [CADDIE_POD.point - 0.04, CADDIE_POD.y];
+  return { muzzle: [RAYGUN.tip, 0], tubes: [[], [top], [top, bottom]] };
+}
+
+/**
+ * The ray gun — 0461, and it was a lavender disc on a slate stub. A chrome barrel lit along its top,
+ * two lavender rings — the rings the gun fires, standing on it — each with a lit face, and a white-hot
+ * emitter cone with the rings' light round its point. Painted over a hull that already holds its shape;
+ * the hangar's side view lays the same gun on its own outline (`paintSaucer` in `port-bake.ts`).
+ */
+export function paintRaygun(ctx: Pen, f: Frame, palette: Palette): void {
+  const chrome = shade(palette.trim, 0.45);
+  const b = RAYGUN.barrel;
+  shaded(ctx, f, [0, -b], [0, b], shade(chrome, 0.35), shade(chrome, -0.3), [
+    [0.6, -b],
+    [RAYGUN.rings[1][1], -b],
+    [RAYGUN.rings[1][1], b],
+    [0.6, b],
+  ]);
+  for (const [back, front, half] of RAYGUN.rings) {
+    // Lit along its upper edge and toward the emitter, so each reads as a ring round the barrel.
+    shaded(ctx, f, [back, -half], [front, half], shade(palette.ally, 0.55), shade(palette.ally, -0.4), [
+      [back, -half],
+      [front, -half],
+      [front, half],
+      [back, half],
+    ]);
+  }
+  const back = RAYGUN.rings[1][1];
+  shaded(ctx, f, [back, 0], [RAYGUN.tip, 0], shade(palette.ally, 0.5), palette.impact, [
+    [back, -RAYGUN.cone],
+    [RAYGUN.tip, -0.025],
+    [RAYGUN.tip, 0.025],
+    [back, RAYGUN.cone],
+  ]);
+  // Its light, short of the box's edge — a glow past 1.16 of the radius runs into the next bitmap.
+  glow(ctx, f, palette.ally, RAYGUN.tip - 0.1, 0, 0.13, 0.75);
+  disc(ctx, f, palette.impact, RAYGUN.tip - 0.06, 0, 0.055, 0.85);
+}
+
+/** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
+function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1): void {
+  const { y, tail, mouth, wide, point } = CADDIE_POD;
+  const at = (x: number, off: number): Pt => [x, (y + off) * side];
+  const [back, front] = CADDIE_PYLON;
+  const body = mix(palette.player, palette.acid, 0.55);
+  // The pylon, in the saucer's own shadow, and a seam where it meets the pod.
+  poly(ctx, f, shade(body, -0.45), [
+    [back + 0.03, (CADDIE_DISC - 0.04) * side],
+    [front - 0.03, (CADDIE_DISC - 0.04) * side],
+    [front - 0.03, (y - podHalf(front - 0.03) + 0.02) * side],
+    [back + 0.03, (y - podHalf(back + 0.03) + 0.02) * side],
+  ]);
+  // The shell: pearl, lit from above, so the top pod's light is on its outer edge and the bottom's on its inner.
+  const outline: Pt[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const x = tail + ((mouth - tail) * i) / 12;
+    outline.push(at(x, -podHalf(x)));
+  }
+  for (let i = 12; i >= 0; i--) {
+    const x = tail + ((mouth - tail) * i) / 12;
+    outline.push(at(x, podHalf(x)));
+  }
+  const pearl = mix(palette.impact, palette.ally, 0.25);
+  shaded(ctx, f, [0, y * side - wide], [0, y * side + wide], pearl, shade(mix(pearl, body, 0.5), -0.35), outline);
+  // Its drive ring: a band of the player's cyan round the shell, and its light.
+  const ringBack = tail + wide - 0.02;
+  const ringFront = ringBack + 0.12;
+  poly(ctx, f, palette.player, [
+    at(ringBack, -podHalf(ringBack) + 0.015),
+    at(ringFront, -podHalf(ringFront) + 0.015),
+    at(ringFront, podHalf(ringFront) - 0.015),
+    at(ringBack, podHalf(ringBack) - 0.015),
+  ]);
+  glow(ctx, f, palette.player, (ringBack + ringFront) / 2, y * side, 0.17, 0.5);
+  // The dark mouth, and the warhead's orange in it.
+  poly(ctx, f, shade(body, -0.6), [
+    at(mouth - 0.12, -podHalf(mouth - 0.12) + 0.015),
+    at(mouth, -podHalf(mouth) + 0.005),
+    at(mouth, podHalf(mouth) - 0.005),
+    at(mouth - 0.12, podHalf(mouth - 0.12) - 0.015),
+  ]);
+  poly(ctx, f, palette.bullet, [
+    at(mouth - 0.08, -0.06),
+    at(point - 0.01, 0),
+    at(mouth - 0.08, 0.06),
+  ]);
+}
 
 /*
   ── THE TWO CARS ARE DRAWN FROM THE SIDE — 0441, played ─────────────────────────────────────────
@@ -2177,6 +2379,15 @@ function firebirdOutline(stage: number): Pt[] {
   return [
     [-17, 5],
     [-17, 2.4],
+    // The spoiler on the ducktail — 0461: a post up from the deck lid and the wing on it.
+    [-15.6, 2.15],
+    [-15.6, 0.9],
+    [-17.2, 0.9],
+    [-17.2, -0.9],
+    [-12.6, -0.9],
+    [-12.6, 0.9],
+    [-13.8, 0.9],
+    [-13.8, 1.83],
     [-12.5, 1.6],
     [-8, -2],
     [-2, -4.6],
@@ -2257,12 +2468,15 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
       trace(ctx, fh, SHIP_CANARD);
       trace(ctx, fh, mirrored(SHIP_CANARD));
       seal(ctx);
+      // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
+      shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(palette.player, 0.3), shade(palette.player, -0.22), SHIP_HULL);
       paintShip(ctx, fh, palette, 2);
+      jazzFighter(ctx, fh, palette);
       break;
     }
+    // The saucer hangs its pods off its sides, in its own outline — 0461.
     case 'caddie':
-      tubes = tubesOf(TUBES_ON.caddie);
-      drawCaddie(ctx, f, palette);
+      drawCaddie(ctx, f, palette, stage);
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
@@ -2280,40 +2494,76 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
 }
 
 /**
+ * The fighter, jazzed — 0461: *"they look fine now, but they could be way cooler."* Over its livery:
+ * the studio's violet as a chevron down its nose (the banner runs violet into cyan, 0439), a line of
+ * light down each wing's leading edge, and its engines and its pods' muzzles glowing. In the hull's own
+ * radius, as `paintShip` is.
+ */
+function jazzFighter(ctx: Pen, f: Frame, palette: Palette): void {
+  poly(ctx, f, palette.ally, [
+    [0.74, 0],
+    [0.62, -0.09],
+    [0.44, -0.09],
+    [0.54, 0],
+    [0.44, 0.09],
+    [0.62, 0.09],
+  ]);
+  const edge: readonly Pt[] = [
+    [0.66, -0.13],
+    [0.34, -0.23],
+    [0.02, -0.3],
+    [-0.12, -0.43],
+  ];
+  seam(ctx, f, shade(palette.player, 0.7), 0.035, edge, 0.85);
+  seam(ctx, f, shade(palette.player, 0.35), 0.035, mirrored(edge), 0.6);
+  for (const side of [1, -1] as const) {
+    glow(ctx, f, palette.hazard, -0.68, 0.21 * side, 0.22, 0.6);
+    glow(ctx, f, palette.hazard, -0.38, -1.15 * side, 0.15, 0.6);
+  }
+}
+
+/**
  * Feather Fade's Little Green Caddie — *"a flying saucer with a 7-iron. They come in peace."* The
  * predecessor's top view (`shipTopArt.ts`, `saucer`): a green disc, an accent rim, an inner ring, a
  * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
  * ray gun's dish, its lens in the rings' own lavender.
  */
-function drawCaddie(ctx: Pen, f: Frame, palette: Palette): void {
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   const body = mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
+  const D = CADDIE_DISC;
   ctx.fillStyle = body;
-  trace(ctx, f, CADDIE_HULL);
+  trace(ctx, f, caddieHull(stage));
   seal(ctx);
-  // The upper face lit, the lower in shadow, so the disc has a top.
-  disc(ctx, f, shade(body, 0.3), -0.1, -0.12, 0.78, 0.45);
-  band(ctx, f, dark, 0, 0, 0.97, 0.85);
-  band(ctx, f, shade(body, -0.22), 0, 0, 0.68, 0.6);
-  // Six running lights round the rim, between the barrel and the tail.
+  if (stage >= 1) paintPod(ctx, f, palette, -1);
+  if (stage >= 2) paintPod(ctx, f, palette, 1);
+  // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
+  shaded(ctx, f, [0.3 * D, -0.8 * D], [-0.4 * D, 0.9 * D], shade(body, 0.35), shade(body, -0.25), roundel(0, 0, D * 0.97, 36, 0, Math.PI * 2));
+  // The rim: a dark band, a lit lip along its upper edge, and a line of light along the band's inside.
+  band(ctx, f, dark, 0, 0, 0.97 * D, 0.8 * D);
+  seam(ctx, f, shade(body, 0.55), 0.05, roundel(0, 0, 0.9 * D, 12, Math.PI * 1.08, Math.PI * 1.72), 0.85, true);
+  // Six vents between the rim and the inner ring: dark slots, each with the acid it runs on glowing in it.
+  for (let k = 0; k < 6; k++) {
+    const a = (k * Math.PI) / 3;
+    const c = Math.cos(a);
+    const s = Math.sin(a);
+    const at = (along: number, off: number): Pt => [c * along - s * off, s * along + c * off];
+    poly(ctx, f, shade(body, -0.55), [at(0.6 * D, -0.07), at(0.77 * D, -0.07), at(0.77 * D, 0.07), at(0.6 * D, 0.07)]);
+    glow(ctx, f, palette.acid, c * 0.685 * D, s * 0.685 * D, 0.07, 0.6);
+  }
+  band(ctx, f, shade(body, -0.3), 0, 0, 0.6 * D, 0.5 * D);
+  // Six running lights round the rim, between the vents, in the player's cyan with a light round each.
   for (let k = 0; k < 6; k++) {
     const a = Math.PI / 6 + (k * Math.PI) / 3;
-    disc(ctx, f, palette.player, Math.cos(a) * 0.91, Math.sin(a) * 0.91, 0.085);
+    glow(ctx, f, palette.player, Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.15, 0.55);
+    disc(ctx, f, shade(palette.player, 0.3), Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.065);
   }
-  // The dome: glass, a lit crown, and a glint.
-  disc(ctx, f, palette.glass, 0, 0, 0.44);
-  disc(ctx, f, shade(palette.glass, 0.35), -0.06, -0.08, 0.3, 0.8);
-  disc(ctx, f, palette.impact, -0.14, -0.16, 0.11, 0.85);
-  // The ray dish: a slate barrel through the rim and a lavender lens at its mouth.
-  poly(ctx, f, palette.trim, [
-    [0.8, -0.1],
-    [1.1, -0.1],
-    [1.1, 0.1],
-    [0.8, 0.1],
-  ]);
-  disc(ctx, f, palette.ally, 1.0, 0, 0.11);
-  // Inside the box: a glow past 1.16 of the radius is cut off by the bitmap's edge.
-  glow(ctx, f, palette.ally, 1.0, 0, 0.15, 0.6);
+  // The dome: glass shaded deep at its base, a lit crown, a rim of light round it, and a glint.
+  shaded(ctx, f, [-0.2 * D, -0.45 * D], [0.2 * D, 0.45 * D], shade(palette.glass, 0.25), shade(palette.glass, -0.35), roundel(0, 0, 0.46 * D, 28, 0, Math.PI * 2));
+  disc(ctx, f, shade(palette.glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, 0.7);
+  seam(ctx, f, shade(palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
+  disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
+  paintRaygun(ctx, f, palette);
 }
 
 /** A steel star about `(x, y)` in the predecessor's frame, `reach` out: one polygon, one mark. */
@@ -2327,7 +2577,12 @@ function steelStar(x: number, y: number, reach: number): Pt[] {
   return out;
 }
 
-/** A car's roof turrets, painted: a slate casing filling each, and the missile's orange at its front. */
+/**
+ * A car's roof turrets, painted: a pod in the car's own livery filling each, lit along its top so it
+ * reads as round, a band round it, and the missile's orange at its front — 0461. They were slate boxes
+ * on both cars; asked for, *"can we make the missile tubes thematically appropriate as well?"*, so the
+ * Firebird's are its black lacquer banded in its phoenix's gold and the estate's its burl banded in gilt.
+ */
 function paintTurrets(
   ctx: Pen,
   f: Frame,
@@ -2336,13 +2591,20 @@ function paintTurrets(
   top: number,
   base: number,
   box: (points: readonly Pt[]) => Pt[],
+  livery: { readonly shell: string; readonly band: string },
 ): void {
   for (const [from, to] of spans) {
-    poly(ctx, f, shade(palette.trim, 0.3), box([
+    shaded(ctx, f, box([[from, top]])[0]!, box([[from, base]])[0]!, shade(livery.shell, 0.5), shade(livery.shell, -0.25), box([
       [from, top],
       [to, top],
       [to, base],
       [from, base],
+    ]));
+    poly(ctx, f, livery.band, box([
+      [from + 0.2, top],
+      [from + 1.95, top],
+      [from + 1.95, base],
+      [from + 0.2, base],
     ]));
     poly(ctx, f, palette.bullet, box([
       [to - 2, top + 0.3],
@@ -2364,16 +2626,41 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   const gold = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const outline = box(firebirdOutline(stage));
   ctx.fillStyle = body;
-  trace(ctx, f, box(firebirdOutline(stage)));
+  trace(ctx, f, outline);
   seal(ctx);
-  // The tyres, rubber in the slate trim, a gold rim in each.
+  /*
+    ── JAZZED — 0461 ──────────────────────────────────────────────────────────────────────────────
+    Asked for: *"overall can we make the player ship's jazzed up and cooler looking, they look fine now,
+    but they could be way cooler."* The lacquer gets a sheen — lit along the roof, dark at the sills —
+    and a highlight down its roofline; a spoiler on the ducktail (the outline's); a chrome side pipe
+    along the sill; deep-dish rims with chrome caps; lamps that glow; and the player's cyan as neon under
+    the car, where a street racer wears it.
+  */
+  shaded(ctx, f, at(0, -5), at(0, 6), shade(body, 0.16), shade(body, -0.45), outline);
+  for (const x of [-6, -1, 4, 8]) glow(ctx, f, palette.player, ...at(x, 6.6), 0.24, 0.55);
+  seam(ctx, f, shade(body, 0.7), 0.035, box([
+    [-8.6, -1.1],
+    [-2.2, -3.9],
+    [5.8, -4.1],
+    [10.4, -1.6],
+  ]), 0.8);
+  // The tyres, rubber in the slate trim, a gold dish in each and a chrome cap.
   for (const x of [12, -10]) {
     const [cx, cy] = at(x, 6);
-    disc(ctx, f, palette.trim, cx, cy, 3.6 * 0.062);
-    disc(ctx, f, gold, cx, cy, 2.3 * 0.062);
-    disc(ctx, f, palette.trim, cx, cy, 1.2 * 0.062);
+    disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 3.6 * 0.062);
+    disc(ctx, f, gold, cx, cy, 2.4 * 0.062);
+    disc(ctx, f, shade(gold, -0.35), cx, cy, 1.7 * 0.062);
+    disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.95 * 0.062);
   }
+  // The side pipe along the sill, chrome lit along its top.
+  shaded(ctx, f, at(0, 3.2), at(0, 5), shade(palette.trim, 0.7), shade(palette.trim, 0.1), box([
+    [-6.2, 3.2],
+    [8.2, 3.2],
+    [8.2, 5],
+    [-6.2, 5],
+  ]));
   // The greenhouse: gold glass, the side window and the windscreen, the T-top bar between them.
   poly(ctx, f, shade(gold, -0.3), box([
     [-7, -1.9],
@@ -2430,20 +2717,35 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [11.6, -2],
   ]));
   poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.35)));
-  // Its turrets on the roof.
-  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box);
-  // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red.
+  // Its turrets on the roof, in its own black and gold.
+  paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
+  // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red —
+  // each with its light round it.
   poly(ctx, f, palette.impact, box([
     [16.8, -0.7],
     [18.7, -0.7],
     [18.7, 1.2],
     [16.8, 1.2],
   ]));
+  glow(ctx, f, palette.impact, ...at(17.6, 0.25), 0.11, 0.6);
   poly(ctx, f, palette.bullet, box([
     [-16.8, 2.6],
     [-15, 2.6],
     [-15, 4.6],
     [-16.8, 4.6],
+  ]));
+  glow(ctx, f, palette.bullet, ...at(-15.6, 3.6), 0.11, 0.55);
+  // The spoiler in the phoenix's gold, its post with it, so the wing is held to the deck rather than
+  // left in the air over a lacquer the void's own black.
+  poly(ctx, f, gold, box([
+    [-17.2, -0.9],
+    [-12.6, -0.9],
+    [-12.6, 0.9],
+    [-13.8, 0.9],
+    [-13.8, 1.75],
+    [-15.6, 1.75],
+    [-15.6, 0.9],
+    [-17.2, 0.9],
   ]));
 }
 
@@ -2458,27 +2760,80 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   const gilt = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const outline = box(estateOutline(stage));
   ctx.fillStyle = gilt;
-  trace(ctx, f, box(estateOutline(stage)));
+  trace(ctx, f, outline);
   seal(ctx);
-  // The burl panelling along the doors, and the cyan running light along its top.
-  poly(ctx, f, shade(gilt, -0.55), box([
-    [-16.4, 3.2],
-    [16, 3.2],
+  /*
+    ── JAZZED — 0461 ──────────────────────────────────────────────────────────────────────────────
+    *"They could be way cooler."* A woody, as a gilded estate should be: the gilt burnished — bright
+    along the roof, deep at the sills — and the whole flank below the glass panelled in burl with grain
+    in it and a gilt frame round it; whitewalls; chrome bumpers; glass with a glare across it; a coil
+    on the lightning rod; and the player's cyan as neon under it.
+  */
+  shaded(ctx, f, at(0, -6), at(0, 6), shade(gilt, 0.35), shade(gilt, -0.3), outline);
+  for (const x of [-5, 0, 5]) glow(ctx, f, palette.player, ...at(x, 7), 0.24, 0.55);
+  // The burl, under the glass and over the sills, framed in gilt, with its grain.
+  const wood = shade(gilt, -0.55);
+  shaded(ctx, f, at(0, 0.6), at(0, 5.4), shade(wood, 0.12), shade(wood, -0.2), box([
+    [-16.4, 0.6],
+    [10.2, 0.6],
+    [12.6, 1.8],
+    [16, 2.4],
     [16, 5.4],
     [-16.4, 5.4],
   ]));
+  for (const y of [1.0, 3.7, 4.6]) {
+    seam(ctx, f, shade(wood, 0.3), 0.022, box([
+      [-15.6, y],
+      [-9, y + 0.25],
+      [-3, y - 0.15],
+      [3, y + 0.2],
+      [9, y - 0.1],
+      [y < 3 ? 9.8 : 15.2, y + 0.1],
+    ]), 0.55, true);
+  }
+  seam(ctx, f, shade(gilt, 0.3), 0.022, box([
+    [-15.9, 1.1],
+    [-15.9, 4.9],
+    [-1.3, 4.9],
+    [-1.3, 1.1],
+    [-15.9, 1.1],
+  ]), 0.8);
+  seam(ctx, f, shade(gilt, 0.3), 0.022, box([
+    [-0.3, 1.1],
+    [10.4, 1.1],
+    [15.4, 3.4],
+    [15.4, 4.9],
+    [-0.3, 4.9],
+    [-0.3, 1.1],
+  ]), 0.8);
+  // The cyan running light along it, where a woody wears its chrome strip.
   poly(ctx, f, palette.player, box([
     [-16, 1.4],
     [11.4, 1.4],
     [11.4, 3.2],
     [-16, 3.2],
   ]));
-  // The wheels over the sills: rubber in the slate trim, a gilt hub.
+  // Chrome bumpers, fore and aft, lit along their tops.
+  for (const [from, to] of [
+    [15.6, 18],
+    [-18, -15.8],
+  ] as const) {
+    shaded(ctx, f, at(0, 4.2), at(0, 6), shade(palette.trim, 0.75), shade(palette.trim, 0.1), box([
+      [from, 4.2],
+      [to, 4.2],
+      [to, 6],
+      [from, 6],
+    ]));
+  }
+  // The wheels over the sills: rubber in the slate trim, a whitewall, a gilt hubcap with a chrome boss.
   for (const x of [9, -9]) {
     const [cx, cy] = at(x, 6.4);
-    disc(ctx, f, palette.trim, cx, cy, 2.9 * 0.062);
-    disc(ctx, f, shade(gilt, 0.2), cx, cy, 1.2 * 0.062);
+    disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 2.9 * 0.062);
+    band(ctx, f, palette.impact, cx, cy, 2.3 * 0.062, 1.6 * 0.062);
+    disc(ctx, f, shade(gilt, 0.2), cx, cy, 1.4 * 0.062);
+    disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.9 * 0.062);
   }
   // The glasshouses, split by a pillar in the gilt.
   poly(ctx, f, palette.glass, box([
@@ -2493,6 +2848,15 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
     [8.6, 0.1],
     [-0.4, 0.1],
   ]));
+  // A glare across both, raked back — 0461.
+  for (const x of [-10.5, 1]) {
+    poly(ctx, f, shade(palette.glass, 0.45), box([
+      [x, -0.6],
+      [x + 1.6, -3.3],
+      [x + 3, -3.3],
+      [x + 1.4, -0.6],
+    ]), 0.8);
+  }
   // The rack along the roof, in a pale gilt.
   poly(ctx, f, shade(gilt, 0.45), box([
     [-13.5, ESTATE_RACK],
@@ -2500,13 +2864,20 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
     [0.5, -4.1],
     [-13.5, -4.1],
   ]));
-  paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box);
-  // The lightning rod on the bonnet: a slate rod, a lit ball, and its light.
+  // Its turrets on the rack, in its own burl banded in gilt.
+  paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
+  // The lightning rod on the bonnet: a slate rod with a chrome coil round it, a lit ball, and its light.
   poly(ctx, f, palette.trim, box([
     [12.9, -2.3],
     [15.1, -2.3],
     [15.1, 1.2],
     [12.9, 1.2],
+  ]));
+  shaded(ctx, f, at(12.6, -1.6), at(15.4, 0.4), shade(palette.trim, 0.75), shade(palette.trim, 0.05), box([
+    [12.9, -1.5],
+    [15.1, -1.5],
+    [15.1, 0.3],
+    [12.9, 0.3],
   ]));
   {
     const [bx, by] = at(ESTATE_BALL[0], ESTATE_BALL[1]);

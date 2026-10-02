@@ -168,6 +168,10 @@ export function inertLevel(): {
   shownPoints: number;
   shownStreak: number;
   onScore: (points: number, streak: number) => void;
+  joltVel: number;
+  joltWay: number;
+  joltWarp: boolean;
+  onJolt: (way: number) => void;
   onCue: (kind: CueKind) => void;
   bound: null;
   room: null;
@@ -205,6 +209,7 @@ export function inertLevel(): {
     shownBoss: -1,
     onBoss: (): void => {},
     ...scoreParts(),
+    ...joltParts(),
     // The fighter's weapon with no tubes, which is what an empty upgrade list resolves to. A fixture
     // that wanted a different ship would say so — 0441.
     weapon: weaponFor(SHIPS.fighter, []),
@@ -277,6 +282,11 @@ export function scoreParts(): { score: LevelScore; shownPoints: number; shownStr
     shownStreak: 0,
     onScore: (): void => {},
   };
+}
+
+/** The lurch half of a world: standing still, and nothing on a dash to swing — 0461. */
+export function joltParts(): { joltVel: number; joltWay: number; joltWarp: boolean; onJolt: () => void } {
+  return { joltVel: 0, joltWay: 0, joltWarp: false, onJolt: (): void => {} };
 }
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
@@ -584,6 +594,7 @@ export function playableWorld(
     shownBoss: -1,
     onBoss: (): void => {},
     ...scoreParts(),
+    ...joltParts(),
     onPickup: (kind: PickupKind, face: number): void => {
       taken.push(kind);
       faces.push(face);

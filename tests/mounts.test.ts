@@ -16,11 +16,11 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrame } from '../src/app/frame.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { SHIPS, type ShipKind } from '../src/content/ships.ts';
+import { CADDIE_DISC, SHIPS, type ShipKind } from '../src/content/ships.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SHIP_BOX } from '../src/content/sprites.ts';
 import { reset } from '../src/sim/entity.ts';
-import { carMounts } from '../src/render/bake.ts';
+import { caddieMounts, carMounts } from '../src/render/bake.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 /** A box's radius in world units: a sprite's frame puts it at 0.42 of the extent. */
@@ -59,6 +59,28 @@ describe('0448 — each ship fires from its own guns', () => {
       expect(row.muzzle.across, `${ship}: the hood gun is under the centreline`).toBeLessThan(0);
       for (const tube of row.tubes[2]) expect(tube.across, `${ship}: a tube is lower than the hood`).toBeLessThan(row.muzzle.across);
     }
+  });
+
+  it('0461 — AND THE SAUCER’S: its gun is the ray gun’s emitter, and its tubes the warheads in the pods off its sides', () => {
+    /*
+      *"can we have the missile turrets sticking out from the sides instead of weirdly placed on it?"* The
+      pods are drawn off the disc's sides on pylons (`caddieMounts`), so the row is held to them on the
+      cars' terms; and they ARE off its sides — further out than the disc reaches, either side of it.
+    */
+    const drawn = caddieMounts();
+    const row = SHIPS.caddie;
+    expect(row.muzzle.along, 'caddie: the row’s gun is not the emitter drawn').toBeCloseTo(drawn.muzzle[0] * R, 1);
+    expect(row.muzzle.across, 'caddie: the row’s gun is not the emitter drawn').toBeCloseTo(drawn.muzzle[1] * R, 1);
+    for (const stage of [1, 2] as const) {
+      const tubes = row.tubes[stage];
+      expect(tubes.length, `caddie: ${stage} tubes fitted, and the drawing has ${drawn.tubes[stage]!.length}`).toBe(drawn.tubes[stage]!.length);
+      tubes.forEach((tube, i) => {
+        const [x, y] = drawn.tubes[stage]![i]!;
+        expect(Math.hypot(tube.along - x * R, tube.across - y * R), `caddie: tube ${i} of ${stage} is off its drawn pod`).toBeLessThan(NEAR);
+        expect(Math.abs(tube.across), `caddie: tube ${i} of ${stage} is on the disc rather than off its side`).toBeGreaterThan(CADDIE_DISC * R);
+      });
+    }
+    expect(row.tubes[2][0]!.across * row.tubes[2][1]!.across, 'caddie: both pods hang off one side').toBeLessThan(0);
   });
 
   it('THE GUN: every ship’s first shot leaves its own muzzle — the arc’s first link too', () => {

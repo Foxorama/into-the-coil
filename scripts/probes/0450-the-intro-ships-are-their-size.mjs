@@ -11,8 +11,9 @@ export const PROBES = [
     guard: 'draws every pilot’s ship no bigger than the fighter was beside the bar door',
     edit: {
       path: 'src/content/port.ts',
-      find: 'export const HANGAR_SCALE = 30 / SHIP_BOX;',
-      replace: 'export const HANGAR_SCALE = 30 / 7;',
+      // 0461 took the box to 24; the break is still the bare hull's scale for the whole box.
+      find: 'export const HANGAR_SCALE = 24 / SHIP_BOX;',
+      replace: 'export const HANGAR_SCALE = 24 / 7;',
     },
   },
   {
@@ -22,8 +23,9 @@ export const PROBES = [
     guard: 'draws every pilot’s ship no bigger than the fighter was beside the bar door',
     edit: {
       path: 'src/content/ships.ts',
-      find: '    intro: { hangar: 1, outside: 0.8 },',
-      replace: '    intro: { hangar: 1, outside: 1 },',
+      // Over its disc since 0461; the break is still the chase's extra reduction not taken.
+      find: '    intro: { hangar: 1 / CADDIE_DISC, outside: 0.8 / CADDIE_DISC },',
+      replace: '    intro: { hangar: 1 / CADDIE_DISC, outside: 1 / CADDIE_DISC },',
     },
   },
   {
