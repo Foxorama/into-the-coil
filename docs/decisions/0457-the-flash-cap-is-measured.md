@@ -106,7 +106,7 @@ picture is the game's own and only the charge is not the run's.
 
 ⚠️ **None owed —** [0001](0001-revertability-not-risk-rating.md). A rig handle and a script.
 
-## Confirmed, not assumed
+## How the meter is seen to fail, and why no probe
 
 The meter's failure is its calibration, run before every judgement. A meter that cannot tell a rate
 or an area exits 2 rather than reporting, per [0005](0005-a-guard-must-be-seen-to-fail.md) in the
