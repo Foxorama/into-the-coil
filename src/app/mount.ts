@@ -1140,6 +1140,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossEscortSide: 1,
     bossLeapIn: 0,
     chilledFor: 0,
+    chillClock: 0,
+    chillRadius: 0,
+    restedBy: 0,
     frozenFor: 0,
     // Nothing is dying at boot, and where the last ship died is not a question anybody has asked yet
     // — the middle of the lane is the honest blank, since it is where a ship starts. 0079.
@@ -2009,6 +2012,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (place === bakedPlace) return;
     bakedPlace = place;
     surface.setSpace(want);
+    // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
+    const hostile = place === null ? null : THEMES[place].bolt;
+    surface.setBolt(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact);
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 

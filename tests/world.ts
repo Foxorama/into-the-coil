@@ -143,6 +143,9 @@ export function inertLevel(): {
   bossEscortSide: number;
   bossLeapIn: number;
   chilledFor: number;
+  chillClock: number;
+  chillRadius: number;
+  restedBy: number;
   frozenFor: number;
   dyingIn: number;
   deathOffset: number;
@@ -249,6 +252,9 @@ export function inertLevel(): {
     bossEscortSide: 1,
     bossLeapIn: 0,
     chilledFor: 0,
+    chillClock: 0,
+    chillRadius: 0,
+    restedBy: 0,
     frozenFor: 0,
     // Nothing is dying in a fixture that has not been driven yet — 0079.
     dyingIn: 0,
@@ -554,6 +560,9 @@ export function playableWorld(
     bossEscortSide: 1,
     bossLeapIn: 0,
     chilledFor: 0,
+    chillClock: 0,
+    chillRadius: 0,
+    restedBy: 0,
     frozenFor: 0,
     dyingIn: 0,
     deathOffset: SHIP_START_ALONG,

@@ -80,6 +80,17 @@ function serpentAt(fraction: number, difficulty?: DifficultyKind): {
 }
 
 /**
+ * Send a ball put on the field by hand down the lane at its row's speed, as a throw does — 0459.
+ *
+ * ⚠️ **THE FIXTURES PUT IT DOWN STILL AND LET THE CAMERA BRING IT IN**, which was the same thing at the
+ * level's scroll rate until the serpent fought in a room: at rest a still ball stays where it was put and
+ * never bursts. Every speed is in the camera's frame (0034), so this is the throw's own.
+ */
+function lob(world: ReturnType<typeof playableWorld>['world'], ball: { velAlong: number }): void {
+  ball.velAlong = -SHOTS.maw.speed + world.scrollPerStep;
+}
+
+/**
  * Turn the serpent's round to the lightning — 0261. At the last third its heads take turns, and the
  * rain is the third; `headAt` is the round's count, read off the row rather than typed.
  *
@@ -2394,6 +2405,7 @@ describe('0311 — the acid and the void come as one ball', () => {
     made.world.enemyShots.clear();
     const ball = made.world.enemyShots.spawn()!;
     reset(ball, made.world.ship.along + 60, BALL_LANE, SHOTS.maw, SHOT_INDEX.maw);
+    lob(made.world, ball);
     ball.health = health;
     return { world: made.world, frame: made.frame };
   }
@@ -2606,6 +2618,7 @@ describe('0322 — the ball is worth shooting', () => {
     made.world.missiles.clear();
     const ball = made.world.enemyShots.spawn()!;
     reset(ball, made.world.ship.along + 60, 14, SHOTS.maw, SHOT_INDEX.maw);
+    lob(made.world, ball);
     return { world: made.world, frame: made.frame, ball: 0 };
   }
 
@@ -2737,6 +2750,7 @@ describe('0322 — the ball is worth shooting', () => {
       const boss = world.bossPool.at(0);
       const ball = world.enemyShots.spawn()!;
       reset(ball, boss.along, world.ship.across, SHOTS.maw, SHOT_INDEX.maw);
+      lob(world, ball);
       let died = -1;
       let hit = false;
       const was = world.ship.health;
@@ -2927,5 +2941,76 @@ describe('0323 — a sound is made for the hundredth time', () => {
           'ringing when the serpent threw the next one',
       ).toBeLessThanOrEqual(gap);
     }
+  });
+});
+
+describe('0459 — the serpent lurks in the world tree’s roots', () => {
+  it('THE ASK: the screen stops, and the roots frame its far side — the top, the bottom and the far edge — while the near half stays open', () => {
+    /*
+      *"We need the world tree's roots framing that side of the screen around to indicate it's lurking in
+      the world tree's roots — the background needs to stop scrolling there as well."* In the player's
+      units: the camera's own step, and where on the narrowest screen the roots begin and end.
+    */
+    const row = BOSSES.jormungandr;
+    expect(row.room, 'the serpent’s fight scrolls on').not.toBeNull();
+    expect(row.room!.wall === null ? null : SPRITE_KINDS[row.room!.wall], 'the serpent’s room is not walled in roots').toBe('rootWall');
+    const { world, frame } = serpentAt(1);
+    for (let i = 0; i < 60; i++) {
+      world.ship.health = world.shipRow.health;
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      expect(world.scrollPerStep, `the camera is still moving on step ${i} of the serpent’s fight`).toBe(0);
+    }
+    const room = world.room!;
+    expect(room, 'the roots were not laid for the painter').not.toBeNull();
+    const narrow = ACROSS_SPAN * MIN_ASPECT;
+    const from = (room.from - world.cameraAlong) / narrow;
+    const to = (room.to - world.cameraAlong) / narrow;
+    expect(from, 'the roots run the whole length of the screen rather than framing its far side').toBeGreaterThan(0.3);
+    expect(from, 'the roots start too far over to frame anything').toBeLessThan(0.6);
+    expect(to, 'the far wall of roots is not at the far edge of the screen').toBeGreaterThan(0.9);
+    expect(to).toBeLessThanOrEqual(1);
+  });
+
+  it('and the animal keeps moving while the screen is still — its bob and its rear are not the camera’s', () => {
+    /*
+      ⚠️ **THE DEFECT THE ROOM FOUND.** The bob and the drift both kept time on the camera, so a camera at
+      rest was a serpent frozen mid-coil. Measured on the screen, over one bob at the opening phase.
+    */
+    const { world, frame } = serpentAt(1);
+    let low = Number.POSITIVE_INFINITY;
+    let high = Number.NEGATIVE_INFINITY;
+    let back = Number.NEGATIVE_INFINITY;
+    let front = Number.POSITIVE_INFINITY;
+    for (let i = 0; i < 600; i++) {
+      world.ship.health = world.shipRow.health;
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      const hull = world.bossPool.at(0);
+      low = Math.min(low, hull.across);
+      high = Math.max(high, hull.across);
+      back = Math.max(back, hull.along - world.cameraAlong);
+      front = Math.min(front, hull.along - world.cameraAlong);
+    }
+    const move = BOSSES.jormungandr.move;
+    expect(move.kind).toBe('bob');
+    if (move.kind !== 'bob') return;
+    expect(high - low, 'the serpent stopped bobbing when the screen stopped').toBeGreaterThan(move.amplitude);
+    expect(back - front, 'the serpent stopped rearing when the screen stopped').toBeGreaterThan(move.rear);
+  });
+
+  it('and when it dies the far roots part, and the level carries on through them', () => {
+    const { world, frame } = serpentAt(1);
+    world.bossPool.at(0).health = 0;
+    const opens = BOSSES.jormungandr.room!.opens;
+    let moved = false;
+    for (let i = 0; i < opens + 30; i++) {
+      world.ship.health = world.shipRow.health;
+      frame.step();
+      if (world.scrollPerStep > 0) moved = true;
+    }
+    expect(world.bossPool.size, 'the serpent did not die').toBe(0);
+    expect(world.room!.open, 'the far roots did not part, so the camera carries the player into them').toBe(1);
+    expect(moved, 'the screen did not start again').toBe(true);
   });
 });

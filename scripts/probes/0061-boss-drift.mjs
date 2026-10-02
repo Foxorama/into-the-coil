@@ -19,8 +19,9 @@ export const PROBES = [
     guard: 'it never stops moving along the lane, which is what a fight is',
     edit: {
       path: 'src/app/boss.ts',
-      find: '  const drift = row.drift > 0 && row.driftWavelength > 0\n    ? row.drift * Math.sin((cameraAlong * TAU) / row.driftWavelength)\n    : 0;',
-      replace: '  const drift = 0;\n  void TAU;',
+      // Re-anchored by 0459: the drift keeps time on the paced camera, which a room does not stop.
+      find: '  const drift = row.drift > 0 && row.driftWavelength > 0\n    ? row.drift * Math.sin((pacedAlong * TAU) / row.driftWavelength)\n    : 0;',
+      replace: '  const drift = 0;\n  void TAU;\n  void pacedAlong;',
     },
   },
   {
@@ -33,7 +34,7 @@ export const PROBES = [
     guard: 'arrives, closes on its station, and then holds it',
     edit: {
       path: 'src/app/boss.ts',
-      find: '    ? row.drift * Math.sin((cameraAlong * TAU) / row.driftWavelength)',
+      find: '    ? row.drift * Math.sin((pacedAlong * TAU) / row.driftWavelength)',
       replace: '    ? row.drift * Math.sin((boss.along * TAU) / row.driftWavelength) * 4',
     },
   },

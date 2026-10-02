@@ -211,9 +211,9 @@ export const PROBES = [
     guard: 'THE ACID IS OVER WHAT IS IN IT AND UNDER WHAT FLIES',
     edit: {
       path: 'src/app/frame.ts',
-      // Re-anchored by 0401, which hands the painter the heart after it.
-      find: 'w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart);',
-      replace: 'w.corridor, POOLS_OF[w.level.theme], w.layers.length - 1, w.heartBeat, heart);',
+      // Re-anchored by 0401, which hands the painter the heart after it, and 0459, the beams.
+      find: 'w.corridor, POOLS_OF[w.level.theme], w.layers.indexOf(w.enemies), w.heartBeat, heart, ',
+      replace: 'w.corridor, POOLS_OF[w.level.theme], w.layers.length - 1, w.heartBeat, heart, ',
     },
   },
 ];

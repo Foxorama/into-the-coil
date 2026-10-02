@@ -301,6 +301,18 @@ export interface ThemeRow {
    */
   lord: FoeSkin;
   /**
+   * The glow a hostile bolt wears here — a lightning strike, a laser — or `null` for the `enemy` ink
+   * every other place strokes them in — 0459.
+   *
+   * ⚠️ **ASKED FOR**: *"the lightning and jellyfish at the end of the black heart look almost exactly
+   * the same colours as the level background so they can hardly be seen at all."* The `enemy` ink is
+   * a hot pink, and the Black Heart is lit by pink arteries and a rose glow off the heart: measured,
+   * the beam's glow against the vessels' lit core is about 1.05 to 1. A place whose light IS the
+   * hostile ink authors its own, which is `foe.shot`'s argument for the place's bullets made again
+   * for its bolts.
+   */
+  bolt: string | null;
+  /**
    * How this place mixes the music, as a multiplier over `MUSIC_LADDER`'s own rung.
    *
    * ⚠️ **A MULTIPLIER rather than a ladder, so a theme cannot break the ladder's shape.** 0090's rule
@@ -706,6 +718,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#9a9a9a', plate: '#4c4c56', lit: '#ff7286', eye: '#ff4040', shot: '#ff2e4d' },
     // The serpent: a venom-green leviathan with its light running down its scales and a gold eye.
     lord: { hull: '#2f8a5a', plate: '#123d2a', lit: '#b8ff9a', eye: '#ffc030' },
+    bolt: null,
     // The reference, and the number every place used to be — 0183. Level one changes nothing.
     aura: 0.55,
     mix: {
@@ -871,6 +884,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#f57a2a', plate: '#8a3a12', lit: '#ffe08a', eye: '#2a0a14', shot: '#ff2f8f' },
     // The fish: a darker, redder fire than its horde, with a pale burning eye.
     lord: { hull: '#c8401a', plate: '#5a1608', lit: '#ffd24a', eye: '#fff2a0' },
+    bolt: null,
     /*
       ⚠️ **HIGHER THAN THE REFERENCE, BECAUSE THE PLACE IS A BUILD.** A cathedral in a furnace
       escalates to organ and pumping beats and hands over to a Dante's-inferno fight; the dread
@@ -1038,6 +1052,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#7f9a2e', plate: '#4a5c18', lit: '#e8d8a8', eye: '#ffb020', shot: '#ff4d2e' },
     // The pterodactyl: leathery olive, bone-pale crest and beak, an amber eye.
     lord: { hull: '#7c962c', plate: '#2e3a12', lit: '#ffe9a8', eye: '#ffb020' },
+    bolt: null,
     /*
       ⚠️ **LOWER, BECAUSE A DANCEFLOOR DOES NOT DO SLOW DREAD.** The place is a run; what it wants is
       for the fight to be the arrival, not for a shadow to lengthen across the whole level.
@@ -1250,6 +1265,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#3aa08a', plate: '#1c5a4c', lit: '#e070f0', eye: '#ff3030', shot: '#ffd12e' },
     // The gyre: the lattice's teal gone dark and hot-pink in the traces, a red core.
     lord: { hull: '#2a8a78', plate: '#0f3f36', lit: '#ff7af0', eye: '#ff3030' },
+    bolt: null,
     /*
       ⚠️ **THE HIGHEST BUT ONE, AND THE FICTION IS THE ARGUMENT.** A labyrinth is the place where the
       thing hunting you is already there; the aura is what says so long before it is on the field.
@@ -1376,6 +1392,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#5c9ad0', plate: '#2a4a80', lit: '#d8f4ff', eye: '#ff5a7a', shot: '#ff5a1e' },
     // The frost ship: paler ice than the shards it sends, its facets near white, a cold red eye.
     lord: { hull: '#4a92da', plate: '#1e3a70', lit: '#eefcff', eye: '#ff5a7a' },
+    bolt: null,
     /*
       ⚠️ **THE LOWEST.** Ice is still, and the shelf's threat is the one that arrives without warning.
       A build that spends the level would spend the only surprise the place has.
@@ -1510,6 +1527,7 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     foe: { hull: '#b85cd0', plate: '#5a2a70', lit: '#e6ff4a', eye: '#ffffff', shot: '#ff2e6b' },
     // The hydra: a deeper, bruised violet than the spores, acid-yellow in the maws, white eyes.
     lord: { hull: '#9a48b8', plate: '#3f1a52', lit: '#d8ff3a', eye: '#ffffff' },
+    bolt: null,
     /*
       ⚠️ **HIGH, BECAUSE THE MIRE SEEPS.** The one place whose whole character is that it reaches you
       before you reach it.
@@ -1600,7 +1618,10 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
     // The hulls here are RED, which is the one place a red bullet would be invisible — so plasma.
     foe: { hull: '#d0303c', plate: '#5a0a14', lit: '#8ac0e8', eye: '#ffd23f', shot: '#ffe84a' },
     // The jellyfish: a darker blood than the gaze, the bell's rim in a cold light, the heart gold.
+    // Its glass is that cold light since 0459, so it stands off a sky that is the blood.
     lord: { hull: '#b8202e', plate: '#40060e', lit: '#9ad0f0', eye: '#ffd23f' },
+    // The plasma its bullets already are — 0459: the `enemy` pink is the colour of this place's light.
+    bolt: '#ffe84a',
     /*
       ⚠️ **THE HIGHEST, BECAUSE HERE THE AURA IS THE PLACE.** The Black Heart is what the run has been
       travelling towards; 0170 already made it audible in its own fight, and this is the other half —

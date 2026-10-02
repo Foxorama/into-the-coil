@@ -59,8 +59,9 @@ export const PROBES = [
     guard: 'THE COLD, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (dAlong * dAlong + dAcross * dAcross > chill.radius * chill.radius) {\n    w.chilledFor = 0;\n    return;\n  }',
-      replace: '  if (dAlong * dAlong + dAcross * dAcross > chill.radius * chill.radius) {\n    return;\n  }',
+      // Re-anchored by 0459, whose radius is the step's and goes to nought while the cold is out.
+      find: '  if (radius <= 0 || dAlong * dAlong + dAcross * dAcross > radius * radius) {\n    w.chilledFor = 0;\n    return;\n  }',
+      replace: '  if (radius <= 0 || dAlong * dAlong + dAcross * dAcross > radius * radius) {\n    return;\n  }',
     },
   },
   {

@@ -48,7 +48,8 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE, SEEN WHERE IT IS',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    slot.swell = (2 * chill.radius) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];',
+      // Re-anchored by 0459: the field is laid at the step's radius, which pulses.
+      find: '    slot.swell = (2 * w.chillRadius) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];',
       replace: '    slot.swell = (2 * 30) / SPRITE_EXTENT[SPRITE_KINDS[layer.sprite]!];',
     },
   },

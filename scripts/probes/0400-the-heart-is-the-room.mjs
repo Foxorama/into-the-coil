@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'THE ASK: the fight stops the screen',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },',
-      replace: '    room: null,',
+      // With the comment over it since 0459, which gives the hydra the same room.
+      find: '      stops it there with everything else.\n    */\n    room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },',
+      replace: '      stops it there with everything else.\n    */\n    room: null,',
     },
   },
   {

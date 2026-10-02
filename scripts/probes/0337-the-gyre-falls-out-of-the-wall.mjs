@@ -78,8 +78,9 @@ export const PROBES = [
     guard: 'THE WRECK: it falls out of the wall',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (w.roomOpen < room.opens) w.roomOpen++;',
-      replace: '  if (w.roomOpen < 0) w.roomOpen++;',
+      // With the line under it since 0459, whose room with no wreck opens on the same words, indented.
+      find: "  if (w.roomOpen < room.opens) w.roomOpen++;\n  // The painter's own copy",
+      replace: "  if (w.roomOpen < 0) w.roomOpen++;\n  // The painter's own copy",
     },
   },
   {

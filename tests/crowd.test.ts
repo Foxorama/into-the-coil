@@ -146,7 +146,9 @@ function speedNow(w: World): number {
   const boss = w.bossPool.at(0);
   const dAlong = w.ship.along - boss.along;
   const dAcross = w.ship.across - boss.across;
-  return dAlong * dAlong + dAcross * dAcross <= chill.radius * chill.radius ? SHIP_SPEED * chill.slow : SHIP_SPEED;
+  // The step's own reach, which pulses since 0459 — the row's `radius` is only where a pulse starts.
+  const radius = w.chillRadius;
+  return radius > 0 && dAlong * dAlong + dAcross * dAcross <= radius * radius ? SHIP_SPEED * chill.slow : SHIP_SPEED;
 }
 
 /** Every shot a boss can put up: the row's, any phase's, and any head's. */
