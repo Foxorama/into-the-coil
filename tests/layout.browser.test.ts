@@ -69,7 +69,7 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function open(viewport: { width: number; height: number }): Promise<Page> {
+async function open(viewport: { width: number; height: number }, kept: 'table' | 'nothing' = 'table'): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
   const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
   /*
@@ -77,13 +77,18 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
     beside its rows (0458), and drops the column while nothing is kept; a guard that loaded a browser
     with nothing kept would be measuring the title every first-time player sees and no returning one
     does. The widest rows the content allows, through the real save layer.
+
+    ⚠️ **AND `nothing` FOR THE OTHER ONE, BECAUSE ONLY EVER SEEDING HID IT — 0460.** The title with no
+    table is a different layout, and on every phone it was broken while this file stayed green.
   */
-  await context.addInitScript(
-    ([key, table]: [string, string]) => {
-      localStorage.setItem(key, table);
-    },
-    [SCORES_KEY, widestTable()] as [string, string],
-  );
+  if (kept === 'table') {
+    await context.addInitScript(
+      ([key, table]: [string, string]) => {
+        localStorage.setItem(key, table);
+      },
+      [SCORES_KEY, widestTable()] as [string, string],
+    );
+  }
   const page = await context.newPage();
   await page.goto(dist);
   await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
@@ -529,6 +534,95 @@ describe.runIf(chromePath)('0370 — the tiers explain themselves on every scree
       }
       await page.context().close();
     }
+  });
+});
+
+describe.runIf(chromePath)('0460 — a band draws its segments whole, between its own steps', () => {
+  /*
+    THE REPORTED ONE: a phone's title with nothing kept yet, the tier names stood four words tall with
+    the step arrows drawn through *Legendary* and *Galaxy*, and the pilot faces cut at both ends. The
+    fit guard above saw none of it — every box was on the display, only on top of one another — and it
+    only ever loaded the title with a table seeded, which is a different layout.
+
+    Measured in the player's pixels, on both titles: no segment is drawn under a step; the chosen
+    segment is drawn whole inside its track; and a track scrolled to its start shows its first segment
+    from its first pixel, because a scroll box cannot reach what overflows before its own start.
+  */
+  for (const kept of ['nothing', 'table'] as const) {
+    it(`with ${kept === 'table' ? 'a full table' : 'nothing kept'}, on every device`, async () => {
+      for (const viewport of VIEWPORTS) {
+        const page = await open(viewport, kept);
+        await page.waitForSelector('.' + prefixFor('title').slice(0, -1) + '-shown');
+        await nameTheWidestPilot(page);
+        const faults = await page.evaluate((p: string) => {
+          const out: string[] = [];
+          const box = (el: Element): DOMRect => el.getBoundingClientRect();
+          const meets = (a: DOMRect, b: { left: number; right: number; top: number; bottom: number }): boolean =>
+            a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+          for (const band of document.querySelectorAll<HTMLElement>('.' + p + 'band')) {
+            const track = band.querySelector<HTMLElement>('.' + p + 'options');
+            if (track === null) continue;
+            const name = band.getAttribute('aria-label') ?? track.className;
+            const t = box(track);
+            const clipped = getComputedStyle(track).overflowX !== 'visible';
+            const options = [...track.querySelectorAll<HTMLElement>('.' + p + 'option')];
+            for (const step of band.querySelectorAll('.' + p + 'band-step')) {
+              const s = box(step);
+              for (const option of options) {
+                const o = box(option);
+                const seen = clipped
+                  ? { left: Math.max(o.left, t.left), right: Math.min(o.right, t.right), top: o.top, bottom: o.bottom }
+                  : o;
+                if (seen.right > seen.left && meets(s, seen)) {
+                  out.push(`${name}: ${(option.textContent || option.getAttribute('aria-label')) ?? ''} is under a step`);
+                }
+              }
+            }
+            const on = track.querySelector('.' + p + 'option-on');
+            if (on !== null) {
+              const o = box(on);
+              if (o.left < t.left - 0.5 || o.right > t.right + 0.5) out.push(`${name}: the chosen one is not drawn whole`);
+            }
+            /*
+              A roster that outgrows its track, which four pilots do not yet and the expanded one
+              will: the track squeezed to one segment, scrolled to its start, and asked for its first.
+            */
+            const first = options[0];
+            if (clipped && first !== undefined) {
+              track.style.maxWidth = box(first).width + 'px';
+              track.scrollLeft = 0;
+              const gap = box(track).left - box(first).left;
+              if (gap > 0.5) out.push(`${name}: the first segment starts ${gap.toFixed(0)} px before any scroll reaches`);
+              track.style.maxWidth = '';
+            }
+          }
+          return out;
+        }, prefixFor('title'));
+        expect(faults, `${viewport.what} (${viewport.width}x${viewport.height}), ${kept} kept`).toEqual([]);
+        await page.context().close();
+      }
+    });
+  }
+});
+
+describe.runIf(chromePath)('0460 — the title’s sky drifts by whole tiles', () => {
+  it('sizes every layer of the drifting background as a tile, so the loop has no seam', async () => {
+    /*
+      0437 drifts the sky's stars a whole number of their own tiles a minute, which is why the loop
+      has no seam. 0440 laid two washes on the same element with a background shorthand, which reset
+      the stars' images AND sizes: the stars were gone, the drift moved the washes at the size of the
+      screen, and their repeat was an edge creeping in from the right that jumped back every minute.
+      A layer drawn at the size of its box (auto) is not a tile, so this asks every layer for one.
+    */
+    const page = await open({ width: 1280, height: 720 });
+    const sizes = await page.evaluate(() => {
+      const sky = document.querySelector('.itc-title-sky');
+      return sky === null ? null : getComputedStyle(sky).backgroundSize.split(',').map((s) => s.trim());
+    });
+    expect(sizes, 'the title has no sky').not.toBeNull();
+    expect(sizes!.length, 'the sky has fewer layers than a sky of stars').toBeGreaterThan(2);
+    expect(sizes!.filter((s) => !/^\d+(\.\d+)?px \d+(\.\d+)?px$/.test(s)), 'layers that are not a tile').toEqual([]);
+    await page.context().close();
   });
 });
 

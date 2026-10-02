@@ -387,12 +387,36 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     three rows round to Settings. The hold is as many frames as cannot reach the repeat however many
     steps each frame catches up, and it is still read on every one of them. The release is not a hold,
     so it keeps its eight.
+
+    ⚠️ **AND THE RELEASE IS MADE IN THE PAGE, BECAUSE A ROUND TRIP IS WALL CLOCK — 0460.** The hold was
+    counted in frames and then ended by a second message from the test, and the page kept stepping
+    while that message was on its way: on a loaded runner the trip is long enough for the frames it
+    spans to reach the repeat, so a tap walked the title round by two or three rows — on 0458's own
+    runs, on #475 and on 0460's. Measured with the release held back half a second: twelve taps of
+    twelve repeated; with the release made in the page after the same frames, none did. Press and
+    release now happen inside one evaluate, so the hold is the frames it counts and nothing else.
   */
   const TAP_FRAMES = Math.floor((MENU_REPEAT_AFTER - 1) / MAX_STEPS);
   async function nudge(page: Page, button: number): Promise<void> {
-    await setPad(page, [0, 0], [button]);
-    await afterFrames(page, TAP_FRAMES);
-    await setPad(page, [0, 0], []);
+    await page.evaluate(
+      ({ key, button, frames }: { key: string; button: number; frames: number }) =>
+        new Promise<void>((done) => {
+          const state = (window as unknown as Record<string, { pressed: number[] }>)[key]!;
+          state.pressed = [button];
+          let left = frames;
+          const tick = (): void => {
+            left -= 1;
+            if (left > 0) {
+              requestAnimationFrame(tick);
+              return;
+            }
+            state.pressed = [];
+            done();
+          };
+          requestAnimationFrame(tick);
+        }),
+      { key: PAD_STATE, button, frames: TAP_FRAMES },
+    );
     await afterFrames(page, 8);
   }
 
