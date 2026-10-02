@@ -1,6 +1,6 @@
 // The flash meter: how many GENERAL FLASHES a second the picture the player watches actually makes.
 //
-// docs/decisions/0456-the-flash-cap-is-measured.md. 0024 put a flash cap in the floor — *"no more
+// docs/decisions/0457-the-flash-cap-is-measured.md. 0024 put a flash cap in the floor — *"no more
 // than three general flashes per second"* — and said it lands with the painter, counted. Nothing has
 // counted it since: the bomb's gap (0375) and the storm's thin strokes (0374) were each argued in
 // prose. This counts it, off the pixels, so a pass that makes the game louder can be told from one

@@ -1068,7 +1068,7 @@ describe('damage is legible on the body that took it', () => {
 
   it('THE FLASH CAP ON A BODY: no wash relights faster than three times a second, however often it is hit', () => {
     /*
-      ⚠️ **`docs/decisions/0456-the-flash-cap-is-measured.md`, and it is 0024's floor rather than a
+      ⚠️ **`docs/decisions/0457-the-flash-cap-is-measured.md`, and it is 0024's floor rather than a
       taste.** The meter read the gyre over the cap under the arc: its hull relit every twelve steps,
       ten transitions a second over a seventh of the screen. How big a body is is content; how often
       it may flash is not. So this is asserted in the player's unit — seconds between two washes

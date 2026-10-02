@@ -11,7 +11,7 @@ export const PROBES = [
     guard: 'A HIT IS AN EVENT AGAIN',
     edit: {
       path: 'src/sim/collide.ts',
-      // ⚠️ Re-anchored by 0456, which put the flash cap's floor under the duty on this line.
+      // ⚠️ Re-anchored by 0457, which put the flash cap's floor under the duty on this line.
       find: '  target.flashGap = Math.max(flashSteps * (1 + FLASH_GAP_DUTY), FLASH_CAP_STEPS);',
       replace: '  target.flashGap = 0;',
     },
@@ -48,7 +48,7 @@ export const PROBES = [
     guard: 'a single hit still flashes for its whole window',
     edit: {
       path: 'src/sim/collide.ts',
-      // ⚠️ Re-anchored by 0456, as the first probe above was.
+      // ⚠️ Re-anchored by 0457, as the first probe above was.
       find: '  target.flashFor = flashSteps;\n  target.flashGap = Math.max(',
       replace: '  target.flashFor = 1;\n  target.flashGap = Math.max(',
     },

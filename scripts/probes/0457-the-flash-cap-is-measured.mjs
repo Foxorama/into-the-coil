@@ -1,12 +1,12 @@
-// The flash cap is measured — docs/decisions/0456-the-flash-cap-is-measured.md
+// The flash cap is measured — docs/decisions/0457-the-flash-cap-is-measured.md
 //
-// The one guard 0456 adds to the suite, broken on purpose. `node scripts/prove-guard.mjs 0456`.
+// The one guard 0457 adds to the suite, broken on purpose. `node scripts/prove-guard.mjs 0457`.
 // The meter itself (`scripts/weigh-flashes.mjs`) is seen to fail by its own calibration strobes,
 // every time it runs, before it judges anything.
 
 export const PROBES = [
   {
-    decision: '0456',
+    decision: '0457',
     suite: 'tests/combat.test.ts',
     // The floor taken out: the duty alone, which relit the gyre ten times a second.
     broke: 'the wash relit on the duty alone, five times a second under a gun that lands every step',
@@ -18,7 +18,7 @@ export const PROBES = [
     },
   },
   {
-    decision: '0456',
+    decision: '0457',
     suite: 'tests/combat.test.ts',
     // The floor kept but set to the wrong rate — four a second, which a reader of "a third" might miss.
     broke: 'the floor at fifteen steps, four washes a second',

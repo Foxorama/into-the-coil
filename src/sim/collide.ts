@@ -78,7 +78,7 @@ const FLASH_GAP_DUTY = 2;
 
 /**
  * The fewest steps from one wash on a body to the next — a third of a second at the fixed 60 Hz
- * step — `docs/decisions/0456-the-flash-cap-is-measured.md`.
+ * step — `docs/decisions/0457-the-flash-cap-is-measured.md`.
  *
  * ⚠️ **0024's FLASH CAP, AND IT IS A FLOOR UNDER THE DUTY RATHER THAN A SECOND DUTY.** The duty
  * above relit a body every twelve steps under a gun that lands that often: five washes a second, ten

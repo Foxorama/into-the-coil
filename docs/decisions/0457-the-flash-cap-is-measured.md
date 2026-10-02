@@ -1,4 +1,4 @@
-# 0456 — The flash cap is measured
+# 0457 — The flash cap is measured
 
 **Accepted 2026-10-02.**
 - `scripts/weigh-flashes.mjs` counts general flashes off the pixels the game draws. It reads every
@@ -107,7 +107,7 @@ rig handle and a script.
 The suite guard is `THE FLASH CAP ON A BODY` in `tests/combat.test.ts`. It drives a landing on every
 step and asserts at least a third of a second between two washes beginning, in seconds, the
 player's unit. Per [0005](0005-a-guard-must-be-seen-to-fail.md), declared in
-`scripts/probes/0456-the-flash-cap-is-measured.mjs`:
+`scripts/probes/0457-the-flash-cap-is-measured.mjs`:
 
 | broken on purpose | went red |
 |---|---|

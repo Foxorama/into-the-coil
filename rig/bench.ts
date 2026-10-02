@@ -50,7 +50,7 @@ if (mounted === null) throw new Error('bench: the game would not mount');
 const { world, dispatch, lifecycle } = mounted.rig;
 
 /*
-  ── THE HANDLE THE FLASH METER DRIVES — 0456 ────────────────────────────────────────────────────
+  ── THE HANDLE THE FLASH METER DRIVES — 0457────────────────────────────────────────────────────
 
   `scripts/weigh-flashes.mjs` throws a special as fast as the game allows and reads every frame the
   game draws. A special is thrown through `launchSpecial`, the call `onSpecial` makes once the run has
