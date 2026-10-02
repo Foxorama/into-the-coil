@@ -347,6 +347,13 @@ ${starSky()}
 
   With no table yet the rows stand alone in the middle: a column kept for nothing is a screen that
   looks unfinished.
+
+  ⚠️ **THE BARE RULE NAMES BOTH CLASSES, AND WITH ONE IT LOST ON EVERY PHONE.** The phone block
+  further down sets the two columns again on the body's one class, and later in the file at the same
+  weight wins — so with no table the rows got five sixteenths of a phone beside a column holding
+  nothing, the tier names stood four words tall under their own step arrows, and the faces were cut at
+  both ends. The layout guard only ever measured the title with a table seeded, so the screen every
+  first-time player sees was the one screen it had not looked at.
 */
 .itc-title-body {
   display: grid;
@@ -355,7 +362,7 @@ ${starSky()}
   gap: min(1rem, 2.4cqh) min(2.5rem, 4cqw);
   width: 100%;
 }
-.itc-title-body-bare { grid-template-columns: minmax(0, 1fr); }
+.itc-title-body.itc-title-body-bare { grid-template-columns: minmax(0, 1fr); }
 .itc-title-body-bare > .itc-title-board { display: none; }
 /* The bands over Launch and Settings, as one column of rows: the order the pad walks them in. */
 .itc-title-main {
@@ -1542,8 +1549,13 @@ ${each('-option-on')} {
   and the rest wait at a lower contrast. Their name, ship and gun are the band's hint line. The track
   scrolls sideways once a roster outgrows it, with the chosen face kept in view, so a longer table is
   the same row and nothing else on the screen moves.
+
+  ⚠️ **SAFE CENTRE, AND A PLAIN ONE CUT THE FIRST FACE OFF FOR GOOD.** A centred row wider than its
+  box overflows BOTH ends, and a scroll box cannot scroll to before its own start — so the first face
+  was half drawn and no scroll reached the rest of it. Safe centring centres a row that fits and
+  starts one that does not at the start, where the scroll can reach all of it.
 */
-.itc-title-options-faces { justify-content: center; overflow-x: auto; scrollbar-width: none; padding: 0.3em; gap: 0.7em; }
+.itc-title-options-faces { justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 0.3em; gap: 0.7em; }
 /*
   ⚠️ **SPELLED OUT AND NOT BY each(), AND THE FIRST VERSION WAS.** each() is a comma list, so a part
   written after it — a child, a second class — binds to its LAST selector only, and the portraits drew
@@ -1915,8 +1927,18 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
     linear-gradient(90deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, transparent), color-mix(in srgb, var(--itc-ink) 30%, transparent));
   background-size: 35% 100%, auto;
 }
-/* The title's void carries the banner's two washes: violet in from the left, the deep blue from the right. */
-.itc-title-sky {
+/*
+  The title's void carries the banner's two washes: violet in from the left, the deep blue from the right.
+
+  ⚠️ **ON A LAYER OF THEIR OWN, AND ON THE SKY ITSELF THEY ATE IT.** A background shorthand on the
+  sky reset the star rule's images and sizes, so 0437's stars were gone and its drift — sixty
+  seconds of background-position — slid these two washes left instead, at the size of the screen,
+  repeating: their seam was an edge creeping in from the right that jumped back every minute.
+*/
+.itc-title-sky::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background:
     radial-gradient(60% 90% at 0% 40%, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 16%, transparent), transparent 70%),
     radial-gradient(55% 90% at 100% 60%, color-mix(in srgb, var(--itc-ink) 10%, transparent), transparent 70%);
