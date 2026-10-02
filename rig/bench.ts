@@ -24,7 +24,8 @@
  */
 
 import { mount } from '../src/app/mount.ts';
-import { SHIP_START_ALONG, advanceLevel } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, advanceLevel, canThrow, launchSpecial } from '../src/app/frame.ts';
+import type { SpecialKind } from '../src/content/specials.ts';
 import { LEVELS, LEVEL_KINDS, type LevelKind } from '../src/content/levels.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
@@ -47,6 +48,26 @@ if (!stage || !levelPick || !along || !where || !hold || !bossHp || !note) throw
 const mounted = mount(stage, 'vivid');
 if (mounted === null) throw new Error('bench: the game would not mount');
 const { world, dispatch, lifecycle } = mounted.rig;
+
+/*
+  ── THE HANDLE THE FLASH METER DRIVES — 0456 ────────────────────────────────────────────────────
+
+  `scripts/weigh-flashes.mjs` throws a special as fast as the game allows and reads every frame the
+  game draws. A special is thrown through `launchSpecial`, the call `onSpecial` makes once the run has
+  spent the charge, so the picture is the game's own; only the charge is not the run's.
+*/
+declare global {
+  interface Window {
+    __bench?: { throwSpecial: (kind: SpecialKind) => boolean };
+  }
+}
+window.__bench = {
+  throwSpecial: (kind: SpecialKind): boolean => {
+    if (!canThrow(world, kind)) return false;
+    launchSpecial(world, kind);
+    return true;
+  },
+};
 
 /*
   `?proof` parks a ship nothing can hurt — 0384: the game's own `resilience: proof` assist (0024), so a

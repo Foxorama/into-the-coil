@@ -77,6 +77,20 @@ import { clearLine, type Corridor } from './corridor.ts';
 const FLASH_GAP_DUTY = 2;
 
 /**
+ * The fewest steps from one wash on a body to the next — a third of a second at the fixed 60 Hz
+ * step — `docs/decisions/0456-the-flash-cap-is-measured.md`.
+ *
+ * ⚠️ **0024's FLASH CAP, AND IT IS A FLOOR UNDER THE DUTY RATHER THAN A SECOND DUTY.** The duty
+ * above relit a body every twelve steps under a gun that lands that often: five washes a second, ten
+ * transitions. On a lancer that is a flicker; on the gyre at a seventh of the screen it is a general
+ * flash, and `scripts/weigh-flashes.mjs` read it over the cap on the pixels — the first thing the
+ * meter found. How big a body may be is content and the cap is not, so the floor is held here, in
+ * the one place a wash is armed, for every body: **no wash relights faster than three a second**.
+ * A landing inside it still takes its health (0334); only the picture waits.
+ */
+const FLASH_CAP_STEPS = 20;
+
+/**
  * Arm a body's hit flash, if it is allowed to flash — 0334.
  *
  * ⚠️ **ONE DESCRIPTION, AND IT USED TO BE FOUR ASSIGNMENTS.** Every landing wrote `flashFor` itself,
@@ -90,7 +104,7 @@ function flash(target: Entity, flashSteps: number): void {
   target.struckIn = flashSteps;
   if (target.flashGap > 0) return;
   target.flashFor = flashSteps;
-  target.flashGap = flashSteps * (1 + FLASH_GAP_DUTY);
+  target.flashGap = Math.max(flashSteps * (1 + FLASH_GAP_DUTY), FLASH_CAP_STEPS);
 }
 
 export function overlaps(a: Entity, b: Entity, radiusScaleB: number): boolean {

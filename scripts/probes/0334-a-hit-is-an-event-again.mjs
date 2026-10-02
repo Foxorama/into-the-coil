@@ -11,7 +11,8 @@ export const PROBES = [
     guard: 'A HIT IS AN EVENT AGAIN',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '  target.flashGap = flashSteps * (1 + FLASH_GAP_DUTY);',
+      // ⚠️ Re-anchored by 0456, which put the flash cap's floor under the duty on this line.
+      find: '  target.flashGap = Math.max(flashSteps * (1 + FLASH_GAP_DUTY), FLASH_CAP_STEPS);',
       replace: '  target.flashGap = 0;',
     },
   },
