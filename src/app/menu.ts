@@ -53,6 +53,31 @@ export const MENU_CONFIRM_BUTTONS: readonly number[] = [0, 9];
 export const MENU_DPAD_BUTTONS = { up: 12, down: 13, left: 14, right: 15 } as const;
 
 /**
+ * Back, by standard-mapping index: the right face button — 0458. *B* on the pads most people hold,
+ * and the button every console menu leaves by. Not a confirm, so it can never start a run.
+ *
+ * ⚠️ **It is `special2` in flight**, which is harmless for the reason `spend` exists: a screen change
+ * re-baselines both readers, so a B held from a menu into a run is not a surge on the first step.
+ */
+export const MENU_BACK_BUTTONS: readonly number[] = [1];
+
+/** The shoulders, by standard-mapping index: the previous tab and the next — 0458. */
+export const MENU_TAB_BUTTONS = { previous: 4, next: 5 } as const;
+
+/**
+ * How long a direction is held before the menu repeats it, and how often after that — 0458, in
+ * reads, which are fixed steps: two-fifths of a second, then seven and a half a second. The D-pad
+ * repeats as the stick does; a held button is still an edge until then.
+ *
+ * ⚠️ **A HELD PUSH ASKED ONCE, AND A LONG BAND OR THE MUSIC ROOM'S GRID WANTED A FLICK PER STEP.**
+ * The delay is long enough that a deliberate single push never repeats — a press is a tenth of a
+ * second or two — and the rate is slow enough to stop on the control the eye is on. **A STARTING
+ * POINT**, on `MENU_REVERSE`'s terms: the console convention, not a measurement.
+ */
+export const MENU_REPEAT_AFTER = 24;
+export const MENU_REPEAT_EVERY = 8;
+
+/**
  * How far a stick must fall back before the menu will hear a new push in the SAME direction.
  *
  * ⚠️ **Below `PAD_DEADZONE`, and the gap between them is the mechanism.** Engaging at 0.18 and
@@ -112,12 +137,16 @@ export interface MenuAsk {
   axis: 'x' | 'y';
   /** Whether a confirm button was pressed this step. An edge, for the same reason. */
   confirm: boolean;
+  /** Whether Back was pressed this step — 0458. An edge, on `confirm`'s terms. */
+  back: boolean;
+  /** A tab asked for: −1 the previous, 1 the next, 0 none — 0458. An edge. */
+  tab: number;
 }
 
 /** The one allocation a caller makes. Built at boot, overwritten every step forever after. */
 export function makeMenuAsk(): MenuAsk {
   // @setup: one ask, built when the shell wires the chrome.
-  return { move: 0, axis: 'y', confirm: false };
+  return { move: 0, axis: 'y', confirm: false, back: false, tab: 0 };
 }
 
 export interface MenuSource {
@@ -171,6 +200,11 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
   // 0214: the axis that direction came from, so a roll from right to down is two asks and not one.
   let heldAxis: 'x' | 'y' = 'y';
   let heldConfirm = false;
+  // @setup: 0458 — Back and the shoulders, held, so each is an edge as confirm is.
+  let heldBack = false;
+  let heldTab = 0;
+  // @setup: 0458 — how many reads the held direction has been held for, for the repeat.
+  let heldFor = 0;
   // @setup: whether the next read is only learning what is already held. See `spend`.
   let spending = false;
 
@@ -191,6 +225,8 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       */
       let strength = 0;
       let confirm = false;
+      let back = false;
+      let tab = 0;
 
       for (let p = 0; p < pads.length; p++) {
         const pad = pads[p];
@@ -251,6 +287,11 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         for (let i = 0; i < MENU_CONFIRM_BUTTONS.length; i++) {
           if (down(pad, MENU_CONFIRM_BUTTONS[i] ?? -1)) confirm = true;
         }
+        for (let i = 0; i < MENU_BACK_BUTTONS.length; i++) {
+          if (down(pad, MENU_BACK_BUTTONS[i] ?? -1)) back = true;
+        }
+        if (down(pad, MENU_TAB_BUTTONS.previous)) tab = -1;
+        else if (down(pad, MENU_TAB_BUTTONS.next)) tab = 1;
       }
 
       /*
@@ -275,9 +316,20 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       */
       const heard =
         move !== 0 && (move !== heldMove || axis !== heldAxis) && (heldMove === 0 || strength >= MENU_REVERSE);
-      ask.move = heard && !spending ? move : 0;
+      /*
+        ⚠️ **THE REPEAT — 0458: THE SAME DIRECTION, STILL PUSHED PAST THE DEADZONE, ON ITS CLOCK.** It
+        counts only while the push that was heard is the one still held, so a stick decaying through
+        the deadzone, a reversal and a roll onto the other axis each start it again — and none of them
+        repeats a direction the player has let go of, which is the bug 0046's edges exist to refuse.
+      */
+      const holding = !heard && move !== 0 && move === heldMove && axis === heldAxis;
+      heldFor = holding ? heldFor + 1 : 0;
+      const repeats = holding && heldFor >= MENU_REPEAT_AFTER && (heldFor - MENU_REPEAT_AFTER) % MENU_REPEAT_EVERY === 0;
+      ask.move = (heard || repeats) && !spending ? move : 0;
       ask.axis = axis;
       ask.confirm = confirm && !heldConfirm && !spending;
+      ask.back = back && !heldBack && !spending;
+      ask.tab = tab !== 0 && tab !== heldTab && !spending ? tab : 0;
       /*
         ⚠️ **`heldMove` is cleared by the RELEASE THRESHOLD ABOVE AND BY NOTHING ELSE.** Clearing it
         here whenever the direction reads zero is the obvious-looking line, and it silently undoes
@@ -295,6 +347,8 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
         heldAxis = axis;
       }
       heldConfirm = confirm;
+      heldBack = back;
+      heldTab = tab;
       spending = false;
     },
     /*
@@ -310,6 +364,9 @@ export function attachMenuPad(options: MenuPadOptions = {}): MenuSource {
       heldMove = 0;
       heldAxis = 'y';
       heldConfirm = false;
+      heldBack = false;
+      heldTab = 0;
+      heldFor = 0;
     },
   };
 }

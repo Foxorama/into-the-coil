@@ -67,15 +67,16 @@ export const PROBES = [
     decision: '0429',
     suite: 'tests/layout.browser.test.ts',
     /*
-      ⚠️ THE TABLE BACK IN THE FLOW — the obvious placement, and the one the smallest landscape phone
-      has no room for: eleven rows added under the key, 128 pixels past a 480x320 display.
+      ⚠️ RE-POINTED BY 0458, WHICH TOOK THE ROLL AWAY. The break was the table laid out in the flow
+      under the key, and there is no key beside it and no roll to fall out of any more. What 0458 holds
+      instead is the played ask — *"could just be the top 5"* — so the break is the whole table back.
     */
-    broke: 'the table laid out in the flow under the key rather than rolling in the key’s box',
-    guard: 'needs no scrolling on any of them',
+    broke: 'the title showing every run the device keeps rather than the best five',
+    guard: 'shows the best five of the table, standing still',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-title-board {\n  display: none;\n  position: absolute;\n  inset: 0;',
-      replace: '.itc-title-board {\n  display: none;\n  position: relative;\n  inset: 0;',
+      find: '      lines.slice(0, BOARD_SHOWN).forEach((line, index) => {',
+      replace: '      lines.forEach((line, index) => {',
     },
   },
 ];

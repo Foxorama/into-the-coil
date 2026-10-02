@@ -56,6 +56,16 @@ export const SIDES = ['gun', 'tubes', 'ward'] as const;
 export type Side = (typeof SIDES)[number];
 
 /**
+ * What a player calls each trigger — 0458, for How to play's controls, and the word the pickups' `how`
+ * lines use for where a charge goes. A table over the closed union, so a fourth side is a row here.
+ */
+export const SIDE_LABELS: Record<Side, string> = {
+  gun: 'Gun trigger',
+  tubes: 'Missile trigger',
+  ward: 'Ward trigger',
+};
+
+/**
  * A surge: for `steps`, the ship wears `aura` — its pods — and each of its volleys fires `pods` extra
  * missiles of the surge's OWN kind, charged — 0379. One of them since 0405, down the middle.
  *

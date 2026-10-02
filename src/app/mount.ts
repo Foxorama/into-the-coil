@@ -49,6 +49,12 @@ import { chargesIn } from '../state/slices/run.ts';
  * is the bomb, which every run starts with, and the tubes' is the golden surge they overflow to — 0376.
  */
 const EMPTY_FACE: Record<Side, SpecialKind> = { gun: 'bomb', tubes: 'overdrive', ward: 'voidMissile' };
+
+/** The four pushes a key can make on a menu — 0458. Built once, so a key press allocates nothing. */
+const MENU_UP = [-1, 'y'] as const;
+const MENU_DOWN = [1, 'y'] as const;
+const MENU_LEFT = [-1, 'x'] as const;
+const MENU_RIGHT = [1, 'x'] as const;
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
@@ -62,7 +68,7 @@ import {
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
-import { AUTHORED, DIFFICULTY_KINDS } from '../content/difficulty.ts';
+import { AUTHORED, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
@@ -931,9 +937,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let savingLine = '';
   /** The next of `FINALE_CUES` the finale has not yet passed. */
   let finaleCueNext = 0;
-  // Whether the select screen was opened from the menu's *Pilot* (back to the menu) or at boot (on
-  // to the intro) — 0415.
-  let selectFromMenu = false;
   // How many steps the splash has been up — 0415: it leaves once loaded AND read, never before.
   let splashSteps = 0;
   const surface = new CanvasSurface(ctx, atlas);
@@ -1672,40 +1675,32 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (screen === 'cleared') lifecycle.onward();
     // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
-    // `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
-    // (`src/state/screens.ts` walks it), so the control's index reads straight off it.
     /*
-      `DIFFICULTY_KINDS` IS the order the title screen's buttons were built in
-      (`src/state/screens.ts` walks it), so the control's index reads straight off it.
-
-      ⚠️ **PAST THE END OF THAT TABLE IS NOT A TIER — 0210.** The music room is appended after the
-      tiers, so an index the difficulty table does not cover is the one button that is not one. The
-      old line used `?? DIFFICULTY_KINDS[0]` and would have started a run on the easiest tier instead.
+      ⚠️ **THE TITLE IS *LAUNCH* AND *SETTINGS* — 0458**, in the order `src/state/screens.ts` lists
+      them. Launch begins a run on the tier the band shows, in the pilot's ship (0441); the tier was the
+      button pressed until the press and the choice became two things.
     */
     else if (screen === 'title') {
-      const tier = DIFFICULTY_KINDS[index];
-      // In the pilot's ship — 0441.
-      if (tier !== undefined) lifecycle.begin(tier, GOLFERS[state.settings.pilot].ship);
-      else if (index === DIFFICULTY_KINDS.length) {
+      if (index === 0) lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship);
+      else dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
+    } else if (screen === 'settings') {
+      if (index === 0) {
         // 0213: the field is swept and the dust is dealt as the room OPENS, because the enemies were
         // visible before anything was pressed — which is what the report is about.
         enterRoom();
         dispatch({ slice: 'screen', type: 'show', screen: 'music' });
-      } else {
-        // 0415: *Pilot* — the golfers, and back to this menu when one is picked, not through the intro.
-        selectFromMenu = true;
-        dispatch({ slice: 'screen', type: 'show', screen: 'select' });
-      }
-    } else if (screen === 'select') {
+      } else goBack();
+    } else if (screen === 'guide') goBack();
+    else if (screen === 'select') {
       /*
         ⚠️ **A GOLFER IS PICKED — 0415.** `GOLFER_KINDS` IS the order `src/state/screens.ts` built the
         buttons in. Picked at boot, the intro plays — and this press is the gesture that turned its
-        sound on (`unlock`, above it in the capture phase); picked from the menu, the menu comes back.
+        sound on (`unlock`, above it in the capture phase). Since 0458 it is only ever picked at boot:
+        the title's pilot band is where the choice is changed.
       */
       dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
       showPilot();
-      dispatch({ slice: 'screen', type: 'show', screen: selectFromMenu ? 'title' : 'intro' });
-      selectFromMenu = false;
+      dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
     } else if (screen === 'music') onMusicRoom(index);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   },
@@ -1728,6 +1723,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The third, and it is the line 0072 predicted: *"the queue behind the style was already the same
     // shape."* `TRAVEL_KINDS` IS the order `src/state/screens.ts` built the options in — 0340.
     else if (name === 'travel') dispatch({ slice: 'settings', type: 'travel', travel: TRAVEL_KINDS[index] ?? DEFAULT_TRAVEL });
+    // 0458: the title's two bands. `DIFFICULTY_KINDS` and `GOLFER_KINDS` ARE the orders they were built in.
+    else if (name === 'difficulty') {
+      dispatch({ slice: 'settings', type: 'difficulty', difficulty: DIFFICULTY_KINDS[index] ?? TUNED });
+      chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
+    } else if (name === 'pilot') {
+      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
+      showPilot();
+    }
   },
   /*
     THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
@@ -1738,20 +1741,42 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   onSeek,
   // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
-  () => leaveIntro());
+  () => leaveIntro(),
+  // 0458: a tab, which is a screen shown like any other.
+  (screen: Screen) => dispatch({ slice: 'screen', type: 'show', screen }));
   for (const element of chrome.elements) host.appendChild(element);
   // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
   chrome.setTouch(touchable);
+  // 0458: and How to play lights the device in hand — the glass, or the keys until a pad says otherwise.
+  chrome.setDevice(touchable ? 'touch' : 'keyboard');
   /*
-    ⚠️ **THE MENU'S *PILOT* SAYS WHO IS FLYING — 0415**, so the choice can be seen without opening the
-    golfers. It is the control after the music room, on 0210's terms for the order.
+    ⚠️ **THE PILOT BAND SAYS WHO IS FLYING — 0458**, and their ship and gun under the faces; it was the
+    menu's *Pilot* button's hint (0415). The boot cards still mark the one flying (0437).
   */
-  const PILOT_ACTION = DIFFICULTY_KINDS.length + 1;
   function showPilot(): void {
-    chrome.setActionHint('title', PILOT_ACTION, GOLFERS[state.settings.pilot].name);
-    // 0437: and the golfers' screen marks the one flying, so changing golfer starts from who it is.
+    chrome.setChoice('pilot', GOLFER_KINDS.indexOf(state.settings.pilot));
     chrome.setCurrent('select', GOLFER_KINDS.indexOf(state.settings.pilot));
     fitPilot();
+  }
+  // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
+  chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
+  /*
+    BACK — 0458: B on a pad, Escape on a keyboard, and the *Back* buttons. Where it goes is the row's
+    `back`; `'opener'` is whichever screen opened the menu (`src/state/slices/screen.ts` records it).
+
+    ⚠️ **THE MUSIC ROOM IS LEFT THROUGH ITS OWN DOOR**, because leaving it puts the camera back and
+    stops the audition (`onMusicRoom` past its last place), and a Back that only changed the screen
+    would leave a level's walk playing under Settings.
+  */
+  function goBack(): void {
+    const screen = state.screen.current;
+    const back = SCREENS[screen].back;
+    if (back === null) return;
+    if (screen === 'music') {
+      onMusicRoom(THEME_KINDS.length + 1);
+      return;
+    }
+    dispatch({ slice: 'screen', type: 'show', screen: back === 'opener' ? state.screen.opener : back });
   }
   /*
     ⚠️ **AND THE WORLD FLIES THE PILOT'S SHIP BEFORE A RUN DOES — 0441.** The title's sky, the lives
@@ -2570,7 +2595,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     audition = null;
     auditionLevel = null;
     releaseCamera();
-    dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+    // Back to Settings, which is the room's door since 0458 — and Settings remembers who opened it.
+    dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
   }
 
   /**
@@ -2924,7 +2950,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       is already chosen (Bo, if nobody has been). The select screen's other keys are its own buttons'.
     */
     if ((screen === 'splash' || screen === 'select') && e.key === 'Escape') {
-      selectFromMenu = false;
       dispatch({ slice: 'screen', type: 'show', screen: 'title' });
       return;
     }
@@ -2935,6 +2960,49 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     leaveIntro();
   };
   window.addEventListener('keydown', introKey, { capture: true });
+  /*
+    THE KEYBOARD ON A MENU — 0458. Arrows and WASD move the cursor the way a pad's stick does, Escape is
+    Back, and Enter or Space on a band steps it — a band is a row and not a button, so the platform
+    would do nothing with the press. Tab still walks the controls the platform's way, and the cursor
+    follows it (`src/app/chrome.ts` reads focus back).
+
+    ⚠️ **BY `code`, ON 0030's TERMS**: the keys' places and not their letters, so the arrows of a
+    non-QWERTY hand are where its WASD would be. And only on a screen the world is not stepping under,
+    where those keys fly the ship.
+  */
+  /*
+    A key's push, or `null` for a key that is not one. Comparisons rather than a table keyed by
+    string or a switch, both of which 0016 refuses over an open set: a key code is not a union, and
+    only these eight mean a direction here.
+  */
+  const menuPush = (code: string): readonly [number, 'x' | 'y'] | null => {
+    if (code === 'ArrowUp' || code === 'KeyW') return MENU_UP;
+    if (code === 'ArrowDown' || code === 'KeyS') return MENU_DOWN;
+    if (code === 'ArrowLeft' || code === 'KeyA') return MENU_LEFT;
+    if (code === 'ArrowRight' || code === 'KeyD') return MENU_RIGHT;
+    return null;
+  };
+  const menuKey = (e: KeyboardEvent): void => {
+    const row = SCREENS[state.screen.current];
+    if (row.steps || row.skips || row.actions.length === 0) return;
+    const push = menuPush(e.code);
+    if (push !== null) {
+      e.preventDefault();
+      chrome.setDevice('keyboard');
+      chrome.move(push[0], push[1]);
+      return;
+    }
+    if (e.key === 'Escape') {
+      goBack();
+      return;
+    }
+    const band = document.activeElement instanceof HTMLElement && document.activeElement.getAttribute('role') === 'group';
+    if (band && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      chrome.activate();
+    }
+  };
+  window.addEventListener('keydown', menuKey);
 
   /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
@@ -3016,6 +3084,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       BEFORE this, so the two can no longer race in that order.
     */
     if (menuAsk.confirm) chrome.activate();
+    // 0458: B is Back, and the shoulders turn the tabs — on a screen that has either.
+    if (menuAsk.back) goBack();
+    if (menuAsk.tab !== 0) chrome.tab(menuAsk.tab);
+    if (menuAsk.move !== 0 || menuAsk.confirm || menuAsk.back || menuAsk.tab !== 0) chrome.setDevice('pad');
   };
 
   /**
@@ -3085,7 +3157,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         audioOut.unlock();
       }
       if (prewarmDone() && splashSteps >= SPLASH_STEPS) {
-        selectFromMenu = false;
         dispatch({ slice: 'screen', type: 'show', screen: 'select' });
       }
     }
@@ -3413,6 +3484,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       window.removeEventListener('pointerdown', unlock, { capture: true });
       window.removeEventListener('keydown', unlock, { capture: true });
       window.removeEventListener('keydown', introKey, { capture: true });
+      window.removeEventListener('keydown', menuKey);
       chrome.release();
       world.input.release();
       // Closes the context and drops the buffers. A page that mounts twice must not leave the first

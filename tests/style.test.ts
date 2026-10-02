@@ -86,8 +86,9 @@ describe('the chooser is the table', () => {
       screen without anybody remembering to come and add it — the same argument the difficulty tiers
       and the pickup key both make.
     */
-    const choice = SCREENS.title.choices.find((c) => c.name === 'style');
-    expect(choice, 'the title screen offers no style at all').toBeDefined();
+    // On Settings since 0458, where the look, the sound and the crossing went when the title became rows.
+    const choice = SCREENS.settings.choices.find((c) => c.name === 'style');
+    expect(choice, 'the settings screen offers no style at all').toBeDefined();
     expect(choice!.options.map((o) => o.label)).toEqual(STYLE_KINDS.map((kind) => STYLES[kind].title));
   });
 
@@ -99,11 +100,19 @@ describe('the chooser is the table', () => {
     }
   });
 
-  it('no other screen offers a setting, so the title is the one place to look', () => {
+  /*
+    ⚠️ **IT WAS *NO OTHER SCREEN OFFERS A SETTING*, AND WHAT IT HELD WAS ONE PLACE TO LOOK — 0458.** Two
+    screens offer settings now, the title its tier and pilot and Settings the rest, so the claim moves
+    from the screen to the setting: each is offered on exactly one screen, or a player changing it in one
+    place would find it set differently in the other's memory of where to look.
+  */
+  it('every setting is offered on exactly one screen, so there is one place to look for it', () => {
+    const where = new Map<string, string[]>();
     for (const [name, row] of Object.entries(SCREENS)) {
-      if (name === 'title') continue;
-      expect(row.choices, `${name} grew a setting without a decision`).toEqual([]);
+      for (const choice of row.choices) where.set(choice.name, [...(where.get(choice.name) ?? []), name]);
     }
+    for (const [setting, screens] of where) expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
+    expect([...where.keys()].sort()).toEqual(['difficulty', 'pilot', 'sound', 'style', 'travel']);
   });
 });
 

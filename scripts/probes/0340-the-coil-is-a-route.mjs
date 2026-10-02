@@ -247,9 +247,10 @@ export const PROBES = [
     guard: 'and the screens that show the scene through them are the two that say so',
     edit: {
       path: 'src/state/screens.ts',
-      // Re-anchored by 0418, whose rows say whether they skip and whether they are part of a run.
-      find: '    steps: true,\n    dims: false,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n  },',
-      replace: '    steps: true,\n    dims: true,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n  },',
+      // Re-anchored by 0418, whose rows say whether they skip and whether they are part of a run, and by
+      // 0458, whose say where Back goes.
+      find: '    steps: true,\n    dims: false,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n    back: null,',
+      replace: '    steps: true,\n    dims: true,\n    timeout: null,\n    pushed: true,\n    skips: false,\n    inRun: true,\n    back: null,',
     },
   },
   {

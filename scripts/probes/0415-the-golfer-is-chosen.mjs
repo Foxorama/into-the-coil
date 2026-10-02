@@ -34,22 +34,25 @@ export const PROBES = [
     decision: '0415',
     suite: 'tests/intro.browser.test.ts',
     broke: 'a pick from the menu playing the intro rather than coming back',
-    guard: 'opens the golfers, and a pick comes straight back to the menu',
+    // ⚠️ Re-pointed by 0458: the menu's pick is the pilot band's, so the break is a band pick playing it.
+    guard: 'takes a pick on the title, stays on the title, and says who is flying',
     edit: {
       path: 'src/app/mount.ts',
-      find: "screen: selectFromMenu ? 'title' : 'intro' });",
-      replace: "screen: 'intro' });",
+      find: "    } else if (name === 'pilot') {\n      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n      showPilot();\n",
+      replace:
+        "    } else if (name === 'pilot') {\n      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n      showPilot();\n      dispatch({ slice: 'screen', type: 'show', screen: 'intro' });\n",
     },
   },
   {
     decision: '0415',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'the menu’s Pilot still naming the golfer before the pick',
-    guard: 'opens the golfers, and a pick comes straight back to the menu',
+    broke: 'the menu still naming the golfer before the pick',
+    // ⚠️ Re-pointed by 0458, on the band's arm: the same pick, and the line under the faces left stale.
+    guard: 'takes a pick on the title, stays on the title, and says who is flying',
     edit: {
       path: 'src/app/mount.ts',
-      find: "      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n      showPilot();\n",
-      replace: "      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n",
+      find: "    } else if (name === 'pilot') {\n      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n      showPilot();\n",
+      replace: "    } else if (name === 'pilot') {\n      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });\n",
     },
   },
   {
@@ -77,12 +80,14 @@ export const PROBES = [
   {
     decision: '0415',
     suite: 'tests/layout.browser.test.ts',
-    broke: 'Pilot as a fifth card on a phone, wrapping onto a row of its own under the tiers',
+    // ⚠️ Re-pointed by 0458: the title's buttons are Launch and Settings, side by side on a phone, and
+    // the break is the same row stacking into two.
+    broke: 'the title’s buttons stacked on a phone, so the second takes a row of its own',
     guard: 'keeps the title’s choices in one row on a phone',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  .itc-title-choices > :nth-child(-n+3) { grid-row: span 2; }',
-      replace: '',
+      find: '  .itc-title-choices { flex-direction: row; gap: min(0.6rem, 1.5cqw); }',
+      replace: '  .itc-title-choices { flex-direction: column; gap: min(0.6rem, 1.5cqw); }',
     },
   },
 ];

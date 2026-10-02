@@ -61,10 +61,10 @@ export const PROBES = [
     edit: {
       path: 'src/state/screens.ts',
       // ⚠️ The row gained `choices` — decision 0070 — then `pushed` — 0340 — then `skips` and `inRun` —
-      // 0418. Same break, current text.
-      find: "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false, skips: false, inRun: true },",
+      // 0418. Same break, current text. ⚠️ And one field to a line since 0458 added three more.
+      find: "  playing: {\n    heading: '',\n    actions: [],\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: null,",
       replace:
-        "  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: { steps: 60, then: null }, pushed: false, skips: false, inRun: true },",
+        "  playing: {\n    heading: '',\n    actions: [],\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: { steps: 60, then: null },",
     },
   },
   {
@@ -99,8 +99,9 @@ export const PROBES = [
       // ⚠️ **The block after that rule is 0070's settings row now, not the tap strip** — which is
       // this probe's own point arriving a second time: the break is *whatever comment follows the
       // line two branches both append near*, and the probe has to be pointed at whatever that is.
-      find: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n/*\n  ── A SETTING, OFFERED',
-      replace: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n  ── A SETTING, OFFERED',
+      // ⚠️ And 0458 retitled that block, so the anchor follows the comment that is there now.
+      find: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n/*\n  ── A SETTING IS A BAND',
+      replace: '.itc-cleared-panel { margin-top: min(1.5rem, 5cqh); margin-bottom: auto; }\n  ── A SETTING IS A BAND',
     },
   },
   {

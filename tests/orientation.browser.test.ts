@@ -337,21 +337,26 @@ describe.runIf(chromePath)('a turn leaves nothing behind it', () => {
     /*
       `applyScreen` arms countdowns, puts out a burn, and — the half a test can see — puts the focus
       back on the screen's first control. Every landscape resize used to run it, so a phone's toolbar
-      sliding in was a screen change. Measured on the title: focus on the second control, then resize.
+      sliding in was a screen change.
+
+      ⚠️ **MEASURED BY WHAT A RE-APPLIED SCREEN TAKES, SINCE 0458 — AND IT WAS WHERE IT PUT THE FOCUS.**
+      This stood the focus on the title's second control and saw a re-apply move it back to the first.
+      0458 made a screen remember its cursor, so re-showing the title now restores the very control the
+      focus is on and that reading went STILL GREEN under 0369's probe. What a re-apply still does is
+      TAKE the focus: showing a screen focuses its cursor. So the focus is let go of first — nothing in
+      the page holds it — and a resize that re-applied the screen is one that grabs it back.
     */
     const page = await open(LANDSCAPE);
     await pastIntro(page);
-    const actions = '.' + prefixFor('title') + 'action';
-    const second = await page.evaluate((selector: string) => {
-      const control = document.querySelectorAll<HTMLElement>(selector)[1];
-      control?.focus();
-      return document.activeElement === control && control !== undefined ? (control.textContent ?? '') : '';
-    }, actions);
-    expect(second, 'the title has no second control to stand on, so this measures nothing').not.toBe('');
+    const released = await page.evaluate(() => {
+      (document.activeElement as HTMLElement | null)?.blur();
+      return document.activeElement === document.body;
+    });
+    expect(released, 'the focus could not be let go of, so this measures nothing').toBe(true);
     await page.setViewportSize({ width: 1200, height: 700 });
     await page.waitForFunction(() => document.querySelector('#app canvas')!.getBoundingClientRect().width === 1200, null, { timeout: 5_000 });
-    const after = await page.evaluate(() => document.activeElement?.textContent ?? '');
-    expect(after, 'a resize took the focus back to the first control, which is the screen being re-applied').toBe(second);
+    const after = await page.evaluate(() => (document.activeElement === document.body ? '' : (document.activeElement?.textContent ?? '?')));
+    expect(after, 'a resize took the focus onto the screen\'s cursor, which is the screen being re-applied').toBe('');
     await page.context().close();
   });
 });

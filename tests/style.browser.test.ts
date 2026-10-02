@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { STYLES, STYLE_KINDS } from '../src/content/styles.ts';
+import { back, openSettings, shown } from './title.ts';
 
 /**
  * THE STYLE, PRESSED, AND WHAT IT ACTUALLY CHANGES ON SCREEN.
@@ -80,8 +81,22 @@ function inkOn(page: Page): Promise<number> {
  * is listed first*, which is a test that goes on passing while measuring something else the day the
  * order changes. `SETTING_ATTR` is the contract, imported rather than spelled out again.
  */
-const STYLE_OPTIONS = `[${SETTING_ATTR}="style"] .${prefixFor('title')}option`;
+// On Settings since 0458.
+const STYLE_OPTIONS = `[${SETTING_ATTR}="style"] .${prefixFor('settings')}option`;
 const option = (index: number): string => `${STYLE_OPTIONS} >> nth=${index}`;
+
+/**
+ * Choose a style on Settings and come back to the title — 0458.
+ *
+ * ⚠️ **BACK TO THE TITLE BEFORE ANYTHING IS COUNTED.** Settings dims: its space colour lies over the
+ * field, so ink counted there is the panel's and the sky could stay on under it with this still green.
+ */
+async function pick(page: Page, index: number): Promise<void> {
+  if (!(await page.locator(shown('settings')).count())) await openSettings(page);
+  await page.click(option(index));
+  await back(page, 'settings');
+  await page.waitForSelector(shown('title'), { state: 'attached' });
+}
 
 describe.runIf(chromePath)('a style is a setting, and pressing it changes the picture', () => {
   it('THE REPORTED ONE: retro is the game before the sky, and the sky actually goes', async () => {
@@ -100,12 +115,12 @@ describe.runIf(chromePath)('a style is a setting, and pressing it changes the pi
     expect(modern, 'the style table no longer has the two styles this test is about').toBeGreaterThan(-1);
     expect(retro, 'the style table no longer has the two styles this test is about').toBeGreaterThan(-1);
 
-    await page.click(option(modern));
+    await pick(page, modern);
     await page.waitForTimeout(200);
     const withSky = await inkOn(page);
     expect(withSky, 'nothing is drawn at all, so this measures nothing').toBeGreaterThan(1000);
 
-    await page.click(option(retro));
+    await pick(page, retro);
     await page.waitForTimeout(200);
     const withoutSky = await inkOn(page);
 
@@ -126,6 +141,7 @@ describe.runIf(chromePath)('a style is a setting, and pressing it changes the pi
     */
     const page = await open();
     const retro = STYLE_KINDS.indexOf('retro');
+    await openSettings(page);
     await page.click(option(retro));
     await page.waitForTimeout(150);
     const marked = await page.evaluate((selector: string) => {
@@ -158,13 +174,13 @@ describe.runIf(chromePath)('a style is a setting, and pressing it changes the pi
         ['.' + prefixFor('title').slice(0, -1), '.itc-playing-hud'],
       );
 
-    await page.click(option(STYLE_KINDS.indexOf('modern')));
+    await pick(page, STYLE_KINDS.indexOf('modern'));
     await page.waitForTimeout(150);
     for (const className of await face()) {
       expect(className, `the modern style left a pixel face on: ${className}`).not.toContain('face-pixel');
     }
 
-    await page.click(option(STYLE_KINDS.indexOf('retro')));
+    await pick(page, STYLE_KINDS.indexOf('retro'));
     await page.waitForTimeout(150);
     for (const className of await face()) {
       expect(className, `retro did not reach: ${className}`).toContain('face-pixel');

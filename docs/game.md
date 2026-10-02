@@ -18,7 +18,8 @@ whole game.
 
 | | |
 |---|---|
-| **The way in** | the page opens on the name while the game loads, then offers the four *Far Carry* golfers; the pick turns the sound on and plays the intro, in which Venoma Krait's Viper lights on its pad and blasts out of the spaceport, and the chosen golfer runs out of the bar to their own ship and chases her through the first level's sky. The title comes up when they are gone; the intro's Skip is up throughout, Escape goes to the menu from anywhere before it, and the menu's *Pilot* changes golfer — [0415](decisions/0415-the-golfer-is-chosen.md), [0416](decisions/0416-the-viper-has-a-pilot.md), [0411](decisions/0411-the-chase-begins-at-the-port.md), [0412](decisions/0412-the-port-is-heard.md). Each golfer flies their own ship — [0441](decisions/0441-a-pilot-flies-their-own-ship.md) |
+| **The way in** | the page opens on the name while the game loads, then offers the four *Far Carry* golfers; the pick turns the sound on and plays the intro, in which Venoma Krait's Viper lights on its pad and blasts out of the spaceport, and the chosen golfer runs out of the bar to their own ship and chases her through the first level's sky. The title comes up when they are gone; the intro's Skip is up throughout, Escape goes to the menu from anywhere before it — [0415](decisions/0415-the-golfer-is-chosen.md), [0416](decisions/0416-the-viper-has-a-pilot.md), [0411](decisions/0411-the-chase-begins-at-the-port.md), [0412](decisions/0412-the-port-is-heard.md). Each golfer flies their own ship — [0441](decisions/0441-a-pilot-flies-their-own-ship.md) |
+| **The menu** | rows: a difficulty band and a pilot band of portraits over *Launch* and *Settings*, beside the top five of the table. Settings holds the look, the sound and the crossing as bands, the music room, and a *How to play* tab. Up and down move between rows and left and right along one, on a pad, the arrows or WASD; B and Escape go back — [0458](decisions/0458-the-title-is-rows.md) |
 | **The way out** | the last boss beaten, the finale — and no cut into it: the heart the jellyfish died on races, catches fire and bursts, and the Viper is thrown out of it with one of the golfers who was not chosen in her cockpit — Venoma's captive all along, and the heart took her. The fighter comes up beside her and the two fly off together, each golfer speaking from their own ship — the found one about being found, the chosen one answering, a named speech bubble each with a voice of their own — until they open up and go. Then the victory screen. Skip is up throughout — [0418](decisions/0418-the-heart-lets-go.md), [0426](decisions/0426-the-finale-is-the-fight-going-on.md). ⚠️ No victory piece of music yet |
 | **Prologue** | choose 1 of the 4 *Far Carry* golfers. Short stage → the Jörmungandr fight. One of the three unchosen characters betrays you |
 | **Level 1 choice** | keep your prologue character, or swap to one of 3 others drawn from the unlocked pool |
@@ -277,8 +278,9 @@ death's ladders back on the field (0066, 0243, 0266) is gone with the cost it an
 0372. The arc is 1.5, because it is the one gun whose fight closing in cannot shorten; the serpent
 authors it back at 1, because it was already that animal's quickest gun.
 
-**The title screen carries a key** — every pickup, its real sprite, and what it does.
-[0045](decisions/0045-the-player-can-see-what-they-are-carrying.md). The enemies deliberately get no
+**How to play carries a key** — every pickup, its real sprite turning through its faces, what each
+face gives and how it is taken. [0045](decisions/0045-the-player-can-see-what-they-are-carrying.md),
+on the title until [0458](decisions/0458-the-title-is-rows.md) moved it behind a tab. The enemies deliberately get no
 key: an enemy announces itself by shooting at you, and a pickup announces nothing — **and it does so
 as it appears**: a firing body's first volley leaves inside a third of a second of its hull entering
 the view, on its own grid slot, so bullets are on the screen for the time a body is and not only
@@ -421,7 +423,7 @@ the *no shop* below is untouched.
 | **the break** | the level's points, its rank (S–D, by the share killed and the hits taken), the bonus for each shield, each bomb (the gun's charges) and each missile powerup (the tubes' charges) held, the level's total and the run's |
 | **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, the level reached and where it lands on the table |
 | **a continue** | starts the score again: the credit that ran out goes on the table with its score and the level it reached — [0438](decisions/0438-the-score-is-the-credits.md) |
-| **the table** | the best ten runs, kept on the device, on the title, rolling with the pickup key — [0429](decisions/0429-the-table-is-kept.md) |
+| **the table** | the best ten runs, kept on the device; the best five on the title, standing still — [0429](decisions/0429-the-table-is-kept.md), [0458](decisions/0458-the-title-is-rows.md) |
 
 ⚠️ Every number in it is a play number, and none has been played.
 

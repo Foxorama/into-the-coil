@@ -3,8 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   MENU_CONFIRM_BUTTONS,
   MENU_DPAD_BUTTONS,
+  MENU_BACK_BUTTONS,
   MENU_RELEASE,
+  MENU_REPEAT_AFTER,
+  MENU_REPEAT_EVERY,
   MENU_REVERSE,
+  MENU_TAB_BUTTONS,
   attachMenuPad,
   makeMenuAsk,
   type MenuAsk,
@@ -15,6 +19,7 @@ import { GameFrame } from '../src/app/frame.ts';
 // 0212: a screen that does not dim has to carry its own legibility, and that lives in the stylesheet.
 import { STYLE } from '../src/app/chrome.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
+import { initialScreen, reduceScreen, type ScreenState } from '../src/state/slices/screen.ts';
 
 /**
  * A GAMEPAD ON A SCREEN WITH BUTTONS ON IT.
@@ -56,8 +61,9 @@ function drive(frames: readonly (Gamepad | null)[][]): MenuAsk[] {
   for (frame = 0; frame < frames.length; frame++) {
     source.read(ask);
     // ⚠️ COPIED rather than pushed by reference — `read` overwrites one caller-owned object, so a
-    // list of references is a list of the LAST frame repeated. 0214 added `axis` to what is copied.
-    out.push({ move: ask.move, axis: ask.axis, confirm: ask.confirm });
+    // list of references is a list of the LAST frame repeated. 0214 added `axis` to what is copied,
+    // and 0458 `back` and `tab`.
+    out.push({ move: ask.move, axis: ask.axis, confirm: ask.confirm, back: ask.back, tab: ask.tab });
   }
   return out;
 }
@@ -299,7 +305,7 @@ describe('a disconnected or absent pad asks for nothing', () => {
       the axis of a pad it decided to ignore. `y` is the resting value, and this pad is pushing `y`;
       the assertion that matters is `move`, and this one holds the shape around it.
     */
-    expect(drive([[gone]])[0]).toEqual({ move: 0, axis: 'y', confirm: false });
+    expect(drive([[gone]])[0]).toEqual({ move: 0, axis: 'y', confirm: false, back: false, tab: 0 });
   });
 });
 
@@ -356,8 +362,10 @@ describe('a screen that expires presses its own control, and says how long it wa
       its point — the pick is the gesture that turns the sound on. The splash leaves by itself but not
       on a clock: `src/app/mount.ts` moves it on once the game has loaded, which no timeout can say.
     */
+    // ⚠️ **AND SETTINGS AND HOW TO PLAY SINCE 0458**, on the title's terms: a player reading them is
+    // reading them, and a screen that timed out from under them would take the page they opened away.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['music', 'playing', 'select', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['guide', 'music', 'playing', 'select', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 
@@ -558,6 +566,76 @@ describe('a screen says whether it stops the world and whether it hides it', () 
       const hasChrome = row.heading.length > 0 || row.actions.length > 0 || row.pushed;
       if (row.timeout === null || row.dims || !hasChrome) continue;
       expect(row.steps, `${screen} shows a countdown over a world it did not stop`).toBe(true);
+    }
+  });
+});
+
+describe('a held direction repeats, and nothing else does — 0458', () => {
+  it('asks once, waits, then asks on its own clock while the push is held', () => {
+    /*
+      Asked for as part of *"the menu navigation with game pad is atrocious"*: a long band or the music
+      room's grid wanted a flick per step. Measured in the unit the player feels, seconds of holding.
+    */
+    const held = [pad(AXES(1, 0))];
+    const seconds = 1.5;
+    const asks = drive(Array.from({ length: Math.round(seconds * STEPS_PER_SECOND) }, () => held));
+    const moves = asks.flatMap((a, i) => (a.move !== 0 ? [i] : []));
+    expect(moves[0], 'the first push was not heard at once').toBe(0);
+    expect(moves[1], 'the repeat began before the delay').toBe(MENU_REPEAT_AFTER);
+    expect(moves[2]! - moves[1]!, 'the repeat ran at the wrong rate').toBe(MENU_REPEAT_EVERY);
+    // A press is a tenth of a second or two, and never repeats.
+    expect(MENU_REPEAT_AFTER / STEPS_PER_SECOND, 'a deliberate single press would repeat').toBeGreaterThanOrEqual(0.3);
+  });
+
+  it('starts its clock again on a new direction rather than repeating the old one', () => {
+    const right = [pad(AXES(1, 0))];
+    const down = [pad(AXES(0, 1))];
+    const frames = [...Array.from({ length: MENU_REPEAT_AFTER - 2 }, () => right), ...Array.from({ length: 6 }, () => down)];
+    const asks = drive(frames);
+    expect(asks.filter((a) => a.move !== 0).map((a) => a.axis), 'a roll onto the other axis repeated the first').toEqual(['x', 'y']);
+  });
+});
+
+describe('Back and the tabs are presses — 0458', () => {
+  it('hears B once for a hold, and never as a confirm', () => {
+    const b = [pad(AXES(0, 0), MENU_BACK_BUTTONS)];
+    const asks = drive([b, b, b, [pad(AXES(0, 0))], b]);
+    expect(asks.map((a) => a.back)).toEqual([true, false, false, false, true]);
+    expect(asks.some((a) => a.confirm), 'Back pressed a control').toBe(false);
+    expect(MENU_CONFIRM_BUTTONS, 'a Back button is also a confirm').not.toContain(MENU_BACK_BUTTONS[0]);
+  });
+
+  it('turns the tabs one press at a time, each shoulder its own way', () => {
+    const lb = [pad(AXES(0, 0), [MENU_TAB_BUTTONS.previous])];
+    const rb = [pad(AXES(0, 0), [MENU_TAB_BUTTONS.next])];
+    expect(drive([rb, rb, [pad(AXES(0, 0))], lb, lb]).map((a) => a.tab)).toEqual([1, 0, 0, -1, 0]);
+  });
+});
+
+describe('Back goes to whoever opened the menu — 0458', () => {
+  const show = (state: ScreenState, screen: Screen): ScreenState => reduceScreen(state, { slice: 'screen', type: 'show', screen });
+
+  it('remembers the title through the tabs and the music room, and back out', () => {
+    let state = show(initialScreen, 'title');
+    state = show(state, 'settings');
+    state = show(state, 'guide');
+    state = show(state, 'settings');
+    state = show(state, 'music');
+    state = show(state, 'settings');
+    expect(state.opener, 'a trip inside the menu rewrote where it was opened from').toBe('title');
+  });
+
+  it('and every screen with a way back names one that exists', () => {
+    for (const screen of SCREEN_KINDS) {
+      const back = SCREENS[screen].back;
+      if (back === null || back === 'opener') continue;
+      expect(SCREEN_KINDS, `${screen} goes back to a screen that does not exist`).toContain(back);
+      expect(SCREENS[back].back, `${screen} goes back to a screen that cannot itself be left`).not.toBeNull();
+    }
+    // A tab strip lists the screen it is drawn on, or the open tab is not one of its tabs.
+    for (const screen of SCREEN_KINDS) {
+      const tabs = SCREENS[screen].tabs;
+      if (tabs.length > 0) expect(tabs, `${screen}'s tabs leave it out`).toContain(screen);
     }
   });
 });

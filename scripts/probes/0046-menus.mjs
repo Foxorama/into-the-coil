@@ -18,7 +18,8 @@ export const PROBES = [
       path: 'src/app/menu.ts',
       // ⚠️ Re-expressed when 0055 rewrote the edge. The break is the same one — the stick read as a
       // level — and this is the line that now carries the edge.
-      find: '      ask.move = heard && !spending ? move : 0;',
+      // ⚠️ Re-anchored by 0458, whose repeat shares the line. The break still reads the stick as a level.
+      find: '      ask.move = (heard || repeats) && !spending ? move : 0;',
       replace: '      ask.move = move;',
     },
   },

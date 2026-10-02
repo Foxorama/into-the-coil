@@ -98,8 +98,9 @@ export const PROBES = [
     guard: 'and the chooser says which one is on, in fill rather than in colour alone',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-title-option-on {\n  background: var(--itc-ink);\n  color: var(--itc-void);\n  opacity: 1;\n}',
-      replace: '.itc-title-option-on {\n  opacity: 1;\n}',
+      // ⚠️ Re-anchored by 0458: every band's options share the rule now, by the screen list.
+      find: "${each('-option-on')} {\n  background: var(--itc-ink);\n  color: var(--itc-void);\n  opacity: 1;\n}",
+      replace: "${each('-option-on')} {\n  opacity: 1;\n}",
     },
   },
 ];

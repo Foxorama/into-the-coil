@@ -26,12 +26,26 @@ import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
-import { GOLFERS, GOLFER_KINDS } from '../content/golfers.ts';
+import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS } from '../content/ships.ts';
 import { WEAPONS } from '../content/weapons.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
-export const SCREEN_KINDS = ['splash', 'select', 'intro', 'title', 'playing', 'gameOver', 'cleared', 'outro', 'victory', 'music', 'travel'] as const;
+export const SCREEN_KINDS = [
+  'splash',
+  'select',
+  'intro',
+  'title',
+  'settings',
+  'guide',
+  'playing',
+  'gameOver',
+  'cleared',
+  'outro',
+  'victory',
+  'music',
+  'travel',
+] as const;
 
 /**
  * Where the player is. Derived from the list, so a screen cannot exist in the union and be missing
@@ -59,7 +73,8 @@ export interface ScreenAction {
  * `slices/` and is the sanctioned place for a shape two of them must agree on. `settings` keys its
  * state by it and `screen` rows name it, and neither imports the other.
  */
-export type SettingName = 'style' | 'sound' | 'travel' | 'pilot';
+// 0458: the tier is a setting since the title became rows — chosen on a band, kept until changed.
+export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -80,6 +95,14 @@ export interface ScreenChoice {
   label: string;
   /** The options, in the order the content hub lists them. Position is the value. */
   options: readonly { label: string; hint: string }[];
+  /**
+   * What a segment of the band shows — 0458: its words, or the golfer's portrait.
+   *
+   * ⚠️ **A FACT ABOUT THE CHOICE AND NOT A SWITCH ON ITS NAME**, on `pushed`'s terms below: the pilot
+   * band is the one drawn in faces today, and a later band of ships would say so here rather than in
+   * an arm of the chrome.
+   */
+  faces: 'words' | 'portraits';
 }
 
 export interface ScreenRow {
@@ -213,6 +236,33 @@ export interface ScreenRow {
    * *"the last level music doesn't stop till you start a new run or go to the music settings."*
    */
   inRun: boolean;
+  /**
+   * Where Back goes — B on a pad, Escape on a keyboard — 0458. `null` for a screen with no way back,
+   * `'opener'` for one reached from more than one place, which goes back to whichever opened it.
+   *
+   * ── THERE WAS NO BACK, AND EVERY WAY OUT WAS A TILE ─────────────────────────────────────────────
+   *
+   * ⚠️ **Walked with a pad, on `main` at `5391d51`**: B on the music room did nothing, and the only way
+   * off it was to walk to *Back* — the ninth tile. `reports/the-menus-reviewed-2026-10-02.md` has the
+   * walk. A screen the player went INTO is a screen they expect to come back OUT of with one press.
+   *
+   * ⚠️ **`'opener'` IS SETTINGS' AND THE GUIDE'S**, because both are reached from the title and from a
+   * paused run, and one fixed destination would send a player who opened Settings mid-run to the
+   * title. `src/state/slices/screen.ts` records the opener as the screen is entered.
+   */
+  back: Screen | 'opener' | null;
+  /**
+   * The screens this one shares a tab strip with, in order, itself among them — 0458. Empty for a
+   * screen with no tabs. Settings and How to play are two tabs of one place to the player and two rows
+   * here, because each has its own controls and its own Back.
+   */
+  tabs: readonly Screen[];
+  /**
+   * Where the cursor starts the first time the screen is shown — 0458: on its first action, or on
+   * its first choice. The title opens on *Launch* so a returning player's first press starts a run;
+   * Settings opens on its first band, because changing one is what it is for.
+   */
+  opensOn: 'action' | 'choice';
 }
 
 /**
@@ -225,6 +275,19 @@ export interface ScreenRow {
  * reach, so the rate is stated here and the shell reads it.
  */
 export const STEPS_PER_SECOND = 60;
+
+/**
+ * What a pilot flies, on one line — the boot cards' hint and the title band's line alike.
+ *
+ * ⚠️ **THE SHIP AND ITS GUN SINCE 0441, AND IT WAS THE GOLFER'S HOME.** Picking a pilot picks a ship
+ * and a gun for the whole run, which is the one thing about the choice that changes how it plays; a
+ * home town does not. One line, because the card's height is what 0415's layout guard measures on a
+ * phone. One function since 0458, because two screens say it and they must say the same thing.
+ */
+function pilotHint(kind: GolferKind): string {
+  const ship = SHIPS[GOLFERS[kind].ship];
+  return `${ship.label} · ${WEAPONS[ship.weapon].label}`;
+}
 
 export const SCREENS: Record<Screen, ScreenRow> = {
   /**
@@ -246,6 +309,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: false,
     inRun: false,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * The golfers — 0415. Four buttons, one per row of `src/content/golfers.ts`, each with a portrait
@@ -253,24 +319,17 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    *
    * ⚠️ **THE PRESS THAT PICKS IS THE PRESS THAT TURNS THE SOUND ON.** No browser plays anything before
    * the page is touched (0412), so a screen that asks for a choice everyone makes anyway is the one
-   * place a gesture costs the player nothing. Picked at boot it goes on to the intro, with sound; picked
-   * from the menu's *Pilot* it goes back to the menu.
+   * place a gesture costs the player nothing. Picked at boot it goes on to the intro, with sound.
+   *
+   * ⚠️ **AT BOOT ONLY SINCE 0458.** The title's *Pilot* opened this too, and the title's pilot band
+   * replaced it: changing pilot is a press along a row now, not a trip to a screen of cards.
    *
    * ⚠️ **Built by walking `GOLFER_KINDS`, so the buttons ARE the table**, on the tiers' own terms.
    */
   select: {
     // An instruction rather than a label — 0436: the screen is a question, so its heading asks it.
     heading: 'Choose your pilot',
-    /*
-      ⚠️ **THE HINT IS THE SHIP AND ITS GUN SINCE 0441, AND IT WAS THE GOLFER'S HOME.** Picking a pilot
-      picks a ship and a gun for the whole run, which is the one thing about the choice that changes
-      how it plays; a home town does not. One line, because the card's height is what 0415's layout
-      guard measures on a phone.
-    */
-    actions: GOLFER_KINDS.map((kind) => {
-      const ship = SHIPS[GOLFERS[kind].ship];
-      return { label: GOLFERS[kind].name, hint: `${ship.label} · ${WEAPONS[ship.weapon].label}` };
-    }),
+    actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
     choices: [],
     steps: false,
     dims: true,
@@ -278,6 +337,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: false,
     inRun: false,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`. What the page
@@ -304,6 +366,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: true,
     inRun: false,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * ⚠️ **The game no longer starts by itself, and that is a deliberate loss.** Until now the page
@@ -315,74 +380,43 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   // puts every user-facing spelling of the name in `src/brand.ts`, and this is the first screen in
   // the game that says it out loud.
   /*
-   * ⚠️ **"Start" is gone, and the three tiers are in its place.** A run cannot begin without a
-   * difficulty, so a screen that started one without asking would be choosing for the player — and
-   * `docs/decisions/0047-difficulty-is-a-tier-and-the-easy-one-is-the-content.md` says a tier is a
-   * property of the run rather than a setting to be found later.
+   * ── THE TITLE IS ROWS — `docs/decisions/0458-the-title-is-rows.md` ─────────────────────────────
    *
-   * ⚠️ **Built by walking `DIFFICULTY_KINDS`, so the buttons ARE the table.** A tier added to
-   * `src/content/difficulty.ts` appears here without anybody remembering to come and add it — the
-   * same argument `src/app/chrome.ts` makes for the pickup key being walked rather than listed, and
-   * the order is the table's order, which is easiest first.
+   * ⚠️ **TWO BANDS AND TWO BUTTONS, AND IT WAS FIVE BUTTONS AND SIX CHIPS.** Asked for as *"the
+   * three difficulty buttons could be a single toggable band; the pilots could be smaller with
+   * profile pics and be toggleable."* The three tiers were three of the five largest things on the
+   * screen and one choice, and each was also the start button — which is why the pilot had to live a
+   * screen away. A band is one row the player moves ALONG; *Launch* is the one thing that starts.
+   *
+   * ⚠️ **A run still cannot begin without a tier** (0047) — it begins on the one the band shows,
+   * which is the one the player chose last, and *Savior* before anything was chosen (`TUNED`).
+   *
+   * ⚠️ **Built by walking `DIFFICULTY_KINDS` and `GOLFER_KINDS`, so the bands ARE the tables**, on
+   * the terms the tier buttons and the boot cards were built on: a tier or a pilot added to its table
+   * appears here without anybody remembering to come and add it. The pilot band is the reason a
+   * larger roster costs this screen nothing — it is one row however long the table gets.
+   *
+   * ⚠️ **Look, Sound and Travel are on Settings now**, the screen 0070 said was real and not yet
+   * worth a door. Four settings and a guide are worth one.
    */
   title: {
     heading: GAME_TITLE,
-    /*
-      ⚠️ **THE TIERS FIRST AND THE MUSIC ROOM LAST, AND THE ORDER IS LOAD-BEARING** — 0210.
-      `src/app/mount.ts` narrows the index it is handed against `DIFFICULTY_KINDS`, so anything
-      appended past the end of that table is not a tier and is routed as such. Putting the music room
-      first would silently make it a difficulty.
-    */
     actions: [
-      ...DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
-      { label: 'Music', hint: '' },
-      // 0415: change golfer without going back through the splash — past the music room, on 0210's terms.
-      { label: 'Pilot', hint: '' },
+      { label: 'Launch', hint: '' },
+      { label: 'Settings', hint: '' },
     ],
-    /*
-      ⚠️ **THE FIRST SETTING, AND IT IS ON THE TITLE SCREEN RATHER THAN BEHIND ONE** —
-      `docs/decisions/0070-a-style-is-a-setting-and-the-first-one.md`. A settings screen is real and
-      is not this: `docs/state-of-play.md` has had one queued for weeks, and inventing it to hold a
-      single two-option row would put the one thing a player might want before their first run behind
-      a door they have to find. The title screen is already the place a run is configured — 0047 put
-      the tier there for the same reason.
-
-      ⚠️ **Built by walking `STYLE_KINDS`, so the buttons ARE the table.** Same argument the tiers
-      above make, and the same one `src/app/chrome.ts` makes for the pickup key.
-    */
-    /*
-      ⚠️ **THE SECOND SETTING, AND IT COST NOTHING BUT THIS ROW** —
-      `docs/decisions/0072-a-cue-is-baked-and-played.md`. 0070 said the queue behind the style was
-      *"already the same shape"* and this is the first entry to test that claim: `src/app/chrome.ts`
-      walks `choices` and needs no edit, the shell routes by `name` and needs one line, and the state
-      is a field. It is the row that proves the mechanism rather than the one that needed it.
-    */
     choices: [
       {
-        name: 'style',
-        label: 'Look',
-        options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
+        name: 'difficulty',
+        label: 'Difficulty',
+        options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+        faces: 'words',
       },
       {
-        name: 'sound',
-        label: 'Sound',
-        options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
-      },
-      /*
-        ⚠️ **THE THIRD SETTING, AND IT IS THE ROW 0072 PREDICTED RATHER THAN THE MECHANISM IT
-        NEEDED** — `docs/decisions/0340-the-coil-is-a-route.md`. 0070 said the queue behind the style
-        was *"already the same shape"* and 0072 was the first entry to test that claim; this is the
-        second, and it cost this row, one line in the shell's router and a field on the slice.
-
-        ⚠️ **A comfort knob over the crossing and NOT over the sim** — 0024. `src/content/travel.ts`
-        holds what it changes: one number, the shortest the chart is up for. Nothing behind this
-        screen can see that table, and `tests/travel.test.ts` is what makes that a fact rather than
-        an intention.
-      */
-      {
-        name: 'travel',
-        label: 'Travel',
-        options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
+        name: 'pilot',
+        label: 'Pilot',
+        options: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
+        faces: 'portraits',
       },
     ],
     steps: false,
@@ -391,10 +425,100 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: false,
     inRun: false,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
+  },
+  /**
+   * Settings — 0458. Reached from the title, and the screen a paused run will open; Back goes to
+   * whichever opened it.
+   *
+   * ⚠️ **THE THREE SETTINGS THE TITLE CARRIED, AS BANDS.** Each was two chips the pad stopped on
+   * twice; a band is one stop that says its value, and its option's hint is written under it, which a
+   * chip could only put in a tooltip.
+   */
+  settings: {
+    heading: 'Settings',
+    // Past the bands, on 0070's terms: the music room is a place to go, and Back is a way out.
+    actions: [
+      { label: 'Music room', hint: '' },
+      { label: 'Back', hint: '' },
+    ],
+    /*
+      ⚠️ **Each built by walking its kind table, so the options ARE the table** — 0070 for the look,
+      0072 for the sound, 0340 for the crossing. **The crossing is a comfort knob over the picture and
+      NOT over the sim** (0024): `src/content/travel.ts` holds what it changes, and
+      `tests/travel.test.ts` makes that a fact.
+    */
+    choices: [
+      {
+        name: 'style',
+        label: 'Look',
+        options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
+        faces: 'words',
+      },
+      {
+        name: 'sound',
+        label: 'Sound',
+        options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
+        faces: 'words',
+      },
+      {
+        name: 'travel',
+        label: 'Travel',
+        options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
+        faces: 'words',
+      },
+    ],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'opener',
+    tabs: ['settings', 'guide'],
+    opensOn: 'choice',
+  },
+  /**
+   * How to play — 0458. The pickups, what each does and how it is taken, and the specials and what
+   * throws them on the device in hand. Its words are the content rows' and its layout is
+   * `src/app/chrome.ts`'s; this row says only that it is a screen with a way back.
+   *
+   * ⚠️ **A REFERENCE THE PLAYER OPENS, NOT A HINT PUSHED AT THEM.** `docs/game.md`: *hints are added
+   * where play proves they are needed, never pre-emptively.* This was asked for from play, and it
+   * waits behind a tab rather than standing on the way into a run.
+   */
+  guide: {
+    heading: 'How to play',
+    actions: [{ label: 'Back', hint: '' }],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'opener',
+    tabs: ['settings', 'guide'],
+    opensOn: 'action',
   },
   // `pushed: false` — the HUD is pushed at it, and the HUD is not a panel: `src/app/chrome.ts` builds
   // it apart and shows it on every row that steps, which is why this row still has no panel.
-  playing: { heading: '', actions: [], choices: [], steps: true, dims: false, timeout: null, pushed: false, skips: false, inRun: true },
+  playing: {
+    heading: '',
+    actions: [],
+    choices: [],
+    steps: true,
+    dims: false,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
+  },
   /**
    * ⚠️ **No summary and no coaching — and one number, since 0428.** `docs/game.md`: *players are
    * assumed to be adaptable; hints are added where play proves they are needed, never pre-emptively.*
@@ -445,6 +569,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     // Its *Continue* resumes the run, in the place it ended in (0068).
     inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * The boss is dead and there is another level behind it.
@@ -488,6 +615,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: false,
     inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * The crossing: the respite is over, and the ship is burning its way to the next place.
@@ -532,6 +662,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: true,
     skips: false,
     inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * The finale — `docs/decisions/0418-the-heart-lets-go.md`: the last boss beaten, the heart bursting,
@@ -550,6 +683,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: true,
     // The last place, heard to its end: the heart is still what is on the screen — 0418.
     inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /**
    * Every level in the run is behind the player.
@@ -569,6 +705,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: false,
     skips: false,
     inRun: false,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
   },
   /*
     ── THE MUSIC ROOM — `docs/decisions/0210-the-title-plays-the-music.md` ──────────────────────────
@@ -614,5 +753,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pushed: true,
     skips: false,
     inRun: false,
+    // Reached from Settings since 0458, so that is where B goes — and Settings remembers its opener.
+    back: 'settings',
+    tabs: [],
+    opensOn: 'action',
   },
 };

@@ -2246,8 +2246,9 @@ describe('every cue is played by something, and every cue the frame plays exists
 
 describe('the chooser is the table', () => {
   it('offers exactly the settings that exist, in the table’s order', () => {
-    const choice = SCREENS.title.choices.find((c) => c.name === 'sound');
-    expect(choice, 'the title screen offers no sound setting at all').toBeDefined();
+    // On Settings since 0458.
+    const choice = SCREENS.settings.choices.find((c) => c.name === 'sound');
+    expect(choice, 'the settings screen offers no sound setting at all').toBeDefined();
     expect(choice!.options.map((o) => o.label)).toEqual(SOUND_KINDS.map((kind) => SOUNDS[kind].title));
   });
 

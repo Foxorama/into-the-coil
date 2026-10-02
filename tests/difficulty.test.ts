@@ -617,19 +617,19 @@ describe('the title screen is the choice', () => {
       to-worst.
     */
     /*
-      ⚠️ **THE TIERS ARE THE LEADING ACTIONS, NOT ALL OF THEM — 0210.** The music room is appended
-      after them, and `src/app/mount.ts` routes by exactly that: an index the difficulty table does
-      not cover is the button that is not a tier. Asserting the whole list would have made adding any
-      non-tier control to this screen a test change rather than a design decision — but asserting
-      only membership would let the music room be inserted FIRST, which would silently make it a
-      difficulty. The leading slice is the claim that matters.
+      ⚠️ **THE TIERS ARE A BAND SINCE 0458, AND THEY WERE THE LEADING ACTIONS.** 0210 held that the
+      tiers came first among the title's buttons because `src/app/mount.ts` routed by index and the
+      music room was appended past them. They are the difficulty band's options now, which is a list
+      that holds nothing else, so the whole list is asserted — and no title button may be a tier, which
+      is the old guard's other half: a button that said a tier's name would be a second way to choose.
     */
     const tiers = DIFFICULTY_KINDS.map((k) => DIFFICULTIES[k].title);
-    expect(SCREENS.title.actions.slice(0, tiers.length).map((a) => a.label)).toEqual(tiers);
-    expect(
-      SCREENS.title.actions.slice(tiers.length).map((a) => a.label),
-      'a control on the title screen past the tiers is routed as "not a tier" by mount',
-    ).not.toContain(tiers[0]);
+    const band = SCREENS.title.choices.find((c) => c.name === 'difficulty');
+    expect(band, 'the title has no difficulty band').toBeDefined();
+    expect(band!.options.map((o) => o.label)).toEqual(tiers);
+    for (const action of SCREENS.title.actions) {
+      expect(tiers, `the title's ${action.label} button is also a tier`).not.toContain(action.label);
+    }
   });
 
   it('and says which is which, because the titles do not', () => {

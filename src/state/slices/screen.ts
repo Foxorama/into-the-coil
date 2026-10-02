@@ -7,10 +7,19 @@
  * `src/state/root.ts` where it is one visible line.
  */
 
-import { type Screen } from '../screens.ts';
+import { SCREENS, type Screen } from '../screens.ts';
 
 export interface ScreenState {
   current: Screen;
+  /**
+   * The screen that opened the menu the player is in — 0458. Where a row's `back: 'opener'` goes.
+   *
+   * ⚠️ **RECORDED ON THE WAY IN, FROM A SCREEN WITH NO WAY BACK OF ITS OWN.** Settings opens the music
+   * room and the music room comes back to Settings; were the opener rewritten on every move, Back from
+   * Settings after a visit to the room would go to the room. A screen that has a `back` is inside a
+   * menu, and one that has none — the title, a paused run — is what a menu was opened from.
+   */
+  opener: Screen;
 }
 
 /**
@@ -25,14 +34,17 @@ export type ScreenAction = { slice: 'screen'; type: 'show'; screen: Screen };
  * has loaded; picking one plays the intro, which hands over to the title by itself —
  * `docs/decisions/0415-the-golfer-is-chosen.md`, 0411 — and the title waits.
  */
-export const initialScreen: ScreenState = { current: 'splash' };
+export const initialScreen: ScreenState = { current: 'splash', opener: 'title' };
 
 export function reduceScreen(state: ScreenState, action: ScreenAction): ScreenState {
   switch (action.type) {
-    case 'show':
+    case 'show': {
       // Identity preserved when nothing moved, so the shell can tell a real transition from a
       // repeated dispatch without comparing fields.
-      return state.current === action.screen ? state : { current: action.screen };
+      if (state.current === action.screen) return state;
+      const entering = SCREENS[action.screen].back === 'opener' && SCREENS[state.current].back === null;
+      return { current: action.screen, opener: entering ? state.current : state.opener };
+    }
     default: {
       // Adding a member to `ScreenAction` fails to compile HERE, per
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`'s fifth defeat.

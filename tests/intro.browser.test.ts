@@ -21,12 +21,12 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { CANVAS_MS, INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS, SPLASH_STEPS } from '../src/content/port.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
-import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { choose } from './title.ts';
 
 vi.setConfig({ testTimeout: 180_000 });
 
@@ -36,7 +36,6 @@ const SPLASH = '.' + prefixFor('splash') + 'shown';
 const SELECT = '.' + prefixFor('select') + 'shown';
 const GOLFER = '.' + prefixFor('select') + 'action';
 const TITLE = '.' + prefixFor('title') + 'shown';
-const TITLE_ACTION = '.' + prefixFor('title') + 'action';
 const HUD = '.itc-playing-hud-shown';
 const SKIP = '.' + prefixFor('intro') + 'skip';
 const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
@@ -392,20 +391,23 @@ describe.runIf(chromePath)('the skip goes to the title and no further', () => {
   }
 });
 
-describe.runIf(chromePath)('Pilot on the menu changes golfer without going back through the intro', () => {
-  it('opens the golfers, and a pick comes straight back to the menu and says who is flying', async () => {
+/*
+  ⚠️ **THE PILOT BAND SINCE 0458, AND IT WAS A BUTTON TO THE GOLFERS' SCREEN.** What 0415 held is
+  unchanged — changing golfer from the menu does not go back through the intro, and the menu says who is
+  flying — and the way it is done is a press on the band rather than a trip to the boot's cards.
+*/
+describe.runIf(chromePath)('the pilot band changes golfer without going back through the intro', () => {
+  it('takes a pick on the title, stays on the title, and says who is flying', async () => {
     const page = await open();
     await page.keyboard.press('Escape');
     await page.waitForSelector(TITLE, { timeout: 5_000 });
-    const pilot = page.locator(TITLE_ACTION).nth(DIFFICULTY_KINDS.length + 1);
-    expect(await pilot.textContent(), 'the menu does not say who is flying').toContain(GOLFERS.bo.name);
-    await pilot.click();
-    await page.waitForSelector(SELECT, { timeout: 5_000 });
-    const larry = GOLFER_KINDS.indexOf('larry');
-    await page.locator(GOLFER).nth(larry).click();
-    await page.waitForSelector(TITLE, { timeout: 5_000 });
+    const line = page.locator(`[${SETTING_ATTR}="pilot"] ~ .${prefixFor('title')}band-hint`);
+    expect(await line.textContent(), 'the menu does not say who is flying').toContain(GOLFERS.bo.name);
+    await choose(page, 'pilot', GOLFER_KINDS.indexOf('larry'));
+    await page.waitForTimeout(300);
+    expect(await shown(page, TITLE), 'a pick on the band left the title').toBe(true);
     expect(await shown(page, SKIP_SHOWN), 'a pick from the menu played the intro').toBe(false);
-    expect(await pilot.textContent(), 'the menu did not take the new golfer').toContain(GOLFERS.larry.name);
+    expect(await line.textContent(), 'the menu did not take the new golfer').toContain(GOLFERS.larry.name);
     await page.context().close();
   });
 });

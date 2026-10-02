@@ -23,14 +23,10 @@ export const PROBES = [
     guard: 'moves DOWN a column and RIGHT along a row',
     edit: {
       path: 'src/app/chrome.ts',
-      find:
-        '      const next = spatially(\n' +
-        '        panel!.controls.map((control) => control.getBoundingClientRect()),\n' +
-        '        focused,\n' +
-        '        delta,\n' +
-        '        axis,\n' +
-        '      );',
-      replace: '      const next = null;',
+      // ⚠️ Re-anchored by 0458, which resolves a push by rows first and keeps the boxes INSIDE a row of
+      // buttons — the room's nine tiles are one such row, so this is still the line that makes it a grid.
+      find: '        const next = spatially(boxes, cursor.col, delta, axis, rows.length === 1);',
+      replace: '        const next = null;',
     },
   },
   {
@@ -80,8 +76,9 @@ export const PROBES = [
     guard: 'has no answer for an axis the layout does not use',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  return best ?? wrap;',
-      replace: '  return best ?? wrap ?? (from + delta + boxes.length) % boxes.length;',
+      // ⚠️ Re-anchored by 0458, which made the wrap optional for a row among others. Same fallback lost.
+      find: '  return best ?? (wraps ? wrap : null);',
+      replace: '  return best ?? (wraps ? wrap : null) ?? (from + delta + boxes.length) % boxes.length;',
     },
   },
 ];

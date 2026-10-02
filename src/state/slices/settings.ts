@@ -23,6 +23,7 @@ import { DEFAULT_SOUND, type SoundKind } from '../../content/sound.ts';
 import { DEFAULT_STYLE, type StyleKind } from '../../content/styles.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
+import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
 import { type SettingName } from '../screens.ts';
 
 /**
@@ -58,7 +59,7 @@ interface SettingValue {
   travel: TravelKind;
   /**
    * Which golfer is flying — `docs/decisions/0415-the-golfer-is-chosen.md`. Chosen on the select
-   * screen at boot and from the menu's *Pilot*; `src/content/golfers.ts` is the table.
+   * screen at boot and on the title's pilot band (0458); `src/content/golfers.ts` is the table.
    *
    * ⚠️ **WHO THEY ARE, NOT WHAT THEY FLY, WHICH IS WHY IT IS A SETTING** and not on the run: it changes
    * the pilot the intro draws and nothing the simulation reads, on `style`'s terms above. The day a
@@ -66,6 +67,15 @@ interface SettingValue {
    * Not remembered between visits — asked for as *"pick each visit"*.
    */
   pilot: GolferKind;
+  /**
+   * Where the title's difficulty band stands — 0458. `src/content/difficulty.ts` is the table.
+   *
+   * ⚠️ **THE BAND'S POSITION, NOT THE RUN'S TIER**, and 0039 is untouched: the tier is still ON the
+   * run, copied there by `begin` and fixed for the run's life. What lives here is what the band shows
+   * between runs, which is why it is a setting — it was the button pressed, and a button holds no
+   * state, until the press and the choice became two things.
+   */
+  difficulty: DifficultyKind;
 }
 
 /**
@@ -87,10 +97,20 @@ export type SettingsAction =
   | { slice: 'settings'; type: 'style'; style: StyleKind }
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
   | { slice: 'settings'; type: 'travel'; travel: TravelKind }
-  | { slice: 'settings'; type: 'pilot'; pilot: GolferKind };
+  | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
+  | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind };
 
-/** What a player who has chosen nothing has. The default IS the game — 0024. */
-export const initialSettings: SettingsState = { style: DEFAULT_STYLE, sound: DEFAULT_SOUND, travel: DEFAULT_TRAVEL, pilot: DEFAULT_GOLFER };
+/**
+ * What a player who has chosen nothing has. The default IS the game — 0024. The band opens on the
+ * tier the game is tuned at (`TUNED`), which is the middle one and the one 0047 calls the game.
+ */
+export const initialSettings: SettingsState = {
+  style: DEFAULT_STYLE,
+  sound: DEFAULT_SOUND,
+  travel: DEFAULT_TRAVEL,
+  pilot: DEFAULT_GOLFER,
+  difficulty: TUNED,
+};
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
   switch (action.type) {
@@ -110,6 +130,9 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // 0415: the golfer, on the same shape.
     case 'pilot':
       return state.pilot === action.pilot ? state : { ...state, pilot: action.pilot };
+    // 0458: the band's tier, on the same shape.
+    case 'difficulty':
+      return state.difficulty === action.difficulty ? state : { ...state, difficulty: action.difficulty };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per
