@@ -48,8 +48,9 @@ export const PROBES = [
     guard: 'a single hit still flashes for its whole window',
     edit: {
       path: 'src/sim/collide.ts',
-      find: '  target.flashFor = flashSteps;\n  target.flashGap = flashSteps * (1 + FLASH_GAP_DUTY);',
-      replace: '  target.flashFor = 1;\n  target.flashGap = flashSteps * (1 + FLASH_GAP_DUTY);',
+      // ⚠️ Re-anchored by 0456, as the first probe above was.
+      find: '  target.flashFor = flashSteps;\n  target.flashGap = Math.max(',
+      replace: '  target.flashFor = 1;\n  target.flashGap = Math.max(',
     },
   },
 ];
