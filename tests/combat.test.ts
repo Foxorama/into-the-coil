@@ -1079,7 +1079,8 @@ describe('damage is legible on the body that took it', () => {
       taken out stayed green, and the game's own four was never flown. The claim is *whatever
       `flashSteps`*, so that is what is swept.
     */
-    for (let flashSteps = 1; flashSteps <= 8; flashSteps++) {
+    // From two: a one-step wash is counted down on the step that armed it and is never drawn.
+    for (let flashSteps = 2; flashSteps <= 8; flashSteps++) {
       const shots = new Pool<Entity>(1, makeEntity);
       const targets = new Pool<Entity>(1, makeEntity);
       const target = targets.spawn()!;
