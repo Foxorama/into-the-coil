@@ -163,7 +163,9 @@ fifth. Over the mauve nebula that comes out about 1.3 to 1.
 `node scripts/prove-guard.mjs 0459`: thirteen probes, all red. **Re-anchored**, each on what it
 breaks: 0061's two drift probes (the paced camera), 0253's slow (the step's radius), 0337's far wall
 (now unique against the no-wreck branch), 0383's acid (the beams' arguments), 0399's field (the step's
-radius) and 0400's room (the hydra has the same one).
+radius) and 0400's room (the hydra has the same one). And 0289's unlocked lunge, which CI's whole
+proof caught: run off the camera, a rear in a room froze outright and reddened the size guards before
+the lock guard. It now runs off the paced camera, so only the lock breaks.
 
 ## Rollback
 
