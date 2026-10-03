@@ -699,3 +699,109 @@ describe('0398 — the pterodactyl is feathered', () => {
     expect(wing().endsWith('Hit'), `the body was lit by a hit and its wings wore ${wing()}`).toBe(true);
   });
 });
+
+describe('0483 — the pterodactyl flies', () => {
+  type Sample = { across: number; vel: number; turn: number; braced: boolean; wing: string; top: number };
+
+  /** The quetzal flown on its own cadence for `steps` at `fraction` of its health, every step written down. */
+  function flown(fraction: number, steps: number): Sample[] {
+    const d = quetzalAt(fraction);
+    const boss = d.world.bossPool.at(0);
+    boss.fireIn = 30;
+    const out: Sample[] = [];
+    for (let i = 0; i < steps; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.ship.invulnFor = 0;
+      boss.health = d.world.bossFullHealth * fraction;
+      d.world.enemyShots.clear();
+      d.frame.step();
+      let wing = 'none';
+      for (let k = 0; k < d.world.bossAura.size; k++) {
+        const kind = SPRITE_KINDS[d.world.bossAura.at(k).sprite]!;
+        if (kind.startsWith('quetzalWing')) wing = kind;
+      }
+      const top = BOSSES.quetzal.patrol * phaseFor(BOSSES.quetzal, boss.health, d.world.bossFullHealth).patrolScale;
+      out.push({ across: boss.across, vel: boss.velAcross, turn: boss.turn, braced: boss.holdFor > 0, wing, top });
+    }
+    return out;
+  }
+
+  const STAGES = [0.95, 0.7, 0.45, 0.2];
+  const FLIGHT = 20 * STEPS_PER_SECOND;
+
+  it('THE REPORTED ONE, IN LANES AND SECONDS: no stage turns or stops dead — the slide never gains or loses more than three lanes a second, a second', () => {
+    /*
+      Reported: a bird that slides at one speed, stops dead and reverses dead does not read as flying.
+      The corner is the defect: a reversal at top speed was a change of twice that speed in one step,
+      about ninety-five lanes a second squared at the last stage, and the brace before a beam half that.
+      Three is half again what the row's ease spends at its fastest stage. And the eased turn still
+      keeps the whole hull on the lane, which is what the hard edge was for.
+    */
+    const r = BOSSES.quetzal.radius;
+    for (const fraction of STAGES) {
+      const flight = flown(fraction, FLIGHT);
+      let worst = 0;
+      let braces = 0;
+      let turns = 0;
+      let heading = 0;
+      for (let i = 1; i < flight.length; i++) {
+        const lanes = (Math.abs(flight[i]!.vel - flight[i - 1]!.vel) * STEPS_PER_SECOND * STEPS_PER_SECOND) / ACROSS_SPAN;
+        worst = Math.max(worst, lanes);
+        if (flight[i]!.braced && !flight[i - 1]!.braced) braces++;
+        // Through zero, since an eased turn stops before it reverses: the last way it was going.
+        const way = Math.sign(flight[i]!.vel);
+        if (way !== 0 && heading !== 0 && way !== heading) turns++;
+        if (way !== 0) heading = way;
+        expect(flight[i]!.across - r, `at ${fraction} the hull left the top of the lane`).toBeGreaterThanOrEqual(-0.01);
+        expect(flight[i]!.across + r, `at ${fraction} the hull left the bottom of the lane`).toBeLessThanOrEqual(ACROSS_SPAN + 0.01);
+      }
+      expect(turns, `at ${fraction} the bird never turned, so the corner was never flown`).toBeGreaterThan(0);
+      if (fraction < 0.75) expect(braces, `at ${fraction} no beam braced it, so the stop was never flown`).toBeGreaterThan(0);
+      expect(worst, `at ${fraction} the slide changed by ${worst.toFixed(1)} lanes a second squared in one step`).toBeLessThanOrEqual(3);
+    }
+  });
+
+  it('THE NOSE POINTS WHERE IT IS GOING: leaning toward the side it slides to whenever it is moving, and level while it braces', () => {
+    for (const fraction of STAGES) {
+      const flight = flown(fraction, FLIGHT);
+      let leaned = 0;
+      for (const s of flight) {
+        if (s.braced) {
+          expect(s.turn, `at ${fraction} the hull leaned through a brace, so its beams left a tilted gun`).toBeCloseTo(0, 6);
+          continue;
+        }
+        if (Math.abs(s.vel) < s.top * 0.1) continue;
+        // A sprite baked facing down the lane points toward +across at a turn of −θ (`turnFor`).
+        expect(Math.sign(-Math.sin(s.turn)), `at ${fraction} the hull slid at ${s.vel.toFixed(2)} and leaned the other way`).toBe(Math.sign(s.vel));
+        if (Math.abs(s.vel) > s.top * 0.9) leaned = Math.max(leaned, Math.abs(s.turn));
+      }
+      expect(leaned, `at ${fraction} the lean at full slide is ${leaned.toFixed(2)} rad, which nobody can see`).toBeGreaterThanOrEqual(0.15);
+    }
+  });
+
+  it('THE FLAP FOLLOWS THE STROKE: the wings beat faster climbing toward the top of the screen than diving away from it', () => {
+    for (const fraction of STAGES) {
+      const flight = flown(fraction, FLIGHT);
+      let climbSteps = 0;
+      let climbBeats = 0;
+      let diveSteps = 0;
+      let diveBeats = 0;
+      for (let i = 1; i < flight.length; i++) {
+        const s = flight[i]!;
+        if (Math.abs(s.vel) < s.top * 0.8) continue;
+        const beat = s.wing !== flight[i - 1]!.wing && !s.wing.endsWith('Hit') ? 1 : 0;
+        if (s.vel < 0) {
+          climbSteps++;
+          climbBeats += beat;
+        } else {
+          diveSteps++;
+          diveBeats += beat;
+        }
+      }
+      expect(climbSteps * diveSteps, `at ${fraction} it never both climbed and dived at speed`).toBeGreaterThan(0);
+      const climbing = climbBeats / climbSteps;
+      const diving = diveBeats / diveSteps;
+      expect(climbing / diving, `at ${fraction} the wings beat ${(climbing * STEPS_PER_SECOND).toFixed(1)} frames a second climbing against ${(diving * STEPS_PER_SECOND).toFixed(1)} diving`).toBeGreaterThanOrEqual(1.8);
+    }
+  });
+});
