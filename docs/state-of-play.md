@@ -1172,8 +1172,10 @@ its queue is six items, one PR each, in the order the report gives and for the r
   reddish places.
 - [0467](decisions/0467-the-ray-gun-is-a-turret.md) — **built**: the saucer's gun is a chrome ball set
   into the rim with a lavender lens, a short barrel and a smaller orb; the tip did not move.
-- **Next**: the Firebird back to black and gold, the fighter's cigar pods, and last the splash that
-  waits for a press with the one pilot screen that launches — each answered in the report's table.
+- [0468](decisions/0468-the-firebird-is-black-and-gold.md) — **built**: the Firebird near black, read by
+  gold pinstripes along every body line, one gold bird, a shaker scoop; the player's cyan as light.
+- **Next**: the fighter's cigar pods, and last the splash that waits for a press with the one pilot
+  screen that launches — each answered in the report's table.
 
 ### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
 
