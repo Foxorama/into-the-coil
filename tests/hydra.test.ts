@@ -16,7 +16,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GameFrame } from '../src/app/frame.ts';
-import { phaseFor } from '../src/app/boss.ts';
+import { foldTurn, phaseFor } from '../src/app/boss.ts';
 import { BEAM_BOLT_KIND, BOSSES, BOSS_KINDS, type BossAttack } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -25,10 +25,11 @@ import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { CAPACITY, NECK_SLOTS } from '../src/app/mount.ts';
-import { drawKind, hydraCollarOf, neckSpine } from '../src/render/bake.ts';
+import { drawKind, hydraCollarOf } from '../src/render/bake.ts';
+import { HYDRA_SKULL, hydraJointOf, hydraKnuckleOf, neckSpine } from '../src/content/necks.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { tracingPen } from './paths.ts';
+import { inside, tracingPen } from './paths.ts';
 import { faceAt } from '../src/sim/corridor.ts';
 import { reset } from '../src/sim/entity.ts';
 
@@ -195,7 +196,8 @@ describe('0384 — the hydra stands in the acid and grows its heads', () => {
       settle(d);
       expect(d.world.bossBody.size, `at ${fraction * 100}% the hydra has ${d.world.bossBody.size} heads`).toBe(phase + 1);
       const drawn = new Set<number>();
-      for (let i = 0; i < d.world.bossAura.size; i++) drawn.add(d.world.bossAura.at(i).sprite);
+      // What each piece is, not what it wears: since 0486 a lit neck wears its hurt twin.
+      for (let i = 0; i < d.world.bossAura.size; i++) drawn.add(d.world.bossAura.at(i).spriteBase);
       for (let k = 0; k <= phase; k++) {
         expect([NECKS.necks[k]!.head, NECKS.necks[k]!.headHit], `head ${k} is not its neck's own`).toContain(d.world.bossBody.at(k).sprite);
         expect(drawn.has(NECKS.necks[k]!.art), `neck ${k} is not drawn`).toBe(true);
@@ -547,10 +549,11 @@ describe('0464 — the hydra is one beast', () => {
       expect(world.bossFront.size, `at ${fraction * 100}% the hydra has ${world.bossFront.size} collars for ${phase + 1} necks`).toBe(phase + 1);
       for (let k = 0; k <= phase; k++) {
         const row = NECKS.necks[k]!;
+        // By what each piece IS, not what it wears this step: since 0486 a lit neck wears its hurt twin.
         let collar = null;
-        for (let i = 0; i < world.bossFront.size; i++) if (world.bossFront.at(i).sprite === row.collar) collar = world.bossFront.at(i);
+        for (let i = 0; i < world.bossFront.size; i++) if (world.bossFront.at(i).spriteBase === row.collar) collar = world.bossFront.at(i);
         let neck = null;
-        for (let i = 0; i < world.bossAura.size; i++) if (world.bossAura.at(i).sprite === row.art) neck = world.bossAura.at(i);
+        for (let i = 0; i < world.bossAura.size; i++) if (world.bossAura.at(i).spriteBase === row.art) neck = world.bossAura.at(i);
         expect(collar, `neck ${k} has no collar of its own`).not.toBeNull();
         expect(neck, `neck ${k} is not drawn`).not.toBeNull();
         expect(Math.hypot(collar!.along - neck!.along, collar!.across - neck!.across), `neck ${k}'s collar stands off its root`).toBeLessThan(1e-9);
@@ -581,5 +584,134 @@ describe('0464 — the hydra is one beast', () => {
         expect(Math.min(x, y, size - x, size - y), `${kind} is drawn off its tile`).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('0486 — the neck bends', () => {
+  /** Neck `k`'s lower neck as laid this step: the aura entity that IS it, whatever it wears. */
+  const lowerOf = (d: Driven, k: number): ReturnType<Driven['world']['bossAura']['at']> | null => {
+    for (let i = 0; i < d.world.bossAura.size; i++) if (d.world.bossAura.at(i).spriteBase === NECKS.necks[k]!.art) return d.world.bossAura.at(i);
+    return null;
+  };
+
+  it('THE ASK, IN PIXELS: every head’s bitmap is one outline round the skull and its upper neck, and the neck in it runs back to its knuckle', () => {
+    /*
+      The plan's first seam: *"the head is its own sprite with its own closed outline, sat on a neck tip
+      0.085 r wide."* Traced at a 1280×720 screen, the head's hull is ONE closed line, and the way back from
+      the head's centre toward its knuckle — as the neck stands at rest — is inside it for most of the run.
+    */
+    const scale = 1280 / (ACROSS_SPAN * (16 / 9));
+    for (let k = 0; k < NECKS.necks.length; k++) {
+      const row = NECKS.necks[k]!;
+      const kind = SPRITE_KINDS[row.head]!;
+      const size = SPRITE_EXTENT[kind] * scale;
+      const { pen, trace } = tracingPen();
+      drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'mire');
+      const hull = trace.passes[0]!;
+      expect(hull.subpaths.length, `head ${k} is ${hull.subpaths.length} outlines, not one round the skull and its neck`).toBe(1);
+      const joint = hydraJointOf(k);
+      // From the head's centre back to the knuckle, at rest: the upper run turned by the row's angle, reversed.
+      const c = Math.cos(row.angle);
+      const s = Math.sin(row.angle);
+      const back = [-(joint.upper[0] * c - joint.upper[1] * s), -(joint.upper[0] * s + joint.upper[1] * c)];
+      for (const share of [0.3, 0.55, 0.8]) {
+        const at: [number, number] = [size / 2 + back[0]! * share * scale, size / 2 + back[1]! * share * scale];
+        expect(inside(hull, at), `head ${k}'s bitmap has no neck ${(share * 100).toFixed(0)}% of the way back to its knuckle`).toBe(true);
+      }
+    }
+  });
+
+  it('THE HEAD TURNS WITH ITS NECK, DRIVEN: on every step, rising and risen, each head stands its upper run from its knuckle along its own turn, and bends no further from its lower neck than the row lets it', () => {
+    /*
+      The plan's guard: *"the head's turn equals the upper neck's turn on every step."* The upper neck is
+      drawn into the head's bitmap at the row's rest angle, so a head turned `t` has its upper neck at
+      `rest + t` — and its centre must be exactly there from the knuckle, or the bitmap's neck points
+      somewhere the knuckle is not. Flown from the step every neck is born, so the rise is in it.
+    */
+    const d = hydraAt(0.15);
+    let rising = 0;
+    for (let step = 0; step < NECKS.rise + 120; step++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.bossPool.at(0).fireIn = 999;
+      d.world.ship.across = 20 + ((step * 7) % 80);
+      d.frame.step();
+      for (let k = 0; k < d.world.bossBody.size; k++) {
+        const row = NECKS.necks[k]!;
+        const lower = lowerOf(d, k);
+        expect(lower, `neck ${k} is not laid`).not.toBeNull();
+        const head = d.world.bossBody.at(k);
+        const joint = hydraJointOf(k);
+        const c = Math.cos(lower!.turn);
+        const s = Math.sin(lower!.turn);
+        const knuckle = [lower!.along + joint.knuckle[0] * c - joint.knuckle[1] * s, lower!.across + joint.knuckle[0] * s + joint.knuckle[1] * c];
+        const carried = row.angle + head.turn;
+        const cc = Math.cos(carried);
+        const cs = Math.sin(carried);
+        const off = Math.hypot(head.along - (knuckle[0]! + joint.upper[0] * cc - joint.upper[1] * cs), head.across - (knuckle[1]! + joint.upper[0] * cs + joint.upper[1] * cc));
+        expect(off, `step ${step}: head ${k} stands ${off.toFixed(3)} units off where its own turn carries its neck`).toBeLessThan(1e-6);
+        const bent = Math.abs(foldTurn(head.turn - foldTurn(lower!.turn - row.angle)));
+        expect(bent, `step ${step}: head ${k} is bent ${bent.toFixed(2)} rad from its lower neck`).toBeLessThanOrEqual(NECKS.bend + 1e-9);
+        if (Math.abs(foldTurn(lower!.turn - row.angle)) > NECKS.bend) rising++;
+      }
+    }
+    expect(rising, 'no neck was ever far enough from rest for the knuckle to bend it, so the rise was never flown').toBeGreaterThan(0);
+  });
+
+  it('IN WORLD UNITS: every neck bends where it has left the body, and far enough behind its head that a neck shows between them', () => {
+    for (let k = 0; k < NECKS.necks.length; k++) {
+      // `out` is the first knot wholly out of the body at every sway (0464).
+      expect(hydraKnuckleOf(k), `neck ${k} bends inside the body`).toBeGreaterThanOrEqual(hydraCollarOf(k).out);
+      // The skull's back is at most nine tenths of its drawing's radius from its centre; two units of neck past that.
+      const { upper } = hydraJointOf(k);
+      const run = Math.hypot(upper[0], upper[1]);
+      expect(run, `neck ${k}'s knuckle is ${run.toFixed(1)} units from its head's centre, inside the skull`).toBeGreaterThanOrEqual(HYDRA_SKULL * 0.42 * 0.9 + 2);
+    }
+  });
+
+  it('THE WHOLE ANIMAL FLASHES AS ONE: a hit on any head lights the body, every neck, every collar, every head and the tail — and every piece has a twin of its own', () => {
+    /*
+      The plan's third seam: *"head and body wear hurt twins, necks and collars have none, so on every hit a
+      white head and a white body sit with coloured necks between."*
+    */
+    for (const row of NECKS.necks) {
+      expect(row.artHit, 'a neck has no hurt twin of its own').not.toBe(row.art);
+      expect(row.collarHit, 'a collar has no hurt twin of its own').not.toBe(row.collar);
+      expect(row.headHit, 'a head has no hurt twin of its own').not.toBe(row.head);
+    }
+    const d = hydraAt(0.15);
+    settle(d);
+    const hull = d.world.bossPool.at(0);
+    for (let k = 0; k < d.world.bossBody.size; k++) d.world.bossBody.at(k).flashFor = 0;
+    hull.flashFor = 0;
+    // One head hit, and nothing else.
+    d.world.bossBody.at(2).flashFor = 4;
+    d.world.bossPool.at(0).fireIn = 999;
+    d.frame.step();
+    expect(hull.sprite, 'a head was hit and the body was not lit').toBe(hull.spriteHit);
+    for (let k = 0; k < d.world.bossBody.size; k++) {
+      const row = NECKS.necks[k]!;
+      expect(d.world.bossBody.at(k).sprite, `head ${k} was not lit with the rest`).toBe(row.headHit);
+      expect(lowerOf(d, k)!.sprite, `neck ${k} was not lit with the rest`).toBe(row.artHit);
+      let collar = null;
+      for (let i = 0; i < d.world.bossFront.size; i++) if (d.world.bossFront.at(i).spriteBase === row.collar) collar = d.world.bossFront.at(i);
+      expect(collar?.sprite, `collar ${k} was not lit with the rest`).toBe(row.collarHit);
+    }
+    const tail = BOSSES.hydra.tail!;
+    let lit = false;
+    for (let i = 0; i < d.world.bossAura.size; i++) if (d.world.bossAura.at(i).sprite === tail.art.spriteHit) lit = true;
+    expect(lit, 'the tail was not lit with the rest').toBe(true);
+  });
+
+  it('BACK TO FRONT: the necks are laid most upright first, the same way on every step', () => {
+    const d = hydraAt(0.15);
+    settle(d);
+    const depth = (k: number): number => Math.abs(foldTurn(NECKS.necks[k]!.angle + Math.PI / 2));
+    const laid: number[] = [];
+    for (let i = 0; i < d.world.bossAura.size; i++) {
+      const k = NECKS.necks.findIndex((n) => n.art === d.world.bossAura.at(i).spriteBase);
+      if (k >= 0) laid.push(k);
+    }
+    expect(laid.length, 'not every neck is laid').toBe(NECKS.necks.length);
+    for (let i = 1; i < laid.length; i++) expect(depth(laid[i]!), `neck ${laid[i]} is laid over neck ${laid[i - 1]}, which reaches further forward`).toBeGreaterThanOrEqual(depth(laid[i - 1]!));
   });
 });

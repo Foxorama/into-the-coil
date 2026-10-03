@@ -75,6 +75,7 @@ import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { paintPort } from '../render/port.ts';
+import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, strokeAt } from '../content/sprites.ts';
@@ -9785,6 +9786,24 @@ const NECK_RISE_FROM = Math.PI * 0.62;
 // @setup: two numbers for the lifetime of the module.
 const NECK_FLAMES = [0.4, 0.7] as const;
 
+/*
+  ⚠️ **WHERE EACH NECK BENDS, AND WHAT IT CARRIES — `docs/decisions/0486-the-neck-bends.md`.** World units
+  in the neck's own frame at rest: the knuckle, and the run from it to the head's centre. The bake draws
+  the upper neck into the head's bitmap at the neck's rest angle, so a head turned by `t` from that angle
+  carries its upper neck round the knuckle by `t` and its centre is the knuckle plus that run turned —
+  one description, `hydraJointOf`, read by both. The hydra is the one boss with necks; a second would
+  name its own joints the day it is drawn.
+*/
+// @setup: five joints, solved once from the row.
+const NECK_JOINTS = (BOSSES.hydra.necks?.necks ?? []).map((_, k) => hydraJointOf(k));
+
+/**
+ * How far from upright each neck stands, which orders them back to front — 0486: the most upright is the
+ * furthest back, so a neck that reaches forward lies over one that rises behind it, the same way on every step.
+ */
+// @setup: one number a neck, solved once from the row.
+const NECK_DEPTH = (BOSSES.hydra.necks?.necks ?? []).map((neck) => Math.abs(foldTurn(neck.angle + Math.PI / 2)));
+
 function layNecks(w: World, hull: Entity | null): void {
   const necks = w.bossRow.necks;
   if (necks === undefined) return;
@@ -9850,6 +9869,16 @@ function layNecks(w: World, hull: Entity | null): void {
     fronting = true;
   }
   while (w.bossFront.size > collars) w.bossFront.releaseAt(w.bossFront.size - 1);
+  /*
+    ⚠️ **THE WHOLE ANIMAL FLASHES AS ONE — 0486.** A hit on the body lit the body and a hit on a head lit
+    that head, so the beast under fire was a patchwork of white and colour with coloured necks between.
+    What anything on it is lit by lights every piece of it, and only in the picture: `flashFor` on each
+    body is still its own, because the wash's gap and the shed (0334, 0480) read it as an event on THAT
+    body. The hull's sprite was chosen by `stepEntities` before this, and is chosen again every step.
+  */
+  let flashing = hull.flashFor > 0;
+  for (let k = 0; k < shown; k++) if (w.bossBody.at(k).flashFor > 0) flashing = true;
+  if (flashing) hull.sprite = hull.spriteHit;
   let collar = 0;
   let flame = 0;
   for (let k = 0; k < shown; k++) {
@@ -9860,12 +9889,20 @@ function layNecks(w: World, hull: Entity | null): void {
     const angle = NECK_RISE_FROM + (row.angle - NECK_RISE_FROM) * eased + sway;
     const rootAlong = hull.along + row.root.along;
     const rootAcross = hull.across + row.root.across;
-    const neck = w.bossAura.at(flames + k);
+    /*
+      ⚠️ **BACK TO FRONT, THE SAME WAY EVERY STEP — 0486.** The pool draws in slot order, so a neck's slot
+      is how many shown necks stand more upright than it: the one rising behind is drawn first and the
+      one reaching forward lies over it, whichever grew first.
+    */
+    let behind = 0;
+    for (let j = 0; j < shown; j++) if (NECK_DEPTH[j]! < NECK_DEPTH[k]! || (NECK_DEPTH[j] === NECK_DEPTH[k] && j < k)) behind++;
+    const neck = w.bossAura.at(flames + behind);
+    const head = w.bossBody.at(k);
     placeAt(neck, rootAlong, rootAcross, foldTurn(angle), fresh);
     neck.swell = 1;
-    neck.sprite = row.art;
+    neck.sprite = flashing ? row.artHit : row.art;
     neck.spriteBase = row.art;
-    neck.spriteHit = row.art;
+    neck.spriteHit = row.artHit;
     /*
       ⚠️ **THE COLLAR IS THE NECK'S ROOT, SO IT IS PLACED EXACTLY AS THE NECK IS — 0464**: the same root,
       the same turn, the same step. Anywhere else and the body's outline is back across the join, and
@@ -9875,19 +9912,19 @@ function layNecks(w: World, hull: Entity | null): void {
       const at = w.bossFront.at(collar++);
       placeAt(at, rootAlong, rootAcross, foldTurn(angle), fresh || fronting);
       at.swell = 1;
-      at.sprite = row.collar;
+      at.sprite = flashing ? row.collarHit : row.collar;
       at.spriteBase = row.collar;
-      at.spriteHit = row.collar;
+      at.spriteHit = row.collarHit;
     }
-    const head = w.bossBody.at(k);
-    const headAlong = rootAlong + Math.cos(angle) * row.reach;
-    const headAcross = rootAcross + Math.sin(angle) * row.reach;
+    // Where the head would stand on a straight neck, which is what it looks at the ship from.
+    const restAlong = rootAlong + Math.cos(angle) * row.reach;
+    const restAcross = rootAcross + Math.sin(angle) * row.reach;
     /*
       It looks at the ship, as far as its row lets it: a snout is at the drawing's −x, so a head
       facing straight down the lane at the player is turned nought, and one looking at the ship is
       turned by the ship's bearing less π.
     */
-    const bearing = foldTurn(Math.atan2(w.ship.across - headAcross, w.ship.along - headAlong) - Math.PI);
+    const bearing = foldTurn(Math.atan2(w.ship.across - restAcross, w.ship.along - restAlong) - Math.PI);
     /*
       ⚠️ **AND THE HEAD THAT IS FIRING A LASER HOLDS ITS AIM — 0452**, as the hull braces for one (0250).
       A beam is fixed across the lane for as long as it is held, and the mouth it is rooted in went on
@@ -9895,12 +9932,33 @@ function layNecks(w: World, hull: Entity | null): void {
       a few units beside the jaw it was drawn coming out of. Fresh heads have nothing to hold.
     */
     const holding = !fresh && hull.holdFor > 0 && hull.muzzleAt === k;
-    const turn = holding ? head.turn : bearing > necks.look ? necks.look : bearing < -necks.look ? -necks.look : bearing;
+    const looking = bearing > necks.look ? necks.look : bearing < -necks.look ? -necks.look : bearing;
+    /*
+      ⚠️ **AND THE HEAD TURNS ABOUT THE KNUCKLE, CARRYING ITS UPPER NECK — 0486.** Its bitmap holds the
+      upper neck drawn at the row's rest angle, so a head turned `t` has its upper neck `t` from rest; its
+      centre is the knuckle, where the lower neck has carried it, plus the run to the head turned by the
+      same. The neck it turns with is itself. It looks at the ship as it always has, as far as the knuckle
+      bends from the lower neck (`bend`): at rest that is never, and while a neck rises out of the acid it is
+      what brings the head up facing the fight rather than nose-down under the lane.
+    */
+    const neckTurn = foldTurn(angle - row.angle);
+    const bent = foldTurn(looking - neckTurn);
+    const turn = holding ? head.turn : foldTurn(neckTurn + (bent > necks.bend ? necks.bend : bent < -necks.bend ? -necks.bend : bent));
+    const joint = NECK_JOINTS[k]!;
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
+    const knuckleAlong = rootAlong + joint.knuckle[0] * c - joint.knuckle[1] * s;
+    const knuckleAcross = rootAcross + joint.knuckle[0] * s + joint.knuckle[1] * c;
+    const carried = row.angle + turn;
+    const cc = Math.cos(carried);
+    const cs = Math.sin(carried);
+    const headAlong = knuckleAlong + joint.upper[0] * cc - joint.upper[1] * cs;
+    const headAcross = knuckleAcross + joint.upper[0] * cs + joint.upper[1] * cc;
     placeAt(head, headAlong, headAcross, turn, fresh);
     head.radius = row.radius;
     head.spriteBase = row.head;
     head.spriteHit = row.headHit;
-    head.sprite = head.flashFor > 0 ? row.headHit : row.head;
+    head.sprite = flashing ? row.headHit : row.head;
     w.mouths[k * 2] = headAlong - Math.cos(turn) * row.mouth - hull.along;
     w.mouths[k * 2 + 1] = headAcross - Math.sin(turn) * row.mouth - hull.across;
     // The flames of a head that burns: along its neck, and last on the head itself — its own aura, or
@@ -9913,7 +9971,12 @@ function layNecks(w: World, hull: Entity | null): void {
       const onHead = f === NECK_FLAMES.length;
       const share = onHead ? 1 : NECK_FLAMES[f]!;
       const at = w.bossAura.at(flame++);
-      placeAt(at, rootAlong + Math.cos(angle) * row.reach * share, rootAcross + Math.sin(angle) * row.reach * share, 0, fresh);
+      // Up the lower neck to its knuckle, and past it up the upper neck the head has carried round — 0486.
+      const d = row.reach * share;
+      const bend = joint.knuckle[0];
+      const up = (d - bend) / (row.reach - bend);
+      if (d <= bend) placeAt(at, rootAlong + c * d, rootAcross + s * d, 0, fresh);
+      else placeAt(at, knuckleAlong + (headAlong - knuckleAlong) * up, knuckleAcross + (headAcross - knuckleAcross) * up, 0, fresh);
       at.swell = (aura.head * (onHead ? 1 : 0.55 + 0.25 * f)) / SERPENT_BODY_DIAMETER;
       const frame = aura.frames[(((tick + (NECK_FLAMES.length - f) * aura.stride) % aura.frames.length) + aura.frames.length) % aura.frames.length]!;
       at.sprite = frame;
@@ -9936,7 +9999,12 @@ function layNecks(w: World, hull: Entity | null): void {
       at.spriteHit = frame;
     }
   }
-  if (tail !== null) layTail(w, hull, tail, tail.art, w.bossAura.at(want - 1), fresh);
+  if (tail !== null) {
+    const end = w.bossAura.at(want - 1);
+    layTail(w, hull, tail, tail.art, end, fresh);
+    // And the tail with the rest of it — 0486.
+    if (flashing) end.sprite = tail.art.spriteHit;
+  }
 }
 
 /**
