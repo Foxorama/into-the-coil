@@ -1155,6 +1155,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     leapFromAlong: 0,
     leapFromAcross: 0,
     bossBeat: 0,
+    bossHeave: 0,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,

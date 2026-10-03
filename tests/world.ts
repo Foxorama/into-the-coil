@@ -131,6 +131,7 @@ export function inertLevel(): {
   leapFromAlong: number;
   leapFromAcross: number;
   bossBeat: number;
+  bossHeave: number;
   bossEntryAt: number;
   bossSettle: boolean;
   bossSpawned: boolean;
@@ -255,6 +256,7 @@ export function inertLevel(): {
     leapFromAlong: 0,
     leapFromAcross: 0,
     bossBeat: 0,
+    bossHeave: 0,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,
@@ -579,6 +581,7 @@ export function playableWorld(
     leapFromAlong: 0,
     leapFromAcross: 0,
     bossBeat: 0,
+    bossHeave: 0,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,
