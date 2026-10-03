@@ -852,8 +852,14 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     thing standing between it and 2.75 is a guard, and that is a conversation about the guard rather
     than about balance — `docs/decisions/0301-the-whip-throws-fireballs.md` has the numbers to have it
     with.
+
+    ⚠️ **1.1 A STEP, FROM 1.8 — 0479.** *"The 'fire' projectile rate is too fast, not that the fire rate
+    is too fast. there's barely any time to see it, let alone dodge it. on both the fish and the
+    hydra."* It was the fastest hostile bullet that flies by a third — spit 1.4, quill 1.3, flak 1.0 —
+    and the biggest, so at Savior it crossed from the fish's station to a ship at 60 in 0.77 s at the
+    whip's root and 0.4 s at its tip. At 1.1 it sits between flak and quill: 1.25 s at the root.
   */
-  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 1.75, health: 1, damage: 1, speed: 1.8, fission: SPENT_BY_ARRIVING, trail: 'ember' },
+  flame: { sprite: SPRITE.flame, spriteHit: SPRITE.flame, radius: 1.75, health: 1, damage: 1, speed: 1.1, fission: SPENT_BY_ARRIVING, trail: 'ember' },
   /*
     ⚠️ **THE BIGGEST AND THE SLOWEST HOSTILE BULLET, WHICH IS 0098'S TRADE AT ITS FAR END** — 0251.
     A chunk of volcanic rock falling on the lane: a fifteenth of the lane across, at under half the

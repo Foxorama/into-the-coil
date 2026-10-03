@@ -45,6 +45,7 @@ export const AUTHORED_IDS = [
   '0322-volley',
   '0323-struck',
   '0325-note',
+  '0479-seen',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -213,6 +214,11 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'every attack a boss throws states a note of the key, rather than gliding past one — 6 dB of `stands`',
     correctly: 'a boss whose attacks are a machine, where a pitch would be a lie about what the thing is',
     decision: '0325-the-fight-sounds-like-the-fight',
+  },
+  '0479-seen': {
+    claim: 'every bullet a boss throws takes at least 0.8 s across the 95 units from the fish’s station to a ship at 60, at Savior',
+    correctly: 'one fast shot telegraphed long enough to be read before it leaves — a beam is, and a bullet could be',
+    decision: '0479-the-flame-slows',
   },
 };
 

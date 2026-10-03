@@ -24,8 +24,8 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE: the two stages the play liked lead',
     edit: {
       path: 'src/content/bosses.ts',
-      find: "look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }",
-      replace: "look: ABLAZE, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }",
+      find: "look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.5 }",
+      replace: "look: ABLAZE, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.5 }",
     },
   },
   {

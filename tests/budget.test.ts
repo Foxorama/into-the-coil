@@ -109,8 +109,15 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * ⚠️ **AND 691 SINCE 0464, ON 0286's LINE AGAIN.** The hydra's five collars — where each neck leaves its
  * body, drawn again in front of it so the body's outline no longer crosses the join: five more blits of
  * a baked bitmap, in one fight. The particle share was not touched.
+ *
+ * ⚠️ **AND 744 SINCE 0479, ON THE ENEMY-BULLET LINE AND THE BLAST LINE.** The flame slowed from 1.8 a
+ * step to 1.1 — *"there's barely any time to see it"* — so it is on the screen longer, and the gyre's
+ * fight peaked at 174 hostile bullets where the pool held 150: fifty more slots, measured. And a void's
+ * rift is open for 150 steps where it was 90, so a banked salvo holds eight open: three more. Fifty-three
+ * more blits of a baked bitmap at the worst second of one fight, on a desktop target. The particle
+ * share was not touched.
  */
-const WORST_CASE = 691;
+const WORST_CASE = 744;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

@@ -448,7 +448,8 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * The shields' — *"if you cap shields, you get a void missile -> it flies forward and creates a
    * massive void zone that negates everything but your ship and bosses (does 10% max boss health
    * damage)."* Thrown to the bomb's reach; the rift is seventy-two units across — most of the lane —
-   * and open for a second and a half.
+   * and open for two and a half seconds: *"the void bomb needs to last 1 sec longer"*, 0479, from
+   * 0377's second and a half.
    *
    * ⚠️ **ON THE WARD'S TRIGGER SINCE 0447, AND IT WAS THE TUBES'** because it is a missile. *"The void
    * bomb will need to have its own unique button."* It is earned off the shield pickup's void face now,
@@ -465,7 +466,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     surge: null,
     storm: null,
     whirl: null,
-    rift: { radius: 36, steps: 90, bossShare: 0.1 },
+    rift: { radius: 36, steps: 150, bossShare: 0.1 },
     nova: null,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
