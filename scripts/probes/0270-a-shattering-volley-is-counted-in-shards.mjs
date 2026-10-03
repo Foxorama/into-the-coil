@@ -27,9 +27,13 @@ export const PROBES = [
       restored exactly, this break leaves the pilot 0.5 units at its narrowest on Burn, where before
       0384 it left none. What it still breaks is the hostile pool — the hoarfrost's last phase reaches
       140 of 150 shots alive — so that is the guard it is held to, and the lane has the probe below.
+
+      ⚠️ **AND AIMED AT THE GENTLEST TIER'S ROOM SINCE 0479**, which grew the pool to 200 for the slower
+      flame: the break no longer fills it (the guard holds 176), and what it does break is the room
+      Legendary promises — the hydra's fourth phase leaves 3.5 units where the ship is 4 across.
     */
     broke: 'a shattering volley spending the phase’s count again, all on one step, as it did before 0270',
-    guard: 'and the pool always has room for the volley after this one',
+    guard: 'and the tier that promises no challenge leaves a whole ship of room to stand in',
     edit: {
       path: 'src/app/boss.ts',
       find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
@@ -72,27 +76,13 @@ export const PROBES = [
       replace: '    const room = Number.POSITIVE_INFINITY;',
     },
   },
-  {
-    decision: '0270',
-    suite: 'tests/crowd.test.ts',
-    /*
-      The pool rule, which 0263 wrote and drove over one phase of one boss. Widening the ceiling to
-      six shards puts the frost ship's last phase into a full pool at `burn` — the state where
-      `src/sim/pool.ts` silently drops the next volley and the shatter of an add with it.
-
-      ⚠️ **MOVED TO THE CEILING'S ONE READER BY 0371, AND THE STAGGER TAKEN OFF THERE TOO.** Six
-      shards half a second apart never have enough alive at once to fill the pool, so widening the
-      constant alone went STILL GREEN. The same six, on one step, as the shard was thrown when this
-      was written — `src/app/boss.ts` is the one place both can be said in one edit.
-    */
-    broke: 'a ceiling wide enough to fill the hostile pool, thrown on one step, so the volley after it is not thrown',
-    guard: 'and the pool always has room for the volley after this one',
-    edit: {
-      path: 'src/app/boss.ts',
-      find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
-      replace: '  const ceiling = bullet.fission.length > 0 ? 6 : Number.POSITIVE_INFINITY;\n  bullet = { ...bullet, stagger: undefined };',
-    },
-  },
+  /*
+    ⚠️ **"A CEILING WIDE ENOUGH TO FILL THE HOSTILE POOL" WAS PROBED HERE, AND 0479 RETIRED IT.** Six
+    shards on one step filled a pool of 150; the pool is 200 since the flame slowed, and no ceiling a
+    volley can throw fills it — a volley's fragments are read off the shot's row when it bursts, so a
+    break in `src/app/boss.ts` cannot make them heavier. The pool guard is still probed, by 0263's
+    snowflake of twenty-four, which floods it through the row.
+  */
   {
     decision: '0270',
     suite: 'tests/difficulty.test.ts',

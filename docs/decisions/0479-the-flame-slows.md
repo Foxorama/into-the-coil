@@ -76,6 +76,18 @@ Savior* — a whip's tip at `1 + reach` — read on every run, and unable to fai
 | the hostile-shot pool at 150 under the slower flame | `EVERY WALL ARRIVES WHOLE` |
 | the blast pool at six under the longer rift | `a salvo thrown as fast as the triggers allow opens every rift it throws` |
 
+**And CI's whole proof found three probes the bigger pool stranded**, each of which had flooded a pool of
+150 to prove *the frost never fills the pool* and *the pool always has room for the volley after this
+one* (`tests/crowd.test.ts`, under 176 now):
+
+- **0263's snowflake** goes from twelve flakes to twenty-four on an unstaggered shard — the same break,
+  heavy enough for 200 — and reddens its guard again;
+- **0270's ceiling taken off** no longer fills the pool, and what it still breaks is the room Legendary
+  promises (the hydra's fourth phase leaves 3.5 units for a ship 4 across): **re-aimed there**;
+- **0270's ceiling of six on one step** is **retired**: a volley's fragments are read off the shot's row
+  when it bursts, so no break in `src/app/boss.ts` can make a volley heavy enough for 200, and 0263's
+  probe floods the pool through the row.
+
 ## Not held by any guard
 
 **The flame's speed itself.** Put back to 1.8, nothing reddens; the taste prints it unmet. That is the

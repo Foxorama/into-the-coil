@@ -127,12 +127,13 @@ export const PROBES = [
       break is the row as 0263 wrote it, unstaggered, with the snowflake doubled; the row keeps both
       fields in one place, so it is one edit.
     */
-    broke: 'a snowflake of twelve on an unstaggered shard, so one volley becomes seventy-two flakes at once',
+    // ⚠️ Twenty-four since 0479, which grew the pool from 150 to 200: seventy-two at once no longer fill it.
+    broke: 'a snowflake of twenty-four on an unstaggered shard, so one volley becomes a hundred and forty-four flakes at once',
     guard: 'the frost never fills the pool',
     edit: {
       path: 'src/content/shots.ts',
       find: "    stagger: 40,\n    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },",
-      replace: "    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 12 },",
+      replace: "    fission: [\n      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },\n      { after: { least: 36, most: 48 }, into: 'ring', shots: 24 },",
     },
   },
 ];
