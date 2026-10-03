@@ -10,10 +10,11 @@ export const PROBES = [
     // The frame noticing the lurch and telling nobody: the dice hang still whatever the ship does.
     broke: 'the jolt read and never raised',
     guard: 'THE ASK: a hard push swings them back once, and a hard stop forward once',
+    // Re-anchored by 0466, which rewrote `stepJolt`: the same break, the frame holding its tongue.
     edit: {
       path: 'src/app/frame.ts',
-      find: '    w.joltWay = way;\n    w.onJolt(way);',
-      replace: '    w.joltWay = way;',
+      find: '  w.joltHold = JOLT_HOLD_STEPS;\n  w.onJolt(way);',
+      replace: '  w.joltHold = JOLT_HOLD_STEPS;',
     },
   },
   {
@@ -22,10 +23,11 @@ export const PROBES = [
     // Any change in speed a lurch: the dice swing on every nudge of the stick.
     broke: 'the jolt raised on any change at all',
     guard: 'and a stick eased over or held moves nothing',
+    // Re-anchored by 0466: the burst mark dropped to nothing, so an eased stick crosses it.
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (Math.abs(change) >= JOLT_AT && way !== w.joltWay) {',
-      replace: '  if (Math.abs(change) >= JOLT_EASED && way !== w.joltWay) {',
+      find: 'const JOLT_BURST = DICE.burst * SHIP_SPEED;',
+      replace: 'const JOLT_BURST = 0.01 * SHIP_SPEED;',
     },
   },
   {

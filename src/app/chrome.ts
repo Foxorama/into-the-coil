@@ -35,7 +35,7 @@ import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pi
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
 import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
-import { HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
+import { DICE, HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -2091,6 +2091,19 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   The dice — 0461: a pair on two strings from the middle of the plate's lower edge, each as big as a
   count and showing its pips. The outer element drifts; the inner swings against a lurch, back from a
   push and forward from a stop, and settles. Two classes a way, swapped, so a second lurch swings again.
+
+  ⚠️ **ONE SWING AT A TIME, AND THE FRAME HOLDS IT — 0466.** The swap restarts the animation from its
+  first keyframe, so a lurch inside a swing snapped the dice from thirty degrees to straight; the frame
+  refuses every lurch until the swing's own length has run, and that length is the dice row's
+  swing length in the ships table, written here once for the four swings so the two cannot drift
+  apart.
+
+  And they are plush — 0466, *"the dice on the hud need to look a bit cooler"*: a cube seen from a
+  corner, a top face lit and a side face shaded so it reads as a solid rather than a tile, the classic
+  red fur (the enemy's ink warmed with the shot's orange, mixed by the shell — no palette role is this
+  red), a soft bloom of
+  its own colour round the whole cube, which is what fuzzy looks like at twenty pixels, and pips in the
+  light ink with a shadow under each.
 */
 .itc-playing-hud-dice { display: none; position: absolute; left: 50%; top: 100%; width: 0; height: 0; pointer-events: none; }
 .itc-playing-hud-walnut .itc-playing-hud-dice { display: block; animation: itc-hud-dice 3.6s ease-in-out infinite alternate; }
@@ -2099,7 +2112,7 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   position: absolute;
   left: -0.04em;
   top: 0;
-  width: 0.08em;
+  width: 0.1em;
   min-width: 1.5px;
   background: color-mix(in srgb, var(--itc-lit) 80%, transparent);
   transform-origin: 50% 0;
@@ -2113,36 +2126,75 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   width: 1.1em;
   height: 1.1em;
   margin-left: -0.55em;
-  border-radius: 0.24em;
-  --itc-pip: var(--itc-void);
-  box-shadow:
-    0 0 0 0.05em color-mix(in srgb, var(--itc-lit) 85%, transparent),
-    0 0 0.25em 0.1em color-mix(in srgb, var(--itc-lit) 45%, transparent),
-    inset -0.1em -0.12em 0.14em color-mix(in srgb, var(--itc-void) 30%, transparent),
-    0 0.2em 0.35em color-mix(in srgb, var(--itc-void) 70%, transparent);
+  border-radius: 0.18em;
+  /* --itc-fur is set by the shell from the palette, on the dice: the plate carries no red of its own. */
+  --itc-fur-lit: color-mix(in srgb, var(--itc-fur) 76%, var(--itc-lit));
+  --itc-fur-dark: color-mix(in srgb, var(--itc-fur) 60%, var(--itc-void));
+  --itc-pip: var(--itc-lit);
+  --itc-pip-shade: color-mix(in srgb, var(--itc-fur) 45%, var(--itc-void));
+  /*
+    A hairline of the light ink round every face, and a halo of the void under the bloom: asked for,
+    *"the red dice need to be visible on ember nebula and the dark heart against those reddish
+    backdrops"* — red on a rose sky is found by its edge, as the counts are by their void halo.
+  */
+  --itc-rim: 0 0 0 0.05em color-mix(in srgb, var(--itc-lit) 90%, transparent);
+  box-shadow: var(--itc-rim);
+  filter:
+    drop-shadow(0 0 0.12em color-mix(in srgb, var(--itc-fur) 85%, transparent))
+    drop-shadow(0 0 0.08em var(--itc-void))
+    drop-shadow(0 0.15em 0.25em color-mix(in srgb, var(--itc-void) 60%, transparent));
+}
+.itc-playing-hud-die::before, .itc-playing-hud-die::after { content: ''; position: absolute; box-shadow: var(--itc-rim); }
+.itc-playing-hud-die::before {
+  left: 0;
+  top: -0.26em;
+  width: 100%;
+  height: 0.26em;
+  border-radius: 0.08em 0.08em 0 0;
+  background: var(--itc-fur-lit);
+  transform: skewX(-45deg);
+  transform-origin: 0 100%;
+}
+.itc-playing-hud-die::after {
+  top: 0;
+  right: -0.26em;
+  width: 0.26em;
+  height: 100%;
+  border-radius: 0 0.08em 0.08em 0;
+  background: var(--itc-fur-dark);
+  transform: skewY(-45deg);
+  transform-origin: 0 0;
 }
 .itc-playing-hud-dice-strand-a .itc-playing-hud-die { transform: rotate(-24deg); }
 .itc-playing-hud-dice-strand-b .itc-playing-hud-die { transform: rotate(18deg); }
 .itc-playing-hud-die-five {
   background:
-    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 73% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 27% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    var(--itc-lit);
+    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 73% 27%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 27% 73%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at calc(27% + 0.04em) calc(27% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(73% + 0.04em) calc(27% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(50% + 0.04em) calc(50% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(27% + 0.04em) calc(73% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(73% + 0.04em) calc(73% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 35% 30%, var(--itc-fur-lit) 0, var(--itc-fur) 55%, var(--itc-fur-dark) 100%);
 }
 .itc-playing-hud-die-three {
   background:
-    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.1em, transparent 0.12em),
-    var(--itc-lit);
+    radial-gradient(circle at 27% 27%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 50% 50%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at 73% 73%, var(--itc-pip) 0 0.09em, transparent 0.11em),
+    radial-gradient(circle at calc(27% + 0.04em) calc(27% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(50% + 0.04em) calc(50% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at calc(73% + 0.04em) calc(73% + 0.04em), var(--itc-pip-shade) 0 0.1em, transparent 0.12em),
+    radial-gradient(circle at 35% 30%, var(--itc-fur-lit) 0, var(--itc-fur) 55%, var(--itc-fur-dark) 100%);
 }
-.itc-playing-hud-dice-back-a { animation: itc-hud-dice-back-a 1.8s ease-out; }
-.itc-playing-hud-dice-back-b { animation: itc-hud-dice-back-b 1.8s ease-out; }
-.itc-playing-hud-dice-fore-a { animation: itc-hud-dice-fore-a 1.8s ease-out; }
-.itc-playing-hud-dice-fore-b { animation: itc-hud-dice-fore-b 1.8s ease-out; }
+.itc-playing-hud-dice-back-a { animation: itc-hud-dice-back-a ${DICE.swingSeconds}s ease-out; }
+.itc-playing-hud-dice-back-b { animation: itc-hud-dice-back-b ${DICE.swingSeconds}s ease-out; }
+.itc-playing-hud-dice-fore-a { animation: itc-hud-dice-fore-a ${DICE.swingSeconds}s ease-out; }
+.itc-playing-hud-dice-fore-b { animation: itc-hud-dice-fore-b ${DICE.swingSeconds}s ease-out; }
 @keyframes itc-hud-dice { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
 @keyframes itc-hud-dice-back-a { 0% { transform: none; } 14% { transform: rotate(34deg); } 34% { transform: rotate(-20deg); } 52% { transform: rotate(11deg); } 70% { transform: rotate(-5deg); } 86% { transform: rotate(2deg); } 100% { transform: none; } }
 @keyframes itc-hud-dice-back-b { 0% { transform: none; } 14% { transform: rotate(34deg); } 34% { transform: rotate(-20deg); } 52% { transform: rotate(11deg); } 70% { transform: rotate(-5deg); } 86% { transform: rotate(2deg); } 100% { transform: none; } }
@@ -3792,6 +3844,13 @@ export function makeChrome(
   const dice = document.createElement('div');
   dice.className = 'itc-playing-hud-dice';
   dice.setAttribute('aria-hidden', 'true');
+  /*
+    The classic red fur — 0466. No palette role is this red, so it is the enemy's ink warmed toward the
+    shot's orange and deepened, mixed here from the palette as the readout's own inks are (0451),
+    so the high-contrast palette answers it. On the dice and not in the stylesheet, because the plate
+    inherits the strip's inks and the score's reds are set on the screens' root, which it is not under.
+  */
+  dice.style.setProperty('--itc-fur', shade(mix(colours.enemy, colours.bullet, 0.3), -0.18));
   const swing = document.createElement('div');
   swing.className = 'itc-playing-hud-dice-swing';
   for (const [strand, face] of [

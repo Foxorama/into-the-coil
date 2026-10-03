@@ -55,7 +55,7 @@ import { animate, type Body, type Entity, reset, stepEntities, turnFor } from '.
 // restated so a scattered pickup's wall and the ship's own clamp are one number — 0100, and the same
 // reason `src/app/mount.ts` imports `PLAYER_LEAD` for the mark that draws it (0074).
 // `SCROLL_PER_STEP` also sizes the rift's carve slots, which are allocated before any world exists — 0377.
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, flyShip, holdStation } from '../sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN, SCROLL_PER_STEP, SHIP_SPEED, flyShip, holdStation } from '../sim/flight.ts';
 import {
   BURN_ASK,
   BURN_ROOT,
@@ -84,7 +84,7 @@ import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
@@ -107,7 +107,7 @@ import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type N
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, muzzleAcrossOf, muzzleAlongOf, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
-import type { Frame } from './loop.ts';
+import { STEP_MS, type Frame } from './loop.ts';
 import { multiplierFor } from '../content/score.ts';
 
 /** How far in front of the ship a shot appears, in world units — clear of its own hurtbox. */
@@ -1269,17 +1269,22 @@ export interface World {
   /** The level's points or the streak moved. Fired on a change only — a kill or a hit. */
   onScore: (points: number, streak: number) => void;
   /**
-   * The ship's speed along the lane in the camera's frame at the last step, which way the last jolt
-   * went (nought once it has eased), and whether the burn between two places was on —
-   * `docs/decisions/0461-the-ships-are-jazzed.md`. What `stepJolt` reads a hard push or a hard stop off.
+   * The ship's speed along the lane in the camera's frame at the last step, whether it has burst
+   * past the dice's mark and not yet braked under it, how many steps of the last swing are left to
+   * run, and whether the burn between two places was on —
+   * `docs/decisions/0461-the-ships-are-jazzed.md`, `docs/decisions/0466-the-dice-swing-once.md`.
+   * What `stepJolt` reads a burst or a brake off, and what holds the dice still while they swing.
    */
   joltVel: number;
-  joltWay: number;
+  joltArmed: boolean;
+  joltHold: number;
   joltWarp: boolean;
   /**
-   * The ship lurched along the lane: `1` a hard push forward (or the burn between places lighting),
-   * `-1` a hard stop — 0461. Fired on the step it starts and not again until it has eased, so the
-   * chrome may be ordinary DOM code: it swings the estate's fuzzy dice.
+   * The ship lurched along the lane: `1` a burst forward (or the burn between places lighting) or a
+   * brake out of reverse — the dice swing back; `-1` a brake from forward or a burst into reverse — the
+   * dice swing forward. 0461, and 0466: fired on the step the lurch is crossed and not again until the
+   * swing it started has settled, so the chrome may be ordinary DOM code: it swings the estate's
+   * fuzzy dice, once.
    */
   onJolt: (way: number) => void;
   /**
@@ -4734,48 +4739,61 @@ function stepExhaust(w: World): void {
 }
 
 /**
- * How much the ship's speed along the lane must change in one step to be a lurch, and how little before
- * the next may fire — 0461, in world units a step in the camera's frame.
+ * The dice's marks on the ship's speed along the lane, in world units a step in the camera's frame,
+ * and the hold — 0466. The shares are the dice row's (`DICE`, `src/content/ships.ts`); the speed is
+ * `SHIP_SPEED` at full stick.
  *
- * ⚠️ **A FULL PUSH FROM REST IS 0.34, AND SO IS LETTING GO FROM FULL SPEED.** `flyShip` closes a fifth
- * of the gap to the ask each step (`FLIGHT_RESPONSE`) and the ask is `SHIP_SPEED` at full stick, so the
- * first step of a hard push or a hard stop changes the speed by 1.7 × 0.2; reversing is twice that, and
- * a full diagonal is 0.24. A stick eased over stays under 0.2 and the dice only drift on their own sway. And it
- * re-arms below 0.06, which a lurch decays to in eight steps, so one push is one swing — though a stop
- * on the heels of a push swings them back at once.
+ * ⚠️ **A CROSSING, NOT A CHANGE.** 0461 fired on a change of 0.2 in a step in a new direction, and a
+ * reversal changes the speed by 0.68 — so a player going back and forth fired back, fore, back, fore
+ * as fast as the stick turned, and every one restarted the swing from nought. Played: *"they jerk
+ * around all over the place."* `flyShip` closes a fifth of the gap to the ask each step
+ * (`FLIGHT_RESPONSE`), so a full push from rest crosses the burst mark on its fifth step and a full
+ * stop crosses the brake mark on its eighth; half a stick each way reaches 0.85 and crosses neither.
  */
-const JOLT_AT = 0.2;
-const JOLT_EASED = 0.06;
+const JOLT_BURST = DICE.burst * SHIP_SPEED;
+const JOLT_BRAKE = DICE.brake * SHIP_SPEED;
+/** One swing, in steps; the next lurch waits for it. The chrome's animation is the same `DICE` number. */
+const JOLT_HOLD_STEPS = Math.round((DICE.swingSeconds * 1000) / STEP_MS);
 
 /**
- * Whether the ship lurched along the lane this step, for the fuzzy dice on the estate's dash — 0461.
- * Asked for: *"have them sway when the ship accelerates or stops hard."* In the camera's frame, which is
+ * Whether the ship lurched along the lane this step, for the fuzzy dice on the estate's dash — 0461,
+ * once per swing since 0466. Asked for: *"have them sway when the ship accelerates or stops hard"*,
+ * then *"a forward burst or hard brake … an uninterruptable sway."* In the camera's frame, which is
  * the one the player flies in (0023): the scroll carries the ship and is not a lurch — except the burn
  * between two places, which is the hardest push the ship ever makes and is one.
  *
- * Nothing allocates: three reads, a compare, and a call on the steps it fires.
+ * The arming is read on every step, hold or no hold, so a burst inside a swing still sets up the brake
+ * that follows it; only the FIRING waits. Nothing allocates: a few reads, compares, and a call on the
+ * steps it fires.
  */
 function stepJolt(w: World): void {
+  if (w.joltHold > 0) w.joltHold--;
   const warping = w.warp > 0;
-  if (warping && !w.joltWarp) w.onJolt(1);
+  const lit = warping && !w.joltWarp;
   w.joltWarp = warping;
   if (w.shipPool.size === 0) {
     w.joltVel = 0;
+    w.joltArmed = false;
     return;
   }
   const vel = w.ship.velAlong - w.scrollPerStep;
-  const change = vel - w.joltVel;
+  const speed = vel < 0 ? -vel : vel;
+  let way = 0;
+  if (lit) {
+    way = 1;
+  } else if (!w.joltArmed && speed >= JOLT_BURST) {
+    // A burst: the dice swing against the way the ship went.
+    w.joltArmed = true;
+    way = vel > 0 ? 1 : -1;
+  } else if (w.joltArmed && speed <= JOLT_BRAKE) {
+    // A brake: the dice carry on the way the ship was going.
+    w.joltArmed = false;
+    way = w.joltVel > 0 ? -1 : 1;
+  }
   w.joltVel = vel;
-  if (Math.abs(change) < JOLT_EASED) {
-    w.joltWay = 0;
-    return;
-  }
-  // A stop straight after a push is its own lurch, eased or not: only the same way twice waits.
-  const way = change > 0 ? 1 : -1;
-  if (Math.abs(change) >= JOLT_AT && way !== w.joltWay) {
-    w.joltWay = way;
-    w.onJolt(way);
-  }
+  if (way === 0 || w.joltHold > 0) return;
+  w.joltHold = JOLT_HOLD_STEPS;
+  w.onJolt(way);
 }
 
 /**

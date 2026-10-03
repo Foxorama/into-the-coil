@@ -1167,9 +1167,12 @@ its queue is six items, one PR each, in the order the report gives and for the r
 - [0465](decisions/0465-the-chrome-fits-the-phone.md) — **built**: the playing strip sized against the
   short axis and the trigger discs held between a fingertip and 66 px. The one number left to a play
   is its floor.
-- **Next**: the dice (one swing per burst or brake, red fur), the ray gun's sheet of three (A chosen),
-  the Firebird back to black and gold, the fighter's cigar pods, and last the splash that waits for a
-  press with the one pilot screen that launches — each answered in the report's table.
+- [0466](decisions/0466-the-dice-swing-once.md) — **built**: a lurch is a burst or a brake crossing,
+  the swing is held for its own length, and the dice are red fur rimmed in light so they read on the
+  reddish places.
+- **Next**: the ray gun's sheet of three (A chosen), the Firebird back to black and gold, the
+  fighter's cigar pods, and last the splash that waits for a press with the one pilot screen that
+  launches — each answered in the report's table.
 
 ### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
 

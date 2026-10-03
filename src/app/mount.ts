@@ -1242,9 +1242,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     shownPoints: 0,
     shownStreak: 0,
     onScore: (): void => {},
-    // Standing still at mount, and replaced below with the chrome — 0461.
+    // Standing still at mount, and replaced below with the chrome — 0461, held once per swing by 0466.
     joltVel: 0,
-    joltWay: 0,
+    joltArmed: false,
+    joltHold: 0,
     joltWarp: false,
     onJolt: (): void => {},
     // Replaced below, once `dispatch` exists. A function property cannot be written before the
