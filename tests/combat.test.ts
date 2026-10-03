@@ -478,6 +478,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     // 0442: the rings that arrived this step, each a burst before the blast pairing.
     landed: makeDeaths(16),
     burstRng: makeRng('combat').stream('burst'),
+    shedRng: makeRng('combat').stream('shed'),
+    bossShedIn: 0,
     arcRng: makeRng('combat').stream('arc'),
     stormRng: makeRng('combat').stream('storm'),
     rainRng: makeRng('combat').stream('rain'),
@@ -625,6 +627,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     // 0442: the rings that arrived this step, each a burst before the blast pairing.
     landed: makeDeaths(16),
     burstRng: makeRng('combat').stream('burst'),
+    shedRng: makeRng('combat').stream('shed'),
+    bossShedIn: 0,
     arcRng: makeRng('combat').stream('arc'),
     stormRng: makeRng('combat').stream('storm'),
     rainRng: makeRng('combat').stream('rain'),

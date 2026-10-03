@@ -1951,6 +1951,20 @@ export interface BossRow extends Body {
    */
   wreck: Wreck | null;
   /**
+   * The fragment it sheds when a hit lands, or `null` for none — 0480.
+   *
+   * ⚠️ **ASKED FOR, THREE TIMES IN ONE PLAY**: *"no damage shows on the boss."* The flash says a hit
+   * landed and the bar says how much is left; nothing between them said *this animal is hurt*. A
+   * fragment of what it is made of is thrown from where the ship's fire meets it each time a hit arms
+   * the flash, so under any gun it sheds as often as it flashes and no more.
+   *
+   * ⚠️ **REQUIRED, AND EVERY ROW SAYS ITS OWN** —
+   * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`: shared code holds
+   * the throw, and the default is nothing. The seven real bosses each shed what they are; the mid-bosses
+   * shed nothing until someone draws what they would.
+   */
+  shed: number | null;
+  /**
    * What a gun's hit on THIS boss is worth, where it is not the gun's own `bossWeight` — 0372.
    *
    * ⚠️ **OPTIONAL, ON 0282's DEFAULT SHAPE.** The gun's row says what it is worth on a boss and
@@ -2485,6 +2499,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss,
     spriteHit: SPRITE.bossHit,
     radius: 11,
@@ -2575,6 +2590,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss2,
     spriteHit: SPRITE.boss2Hit,
     radius: 12.5,
@@ -2647,6 +2663,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss3,
     spriteHit: SPRITE.boss3Hit,
     radius: 11.5,
@@ -2722,6 +2739,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss4,
     spriteHit: SPRITE.boss4Hit,
     radius: 13,
@@ -2777,6 +2795,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss5,
     spriteHit: SPRITE.boss5Hit,
     radius: 14,
@@ -2854,6 +2873,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss6,
     spriteHit: SPRITE.boss6Hit,
     radius: 12.5,
@@ -2939,6 +2959,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: null,
     sprite: SPRITE.boss7,
     spriteHit: SPRITE.boss7Hit,
     radius: 16,
@@ -3167,6 +3188,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: { stand: 60, settle: 150, mouth: -100, wall: SPRITE.rootWall, opens: 90 },
     burn: null,
     wreck: null,
+    shed: SPRITE.shedScale,
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -3712,6 +3734,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: SPRITE.shedEmber,
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     // Grown with the drawing in 0381 (42 → 50 across): the same share of the tile it always was.
@@ -3822,6 +3845,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: SPRITE.shedFeather,
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -3961,6 +3985,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       window at Savior; the gun and the tube alone do not.
     */
     wreck: { gravity: 0.022, tumble: 0.065, wreckage: SPRITE.boss11Wreck, wreckageHit: SPRITE.boss11WreckHit, settle: 60, health: 0.22 },
+    shed: SPRITE.shedTooth,
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -4109,6 +4134,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
+    shed: SPRITE.shedIce,
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     // 21 since 0399, from 13: the same share of a drawing grown from 33 to 54.
@@ -4253,6 +4279,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
+    shed: SPRITE.shedFlesh,
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 21,
@@ -4447,6 +4474,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
+    shed: SPRITE.shedGlass,
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,

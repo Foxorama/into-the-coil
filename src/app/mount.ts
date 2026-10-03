@@ -1073,6 +1073,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Its own stream per 0021: a fragment's direction is the most cosmetic roll in the game and it
     // must not be able to move a wave by one enemy.
     burstRng: makeRng('proof-scene').stream('burst'),
+    shedRng: makeRng('proof-scene').stream('shed'),
+    bossShedIn: 0,
     // What a mid-boss's death drops is its own concern, so its own stream — 0021, 0256.
     dropRng: makeRng('proof-scene').stream('drop'),
     arcRng: makeRng('proof-scene').stream('arc'),

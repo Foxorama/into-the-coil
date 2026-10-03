@@ -74,7 +74,7 @@ import { clearLine, type Corridor } from './corridor.ts';
  * default shape. A body that wanted its own duty would say so on its row; none does, and *no row can
  * forget it* is an argument for a default rather than for a constant.
  */
-const FLASH_GAP_DUTY = 2;
+export const FLASH_GAP_DUTY = 2;
 
 /**
  * Arm a body's hit flash, if it is allowed to flash — 0334.

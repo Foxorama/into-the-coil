@@ -135,6 +135,8 @@ function stationKeepingWorld(surface: Surface): World {
     // 0442: the rings that arrived this step. Nothing fires here, so it stays empty.
     landed: makeDeaths(8),
     burstRng: makeRng('interp').stream('burst'),
+    shedRng: makeRng('interp').stream('shed'),
+    bossShedIn: 0,
     arcRng: makeRng('interp').stream('arc'),
     stormRng: makeRng('interp').stream('storm'),
     rainRng: makeRng('interp').stream('rain'),

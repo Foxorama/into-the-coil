@@ -477,6 +477,8 @@ export function playableWorld(
     hits: makeDeaths(CAPACITY.missiles),
     landed: makeDeaths(CAPACITY.playerShots),
     burstRng: makeRng('test').stream('burst'),
+    shedRng: makeRng('test').stream('shed'),
+    bossShedIn: 0,
     dropRng: makeRng('test').stream('drop'),
     arcRng: makeRng('test').stream('arc'),
     stormRng: makeRng('test').stream('storm'),
