@@ -352,7 +352,7 @@ One PR at a time, each from `main`, each photographed before it is handed over.
 1. **BUILT — [0465](../docs/decisions/0465-the-chrome-fits-the-phone.md).** **The chrome on a phone** (§2) — the smallest, the clearest defect, and measured.
 2. **BUILT — [0466](../docs/decisions/0466-the-dice-swing-once.md).** **The dice** — one swing per lurch, started by a burst or a brake; the cube and the fur. Asked for while it was built: *"the red dice need to be visible on ember nebula and the dark heart against those reddish backdrops"* — a light rim and a void halo, photographed in both.
 3. **BUILT — [0467](../docs/decisions/0467-the-ray-gun-is-a-turret.md).** **The ray gun** (§3) — direction A, built straight from the player's choice rather than from a sheet of three; B and C are a sheet pass away if A does not land on play.
-4. **The Firebird** (§3).
+4. **BUILT — [0468](../docs/decisions/0468-the-firebird-is-black-and-gold.md).** **The Firebird** (§3) — near-black read by gold pinstripes, one gold bird, a shaker scoop, the cyan as light.
 5. **The fighter's pods** (§3).
 6. **The splash waits for a press, and the pilot screen launches** (§1 and above) — the largest, and
    it waits on the first answer below.

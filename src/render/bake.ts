@@ -2685,37 +2685,40 @@ function paintTurrets(
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
 function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
-  const body = mix(palette.space, palette.player, 0.2);
+  /*
+    ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
+    Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
+    was the void mixed a fifth toward the player's cyan (navy), the beltline was a cyan pinstripe where
+    the Trans Am's is gold, the phoenix was gold AND the shot's orange the length of the flank, a chrome
+    side pipe was the brightest band on the car, and the launcher was a grey box. The reference is the
+    1977 Trans Am SE: jet black lacquer, gold pinstriping along every body line, gold snowflake wheels,
+    gold glass, a gold shaker scoop, one gold bird. A black car on a dark void is not found by lifting
+    the black; it is found by what the Bandit was found by on the road at night — the gold lines round
+    every panel. So: the body near black, warm, with one sheen along the roof; a gold pinstripe along
+    the beltline, the rocker, both wheel arches, the nose and the T-top; the bird small, gold and one
+    colour, a third of the flank; the launcher a shaker scoop in the lacquer with a gold lip; and the
+    player's cyan kept as LIGHT and not paint — the T-top's bar and the headlamp's glow — so the player
+    still finds themselves (0441) without the car turning blue. The 0461 jazz and the 0463 pinstripe
+    are in the history; what survives of them is the sheen, the rims, the lamps and the spoiler.
+  */
+  const body = shade(mix(palette.space, palette.hazard, 0.08), 0.16);
   const gold = palette.hazard;
+  const stripe = shade(gold, 0.15);
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
   const outline = box(firebirdOutline(stage));
   ctx.fillStyle = body;
   trace(ctx, f, outline);
   seal(ctx);
-  /*
-    ── JAZZED — 0461 ──────────────────────────────────────────────────────────────────────────────
-    Asked for: *"overall can we make the player ship's jazzed up and cooler looking, they look fine now,
-    but they could be way cooler."* The lacquer gets a sheen — lit along the roof, dark at the sills —
-    and a highlight down its roofline; a spoiler on the ducktail (the outline's); a chrome side pipe
-    along the sill; deep-dish rims with chrome caps; lamps that glow; and the player's cyan as neon under
-    the car, where a street racer wears it.
-
-    ⚠️ **THE NEON IS GONE, AND SO IS THE BAND — 0463.** *"can we remove the blue glow from under the
-    firebird, it doesn't look that great"*: at the shipped camera it was a cyan smear between the
-    wheels, under a car already striped cyan the height of a door. The stripe went too — it was 1.8
-    of the predecessor's units deep, which is the 2.5-pixel floor for a solid mark, so it could not be
-    thinner and be paint, and the phoenix sat on cyan rather than on lacquer. The player's cyan is a
-    pinstripe down the shoulder now, and the phoenix is gold on black.
-  */
-  shaded(ctx, f, at(0, -5), at(0, 6), shade(body, 0.2), shade(body, -0.45), outline);
-  seam(ctx, f, shade(body, 0.7), 0.035, box([
+  // The lacquer: lit along the roof, deep at the sills, and one highlight down the roofline.
+  shaded(ctx, f, at(0, -5), at(0, 6), shade(body, 0.3), shade(body, -0.35), outline);
+  seam(ctx, f, shade(body, 0.9), 0.035, box([
     [-8.6, -1.1],
     [-2.2, -3.9],
     [5.8, -4.1],
     [10.4, -1.6],
-  ]), 0.8);
-  // The tyres, rubber in the slate trim, a gold dish in each and a chrome cap.
+  ]), 0.7);
+  // The tyres: rubber in the slate trim, a gold snowflake dish in each and a chrome cap.
   for (const x of [12, -10]) {
     const [cx, cy] = at(x, 6);
     disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 3.6 * 0.062);
@@ -2723,14 +2726,31 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     disc(ctx, f, shade(gold, -0.35), cx, cy, 1.7 * 0.062);
     disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.95 * 0.062);
   }
-  // The side pipe along the sill, chrome lit along its top.
-  shaded(ctx, f, at(0, 3.2), at(0, 5), shade(palette.trim, 0.7), shade(palette.trim, 0.1), box([
-    [-6.2, 3.2],
-    [8.2, 3.2],
-    [8.2, 5],
-    [-6.2, 5],
-  ]));
-  // The greenhouse: gold glass, the side window and the windscreen, the T-top bar between them.
+  /*
+    The gold pinstripes, each inside the silhouette (`tests/accents.test.ts`): the beltline from the
+    tail to the nose, the rocker between the wheels, an arch over each wheel stopped short of the sill,
+    and the nose's edge.
+  */
+  const pin = 0.045;
+  seam(ctx, f, stripe, pin, box([
+    [-11, 1.35],
+    [-4, -0.4],
+    [6, -1],
+    [16.6, -0.9],
+  ]), 0.95, true);
+  seam(ctx, f, stripe, pin, box([
+    [-6.4, 3.4],
+    [8.4, 3.4],
+  ]), 0.9);
+  for (const x of [12, -10]) {
+    seam(ctx, f, stripe, pin, box(roundel(x, 6, 4.1, 12, Math.PI + 0.36, Math.PI * 2 - 0.36)), 0.9, true);
+  }
+  seam(ctx, f, stripe, pin, box([
+    [18.4, -0.6],
+    [18.4, 2.2],
+  ]), 0.9);
+  // The greenhouse: gold glass, the side window and the windscreen, and the T-top bar between them
+  // in the player's cyan — the one light on the roof.
   poly(ctx, f, shade(gold, -0.3), box([
     [-7, -1.9],
     [-2.2, -4.2],
@@ -2748,69 +2768,55 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [3, -1.9],
     [1.2, -1.9],
   ]));
-  // The shoulder line, a pinstripe in the player's cyan where the predecessor's beltline was gold — 0463.
-  seam(ctx, f, palette.player, 0.055, box([
-    [-11, 1.35],
-    [-4, -0.4],
-    [6, -1],
-    [16.6, -0.9],
-  ]), 0.95, true);
+  seam(ctx, f, palette.player, 0.05, box([
+    [2.1, -4.05],
+    [2.1, -2.2],
+  ]), 0.95);
   /*
-    The phoenix across the flank — 0463: its tail in flame trailing back and down toward the rear
-    wheel, its body and crested head toward the nose, and one wing raised and swept back under the
-    glass with its feathers along the lower edge. On the lacquer, so the gold is the brightest thing on
-    the car's side.
+    The bird: small, gold, one colour, a third of the flank on the door under the glass — a crested
+    head toward the nose, two wings up, a forked tail trailing back. ONE polygon: 0463's three slivers
+    at half their size were each under 0106's floor (1.7 px across on 1280×720), and a decal is one
+    shape anyway.
   */
-  poly(ctx, f, palette.bullet, box([
-    [4.5, 1],
-    [-1, 2.2],
-    [-9, 2.9],
-    [-4.5, 1.6],
-    [-8.5, 1.2],
-    [0, 0.8],
-  ]));
   poly(ctx, f, gold, box([
-    [4, 0.9],
-    [9, -0.2],
-    [13, -0.5],
-    [15.6, 0.1],
-    [13.4, 0.5],
-    [14.6, 1.1],
-    [12, 1.2],
-    [8, 1.6],
+    [9.6, 0],
+    [8.6, -1.4],
+    [7.6, -0.6],
+    [6, -1.8],
+    [4.6, -0.5],
+    [2.6, -1.8],
+    [1.6, -0.4],
+    [0.4, 0.2],
+    [-2.4, 1.2],
+    [-0.6, 1.1],
+    [-2.2, 2.4],
+    [1.4, 2],
+    [5.6, 2.2],
+    [8.6, 1.2],
   ]));
-  poly(ctx, f, gold, box([
-    [9, 0],
-    [5, -1.5],
-    [0, -1.8],
-    [-4.5, -1.3],
-    [-1.5, -0.7],
-    [-3.2, -0.1],
-    [0.5, 0.1],
-    [-1.8, 0.8],
-    [3.5, 0.8],
-  ]));
-  // The phoenix's eye, in the lacquer.
-  disc(ctx, f, body, ...at(13.2, -0.05), 0.95 * 0.062);
-  // The launcher on the hood: a slate block, and the steel star the blades leave from.
-  poly(ctx, f, palette.trim, box([
+  // The shaker scoop on the hood, in the lacquer with a gold lip, and the steel star the blades leave from.
+  shaded(ctx, f, at(0, -4.8), at(0, -2), shade(body, 0.35), shade(body, -0.2), box([
     [11.6, -4.8],
     [15.6, -4.8],
     [15.6, -2],
     [11.6, -2],
   ]));
-  poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.35)));
+  seam(ctx, f, stripe, pin, box([
+    [12.2, -4.35],
+    [15, -4.35],
+  ]), 0.95);
+  poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.2)));
   // Its turrets on the roof, in its own black and gold.
   paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
-  // A headlamp in the impact ink at the nose, a tail lamp in the shot's orange — never the enemy's red —
-  // each with its light round it.
+  // A headlamp in the impact ink at the nose with the player's cyan round it, a tail lamp in the shot's
+  // orange — never the enemy's red — with its own light.
   poly(ctx, f, palette.impact, box([
     [16.8, -0.7],
     [18.7, -0.7],
     [18.7, 1.2],
     [16.8, 1.2],
   ]));
-  glow(ctx, f, palette.impact, ...at(17.6, 0.25), 0.11, 0.6);
+  glow(ctx, f, palette.player, ...at(17.6, 0.25), 0.11, 0.6);
   poly(ctx, f, palette.bullet, box([
     [-16.8, 2.6],
     [-15, 2.6],
@@ -2818,12 +2824,8 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [-16.8, 4.6],
   ]));
   glow(ctx, f, palette.bullet, ...at(-15.6, 3.6), 0.11, 0.55);
-  /*
-    The spoiler is the car's own lacquer with a gold edge along the wing — 0463. It was solid gold, and
-    at the shipped camera a gold T over the deck read as a hammer laid on the boot rather than as part
-    of the body; the gold on its leading edge still says it is there.
-  */
-  shaded(ctx, f, at(0, -0.9), at(0, 1.75), shade(body, 0.3), shade(body, -0.2), box([
+  // The spoiler in the lacquer with a gold edge along the wing — 0463.
+  shaded(ctx, f, at(0, -0.9), at(0, 1.75), shade(body, 0.35), shade(body, -0.2), box([
     [-17.2, -0.9],
     [-12.6, -0.9],
     [-12.6, 0.9],
