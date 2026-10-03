@@ -1938,6 +1938,21 @@ export function gunWeightOn(boss: BossRow, gun: WeaponKind): number {
 }
 
 /**
+ * How far down the lane, toward the ship, the animal reaches from its centre — 0476: its radius, or
+ * its tentacles where they hang further. What the aura's gap is measured to (0092): the boss is heard
+ * from the nearest part of it.
+ *
+ * ⚠️ **ONLY THE JELLYFISH'S ANSWER MOVES.** It went back from 152 to 190 so nothing could fly behind
+ * it, and measured to the bell alone its aura at the back of the box fell to 0.04 of its ceiling —
+ * under the tenth `tests/music.test.ts` holds as *attenuated, not muted*. Its tentacles hang forty units
+ * toward the ship; measured to them it is 0.14. Every other row has no tendrils, so its gap is its hull.
+ */
+export function reachDownLane(boss: BossRow): number {
+  // `reach` is an along offset, and down the lane toward the ship is negative.
+  return boss.tendrils === undefined ? boss.radius : Math.max(boss.radius, -boss.tendrils.reach);
+}
+
+/**
  * A room: the place a fight happens, and the camera stopping in it — 0335.
  *
  * ── THE CAMERA COMES TO REST AT AN AUTHORED DISTANCE, AND THE HULL FOLLOWS IT ────────────────────
@@ -4327,9 +4342,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
     uncoil: null,
     /*
       The moon jellies — 0255: from three quarters of its health, two a volley from the top edge. And a
-      jelly that drifts into it or any tentacle of it feeds it a twentieth of its health — 0404.
+      jelly that drifts into it or any tentacle of it feeds it — 0404.
+
+      ⚠️ **A FIFTIETH AT SAVIOR, NOT A TWENTIETH — 0476.** At a twentieth the fight did not finish from
+      most places a player can stand: 0386 had measured the player's damage the day before the feeding
+      existed, and a third of the rain lands on a body that spans 52 units across. *"The jellyfish never
+      opens"* was the report. Tentacles still feed it, as 0404 was asked; the rate was the defect.
+
+      ⚠️ **AND A SHARE OF THE AUTHORED HEALTH, NOT THE TIER'S** — `feedBoss` — so a jelly gives back the
+      same number of shots at every tier. A share of the tier's full health made Burn's fight, two and a
+      half times as long, land two and a half times the feeds: it finished from nowhere, with any gun.
+      0.032 of the authored 1890 is a fiftieth of Savior's.
     */
-    fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75, feeds: 0.05 },
+    fall: { kind: 'body', enemy: 'moonJelly', every: 75, count: 2, from: 0.75, feeds: 0.032 },
     chill: null,
     muzzle: null,
     chain: null,
@@ -4380,8 +4405,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 17,
     // Doubled by 0260, from 1100. 1890 from 1870 — 0441: the arc at the true cap sat on the forty.
     health: 1890,
+    /*
+      ⚠️ **THE LIGHTNING AT 1.4, NOT ITS 1.5 — 0476**, on the gyre's and the pterodactyl's pattern.
+      Re-banded for the feeding, the open bell's doubled damage runs over a wider band, and the arc took
+      the fight in 38.5 s against 0260's forty; the other three guns were 49–64 s.
+    */
+    gunWeights: { arc: 1.4 },
     damage: 3,
-    station: 152,
+    /*
+      ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you
+      shouldn't be able to fly around it."* At 152 the bell covered 135–169 and left 33 units behind it in
+      a box that runs to 202.7; at 190 its front is at 207, past the box, so nothing flies behind it — the
+      hydra's answer at 0459. Beside it stays possible, and the tentacles still hang to 150.
+    */
+    station: 190,
     // Zero, on the gyre's terms (0332): a thing hung over a heart set into the place does not drift along it.
     drift: 0,
     driftWavelength: 300,
@@ -4407,14 +4444,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
         tier 54, 42, 36, 30, 30 steps became 54, 54, 48, 42, 36, and the lasers' warning and hold are
         unchanged. The first ring stays at 54 there because the arc's forty-second fight is over
         before an eighth volley at anything slower.
+
+        ⚠️ **RE-SOLVED BY 0476, ON THE FEEDING 0386 NEVER SAW.** 0386 solved these lines the day before
+        the rain fed the bell, so the phases under it — where the jellies fall — ran twice the others.
+        `scripts/solve-phase-bands.mjs medusa`, flown with a fiftieth a feed from 190: the lines move
+        to 0.82, 0.63, 0.47 and 0.31, and the open bell has the widest band because a feed closes it.
       */
       { upTo: 1, fireEvery: 72, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.81, fireEvery: 66, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
-      { upTo: 0.6, fireEvery: 60, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
+      { upTo: 0.82, fireEvery: 66, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
+      { upTo: 0.63, fireEvery: 60, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.47, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
-      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
+      { upTo: 0.31, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
     ],
   },
 };

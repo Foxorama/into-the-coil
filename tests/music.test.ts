@@ -63,7 +63,7 @@ import { resolve, dirname } from 'node:path';
 /** The repository root, for the one guard here that reads a file rather than a value. */
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 import { MUSIC_ROLES } from '../src/content/arrangement.ts';
-import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, reachDownLane } from '../src/content/bosses.ts';
 import { SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
 import { CUES } from '../src/content/cues.ts';
 import { cueOfFlight } from '../src/app/frame.ts';
@@ -1428,9 +1428,13 @@ describe('the boss brings an aura with it', () => {
   */
   /** Where the ship may sit, in the camera's frame — the box a boss fight is flown inside. */
   const BOX_BACK = PLAYER_ALONG_MARGIN;
-  /** The gap to a boss holding station, from a given place in the box. Hulls, not centres. */
+  /**
+   * The gap to a boss holding station, from a given place in the box. Hulls, not centres — and the
+   * nearest part of the animal down the lane, which is the jellyfish's tentacles since 0476, as the
+   * shell measures it (`reachDownLane`).
+   */
   const gapFrom = (along: number, kind: (typeof BOSS_KINDS)[number]): number =>
-    BOSSES[kind].station - along - BOSSES[kind].radius - SHIPS[SHIP_KINDS[0]!].radius;
+    BOSSES[kind].station - along - reachDownLane(BOSSES[kind]) - SHIPS[SHIP_KINDS[0]!].radius;
 
   it('0092 — THE RANGE COVERS THE BOX, so *far away* is somewhere the player can actually be', () => {
     /*

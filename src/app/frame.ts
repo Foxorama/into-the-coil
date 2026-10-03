@@ -2789,7 +2789,11 @@ function bossJustDied(w: World): boolean {
  * ⚠️ **ASKED FOR**: *"if a falling jellyfish hits the boss, the boss regains 5% health and the jellyfish
  * disappears -> this includes if they hit a tentacle."* Any body of the fall's kind overlapping the hull
  * or any body of the animal (`bossBody` — the tentacles) is gone on this step, in a burst where it met
- * it, and the hull has the fall's `feeds` share of its full health back, never past full.
+ * it, and the hull has the fall's `feeds` share of its AUTHORED health back, never past full.
+ *
+ * ⚠️ **THE AUTHORED HEALTH AND NOT THE TIER'S — 0476**, so a feed is the same number of shots at every
+ * tier. A share of the tier's full health made the feeds a fixed share per jelly while a harder tier's
+ * fight runs longer and lets more of them land: on Burn it never finished.
  *
  * ⚠️ **AND A HEAL OVER A PHASE'S LINE IS THAT PHASE AGAIN.** `phaseFor` reads the health, so a jellyfish
  * fed back past its last fifth shuts its bell and stops the void until it is knocked back down — asked,
@@ -2807,7 +2811,7 @@ function feedBoss(w: World): void {
     let touches = overlaps(e, hull, 1);
     for (let j = 0; !touches && j < w.bossBody.size; j++) touches = overlaps(e, w.bossBody.at(j), 1);
     if (!touches) continue;
-    hull.health = Math.min(w.bossFullHealth, hull.health + fall.feeds * w.bossFullHealth);
+    hull.health = Math.min(w.bossFullHealth, hull.health + fall.feeds * w.bossRow.health);
     // Where it met the animal, read before the slot is handed back.
     const along = e.along;
     const across = e.across;
