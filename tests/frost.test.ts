@@ -597,19 +597,23 @@ describe('0263 — the frost ship shatters', () => {
     frame.step();
     expect(world.enemyShots.size, 'the shard did not open into the fan').toBe(shards * fan.shots);
     pinFuses(d, 1, end);
+    let widest = 0;
     for (let i = 0; i < world.enemyShots.size; i++) {
       const bolt = world.enemyShots.at(i);
       expect(bolt.turnsLeft, 'a bolt is not at the second stage').toBe(1);
       // It will burst again, so it keeps the shard's art — 0390; only the flake that melts is dressed.
       expect(bolt.sprite, 'a bolt that will still burst is drawn as one that will not').toBe(SHOTS.frost.sprite);
-      // About the shard's OWN heading — not the ship's — and split, so neither bolt is the shard.
+      // About the shard's OWN heading — not the ship's — and split, so the bolts are not one line.
       const off = between(headingOf(d, i), Math.PI);
       expect(off, 'a bolt is not inside the fan').toBeLessThanOrEqual(fan.spread / 2 + 1e-6);
-      expect(off, 'a bolt flies exactly where the shard was going, so the fan is one line').toBeGreaterThan(0.1);
+      widest = Math.max(widest, off);
       // In the player's units: on the screen, and ahead of the ship's box's near edge.
       expect(bolt.along, `the split is off the far edge of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan);
       expect(bolt.along, `the split is behind the camera at the ${end} fuse`).toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN);
     }
+    // ⚠️ Since 0482's three, the middle bolt flies the shard's own heading by construction; what may not
+    // happen is every bolt on it, which is one line.
+    expect(widest, 'every bolt flies exactly where the shard was going, so the fan is one line').toBeGreaterThan(0.1);
     expect(debrisNear(d, splitAlong, splitAcross, 5), 'the split was not drawn').toBeGreaterThanOrEqual(BURST.fission);
 
     // The second fuse, and the snowflake.
@@ -927,5 +931,93 @@ describe('0459 — the cold pulses', () => {
     expect(at(0), 'the cold at rest already reaches the far side of the screen').toBe(false);
     expect(at(chill.swell - 1), 'the cold at its top does not reach the ship').toBe(true);
     expect(at(chill.swell + chill.retract), 'a cold that has drawn back still slows').toBe(false);
+  });
+});
+
+/**
+ * The frost is a cloud — `docs/decisions/0482-the-frost-is-a-cloud.md`. Played: *"essentially it's still
+ * two cluster bombs really close together and rather than creating a navigable cloud of shrapnel, it
+ * creates either too much or it creates a non-event."*
+ */
+describe('0482 — the frost is a cloud', () => {
+  it('THE REPORTED ONE, IN LANE UNITS AND SECONDS: a shard’s two bursts are a second apart, and its flakes at their melt lie within a fifth of the lane of where they opened', () => {
+    /*
+      Driven at both ends of both fuses: one wall from the frost ship, every shard followed through its
+      split, its bolts through their rings, and every flake to the step before it melts. The cloud's
+      size is each flake's distance from the point its ring opened at — so a flake flying at the shard's
+      whole speed, which is the report's *"too much, then nothing"*, is seventy units out.
+    */
+    const stages = SHOTS.frost.fission;
+    for (const end of ['least', 'most'] as const) {
+      const d = frostAt(1);
+      const { world, frame } = d;
+      const hold = (): void => {
+        world.ship.health = world.shipRow.health;
+        world.ship.invulnFor = 2;
+        world.ship.along = world.cameraAlong + PLAYER_ALONG_MARGIN;
+        world.ship.across = 3;
+        world.bossPool.at(0).fireIn = 999;
+        world.bossPool.at(0).sprayLeft = 0;
+      };
+      // Each shot's fuse pinned once, on the step it is first seen lit at this stage.
+      const pinned = new Set<object>();
+      const pin = (stage: number): void => {
+        for (let i = 0; i < world.enemyShots.size; i++) {
+          const shot = world.enemyShots.at(i);
+          if (shot.turnsLeft !== stage || shot.fireIn <= 0 || pinned.has(shot)) continue;
+          pinned.add(shot);
+          shot.fireIn = stages[stage]!.after[end];
+        }
+      };
+      const at = (stage: number): number => {
+        let n = 0;
+        for (let i = 0; i < world.enemyShots.size; i++) if (world.enemyShots.at(i).turnsLeft === stage) n++;
+        return n;
+      };
+      hold();
+      world.bossPool.at(0).fireIn = 1;
+      frame.step();
+      expect(at(0), 'the wall threw nothing').toBeGreaterThan(0);
+      pin(0);
+      let step = 0;
+      let split = -1;
+      let opened = -1;
+      const centres: { along: number; across: number }[] = [];
+      let widest = 0;
+      let melted = 0;
+      for (; step < 600; step++) {
+        hold();
+        // The bolts' positions on the step before they open, which is where their rings open.
+        const bolts: { along: number; across: number }[] = [];
+        for (let i = 0; i < world.enemyShots.size; i++) {
+          const s = world.enemyShots.at(i);
+          if (s.turnsLeft === 1) bolts.push({ along: s.along - world.cameraAlong, across: s.across });
+        }
+        frame.step();
+        pin(1);
+        if (split < 0 && at(0) === 0) split = step;
+        if (opened < 0 && split >= 0 && at(2) > 0) opened = step;
+        // Every bolt's last place is where its ring may open, so each is a centre a flake is measured from.
+        if (split >= 0) centres.push(...bolts);
+        if (opened >= 0) {
+          for (let i = 0; i < world.enemyShots.size; i++) {
+            const flake = world.enemyShots.at(i);
+            if (flake.turnsLeft !== 2) continue;
+            let near = Infinity;
+            for (const c of centres) near = Math.min(near, Math.hypot(flake.along - world.cameraAlong - c.along, flake.across - c.across));
+            widest = Math.max(widest, near);
+          }
+          if (at(2) === 0 && at(1) === 0) {
+            melted = step;
+            break;
+          }
+        }
+      }
+      expect(split, `no shard split at the ${end} fuse`).toBeGreaterThanOrEqual(0);
+      expect(opened, `no bolt opened at the ${end} fuse`).toBeGreaterThan(split);
+      expect(melted, `the cloud never melted at the ${end} fuse`).toBeGreaterThan(opened);
+      expect((opened - split) / STEPS_PER_SECOND, `the two bursts of a shard were ${((opened - split) / STEPS_PER_SECOND).toFixed(2)} s apart at the ${end} fuse`).toBeGreaterThanOrEqual(1);
+      expect(widest, `a flake ended ${widest.toFixed(1)} units from where its ring opened at the ${end} fuse`).toBeLessThanOrEqual(ACROSS_SPAN / 5);
+    }
   });
 });
