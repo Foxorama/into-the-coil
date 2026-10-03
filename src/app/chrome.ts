@@ -2611,9 +2611,9 @@ export interface Chrome {
    * Called on a change of the displayed fraction, never per frame: `src/app/frame.ts` quantises the
    * fraction and fires only when the quantum moves, on `onHealth`'s terms. `row` is the boss whose
    * bar it is, so the phase thresholds can be marked on it — rebuilt when the row changes, not per
-   * call.
+   * call. `null` is a bar with no phases to mark, which is a wreck's — 0475.
    */
-  setBoss(fraction: number, row: BossRow): void;
+  setBoss(fraction: number, row: BossRow | null): void;
   /**
    * Redraw the score — 0428: the run's points so far and the streak they are being scored on. Called
    * on a change, never per frame, on `setHud`'s terms; the count-up between two values is the
@@ -4232,7 +4232,7 @@ export function makeChrome(
       }
       paintTriggers();
     },
-    setBoss(fraction: number, row: BossRow): void {
+    setBoss(fraction: number, row: BossRow | null): void {
       bossFraction = fraction;
       if (fraction >= 0) {
         const shown = Math.min(1, fraction);
@@ -4243,13 +4243,14 @@ export function makeChrome(
           ⚠️ **The notches are the row's phase thresholds, and they are cut once per row.** Every
           `upTo` below one is a place the fight turns — the boss fires wider, flies differently, and
           since 0111 sheds pieces — so the bar says where those are before they happen. The first
-          row's `upTo` is 1 and is the bar's own end, so it gets no mark.
+          row's `upTo` is 1 and is the bar's own end, so it gets no mark. A wreck's bar has no phases
+          to mark, and comes as `null` — 0475.
         */
         if (row !== bossRowShown) {
           bossRowShown = row;
           for (const notch of bossNotches) notch.remove();
           bossNotches.length = 0;
-          for (const phase of row.phases) {
+          for (const phase of row === null ? [] : row.phases) {
             if (phase.upTo >= 1 || phase.upTo <= 0) continue;
             const notch = document.createElement('div');
             notch.className = 'itc-playing-boss-notch';

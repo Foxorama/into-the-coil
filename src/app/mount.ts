@@ -1023,6 +1023,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     bossWheelIn: 0,
     bossWreckTurn: 0,
     wreckDown: false,
+    wreckBeaten: false,
     wreckIn: 0,
     roomOpen: 0,
     shipPool,
@@ -3045,7 +3046,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     end boss is on the field, which is the only time the fraction is not negative.
   */
   world.onBoss = (fraction: number): void => {
-    chrome.setBoss(fraction, world.bossRow);
+    // A beaten boss's bar is its wreck's, which stands in no phase — 0475.
+    chrome.setBoss(fraction, world.bossBeaten ? null : world.bossRow);
   };
   // The score — 0428: the frame says a kill or a hit moved it, and the run's banked levels are added here.
   world.onScore = syncScore;

@@ -42,6 +42,7 @@ import { reset } from '../src/sim/entity.ts';
 import { SPRITE } from '../src/content/sprites.ts';
 import { bodyOf } from './bodies.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import { LOADOUTS, flyWreck } from '../scripts/weigh-wreck.mjs';
 
 /** The gyre alone, a short way in, with no mid-boss in front of it. */
 const GYRE_ONLY: LevelRow = {
@@ -1001,44 +1002,125 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(world.scrollPerStep, 'the world never started again, so the player cannot fly onwards').toBeGreaterThan(0);
   });
 
-  it('and nothing may shoot a wreck, because it is a corpse and not a target', () => {
+  /*
+    ⚠️ **0337's *"nothing may shoot a wreck"* WAS HERE, AND 0475 RETIRES IT ON THE PLAYER'S WORD.** It
+    held that a shot parked on the falling wreck flew through: *"I want this to be killable as a first
+    in game achievement."* What it was guarding against — a wreck shot out of the pool soft-locking the
+    room — is held by *the room opens even if the wreck is gone*, below, which never depended on it.
+  */
+  it('THE ASK: a shot lands on the wreck, it flashes, and killing it bursts it and opens the room at once', () => {
     /*
-      ⚠️ **FOUND BY PHOTOGRAPHING IT — 0337, and 0027 is the rule.** The wreck is the same hull in the
-      same pool, so `playerShots` × `bossPool` went on pairing all the way down: the player's fire was
-      swallowed by a dead thing, which flashed white for each one and cued `hit`. On the bench, where
-      the scrub pins the boss's health, it was worse than untidy — the pairing killed the wreck a
-      second time and it vanished mid-fall. `shootable` is gated on `bossBeaten` now.
-
-      Driven by parking a shot on the wreck every step of the fall: if the pairing is live the pool
-      eats them, and if it is not they fly through.
+      ⚠️ **0475.** Driven by parking a shot on the wreck every step from the death: each one is spent on
+      it and lights it, its health falls, and the step it runs out it is gone with a burst and a cue,
+      `wreckBeaten` latched, and the far wall parting on that step rather than after the settle.
     */
+    const room = BOSSES.gyre.room;
+    if (room === null) throw new Error('the gyre has no room');
     const { world, frame } = gyreOnStation();
     world.bossPool.at(0).health = 1;
+    const cues: string[] = [];
+    const heard = world.onCue;
+    world.onCue = (cue, across) => {
+      cues.push(cue);
+      heard(cue, across);
+    };
     let parked = 0;
     let eaten = 0;
     let flashed = 0;
-    for (let step = 0; step < 20 * STEPS_PER_SECOND && !world.wreckDown; step++) {
+    let killedAt = -1;
+    let openedAt = -1;
+    let laid = -1;
+    for (let step = 0; step < 20 * STEPS_PER_SECOND && openedAt < 0; step++) {
       world.ship.health = world.shipRow.health;
       world.ship.invulnFor = 999;
+      if (world.bossBeaten) world.fireIn = Number.MAX_SAFE_INTEGER;
       if (world.bossBeaten && world.bossPool.size > 0) {
+        if (laid < 0) laid = world.bossPool.at(0).health;
         const body = world.bossPool.at(0);
         world.playerShots.clear();
         const shot = world.playerShots.spawn();
         if (shot !== null) {
-          reset(shot, body.along, body.across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+          reset(shot, body.along, body.across, bodyOf(SPRITE.bullet, 0.9, 1, 40));
           parked++;
         }
       }
+      cues.length = 0;
       frame.step();
-      if (world.bossBeaten && world.bossPool.size > 0) {
-        if (world.playerShots.size === 0 && parked > 0) eaten++;
+      if (world.bossBeaten && parked > 0 && world.bossPool.size > 0) {
+        if (world.playerShots.size === 0) eaten++;
         if (world.bossPool.at(0).flashFor > 0) flashed++;
       }
+      if (world.wreckBeaten && killedAt < 0) {
+        killedAt = step;
+        expect(cues, 'the wreck died and nothing was heard').toContain('bossDown');
+      }
+      if (world.roomOpen > 0 && openedAt < 0) openedAt = step;
     }
-    expect(parked, 'no shot was ever parked on the wreck, so this guard drove nothing').toBeGreaterThan(20);
-    expect(eaten, `${eaten} of ${parked} shots were swallowed by the wreck`).toBe(0);
-    expect(flashed, 'the wreck flashed as though it had been hit').toBe(0);
-    expect(world.bossPool.size, 'the wreck was shot out of existence on its way down').toBe(1);
+    expect(parked, 'no shot was ever parked on the wreck, so this guard drove nothing').toBeGreaterThan(3);
+    expect(laid, 'the wreck came back with the boss’s health rather than its own').toBeLessThan(world.bossFullHealth);
+    expect(eaten, `${eaten} of ${parked} shots were spent on the wreck`).toBeGreaterThan(0);
+    expect(flashed, 'the wreck took hits and never showed one').toBeGreaterThan(0);
+    expect(killedAt, 'the wreck could not be killed').toBeGreaterThan(0);
+    expect(world.bossPool.size, 'the wreck was killed and is still on the field').toBe(0);
+    expect(openedAt - killedAt, 'the wreck was killed and the room waited out the settle anyway').toBeLessThanOrEqual(1);
+  });
+
+  it('THE BAR: gone the step the gyre dies, then the wreck’s own, then gone when it is killed', () => {
+    /*
+      ⚠️ **REPORTED: *"when it dies there's a health bar still visible."*** `layWreck` respawned the
+      hull with the row's raw health, so the bar came back at 1500 over the tier's full health — 100% on
+      Legend, 62.5% on Savior, 39% on Burn — over a husk nothing could hit, and stayed through the clear.
+      `tests/boss-bar.test.ts` drives only the serpent, which has no wreck, so nothing saw it. Driven at
+      Savior, reading what the shell is handed.
+    */
+    const { world, frame } = gyreOnStation('savior');
+    const shown: number[] = [];
+    world.onBoss = (fraction) => shown.push(fraction);
+    world.bossPool.at(0).health = 1;
+    let diedAt = -1;
+    let killedAt = -1;
+    const at: number[] = [];
+    for (let step = 0; step < 20 * STEPS_PER_SECOND && killedAt < 0; step++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 999;
+      if (world.bossBeaten) world.fireIn = Number.MAX_SAFE_INTEGER;
+      // Once it is down, a tenth of its own health a step — a bar that falls in ten notches and then empties.
+      if (world.wreckDown && world.bossPool.size > 0) world.bossPool.at(0).health -= (BOSSES.gyre.wreck!.health * world.bossFullHealth) / 10;
+      if (world.wreckDown && world.bossPool.size > 0 && world.bossPool.at(0).health <= 0) {
+        world.bossPool.at(0).health = 0.001;
+        const shot = world.playerShots.spawn();
+        if (shot !== null) reset(shot, world.bossPool.at(0).along, world.bossPool.at(0).across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+      }
+      shown.length = 0;
+      frame.step();
+      if (world.bossBeaten && diedAt < 0) {
+        diedAt = step;
+        expect(shown, 'the gyre died and its bar stayed up').toContain(-1);
+      }
+      if (diedAt >= 0 && step > diedAt && shown.length > 0) at.push(...shown);
+      if (world.wreckBeaten) killedAt = step;
+    }
+    expect(diedAt, 'the gyre never died').toBeGreaterThanOrEqual(0);
+    expect(at[0], 'the wreck’s bar did not come up full of its own health').toBe(1);
+    expect(at.some((f) => f > 0 && f < 1), 'the wreck’s bar never fell as it was hurt').toBe(true);
+    expect(killedAt, 'the wreck was never killed').toBeGreaterThan(0);
+    expect(at[at.length - 1], 'the wreck was killed and its bar stayed up').toBe(-1);
+  });
+
+  it('THE PLAYER’S LINE, at Savior: one bomb, the first tube and full autofire kill the wreck, and one short does not', () => {
+    /*
+      ⚠️ **IN THE PLAYER'S UNITS — A LOADOUT AND A WINDOW — 0027.** *"It should take 1 bomb, 1 missile
+      upgrade and full autofire to completely kill it."* `scripts/weigh-wreck.mjs` flies the gyre to its
+      death in its shut room and then each loadout at the wreck, from the death to the step it is
+      killed or carried off the screen. The line is drawn at Savior, the tuned tier (0356); 0475 has
+      what the other two tiers read.
+    */
+    for (const loadout of LOADOUTS) {
+      if (loadout.pass === null) continue;
+      const { killed, window } = flyWreck(loadout, { difficulty: 'savior' });
+      if (loadout.pass) expect(killed, `${loadout.name} did not kill the wreck in its ${window.toFixed(1)} s`).not.toBeNull();
+      else expect(killed, `${loadout.name} killed the wreck, which the player's line says it may not`).toBeNull();
+    }
   });
 
   it('THE REPORTED ONE: a wall still on the field when the gyre dies does not wait for the ship', () => {

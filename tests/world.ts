@@ -183,6 +183,7 @@ export function inertLevel(): {
   bossWheelIn: number;
   bossWreckTurn: number;
   wreckDown: boolean;
+  wreckBeaten: boolean;
   wreckIn: number;
   roomOpen: number;
 } {
@@ -199,6 +200,7 @@ export function inertLevel(): {
     bossWheelIn: 0,
     bossWreckTurn: 0,
     wreckDown: false,
+    wreckBeaten: false,
     wreckIn: 0,
     roomOpen: 0,
     // A collision fixture has no ears. `playableWorld` is the one that records cues, because it is
@@ -428,6 +430,7 @@ export function playableWorld(
     bossWheelIn: 0,
     bossWreckTurn: 0,
     wreckDown: false,
+    wreckBeaten: false,
     wreckIn: 0,
     roomOpen: 0,
     shipPool,

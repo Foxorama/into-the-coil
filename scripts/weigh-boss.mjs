@@ -150,7 +150,14 @@ export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, shor
       killed = (step - start) / STEPS_PER_SECOND;
       phase = Number.NaN;
     }
-    if (start >= 0 && world.bossPool.size === 0) return { seconds: (step - start) / STEPS_PER_SECOND, killed: killed ?? (step - start) / STEPS_PER_SECOND, phaseAt };
+    /*
+      ⚠️ **THE FIGHT ENDS AT THE BOSS'S DEATH, NOT WHEN THE POOL EMPTIES — 0475.** For six of the seven
+      they are one step. The gyre's wreck lies in the pool for eight and a half seconds after it, and
+      this returned then — so every gun's gyre fight was read eight and a half seconds long, and
+      0260's forty-second floor in `tests/level.test.ts` passed the arc at 41.1 s on a kill at 32.5. It
+      surfaced when the wreck could be killed and the padding shrank.
+    */
+    if (start >= 0 && (world.bossPool.size === 0 || world.bossBeaten)) return { seconds: (step - start) / STEPS_PER_SECOND, killed: killed ?? (step - start) / STEPS_PER_SECOND, phaseAt };
   }
   if (start < 0) throw new Error(`${kind} never came on to be fought`);
   return { seconds: null, phaseAt };
