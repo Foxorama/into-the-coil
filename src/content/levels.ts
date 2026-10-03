@@ -120,6 +120,23 @@ export const MIX_RUN = 3;
 export const FIGHT_FIRING_IN = 3;
 
 /**
+ * How far short of a mid-boss's `at` a firing wave already counts as its fight's, in world units — 0472.
+ *
+ * ⚠️ **THE WAVES THAT FLY IN WITH THE BOSS WERE NEVER THINNED.** Reported: *"there's some spots,
+ * especially around minibosses, that it's too bullety."* 0267 thinned the waves put down while the
+ * mid-boss is in the pool; but the mid-boss is put down on the same horizon as the waves, so every
+ * firing wave authored in the stretch just before it is on the field already and arrives on the
+ * screen with the hull — 0441's picket and lancer before the sentinel, three lancers and a sower
+ * before the shoal mother. `scripts/weigh-fight.mjs` at Savior, with the thinning set to admit
+ * nothing, still saw 1.3–4.6 firing bodies per ten seconds arrive on each fight.
+ *
+ * ⚠️ **A BUDGET, AND THE PLAY OWNS THE NUMBER.** Two thirds of the widest view: a wave this close is
+ * still crossing the screen when the hull settles on station. 0472 has the measurement at 0, this
+ * and the whole view.
+ */
+export const FIGHT_LEAD = 190;
+
+/**
  * How long each level's mid-boss fight should take, in seconds, at the loadout it is met with — 0269.
  *
  * ── THE LADDER IS IN SECONDS BECAUSE HEALTH IS NOT A THING THE PLAYER CAN FEEL ──────────────────
@@ -1056,13 +1073,15 @@ const SHOAL: readonly WaveEntry[] = [
   { at: 3060, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
   { at: 3117, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
   { at: 3175, enemy: 'charger', formation: 'column', count: 6, lane: 50 },
-  { at: 3232, enemy: 'sower', formation: 'column', count: 5, lane: 44 },
+  // Four, not five or six, from here to 3463 — 0472: three sowers in four waves were the level's
+  // busiest two seconds at Savior outside its end boss, 35 live lances.
+  { at: 3232, enemy: 'sower', formation: 'column', count: 4, lane: 44 },
   { at: 3290, enemy: 'drifter', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
   { at: 3348, enemy: 'charger', formation: 'column', count: 6, lane: 45 },
   // A sower since 0259, and it was a charger: the stretch from 3290 to 3463 was three non-firing
   // waves and the level's longest dry stretch at the capped loadout — `scripts/weigh-bullets.mjs`.
-  { at: 3405, enemy: 'sower', formation: 'line', count: 6, lane: 55, origin: 'acrossMinus' },
-  { at: 3463, enemy: 'sower', formation: 'column', count: 5, lane: 44, origin: 'acrossPlus' },
+  { at: 3405, enemy: 'sower', formation: 'line', count: 4, lane: 55, origin: 'acrossMinus' },
+  { at: 3463, enemy: 'sower', formation: 'column', count: 4, lane: 44, origin: 'acrossPlus' },
   { at: 3520, enemy: 'drifter', formation: 'column', count: 6, lane: 59 },
   { at: 3577, enemy: 'charger', formation: 'column', count: 6, lane: 49 },
   { at: 3635, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
@@ -1136,32 +1155,37 @@ const BATTERIES: readonly WaveEntry[] = [
   { at: 2312, enemy: 'warden', formation: 'vee', count: 4, lane: 44 },
   { at: 2370, enemy: 'turret', formation: 'vee', count: 4, lane: 60 },
   { at: 2428, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 2485, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
+  // Every turret from here to the end four, not five — 0472: the level's busiest two seconds at
+  // Savior were the run from 2715 to 2945, 42 live bullets, two thirds of them flak.
+  { at: 2485, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
   { at: 2543, enemy: 'shard', formation: 'line', count: 5, lane: 41 },
   { at: 2600, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 2657, enemy: 'turret', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 2657, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossMinus' },
   { at: 2715, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
   { at: 2772, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
-  { at: 2830, enemy: 'turret', formation: 'line', count: 5, lane: 59 },
-  { at: 2888, enemy: 'shard', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
-  { at: 2945, enemy: 'turret', formation: 'line', count: 5, lane: 41 },
+  { at: 2830, enemy: 'turret', formation: 'line', count: 4, lane: 59 },
+  // Three since 0472, from five: each one killed opens into frost that splits again.
+  { at: 2888, enemy: 'shard', formation: 'line', count: 3, lane: 49, origin: 'acrossPlus' },
+  // A weaver since 0472, and it was a turret: turret, shard, turret was the level's busiest two seconds
+  // at Savior even with every turret at four, because a shard killed there shatters into the flak.
+  { at: 2945, enemy: 'weaver', formation: 'line', count: 5, lane: 41 },
   { at: 3003, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
   { at: 3060, enemy: 'charger', formation: 'column', count: 5, lane: 42, origin: 'acrossMinus' },
-  { at: 3117, enemy: 'turret', formation: 'line', count: 5, lane: 55 },
+  { at: 3117, enemy: 'turret', formation: 'line', count: 4, lane: 55 },
   { at: 3175, enemy: 'warden', formation: 'line', count: 5, lane: 42 },
   { at: 3232, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
   { at: 3290, enemy: 'shard', formation: 'column', count: 5, lane: 47 },
-  { at: 3348, enemy: 'turret', formation: 'column', count: 5, lane: 58 },
+  { at: 3348, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
   { at: 3405, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
   { at: 3463, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
-  { at: 3520, enemy: 'turret', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 3520, enemy: 'turret', formation: 'column', count: 4, lane: 60, origin: 'acrossPlus' },
   { at: 3577, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
   { at: 3635, enemy: 'shard', formation: 'column', count: 5, lane: 47, origin: 'acrossMinus' },
-  { at: 3692, enemy: 'turret', formation: 'column', count: 5, lane: 58 },
+  { at: 3692, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
   { at: 3750, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
   { at: 3808, enemy: 'weaver', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
   { at: 3865, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
-  { at: 3923, enemy: 'turret', formation: 'column', count: 5, lane: 60 },
+  { at: 3923, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
   { at: 3980, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
 ];
 
@@ -1228,34 +1252,36 @@ const GAUNTLET: readonly WaveEntry[] = [
   { at: 2330, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
   { at: 2384, enemy: 'lancer', formation: 'line', count: 5, lane: 59, origin: 'acrossMinus' },
   { at: 2440, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
-  { at: 2494, enemy: 'turret', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  // Every turret from here to the end four, not six — 0472: the level's two busiest stretches at
+  // Savior were here, 47 and 39 live bullets over two seconds, three quarters of them flak.
+  { at: 2494, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
   { at: 2549, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
   { at: 2604, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
   { at: 2659, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
-  { at: 2713, enemy: 'turret', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 2713, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
   { at: 2769, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
   { at: 2823, enemy: 'warden', formation: 'line', count: 6, lane: 40, origin: 'acrossPlus' },
   { at: 2878, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
-  { at: 2933, enemy: 'turret', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 2933, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
   { at: 2988, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
   { at: 3042, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
   { at: 3098, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
-  { at: 3152, enemy: 'turret', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 3152, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
   { at: 3207, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
   { at: 3262, enemy: 'spore', formation: 'line', count: 6, lane: 50 },
   { at: 3317, enemy: 'warden', formation: 'line', count: 6, lane: 60 },
   { at: 3372, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
-  { at: 3427, enemy: 'turret', formation: 'line', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 3427, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossPlus' },
   { at: 3481, enemy: 'lancer', formation: 'line', count: 6, lane: 55 },
   { at: 3537, enemy: 'charger', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
   { at: 3591, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
   { at: 3646, enemy: 'warden', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
-  { at: 3701, enemy: 'turret', formation: 'line', count: 6, lane: 50 },
+  { at: 3701, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
   { at: 3756, enemy: 'spore', formation: 'line', count: 6, lane: 60 },
   { at: 3811, enemy: 'lancer', formation: 'line', count: 6, lane: 41, origin: 'acrossMinus' },
   { at: 3866, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
   { at: 3920, enemy: 'warden', formation: 'line', count: 6, lane: 55 },
-  { at: 3975, enemy: 'turret', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 3975, enemy: 'turret', formation: 'line', count: 4, lane: 42, origin: 'acrossMinus' },
   { at: 4030, enemy: 'charger', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
   { at: 4085, enemy: 'lancer', formation: 'line', count: 6, lane: 59 },
 ];
@@ -1326,28 +1352,30 @@ const EYE: readonly WaveEntry[] = [
   { at: 2493, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
   { at: 2548, enemy: 'warden', formation: 'column', count: 6, lane: 60 },
   { at: 2601, enemy: 'charger', formation: 'column', count: 6, lane: 41, origin: 'acrossMinus' },
-  { at: 2654, enemy: 'turret', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  // Every turret from here to the end four, not six — 0472: the level's busiest stretch at Savior
+  // outside its two fights was here, 33 live bullets over two seconds, nine tenths of them flak.
+  { at: 2654, enemy: 'turret', formation: 'column', count: 4, lane: 45, origin: 'acrossPlus' },
   { at: 2708, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
   { at: 2761, enemy: 'charger', formation: 'column', count: 6, lane: 42, origin: 'acrossMinus' },
   { at: 2815, enemy: 'gaze', formation: 'column', count: 6, lane: 59 },
-  { at: 2868, enemy: 'turret', formation: 'column', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 2868, enemy: 'turret', formation: 'column', count: 4, lane: 49, origin: 'acrossPlus' },
   { at: 2922, enemy: 'weaver', formation: 'column', count: 5, lane: 50 },
   { at: 2975, enemy: 'charger', formation: 'column', count: 6, lane: 41, origin: 'acrossMinus' },
   { at: 3028, enemy: 'warden', formation: 'column', count: 6, lane: 60 },
-  { at: 3083, enemy: 'turret', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 3083, enemy: 'turret', formation: 'column', count: 4, lane: 45, origin: 'acrossPlus' },
   { at: 3136, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
   { at: 3189, enemy: 'charger', formation: 'column', count: 6, lane: 42, origin: 'acrossMinus' },
   { at: 3243, enemy: 'gaze', formation: 'column', count: 6, lane: 59 },
-  { at: 3297, enemy: 'turret', formation: 'column', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 3297, enemy: 'turret', formation: 'column', count: 4, lane: 49, origin: 'acrossPlus' },
   { at: 3350, enemy: 'charger', formation: 'line', count: 6, lane: 47 },
   { at: 3403, enemy: 'warden', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
   { at: 3457, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 3510, enemy: 'turret', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 3510, enemy: 'turret', formation: 'line', count: 4, lane: 53, origin: 'acrossPlus' },
   { at: 3564, enemy: 'gaze', formation: 'line', count: 6, lane: 44 },
   { at: 3618, enemy: 'charger', formation: 'line', count: 6, lane: 60, origin: 'acrossMinus' },
   { at: 3671, enemy: 'warden', formation: 'line', count: 6, lane: 50 },
   { at: 3724, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossPlus' },
-  { at: 3778, enemy: 'turret', formation: 'line', count: 6, lane: 47 },
+  { at: 3778, enemy: 'turret', formation: 'line', count: 4, lane: 47 },
   { at: 3832, enemy: 'lancer', formation: 'line', count: 6, lane: 58, origin: 'acrossMinus' },
   { at: 3885, enemy: 'charger', formation: 'line', count: 6, lane: 42 },
   { at: 3938, enemy: 'gaze', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
@@ -1591,10 +1619,14 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       /*
         ⚠️ **TWO TURNING STRETCHES, AND THE THREE STRAIGHT ONES ARE WHERE A FIGHT IS — 0350.** Straight
         and full width for the opening 300, for the lattice's fight (it arrives at 1519, and the
-        stretch is held from 1270 to 1770), and for the last 400 before the room — the plan's rule
+        stretch is held from 1270 to 2100), and for the last 400 before the room — the plan's rule
         that a fight in a corridor that is also turning is two difficulties at once. Between them the
         corridor swings from side to side and pinches, a point every 180 units or so: far enough
         apart that the half-cosine between them sets the shape, and the tier's slope only caps it.
+
+        ⚠️ **TO 2100, NOT 1770, SINCE 0472** solved the lattice at the tuned tier. 1770 was sized for a
+        fight nobody flew; at Savior the hull now dies with the camera near 1880 and its drop thrown at
+        about 2046, where 1900's and 2080's swings had the stone across the lane.
       */
       shape: [
         { at: 300, swing: 0, narrow: 0 },
@@ -1604,9 +1636,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
         { at: 980, swing: -0.6, narrow: 1 },
         { at: 1150, swing: 0, narrow: 0.5 },
         { at: 1270, swing: 0, narrow: 0 },
-        { at: 1770, swing: 0, narrow: 0 },
-        { at: 1900, swing: 0.8, narrow: 0.7 },
-        { at: 2080, swing: -0.7, narrow: 1 },
+        { at: 2100, swing: 0, narrow: 0 },
         { at: 2260, swing: -0.9, narrow: 0.5 },
         { at: 2440, swing: 0.5, narrow: 0.8 },
         { at: 2620, swing: 0.9, narrow: 1 },

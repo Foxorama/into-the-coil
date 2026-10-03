@@ -88,7 +88,7 @@ import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PL
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
@@ -2546,7 +2546,9 @@ export class GameFrame implements Frame {
       */
       const wave = w.level.waves[w.nextWave]!;
       const row = w.enemyRows[w.enemyKinds[wave.enemy]];
-      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && w.bossPool.size > 0;
+      // A wave just short of the mid-boss flies in with it, so it is the fight's as well — 0472.
+      const ahead = w.level.midBoss !== null && wave.at >= w.level.midBoss.at - FIGHT_LEAD;
+      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && (w.bossPool.size > 0 || ahead);
       if (thinned) w.fightFiring++;
       // ⚠️ `(n - 1) % N`, so the FIRST offer of a fight always lands and `FIGHT_FIRING_IN` of 1 means
       // *thin nothing*. `n % N === 1` reads the same and is wrong at 1, where it admits none — the
@@ -7397,6 +7399,14 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   // A drop one pickup short is dropped rather than grown — `src/sim/pool.ts` has the argument.
   if (item === null) return;
   reset(item, along, across, row, slot);
+  /*
+    ⚠️ **BORN BESIDE THE STONE, NOT IN IT — 0472.** A hull dies wherever its patrol had it, and in a
+    corridor that can be over the stone; `stoneHoldsPickups` puts a piece back, but it runs before
+    this in the step, so the drop was drawn inside the wall for the step it was thrown on.
+    `tests/corridor.test.ts` saw it the day the lattice's fight got shorter and ended in a turn.
+  */
+  const side = stoneAt(w.corridor, item.along, item.across, item.radius);
+  if (side !== 0 && w.corridor !== null) item.across = outOfStone(w.corridor, item.along, item.across, item.radius, side);
   /*
     ⚠️ **A DROPPED PIECE CYCLES LIKE AN AUTHORED ONE — 0233.** 0243 had a scattered piece hold the
     face the player just lost, because what a death threw back was what it took and a switch under

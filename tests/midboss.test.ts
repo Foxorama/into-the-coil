@@ -22,6 +22,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BOSSES } from '../src/content/bosses.ts';
+import { TUNED } from '../src/content/difficulty.ts';
 import { BOSS_DEATH_STEPS } from '../src/app/frame.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS, type LevelKind } from '../src/content/levels.ts';
@@ -43,11 +44,16 @@ const CLOSE_ENOUGH_SECONDS = 3;
   of each (0269) while the ladders crossed every level and outlived every death, so from the second
   level on the fight it held was one nobody flew: the flown one ran six to nine seconds. `carriedAt`
   walks the run's pickups in order, so a pickup moved anywhere moves the loadout this is asked at.
+
+  ⚠️ **AND AT THE TIER THE GAME IS TUNED FOR — 0472.** This flew the content multiplied by nothing,
+  which no tier is since 0356, and Savior's toughness made every fight it passed run 24–57 s against
+  the 17–23 its level asks for. Reported: *"on saviour difficulty, there's some spots, especially
+  around minibosses, that it's too bullety."*
 */
 const met = new Map<LevelKind, ReturnType<typeof weighFight>>();
 for (const kind of LEVEL_KINDS) {
   if (LEVELS[kind].midBoss === null) continue;
-  met.set(kind, weighFight(kind, carriedAt(kind)));
+  met.set(kind, weighFight(kind, { ...carriedAt(kind), difficulty: TUNED }));
 }
 
 describe('0269 — a mid-boss is fought for as long as its level says', () => {
