@@ -56,7 +56,8 @@ const MENU_DOWN = [1, 'y'] as const;
 const MENU_LEFT = [-1, 'x'] as const;
 const MENU_RIGHT = [1, 'x'] as const;
 import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
-import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
+import { ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
+import { ROWS_OF } from '../content/arms.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
 import { BOSSES } from '../content/bosses.ts';
 import {
@@ -808,8 +809,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pickupKinds[k] = index;
   });
 
-  /** Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key. */
-  const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
+  /**
+   * Enemy rows by index, so a per-step lookup in the frame is an array index and not a string key —
+   * the Approach's until a level starts, and every level's own place's from then (0473).
+   */
+  const enemyRows: readonly EnemyRow[] = ROWS_OF.approach;
   /**
    * The reverse lookup, so a level can name its enemies in words and a spawn still costs an index.
    *

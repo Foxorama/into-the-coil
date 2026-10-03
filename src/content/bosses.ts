@@ -2522,7 +2522,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 20,
     driftWavelength: 150,
     patrol: 0.42,
-    shot: 'lance',
+    // The fish's quill, as its place's raiders throw — 0473, from the lance every place shared.
+    shot: 'quill',
     phases: [
       // No gentle opening. It starts where the sentinel's second phase ended.
       // Three phases on the fish's tempo — 0269: volans is a five-row ladder, so its 2nd, 4th and
@@ -2605,7 +2606,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // crossing took a fifth longer and the fight became a count of crossings: 23 health fought for
     // 15 s and 24 for 26, with nothing between. A fifth faster is the crossing it had.
     patrol: 0.6,
-    shot: 'flak',
+    // The gyre's cog, as its place's raiders throw — 0473, from the slab every place shared.
+    shot: 'cog',
     phases: [
       // Wide and slow from the start: the shots are the lane-taking, not the hull.
       // Three phases on the gyre's tempo — 0269. The gyre is a three-row ladder, so there is no
@@ -2660,7 +2662,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 18,
     driftWavelength: 120,
     patrol: 0.62,
-    shot: 'lance',
+    // The pterodactyl's quill, as its place's raiders throw — 0473, from the lance every place shared.
+    // Not the teeth its raiders also throw: a spine at 0.95 against the lance's 1.6 left this fight half
+    // as busy again by the count on the screen.
+    shot: 'quill',
     phases: [
       // Three phases, not four — 0247: twelve seconds at max weapons at half its health.
       // Three phases on the pterodactyl's tempo — 0269: quetzal has four rows, so its last three are
@@ -2713,7 +2718,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 8,
     driftWavelength: 300,
     patrol: 0.16,
-    shot: 'flak',
+    // Hail, as its place's raiders throw — 0473, from the slab every place shared.
+    shot: 'hail',
     phases: [
       // Three phases, not four — 0247: fourteen seconds at max weapons at half its health.
       // Three phases on the frost ship's tempo — 0269: hoarfrost has four rows, so its last three.
@@ -2787,7 +2793,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 15,
     driftWavelength: 180,
     patrol: 0.45,
-    shot: 'spit',
+    // The hydra's droplets, as its place's raiders throw — 0473, from the spit: *"very small and hard
+    // to see."*
+    shot: 'droplet',
     phases: [
       // Three fans and the eye, not five and the eye — 0247: fifteen seconds at max weapons at half
       // its health, and a phase under three of them is not a phase.
@@ -2873,15 +2881,19 @@ export const BOSSES: Record<BossKind, BossRow> = {
     drift: 14,
     driftWavelength: 200,
     patrol: 0.4,
-    shot: 'lance',
+    // Clots, as its place's raiders throw — 0473, from the lance: the smallest bullet there is, in the
+    // tightest curtain in the game, at the last level, was *"very small and hard to see."*
+    shot: 'clot',
     phases: [
       // Three rings and the eye, not five and the eye — 0247: seventeen seconds at max weapons at
       // half its health.
       // Three phases on the jellyfish's tempo — 0269: medusa is a five-row ladder, so its 2nd, 4th
       // and 5th. ⚠️ **Its SPREAD is not borrowed** — medusa fires at a spread of zero because it
       // throws rings, and ten bullets on one line is not a fan. The axis keeps its own.
-      { upTo: 1, fireEvery: 54, shots: 4, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.66, fireEvery: 42, shots: 6, spread: 1.4, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      // ⚠️ 66 and 48, from 54 and 42 — 0473: its clots stay on the screen 1.6/1.3 as long as the lances
+      // did, and at the old cadence its fight measured a quarter busier by the count on the screen.
+      { upTo: 1, fireEvery: 66, shots: 4, spread: 1, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.66, fireEvery: 48, shots: 6, spread: 1.4, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       /*
         ⚠️ **THE EYE, AND IT WAS THE LAST THING THE AUTHORED RUN ASKED FOR.** The ring stops, the
         stalk slows to half what it was chasing at, and the fight ends on a window the player has to

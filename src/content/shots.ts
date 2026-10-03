@@ -51,6 +51,11 @@ export type ShotKind =
   // The two that do not fly straight — 0327. A ripple snakes across the lane; a curl bends.
   | 'ripple'
   | 'curl'
+  // Three places' own ammunition — 0473: the Labyrinth's cog, the Rime Shelf's hailstone, the Black
+  // Heart's clot.
+  | 'cog'
+  | 'hail'
+  | 'clot'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -367,6 +372,9 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'quill',
   'ripple',
   'curl',
+  'cog',
+  'hail',
+  'clot',
   'missile',
   'seeker',
   'bomb',
@@ -607,6 +615,37 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     fission: SPENT_BY_ARRIVING,
     path: { kind: 'arc', turn: 0.05, sweep: Math.PI },
   },
+  /*
+    ── THREE PLACES' OWN AMMUNITION — 0473 ─────────────────────────────────────────────────────────
+
+    *"Enemies on each level need some unique level attacks … thematic for level and boss on that
+    level"*, and *"in the later stages a lot of the miniboss and level enemies attacks are very small
+    and hard to see and dodge."* Four places arm their kinds from their lord's own shots — the fish's
+    quills, the pterodactyl's rocks, the hydra's acid (`src/content/arms.ts`). Three have nothing a
+    raider can throw: the frost ship's shard bursts twelve ways, the jellyfish's void eats the
+    player's fire, and the gyre's is the slab every place already has. These are theirs.
+
+    ⚠️ **DRAWN WITH NO HEADING, BECAUSE A BLIT CANNOT ROTATE** — the acid's lesson (0300): a pointed
+    shot sprayed or aimed is drawn pointing somewhere it is not going. A cog, a hailstone and a cell
+    are each the same object from every side.
+
+    ⚠️ **MORE THAN TWICE AS WIDE AS THE LANCE AND THE SPIT THEY REPLACE, AND HURT HARDLY MORE.** Seen is
+    what was asked for; a bigger hurtbox is a harder dodge, which was not. Each sits a hair above
+    `tests/combat.test.ts`'s floor of a quarter of its drawing.
+
+    ⚠️ **AND NOT SLOW, BECAUSE A SLOW BULLET IS MORE BULLETS.** How long a shot is on the screen goes as
+    one over its speed, so the first drafts — the clot at 1, the hail at 0.9, where the lance they
+    replaced is 1.6 — made the axis's fight half as busy again by the count on the screen, in a report
+    that had just said *too bullety around minibosses*. Each is as quick as the slab or quicker.
+  */
+  // A cog of the gyre's — the Labyrinth's: eight teeth round a hub, in its place's ink. A shade quicker
+  // than the slab, because a machine's shot is thrown rather than lobbed.
+  cog: { sprite: SPRITE.cog, spriteHit: SPRITE.cog, radius: 1.1, health: 1, damage: 1, speed: 1.1, fission: SPENT_BY_ARRIVING },
+  // A hailstone — the Rime Shelf's: ice that does not burst, in the frost ink, so a raider's shard is
+  // told from the frost ship's by staying one thing.
+  hail: { sprite: SPRITE.hail, spriteHit: SPRITE.hail, radius: 1.2, health: 1, damage: 1, speed: 1.1, fission: SPENT_BY_ARRIVING },
+  // A clot — the Black Heart's: a knot of blood, lobed round a dark middle, in its place's ink.
+  clot: { sprite: SPRITE.clot, spriteHit: SPRITE.clot, radius: 1.15, health: 1, damage: 1, speed: 1.3, fission: SPENT_BY_ARRIVING },
   /**
    * The serpent's acid blast — `docs/decisions/0248-the-serpent-strikes.md`. The fattest and
    * slowest bullet in the game: a wall of these across the lane is a thing to walk through, and
@@ -726,8 +765,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * from a mouth and is spent by arriving; sixteen of these leave one point in every direction at once, and a
    * ring that is still crossing the lane when the next ball arrives is a fight that silts up. Smaller, quicker
    * and worth one hit, which is a thing to fly between rather than a wall.
+   *
+   * ⚠️ **1.3 SINCE 0473**, which made it the Mire's raiders' and the chorus's ammunition in place of the
+   * spit at 1.4. A burst's droplets leave at the maw's own `swallow.speed` and are unmoved; a thrown
+   * droplet at 1 stayed on the screen half as long again as the spit it replaced, and the chorus's fight
+   * measured a third busier for it (`scripts/weigh-fight.mjs`, 0473 has the numbers).
    */
-  droplet: { sprite: SPRITE.droplet, spriteHit: SPRITE.droplet, radius: 1.1, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
+  droplet: { sprite: SPRITE.droplet, spriteHit: SPRITE.droplet, radius: 1.1, health: 1, damage: 1, speed: 1.3, fission: SPENT_BY_ARRIVING },
   /**
    * The fish's spine — `docs/decisions/0316-the-quill-is-a-spine.md`. A barbed fin-spine, point first,
    * in the enemy's ink: the flying fish's own bullet where it threw the lancer's lance.

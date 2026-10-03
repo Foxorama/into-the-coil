@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { drawKind } from '../src/render/bake.ts';
 import { ENEMIES, ENEMY_KINDS, SIGNATURE_OF, type EnemyKind } from '../src/content/enemies.ts';
+import { ROWS_OF } from '../src/content/arms.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { PALETTES } from '../src/content/palette.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
@@ -76,15 +77,18 @@ describe('0232 — each place has its own enemy', () => {
 
   it('and a firing signature sends a bullet-and-pattern no other kind sends', () => {
     // `tests/legibility.test.ts` holds this over every shooter; restated here over the seven so the
-    // failure names the place.
-    const seen = new Map<string, EnemyKind>();
-    for (const kind of ENEMY_KINDS) {
-      const row = ENEMIES[kind];
-      if (row.fireEvery === 0) continue;
-      const signature = `${row.shot}/${row.attack.kind}`;
-      const twin = seen.get(signature);
-      expect(twin, `${kind} and ${twin} both send ${signature}`).toBeUndefined();
-      seen.set(signature, kind);
+    // failure names the place. ⚠️ **IN EVERY PLACE SINCE 0473**, whose raiders throw its own arms: a
+    // signature must not be what the place's own shared kinds now send.
+    for (const theme of THEME_KINDS) {
+      const seen = new Map<string, EnemyKind>();
+      ENEMY_KINDS.forEach((kind, index) => {
+        const row = ROWS_OF[theme][index]!;
+        if (row.fireEvery === 0) return;
+        const signature = `${row.shot}/${row.attack.kind}`;
+        const twin = seen.get(signature);
+        expect(twin, `${kind} and ${twin} both send ${signature} at ${theme}`).toBeUndefined();
+        seen.set(signature, kind);
+      });
     }
     expect(SIGNATURES.filter((k) => ENEMIES[k].fireEvery > 0).length, 'no signature fires').toBeGreaterThan(0);
     expect(SIGNATURES.filter((k) => ENEMIES[k].fireEvery === 0).length, 'every signature fires, so none is a body to avoid').toBeGreaterThan(0);

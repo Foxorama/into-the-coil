@@ -826,6 +826,15 @@ export const SPRITE_KINDS = [
   'ripple',
   'curl',
   /*
+    Three places' own ammunition — 0473, each the same object from every side because a blit cannot
+    turn: a COG of eight teeth round a holed hub for the Labyrinth, a faceted HAILSTONE for the Rime
+    Shelf, a CLOT — a red cell, a thick rim round a thin middle — for the Black Heart. None is the
+    square, the dash, the slab, the gobbet, the ring, the star or the spine.
+  */
+  'cog',
+  'hail',
+  'clot',
+  /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
     by size before colour is involved at all — which matters more here than anywhere else, because
@@ -2127,6 +2136,11 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // 0327. Both keep the 0.9 hurtbox, so the band `tests/combat.test.ts` holds is what bounds them.
   ripple: 2.9,
   curl: 3.2,
+  // More than twice the lance and the spit they replace in three places — 0473: *"very small and hard
+  // to see."* Each hurtbox in `src/content/shots.ts` is a hair over a quarter of its drawing.
+  cog: 4.4,
+  hail: 4.8,
+  clot: 4.6,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.
   missile: 3.4,
   // The seeker is the missile's size: what tells them apart is the fins and the eye, not the box.
