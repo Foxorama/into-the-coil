@@ -1156,6 +1156,21 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
+
+A design pass over the way in, the in-game chrome on a phone and the four ships, asked for as *"a
+deep dive analysis on the buttons icons, displays, huds etc"*. The review, its measurements and the
+player's answers are
+[`the-chrome-and-the-ships-reviewed`](../reports/the-chrome-and-the-ships-reviewed-2026-10-03.md);
+its queue is six items, one PR each, in the order the report gives and for the reasons it gives:
+
+- [0465](decisions/0465-the-chrome-fits-the-phone.md) — **built**: the playing strip sized against the
+  short axis and the trigger discs held between a fingertip and 66 px. The one number left to a play
+  is its floor.
+- **Next**: the dice (one swing per burst or brake, red fur), the ray gun's sheet of three (A chosen),
+  the Firebird back to black and gold, the fighter's cigar pods, and last the splash that waits for a
+  press with the one pilot screen that launches — each answered in the report's table.
+
 ### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
 
 A UX pass over the way in, the menu, the readout and the pickups, asked for with three items named:
