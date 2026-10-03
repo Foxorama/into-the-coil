@@ -60,7 +60,9 @@ is not one line — with three bolts the middle flies the shard's heading by con
 held), and the hydra's *every head's attack leaves its own mouth* (it read the first two shots in the air,
 which are now a split shard's bolts; it reads the pair of shards at their first sighting).
 
-Re-anchored: 0263's two probes and 0371's two on the new stages.
+Re-anchored: 0263's two probes and 0371's two on the new stages. 0270's *a shattering volley spending
+the phase's count again* is aimed back at the pool guard: with the flakes hanging, the restored break
+fills the pool again (200 of 200 on Burn) before the gentlest tier's room fails.
 
 ## Seen to fail
 

@@ -31,9 +31,13 @@ export const PROBES = [
       ⚠️ **AND AIMED AT THE GENTLEST TIER'S ROOM SINCE 0479**, which grew the pool to 200 for the slower
       flame: the break no longer fills it (the guard holds 176), and what it does break is the room
       Legendary promises — the hydra's fourth phase leaves 3.5 units where the ship is 4 across.
+
+      ⚠️ **AND BACK AT THE POOL SINCE 0482**, whose flakes hang where they open instead of racing off
+      the lane: restored, this break fills it again — the hoarfrost's last phase on Burn reaches 200 of
+      200 alive against the 176 the guard holds — and that fails first.
     */
     broke: 'a shattering volley spending the phase’s count again, all on one step, as it did before 0270',
-    guard: 'and the tier that promises no challenge leaves a whole ship of room to stand in',
+    guard: 'and the pool always has room for the volley after this one',
     edit: {
       path: 'src/app/boss.ts',
       find: '  const ceiling = bullet.fission.length > 0 ? SHARD_VOLLEY : Number.POSITIVE_INFINITY;',
