@@ -2448,16 +2448,26 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
         */
         if (quickest === null) continue;
         expect(quickest.seconds!, `the ${gun} kills ${kind} in ${quickest.seconds!.toFixed(1)}s on the tuned tier`).toBeGreaterThanOrEqual(40);
+        /*
+          ⚠️ **EACH PHASE'S TIME SUMMED OVER EVERY TIME IT IS ENTERED — 0476.** A fed jellyfish crosses
+          back over a line (0404's *"the bell closes again"*), so a phase can be entered twice; each
+          stretch read as a phase of its own failed a fifth of a second spent back in phase four. What
+          0260 asks is that every attack is seen, which is the time the fight spends in it.
+        */
+        const spent = new Map<number, number>();
         quickest!.phaseAt.forEach((entered, i) => {
-          const phase = row.phases[entered.phase]!;
-          if (phase.stance.kind === 'bare') return;
           const ends = quickest!.phaseAt[i + 1]?.at ?? quickest!.seconds!;
-          const volleys = ((ends - entered.at) * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
+          spent.set(entered.phase, (spent.get(entered.phase) ?? 0) + ends - entered.at);
+        });
+        for (const [index, seconds] of spent) {
+          const phase = row.phases[index]!;
+          if (phase.stance.kind === 'bare') continue;
+          const volleys = (seconds * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
           expect(
             volleys,
-            `against the ${gun}, ${kind}'s phase ${entered.phase + 1} lasts ${(ends - entered.at).toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
+            `against the ${gun}, ${kind}'s phase ${index + 1} lasts ${seconds.toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
           ).toBeGreaterThanOrEqual(8);
-        });
+        }
       }
     }
   });

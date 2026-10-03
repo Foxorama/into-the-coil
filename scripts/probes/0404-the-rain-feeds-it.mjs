@@ -36,8 +36,9 @@ export const PROBES = [
     guard: 'and a heal over the last fifth',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    hull.health = Math.min(w.bossFullHealth, hull.health + fall.feeds * w.bossFullHealth);',
-      replace: '    hull.health = Math.min(w.bossFullHealth * 0.2, hull.health + fall.feeds * w.bossFullHealth);',
+      // Re-anchored by 0476: a feed is a share of the authored health, and the open line is at 0.31.
+      find: '    hull.health = Math.min(w.bossFullHealth, hull.health + fall.feeds * w.bossRow.health);',
+      replace: '    hull.health = Math.min(w.bossFullHealth * 0.3, hull.health + fall.feeds * w.bossRow.health);',
     },
   },
   {

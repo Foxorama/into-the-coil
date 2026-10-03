@@ -41,10 +41,10 @@ export const PROBES = [
         docs/decisions/0019-a-probe-must-be-seen-to-apply.md. The medusa's bell is the same break on a
         boss this guard still covers, and 0269 carries a probe for the mid-boss half.
       */
-      // Re-anchored by 0402: eight void a ring, and the bell worn open.
-      find: "      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
+      // Re-anchored by 0402: eight void a ring, and the bell worn open; and by 0476, the line at 0.31.
+      find: "      { upTo: 0.31, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
       replace:
-        "      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 9 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
+        "      { upTo: 0.31, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 9 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
     },
   },
   {

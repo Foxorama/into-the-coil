@@ -34,6 +34,8 @@ import { beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import { WEAPON_KINDS } from '../src/content/weapons.ts';
+import { flyFight } from '../scripts/weigh-boss.mjs';
 
 /** The jellyfish alone, a short way in, with no mid-boss in front of it. */
 const MEDUSA_ONLY: LevelRow = {
@@ -103,7 +105,7 @@ describe('0255 — the jellyfish opens', () => {
     expect(row.uncoil, 'the jellyfish still throws the curtain that stood in for its tendrils').toBeNull();
     const at = (f: number) => phaseFor(row, row.health * f);
     expect((at(1).attack ?? row.attack).kind).toBe('ring');
-    for (const f of [0.7, 0.25]) {
+    for (const f of [0.7, 0.4]) {
       const beams = at(f).attack!;
       expect(beams.kind, `no tendrils at ${f}`).toBe('beam');
       if (beams.kind !== 'beam') return;
@@ -120,12 +122,12 @@ describe('0255 — the jellyfish opens', () => {
       expect((beams.warning + beams.hold) / STEPS_PER_SECOND).toBeLessThanOrEqual(1);
     }
     const first = at(0.7).attack!;
-    const second = at(0.25).attack!;
+    const second = at(0.4).attack!;
     if (first.kind === 'beam' && second.kind === 'beam') {
       expect(second.hold, 'the second tendrils are not held longer').toBeGreaterThan(first.hold);
       expect(second.halfWidth, 'the second tendrils are not thicker').toBeGreaterThan(first.halfWidth);
     }
-    expect((at(0.45).attack ?? row.attack).kind).toBe('ring');
+    expect((at(0.55).attack ?? row.attack).kind).toBe('ring');
     // The opening: not a bared window — it takes more AND keeps throwing, and what it throws is void.
     const last = at(0.1);
     expect(last.stance.kind, 'the last phase is not the opening').toBe('open');
@@ -318,7 +320,7 @@ describe('0403 — the tentacles pull out of the heart', () => {
       between two neighbours was less than a ship at the median along. So this flies volleys and asks the
       question the player asks: at this along, is there a place between these two that neither burns?
     */
-    for (const f of [0.7, 0.25]) {
+    for (const f of [0.7, 0.4]) {
       const d = medusaAt(f);
       const boss = d.world.bossPool.at(0);
       const r = d.world.ship.radius * d.world.tuning.hurtbox;
@@ -403,7 +405,7 @@ describe('0402 — the jellyfish is glass, and it opens', () => {
     const d = medusaAt(0.1);
     stepHeld(d, 5);
     expect(d.world.bossPool.at(0).spriteBase, 'the jellyfish at its last fifth is not drawn open').toBe(last.hull!.rest);
-    d.world.bossPool.at(0).health = d.world.bossFullHealth * 0.3;
+    d.world.bossPool.at(0).health = d.world.bossFullHealth * 0.4;
     stepHeld(d, 5);
     expect(d.world.bossPool.at(0).spriteBase, 'healed back over its last fifth, the jellyfish is still drawn open').toBe(row.sprite);
   });
@@ -440,9 +442,15 @@ describe('0459 — the Black Heart’s lightning and its jellyfish stand off it'
 });
 
 describe('0404 — the rain feeds it', () => {
-  it('THE ASK: a moon jelly that drifts into the jellyfish is gone, and gives it back a twentieth of its health', () => {
+  it('THE ASK: a moon jelly that drifts into the jellyfish is gone, and gives it back its share of its health', () => {
     if (fall.kind !== 'body') return;
-    expect(fall.feeds).toBe(0.05);
+    /*
+      ⚠️ **THE SHARE IS THE ROW'S, AND IT WAS PINNED HERE AT A TWENTIETH UNTIL 0476** made it a fiftieth
+      on a measurement: at a twentieth the fight did not finish from most places. What this holds is
+      that a feed happens and is the row's; whether the fight can be won is `0476`'s guard below.
+    */
+    const share = fall.feeds ?? 0;
+    expect(share, 'the jellyfish authors no feed').toBeGreaterThan(0);
     const d = medusaAt(0.5);
     // The ship's fire held while the feed is weighed: the fighter's four-barrel fan opens at the cap
     // since 0441, and from lane 5 its outer barrels reach the bell inside the five steps measured.
@@ -455,7 +463,7 @@ describe('0404 — the rain feeds it', () => {
     dropJelly(d, boss.along, boss.across);
     stepHeld(d, 5);
     expect(jellies(d).length, 'the jelly that drifted into the jellyfish is still there').toBe(0);
-    expect(boss.health - before, 'the jellyfish was not fed a twentieth of its health').toBeCloseTo(d.world.bossFullHealth * 0.05, 6);
+    expect(boss.health - before, 'the jellyfish was not fed its share of its health').toBeCloseTo(row.health * share, 6);
   });
 
   it('and one that drifts into a tentacle feeds it too', () => {
@@ -473,8 +481,12 @@ describe('0404 — the rain feeds it', () => {
   });
 
   it('and a heal over the last fifth’s line shuts the bell: the phase before is the phase again', () => {
-    const d = medusaAt(0.18);
+    // Half a feed under the line, so one feed carries it over — 0476 made a feed a fiftieth at Savior
+    // and a share of the authored health, and the old 0.18 was a twentieth's worth under it.
+    const line = row.phases[row.phases.length - 1]!.upTo;
+    const d = medusaAt(line);
     const boss = d.world.bossPool.at(0);
+    boss.health = line * d.world.bossFullHealth - ((fall.kind === 'body' ? (fall.feeds ?? 0) : 0) * row.health) / 2;
     expect(phaseFor(row, boss.health, d.world.bossFullHealth).stance.kind).toBe('open');
     dropJelly(d, boss.along, boss.across);
     stepHeld(d, 5);
@@ -501,5 +513,51 @@ describe('0404 — the rain feeds it', () => {
     }
     expect(seen.size, 'a dozen belches all fell in one glow').toBeGreaterThanOrEqual(3);
     expect(drawn.has(row.sprite), 'a moon jelly is the jellyfish’s own colour').toBe(false);
+  });
+});
+
+describe('0476 — the jellyfish can be finished, and opens', () => {
+  /*
+    Reported, 2026-10-04: *"the jellyfish never opens for the 'double damage' phase."* Measured: at a
+    twentieth a feed, from fifteen held places and the bell's own lane, the fight did not finish for any
+    gun at the median place and the ray never reached the open bell. Flown here through the real frame
+    in the player's units — seconds, and whether the open phase was fought — from the bell's own lane at
+    the two distances a pilot fights from, which is how a gun that fires straight is flown at a thing
+    that does not move (`scripts/weigh-boss.mjs`). The ship held at rest is not one of them: at 190 the
+    arc's reach does not get there, which is the arc's, not the fight's.
+  */
+  const CAP = 240;
+  const OPEN = row.phases.length - 1;
+
+  it('THE REPORTED ONE, at Savior: every gun finishes the fight from the bell’s lane, and fights the open bell', () => {
+    for (const gun of WEAPON_KINDS) {
+      for (const short of [60, 45]) {
+        const fight = flyFight('medusa', gun, { lane: 'boss', short, cap: CAP, difficulty: 'savior' });
+        expect(fight.seconds, `the ${gun} from ${short} short never finished the jellyfish in ${CAP} s`).not.toBeNull();
+        expect(
+          fight.phaseAt.some((p) => p.phase === OPEN),
+          `the ${gun} from ${short} short finished the jellyfish without the bell ever opening`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('and on Burn, where the fight is longest: a feed is the same number of shots at every tier', () => {
+    /*
+      ⚠️ **A SHARE OF THE TIER'S FULL HEALTH NEVER FINISHED ON BURN, WITH ANY GUN.** Burn's fight is two
+      and a half times as long, so it landed two and a half times the feeds, each worth as much of the
+      fight as Savior's. A feed is a share of the AUTHORED health since 0476. Two guns, because the arc
+      on Burn stalls in the open phase for a reason this does not touch — the decision says which.
+    */
+    for (const gun of ['pulse', 'shuriken'] as const) {
+      const fight = flyFight('medusa', gun, { lane: 'boss', short: 45, cap: CAP, difficulty: 'burn' });
+      expect(fight.seconds, `on Burn the ${gun} never finished the jellyfish in ${CAP} s`).not.toBeNull();
+    }
+  });
+
+  it('IN LANE UNITS: the bell stands past the ship’s box, so nothing flies round behind it', () => {
+    // *"You shouldn't be able to fly around it."* Its far rim at rest, nearest the drift allows, against
+    // the furthest the ship can go.
+    expect(row.station - row.drift + row.radius, 'the ship can fly behind the jellyfish').toBeGreaterThanOrEqual(PLAYER_LEAD);
   });
 });

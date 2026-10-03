@@ -59,7 +59,7 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
-import { BOSSES } from '../content/bosses.ts';
+import { BOSSES, reachDownLane } from '../content/bosses.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -2864,7 +2864,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         ? auditionAura(auditionLevel, audition, auditionAlong)
         : auraFor(
             build,
-            boss === null ? 0 : auraNearnessFor(boss.along, boss.radius, world.ship.along, world.ship.radius),
+            // To the nearest part of the animal, which is the jellyfish's tentacles — 0476.
+            boss === null ? 0 : auraNearnessFor(boss.along, reachDownLane(world.bossRow), world.ship.along, world.ship.radius),
           );
     /*
       ⚠️ **Re-issued whenever the LEVEL changes or the aura has moved enough to hear**, rather than

@@ -103,9 +103,6 @@ export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, shor
   let phase = -1;
   /** @type {number | null} */
   let killed = null;
-  /** The kind the fight began on, and its health last step — the pool's first slot is not the hull once it has died. */
-  let hullKind = -1;
-  let lastHealth = Number.POSITIVE_INFINITY;
   const phaseAt = [];
   // The entrance is not the fight, and on the serpent it is about a thousand steps of it — 0306.
   for (let step = 0; step < cap * STEPS_PER_SECOND + 3000; step++) {
@@ -116,7 +113,6 @@ export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, shor
       const boss = world.bossPool.at(0);
       if (start < 0) {
         start = step;
-        hullKind = boss.kind;
       }
       if (step - start > cap * STEPS_PER_SECOND) break;
       const now = row.phases.indexOf(phaseFor(row, boss.health, world.bossFullHealth));
@@ -135,18 +131,14 @@ export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, shor
     if (wrecks.count > 0) throw new Error(`${kind}, ${gun}: the ship died, so this measured a respawn`);
     if (world.weapon.kind !== gun) throw new Error(`${kind}, ${gun}: the gun changed to ${world.weapon.kind}`);
     /*
-      ⚠️ **THE KILL IS NOT THE END, AND THE PHASES STOP AT THE KILL — 0386.** When the gyre's hull dies
-      another of its bodies moves into the pool's first slot and stays for eight and a half seconds —
-      at six tenths of the hull's health, so the fight came back as its second phase again at the end
-      and that phase was billed for time nobody was fighting it. A pool keeps its slots and copies a
-      body into the one that emptied, so the slot is the same object either way: the kill is the first
-      step the slot holds another kind, holds nothing, or holds more health than the hull had — no
-      hull is healed — and no phase is counted after it.
+      ⚠️ **THE PHASES STOP AT THE KILL — 0386 — AND THE KILL IS `bossBeaten`, SINCE 0476.** 0386 read
+      the kill off the pool's first slot — another kind, nothing, or *more health than the hull had,
+      because no hull is healed* — to stop the gyre's wreck being billed as a second phase-two. Then
+      0404 fed the jellyfish, and every feed read as its death: the phases stopped at the first jelly it
+      ate, and the open phase was reported never reached on fights that reached it. The frame latches
+      the death itself, and the fight ends there (0475), so that is what is read.
     */
-    const first = world.bossPool.size > 0 ? world.bossPool.at(0) : null;
-    const gone = first === null || first.kind !== hullKind || first.health <= 0 || first.health > lastHealth;
-    if (first !== null && !gone) lastHealth = first.health;
-    if (start >= 0 && killed === null && gone) {
+    if (start >= 0 && killed === null && (world.bossBeaten || world.bossPool.size === 0)) {
       killed = (step - start) / STEPS_PER_SECOND;
       phase = Number.NaN;
     }
