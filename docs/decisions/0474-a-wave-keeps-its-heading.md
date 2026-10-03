@@ -57,7 +57,7 @@ its own spoke, which is what 0473 wrote it was for.
 **One thing a straight ripple does differently**: its along velocity is the camera's rate *this step*
 plus its own, rather than the rate it was thrown at plus its own. They differ only while the camera's
 rate is changing — a room closing ([0335](0335-the-fight-happens-in-a-room.md)) or a burn
-([0340](0340-a-transition-stays-in-the-game.md)) — and the camera's frame is the one every speed is
+([0340](0340-the-coil-is-a-route.md)) — and the camera's frame is the one every speed is
 in ([0023](0023-the-long-axis-is-the-scroll-axis.md)).
 
 **Not done: the plan's second half**, *a shot with no velocity in the camera's frame for a second is
