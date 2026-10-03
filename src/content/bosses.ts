@@ -1136,6 +1136,18 @@ export interface Face {
    */
   shut: number;
   shutHit: number;
+  /**
+   * How far across the lane the ship must be before the eye follows it and the side it is on changes,
+   * in world units — 0478. Absent is `FACE_LOOK` in `src/app/frame.ts`, which every face wore until
+   * then.
+   */
+  look?: number;
+  /**
+   * Steps after a snap before another can be armed — 0478. Absent is none, which every face had until
+   * then. Played on the fish: *"i think it's just the mouth is animated a bit too fast"* — a stalker
+   * crosses its own centreline constantly, so its jaw snapped every time it did.
+   */
+  biteRest?: number;
 }
 
 /**
@@ -1690,8 +1702,15 @@ export interface Burn {
 /**
  * A leap — 0380: *"we need a new stage 3 and four"*, and the one thing a flying fish does that no
  * other boss can is leave the lane and come back over it. The phase's clock, not the volley's, so the
- * fight goes on throwing between leaps; the flight itself is the row's `entrance`, replayed from
- * wherever the boss is — it dives to the path's start first, at `DIVE_PER_STEP` in `src/app/frame.ts`.
+ * fight goes on throwing between leaps.
+ *
+ * ⚠️ **ITS OWN FLIGHT SINCE 0478, FROM THE STATION AND BACK ONTO IT.** 0380 flew the row's `entrance`
+ * again: a straight dive at one speed to a point ahead of the screen, the breach, and then the ordinary
+ * arrival crawling back in from beyond the leading edge — about four seconds, a second and a half of
+ * it with no fish on the screen. Played: *"the jumpy animation feels a bit weird"*, which it was: two
+ * other things glued together. Now an eased dive from where the fish is into the near edge, `arcs`
+ * leaps out through it down the lane, and one curve back up the lane onto the place it left — on the
+ * screen the whole way, and never handed to the arrival. `src/app/frame.ts`'s `driveLeap` flies it.
  */
 export interface Leap {
   /**
@@ -1702,6 +1721,18 @@ export interface Leap {
   first: number;
   /** Steps between leaps after the first, before the tier scales it. */
   every: number;
+  /** Steps of the dive from the station into the near edge, eased out of rest. */
+  dive: number;
+  /** How far past the edge each arc crests, in world units, one an arc in the order they are flown. */
+  arcs: readonly number[];
+  /** The along each arc covers, down the lane, in world units. */
+  span: number;
+  /** World units of along a step through the arcs — a thrown body's constant horizontal speed (0313). */
+  speed: number;
+  /** How far under the edge it runs between arcs, in world units — less than its radius, so it shows. */
+  depth: number;
+  /** Steps of the curve back up the lane onto the station, eased into rest. */
+  back: number;
 }
 
 export interface Escort {
@@ -2145,6 +2176,9 @@ const VOLANS_FACE: Face = {
   gapeHit: SPRITE.boss9GapeHit,
   shut: SPRITE.boss9Shut,
   shutHit: SPRITE.boss9ShutHit,
+  // A stalker crosses its own centreline constantly: a wider band and a rest between snaps — 0478.
+  look: 12,
+  biteRest: 45,
 };
 
 /**
@@ -2215,6 +2249,8 @@ const BARBED_FACE: Face = {
   gapeHit: SPRITE.boss9BarbedGapeHit,
   shut: SPRITE.boss9BarbedShut,
   shutHit: SPRITE.boss9BarbedShutHit,
+  look: 12,
+  biteRest: 45,
 };
 
 const ABLAZE: Look = {
@@ -3682,15 +3718,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 18,
     // Doubled by 0260, from 760. 1400 from 1300 — 0441: flown at the true cap in each gun's own ship
     // (`scripts/weigh-boss.mjs`), the arc and the ray took it in 38 s, under 0260's forty.
-    health: 1400,
+    // ⚠️ 1450 FROM 1400 — 0478: the leap is back on the screen and on station in two and a half seconds,
+    // so every gun reaches it for longer, and all four took it under forty (39.3, 38.4, 39.1, 40.0).
+    // Health is the one lever that moves all four; the pterodactyl goes to 1460 to stay the tougher.
+    health: 1450,
     /*
-      ⚠️ **THE ARC AT 1.35, THE SHURIKEN AND THE RAY AT 0.95 — 0477.** Its leap is a target now, so the
-      four seconds a leap used to be free are a fight: the arc took it in 35.5 s, the shuriken in 38.9
-      and the ray in 39.2 against 0260's forty, with the pulse at 41.1. Health is held under the
-      pterodactyl's by the run's ordering (`tests/level.test.ts`), so the guns that fell short are
-      weighted, on the pterodactyl's pattern (0441).
+      ⚠️ **THE ARC AT 1.3, THE SHURIKEN AND THE RAY AT 0.95 — 0477, the arc moved by 0478.** Its leap is
+      a target, so the four seconds a leap used to be free are a fight: the arc took it in 35.5 s, the
+      shuriken in 38.9 and the ray in 39.2 against 0260's forty, with the pulse at 41.1. The guns that
+      fell furthest are weighted, on the pterodactyl's pattern (0441).
     */
-    gunWeights: { arc: 1.35, shuriken: 0.95, ray: 0.95 },
+    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95 },
     damage: 3,
     station: 155,
     drift: 5,
@@ -3745,7 +3783,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
         core inks, the crown bigger and the flicker quicker — one fire at a higher temperature, which
         is what a fourth stage after *ablaze* has left to be.
       */
-      { upTo: 0.15, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360 } },
+      { upTo: 0.15, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360, dive: 36, arcs: [28, 40], span: 36, speed: 1.2, depth: 8, back: 54 } },
     ],
   },
   /**
@@ -3789,7 +3827,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 15,
     // Doubled by 0260, from 820. 1410 from 1390 — 0441: over the fish's new 1400, because a later boss
     // is a tougher one (`tests/level.test.ts`); its quickest gun is held by the arc's weight below.
-    health: 1410,
+    // 1460 from 1410 — 0478, over the fish's 1450 for the same reason; a fight a few percent longer.
+    health: 1460,
     /*
       ⚠️ **THE LIGHTNING AT 1.1 HERE, NOT ITS 1.5 — 0441, on the serpent's own pattern (0372).** Flown
       at the true cap, the arc took this animal in 30 s against 0260's forty, while the pulse took 99:

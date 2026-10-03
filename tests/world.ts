@@ -121,12 +121,15 @@ export function inertLevel(): {
   bossTrailAt: number;
   chainPhase: number;
   bossBite: number;
+  bossBiteRest: number;
   bossGazeSide: number;
   // How far into its reared bow the neck is — 0309.
   bossBow: number;
   // The entrance — 0306. A fixture's boss makes none unless its row authors one.
   bossEntering: number;
   bossLeaping: boolean;
+  leapFromAlong: number;
+  leapFromAcross: number;
   bossEntryAt: number;
   bossSettle: boolean;
   bossSpawned: boolean;
@@ -243,10 +246,13 @@ export function inertLevel(): {
     bossTrailAt: 0,
     chainPhase: 0,
     bossBite: 0,
+    bossBiteRest: 0,
     bossGazeSide: 0,
     bossBow: 0,
     bossEntering: -1,
     bossLeaping: false,
+    leapFromAlong: 0,
+    leapFromAcross: 0,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,
@@ -561,10 +567,13 @@ export function playableWorld(
     bossTrailAt: 0,
     chainPhase: 0,
     bossBite: 0,
+    bossBiteRest: 0,
     bossGazeSide: 0,
     bossBow: 0,
     bossEntering: -1,
     bossLeaping: false,
+    leapFromAlong: 0,
+    leapFromAcross: 0,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,

@@ -56,7 +56,8 @@ export const PROBES = [
     guard: 'coils ROUND the middle of the screen leaving the centre open',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    w.bossSettle = true;\n',
+      // Re-anchored by 0478, where the hand-over became `settleOnStation`, shared with the leap.
+      find: '  w.bossSettle = true;\n',
       replace: '',
     },
   },

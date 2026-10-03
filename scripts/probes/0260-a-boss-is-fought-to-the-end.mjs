@@ -20,9 +20,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // Re-anchored by 0391, which cut every end boss's health; still half of it.
-      // And by 0441, which raised it to 1400 once every gun was flown in its own ship; still half.
-      find: '    health: 1400,',
-      replace: '    health: 700,',
+      // And by 0441, which raised it to 1400 once every gun was flown in its own ship; still half. And by 0478, to 1450; still half.
+      find: '    health: 1450,',
+      replace: '    health: 725,',
     },
   },
   {

@@ -38,7 +38,8 @@ export const PROBES = [
     guard: 'it answers the PILOT and not a clock',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  const side = gaze < -FACE_LOOK ? -1 : gaze > FACE_LOOK ? 1 : w.bossGazeSide;',
+      // Re-anchored by 0478, where the band became the face's own.
+      find: '  const side = gaze < -look ? -1 : gaze > look ? 1 : w.bossGazeSide;',
       replace: '  const side = w.steps % 48 < 24 ? -1 : 1;',
     },
   },

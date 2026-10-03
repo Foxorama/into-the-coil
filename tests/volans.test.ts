@@ -10,7 +10,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame, wearHull } from '../src/app/frame.ts';
+import { GameFrame, leapSteps, wearHull } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { BOSSES } from '../src/content/bosses.ts';
@@ -26,6 +26,7 @@ import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { CUES } from '../src/content/cues.ts';
 import { SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
+import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { BANDS, centroid, spectrum } from './spectrum.ts';
 import { inside, tracingPen, type Pass } from './paths.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -1010,10 +1011,12 @@ describe('0380 — the fish has four stages', () => {
 
   it('and at the last stage it LEAPS: out through the near edge, back across the screen with the edge breaking four times, and on station throwing again', () => {
     /*
-      ⚠️ **THE ENTRANCE REPLAYED, MEASURED AS THE PLAYER SEES IT.** Within one interval of the stage
-      opening the fish is gone through the edge (unshootable: `bossEntering` is up); the edge breaks
-      `leaps + 1` times with the breach's own cue; and inside ten seconds it is back on station, on
-      the fire grid, throwing — a leap that ended the fight would be a boss that left.
+      ⚠️ **ITS OWN FLIGHT SINCE 0478, MEASURED AS THE PLAYER SEES IT.** Within one interval of the stage
+      opening the fish goes through the near edge; the edge breaks twice an arc with the breach's own
+      cue; it is never off the narrowest screen — not past the edge with more than its depth, not past
+      the leading edge — and it is back on the place it left inside the leap's own length and a beat,
+      on the fire grid, throwing. 0380's was the entrance replayed: gone off the lane, off the screen
+      for a second and a half, and four seconds before the arrival brought it back.
     */
     const stage = ROW.phases.findIndex((p) => p.leap !== undefined);
     expect(stage, 'no stage of the fish leaps').toBeGreaterThanOrEqual(0);
@@ -1033,8 +1036,14 @@ describe('0380 — the fish has four stages', () => {
     const crossingsBefore = cues.filter((c) => c === 'bossBreach').length;
     let left = -1;
     let back = -1;
-    let outside = false;
+    let through = false;
+    let offScreen = 0;
+    const worn = new Set<number>();
+    let leftFrom = { along: 0, across: 0 };
+    let landedAt = { along: 0, across: 0 };
     let thrown = false;
+    const narrowest = ACROSS_SPAN * MIN_ASPECT;
+    const surface = ROW.entrance?.kind === 'breach' ? ROW.entrance.surface : ACROSS_SPAN;
     let longestStep = 0;
     // 0395: while it banks through the leap, every flame of its fire is turned as the hull is.
     let banked = 0;
@@ -1053,7 +1062,10 @@ describe('0380 — the fish has four stages', () => {
       // In the camera's frame, which is the one the player watches it move in (0023).
       // While it is still flying its leap — the hand-over step lays it on station, which 0306 allows.
       if (left >= 0 && world.bossEntering >= 0) longestStep = Math.max(longestStep, Math.hypot(boss.along - world.cameraAlong - wasAlong, boss.across - wasAcross));
-      if (left < 0 && world.bossEntering >= 0) left = i;
+      if (left < 0 && world.bossEntering >= 0) {
+        left = i;
+        leftFrom = { along: wasAlong, across: wasAcross };
+      }
       if (left >= 0 && world.bossEntering >= 0 && Math.abs(boss.turn) > 0.2)
         for (let k = 0; k < world.bossAura.size; k++) {
           const flame = world.bossAura.at(k);
@@ -1061,8 +1073,15 @@ describe('0380 — the fish has four stages', () => {
           banked++;
           if (flame.turn !== boss.turn) apart++;
         }
-      if (left >= 0 && boss.across - ROW.radius > ACROSS_SPAN) outside = true;
-      if (left >= 0 && back < 0 && world.bossEntering < 0) back = i;
+      if (left >= 0 && back < 0 && boss.across > surface) through = true;
+      if (left >= 0 && back < 0) worn.add(boss.spriteBase);
+      // Off the screen: past the near edge by more than half its body, or past the narrowest screen's leading edge.
+      const rel = boss.along - world.cameraAlong;
+      if (left >= 0 && back < 0 && (boss.across - ROW.radius / 2 > ACROSS_SPAN || rel - ROW.radius > narrowest || rel < 0)) offScreen++;
+      if (left >= 0 && back < 0 && world.bossEntering < 0) {
+        back = i;
+        landedAt = { along: rel, across: boss.across };
+      }
       if (back >= 0 && world.enemyShots.size > shots) {
         thrown = true;
         break;
@@ -1071,10 +1090,20 @@ describe('0380 — the fish has four stages', () => {
     expect(left, `the fish never leapt in ${((leap.every + 900) / 60).toFixed(0)}s of its last stage`).toBeGreaterThanOrEqual(0);
     expect(left, 'the fish leapt before the player had seen the stage').toBeGreaterThan(leap.first * 0.5);
     expect(left, `the first leap waited ${(left / 60).toFixed(1)}s, longer than the row's ${(leap.first / 60).toFixed(1)}s and a capped gun's whole last stage`).toBeLessThanOrEqual(leap.first * 1.5 + 30);
-    expect(outside, 'the fish leapt without ever going through the near edge').toBe(true);
+    expect(through, 'the fish leapt without ever going through the near edge').toBe(true);
+    expect(offScreen, `the fish was off the narrowest screen for ${offScreen} steps of its leap`).toBe(0);
     expect(back, 'the fish leapt and never came back').toBeGreaterThanOrEqual(0);
-    expect((back - left) / 60, `the leap took ${((back - left) / 60).toFixed(1)}s`).toBeLessThan(10);
-    expect(cues.filter((c) => c === 'bossBreach').length - crossingsBefore, 'the edge did not break once for every crossing of the leap').toBeGreaterThanOrEqual(ROW.entrance!.kind === 'breach' ? ROW.entrance!.leaps + 1 : 1);
+    /*
+      ⚠️ **IN SECONDS, AND NOT AGAINST THE ROW'S OWN LENGTH**, which would be a guard measuring the
+      constant it guards (0027). The plan's two and a half, and half a second over: 0380's was four,
+      a second and a half of it with no fish on the screen.
+    */
+    expect((back - left) / 60, `the leap took ${((back - left) / 60).toFixed(1)}s against its own ${(leapSteps(leap) / 60).toFixed(1)}`).toBeLessThanOrEqual(3);
+    // And its face goes on living while it flies — 0478: it was frozen on whatever it wore when it left.
+    expect(worn.size, 'the fish wore one face the whole of its leap').toBeGreaterThan(1);
+    // Back on the place it left — 0478: the leap is a thing it does from its station, not a second arrival.
+    expect(Math.hypot(landedAt.along - leftFrom.along, landedAt.across - leftFrom.across), 'the fish came back somewhere other than where it left').toBeLessThan(2);
+    expect(cues.filter((c) => c === 'bossBreach').length - crossingsBefore, 'the edge did not break twice for every arc of the leap').toBeGreaterThanOrEqual(leap.arcs.length * 2);
     expect(thrown, 'the fish came back from its leap and never threw again').toBe(true);
     /*
       ⚠️ **AND ITS FIRE BANKS WITH IT — `docs/decisions/0395-the-fish-wears-its-fire.md`.** The ribbons are
@@ -2119,5 +2148,43 @@ describe('0477 — the leap is a target', () => {
     }
     expect(parked, 'no shot was parked on the arriving fish, so this guard drove nothing').toBeGreaterThan(60);
     expect(landed, `the arriving fish took ${landed} hits it should have refused`).toBe(0);
+  });
+});
+
+/**
+ * The mouth rests between snaps — `docs/decisions/0478-the-leap-has-its-own-flight.md`. Played: *"i
+ * think it's just the mouth is animated a bit too fast."* The fish stalks the ship's lane, so the ship
+ * crosses its centreline constantly, and every crossing snapped the jaw shut.
+ */
+describe('0478 — the mouth rests between snaps', () => {
+  it('THE REPORTED ONE: with the ship weaving across the fish’s lane every sixth of a second, the jaw snaps no more than twice a second', () => {
+    /*
+      In the player's unit, snaps a second, read off the face the hull wears: a snap is a step it puts
+      on the shut jaw after a step it did not. The fish's fire is held, so every closed jaw is a bite and
+      no gape outranks one. Measured at 0478: 5.5 a second before, 1.2 after. **Twice a second, and not
+      the face's own rest**, which would be a guard measured in the constant it guards (0027).
+    */
+    const face = BOSSES.volans.face!;
+    const CEILING = 2;
+    const { world, frame } = volansAt(0.9);
+    const seconds = 10;
+    let snaps = 0;
+    let shut = false;
+    for (let i = 0; i < seconds * STEPS_PER_SECOND; i++) {
+      const boss = world.bossPool.at(0);
+      boss.fireIn = 999;
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      world.ship.prevAcross = world.ship.across;
+      world.ship.across = boss.across + (Math.floor(i / 10) % 2 === 0 ? 20 : -20);
+      frame.step();
+      const now = world.bossPool.at(0).spriteBase === face.shut;
+      if (now && !shut) snaps++;
+      shut = now;
+    }
+    expect(snaps, 'the jaw never snapped, so this guard drove nothing').toBeGreaterThan(0);
+    expect(snaps / seconds, `the jaw snapped ${(snaps / seconds).toFixed(1)} times a second`).toBeLessThanOrEqual(CEILING);
   });
 });
