@@ -16,13 +16,13 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { LEVELS, LEVEL_KINDS, type LevelRow } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, WALL_RISE_MAX } from '../src/content/sprites.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { PLAYER_MARGIN } from '../src/sim/flight.ts';
-import { GameFrame, layRoom } from '../src/app/frame.ts';
+import { GameFrame, dropPickups, layRoom } from '../src/app/frame.ts';
 import { paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
@@ -540,5 +540,36 @@ describe('0348 — the labyrinth is walled', () => {
     }
     expect(fired, 'the sentry never fired, so no wall was laid').toBeGreaterThan(0);
     expect(sparks, `${sparks} spark-steps in the stone: a shot of the wall met it`).toBe(0);
+  });
+
+  it('0472 — a drop thrown from over the stone is born beside it, on the step it is thrown', () => {
+    /*
+      A hull dies wherever its patrol had it, and in a turning corridor that can be over the wall: the
+      lattice's did, at Savior, once 0472 solved its fight at the tuned tier and it ended in a turn.
+      `stoneHoldsPickups` puts a piece back every step, but before the drop in the step's order, so the
+      piece was drawn in the stone once. Thrown here from a place the stone covers, at every tier.
+    */
+    for (const tier of DIFFICULTY_KINDS) {
+      const { world } = playableWorld(TURN, tier);
+      const corridor = world.corridor!;
+      let along = Number.NaN;
+      let across = Number.NaN;
+      for (let a = corridor.from; a < corridor.to && Number.isNaN(along); a += 4) {
+        for (let x = 2; x < ACROSS_SPAN - 2; x += 2) {
+          if (stoneAt(corridor, a, x, 0) !== 0) {
+            along = a;
+            across = x;
+            break;
+          }
+        }
+      }
+      expect(along, `${tier}: no stone across the lane to throw from, so this measured nothing`).not.toBeNaN();
+      dropPickups(world, along, across, MID_BOSS_DROP);
+      expect(world.pickups.size, `${tier}: nothing was thrown`).toBeGreaterThan(0);
+      for (let i = 0; i < world.pickups.size; i++) {
+        const item = world.pickups.at(i);
+        expect(stoneAt(corridor, item.along, item.across, item.radius), `${tier}: piece ${i} of the drop was born in the stone`).toBe(0);
+      }
+    }
   });
 });

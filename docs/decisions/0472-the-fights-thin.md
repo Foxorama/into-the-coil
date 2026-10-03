@@ -99,6 +99,23 @@ No guard is added for the lead or for the wave counts. They are tuning numbers, 
 live bullets"* would be a threshold answering the question before it is asked —
 [0295](0295-a-ranking-guard-is-a-content-limiter.md). The instrument is how the next pass reads them.
 
+## ⚠️ What CI found: the shorter fight ended in a turn
+
+The first push went red on `tests/corridor.test.ts`. At Savior, the Labyrinth's three mid-boss pickups
+were drawn inside the corridor's stone for one step. [0350](0350-the-corridor-turns.md) holds the
+corridor straight for the lattice's fight, from 1270 to 1770. That stretch had been sized for the fight
+at AUTHORED. Solved at the tuned tier, the hull now dies with the camera near 1880, and its drop is
+thrown at about 2046, where the 1900 and 2080 swings put stone across the lane. Two changes, each
+answering half of it:
+
+- **The straight stretch runs to 2100.** That covers the fight at the tier it is tuned for, which is
+  0350's own rule: a fight in a corridor that is also turning is two difficulties at once. The swings
+  at 1900 and 2080 are gone; the turning resumes at 2260.
+- **A drop is born beside the stone, not in it.** `stoneHoldsPickups` already puts a piece back every
+  step, but it runs before the drop in the step's order. Burn's fight is longer than Savior's, so its
+  drop can still land in a turn. `throwPiece` now puts a piece out of the stone as it is made. The new
+  guard throws a drop from over the stone of a hard-turning corridor at every tier.
+
 ## Seen to fail
 
 [0005](0005-a-guard-must-be-seen-to-fail.md). `node scripts/prove-guard.mjs 0472`:
@@ -106,6 +123,7 @@ live bullets"* would be a threshold answering the question before it is asked �
 | broken on purpose | went red |
 |---|---|
 | the lattice back at the health solved off the tuned tier | `THE REPORTED ONE: a mid-boss fight lasts what its level asks` |
+| a drop born where the hull died, stone or not | `0472 — a drop thrown from over the stone is born beside it` |
 
 ## ⚠️ Measured and not changed
 

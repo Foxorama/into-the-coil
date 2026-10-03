@@ -17,4 +17,16 @@ export const PROBES = [
       replace: '    health: 187,',
     },
   },
+  {
+    decision: '0472',
+    suite: 'tests/corridor.test.ts',
+    // The drop thrown where the hull died, inside the wall, as CI caught it once the fight was shorter.
+    broke: 'a drop born where the hull died, stone or not',
+    guard: '0472 — a drop thrown from over the stone is born beside it',
+    edit: {
+      path: 'src/app/frame.ts',
+      find: '  if (side !== 0 && w.corridor !== null) item.across = outOfStone(w.corridor, item.along, item.across, item.radius, side);',
+      replace: '  void side;',
+    },
+  },
 ];

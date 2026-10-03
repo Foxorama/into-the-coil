@@ -7400,6 +7400,14 @@ function throwPiece(w: World, along: number, across: number, kind: PickupKind, i
   if (item === null) return;
   reset(item, along, across, row, slot);
   /*
+    ⚠️ **BORN BESIDE THE STONE, NOT IN IT — 0472.** A hull dies wherever its patrol had it, and in a
+    corridor that can be over the stone; `stoneHoldsPickups` puts a piece back, but it runs before
+    this in the step, so the drop was drawn inside the wall for the step it was thrown on.
+    `tests/corridor.test.ts` saw it the day the lattice's fight got shorter and ended in a turn.
+  */
+  const side = stoneAt(w.corridor, item.along, item.across, item.radius);
+  if (side !== 0 && w.corridor !== null) item.across = outOfStone(w.corridor, item.along, item.across, item.radius, side);
+  /*
     ⚠️ **A DROPPED PIECE CYCLES LIKE AN AUTHORED ONE — 0233.** 0243 had a scattered piece hold the
     face the player just lost, because what a death threw back was what it took and a switch under
     fire was the report; a drop is an offer, not a return, and since 0256 a switch keeps the count,

@@ -1619,10 +1619,14 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       /*
         ⚠️ **TWO TURNING STRETCHES, AND THE THREE STRAIGHT ONES ARE WHERE A FIGHT IS — 0350.** Straight
         and full width for the opening 300, for the lattice's fight (it arrives at 1519, and the
-        stretch is held from 1270 to 1770), and for the last 400 before the room — the plan's rule
+        stretch is held from 1270 to 2100), and for the last 400 before the room — the plan's rule
         that a fight in a corridor that is also turning is two difficulties at once. Between them the
         corridor swings from side to side and pinches, a point every 180 units or so: far enough
         apart that the half-cosine between them sets the shape, and the tier's slope only caps it.
+
+        ⚠️ **TO 2100, NOT 1770, SINCE 0472** solved the lattice at the tuned tier. 1770 was sized for a
+        fight nobody flew; at Savior the hull now dies with the camera near 1880 and its drop thrown at
+        about 2046, where 1900's and 2080's swings had the stone across the lane.
       */
       shape: [
         { at: 300, swing: 0, narrow: 0 },
@@ -1632,9 +1636,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
         { at: 980, swing: -0.6, narrow: 1 },
         { at: 1150, swing: 0, narrow: 0.5 },
         { at: 1270, swing: 0, narrow: 0 },
-        { at: 1770, swing: 0, narrow: 0 },
-        { at: 1900, swing: 0.8, narrow: 0.7 },
-        { at: 2080, swing: -0.7, narrow: 1 },
+        { at: 2100, swing: 0, narrow: 0 },
         { at: 2260, swing: -0.9, narrow: 0.5 },
         { at: 2440, swing: 0.5, narrow: 0.8 },
         { at: 2620, swing: 0.9, narrow: 1 },
