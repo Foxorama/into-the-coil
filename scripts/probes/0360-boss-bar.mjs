@@ -43,8 +43,9 @@ export const PROBES = [
     guard: 'rounds UP, so a boss on its last point of health shows a sliver',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'Math.ceil((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS)',
-      replace: 'Math.floor((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS)',
+      // Re-anchored by 0475: the denominator is the wreck's while one stands.
+      find: 'Math.ceil((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS)',
+      replace: 'Math.floor((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS)',
     },
   },
   {
