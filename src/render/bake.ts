@@ -2121,23 +2121,51 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
   lavender all over and read as one blob.
 */
 
-/** The ray gun, in the box's radius: its chamber on the disc, the barrel's half-width, two fins and the orb. */
+/*
+  ── AND A PROFILE LAID FLAT IS A STICK, SO THE GUN IS A TURRET SET INTO THE RIM — 0467 ─────────────
+
+  Played a third time: *"the ray gun on the lil caddie looks pretty terrible and needs to be scrapped
+  and restarted."* 0461 and 0463 each drew what a ray gun looks like from the SIDE — a bulb, fins, a
+  barrel, a ball — and laid it flat on a saucer seen from ABOVE, where fins are a cone, a barrel is a
+  line, and chrome has no edge against the void: at the shipped camera, thirteen pixels of grey wedge
+  and a lavender dot. What reads from above is a round thing with a light in it, which is what the
+  pods beside it are. So the gun is an emitter housing half sunk into the rim at the nose — a chrome
+  ball the size of half the dome, a lavender lens in its face with the rings it fires glowing in it
+  about a white heart — and a short fat barrel from it to the orb. The tip did not move, so the row's
+  `muzzle` and the mounts guard are unchanged. `reports/the-chrome-and-the-ships-reviewed-2026-10-03.md`
+  is the review; the player chose this of three directions.
+*/
+
+/** The ray gun, in the box's radius: the housing set into the rim, its lens, the barrel's half-width and the orb. */
 const RAYGUN = {
-  /** The chamber the gun is fed from, on the saucer's face just ahead of the dome. */
-  chamber: { x: 0.45, r: 0.13 },
-  barrel: 0.06,
+  /** The emitter housing: a ball with its centre inside the rim, so half of it stands proud of the disc. */
+  housing: { x: 0.6, r: 0.22 },
+  /** The lens in its face, and the white heart of the lens. */
+  lens: 0.145,
+  /** 0.055 and not 0.05: at 1280×720 the smaller was 2.37 px across, under 0106's floor for a solid mark. */
+  heart: 0.055,
+  /** The barrel's half-width, from the housing to the orb. */
+  barrel: 0.08,
   /**
-   * Each fin's back, front, half-height at the back and at the front — the bigger nearer the saucer,
-   * and each swept down toward the muzzle, so the gun points.
+   * The orb at the muzzle; its front is the tip, where the rings leave. Smaller than the lens, so the
+   * gun reads as a lens with a muzzle and not as a dumbbell of two lavender balls.
    */
-  fins: [
-    [0.62, 0.76, 0.28, 0.17],
-    [0.82, 0.95, 0.2, 0.12],
-  ] as const,
-  /** The orb at the muzzle; its front is the tip, where the rings leave. */
-  orb: { x: 1.035, r: 0.095 },
+  orb: { x: 1.05, r: 0.08 },
   tip: 1.13,
 };
+
+/**
+ * Where the housing's ball crosses the disc's rim, on the lower side: the point, its angle about the
+ * disc and its angle about the housing — solved rather than placed, so the rim hands over to the
+ * housing with no sliver of hull between them.
+ */
+function housingSeat(): { x: number; y: number; onDisc: number; onHousing: number } {
+  const D = CADDIE_DISC;
+  const { x: cx, r } = RAYGUN.housing;
+  const x = (D * D - r * r + cx * cx) / (2 * cx);
+  const y = Math.sqrt(Math.max(0, D * D - x * x));
+  return { x, y, onDisc: Math.atan2(y, x), onHousing: Math.atan2(y, x - cx) };
+}
 
 /**
  * One missile pod, in the box's radius: how far out its axis hangs, its tail and its mouth along it,
@@ -2195,16 +2223,8 @@ function podDetour(): Pt[] {
  */
 function caddieHull(stage: number): Pt[] {
   const D = CADDIE_DISC;
-  // Where the first fin's swept edge crosses the rim: the line from its back to its front, solved
-  // against the disc, so the rim hands over to the fin with no sliver of hull between them.
-  const [back, front, high, low] = RAYGUN.fins[0];
-  const dx = front - back;
-  const dy = low - high;
-  const qa = dx * dx + dy * dy;
-  const qb = 2 * (back * dx + high * dy);
-  const qc = back * back + high * high - D * D;
-  const t = (-qb + Math.sqrt(qb * qb - 4 * qa * qc)) / (2 * qa);
-  const meets = Math.atan2(high + t * dy, back + t * dx);
+  // Where the housing's ball leaves the rim — 0467.
+  const meets = housingSeat().onDisc;
   // The lower half, from where the gun leaves the rim round to the tail, a pod's detour in it at two.
   const lower = (pod: boolean): Pt[] => {
     const out: Pt[] = [];
@@ -2229,24 +2249,20 @@ function caddieHull(stage: number): Pt[] {
 }
 
 /**
- * The ray gun's outline outside the rim, from the top of its first fin over the orb to the bottom of
- * it — the hull's, and the hangar's side view strokes it round a gun of its own.
+ * The ray gun's outline outside the rim, from the housing's seat in the rim on the upper side, round
+ * the housing, along the barrel and round the orb to the tip, and back down the lower side — the
+ * hull's, and the hangar's side view strokes it round a gun of its own. 0467.
  */
 export function raygunProfile(): Pt[] {
-  const [finA, finB] = RAYGUN.fins;
-  const { x, r } = RAYGUN.orb;
-  // Where the barrel's edge meets the orb, and round its upper half to the tip.
-  const from = Math.PI + Math.asin(RAYGUN.barrel / r);
-  const gun: Pt[] = [
-    [finA[1], -finA[3]],
-    [finA[1], -RAYGUN.barrel],
-    [finB[0], -RAYGUN.barrel],
-    [finB[0], -finB[2]],
-    [finB[1], -finB[3]],
-    [finB[1], -RAYGUN.barrel],
-    ...roundel(x, 0, r, 10, from, Math.PI * 2).slice(0, -1).map(([px, py]): Pt => [px, -Math.abs(py)]),
-    [RAYGUN.tip, 0],
-  ];
+  const { x: hx, r: hr } = RAYGUN.housing;
+  const { x: ox, r: or } = RAYGUN.orb;
+  const seat = housingSeat();
+  // Where the barrel's edge leaves the housing, and where it arrives at the orb, as angles about each.
+  const leaves = Math.asin(RAYGUN.barrel / hr);
+  const arrives = Math.PI - Math.asin(RAYGUN.barrel / or);
+  // The upper side: negative `across`. The barrel is the straight run between the two arcs, and the
+  // orb's arc ends on the tip exactly.
+  const gun: Pt[] = [...roundel(hx, 0, hr, 10, -seat.onHousing, -leaves), ...roundel(ox, 0, or, 10, -arrives, 0)];
   // The tip is shared, so the mirror starts one point back.
   return [...gun, ...mirrored(gun).reverse().slice(1)];
 }
@@ -2263,48 +2279,45 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
 }
 
 /**
- * The ray gun — 0463, and it was a lavender spool. A chamber on the saucer's face with the rings' light
- * glowing in it, a chrome barrel with a line of that light down it, two chrome fins lit from above and
- * shrinking toward the muzzle, and a ball of light at the end that the rings leave from. Painted over a
+ * The ray gun — 0467, and it was a stick. A chrome ball set into the rim with a lavender lens in its
+ * face, the rings it fires glowing in the lens about a white heart; a short chrome barrel with a line
+ * of that light down it; and the ball of light at the end that the rings leave from. Painted over a
  * hull that already holds its shape; the hangar's side view lays the same gun on its own outline
- * (`paintSaucer` in `port-bake.ts`), where the chamber is behind the lens and is left off.
+ * (`paintSaucer` in `port-bake.ts`), where the housing stands proud of the rim's edge and has no seat
+ * in a face to shadow, which is what `onDisc` turns off.
  */
-export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, chamber = true): void {
+export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true): void {
   const chrome = shade(palette.trim, 0.65);
   const b = RAYGUN.barrel;
+  const { x: hx, r: hr } = RAYGUN.housing;
   const { x: ox, r: or } = RAYGUN.orb;
-  const c = RAYGUN.chamber;
-  if (chamber) {
-    // A chrome collar, dark under its lip, and the light inside it.
-    shaded(ctx, f, [c.x - c.r, -c.r], [c.x + c.r, c.r], shade(chrome, 0.35), shade(chrome, -0.45), roundel(c.x, 0, c.r, 20, 0, Math.PI * 2));
-    disc(ctx, f, shade(palette.ally, -0.35), c.x, 0, c.r * 0.72);
-    glow(ctx, f, palette.ally, c.x, 0, c.r * 1.1, 0.85);
-  }
+  // The barrel first, so the housing and the orb sit over its ends: chrome lit along its top, the
+  // rings' light down its middle.
   shaded(ctx, f, [0, -b], [0, b], shade(chrome, 0.4), shade(chrome, -0.35), [
-    [c.x, -b],
+    [hx, -b],
     [ox, -b],
     [ox, b],
-    [c.x, b],
+    [hx, b],
   ]);
-  for (const [back, front, high, low] of RAYGUN.fins) {
-    // Bright along the top and gunmetal along the bottom, so each reads as a fin standing up off the
-    // barrel and the light down the middle is the brightest thing on the gun.
-    shaded(ctx, f, [0, -high], [0, high], shade(palette.trim, 0.8), shade(palette.trim, -0.35), [
-      [back, -high],
-      [front, -low],
-      [front, low],
-      [back, high],
-    ]);
-  }
-  // The energy running down the barrel from the chamber to the orb.
   seam(ctx, f, shade(palette.ally, 0.35), 0.045, [
-    [chamber ? c.x : RAYGUN.fins[0][0], 0],
+    [hx + hr * 0.8, 0],
     [ox, 0],
   ], 0.9);
+  // The housing's seat: a shadow on the disc's face round the ball's back, so it sits IN the hull.
+  if (onDisc) disc(ctx, f, shade(palette.space, 0.12), hx - 0.03, 0, hr * 1.04, 0.6);
+  // The ball: chrome, lit above and ahead, dark below and behind.
+  shaded(ctx, f, [hx + hr * 0.2, -hr], [hx - hr * 0.2, hr], shade(chrome, 0.55), shade(chrome, -0.45), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
+  // The lens: the rings' lavender, deep at its edge, two rings of light in it about the heart.
+  const lens = RAYGUN.lens;
+  shaded(ctx, f, [hx, -lens], [hx, lens], shade(palette.ally, 0.05), shade(palette.ally, -0.5), roundel(hx, 0, lens, 24, 0, Math.PI * 2));
+  seam(ctx, f, shade(palette.ally, 0.45), 0.04, roundel(hx, 0, lens * 0.74, 18, 0, Math.PI * 2), 0.9, true);
+  seam(ctx, f, shade(palette.ally, 0.6), 0.04, roundel(hx, 0, lens * 0.44, 14, 0, Math.PI * 2), 0.9, true);
+  glow(ctx, f, palette.ally, hx, 0, lens * 1.25, 0.65);
+  disc(ctx, f, palette.impact, hx + 0.01, 0, RAYGUN.heart);
   // The orb: the rings' lavender with a white-hot heart, and its light — short of the box's edge,
   // because a glow past 1.16 of the radius runs into the next bitmap.
   disc(ctx, f, shade(palette.ally, 0.25), ox, 0, or - 0.005);
-  glow(ctx, f, palette.ally, ox, 0, 0.12, 0.8);
+  glow(ctx, f, palette.ally, ox, 0, 0.105, 0.8);
   disc(ctx, f, palette.impact, ox + 0.01, 0, 0.055);
 }
 
