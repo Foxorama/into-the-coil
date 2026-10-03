@@ -694,3 +694,76 @@ describe.runIf(chromePath)('the readout follows what the player spends', () => {
     await page.context().close();
   });
 });
+
+/*
+ * THE CHROME FITS THE PHONE — `docs/decisions/0465-the-chrome-fits-the-phone.md`.
+ *
+ * Played: *"the hud and side buttons are too big on mobile it looks weird."* Measured, the strip was
+ * typeset in `vw`, so an 844-wide phone wore the desktop's font on a screen half as tall — 16 % of
+ * the height against the desktop's 9 % — and three discs at 0.17 of the short edge stacked 61 % of
+ * the height up the leading edge. Both in the player's units here, as 0049 measures its screens:
+ * pixels of the glass against the glass.
+ *
+ * ⚠️ One press and five viewports, resized as 0439's guard does, because every press here pays a
+ * music bake and the strip re-lays out on a resize (0369).
+ */
+describe.runIf(chromePath)('0465 — the chrome fits the phone', () => {
+  /** The layout guard's phones, plus the camera the game ships on a desktop. */
+  const PHONES = [
+    [480, 320],
+    [667, 375],
+    [812, 375],
+    [844, 390],
+    [915, 412],
+  ] as const;
+
+  async function measure(page: Page, width: number, height: number) {
+    await page.setViewportSize({ width, height });
+    await page.waitForTimeout(200);
+    return page.evaluate(() => {
+      const bottom = (s: string): number => document.querySelector(s)!.getBoundingClientRect().bottom;
+      const discs = [...document.querySelectorAll('.itc-playing-trigger-button')].map((b) => {
+        const r = b.getBoundingClientRect();
+        return { top: r.top, bottom: r.bottom, width: r.width };
+      });
+      return { strip: Math.max(bottom('.itc-playing-hud'), bottom('.itc-playing-score')), discs, height: innerHeight };
+    });
+  }
+
+  it('THE ASK: the strip is under a tenth of a phone’s height, and the desktop’s is what it was', async () => {
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-score-shown');
+    for (const [width, height] of PHONES) {
+      const m = await measure(page, width, height);
+      /*
+        A tenth. The smallest phone stands on the type's floor — 0.75 rem, the one number 0465 leaves
+        to the play — and a floor is a height the box cannot shrink (0049), so there it is an eighth.
+      */
+      const share = height <= 320 ? 0.125 : 0.105;
+      expect(m.strip / height, `at ${width}×${height} the strip is ${((100 * m.strip) / height).toFixed(1)} % of the height`).toBeLessThanOrEqual(share);
+    }
+    // Measured on main at 85a6432, before the change: the plates' bottom edge at 64 px. 0153: the desktop does not move.
+    const desk = await measure(page, 1280, 720);
+    expect(Math.abs(desk.strip - 64), `at 1280×720 the strip ends at ${desk.strip.toFixed(1)} px where it ended at 64`).toBeLessThanOrEqual(1);
+    await page.context().close();
+  });
+
+  it('and the discs are a thumb and no more: 44 to 66 px each, the column under half the height', async () => {
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-trigger-shown');
+    for (const [width, height] of PHONES) {
+      const m = await measure(page, width, height);
+      const at = `${width}×${height}`;
+      expect(m.discs.length, `at ${at} the discs are not one per trigger`).toBe(SIDES.length);
+      for (const disc of m.discs) {
+        expect(disc.width, `at ${at} a disc is ${disc.width.toFixed(1)} px, under a fingertip`).toBeGreaterThanOrEqual(43.5);
+        expect(disc.width, `at ${at} a disc is ${disc.width.toFixed(1)} px, over the 66 the 390 px phone had`).toBeLessThanOrEqual(66.5);
+      }
+      const column = Math.max(...m.discs.map((d) => d.bottom)) - Math.min(...m.discs.map((d) => d.top));
+      expect(column / height, `at ${at} the discs take ${((100 * column) / height).toFixed(1)} % of the height`).toBeLessThanOrEqual(0.5);
+    }
+    await page.context().close();
+  });
+});

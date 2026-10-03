@@ -44,6 +44,12 @@ import { PAD_SPECIAL_BUTTONS } from './pad.ts';
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
 import { TRIGGER_BUTTON } from './touch.ts';
+/**
+ * The drawn disc's diameter as the stylesheet says it — 0465: the table's share of the glass's short
+ * edge, held between its floor and its ceiling in pixels. One string, used for the disc's box and for
+ * each disc's place up the edge, so `triggerRadius` and the picture cannot round differently.
+ */
+const TRIGGER_DISC = `clamp(${TRIGGER_BUTTON.min}px, ${TRIGGER_BUTTON.size * 100}cqmin, ${TRIGGER_BUTTON.max}px)`;
 // The boss's phase table, so the bar can mark where the fight turns — 0360.
 import type { BossRow } from '../content/bosses.ts';
 import { MULTIPLIER_CAP, STREAK_STEP, multiplierFor } from '../content/score.ts';
@@ -998,14 +1004,28 @@ ${faceTurns()}
 */
 .itc-playing-top {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
+  /*
+    ⚠️ **ITS OWN CONTAINER, EXACTLY THE HOST'S SIZE — 0465**, as the trigger discs' is, so the strip
+    inside it is sized against the SHORT AXIS of the box the player is looking at. It was a strip
+    pinned to the top and typeset in vw, and a landscape phone has the desktop's width and half its
+    height: at 844×390 the readout wore the desktop's font to within half a pixel and the strip was
+    16 % of the picture where the desktop's is 9 %. 0049's rule, one screen over.
+  */
+  container-type: size;
+  pointer-events: none;
+}
+.itc-playing-strip {
   display: grid;
   grid-template-columns: 1fr minmax(0, 38%) 1fr;
   column-gap: 0.6em;
   align-items: start;
-  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  /*
+    2.9 % of the box's height is the desktop's 20.8 px at 720 tall, so 1280×720 does not move
+    (0153); the cap holds a tall monitor where it was. The floor is a phone's, read at a hand's
+    length and at a device scale of two — 0361's 0.95 rem was sized for a monitor at arm's length.
+  */
+  font: 600 clamp(0.75rem, 2.9cqh, 1.3rem)/1 system-ui, sans-serif;
   pointer-events: none;
 }
 .itc-playing-hud {
@@ -1018,9 +1038,9 @@ ${faceTurns()}
   /*
     Read at arm's length rather than leaned into — 0361. The readout was two thirds of this and the
     smallest text in the game while a fight is on; it is the one piece of chrome the player reads
-    without looking away from the ship.
+    without looking away from the ship. The type is the strip's, inherited, since 0465 — declared once
+    above, so the three plates cannot be sized apart.
   */
-  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
   /* A halo of the void, so the ink stays legible over a bright place's land. */
   text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000);
   pointer-events: none;
@@ -1067,7 +1087,6 @@ ${faceTurns()}
   box-sizing: border-box;
   border: 2px solid currentColor;
   border-radius: 0.4em;
-  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
   filter: drop-shadow(0 0 0.2em var(--itc-void, #000));
   pointer-events: none;
 }
@@ -1114,7 +1133,8 @@ ${faceTurns()}
   align-items: flex-end;
   gap: 0.25em;
   padding: 0.7em 1.1em;
-  font: 800 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;
+  /* The strip's type (0465), at the score's own weight. */
+  font-weight: 800;
   pointer-events: none;
 }
 .itc-playing-score-shown { display: flex; }
@@ -1678,8 +1698,15 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
 .itc-playing-trigger-button {
   position: absolute;
   right: ${TRIGGER_BUTTON.inset * 100}cqmin;
-  width: ${TRIGGER_BUTTON.size * 100}cqmin;
-  height: ${TRIGGER_BUTTON.size * 100}cqmin;
+  /*
+    A thumb's size, and no more — 0465. The disc was 0.17 of the short edge, sized when there were
+    two and played at three as *"too big"*: 66 px on a 390 px phone, three of them 61 % of the height
+    up the edge every threat enters by. The table's floor and ceiling are pixels because a thumb is
+    the same size on every phone; between them the disc is a share of the short edge.
+  */
+  width: ${TRIGGER_DISC};
+  height: ${TRIGGER_DISC};
+  font-size: clamp(0.7rem, 3cqmin, 1.1rem);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -1940,7 +1967,7 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 .itc-playing-trigger-button {
   border-color: transparent;
   background:
-    linear-gradient(color-mix(in srgb, var(--itc-void) 55%, transparent), color-mix(in srgb, var(--itc-void) 55%, transparent)) padding-box,
+    linear-gradient(color-mix(in srgb, var(--itc-void) 35%, transparent), color-mix(in srgb, var(--itc-void) 35%, transparent)) padding-box,
     linear-gradient(135deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
   box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 25%, transparent);
 }
@@ -1954,7 +1981,7 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   with one rim, the studio's, and each keeps its own ink inside: the cyan readout, the enemy's bar,
   the gold score. The grid, its columns and its guards are 0360's and 0428's and are untouched.
 */
-.itc-playing-top {
+.itc-playing-strip {
   --itc-strip: 2.6em;
   padding: 0.5em 0.6em 0;
   align-items: center;
@@ -3711,14 +3738,21 @@ export function makeChrome(
   shieldGroup.setAttribute('role', 'img');
   const pips: HTMLElement[] = [];
   hud.append(livesGroup, shieldGroup, ...stackGroups.map((s) => s.group));
-  // The row the readout shares with the boss bar — a grid, so the two cannot overlap on any width.
+  /*
+    The box the strip is sized against — 0465: the host's whole glass, a query container as the
+    trigger discs' is, so the strip's type is a share of the SHORT axis and not of the width.
+  */
   const top = document.createElement('div');
   top.className = 'itc-playing-top';
   // The studio's two inks for the plates' rims, violet into cyan — 0439, as the banner runs.
   top.style.setProperty('--itc-ink', colours.player);
   top.style.setProperty('--itc-ally', colours.ally);
   top.style.setProperty('--itc-void', colours.space);
-  top.appendChild(hud);
+  // The row the readout shares with the boss bar — a grid, so the two cannot overlap on any width.
+  const strip = document.createElement('div');
+  strip.className = 'itc-playing-strip';
+  strip.appendChild(hud);
+  top.appendChild(strip);
   elements.push(top);
 
   /*
@@ -3828,7 +3862,7 @@ export function makeChrome(
   bossBar.appendChild(bossTrack);
   /** The notches, grown once per row and reused. */
   const bossNotches: HTMLElement[] = [];
-  top.appendChild(bossBar);
+  strip.appendChild(bossBar);
 
   /*
     ── THE SCORE — 0428 ────────────────────────────────────────────────────────────────────────────
@@ -3867,7 +3901,7 @@ export function makeChrome(
   streakTimes.textContent = '×1';
   streakRow.append(streakTimes, streakBar);
   scoreBox.append(scorePop, streakRow);
-  top.appendChild(scoreBox);
+  strip.appendChild(scoreBox);
   /** What the score last said, so a call that changed nothing animates nothing. */
   let scoreShown = -1;
   let streakShown = 0;
@@ -4121,7 +4155,7 @@ export function makeChrome(
             run — is the one under the resting thumb. The same arithmetic the hit test does, in the
             container's own short-edge units.
           */
-          band.style.bottom = String((TRIGGER_BUTTON.inset + i * (TRIGGER_BUTTON.size + TRIGGER_BUTTON.gap)) * 100) + 'cqmin';
+          band.style.bottom = 'calc(' + String((TRIGGER_BUTTON.inset + i * TRIGGER_BUTTON.gap) * 100) + 'cqmin + ' + String(i) + ' * ' + TRIGGER_DISC + ')';
           // Bare, as the readout's are — 0433: the disc round it is already the button's shape.
           const icon = glyphOf(row.sprite);
           icon.className = 'itc-playing-trigger-icon';

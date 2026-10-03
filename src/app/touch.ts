@@ -342,19 +342,32 @@ function clamp1(n: number): number {
  * ⚠️ **Fractions of the SHORT edge**, because a thumb is the same size on every phone and the short
  * edge is the one a landscape phone is short of —
  * `docs/decisions/0049-the-chrome-is-authored-against-the-short-axis.md`. Sized against a 390px
- * short edge: a 66px disc, an 86px hit circle, 20px in from each edge.
+ * short edge: a 47px disc, a 61px hit circle, 20px in from each edge — and the disc is held between
+ * a fingertip and the 66px it used to be, in pixels, since
+ * `docs/decisions/0465-the-chrome-fits-the-phone.md`.
  *
  * ⚠️ **`reach` is how far past the drawn rim a tap still counts.** A thumb lands on the edge of the
  * thing it aims at as often as on its middle, and a button that heard only its own disc would be
  * 0060's dead half again — a tap the player watched land, answered with silence.
  */
 export const TRIGGER_BUTTON = {
-  /** The drawn disc's diameter. */
-  size: 0.17,
+  /**
+   * The drawn disc's diameter, between `min` and `max` — 0465. It was 0.17 with no floor or
+   * ceiling, sized at two discs and played at three: *"the hud and side buttons are too big on
+   * mobile."* 66 px on a 390 px phone, and the three of them 61 % of the height up the leading edge.
+   */
+  size: 0.12,
+  /**
+   * The smallest the disc is drawn, in CSS pixels: a fingertip, 0358's own floor. A thumb is the
+   * same size on every phone, so below this the share of the short edge gives way to the thumb.
+   */
+  min: 44,
+  /** And the largest — what the 390 px phone had, which a tablet's short edge would otherwise double. */
+  max: 66,
   /** From the leading edge, and from the low edge, to the first disc's rim. */
   inset: 0.05,
   /** Between one disc's rim and the next one's, up the leading edge. */
-  gap: 0.05,
+  gap: 0.035,
   /** The hit radius, as a multiple of the drawn one. */
   reach: 1.3,
 } as const;
@@ -369,7 +382,8 @@ export const TRIGGER_BUTTON = {
  * beyond the `DOMRect` the header already declares.
  */
 export function triggerRadius(width: number, height: number): number {
-  return (TRIGGER_BUTTON.size * Math.min(width, height)) / 2;
+  const drawn = TRIGGER_BUTTON.size * Math.min(width, height);
+  return Math.min(TRIGGER_BUTTON.max, Math.max(TRIGGER_BUTTON.min, drawn)) / 2;
 }
 
 /** The centre of every trigger button along the glass's long edge, from its left, in CSS pixels. */
@@ -380,7 +394,8 @@ export function triggerX(width: number, height: number): number {
 /** The centre of trigger `band` down the glass's short edge, from its top, in CSS pixels. */
 export function triggerY(width: number, height: number, band: number): number {
   const short = Math.min(width, height);
-  return height - TRIGGER_BUTTON.inset * short - triggerRadius(width, height) - band * (TRIGGER_BUTTON.size + TRIGGER_BUTTON.gap) * short;
+  const radius = triggerRadius(width, height);
+  return height - TRIGGER_BUTTON.inset * short - radius - band * (2 * radius + TRIGGER_BUTTON.gap * short);
 }
 
 /**
