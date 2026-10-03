@@ -4160,10 +4160,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
       nearest of its drift — three quarters of a 16:9 screen and more — then lit, dark, lit and dark a
       fifth of a second each, and out.
 
-      ⚠️ **108 AND NOT 120, BECAUSE THE SHIP STARTS AT 40.** At 120 the top of the pulse reached past
-      where a ship is put on the field, so a life could begin frozen, and `tests/crowd.test.ts`'s pilot
-      — which holds its lane rather than retreating — was frozen under a volley with nowhere to go. The
-      strip behind 44 is the answer to the cold: *fall back*, and never *there is nowhere*.
+      ⚠️ **130, OVER WHERE THE SHIP STARTS, AND THE CORNERS ARE THE ANSWER — 0484.** 0459 held it at 108
+      so the start at 40 stayed clear, and that kept the whole left of the screen clear with it: a cold
+      the player never had to move for. Played: *"as long as the player has safe space at the top left
+      and bottom left of the screen, it can overlap the 'starting' space."* The cold is a circle, so the
+      back corners are where it is furthest; 130 is solved for a pocket a fifteenth of the lane in from
+      each, with the hull at the top of its patrol crowding the top one. *Fall back to a corner*, and
+      never *there is nowhere*.
 
       ⚠️ **OUT IN SIX AND A HALF SECONDS, BACK IN TWO AND A HALF, ONE AT REST — 0471.** *"It should
       pulse out, retract and pulse again like a proper pulse."* 0459's strobe and its one-step jump
@@ -4173,7 +4176,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     chill: {
       radius: 46,
-      reach: 108,
+      reach: 130,
       pulse: 600,
       swell: 390,
       retract: 150,
