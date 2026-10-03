@@ -77,8 +77,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length,
-      // by 0364, which re-solved them after the zoom, and by 0406, at the loadout the run carries in.
-      find: '    health: 699,',
+      // by 0364, which re-solved them after the zoom, by 0406, at the loadout the run carries in, and
+      // by 0472, at the tuned tier.
+      find: '    health: 414,',
       replace: '    health: 2000,',
     },
   },

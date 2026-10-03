@@ -22,8 +22,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: firing bodies arrive more slowly during a mid-boss fight than before it',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && w.bossPool.size > 0;',
-      replace: '      const thinned = false;',
+      // Re-anchored by 0472, which counts the waves just short of the mid-boss as its fight's too.
+      find: '      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && (w.bossPool.size > 0 || ahead);',
+      replace: '      const thinned = false && ahead;',
     },
   },
   {
@@ -56,8 +57,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: firing bodies arrive more slowly during a mid-boss fight than before it',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'row.fireEvery > 0 && w.fight === 0 && w.bossPool.size > 0;',
-      replace: 'row.fireEvery > 0 && w.fight === 1 && w.bossPool.size > 0;',
+      find: 'row.fireEvery > 0 && w.fight === 0 && (w.bossPool.size > 0 || ahead);',
+      replace: 'row.fireEvery > 0 && w.fight === 1 && (w.bossPool.size > 0 || ahead);',
     },
   },
 ];

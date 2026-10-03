@@ -20,10 +20,16 @@
 // outlive a death, so from the second level on a mid-boss is met at the cap and every fight here was
 // solved for a ship a third as strong as the one that flies it. The ship's own gun, as before.
 //
+// ⚠️ **AT THE TUNED TIER, SINCE 0472.** It flew the content multiplied by nothing, which no tier is
+// since 0356 made Savior the one the game is tuned for — and Savior's toughness of 1.6 stretched every
+// fight solved here to 24–57 s against the 17–23 asked for. A quantity is checked in the case it is
+// applied to (0280), and the case a player meets is a tier.
+//
 // It exits non-zero if any level's mid-boss is not fought, on the same terms as its siblings: an
 // instrument that measured nothing must not report success.
 
 import { BOSSES } from '../src/content/bosses.ts';
+import { TUNED } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS } from '../src/content/levels.ts';
 import { carriedAt, weighFight } from './weigh-fight.mjs';
 
@@ -34,7 +40,7 @@ for (const kind of LEVEL_KINDS) {
   if (level.midBoss === null) continue;
   const row = BOSSES[level.midBoss.kind];
   const want = MID_BOSS_SECONDS[kind];
-  const r = weighFight(kind, carriedAt(kind));
+  const r = weighFight(kind, { ...carriedAt(kind), difficulty: TUNED });
   if (!r.fought) {
     unfought++;
     continue;

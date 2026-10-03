@@ -88,7 +88,7 @@ import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PL
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
-import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
+import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
@@ -2546,7 +2546,9 @@ export class GameFrame implements Frame {
       */
       const wave = w.level.waves[w.nextWave]!;
       const row = w.enemyRows[w.enemyKinds[wave.enemy]];
-      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && w.bossPool.size > 0;
+      // A wave just short of the mid-boss flies in with it, so it is the fight's as well — 0472.
+      const ahead = w.level.midBoss !== null && wave.at >= w.level.midBoss.at - FIGHT_LEAD;
+      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && (w.bossPool.size > 0 || ahead);
       if (thinned) w.fightFiring++;
       // ⚠️ `(n - 1) % N`, so the FIRST offer of a fight always lands and `FIGHT_FIRING_IN` of 1 means
       // *thin nothing*. `n % N === 1` reads the same and is wrong at 1, where it admits none — the

@@ -2423,7 +2423,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // and fought it for 10 s against the level's 17; re-solved by the same script.
     // 262 from 211 — 0452: main already fought it for 14.3 s, and the volley leaving its prow took
     // 0.6 s more off, past the guard's three; re-solved by the same script, the other six left in band.
-    health: 262,
+    // 153 from 262 — 0472: solved at the tuned tier, where 262 fought for 26 s; two passes.
+    health: 153,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -2506,7 +2507,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // A mid-boss since 0247, which halved 580 to 290; solved to its level's seconds since 0269.
     // 66 from 65 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 277 from 66 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 277,
+    // 168 from 277 — 0472: solved at the tuned tier, where 277 fought for 29 s; two passes.
+    health: 168,
     damage: 3,
     // Closer than the sentinel's 120, which is most of what makes it feel like a different fight:
     // the player has less room in front of them and less warning on everything it throws.
@@ -2583,7 +2585,10 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 32 from 48 — re-solved after 0364: a fifth further off and patrolling a lane a fifth wider, so
     // less of what is fired at it lands, and at 48 the fight ran 52 s against 20. See `patrol`.
     // 187 from 32 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 187,
+    // 101 from 187 — 0472: solved at the tuned tier, where 187 fought for 56 s. Scanned by hand rather
+    // than by the solver's ratio, which did not converge: the fight steps with the walls' clock — 97
+    // fights for 16.5 s, 99 for 22.6, 101 for 19.4.
+    health: 101,
     damage: 3,
     /*
       ⚠️ **The furthest station any hull can have, and the guard is what said where that is.** The
@@ -2648,7 +2653,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // and 0269 solved it to its level's seconds.
     // 50 from 61 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 229 from 50 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 229,
+    // 132 from 229 — 0472: solved at the tuned tier, where 229 fought for 30 s; two passes.
+    health: 132,
     damage: 3,
     station: 163,
     drift: 18,
@@ -2700,7 +2706,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 0.16, so nearly everything fired at it lands and the health is the whole of the fight.
     // 158 from 210 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 541 from 158 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 541,
+    // 329 from 541 — 0472: solved at the tuned tier, where 541 fought for 35 s; two passes.
+    health: 329,
     damage: 3,
     station: 170,
     drift: 8,
@@ -2773,7 +2780,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // A mid-boss since 0247, which halved 980 to 490; solved to its level's seconds since 0269.
     // 97 from 94 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 419 from 97 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 419,
+    // 237 from 419 — 0472: solved at the tuned tier, where 419 fought for 34 s; two passes.
+    health: 237,
     damage: 3,
     station: 166,
     drift: 15,
@@ -2856,7 +2864,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // since 0269, and the toughest of the seven in both.
     // 164 from 208 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 699 from 164 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
-    health: 699,
+    // 414 from 699 — 0472: solved at the tuned tier, where 699 fought for 34 s; two passes.
+    health: 414,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.

@@ -2,6 +2,10 @@
 //
 // Usage:  node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-fight.mjs
 //              [levelKind] [--missiles=1] [--sweep=8] [--gun=pulse|arc|shuriken|ray]
+//              [--difficulty=savior] [--carried]
+//
+// `--difficulty` flies a tier rather than the content multiplied by nothing; `--carried` flies the
+// tubes a player who took every pickup carries in, `carriedAt`, rather than one rung — 0472.
 //
 // A gun is flown in the ship it is keyed to, whole — 0441; `--weapon=N` went with the gun's tiers.
 //
@@ -30,6 +34,10 @@
 //   waves                     waves that SPAWNED in the stretch, and how many of them fire
 //   alive                     enemies on the field, averaged over the stretch and at its worst
 //   bullets                   the share of the stretch with an enemy bullet on the screen
+//   live                      how MANY enemy bullets are on the screen: the mean over the stretch,
+//                             its worst step, and its worst two seconds — 0472
+//   worst 2s of the level     where the busiest two seconds of the whole walk fall, as distance
+//                             from the mid-boss's `at`
 //
 // It exits non-zero if a level's mid-boss is never fought, on the same terms as its sibling: an
 // instrument that measured nothing must not report success.
@@ -85,6 +93,23 @@ function bulletOnScreen(world) {
   return false;
 }
 
+/**
+ * How MANY enemy shots are inside the view this step — 0472.
+ *
+ * ⚠️ **A COUNT, BECAUSE THE REPORT IS A COUNT.** *"There's some spots, especially around minibosses,
+ * that it's too bullety"*: `bulletOnScreen` answers whether there is anything to dodge, and is near
+ * one hundred percent through every fight, so it cannot tell a busy fight from a crowded one.
+ */
+function bulletsOnScreen(world) {
+  let n = 0;
+  for (let i = 0; i < world.enemyShots.size; i++) {
+    const s = world.enemyShots.at(i);
+    const inView = s.along - world.cameraAlong;
+    if (inView >= 0 && inView <= world.view.alongSpan && s.across >= 0 && s.across <= ACROSS_SPAN) n++;
+  }
+  return n;
+}
+
 /** How many enemies are inside the view this step. Bodies, not shots — the report is about waves. */
 function aliveOnScreen(world) {
   let n = 0;
@@ -122,7 +147,7 @@ function enteringNow(world, out) {
 
 /** A fresh tally for one stretch of a level. */
 function stretch() {
-  return { steps: 0, waves: 0, firing: 0, entered: 0, enteredFiring: 0, alive: 0, peak: 0, covered: 0 };
+  return { steps: 0, waves: 0, firing: 0, entered: 0, enteredFiring: 0, alive: 0, peak: 0, covered: 0, live: 0, livePeak: 0, window: 0 };
 }
 
 const shaped = (s) => ({
@@ -137,6 +162,9 @@ const shaped = (s) => ({
   alive: s.steps > 0 ? s.alive / s.steps : 0,
   peak: s.peak,
   covered: s.steps > 0 ? s.covered / s.steps : 0,
+  live: s.steps > 0 ? s.live / s.steps : 0,
+  livePeak: s.livePeak,
+  window: s.window,
 });
 
 /**
@@ -151,7 +179,7 @@ export function weighFight(kind, options = {}) {
   const missileTier = options.missileTier ?? 1;
   const sweepSeconds = options.sweepSeconds ?? 8;
   const level = LEVELS[kind];
-  const { world } = playableWorld(level);
+  const { world } = playableWorld(level, options.difficulty);
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < missileTier; i++) carried.push('missile');
@@ -171,6 +199,12 @@ export function weighFight(kind, options = {}) {
   // fight the immortal ship somehow cannot win ends the walk rather than hanging it.
   const cap = STEPS_PER_SECOND * 60 * 10;
   let step = 0;
+  // The worst two seconds — 0472: a running sum over a ring of the last WINDOW steps' counts.
+  const WINDOW = 2 * STEPS_PER_SECOND;
+  const ring = new Array(WINDOW).fill(0);
+  let sum = 0;
+  // Every step's two-second mean, where the camera was, and which fight was on — read after the walk.
+  const trace = [];
   /*
     ⚠️ **THE WALK ENDS WHEN THE LEVEL IS OUT OF WAVES *AND* THE MID-BOSS IS DEAD.** Stopping at
     `bossAt` alone truncated the two longest fights — the Saurian Belt's and the Labyrinth's ran past
@@ -214,6 +248,19 @@ export function weighFight(kind, options = {}) {
     here.alive += live;
     if (live > here.peak) here.peak = live;
     if (bulletOnScreen(world)) here.covered++;
+    const count = bulletsOnScreen(world);
+    here.live += count;
+    if (count > here.livePeak) here.livePeak = count;
+    sum += count - ring[step % WINDOW];
+    ring[step % WINDOW] = count;
+    const mean = sum / WINDOW;
+    if (mean > here.window) here.window = mean;
+    // From the step the end boss is put down, whatever its pool says: the jellyfish's fight was counted
+    // as the level until this read the flag the frame itself spawns by.
+    const ending = world.fight === 1 && world.bossSpawned;
+    // A scratch census asks the world itself, every step — 0472's breakdown of a busy window by shot.
+    if (options.census !== undefined) options.census(world);
+    trace.push({ mean, along: world.cameraAlong - world.levelOrigin, fighting, ending });
     enteringNow(world, here);
     for (let i = spawnedBefore; i < world.nextWave; i++) {
       const wave = level.waves[i];
@@ -223,11 +270,27 @@ export function weighFight(kind, options = {}) {
       seen++;
     }
   }
+  /*
+    The busiest two seconds of the level, three of them, at least four seconds apart — 0472. The end
+    boss's fight is its own thing and is left out: what the report names is the level and its mid-boss.
+  */
+  const busiest = [];
+  const apart = 4 * STEPS_PER_SECOND;
+  const order = trace.map((t, i) => i).filter((i) => !trace[i].ending).sort((a, b) => trace[b].mean - trace[a].mean);
+  for (const i of order) {
+    if (busiest.length === 3) break;
+    if (busiest.some((j) => Math.abs(i - j) < apart)) continue;
+    busiest.push(i);
+  }
+  const midAt = level.midBoss === null ? 0 : level.midBoss.at;
   return {
     kind,
     midBoss: level.midBoss === null ? null : level.midBoss.kind,
     fought,
     seen,
+    // `along` is where the camera's back edge was, in level units, and `fromMid` the same from the mid-boss's `at`.
+    busiest: busiest.map((i) => ({ ...trace[i], fromMid: trace[i].along - midAt })),
+    ended: trace.reduce((m, t) => (t.ending && t.mean > m ? t.mean : m), 0),
     before: shaped(before),
     during: shaped(during),
     after: shaped(after),
@@ -248,10 +311,12 @@ if (isMain) {
     missileTier: flag('missiles', 1),
     sweepSeconds: flag('sweep', 8),
     gun: gun === undefined ? undefined : gun.slice('--gun='.length),
+    difficulty: args.find((a) => a.startsWith('--difficulty='))?.slice('--difficulty='.length),
   };
+  const carried = args.includes('--carried');
   let unfought = 0;
   for (const kind of kinds) {
-    const r = weighFight(kind, options);
+    const r = weighFight(kind, carried ? { ...options, missileTier: carriedAt(kind).missileTier } : options);
     if (r.midBoss === null) {
       console.log(`\n${kind}  — no mid-boss`);
       continue;
@@ -264,11 +329,19 @@ if (isMain) {
           `arriving ${s.rate.toFixed(1).padStart(4)}/10s, ${s.firingRate.toFixed(1).padStart(4)} firing   ` +
           `offered ${String(s.firing).padStart(2)}   ` +
           `alive ${s.alive.toFixed(1).padStart(4)} avg   ` +
-          `bullets ${(s.covered * 100).toFixed(0).padStart(3)}%`,
+          `bullets ${(s.covered * 100).toFixed(0).padStart(3)}%   ` +
+          `live ${s.live.toFixed(1).padStart(4)} avg ${String(s.livePeak).padStart(3)} peak ${s.window.toFixed(1).padStart(4)} worst 2s`,
       );
     row('before', r.before);
     row('during', r.during);
     row('after', r.after);
+    for (const b of r.busiest) {
+      console.log(
+        `  busy 2s: ${b.mean.toFixed(1).padStart(4)} live, camera at ${b.along.toFixed(0).padStart(5)} ` +
+          `(${b.fromMid >= 0 ? '+' : ''}${b.fromMid.toFixed(0)} from the mid-boss)${b.fighting ? ', in its fight' : ''}`,
+      );
+    }
+    console.log(`  the end boss's busiest 2s: ${r.ended.toFixed(1)} live`);
   }
   if (unfought > 0) {
     console.error(`\n${unfought} level(s) never fought their mid-boss — this measured nothing about them.`);

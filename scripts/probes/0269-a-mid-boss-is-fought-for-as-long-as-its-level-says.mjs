@@ -24,9 +24,10 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0364, which re-solved every mid-boss after the zoom, and by 0406, which
       // solved it at the loadout the run carries in: 120, so 0247's 240 is twice it now, not four times.
       // ⚠️ And by 0441, which re-solved it at 211 for a ship that carries its own gun from the start;
-      // the break is still twice what its level asks. And by 0452, which re-solved it at 262.
-      find: '    health: 262,',
-      replace: '    health: 524,',
+      // the break is still twice what its level asks. And by 0452, which re-solved it at 262, and by
+      // 0472, which solved it at the tuned tier, 153.
+      find: '    health: 153,',
+      replace: '    health: 306,',
     },
   },
   {
@@ -44,9 +45,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364 — the redoubt's re-solved health, given the lattice's re-solved one —
-      // and by 0406, which re-solved both at the loadout the run carries in.
-      find: '    health: 541,',
-      replace: '    health: 187,',
+      // and by 0406, which re-solved both at the loadout the run carries in, and by 0472, at the tuned tier.
+      find: '    health: 329,',
+      replace: '    health: 101,',
     },
   },
   /*
