@@ -1170,9 +1170,10 @@ its queue is six items, one PR each, in the order the report gives and for the r
 - [0466](decisions/0466-the-dice-swing-once.md) — **built**: a lurch is a burst or a brake crossing,
   the swing is held for its own length, and the dice are red fur rimmed in light so they read on the
   reddish places.
-- **Next**: the ray gun's sheet of three (A chosen), the Firebird back to black and gold, the
-  fighter's cigar pods, and last the splash that waits for a press with the one pilot screen that
-  launches — each answered in the report's table.
+- [0467](decisions/0467-the-ray-gun-is-a-turret.md) — **built**: the saucer's gun is a chrome ball set
+  into the rim with a lavender lens, a short barrel and a smaller orb; the tip did not move.
+- **Next**: the Firebird back to black and gold, the fighter's cigar pods, and last the splash that
+  waits for a press with the one pilot screen that launches — each answered in the report's table.
 
 ### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
 
