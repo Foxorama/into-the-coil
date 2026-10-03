@@ -652,9 +652,36 @@ export function stepBoss(
         ⚠️ The turn is on the HULL's edge rather than its centre, or half the boss leaves the lane —
         and there is no `across` cull, so nothing would ever bring it back.
       */
-      if (boss.across - boss.radius <= 0) direction = 1;
-      else if (boss.across + boss.radius >= ACROSS_SPAN) direction = -1;
-      boss.velAcross = row.patrol * phase.patrolScale * direction;
+      const top = row.patrol * phase.patrolScale;
+      if (move.ease === undefined) {
+        if (boss.across - boss.radius <= 0) direction = 1;
+        else if (boss.across + boss.radius >= ACROSS_SPAN) direction = -1;
+        boss.velAcross = top * direction;
+        break;
+      }
+      /*
+        ── EASED — `docs/decisions/0483-the-pterodactyl-flies.md` ─────────────────────────────────────
+
+        ⚠️ **THE TURN STARTS WHERE THE STOPPING DISTANCE MEETS THE EDGE**, so the hull's edge still
+        touches the lane's and never crosses it: `v² / 2a` is how far it coasts while shedding `a` a
+        step, asked of the speed it may have after this step's gain, plus the step that gain carries
+        it. The hard edge stays as the backstop.
+
+        ⚠️ **AND IT SLOWS FOR A BEAM BEFORE THE VOLLEY THAT THROWS ONE**, because the brace below
+        stops it in a step and a beam is fixed across where it was fired: a hull still sliding would be
+        stopped dead, which is the corner this takes away. `fireIn` is the gate's own count, read
+        before the gate decrements it, so `ease + 1` is `ease` steps of slowing that end on the throw.
+      */
+      const rate = top / move.ease;
+      const v = boss.velAcross;
+      const ahead = Math.abs(v) + rate;
+      const coast = ahead + (ahead * ahead) / (2 * rate);
+      if (boss.across - boss.radius <= 0 || (v < 0 && boss.across - boss.radius - coast <= 0)) direction = 1;
+      else if (boss.across + boss.radius >= ACROSS_SPAN || (v > 0 && boss.across + boss.radius + coast >= ACROSS_SPAN)) direction = -1;
+      const attack = phase.attack ?? row.attack;
+      const bracing = attack.kind === 'beam' && boss.fireIn <= move.ease + 1;
+      const want = bracing ? 0 : top * direction;
+      boss.velAcross = v + Math.max(-rate, Math.min(rate, want - v));
       break;
     }
     case 'bob': {
@@ -791,6 +818,14 @@ export function stepBoss(
     boss.velAcross = 0;
     boss.holdFor--;
   }
+  /*
+    ── AND IT LEANS INTO THE SLIDE — `docs/decisions/0483-the-pterodactyl-flies.md` ────────────────
+
+    After the brace, so a braced hull is level and its beams leave the roots the row drew. A turn of
+    `−θ` points a sprite baked facing down the lane toward `+across` (`turnFor`), so the sign is the
+    velocity's, negated.
+  */
+  if (row.bank !== undefined) boss.turn = (-row.bank * boss.velAcross) / (row.patrol * phase.patrolScale);
 
   /*
     ── THE ONE PHASE THAT DOES NOT SHOOT ───────────────────────────────────────────────────────────
@@ -1357,6 +1392,14 @@ function throwAttack(
       const held = attack.warning + attack.hold;
       boss.holdFor = held;
       boss.fireIn += held;
+      /*
+        ⚠️ **A LEANING HULL IS LEVELLED AS IT THROWS — 0483.** The ease has it still and level by now,
+        except when the volley comes sooner than the ease can stop it — a stage that opens with a beam
+        part-way through the last stage's cadence. The beam is fixed where its root is on this step,
+        and the brace holds the hull level from the next, so a root turned by the lean would be a beam
+        leaving from where no gun is drawn.
+      */
+      if (row.bank !== undefined) boss.turn = 0;
       // One seed for the volley when it flies `together` — 0403, drawn once, so its beams bend as one.
       const volleySeed = attack.jag !== undefined && attack.together === true ? beamRng.int(0, 0x7fffffff) : 0;
       for (let i = 0; i < attack.from.length; i++) {

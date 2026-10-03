@@ -1412,6 +1412,8 @@ export interface World {
   /** Where the leap left from and comes back to, in the camera's frame — 0478. */
   leapFromAlong: number;
   leapFromAcross: number;
+  /** Where the wings are in their beat, in frames — 0483, carried because its rate follows the stroke. */
+  bossBeat: number;
   /**
    * Where the boss was put on the field, ahead of the camera's trailing edge — 0306. The entrance
    * starts here, and so does the arrival after it: *"then enter where it is now."*
@@ -9489,7 +9491,8 @@ function layAura(w: World): void {
     w.bossAura.clear();
     return;
   }
-  const look = phaseFor(w.bossRow, head.health, w.bossFullHealth).look;
+  const phase = phaseFor(w.bossRow, head.health, w.bossFullHealth);
+  const look = phase.look;
   const aura = look?.aura ?? null;
   /*
     ── AND THE TAIL, IN THE SAME LAYER — 0374 ──────────────────────────────────────────────────────
@@ -9524,7 +9527,21 @@ function layAura(w: World): void {
   if (chill !== null && w.bossAura.size === want) layChill(w, head, chill);
   if (tail !== null && w.bossAura.size === want) layTail(w, head, tail, look?.tail ?? tail.art, w.bossAura.at(want - 1), fresh);
   if (aura === null) return;
-  const tick = Math.floor(w.steps / aura.hold);
+  /*
+    ⚠️ **A BEAT THAT FOLLOWS THE STROKE IS A PHASE CARRIED, NOT A CLOCK DIVIDED — 0483.** The wings work
+    on the climb and glide on the dive, so the rate changes every step, and `steps / hold` at a new rate
+    is a jump to a different frame. `bossBeat` advances by the rate instead; climb is toward `across`
+    zero, so the velocity's share of top speed is negated. Never below a tenth of the rate, so a row
+    that authors a climb of one or more still beats on the dive.
+  */
+  let tick: number;
+  if (aura.climb === undefined) tick = Math.floor(w.steps / aura.hold);
+  else {
+    const top = w.bossRow.patrol * phase.patrolScale;
+    const climbing = top > 0 ? -head.velAcross / top : 0;
+    w.bossBeat += Math.max(0.1, 1 + aura.climb * climbing) / aura.hold;
+    tick = Math.floor(w.bossBeat);
+  }
   /*
     ⚠️ **AND WHETHER THE CROWN IS FLARING — 0310.** *"Half a second before the lightning attack happens,
     the horns need to flare with red lightning."*
@@ -10169,6 +10186,7 @@ function spawnBoss(w: World): void {
   w.bossEntryAt = boss.along - w.cameraAlong;
   w.bossEntering = entrance === null ? -1 : 0;
   w.bossLeaping = false;
+  w.bossBeat = 0;
   w.bossSettle = false;
   if (entrance !== null) {
     /*

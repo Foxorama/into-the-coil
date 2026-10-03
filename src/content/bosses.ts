@@ -116,7 +116,19 @@ export type BossMove =
    * one fight with seven skins; something that flies a fixed path is what makes the ones that do not
    * mean anything. The phase still scales it, which is the escalation this arm already had.
    */
-  | { kind: 'patrol' }
+  | {
+      kind: 'patrol';
+      /**
+       * Steps to slow into a reversal or a beam's brace, and to come back up to speed out of either —
+       * `docs/decisions/0483-the-pterodactyl-flies.md`. Absent, it reverses and stops in one step, as
+       * every patroller did.
+       *
+       * ⚠️ **A RATE OF CHANGE AND NOT A CURVE**: the hull gains or loses at most `top / ease` a step,
+       * turns early enough that its stopping distance meets the edge, and starts slowing for a beam
+       * `ease` steps before the volley that throws one — so the brace finds it already still.
+       */
+      ease?: number;
+    }
   /**
    * Rises and falls across the lane on a sine — **the up-and-down the report asked for by name.**
    *
@@ -1230,6 +1242,16 @@ export interface Aura {
    * animal minus its wings would be the tail's defect over again (0374).
    */
   hurt?: readonly number[];
+  /**
+   * How much faster the beat runs while the hull climbs, and slower while it dives, as a share of
+   * `hold`'s rate at full patrol speed — `docs/decisions/0483-the-pterodactyl-flies.md`. Absent, the
+   * beat is the step clock alone.
+   *
+   * ⚠️ **CLIMB IS TOWARD `across` ZERO**, the top of the desktop screen (0153): a climbing bird works and
+   * a diving one glides. The beat is a phase carried on the world rather than a clock divided, so a
+   * change of rate never jumps a frame.
+   */
+  climb?: number;
 }
 
 /**
@@ -1841,6 +1863,15 @@ export interface BossRow extends Body {
   /** World units per step it slides across the lane, before a phase scales it. */
   patrol: number;
   /**
+   * How far the hull leans into its slide across the lane, in radians at full patrol speed, or absent
+   * for a hull that faces down the lane whatever it does — `docs/decisions/0483-the-pterodactyl-flies.md`.
+   *
+   * ⚠️ **THE NOSE POINTS WHERE IT IS GOING**: the lean is the velocity's share of the phase's top
+   * speed, so it eases with the move and is level at a brace. Whatever is laid off the hull's turn —
+   * its wings, its fire, its muzzles — leans with it.
+   */
+  bank?: number;
+  /**
    * What it fires.
    *
    * ⚠️ **SEVEN BOSSES USED TO NAME ONE ROW, WHICH IS HALF OF A PLAY REPORT** —
@@ -2347,7 +2378,8 @@ const QUETZAL_WINGS_HIT: readonly number[] = [
 ];
 
 /** The wings beating at `hold` steps a frame — quicker each stage, which is the animal working harder. */
-const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_WINGS_HIT, hold, stride: 1, head: QUETZAL_WING_HEAD });
+// Half as fast again on the climb and half as fast on the dive — 0483: the bird works up and glides down.
+const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_WINGS_HIT, hold, stride: 1, head: QUETZAL_WING_HEAD, climb: 0.5 });
 
 /**
  * Where the shoulder cannons' muzzles are, across the lane from the hull's centre — 0398:
@@ -3851,7 +3883,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
    */
   quetzal: {
     points: 30000,
-    move: { kind: 'patrol' },
+    // Eased into every turn and brace — 0483: a bird that stops dead and reverses dead does not fly.
+    move: { kind: 'patrol', ease: 24 },
     attack: { kind: 'spray', from: WINGS },
     uncoil: null,
     // The volcanoes — 0251: two rocks every second and a half, from the top of the screen, through
@@ -3880,13 +3913,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
       the bird patrols the lane at 150 out, where the pulse's four-barrel fan is wider than its body and
       the ray's one ring is off its line half the time, and the arc cannot miss. Health would have fixed
       the arc and made every other ship's fight a third longer, so the player chose the arc's weight.
+
+      ⚠️ **AND THE RAY AT 0.82 — 0483.** Eased, the bird hangs at every turn and slows to a hover before
+      each beam, and the ray's pursuit (`weigh-boss`, on its lane at 45) took it in 35 s from 46. Every
+      held lane got slower — a leaning, easing hull is harder to sit under — so health would have
+      lengthened the fights that already grew, and the weight is the gyre's own answer (0475).
     */
-    gunWeights: { arc: 1.1 },
+    gunWeights: { arc: 1.1, ray: 0.82 },
     damage: 3,
     station: 154,
     drift: 6,
     driftWavelength: 160,
     patrol: 0.55,
+    // Leaning a sixth of a right angle into the slide at full speed — 0483, level at every brace.
+    bank: 0.26,
     // A feathered quill since 0398, where it threw the lancer's lance.
     shot: 'quill',
     phases: [
