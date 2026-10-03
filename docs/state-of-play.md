@@ -1161,6 +1161,24 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE BOSSES' LOOK IS A PLAN, AND NOTHING IN IT IS BUILT — 2026-10-04
+
+The player's notes on all seven end bosses' graphics and animation, plus seven more given the same
+day (the flame's speed, the cold's growth and reach, the frost's cloud, the void's length, shields in
+the ship's livery, the shuriken's sound, the caddie's gun), each diagnosed against the code and the
+flown fights, are [`the-bosses-look-planned`](../reports/the-bosses-look-planned-2026-10-04.md).
+**Its item 0 is a bullet that hung on the Rime Shelf and did not reproduce** in seven headless
+flights; `scripts/weigh-stuck.mjs` is the instrument, and the first thing the next session does is
+ask the player what preceded it. **It holds the order,
+so this file does not.** Three of the notes are fight defects rather than pictures and lead the queue:
+the gyre's bar coming back over its wreck, a jellyfish fight the instrument reports as never finishing
+from the median lane, and a fish whose last-stage leap no gun can pre-empt — each measured in the report.
+One cross-boss item (damage showing on the body, every boss authoring its own) sits above the per-boss
+art. One item stops for the player's word before it is built: the gyre's hole per stance, against
+[0151](decisions/0151-the-gap-you-have-to-reach.md); the jellyfish's heal keeps
+[0404](decisions/0404-the-rain-feeds-it.md)'s *"closes again"* and moves only its rate. **Read it
+before touching any boss**, and take the top undone item.
+
 ### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
 
 A design pass over the way in, the in-game chrome on a phone and the four ships, asked for as *"a
