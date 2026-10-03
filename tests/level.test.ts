@@ -1849,8 +1849,9 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       the air, and asks whether it got to the near edge of the hole.
 
       ⚠️ **At the HARDEST tier**, where the bullet is fastest and the window shortest — 39 steps for
-      the axis, in which the ship covers 59.5 units. That is the whole reason the two bosses' holes sit
-      at opposite ends of the band: the chorus's slower bullet buys it a hole hard over to one side.
+      the axis's lance, in which the ship covers 59.5 units; 58 for its clot since 0473, which covers
+      more. That is the whole reason the two bosses' holes sit at opposite ends of the band: the
+      chorus's slower bullet buys it a hole hard over to one side.
 
       ⚠️ **AND THE SHIP IS HELD OUT OF DANGER FOR THE MEASUREMENT.** A first draft did not, and the
       fixture never dodges — so it died mid-run, respawned at the middle of the lane, and the distance

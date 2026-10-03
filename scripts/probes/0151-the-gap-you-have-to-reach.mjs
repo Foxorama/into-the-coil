@@ -51,7 +51,10 @@ export const PROBES = [
       find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 70, hole: 12, spin: false, quicken: null, apart: 0 },',
       // ⚠️ Re-anchored by 0364: the lane is 120 and the boss stands a fifth further off, so the curtain
       // is in the air a fifth longer and 84 is now inside the ship's reach; 84 → 101 is the same 0.84 share.
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 101, hole: 12, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ And by 0473, whose clot at 1.3 keeps the axis's curtain in the air 58 steps where the lance's
+      // was 39 at the hardest tier: the ship reaches 97.8 from the far wall now, so 101 was inside it and
+      // this went STILL GREEN in CI. 114 is the lane's last place for a hole of twelve, 10 short.
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 114, hole: 12, spin: false, quicken: null, apart: 0 },',
     },
   },
   {

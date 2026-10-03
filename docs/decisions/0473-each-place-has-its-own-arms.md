@@ -162,6 +162,13 @@ place's raiders throw, and it was true only of the Approach:
 | a stream whose shots all leave at one speed | `and a stream is one heading, each shot slower` |
 | the Saurian lancer throwing a spine at the ship, which is the minnow's | `and a firing signature sends a bullet-and-pattern no other kind sends` |
 
+⚠️ **And CI's whole proof found a probe this change stranded.** 0151's *"the hole authored past what
+the ship can cross from the far wall while the curtain closes"* moved the axis's curtain hole to 101,
+out of the ship's reach in the lance's 39 steps in the air. The clot's curtain is in the air 58 steps
+at the hardest tier, and the ship reaches 97.8, so 101 was inside its reach and the probe went STILL
+GREEN. It now moves the hole to 114, the lane's last place for a hole of twelve, which is 10 short. The
+axis's own hole at 70 is further inside the reach than before, which is the point of the guard.
+
 ## What it costs
 
 Three sprites in every place's atlas, baked at load. `ROWS_OF` is seven arrays of twenty rows, built
