@@ -1406,6 +1406,17 @@ export interface World {
    */
   bossEntering: number;
   /**
+   * Whether the entrance being flown is a LEAP mid-fight rather than the boss's arrival — 0477.
+   *
+   * ⚠️ **A LEAP IS NOT AN ENTRANCE, AND THIS IS THE WORD THAT SAYS SO.** 0380 made the fish's leap the
+   * entrance replayed, and it inherited the entrance's *"untouchable"* (0306) by reuse rather than by a
+   * decision: every damage path gates on `bossEntering`, so a fish on its last point of health leapt
+   * and nothing landing on it counted. Played: *"you should be able to damage it fast enough to skip
+   * the jumpy animation and not be forced through a none-interactable action."* While this is up, the
+   * boss is a target and its bar stays up; the arrival still refuses every hit.
+   */
+  bossLeaping: boolean;
+  /**
    * Where the boss was put on the field, ahead of the camera's trailing edge — 0306. The entrance
    * starts here, and so does the arrival after it: *"then enter where it is now."*
    */
@@ -2478,7 +2489,8 @@ export class GameFrame implements Frame {
     */
     const barOver = !w.bossBeaten ? w.bossFullHealth : wreckStanding(w) ? wreckHealth(w.bossRow, w.bossFullHealth) : 0;
     const bossShown =
-      bossOnField(w) && w.bossEntering < 0 && barOver > 0
+      // Up through a leap, which is the fight going on — 0477.
+      bossOnField(w) && (w.bossEntering < 0 || w.bossLeaping) && barOver > 0
         ? Math.min(1, Math.ceil((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS) / BOSS_BAR_STEPS)
         : -1;
     if (bossShown !== w.shownBoss) {
@@ -2593,6 +2605,12 @@ export class GameFrame implements Frame {
     // from then until the next fight is set up or the screen changes.
     if (bossJustDied(w)) {
       w.bossBeaten = true;
+      /*
+        ⚠️ **A FISH KILLED IN THE AIR DIES THERE — 0477.** Its leap is over with it: the death log put
+        the burst where it was, and nothing after this step may read the boss as still flying in.
+      */
+      w.bossEntering = -1;
+      w.bossLeaping = false;
       // Flat, a mid-boss or the end one: the streak multiplies a wave and never a fight — 0428.
       w.score.points += w.bossRow.points;
       // The one cue sized to fill a beat rather than to punctuate one: `BOSS_DEATH_STEPS` is 1.6
@@ -3213,9 +3231,12 @@ export function wreckStanding(w: World): boolean {
  * NOT BE KILLED.** 0337 gated every path on *beaten* so nothing could shoot a thing already dead;
  * the player asked for the wreck to be a kill. Not during an entrance — 0306's *"not-shootable"* —
  * and not a boss that is beaten unless what is left of it is a wreck still standing.
+ *
+ * ⚠️ **AND A LEAP IS NOT AN ENTRANCE — 0477.** The fish's leap is the entrance flown again, so it
+ * inherited the arrival's *"untouchable"*; `bossLeaping` takes it back out. The arrival still refuses.
  */
 export function bossTargetable(w: World): boolean {
-  if (w.bossPool.size === 0 || w.bossEntering >= 0) return false;
+  if (w.bossPool.size === 0 || (w.bossEntering >= 0 && !w.bossLeaping)) return false;
   return !w.bossBeaten || wreckStanding(w);
 }
 
@@ -8074,6 +8095,7 @@ function driveEntrance(w: World, boss: Entity): void {
       there — `bossSettle` — so nothing is drawn between two edges of the screen.
     */
     w.bossEntering = -1;
+    w.bossLeaping = false;
     boss.along = w.cameraAlong + w.bossEntryAt;
     boss.across = ACROSS_SPAN / 2;
     boss.velAlong = 0;
@@ -8746,6 +8768,8 @@ function driveBoss(w: World): void {
       */
       if (w.bossRow.entrance.kind === 'breach') w.bossEntryAt = w.bossRow.entrance.from + LEAP_RUN_IN;
       w.bossEntering = 0;
+      // A leap, and not the arrival: a target the whole way — 0477.
+      w.bossLeaping = true;
       w.bossLeapIn = fireGapFor(leap.every, w.difficulty);
       return;
     }
@@ -9933,6 +9957,7 @@ function spawnBoss(w: World): void {
   const entrance = w.bossRow.entrance;
   w.bossEntryAt = boss.along - w.cameraAlong;
   w.bossEntering = entrance === null ? -1 : 0;
+  w.bossLeaping = false;
   w.bossSettle = false;
   if (entrance !== null) {
     /*

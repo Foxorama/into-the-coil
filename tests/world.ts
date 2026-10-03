@@ -126,6 +126,7 @@ export function inertLevel(): {
   bossBow: number;
   // The entrance — 0306. A fixture's boss makes none unless its row authors one.
   bossEntering: number;
+  bossLeaping: boolean;
   bossEntryAt: number;
   bossSettle: boolean;
   bossSpawned: boolean;
@@ -245,6 +246,7 @@ export function inertLevel(): {
     bossGazeSide: 0,
     bossBow: 0,
     bossEntering: -1,
+    bossLeaping: false,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,
@@ -562,6 +564,7 @@ export function playableWorld(
     bossGazeSide: 0,
     bossBow: 0,
     bossEntering: -1,
+    bossLeaping: false,
     bossEntryAt: 0,
     bossSettle: false,
     bossSpawned: false,

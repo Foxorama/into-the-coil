@@ -19,7 +19,7 @@ import { ENEMIES } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import type { ThemeKind } from '../src/content/themes.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
@@ -29,6 +29,8 @@ import { makeRng } from '../src/sim/rng.ts';
 import { BANDS, centroid, spectrum } from './spectrum.ts';
 import { inside, tracingPen, type Pass } from './paths.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import { bodyOf } from './bodies.ts';
+import { reset } from '../src/sim/entity.ts';
 
 /** The fish alone, a short way in, with no mid-boss in front of it. */
 const VOLANS_ONLY: LevelRow = {
@@ -1998,5 +2000,124 @@ describe('0321 — the shoal is drawn', () => {
       `the kite's outline carries ${kite.toFixed(1)} samples a corner and the minnow's ${minnow.toFixed(1)} — ` +
         'two hulls drawn the same way are separated only by their outlines, and 0314 spends both channels on purpose',
     ).toBeGreaterThanOrEqual(8);
+  });
+});
+
+/**
+ * The leap is a target — `docs/decisions/0477-the-leap-is-a-target.md`. Played: *"at end of health, the
+ * jumpy animation can't be interrupted, you should be able to damage it fast enough to skip the jumpy
+ * animation and not be forced through a none-interactable action."*
+ *
+ * ⚠️ **DRIVEN BY PARKING A SHOT ON THE HULL EVERY STEP**, the wreck's own fixture (0475): if the pairing
+ * is live the shot is spent on the fish and its health falls, and if it is not the shot flies through.
+ */
+describe('0477 — the leap is a target', () => {
+  const ROW = BOSSES.volans;
+  const stage = ROW.phases.findIndex((p) => p.leap !== undefined);
+  const inside = (ROW.phases[stage]!.upTo + (ROW.phases[stage + 1]?.upTo ?? 0)) / 2;
+
+  /** The fish arrived, at its leaping stage, flown with its fire held until the leap is under way. */
+  function leaping(): { world: ReturnType<typeof playableWorld>['world']; frame: GameFrame; shown: number[] } {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    const shown: number[] = [];
+    world.onBoss = (fraction) => shown.push(fraction);
+    const held = (): void => {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+    };
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      held();
+      frame.step();
+    }
+    world.bossPool.at(0).health = world.bossFullHealth * inside;
+    for (let i = 0; i < ROW.phases[stage]!.leap!.every * 3 && !world.bossLeaping; i++) {
+      held();
+      world.bossPool.at(0).health = world.bossFullHealth * inside;
+      frame.step();
+    }
+    expect(world.bossLeaping, 'the fish never leapt, so this guard drove nothing').toBe(true);
+    // Into the leap proper, past the dive to its start, so the fish is out over the lane.
+    for (let i = 0; i < 30; i++) {
+      held();
+      frame.step();
+    }
+    return { world, frame, shown };
+  }
+
+  /**
+   * A pulse put on the hull, where the gun would have put it — one point, so sixty of them leave the
+   * last stage's fish alive and the bar is read on a fish that is still there.
+   */
+  function park(world: ReturnType<typeof playableWorld>['world']): void {
+    const body = world.bossPool.at(0);
+    world.playerShots.clear();
+    const shot = world.playerShots.spawn();
+    if (shot !== null) reset(shot, body.along, body.across, bodyOf(SPRITE.bullet, 0.9, 1, 1));
+  }
+
+  it('THE ASK: a shot that meets the fish in its leap is spent on it, and the bar stays up', () => {
+    const { world, frame, shown } = leaping();
+    const before = world.bossPool.at(0).health;
+    let landed = 0;
+    let hidden = 0;
+    for (let i = 0; i < 60 && world.bossLeaping; i++) {
+      world.ship.invulnFor = 2;
+      park(world);
+      frame.step();
+      if (world.playerShots.size === 0) landed++;
+      /*
+        ⚠️ **WHAT THE SHELL IS SHOWING, READ EVERY STEP — THE LAST VALUE IT WAS HANDED.** The frame hands
+        the bar over on a change only (0360), so a bar that went down as the leap began is never handed
+        over again inside it; the first draft listened for a change here and could not fail.
+      */
+      if (shown[shown.length - 1] === -1) hidden++;
+    }
+    expect(landed, 'no shot that met the leaping fish was spent on it').toBeGreaterThan(10);
+    expect(world.bossPool.at(0).health, 'the fish took nothing in its leap').toBeLessThan(before);
+    expect(shown.length, 'the bar was never handed to the shell, so this read nothing').toBeGreaterThan(0);
+    expect(hidden, `the bar was down for ${hidden} steps of the leap`).toBe(0);
+  });
+
+  it('and a fish killed in its leap dies there: the pool empties on that step, the bar goes, the clear is armed', () => {
+    const { world, frame } = leaping();
+    world.bossPool.at(0).health = 1;
+    let diedAt = -1;
+    for (let i = 0; i < 60 && diedAt < 0; i++) {
+      world.ship.invulnFor = 2;
+      park(world);
+      frame.step();
+      if (world.bossBeaten) diedAt = i;
+    }
+    expect(diedAt, 'the fish could not be killed in its leap').toBeGreaterThanOrEqual(0);
+    expect(world.bossPool.size, 'the fish died in its leap and is still on the field').toBe(0);
+    expect(world.bossEntering, 'the fish died in its leap and is still flying in').toBe(-1);
+    expect(world.bossLeaping, 'the fish died in its leap and is still leaping').toBe(false);
+    expect(world.clearedIn, 'the fish died in its leap and the level was not cleared').toBeGreaterThan(0);
+  });
+
+  it('and the arrival is still untouchable — 0306: a shot on the fish as it first breaches flies through', () => {
+    const { world } = playableWorld(VOLANS_ONLY);
+    const frame = new GameFrame(world);
+    let parked = 0;
+    let landed = 0;
+    for (let i = 0; i < 2400 && !(world.bossPool.size > 0 && world.bossEntering < 0); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      world.missileIn = Number.MAX_SAFE_INTEGER;
+      const flying = world.bossPool.size > 0 && world.bossEntering >= 0;
+      if (flying) {
+        park(world);
+        parked++;
+      }
+      const health = world.bossPool.size > 0 ? world.bossPool.at(0).health : 0;
+      frame.step();
+      if (flying && world.bossPool.size > 0 && world.bossPool.at(0).health < health) landed++;
+    }
+    expect(parked, 'no shot was parked on the arriving fish, so this guard drove nothing').toBeGreaterThan(60);
+    expect(landed, `the arriving fish took ${landed} hits it should have refused`).toBe(0);
   });
 });
