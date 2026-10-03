@@ -350,7 +350,7 @@ first.
 One PR at a time, each from `main`, each photographed before it is handed over.
 
 1. **BUILT — [0465](../docs/decisions/0465-the-chrome-fits-the-phone.md).** **The chrome on a phone** (§2) — the smallest, the clearest defect, and measured.
-2. **The dice** — one swing per lurch, started by a burst or a brake; the cube and the fur.
+2. **BUILT — [0466](../docs/decisions/0466-the-dice-swing-once.md).** **The dice** — one swing per lurch, started by a burst or a brake; the cube and the fur. Asked for while it was built: *"the red dice need to be visible on ember nebula and the dark heart against those reddish backdrops"* — a light rim and a void halo, photographed in both.
 3. **The ray gun's sheet of three** (§3) — no PR; a picture for the player to choose from, then its PR.
 4. **The Firebird** (§3).
 5. **The fighter's pods** (§3).
