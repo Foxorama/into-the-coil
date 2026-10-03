@@ -1623,18 +1623,41 @@ export interface Wheel {
  *
  * ⚠️ **AND IT IS STILL IN THE BOSS'S POOL, WHICH IS WHY `driveBoss` HAD TO LEARN THE WORD *BEATEN*.**
  * A wreck is the hull, not a replacement for it — the same bitmap, the same size, the fire it caught
- * still burning on it. What it is not is a target: nothing may shoot a thing that is already dead,
- * and the gate that says so is one line.
+ * still burning on it.
+ *
+ * ⚠️ **AND SINCE 0475 IT IS A TARGET, WITH HEALTH OF ITS OWN.** 0337 made it one that nothing could
+ * shoot; the player asked for the opposite — *"I want this to be killable as a first in game
+ * achievement — it should take 1 bomb, 1 missile upgrade and full autofire to completely kill it."*
+ * Killing it bursts it and opens the room at once, so the kill is also the quick way out.
  */
 export interface Wreck {
   /** Across units per step per step it falls, once it is out of its seat. */
   gravity: number;
   /** Radians a step it tumbles as it goes. */
   tumble: number;
-  /** The bitmap it wears once it has come to rest on the floor. */
+  /** The bitmap it wears once it has come to rest on the floor, and the same lit by a hit — 0475. */
   wreckage: number;
+  wreckageHit: number;
   /** Steps it lies there before the room begins to open. */
   settle: number;
+  /**
+   * What it takes to kill, as a share of the boss's full health at the tier — 0475, scaled by the
+   * tier's `toughness` like everything else that can be shot. The window to do it in is the fall, the
+   * settle and the room opening, and `tests/gyre.test.ts` holds it at Savior, the tuned tier (0356),
+   * against the loadout the player named.
+   *
+   * ⚠️ **THE LINE IS DRAWN AT SAVIOR AND MOVES WITH THE TIER, AND THAT WAS MEASURED.** The gun and the
+   * tubes do not scale with a tier and the bomb does (0372), so no one share draws the player's line on
+   * all three: at this one Legend's gun kills it alone and nothing named kills it on Burn. Sized on the
+   * authored health instead, Legend's smaller bomb left it unkillable on the EASIEST tier. 0475's table
+   * has both, and which the achievement wants is the player's.
+   */
+  health: number;
+}
+
+/** A row's wreck's health in points over the fight's `full`, and nought for a row with none — 0475. */
+export function wreckHealth(row: { wreck: Wreck | null }, full: number): number {
+  return row.wreck === null ? 0 : row.wreck.health * full;
 }
 
 export interface Burn {
@@ -3870,7 +3893,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **AND A SECOND LYING THERE BEFORE THE WALL MOVES**, because the crash and the way out are two
       beats and running them together makes the first one a transition.
     */
-    wreck: { gravity: 0.022, tumble: 0.065, wreckage: SPRITE.boss11Wreck, settle: 60 },
+    /*
+      ⚠️ **AND IT CAN BE KILLED — 0475**, at the share `scripts/weigh-wreck.mjs` measured to the
+      player's line: one bomb, the first missile tube and the gun at full autofire kill it inside its
+      window at Savior; the gun and the tube alone do not.
+    */
+    wreck: { gravity: 0.022, tumble: 0.065, wreckage: SPRITE.boss11Wreck, wreckageHit: SPRITE.boss11WreckHit, settle: 60, health: 0.22 },
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -3878,6 +3906,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 20,
     // Doubled by 0260, from 880.
     health: 1500,
+    /*
+      ⚠️ **THE LIGHTNING AT 1.2 AND THE RAY AT 0.82 — 0475, on the pterodactyl's pattern (0441).** Every
+      gun's fight with this animal was read eight and a half seconds long, because the instrument ended
+      it when the pool emptied and the wreck lies in the pool after the death. Read at the death, the
+      arc killed it in 32.5 s and the ray in 35.8 against 0260's forty, while the pulse and the shuriken
+      took 40.2. The weights put both at 40.6–40.7 and leave the other two where they were.
+    */
+    gunWeights: { arc: 1.2, ray: 0.82 },
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place

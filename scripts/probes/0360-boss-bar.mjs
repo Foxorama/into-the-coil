@@ -18,8 +18,9 @@ export const PROBES = [
     guard: 'THE ASK: the bar comes up full when the end boss has arrived',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      bossOnField(w) && w.bossEntering < 0 && w.bossFullHealth > 0',
-      replace: '      w.bossPool.size > 0 && w.bossEntering < 0 && w.bossFullHealth > 0',
+      // Re-anchored by 0475, where the bar's denominator became the wreck's when one stands.
+      find: '      bossOnField(w) && w.bossEntering < 0 && barOver > 0',
+      replace: '      w.bossPool.size > 0 && w.bossEntering < 0 && barOver > 0',
     },
   },
   {
@@ -42,8 +43,9 @@ export const PROBES = [
     guard: 'rounds UP, so a boss on its last point of health shows a sliver',
     edit: {
       path: 'src/app/frame.ts',
-      find: 'Math.ceil((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS)',
-      replace: 'Math.floor((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS)',
+      // Re-anchored by 0475: the denominator is the wreck's while one stands.
+      find: 'Math.ceil((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS)',
+      replace: 'Math.floor((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS)',
     },
   },
   {

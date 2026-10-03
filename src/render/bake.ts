@@ -1014,6 +1014,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11ChippedHit: 'impact',
   boss11BrokenHit: 'impact',
   boss11BurntHit: 'impact',
+  boss11WreckHit: 'impact',
   boss12Hit: 'impact',
   boss13Hit: 'impact',
   hydraTailHit: 'impact',
@@ -12272,7 +12273,8 @@ export function drawKind(
     case 'boss11BrokenHit':
     case 'boss11Burnt':
     case 'boss11BurntHit':
-    case 'boss11Wreck': {
+    case 'boss11Wreck':
+    case 'boss11WreckHit': {
       /*
         THE GYRE: a cog — sixteen teeth about a hub with a hole in it. Round like the axis and not
         the axis: its edge goes in and out sixteen times.
@@ -12285,9 +12287,9 @@ export function drawKind(
       /*
         ⚠️ **AND A FIFTH WEAR THAT IS NOT A PHASE — 0337.** `boss11Wreck` is what is left after it
         falls out of the wall: the burnt body with its rim stove in on one side, its spokes down and
-        its core gone out. It wears no phase and takes no hit, because nothing hits it.
+        its core gone out. It wears no phase — and since 0475 it takes hits, so it has a twin.
       */
-      const wear = kind === 'boss11Wreck'
+      const wear = kind.startsWith('boss11Wreck')
         ? 4
         : kind.startsWith('boss11Burnt')
           ? 3

@@ -90,7 +90,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -1564,6 +1564,12 @@ export interface World {
   bossWreckTurn: number;
   /** Whether the wreck has reached the floor — 0337. `false` while it is falling and before it is. */
   wreckDown: boolean;
+  /**
+   * Whether the wreck was killed — 0475: the boss's second death, latched once, and the fact the
+   * player's achievement will read. A wreck that leaves any other way — off the trailing edge as the
+   * camera moves on — was not killed and does not set it.
+   */
+  wreckBeaten: boolean;
   /** Steps the wreck lies on the floor before the room begins to open — 0337. */
   wreckIn: number;
   /**
@@ -2166,7 +2172,8 @@ export class GameFrame implements Frame {
       worth in it. A window that opened for the guns and not for the arsenal would be a second answer
       to *how open is it*, and 0053 says the bomb is the first thing the player spends.
     */
-    const open = w.bossPool.size > 0 ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
+    // A wreck stands in no phase, so it is open by exactly one — 0475.
+    const open = w.bossPool.size > 0 && !w.bossBeaten ? openBy(phaseFor(w.bossRow, w.bossPool.at(0).health, w.bossFullHealth)) : 1;
     // And the gun's own weight on this boss — 0372; the missiles and the blast are not the gun's.
     const gunOpen = open * gunWeightOn(w.bossRow, w.weapon.kind);
     /*
@@ -2177,12 +2184,13 @@ export class GameFrame implements Frame {
       the seekers are held off it by the same field where they choose a target.
     */
     /*
-      ⚠️ **AND NOTHING MAY SHOOT A WRECK — 0337.** A hull that falls out of its wall instead of
-      exploding is still in this pool, so without `bossBeaten` here the player's own fire takes it
-      on the way down and it vanishes mid-fall. **It also soft-locked the level**: the room opens
-      when the wreck lands, and a wreck that was shot never landed. Found by photographing it.
+      ⚠️ **AND A WRECK MAY BE SHOT, SINCE 0475 — 0337 SAID NOTHING MAY.** A hull that falls out of
+      its wall is still in this pool. 0337 gated it out because a shot wreck vanished mid-fall and
+      **soft-locked the level** — the room opened when the wreck landed, and a shot one never landed.
+      That is answered in `stepWreck` now (an empty pool opens the room), and a wreck killed is a
+      kill: it bursts where it is and the room opens at once. `bossTargetable` is the one answer.
     */
-    const shootable = w.bossEntering < 0 && !w.bossBeaten;
+    const shootable = bossTargetable(w);
     if (shootable) killedByShots += collideInto(w.playerShots, w.bossPool, 1, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, shotLog, bladeGap, hull);
     /*
       ⚠️ **AND THE ONE HOSTILE BULLET THE PLAYER CAN SHOOT AT — 0291.** Before the boss's own hull,
@@ -2461,9 +2469,17 @@ export class GameFrame implements Frame {
       sliver and never an empty bar; clamped, because a fed fish (0314) can stand above what it
       arrived with.
     */
+    /*
+      ⚠️ **AND A WRECK'S BAR IS THE WRECK'S — 0475.** The wreck is the hull respawned into this pool,
+      and the bar read its raw row health over the tier's full health: it came back after the death at
+      100% on Legendary, 62.5% on Savior and 39% on Burn, over a husk nothing could hit. Reported: *"when
+      it dies there's a health bar still visible."* A wreck still standing shows its own health over
+      its own full; a beaten boss with nothing standing shows none.
+    */
+    const barOver = !w.bossBeaten ? w.bossFullHealth : wreckStanding(w) ? wreckHealth(w.bossRow, w.bossFullHealth) : 0;
     const bossShown =
-      bossOnField(w) && w.bossEntering < 0 && w.bossFullHealth > 0
-        ? Math.min(1, Math.ceil((w.bossPool.at(0).health / w.bossFullHealth) * BOSS_BAR_STEPS) / BOSS_BAR_STEPS)
+      bossOnField(w) && w.bossEntering < 0 && barOver > 0
+        ? Math.min(1, Math.ceil((w.bossPool.at(0).health / barOver) * BOSS_BAR_STEPS) / BOSS_BAR_STEPS)
         : -1;
     if (bossShown !== w.shownBoss) {
       w.shownBoss = bossShown;
@@ -3155,6 +3171,7 @@ function nextFight(w: World): void {
   w.bossWheelIn = 0;
   w.bossWreckTurn = 0;
   w.wreckDown = false;
+  w.wreckBeaten = false;
   w.wreckIn = 0;
   w.roomOpen = 0;
   w.bossFallIn = 0;
@@ -3173,6 +3190,29 @@ function nextFight(w: World): void {
  */
 export function bossOnField(w: World): boolean {
   return w.bossPool.size > 0 && w.fight === 1;
+}
+
+/**
+ * Whether a wreck is on the field to be killed — 0475: the end boss beaten, its row falling into a
+ * wreck, the wreck still in the pool and not yet killed.
+ */
+export function wreckStanding(w: World): boolean {
+  return w.bossBeaten && w.fight === 1 && w.bossRow.wreck !== null && !w.wreckBeaten && w.bossPool.size > 0;
+}
+
+/**
+ * Whether the player's fire may land on what is in the boss's pool — 0475. **The one answer every
+ * damage path reads**: the shots, the missiles, the whirlpool and the blast in the pairings, the
+ * rift, the storm, the nova and the arc's choice of target.
+ *
+ * ⚠️ **IT WAS `bossEntering < 0 && !bossBeaten` WRITTEN OUT SIX TIMES, AND THAT IS WHY THE WRECK COULD
+ * NOT BE KILLED.** 0337 gated every path on *beaten* so nothing could shoot a thing already dead;
+ * the player asked for the wreck to be a kill. Not during an entrance — 0306's *"not-shootable"* —
+ * and not a boss that is beaten unless what is left of it is a wreck still standing.
+ */
+export function bossTargetable(w: World): boolean {
+  if (w.bossPool.size === 0 || w.bossEntering >= 0) return false;
+  return !w.bossBeaten || wreckStanding(w);
 }
 
 /**
@@ -3495,7 +3535,8 @@ function fireArc(w: World): void {
     // Only what the link can see — 0349: lightning does not jump through stone.
     const enemy = onBoss ? -1 : nearestFrom(w.enemies, fromAlong, fromAcross, reach, true, edge, w.corridor);
     // Not a boss that is still making its entrance — 0306: *"not-shootable"* is the arc's too.
-    const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge, w.corridor) : -1;
+    // And a beaten one only while it is a wreck still standing — 0475.
+    const boss = bossTargetable(w) ? nearestFrom(w.bossPool, fromAlong, fromAcross, reach, false, edge, w.corridor) : -1;
     // Where this link is going, decided before anything is struck — a void on the way takes it first.
     const onEnemy = enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), fromAlong, fromAcross));
     if (onEnemy) {
@@ -3903,7 +3944,7 @@ function openRift(w: World, along: number, across: number, rift: Rift, sound: Cu
   if (sound !== null) w.onCue(sound, across);
   carveStone(w, along, across, rift.radius);
   // The boss's share, once, if the rift reaches its head or any part of its body — 0372's shape.
-  if (w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
+  if (bossTargetable(w)) {
     const head = w.bossPool.at(0);
     let reaches = inRift(body, head, head.radius);
     for (let i = 0; !reaches && i < w.bossBody.size; i++) reaches = inRift(body, w.bossBody.at(i), w.bossBody.at(i).radius);
@@ -4015,7 +4056,7 @@ function unleashStorm(w: World, along: number, across: number, storm: Storm, sou
   const leading = w.cameraAlong + w.view.alongSpan;
   // The whole screen is in reach of the burst; a chain is not.
   const anywhere = w.view.alongSpan + ACROSS_SPAN;
-  let bossOpen = w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten;
+  let bossOpen = bossTargetable(w);
   for (let s = 0; s < storm.strikes; s++) {
     const hit = stormStrike(w, along, across, anywhere, leading, storm, bossOpen);
     if (hit === 0) break;
@@ -4238,7 +4279,7 @@ function stepNova(w: World): void {
     if (crossed(d, was, now, first)) strike(w.enemies, i, nova.damage, IMPACT_FLASH_STEPS, w.deaths);
   }
   // The boss, once a nova, the first step it crosses the head or any of the body.
-  if (!w.novaBossHit && w.bossPool.size > 0 && w.bossEntering < 0 && !w.bossBeaten) {
+  if (!w.novaBossHit && bossTargetable(w)) {
     const head = w.bossPool.at(0);
     let reaches = crossed(Math.hypot(head.along - centreAlong, head.across - centreAcross) - head.radius, was, now, first);
     for (let i = 0; !reaches && i < w.bossBody.size; i++) {
@@ -4497,7 +4538,7 @@ function seek(w: World, m: Entity): void {
   const to = w.cameraAlong + w.view.alongSpan;
   const enemy = nearestInBox(w.enemies, m.along, m.across, from, to, 0, ACROSS_SPAN);
   // Nor a seeker — a boss making its entrance is not a target for anything the player throws (0306).
-  const boss = w.bossPool.size > 0 && w.bossEntering < 0 ? nearestInBox(w.bossPool, m.along, m.across, from, to, 0, ACROSS_SPAN) : -1;
+  const boss = bossTargetable(w) ? nearestInBox(w.bossPool, m.along, m.across, from, to, 0, ACROSS_SPAN) : -1;
   let target: Entity;
   if (enemy >= 0 && (boss < 0 || nearer(w.enemies.at(enemy), w.bossPool.at(0), m.along, m.across))) target = w.enemies.at(enemy);
   else if (boss >= 0) target = w.bossPool.at(boss);
@@ -8108,8 +8149,8 @@ function cancelFire(w: World): void {
  *
  * ⚠️ **THE SAME POOL AND THE SAME BITMAP, BECAUSE IT IS THE SAME OBJECT.** A wreck drawn out of a
  * different pool would be a second thing appearing where the first one vanished; what the player has
- * to see is the cog they were fighting coming out of the wall. `driveBoss` and every pairing that
- * shoots at the boss are gated on `bossBeaten` so nothing may hit it and it does nothing back.
+ * to see is the cog they were fighting coming out of the wall. `driveBoss` is gated on `bossBeaten`,
+ * so it does nothing back; since 0475 the player's fire reads `bossTargetable` and may kill it.
  *
  * ⚠️ **AND IT KEEPS THE FIRE IT CAUGHT**, because `layAura` reads the pool it is in.
  */
@@ -8117,16 +8158,24 @@ function layWreck(w: World): void {
   const body = w.bossPool.spawn();
   if (body === null) return;
   reset(body, w.cameraAlong + w.bossOffset, w.bossAcross, w.bossRow);
-  // What it was wearing when it died — the last phase's body, not the row's whole one.
+  /*
+    ⚠️ **ITS OWN HEALTH — 0475.** `reset` wrote the row's whole health, which the bar read back over
+    the tier's as a boss with health left. The wreck is a second, small kill, sized on the row against
+    the loadout the player named, and scaled by the tier as anything that can be shot is.
+  */
+  if (w.bossRow.wreck !== null) body.health = wreckHealth(w.bossRow, w.bossFullHealth);
+  // What it was wearing when it died — the last phase's body, not the row's whole one, lit by a hit
+  // since it can be shot (0475).
   const worn = w.bossRow.phases[w.bossRow.phases.length - 1]!.hull;
   if (worn !== undefined) {
     body.sprite = worn.rest;
     body.spriteBase = worn.rest;
-    body.spriteHit = worn.rest;
+    body.spriteHit = worn.hit;
   }
   body.turn = w.bossWreckTurn;
   body.prevTurn = body.turn;
   w.wreckDown = false;
+  w.wreckBeaten = false;
   w.wreckIn = 0;
   w.roomOpen = 0;
 }
@@ -8163,11 +8212,20 @@ function stepWreck(w: World): void {
     ⚠️ **AN EMPTY POOL OPENS THE ROOM ANYWAY**, and this line is the difference between a wreck and a
     soft-lock. The way out is spent by the wreck LANDING, so every path that ends with no wreck on the
     field — anything at all that releases it — used to leave the player sealed in a room with nothing
-    alive in it and no wall that would ever part. `shootable` is gated on `bossBeaten` so the player's
-    own fire can no longer be that path (it was, and it was found by photographing the death), but a
-    level that cannot be finished is not a defect to hold off with one gate: *the room opens* is the
-    invariant, and the fall is the decoration on it.
+    alive in it and no wall that would ever part. *The room opens* is the invariant, and the fall is
+    the decoration on it.
+
+    ⚠️ **AND SINCE 0475 THE PLAYER'S FIRE IS ONE OF THOSE PATHS ON PURPOSE.** A wreck killed is the
+    boss's second death: it bursts where it died, it is heard, and the room opens at once — the
+    settle is skipped, so the kill is also the quick way out. `wreckBeaten` latches it, and it is
+    told from a wreck carried off the trailing edge by the death log, which only a kill writes.
   */
+  if (w.bossPool.size === 0 && !w.wreckBeaten && w.bossDeaths.count > 0) {
+    w.wreckBeaten = true;
+    burst(w, w.bossDeaths.along[0]!, w.bossDeaths.across[0]!, BURST.boss);
+    w.onCue('bossDown', w.bossDeaths.across[0]!);
+    w.wreckIn = 0;
+  }
   if (w.bossPool.size === 0) w.wreckDown = true;
   const body = w.bossPool.size > 0 ? w.bossPool.at(0) : null;
   if (!w.wreckDown && body !== null) {
@@ -8183,7 +8241,7 @@ function stepWreck(w: World): void {
       w.wreckIn = wreck.settle;
       body.sprite = wreck.wreckage;
       body.spriteBase = wreck.wreckage;
-      body.spriteHit = wreck.wreckage;
+      body.spriteHit = wreck.wreckageHit;
       /*
         ⚠️ **THE CRASH IS WHERE THE BURST WENT.** 0062 gives a boss's death its own beat and its own
         cue; this row spends both HERE rather than on the step its health ran out, because the thing
@@ -9843,6 +9901,7 @@ function spawnBoss(w: World): void {
   w.bossWheelIn = 0;
   w.bossWreckTurn = 0;
   w.wreckDown = false;
+  w.wreckBeaten = false;
   w.wreckIn = 0;
   w.roomOpen = 0;
   // The first belch waits the fall's own gap, so the rock arrives after the boss has — 0251.
@@ -10358,6 +10417,7 @@ function beginScript(w: World): void {
   w.bossWheelIn = 0;
   w.bossWreckTurn = 0;
   w.wreckDown = false;
+  w.wreckBeaten = false;
   w.wreckIn = 0;
   w.roomOpen = 0;
   w.bossFallIn = 0;

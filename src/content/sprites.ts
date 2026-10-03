@@ -591,6 +591,8 @@ export const SPRITE_KINDS = [
     the thing lying there are one object.
   */
   'boss11Wreck',
+  // And lit by a hit, since the wreck can be shot — 0475.
+  'boss11WreckHit',
   'gyreFire0',
   'gyreFire1',
   'gyreFire2',
@@ -1893,6 +1895,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   // The same box as every other body of it — 0320s rule, on the fifth.
   boss11Wreck: 52,
+  boss11WreckHit: 52,
   gyreFire0: 26,
   gyreFire1: 26,
   gyreFire2: 26,

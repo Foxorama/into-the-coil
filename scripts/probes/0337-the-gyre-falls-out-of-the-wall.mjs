@@ -98,23 +98,8 @@ export const PROBES = [
       replace: '      w.wreckIn = 0;',
     },
   },
-  {
-    decision: '0337',
-    suite: 'tests/gyre.test.ts',
-    /*
-      ⚠️ THE PAIRING LEFT LIVE OVER A WRECK — the defect as it was actually found, by photographing
-      the death on the bench: the player's fire goes on being swallowed by a corpse, which flashes for
-      each shot, and where anything else has already taken the hull's health down it dies twice and
-      disappears mid-fall.
-    */
-    broke: 'the player’s fire still pairing with the wreck, so a corpse eats shots and flashes',
-    guard: 'and nothing may shoot a wreck',
-    edit: {
-      path: 'src/app/frame.ts',
-      find: '    const shootable = w.bossEntering < 0 && !w.bossBeaten;',
-      replace: '    const shootable = w.bossEntering < 0;',
-    },
-  },
+  // ⚠️ *"and nothing may shoot a wreck"* was probed here and is retired with its guard by 0475, on the
+  // player's word: *"I want this to be killable."* 0475's probes break the wreck that can be killed.
   {
     decision: '0337',
     suite: 'tests/gyre.test.ts',
