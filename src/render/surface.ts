@@ -61,8 +61,14 @@ export interface Surface {
    * `hostile` strokes it in the enemy's inks rather than the player's — the serpent's lightning,
    * `docs/decisions/0248-the-serpent-strikes.md`. A flag rather than a colour, on the same terms
    * as the inks themselves: a string per stroke per frame would be a hash lookup on the hot path.
+   *
+   * `beam` strokes it as a held column of light rather than as a flash —
+   * `docs/decisions/0470-the-light-is-additive.md`. A laser is on for half a second and the player
+   * stands beside it; a flash is gone in eight steps. Drawn as the same stack, the laser was a flat
+   * band with a line down it. A flag on the flag's terms, and absent is a flash. **Still one verb**:
+   * a beam is a polyline stroked some number of times, counted as one bolt, exactly as a flash is.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void;
+  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean, beam?: boolean): void;
 }
 
 /**

@@ -416,8 +416,12 @@ const NO_SKY: Sky = [];
 
 /** Steps a link stays on screen after it has landed. Short: lightning is a flash, not a beam. */
 export const BOLT_STEPS = 8;
-/** Vertices on a link, both ends included. */
-const BOLT_VERTICES = 9;
+/**
+ * Vertices on a link, both ends included. Thirteen since 0470, from nine: at nine a link was a wire
+ * with four kinks in it, and lightning is a channel that turns every few units. The jag's amplitude
+ * is unchanged; what changed is how often it is sampled.
+ */
+const BOLT_VERTICES = 13;
 /** Vertices on the twig that branches off a link. */
 const TWIG_VERTICES = 3;
 /** Stroke width of the core, in world units. The glow under it is four times this, the flash fourteen — 0238. */
@@ -426,6 +430,8 @@ const BOLT_WIDTH = 0.5;
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
 export const BOLT_JAG_MAX = 3;
+/** And a ceiling per leg, as a share of the leg's length, so a short link is not a knot — 0470. */
+const BOLT_JAG_LEG = 0.5;
 /** The twig's length as a fraction of its link's. */
 const TWIG_SHARE = 0.3;
 /**
@@ -461,10 +467,39 @@ const BOLT_DOT_EVERY = 2;
  */
 const BOLT_DOT_WIDTH = 2.8;
 /**
- * How many `bolt` calls one link costs: its stroke, its twig, and its dots. `tests/weapons.test.ts`
+ * How many `bolt` calls one link costs: its stroke, its two twigs, and its dots. `tests/weapons.test.ts`
  * counts them against this, so the picture's cost is a stated number and not an accident.
  */
-export const STROKES_PER_LINK = 2 + Math.floor((BOLT_VERTICES - 2) / BOLT_DOT_EVERY);
+export const STROKES_PER_LINK = 3 + Math.floor((BOLT_VERTICES - 2) / BOLT_DOT_EVERY);
+/**
+ * ── A FLASH SNAPS AND DIES; A BEAM IGNITES AND HUMS — 0470 ─────────────────────────────────────
+ *
+ * *"Lightning needs to be brighter and flashier."* A link faded in a straight line over its eight
+ * steps, at one width: a wire dimming. A flash is a channel that is widest and brightest the instant
+ * it lands and collapses — so the fade is the life raised to `BOLT_FADE_POWER`, which keeps the first
+ * steps near full and drops the last ones fast, and the core's width rides the fade between
+ * `BOLT_CORE_DYING` and `BOLT_CORE_STRUCK` of `BOLT_WIDTH`. Both are the picture's and neither is
+ * guarded as a number; `tests/bolt.test.ts` holds the shape — brightest and widest on the step it lands.
+ */
+const BOLT_FADE_POWER = 1.5;
+const BOLT_CORE_STRUCK = 1.2;
+const BOLT_CORE_DYING = 0.6;
+/** The second twig's reach as a share of the first's — a fork, smaller than the branch it leaves. */
+const TWIG_SECOND = 0.6;
+/**
+ * A beam switching on blooms to `BEAM_IGNITE` of its width and settles to the width it hurts over its
+ * first `BOLT_STEPS` of burn — the picture of power being put through it. Wider than the hurt for an
+ * eighth of a second and never narrower, which is the half of 0250's *as wide as it hurts* that
+ * matters: nothing hurts where nothing is drawn.
+ */
+const BEAM_IGNITE = 1.25;
+/**
+ * And while it is held, the whole column breathes between `BEAM_HUM_FLOOR` and full over
+ * `BEAM_HUM_PERIOD` steps — half a second, under two cycles a second, well short of the three that
+ * a flashing area the size of a beam must stay under. Shallow and slow on purpose: a hum, not a strobe.
+ */
+const BEAM_HUM_FLOOR = 0.88;
+const BEAM_HUM_PERIOD = 30;
 
 // @setup: one dot's worth of buffer for the module's lifetime.
 const DOT = new Float32Array(2);
@@ -544,12 +579,20 @@ export function paintBolts(
       if (warning) {
         surface.bolt(BEAM_PATH, points, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
       } else {
-        const held = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
-        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * view.scale, held, true);
+        const held = beamHum(e);
+        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, true, true);
       }
       continue;
     }
-    const amp = warning || beam ? 0 : BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
+    /*
+      The jag: a share of the link's length, under an absolute ceiling (0302), and under a share of
+      one LEG — 0470. At thirteen vertices a short link's legs are a unit or two long, and a swing of
+      a sixth of the whole link on every one of them is a knot, not a bolt; a leg may swing half its
+      own length and no further, which only a link shorter than about forty units ever feels.
+    */
+    const legCap = (BOLT_JAG_LEG * length) / (BOLT_VERTICES - 1);
+    const jagAmp = BOLT_JAG * length > BOLT_JAG_MAX ? BOLT_JAG_MAX : BOLT_JAG * length;
+    const amp = warning || beam ? 0 : jagAmp > legCap ? legCap : jagAmp;
     const page = Math.floor(e.lifeFor / BOLT_PAGE_STEPS);
     const seed = e.spin;
     const last = BOLT_VERTICES - 1;
@@ -568,15 +611,16 @@ export function paintBolts(
       continue;
     }
     if (beam) {
-      // The stroke's own width is a quarter of the visible glow (`src/render/canvas.ts`), so a
-      // quarter of the hurt width draws the glow exactly as wide as the beam hurts.
-      const held = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
-      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * view.scale, held, true);
+      // The stroke's own width is a quarter of the visible body (`src/render/canvas.ts`), so a
+      // quarter of the hurt width draws the body exactly as wide as the beam hurts.
+      const held = beamHum(e);
+      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, true, true);
       continue;
     }
-    // Fades over its life: a flash, brightest the step it lands.
-    const fade = e.lifeFor / BOLT_STEPS;
-    surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * view.scale, fade, hostile);
+    // Fades over its life: a flash, brightest and widest the step it lands, collapsing after — 0470.
+    const fade = Math.pow(e.lifeFor / BOLT_STEPS, BOLT_FADE_POWER);
+    const core = BOLT_WIDTH * (BOLT_CORE_DYING + (BOLT_CORE_STRUCK - BOLT_CORE_DYING) * fade);
+    surface.bolt(LINK, BOLT_VERTICES, core * view.scale, fade, hostile);
     // The bright points: a dot on every third inner vertex, over the stroke — 0236.
     for (let v = BOLT_DOT_EVERY; v < last; v += BOLT_DOT_EVERY) {
       DOT[0] = LINK[v * 2]!;
@@ -584,28 +628,81 @@ export function paintBolts(
       surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade, hostile);
     }
     /*
-      The twig: from a vertex a third to two thirds along, out to the side the hash says, and on
-      again at half the length. Two segments, so it forks rather than spikes.
+      The twigs: one from a vertex a third to two thirds along, out to the side the hash says, and
+      on again at half the length — two segments, so it forks rather than spikes. And a second, smaller,
+      off the other side from a vertex nearer the far end — 0470: one branch is a wire with a kink in
+      it, two is a thing that forked.
     */
-    const from = 3 + ((seed + page) & 3);
-    const side = jag(seed, from + 17, page) < 0 ? -1 : 1;
-    const t0 = from / last;
-    const rootAlong = endAlong + e.fromAlong * (1 - t0) + nAlong * jag(seed, from, page) * amp;
-    const rootAcross = endAcross + e.fromAcross * (1 - t0) + nAcross * jag(seed, from, page) * amp;
     const reach = TWIG_SHARE * length > TWIG_MAX ? TWIG_MAX : TWIG_SHARE * length;
-    for (let v = 0; v < TWIG_VERTICES; v++) {
-      const s = v / (TWIG_VERTICES - 1);
-      const out = side * reach * s;
-      const back = -e.fromAlong / length;
-      const backAcross = -e.fromAcross / length;
-      const along = rootAlong + nAlong * out + back * reach * s * 0.5 + nAlong * jag(seed, v + 40, page) * amp * s;
-      const across = rootAcross + nAcross * out + backAcross * reach * s * 0.5 + nAcross * jag(seed, v + 40, page) * amp * s;
-      const inView = along - cameraAlong;
-      TWIG[v * 2] = screenX(view, inView, across);
-      TWIG[v * 2 + 1] = screenY(view, inView, across);
-    }
-    surface.bolt(TWIG, TWIG_VERTICES, BOLT_WIDTH * 0.6 * view.scale, fade * 0.8, hostile);
+    const from = 4 + ((seed + page) & 3);
+    const side = jag(seed, from + 17, page) < 0 ? -1 : 1;
+    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, from, side, reach, core * 0.6 * view.scale, fade * 0.8, hostile);
+    const fork = 2 + (((seed >> 3) + page) & 3);
+    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, fork, -side, reach * TWIG_SECOND, core * 0.5 * view.scale, fade * 0.7, hostile);
   }
+}
+
+/**
+ * One twig off a link: from vertex `from`, out to `side` for `reach`, bending back towards the far
+ * end as it goes and jagged on the way. A module function and not a closure, so the frame allocates
+ * nothing for it (0022); its arguments are the link's own numbers, already in hand.
+ */
+function paintTwig(
+  surface: Surface,
+  view: View,
+  e: Entity,
+  cameraAlong: number,
+  endAlong: number,
+  endAcross: number,
+  nAlong: number,
+  nAcross: number,
+  length: number,
+  amp: number,
+  page: number,
+  from: number,
+  side: number,
+  reach: number,
+  width: number,
+  alpha: number,
+  hostile: boolean,
+): void {
+  const seed = e.spin;
+  const last = BOLT_VERTICES - 1;
+  const t0 = from / last;
+  const rootAlong = endAlong + e.fromAlong * (1 - t0) + nAlong * jag(seed, from, page) * amp;
+  const rootAcross = endAcross + e.fromAcross * (1 - t0) + nAcross * jag(seed, from, page) * amp;
+  const back = -e.fromAlong / length;
+  const backAcross = -e.fromAcross / length;
+  for (let v = 0; v < TWIG_VERTICES; v++) {
+    const s = v / (TWIG_VERTICES - 1);
+    const out = side * reach * s;
+    const along = rootAlong + nAlong * out + back * reach * s * 0.5 + nAlong * jag(seed, v + 40 + from, page) * amp * s;
+    const across = rootAcross + nAcross * out + backAcross * reach * s * 0.5 + nAcross * jag(seed, v + 40 + from, page) * amp * s;
+    const inView = along - cameraAlong;
+    TWIG[v * 2] = screenX(view, inView, across);
+    TWIG[v * 2 + 1] = screenY(view, inView, across);
+  }
+  surface.bolt(TWIG, TWIG_VERTICES, width, alpha, hostile);
+}
+
+/**
+ * How loud a held beam is this step — 0470: full for its ignition and its hum's peaks, breathing down
+ * to `BEAM_HUM_FLOOR` between them, and fading over its last `BOLT_STEPS` as it always did. Read off
+ * `lifeFor` and nothing else, so the painter draws the same frame however often it is asked.
+ */
+function beamHum(e: Entity): number {
+  const out = e.lifeFor > BOLT_STEPS ? 1 : e.lifeFor / BOLT_STEPS;
+  const burnt = e.holdFor - e.lifeFor;
+  if (burnt < BOLT_STEPS) return out;
+  const hum = BEAM_HUM_FLOOR + (1 - BEAM_HUM_FLOOR) * (0.5 + 0.5 * Math.cos(((burnt - BOLT_STEPS) * 2 * Math.PI) / BEAM_HUM_PERIOD));
+  return out * hum;
+}
+
+/** How much wider than it hurts a beam is drawn this step — `BEAM_IGNITE` as it lights, one once it has settled. */
+function beamBloom(e: Entity): number {
+  const burnt = e.holdFor - e.lifeFor;
+  if (burnt >= BOLT_STEPS) return 1;
+  return 1 + (BEAM_IGNITE - 1) * (1 - burnt / BOLT_STEPS);
 }
 
 /**
