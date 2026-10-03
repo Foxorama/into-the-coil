@@ -807,10 +807,10 @@ describe('0459 — the cold pulses', () => {
   it('THE ASKED-FOR ONE, IN NUMBERS: a fifth larger at rest, a pulse every ten seconds, and at its top it reaches every lane and most of the screen while leaving a strip behind it to fly in', () => {
     expect(chill.radius, 'the cold at rest is not a fifth larger than the 38 it was').toBeCloseTo(38 * 1.2, 0);
     expect(chill.pulse / STEPS_PER_SECOND, 'the pulse is not ten seconds').toBe(10);
-    expect(chill.flicker).toBeGreaterThan(0);
-    expect(chill.flicker, 'the flicker is most of the pulse').toBeLessThan(chill.pulse / 4);
-    // A lit half and a dark one is a flash, over most of the screen — under 0024's three a second.
-    expect(STEPS_PER_SECOND / (2 * chill.blink), 'the flicker strobes over the flash cap').toBeLessThanOrEqual(3);
+    // 0471: out, back, and a rest — the swell and the retract fit inside one pulse, and both are seen.
+    expect(chill.swell).toBeGreaterThan(0);
+    expect(chill.retract).toBeGreaterThan(0);
+    expect(chill.swell + chill.retract, 'the swell and the retract overrun the pulse').toBeLessThanOrEqual(chill.pulse);
     // Wherever across the lane the hull patrols — its edge is turned at the lane's — both edges are in it.
     const row = BOSSES.hoarfrost;
     expect(chill.reach, 'at its top the cold does not reach every lane').toBeGreaterThanOrEqual(ACROSS_SPAN - row.radius);
@@ -823,14 +823,12 @@ describe('0459 — the cold pulses', () => {
     expect(near - PLAYER_ALONG_MARGIN, 'at its top the cold leaves nowhere to fly').toBeGreaterThan(15);
   });
 
-  it('THE PULSE, DRIVEN: over one pulse the slow and the drawing are one radius on every step — swelling from the row’s rest to its reach, strobing out, and starting again', () => {
+  it('THE PULSE, DRIVEN: over one pulse the slow and the drawing are one radius on every step — swelling from the row’s rest to its reach, drawing back to rest, and starting again', () => {
     const d = frostAt(1);
     const { world, frame } = d;
     const haze = SPRITE_EXTENT[SPRITE_KINDS[chill.field[0]!.sprite]!];
     let widest = 0;
-    let out = 0;
-    let lit = 0;
-    const grow = chill.pulse - chill.flicker;
+    let last = Infinity;
     for (let k = 0; k <= chill.pulse; k++) {
       world.ship.health = world.shipRow.health;
       world.bossPool.at(0).fireIn = 999;
@@ -838,23 +836,44 @@ describe('0459 — the cold pulses', () => {
       const r = world.chillRadius;
       expect(r, `step ${k} of the pulse`).toBeCloseTo(chillRadiusAt(chill, k), 9);
       expect(world.bossAura.at(0).swell * haze, `the cold is drawn ${(world.bossAura.at(0).swell * haze) / 2} out on step ${k} and slows at ${r}`).toBeCloseTo(2 * r, 9);
-      if (k < grow) {
+      if (k < chill.swell) {
         expect(r, `the cold shrank on step ${k} of its swell`).toBeGreaterThanOrEqual(widest);
         widest = r;
+      } else if (k < chill.swell + chill.retract) {
+        // Step `swell` is the top itself, a hair above the swell's last step.
+        if (k > chill.swell) expect(r, `the cold grew on step ${k} of its retract`).toBeLessThanOrEqual(last);
       } else if (k < chill.pulse) {
-        if (r === 0) out++;
-        else lit++;
+        expect(r, `the cold is not at rest on step ${k}`).toBe(chill.radius);
       }
+      last = r;
     }
     expect(chillRadiusAt(chill, 0)).toBe(chill.radius);
     expect(widest, 'the swell never reached its top').toBeGreaterThan(chill.reach - 0.5);
-    expect(out, 'the cold never went out').toBeGreaterThan(0);
-    expect(lit, 'the cold went out without flickering').toBeGreaterThan(0);
     // And the next pulse starts small again.
     expect(world.chillRadius, 'the pulse did not restart at rest').toBe(chill.radius);
   });
 
-  it('THE EFFECT, WHERE THE PLAYER IS: a ship most of the way down the lane from the hull is free at the start of a pulse and slowed at its top, and free again while it is out', () => {
+  it('THE REPORTED ONE, IN THE LANE: the cold’s edge never jumps — across two whole pulses and the turn between them, it moves under a hundredth of the lane in any step', () => {
+    /*
+      0471: *"the rime shelf bosses aura pulses out and then just resets like it's a bug, it should
+      pulse out, retract and pulse again like a proper pulse."* 0459's edge went from its reach to
+      nothing and from nothing back to its rest in one step each — over half the lane at once. A
+      pulse is an edge the eye can follow, in and out, so the guard is how far it moves in a step, in
+      shares of the lane the player flies across.
+    */
+    let worst = 0;
+    let at = 0;
+    for (let k = 1; k <= 2 * chill.pulse + 1; k++) {
+      const moved = Math.abs(chillRadiusAt(chill, k) - chillRadiusAt(chill, k - 1)) / ACROSS_SPAN;
+      if (moved > worst) {
+        worst = moved;
+        at = k;
+      }
+    }
+    expect(worst, `the cold's edge moved ${(100 * worst).toFixed(1)}% of the lane on step ${at}`).toBeLessThan(0.01);
+  });
+
+  it('THE EFFECT, WHERE THE PLAYER IS: a ship most of the way down the lane from the hull is free at the start of a pulse and slowed at its top, and free again once it has drawn back', () => {
     const at = (clock: number): boolean => {
       const d = frostAt(1);
       const boss = d.world.bossPool.at(0);
@@ -866,10 +885,8 @@ describe('0459 — the cold pulses', () => {
       d.frame.step();
       return d.world.chilledFor > 0;
     };
-    const grow = chill.pulse - chill.flicker;
     expect(at(0), 'the cold at rest already reaches the far side of the screen').toBe(false);
-    expect(at(grow - 1), 'the cold at its top does not reach the ship').toBe(true);
-    const dark = Array.from({ length: chill.flicker }, (_, i) => grow + i).find((k) => chillRadiusAt(chill, k) === 0)!;
-    expect(at(dark), 'a cold that has gone out still slows').toBe(false);
+    expect(at(chill.swell - 1), 'the cold at its top does not reach the ship').toBe(true);
+    expect(at(chill.swell + chill.retract), 'a cold that has drawn back still slows').toBe(false);
   });
 });

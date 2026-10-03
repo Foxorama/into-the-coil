@@ -922,17 +922,22 @@ export interface Chill {
    *
    * ⚠️ **ASKED FOR**: *"it needs to slowly increase in a pulse every 10 secs so that it takes up most
    * of the screen, then flickers out and restarts. It's pretty at the moment but has no game effect
-   * at all as it's too small."* The cold grows from `radius` to this over a pulse, strobes for its
-   * last `flicker` steps and goes out, and starts again from `radius`. The model and the picture both
-   * read `chillRadiusAt`, so the slow is exactly as wide as what is drawn on every step of it.
+   * at all as it's too small."* The cold grows from `radius` to this over `swell` steps, draws back to
+   * `radius` over `retract`, and rests there for what is left of the pulse — 0471. The model and the
+   * picture both read `chillRadiusAt`, so the slow is exactly as wide as what is drawn on every step.
+   *
+   * ⚠️ **NO LONGER A STROBE AND A WRAP — 0471.** *"The aura pulses out and then just resets like
+   * it's a bug, it should pulse out, retract and pulse again like a proper pulse."* 0459's pulse
+   * strobed at its top and then jumped from nothing back to `radius` on one step; nothing on the
+   * screen moved the cold back in, so it read as a reset.
    */
   reach: number;
   /** Steps from one pulse's start to the next — 0459. */
   pulse: number;
-  /** The last steps of a pulse, over which the cold strobes at `reach` and goes out — 0459. */
-  flicker: number;
-  /** Steps each strobe of the flicker is lit, and then dark — 0459. */
-  blink: number;
+  /** Steps the cold takes to swell from `radius` to `reach` — 0471. */
+  swell: number;
+  /** Steps it takes to draw back from `reach` to `radius`; the rest of the pulse it rests — 0471. */
+  retract: number;
   /** What is left of the stick's ask inside it: `0.5` is half speed. */
   slow: number;
   /** Steps inside it before the ship freezes. */
@@ -956,21 +961,19 @@ export interface Chill {
 }
 
 /**
- * How far the cold reaches `clock` steps into its fight, or `0` while it is out — 0459.
+ * How far the cold reaches `clock` steps into its fight — 0459, 0471.
  *
  * ⚠️ **ONE FUNCTION FOR THE SLOW AND THE DRAWING**, because a pulse is a moving edge, and an edge the
  * model and the picture each computed would be two edges by the first tuning pass. A smoothstep from
- * `radius` to `reach`, so the swell starts and lands gently; then lit and dark by turns, `blink` steps
- * each, until the pulse ends.
+ * `radius` out to `reach` over `swell`, the same back over `retract`, and `radius` until the pulse
+ * ends — so the edge starts, turns and lands gently and never jumps.
  */
 export function chillRadiusAt(chill: Chill, clock: number): number {
   const t = clock % chill.pulse;
-  const grow = chill.pulse - chill.flicker;
-  if (t < grow) {
-    const s = t / grow;
-    return chill.radius + (chill.reach - chill.radius) * s * s * (3 - 2 * s);
-  }
-  return Math.floor((t - grow) / chill.blink) % 2 === 0 ? chill.reach : 0;
+  const ease = (s: number): number => chill.radius + (chill.reach - chill.radius) * s * s * (3 - 2 * s);
+  if (t < chill.swell) return ease(t / chill.swell);
+  if (t < chill.swell + chill.retract) return ease(1 - (t - chill.swell) / chill.retract);
+  return chill.radius;
 }
 
 /** One layer of a cold's field — 0399: a bitmap, and how far it turns each step. */
@@ -3957,16 +3960,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
       — which holds its lane rather than retreating — was frozen under a volley with nowhere to go. The
       strip behind 44 is the answer to the cold: *fall back*, and never *there is nowhere*.
 
-      ⚠️ **THE STROBE IS TWELVE STEPS A HALF, AND 0024'S CAP IS WHY.** Most of the screen going
-      dark and light is a general flash if anything is, and the cap is three a second: twelve and
-      twelve is two and a half. `tests/frost.test.ts` holds the arithmetic.
+      ⚠️ **OUT IN SIX AND A HALF SECONDS, BACK IN TWO AND A HALF, ONE AT REST — 0471.** *"It should
+      pulse out, retract and pulse again like a proper pulse."* 0459's strobe and its one-step jump
+      back to 46 are gone; the cold now draws back across the screen as visibly as it came. A ship
+      80 from the hull — most of the way down the lane — is inside it for 4.2 s of each pulse, against
+      0459's 4.7, because the retract keeps it there on the way back.
     */
     chill: {
       radius: 46,
       reach: 108,
       pulse: 600,
-      flicker: 48,
-      blink: 12,
+      swell: 390,
+      retract: 150,
       slow: 0.5,
       freezeAfter: 45,
       frozenFor: 30,
@@ -4009,12 +4014,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
       and small: the wall is one either side of the hull, the sprays two and then three, and the
       ring 0253 threw at the last fifth is gone — six shards that each open into twelve is a screen
       nobody can read. The adds come in from the sides on 0262's flank, and shatter where they die.
+
+      ⚠️ **SLOWER, AS FAR AS 0260'S EIGHT VOLLEYS ALLOW — 0471.** *"The hydra level boss and rime
+      shelf level boss and jellyfish level boss fire a bit too fast."* 84, 66, 60 became 90, 84, 72:
+      at the tuned tier 66 and 54 steps became 72 and 66. The wall stays at 96 because the arc's
+      forty-second fight ends its first phase at 7.99 volleys at 102. The last phase's volleys are
+      held apart by the shard's own stagger, as they were.
     */
     phases: [
       { upTo: 1, fireEvery: 96, shots: 1, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.74, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
-      { upTo: 0.49, fireEvery: 66, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },
-      { upTo: 0.25, fireEvery: 60, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.74, fireEvery: 90, shots: 2, spread: 0.8, patrolScale: 1.2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
+      { upTo: 0.49, fireEvery: 84, shots: 2, spread: 0.8, patrolScale: 1.5, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'summon', enemy: 'shard', count: 2, formation: 'vee', from: 'sides', standing: 6 } },
+      { upTo: 0.25, fireEvery: 72, shots: 3, spread: 1.2, patrolScale: 1.9, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'spray' } },
     ],
   },
   /**
@@ -4158,12 +4169,17 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **AND SIX A FAN FROM SIXTY PERCENT DOWN SINCE 0387** — *"about 1-2 less orbs at 60% and less
       health - gets really hard to dodge."* A play outranks the measured target 0385 set, so the last
       three phases are roomier than it left them. `docs/decisions/0387-the-hydra-throws-fewer-from-sixty.md`.
+
+      ⚠️ **SLOWER, AS FAR AS 0260'S EIGHT VOLLEYS ALLOW — 0471.** *"The hydra level boss … fire[s] a
+      bit too fast."* 72, 60, 54, 48 and 42 became 78, 72, 66, 60 and 54: at the tuned tier 54, 48,
+      42, 36, 30 steps became 60, 54, 54, 48, 42, before each head's own gap, which is unchanged. The
+      arc's forty-second fight holds the first phase there.
     */
     phases: [
-      { upTo: 1, fireEvery: 72, shots: 5, spread: 1.0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 1, fireEvery: 78, shots: 5, spread: 1.0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
       {
         upTo: 0.8,
-        fireEvery: 60,
+        fireEvery: 72,
         shots: 6,
         spread: 1.2,
         patrolScale: 1.2,
@@ -4174,7 +4190,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.6,
-        fireEvery: 54,
+        fireEvery: 66,
         shots: 6,
         spread: 1.3,
         patrolScale: 1.4,
@@ -4192,7 +4208,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.4,
-        fireEvery: 48,
+        fireEvery: 60,
         shots: 6,
         spread: 1.4,
         patrolScale: 1.6,
@@ -4211,7 +4227,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       },
       {
         upTo: 0.2,
-        fireEvery: 42,
+        fireEvery: 54,
         shots: 6,
         spread: 1.5,
         patrolScale: 1.8,
@@ -4328,14 +4344,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
         ⚠️ **AND EIGHT VOID A RING RATHER THAN TEN — 0402.** *"It needs slightly less void balls
         firing."* A fifth fewer, on the same cadence.
+
+        ⚠️ **SLOWER, AS FAR AS 0260'S EIGHT VOLLEYS ALLOW — 0471.** *"The … jellyfish level boss
+        fire[s] a bit too fast."* 66, 54, 48, 42 and 36 became 72, 66, 60, 54 and 48: at the tuned
+        tier 54, 42, 36, 30, 30 steps became 54, 54, 48, 42, 36, and the lasers' warning and hold are
+        unchanged. The first ring stays at 54 there because the arc's forty-second fight is over
+        before an eighth volley at anything slower.
       */
-      { upTo: 1, fireEvery: 66, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.81, fireEvery: 54, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
-      { upTo: 0.6, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.4, fireEvery: 42, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
+      { upTo: 1, fireEvery: 72, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.81, fireEvery: 66, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
+      { upTo: 0.6, fireEvery: 60, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
+      { upTo: 0.4, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
-      { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
+      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
     ],
   },
 };
