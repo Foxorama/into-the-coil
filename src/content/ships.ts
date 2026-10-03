@@ -134,6 +134,24 @@ export type HudMotif = 'bracket' | 'orbit' | 'checker' | 'walnut';
 /** Written out rather than derived, so the chrome can take every motif's class off before it puts one on. */
 export const HUD_MOTIFS: readonly HudMotif[] = ['bracket', 'orbit', 'checker', 'walnut'];
 
+/**
+ * The walnut dash's fuzzy dice — `docs/decisions/0466-the-dice-swing-once.md`. Played on 0461's
+ * swing: *"they should start to sway on a forward burst or hard brake, but it should trigger an
+ * uninterruptable sway, at the moment they jerk around all over the place because the player is
+ * constantly going back and forth."*
+ *
+ * A lurch is a CROSSING of the ship's speed along the lane, in the camera's frame, as a share of
+ * `SHIP_SPEED`: up past `burst` is a burst, and down past `brake` after one is a brake. A stick
+ * wagged about the middle crosses neither. One swing runs `swingSeconds` and nothing interrupts it:
+ * the frame (`stepJolt`) refuses every lurch until the last swing has settled, and the chrome's
+ * animation is this long, so the two are one number here.
+ */
+export const DICE = {
+  burst: 0.6,
+  brake: 0.2,
+  swingSeconds: 1.8,
+} as const;
+
 export interface HudTheme {
   readonly motif: HudMotif;
   readonly ink: HudInk;

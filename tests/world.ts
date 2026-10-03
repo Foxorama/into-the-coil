@@ -171,7 +171,8 @@ export function inertLevel(): {
   shownStreak: number;
   onScore: (points: number, streak: number) => void;
   joltVel: number;
-  joltWay: number;
+  joltArmed: boolean;
+  joltHold: number;
   joltWarp: boolean;
   onJolt: (way: number) => void;
   onCue: (kind: CueKind) => void;
@@ -287,9 +288,9 @@ export function scoreParts(): { score: LevelScore; shownPoints: number; shownStr
   };
 }
 
-/** The lurch half of a world: standing still, and nothing on a dash to swing — 0461. */
-export function joltParts(): { joltVel: number; joltWay: number; joltWarp: boolean; onJolt: () => void } {
-  return { joltVel: 0, joltWay: 0, joltWarp: false, onJolt: (): void => {} };
+/** The lurch half of a world: standing still, no swing running, and nothing on a dash to swing — 0461, 0466. */
+export function joltParts(): { joltVel: number; joltArmed: boolean; joltHold: number; joltWarp: boolean; onJolt: () => void } {
+  return { joltVel: 0, joltArmed: false, joltHold: 0, joltWarp: false, onJolt: (): void => {} };
 }
 
 /** The pickup half of a world, built the way `mount.ts` builds it rather than restated. */
