@@ -265,11 +265,25 @@ describe('0384 — the hydra stands in the acid and grows its heads', () => {
       const phase = phaseFor(BOSSES.hydra, boss.health, d.world.bossFullHealth).attack!;
       const thrown = phase.kind === 'heads' ? phase.heads[k]!.attack : phase;
       if (thrown.kind === 'wall') {
-        for (let s = 0; s < 30 && d.world.enemyShots.size < 2; s++) d.frame.step();
-        const a = d.world.enemyShots.at(0);
-        const b = d.world.enemyShots.at(1);
-        // Along, where the first shard was thrown; across, the pair's middle — the pair flew on meanwhile.
-        at = { along: at!.along, across: (a.across + b.across) / 2 };
+        /*
+          ⚠️ **THE PAIR'S SHARDS, EACH WHERE IT WAS FIRST SEEN — 0482.** This waited for any two shots
+          in the air, which were the pair while a shard took 38 steps to split; at 24 the first shard's
+          bolts are in the air before its staggered twin is thrown. Each shard is read at the step it
+          first appears, still a shard, so the middle is the pair's whatever has split since.
+        */
+        const firsts = new Set<object>();
+        const seen: number[] = [];
+        for (let s = 0; s < 60 && seen.length < 2; s++) {
+          for (let i = 0; i < d.world.enemyShots.size; i++) {
+            const shard = d.world.enemyShots.at(i);
+            if (shard.turnsLeft !== 0 || firsts.has(shard)) continue;
+            firsts.add(shard);
+            seen.push(shard.across);
+          }
+          if (seen.length < 2) d.frame.step();
+        }
+        // Along, where the first shard was thrown; across, the pair's middle.
+        at = { along: at!.along, across: (seen[0]! + seen[1]!) / 2 };
       }
       const gap = Math.hypot(at!.along - mouth.along, at!.across - mouth.across);
       expect(gap, `head ${k}'s attack left ${gap.toFixed(1)} units from its mouth`).toBeLessThan(5);

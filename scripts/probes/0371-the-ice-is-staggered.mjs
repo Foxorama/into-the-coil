@@ -71,8 +71,9 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      find: "      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },",
-      replace: "      { after: { least: 38, most: 96 }, into: 'fan', shots: 2, spread: 0.6 },",
+      // Re-anchored by 0482: three bolts, sooner.
+      find: "      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },",
+      replace: "      { after: { least: 24, most: 96 }, into: 'fan', shots: 3, spread: 1 },",
     },
   },
   {
@@ -112,8 +113,9 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      find: "      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },",
-      replace: "      { after: { least: 26, most: 48 }, into: 'ring', shots: 6 },",
+      // Re-anchored by 0482: a second later, at a sixth of the speed.
+      find: "      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
+      replace: "      { after: { least: 20, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
     },
   },
 ];

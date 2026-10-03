@@ -274,10 +274,15 @@ export interface Swallow {
  * bursts into. A `fan` is `shots` about the heading the shot was flying on, `spread` wide in total on
  * the same arithmetic as an enemy's `spray`; a `ring` is `shots` evenly round, the first on the
  * heading; `nothing` is the melt.
+ *
+ * ⚠️ **`pace` IS THE SHARE OF THE ROW'S SPEED ITS CHILDREN LEAVE AT — 0482**, absent for the row's own.
+ * *"Rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a
+ * non-event."* A snowflake that flies at its shard's whole speed is a ring the size of the screen a
+ * second later; one at a sixth of it is a cloud that hangs and can be flown through.
  */
 export type Fission =
-  | { after: Fuse; into: 'fan'; shots: number; spread: number }
-  | { after: Fuse; into: 'ring'; shots: number }
+  | { after: Fuse; into: 'fan'; shots: number; spread: number; pace?: number }
+  | { after: Fuse; into: 'ring'; shots: number; pace?: number }
   | { after: Fuse; into: 'nothing' };
 
 /**
@@ -928,10 +933,18 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     damage: 1,
     speed: 0.75,
     stagger: 40,
+    /*
+      ⚠️ **A CLOUD AND NOT TWO BANGS — 0482.** *"It's still two cluster bombs really close together and
+      rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a
+      non-event."* The two bolts popped 0.7 s apart and 20 units apart, and each ring flew out at the
+      shard's whole speed to 77 units before it melted: dense for a moment, gone the next. Now three
+      bolts split sooner and wider, each opens a second later into six flakes at a sixth of the
+      speed, and they linger: three clouds no more than a fifth of the lane in radius, a field to thread.
+    */
     fission: [
-      { after: { least: 38, most: 56 }, into: 'fan', shots: 2, spread: 0.6 },
-      { after: { least: 36, most: 48 }, into: 'ring', shots: 6 },
-      { after: { least: 90, most: 90 }, into: 'nothing' },
+      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },
+      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },
+      { after: { least: 130, most: 130 }, into: 'nothing' },
     ],
   },
   /**

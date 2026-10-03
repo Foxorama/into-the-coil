@@ -5894,7 +5894,8 @@ function fissionShots(w: World): void {
     const next = shot.turnsLeft + 1;
     const kind = shot.kind;
     pool.releaseAt(i);
-    const speed = row.speed * w.difficulty.shotSpeed;
+    // At the stage's own share of the row's speed where it says one — 0482: the frost's cloud drifts.
+    const speed = row.speed * w.difficulty.shotSpeed * (stage.into === 'nothing' ? 1 : (stage.pace ?? 1));
     switch (stage.into) {
       case 'fan': {
         // The same arithmetic as an enemy's `spray`: `spread` is the whole width, centred.
