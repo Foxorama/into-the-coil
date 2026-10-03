@@ -913,6 +913,11 @@ walled in the world tree's roots, the hydra in a room with no walls and further 
 laser leaves from under its gun, the frost ship's cold pulses out to most of the screen every ten
 seconds, and the Black Heart's lightning and jellyfish are no longer its own colours — **owed a play of
 all five fights**, the frost ship's pulse above all, since it is the first time the cold costs anything.
+And the light is additive ([0470](decisions/0470-the-light-is-additive.md)): every bolt's glow is added
+to the frame rather than laid over it, a laser is a six-layer column with a white heart and a dark rim,
+and a flash snaps and collapses on thirteen vertices with two twigs — the answer to *"the jellyfish's
+laser still looks terrible against the background"*, measured in pixels — **owed a play of the arc, the
+serpent, the pterodactyl and the jellyfish**, and a look at the arc over the Rime Shelf's ice.
 
 And the run ends on the way out ([0418](decisions/0418-the-heart-lets-go.md), one shot since
 [0426](decisions/0426-the-finale-is-the-fight-going-on.md)): the finale, then the victory screen —

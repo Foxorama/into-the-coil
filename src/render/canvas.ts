@@ -118,28 +118,48 @@ export class CanvasSurface implements Surface {
   }
 
   /**
-   * One bolt: the same polyline stroked three times — a dark halo, a wide faint glow, a thin bright
-   * core. A single point is a dot: the round cap does the drawing.
+   * One bolt: the same polyline stroked once per layer of its look — a flash's four, a beam's five,
+   * a dot's two — and the light layers are ADDED to the frame rather than laid over it. A single
+   * point is a dot: the round cap does the drawing.
    *
-   * ⚠️ **THREE STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
+   * ⚠️ **STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
    * bounding box, which is the one Canvas2D call that is genuinely expensive and the one this
    * backend must never make sixty times a second. Translucent wide strokes under a thin opaque one
-   * are what a glow looks like at the size a bolt is drawn, and they cost three path strokes.
+   * are what a glow looks like at the size a bolt is drawn, and they cost one path stroke each.
    *
-   * ⚠️ **THE DARK HALO IS THE FIRST PLAY-TEST'S — 0236.** *"It needs some bright points and a bit of
-   * a darker glow around it."* A bolt over a busy sky had nothing to stand against; the halo is the
-   * space colour at half alpha, twice the glow's width, and it is what gives the glow an edge.
+   * ⚠️ **THE LIGHT IS ADDITIVE — 0470.** *"Lightning needs to be brighter and flashier … lasers need
+   * more depth and layers … the jellyfish's laser still looks terrible against the background."* Every
+   * glow here was laid `source-over`: a yellow at four tenths over the Black Heart's plum is a
+   * mustard band, and a pink at four tenths over the Saurian night is a flat road with a white line
+   * down it — a translucent paint, which is what `source-over` IS. Light does not mix with what is
+   * behind it; it adds to it. So the wash, the glow and the core are stroked `lighter`, which adds the
+   * ink's channels to the frame's: the same yellow over the same plum is yellow light falling off into
+   * the dark, and over the vessels it is brighter than they are, which is the whole of the third
+   * complaint. The rim stays `source-over`, because an added black is nothing — its job is to darken.
+   * A compositing mode is one property write on the context's own state and costs no draw.
+   *
+   * ⚠️ **THE DARK RIM IS THE FIRST PLAY-TEST'S — 0236.** *"It needs some bright points and a bit of
+   * a darker glow around it."* A bolt over a busy sky had nothing to stand against; the rim is the
+   * space colour at half alpha, half as wide again as the glow, and it is what gives the glow an
+   * edge — in the Black Heart it is what parts a laser from an artery it crosses.
    *
    * ⚠️ **THE FLASH IS THE SECOND'S — 0238.** *"Lightning needs more glow around the edges, not
-   * specific details but more like the lightning flash."* A fourth stroke, first and under the
-   * others: the glow ink at a sixth of the alpha and fourteen times the core's width — a wash of
-   * light round the whole bolt that fades with it, which is what a flash is. Still no `shadowBlur`,
-   * and still one path: four strokes of the same polyline.
+   * specific details but more like the lightning flash."* The widest stroke, first and under the
+   * others: the glow ink, faint, fourteen times the core's width — a wash of light round the whole
+   * bolt that fades with it, which is what a flash is.
+   *
+   * ⚠️ **A BEAM HAS ITS OWN STACK — 0470.** A flash is a filament in a wash; a beam is a column of
+   * light the player stands beside for half a second, and drawn as a flash it was the road above.
+   * `BEAM_LAYERS` is five deep: the wash, the rim, the body at exactly the width the beam hurts, an
+   * inner glow at half of it and a hot core at a fifth — each narrower one brighter, which is what
+   * gives a column of light its depth. The caller says which with `beam`.
    *
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
-   * context's own path, and the points are the caller's buffer.
+   * context's own path, the layers are module constants, and the points are the caller's buffer.
+   * **And the context is put back** — `source-over`, alpha one — before this returns, because every
+   * blit after it would otherwise be added to the frame too.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void {
+  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean, beam = false): void {
     if (count < 1) return;
     const ctx = this.ctx;
     const glow = hostile ? this.hostileGlow : this.boltGlow;
@@ -150,27 +170,71 @@ export class CanvasSurface implements Surface {
     ctx.moveTo(points[0]!, points[1]!);
     if (count === 1) ctx.lineTo(points[0]!, points[1]!);
     for (let i = 1; i < count; i++) ctx.lineTo(points[i * 2]!, points[i * 2 + 1]!);
-    // The flash and the dark halo wrap the bolt and not its dots: a dot with its own wash is a
-    // bead, a dot with its own halo is a dark disc punched in the flash, and the eye reads either as
-    // a string of lights rather than as one flash. A dot is its glow and its core.
-    if (count > 1) {
-      ctx.globalAlpha = alpha * 0.16;
-      ctx.strokeStyle = glow;
-      ctx.lineWidth = width * 14;
-      ctx.stroke();
-      ctx.globalAlpha = alpha * 0.5;
-      ctx.strokeStyle = this.boltDark;
-      ctx.lineWidth = width * 6;
+    // The flash and the dark rim wrap the bolt and not its dots: a dot with its own wash is a
+    // bead, a dot with its own rim is a dark disc punched in the flash, and the eye reads either as
+    // a string of lights rather than as one flash. A dot is its glow and its core — 0238.
+    const layers = count === 1 ? DOT_LAYERS : beam ? BEAM_LAYERS : FLASH_LAYERS;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i]!;
+      ctx.globalCompositeOperation = layer.additive ? 'lighter' : 'source-over';
+      ctx.globalAlpha = alpha * layer.alpha;
+      ctx.strokeStyle = layer.ink === 'dark' ? this.boltDark : layer.ink === 'core' ? core : glow;
+      ctx.lineWidth = width * layer.width;
       ctx.stroke();
     }
-    ctx.globalAlpha = alpha * 0.4;
-    ctx.strokeStyle = glow;
-    ctx.lineWidth = width * 4;
-    ctx.stroke();
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = core;
-    ctx.lineWidth = width;
-    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
 }
+
+/**
+ * One stroke of a bolt's stack — 0470: how wide, as a multiple of the width the caller asked for; how
+ * loud, as a share of the alpha it asked for; which of the three inks; and whether it is added to the
+ * frame (`lighter`) or laid over it (`source-over`).
+ *
+ * Module constants and not a parameter, on `setBolt`'s terms: a look is a property of what a bolt is,
+ * not of the call, and a table per stroke per frame would be an allocation on the hot path.
+ * `tests/bolt.browser.test.ts` strokes each table on a real canvas and reads the pixels back.
+ */
+export interface BoltLayer {
+  readonly width: number;
+  readonly alpha: number;
+  readonly ink: 'glow' | 'dark' | 'core';
+  readonly additive: boolean;
+}
+
+/**
+ * A flash — chain lightning, the storm, the serpent's strike. In order, under to over: the wash
+ * (0238), the rim (0236), the glow and the core. The glow is ADDED now, so it is light rather than
+ * paint, and it is louder than it was for it: at four tenths added it read as a tint.
+ */
+export const FLASH_LAYERS: readonly BoltLayer[] = [
+  { width: 14, alpha: 0.2, ink: 'glow', additive: true },
+  { width: 6, alpha: 0.5, ink: 'dark', additive: false },
+  { width: 4, alpha: 0.55, ink: 'glow', additive: true },
+  { width: 1, alpha: 1, ink: 'core', additive: true },
+];
+
+/** A bright point on a flash — 0236, 0239: its glow and its core, nothing round them (0238). */
+export const DOT_LAYERS: readonly BoltLayer[] = [
+  { width: 4, alpha: 0.55, ink: 'glow', additive: true },
+  { width: 1, alpha: 1, ink: 'core', additive: true },
+];
+
+/**
+ * A beam — a boss's laser, held. Six deep, under to over: a wash near twice the hurt width, the rim a
+ * third wider than the hurt, the BODY at exactly the hurt width (0250: *the picture is as wide as the
+ * hurt* — `src/render/scene.ts` passes a quarter of it, and four is this row), an inner glow at
+ * three fifths of it, a hot glow at a third, and a white core at a fifth. Each narrower layer is
+ * louder than the one under it, so the column is brightest down its middle and falls off to its edge
+ * in steps too close to read as steps, which is what a beam of light looks like and what a single
+ * band at one alpha does not.
+ */
+export const BEAM_LAYERS: readonly BoltLayer[] = [
+  { width: 7, alpha: 0.16, ink: 'glow', additive: true },
+  { width: 5.2, alpha: 0.6, ink: 'dark', additive: false },
+  { width: 4, alpha: 0.28, ink: 'glow', additive: true },
+  { width: 2.4, alpha: 0.4, ink: 'glow', additive: true },
+  { width: 1.4, alpha: 0.6, ink: 'glow', additive: true },
+  { width: 0.8, alpha: 1, ink: 'core', additive: true },
+];

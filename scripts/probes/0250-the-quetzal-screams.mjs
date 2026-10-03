@@ -91,10 +91,11 @@ export const PROBES = [
       /*
         Re-anchored by 0388: the quetzal's beams are all jagged, so they are drawn by the jagged branch,
         and the straight one's stroke went STILL GREEN under the proof. The same break, on the line that
-        draws them. And by 0453, whose beams say their own count of points.
+        draws them. And by 0453, whose beams say their own count of points. And by 0470, whose beam
+        blooms as it lights and is stroked as a beam.
       */
-      find: '        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * view.scale, held, true);',
-      replace: '        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * view.scale, held, true);',
+      find: '        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, true, true);',
+      replace: '        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * view.scale, held, true, true);',
     },
   },
   {

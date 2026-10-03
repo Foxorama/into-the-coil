@@ -114,6 +114,8 @@ export interface Stroke {
   readonly alpha: number;
   /** The `strokeStyle` in force: a hex string, or `'gradient'`. */
   readonly colour: string;
+  /** The `globalCompositeOperation` in force — 0470: a bolt's light is `lighter`, its rim `source-over`. */
+  readonly composite: string;
 }
 
 /** What a trace answers. `passes[0]` is the hull; a second pass is an accent. */
@@ -287,6 +289,7 @@ export function tracingPen(): { pen: Pen; trace: Trace } {
         width: pen.lineWidth,
         alpha: pen.globalAlpha,
         colour: typeof pen.strokeStyle === 'string' ? pen.strokeStyle : 'gradient',
+        composite: pen.globalCompositeOperation,
       });
     },
     fillRect(x: number, y: number, w: number, h: number): void {

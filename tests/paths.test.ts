@@ -70,6 +70,7 @@ const line = (points: readonly Point[], width: number, closed = false): Stroke =
   width,
   alpha: 1,
   colour: '#fff',
+  composite: 'source-over',
 });
 
 describe('the pen records what was drawn', () => {
