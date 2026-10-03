@@ -562,9 +562,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss12: 'enemy',
   // The frost ship's cold — 0399: the cold's own ink, which is the frost's.
   chillHaze: 'frost',
-  chillFlakes0: 'frost',
-  chillFlakes1: 'frost',
-  chillFlakes2: 'frost',
+  chillPatch: 'frost',
   boss13: 'enemy',
   // The hydra's pieces are the hydra — 0384, and its acid is the bank's.
   hydraTail: 'enemy',
@@ -9311,16 +9309,16 @@ function paintBoss12(ctx: Pen, f: Frame, skin: FoeSkin): void {
 
 /**
  * The most any mark in the cold is laid down at — 0399's *heavily transparent*. `tests/frost.test.ts`
- * holds the field under half in its own number rather than reading this one back.
+ * holds the field under three tenths in its own number rather than reading this one back.
+ *
+ * ⚠️ **0.25, AND IT WAS 0.45 — 0481.** *"The aura needs to be a bit more translucent, it overpowers the
+ * screen at the moment."* Every alpha in the cold is halved with it: the veil 0.16 → 0.08, a patch's
+ * light 0.3 → 0.15.
  */
-const CHILL_OPACITY = 0.45;
+const CHILL_OPACITY = 0.25;
 
-/** The flakes' ring for each layer, as fractions of the field's radius, and how many — 0399. */
-export const CHILL_RINGS: readonly { from: number; to: number; count: number }[] = [
-  { from: 0.72, to: 0.96, count: 26 },
-  { from: 0.48, to: 0.74, count: 18 },
-  { from: 0.24, to: 0.52, count: 12 },
-];
+/** How many snowflakes and motes one patch of the cold holds — 0481. */
+const CHILL_PATCH_FLAKES = 5;
 
 /** The colour of the cold: the frost's ink most of the way to white, so it is never the frost's bullet. */
 function frostWhite(palette: Palette, by: number): string {
@@ -9351,7 +9349,7 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
   veil.addColorStop(0.62, rgba(ice, 0.4));
   veil.addColorStop(0.9, rgba(ice, 1));
   veil.addColorStop(1, rgba(ice, 0));
-  ctx.globalAlpha = 0.16;
+  ctx.globalAlpha = 0.08;
   ctx.fillStyle = veil;
   ctx.beginPath();
   ctx.moveTo(c + edge, c);
@@ -9406,8 +9404,8 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
     const dot = edge * rng.range(0.003, 0.009);
     const x = c + Math.cos(a) * Math.min(at, edge - dot * 2.5);
     const y = c + Math.sin(a) * Math.min(at, edge - dot * 2.5);
-    soft(x, y, dot * 2.5, frostWhite(palette, 0.85), rng.range(0.12, 0.3));
-    ctx.globalAlpha = rng.range(0.18, 0.4);
+    soft(x, y, dot * 2.5, frostWhite(palette, 0.85), rng.range(0.06, 0.15));
+    ctx.globalAlpha = rng.range(0.09, 0.2);
     ctx.fillStyle = frostWhite(palette, 0.9);
     ctx.beginPath();
     ctx.moveTo(x + dot, y);
@@ -9418,38 +9416,28 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
 }
 
 /**
- * One ring of flakes — 0399. Half are snowflakes, six arms with a pair of barbs each; half are motes,
- * a soft point of light. Each trails a wisp of its own orbit behind it, on the side it came from: the
- * row turns every ring the negative way, so a flake has come from the larger angle.
+ * A patch of the cold's flakes — 0481, from 0399's rings. Half are snowflakes, six arms with a pair of
+ * barbs each; half are motes, a soft point of light. **Drawn at the size the tile is baked, whatever the
+ * cold's radius**: the frame rides the patch out on its ring rather than swelling it, so a snowflake is
+ * a snowflake at rest and at the top of the pulse.
  */
-function paintChillFlakes(ctx: Pen, size: number, palette: Palette, layer: number): void {
+function paintChillPatch(ctx: Pen, size: number, palette: Palette): void {
   const c = size / 2;
   const edge = c;
-  const ring = CHILL_RINGS[layer]!;
-  const unit = size / SPRITE_EXTENT.chillFlakes0;
-  const rng = makeRng('aura').stream(`chill/flakes${layer}`);
+  const unit = size / SPRITE_EXTENT.chillPatch;
+  const rng = makeRng('aura').stream('chill/patch');
   ctx.lineCap = 'round';
-  for (let i = 0; i < ring.count; i++) {
-    const a = ((i + rng.range(-0.35, 0.35)) / ring.count) * Math.PI * 2;
+  for (let i = 0; i < CHILL_PATCH_FLAKES; i++) {
+    const a = ((i + rng.range(-0.3, 0.3)) / CHILL_PATCH_FLAKES) * Math.PI * 2;
     const flake = unit * rng.range(1.3, 2.6);
-    const at = Math.min(edge * rng.range(ring.from, ring.to), edge - flake);
+    const at = Math.min(edge * rng.range(0.15, 0.75), edge - flake);
     const x = c + Math.cos(a) * at;
     const y = c + Math.sin(a) * at;
-    // The wisp: its own arc behind it, fading as it goes.
-    const trail = rng.range(0.07, 0.16);
-    for (let s = 0; s < 4; s++) {
-      ctx.globalAlpha = 0.11 * (1 - s / 4);
-      ctx.strokeStyle = frostWhite(palette, 0.8);
-      ctx.lineWidth = flake * (0.3 - s * 0.06);
-      ctx.beginPath();
-      ctx.arc(c, c, at, a + (trail * s) / 4, a + (trail * (s + 1)) / 4);
-      ctx.stroke();
-    }
     // Its light.
     const light = ctx.createRadialGradient(x, y, 0, x, y, flake * 0.95);
     light.addColorStop(0, rgba(frostWhite(palette, 0.9), 1));
     light.addColorStop(1, rgba(frostWhite(palette, 0.7), 0));
-    ctx.globalAlpha = 0.3;
+    ctx.globalAlpha = 0.15;
     ctx.fillStyle = light;
     ctx.beginPath();
     ctx.moveTo(x + flake * 0.95, y);
@@ -12466,11 +12454,9 @@ export function drawKind(
       // frost rather than a place's skin, because it is the one picture of a rule the ship flies under.
       paintChillHaze(ctx, size, palette);
       return;
-    case 'chillFlakes0':
-    case 'chillFlakes1':
-    case 'chillFlakes2':
-      // And its three rings of flakes, the outer first — 0399.
-      paintChillFlakes(ctx, size, palette, Number(kind.slice('chillFlakes'.length)));
+    case 'chillPatch':
+      // And its flakes, a patch at a time, ridden out on rings by the frame — 0481.
+      paintChillPatch(ctx, size, palette);
       return;
     case 'boss13':
     case 'boss13Hit':

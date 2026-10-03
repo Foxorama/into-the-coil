@@ -9509,7 +9509,7 @@ function layAura(w: World): void {
     the picture says what the model does, for exactly as long (0036).
   */
   const chill = w.bossRow.chill;
-  const field = chill === null ? 0 : chill.field.length;
+  const field = chill === null ? 0 : chill.field.length + patchesOf(chill);
   const flames = aura === null ? 0 : w.bossBody.size + 1;
   const want = field + flames + (tail === null ? 0 : 1);
   let fresh = false;
@@ -9588,9 +9588,16 @@ function layAura(w: World): void {
   }
 }
 
+/** How many patches a cold's rings carry — 0481. Its own loop, so nothing is built in the frame. */
+export function patchesOf(chill: Chill): number {
+  let n = 0;
+  for (let r = 0; r < chill.rings.length; r++) n += chill.rings[r]!.count;
+  return n;
+}
+
 /**
  * Lay a cold's field on the hull, turning — `docs/decisions/0399-the-frost-is-crystal.md`. Layer `i`
- * of the row's `field` is slot `i` of the aura pool.
+ * of the row's `field` is slot `i` of the aura pool, and its rings' patches follow them (0481).
  *
  * ⚠️ **SWELLED TO THE ROW'S RADIUS, SO WHAT IS DRAWN IS WHERE THE COLD IS.** Every field is painted to
  * its tile's edge, so a layer blitted at `2 × radius / extent` ends exactly where `chillShip` stops
@@ -9618,6 +9625,36 @@ function layChill(w: World, head: Entity, chill: Chill): void {
     slot.sprite = layer.sprite;
     slot.spriteBase = layer.sprite;
     slot.spriteHit = layer.sprite;
+  }
+  /*
+    ── AND THE FLAKES RIDE OUT ON THE RADIUS AT THEIR OWN SIZE — 0481 ──────────────────────────────
+
+    ⚠️ **PLACED ON THE RING, NOT SWELLED WITH IT.** *"It's scaled up for the pulse so the snowflakes and
+    stuff in it get huge, rather than it increase in size organically."* Each patch is drawn at scale
+    one and stands at its ring's share of this step's radius, so as the cold swells the patches move
+    apart and the field thins toward its edge; as it draws back they close up. Where it was last step is
+    the same arithmetic on last step's radius, so the scene interpolates a patch along its own path.
+  */
+  const was = w.chillRadius > 0 ? chillRadiusAt(chill, w.chillClock - 1) : 0;
+  let slot = chill.field.length;
+  for (let r = 0; r < chill.rings.length; r++) {
+    const ring = chill.rings[r]!;
+    for (let k = 0; k < ring.count; k++) {
+      const patch = w.bossAura.at(slot++);
+      const angle = (k / ring.count) * TAU + ((w.steps * ring.spin) % TAU);
+      const before = (k / ring.count) * TAU + (((w.steps - 1) * ring.spin) % TAU);
+      patch.along = head.along + Math.cos(angle) * ring.at * w.chillRadius;
+      patch.across = head.across + Math.sin(angle) * ring.at * w.chillRadius;
+      patch.prevAlong = head.prevAlong + Math.cos(before) * ring.at * was;
+      patch.prevAcross = head.prevAcross + Math.sin(before) * ring.at * was;
+      // Out while the cold is out — nought radius is no field to ride.
+      patch.swell = w.chillRadius > 0 ? 1 : 0;
+      patch.turn = foldTurn(angle);
+      patch.prevTurn = foldTurn(before);
+      patch.sprite = ring.sprite;
+      patch.spriteBase = ring.sprite;
+      patch.spriteHit = ring.sprite;
+    }
   }
 }
 

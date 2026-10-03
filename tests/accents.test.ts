@@ -152,9 +152,7 @@ const HULLLESS: readonly SpriteKind[] = [
   'volansBlaze7',
   // The frost ship's cold is a field the ship flies in, not a body — 0399: haze and flakes, no edge.
   'chillHaze',
-  'chillFlakes0',
-  'chillFlakes1',
-  'chillFlakes2',
+  'chillPatch',
   'skyFar',
   'skyNear',
   'skyRush',

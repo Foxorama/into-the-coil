@@ -958,6 +958,27 @@ export interface Chill {
    * the arithmetic and no opinion.
    */
   field: readonly ChillLayer[];
+  /**
+   * The flakes, as patches of a fixed size riding rings on the radius — 0481.
+   *
+   * ⚠️ **ASKED FOR**: *"it gets bigger, but just on scale size which is why it looks so weird, it's scaled
+   * up for the pulse so the snowflakes and stuff in it get huge, rather than it increase in size
+   * organically."* The field's layers are swelled to the radius, which is right for a mist and wrong for
+   * a snowflake: 0399's three rings of flakes went from 46 to 108 and every flake grew 2.3 times with
+   * them. A patch is drawn at the size it was baked whatever the radius, and rides out on its ring as
+   * the cold swells, so the field thins toward its edge as breath does.
+   */
+  rings: readonly ChillRing[];
+}
+
+/** One ring of a cold's flakes — 0481: `count` patches at `at` of the radius, turned `spin` a step. */
+export interface ChillRing {
+  sprite: number;
+  /** Where on the radius, as a share of it. */
+  at: number;
+  count: number;
+  /** Radians a step, signed: the inner ring the quicker, so the cold is a vortex (0399). */
+  spin: number;
 }
 
 /**
@@ -4119,11 +4140,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       slow: 0.5,
       freezeAfter: 45,
       frozenFor: 30,
-      field: [
-        { sprite: SPRITE.chillHaze, spin: -0.0025 },
-        { sprite: SPRITE.chillFlakes0, spin: -0.005 },
-        { sprite: SPRITE.chillFlakes1, spin: -0.009 },
-        { sprite: SPRITE.chillFlakes2, spin: -0.016 },
+      // The mist, swelled to the radius: a gradient enlarging is what a mist spreading looks like — 0481.
+      field: [{ sprite: SPRITE.chillHaze, spin: -0.0025 }],
+      // And the flakes riding out on it at their own size, ten on the rim and six inside — 0481.
+      rings: [
+        { sprite: SPRITE.chillPatch, at: 0.9, count: 10, spin: -0.006 },
+        { sprite: SPRITE.chillPatch, at: 0.45, count: 6, spin: -0.013 },
       ],
     },
     muzzle: null,
