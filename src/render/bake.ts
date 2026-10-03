@@ -652,6 +652,11 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // its place's colour. What tells them from the spit and the slab is the shape and the path.
   ripple: 'enemy',
   curl: 'enemy',
+  // A raider's bullet takes its place's colour (0296), so the cog and the clot are in the enemy ink and
+  // `PLACE_SHOTS` paints them; the hailstone is ice wherever it is, in the frost ink — 0473.
+  cog: 'enemy',
+  hail: 'frost',
+  clot: 'enemy',
   /*
     ⚠️ **EACH FACE OF A CYCLING PICKUP IN THE INK OF WHAT IT OFFERS — 0239, finished by 0240.** 0233
     gave every face the pickup ink (*the same pickup, so the same ink*) and the third play-test
@@ -1132,6 +1137,33 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
 const PLACE_SHOTS: ReadonlySet<SpriteKind> = new Set(
   SHOT_KINDS.map((k) => SPRITE_KINDS[SHOTS[k].sprite]!).filter((sprite) => INK_OF[sprite] === 'enemy'),
 );
+
+/**
+ * The cog's outline — 0473: eight teeth, each a flat top at 0.95 between two roots at 0.72, written as
+ * arithmetic rather than thirty-two literals so the teeth are the same tooth.
+ */
+const COG_OUTLINE: readonly Pt[] = Array.from({ length: 8 }, (_, k) => {
+  const c = (k * Math.PI) / 4;
+  return [
+    [0.72, c - 0.3],
+    [0.95, c - 0.17],
+    [0.95, c + 0.17],
+    [0.72, c + 0.3],
+  ] as const;
+})
+  .flat()
+  .map(([radius, angle]): Pt => [radius * Math.cos(angle), radius * Math.sin(angle)]);
+
+/**
+ * The clot's outline — 0473: seven shallow scallops round the circle, a lump of things stuck together.
+ * ⚠️ **FIVE DEEP LOBES WAS A STARFISH** on the sheet at 8×, which is a pointed thing with a heading;
+ * seven at half the depth read as a knot.
+ */
+const CLOT_OUTLINE: readonly Pt[] = Array.from({ length: 56 }, (_, i): Pt => {
+  const angle = (i / 56) * Math.PI * 2;
+  const radius = 0.82 + 0.07 * Math.cos(7 * angle + 0.3);
+  return [radius * Math.cos(angle), radius * Math.sin(angle)];
+});
 
 /*
   ══ THE PAINT ════════════════════════════════════════════════════════════════════════════════════
@@ -13019,6 +13051,69 @@ export function drawKind(
       // In the thick of the back, clear of the mouth: the hollow's edge is at −0.38, and a core at
       // −0.55 with a radius of 0.26 poked into it by a tenth — the same guard, read again.
       disc(ctx, f, shade(ink, 0.7), -0.66, 0, 0.22);
+      return;
+    case 'cog':
+      /*
+        A COG — 0473, the Labyrinth's: eight square teeth round a hub with a hole through it, the gyre's
+        own gear at a bullet's size. The hole is what keeps it from the void's ring, which has no teeth,
+        and the teeth are what keep it from the slab, which has no hole. Its marks sit in the band
+        between the hole and the roots of the teeth, so none is off the hull (0149).
+      */
+      trace(ctx, f, COG_OUTLINE);
+      ring(ctx, f, 0, 0, 0.28);
+      seal(ctx);
+      glow(ctx, f, ink, 0, 0, 1.05, 0.45);
+      band(ctx, f, shade(ink, 0.55), 0, 0, 0.6, 0.42);
+      return;
+    case 'hail':
+      /*
+        A HAILSTONE — 0473, the Rime Shelf's: a faceted lump of ice, lit on its upper face and shaded on
+        its lower, so it reads as a solid thing turning rather than as the frost ship's star. No points
+        all round and no heart: the shard bursts and this does not, and the player is told which by
+        the shape before either does anything.
+      */
+      trace(ctx, f, [
+        [0, -0.9],
+        [0.55, -0.72],
+        [0.88, -0.22],
+        [0.8, 0.38],
+        [0.42, 0.82],
+        [-0.12, 0.9],
+        [-0.62, 0.66],
+        [-0.9, 0.12],
+        [-0.7, -0.5],
+      ]);
+      seal(ctx);
+      glow(ctx, f, ink, 0, 0, 1.05, 0.4);
+      poly(ctx, f, shade(ink, -0.3), [
+        [0.3, -0.28],
+        [0.66, 0.3],
+        [0.32, 0.64],
+        [-0.18, -0.04],
+      ]);
+      poly(ctx, f, shade(ink, 0.45), [
+        [-0.56, -0.42],
+        [-0.04, -0.7],
+        [0.3, -0.28],
+        [-0.18, -0.04],
+      ]);
+      disc(ctx, f, shade(ink, 1), -0.28, -0.42, 0.12);
+      return;
+    case 'clot':
+      /*
+        A CLOT — 0473, the Black Heart's: a knot of blood, five lobes round a dark middle with a wet
+        light on it. ⚠️ **NOT THE PLACE'S RED CELL**, which is its drifter (0446): a cell is a smooth
+        disc that is pale in its middle where it is thin, and this is lobed and dark where it is
+        thickest — a hull and a bullet the player must tell apart (0081), told apart by outline first.
+      */
+      trace(ctx, f, CLOT_OUTLINE);
+      seal(ctx);
+      glow(ctx, f, ink, 0, 0, 1.05, 0.45);
+      // A dark, mottled middle — three knots of different sizes, so it is not the cell's one pale dimple.
+      disc(ctx, f, shade(ink, -0.4), 0.14, 0.12, 0.32);
+      disc(ctx, f, shade(ink, -0.3), -0.22, 0.22, 0.2);
+      disc(ctx, f, shade(ink, -0.3), 0.2, -0.28, 0.17);
+      disc(ctx, f, shade(ink, 0.8), -0.32, -0.32, 0.13);
       return;
     case 'kite':
     case 'kiteHit':

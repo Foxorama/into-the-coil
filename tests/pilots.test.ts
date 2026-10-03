@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
-import { ATTACK_KINDS, ENEMIES, ENEMY_KINDS, MOTION_KINDS, shotsPerVolley, type EnemyKind } from '../src/content/enemies.ts';
+import { ATTACK_KINDS, ENEMIES, ENEMY_KINDS, MOTION_KINDS, shotsPerVolley, type Attack, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
+import { ROWS_OF } from '../src/content/arms.ts';
+import { THEME_KINDS, type ThemeKind } from '../src/content/themes.ts';
+
+/** Whether an attack points at the ship — an aimed shot, or a string thrown at it (0473). */
+const aims = (attack: Attack): boolean => attack.kind === 'aimed' || (attack.kind === 'stream' && attack.aimed);
+
+/** Every place's kinds whose own row passes `pick`, with the place and the row — 0473. */
+const everywhere = (pick: (row: EnemyRow) => boolean): (readonly [ThemeKind, EnemyKind, EnemyRow])[] =>
+  THEME_KINDS.flatMap((theme) =>
+    ENEMY_KINDS.flatMap((kind, i) => {
+      const row = ROWS_OF[theme][i]!;
+      return pick(row) ? [[theme, kind, row] as const] : [];
+    }),
+  );
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
@@ -181,20 +195,23 @@ describe('0105 — a body is on screen long enough to be answered', () => {
       pool, the screen and the dodge. A pattern is allowed to be more of the second and must not be
       more of the first.
     */
-    for (const kind of ENEMY_KINDS) {
-      const row = ENEMIES[kind];
-      if (row.fireEvery === 0) continue;
-      // Plus the one a body fires on entering the view — 0259 — which is not on its reload.
-      const volleys = (onScreen(kind, hardest.closing) * STEPS_PER_SECOND) / (row.fireEvery * hardest.fireGap) + 1;
-      expect(
-        volleys,
-        `a ${kind} gets ${volleys.toFixed(1)} volleys away while it is on screen at the hardest tier`,
-      ).toBeLessThan(10);
-      const bullets = volleys * shotsPerVolley(row.attack);
-      expect(
-        bullets,
-        `a ${kind} puts ${bullets.toFixed(0)} bullets on the screen while it is visible at the hardest tier`,
-      ).toBeLessThan(30);
+    // In every place, on its own arms — 0473 gave each place's raiders their own cadence and volley.
+    for (const theme of THEME_KINDS) {
+      ENEMY_KINDS.forEach((kind, index) => {
+        const row = ROWS_OF[theme][index]!;
+        if (row.fireEvery === 0) return;
+        // Plus the one a body fires on entering the view — 0259 — which is not on its reload.
+        const volleys = (onScreen(kind, hardest.closing) * STEPS_PER_SECOND) / (row.fireEvery * hardest.fireGap) + 1;
+        expect(
+          volleys,
+          `a ${kind} at ${theme} gets ${volleys.toFixed(1)} volleys away while it is on screen at the hardest tier`,
+        ).toBeLessThan(10);
+        const bullets = volleys * shotsPerVolley(row.attack);
+        expect(
+          bullets,
+          `a ${kind} at ${theme} puts ${bullets.toFixed(0)} bullets on the screen while it is visible at the hardest tier`,
+        ).toBeLessThan(30);
+      });
     }
   });
 });
@@ -436,7 +453,8 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
   */
   it('the table has no arm nothing uses, so the union cannot fill up with attacks no level sends', () => {
     // The same rule the motion union already carries one describe block up, for the same reason.
-    const fired = new Set(ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0).map((k) => ENEMIES[k].attack.kind));
+    // Over every place's rows since 0473: an attack only one place's raiders throw is thrown.
+    const fired = new Set(THEME_KINDS.flatMap((theme) => ROWS_OF[theme].filter((row) => row.fireEvery > 0).map((row) => row.attack.kind)));
     const dead = ATTACK_KINDS.filter((kind) => !fired.has(kind));
     expect(dead, `these attacks exist and no enemy sends them: ${dead.join(', ')}`).toEqual([]);
   });
@@ -452,16 +470,19 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       ⚠️ **Counted over the kinds that actually shoot**, which is what the report is about: a body
       with `fireEvery: 0` has no attack to be a pattern.
     */
-    const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
-    const patterned = shooters.filter((k) => ENEMIES[k].attack.kind !== 'aimed');
-    expect(
-      patterned.length,
-      `${patterned.length} of ${shooters.length} shooting kinds send a pattern — the rest aim at the ship`,
-    ).toBeGreaterThan(shooters.length - patterned.length);
-    const aimed = shooters.filter((k) => ENEMIES[k].attack.kind === 'aimed');
-    expect(aimed.length, 'nothing on the field aims at the player at all, so the fight became weather').toBeGreaterThan(
-      0,
-    );
+    // In every place, over its own rows — 0473: a place whose raiders all aim is the report again.
+    for (const theme of THEME_KINDS) {
+      const shooters = ROWS_OF[theme].filter((row) => row.fireEvery > 0);
+      const patterned = shooters.filter((row) => !aims(row.attack));
+      expect(
+        patterned.length,
+        `${patterned.length} of ${shooters.length} shooting kinds send a pattern at ${theme} — the rest aim at the ship`,
+      ).toBeGreaterThan(shooters.length - patterned.length);
+      expect(
+        shooters.length - patterned.length,
+        `nothing at ${theme} aims at the player at all, so the fight became weather`,
+      ).toBeGreaterThan(0);
+    }
   });
 
   it('and a pattern is the same pattern wherever the player is, which is what makes it one', () => {
@@ -474,7 +495,8 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       ⚠️ **Measured as the set of shot HEADINGS**, in a world where the ship is put somewhere
       different each run. Two runs, two ship positions, and the volley has to come out identical.
     */
-    for (const kind of ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0 && ENEMIES[k].attack.kind !== 'aimed')) {
+    // Every place's patterns, since 0473 gave each its own.
+    for (const [theme, kind] of everywhere((row) => row.fireEvery > 0 && !aims(row.attack))) {
       const headings: string[][] = [];
       for (const lane of [12, 88]) {
         const { world } = playableWorld({
@@ -485,7 +507,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         midBoss: null,
           sections: NO_SECTIONS,
           boss: 'sentinel',
-          theme: 'approach',
+          theme,
         });
         const frame = new GameFrame(world);
         // Park the ship where it cannot be hit and cannot die, so the only variable is where it IS.
@@ -503,12 +525,12 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
             seen.push(Math.atan2(shot.velAcross, shot.velAlong - world.scrollPerStep).toFixed(3));
           }
         }
-        expect(seen.length, `a ${kind} never fired, so this measured nothing`).toBeGreaterThan(0);
+        expect(seen.length, `a ${kind} at ${theme} never fired, so this measured nothing`).toBeGreaterThan(0);
         headings.push(seen.sort());
       }
       expect(
         headings[0],
-        `a ${kind}'s volley changes shape depending on where the ship is, which makes it a spread rather than a pattern`,
+        `a ${kind}'s volley at ${theme} changes shape depending on where the ship is, which makes it a spread rather than a pattern`,
       ).toEqual(headings[1]);
     }
   });
@@ -520,10 +542,11 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       hard. Driven through the real frame and measured in world units across, against the body that
       fired.
     */
-    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'wall');
+    // Every place's walls — 0473.
+    const kinds = everywhere((row) => row.fireEvery > 0 && row.attack.kind === 'wall');
     expect(kinds.length, 'nothing in the table lays a wall, so this measured nothing').toBeGreaterThan(0);
-    for (const kind of kinds) {
-      const attack = ENEMIES[kind].attack;
+    for (const [theme, kind, row] of kinds) {
+      const attack = row.attack;
       if (attack.kind !== 'wall') continue;
       const { world } = playableWorld({
         waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
@@ -533,7 +556,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         midBoss: null,
         sections: NO_SECTIONS,
         boss: 'sentinel',
-        theme: 'approach',
+        theme,
       });
       const frame = new GameFrame(world);
       world.ship.health = 1e9;
@@ -560,7 +583,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       }
       const lanes: number[] = [];
       for (let s = 0; s < world.enemyShots.size; s++) lanes.push(world.enemyShots.at(s).across);
-      expect(lanes.length, `a ${kind} never laid a wall, so this measured nothing`).toBeGreaterThan(1);
+      expect(lanes.length, `a ${kind} at ${theme} never laid a wall, so this measured nothing`).toBeGreaterThan(1);
       const nearest = Math.min(...lanes.map((across) => Math.abs(across - firedAt)));
       /*
         ⚠️ **The hole has to be wider than the ship, and the bound is the ship's own hurtbox rather
@@ -570,7 +593,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       */
       expect(
         nearest,
-        `a ${kind}'s nearest bullet is ${nearest.toFixed(1)} units from where it fired — that is not a hole`,
+        `a ${kind} at ${theme}: its nearest bullet is ${nearest.toFixed(1)} units from where it fired — that is not a hole`,
       ).toBeGreaterThan(Math.max(...SHIP_KINDS.map((ship) => SHIPS[ship].radius)) * 2);
       // And the wall is actually a wall: shots on both sides of the body, not a lopsided fan.
       expect(lanes.some((a) => a < firedAt), `a ${kind}'s wall is only on one side of it`).toBe(true);
@@ -586,9 +609,10 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       radius: on the step it is fired, every shot is within the hull plus one step of its own travel;
       and once formed, the shots stand on the authored slots, so the wall is the one that was designed.
     */
-    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'wall');
-    for (const kind of kinds) {
-      const attack = ENEMIES[kind].attack;
+    // Every place's walls — 0473.
+    const kinds = everywhere((row) => row.fireEvery > 0 && row.attack.kind === 'wall');
+    for (const [theme, kind, row] of kinds) {
+      const attack = row.attack;
       if (attack.kind !== 'wall') continue;
       const { world } = playableWorld({
         waves: [{ at: 200, enemy: kind, formation: 'line', count: 1, lane: 50 }],
@@ -598,11 +622,11 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         midBoss: null,
         sections: NO_SECTIONS,
         boss: 'sentinel',
-        theme: 'approach',
+        theme,
       });
       const frame = new GameFrame(world);
       world.ship.health = 1e9;
-      const reach = ENEMIES[kind].radius + SHOTS[ENEMIES[kind].shot].speed * world.difficulty.shotSpeed * Math.SQRT2 * 2;
+      const reach = row.radius + SHOTS[row.shot].speed * world.difficulty.shotSpeed * Math.SQRT2 * 2;
       let firedAt = Number.NaN;
       let farthest = -1;
       for (let i = 0; i < 900 && farthest < 0; i++) {
@@ -620,10 +644,10 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
           }
         }
       }
-      expect(farthest, `a ${kind} never laid a wall, so this measured nothing`).toBeGreaterThanOrEqual(0);
+      expect(farthest, `a ${kind} at ${theme} never laid a wall, so this measured nothing`).toBeGreaterThanOrEqual(0);
       expect(
         farthest,
-        `a ${kind}'s wall appeared ${farthest.toFixed(1)} units from a hull of radius ${ENEMIES[kind].radius} — in mid air`,
+        `a ${kind}'s wall at ${theme} appeared ${farthest.toFixed(1)} units from a hull of radius ${row.radius} — in mid air`,
       ).toBeLessThanOrEqual(reach);
       for (let i = 0; i < 300 && [...Array(world.enemyShots.size).keys()].some((s) => world.enemyShots.at(s).steerAcross !== 0); i++) {
         world.fireIn = Number.MAX_SAFE_INTEGER;
@@ -634,7 +658,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       for (let s = 0; s < world.enemyShots.size; s++) {
         const across = world.enemyShots.at(s).across;
         const off = Math.min(...slots.map((slot) => Math.abs(slot - across)));
-        expect(off, `a ${kind}'s shot stopped ${off.toFixed(2)} units off any slot of its wall`).toBeLessThan(1);
+        expect(off, `a ${kind}'s shot at ${theme} stopped ${off.toFixed(2)} units off any slot of its wall`).toBeLessThan(1);
       }
     }
   });
@@ -648,9 +672,10 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
       `docs/decisions/0098-a-wave-plays-a-figure.md`'s *"they all fire at exactly the same time"*
       arriving in the other axis.
     */
-    const kinds = ENEMY_KINDS.filter((k) => ENEMIES[k].attack.kind === 'spiral');
+    // Every place's turning rings — 0473.
+    const kinds = everywhere((row) => row.fireEvery > 0 && row.attack.kind === 'spiral');
     expect(kinds.length, 'nothing in the table spirals, so this measured nothing').toBeGreaterThan(0);
-    for (const kind of kinds) {
+    for (const [theme, kind] of kinds) {
       const { world } = playableWorld({
         waves: [{ at: 200, enemy: kind, formation: 'column', count: 3, lane: 50 }],
         pickups: [],
@@ -659,7 +684,7 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         midBoss: null,
         sections: NO_SECTIONS,
         boss: 'sentinel',
-        theme: 'approach',
+        theme,
       });
       const frame = new GameFrame(world);
       world.ship.health = 1e9;
@@ -678,11 +703,11 @@ describe('0110 — an attack is a pattern, and not every pattern is aimed at you
         }
         before = world.enemyShots.size;
       }
-      expect(volleys.length, `a ${kind} fired ${volleys.length} volleys, which is not enough to see a turn`).toBeGreaterThan(3);
+      expect(volleys.length, `a ${kind} at ${theme} fired ${volleys.length} volleys, which is not enough to see a turn`).toBeGreaterThan(3);
       const angles = volleys.map((v) => v[0]!.toFixed(3));
       expect(
         new Set(angles).size,
-        `a ${kind} sends every volley at the same angle, so the ring never turns`,
+        `a ${kind} at ${theme} sends every volley at the same angle, so the ring never turns`,
       ).toBeGreaterThan(1);
     }
   });

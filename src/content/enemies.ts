@@ -65,7 +65,7 @@ export type EnemyKind =
  * the same failure the other way up — it becomes weather. `tests/pilots.test.ts` holds that both are
  * on the field.
  */
-export const ATTACK_KINDS = ['aimed', 'spray', 'wall', 'spiral'] as const;
+export const ATTACK_KINDS = ['aimed', 'spray', 'wall', 'spiral', 'stream'] as const;
 
 /** Derived from the list, so an attack cannot exist in the union and be missing from the switch. */
 export type AttackKind = (typeof ATTACK_KINDS)[number];
@@ -117,7 +117,18 @@ export type Attack =
    *
    * `turn` is radians added per volley.
    */
-  | { kind: 'spiral'; shots: number; turn: number };
+  | { kind: 'spiral'; shots: number; turn: number }
+  /**
+   * A string of shots on ONE heading, each a little slower than the one before — 0473.
+   *
+   * ⚠️ **ONE LINE OF BULLETS, NOT A FAN AND NOT A RING.** Every other pattern spreads its shots across
+   * angles; this one spreads them along a single path, so a volley arrives as a burst the player
+   * steps out of the line of once rather than threads. `lag` is the share of the shot's speed each
+   * one gives up on the one in front, so the string opens out as it flies and its length is a fact
+   * of the row. `aimed` points it at the ship, on `aimed`'s own arithmetic; otherwise it goes straight
+   * back down the lane, as a one-shot spray does.
+   */
+  | { kind: 'stream'; shots: number; lag: number; aimed: boolean };
 
 /**
  * How many bullets one volley of `attack` puts on the field.
@@ -142,6 +153,8 @@ export function shotsPerVolley(attack: Attack): number {
     case 'wall':
       return attack.shots * 2;
     case 'spiral':
+      return attack.shots;
+    case 'stream':
       return attack.shots;
     default: {
       // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
@@ -1098,8 +1111,12 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
     // dies, so beside the ship is the wrong place to have killed one.
     shatter: { shot: 'frost', shots: 6 },
     fireEvery: 78,
-    shot: 'spit',
-    // RIME SHELF'S OWN: a crystal that circles close and sheds three squares in a turning spiral.
+    // Hail since 0473, and it was the spit: *"in the later stages a lot of the … level enemies attacks
+    // are very small and hard to see"*, and the place's own crystal was throwing the smallest square
+    // in the game in the place whose raiders now throw ice. The Rime spinner gave up the hail ring for
+    // it (`src/content/arms.ts`).
+    shot: 'hail',
+    // RIME SHELF'S OWN: a crystal that circles close and sheds three hailstones in a turning spiral.
     attack: { kind: 'spiral', shots: 3, turn: 0.3 },
     motion: { kind: 'circle', agility: 0.4, radius: 22 },
   },

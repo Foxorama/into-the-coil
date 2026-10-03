@@ -13,9 +13,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0316, which redrew the bullet and renamed it with the drawing, and by 0317,
-      // which rewrote the comment over the opening phase.
-      find: "    shot: 'spine',\n    phases: [",
-      replace: "    shot: 'lance',\n    phases: [",
+      // which rewrote the comment over the opening phase, and by 0473, whose shoal mother throws spines too.
+      find: "    // ladder, the speed and the hurtbox are 0262's; what changed is that the animal is not a bird.\n    shot: 'spine',",
+      replace: "    // ladder, the speed and the hurtbox are 0262's; what changed is that the animal is not a bird.\n    shot: 'lance',",
     },
   },
   {

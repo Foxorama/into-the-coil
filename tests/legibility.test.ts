@@ -12,6 +12,8 @@ import {
 import { SHIPS, SHIP_KINDS, hullFor } from '../src/content/ships.ts';
 import { SHOTS, SHOT_KINDS, type ShotKind } from '../src/content/shots.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { ROWS_OF } from '../src/content/arms.ts';
+import { THEME_KINDS } from '../src/content/themes.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -144,7 +146,8 @@ describe('the shot that kills you is not the shot you kill with', () => {
       least three kinds, which is 0098's own floor.
     */
     const shooters = ENEMY_KINDS.filter((k) => ENEMIES[k].fireEvery > 0);
-    const fromEnemies = new Set(shooters.map((k) => ENEMIES[k].shot));
+    // Every place's raiders, since 0473 armed each place's own — a bullet only a place sends is sent.
+    const fromEnemies = new Set(THEME_KINDS.flatMap((theme) => ROWS_OF[theme].filter((row) => row.fireEvery > 0).map((row) => row.shot)));
     // A boss's fall sends its rock — 0251: a fall is a volley from the sky, and the rock is nobody else's.
     // And a head sends its own shot — 0254: the hydra's phases name five through their heads.
     const fromBosses = new Set(
@@ -173,11 +176,16 @@ describe('the shot that kills you is not the shot you kill with', () => {
       hostile.filter((k) => !sent.has(k)),
       'a hostile bullet exists in the table and nothing — enemy, boss or phase — sends it',
     ).toEqual([]);
-    const signatures = new Set(shooters.map((k) => `${ENEMIES[k].shot}/${ENEMIES[k].attack.kind}`));
-    expect(
-      signatures.size,
-      `two enemy kinds send the same bullet in the same pattern (${[...signatures].join(', ')})`,
-    ).toBe(shooters.length);
+    // In every place, over that place's own rows — 0473.
+    for (const theme of THEME_KINDS) {
+      const rows = ROWS_OF[theme].filter((row) => row.fireEvery > 0);
+      const signatures = new Set(rows.map((row) => `${row.shot}/${row.attack.kind}`));
+      expect(
+        signatures.size,
+        `two enemy kinds send the same bullet in the same pattern at ${theme} (${[...signatures].join(', ')})`,
+      ).toBe(rows.length);
+    }
+    expect(shooters.length, 'nothing shoots').toBeGreaterThan(0);
 
     /*
       ⚠️ **AND NO TWO OF THEM ARE THE SAME BITMAP.** A uniqueness rule limits no single design — it

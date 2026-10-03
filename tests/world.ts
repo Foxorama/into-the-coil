@@ -25,7 +25,8 @@ import {
   weaponFor,
 } from '../src/content/pickups.ts';
 import { makeCollected } from '../src/sim/collide.ts';
-import { ENEMIES, ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
+import { ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../src/content/enemies.ts';
+import { ROWS_OF } from '../src/content/arms.ts';
 import type { LevelRow } from '../src/content/levels.ts';
 import type { LevelSections } from '../src/content/music.ts';
 import { SHIPS } from '../src/content/ships.ts';
@@ -398,7 +399,8 @@ export function playableWorld(
   const bossFront = new Pool<Entity>(CAPACITY.bossFront, makeEntity);
   const nova = new Pool<Entity>(CAPACITY.nova, makeEntity);
 
-  const enemyRows: readonly EnemyRow[] = ENEMY_KINDS.map((k) => ENEMIES[k]);
+  // The level's own place's rows, as `startLevel` sets them — 0473.
+  const enemyRows: readonly EnemyRow[] = ROWS_OF[level.theme];
   // The fighter, Huang-Woo Hook's: the ship the game was built on, and the pulse — 0441.
   const shipRow = SHIPS.fighter;
   const ship = shipPool.spawn()!;

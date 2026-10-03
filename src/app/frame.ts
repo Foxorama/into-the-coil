@@ -83,6 +83,7 @@ import { VEINS_OF, arteryAt } from '../content/veins.ts';
 import type { Surface } from '../render/surface.ts';
 import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
+import { ROWS_OF } from '../content/arms.ts';
 import type { ShipRow } from '../content/ships.ts';
 import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
@@ -5116,6 +5117,34 @@ function fireEnemies(w: World): void {
         }
         break;
       }
+      case 'stream': {
+        /*
+          ⚠️ **ONE HEADING, `shots` SPEEDS — 0473.** At the ship on `aimed`'s arithmetic, or straight
+          back down the lane; each shot gives up `lag` of the speed of the one ahead of it, so all of
+          them leave the hull on this step and the string opens out as it flies. Nothing allocates: the
+          heading is two numbers.
+        */
+        let headAlong = -1;
+        let headAcross = 0;
+        if (attack.aimed) {
+          const dAlong = ship.along - e.along;
+          const dAcross = ship.across - e.across;
+          const distance = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
+          if (distance <= 0) continue;
+          headAlong = dAlong / distance;
+          headAcross = dAcross / distance;
+        }
+        w.onCue('threat', e.across);
+        for (let s = 0; s < attack.shots; s++) {
+          const shot = w.enemyShots.spawn();
+          if (shot === null) break;
+          const pace = speed * (1 - attack.lag * s);
+          reset(shot, e.along, e.across, bullet, bulletKind);
+          shot.velAlong = headAlong * pace + w.scrollPerStep;
+          shot.velAcross = headAcross * pace;
+        }
+        break;
+      }
       default: {
         // `docs/decisions/0016-a-hub-enumerates-kinds.md`: the arm that makes the union closed.
         const never: never = attack;
@@ -10028,6 +10057,8 @@ function ventFor(level: LevelRow, entry: LevelRow['landmarks'][number]): Landmar
 
 export function startLevel(w: World, level: LevelRow): void {
   w.level = level;
+  // What the place's raiders throw — 0473: one table per place, built at import and swapped here.
+  w.enemyRows = ROWS_OF[level.theme];
   w.landmarks = landmarksFor(level);
   /*
     ⚠️ **ZERO, and it is not a default — it is what this function MEANS.** `startLevel` is the run
@@ -10210,6 +10241,8 @@ const NO_BEDS: readonly number[] = [];
  */
 export function advanceLevel(w: World, level: LevelRow, levelIndex: number): void {
   w.level = level;
+  // What the place's raiders throw — 0473.
+  w.enemyRows = ROWS_OF[level.theme];
   w.landmarks = landmarksFor(level);
   /*
     ⚠️ **REQUIRED rather than defaulted, because this is the parameter the dial is made of** —
