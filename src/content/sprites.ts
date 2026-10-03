@@ -689,9 +689,7 @@ export const SPRITE_KINDS = [
     the flakes twirl rather than the field spin. No hurt twins: nothing ever hits the cold.
   */
   'chillHaze',
-  'chillFlakes0',
-  'chillFlakes1',
-  'chillFlakes2',
+  'chillPatch',
   'boss13',
   'boss13Hit',
   /*
@@ -1982,9 +1980,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     painter's edge is the tile's edge.
   */
   chillHaze: 76,
-  chillFlakes0: 76,
-  chillFlakes1: 76,
-  chillFlakes2: 76,
+  // A patch of the cold's flakes, drawn at this size whatever the cold's radius — 0481.
+  chillPatch: 30,
   /*
     ⚠️ **56 SINCE 0384, AND IT WAS 41 WITH FIVE NECKS INSIDE IT.** The necks and heads are drawn apart
     now, so this is a body alone — a chest and shoulders standing up out of the acid, broad enough to

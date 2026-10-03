@@ -37,7 +37,7 @@ import { SHARD_VOLLEY, SHOTS, SHOT_INDEX, SHOT_KINDS, type ShotKind } from '../s
 import { DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
-import { CHILL_RINGS, INK_OF, drawKind } from '../src/render/bake.ts';
+import { INK_OF, drawKind } from '../src/render/bake.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { tracingPen } from './paths.ts';
 import { reset } from '../src/sim/entity.ts';
@@ -321,7 +321,8 @@ describe('0253 — the frost ship chills', () => {
 describe('0399 — the frost is crystal', () => {
   const screen = viewOf(1280, 720);
   const ink = PALETTES[DEFAULT_PALETTE];
-  const field = chill.field.map((layer) => SPRITE_KINDS[layer.sprite]!);
+  // What the cold is drawn as: its swelled layers, then the patch its rings carry — 0481.
+  const field = [...chill.field.map((layer) => SPRITE_KINDS[layer.sprite]!), ...new Set(chill.rings.map((ring) => SPRITE_KINDS[ring.sprite]!))];
   /** One layer of the field traced at the size it bakes for that screen, with its centre. */
   const traced = (kind: (typeof field)[number]): { trace: ReturnType<typeof tracingPen>['trace']; size: number } => {
     const size = SPRITE_EXTENT[kind] * screen.scale;
@@ -400,55 +401,93 @@ describe('0399 — the frost is crystal', () => {
     for (let i = 0; i < world.bossAura.size; i++) expect(field, 'the cold outlived the hull').not.toContain(SPRITE_KINDS[world.bossAura.at(i).sprite]);
   });
 
-  it('THE ASKED-FOR ONE, HEAVILY TRANSPARENT: no mark in the cold is laid down at half or more, none is the frost bullet’s ink, and it is full of flakes', () => {
+  it('THE ASKED-FOR ONE, HEAVILY TRANSPARENT: no mark in the cold is laid down at three tenths or more, none is the frost bullet’s ink, and it is full of flakes', () => {
     /*
       ⚠️ **NOT A DEATH FIELD, SO NOTHING IN IT MAY LOOK LIKE THE THING THAT KILLS.** The frost ship's
       shards are its own saturated ink with a dark edge; the field round the hull that throws them is
       the one place a decoration could be read as a bullet.
+
+      ⚠️ **THREE TENTHS SINCE 0481, FROM HALF.** *"The aura needs to be a bit more translucent, it
+      overpowers the screen."* Every alpha in the cold was halved, and the ceiling came down with it.
     */
     let flakes = 0;
     for (const kind of field) {
       const { trace } = traced(kind);
       for (const mark of [...trace.passes, ...trace.inks]) {
-        expect(mark.alpha, `a mark in ${kind} is laid down at ${mark.alpha}`).toBeLessThan(0.5);
+        expect(mark.alpha, `a mark in ${kind} is laid down at ${mark.alpha}`).toBeLessThan(0.3);
         expect(mark.colour, `a mark in ${kind} is the frost bullet's own ink`).not.toBe(ink.frost);
       }
-      if (kind !== field[0]) flakes += trace.passes.filter((p) => p.colour === 'gradient').length;
-      // And no layer reaches past its tile's edge, which is the cold's edge.
+      // And no layer reaches past its tile's edge, which for the haze is the cold's edge.
       const { reach, size } = reachOf(kind);
-      expect(reach / (size / 2), `${kind} is drawn past the edge of the cold`).toBeLessThanOrEqual(1 + 1e-6);
+      expect(reach / (size / 2), `${kind} is drawn past the edge of its tile`).toBeLessThanOrEqual(1 + 1e-6);
     }
+    // The flakes: a patch's lights, times the patches the rings carry.
+    for (const ring of chill.rings) flakes += traced(SPRITE_KINDS[ring.sprite]!).trace.passes.filter((p) => p.colour === 'gradient').length * ring.count;
     expect(flakes, 'the cold is not full of flakes').toBeGreaterThanOrEqual(50);
   });
 
   it('THE ASKED-FOR ONE, TWIRLING: every ring of flakes travels at least 40 CSS pixels a second on a 1280×720 screen, and the inner rings turn quicker than the outer', () => {
     /*
-      ⚠️ **A TWIRL IS THE RINGS OVERTAKING ONE ANOTHER.** One ring, or three at one rate, is a disc
-      turning under the hull; the inner quickest is a vortex. Measured on the slots the frame lays,
-      over a second, the short way round each step — which is how the scene interpolates a turn.
+      ⚠️ **A TWIRL IS THE RINGS OVERTAKING ONE ANOTHER.** One ring, or two at one rate, is a disc
+      turning under the hull; the inner quickest is a vortex. Measured since 0481 on the first patch of
+      each ring the frame lays — the angle it makes round the hull, over a second, at the cold's rest.
     */
     const d = frostAt(1);
-    const turned = chill.field.map(() => 0);
-    let before = chill.field.map((_, k) => d.world.bossAura.at(k).turn);
+    const firstOf = chill.rings.map((_, r) => chill.field.length + chill.rings.slice(0, r).reduce((n, ring) => n + ring.count, 0));
+    const angleOf = (slot: number): number => {
+      const boss = d.world.bossPool.at(0);
+      const patch = d.world.bossAura.at(slot);
+      return Math.atan2(patch.across - boss.across, patch.along - boss.along);
+    };
+    const turned = chill.rings.map(() => 0);
+    let before = firstOf.map(angleOf);
     for (let i = 0; i < STEPS_PER_SECOND; i++) {
       d.world.ship.health = d.world.shipRow.health;
       d.frame.step();
-      const now = chill.field.map((_, k) => d.world.bossAura.at(k).turn);
-      now.forEach((turn, k) => {
-        let swing = turn - before[k]!;
+      const now = firstOf.map(angleOf);
+      now.forEach((angle, k) => {
+        let swing = angle - before[k]!;
         if (swing > Math.PI) swing -= Math.PI * 2;
         if (swing < -Math.PI) swing += Math.PI * 2;
         turned[k] = turned[k]! + Math.abs(swing);
       });
       before = now;
     }
-    const rings = turned.slice(1);
-    rings.forEach((rate, k) => {
-      const ring = CHILL_RINGS[k]!;
-      const px = rate * ((ring.from + ring.to) / 2) * chill.radius * screen.scale;
+    chill.rings.forEach((ring, k) => {
+      const px = turned[k]! * ring.at * chill.radius * screen.scale;
       expect(px, `ring ${k} of the flakes travels ${px.toFixed(0)} px a second`).toBeGreaterThanOrEqual(40);
-      if (k > 0) expect(rate, `ring ${k} turns no quicker than the ring outside it`).toBeGreaterThan(rings[k - 1]!);
+      if (k > 0 && ring.at < chill.rings[k - 1]!.at) expect(turned[k], `ring ${k} turns no quicker than the ring outside it`).toBeGreaterThan(turned[k - 1]!);
     });
+  });
+
+  it('THE REPORTED ONE, IN PIXELS: a snowflake is drawn the same size at the cold’s rest and at the top of its pulse — the field grows, the flakes do not', () => {
+    /*
+      ⚠️ **0481.** *"It gets bigger, but just on scale size which is why it looks so weird … the snowflakes
+      and stuff in it get huge."* 0399's flakes were layers swelled with the radius, so from rest to the
+      top every flake was drawn 2.3 times as big. Read off the slots the frame lays, in CSS pixels on a
+      1280×720 screen: every patch's drawn extent at the radius at rest and at the reach, and the patches
+      further apart at the top than at rest.
+    */
+    const drawnAt = (clock: number): { px: number[]; spread: number } => {
+      const d = frostAt(1);
+      d.world.chillClock = clock - 1;
+      d.world.ship.health = d.world.shipRow.health;
+      d.frame.step();
+      const boss = d.world.bossPool.at(0);
+      const px: number[] = [];
+      let spread = 0;
+      for (let s = chill.field.length; s < chill.field.length + chill.rings.reduce((n, ring) => n + ring.count, 0); s++) {
+        const patch = d.world.bossAura.at(s);
+        px.push(SPRITE_EXTENT[SPRITE_KINDS[patch.sprite]!] * patch.swell * screen.scale);
+        spread = Math.max(spread, Math.hypot(patch.along - boss.along, patch.across - boss.across));
+      }
+      return { px, spread };
+    };
+    const rest = drawnAt(chill.pulse - 1);
+    const top = drawnAt(chill.swell);
+    expect(rest.px.length, 'the cold carries no flakes').toBeGreaterThan(0);
+    rest.px.forEach((px, k) => expect(top.px[k], `patch ${k} is ${px.toFixed(0)} px at rest and ${top.px[k]!.toFixed(0)} px at the top`).toBeCloseTo(px, 6));
+    expect(top.spread, 'the flakes did not ride out with the cold').toBeGreaterThan(rest.spread * 1.5);
   });
 });
 

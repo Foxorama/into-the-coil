@@ -73,7 +73,7 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE, HEAVILY TRANSPARENT',
     edit: {
       path: 'src/render/bake.ts',
-      find: 'const CHILL_OPACITY = 0.45;',
+      find: 'const CHILL_OPACITY = 0.25;',
       replace: 'const CHILL_OPACITY = 0.9;',
     },
   },
@@ -93,12 +93,13 @@ export const PROBES = [
     decision: '0399',
     suite: 'tests/frost.test.ts',
     // A handful of flakes where it was asked to be full of them.
-    broke: 'the outer ring thinned to six flakes',
+    // Re-anchored by 0481, where the flakes are patches on rings: the outer ring cut to one patch.
+    broke: 'the outer ring thinned to one patch',
     guard: 'THE ASKED-FOR ONE, HEAVILY TRANSPARENT',
     edit: {
-      path: 'src/render/bake.ts',
-      find: '  { from: 0.72, to: 0.96, count: 26 },',
-      replace: '  { from: 0.72, to: 0.96, count: 6 },',
+      path: 'src/content/bosses.ts',
+      find: '        { sprite: SPRITE.chillPatch, at: 0.9, count: 10, spin: -0.006 },',
+      replace: '        { sprite: SPRITE.chillPatch, at: 0.9, count: 1, spin: -0.006 },',
     },
   },
   {
@@ -106,25 +107,26 @@ export const PROBES = [
     suite: 'tests/frost.test.ts',
     // The inner ring at the ring outside it's rate: two rings turning as one disc. Quick enough to
     // clear the speed floor, so what goes red is the ordering — at the outer ring's rate the floor
-    // fired first and the ordering was never seen to.
-    broke: 'the inner ring turned at the middle ring’s rate',
+    // fired first and the ordering was never seen to. Re-anchored by 0481: two rings of patches now.
+    broke: 'the inner ring turned at the outer ring’s rate',
     guard: 'THE ASKED-FOR ONE, TWIRLING',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '        { sprite: SPRITE.chillFlakes2, spin: -0.016 },',
-      replace: '        { sprite: SPRITE.chillFlakes2, spin: -0.009 },',
+      find: '        { sprite: SPRITE.chillPatch, at: 0.45, count: 6, spin: -0.013 },',
+      replace: '        { sprite: SPRITE.chillPatch, at: 0.45, count: 6, spin: -0.006 },',
     },
   },
   {
     decision: '0399',
     suite: 'tests/frost.test.ts',
-    // The frame laying every layer unturned, whatever the row says.
+    // The frame laying every ring unturned, whatever the row says. Re-anchored by 0481: the flakes are
+    // patches placed round the ring, and what twirls is where they stand.
     broke: 'the field laid unturned, so nothing twirls',
     guard: 'THE ASKED-FOR ONE, TWIRLING',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    slot.turn = foldTurn((w.steps * layer.spin) % TAU);',
-      replace: '    slot.turn = 0;',
+      find: '      const angle = (k / ring.count) * TAU + ((w.steps * ring.spin) % TAU);',
+      replace: '      const angle = (k / ring.count) * TAU;',
     },
   },
 ];
