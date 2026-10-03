@@ -1161,23 +1161,25 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE BOSSES' LOOK IS A PLAN, AND NOTHING IN IT IS BUILT — 2026-10-04
+### ⚠️ THE BOSSES' LOOK IS BEING BUILT, IN THE PLAN'S ORDER, AND NONE OF IT HAS BEEN PLAYED — 2026-10-04
 
-The player's notes on all seven end bosses' graphics and animation, plus seven more given the same
-day (the flame's speed, the cold's growth and reach, the frost's cloud, the void's length, shields in
-the ship's livery, the shuriken's sound, the caddie's gun), each diagnosed against the code and the
-flown fights, are [`the-bosses-look-planned`](../reports/the-bosses-look-planned-2026-10-04.md).
-**Its item 0 is a bullet that hung on the Rime Shelf and did not reproduce** in seven headless
-flights; `scripts/weigh-stuck.mjs` is the instrument, and the first thing the next session does is
-ask the player what preceded it. **It holds the order,
-so this file does not.** Three of the notes are fight defects rather than pictures and lead the queue:
-the gyre's bar coming back over its wreck, a jellyfish fight the instrument reports as never finishing
-from the median lane, and a fish whose last-stage leap no gun can pre-empt — each measured in the report.
-One cross-boss item (damage showing on the body, every boss authoring its own) sits above the per-boss
-art. One item stops for the player's word before it is built: the gyre's hole per stance, against
-[0151](decisions/0151-the-gap-you-have-to-reach.md); the jellyfish's heal keeps
-[0404](decisions/0404-the-rain-feeds-it.md)'s *"closes again"* and moves only its rate. **Read it
-before touching any boss**, and take the top undone item.
+[`the-bosses-look-planned`](../reports/the-bosses-look-planned-2026-10-04.md) is the plan and **holds
+the order, so this file does not.** Landed, one PR each, every one owed a play on its own *Owed*:
+
+- item 0, the Rime Shelf's stuck bullet — [0474](decisions/0474-a-wave-keeps-its-heading.md); the
+  instrument is a guard now;
+- item 1, the gyre's wreck — [0475](decisions/0475-the-wreck-can-be-killed.md), with **the player's word
+  owed on how the kill moves with the tier**;
+- item 2, the jellyfish opens — [0476](decisions/0476-the-jellyfish-opens.md), with **the player's word
+  owed on the tentacles still feeding it**, which the plan proposed removing;
+- item 3, the fish — [0477](decisions/0477-the-leap-is-a-target.md) and
+  [0478](decisions/0478-the-leap-has-its-own-flight.md);
+- item 4, the flame and the void — [0479](decisions/0479-the-flame-slows.md);
+- item 5's first half, damage sheds — [0480](decisions/0480-damage-sheds.md); the wear ladders follow,
+  one boss a PR, each after a play of the shed.
+
+**Next is the plan's item 6** (the cold grows instead of zooming). Item 4.2, the gyre's hole per stance,
+is still not built without the player's word, against [0151](decisions/0151-the-gap-you-have-to-reach.md).
 
 ### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
 

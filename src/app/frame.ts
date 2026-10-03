@@ -40,6 +40,7 @@ import {
   collectInto,
   collideInto,
   collideIntoOne,
+  FLASH_GAP_DUTY,
   nearestFrom,
   nearestInBox,
   overlaps,
@@ -981,6 +982,10 @@ export interface World {
    * not be able to move a wave by one enemy.
    */
   burstRng: Rng;
+  /** Where a lord's fragment flies and how it lies — 0480. Its own stream, on `burstRng`'s argument. */
+  shedRng: Rng;
+  /** Steps before the boss may shed again — 0480: one fragment a flash, under any gun. */
+  bossShedIn: number;
   /**
    * The drop stream, and it is separate from `burstRng` for the opposite reason `burstRng` is
    * separate from `rng`.
@@ -2256,6 +2261,8 @@ export class GameFrame implements Frame {
     if (onBody > 0 && w.bossPool.size > 0 && strike(w.bossPool, 0, onBody, IMPACT_FLASH_STEPS, w.bossDeaths)) {
       killedByShots += 1;
     }
+    // After every pairing that can light the animal, so a hit this step is shed this step — 0480.
+    shedHits(w);
     /*
       The impact flash's twin. An arrival that did not kill is a body that went white and stayed.
 
@@ -5982,6 +5989,58 @@ function burst(w: World, along: number, across: number, count: number): void {
     piece.velAcross = Math.sin(angle) * speed;
     piece.lifeFor = Math.round(w.burstRng.range(BURST.lifeMin, BURST.lifeMax));
   }
+}
+
+/**
+ * Steps between two fragments off one boss — 0480: the flash's own cycle (0334), so a lord sheds as
+ * often as it is drawn hit and no more, under any gun. Five a second.
+ */
+export const SHED_GAP = IMPACT_FLASH_STEPS * (1 + FLASH_GAP_DUTY);
+
+// @setup: one body for every fragment; its sprite is written before each `reset` reads it.
+const SHED_BODY = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage: 0 };
+
+/**
+ * A fragment of the lord, thrown where a hit landed — `docs/decisions/0480-damage-sheds.md`.
+ *
+ * ⚠️ **ON THE STEP A HIT ARMS THE FLASH, READ OFF THE FLASH'S OWN GAP.** `flash` in `src/sim/collide.ts`
+ * sets a body's `flashGap` to exactly `SHED_GAP` when it lights it, and the gap only ever counts down
+ * from there — so a body wearing that number now was lit by something this step. No new field on the
+ * pairing, no edit to the hot collision file: the event is already written on the body that took it.
+ *
+ * ⚠️ **FROM THE RIM THAT FACES THE SHIP**, because that is where the ship's fire lands: the impact is not
+ * logged for a survived pulse (0127's note on the `hit` cue says why), and the face turned to the ship
+ * is the answer for every gun that fires forward. It leaves outward, spinning nothing, in the world's
+ * frame like every fragment of a burst.
+ */
+function shedHits(w: World): void {
+  if (w.bossShedIn > 0) w.bossShedIn -= 1;
+  const shed = w.bossRow.shed;
+  if (shed === null || w.bossShedIn > 0 || w.bossPool.size === 0) return;
+  let struck: Entity | null = w.bossPool.at(0).flashGap === SHED_GAP ? w.bossPool.at(0) : null;
+  for (let i = 0; struck === null && i < w.bossBody.size; i++) {
+    const node = w.bossBody.at(i);
+    if (node.flashGap === SHED_GAP) struck = node;
+  }
+  if (struck === null) return;
+  const piece = w.debris.spawn();
+  // A fragment the pool has no room for is dropped, not grown — `src/sim/pool.ts`.
+  if (piece === null) return;
+  const toAlong = w.ship.along - struck.along;
+  const toAcross = w.ship.across - struck.across;
+  const heading = Math.atan2(toAcross, toAlong);
+  const rim = struck.radius * 0.8;
+  SHED_BODY.sprite = shed;
+  SHED_BODY.spriteHit = shed;
+  reset(piece, struck.along + Math.cos(heading) * rim, struck.across + Math.sin(heading) * rim, SHED_BODY);
+  const away = heading + w.shedRng.range(-0.9, 0.9);
+  const speed = w.shedRng.range(0.25, 0.5);
+  piece.velAlong = Math.cos(away) * speed;
+  piece.velAcross = Math.sin(away) * speed;
+  piece.turn = w.shedRng.range(-Math.PI, Math.PI);
+  piece.prevTurn = piece.turn;
+  piece.lifeFor = Math.round(w.shedRng.range(36, 54));
+  w.bossShedIn = SHED_GAP;
 }
 
 /**

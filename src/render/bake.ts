@@ -502,6 +502,14 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss11Burnt: 'enemy',
   // Dead metal is still the creature it was — 0337.
   boss11Wreck: 'enemy',
+  // What a lord sheds is the lord: baked in its skin, `enemy` only where a palette has none — 0480.
+  shedScale: 'enemy',
+  shedEmber: 'enemy',
+  shedFeather: 'enemy',
+  shedTooth: 'enemy',
+  shedIce: 'enemy',
+  shedFlesh: 'enemy',
+  shedGlass: 'enemy',
   /*
     ⚠️ **THE FLAMES MEAN NOTHING, SO THEY WEAR AN INK THAT MEANS NOTHING — 0305's ARGUMENT, REUSED.**
     A decoration ink (0194) is the promise that nothing the player must find is drawn in it, and a
@@ -5970,6 +5978,15 @@ function paintBoss6(ctx: Pen, f: Frame, skin: FoeSkin, theme: ThemeKind): void {
   the head was on this list because a row names it as the boss's `sprite`, and the body was not,
   because nothing named it. The row names it now.
 */
+/** The outlines of what the lords shed, in the frame's own units — 0480. Built once, at import. */
+// ⚠️ A POLYGON AND NOT A CURVE: through six points `curveLoop` rounds a scale into an oval, photographed.
+const SCALE_SHED: readonly Pt[] = [[1, 0], [0.55, 0.36], [0.05, 0.58], [-0.55, 0.56], [-0.92, 0.3], [-1, 0], [-0.92, -0.3], [-0.55, -0.56], [0.05, -0.58], [0.55, -0.36]];
+const FEATHER_SHED: readonly Pt[] = [[1, 0], [0.55, 0.22], [-0.3, 0.3], [-0.9, 0.16], [-1, 0], [-0.9, -0.1], [-0.3, -0.2], [0.55, -0.16]];
+const TOOTH_SHED: readonly Pt[] = [[0.85, -0.45], [0.85, 0.45], [-0.3, 0.8], [-0.85, 0.8], [-0.85, -0.8], [-0.3, -0.8]];
+const ICE_SHED: readonly Pt[] = [[1, 0], [0.15, 0.24], [-1, 0.14], [-0.72, -0.02], [-0.95, -0.18], [0.1, -0.24]];
+const FLESH_SHED: readonly Pt[] = [[0.95, 0.05], [0.55, 0.5], [0.1, 0.42], [-0.35, 0.78], [-0.85, 0.35], [-0.75, -0.15], [-0.95, -0.55], [-0.2, -0.7], [0.35, -0.45], [0.8, -0.5]];
+const GLASS_SHED: readonly Pt[] = [[1, -0.1], [-0.4, 0.8], [-0.9, -0.45], [0.1, -0.7]];
+
 const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   const row = BOSSES[LEVELS[k].boss];
   /*
@@ -5989,6 +6006,8 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
     `Chain` is a sprite index and nothing else is, which is what makes this safe to walk.
   */
   const named = [row.sprite, row.spriteHit];
+  // What it sheds is it, so it wears its skin — 0480.
+  if (row.shed !== null) named.push(row.shed);
   if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
   // A jellyfish's tentacles are its glass — 0403.
   if (row.tendrils !== undefined) named.push(row.tendrils.sprite, row.tendrils.spriteHit);
@@ -13222,6 +13241,75 @@ export function drawKind(
       ctx.lineTo(half - r, half + r * 0.2);
       ctx.closePath();
       break;
+    /*
+      ── WHAT A LORD SHEDS — 0480 ────────────────────────────────────────────────────────────────
+
+      One fragment a boss, in the lord's own skin (`LORD_HULLS` names the row's `shed`), thrown from
+      where the ship's fire lands each time a hit arms the flash. Each is the animal's material and
+      none is round: a disc at this size is a bullet, which is `debris`'s own rule above.
+    */
+    case 'shedScale':
+    case 'shedEmber': {
+      // A scale: a pointed lozenge with a ridge down it — the serpent's with the acid in the cut, the
+      // fish's with its fire showing through the edge.
+      trace(ctx, f, SCALE_SHED);
+      ctx.fillStyle = kind === 'shedEmber' ? (skin?.plate ?? ink) : (skin?.hull ?? ink);
+      seal(ctx);
+      poly(ctx, f, skin?.lit ?? palette.impact, [[0.85, 0], [-0.7, 0.14], [-0.7, -0.14]], 0.75);
+      if (kind === 'shedEmber') {
+        glow(ctx, f, palette.fire, 0.1, 0, 0.6, 0.7);
+        disc(ctx, f, palette.hazard, 0.1, 0, 0.18);
+      } else poly(ctx, f, skin?.plate ?? palette.space, [[-0.92, 0.3], [-0.55, 0.56], [0.05, 0.58], [-0.1, 0.2], [-0.6, 0.12]], 0.9);
+      return;
+    }
+    case 'shedFeather': {
+      // A primary: a long vane either side of its shaft, the outer side the narrower. The shaft is the
+      // line between a lit vane and a shaded one — at this size a stroked shaft is under a pixel.
+      curveLoop(ctx, f, FEATHER_SHED);
+      ctx.fillStyle = skin?.hull ?? ink;
+      seal(ctx);
+      poly(ctx, f, skin?.lit ?? palette.impact, [[0.9, -0.02], [0.5, -0.15], [-0.3, -0.18], [-0.85, -0.08], [-0.9, -0.02]], 0.7);
+      return;
+    }
+    case 'shedTooth': {
+      // A tooth off the cog: square-shouldered, wider at the root it broke from, the break left dark.
+      trace(ctx, f, TOOTH_SHED);
+      ctx.fillStyle = skin?.hull ?? ink;
+      seal(ctx);
+      poly(ctx, f, skin?.lit ?? palette.impact, [[0.75, -0.42], [0.75, -0.15], [-0.4, -0.45], [-0.4, -0.7]], 0.8);
+      poly(ctx, f, skin?.plate ?? palette.space, [[-0.8, -0.75], [-0.4, -0.75], [-0.2, -0.2], [-0.45, 0.25], [-0.3, 0.75], [-0.8, 0.75]]);
+      return;
+    }
+    case 'shedIce': {
+      // A splinter of the frost ship's ice: long, thin and faceted, lit along one edge.
+      trace(ctx, f, ICE_SHED);
+      ctx.fillStyle = rgba(palette.frost, 0.85);
+      seal(ctx);
+      poly(ctx, f, skin?.lit ?? palette.impact, [[0.9, 0], [-0.8, 0.08], [-0.6, 0.02]], 0.85);
+      return;
+    }
+    case 'shedFlesh': {
+      /*
+        A gobbet of the hydra: a torn piece of its hide, its underside in shadow along one edge and one
+        fleck of the acid it stands in. ⚠️ ONE FLECK: two flecks above a dark arc is a face — the first
+        draft was a smiley, photographed.
+      */
+      curveLoop(ctx, f, FLESH_SHED);
+      ctx.fillStyle = skin?.hull ?? ink;
+      seal(ctx);
+      poly(ctx, f, skin?.plate ?? palette.space, [[-0.95, -0.55], [-0.2, -0.7], [0.35, -0.45], [0.8, -0.5], [0.55, -0.15], [-0.6, -0.2]], 0.8);
+      disc(ctx, f, palette.acid, 0.35, 0.2, 0.22, 0.9);
+      return;
+    }
+    case 'shedGlass': {
+      // A shard of the jellyfish's bell: clear glass with a lit edge and a glint.
+      trace(ctx, f, GLASS_SHED);
+      ctx.fillStyle = rgba(skin?.lit ?? palette.glass, 0.55);
+      seal(ctx);
+      poly(ctx, f, palette.impact, [[0.85, -0.1], [-0.35, 0.68], [-0.25, 0.55], [0.7, -0.08]], 0.85);
+      disc(ctx, f, palette.impact, 0.1, 0.05, 0.12, 0.8);
+      return;
+    }
     /*
       ── THE BANG — 0227 ─────────────────────────────────────────────────────────────────────────
 

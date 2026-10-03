@@ -593,6 +593,19 @@ export const SPRITE_KINDS = [
   'boss11Wreck',
   // And lit by a hit, since the wreck can be shot — 0475.
   'boss11WreckHit',
+  /*
+    ⚠️ **WHAT EACH LORD SHEDS WHEN IT IS HIT — 0480.** *"No damage shows on the boss"*, said three times
+    and true of five. One fragment a boss, thrown from where the ship's fire lands, in the lord's own
+    skin: a scale, an ember-lit scale, a feather, a cog's tooth, a splinter of ice, a gobbet of flesh,
+    a shard of glass. Debris, so no twin: a fragment is never hit.
+  */
+  'shedScale',
+  'shedEmber',
+  'shedFeather',
+  'shedTooth',
+  'shedIce',
+  'shedFlesh',
+  'shedGlass',
   'gyreFire0',
   'gyreFire1',
   'gyreFire2',
@@ -1896,6 +1909,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // The same box as every other body of it — 0320s rule, on the fifth.
   boss11Wreck: 52,
   boss11WreckHit: 52,
+  // A fragment is a fraction of what it came off, and well under a bullet's place on the screen — 0480.
+  shedScale: 3.2,
+  shedEmber: 3.2,
+  shedFeather: 5,
+  shedTooth: 3.6,
+  shedIce: 3.8,
+  shedFlesh: 3.2,
+  shedGlass: 3.6,
   gyreFire0: 26,
   gyreFire1: 26,
   gyreFire2: 26,
