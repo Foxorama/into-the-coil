@@ -110,7 +110,7 @@ export const PROBES = [
     // The pool at its size before 0377: a banked salvo's last rifts find it full and open nothing.
     broke: 'a blast pool too small for a salvo of rifts',
     guard: 'a salvo thrown as fast as the triggers allow opens every rift it throws',
-    edit: { path: 'src/app/mount.ts', find: '  blasts: 6,', replace: '  blasts: 4,' },
+    edit: { path: 'src/app/mount.ts', find: '  blasts: 9,', replace: '  blasts: 4,' },
   },
   {
     decision: '0377',
@@ -185,7 +185,7 @@ export const PROBES = [
     guard: 'every row is exactly one of the two shapes',
     edit: {
       path: 'src/content/specials.ts',
-      find: '    rift: { radius: 36, steps: 90, bossShare: 0.1 },',
+      find: '    rift: { radius: 36, steps: 150, bossShare: 0.1 },',
       replace: '    rift: null,',
     },
   },

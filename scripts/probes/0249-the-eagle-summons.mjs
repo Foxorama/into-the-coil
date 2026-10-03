@@ -13,7 +13,8 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0317, which moved the whip to the third phase and widened its arc.
       // ⚠️ Re-anchored by 0380: the whip is the last stage's, with an escort and a leap after it.
-      find: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort:",
+      // ⚠️ And by 0479, where the lash's reach went to half.
+      find: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.5 }, escort:",
       replace: "shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0 }, escort:",
     },
   },

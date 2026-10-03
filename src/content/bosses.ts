@@ -3775,15 +3775,15 @@ export const BOSSES: Record<BossKind, BossRow> = {
       */
       { upTo: 0.44, fireEvery: 42, shots: 5, spread: 0.8, patrolScale: 2, stance: { kind: 'volley' }, look: ABLAZE, shot: null, attack: { kind: 'breaker', span: 60, rise: 1.5, ends: 0.66, roams: true, warning: 30 }, cue: 'bossBreach' },
       /*
-        ⚠️ **STAGE FOUR — IT LEAPS, WHITE-HOT, WHIPPING FLAME.** Every six seconds it dives out through
-        the near edge and flies its breach again — three leaps across the whole screen, unshootable
-        and fully live, the one thing a flying fish does that no other boss can — then arrives and
-        goes back to the whip of flame (0249's lash, the tip quicker than the root) with a pair of
-        kites out of its mouth between leaps. The look is `BLAZING`: the same fire in the ember's own
+        ⚠️ **STAGE FOUR — IT LEAPS, WHITE-HOT, WHIPPING FLAME.** Every six seconds it dives into the
+        near edge and leaps out through it twice and back onto its station (0478), a target the whole
+        way (0477) — the one thing a flying fish does that no other boss can — and goes back to the whip
+        of flame (0249's lash, the tip quicker than the root: half as quick again since 0479, where it
+        was nearly twice) with a pair of kites out of its mouth between leaps. The look is `BLAZING`: the same fire in the ember's own
         core inks, the crown bigger and the flicker quicker — one fire at a higher temperature, which
         is what a fourth stage after *ablaze* has left to be.
       */
-      { upTo: 0.15, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.9 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360, dive: 36, arcs: [28, 40], span: 36, speed: 1.2, depth: 8, back: 54 } },
+      { upTo: 0.15, fireEvery: 36, shots: 5, spread: 1.1, patrolScale: 2.2, stance: { kind: 'volley' }, look: BLAZING, shot: 'flame', attack: { kind: 'whip', sweep: 1.3, reach: 0.5 }, escort: { enemy: 'kite', count: 2, formation: 'vee', from: 'mouth', standing: 4, every: 120 }, leap: { first: 150, every: 360, dive: 36, arcs: [28, 40], span: 36, speed: 1.2, depth: 8, back: 54 } },
     ],
   },
   /**

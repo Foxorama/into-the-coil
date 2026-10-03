@@ -61,6 +61,7 @@ function over(base: string, top: string, alpha: number): string {
 import { loopsAt } from './bakes.ts';
 import { SAMPLE_RATE, sampleCue } from '../src/app/sound.ts';
 import { PICKUP_CYCLE_STEPS } from '../src/content/pickups.ts';
+import { DIFFICULTIES } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /** The three changes a player crosses while flying the same stretch of level — 0167's own exclusion. */
@@ -411,6 +412,44 @@ function measureNote(): void {
   observe('0325-note', mute.length === 0 && thrown.size > 0, thrown.size === 0 ? ['no boss throws a cue at all'] : mute);
 }
 
+/**
+ * 0479 — every bullet a boss throws is in the air long enough to be seen. Advisory, on 0295's terms: a
+ * ranking of every bullet against every other is a content limiter, so this is one floor in the
+ * player's unit and a printout of the quickest, so the next one that creeps up is a line on every run.
+ *
+ * Reported: *"the 'fire' projectile rate is too fast … there's barely any time to see it, let alone
+ * dodge it."* Ninety-five units is the fish's station to a ship at 60, the distance the report measured;
+ * the speed is the row's at Savior's `shotSpeed`, and a whip's tip flies `1 + reach` times its root
+ * (0249). A beam is not a bullet and is warned (0250), so it is not here.
+ */
+function measureSeen(): void {
+  const ACROSS = 95;
+  const FLOOR = 0.8;
+  const pace = DIFFICULTIES.savior.shotSpeed;
+  const seen: { what: string; seconds: number }[] = [];
+  const add = (boss: string, shot: ShotKind, times: number): void => {
+    const speed = SHOTS[shot].speed * pace * times;
+    if (speed > 0) seen.push({ what: `${boss}'s ${shot}${times > 1 ? ` at a whip's tip` : ''}`, seconds: ACROSS / speed / STEPS_PER_SECOND });
+  };
+  for (const kind of BOSS_KINDS) {
+    const row = BOSSES[kind];
+    for (const phase of row.phases) {
+      const attack = phase.attack ?? row.attack;
+      const shot = phase.shot ?? row.shot;
+      if (attack.kind === 'heads') {
+        for (const head of attack.heads) if (head.attack.kind !== 'beam') add(kind, head.shot, 1);
+      } else if (attack.kind === 'whip') {
+        add(kind, shot, 1 + attack.reach);
+      } else if (attack.kind !== 'beam') add(kind, shot, 1);
+      if (phase.wheel !== undefined) add(kind, phase.wheel.shot, 1);
+    }
+  }
+  seen.sort((a, b) => a.seconds - b.seconds);
+  const quickest = seen[0];
+  const lines = seen.slice(0, 5).map((s) => `${s.what}: ${s.seconds.toFixed(2)} s`);
+  observe('0479-seen', quickest !== undefined && quickest.seconds >= FLOOR, quickest === undefined ? ['no boss throws a bullet'] : lines);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -426,6 +465,7 @@ function measureAll(): void {
   measureVolley();
   measureStruck();
   measureNote();
+  measureSeen();
 }
 
 /**

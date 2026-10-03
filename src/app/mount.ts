@@ -214,9 +214,20 @@ export const CAPACITY = {
     `THROW_GAP_STEPS` (20) and a rift open for its row's 90 steps is five open at once for a player
     who banked five voids — 0372 keeps every charge — and the pyre a wreck throws is the sixth. A
     rift that found the pool full would not open at all; `tests/void.test.ts` throws that salvo.
+
+    ⚠️ **NINE SINCE 0479, WHERE A RIFT IS OPEN FOR 150 STEPS.** *"The void bomb needs to last 1 sec
+    longer."* The same salvo holds eight open at once, and the pyre is the ninth.
   */
-  blasts: 6,
-  enemyShots: 150,
+  blasts: 9,
+  /*
+    ⚠️ **TWO HUNDRED SINCE 0479, AND IT WAS A HUNDRED AND FIFTY.** The flame went from 1.8 a step to 1.1,
+    so the gyre's wheel's flames are on the field longer, and its fight — curtains of forty-one beside
+    the wheel — peaked at 174 at Legend and 158 at Savior, flown by `scripts/weigh-stuck.mjs` with the
+    pool unbounded. At 150 a curtain met a full pool and came out short, which is a second way through
+    (`tests/level.test.ts`, *every wall arrives whole*) — and at Legend the fight was already reaching
+    exactly 150 before the flame moved. Every other level peaks at 80 or under.
+  */
+  enemyShots: 200,
   /*
     ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
     pools total EXACTLY 500 and `tests/budget.test.ts` holds that ceiling, so a serpent with a body
