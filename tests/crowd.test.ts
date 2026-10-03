@@ -231,7 +231,14 @@ function fly(kind: BossKind, phaseIndex: number, tier: (typeof DIFFICULTY_KINDS)
     */
     const wants = middle - world.ship.across;
     stick.across = wants > 0.5 ? 1 : wants < -0.5 ? -1 : 0;
-    stick.along = 0;
+    /*
+      ⚠️ **AND IN A FIGHT WITH A COLD IT FALLS BACK — 0484.** The cold covers where a ship starts, on the
+      player's word (*"it can overlap the 'starting' space — the point is to make the player have to
+      avoid it"*), and what it leaves is the back of the box, its corners most of all. A pilot that
+      held the lane it started in was measuring a player who never answered the cold, which is the
+      fixture's hands again — so it flies the answer the fight asks for, and nothing else changes.
+    */
+    stick.along = world.bossRow.chill !== null ? -1 : 0;
     frame.step();
     if (run < worstRun) worstRun = run;
     if (world.enemyShots.size > peakShots) peakShots = world.enemyShots.size;

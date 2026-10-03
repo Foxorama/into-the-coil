@@ -847,7 +847,7 @@ describe('0371 — the ice is staggered', () => {
 });
 
 describe('0459 — the cold pulses', () => {
-  it('THE ASKED-FOR ONE, IN NUMBERS: a fifth larger at rest, a pulse every ten seconds, and at its top it reaches every lane and most of the screen while leaving a strip behind it to fly in', () => {
+  it('THE ASKED-FOR ONE, IN NUMBERS: a fifth larger at rest, a pulse every ten seconds, and at its top it reaches every lane and most of the screen while leaving both back corners to fly in', () => {
     expect(chill.radius, 'the cold at rest is not a fifth larger than the 38 it was').toBeCloseTo(38 * 1.2, 0);
     expect(chill.pulse / STEPS_PER_SECOND, 'the pulse is not ten seconds').toBe(10);
     // 0471: out, back, and a rest — the swell and the retract fit inside one pulse, and both are seen.
@@ -861,9 +861,26 @@ describe('0459 — the cold pulses', () => {
     const narrow = ACROSS_SPAN * (16 / 9);
     const near = row.station - row.drift - chill.reach;
     expect((narrow - near) / narrow, 'at its top the cold is not most of the screen').toBeGreaterThan(0.75);
-    // And never all of it: where a ship is put on the field is clear of it, so no life begins frozen.
-    expect(near, 'at its top the cold reaches where a ship starts').toBeGreaterThan(SHIP_START_ALONG + SHIPS.fighter.radius);
-    expect(near - PLAYER_ALONG_MARGIN, 'at its top the cold leaves nowhere to fly').toBeGreaterThan(15);
+    /*
+      ⚠️ **AND IT COVERS WHERE A SHIP STARTS, ON THE PLAYER'S WORD — 0484.** *"As long as the player has
+      safe space at the top left and bottom left of the screen, it can overlap the 'starting' space — the
+      point is to make the player have to avoid it, otherwise it's a pure non-event."* 0459 held the cold
+      off the start, and so off the whole left of the screen; what the player is owed is the two
+      corners, and the cold is a circle, so the corners are where it is furthest.
+    */
+    expect(near, 'at its top the cold leaves the start clear, so the ship never has to move').toBeLessThan(SHIP_START_ALONG);
+    /*
+      In lane shares: a pocket a fifteenth of the lane in from each back corner — a ship's length and
+      more — is outside the cold by the ship's hurtbox, wherever across the lane the hull has patrolled
+      to and at the nearest of its drift. The hull at the top of the lane is what crowds the top corner.
+    */
+    const pocket = ACROSS_SPAN / 15;
+    for (const across of [row.radius, ACROSS_SPAN / 2, ACROSS_SPAN - row.radius]) {
+      for (const corner of [pocket, ACROSS_SPAN - pocket]) {
+        const clear = Math.hypot(row.station - row.drift - (PLAYER_ALONG_MARGIN + pocket), across - corner) - chill.reach;
+        expect(clear, `with the hull at ${across} across, the cold at its top leaves no room in the corner at ${corner.toFixed(0)}`).toBeGreaterThan(SHIPS.fighter.radius);
+      }
+    }
   });
 
   it('THE PULSE, DRIVEN: over one pulse the slow and the drawing are one radius on every step — swelling from the row’s rest to its reach, drawing back to rest, and starting again', () => {

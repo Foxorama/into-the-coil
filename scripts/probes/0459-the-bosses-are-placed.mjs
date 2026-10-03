@@ -108,22 +108,12 @@ export const PROBES = [
     guard: 'THE ASKED-FOR ONE, IN NUMBERS',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '      radius: 46,\n      reach: 108,',
-      replace: '      radius: 38,\n      reach: 108,',
+      find: '      radius: 46,\n      reach: 130,',
+      replace: '      radius: 38,\n      reach: 130,',
     },
   },
-  {
-    decision: '0459',
-    suite: 'tests/frost.test.ts',
-    // The first draft's reach, whose top covered where a ship starts.
-    broke: 'the cold reaching 120 at its top',
-    guard: 'THE ASKED-FOR ONE, IN NUMBERS',
-    edit: {
-      path: 'src/content/bosses.ts',
-      find: '      radius: 46,\n      reach: 108,',
-      replace: '      radius: 46,\n      reach: 120,',
-    },
-  },
+  // The first draft's reach, 120, whose top covered where a ship starts, was a probe here until 0484: the
+  // player ruled that the cold may cover the start, so it broke nothing. 0484's own probes hold the corners.
   {
     decision: '0459',
     suite: 'tests/medusa.test.ts',
