@@ -90,7 +90,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
+import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -166,23 +166,6 @@ const ROAM_INWARD = 0.25;
  * screen when the leading edge reaches it, and no more, so it can still be seen at the very edge.
  */
 const ROAM_UNSEEN_MARGIN = 2;
-
-/**
- * How fast a boss flies to the start of its entrance for a mid-fight leap, in world units a step —
- * 0380. Three: twice the breach's own speed and a fifth over the ship's, so the dive out reads as a
- * dive rather than a drift, and from the fish's station to the near edge is about a second.
- */
-const DIVE_PER_STEP = 3;
-
-/**
- * How far up-lane of a breach's first crest a mid-fight leap begins its run along the edge, in world
- * units — 0380. Sixty-four, and the number is the arrival's and not the run-in's: the hand-over lays
- * the boss at the path's start, mid-lane, and the fish's `from` is 176 against a narrowest view of
- * 213, so a start any nearer than the view plus a hull (about 240) is a fish that pops into being on
- * the screen after its dive. The run along the edge from there is about a second at the breach's
- * speed, the first part of it just beyond the leading edge.
- */
-const LEAP_RUN_IN = 64;
 
 /**
  * How much wider than its formation's spacing a spat horde fans — 0373. At 5, a rank of kites
@@ -1381,6 +1364,8 @@ export interface World {
    * bitten at, and neither of them sees the animation the other does.
    */
   bossBite: number;
+  /** Steps before another snap may be armed, after the face's `biteRest` — 0478. Nought when none. */
+  bossBiteRest: number;
   /**
    * Which side of the head the ship was last committed to — `-1` up-lane, `1` down-lane, `0` before
    * it has been anywhere. Only changes once the ship is clear of the head's own width, so a pilot
@@ -1414,8 +1399,14 @@ export interface World {
    * and nothing landing on it counted. Played: *"you should be able to damage it fast enough to skip
    * the jumpy animation and not be forced through a none-interactable action."* While this is up, the
    * boss is a target and its bar stays up; the arrival still refuses every hit.
+   *
+   * While it is up, `bossEntering` counts the leap's steps — 0478, where the leap stopped being the
+   * entrance flown again and became `driveLeap`.
    */
   bossLeaping: boolean;
+  /** Where the leap left from and comes back to, in the camera's frame — 0478. */
+  leapFromAlong: number;
+  leapFromAcross: number;
   /**
    * Where the boss was put on the field, ahead of the camera's trailing edge — 0306. The entrance
    * starts here, and so does the arrival after it: *"then enter where it is now."*
@@ -8061,30 +8052,8 @@ function driveEntrance(w: World, boss: Entity): void {
   const entrance = w.bossRow.entrance!;
   const chain = w.bossRow.chain;
   const total = entranceLength(entrance, w.bossEntryAt, chain === null ? 0 : chainReach(chain), thickest(chain, SPRITE_EXTENT[SPRITE_KINDS[w.bossRow.sprite]!]! / 2));
-  /*
-    ── THE DIVE TO THE PATH'S START, WHEN THE ENTRANCE IS FLOWN AGAIN — 0380 ────────────────────
-
-    ⚠️ **A LEAP MID-FIGHT IS THE ENTRANCE REPLAYED, AND THE ONE THING IT NEEDS THAT A SPAWN DOES NOT
-    IS TO GET TO THE START.** A boss put on the field is put AT the path's start (`spawnBoss`), so
-    this is a distance of nothing there; a boss leaping from its station is a hull's length or more
-    away, and it flies there first — straight, at `DIVE_PER_STEP`, nosed into its own heading — and
-    the entrance counts from the step it arrives. Nothing in the path or the hand-over knows the
-    difference, which is what keeps one description of the flight.
-  */
-  if (w.bossEntering === 0) {
-    entranceAt(entrance, w.bossEntryAt, 0);
-    const dAlong = w.cameraAlong + ENTRANCE_AT[0]! - boss.along;
-    const dAcross = ENTRANCE_AT[1]! - boss.across;
-    const far = Math.hypot(dAlong, dAcross);
-    if (far > DIVE_PER_STEP) {
-      boss.velAlong = w.scrollPerStep + (dAlong / far) * DIVE_PER_STEP;
-      boss.velAcross = (dAcross / far) * DIVE_PER_STEP;
-      if (chain === null) boss.turn = turnFor(Math.atan2(dAcross, dAlong));
-      w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
-      w.bossAcross = boss.across + boss.velAcross;
-      return;
-    }
-  }
+  // ⚠️ A leap used to arrive here and dive to the path's start first (0380); it has its own flight in
+  // `driveLeap` since 0478, so an entrance is only ever flown from where the boss was put on the field.
   w.bossEntering += 1;
   const s = w.bossEntering * entrance.speed;
   if (s >= total) {
@@ -8094,18 +8063,7 @@ function driveEntrance(w: World, boss: Entity): void {
       on the fire grid from its first shot (0096). The body is laid there this step rather than moved
       there — `bossSettle` — so nothing is drawn between two edges of the screen.
     */
-    w.bossEntering = -1;
-    w.bossLeaping = false;
-    boss.along = w.cameraAlong + w.bossEntryAt;
-    boss.across = ACROSS_SPAN / 2;
-    boss.velAlong = 0;
-    boss.velAcross = 0;
-    boss.turn = 0;
-    boss.bobPhase = 0;
-    // The phase it is IN, since 0380: a leap mid-fight hands over into whatever stage the bar says.
-    boss.fireIn = nextOnGrid(w.steps, fireGapFor(phaseFor(w.bossRow, boss.health, w.bossFullHealth).fireEvery, w.difficulty));
-    w.bossTrail.fill(boss.across);
-    w.bossSettle = true;
+    settleOnStation(w, boss, w.bossEntryAt, ACROSS_SPAN / 2);
   } else {
     entranceAt(entrance, w.bossEntryAt, s);
     boss.velAlong = w.cameraAlong + ENTRANCE_AT[0]! - boss.along;
@@ -8118,6 +8076,154 @@ function driveEntrance(w: World, boss: Entity): void {
     */
     if (chain === null) boss.turn = turnFor(ENTRANCE_AT[2]!);
     breakSurface(w, entrance, w.bossEntryAt, s);
+  }
+  w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
+  w.bossAcross = boss.across + boss.velAcross;
+}
+
+/**
+ * The hand-over onto the station at the end of an entrance or a leap — 0306, 0478: laid there this
+ * step, at rest, facing down the lane, on the fire grid of the phase it is in.
+ *
+ * ⚠️ **"THEN ENTER WHERE IT IS NOW."** The fight starts from here exactly as a boss with no entrance
+ * starts from its spawn, on the fire grid from its first shot (0096). The body is laid there this step
+ * rather than moved there — `bossSettle` — so nothing is drawn between two edges of the screen.
+ */
+function settleOnStation(w: World, boss: Entity, along: number, across: number): void {
+  w.bossEntering = -1;
+  w.bossLeaping = false;
+  boss.along = w.cameraAlong + along;
+  boss.across = across;
+  boss.velAlong = 0;
+  boss.velAcross = 0;
+  boss.turn = 0;
+  boss.bobPhase = 0;
+  // The phase it is IN, since 0380: a leap mid-fight hands over into whatever stage the bar says.
+  boss.fireIn = nextOnGrid(w.steps, fireGapFor(phaseFor(w.bossRow, boss.health, w.bossFullHealth).fireEvery, w.difficulty));
+  w.bossTrail.fill(boss.across);
+  w.bossSettle = true;
+}
+
+/** The leap a row's stages fly, or none — 0478. Its own loop, so nothing is built in the frame. */
+function leapOf(row: BossRow): Leap | null {
+  for (let i = 0; i < row.phases.length; i++) {
+    const leap = row.phases[i]!.leap;
+    if (leap !== undefined) return leap;
+  }
+  return null;
+}
+
+/** Steps a whole leap takes, from leaving the station to being back on it — 0478. */
+export function leapSteps(leap: Leap): number {
+  return leap.dive + leap.arcs.length * (leap.span / leap.speed) + leap.back;
+}
+
+// @setup: one scratch pair for the module's lifetime, written by `leapAt` and read inside one call.
+const LEAP_AT = new Float64Array(2);
+
+/**
+ * Where a leap has the boss `k` steps in, in the camera's frame — 0478: `LEAP_AT` is `[along, across]`.
+ *
+ * ── THREE PIECES THAT MEET WITHOUT A CORNER ANYWHERE THE PLAYER CAN SEE ONE ──────────────────────
+ *
+ * The dive is a cubic from the station at rest to `depth` under the near edge, half a span down the
+ * lane, arriving at the arcs' own speed and going down — so it eases out of rest and is nosed into the
+ * water. Then each arc is a parabola through the edge on 0313's terms: constant along speed, fastest
+ * where it leaves and re-enters, slowest at the top, cresting `arcs[i]` past the edge. The skip at each
+ * junction is a corner under the edge, which is what 0313's breach does and what a fish skipping does.
+ * Then a cubic from the last arc's bottom, leaving as the next arc would, back to the station at rest.
+ */
+function leapAt(leap: Leap, fromAlong: number, fromAcross: number, surface: number, k: number): void {
+  const arcSteps = leap.span / leap.speed;
+  const under = surface + leap.depth;
+  const firstAlong = fromAlong - leap.span / 2;
+  const n = leap.arcs.length;
+  if (k <= leap.dive) {
+    const u = k / leap.dive;
+    const rise = (4 * (leap.arcs[0]! + leap.depth)) / arcSteps;
+    hermite(fromAlong, fromAcross, 0, 0, firstAlong, under, -leap.speed * leap.dive, rise * leap.dive, u);
+    return;
+  }
+  const t = k - leap.dive;
+  if (t <= n * arcSteps) {
+    const i = Math.min(Math.floor(t / arcSteps), n - 1);
+    const into = t - i * arcSteps;
+    const u = into / arcSteps;
+    LEAP_AT[0] = firstAlong - i * leap.span - leap.speed * into;
+    LEAP_AT[1] = under - 4 * (leap.arcs[i]! + leap.depth) * u * (1 - u);
+    return;
+  }
+  const u = Math.min(1, (t - n * arcSteps) / leap.back);
+  const rise = (4 * (leap.arcs[n - 1]! + leap.depth)) / arcSteps;
+  hermite(firstAlong - n * leap.span, under, -leap.speed * leap.back, -rise * leap.back, fromAlong, fromAcross, 0, 0, u);
+}
+
+/** A cubic Hermite from `p0` leaving along `m0` to `p1` arriving along `m1`, at `u` in [0, 1], into `LEAP_AT`. */
+function hermite(a0: number, x0: number, ma0: number, mx0: number, a1: number, x1: number, ma1: number, mx1: number, u: number): void {
+  const u2 = u * u;
+  const u3 = u2 * u;
+  const h00 = 2 * u3 - 3 * u2 + 1;
+  const h10 = u3 - 2 * u2 + u;
+  const h01 = -2 * u3 + 3 * u2;
+  const h11 = u3 - u2;
+  LEAP_AT[0] = h00 * a0 + h10 * ma0 + h01 * a1 + h11 * ma1;
+  LEAP_AT[1] = h00 * x0 + h10 * mx0 + h01 * x1 + h11 * mx1;
+}
+
+/**
+ * How much of the leap's first and last stretch the fish spends turning between facing down the lane
+ * and facing where it flies — 0478. It leaves its station at rest and arrives back at rest, and a
+ * heading is not defined at rest: blended in over this share of the dive and out over this share of the
+ * curve back, so it turns to go and turns round again to land.
+ */
+const LEAP_TURN_SHARE = 0.35;
+
+/**
+ * One step of a leap — 0478: the boss where `leapAt` says, nosed into its flight, the edge breaking
+ * where it goes through, and laid back on its station when the leap is over.
+ *
+ * ⚠️ **NEVER HANDED TO THE ARRIVAL, WHICH IS WHAT MADE THE OLD ONE WEIRD.** 0380 flew the entrance
+ * again and let the arrival bring it back from beyond the leading edge — a second and a half with no
+ * fish on the screen and a crawl at the end of a dive. It is back on the place it left, in the time the
+ * row says, on the screen the whole way.
+ */
+function driveLeap(w: World, boss: Entity): void {
+  const leap = leapOf(w.bossRow);
+  if (leap === null) {
+    settleOnStation(w, boss, w.leapFromAlong, w.leapFromAcross);
+    return;
+  }
+  const entrance = w.bossRow.entrance;
+  const surface = entrance !== null && entrance.kind === 'breach' ? entrance.surface : ACROSS_SPAN;
+  const total = leapSteps(leap);
+  w.bossEntering += 1;
+  const k = w.bossEntering;
+  if (k >= total) {
+    settleOnStation(w, boss, w.leapFromAlong, w.leapFromAcross);
+    w.bossOffset = boss.along - w.cameraAlong;
+    w.bossAcross = boss.across;
+    return;
+  }
+  leapAt(leap, w.leapFromAlong, w.leapFromAcross, surface, k - 1);
+  const wasAcross = LEAP_AT[1]!;
+  leapAt(leap, w.leapFromAlong, w.leapFromAcross, surface, k + 1);
+  const nextAlong = LEAP_AT[0]!;
+  const nextAcross = LEAP_AT[1]!;
+  leapAt(leap, w.leapFromAlong, w.leapFromAcross, surface, k);
+  const along = LEAP_AT[0]!;
+  const across = LEAP_AT[1]!;
+  boss.velAlong = w.cameraAlong + along - boss.along;
+  boss.velAcross = across - boss.across;
+  // Nosed into where it is going, eased in from and out to facing down the lane.
+  const heading = turnFor(Math.atan2(nextAcross - across, nextAlong - along));
+  const out = k / (leap.dive * LEAP_TURN_SHARE * 2);
+  const home = (total - k) / (leap.back * LEAP_TURN_SHARE * 2);
+  const nosed = Math.min(1, out, home);
+  boss.turn = heading * nosed;
+  // Each time it goes through the edge, the edge breaks and is heard — 0313's spray, 0375's cue.
+  if (wasAcross - surface < 0 !== across - surface < 0) {
+    burst(w, w.cameraAlong + along, surface, BURST.breach);
+    w.onCue('bossBreach', surface);
   }
   w.bossOffset = boss.along + boss.velAlong - w.cameraAlong;
   w.bossAcross = boss.across + boss.velAcross;
@@ -8308,9 +8414,13 @@ function driveBoss(w: World): void {
   */
   if (w.bossPool.size === 0 || w.bossBeaten) return;
   const boss = w.bossPool.at(0);
-  // Flying its entrance, which is the whole of what it does until the fight begins — 0306.
+  // Flying its entrance, which is the whole of what it does until the fight begins — 0306. Or its
+  // leap, which is its own flight and wears its face as it goes — 0478.
   if (w.bossEntering >= 0) {
-    driveEntrance(w, boss);
+    if (w.bossLeaping) {
+      driveLeap(w, boss);
+      wearFace(w, boss);
+    } else driveEntrance(w, boss);
     return;
   }
   /*
@@ -8748,25 +8858,18 @@ function driveBoss(w: World): void {
     ── THE LEAP — 0380 ────────────────────────────────────────────────────────────────────────────
 
     *"We need a new stage 3 and four."* On a clock of its own, on the escort's argument: the phase goes
-    on throwing and calling between leaps, and a leap is not a volley. When it fires the boss goes
-    back into its entrance from the top — `bossEntering` at zero — and `driveEntrance` flies it to the
-    path's start first, then through the edge and back across the lane, unshootable and fully live,
-    and hands it over to the arrival every boss has. The clock is set by the phase that opens with a
-    leap, so the first one waits a whole interval and the player has seen the stage before it goes.
+    on throwing and calling between leaps, and a leap is not a volley. When it fires the boss leaves
+    from where it is — `bossEntering` counts the leap's steps — and `driveLeap` flies it into the near
+    edge, out through it, and back onto the place it left (0478). The clock is set by the phase that
+    opens with a leap, so the first one waits a whole interval and the player has seen the stage first.
   */
   const leap = throwing.leap;
-  if (leap !== undefined && w.bossRow.entrance !== null) {
+  if (leap !== undefined) {
     w.bossLeapIn--;
     if (w.bossLeapIn <= 0) {
-      /*
-        ⚠️ **A LEAP STARTS ITS PATH A SHORT RUN-IN AHEAD OF THE FIRST CREST, NOT WHERE THE SPAWN WAS.**
-        `bossEntryAt` is where the boss was put on the field, which is the entrance's start and the
-        arrival's place; a breach mid-fight has no spawn to start from, and photographed on the bench
-        the fish dived to wherever that offset happened to be. The path begins `LEAP_RUN_IN` up-lane
-        of the breach's `from` — inside the narrowest screen, so the run-in along the edge is seen —
-        and the arrival that follows enters from there, as every arrival does.
-      */
-      if (w.bossRow.entrance.kind === 'breach') w.bossEntryAt = w.bossRow.entrance.from + LEAP_RUN_IN;
+      // From where it is, and back to it — 0478. In the camera's frame, which the whole flight is in.
+      w.leapFromAlong = boss.along - w.cameraAlong;
+      w.leapFromAcross = boss.across;
       w.bossEntering = 0;
       // A leap, and not the arrival: a target the whole way — 0477.
       w.bossLeaping = true;
@@ -8939,9 +9042,20 @@ function wearFace(w: World, boss: Entity): void {
     clear of it, which is the same `FACE_LOOK` the pupil follows — so the thing that arms the bite is
     the thing the player watched the eye do.
   */
-  const side = gaze < -FACE_LOOK ? -1 : gaze > FACE_LOOK ? 1 : w.bossGazeSide;
+  /*
+    ⚠️ **AND THE BAND AND A REST BETWEEN SNAPS ARE THE FACE'S, SINCE 0478.** The fish stalks the ship's
+    lane, so the ship is on its centreline constantly and the jaw snapped every time it crossed —
+    *"the mouth is animated a bit too fast."* A face may author a wider band and a rest after a snap;
+    absent, both are what every face had, so the serpent and the pterodactyl are unmoved.
+  */
+  const look = face.look ?? FACE_LOOK;
+  const side = gaze < -look ? -1 : gaze > look ? 1 : w.bossGazeSide;
+  if (w.bossBiteRest > 0) w.bossBiteRest -= 1;
   if (side !== w.bossGazeSide) {
-    if (w.bossGazeSide !== 0) w.bossBite = BITE_STEPS;
+    if (w.bossGazeSide !== 0 && w.bossBiteRest === 0) {
+      w.bossBite = BITE_STEPS;
+      w.bossBiteRest = face.biteRest ?? 0;
+    }
     w.bossGazeSide = side;
   }
   if (w.bossBite > 0) w.bossBite -= 1;
@@ -8980,7 +9094,7 @@ function wearFace(w: World, boss: Entity): void {
     boss.spriteBase = face.shut;
     boss.spriteHit = face.shutHit;
   } else {
-    boss.spriteBase = gaze < -FACE_LOOK ? face.up : gaze > FACE_LOOK ? face.down : face.rest;
+    boss.spriteBase = gaze < -look ? face.up : gaze > look ? face.down : face.rest;
     boss.spriteHit = face.restHit;
   }
 }

@@ -103,8 +103,10 @@ export const PROBES = [
     guard: 'and at the last stage it LEAPS',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (far > DIVE_PER_STEP) {\n      boss.velAlong',
-      replace: '    if (false) {\n      boss.velAlong',
+      // Re-anchored by 0478, where the leap is its own flight: the dive's ease skipped, so the first
+      // step of it puts the fish under the edge.
+      find: '    const u = k / leap.dive;\n    const rise = (4 * (leap.arcs[0]! + leap.depth)) / arcSteps;',
+      replace: '    const u = 1;\n    const rise = (4 * (leap.arcs[0]! + leap.depth)) / arcSteps;',
     },
   },
 ];
