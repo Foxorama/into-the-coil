@@ -885,10 +885,11 @@ export const ENEMIES: Record<EnemyKind, EnemyRow> = {
       to the player; the lancer's hunt (0073) is this row's now, at a lancer's agility, and every
       shared kind the Approach sends is on a pattern. `tests/pilot.test.ts` holds it per place.
 
-      ⚠️ **SPREAD ZERO SINCE 0327, AND THE TWO ARE STILL TOLD APART.** A wave replaces the across
-      component the muzzle gave a shot (`src/content/shots.ts`), so a fan of ripples would lose its
-      fan; what separates the pair is the `spin` the spray arm deals — the first swings one way and
-      the second the other, which is the braid.
+      ⚠️ **SPREAD ZERO SINCE 0327, AND THE TWO ARE STILL TOLD APART.** Two shots on one heading are
+      one line until the swing parts them (`src/content/shots.ts`); what separates the pair is the
+      `spin` the spray arm deals — the first swings one way and the second the other, which is the
+      braid. A wave swings across its own heading since 0474, so a fan would keep its fan now; this
+      pair is a braid because a braid is what the picket throws.
     */
     attack: { kind: 'spray', shots: 2, spread: 0 },
     motion: { kind: 'hunt', agility: 0.35 },

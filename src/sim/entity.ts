@@ -518,6 +518,16 @@ export interface Entity extends Body {
    * zero means *flies straight*, which is every other body.
    */
   seekTurn: number;
+  /**
+   * The velocity a shot on a `wave` path was thrown at, in the camera's frame — 0474. Taken on the
+   * first step the shot is on its path, and nought on both axes until then, which is every other body.
+   *
+   * ⚠️ **THE SWING RIDES THIS, AND UNTIL 0474 IT REPLACED IT.** A wave wrote the across velocity every
+   * step from the along one, so a ripple thrown sideways out of a ring lost the only speed it had and
+   * hung on the screen swinging in place until the ship flew into it — played on the Rime Shelf.
+   */
+  wayAlong: number;
+  wayAcross: number;
 }
 
 /**
@@ -624,6 +634,8 @@ export function makeEntity(): Entity {
     turn: 0,
     prevTurn: 0,
     seekTurn: 0,
+    wayAlong: 0,
+    wayAcross: 0,
   };
 }
 
@@ -705,6 +717,9 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.turn = 0;
   e.prevTurn = 0;
   e.seekTurn = 0;
+  // And on no path's heading until `bendShots` takes one — 0474.
+  e.wayAlong = 0;
+  e.wayAcross = 0;
 }
 
 /**

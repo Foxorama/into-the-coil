@@ -5729,8 +5729,32 @@ function bendShots(w: World): void {
     const hand = shot.spin === 0 ? 1 : shot.spin;
     switch (path.kind) {
       case 'wave': {
+        /*
+          ⚠️ **THE SWING IS ACROSS THE SHOT'S OWN HEADING, AND IT IS ADDED TO IT — 0474.** It used to
+          write the across velocity from the along one, which is the whole of a ripple flown straight
+          down the lane and nothing of one flown any other way: 0473's ring threw a ripple sideways,
+          the swing wiped the only speed it had, and it hung on the Rime Shelf until the ship flew into
+          it. The heading is taken once, in the camera's frame, on the first step the shot is on its
+          path — after a wall's slot, so a wall's shot is on the heading it falls down the lane at.
+
+          Straight down the lane (`h = (−1, 0)`) every term below is the line it replaces exactly: the
+          phase is `k·along`, the rate the world's along velocity, the swing all across.
+        */
+        if (shot.wayAlong === 0 && shot.wayAcross === 0) {
+          shot.wayAlong = shot.velAlong - w.scrollPerStep;
+          shot.wayAcross = shot.velAcross;
+        }
+        const speed = Math.sqrt(shot.wayAlong * shot.wayAlong + shot.wayAcross * shot.wayAcross);
+        if (speed === 0) break;
+        const hAlong = shot.wayAlong / speed;
+        const hAcross = shot.wayAcross / speed;
         const k = TAU / path.wavelength;
-        shot.velAcross = hand * path.amplitude * k * Math.cos(shot.along * k) * shot.velAlong;
+        // How far down its own heading the shot has come in the world, and how fast it is going there.
+        const down = -(hAlong * shot.along + hAcross * shot.across);
+        const rate = -(speed + w.scrollPerStep * hAlong);
+        const swing = hand * path.amplitude * k * Math.cos(down * k) * rate;
+        shot.velAlong = w.scrollPerStep + shot.wayAlong + hAcross * swing;
+        shot.velAcross = shot.wayAcross - hAlong * swing;
         break;
       }
       case 'arc': {
