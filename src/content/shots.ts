@@ -155,10 +155,13 @@ export interface ShotRow extends Body {
    * shots fired a second apart trace the same curve through the same piece of world and the pattern
    * can be drawn on a map. `bendShots` in `src/app/frame.ts` steps both, allocating nothing.
    *
-   * ⚠️ **A WAVE REPLACES THE ACROSS COMPONENT THE MUZZLE GAVE THE SHOT**, exactly as a weaver's weave
-   * replaces its roam: the swing IS the shot's across motion. A fan of ripples would lose its fan, so a
-   * row that wants a spread and a swing has not decided which it is — the picket's pair is a spray of
-   * spread zero, and what tells its two shots apart is `spin`, the arm's own handedness.
+   * ⚠️ **A WAVE SWINGS ACROSS THE SHOT'S OWN HEADING AND KEEPS THE SPEED ITS MUZZLE GAVE IT — 0474.**
+   * It used to REPLACE the across component, as a weaver's weave replaces its roam, which is the whole
+   * of a shot thrown straight down the lane and nothing of one thrown any other way: 0473's ring threw
+   * a ripple sideways, the swing wiped the only speed it had, and it hung on the Rime Shelf's screen
+   * until the ship flew into it. Down the lane the swing is all across, exactly as it was; out of a ring
+   * each ripple snakes along its own spoke. The picket's pair is still a spray of spread zero, and what
+   * tells its two shots apart is `spin`, the arm's own handedness.
    *
    * ⚠️ **A CURVING BULLET IS ITS OWN ROW AND NEVER A FIELD ON A ROW THAT ALSO FLIES STRAIGHT** —
    * 0258's rejection, a kind that does one thing in one level and another in the next is two kinds
