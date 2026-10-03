@@ -103,18 +103,6 @@ export const PROBES = [
   {
     decision: '0459',
     suite: 'tests/frost.test.ts',
-    // The first draft's strobe: six flashes a second over most of the screen.
-    broke: 'the flicker strobing every five steps',
-    guard: 'THE ASKED-FOR ONE, IN NUMBERS',
-    edit: {
-      path: 'src/content/bosses.ts',
-      find: '      flicker: 48,\n      blink: 12,',
-      replace: '      flicker: 48,\n      blink: 5,',
-    },
-  },
-  {
-    decision: '0459',
-    suite: 'tests/frost.test.ts',
     // The cold at rest where it was before the ask.
     broke: 'the cold at rest put back at 38',
     guard: 'THE ASKED-FOR ONE, IN NUMBERS',

@@ -42,9 +42,9 @@ export const PROBES = [
         boss this guard still covers, and 0269 carries a probe for the mid-boss half.
       */
       // Re-anchored by 0402: eight void a ring, and the bell worn open.
-      find: "      { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
+      find: "      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
       replace:
-        "      { upTo: 0.21, fireEvery: 36, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 9 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
+        "      { upTo: 0.21, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 9 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },",
     },
   },
   {
