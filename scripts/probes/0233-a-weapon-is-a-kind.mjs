@@ -151,8 +151,14 @@ export const PROBES = [
     decision: '0233',
     suite: 'tests/weapons.test.ts',
     // The ends jagged like the middle: the stroke no longer arrives on the body it struck.
+    /*
+      ⚠️ Re-aimed by 0470, which caps a link's jag at half a leg: on THE PICTURE's short link the ends
+      now swing under that guard's tolerance, and the break shows on the long dry bolt of 0302's guard
+      in the same suite — the same claim, that a stroke leaves the nose, measured where the swing is big
+      enough to see.
+    */
     broke: 'the bolt’s ends jagged with the rest, so the stroke misses the body it struck',
-    guard: 'THE PICTURE, in pixels',
+    guard: 'THE RANGE, in pixels',
     edit: {
       path: 'src/render/scene.ts',
       find: '      const off = v === 0 || v === last ? 0 : jag(seed, v, page) * amp;',

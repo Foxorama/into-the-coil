@@ -96,7 +96,10 @@ beside `before/`. Three passes: the first showed a short link knotting at thirte
 cap), the second a five-layer beam banding (the sixth layer and the alphas above).
 
 `node scripts/prove-guard.mjs 0470`: ten probes, all red. 0250's beam-width probe re-anchored on the
-line as it is now.
+line as it is now. 0233's *ends jagged* probe re-aimed at 0302's long-bolt guard in the same suite:
+with the per-leg cap, the short link its own guard draws swings its ends under that guard's
+tolerance, and the break shows on the dry bolt at full reach — CI's proof found that, not the local
+one, which proves only the change's own decision ([0434](0434-the-whole-proof-is-cis.md)).
 
 ## Why it is built the way it is
 
