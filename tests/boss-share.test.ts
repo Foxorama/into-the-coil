@@ -119,14 +119,21 @@ describe('a thrown bomb is worth a share of the fight', () => {
 });
 
 describe('a gun on a boss is weighed by its own row', () => {
-  /** Seconds to kill volans with `gun` at `weight`, the row patched for the one fight and put back. */
+  /*
+    ⚠️ **ON A BOSS THAT AUTHORS NO WEIGHT OF ITS OWN, WHICH THE FISH WAS UNTIL 0477** — a boss's own
+    entry wins over the gun's row, so patching the row reaches only a boss without one. The frost ship
+    authors none.
+  */
+  const PLAIN = 'hoarfrost';
+
+  /** Seconds to kill the frost ship with `gun` at `weight`, the row patched for the one fight and put back. */
   function fightAt(gun: WeaponKind, weight: number): number {
     const row = WEAPONS[gun] as { bossWeight: number };
     const was = row.bossWeight;
     row.bossWeight = weight;
     try {
-      const { seconds } = flyFight('volans', gun, { lane: 'boss', short: 45, cap: 200 });
-      if (seconds === null) throw new Error(`${gun} never killed volans`);
+      const { seconds } = flyFight(PLAIN, gun, { lane: 'boss', short: 45, cap: 200 });
+      if (seconds === null) throw new Error(`${gun} never killed the ${PLAIN}`);
       return seconds;
     } finally {
       row.bossWeight = was;
@@ -165,7 +172,7 @@ describe('a gun on a boss is weighed by its own row', () => {
       }
     };
     expect(fly(2), 'the serpent’s own weight for the arc is not reaching it').toBeLessThan(fly(1) * 0.75);
-    expect(gunWeightOn(BOSSES.volans, 'arc'), 'a boss with no entry does not fall back to the gun').toBe(
+    expect(gunWeightOn(BOSSES[PLAIN], 'arc'), 'a boss with no entry does not fall back to the gun').toBe(
       WEAPONS.arc.bossWeight,
     );
   });

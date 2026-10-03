@@ -3683,6 +3683,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // Doubled by 0260, from 760. 1400 from 1300 — 0441: flown at the true cap in each gun's own ship
     // (`scripts/weigh-boss.mjs`), the arc and the ray took it in 38 s, under 0260's forty.
     health: 1400,
+    /*
+      ⚠️ **THE ARC AT 1.35, THE SHURIKEN AND THE RAY AT 0.95 — 0477.** Its leap is a target now, so the
+      four seconds a leap used to be free are a fight: the arc took it in 35.5 s, the shuriken in 38.9
+      and the ray in 39.2 against 0260's forty, with the pulse at 41.1. Health is held under the
+      pterodactyl's by the run's ordering (`tests/level.test.ts`), so the guns that fell short are
+      weighted, on the pterodactyl's pattern (0441).
+    */
+    gunWeights: { arc: 1.35, shuriken: 0.95, ray: 0.95 },
     damage: 3,
     station: 155,
     drift: 5,
