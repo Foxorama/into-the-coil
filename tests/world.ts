@@ -114,6 +114,9 @@ export function inertLevel(): {
   // The mouths and births of a many-headed boss — 0384. Never read for a boss without necks.
   mouths: Float64Array;
   necksBorn: Float64Array;
+  // The whole animal's own flash — 0519.
+  beastLitFor: number;
+  beastGap: number;
   bodyBolts: Int32Array;
   // The jellyfish's tentacles — 0403.
   tendrilsFrom: number;
@@ -242,6 +245,8 @@ export function inertLevel(): {
     bossFront: new Pool<Entity>(CAPACITY.bossFront, makeEntity),
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    beastLitFor: 0,
+    beastGap: 0,
     bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.
     tendrilsFrom: -1,
@@ -569,6 +574,8 @@ export function playableWorld(
     bossFront,
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    beastLitFor: 0,
+    beastGap: 0,
     bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.
     tendrilsFrom: -1,

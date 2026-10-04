@@ -1164,6 +1164,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The mouths and births of a many-headed boss — 0384. @setup: built at mount, never in a frame.
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    // The whole animal dark and free to light — 0519.
+    beastLitFor: 0,
+    beastGap: 0,
     bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // No tentacle out of anything yet — 0403.
     tendrilsFrom: -1,

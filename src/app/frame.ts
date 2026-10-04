@@ -831,6 +831,14 @@ const PICKUP_SLOW_AT = PLAYER_LEAD - PICKUP_TURN_ROOM;
  */
 const IMPACT_FLASH_STEPS = 4;
 
+/**
+ * How long a many-headed boss waits between one whole-animal flash and the next — 0519: a third of a
+ * second, so it lights at most three times in any one, which is 0024's cap in WCAG's own terms. Its
+ * own number and not 0334's duty, because this body is over the general-flash area and a single
+ * silhouette is not.
+ */
+const BEAST_RELIGHT_STEPS = 20;
+
 /** Everything a frame reads. Mutable, set up once, and updated on a resize — never reducer state. */
 /**
  * A level's account as the frame counts it — 0428. Mutated in place, never reducer state, on 0022's
@@ -1339,6 +1347,12 @@ export interface World {
    * rises out of the acid over its row's `rise` from here, so a head grows rather than appearing.
    */
   necksBorn: Float64Array;
+  /**
+   * The whole animal's own hit flash — 0519: steps it has left lit, and steps before it may light again.
+   * `layNecks` lights every piece of a many-headed boss from these, and arms them from its pieces' own.
+   */
+  beastLitFor: number;
+  beastGap: number;
   /**
    * The lightning running along a boss's body — 0487: `BODY_BOLT_FIELDS` a slot (from node, to node, seed,
    * age, lit), from −1 for an empty slot. Laid by `layAura` and stroked by `paintBodyBolts`.
@@ -10045,6 +10059,8 @@ function layNecks(w: World, hull: Entity | null): void {
     w.bossAura.clear();
     w.bossFront.clear();
     w.necksBorn.fill(-1);
+    w.beastLitFor = 0;
+    w.beastGap = 0;
     return;
   }
   const phase = phaseFor(w.bossRow, hull.health, w.bossFullHealth);
@@ -10109,9 +10125,26 @@ function layNecks(w: World, hull: Entity | null): void {
     body is still its own, because the wash's gap and the shed (0334, 0480) read it as an event on THAT
     body. The hull's sprite was chosen by `stepEntities` before this, and is chosen again every step.
   */
-  let flashing = hull.flashFor > 0;
-  for (let k = 0; k < shown; k++) if (w.bossBody.at(k).flashFor > 0) flashing = true;
-  if (flashing) hull.sprite = hull.spriteHit;
+  /*
+    ⚠️ **AND IT LIGHTS AT MOST THREE TIMES A SECOND, AS ONE — 0519.** Each piece's flash keeps 0334's
+    duty, four on and eight off, but a duty is per body: with the hull and five heads taking hits in
+    turn, any one of them flashing lit all of it, and the animal relit every few steps. Lit, it is an
+    eighth of the screen, over WCAG's general-flash area, and `scripts/weigh-flashes.mjs` read it at
+    eight flashes a second against 0024's three. So the animal keeps its own flash: lit when a piece
+    is hit and it is free to light, for one impact's length, then dark for the rest of a third of a
+    second. The pieces' own `flashFor` is untouched, because the wash's gap and the shed read it.
+  */
+  if (w.beastLitFor > 0) w.beastLitFor--;
+  if (w.beastGap > 0) w.beastGap--;
+  let struck = hull.flashFor > 0;
+  for (let k = 0; k < shown; k++) if (w.bossBody.at(k).flashFor > 0) struck = true;
+  if (struck && w.beastGap === 0) {
+    w.beastLitFor = IMPACT_FLASH_STEPS;
+    w.beastGap = BEAST_RELIGHT_STEPS;
+  }
+  const flashing = w.beastLitFor > 0;
+  // Both ways: the hull's own flash would show it lit while the animal is dark.
+  hull.sprite = flashing ? hull.spriteHit : hull.spriteBase;
   let collar = 0;
   let flame = 0;
   for (let k = 0; k < shown; k++) {
