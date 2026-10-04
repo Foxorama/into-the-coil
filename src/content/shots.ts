@@ -56,6 +56,8 @@ export type ShotKind =
   | 'cog'
   | 'hail'
   | 'clot'
+  // The gyre's own, a Maltese wheel in its lord's colours — 0494.
+  | 'tooth'
   | 'missile'
   | 'seeker'
   | 'bomb'
@@ -383,6 +385,7 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'cog',
   'hail',
   'clot',
+  'tooth',
   'missile',
   'seeker',
   'bomb',
@@ -648,6 +651,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   */
   // A cog of the gyre's — the Labyrinth's: eight teeth round a hub, in its place's ink. A shade quicker
   // than the slab, because a machine's shot is thrown rather than lobbed.
+  /*
+    THE GYRE'S OWN — 0494. *"A clockwork lord throws the same gold slab every raider in its level
+    throws."* Its curtains and its fan threw `flak`, repainted the Labyrinth's raider gold. Every number
+    is the slab's, so the curtain's slots, spacing, hole and reach are untouched and only the picture
+    changes; the picture is the bake's, a Maltese wheel in the lord's own skin.
+  */
+  tooth: { sprite: SPRITE.tooth, spriteHit: SPRITE.tooth, radius: 0.9, health: 1, damage: 1, speed: 1, fission: SPENT_BY_ARRIVING },
   cog: { sprite: SPRITE.cog, spriteHit: SPRITE.cog, radius: 1.1, health: 1, damage: 1, speed: 1.1, fission: SPENT_BY_ARRIVING },
   // A hailstone — the Rime Shelf's: ice that does not burst, in the frost ink, so a raider's shard is
   // told from the frost ship's by staying one thing.

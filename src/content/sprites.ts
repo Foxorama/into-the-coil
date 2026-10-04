@@ -892,6 +892,8 @@ export const SPRITE_KINDS = [
   'cog',
   'hail',
   'clot',
+  // The gyre's own shot, a Maltese wheel: the same from every side, on the cog's terms — 0494.
+  'tooth',
   /*
     ⚠️ **A DART, AND THE ONLY THING IN THE GAME DRAWN LONG ALONG ITS OWN TRAVEL IN THE BULLET INK.**
     The pulse is a disc of 1.8 units; this is 2.8 and pointed, so the two are told apart by shape and
@@ -2282,6 +2284,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // More than twice the lance and the spit they replace in three places — 0473: *"very small and hard
   // to see."* Each hurtbox in `src/content/shots.ts` is a hair over a quarter of its drawing.
   cog: 4.4,
+  // The slab's tile, because it is the slab's hurtbox — 0494.
+  tooth: 3.4,
   hail: 4.8,
   clot: 4.6,
   // Longer than the pulse and pointed. A missile is the shot the player is meant to notice.

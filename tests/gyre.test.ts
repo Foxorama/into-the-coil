@@ -40,6 +40,11 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flig
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { reset } from '../src/sim/entity.ts';
 import { SPRITE } from '../src/content/sprites.ts';
+import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
+import { PALETTES } from '../src/content/palette.ts';
+import { THEMES } from '../src/content/themes.ts';
+import { drawKind } from '../src/render/bake.ts';
+import { tracingPen } from './paths.ts';
 import { bodyOf } from './bodies.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { LOADOUTS, flyWreck } from '../scripts/weigh-wreck.mjs';
@@ -1365,5 +1370,60 @@ describe('0339 — a level is cleared once', () => {
       'the second level never reported itself cleared — the run is sealed in it, which is what a latch ' +
         'that is never let go does',
     ).toBe(2);
+  });
+});
+
+describe('0494 — the gyre throws its own', () => {
+  /*
+    *"A clockwork lord throws the same gold slab every raider in its level throws."* The plan's 4.1. Held
+    off the fight and off the bake: what the gyre throws is a shot no raider throws, drawn in its lord's
+    skin, and drawn the same from every side, because its walls come at the ship from all of them.
+  */
+  const toothDrawn = (palette: 'vivid' | 'high-contrast') => {
+    const { pen, trace } = tracingPen();
+    const size = SPRITE_EXTENT.tooth * 20;
+    drawKind(pen, 'tooth', PALETTES[palette], size, GYRE_ONLY.theme);
+    return { trace, size };
+  };
+
+  it('THE LORD’S OWN SHOT: its fire is the tooth, no raider throws it, and it is sealed in the lord’s light', () => {
+    const { world, frame } = gyreOnStation();
+    world.bossPool.at(0).fireIn = 1;
+    for (let i = 0; i < 4 && world.enemyShots.size === 0; i++) frame.step();
+    expect(world.enemyShots.size, 'the gyre threw nothing').toBeGreaterThan(0);
+    for (let i = 0; i < world.enemyShots.size; i++) {
+      expect(SPRITE_KINDS[world.enemyShots.at(i).sprite], 'the gyre threw something that is not its own').toBe('tooth');
+    }
+    for (const kind of ENEMY_KINDS) expect(ENEMIES[kind].shot, `the ${kind} throws the gyre's tooth`).not.toBe('tooth');
+    expect(toothDrawn('vivid').trace.passes[0]!.colour, 'the tooth is not sealed in its lord’s light').toBe(THEMES[GYRE_ONLY.theme].lord.lit);
+    expect(toothDrawn('high-contrast').trace.passes[0]!.colour, 'the high-contrast tooth is not in the enemy ink').toBe(PALETTES['high-contrast'].enemy);
+  });
+
+  it('NO HEADING: the tooth turned a quarter is the same outline, because a blit cannot turn', () => {
+    /*
+      ⚠️ **IN THE TILE'S PIXELS, AT FOUR TIMES THE SHIPPED SIZE**: every corner of the outline, turned a
+      quarter about the tile's centre, lands on the outline within half a pixel. A tooth drawn as the
+      plan's wedge would point one way and fly every other (0300), and fails this by most of its length.
+    */
+    const { trace, size } = toothDrawn('vivid');
+    const outline = trace.passes[0]!.subpaths[0]!;
+    const c = size / 2;
+    const toOutline = (x: number, y: number): number => {
+      let best = Infinity;
+      for (let i = 0; i < outline.length; i++) {
+        const [ax, ay] = outline[i]!;
+        const [bx, by] = outline[(i + 1) % outline.length]!;
+        const dx = bx - ax;
+        const dy = by - ay;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)));
+        best = Math.min(best, Math.hypot(x - (ax + t * dx), y - (ay + t * dy)));
+      }
+      return best;
+    };
+    expect(outline.length, 'the tooth has no outline').toBeGreaterThan(8);
+    for (const [x, y] of outline) {
+      const off = toOutline(c - (y - c), c + (x - c));
+      expect(off, `a corner of the tooth turned a quarter is ${off.toFixed(2)} px off its outline`).toBeLessThan(0.5);
+    }
   });
 });

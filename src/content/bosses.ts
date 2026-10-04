@@ -4203,7 +4203,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     driftWavelength: 220,
     // What it closes on its seat at, and nothing after that: the `socket` arm stops at `at`.
     patrol: 0.45,
-    shot: 'flak',
+    // Its own, since 0494: it threw the raiders' slab.
+    shot: 'tooth',
     /*
       ⚠️ **AND EACH PHASE WEARS ITS OWN DAMAGE — 0332**: *"have it change as it gets more damaged."*
       Whole, then chipped, then broken, then burnt — the same rungs the fan escalates on, so the body
