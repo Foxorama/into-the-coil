@@ -212,6 +212,14 @@ sower it broke went STILL GREEN on the denser Labyrinth, every firing wave in fi
 alone and none takes the middle sweep past nine, and the sentry and sower at 875 and 980 together
 read 10.1 / 11.4 / 13.2 s.
 
+**One guard added, because CI's proof found one this change silenced.** 0350's *pickups left to float
+into the masonry* went STILL GREEN: closed up a tenth, the Labyrinth's script no longer puts a piece
+where a bend reaches it, so the reported risk's flight, which holds only the pickups the level happens
+to drop, could not see the hold taken out. `tests/corridor.test.ts`, *a piece floated beside the stone
+is held off it*, throws drops beside the corridor's face every two seconds of the flight and holds every
+one of them off the stone. With the hold taken out it goes red at the first bend; 0350's probe now
+names it, and all thirteen of 0350's probes are red.
+
 ## Confirmed, not assumed
 
 `npm run prove` for every decision whose probes this moved — 0040, 0043, 0082, 0158, 0203, 0224,
