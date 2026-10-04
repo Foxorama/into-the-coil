@@ -30,7 +30,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
       replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 4, spin: false, quicken: null, apart: 0 },',
     },
   },
@@ -48,7 +48,7 @@ export const PROBES = [
     guard: 'and it can be REACHED from the far wall, which is where a static hole may sit',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, hole: 14, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
       // ⚠️ Re-anchored by 0364: the lane is 120 and the boss stands a fifth further off, so the curtain
       // is in the air a fifth longer and 84 is now inside the ship's reach; 84 → 101 is the same 0.84 share.
       // ⚠️ And by 0473, whose clot at 1.3 keeps the axis's curtain in the air 58 steps where the lance's
@@ -56,7 +56,7 @@ export const PROBES = [
       // this went STILL GREEN in CI. 114 is the lane's last place for a hole of twelve, 10 short.
       // ⚠️ And by 0497, which widened the hole to fourteen: 112 is the last place for that, its near
       // edge at 105, still 7 past the ship's reach.
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 112, hole: 14, spin: false, quicken: null, apart: 0 },',
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 112, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -92,7 +92,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
       replace: 'uncoil: { from: 0.7, every: 0.1, gap: 5.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
@@ -142,8 +142,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
-      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
+      replace: 'uncoil: { from: 0.7, every: 0.9, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
   {
@@ -165,7 +165,7 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364, which moved the hole 26 → 31 with the zoom.
-      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },',
       replace: 'uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 4, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },

@@ -23,7 +23,7 @@
 import { ACROSS_SPAN, MIN_ASPECT } from '../sim/camera.ts';
 import { type Entity, reset, turnFor } from '../sim/entity.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, type BossAttack, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, CURTAIN_STANCES, RAIN_BOLT_KIND, holeAt, type BossAttack, type BossPhase, type BossRow, type CurtainStance, type Fall, type Uncoil } from '../content/bosses.ts';
 import { BOLT_STEPS } from '../render/scene.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../sim/flight.ts';
 import type { Rng } from '../sim/rng.ts';
@@ -369,8 +369,8 @@ export function throwCurtain(
   // absorbs that; leaning or along, the line is longer and the last shot lands where its end would.
   const count = Math.round(length / spacing);
   const clear = uncoil.hole / 2;
-  // The hole is `at` along the line as `at` is across the lane: the same share of its length.
-  const hole = (uncoil.at / ACROSS_SPAN) * length;
+  // The hole is its stance's place along the line as `at` is across the lane: a share of its length — 0501.
+  const hole = (holeAt(uncoil, stance) / ACROSS_SPAN) * length;
   // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have a
   // second opening at exactly the place a cornered player is already flying.
   for (let i = 0; i <= count; i++) {
