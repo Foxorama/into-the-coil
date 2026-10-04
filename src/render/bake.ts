@@ -540,7 +540,6 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   rootTrunk: 'sky',
   rootFork: 'sky',
   rootTip: 'sky',
-  rootKnot: 'sky',
   // The wall's caps are the wall — 0350.
   wallRise0: 'sky',
   wallRise1: 'sky',
@@ -9684,7 +9683,8 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
   ⚠️ **A FEW LARGE PIECES, NOT A TILE.** 0459's wall was one 12-unit tile of strokes wallpapered thirty
   times along the lane: no shape, no curvature, nothing the eye reads as a root. Each piece here is a root
   as a thing — a trunk lying along an edge with its rootlets going off it, a fork, a tapering tip that
-  curls, and the knot the serpent coils in round — tapering as roots do, in 0459's own bark.
+  curls — tapering as roots do, in 0459's own bark. 0488's fourth, the knot the serpent coiled in round,
+  went in 0515.
 
   ⚠️ **FILLED AND NOT STROKED.** A strand is its two edges, swung off its line by half its width, filled:
   so it can taper, which a stroke of one width cannot. Shadow under it, bark, and a lit flank.
@@ -9724,23 +9724,11 @@ const lying =
   (t: number): number =>
     ends + (most - ends) * Math.sqrt(Math.sin(Math.PI * t));
 
-/** A ring of root, closed on itself — the knot's own loop. */
-function rootRing(cx: number, cy: number, radius: number, n = 40): Pt[] {
-  const out: Pt[] = [];
-  for (let i = 0; i <= n; i++) {
-    const a = (i / n) * Math.PI * 2;
-    // Gnarled: the ring swells and pinches as it goes round.
-    const r = radius * (1 + 0.08 * Math.sin(a * 3) + 0.05 * Math.sin(a * 5 + 1));
-    out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
-  }
-  return out;
-}
-
 /**
  * Each piece's roots, in its own `r` — 0488. Drawn lying along `+x`; the room turns them into place.
  * A piece's rootlets go to its `−y`, which is the side a room puts off the lane.
  */
-const ROOT_PIECES: Record<'rootTrunk' | 'rootFork' | 'rootTip' | 'rootKnot', readonly RootStrand[]> = {
+const ROOT_PIECES: Record<'rootTrunk' | 'rootFork' | 'rootTip', readonly RootStrand[]> = {
   rootTrunk: [
     { line: rootLine([-1.1, 0.04], [1.1, -0.04], 0.06, 0.05), width: lying(0.3, 0.1) },
     { line: rootLine([-0.35, -0.02], [-0.8, -0.62], -0.1), width: taper(0.13, 0.025) },
@@ -9758,12 +9746,6 @@ const ROOT_PIECES: Record<'rootTrunk' | 'rootFork' | 'rootTip' | 'rootKnot', rea
     { line: rootLine([-1.1, 0.12], [0.62, -0.58], 0.42, 0.03), width: taper(0.3, 0.04) },
     // Off to the curl's side, which is the side a room puts off the lane.
     { line: rootLine([-0.45, -0.04], [-0.15, -0.6], -0.08), width: taper(0.1, 0.02) },
-  ],
-  rootKnot: [
-    { line: rootRing(0, 0, 0.5), width: (t) => 0.18 + 0.05 * Math.sin(t * Math.PI * 6) },
-    { line: rootLine([-0.95, 0.32], [0.92, -0.34], 0.22, 0.04), width: lying(0.24, 0.07) },
-    { line: rootLine([-0.84, -0.6], [0.8, 0.66], -0.22, 0.04), width: lying(0.2, 0.06) },
-    { line: rootLine([0.1, -0.5], [0.3, -0.92], 0.05), width: taper(0.09, 0.02) },
   ],
 };
 
@@ -13325,7 +13307,6 @@ export function drawKind(
     case 'rootTrunk':
     case 'rootFork':
     case 'rootTip':
-    case 'rootKnot':
       // THE WORLD TREE'S ROOTS AS ROOTS — 0488: one piece, placed by its room.
       paintRootPiece(ctx, f, palette, ROOT_PIECES[kind]);
       return;

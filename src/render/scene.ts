@@ -226,8 +226,6 @@ export interface Room {
   pieces: readonly RoomPiece[] | null;
   /** Where the camera rests, in world units along: the pieces are placed from it. */
   rest: number;
-  /** How much of the entrance's knot still stands, `1` while the boss arrives, sinking to `0` after. */
-  knot: number;
 }
 
 /*
@@ -821,9 +819,8 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
   if (room === null) return;
   /*
     ⚠️ **AND THE WORLD TREE'S ROOTS, PLACED — 0488.** Each piece where its row put it, from the resting
-    camera, turned as it said. The far ones withdraw off the screen as the far wall would part, and the
-    knot the serpent coiled in round sinks into the dark as the fight begins. Under every body, as the
-    wall is. Nothing allocates: the row's list is read, never built.
+    camera, turned as it said. The far ones withdraw off the screen as the far wall would part. Under
+    every body, as the wall is. Nothing allocates: the row's list is read, never built.
   */
   const pieces = room.pieces;
   if (pieces !== null) {
@@ -833,17 +830,13 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
       along, and placed from the near edge the far roots stood at four fifths of it with open sky past
       them and the serpent's body running across that sky. Moved on by however much more this screen
       shows, the frame is the same picture on every device: the far side framed, the near side open.
-      The knot is not moved, because it is where the serpent coils, and the serpent is in the world.
       Every piece moves AWAY from the ship, so the picture of the bound is still outside the bound.
     */
     const past = Math.max(0, view.alongSpan - PLAYER_ALONG_SPAN);
     for (let i = 0; i < pieces.length; i++) {
       const piece = pieces[i]!;
-      const alpha = piece.entrance ? room.knot : 1;
-      if (alpha <= 0) continue;
-      const hung = piece.entrance ? 0 : past;
-      const along = room.rest + piece.along + hung + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
-      surface.blit(piece.sprite, screenX(view, along, piece.across), screenY(view, along, piece.across), view.scale, piece.turn, alpha);
+      const along = room.rest + piece.along + past + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
+      surface.blit(piece.sprite, screenX(view, along, piece.across), screenY(view, along, piece.across), view.scale, piece.turn);
     }
   }
   if (room.sprite < 0 || room.extent <= 0) return;
