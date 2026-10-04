@@ -18,15 +18,15 @@
 import { CUES, inKey, type CueLayer, type CueRow } from '../src/content/cues.ts';
 
 /** The voices on the desk. Closed, per 0016. */
-export type ThrowVoice = 'shipped' | 'noShing' | 'thrum' | 'everyOther' | 'whistle';
+export type ThrowVoice = 'shipped' | 'noShing' | 'whetstone' | 'everyOther' | 'whistle';
 
-export const THROW_VOICE_KINDS: readonly ThrowVoice[] = ['shipped', 'noShing', 'thrum', 'everyOther', 'whistle'];
+export const THROW_VOICE_KINDS: readonly ThrowVoice[] = ['shipped', 'noShing', 'whetstone', 'everyOther', 'whistle'];
 
 /** What each is called on the desk, and the one thing it changes. */
 export const THROW_VOICE_LABELS: Record<ThrowVoice, string> = {
   shipped: 'shipped — as it is',
   noShing: 'no shing — the noise sweep gone',
-  thrum: 'the thrum — a pitched whirr, no noise',
+  whetstone: 'the whetstone — a knife drawn on a stone, over a deeper beat',
   everyOther: 'every other blade — the cue on alternate throws',
   whistle: 'the whistle — a bending tone under the launcher',
 };
@@ -53,17 +53,19 @@ export const ROWS: Record<ThrowVoice, CueRow> = {
   // the ray gun). This is that, and only that, taken out.
   noShing: { ...shipped, layers: [launcher, steelLow, steelHigh, tick] },
   /*
-    A pitched whirr on the root falling a fifth — a saw under a lowpass that closes, with a flutter in it
-    — and the partials an octave down. No noise at all: the blade is a note that spins away.
+    A knife drawn on a whetstone, over a deeper beat — 0496. Played: *"I can't hear a thrum, can we do a
+    knife on a whetstone, but a deeper beat?"* The thrum is gone. The stroke is gritty noise through a
+    narrow resonant band that SWELLS in rather than clicks, and rises as the edge slides along the stone,
+    with a rougher, darker grain under it; one steel partial says *blade*. The beat is the launcher a
+    fourth lower, longer and driven harder, so it lands as a thud rather than a tap.
   */
-  thrum: {
+  whetstone: {
     ...shipped,
     layers: [
-      launcher,
-      { wave: 'saw', from: inKey(14), to: inKey(10), seconds: 0.13, gain: 0.3, attack: 0.003, curve: 3, lowFrom: 1800, lowTo: 500, q: 1.6, vibrato: 45, pan: -0.35, panTo: 0.35 },
-      { ...steelLow, from: inKey(22), to: inKey(21) },
-      { ...steelHigh, from: inKey(26), to: inKey(25) },
-      tick,
+      { ...launcher, from: inKey(2), to: inKey(-7), seconds: 0.15, gain: 0.72, curve: 3, drive: 0.5 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.15, gain: 0.19, attack: 0.018, curve: 2.4, highFrom: 1200, highTo: 2000, lowFrom: 3400, lowTo: 4600, q: 3.2, pan: -0.4, panTo: 0.4 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.16, attack: 0.012, curve: 3, highFrom: 500, highTo: 800, lowFrom: 1500, lowTo: 1900, q: 1.8, pan: 0.3, panTo: -0.3 },
+      { ...steelHigh, gain: 0.07, pan: 0 },
     ],
   },
   /*
