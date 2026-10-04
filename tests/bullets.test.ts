@@ -13,10 +13,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY } from '../src/content/cadence.ts';
-import { BOSSES } from '../src/content/bosses.ts';
-import { ENEMIES, type EnemyKind } from '../src/content/enemies.ts';
-import { abreastCap, gapAcross } from '../src/content/formations.ts';
+import { ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY } from '../src/content/cadence.ts';
+import { type DifficultyKind, fireGapFor } from '../src/content/difficulty.ts';
+import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { GameFrame } from '../src/app/frame.ts';
 import { MAX_ALONG_SPAN } from '../src/sim/camera.ts';
@@ -252,8 +251,8 @@ describe('0259 — the bullets stay on the screen', () => {
   it('THE ENTRY VOLLEY: a formation still opens as a figure behind the window', () => {
     /*
       A wave of five turrets, spawned beyond the view as every leading wave is: the five do not fire on
-      one step, because the deal across `ENTRY_SLOTS` sits behind the window exactly as it sat behind
-      0259's entry gap.
+      one step, because the deal sits behind the window exactly as it sat behind 0259's entry gap —
+      three slots by index until 0499, the wave's turns since.
     */
     const { fired } = firstVolleys(
       { at: 400, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
@@ -264,41 +263,108 @@ describe('0259 — the bullets stay on the screen', () => {
     expect(new Set(fired).size, `all five fired on ${new Set(fired).size} step(s) — a volley, not a figure`).toBeGreaterThan(1);
     expect(ENTRY_VOLLEY / FIRE_GRID, 'the entry gap has one slot, so a formation would fire in unison').toBeGreaterThanOrEqual(2);
     /*
-      ⚠️ **THE DEAL IS AS WIDE AS A RANK, AND THE RANK IS COMPUTED RATHER THAN RESTATED** — 0259,
-      amended. `ENTRY_SLOTS` is what stops a formation entering abreast from firing on one step, and
-      it is only enough while it covers the widest rank a FIRING kind can stand in: `abreastCap` is
-      `1 + VOLLEY_SPAN / gap`, so a thinner gun than the picket's 3.0 would make a rank of four and
-      leave two of them sharing a slot in silence. Read off `src/content/formations.ts` so that day
-      reddens this instead — `docs/decisions/0027-measure-the-picture-not-the-model.md` is the rule
-      about a guard that only proves the code agrees with itself.
+      ⚠️ **THE DEAL WAS AS WIDE AS A RANK, AND THAT HALF OF THIS GUARD IS DELETED — 0499.** It held
+      `ENTRY_SLOTS` at or above the widest rank a firing kind can stand in and the widest call a boss
+      makes, because three slots by index could only keep three bodies apart. The deal is a member's
+      turn now, taken at the entry from what of the wave has arrived, so ANY width is dealt one turn a
+      member and there is no slot count left to hold against a width. What it can still do is put two
+      neighbours on one step, when half a reload holds fewer grid slots than the wave has members —
+      and that is not a defect: it is the hardest tier with a big wave, and a change that made it so
+      would be correct. `docs/decisions/0192-a-guard-holds-an-invariant.md`: demoted in one edit, with
+      the reason. The turns themselves are held by the guard below, in seconds.
     */
+  });
+
+  /**
+   * The first volleys of one wave, flown through its entry with the ship's guns off: the step of every
+   * volley, counted at the pool so that a shot culled on the same step cannot hide one.
+   */
+  const waveVolleys = (
+    wave: (typeof LEVELS)[keyof typeof LEVELS]['waves'][number],
+    difficulty: DifficultyKind,
+  ): { volleys: number[]; reload: number } => {
+    const { world } = playableWorld(
+      {
+        waves: [wave],
+        pickups: [],
+        landmarks: [],
+        bossAt: Number.POSITIVE_INFINITY,
+        midBoss: null,
+        sections: NO_SECTIONS,
+        boss: 'sentinel',
+        theme: 'approach',
+      },
+      difficulty,
+    );
+    const frame = new GameFrame(world);
+    const pool = world.enemyShots;
+    const spawn = pool.spawn.bind(pool);
+    let shots = 0;
+    pool.spawn = () => {
+      shots++;
+      return spawn();
+    };
+    const perVolley = shotsPerVolley(ENEMIES[wave.enemy].attack);
+    const volleys: number[] = [];
+    for (let step = 0; step < STEPS_PER_SECOND * 20 && volleys.length < wave.count * 2; step++) {
+      world.fireIn = Number.MAX_SAFE_INTEGER;
+      shots = 0;
+      frame.step();
+      for (let v = 0; v < shots / perVolley; v++) volleys.push(step);
+    }
+    return { volleys, reload: fireGapFor(ENEMIES[wave.enemy].fireEvery, world.difficulty) / STEPS_PER_SECOND };
+  };
+
+  /**
+   * The share of its reload a wave's opening is spread across — **a literal, because the player
+   * chose it**: *"spread a wave's members across about half of their reload… so the other half of
+   * the reload stays quiet as the gap to move through"* (0499). Not `SWEEP_SHARE`, for 0027's reason
+   * written above `RECOGNISABLE_SECONDS`: a bound defined by the constant it guards moves with it.
+   */
+  const HALF = 0.5;
+  /** One grid slot in seconds — the rounding every turn is put through (0096). */
+  const SLOT_SECONDS = FIRE_GRID / STEPS_PER_SECOND;
+
+  it('THE WAVE TAKES TURNS: a wave opens fire one body at a time across about half its reload, and the other half is quiet', () => {
     /*
-      ⚠️ **OVER THE KINDS A LEVEL SENDS, SINCE 0373.** A rank is a formation an authored wave stands
-      in; a kind no level authors — the fish's kite and minnow, which fire now — stands only in the
-      rank its boss calls, and a call is at most `count` wide. The minnow at 2.2 would otherwise say a
-      rank of four is possible where nothing ever puts four of it abreast. `tests/volans.test.ts`
-      holds that no level sends either, and the calls below are read off the boss table.
+      ⚠️ **0499 — *"they all kind of create an undodgeable wall."*** At Savior, three fixtures, each
+      for a reason:
+
+      - **Three wardens abreast** — one rank, entering on one step, where every turn is the deal's and
+        none is the formation's. Three slots by index opened it over a fifth of a second.
+      - **Six wardens in a line** — the Mire's own wave, two ranks, the second arriving a third of a
+        second behind the first. Its opening was already this wide by its geometry; it is here so the
+        turns are seen not to stretch it past the half, which the first draft of 0499 did.
+      - **Five turrets in a line** — a back pair that arrives past its turns, the case a deal dealt at
+        the spawn put on one step.
+      - **And six wardens at Legendary**, where the reload is long enough that the front rank's turns
+        are still being taken when the back rank arrives: the back waits for them rather than landing
+        on the front's last turn. The only fixture here that asks the wave about who went BEFORE.
+
+      Held in seconds, in the player's units: each opening volley on a step of its own; the opening
+      spread across at least the share its members' turns take, less a slot; and the wave's NEXT
+      volley no sooner than the quiet half of the reload after the opening's last, less a slot.
     */
-    const authored = new Set(LEVEL_KINDS.flatMap((kind) => LEVELS[kind].waves.map((wave) => wave.enemy)));
-    const widestRank = Math.max(
-      ...Object.entries(ENEMIES)
-        .filter(([kind, row]) => row.fireEvery > 0 && authored.has(kind as EnemyKind))
-        .map(([, row]) => abreastCap(gapAcross(row.radius))),
-    );
-    expect(ENTRY_SLOTS, `a rank of ${widestRank} firing bodies is dealt into ${ENTRY_SLOTS} slots, so two share one`).toBeGreaterThanOrEqual(
-      widestRank,
-    );
-    const widestCall = Math.max(
-      ...Object.values(BOSSES).flatMap((row) =>
-        row.phases.flatMap((phase) => {
-          const calls: number[] = [];
-          if (phase.escort !== undefined && ENEMIES[phase.escort.enemy].fireEvery > 0) calls.push(phase.escort.count);
-          const attack = phase.attack ?? row.attack;
-          if (attack.kind === 'summon' && ENEMIES[attack.enemy].fireEvery > 0) calls.push(attack.count);
-          return calls;
-        }),
-      ),
-    );
-    expect(ENTRY_SLOTS, `a boss calls ${widestCall} firing bodies at once, dealt into ${ENTRY_SLOTS} slots, so two share one`).toBeGreaterThanOrEqual(widestCall);
+    for (const [wave, tier] of [
+      [{ at: 400, enemy: 'warden', formation: 'line', count: 3, lane: 50 }, 'savior'],
+      [{ at: 400, enemy: 'warden', formation: 'line', count: 6, lane: 50 }, 'savior'],
+      [{ at: 400, enemy: 'turret', formation: 'line', count: 5, lane: 50 }, 'savior'],
+      [{ at: 400, enemy: 'warden', formation: 'line', count: 6, lane: 50 }, 'legendary'],
+    ] as const) {
+      const name = `${wave.count} ${wave.enemy}s at ${tier}`;
+      const { volleys, reload } = waveVolleys(wave, tier);
+      expect(volleys.length, `${name} never fired ${wave.count + 1} volleys`).toBeGreaterThan(wave.count);
+      const opening = volleys.slice(0, wave.count);
+      expect(new Set(opening).size, `${name} opened fire on ${new Set(opening).size} step(s) for ${wave.count} bodies — a wall`).toBe(wave.count);
+      const spread = (opening[wave.count - 1]! - opening[0]!) / STEPS_PER_SECOND;
+      const turns = ((wave.count - 1) / wave.count) * HALF * reload;
+      expect(spread, `${name} opened over ${spread.toFixed(2)}s against turns of ${turns.toFixed(2)}s on a ${reload.toFixed(2)}s reload`).toBeGreaterThanOrEqual(
+        turns - SLOT_SECONDS,
+      );
+      const quiet = (volleys[wave.count]! - opening[wave.count - 1]!) / STEPS_PER_SECOND;
+      expect(quiet, `${name} fired again ${quiet.toFixed(2)}s after its opening, inside the quiet half of a ${reload.toFixed(2)}s reload`).toBeGreaterThanOrEqual(
+        (1 - HALF) * reload - SLOT_SECONDS,
+      );
+    }
   });
 });

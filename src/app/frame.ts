@@ -90,11 +90,11 @@ import type { ShipRow } from '../content/ships.ts';
 import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, SHIELD_ORBIT, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
-import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
+import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
+import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
@@ -4901,6 +4901,78 @@ function stepJolt(w: World): void {
 }
 
 /**
+ * Whether a body's hull crosses an edge of the screen this step: the leading edge of the view (0259)
+ * or, for a body still steering in from the side, the lane's (0326). True on exactly one step per
+ * edge. Asked of the body `fireEnemies` is dealing, and — by `turnWait` — of its wave's other members,
+ * which is why it is one description and not two.
+ *
+ * ⚠️ **The positions are a step stale** — `stepEntities` runs after `fireEnemies` — so it is the
+ * previous edge against the previous view and the current one against the current, for every body
+ * alike, which is what lets two members entering together see each other as doing so.
+ */
+function entersNow(w: World, e: Entity): boolean {
+  const enteredAlong =
+    e.along - e.radius <= w.cameraAlong + w.view.alongSpan &&
+    e.prevAlong - e.radius > w.prevCameraAlong + w.view.alongSpan;
+  const enteredAcross =
+    e.steerAcross !== 0 &&
+    e.across + e.radius >= 0 &&
+    e.across - e.radius <= ACROSS_SPAN &&
+    (e.prevAcross + e.radius < 0 || e.prevAcross - e.radius > ACROSS_SPAN);
+  return enteredAlong || enteredAcross;
+}
+
+/**
+ * How many steps past its seen window a wave's member waits for its turn — 0499, on the grid.
+ *
+ * ── THE WAVE FIRES IN TURN ──────────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0499-the-wave-fires-in-turn.md`. *"Everything that fires multiple bullets needs to
+ * space out the fire for the group a bit as they all kind of create an undodgeable wall."* Chosen: a
+ * wave's members take turns across half of their reload, in order along the line, so the fire rolls
+ * down it and the other half of the reload is the gap. A reload is relative (0096), so the turns a
+ * wave opens with are the turns it keeps.
+ *
+ * ⚠️ **TAKEN AT THE ENTRY, FROM WHAT HAS ARRIVED — AND IT WAS DEALT AT THE SPAWN FIRST, AND WRONG.**
+ * The first build dealt each member a slot when it was placed, with an estimate of how much later than
+ * the head it would reach the edge. It was wrong for a flanker, which reaches the screen by two edges:
+ * a stream's head crosses into the lane on one step while its tail is still closing on the view, and
+ * the estimate dealt the head's first two members one step. Asked here, the question has no estimate
+ * in it: who of my wave is crossing an edge on this same step, and when did the last one who already
+ * crossed go.
+ *
+ * - **Someone of the wave already went**: this member goes no sooner than that turn plus `turnGap`.
+ *   A column's tail arrives a beat behind its head and is past its turn already; it fires on its own
+ *   entry as before, so nothing that was spread by its shape is delayed by this.
+ * - **Others are crossing with it**: it waits a `turnGap` for each of them ahead of it in the order
+ *   `entrySlot` gives — rank by rank, across the lane within a rank (`turnInWave`). That order is
+ *   the spawn's, never the pool's, because a pool swaps on every release and a rank processed in pool
+ *   order sweeps whichever way the last death left it.
+ *
+ * ⚠️ **The first of a wave to arrive waits nothing**, so a wave still announces itself inside the
+ * window 0259 sized and 0326 put behind being seen, and a body alone is untouched.
+ *
+ * ⚠️ **IT SCANS THE POOL AND ALLOCATES NOTHING** — 0022. It runs on the step a body crosses an edge,
+ * which is once or twice in a body's life, over a pool of forty.
+ */
+function turnWait(w: World, e: Entity, seen: number): number {
+  if (e.turnOf === 0 || e.turnGap <= 0) return 0;
+  const mine = w.steps + seen;
+  let from = mine;
+  let ahead = 0;
+  for (let j = 0; j < w.enemies.size; j++) {
+    const m = w.enemies.at(j);
+    if (m === e || m.turnOf !== e.turnOf) continue;
+    if (entersNow(w, m)) {
+      if (m.entrySlot < e.entrySlot) ahead++;
+    } else if (m.turnAt > 0 && m.turnAt + e.turnGap > from) {
+      from = m.turnAt + e.turnGap;
+    }
+  }
+  return turnOnGrid(from - mine + ahead * e.turnGap);
+}
+
+/**
  * Every enemy that has a weapon and has waited long enough, firing at where the ship is now.
  *
  * Aimed rather than sprayed, because the quantity this build exists to make measurable is whether the
@@ -4947,7 +5019,8 @@ function fireEnemies(w: World): void {
       units, so the count carries it — and that is two slots however many bodies arrive on the step:
       `npm run prove` caught it as 0098's probe applying and reddening nothing, and re-aimed at a
       rank of three abreast the guard went red. `e.entrySlot` is dealt at the spawn instead, so the
-      deal is as wide as a rank is and member 0 still fires inside `ENTRY_VOLLEY`.
+      deal is as wide as a rank is and member 0 still fires inside `ENTRY_VOLLEY`. ⚠️ **Since 0499 the
+      deal is `turnWait`'s, taken here from what of the wave has actually arrived** — see it.
 
       ⚠️ **The edge is the player's view and the camera's last position is the other half of the
       test** — the body's positions are a step stale here (`stepEntities` runs after this), so the
@@ -4984,20 +5057,15 @@ function fireEnemies(w: World): void {
       this — so it is the previous edge against the lane and the current one against it, true on
       exactly one step, as the along test already is.
     */
-    const enteredAlong =
-      e.along - e.radius <= w.cameraAlong + w.view.alongSpan &&
-      e.prevAlong - e.radius > w.prevCameraAlong + w.view.alongSpan;
-    const enteredAcross =
-      e.steerAcross !== 0 &&
-      e.across + e.radius >= 0 &&
-      e.across - e.radius <= ACROSS_SPAN &&
-      (e.prevAcross + e.radius < 0 || e.prevAcross - e.radius > ACROSS_SPAN);
-    if (enteredAlong || enteredAcross) {
+    if (entersNow(w, e)) {
       // Plus one, because the count is decremented on this very step below — a spawn's count is set
       // after this loop and takes its first decrement a step later. `tests/spawns.test.ts` holds
       // that every volley lands on the grid, and this is the step that was off it. The window is a
-      // whole number of grid units, so adding it keeps the volley where `nextOnGrid` put it.
-      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;
+      // whole number of grid units, so adding it keeps the volley where `nextOnGrid` put it, and
+      // `turnWait` is a whole number of them too.
+      const seen = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY);
+      e.fireIn = seen + turnWait(w, e, seen) + 1;
+      e.turnAt = w.steps + e.fireIn;
     }
     /*
       ⚠️ **A THREAT THE PLAYER CANNOT SEE DOES NOT SHOOT**, and this line arrives with the roam that
@@ -6382,7 +6450,15 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
       const lane = Math.min(ACROSS_SPAN - row.radius, Math.max(row.radius, lord.across + fan));
       reset(e, mouthAlongOf(w, lord), mouthAcrossOf(w, lord), row, kind);
       animate(e, row.cycle);
-      e.entrySlot = i % ENTRY_SLOTS;
+      /*
+        ⚠️ **IN TURN ACROSS THE FAN — 0499.** Every add leaves the mouth on one step, which is the
+        rank a wave abreast is and the wall the report names, so it is dealt the same sweep: across
+        the fan in the direction the call leans, over half the row's reload. It is dealt here rather
+        than by `turnWait`, because a body spat inside the view and the lane never crosses an edge:
+        everything `turnWait` would have to ask is already known on this step.
+      */
+      e.entrySlot = turnInWave(formation, i, count, gap, false, side < 0 ? -1 : 1);
+      const spatTurn = turnOnGrid(e.entrySlot * turnGapFor(count, fireGapFor(row.fireEvery, w.difficulty)));
       /*
         ⚠️ **ITS FIRST SHOT IS THE ENTRY'S DEAL, NOT A WHOLE RELOAD AWAY — 0326's window, applied to a
         body that entered through a mouth.** A summoned add's first volley used to be a full cadence
@@ -6394,7 +6470,7 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
       */
       // ⚠️ Written as `1 + …` so that 0259's and 0326's probes, which anchor on the fire gate's own
       // spelling of this sum, still find exactly one line.
-      e.fireIn = 1 + SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;
+      e.fireIn = 1 + SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + spatTurn;
       e.velAlong = -row.closing * w.difficulty.closing + w.scrollPerStep;
       e.velAcross = lane > e.across ? SPIT_SPEED : lane < e.across ? -SPIT_SPEED : 0;
       e.steerAcross = lane;
@@ -6419,7 +6495,12 @@ function summonAdds(w: World, enemy: EnemyKind, count: number, formationKind: Fo
     // A summoned rank enters abreast exactly as an authored one does, so it is dealt the same — 0259.
     // ⚠️ It is dealt whichever edge it comes in from: a flanking summon (0262) still arrives as a
     // rank, and the deal is about when its members open fire rather than about where they entered.
-    e.entrySlot = i % ENTRY_SLOTS;
+    // ⚠️ And it takes its turn as an authored one does — 0499: down the stream for a flank, rank by
+    // rank and across for a lead call, the sweep turned by the call's own side as the fan above is.
+    // A call is its own wave, labelled by the step it was made on; two calls on one step share turns.
+    e.entrySlot = turnInWave(formation, i, count, gap, flanking, side < 0 ? -1 : 1);
+    e.turnOf = -(w.steps + 1);
+    e.turnGap = turnGapFor(count, fireGapFor(row.fireEvery, w.difficulty));
     if (flanking) {
       e.velAcross = -side * FLANK_ENTRY_SPEED;
       e.steerAcross = target;
@@ -6520,6 +6601,43 @@ function rainBodies(w: World, enemy: EnemyKind, count: number): void {
       animate(e, tint);
     }
   }
+}
+
+/**
+ * The member's place in the order its wave fires in — 0499.
+ *
+ * `docs/decisions/0499-the-wave-fires-in-turn.md`. *"Space out the fire for the group a bit"*, and the
+ * answer chosen was a sweep: the members fire one after another down the line, so the fire rolls
+ * along it rather than leaving it at once. This says who is first, second and so on, which is all
+ * `turnWait` needs of the spawn: it asks the rest of the field when the member arrives.
+ *
+ * ⚠️ **RANK BY RANK AS THEY STAND, THEN ACROSS THE LANE WITHIN A RANK.** `alongOffset` is how far
+ * behind the wave's own point the member stands: a folded line's second rank, a vee's arms, a
+ * column's tail. Within one depth the order is across the lane, in the direction `sense` gives, so a
+ * rank arriving abreast sweeps one way. It only decides between members that cross an edge on the
+ * SAME step — anyone who arrived earlier has gone already — so a two-rank line arriving a third of a
+ * second apart is two sweeps, the second following the first.
+ *
+ * ⚠️ **A FLANKER'S LINE IS ITS STREAM, AND THE STREAM IS THE INDEX.** A flanking wave is spread along
+ * the edge it comes in by, by `streamOffset` — the index times a gap (0197) — so the order a player
+ * can see is down the stream. The formation's lanes are only where they steer to afterwards.
+ *
+ * ⚠️ **COUNTED, NOT SORTED, AND IT ALLOCATES NOTHING** — 0022. A wave is at most a dozen bodies and
+ * this runs once per body as it is placed; a loop over the formation's own offsets is cheaper than any
+ * array that would hold them.
+ */
+function turnInWave(formation: FormationRow, i: number, count: number, gap: number, flanking: boolean, sense: number): number {
+  if (flanking) return i;
+  const depth = formation.alongOffset(i, count, gap);
+  const across = formation.acrossOffset(i, count, gap) * sense;
+  let turn = 0;
+  for (let j = 0; j < count; j++) {
+    if (j === i) continue;
+    const theirDepth = formation.alongOffset(j, count, gap);
+    const theirAcross = formation.acrossOffset(j, count, gap) * sense;
+    if (theirDepth < depth || (theirDepth === depth && (theirAcross < across || (theirAcross === across && j < i)))) turn++;
+  }
+  return turn;
 }
 
 function spawnWave(w: World, index: number): void {
@@ -6738,14 +6856,30 @@ function spawnWave(w: World, index: number): void {
       0259, amended. The spread above is across the body's OWN cadence, and a wave whose members
       enter the view on the same step never gets to play it: the entry volley pulls every one of
       them inside `ENTRY_VOLLEY`, and two slots is two slots however many arrived. `abreastCap` puts
-      three firing bodies in a rank, so the deal is the member's index over `ENTRY_SLOTS`.
+      three firing bodies in a rank, so the deal was the member's index over three slots.
 
       ⚠️ **The MEMBER'S index alone, and not `i + index` as the cadence spread uses.** Rotating this
       by the wave would leave a wave of one holding slot 2 — a body flying alone, made to wait the
       whole deal for nothing, which is the delay 0259 measured and refused. Member 0 always holds
       slot 0, so every wave still announces itself inside the window that decision sized.
+
+      ── AND THE DEAL IS HALF THE RELOAD NOW, IN TURN DOWN THE LINE — 0499 ─────────────────────────
+
+      ⚠️ **REPORTED: *"they all kind of create an undodgeable wall."*** Three slots by index is right
+      for a rank of three and for nothing wider, and it opened a single rank over a fifth of a second.
+      The deal is now taken at the entry by `turnWait`, from what of the
+      wave has actually arrived: the member's place in its wave (`turnInWave`, below) and a gap of
+      half its own reload over the wave's size (`turnGapFor`), so the fire rolls down the line and the
+      other half of the reload is the gap. The two paragraphs above still hold: the order is the
+      member's own and whoever arrives first waits nothing.
+
+      ⚠️ **The sweep runs one way across the lane and the next wave's the other**, by the wave's
+      parity — the idiom this function already uses for which way a drifter leans, for its reason: a
+      level is authored, and every line in a level sweeping left to right is a level that leans.
     */
-    e.entrySlot = i % ENTRY_SLOTS;
+    e.entrySlot = turnInWave(formation, i, wave.count, gap, flanking, index % 2 === 0 ? 1 : -1);
+    e.turnOf = index + 1;
+    e.turnGap = turnGapFor(wave.count, fireGapFor(row.fireEvery, w.difficulty));
   }
 }
 
