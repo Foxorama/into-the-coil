@@ -36,8 +36,8 @@ export const PROBES = [
     guard: 'and every lord sheds its own',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    shed: SPRITE.shedGlass,',
-      replace: '    shed: SPRITE.shedIce,',
+      find: "    shed: { sprite: SPRITE.shedGlass, from: 'facing' },",
+      replace: "    shed: { sprite: SPRITE.shedIce, from: 'facing' },",
     },
   },
 ];

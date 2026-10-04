@@ -43,6 +43,7 @@ describe('0480 — damage sheds', () => {
       let shed = 0;
       let worn = 0;
       let wide = 0;
+      let mouthward = 0;
       for (let i = 0; i < seconds * STEPS_PER_SECOND; i++) {
         const hull = world.bossPool.at(0);
         hull.health = world.bossFullHealth;
@@ -71,23 +72,44 @@ describe('0480 — damage sheds', () => {
         // The newest fragment wears the row's own, and leaves from the animal rather than from nowhere.
         for (let k = 0; k < world.debris.size; k++) {
           const piece = world.debris.at(k);
-          if (piece.sprite !== row.shed) continue;
+          if (piece.sprite !== row.shed?.sprite) continue;
           worn++;
           const off = Math.hypot(piece.along - world.bossPool.at(0).along, piece.across - world.bossPool.at(0).across);
           if (off > 120) wide++;
           break;
         }
+        /*
+          ⚠️ **A FLANK'S FRAGMENT NEVER LEAVES THE SHIP'S HALF OF THE ANIMAL, NOR FLIES AT THE SHIP — 0514.**
+          The fish's face is the mouth its adds come out of (0373), and an ember thrown from it at the
+          player was taken for an add. Read off the newest fragment, against the line from the hull to
+          the ship: where it starts, and which way it goes.
+        */
+        if (row.shed?.from === 'flank') {
+          for (let k = world.debris.size - 1; k >= 0; k--) {
+            const piece = world.debris.at(k);
+            if (piece.sprite !== row.shed.sprite) continue;
+            const lord = world.bossPool.at(0);
+            const toAlong = world.ship.along - lord.along;
+            const toAcross = world.ship.across - lord.across;
+            const reach = Math.hypot(toAlong, toAcross);
+            const starts = ((piece.along - lord.along) * toAlong + (piece.across - lord.across) * toAcross) / reach;
+            const flies = (piece.velAlong * toAlong + piece.velAcross * toAcross) / reach;
+            if (starts > 0.5 || flies > 0.01) mouthward++;
+            break;
+          }
+        }
       }
       expect(shed, `${kind} shed nothing under a hit every step`).toBeGreaterThan(0);
-      expect(worn, `${kind} shed ${shed} times and none of them was its ${SPRITE_KINDS[row.shed ?? 0]}`).toBe(shed);
+      expect(worn, `${kind} shed ${shed} times and none of them was its ${SPRITE_KINDS[row.shed?.sprite ?? 0]}`).toBe(shed);
       expect(wide, `${kind}'s fragments started a long way from it`).toBe(0);
+      expect(mouthward, `${kind} sheds off its flank, and ${mouthward} of ${shed} left the face turned to the ship or flew at it`).toBe(0);
       expect(shed / seconds, `${kind} shed ${(shed / seconds).toFixed(1)} a second`).toBeLessThanOrEqual(MOST_A_SECOND);
     });
   }
 
   it('and every lord sheds its own: no two bosses shed the same fragment', () => {
     // 0282's terms: a mechanism whose output is the same for every instance is the tell.
-    const sheds = LEVEL_KINDS.map((level) => BOSSES[LEVELS[level].boss].shed);
+    const sheds = LEVEL_KINDS.map((level) => BOSSES[LEVELS[level].boss].shed?.sprite);
     expect(new Set(sheds).size, 'two lords shed the same thing').toBe(sheds.length);
   });
 });
