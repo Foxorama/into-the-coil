@@ -25,9 +25,9 @@ export const PROBES = [
       // solved it at the loadout the run carries in: 120, so 0247's 240 is twice it now, not four times.
       // ⚠️ And by 0441, which re-solved it at 211 for a ship that carries its own gun from the start;
       // the break is still twice what its level asks. And by 0452, which re-solved it at 262, and by
-      // 0472, which solved it at the tuned tier, 153.
-      find: '    health: 153,',
-      replace: '    health: 306,',
+      // 0472, which solved it at the tuned tier, 153. And by 0503, which closed its level up: 174.
+      find: '    health: 174,',
+      replace: '    health: 348,',
     },
   },
   {

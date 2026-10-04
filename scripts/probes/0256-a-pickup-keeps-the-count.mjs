@@ -64,8 +64,9 @@ export const PROBES = [
     guard: 'THE BUDGET: a level authors one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 864, kind: 'missile', lane: 28 },",
-      replace: "  { at: 864, kind: 'missile', lane: 28 },\n  { at: 1700, kind: 'bomb', lane: 40 },",
+      // The missiles' places are 0503's, which closed the levels up.
+      find: "  { at: 813, kind: 'missile', lane: 28 },",
+      replace: "  { at: 813, kind: 'missile', lane: 28 },\n  { at: 1700, kind: 'bomb', lane: 40 },",
     },
   },
   {
@@ -77,8 +78,8 @@ export const PROBES = [
     guard: 'THE BUDGET: a level authors one missile and nothing else',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 854, kind: 'missile', lane: 56 },",
-      replace: "  { at: 854, kind: 'missile', lane: 56 },\n  { at: 1500, kind: 'shield', lane: 50 },",
+      find: "  { at: 804, kind: 'missile', lane: 56 },",
+      replace: "  { at: 804, kind: 'missile', lane: 56 },\n  { at: 1500, kind: 'shield', lane: 50 },",
     },
   },
   {
@@ -89,7 +90,8 @@ export const PROBES = [
     guard: 'THE TUBE: every level offers a missile about a fifth of the way in',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 848, kind: 'missile', lane: 36 },",
+      // 2100 is still past the middle of a level whose boss is at 3988.
+      find: "  { at: 798, kind: 'missile', lane: 36 },",
       replace: "  { at: 2100, kind: 'missile', lane: 36 },",
     },
   },

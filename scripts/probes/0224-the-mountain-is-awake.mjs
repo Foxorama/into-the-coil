@@ -20,8 +20,9 @@ export const PROBES = [
     guard: 'a volcano arrives on each of the level’s own section boundaries',
     edit: {
       path: 'src/content/levels.ts',
-      // Re-anchored by 0347, which re-placed and scaled the three and gave each an eruption.
-      find: '      { at: 2534, lane: 48,',
+      // Re-anchored by 0347, which re-placed and scaled the three and gave each an eruption, and by
+      // 0503, which moved the three with their sections: `surge` is 2419.
+      find: '      { at: 2419, lane: 48,',
       replace: '      { at: 2500, lane: 48,',
     },
   },
@@ -40,8 +41,9 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // Re-anchored by 0347: drawn 1.4 times its bitmap and standing behind a far range whose peaks
       // reach lane 44, so hanging in the air is a lane far above the screen's top.
-      find: '      { at: 1249, lane: 46,',
-      replace: '      { at: 1249, lane: -20,',
+      // 1151 since 0503.
+      find: '      { at: 1151, lane: 46,',
+      replace: '      { at: 1151, lane: -20,',
     },
   },
   {

@@ -18,8 +18,10 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: after a mid-boss arrives nothing new is put down for its window',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 2520, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
-      replace: "  { at: 2400, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
+      // Re-anchored by 0503, which closed the level up: the chorus's window is 1499–2399, so the
+      // wave is moved from 2400 back to 2280, the same 120 inside it.
+      find: "  { at: 2400, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
+      replace: "  { at: 2280, enemy: 'charger', formation: 'line', count: 5, lane: 41 },",
     },
   },
   {
@@ -45,8 +47,9 @@ export const PROBES = [
     guard: 'and the window is the gap: the script resumes when it closes, not later',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 2450, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
-      replace: "  { at: 2489, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
+      // Re-anchored by 0503: the window closes at 2335 and the wave stands at 2336; 39 late again.
+      find: "  { at: 2336, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
+      replace: "  { at: 2375, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
     },
   },
   {
@@ -84,8 +87,9 @@ export const PROBES = [
     guard: 'and every level is written for the twenty-five seconds the player asked for',
     edit: {
       path: 'src/content/levels.ts',
-      find: "    midBoss: { kind: 'chorus', at: 1619, windowSeconds: 25 },",
-      replace: "    midBoss: { kind: 'chorus', at: 1619, windowSeconds: 20 },",
+      // 1499 since 0503.
+      find: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 25 },",
+      replace: "    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 20 },",
     },
   },
 ];

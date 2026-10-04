@@ -19,8 +19,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, IN LANE UNITS: every volcano’s smoke leaves the top of the screen',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      { at: 1249, lane: 46,',
-      replace: '      { at: 1249, lane: 60,',
+      // 1151 since 0503, with its section.
+      find: '      { at: 1151, lane: 46,',
+      replace: '      { at: 1151, lane: 60,',
     },
   },
   {
@@ -31,8 +32,9 @@ export const PROBES = [
     guard: 'and its crater is on the screen, above all the land in front of it',
     edit: {
       path: 'src/content/levels.ts',
-      find: '      { at: 3627, lane: 45,',
-      replace: '      { at: 3627, lane: 70,',
+      // 3398 since 0503, with its section.
+      find: '      { at: 3398, lane: 45,',
+      replace: '      { at: 3398, lane: 70,',
     },
   },
   {

@@ -589,8 +589,12 @@ describe('0138 — a section boundary is a distance you can drag', () => {
       BOSS*** — 0158. Each value below is a legal place for it: between `push` and `approach`, a bar
       clear of both. Dragging it PAST a neighbour is a different claim and `NO DRAG CAN REORDER A
       SCRIPT` is where that is held; here the boundary is asked to land where it was put.
+
+      ⚠️ **2419 AND 3200, WHERE THEY WERE 2534 AND 3400 — 0503.** The level closed up by a tenth, so the
+      shipped `surge` is 2419 and `approach` opens at 3398: 3400 would be dragged past it and clamped,
+      which is the other claim. 3200 is the same kind of value, late and a bar clear of `approach`.
     */
-    for (const surge of [1400, 2000, 2534, 3400]) {
+    for (const surge of [1400, 2000, 2419, 3200]) {
       const at = dragSection(sections, 2, surge, bossAt);
       expect(at[2]!.at, `surge asked for ${surge} was clamped, so this is not testing a landing`).toBe(surge);
       const crossesAt = surge / UNITS_PER_SECOND;

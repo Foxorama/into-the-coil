@@ -210,8 +210,16 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
 
       ⚠️ **AND IT WAS A FIVE-RUNG LADDER UNTIL 0441** — 0236, 0297, 0302 and 0303 each moved it, and
       their reasoning is theirs. A ship opens at the cap now, so the cap is the only rung there is.
+
+      ── AND 90 SINCE 0503, FOR THE SAME REASON A SECOND TIME ───────────────────────────────────────
+
+      ⚠️ **0500 GAVE A DESKTOP A BAR AND FITTED THE WORLD UNDER IT**, so a maximised window sees 263
+      units ahead where it saw 241 and draws everything about a tenth smaller. *"Extend the lightning
+      gun's reach … as we've made the desktop distance larger."* 82 × 1.1 is 90, on 0443's precedent:
+      the bolt the player played, at the screen they play on. The weight is untouched — the ask was
+      the reach — so the chain is 90 → 54 → 32.4.
     */
-    reach: 82,
+    reach: 90,
     /*
       Three fifths of the jump before it — 0302. A share and not a subtraction, on
       `src/content/pickups.ts`'s own argument: a constant taken off a reach reaches zero and then

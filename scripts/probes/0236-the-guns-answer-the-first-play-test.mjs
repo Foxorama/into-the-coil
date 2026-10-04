@@ -31,7 +31,8 @@ export const PROBES = [
     */
     edit: {
       path: 'src/content/weapons.ts',
-      find: '    reach: 82,',
+      // 90 since 0503, a tenth longer with the desktop's view; the break still clears 213.
+      find: '    reach: 90,',
       // Past the narrowest view's 213 units — 200 was under it, and CI said STILL GREEN.
       replace: '    reach: 260,',
     },

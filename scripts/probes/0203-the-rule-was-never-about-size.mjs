@@ -17,8 +17,10 @@ export const PROBES = [
     guard: 'the Pillars arrive exactly where the organ opens',
     edit: {
       path: 'src/content/levels.ts',
-      find: "      { at: 1299, section: 'push' },",
-      replace: "      { at: 1420, section: 'push' },",
+      // Re-anchored by 0503, which put the organ at 1209 and left `gauntlet` opening `push` there too,
+      // so the anchor carries Ember Nebula's own `bossAt` to stay unique.
+      find: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1209, section: 'push' },",
+      replace: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1420, section: 'push' },",
     },
   },
   {
@@ -48,8 +50,9 @@ export const PROBES = [
       // lives on grew a field.
       // ⚠️ And again by 0346, which placed three stands and gave the entry a `scale`. Anchored on
       // the entry's position and the one field this breaks, so the next field does not strand it.
-      find: '{ at: 1299, lane: 58, depth: 0.08,',
-      replace: '{ at: 1299, lane: 58, depth: 0.2,',
+      // And by 0503, which moved the stand with the organ to 1209.
+      find: '{ at: 1209, lane: 58, depth: 0.08,',
+      replace: '{ at: 1209, lane: 58, depth: 0.2,',
     },
   },
 ];

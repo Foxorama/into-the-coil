@@ -65,13 +65,26 @@ export const PROBES = [
       6.9s and went STILL GREEN. Every firing wave past 400 was tried alone again; the sower at 1048 sits
       inside the level's worst stretch (8.2s at 1191) and takes it to **15.7s**. Also past nine: the sower
       at 760 (21.2s, but ending at 763 it runs back into the opening's own quiet) and the turret at 3692 (10.3s, too close).
+
+      ⚠️ **AND A FOURTH TIME BY 0503, WHICH CLOSED THE LEVELS UP AND HELD THE BUDGET ON THREE SWEEPS.**
+      The sower, now at 980, measures 4.2 / 3.9 / 7.1 s at the guard's sweeps of seven, eight and nine
+      seconds with the break in: STILL GREEN. Every firing wave in five levels was tried alone and none
+      takes the middle of the three past nine — a level a tenth denser has the slack. Two in a row do:
+      the sentry column at 875 and the sower at 980 together measure **10.1 / 11.4 / 13.2 s**, ending
+      at 965–1080. The break is the sower again, with the sentry beside it.
     */
-    broke: 'the shoal’s flanking sower at 1048 made a charger, so the stretch to 1191 runs past the budget',
+    broke: 'the shoal’s sentry at 875 and flanking sower at 980 made chargers, so the stretch to 1080 runs past the budget',
     guard: 'THE REPORTED ONE: at the capped loadout, no level goes',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 1048, enemy: 'sower', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
-      replace: "  { at: 1048, enemy: 'charger', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
+      find:
+        "  { at: 875, enemy: 'sentry', formation: 'column', count: 5, lane: 42 },\n" +
+        "  { at: 927, enemy: 'charger', formation: 'column', count: 5, lane: 44, origin: 'acrossMinus' },\n" +
+        "  { at: 980, enemy: 'sower', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
+      replace:
+        "  { at: 875, enemy: 'charger', formation: 'column', count: 5, lane: 42 },\n" +
+        "  { at: 927, enemy: 'charger', formation: 'column', count: 5, lane: 44, origin: 'acrossMinus' },\n" +
+        "  { at: 980, enemy: 'charger', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },",
     },
   },
   {

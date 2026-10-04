@@ -145,8 +145,10 @@ export const PROBES = [
     decision: '0350',
     suite: 'tests/corridor.test.ts',
     // Only the box's edges turn a pickup, which is what it had before the corridor turned.
+    // ⚠️ Re-aimed by 0503: closed up a tenth, the Labyrinth's script puts no piece where a bend reaches
+    // it, and the reported risk's flight went STILL GREEN in CI. The pieces are now thrown on purpose.
     broke: 'pickups left to float into the masonry, on the screen and out of reach',
-    guard: 'THE REPORTED RISK, IN PIXELS',
+    guard: '0503 — a piece floated beside the stone is held off it, wherever along the corridor it was thrown',
     edit: {
       path: 'src/app/frame.ts',
       find: '    stoneHoldsPickups(w);',

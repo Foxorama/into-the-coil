@@ -34,8 +34,9 @@ export const PROBES = [
     guard: 'and a signature is sent by its own place’s level and by no other',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 584, enemy: 'moth', formation: 'column', count: 5, lane: 35 },",
-      replace: "  { at: 584, enemy: 'picket', formation: 'column', count: 5, lane: 35 },",
+      // 558 since 0503 closed the level up.
+      find: "  { at: 558, enemy: 'moth', formation: 'column', count: 5, lane: 35 },",
+      replace: "  { at: 558, enemy: 'picket', formation: 'column', count: 5, lane: 35 },",
     },
   },
   {

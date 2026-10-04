@@ -104,8 +104,9 @@ export const PROBES = [
     guard: 'never puts an enemy where it can leave the ROAM band',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },",
-      replace: "  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 20, origin: 'acrossMinus' },",
+      // 1077 since 0503 closed the level up.
+      find: "  { at: 1077, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },",
+      replace: "  { at: 1077, enemy: 'swift', formation: 'column', count: 5, lane: 20, origin: 'acrossMinus' },",
     },
   },
 ];

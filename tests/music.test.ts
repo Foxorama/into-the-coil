@@ -549,16 +549,19 @@ describe('how far up the ladder a run is', () => {
       for it.
     */
     const OPENS_AT: Record<LevelKind, readonly (readonly [string, number])[]> = {
-      approach: [['run', 0.0], ['push', 34.69], ['surge', 70.39], ['approach', 100.75]],
-      descent: [['run', 0.0], ['push', 36.08], ['surge', 71.78], ['approach', 102.14]],
-      coilward: [['run', 0.0], ['push', 34.69], ['surge', 70.39], ['approach', 100.75]],
-      shoal: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
-      batteries: [['run', 0.0], ['push', 33.86], ['surge', 69.56], ['approach', 99.92]],
-      gauntlet: [['run', 0.0], ['push', 36.64], ['surge', 72.33], ['approach', 102.69]],
+      // ⚠️ 0503 — every level closed up by a tenth and every boundary put back on the nearest bar, a unit
+      // short of it: the approach's `surge` was 44 bars (70.39 s) and is 42 (67.19 s). Pasted back.
+      approach: [['run', 0.0], ['push', 31.97], ['surge', 67.19], ['approach', 94.39]],
+      descent: [['run', 0.0], ['push', 33.58], ['surge', 68.78], ['approach', 95.97]],
+      coilward: [['run', 0.0], ['push', 31.97], ['surge', 67.19], ['approach', 94.39]],
+      shoal: [['run', 0.0], ['push', 31.97], ['surge', 65.58], ['approach', 94.39]],
+      batteries: [['run', 0.0], ['push', 31.97], ['surge', 65.58], ['approach', 94.39]],
+      gauntlet: [['run', 0.0], ['push', 33.58], ['surge', 68.78], ['approach', 95.97]],
       // ⚠️ 0180 — driven on the desk. 39.97 → 20.67, and `push` and `surge` take what the opening
       // gave up. This is the number this guard printed, pasted back, which is what its note says to do.
       // ⚠️ AND THEN FOUR MOVEMENTS, EACH ON A PHRASE — 0331. The lament to bar 16, the same song faster to bar 36,
       // the ballad to bar 72, the acceptance into the fight; `LEVELS.eye.sections` is where those bars are written.
+      // 0503 closed up the six above and not this one: its length is its music's.
       eye: [['run', 0.0], ['push', 25.5], ['surge', 57.5], ['approach', 115.14]],
     };
 

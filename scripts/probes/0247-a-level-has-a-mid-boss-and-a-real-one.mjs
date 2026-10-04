@@ -52,8 +52,8 @@ export const PROBES = [
     guard: 'THE ROSTER: every level has a mid-boss',
     edit: {
       path: 'src/content/levels.ts',
-      // Re-anchored by 0502, which gave the row its window.
-      find: "    midBoss: { kind: 'sentinel', at: 1549, windowSeconds: 25 },",
+      // Re-anchored by 0502, which gave the row its window, and by 0503, which moved it to 1435.
+      find: "    midBoss: { kind: 'sentinel', at: 1435, windowSeconds: 25 },",
       replace: "    midBoss: { kind: 'sentinel', at: 5549, windowSeconds: 25 },",
     },
   },

@@ -572,4 +572,42 @@ describe('0348 — the labyrinth is walled', () => {
       }
     }
   });
+
+  it('0503 — a piece floated beside the stone is held off it, wherever along the corridor it was thrown', () => {
+    /*
+      ⚠️ **THE REPORTED RISK'S PICKUP HALF, ASKED ON PURPOSE.** That guard flies the level and holds
+      whatever pickups the script happens to put down; after 0503 closed the levels up a tenth, the
+      Labyrinth's missile landed where no bend ever reached it, and with the stone's hold taken out the
+      guard stayed green in CI's proof. So pieces are thrown here beside every wall the corridor turns
+      past, a few units off its face, and flown on: none may ever be found in the stone.
+    */
+    const { world } = playableWorld(TURN, 'savior');
+    const frame = new GameFrame(world);
+    const corridor = world.corridor!;
+    let thrown = 0;
+    let checked = 0;
+    for (let step = 0; step < 60 * 120; step++) {
+      if (world.fight === 1 && world.bossPool.size > 0) break;
+      world.ship.health = world.shipRow.health;
+      // Every two seconds, one drop against whichever face is nearest the leading half of the screen.
+      if (step % 120 === 60) {
+        const along = world.cameraAlong + 120;
+        for (let x = 2; x < ACROSS_SPAN / 2; x += 1) {
+          if (stoneAt(corridor, along, x, 0) === 0) {
+            dropPickups(world, along, x + 3, MID_BOSS_DROP);
+            thrown++;
+            break;
+          }
+        }
+      }
+      frame.step();
+      for (let i = 0; i < world.pickups.size; i++) {
+        const item = world.pickups.at(i);
+        checked++;
+        expect(stoneAt(corridor, item.along, item.across, item.radius), `step ${step}: a piece at ${item.along.toFixed(0)} along, ${item.across.toFixed(1)} across is in the stone`).toBe(0);
+      }
+    }
+    expect(thrown, 'nothing was thrown, so this measured nothing').toBeGreaterThan(10);
+    expect(checked).toBeGreaterThan(0);
+  });
 });
