@@ -49,7 +49,8 @@ import {
 import { LEVELS, type LevelKind } from '../src/content/levels.ts';
 import { VOLLEY_CYCLE } from '../src/content/cadence.ts';
 import { THEMES, THEME_KINDS, mixOf, rungIn, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
-import { SHIPS } from '../src/content/ships.ts';
+import { SHIPS, type ShipKind } from '../src/content/ships.ts';
+import { cueOfFlight } from '../src/app/frame.ts';
 import { UPGRADE_TIERS, weaponFor, type UpgradeKind, type Weapon } from '../src/content/pickups.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import type { CueKind } from '../src/content/cues.ts';
@@ -742,13 +743,17 @@ export function loudestGain(theme: ThemeKind, layer: MusicLayer): number {
  * copies of *what is a tier-two ship* is how the dashboard and the WAV rig end up disagreeing about
  * the cadence they are both supposed to be showing —
  * `docs/decisions/0029-the-tracked-record-is-the-record.md`.
+ *
+ * ⚠️ **`ship` SINCE 0495**, so the desk can put the shuriken over a level: the gun is the ship's (0441),
+ * and the desk fired the fighter's pulse whatever was asked of it. The fighter is the default, so
+ * `hear.mjs` and every call that never asked are unchanged.
  */
-export function weaponAtTier(tier: number): Weapon {
+export function weaponAtTier(tier: number, ship: ShipKind = 'fighter'): Weapon {
   const carried: UpgradeKind[] = [];
   const clamped = tier < 0 ? 0 : tier > UPGRADE_TIERS ? UPGRADE_TIERS : Math.floor(tier);
   // The tubes only since 0441: the gun is the ship's, at the top of what was its ladder.
   for (let i = 0; i < clamped; i++) carried.push('missile');
-  return weaponFor(SHIPS.fighter, carried);
+  return weaponFor(SHIPS[ship], carried);
 }
 
 /** One thing the player will hear over the bed, and how often. */
@@ -785,12 +790,13 @@ export interface CueLine {
  *        [`the-eleventh-play-test`](../reports/the-eleventh-play-test-2026-08-11.md) named as the
  *        counterpoint, and the one number here a hand has to choose.
  */
-export function cueLines(tier: number, rung: MusicLevel, bodiesPerSecond: number): CueLine[] {
-  const weapon = weaponAtTier(tier);
+export function cueLines(tier: number, rung: MusicLevel, bodiesPerSecond: number, ship: ShipKind = 'fighter'): CueLine[] {
+  const weapon = weaponAtTier(tier, ship);
   const inFight = rung === 'boss' || rung === 'bossPeak';
   const per = (every: number): number => STEPS_PER_SECOND / every;
   return [
-    { kind: 'pulse', every: weapon.fireEvery, perSecond: per(weapon.fireEvery), sounds: true },
+    // The ship's own gun's cue, named as the frame names it — 0495.
+    { kind: cueOfFlight(weapon.flight), every: weapon.fireEvery, perSecond: per(weapon.fireEvery), sounds: true },
     {
       kind: 'missile',
       every: weapon.launchers > 0 ? weapon.missileEvery : null,

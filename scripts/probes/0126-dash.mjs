@@ -167,8 +167,9 @@ export const PROBES = [
     guard: 'THE GUN’S CADENCE IS THE SHIP’S, never a number typed into the rig',
     edit: {
       path: 'rig/transport.ts',
-      find: "    { kind: 'pulse', every: weapon.fireEvery, perSecond: per(weapon.fireEvery), sounds: true },",
-      replace: "    { kind: 'pulse', every: 8, perSecond: per(8), sounds: true },",
+      // ⚠️ Re-anchored by 0495, whose gun line names the ship's own cue.
+      find: '    { kind: cueOfFlight(weapon.flight), every: weapon.fireEvery, perSecond: per(weapon.fireEvery), sounds: true },',
+      replace: '    { kind: cueOfFlight(weapon.flight), every: 8, perSecond: per(8), sounds: true },',
     },
   },
   {
