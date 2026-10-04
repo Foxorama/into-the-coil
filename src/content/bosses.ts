@@ -30,7 +30,7 @@ import type { EnemyKind } from './enemies.ts';
 import type { FormationKind } from './formations.ts';
 import type { ShotKind } from './shots.ts';
 import type { ThemeKind } from './themes.ts';
-import { QUETZAL_WING_HEAD, SPRITE, VOLANS_FIRE_HEAD } from './sprites.ts';
+import { QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SPRITE, VOLANS_FIRE_HEAD } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 
 /**
@@ -1252,6 +1252,16 @@ export interface Aura {
    * change of rate never jumps a frame.
    */
   climb?: number;
+  /**
+   * How far the body rises and falls across the lane with the beat, in world units, and the share of
+   * the beat that is the downstroke — `docs/decisions/0485-the-pterodactyl-is-plumed.md`. Absent, the
+   * body does not move with what it wears.
+   *
+   * ⚠️ **THE BODY RISES ON THE DOWNSTROKE**, which is what makes a flap read as flight, and it is the
+   * model's body that moves — the picture says what the model does (0036). It heaves by the slide's
+   * share of top speed, so a hull braced for its beams is still and its roots stay on its guns.
+   */
+  heave?: { by: number; down: number };
 }
 
 /**
@@ -2365,6 +2375,10 @@ const QUETZAL_WINGS: readonly number[] = [
   SPRITE.quetzalWing5,
   SPRITE.quetzalWing6,
   SPRITE.quetzalWing7,
+  SPRITE.quetzalWing8,
+  SPRITE.quetzalWing9,
+  SPRITE.quetzalWing10,
+  SPRITE.quetzalWing11,
 ];
 const QUETZAL_WINGS_HIT: readonly number[] = [
   SPRITE.quetzalWing0Hit,
@@ -2375,11 +2389,16 @@ const QUETZAL_WINGS_HIT: readonly number[] = [
   SPRITE.quetzalWing5Hit,
   SPRITE.quetzalWing6Hit,
   SPRITE.quetzalWing7Hit,
+  SPRITE.quetzalWing8Hit,
+  SPRITE.quetzalWing9Hit,
+  SPRITE.quetzalWing10Hit,
+  SPRITE.quetzalWing11Hit,
 ];
 
 /** The wings beating at `hold` steps a frame — quicker each stage, which is the animal working harder. */
 // Half as fast again on the climb and half as fast on the dive — 0483: the bird works up and glides down.
-const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_WINGS_HIT, hold, stride: 1, head: QUETZAL_WING_HEAD, climb: 0.5 });
+// And the body a unit and a half up on every downstroke — 0485.
+const beating = (hold: number): Aura => ({ frames: QUETZAL_WINGS, hurt: QUETZAL_WINGS_HIT, hold, stride: 1, head: QUETZAL_WING_HEAD, climb: 0.5, heave: { by: 1.5, down: QUETZAL_DOWNSTROKE } });
 
 /**
  * Where the shoulder cannons' muzzles are, across the lane from the hull's centre — 0398:
@@ -3931,18 +3950,18 @@ export const BOSSES: Record<BossKind, BossRow> = {
     shot: 'quill',
     phases: [
       // Four quills, two off each wing — 0398: three shared between two wings would throw lopsided.
-      { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(5) }, shot: null, attack: null },
+      { upTo: 1, fireEvery: 72, shots: 4, spread: 0.5, patrolScale: 1, stance: { kind: 'volley' }, look: { face: QUETZAL_FACE, aura: beating(6) }, shot: null, attack: null },
       // The shoulder cannons: 0.3 s of warning, 0.4 s of beam, three units wide each.
-      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: QUETZAL_PAIR } },
+      { upTo: 0.75, fireEvery: 60, shots: 3, spread: 0.5, patrolScale: 1.5, stance: { kind: 'volley' }, look: { face: QUETZAL_SHOULDERS, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 18, hold: 24, halfWidth: 1.5, from: [LEFT_CANNON, RIGHT_CANNON], jag: QUETZAL_PAIR } },
       // The throat cannon: half a second of warning, half a second of beam, twelve units wide.
-      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },
+      { upTo: 0.5, fireEvery: 54, shots: 5, spread: 0.9, patrolScale: 2, stance: { kind: 'volley' }, look: { face: QUETZAL_MOUTH, aura: beating(5) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 6, from: [THROAT], jag: QUETZAL_ONE } },
       /*
         Everything: the throat and both shoulders, on the mouth's timing, each five units wide. 0398
         brought the shoulders in from eighteen to eleven, so what the three leave between them is two
         gaps of six units rather than two of thirteen — a thing a player can thread and not be sure of,
         with open lane either side of the brace for the player who would rather go round.
       */
-      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(3) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: QUETZAL_FAN } },
+      { upTo: 0.25, fireEvery: 48, shots: 7, spread: 1.3, patrolScale: 2.4, stance: { kind: 'volley' }, look: { face: QUETZAL_EVERYTHING, aura: beating(4) }, shot: null, attack: { kind: 'beam', warning: 30, hold: 30, halfWidth: 2.5, from: [LEFT_CANNON, THROAT, RIGHT_CANNON], jag: QUETZAL_FAN } },
     ],
   },
   /**

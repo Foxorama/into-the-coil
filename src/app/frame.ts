@@ -77,7 +77,7 @@ import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Ro
 import { paintPort } from '../render/port.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
-import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, WALL_RISES, strokeAt } from '../content/sprites.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VENT_OF } from '../content/volcano.ts';
 import { VEINS_OF, arteryAt } from '../content/veins.ts';
@@ -1414,6 +1414,8 @@ export interface World {
   leapFromAcross: number;
   /** Where the wings are in their beat, in frames — 0483, carried because its rate follows the stroke. */
   bossBeat: number;
+  /** How far the body is heaved across the lane by its beat this step — 0485, carried so it moves by the change. */
+  bossHeave: number;
   /**
    * Where the boss was put on the field, ahead of the camera's trailing edge — 0306. The entrance
    * starts here, and so does the arrival after it: *"then enter where it is now."*
@@ -9535,12 +9537,33 @@ function layAura(w: World): void {
     that authors a climb of one or more still beats on the dive.
   */
   let tick: number;
-  if (aura.climb === undefined) tick = Math.floor(w.steps / aura.hold);
+  const heave = aura.heave;
+  if (aura.climb === undefined && heave === undefined) tick = Math.floor(w.steps / aura.hold);
   else {
     const top = w.bossRow.patrol * phase.patrolScale;
     const climbing = top > 0 ? -head.velAcross / top : 0;
-    w.bossBeat += Math.max(0.1, 1 + aura.climb * climbing) / aura.hold;
+    w.bossBeat += Math.max(0.1, 1 + (aura.climb ?? 0) * climbing) / aura.hold;
     tick = Math.floor(w.bossBeat);
+    /*
+      ⚠️ **AND THE BODY HEAVES WITH IT — 0485**, up on the downstroke: `strokeAt` is 0 at its bottom, so
+      the body is highest there. Moved by the change in the offset rather than set to it, so the patrol
+      that carried it keeps carrying it, and `prevAcross` is untouched so the renderer eases the rise
+      like any other motion. Scaled by the slide's share of top speed, so an eased hull settles out of it.
+
+      ⚠️ **NOT AT ALL WHILE IT BRACES, AND NEVER MORE THAN A SIXTH OF ITS HEIGHT IN A STEP.** A beam is
+      fixed where it was fired, so a body that went on heaving would slide off its own roots; and a
+      volley that comes before the ease has stopped it — a stage that opens with a beam — stops the
+      slide in one step, which would drop the heave back in one step too. The stroke itself never asks
+      for more than about an eighth.
+    */
+    if (heave !== undefined && head.holdFor <= 0) {
+      const sliding = top > 0 ? Math.min(1, Math.abs(head.velAcross) / top) : 0;
+      const want = -heave.by * sliding * Math.cos(strokeAt(w.bossBeat / aura.frames.length, heave.down));
+      const step = heave.by / 6;
+      const offset = w.bossHeave + Math.max(-step, Math.min(step, want - w.bossHeave));
+      head.across += offset - w.bossHeave;
+      w.bossHeave = offset;
+    }
   }
   /*
     ⚠️ **AND WHETHER THE CROWN IS FLARING — 0310.** *"Half a second before the lightning attack happens,
@@ -10187,6 +10210,7 @@ function spawnBoss(w: World): void {
   w.bossEntering = entrance === null ? -1 : 0;
   w.bossLeaping = false;
   w.bossBeat = 0;
+  w.bossHeave = 0;
   w.bossSettle = false;
   if (entrance !== null) {
     /*

@@ -14,9 +14,11 @@ import { GameFrame } from '../src/app/frame.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BEAM_BOLT_KIND, BOSSES, type BossAttack } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
-import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { QUETZAL_BEAT, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../src/content/sprites.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
-import { QUETZAL_CANNON, QUETZAL_THROAT } from '../src/render/bake.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { QUETZAL_CANNON, QUETZAL_THROAT, drawKind } from '../src/render/bake.ts';
+import { inside, tracingPen, type Pass } from './paths.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
@@ -740,6 +742,8 @@ describe('0483 — the pterodactyl flies', () => {
     const r = BOSSES.quetzal.radius;
     for (const fraction of STAGES) {
       const flight = flown(fraction, FLIGHT);
+      // The body's heave with the beat (0485) is on top of the slide, so a hull at the edge rises past it by that much and no more.
+      const heave = phaseFor(BOSSES.quetzal, BOSSES.quetzal.health * fraction).look?.aura?.heave?.by ?? 0;
       let worst = 0;
       let braces = 0;
       let turns = 0;
@@ -752,8 +756,8 @@ describe('0483 — the pterodactyl flies', () => {
         const way = Math.sign(flight[i]!.vel);
         if (way !== 0 && heading !== 0 && way !== heading) turns++;
         if (way !== 0) heading = way;
-        expect(flight[i]!.across - r, `at ${fraction} the hull left the top of the lane`).toBeGreaterThanOrEqual(-0.01);
-        expect(flight[i]!.across + r, `at ${fraction} the hull left the bottom of the lane`).toBeLessThanOrEqual(ACROSS_SPAN + 0.01);
+        expect(flight[i]!.across - r, `at ${fraction} the hull left the top of the lane`).toBeGreaterThanOrEqual(-0.01 - heave);
+        expect(flight[i]!.across + r, `at ${fraction} the hull left the bottom of the lane`).toBeLessThanOrEqual(ACROSS_SPAN + 0.01 + heave);
       }
       expect(turns, `at ${fraction} the bird never turned, so the corner was never flown`).toBeGreaterThan(0);
       if (fraction < 0.75) expect(braces, `at ${fraction} no beam braced it, so the stop was never flown`).toBeGreaterThan(0);
@@ -803,5 +807,101 @@ describe('0483 — the pterodactyl flies', () => {
       const diving = diveBeats / diveSteps;
       expect(climbing / diving, `at ${fraction} the wings beat ${(climbing * STEPS_PER_SECOND).toFixed(1)} frames a second climbing against ${(diving * STEPS_PER_SECOND).toFixed(1)} diving`).toBeGreaterThanOrEqual(1.8);
     }
+  });
+});
+
+describe('0485 — the pterodactyl is plumed', () => {
+  // The wings as they are drawn on a 1280×720 screen, and their hull — the silhouette a player reads.
+  const SCREEN = viewOf(1280, 720);
+  const size = SPRITE_EXTENT.quetzalWing0 * SCREEN.scale;
+  const tracedOf = (frame: number): { hull: Pass; outline: number } => {
+    const { pen, trace } = tracingPen();
+    drawKind(pen, `quetzalWing${frame}` as SpriteKind, PALETTES[DEFAULT_PALETTE], size);
+    // The seal is the first stroke, and its width is the outline the player sees round every slot.
+    return { hull: trace.passes[0]!, outline: trace.inks[0]!.width };
+  };
+  const hullOf = (frame: number): Pass => tracedOf(frame).hull;
+  // A point in the wing tile's own `r`, in the traced canvas's pixels.
+  const px = (x: number, y: number): readonly [number, number] => [size / 2 + x * size * 0.42, size / 2 + y * size * 0.42];
+
+  it('THE ASKED-FOR ONE, IN PIXELS: at full spread each wing parts into five fingers, and the sky between every two shows past the outline', () => {
+    /*
+      The plan's diagnosis: *"each wing is one filled outline with eleven shafts stroked on it … the
+      flight feathers are lines on a sheet rather than feathers."* Across the primaries near their
+      tips — a line at 0.47 of the tile's `r` back from the shoulder — a feathered wing is five runs of
+      hull with sky between them, and the sky is only sky if it is wider than the dark outline stroked
+      round both sides of it and a mark besides (0106's 2.5 px, read as a gap).
+    */
+    const { hull, outline } = tracedOf(0);
+    for (const side of [-1, 1]) {
+      const runs: number[] = [];
+      const gaps: number[] = [];
+      let was = false;
+      let from = 0;
+      for (let y = 0.6; y <= 1.2; y += 0.001) {
+        const [x, py] = px(0.47, y * side);
+        const now = inside(hull, [x, py]);
+        if (now !== was) {
+          const length = Math.abs(py - from);
+          if (was) runs.push(length);
+          else if (runs.length > 0) gaps.push(length);
+          from = py;
+          was = now;
+        }
+      }
+      expect(runs.length, `the ${side < 0 ? 'upper' : 'lower'} wing is ${runs.length} runs across its primaries, not five fingers`).toBe(5);
+      for (const gap of gaps) expect(gap - outline, `a slot between two primaries is ${gap.toFixed(1)}px against an outline of ${outline.toFixed(1)}px`).toBeGreaterThanOrEqual(2.5);
+    }
+  });
+
+  it('THE DOWNSTROKE DRIVES: the wing spreads from its most raised to its widest in fewer frames than it takes to rise again', () => {
+    // Its reach across the tile, frame by frame, off the hull itself.
+    const reach: number[] = [];
+    for (let frame = 0; frame < QUETZAL_BEAT; frame++) {
+      const hull = hullOf(frame);
+      let top = Infinity;
+      for (let y = 0; y < size / 2; y += 0.5) {
+        let any = false;
+        for (let x = 0; x < size && !any; x += 1) any = inside(hull, [x, y]);
+        if (any) {
+          top = y;
+          break;
+        }
+      }
+      reach.push(size / 2 - top);
+    }
+    const widest = reach.indexOf(Math.max(...reach));
+    const raised = reach.indexOf(Math.min(...reach));
+    const down = (widest - raised + QUETZAL_BEAT) % QUETZAL_BEAT;
+    const up = QUETZAL_BEAT - down;
+    expect(Math.max(...reach) - Math.min(...reach), 'the wing never rises: its reach does not change through the beat').toBeGreaterThan(size * 0.05);
+    expect(down, `the downstroke takes ${down} frames and the recovery ${up}`).toBeLessThan(up);
+  });
+
+  it('THE BODY HEAVES, IN UNITS: sliding at speed, the hull rides at least a unit higher at the bottom of the downstroke than at the top of the recovery', () => {
+    const d = quetzalAt(0.95);
+    const boss = d.world.bossPool.at(0);
+    boss.fireIn = 999;
+    const at: Record<number, number[]> = {};
+    for (let i = 0; i < 20 * STEPS_PER_SECOND; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      boss.fireIn = 999;
+      d.frame.step();
+      const top = BOSSES.quetzal.patrol * phaseFor(BOSSES.quetzal, boss.health, d.world.bossFullHealth).patrolScale;
+      if (Math.abs(boss.velAcross) < top * 0.95) continue;
+      let frame = -1;
+      for (let k = 0; k < d.world.bossAura.size; k++) {
+        const kind = SPRITE_KINDS[d.world.bossAura.at(k).sprite]!;
+        if (kind.startsWith('quetzalWing')) frame = Number.parseInt(kind.slice('quetzalWing'.length), 10);
+      }
+      (at[frame] ??= []).push(d.world.bossHeave);
+    }
+    const mean = (xs: number[] | undefined): number => (xs === undefined || xs.length === 0 ? Number.NaN : xs.reduce((a, b) => a + b, 0) / xs.length);
+    // Frame 0 is the bottom of the downstroke, the wing at full spread; the most raised is where the recovery ends.
+    const bottom = mean(at[0]);
+    const raised = mean(at[Math.round(QUETZAL_BEAT * 0.6)]);
+    expect(Number.isFinite(bottom) && Number.isFinite(raised), 'the bird was never seen at speed at both ends of its stroke').toBe(true);
+    // Up is toward `across` zero, the top of the desktop screen.
+    expect(raised - bottom, `the body is ${(raised - bottom).toFixed(2)} units higher at the bottom of the downstroke`).toBeGreaterThanOrEqual(1);
   });
 });

@@ -549,6 +549,10 @@ export const SPRITE_KINDS = [
   'quetzalWing5',
   'quetzalWing6',
   'quetzalWing7',
+  'quetzalWing8',
+  'quetzalWing9',
+  'quetzalWing10',
+  'quetzalWing11',
   'quetzalWing0Hit',
   'quetzalWing1Hit',
   'quetzalWing2Hit',
@@ -557,6 +561,10 @@ export const SPRITE_KINDS = [
   'quetzalWing5Hit',
   'quetzalWing6Hit',
   'quetzalWing7Hit',
+  'quetzalWing8Hit',
+  'quetzalWing9Hit',
+  'quetzalWing10Hit',
+  'quetzalWing11Hit',
   'boss11',
   'boss11Hit',
   /*
@@ -1868,6 +1876,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   quetzalWing5: 72,
   quetzalWing6: 72,
   quetzalWing7: 72,
+  quetzalWing8: 72,
+  quetzalWing9: 72,
+  quetzalWing10: 72,
+  quetzalWing11: 72,
   quetzalWing0Hit: 72,
   quetzalWing1Hit: 72,
   quetzalWing2Hit: 72,
@@ -1876,6 +1888,10 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   quetzalWing5Hit: 72,
   quetzalWing6Hit: 72,
   quetzalWing7Hit: 72,
+  quetzalWing8Hit: 72,
+  quetzalWing9Hit: 72,
+  quetzalWing10Hit: 72,
+  quetzalWing11Hit: 72,
   /*
     ⚠️ **36 UNTIL 0332, AND THE ASK WAS *UPSCALE THE GRAPHICS*.** 52 across, with the hurtbox at 20 —
     0.385 of its own extent against the 0.389 it had at 36 and 14, so what changed is the size on
@@ -2503,3 +2519,25 @@ export const VOLANS_FIRE_HEAD = { ember: 21.1, blaze: 24.5 } as const;
  * roots them on the body's shoulders, so it needs the same number the row does.
  */
 export const QUETZAL_WING_HEAD = SERPENT_BODY_DIAMETER;
+
+/** The frames in one of the pterodactyl's wingbeats — 0485: twelve, so a slow beat is not stepped. */
+export const QUETZAL_BEAT = 12;
+
+/** The share of a wingbeat that is the downstroke — 0485: a bird drives down and recovers up. */
+export const QUETZAL_DOWNSTROKE = 0.4;
+
+/**
+ * Where in its stroke a wing is at `u` beats, as an angle — `docs/decisions/0485-the-pterodactyl-is-plumed.md`.
+ * 0 is the bottom of the downstroke, the wing at full spread; π is the top of the upstroke, the wing
+ * raised and, from above, foreshortened. The upstroke takes `1 − down` of the beat and the downstroke
+ * `down`, so the downstroke is the quick one.
+ *
+ * ⚠️ **HERE BECAUSE TWO LAYERS ASK IT THE SAME QUESTION.** The bake draws each frame at its place in
+ * the stroke, and the frame heaves the body by the same place; two copies of the warp would let the
+ * body rise on a frame the wings were not driving down on.
+ */
+export function strokeAt(u: number, down: number): number {
+  const v = u - Math.floor(u);
+  const up = 1 - down;
+  return v < up ? (Math.PI * v) / up : Math.PI + (Math.PI * (v - up)) / down;
+}

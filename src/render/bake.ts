@@ -26,7 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
-import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX } from '../content/sprites.ts';
+import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_BEAT, QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX, strokeAt } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
@@ -496,6 +496,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   quetzalWing5: 'enemy',
   quetzalWing6: 'enemy',
   quetzalWing7: 'enemy',
+  quetzalWing8: 'enemy',
+  quetzalWing9: 'enemy',
+  quetzalWing10: 'enemy',
+  quetzalWing11: 'enemy',
   boss11: 'enemy',
   boss11Chipped: 'enemy',
   boss11Broken: 'enemy',
@@ -1016,6 +1020,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   quetzalWing5Hit: 'impact',
   quetzalWing6Hit: 'impact',
   quetzalWing7Hit: 'impact',
+  quetzalWing8Hit: 'impact',
+  quetzalWing9Hit: 'impact',
+  quetzalWing10Hit: 'impact',
+  quetzalWing11Hit: 'impact',
   boss11Hit: 'impact',
   boss11ChippedHit: 'impact',
   boss11BrokenHit: 'impact',
@@ -8476,91 +8484,225 @@ function paintBoss10(ctx: Pen, f: Frame, skin: FoeSkin, palette: Palette, kind: 
   for (const side of [-1, 1]) eye(ctx, f, skin, -0.46, 0.074 * side, 0.03, gaze);
 }
 
-/** How many frames one wingbeat is — 0398. The frames are the beat, so they loop. */
-const QUETZAL_BEAT = 8;
+/**
+ * The wings' outline, in world units — 0485, on the frost ship's terms (0399). `drawKind`'s default is
+ * a share of the tile, and the wings' tile is 72 units, so their rim was 2.9 units against the body's
+ * 1.8 — thick enough to fill every slot between two primaries, so the sky the feathers part on never
+ * showed. A fine dark edge is what a feather has.
+ */
+const QUETZAL_WING_OUTLINE = 1.1;
 
 /**
- * One wing at full spread, the `−y` side, in the wing tile's own `r` — 0398: root under the shoulder
- * pod, the leading edge out to the wrist and the hand, then the trailing edge back as flight feathers.
+ * One flight feather of the pterodactyl's wing — 0485: its two edges from the root to the tip, the
+ * `lead` one facing the wingtip and the `trail` one facing the body, in the wing tile's own `r`.
  */
-function quetzalWing(frame: number): { outline: Pt[]; feathers: readonly (readonly [Pt, Pt])[]; arm: readonly Pt[] } {
+type Quill = { lead: Pt[]; trail: Pt[]; base: Pt; tip: Pt; primary: boolean };
+
+/**
+ * A feather from `base` to `tip`, `width` its widest half-vane: the outer vane is the narrow one, as on
+ * any flight feather, and a primary comes to a point where a secondary is rounded — 0485.
+ */
+function quill(base: Pt, tip: Pt, width: number, primary: boolean): Quill {
+  const dx = tip[0] - base[0];
+  const dy = tip[1] - base[1];
+  const length = Math.hypot(dx, dy);
+  // The normal toward the wingtip, which on the `−y` wing is the side of smaller `y`.
+  const nx = dy / length;
+  const ny = -dx / length;
+  const lead: Pt[] = [];
+  const trail: Pt[] = [];
+  for (const t of [0, 0.2, 0.4, 0.55, 0.7, 0.8, 0.88, 0.94]) {
+    const fall = primary ? Math.sqrt(Math.max(0, 1 - t * t * t)) : Math.sqrt(Math.max(0, 1 - t ** 6));
+    // A primary is emarginated: its outer third narrows to a finger, which is what opens the slot of sky.
+    const finger = primary ? 1 - 0.6 * Math.min(1, Math.max(0, (t - 0.45) / 0.25)) : 1;
+    const w = width * fall * finger * (0.85 + 0.15 * t);
+    const x = base[0] + dx * t;
+    const y = base[1] + dy * t;
+    // The outer vane a little over half the inner on a primary — wide enough that two neighbours overlap at the root.
+    const outerVane = primary ? 0.7 : 0.55;
+    lead.push([x + nx * w * outerVane, y + ny * w * outerVane]);
+    trail.push([x - nx * w, y - ny * w]);
+  }
+  return { lead, trail, base, tip, primary };
+}
+
+/** Where two polylines first cross, walking both from their tips — the bottom of the slot between two feathers. */
+function slotBetween(a: readonly Pt[], b: readonly Pt[]): { at: Pt; i: number; j: number } {
+  for (let i = a.length - 2; i >= 0; i--) {
+    for (let j = b.length - 2; j >= 0; j--) {
+      const [p, q] = [a[i]!, a[i + 1]!];
+      const [r, s] = [b[j]!, b[j + 1]!];
+      const d = (q[0] - p[0]) * (s[1] - r[1]) - (q[1] - p[1]) * (s[0] - r[0]);
+      if (Math.abs(d) < 1e-12) continue;
+      const u = ((r[0] - p[0]) * (s[1] - r[1]) - (r[1] - p[1]) * (s[0] - r[0])) / d;
+      const v = ((r[0] - p[0]) * (q[1] - p[1]) - (r[1] - p[1]) * (q[0] - p[0])) / d;
+      if (u >= 0 && u <= 1 && v >= 0 && v <= 1) return { at: [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u], i, j };
+    }
+  }
+  // Two feathers that never overlap meet at their roots, which the hand covers.
+  return { at: [(a[0]![0] + b[0]![0]) / 2, (a[0]![1] + b[0]![1]) / 2], i: 0, j: 0 };
+}
+
+/**
+ * One wing, the `−y` side, in the wing tile's own `r`, at `frame` of the beat —
+ * `docs/decisions/0485-the-pterodactyl-is-plumed.md`, after 0398: root under the shoulder pod, the
+ * leading edge out to the wrist and the hand, then the flight feathers back.
+ *
+ * ⚠️ **THE OUTLINE IS THE FEATHERS' OWN UNION, SO EVERY SLOT OF SKY IS A REAL GAP IN THE BODY.** 0398's
+ * trailing edge was one shape with shafts stroked on it — feathers drawn as lines on a sheet. Here each
+ * feather is two edges, and the silhouette walks out along one feather's lead edge to its tip, back down
+ * its trail edge to where it crosses the next feather's lead edge, and out again: the slot between two
+ * primaries is the sky between them, and the paint inside it is each feather in turn.
+ */
+function quetzalWing(frame: number): { outline: Pt[]; quills: Quill[]; arm: readonly Pt[] } {
   // Where the body's shoulder is in this tile — the body's `r` over this one's.
   const body = (SPRITE_EXTENT.boss10 * 0.42) / ((SPRITE_EXTENT.quetzalWing0 * QUETZAL_WING_HEAD) / SERPENT_BODY_DIAMETER * 0.42);
   const root: Pt = [0.02 * body, -0.5 * body];
-  const beat = (frame / QUETZAL_BEAT) * Math.PI * 2;
-  // The downstroke spreads the wing to its full span; on the upstroke it is raised, so from above it is
-  // foreshortened across and its hand swings back.
-  const span = 0.78 + 0.22 * Math.cos(beat);
-  const sweep = 0.08 * Math.sin(beat);
+  /*
+    The downstroke spreads the wing to its full span and the upstroke raises it, so from above it is
+    foreshortened across and its hand swings back — 0398's place, now on `strokeAt`'s quick downstroke
+    and slow recovery. And on the recovery the primaries close up, as a bird's do to slip the air.
+  */
+  const stroke = strokeAt(frame / QUETZAL_BEAT, QUETZAL_DOWNSTROKE);
+  const span = 0.78 + 0.22 * Math.cos(stroke);
+  const sweep = 0.08 * Math.sin(stroke);
+  const close = 0.22 * Math.max(0, Math.sin(stroke));
   const place = ([x, y]: Pt): Pt => {
     const out = y - root[1];
     return [x + (1 - span) * 0.6 * -out + sweep * -out, root[1] + out * span];
   };
+  const leading: Pt[] = [
+    [root[0] - 0.03, root[1] - 0.01],
+    [-0.08, -0.42],
+    [-0.12, -0.54],
+    [-0.12, -0.64],
+    [-0.03, -0.8],
+    [0.12, -0.96],
+    [0.27, -1.06],
+  ];
   /*
-    ⚠️ **LONG AND NARROW, WHICH IS WHAT MAKES IT A WING.** The first draft's chord was three quarters of
-    its span and photographed as a clam shell either side of the body. A wing from above is an arm out
-    to the wrist, a hand swept back to the tip, and a band of flight feathers a quarter of the span deep
-    behind both — the primaries off the hand, pointed and parted, and the secondaries off the arm.
+    Five primaries off the hand, the outermost first, raking back from the wingtip to the wrist. Five
+    and not 0398's six, so the slot between two fingers is wider than the outline the seal strokes
+    round it — at six the stroke closed every slot and the sky never showed.
   */
-  const leading: Pt[] = (
-    [
-      [root[0] - 0.03, root[1] - 0.01],
-      [-0.08, -0.42],
-      [-0.12, -0.54],
-      [-0.12, -0.64],
-      [-0.03, -0.8],
-      [0.12, -0.96],
-      [0.3, -1.08],
-      [0.3, -1.08],
-    ] as const
-  ).map(place);
-  const arm: Pt[] = leading.slice(1, 6);
-  const feathers: [Pt, Pt][] = [];
-  const edge: Pt[] = [];
-  // Six primaries off the hand, each a pointed tip with a notch before the next, raking back.
-  for (let i = 0; i < 6; i++) {
-    const t = i / 5;
-    const tip: Pt = [0.4 + t * 0.06, -1.02 + t * 0.34];
-    const next: Pt = [0.4 + (t + 0.2) * 0.06, -1.02 + (t + 0.2) * 0.34];
-    const notch: Pt = [(tip[0] + next[0]) / 2 - 0.05, (tip[1] + next[1]) / 2];
-    const base: Pt = [tip[0] - 0.2, tip[1] + 0.07];
-    feathers.push([place(base), place([tip[0] - 0.03, tip[1] + 0.005])]);
-    edge.push(place(tip), place(tip), place(notch));
+  const wrist: Pt = [-0.1, -0.62];
+  const hand: Pt = [0.26, -1.04];
+  const outer: Pt = [0.54, -1.13];
+  const inner: Pt = [0.52, -0.7];
+  const tips: Pt[] = [];
+  for (let i = 0; i < 5; i++) tips.push([outer[0] + (inner[0] - outer[0]) * (i / 4), outer[1] + (inner[1] - outer[1]) * (i / 4)]);
+  const middle: Pt = [(outer[0] + inner[0]) / 2, (outer[1] + inner[1]) / 2];
+  const quills: Quill[] = [];
+  for (let i = 0; i < 5; i++) {
+    const s = 0.04 + i * 0.2;
+    const base: Pt = [hand[0] + (wrist[0] - hand[0]) * s, hand[1] + (wrist[1] - hand[1]) * s];
+    const tip: Pt = [tips[i]![0] + (middle[0] - tips[i]![0]) * close, tips[i]![1] + (middle[1] - tips[i]![1]) * close];
+    quills.push(quill(base, tip, 0.08, true));
   }
-  // Five secondaries off the arm, rounded, shorter toward the body.
+  // Five secondaries off the arm, rounded and shorter toward the body.
   for (let i = 0; i < 5; i++) {
     const t = i / 4;
-    const tip: Pt = [0.4 - t * 0.2, -0.62 + t * 0.28];
-    const base: Pt = [-0.06 + t * 0.02, -0.62 + t * 0.26];
-    feathers.push([place(base), place([tip[0] - 0.05, tip[1]])]);
-    edge.push(place(tip), place([tip[0] - 0.06, tip[1] + 0.035]));
+    const base: Pt = [-0.07 + t * 0.07, -0.6 + t * 0.24];
+    const tip: Pt = [0.42 - t * 0.2, -0.66 + t * 0.3];
+    quills.push(quill(base, tip, 0.07, false));
   }
-  const outline: Pt[] = [...leading, ...edge, [root[0] + 0.14, root[1] + 0.03]];
-  return { outline, feathers, arm };
+  // The silhouette: the leading edge out to the first primary, then every feather's tip and the slot after it.
+  const edge: Pt[] = [...leading];
+  let from = 0;
+  for (let k = 0; k < quills.length; k++) {
+    const q = quills[k]!;
+    const next = quills[k + 1];
+    for (let n = from + 1; n < q.lead.length; n++) edge.push(q.lead[n]!);
+    edge.push(q.tip);
+    if (next === undefined) {
+      for (let n = q.trail.length - 1; n >= 0; n--) edge.push(q.trail[n]!);
+      break;
+    }
+    // With the tips, because two rounded feathers side by side cross only as they close to their points.
+    const slot = slotBetween([...q.trail, q.tip], [...next.lead, next.tip]);
+    for (let n = q.trail.length - 1; n > slot.i; n--) edge.push(q.trail[n]!);
+    edge.push(slot.at);
+    from = slot.j;
+  }
+  edge.push([root[0] + 0.14, root[1] + 0.03]);
+  const moved = (q: Quill): Quill => ({ lead: q.lead.map(place), trail: q.trail.map(place), base: place(q.base), tip: place(q.tip), primary: q.primary });
+  return { outline: edge.map(place), quills: quills.map(moved), arm: leading.slice(1, 6).map(place) };
 }
 
 /**
- * Both wings, one frame of the beat — 0398. Sealed as one hull of two sub-paths, then paint: a shade
- * from the leading edge back, three rows of coverts along the arm, a shaft down every flight feather,
- * and the leading edge lit.
+ * A feather's own shape, a little inside the silhouette it helped make — 0485: its edges pulled toward
+ * its shaft and its tip toward its root, so the hull's ink shows as a rim between two feathers and no
+ * paint is ever over the edge (`tests/accents.test.ts`). From `from` of its length, because the coverts
+ * lie over the roots.
+ */
+function vane(q: Quill, from: number, inset: number): Pt[] {
+  const n = q.lead.length;
+  const start = Math.round(from * (n - 1));
+  const toward = (p: Pt, a: Pt): Pt => [p[0] + (a[0] - p[0]) * inset, p[1] + (a[1] - p[1]) * inset];
+  const axis = (k: number): Pt => [(q.lead[k]![0] + q.trail[k]![0]) / 2, (q.lead[k]![1] + q.trail[k]![1]) / 2];
+  const out: Pt[] = [];
+  for (let k = start; k < n; k++) out.push(toward(q.lead[k]!, axis(k)));
+  out.push(toward(q.tip, q.base));
+  for (let k = n - 1; k >= start; k--) out.push(toward(q.trail[k]!, axis(k)));
+  return out;
+}
+
+/**
+ * Both wings, one frame of the beat — 0398, 0485. Sealed as one hull of two sub-paths, then painted:
+ * a wash from the leading edge back, every flight feather from the body outward so each one lies over
+ * the next one in, with a dark shaft, a lit outer vane and a shadowed inner one, then the coverts over
+ * their roots and the leading edge lit.
  */
 function drawQuetzalWings(ctx: Pen, f: Frame, skin: FoeSkin | null, frame: number): void {
   const wing = quetzalWing(frame);
-  const both = [-1, 1].map((side) => wing.outline.map(([x, y]) => [x, y * -side] as const));
+  const flip =
+    (side: number) =>
+    ([x, y]: Pt): Pt => [x, y * -side];
   ctx.beginPath();
-  for (const outline of both) curveLoop(ctx, f, outline);
+  for (const side of [-1, 1]) trace(ctx, f, wing.outline.map(flip(side)));
   if (skin !== null) ctx.fillStyle = skin.hull;
   seal(ctx);
   if (skin === null) return;
   for (const side of [-1, 1]) {
-    const flip = ([x, y]: Pt): Pt => [x, y * -side];
-    const outline = wing.outline.map(flip);
+    const at = flip(side);
+    const outline = wing.outline.map(at);
     // Lit along the arm, darkening back into the flight feathers.
-    shaded(ctx, f, flip([-0.1, -0.6]), flip([0.4, -0.6]), rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), outline, 1, true);
-    // A shaft down every flight feather.
-    // Stopping short of the tip, which `curveLoop` rounds inside where the doubled point was authored.
-    for (const [[bx, by], [tx, ty]] of wing.feathers) seam(ctx, f, rgba(skin.plate, 0.6), 0.016, [flip([bx + (tx - bx) * 0.1, by + (ty - by) * 0.1]), flip([bx + (tx - bx) * 0.75, by + (ty - by) * 0.75])]);
-    // Coverts: two rows of scallops over the roots of the flight feathers, along the arm and the hand.
+    shaded(ctx, f, at([-0.1, -0.6]), at([0.4, -0.6]), rgba(skin.lit, 0.3), rgba(skin.plate, 0.6), outline, 1, false);
+    // The feathers, innermost secondary first, so each lies over the next one in and the outermost primary is on top.
+    for (let k = wing.quills.length - 1; k >= 0; k--) {
+      const q = wing.quills[k]!;
+      const shape = vane(q, 0.15, 0.14).map(at);
+      shaded(ctx, f, at(q.base), at(q.tip), shade(skin.hull, 0.08), shade(skin.plate, -0.12), shape, 1, false);
+      // The inner vane in shadow, from the shaft to the trailing edge.
+      const n = q.lead.length;
+      const shadow: Pt[] = [];
+      for (let m = 3; m < n; m++) shadow.push(at([(q.lead[m]![0] + q.trail[m]![0]) / 2, (q.lead[m]![1] + q.trail[m]![1]) / 2]));
+      shadow.push(at([q.tip[0] + (q.base[0] - q.tip[0]) * 0.14, q.tip[1] + (q.base[1] - q.tip[1]) * 0.14]));
+      for (let m = n - 1; m >= 3; m--) shadow.push(at([q.trail[m]![0] + (q.lead[m]![0] - q.trail[m]![0]) * 0.14, q.trail[m]![1] + (q.lead[m]![1] - q.trail[m]![1]) * 0.14]));
+      poly(ctx, f, shade(skin.plate, -0.35), shadow, 0.45);
+      // The outer vane's edge caught by the light, the inner one's dark against the feather under it.
+      /*
+        Most of the way in toward the vane's middle and short of the finger, and only where the vane is
+        wide enough to hold the stroke: a raised wing is foreshortened across, so on the upstroke its
+        vanes narrow and the light along them shortens, which is also what light on a raised wing does.
+      */
+      const lit: Pt[] = [];
+      for (let m = 3; m < n - 2; m++) {
+        const ax = (q.lead[m]![0] + q.trail[m]![0]) / 2;
+        const ay = (q.lead[m]![1] + q.trail[m]![1]) / 2;
+        if (0.7 * Math.hypot(ax - q.lead[m]![0], ay - q.lead[m]![1]) < 0.012) break;
+        lit.push(at([q.lead[m]![0] + (ax - q.lead[m]![0]) * 0.7, q.lead[m]![1] + (ay - q.lead[m]![1]) * 0.7]));
+      }
+      if (lit.length > 1) seam(ctx, f, rgba(skin.lit, 0.55), 0.018, lit, 1, true);
+      // The shaft, dark, root to where a primary narrows to its finger, which on a raised wing is too thin to carry it.
+      const shaftFrom: Pt = [q.base[0] + (q.tip[0] - q.base[0]) * 0.22, q.base[1] + (q.tip[1] - q.base[1]) * 0.22];
+      const shaftTo: Pt = [q.base[0] + (q.tip[0] - q.base[0]) * 0.66, q.base[1] + (q.tip[1] - q.base[1]) * 0.66];
+      seam(ctx, f, rgba(shade(skin.plate, -0.5), 0.8), 0.018, [at(shaftFrom), at(shaftTo)]);
+    }
+    // The coverts: a band of the arm's own skin over the feathers' roots, and two rows of scallops on it.
+    const band: Pt[] = [...wing.arm, ...wing.arm.slice().reverse().map(([x, y]): Pt => [x + 0.13, y + 0.03])].map(at);
+    poly(ctx, f, skin.hull, band);
+    shaded(ctx, f, at([-0.1, -0.6]), at([0.1, -0.6]), rgba(skin.lit, 0.3), rgba(skin.plate, 0.3), band, 1, false);
     for (let row = 0; row < 2; row++) {
       for (let i = 0; i + 1 < wing.arm.length; i++) {
         for (const t of [0.25, 0.75]) {
@@ -8569,12 +8711,12 @@ function drawQuetzalWings(ctx: Pen, f: Frame, skin: FoeSkin | null, frame: numbe
           const x = ax + (bx - ax) * t + 0.06 + row * 0.06;
           const y = ay + (by - ay) * t + 0.015;
           const s = 0.028 + row * 0.006;
-          seam(ctx, f, rgba(skin.lit, 0.45 - row * 0.12), 0.014, [flip([x - s * 0.4, y - s]), flip([x + s * 0.6, y - s * 0.3]), flip([x + s * 0.6, y + s * 0.3]), flip([x - s * 0.4, y + s])], 1, true);
+          seam(ctx, f, rgba(skin.lit, 0.45 - row * 0.12), 0.014, [at([x - s * 0.4, y - s]), at([x + s * 0.6, y - s * 0.3]), at([x + s * 0.6, y + s * 0.3]), at([x - s * 0.4, y + s])], 1, true);
         }
       }
     }
     // The leading edge caught by the light.
-    seam(ctx, f, rgba(skin.lit, 0.6), 0.024, wing.arm.map(([x, y]) => flip([x + 0.045, y + 0.012])), 1, true);
+    seam(ctx, f, rgba(skin.lit, 0.6), 0.024, wing.arm.map(([x, y]) => at([x + 0.045, y + 0.012])), 1, true);
   }
 }
 
@@ -12261,6 +12403,10 @@ export function drawKind(
     case 'quetzalWing5':
     case 'quetzalWing6':
     case 'quetzalWing7':
+    case 'quetzalWing8':
+    case 'quetzalWing9':
+    case 'quetzalWing10':
+    case 'quetzalWing11':
     case 'quetzalWing0Hit':
     case 'quetzalWing1Hit':
     case 'quetzalWing2Hit':
@@ -12269,8 +12415,13 @@ export function drawKind(
     case 'quetzalWing5Hit':
     case 'quetzalWing6Hit':
     case 'quetzalWing7Hit':
+    case 'quetzalWing8Hit':
+    case 'quetzalWing9Hit':
+    case 'quetzalWing10Hit':
+    case 'quetzalWing11Hit':
       // THE PTERODACTYL'S WINGS — 0398: one frame of the wingbeat, both wings, behind the body.
-      drawQuetzalWings(ctx, f, skin, Number(kind.slice('quetzalWing'.length, 'quetzalWing'.length + 1)));
+      ctx.lineWidth = Math.max(1, (size * QUETZAL_WING_OUTLINE) / SPRITE_EXTENT.quetzalWing0);
+      drawQuetzalWings(ctx, f, skin, Number.parseInt(kind.slice('quetzalWing'.length), 10));
       return;
     case 'boss11':
     case 'boss11Hit':
