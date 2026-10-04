@@ -48,13 +48,15 @@ export const PROBES = [
     guard: 'and it can be REACHED from the far wall, which is where a static hole may sit',
     edit: {
       path: 'src/content/bosses.ts',
-      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 70, hole: 12, spin: false, quicken: null, apart: 0 },',
+      find: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, hole: 14, spin: false, quicken: null, apart: 0 },',
       // ⚠️ Re-anchored by 0364: the lane is 120 and the boss stands a fifth further off, so the curtain
       // is in the air a fifth longer and 84 is now inside the ship's reach; 84 → 101 is the same 0.84 share.
       // ⚠️ And by 0473, whose clot at 1.3 keeps the axis's curtain in the air 58 steps where the lance's
       // was 39 at the hardest tier: the ship reaches 97.8 from the far wall now, so 101 was inside it and
       // this went STILL GREEN in CI. 114 is the lane's last place for a hole of twelve, 10 short.
-      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4, at: 114, hole: 12, spin: false, quicken: null, apart: 0 },',
+      // ⚠️ And by 0497, which widened the hole to fourteen: 112 is the last place for that, its near
+      // edge at 105, still 7 past the ship's reach.
+      replace: 'uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 112, hole: 14, spin: false, quicken: null, apart: 0 },',
     },
   },
   {

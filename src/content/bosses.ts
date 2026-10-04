@@ -3106,7 +3106,14 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     // No floor, on the chorus's own measurement — 0333. Two walls, both whole, under every gun.
     // `at` 58 → 70 with 0364's zoom: at 58 of a 120 lane the hole had crossed to the chorus's side.
-    uncoil: { from: 0.5, every: 0.1, gap: 4, at: 70, hole: 12, spin: false, quicken: null, apart: 0 },
+    /*
+      ⚠️ **A FIFTH WIDER, AND THE SPACING MOVED SO THAT A FIFTH IS WHAT IT IS — 0497.** *"Needs about a
+      20% bigger increase in the bullet wall gap, at the moment it needs perfection to fit."* On a
+      spacing of 4 the hole could only be 12 or 16 between the clots that bound it, so `gap` 4.85 lays
+      the wall at 4.8 and the clots either side stand at 62.4 and 76.8: 14.4 apart, which is 12 × 1.2,
+      and 12.1 of clear air where there was 9.7. `hole` 14 is the cut, a fraction inside both of them.
+    */
+    uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
