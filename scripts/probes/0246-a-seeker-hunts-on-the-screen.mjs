@@ -23,7 +23,8 @@ export const PROBES = [
     guard: 'THE FUSE: a seeker burns out',
     edit: {
       path: 'src/content/missiles.ts',
-      find: '    seek: 0.09,\n    fuse: 90,',
+      // 99 since 0503, a tenth longer with the desktop's view.
+      find: '    seek: 0.09,\n    fuse: 99,',
       replace: '    seek: 0.09,\n    fuse: 0,',
     },
   },

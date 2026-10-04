@@ -51,8 +51,10 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // `descent`'s numbers are its own — levels one and three ship identical scripts, so an anchor
       // on either of those appears twice and `planEdit` refuses it.
-      find: "      { at: 1299, section: 'push' },",
-      replace: "      { at: 2999, section: 'push' },",
+      // ⚠️ Re-anchored by 0503, after which `descent` and `gauntlet` ship identical scripts too, both
+      // opening `push` on bar 21 — so the anchor carries `descent`'s own `bossAt` to stay unique.
+      find: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 1209, section: 'push' },",
+      replace: "    bossAt: 4054,\n    sections: [\n      { at: 0, section: 'run' },\n      { at: 2999, section: 'push' },",
     },
   },
   {

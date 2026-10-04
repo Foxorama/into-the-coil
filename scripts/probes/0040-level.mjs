@@ -20,7 +20,9 @@ export const PROBES = [
       // 398, so the list stops ascending. The compression moved every position, and a re-anchoring
       // pass rewrote both sides to the same number, which `npm test` caught as a probe that changes
       // nothing: an anchor can be moved mechanically, a BREAK cannot.
-      find: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
+      // Re-anchored by 0503, which closed the level up: the drifter is at 423 and the lancer above it
+      // at 370, so 360 is still behind it.
+      find: "  { at: 423, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
       replace: "  { at: 360, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },",
     },
   },
@@ -42,9 +44,9 @@ export const PROBES = [
       // ⚠️ Re-aimed by 0382, which made the guard read lanes in WORLD units: a share of 20 is 24
       // units across and no longer clears the band with this weaver's swing, so the lane is 10. The
       // `at` stays where it was, because moving it to 960 reddened the ordering guard as well and
-      // that is not the guard this probe is for.
-      find: "  { at: 725, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
-      replace: "  { at: 725, enemy: 'weaver', formation: 'line', count: 5, lane: 10 },",
+      // that is not the guard this probe is for. (686 since 0503 closed the level up.)
+      find: "  { at: 686, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },",
+      replace: "  { at: 686, enemy: 'weaver', formation: 'line', count: 5, lane: 10 },",
     },
   },
   /*
@@ -73,8 +75,11 @@ export const PROBES = [
       // those three past the sentinel's window: the break is now the teaching stretch, four waves
       // thinned to one body each where it used to be three — a view holds a fifth of a level's waves
       // and the guard no longer reads the window, so three in one view left eight standing.
-      find: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },\n  { at: 494, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },\n  { at: 551, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },\n  { at: 609, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },",
-      replace: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 1, lane: 55 },\n  { at: 494, enemy: 'lancer', formation: 'line', count: 1, lane: 30 },\n  { at: 551, enemy: 'drifter', formation: 'line', count: 1, lane: 65 },\n  { at: 609, enemy: 'lancer', formation: 'vee', count: 1, lane: 45 },",
+      // ⚠️ And by 0503, which closed the level up by a tenth: the same four went STILL GREEN, because a
+      // view from the first wave now also holds the lancer column at 370 — eight bodies, exactly the
+      // floor. The break thins that column too: five waves to one body each, five in the view.
+      find: "  { at: 370, enemy: 'lancer', formation: 'column', count: 8, lane: 50 },\n  { at: 423, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },\n  { at: 476, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },\n  { at: 528, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },\n  { at: 581, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },",
+      replace: "  { at: 370, enemy: 'lancer', formation: 'column', count: 1, lane: 50 },\n  { at: 423, enemy: 'drifter', formation: 'vee', count: 1, lane: 55 },\n  { at: 476, enemy: 'lancer', formation: 'line', count: 1, lane: 30 },\n  { at: 528, enemy: 'drifter', formation: 'line', count: 1, lane: 65 },\n  { at: 581, enemy: 'lancer', formation: 'vee', count: 1, lane: 45 },",
     },
   },
   {

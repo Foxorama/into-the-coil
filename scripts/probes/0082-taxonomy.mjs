@@ -36,9 +36,10 @@ export const PROBES = [
         0083 gave the weapon count a guard of its own. 0256 cut a level to a weapon and a missile and
         moved the shields to the mid-boss's drop, so the budget guard is `THE BUDGET` now and the
         creep this models is a second missile in the middle of a level.
+        Re-anchored by 0503, which closed the level up: the Mire's missile is at 816.
       */
-      find: "  { at: 868, kind: 'missile', lane: 42 },",
-      replace: "  { at: 868, kind: 'missile', lane: 42 },\n  { at: 2600, kind: 'missile', lane: 40 },",
+      find: "  { at: 816, kind: 'missile', lane: 42 },",
+      replace: "  { at: 816, kind: 'missile', lane: 42 },\n  { at: 2600, kind: 'missile', lane: 40 },",
     },
   },
   {

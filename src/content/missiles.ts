@@ -64,11 +64,19 @@ export interface MissileRow {
    * `docs/decisions/0246-a-seeker-hunts-on-the-screen.md`. Played at no fuse: *"I had 15-20 on
    * screen at a time and they were killing everything super fast."* A straight missile is spent by
    * the leading edge inside a second and a half; a seeker that turns is spent by nothing, and a
-   * screen of them circling is a screen nothing survives. Ninety steps is a second and a half: at
-   * the row's speed that is the far edge of the widest screen from the ship, so a seeker still
-   * reaches a boss on its station and comes about for a body just behind the ship — and a seeker
-   * that is still turning after that is spent. At the cap that is nine in the air, against the
-   * fifteen to twenty the play-test counted.
+   * screen of them circling is a screen nothing survives. Ninety steps was a second and a half, and
+   * a seeker still reaches a boss on its station and comes about for a body just behind the ship —
+   * and a seeker that is still turning after that is spent. At the cap that is nine in the air,
+   * against the fifteen to twenty the play-test counted.
+   *
+   * ⚠️ **NINETY-NINE SINCE 0503, AND WHAT IT REACHES IS A BOSS'S STATION, NOT THE SCREEN'S EDGE.** This
+   * note used to say ninety steps carried a seeker to *"the far edge of the widest screen from the
+   * ship"*. It never did: at the seeker's 1.4 a step, in the camera's frame, ninety steps is 126
+   * units, which from the ship's place forty into the view ends at 166 — where the bosses stand (154
+   * to 190 from the camera), and well short of even a 16:9 screen's 213. Played after 0500's bar let
+   * a maximised desktop see 263 units where it saw 241: *"extend the … homing missiles distance as
+   * we've made the desktop distance larger."* So ninety-nine, by the same tenth: 139 units, ending at
+   * 179, about the share of the screen it had. `docs/decisions/0503-the-levels-close-up.md`.
    */
   fuse: number;
   /** The face the missile pickup shows when it is offering this kind — an index into the atlas. */
@@ -120,8 +128,9 @@ export const MISSILES: Record<MissileKind, MissileRow> = {
     guidance: 'homing',
     missileEvery: [8, 8, 8, 6, 4],
     launchers: [0, 1, 2, 2, 2],
+    // `fuse` was 90 until 0503: a tenth longer, with the desktop's view — see the field's note.
     seek: 0.09,
-    fuse: 90,
+    fuse: 99,
     pickup: SPRITE.pickupSeeker,
     // The purple aura — 0373.
     special: 'hunt',

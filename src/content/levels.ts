@@ -603,6 +603,27 @@ export interface LevelRow {
   0441 TOOK IT WITH THE CLAMP. Every ship opens on its whole gun, so there is no second weapon for the
   teeth to wait for; nothing read it once the dial went.
 */
+/*
+  ── SIX OF THE SCRIPTS BELOW WERE CLOSED UP BY A TENTH — 0503 ─────────────────────────────────────
+
+  `docs/decisions/0503-the-levels-close-up.md`. Played after 0500 gave a desktop its HUD bar: *"the
+  levels now feel long and empty again."* A maximised window sees 263 units ahead where it saw 241, so
+  a screen held a tenth less of the script than it did. Every gap a level AUTHORS is now 1/1.1 of what
+  it was: from the opening's 300 to the mid-boss, and from its window's end to the last wave.
+
+  ⚠️ **THE BLACK HEART IS THE SEVENTH AND IS NOT CLOSED UP.** Its length is its music's — a ballad of
+  thirty-six bars turned to land on bar 36, and an acceptance on bar 72 — and the note on its
+  `sections` says what moving it costs.
+
+  ⚠️ **WHAT DID NOT SHRINK, AND WHY.** The opening's 300 is past `MAX_ALONG_SPAN`, the widest screen (0043). The window
+  is twenty-five seconds (0502), and seconds do not shrink with a screen. The 190 between the last wave
+  and `bossAt` is `FIGHT_LEAD`'s measure. So a level is about 6% shorter rather than 9%, and every
+  stretch that is authored is a tenth denser.
+
+  ⚠️ **THE PLACES A NOTE NAMES ARE WHERE THE WAVE STOOD WHEN THE NOTE WAS WRITTEN** — before 0503, and
+  for the back of a level before 0502 too. The script is the same script in the same order; only the
+  numbers moved.
+*/
 
 const APPROACH: readonly WaveEntry[] = [
   /*
@@ -616,26 +637,26 @@ const APPROACH: readonly WaveEntry[] = [
   */
   // ── Teaching. One kind at a time, in shapes that read at a glance.
   { at: 300, enemy: 'drifter', formation: 'line', count: 5, lane: 45 },
-  { at: 377, enemy: 'lancer', formation: 'column', count: 8, lane: 50 },
-  { at: 435, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },
-  { at: 494, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },
-  { at: 551, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
-  { at: 609, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },
-  { at: 667, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
+  { at: 370, enemy: 'lancer', formation: 'column', count: 8, lane: 50 },
+  { at: 423, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },
+  { at: 476, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },
+  { at: 528, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
+  { at: 581, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },
+  { at: 634, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
 
   // ── Weavers. Introduced alone, then mixed into shapes that were safe without them. ──────────────
-  { at: 725, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 686, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 754, enemy: 'drifter', formation: 'line', count: 5, lane: 38 },
-  { at: 783, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
-  { at: 812, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
+  { at: 713, enemy: 'drifter', formation: 'line', count: 5, lane: 38 },
+  { at: 739, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
+  { at: 765, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 841, enemy: 'weaver', formation: 'vee', count: 4, lane: 62 },
+  { at: 792, enemy: 'weaver', formation: 'vee', count: 4, lane: 62 },
   // The swift — 0328: the first body in the run that flies a curve, met before the sentinel with the
   // one gun the level has handed over, and clamped to one hit here like everything before 1,000.
-  { at: 870, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
-  { at: 899, enemy: 'lancer', formation: 'column', count: 8, lane: 40 },
-  { at: 956, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
+  { at: 818, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
+  { at: 845, enemy: 'lancer', formation: 'column', count: 8, lane: 40 },
+  { at: 896, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
   /*
     ── THE RUN-UP: THE STRETCH THE SECOND WEAPON GETS TO ITSELF ─────────────────────────────────────
 
@@ -672,34 +693,34 @@ const APPROACH: readonly WaveEntry[] = [
     fire come in a row, and no more than three that do (`MIX_RUN`). The first draft swapped three and
     the stretch from 956 to 1,130 still ran dry for twelve seconds; four left it at 9.02 against nine.
   */
-  { at: 1015, enemy: 'picket', formation: 'line', count: 8, lane: 40 },
-  { at: 1073, enemy: 'swift', formation: 'vee', count: 5, lane: 65 },
-  { at: 1130, enemy: 'lancer', formation: 'line', count: 8, lane: 35 },
-  { at: 1189, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
-  { at: 1246, enemy: 'drifter', formation: 'vee', count: 5, lane: 55 },
-  { at: 1305, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
-  { at: 1362, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 1420, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 1479, enemy: 'lancer', formation: 'column', count: 8, lane: 30 },
-  { at: 1536, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 950, enemy: 'picket', formation: 'line', count: 8, lane: 40 },
+  { at: 1003, enemy: 'swift', formation: 'vee', count: 5, lane: 65 },
+  { at: 1055, enemy: 'lancer', formation: 'line', count: 8, lane: 35 },
+  { at: 1108, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
+  { at: 1160, enemy: 'drifter', formation: 'vee', count: 5, lane: 55 },
+  { at: 1214, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
+  { at: 1265, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 1318, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
+  { at: 1372, enemy: 'lancer', formation: 'column', count: 8, lane: 30 },
+  { at: 1424, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
   /*
-    ⚠️ **NOTHING FROM 1,549 TO 2,449: THE SENTINEL'S WINDOW — 0502.** Twenty-five seconds of the
-    camera from the mid-boss's own place, which no wave is put down inside: *"leave the gap empty."*
-    Every wave from here to the boss stood 1,594 to 4,060 until then, and is the same script in the
-    same order, scaled into what the window leaves. The places the notes below name are where those
-    waves stood before 0502.
+    ⚠️ **NOTHING FROM 1,435 TO 2,335: THE SENTINEL'S WINDOW — 0502, at 0503's places.** Twenty-five
+    seconds of the camera from the mid-boss's own place, which no wave is put down inside: *"leave the
+    gap empty."* Every wave from here to the boss stood 1,594 to 4,060 until then, and is the same
+    script in the same order, scaled into what the window leaves. The places the notes below name are
+    where those waves stood before 0502.
   */
-  { at: 2450, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
+  { at: 2336, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
 
   // ── Teeth. The lancer first, at the two health the run-up was hiding, and then the turret at three
   //    — so the level introduces *takes more than one shot* and *takes three* as two separate events.
   //    Mixed with the one-health kinds three at most in a row, which is 0231's rule; this stretch was
   //    the run-up's eight one-health waves until 0256 moved the second weapon up the level.
-  { at: 2488, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
-  { at: 2527, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 2565, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
-  { at: 2603, enemy: 'turret', formation: 'line', count: 6, lane: 55 },
-  { at: 2642, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
+  { at: 2370, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
+  { at: 2406, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 2440, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
+  { at: 2475, enemy: 'turret', formation: 'line', count: 6, lane: 55 },
+  { at: 2510, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
   /*
     ⚠️ **THREE LANCER WAVES ARE SWIFTS — 0328 — AND THEY REPLACE RATHER THAN JOIN.** At the one-rung
     loadout `tests/fight.test.ts` walked this level with, the sentinel's fight ran most of the way to
@@ -709,11 +730,11 @@ const APPROACH: readonly WaveEntry[] = [
     body that curves. A vee astride the centre crosses itself in an X. (0502 took that guard: a
     fight past its window is meant to get busier — *"increased difficulty with adds."*)
   */
-  { at: 2679, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
-  { at: 2718, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
-  { at: 2767, enemy: 'drifter', formation: 'column', count: 5, lane: 40 },
-  { at: 2794, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
-  { at: 2833, enemy: 'picket', formation: 'line', count: 8, lane: 50 },
+  { at: 2544, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
+  { at: 2580, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 2624, enemy: 'drifter', formation: 'column', count: 5, lane: 40 },
+  { at: 2649, enemy: 'drifter', formation: 'vee', count: 6, lane: 45 },
+  { at: 2684, enemy: 'picket', formation: 'line', count: 8, lane: 50 },
   /*
     ⚠️ **LANE 40, NOT 30 — 0382.** This column's fire used to depend on hiding: authored at 30, its
     turrets roamed off the near edge before anyone saw them, sat twenty units past the screen where
@@ -724,45 +745,45 @@ const APPROACH: readonly WaveEntry[] = [
     35% / 39% / 38%, and the dry stretch is inside the run-up at either of the last two. Forty is
     the lane the column at 2405 already flies.
   */
-  { at: 2871, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
-  { at: 2910, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
-  { at: 2948, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
-  { at: 2986, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
-  { at: 3025, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 2719, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
+  { at: 2754, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
+  { at: 2789, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 2823, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
+  { at: 2859, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
 
   // ── Chargers. Faster than a reaction, so they have to be seen coming. ───────────────────────────
-  { at: 3063, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
-  { at: 3101, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
+  { at: 2893, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 2928, enemy: 'drifter', formation: 'line', count: 6, lane: 35 },
   // From the side, and back out by it — 0328: level one's first U, in a lancer vee's place.
-  { at: 3139, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
-  { at: 3178, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
-  { at: 3216, enemy: 'charger', formation: 'column', count: 4, lane: 55, origin: 'acrossPlus' },
-  { at: 3254, enemy: 'turret', formation: 'line', count: 6, lane: 40 },
-  { at: 3293, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 3330, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
-  { at: 3369, enemy: 'lancer', formation: 'column', count: 8, lane: 60 },
-  { at: 3408, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 3446, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
-  { at: 3484, enemy: 'turret', formation: 'column', count: 6, lane: 65 },
-  { at: 3522, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
-  { at: 3561, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
+  { at: 2962, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
+  { at: 2998, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
+  { at: 3032, enemy: 'charger', formation: 'column', count: 4, lane: 55, origin: 'acrossPlus' },
+  { at: 3067, enemy: 'turret', formation: 'line', count: 6, lane: 40 },
+  { at: 3102, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 3136, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 3171, enemy: 'lancer', formation: 'column', count: 8, lane: 60 },
+  { at: 3207, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
+  { at: 3241, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
+  { at: 3276, enemy: 'turret', formation: 'column', count: 6, lane: 65 },
+  { at: 3310, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 3346, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
 
   // ── Everything, at density. The stretch that decides whether three lives was the right number. ──
-  { at: 3599, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
-  { at: 3637, enemy: 'turret', formation: 'column', count: 6, lane: 25 },
-  { at: 3672, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
-  { at: 3706, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 3740, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
-  { at: 3773, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
-  { at: 3808, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
-  { at: 3842, enemy: 'turret', formation: 'line', count: 6, lane: 45 },
-  { at: 3876, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
-  { at: 3909, enemy: 'charger', formation: 'vee', count: 6, lane: 50 },
-  { at: 3944, enemy: 'picket', formation: 'column', count: 8, lane: 65 },
-  { at: 3978, enemy: 'drifter', formation: 'vee', count: 6, lane: 35 },
-  { at: 4012, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
-  { at: 4046, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
-  { at: 4080, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 3380, enemy: 'picket', formation: 'vee', count: 8, lane: 50 },
+  { at: 3415, enemy: 'turret', formation: 'column', count: 6, lane: 25 },
+  { at: 3447, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 3478, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 3509, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
+  { at: 3539, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 3570, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
+  { at: 3601, enemy: 'turret', formation: 'line', count: 6, lane: 45 },
+  { at: 3632, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 3662, enemy: 'charger', formation: 'vee', count: 6, lane: 50 },
+  { at: 3694, enemy: 'picket', formation: 'column', count: 8, lane: 65 },
+  { at: 3725, enemy: 'drifter', formation: 'vee', count: 6, lane: 35 },
+  { at: 3756, enemy: 'turret', formation: 'column', count: 6, lane: 40 },
+  { at: 3787, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
+  { at: 3818, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
 ];
 
 /*
@@ -817,20 +838,20 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
     thing. A fifth of the way in, which is the ask's *"about 20% of the way into the level"*, and
     after the first weapon because one new weapon at a time is how either gets noticed.
   */
-  { at: 720, kind: 'missile', lane: 62 },
+  { at: 682, kind: 'missile', lane: 62 },
   /*
     ⚠️ **LEVEL ONE'S EXTRA PICKUP, BEFORE THE MID-BOSS — a bomb since 0441, and a weapon before it.**
     It was the pickup that lifted the one-hit clamp (0084, 0086); the clamp went with the weapon
     ladder, because its premise was a gun one rung up. What is left is a charge to bring into the
-    first fight, 549 units before the sentinel arrives.
+    first fight, 499 units before the sentinel arrives.
   */
-  { at: 1000, kind: 'bomb', lane: 34 },
+  { at: 936, kind: 'bomb', lane: 34 },
   /*
     ⚠️ **AND ITS EXTRA MISSILE, HALFWAY BETWEEN THE FIGHTS** — *"halfway between miniboss and level
-    boss"*: the sentinel at 1549 and the serpent at 4270, so the midpoint is 2910. The second tube,
-    for a player who took the first; a charge, for one whose rack is somehow already full.
+    boss"*: the sentinel at 1435 and the serpent at 4008, so the midpoint is 2722 (0503). The second
+    tube, for a player who took the first; a charge, for one whose rack is somehow already full.
   */
-  { at: 2910, kind: 'missile', lane: 30 },
+  { at: 2722, kind: 'missile', lane: 30 },
 ];
 
 /*
@@ -855,26 +876,26 @@ const APPROACH_PICKUPS: readonly PickupEntry[] = [
 */
 const DESCENT: readonly WaveEntry[] = [
   { at: 300, enemy: 'lancer', formation: 'vee', count: 8, lane: 50 },
-  { at: 355, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 365, enemy: 'spinner', formation: 'column', count: 3, lane: 30 },
-  { at: 420, enemy: 'lancer', formation: 'line', count: 8, lane: 65 },
-  { at: 474, enemy: 'charger', formation: 'vee', count: 5, lane: 50 },
-  { at: 530, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
-  { at: 584, enemy: 'moth', formation: 'column', count: 5, lane: 35 },
-  { at: 640, enemy: 'weaver', formation: 'column', count: 5, lane: 60 },
+  { at: 350, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 359, enemy: 'spinner', formation: 'column', count: 3, lane: 30 },
+  { at: 409, enemy: 'lancer', formation: 'line', count: 8, lane: 65 },
+  { at: 458, enemy: 'charger', formation: 'vee', count: 5, lane: 50 },
+  { at: 509, enemy: 'drifter', formation: 'vee', count: 6, lane: 40 },
+  { at: 558, enemy: 'moth', formation: 'column', count: 5, lane: 35 },
+  { at: 609, enemy: 'weaver', formation: 'column', count: 5, lane: 60 },
 
   // ── Wardens. Four health, weaving, and shooting — the first thing that is two problems at once. ─
-  { at: 694, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
+  { at: 658, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 722, enemy: 'weaver', formation: 'line', count: 5, lane: 60 },
-  { at: 750, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
-  { at: 778, enemy: 'warden', formation: 'column', count: 5, lane: 40 },
+  { at: 684, enemy: 'weaver', formation: 'line', count: 5, lane: 60 },
+  { at: 709, enemy: 'charger', formation: 'column', count: 5, lane: 30, origin: 'acrossMinus' },
+  { at: 735, enemy: 'warden', formation: 'column', count: 5, lane: 40 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 805, enemy: 'drifter', formation: 'vee', count: 5, lane: 36 },
-  { at: 859, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
-  { at: 915, enemy: 'lancer', formation: 'vee', count: 8, lane: 62 },
-  { at: 969, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
-  { at: 1025, enemy: 'moth', formation: 'line', count: 5, lane: 45 },
+  { at: 759, enemy: 'drifter', formation: 'vee', count: 5, lane: 36 },
+  { at: 808, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
+  { at: 859, enemy: 'lancer', formation: 'vee', count: 8, lane: 62 },
+  { at: 908, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 959, enemy: 'moth', formation: 'line', count: 5, lane: 45 },
   // ⚠️ Filler, and it was filling something the density guard measured rather than something anybody
   // felt: two three-wide waves in a row used to be a six-enemy trough, and wardens are four health
   // each so making THEM more numerous would have changed the level's difficulty to fix its pacing.
@@ -883,75 +904,75 @@ const DESCENT: readonly WaveEntry[] = [
   // without removing a body, so the view holds more at once and this wave can go without the guard
   // noticing. Driven: one removed is green, two are green, three go red. It stays because the level
   // was authored with it, not because the floor still needs it.
-  { at: 1052, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },
-  { at: 1079, enemy: 'turret', formation: 'line', count: 6, lane: 55 },
-  { at: 1134, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },
-  { at: 1190, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
-  { at: 1244, enemy: 'warden', formation: 'vee', count: 5, lane: 50 },
-  { at: 1300, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
-  { at: 1354, enemy: 'lancer', formation: 'line', count: 8, lane: 68 },
-  { at: 1410, enemy: 'charger', formation: 'line', count: 5, lane: 45 },
+  { at: 984, enemy: 'drifter', formation: 'line', count: 5, lane: 62 },
+  { at: 1008, enemy: 'turret', formation: 'line', count: 6, lane: 55 },
+  { at: 1058, enemy: 'charger', formation: 'column', count: 5, lane: 25, origin: 'acrossPlus' },
+  { at: 1109, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },
+  { at: 1158, enemy: 'warden', formation: 'vee', count: 5, lane: 50 },
+  { at: 1209, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
+  { at: 1258, enemy: 'lancer', formation: 'line', count: 8, lane: 68 },
+  { at: 1309, enemy: 'charger', formation: 'line', count: 5, lane: 45 },
   // The swift — 0328: a line astride the centre, half sweeping each way, through the chargers.
-  { at: 1437, enemy: 'swift', formation: 'line', count: 5, lane: 45 },
-  { at: 1464, enemy: 'moth', formation: 'column', count: 5, lane: 35 },
+  { at: 1334, enemy: 'swift', formation: 'line', count: 5, lane: 45 },
+  { at: 1358, enemy: 'moth', formation: 'column', count: 5, lane: 35 },
 
   // ── Chargers at density, through standing fire. The stretch that punishes standing still. ───────
-  { at: 1519, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
-  { at: 1574, enemy: 'warden', formation: 'line', count: 5, lane: 45 },
-  // ⚠️ Nothing from 1,599 to 2,499: the harrow's window — 0502. Everything below stood 1,629 to 4,110
+  { at: 1408, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
+  { at: 1458, enemy: 'warden', formation: 'line', count: 5, lane: 45 },
+  // ⚠️ Nothing from 1,481 to 2,381 (0503's places): the harrow's window — 0502. Everything below stood 1,629 to 4,110
   // until then, and is the same script in the same order, scaled into what the window leaves.
-  { at: 2500, enemy: 'lancer', formation: 'line', count: 8, lane: 50 },
-  { at: 2537, enemy: 'charger', formation: 'column', count: 5, lane: 35, origin: 'acrossMinus' },
-  { at: 2572, enemy: 'turret', formation: 'line', count: 6, lane: 60 },
-  { at: 2608, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
-  { at: 2645, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
-  { at: 2681, enemy: 'moth', formation: 'vee', count: 5, lane: 50 },
-  { at: 2717, enemy: 'warden', formation: 'column', count: 5, lane: 55 },
-  { at: 2753, enemy: 'charger', formation: 'line', count: 6, lane: 42 },
-  { at: 2790, enemy: 'charger', formation: 'vee', count: 5, lane: 60 },
-  { at: 2825, enemy: 'turret', formation: 'column', count: 6, lane: 28 },
-  { at: 2861, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 2897, enemy: 'lancer', formation: 'line', count: 8, lane: 65 },
-  { at: 2934, enemy: 'moth', formation: 'line', count: 5, lane: 45 },
-  { at: 2970, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 2382, enemy: 'lancer', formation: 'line', count: 8, lane: 50 },
+  { at: 2416, enemy: 'charger', formation: 'column', count: 5, lane: 35, origin: 'acrossMinus' },
+  { at: 2447, enemy: 'turret', formation: 'line', count: 6, lane: 60 },
+  { at: 2480, enemy: 'weaver', formation: 'column', count: 5, lane: 30 },
+  { at: 2514, enemy: 'charger', formation: 'column', count: 5, lane: 70, origin: 'acrossPlus' },
+  { at: 2546, enemy: 'moth', formation: 'vee', count: 5, lane: 50 },
+  { at: 2579, enemy: 'warden', formation: 'column', count: 5, lane: 55 },
+  { at: 2612, enemy: 'charger', formation: 'line', count: 6, lane: 42 },
+  { at: 2646, enemy: 'charger', formation: 'vee', count: 5, lane: 60 },
+  { at: 2677, enemy: 'turret', formation: 'column', count: 6, lane: 28 },
+  { at: 2710, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 2743, enemy: 'lancer', formation: 'line', count: 8, lane: 65 },
+  { at: 2776, enemy: 'moth', formation: 'line', count: 5, lane: 45 },
+  { at: 2809, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
 
   // ── Everything, with wardens holding the lane the player wants. ─────────────────────────────────
-  { at: 3006, enemy: 'charger', formation: 'vee', count: 6, lane: 55 },
-  { at: 3042, enemy: 'warden', formation: 'vee', count: 5, lane: 50 },
-  { at: 3078, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
-  { at: 3114, enemy: 'charger', formation: 'column', count: 5, lane: 65 },
-  { at: 3150, enemy: 'turret', formation: 'line', count: 6, lane: 45 },
-  { at: 3187, enemy: 'lancer', formation: 'column', count: 8, lane: 32 },
-  { at: 3223, enemy: 'charger', formation: 'vee', count: 5, lane: 45 },
-  { at: 3259, enemy: 'moth', formation: 'line', count: 5, lane: 58 },
-  { at: 3295, enemy: 'lancer', formation: 'line', count: 8, lane: 50 },
-  { at: 3331, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
-  { at: 3349, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
-  { at: 3367, enemy: 'turret', formation: 'column', count: 6, lane: 70 },
-  { at: 3403, enemy: 'lancer', formation: 'vee', count: 8, lane: 38 },
-  { at: 3440, enemy: 'charger', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
-  { at: 3476, enemy: 'moth', formation: 'column', count: 5, lane: 50 },
-  { at: 3512, enemy: 'charger', formation: 'vee', count: 6, lane: 45 },
-  { at: 3548, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 3584, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },
+  { at: 2842, enemy: 'charger', formation: 'vee', count: 6, lane: 55 },
+  { at: 2875, enemy: 'warden', formation: 'vee', count: 5, lane: 50 },
+  { at: 2907, enemy: 'weaver', formation: 'line', count: 5, lane: 40 },
+  { at: 2940, enemy: 'charger', formation: 'column', count: 5, lane: 65 },
+  { at: 2973, enemy: 'turret', formation: 'line', count: 6, lane: 45 },
+  { at: 3006, enemy: 'lancer', formation: 'column', count: 8, lane: 32 },
+  { at: 3039, enemy: 'charger', formation: 'vee', count: 5, lane: 45 },
+  { at: 3072, enemy: 'moth', formation: 'line', count: 5, lane: 58 },
+  { at: 3105, enemy: 'lancer', formation: 'line', count: 8, lane: 50 },
+  { at: 3137, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 3154, enemy: 'swift', formation: 'vee', count: 5, lane: 50 },
+  { at: 3170, enemy: 'turret', formation: 'column', count: 6, lane: 70 },
+  { at: 3203, enemy: 'lancer', formation: 'vee', count: 8, lane: 38 },
+  { at: 3236, enemy: 'charger', formation: 'column', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 3269, enemy: 'moth', formation: 'column', count: 5, lane: 50 },
+  { at: 3302, enemy: 'charger', formation: 'vee', count: 6, lane: 45 },
+  { at: 3335, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 3367, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },
 
   // ── The hardest stretch in the game so far. ─────────────────────────────────────────────────────
-  { at: 3620, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
-  { at: 3654, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
-  { at: 3689, enemy: 'turret', formation: 'line', count: 6, lane: 40 },
-  { at: 3722, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
-  { at: 3756, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
-  { at: 3790, enemy: 'moth', formation: 'vee', count: 5, lane: 50 },
-  { at: 3824, enemy: 'warden', formation: 'column', count: 5, lane: 35 },
-  { at: 3858, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
-  { at: 3892, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
-  { at: 3926, enemy: 'turret', formation: 'column', count: 6, lane: 68 },
-  { at: 3960, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
-  { at: 3994, enemy: 'warden', formation: 'vee', count: 5, lane: 45 },
-  { at: 4028, enemy: 'moth', formation: 'line', count: 5, lane: 60 },
-  { at: 4062, enemy: 'charger', formation: 'column', count: 5, lane: 40, origin: 'acrossPlus' },
-  { at: 4096, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
-  { at: 4130, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
+  { at: 3400, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
+  { at: 3431, enemy: 'charger', formation: 'vee', count: 5, lane: 55 },
+  { at: 3463, enemy: 'turret', formation: 'line', count: 6, lane: 40 },
+  { at: 3493, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },
+  { at: 3524, enemy: 'charger', formation: 'column', count: 5, lane: 65, origin: 'acrossMinus' },
+  { at: 3555, enemy: 'moth', formation: 'vee', count: 5, lane: 50 },
+  { at: 3586, enemy: 'warden', formation: 'column', count: 5, lane: 35 },
+  { at: 3616, enemy: 'drifter', formation: 'line', count: 6, lane: 55 },
+  { at: 3647, enemy: 'charger', formation: 'column', count: 5, lane: 25 },
+  { at: 3678, enemy: 'turret', formation: 'column', count: 6, lane: 68 },
+  { at: 3709, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 3740, enemy: 'warden', formation: 'vee', count: 5, lane: 45 },
+  { at: 3771, enemy: 'moth', formation: 'line', count: 5, lane: 60 },
+  { at: 3802, enemy: 'charger', formation: 'column', count: 5, lane: 40, origin: 'acrossPlus' },
+  { at: 3833, enemy: 'drifter', formation: 'line', count: 6, lane: 50 },
+  { at: 3864, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
 ];
 
 /**
@@ -966,7 +987,7 @@ const DESCENT_PICKUPS: readonly PickupEntry[] = [
   // The opening weapon was here, as level one's was, and 0441 took both: *"we'll remove the first
   // weapon pick up from each level."* Every level after the first authors its tube and nothing else;
   // its charge is the mid-boss's.
-  { at: 864, kind: 'missile', lane: 28 },
+  { at: 813, kind: 'missile', lane: 28 },
 ];
 
 
@@ -984,80 +1005,80 @@ const DESCENT_PICKUPS: readonly PickupEntry[] = [
 */
 const COILWARD: readonly WaveEntry[] = [
   { at: 300, enemy: 'drifter', formation: 'line', count: 5, lane: 47 },
-  { at: 359, enemy: 'lancer', formation: 'line', count: 8, lane: 58 },
-  { at: 418, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
-  { at: 477, enemy: 'lancer', formation: 'line', count: 8, lane: 53, origin: 'acrossMinus' },
-  { at: 536, enemy: 'drifter', formation: 'line', count: 5, lane: 44 },
-  { at: 595, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
-  { at: 654, enemy: 'raptor', formation: 'line', count: 5, lane: 50 },
-  { at: 713, enemy: 'lancer', formation: 'line', count: 8, lane: 40, origin: 'acrossPlus' },
+  { at: 354, enemy: 'lancer', formation: 'line', count: 8, lane: 58 },
+  { at: 407, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 461, enemy: 'lancer', formation: 'line', count: 8, lane: 53, origin: 'acrossMinus' },
+  { at: 515, enemy: 'drifter', formation: 'line', count: 5, lane: 44 },
+  { at: 568, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },
+  { at: 622, enemy: 'raptor', formation: 'line', count: 5, lane: 50 },
+  { at: 675, enemy: 'lancer', formation: 'line', count: 8, lane: 40, origin: 'acrossPlus' },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 742, enemy: 'charger', formation: 'vee', count: 4, lane: 40 },
-  { at: 772, enemy: 'sower', formation: 'column', count: 6, lane: 50 },
+  { at: 702, enemy: 'charger', formation: 'vee', count: 4, lane: 40 },
+  { at: 729, enemy: 'sower', formation: 'column', count: 6, lane: 50 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 801, enemy: 'drifter', formation: 'line', count: 5, lane: 64 },
-  { at: 831, enemy: 'lancer', formation: 'column', count: 8, lane: 41 },
-  { at: 890, enemy: 'lancer', formation: 'column', count: 8, lane: 60, origin: 'acrossMinus' },
-  { at: 948, enemy: 'weaver', formation: 'column', count: 5, lane: 45 },
-  { at: 1008, enemy: 'charger', formation: 'column', count: 5, lane: 55 },
-  { at: 1067, enemy: 'lancer', formation: 'column', count: 8, lane: 42, origin: 'acrossPlus' },
-  { at: 1126, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 755, enemy: 'drifter', formation: 'line', count: 5, lane: 64 },
+  { at: 783, enemy: 'lancer', formation: 'column', count: 8, lane: 41 },
+  { at: 836, enemy: 'lancer', formation: 'column', count: 8, lane: 60, origin: 'acrossMinus' },
+  { at: 889, enemy: 'weaver', formation: 'column', count: 5, lane: 45 },
+  { at: 944, enemy: 'charger', formation: 'column', count: 5, lane: 55 },
+  { at: 997, enemy: 'lancer', formation: 'column', count: 8, lane: 42, origin: 'acrossPlus' },
+  { at: 1051, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
   // The swift from the side — 0328: the Belt's idea, *where things come from*, used twice by one body
   // that comes in by an edge and goes out by it.
-  { at: 1155, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
-  { at: 1185, enemy: 'raptor', formation: 'column', count: 5, lane: 49 },
-  { at: 1244, enemy: 'lancer', formation: 'column', count: 8, lane: 50, origin: 'acrossMinus' },
-  { at: 1303, enemy: 'sower', formation: 'column', count: 6, lane: 44 },
-  { at: 1361, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
-  { at: 1420, enemy: 'lancer', formation: 'column', count: 8, lane: 60 },
-  { at: 1480, enemy: 'lancer', formation: 'column', count: 8, lane: 45, origin: 'acrossPlus' },
-  { at: 1539, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
-  // ⚠️ Nothing from 1,549 to 2,449: the shoal mother's window — 0502. Everything below stood 1,598 to
+  { at: 1077, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 1105, enemy: 'raptor', formation: 'column', count: 5, lane: 49 },
+  { at: 1158, enemy: 'lancer', formation: 'column', count: 8, lane: 50, origin: 'acrossMinus' },
+  { at: 1212, enemy: 'sower', formation: 'column', count: 6, lane: 44 },
+  { at: 1265, enemy: 'weaver', formation: 'column', count: 5, lane: 55 },
+  { at: 1318, enemy: 'lancer', formation: 'column', count: 8, lane: 60 },
+  { at: 1373, enemy: 'lancer', formation: 'column', count: 8, lane: 45, origin: 'acrossPlus' },
+  { at: 1426, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
+  // ⚠️ Nothing from 1,435 to 2,335 (0503's places): the shoal mother's window — 0502. Everything below stood 1,598 to
   // 4,016 until then, and is the same script in the same order, scaled into what the window leaves.
-  { at: 2450, enemy: 'warden', formation: 'column', count: 5, lane: 42 },
-  { at: 2490, enemy: 'turret', formation: 'vee', count: 6, lane: 47 },
-  { at: 2530, enemy: 'lancer', formation: 'vee', count: 8, lane: 42, origin: 'acrossMinus' },
-  { at: 2569, enemy: 'weaver', formation: 'vee', count: 4, lane: 44 },
-  { at: 2608, enemy: 'turret', formation: 'vee', count: 6, lane: 53 },
-  { at: 2648, enemy: 'sower', formation: 'vee', count: 6, lane: 44 },
-  { at: 2689, enemy: 'raptor', formation: 'vee', count: 4, lane: 44 },
-  { at: 2728, enemy: 'lancer', formation: 'vee', count: 8, lane: 60, origin: 'acrossPlus' },
-  { at: 2768, enemy: 'turret', formation: 'vee', count: 6, lane: 50 },
-  { at: 2808, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
-  { at: 2847, enemy: 'lancer', formation: 'vee', count: 8, lane: 47, origin: 'acrossMinus' },
-  { at: 2887, enemy: 'turret', formation: 'vee', count: 6, lane: 58 },
-  { at: 2927, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
-  { at: 2966, enemy: 'lancer', formation: 'vee', count: 8, lane: 53, origin: 'acrossPlus' },
-  { at: 3007, enemy: 'turret', formation: 'vee', count: 6, lane: 44 },
-  { at: 3047, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
-  { at: 3086, enemy: 'raptor', formation: 'line', count: 5, lane: 56 },
-  { at: 3106, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
-  { at: 3125, enemy: 'lancer', formation: 'line', count: 8, lane: 55 },
-  { at: 3165, enemy: 'charger', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
-  { at: 3205, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
-  { at: 3245, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
-  { at: 3285, enemy: 'lancer', formation: 'line', count: 8, lane: 49, origin: 'acrossPlus' },
-  { at: 3325, enemy: 'raptor', formation: 'line', count: 5, lane: 50 },
-  { at: 3365, enemy: 'lancer', formation: 'line', count: 8, lane: 42, origin: 'acrossMinus' },
-  { at: 3404, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
-  { at: 3444, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
-  { at: 3483, enemy: 'turret', formation: 'column', count: 6, lane: 58, origin: 'acrossMinus' },
-  { at: 3523, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
-  { at: 3563, enemy: 'raptor', formation: 'line', count: 5, lane: 55 },
-  { at: 3603, enemy: 'lancer', formation: 'column', count: 8, lane: 53, origin: 'acrossPlus' },
-  { at: 3643, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
-  { at: 3682, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
-  { at: 3702, enemy: 'swift', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
-  { at: 3722, enemy: 'turret', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
-  { at: 3762, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
-  { at: 3802, enemy: 'raptor', formation: 'column', count: 5, lane: 50 },
-  { at: 3841, enemy: 'lancer', formation: 'column', count: 8, lane: 40, origin: 'acrossPlus' },
-  { at: 3881, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
-  { at: 3921, enemy: 'turret', formation: 'column', count: 6, lane: 58, origin: 'acrossMinus' },
-  { at: 3961, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
-  { at: 4000, enemy: 'lancer', formation: 'column', count: 8, lane: 53, origin: 'acrossPlus' },
-  { at: 4040, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
-  { at: 4080, enemy: 'turret', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 2336, enemy: 'warden', formation: 'column', count: 5, lane: 42 },
+  { at: 2372, enemy: 'turret', formation: 'vee', count: 6, lane: 47 },
+  { at: 2409, enemy: 'lancer', formation: 'vee', count: 8, lane: 42, origin: 'acrossMinus' },
+  { at: 2444, enemy: 'weaver', formation: 'vee', count: 4, lane: 44 },
+  { at: 2480, enemy: 'turret', formation: 'vee', count: 6, lane: 53 },
+  { at: 2516, enemy: 'sower', formation: 'vee', count: 6, lane: 44 },
+  { at: 2553, enemy: 'raptor', formation: 'vee', count: 4, lane: 44 },
+  { at: 2589, enemy: 'lancer', formation: 'vee', count: 8, lane: 60, origin: 'acrossPlus' },
+  { at: 2625, enemy: 'turret', formation: 'vee', count: 6, lane: 50 },
+  { at: 2661, enemy: 'weaver', formation: 'vee', count: 4, lane: 56 },
+  { at: 2697, enemy: 'lancer', formation: 'vee', count: 8, lane: 47, origin: 'acrossMinus' },
+  { at: 2733, enemy: 'turret', formation: 'vee', count: 6, lane: 58 },
+  { at: 2770, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 2805, enemy: 'lancer', formation: 'vee', count: 8, lane: 53, origin: 'acrossPlus' },
+  { at: 2842, enemy: 'turret', formation: 'vee', count: 6, lane: 44 },
+  { at: 2879, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
+  { at: 2914, enemy: 'raptor', formation: 'line', count: 5, lane: 56 },
+  { at: 2932, enemy: 'swift', formation: 'column', count: 5, lane: 50, origin: 'acrossPlus' },
+  { at: 2950, enemy: 'lancer', formation: 'line', count: 8, lane: 55 },
+  { at: 2986, enemy: 'charger', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 3022, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 3059, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
+  { at: 3095, enemy: 'lancer', formation: 'line', count: 8, lane: 49, origin: 'acrossPlus' },
+  { at: 3131, enemy: 'raptor', formation: 'line', count: 5, lane: 50 },
+  { at: 3168, enemy: 'lancer', formation: 'line', count: 8, lane: 42, origin: 'acrossMinus' },
+  { at: 3203, enemy: 'charger', formation: 'line', count: 5, lane: 41, origin: 'acrossMinus' },
+  { at: 3240, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 3275, enemy: 'turret', formation: 'column', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 3311, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 3348, enemy: 'raptor', formation: 'line', count: 5, lane: 55 },
+  { at: 3384, enemy: 'lancer', formation: 'column', count: 8, lane: 53, origin: 'acrossPlus' },
+  { at: 3420, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 3456, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 3474, enemy: 'swift', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 3492, enemy: 'turret', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 3529, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  { at: 3565, enemy: 'raptor', formation: 'column', count: 5, lane: 50 },
+  { at: 3600, enemy: 'lancer', formation: 'column', count: 8, lane: 40, origin: 'acrossPlus' },
+  { at: 3637, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 3673, enemy: 'turret', formation: 'column', count: 6, lane: 58, origin: 'acrossMinus' },
+  { at: 3710, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 3745, enemy: 'lancer', formation: 'column', count: 8, lane: 53, origin: 'acrossPlus' },
+  { at: 3781, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  { at: 3818, enemy: 'turret', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
 ];
 
 /**
@@ -1067,7 +1088,7 @@ const COILWARD: readonly WaveEntry[] = [
  * what changes is what it costs to reach them.
  */
 const COILWARD_PICKUPS: readonly PickupEntry[] = [
-  { at: 854, kind: 'missile', lane: 56 },
+  { at: 804, kind: 'missile', lane: 56 },
 ];
 
 /*
@@ -1080,81 +1101,81 @@ const COILWARD_PICKUPS: readonly PickupEntry[] = [
 */
 const SHOAL: readonly WaveEntry[] = [
   { at: 300, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
-  { at: 357, enemy: 'drifter', formation: 'line', count: 5, lane: 41 },
-  { at: 415, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
-  { at: 472, enemy: 'sower', formation: 'line', count: 5, lane: 45 },
-  { at: 530, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
-  { at: 588, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
-  { at: 645, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
-  { at: 703, enemy: 'sower', formation: 'line', count: 5, lane: 49 },
+  { at: 352, enemy: 'drifter', formation: 'line', count: 5, lane: 41 },
+  { at: 405, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 456, enemy: 'sower', formation: 'line', count: 5, lane: 45 },
+  { at: 509, enemy: 'charger', formation: 'line', count: 5, lane: 55 },
+  { at: 562, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 614, enemy: 'charger', formation: 'line', count: 5, lane: 59 },
+  { at: 666, enemy: 'sower', formation: 'line', count: 5, lane: 49 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 731, enemy: 'drifter', formation: 'vee', count: 5, lane: 34 },
-  { at: 760, enemy: 'sower', formation: 'column', count: 5, lane: 53 },
-  { at: 789, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
+  { at: 692, enemy: 'drifter', formation: 'vee', count: 5, lane: 34 },
+  { at: 718, enemy: 'sower', formation: 'column', count: 5, lane: 53 },
+  { at: 745, enemy: 'charger', formation: 'column', count: 5, lane: 47 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 817, enemy: 'weaver', formation: 'line', count: 5, lane: 54 },
-  { at: 875, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
-  { at: 932, enemy: 'sentry', formation: 'column', count: 5, lane: 42 },
-  { at: 990, enemy: 'charger', formation: 'column', count: 5, lane: 44, origin: 'acrossMinus' },
-  { at: 1048, enemy: 'sower', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },
-  { at: 1105, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
-  { at: 1163, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
-  { at: 1220, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
-  { at: 1277, enemy: 'sower', formation: 'column', count: 5, lane: 47 },
-  { at: 1335, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
-  { at: 1392, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
-  { at: 1450, enemy: 'lancer', formation: 'vee', count: 6, lane: 60 },
-  { at: 1508, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
-  // ⚠️ Nothing from 1,519 to 2,419: the lattice's window — 0502. Everything below stood 1,565 to 3,980
+  { at: 770, enemy: 'weaver', formation: 'line', count: 5, lane: 54 },
+  { at: 823, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 875, enemy: 'sentry', formation: 'column', count: 5, lane: 42 },
+  { at: 927, enemy: 'charger', formation: 'column', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 980, enemy: 'sower', formation: 'column', count: 5, lane: 56, origin: 'acrossPlus' },
+  { at: 1032, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 1085, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
+  { at: 1136, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 1188, enemy: 'sower', formation: 'column', count: 5, lane: 47 },
+  { at: 1241, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
+  { at: 1293, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
+  { at: 1345, enemy: 'lancer', formation: 'vee', count: 6, lane: 60 },
+  { at: 1398, enemy: 'charger', formation: 'column', count: 5, lane: 44 },
+  // ⚠️ Nothing from 1,408 to 2,308 (0503's places): the lattice's window — 0502. Everything below stood 1,565 to 3,980
   // until then, and is the same script in the same order, scaled into what the window leaves; the
   // places the notes below name are where those waves stood before it.
-  { at: 2420, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
-  { at: 2459, enemy: 'sentry', formation: 'vee', count: 6, lane: 42 },
-  { at: 2498, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
-  { at: 2536, enemy: 'charger', formation: 'vee', count: 6, lane: 41 },
-  { at: 2575, enemy: 'lancer', formation: 'vee', count: 6, lane: 50 },
-  { at: 2614, enemy: 'weaver', formation: 'vee', count: 5, lane: 45, origin: 'acrossMinus' },
-  { at: 2653, enemy: 'charger', formation: 'vee', count: 6, lane: 55 },
-  { at: 2692, enemy: 'lancer', formation: 'vee', count: 6, lane: 45, origin: 'acrossMinus' },
-  { at: 2730, enemy: 'weaver', formation: 'vee', count: 5, lane: 56 },
-  { at: 2770, enemy: 'charger', formation: 'vee', count: 6, lane: 49, origin: 'acrossPlus' },
-  { at: 2808, enemy: 'weaver', formation: 'vee', count: 5, lane: 44 },
-  { at: 2847, enemy: 'sower', formation: 'vee', count: 6, lane: 60 },
-  { at: 2886, enemy: 'sentry', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },
-  { at: 2924, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
-  { at: 2963, enemy: 'charger', formation: 'vee', count: 6, lane: 42 },
-  { at: 3002, enemy: 'turret', formation: 'line', count: 5, lane: 60, origin: 'acrossPlus' },
-  { at: 3041, enemy: 'charger', formation: 'line', count: 5, lane: 47 },
-  { at: 3080, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
-  { at: 3119, enemy: 'turret', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
-  { at: 3157, enemy: 'charger', formation: 'line', count: 5, lane: 53 },
-  { at: 3196, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 3235, enemy: 'turret', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
-  { at: 3274, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
-  { at: 3313, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 3351, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
-  { at: 3391, enemy: 'sentry', formation: 'line', count: 5, lane: 44 },
-  { at: 3429, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
-  { at: 3468, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
-  { at: 3507, enemy: 'charger', formation: 'column', count: 6, lane: 50 },
+  { at: 2309, enemy: 'weaver', formation: 'column', count: 5, lane: 56 },
+  { at: 2344, enemy: 'sentry', formation: 'vee', count: 6, lane: 42 },
+  { at: 2380, enemy: 'weaver', formation: 'vee', count: 5, lane: 50 },
+  { at: 2414, enemy: 'charger', formation: 'vee', count: 6, lane: 41 },
+  { at: 2450, enemy: 'lancer', formation: 'vee', count: 6, lane: 50 },
+  { at: 2485, enemy: 'weaver', formation: 'vee', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 2521, enemy: 'charger', formation: 'vee', count: 6, lane: 55 },
+  { at: 2556, enemy: 'lancer', formation: 'vee', count: 6, lane: 45, origin: 'acrossMinus' },
+  { at: 2591, enemy: 'weaver', formation: 'vee', count: 5, lane: 56 },
+  { at: 2627, enemy: 'charger', formation: 'vee', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 2662, enemy: 'weaver', formation: 'vee', count: 5, lane: 44 },
+  { at: 2697, enemy: 'sower', formation: 'vee', count: 6, lane: 60 },
+  { at: 2733, enemy: 'sentry', formation: 'line', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 2767, enemy: 'weaver', formation: 'vee', count: 5, lane: 55 },
+  { at: 2803, enemy: 'charger', formation: 'vee', count: 6, lane: 42 },
+  { at: 2838, enemy: 'turret', formation: 'line', count: 5, lane: 60, origin: 'acrossPlus' },
+  { at: 2873, enemy: 'charger', formation: 'line', count: 5, lane: 47 },
+  { at: 2909, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 2944, enemy: 'turret', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 2979, enemy: 'charger', formation: 'line', count: 5, lane: 53 },
+  { at: 3014, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 3050, enemy: 'turret', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 3085, enemy: 'charger', formation: 'line', count: 5, lane: 50 },
+  { at: 3121, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 3155, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
+  { at: 3192, enemy: 'sentry', formation: 'line', count: 5, lane: 44 },
+  { at: 3226, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
+  { at: 3262, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 3297, enemy: 'charger', formation: 'column', count: 6, lane: 50 },
   // Four, not five or six, from here to 3463 — 0472: three sowers in four waves were the level's
   // busiest two seconds at Savior outside its end boss, 35 live lances.
-  { at: 3545, enemy: 'sower', formation: 'column', count: 4, lane: 44 },
-  { at: 3584, enemy: 'drifter', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
-  { at: 3623, enemy: 'charger', formation: 'column', count: 6, lane: 45 },
+  { at: 3332, enemy: 'sower', formation: 'column', count: 4, lane: 44 },
+  { at: 3367, enemy: 'drifter', formation: 'column', count: 6, lane: 60, origin: 'acrossMinus' },
+  { at: 3403, enemy: 'charger', formation: 'column', count: 6, lane: 45 },
   // A sower since 0259, and it was a charger: the stretch from 3290 to 3463 was three non-firing
   // waves and the level's longest dry stretch at the capped loadout — `scripts/weigh-bullets.mjs`.
-  { at: 3662, enemy: 'sower', formation: 'line', count: 4, lane: 55, origin: 'acrossMinus' },
-  { at: 3701, enemy: 'sower', formation: 'column', count: 4, lane: 44, origin: 'acrossPlus' },
-  { at: 3740, enemy: 'drifter', formation: 'column', count: 6, lane: 59 },
-  { at: 3778, enemy: 'charger', formation: 'column', count: 6, lane: 49 },
-  { at: 3817, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
-  { at: 3856, enemy: 'turret', formation: 'column', count: 5, lane: 44, origin: 'acrossPlus' },
-  { at: 3895, enemy: 'drifter', formation: 'column', count: 6, lane: 60 },
-  { at: 3934, enemy: 'charger', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
-  { at: 3972, enemy: 'turret', formation: 'line', count: 5, lane: 55 },
-  { at: 4012, enemy: 'sentry', formation: 'column', count: 5, lane: 44 },
-  { at: 4050, enemy: 'drifter', formation: 'column', count: 6, lane: 59, origin: 'acrossMinus' },
+  { at: 3438, enemy: 'sower', formation: 'line', count: 4, lane: 55, origin: 'acrossMinus' },
+  { at: 3473, enemy: 'sower', formation: 'column', count: 4, lane: 44, origin: 'acrossPlus' },
+  { at: 3509, enemy: 'drifter', formation: 'column', count: 6, lane: 59 },
+  { at: 3543, enemy: 'charger', formation: 'column', count: 6, lane: 49 },
+  { at: 3579, enemy: 'charger', formation: 'column', count: 6, lane: 50, origin: 'acrossMinus' },
+  { at: 3614, enemy: 'turret', formation: 'column', count: 5, lane: 44, origin: 'acrossPlus' },
+  { at: 3650, enemy: 'drifter', formation: 'column', count: 6, lane: 60 },
+  { at: 3685, enemy: 'charger', formation: 'column', count: 6, lane: 45, origin: 'acrossPlus' },
+  { at: 3720, enemy: 'turret', formation: 'line', count: 5, lane: 55 },
+  { at: 3756, enemy: 'sentry', formation: 'column', count: 5, lane: 44 },
+  { at: 3791, enemy: 'drifter', formation: 'column', count: 6, lane: 59, origin: 'acrossMinus' },
 ];
 
 /**
@@ -1164,7 +1185,7 @@ const SHOAL: readonly WaveEntry[] = [
  * that stretch.
  */
 const SHOAL_PICKUPS: readonly PickupEntry[] = [
-  { at: 848, kind: 'missile', lane: 36 },
+  { at: 798, kind: 'missile', lane: 36 },
 ];
 
 /*
@@ -1178,82 +1199,82 @@ const SHOAL_PICKUPS: readonly PickupEntry[] = [
 */
 const BATTERIES: readonly WaveEntry[] = [
   { at: 300, enemy: 'turret', formation: 'line', count: 4, lane: 47 },
-  { at: 357, enemy: 'drifter', formation: 'line', count: 4, lane: 58 },
-  { at: 415, enemy: 'spinner', formation: 'line', count: 4, lane: 42 },
-  { at: 472, enemy: 'drifter', formation: 'line', count: 4, lane: 53 },
-  { at: 530, enemy: 'turret', formation: 'line', count: 4, lane: 44 },
-  { at: 588, enemy: 'drifter', formation: 'line', count: 4, lane: 60 },
-  { at: 645, enemy: 'shard', formation: 'line', count: 4, lane: 50 },
-  { at: 703, enemy: 'drifter', formation: 'line', count: 4, lane: 40 },
+  { at: 352, enemy: 'drifter', formation: 'line', count: 4, lane: 58 },
+  { at: 405, enemy: 'spinner', formation: 'line', count: 4, lane: 42 },
+  { at: 456, enemy: 'drifter', formation: 'line', count: 4, lane: 53 },
+  { at: 509, enemy: 'turret', formation: 'line', count: 4, lane: 44 },
+  { at: 562, enemy: 'drifter', formation: 'line', count: 4, lane: 60 },
+  { at: 614, enemy: 'shard', formation: 'line', count: 4, lane: 50 },
+  { at: 666, enemy: 'drifter', formation: 'line', count: 4, lane: 40 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 731, enemy: 'weaver', formation: 'vee', count: 4, lane: 42 },
-  { at: 760, enemy: 'spinner', formation: 'column', count: 4, lane: 50 },
+  { at: 692, enemy: 'weaver', formation: 'vee', count: 4, lane: 42 },
+  { at: 718, enemy: 'spinner', formation: 'column', count: 4, lane: 50 },
   // 0113 — a one-health, non-firing wave in this level's widest mid gap: more death notes, no more incoming.
-  { at: 789, enemy: 'drifter', formation: 'line', count: 6, lane: 58 },
-  { at: 817, enemy: 'warden', formation: 'column', count: 4, lane: 41 },
-  { at: 875, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
-  { at: 932, enemy: 'shard', formation: 'column', count: 4, lane: 45 },
-  { at: 990, enemy: 'drifter', formation: 'column', count: 4, lane: 55 },
-  { at: 1048, enemy: 'warden', formation: 'column', count: 4, lane: 42, origin: 'acrossMinus' },
-  { at: 1105, enemy: 'spinner', formation: 'column', count: 4, lane: 59 },
-  { at: 1163, enemy: 'warden', formation: 'column', count: 4, lane: 49 },
-  { at: 1220, enemy: 'drifter', formation: 'column', count: 4, lane: 50 },
-  { at: 1277, enemy: 'shard', formation: 'column', count: 4, lane: 41 },
-  { at: 1335, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
-  { at: 1392, enemy: 'warden', formation: 'column', count: 4, lane: 45, origin: 'acrossPlus' },
-  { at: 1450, enemy: 'drifter', formation: 'column', count: 4, lane: 55 },
-  { at: 1508, enemy: 'warden', formation: 'column', count: 4, lane: 42 },
-  // ⚠️ Nothing from 1,519 to 2,419: the redoubt's window — 0502. Everything below stood 1,565 to 3,980
+  { at: 745, enemy: 'drifter', formation: 'line', count: 6, lane: 58 },
+  { at: 770, enemy: 'warden', formation: 'column', count: 4, lane: 41 },
+  { at: 823, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
+  { at: 875, enemy: 'shard', formation: 'column', count: 4, lane: 45 },
+  { at: 927, enemy: 'drifter', formation: 'column', count: 4, lane: 55 },
+  { at: 980, enemy: 'warden', formation: 'column', count: 4, lane: 42, origin: 'acrossMinus' },
+  { at: 1032, enemy: 'spinner', formation: 'column', count: 4, lane: 59 },
+  { at: 1085, enemy: 'warden', formation: 'column', count: 4, lane: 49 },
+  { at: 1136, enemy: 'drifter', formation: 'column', count: 4, lane: 50 },
+  { at: 1188, enemy: 'shard', formation: 'column', count: 4, lane: 41 },
+  { at: 1241, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
+  { at: 1293, enemy: 'warden', formation: 'column', count: 4, lane: 45, origin: 'acrossPlus' },
+  { at: 1345, enemy: 'drifter', formation: 'column', count: 4, lane: 55 },
+  { at: 1398, enemy: 'warden', formation: 'column', count: 4, lane: 42 },
+  // ⚠️ Nothing from 1,408 to 2,308 (0503's places): the redoubt's window — 0502. Everything below stood 1,565 to 3,980
   // until then, and is the same script in the same order, scaled into what the window leaves; the
   // places the notes below name are where those waves stood before it.
-  { at: 2420, enemy: 'shard', formation: 'vee', count: 4, lane: 47 },
-  { at: 2459, enemy: 'turret', formation: 'vee', count: 4, lane: 58 },
-  { at: 2498, enemy: 'drifter', formation: 'vee', count: 4, lane: 42 },
-  { at: 2536, enemy: 'warden', formation: 'vee', count: 4, lane: 53 },
-  { at: 2575, enemy: 'turret', formation: 'vee', count: 4, lane: 44, origin: 'acrossMinus' },
-  { at: 2614, enemy: 'shard', formation: 'vee', count: 4, lane: 60 },
-  { at: 2653, enemy: 'drifter', formation: 'vee', count: 4, lane: 50 },
-  { at: 2692, enemy: 'turret', formation: 'vee', count: 4, lane: 40 },
-  { at: 2730, enemy: 'lancer', formation: 'vee', count: 4, lane: 47 },
-  { at: 2770, enemy: 'warden', formation: 'vee', count: 4, lane: 58, origin: 'acrossPlus' },
-  { at: 2808, enemy: 'drifter', formation: 'vee', count: 4, lane: 42 },
-  { at: 2847, enemy: 'shard', formation: 'vee', count: 4, lane: 53 },
-  { at: 2886, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
-  { at: 2924, enemy: 'warden', formation: 'vee', count: 4, lane: 44 },
-  { at: 2963, enemy: 'turret', formation: 'vee', count: 4, lane: 60 },
-  { at: 3002, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 2309, enemy: 'shard', formation: 'vee', count: 4, lane: 47 },
+  { at: 2344, enemy: 'turret', formation: 'vee', count: 4, lane: 58 },
+  { at: 2380, enemy: 'drifter', formation: 'vee', count: 4, lane: 42 },
+  { at: 2414, enemy: 'warden', formation: 'vee', count: 4, lane: 53 },
+  { at: 2450, enemy: 'turret', formation: 'vee', count: 4, lane: 44, origin: 'acrossMinus' },
+  { at: 2485, enemy: 'shard', formation: 'vee', count: 4, lane: 60 },
+  { at: 2521, enemy: 'drifter', formation: 'vee', count: 4, lane: 50 },
+  { at: 2556, enemy: 'turret', formation: 'vee', count: 4, lane: 40 },
+  { at: 2591, enemy: 'lancer', formation: 'vee', count: 4, lane: 47 },
+  { at: 2627, enemy: 'warden', formation: 'vee', count: 4, lane: 58, origin: 'acrossPlus' },
+  { at: 2662, enemy: 'drifter', formation: 'vee', count: 4, lane: 42 },
+  { at: 2697, enemy: 'shard', formation: 'vee', count: 4, lane: 53 },
+  { at: 2733, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 2767, enemy: 'warden', formation: 'vee', count: 4, lane: 44 },
+  { at: 2803, enemy: 'turret', formation: 'vee', count: 4, lane: 60 },
+  { at: 2838, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
   // Every turret from here to the end four, not five — 0472: the level's busiest two seconds at
   // Savior were the run from 2715 to 2945, 42 live bullets, two thirds of them flak.
-  { at: 3041, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
-  { at: 3080, enemy: 'shard', formation: 'line', count: 5, lane: 41 },
-  { at: 3119, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 3157, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossMinus' },
-  { at: 3196, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
-  { at: 3235, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
-  { at: 3274, enemy: 'turret', formation: 'line', count: 4, lane: 59 },
+  { at: 2873, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
+  { at: 2909, enemy: 'shard', formation: 'line', count: 5, lane: 41 },
+  { at: 2944, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 2979, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossMinus' },
+  { at: 3014, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
+  { at: 3050, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossMinus' },
+  { at: 3085, enemy: 'turret', formation: 'line', count: 4, lane: 59 },
   // Three since 0472, from five: each one killed opens into frost that splits again.
-  { at: 3313, enemy: 'shard', formation: 'line', count: 3, lane: 49, origin: 'acrossPlus' },
+  { at: 3121, enemy: 'shard', formation: 'line', count: 3, lane: 49, origin: 'acrossPlus' },
   // A weaver since 0472, and it was a turret: turret, shard, turret was the level's busiest two seconds
   // at Savior even with every turret at four, because a shard killed there shatters into the flak.
-  { at: 3351, enemy: 'weaver', formation: 'line', count: 5, lane: 41 },
-  { at: 3391, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
-  { at: 3429, enemy: 'charger', formation: 'column', count: 5, lane: 42, origin: 'acrossMinus' },
-  { at: 3468, enemy: 'turret', formation: 'line', count: 4, lane: 55 },
-  { at: 3507, enemy: 'warden', formation: 'line', count: 5, lane: 42 },
-  { at: 3545, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
-  { at: 3584, enemy: 'shard', formation: 'column', count: 5, lane: 47 },
-  { at: 3623, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
-  { at: 3662, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
-  { at: 3701, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
-  { at: 3740, enemy: 'turret', formation: 'column', count: 4, lane: 60, origin: 'acrossPlus' },
-  { at: 3778, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
-  { at: 3817, enemy: 'shard', formation: 'column', count: 5, lane: 47, origin: 'acrossMinus' },
-  { at: 3856, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
-  { at: 3895, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
-  { at: 3934, enemy: 'weaver', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
-  { at: 3972, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
-  { at: 4012, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
-  { at: 4050, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 3155, enemy: 'weaver', formation: 'line', count: 5, lane: 41 },
+  { at: 3192, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
+  { at: 3226, enemy: 'charger', formation: 'column', count: 5, lane: 42, origin: 'acrossMinus' },
+  { at: 3262, enemy: 'turret', formation: 'line', count: 4, lane: 55 },
+  { at: 3297, enemy: 'warden', formation: 'line', count: 5, lane: 42 },
+  { at: 3332, enemy: 'weaver', formation: 'column', count: 5, lane: 53 },
+  { at: 3367, enemy: 'shard', formation: 'column', count: 5, lane: 47 },
+  { at: 3403, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
+  { at: 3438, enemy: 'charger', formation: 'column', count: 5, lane: 50 },
+  { at: 3473, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
+  { at: 3509, enemy: 'turret', formation: 'column', count: 4, lane: 60, origin: 'acrossPlus' },
+  { at: 3543, enemy: 'weaver', formation: 'column', count: 5, lane: 44 },
+  { at: 3579, enemy: 'shard', formation: 'column', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 3614, enemy: 'turret', formation: 'column', count: 4, lane: 58 },
+  { at: 3650, enemy: 'charger', formation: 'column', count: 5, lane: 42 },
+  { at: 3685, enemy: 'weaver', formation: 'column', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 3720, enemy: 'warden', formation: 'column', count: 5, lane: 44 },
+  { at: 3756, enemy: 'turret', formation: 'column', count: 4, lane: 60 },
+  { at: 3791, enemy: 'charger', formation: 'column', count: 5, lane: 50, origin: 'acrossMinus' },
 ];
 
 /**
@@ -1262,7 +1283,7 @@ const BATTERIES: readonly WaveEntry[] = [
  * up. The charge is the redoubt's to drop now (0256), a third of the way in.
  */
 const BATTERIES_PICKUPS: readonly PickupEntry[] = [
-  { at: 848, kind: 'missile', lane: 60 },
+  { at: 798, kind: 'missile', lane: 60 },
 ];
 
 /*
@@ -1277,94 +1298,94 @@ const BATTERIES_PICKUPS: readonly PickupEntry[] = [
 const GAUNTLET: readonly WaveEntry[] = [
   { at: 300, enemy: 'lancer', formation: 'line', count: 5, lane: 50 },
   // Four, not five — 0502, the count every turret after 0472 carries.
-  { at: 355, enemy: 'turret', formation: 'line', count: 4, lane: 44 },
-  { at: 410, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
-  { at: 465, enemy: 'lancer', formation: 'line', count: 8, lane: 45, origin: 'acrossMinus' },
-  { at: 519, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
-  { at: 574, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
-  { at: 629, enemy: 'lancer', formation: 'line', count: 5, lane: 59 },
-  { at: 684, enemy: 'spore', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
-  { at: 739, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
+  { at: 350, enemy: 'turret', formation: 'line', count: 4, lane: 44 },
+  { at: 400, enemy: 'drifter', formation: 'line', count: 5, lane: 60 },
+  { at: 450, enemy: 'lancer', formation: 'line', count: 8, lane: 45, origin: 'acrossMinus' },
+  { at: 499, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
+  { at: 549, enemy: 'drifter', formation: 'line', count: 5, lane: 42 },
+  { at: 599, enemy: 'lancer', formation: 'line', count: 5, lane: 59 },
+  { at: 649, enemy: 'spore', formation: 'line', count: 5, lane: 49, origin: 'acrossPlus' },
+  { at: 699, enemy: 'drifter', formation: 'line', count: 5, lane: 50 },
   /*
     ⚠️ **FIVE WAVES 27 APART STOOD HERE UNTIL 0502**, at 739 to 848 — the densest stretch the level
     authored, in the stretch the player called heavy: *"heavy at the front of the level and then
     hardly any waves near the end."* The two 0113 fillers between went to the back, where it was
     thin, and the turret is four like every turret after 0472.
   */
-  { at: 794, enemy: 'turret', formation: 'line', count: 4, lane: 47 },
-  { at: 848, enemy: 'sower', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
-  { at: 904, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
-  { at: 958, enemy: 'spinner', formation: 'line', count: 5, lane: 53 },
-  { at: 1013, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
-  { at: 1068, enemy: 'spore', formation: 'line', count: 5, lane: 56, origin: 'acrossPlus' },
-  { at: 1123, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
-  { at: 1178, enemy: 'charger', formation: 'line', count: 5, lane: 40 },
-  { at: 1233, enemy: 'weaver', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
-  { at: 1287, enemy: 'turret', formation: 'line', count: 5, lane: 58 },
-  { at: 1343, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
-  { at: 1397, enemy: 'spore', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
-  { at: 1452, enemy: 'spinner', formation: 'line', count: 5, lane: 44 },
-  { at: 1507, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
-  { at: 1562, enemy: 'weaver', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
-  { at: 1616, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
+  { at: 749, enemy: 'turret', formation: 'line', count: 4, lane: 47 },
+  { at: 798, enemy: 'sower', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 849, enemy: 'charger', formation: 'line', count: 5, lane: 58 },
+  { at: 898, enemy: 'spinner', formation: 'line', count: 5, lane: 53 },
+  { at: 948, enemy: 'charger', formation: 'line', count: 5, lane: 44 },
+  { at: 998, enemy: 'spore', formation: 'line', count: 5, lane: 56, origin: 'acrossPlus' },
+  { at: 1048, enemy: 'turret', formation: 'line', count: 5, lane: 50 },
+  { at: 1098, enemy: 'charger', formation: 'line', count: 5, lane: 40 },
+  { at: 1148, enemy: 'weaver', formation: 'line', count: 5, lane: 47, origin: 'acrossMinus' },
+  { at: 1197, enemy: 'turret', formation: 'line', count: 5, lane: 58 },
+  { at: 1248, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
+  { at: 1297, enemy: 'spore', formation: 'line', count: 5, lane: 53, origin: 'acrossPlus' },
+  { at: 1347, enemy: 'spinner', formation: 'line', count: 5, lane: 44 },
+  { at: 1397, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 1447, enemy: 'weaver', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 1496, enemy: 'warden', formation: 'line', count: 5, lane: 50 },
   /*
-    ⚠️ **NOTHING FROM 1,619 TO 2,519: THE CHORUS'S WINDOW — 0502.** Everything below stood 1,672 to
+    ⚠️ **NOTHING FROM 1,499 TO 2,399: THE CHORUS'S WINDOW — 0502, at 0503's places.** Everything below stood 1,672 to
     4,085 until then and is the same script in the same order, with the two fillers from the front
     in it, laid evenly from the window's end to the boss: this level was one wave every 55 units,
     and it is one every 35 now. The places the notes below name are where those waves stood before
     it.
   */
-  { at: 2520, enemy: 'charger', formation: 'line', count: 5, lane: 41 },
-  { at: 2555, enemy: 'lancer', formation: 'line', count: 5, lane: 60, origin: 'acrossMinus' },
-  { at: 2591, enemy: 'warden', formation: 'line', count: 5, lane: 45 },
-  { at: 2626, enemy: 'spore', formation: 'line', count: 5, lane: 55 },
-  { at: 2662, enemy: 'lancer', formation: 'line', count: 5, lane: 42, origin: 'acrossPlus' },
-  { at: 2697, enemy: 'warden', formation: 'line', count: 5, lane: 59 },
-  { at: 2733, enemy: 'charger', formation: 'line', count: 5, lane: 49 },
-  { at: 2768, enemy: 'lancer', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
-  { at: 2803, enemy: 'warden', formation: 'line', count: 5, lane: 41 },
-  { at: 2839, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
-  { at: 2874, enemy: 'lancer', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
-  { at: 2910, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
-  { at: 2945, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
-  { at: 2981, enemy: 'lancer', formation: 'line', count: 5, lane: 59, origin: 'acrossMinus' },
-  { at: 3016, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
+  { at: 2400, enemy: 'charger', formation: 'line', count: 5, lane: 41 },
+  { at: 2432, enemy: 'lancer', formation: 'line', count: 5, lane: 60, origin: 'acrossMinus' },
+  { at: 2464, enemy: 'warden', formation: 'line', count: 5, lane: 45 },
+  { at: 2496, enemy: 'spore', formation: 'line', count: 5, lane: 55 },
+  { at: 2529, enemy: 'lancer', formation: 'line', count: 5, lane: 42, origin: 'acrossPlus' },
+  { at: 2561, enemy: 'warden', formation: 'line', count: 5, lane: 59 },
+  { at: 2594, enemy: 'charger', formation: 'line', count: 5, lane: 49 },
+  { at: 2625, enemy: 'lancer', formation: 'line', count: 5, lane: 50, origin: 'acrossMinus' },
+  { at: 2657, enemy: 'warden', formation: 'line', count: 5, lane: 41 },
+  { at: 2690, enemy: 'charger', formation: 'line', count: 5, lane: 60 },
+  { at: 2722, enemy: 'lancer', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 2754, enemy: 'warden', formation: 'line', count: 5, lane: 55 },
+  { at: 2786, enemy: 'charger', formation: 'line', count: 5, lane: 42 },
+  { at: 2819, enemy: 'lancer', formation: 'line', count: 5, lane: 59, origin: 'acrossMinus' },
+  { at: 2851, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
   // Every turret from here to the end four, not six — 0472: the level's two busiest stretches at
   // Savior were here, 47 and 39 live bullets over two seconds, three quarters of them flak.
-  { at: 3052, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
-  { at: 3087, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 3122, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
-  { at: 3158, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
-  { at: 3193, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
-  { at: 3229, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 3264, enemy: 'warden', formation: 'line', count: 6, lane: 40, origin: 'acrossPlus' },
-  { at: 3300, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
-  { at: 3335, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
-  { at: 3370, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
-  { at: 3406, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
-  { at: 3441, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
-  { at: 3477, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
-  { at: 3512, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
-  { at: 3548, enemy: 'spore', formation: 'line', count: 6, lane: 50 },
-  { at: 3583, enemy: 'warden', formation: 'line', count: 6, lane: 60 },
-  { at: 3618, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
-  { at: 3654, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossPlus' },
-  { at: 3689, enemy: 'lancer', formation: 'line', count: 6, lane: 55 },
-  { at: 3725, enemy: 'charger', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
-  { at: 3760, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
-  { at: 3796, enemy: 'warden', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 2884, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
+  { at: 2915, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 2947, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 2980, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
+  { at: 3012, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
+  { at: 3044, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 3076, enemy: 'warden', formation: 'line', count: 6, lane: 40, origin: 'acrossPlus' },
+  { at: 3109, enemy: 'spore', formation: 'line', count: 6, lane: 47 },
+  { at: 3141, enemy: 'turret', formation: 'line', count: 4, lane: 58, origin: 'acrossMinus' },
+  { at: 3173, enemy: 'weaver', formation: 'line', count: 5, lane: 44 },
+  { at: 3205, enemy: 'warden', formation: 'line', count: 6, lane: 53, origin: 'acrossPlus' },
+  { at: 3237, enemy: 'charger', formation: 'line', count: 6, lane: 44 },
+  { at: 3270, enemy: 'turret', formation: 'line', count: 4, lane: 60, origin: 'acrossMinus' },
+  { at: 3302, enemy: 'weaver', formation: 'line', count: 5, lane: 50 },
+  { at: 3334, enemy: 'spore', formation: 'line', count: 6, lane: 50 },
+  { at: 3366, enemy: 'warden', formation: 'line', count: 6, lane: 60 },
+  { at: 3398, enemy: 'weaver', formation: 'line', count: 5, lane: 44, origin: 'acrossMinus' },
+  { at: 3431, enemy: 'turret', formation: 'line', count: 4, lane: 45, origin: 'acrossPlus' },
+  { at: 3463, enemy: 'lancer', formation: 'line', count: 6, lane: 55 },
+  { at: 3495, enemy: 'charger', formation: 'line', count: 6, lane: 42, origin: 'acrossMinus' },
+  { at: 3527, enemy: 'weaver', formation: 'line', count: 5, lane: 56 },
+  { at: 3560, enemy: 'warden', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
   // 0113's filler, moved here from the front by 0502: more death notes where the level was thin.
-  { at: 3831, enemy: 'charger', formation: 'line', count: 4, lane: 44 },
-  { at: 3867, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
-  { at: 3902, enemy: 'spore', formation: 'line', count: 6, lane: 60 },
-  { at: 3937, enemy: 'lancer', formation: 'line', count: 6, lane: 41, origin: 'acrossMinus' },
-  { at: 3973, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
-  { at: 4008, enemy: 'warden', formation: 'line', count: 6, lane: 55 },
+  { at: 3592, enemy: 'charger', formation: 'line', count: 4, lane: 44 },
+  { at: 3624, enemy: 'turret', formation: 'line', count: 4, lane: 50 },
+  { at: 3656, enemy: 'spore', formation: 'line', count: 6, lane: 60 },
+  { at: 3688, enemy: 'lancer', formation: 'line', count: 6, lane: 41, origin: 'acrossMinus' },
+  { at: 3721, enemy: 'weaver', formation: 'line', count: 5, lane: 45, origin: 'acrossPlus' },
+  { at: 3753, enemy: 'warden', formation: 'line', count: 6, lane: 55 },
   // 0113's filler, moved here from the front by 0502: more death notes where the level was thin.
-  { at: 4044, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
-  { at: 4079, enemy: 'turret', formation: 'line', count: 4, lane: 42, origin: 'acrossMinus' },
-  { at: 4115, enemy: 'charger', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
-  { at: 4150, enemy: 'lancer', formation: 'line', count: 6, lane: 59 },
+  { at: 3785, enemy: 'weaver', formation: 'vee', count: 5, lane: 60 },
+  { at: 3817, enemy: 'turret', formation: 'line', count: 4, lane: 42, origin: 'acrossMinus' },
+  { at: 3850, enemy: 'charger', formation: 'line', count: 6, lane: 49, origin: 'acrossPlus' },
+  { at: 3882, enemy: 'lancer', formation: 'line', count: 6, lane: 59 },
 ];
 
 /**
@@ -1373,7 +1394,7 @@ const GAUNTLET: readonly WaveEntry[] = [
  * is too mean — if any level leaves the player unable to reach what it offers, it is this one.
  */
 const GAUNTLET_PICKUPS: readonly PickupEntry[] = [
-  { at: 868, kind: 'missile', lane: 42 },
+  { at: 816, kind: 'missile', lane: 42 },
 ];
 
 /*
@@ -1497,7 +1518,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       previous fight would make the first phase unreadable — and the first phase is where the player
       learns where the hull ends. `src/content/bosses.ts` says that is what it is for.
     */
-    bossAt: 4270,
+    bossAt: 4008,
     /*
       ⚠️ **ALL SEVEN SCRIPTS ARE THE SEED AND NOT YET AN AUTHORING CHOICE** —
       `docs/decisions/0158-a-level-says-where-its-sections-open.md`. Each is `bossAt` minus the three
@@ -1512,17 +1533,21 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       (`docs/decisions/0131-the-surge-comes-sooner.md`). That was only ever true of one level while
       the distance was shared; now it is a property of this script, and it is the one number here
       that a play-test has already argued for.
+
+      ⚠️ **AND 0503 KEPT IT ON A BAR WHEN IT CLOSED THE LEVEL UP.** Every boundary went through the same
+      tenth the waves did and was put back on the nearest bar of scroll (57.6 units), a unit short of it
+      so the rung has turned before the downbeat: `surge` is 2419, **42 bars exactly**, 67.2 s.
     */
     sections: [
       { at: 0, section: 'run' },
-      { at: 1249, section: 'push' },
-      { at: 2534, section: 'surge' },
-      { at: 3627, section: 'approach' },
+      { at: 1151, section: 'push' },
+      { at: 2419, section: 'surge' },
+      { at: 3398, section: 'approach' },
     ],
     // The serpent at the end, and the sentinel — the teacher — halfway, once the push has begun.
     boss: 'jormungandr',
     // Twenty-five seconds of nothing new from the sentinel's arrival — 0502, the player's number.
-    midBoss: { kind: 'sentinel', at: 1549, windowSeconds: 25 },
+    midBoss: { kind: 'sentinel', at: 1435, windowSeconds: 25 },
     landmarks: [],
     theme: 'approach',
   },
@@ -1537,22 +1562,23 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   descent: {
     waves: DESCENT,
     pickups: DESCENT_PICKUPS,
-    bossAt: 4320,
+    bossAt: 4054,
     sections: [
       { at: 0, section: 'run' },
-      { at: 1299, section: 'push' },
-      { at: 2584, section: 'surge' },
-      { at: 3677, section: 'approach' },
+      { at: 1209, section: 'push' },
+      { at: 2476, section: 'surge' },
+      { at: 3455, section: 'approach' },
     ],
     boss: 'volans',
-    midBoss: { kind: 'harrow', at: 1599, windowSeconds: 25 },
+    midBoss: { kind: 'harrow', at: 1481, windowSeconds: 25 },
     /*
-      ⚠️ **1299 IS `push`, WHICH IS WHERE THE ORGAN OPENS** — `src/content/nebula.ts`'s ladder puts
-      the pipe organ on `push`, and this level's `sections` opens `push` at 1299. Asked for by name:
+      ⚠️ **1209 IS `push`, WHICH IS WHERE THE ORGAN OPENS** — `src/content/nebula.ts`'s ladder puts
+      the pipe organ on `push`, and this level's `sections` opens `push` at 1209 (1299 until 0503
+      closed the level up, and a unit short of bar 21 now). Asked for by name:
       *"when the massive pipe organ kicks in music wise we see the pillars of god going past."*
 
       **The two numbers are the same number on purpose, and `tests/sky.test.ts` holds them equal** —
-      typing 1299 twice is the drift `docs/decisions/0029-the-tracked-record-is-the-record.md` is
+      typing 1209 twice is the drift `docs/decisions/0029-the-tracked-record-is-the-record.md` is
       about, so the guard reads the section list rather than this literal.
 
       ⚠️ **`lane: 72` AND THE NUMBER CAME OUT OF THE SHOT RIG, NOT OUT OF A CALCULATION.** At 30 the
@@ -1576,7 +1602,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       level placed one; it places all three now, scaled so the tallest column runs from under the
       bottom of the lane to its top, at three rates so the stands slide against each other.
 
-      ⚠️ **THE MIDDLE ONE IS STILL AT 1299 AND IS STILL THE BIGGEST**, because that is where the organ
+      ⚠️ **THE MIDDLE ONE IS STILL AT `push` AND IS STILL THE BIGGEST**, because that is where the organ
       opens and `tests/sky.test.ts` holds it there. The first is on screen from the opening; the last
       arrives as the first is leaving, so the level is never without them and the fight has them behind it.
 
@@ -1588,9 +1614,10 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       // ⚠️ NEGATIVE ON PURPOSE: `at` is where a stand ENTERS, and at this depth one entering at the
       // start has crept a fifth of the way in by the first section — photographed, and the opening was
       // empty. It entered fourteen hundred units before the level began, so it is standing there.
+      // 0503 left it: it is not in the script, and where it stands at the opening is a picture.
       { at: -1400, lane: 66, depth: 0.07, beat: 0, variant: 1, scale: 1.35 },
-      { at: 1299, lane: 58, depth: 0.08, beat: 0, variant: 0, scale: 1.7 },
-      { at: 2650, lane: 62, depth: 0.075, beat: 0, variant: 2, scale: 1.5 },
+      { at: 1209, lane: 58, depth: 0.08, beat: 0, variant: 0, scale: 1.7 },
+      { at: 2518, lane: 62, depth: 0.075, beat: 0, variant: 2, scale: 1.5 },
     ],
     theme: 'nebula',
   },
@@ -1604,17 +1631,17 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   coilward: {
     waves: COILWARD,
     pickups: COILWARD_PICKUPS,
-    bossAt: 4270,
+    bossAt: 4008,
     sections: [
       { at: 0, section: 'run' },
-      { at: 1249, section: 'push' },
-      { at: 2534, section: 'surge' },
-      { at: 3627, section: 'approach' },
+      { at: 1151, section: 'push' },
+      { at: 2419, section: 'surge' },
+      { at: 3398, section: 'approach' },
     ],
     // The pterodactyl at the end; the shoal mother — the labyrinth's old end, a flying thing that
     // fires little and hits hard — halfway, as the belt's mid-tier dino.
     boss: 'quetzal',
-    midBoss: { kind: 'shoalMother', at: 1549, windowSeconds: 25 },
+    midBoss: { kind: 'shoalMother', at: 1435, windowSeconds: 25 },
     /*
       ⚠️ **THREE, AND THIS IS THE FIRST LEVEL TO PLACE MORE THAN ONE** —
       `docs/decisions/0224-the-mountain-is-awake.md`. Asked for: *"exploding volcanoes adding volcanic
@@ -1622,8 +1649,8 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       0203 made a landmark the one thing in the sky that can be somewhere in particular, and until now
       every place that used it used it once.
 
-      ⚠️ **ONE PER SECTION AFTER THE FIRST, SO THE LEVEL ESCALATES WITH ITS OWN MUSIC.** 1249, 2534 and
-      3627 are `push`, `surge` and `approach` — read off `sections` above rather than typed twice, the
+      ⚠️ **ONE PER SECTION AFTER THE FIRST, SO THE LEVEL ESCALATES WITH ITS OWN MUSIC.** 1151, 2419 and
+      3398 are `push`, `surge` and `approach` (0503 moved all six together) — read off `sections` above rather than typed twice, the
       way the Pillars are tied to Ember Nebula's organ. Each arrives a little before its boundary,
       because `at` is when a landmark's leading edge ENTERS and it takes most of a minute to cross.
 
@@ -1648,9 +1675,9 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       in the air at once, because a flight is now only the climb.
     */
     landmarks: [
-      { at: 1249, lane: 46, depth: 0.07, beat: 0, variant: 0, scale: 1.4, erupts: { count: 2, period: 72, overshoot: 14, reach: 10 } },
-      { at: 2534, lane: 48, depth: 0.075, beat: 0, variant: 1, scale: 1.4, erupts: { count: 3, period: 62, overshoot: 20, reach: 13 } },
-      { at: 3627, lane: 45, depth: 0.065, beat: 0, variant: 2, scale: 1.45, erupts: { count: 4, period: 52, overshoot: 28, reach: 16 } },
+      { at: 1151, lane: 46, depth: 0.07, beat: 0, variant: 0, scale: 1.4, erupts: { count: 2, period: 72, overshoot: 14, reach: 10 } },
+      { at: 2419, lane: 48, depth: 0.075, beat: 0, variant: 1, scale: 1.4, erupts: { count: 3, period: 62, overshoot: 20, reach: 13 } },
+      { at: 3398, lane: 45, depth: 0.065, beat: 0, variant: 2, scale: 1.45, erupts: { count: 4, period: 52, overshoot: 28, reach: 16 } },
     ],
     theme: 'saurian',
   },
@@ -1664,17 +1691,19 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   shoal: {
     waves: SHOAL,
     pickups: SHOAL_PICKUPS,
-    bossAt: 4240,
+    // ⚠️ 3988 AND NOT 3981 — 0503: the room's open side (`bossAt` less its stand and mouth) has to land
+    // on the corridor's twelve-unit grid, and it rounds up so the last wave keeps `FIGHT_LEAD`.
+    bossAt: 3988,
     sections: [
       { at: 0, section: 'run' },
-      { at: 1219, section: 'push' },
-      { at: 2504, section: 'surge' },
-      { at: 3597, section: 'approach' },
+      { at: 1151, section: 'push' },
+      { at: 2361, section: 'surge' },
+      { at: 3398, section: 'approach' },
     ],
     // The gyre — the lattice, upgraded — at the end; the lattice itself, the saurian belt's old end,
     // halfway.
     boss: 'gyre',
-    midBoss: { kind: 'lattice', at: 1519, windowSeconds: 25 },
+    midBoss: { kind: 'lattice', at: 1408, windowSeconds: 25 },
     landmarks: [],
     theme: 'labyrinth',
     /*
@@ -1693,44 +1722,49 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       wall: 'roomWall',
       passages: [
         { at: 150, side: 1, length: 36 },
-        { at: 620, side: -1, length: 48 },
-        { at: 1260, side: 1, length: 30 },
-        { at: 1640, side: -1, length: 42 },
-        { at: 2150, side: 1, length: 36 },
-        { at: 2700, side: -1, length: 30 },
-        { at: 3120, side: 1, length: 48 },
-        { at: 3560, side: -1, length: 36 },
+        { at: 591, side: -1, length: 48 },
+        { at: 1173, side: 1, length: 30 },
+        { at: 1529, side: -1, length: 42 },
+        { at: 2039, side: 1, length: 36 },
+        { at: 2563, side: -1, length: 30 },
+        { at: 2945, side: 1, length: 48 },
+        { at: 3345, side: -1, length: 36 },
       ],
       /*
         ⚠️ **TWO TURNING STRETCHES, AND THE THREE STRAIGHT ONES ARE WHERE A FIGHT IS — 0350.** Straight
-        and full width for the opening 300, for the lattice's fight (it arrives at 1519, and the
-        stretch is held from 1270 to 2100), and for the last 400 before the room — the plan's rule
-        that a fight in a corridor that is also turning is two difficulties at once. Between them the
-        corridor swings from side to side and pinches, a point every 180 units or so: far enough
-        apart that the half-cosine between them sets the shape, and the tier's slope only caps it.
+        and full width for the opening 300, for the lattice's fight (it arrives at 1408, and the
+        stretch is held from 1159 to 1989), and for the last 500 before the boss, 400 before the room
+        — the plan's rule that a fight in a corridor that is also turning is two difficulties at once.
+        Between them the corridor swings from side to side and pinches, a point every 165 units or so
+        since 0503 closed the level up (180 before): far enough apart that the half-cosine between them
+        sets the shape, and the tier's slope only caps it.
 
         ⚠️ **TO 2100, NOT 1770, SINCE 0472** solved the lattice at the tuned tier. 1770 was sized for a
         fight nobody flew; at Savior the hull now dies with the camera near 1880 and its drop thrown at
         about 2046, where 1900's and 2080's swings had the stone across the lane.
+
+        ⚠️ **AND THE HOLD KEPT ITS LENGTH WHEN 0503 CLOSED THE REST UP.** A fight is seconds, and seconds
+        do not shrink with a screen: the hold still opens 249 units before the lattice and closes 581
+        after it, at 1159 and 1989. The ends, the opening's 300 and the last 500, are distances too.
       */
       shape: [
         { at: 300, swing: 0, narrow: 0 },
-        { at: 450, swing: -0.8, narrow: 0.6 },
-        { at: 620, swing: 0.7, narrow: 0.9 },
-        { at: 800, swing: 0.9, narrow: 0.4 },
-        { at: 980, swing: -0.6, narrow: 1 },
-        { at: 1150, swing: 0, narrow: 0.5 },
-        { at: 1270, swing: 0, narrow: 0 },
-        { at: 2100, swing: 0, narrow: 0 },
-        { at: 2260, swing: -0.9, narrow: 0.5 },
-        { at: 2440, swing: 0.5, narrow: 0.8 },
-        { at: 2620, swing: 0.9, narrow: 1 },
-        { at: 2800, swing: 0, narrow: 0.6 },
-        { at: 2980, swing: -0.8, narrow: 0.9 },
-        { at: 3160, swing: 0.6, narrow: 1 },
-        { at: 3340, swing: 0.9, narrow: 0.4 },
-        { at: 3520, swing: -0.3, narrow: 0.8 },
-        { at: 3740, swing: 0, narrow: 0 },
+        { at: 436, swing: -0.8, narrow: 0.6 },
+        { at: 591, swing: 0.7, narrow: 0.9 },
+        { at: 755, swing: 0.9, narrow: 0.4 },
+        { at: 918, swing: -0.6, narrow: 1 },
+        { at: 1073, swing: 0, narrow: 0.5 },
+        { at: 1159, swing: 0, narrow: 0 },
+        { at: 1989, swing: 0, narrow: 0 },
+        { at: 2149, swing: -0.9, narrow: 0.5 },
+        { at: 2327, swing: 0.5, narrow: 0.8 },
+        { at: 2491, swing: 0.9, narrow: 1 },
+        { at: 2654, swing: 0, narrow: 0.6 },
+        { at: 2818, swing: -0.8, narrow: 0.9 },
+        { at: 2982, swing: 0.6, narrow: 1 },
+        { at: 3145, swing: 0.9, narrow: 0.4 },
+        { at: 3309, swing: -0.3, narrow: 0.8 },
+        { at: 3488, swing: 0, narrow: 0 },
       ],
     },
   },
@@ -1744,15 +1778,15 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   batteries: {
     waves: BATTERIES,
     pickups: BATTERIES_PICKUPS,
-    bossAt: 4240,
+    bossAt: 3981,
     sections: [
       { at: 0, section: 'run' },
-      { at: 1219, section: 'push' },
-      { at: 2504, section: 'surge' },
-      { at: 3597, section: 'approach' },
+      { at: 1151, section: 'push' },
+      { at: 2361, section: 'surge' },
+      { at: 3398, section: 'approach' },
     ],
     boss: 'hoarfrost',
-    midBoss: { kind: 'redoubt', at: 1519, windowSeconds: 25 },
+    midBoss: { kind: 'redoubt', at: 1408, windowSeconds: 25 },
     landmarks: [],
     theme: 'rime',
   },
@@ -1766,15 +1800,15 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   gauntlet: {
     waves: GAUNTLET,
     pickups: GAUNTLET_PICKUPS,
-    bossAt: 4340,
+    bossAt: 4072,
     sections: [
       { at: 0, section: 'run' },
-      { at: 1319, section: 'push' },
-      { at: 2604, section: 'surge' },
-      { at: 3697, section: 'approach' },
+      { at: 1209, section: 'push' },
+      { at: 2476, section: 'surge' },
+      { at: 3455, section: 'approach' },
     ],
     boss: 'hydra',
-    midBoss: { kind: 'chorus', at: 1619, windowSeconds: 25 },
+    midBoss: { kind: 'chorus', at: 1499, windowSeconds: 25 },
     landmarks: [],
     theme: 'mire',
     /*
@@ -1837,6 +1871,7 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
   eye: {
     waves: EYE,
     pickups: EYE_PICKUPS,
+    // ⚠️ 0503 CLOSED SIX LEVELS UP AND NOT THIS ONE — its length is its music's; see `sections` below.
     bossAt: 4460,
     /*
       ⚠️ **DRIVEN ON THE DESK AND PASTED BACK, WHICH IS WHAT `docs/decisions/0163-the-script-is-edited-here.md`
@@ -1871,6 +1906,14 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       instruments and volume slightly earlier to bridge that transition."* `surge` turns at bar 36
       (57.6 s), and the ballad — still turned so its first bar lands on bar 40 — enters on its own last
       four, `Dm · Em · F · G`, climbing into the top of the song while it swells in (`swell` on the row).
+
+      ⚠️ **AND 0503 LEFT ALL OF IT, AND THE LEVEL WITH IT — `docs/decisions/0503-the-levels-close-up.md`.**
+      The other six closed up by a tenth. This level's length is its music's: the lament's sixteen
+      bars, the same song faster to bar 36, a ballad of thirty-six bars through-composed and turned to
+      land on bar 36 (`src/content/core.ts`), and the acceptance from bar 72 — every one of them asked
+      for in seconds across 0331's listens. A tenth off the level is four bars off that, and the ballad
+      moving with it reads in the loudness model as a climb that is not heard, because the model
+      measures a place's loops from the level's first bar. It is the player's to choose, with the ear.
     */
     sections: [
       { at: 0, section: 'run' },

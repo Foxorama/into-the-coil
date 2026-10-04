@@ -2706,7 +2706,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 262 from 211 — 0452: main already fought it for 14.3 s, and the volley leaving its prow took
     // 0.6 s more off, past the guard's three; re-solved by the same script, the other six left in band.
     // 153 from 262 — 0472: solved at the tuned tier, where 262 fought for 26 s; two passes.
-    health: 153,
+    // 174 from 153 — 0503: the level closed up by a tenth and 153 fought for 15.4 s against 17; the
+    // solver's 169 read 16.5, and its second pass, 174, reads 17.0.
+    health: 174,
     damage: 3,
     // Far enough forward that the whole hull is on screen on the narrowest view the clamp allows,
     // and far enough back that the player is not fighting it at the very edge of their reach.
@@ -2873,6 +2875,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 101 from 187 — 0472: solved at the tuned tier, where 187 fought for 56 s. Scanned by hand rather
     // than by the solver's ratio, which did not converge: the fight steps with the walls' clock — 97
     // fights for 16.5 s, 99 for 22.6, 101 for 19.4.
+    // ⚠️ Left at 101 by 0503, which closed the level up: it fights for 18.1 s now, and the scan around it
+    // still steps — 103 for 18.5, 105 to 109 for 21.6, 111 for 18.8 — and 105's 1.6 s over is no
+    // nearer 20 than 101's 1.9 under to be worth a move across the cliff.
     health: 101,
     damage: 3,
     /*
