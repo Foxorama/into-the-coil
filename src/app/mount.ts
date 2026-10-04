@@ -88,6 +88,7 @@ import {
   levelOfPlace,
   musicLevelFor,
   musicPlaceFor,
+  picturePlaceFor,
   placeFor,
   UNITS_PER_SECOND,
 } from './music.ts';
@@ -2603,15 +2604,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **AND THE BURN SWAPS IT ONCE, AT FULL SPEED** — `travelSwapped`'s own note has why. Before that
    * the ship is still leaving the place it was in; after it, it is arriving in `placeFor(run.level)`,
    * which is the same place `arrive` is about to enter, so nothing changes on the step it lands.
+   *
+   * ⚠️ **AND IT WAS STILL A LIST OF SCREENS, SO EVERY SCREEN ADDED SINCE FELL THROUGH IT — 0518.** The
+   * run-over screen, the pause, its quit question and its count-in all sit over the run's field, and
+   * every one of them returned `null`: the place went to the title's void behind the menu, the boss
+   * went to its unskinned green, and the atlas was baked twice — ~300 ms each, measured — on every
+   * pause and every continue. *Is this screen in a run* is already a fact on the row (`inRun`, 0418),
+   * and the music has read it since; the picture reads the same one, so the two cannot disagree and
+   * the next screen over the field cannot fall through. The rule is `picturePlaceFor`, beside the
+   * music's, so it is a unit test rather than a canvas.
    */
   function placeOnScreen(): ThemeKind | null {
-    const screen = state.screen.current;
-    // And the finale's, which happens where the last boss died — 0418.
-    if (screen === 'playing' || screen === 'cleared' || screen === 'outro') return world.level.theme;
-    // The intro's dark outside is the first level's place, since it leads into it — 0416.
-    if (screen === 'intro') return placeFor(0);
-    if (screen === 'travel') return travelSwapped ? placeFor(state.run.level) : world.level.theme;
-    return audition;
+    return picturePlaceFor(state.screen.current, audition, world.level.theme, state.run.level, travelSwapped);
   }
 
   /** Put the run's camera back exactly as the room found it. A no-op unless the room borrowed it. */
