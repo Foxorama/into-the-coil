@@ -48,8 +48,9 @@ export const PROBES = [
     guard: 'THE WHOLE ANIMAL FLASHES AS ONE',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  if (flashing) hull.sprite = hull.spriteHit;\n',
-      replace: '',
+      // Re-anchored by 0519, which made the body's sprite follow the animal both ways.
+      find: '  hull.sprite = flashing ? hull.spriteHit : hull.spriteBase;',
+      replace: '  hull.sprite = hull.flashFor > 0 ? hull.spriteHit : hull.spriteBase;',
     },
   },
   {

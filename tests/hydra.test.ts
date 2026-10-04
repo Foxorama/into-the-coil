@@ -32,6 +32,7 @@ import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { inside, tracingPen } from './paths.ts';
 import { faceAt } from '../src/sim/corridor.ts';
 import { reset } from '../src/sim/entity.ts';
+import { strike } from '../src/sim/collide.ts';
 
 /** The hydra alone, a short way in, with no mid-boss in front of it. */
 const HYDRA_ONLY: LevelRow = {
@@ -713,5 +714,43 @@ describe('0486 — the neck bends', () => {
     }
     expect(laid.length, 'not every neck is laid').toBe(NECKS.necks.length);
     for (let i = 1; i < laid.length; i++) expect(depth(laid[i]!), `neck ${laid[i]} is laid over neck ${laid[i - 1]}, which reaches further forward`).toBeGreaterThanOrEqual(depth(laid[i - 1]!));
+  });
+});
+
+describe('0519 — the beast lights at most three times a second', () => {
+  it('IN SECONDS: under a hit on some piece of it every step, the whole animal lights no more than three times in any second, and still lights', () => {
+    /*
+      0024's cap in WCAG's terms: three flashes in any one second, a flash two opposing transitions. Lit,
+      the animal is over the general-flash area (`scripts/weigh-flashes.mjs` read 13% of the screen), so
+      its flash is held to the cap and not only to 0334's per-body duty, which it beat by taking turns.
+    */
+    const d = hydraAt(0.15);
+    settle(d);
+    const hull = d.world.bossPool.at(0);
+    const heads = d.world.bossBody.size;
+    const lit: boolean[] = [];
+    for (let i = 0; i < STEPS_PER_SECOND * 4; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      hull.fireIn = 999;
+      hull.health = d.world.bossFullHealth * 0.15;
+      /*
+        A different piece struck every step, the hull among them, through `strike` — so each piece's own
+        0334 duty refuses what it would — and that is the turn-taking that beat the duty. A body struck
+        at no damage is not killed.
+      */
+      const k = (i * 5) % (heads + 1);
+      if (k === heads) strike(d.world.bossPool, 0, 0, 4, null);
+      else strike(d.world.bossBody, k, 0, 4, null);
+      d.frame.step();
+      lit.push(hull.sprite === hull.spriteHit);
+    }
+    let worst = 0;
+    for (let from = 0; from + STEPS_PER_SECOND <= lit.length; from++) {
+      let turns = 0;
+      for (let i = from + 1; i < from + STEPS_PER_SECOND; i++) if (lit[i] !== lit[i - 1]) turns++;
+      worst = Math.max(worst, turns);
+    }
+    expect(worst, `the animal turned ${worst} times in its worst second, over the cap's six`).toBeLessThanOrEqual(6);
+    expect(lit.filter((on) => on).length, 'struck every step for four seconds and never lit').toBeGreaterThan(0);
   });
 });
