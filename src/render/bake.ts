@@ -1945,20 +1945,38 @@ export const SHIP_HULL: readonly Pt[] = [...SHIP_UPPER, ...mirrored(SHIP_UPPER).
   the hull's radius, and a pod reaches a third of a hull past the wingtip.
 */
 
-/** A wingtip pod, the second tier's addition. Its base lies exactly on the wingtip edge. */
-const SHIP_POD: readonly Pt[] = [
-  [-0.4, -0.78],
-  [-0.26, -1.15],
-  [-0.9, -1.15],
-  [-0.74, -0.78],
-];
+/*
+  The second tier's smaller pod stood here until 0469. Every run flies the capped kit since 0441, so
+  nothing drew it, and the cigar below is the one pod the fighter has.
+*/
 
-/** The third tier's pod: longer, and it carries a lit muzzle. */
+/*
+  ── THE POD IS A CIGAR, NOT A BELL — 0469 ───────────────────────────────────────────────────────────
+
+  Played: *"the wingtips on the Huang-woo spaceship still look weird."* The capped pod was a trapezoid
+  0.40 of the radius wide where it met the wing and 0.82 at its outer edge, square-cornered, with its
+  light in the back corner: a bell hung off each wingtip, flared the wrong way, and at 85 pixels two
+  flaps. A pod on a wingtip is a cigar — longest along the line of flight, widest at its waist,
+  tapering to both ends, its light at the FRONT where a forward gun fires. This one lies on the
+  wingtip's chord (the two points at −0.78 are the chord's ends, so it shares that edge with the hull
+  and no area — 0194's trap), runs from 0.1 ahead of it to 1.0 behind, and is 0.35 wide at the waist.
+  The span falls from 1.31 radii to 1.13, which is the way 0449 was asked for.
+*/
+/** The capped pod: a cigar on the wingtip's chord, nose first. */
 const SHIP_POD_MK3: readonly Pt[] = [
-  [-0.36, -0.78],
-  [-0.14, -1.31],
-  [-0.96, -1.31],
-  [-0.76, -0.78],
+  [-0.42, -0.78],
+  [-0.2, -0.8],
+  [0, -0.86],
+  [0.1, -0.95],
+  [0, -1.05],
+  [-0.2, -1.11],
+  [-0.45, -1.13],
+  [-0.7, -1.12],
+  [-0.9, -1.06],
+  [-1, -0.96],
+  [-0.95, -0.86],
+  [-0.85, -0.8],
+  [-0.72, -0.78],
 ];
 
 /** A canard on the leading edge, the third tier's. Both base points sit on one hull edge. */
@@ -2105,22 +2123,21 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): v
   for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
   for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
   if (tier >= 1) {
-    const pod = tier >= 2 ? SHIP_POD_MK3 : SHIP_POD;
-    const tip = pod[1]![1];
     for (const side of [1, -1] as const) {
-      // A dark band down each pod, so the pod reads as a fitted part rather than a second wing.
+      // A dark band down each pod's length, so the pod reads as a fitted part rather than a second wing
+      // — 0469: along the cigar, at its waist, and 0.15 wide so it clears the floor.
       poly(ctx, f, dark, [
-        [-0.44, (tip + 0.06) * side],
-        [-0.76, (tip + 0.06) * side],
-        [-0.72, -0.85 * side],
-        [-0.46, -0.85 * side],
+        [-0.15, -0.92 * side],
+        [-0.85, -0.92 * side],
+        [-0.85, -1.07 * side],
+        [-0.15, -1.07 * side],
       ]);
-      // And a lit muzzle at its front: the pod is a gun, and a gun shows where it fires from.
+      // And a lit muzzle at its NOSE: the pod is a gun, and a gun shows where it fires from.
       poly(ctx, f, palette.hazard, [
-        [-0.3, (tip + 0.04) * side],
-        [-0.46, (tip + 0.04) * side],
-        [-0.48, (tip + 0.2) * side],
-        [-0.34, (tip + 0.2) * side],
+        [-0.02, -0.885 * side],
+        [-0.17, -0.885 * side],
+        [-0.17, -1.035 * side],
+        [-0.02, -1.035 * side],
       ]);
     }
   }
@@ -2711,9 +2728,9 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
       // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
       shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(palette.player, 0.15), shade(palette.player, -0.4), SHIP_HULL);
-      // And the wingtip pods the same light, bright at the front and in shadow behind.
+      // And the wingtip pods the same light, bright at the nose and in shadow behind — along the cigar (0469).
       for (const pod of [SHIP_POD_MK3, mirrored(SHIP_POD_MK3)]) {
-        shaded(ctx, fh, [-0.14, 0], [-0.96, 0], shade(palette.player, 0.1), shade(palette.player, -0.42), pod);
+        shaded(ctx, fh, [0.1, 0], [-1, 0], shade(palette.player, 0.1), shade(palette.player, -0.42), pod);
       }
       paintShip(ctx, fh, palette, 2);
       jazzFighter(ctx, fh, palette);
@@ -2763,7 +2780,7 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette): void {
   seam(ctx, f, shade(palette.player, 0.35), 0.035, mirrored(edge), 0.6);
   for (const side of [1, -1] as const) {
     glow(ctx, f, palette.hazard, -0.68, 0.21 * side, 0.22, 0.6);
-    glow(ctx, f, palette.hazard, -0.38, -1.15 * side, 0.15, 0.6);
+    glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
   }
 }
 

@@ -281,8 +281,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
       { base: SPRITE.fighterTubes, hit: SPRITE.fighterTubesHit },
     ],
-    // The tips of its wingtip pods: 1.31 of the 7-unit hull's radius (`SHIP_POD_MK3` in the bake), since
-    // the wings were trimmed (0449); it was 1.48.
+    // A hair inside its wingtip pods' waist: 1.13 of the 7-unit hull's radius since the pods became
+    // cigars (0469, `SHIP_POD_MK3` in the bake); the flared pods reached 1.31, and 1.48 before 0449.
     wingtip: 3.85,
     muzzle: NOSE,
     tubes: SIDE_TUBES,
