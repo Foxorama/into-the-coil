@@ -45,8 +45,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0364 — the redoubt's re-solved health, given the lattice's re-solved one —
-      // and by 0406, which re-solved both at the loadout the run carries in, and by 0472, at the tuned tier.
-      find: '    health: 329,',
+      // and by 0406, which re-solved both at the loadout the run carries in, by 0472, at the tuned tier,
+      // and by 0502, once no wave soaked up the fight's fire.
+      find: '    health: 359,',
       replace: '    health: 101,',
     },
   },

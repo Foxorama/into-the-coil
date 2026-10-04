@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, laneAcross, type WaveEntry } from '../src/content/levels.ts';
+import { DEFAULT_ORIGIN, LEVELS, LEVEL_KINDS, laneAcross, windowEnd, type WaveEntry } from '../src/content/levels.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import {
   ENGAGE_RANGE,
@@ -348,13 +348,21 @@ describe('a level actually puts something in front of the player', () => {
         ⚠️ It starts at the FIRST wave, because the level now opens on a deliberately empty screen so
         the player can find the controls, and it stops a lookahead short of the last, because of the
         deliberate quiet in front of the boss. Both are pacing that was decided on purpose.
+
+        ⚠️ **AND IT SKIPS EVERY VIEW THAT TAKES IN A MID-BOSS'S WINDOW — 0502**, the third quiet decided
+        on purpose: *"leave the gap empty."* The window is twenty-five seconds of camera with the
+        mid-boss in it and no wave, so a view inside it holds none by authoring, and
+        `tests/window.test.ts` is what holds that it does.
       */
+      const midBoss = LEVELS[kind].midBoss;
+      const inWindow = (camera: number): boolean =>
+        midBoss !== null && camera <= windowEnd(midBoss, SCROLL_PER_STEP * 60) && camera + MAX_ALONG_SPAN >= midBoss.at;
       const points: number[] = [];
       for (const wave of waves) {
         points.push(wave.at + 1, wave.at - MAX_ALONG_SPAN);
       }
       for (const camera of points) {
-        if (camera < firstWave || camera + MAX_ALONG_SPAN > lastWave) continue;
+        if (camera < firstWave || camera + MAX_ALONG_SPAN > lastWave || inWindow(camera)) continue;
         let onScreen = 0;
         for (const wave of waves) {
           if (wave.at >= camera && wave.at <= camera + MAX_ALONG_SPAN) onScreen += wave.count;

@@ -69,10 +69,12 @@ export const PROBES = [
       path: 'src/content/levels.ts',
       // ⚠️ RE-ANCHORED by `docs/decisions/0086-the-teeth-wait-for-the-gun.md`, which took the turret
       // out of the third of these lines, and by 0256, which moved the run-up band up the level and
-      // put the teeth here; and by 0326, which made the lancer wave eight. The break is unchanged —
-      // three consecutive waves thinned to one body each.
-      find: "  { at: 1652, enemy: 'lancer', formation: 'line', count: 8, lane: 60 },\n  { at: 1710, enemy: 'weaver', formation: 'line', count: 5, lane: 45 },\n  { at: 1768, enemy: 'drifter', formation: 'vee', count: 6, lane: 50 },",
-      replace: "  { at: 2400, enemy: 'lancer', formation: 'line', count: 1, lane: 60 },\n  { at: 2490, enemy: 'weaver', formation: 'line', count: 1, lane: 45 },\n  { at: 2580, enemy: 'drifter', formation: 'vee', count: 1, lane: 50 },",
+      // put the teeth here; and by 0326, which made the lancer wave eight. And by 0502, which moved
+      // those three past the sentinel's window: the break is now the teaching stretch, four waves
+      // thinned to one body each where it used to be three — a view holds a fifth of a level's waves
+      // and the guard no longer reads the window, so three in one view left eight standing.
+      find: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 6, lane: 55 },\n  { at: 494, enemy: 'lancer', formation: 'line', count: 8, lane: 30 },\n  { at: 551, enemy: 'drifter', formation: 'line', count: 5, lane: 65 },\n  { at: 609, enemy: 'lancer', formation: 'vee', count: 8, lane: 45 },",
+      replace: "  { at: 435, enemy: 'drifter', formation: 'vee', count: 1, lane: 55 },\n  { at: 494, enemy: 'lancer', formation: 'line', count: 1, lane: 30 },\n  { at: 551, enemy: 'drifter', formation: 'line', count: 1, lane: 65 },\n  { at: 609, enemy: 'lancer', formation: 'vee', count: 1, lane: 45 },",
     },
   },
   {
