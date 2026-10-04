@@ -1796,7 +1796,12 @@ ${each('-band[hidden]')} { display: none; }
     .itc-settings-touch .itc-settings-band-step, .itc-settings-touch .itc-settings-band-label { display: none; }
     /* One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured. */
     .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'track' 'hint'; }
-    .itc-settings-touch .itc-settings-option { padding: 0.35em 0.35em; }
+    /*
+      With room for CI's fonts: at 480 wide three steering words were 208 px in a 207 px track on this
+      machine and wider on CI, which drew Gentle and Quick past their track (this decision's own guard,
+      on CI). Sized now for about thirty pixels to spare.
+    */
+    .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
