@@ -1,6 +1,6 @@
 # The hangar, planned — 2026-10-05
 
-One ask, seven changes, landed in order, each from `main` and each played on its own branch preview.
+One ask, nine changes, landed in order, each from `main` and each played on its own branch preview.
 This file holds the plan and the answers the player gave while it was being made. What each change
 decided lives in its decision once it lands; this is the queue.
 
@@ -36,6 +36,11 @@ Then, while it was being planned:
 >
 > *"also in the cosmetic shop Ion Thrusters - blue flame thrusters for your spaceship"*
 
+And once the plan was written:
+
+> *"I do want guns to be interchangable per ship as well, it's expensive, but it makes the modding a
+> lot more fun and a lot higher quality"*
+
 ## What was already true
 
 - **The novelty dice slot exists, on one ship.** The estate's `walnut` HUD plate hangs fuzzy dice
@@ -48,9 +53,16 @@ Then, while it was being planned:
   Each wheel's detail is its own loop in `src/render/bake.ts` (the Firebird's snowflakes, the
   estate's whitewall and gilt hubcap), so it takes a parameter; the tyre's silhouette is part of
   each car's one outline path and does not.
-- **The gun is the ship's, and stays so.** `ShipRow.weapon`, and `shipCarrying` maps a gun back
-  to its one ship. The player's second message keeps it that way, which keeps every gun mount
-  drawn where 0441 drew it.
+- **The gun is the ship's in three places, and only one of them is how it flies.** `ShipRow.weapon`
+  fixes it (0441), and `shipCarrying` maps a gun back to its one ship. The frame already switches on
+  `w.weapon.flight` and never on the ship, so the *behaviour* is free. Two things are not: the
+  **drawing** — each car's one outline path takes in its hood gun, and every gun is painted inside
+  its ship's draw function — and the **shot's starting point**: the row's `muzzle` (0448), which
+  `tests/mounts.test.ts` holds to the bake's `carMounts`.
+- **A gun flown from a different ship is a different fight.** The shuriken's helix width is the
+  ship's `wingtip`, and the arc's first link leaves from the ship's muzzle. So 0260's forty-second
+  floor, which `tests/level.test.ts` flies in every ship today, has four fights per boss now and
+  sixteen once guns swap.
 - **Nothing persists between visits except the table and the settings** — `itc_scores` and
   `itc_settings`. The unlock pool in `docs/game.md` was never built. There is no meta-progression
   store, and `tests/privacy.test.ts` fails a key that `PRIVACY.md` does not list.
@@ -72,9 +84,13 @@ Then, while it was being planned:
   the instant you touch it."* A shop that sells only what the sim never reads leaves that intact. So
   the line is replaced rather than deleted: **the shop never sells anything the sim reads**, and
   that is the argued reversal the file asks for.
-- **The pilot staying on their ship takes out the expensive part of the ask.** A gun on any ship
-  would have needed every ship to name a hardpoint and every gun to draw its mount from the side and
-  from above, and the atlas to hold each ship once per gun it can carry. None of it is owed now.
+- **A swappable gun is the expensive part of the ask, and it was asked for knowing that.** It
+  reverses 0441's *"a weapon will be keyed to that ship only"*, which was also the player's. What it
+  costs: every gun drawn twice, side-on for the cars and top-down for the fighter and the saucer; the
+  guns taken out of the cars' outlines; the forty-second boss floor flown sixteen ways rather than
+  four, at four times that guard's cost in CI; and the sheet holding each ship once per gun it may
+  carry. Done as the gun's own layer, it is eight drawings, not twelve bespoke combinations, and a
+  fifth gun costs two drawings rather than four.
 - **Shards from the best credit cannot be farmed by continuing.** Freeplay's unlimited continues
   each start the score again (0438), and only the best one pays.
 - **The price list cannot be set yet.** At 5–300 shards a run, any price written now is a guess by a
@@ -84,7 +100,9 @@ Then, while it was being planned:
 
 | question | answer |
 |---|---|
-| what does beating the jellyfish in a ship unlock? | that ship's own set of cosmetics. The pilot keeps their ship and the ship its gun |
+| what does beating the jellyfish in a ship unlock? | that ship's own set of cosmetics and its gun slot, and its gun for the other ships' gun slots. The pilot keeps their ship |
+| can the guns be swapped? | **yes** — *"it's expensive, but it makes the modding a lot more fun and a lot higher quality"* |
+| where can a won gun go? | **only onto ships that have been won in.** A ship's gun slot is one of its own options, like its wheels: the shuriken goes on the fighter after a win in the Firebird **and** a win in the fighter |
 | does a win on continues count? | yes — any win, any difficulty, Freeplay included. It unlocks looks, not power |
 | which slots does a ship have? | wheels on both cars; hood or nose art; a livery; the HUD plate's motif |
 | a livery from palette roles, or any colour? | **any colour** — *"if someone wants to make something monstrous on their own game they can do that"* |
@@ -117,6 +135,10 @@ Then, while it was being planned:
   slot changes, and the cost of each lands against the press-to-HUD second as a budget, sized under
   load.
 - **The dice stay the estate's default dangle**, and the other three ships open with nothing hung.
+- **A run carries the fitted gun, not the ship's.** A run opens on two charges of the *fitted* gun's
+  special, as it opens on the ship's own today, and the pilot card names the fitted gun. The ship's
+  own gun is its default, on its row, and the fallback when nothing is fitted.
+- **The HUD plate, the shell, the tubes and the engines stay the ship's.** Only the gun moves.
 
 ## Raised for the screen, not answered by a rule
 
@@ -147,18 +169,33 @@ Then, while it was being planned:
    row with its own drawing and its own swing weights on the existing swing. The dice, the
    eucalyptus tree, the family in the frame and the golf ball. The shop tab, a provisional price on
    each row, and buying.
-4. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
+4. **The gun is its own layer** — and nothing the player sees changes. Each ship authors a
+   hardpoint, in the view it is drawn in, and may override it for one gun. Each gun authors its
+   mount's drawing from the side and from above, and where its shot leaves that drawing. The
+   muzzle is the hardpoint plus the gun's own offset. The guns come out of the cars' outlines and
+   the hit twins, the run carries a fitted gun, and `shipCarrying` goes. **Proved by the sheet
+   baking byte-identical** with every ship on its own gun, so a refactor that moved a pixel is
+   found before any new drawing hides it.
+5. **The gun slot.** The twelve new pairings drawn and photographed at the shipped camera; the
+   boss floor flown in all sixteen, with any pairing under forty seconds answered on its boss's or
+   its gun's row as 0441 answered the pterodactyl; `tests/mounts.test.ts` holding every pairing's
+   muzzle to its drawing; the slot in the hangar; the atlas baking the fitted gun only.
+6. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
    estate's whitewall are each one entry of its set — with the tyre's outline untouched.
-5. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
+7. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
    nose art for the fighter, a crest on the estate's bonnet and the saucer's dome.
-6. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
+8. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
    can all work. The running lights stay cyan and the high-contrast look stays on roles, as above.
-7. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
+9. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
    weighed against the frost shot on the frost ship's level before it ships.
 
 The order is the save first, because every later item writes to it; then shards, so the very next
-run already earns; then the shop, the first thing there is to buy. A senior-design pass is owed on
-each before it is handed over, photographed at the camera the game ships.
+run already earns; then the shop, the first thing there is to buy. **The guns come before the
+wheels and the nose art** because all three open the same car drawings: the gun's layer is cut
+first, so the wheels and the art are drawn onto the layering they will keep, rather than cut
+apart a second time. The gun is two PRs because the first can be proved byte-identical and the
+second cannot. A senior-design pass is owed on each before it is handed over, photographed at the
+camera the game ships.
 
 ## Owed
 
@@ -167,4 +204,6 @@ each before it is handed over, photographed at the camera the game ships.
 - **Who Cosmo is.** A name on a screen, or a face with a line, like the pilots have.
 - **Whether losing the device's storage losing the purchases needs saying in the shop.** The game
   makes no network requests after load, so there is nowhere else to keep them.
+- **What sixteen boss fights cost in CI**, measured on the gun slot's own run before it merges —
+  that guard is already among the suite's slow ones.
 - A play of each change on its branch preview, before the next is built.
