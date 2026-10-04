@@ -17,7 +17,7 @@
 
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
-import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, holeAt } from '../src/content/bosses.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { curtainSpacing, curtainStance } from '../src/app/boss.ts';
 import { weaponFor } from '../src/content/pickups.ts';
@@ -73,7 +73,7 @@ function wanted(uncoil, stance, span) {
           ? Math.hypot(span, 30)
           : span;
   const count = Math.round(length / spacing);
-  const hole = (uncoil.at / ACROSS_SPAN) * length;
+  const hole = (holeAt(uncoil, stance) / ACROSS_SPAN) * length;
   const clear = uncoil.hole / 2;
   let n = 0;
   for (let i = 0; i <= count; i++) {

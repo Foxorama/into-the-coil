@@ -761,6 +761,26 @@ export const CURTAIN_STANCES = [
 /** Derived from the list, so a stance cannot exist in the union and be missing from the switch. */
 export type CurtainStance = (typeof CURTAIN_STANCES)[number];
 
+/**
+ * The gyre's hole for each way its wall stands — `atBy` on its row.
+ *
+ * ⚠️ **A HOLE PER STANCE — 0498**: *"I want the holes to be in different positions to keep the player
+ * actively moving around the screen."* Each wall's hole is far from the last one's: the walls across
+ * the lane swap edges (the backslant's 31 runs from the far edge, so it opens at 89 across), and the
+ * four along the lane swap ends, the front at three fifths of the line and the back at a quarter.
+ * Every one is where it was last fight, so the pattern is still the one 0151 says the player learns.
+ */
+const GYRE_HOLES: Readonly<Record<CurtainStance, number>> = { across: 31, backslant: 31, alongFar: 75, rakeFar: 30, astern: 89, rakeNear: 75, alongNear: 30, slant: 89 };
+
+/**
+ * Where a wall standing this way leaves its hole, as a share of the lane in `at`'s units — the row's
+ * own place for that stance, or `at` — 0498. The one reader, so the thrower, the instruments and the
+ * guards cannot disagree about where the hole is.
+ */
+export function holeAt(uncoil: Uncoil, stance: CurtainStance): number {
+  return uncoil.atBy?.[stance] ?? uncoil.at;
+}
+
 export interface Uncoil {
   /** Health fraction at or below which the boss starts throwing it. */
   from: number;
@@ -831,6 +851,21 @@ export interface Uncoil {
    * bosses sit at different ends of it.
    */
   at: number;
+  /**
+   * Where the hole stands on each way the wall can stand, as `at` does, or `null` for `at` on every one —
+   * `docs/decisions/0498-the-hole-moves-with-the-wall.md`.
+   *
+   * ⚠️ **ASKED FOR, OVER 0151**: *"I want the holes to be in different positions to keep the player
+   * actively moving around the screen."* The hole was one share of every line, and on a spinning wall
+   * that put four of the eight holes about forty units ahead of the camera's trailing edge, where the
+   * ship already sits. A hole per stance is still FIXED — the k-th wall's hole is where it was last
+   * fight — so it is still the pattern 0151 says the player learns; what changes is that learning it
+   * means flying it.
+   *
+   * ⚠️ **A DEFAULT AND NOT A CONSTANT** — 0282. A wall that does not turn authors none and every wall it
+   * throws uses `at`; `holeAt` is the one reader.
+   */
+  atBy: Readonly<Record<CurtainStance, number>> | null;
   /**
    * Whether the curtain turns an eighth between one throw and the next — 0252, **and the hull turns
    * with it since 0332.** `false` for a wall that always stands across the lane.
@@ -3018,7 +3053,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // chorus's four walls arrive whole with none; a floor of two seconds costs it three of them
     // against a fast gun and buys nothing. `scripts/weigh-walls.mjs` is where that is read.
     // `at` 26 → 31 with 0364's zoom, so the hole is where it was on the screen; `hole` is a ship's room and stays.
-    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, hole: 14, spin: false, quicken: null, apart: 0 },
+    uncoil: { from: 0.7, every: 0.1, gap: 4.5, at: 31, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     // Its middle eye, the one on the player's side of the middle lobe — 0452. The rake used to leave
@@ -3113,7 +3148,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       the wall at 4.8 and the clots either side stand at 62.4 and 76.8: 14.4 apart, which is 12 × 1.2,
       and 12.1 of clear air where there was 9.7. `hole` 14 is the cut, a fraction inside both of them.
     */
-    uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, hole: 14, spin: false, quicken: null, apart: 0 },
+    uncoil: { from: 0.5, every: 0.1, gap: 4.85, at: 70, atBy: null, hole: 14, spin: false, quicken: null, apart: 0 },
     fall: null,
     chill: null,
     muzzle: null,
@@ -4137,7 +4172,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       fewer walls and all of them whole, which is the trade 0040 already makes about a short fight.
     */
     // `at` 26 → 31 with 0364's zoom, on the chorus's terms.
-    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
+    // Its hole per stance, `GYRE_HOLES` — 0498.
+    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, atBy: GYRE_HOLES, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
     fall: null,
     chill: null,
     muzzle: null,
