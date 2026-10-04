@@ -598,6 +598,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   acidRise6: 'sky',
   boss14: 'enemy',
   boss14Open: 'enemy',
+  boss14Lime: 'enemy',
+  boss14Yellow: 'enemy',
+  boss14Amber: 'enemy',
   // A tentacle is the animal — 0403: it stings and it is shot, so it is in the ink of what can kill.
   tendril: 'enemy',
   tendrilLit: 'enemy',
@@ -1055,6 +1058,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   hydraNeck4Hit: 'impact',
   hydraCollar4Hit: 'impact',
   boss14Hit: 'impact',
+  boss14LimeHit: 'impact',
+  boss14YellowHit: 'impact',
+  boss14AmberHit: 'impact',
   boss14OpenHit: 'impact',
   tendrilHit: 'impact',
   // Fragments are the impact itself, so they are the impact ink; they carry no identity of their own.
@@ -10969,6 +10975,29 @@ export function medusaSeal(skin: FoeSkin): string {
   return rgba(medusaGlass(skin), MEDUSA_GLASS);
 }
 
+/**
+ * The bell's light at each step of its health, whole to open — `docs/decisions/0491-the-glow-is-its-health.md`:
+ * green, lime, yellow, amber and red. *"Green → yellow → amber → red"* is four, and the open bell is the fifth.
+ * Bright enough each to read as a light against the Black Heart's mauve, and far enough apart in hue that
+ * a step is seen, not inferred.
+ *
+ * ⚠️ **THE RED IS A PALE ONE, AND 0459's FLOOR IS WHY.** The place is a red-mauve, and a red glass over it
+ * is the colour of the place: `#ff5a68` laid at the glass's half came to 2.46 against the gameplay floor of
+ * three, and the reported defect 0459 answered was this very animal *"almost exactly the same colours as
+ * the level background."* The palest red that clears the floor, at 3.13; its rim and beads are the same
+ * light at full strength, which is where the red reads. The amber is lifted for the same floor (2.996).
+ */
+export const MEDUSA_GLOW = ['#5dff8a', '#c4ff4a', '#ffe14a', '#ffb44e', '#ffa898'] as const;
+
+/** Which of the five a bell is, by its name — 0491. */
+function medusaStage(kind: SpriteKind): 0 | 1 | 2 | 3 | 4 {
+  if (kind.startsWith('boss14Lime')) return 1;
+  if (kind.startsWith('boss14Yellow')) return 2;
+  if (kind.startsWith('boss14Amber')) return 3;
+  if (kind.startsWith('boss14Open')) return 4;
+  return 0;
+}
+
 /** Paint one bell, shut or a half of one open, over an outline already traced and sealed. */
 function paintMedusaBell(ctx: Pen, f: Frame, skin: FoeSkin, open: boolean): void {
   const glass = medusaGlass(skin);
@@ -13143,6 +13172,12 @@ export function drawKind(
     }
     case 'boss14':
     case 'boss14Hit':
+    case 'boss14Lime':
+    case 'boss14LimeHit':
+    case 'boss14Yellow':
+    case 'boss14YellowHit':
+    case 'boss14Amber':
+    case 'boss14AmberHit':
     case 'boss14Open':
     case 'boss14OpenHit': {
       /*
@@ -13154,9 +13189,11 @@ export function drawKind(
       const open = kind === 'boss14Open' || kind === 'boss14OpenHit';
       const outlines = open ? [medusaHalf(-1), medusaHalf(1)] : [medusaHull()];
       for (const outline of outlines) curveLoop(ctx, f, outline);
-      if (skin !== null) ctx.fillStyle = medusaSeal(skin);
+      // Its light in the tint its health is at — 0491: the glass, the lamp in it, the rim and the beads.
+      const lit = skin === null ? null : { ...skin, lit: MEDUSA_GLOW[medusaStage(kind)] };
+      if (lit !== null) ctx.fillStyle = medusaSeal(lit);
       seal(ctx);
-      if (skin !== null) paintMedusaBell(ctx, f, skin, open);
+      if (lit !== null) paintMedusaBell(ctx, f, lit, open);
       return;
     }
     case 'heart':

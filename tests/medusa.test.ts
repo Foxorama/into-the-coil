@@ -24,7 +24,8 @@ import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
-import { HEART_ROSE, INK_OF, medusaSeal, mix } from '../src/render/bake.ts';
+import { HEART_ROSE, INK_OF, MEDUSA_GLOW, drawKind, medusaSeal, mix } from '../src/render/bake.ts';
+import { tracingPen } from './paths.ts';
 import { PALETTES } from '../src/content/palette.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { GAMEPLAY_FLOOR, contrast } from './contrast.ts';
@@ -407,7 +408,12 @@ describe('0402 — the jellyfish is glass, and it opens', () => {
     const d = medusaAt(0.1);
     stepHeld(d, 5);
     expect(d.world.bossPool.at(0).spriteBase, 'the jellyfish at its last fifth is not drawn open').toBe(last.hull!.rest);
-    d.world.bossPool.at(0).health = d.world.bossFullHealth * 0.4;
+    /*
+      Healed back to its first phase, which authors no bell of its own, so what it wears is the row's: the
+      body put back. Healed to 0.4 before 0491; that phase wears its own glow now, and asking there would no
+      longer ask whether the row's own body comes back.
+    */
+    d.world.bossPool.at(0).health = d.world.bossFullHealth * 0.9;
     stepHeld(d, 5);
     expect(d.world.bossPool.at(0).spriteBase, 'healed back over its last fifth, the jellyfish is still drawn open').toBe(row.sprite);
   });
@@ -423,13 +429,16 @@ describe('0459 — the Black Heart’s lightning and its jellyfish stand off it'
   const vessel = mix(mix(nebula, HEART_ROSE, 0.6), '#ffffff', 0.35);
 
   it('THE JELLYFISH: its glass, laid over the place’s nebula, is over the gameplay floor against it', () => {
-    const m = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(medusaSeal(THEMES.core.lord));
-    expect(m, 'the seal is not an rgba this can read').not.toBeNull();
-    const [r, g, b, a] = [Number(m![1]), Number(m![2]), Number(m![3]), Number(m![4])];
-    const under = [1, 3, 5].map((i) => parseInt(nebula.slice(i, i + 2), 16));
-    const laid = `#${[r, g, b].map((c, i) => Math.round(under[i]! + (c - under[i]!) * a).toString(16).padStart(2, '0')).join('')}`;
-    expect(contrast(laid, nebula), `the bell is ${laid} over ${nebula}`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
-    expect(a, 'the bell is no longer glass, and the heart behind it is lost').toBeLessThanOrEqual(0.6);
+    // In every tint its health lights it in since 0491, which is the glass that is drawn.
+    for (const glow of MEDUSA_GLOW) {
+      const m = /^rgba\((\d+), (\d+), (\d+), ([\d.]+)\)$/.exec(medusaSeal({ ...THEMES.core.lord, lit: glow }));
+      expect(m, 'the seal is not an rgba this can read').not.toBeNull();
+      const [r, g, b, a] = [Number(m![1]), Number(m![2]), Number(m![3]), Number(m![4])];
+      const under = [1, 3, 5].map((i) => parseInt(nebula.slice(i, i + 2), 16));
+      const laid = `#${[r, g, b].map((c, i) => Math.round(under[i]! + (c - under[i]!) * a).toString(16).padStart(2, '0')).join('')}`;
+      expect(contrast(laid, nebula), `the bell lit ${glow} is ${laid} over ${nebula}`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
+      expect(a, 'the bell is no longer glass, and the heart behind it is lost').toBeLessThanOrEqual(0.6);
+    }
   });
 
   it('THE LIGHTNING: a hostile bolt here is not the enemy pink the vessels are lit in, and stands off them and the sky', () => {
@@ -696,5 +705,36 @@ describe('0490 — the tentacles are tentacles', () => {
       }
     }
     expect(turns.size, 'the arms never sway').toBeGreaterThan(frills.roots.length);
+  });
+});
+
+describe('0491 — the glow is its health', () => {
+  /** What the jellyfish's hull is filled in, traced off the bitmap it wears. */
+  const sealOf = (sprite: number): string => {
+    const kind = SPRITE_KINDS[sprite]!;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES.vivid, SPRITE_EXTENT[kind] * 8, 'core');
+    return trace.passes[0]!.colour;
+  };
+
+  it('THE ASK, DRIVEN, IN THE INK: every phase wears its own glow — five, whole to open — and a feed back over a line steps the glow back', () => {
+    /*
+      *"As it gets healed its glow will change"*, and the plan's green, yellow, amber, red and the open bell.
+      Driven through every phase: the bell it wears, and the glass that bell is filled in, read off its trace.
+    */
+    const d = medusaAt(0.95);
+    const worn: number[] = [];
+    for (const phase of row.phases) {
+      d.world.bossPool.at(0).health = d.world.bossFullHealth * (phase.upTo - 0.02);
+      stepHeld(d, 5);
+      worn.push(d.world.bossPool.at(0).spriteBase);
+    }
+    expect(new Set(worn).size, `the bell wears ${new Set(worn).size} looks over its five phases`).toBe(row.phases.length);
+    const seals = worn.map(sealOf);
+    expect(new Set(seals).size, `its glass is ${new Set(seals).size} colours over its five phases: ${seals.join(', ')}`).toBe(row.phases.length);
+    // Fed back over a line: the glow is the phase's again, on the step it crosses.
+    d.world.bossPool.at(0).health = d.world.bossFullHealth * (row.phases[1]!.upTo - 0.02);
+    stepHeld(d, 5);
+    expect(d.world.bossPool.at(0).spriteBase, 'healed back over a line, the bell kept the glow it had').toBe(worn[1]);
   });
 });

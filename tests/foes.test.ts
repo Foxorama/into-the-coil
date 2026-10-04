@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { drawKind, medusaSeal } from '../src/render/bake.ts';
+import { MEDUSA_GLOW, drawKind, medusaSeal } from '../src/render/bake.ts';
 import { BOSSES, BOSS_KINDS } from '../src/content/bosses.ts';
 import { ENEMIES, ENEMY_KINDS } from '../src/content/enemies.ts';
 import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
@@ -176,8 +176,9 @@ describe('0264 — the lord wears its own skin', () => {
         ⚠️ **THE JELLYFISH IS SEALED IN ITS SKIN AS GLASS — 0402.** *"A translucent jellyfish and you can
         see the heart beating behind it"*: its bell is filled with its lord's skin lifted to glass, and
         that is the one lord whose seal is not its hull opaque. Held to exactly that, rather than excused.
+        Since 0491 the glass is lit in the tint its health is at, and the whole bell is the first of them.
       */
-      const sealed = lord === 'boss14' ? medusaSeal(THEMES[theme].lord) : THEMES[theme].lord.hull;
+      const sealed = lord === 'boss14' ? medusaSeal({ ...THEMES[theme].lord, lit: MEDUSA_GLOW[0] }) : THEMES[theme].lord.hull;
       expect(trace.passes[0]!.colour, `${level}'s lord is not sealed in the lord's skin`).toBe(sealed);
       const mid = LEVELS[level].midBoss;
       if (mid === null) continue;

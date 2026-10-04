@@ -4751,9 +4751,9 @@ export const BOSSES: Record<BossKind, BossRow> = {
         to 0.82, 0.63, 0.47 and 0.31, and the open bell has the widest band because a feed closes it.
       */
       { upTo: 1, fireEvery: 72, shots: 4, spread: 0, patrolScale: 1, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.82, fireEvery: 66, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },
-      { upTo: 0.63, fireEvery: 60, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null },
-      { upTo: 0.47, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true } },
+      { upTo: 0.82, fireEvery: 66, shots: 6, spread: 0, patrolScale: 1.3, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true }, hull: { rest: SPRITE.boss14Lime, hit: SPRITE.boss14LimeHit } },
+      { upTo: 0.63, fireEvery: 60, shots: 8, spread: 0, patrolScale: 1.6, stance: { kind: 'volley' }, look: null, shot: null, attack: null, hull: { rest: SPRITE.boss14Yellow, hit: SPRITE.boss14YellowHit } },
+      { upTo: 0.47, fireEvery: 54, shots: 8, spread: 0, patrolScale: 2, stance: { kind: 'volley' }, look: null, shot: null, attack: { kind: 'beam', warning: 24, hold: 24, halfWidth: 1.8, from: MEDUSA_LASERS, jag: MEDUSA_WIDE_FAN, together: true }, hull: { rest: SPRITE.boss14Amber, hit: SPRITE.boss14AmberHit } },
       // A fifth at twice the damage is 3.4 s at max weapons — over 0124's three, and past the death it
       // runs into (0150's floor). The bell parted — 0402: *"actually 'open and expose the heart'"*.
       { upTo: 0.31, fireEvery: 48, shots: 8, spread: 0, patrolScale: 1.2, stance: { kind: 'open', damageScale: 2 }, look: null, shot: 'void', attack: { kind: 'ring' }, hull: { rest: SPRITE.boss14Open, hit: SPRITE.boss14OpenHit } },
