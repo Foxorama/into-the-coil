@@ -459,6 +459,30 @@ export function musicPlaceFor(screen: Screen, audition: ThemeKind | null, runLev
   return SCREENS[screen].inRun ? placeFor(runLevel) : 'approach';
 }
 
+/**
+ * Which place is DRAWN on `screen`, or `null` for the title's void — the picture's half of the rule
+ * above, and `src/app/mount.ts`'s `placeOnScreen` has its history. `field` is the place the field is
+ * flying, `swapped` whether the burn has reached full speed (0340).
+ *
+ * ⚠️ **ON `inRun`, AS THE MUSIC IS — 0518.** It was a list of three screens, so the run-over screen,
+ * the pause, its quit question and its count-in fell through to the void and re-baked the atlas on the
+ * way in and again on the way out. A pure function on `musicPlaceFor`'s terms, so it is a unit test.
+ */
+export function picturePlaceFor(
+  screen: Screen,
+  audition: ThemeKind | null,
+  field: ThemeKind,
+  runLevel: number,
+  swapped: boolean,
+): ThemeKind | null {
+  // The intro's dark outside is the first level's place, since it leads into it — 0416.
+  if (screen === 'intro') return placeFor(0);
+  if (screen === 'travel') return swapped ? placeFor(runLevel) : field;
+  // Every other screen of a run is over its field, the finale's included — 0418, 0518.
+  if (SCREENS[screen].inRun) return field;
+  return audition;
+}
+
 /*
   ── THE MUSIC ROOM WALKS A LEVEL — `docs/decisions/0212-the-room-walks-the-level.md` ─────────────
 
