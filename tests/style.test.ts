@@ -112,7 +112,8 @@ describe('the chooser is the table', () => {
       for (const choice of row.choices) where.set(choice.name, [...(where.get(choice.name) ?? []), name]);
     }
     for (const [setting, screens] of where) expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
-    expect([...where.keys()].sort()).toEqual(['difficulty', 'pilot', 'sound', 'style', 'travel']);
+    // 0512: and the touch section's two, on Settings with the rest.
+    expect([...where.keys()].sort()).toEqual(['difficulty', 'hand', 'pilot', 'sound', 'steer', 'style', 'travel']);
   });
 });
 

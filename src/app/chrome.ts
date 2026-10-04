@@ -44,6 +44,7 @@ import { PAD_SPECIAL_BUTTONS } from './pad.ts';
 // hit region disagree — `docs/decisions/0060-a-trigger-is-a-place-on-the-glass.md`, and the button
 // that replaced the strip is `docs/decisions/0358-a-trigger-is-a-button.md`.
 import { TRIGGER_BUTTON } from './touch.ts';
+import type { HandKind } from '../content/touch.ts';
 /**
  * The drawn disc's diameter as the stylesheet says it — 0465: the table's share of the glass's short
  * edge, held between its floor and its ceiling in pixels. One string, used for the disc's box and for
@@ -1746,6 +1747,25 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   opacity: 0.85;
 }
 .itc-playing-trigger-icon { display: block; width: 1.8em; height: 1.8em; }
+/* Up the left edge for a left thumb, at the same inset (0512): the hit test reads the same setting. */
+.itc-playing-trigger-left .itc-playing-trigger-button { right: auto; left: ${TRIGGER_BUTTON.inset * 100}cqmin; }
+/* A band the device has no use for is off the screen, whatever display the band rule gives it. */
+${each('-band[hidden]')} { display: none; }
+/*
+  ⚠️ **ON A TOUCH SCREEN SETTINGS IS TWO COLUMNS, AND THE SECOND IS THE TOUCH SECTION — 0512.** Five
+  bands in one column were 505 px of content on a 390 px phone and 39 px too many on a touch laptop;
+  the width every landscape screen has to spare is the room. Filled down the columns, three to a
+  column, so down from the last of the three goes to the first of the touch section's, which is the
+  order the walk takes them in.
+*/
+.itc-settings-touch .itc-settings-settings-box {
+  display: grid;
+  grid-template-rows: repeat(3, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  column-gap: min(1rem, 2cqw);
+  width: min(100%, 64em);
+}
 @container (max-height: 460px) {
   /*
     ── THE TITLE ON A PHONE — 0370, and rows since 0458 ──────────────────────────────────────────
@@ -1757,6 +1777,27 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   */
   .itc-title-body { grid-template-columns: minmax(0, 5fr) minmax(0, 11fr); gap: min(0.6rem, 2cqh) min(1.5rem, 3cqw); }
   .itc-title-main, .itc-settings-settings-box { gap: min(0.45rem, 1.6cqh); }
+  /*
+    Half a phone's width each, so the band's furniture gives back what the words need, on 0460's terms:
+    a segment's floor is its longest word, and *Gentle · Standard · Quick* beside a label is the widest.
+  */
+  .itc-settings-touch .itc-settings-band { gap: 0.1em 0.2em; padding: 0.2em 0.25em; }
+  .itc-settings-touch .itc-settings-band-label { letter-spacing: 0.08em; }
+  .itc-settings-touch .itc-settings-band-step { padding: 0; }
+  .itc-settings-touch .itc-settings-options { gap: 0.25em; }
+  .itc-settings-touch .itc-settings-option { font-size: 0.9em; padding: 0.35em 0.45em; }
+  /*
+    And on a small phone the steps go, and the label with them: a thumb taps the segment it wants, so
+    the arrows say nothing a segment does not, and a pad still steps a band without them. The label is
+    the band's name, which its hint says in other words and its aria-label says to a reader. 760, and
+    not the 620 the title's rule uses: at 667 wide half a column was still short of three words.
+  */
+  @container (max-width: 760px) {
+    .itc-settings-touch .itc-settings-band-step, .itc-settings-touch .itc-settings-band-label { display: none; }
+    /* One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured. */
+    .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'track' 'hint'; }
+    .itc-settings-touch .itc-settings-option { padding: 0.35em 0.35em; }
+  }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
     grid-template-areas: 'label less track more' '. hint hint hint';
@@ -2385,6 +2426,22 @@ interface Band {
   hints: readonly string[];
   /** Which option is on — written by `setChoice`, read by a step. */
   index: number;
+  /** Which devices it is offered on — 0512, the row's `on`. */
+  on: 'all' | 'touch';
+}
+
+/**
+ * The rows the cursor walks, from what a screen has and what of it is shown — 0458's order: the tabs,
+ * each band, the actions. Since 0511 and 0512 a control or a band can be off the screen for now, and
+ * one that is gone is not a stop.
+ */
+function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[]): HTMLElement[][] {
+  const rows: HTMLElement[][] = [];
+  if (tabs.length > 0) rows.push([...tabs]);
+  for (const band of bands) if (!band.root.hidden) rows.push([band.root]);
+  const shown = controls.filter((c) => !c.hidden);
+  if (shown.length > 0) rows.push(shown);
+  return rows;
 }
 
 /**
@@ -2637,6 +2694,8 @@ export interface Chrome {
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
    */
   setTouch(touch: boolean): void;
+  /** Which side the trigger discs are drawn on — 0512, the side `src/app/touch.ts` hit-tests. */
+  setHand(hand: HandKind): void;
   /**
    * The ship lurched along the lane — `1` a hard push, `-1` a hard stop — so the fuzzy dice on the
    * estate's dash swing against it (0461). Fired by the frame on the step it starts, never per frame.
@@ -3752,6 +3811,7 @@ export function makeChrome(
         // The pilot's line is the name as well as what they fly: the face alone does not say who it is.
         hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
         index: 0,
+        on: choice.on,
       };
       choiceBands.push(band);
       line.append(label, less, box, more, hint);
@@ -3790,10 +3850,8 @@ export function makeChrome(
       drawn in on every screen. Built once, from what was built, so the walk cannot list a control the
       screen does not have or miss one it does.
     */
-    const rows: HTMLElement[][] = [];
-    if (tabs.length > 0) rows.push(tabs);
-    for (const band of choiceBands) rows.push([band.root]);
-    if (controls.length > 0) rows.push(controls);
+    // Rewritten in place by `setActionShown` and `setTouch`, so `follow` below reads the walk as it stands.
+    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls);
     /*
       ⚠️ **ONE CURSOR, WHOEVER MOVED IT.** A click, a tap or the Tab key puts the platform's focus on a
       control without asking the chrome; read back here, so the next push of a stick starts from where
@@ -4263,6 +4321,18 @@ export function makeChrome(
     },
     setTouch(touch: boolean): void {
       hud.classList.toggle('itc-playing-hud-touch', touch);
+      // 0512: and the touch section is up where there is glass to touch, and out of the walk where not.
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const panel = panels[screen];
+        if (panel === undefined) continue;
+        // A class the stylesheet lays a touch screen's panel out by, on the panel the screen has.
+        panel.root.classList.toggle(prefixFor(screen) + 'touch', touch);
+        for (const band of panel.bands) if (band.on === 'touch') band.root.hidden = !touch;
+        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+      }
+    },
+    setHand(hand: HandKind): void {
+      trigger.classList.toggle('itc-playing-trigger-left', hand === 'left');
     },
     swayDice(way: number): void {
       // `kick`'s two classes, so a second lurch the same way runs the swing again.
@@ -4691,8 +4761,7 @@ export function makeChrome(
       const control = panel?.controls[index];
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
-      // The actions are the last row the cursor walks (see where `rows` is built).
-      panel.rows[panel.rows.length - 1] = panel.controls.filter((c) => !c.hidden);
+      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {

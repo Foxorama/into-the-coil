@@ -69,9 +69,14 @@ afterAll(async () => {
   await browser?.close();
 });
 
-async function open(viewport: { width: number; height: number }, kept: 'table' | 'nothing' = 'table'): Promise<Page> {
+async function open(
+  viewport: { width: number; height: number },
+  kept: 'table' | 'nothing' = 'table',
+  // 0512: a page that can be touched lays Settings out with its touch section, which no other page has.
+  touch = false,
+): Promise<Page> {
   browser ??= await launchChromium({ headless: true });
-  const context = await browser.newContext({ viewport, deviceScaleFactor: 1 });
+  const context = await browser.newContext({ viewport, deviceScaleFactor: 1, hasTouch: touch });
   /*
     ⚠️ **A FULL HIGH-SCORE TABLE, WRITTEN BEFORE THE PAGE LOADS — 0429.** The title stands the table
     beside its rows (0458), and drops the column while nothing is kept; a guard that loaded a browser
@@ -603,6 +608,59 @@ describe.runIf(chromePath)('0460 — a band draws its segments whole, between it
       }
     });
   }
+});
+
+describe.runIf(chromePath)('0512 — Settings on a touch screen fits, its bands whole', () => {
+  /*
+    ⚠️ **EVERY GUARD ABOVE OPENS A PAGE THAT CANNOT BE TOUCHED, AND THE TOUCH SECTION IS ONLY ON ONE THAT
+    CAN.** Five bands in a column were 505 px of content on a 390 px phone, and the step arrows were drawn
+    through *Gentle* and *Quick* — both on the screen that is only laid out that way where a finger can
+    reach it, so neither guard could see either. Measured here on a page with touch, on every device,
+    with each band saying its longest line: no scroll, no segment under a step, the chosen one whole.
+  */
+  it('needs no scrolling and draws every segment whole with the touch section up, on every device', async () => {
+    const longest = (all: readonly string[]): string => all.reduce((a, b) => (b.length > a.length ? b : a), '');
+    const lines = SCREENS.settings.choices.map((choice) => ({ name: choice.name, line: longest(choice.options.map((o) => o.hint)) }));
+    for (const viewport of VIEWPORTS) {
+      const page = await open(viewport, 'table', true);
+      await showOnly(page, 'settings');
+      const faults = await page.evaluate(
+        ({ p, attr, lines }: { p: string; attr: string; lines: { name: string; line: string }[] }) => {
+          const out: string[] = [];
+          for (const { name, line } of lines) {
+            const hint = document.querySelector(`[${attr}="${name}"] ~ .${p}band-hint`);
+            if (hint instanceof HTMLElement) hint.textContent = line;
+          }
+          const root = document.querySelector<HTMLElement>('.' + p.slice(0, -1));
+          if (root === null) return ['no Settings to measure'];
+          const over = root.scrollHeight - root.clientHeight;
+          if (over > 1) out.push(`it scrolls by ${over} px`);
+          const box = (el: Element): DOMRect => el.getBoundingClientRect();
+          const meets = (a: DOMRect, b: DOMRect): boolean =>
+            a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+          const bands = [...root.querySelectorAll<HTMLElement>('.' + p + 'band')].filter((b) => !b.hidden);
+          if (bands.length !== lines.length) out.push(`${bands.length} bands shown of ${lines.length}`);
+          for (const band of bands) {
+            const name = band.getAttribute('aria-label') ?? '';
+            const track = band.querySelector<HTMLElement>('.' + p + 'options')!;
+            const options = [...track.querySelectorAll<HTMLElement>('.' + p + 'option')];
+            for (const step of band.querySelectorAll('.' + p + 'band-step')) {
+              for (const option of options) if (meets(box(step), box(option))) out.push(`${name}: ${option.textContent} is under a step`);
+            }
+            for (const option of options) {
+              const o = box(option);
+              const t = box(track);
+              if (o.left < t.left - 0.5 || o.right > t.right + 0.5) out.push(`${name}: ${option.textContent} is not drawn whole`);
+            }
+          }
+          return out;
+        },
+        { p: prefixFor('settings'), attr: SETTING_ATTR, lines },
+      );
+      expect(faults, `${viewport.what} (${viewport.width}x${viewport.height}), touch`).toEqual([]);
+      await page.context().close();
+    }
+  });
 });
 
 describe.runIf(chromePath)('0460 — the title’s sky drifts by whole tiles', () => {

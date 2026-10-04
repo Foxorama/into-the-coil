@@ -19,8 +19,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE: with one special owned, the one button fires it',
     edit: {
       path: 'src/app/touch.ts',
-      find: '    const zone = tapZone(target, e, bandCount(bandsOf()));',
-      replace: '    const zone = tapZone(target, e, SPECIAL_BINDINGS);',
+      find: '    const zone = tapZone(target, e, bandCount(bandsOf()), handOf());',
+      replace: '    const zone = tapZone(target, e, SPECIAL_BINDINGS, handOf());',
     },
   },
   {
@@ -32,8 +32,8 @@ export const PROBES = [
     guard: 'asks for the count on every tap, because the arsenal grows during a run',
     edit: {
       path: 'src/app/touch.ts',
-      find: '    const zone = tapZone(target, e, bandCount(bandsOf()));',
-      replace: '    const zone = tapZone(target, e, bandCount(options.bands ? 1 : SPECIAL_BINDINGS));',
+      find: '    const zone = tapZone(target, e, bandCount(bandsOf()), handOf());',
+      replace: '    const zone = tapZone(target, e, bandCount(options.bands ? 1 : SPECIAL_BINDINGS), handOf());',
     },
   },
   {

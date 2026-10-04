@@ -37,6 +37,8 @@ import {
   travelMayLand,
   warpAt,
 } from '../content/travel.ts';
+// 0512: the touch section — which side the discs stand on, and how quick the steering is.
+import { DEFAULT_HAND, DEFAULT_STEER, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
 import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcross, type Mote } from './attract.ts';
 import { DEBRIS } from '../content/debris.ts';
@@ -1267,6 +1269,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         alongAxis: () => view.alongAxis,
         scale: () => view.scale,
         bands: () => SIDES.length,
+        // 0512: the touch section's two, read per tap and per step so a change from the pause is felt at once.
+        hand: () => state.settings.hand,
+        steer: () => STEERS[state.settings.steer].ratio,
       }),
       // 0511: Start asks for a pause, and the shell hears it on the next tick (`pauseAsked`).
       attachPad({
@@ -1844,6 +1849,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
       showPilot();
     }
+    // 0512: the touch section's two. `HAND_KINDS` and `STEER_KINDS` ARE the orders they were built in.
+    else if (name === 'hand') {
+      dispatch({ slice: 'settings', type: 'hand', hand: HAND_KINDS[index] ?? DEFAULT_HAND });
+      applyTouch();
+    } else if (name === 'steer') {
+      dispatch({ slice: 'settings', type: 'steer', steer: STEER_KINDS[index] ?? DEFAULT_STEER });
+      applyTouch();
+    }
   },
   /*
     THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
@@ -2006,6 +2019,17 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('travel', TRAVEL_KINDS.indexOf(state.settings.travel));
   };
   applyTravel();
+  /*
+    WHAT THE TOUCH SECTION CHANGES — 0512: the marks on its two bands, and the side the discs are drawn
+    on. What each is FOR is read where a finger is read (`attachTouch`'s `hand` and `steer`, above), so
+    the picture and the hit test take the side from the one value and nothing else is put out of step.
+  */
+  function applyTouch(): void {
+    chrome.setChoice('hand', HAND_KINDS.indexOf(state.settings.hand));
+    chrome.setChoice('steer', STEER_KINDS.indexOf(state.settings.steer));
+    chrome.setHand(state.settings.hand);
+  }
+  applyTouch();
 
   /*
     HOW FAR UP THE MUSIC'S LADDER THE RUN IS — `docs/decisions/0090-the-music-is-four-loops.md`.
