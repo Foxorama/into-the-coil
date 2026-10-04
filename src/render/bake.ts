@@ -600,6 +600,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   boss14Open: 'enemy',
   // A tentacle is the animal — 0403: it stings and it is shot, so it is in the ink of what can kill.
   tendril: 'enemy',
+  tendrilLit: 'enemy',
+  oralArm: 'enemy',
   /*
     ⚠️ **THE HEART IS THE PLACE, ON THE SEAT'S TERMS — 0400.** It is scenery that nothing collides with,
     as the gyre's housing is, so it takes the ink nothing the player must find is drawn in; what hurts is
@@ -6060,7 +6062,9 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   if (row.shed !== null) named.push(row.shed);
   if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
   // A jellyfish's tentacles are its glass — 0403.
-  if (row.tendrils !== undefined) named.push(row.tendrils.sprite, row.tendrils.spriteHit);
+  if (row.tendrils !== undefined) named.push(row.tendrils.sprite, row.tendrils.spriteHit, row.tendrils.lit.sprite);
+  // And the frilled arms under the bell, the same glass — 0490.
+  if (row.tendrils?.frills !== undefined) named.push(row.tendrils.frills.sprite);
   if (row.face !== null) named.push(...Object.values(row.face));
   /*
     ⚠️ **AND WHAT EVERY PHASE'S LOOK NAMES — 0305**, on this list's own terms: the horned faces and the
@@ -11200,6 +11204,31 @@ function drawTendril(ctx: Pen, f: Frame, skin: FoeSkin): void {
   for (const [x, y] of [[-0.5, 0.1], [0, -0.1], [0.5, 0.1]] as const) disc(ctx, f, mix(skin.hull, '#ffffff', 0.35), x, y, 0.065, 0.9);
 }
 
+/**
+ * A frilled oral arm — `docs/decisions/0490-the-tentacles-are-tentacles.md`: a ribbon of the bell's glass from
+ * its root at the tile's centre to its tip at `−x`, its two edges ruffled — the frill folding on itself every
+ * few units — narrowing to the tip, with a paler fold down its middle. No outline, as a tentacle has none.
+ */
+function drawOralArm(ctx: Pen, f: Frame, skin: FoeSkin): void {
+  const glass = medusaGlass(skin);
+  const upper: Pt[] = [];
+  const lower: Pt[] = [];
+  const n = 40;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const x = -t * 1.05;
+    const width = 0.2 * (1 - t * 0.7);
+    const frill = 0.07 * (1 - t * 0.5) * Math.sin(t * Math.PI * 9);
+    const wander = 0.06 * Math.sin(t * Math.PI * 2.2);
+    upper.push([x, wander - width - Math.abs(frill)]);
+    lower.push([x, wander + width + Math.abs(frill * 0.8)]);
+  }
+  poly(ctx, f, glass, [...upper, ...lower.reverse()], 0.75);
+  // The fold down its middle, paler, and the frill's edge catching the light.
+  seam(ctx, f, mix(skin.lit, '#ffffff', 0.55), 0.05, upper.map(([x, y], i) => [x, y + 0.2 * (1 - (i / n) * 0.7) * 0.9] as Pt), 0.55, true);
+  seam(ctx, f, mix(skin.lit, '#ffffff', 0.35), 0.03, upper, 0.5, true);
+}
+
 /** A length of the heart's own vessel — 0400: the gas's body colour, lit down its middle. */
 function drawArtery(ctx: Pen, f: Frame, body: string): void {
   const hull: Pt[] = [];
@@ -13142,6 +13171,18 @@ export function drawKind(
     case 'tendrilHit':
       // A LENGTH OF TENTACLE — 0403, in the lord's glass. No outline: eight overlap as one.
       if (skin !== null) drawTendril(ctx, f, skin);
+      return;
+    case 'tendrilLit':
+      // AND ONE ALIGHT WITH THE LASER ABOUT TO LEAVE IT — 0490: the same length, its core charged.
+      if (skin !== null) {
+        drawTendril(ctx, f, skin);
+        glow(ctx, f, mix(skin.lit, '#ffffff', 0.4), 0, 0, 0.9, 0.7);
+        seam(ctx, f, '#ffffff', 0.14, [[-0.9, 0], [0.9, 0]], 0.9);
+      }
+      return;
+    case 'oralArm':
+      // A FRILLED ORAL ARM — 0490: a ruffled ribbon of the bell's glass hanging down the lane.
+      if (skin !== null) drawOralArm(ctx, f, skin);
       return;
     case 'bullet':
       /*

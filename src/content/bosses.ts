@@ -1483,6 +1483,23 @@ export interface Tendrils {
   brace: number;
   /** How much of a hit on a tentacle reaches the hull — 1 for all of it. */
   hurt: number;
+  /**
+   * What a length near the tip wears while a laser is about to leave it — `docs/decisions/0490-the-tentacles-are-tentacles.md`:
+   * the charge, lit in the last `charge` steps of a beam's warning, on the last `lit` lengths of each tentacle.
+   * The line down the lane already warns where; this says *now*, at the thing it comes out of.
+   */
+  lit: { sprite: number; charge: number; lengths: number };
+  /**
+   * How many half-waves run down a tentacle at once — 0490. One and a little was a rod waving from its root;
+   * two is an S that travels, which is what a tentacle in water does.
+   */
+  waves: number;
+  /**
+   * The frilled oral arms under the bell, or absent — 0490: shorter, ruffled, laid behind the bell as pictures
+   * (they sting nothing) and swaying slowly. *"A medusa has both, and the frill is what makes a jellyfish
+   * read."* Each is a `sprite` rooted at `[along, across]` from the hull's centre and hanging down the lane.
+   */
+  frills?: { sprite: number; roots: readonly (readonly [number, number])[]; sway: number; beat: number };
 }
 
 /**
@@ -4639,6 +4656,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ],
       tips: MEDUSA_TIPS,
       reach: -MEDUSA_REACH,
+      /*
+        ⚠️ **EIGHT STILL, AND 0490 ASKED FOR TWELVE.** Twenty more lengths is twenty more entities against
+        0022's worst case, already full; the share 0022 names as sheddable is the particles', and
+        `tests/flares.test.ts` prices their fullest moment at 148.9 of the 149 they have — so twelve would be
+        bought with a boss's explosion. The curve is the wave's (`waves`), and eight draws it.
+      */
       nodes: 8,
       sprite: SPRITE.tendril,
       spriteHit: SPRITE.tendrilHit,
@@ -4650,6 +4673,22 @@ export const BOSSES: Record<BossKind, BossRow> = {
       draw: 90,
       brace: 18,
       hurt: 1,
+      // The last three lengths alight for the twenty steps before a laser leaves the tip — 0490.
+      lit: { sprite: SPRITE.tendrilLit, charge: 20, lengths: 3 },
+      // An S and a half down the arm: as much wave as eight lengths can bend through without a kink.
+      waves: 1.5,
+      // Four frilled oral arms between the tentacles' roots, swaying slower than the tentacles wave — 0490.
+      frills: {
+        sprite: SPRITE.oralArm,
+        roots: [
+          [MEDUSA_RIM + 2, -10.8],
+          [MEDUSA_RIM + 2, -3.9],
+          [MEDUSA_RIM + 2, 3.9],
+          [MEDUSA_RIM + 2, 10.8],
+        ],
+        sway: 0.18,
+        beat: 230,
+      },
     },
     /*
       ⚠️ **THE LABYRINTH'S ROOM WITH NO WALLS — 0400.** *"The boss fight needs to be similar to the

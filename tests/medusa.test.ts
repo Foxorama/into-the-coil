@@ -602,3 +602,99 @@ describe('0489 — the heart has a chamber', () => {
     expect(off, `the chamber is drawn ${off.toFixed(1)}px from the heart it holds`).toBeLessThan(0.5);
   });
 });
+
+describe('0490 — the tentacles are tentacles', () => {
+  /** How far each length of tentacle `k` stands off the line from its root to its tip at rest, signed. */
+  const offsets = (d: Driven, k: number): number[] => {
+    const hull = d.world.bossPool.at(0);
+    const root = tendrils.roots[k]!;
+    const tip = tendrils.tips[k]!;
+    const chordAlong = tendrils.reach - root[0];
+    const chordAcross = tip - root[1];
+    const chord = Math.hypot(chordAlong, chordAcross);
+    const out: number[] = [];
+    for (let j = 0; j < tendrils.nodes; j++) {
+      const node = d.world.bossBody.at(k * tendrils.nodes + j);
+      const along = node.along - (hull.along + root[0]);
+      const across = node.across - (hull.across + root[1]);
+      out.push((along * -chordAcross + across * chordAlong) / chord);
+    }
+    return out;
+  };
+
+  it('THE ASK, IN LANE UNITS: a slack tentacle is a curve and not a rod — on most steps of a beat it crosses its own line, an S down the arm', () => {
+    /*
+      The plan: *"laid on a straight line from root to tip with a sideways sine added … it reads as a chain of
+      rods wiggling."* A rod waving from its root stays on one side of its line; a tentacle with a wave running
+      down it crosses it. Every tentacle, sampled through one beat with no volley held.
+    */
+    const d = medusaAt(0.95);
+    let steps = 0;
+    let crossing = 0;
+    for (let i = 0; i < tendrils.beat; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.bossPool.at(0).fireIn = 999;
+      d.frame.step();
+      if (i % 10 !== 0) continue;
+      for (let k = 0; k < tendrils.roots.length; k++) {
+        steps++;
+        const off = offsets(d, k);
+        const most = Math.max(...off);
+        const least = Math.min(...off);
+        if (most > 0.5 && least < -0.5) crossing++;
+      }
+    }
+    expect(crossing / steps, `a tentacle crossed its own line on ${((crossing / steps) * 100).toFixed(0)}% of the samples`).toBeGreaterThan(0.5);
+  });
+
+  it('THE TIPS ALIGHT, DRIVEN: in the last steps of a laser’s warning the tips it leaves are lit, and at no other step', () => {
+    const d = medusaAt(0.7);
+    const boss = d.world.bossPool.at(0);
+    d.world.ship.across = 5;
+    boss.fireIn = 1;
+    let lit = 0;
+    let wrong = 0;
+    for (let i = 0; i < 120; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.world.ship.across = 5;
+      // What the beams in the air say as the step begins, which is what the tentacles are laid against.
+      let charging = false;
+      for (let b = 0; b < d.world.bolts.size; b++) {
+        const bolt = d.world.bolts.at(b);
+        if (bolt.kind === BEAM_BOLT_KIND && bolt.lifeFor > bolt.holdFor && bolt.lifeFor - bolt.holdFor <= tendrils.lit.charge) charging = true;
+      }
+      d.frame.step();
+      if (i > 0) boss.fireIn = 999;
+      for (let k = 0; k < tendrils.roots.length; k++) {
+        const tipNode = d.world.bossBody.at(k * tendrils.nodes + tendrils.nodes - 1);
+        const alight = tipNode.spriteBase === tendrils.lit.sprite;
+        if (alight !== charging) wrong++;
+        if (alight) lit++;
+      }
+    }
+    expect(lit, 'no tip was ever lit before a laser left it').toBeGreaterThan(0);
+    expect(wrong, `${wrong} tip-steps were lit when no laser was about to leave, or dark when one was`).toBe(0);
+  });
+
+  it('THE FRILLS: four oral arms hang from the bell’s rim down the lane, behind the bell, swaying', () => {
+    const frills = tendrils.frills!;
+    expect(frills, 'the jellyfish has no oral arms').toBeDefined();
+    const d = medusaAt(0.95);
+    const hull = d.world.bossPool.at(0);
+    const turns = new Set<string>();
+    for (let i = 0; i < 60; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      hull.fireIn = 999;
+      d.frame.step();
+      const arms = [];
+      for (let a = 0; a < d.world.bossAura.size; a++) if (d.world.bossAura.at(a).spriteBase === frills.sprite) arms.push(d.world.bossAura.at(a));
+      expect(arms.length, 'not every frilled arm was laid').toBe(frills.roots.length);
+      for (const arm of arms) {
+        expect(Math.hypot(arm.along - hull.along, arm.across - hull.across), 'an arm hangs from somewhere other than the bell').toBeLessThanOrEqual(BOSSES.medusa.radius + 2);
+        expect(Math.abs(arm.turn), 'an arm hangs anywhere but down the lane').toBeLessThanOrEqual(frills.sway + 1e-9);
+        turns.add(arm.turn.toFixed(3));
+      }
+    }
+    expect(turns.size, 'the arms never sway').toBeGreaterThan(frills.roots.length);
+  });
+});

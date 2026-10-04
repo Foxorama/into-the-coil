@@ -786,6 +786,9 @@ export const SPRITE_KINDS = [
   // A length of the jellyfish's tentacle — 0403: a body in `bossBody`, so it has a hurt twin.
   'tendril',
   'tendrilHit',
+  // A length near the tip alight with a laser's charge, and the frilled arms under the bell — 0490.
+  'tendrilLit',
+  'oralArm',
   'bullet',
   /*
     ── WHAT SHOOTS BACK, AND IT WAS THE SAME BITMAP AS WHAT THE PLAYER FIRES ───────────────────────
@@ -2113,6 +2116,9 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   */
   tendril: 10,
   tendrilHit: 10,
+  tendrilLit: 10,
+  // A ruffled arm hanging half a tentacle's reach, rooted on its tile's centre and running along `−x` — 0490.
+  oralArm: 40,
   bullet: 1.8,
   /*
     ⚠️ **Bigger than the pulse and drawn in the ENEMY ink** — 0081. It is the only thing on screen the
