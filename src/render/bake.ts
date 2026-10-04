@@ -24,7 +24,7 @@ import { THEMES, foeOf, lordOf, type FoeSkin, type LandLight, type ThemeKind } f
 import { BOSSES, type BossKind } from '../content/bosses.ts';
 import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
-import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
+import { LANDMARK_SLOTS, LIGHT_KINDS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
 import { HYDRA_SKULL, NECK_KNOTS, hydraKnuckleOf, neckSpine } from '../content/necks.ts';
 import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_BEAT, QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX, strokeAt } from '../content/sprites.ts';
@@ -107,6 +107,13 @@ export interface Atlas {
   readonly extents: readonly number[];
   /** The resolution it was baked at, so staleness is a question with an answer. */
   readonly pixelsPerUnit: number;
+  /**
+   * Which bitmaps are LIGHT, in the same order — `docs/decisions/0520-the-light-is-loud.md`. A light is
+   * drawn added to what is under it rather than over it, so two of them crossing burn brighter where
+   * they cross and a glow brightens the sky it lies on instead of veiling it. Absent is none: the
+   * port's and the finale's pieces are all body.
+   */
+  readonly light?: readonly boolean[];
 }
 
 /** Which view a viewport wants: side profile when it scrolls across `x`, top-down when down `y`. */
@@ -13685,8 +13692,10 @@ export function drawKind(
       ring(ctx, f, 0.6, 0.56, 0.14);
       ring(ctx, f, -0.62, -0.55, 0.11);
       seal(ctx);
-      glow(ctx, f, palette.acid, 0, 0, 1.1, 0.45);
+      // 0520: a stronger glow, and a hot heart with a glint on it, so the drop is lit from inside.
+      glow(ctx, f, palette.acid, 0, 0, 1.1, 0.65);
       disc(ctx, f, shade(palette.acid, 0.6), -0.1, -0.12, 0.24);
+      disc(ctx, f, shade(palette.acid, 0.85), -0.16, -0.18, 0.11);
       return;
     case 'void':
       /*
@@ -13700,9 +13709,11 @@ export function drawKind(
       ctx.moveTo(half + r * 0.38, half);
       ctx.arc(half, half, r * 0.38, 0, Math.PI * 2);
       seal(ctx);
-      glow(ctx, f, palette.void, 0, 0, 1.1, 0.5);
+      // 0520: the hole glows harder, and the rim has a bright inner edge where the light catches it.
+      glow(ctx, f, palette.void, 0, 0, 1.1, 0.7);
+      band(ctx, f, shade(palette.void, 0.45), 0, 0, 0.5, 0.4, 0.85);
       // The light on the rim, not in the hole: a mark over a hole is a mark off the hull (0149).
-      disc(ctx, f, shade(palette.void, 0.7), 0, -0.6, 0.17);
+      disc(ctx, f, shade(palette.void, 0.75), 0, -0.6, 0.17);
       return;
     case 'maw':
     case 'mawHit':
@@ -13722,7 +13733,9 @@ export function drawKind(
       */
       ctx.arc(half, half, r * 0.86, 0, Math.PI * 2);
       seal(ctx);
-      glow(ctx, f, palette.void, 0, 0, 1.15, 0.55);
+      // 0520: a hotter glow, and a lit rim band, so the swallowed volley reads as charge held in it.
+      glow(ctx, f, palette.void, 0, 0, 1.15, 0.75);
+      band(ctx, f, shade(palette.void, 0.4), 0, 0, 0.86, 0.74, 0.8);
       /*
         THE ACID INSIDE — three blots off centre, in the drops' own ink, so the ball reads as carrying
         something rather than as a bigger void. Their sizes fall, which is what keeps three marks from
@@ -13736,6 +13749,9 @@ export function drawKind(
       */
       disc(ctx, f, palette.acid, -0.22, -0.18, 0.3);
       disc(ctx, f, palette.acid, 0.26, 0.1, 0.22);
+      // Each blot lit at its heart (0520), in the acid's own lifted ink, so they glow rather than sit.
+      disc(ctx, f, shade(palette.acid, 0.6), -0.26, -0.22, 0.13);
+      disc(ctx, f, shade(palette.acid, 0.6), 0.23, 0.07, 0.1);
       // And the rim light the void wears, so the two are visibly the same family of thing.
       disc(ctx, f, shade(palette.void, 0.7), 0, -0.66, 0.15);
       return;
@@ -14593,10 +14609,15 @@ export function drawKind(
       ctx.arc(half, half, r * 1.0, 0, Math.PI * 2);
       seal(ctx);
       const radii = [0.24, 0.47, 0.7, 0.92] as const;
+      // 0520: the field glows from its heart, and the lit ring runs nearly white with its own light
+      // either side of it, so the ripple stepping outward is a ring of light rather than of paint.
+      glow(ctx, f, ring, 0, 0, 0.9, 0.45);
       radii.forEach((at, k) => {
         const lit = k === page + 1 || k === 3;
-        band(ctx, f, lit ? shade(ring, 0.35) : ring, 0, 0, at + 0.07, at - 0.07, lit ? 1 : 0.75);
+        if (lit) band(ctx, f, ring, 0, 0, at + 0.11, at - 0.11, 0.5);
+        band(ctx, f, lit ? shade(ring, 0.65) : shade(ring, 0.15), 0, 0, at + 0.07, at - 0.07, lit ? 1 : 0.8);
       });
+      glow(ctx, f, palette.impact, 0, 0, 0.3, 0.85);
       disc(ctx, f, palette.impact, 0, 0, 0.12);
       return;
     }
@@ -14617,9 +14638,10 @@ export function drawKind(
       seal(ctx);
       ctx.globalAlpha = 1;
       const rim = edge / r;
-      band(ctx, f, fading ? ring : shade(ring, 0.4), 0, 0, rim, rim - 0.16, fading ? 0.55 : 0.95);
-      glow(ctx, f, ring, 0, 0, rim * 0.8, fading ? 0.3 : 0.7);
-      if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.4, 0.8);
+      // 0520: drawn ADDED (`LIGHT_KINDS`), so the rim and the heart burn over what they land on.
+      band(ctx, f, fading ? shade(ring, 0.2) : shade(ring, 0.6), 0, 0, rim, rim - 0.16, fading ? 0.6 : 0.95);
+      glow(ctx, f, ring, 0, 0, rim * 0.85, fading ? 0.35 : 0.8);
+      if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.45, 0.85);
       return;
     }
     case 'shuriken':
@@ -14933,8 +14955,12 @@ export function drawKind(
       // The hull first, because the first fill IS the hull and everything after it is paint.
       ctx.arc(half, half, r * 0.42, 0, Math.PI * 2);
       seal(ctx);
-      glow(ctx, f, shade(palette.ally, 0.3), 0, 0, 0.95, 0.4);
-      spiralArms(ctx, f, shade(palette.ally, 0.45), 3, 0.18, 0.95, 2.6, 0.12, 0.8);
+      // 0520: a wider, brighter halo, arms with a hot filament down each, and a lit ring round the
+      // heart — the rift's own vocabulary, so the ball reads as the hole it is about to open.
+      glow(ctx, f, shade(palette.ally, 0.3), 0, 0, 1, 0.55);
+      spiralArms(ctx, f, shade(palette.ally, 0.2), 3, 0.18, 0.95, 2.6, 0.14, 0.7);
+      spiralArms(ctx, f, shade(palette.ally, 0.7), 3, 0.2, 0.9, 2.6, 0.045, 0.85);
+      band(ctx, f, shade(palette.ally, 0.7), 0, 0, 0.29, 0.22, 0.85);
       disc(ctx, f, palette.space, 0, 0, 0.22);
       return;
     }
@@ -14948,12 +14974,31 @@ export function drawKind(
     */
     case 'riftZone': {
       const edge = half - ctx.lineWidth / 2;
+      const rim = edge / r;
       ctx.arc(half, half, edge, 0, Math.PI * 2);
       seal(ctx);
+      /*
+        ── A RING OF LIGHT AT ITS HEART, AND NO MORE CONTRAST THAN THAT — 0520 ──────────────────────
+
+        *"Make the game flashy and vibrant … the void bomb."* A ring of light circles the heart where the
+        arms go in, so the hole reads as pulling light into it.
+
+        ⚠️ **THE BURNING RIM AND THE BRIGHT FILAMENTS WERE BUILT AND MEASURED OUT.** A zone slides across
+        the screen with the scroll and turns as it goes, so every bright line in it is a strobe on the
+        cells it crosses. The full horizon — the dark deepened to the heart, a bright filament down each
+        arm, a burning rim — read eight transitions in a second on `scripts/weigh-flashes.mjs` with the
+        void thrown as fast as it may be, and dimmed it read seven, against 0024's cap of six. The rim
+        alone, without the filaments, read six — exactly the cap — on three runs of four. The heart's ring
+        reads three, as the zone without it did. So the zone keeps its arms as they were and gains only
+        the ring.
+      */
       billow(ctx, half, edge * 0.93, 0.05, 6, 0.8, palette.space, 0.82);
-      spiralArms(ctx, f, shade(palette.ally, 0.1), 5, 0.12, (edge * 0.9) / r, 2.2, 0.16, 0.42);
+      spiralArms(ctx, f, shade(palette.ally, 0.1), 5, 0.12, rim * 0.9, 2.2, 0.16, 0.42);
       billow(ctx, half, edge * 0.42, 0.12, 4, 2.2, shade(palette.ally, -0.55), 0.6);
-      disc(ctx, f, palette.space, 0, 0, (edge * 0.18) / r, 0.85);
+      // Where the arms go in: a ring of light round the heart.
+      glow(ctx, f, shade(palette.ally, 0.3), 0, 0, rim * 0.34, 0.6);
+      band(ctx, f, shade(palette.ally, 0.65), 0, 0, rim * 0.24, rim * 0.19, 0.85);
+      disc(ctx, f, palette.space, 0, 0, rim * 0.18, 0.85);
       return;
     }
     case 'stormBall': {
@@ -15246,13 +15291,14 @@ export function drawKind(
       window.addColorStop(0, rgba(ink, 0));
       window.addColorStop(0.5, ink);
       window.addColorStop(1, rgba(ink, 0));
-      ctx.globalAlpha = 0.5;
+      // 0520: a deeper glow either side, and the core runs nearly white — the band is drawn ADDED.
+      ctx.globalAlpha = 0.75;
       ctx.fillStyle = window;
       ctx.beginPath();
       ctx.rect(half - long, half - thick * 4, long * 2, thick * 8);
       ctx.fill();
       ctx.globalAlpha = 1;
-      poly(ctx, f, shade(ink, 0.6), [
+      poly(ctx, f, shade(ink, 0.8), [
         [-long / r, -thick / (2 * r)],
         [long / r, -thick / (2 * r)],
         [long / r, thick / (2 * r)],
@@ -17967,5 +18013,6 @@ export function bakeAtlas(
     bitmaps: SPRITE_KINDS.map((kind) => bakeOne(kind, palette, view, pixelsPerUnit, theme)),
     extents: SPRITE_KINDS.map((kind) => SPRITE_EXTENT[kind]),
     pixelsPerUnit,
+    light: SPRITE_KINDS.map((kind) => LIGHT_KINDS.includes(kind)),
   };
 }

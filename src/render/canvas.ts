@@ -37,12 +37,10 @@ export class CanvasSurface implements Surface {
   private height = 0;
   private space = '#000000';
   private bar = 0;
-  private boltGlow = '#ffffff';
-  private boltCore = '#ffffff';
+  private boltInk = UNSET;
+  // The enemy's lightning — 0248. Its own inks; the dark halo is the same space.
+  private hostileInk = UNSET;
   private boltDark = '#000000';
-  // The enemy's lightning — 0248. Its own glow and core; the dark halo is the same space.
-  private hostileGlow = '#ffffff';
-  private hostileCore = '#ffffff';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
     this.atlas = atlas;
@@ -81,16 +79,14 @@ export class CanvasSurface implements Surface {
   }
 
   /**
-   * The two inks a bolt is stroked in — a wide translucent glow and a thin bright core — set with the
-   * palette rather than passed per call, on `setSpace`'s terms: a colour is a property of the palette
-   * the page is showing, and a string per stroke per frame would be a hash lookup on the hot path.
+   * The inks a bolt is stroked in — set with the palette rather than passed per call, on `setSpace`'s
+   * terms: a colour is a property of the palette the page is showing, and a string per stroke per
+   * frame would be a hash lookup on the hot path. Solved once per palette by `boltInks` — 0520.
    */
-  setBolt(glow: string, core: string, dark: string, hostileGlow: string, hostileCore: string): void {
-    this.boltGlow = glow;
-    this.boltCore = core;
-    this.boltDark = dark;
-    this.hostileGlow = hostileGlow;
-    this.hostileCore = hostileCore;
+  setBolt(inks: BoltInks): void {
+    this.boltInk = inks.player;
+    this.hostileInk = inks.hostile;
+    this.boltDark = inks.dark;
   }
 
   clear(): void {
@@ -124,11 +120,19 @@ export class CanvasSurface implements Surface {
     if (bitmap === undefined || alpha <= 0) return;
     const size = this.atlas.extents[sprite]! * scale;
     const half = size / 2;
+    /*
+      ⚠️ **A LIGHT IS ADDED, NOT LAID OVER — 0520.** The same one draw with the context's composite set
+      round it and put back, on 0401's terms for alpha: what the kind is decides it (`LIGHT_KINDS`), the
+      atlas carries it, and nothing here allocates.
+    */
+    const light = this.atlas.light !== undefined && this.atlas.light[sprite] === true;
+    if (light) this.ctx.globalCompositeOperation = 'lighter';
     // 0401: a faded blit is the same one draw with the context's alpha set round it, and put back.
     if (alpha < 1) this.ctx.globalAlpha = alpha;
     if (turn === 0) {
       this.ctx.drawImage(bitmap, x - half, y - half, size, size);
       if (alpha < 1) this.ctx.globalAlpha = 1;
+      if (light) this.ctx.globalCompositeOperation = 'source-over';
       return;
     }
     /*
@@ -144,11 +148,12 @@ export class CanvasSurface implements Surface {
     ctx.drawImage(bitmap, -half, -half, size, size);
     ctx.restore();
     if (alpha < 1) ctx.globalAlpha = 1;
+    if (light) ctx.globalCompositeOperation = 'source-over';
   }
 
   /**
-   * One bolt: the same polyline stroked once per layer of its look — a flash's four, a beam's five,
-   * a dot's two — and the light layers are ADDED to the frame rather than laid over it. A single
+   * One bolt: the same polyline stroked once per layer of its look — a flash's six, a beam's six, a
+   * dot's three — and the light layers are ADDED to the frame rather than laid over it. A single
    * point is a dot: the round cap does the drawing.
    *
    * ⚠️ **STROKES AND NO `shadowBlur`.** A canvas shadow is a per-draw Gaussian over the path's
@@ -175,7 +180,7 @@ export class CanvasSurface implements Surface {
    * ⚠️ **THE FLASH IS THE SECOND'S — 0238.** *"Lightning needs more glow around the edges, not
    * specific details but more like the lightning flash."* The widest stroke, first and under the
    * others: the glow ink, faint, fourteen times the core's width — a wash of light round the whole
-   * bolt that fades with it, which is what a flash is.
+   * bolt that fades with it, which is what a flash is. Two since 0520, a bloom and a wash, capped.
    *
    * ⚠️ **A BEAM HAS ITS OWN STACK — 0470.** A flash is a filament in a wash; a beam is a column of
    * light the player stands beside for half a second, and drawn as a flash it was the road above.
@@ -191,8 +196,7 @@ export class CanvasSurface implements Surface {
   bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean, beam = false): void {
     if (count < 1) return;
     const ctx = this.ctx;
-    const glow = hostile ? this.hostileGlow : this.boltGlow;
-    const core = hostile ? this.hostileCore : this.boltCore;
+    const ink = hostile ? this.hostileInk : this.boltInk;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -206,8 +210,9 @@ export class CanvasSurface implements Surface {
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i]!;
       ctx.globalCompositeOperation = layer.additive ? 'lighter' : 'source-over';
-      ctx.globalAlpha = alpha * layer.alpha;
-      ctx.strokeStyle = layer.ink === 'dark' ? this.boltDark : layer.ink === 'core' ? core : glow;
+      // A capped layer keeps only the share of its alpha this ink may lift the space by — 0520.
+      ctx.globalAlpha = alpha * layer.alpha * (layer.capped ? ink.wide : 1);
+      ctx.strokeStyle = layer.ink === 'dark' ? this.boltDark : layer.ink === 'core' ? ink.core : layer.ink === 'hot' ? ink.hot : ink.glow;
       ctx.lineWidth = width * layer.width;
       ctx.stroke();
     }
@@ -228,25 +233,64 @@ export class CanvasSurface implements Surface {
 export interface BoltLayer {
   readonly width: number;
   readonly alpha: number;
-  readonly ink: 'glow' | 'dark' | 'core';
+  /** `hot` is the glow taken halfway to white — 0520. */
+  readonly ink: 'glow' | 'dark' | 'core' | 'hot';
   readonly additive: boolean;
+  /**
+   * A layer wide enough to be an AREA, held under a flash by the ink's `wide` share — 0520. Every
+   * capped layer of a stack is summed when that share is solved, so the table says what is capped and
+   * `src/render/bolt-inks.ts` says by how much.
+   */
+  readonly capped?: true;
 }
 
+/** What a bolt is stroked in: a glow, its hot inner shade, a core, and the share of the capped layers it may keep. */
+export interface BoltInk {
+  readonly glow: string;
+  readonly hot: string;
+  readonly core: string;
+  /** The share of a capped layer's alpha this ink may keep — `wideScale` in `bolt-inks.ts`. */
+  readonly wide: number;
+}
+
+/** The player's bolt and the enemy's, and the dark rim they share. */
+export interface BoltInks {
+  readonly player: BoltInk;
+  readonly hostile: BoltInk;
+  readonly dark: string;
+}
+
+// Before a palette is set, a bolt is white and keeps none of its wide light.
+const UNSET: BoltInk = { glow: '#ffffff', hot: '#ffffff', core: '#ffffff', wide: 0 };
+
 /**
- * A flash — chain lightning, the storm, the serpent's strike. In order, under to over: the wash
- * (0238), the rim (0236), the glow and the core. The glow is ADDED now, so it is light rather than
- * paint, and it is louder than it was for it: at four tenths added it read as a tint.
+ * A flash — chain lightning, the storm, the serpent's strike. In order, under to over: the bloom and
+ * the wash, the rim (0236), the glow, the hot glow and the core. The glow is ADDED (0470), so it is
+ * light rather than paint.
+ *
+ * ⚠️ **THE BLOOM AND THE WASH ARE CAPPED — 0520.** *"Can we make the game flashy and vibrant? In
+ * particular for lightning."* They are the only strokes wide enough to be an area, and a flash is a
+ * change of brightness over an area (0457). So they are louder and wider than 0238's single wash was,
+ * and each palette keeps only the share of them that cannot lift its space by a flash's worth: the
+ * light is as loud as the cap allows, and no louder, whatever ink the palette gives the bolt.
+ *
+ * ⚠️ **THE HOT GLOW IS THE BOLT'S WHITE HEART — 0520**: the glow's ink taken halfway to white, under
+ * the core and nearly twice as wide, so a bolt runs white at its heart, ink at its edge and ink-coloured
+ * light round that.
  */
 export const FLASH_LAYERS: readonly BoltLayer[] = [
-  { width: 14, alpha: 0.2, ink: 'glow', additive: true },
+  { width: 22, alpha: 0.5, ink: 'glow', additive: true, capped: true },
+  { width: 9, alpha: 0.7, ink: 'glow', additive: true, capped: true },
   { width: 6, alpha: 0.5, ink: 'dark', additive: false },
   { width: 4, alpha: 0.55, ink: 'glow', additive: true },
+  { width: 1.8, alpha: 1, ink: 'hot', additive: true },
   { width: 1, alpha: 1, ink: 'core', additive: true },
 ];
 
-/** A bright point on a flash — 0236, 0239: its glow and its core, nothing round them (0238). */
+/** A bright point on a flash — 0236, 0239: its glow, its hot heart (0520) and its core, nothing round them (0238). */
 export const DOT_LAYERS: readonly BoltLayer[] = [
   { width: 4, alpha: 0.55, ink: 'glow', additive: true },
+  { width: 1.8, alpha: 1, ink: 'hot', additive: true },
   { width: 1, alpha: 1, ink: 'core', additive: true },
 ];
 

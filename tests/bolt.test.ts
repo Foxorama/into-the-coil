@@ -13,6 +13,7 @@ import { PALETTES } from '../src/content/palette.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import type { Atlas } from '../src/render/bake.ts';
 import { BEAM_LAYERS, CanvasSurface, DOT_LAYERS, FLASH_LAYERS } from '../src/render/canvas.ts';
+import { boltInks } from '../src/render/bolt-inks.ts';
 import { BOLT_STEPS, STROKES_PER_LINK, paintBolts } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -29,7 +30,7 @@ const HOSTILE = PALETTES.vivid.enemy;
 function canvas(): { surface: CanvasSurface; pen: ReturnType<typeof tracingPen>['pen']; inks: () => readonly Stroke[] } {
   const { pen, trace } = tracingPen();
   const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-  surface.setBolt(GLOW, CORE, DARK, HOSTILE, CORE);
+  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE));
   return { surface, pen, inks: () => trace.inks };
 }
 
@@ -92,10 +93,14 @@ describe('0470 — the light is additive', () => {
     // And the stacks really are two — the flash is not drawn with the beam's layers or vice versa.
     const flash = canvas();
     flash.surface.bolt(LINE, 3, width, 1, true, false);
-    expect(light(flash.inks()).length, 'a flash is drawn as a beam').toBeLessThan(layers.length);
+    // By what is stroked and not by how many: since 0520 a flash has as many layers of light as a beam.
+    const shape = (s: readonly Stroke[]): string => s.map((l) => `${l.width}/${l.alpha}`).join(' ');
+    expect(shape(light(flash.inks())), 'a flash is drawn as a beam').not.toBe(shape(layers));
     expect(BEAM_LAYERS.length).toBe(inks().length);
     expect(FLASH_LAYERS.length).toBe(flash.inks().length);
-    expect(DOT_LAYERS.length, 'a dot has grown a rim or a wash').toBe(2);
+    // What 0238 forbids a dot is a rim or a wash, not a third layer: 0520 gave it a hot heart, inside its glow.
+    expect(DOT_LAYERS.some((l) => l.ink === 'dark'), 'a dot has grown a rim').toBe(false);
+    expect(Math.max(...DOT_LAYERS.map((l) => l.width)), 'a dot has grown a wash wider than its glow').toBe(4);
   });
 
   /** A surface that keeps every bolt call. */
