@@ -57,7 +57,7 @@ export const PROBES = [
     suite: 'tests/quetzal.test.ts',
     // Heaving through a brace: the body slides off the roots of its own beams.
     broke: 'the heave going on while the hull braces',
-    guard: 'THE BRACE',
+    guard: 'THE BRACE: the hull stands still across the lane',
     edit: {
       path: 'src/app/frame.ts',
       find: 'if (heave !== undefined && head.holdFor <= 0) {',
