@@ -91,12 +91,13 @@ export const PROBES = [
     decision: '0428',
     suite: 'tests/hud.browser.test.ts',
     // The counter put in the readout's column: it lands over the lives and shields on every screen.
+    // Since 0511 the score stands in a corner it shares with the pause plate, and the corner is placed.
     broke: 'the score laid out in the readout’s column, over the lives and the shields',
     guard: '0428 — THE ASK: the score is top right',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-playing-score {\n  grid-column: 3;\n  justify-self: end;',
-      replace: '.itc-playing-score {\n  grid-column: 1;\n  justify-self: end;',
+      find: '.itc-playing-corner {\n  grid-column: 3;\n  justify-self: end;',
+      replace: '.itc-playing-corner {\n  grid-column: 1;\n  justify-self: end;',
     },
   },
 ];

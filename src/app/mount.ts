@@ -987,6 +987,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
   surface.setBolt(colours.player, colours.impact, colours.space, colours.enemy, colours.impact);
 
+  // Whether the pad's Start was pressed since the last tick — 0511. Set from inside the step, spent in `onTick`.
+  let pauseAsked = false;
+
   const world: World = {
     /*
       DRAW ORDER, back to front, and it is a decision rather than whichever pool came first.
@@ -1265,7 +1268,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         scale: () => view.scale,
         bands: () => SIDES.length,
       }),
-      attachPad({ alongAxis: () => view.alongAxis }),
+      // 0511: Start asks for a pause, and the shell hears it on the next tick (`pauseAsked`).
+      attachPad({
+        alongAxis: () => view.alongAxis,
+        onPause: () => {
+          pauseAsked = true;
+        },
+      }),
     ]),
     intent: makeIntent(SPECIAL_BINDINGS),
     // The title screen does not step (`src/state/screens.ts`), so the game opens on a still field
@@ -1463,6 +1472,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const timeout = SCREENS[screen].timeout;
     timeoutLeft = playable && timeout !== null ? timeout.steps : 0;
     shownSeconds = -1;
+    /*
+      ⚠️ **A HELD RUN HOLDS THE AUDIO CLOCK — 0511**: on the pause and its two screens, and on Settings
+      and How to play while a pause is what opened them. Released on any other screen, so a quit to
+      the title or the count-in running out into the run lets it go.
+    */
+    const row = SCREENS[screen];
+    const held = row.pause === 'held' || (row.back === 'opener' && SCREENS[state.screen.opener].pause === 'held');
+    audioOut.hold(held);
+    // And Settings under a held run has no music room: the room walks a level over the run's field.
+    chrome.setActionShown('settings', 0, !held);
     chrome.show(playable ? screen : null);
     tickTimer();
   };
@@ -1768,7 +1787,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         dispatch({ slice: 'screen', type: 'show', screen: 'music' });
       } else goBack();
     } else if (screen === 'guide') goBack();
-    else if (screen === 'select') {
+    /*
+      ⚠️ **THE PAUSE — 0511**, in the order its row lists them: *Resume* goes through the count-in, as
+      Back does; *Settings* and *How to play* are the title's own two screens, opened from here so their
+      Back comes here; *Quit* asks first.
+    */
+    else if (screen === 'paused') {
+      if (index === 0) goBack();
+      else if (index === 1) dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
+      else if (index === 2) dispatch({ slice: 'screen', type: 'show', screen: 'guide' });
+      else dispatch({ slice: 'screen', type: 'show', screen: 'quit' });
+    } else if (screen === 'quit') {
+      if (index === 0) goBack();
+      else {
+        // A quit is kept on the table like a run over, if it makes the ten — answered 2026-10-02.
+        recordRun(false);
+        dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+      }
+    } else if (screen === 'select') {
       /*
         ⚠️ **A GOLFER IS PICKED — 0415.** `GOLFER_KINDS` IS the order `src/state/screens.ts` built the
         buttons in. Picked at boot, the intro plays — and this press is the gesture that turned its
@@ -1820,7 +1856,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0412: the intro's skip. An arrow, because `leaveIntro` is written further down.
   () => leaveIntro(),
   // 0458: a tab, which is a screen shown like any other.
-  (screen: Screen) => dispatch({ slice: 'screen', type: 'show', screen }));
+  (screen: Screen) => dispatch({ slice: 'screen', type: 'show', screen }),
+  // 0511: the pause button. An arrow, because `pauseRun` is written further down.
+  () => pauseRun());
   for (const element of chrome.elements) host.appendChild(element);
   // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
   chrome.setTouch(touchable);
@@ -3102,6 +3140,46 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   window.addEventListener('keydown', menuKey);
 
   /*
+    ── THE PAUSE — 0511 ──────────────────────────────────────────────────────────────────────────────
+
+    Asked for: *"so that people can pause, change settings or quit mid-game if they want."* Four ways
+    in, one door: the button, Escape and P, Start on a pad, and the tab being hidden. Each asks
+    `pauseRun`, which pauses only on a screen whose row offers it.
+  */
+  const pauseRun = (): void => {
+    if (SCREENS[state.screen.current].pause === 'offered') dispatch({ slice: 'screen', type: 'show', screen: 'paused' });
+  };
+  /*
+    ⚠️ **AFTER `menuKey`, AND THE ORDER IS THE BEHAVIOUR.** Both listen on the window and run in the order
+    they were added: on a run, `menuKey` returns at once (the world steps) and this pauses; on the pause,
+    `menuKey` hears Escape as Back, and this hears P. Added the other way round, the Escape that paused
+    would be heard by `menuKey` on the pause it had just raised, and resume it.
+  */
+  const pauseKey = (e: KeyboardEvent): void => {
+    const row = SCREENS[state.screen.current];
+    if (row.pause === 'offered' && (e.code === 'Escape' || e.code === 'KeyP')) {
+      e.preventDefault();
+      pauseRun();
+    } else if (state.screen.current === 'paused' && e.code === 'KeyP') {
+      e.preventDefault();
+      goBack();
+    }
+  };
+  window.addEventListener('keydown', pauseKey);
+  /*
+    ⚠️ **A HIDDEN TAB PAUSES THE RUN.** The loop stops when the tab is hidden and the music did not —
+    it free-runs on the audio clock (0160) — so a player who switched away came back to a run whose
+    volleys and score had come apart by however long they were gone. And a count-in hidden half way is
+    a pause again, rather than a run that starts while nobody is looking.
+  */
+  const onHidden = (): void => {
+    if (document.visibilityState !== 'hidden') return;
+    if (state.screen.current === 'resuming') dispatch({ slice: 'screen', type: 'show', screen: 'paused' });
+    else pauseRun();
+  };
+  document.addEventListener('visibilitychange', onHidden);
+
+  /*
     ⚠️ **The frame reports a death; this decides what it cost.** `dispatch` may flip the screen to
     `gameOver` on its own — `src/state/root.ts` holds that as the one cross-slice agreement — so the
     check below reads the state AFTER the reducer has run rather than predicting what it will say.
@@ -3228,6 +3306,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world comes back rather than staying silent over a menu.
     */
     speaker.setHush(world.stepping && hushed(world));
+    /*
+      0511: Start, if the pad heard it on the last step. Cleared whether or not it paused, so a press on
+      a screen that offers no pause is not kept and spent on the next one that does.
+    */
+    if (pauseAsked) {
+      pauseAsked = false;
+      pauseRun();
+    }
     /*
       ⚠️ **BEFORE BOTH, BECAUSE BOTH READ IT** — 0212. `applyPlace` bakes the sky the walk is moving
       through and `applyMusicLevel` asks the walk which rung it has reached; a camera moved after them

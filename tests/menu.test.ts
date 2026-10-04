@@ -364,8 +364,10 @@ describe('a screen that expires presses its own control, and says how long it wa
     */
     // ⚠️ **AND SETTINGS AND HOW TO PLAY SINCE 0458**, on the title's terms: a player reading them is
     // reading them, and a screen that timed out from under them would take the page they opened away.
+    // ⚠️ **AND THE PAUSE AND ITS QUESTION SINCE 0511**: a held run is held until its player comes back,
+    // and a pause that timed out would resume — or quit — a run its owner had walked away from.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['guide', 'music', 'playing', 'select', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['guide', 'music', 'paused', 'playing', 'quit', 'select', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 
@@ -445,6 +447,8 @@ describe('a screen says whether it stops the world and whether it hides it', () 
       what is behind it is the game — at twelve times its scroll rate.
     */
     travel: 'a caption over a ship that is burning between two places, and still being flown — 0340',
+    // ⚠️ **AND THE FIRST OF THEM BEHIND WHICH NOTHING MOVES — 0511**: the field is what is counted down to.
+    resuming: 'the count-in over the stopped field the player is about to fly again — 0511',
   };
 
   /*
@@ -551,6 +555,13 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     expect(idles, 'the menu reader never ran on a screen the simulation is stopped on').toBe(10);
   });
 
+  /*
+    ⚠️ **IT SAID *A SCREEN THAT DOES NOT DIM*, AND DIMMING WAS STANDING IN FOR STOPPING — 0511.** Every
+    screen that stopped the world painted over it, so the two answered alike until the count-in, which
+    stops the world and shows it because the field is what it counts down to. The chrome now draws a
+    countdown where the world is stopped (`!row.steps`), and this holds the rows to that: a screen that
+    shows the scene and carries a timeout either keeps the world running or is the count-in.
+  */
   it('a screen that does not dim never carries a countdown, because it never took anything away', () => {
     // `docs/game.md`'s voice rule: no restating what the screen already shows. A number counting down
     // over a world that never stopped is a fact about nothing the player is waiting for.
@@ -565,7 +576,10 @@ describe('a screen says whether it stops the world and whether it hides it', () 
       const row = SCREENS[screen];
       const hasChrome = row.heading.length > 0 || row.actions.length > 0 || row.pushed;
       if (row.timeout === null || row.dims || !hasChrome) continue;
-      expect(row.steps, `${screen} shows a countdown over a world it did not stop`).toBe(true);
+      expect(
+        row.steps || row.pause === 'held',
+        `${screen} shows the scene, stops it and counts down over it without being the count-in`,
+      ).toBe(true);
     }
   });
 });
@@ -625,12 +639,24 @@ describe('Back goes to whoever opened the menu — 0458', () => {
     expect(state.opener, 'a trip inside the menu rewrote where it was opened from').toBe('title');
   });
 
+  it('remembers a pause that opened it, though the pause has a Back of its own — 0511', () => {
+    let state = show(initialScreen, 'playing');
+    state = show(state, 'paused');
+    state = show(state, 'settings');
+    state = show(state, 'guide');
+    state = show(state, 'settings');
+    expect(state.opener, 'Settings opened from a pause would go back to the title with the run held').toBe('paused');
+  });
+
   it('and every screen with a way back names one that exists', () => {
     for (const screen of SCREEN_KINDS) {
       const back = SCREENS[screen].back;
       if (back === null || back === 'opener') continue;
       expect(SCREEN_KINDS, `${screen} goes back to a screen that does not exist`).toContain(back);
-      expect(SCREENS[back].back, `${screen} goes back to a screen that cannot itself be left`).not.toBeNull();
+      // Left by its own Back, or by its own clock — 0511: the pause goes back to the count-in, which
+      // nobody leaves by pressing anything because it leaves into the run by itself.
+      const leaves = SCREENS[back].back !== null || SCREENS[back].timeout !== null;
+      expect(leaves, `${screen} goes back to a screen that cannot itself be left`).toBe(true);
     }
     // A tab strip lists the screen it is drawn on, or the open tab is not one of its tabs.
     for (const screen of SCREEN_KINDS) {

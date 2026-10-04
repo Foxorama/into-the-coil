@@ -45,6 +45,9 @@ export const SCREEN_KINDS = [
   'victory',
   'music',
   'travel',
+  'paused',
+  'quit',
+  'resuming',
 ] as const;
 
 /**
@@ -249,6 +252,9 @@ export interface ScreenRow {
    * ⚠️ **`'opener'` IS SETTINGS' AND THE GUIDE'S**, because both are reached from the title and from a
    * paused run, and one fixed destination would send a player who opened Settings mid-run to the
    * title. `src/state/slices/screen.ts` records the opener as the screen is entered.
+   *
+   * ⚠️ **THE PAUSE'S BACK IS THE COUNT-IN — 0511.** B and Escape on a pause resume the run, which is
+   * what every console's pause does with them, so its row says where they go like any other.
    */
   back: Screen | 'opener' | null;
   /**
@@ -263,6 +269,20 @@ export interface ScreenRow {
    * Settings opens on its first band, because changing one is what it is for.
    */
   opensOn: 'action' | 'choice';
+  /**
+   * What this screen has to do with a pause — 0511. `'offered'` where a run may be paused from (the
+   * button is up, Escape, P and Start ask for it, a hidden tab takes it), `'held'` on a screen a
+   * paused run is held under — the world stopped AND the audio clock stopped with it — and `null`
+   * everywhere else.
+   *
+   * ⚠️ **TWO ANSWERS ON ONE FIELD, BECAUSE THEY CANNOT BOTH BE TRUE.** A screen a pause is offered on
+   * is one the run is going on under, and a screen a run is held under is one it is not.
+   *
+   * ⚠️ **SETTINGS AND HOW TO PLAY ARE `null` AND ARE STILL HELD WHEN A PAUSE OPENED THEM.** Their
+   * opener says so (`src/state/slices/screen.ts`): the same two screens are reached from the title,
+   * where nothing is held, and a field on their rows could only be one of the two.
+   */
+  pause: 'offered' | 'held' | null;
 }
 
 /**
@@ -301,6 +321,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   splash: {
     heading: GAME_TITLE,
+    pause: null,
     actions: [],
     choices: [],
     steps: false,
@@ -329,6 +350,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   select: {
     // An instruction rather than a label — 0436: the screen is a question, so its heading asks it.
     heading: 'Choose your pilot',
+    pause: null,
     actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
     choices: [],
     steps: false,
@@ -358,6 +380,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   intro: {
     heading: '',
+    pause: null,
     actions: [],
     choices: [],
     steps: false,
@@ -401,6 +424,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   title: {
     heading: GAME_TITLE,
+    pause: null,
     actions: [
       { label: 'Launch', hint: '' },
       { label: 'Settings', hint: '' },
@@ -439,6 +463,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   settings: {
     heading: 'Settings',
+    pause: null,
     // Past the bands, on 0070's terms: the music room is a place to go, and Back is a way out.
     actions: [
       { label: 'Music room', hint: '' },
@@ -491,6 +516,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   guide: {
     heading: 'How to play',
+    pause: null,
     actions: [{ label: 'Back', hint: '' }],
     choices: [],
     steps: false,
@@ -518,6 +544,10 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     back: null,
     tabs: [],
     opensOn: 'action',
+    // 0511: the one screen a run is paused FROM. The break and the burn step too, and are not offered
+    // it: each leaves on its own within seconds, and a pause there would have to resume into a screen
+    // that has already half-expired.
+    pause: 'offered',
   },
   /**
    * ⚠️ **No summary and no coaching — and one number, since 0428.** `docs/game.md`: *players are
@@ -557,6 +587,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   gameOver: {
     heading: 'Run over',
+    pause: null,
     actions: [{ label: 'Continue', hint: '' }],
     choices: [],
     steps: false,
@@ -600,6 +631,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   */
   cleared: {
     heading: 'Level clear',
+    pause: null,
     actions: [{ label: 'Onward', hint: '' }],
     choices: [],
     steps: true,
@@ -654,6 +686,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // ⚠️ **Empty, because the heading is the PLACE and the place is not known until the crossing
     // starts.** `pushed` below is what says so, and is why this row has a panel at all.
     heading: '',
+    pause: null,
     actions: [],
     choices: [],
     steps: true,
@@ -674,6 +707,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   outro: {
     heading: '',
+    pause: null,
     actions: [],
     choices: [],
     steps: false,
@@ -697,6 +731,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    */
   victory: {
     heading: 'Coil cleared',
+    pause: null,
     actions: [{ label: 'Again', hint: '' }],
     choices: [],
     steps: false,
@@ -729,6 +764,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   */
   music: {
     heading: 'Music',
+    pause: null,
     actions: [
       ...THEME_KINDS.map((kind) => ({ label: THEMES[kind].title, hint: '' })),
       { label: 'Play all', hint: 'each place in turn, then round again' },
@@ -755,6 +791,86 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     inRun: false,
     // Reached from Settings since 0458, so that is where B goes — and Settings remembers its opener.
     back: 'settings',
+    tabs: [],
+    opensOn: 'action',
+  },
+  /*
+    ── THE PAUSE — `docs/decisions/0511-the-run-can-be-paused.md` ──────────────────────────────────
+
+    Asked for: *"we also need to add a pause/settings button in game as well so that people can pause,
+    change settings or quit mid-game if they want."* There was none: a run could only be left by dying.
+
+    ⚠️ **HELD, NOT JUST STOPPED.** `steps: false` stops the sim; `pause: 'held'` is what stops the
+    audio clock with it (`src/app/mount.ts` suspends the context), because the music free-runs on
+    `AudioContext.currentTime` (0160) and the beat-authored volleys are phased to it. A pause that
+    stopped only the world would resume into a run whose volleys and score had come apart.
+
+    ⚠️ **`back: 'resuming'`, SO B AND ESCAPE RESUME**, through the count-in like *Resume* does.
+  */
+  paused: {
+    heading: 'Paused',
+    pause: 'held',
+    actions: [
+      { label: 'Resume', hint: '' },
+      { label: 'Settings', hint: '' },
+      { label: 'How to play', hint: '' },
+      { label: 'Quit', hint: '' },
+    ],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: true,
+    back: 'resuming',
+    tabs: [],
+    opensOn: 'action',
+  },
+  /*
+    Quit asks once — 0511, from the review: *one stray press throwing away a run is worse than one
+    extra press.* And a quit is kept on the table like a run over, if it makes the ten (answered
+    2026-10-02).
+  */
+  quit: {
+    heading: 'Quit this run?',
+    pause: 'held',
+    actions: [
+      { label: 'Keep playing', hint: '' },
+      { label: 'Quit', hint: '' },
+    ],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: true,
+    back: 'paused',
+    tabs: [],
+    // On *Keep playing*, which is first so the cursor lands on it: a press made in haste costs nothing.
+    opensOn: 'action',
+  },
+  /*
+    The count-in — 0511. *Resume carries a short count-in, so the player has their thumb back before
+    the bullets move.* The field is shown and stopped (`dims: false`, `steps: false`), the number counts
+    down over it, and it expires into the run.
+
+    ⚠️ **TWO SECONDS, AND IT IS A PLAY NUMBER.** Long enough to find the stick again after a menu; any
+    longer and the pause costs more than the interruption it was for.
+  */
+  resuming: {
+    heading: 'Ready',
+    pause: 'held',
+    actions: [],
+    choices: [],
+    steps: false,
+    dims: false,
+    timeout: { steps: 2 * STEPS_PER_SECOND, then: 'playing' },
+    pushed: false,
+    skips: false,
+    inRun: true,
+    back: null,
     tabs: [],
     opensOn: 'action',
   },

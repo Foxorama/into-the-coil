@@ -1154,8 +1154,7 @@ ${faceTurns()}
 @property --itc-playing-points { syntax: '<integer>'; inherits: true; initial-value: 0; }
 @counter-style itc-playing-digits { system: extends decimal; pad: 8 "0"; }
 .itc-playing-score {
-  grid-column: 3;
-  justify-self: end;
+  /* Placed by the corner it shares with the pause plate, which holds the third column (0511). */
   display: none;
   flex-direction: column;
   align-items: flex-end;
@@ -2265,6 +2264,64 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 .itc-playing-score-streak { flex-direction: column; align-items: stretch; gap: 0.2em; font-size: 0.7em; }
 .itc-playing-score-bar { width: auto; height: 0.28em; }
 .itc-playing-score-times { text-align: center; }
+/*
+  ── THE PAUSE, AND THE COUNT-IN — 0511 ────────────────────────────────────────────────────────────
+
+  The third column holds the pause plate and the score side by side, at the end of the row. The plate
+  is the strip's height and wears the strip's rim; its hit area runs past it to a thumb's 44 px on
+  every side it can, so the row's height is the strip's and not the thumb's.
+*/
+.itc-playing-corner {
+  grid-column: 3;
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.itc-playing-pause {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 66%, transparent);
+  position: relative;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--itc-strip);
+  height: var(--itc-strip);
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  border: 1.5px solid transparent;
+  border-radius: 0.75em;
+  background:
+    linear-gradient(var(--itc-glass), var(--itc-glass)) padding-box,
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+  box-shadow: 0 0 0.9em color-mix(in srgb, var(--itc-ink) 14%, transparent);
+  cursor: pointer;
+  pointer-events: auto;
+}
+.itc-playing-pause::before {
+  content: '';
+  position: absolute;
+  inset: min(0px, calc((var(--itc-strip) - 44px) / 2));
+}
+.itc-playing-pause-shown { display: flex; }
+.itc-playing-pause:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.itc-playing-pause-bars {
+  width: 0.8em;
+  height: 0.95em;
+  background: linear-gradient(90deg, currentColor 0 34%, transparent 34% 66%, currentColor 66% 100%);
+  filter: drop-shadow(0 0 0.15em var(--itc-void, #000));
+}
+/* The count-in is a banner over the field about to move: a thumb set down under it lands on the glass. */
+.itc-resuming { pointer-events: none; }
+.itc-resuming-heading { font-size: 1.4em; letter-spacing: 0.3em; }
+.itc-resuming-timer { font-size: 4em; font-weight: 800; }
+.itc-resuming-heading, .itc-resuming-timer { text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000); }
+/* The pause's buttons are one column of one width, so the list reads as a list and not a stack of words. */
+.itc-paused-action, .itc-quit-action { min-width: 11em; }
+/* An action the shell has taken off a screen for now, whatever display the action rule gives it. */
+${each('-action[hidden]')} { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .itc-playing-boss-fill { transition: none; }
   ${each('-action')}, .itc-intro-skip { transition: none; }
@@ -2301,9 +2358,10 @@ interface Panel {
   /**
    * The rows the cursor walks — 0458: the tabs, then each band, then the actions, in the order the
    * screen draws them. A row of one band is one stop; a row of buttons is walked along by where they
-   * stand, which is how the music room's grid stays a grid.
+   * stand, which is how the music room's grid stays a grid. The list is fixed; its last row is
+   * rewritten when an action is taken off the screen (`setActionShown`, 0511).
    */
-  rows: readonly (readonly HTMLElement[])[];
+  rows: (readonly HTMLElement[])[];
   /** The music room's readout — 0212. `null` on every other screen, which is all of them. */
   now: NowPlayingParts | null;
   /** The crossing's words — 0340. `null` on every other screen, on `now`'s exact terms. */
@@ -2701,6 +2759,12 @@ export interface Chrome {
    * finish loading first; the finale always may (0418). Shown on a row that `skips`, while this is true.
    */
   setSkipReady(ready: boolean): void;
+  /**
+   * Take one of a screen's actions off it, or put it back — 0511: Settings opened from a pause has no
+   * music room, because the room walks a level of its own over the field a held run is standing in.
+   * The cursor's row is the shown actions, so a walk cannot land on one that is gone.
+   */
+  setActionShown(screen: Screen, index: number, shown: boolean): void;
   /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
@@ -3273,6 +3337,8 @@ export function makeChrome(
   onSkip: () => void,
   // 0458: a tab pressed — the screen it opens. The shell shows it, as it shows every screen.
   onTab: (screen: Screen) => void,
+  // 0511: the pause button, pressed. The shell decides whether the screen it was pressed on may pause.
+  onPause: () => void,
 ): Chrome {
   const style = document.createElement('style');
   style.textContent = STYLE;
@@ -3703,12 +3769,16 @@ export function makeChrome(
     */
     let timer: HTMLElement | null = null;
     /*
-      ⚠️ **Only a DIMMING screen gets one, and that is a relationship rather than a filter.** A screen
-      that has stopped the world owes the player a number saying when it will stop doing that; a
-      banner over a world that never stopped does not, and a countdown on one would be exactly the
-      *restating what the screen already shows* `docs/game.md` bans. Decision 0063.
+      ⚠️ **Only a screen that has STOPPED THE WORLD gets one, and that is a relationship rather than a
+      filter.** A screen that has stopped the world owes the player a number saying when it will stop
+      doing that; a banner over a world that never stopped does not, and a countdown on one would be
+      exactly the *restating what the screen already shows* `docs/game.md` bans. Decision 0063.
+
+      ⚠️ **IT READ `row.dims`, WHICH WAS THE SAME ANSWER UNTIL THE COUNT-IN — 0511.** Every screen that
+      stopped the world also painted over it, so *dims* stood in for *stopped*. The count-in stops the
+      world and shows it, because what the player is counting down to is that field moving again.
     */
-    if (row.timeout !== null && row.dims) {
+    if (row.timeout !== null && !row.steps) {
       timer = document.createElement('div');
       timer.className = prefix + 'timer';
       timer.setAttribute('aria-live', 'off');
@@ -3988,7 +4058,34 @@ export function makeChrome(
   streakTimes.textContent = '×1';
   streakRow.append(streakTimes, streakBar);
   scoreBox.append(scorePop, streakRow);
-  strip.appendChild(scoreBox);
+  /*
+    ── THE PAUSE BUTTON — 0511 ───────────────────────────────────────────────────────────────────────
+
+    *"We also need to add a pause/settings button in game."* A plate on the strip's line, beside the
+    score in its column, on every device: the keys and Start are the shell's, and a thumb has nothing
+    else to press. Left of the score, because the trigger discs stack up the right edge (0358) and the
+    corner is the first place a thumb reaching for the top disc lands.
+
+    ⚠️ **A THUMB'S TARGET AND A PLATE'S PICTURE ARE TWO SIZES.** The plate is the strip's height so it
+    sits on 0439's line with the other three; on a phone that is about 31 px, under the 44 px a thumb
+    needs, so the hit area runs past the plate on every side (`::before` in the stylesheet) without the
+    row growing for it.
+  */
+  const pause = document.createElement('button');
+  pause.type = 'button';
+  pause.className = 'itc-playing-pause';
+  pause.setAttribute('aria-label', 'Pause');
+  pause.title = 'Pause (Esc)';
+  pause.style.color = colours.player;
+  const pauseBars = document.createElement('span');
+  pauseBars.className = 'itc-playing-pause-bars';
+  pauseBars.setAttribute('aria-hidden', 'true');
+  pause.appendChild(pauseBars);
+  pause.addEventListener('click', () => onPause());
+  const corner = document.createElement('div');
+  corner.className = 'itc-playing-corner';
+  corner.append(pause, scoreBox);
+  strip.appendChild(corner);
   /** What the score last said, so a call that changed nothing animates nothing. */
   let scoreShown = -1;
   let streakShown = 0;
@@ -4391,9 +4488,16 @@ export function makeChrome(
         readout that vanished for it would be the one moment in the game where what they are carrying
         is invisible.
       */
-      hud.classList.toggle('itc-playing-hud-shown', screen !== null && SCREENS[screen].steps);
+      /*
+        ⚠️ **AND OVER THE COUNT-IN — 0511**: a held screen that shows the field (`dims: false`) is the
+        field about to move, and the readout is part of what the player is getting ready to read.
+      */
+      const counting = screen !== null && SCREENS[screen].pause === 'held' && !SCREENS[screen].dims;
+      hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting));
       // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
-      scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && SCREENS[screen].steps && SCREENS[screen].inRun);
+      scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && ((SCREENS[screen].steps && SCREENS[screen].inRun) || counting));
+      // 0511: the pause button where a pause is offered, and nowhere else.
+      pause.classList.toggle('itc-playing-pause-shown', screen !== null && SCREENS[screen].pause === 'offered');
       for (const name of Object.keys(panels) as Screen[]) {
         const panel = panels[name];
         if (panel === undefined) continue;
@@ -4574,12 +4678,21 @@ export function makeChrome(
       trigger.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       bossBar.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       scoreBox.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
+      pause.classList.toggle(prefixFor('playing') + 'face-pixel', face === 'pixel');
       skip.classList.toggle(prefixFor('intro') + 'face-pixel', face === 'pixel');
       bubble.classList.toggle(prefixFor('outro') + 'face-pixel', face === 'pixel');
     },
     setSkipReady(ready: boolean): void {
       skipReady = ready;
       paintSkip();
+    },
+    setActionShown(screen: Screen, index: number, shown: boolean): void {
+      const panel = panels[screen];
+      const control = panel?.controls[index];
+      if (panel === undefined || control === undefined || control.hidden === !shown) return;
+      control.hidden = !shown;
+      // The actions are the last row the cursor walks (see where `rows` is built).
+      panel.rows[panel.rows.length - 1] = panel.controls.filter((c) => !c.hidden);
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {
