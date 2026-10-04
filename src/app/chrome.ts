@@ -1781,28 +1781,19 @@ ${each('-band[hidden]')} { display: none; }
     Half a phone's width each, so the band's furniture gives back what the words need, on 0460's terms:
     a segment's floor is its longest word, and *Gentle · Standard · Quick* beside a label is the widest.
   */
-  .itc-settings-touch .itc-settings-band { gap: 0.1em 0.2em; padding: 0.2em 0.25em; }
-  .itc-settings-touch .itc-settings-band-label { letter-spacing: 0.08em; }
-  .itc-settings-touch .itc-settings-band-step { padding: 0; }
   .itc-settings-touch .itc-settings-options { gap: 0.25em; }
-  .itc-settings-touch .itc-settings-option { font-size: 0.9em; padding: 0.35em 0.45em; }
   /*
-    And on a small phone the steps go, and the label with them: a thumb taps the segment it wants, so
-    the arrows say nothing a segment does not, and a pad still steps a band without them. The label is
-    the band's name, which its hint says in other words and its aria-label says to a reader. 760, and
-    not the 620 the title's rule uses: at 667 wide half a column was still short of three words.
+    ⚠️ **ON A TOUCH PHONE A BAND IS ITS SEGMENTS: THE STEPS AND THE LABEL GO, AT EVERY WIDTH.** A thumb
+    taps the segment it wants, so the arrows say nothing a segment does not, and a pad still steps a band
+    without them; the label is the band's name, which its hint says in other words and its aria-label
+    says to a reader. It went by width first — 760 and then wider — and CI's fonts found the steering
+    words under the arrows at 480 and again at 812, each a few pixels past where this machine's ended.
+    A rule that holds by a margin of fonts is not a rule; this one holds at any width.
   */
-  @container (max-width: 760px) {
-    .itc-settings-touch .itc-settings-band-step, .itc-settings-touch .itc-settings-band-label { display: none; }
-    /* One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured. */
-    .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'track' 'hint'; }
-    /*
-      With room for CI's fonts: at 480 wide three steering words were 208 px in a 207 px track on this
-      machine and wider on CI, which drew Gentle and Quick past their track (this decision's own guard,
-      on CI). Sized now for about thirty pixels to spare.
-    */
-    .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
-  }
+  .itc-settings-touch .itc-settings-band-step, .itc-settings-touch .itc-settings-band-label { display: none; }
+  /* One column with the steps gone, or their empty columns keep their gaps — six pixels a side, measured. */
+  .itc-settings-touch .itc-settings-band { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'track' 'hint'; gap: 0.1em; padding: 0.2em 0.25em; }
+  .itc-settings-touch .itc-settings-option { font-size: 0.8em; padding: 0.3em 0.25em; }
   ${each('-band')} {
     grid-template-columns: max-content auto minmax(0, 1fr) auto;
     grid-template-areas: 'label less track more' '. hint hint hint';

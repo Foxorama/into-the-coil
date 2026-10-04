@@ -34,9 +34,10 @@ arrows. None of it was visible to a guard. So:
 
 - **Settings is two columns on a touch screen, and the second column is the touch section**, filled
   down the columns so the walk's order and the eye's agree.
-- **Below 760 px wide a touch band loses its steps and its label.** A thumb taps the segment it wants,
-  and the band still names itself to a reader. The title's narrow rule is at 620, and 667 was still
-  short of three words.
+- **On a touch phone a band loses its steps and its label, at every width.** A thumb taps the segment
+  it wants, and the band still names itself to a reader. This went by width first, below 760, and CI's
+  wider fonts found the steering words under the arrows at 480 and then at 812, each a few pixels past
+  where this machine's ended. A rule that holds by a margin of fonts is not a rule.
 - **`tests/layout.browser.test.ts` opens Settings on a touch page at every viewport**, with each band
   showing its longest line: no scroll, no segment under a step, every segment drawn whole. It went red
   on the defects above before they were fixed.
