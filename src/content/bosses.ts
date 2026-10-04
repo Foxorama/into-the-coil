@@ -1341,15 +1341,27 @@ export interface Neck {
   angle: number;
   /** How far the head's centre stands from the root, in world units — the neck's drawn length. */
   reach: number;
-  /** The neck's drawing, rooted on the bitmap's centre and running along its `+x` to `reach`. */
+  /**
+   * The neck's drawing, rooted on the bitmap's centre and running along its `+x` to its knuckle — and its
+   * hurt twin. Since `docs/decisions/0486-the-neck-bends.md` the neck above the knuckle is the head's.
+   *
+   * ⚠️ **A TWIN, BECAUSE THE WHOLE ANIMAL FLASHES AS ONE.** The head and the body had theirs and the necks
+   * and collars had none, so every hit lit a white head and a white body with coloured necks between.
+   */
   art: number;
+  artHit: number;
   /**
    * The neck's root drawn again IN FRONT of the hull — `docs/decisions/0464-the-hydra-is-one-beast.md`.
    * Placed where the neck is and turned as it is, so the two are one picture: what it adds is that the
-   * body's outline no longer crosses the neck where it leaves the body. A picture, in no pairing.
+   * body's outline no longer crosses the neck where it leaves the body. A picture, in no pairing. And its
+   * hurt twin, on `artHit`'s terms (0486).
    */
   collar: number;
-  /** The head, and its hurt twin. Drawn snout to `−x`, as every head in the game is. */
+  collarHit: number;
+  /**
+   * The head, and its hurt twin. Drawn snout to `−x`, as every head in the game is — and since 0486 with
+   * its upper neck in the same bitmap, so the head turns about the neck's knuckle carrying it.
+   */
   head: number;
   headHit: number;
   /** The head's hurtbox, in world units. */
@@ -1384,6 +1396,12 @@ export interface Necks {
   hurt: number;
   /** How far a head may turn from the lane's axis to look at the ship, in radians. */
   look: number;
+  /**
+   * How far a head may turn from its lower neck at the knuckle, in radians — `docs/decisions/0486-the-neck-bends.md`.
+   * At rest the look is well inside it. While a neck swings up out of the acid it is what keeps the head
+   * coming up facing the fight rather than nose-down in the stuff with its mouth under the lane.
+   */
+  bend: number;
   /**
    * The whole animal catching fire from one head — `docs/decisions/0389-the-hydra-catches-fire.md`, or
    * absent for a boss whose aura stays on the head that owns it.
@@ -4301,16 +4319,20 @@ export const BOSSES: Record<BossKind, BossRow> = {
     */
     necks: {
       necks: [
-        { root: { along: -9, across: -19.5 }, angle: -0.78 * Math.PI, reach: 44, art: SPRITE.hydraNeck0, collar: SPRITE.hydraCollar0, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 11.5, mouth: 12.5, livery: 'mire' },
-        { root: { along: -17, across: -11.5 }, angle: -0.93 * Math.PI, reach: 41.5, art: SPRITE.hydraNeck1, collar: SPRITE.hydraCollar1, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 11.5, mouth: 12.5, livery: 'nebula' },
-        { root: { along: 1.5, across: -20 }, angle: -0.55 * Math.PI, reach: 47, art: SPRITE.hydraNeck2, collar: SPRITE.hydraCollar2, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 11.5, mouth: 12.5, livery: 'saurian' },
-        { root: { along: -13.5, across: -15.5 }, angle: -0.86 * Math.PI, reach: 28.5, art: SPRITE.hydraNeck3, collar: SPRITE.hydraCollar3, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 11.5, mouth: 12.5, livery: 'rime' },
+        { root: { along: -9, across: -19.5 }, angle: -0.78 * Math.PI, reach: 44, art: SPRITE.hydraNeck0, artHit: SPRITE.hydraNeck0Hit, collar: SPRITE.hydraCollar0, collarHit: SPRITE.hydraCollar0Hit, head: SPRITE.hydraHead0, headHit: SPRITE.hydraHead0Hit, radius: 11.5, mouth: 12.5, livery: 'mire' },
+        { root: { along: -17, across: -11.5 }, angle: -0.93 * Math.PI, reach: 41.5, art: SPRITE.hydraNeck1, artHit: SPRITE.hydraNeck1Hit, collar: SPRITE.hydraCollar1, collarHit: SPRITE.hydraCollar1Hit, head: SPRITE.hydraHead1, headHit: SPRITE.hydraHead1Hit, radius: 11.5, mouth: 12.5, livery: 'nebula' },
+        { root: { along: 1.5, across: -20 }, angle: -0.55 * Math.PI, reach: 47, art: SPRITE.hydraNeck2, artHit: SPRITE.hydraNeck2Hit, collar: SPRITE.hydraCollar2, collarHit: SPRITE.hydraCollar2Hit, head: SPRITE.hydraHead2, headHit: SPRITE.hydraHead2Hit, radius: 11.5, mouth: 12.5, livery: 'saurian' },
+        // The ice's: 36 from 28.5 — 0486, *"the ice head needs more neck"* — and turned into the gap between
+        // the serpent's head above and the fish's below, a neck's length from each, where 28.5 had sat it.
+        { root: { along: -13.5, across: -15.5 }, angle: -0.835 * Math.PI, reach: 36, art: SPRITE.hydraNeck3, artHit: SPRITE.hydraNeck3Hit, collar: SPRITE.hydraCollar3, collarHit: SPRITE.hydraCollar3Hit, head: SPRITE.hydraHead3, headHit: SPRITE.hydraHead3Hit, radius: 11.5, mouth: 12.5, livery: 'rime' },
         {
           root: { along: -4, across: -20 },
           angle: -0.66 * Math.PI,
           reach: 47,
           art: SPRITE.hydraNeck4,
+          artHit: SPRITE.hydraNeck4Hit,
           collar: SPRITE.hydraCollar4,
+          collarHit: SPRITE.hydraCollar4Hit,
           head: SPRITE.hydraHead4,
           headHit: SPRITE.hydraHead4Hit,
           radius: 11.5,
@@ -4334,6 +4356,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
       rise: 70,
       hurt: 1,
       look: 0.6,
+      // Twice the look, and a little over two thirds of a right angle at the knuckle — 0486.
+      bend: 1.2,
       /*
         ⚠️ **THE CLOCKWORK'S FIRE TAKES THE WHOLE ANIMAL — 0389.** When it has risen, every head burns with
         its aura; the fire runs down the necks over a second; then the body lights where the necks meet it

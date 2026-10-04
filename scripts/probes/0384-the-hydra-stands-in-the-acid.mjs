@@ -26,8 +26,9 @@ export const PROBES = [
     guard: 'THE ASK: a neck grows with every phase',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    head.sprite = head.flashFor > 0 ? row.headHit : row.head;',
-      replace: '    head.sprite = head.flashFor > 0 ? row.headHit : necks.necks[0]!.head;',
+      // Re-anchored by 0486, where a head is lit with the whole animal.
+      find: '    head.sprite = flashing ? row.headHit : row.head;',
+      replace: '    head.sprite = flashing ? row.headHit : necks.necks[0]!.head;',
     },
   },
   {

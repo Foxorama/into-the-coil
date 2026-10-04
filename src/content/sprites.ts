@@ -716,6 +716,12 @@ export const SPRITE_KINDS = [
   'hydraNeck2',
   'hydraNeck3',
   'hydraNeck4',
+  // And their hurt twins, so the whole animal flashes as one — 0486.
+  'hydraNeck0Hit',
+  'hydraNeck1Hit',
+  'hydraNeck2Hit',
+  'hydraNeck3Hit',
+  'hydraNeck4Hit',
   /*
     Where each neck leaves the body — 0464: the neck's own root, drawn again IN FRONT of the body so
     no outline crosses the join, fading into the flesh it grows out of. Placed with its neck.
@@ -725,6 +731,11 @@ export const SPRITE_KINDS = [
   'hydraCollar2',
   'hydraCollar3',
   'hydraCollar4',
+  'hydraCollar0Hit',
+  'hydraCollar1Hit',
+  'hydraCollar2Hit',
+  'hydraCollar3Hit',
+  'hydraCollar4Hit',
   'hydraHead0',
   'hydraHead0Hit',
   'hydraHead1',
@@ -2018,6 +2029,11 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   hydraNeck2: 99,
   hydraNeck3: 99,
   hydraNeck4: 99,
+  hydraNeck0Hit: 99,
+  hydraNeck1Hit: 99,
+  hydraNeck2Hit: 99,
+  hydraNeck3Hit: 99,
+  hydraNeck4Hit: 99,
   /*
     ⚠️ **A COLLAR IS ROOTED ON THE BITMAP'S CENTRE AS ITS NECK IS, AND DRAWN AT ITS NECK'S SCALE — 0464**,
     so this is only how much of the neck's root the tile can hold: the body's outline crosses each
@@ -2029,17 +2045,26 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   hydraCollar2: 48,
   hydraCollar3: 48,
   hydraCollar4: 48,
-  // One box for every head, so a head grows no bigger than the neck it is carried on.
-  hydraHead0: 31,
-  hydraHead0Hit: 31,
-  hydraHead1: 31,
-  hydraHead1Hit: 31,
-  hydraHead2: 31,
-  hydraHead2Hit: 31,
-  hydraHead3: 31,
-  hydraHead3Hit: 31,
-  hydraHead4: 31,
-  hydraHead4Hit: 31,
+  hydraCollar0Hit: 48,
+  hydraCollar1Hit: 48,
+  hydraCollar2Hit: 48,
+  hydraCollar3Hit: 48,
+  hydraCollar4Hit: 48,
+  /*
+    One box for every head, so a head grows no bigger than the neck it is carried on — and since 0486
+    big enough for the upper neck it carries from its knuckle: the skull is still drawn at 31 units
+    (`HYDRA_SKULL`), and the longest upper neck reaches some twenty-three units back from its centre.
+  */
+  hydraHead0: 58,
+  hydraHead0Hit: 58,
+  hydraHead1: 58,
+  hydraHead1Hit: 58,
+  hydraHead2: 58,
+  hydraHead2Hit: 58,
+  hydraHead3: 58,
+  hydraHead3Hit: 58,
+  hydraHead4: 58,
+  hydraHead4Hit: 58,
   // The bank's own tile, so an acid cap and a mud cap meet edge to edge — 0384.
   acidRise0: 12,
   acidRise1: 12,

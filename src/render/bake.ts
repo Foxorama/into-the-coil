@@ -26,6 +26,7 @@ import { SHOTS, SHOT_KINDS } from '../content/shots.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { LANDMARK_SLOTS, SERPENT_BODY_DIAMETER, SPRITE, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } from '../content/sprites.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide } from '../content/specials.ts';
+import { HYDRA_SKULL, NECK_KNOTS, hydraKnuckleOf, neckSpine } from '../content/necks.ts';
 import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, BEAD_HEAD, EMBER_HEAD, FIGHTER_HULL, MIRE_ACID_CAPS, MIRE_BANK_CAPS, MIRE_BED, QUETZAL_BEAT, QUETZAL_DOWNSTROKE, QUETZAL_WING_HEAD, SHIP_BOX, VOLANS_FIRE_HEAD, WALL_RISE_MAX, strokeAt } from '../content/sprites.ts';
 import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
@@ -1037,6 +1038,16 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   hydraHead2Hit: 'impact',
   hydraHead3Hit: 'impact',
   hydraHead4Hit: 'impact',
+  hydraNeck0Hit: 'impact',
+  hydraCollar0Hit: 'impact',
+  hydraNeck1Hit: 'impact',
+  hydraCollar1Hit: 'impact',
+  hydraNeck2Hit: 'impact',
+  hydraCollar2Hit: 'impact',
+  hydraNeck3Hit: 'impact',
+  hydraCollar3Hit: 'impact',
+  hydraNeck4Hit: 'impact',
+  hydraCollar4Hit: 'impact',
   boss14Hit: 'impact',
   boss14OpenHit: 'impact',
   tendrilHit: 'impact',
@@ -1565,6 +1576,35 @@ export function curveLoop(ctx: Pen, f: Frame, points: readonly Pt[]): void {
     );
   }
   ctx.closePath();
+}
+
+/**
+ * The curve `curveLoop` draws through `points`, sampled `per` times a span — 0486: a curved outline as a
+ * polygon, so it can be joined to another one and the join and both halves drawn straight through the
+ * same vertices. Smoothing the joined outline instead rounds it differently where the neighbours change,
+ * and a wash laid over either half then stands past the other's edge.
+ */
+function curvePoints(points: readonly Pt[], per: number): Pt[] {
+  const n = points.length;
+  const at = (i: number): Pt => points[((i % n) + n) % n]!;
+  const out: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const [ax, ay] = at(i - 1);
+    const [bx, by] = at(i);
+    const [cx, cy] = at(i + 1);
+    const [dx, dy] = at(i + 2);
+    const p1: Pt = [bx + (cx - ax) / 6, by + (cy - ay) / 6];
+    const p2: Pt = [cx - (dx - bx) / 6, cy - (dy - by) / 6];
+    for (let s = 0; s < per; s++) {
+      const t = s / per;
+      const u = 1 - t;
+      out.push([
+        u * u * u * bx + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * cx,
+        u * u * u * by + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * cy,
+      ]);
+    }
+  }
+  return out;
 }
 
 /**
@@ -9703,23 +9743,7 @@ const HYDRA_TAIL: readonly Pt[] = tube(HYDRA_TAIL_SPINE, 0.2, 0.035);
   it; the collar is in a layer in front of it (`bossFront`, `src/app/mount.ts`).
 */
 
-/** Knots along a neck's spine — 0464: enough that the root's flare is a curve rather than a chamfer. */
-const NECK_KNOTS = 16;
-
-/** Where a neck's spine starts, in its `r`: behind its root and into the body, so the flare is too. */
-const NECK_FROM = -0.24;
-
-/** A neck's spine in its own frame: root on the bitmap's centre, the head's centre at `reach` on `+x`. */
-export function neckSpine(reach: number): Pt[] {
-  const out: Pt[] = [];
-  for (let i = 0; i <= NECK_KNOTS; i++) {
-    const t = i / NECK_KNOTS;
-    const x = NECK_FROM + (reach - NECK_FROM) * t;
-    // A gentle S, so a neck is a serpent's and not a pole: nought at both ends.
-    out.push([x, 0.07 * Math.sin(t * Math.PI * 2)]);
-  }
-  return out;
-}
+// The spine — its knots, where it starts and its S — is `src/content/necks.ts`'s since 0486, which the frame reads too.
 
 /**
  * How wide a neck is, in its `r`: `NECK_TIP` each side at the head, which covers it, and at the root
@@ -9838,20 +9862,17 @@ export interface Collar {
   out: number;
   /** Where the collar's own drawing stops — past `out + 1`, and even, so its marks are its neck's. */
   cut: number;
-  /** Where the body's flesh has wholly given way to the lord's colours up the neck. */
-  livery: number;
-  /** The body's light, `from` lit and `to` in shadow, in the neck's own frame at rest. */
-  light: { from: Pt; to: Pt };
 }
 
 /**
  * How far inside the body's outline a collar is whole, and how much deeper it has faded out, in world
  * units — 0464. Whole past the outline's inner half (0.55) and a neck's sway at the join (about a
- * unit and a half), so the body's outline is under it at every sway; faded over four more, which reads
- * as the neck's throat running on into the chest and stopping.
+ * unit and a half), so the body's outline is under it at every sway; faded over ten more since 0486, which
+ * carries the head's colours out onto the chest rather than stopping them at its edge — and where the
+ * roots crowd the shoulders, the collars' fades lie over each other and their colours mix.
  */
 const COLLAR_WHOLE = 2;
-const COLLAR_FADE = 4;
+const COLLAR_FADE = 10;
 
 /**
  * Where neck `k` leaves the body — 0464, solved from the row for EVERY neck rather than one, because
@@ -9866,7 +9887,7 @@ const COLLAR_FADE = 4;
 export function hydraCollarOf(k: number): Collar {
   const necks = BOSSES.hydra.necks;
   const neck = necks?.necks[k];
-  const none = { edge: { at: [0, 0] as Pt, normal: [1, 0] as Pt }, out: 2, cut: 4, livery: 4, light: { from: [0, 0] as Pt, to: [1, 0] as Pt } };
+  const none = { edge: { at: [0, 0] as Pt, normal: [1, 0] as Pt }, out: 2, cut: 4 };
   if (necks === undefined || neck === undefined) return none;
   const rn = SPRITE_EXTENT[SPRITE_KINDS[neck.art]!] * 0.42;
   const rb = SPRITE_EXTENT.boss13 * 0.42;
@@ -9914,24 +9935,10 @@ export function hydraCollarOf(k: number): Collar {
     const ny = (cx - ax) / len;
     normal = insideBody([bx + nx * 0.05, by + ny * 0.05]) ? [-nx, -ny] : [nx, ny];
   }
-  /*
-    Into the neck's frame at rest: a point of the body's drawing is a world offset from the hull, less
-    the root, turned back by the neck's angle and over the neck's `r`; a direction is only turned.
-  */
+  // Into the neck's frame at rest: a direction is only turned back by the neck's angle.
   const c = Math.cos(neck.angle);
   const s = Math.sin(neck.angle);
-  const toNeck = ([x, y]: Pt): Pt => {
-    const along = x * rb - neck.root.along;
-    const across = y * rb - neck.root.across;
-    return [(along * c + across * s) / rn, (-along * s + across * c) / rn];
-  };
-  return {
-    edge: { at, normal: [normal[0] * c + normal[1] * s, -normal[0] * s + normal[1] * c] },
-    out,
-    cut,
-    livery: Math.min(NECK_KNOTS, out + Math.max(2, Math.round((NECK_KNOTS - out) * 0.3))),
-    light: { from: toNeck(HYDRA_LIGHT[0]), to: toNeck(HYDRA_LIGHT[1]) },
-  };
+  return { edge: { at, normal: [normal[0] * c + normal[1] * s, -normal[0] * s + normal[1] * c] }, out, cut };
 }
 
 /** The body's light: lit at the first point, in shadow by the second — 0384, shared with its necks since 0464. */
@@ -10037,7 +10044,7 @@ function paintHydraTail(ctx: Pen, f: Frame, skin: FoeSkin): void {
  * Neck `k` — 0384, in the colours of the head it carries: a serpent's banded scales, a fish's finned
  * reds, a pterodactyl's leather, an ice crystal's facets, a clockwork's plated segments.
  */
-function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, flesh: FoeSkin, k: number, reach: number, upto = NECK_KNOTS): void {
+function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, k: number, reach: number, upto = NECK_KNOTS): void {
   const spine = neckSpine(reach);
   const hull = hydraNeckHull(k, reach, upto);
   const smooth = k !== 3;
@@ -10055,29 +10062,25 @@ function paintHydraNeck(ctx: Pen, f: Frame, skin: FoeSkin, flesh: FoeSkin, k: nu
   }
   paintNeckOwn(ctx, f, skin, k, spine, upto);
   /*
-    ⚠️ **AND THE BODY'S FLESH UNDER ITS ROOT — 0464**, the lord's colours fading out down the neck from
-    `livery` to where it leaves the body, and the body showing through as they go. Two gradients at
-    once, one along the neck and one across the body, which one fill cannot hold: so the neck's own
-    paint is taken back out along the neck (`destination-out`) and the body's light is laid UNDER what
-    is left (`destination-over`) — lit and shadowed exactly as the body is lit at that place, because
-    it is the body's own gradient carried into the neck's frame. Within the neck's own outline both, so
-    nothing leaves it.
+    ⚠️ **THE LORD'S COLOURS ALL THE WAY DOWN — 0486, TURNING 0464's FADE ROUND.** 0464 laid the body's
+    flesh up each neck's root, so the Mire's skin climbed every neck. Played: *"it should be more that the
+    head colours blend into each other and the body as opposed to the body blending into the necks."* So a
+    neck is its head's colours to its root, and it is the collar, drawn over the body, that carries them out
+    onto the chest and fades there (`COLLAR_FADE`) — where five roots crowd the shoulders, into each other.
   */
-  const join = hydraCollarOf(k);
-  ctx.globalCompositeOperation = 'destination-out';
-  shaded(ctx, f, [spine[join.out]![0], 0], [spine[join.livery]![0], 0], rgba(flesh.hull, 1), rgba(flesh.hull, 0), hull, 1, smooth);
-  ctx.globalCompositeOperation = 'destination-over';
-  shaded(ctx, f, join.light.from, join.light.to, shade(flesh.hull, 0.22), shade(flesh.hull, -0.4), hull, 1, smooth);
-  ctx.globalCompositeOperation = 'source-over';
 }
 
-/** Neck `k`'s own marks, to knot `upto` — 0384, laid two knots at a time since 0464. */
-function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: readonly Pt[], upto: number): void {
+/**
+ * Neck `k`'s own marks, from knot `from` to knot `upto` — 0384, laid two knots at a time since 0464, and
+ * from a knot since 0486, when the upper neck is painted into its head's bitmap from the knuckle up.
+ */
+function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: readonly Pt[], upto: number, from = 0): void {
   // One arm per neck, and an `if` chain because `k` is a number: there is no union for a `never` to close.
   if (k === 0) {
     // The serpent's own: dark bands down the neck and the place's acid in spots between them.
-    for (let i = 2; i + 2 <= upto; i += 4) poly(ctx, f, skin.plate, neckBand(spine, i, i + 2, -0.2, 0.5), 0.6);
+    for (let i = 2; i + 2 <= upto; i += 4) if (i >= from) poly(ctx, f, skin.plate, neckBand(spine, i, i + 2, -0.2, 0.5), 0.6);
     for (let i = 4; i + 2 <= upto; i += 4) {
+      if (i < from) continue;
       const at = neckAt(spine, i, 0.15);
       disc(ctx, f, skin.lit, at[0], at[1], 0.03, 0.9);
     }
@@ -10087,7 +10090,7 @@ function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: reado
     // The fish's: the fin along its back, rayed from the neck out toward each fin's point, in the
     // ember's gold and inside the fin; and scales as arcs down its side.
     for (let i = CREST_FROM; i + 2 <= upto; i++) {
-      if (!crests(k, i, upto)) continue;
+      if (i < from || !crests(k, i, upto)) continue;
       const [ux, uy] = headingAt(spine, i + 1);
       const h = neckHalf(i + 1, 1);
       const peak = neckCrest(spine, k, i);
@@ -10095,6 +10098,7 @@ function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: reado
       seam(ctx, f, skin.lit, 0.025, [foot, [foot[0] + (peak[0] - foot[0]) * 0.7, foot[1] + (peak[1] - foot[1]) * 0.7]], 0.9);
     }
     for (let i = 2; i + 2 <= upto; i += 2) {
+      if (i < from) continue;
       const [ux, uy] = headingAt(spine, i);
       const on = spine[i]!;
       seam(ctx, f, shade(skin.hull, -0.4), 0.03, [neckAt(spine, i, 0.4), [on[0] + ux * 0.05, on[1] + uy * 0.05], neckAt(spine, i, -0.1)], 0.6, true);
@@ -10103,10 +10107,12 @@ function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: reado
   }
   if (k === 2) {
     // The pterodactyl's: leather, with tendons down it and a knuckled ridge along its back.
-    const along = (s: number): Pt[] => spine.slice(1, upto).map((_, j) => neckAt(spine, j + 1, s));
+    const start = Math.max(1, from);
+    const along = (s: number): Pt[] => spine.slice(start, upto).map((_, j) => neckAt(spine, j + start, s));
     seam(ctx, f, shade(skin.hull, -0.35), 0.03, along(0.35), 0.6, true);
     seam(ctx, f, shade(skin.hull, -0.35), 0.03, along(-0.05), 0.5, true);
     for (let i = 2; i + 2 <= upto; i += 4) {
+      if (i < from) continue;
       // Inside the neck's own edge at its thin end too: the knuckle and its radius both a share of it.
       const at = neckAt(spine, i, 0.5);
       disc(ctx, f, skin.plate, at[0], at[1], neckHalf(i, 1) * 0.32, 0.9);
@@ -10116,6 +10122,7 @@ function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: reado
   if (k === 3) {
     // The ice's: faceted, each segment split into a lit and a cold face, and the crystals on its back.
     for (let i = 0; i + 2 <= upto; i += 2) {
+      if (i < from) continue;
       const a = neckAt(spine, i, 0.85);
       const b = neckAt(spine, i + 2, -0.85);
       const c = neckAt(spine, i + 2, 0.85);
@@ -10126,11 +10133,273 @@ function paintNeckOwn(ctx: Pen, f: Frame, skin: FoeSkin, k: number, spine: reado
   }
   // The clockwork's: plated segments with a glowing seam between each, and a rivet on each plate.
   for (let i = 2; i + 2 <= upto; i += 2) {
+    if (i < from) continue;
     // To 0.8 of the edge: at 0.9 a seam's round end stood past the thinner back, a speck on the outline.
     seam(ctx, f, skin.lit, 0.03, [neckAt(spine, i, 0.8), neckAt(spine, i, -0.8)], 0.85);
     const bolt = neckAt(spine, i, 0.55);
     disc(ctx, f, shade(skin.plate, -0.3), bolt[0], bolt[1], 0.025, 1);
   }
+}
+
+/*
+  ── A NECK IS TWO BONES — `docs/decisions/0486-the-neck-bends.md` ─────────────────────────────────
+
+  ⚠️ **THE HEAD TURNED ON ITS OWN AND THE NECK BEHIND IT DID NOT.** A head looks up to 0.6 rad after the
+  ship and its neck was one rigid bitmap, so every head sat on its neck at an angle the neck never made,
+  with its own closed outline across the neck's tip. So the neck bends at a knuckle: below it, the neck
+  drawing turned about its root as before; above it, the upper neck is DRAWN INTO THE HEAD'S OWN BITMAP,
+  one outline round both, and the head turns about the knuckle carrying it. The head can never turn
+  against its neck, because the neck it turns with is itself.
+
+  ⚠️ **THE UPPER NECK'S FAR END FADES INTO THE LOWER NECK, ON THE COLLAR'S TERMS (0464)**, outline and
+  all, so where the two bones meet there is no line across the neck.
+*/
+
+/** How many knots the upper neck's far end fades over into the lower neck — 0486. */
+const KNUCKLE_FADE = 2;
+
+/** How much wider the upper neck is where it meets the head than the neck it continues — 0486: it swells to the throat. */
+const NECK_THROAT_GROW = 0.6;
+
+/** How wide the upper neck is at knot `i` — the neck's own width, swelling toward the head from the knuckle. */
+function throatGrow(i: number, knuckle: number): number {
+  return 1 + NECK_THROAT_GROW * Math.max(0, (i - knuckle) / (NECK_KNOTS - knuckle));
+}
+
+/**
+ * The upper neck's two edges from knot `from` to the head's centre, in the neck's own `r` — its back
+ * (`+y`, with a fin ray or a crystal where the neck carries them) and its throat.
+ */
+function upperNeckSides(k: number, reach: number, from: number): { back: Pt[]; throat: Pt[] } {
+  const spine = neckSpine(reach);
+  const knuckle = hydraKnuckleOf(k);
+  const back: Pt[] = [];
+  const throat: Pt[] = [];
+  for (let i = from; i <= NECK_KNOTS; i++) {
+    const grow = throatGrow(i, knuckle);
+    if (i === from || !crests(k, i - 1, NECK_KNOTS)) back.push(offSpine(spine, i, neckHalf(i, 1) * grow));
+    if (crests(k, i, NECK_KNOTS)) {
+      const [x, y] = spine[i + 1]!;
+      const [ux, uy] = headingAt(spine, i + 1);
+      const h = neckHalf(i + 1, 1) * throatGrow(i + 1, knuckle) + (k === 1 ? 0.075 : 0.1);
+      const lean = k === 1 ? 0.03 : 0;
+      back.push([x - uy * h - ux * lean, y + ux * h - uy * lean]);
+    }
+    throat.push(offSpine(spine, i, -neckHalf(i, -1) * grow));
+  }
+  return { back, throat };
+}
+
+/** Whether a point is inside an outline, by the even-odd rule. Cold code, for the bake. */
+function insideOutline([x, y]: Pt, poly: readonly Pt[]): boolean {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i]!;
+    const [xj, yj] = poly[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+
+/** Where segment `p→q` first crosses polygon `poly`'s boundary from `p`, and which edge — or null. */
+function crossing(p: Pt, q: Pt, poly: readonly Pt[]): { at: Pt; edge: number; u: number } | null {
+  let best: { at: Pt; edge: number; u: number } | null = null;
+  for (let e = 0; e < poly.length; e++) {
+    const r = poly[e]!;
+    const s = poly[(e + 1) % poly.length]!;
+    const d = (q[0] - p[0]) * (s[1] - r[1]) - (q[1] - p[1]) * (s[0] - r[0]);
+    if (Math.abs(d) < 1e-12) continue;
+    const u = ((r[0] - p[0]) * (s[1] - r[1]) - (r[1] - p[1]) * (s[0] - r[0])) / d;
+    const v = ((r[0] - p[0]) * (q[1] - p[1]) - (r[1] - p[1]) * (q[0] - p[0])) / d;
+    if (u < 0 || u > 1 || v < 0 || v > 1) continue;
+    if (best === null || u < best.u) best = { at: [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u], edge: e, u };
+  }
+  return best;
+}
+
+/**
+ * The outline of a head and the neck that enters it, as ONE line — 0486. Out along the neck's back from
+ * its far end to where it meets the head, round the head the long way — over the crown, the snout and
+ * the jaw — to where the throat meets it, and back down the throat. Both sides of the neck end inside
+ * the head, at its centre, so each crosses the head's outline once on the way in.
+ */
+function headAndNeck(head: readonly Pt[], back: readonly Pt[], throat: readonly Pt[]): Pt[] {
+  const enter = (side: readonly Pt[]): { at: Pt; edge: number; i: number } => {
+    for (let i = 0; i + 1 < side.length; i++) {
+      if (insideOutline(side[i]!, head) || !insideOutline(side[i + 1]!, head)) continue;
+      const hit = crossing(side[i]!, side[i + 1]!, head);
+      if (hit !== null) return { at: hit.at, edge: hit.edge, i };
+    }
+    throw new Error('a neck that never enters its head');
+  };
+  const b = enter(back);
+  const t = enter(throat);
+  const n = head.length;
+  // The head's outline between the two crossings, both ways round; the longer is the outside of the join.
+  const arc = (step: 1 | -1): Pt[] => {
+    const out: Pt[] = [];
+    let e = step === 1 ? (b.edge + 1) % n : b.edge;
+    const stop = step === 1 ? (t.edge + 1) % n : t.edge;
+    for (let guard = 0; guard <= n && e !== stop; guard++) {
+      out.push(head[e]!);
+      e = (e + step + n) % n;
+    }
+    return out;
+  };
+  const length = (pts: readonly Pt[]): number => {
+    let sum = 0;
+    for (let i = 0; i + 1 < pts.length; i++) sum += Math.hypot(pts[i + 1]![0] - pts[i]![0], pts[i + 1]![1] - pts[i]![1]);
+    return sum;
+  };
+  const forward = arc(1);
+  const backward = arc(-1);
+  const round = length([b.at, ...forward, t.at]) >= length([b.at, ...backward, t.at]) ? forward : backward;
+  return [...back.slice(0, b.i + 1), b.at, ...round, t.at, ...throat.slice(0, t.i + 1).reverse()];
+}
+
+/**
+ * A pen that draws turned and moved — 0486: every point it is given turned by `turn` about `(ox, oy)` and
+ * set down at `(cx, cy)`, so a neck's own painting, which knows only its own frame, can be laid into a
+ * head's bitmap at the angle the neck stands at. A rotation, so widths and radii are as asked.
+ */
+function turnedPen(ctx: Pen, ox: number, oy: number, turn: number, cx: number, cy: number): Pen {
+  const c = Math.cos(turn);
+  const s = Math.sin(turn);
+  const x = (px: number, py: number): number => cx + (px - ox) * c - (py - oy) * s;
+  const y = (px: number, py: number): number => cy + (px - ox) * s + (py - oy) * c;
+  const pen = {
+    get fillStyle() {
+      return ctx.fillStyle;
+    },
+    set fillStyle(v) {
+      ctx.fillStyle = v;
+    },
+    get strokeStyle() {
+      return ctx.strokeStyle;
+    },
+    set strokeStyle(v) {
+      ctx.strokeStyle = v;
+    },
+    get lineWidth() {
+      return ctx.lineWidth;
+    },
+    set lineWidth(v) {
+      ctx.lineWidth = v;
+    },
+    get lineCap() {
+      return ctx.lineCap;
+    },
+    set lineCap(v) {
+      ctx.lineCap = v;
+    },
+    get globalAlpha() {
+      return ctx.globalAlpha;
+    },
+    set globalAlpha(v) {
+      ctx.globalAlpha = v;
+    },
+    get globalCompositeOperation() {
+      return ctx.globalCompositeOperation;
+    },
+    set globalCompositeOperation(v) {
+      ctx.globalCompositeOperation = v;
+    },
+    beginPath: () => ctx.beginPath(),
+    closePath: () => ctx.closePath(),
+    moveTo: (px: number, py: number) => ctx.moveTo(x(px, py), y(px, py)),
+    lineTo: (px: number, py: number) => ctx.lineTo(x(px, py), y(px, py)),
+    arc: (px: number, py: number, radius: number, from: number, to: number, ccw?: boolean) => ctx.arc(x(px, py), y(px, py), radius, from + turn, to + turn, ccw),
+    quadraticCurveTo: (ax: number, ay: number, px: number, py: number) => ctx.quadraticCurveTo(x(ax, ay), y(ax, ay), x(px, py), y(px, py)),
+    bezierCurveTo: (ax: number, ay: number, bx: number, by: number, px: number, py: number) =>
+      ctx.bezierCurveTo(x(ax, ay), y(ax, ay), x(bx, by), y(bx, by), x(px, py), y(px, py)),
+    rect: (px: number, py: number, w: number, h: number) => {
+      ctx.moveTo(x(px, py), y(px, py));
+      ctx.lineTo(x(px + w, py), y(px + w, py));
+      ctx.lineTo(x(px + w, py + h), y(px + w, py + h));
+      ctx.lineTo(x(px, py + h), y(px, py + h));
+      ctx.closePath();
+    },
+    fill: (rule?: CanvasFillRule) => ctx.fill(rule),
+    stroke: () => ctx.stroke(),
+    fillRect: () => {
+      throw new Error('a turned pen fills no rectangles: a rectangle turned is not one');
+    },
+    createLinearGradient: (ax: number, ay: number, bx: number, by: number) => ctx.createLinearGradient(x(ax, ay), y(ax, ay), x(bx, by), y(bx, by)),
+    createRadialGradient: (ax: number, ay: number, ar: number, bx: number, by: number, br: number) =>
+      ctx.createRadialGradient(x(ax, ay), y(ax, ay), ar, x(bx, by), y(bx, by), br),
+  };
+  return pen as unknown as Pen;
+}
+
+/**
+ * Head `k` and its upper neck, as one body — 0486. Sealed as one outline; the neck painted as the neck
+ * is (its own marks, from the knuckle up), then the skull over it at its own size; then the neck's far
+ * end taken back out into the lower neck it lies over. `size` is the tile in pixels.
+ */
+function drawHydraHead(ctx: Pen, size: number, kind: SpriteKind, skin: FoeSkin | null, k: number, reach: number): void {
+  const neck = BOSSES.hydra.necks!.necks[k]!;
+  const half = size / 2;
+  const ppu = size / SPRITE_EXTENT[kind];
+  const rn = SPRITE_EXTENT[SPRITE_KINDS[neck.art]!] * 0.42;
+  const spine = neckSpine(reach);
+  const [hx, hy] = spine[NECK_KNOTS]!;
+  const knuckle = hydraKnuckleOf(k);
+  const from = Math.max(0, knuckle - KNUCKLE_FADE);
+  // The neck's frame, laid so its head's centre is this tile's centre and it stands at its own angle.
+  const fn: Frame = { half: 0, r: rn * ppu };
+  const turned = turnedPen(ctx, hx * fn.r, hy * fn.r, neck.angle, half, half);
+  const toTile = ([x, y]: Pt): Pt => {
+    const px = x * fn.r - hx * fn.r;
+    const py = y * fn.r - hy * fn.r;
+    const c = Math.cos(neck.angle);
+    const s = Math.sin(neck.angle);
+    return [(px * c - py * s) / (0.42 * size), (px * s + py * c) / (0.42 * size)];
+  };
+  // The skull at its own world size whatever this tile is, as a longer-horned serpent's face is (0305).
+  const fh: Frame = { half, r: HYDRA_SKULL * 0.42 * ppu };
+  const fTile: Frame = { half, r: 0.42 * size };
+  // A flesh skull's curve sampled into a polygon, so the join and both its halves share their vertices.
+  const own = HYDRA_CURVED[k]! ? curvePoints(HYDRA_HEADS[k]!, 8) : HYDRA_HEADS[k]!;
+  const skull = own.map(([x, y]): Pt => [(x * fh.r) / fTile.r, (y * fh.r) / fTile.r]);
+  const sides = upperNeckSides(k, reach, from);
+  const outline = headAndNeck(skull, sides.back.map(toTile), sides.throat.map(toTile));
+  ctx.lineWidth = Math.max(1, (size * HYDRA_OUTLINE) / SPRITE_EXTENT[kind]);
+  ctx.beginPath();
+  trace(ctx, fTile, outline);
+  if (skin !== null) ctx.fillStyle = skin.hull;
+  seal(ctx);
+  if (skin === null) return;
+  /*
+    The upper neck, painted as its neck is: lit along its back and shadowed down its throat — over the
+    sealed outline itself, drawn the way it was sealed, so no wash leaves it at the throat where the curve
+    rounds the corner the neck makes with the jaw. The skull's own wash goes over it after.
+  */
+  shaded(ctx, fTile, toTile([reach * 0.5, 0.14]), toTile([reach * 0.5, -0.14]), shade(skin.hull, 0.2), shade(skin.hull, -0.38), outline, 1, false);
+  /*
+    Its marks from a knot inside its far end, so a seam across a knot or a spot centred on one is never
+    half over the end the outline closes on — on the even knots the whole neck's are, so they line up with
+    the lower neck's under the fade.
+  */
+  const first = from + 1 + ((from + 1) % 2);
+  for (let i = first; i + 2 <= NECK_KNOTS; i += 2) {
+    poly(turned, fn, mix(skin.lit, skin.hull, 0.5), neckBand(spine, i, i + 2, 0.5, 0.82), 0.75);
+    const scute = k === 3 ? mix(skin.lit, skin.hull, 0.3) : k === 4 ? skin.plate : mix(skin.lit, skin.hull, 0.45);
+    poly(turned, fn, scute, neckBand(spine, i, i + 2, -0.25, -0.8), 0.9);
+    seam(turned, fn, shade(skin.hull, -0.5), 0.03, [neckAt(spine, i, -0.8), neckAt(spine, i, -0.25)], 0.8);
+  }
+  paintNeckOwn(turned, fn, skin, k, spine, NECK_KNOTS, first);
+  // The skull over its neck, washed over the same polygon its half of the outline was traced through.
+  paintHydraHead(ctx, fh, skin, k, own);
+  // And the neck's far end taken back out, outline and all, so it fades into the lower neck under it.
+  ctx.globalCompositeOperation = 'destination-out';
+  const edge = 2;
+  shaded(turned, fn, [spine[from]![0], 0], [spine[knuckle]![0], 0], rgba('#000000', 1), rgba('#000000', 0), [
+    [spine[from]![0] - edge, -edge],
+    [spine[knuckle]![0], -edge],
+    [spine[knuckle]![0], edge],
+    [spine[from]![0] - edge, edge],
+  ]);
+  ctx.globalCompositeOperation = 'source-over';
 }
 
 /*
@@ -10256,11 +10525,12 @@ const HYDRA_CURVED: readonly boolean[] = [true, true, true, false, false];
  */
 const TOOTH = 0.85;
 
-/** Head `k`'s paint — 0384. */
-function paintHydraHead(ctx: Pen, f: Frame, skin: FoeSkin, k: number): void {
-  const hull = HYDRA_HEADS[k]!;
-  const curved = HYDRA_CURVED[k]!;
-  shaded(ctx, f, [-0.2, -0.7], [0.1, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), hull, 1, curved);
+/**
+ * Head `k`'s paint — 0384. Its wash over `skull`, the polygon its outline was traced through (0486), which
+ * for a flesh head is its curve already sampled, so the wash is drawn straight through the same points.
+ */
+function paintHydraHead(ctx: Pen, f: Frame, skin: FoeSkin, k: number, skull: readonly Pt[]): void {
+  shaded(ctx, f, [-0.2, -0.7], [0.1, 0.6], shade(skin.hull, 0.24), shade(skin.hull, -0.42), skull, 1, false);
   const e = HYDRA_EYES[k]!;
   // The mouth: dark in the notch the jaws leave, and what each breathes lit in the back of it.
   ctx.globalAlpha = 0.85;
@@ -12636,6 +12906,11 @@ export function drawKind(
     case 'hydraNeck2':
     case 'hydraNeck3':
     case 'hydraNeck4':
+    case 'hydraNeck0Hit':
+    case 'hydraNeck1Hit':
+    case 'hydraNeck2Hit':
+    case 'hydraNeck3Hit':
+    case 'hydraNeck4Hit':
     case 'hydraHead0':
     case 'hydraHead0Hit':
     case 'hydraHead1':
@@ -12654,24 +12929,34 @@ export function drawKind(
       const neck = hydraNeckOf(kind);
       if (neck === null) return;
       const own = hurt ? null : lordOf(neck.livery, palette);
+      // The head and its upper neck, one body turned about the knuckle — 0486.
+      if (!kind.startsWith('hydraNeck')) {
+        drawHydraHead(ctx, size, kind, own, neck.k, neck.reach);
+        return;
+      }
       ctx.lineWidth = Math.max(1, size * HYDRA_OUTLINE / SPRITE_EXTENT[kind]);
-      const isNeck = kind.startsWith('hydraNeck');
-      const outline = isNeck ? hydraNeckHull(neck.k, neck.reach) : HYDRA_HEADS[neck.k]!;
+      // The lower neck, to a knot past its knuckle: the head's own upper neck lies over the rest — 0486.
+      const upto = Math.min(NECK_KNOTS, hydraKnuckleOf(neck.k) + 1);
+      const outline = hydraNeckHull(neck.k, neck.reach, upto);
       // Flesh is curved; ice and metal are cut straight — and so is a crystal crest on an ice neck.
-      if (isNeck ? neck.k !== 3 : HYDRA_CURVED[neck.k]!) curveLoop(ctx, f, outline);
+      if (neck.k !== 3) curveLoop(ctx, f, outline);
       else trace(ctx, f, outline);
       if (own !== null) ctx.fillStyle = own.hull;
       seal(ctx);
       if (own === null) return;
       // The neck's root in the body's own skin — 0464: the place's lord, as `boss13` is.
-      if (isNeck) paintHydraNeck(ctx, f, own, lordOf(theme, palette) ?? own, neck.k, neck.reach);
-      else paintHydraHead(ctx, f, own, neck.k);
+      paintHydraNeck(ctx, f, own, neck.k, neck.reach, upto);
       return;
     }
     case 'hydraCollar0':
     case 'hydraCollar1':
     case 'hydraCollar2':
     case 'hydraCollar3':
+    case 'hydraCollar0Hit':
+    case 'hydraCollar1Hit':
+    case 'hydraCollar2Hit':
+    case 'hydraCollar3Hit':
+    case 'hydraCollar4Hit':
     case 'hydraCollar4': {
       /*
         WHERE A NECK LEAVES THE BODY — 0464: the neck's own drawing to `cut`, at the NECK's scale
@@ -12691,7 +12976,7 @@ export function drawKind(
       else trace(ctx, at, hydraNeckHull(neck.k, neck.reach, cut));
       if (own !== null) ctx.fillStyle = own.hull;
       seal(ctx);
-      if (own !== null) paintHydraNeck(ctx, at, own, lordOf(theme, palette) ?? own, neck.k, neck.reach, cut);
+      if (own !== null) paintHydraNeck(ctx, at, own, neck.k, neck.reach, cut);
       const spine = neckSpine(neck.reach);
       const edge = half / at.r;
       // Only how much is taken out matters to `destination-out`; the ink is the flash's for want of any.
