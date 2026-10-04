@@ -234,7 +234,7 @@ describe('0348 — the labyrinth is walled', () => {
     */
     const { world } = playableWorld(LEVELS[walled[0]!]);
     const view = world.view;
-    const room = { sprite: world.corridor!.sprite, extent: world.corridor!.extent, from: 0, to: 2000, open: 0 };
+    const room = { sprite: world.corridor!.sprite, extent: world.corridor!.extent, from: 0, to: 2000, open: 0, pieces: null, rest: 0, knot: 0 };
     const sides = (camera: number): number[] => {
       const surface = new Recorder();
       paintScene(surface, view, [], camera, 0, [], null, [], 0, room);

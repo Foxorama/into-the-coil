@@ -2124,6 +2124,30 @@ export function reachDownLane(boss: BossRow): number {
  * open side is; the far wall is the forward edge of the player's own box, which is why the ship
  * cannot reach it.
  */
+/**
+ * A piece of scenery laid in a room — `docs/decisions/0488-the-roots-are-roots.md`, where it was first the
+ * world tree's roots, and any room's since: the heart's chamber is one (0489). Scenery: it
+ * collides with nothing (0335's walls are the picture of a bound the ship already has), and it is drawn
+ * under every body (0459: nothing the player has to see is behind scenery).
+ */
+export interface RoomPiece {
+  /** The piece's drawing. */
+  sprite: number;
+  /** Where its centre stands, in world units from the resting camera's trailing edge, and across the lane. */
+  along: number;
+  across: number;
+  /** How it is turned, in radians. */
+  turn: number;
+  /** Whether it is the far wall, which withdraws off the screen once the fight is over (0337). */
+  far: boolean;
+  /**
+   * Whether it stands only for the boss's arrival — the knot a serpent coils in round — and sinks into the
+   * dark once the fight begins, because a root in the open lane for the whole fight is a thing that looks
+   * solid and is not (0036).
+   */
+  entrance: boolean;
+}
+
 export interface Room {
   /** World units short of the fight's own distance the camera comes to rest. */
   stand: number;
@@ -2153,6 +2177,10 @@ export interface Room {
    * the painter (`w.room` stays `null`) and has nothing to part, so it states `opens: 0`.
    */
   wall: number | null;
+  /**
+   * Or the pieces it is framed by, placed rather than tiled — 0488. Absent, the room is its `wall` alone.
+   */
+  pieces?: readonly RoomPiece[];
   /**
    * Steps the far wall takes to part once the fight is over — 0337.
    *
@@ -3297,8 +3325,28 @@ export const BOSSES: Record<BossKind, BossRow> = {
       far side, where the body runs off the screen into them. `mouth` is in front of the camera rather
       than behind it, which is what keeps the near half of the screen open sky. Nothing falls out of
       them, so the far side parts on the death itself and the level carries on through it.
+
+      ⚠️ **AND THE ROOTS ARE ROOTS — 0488.** The strip of one tile became five pieces: a trunk lying along
+      each lane edge and a tip curling at the bottom, a fork and a trunk down the far side — which withdraw
+      off the screen when it parts — and the knot at the coil's centre that the serpent arrives wrapped
+      round, sinking into the dark once it has arrived. Every one is outside the ship's box
+      (`tests/serpent.test.ts`), so the picture of the bound is still the bound.
     */
-    room: { stand: 60, settle: 150, mouth: -100, wall: SPRITE.rootWall, opens: 90 },
+    room: {
+      stand: 60,
+      settle: 150,
+      mouth: -100,
+      wall: null,
+      pieces: [
+        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false, entrance: false },
+        { sprite: SPRITE.rootTip, along: 118, across: 128, turn: Math.PI, far: false, entrance: false },
+        { sprite: SPRITE.rootTrunk, along: 185, across: 123.5, turn: Math.PI, far: false, entrance: false },
+        { sprite: SPRITE.rootFork, along: 232, across: 58, turn: Math.PI, far: true, entrance: false },
+        { sprite: SPRITE.rootTrunk, along: 216, across: 98, turn: Math.PI / 2, far: true, entrance: false },
+        { sprite: SPRITE.rootKnot, along: 107, across: ACROSS_SPAN / 2, turn: 0.4, far: false, entrance: true },
+      ],
+      opens: 90,
+    },
     burn: null,
     wreck: null,
     shed: SPRITE.shedScale,

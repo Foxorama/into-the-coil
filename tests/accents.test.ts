@@ -182,8 +182,15 @@ const HULLLESS: readonly SpriteKind[] = [
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.
   'roomWall',
-  // The serpent's roots tile into the next on the same terms — 0459.
-  'rootWall',
+  /*
+    The world tree's roots, placed as pieces since 0488 where 0459 tiled them: scenery under every body,
+    each a few roots crossing with no outline round the lot — a root has no coping, and the shadow under
+    each strand is what separates it from the one it crosses, as it did in the tile.
+  */
+  'rootTrunk',
+  'rootFork',
+  'rootTip',
+  'rootKnot',
   // And its caps where the wall turns, on the same terms — 0350.
   'wallRise0',
   'wallRise1',
