@@ -87,7 +87,7 @@ import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ORBIT, SHIELD_PLACES, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, SHIELD_ORBIT, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
@@ -4743,16 +4743,19 @@ function stepShields(w: World): void {
   const shimmer = Math.floor(w.cameraAlong / SHIELD_SHIMMER) % 3;
   for (let i = 0; i < count; i++) {
     const orb = w.shieldOrbs.at(i);
-    const place = SHIELD_PLACES[layout[i] ?? 0]!;
-    const sprite = place.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];
+    // The ship's own plate at that place — 0492. Where it stands is every ship's; what it looks like is not.
+    const place = layout[i] ?? 0;
+    const frames = w.shipRow.shield.places[place]!;
+    const sprite = frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];
+    const angle = SHIELD_ANGLES[place]!;
     orb.sprite = sprite;
     orb.spriteBase = sprite;
     orb.spriteHit = sprite;
     // Carried by hand, because nothing else steps this pool — and the renderer interpolates from it.
     orb.prevAlong = orb.along;
     orb.prevAcross = orb.across;
-    orb.along = w.ship.along + Math.cos(place.angle) * SHIELD_ORBIT;
-    orb.across = w.ship.across + Math.sin(place.angle) * SHIELD_ORBIT;
+    orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
+    orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
   }
 }
 
