@@ -229,7 +229,8 @@ says. The ones that bear on this change:
 | the shoal mother's first wave after the window 39 late | `and the window is the gap: the script resumes when it closes, not later` |
 | the sentinel at twice its 174 | `THE REPORTED ONE: a mid-boss fight lasts what its level asks` |
 
-The whole non-browser suite is green on the tree, 1882 tests.
+The whole non-browser suite is green on the tree. The table above is other decisions' probes, so
+0503 is a `WITHOUT_PROBES` row in `tests/prove-guard.test.ts`, with that reason.
 
 ## Owed
 

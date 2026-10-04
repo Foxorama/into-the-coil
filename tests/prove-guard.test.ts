@@ -308,6 +308,7 @@ const WITHOUT_PROBES: Record<string, string> = {
   // One more of the same kind: 0502 gives each mid-boss a window no wave is authored inside, and has
   // the waves past it come as written, so the thinning over a fight and `tests/fight.test.ts` are gone.
   '0267': 'its thinning over a live mid-boss and both its guards were deleted by 0502 — the window is authored empty and the adds past it come as written, and 0502 has its own table and probes',
+  '0503': 'it adds no guard — its table is the proofs of the decisions whose probes it re-anchored, and the dry budget it re-walked at three sweeps is proved by 0259’s own re-aimed probe',
   '0007': 'every row needs `npm run build` and a browser run first, and the harness runs vitest against the tree rather than a built dist/',
   '0008': 'the manifest and `_headers` rows assert on a built dist/, which the harness does not produce',
   '0009': "the cache-sweep rows drive a real page against a built dist/ with a stranger's cache seeded on the origin",
