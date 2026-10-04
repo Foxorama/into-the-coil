@@ -6,7 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { afterFrames } from './frames.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { launch, openRoom, shown as shownScreen } from './title.ts';
+import { credit, launch, openRoom, shown as shownScreen } from './title.ts';
 import { MENU_BACK_BUTTONS, MENU_CONFIRM_BUTTONS, MENU_DPAD_BUTTONS, MENU_REPEAT_AFTER } from '../src/app/menu.ts';
 import { MAX_STEPS } from '../src/app/loop.ts';
 // 0214: the room's controls are the place table, and the grid is what the D-pad has to read.
@@ -266,6 +266,8 @@ describe.runIf(chromePath)('the run-over screen gives up on its own', () => {
     const quickest = DIFFICULTY_KINDS.reduce((fewest, kind) =>
       DIFFICULTIES[kind].lives < DIFFICULTIES[fewest].lives ? kind : fewest,
     );
+    // The run-over screen is Freeplay's since 0517; no quarters ends on the game over, which waits.
+    await credit(page, 'free');
     await launch(page, quickest);
     await page.waitForSelector('.itc-playing-hud-shown', { timeout: HUD_MS });
     // Full forward on the stick: the ship flies up-lane into everything the level sends, which
@@ -593,6 +595,19 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     await nudge(page, MENU_DPAD_BUTTONS.down);
     await nudge(page, MENU_DPAD_BUTTONS.down);
     expect(await ring()).toBe(SCREENS.title.actions[0]!.label);
+    /*
+      0517: the continues chip stands left of Fly. Left reaches it, A steps it round and leaves the ring
+      on it — a chip is a button the cursor walks, not a band it moves along — and right comes back.
+    */
+    const credits = SCREENS.title.choices.find((c) => c.name === 'credits')!;
+    await nudge(page, MENU_DPAD_BUTTONS.left);
+    expect(await ring(), 'left from Fly did not reach the continues chip').toBe(credits.label);
+    const credited = await filled('credits');
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    expect(await filled('credits'), 'A on the continues chip did not step it').not.toBe(credited);
+    expect(await ring(), 'a press on the chip moved the ring off it').toBe(credits.label);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await ring(), 'right from the chip did not come back to Fly').toBe(SCREENS.title.actions[0]!.label);
     await nudge(page, MENU_DPAD_BUTTONS.right);
     expect(await ring(), 'right from Fly did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
 

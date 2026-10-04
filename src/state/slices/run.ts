@@ -18,6 +18,7 @@ import { SHIPS, type ShipKind } from '../../content/ships.ts';
 import { WEAPONS } from '../../content/weapons.ts';
 import type { MissileKind } from '../../content/missiles.ts';
 import type { LevelTally } from '../../content/score.ts';
+import { DEFAULT_CREDIT, type CreditKind } from '../../content/credits.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../../content/golfers.ts';
 
 /**
@@ -161,6 +162,14 @@ export interface RunState {
   tallies: readonly LevelTally[];
   /** Continues taken this run — 0428. Since 0438, which credit this is, counting from nought. */
   continues: number;
+  /**
+   * Whether this run may be continued when it runs out — 0517. `src/content/credits.ts` is the table.
+   *
+   * ⚠️ **ON THE RUN, COPIED BY `begin`, on `difficulty`'s terms**: chosen on the title before the run
+   * and fixed for its length. `src/state/root.ts` reads it to send a run that ran out to the run-over
+   * screen or the game-over one, because the settings slice may take part in no agreement.
+   */
+  credits: CreditKind;
 }
 
 /** Every cleared level's total added up — the score before the level being flown. */
@@ -183,7 +192,8 @@ export type RunAction =
     resolves it to the ship it flies; the run keeps the ship rather than the pilot, because the ship is
     what the reducer and the frame read.
   */
-  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind }
+  // 0517: and on its credits, which the title chose.
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind }
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
@@ -214,6 +224,7 @@ export const initialRun: RunState = {
   difficulty: DEFAULT_DIFFICULTY,
   tallies: [],
   continues: 0,
+  credits: DEFAULT_CREDIT,
 };
 
 export function reduceRun(state: RunState, action: RunAction): RunState {
@@ -229,6 +240,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: action.difficulty,
         tallies: [],
         continues: 0,
+        credits: action.credits,
       };
     case 'continued':
       /*
@@ -268,6 +280,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         */
         tallies: [],
         continues: state.continues + 1,
+        credits: state.credits,
       };
     case 'lifeLost':
       /*
@@ -294,6 +307,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             difficulty: state.difficulty,
             tallies: state.tallies,
             continues: state.continues,
+            credits: state.credits,
           };
     case 'took': {
       // Its charges go on TOP of its own side's stack, so what was earned last is thrown first — 0373, 0376.
@@ -311,6 +325,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
+        credits: state.credits,
       };
     }
     case 'spent': {
@@ -332,6 +347,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
+        credits: state.credits,
       };
     }
     /*
@@ -386,6 +402,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
+        credits: state.credits,
       };
     }
     case 'levelCleared':
@@ -410,6 +427,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
         tallies: state.tallies,
         continues: state.continues,
+        credits: state.credits,
       };
     case 'scored':
       // Appended and nothing else moves: the account is the frame's, the run only keeps it — 0428.
@@ -423,6 +441,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         difficulty: state.difficulty,
         tallies: [...state.tallies, action.tally],
         continues: state.continues,
+        credits: state.credits,
       };
     default: {
       // Adding a member to `RunAction` fails to compile HERE, per

@@ -353,7 +353,7 @@ ${starSky()}
   victory's and the music room's were the panel's plain cyan, a second voice beside the title's.
 */
 .itc-title-heading, .itc-splash-heading, .itc-settings-heading, .itc-guide-heading,
-.itc-paused-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
+.itc-paused-heading, .itc-gameover-heading, .itc-ended-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-weight: 800;
   letter-spacing: 0.06em;
   background: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)) 15%, var(--itc-ink) 85%);
@@ -362,7 +362,7 @@ ${starSky()}
   color: transparent;
   filter: drop-shadow(0 0 0.3em color-mix(in srgb, var(--itc-ink) 40%, transparent));
 }
-.itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading {
+.itc-gameover-heading, .itc-ended-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading {
   font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem);
   margin: 0;
 }
@@ -1215,7 +1215,7 @@ ${faceTurns()}
   a reader, clipped out of sight, and the counter draws what the eye sees.
 */
 @property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
-.itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet {
+.itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet {
   display: grid;
   grid-template-columns: auto auto;
   gap: 0.3em 0;
@@ -1223,7 +1223,7 @@ ${faceTurns()}
   font-variant-numeric: tabular-nums;
   text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000);
 }
-.itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label {
+.itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label, .itc-ended-sheet-label {
   text-align: left;
   padding-right: 2em;
   font-weight: 500;
@@ -1231,15 +1231,15 @@ ${faceTurns()}
   animation: itc-cleared-sheet-in 0.3s ease-out forwards;
   animation-delay: calc(var(--itc-sheet-i, 0) * 0.28s);
 }
-.itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value {
+.itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value, .itc-ended-sheet-value {
   text-align: right;
   opacity: 0;
   counter-reset: itc-sheet var(--itc-sheet-n);
   animation: itc-cleared-sheet-in 0.3s ease-out forwards, itc-cleared-sheet-count 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
   animation-delay: calc(var(--itc-sheet-i, 0) * 0.28s);
 }
-.itc-cleared-sheet-count::after, .itc-victory-sheet-count::after, .itc-gameover-sheet-count::after { content: counter(itc-sheet); }
-.itc-cleared-sheet-said, .itc-victory-sheet-said, .itc-gameover-sheet-said {
+.itc-cleared-sheet-count::after, .itc-victory-sheet-count::after, .itc-gameover-sheet-count::after, .itc-ended-sheet-count::after { content: counter(itc-sheet); }
+.itc-cleared-sheet-said, .itc-victory-sheet-said, .itc-gameover-sheet-said, .itc-ended-sheet-said {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1247,17 +1247,17 @@ ${faceTurns()}
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.itc-cleared-sheet-total, .itc-victory-sheet-total, .itc-gameover-sheet-total {
+.itc-cleared-sheet-total, .itc-victory-sheet-total, .itc-gameover-sheet-total, .itc-ended-sheet-total {
   font-size: 1.25em;
   font-weight: 800;
   color: var(--itc-gold, #ffd23f);
 }
 /* A total under other lines is ruled off from them; a total that is the whole sheet is not. */
-.itc-cleared-sheet-total:nth-child(n+3), .itc-victory-sheet-total:nth-child(n+3), .itc-gameover-sheet-total:nth-child(n+3) {
+.itc-cleared-sheet-total:nth-child(n+3), .itc-victory-sheet-total:nth-child(n+3), .itc-gameover-sheet-total:nth-child(n+3), .itc-ended-sheet-total:nth-child(n+3) {
   padding-top: 0.25em;
   border-top: 2px solid currentColor;
 }
-.itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank {
+.itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank, .itc-ended-sheet-rank {
   font-size: 2em;
   font-weight: 900;
   line-height: 0.9;
@@ -1272,8 +1272,8 @@ ${faceTurns()}
   threshold, for its reason.
 */
 @container (max-height: 460px) {
-  .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet { font-size: 0.82em; row-gap: 0.1em; }
-  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { font-size: 1.5em; }
+  .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet { font-size: 0.82em; row-gap: 0.1em; }
+  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank, .itc-ended-sheet-rank { font-size: 1.5em; }
 }
 @keyframes itc-cleared-sheet-in { from { opacity: 0; transform: translateY(0.4em); } to { opacity: 1; transform: none; } }
 @keyframes itc-cleared-sheet-count { from { --itc-sheet-n: 0; } }
@@ -1318,9 +1318,9 @@ ${faceTurns()}
   .itc-playing-score-value { transition: none; animation: none; background-position: 50% 0; }
   .itc-playing-score-gain-a, .itc-playing-score-gain-b, .itc-playing-score-max .itc-playing-score-times,
   .itc-playing-score-broke .itc-playing-score-streak, .itc-title-board-fresh { animation: none; }
-  .itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label,
-  .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value,
-  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank { animation: none; opacity: 1; }
+  .itc-cleared-sheet-label, .itc-victory-sheet-label, .itc-gameover-sheet-label, .itc-ended-sheet-label,
+  .itc-cleared-sheet-value, .itc-victory-sheet-value, .itc-gameover-sheet-value, .itc-ended-sheet-value,
+  .itc-cleared-sheet-rank, .itc-victory-sheet-rank, .itc-gameover-sheet-rank, .itc-ended-sheet-rank { animation: none; opacity: 1; }
   /* The key still turns — it is how a cycling pickup is told — but it cuts rather than fades. 0432. */
   .itc-guide-key-face { animation-timing-function: steps(1, end); }
 }
@@ -1715,6 +1715,7 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
 .itc-settings-face-pixel,
 .itc-guide-face-pixel,
 .itc-gameover-face-pixel,
+.itc-ended-face-pixel,
 .itc-cleared-face-pixel,
 .itc-victory-face-pixel,
 .itc-travel-face-pixel,
@@ -2082,14 +2083,46 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 .itc-title-option-face.itc-title-option-on > canvas { box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
 .itc-title-option:not(.itc-title-option-on), .itc-settings-option:not(.itc-settings-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
 .itc-title-option-face, .itc-title-option-face:not(.itc-title-option-on) { border-color: transparent; }
+/*
+  ── THE CHIP — 0517 ───────────────────────────────────────────────────────────────────────────────
+
+  A two-way choice drawn as one button beside Settings, saying the option that is on: the others are
+  not drawn, and a press steps it round. It wears an action's glass and rim rather than a chosen
+  segment's fill, because beside Fly and Settings it reads as one of them, and the words are the state.
+*/
+/*
+  As wide as its words on one line: a mode in three lines of a button is the band again, sideways.
+
+  ⚠️ **DRAWN BEFORE FLY, AND WALKED AFTER IT.** A push down from the tier lands on the button standing
+  nearest across from it, and with the chip on the right that was Settings; with Fly between the two,
+  it is Fly, as it was. The walk still opens on Fly, which is first in the row the cursor reads.
+*/
+.itc-title-choices > .itc-title-chip { display: flex; flex: 1 1 0; min-width: max-content; padding: 0; opacity: 1; order: -1; }
+.itc-title-chip .itc-title-options { flex: 1 1 auto; }
+.itc-title-chip .itc-title-option { white-space: nowrap; }
+.itc-title-chip .itc-title-option:not(.itc-title-option-on) { display: none; }
+.itc-title-chip .itc-title-option {
+  --itc-glass: color-mix(in srgb, var(--itc-void) 80%, transparent);
+  color: inherit;
+  opacity: 0.9;
+  padding: 0.4em 0.9em;
+  border-color: transparent;
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--itc-glass), var(--itc-glass)),
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+}
+.itc-title-chip .itc-title-option:hover { --itc-glass: color-mix(in srgb, var(--itc-void) 70%, var(--itc-ally, var(--itc-ink))); }
 /* A card lights under the pointer. */
 .itc-title-option-face:hover > canvas { box-shadow: 0 0 0 2px color-mix(in srgb, var(--itc-ink) 60%, transparent); }
 /*
   The banner's rule, under every heading but the name's — which has the badge, and on the splash the
   loading light, as its line. Out of flow, hung from the heading, so the panel is the height it was.
 */
-.itc-paused-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading { position: relative; }
-.itc-paused-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after,
+.itc-paused-heading, .itc-gameover-heading, .itc-ended-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading { position: relative; }
+.itc-paused-heading::after, .itc-gameover-heading::after, .itc-ended-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after,
 .itc-settings-heading::after, .itc-guide-heading::after {
   content: '';
   position: absolute;
@@ -2542,8 +2575,11 @@ interface Band {
   on: 'all' | 'touch';
   /** What a press on it does — 0513, the row's `press`. */
   press: 'steps' | 'takes';
-  /** What its segments show — the row's `faces`; a band of faces has the pilot card under it (0513). */
-  faces: 'words' | 'portraits';
+  /**
+   * What its segments show — the row's `faces`; a band of faces has the pilot card under it (0513), and
+   * a chip is one button among the actions (0517).
+   */
+  faces: 'words' | 'portraits' | 'chip';
 }
 
 /**
@@ -2554,8 +2590,10 @@ interface Band {
 function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[]): HTMLElement[][] {
   const rows: HTMLElement[][] = [];
   if (tabs.length > 0) rows.push([...tabs]);
-  for (const band of bands) if (!band.root.hidden) rows.push([band.root]);
+  for (const band of bands) if (!band.root.hidden && band.faces !== 'chip') rows.push([band.root]);
+  // 0517: a chip is drawn among the actions, after them, so it is walked there too.
   const shown = controls.filter((c) => !c.hidden);
+  for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
   if (shown.length > 0) rows.push(shown);
   return rows;
 }
@@ -3739,7 +3777,8 @@ export function makeChrome(
       file's, on `setActionHint`'s terms.
     */
     let sheet: HTMLElement | null = null;
-    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver') {
+    // 0517: and the game over, the fourth — a run that could not be continued is added up there.
+    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
       panel.appendChild(sheet);
@@ -3896,8 +3935,10 @@ export function makeChrome(
     // Not `bands`: that name is the trigger discs', further down, and the two are different things.
     const choiceBands: Band[] = [];
     for (const choice of row.choices) {
+      const chip = choice.faces === 'chip';
       const line = document.createElement('div');
-      line.className = prefix + 'band';
+      // 0517: a chip is not drawn as a band, so it does not wear the band's class or its layout.
+      line.className = prefix + (chip ? 'chip' : 'band');
       line.tabIndex = 0;
       line.setAttribute('role', 'group');
       line.setAttribute('aria-label', choice.label);
@@ -3966,8 +4007,14 @@ export function makeChrome(
         } else {
           button.textContent = option.label;
         }
+        /*
+          ⚠️ **A CHIP SHOWS ONLY THE OPTION THAT IS ON, SO A PRESS ON IT STEPS TO THE NEXT — 0517**, round
+          the end, as the cursor's press on a band does. Its hint is the tooltip, having no line to go on.
+        */
+        if (chip) button.title = option.hint;
+        const target = chip ? (index + 1) % choice.options.length : index;
         // A pointer's press, which a band of pilots reads differently from the cursor's — 0513.
-        const press = (): void => onChoice(choice.name, index, true);
+        const press = (): void => onChoice(choice.name, target, true);
         button.addEventListener('click', press);
         listeners.push(() => button.removeEventListener('click', press));
         box.append(button);
@@ -3988,6 +4035,12 @@ export function makeChrome(
         faces: choice.faces,
       };
       choiceBands.push(band);
+      if (chip) {
+        // 0517: the options alone, after the actions in the DOM and the walk; the stylesheet draws it first.
+        line.append(box);
+        choices.appendChild(line);
+        continue;
+      }
       line.append(label, less, box, more, hint);
       settingsBox.appendChild(line);
       /*
@@ -4004,7 +4057,7 @@ export function makeChrome(
       }
     }
     // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
-    if (choiceBands.length === 0) settingsBox.remove();
+    if (settingsBox.childElementCount === 0) settingsBox.remove();
 
     /*
       The countdown, for a screen that expires.
@@ -4807,7 +4860,12 @@ export function makeChrome(
         0214's argument is untouched there, because the music room's tiles are one row of buttons laid
         out as a grid, and how many sit in a line is still a fact about the viewport.
       */
-      const band = bandAtCursor();
+      /*
+        ⚠️ **A CHIP IS A BUTTON IN A ROW OF BUTTONS HERE — 0517.** Left and right move along the row past
+        it, as they do past *Settings*; only a press steps it, and that is `activate`'s.
+      */
+      const found = bandAtCursor();
+      const band = found?.faces === 'chip' ? undefined : found;
       if (band !== undefined && axis === 'x') {
         stepBand(band, delta, false);
         return;

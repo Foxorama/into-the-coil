@@ -297,7 +297,7 @@ describe('a crossing carries the run forward exactly once', () => {
     };
     // The ship the world was built flying, so the run and the world agree on it — 0441.
     const ship = SHIP_KINDS.find((kind) => SHIPS[kind] === built.world.shipRow)!;
-    dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]!, ship });
+    dispatch({ slice: 'run', type: 'begin', difficulty: DIFFICULTY_KINDS[0]!, ship, credits: 'free' });
     return {
       world: built.world,
       state: (): State => current,

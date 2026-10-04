@@ -25,6 +25,7 @@ import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
 import { DEFAULT_HAND, DEFAULT_STEER, type HandKind, type SteerKind } from '../../content/touch.ts';
+import { DEFAULT_CREDIT, type CreditKind } from '../../content/credits.ts';
 import { type SettingName } from '../screens.ts';
 
 /**
@@ -87,6 +88,13 @@ interface SettingValue {
   hand: HandKind;
   /** How far the ship goes for a finger's travel — 0512, on `hand`'s terms. */
   steer: SteerKind;
+  /**
+   * Where the title's continues band stands — 0517. `src/content/credits.ts` is the table.
+   *
+   * ⚠️ **THE BAND'S POSITION, NOT THE RUN'S RULE**, on `difficulty`'s terms: `begin` copies it onto the
+   * run, and the run's copy is the one anything decides on.
+   */
+  credits: CreditKind;
 }
 
 /**
@@ -111,7 +119,8 @@ export type SettingsAction =
   | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
   | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind }
   | { slice: 'settings'; type: 'hand'; hand: HandKind }
-  | { slice: 'settings'; type: 'steer'; steer: SteerKind };
+  | { slice: 'settings'; type: 'steer'; steer: SteerKind }
+  | { slice: 'settings'; type: 'credits'; credits: CreditKind };
 
 /**
  * What a player who has chosen nothing has. The default IS the game — 0024. The band opens on the
@@ -125,6 +134,7 @@ export const initialSettings: SettingsState = {
   difficulty: TUNED,
   hand: DEFAULT_HAND,
   steer: DEFAULT_STEER,
+  credits: DEFAULT_CREDIT,
 };
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
@@ -153,6 +163,9 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
       return state.hand === action.hand ? state : { ...state, hand: action.hand };
     case 'steer':
       return state.steer === action.steer ? state : { ...state, steer: action.steer };
+    // 0517: the continues band, on the same shape.
+    case 'credits':
+      return state.credits === action.credits ? state : { ...state, credits: action.credits };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per

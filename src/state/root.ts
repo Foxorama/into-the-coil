@@ -19,6 +19,7 @@ import {
   reduceSettings,
 } from './slices/settings.ts';
 import { LEVEL_KINDS } from '../content/levels.ts';
+import { CREDITS } from '../content/credits.ts';
 
 /** Every slice. Closed — a new one fails `State` to build until it has been given a shape below. */
 export type SliceName = 'screen' | 'run' | 'settings';
@@ -74,6 +75,8 @@ export function reduce(state: State, action: Action): State {
 
 /** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
 const SHOW_GAME_OVER: ScreenAction = { slice: 'screen', type: 'show', screen: 'gameOver' };
+// A run with no credit left to offer ends on its account — 0517.
+const SHOW_ENDED: ScreenAction = { slice: 'screen', type: 'show', screen: 'ended' };
 // The run finished goes to the finale, which expires into the victory screen — 0418.
 const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outro' };
 
@@ -87,10 +90,15 @@ const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outr
  * ⚠️ **Conditioned on `playing`, so it cannot fight the shell.** Without that, every action
  * dispatched while the game-over screen is up would re-assert it, and a `begin` — which stocks three
  * lives — would be immediately overwritten by a stale reading of a state that no longer holds.
+ *
+ * ⚠️ **WHICH SCREEN IS THE RUN'S CREDITS', READ OFF THE RUN — 0517.** Freeplay offers the continue
+ * (0068); no quarters ends the run on the game-over screen. The run carries the choice because `begin`
+ * copied it there, so this still never reads the settings slice.
  */
 function agree(state: State): State {
   if (state.run.lives <= 0 && state.screen.current === 'playing') {
-    return { screen: reduceScreen(state.screen, SHOW_GAME_OVER), run: state.run, settings: state.settings };
+    const over = CREDITS[state.run.credits].continues ? SHOW_GAME_OVER : SHOW_ENDED;
+    return { screen: reduceScreen(state.screen, over), run: state.run, settings: state.settings };
   }
   /*
     THE SECOND AGREEMENT: a level cleared past the end of the run is the run finished.

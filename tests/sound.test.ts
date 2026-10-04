@@ -2293,7 +2293,7 @@ describe('the sound setting on the settings slice', () => {
 
   it('is untouched by a run, on the same terms the style is', () => {
     const chosen = reduce(initialState, pick('off'));
-    const played = reduce(reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship }), {
+    const played = reduce(reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship, credits: 'free' }), {
       slice: 'screen',
       type: 'show',
       screen: 'playing',

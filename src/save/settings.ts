@@ -20,6 +20,7 @@ import { SOUND_KINDS } from '../content/sound.ts';
 import { STYLE_KINDS } from '../content/styles.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
 import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
+import { CREDIT_KINDS } from '../content/credits.ts';
 import type { SettingsState } from '../state/slices/settings.ts';
 import type { Store } from './store.ts';
 
@@ -52,6 +53,7 @@ export function keptOf(settings: SettingsState): KeptSettings {
     difficulty: settings.difficulty,
     hand: settings.hand,
     steer: settings.steer,
+    credits: settings.credits,
   };
 }
 
@@ -84,6 +86,11 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
     */
     hand: oneOf(HAND_KINDS, doc.hand, base.hand),
     steer: oneOf(STEER_KINDS, doc.steer, base.steer),
+    /*
+      0517: the continues band — a player who chose Freeplay is on Freeplay next visit. A document
+      written before it has no field and reads as no quarters, on 0512's per-field terms.
+    */
+    credits: oneOf(CREDIT_KINDS, doc.credits, base.credits),
     pilot: base.pilot,
   };
 }

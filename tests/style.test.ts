@@ -113,7 +113,8 @@ describe('the chooser is the table', () => {
     }
     for (const [setting, screens] of where) expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
     // 0512: and the touch section's two, on Settings with the rest.
-    expect([...where.keys()].sort()).toEqual(['difficulty', 'hand', 'pilot', 'sound', 'steer', 'style', 'travel']);
+    // 0517: and the continues band, on the title beside the tier.
+    expect([...where.keys()].sort()).toEqual(['credits', 'difficulty', 'hand', 'pilot', 'sound', 'steer', 'style', 'travel']);
   });
 });
 
@@ -147,7 +148,7 @@ describe('the settings slice', () => {
     */
     const chosen = reduce(initialState, pick(STYLE_KINDS[0]!));
     const played = reduce(
-      reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship }),
+      reduce(chosen, { slice: 'run', type: 'begin', difficulty: 'savior', ship: initialState.run.ship, credits: 'free' }),
       { slice: 'screen', type: 'show', screen: 'playing' },
     );
     expect(styleOf(played), 'starting a run reset the style').toBe(STYLE_KINDS[0]);

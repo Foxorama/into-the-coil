@@ -134,7 +134,7 @@ async function showOnly(page: Page, screen: Screen): Promise<void> {
     const rows = await page.$('.' + prefixFor('title') + 'board-rows');
     expect(rows, 'the title has no high-score table to measure — the seeded table was not read').not.toBeNull();
   }
-  if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver') await fillTheSheet(page, screen);
+  if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended') await fillTheSheet(page, screen);
 }
 
 /** Ten runs, as wide as the table can be: the longest first name, seven digits, and every one clear. */
@@ -151,14 +151,15 @@ function widestTable(): string {
 /**
  * Put an account on a screen that shows one, at its LONGEST — 0428, on `fillTheRoom`'s terms: the
  * sheet is pushed by the shell mid-run, so `showOnly` would otherwise measure it empty. The break's
- * seven lines, the victory's five and the run over's one, each value seven digits wide, written in
- * the classes `setSheet` writes.
+ * seven lines, the victory's five, the run over's one and the game over's nine (0517), each value
+ * seven digits wide, written in the classes `setSheet` writes.
  */
-async function fillTheSheet(page: Page, screen: 'cleared' | 'victory' | 'gameOver'): Promise<void> {
+async function fillTheSheet(page: Page, screen: 'cleared' | 'victory' | 'gameOver' | 'ended'): Promise<void> {
   const lines: Record<typeof screen, string[]> = {
     cleared: ['Points', 'Rank', 'Shields ×3', 'Bombs ×12', 'Missiles ×12', 'Level total', 'Score'],
     victory: ['Ranks', 'Points', 'Bonuses', 'Final score', 'High score'],
     gameOver: ['Score'],
+    ended: ['Reached', 'Ranks', 'Kills', 'Shot down', 'Hits taken', 'Points', 'Bonuses', 'Final score', 'High score'],
   };
   await page.evaluate(
     ({ prefix, labels }: { prefix: string; labels: string[] }) => {
@@ -193,7 +194,8 @@ async function fillTheSheet(page: Page, screen: 'cleared' | 'victory' | 'gameOve
  */
 async function nameTheWidestPilot(page: Page): Promise<void> {
   const longest = (all: readonly string[]): string => all.reduce((a, b) => (b.length > a.length ? b : a), '');
-  const lines = SCREENS.title.choices.map((choice) => ({
+  // 0517: a chip has no line under it — its hint is its tooltip — so there is nothing to fill.
+  const lines = SCREENS.title.choices.filter((choice) => choice.faces !== 'chip').map((choice) => ({
     name: choice.name,
     line: longest(choice.options.map((o) => (choice.faces === 'portraits' ? o.label + ' — ' + o.hint : o.hint))),
   }));

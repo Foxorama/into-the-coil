@@ -491,7 +491,7 @@ describe('a tier is a property of the run, and never an assist', () => {
       { slice: 'run', type: 'lifeLost' },
     ];
     for (const tier of DIFFICULTY_KINDS) {
-      let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: tier, ship: initialState.run.ship });
+      let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: tier, ship: initialState.run.ship, credits: 'free' });
       expect(state.run.difficulty, 'a run did not begin on the tier it was given').toBe(tier);
       expect(state.run.lives, 'a run did not start on its tier\'s lives').toBe(livesFor(tier));
       for (const action of during) {

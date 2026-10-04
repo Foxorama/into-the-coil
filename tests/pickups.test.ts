@@ -292,7 +292,7 @@ describe('an upgrade changes the ship, and stacking one changes it again', () =>
     const two = weaponFor(SHIPS.fighter, ['missile', 'missile']);
     expect(JSON.stringify(two), 'a second missile did nothing').not.toBe(JSON.stringify(one));
 
-    let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: 'fighter' });
+    let state = reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: 'fighter', credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
     state = reduce(state, { slice: 'run', type: 'upgraded', upgrade: 'missile', kind: SHIPS.fighter.missile });
     expect(state.run.upgrades, 'the run kept one missile where two were taken').toEqual(['missile', 'missile']);

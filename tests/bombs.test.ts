@@ -218,7 +218,7 @@ describe('what a run may spend', () => {
   */
   const SHIP = shipCarrying(WEAPON_OF_THE_BOMB);
   const begin = (): State =>
-    reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP });
+    reduce(initialState, { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP, credits: 'free' });
 
   it('starts with the ship’s own kit and no more', () => {
     expect(begin().run.arsenal).toEqual(startingArsenal(SHIP, DEFAULT_DIFFICULTY));

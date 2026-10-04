@@ -15,6 +15,7 @@ import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
 import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
+import { CREDIT_KINDS } from '../src/content/credits.ts';
 
 /**
  * THE SETTINGS ARE KEPT — `docs/decisions/0510-the-settings-are-kept.md`, and the second `itc_*` key.
@@ -47,6 +48,7 @@ const moved = (): SettingsState => ({
   pilot: GOLFER_KINDS.find((k) => k !== initialSettings.pilot)!,
   hand: HAND_KINDS.find((k) => k !== initialSettings.hand)!,
   steer: STEER_KINDS.find((k) => k !== initialSettings.steer)!,
+  credits: CREDIT_KINDS.find((k) => k !== initialSettings.credits)!,
 });
 
 describe('0510 — the settings are kept', () => {

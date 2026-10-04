@@ -14,8 +14,8 @@ export const PROBES = [
     guard: 'the pilot is not kept',
     edit: {
       path: 'src/save/settings.ts',
-      find: '    steer: settings.steer,\n  };',
-      replace: '    steer: settings.steer,\n    pilot: settings.pilot,\n  };',
+      find: '    credits: settings.credits,\n  };',
+      replace: '    credits: settings.credits,\n    pilot: settings.pilot,\n  };',
     },
   },
   {

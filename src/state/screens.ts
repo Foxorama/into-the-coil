@@ -26,6 +26,7 @@ import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
 import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
+import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
 import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
@@ -41,6 +42,7 @@ export const SCREEN_KINDS = [
   'guide',
   'playing',
   'gameOver',
+  'ended',
   'cleared',
   'outro',
   'victory',
@@ -79,7 +81,8 @@ export interface ScreenAction {
  */
 // 0458: the tier is a setting since the title became rows — chosen on a band, kept until changed.
 // 0512: and the touch section's two.
-export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer';
+// 0517: and whether a run that runs out may be continued.
+export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -107,7 +110,12 @@ export interface ScreenChoice {
    * band is the one drawn in faces today, and a later band of ships would say so here rather than in
    * an arm of the chrome.
    */
-  faces: 'words' | 'portraits';
+  /*
+    ⚠️ **`'chip'` SINCE 0517: ONE BUTTON IN THE ROW OF ACTIONS, SAYING THE OPTION THAT IS ON**, for a
+    two-way choice on a screen with no height left for a band. A press steps it round; the cursor walks
+    it as one of the buttons beside it, and its hint is the button's tooltip rather than a line under it.
+  */
+  faces: 'words' | 'portraits' | 'chip';
   /**
    * Which devices the band is offered on — 0512. `'touch'` for a setting about the glass, which a
    * keyboard and a pad have no use for; `'all'` for the rest.
@@ -472,6 +480,22 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'steps',
       },
+      /*
+        0517: whether the run may be continued — asked for on this screen, because it is the other
+        choice about the run the pilot is about to fly. Built by walking `CREDIT_KINDS`.
+
+        ⚠️ **A CHIP BESIDE *SETTINGS*, AND A BAND DID NOT FIT.** A third band put *Fly* under the fold
+        of a 1280x720 laptop, and on a phone the title's grid has one cell for the tier. Chosen by the
+        player of three ways to fit it: a chip costs the screen no height.
+      */
+      {
+        name: 'credits',
+        label: 'Continues',
+        options: CREDIT_KINDS.map((kind) => ({ label: CREDITS[kind].title, hint: CREDITS[kind].hint })),
+        faces: 'chip',
+        on: 'all',
+        press: 'steps',
+      },
     ],
     steps: false,
     dims: true,
@@ -658,6 +682,38 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     // Its *Continue* resumes the run, in the place it ended in (0068).
     inRun: true,
+    back: null,
+    tabs: [],
+    opensOn: 'action',
+  },
+  /*
+    ── GAME OVER — `docs/decisions/0517-no-quarters-given.md` ──────────────────────────────────────
+
+    Where a run on *No quarters given* ends: *"it changes into a game over screen that gives the score
+    summary and stats about that run and has a 'Main Menu' button."* The run-over screen's place and
+    its frozen field, with no offer on it — so no countdown either: the seven seconds were the offer's
+    cost (0068), and with nothing to take back there is nothing to expire. The run is on the table as
+    the screen arrives, and the sheet says where.
+
+    ⚠️ **A ROW OF ITS OWN AND NOT `gameOver` WITH ITS BUTTON HIDDEN**, on `victory`'s terms: the label
+    is the promise. *Continue* on a screen that cannot continue, or a row whose actions changed with a
+    setting, is the screen lying about what its button does.
+
+    ⚠️ **`inRun: true`, as the run-over screen is**: the place it ended in is still what is on the
+    screen, and its music is what goes on under the account until *Main Menu*.
+  */
+  ended: {
+    heading: 'Game over',
+    pause: null,
+    actions: [{ label: 'Main Menu', hint: '' }],
+    choices: [],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: true,
+    // No Back, on `victory`'s terms: the one way off is the one button, and the cursor opens on it.
     back: null,
     tabs: [],
     opensOn: 'action',
