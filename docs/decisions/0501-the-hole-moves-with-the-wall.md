@@ -68,6 +68,12 @@ The rows gained `atBy`, so the probes that quote them (0151, 0252, 0260) are re-
 *the hole read as a place across the lane* probe now breaks `holeAt`'s line. 0151's 8, 0252's 6, 0260's 2 and 0333's
 4 are all red.
 
+**And one probe it silenced.** [0479](0479-the-flame-slows.md)'s *hostile-shot pool at 150* broke the
+gyre's eighth wall, which arrived cut short of its line. With the holes moved, that wall arrives whole
+at 150, and CI's proof reported it STILL GREEN. The guard still holds the same thing, so the probe is
+re-sized rather than deleted: at 140 the eighth wall arrives with 37 shots, short of its end, and goes
+red.
+
 ## Owed
 
 - **A play of the Labyrinth's fight**: does each wall now move you, and is any of the eight unfair from where the

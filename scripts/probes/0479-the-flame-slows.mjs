@@ -9,12 +9,14 @@ export const PROBES = [
     decision: '0479',
     suite: 'tests/level.test.ts',
     // The hostile pool at its old 150, under a flame on the screen half again as long: a curtain cut short.
-    broke: 'the hostile-shot pool at 150 under the slower flame',
+    // ⚠️ Re-sized by 0501: with a hole per stance, the gyre's eighth wall arrives whole at 150 and this
+    // went STILL GREEN in CI. At 140 that wall is cut to 37 shots, short of its line's end, as before.
+    broke: 'the hostile-shot pool at 140 under the slower flame',
     guard: 'EVERY WALL ARRIVES WHOLE',
     edit: {
       path: 'src/app/mount.ts',
       find: '  enemyShots: 200,',
-      replace: '  enemyShots: 150,',
+      replace: '  enemyShots: 140,',
     },
   },
   {
