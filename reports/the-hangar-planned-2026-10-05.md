@@ -1,0 +1,170 @@
+# The hangar, planned — 2026-10-05
+
+One ask, seven changes, landed in order, each from `main` and each played on its own branch preview.
+This file holds the plan and the answers the player gave while it was being made. What each change
+decided lives in its decision once it lands; this is the queue.
+
+## The ask
+
+> *"so need a plan for adding in a customisation 'mod-shop' style option from the main menu or
+> somewhere like that. Will you to chop and change anything about your ship and/or pilot as you
+> unlock things and/or buy things - part of this work will be a cosmetic store as well where you can
+> buy additional cool things to trick out your ride.*
+>
+> *'Hangin` Out' - the spaceship hangar, allows you to select your pilot, then choose their
+> spaceship, choose their weapon, choose what is hanging from the dashboard in the novelty dice slot
+> and customise anything else about the ship based on that particular spaceship - like the station
+> wagon and firebird can have customisable wheels.*
+>
+> *The way it works is that when you beat the jellyfish with a pilot and ship you unlock that ship to
+> do with as you want. Each additionally ship you finish a run with with provides all that ship's
+> customisation options for you to chop and change.*
+>
+> *The Cosmo's Cosmetics shop will let you buy additional things that will be equippable onto your
+> spaceship, starting items to buy will be some other fun things to hang from the dashboard - like a
+> eucalyptus potpurri tree, a picture of the alien's family in a little frame, a golf ball.*
+>
+> *Star Shards are how you'll be able to buy things in the shop and you earn Star Shards based on
+> your points total in a run — the highest points you earned in a continue run grant you 1 Star Shard
+> per 10,000 pts. in a non-continue run, you'll only have highest score for that run, so it's just
+> based on your sore for that run."*
+
+Then, while it was being planned:
+
+> *"We can keep the pilot locked to the ship and have that kept so you can't change the main ship,
+> but each spaceship will have a set series of cosmetics you change"*
+>
+> *"also in the cosmetic shop Ion Thrusters - blue flame thrusters for your spaceship"*
+
+## What was already true
+
+- **The novelty dice slot exists, on one ship.** The estate's `walnut` HUD plate hangs fuzzy dice
+  that swing on a burst and a brake (`DICE` in `src/content/ships.ts`, the swing in `stepJolt` in
+  `src/app/frame.ts`, the plate in `src/app/chrome.ts`). The fighter's `bracket`, the saucer's
+  `orbit` and the Firebird's `checker` have nothing to hang from. **The dashboard is the HUD plate.**
+  No cockpit is drawn anywhere, and at the 9.4-unit `SHIP_BOX` a dangle in the world would be under
+  the smallest mark the bake allows.
+- **The cars' wheels are visible in play.** Both cars are drawn side-on since 0441's first play.
+  Each wheel's detail is its own loop in `src/render/bake.ts` (the Firebird's snowflakes, the
+  estate's whitewall and gilt hubcap), so it takes a parameter; the tyre's silhouette is part of
+  each car's one outline path and does not.
+- **The gun is the ship's, and stays so.** `ShipRow.weapon`, and `shipCarrying` maps a gun back
+  to its one ship. The player's second message keeps it that way, which keeps every gun mount
+  drawn where 0441 drew it.
+- **Nothing persists between visits except the table and the settings** — `itc_scores` and
+  `itc_settings`. The unlock pool in `docs/game.md` was never built. There is no meta-progression
+  store, and `tests/privacy.test.ts` fails a key that `PRIVACY.md` does not list.
+- **A run ends in five places** in `src/app/mount.ts`, all through `recordRun`: the game-over
+  screen with no quarters, the victory, the run-over offer running out, the pause's quit, and a
+  continue — which ends a credit, not the run.
+- **No run's total has ever been measured.** `docs/game.md`'s Score section: *"Every number in it
+  is a play number, and none has been played."* An estimate from the point tables (unverified, owed
+  a play): a poor credit at 50–250k, a strong one-credit clear at 2–3M. **That is 5 to 300 shards a
+  run** — two orders of magnitude, because the streak's ×8 dominates.
+
+## Pressure-tested
+
+- **It reverses two lines, and both reversals are sound.** `docs/game.md` says *"No shop, no
+  currency, no economy. Re-adding one is an argued reversal, not a drift"*, and
+  [0428](../docs/decisions/0428-the-score-is-kept.md) adds *"The score is not a currency."* No
+  decision ever argued the first; it came in as a premise with the product definition, and the
+  sentence it rests on is about power *in a run* — *"everything is found in the level and applied
+  the instant you touch it."* A shop that sells only what the sim never reads leaves that intact. So
+  the line is replaced rather than deleted: **the shop never sells anything the sim reads**, and
+  that is the argued reversal the file asks for.
+- **The pilot staying on their ship takes out the expensive part of the ask.** A gun on any ship
+  would have needed every ship to name a hardpoint and every gun to draw its mount from the side and
+  from above, and the atlas to hold each ship once per gun it can carry. None of it is owed now.
+- **Shards from the best credit cannot be farmed by continuing.** Freeplay's unlimited continues
+  each start the score again (0438), and only the best one pays.
+- **The price list cannot be set yet.** At 5–300 shards a run, any price written now is a guess by a
+  factor of ten. Prices are provisional on their rows until a played run gives a real number.
+
+## The answers
+
+| question | answer |
+|---|---|
+| what does beating the jellyfish in a ship unlock? | that ship's own set of cosmetics. The pilot keeps their ship and the ship its gun |
+| does a win on continues count? | yes — any win, any difficulty, Freeplay included. It unlocks looks, not power |
+| which slots does a ship have? | wheels on both cars; hood or nose art; a livery; the HUD plate's motif |
+| a livery from palette roles, or any colour? | **any colour** — *"if someone wants to make something monstrous on their own game they can do that"* |
+| what is in the shop first? | dangles — a eucalyptus potpourri tree, the alien's family in a little frame, a golf ball — and **Ion Thrusters**, a blue flame |
+
+## Read, and decided without asking — each can be vetoed
+
+- **Shop items fit any ship from the moment they are bought.** A dangle or the ion thrusters are
+  not gated by a win; the player paid for them. A ship's **own** slots — wheels, nose art, livery,
+  plate — are what its win unlocks.
+- **The loadout is kept per ship**, so each pilot flies as they were left. Picking the pilot stays
+  on the title (0513's one tap to fly), and the pilot card shows the loadout they will fly.
+- **The hangar is a door off the title, and Cosmo's is a tab inside it**, using the `tabs` a screen
+  row already has. Buying and fitting are one place.
+- **Shards are paid at every true run end, including a quit from the pause.** Otherwise a player
+  who has earned a credit's score is pushed to fly a lost run out to keep it. Nothing is paid at a
+  continue, because a continue does not end the run. The run-over, game-over and victory screens
+  show what was earned.
+- **Under any livery, the running lights stay the player's cyan.** 0441: *"every ship carries the
+  player's cyan as running lights, so the player can always find themselves."* That is hard because
+  of what it is about. The monstrous livery is the body; the lights that say *this one is you* are
+  not paint.
+- **The high-contrast look ignores the livery and draws the ship's roles.** An accessibility knob
+  that a cosmetic can defeat is not a knob
+  ([0024](../docs/decisions/0024-the-accessibility-floor-is-settings.md)), and 0441 rejected fixed
+  hexes because that palette could not answer them. The livery is kept, and shows again when the
+  look is switched back.
+- **Only the fitted loadout is baked for a run.** The atlas bakes every ship at every stage today.
+  Baking every option would multiply it by every slot. The hangar bakes its one preview ship when a
+  slot changes, and the cost of each lands against the press-to-HUD second as a budget, sized under
+  load.
+- **The dice stay the estate's default dangle**, and the other three ships open with nothing hung.
+
+## Raised for the screen, not answered by a rule
+
+- **A blue plume and the frost shot.** `frost` is a saturated cyan that means *this will slow you*,
+  and the player's own cyan sits beside it. A blue exhaust trails behind the ship, the one place a
+  shot arriving from behind is read. It is weighed on the frost ship's level, beside its shots and
+  photographed at the shipped camera, before it ships — per
+  [0295](../docs/decisions/0295-a-ranking-guard-is-a-content-limiter.md), argued for this case, with
+  no guard. 0295's *"a flame is the same red everywhere"* is about hostile fire, not the ship's
+  exhaust, so it does not decide this.
+- **A dangle swinging on the plate** sits in the HUD's corner, not on the lane. Its motion is
+  already authored to a burst and a brake, so a new item reuses the swing rather than adding motion
+  to the screen's edge.
+
+## The queue
+
+1. **The hangar and the unlocks.** A third storage key, `itc_hangar`, versioned from v1: wins per
+   ship, the shard balance, what is owned, each ship's loadout — in `PRIVACY.md`, with a rollback
+   note because the key is irreversible (0001). A victory records its ship. *Hangin' Out* on the
+   title: the ships in the pilot band's order, each with its gun shown and not changeable, its slots
+   locked behind *beat the jellyfish in this ship* until it is. The first slot is **the HUD plate's
+   motif**, because all four motifs are already drawn. `docs/game.md`'s *no shop* line is
+   rewritten in the same PR, since this is the PR that makes it untrue.
+2. **Star Shards.** The best credit of a run, `floor(score / 10 000)`, paid at the true run ends
+   and shown on their screens; the balance on the hangar. 0428's *not a currency* is reversed in
+   the decision.
+3. **The dangle slot, and Cosmo's Cosmetics.** Every plate gets a place to hang from; a dangle is a
+   row with its own drawing and its own swing weights on the existing swing. The dice, the
+   eucalyptus tree, the family in the frame and the golf ball. The shop tab, a provisional price on
+   each row, and buying.
+4. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
+   estate's whitewall are each one entry of its set — with the tyre's outline untouched.
+5. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
+   nose art for the fighter, a crest on the estate's bonnet and the saucer's dome.
+6. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
+   can all work. The running lights stay cyan and the high-contrast look stays on roles, as above.
+7. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
+   weighed against the frost shot on the frost ship's level before it ships.
+
+The order is the save first, because every later item writes to it; then shards, so the very next
+run already earns; then the shop, the first thing there is to buy. A senior-design pass is owed on
+each before it is handed over, photographed at the camera the game ships.
+
+## Owed
+
+- **A measured run total** before any price stops being provisional — the table on the title
+  already holds every credit's score, so the player's own runs are the first measurement.
+- **Who Cosmo is.** A name on a screen, or a face with a line, like the pilots have.
+- **Whether losing the device's storage losing the purchases needs saying in the shop.** The game
+  makes no network requests after load, so there is nowhere else to keep them.
+- A play of each change on its branch preview, before the next is built.
