@@ -80,11 +80,13 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // Red lightning on every frame of the storm: a red aura, not a flicker through one.
     broke: 'the lightning on every frame of the storm, so it glows red rather than flickering',
-    guard: 'and the red lightning is through the lightning phase’s aura',
+    // ⚠️ Re-anchored by 0487: the lightning is the body's, so a red the phases cannot be told apart by is a
+    // storm that runs in the void phase as well as the lightning's.
+    guard: 'THE REPORTED ONE, DRIVEN: the lightning runs along the whole body',
     edit: {
-      path: 'src/render/bake.ts',
-      find: '  if (!storm || !STORM_LIT.includes(frame)) return;',
-      replace: '  if (!storm) return;',
+      path: 'src/app/frame.ts',
+      find: '  layBodyBolts(w, aura?.storm);',
+      replace: '  layBodyBolts(w, w.bossRow.phases[w.bossRow.phases.length - 1]!.look?.aura?.storm);',
     },
   },
 ];

@@ -59,7 +59,7 @@ import { DEFAULT_ASSISTS, tuningFor } from '../sim/assist.ts';
 import { ENEMY_KINDS, type EnemyKind, type EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import { LEVELS, LEVEL_KINDS, type LevelRow } from '../content/levels.ts';
-import { BOSSES, reachDownLane } from '../content/bosses.ts';
+import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES, reachDownLane } from '../content/bosses.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -1079,6 +1079,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     dropRng: makeRng('proof-scene').stream('drop'),
     arcRng: makeRng('proof-scene').stream('arc'),
     stormRng: makeRng('proof-scene').stream('storm'),
+    bodyBoltRng: makeRng('proof-scene').stream('body-bolt'),
     // Where the serpent's lightning falls — 0248, its own stream per 0021.
     rainRng: makeRng('proof-scene').stream('rain'),
     // Where the fish's wave rises off the edge — 0380, its own stream on the same terms.
@@ -1139,6 +1140,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // The mouths and births of a many-headed boss — 0384. @setup: built at mount, never in a frame.
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // No tentacle out of anything yet — 0403.
     tendrilsFrom: -1,
     tendrilBrace: 0,

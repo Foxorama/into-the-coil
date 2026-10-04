@@ -6679,21 +6679,8 @@ const AURA_INKS = { deep: '#2a1a9a', violet: '#8a3cff', blue: '#3f6bff', core: '
  */
 const STORM_INKS = { glow: '#ff2238', core: '#ffe4e4' } as const;
 
-/**
- * Which of a storm's frames carry lightning — 0305, and five of six since 0310.
- *
- * ⚠️ **IT WAS TWO OF SIX AND THE PLAYER ASKED FOR THE WHOLE ANIMAL**: *"the red lightning flickers need
- * to be across the whole body and a bit more subdued."* `Aura.stride` is 1 and there are twenty-six
- * nodes, so node `k` shows frame `(t + k) % 6` — with two frames lit that is **nine of twenty-seven
- * flames** carrying lightning at any instant, evenly spaced down the body. Which is *across the body* in
- * the arithmetic and reads as a row of sparks in the picture, because two thirds of the animal is dark.
- *
- * ⚠️ **FIVE AND NOT SIX, SO A FLAME STILL GOES OUT.** Every frame lit is a constant crackle, and the
- * word asked for was *flickers*. At five of six each node is dark for one frame in six — three hundredths
- * of a second in every eighteen — and the dark one walks down the body with the stride, so the animal
- * crackles everywhere and never evenly.
- */
-const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4];
+// Which frames carried lightning (0305, 0310) went with the baked bolt in 0487: 0310's *five of six* is the
+// share of a body bolt's life it is lit, `Aura.storm.lit`.
 
 /**
  * One flame of the serpent's aura — frame `frame` of six, with red lightning through it if `storm`.
@@ -6714,9 +6701,16 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
     tongues are soft: curves through their samples rather than corners, fewer, of very different
     heights, each a stack of four fading layers so its edge is a falloff and not a line.
   */
-  glow(ctx, f, AURA_INKS.deep, 0, -R * 0.2, R * 2.05, 0.8);
-  glow(ctx, f, AURA_INKS.violet, 0, -R * 0.1, R * 1.7, 0.7);
-  glow(ctx, f, AURA_INKS.blue, 0, -R * 0.45, R * 1.3, 0.5);
+  /*
+    ⚠️ **UNDER THE STORM, A SOFT GLOW AND ONE TONGUE — 0487.** The lightning is stroked along the body now
+    (`paintBodyBolts`), and twenty-seven overlapping tiles of four tongues each were noise under it, piling
+    the violet into a slab where they crossed. So a storm node is the haze at a little over half its weight
+    and one tongue, and its six frames run at six steps where the flames ran at three.
+  */
+  const weight = storm ? 0.55 : 1;
+  glow(ctx, f, AURA_INKS.deep, 0, -R * 0.2, R * 2.05, 0.8 * weight);
+  glow(ctx, f, AURA_INKS.violet, 0, -R * 0.1, R * 1.7, 0.7 * weight);
+  glow(ctx, f, AURA_INKS.blue, 0, -R * 0.45, R * 1.3, 0.5 * weight);
   /*
     ⚠️ **THE TONGUES RISE FROM THE UPPER ARC AND GO STRAIGHT UP**, whatever the arc's angle at their
     root, because energy rising off a body rises: a flame that left the flesh along its own normal
@@ -6740,6 +6734,7 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
     const high = R * rng.range(0.7, 1.85);
     const lean = R * rng.range(-0.35, 0.35);
     const wide = R * rng.range(0.34, 0.52);
+    if (storm && i !== 1) continue;
     // A flame is widest a third of the way up and bends as it climbs: the lean arrives at the tip.
     const tongue = (scale: number): Pt[] => [
       [rx - wide * 0.7 * scale, ry + wide * 0.4],
@@ -6756,37 +6751,8 @@ function paintSerpentAura(ctx: Pen, f: Frame, frame: number, storm: boolean): vo
     lick(AURA_INKS.blue, tongue(0.62), 0.4);
     lick(AURA_INKS.core, tongue(0.32), 0.45);
   }
-  if (!storm || !STORM_LIT.includes(frame)) return;
-  /*
-    ⚠️ **THE LIGHTNING FORKS THROUGH THE FLAME AND NOT ROUND IT**: rooted on the flesh and climbing
-    through the tongues, jagged at every joint, with one branch off it — the arc's own figure (0233)
-    in the other ink, stroked twice for a glow and a core.
-  */
-  const bolt: Pt[] = [];
-  let x = rng.range(-0.6, 0.6) * R;
-  let y = -R * 0.7;
-  bolt.push([x, y]);
-  for (let j = 0; j < 5; j++) {
-    x += rng.range(-0.35, 0.35) * R;
-    y -= rng.range(0.2, 0.34) * R;
-    bolt.push([x, y]);
-  }
-  const fork = bolt[2]!;
-  const branch: Pt[] = [fork, [fork[0] + rng.range(0.25, 0.45) * R * (rng.range(0, 1) < 0.5 ? -1 : 1), fork[1] - R * 0.3], [fork[0] + rng.range(-0.2, 0.2) * R, fork[1] - R * 0.55]];
-  /*
-    ⚠️ **BOLDER THAN THE FIRST BAKE, WHICH PHOTOGRAPHED AS A FAINT PINK SCRIBBLE** inside the haze
-    once the haze was thick enough to be an aura — the red has to win against violet at a node's size.
-
-    ⚠️ **AND SUBDUED AGAIN BY 0310, BECAUSE THERE ARE NOW TWO AND A HALF TIMES AS MANY OF THEM.** *"A bit
-    more subdued"* was asked for in the same breath as *across the whole body*, and the two are one
-    change: nine bolts at this weight was a row of sparks, and twenty-two at this weight would be a
-    second aura in red. The glow narrows 0.085 → 0.062 and drops to 0.5 alpha, and the core 0.03 → 0.022
-    at 0.8 — so a single flame is fainter than it was and the ANIMAL carries more light than it did.
-  */
-  for (const line of [bolt, branch]) {
-    seam(ctx, f, STORM_INKS.glow, 0.062, line, 0.5);
-    seam(ctx, f, STORM_INKS.core, 0.022, line, 0.8);
-  }
+  // The storm's lightning is not baked into a node's flame since 0487: one bolt a tile could only ever be
+  // inside its tile. It is stroked along the body, node to node, by `paintBodyBolts`.
 }
 
 /**

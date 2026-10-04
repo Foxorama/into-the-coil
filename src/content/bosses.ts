@@ -51,6 +51,18 @@ export const RAIN_BOLT_KIND = 1;
 export const BEAM_BOLT_KIND = 2;
 
 /**
+ * The slots in the table of bolts a storm runs along a body — `docs/decisions/0487-the-storm-is-lightning.md`.
+ * A fixed table, so nothing grows in the frame, and the most any row's `Aura.storm.bolts` may ask for.
+ */
+export const BODY_BOLT_SLOTS = 4;
+
+/** The most nodes one body bolt may run over — 0487, so the painter's buffer is sized once. */
+export const BODY_BOLT_SPAN = 6;
+
+/** The fields a body bolt keeps in the table: from node, to node, seed, age, and whether it is lit. */
+export const BODY_BOLT_FIELDS = 5;
+
+/**
  * Every boss in the game. Closed.
  *
  * ⚠️ **SEVEN MID-BOSSES AND SEVEN END BOSSES, IN THAT ORDER, EACH TOUGHER THAN THE LAST** —
@@ -1262,6 +1274,17 @@ export interface Aura {
    * share of top speed, so a hull braced for its beams is still and its roots stay on its guns.
    */
   heave?: { by: number; down: number };
+  /**
+   * Lightning stroked along the body rather than baked into each node's flame —
+   * `docs/decisions/0487-the-storm-is-lightning.md`. At most `bolts` alive at once, each running node to
+   * node over `span` nodes, re-rolled every `every` steps from its own stream and lit for `lit` of them, so
+   * the crackle walks the animal. Absent, the aura is its frames alone.
+   *
+   * ⚠️ **A BOLT BAKED IN A TILE IS ONLY EVER INSIDE ITS TILE**, so 0310's *"across the whole body"* was never
+   * what the picture did: twenty-seven separate sparks. A bolt stroked from node to node is one thing that
+   * runs down the animal.
+   */
+  storm?: { bolts: number; span: readonly [number, number]; every: number; lit: number };
 }
 
 /**
@@ -3663,9 +3686,16 @@ export const BOSSES: Record<BossKind, BossRow> = {
           },
           aura: {
             frames: [SPRITE.serpentStorm0, SPRITE.serpentStorm1, SPRITE.serpentStorm2, SPRITE.serpentStorm3, SPRITE.serpentStorm4, SPRITE.serpentStorm5],
-            hold: 3,
+            // A slow glow under the lightning since 0487, six steps a frame where the flames ran at three.
+            hold: 6,
             stride: 1,
             head: 15,
+            /*
+              ⚠️ **AND THE LIGHTNING RUNS ALONG THE ANIMAL — 0487.** Three bolts over two to five nodes each,
+              re-rolled every twelve steps and lit for ten of them: 0310's *five frames of six* kept as the
+              share of a bolt's life it is alight, and the crackle crawls as each one lands somewhere new.
+            */
+            storm: { bolts: 3, span: [2, 5], every: 12, lit: 10 },
             /*
               ⚠️ **AND THE CROWN FLARES BEFORE A STRIKE — 0310.** Three frames on the same three-step hold
               the flames run at, so the discharge crackles at the rate the rest of the animal does rather

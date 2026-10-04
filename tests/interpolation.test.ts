@@ -139,6 +139,7 @@ function stationKeepingWorld(surface: Surface): World {
     bossShedIn: 0,
     arcRng: makeRng('interp').stream('arc'),
     stormRng: makeRng('interp').stream('storm'),
+    bodyBoltRng: makeRng('interp').stream('body-bolt'),
     rainRng: makeRng('interp').stream('rain'),
     breakerRng: makeRng('interp').stream('breaker'),
     beamRng: makeRng('interp').stream('beam'),

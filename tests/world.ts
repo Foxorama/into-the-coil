@@ -16,7 +16,7 @@ import type { CueKind } from '../src/content/cues.ts';
 import { AUTHORED, DIFFICULTIES, type DifficultyKind } from '../src/content/difficulty.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
-import { BOSSES } from '../src/content/bosses.ts';
+import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES } from '../src/content/bosses.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -114,6 +114,7 @@ export function inertLevel(): {
   // The mouths and births of a many-headed boss — 0384. Never read for a boss without necks.
   mouths: Float64Array;
   necksBorn: Float64Array;
+  bodyBolts: Int32Array;
   // The jellyfish's tentacles — 0403.
   tendrilsFrom: number;
   tendrilBrace: number;
@@ -241,6 +242,7 @@ export function inertLevel(): {
     bossFront: new Pool<Entity>(CAPACITY.bossFront, makeEntity),
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.
     tendrilsFrom: -1,
     tendrilBrace: 0,
@@ -486,6 +488,7 @@ export function playableWorld(
     dropRng: makeRng('test').stream('drop'),
     arcRng: makeRng('test').stream('arc'),
     stormRng: makeRng('test').stream('storm'),
+    bodyBoltRng: makeRng('test').stream('body-bolt'),
     rainRng: makeRng('test').stream('rain'),
     breakerRng: makeRng('test').stream('breaker'),
     beamRng: makeRng('test').stream('beam'),
@@ -566,6 +569,7 @@ export function playableWorld(
     bossFront,
     mouths: new Float64Array(NECK_SLOTS * 2),
     necksBorn: new Float64Array(NECK_SLOTS).fill(-1),
+    bodyBolts: new Int32Array(BODY_BOLT_SLOTS * BODY_BOLT_FIELDS).fill(-1),
     // 0403: no tentacle has pulled out of anything yet.
     tendrilsFrom: -1,
     tendrilBrace: 0,
