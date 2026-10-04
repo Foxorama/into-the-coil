@@ -17,6 +17,7 @@
 
 import { GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../content/difficulty.ts';
+import { browserStore, type Store } from './store.ts';
 
 /** Where the table lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
 export const SCORES_KEY = 'itc_scores';
@@ -47,25 +48,9 @@ export interface ScoreEntry {
   when: number;
 }
 
-/** What the table is read from and written to — `localStorage` in the game, a map in a test. */
-export interface ScoreStore {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
-
-/**
- * The browser's storage, or `null` where there is none to be had — a sandboxed frame, a private
- * window that throws on access, a browser with site data blocked. The table is then not kept, and
- * nothing else about the game changes.
- */
-export function browserStore(): ScoreStore | null {
-  try {
-    const store = globalThis.localStorage;
-    return store === undefined ? null : store;
-  } catch {
-    return null;
-  }
-}
+/** What the table is read from and written to — the one store every kept thing shares since 0510. */
+export type ScoreStore = Store;
+export { browserStore };
 
 const isCount = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0 && Math.floor(n) === n;
 

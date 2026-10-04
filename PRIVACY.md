@@ -1,6 +1,6 @@
 # Privacy — Into the Coil
 
-**Last updated: 30 September 2026**
+**Last updated: 4 October 2026**
 
 ## The short version
 
@@ -15,19 +15,20 @@ code by a test, so it cannot quietly fall out of date.
 
 ## What the game stores on your device
 
-**The game keeps one thing between visits: its high-score table.** It does not save a run in
-progress.
+**The game keeps two things between visits: its high-score table, and your settings.** It does not
+save a run in progress.
 
 | What | Where | Why |
 |---|---|---|
 | A copy of the page itself | Cache Storage, named `into-the-coil-<version>` | So the game still opens when you have no network |
 | The ten best runs: each one's score, which golfer flew it, the difficulty, how far it got, how many continues it took, and the date it ended | Local Storage, key `itc_scores` | So the title screen can show the high scores |
+| Your settings: the look, sound on or off, how long the crossing between places lasts, and the difficulty last chosen | Local Storage, key `itc_settings` | So the game opens the way you left it |
 
 That cache holds the game's own program — the same file the server sent you — and nothing about you.
 It is the ordinary mechanism that lets an installed web app work offline.
 
-The high-score table is written only by the game, only on your device, and is never sent anywhere. It
-holds no name — the golfer is the character you chose, not you.
+The high-score table and the settings are written only by the game, only on your device, and are
+never sent anywhere. The table holds no name — the golfer is the character you chose, not you.
 
 **Every key the game uses is listed here**, in the table above. That is enforced: `tests/privacy.test.ts` reads the source and this page and
 fails the build if either names storage the other does not.
