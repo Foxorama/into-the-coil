@@ -6166,7 +6166,7 @@ const LORD_HULLS: readonly SpriteKind[] = LEVEL_KINDS.flatMap((k) => {
   */
   const named = [row.sprite, row.spriteHit];
   // What it sheds is it, so it wears its skin — 0480.
-  if (row.shed !== null) named.push(row.shed);
+  if (row.shed !== null) named.push(row.shed.sprite);
   if (row.chain !== null) named.push(row.chain.sprite, row.chain.spriteHit);
   // A jellyfish's tentacles are its glass — 0403.
   if (row.tendrils !== undefined) named.push(row.tendrils.sprite, row.tendrils.spriteHit, row.tendrils.lit.sprite);

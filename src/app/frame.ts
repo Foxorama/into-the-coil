@@ -6130,7 +6130,7 @@ const SHED_BODY = { sprite: 0, spriteHit: 0, radius: 0, health: 1, damage: 0 };
  * ⚠️ **FROM THE RIM THAT FACES THE SHIP**, because that is where the ship's fire lands: the impact is not
  * logged for a survived pulse (0127's note on the `hit` cue says why), and the face turned to the ship
  * is the answer for every gun that fires forward. It leaves outward, spinning nothing, in the world's
- * frame like every fragment of a burst.
+ * frame like every fragment of a burst. **Unless the row says `flank`** — 0514, below.
  */
 function shedHits(w: World): void {
   if (w.bossShedIn > 0) w.bossShedIn -= 1;
@@ -6147,12 +6147,20 @@ function shedHits(w: World): void {
   if (piece === null) return;
   const toAlong = w.ship.along - struck.along;
   const toAcross = w.ship.across - struck.across;
-  const heading = Math.atan2(toAcross, toAlong);
+  const toShip = Math.atan2(toAcross, toAlong);
+  /*
+    ⚠️ **OR OFF A FLANK, AND OUT AWAY FROM THE SHIP — 0514.** A side drawn on the shed's own stream, the
+    rim a quarter to three-eighths of a turn round from the ship, and the flight turned further from it
+    rather than back, so its along-the-ship part is never towards the player: a fragment that leaves a
+    face which is a mouth (0373) at the player reads as an add.
+  */
+  const side = shed.from === 'flank' ? (w.shedRng.range(-1, 1) < 0 ? -1 : 1) : 0;
+  const heading = shed.from === 'flank' ? toShip + side * w.shedRng.range(Math.PI / 2, (Math.PI * 3) / 4) : toShip;
   const rim = struck.radius * 0.8;
-  SHED_BODY.sprite = shed;
-  SHED_BODY.spriteHit = shed;
+  SHED_BODY.sprite = shed.sprite;
+  SHED_BODY.spriteHit = shed.sprite;
   reset(piece, struck.along + Math.cos(heading) * rim, struck.across + Math.sin(heading) * rim, SHED_BODY);
-  const away = heading + w.shedRng.range(-0.9, 0.9);
+  const away = shed.from === 'flank' ? heading + side * w.shedRng.range(0, 0.5) : heading + w.shedRng.range(-0.9, 0.9);
   const speed = w.shedRng.range(0.25, 0.5);
   piece.velAlong = Math.cos(away) * speed;
   piece.velAcross = Math.sin(away) * speed;

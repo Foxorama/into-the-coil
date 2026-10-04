@@ -569,6 +569,21 @@ export interface Grow {
  */
 export type SummonFrom = 'lead' | 'sides' | 'mouth';
 
+/**
+ * Where a lord's fragment leaves it — `docs/decisions/0514-the-fish-sheds-off-its-flanks.md`.
+ *
+ * `facing` is 0480's: off the rim turned to the ship, where its fire lands, flying at the ship.
+ * `flank` is off a side, a quarter to three-eighths of a turn round from the ship, flying out and away
+ * from it.
+ *
+ * ⚠️ **THE FISH IS WHY THERE ARE TWO.** It stalks the ship's lane face-on, so its rim turned to the
+ * ship is its mouth, and 0373 made the mouth the place its adds come out of. Five embers a second
+ * leaving the jaw at the player read as adds, tiny ones that never fire — *"the adds it spits out of
+ * its mouth are now weirdly tiny and no longer fire bullets"* — while the real kites and minnows were
+ * unchanged. A boss whose face is not a door keeps `facing`.
+ */
+export type ShedFrom = 'facing' | 'flank';
+
 /** One of the hydra's heads — 0254: what it throws, and how. */
 export interface Head {
   shot: ShotKind;
@@ -2117,8 +2132,10 @@ export interface BossRow extends Body {
    * `docs/decisions/0282-a-mechanism-for-every-instance-makes-them-one-instance.md`: shared code holds
    * the throw, and the default is nothing. The seven real bosses each shed what they are; the mid-bosses
    * shed nothing until someone draws what they would.
+   *
+   * ⚠️ **AND WHERE IT LEAVES FROM IS THE ROW'S TOO — 0514.** `from` is `ShedFrom`'s.
    */
-  shed: number | null;
+  shed: { sprite: number; from: ShedFrom } | null;
   /**
    * What a gun's hit on THIS boss is worth, where it is not the gun's own `bossWeight` — 0372.
    *
@@ -3416,7 +3433,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     },
     burn: null,
     wreck: null,
-    shed: SPRITE.shedScale,
+    shed: { sprite: SPRITE.shedScale, from: 'facing' },
     chain: {
       sprite: SPRITE.serpentBody,
       spriteHit: SPRITE.serpentBodyHit,
@@ -3969,7 +3986,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
-    shed: SPRITE.shedEmber,
+    /*
+      ⚠️ **OFF ITS FLANKS, NOT ITS FACE — 0514.** Its face is turned to the ship and is the mouth its
+      adds leave by (0373), so 0480's embers off the facing rim came out of the jaw at the player and
+      were taken for adds: tiny ones that never fire. Off a side and away from the ship, they read as
+      the fins burning, and the mouth is the adds' alone.
+    */
+    shed: { sprite: SPRITE.shedEmber, from: 'flank' },
     sprite: SPRITE.boss9,
     spriteHit: SPRITE.boss9Hit,
     // Grown with the drawing in 0381 (42 → 50 across): the same share of the tile it always was.
@@ -4081,7 +4104,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
-    shed: SPRITE.shedFeather,
+    shed: { sprite: SPRITE.shedFeather, from: 'facing' },
     sprite: SPRITE.boss10,
     spriteHit: SPRITE.boss10Hit,
     radius: 15,
@@ -4229,7 +4252,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       window at Savior; the gun and the tube alone do not.
     */
     wreck: { gravity: 0.022, tumble: 0.065, wreckage: SPRITE.boss11Wreck, wreckageHit: SPRITE.boss11WreckHit, settle: 60, health: 0.22 },
-    shed: SPRITE.shedTooth,
+    shed: { sprite: SPRITE.shedTooth, from: 'facing' },
     sprite: SPRITE.boss11,
     spriteHit: SPRITE.boss11Hit,
     // 14 until 0332, on an extent that went 36 → 52. `src/content/sprites.ts` has both numbers and
@@ -4383,7 +4406,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: null,
     burn: null,
     wreck: null,
-    shed: SPRITE.shedIce,
+    shed: { sprite: SPRITE.shedIce, from: 'facing' },
     sprite: SPRITE.boss12,
     spriteHit: SPRITE.boss12Hit,
     // 21 since 0399, from 13: the same share of a drawing grown from 33 to 54.
@@ -4534,7 +4557,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
-    shed: SPRITE.shedFlesh,
+    shed: { sprite: SPRITE.shedFlesh, from: 'facing' },
     sprite: SPRITE.boss13,
     spriteHit: SPRITE.boss13Hit,
     radius: 21,
@@ -4751,7 +4774,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
     room: { stand: 60, settle: 150, mouth: 40, wall: null, opens: 0 },
     burn: null,
     wreck: null,
-    shed: SPRITE.shedGlass,
+    shed: { sprite: SPRITE.shedGlass, from: 'facing' },
     sprite: SPRITE.boss14,
     spriteHit: SPRITE.boss14Hit,
     radius: 17,
