@@ -1199,13 +1199,24 @@ the order, so this file does not.** Landed, one PR each, every one owed a play o
 4.2, the gyre's hole per stance, is still not built without the player's word, against
 [0151](decisions/0151-the-gap-you-have-to-reach.md).
 
-### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
+### ⚠️ THE MENUS AND THE WAY IN ARE BUILT, BOTH QUEUES, AND NONE OF IT HAS BEEN PLAYED — 2026-10-04
 
-A design pass over the way in, the in-game chrome on a phone and the four ships, asked for as *"a
-deep dive analysis on the buttons icons, displays, huds etc"*. The review, its measurements and the
-player's answers are
-[`the-chrome-and-the-ships-reviewed`](../reports/the-chrome-and-the-ships-reviewed-2026-10-03.md);
-its queue is six items, one PR each, in the order the report gives and for the reasons it gives:
+Both queues below are built to their last item. Items 2–4 of the menus review stood unbuilt for two
+days after its first PR merged — the session that built item 1 ended, and the player believed the
+rest were done — so **this heading names what is owed, and the next session reads it here.**
+
+[`the-menus-reviewed`](../reports/the-menus-reviewed-2026-10-02.md), after
+[0458](decisions/0458-the-title-is-rows.md):
+
+- [0510](decisions/0510-the-settings-are-kept.md) — the settings kept under `itc_settings`; the pilot
+  picked each visit.
+- [0511](decisions/0511-the-run-can-be-paused.md) — the pause. **Owed: a listen** for the resume of a
+  suspended context, and the count-in's two seconds on play.
+- [0512](decisions/0512-the-touch-is-yours.md) — the touch section, trigger side and steering. **Owed:
+  a play on a phone**, and the steering's three ratios on it.
+
+[`the-chrome-and-the-ships-reviewed`](../reports/the-chrome-and-the-ships-reviewed-2026-10-03.md), its
+six items in the order it gives:
 
 - [0465](decisions/0465-the-chrome-fits-the-phone.md) — **built**: the playing strip sized against the
   short axis and the trigger discs held between a fingertip and 66 px. The one number left to a play
@@ -1217,8 +1228,9 @@ its queue is six items, one PR each, in the order the report gives and for the r
   into the rim with a lavender lens, a short barrel and a smaller orb; the tip did not move.
 - [0468](decisions/0468-the-firebird-is-black-and-gold.md) — **built**: the Firebird near black, read by
   gold pinstripes along every body line, one gold bird, a shaker scoop; the player's cyan as light.
-- **Next**: the fighter's cigar pods, and last the splash that waits for a press with the one pilot
-  screen that launches — each answered in the report's table.
+- [0469](decisions/0469-the-pods-are-cigars.md) — **built**: the fighter's wingtip pods.
+- [0513](decisions/0513-the-pilot-flies.md) — **built**: the splash waits for a press, and the title is
+  the one pilot screen. **Owed: a play on a phone** of *tap to see, tap again to fly*.
 
 ### ⚠️ THE SCREENS ARE REVIEWED AND THE WHOLE QUEUE IS BUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-01
 
