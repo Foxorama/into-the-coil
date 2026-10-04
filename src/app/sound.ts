@@ -1285,6 +1285,19 @@ export interface WebAudioOut extends AudioOut {
    * context the browser suspended.
    */
   unlock(): void;
+  /**
+   * Stop the audio clock, or let it go again — 0511, a paused run.
+   *
+   * ⚠️ **THE CONTEXT IS SUSPENDED, NOT MUTED**, because `currentTime` is what the music free-runs on
+   * (0160) and what the beat-authored volleys are phased against: a muted context keeps counting, and a
+   * run resumed under it has come apart from its own score by however long the pause was. Suspended,
+   * the clock stands still and resumes where it stood.
+   *
+   * ⚠️ **AND `unlock` MAY NOT UNDO IT.** Every gesture resumes a context the browser suspended, which
+   * is right after a backgrounded tab and wrong under a pause, where a press on *Settings* would start
+   * the music again under a held run. While held, `unlock` builds what it has to and resumes nothing.
+   */
+  hold(held: boolean): void;
   release(): void;
   /**
    * The music, once the context exists — null before the first gesture.
@@ -1894,6 +1907,8 @@ export function makeAudioOut(): WebAudioOut {
   */
   let cueSamples: Float32Array[][] = [];
   let music: MusicOut | null = null;
+  // Whether a paused run is holding the clock — 0511. `unlock` reads it.
+  let held = false;
   /*
     ⚠️ **THE FIELD, AS A FIXED SET OF PLACES RATHER THAN A NODE PER SOUND** — 0127. `PAN_BUCKETS`
     panners are wired into the master when the context is built and never touched again, so a cue
@@ -2040,8 +2055,15 @@ export function makeAudioOut(): WebAudioOut {
         // Into the hush, like every cue it does not let through — 0378.
         music = makeMusicOut(ctx, hushGain, wholeLoops(), SAMPLE_RATE);
       }
-      // Every time, not only on the first: a backgrounded tab suspends the context behind us.
-      if (ctx.state === 'suspended') void ctx.resume();
+      // Every time, not only on the first: a backgrounded tab suspends the context behind us. Never
+      // under a pause — 0511.
+      if (ctx.state === 'suspended' && !held) void ctx.resume();
+    },
+    hold(next: boolean): void {
+      held = next;
+      if (ctx === null) return;
+      if (held && ctx.state === 'running') void ctx.suspend();
+      else if (!held && ctx.state === 'suspended') void ctx.resume();
     },
     sound(index: number, velocity: number, pan: number, rate = 1): void {
       const variants = buffers[index];

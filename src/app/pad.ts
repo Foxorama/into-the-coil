@@ -50,12 +50,23 @@ export const PAD_DEADZONE = 0.18;
 export const PAD_AXIS_X = 0;
 export const PAD_AXIS_Y = 1;
 export const PAD_SPECIAL_BUTTONS: readonly number[] = [0, 1, 2, 3];
+/**
+ * Start, by its standard-mapping index — 0511: the button every console pauses on, and free in play
+ * (0–3 are the specials). A menu reads it as a confirm (`src/app/menu.ts`), so on the pause it presses
+ * *Resume*, which is where the cursor opens.
+ */
+export const PAD_PAUSE_BUTTON = 9;
 
 export interface PadOptions {
   /** See `src/app/touch.ts` — the same reason, the same thread. */
   alongAxis?: () => ScrollAxis;
   /** Injected so a test can drive a stub without a physical pad. Defaults to the real navigator. */
   pads?: () => readonly (Gamepad | null)[];
+  /**
+   * Start was pressed, in play — 0511. Told on the edge and on the step the snapshot was taken, and
+   * the shell decides what it means; a pause is not an `Intent` because nothing in the sim may read it.
+   */
+  onPause?: () => void;
 }
 
 /**
@@ -83,12 +94,16 @@ export function attachPad(options: PadOptions = {}): InputSource {
     snapshot anyway — costs nothing at all.
   */
   let spending = false;
+  // @setup: whether Start was down at the previous step — 0511, an edge on `wasDown`'s terms.
+  let pauseWasDown = false;
+  const onPause = options.onPause;
 
   return {
     contribute(intent: Intent): void {
       const pads = readPads();
       let ax = 0;
       let ay = 0;
+      let pauseDown = false;
 
       for (let p = 0; p < pads.length; p++) {
         const pad = pads[p];
@@ -119,7 +134,11 @@ export function attachPad(options: PadOptions = {}): InputSource {
           }
           wasDown[i] = down;
         }
+        if (pad.buttons[PAD_PAUSE_BUTTON]?.pressed === true) pauseDown = true;
       }
+      // Start held through the count-in is not a second pause: the same `!spending` as the specials.
+      if (pauseDown && !pauseWasDown && !spending && onPause !== undefined) onPause();
+      pauseWasDown = pauseDown;
       spending = false;
 
       // 0023's handedness, exactly as `src/app/touch.ts` applies it.
@@ -143,6 +162,7 @@ export function attachPad(options: PadOptions = {}): InputSource {
     },
     release(): void {
       for (let i = 0; i < wasDown.length; i++) wasDown[i] = false;
+      pauseWasDown = false;
     },
   };
 }

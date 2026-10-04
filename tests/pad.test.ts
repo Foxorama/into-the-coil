@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { SPECIAL_BINDINGS } from '../src/content/actions.js';
 import { makeIntent, type Intent } from '../src/sim/intent.js';
 import { combineDevices } from '../src/app/devices.js';
-import { attachPad, PAD_DEADZONE, PAD_SPECIAL_BUTTONS } from '../src/app/pad.js';
+import { attachPad, PAD_DEADZONE, PAD_PAUSE_BUTTON, PAD_SPECIAL_BUTTONS } from '../src/app/pad.js';
 
 /**
  * THE THIRD DEVICE.
@@ -214,5 +214,55 @@ describe('a press that has already been used is not read again', () => {
     set(pad(0, 0, buttonsWith(FIRST)));
     step();
     expect(step().specials[0], 'a held button repeated').toBe(0);
+  });
+});
+
+describe('Start asks for a pause — 0511', () => {
+  /** A pad source whose pause asks are counted. */
+  function pauseRig(): { set: (p: Gamepad) => void; step: () => void; spend: () => void; asks: () => number } {
+    let snapshot: readonly (Gamepad | null)[] = [];
+    let asks = 0;
+    const src = attachPad({
+      pads: () => snapshot,
+      onPause: () => {
+        asks++;
+      },
+    });
+    const intent = makeIntent(SPECIAL_BINDINGS);
+    return {
+      set: (p) => {
+        snapshot = [p];
+      },
+      step: () => src.contribute(intent),
+      spend: () => src.spend(),
+      asks: () => asks,
+    };
+  }
+
+  it('THE ASK: Start pressed in play asks once, and held asks no more', () => {
+    const { set, step, asks } = pauseRig();
+    set(pad(0, 0, buttonsWith(PAD_PAUSE_BUTTON)));
+    step();
+    step();
+    step();
+    expect(asks(), 'a held Start asked for a pause on every step').toBe(1);
+    set(pad(0, 0, []));
+    step();
+    set(pad(0, 0, buttonsWith(PAD_PAUSE_BUTTON)));
+    step();
+    expect(asks(), 'the next press of Start was not heard').toBe(2);
+  });
+
+  it('and Start held through the count-in into the run is not a second pause', () => {
+    // On the pause Start is a confirm and resumes; the run's reader must learn it is held, not hear it.
+    const { set, step, spend, asks } = pauseRig();
+    set(pad(0, 0, buttonsWith(PAD_PAUSE_BUTTON)));
+    spend();
+    step();
+    expect(asks(), 'the Start that resumed the run paused it again').toBe(0);
+  });
+
+  it('and Start is none of the specials', () => {
+    expect(PAD_SPECIAL_BUTTONS, 'Start throws a special as well as pausing').not.toContain(PAD_PAUSE_BUTTON);
   });
 });

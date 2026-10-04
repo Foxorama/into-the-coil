@@ -42,7 +42,16 @@ export function reduceScreen(state: ScreenState, action: ScreenAction): ScreenSt
       // Identity preserved when nothing moved, so the shell can tell a real transition from a
       // repeated dispatch without comparing fields.
       if (state.current === action.screen) return state;
-      const entering = SCREENS[action.screen].back === 'opener' && SCREENS[state.current].back === null;
+      /*
+        ⚠️ **FROM OUTSIDE THE MENU, WHICH WAS *A SCREEN WITH NO BACK* UNTIL ONE HAD A BACK — 0511.** The
+        pause's Back is the count-in, and the pause opens Settings; read as *no back of its own*, it was
+        not an opener, and Back from Settings would have gone to the title with the run still held.
+        Inside the menu is a screen that goes back to an opener-row (the music room to Settings) or is
+        one (How to play beside Settings); anything else opened it.
+      */
+      const from = SCREENS[state.current].back;
+      const inside = from === 'opener' || (from !== null && SCREENS[from].back === 'opener');
+      const entering = SCREENS[action.screen].back === 'opener' && !inside;
       return { current: action.screen, opener: entering ? state.current : state.opener };
     }
     default: {
