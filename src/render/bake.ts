@@ -2634,18 +2634,16 @@ const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
 function firebirdOutline(stage: number): Pt[] {
   return [
     [-17, 5],
-    [-17, 2.4],
-    // The spoiler on the ducktail — 0461: a post up from the deck lid and the wing on it.
-    [-15.6, 2.15],
-    [-15.6, 0.9],
-    [-17.2, 0.9],
-    [-17.2, -0.9],
-    [-12.6, -0.9],
-    [-12.6, 0.9],
-    [-13.8, 0.9],
-    [-13.8, 1.83],
-    [-12.5, 1.6],
-    [-8, -2],
+    // The tail panel stands tall and square, and the deck runs level with the beltline from it to the
+    // back glass — played: *"the rear end of the firebird is a little low, it should be based on the
+    // trans-am."* It was a wing on a post over a deck that fell below the beltline, a fastback's
+    // tail; the Trans Am's is high and flat, its spoiler a ducktail lip kicked up off the deck's end
+    // (0516).
+    [-17, -0.4],
+    [-17.5, -2],
+    [-15.4, -1.8],
+    [-14, -1.1],
+    [-9.6, -1.3],
     [-2, -4.6],
     ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
     [6, -4.8],
@@ -2912,7 +2910,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   // The lacquer: lit along the roof, deep at the sills, and one highlight down the roofline.
   shaded(ctx, f, at(0, -5), at(0, 6), shade(body, 0.3), shade(body, -0.35), outline);
   seam(ctx, f, shade(body, 0.9), 0.035, box([
-    [-8.6, -1.1],
+    [-9, -1.2],
     [-2.2, -3.9],
     [5.8, -4.1],
     [10.4, -1.6],
@@ -2932,7 +2930,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   */
   const pin = 0.045;
   seam(ctx, f, stripe, pin, box([
-    [-11, 1.35],
+    [-16.4, -0.2],
     [-4, -0.4],
     [6, -1],
     [16.6, -0.9],
@@ -3016,27 +3014,27 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [16.8, 1.2],
   ]));
   glow(ctx, f, palette.player, ...at(17.6, 0.25), 0.11, 0.6);
+  // The tail lamp wraps the corner high on the tail panel, under the deck, as the Trans Am's does.
   poly(ctx, f, palette.bullet, box([
-    [-16.8, 2.6],
-    [-15, 2.6],
-    [-15, 4.6],
-    [-16.8, 4.6],
+    [-16.8, 0.2],
+    [-15, 0.2],
+    [-15, 2.2],
+    [-16.8, 2.2],
   ]));
-  glow(ctx, f, palette.bullet, ...at(-15.6, 3.6), 0.11, 0.55);
-  // The spoiler in the lacquer with a gold edge along the wing — 0463.
-  shaded(ctx, f, at(0, -0.9), at(0, 1.75), shade(body, 0.35), shade(body, -0.2), box([
-    [-17.2, -0.9],
-    [-12.6, -0.9],
-    [-12.6, 0.9],
-    [-13.8, 0.9],
-    [-13.8, 1.75],
-    [-15.6, 1.75],
-    [-15.6, 0.9],
-    [-17.2, 0.9],
+  glow(ctx, f, palette.bullet, ...at(-15.6, 1.2), 0.11, 0.55);
+  // The ducktail lip in the lacquer, lit along its top, with a gold edge — 0463's gold edge, on the lip.
+  shaded(ctx, f, at(0, -2), at(0, -0.1), shade(body, 0.35), shade(body, -0.2), box([
+    [-17, -0.1],
+    [-17, -0.4],
+    [-17.5, -2],
+    [-15.4, -1.8],
+    [-14, -1.1],
+    [-15.2, -1.1],
+    [-15.2, -0.1],
   ]));
   seam(ctx, f, gold, 0.04, box([
-    [-16.7, -0.45],
-    [-13.1, -0.45],
+    [-16.9, -1.45],
+    [-15.3, -1.35],
   ]), 0.95);
   // A glare across the windscreen, raked back as the estate's is.
   poly(ctx, f, shade(gold, 0.25), box([
