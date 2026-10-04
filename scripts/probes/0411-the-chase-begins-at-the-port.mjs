@@ -144,8 +144,8 @@ export const PROBES = [
     decision: '0411',
     suite: 'tests/intro.browser.test.ts',
     broke: 'the frame clearing the canvas in place of drawing the intro',
-    // 0415 folded *the intro draws* into the test that looks for the picked golfer in it.
-    guard: 'runs the golfer who was picked out of the bar',
+    // 0415 folded *the intro draws* into the test that looks for the picked golfer in it; 0513 renamed it.
+    guard: 'runs the pilot who was chosen out of the bar',
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0441, which hands the port the ship's own wingtip, and by 0444, which hands

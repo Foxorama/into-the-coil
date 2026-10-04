@@ -38,7 +38,7 @@ import { paintPort } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
-import { SCREENS } from '../src/state/screens.ts';
+import { SCREENS, beginsRun } from '../src/state/screens.ts';
 import { initialScreen } from '../src/state/slices/screen.ts';
 
 interface Blit {
@@ -98,15 +98,26 @@ function tailPx(b: Blit, kind: 'blue' | 'blueSide' | 'viper'): number {
   return b.x - TAIL[kind]! * PORT_EXTENT[kind] * b.scale;
 }
 
-describe('the intro is a screen a pick plays, and it leaves by itself', () => {
-  it('follows the splash, has no panel, steps nothing, and goes to the title on its own clock', () => {
-    // 0415: the page opens on the splash; a golfer picked on the select screen plays the intro.
+describe('the intro is a screen the first flight plays, and it leaves by itself', () => {
+  it('follows the splash, has no panel, steps nothing, and goes into the run on its own clock', () => {
+    // 0415: the page opens on the splash. 0513: the first Fly of a visit plays the intro, and it ends in
+    // the run that flight asked for — `playing` from outside a run is a run begun (`src/app/mount.ts`).
     expect(initialScreen.current).toBe('splash');
     const row = SCREENS.intro;
     expect(row.heading, 'the intro grew words').toBe('');
     expect(row.actions, 'the intro grew a button — a picture, not a screen with controls').toEqual([]);
     expect(row.steps, 'the sim runs under a picture that cannot touch it').toBe(false);
-    expect(row.timeout).toEqual({ steps: INTRO_STEPS, then: 'title' });
+    expect(row.inRun, 'the intro counts as inside a run, so its end would resume a run nobody began').toBe(false);
+    expect(row.timeout).toEqual({ steps: INTRO_STEPS, then: 'playing' });
+  });
+
+  it('0513 — the intro running out begins a run, and the count-in running out does not begin another', () => {
+    // The two screens that expire into play, read the way the shell reads them (`beginsRun`).
+    expect(beginsRun('intro', SCREENS.intro.timeout!.then!), 'the intro ended on a field with no run behind it').toBe(true);
+    expect(
+      beginsRun('resuming', SCREENS.resuming.timeout!.then!),
+      'the end of a pause began a new run and threw the held one away',
+    ).toBe(false);
   });
 
   it('runs its beats in the order they are written', () => {

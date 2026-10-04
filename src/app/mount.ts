@@ -119,7 +119,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
@@ -1760,6 +1760,40 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const lifecycle = makeLifecycle(world, dispatch, () => state.run);
 
   /*
+    ── FLYING — 0513 ────────────────────────────────────────────────────────────────────────────────
+
+    The pilot screen's one way into a run: *Fly*, or a press on the highlighted pilot. The first flight
+    of a visit plays the intro with that pilot in it, and the intro ends in the run (its row's `then` is
+    `playing`, which `expireTo` below begins); every flight after it begins the run at once.
+  */
+  /** Whether this visit has flown yet — the intro is the first flight's. */
+  let flownThisVisit = false;
+  /**
+   * Whether a pointer's press on the highlighted pilot flies them: a pointer has chosen on the pilot
+   * screen, or a run has been flown. False at boot, so a thumb's first landing on a card is a look.
+   */
+  let pilotArmed = false;
+  /** Whether the splash has had a press the page could turn the sound on with — 0513. */
+  let splashPressed = false;
+  const startRun = (): void => {
+    pilotArmed = true;
+    lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship);
+  };
+  function fly(): void {
+    if (flownThisVisit) {
+      startRun();
+      return;
+    }
+    flownThisVisit = true;
+    dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
+  }
+  /** Where a screen goes when it runs out or is skipped — a run begun, or a screen shown (`beginsRun`, 0513). */
+  const expireTo = (from: Screen, then: Screen): void => {
+    if (beginsRun(from, then)) startRun();
+    else dispatch({ slice: 'screen', type: 'show', screen: then });
+  };
+
+  /*
     What a screen's controls do.
 
     ⚠️ **Three of the four screens now carry something forward, and only `victory` throws a run
@@ -1777,13 +1811,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
     /*
-      ⚠️ **THE TITLE IS *LAUNCH* AND *SETTINGS* — 0458**, in the order `src/state/screens.ts` lists
-      them. Launch begins a run on the tier the band shows, in the pilot's ship (0441); the tier was the
-      button pressed until the press and the choice became two things.
+      ⚠️ **THE TITLE IS *FLY* AND *SETTINGS* — 0458, and *Fly* since 0513**, in the order
+      `src/state/screens.ts` lists them. Fly flies the highlighted pilot on the tier the band shows.
     */
     else if (screen === 'title') {
-      if (index === 0) lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship);
+      if (index === 0) fly();
       else dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
+    }
+    /*
+      ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
+      or the key first and marks the splash pressed; a pad's confirm clicks the prompt too, with no
+      gesture the page could turn the sound on with, and that is the press the splash does not take.
+    */
+    else if (screen === 'splash') {
+      if (splashPressed) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
     } else if (screen === 'settings') {
       if (index === 0) {
         // 0213: the field is swept and the dust is dealt as the room OPENS, because the enemies were
@@ -1809,16 +1850,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         recordRun(false);
         dispatch({ slice: 'screen', type: 'show', screen: 'title' });
       }
-    } else if (screen === 'select') {
-      /*
-        ⚠️ **A GOLFER IS PICKED — 0415.** `GOLFER_KINDS` IS the order `src/state/screens.ts` built the
-        buttons in. Picked at boot, the intro plays — and this press is the gesture that turned its
-        sound on (`unlock`, above it in the capture phase). Since 0458 it is only ever picked at boot:
-        the title's pilot band is where the choice is changed.
-      */
-      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
-      showPilot();
-      dispatch({ slice: 'screen', type: 'show', screen: 'intro' });
     } else if (screen === 'music') onMusicRoom(index);
     else dispatch({ slice: 'screen', type: 'show', screen: 'title' });
   },
@@ -1833,7 +1864,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ⚠️ **It dispatches and stops.** What a style CHANGES is decided in one place below, off the state,
     so a second way in — a pad, a later settings screen — cannot apply half of it.
   */
-  (name: SettingName, index: number): void => {
+  (name: SettingName, index: number, pointer: boolean): void => {
     if (name === 'style') dispatch({ slice: 'settings', type: 'style', style: STYLE_KINDS[index] ?? DEFAULT_STYLE });
     // The second setting, and it is one more line here because 0070 built the mechanism rather than
     // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
@@ -1846,8 +1877,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       dispatch({ slice: 'settings', type: 'difficulty', difficulty: DIFFICULTY_KINDS[index] ?? TUNED });
       chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
     } else if (name === 'pilot') {
-      dispatch({ slice: 'settings', type: 'pilot', pilot: GOLFER_KINDS[index] ?? DEFAULT_GOLFER });
+      /*
+        ⚠️ **A PRESS ON THE HIGHLIGHTED PILOT FLIES THEM — 0513, AND A THUMB'S FIRST LANDING DOES NOT.**
+        The cursor's press (A, Enter) on the band is a decision and flies at once. A pointer's press on
+        the card already highlighted flies only once a pointer has chosen on this screen, or a run has
+        been flown: *a thumb lands on the edge of what it aims at* (0358), so a first tap highlights —
+        tap to see, tap again to fly — and after a run the card flown last is one tap from flying again.
+      */
+      const kind = GOLFER_KINDS[index] ?? DEFAULT_GOLFER;
+      if (kind === state.settings.pilot && (!pointer || pilotArmed)) {
+        fly();
+        return;
+      }
+      dispatch({ slice: 'settings', type: 'pilot', pilot: kind });
       showPilot();
+      pilotArmed = true;
     }
     // 0512: the touch section's two. `HAND_KINDS` and `STEER_KINDS` ARE the orders they were built in.
     else if (name === 'hand') {
@@ -1875,6 +1919,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   for (const element of chrome.elements) host.appendChild(element);
   // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
   chrome.setTouch(touchable);
+  // 0513: the splash's prompt waits for the game behind it, and `onTick` puts it up.
+  chrome.setActionShown('splash', 0, false);
   // 0458: and How to play lights the device in hand — the glass, or the keys until a pad says otherwise.
   chrome.setDevice(touchable ? 'touch' : 'keyboard');
   /*
@@ -3055,11 +3101,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const unlock = (e: Event): void => {
     const screen = state.screen.current;
     /*
-      ⚠️ **AND ON THE SPLASH TOO, AND ESCAPE ON THE SELECT SCREEN** — 0415. The splash is up while the
-      game loads, so a press there is the early press the intro's rule is for; Escape anywhere before
-      the menu is the skip, and asks for nothing.
+      ⚠️ **AND ON THE SPLASH TOO** — 0415. The splash is up while the game loads, so a press there is
+      the early press the intro's rule is for; Escape before the menu is the skip, and asks for nothing.
+
+      ⚠️ **AND SINCE 0513 THE SPLASH'S PRESS IS THE ONE IT WAITS FOR**: it is marked here, where every
+      key and every pointer is heard first, and the splash goes on the step it may (`onTick`).
     */
-    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'select' || screen === 'intro')) return;
+    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'intro')) return;
+    if (screen === 'splash') splashPressed = true;
     if (screen === 'intro' || screen === 'splash') {
       if (prewarmDone()) unlockAudio();
       else introWantsSound = true;
@@ -3087,7 +3136,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const leaveIntro = (): void => {
     const row = SCREENS[state.screen.current];
-    if (row.skips && row.timeout !== null && row.timeout.then !== null) dispatch({ slice: 'screen', type: 'show', screen: row.timeout.then });
+    if (row.skips && row.timeout !== null && row.timeout.then !== null) expireTo(state.screen.current, row.timeout.then);
   };
   /**
    * One step of a golfer saying `line`, begun at `from`, from the mouth at (`along`, `across`) — 0418:
@@ -3105,10 +3154,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const introKey = (e: KeyboardEvent): void => {
     const screen = state.screen.current;
     /*
-      ⚠️ **ESCAPE ON THE SPLASH OR THE SELECT SCREEN GOES STRAIGHT TO THE MENU** — 0415, with whoever
-      is already chosen (Bo, if nobody has been). The select screen's other keys are its own buttons'.
+      ⚠️ **ESCAPE ON THE SPLASH GOES STRAIGHT TO THE PILOT SCREEN** — 0415, and asks for no sound: the
+      first press there that is a gesture builds it, as a press on the title always could.
     */
-    if ((screen === 'splash' || screen === 'select') && e.key === 'Escape') {
+    if (screen === 'splash' && e.key === 'Escape') {
       dispatch({ slice: 'screen', type: 'show', screen: 'title' });
       return;
     }
@@ -3116,6 +3165,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const activates = e.key === 'Enter' || e.key === ' ';
     if (e.key !== 'Escape' && !(activates && skipsNow())) return;
     if (activates) e.preventDefault();
+    /*
+      ⚠️ **AND THE KEY IS SPENT HERE, BECAUSE THE INTRO SKIPS INTO THE RUN NOW — 0513.** This listens in
+      the capture phase on the window, ahead of the run's own: the keyboard source would count Space as
+      a special thrown on the first step of the run it skipped into, and the pause would hear Escape on
+      the run and pause it. Neither press was meant for the run.
+    */
+    e.stopPropagation();
     leaveIntro();
   };
   window.addEventListener('keydown', introKey, { capture: true });
@@ -3356,9 +3412,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     stepCrossing();
     /*
-      ⚠️ **THE SPLASH GIVES WAY WHEN THE GAME HAS LOADED AND IT HAS BEEN READ** — 0415: not before
-      `SPLASH_STEPS`, so the name is seen, and not before the prewarm is done, so the press that picks a
-      golfer is instant. A press made on the splash gets its sound the step loading finishes.
+      ⚠️ **THE SPLASH IS READY WHEN THE GAME HAS LOADED AND IT HAS BEEN READ** — 0415: not before
+      `SPLASH_STEPS`, so the name is seen, and not before the prewarm is done, so the first press on the
+      pilot screen is instant. A press made on the splash gets its sound the step loading finishes.
+
+      ⚠️ **AND SINCE 0513 IT WAITS FOR A PRESS THERE.** Ready, it puts up *Press to begin*; pressed — now,
+      or at any time before — it goes on to the pilot screen.
     */
     if (state.screen.current === 'splash') {
       splashSteps++;
@@ -3367,7 +3426,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         unlockAudio();
       }
       if (prewarmDone() && splashSteps >= SPLASH_STEPS) {
-        dispatch({ slice: 'screen', type: 'show', screen: 'select' });
+        if (splashPressed) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+        else chrome.setActionShown('splash', 0, true);
       }
     }
     // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
@@ -3418,7 +3478,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (timeoutLeft > 0) return;
     const then = SCREENS[state.screen.current].timeout?.then;
     if (then == null) chrome.activate();
-    else dispatch({ slice: 'screen', type: 'show', screen: then });
+    else expireTo(state.screen.current, then);
   };
 
   /*

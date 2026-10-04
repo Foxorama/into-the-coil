@@ -56,12 +56,16 @@ export interface GolferRow extends RunnerRow {
   ship: ShipKind;
   /**
    * Where they are from. It was the select card's line under the name (0415) until 0441 gave that line
-   * to the ship and its gun, which is what the choice decides; it is the golfer's fiction, kept for
-   * whatever speaks of them next.
+   * to the ship and its gun; the pilot screen's panel says it again (0513).
    */
   home: string;
   /** Their pronouns, as the predecessor gives them. */
   pronouns: string;
+  /**
+   * Who they are, in a line — 0513. It was a code comment on each row, and the review found it there:
+   * *"nothing anywhere says who a pilot is"*. On the row now, so the pilot screen's panel reads it.
+   */
+  bio: string;
   /**
    * How their voice blips when a speech bubble types what they say, as a playback rate on the `talk`
    * cue — 0418. One cue, pitched per golfer, so a fifth golfer is a number here rather than a cue.
@@ -103,7 +107,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'coils',
     stubble: false,
     build: 0.98,
-    // Reads wind off kites over the Ngong Hills, a feather in her cap; a controlled fade on every shot.
+    bio: 'Reads wind off kites over the Ngong Hills, a feather in her cap; a controlled fade on every shot.',
     voice: 1.14,
     saved: [
       'You found me! I felt the wind change, and I hoped it was you.',
@@ -132,7 +136,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'sweep',
     stubble: false,
     build: 1,
-    // Names a club by the sound of the strike, blindfold; striped irons, and a hook into Gwangalli harbour.
+    bio: 'Names a club by the sound of the strike, blindfold; striped irons, and a hook into Gwangalli harbour.',
     voice: 1.03,
     saved: [
       'I heard your guns through the walls. I knew someone had come.',
@@ -161,7 +165,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'crop',
     stubble: true,
     build: 1.08,
-    // Three long-drive titles, a dented driver on the mantel, two kids and a kelpie, and a road train.
+    bio: 'Three long-drive titles, a dented driver on the mantel, two kids and a kelpie, and a road train.',
     voice: 0.8,
     saved: [
       'Mate! You came for me! Thought I was a goner in there.',
@@ -190,7 +194,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'tousled',
     stubble: false,
     build: 1,
-    // Spins it back on a string; roasts coffee named for its spin rate; once lost a playoff to backspin.
+    bio: 'Spins it back on a string; roasts coffee named for their spin rate; once lost a playoff to backspin.',
     voice: 0.95,
     saved: [
       'You came back for me. I’m naming my next coffee roast after you.',

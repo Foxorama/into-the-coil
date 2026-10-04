@@ -22,8 +22,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { fly } from './title.ts';
 import { framesInARow, moved } from './frames.ts';
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
@@ -98,7 +98,8 @@ async function open(viewport: { width: number; height: number }): Promise<Page> 
  */
 async function start(page: Page): Promise<void> {
   await pastIntro(page);
-  await page.click('.' + prefixFor('title') + 'action');
+  // Fly, and past the intro the first flight plays — 0513 (`tests/title.ts`).
+  await fly(page);
   await page.waitForTimeout(120);
 }
 

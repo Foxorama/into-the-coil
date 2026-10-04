@@ -358,16 +358,15 @@ describe('a screen that expires presses its own control, and says how long it wa
     */
     const waiting = SCREEN_KINDS.filter((s: Screen) => SCREENS[s].timeout === null);
     /*
-      ⚠️ **AND THE SPLASH AND THE GOLFERS SINCE 0415.** The select screen waits for a hand, which is
-      its point — the pick is the gesture that turns the sound on. The splash leaves by itself but not
-      on a clock: `src/app/mount.ts` moves it on once the game has loaded, which no timeout can say.
+      ⚠️ **AND THE SPLASH SINCE 0415, AND IT WAITS FOR A HAND SINCE 0513.** Its press is the gesture
+      that turns the sound on — the golfers' screen that was that press is gone into the title.
     */
     // ⚠️ **AND SETTINGS AND HOW TO PLAY SINCE 0458**, on the title's terms: a player reading them is
     // reading them, and a screen that timed out from under them would take the page they opened away.
     // ⚠️ **AND THE PAUSE AND ITS QUESTION SINCE 0511**: a held run is held until its player comes back,
     // and a pause that timed out would resume — or quit — a run its owner had walked away from.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['guide', 'music', 'paused', 'playing', 'quit', 'select', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['guide', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 

@@ -45,7 +45,8 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'an early press unlocking at once, which runs the whole load on the press and freezes the page',
-    guard: 'keeps a press on the splash',
+    // 0513: the splash's own press now, which is the early one.
+    guard: 'keeps a press made while it loads',
     edit: {
       path: 'src/app/mount.ts',
       find: '      if (prewarmDone()) unlockAudio();\n      else introWantsSound = true;\n      return;\n    }\n    unlockAudio();',
@@ -56,7 +57,8 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'the sound on and the intro’s beats never played',
-    guard: 'turns the sound on with the pick, never freezes, plays the cues',
+    // 0513: the intro is the first flight's, and the sound came on at the splash.
+    guard: 'plays the intro on the first Fly, plays its cues',
     edit: {
       path: 'src/app/mount.ts',
       find: '        if (audioOut.ready()) speaker.play(INTRO_CUES[introCueNext]!.cue);\n',
@@ -79,10 +81,11 @@ export const PROBES = [
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',
     broke: 'Escape asking for the sound like any other press',
-    guard: 'goes to the menu on Escape from the golfers too, and builds no sound',
+    // 0513: the golfers' screen is gone; Escape on the splash is the press that asks for nothing.
+    guard: 'goes to the pilot screen on Escape, and builds no sound',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'select' || screen === 'intro')) return;\n",
+      find: "    if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'intro')) return;\n",
       replace: '',
     },
   },

@@ -33,12 +33,39 @@ export async function choose(page: Page, setting: SettingName, index: number): P
   await page.locator(`[${SETTING_ATTR}="${setting}"] .${prefixFor(screen)}option >> nth=${index}`).click();
 }
 
-/** On the title: choose `tier` on the band and press Launch. */
+/**
+ * On the title: press Fly, and be in the run — 0513.
+ *
+ * ⚠️ **THE FIRST FLIGHT OF A VISIT PLAYS THE INTRO, AND IT ENDS IN THE RUN.** A test whose subject is
+ * not the intro skips it the way a player can, with Escape — and only once the Skip is up, because
+ * Escape on the run that follows is a pause (0511). A later flight goes straight into the run.
+ */
+export async function fly(page: Page): Promise<void> {
+  await page.waitForSelector(shown('title'), { state: 'attached' });
+  await pressOn(page, 'title', SCREENS.title.actions[0]!.label);
+  const where = await page.waitForFunction(
+    ([hud, skip]: [string, string]) =>
+      document.querySelector(hud) !== null ? 'run' : document.querySelector(skip) !== null ? 'intro' : null,
+    [HUD_SHOWN, SKIP_SHOWN] as [string, string],
+    { timeout: 30_000 },
+  );
+  if ((await where.jsonValue()) === 'intro') {
+    await page.keyboard.press('Escape');
+    await page.waitForSelector(HUD_SHOWN, { timeout: 30_000 });
+  }
+}
+
+/** On the title: choose `tier` on the band and fly. */
 export async function launch(page: Page, tier: DifficultyKind): Promise<void> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
   await choose(page, 'difficulty', DIFFICULTY_KINDS.indexOf(tier));
-  await pressOn(page, 'title', SCREENS.title.actions[0]!.label);
+  await fly(page);
 }
+
+/** The readout, up while a run flies. */
+const HUD_SHOWN = '.itc-playing-hud-shown';
+/** The intro's Skip, up once the game behind it has loaded — 0412. */
+const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
 
 /** From the title: open Settings. */
 export async function openSettings(page: Page): Promise<void> {

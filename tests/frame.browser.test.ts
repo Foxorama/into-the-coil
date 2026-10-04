@@ -17,9 +17,9 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { framesInARow, moved } from './frames.ts';
+import { fly } from './title.ts';
 
 /*
   ⚠️ FILE-LEVEL, because vitest's 5s default is not a browser test's timeout — see
@@ -65,11 +65,12 @@ async function open(
  * MOVING game has to start one first. The pair of tests around `waits on the title screen` is what
  * keeps that from being an assumption.
  *
- * The selector is built from `prefixFor` rather than typed out, so a class rename cannot leave this
- * silently clicking nothing — `tests/chrome.test.ts` holds the same single description.
+ * Through `tests/title.ts`, which reaches the button by the row's own label, so a renamed button or
+ * class cannot leave this silently clicking nothing.
  */
 async function start(page: Page): Promise<void> {
-  await page.click('.' + prefixFor('title') + 'action');
+  // Fly, and past the intro the first flight plays — 0513 (`tests/title.ts`).
+  await fly(page);
   await page.waitForTimeout(120);
 }
 

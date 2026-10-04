@@ -114,7 +114,7 @@ export const PROBES = [
     guard: 'counts down and returns to the title with no input at all',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    if (then == null) chrome.activate();\n    else dispatch({ slice: \'screen\', type: \'show\', screen: then });',
+      find: '    if (then == null) chrome.activate();\n    else expireTo(state.screen.current, then);',
       replace: '    chrome.activate();',
     },
   },
