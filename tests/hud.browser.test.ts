@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { hudBar, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { launch, openSettings, shown as shownScreen } from './title.ts';
+import { fly, launch, openSettings, shown as shownScreen } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../src/content/pickups.ts';
 import { MAX_SHIELDS } from '../src/content/ships.ts';
@@ -225,7 +225,7 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
 
   it('is not drawn on a device with nothing to tap it with', async () => {
     const page = await open(false);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     expect(await shown(page, TRIGGER), 'a desktop was shown a place to put a finger').toBe(false);
     await page.context().close();
@@ -234,7 +234,7 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
   it('is drawn on a touch device, once a run is running and never before it', async () => {
     const page = await open(true);
     expect(await shown(page, TRIGGER), 'the button was up before there was a run to fire in').toBe(false);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     expect(await shown(page, TRIGGER), 'a phone was shown no place to press').toBe(true);
     await page.context().close();
@@ -253,7 +253,7 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
       itself (0027). The functions are the other reader — the hit test's.
     */
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     const geometry = await page.evaluate(() => {
       const canvas = document.querySelector('#app canvas');
@@ -295,7 +295,7 @@ describe.runIf(chromePath)('the trigger button says where the bomb is', () => {
     // The same rule as the title screen's key: the real art, never a drawing of it. A glyph here
     // would be a second description of the bomb's silhouette.
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     const band = await page.evaluate(() => {
       const el = document.querySelector('.itc-playing-trigger-button');
@@ -337,7 +337,7 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
       it, at a phone's width, is the one any bar has to clear; a narrower one clears by more.
     */
     const page = await open(false);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-hud-shown');
     for (const [width, height] of [
       [667, 375],
@@ -379,7 +379,7 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
       are measured at their widest together, which is the only arrangement in which they could meet.
     */
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-score-shown');
     const said = await page.getAttribute('.itc-playing-score', 'aria-label');
     expect(said, 'the score does not say its number in words').toMatch(/^Score 0, times 1$/);
@@ -428,7 +428,7 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
       three boxes share a centre line and a height, to a pixel.
     */
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-score-shown');
     for (const [width, height] of [
       [667, 375],
@@ -477,7 +477,7 @@ describe.runIf(chromePath)('0500 — the desk has a bar', () => {
       inside the bar with air on both sides, the bar is drawn black, and the first row under it is not.
     */
     const page = await open(false);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-score-shown');
     for (const [width, height] of [
       [1920, 950],
@@ -509,7 +509,7 @@ describe.runIf(chromePath)('0500 — the desk has a bar', () => {
 
   it('and a touch screen keeps none: the field is the whole glass, as it was', async () => {
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-score-shown');
     await page.setViewportSize({ width: 844, height: 390 });
     await page.waitForTimeout(500);
@@ -558,7 +558,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
   it('is hidden until a run starts, and shows while playing', async () => {
     const page = await open();
     expect(await shown(page, HUD), 'the readout is up before there is a run to report').toBe(false);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     expect(await shown(page, HUD), 'the readout never appeared').toBe(true);
     await page.context().close();
@@ -572,7 +572,7 @@ describe.runIf(chromePath)('the in-game readout', () => {
       assertion that keeps them there.
     */
     const page = await open();
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(200);
     const labels = await page.evaluate((selector: string) =>
       [...document.querySelectorAll(selector)].map((el) => el.getAttribute('aria-label') ?? ''),
@@ -734,7 +734,7 @@ describe.runIf(chromePath)('the readout follows what the player spends', () => {
       the number — no dodging, no waiting for a wave.
     */
     const page = await open();
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForTimeout(300);
     // "2 charges, next Bomb" since 0373: the stack's count and what it throws next.
     const label = '.itc-playing-hud-group[aria-label*="charge"]';
@@ -786,7 +786,7 @@ describe.runIf(chromePath)('0465 — the chrome fits the phone', () => {
 
   it('THE ASK: the strip is under a tenth of a phone’s height, and the desktop’s is what it was', async () => {
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-score-shown');
     for (const [width, height] of PHONES) {
       const m = await measure(page, width, height);
@@ -805,7 +805,7 @@ describe.runIf(chromePath)('0465 — the chrome fits the phone', () => {
 
   it('and the discs are a thumb and no more: 44 to 66 px each, the column under half the height', async () => {
     const page = await open(true);
-    await page.click('.' + prefixFor('title') + 'action');
+    await fly(page);
     await page.waitForSelector('.itc-playing-trigger-shown');
     for (const [width, height] of PHONES) {
       const m = await measure(page, width, height);

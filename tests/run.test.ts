@@ -64,11 +64,11 @@ function armed(): State {
 }
 
 describe('a run is lives', () => {
-  it('starts on the splash, and the intro after it hands over to the title, with no run in progress', () => {
-    // 0415: the page opens on the splash, which gives way to the golfers; the intro a pick plays ends
-    // on the title by its own clock — `SCREENS.intro.timeout`, 0411.
+  it('starts on the splash with no run in progress, and the intro the first flight plays ends in one', () => {
+    // 0415: the page opens on the splash. 0513: its press opens the pilot screen, and the intro the first
+    // Fly plays ends in the run by its own clock — `SCREENS.intro.timeout`, begun by the shell.
     expect(initialState.screen.current).toBe('splash');
-    expect(SCREENS.intro.timeout?.then).toBe('title');
+    expect(SCREENS.intro.timeout?.then).toBe('playing');
     // Zero rather than a full complement, so `begin` is the only way into a run — a state that was
     // already stocked would let a stray dispatch drop the player into a half-run.
     expect(initialState.run.lives).toBe(0);

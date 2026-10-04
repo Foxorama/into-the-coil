@@ -3,8 +3,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
+import { fly } from './title.ts';
 import { placeFor } from '../src/app/music.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
@@ -86,8 +86,8 @@ describe.runIf(chromePath)('level one is drawn in its own place, not in the titl
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
-    // The first tier, which is the one `scripts/shot.mjs` presses.
-    await page.locator('.' + prefixFor('title') + 'action').first().click();
+    // Fly, which is what `scripts/shot.mjs` presses, and past the intro the first flight plays — 0513.
+    await fly(page);
     // A few seconds in, which is `scripts/shot.mjs`'s first shot of the level and where 0417's
     // before-and-after pair was taken: the weather has scrolled on and little else has arrived.
     await page.waitForTimeout(3_000);

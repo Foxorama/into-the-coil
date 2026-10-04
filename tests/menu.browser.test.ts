@@ -572,27 +572,29 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     const tier = SCREENS.title.choices.find((c) => c.name === 'difficulty')!;
     const pilot = SCREENS.title.choices.find((c) => c.name === 'pilot')!;
 
-    expect(await ring(), 'the title does not open on Launch').toBe(SCREENS.title.actions[0]!.label);
+    // 0513: the pilot band is drawn first and the tier under the pilot card, so up from Fly is the tier.
+    expect(await ring(), 'the title does not open on Fly').toBe(SCREENS.title.actions[0]!.label);
     await nudge(page, MENU_DPAD_BUTTONS.up);
-    expect(await ring(), 'up from Launch is not the pilot band').toBe(pilot.label);
-    const flying = await filled('pilot');
-    await nudge(page, MENU_DPAD_BUTTONS.left);
-    const pilots = pilot.options.map((o) => o.label);
-    expect(await filled('pilot'), 'left on the pilot band did not choose the pilot before').toBe(pilots[pilots.indexOf(flying) - 1]);
-    await nudge(page, MENU_DPAD_BUTTONS.up);
-    expect(await ring(), 'up from the pilot band is not the difficulty band').toBe(tier.label);
+    expect(await ring(), 'up from Fly is not the difficulty band').toBe(tier.label);
     const was = await filled('difficulty');
     await nudge(page, MENU_DPAD_BUTTONS.right);
     const tiers = tier.options.map((o) => o.label);
     expect(await filled('difficulty'), 'right on the difficulty band did not choose the next tier').toBe(tiers[tiers.indexOf(was) + 1]);
     expect(await ring(), 'a step along a band moved the ring off it').toBe(tier.label);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    expect(await ring(), 'up from the difficulty band is not the pilot band').toBe(pilot.label);
+    const flying = await filled('pilot');
+    await nudge(page, MENU_DPAD_BUTTONS.left);
+    const pilots = pilot.options.map((o) => o.label);
+    expect(await filled('pilot'), 'left on the pilot band did not choose the pilot before').toBe(pilots[pilots.indexOf(flying) - 1]);
 
-    // Down through every row: the bands, Launch, then Settings — the one the old walk could not reach.
+    // Down through every row to Fly, then along it to Settings — the one the old walk could not reach.
+    // 0513: Fly and Settings stand side by side on every device, so Settings is along the row, not under it.
     await nudge(page, MENU_DPAD_BUTTONS.down);
     await nudge(page, MENU_DPAD_BUTTONS.down);
     expect(await ring()).toBe(SCREENS.title.actions[0]!.label);
-    await nudge(page, MENU_DPAD_BUTTONS.down);
-    expect(await ring(), 'down from Launch did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await ring(), 'right from Fly did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
 
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     await page.waitForSelector(shownScreen('settings'), { timeout: 15_000 });
@@ -602,6 +604,18 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
       SCREENS.title.actions[1]!.label,
     );
     expect(await shown(page, '.itc-playing-hud'), 'a press on the title started a run').toBe(false);
+    await page.context().close();
+  });
+
+  it('0513 — A on the pilot band flies the pilot it is on, where it used to step to the next', async () => {
+    const page = await open();
+    await afterFrames(page, 8);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
+    // The first flight of a visit is the intro's, whose Skip is the sign it began.
+    await page.waitForSelector('.' + prefixFor('intro') + 'skip-shown', { timeout: 15_000 });
+    expect(await shown(page, shownScreen('title')), 'A on the pilot band left the title up').toBe(false);
     await page.context().close();
   });
 });

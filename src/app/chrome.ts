@@ -36,6 +36,8 @@ import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
 import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
+// 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
+import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -351,7 +353,7 @@ ${starSky()}
   victory's and the music room's were the panel's plain cyan, a second voice beside the title's.
 */
 .itc-title-heading, .itc-splash-heading, .itc-settings-heading, .itc-guide-heading,
-.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
+.itc-paused-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading {
   font-weight: 800;
   letter-spacing: 0.06em;
   background: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)) 15%, var(--itc-ink) 85%);
@@ -456,16 +458,11 @@ ${each('-choices')} {
 }
 .itc-music-action { width: min(100%, 18ch); }
 /*
-  ── THE SPLASH AND THE GOLFERS — decision 0415 ───────────────────────────────────────────────────
+  ── THE SPLASH — decision 0415, and a press since 0513 ───────────────────────────────────────────
 
-  The splash is the name, large, fading up while the game loads behind it; the select screen fades up
-  in its place. Both dim to the space colour, so one after the other reads as the name giving way to
-  the four golfers rather than as a cut.
-
-  The golfers are four cards, a portrait over a name over a home, always four across: the game is
-  landscape only (0031), so the scarce axis is the height, and a two-by-two grid was tried first and
-  the layout guard refused it — 33 pixels too tall on a 480x320 phone. The portrait is sized against
-  the short axis like the rest of the chrome (0049), with a floor so a phone's is still a face.
+  The name, large, fading up while the game loads behind it. Once it has loaded the sweep under the
+  name stops and Press to begin breathes in its place: a button, so a click and a tap reach it, though
+  any key or tap anywhere does the same. The golfers' four cards that followed it are gone.
 */
 .itc-splash-heading {
   font-size: clamp(1.8rem, min(9cqw, 14cqh), 5rem);
@@ -473,7 +470,6 @@ ${each('-choices')} {
   margin: 0;
   animation: itc-splash-in 1.2s ease-out both;
 }
-.itc-select-shown { animation: itc-select-in 0.6s ease-out both; }
 @keyframes itc-splash-in { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: none; } }
 /*
   ⚠️ **THE SPLASH SAYS IT IS WORKING — 0436.** It was the name alone on the void for as long as the
@@ -501,37 +497,20 @@ ${each('-choices')} {
 @media (prefers-reduced-motion: reduce) {
   .itc-splash-panel::after { animation: none; background-position: 50% 0, 0 0; }
 }
-@keyframes itc-select-in { from { opacity: 0; } to { opacity: 1; } }
-.itc-select-heading { font-size: clamp(1.1rem, min(5cqw, 8cqh), 2.75rem); margin: 0; }
-.itc-select-choices {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: min(1rem, 2.5cqh) min(1rem, 2cqw);
-  width: min(100%, 64rem);
+/* Loaded: the sweep has said what it was for, and the prompt takes its place. */
+.itc-splash-panel:has(.itc-splash-action:not([hidden]))::after { display: none; }
+.itc-splash-action {
+  border: none;
+  background: none;
+  box-shadow: none;
+  font-size: clamp(1rem, min(3cqw, 5cqh), 1.6rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  animation: itc-splash-breathe 2.4s ease-in-out infinite;
 }
-.itc-select-action {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 0.2em;
-  height: 100%;
-}
-.itc-select-action-hint { display: block; font-size: 0.8em; font-weight: 500; opacity: 0.7; }
-/*
-  ⚠️ **NO CARD IS MARKED — 0462.** 0437 ticked the golfer flying now, when this screen was also where
-  the golfer was changed; since 0458 it is only shown at boot, before anyone has chosen, so the tick
-  only ever named the default.
-*/
-.itc-select-action { position: relative; transition: transform 0.15s ease-out; }
-/* A card lifts under the pointer, so the choice under the hand is the one that moved. */
-.itc-select-action:hover { transform: translateY(-0.25em); }
+@keyframes itc-splash-breathe { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .itc-select-action, .itc-select-action:hover { transition: none; transform: none; }
-}
-.itc-select-portrait {
-  width: clamp(3rem, min(24cqh, 14cqw), 9rem);
-  height: clamp(3rem, min(24cqh, 14cqw), 9rem);
+  .itc-splash-action { animation: none; }
 }
 /*
   ── THE NOW PLAYING READOUT — decision 0212, and no extension on that path ──────────────────────
@@ -1594,18 +1573,77 @@ ${each('-option-on')} {
   written after it — a child, a second class — binds to its LAST selector only, and the portraits drew
   as 585-pixel ovals. Only the title has faces, so only its prefix is here.
 */
+/*
+  ⚠️ **A CARD SINCE 0513: THE FACE, AND THE NAME THEY GO BY UNDER IT.** The button is the card and the
+  canvas is the round face inside it, so the ring is drawn round the face and the name stands clear of it.
+*/
 .itc-title-option.itc-title-option-face {
   flex: 0 0 auto;
-  width: clamp(2.4rem, 11cqh, 3.6rem);
-  height: clamp(2.4rem, 11cqh, 3.6rem);
-  padding: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  opacity: 0.55;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2em;
+  padding: 0.2em 0.3em;
+  border-radius: 0.6em;
+  background: none;
+  opacity: 0.6;
   transition: transform 0.15s ease-out, opacity 0.15s ease-out;
 }
-.itc-title-option-face > canvas { display: block; width: 100%; height: 100%; }
-.itc-title-option-face.itc-title-option-on { opacity: 1; transform: scale(1.12); }
+.itc-title-option-face > canvas {
+  display: block;
+  width: clamp(2.4rem, 11cqh, 3.6rem);
+  height: clamp(2.4rem, 11cqh, 3.6rem);
+  border-radius: 50%;
+}
+.itc-title-option-name { font-size: 0.72em; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
+.itc-title-option-face.itc-title-option-on { opacity: 1; transform: scale(1.06); }
+/* The band's own line is the panel's to say to the eye, and stays for a reader. */
+.itc-title-band-faces .itc-title-band-hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+/*
+  ── THE PILOT CARD — 0513 ──────────────────────────────────────────────────────────────────────
+
+  Under the faces: the ship drawn large beside the words, which are the name, the pronouns and home on
+  one line, who they are, and the craft and its gun. Left-aligned words in a centred card, so a longer
+  line wraps under its own start rather than round the middle.
+*/
+.itc-title-pilot-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.2em 1em;
+  padding: 0.5em 0.9em;
+  border-radius: 0.75em;
+  background: color-mix(in srgb, var(--itc-ink) 6%, transparent);
+  text-align: left;
+}
+.itc-title-pilot-ship { display: flex; align-items: center; justify-content: center; width: clamp(4rem, 18cqh, 9rem); }
+.itc-title-pilot-ship > canvas { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 0.6em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
+.itc-title-pilot-words { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.itc-title-pilot-name { font-size: 1.25em; font-weight: 800; letter-spacing: 0.02em; }
+.itc-title-pilot-who { font-size: 0.8em; opacity: 0.7; letter-spacing: 0.06em; }
+.itc-title-pilot-bio { margin: 0.2em 0; font-size: 0.85em; line-height: 1.3; opacity: 0.9; }
+.itc-title-pilot-craft { font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--itc-ally, var(--itc-ink)); }
+.itc-title-pilot-gun { font-size: 0.8em; opacity: 0.85; }
+/*
+  ⚠️ **AND THE PILOT SCREEN GIVES BACK THE HEIGHT THE CARD TAKES — 0513.** The card is new and the
+  screen is the height it was, so two things the card made redundant go: the bands' labels — the faces
+  are the pilots and the tier's line names the tier, and each band still names itself to a reader —
+  and the second row of buttons, *Fly* and *Settings* standing side by side as they do on a phone.
+*/
+.itc-title-band { grid-template-areas: 'less track more' 'hint hint hint'; }
+.itc-title-band-label { display: none; }
+.itc-title-choices { flex-direction: row; }
+.itc-title-choices > :first-child { flex: 2 1 0; }
+.itc-title-choices > :nth-child(n+2) { flex: 1 1 0; }
+/* The highlighted card's name is the card's ink, not the fill's: the fill is the face's ring now. */
+.itc-title-option-face.itc-title-option-on .itc-title-option-name { color: var(--itc-ink); }
 /*
   The band the cursor is on. The ring is the shared focus outline further down (the -action-cursor
   class is set on the band itself), and a faint glass behind the row says which row a step moves.
@@ -1812,7 +1850,82 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-title-band-label { display: none; }
   .itc-title-option { font-size: 0.92em; }
-  .itc-title-option.itc-title-option-face { width: clamp(2.1rem, 11cqh, 2.8rem); height: clamp(2.1rem, 11cqh, 2.8rem); }
+  .itc-title-option-face > canvas { width: clamp(1.9rem, 9cqh, 2.6rem); height: clamp(1.9rem, 9cqh, 2.6rem); }
+  /*
+    The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
+    to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
+  */
+  /*
+    ⚠️ **ON A PHONE THE PILOT SCREEN IS TWO ROWS OF TWO AND TWO ACROSS — 0513.** With the card under
+    the faces the title ran 80 px past a 390 px phone and 150 past a 320 one. The main column and its
+    box of bands stand aside (display: contents), so the faces, the card, the tier and the buttons are
+    the body's own cells: the table on the left, as wide as its rows and each row one line, with the
+    faces and the card beside it; then the tier across both columns, where its three names fit a line
+    each; then Fly and Settings. The DOM is untouched, so the walk's order is.
+
+    ⚠️ **ONE LAYOUT AT EVERY PHONE WIDTH, AND IT WAS TWO.** The first put the card under the table
+    wherever there was width for it, and the table's names wrapped at 667 and doubled its height: a
+    breakpoint moves a problem to the width beside it, so there is none.
+  */
+  .itc-title-main, .itc-title-settings-box { display: contents; }
+  .itc-title-body:not(.itc-title-body-bare) {
+    grid-template-columns: max-content minmax(0, 1fr);
+    grid-template-areas: 'board pilot' 'board card' 'tier tier' 'choices choices';
+    align-items: center;
+  }
+  .itc-title-body.itc-title-body-bare { grid-template-areas: 'pilot' 'card' 'tier' 'choices'; }
+  .itc-title-board { grid-area: board; }
+  .itc-title-band-faces { grid-area: pilot; }
+  .itc-title-band:not(.itc-title-band-faces) { grid-area: tier; }
+  .itc-title-choices { grid-area: choices; }
+  .itc-title-pilot-card { grid-area: card; padding: 0.3em 0.6em; gap: 0.1em 0.6em; font-size: 0.76em; }
+  .itc-title-pilot-gun { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The pronouns and the home on the name's line, and the line about them one line long. */
+  .itc-title-pilot-words { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
+  .itc-title-pilot-bio, .itc-title-pilot-gun, .itc-title-pilot-craft { flex-basis: 100%; }
+  .itc-title-body .itc-title-pilot-bio { -webkit-line-clamp: 1; }
+  .itc-title-board-score, .itc-title-board-pilot { white-space: nowrap; }
+  /* How far each run got goes on every phone, and the table is the height of the faces and card beside it. */
+  .itc-title-body .itc-title-board-reached { display: none; }
+  .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto auto; }
+  .itc-title-body .itc-title-board { font-size: 0.72em; }
+  /*
+    The tier's three names on one line each where they fit — two lines each was the band's height twice
+    over — and the buttons a thumb tall and no taller, with room left for CI's wider fonts.
+  */
+  .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.78em; padding: 0.3em 0.4em; }
+  .itc-title-body .itc-title-choices > * { padding-top: 0.3em; padding-bottom: 0.3em; }
+  /*
+    The names under the faces go on a phone: the card beside them names the highlighted pilot, each
+    face names itself to a reader, and the line they took was the margin CI's wider fonts need.
+  */
+  .itc-title-option-name { display: none; }
+  .itc-title-pilot-ship { width: clamp(3rem, 16cqh, 5rem); }
+  .itc-title-pilot-name { font-size: 1.05em; }
+  .itc-title-pilot-bio {
+    margin: 0.1em 0;
+    font-size: 0.78em;
+    line-height: 1.2;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  /* The craft's name is the picture beside it; the gun's line says what it fires. */
+  .itc-title-pilot-craft { display: none; }
+  .itc-title-pilot-who { font-size: 0.72em; }
+  /*
+    ⚠️ **ON THE SHORTEST PHONES THE LINE ABOUT WHO THEY ARE GOES**, and the card is a name, a home and
+    a gun beside the ship. Below 360 tall there is no row of the screen to give it without the tier or
+    *Fly* going under the fold, and those are the two things a run cannot start without.
+  */
+  @container (max-height: 360px) {
+    .itc-title-pilot-bio { display: none; }
+    /* And the tier's names, the buttons and the ship a step smaller, which is the room CI's fonts need. */
+    .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.7em; }
+    .itc-title-body .itc-title-choices > * { font-size: 0.85em; }
+    .itc-title-pilot-ship { width: 2.6rem; }
+  }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
     column took the width three tier names needed, and they stacked a letter to a line. The hint under
@@ -1964,18 +2077,19 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   border-color: transparent;
   background-clip: border-box;
 }
-/* The face's ring is the run as well, drawn round the portrait rather than over it. */
-.itc-title-option-face.itc-title-option-on { background-image: none; box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
+/* The card's ring is the run as well, drawn round the portrait rather than over the card (0513). */
+.itc-title-option-face.itc-title-option-on { background-image: none; box-shadow: none; }
+.itc-title-option-face.itc-title-option-on > canvas { box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
 .itc-title-option:not(.itc-title-option-on), .itc-settings-option:not(.itc-settings-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
-/* A golfer's card lights under the pointer, as it lifts. */
-.itc-select-action:hover { box-shadow: 0 0.4em 1.4em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, transparent), 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent); }
-.itc-select-portrait { filter: drop-shadow(0 0.15em 0.5em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
+.itc-title-option-face, .itc-title-option-face:not(.itc-title-option-on) { border-color: transparent; }
+/* A card lights under the pointer. */
+.itc-title-option-face:hover > canvas { box-shadow: 0 0 0 2px color-mix(in srgb, var(--itc-ink) 60%, transparent); }
 /*
   The banner's rule, under every heading but the name's — which has the badge, and on the splash the
   loading light, as its line. Out of flow, hung from the heading, so the panel is the height it was.
 */
-.itc-select-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading { position: relative; }
-.itc-select-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after,
+.itc-paused-heading, .itc-gameover-heading, .itc-cleared-heading, .itc-victory-heading, .itc-music-heading, .itc-settings-heading, .itc-guide-heading { position: relative; }
+.itc-paused-heading::after, .itc-gameover-heading::after, .itc-cleared-heading::after, .itc-victory-heading::after, .itc-music-heading::after,
 .itc-settings-heading::after, .itc-guide-heading::after {
   content: '';
   position: absolute;
@@ -2357,6 +2471,8 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 .itc-resuming-heading, .itc-resuming-timer { text-shadow: 0 0 0.4em var(--itc-void, #000), 0 0 0.15em var(--itc-void, #000); }
 /* The pause's buttons are one column of one width, so the list reads as a list and not a stack of words. */
 .itc-paused-action, .itc-quit-action { min-width: 11em; }
+/* The splash's prompt is words and not a plate (0513): the whole screen is what a press lands on. */
+.itc-splash-action, .itc-splash-action:hover { border-color: transparent; background: none; box-shadow: none; }
 /* An action the shell has taken off a screen for now, whatever display the action rule gives it. */
 ${each('-action[hidden]')} { display: none; }
 @media (prefers-reduced-motion: reduce) {
@@ -2424,6 +2540,10 @@ interface Band {
   index: number;
   /** Which devices it is offered on — 0512, the row's `on`. */
   on: 'all' | 'touch';
+  /** What a press on it does — 0513, the row's `press`. */
+  press: 'steps' | 'takes';
+  /** What its segments show — the row's `faces`; a band of faces has the pilot card under it (0513). */
+  faces: 'words' | 'portraits';
 }
 
 /**
@@ -2664,11 +2784,9 @@ const ICON_PIXELS_PER_UNIT = 28;
 const BADGE_SRC = 'icon-192.png';
 
 /**
- * How many pixels square a golfer's portrait is baked at — 0415. Above the largest it is ever drawn
- * (9rem) at a pixel ratio of two, on the icons' own argument: a few kilobytes once, and no pixel steps.
+ * The pilot band's portraits — 0458: drawn at 3.6rem at most, so 128 covers a pixel ratio of two. The
+ * boot cards' 320-pixel portraits went with the cards (0513).
  */
-const PORTRAIT_PIXELS = 320;
-/** The pilot band's portraits — 0458: drawn at 3.6rem at most, so 128 covers a pixel ratio of two. */
 const FACE_PIXELS = 128;
 /**
  * How many of the table's runs the title shows — 0458: *"could just be the top 5."* The device keeps
@@ -3385,7 +3503,12 @@ function buildNowPlaying(
 export function makeChrome(
   colours: Palette,
   onAction: (screen: Screen, index: number) => void,
-  onChoice: (name: SettingName, index: number) => void,
+  /*
+    0513: `pointer` is a click or a tap on a segment, where `false` is the cursor's step or press. A band
+    of pilots tells them apart: a thumb's first landing on a card is a look, and the cursor's press is a
+    decision.
+  */
+  onChoice: (name: SettingName, index: number, pointer: boolean) => void,
   // 0212: the music room's seek. A fraction of the walk, and the shell decides what that means.
   onSeek: (through: number) => void,
   // 0412: the intro's skip, pressed.
@@ -3444,6 +3567,67 @@ export function makeChrome(
     const pen = portrait.getContext('2d');
     if (pen !== null) paintPortrait(pen, GOLFERS[golfer], FACE_PIXELS);
     return portrait;
+  };
+  /*
+    ── THE PILOT CARD — 0513 ───────────────────────────────────────────────────────────────────────
+
+    Who the highlighted pilot is and what they fly: their ship drawn large from the sheet's own bake, so
+    it is the ship the run draws, beside their name, pronouns and home, the line about them, and their
+    gun with its one-line hint. Built once; `paintPilot` rewrites its words and swaps its ship.
+  */
+  /** The ship drawn on the card, in pixels per world unit — twice the readout's icons. */
+  const CARD_SHIP_PIXELS_PER_UNIT = ICON_PIXELS_PER_UNIT * 2;
+  // @setup: a ship is baked the first time its pilot is highlighted, and kept for the page.
+  const cardShips = new Map<number, HTMLCanvasElement>();
+  const shipOnCard = (sprite: number): HTMLCanvasElement => {
+    let canvas = cardShips.get(sprite);
+    if (canvas === undefined) {
+      const kind = SPRITE_KINDS[sprite];
+      canvas = kind === undefined ? document.createElement('canvas') : bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT);
+      cardShips.set(sprite, canvas);
+    }
+    return canvas;
+  };
+  interface PilotCard {
+    root: HTMLElement;
+    ship: HTMLElement;
+    name: HTMLElement;
+    who: HTMLElement;
+    bio: HTMLElement;
+    craft: HTMLElement;
+    gun: HTMLElement;
+  }
+  let pilotCard: PilotCard | null = null;
+  const buildPilotCard = (prefix: string): PilotCard => {
+    const part = (tag: string, name: string): HTMLElement => {
+      const el = document.createElement(tag);
+      el.className = prefix + 'pilot-' + name;
+      return el;
+    };
+    const root = part('div', 'card');
+    root.setAttribute('aria-hidden', 'true');
+    const ship = part('div', 'ship');
+    const words = part('div', 'words');
+    const name = part('div', 'name');
+    const who = part('div', 'who');
+    const bio = part('p', 'bio');
+    const craft = part('div', 'craft');
+    const gun = part('div', 'gun');
+    words.append(name, who, bio, craft, gun);
+    root.append(ship, words);
+    return { root, ship, name, who, bio, craft, gun };
+  };
+  const paintPilot = (golfer: GolferKind | undefined): void => {
+    if (pilotCard === null || golfer === undefined) return;
+    const row = GOLFERS[golfer];
+    const ship = SHIPS[row.ship];
+    const weapon = WEAPONS[ship.weapon];
+    pilotCard.name.textContent = row.name;
+    pilotCard.who.textContent = row.pronouns + ' · ' + row.home;
+    pilotCard.bio.textContent = row.bio;
+    pilotCard.craft.textContent = ship.label;
+    pilotCard.gun.textContent = weapon.label + ' — ' + weapon.hint;
+    pilotCard.ship.replaceChildren(shipOnCard(ship.sprite));
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
@@ -3675,22 +3859,6 @@ export function makeChrome(
       control.className = prefix + 'action';
       control.textContent = action.label;
       /*
-        ⚠️ **THE GOLFERS' BUTTONS CARRY A PORTRAIT — 0415**, above the name, drawn from the golfer's
-        row by `src/render/golfer-art.ts`. The index IS the golfer: `src/state/screens.ts` walks
-        `GOLFER_KINDS` to build the row. Decorative, like the key's icons — the name is the label.
-      */
-      const golfer = screen === 'select' ? GOLFER_KINDS[index] : undefined;
-      if (golfer !== undefined) {
-        const portrait = document.createElement('canvas');
-        portrait.width = PORTRAIT_PIXELS;
-        portrait.height = PORTRAIT_PIXELS;
-        portrait.className = prefix + 'portrait';
-        portrait.setAttribute('aria-hidden', 'true');
-        const pen = portrait.getContext('2d');
-        if (pen !== null) paintPortrait(pen, GOLFERS[golfer], PORTRAIT_PIXELS);
-        control.prepend(portrait);
-      }
-      /*
         The hint, INSIDE the button so it is part of what the control announces itself as.
 
         ⚠️ **Beside it would be a second thing to focus and a second thing to tab past**, and the
@@ -3779,19 +3947,27 @@ export function makeChrome(
         button.className = prefix + 'option';
         if (choice.faces === 'portraits') {
           /*
-            ⚠️ **THE GOLFER'S PORTRAIT, ROUND, AND THE NAME IS ITS LABEL — 0458.** The same painting the
-            boot cards carry (`src/render/golfer-art.ts`), at a thumbnail; the position IS the golfer,
-            because `src/state/screens.ts` walked `GOLFER_KINDS` to build the options.
+            ⚠️ **A CARD: THE GOLFER'S PORTRAIT, ROUND, AND THE NAME THEY GO BY UNDER IT — 0513.** It was
+            a face alone (0458), and four faces nobody had been introduced to were a choice between
+            colours. The painting is `src/render/golfer-art.ts`'s; the position IS the golfer, because
+            `src/state/screens.ts` walked `GOLFER_KINDS` to build the options. The full name is the label.
           */
           button.classList.add(prefix + 'option-face');
           button.setAttribute('aria-label', option.label);
           button.title = option.label;
           const golfer = GOLFER_KINDS[index];
-          if (golfer !== undefined) button.appendChild(portraitOf(golfer, prefix));
+          if (golfer !== undefined) {
+            const name = document.createElement('span');
+            name.className = prefix + 'option-name';
+            name.setAttribute('aria-hidden', 'true');
+            name.textContent = GOLFERS[golfer].name.split(' ')[0] ?? GOLFERS[golfer].name;
+            button.append(portraitOf(golfer, prefix), name);
+          }
         } else {
           button.textContent = option.label;
         }
-        const press = (): void => onChoice(choice.name, index);
+        // A pointer's press, which a band of pilots reads differently from the cursor's — 0513.
+        const press = (): void => onChoice(choice.name, index, true);
         button.addEventListener('click', press);
         listeners.push(() => button.removeEventListener('click', press));
         box.append(button);
@@ -3808,10 +3984,24 @@ export function makeChrome(
         hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
         index: 0,
         on: choice.on,
+        press: choice.press,
+        faces: choice.faces,
       };
       choiceBands.push(band);
       line.append(label, less, box, more, hint);
       settingsBox.appendChild(line);
+      /*
+        ⚠️ **AND UNDER A BAND OF FACES, WHO THE HIGHLIGHTED ONE IS — 0513.** *"Nothing anywhere says who
+        a pilot is"*: the row held a home, pronouns and a biography, and the screen showed a face. The
+        panel is read off the rows (`GOLFERS`, `SHIPS`, `WEAPONS`), so a fifth pilot is a row and the
+        panel knows them; `setChoice` fills it with whichever face is on. The band's own line says the
+        same name and ship to a reader and stands off the glass, where the panel says it to the eye.
+      */
+      if (choice.faces === 'portraits') {
+        line.classList.add(prefix + 'band-faces');
+        pilotCard = buildPilotCard(prefix);
+        settingsBox.appendChild(pilotCard.root);
+      }
     }
     // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
     if (choiceBands.length === 0) settingsBox.remove();
@@ -4275,7 +4465,7 @@ export function makeChrome(
     let next = band.index + delta;
     if (round) next = (next + count) % count;
     else next = Math.max(0, Math.min(count - 1, next));
-    if (next !== band.index) onChoice(band.name, next);
+    if (next !== band.index) onChoice(band.name, next, false);
   };
   /** The band whose row the cursor is on, or `undefined` on a row of buttons. */
   const bandAtCursor = (): Band | undefined => {
@@ -4673,7 +4863,9 @@ export function makeChrome(
     activate(): void {
       // A band is pressed by stepping it on, round its end — 0458; a button is clicked, as ever.
       const band = bandAtCursor();
-      if (band !== undefined) stepBand(band, 1, true);
+      // 0513: unless the band takes its own option on a press, which is the pilot band's — A flies them.
+      if (band !== undefined && band.press === 'takes') onChoice(band.name, band.index, false);
+      else if (band !== undefined) stepBand(band, 1, true);
       else atCursor()?.click();
     },
     tab(delta: number): void {
@@ -4712,6 +4904,8 @@ export function makeChrome(
         if (band === undefined) continue;
         band.index = index;
         band.hint.textContent = band.hints[index] ?? '';
+        // 0513: a band of faces says who the one on it is, on the card under it.
+        if (band.faces === 'portraits') paintPilot(GOLFER_KINDS[index]);
         band.less.disabled = index <= 0;
         band.more.disabled = index >= band.hints.length - 1;
         /*

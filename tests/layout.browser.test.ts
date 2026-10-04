@@ -328,6 +328,8 @@ function controlsAreHittable(page: Page, screen: Screen): Promise<string[]> {
   return page.evaluate((prefix: string) => {
     const misses: string[] = [];
     for (const control of document.querySelectorAll('.' + prefix + 'action')) {
+      // A control taken off its screen for now is not drawn, so there is no place to press it — 0511, 0513.
+      if (control instanceof HTMLElement && control.hidden) continue;
       const r = control.getBoundingClientRect();
       const hit = document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2);
       if (hit !== control && !control.contains(hit)) {

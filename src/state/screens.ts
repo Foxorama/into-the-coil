@@ -35,7 +35,6 @@ import { WEAPONS } from '../content/weapons.ts';
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = [
   'splash',
-  'select',
   'intro',
   'title',
   'settings',
@@ -117,6 +116,14 @@ export interface ScreenChoice {
    * a laptop with a touchscreen has the discs, so it has the choice of which side they stand on.
    */
   on: 'all' | 'touch';
+  /**
+   * What a press on the band does — 0513. `'steps'` moves it on to the next option, round the end,
+   * which is what every band did; `'takes'` presses the option already on it, which is the pilot
+   * band's: the cursor on a pilot is the highlight, and A or Enter on it flies them.
+   *
+   * ⚠️ **A FACT ABOUT THE CHOICE, ON `faces`'s TERMS**: the chrome reads it and never the band's name.
+   */
+  press: 'steps' | 'takes';
 }
 
 export interface ScreenRow {
@@ -308,16 +315,29 @@ export interface ScreenRow {
 export const STEPS_PER_SECOND = 60;
 
 /**
- * What a pilot flies, on one line — the boot cards' hint and the title band's line alike.
+ * What a pilot flies, on one line — the pilot band's line, and what a reader hears of each face.
  *
  * ⚠️ **THE SHIP AND ITS GUN SINCE 0441, AND IT WAS THE GOLFER'S HOME.** Picking a pilot picks a ship
- * and a gun for the whole run, which is the one thing about the choice that changes how it plays; a
- * home town does not. One line, because the card's height is what 0415's layout guard measures on a
- * phone. One function since 0458, because two screens say it and they must say the same thing.
+ * and a gun for the whole run, which is the one thing about the choice that changes how it plays. The
+ * home, the pronouns and who they are went to the panel under the faces in 0513.
  */
 function pilotHint(kind: GolferKind): string {
   const ship = SHIPS[GOLFERS[kind].ship];
   return `${ship.label} · ${WEAPONS[ship.weapon].label}`;
+}
+
+/**
+ * Whether a screen leaving for `then` — run out or skipped — begins a run rather than showing a screen
+ * — 0513.
+ *
+ * ⚠️ **INTO PLAY FROM OUTSIDE A RUN BEGINS ONE; FROM INSIDE IT, IT IS THE RUN GOING ON.** The intro
+ * (`inRun: false`) ends in a run begun on what the pilot screen showed, because `playing` with no run
+ * behind it is a field with nobody in it. The pause's count-in (`inRun: true`) ends in the run it held,
+ * and beginning one there would throw the held run away at the end of every pause. Here rather than in
+ * the shell so the difference can be held without a browser.
+ */
+export function beginsRun(from: Screen, then: Screen): boolean {
+  return then === 'playing' && !SCREENS[from].inRun;
 }
 
 export const SCREENS: Record<Screen, ScreenRow> = {
@@ -325,15 +345,21 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * The splash — `docs/decisions/0415-the-golfer-is-chosen.md`. What the page opens on: the name, over
    * the dark, while the game loads behind it.
    *
-   * ⚠️ **IT LEAVES WHEN THE GAME HAS LOADED, NOT ON A CLOCK**, which is why `timeout` is null:
-   * `src/app/mount.ts` moves it on to the select screen once the prewarm is done and it has been up
-   * long enough to be read. So the press that picks a golfer is never the one that pays for loading —
-   * and that press is what turns the sound on, which is the whole reason this screen exists.
+   * ⚠️ **IT WAITS FOR A PRESS SINCE 0513, AND THE PRESS IS THE SOUND'S.** No browser plays anything
+   * before the page is touched (0412). The golfers' cards were that press until the review found the
+   * pilot asked twice; the splash takes the duty, which is the first screen of nearly every game for
+   * exactly this reason. Once the game behind it has loaded and the name has been up its time,
+   * *Press to begin* appears; a key, a click or a tap goes on to the pilot screen with sound, and one
+   * made before then is remembered and goes on the moment it may. `timeout` is null: it never leaves
+   * by itself. A pad cannot ask for sound, so a pad's press does nothing here — and the hint says so
+   * by naming a key.
+   *
+   * ⚠️ **ESCAPE STILL ASKS FOR NOTHING** (0412): it goes on without building the sound.
    */
   splash: {
     heading: GAME_TITLE,
     pause: null,
-    actions: [],
+    actions: [{ label: 'Press to begin', hint: '' }],
     choices: [],
     steps: false,
     dims: true,
@@ -346,41 +372,17 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     opensOn: 'action',
   },
   /**
-   * The golfers — 0415. Four buttons, one per row of `src/content/golfers.ts`, each with a portrait
-   * the chrome draws in: their name, and where they are from.
+   * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`: the Viper
+   * blasts out of the spaceport, the pilot runs out of the bar to their ship and goes after her, and
+   * the level opens when they are gone.
    *
-   * ⚠️ **THE PRESS THAT PICKS IS THE PRESS THAT TURNS THE SOUND ON.** No browser plays anything before
-   * the page is touched (0412), so a screen that asks for a choice everyone makes anyway is the one
-   * place a gesture costs the player nothing. Picked at boot it goes on to the intro, with sound.
+   * ⚠️ **IT ENDS IN THE RUN SINCE 0513, AND IT ENDED AT THE TITLE.** The boot's pick played it and the
+   * title came after; the pick is the title's *Fly* now, so the intro plays on the first flight of a
+   * visit and hands over to the run that flight asked for. `then: 'playing'` is the run beginning —
+   * `src/app/mount.ts` begins it on the tier and the ship the title showed, rather than showing a
+   * screen with no run behind it. Its Skip goes the same way, into level one.
    *
-   * ⚠️ **AT BOOT ONLY SINCE 0458.** The title's *Pilot* opened this too, and the title's pilot band
-   * replaced it: changing pilot is a press along a row now, not a trip to a screen of cards.
-   *
-   * ⚠️ **Built by walking `GOLFER_KINDS`, so the buttons ARE the table**, on the tiers' own terms.
-   */
-  select: {
-    // An instruction rather than a label — 0436: the screen is a question, so its heading asks it.
-    heading: 'Choose your pilot',
-    pause: null,
-    actions: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
-    choices: [],
-    steps: false,
-    dims: true,
-    timeout: null,
-    pushed: false,
-    skips: false,
-    inRun: false,
-    back: null,
-    tabs: [],
-    opensOn: 'action',
-  },
-  /**
-   * The chase begins at the port — `docs/decisions/0411-the-chase-begins-at-the-port.md`. What the page
-   * opens on: the Viper blasts out of the spaceport, a pilot runs out of the bar to the blue fighter and
-   * goes after her, and the title comes up when they are gone.
-   *
-   * ⚠️ **NO PANEL, NO BUTTON, AND IT LEAVES ON ITS OWN CLOCK** — `timeout.then` is the title, so a
-   * player who watches it to the end is handed the title without pressing anything. Any press skips it
+   * ⚠️ **NO PANEL, NO BUTTON, AND IT LEAVES ON ITS OWN CLOCK.** Any press skips it
    * (`src/app/mount.ts`), and that is the only thing a press does here. It is a picture and not a
    * screen with controls on it, which is why `heading` and `actions` are empty and the chrome builds
    * nothing for it — the same shape `playing` has.
@@ -396,7 +398,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     choices: [],
     steps: false,
     dims: false,
-    timeout: { steps: INTRO_STEPS, then: 'title' },
+    timeout: { steps: INTRO_STEPS, then: 'playing' },
     pushed: false,
     skips: true,
     inRun: false,
@@ -433,27 +435,42 @@ export const SCREENS: Record<Screen, ScreenRow> = {
    * ⚠️ **Look, Sound and Travel are on Settings now**, the screen 0070 said was real and not yet
    * worth a door. Four settings and a guide are worth one.
    */
+  /*
+   * ── THE TITLE IS THE PILOT SCREEN — `docs/decisions/0513-the-pilot-flies.md` ────────────────────
+   *
+   * ⚠️ **ONE SCREEN FOR THE BOOT'S JOB AND THE TITLE'S, BECAUSE THEY WERE THE SAME DECISION.** The boot
+   * asked for a pilot on four large cards and then the title asked again on a band of faces beside
+   * *Launch*: *"having the pilots to select from, but then have to click on a secondary launch
+   * button."* The cards are gone; the faces are cards, the panel under them says who the highlighted
+   * pilot is and what they fly, and a press on that pilot — or *Fly* — is the launch.
+   *
+   * ⚠️ **THE PILOT FIRST**, because the panel is what the strip is choosing between, and the tier is a
+   * choice about the run the pilot is about to fly. The walk is the order they are drawn in.
+   */
   title: {
     heading: GAME_TITLE,
     pause: null,
     actions: [
-      { label: 'Launch', hint: '' },
+      { label: 'Fly', hint: '' },
       { label: 'Settings', hint: '' },
     ],
     choices: [
-      {
-        name: 'difficulty',
-        label: 'Difficulty',
-        options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
-        faces: 'words',
-        on: 'all',
-      },
       {
         name: 'pilot',
         label: 'Pilot',
         options: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
         faces: 'portraits',
         on: 'all',
+        // A press on the highlighted pilot flies them — 0513.
+        press: 'takes',
+      },
+      {
+        name: 'difficulty',
+        label: 'Difficulty',
+        options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
       },
     ],
     steps: false,
@@ -495,6 +512,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
         faces: 'words',
         on: 'all',
+        press: 'steps',
       },
       {
         name: 'sound',
@@ -502,6 +520,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
         faces: 'words',
         on: 'all',
+        press: 'steps',
       },
       {
         name: 'travel',
@@ -509,6 +528,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
         faces: 'words',
         on: 'all',
+        press: 'steps',
       },
       /*
         ⚠️ **THE TOUCH SECTION — 0512**, on a screen that can be touched and nowhere else: which side the
@@ -522,6 +542,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: HAND_KINDS.map((kind) => ({ label: HANDS[kind].title, hint: HANDS[kind].hint })),
         faces: 'words',
         on: 'touch',
+        press: 'steps',
       },
       {
         name: 'steer',
@@ -529,6 +550,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         options: STEER_KINDS.map((kind) => ({ label: STEERS[kind].title, hint: STEERS[kind].hint })),
         faces: 'words',
         on: 'touch',
+        press: 'steps',
       },
     ],
     steps: false,
