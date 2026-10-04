@@ -1154,8 +1154,7 @@ ${faceTurns()}
 @property --itc-playing-points { syntax: '<integer>'; inherits: true; initial-value: 0; }
 @counter-style itc-playing-digits { system: extends decimal; pad: 8 "0"; }
 .itc-playing-score {
-  grid-column: 3;
-  justify-self: end;
+  /* Placed by the corner it shares with the pause plate, which holds the third column (0511). */
   display: none;
   flex-direction: column;
   align-items: flex-end;
