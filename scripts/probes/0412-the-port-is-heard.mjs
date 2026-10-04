@@ -89,17 +89,13 @@ export const PROBES = [
       replace: '',
     },
   },
-  {
-    decision: '0412',
-    suite: 'tests/intro.browser.test.ts',
-    broke: 'Enter’s default left alone, so the skip’s keypress starts a run on the tier it focused',
-    guard: 'goes on Enter',
-    edit: {
-      path: 'src/app/mount.ts',
-      find: '    if (activates) e.preventDefault();',
-      replace: '',
-    },
-  },
+  /*
+    ⚠️ **"Enter's default left alone" WAS DELETED BY 0513, AND IT WAS STILL GREEN WHEN IT WENT.** The
+    break it named was the skip's Enter carrying through onto the title's focused tier and starting a
+    run; the skip goes INTO the run since 0513, and what a skip's key must not do now is reach the run —
+    held by 0513's own probe (the key spent at the skip) and the test that Space and Enter throw nothing.
+    The default it cancelled has no button left to press, so nothing a test can see depends on it.
+  */
   {
     decision: '0412',
     suite: 'tests/intro.browser.test.ts',

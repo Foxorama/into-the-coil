@@ -257,8 +257,14 @@ describe.runIf(chromePath)('the page opens on the name, and asks for a press onc
   });
 
   it('goes to the pilot screen on Escape, and builds no sound', async () => {
+    /*
+      ⚠️ **ONCE THE GAME HAS LOADED, WHERE A PRESS THAT ASKED FOR SOUND WOULD BE ANSWERED AT ONCE.** An
+      Escape made while it loads only remembers a wish for sound, and the splash is gone before it is
+      met — so pressed early this went green over an Escape that asked for sound like any other press
+      (0412's probe, STILL GREEN when 0513 moved it here).
+    */
     const page = await open();
-    await page.waitForTimeout(300);
+    await page.waitForSelector(PROMPT, { timeout: INTRO_READY_MS });
     await page.keyboard.press('Escape');
     await page.waitForSelector(TITLE, { timeout: INTRO_READY_MS });
     await page.waitForTimeout(500);
