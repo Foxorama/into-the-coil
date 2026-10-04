@@ -1,6 +1,6 @@
 # The hangar, planned — 2026-10-05
 
-One ask, nine changes, landed in order, each from `main` and each played on its own branch preview.
+One ask, ten changes, landed in order, each from `main` and each played on its own branch preview.
 This file holds the plan and the answers the player gave while it was being made. What each change
 decided lives in its decision once it lands; this is the queue.
 
@@ -40,6 +40,9 @@ And once the plan was written:
 
 > *"I do want guns to be interchangable per ship as well, it's expensive, but it makes the modding a
 > lot more fun and a lot higher quality"*
+>
+> *"the specials should be separate as well and let you pair the shuriken special with the lightning
+> gun once you've unlocked both"*
 
 ## What was already true
 
@@ -59,6 +62,11 @@ And once the plan was written:
   **drawing** — each car's one outline path takes in its hood gun, and every gun is painted inside
   its ship's draw function — and the **shot's starting point**: the row's `muzzle` (0448), which
   `tests/mounts.test.ts` holds to the bake's `carMounts`.
+- **A special is already free of its gun everywhere but the opening.** `WeaponRow.special` is read
+  by one function, `startingArsenal` in `src/state/slices/run.ts`, for the two charges a run opens
+  on. Every special can be thrown from every ship (0441), each knows its own trigger
+  (`SPECIALS[kind].side`), and Burn's opening void already asks the *opening special's* side —
+  so a run opened on the nova from any ship gets no void on top, by the code as it stands.
 - **A gun flown from a different ship is a different fight.** The shuriken's helix width is the
   ship's `wingtip`, and the arc's first link leaves from the ship's muzzle. So 0260's forty-second
   floor, which `tests/level.test.ts` flies in every ship today, has four fights per boss now and
@@ -102,6 +110,7 @@ And once the plan was written:
 |---|---|
 | what does beating the jellyfish in a ship unlock? | that ship's own set of cosmetics and its gun slot, and its gun for the other ships' gun slots. The pilot keeps their ship |
 | can the guns be swapped? | **yes** — *"it's expensive, but it makes the modding a lot more fun and a lot higher quality"* |
+| is the special its own slot? | **yes**, apart from the gun — *"pair the shuriken special with the lightning gun once you've unlocked both"*: the whirlpool on the estate, after a win in the Firebird and a win in the estate |
 | where can a won gun go? | **only onto ships that have been won in.** A ship's gun slot is one of its own options, like its wheels: the shuriken goes on the fighter after a win in the Firebird **and** a win in the fighter |
 | does a win on continues count? | yes — any win, any difficulty, Freeplay included. It unlocks looks, not power |
 | which slots does a ship have? | wheels on both cars; hood or nose art; a livery; the HUD plate's motif |
@@ -135,8 +144,9 @@ And once the plan was written:
   slot changes, and the cost of each lands against the press-to-HUD second as a budget, sized under
   load.
 - **The dice stay the estate's default dangle**, and the other three ships open with nothing hung.
-- **A run carries the fitted gun, not the ship's.** A run opens on two charges of the *fitted* gun's
-  special, as it opens on the ship's own today, and the pilot card names the fitted gun. The ship's
+- **A run carries the fitted gun and the fitted special, not the ship's.** A run opens on two
+  charges of the *fitted* special, and the pilot card names both. A special unlocks exactly as a gun
+  does: with its ship's win, onto ships that have themselves been won in. The ship's
   own gun is its default, on its row, and the fallback when nothing is fitted.
 - **The HUD plate, the shell, the tubes and the engines stay the ship's.** Only the gun moves.
 
@@ -169,24 +179,28 @@ And once the plan was written:
    row with its own drawing and its own swing weights on the existing swing. The dice, the
    eucalyptus tree, the family in the frame and the golf ball. The shop tab, a provisional price on
    each row, and buying.
-4. **The gun is its own layer** — and nothing the player sees changes. Each ship authors a
+4. **The special slot.** The run carries a fitted special and `startingArsenal` reads it, with the
+   gun row's `special` as the default. No art, no new fight: every special is already thrown from
+   every ship. First of the loadout slots because it is the cheapest, and it puts the unlock rule
+   that guns will share in front of a player before the guns cost anything.
+5. **The gun is its own layer** — and nothing the player sees changes. Each ship authors a
    hardpoint, in the view it is drawn in, and may override it for one gun. Each gun authors its
    mount's drawing from the side and from above, and where its shot leaves that drawing. The
    muzzle is the hardpoint plus the gun's own offset. The guns come out of the cars' outlines and
    the hit twins, the run carries a fitted gun, and `shipCarrying` goes. **Proved by the sheet
    baking byte-identical** with every ship on its own gun, so a refactor that moved a pixel is
    found before any new drawing hides it.
-5. **The gun slot.** The twelve new pairings drawn and photographed at the shipped camera; the
+6. **The gun slot.** The twelve new pairings drawn and photographed at the shipped camera; the
    boss floor flown in all sixteen, with any pairing under forty seconds answered on its boss's or
    its gun's row as 0441 answered the pterodactyl; `tests/mounts.test.ts` holding every pairing's
    muzzle to its drawing; the slot in the hangar; the atlas baking the fitted gun only.
-6. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
+7. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
    estate's whitewall are each one entry of its set — with the tyre's outline untouched.
-7. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
+8. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
    nose art for the fighter, a crest on the estate's bonnet and the saucer's dome.
-8. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
+9. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
    can all work. The running lights stay cyan and the high-contrast look stays on roles, as above.
-9. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
+10. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
    weighed against the frost shot on the frost ship's level before it ships.
 
 The order is the save first, because every later item writes to it; then shards, so the very next
