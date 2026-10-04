@@ -18,9 +18,11 @@ import { GameFrame } from '../src/app/frame.ts';
 import { weaponFor } from '../src/content/pickups.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../src/content/ships.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
-import { SHIP_BOX } from '../src/content/sprites.ts';
+import { SHIP_BOX, SPRITE_EXTENT } from '../src/content/sprites.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { reset } from '../src/sim/entity.ts';
-import { caddieMounts, carMounts } from '../src/render/bake.ts';
+import { caddieMounts, carMounts, drawKind } from '../src/render/bake.ts';
+import { tracingPen } from './paths.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 /** A box's radius in world units: a sprite's frame puts it at 0.42 of the extent. */
@@ -126,5 +128,67 @@ describe('0448 — each ship fires from its own guns', () => {
       expect(w.missiles.at(0).across, `${ship}: the first missile did not open to the top path`).toBeLessThan(w.ship.across - 3);
       expect(w.missiles.at(1).across, `${ship}: the second missile did not open to the bottom path`).toBeGreaterThan(w.ship.across + 3);
     }
+  });
+});
+
+describe('0493 — the ray gun hangs under the lip, and its muzzle is a ring', () => {
+  /*
+    *"On the little caddie the raygun sits above the ship instead of under it, and it's weird that it
+    has a small pointed end, but fires a large circular projectile."* Two claims about the picture, held
+    in world units off the bake's own trace: the emitter is drawn before the disc's face, so the face
+    covers it to the rim; and the muzzle is a dish the size of the smallest ring it fires.
+  */
+  const unit = 10;
+  /** Every filled mark of a kind's bake, as circles in world units about the tile's centre: where, and how far out. */
+  const circlesOf = (kind: 'caddie'): { x: number; y: number; r: number }[] => {
+    const size = SPRITE_EXTENT[kind] * unit;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+    return trace.passes.map((pass) => {
+      const points = pass.subpaths[0] ?? [];
+      const x = points.reduce((sum, p) => sum + p[0], 0) / Math.max(1, points.length);
+      const y = points.reduce((sum, p) => sum + p[1], 0) / Math.max(1, points.length);
+      const r = Math.max(0, ...points.map((p) => Math.hypot(p[0] - x, p[1] - y)));
+      return { x: (x - size / 2) / unit, y: (y - size / 2) / unit, r: r / unit };
+    });
+  };
+
+  it('UNDER THE LIP: the emitter is painted before the disc’s face, so the face covers it to the rim', () => {
+    const marks = circlesOf('caddie');
+    const rim = CADDIE_DISC * R;
+    // The face: the biggest mark centred on the saucer. The housing: a mark centred inside the rim, ahead
+    // of the dome, that reaches out past it.
+    const face = marks.findIndex((m) => Math.hypot(m.x, m.y) < 0.1 && m.r > rim * 0.9);
+    const housings = marks.flatMap((m, i) => (m.x > rim * 0.5 && m.x < rim && Math.abs(m.y) < 0.05 && m.x + m.r > rim ? [i] : []));
+    expect(face, 'no face is painted on the disc').toBeGreaterThanOrEqual(0);
+    expect(housings.length, 'no emitter housing reaches out past the rim').toBeGreaterThan(0);
+    for (const housing of housings) {
+      expect(housing, 'the emitter is painted over the disc, so it sits on top of the saucer').toBeLessThan(face);
+    }
+  });
+
+  it('A RING IN, A RING OUT: the muzzle is a dish the size of the smallest ring the gun fires', () => {
+    // The ray's smallest ring: its innermost band, a mark of two circles about the shot's centre,
+    // measured down its middle.
+    const size = SPRITE_EXTENT.ray * unit;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, 'ray', PALETTES[DEFAULT_PALETTE], size, 'approach');
+    const ringRadii = trace.passes
+      .filter((pass) => pass.subpaths.length === 2)
+      .map((pass) => {
+        const radius = (sub: readonly (readonly [number, number])[]): number =>
+          Math.max(...sub.map((p) => Math.hypot(p[0] - size / 2, p[1] - size / 2))) / unit;
+        return (radius(pass.subpaths[0]!) + radius(pass.subpaths[1]!)) / 2;
+      });
+    expect(ringRadii.length, 'the ray is drawn with no rings').toBeGreaterThan(0);
+    const smallest = Math.min(...ringRadii);
+    // The dish: the biggest mark centred out past the rim on the gun's line, whose front is the muzzle.
+    const muzzle = SHIPS.caddie.muzzle.along;
+    const dish = circlesOf('caddie')
+      .filter((m) => m.x > CADDIE_DISC * R && Math.abs(m.y) < 0.05 && Math.abs(m.x + m.r - muzzle) < 0.15)
+      .sort((a, b) => b.r - a.r)[0];
+    expect(dish, 'no dish is drawn at the muzzle').toBeDefined();
+    expect(dish!.r / smallest, `the muzzle is ${dish!.r.toFixed(2)} units across its mouth and the smallest ring ${smallest.toFixed(2)}`).toBeGreaterThan(0.85);
+    expect(dish!.r / smallest, `the muzzle is ${dish!.r.toFixed(2)} units across its mouth and the smallest ring ${smallest.toFixed(2)}`).toBeLessThan(1.15);
   });
 });
