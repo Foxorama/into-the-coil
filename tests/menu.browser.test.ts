@@ -588,12 +588,13 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     const pilots = pilot.options.map((o) => o.label);
     expect(await filled('pilot'), 'left on the pilot band did not choose the pilot before').toBe(pilots[pilots.indexOf(flying) - 1]);
 
-    // Down through every row: the bands, Fly, then Settings — the one the old walk could not reach.
+    // Down through every row to Fly, then along it to Settings — the one the old walk could not reach.
+    // 0513: Fly and Settings stand side by side on every device, so Settings is along the row, not under it.
     await nudge(page, MENU_DPAD_BUTTONS.down);
     await nudge(page, MENU_DPAD_BUTTONS.down);
     expect(await ring()).toBe(SCREENS.title.actions[0]!.label);
-    await nudge(page, MENU_DPAD_BUTTONS.down);
-    expect(await ring(), 'down from Launch did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await ring(), 'right from Fly did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
 
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     await page.waitForSelector(shownScreen('settings'), { timeout: 15_000 });
