@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { prefixFor } from '../src/app/chrome.ts';
+import { hudBar, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { launch, openSettings, shown as shownScreen } from './title.ts';
 import { SCREENS } from '../src/state/screens.ts';
@@ -460,6 +460,60 @@ describe.runIf(chromePath)('the readout and the boss bar share the top of the sc
         expect(Math.abs(box.height - readout!.height), `at ${at} the ${box.name} is ${box.height.toFixed(1)} px tall and the readout ${readout!.height.toFixed(1)}`).toBeLessThanOrEqual(1);
       }
     }
+    await page.context().close();
+  });
+});
+
+describe.runIf(chromePath)('0500 — the desk has a bar', () => {
+  /** The colour of one canvas pixel, in CSS pixels at a device scale of one. */
+  const pixel = (page: Page, x: number, y: number): Promise<number[]> =>
+    page.evaluate(([px, py]) => Array.from(document.querySelector<HTMLCanvasElement>('#app canvas')!.getContext('2d')!.getImageData(px!, py!, 1, 1).data), [x, y]);
+
+  it('THE ASK, IN PIXELS: on a desktop the readout, the boss bar and the score stand in a black bar at the top, with the strip’s own air above and below them, and the field starts under it', async () => {
+    /*
+      *"Can we shift the HUD and things into the bar at the top on desktop? … about the size of our HUD
+      layout now and then just a tiny bit for bordering around the top and bottom."* Asked of the real
+      page at the player's own maximised window and at the two sizes the guards name: every plate is
+      inside the bar with air on both sides, the bar is drawn black, and the first row under it is not.
+    */
+    const page = await open(false);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-score-shown');
+    for (const [width, height] of [
+      [1920, 950],
+      [1280, 720],
+      [1366, 657],
+    ] as const) {
+      await page.setViewportSize({ width, height });
+      await page.waitForTimeout(500);
+      const rem = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
+      const bar = hudBar(height, rem);
+      const at = `${width}×${height}`;
+      const plates = await page.evaluate(() => {
+        document.querySelector<HTMLElement>('.itc-playing-boss')!.classList.add('itc-playing-boss-shown');
+        return ['.itc-playing-hud', '.itc-playing-boss', '.itc-playing-score'].map((s) => {
+          const r = document.querySelector<HTMLElement>(s)!.getBoundingClientRect();
+          return { name: s.slice(13), top: r.top, bottom: r.bottom };
+        });
+      });
+      for (const plate of plates) {
+        expect(plate.top, `at ${at} the ${plate.name} has no air above it`).toBeGreaterThan(2);
+        expect(plate.bottom, `at ${at} the ${plate.name} reaches ${plate.bottom.toFixed(1)} px, over the field below a bar of ${bar.toFixed(1)}`).toBeLessThan(bar - 2);
+        expect(bar - plate.bottom, `at ${at} the ${plate.name} has ${(bar - plate.bottom).toFixed(1)} px under it and ${plate.top.toFixed(1)} over it`).toBeCloseTo(plate.top, 0);
+      }
+      expect(await pixel(page, Math.round(width / 2), Math.floor(bar / 2)), `at ${at} the bar is not drawn black`).toEqual([0, 0, 0, 255]);
+      expect(await pixel(page, Math.round(width / 2), Math.ceil(bar) + 1), `at ${at} the bar runs on into the field`).not.toEqual([0, 0, 0, 255]);
+    }
+    await page.context().close();
+  });
+
+  it('and a touch screen keeps none: the field is the whole glass, as it was', async () => {
+    const page = await open(true);
+    await page.click('.' + prefixFor('title') + 'action');
+    await page.waitForSelector('.itc-playing-score-shown');
+    await page.setViewportSize({ width: 844, height: 390 });
+    await page.waitForTimeout(500);
+    expect(await pixel(page, 422, 4), 'a touch screen got the desk’s bar').not.toEqual([0, 0, 0, 255]);
     await page.context().close();
   });
 });

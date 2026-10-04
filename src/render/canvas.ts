@@ -28,11 +28,15 @@ export function renderScale(devicePixelRatio: number): number {
   return Math.min(devicePixelRatio, MAX_DPR);
 }
 
+/** The bar's ink — 0500: a letterbox is black, and the HUD's plates were made to stand on the void. */
+const BAR_INK = '#000000';
+
 export class CanvasSurface implements Surface {
   private atlas: Atlas;
   private width = 0;
   private height = 0;
   private space = '#000000';
+  private bar = 0;
   private boltGlow = '#ffffff';
   private boltCore = '#ffffff';
   private boltDark = '#000000';
@@ -49,11 +53,15 @@ export class CanvasSurface implements Surface {
     this.atlas = atlas;
   }
 
-  /** The drawing surface's size in CSS pixels, and the colour behind everything. */
-  setSize(width: number, height: number, space: string): void {
+  /**
+   * The drawing surface's size in CSS pixels, the colour behind everything, and how much of its top
+   * is the chrome's bar rather than the field — 0500, `View.barAcross`.
+   */
+  setSize(width: number, height: number, space: string, bar = 0): void {
     this.width = width;
     this.height = height;
     this.space = space;
+    this.bar = bar;
   }
 
   /**
@@ -86,8 +94,29 @@ export class CanvasSurface implements Surface {
   }
 
   clear(): void {
-    this.ctx.fillStyle = this.space;
-    this.ctx.fillRect(0, 0, this.width, this.height);
+    const ctx = this.ctx;
+    if (this.bar <= 0) {
+      ctx.fillStyle = this.space;
+      ctx.fillRect(0, 0, this.width, this.height);
+      return;
+    }
+    /*
+      ⚠️ **THE BAR IS THE CHROME'S, SO NOTHING OF THE WORLD IS DRAWN IN IT — 0500.** A flanker enters
+      from past the lane's edge and a big hull reaches over it; with no bar both were off the canvas,
+      and with one they would be drawn behind the HUD. So the frame is clipped to the field: the last
+      frame's clip is put back, the bar filled black, and the field clipped again. `restore` with
+      nothing saved does nothing, which is the first frame after a fit — a resized canvas has dropped
+      its whole state stack. Calls on the context's own stack; nothing allocates.
+    */
+    ctx.restore();
+    ctx.save();
+    ctx.fillStyle = BAR_INK;
+    ctx.fillRect(0, 0, this.width, this.bar);
+    ctx.fillStyle = this.space;
+    ctx.fillRect(0, this.bar, this.width, this.height - this.bar);
+    ctx.beginPath();
+    ctx.rect(0, this.bar, this.width, this.height - this.bar);
+    ctx.clip();
   }
 
   blit(sprite: number, x: number, y: number, scale: number, turn = 0, alpha = 1): void {

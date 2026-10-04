@@ -119,7 +119,7 @@ import {
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
-import { makeChrome } from './chrome.ts';
+import { hudBar, makeChrome } from './chrome.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
 import { browserStore, placeScore, readScores, recordScore } from '../save/scores.ts';
 import { combineDevices } from './devices.ts';
@@ -931,7 +931,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   requestAnimationFrame(() => requestAnimationFrame(() => prewarmAudio()));
 
-  const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host));
+  // Whether a finger can land on this screen — the trigger strip's question below, asked here first.
+  const touchable = navigator.maxTouchPoints > 0;
+  /*
+    ⚠️ **A DESKTOP KEEPS A BAR AT THE TOP FOR THE HUD — 0500**, and the world is fitted to the screen
+    under it, so a monitor sees further ahead and the HUD stops covering the lane. A touch screen keeps
+    none: the phone already sees further than any monitor, and it is the screen the player said looks
+    right. The bar is the strip's own height (`hudBar`), so it follows the strip's type down a small
+    window and stops where the type stops.
+  */
+  const barFor = (height: number): number => {
+    if (touchable) return 0;
+    const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+    return hudBar(height, Number.isFinite(rem) && rem > 0 ? rem : 16);
+  };
+  const measure = (): View => viewOf(viewportWidth(host), viewportHeight(host), barFor(viewportHeight(host)));
   let view = measure();
   let dpr = fitCanvas(canvas, ctx, viewportWidth(host), viewportHeight(host));
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
@@ -965,7 +979,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // How many steps the splash has been up — 0415: it leaves once loaded AND read, never before.
   let splashSteps = 0;
   const surface = new CanvasSurface(ctx, atlas);
-  surface.setSize(viewportWidth(host), viewportHeight(host), colours.space);
+  surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, view.barAcross);
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
@@ -1497,8 +1511,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * ⚠️ **The alternative was to reveal it on the first touch, and it is worse in the one case that
    * matters**: the first touch of a run is as likely to be in the strip as anywhere else, so the
    * player would discover where the bomb is by spending one.
+   *
+   * `touchable` itself is declared above, where the camera first asks it — 0500.
    */
-  const touchable = navigator.maxTouchPoints > 0;
 
   /**
    * What the trigger buttons draw — 0060, and 0358 for the shape.
@@ -3449,7 +3464,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     view = next;
     dpr = nextDpr;
     world.view = next;
-    surface.setSize(width, height, colours.space);
+    surface.setSize(width, height, colours.space, next.barAcross);
     // Last, so a resumed loop's first frame draws at the size that was just fitted.
     setPlayable(true);
   };

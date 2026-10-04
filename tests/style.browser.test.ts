@@ -3,7 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
 import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
-import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
+import { SETTING_ATTR, hudBar, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { STYLES, STYLE_KINDS } from '../src/content/styles.ts';
 import { back, openSettings, shown } from './title.ts';
@@ -49,14 +49,20 @@ async function open(): Promise<Page> {
  * ⚠️ **Sampled against the DARKEST pixel on the canvas rather than against a colour written here.**
  * The space ink is a palette value and `src/content/palette.ts` may move it; what this needs is
  * *how much is drawn*, and the answer is *everything brighter than the background*.
+ *
+ * ⚠️ **THE FIELD ONLY, BELOW THE DESK'S BAR — 0500.** The bar is black and the darkest thing on the
+ * canvas, so counted with it every pixel of the space read as ink and both sides of the comparison
+ * were the whole field. The bar is the HUD's, not the sky's, so it is not counted.
  */
-function inkOn(page: Page): Promise<number> {
-  return page.evaluate(() => {
+async function inkOn(page: Page): Promise<number> {
+  const rem = await page.evaluate(() => Number.parseFloat(getComputedStyle(document.documentElement).fontSize));
+  const bar = Math.ceil(hudBar(page.viewportSize()!.height, rem));
+  return page.evaluate((top: number) => {
     const canvas = document.querySelector('#app canvas');
     if (!(canvas instanceof HTMLCanvasElement)) return -1;
     const ctx = canvas.getContext('2d');
     if (ctx === null) return -1;
-    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const data = ctx.getImageData(0, top, canvas.width, canvas.height - top).data;
     let darkest = 255 * 3;
     for (let i = 0; i < data.length; i += 4) {
       const sum = data[i]! + data[i + 1]! + data[i + 2]!;
@@ -69,7 +75,7 @@ function inkOn(page: Page): Promise<number> {
       if (data[i]! + data[i + 1]! + data[i + 2]! > darkest + 12) inked++;
     }
     return inked;
-  });
+  }, bar);
 }
 
 /**
