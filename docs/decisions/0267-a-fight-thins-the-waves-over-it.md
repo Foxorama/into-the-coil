@@ -1,5 +1,12 @@
 # 0267 — A fight thins the waves over it
 
+> ⚠️ **AMENDED 2026-10-04 by [0502](0502-the-window-is-the-fight.md).** Each mid-boss now has a
+> window — twenty-five seconds no wave is authored inside — and past it the waves come as written:
+> *"if you take longer to kill the miniboss you get increased difficulty with adds"*, and of an early
+> kill, *"leave the gap empty."* So the thinning while the mid-boss lives is gone, and with it both
+> guards below and their probes; what is left of this rule is [0472](0472-the-fights-thin.md)'s lead.
+> The argument that a fight's length is the player's stands, and is why the window is in seconds.
+
 **Accepted 2026-09-06**, from the play of the build [0256](0256-a-pickup-keeps-the-count.md) and
 [0257](0257-the-arc-lands-on-the-screen.md) shipped in:
 

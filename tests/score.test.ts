@@ -95,7 +95,7 @@ describe('0428 — what a kill is worth, and what a streak multiplies', () => {
   });
 
   it('a boss is worth its row’s points, flat — the streak multiplies a wave and never a fight', () => {
-    const level: LevelRow = { ...DRIFTERS(0), waves: [], bossAt: 700, midBoss: { kind: 'sentinel', at: 200 }, boss: 'jormungandr' };
+    const level: LevelRow = { ...DRIFTERS(0), waves: [], bossAt: 700, midBoss: { kind: 'sentinel', at: 200, windowSeconds: 25 }, boss: 'jormungandr' };
     const { world } = playableWorld(level);
     const frame = new GameFrame(world);
     for (let i = 0; i < 4000 && world.bossPool.size === 0; i++) frame.step();

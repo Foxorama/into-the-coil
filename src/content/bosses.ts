@@ -2998,7 +2998,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 158 from 210 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 541 from 158 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
     // 329 from 541 — 0472: solved at the tuned tier, where 541 fought for 35 s; two passes.
-    health: 329,
+    // 359 from 329 — 0502: no waves are put down over the fight now, so none soak up its fire.
+    health: 359,
     damage: 3,
     station: 170,
     drift: 8,
@@ -3074,7 +3075,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 97 from 94 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 419 from 97 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
     // 237 from 419 — 0472: solved at the tuned tier, where 419 fought for 34 s; two passes.
-    health: 237,
+    // 284 from 237 — 0502: no waves are put down over the fight now, so none soak up its fire.
+    health: 284,
     damage: 3,
     station: 166,
     drift: 15,
@@ -3168,7 +3170,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     // 164 from 208 — re-solved after 0364's zoom (`scripts/solve-mid-health.mjs`).
     // 699 from 164 — 0406: solved at the loadout the run carries in (`carriedAt`), which is the cap.
     // 414 from 699 — 0472: solved at the tuned tier, where 699 fought for 34 s; two passes.
-    health: 414,
+    // 507 from 414 — 0502: no waves are put down over the fight now, so none soak up its fire.
+    health: 507,
     damage: 3,
     // The closest station in the game. `95 + 14 + 16` is 125 against 150 — the hull fills a fifth of
     // the narrowest view, which is what a last boss should cost the player in room.

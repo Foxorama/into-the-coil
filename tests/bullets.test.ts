@@ -16,9 +16,10 @@ import { describe, expect, it } from 'vitest';
 import { ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY } from '../src/content/cadence.ts';
 import { type DifficultyKind, fireGapFor } from '../src/content/difficulty.ts';
 import { ENEMIES, shotsPerVolley } from '../src/content/enemies.ts';
-import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
+import { LEVELS, LEVEL_KINDS, windowEnd } from '../src/content/levels.ts';
 import { GameFrame } from '../src/app/frame.ts';
-import { MAX_ALONG_SPAN } from '../src/sim/camera.ts';
+import { MAX_ALONG_SPAN, spawnAlong } from '../src/sim/camera.ts';
+import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { weighLevel } from '../scripts/weigh-bullets.mjs';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -113,8 +114,19 @@ describe('0259 — the bullets stay on the screen', () => {
         is held like every other.
       */
       const opening = level.waves[0]!.at + MAX_ALONG_SPAN;
+      /*
+        ⚠️ **AND A MID-BOSS'S WINDOW IS A SECOND OPENING — 0502.** *"Leave the gap empty"*: nothing is
+        put down for its window after the mid-boss is, so a walk that kills the hull at once — this one
+        does — flies the rest of the window with nothing new to fire. It is held exactly as the
+        opening is: from the mid-boss's put-down to its window's first wave plus a view's crossing.
+        `tests/window.test.ts` holds that the window is no longer than its row says.
+      */
+      const midBoss = level.midBoss;
+      const resumes = midBoss === null ? undefined : level.waves.find((w) => w.at > windowEnd(midBoss, SCROLL_PER_STEP * STEPS_PER_SECOND));
+      const windowFrom = midBoss === null ? Number.POSITIVE_INFINITY : midBoss.at - spawnAlong(0);
+      const windowTo = resumes === undefined ? Number.NEGATIVE_INFINITY : resumes.at + MAX_ALONG_SPAN;
       const lifts = secondTubeOf(kind);
-      const authoredQuiet = (endsAt: number): boolean => endsAt <= opening;
+      const authoredQuiet = (endsAt: number): boolean => endsAt <= opening || (endsAt > windowFrom && endsAt <= windowTo);
       // Level one before it can carry a second tube is the one-tube walk's — see `secondTubeOf`.
       const stretches = Number.isNaN(lifts)
         ? r.dryStretches

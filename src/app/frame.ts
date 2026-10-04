@@ -1177,13 +1177,13 @@ export interface World {
    */
   nextFlank: number;
   /**
-   * How many firing waves the mid-boss's fight has been offered — 0267. One in `FIGHT_FIRING_IN`
+   * How many firing waves the mid-boss's lead has offered — 0267, 0472. One in `FIGHT_FIRING_IN`
    * of them is put on the field and the rest are skipped.
    *
    * ⚠️ **OFFERED, NOT SPAWNED**, so the thinning is a share of what the script sends rather than of
-   * what survived a pool that was full. It counts only while the mid-boss is on the field, so it is
-   * the fight's own count and not the level's; nothing resets it between the two fights, because a
-   * level has one mid-boss and the end boss's waves have run out by the time it arrives.
+   * what survived a pool that was full. It counts only the waves authored in `FIGHT_LEAD` short of the
+   * mid-boss — since 0502, which took the half that counted while the hull lived — so it is the
+   * fight's own count and not the level's, and nothing resets it, because a level has one mid-boss.
    */
   fightFiring: number;
   /** Index of the next pickup in `level.pickups`. Its own index, because the two lists interleave. */
@@ -2564,6 +2564,10 @@ export class GameFrame implements Frame {
       /*
         ── A FIGHT THINS THE FIRING WAVES OVER IT — 0267 ──────────────────────────────────────────
 
+        ⚠️ **SINCE 0502 IT THINS ONLY THE WAVES THAT FLY IN WITH THE HULL** — 0472's lead. The rest of
+        a fight is a window no wave is authored inside, then adds that come as written; the notes
+        below are 0267's, and still say why a thinned wave is skipped and not held.
+
         `docs/decisions/0267-a-fight-thins-the-waves-over-it.md`. Reported: *"when the minibosses are
         on screen there are way too many waves in general happening and it's a lot… less during the
         miniboss — still need some during miniboss otherwise miniboss is too easy, but not as many."*
@@ -2585,9 +2589,18 @@ export class GameFrame implements Frame {
       */
       const wave = w.level.waves[w.nextWave]!;
       const row = w.enemyRows[w.enemyKinds[wave.enemy]];
-      // A wave just short of the mid-boss flies in with it, so it is the fight's as well — 0472.
-      const ahead = w.level.midBoss !== null && wave.at >= w.level.midBoss.at - FIGHT_LEAD;
-      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && (w.bossPool.size > 0 || ahead);
+      /*
+        A wave just short of the mid-boss flies in with it, so it is the fight's as well — 0472.
+
+        ⚠️ **AND ONLY THAT WAVE SINCE 0502.** This read `w.bossPool.size > 0 || ahead`, with `ahead`
+        open-ended, so every firing wave offered while the mid-boss lived was thinned. 0502 gives each
+        mid-boss a window no wave is authored inside, and past it the waves are the adds the player
+        asked for — *"if you take longer to kill the miniboss you get increased difficulty with
+        adds."* So the lead stops at the mid-boss's own place, and a fight's length decides nothing.
+      */
+      const midBoss = w.level.midBoss;
+      const ahead = midBoss !== null && wave.at >= midBoss.at - FIGHT_LEAD && wave.at < midBoss.at;
+      const thinned = row !== undefined && row.fireEvery > 0 && w.fight === 0 && ahead;
       if (thinned) w.fightFiring++;
       // ⚠️ `(n - 1) % N`, so the FIRST offer of a fight always lands and `FIGHT_FIRING_IN` of 1 means
       // *thin nothing*. `n % N === 1` reads the same and is wrong at 1, where it admits none — the
