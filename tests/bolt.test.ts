@@ -9,10 +9,15 @@
  */
 import { describe, expect, it } from 'vitest';
 import { BEAM_BOLT_KIND } from '../src/content/bosses.ts';
-import { PALETTES } from '../src/content/palette.ts';
+import { PALETTES, type PaletteName } from '../src/content/palette.ts';
 import { SHOTS } from '../src/content/shots.ts';
+import { LIGHT_KINDS, SPRITE, SPRITE_KINDS } from '../src/content/sprites.ts';
+import { THEMES, THEME_KINDS } from '../src/content/themes.ts';
 import type { Atlas } from '../src/render/bake.ts';
 import { BEAM_LAYERS, CanvasSurface, DOT_LAYERS, FLASH_LAYERS } from '../src/render/canvas.ts';
+import { boltInks } from '../src/render/bolt-inks.ts';
+import { luminance } from './contrast.ts';
+import { withTheGame } from '../src/render/port-bake.ts';
 import { BOLT_STEPS, STROKES_PER_LINK, paintBolts } from '../src/render/scene.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
@@ -29,7 +34,7 @@ const HOSTILE = PALETTES.vivid.enemy;
 function canvas(): { surface: CanvasSurface; pen: ReturnType<typeof tracingPen>['pen']; inks: () => readonly Stroke[] } {
   const { pen, trace } = tracingPen();
   const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-  surface.setBolt(GLOW, CORE, DARK, HOSTILE, CORE);
+  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE));
   return { surface, pen, inks: () => trace.inks };
 }
 
@@ -92,10 +97,14 @@ describe('0470 — the light is additive', () => {
     // And the stacks really are two — the flash is not drawn with the beam's layers or vice versa.
     const flash = canvas();
     flash.surface.bolt(LINE, 3, width, 1, true, false);
-    expect(light(flash.inks()).length, 'a flash is drawn as a beam').toBeLessThan(layers.length);
+    // By what is stroked and not by how many: since 0520 a flash has as many layers of light as a beam.
+    const shape = (s: readonly Stroke[]): string => s.map((l) => `${l.width}/${l.alpha}`).join(' ');
+    expect(shape(light(flash.inks())), 'a flash is drawn as a beam').not.toBe(shape(layers));
     expect(BEAM_LAYERS.length).toBe(inks().length);
     expect(FLASH_LAYERS.length).toBe(flash.inks().length);
-    expect(DOT_LAYERS.length, 'a dot has grown a rim or a wash').toBe(2);
+    // What 0238 forbids a dot is a rim or a wash, not a third layer: 0520 gave it a hot heart, inside its glow.
+    expect(DOT_LAYERS.some((l) => l.ink === 'dark'), 'a dot has grown a rim').toBe(false);
+    expect(Math.max(...DOT_LAYERS.map((l) => l.width)), 'a dot has grown a wash wider than its glow').toBe(4);
   });
 
   /** A surface that keeps every bolt call. */
@@ -189,5 +198,72 @@ describe('0470 — the light is additive', () => {
     expect(lit, 'the beam does not bloom as it lights').toBeGreaterThan(settled);
     expect(settled, 'a settled beam is not drawn as wide as it hurts').toBeCloseTo(hurt, 6);
     for (let life = 30; life >= 1; life--) expect(widthAt(life) * 4, `at ${life} the beam is narrower than it hurts`).toBeGreaterThanOrEqual(hurt - 1e-9);
+  });
+});
+
+describe('0520 — the light is loud', () => {
+  it('THE HOT HEART, IN LUMINANCE: on every palette and in every place, a flash and a dot run whiter inside their glow — a stroke brighter than the glow, narrower than it and wider than the core', () => {
+    /*
+      Read off the strokes the canvas actually makes. *"Flashy"* at the size a bolt is drawn is a white
+      heart in a coloured glow; a heart in the glow's own ink is a coloured line.
+    */
+    const width = 2;
+    for (const palette of Object.keys(PALETTES) as PaletteName[]) {
+      const colours = PALETTES[palette];
+      for (const place of THEME_KINDS) {
+        const hostileGlow = THEMES[place].bolt ?? colours.enemy;
+        for (const [who, glow, hostile] of [['player', colours.player, false], ['hostile', hostileGlow, true]] as const) {
+          for (const [what, points, count] of [['flash', LINE, 3], ['dot', POINT, 1]] as const) {
+            const { pen, trace } = tracingPen();
+            const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
+            surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostileGlow, colours.impact));
+            surface.bolt(points, count, width, 1, hostile);
+            const glows = trace.inks.filter((s) => s.colour === glow);
+            const narrowestGlow = Math.min(...glows.map((s) => s.width));
+            const hearts = trace.inks.filter((s) => s.width < narrowestGlow && s.width > width + 1e-9 && s.alpha === 1);
+            const where = `${who}'s ${what} on ${palette} in ${place}`;
+            expect(hearts.length, `${where} has no stroke between its glow and its core`).toBe(1);
+            const heart = hearts[0]!;
+            expect(heart.composite, `${where}'s heart is laid as paint`).toBe('lighter');
+            // Whiter than the glow, unless the glow is white already and there is nowhere whiter to go.
+            const floor = luminance(glow) > 0.95 ? luminance(glow) - 1e-9 : luminance(glow) + 0.01;
+            expect(luminance(heart.colour), `${where}'s heart ${heart.colour} is no whiter than its glow ${glow}`).toBeGreaterThan(floor);
+          }
+        }
+      }
+    }
+  });
+
+  it('A LIGHT IS ADDED: every light kind is blitted adding to the frame, a body is laid, and the context is put back either way', () => {
+    const log: string[] = [];
+    const ctx = {
+      globalCompositeOperation: 'source-over',
+      globalAlpha: 1,
+      drawImage(): void {
+        log.push(ctx.globalCompositeOperation);
+      },
+      save(): void {},
+      restore(): void {},
+      translate(): void {},
+      rotate(): void {},
+    };
+    const light = SPRITE_KINDS.map((kind) => LIGHT_KINDS.includes(kind));
+    const atlas = { bitmaps: SPRITE_KINDS.map(() => ({})), extents: SPRITE_KINDS.map(() => 1), pixelsPerUnit: 1, light } as unknown as Atlas;
+    const surface = new CanvasSurface(ctx as unknown as CanvasRenderingContext2D, atlas);
+    expect(LIGHT_KINDS.length, 'nothing is light').toBeGreaterThan(0);
+    for (const [turn, alpha] of [[0, 1], [0.5, 0.5]] as const) {
+      for (const kind of SPRITE_KINDS) {
+        log.length = 0;
+        surface.blit(SPRITE[kind], 0, 0, 1, turn, alpha);
+        expect(log[0], `${kind} turned ${turn} is ${LIGHT_KINDS.includes(kind) ? 'laid, though it is light' : 'added, though it is body'}`).toBe(LIGHT_KINDS.includes(kind) ? 'lighter' : 'source-over');
+        expect(ctx.globalCompositeOperation, `${kind} left the context adding`).toBe('source-over');
+      }
+    }
+  });
+
+  it('and the port keeps the game’s lights at the game’s indices', () => {
+    const port = { bitmaps: [{}, {}], extents: [1, 1], pixelsPerUnit: 1 } as unknown as Atlas;
+    const game = { bitmaps: [{}, {}, {}], extents: [1, 1, 1], pixelsPerUnit: 1, light: [false, true, false] } as unknown as Atlas;
+    expect(withTheGame(port, game).light).toEqual([false, false, false, true, false]);
   });
 });

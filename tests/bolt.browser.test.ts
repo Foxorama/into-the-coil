@@ -11,7 +11,8 @@
 import { describe, it, expect, afterAll, vi } from 'vitest';
 import type { Browser } from 'playwright-core';
 import { launchChromium } from './chromium.ts';
-import { BEAM_LAYERS, FLASH_LAYERS, type BoltLayer } from '../src/render/canvas.ts';
+import { BEAM_LAYERS, FLASH_LAYERS, type BoltInk, type BoltInks, type BoltLayer } from '../src/render/canvas.ts';
+import { boltInks } from '../src/render/bolt-inks.ts';
 import { PALETTES } from '../src/content/palette.ts';
 import { THEMES } from '../src/content/themes.ts';
 import { HEART_ROSE, mix } from '../src/render/bake.ts';
@@ -38,8 +39,8 @@ const HURT = WIDTH * 4;
 
 interface Sample {
   layers: readonly BoltLayer[];
-  glow: string;
-  core: string;
+  /** The inks as `boltInks` solves them — 0520 added the hot heart. */
+  ink: BoltInk;
   dark: string;
   bg: string;
   /** Pixels off the line to read, across it. */
@@ -52,7 +53,7 @@ interface Sample {
 async function stroke(sample: Sample): Promise<string[]> {
   browser ??= await launchChromium({ headless: true });
   const page = await browser.newPage();
-  const pixels = await page.evaluate(({ layers, glow, core, dark, bg, offsets, laid, width }) => {
+  const pixels = await page.evaluate(({ layers, ink, dark, bg, offsets, laid, width }) => {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 240;
@@ -67,7 +68,8 @@ async function stroke(sample: Sample): Promise<string[]> {
     for (const layer of layers) {
       ctx.globalCompositeOperation = laid ? 'source-over' : layer.additive ? 'lighter' : 'source-over';
       ctx.globalAlpha = layer.alpha;
-      ctx.strokeStyle = layer.ink === 'dark' ? dark : layer.ink === 'core' ? core : glow;
+      // As `CanvasSurface.bolt` inks it — the hot heart is 0520's.
+      ctx.strokeStyle = layer.ink === 'dark' ? dark : layer.ink === 'core' ? ink.core : layer.ink === 'hot' ? ink.hot : ink.glow;
       ctx.lineWidth = width * layer.width;
       ctx.stroke();
     }
@@ -82,13 +84,16 @@ async function stroke(sample: Sample): Promise<string[]> {
 
 const core = PALETTES.vivid.impact;
 const heart = THEMES.core;
+/** A bolt's inks in `place`, as `src/app/mount.ts` sets them there. */
+const inksIn = (place: typeof heart): BoltInks =>
+  boltInks(PALETTES.vivid.player, core, PALETTES.vivid.space, place.bolt ?? PALETTES.vivid.enemy, core);
 /** The vessels' lit core, as `tests/medusa.test.ts` derives it from the bake. */
 const vessel = mix(mix(heart.nebula.vivid, HEART_ROSE, 0.6), '#ffffff', 0.35);
 
 describe('0470 — the light is additive, in pixels', () => {
   it('IN PIXELS: a beam over the Black Heart is white at its heart, falls off through its body, and its rim parts it from an artery', async () => {
     expect(heart.bolt, 'the Black Heart strokes its bolts in the enemy ink').not.toBeNull();
-    const base = { layers: BEAM_LAYERS, glow: heart.bolt!, core, dark: heart.space.vivid, laid: false };
+    const base = { layers: BEAM_LAYERS, ink: inksIn(heart).hostile, dark: heart.space.vivid, laid: false };
     // The heart, a point inside the inner glow, a point in the body alone, and a point in the rim —
     // each a pixel or more clear of a layer's edge, where the antialiasing is.
     const offsets = [0, HURT * 0.2, HURT * 0.44, HURT * 0.57];
@@ -111,7 +116,7 @@ describe('0470 — the light is additive, in pixels', () => {
   });
 
   it('IN PIXELS: added beats laid — the beam’s body over an artery is brighter added than it was as paint', async () => {
-    const base = { layers: BEAM_LAYERS, glow: heart.bolt!, core, dark: heart.space.vivid, bg: vessel, offsets: [HURT * 0.44] };
+    const base = { layers: BEAM_LAYERS, ink: inksIn(heart).hostile, dark: heart.space.vivid, bg: vessel, offsets: [HURT * 0.44] };
     const [added] = await stroke({ ...base, laid: false });
     const [laid] = await stroke({ ...base, laid: true });
     expect(luminance(added!), `the body added is ${added}, laid it is ${laid}`).toBeGreaterThan(luminance(laid!) + 0.05);
@@ -119,7 +124,7 @@ describe('0470 — the light is additive, in pixels', () => {
 
   it('IN PIXELS: the arc over The Approach is light the player can see — its glow stands off the sky, and added beats laid', async () => {
     const approach = THEMES.approach;
-    const base = { layers: FLASH_LAYERS, glow: PALETTES.vivid.player, core, dark: approach.space.vivid, bg: approach.space.vivid, offsets: [WIDTH * 1.5] };
+    const base = { layers: FLASH_LAYERS, ink: inksIn(approach).player, dark: approach.space.vivid, bg: approach.space.vivid, offsets: [WIDTH * 1.5] };
     const [added] = await stroke({ ...base, laid: false });
     const [laid] = await stroke({ ...base, laid: true });
     expect(contrast(added!, approach.space.vivid), `the glow ${added} against The Approach's sky`).toBeGreaterThanOrEqual(GAMEPLAY_FLOOR);
