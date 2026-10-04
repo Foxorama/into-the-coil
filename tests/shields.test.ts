@@ -3,7 +3,7 @@ import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { type Entity, makeEntity, reset } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
 import { GameFrame, advanceLevel, respawn, startLevel, takeShield, type World } from '../src/app/frame.ts';
-import { MAX_SHIELDS, SHIELD_ORBIT, SHIELD_PLACES, SHIPS, SHIP_KINDS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
+import { MAX_SHIELDS, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, SHIP_KINDS, fullHealthFor, shieldsOf } from '../src/content/ships.ts';
 import {
   PICKUPS,
   PICKUP_KINDS,
@@ -20,6 +20,9 @@ import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { CAPACITY } from '../src/app/mount.ts';
+import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
+import { drawKind } from '../src/render/bake.ts';
+import { tracingPen } from './paths.ts';
 import { playableWorld, NO_LEVEL } from './world.ts';
 
 /**
@@ -291,9 +294,10 @@ describe('the shell is drawn where the player is looking', () => {
       frame.step();
       for (let i = 0; i < world.shieldOrbs.size; i++) {
         const orb = world.shieldOrbs.at(i);
-        const place = SHIELD_PLACES.find((p) => p.frames.includes(orb.sprite));
-        expect(place, `plate ${i} of ${shields} wears no plate's picture`).toBeDefined();
-        const off = Math.abs(turnOf(world, orb) - place!.angle);
+        // ⚠️ The ship's own plates since 0492, which gave each ship its shell.
+        const place = world.shipRow.shield.places.findIndex((p) => p.includes(orb.sprite));
+        expect(place, `plate ${i} of ${shields} wears no plate's picture`).toBeGreaterThanOrEqual(0);
+        const off = Math.abs(turnOf(world, orb) - SHIELD_ANGLES[place]!);
         expect(Math.min(off, Math.PI * 2 - off), `plate ${i} of ${shields} is drawn for another place`).toBeLessThan(1e-6);
       }
     }
@@ -375,7 +379,7 @@ describe('the shell costs nothing the budget did not already have', () => {
       expect(world.shieldOrbs.at(i).radius, 'a mark has a hurtbox').toBe(0);
       expect(world.shieldOrbs.at(i).damage, 'a mark can hurt something').toBe(0);
       expect(
-        SHIELD_PLACES.some((p) => p.frames.includes(world.shieldOrbs.at(i).sprite)),
+        world.shipRow.shield.places.some((p) => p.includes(world.shieldOrbs.at(i).sprite)),
         'a plate is drawn as something else',
       ).toBe(true);
     }
@@ -606,5 +610,72 @@ describe('the shell is drawn under the ship and above everything else', () => {
     }
     // The pool type is the one the painter walks; a fixture that built its own would prove nothing.
     expect(new Pool<Entity>(1, makeEntity).size).toBe(0);
+  });
+});
+
+describe('0492 — the shell is the ship’s own', () => {
+  /*
+    *"The deflector shell is four places × three shimmer frames of one plate … for every ship."* The
+    readout wore the ship since 0451 and the shell did not. Three things the picture could get wrong:
+    a ship flying in another ship's shell, two ships sharing one, and a look drawn about the wrong
+    centre, which would scatter a shell of four plates into four arcs pointing nowhere.
+  */
+  it('THE OWN SHELL: every ship flies in its own plates, and no two ships share one', () => {
+    const owner = new Map<number, string>();
+    for (const kind of SHIP_KINDS) {
+      for (const frames of SHIPS[kind].shield.places) {
+        for (const sprite of frames) {
+          expect(owner.get(sprite), `${kind}'s shell wears ${SPRITE_KINDS[sprite]}, which is ${owner.get(sprite)}'s`).toBeUndefined();
+          owner.set(sprite, kind);
+        }
+      }
+      const { world, frame } = quietWorld();
+      world.shipRow = SHIPS[kind];
+      giveShields(world, MAX_SHIELDS);
+      frame.step();
+      expect(world.shieldOrbs.size, `${kind} wears no shell`).toBe(MAX_SHIELDS);
+      for (let i = 0; i < world.shieldOrbs.size; i++) {
+        const sprite = world.shieldOrbs.at(i).sprite;
+        expect(
+          SHIPS[kind].shield.places.some((p) => p.includes(sprite)),
+          `${kind} flies in ${SPRITE_KINDS[sprite]}, which is not its own plate`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('THE OWN SHELL, DRAWN: every look curves round the ship at the shell’s orbit, and no two looks are one picture', () => {
+    /*
+      ⚠️ **IN WORLD UNITS ABOUT THE SHIP**, which is what the player sees: every mark of every plate,
+      at every place, lies within a unit of `SHIELD_ORBIT` from the ship's centre. A look drawn about
+      the tile's centre would sit within a unit of the TILE's centre, five units out, and fail this.
+    */
+    const ink = PALETTES[DEFAULT_PALETTE];
+    const pictures = new Set<string>();
+    for (const kind of SHIP_KINDS) {
+      const { places } = SHIPS[kind].shield;
+      for (let place = 0; place < places.length; place++) {
+        const sprite = SPRITE_KINDS[places[place]![0]]!;
+        const unit = 10;
+        const size = SPRITE_EXTENT[sprite] * unit;
+        const { pen, trace } = tracingPen();
+        drawKind(pen, sprite, ink, size, 'rime');
+        const sx = size / 2 - Math.cos(SHIELD_ANGLES[place]!) * SHIELD_ORBIT * unit;
+        const sy = size / 2 - Math.sin(SHIELD_ANGLES[place]!) * SHIELD_ORBIT * unit;
+        let marks = 0;
+        for (const mark of [...trace.passes, ...trace.inks]) {
+          for (const sub of mark.subpaths) {
+            for (const [x, y] of sub) {
+              marks++;
+              const off = Math.hypot(x - sx, y - sy) / unit - SHIELD_ORBIT;
+              expect(Math.abs(off), `${sprite} draws a mark ${off.toFixed(2)} units off the shell`).toBeLessThan(1);
+            }
+          }
+        }
+        expect(marks, `${sprite} draws nothing`).toBeGreaterThan(0);
+        if (place === 0) pictures.add(JSON.stringify(trace.inks.map((s) => s.subpaths)));
+      }
+    }
+    expect(pictures.size, 'two ships wear one picture of a shell').toBe(SHIP_KINDS.length);
   });
 });

@@ -107,7 +107,35 @@ export interface ShipRow extends Body {
    * rim runs from into that ink, and the dressing the plate wears — the predecessor's bridges, carried.
    */
   hud: HudTheme;
+  /**
+   * The deflector shell this ship wears — `docs/decisions/0492-the-shields-wear-the-ship.md`. The
+   * readout wore the ship since 0451 and the shell round the hull did not: one honeycomb in the
+   * player's ink for all four. What it DOES is not here — the orbit, the places and the layout are
+   * one for every ship, so a shield is a shield — only what it looks like.
+   */
+  shield: ShieldShell;
 }
+
+/**
+ * How a ship's shell is drawn. Closed, per 0016 — each is a draw in `src/render/bake.ts`.
+ *
+ *   **honeycomb**  a strip of energy cells with a bright rim: a starfighter's deflector (0430)
+ *   **bubble**     a soap film with a light sliding over it: the saucer's, in its ray's lavender
+ *   **plumes**     gold-edged black feathers laid along the arc: the Firebird's phoenix
+ *   **lattice**    a gilt trellis between two gilt rails, studded where it crosses: the estate's
+ */
+export type ShieldLook = 'honeycomb' | 'bubble' | 'plumes' | 'lattice';
+
+/**
+ * A ship's shell: its look, and a plate's three shimmer frames at each of the four places
+ * `SHIELD_ANGLES` names, in that order.
+ */
+export interface ShieldShell {
+  readonly look: ShieldLook;
+  readonly places: readonly [ShieldFrames, ShieldFrames, ShieldFrames, ShieldFrames];
+}
+
+export type ShieldFrames = readonly [number, number, number];
 
 /**
  * A colour the readout wears: a palette role, moved toward another and lifted or shaded — never a hex,
@@ -268,6 +296,16 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // The studio's own readout, violet into cyan (0439), in a gunsight's corners.
     hud: { motif: 'bracket', ink: { from: 'player' }, trim: { from: 'ally' } },
+    // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
+    shield: {
+      look: 'honeycomb',
+      places: [
+        [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c],
+        [SPRITE.shield120a, SPRITE.shield120b, SPRITE.shield120c],
+        [SPRITE.shield180a, SPRITE.shield180b, SPRITE.shield180c],
+        [SPRITE.shield240a, SPRITE.shield240b, SPRITE.shield240c],
+      ],
+    },
   },
   /**
    * Feather Fade's — *The Far Carry*'s Little Green Caddie, *"a flying saucer with a 7-iron. They come
@@ -321,6 +359,16 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1 / CADDIE_DISC, outside: 0.8 / CADDIE_DISC },
     // The saucer's own green, lifted to read as text, and its ray dish's lavender — the probe deck.
     hud: { motif: 'orbit', ink: { from: 'player', toward: 'acid', by: 0.55, lift: 0.2 }, trim: { from: 'ally' } },
+    // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
+    shield: {
+      look: 'bubble',
+      places: [
+        [SPRITE.shieldBubble0a, SPRITE.shieldBubble0b, SPRITE.shieldBubble0c],
+        [SPRITE.shieldBubble120a, SPRITE.shieldBubble120b, SPRITE.shieldBubble120c],
+        [SPRITE.shieldBubble180a, SPRITE.shieldBubble180b, SPRITE.shieldBubble180c],
+        [SPRITE.shieldBubble240a, SPRITE.shieldBubble240b, SPRITE.shieldBubble240c],
+      ],
+    },
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
@@ -355,6 +403,16 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // Its phoenix's gold on its black lacquer, the rim running from its tail lamp's orange.
     hud: { motif: 'checker', ink: { from: 'hazard' }, trim: { from: 'bullet' } },
+    // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
+    shield: {
+      look: 'plumes',
+      places: [
+        [SPRITE.shieldPlume0a, SPRITE.shieldPlume0b, SPRITE.shieldPlume0c],
+        [SPRITE.shieldPlume120a, SPRITE.shieldPlume120b, SPRITE.shieldPlume120c],
+        [SPRITE.shieldPlume180a, SPRITE.shieldPlume180b, SPRITE.shieldPlume180c],
+        [SPRITE.shieldPlume240a, SPRITE.shieldPlume240b, SPRITE.shieldPlume240c],
+      ],
+    },
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
@@ -387,6 +445,16 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // The gilt, a shade paler to read as text, and the burl of its doors for the rim's dark end.
     hud: { motif: 'walnut', ink: { from: 'hazard', lift: 0.25 }, trim: { from: 'hazard', lift: -0.45 } },
+    // A gilt trellis between gilt rails, a stud at every crossing — 0492.
+    shield: {
+      look: 'lattice',
+      places: [
+        [SPRITE.shieldLattice0a, SPRITE.shieldLattice0b, SPRITE.shieldLattice0c],
+        [SPRITE.shieldLattice120a, SPRITE.shieldLattice120b, SPRITE.shieldLattice120c],
+        [SPRITE.shieldLattice180a, SPRITE.shieldLattice180b, SPRITE.shieldLattice180c],
+        [SPRITE.shieldLattice240a, SPRITE.shieldLattice240b, SPRITE.shieldLattice240c],
+      ],
+    },
   },
 };
 
@@ -422,19 +490,30 @@ export const MAX_SHIELDS = 3;
 export const SHIELD_ORBIT = 5.6;
 
 /**
- * Where a plate of the deflector shell may stand, in radians from the nose, and its three shimmer
- * frames — `docs/decisions/0430-the-readout-counts-ships-and-shields.md`.
+ * Where a plate of the deflector shell may stand, in radians from the nose —
+ * `docs/decisions/0430-the-readout-counts-ships-and-shields.md`. A ship's `shield.places` gives each
+ * its three shimmer frames, in this order (0492).
  *
  * ⚠️ **FOUR PLACES, BECAUSE A BITMAP CANNOT TURN.** Each is baked curving round the ship from where it
  * stands, so the shell no longer spins: a deflector is worn facing the fire, and a plate that turned
  * would need a picture for every angle it passed through.
  */
-export const SHIELD_PLACES: readonly { readonly angle: number; readonly frames: readonly [number, number, number] }[] = [
-  { angle: 0, frames: [SPRITE.shield0a, SPRITE.shield0b, SPRITE.shield0c] },
-  { angle: (Math.PI * 2) / 3, frames: [SPRITE.shield120a, SPRITE.shield120b, SPRITE.shield120c] },
-  { angle: Math.PI, frames: [SPRITE.shield180a, SPRITE.shield180b, SPRITE.shield180c] },
-  { angle: (Math.PI * 4) / 3, frames: [SPRITE.shield240a, SPRITE.shield240b, SPRITE.shield240c] },
-];
+export const SHIELD_ANGLES: readonly [number, number, number, number] = [0, (Math.PI * 2) / 3, Math.PI, (Math.PI * 4) / 3];
+
+/**
+ * Which ship's shell a plate's sprite belongs to, and where on it — for the bake, which is handed a
+ * sprite and draws the plate the row says it is.
+ */
+export function shieldPlateOf(sprite: number): { readonly ship: ShipRow; readonly place: number; readonly shimmer: number } | null {
+  for (const kind of SHIP_KINDS) {
+    const places = SHIPS[kind].shield.places;
+    for (let place = 0; place < places.length; place++) {
+      const shimmer = places[place]!.indexOf(sprite);
+      if (shimmer >= 0) return { ship: SHIPS[kind], place, shimmer };
+    }
+  }
+  return null;
+}
 
 /**
  * Which places a shell of each size stands on, indexed by how many shields the ship carries.

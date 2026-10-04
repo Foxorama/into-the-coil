@@ -33,7 +33,7 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, SHIELD_ORBIT, SHIELD_PLACES } from '../content/ships.ts';
+import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, shieldPlateOf } from '../content/ships.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -765,6 +765,43 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shield240a: 'player',
   shield240b: 'player',
   shield240c: 'player',
+  // Each ship's shell in the ink its readout wears (0451): the saucer's lavender, the two cars' gold — 0492.
+  shieldBubble0a: 'ally',
+  shieldBubble0b: 'ally',
+  shieldBubble0c: 'ally',
+  shieldBubble120a: 'ally',
+  shieldBubble120b: 'ally',
+  shieldBubble120c: 'ally',
+  shieldBubble180a: 'ally',
+  shieldBubble180b: 'ally',
+  shieldBubble180c: 'ally',
+  shieldBubble240a: 'ally',
+  shieldBubble240b: 'ally',
+  shieldBubble240c: 'ally',
+  shieldPlume0a: 'hazard',
+  shieldPlume0b: 'hazard',
+  shieldPlume0c: 'hazard',
+  shieldPlume120a: 'hazard',
+  shieldPlume120b: 'hazard',
+  shieldPlume120c: 'hazard',
+  shieldPlume180a: 'hazard',
+  shieldPlume180b: 'hazard',
+  shieldPlume180c: 'hazard',
+  shieldPlume240a: 'hazard',
+  shieldPlume240b: 'hazard',
+  shieldPlume240c: 'hazard',
+  shieldLattice0a: 'hazard',
+  shieldLattice0b: 'hazard',
+  shieldLattice0c: 'hazard',
+  shieldLattice120a: 'hazard',
+  shieldLattice120b: 'hazard',
+  shieldLattice120c: 'hazard',
+  shieldLattice180a: 'hazard',
+  shieldLattice180b: 'hazard',
+  shieldLattice180c: 'hazard',
+  shieldLattice240a: 'hazard',
+  shieldLattice240b: 'hazard',
+  shieldLattice240c: 'hazard',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -12088,6 +12125,238 @@ const PLATE_SWEEP = (50 * Math.PI) / 180;
 const PLATE_CELL = 0.45;
 
 /**
+ * Where a plate is drawn in its tile — `docs/decisions/0492-the-shields-wear-the-ship.md`. Every
+ * ship's shell stands at the same orbit, sweep and thickness, so a shield is the same size whoever
+ * wears it; this is that shared frame, and each look draws in it.
+ *
+ * ⚠️ **DRAWN ROUND THE SHIP'S CENTRE, NOT THE TILE'S** — 0430. The tile is centred on the plate, where
+ * the frame puts the body, so the ship sits `SHIELD_ORBIT` behind it along `angle`, and every arc is
+ * about that point. That is what makes four plates at four places one shell.
+ */
+interface PlateAt {
+  readonly cx: number;
+  readonly cy: number;
+  readonly radius: number;
+  readonly unit: number;
+  readonly angle: number;
+  /** Half the strip's thickness, in pixels: the honeycomb's two zig-zagged rows, which every look keeps. */
+  readonly edge: number;
+}
+
+function plateAt(size: number, extent: number, angle: number): PlateAt {
+  const half = size / 2;
+  const unit = size / extent;
+  const radius = SHIELD_ORBIT * unit;
+  const cell = PLATE_CELL * unit;
+  return {
+    cx: half - Math.cos(angle) * radius,
+    cy: half - Math.sin(angle) * radius,
+    radius,
+    unit,
+    angle,
+    edge: (Math.sqrt(3) / 4) * cell + (Math.sqrt(3) / 2) * cell,
+  };
+}
+
+/** An arc of the shell about the ship's centre, `sweep` either side of the plate's middle. */
+function plateArc(ctx: Pen, at: PlateAt, r: number, sweep: number, colour: string, width: number, alpha: number, cap: CanvasLineCap): void {
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = colour;
+  ctx.lineWidth = width;
+  ctx.lineCap = cap;
+  ctx.beginPath();
+  ctx.arc(at.cx, at.cy, r, at.angle - sweep, at.angle + sweep);
+  ctx.stroke();
+}
+
+/**
+ * How much of a mark at `a` radians survives the plate's fade toward its ends — the honeycomb's own
+ * curve, so every look's plate thins out the same way and four of them close into one shell.
+ */
+function plateFade(at: PlateAt, a: number): number {
+  const reach = Math.abs(a - at.angle) / PLATE_SWEEP;
+  return 1 - 0.75 * reach * reach;
+}
+
+/** A point on the shell: `a` radians round the ship's centre, `r` pixels out from it. */
+function platePoint(at: PlateAt, a: number, r: number): Pt {
+  return [at.cx + Math.cos(a) * r, at.cy + Math.sin(a) * r];
+}
+
+/**
+ * The saucer's shell — 0492. A soap film: a bubble seen edge-on is a ring brightest at its skin, with
+ * colour running through it. Two thin skins round the ship in the ray dish's lavender, the player's
+ * cyan and the acid the saucer runs on, banded along the arc; `shimmer` slides the bands and a glint
+ * along it, which is how a bubble catches the light as it turns.
+ *
+ * ⚠️ **NOTHING SOLID, on 0379's rule for anything worn round the ship**: the film is two hairlines and a
+ * glow, so a bullet crossing it is seen through it.
+ */
+function drawBubblePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const film = [palette.ally, palette.player, palette.acid];
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP, palette.ally, edge * 2.4, 0.07, 'butt');
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.7, palette.ally, edge * 1.6, 0.07, 'butt');
+  // The two skins, in short runs so the colour can change along them: the outer one bright, the inner
+  // one fainter and a band behind, as the far side of a film is.
+  const runs = 30;
+  const run = (PLATE_SWEEP * 2) / runs;
+  for (const [r, alpha, lag] of [
+    [radius + edge * 0.55, 1, 0],
+    [radius - edge * 0.45, 0.4, 1],
+  ] as const) {
+    for (let i = 0; i < runs; i++) {
+      const a = angle - PLATE_SWEEP + i * run;
+      const band = ((i / runs) * 4 + shimmer + lag) % 3;
+      const k = Math.floor(band);
+      ctx.globalAlpha = alpha * plateFade(at, a + run / 2);
+      ctx.strokeStyle = mix(film[k]!, film[(k + 1) % 3]!, band - k);
+      ctx.lineWidth = Math.max(1, 0.13 * unit);
+      ctx.lineCap = 'butt';
+      ctx.beginPath();
+      ctx.arc(at.cx, at.cy, r, a, a + run * 1.05);
+      ctx.stroke();
+    }
+  }
+  // The glint: a short bright stroke on the outer skin and a fleck inside it, sliding along the plate.
+  const g = angle + (shimmer - 1) * PLATE_SWEEP * 0.45;
+  ctx.globalAlpha = 0.9;
+  ctx.strokeStyle = shade(palette.ally, 0.8);
+  ctx.lineWidth = Math.max(1.5, 0.14 * unit);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.arc(at.cx, at.cy, radius + edge * 0.55, g - 0.07, g + 0.07);
+  ctx.stroke();
+  const [fx, fy] = platePoint(at, g + 0.12, radius + edge * 0.1);
+  ctx.globalAlpha = 0.7;
+  ctx.fillStyle = shade(palette.ally, 0.8);
+  ctx.beginPath();
+  ctx.arc(fx, fy, Math.max(0.8, 0.07 * unit), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The Firebird's shell — 0492. Its phoenix's feathers, laid along the arc and overlapping as plumage
+ * does, every one pointing the same way round the ship: black lacquer read by its gold edges and a
+ * gold quill, as the car itself is read (0468). `shimmer` is which third of the edges glints.
+ *
+ * ⚠️ **THE LACQUER IS A TINT, NOT A FILL** — 0379. A black feather laid solid would be a dark band round
+ * the ship that a bullet could cross unseen; at a third it darkens what is behind it and hides nothing.
+ */
+function drawPlumePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const gold = palette.hazard;
+  const lacquer = shade(mix(palette.space, palette.hazard, 0.08), 0.16);
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, gold, edge * 2.2, 0.06, 'butt');
+  const feathers = 9;
+  const step = (PLATE_SWEEP * 2) / feathers;
+  // Each feather is a step and a half long, so it lies over the root of the one after it.
+  const long = step * 1.55;
+  const wide = edge * 0.62;
+  for (let i = 0; i < feathers; i++) {
+    const a = angle - PLATE_SWEEP + i * step;
+    const fade = plateFade(at, a + long / 2);
+    const lit = i % 3 === shimmer;
+    // Root on the inside of the strip, tip out at its outer edge: a feather swept back along the arc.
+    const root = platePoint(at, a, radius - edge * 0.55);
+    const tip = platePoint(at, a + long, radius + edge * 0.7);
+    const mid = a + long * 0.45;
+    const out = platePoint(at, mid, radius + wide + edge * 0.15);
+    const inn = platePoint(at, mid, radius - wide + edge * 0.15);
+    ctx.beginPath();
+    ctx.moveTo(root[0], root[1]);
+    ctx.quadraticCurveTo(out[0], out[1], tip[0], tip[1]);
+    ctx.quadraticCurveTo(inn[0], inn[1], root[0], root[1]);
+    ctx.closePath();
+    ctx.globalAlpha = 0.35 * fade;
+    ctx.fillStyle = lit ? mix(lacquer, gold, 0.25) : lacquer;
+    ctx.fill();
+    ctx.globalAlpha = (lit ? 1 : 0.75) * fade;
+    ctx.strokeStyle = lit ? shade(gold, 0.45) : gold;
+    ctx.lineWidth = Math.max(1, 0.06 * unit);
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    // The quill, from the root most of the way to the tip.
+    const bend = platePoint(at, a + long * 0.4, radius + edge * 0.05);
+    const quill = platePoint(at, a + long * 0.8, radius + edge * 0.45);
+    ctx.globalAlpha = 0.6 * fade;
+    ctx.strokeStyle = shade(gold, 0.2);
+    ctx.lineWidth = Math.max(1, 0.04 * unit);
+    ctx.beginPath();
+    ctx.moveTo(root[0], root[1]);
+    ctx.quadraticCurveTo(bend[0], bend[1], quill[0], quill[1]);
+    ctx.stroke();
+  }
+  // The outer edge a hit lands on, in gold over a glow, as the honeycomb's is in its ink.
+  plateArc(ctx, at, radius + edge, PLATE_SWEEP * 0.85, gold, 0.4 * unit, 0.25, 'round');
+  plateArc(ctx, at, radius + edge, PLATE_SWEEP * 0.78, shade(gold, 0.3), Math.max(1.2, 0.09 * unit), 0.9, 'round');
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The estate's shell — 0492. *"Solid-gold trim, fuzzy dice, the works"*: a gilt trellis between two
+ * gilt rails, as a woody's roof rack or a garden gate is, with a stud where every bar crosses.
+ * `shimmer` is which third of the studs is lit.
+ *
+ * ⚠️ **BARS, NOT PANELS** — 0379. The diamonds between the bars are open, so the trellis frames what
+ * is behind it; the one fill is the glow every plate sits in.
+ */
+function drawLatticePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const gilt = palette.hazard;
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.8, gilt, edge * 2.2, 0.07, 'butt');
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.55, gilt, edge * 1.6, 0.07, 'butt');
+  const inner = radius - edge * 0.75;
+  const outer = radius + edge * 0.75;
+  const bays = 8;
+  const step = (PLATE_SWEEP * 1.7) / bays;
+  const first = angle - (bays * step) / 2;
+  const bar = (a0: number, r0: number, a1: number, r1: number, alpha: number): void => {
+    const [x0, y0] = platePoint(at, a0, r0);
+    const [x1, y1] = platePoint(at, a1, r1);
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.stroke();
+  };
+  ctx.strokeStyle = shade(gilt, 0.1);
+  ctx.lineWidth = Math.max(1, 0.055 * unit);
+  ctx.lineCap = 'round';
+  for (let i = 0; i < bays; i++) {
+    const a = first + i * step;
+    const fade = plateFade(at, a + step / 2);
+    bar(a, inner, a + step, outer, 0.8 * fade);
+    bar(a, outer, a + step, inner, 0.8 * fade);
+  }
+  // The rails, the outer one the brighter: the edge a hit lands on.
+  plateArc(ctx, at, inner, (bays * step) / 2, shade(gilt, -0.1), Math.max(1, 0.07 * unit), 0.7, 'round');
+  plateArc(ctx, at, outer, (bays * step) / 2 + 0.03, gilt, 0.4 * unit, 0.25, 'round');
+  plateArc(ctx, at, outer, (bays * step) / 2 + 0.03, shade(gilt, 0.3), Math.max(1.2, 0.09 * unit), 0.95, 'round');
+  // A stud at every crossing, the lit third bright with a light round it.
+  for (let i = 0; i < bays; i++) {
+    const a = first + (i + 0.5) * step;
+    const fade = plateFade(at, a);
+    const lit = i % 3 === shimmer;
+    const [x, y] = platePoint(at, a, radius);
+    if (lit) {
+      ctx.globalAlpha = 0.35 * fade;
+      ctx.fillStyle = gilt;
+      ctx.beginPath();
+      ctx.arc(x, y, 0.32 * unit, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = fade;
+    ctx.fillStyle = lit ? shade(gilt, 0.6) : shade(gilt, -0.05);
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(0.9, 0.12 * unit), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * One plate of the deflector shell — `docs/decisions/0430-the-readout-counts-ships-and-shields.md`.
  *
  * *"Shields a starfighter spaceship would have."* A curved strip of energy honeycomb round the ship
@@ -12095,34 +12364,21 @@ const PLATE_CELL = 0.45;
  * over a soft band of light. `shimmer` is which third of the cells is lit: the three frames in turn
  * are a light running through the lattice.
  *
- * ⚠️ **DRAWN ROUND THE SHIP'S CENTRE, NOT THE TILE'S.** The tile is centred on the plate, where the
- * frame puts the body, so the ship sits `SHIELD_ORBIT` behind it along `angle` and every arc here is
- * about that point. That is what makes four plates at four places one shell.
+ * The fighter's since 0492, which gave every ship its own; drawn in `plateAt`'s frame, round the
+ * ship's centre and not the tile's, as each of the others is.
  *
  * ⚠️ **THE MIDDLE IS OPEN AND THE CELLS ARE TRANSLUCENT**, on 0379's rule for anything worn round
  * the ship — *"nothing round the ship, so nothing hides a bullet beside it."* The only solid line is
  * the rim, which is a hairline; a bullet crossing the strip is seen through it.
  */
-function drawShieldPlate(ctx: Pen, size: number, extent: number, angle: number, shimmer: number, ink: string): void {
-  const half = size / 2;
-  const unit = size / extent;
-  const cx = half - Math.cos(angle) * SHIELD_ORBIT * unit;
-  const cy = half - Math.sin(angle) * SHIELD_ORBIT * unit;
-  const radius = SHIELD_ORBIT * unit;
+function drawShieldPlate(ctx: Pen, at: PlateAt, shimmer: number, ink: string): void {
+  const { cx, cy, radius, unit, angle, edge } = at;
   const lit = shade(ink, 0.55);
   const cell = PLATE_CELL * unit;
   // The zig-zag: alternate columns sit a quarter of a cell's height either side of the orbit.
   const offset = (Math.sqrt(3) / 4) * cell;
-  const edge = offset + (Math.sqrt(3) / 2) * cell;
-  const arc = (r: number, sweep: number, colour: string, width: number, alpha: number, cap: CanvasLineCap): void => {
-    ctx.globalAlpha = alpha;
-    ctx.strokeStyle = colour;
-    ctx.lineWidth = width;
-    ctx.lineCap = cap;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, angle - sweep, angle + sweep);
-    ctx.stroke();
-  };
+  const arc = (r: number, sweep: number, colour: string, width: number, alpha: number, cap: CanvasLineCap): void =>
+    plateArc(ctx, at, r, sweep, colour, width, alpha, cap);
 
   // The light the strip sits in — square-ended and stepped shorter, so the plate's ends fade out
   // rather than rounding off into a capsule, which is what armour looks like and energy does not.
@@ -14897,7 +15153,8 @@ export function drawKind(
     /*
       A plate of the deflector shell — 0430. It was a ring, three of them orbiting the hull, and
       *"the shields should look like shields"*. The place is the number in the name and the shimmer
-      frame is the letter; `SHIELD_PLACES` is the one list of angles, read here and by the frame.
+      frame is the letter; `SHIELD_ANGLES` is the one list of angles, read here and by the frame.
+      Since 0492 the plate is the ship's: its row's `shield` names the sprite and how it is drawn.
     */
     case 'shield0a':
     case 'shield0b':
@@ -14910,11 +15167,65 @@ export function drawKind(
     case 'shield180c':
     case 'shield240a':
     case 'shield240b':
-    case 'shield240c': {
-      const place = SHIELD_PLACES.find((p) => p.frames.includes(SPRITE[kind]));
-      if (place === undefined) throw new Error(`${kind} stands at no place on the shell`);
-      drawShieldPlate(ctx, size, SPRITE_EXTENT[kind], place.angle, place.frames.indexOf(SPRITE[kind]), palette[INK_OF[kind]]);
-      return;
+    case 'shield240c':
+    case 'shieldBubble0a':
+    case 'shieldBubble0b':
+    case 'shieldBubble0c':
+    case 'shieldBubble120a':
+    case 'shieldBubble120b':
+    case 'shieldBubble120c':
+    case 'shieldBubble180a':
+    case 'shieldBubble180b':
+    case 'shieldBubble180c':
+    case 'shieldBubble240a':
+    case 'shieldBubble240b':
+    case 'shieldBubble240c':
+    case 'shieldPlume0a':
+    case 'shieldPlume0b':
+    case 'shieldPlume0c':
+    case 'shieldPlume120a':
+    case 'shieldPlume120b':
+    case 'shieldPlume120c':
+    case 'shieldPlume180a':
+    case 'shieldPlume180b':
+    case 'shieldPlume180c':
+    case 'shieldPlume240a':
+    case 'shieldPlume240b':
+    case 'shieldPlume240c':
+    case 'shieldLattice0a':
+    case 'shieldLattice0b':
+    case 'shieldLattice0c':
+    case 'shieldLattice120a':
+    case 'shieldLattice120b':
+    case 'shieldLattice120c':
+    case 'shieldLattice180a':
+    case 'shieldLattice180b':
+    case 'shieldLattice180c':
+    case 'shieldLattice240a':
+    case 'shieldLattice240b':
+    case 'shieldLattice240c': {
+      const plate = shieldPlateOf(SPRITE[kind]);
+      if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
+      const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!);
+      const look = plate.ship.shield.look;
+      switch (look) {
+        case 'honeycomb':
+          drawShieldPlate(ctx, at, plate.shimmer, palette[INK_OF[kind]]);
+          return;
+        case 'bubble':
+          drawBubblePlate(ctx, at, plate.shimmer, palette);
+          return;
+        case 'plumes':
+          drawPlumePlate(ctx, at, plate.shimmer, palette);
+          return;
+        case 'lattice':
+          drawLatticePlate(ctx, at, plate.shimmer, palette);
+          return;
+        default: {
+          const never: never = look;
+          throw new Error(`no shell is drawn as ${String(never)}`);
+        }
+      }
     }
     /*
       A surge's picture — THE PODS IT ADDS, since 0379.

@@ -110,8 +110,9 @@ export const PROBES = [
     guard: 'is drawn curving round the ship from where each plate actually stands',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const sprite = place.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
-      replace: '    const sprite = SHIELD_PLACES[0]!.frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
+      // ⚠️ Re-anchored by 0492, which gave every ship its own shell: still the fore plate's frames.
+      find: '    const sprite = frames[shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
+      replace: '    const sprite = w.shipRow.shield.places[0]![shimmer === 1 ? 1 : shimmer === 2 ? 2 : 0];',
     },
   },
   {
