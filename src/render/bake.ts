@@ -2638,23 +2638,33 @@ function firebirdOutline(stage: number): Pt[] {
     // back glass — played: *"the rear end of the firebird is a little low, it should be based on the
     // trans-am."* It was a wing on a post over a deck that fell below the beltline, a fastback's
     // tail; the Trans Am's is high and flat, its spoiler a ducktail lip kicked up off the deck's end
-    // (0516).
+    // (0516). And curved, played again: *"the back is a little flat - it needs a bit of a curve"* — the
+    // back glass rolls into the deck, and the deck rises to the lip.
     [-17, -0.4],
-    [-17.5, -2],
-    [-15.4, -1.8],
-    [-14, -1.1],
-    [-9.6, -1.3],
+    [-17.5, -2.1],
+    [-16, -2],
+    [-14.6, -1.6],
+    [-13, -1.45],
+    [-11.2, -1.5],
+    [-9.8, -1.75],
+    [-8.4, -2.3],
+    [-6.6, -3.1],
+    [-4.6, -3.95],
+    [-3.1, -4.4],
     [-2, -4.6],
     ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
     [6, -4.8],
-    [11, -2.2],
+    [10.8, -2.1],
     // The launcher on the hood: a block the blades leave from.
-    [11.6, -2.11],
+    [11.6, -1.95],
     [11.6, -4.8],
     [15.6, -4.8],
-    [15.6, -1.52],
-    [19, -1],
-    [19, 2.6],
+    // The hood falls to a low nose — *"the front is a little high"* (0516).
+    [15.6, -1.25],
+    [17.6, -0.6],
+    [19.2, 0.3],
+    [19.3, 1.4],
+    [18.8, 2.8],
     [16.5, 5],
     ...wheelUnder(12, 6, 3.6, 5),
     ...wheelUnder(-10, 6, 3.6, 5),
@@ -2826,6 +2836,20 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
 }
 
+/**
+ * A snowflake wheel's gold about `(x, y)` in the predecessor's frame, `reach` out: ten spikes from a
+ * ring at two fifths of it, one polygon and one mark.
+ */
+function snowflake(x: number, y: number, reach: number): Pt[] {
+  const out: Pt[] = [];
+  for (let k = 0; k < 20; k++) {
+    const a = (k * Math.PI) / 10;
+    const r = k % 2 === 0 ? reach : reach * 0.4;
+    out.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+  }
+  return out;
+}
+
 /** A steel star about `(x, y)` in the predecessor's frame, `reach` out: one polygon, one mark. */
 function steelStar(x: number, y: number, reach: number): Pt[] {
   const out: Pt[] = [];
@@ -2910,17 +2934,23 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   // The lacquer: lit along the roof, deep at the sills, and one highlight down the roofline.
   shaded(ctx, f, at(0, -5), at(0, 6), shade(body, 0.3), shade(body, -0.35), outline);
   seam(ctx, f, shade(body, 0.9), 0.035, box([
-    [-9, -1.2],
-    [-2.2, -3.9],
+    [-9.2, -1.6],
+    [-6.6, -2.6],
+    [-3.2, -3.9],
     [5.8, -4.1],
     [10.4, -1.6],
   ]), 0.7);
-  // The tyres: rubber in the slate trim, a gold snowflake dish in each and a chrome cap.
+  /*
+    The tyres: rubber in the slate trim, and in each the Trans Am's snowflake — gold spikes out from
+    the hub over a dark dish, played: *"can we give it the golden spikes for the wheels as well?"*
+    (0516). ONE polygon a wheel, as the launcher's star is: a spoke on its own at this size is under
+    0106's floor.
+  */
   for (const x of [12, -10]) {
     const [cx, cy] = at(x, 6);
     disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 3.6 * 0.062);
-    disc(ctx, f, gold, cx, cy, 2.4 * 0.062);
-    disc(ctx, f, shade(gold, -0.35), cx, cy, 1.7 * 0.062);
+    disc(ctx, f, shade(gold, -0.6), cx, cy, 2.55 * 0.062);
+    poly(ctx, f, gold, box(snowflake(x, 6, 2.5)));
     disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.95 * 0.062);
   }
   /*
@@ -2930,10 +2960,12 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   */
   const pin = 0.045;
   seam(ctx, f, stripe, pin, box([
-    [-16.4, -0.2],
+    [-16.4, -0.5],
+    [-12, -0.75],
+    [-8, -0.45],
     [-4, -0.4],
     [6, -1],
-    [16.6, -0.9],
+    [16, -0.5],
   ]), 0.95, true);
   seam(ctx, f, stripe, pin, box([
     [-6.4, 3.4],
@@ -2943,32 +2975,41 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     seam(ctx, f, stripe, pin, box(roundel(x, 6, 4.1, 12, Math.PI + 0.36, Math.PI * 2 - 0.36)), 0.9, true);
   }
   seam(ctx, f, stripe, pin, box([
-    [18.4, -0.6],
-    [18.4, 2.2],
+    [18.5, 0.9],
+    [18.5, 1.7],
   ]), 0.9);
-  // The greenhouse: gold glass, the side window and the windscreen, and the T-top bar between them
-  // in the player's cyan — the one light on the roof.
+  /*
+    The greenhouse: gold glass. It is a two-door — played: *"it's also 2door"* (0516). It had a pillar
+    in the middle of the side glass, which read as a front door and a back one. Now: a small quarter
+    window under the sail, the B-pillar behind the door with the player's cyan on it — the one light
+    on the roof — one long door window, and the A-pillar down to the cowl.
+  */
   poly(ctx, f, shade(gold, -0.3), box([
-    [-7, -1.9],
-    [-2.2, -4.2],
-    [-2.2, -1.9],
+    [-7.4, -2],
+    [-3.4, -3.85],
+    [-3.4, -2],
   ]));
   poly(ctx, f, shade(gold, -0.3), box([
-    [-0.4, -4.2],
+    [-2.4, -4.2],
     [5.4, -4.4],
     [9.4, -2.2],
-    [-0.4, -2],
+    [-2.4, -2],
   ]));
   poly(ctx, f, body, box([
-    [1.2, -4.5],
-    [3, -4.5],
-    [3, -1.9],
-    [1.2, -1.9],
+    [4.6, -4.6],
+    [5.6, -4.6],
+    [7.2, -2],
+    [6.2, -2],
   ]));
   seam(ctx, f, palette.player, 0.05, box([
-    [2.1, -4.05],
-    [2.1, -2.2],
+    [-2.9, -3.7],
+    [-2.9, -2.2],
   ]), 0.95);
+  // The door's back shut, down from the B-pillar to the rocker: one long door.
+  seam(ctx, f, shade(body, 0.5), 0.035, box([
+    [-3.2, -1.7],
+    [-3.2, 3],
+  ]), 0.6);
   /*
     The bird: small, gold, one colour, a third of the flank on the door under the glass — a crested
     head toward the nose, two wings up, a forked tail trailing back. ONE polygon: 0463's three slivers
@@ -3008,12 +3049,12 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   // A headlamp in the impact ink at the nose with the player's cyan round it, a tail lamp in the shot's
   // orange — never the enemy's red — with its own light.
   poly(ctx, f, palette.impact, box([
-    [16.8, -0.7],
-    [18.7, -0.7],
-    [18.7, 1.2],
-    [16.8, 1.2],
+    [16.4, 0.3],
+    [18.3, 0.3],
+    [18.3, 2.2],
+    [16.4, 2.2],
   ]));
-  glow(ctx, f, palette.player, ...at(17.6, 0.25), 0.11, 0.6);
+  glow(ctx, f, palette.player, ...at(17.3, 1.25), 0.11, 0.6);
   // The tail lamp wraps the corner high on the tail panel, under the deck, as the Trans Am's does.
   poly(ctx, f, palette.bullet, box([
     [-16.8, 0.2],
@@ -3023,25 +3064,24 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   ]));
   glow(ctx, f, palette.bullet, ...at(-15.6, 1.2), 0.11, 0.55);
   // The ducktail lip in the lacquer, lit along its top, with a gold edge — 0463's gold edge, on the lip.
-  shaded(ctx, f, at(0, -2), at(0, -0.1), shade(body, 0.35), shade(body, -0.2), box([
+  shaded(ctx, f, at(0, -2.1), at(0, -0.1), shade(body, 0.35), shade(body, -0.2), box([
     [-17, -0.1],
     [-17, -0.4],
-    [-17.5, -2],
-    [-15.4, -1.8],
-    [-14, -1.1],
-    [-15.2, -1.1],
+    [-17.5, -2.1],
+    [-16, -2],
+    [-14.6, -1.6],
     [-15.2, -0.1],
   ]));
   seam(ctx, f, gold, 0.04, box([
-    [-16.9, -1.45],
-    [-15.3, -1.35],
+    [-16.6, -1.35],
+    [-15.4, -1.15],
   ]), 0.95);
-  // A glare across the windscreen, raked back as the estate's is.
+  // A glare across the door glass, raked back as the estate's is.
   poly(ctx, f, shade(gold, 0.25), box([
-    [3.2, -2.2],
+    [2.2, -2.2],
+    [3.6, -4.2],
     [4.6, -4.2],
-    [5.8, -4.2],
-    [4.4, -2.2],
+    [3.2, -2.2],
   ]), 0.7);
 }
 
