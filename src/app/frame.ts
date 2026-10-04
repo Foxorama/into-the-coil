@@ -9472,12 +9472,15 @@ function layAura(w: World): void {
       sprite is a number on a content row, and a second `Body` per boss would be a table to keep in
       step.
     */
-    while (w.bossAura.size < flames + 1) {
+    // And after the flames, a jellyfish's frilled arms, under the bell and over the heart — 0490.
+    const frills = w.bossRow.tendrils?.frills;
+    const arms = frills === undefined ? 0 : frills.roots.length;
+    while (w.bossAura.size < flames + 1 + arms) {
       const flame = w.bossAura.spawn();
       if (flame === null) break;
       reset(flame, head.along, head.across, AURA_FLAME);
     }
-    while (w.bossAura.size > flames + 1) w.bossAura.releaseAt(w.bossAura.size - 1);
+    while (w.bossAura.size > flames + 1 + arms) w.bossAura.releaseAt(w.bossAura.size - 1);
     for (let i = 0; i < w.bossAura.size; i++) {
       const seat = w.bossAura.at(i);
       seat.prevAlong = head.prevAlong;
@@ -9490,6 +9493,27 @@ function layAura(w: World): void {
         seat.spriteHit = move.seat;
         // A seat that is a heart beats — 0400; the painter says how hard.
         seat.throb = move.throb ?? 0;
+        continue;
+      }
+      if (i > flames) {
+        if (frills === undefined) continue;
+        /*
+          ⚠️ **A FRILLED ARM HANGS FROM ITS ROOT ON THE RIM AND SWAYS SLOWER THAN THE TENTACLES WAVE — 0490**,
+          each a little out of step with the next. Its bitmap is rooted on the tile's centre and hangs along
+          `−x`, so a turn of nought hangs it straight down the lane. It is the hull's: it moves as the hull does.
+        */
+        const arm = i - flames - 1;
+        const root = frills.roots[arm]!;
+        seat.along = head.along + root[0];
+        seat.across = head.across + root[1];
+        seat.prevAlong = head.prevAlong + root[0];
+        seat.prevAcross = head.prevAcross + root[1];
+        seat.prevTurn = seat.turn;
+        seat.turn = frills.sway * Math.sin((w.steps / frills.beat) * TAU + arm * 1.9);
+        seat.sprite = frills.sprite;
+        seat.spriteBase = frills.sprite;
+        seat.spriteHit = frills.sprite;
+        seat.swell = 1;
         continue;
       }
       if (burn === null) continue;
@@ -10198,15 +10222,39 @@ function layTendrils(w: World, hull: Entity | null): void {
   const slack = 1 - w.tendrilBrace;
   const veins = VEINS_OF[w.level.theme];
   const span = SPRITE_EXTENT.skyNebula;
+  /*
+    ⚠️ **AND THE TIPS ALIGHT WITH THE LASER ABOUT TO LEAVE THEM — 0490**, read off the beams already in the
+    air rather than a timer of their own: a beam warns while its life is past its hold, and its last
+    `charge` steps of that are when the tips it roots at are lit.
+  */
+  let charging = false;
+  for (let i = 0; i < w.bolts.size; i++) {
+    const b = w.bolts.at(i);
+    if (b.kind === BEAM_BOLT_KIND && b.lifeFor > b.holdFor && b.lifeFor - b.holdFor <= tendrils.lit.charge) charging = true;
+  }
+  const phase = (w.steps / tendrils.beat) * TAU;
   for (let k = 0; k < tendrils.roots.length; k++) {
     const root = tendrils.roots[k]!;
     const tip = tendrils.tips[k]!;
     const artery = veins === null ? undefined : veins.arteries[k];
+    /*
+      ⚠️ **THE WAVE IS ACROSS THE ARM AND RUNS DOWN IT — 0490.** It was a sideways sine on a straight line,
+      a rod waving from its root. Across the arm's own line from root to tip, `waves` half-waves at once so
+      the arm is an S that travels, its swing growing to the tip, with a second at twice the rate to curl it.
+    */
+    const chordAlong = tendrils.reach - root[0];
+    const chordAcross = tip - root[1];
+    const chord = Math.sqrt(chordAlong * chordAlong + chordAcross * chordAcross) || 1;
+    const normalAlong = -chordAcross / chord;
+    const normalAcross = chordAlong / chord;
     for (let j = 0; j < tendrils.nodes; j++) {
       const t = (j + 0.5) / tendrils.nodes;
-      let along = hull.along + root[0] + (tendrils.reach - root[0]) * t;
-      let across = hull.across + root[1] + (tip - root[1]) * t;
-      across += slack * tendrils.sway * t ** 1.3 * Math.sin((w.steps / tendrils.beat) * TAU - t * 2.4 + k * 1.3);
+      let along = hull.along + root[0] + chordAlong * t;
+      let across = hull.across + root[1] + chordAcross * t;
+      const run = t * Math.PI * tendrils.waves;
+      const swing = slack * tendrils.sway * t ** 1.3 * (Math.sin(phase - run + k * 1.3) + 0.3 * Math.sin(2 * phase - 2 * run + k));
+      along += normalAlong * swing;
+      across += normalAcross * swing;
       if (artery !== undefined && veins !== null && out < 1) {
         arteryAt(artery, veins, 1 - t * TENDRIL_LIE, hull.along, hull.across, w.cameraAlong, span, ACROSS_SPAN, TENDRIL_ARTERY);
         along = TENDRIL_ARTERY[0]! + (along - TENDRIL_ARTERY[0]!) * out;
@@ -10228,6 +10276,9 @@ function layTendrils(w: World, hull: Entity | null): void {
       node.swell = 1 - (1 - tendrils.taper) * t;
       node.radius = tendrils.radius * node.swell;
       node.damage = drawn >= 1 ? w.bossRow.damage : 0;
+      // The last lengths alight while a laser is about to leave the tip — 0490; a hit still lights them white.
+      node.spriteBase = charging && j >= tendrils.nodes - tendrils.lit.lengths ? tendrils.lit.sprite : tendrils.sprite;
+      node.sprite = node.flashFor > 0 ? tendrils.spriteHit : node.spriteBase;
       placeAt(node, TENDRIL_AT[at]!, TENDRIL_AT[at + 1]!, foldTurn(heading - Math.PI), fresh);
     }
   }

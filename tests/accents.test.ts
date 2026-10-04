@@ -180,6 +180,9 @@ const HULLLESS: readonly SpriteKind[] = [
   'heart',
   // And the chamber it is set in — 0489: scenery of the same flesh, under every body.
   'heartChamber',
+  // And the jellyfish's frilled arms — 0490: a ribbon of the bell's glass in no pairing, with no outline,
+  // as a length of its tentacle has none.
+  'oralArm',
   'bound',
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.
@@ -253,7 +256,8 @@ const CHAIN_BODIES: readonly SpriteKind[] = BOSS_KINDS.flatMap((kind) => {
   const tendrils = BOSSES[kind].tendrils;
   return [
     ...(chain === null ? [] : [SPRITE_KINDS[chain.sprite]!, SPRITE_KINDS[chain.spriteHit]!]),
-    ...(tendrils === undefined ? [] : [SPRITE_KINDS[tendrils.sprite]!, SPRITE_KINDS[tendrils.spriteHit]!]),
+    // And its lit length is the same slice alight — 0490.
+    ...(tendrils === undefined ? [] : [SPRITE_KINDS[tendrils.sprite]!, SPRITE_KINDS[tendrils.spriteHit]!, SPRITE_KINDS[tendrils.lit.sprite]!]),
   ];
 });
 
