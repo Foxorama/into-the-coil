@@ -121,7 +121,9 @@ import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../sta
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
-import { browserStore, placeScore, readScores, recordScore } from '../save/scores.ts';
+import { placeScore, readScores, recordScore } from '../save/scores.ts';
+import { browserStore } from '../save/store.ts';
+import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1309,7 +1311,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     happens here: showing chrome, stopping the simulation, putting the ship back. The reducer knows
     none of it, which is what lets the whole run be played in a unit test with no canvas.
   */
-  let state: State = initialState;
+  /*
+    ⚠️ **THE SETTINGS OPEN AS THEY WERE LEFT — 0510**, laid over the defaults before anything reads
+    them, so every `apply*` below meets the kept value at boot exactly as it meets a default. Read into
+    the initial state rather than dispatched, because a dispatch is a change the player made and the
+    sound's chime rides one.
+  */
+  const keptStore = browserStore();
+  let state: State = { ...initialState, settings: readSettings(keptStore, initialState.settings) };
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
   let playable = false;
   /** Fixed steps left before the current screen expires by itself. `0` on a screen that waits. */
@@ -1550,7 +1559,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ran out onto the title, and since 0438 a run over the player continued from, which starts the
     score again — and `runRecorded` is what makes each credit one row however it got there.
   */
-  const scoreStore = browserStore();
+  const scoreStore = keptStore;
   let scoreTable = readScores(scoreStore);
   /** The row a run just set, lit on the title until the next run begins. `-1` for none. */
   let freshPlace = -1;
@@ -1624,6 +1633,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0340, on the two lines above's terms: per FIELD, so a travel change re-marks one chooser and
     // does not re-bake an atlas or touch the speaker.
     const travelChanged = next.settings.travel !== state.settings.travel;
+    /*
+      0510: what is kept, compared as it is written — so a pilot pick, which is not kept, writes
+      nothing, and a setting added to what is kept is compared without a line here learning its name.
+    */
+    const keptChanged =
+      next.settings !== state.settings && serialiseSettings(next.settings) !== serialiseSettings(state.settings);
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -1680,6 +1695,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (state.settings.sound === 'on') speaker.play('chime');
     }
     if (travelChanged) applyTravel();
+    if (keptChanged) writeSettings(keptStore, state.settings);
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
     if (moved) enterScreen(was, state.screen.current);
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
@@ -1923,6 +1939,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('sound', SOUND_KINDS.indexOf(state.settings.sound));
   };
   applySound();
+  /*
+    ⚠️ **THE MUSIC IS BORN ON, AND IS TOLD OTHERWISE THE MOMENT IT EXISTS — 0510.** It is built on the
+    first gesture (`src/app/sound.ts`), after `applySound` has run against a `null`, so a sound kept
+    *Off* between visits would have been silent cues over playing music. Told once, on the music that
+    was just built: `setOn` restarts the loops and cancels a duck, so it is no thing to repeat on every
+    press that resumes a context.
+  */
+  let toldMusic: ReturnType<typeof audioOut.music> = null;
+  const unlockAudio = (): void => {
+    audioOut.unlock();
+    const music = audioOut.music();
+    if (music === null || music === toldMusic) return;
+    toldMusic = music;
+    if (state.settings.sound !== 'on') music.setOn(false);
+  };
 
   /*
     WHAT THE TRAVEL SETTING CHANGES, in one place — and it is NOTHING but the mark on its own chooser.
@@ -2968,11 +2999,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (e instanceof KeyboardEvent && e.key === 'Escape' && (screen === 'splash' || screen === 'select' || screen === 'intro')) return;
     if (screen === 'intro' || screen === 'splash') {
-      if (prewarmDone()) audioOut.unlock();
+      if (prewarmDone()) unlockAudio();
       else introWantsSound = true;
       return;
     }
-    audioOut.unlock();
+    unlockAudio();
   };
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
@@ -3110,7 +3141,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // anything before that asks for the sound, which a pad can only have if the page was touched.
     if (state.screen.current === 'intro') {
       if (menuAsk.move === 0 && !menuAsk.confirm) return;
-      if (introReady) audioOut.unlock();
+      if (introReady) unlockAudio();
       else introWantsSound = true;
       if (menuAsk.confirm && introReady) leaveIntro();
       return;
@@ -3134,7 +3165,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the frames a pad is actually asking for something, and it converts *silent for pad users* into
       *silent only where the browser genuinely forbids it*.
     */
-    if (menuAsk.move !== 0 || menuAsk.confirm) audioOut.unlock();
+    if (menuAsk.move !== 0 || menuAsk.confirm) unlockAudio();
     /*
       0214: the axis goes with the direction. The chrome resolves it against its own layout.
 
@@ -3223,7 +3254,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       splashSteps++;
       if (introWantsSound && prewarmDone()) {
         introWantsSound = false;
-        audioOut.unlock();
+        unlockAudio();
       }
       if (prewarmDone() && splashSteps >= SPLASH_STEPS) {
         dispatch({ slice: 'screen', type: 'show', screen: 'select' });
@@ -3240,7 +3271,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (!introReady && prewarmDone()) {
         introReady = true;
         chrome.setSkipReady(true);
-        if (introWantsSound) audioOut.unlock();
+        if (introWantsSound) unlockAudio();
       }
       // Every beat the intro has passed, heard if the sound is on by then and never caught up on.
       while (introCueNext < INTRO_CUES.length && INTRO_CUES[introCueNext]!.at <= world.intro) {

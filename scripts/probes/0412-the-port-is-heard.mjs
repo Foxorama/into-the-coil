@@ -48,8 +48,8 @@ export const PROBES = [
     guard: 'keeps a press on the splash',
     edit: {
       path: 'src/app/mount.ts',
-      find: '      if (prewarmDone()) audioOut.unlock();\n      else introWantsSound = true;\n      return;\n    }\n    audioOut.unlock();',
-      replace: '      audioOut.unlock();\n      return;\n    }\n    audioOut.unlock();',
+      find: '      if (prewarmDone()) unlockAudio();\n      else introWantsSound = true;\n      return;\n    }\n    unlockAudio();',
+      replace: '      unlockAudio();\n      return;\n    }\n    unlockAudio();',
     },
   },
   {

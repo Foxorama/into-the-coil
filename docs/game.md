@@ -429,8 +429,9 @@ the *no shop* below is untouched.
 
 ## Save and resume
 
-**The high-score table is the one thing kept between visits today** —
-[0429](decisions/0429-the-table-is-kept.md). What follows is the run save, which does not exist yet.
+**The high-score table and the settings are what is kept between visits today** —
+[0429](decisions/0429-the-table-is-kept.md), [0510](decisions/0510-the-settings-are-kept.md); the
+pilot is picked each visit. What follows is the run save, which does not exist yet.
 
 The save is an **interruption hedge and not a safety net** —
 [0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md). It exists so that a browser
