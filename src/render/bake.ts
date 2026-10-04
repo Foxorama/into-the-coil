@@ -675,6 +675,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // A raider's bullet takes its place's colour (0296), so the cog and the clot are in the enemy ink and
   // `PLACE_SHOTS` paints them; the hailstone is ice wherever it is, in the frost ink — 0473.
   cog: 'enemy',
+  // The gyre's tooth is hostile, and the enemy ink is what the high-contrast palette draws it in; in
+  // the vivid one it draws itself in its lord's skin, which no place colours over — 0494.
+  tooth: 'enemy',
   hail: 'frost',
   clot: 'enemy',
   /*
@@ -1228,6 +1231,31 @@ const COG_OUTLINE: readonly Pt[] = Array.from({ length: 8 }, (_, k) => {
 })
   .flat()
   .map(([radius, angle]): Pt => [radius * Math.cos(angle), radius * Math.sin(angle)]);
+
+/** How deep the tooth's four slots run in, as a radius: past the hub painted at its middle — 0494. */
+const TOOTH_HUB = 0.5;
+
+/**
+ * The gyre's tooth's outline — 0494: a disc of 0.86 with four square slots cut in to `TOOTH_HUB` on the
+ * diagonals, each a fixed width rather than a fixed angle so its walls are parallel and its shoulders
+ * square. Written as arithmetic so the four slots are the same slot.
+ */
+const TOOTH_OUTLINE: readonly Pt[] = Array.from({ length: 4 }, (_, k) => {
+  const rim = 0.86;
+  const halfWidth = 0.09;
+  const slot = Math.PI / 4 + (k * Math.PI) / 2;
+  const opens = Math.asin(halfWidth / rim);
+  // The rim from the last slot round to this one, then in down one wall, across the floor, out the other.
+  const arc: Pt[] = Array.from({ length: 9 }, (_, i): Pt => {
+    const a = slot - Math.PI / 2 + opens + (i / 8) * (Math.PI / 2 - 2 * opens);
+    return [rim * Math.cos(a), rim * Math.sin(a)];
+  });
+  const wall = (side: number, r: number): Pt => [
+    r * Math.cos(slot) - side * halfWidth * Math.sin(slot),
+    r * Math.sin(slot) + side * halfWidth * Math.cos(slot),
+  ];
+  return [...arc, wall(-1, Math.sqrt(rim * rim - halfWidth * halfWidth)), wall(-1, TOOTH_HUB), wall(1, TOOTH_HUB), wall(1, Math.sqrt(rim * rim - halfWidth * halfWidth))];
+}).flat();
 
 /**
  * The clot's outline — 0473: seven shallow scallops round the circle, a lump of things stuck together.
@@ -13984,6 +14012,33 @@ export function drawKind(
       glow(ctx, f, ink, 0, 0, 1.05, 0.45);
       band(ctx, f, shade(ink, 0.55), 0, 0, 0.6, 0.42);
       return;
+    case 'tooth': {
+      /*
+        THE GYRE'S OWN SHOT — 0494: a Maltese wheel, the escapement a clockwork lord turns on, at a
+        bullet's size. A disc with four square slots cut in to its hub, in the lord's pink with its
+        teal for the hub and a red core. Four slots and
+        not one tooth, because a blit cannot turn (0300) and the gyre's walls come at the ship from
+        every side; on the diagonals, so it is not a plus. What keeps it from the place's cog is the
+        slots cut IN where the cog's teeth stand OUT, and the lord's colours where the cog wears the
+        raiders' gold. The high-contrast palette has no skins, and it gets the enemy ink.
+      */
+      const own = lordOf(theme, palette);
+      // The wheel in the lord's light, because at a bullet's size the fill is what the eye finds: a
+      // teal wheel was a dim rivet beside the slab's gold, photographed in the fight. The teal is its hub.
+      const body = own?.lit ?? ink;
+      ctx.fillStyle = body;
+      trace(ctx, f, TOOTH_OUTLINE);
+      seal(ctx);
+      glow(ctx, f, body, 0, 0, 1.05, 0.45);
+      disc(ctx, f, own?.hull ?? shade(ink, -0.35), 0, 0, 0.36);
+      // A brighter edge on the rim between the slots, where the corridor's light catches it.
+      for (let k = 0; k < 4; k++) {
+        const middle = (k * Math.PI) / 2;
+        seam(ctx, f, shade(body, 0.45), 0.08, roundel(0, 0, 0.74, 8, middle - 0.42, middle + 0.42), 1);
+      }
+      disc(ctx, f, own?.eye ?? shade(ink, 0.7), 0, 0, 0.2);
+      return;
+    }
     case 'hail':
       /*
         A HAILSTONE — 0473, the Rime Shelf's: a faceted lump of ice, lit on its upper face and shaded on
