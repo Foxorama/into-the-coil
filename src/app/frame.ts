@@ -2674,6 +2674,7 @@ export class GameFrame implements Frame {
       }
     }
     stepWreck(w);
+    stepPieces(w);
     stepBossDeath(w);
     stepShipDeath(w);
   }
@@ -3106,15 +3107,34 @@ export function layRoom(w: World): void {
   const rest = roomRestFor(w);
   // A new fight's room opens from nothing, or the last one's rest would carry into it.
   w.roomHold = 0;
-  // A room with no walls — 0400 — is a camera at rest and nothing for the painter.
-  w.room = room === null || room.wall === null || !Number.isFinite(rest) ? null : {
-    sprite: room.wall,
-    extent: SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
+  // A room with no walls and no pieces — 0400 — is a camera at rest and nothing for the painter.
+  const pieces = room?.pieces ?? null;
+  w.room = room === null || (room.wall === null && pieces === null) || !Number.isFinite(rest) ? null : {
+    sprite: room.wall ?? -1,
+    extent: room.wall === null ? 0 : SPRITE_EXTENT[SPRITE_KINDS[room.wall]!]!,
     from: rest - room.mouth,
     to: rest + PLAYER_LEAD,
     // Shut. `stepWreck` opens it once the thing that was in the wall is on the floor — 0337.
     open: 0,
+    pieces,
+    rest,
+    // The knot stands for the arrival — 0488 — and `stepPieces` sinks it once the fight begins.
+    knot: 1,
   };
+}
+
+/** Steps the entrance's knot takes to sink into the dark once the boss has arrived — 0488: a second. */
+const KNOT_SINKS = 60;
+
+/**
+ * The room's roots, one step — `docs/decisions/0488-the-roots-are-roots.md`: the knot the boss arrived round
+ * stands while it arrives and sinks over a second once it has, so it is never a thing in the open lane
+ * through the fight that looks solid and is not. Nothing allocates.
+ */
+function stepPieces(w: World): void {
+  if (w.room === null || w.room.pieces === null) return;
+  if (w.bossPool.size > 0 && w.bossEntering >= 0) w.room.knot = 1;
+  else if (w.bossSpawned && w.room.knot > 0) w.room.knot = Math.max(0, w.room.knot - 1 / KNOT_SINKS);
 }
 
 /**

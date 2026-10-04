@@ -1176,10 +1176,20 @@ the order, so this file does not.** Landed, one PR each, every one owed a play o
   [0478](decisions/0478-the-leap-has-its-own-flight.md);
 - item 4, the flame and the void — [0479](decisions/0479-the-flame-slows.md);
 - item 5's first half, damage sheds — [0480](decisions/0480-damage-sheds.md); the wear ladders follow,
-  one boss a PR, each after a play of the shed.
+  one boss a PR, each after a play of the shed;
+- item 6, the cold — [0481](decisions/0481-the-cold-grows.md), its reach on the player's word in
+  [0484](decisions/0484-the-cold-reaches-the-start.md), and the frost's cloud in
+  [0482](decisions/0482-the-frost-is-a-cloud.md); **the escorts wait on a play of
+  [0471](decisions/0471-the-cold-breathes.md)**;
+- item 7, the pterodactyl — [0483](decisions/0483-the-pterodactyl-flies.md) and
+  [0485](decisions/0485-the-pterodactyl-is-plumed.md);
+- item 8, the hydra's neck — [0486](decisions/0486-the-neck-bends.md), with the player's two notes on its
+  first photographs taken in;
+- item 9, the serpent — [0487](decisions/0487-the-storm-is-lightning.md) and
+  [0488](decisions/0488-the-roots-are-roots.md).
 
-**Next is the plan's item 6** (the cold grows instead of zooming). Item 4.2, the gyre's hole per stance,
-is still not built without the player's word, against [0151](decisions/0151-the-gap-you-have-to-reach.md).
+**Next is the plan's item 10** (the heart's chamber, the tentacles, the glow). Item 4.2, the gyre's hole per
+stance, is still not built without the player's word, against [0151](decisions/0151-the-gap-you-have-to-reach.md).
 
 ### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
 

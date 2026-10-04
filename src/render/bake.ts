@@ -537,7 +537,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // player must find is drawn in, and a wall is the thing they are found against.
   roomWall: 'sky',
   // And the serpent's room is walled in roots, on the same terms — 0459.
-  rootWall: 'sky',
+  rootTrunk: 'sky',
+  rootFork: 'sky',
+  rootTip: 'sky',
+  rootKnot: 'sky',
   // The wall's caps are the wall — 0350.
   wallRise0: 'sky',
   wallRise1: 'sky',
@@ -9563,6 +9566,128 @@ function paintChillHaze(ctx: Pen, size: number, palette: Palette): void {
   ctx.globalAlpha = 1;
 }
 
+/*
+  ── THE WORLD TREE'S ROOTS AS ROOTS — `docs/decisions/0488-the-roots-are-roots.md` ──────────────────
+
+  ⚠️ **A FEW LARGE PIECES, NOT A TILE.** 0459's wall was one 12-unit tile of strokes wallpapered thirty
+  times along the lane: no shape, no curvature, nothing the eye reads as a root. Each piece here is a root
+  as a thing — a trunk lying along an edge with its rootlets going off it, a fork, a tapering tip that
+  curls, and the knot the serpent coils in round — tapering as roots do, in 0459's own bark.
+
+  ⚠️ **FILLED AND NOT STROKED.** A strand is its two edges, swung off its line by half its width, filled:
+  so it can taper, which a stroke of one width cannot. Shadow under it, bark, and a lit flank.
+*/
+
+/** One root of a piece: its line in the tile's own `r`, and how wide it is along it, `t` from 0 to 1. */
+interface RootStrand {
+  line: readonly Pt[];
+  width: (t: number) => number;
+}
+
+/** A root's line from `a` to `b`, bowed `bend` to its left at the middle and wandering `wave` over `waves` swings. */
+function rootLine(a: Pt, b: Pt, bend: number, wave = 0, waves = 2, n = 28): Pt[] {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+  const out: Pt[] = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const off = bend * Math.sin(Math.PI * t) + wave * Math.sin(2 * Math.PI * waves * t) * Math.sin(Math.PI * t);
+    out.push([a[0] + dx * t + nx * off, a[1] + dy * t + ny * off]);
+  }
+  return out;
+}
+
+/** Thick at its root and tapering to a point: from `from` to `to`, faster toward the tip. */
+const taper =
+  (from: number, to: number) =>
+  (t: number): number =>
+    to + (from - to) * Math.pow(1 - t, 0.7);
+
+/** Thick in the middle and thinner at both ends, as a root lying across the ground between two places. */
+const lying =
+  (most: number, ends: number) =>
+  (t: number): number =>
+    ends + (most - ends) * Math.sqrt(Math.sin(Math.PI * t));
+
+/** A ring of root, closed on itself — the knot's own loop. */
+function rootRing(cx: number, cy: number, radius: number, n = 40): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i <= n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    // Gnarled: the ring swells and pinches as it goes round.
+    const r = radius * (1 + 0.08 * Math.sin(a * 3) + 0.05 * Math.sin(a * 5 + 1));
+    out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  return out;
+}
+
+/**
+ * Each piece's roots, in its own `r` — 0488. Drawn lying along `+x`; the room turns them into place.
+ * A piece's rootlets go to its `−y`, which is the side a room puts off the lane.
+ */
+const ROOT_PIECES: Record<'rootTrunk' | 'rootFork' | 'rootTip' | 'rootKnot', readonly RootStrand[]> = {
+  rootTrunk: [
+    { line: rootLine([-1.1, 0.04], [1.1, -0.04], 0.06, 0.05), width: lying(0.3, 0.1) },
+    { line: rootLine([-0.35, -0.02], [-0.8, -0.62], -0.1), width: taper(0.13, 0.025) },
+    { line: rootLine([0.3, -0.04], [0.92, -0.58], 0.12), width: taper(0.11, 0.02) },
+    { line: rootLine([-0.02, -0.06], [0.2, -0.7], 0.08), width: taper(0.08, 0.02) },
+  ],
+  rootFork: [
+    { line: rootLine([-1.1, 0], [-0.08, 0.01], 0.04), width: taper(0.32, 0.24) },
+    { line: rootLine([-0.12, 0.01], [1.02, -0.56], 0.1, 0.04), width: taper(0.23, 0.035) },
+    { line: rootLine([-0.12, 0.01], [0.98, 0.5], -0.08, 0.04), width: taper(0.19, 0.03) },
+    { line: rootLine([0.44, -0.27], [0.78, -0.84], 0.06), width: taper(0.07, 0.02) },
+  ],
+  rootTip: [
+    // One line bowed hard, so the curl is the root's own turn and not a second root joined on.
+    { line: rootLine([-1.1, 0.12], [0.62, -0.58], 0.42, 0.03), width: taper(0.3, 0.04) },
+    // Off to the curl's side, which is the side a room puts off the lane.
+    { line: rootLine([-0.45, -0.04], [-0.15, -0.6], -0.08), width: taper(0.1, 0.02) },
+  ],
+  rootKnot: [
+    { line: rootRing(0, 0, 0.5), width: (t) => 0.18 + 0.05 * Math.sin(t * Math.PI * 6) },
+    { line: rootLine([-0.95, 0.32], [0.92, -0.34], 0.22, 0.04), width: lying(0.24, 0.07) },
+    { line: rootLine([-0.84, -0.6], [0.8, 0.66], -0.22, 0.04), width: lying(0.2, 0.06) },
+    { line: rootLine([0.1, -0.5], [0.3, -0.92], 0.05), width: taper(0.09, 0.02) },
+  ],
+};
+
+/** A strand's outline: its line swung `scale` of its width to each side, there and back. */
+function strandOutline(strand: RootStrand, scale: number): Pt[] {
+  const { line } = strand;
+  const left: Pt[] = [];
+  const right: Pt[] = [];
+  for (let i = 0; i < line.length; i++) {
+    const a = line[Math.max(0, i - 1)]!;
+    const b = line[Math.min(line.length - 1, i + 1)]!;
+    const length = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const nx = -(b[1] - a[1]) / length;
+    const ny = (b[0] - a[0]) / length;
+    const half = (strand.width(i / (line.length - 1)) / 2) * scale;
+    const [x, y] = line[i]!;
+    left.push([x + nx * half, y + ny * half]);
+    right.push([x - nx * half, y - ny * half]);
+  }
+  return [...left, ...right.reverse()];
+}
+
+/** One piece of the world tree's roots — 0488: every strand's shadow first, then the bark, then the light. */
+function paintRootPiece(ctx: Pen, f: Frame, palette: Palette, strands: readonly RootStrand[]): void {
+  const bark = mix(palette.sky, '#5e3e26', 0.62);
+  const under = shade(bark, -0.35);
+  const lit = shade(bark, 0.4);
+  for (const strand of strands) poly(ctx, f, under, strandOutline(strand, 1.35));
+  for (const strand of strands) {
+    poly(ctx, f, bark, strandOutline(strand, 1));
+    // The flank toward the light: a thin band along the strand's upper edge.
+    const band: RootStrand = { line: strand.line.map(([x, y], i) => [x, y - (strand.width(i / (strand.line.length - 1)) / 2) * 0.55] as const), width: (t) => strand.width(t) * 0.25 };
+    poly(ctx, f, lit, strandOutline(band, 1), 0.6);
+  }
+}
+
 /**
  * A patch of the cold's flakes — 0481, from 0399's rings. Half are snowflakes, six arms with a pair of
  * barbs each; half are motes, a soft point of light. **Drawn at the size the tile is baked, whatever the
@@ -12751,53 +12876,13 @@ export function drawKind(
       band(edge - 0.07, edge, shade(stone, 0.5));
       return;
     }
-    case 'rootWall': {
-      /*
-        THE WORLD TREE'S ROOTS — 0459. A bed of root in shadow, and over it roots running both ways
-        across the tile, thick and thin, each with its bark lit along one flank.
-
-        ⚠️ **EVERY ROOT IS ONE PERIODIC LINE, SO THE TILE HAS NO SEAM.** A root climbs or falls one
-        tile for every tile it crosses, and its wander is a sine whose period is the tile: so where it
-        leaves one edge, the copy one tile over or one tile up arrives on the same point at the same
-        angle. Each is drawn past the tile's edges and again a tile above and below, and the bitmap's
-        own edge is the clip — which is what makes the top wall, the bottom wall and the far wall
-        the same tile with no joint to see.
-
-        ⚠️ **NO OUTLINE AND NO FACE, UNLIKE THE MASONRY.** A root has no coping; the shadow under each
-        is what separates it from the one it crosses.
-      */
-      const edge = half / r;
-      const span = edge * 2;
-      const bark = mix(palette.sky, '#5e3e26', 0.62);
-      const bed = shade(bark, -0.62);
-      const under = shade(bark, -0.35);
-      const lit = shade(bark, 0.4);
-      poly(ctx, f, bed, [[-edge, -edge], [edge, -edge], [edge, edge], [-edge, edge]]);
-      // [climbs, where it crosses the middle, thickness, wander, wanders per tile]
-      const roots = [
-        [1, -0.5, 0.46, 0.1, 1],
-        [-1, 0.45, 0.38, 0.12, 1],
-        [1, 0.7, 0.26, 0.08, 2],
-        [-1, -0.75, 0.22, 0.1, 2],
-        [1, 0.05, 0.14, 0.12, 3],
-        [-1, -0.1, 0.11, 0.1, 3],
-      ] as const;
-      const steps = 32;
-      for (const [climbs, at, thick, wander, waves] of roots) {
-        for (const copy of [-span, 0, span]) {
-          const line: Pt[] = [];
-          for (let s = 0; s <= steps; s++) {
-            const x = -edge - 0.5 + ((span + 1) * s) / steps;
-            const y = climbs * x + at * edge + copy + wander * Math.sin((2 * Math.PI * waves * (x + edge)) / span);
-            line.push([x, y]);
-          }
-          seam(ctx, f, under, thick + 0.08, line, 1, true);
-          seam(ctx, f, bark, thick, line, 1, true);
-          seam(ctx, f, lit, thick * 0.28, line.map(([x, y]) => [x, y - thick * 0.22]), 0.6, true);
-        }
-      }
+    case 'rootTrunk':
+    case 'rootFork':
+    case 'rootTip':
+    case 'rootKnot':
+      // THE WORLD TREE'S ROOTS AS ROOTS — 0488: one piece, placed by its room.
+      paintRootPiece(ctx, f, palette, ROOT_PIECES[kind]);
       return;
-    }
     case 'wallRise0':
     case 'wallRise1':
     case 'wallRise2':

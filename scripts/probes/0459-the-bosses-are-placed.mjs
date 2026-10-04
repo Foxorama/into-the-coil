@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'THE ASK: the screen stops, and the roots frame its far side',
     edit: {
       path: 'src/content/bosses.ts',
-      find: '    room: { stand: 60, settle: 150, mouth: -100, wall: SPRITE.rootWall, opens: 90 },',
-      replace: '    room: { stand: 60, settle: 150, mouth: 40, wall: SPRITE.rootWall, opens: 90 },',
+      // Re-anchored by 0488, which placed the roots as pieces: the nearest brought to the near side of the screen.
+      find: '        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false, entrance: false },',
+      replace: '        { sprite: SPRITE.rootTrunk, along: 40, across: -3.5, turn: 0, far: false, entrance: false },',
     },
   },
   {

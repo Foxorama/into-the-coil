@@ -33,7 +33,7 @@ import { BOLT_STEPS, paintBodyBolts, paintScene } from '../src/render/scene.ts';
 import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
-import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
+import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
@@ -2978,7 +2978,8 @@ describe('0459 — the serpent lurks in the world tree’s roots', () => {
     */
     const row = BOSSES.jormungandr;
     expect(row.room, 'the serpent’s fight scrolls on').not.toBeNull();
-    expect(row.room!.wall === null ? null : SPRITE_KINDS[row.room!.wall], 'the serpent’s room is not walled in roots').toBe('rootWall');
+    // Framed in pieces of root since 0488, which holds what they are; this holds where.
+    expect(row.room!.pieces?.length ?? 0, 'the serpent’s room is not framed in roots').toBeGreaterThan(0);
     const { world, frame } = serpentAt(1);
     for (let i = 0; i < 60; i++) {
       world.ship.health = world.shipRow.health;
@@ -2989,7 +2990,17 @@ describe('0459 — the serpent lurks in the world tree’s roots', () => {
     const room = world.room!;
     expect(room, 'the roots were not laid for the painter').not.toBeNull();
     const narrow = ACROSS_SPAN * MIN_ASPECT;
-    const from = (room.from - world.cameraAlong) / narrow;
+    /*
+      Where the nearest root piece begins, since 0488 placed them rather than tiling them from `from`: a
+      piece's centre less half its tile, from the resting camera, over the narrowest screen. The knot is
+      the entrance's and gone by now.
+    */
+    let nearest = Infinity;
+    for (const piece of room.pieces ?? []) {
+      if (piece.entrance) continue;
+      nearest = Math.min(nearest, room.rest + piece.along - SPRITE_EXTENT[SPRITE_KINDS[piece.sprite]!] / 2);
+    }
+    const from = (nearest - world.cameraAlong) / narrow;
     const to = (room.to - world.cameraAlong) / narrow;
     expect(from, 'the roots run the whole length of the screen rather than framing its far side').toBeGreaterThan(0.3);
     expect(from, 'the roots start too far over to frame anything').toBeLessThan(0.6);
@@ -3086,5 +3097,83 @@ describe('0487 — the storm is lightning', () => {
       }
     }
     expect(drawn, 'no body bolt was ever stroked, so nothing above was asked').toBeGreaterThan(0);
+  });
+});
+
+describe('0488 — the roots are roots', () => {
+  const room = BOSSES.jormungandr.room!;
+  const roots = room.pieces ?? [];
+  /** Every vertex a placed piece draws, in the lane: along from the resting camera's trailing edge, and across. */
+  const drawn = (piece: (typeof roots)[number]): [number, number][] => {
+    const kind = SPRITE_KINDS[piece.sprite]!;
+    const extent = SPRITE_EXTENT[kind];
+    const size = extent * 10;
+    const { pen, trace } = tracingPen();
+    drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
+    const c = Math.cos(piece.turn);
+    const s = Math.sin(piece.turn);
+    const out: [number, number][] = [];
+    for (const pass of trace.passes) {
+      for (const path of pass.subpaths) {
+        for (const [x, y] of path) {
+          const lx = ((x - size / 2) / size) * extent;
+          const ly = ((y - size / 2) / size) * extent;
+          out.push([piece.along + lx * c - ly * s, piece.across + lx * s + ly * c]);
+        }
+      }
+    }
+    return out;
+  };
+
+  it('THE ASK: the serpent’s room is framed by pieces of root and not by a tile, and the coil it arrives in is wound round one', () => {
+    /*
+      The plan: *"the room's wall stops being a tile and becomes a few large root pieces … the coil is the
+      'coiled around'."* The entrance's circle has its centre inside the knot's drawing.
+    */
+    expect(room.wall, 'the serpent’s room is still a tiled wall').toBeNull();
+    expect(roots.filter((p) => !p.entrance).length, 'the room is framed by fewer than three pieces').toBeGreaterThanOrEqual(3);
+    const entrance = BOSSES.jormungandr.entrance;
+    if (entrance?.kind !== 'coil') throw new Error('the serpent no longer coils in');
+    const knot = roots.find((p) => p.entrance);
+    expect(knot, 'no root stands where the serpent coils in').toBeDefined();
+    const points = drawn(knot!);
+    const reach = Math.max(...points.map(([a, b]) => Math.hypot(a - entrance.centre.along, b - entrance.centre.across)));
+    expect(Math.hypot(knot!.along - entrance.centre.along, knot!.across - entrance.centre.across), 'the knot is not at the coil’s centre').toBeLessThan(1);
+    expect(reach, `the knot reaches ${reach.toFixed(1)} units from the coil's centre, past the coil's own ${entrance.radius}`).toBeLessThanOrEqual(entrance.radius);
+  });
+
+  it('IN LANE UNITS: no piece but the knot crosses the ship’s box — the picture of the bound is still the bound', () => {
+    /*
+      0335's walls stand just outside the lane and just beyond the box, so nothing the player must see is
+      behind one and nothing they cannot fly into looks like something they can. The pieces keep that, every
+      vertex of every one, at the resting camera.
+    */
+    for (const piece of roots) {
+      if (piece.entrance) continue;
+      for (const [along, across] of drawn(piece)) {
+        const inside = along > PLAYER_ALONG_MARGIN && along < PLAYER_LEAD && across > PLAYER_MARGIN && across < ACROSS_SPAN - PLAYER_MARGIN;
+        expect(inside, `${SPRITE_KINDS[piece.sprite]} draws at along ${along.toFixed(1)}, across ${across.toFixed(1)}, inside the ship's box`).toBe(false);
+      }
+    }
+  });
+
+  it('AND THE KNOT SINKS ONCE THE SERPENT HAS ARRIVED, DRIVEN: it stands for the coil and is gone a second after the fight begins', () => {
+    const { world } = playableWorld(SERPENT_ONLY);
+    const frame = new GameFrame(world);
+    let coiling = 0;
+    let arrived = -1;
+    for (let i = 0; i < 2400 && (arrived < 0 || i < arrived + STEPS_PER_SECOND * 2); i++) {
+      world.ship.health = world.shipRow.health;
+      world.ship.invulnFor = 2;
+      if (world.bossPool.size > 0) world.bossPool.at(0).fireIn = 999;
+      frame.step();
+      if (world.bossPool.size > 0 && world.bossEntering >= 0) {
+        coiling++;
+        expect(world.room?.knot, `the knot was not standing while the serpent coiled in, ${coiling} steps into it`).toBe(1);
+      }
+      if (arrived < 0 && world.bossPool.size > 0 && world.bossEntering < 0) arrived = i;
+    }
+    expect(coiling, 'the serpent never coiled in, so the knot was never asked about').toBeGreaterThan(0);
+    expect(world.room?.knot, 'the knot still stands two seconds after the serpent arrived').toBe(0);
   });
 });

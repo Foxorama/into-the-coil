@@ -10,7 +10,7 @@
  * a scrub bar, and it is the rule `docs/decisions/0015-the-layer-ladder.md` gives the layer.
  */
 
-import { BEAM_BOLT_KIND, BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, RAIN_BOLT_KIND } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, RAIN_BOLT_KIND, type RoomPiece } from '../content/bosses.ts';
 import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
@@ -207,7 +207,7 @@ const NO_LANDMARKS: Landmarks = [];
  * `null` for a fight with no room, which is every fight but one.
  */
 export interface Room {
-  /** The bitmap the walls are tiled from. */
+  /** The bitmap the walls are tiled from, or −1 for a room framed only by its roots (0488). */
   sprite: number;
   /** Its tiling period, in world units — the same number in both axes. */
   extent: number;
@@ -222,6 +222,12 @@ export interface Room {
    * that got shorter: the gap opens where the ship is already flying and grows past it.
    */
   open: number;
+  /** The pieces the room is framed by, placed rather than tiled — 0488 — or `null`. */
+  pieces: readonly RoomPiece[] | null;
+  /** Where the camera rests, in world units along: the pieces are placed from it. */
+  rest: number;
+  /** How much of the entrance's knot still stands, `1` while the boss arrives, sinking to `0` after. */
+  knot: number;
 }
 
 /*
@@ -783,6 +789,9 @@ const WARNING_ALPHA = 0.45;
  */
 const BEAM_STROKE = 0.5;
 
+/** How far a far root withdraws along the lane as the room opens, in world units — 0488: off the screen. */
+const ROOT_WITHDRAW = 60;
+
 /**
  * The edge of the player's box: one dash per tiling period, straight down the lane.
  *
@@ -809,7 +818,24 @@ const BEAM_STROKE = 0.5;
  * ⚠️ **Nothing allocates.** Two divides, two ceilings and a loop over numbers.
  */
 function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong: number): void {
-  if (room === null || room.extent <= 0) return;
+  if (room === null) return;
+  /*
+    ⚠️ **AND THE WORLD TREE'S ROOTS, PLACED — 0488.** Each piece where its row put it, from the resting
+    camera, turned as it said. The far ones withdraw off the screen as the far wall would part, and the
+    knot the serpent coiled in round sinks into the dark as the fight begins. Under every body, as the
+    wall is. Nothing allocates: the row's list is read, never built.
+  */
+  const pieces = room.pieces;
+  if (pieces !== null) {
+    for (let i = 0; i < pieces.length; i++) {
+      const piece = pieces[i]!;
+      const alpha = piece.entrance ? room.knot : 1;
+      if (alpha <= 0) continue;
+      const along = room.rest + piece.along + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
+      surface.blit(piece.sprite, screenX(view, along, piece.across), screenY(view, along, piece.across), view.scale, piece.turn, alpha);
+    }
+  }
+  if (room.sprite < 0 || room.extent <= 0) return;
   const half = room.extent / 2;
   /*
     ⚠️ **THE WALL'S FACE IS THE EDGE OF THE PLAYER'S BOX, AND THE REST OF IT IS OFF THE SCREEN.** A

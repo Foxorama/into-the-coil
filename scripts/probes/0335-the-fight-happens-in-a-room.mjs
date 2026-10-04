@@ -72,8 +72,8 @@ export const PROBES = [
     guard: 'the room has walls on three sides',
     edit: {
       path: 'src/app/frame.ts',
-      // Re-anchored by 0400, which lets a room have no walls.
-      find: '  w.room = room === null || room.wall === null || !Number.isFinite(rest) ? null : {',
+      // Re-anchored by 0400, which lets a room have no walls, and by 0488, which lets one have roots instead.
+      find: '  w.room = room === null || (room.wall === null && pieces === null) || !Number.isFinite(rest) ? null : {',
       replace: '  w.room = true ? null : {',
     },
   },
