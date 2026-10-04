@@ -271,7 +271,7 @@ PROBES.push(
     guard: 'THE DISTANCE ONE: N pixels of finger deliver N × gain pixels of ship',
     edit: {
       path: 'src/app/touch.ts',
-      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;',
+      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / (DRAG_GAIN * steerOf());',
       replace: '        const pxPerStep = 90;',
     },
   },
@@ -282,8 +282,8 @@ PROBES.push(
     guard: 'scales with the screen, so the same swipe means the same thing on any device',
     edit: {
       path: 'src/app/touch.ts',
-      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;',
-      replace: '        const pxPerStep = (SHIP_SPEED * 4) / DRAG_GAIN;',
+      find: '        const pxPerStep = (SHIP_SPEED * scaleOf()) / (DRAG_GAIN * steerOf());',
+      replace: '        const pxPerStep = (SHIP_SPEED * 4) / (DRAG_GAIN * steerOf());',
     },
   },
 );

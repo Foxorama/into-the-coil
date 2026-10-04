@@ -14,6 +14,7 @@ import { SOUND_KINDS } from '../src/content/sound.ts';
 import { TRAVEL_KINDS } from '../src/content/travel.ts';
 import { DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { GOLFER_KINDS } from '../src/content/golfers.ts';
+import { HAND_KINDS, STEER_KINDS } from '../src/content/touch.ts';
 
 /**
  * THE SETTINGS ARE KEPT — `docs/decisions/0510-the-settings-are-kept.md`, and the second `itc_*` key.
@@ -44,6 +45,8 @@ const moved = (): SettingsState => ({
   travel: TRAVEL_KINDS.find((k) => k !== initialSettings.travel)!,
   difficulty: DIFFICULTY_KINDS.find((k) => k !== initialSettings.difficulty)!,
   pilot: GOLFER_KINDS.find((k) => k !== initialSettings.pilot)!,
+  hand: HAND_KINDS.find((k) => k !== initialSettings.hand)!,
+  steer: STEER_KINDS.find((k) => k !== initialSettings.steer)!,
 });
 
 describe('0510 — the settings are kept', () => {
@@ -56,6 +59,21 @@ describe('0510 — the settings are kept', () => {
     expect(back.sound).toBe(chosen.sound);
     expect(back.travel).toBe(chosen.travel);
     expect(back.difficulty).toBe(chosen.difficulty);
+  });
+
+  it('0512: the touch section is kept too, and a document from before it reads as its defaults', () => {
+    const store = memory();
+    const chosen = moved();
+    writeSettings(store, chosen);
+    const back = readSettings(store, initialSettings);
+    expect(back.hand, 'the trigger side was forgotten').toBe(chosen.hand);
+    expect(back.steer, 'the steering was forgotten').toBe(chosen.steer);
+    // Version 1 as 0510 wrote it, before there was a touch section: still version 1, still read.
+    const before = JSON.stringify({ v: SETTINGS_VERSION, style: chosen.style, sound: chosen.sound, travel: chosen.travel, difficulty: chosen.difficulty });
+    const old = settingsFrom(before, initialSettings);
+    expect(old.style, 'a document from before the touch section was thrown away').toBe(chosen.style);
+    expect(old.hand).toBe(initialSettings.hand);
+    expect(old.steer).toBe(initialSettings.steer);
   });
 
   it('the pilot is not kept — written without it, and read as whatever the visit starts with', () => {

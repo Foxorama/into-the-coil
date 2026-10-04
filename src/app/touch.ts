@@ -41,6 +41,7 @@ import { SPECIAL_BINDINGS } from '../content/actions.js';
 import type { ScrollAxis } from '../sim/camera.js';
 import { SHIP_SPEED } from '../sim/flight.js';
 import type { Intent } from '../sim/intent.js';
+import type { HandKind } from '../content/touch.js';
 import type { InputSource } from './input.js';
 
 /** How a finger is read. `docs/decisions/0032-touch-is-relative-drag-and-not-a-stick.md`. */
@@ -158,6 +159,20 @@ export interface TouchOptions {
    * saved, and currently unreachable*, and zero bands would be a division by zero.
    */
   bands?: () => number;
+  /**
+   * Which side the trigger discs stand on — 0512. The hit test reads it here and the chrome draws the
+   * discs from the same setting, so the picture and the place a tap lands are one answer.
+   */
+  hand?: () => HandKind;
+  /**
+   * How much further the ship goes for the same drag, against `DRAG_GAIN` — 0512, the steering band's
+   * ratio. Read per step, so a change from the pause's Settings is felt on the next drag.
+   *
+   * ⚠️ **IT SCALES THE FINGER, NEVER THE SHIP.** A full-deflection ask is still one step of
+   * `SHIP_SPEED`, so *Quick* reaches top speed with less finger and never exceeds it. The stick is
+   * scaled the same way, by the radius a full deflection takes.
+   */
+  steer?: () => number;
 }
 
 /**
@@ -176,6 +191,9 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
   // The whole budget, for a caller that has no arsenal to ask about — a test rig, or a device
   // attached before a run exists.
   const bandsOf = options.bands ?? ((): number => SPECIAL_BINDINGS);
+  // The discs where 0358 put them, and the gain the report measured, for a caller that does not say.
+  const handOf = options.hand ?? ((): HandKind => 'right');
+  const steerOf = options.steer ?? ((): number => 1);
 
   /** The pointer that steers, or −1 when no finger is down. The rest are taps. */
   let steering = -1;
@@ -198,7 +216,7 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
     // ⚠️ A mouse is NOT a finger. Desktop already has a complete scheme and a second one that works
     // only while a button is held is a bug report, not a feature. See 0032's rejection.
     if (e.pointerType === 'mouse') return;
-    const zone = tapZone(target, e, bandCount(bandsOf()));
+    const zone = tapZone(target, e, bandCount(bandsOf()), handOf());
     if (zone === -1) {
       // The steering area. A second finger here while one already steers is ignored rather than
       // stealing the drag — the common case is a palm or the other thumb resting on the glass.
@@ -271,7 +289,7 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
           ⚠️ The scale is read per step, not captured: a resize or a rotation changes how big a world
           unit is, and a drag in progress must not keep spending against the old screen.
         */
-        const pxPerStep = (SHIP_SPEED * scaleOf()) / DRAG_GAIN;
+        const pxPerStep = (SHIP_SPEED * scaleOf()) / (DRAG_GAIN * steerOf());
         if (pxPerStep > 0) {
           const spendX = clamp1(bankX / pxPerStep);
           const spendY = clamp1(bankY / pxPerStep);
@@ -286,8 +304,9 @@ export function attachTouch(target: HTMLElement, options: TouchOptions = {}): In
         // Radial, not per-axis: a square deadzone lets a diagonal through while refusing a shallow
         // angle of the same magnitude. Same argument as `src/app/pad.ts`.
         if (dx * dx + dy * dy >= STICK_DEADZONE_PX * STICK_DEADZONE_PX) {
-          askX = clamp1(dx / STICK_RADIUS_PX);
-          askY = clamp1(dy / STICK_RADIUS_PX);
+          const radius = STICK_RADIUS_PX / steerOf();
+          askX = clamp1(dx / radius);
+          askY = clamp1(dy / radius);
         }
       }
 
@@ -386,9 +405,13 @@ export function triggerRadius(width: number, height: number): number {
   return Math.min(TRIGGER_BUTTON.max, Math.max(TRIGGER_BUTTON.min, drawn)) / 2;
 }
 
-/** The centre of every trigger button along the glass's long edge, from its left, in CSS pixels. */
-export function triggerX(width: number, height: number): number {
-  return width - TRIGGER_BUTTON.inset * Math.min(width, height) - triggerRadius(width, height);
+/**
+ * The centre of every trigger button along the glass's long edge, from its left, in CSS pixels —
+ * up the right edge, or the left one for a left thumb (0512), at the same inset either way.
+ */
+export function triggerX(width: number, height: number, hand: HandKind = 'right'): number {
+  const fromEdge = TRIGGER_BUTTON.inset * Math.min(width, height) + triggerRadius(width, height);
+  return hand === 'left' ? fromEdge : width - fromEdge;
 }
 
 /** The centre of trigger `band` down the glass's short edge, from its top, in CSS pixels. */
@@ -423,14 +446,14 @@ export function bandCount(want: number): number {
  * The NEAREST disc within reach, so a tap between two stacked buttons goes to one of them and never
  * to both. Nothing here allocates but the `DOMRect`.
  */
-function tapZone(target: HTMLElement, e: PointerEvent, bands: number): number {
+function tapZone(target: HTMLElement, e: PointerEvent, bands: number, hand: HandKind): number {
   if (SPECIAL_BINDINGS < 1) return -1;
   const box = target.getBoundingClientRect();
   if (box.width <= 0 || box.height <= 0) return -1;
 
   const px = e.clientX - box.left;
   const py = e.clientY - box.top;
-  const dx = px - triggerX(box.width, box.height);
+  const dx = px - triggerX(box.width, box.height, hand);
   const reach = triggerRadius(box.width, box.height) * TRIGGER_BUTTON.reach;
   let hit = -1;
   let best = reach * reach;

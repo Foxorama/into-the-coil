@@ -24,6 +24,7 @@ import { DEFAULT_STYLE, type StyleKind } from '../../content/styles.ts';
 import { DEFAULT_TRAVEL, type TravelKind } from '../../content/travel.ts';
 import { DEFAULT_GOLFER, type GolferKind } from '../../content/golfers.ts';
 import { TUNED, type DifficultyKind } from '../../content/difficulty.ts';
+import { DEFAULT_HAND, DEFAULT_STEER, type HandKind, type SteerKind } from '../../content/touch.ts';
 import { type SettingName } from '../screens.ts';
 
 /**
@@ -76,6 +77,16 @@ interface SettingValue {
    * state, until the press and the choice became two things.
    */
   difficulty: DifficultyKind;
+  /**
+   * Which side the trigger discs stand on — 0512. `src/content/touch.ts` is the table.
+   *
+   * ⚠️ **IT REACHES `src/app/touch.ts` AND THE CHROME AND NOTHING ELSE**, on `sound`'s terms above: where
+   * a tap is read as a trigger, and where the disc that says so is drawn. Both read the one value, so
+   * the picture and the hit test cannot stand on different sides.
+   */
+  hand: HandKind;
+  /** How far the ship goes for a finger's travel — 0512, on `hand`'s terms. */
+  steer: SteerKind;
 }
 
 /**
@@ -98,7 +109,9 @@ export type SettingsAction =
   | { slice: 'settings'; type: 'sound'; sound: SoundKind }
   | { slice: 'settings'; type: 'travel'; travel: TravelKind }
   | { slice: 'settings'; type: 'pilot'; pilot: GolferKind }
-  | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind };
+  | { slice: 'settings'; type: 'difficulty'; difficulty: DifficultyKind }
+  | { slice: 'settings'; type: 'hand'; hand: HandKind }
+  | { slice: 'settings'; type: 'steer'; steer: SteerKind };
 
 /**
  * What a player who has chosen nothing has. The default IS the game — 0024. The band opens on the
@@ -110,6 +123,8 @@ export const initialSettings: SettingsState = {
   travel: DEFAULT_TRAVEL,
   pilot: DEFAULT_GOLFER,
   difficulty: TUNED,
+  hand: DEFAULT_HAND,
+  steer: DEFAULT_STEER,
 };
 
 export function reduceSettings(state: SettingsState, action: SettingsAction): SettingsState {
@@ -133,6 +148,11 @@ export function reduceSettings(state: SettingsState, action: SettingsAction): Se
     // 0458: the band's tier, on the same shape.
     case 'difficulty':
       return state.difficulty === action.difficulty ? state : { ...state, difficulty: action.difficulty };
+    // 0512: the touch section's two, on the same shape.
+    case 'hand':
+      return state.hand === action.hand ? state : { ...state, hand: action.hand };
+    case 'steer':
+      return state.steer === action.steer ? state : { ...state, steer: action.steer };
     default: {
       /*
         Adding a member to `SettingsAction` fails to compile HERE, per

@@ -22,6 +22,8 @@ import { SOUNDS, SOUND_KINDS } from '../content/sound.ts';
 import { STYLES, STYLE_KINDS } from '../content/styles.ts';
 // 0340: the crossing's knob, on the two lines above's exact terms.
 import { TRAVELS, TRAVEL_KINDS } from '../content/travel.ts';
+// 0512: the touch section's two, on the same terms.
+import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { INTRO_STEPS } from '../content/port.ts';
@@ -77,7 +79,8 @@ export interface ScreenAction {
  * state by it and `screen` rows name it, and neither imports the other.
  */
 // 0458: the tier is a setting since the title became rows — chosen on a band, kept until changed.
-export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot';
+// 0512: and the touch section's two.
+export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer';
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -106,6 +109,14 @@ export interface ScreenChoice {
    * an arm of the chrome.
    */
   faces: 'words' | 'portraits';
+  /**
+   * Which devices the band is offered on — 0512. `'touch'` for a setting about the glass, which a
+   * keyboard and a pad have no use for; `'all'` for the rest.
+   *
+   * ⚠️ **A CAPABILITY OF THE DEVICE, READ THE WAY THE STRIP IS** (`touchable` in `src/app/mount.ts`):
+   * a laptop with a touchscreen has the discs, so it has the choice of which side they stand on.
+   */
+  on: 'all' | 'touch';
 }
 
 export interface ScreenRow {
@@ -435,12 +446,14 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Difficulty',
         options: DIFFICULTY_KINDS.map((kind) => ({ label: DIFFICULTIES[kind].title, hint: DIFFICULTIES[kind].hint })),
         faces: 'words',
+        on: 'all',
       },
       {
         name: 'pilot',
         label: 'Pilot',
         options: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
         faces: 'portraits',
+        on: 'all',
       },
     ],
     steps: false,
@@ -481,18 +494,41 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Look',
         options: STYLE_KINDS.map((kind) => ({ label: STYLES[kind].title, hint: STYLES[kind].hint })),
         faces: 'words',
+        on: 'all',
       },
       {
         name: 'sound',
         label: 'Sound',
         options: SOUND_KINDS.map((kind) => ({ label: SOUNDS[kind].title, hint: SOUNDS[kind].hint })),
         faces: 'words',
+        on: 'all',
       },
       {
         name: 'travel',
         label: 'Travel',
         options: TRAVEL_KINDS.map((kind) => ({ label: TRAVELS[kind].title, hint: TRAVELS[kind].hint })),
         faces: 'words',
+        on: 'all',
+      },
+      /*
+        ⚠️ **THE TOUCH SECTION — 0512**, on a screen that can be touched and nowhere else: which side the
+        trigger discs stand on, and how quick the steering is. Asked for as both, of *trigger side,
+        sensitivity, both, neither?*. Comfort knobs over the input and not over the sim (0024):
+        `src/content/touch.ts` holds what each changes.
+      */
+      {
+        name: 'hand',
+        label: 'Triggers',
+        options: HAND_KINDS.map((kind) => ({ label: HANDS[kind].title, hint: HANDS[kind].hint })),
+        faces: 'words',
+        on: 'touch',
+      },
+      {
+        name: 'steer',
+        label: 'Steering',
+        options: STEER_KINDS.map((kind) => ({ label: STEERS[kind].title, hint: STEERS[kind].hint })),
+        faces: 'words',
+        on: 'touch',
       },
     ],
     steps: false,

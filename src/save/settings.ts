@@ -19,6 +19,7 @@ import { DIFFICULTY_KINDS } from '../content/difficulty.ts';
 import { SOUND_KINDS } from '../content/sound.ts';
 import { STYLE_KINDS } from '../content/styles.ts';
 import { TRAVEL_KINDS } from '../content/travel.ts';
+import { HAND_KINDS, STEER_KINDS } from '../content/touch.ts';
 import type { SettingsState } from '../state/slices/settings.ts';
 import type { Store } from './store.ts';
 
@@ -49,6 +50,8 @@ export function keptOf(settings: SettingsState): KeptSettings {
     sound: settings.sound,
     travel: settings.travel,
     difficulty: settings.difficulty,
+    hand: settings.hand,
+    steer: settings.steer,
   };
 }
 
@@ -75,6 +78,12 @@ export function settingsFrom(text: string | null, base: SettingsState): Settings
     sound: oneOf(SOUND_KINDS, doc.sound, base.sound),
     travel: oneOf(TRAVEL_KINDS, doc.travel, base.travel),
     difficulty: oneOf(DIFFICULTY_KINDS, doc.difficulty, base.difficulty),
+    /*
+      0512: the touch section's two. A version-1 document written before them has neither field, and
+      reads as their defaults on the per-field rule above — so adding a kept setting is not a new version.
+    */
+    hand: oneOf(HAND_KINDS, doc.hand, base.hand),
+    steer: oneOf(STEER_KINDS, doc.steer, base.steer),
     pilot: base.pilot,
   };
 }
