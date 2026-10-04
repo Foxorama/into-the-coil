@@ -641,13 +641,12 @@ export const SPRITE_KINDS = [
   /*
     ⚠️ **AND THE ROOTS AS ROOTS — 0488.** *"Roots that are roots, with the serpent round them"*: the wall
     tile was a strip of the same tile thirty times, with no shape and no relation to the body. A room may
-    place a few large pieces instead — a trunk, a fork, a tapering tip, and the knot the serpent coils in
-    round — each laid by the row at a place and a turn.
+    place a few large pieces instead — a trunk, a fork and a tapering tip — each laid by the row at a
+    place and a turn. 0488 had a fourth, the knot the serpent coiled in round; 0515 took it out.
   */
   'rootTrunk',
   'rootFork',
   'rootTip',
-  'rootKnot',
   /*
     ── AND ITS COPING WHERE THE WALL TURNS — 0350 ───────────────────────────────────────────────────
 
@@ -2035,7 +2034,6 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   rootTrunk: 72,
   rootFork: 64,
   rootTip: 56,
-  rootKnot: 44,
   // The caps are the wall's own tile, so a cap and the masonry under it meet edge to edge — 0350.
   wallRise0: 12,
   wallRise1: 12,

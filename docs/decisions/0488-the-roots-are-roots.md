@@ -5,6 +5,10 @@ its 1.1, after [0487](0487-the-storm-is-lightning.md). The serpent's *"roots"* w
 of strokes wallpapered about thirty times along both lane edges and across the far wall
 ([0459](0459-the-bosses-are-placed.md)). It had no shape, no curvature, and no relation to the body.
 
+⚠️ **Superseded in part by [0515](0515-the-knot-is-gone.md)**: *the knot*. Played, it read as a thing in the
+open screen that fades for no reason, and it is gone with its sinking and its two guards. The pieces round the
+edges stand.
+
 ## The rule
 
 **A room may be framed by root pieces placed rather than a tile tiled.** `Room.pieces` is a list of `RoomPiece`:

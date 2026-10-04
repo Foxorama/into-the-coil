@@ -2209,12 +2209,6 @@ export interface RoomPiece {
   turn: number;
   /** Whether it is the far wall, which withdraws off the screen once the fight is over (0337). */
   far: boolean;
-  /**
-   * Whether it stands only for the boss's arrival — the knot a serpent coils in round — and sinks into the
-   * dark once the fight begins, because a root in the open lane for the whole fight is a thing that looks
-   * solid and is not (0036).
-   */
-  entrance: boolean;
 }
 
 export interface Room {
@@ -3412,9 +3406,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       ⚠️ **AND THE ROOTS ARE ROOTS — 0488.** The strip of one tile became five pieces: a trunk lying along
       each lane edge and a tip curling at the bottom, a fork and a trunk down the far side — which withdraw
-      off the screen when it parts — and the knot at the coil's centre that the serpent arrives wrapped
-      round, sinking into the dark once it has arrived. Every one is outside the ship's box
-      (`tests/serpent.test.ts`), so the picture of the bound is still the bound.
+      off the screen when it parts. Every one is outside the ship's box (`tests/serpent.test.ts`), so
+      the picture of the bound is still the bound.
+
+      ⚠️ **AND NO KNOT — 0515.** 0488 also stood a knot at the coil's centre for the serpent to arrive
+      wrapped round, sinking once it had. Played: *"the little root knot at the start needs to go away"* —
+      a root in the middle of the open screen that fades for no reason the player can see. The frame is
+      the roots round the edges, and the serpent coils round nothing.
     */
     room: {
       stand: 60,
@@ -3422,12 +3420,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       mouth: -100,
       wall: null,
       pieces: [
-        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false, entrance: false },
-        { sprite: SPRITE.rootTip, along: 118, across: 128, turn: Math.PI, far: false, entrance: false },
-        { sprite: SPRITE.rootTrunk, along: 185, across: 123.5, turn: Math.PI, far: false, entrance: false },
-        { sprite: SPRITE.rootFork, along: 232, across: 58, turn: Math.PI, far: true, entrance: false },
-        { sprite: SPRITE.rootTrunk, along: 216, across: 98, turn: Math.PI / 2, far: true, entrance: false },
-        { sprite: SPRITE.rootKnot, along: 107, across: ACROSS_SPAN / 2, turn: 0.4, far: false, entrance: true },
+        { sprite: SPRITE.rootTrunk, along: 150, across: -3.5, turn: 0, far: false },
+        { sprite: SPRITE.rootTip, along: 118, across: 128, turn: Math.PI, far: false },
+        { sprite: SPRITE.rootTrunk, along: 185, across: 123.5, turn: Math.PI, far: false },
+        { sprite: SPRITE.rootFork, along: 232, across: 58, turn: Math.PI, far: true },
+        { sprite: SPRITE.rootTrunk, along: 216, across: 98, turn: Math.PI / 2, far: true },
       ],
       opens: 90,
     },

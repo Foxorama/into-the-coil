@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, IN SHARES OF THE SCREEN: the far roots stand where they stand on a 16:9 monitor on a phone and on the widest screen too, rather than four fifths of the way over with sky past them',
     edit: {
       path: 'src/render/scene.ts',
-      find: '      const hung = piece.entrance ? 0 : past;',
-      replace: '      const hung = piece.entrance ? 0 : 0 * past;',
+      // Re-anchored by 0515, which took out the one piece that was not hung.
+      find: '      const along = room.rest + piece.along + past + (piece.far',
+      replace: '      const along = room.rest + piece.along + 0 * past + (piece.far',
     },
   },
 ];

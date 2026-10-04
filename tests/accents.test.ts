@@ -232,7 +232,6 @@ const HULLLESS: readonly SpriteKind[] = [
   'rootTrunk',
   'rootFork',
   'rootTip',
-  'rootKnot',
   // And its caps where the wall turns, on the same terms — 0350.
   'wallRise0',
   'wallRise1',
