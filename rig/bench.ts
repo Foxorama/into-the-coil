@@ -159,7 +159,7 @@ const ship: ShipKind =
   askedShip !== null && (SHIP_KINDS as readonly string[]).includes(askedShip)
     ? (askedShip as ShipKind)
     : (SHIP_KINDS.find((kind) => SHIPS[kind].weapon === askedGun) ?? 'fighter');
-lifecycle.begin((DIFFICULTY_KINDS as readonly string[]).includes(askedTier ?? '') ? (askedTier as DifficultyKind) : 'savior', ship);
+lifecycle.begin((DIFFICULTY_KINDS as readonly string[]).includes(askedTier ?? '') ? (askedTier as DifficultyKind) : 'savior', ship, 'free');
 dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 // And the tubes, the same way: `?missile=homing&tubes=2` — 0235.
 const tubes = query.get('missile');

@@ -37,6 +37,8 @@ import {
   travelMayLand,
   warpAt,
 } from '../content/travel.ts';
+// 0517: whether a run that runs out may be continued.
+import { CREDIT_KINDS, DEFAULT_CREDIT } from '../content/credits.ts';
 // 0512: the touch section — which side the discs stand on, and how quick the steering is.
 import { DEFAULT_HAND, DEFAULT_STEER, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0213: the music room's flythrough — the ship flying the level, and the dust going past it.
@@ -122,7 +124,7 @@ import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, beginsRun, type Screen, type SettingName } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
-import { boardLines, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
+import { boardLines, endSheet, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
 import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
@@ -1609,6 +1611,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // Where it would land, read off the table without writing it — 0438. It is written on the way out.
       const would = placeScore(scoreTable, entryOf(state.run, world.score, state.settings.pilot, false, Date.now()));
       chrome.setSheet('gameOver', overSheet(state.run, world.score, would.place));
+    } else if (now === 'ended') {
+      // 0517: no offer to wait on, so the run goes on the table as it arrives, as a victory's does.
+      chrome.setSheet('ended', endSheet(state.run, world.score, recordRun(false)));
     } else if (now === 'victory') {
       chrome.setSheet('victory', runSheet(state.run, recordRun(true)));
     } else if (now === 'title' && was === 'gameOver') {
@@ -1777,7 +1782,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let splashPressed = false;
   const startRun = (): void => {
     pilotArmed = true;
-    lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship);
+    lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship, state.settings.credits);
   };
   function fly(): void {
     if (flownThisVisit) {
@@ -1797,7 +1802,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     What a screen's controls do.
 
     ⚠️ **Three of the four screens now carry something forward, and only `victory` throws a run
-    away.** `cleared` keeps the run and changes the level; `gameOver` keeps the LEVEL and restocks
+    away** — and since 0517 the game-over screen, whose *Main Menu* is the fall-through at the end. `cleared` keeps the run and changes the level; `gameOver` keeps the LEVEL and restocks
     the run — `docs/decisions/0068-a-run-over-is-a-continue.md`, which is what turned *Again* into
     *Continue*. A run cannot begin without a tier (0047), so the two that do end a run go back to the
     title, where the choice is.
@@ -1901,6 +1906,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       dispatch({ slice: 'settings', type: 'steer', steer: STEER_KINDS[index] ?? DEFAULT_STEER });
       applyTouch();
     }
+    // 0517: the continues band, on the difficulty band's terms. `CREDIT_KINDS` IS the order it was built in.
+    else if (name === 'credits') {
+      dispatch({ slice: 'settings', type: 'credits', credits: CREDIT_KINDS[index] ?? DEFAULT_CREDIT });
+      chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
+    }
   },
   /*
     THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
@@ -1934,6 +1944,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
   chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
+  // 0517: and the continues band on the credits the state holds, kept between visits.
+  chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
   /*
     BACK — 0458: B on a pad, Escape on a keyboard, and the *Back* buttons. Where it goes is the row's
     `back`; `'opener'` is whichever screen opened the menu (`src/state/slices/screen.ts` records it).

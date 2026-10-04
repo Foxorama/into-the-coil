@@ -41,7 +41,11 @@ ends the run.
 [0082](decisions/0082-a-pickup-is-rare-and-says-what-it-is.md) replaced the extra-life pickup with a
 second shield, so the complement only goes down. See *Upgrades*.
 
-**A run that ends may be continued**, once per ending and only from the screen it ends on —
+**A run is one credit unless the player chose Freeplay** —
+[0517](decisions/0517-no-quarters-given.md). The title's continues chip is *No quarters given* until
+it is pressed: a run that runs out ends on the game-over screen, with its account and *Main Menu*.
+On *Freeplay*, kept between visits like the other settings, **a run that ends may be continued**,
+once per ending and only from the screen it ends on —
 [0068](decisions/0068-a-run-over-is-a-continue.md). The level does not restart: the field is frozen
 where the run stopped, and the button hands back a fresh ship and a full complement of lives. **It
 keeps everything else** — the ladders, the kinds and the charges
@@ -269,7 +273,9 @@ beyond them: multi-tag tracking specials, faster engines, orbiting mines.
 grounds that a shield is the better version of the same promise: it stops the death. Since
 [0372](decisions/0372-a-death-keeps-the-ladders.md) a death costs only the life, so that is ALL a
 shield saves now. **This is open rather than settled**, and it is what
-[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for.
+[0068](decisions/0068-a-run-over-is-a-continue.md)'s free continue is currently standing in for — and
+since [0517](decisions/0517-no-quarters-given.md) the free continue is Freeplay's, so on the default a
+run is the tier's lives and nothing else.
 
 ⚠️ **A player who just died is flying with everything they had** — 0372. The scatter that handed a
 death's ladders back on the field (0066, 0243, 0266) is gone with the cost it answered.

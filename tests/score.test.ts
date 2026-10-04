@@ -139,7 +139,7 @@ describe('0428 — a level’s rank and its bonuses', () => {
   });
 
   it('THE ASK: the clear pays for each shield on the hull, each bomb on the gun and each charge in the tubes', () => {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'took', special: 'hunt' });
     const score = { points: 12000, streak: 5, best: 30, kills: 90, spawned: 100, hits: 1 };
     const tally = tallyAtClear(state.run, score, 2);
@@ -154,7 +154,7 @@ describe('0428 — a level’s rank and its bonuses', () => {
 
 describe('0428 — the run banks each level, and a death keeps it', () => {
   it('banks in order, keeps the score through a death, and a new run starts from nothing', () => {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     const one = tallyOf(0, 1000, 10, 10, 0, { shield: 1, bomb: 0, missile: 0 });
     const two = tallyOf(1, 2000, 10, 20, 2, { shield: 0, bomb: 1, missile: 0 });
     state = reduce(state, { slice: 'run', type: 'scored', tally: one });
@@ -165,13 +165,13 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     expect(bankedBonus(state.run)).toBe(one.bonus + two.bonus);
     state = reduce(state, { slice: 'run', type: 'lifeLost' });
     expect(bankedScore(state.run), 'a death cost the score').toBe(one.total + two.total);
-    state = reduce(state, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP });
+    state = reduce(state, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP, credits: 'free' });
     expect(state.run.tallies).toEqual([]);
     expect(state.run.continues).toBe(0);
   });
 
   it('THE ASK: the break shows the level’s points, rank, three bonuses, its total and the run’s', () => {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     const earlier = tallyOf(0, 7000, 1, 1, 0, { shield: 0, bomb: 0, missile: 0 });
     const tally = tallyOf(1, 3000, 9, 10, 0, { shield: 2, bomb: 1, missile: 0 });
     state = reduce(state, { slice: 'run', type: 'scored', tally: earlier });
@@ -188,7 +188,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
   });
 
   it('THE ASK: the end shows the total score with the total bonuses, and where it landed', () => {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(0, 1000, 1, 1, 0, { shield: 1, bomb: 1, missile: 1 }) });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(1, 2000, 1, 5, 5, { shield: 0, bomb: 2, missile: 0 }) });
     const said = Object.fromEntries(runSheet(state.run, 2).map((l) => [l.label, l.value]));
@@ -200,7 +200,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
   });
 
   it('a finished run goes on the table with the level being flown counted, and the title reads it back', () => {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'burn', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(0, 1000, 1, 1, 0, { shield: 0, bomb: 0, missile: 0 }) });
     state = reduce(state, { slice: 'run', type: 'levelCleared' });
     const flying = { points: 450, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
@@ -216,7 +216,7 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
 describe('0438 — a continue starts the score again, and the table keeps the credit that ran out', () => {
   /** A run that banked two levels and ran out of lives on the third. */
   function ranOutOnThree(): State {
-    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP });
+    let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     for (let i = 0; i < 2; i++) {
       state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(i, 1000, 10, 10, 0, { shield: 1, bomb: 0, missile: 0 }) });
       state = reduce(state, { slice: 'run', type: 'levelCleared' });

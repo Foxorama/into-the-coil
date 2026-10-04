@@ -100,6 +100,13 @@ export interface LevelTally {
   bonus: number;
   /** `points + bonus`: what the level added to the run. */
   total: number;
+  /**
+   * What the rank was read from: bodies killed, bodies sent, hits taken — kept since 0517, because the
+   * game-over screen adds them up over the run and the letter alone cannot be added.
+   */
+  kills: number;
+  spawned: number;
+  hits: number;
 }
 
 /** The bonus for what is held, all kinds added together. */
@@ -112,5 +119,5 @@ export function bonusFor(held: Held): number {
 /** A cleared level's account, from what the frame counted and what the ship is carrying. */
 export function tallyOf(level: number, points: number, kills: number, spawned: number, hits: number, held: Held): LevelTally {
   const bonus = bonusFor(held);
-  return { level, points, rank: rankFor(kills, spawned, hits), held, bonus, total: points + bonus };
+  return { level, points, rank: rankFor(kills, spawned, hits), held, bonus, total: points + bonus, kills, spawned, hits };
 }

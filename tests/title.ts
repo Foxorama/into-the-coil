@@ -16,6 +16,7 @@
 import type { Page } from 'playwright-core';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
+import { CREDIT_KINDS, type CreditKind } from '../src/content/credits.ts';
 import { SCREENS, type Screen, type SettingName } from '../src/state/screens.ts';
 
 /** The CSS selector for a screen's shown overlay. */
@@ -30,7 +31,16 @@ async function pressOn(page: Page, screen: Screen, label: string): Promise<void>
 export async function choose(page: Page, setting: SettingName, index: number): Promise<void> {
   const screen = (Object.keys(SCREENS) as Screen[]).find((s) => SCREENS[s].choices.some((c) => c.name === setting));
   if (screen === undefined) throw new Error(`no screen offers ${setting}`);
-  await page.locator(`[${SETTING_ATTR}="${setting}"] .${prefixFor(screen)}option >> nth=${index}`).click();
+  const options = `[${SETTING_ATTR}="${setting}"] .${prefixFor(screen)}option`;
+  // 0517: a chip draws only the option that is on, and a press steps it — so it is pressed round to it.
+  if (SCREENS[screen].choices.find((c) => c.name === setting)?.faces === 'chip') {
+    for (let tries = 0; tries < 8; tries++) {
+      if ((await page.locator(`${options} >> nth=${index}`).getAttribute('aria-pressed')) === 'true') return;
+      await page.locator(`${options}[aria-pressed="true"]`).click();
+    }
+    throw new Error(`the ${setting} chip never came round to option ${index}`);
+  }
+  await page.locator(`${options} >> nth=${index}`).click();
 }
 
 /**
@@ -60,6 +70,15 @@ export async function launch(page: Page, tier: DifficultyKind): Promise<void> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
   await choose(page, 'difficulty', DIFFICULTY_KINDS.indexOf(tier));
   await fly(page);
+}
+
+/**
+ * On the title: choose `credits` on the continues band — 0517. A test whose subject is the run-over
+ * screen and its *Continue* chooses Freeplay first, because no quarters is the default.
+ */
+export async function credit(page: Page, credits: CreditKind): Promise<void> {
+  await page.waitForSelector(shown('title'), { state: 'attached' });
+  await choose(page, 'credits', CREDIT_KINDS.indexOf(credits));
 }
 
 /** The readout, up while a run flies. */

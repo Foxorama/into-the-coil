@@ -106,7 +106,7 @@ describe('0355 — a life opens on its tier’s shell', () => {
       const run = shell(tier);
       const { world, frame } = run;
 
-      run.lifecycle.begin(tier, ship);
+      run.lifecycle.begin(tier, ship, 'free');
       expect(world.shipRow, `a ${tier} run begun in the ${ship} flies another ship`).toBe(SHIPS[ship]);
       frame.step();
       expect(shields(world), `a ${tier} ${ship} run opens on the wrong shell`).toBe(row.shellOpen);

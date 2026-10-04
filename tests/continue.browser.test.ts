@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { launch } from './title.ts';
+import { credit, launch } from './title.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { SCORES_KEY, parseScores } from '../src/save/scores.ts';
@@ -64,6 +64,8 @@ describe.runIf(chromePath)('the run-over screen offers to continue, and the offe
   it('says Continue, and puts the player back into the game rather than back to the title', async () => {
     const page = await open();
     // The tier on its band, then Launch — 0458; `tests/title.ts` reads the segment off `DIFFICULTY_KINDS`.
+    // The continue is Freeplay's — 0517: no quarters, the default, ends the run on the game over.
+    await credit(page, 'free');
     await launch(page, QUICKEST);
 
     // The fixture flies nothing, so the waves end the run on their own. Waited on, never timed.

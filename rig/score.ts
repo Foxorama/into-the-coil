@@ -40,7 +40,7 @@ const mounted = mount(stage, 'vivid');
 if (mounted === null) throw new Error('score bench: the game would not mount');
 const { world, dispatch, lifecycle, stateOf } = mounted.rig;
 
-lifecycle.begin('savior', 'fighter');
+lifecycle.begin('savior', 'fighter', 'free');
 dispatch({ slice: 'screen', type: 'show', screen: 'playing' });
 
 /** A level flown well: most of it killed, one shield lost, a streak going. */

@@ -365,8 +365,10 @@ describe('a screen that expires presses its own control, and says how long it wa
     // reading them, and a screen that timed out from under them would take the page they opened away.
     // ⚠️ **AND THE PAUSE AND ITS QUESTION SINCE 0511**: a held run is held until its player comes back,
     // and a pause that timed out would resume — or quit — a run its owner had walked away from.
+    // ⚠️ **AND THE GAME OVER SINCE 0517**, on `victory`'s terms: it ends a run and adds it up, and the
+    // run-over screen's countdown was the cost of an offer this one does not make.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['guide', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['ended', 'guide', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 

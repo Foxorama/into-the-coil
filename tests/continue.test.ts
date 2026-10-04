@@ -131,11 +131,11 @@ describe('a new run opens on an empty field', () => {
   */
   it('THE REPORTED ONE: a run started from the title does not inherit the last one’s field', () => {
     const built = shell();
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
     const fought = built.world.enemies.size;
 
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     expect(
       built.world.enemies.size,
       `a new run opened on ${fought} enemies from the last one, which is what reads as resuming it`,
@@ -145,13 +145,13 @@ describe('a new run opens on an empty field', () => {
 
   it('and starts at the beginning of level one, however deep the last run got', () => {
     const built = shell();
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
     built.dispatch({ slice: 'run', type: 'levelCleared' });
     built.lifecycle.onward();
     expect(built.state().run.level, 'the fixture never left level one, so this asserts nothing').toBeGreaterThan(0);
 
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     expect(built.state().run.level, 'a new run began part-way through the sequence').toBe(0);
     expect(secondsIn(built.world.cameraAlong), 'a new run began part-way through a level').toBe(0);
     expect(built.world.nextWave, 'a new run began part-way through the wave table').toBe(0);
@@ -165,7 +165,7 @@ describe('a new run opens on an empty field', () => {
       `docs/decisions/0043-a-weapon-is-a-budget-and-a-level-opens-empty.md`.
     */
     const built = shell();
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
     /*
       ⚠️ **`onward` THEN `arrive`, AND THE INVARIANT DID NOT MOVE — 0340.** The next level used to be
@@ -186,7 +186,7 @@ describe('a new run opens on an empty field', () => {
       pickup is the player's to catch, not the level's — so `arrive` keeps it and `begin` does not.
     */
     const built = shell();
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
     dropPickups(built.world, built.world.ship.along + 40, 50, ['bomb', 'shield', 'missile']);
     const thrown = built.world.pickups.size;
@@ -196,7 +196,7 @@ describe('a new run opens on an empty field', () => {
     built.lifecycle.arrive();
     expect(built.world.pickups.size, 'level two opened with what was still floating swept away').toBe(thrown);
 
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     expect(built.world.pickups.size, 'a new run opened on the last one’s pickups').toBe(0);
   });
 });
@@ -205,7 +205,7 @@ describe('a run over is a continue', () => {
   /** A run flown into a fight, upgraded, and then flown out of lives: a run-over screen with a level behind it. */
   function ranOut(): Shell {
     const built = shell();
-    built.lifecycle.begin(TIER, SHIP);
+    built.lifecycle.begin(TIER, SHIP, 'free');
     intoAFight(built);
     // The tubes, the one ladder since 0441.
     built.dispatch({ slice: 'run', type: 'upgraded', upgrade: 'missile', kind: 'homing' });

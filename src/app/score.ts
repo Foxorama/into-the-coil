@@ -91,6 +91,38 @@ export function overSheet(run: RunState, score: LevelScore, place: number | null
   ];
 }
 
+/**
+ * The game over's account — 0517: *"the score summary and stats about that run."* How far it got and
+ * each cleared level's letter, what it shot down and what hit it, then the victory's summary: points,
+ * bonuses, the score and where it landed on the table.
+ *
+ * ⚠️ **THE LEVEL BEING FLOWN COUNTS TOO.** It was never cleared, so it has no tally, but its kills and
+ * hits are the frame's, and a run that died on level one would otherwise read as nothing shot at all.
+ * A run with one credit is the whole run, so the tallies are every level it cleared.
+ */
+export function endSheet(run: RunState, score: LevelScore, place: number | null): SheetLine[] {
+  let kills = score.kills;
+  let spawned = score.spawned;
+  let hits = score.hits;
+  for (const tally of run.tallies) {
+    kills += tally.kills;
+    spawned += tally.spawned;
+    hits += tally.hits;
+  }
+  const bonus = bankedBonus(run);
+  const total = runScore(run, score);
+  const lines: SheetLine[] = [{ label: 'Reached', value: 'Level ' + String(run.level + 1), tone: 'plain' }];
+  if (run.tallies.length > 0) lines.push({ label: 'Ranks', value: ranksOf(run), tone: 'plain' });
+  lines.push({ label: 'Kills', value: kills, tone: 'plain' });
+  lines.push({ label: 'Shot down', value: String(spawned > 0 ? Math.round((100 * kills) / spawned) : 0) + '%', tone: 'plain' });
+  lines.push({ label: 'Hits taken', value: hits, tone: 'plain' });
+  lines.push({ label: 'Points', value: total - bonus, tone: 'plain' });
+  lines.push({ label: 'Bonuses', value: bonus, tone: 'plain' });
+  lines.push({ label: 'Final score', value: total, tone: 'total' });
+  lines.push({ label: 'High score', value: placeLabel(place), tone: 'plain' });
+  return lines;
+}
+
 /** Where a run landed, in words. */
 export function placeLabel(place: number | null): string {
   return place === null ? '—' : '#' + String(place + 1);

@@ -36,7 +36,7 @@ function play(...actions: Action[]): State {
  * continue that put the default ship back is a different answer from keeping this one.
  */
 const SHIP: ShipKind = SHIP_KINDS.find((kind) => kind !== initialRun.ship)!;
-const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP };
+const BEGIN: Action = { slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship: SHIP, credits: 'free' };
 
 /** Lives the tier BEGIN picks starts with. Read from the table, never written down here. */
 const STARTING_LIVES_OF_THE_TIER = livesFor(DEFAULT_DIFFICULTY);
@@ -166,7 +166,7 @@ describe('a run is lives', () => {
       special, is a different answer — 0282: the opening differs per ship.
     */
     for (const ship of SHIP_KINDS) {
-      const run = play({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship }).run;
+      const run = play({ slice: 'run', type: 'begin', difficulty: DEFAULT_DIFFICULTY, ship, credits: 'free' }).run;
       expect(run.ship, `a run begun in the ${ship} flies something else`).toBe(ship);
       expect(run.missile, `the ${ship} opened on somebody else's tube`).toBe(SHIPS[ship].missile);
       const own = WEAPONS[SHIPS[ship].weapon].special;
@@ -310,7 +310,7 @@ describe('a run over is a continue', () => {
     // A property of the RUN (0047), and this is still the same run. A continue that dropped the
     // player onto the default tier would be the game quietly changing the game.
     for (const difficulty of DIFFICULTY_KINDS) {
-      let state = reduce(play({ slice: 'run', type: 'begin', difficulty, ship: SHIP }), PLAY);
+      let state = reduce(play({ slice: 'run', type: 'begin', difficulty, ship: SHIP, credits: 'free' }), PLAY);
       for (let i = 0; i < livesFor(difficulty); i++) state = reduce(state, DIE);
       const resumed = reduce(state, CONTINUE).run;
       expect(resumed.difficulty, `a continue on ${difficulty} changed the tier`).toBe(difficulty);
