@@ -781,6 +781,8 @@ export const SPRITE_KINDS = [
     the player hears (`Entity.throb`), so it is the one seat that moves.
   */
   'heart',
+  // And the chamber it is set in, as the cog is set in its housing — 0489.
+  'heartChamber',
   // A length of the jellyfish's tentacle — 0403: a body in `bossBody`, so it has a hurt twin.
   'tendril',
   'tendrilHit',
@@ -2098,6 +2100,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     first size, and on the bench most of it was under the frill.
   */
   heart: 44,
+  /*
+    ⚠️ **THE GYRE'S HOUSING-TO-HULL RATIO ON THE BELL — 0489**, 68 over 52 on the bell's 46, which is sixty:
+    the plan wrote *about 110* and the ratio it named does not give that. Sixty-four, so the heart's 44 sits
+    in its bore with flesh round it and the bell's rim lies over its mouth.
+  */
+  heartChamber: 64,
   /*
     ⚠️ **A LENGTH OF TENTACLE, AND THE TENTACLE IS EIGHT OF THEM — 0403.** Laid down a curve that is
     waving, each turned to the curve and a little narrower than the one before, overlapping its

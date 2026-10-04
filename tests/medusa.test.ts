@@ -34,6 +34,8 @@ import { beamAcrossAt, beamDistance } from '../src/sim/jag.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
+import type { Surface } from '../src/render/surface.ts';
+import { skyFor } from '../src/app/mount.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { flyFight } from '../scripts/weigh-boss.mjs';
 
@@ -559,5 +561,44 @@ describe('0476 — the jellyfish can be finished, and opens', () => {
     // *"You shouldn't be able to fly around it."* Its far rim at rest, nearest the drift allows, against
     // the furthest the ship can go.
     expect(row.station - row.drift + row.radius, 'the ship can fly behind the jellyfish').toBeGreaterThanOrEqual(PLAYER_LEAD);
+  });
+});
+
+describe('0489 — the heart has a chamber', () => {
+  /** A surface that keeps every blit's sprite and place, in the order they were drawn. */
+  class Blits implements Surface {
+    readonly blits: { sprite: number; x: number; y: number }[] = [];
+    clear(): void {}
+    blit(sprite: number, x: number, y: number): void {
+      this.blits.push({ sprite, x, y });
+    }
+    bolt(): void {}
+  }
+
+  it('THE ASK, IN PIXELS: the heart is set in its chamber on the screen — the chamber drawn at the heart, under the heart and under the bell', () => {
+    /*
+      The plan: *"the cog sits in a housing bigger than it; the bell sits on a heart smaller than it, in an
+      open room."* On the real frame at a 1280×720 screen, the chamber is blitted at the heart's own place to
+      the pixel, and before the heart and the bell, so it is what they are set in.
+    */
+    const d = medusaAt(0.95);
+    for (let i = 0; i < 30; i++) {
+      d.world.ship.health = d.world.shipRow.health;
+      d.frame.step();
+    }
+    const surface = new Blits();
+    d.world.surface = surface;
+    // The place's own sky, which carries the vessels the chamber is laid with; a fixture's is empty.
+    d.world.sky = skyFor('core');
+    d.frame.draw(1);
+    const chamber = surface.blits.findIndex((b) => b.sprite === SPRITE.heartChamber);
+    const heart = surface.blits.findIndex((b) => b.sprite === SPRITE.heart);
+    const bell = surface.blits.findIndex((b) => b.sprite === BOSSES.medusa.sprite || b.sprite === BOSSES.medusa.spriteHit);
+    expect(chamber, 'the chamber was not drawn').toBeGreaterThanOrEqual(0);
+    expect(heart, 'the heart was not drawn').toBeGreaterThanOrEqual(0);
+    expect(chamber, 'the chamber was drawn over the heart').toBeLessThan(heart);
+    if (bell >= 0) expect(chamber, 'the chamber was drawn over the bell').toBeLessThan(bell);
+    const off = Math.hypot(surface.blits[chamber]!.x - surface.blits[heart]!.x, surface.blits[chamber]!.y - surface.blits[heart]!.y);
+    expect(off, `the chamber is drawn ${off.toFixed(1)}px from the heart it holds`).toBeLessThan(0.5);
   });
 });
