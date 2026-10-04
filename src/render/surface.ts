@@ -101,7 +101,8 @@ export function screenX(view: View, alongInView: number, across: number): number
  * passed in to find the far edge.
  */
 export function screenY(view: View, alongInView: number, across: number): number {
+  // The bar is above the field and is the chrome's — 0500 — so the lane starts under it.
   return view.alongAxis === 'x'
-    ? view.gutterAcross + across * view.scale
+    ? view.gutterAcross + view.barAcross + across * view.scale
     : view.gutterAlong + (view.alongSpan - alongInView) * view.scale;
 }

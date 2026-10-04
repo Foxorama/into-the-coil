@@ -12,7 +12,8 @@ export const PROBES = [
     guard: 'THE ASK: the strip is under a tenth of a phone’s height',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  font: 600 clamp(0.75rem, 2.9cqh, 1.3rem)/1 system-ui, sans-serif;',
+      // ⚠️ Re-anchored by 0500, which made the strip's numbers `STRIP` so the desk's bar reads the same ones.
+      find: '  font: 600 clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem)/1 system-ui, sans-serif;',
       replace: '  font: 600 clamp(0.95rem, 2.4vw, 1.3rem)/1 system-ui, sans-serif;',
     },
   },
@@ -24,8 +25,9 @@ export const PROBES = [
     guard: 'and the desktop’s is what it was',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  font: 600 clamp(0.75rem, 2.9cqh, 1.3rem)/1 system-ui, sans-serif;',
-      replace: '  font: 600 clamp(0.75rem, 2.5cqh, 1.3rem)/1 system-ui, sans-serif;',
+      // ⚠️ Re-anchored by 0500: the share is `STRIP.fontCqh` now, which the stylesheet and the desk's bar both read.
+      find: '  fontCqh: 2.9,',
+      replace: '  fontCqh: 2.5,',
     },
   },
   {

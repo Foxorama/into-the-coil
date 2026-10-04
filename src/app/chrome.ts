@@ -171,6 +171,34 @@ function faceTurns(): string {
 }
 
 /**
+ * The strip across the top of play — 0439's one height, 0465's type — as numbers rather than as
+ * literals in the stylesheet, because since 0500 the camera keeps a bar for it on a desktop and the
+ * bar must be exactly the strip. The stylesheet interpolates these; `hudBar` reads the same ones.
+ */
+export const STRIP = {
+  /** The strip's type: a share of the host's height in hundredths (cqh), between a floor and a cap in rem. */
+  fontFloorRem: 0.75,
+  fontCqh: 2.9,
+  fontCapRem: 1.3,
+  /** Every plate's height, in the strip's em. */
+  plateEm: 2.6,
+  /** The air above the plates, in the strip's em — and, in the bar, below them too. */
+  padEm: 0.5,
+} as const;
+
+/**
+ * How tall the bar at the top of a desktop's screen is, in CSS pixels — 0500: the strip's plates with
+ * the strip's own air above and the same below, for a host `hostHeight` tall at a root type of `remPx`.
+ *
+ * ⚠️ **A desktop's only.** The shell asks for none on a touch screen, where the HUD stays over the
+ * field as it always has: the phone was the screen the player said looks right.
+ */
+export function hudBar(hostHeight: number, remPx: number): number {
+  const font = Math.min(STRIP.fontCapRem * remPx, Math.max(STRIP.fontFloorRem * remPx, (STRIP.fontCqh * hostHeight) / 100));
+  return font * (STRIP.padEm + STRIP.plateEm + STRIP.padEm);
+}
+
+/**
  * ⚠️ **EXPORTED SINCE 0210, AND IT IS A CONTRACT WITH `tests/chrome.test.ts` RATHER THAN A CONVENIENCE.**
  * The guards used to regex this literal out of the source file. That worked while every selector was
  * spelled out; the moment `${each()}` interpolated one, a source scan started reading the template
@@ -1025,7 +1053,7 @@ ${faceTurns()}
     (0153); the cap holds a tall monitor where it was. The floor is a phone's, read at a hand's
     length and at a device scale of two — 0361's 0.95 rem was sized for a monitor at arm's length.
   */
-  font: 600 clamp(0.75rem, 2.9cqh, 1.3rem)/1 system-ui, sans-serif;
+  font: 600 clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem)/1 system-ui, sans-serif;
   pointer-events: none;
 }
 .itc-playing-hud {
@@ -1982,8 +2010,8 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   the gold score. The grid, its columns and its guards are 0360's and 0428's and are untouched.
 */
 .itc-playing-strip {
-  --itc-strip: 2.6em;
-  padding: 0.5em 0.6em 0;
+  --itc-strip: ${STRIP.plateEm}em;
+  padding: ${STRIP.padEm}em 0.6em 0;
   align-items: center;
 }
 .itc-playing-hud, .itc-playing-boss, .itc-playing-score {

@@ -122,6 +122,12 @@ export interface View {
   gutterAlong: number;
   /** CSS pixels of gutter at EACH of the two across edges. Zero inside the clamp. */
   gutterAcross: number;
+  /**
+   * CSS pixels at the TOP of a landscape screen that belong to the chrome rather than the world —
+   * 0500. The field is the screen below it, so everything above is measured against that, and the
+   * lane starts at `barAcross + gutterAcross`. Zero unless the shell asks for one.
+   */
+  barAcross: number;
 }
 
 function clamp(n: number, min: number, max: number): number {
@@ -135,8 +141,14 @@ function clamp(n: number, min: number, max: number): number {
  * pass — and it returns a fully-formed reference view at `scale: 0` rather than throwing or leaking
  * a `NaN`. Nothing draws at zero scale, which is correct; a `NaN` reaching a canvas transform
  * silently blanks the frame instead, and that is the failure this avoids.
+ *
+ * ⚠️ **`bar` IS A HEIGHT THE SHELL KEEPS FOR ITS CHROME — 0500.** On a landscape screen the top `bar`
+ * pixels are taken off before anything else is asked, so the world is fitted to the screen below
+ * them: a 1920×950 window with a 75-pixel bar is viewed as 1920×875, which sees further ahead. The
+ * camera does not know what the bar holds or how tall it is; it is told. A bar that would leave no
+ * field, or a portrait screen, which has no top to keep, gets none.
  */
-export function viewOf(widthPx: number, heightPx: number): View {
+export function viewOf(widthPx: number, heightPx: number, bar = 0): View {
   const usable =
     Number.isFinite(widthPx) && Number.isFinite(heightPx) && widthPx > 0 && heightPx > 0;
   if (!usable) {
@@ -147,9 +159,15 @@ export function viewOf(widthPx: number, heightPx: number): View {
       scale: 0,
       gutterAlong: 0,
       gutterAcross: 0,
+      barAcross: 0,
     };
   }
+  const barAcross = widthPx >= heightPx && Number.isFinite(bar) && bar > 0 && heightPx - bar >= heightPx / 2 ? bar : 0;
+  return fieldOf(widthPx, heightPx - barAcross, widthPx >= heightPx, barAcross);
+}
 
+/** The view of the field: the screen less the bar, which keeps its orientation from the whole screen. */
+function fieldOf(widthPx: number, heightPx: number, landscape: boolean, barAcross: number): View {
   const long = Math.max(widthPx, heightPx);
   const short = Math.min(widthPx, heightPx);
   const alongSpan = ACROSS_SPAN * clamp(long / short, MIN_ASPECT, MAX_ASPECT);
@@ -161,7 +179,7 @@ export function viewOf(widthPx: number, heightPx: number): View {
   return {
     alongSpan,
     acrossSpan: ACROSS_SPAN,
-    alongAxis: widthPx >= heightPx ? 'x' : 'y',
+    alongAxis: landscape ? 'x' : 'y',
     scale,
     /*
       ⚠️ **Floored at zero, and the floor is arithmetic rather than caution.** `scale` is the smaller
@@ -174,6 +192,7 @@ export function viewOf(widthPx: number, heightPx: number): View {
     */
     gutterAlong: Math.max(0, (long - alongSpan * scale) / 2),
     gutterAcross: Math.max(0, (short - ACROSS_SPAN * scale) / 2),
+    barAcross,
   };
 }
 

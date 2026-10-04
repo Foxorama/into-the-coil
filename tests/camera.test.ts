@@ -201,6 +201,32 @@ describe('the fit is a letterbox, never a crop and never a stretch', () => {
   });
 });
 
+describe('0500 — a bar the shell keeps at the top', () => {
+  it('THE ASK, IN PIXELS: a 1920×950 window with a 75-pixel bar fits the lane under it and sees further ahead, and the bar is the only thing that moved', () => {
+    const whole = viewOf(1920, 950);
+    const barred = viewOf(1920, 950, 75);
+    expect(barred.barAcross).toBe(75);
+    expect(barred.acrossSpan).toBe(ACROSS_SPAN);
+    // The lane fills the screen under the bar, top to bottom, and nothing of it is above the bar.
+    expect(barred.barAcross + 2 * barred.gutterAcross + ACROSS_SPAN * barred.scale).toBeCloseTo(950, 6);
+    expect(barred.alongSpan, 'the bar bought no lookahead').toBeGreaterThan(whole.alongSpan);
+    expect(barred.alongSpan).toBeCloseTo(ACROSS_SPAN * (1920 / 875), 6);
+    expect(viewOf(1920, 950, 0)).toEqual(whole);
+  });
+
+  it('and portrait, a bar that would leave no field, and a bar that is not a number all keep none', () => {
+    for (const [w, h, bar] of [
+      [950, 1920, 75],
+      [1920, 950, 500],
+      [1920, 950, Number.NaN],
+      [1920, 950, -10],
+    ] as const) {
+      expect(viewOf(w, h, bar).barAcross, `viewOf(${w}, ${h}, ${bar}) kept a bar`).toBe(0);
+      expect(viewOf(w, h, bar)).toEqual(viewOf(w, h));
+    }
+  });
+});
+
 describe('spawning and culling are authored against the widest view that exists', () => {
   it('puts the spawn line beyond the widest view any device can have', () => {
     // The pop-in bug, guarded: a wave placed for the authoring device appears out of nothing on a
