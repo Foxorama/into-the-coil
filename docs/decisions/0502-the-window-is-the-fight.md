@@ -22,6 +22,15 @@ On how long a mid-boss takes them:
 Asked what an early kill should leave — the waves resuming at once, the camera speeding through the
 gap, or the gap left empty — the player chose: *"Leave the gap empty."*
 
+And shown a first build that also dropped the firing waves no 25-second fight had met, against one
+that kept every authored body:
+
+> *"back half of each level should have more as the level should get more difficult upto and then
+> including the end boss"*
+
+with the build that dropped them reported as feeling *"long and empty"*. So every body is kept, and
+the back of a level is meant to be heavier than its front.
+
 ## What was true
 
 Measured with a scratch instrument that walks every level through the real frame at 1920×950 with an
@@ -78,45 +87,46 @@ the tables:
 - the waves from the mid-boss's `at` to the last are the same script in the same order, each keeping
   its gap to the wave before it, scaled into **one unit past the window's end to 190 short of
   `bossAt`** — the last wave as late as it can stand without flying in with the end boss, on
-  `FIGHT_LEAD`'s own measure;
-- **less the firing waves 0267 skipped over a 25-second fight**, which no player who fought that long
-  had ever met — two in three of those offered while the hull lived, counted from its lead as the
-  counter did. A removal that would have made a run of more than `MIX_RUN` waves of one class was
-  refused, so the Approach lost three of five and the Labyrinth one of four;
+  `FIGHT_LEAD`'s own measure — **every authored body kept**, the player's ramp;
 - **the Mire's front**: its two 0113 fillers moved from 794 and 821 to the back, where it was thin;
   the turret at 767 moved to 794 so 739, 794 and 848 stand 55 apart; the turrets at 355 and 794 are
   four. Its back is laid evenly, as it already was.
 
 | level | window | the script past it, was → is | waves past it | bodies, level |
 |---|---|---|---|---|
-| The Approach | 1549–2449 | 1594–4060 → 2450–4080 | 45 → 42 | 415 → 393 |
-| Ember Nebula | 1599–2499 | 1629–4110 → 2500–4130 | 48 → 44 | 428 → 403 |
-| Saurian Belt | 1549–2449 | 1598–4016 → 2450–4080 | 44 → 37 | 412 → 365 |
-| The Labyrinth | 1519–2419 | 1565–3980 → 2420–4050 | 43 → 42 | 350 → 344 |
-| Rime Shelf | 1519–2419 | 1565–3980 → 2420–4050 | 43 → 36 | 289 → 261 |
-| The Toxic Mire | 1619–2519 | 1672–4085 → 2520–4150 | 45 → 40 | 372 → 336 |
-| The Black Heart | 1044–1944 | 1049–4206 → 1945–4270 | 60 → 56 | 422 → 399 |
+| The Approach | 1549–2449 | 1594–4060 → 2450–4080 | 45 | 415 |
+| Ember Nebula | 1599–2499 | 1629–4110 → 2500–4130 | 48 | 428 |
+| Saurian Belt | 1549–2449 | 1598–4016 → 2450–4080 | 44 | 412 |
+| The Labyrinth | 1519–2419 | 1565–3980 → 2420–4050 | 43 | 350 |
+| Rime Shelf | 1519–2419 | 1565–3980 → 2420–4050 | 43 | 289 |
+| The Toxic Mire | 1619–2519 | 1672–4085 → 2520–4150 | 45 → 47 | 372 → 370 |
+| The Black Heart | 1044–1944 | 1049–4206 → 1945–4270 | 60 | 422 |
+
+The Mire gains its two fillers in the back and loses a turret body at 355 and at 794.
 
 **Three mid-bosses are re-solved**, `scripts/solve-mid-health.mjs`, because the waves that used to be
 put down over a fight were soaking up its fire: with none, the redoubt, the chorus and the axis died
 in 19, 18 and 19 seconds against the 21, 22 and 23 their levels ask. Redoubt 329 → 359, chorus 237 →
-284, axis 414 → 507; the second pass reads 21, 22 and 22. The other four were within a second.
+284, axis 414 → 507; the second pass reads 21, 22 and 22, and a third, re-run on the tables as
+shipped, reads the same. The other four were within a second.
 
 ## The figures
 
 Savior, guns on, each mid-boss at its natural health — bodies and live enemy bullets on the screen,
-the mean over the first three tenths of the level against the mean over the last four. *Kept* is the
-first build of this decision, every authored body moved; *shipped* is the one above.
+the mean over the first three tenths of the level against the mean over the last four:
 
-| level | bodies before | kept | shipped | bullets before | kept | shipped |
-|---|---|---|---|---|---|---|
-| The Approach | 4.8 / 2.8 | 4.8 / 4.9 | 4.8 / 3.8 | 4.5 / 2.6 | 4.5 / 8.9 | 4.5 / 8.8 |
-| Ember Nebula | 5.8 / 2.7 | 5.8 / 7.0 | 5.8 / 6.1 | 7.6 / 5.5 | 7.6 / 11.0 | 7.6 / 11.4 |
-| Saurian Belt | 3.9 / 4.3 | 3.9 / 7.7 | 3.9 / 7.3 | 7.6 / 9.8 | 7.6 / 16.9 | 7.6 / 17.2 |
-| The Labyrinth | 5.0 / 6.3 | 5.0 / 9.5 | 5.0 / 9.3 | 6.1 / 11.0 | 6.1 / 19.2 | 6.1 / 21.9 |
-| Rime Shelf | 3.1 / 2.4 | 3.1 / 4.8 | 3.1 / 4.0 | 9.5 / 9.4 | 9.5 / 16.8 | 9.5 / 15.2 |
-| The Toxic Mire | 4.1 / 4.5 | 3.7 / 8.4 | 3.7 / 6.0 | 5.7 / 12.2 | 5.2 / 21.1 | 5.2 / 15.5 |
-| The Black Heart | 8.4 / 4.4 | 8.4 / 7.8 | 8.4 / 6.5 | 12.6 / 10.8 | 12.6 / 19.9 | 12.6 / 15.7 |
+| level | bodies before | after | bullets before | after |
+|---|---|---|---|---|
+| The Approach | 4.8 / 2.8 | 4.8 / 4.9 | 4.5 / 2.6 | 4.5 / 8.9 |
+| Ember Nebula | 5.8 / 2.7 | 5.8 / 7.0 | 7.6 / 5.5 | 7.6 / 11.0 |
+| Saurian Belt | 3.9 / 4.3 | 3.9 / 7.7 | 7.6 / 9.8 | 7.6 / 16.9 |
+| The Labyrinth | 5.0 / 6.3 | 5.0 / 9.5 | 6.1 / 11.0 | 6.1 / 19.2 |
+| Rime Shelf | 3.1 / 2.4 | 3.1 / 4.8 | 9.5 / 9.4 | 9.5 / 16.8 |
+| The Toxic Mire | 4.1 / 4.5 | 3.7 / 8.4 | 5.7 / 12.2 | 5.2 / 21.1 |
+| The Black Heart | 8.4 / 4.4 | 8.4 / 7.8 | 12.6 / 10.8 | 12.6 / 19.9 |
+
+With the mid-boss stood at about 40 seconds the backs read 4.8–9.8 bodies and 9.6–25.9 bullets, the
+Mire the most.
 
 **The fight, and what is put down over it**, by the same walk — the mid-boss's health scaled per
 level until the guns-on fight measured about 25 and about 40 seconds (three passes of a ratio, the
@@ -124,29 +134,29 @@ closest kept; the seconds are what was measured, not what was asked):
 
 | level | Savior, natural | Savior, ~25 s | Savior, ~40 s | Burn, natural |
 |---|---|---|---|---|
-| The Approach | 14 s, 6 waves → 14 s, 0 | 25 s, 10 → 24 s, 0 | 40 s, 18 → 37 s, 11 | 26 s, 11 → 24 s, 0 |
-| Ember Nebula | 18 s, 8 → 17 s, 0 | 26 s, 12 → 24 s, 0 | 39 s, 17 → 39 s, 13 | 30 s, 14 → 30 s, 5 |
-| Saurian Belt | 18 s, 5 → 18 s, 0 | 25 s, 8 → 25 s, 0 | 41 s, 15 → 37 s, 9 | 28 s, 10 → 25 s, 1 |
-| The Labyrinth | 18 s, 9 → 18 s, 0 | 24 s, 10 → 22 s, 0 | 42 s, 20 → 42 s, 16 | 40 s, 19 → 56 s, 28 |
-| Rime Shelf | 24 s, 8 → 20 s, 0 | 25 s, 8 → 23 s, 0 | 39 s, 13 → 39 s, 11 | 35 s, 12 → 33 s, 7 |
-| The Toxic Mire | 19 s, 7 → 21 s, 0 | 25 s, 9 → 28 s, 3 | 40 s, 16 → 45 s, 18 | 32 s, 12 → 31 s, 6 |
-| The Black Heart | 20 s, 9 → 22 s, 0 | 25 s, 11 → 26 s, 1 | 40 s, 18 → 46 s, 19 | 33 s, 14 → 38 s, 12 |
+| The Approach | 14 s, 6 waves → 14 s, 0 | 25 s, 10 → 24 s, 0 | 40 s, 18 → 39 s, 13 | 26 s, 11 → 24 s, 0 |
+| Ember Nebula | 18 s, 8 → 17 s, 0 | 26 s, 12 → 24 s, 0 | 39 s, 17 → 38 s, 14 | 30 s, 14 → 30 s, 5 |
+| Saurian Belt | 18 s, 5 → 18 s, 0 | 25 s, 8 → 25 s, 0 | 41 s, 15 → 38 s, 12 | 28 s, 10 → 25 s, 1 |
+| The Labyrinth | 18 s, 9 → 18 s, 0 | 24 s, 10 → 22 s, 0 | 42 s, 20 → 45 s, 19 | 40 s, 19 → 51 s, 24 |
+| Rime Shelf | 24 s, 8 → 20 s, 0 | 25 s, 8 → 23 s, 0 | 39 s, 13 → 41 s, 15 | 35 s, 12 → 33 s, 8 |
+| The Toxic Mire | 19 s, 7 → 21 s, 0 | 25 s, 9 → 28 s, 4 | 40 s, 16 → 47 s, 23 | 32 s, 12 → 35 s, 10 |
+| The Black Heart | 20 s, 9 → 22 s, 0 | 25 s, 11 → 26 s, 1 | 40 s, 18 → 45 s, 19 | 33 s, 14 → 38 s, 13 |
 
 Before, the waves put down over a fight were the thinned remainder of the stretch the camera crossed;
 after, a fight inside its window has none, and one past it has every wave the window's end reached.
 
 ## ⚠️ What it changes that was not asked for
 
-- **The back of every level carries more bullets than it did**, 1.3 times (the Mire) to 3.4 times
-  (the Approach, from 2.6 live to 8.8), and more than the front in every level. The bodies balanced; the bullets went past balance, because the window's waves
-  were firing-heavy — they were written under a thinning that let a third of them through — and the
-  ones a 25-second fight did meet now play in the open. The Labyrinth and Saurian Belt rose most.
+- **The back of every level carries more bullets than it did**, 1.7 times (the Mire, 12.2 live to
+  21.1) to 3.4 times (the Approach, 2.6 to 8.9), and more than the front in every level. That is the
+  shape the player asked for — *"more as the level should get more difficult"* — and it is steeper
+  than the bodies' because the window's waves were firing-heavy: they were written under a thinning
+  that let a third of them through, and all of them now play past the fight.
 - **A slow fight gets slower.** Adds absorb the shots meant for the hull, so a fight past its window
-  runs longer and meets more adds: at Burn the lattice went from 40 to 56 seconds, and the 40-second
-  fights at Savior ran to 45–46 in the Mire and the Black Heart.
+  runs longer and meets more adds: at Burn the lattice went from 40 to 51 seconds, and the 40-second
+  fights at Savior ran to 45–47 in the Labyrinth, the Mire and the Black Heart.
 - **At Savior an average kill leaves two to eleven seconds empty**, the window's remainder after
   fights of 14–23 seconds. That is the gap the player chose.
-- **The authored body count fell by 2–11%**, the waves no 25-second fight had met.
 - **The first wave after the window is seen about two seconds after the window closes**, as every
   wave is seen about two seconds after it is put down; the mid-boss arrives the same way, so the window
   is twenty-five seconds from seeing one to seeing the other.
@@ -165,9 +175,11 @@ after, a fight inside its window has none, and one past it has every wave the wi
 - **Keeping 0267's thinning past the window.** The player asked for the opposite.
 - **A window as a constant.** [0282](0282-a-mechanism-for-every-instance-makes-them-one-instance.md):
   every row says its own.
-- **Moving every authored body**, *kept* in the table. Built and measured first: it raised the back
-  further for waves no player had met. ⚠️ It is the player's to choose between the two, and *kept* is
-  a revert of the removals.
+- **Dropping the firing waves 0267 skipped over a 25-second fight**, which no player who fought that
+  long had met — two in three of those offered while the hull lived, 6 to 47 bodies a level. Built
+  and measured: it took the back's bullets down by a fifth to a quarter in the Mire and the Black Heart. Refused by
+  the player, who played it as *"long and empty"* and wants the back of a level heavier — *"more as
+  the level should get more difficult upto and then including the end boss."*
 - **Lengthening each level by 25 seconds** so nothing is compressed. `bossAt`, the music's sections,
   the landmarks, the Labyrinth's corridor and the Mire's bank are all authored against the length.
 
@@ -225,9 +237,8 @@ reddening a guard, as 0267's notes recorded; its skipping form is the fifth row.
 
 ## Owed
 
-- **A play of every level at Savior**, and the player's call between *kept* and *shipped*.
-- **The back's bullets**: the Labyrinth and Saurian Belt most. If the end now reads as too much, the
-  next pass is the firing waves in the back's first third, which were the window's.
+- **A play of every level at Savior**: whether the back's climb reads as the ramp asked for. If a
+  stretch reads as too much, the first place to look is the back's first third, which was the window.
 - **The Labyrinth at Burn**, whose slow lattice fight now meets adds and runs longer for them.
 - **`docs/state-of-play.md`**, once this lands.
 
