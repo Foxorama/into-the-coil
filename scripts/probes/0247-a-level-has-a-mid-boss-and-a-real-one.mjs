@@ -52,8 +52,9 @@ export const PROBES = [
     guard: 'THE ROSTER: every level has a mid-boss',
     edit: {
       path: 'src/content/levels.ts',
-      find: "    midBoss: { kind: 'sentinel', at: 1549 },",
-      replace: "    midBoss: { kind: 'sentinel', at: 5549 },",
+      // Re-anchored by 0502, which gave the row its window.
+      find: "    midBoss: { kind: 'sentinel', at: 1549, windowSeconds: 25 },",
+      replace: "    midBoss: { kind: 'sentinel', at: 5549, windowSeconds: 25 },",
     },
   },
   {
@@ -78,8 +79,8 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0269, which solved every mid-boss's health to its level's own fight length,
       // by 0364, which re-solved them after the zoom, by 0406, at the loadout the run carries in, and
-      // by 0472, at the tuned tier.
-      find: '    health: 414,',
+      // by 0472, at the tuned tier, and by 0502, once no wave soaked up the fight's fire.
+      find: '    health: 507,',
       replace: '    health: 2000,',
     },
   },

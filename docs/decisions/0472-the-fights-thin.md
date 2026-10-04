@@ -1,5 +1,10 @@
 # 0472 — The fights thin at Savior
 
+> ⚠️ **AMENDED 2026-10-04 by [0502](0502-the-window-is-the-fight.md).** `FIGHT_LEAD` is kept and now
+> stops at the mid-boss's own place: the window after it is authored empty, and the waves past the
+> window are adds that come as written. `tests/fight.test.ts`, named below, is deleted. The redoubt,
+> chorus and axis are re-solved, because no wave over the fight soaks up its fire any more.
+
 **Accepted 2026-10-03.** From the play report:
 
 > *"we bunched up a bunch of shooters on every level and on saviour difficulty, there's some spots,

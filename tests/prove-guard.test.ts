@@ -305,6 +305,9 @@ const WITHOUT_PROBES: Record<string, string> = {
   // that turned it and the run-up after it are gone from the tree with `tests/dial.test.ts`.
   '0084': 'its dial and the one-hit clamp it turned were deleted by 0441 — every ship opens on its whole gun, and nothing reads a dial',
   '0086': 'its run-up after the pickup that lifted the clamp was deleted by 0441 with the clamp — there is no second weapon for the teeth to wait for',
+  // One more of the same kind: 0502 gives each mid-boss a window no wave is authored inside, and has
+  // the waves past it come as written, so the thinning over a fight and `tests/fight.test.ts` are gone.
+  '0267': 'its thinning over a live mid-boss and both its guards were deleted by 0502 — the window is authored empty and the adds past it come as written, and 0502 has its own table and probes',
   '0007': 'every row needs `npm run build` and a browser run first, and the harness runs vitest against the tree rather than a built dist/',
   '0008': 'the manifest and `_headers` rows assert on a built dist/, which the harness does not produce',
   '0009': "the cache-sweep rows drive a real page against a built dist/ with a stranger's cache seeded on the origin",

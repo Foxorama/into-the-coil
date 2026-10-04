@@ -23,7 +23,7 @@ const TWO_FIGHTS: LevelRow = {
   pickups: [],
   landmarks: [],
   bossAt: 700,
-  midBoss: { kind: 'sentinel', at: 200 },
+  midBoss: { kind: 'sentinel', at: 200, windowSeconds: 25 },
   sections: NO_SECTIONS,
   boss: 'jormungandr',
   theme: 'approach',
