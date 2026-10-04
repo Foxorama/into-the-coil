@@ -14,6 +14,7 @@
  */
 
 import { BAR_SECONDS, BEAT_SECONDS, type MusicLayer, type MusicLevel } from './music.ts';
+import { SPRITE } from './sprites.ts';
 import { barsOf, voicesOf, type ThemeKind } from './themes.ts';
 
 /**
@@ -91,6 +92,13 @@ export interface Veins {
   readonly hearts: readonly HeartVoice[];
   /** The vessels into the heart the last fight is set over — 0400. In the order the tentacles lie in them. */
   readonly arteries: readonly Artery[];
+  /**
+   * The chamber the heart is set in — `docs/decisions/0489-the-heart-has-a-chamber.md`: vein-flesh round a
+   * bore the heart sits in, laid at the heart wherever it is, under every body, after the vessels that run
+   * into it. The gyre sits in a housing bigger than it; the bell sat on a heart smaller than it, in an open
+   * room. This is the housing.
+   */
+  readonly chamber: number;
 }
 
 /** How long a beat's light takes to fall to a third, in seconds — about a lub's own ring. */
@@ -246,6 +254,7 @@ export const VEINS_OF: Record<ThemeKind, Veins | null> = {
       near side, top to bottom in the order the tentacles hang, because the tentacles lie in them before
       they pull out.
     */
+    chamber: SPRITE.heartChamber,
     arteries: [
       { trunk: 0, back: 62, into: [-4, -10], width: 3.4 },
       { trunk: 1, back: 42, into: [-9, -5], width: 3.8 },

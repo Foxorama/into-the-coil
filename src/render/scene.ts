@@ -1241,6 +1241,14 @@ function paintArteries(surface: Surface, view: View, cameraAlong: number, sky: S
         ARTERY_AT[1] = ARTERY_NEXT[1]!;
       }
     }
+    /*
+      ⚠️ **AND THE CHAMBER THE HEART IS SET IN, AT THE HEART — 0489**, after the vessels so they run in under
+      its flesh, and before every body so the heart beats in its bore and the bell lies over its mouth. At
+      the heart wherever the heart is, which is what keeps it with her into the finale (0426): a piece fixed
+      in the world would be left behind when the camera moves on with the heart.
+    */
+    const inView = heart[0]! - cameraAlong;
+    surface.blit(veins.chamber, screenX(view, inView, heart[1]!), screenY(view, inView, heart[1]!), view.scale);
   }
 }
 

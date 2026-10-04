@@ -178,6 +178,8 @@ const HULLLESS: readonly SpriteKind[] = [
   'skyVeins',
   'artery',
   'heart',
+  // And the chamber it is set in — 0489: scenery of the same flesh, under every body.
+  'heartChamber',
   'bound',
   // The labyrinth's masonry is a surface that tiles into the next, on the sky's own terms — 0348: an
   // outline round each block is exactly what made a corridor of it read as a film strip.

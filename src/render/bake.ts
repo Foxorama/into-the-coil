@@ -606,6 +606,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
     the glass hung over it.
   */
   heart: 'sky',
+  heartChamber: 'sky',
   bullet: 'bullet',
   /*
     ⚠️ **THE ENEMY INK, and this is the one ink assignment in the table that changed a rule** — 0081.
@@ -11108,6 +11109,73 @@ function drawHeartSeat(ctx: Pen, f: Frame, plain: string | null): void {
   seam(ctx, f, shade(rose, -0.15), 0.045, HEART_BODY.slice(8).concat([HEART_BODY[0]!]), 0.8, true);
 }
 
+/** The chamber's ring, from its bore at `bore` of the radius out to its gnarled rim. In the tile's own `r`. */
+const CHAMBER_BORE = 0.66;
+
+/** A ring's edge at radius `r`, swelling and pinching as it goes round, `n` samples. */
+function chamberEdge(r: number, lumps: number, phase: number, n = 48): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * Math.PI * 2;
+    const k = r * (1 + 0.06 * Math.sin(a * lumps + phase) + 0.03 * Math.sin(a * (lumps + 3) + phase * 2));
+    out.push([Math.cos(a) * k, Math.sin(a) * k]);
+  }
+  return out;
+}
+
+/**
+ * The chamber the heart is set in — `docs/decisions/0489-the-heart-has-a-chamber.md`. A ring of vein-flesh
+ * round a dark bore the heart sits in: folds of it running out from the bore, vessels over it toward the
+ * heart, and the bore's rim lit from the heart's own light inside. Its outer edge is the flesh darkening
+ * into the room, not a line: it is the place the heart is set in, and a hard edge would make it a thing.
+ */
+function drawHeartChamber(ctx: Pen, f: Frame, plain: string | null): void {
+  const flesh = plain === null ? mix(HEART_FLESH, HEART_ROSE, 0.2) : shade(plain, -0.5);
+  const deep = plain === null ? HEART_FLESH : shade(plain, -0.8);
+  const rose = plain ?? HEART_ROSE;
+  const violet = plain ?? HEART_VIOLET;
+  const outer = chamberEdge(0.98, 7, 0.4);
+  const bore = chamberEdge(CHAMBER_BORE, 5, 1.3);
+  // The flesh, a ring: the rim and the bore as two sub-paths, so the bore is a hole in it.
+  ctx.beginPath();
+  curveLoop(ctx, f, outer);
+  curveLoop(ctx, f, bore);
+  ctx.fillStyle = flesh;
+  ctx.fill('evenodd');
+  // Darker toward its outer edge, so it falls away into the room rather than stopping at a line.
+  shaded(ctx, f, [0, 0], [0, 1], rgba(deep, 0), rgba(deep, 0.85), outer, 1, true);
+  // Folds running out from the bore, each a ridge lit on one side.
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + 0.2;
+    const sway = 0.12 * Math.sin(i * 2.3);
+    const from: Pt = [Math.cos(a) * (CHAMBER_BORE + 0.04), Math.sin(a) * (CHAMBER_BORE + 0.04)];
+    const mid: Pt = [Math.cos(a + sway) * 0.8, Math.sin(a + sway) * 0.8];
+    const to: Pt = [Math.cos(a + sway * 1.6) * 0.92, Math.sin(a + sway * 1.6) * 0.92];
+    seam(ctx, f, shade(rose, -0.55), 0.05, [from, mid, to], 0.55, true);
+    seam(ctx, f, shade(rose, -0.2), 0.018, [from, mid], 0.4, true);
+  }
+  // Vessels over the flesh, running in to the bore.
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 + 0.7;
+    const path: Pt[] = [];
+    for (let s = 0; s <= 6; s++) {
+      const t = s / 6;
+      const r = 0.94 - t * (0.94 - CHAMBER_BORE - 0.02);
+      const b = a + 0.35 * Math.sin(t * Math.PI + i);
+      path.push([Math.cos(b) * r, Math.sin(b) * r]);
+    }
+    seam(ctx, f, shade(violet, -0.35), 0.035, path, 0.7, true);
+    seam(ctx, f, violet, 0.012, path, 0.6, true);
+  }
+  // The bore dark, and its rim lit by the heart inside it.
+  ctx.beginPath();
+  curveLoop(ctx, f, bore);
+  ctx.fillStyle = deep;
+  ctx.fill('evenodd');
+  seam(ctx, f, rose, 0.04, [...bore, bore[0]!], 0.75, true);
+  glow(ctx, f, rose, 0, 0, CHAMBER_BORE * 1.05, 0.35);
+}
+
 /*
   ── A LENGTH OF TENTACLE — 0403 ──────────────────────────────────────────────────────────────────
 
@@ -13065,6 +13133,10 @@ export function drawKind(
     case 'heart':
       // THE HEART THE JELLYFISH HANGS OVER — 0400. Scenery with no hurt twin, as the gyre's seat is.
       drawHeartSeat(ctx, f, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
+      return;
+    case 'heartChamber':
+      // AND THE CHAMBER IT IS SET IN — 0489: vein-flesh round a bore, as the cog's housing is round the cog.
+      drawHeartChamber(ctx, f, palette.glass === palette.space && palette.trim === palette.space ? palette.sky : null);
       return;
     case 'tendril':
     case 'tendrilHit':
