@@ -9,11 +9,12 @@ export const PROBES = [
     suite: 'tests/serpent.test.ts',
     // The state of `main`: two frames of six, which is nine of twenty-seven flames and a row of sparks.
     broke: 'the lightning back on two frames of six, which is a third of the body at any instant',
-    guard: 'THE REPORTED ONE: the lightning is on nearly every frame, so it is across the whole body',
+    // ⚠️ Re-anchored by 0487, which strokes the lightning along the body: a row of sparks is one short bolt now.
+    guard: 'THE REPORTED ONE, DRIVEN: the lightning runs along the whole body',
     edit: {
-      path: 'src/render/bake.ts',
-      find: 'const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4];',
-      replace: 'const STORM_LIT: readonly number[] = [0, 3];',
+      path: 'src/content/bosses.ts',
+      find: 'storm: { bolts: 3, span: [2, 5], every: 12, lit: 10 },',
+      replace: 'storm: { bolts: 1, span: [2, 2], every: 12, lit: 10 },',
     },
   },
   {
@@ -25,11 +26,12 @@ export const PROBES = [
       rather than flickering. It is the change a hand reaching for *more lightning* would make.
     */
     broke: 'every frame lit, so nothing ever goes out and the crackle is a glow',
-    guard: 'THE REPORTED ONE: the lightning is on nearly every frame, so it is across the whole body',
+    // ⚠️ Re-anchored by 0487: every frame lit is a bolt lit for its whole life.
+    guard: 'and the red lightning flickers',
     edit: {
-      path: 'src/render/bake.ts',
-      find: 'const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4];',
-      replace: 'const STORM_LIT: readonly number[] = [0, 1, 2, 3, 4, 5];',
+      path: 'src/content/bosses.ts',
+      find: 'storm: { bolts: 3, span: [2, 5], every: 12, lit: 10 },',
+      replace: 'storm: { bolts: 3, span: [2, 5], every: 12, lit: 12 },',
     },
   },
   /*

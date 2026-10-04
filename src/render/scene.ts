@@ -10,7 +10,7 @@
  * a scrub bar, and it is the rule `docs/decisions/0015-the-layer-ladder.md` gives the layer.
  */
 
-import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
+import { BEAM_BOLT_KIND, BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, RAIN_BOLT_KIND } from '../content/bosses.ts';
 import { ARTERY_HALF_LENGTH, ARTERY_HALF_WIDTH, SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import type { Eruption } from '../content/volcano.ts';
 import type { Pools } from '../content/pools.ts';
@@ -683,6 +683,69 @@ function paintTwig(
     TWIG[v * 2 + 1] = screenY(view, inView, across);
   }
   surface.bolt(TWIG, TWIG_VERTICES, width, alpha, hostile);
+}
+
+/*
+  ── THE STORM ON THE BODY — `docs/decisions/0487-the-storm-is-lightning.md` ───────────────────────────
+
+  ⚠️ **STROKED NODE TO NODE THROUGH THE BODY AS IT IS DRAWN THIS FRAME**, each node where the renderer
+  puts it — between its last place and this one — so the lightning is on the flesh it crawls over and
+  never a step behind it. Two jagged vertices a link, swung off the line by at most `BODY_BOLT_JAG` of the
+  node's own girth, so a bolt never leaves the body: the warned columns are what comes for the ship.
+  The same verb as every bolt (0233), additive like every light (0470), in the enemy's ink.
+*/
+
+/** How far a body bolt's vertex swings off the line between two nodes, as a share of the node's radius. */
+const BODY_BOLT_JAG = 0.45;
+/** Steps a body bolt holds one shape before it re-jags, so it crackles rather than shimmers. */
+const BODY_BOLT_PAGE = 2;
+/** The core's width, as a share of a link's. A body bolt is a thread on the animal, not a strike. */
+const BODY_BOLT_WIDTH = 0.7;
+// @setup: one buffer for the module's lifetime: three vertices a link over the longest span, and the end.
+const BODY_PATH = new Float32Array((3 * (BODY_BOLT_SPAN - 1) + 1) * 2);
+
+/**
+ * Stroke a boss's body bolts — 0487: every lit slot of `table`, through `body`'s nodes from its first
+ * to its last. Nothing allocates.
+ */
+export function paintBodyBolts(surface: Surface, view: View, table: Int32Array, body: Pool<Entity>, cameraAlong: number, alpha: number, steps: number): void {
+  const page = Math.floor(steps / BODY_BOLT_PAGE);
+  for (let s = 0; s < BODY_BOLT_SLOTS; s++) {
+    const at = s * BODY_BOLT_FIELDS;
+    const from = table[at]!;
+    const to = table[at + 1]!;
+    if (from < 0 || table[at + 4] !== 1 || to >= body.size || to <= from) continue;
+    const seed = table[at + 2]!;
+    let count = 0;
+    for (let n = from; n <= to; n++) {
+      const node = body.at(n);
+      const along = node.prevAlong + (node.along - node.prevAlong) * alpha;
+      const across = node.prevAcross + (node.across - node.prevAcross) * alpha;
+      BODY_PATH[count * 2] = screenX(view, along - cameraAlong, across);
+      BODY_PATH[count * 2 + 1] = screenY(view, along - cameraAlong, across);
+      count++;
+      if (n === to) break;
+      // Two vertices a third and two thirds of the way to the next node, swung off the line.
+      const next = body.at(n + 1);
+      const nextAlong = next.prevAlong + (next.along - next.prevAlong) * alpha;
+      const nextAcross = next.prevAcross + (next.across - next.prevAcross) * alpha;
+      const dAlong = nextAlong - along;
+      const dAcross = nextAcross - across;
+      const length = Math.sqrt(dAlong * dAlong + dAcross * dAcross);
+      const nAlong = length > 0 ? -dAcross / length : 0;
+      const nAcross = length > 0 ? dAlong / length : 0;
+      const swing = node.radius * BODY_BOLT_JAG;
+      for (let k = 1; k <= 2; k++) {
+        const off = jag(seed, (n - from) * 2 + k, page) * swing;
+        const pAlong = along + (dAlong * k) / 3 + nAlong * off;
+        const pAcross = across + (dAcross * k) / 3 + nAcross * off;
+        BODY_PATH[count * 2] = screenX(view, pAlong - cameraAlong, pAcross);
+        BODY_PATH[count * 2 + 1] = screenY(view, pAlong - cameraAlong, pAcross);
+        count++;
+      }
+    }
+    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, true);
+  }
 }
 
 /**

@@ -73,7 +73,7 @@ import type { Tuning } from '../sim/assist.ts';
 import type { InputSource } from './input.ts';
 import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_STEPS, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
+import { BOLT_STEPS, paintBodyBolts, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
 import { paintPort } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
@@ -92,7 +92,7 @@ import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } 
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
-import { BOSSES, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
+import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_SLOTS, ENTRY_VOLLEY, FIRE_GRID, SEEN_BEFORE_VOLLEY, nextOnGrid } from '../content/cadence.ts';
 import {
@@ -1009,6 +1009,8 @@ export interface World {
    * not move where the arc's next link lands.
    */
   stormRng: Rng;
+  /** Where a boss's lightning runs on its body and for how long — 0487. Its own stream, on `stormRng`'s argument. */
+  bodyBoltRng: Rng;
   /** Steps of flicker left, how many bolts each renewal throws, and where it went off in the camera. */
   stormFor: number;
   stormFlicker: number;
@@ -1337,6 +1339,11 @@ export interface World {
    * rises out of the acid over its row's `rise` from here, so a head grows rather than appearing.
    */
   necksBorn: Float64Array;
+  /**
+   * The lightning running along a boss's body — 0487: `BODY_BOLT_FIELDS` a slot (from node, to node, seed,
+   * age, lit), from −1 for an empty slot. Laid by `layAura` and stroked by `paintBodyBolts`.
+   */
+  bodyBolts: Int32Array;
   /**
    * The step a jellyfish's tentacles began to pull out of the heart's arteries, or −1 before — 0403.
    * They start on the step the fight's camera comes to rest, so they peel out of vessels the player can
@@ -2714,6 +2721,8 @@ export class GameFrame implements Frame {
     // `layers` and were blitted above; this strokes the lines between them. A boss's beams are not
     // among them: they were stroked under the animal, above — 0459.
     paintBolts(w.surface, w.view, w.bolts, camera, alpha, false);
+    // And the storm on a boss's body, over the body it runs along — 0487.
+    paintBodyBolts(w.surface, w.view, w.bodyBolts, w.bossBody, camera, alpha, w.steps);
   }
 }
 
@@ -9492,11 +9501,14 @@ function layAura(w: World): void {
   }
   if (head === null) {
     w.bossAura.clear();
+    layBodyBolts(w, undefined);
     return;
   }
   const phase = phaseFor(w.bossRow, head.health, w.bossFullHealth);
   const look = phase.look;
   const aura = look?.aura ?? null;
+  // The lightning along the body, where the aura runs a storm — 0487; an empty table where it does not.
+  layBodyBolts(w, aura?.storm);
   /*
     ── AND THE TAIL, IN THE SAME LAYER — 0374 ──────────────────────────────────────────────────────
 
@@ -9627,6 +9639,42 @@ function layAura(w: World): void {
     const frame = set[(((tick + k * aura.stride) % set.length) + set.length) % set.length]!;
     flame.sprite = frame;
     flame.spriteBase = frame;
+  }
+}
+
+/**
+ * The lightning along a boss's body — `docs/decisions/0487-the-storm-is-lightning.md`: the table
+ * `paintBodyBolts` strokes from, one slot a bolt. Each runs from node to node over its row's span, is
+ * re-rolled from its own stream every `every` steps — staggered on its first roll, so the bolts never land
+ * together — and is lit for the first `lit` steps of each. No storm, or a body of fewer than two nodes,
+ * and every slot is empty.
+ *
+ * ⚠️ **NODES OF THE BODY AND NOT THE HEAD**, so a bolt is always on flesh and never out past the crown:
+ * the warned columns down the lane are the lightning that comes for the ship, and a bolt on the animal
+ * must not be read as one (0024: colour alone may not carry that). Nothing allocates.
+ */
+function layBodyBolts(w: World, storm: Aura['storm']): void {
+  const table = w.bodyBolts;
+  const nodes = w.bossBody.size;
+  for (let s = 0; s < BODY_BOLT_SLOTS; s++) {
+    const at = s * BODY_BOLT_FIELDS;
+    if (storm === undefined || s >= storm.bolts || nodes < 2) {
+      table[at] = -1;
+      continue;
+    }
+    const fresh = table[at]! < 0;
+    let age = table[at + 3]! + 1;
+    if (fresh || age >= storm.every || table[at + 1]! >= nodes) {
+      const most = Math.min(storm.span[1], nodes, BODY_BOLT_SPAN);
+      const span = Math.min(most, storm.span[0] + Math.floor(w.bodyBoltRng.range(0, most - storm.span[0] + 1)));
+      const from = Math.min(nodes - span, Math.floor(w.bodyBoltRng.range(0, nodes - span + 1)));
+      table[at] = from;
+      table[at + 1] = from + span - 1;
+      table[at + 2] = Math.floor(w.bodyBoltRng.range(0, 1 << 30));
+      age = fresh ? Math.min(storm.every - 1, Math.floor(w.bodyBoltRng.range(0, storm.every))) : 0;
+    }
+    table[at + 3] = age;
+    table[at + 4] = age < storm.lit ? 1 : 0;
   }
 }
 

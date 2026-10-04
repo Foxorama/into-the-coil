@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 import { GameFrame, wearHull } from '../src/app/frame.ts';
 import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
 import { muzzleAcrossOf, muzzleAlongOf, phaseFor } from '../src/app/boss.ts';
-import { BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
+import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
 import { CUES, type CueKind } from '../src/content/cues.ts';
@@ -29,8 +29,8 @@ import { SERPENT_BODY_DIAMETER, SPRITE_EXTENT, SPRITE_KINDS, type SpriteKind } f
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
-import { BOLT_STEPS, paintScene } from '../src/render/scene.ts';
-import type { Surface } from '../src/render/surface.ts';
+import { BOLT_STEPS, paintBodyBolts, paintScene } from '../src/render/scene.ts';
+import { screenX, screenY, type Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
@@ -915,6 +915,8 @@ describe('0248 — the serpent strikes', () => {
     armRain(world.bossPool.at(0));
     world.bossPool.at(0).fireIn = 1;
     frame.step();
+    // The rain's strokes alone: the storm on the body is hostile ink too since 0487, and has its own guards.
+    world.bodyBolts.fill(-1);
     frame.draw(0);
     const warnings = recorder.strokes.filter((s) => s.hostile);
     expect(warnings.length, 'no hostile line was drawn on the step the volley was thrown').toBeGreaterThan(0);
@@ -1751,31 +1753,21 @@ describe('0310 — the storm runs the whole body, and the horns fire it', () => 
     return out;
   }
 
-  /** How many strokes a kind draws in the storm's two reds — the discharge, traced. */
-  function sparks(kind: SpriteKind): number {
-    const size = SPRITE_EXTENT[kind] * viewOf(1280, 720).scale;
-    const rec = tracingPen();
-    drawKind(rec.pen, kind, PALETTES[DEFAULT_PALETTE], size, 'approach');
-    return rec.trace.inks.filter((ink) => ink.colour === '#ff2238' || ink.colour === '#ffe4e4').length;
-  }
 
-  it('THE REPORTED ONE: the lightning is on nearly every frame, so it is across the whole body', () => {
+  it('THE REPORTED ONE, DRIVEN: the lightning runs along the whole body — every node under a bolt within two seconds, a bolt alight on nearly every step — and the void phase never crackles', () => {
     /*
-      ⚠️ **THE ARITHMETIC IS WHY TWO FRAMES WAS NOT *ACROSS THE BODY*.** `Aura.stride` is 1 and the body is
-      twenty-six nodes, so node `k` wears frame `(t + k) % 6` — with two of six lit, **nine of the
-      twenty-seven flames** carry lightning at any instant. That is *spread* in the model and reads as a row
-      of sparks in the picture, because two thirds of the animal is dark at every moment.
-
-      ⚠️ **AND NOT ALL SIX, WHICH IS THE OTHER HALF OF THE WORD.** *Flickers* means something goes out. At
-      five of six each node is dark one frame in six and the dark one walks down the body.
+      0310: *"the red lightning flickers need to be across the whole body."* Baked into each node's flame it
+      was across the body in the arithmetic and a row of sparks in the picture; a bolt in a tile could only
+      ever be inside its tile. Since 0487 the lightning is stroked node to node along the animal, and what is
+      held is the reported thing in the player's time: within two seconds every node has had lightning on it.
     */
-    const storm = [0, 1, 2, 3, 4, 5].map((i) => sparks(`serpentStorm${i}` as SpriteKind));
-    const lit = storm.filter((n) => n > 0).length;
-    expect(lit, `${lit} of the storm's six frames carry lightning — ${storm.join(', ')} strokes each`).toBe(5);
-    // And the void phase's aura carries none at all, which is what makes the two phases tellable apart.
-    for (let i = 0; i < 6; i++) {
-      expect(sparks(`serpentAura${i}` as SpriteKind), `the void phase's aura frame ${i} crackles`).toBe(0);
-    }
+    const storm = stormOver(0.3, 2);
+    expect(storm.nodes, 'the serpent has no body for lightning to run along').toBeGreaterThan(10);
+    expect(storm.covered.size, `only ${storm.covered.size} of ${storm.nodes} nodes had lightning on them in two seconds`).toBe(storm.nodes);
+    const quiet = storm.alight.filter((n) => n === 0).length / storm.alight.length;
+    expect(quiet, `no bolt was alight on ${(quiet * 100).toFixed(0)}% of the lightning phase's steps`).toBeLessThan(1 / 6);
+    const calm = stormOver(0.5, 2);
+    expect(Math.max(...calm.alight), 'the void phase crackles').toBe(0);
   });
 
   /*
@@ -2003,25 +1995,58 @@ describe('0305 — the serpent darkens', () => {
     }
   });
 
-  it('and the red lightning is through the lightning phase’s aura, on some of its frames and not all — and never through the void phase’s', () => {
+  it('and the red lightning flickers: every bolt goes out and comes on again, and none is drawn in a flame', () => {
     /*
-      *"A super saiyan red lightning flicker through the aura."* A flicker is on and off; a bolt on
-      every frame is a second aura drawn in red. Read off the trace of the real drawing: a stroke is
-      lightning, and the aura's own flame is fills.
+      *"A super saiyan red lightning flicker through the aura."* A flicker is on and off; a bolt always lit
+      is a second aura drawn in red. Driven: every slot the storm uses is lit at some step and dark at
+      another. And read off the trace: no aura frame of either phase strokes anything, because since 0487
+      the lightning is the body's and not the flame's.
     */
+    const storm = stormOver(0.3, 2);
+    const used = lookAt(0.3)!.aura!.storm!.bolts;
+    for (let s = 0; s < used; s++) {
+      expect(storm.lit[s], `bolt ${s} never lit`).toBe(true);
+      expect(storm.dark[s], `bolt ${s} never went out, so it glows rather than flickering`).toBe(true);
+    }
     const strokesIn = (index: number): number => {
       const kind = SPRITE_KINDS[index]!;
       const { pen, trace } = tracingPen();
       drawKind(pen, kind, PALETTES[DEFAULT_PALETTE], SPRITE_EXTENT[kind] * 8, 'approach');
       return trace.inks.length;
     };
-    const hurt = lookAt(0.5)!.aura!.frames.map(strokesIn);
-    const last = lookAt(0.3)!.aura!.frames.map(strokesIn);
-    expect(hurt.every((n) => n === 0), 'the void phase’s aura has lightning in it before the lightning phase').toBe(true);
-    expect(last.some((n) => n > 0), 'the lightning phase’s aura has no lightning in it').toBe(true);
-    expect(last.some((n) => n === 0), 'every frame of the lightning phase’s aura is lit, so it glows red rather than flickering').toBe(true);
+    for (const fraction of [0.5, 0.3]) {
+      const frames = lookAt(fraction)!.aura!.frames.map(strokesIn);
+      expect(frames.every((n) => n === 0), `an aura frame at ${fraction} still has lightning baked into its flame`).toBe(true);
+    }
   });
 });
+
+/** The storm's bolts over `seconds` at `fraction` of the serpent's health: which nodes each step lit, and how many bolts were alight. */
+function stormOver(fraction: number, seconds: number): { covered: Set<number>; alight: number[]; dark: boolean[]; lit: boolean[]; nodes: number } {
+  const { world, frame } = serpentAt(fraction);
+  const covered = new Set<number>();
+  const alight: number[] = [];
+  const dark = [false, false, false, false];
+  const lit = [false, false, false, false];
+  for (let step = 0; step < seconds * STEPS_PER_SECOND; step++) {
+    world.ship.health = world.shipRow.health;
+    world.bossPool.at(0).health = world.bossFullHealth * fraction;
+    frame.step();
+    let on = 0;
+    for (let s = 0; s < BODY_BOLT_SLOTS; s++) {
+      const at = s * BODY_BOLT_FIELDS;
+      const from = world.bodyBolts[at]!;
+      if (from < 0) continue;
+      if (world.bodyBolts[at + 4] === 1) {
+        on++;
+        lit[s] = true;
+        for (let n = from; n <= world.bodyBolts[at + 1]!; n++) covered.add(n);
+      } else dark[s] = true;
+    }
+    alight.push(on);
+  }
+  return { covered, alight, dark, lit, nodes: world.bossBody.size };
+}
 
 describe('0306 — the serpent coils in', () => {
   /** One step of the entrance, as the picture has it: every node and the head, in the camera's frame. */
@@ -3012,5 +3037,54 @@ describe('0459 — the serpent lurks in the world tree’s roots', () => {
     expect(world.bossPool.size, 'the serpent did not die').toBe(0);
     expect(world.room!.open, 'the far roots did not part, so the camera carries the player into them').toBe(1);
     expect(moved, 'the screen did not start again').toBe(true);
+  });
+});
+
+describe('0487 — the storm is lightning', () => {
+  /** A surface that keeps each bolt's points, so a stroke can be asked where it is. */
+  class Points implements Surface {
+    readonly strokes: { points: number[]; hostile: boolean }[] = [];
+    clear(): void {}
+    blit(): void {}
+    bolt(points: Float32Array, count: number, _width: number, _alpha: number, hostile: boolean): void {
+      this.strokes.push({ points: Array.from(points.subarray(0, count * 2)), hostile });
+    }
+  }
+
+  it('THE CONSIDERED ONE, IN PIXELS: every body bolt is stroked on the animal — no vertex further from its nearest node than that node’s girth — and never more at once than the table holds', () => {
+    /*
+      The plan's *consider the screen*: the lightning phase already warns columns down the lane at the ship,
+      and a bolt on the animal must never be read as one coming for it. Colour cannot carry that (0024), so
+      the body bolts stay ON the body, on a 1280×720 screen, and the columns are what reach the player.
+    */
+    const { world, frame } = serpentAt(0.3);
+    const view = viewOf(1280, 720);
+    let drawn = 0;
+    for (let step = 0; step < 3 * STEPS_PER_SECOND; step++) {
+      world.ship.health = world.shipRow.health;
+      world.bossPool.at(0).health = world.bossFullHealth * 0.3;
+      frame.step();
+      const surface = new Points();
+      paintBodyBolts(surface, view, world.bodyBolts, world.bossBody, world.cameraAlong, 1, world.steps);
+      expect(surface.strokes.length, `step ${step}: ${surface.strokes.length} body bolts stroked against a table of ${BODY_BOLT_SLOTS}`).toBeLessThanOrEqual(BODY_BOLT_SLOTS);
+      for (const stroke of surface.strokes) {
+        expect(stroke.hostile, 'a body bolt was drawn in the player’s hand').toBe(true);
+        for (let v = 0; v < stroke.points.length; v += 2) {
+          let nearest = Infinity;
+          let girth = 0;
+          for (let n = 0; n < world.bossBody.size; n++) {
+            const node = world.bossBody.at(n);
+            const d = Math.hypot(stroke.points[v]! - screenX(view, node.along - world.cameraAlong, node.across), stroke.points[v + 1]! - screenY(view, node.along - world.cameraAlong, node.across));
+            if (d < nearest) {
+              nearest = d;
+              girth = node.radius * view.scale;
+            }
+          }
+          expect(nearest, `step ${step}: a body bolt's vertex is ${nearest.toFixed(1)}px from the body against a girth of ${girth.toFixed(1)}px`).toBeLessThanOrEqual(girth);
+        }
+        drawn++;
+      }
+    }
+    expect(drawn, 'no body bolt was ever stroked, so nothing above was asked').toBeGreaterThan(0);
   });
 });
