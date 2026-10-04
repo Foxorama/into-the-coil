@@ -776,6 +776,18 @@ export const SPRITE_KINDS = [
   'boss14Open',
   'boss14OpenHit',
   /*
+    ⚠️ **AND ITS GLOW BY HEALTH — 0491.** *"As it gets healed its glow will change"*: green
+    whole, lime, yellow, amber, and the open bell red. The whole bell is `boss14`, worn green; these are
+    the three between, each worn by its phase (`BossPhase.hull`), so a feed that crosses a line back
+    steps the glow back through the mechanism that already did that for the open bell.
+  */
+  'boss14Lime',
+  'boss14LimeHit',
+  'boss14Yellow',
+  'boss14YellowHit',
+  'boss14Amber',
+  'boss14AmberHit',
+  /*
     ⚠️ **THE HEART THE JELLYFISH HANGS OVER — 0400**, the seat of a `socket` move: scenery, in the
     layer behind the hull, with no hurt twin because nothing collides with it. It beats to the heart
     the player hears (`Entity.throb`), so it is the one seat that moves.
@@ -2094,6 +2106,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   boss14Hit: 46,
   // The bell parted — 0402: the same box, so the hull that opens is the hull that was shut (0332's rule).
   boss14Open: 46,
+  boss14Lime: 46,
+  boss14LimeHit: 46,
+  boss14Yellow: 46,
+  boss14YellowHit: 46,
+  boss14Amber: 46,
+  boss14AmberHit: 46,
   boss14OpenHit: 46,
   /*
     ⚠️ **THE HEART IT HANGS OVER, AND SMALLER THAN THE BELL ON PURPOSE — 0400.** *"The black heart needs

@@ -1186,9 +1186,12 @@ the order, so this file does not.** Landed, one PR each, every one owed a play o
 - item 8, the hydra's neck — [0486](decisions/0486-the-neck-bends.md), with the player's two notes on its
   first photographs taken in;
 - item 9, the serpent — [0487](decisions/0487-the-storm-is-lightning.md) and
-  [0488](decisions/0488-the-roots-are-roots.md).
+  [0488](decisions/0488-the-roots-are-roots.md);
+- item 10, the heart and the jellyfish — [0489](decisions/0489-the-heart-has-a-chamber.md),
+  [0490](decisions/0490-the-tentacles-are-tentacles.md) and [0491](decisions/0491-the-glow-is-its-health.md).
 
-**Next is the plan's item 10** (the heart's chamber, the tentacles, the glow). Item 4.2, the gyre's hole per
+**Next is the plan's item 11** (shields in the livery, the caddie's gun under the lip, the gyre's teeth), then
+item 12, the shuriken's listening set on the dash. Item 4.2, the gyre's hole per
 stance, is still not built without the player's word, against [0151](decisions/0151-the-gap-you-have-to-reach.md).
 
 ### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03

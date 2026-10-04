@@ -73,9 +73,10 @@ export const PROBES = [
     edit: {
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0403, whose lasers leave the tentacles' tips in one zigzag, and 0452, whose
-      // roots are points: the tips' reach kept, their spread lost. And by 0453, whose fan is the row's.
-      find: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true } },",
-      replace: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: [[-40, 0], [-40, 0], [-40, 0], [-40, 0], [-40, 0]], jag: MEDUSA_FAN, together: true } },",
+      // roots are points: the tips' reach kept, their spread lost. And by 0453, whose fan is the row's,
+      // and 0491, whose glow gives the phase a bell after the attack.
+      find: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: MEDUSA_LASERS, jag: MEDUSA_FAN, together: true }, hull:",
+      replace: "attack: { kind: 'beam', warning: 24, hold: 18, halfWidth: 1.5, from: [[-40, 0], [-40, 0], [-40, 0], [-40, 0], [-40, 0]], jag: MEDUSA_FAN, together: true }, hull:",
     },
   },
 ];
