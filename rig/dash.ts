@@ -40,7 +40,10 @@ import {
 import { THEMES, bakedBy, paceAt, panTrackOf, revoicedBy, rungOf, type ThemeKind, type ThemeLadder } from '../src/content/themes.ts';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, takePrewarmed } from '../src/app/sound.ts';
+import { SAMPLE_RATE, makeAudioOut, makeSpeaker, prewarmAudio, sampleCue, takePrewarmed, velocitiesOf } from '../src/app/sound.ts';
+import { cueOfFlight } from '../src/app/frame.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { ROWS, THROW_VOICE_KINDS, THROW_VOICE_LABELS, type ThrowVoice } from './throws.ts';
 import { auraNearness, bakeLayer } from '../src/app/music.ts';
 import { makeRng } from '../src/sim/rng.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
@@ -498,6 +501,8 @@ el<HTMLButtonElement>('unlock').addEventListener('click', () => {
   // plays the base composition however its theme is voiced.
   goToPlace(LEVELS[kind].theme);
   playButton.disabled = !unlocked;
+  // The shuriken's voice the desk is set to — 0495. The shipped one costs a re-sample of one cue.
+  applyVoice();
   status.textContent = unlocked ? 'audio running' : 'the browser refused a context — no AudioContext on this page';
   el<HTMLButtonElement>('unlock').disabled = unlocked;
   if (unlocked && !walking) togglePlay();
@@ -719,6 +724,61 @@ bind('tier', 'tierOut', (v) => (tier = v));
 bind('bodies', 'bodiesOut', (v) => (killsPerSecond = v), (v) => v.toFixed(1));
 bind('gap', 'gapOut', (v) => (gapUnits = v));
 bind('shipAt', 'shipAtOut', (v) => (shipAcross = v));
+
+/*
+  ── THE GUN, AND THE SHURIKEN'S LISTENING SET — 0495 ────────────────────────────────────────────
+
+  The desk fired the fighter's pulse whatever ship was asked about; the gun is the ship's (0441), so the
+  ship is chosen here and its own gun fires at its own cadence. And the shuriken's voice is a question
+  the player is answering by ear: *the shuriken's sound*, item 13 of the bosses' look plan, with four
+  candidates in `rig/throws.ts`. Choosing one re-samples the throw from that row and hands the mixer
+  the set with only that cue changed, on the same `setCues` the game swaps a place's cues with (0190),
+  so it changes on the next blade while the level plays.
+
+  ⚠️ **NOTHING HAPPENS UNTIL THE DESK IS ON THE AIR**: `setCues` is silent before the first gesture,
+  and the unlock below puts the chosen voice on as it starts.
+*/
+let ship: ShipKind = 'fighter';
+let voice: ThrowVoice = 'shipped';
+
+const gunSelect = el<HTMLSelectElement>('gun');
+for (const k of SHIP_KINDS) {
+  const option = document.createElement('option');
+  option.value = k;
+  option.textContent = `${SHIPS[k].label} — ${SHIPS[k].weapon}`;
+  gunSelect.append(option);
+}
+gunSelect.addEventListener('change', () => {
+  ship = gunSelect.value as ShipKind;
+});
+
+/** The shuriken's ship: choosing a voice puts its gun on, because a voice no blade plays is not heard. */
+const SHURIKEN_SHIP: ShipKind = SHIP_KINDS.find((k) => cueOfFlight(weaponAtTier(0, k).flight) === 'throw') ?? 'firebird';
+
+const voiceSelect = el<HTMLSelectElement>('throwVoice');
+for (const k of THROW_VOICE_KINDS) {
+  const option = document.createElement('option');
+  option.value = k;
+  option.textContent = THROW_VOICE_LABELS[k];
+  voiceSelect.append(option);
+}
+voiceSelect.addEventListener('change', () => {
+  voice = voiceSelect.value as ThrowVoice;
+  ship = SHURIKEN_SHIP;
+  gunSelect.value = ship;
+  applyVoice();
+});
+
+/** Put the chosen voice on the air: every cue as the prewarm baked it, but the throw from its row. */
+function applyVoice(): void {
+  const base = takePrewarmed()?.cues;
+  if (!out.ready() || base === undefined) return;
+  const row = ROWS[voice];
+  const streams = makeRng('throw-voices');
+  const samples = base.slice();
+  samples[CUE_KINDS.indexOf('throw')] = velocitiesOf(row).map((velocity) => sampleCue(row, SAMPLE_RATE, streams.stream('throw'), velocity));
+  out.setCues(samples);
+}
 
 // ── THE LAYER TABLE ─────────────────────────────────────────────────────────────────────────────
 
@@ -1115,7 +1175,7 @@ const cueBody = el<HTMLTableSectionElement>('cues').querySelector('tbody')!;
 const silenced = new Set<string>();
 
 function drawCues(): void {
-  const lines = cueLines(tier, now().rung, killsPerSecond);
+  const lines = cueLines(tier, now().rung, killsPerSecond, ship);
   cueBody.replaceChildren();
   for (const line of lines) {
     const tr = document.createElement('tr');
@@ -1202,13 +1262,13 @@ function flash(kindName: string): void {
  */
 function cuesOnStep(step: number, rung: MusicLevel): void {
   if (!cuesOn) return;
-  const weapon = weaponAtTier(tier);
+  const weapon = weaponAtTier(tier, ship);
   const play = (name: Parameters<typeof speaker.play>[0], across: number): void => {
     if (silenced.has(name)) return;
     speaker.play(name, across);
     flash(name);
   };
-  if (step % weapon.fireEvery === 0) play('pulse', shipAcross);
+  if (step % weapon.fireEvery === 0) play(cueOfFlight(weapon.flight), shipAcross);
   if (weapon.launchers > 0 && step % weapon.missileEvery === 0) play('missile', shipAcross);
   // A boss holds a station and drifts across it (0061); the middle is the honest stand-in.
   if ((rung === 'boss' || rung === 'bossPeak') && step % 72 === 0) play('bossShot', ACROSS_SPAN / 2);
@@ -1561,7 +1621,7 @@ function drawSpans(): void {
  */
 function momentAsText(moment: Moment): string {
   const music = out.music();
-  const lines = cueLines(tier, moment.rung, killsPerSecond).filter((c) => c.sounds);
+  const lines = cueLines(tier, moment.rung, killsPerSecond, ship).filter((c) => c.sounds);
   const sounding = moment.layers.filter((l) => l.target > 0 || held.has(l.layer));
   const silent = moment.layers.filter((l) => l.target <= 0 && !held.has(l.layer)).map((l) => l.layer);
   /*

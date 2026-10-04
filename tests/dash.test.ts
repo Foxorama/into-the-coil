@@ -41,7 +41,13 @@ import { LEVELS, LEVEL_KINDS } from '../src/content/levels.ts';
 import { auraBuild, auraFor, levelWrites, musicLevelFor } from '../src/app/music.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
-import { SHIPS, shipCarrying } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
+import { cueOfFlight } from '../src/app/frame.ts';
+import { CUES } from '../src/content/cues.ts';
+import { MASTER_GAIN, SAMPLE_RATE, sampleCue, variantAt, velocitiesOf } from '../src/app/sound.ts';
+import { makeRng } from '../src/sim/rng.ts';
+import { loudest } from './spectrum.ts';
+import { ROWS as THROW_ROWS, THROW_VOICE_KINDS } from '../rig/throws.ts';
 import { UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
 
 /**
@@ -1034,5 +1040,48 @@ describe('the rig is not in the game, and the game is not in the rig', () => {
       `the desk tops out at ${DESK_CEILING.toFixed(2)} and ${who} ships at ${loudest.toFixed(2)} — maxing that fader turns the layer DOWN`,
     ).toBeGreaterThanOrEqual(loudest);
     expect(LOUDEST_SHIPPED, 'the rig disagrees with the tables about the loudest gain').toBeCloseTo(loudest, 6);
+  });
+});
+
+describe('0495 — the shuriken’s listening set', () => {
+  /*
+    *"The shuriken's sound — a listening set, not a guess."* The desk puts the shipped throw and four
+    candidates over a level while it plays. Three claims the desk makes about what it is playing, each a
+    way it could be judging a sound the game would not make.
+  */
+  const loudOf = (samples: Float32Array): number => 20 * Math.log10(Math.max(loudest(samples, SAMPLE_RATE) * MASTER_GAIN, 1e-12));
+
+  it('THE GUN ON THE DESK: each ship fires its own gun’s cue at its own cadence, and the shuriken’s is the throw', () => {
+    for (const ship of SHIP_KINDS) {
+      const weapon = weaponAtTier(0, ship);
+      const gun = cueLines(0, 'run', 1.6, ship)[0]!;
+      expect(gun.kind, `the desk fires the ${ship} with another ship’s gun`).toBe(cueOfFlight(weapon.flight));
+      expect(gun.every, `the desk fires the ${ship} off its cadence`).toBe(weapon.fireEvery);
+    }
+    expect(cueLines(0, 'run', 1.6, shipCarrying('shuriken'))[0]!.kind, 'the shuriken’s gun is not the throw').toBe('throw');
+  });
+
+  it('THE SET SITS WHERE A GUN SITS: no voice on the desk is louder than the loudest gun the game ships', () => {
+    /*
+      ⚠️ **A-WEIGHTED, AT THE BUS, IN THE PLAYER'S DECIBELS** — `scripts/weigh-cue.mjs --loud`'s own
+      column. A candidate louder than every gun would win a listen for being loud, which is the defect
+      0463 found on the ray gun and not an answer to the question asked.
+    */
+    const guns = (['pulse', 'arc', 'ray', 'throw'] as const).map((kind) => loudOf(sampleCue(CUES[kind], SAMPLE_RATE, makeRng('dash').stream(kind))));
+    const ceiling = Math.max(...guns);
+    for (const voice of THROW_VOICE_KINDS) {
+      const loud = loudOf(sampleCue(THROW_ROWS[voice], SAMPLE_RATE, makeRng('dash').stream('throw')));
+      expect(loud, `${voice} is ${loud.toFixed(1)} dB against the loudest gun's ${ceiling.toFixed(1)}`).toBeLessThanOrEqual(ceiling + 0.5);
+    }
+  });
+
+  it('EVERY OTHER BLADE: on the shuriken’s cadence, that voice sounds on alternate throws and on no others', () => {
+    const row = THROW_ROWS.everyOther;
+    const weapon = weaponAtTier(0, shipCarrying('shuriken'));
+    const velocities = velocitiesOf(row);
+    const heard: boolean[] = [];
+    for (let step = 0; step < VOLLEY_CYCLE * 4; step += weapon.fireEvery) heard.push((velocities[variantAt(velocities.length, step)] ?? 0) > 0);
+    expect(heard.length, 'the shuriken fired fewer than four times in four volleys').toBeGreaterThanOrEqual(4);
+    heard.forEach((on, i) => expect(on, `throw ${i} is ${on ? 'heard' : 'silent'}`).toBe(i % 2 === 0));
   });
 });

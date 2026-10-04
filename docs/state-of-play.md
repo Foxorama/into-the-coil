@@ -1161,7 +1161,7 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
-### ⚠️ THE BOSSES' LOOK IS BEING BUILT, IN THE PLAN'S ORDER, AND NONE OF IT HAS BEEN PLAYED — 2026-10-04
+### ⚠️ THE BOSSES' LOOK IS BUILT, IN THE PLAN'S ORDER, AND NONE OF IT HAS BEEN PLAYED — 2026-10-04
 
 [`the-bosses-look-planned`](../reports/the-bosses-look-planned-2026-10-04.md) is the plan and **holds
 the order, so this file does not.** Landed, one PR each, every one owed a play on its own *Owed*:
@@ -1188,11 +1188,16 @@ the order, so this file does not.** Landed, one PR each, every one owed a play o
 - item 9, the serpent — [0487](decisions/0487-the-storm-is-lightning.md) and
   [0488](decisions/0488-the-roots-are-roots.md);
 - item 10, the heart and the jellyfish — [0489](decisions/0489-the-heart-has-a-chamber.md),
-  [0490](decisions/0490-the-tentacles-are-tentacles.md) and [0491](decisions/0491-the-glow-is-its-health.md).
+  [0490](decisions/0490-the-tentacles-are-tentacles.md) and [0491](decisions/0491-the-glow-is-its-health.md);
+- item 11 — the shields in each ship's livery, [0492](decisions/0492-the-shields-wear-the-ship.md); the
+  caddie's gun under the lip, [0493](decisions/0493-the-ray-gun-hangs-under-the-lip.md); the gyre's own
+  shot, [0494](decisions/0494-the-gyre-throws-its-own.md);
+- item 12, the shuriken's listening set — [0495](decisions/0495-the-throw-is-a-listening-set.md).
 
-**Next is the plan's item 11** (shields in the livery, the caddie's gun under the lip, the gyre's teeth), then
-item 12, the shuriken's listening set on the dash. Item 4.2, the gyre's hole per
-stance, is still not built without the player's word, against [0151](decisions/0151-the-gap-you-have-to-reach.md).
+**Nothing in the plan is left to build.** What is next is the plays each decision owes, and **the listen**:
+`npm run dash`, the shuriken's voice selector, and the voice picked becomes the throw in a PR of its own. Item
+4.2, the gyre's hole per stance, is still not built without the player's word, against
+[0151](decisions/0151-the-gap-you-have-to-reach.md).
 
 ### ⚠️ THE CHROME AND THE SHIPS ARE REVIEWED, AND THE QUEUE IS BEING BUILT — 2026-10-03
 

@@ -46,8 +46,13 @@
 //
 // Usage:
 //   node --experimental-transform-types --import ./scripts/ts.mjs scripts/weigh-fit.mjs
-//        [--only=bossAcid,bossVoid] [--place=approach] [--rung=boss] [--json]
+//        [--only=bossAcid,bossVoid] [--place=approach] [--rung=boss] [--json] [--from=rig/throws.ts]
+//
+// `--from=` reads the rows a module exports as `ROWS` instead of the place's own cues — a listening set's
+// candidates, against the same bed (0495).
 
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { CUE_KINDS, MUSIC_ROOT, SCALE } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, sampleCue, saturate } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -65,8 +70,12 @@ const asJson = args.includes('--json');
 if (!THEME_KINDS.includes(place)) throw new Error(`--place=${place} is no theme: ${THEME_KINDS.join(', ')}`);
 if (!MUSIC_LEVELS.includes(rung)) throw new Error(`--rung=${rung} is no rung: ${MUSIC_LEVELS.join(', ')}`);
 
-const kinds = only ? only.split(',') : CUE_KINDS;
-for (const kind of kinds) if (!CUE_KINDS.includes(kind)) throw new Error(`${kind} is no cue`);
+const from = args.find((a) => a.startsWith('--from='))?.slice('--from='.length);
+const table = from === undefined ? null : (await import(pathToFileURL(resolve(from)).href)).ROWS;
+if (from !== undefined && table === undefined) throw new Error(`${from} exports no ROWS`);
+const known = table === null ? CUE_KINDS : Object.keys(table);
+const kinds = only ? only.split(',') : known;
+for (const kind of kinds) if (!known.includes(kind)) throw new Error(`${kind} is no cue`);
 
 /*
   ⚠️ **THE ARITHMETIC IS `tests/spectrum.ts`'s AND IS NOT REPEATED HERE**, on `weigh-heard.mjs`'s own
@@ -155,7 +164,7 @@ if (args.includes('--layers')) {
   rows.push(measure('THE BED', bed));
 } else {
   for (const kind of kinds) {
-    const row = cueRowOf(place, kind);
+    const row = table === null ? cueRowOf(place, kind) : table[kind];
     const samples = sampleCue(row, SAMPLE_RATE, makeRng('weigh-fit').stream(kind), 1);
     for (let i = 0; i < samples.length; i++) samples[i] *= MASTER_GAIN;
     rows.push(measure(kind, samples));

@@ -25,9 +25,13 @@
 // column that moved when the mix moved would report a re-voice that never happened. The bands are
 // normalised to the cue's own loudest, exactly as `tests/spectrum.ts` does for the guards.
 //
-// Usage:  node scripts/weigh-cue.mjs [--only=pulse,kill] [--loud] [--json]
+// Usage:  node scripts/weigh-cue.mjs [--only=pulse,kill] [--loud] [--json] [--from=rig/throws.ts]
 //
 // `--json` prints one object per cue, for diffing two runs against each other rather than by eye.
+//
+// `--from=` weighs the rows a module exports as `ROWS` instead of `CUES` — candidates that are not in the
+// game yet, measured by the same arithmetic as the ones that are, so a listening set is offered only
+// once its numbers sit where a cue of its kind sits (0495).
 //
 // ⚠️ `--loud` IS THE EXCEPTION TO THE PARAGRAPH ABOVE AND IS OFF BY DEFAULT FOR THE REASON IT GIVES.
 // Every other column here is a ratio, so that a re-voice reads as a change and a mix move does not.
@@ -41,6 +45,8 @@
 //          written in. `loudest` in tests/spectrum.ts is the measure, and its header says why the mean
 //          over the whole cue was tried first and said a longer, heavier sound was a quieter one.
 
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { CUES, CUE_KINDS } from '../src/content/cues.ts';
 import { MASTER_GAIN, SAMPLE_RATE, cueSeconds, sampleCue } from '../src/app/sound.ts';
 import { makeRng } from '../src/sim/rng.ts';
@@ -48,6 +54,9 @@ import { BANDS, centroid, loudest, spectrum } from '../tests/spectrum.ts';
 
 const args = process.argv.slice(2);
 const only = args.find((a) => a.startsWith('--only='))?.slice('--only='.length);
+const from = args.find((a) => a.startsWith('--from='))?.slice('--from='.length);
+const table = from === undefined ? CUES : (await import(pathToFileURL(resolve(from)).href)).ROWS;
+if (table === undefined) throw new Error(`${from} exports no ROWS`);
 const asJson = args.includes('--json');
 const loud = args.includes('--loud');
 
@@ -81,12 +90,12 @@ function crestDb(samples, rate) {
  */
 const loudDb = (samples) => db(loudest(samples, SAMPLE_RATE) * MASTER_GAIN);
 
-const kinds = only ? only.split(',') : CUE_KINDS;
+const kinds = only ? only.split(',') : from === undefined ? CUE_KINDS : Object.keys(table);
 const rows = [];
 
 for (const kind of kinds) {
-  const row = CUES[kind];
-  if (row === undefined) throw new Error(`no cue named ${kind} — the kinds are: ${CUE_KINDS.join(', ')}`);
+  const row = table[kind];
+  if (row === undefined) throw new Error(`no cue named ${kind} — the kinds are: ${Object.keys(table).join(', ')}`);
   const samples = sampleCue(row, SAMPLE_RATE, makeRng('cues').stream(kind));
   const seconds = cueSeconds(row);
   const bands = spectrum(samples, SAMPLE_RATE);
