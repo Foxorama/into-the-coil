@@ -3051,6 +3051,50 @@ describe('0459 — the serpent lurks in the world tree’s roots', () => {
   });
 });
 
+describe('0498 — the roots meet the edge of every screen', () => {
+  /** A surface that keeps where each blit landed, in CSS pixels. */
+  class Blits implements Surface {
+    readonly at: { sprite: number; x: number }[] = [];
+    clear(): void {}
+    blit(sprite: number, x: number): void {
+      this.at.push({ sprite, x });
+    }
+    bolt(): void {}
+  }
+
+  it('THE REPORTED ONE, IN SHARES OF THE SCREEN: the far roots stand where they stand on a 16:9 monitor on a phone and on the widest screen too, rather than four fifths of the way over with sky past them', () => {
+    /*
+      *"The screensize mobile with the walls we added to the serpent level is pretty bad."* Photographed
+      on a 19.5:9 phone, the far roots stood at about four fifths of the screen, with open sky past them
+      and the serpent's body running across it. The picture's own units: how far the farthest root's
+      centre lands from the screen's far edge, in screen heights — the one length every screen draws at
+      the same scale, since the lane is the height on all of them.
+    */
+    const { world, frame } = serpentAt(1);
+    for (let i = 0; i < 60; i++) {
+      world.ship.health = world.shipRow.health;
+      world.bossPool.at(0).fireIn = 999;
+      frame.step();
+    }
+    const room = world.room!;
+    const roots = new Set((room.pieces ?? []).filter((p) => !p.entrance).map((p) => p.sprite));
+    const farthestShare = (width: number, height: number): number => {
+      const view = viewOf(width, height);
+      const surface = new Blits();
+      paintScene(surface, view, [], world.cameraAlong, 1, undefined, null, undefined, 0, room);
+      let far = -Infinity;
+      for (const b of surface.at) if (roots.has(b.sprite)) far = Math.max(far, b.x);
+      return (far - view.gutterAlong - view.alongSpan * view.scale) / (ACROSS_SPAN * view.scale);
+    };
+    const monitor = farthestShare(1920, 1080);
+    expect(monitor, 'no root was drawn at all, so nothing below was asked').toBeGreaterThan(-0.5);
+    for (const [w, h, name] of [[844, 390, 'a 19.5:9 phone'], [2400, 1000, 'the widest screen']] as const) {
+      const share = farthestShare(w, h);
+      expect(Math.abs(share - monitor), `on ${name} the far roots stand ${share.toFixed(3)} screen heights past its far edge against the monitor's ${monitor.toFixed(3)}`).toBeLessThan(0.01);
+    }
+  });
+});
+
 describe('0487 — the storm is lightning', () => {
   /** A surface that keeps each bolt's points, so a stroke can be asked where it is. */
   class Points implements Surface {

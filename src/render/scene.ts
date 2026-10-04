@@ -19,7 +19,7 @@ import { knotOf, opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
-import { PLAYER_MARGIN } from '../sim/flight.ts';
+import { PLAYER_ALONG_SPAN, PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
@@ -827,11 +827,22 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
   */
   const pieces = room.pieces;
   if (pieces !== null) {
+    /*
+      ⚠️ **THE FRAME HANGS FROM THE SCREEN'S FAR EDGE, NOT ITS NEAR ONE — 0498.** The pieces are
+      authored on the 16:9 screen, the narrowest any device gets. A phone shows up to 47 units more
+      along, and placed from the near edge the far roots stood at four fifths of it with open sky past
+      them and the serpent's body running across that sky. Moved on by however much more this screen
+      shows, the frame is the same picture on every device: the far side framed, the near side open.
+      The knot is not moved, because it is where the serpent coils, and the serpent is in the world.
+      Every piece moves AWAY from the ship, so the picture of the bound is still outside the bound.
+    */
+    const past = Math.max(0, view.alongSpan - PLAYER_ALONG_SPAN);
     for (let i = 0; i < pieces.length; i++) {
       const piece = pieces[i]!;
       const alpha = piece.entrance ? room.knot : 1;
       if (alpha <= 0) continue;
-      const along = room.rest + piece.along + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
+      const hung = piece.entrance ? 0 : past;
+      const along = room.rest + piece.along + hung + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
       surface.blit(piece.sprite, screenX(view, along, piece.across), screenY(view, along, piece.across), view.scale, piece.turn, alpha);
     }
   }
