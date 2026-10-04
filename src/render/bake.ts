@@ -2272,21 +2272,34 @@ function roundel(cx: number, cy: number, radius: number, count: number, from: nu
   is the review; the player chose this of three directions.
 */
 
-/** The ray gun, in the box's radius: the housing set into the rim, its lens, the barrel's half-width and the orb. */
+/*
+  ── UNDER THE LIP, AND THE MUZZLE IS A RING — 0493 ──────────────────────────────────────────────
+
+  Played: *"on the little caddie the raygun sits above the ship instead of under it, and it's weird
+  that it has a small pointed end, but fires a large circular projectile."* It was painted over the
+  dome, so from above it read as a thing sitting on the saucer. Now the housing is painted before the
+  disc, which covers it to the rim: what shows is the housing's front past the rim, in the rim's
+  shadow, a short barrel, and the muzzle. The muzzle is an open dish the size of the smallest ring the
+  gun fires, lit lavender inside, with no orb and no point. The tip did not move, so the row's `muzzle`
+  and the mounts guard are unchanged.
+*/
+
+/** The ray gun, in the box's radius: the housing under the rim, its lens, the barrel's half-width and the dish. */
 const RAYGUN = {
-  /** The emitter housing: a ball with its centre inside the rim, so half of it stands proud of the disc. */
+  /** The emitter housing: a ball with its centre inside the rim, so its front stands out past the disc. */
   housing: { x: 0.6, r: 0.22 },
-  /** The lens in its face, and the white heart of the lens. */
+  /** The lens in its face and its white heart: seen only from the side, in the hangar — on top the disc covers it. */
   lens: 0.145,
   /** 0.055 and not 0.05: at 1280×720 the smaller was 2.37 px across, under 0106's floor for a solid mark. */
   heart: 0.055,
-  /** The barrel's half-width, from the housing to the orb. */
+  /** The barrel's half-width, from the housing to the dish. */
   barrel: 0.08,
   /**
-   * The orb at the muzzle; its front is the tip, where the rings leave. Smaller than the lens, so the
-   * gun reads as a lens with a muzzle and not as a dumbbell of two lavender balls.
+   * The dish at the muzzle; its front is the tip, where the rings leave. Its radius is the ray's
+   * smallest ring (`ray`'s first band, 0.24 of its 1.85-unit radius, 0.44 units) in this box's 3.95-unit radius, so
+   * the gun's mouth is the size of what comes out of it — 0493.
    */
-  orb: { x: 1.05, r: 0.08 },
+  dish: { x: 1.13 - 0.112, r: 0.112 },
   tip: 1.13,
 };
 
@@ -2386,25 +2399,25 @@ function caddieHull(stage: number): Pt[] {
 
 /**
  * The ray gun's outline outside the rim, from the housing's seat in the rim on the upper side, round
- * the housing, along the barrel and round the orb to the tip, and back down the lower side — the
+ * the housing, along the barrel and round the dish to the tip, and back down the lower side — the
  * hull's, and the hangar's side view strokes it round a gun of its own. 0467.
  */
 export function raygunProfile(): Pt[] {
   const { x: hx, r: hr } = RAYGUN.housing;
-  const { x: ox, r: or } = RAYGUN.orb;
+  const { x: ox, r: or } = RAYGUN.dish;
   const seat = housingSeat();
-  // Where the barrel's edge leaves the housing, and where it arrives at the orb, as angles about each.
+  // Where the barrel's edge leaves the housing, and where it arrives at the dish, as angles about each.
   const leaves = Math.asin(RAYGUN.barrel / hr);
   const arrives = Math.PI - Math.asin(RAYGUN.barrel / or);
   // The upper side: negative `across`. The barrel is the straight run between the two arcs, and the
-  // orb's arc ends on the tip exactly.
+  // dish's arc ends on the tip exactly.
   const gun: Pt[] = [...roundel(hx, 0, hr, 10, -seat.onHousing, -leaves), ...roundel(ox, 0, or, 10, -arrives, 0)];
   // The tip is shared, so the mirror starts one point back.
   return [...gun, ...mirrored(gun).reverse().slice(1)];
 }
 
 /**
- * Where the saucer's gun and pods are DRAWN, in the box's radius: the orb's tip, and the warhead's
+ * Where the saucer's gun and pods are DRAWN, in the box's radius: the dish's tip, and the warhead's
  * point in each pod at one tube and two — 0461, on `carMounts`' terms. `tests/mounts.test.ts` holds the
  * caddie's row to these.
  */
@@ -2415,20 +2428,21 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
 }
 
 /**
- * The ray gun — 0467, and it was a stick. A chrome ball set into the rim with a lavender lens in its
- * face, the rings it fires glowing in the lens about a white heart; a short chrome barrel with a line
- * of that light down it; and the ball of light at the end that the rings leave from. Painted over a
- * hull that already holds its shape; the hangar's side view lays the same gun on its own outline
- * (`paintSaucer` in `port-bake.ts`), where the housing stands proud of the rim's edge and has no seat
- * in a face to shadow, which is what `onDisc` turns off.
+ * The ray gun — 0467, and under the lip since 0493. A chrome emitter housing with a lavender lens in its
+ * face, a short chrome barrel with a line of the rings' light down it, and an open dish at the muzzle,
+ * lit inside, that the rings leave from. On the disc (`onDisc`) it is painted BEFORE the disc's face, so
+ * the face covers the housing to the rim: only its front shows, dark where the rim's shadow falls across
+ * it, and the lens is not drawn at all. The hangar's side view lays the same gun on its own outline
+ * (`paintSaucer` in `port-bake.ts`), where the housing hangs under the rim's edge and its lens is seen,
+ * which is what `onDisc` false keeps.
  */
 export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true): void {
   const chrome = shade(palette.trim, 0.65);
   const b = RAYGUN.barrel;
   const { x: hx, r: hr } = RAYGUN.housing;
-  const { x: ox, r: or } = RAYGUN.orb;
-  // The barrel first, so the housing and the orb sit over its ends: chrome lit along its top, the
-  // rings' light down its middle.
+  const { x: ox, r: or } = RAYGUN.dish;
+  // The barrel first, so the housing and the dish sit over its ends: chrome lit along its top, the
+  // rings' light down its middle to the dish's mouth.
   shaded(ctx, f, [0, -b], [0, b], shade(chrome, 0.4), shade(chrome, -0.35), [
     [hx, -b],
     [ox, -b],
@@ -2437,24 +2451,28 @@ export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true)
   ]);
   seam(ctx, f, shade(palette.ally, 0.35), 0.045, [
     [hx + hr * 0.8, 0],
-    [ox, 0],
+    [ox - or * 0.7, 0],
   ], 0.9);
-  // The housing's seat: a shadow on the disc's face round the ball's back, so it sits IN the hull.
-  if (onDisc) disc(ctx, f, shade(palette.space, 0.12), hx - 0.03, 0, hr * 1.04, 0.6);
-  // The ball: chrome, lit above and ahead, dark below and behind.
-  shaded(ctx, f, [hx + hr * 0.2, -hr], [hx - hr * 0.2, hr], shade(chrome, 0.55), shade(chrome, -0.45), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
-  // The lens: the rings' lavender, deep at its edge, two rings of light in it about the heart.
-  const lens = RAYGUN.lens;
-  shaded(ctx, f, [hx, -lens], [hx, lens], shade(palette.ally, 0.05), shade(palette.ally, -0.5), roundel(hx, 0, lens, 24, 0, Math.PI * 2));
-  seam(ctx, f, shade(palette.ally, 0.45), 0.04, roundel(hx, 0, lens * 0.74, 18, 0, Math.PI * 2), 0.9, true);
-  seam(ctx, f, shade(palette.ally, 0.6), 0.04, roundel(hx, 0, lens * 0.44, 14, 0, Math.PI * 2), 0.9, true);
-  glow(ctx, f, palette.ally, hx, 0, lens * 1.25, 0.65);
-  disc(ctx, f, palette.impact, hx + 0.01, 0, RAYGUN.heart);
-  // The orb: the rings' lavender with a white-hot heart, and its light — short of the box's edge,
-  // because a glow past 1.16 of the radius runs into the next bitmap.
-  disc(ctx, f, shade(palette.ally, 0.25), ox, 0, or - 0.005);
-  glow(ctx, f, palette.ally, ox, 0, 0.105, 0.8);
-  disc(ctx, f, palette.impact, ox + 0.01, 0, 0.055);
+  if (onDisc) {
+    // The ball, in the rim's shadow: dark where it comes out from under the rim, lit toward the muzzle.
+    shaded(ctx, f, [CADDIE_DISC, 0], [hx + hr, 0], shade(chrome, -0.6), shade(chrome, 0.3), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
+  } else {
+    // The ball: chrome, lit above and ahead, dark below and behind.
+    shaded(ctx, f, [hx + hr * 0.2, -hr], [hx - hr * 0.2, hr], shade(chrome, 0.55), shade(chrome, -0.45), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
+    // The lens: the rings' lavender, deep at its edge, two rings of light in it about the heart.
+    const lens = RAYGUN.lens;
+    shaded(ctx, f, [hx, -lens], [hx, lens], shade(palette.ally, 0.05), shade(palette.ally, -0.5), roundel(hx, 0, lens, 24, 0, Math.PI * 2));
+    seam(ctx, f, shade(palette.ally, 0.45), 0.04, roundel(hx, 0, lens * 0.74, 18, 0, Math.PI * 2), 0.9, true);
+    seam(ctx, f, shade(palette.ally, 0.6), 0.04, roundel(hx, 0, lens * 0.44, 14, 0, Math.PI * 2), 0.9, true);
+    glow(ctx, f, palette.ally, hx, 0, lens * 1.25, 0.65);
+    disc(ctx, f, palette.impact, hx + 0.01, 0, RAYGUN.heart);
+  }
+  // The dish: a chrome lip round a mouth deep in the rings' lavender, with a ring of their light lit in
+  // it. A ring goes in and a ring comes out, and nothing about it is a point.
+  disc(ctx, f, shade(palette.ally, -0.45), ox, 0, or);
+  glow(ctx, f, palette.ally, ox, 0, or * 0.9, 0.75);
+  seam(ctx, f, shade(palette.ally, 0.55), 0.03, roundel(ox, 0, or * 0.5, 16, 0, Math.PI * 2), 0.95, true);
+  seam(ctx, f, shade(chrome, 0.35), 0.035, roundel(ox, 0, or - 0.02, 20, 0, Math.PI * 2), 1, true);
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
@@ -2734,6 +2752,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   ctx.fillStyle = body;
   trace(ctx, f, caddieHull(stage));
   seal(ctx);
+  // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
+  paintRaygun(ctx, f, palette);
   if (stage >= 1) paintPod(ctx, f, palette, -1);
   if (stage >= 2) paintPod(ctx, f, palette, 1);
   // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
@@ -2762,7 +2782,6 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   disc(ctx, f, shade(palette.glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, 0.7);
   seam(ctx, f, shade(palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
   disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
-  paintRaygun(ctx, f, palette);
 }
 
 /** A steel star about `(x, y)` in the predecessor's frame, `reach` out: one polygon, one mark. */
