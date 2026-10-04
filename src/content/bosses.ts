@@ -764,7 +764,7 @@ export type CurtainStance = (typeof CURTAIN_STANCES)[number];
 /**
  * The gyre's hole for each way its wall stands — `atBy` on its row.
  *
- * ⚠️ **A HOLE PER STANCE — 0498**: *"I want the holes to be in different positions to keep the player
+ * ⚠️ **A HOLE PER STANCE — 0501**: *"I want the holes to be in different positions to keep the player
  * actively moving around the screen."* Each wall's hole is far from the last one's: the walls across
  * the lane swap edges (the backslant's 31 runs from the far edge, so it opens at 89 across), and the
  * four along the lane swap ends, the front at three fifths of the line and the back at a quarter.
@@ -774,7 +774,7 @@ const GYRE_HOLES: Readonly<Record<CurtainStance, number>> = { across: 31, backsl
 
 /**
  * Where a wall standing this way leaves its hole, as a share of the lane in `at`'s units — the row's
- * own place for that stance, or `at` — 0498. The one reader, so the thrower, the instruments and the
+ * own place for that stance, or `at` — 0501. The one reader, so the thrower, the instruments and the
  * guards cannot disagree about where the hole is.
  */
 export function holeAt(uncoil: Uncoil, stance: CurtainStance): number {
@@ -853,7 +853,7 @@ export interface Uncoil {
   at: number;
   /**
    * Where the hole stands on each way the wall can stand, as `at` does, or `null` for `at` on every one —
-   * `docs/decisions/0498-the-hole-moves-with-the-wall.md`.
+   * `docs/decisions/0501-the-hole-moves-with-the-wall.md`.
    *
    * ⚠️ **ASKED FOR, OVER 0151**: *"I want the holes to be in different positions to keep the player
    * actively moving around the screen."* The hole was one share of every line, and on a spinning wall
@@ -4172,7 +4172,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       fewer walls and all of them whole, which is the trade 0040 already makes about a short fight.
     */
     // `at` 26 → 31 with 0364's zoom, on the chorus's terms.
-    // Its hole per stance, `GYRE_HOLES` — 0498.
+    // Its hole per stance, `GYRE_HOLES` — 0501.
     uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, atBy: GYRE_HOLES, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },
     fall: null,
     chill: null,

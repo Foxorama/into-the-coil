@@ -1,4 +1,4 @@
-# 0498 — The hole moves with the wall
+# 0501 — The hole moves with the wall
 
 **Accepted 2026-10-04.** Item 4.2 of [`the-bosses-look-planned`](../../reports/the-bosses-look-planned-2026-10-04.md),
 on the player's word: *"I want the holes to be in different positions to keep the player actively moving around the
@@ -45,7 +45,7 @@ wall at Burn on the shuriken is a shot short **on main as well**, so it is not t
 
 `tests/gyre.test.ts`:
 
-- **0498 — THE HOLES MOVE**: driven through all eight walls, in the units the ship flies (a hole's across for a wall
+- **0501 — THE HOLES MOVE**: driven through all eight walls, in the units the ship flies (a hole's across for a wall
   across the lane, its distance ahead of the camera for one along it). No two consecutive walls of the same kind open
   within a hole's width of each other. Red on main.
 - *THE EIGHT WALLS, DRIVEN* asks each wall's hole at its stance's own share. *The wall from astern* flies to the
@@ -56,7 +56,7 @@ lane* of every stance.
 
 ## Seen to fail
 
-[0005](0005-a-guard-must-be-seen-to-fail.md). `node scripts/prove-guard.mjs 0498`:
+[0005](0005-a-guard-must-be-seen-to-fail.md). `node scripts/prove-guard.mjs 0501`:
 
 | broken on purpose | went red |
 |---|---|

@@ -40,7 +40,7 @@ export const PROBES = [
     guard: 'THE EIGHT WALLS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      // ⚠️ Re-anchored by 0498, whose hole is the stance's own place.
+      // ⚠️ Re-anchored by 0501, whose hole is the stance's own place.
       find: '  const hole = (holeAt(uncoil, stance) / ACROSS_SPAN) * length;',
       replace: '  const hole = holeAt(uncoil, stance);',
     },

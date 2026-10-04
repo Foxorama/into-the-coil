@@ -237,7 +237,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(LEVELS.shoal.theme).toBe('labyrinth');
   });
 
-  it('0498 — THE HOLES MOVE: each wall’s hole is away from the one before it, where the ship has to be', () => {
+  it('0501 — THE HOLES MOVE: each wall’s hole is away from the one before it, where the ship has to be', () => {
     /*
       *"I want the holes to be in different positions to keep the player actively moving around the
       screen."* Driven through all eight walls, in the units the player flies: a wall across the lane is
@@ -383,7 +383,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
         read off the curtain the fight threw; `length` is a shot short of the whole line at each end,
         which is what the spacing in the tolerance pays for.
       */
-      // The stance's own share since 0498, which gave each way the wall stands its own hole.
+      // The stance's own share since 0501, which gave each way the wall stands its own hole.
       const expected = (holeAt(gyre, stance) / ACROSS_SPAN) * (length + spacing);
       expect(
         Math.abs(centre - expected),
@@ -475,7 +475,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       let thrown = -1;
       // The hole's across on a wall that stands across the lane is the row's own `at`, and the far
       // corner from it is whichever lane edge is further away.
-      // The wall from astern's own hole since 0498.
+      // The wall from astern's own hole since 0501.
       const target = holeAt(gyre, 'astern');
       const start = target < ACROSS_SPAN / 2 ? ACROSS_SPAN - PLAYER_MARGIN : PLAYER_MARGIN;
       /*

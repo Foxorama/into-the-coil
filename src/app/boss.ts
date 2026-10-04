@@ -369,7 +369,7 @@ export function throwCurtain(
   // absorbs that; leaning or along, the line is longer and the last shot lands where its end would.
   const count = Math.round(length / spacing);
   const clear = uncoil.hole / 2;
-  // The hole is its stance's place along the line as `at` is across the lane: a share of its length — 0498.
+  // The hole is its stance's place along the line as `at` is across the lane: a share of its length — 0501.
   const hole = (holeAt(uncoil, stance) / ACROSS_SPAN) * length;
   // `<=` so the far edge gets one too: a curtain that stopped short of the lane's end would have a
   // second opening at exactly the place a cornered player is already flying.
