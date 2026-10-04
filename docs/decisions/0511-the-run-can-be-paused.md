@@ -22,7 +22,7 @@ a two-second count-in, and a quit asks once and is kept on the table.**
 
 ## Why the audio clock and not only the world
 
-The music free-runs on `AudioContext.currentTime` ([0160](0160-the-music-is-the-clock.md)), and the
+The music free-runs on `AudioContext.currentTime` ([0160](0160-the-music-free-runs.md)), and the
 volleys authored to the beat are phased against it. A pause that stopped the world and muted the music
 would leave the clock counting: the run would resume with its volleys off the beat by however long the
 pause lasted. Suspending the context stops `currentTime`, so the music and the run resume together
