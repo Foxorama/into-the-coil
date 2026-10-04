@@ -68,6 +68,8 @@ export function withTheGame(port: Atlas, game: Atlas): Atlas {
     ...port,
     bitmaps: [...port.bitmaps, ...game.bitmaps],
     extents: [...port.extents, ...game.extents],
+    // The game's lights at the game's indices — 0458. The port's own pieces are all body.
+    light: [...port.bitmaps.map(() => false), ...(game.light ?? game.bitmaps.map(() => false))],
   };
 }
 

@@ -14,6 +14,35 @@ import type { Atlas } from './bake.ts';
 import type { Surface } from './surface.ts';
 
 /**
+ * A bolt's two WIDE strokes — the bloom and the flash, added under everything — as multiples of the
+ * core's width and shares of its alpha — 0458. `src/render/bolt-inks.ts` holds them under a flash
+ * and says how; they are here because this is the file that strokes them, and that one may reach the
+ * baker where this one may not.
+ */
+export const BOLT_BLOOM_WIDTH = 22;
+export const BOLT_BLOOM_ALPHA = 0.5;
+export const BOLT_FLASH_WIDTH = 9;
+export const BOLT_FLASH_ALPHA = 0.7;
+
+/** What a bolt is stroked in: a glow, its hot inner shade, a core, and how much of the wide strokes it may keep. */
+export interface BoltInk {
+  readonly glow: string;
+  readonly hot: string;
+  readonly core: string;
+  /** The share of the wide strokes' alpha this ink may keep — `wideScale` in `bolt-inks.ts`. */
+  readonly wide: number;
+}
+
+/** The player's bolt and the enemy's, and the dark halo they share. */
+export interface BoltInks {
+  readonly player: BoltInk;
+  readonly hostile: BoltInk;
+  readonly dark: string;
+}
+
+const UNSET: BoltInk = { glow: '#ffffff', hot: '#ffffff', core: '#ffffff', wide: 0 };
+
+/**
  * The device-pixel-ratio ceiling, per 0022.
  *
  * At DPR 3 a 1080p phone renders ~2.6M pixels a frame; the cap drops it to ~1.15M for a difference
@@ -33,12 +62,10 @@ export class CanvasSurface implements Surface {
   private width = 0;
   private height = 0;
   private space = '#000000';
-  private boltGlow = '#ffffff';
-  private boltCore = '#ffffff';
+  private boltInk = UNSET;
+  // The enemy's lightning — 0248. Its own inks; the dark halo is the same space.
+  private hostileInk = UNSET;
   private boltDark = '#000000';
-  // The enemy's lightning — 0248. Its own glow and core; the dark halo is the same space.
-  private hostileGlow = '#ffffff';
-  private hostileCore = '#ffffff';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
     this.atlas = atlas;
@@ -73,16 +100,14 @@ export class CanvasSurface implements Surface {
   }
 
   /**
-   * The two inks a bolt is stroked in — a wide translucent glow and a thin bright core — set with the
-   * palette rather than passed per call, on `setSpace`'s terms: a colour is a property of the palette
-   * the page is showing, and a string per stroke per frame would be a hash lookup on the hot path.
+   * The inks a bolt is stroked in — set with the palette rather than passed per call, on
+   * `setSpace`'s terms: a colour is a property of the palette the page is showing, and a string per
+   * stroke per frame would be a hash lookup on the hot path. Solved by `boltInks` (0458), once.
    */
-  setBolt(glow: string, core: string, dark: string, hostileGlow: string, hostileCore: string): void {
-    this.boltGlow = glow;
-    this.boltCore = core;
-    this.boltDark = dark;
-    this.hostileGlow = hostileGlow;
-    this.hostileCore = hostileCore;
+  setBolt(inks: BoltInks): void {
+    this.boltInk = inks.player;
+    this.hostileInk = inks.hostile;
+    this.boltDark = inks.dark;
   }
 
   clear(): void {
@@ -95,11 +120,19 @@ export class CanvasSurface implements Surface {
     if (bitmap === undefined || alpha <= 0) return;
     const size = this.atlas.extents[sprite]! * scale;
     const half = size / 2;
+    /*
+      ⚠️ **A LIGHT IS ADDED, NOT LAID OVER — `docs/decisions/0458-light-is-added.md`.** The same one
+      draw with the context's composite set round it and put back, on 0401's terms for alpha: what the
+      kind is decides it (`LIGHT_KINDS`), the atlas carries it, and nothing here allocates.
+    */
+    const light = this.atlas.light !== undefined && this.atlas.light[sprite] === true;
+    if (light) this.ctx.globalCompositeOperation = 'lighter';
     // 0401: a faded blit is the same one draw with the context's alpha set round it, and put back.
     if (alpha < 1) this.ctx.globalAlpha = alpha;
     if (turn === 0) {
       this.ctx.drawImage(bitmap, x - half, y - half, size, size);
       if (alpha < 1) this.ctx.globalAlpha = 1;
+      if (light) this.ctx.globalCompositeOperation = 'source-over';
       return;
     }
     /*
@@ -115,6 +148,7 @@ export class CanvasSurface implements Surface {
     ctx.drawImage(bitmap, -half, -half, size, size);
     ctx.restore();
     if (alpha < 1) ctx.globalAlpha = 1;
+    if (light) ctx.globalCompositeOperation = 'source-over';
   }
 
   /**
@@ -138,39 +172,69 @@ export class CanvasSurface implements Surface {
    *
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
    * context's own path, and the points are the caller's buffer.
+   *
+   * ── AND IT IS LIGHT, ADDED — `docs/decisions/0458-light-is-added.md` ──────────────────────────
+   *
+   * *"Can we make the game flashy and vibrant? In particular for lightning."* Every stroke but the
+   * dark halo is ADDED to what is under it now, so a bolt brightens the sky it crosses, two bolts
+   * burn white where they cross, and the glow is the ink at full saturation rather than a veil of it.
+   * A bloom wider than the old flash goes under everything, and a hot inner glow — the ink taken
+   * halfway to white — sits between the glow and the core, so the bolt runs white at its heart, ink
+   * at its edge and ink-coloured light round that. Six strokes of one path, still no `shadowBlur`.
+   *
+   * ⚠️ **THE CAP IS WHAT A STROKE IS NOT.** 0374's argument — thin strokes, not a change in the
+   * screen's brightness — is measured now (`scripts/weigh-flashes.mjs`, 0457), and the bloom's width
+   * and alpha were set against it rather than against taste.
    */
   bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void {
     if (count < 1) return;
     const ctx = this.ctx;
-    const glow = hostile ? this.hostileGlow : this.boltGlow;
-    const core = hostile ? this.hostileCore : this.boltCore;
+    const ink = hostile ? this.hostileInk : this.boltInk;
+    const glow = ink.glow;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
     ctx.moveTo(points[0]!, points[1]!);
     if (count === 1) ctx.lineTo(points[0]!, points[1]!);
     for (let i = 1; i < count; i++) ctx.lineTo(points[i * 2]!, points[i * 2 + 1]!);
-    // The flash and the dark halo wrap the bolt and not its dots: a dot with its own wash is a
-    // bead, a dot with its own halo is a dark disc punched in the flash, and the eye reads either as
-    // a string of lights rather than as one flash. A dot is its glow and its core.
+    // The bloom, the flash and the dark halo wrap the bolt and not its dots: a dot with its own wash
+    // is a bead, a dot with its own halo is a dark disc punched in the flash, and the eye reads either
+    // as a string of lights rather than as one flash. A dot is its glow and its core.
     if (count > 1) {
-      ctx.globalAlpha = alpha * 0.16;
+      const wide = alpha * ink.wide;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = wide * BOLT_BLOOM_ALPHA;
       ctx.strokeStyle = glow;
-      ctx.lineWidth = width * 14;
+      ctx.lineWidth = width * BOLT_BLOOM_WIDTH;
       ctx.stroke();
+      ctx.globalAlpha = wide * BOLT_FLASH_ALPHA;
+      ctx.lineWidth = width * BOLT_FLASH_WIDTH;
+      ctx.stroke();
+      ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = alpha * 0.5;
       ctx.strokeStyle = this.boltDark;
       ctx.lineWidth = width * 6;
       ctx.stroke();
     }
-    ctx.globalAlpha = alpha * 0.4;
+    /*
+      ⚠️ **THE GLOW IS STILL FOUR TIMES THE CORE, AND A BEAM DEPENDS ON IT.** `paintBolts` strokes a
+      hostile beam at a quarter of its hurt width so that THIS edge — the bright one, against the dark
+      halo — is exactly where it hurts (`src/render/scene.ts`). Everything wider is bloom, under the
+      halo's edge and a fraction of the light.
+    */
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = alpha * 0.75;
     ctx.strokeStyle = glow;
     ctx.lineWidth = width * 4;
     ctx.stroke();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = core;
+    ctx.strokeStyle = ink.hot;
+    ctx.lineWidth = width * 1.8;
+    ctx.stroke();
+    ctx.strokeStyle = ink.core;
     ctx.lineWidth = width;
     ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
 }

@@ -23,6 +23,7 @@ import { bakePort, withTheGame } from '../render/port-bake.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
+import { boltInks } from '../render/bolt-inks.ts';
 // 0212: the room borrows the run's landmarks and has to hand back exactly what it took.
 import type { Landmarks, Sky } from '../render/scene.ts';
 import { VEINS_OF, WEATHER_DEPTH, heartAt } from '../content/veins.ts';
@@ -941,7 +942,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // A bolt glows in the player's ink with an impact-white core — 0233. The player's, because it is
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
-  surface.setBolt(colours.player, colours.impact, colours.space, colours.enemy, colours.impact);
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact));
 
   const world: World = {
     /*

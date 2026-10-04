@@ -3537,9 +3537,9 @@ function nearer(a: Entity, b: Entity, along: number, across: number): boolean {
 */
 
 /** One link's picture: an entity at the landing point, carrying its start, riding the camera. */
-function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number): void {
+function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, toAlong: number, toAcross: number): Entity | null {
   const link = w.bolts.spawn();
-  if (link === null) return;
+  if (link === null) return null;
   reset(link, toAlong, toAcross, row);
   link.velAlong = w.scrollPerStep;
   link.fromAlong = fromAlong - toAlong;
@@ -3547,6 +3547,7 @@ function spawnLink(w: World, row: Body, fromAlong: number, fromAcross: number, t
   link.lifeFor = BOLT_STEPS;
   // The jag's seed — `paintBolts` hashes it, so two links never flicker in step.
   link.spin = w.arcRng.int(0, 0x7fffffff);
+  return link;
 }
 
 /**
@@ -3966,21 +3967,42 @@ function unleashStorm(w: World, along: number, across: number, storm: Storm, sou
   flickerStorm(w);
 }
 
-/** A fresh flicker: bolts from the storm's centre to random places on the screen. Pure picture. */
+/**
+ * The opening flicker: `stormFlicker` bolts from the storm's centre to random places on the screen,
+ * each with a different life — 0458. Pure picture.
+ *
+ * ⚠️ **STAGGERED, AND THAT IS THE FLASH CAP.** The flicker was a generation of bolts thrown together
+ * and renewed together every bolt's life — seven and a half times a second, the whole picture lit and
+ * gone at once. At the old weight a generation was under a general flash's area; lit as 0458 lights a
+ * bolt, `scripts/weigh-flashes.mjs` read it at twelve transitions a second over a sixth of the screen.
+ * So bolt `i` of the opening lives `i + 1` steps and `stepStorm` replaces them one share at a time: the
+ * screen holds as many bolts as it did, flickering as hard, and no step changes more than a share of
+ * them.
+ */
 function flickerStorm(w: World): void {
-  const fromAlong = w.cameraAlong + w.stormOffset;
   for (let i = 0; i < w.stormFlicker; i++) {
-    const toAlong = w.cameraAlong + w.stormRng.range(0, w.view.alongSpan);
-    const toAcross = w.stormRng.range(0, ACROSS_SPAN);
-    spawnLink(w, SHOTS.arc, fromAlong, w.stormAcross, toAlong, toAcross);
+    stormBolt(w, 1 + Math.floor((i * BOLT_STEPS) / w.stormFlicker));
   }
 }
 
-/** The flicker, renewed every bolt's lifetime until the storm is spent. */
+/** One flicker bolt from the storm's centre to a random place on the screen, living `life` steps. */
+function stormBolt(w: World, life: number): void {
+  const toAlong = w.cameraAlong + w.stormRng.range(0, w.view.alongSpan);
+  const toAcross = w.stormRng.range(0, ACROSS_SPAN);
+  const link = spawnLink(w, SHOTS.arc, w.cameraAlong + w.stormOffset, w.stormAcross, toAlong, toAcross);
+  // `spawnLink` gives a link the bolt's whole life; the opening's are shorter, so they go in turn.
+  if (link !== null) link.lifeFor = life;
+}
+
+/** The flicker, renewed a share every step until the storm is spent — `flickerStorm` says why. */
 function stepStorm(w: World): void {
   if (w.stormFor <= 0) return;
   w.stormFor--;
-  if (w.stormFor > 0 && w.stormFor % BOLT_STEPS === 0) flickerStorm(w);
+  if (w.stormFor <= 0) return;
+  // The bolts due this step: over any `BOLT_STEPS` in a row, exactly `stormFlicker` of them.
+  const k = w.stormFor % BOLT_STEPS;
+  const due = Math.floor(((k + 1) * w.stormFlicker) / BOLT_STEPS) - Math.floor((k * w.stormFlicker) / BOLT_STEPS);
+  for (let i = 0; i < due; i++) stormBolt(w, BOLT_STEPS);
 }
 
 /*

@@ -1394,6 +1394,35 @@ export const SHIP_BOX = 9.4;
 export const FIGHTER_HULL = 7;
 
 /**
+ * The kinds that are LIGHT rather than body — `docs/decisions/0458-light-is-added.md`.
+ *
+ * A light is drawn ADDED to what is under it (`src/render/canvas.ts`): a spark over a hull brightens
+ * the hull, two crossing burn white where they cross, and a glow over the sky lifts the sky instead of
+ * veiling it. That is what a flash, a muzzle burst or a ring of energy does, and it is the one thing a
+ * body must never do — a hull drawn added would go transparent over a pale sky. So the list is of
+ * kinds that are nothing BUT light: no dark outline, no smoke, no hull the player has to find.
+ *
+ * ⚠️ **A KIND SAYS IT IS LIGHT; NOTHING DECIDES IT FOR THEM** (0282). A list over the closed union
+ * rather than a flag computed from the drawing, so adding one is a line here and taking one off is the
+ * same line.
+ */
+export const LIGHT_KINDS: readonly SpriteKind[] = [
+  // The first two frames of a body coming apart — the flash and the fireball. The smoke after is body.
+  'burst0',
+  'burst1',
+  // A missile's landing, both frames.
+  'spark0',
+  'spark1',
+  // The point of light where a bolt lands.
+  'arcNode',
+  // A ray ring's burst and its fading rim — the ring in flight keeps its dark field (0442).
+  'rayBurst',
+  'rayFade',
+  // The nova's band.
+  'novaArc',
+];
+
+/**
  * How big each kind is, in WORLD units across — so its screen size falls out of the camera.
  *
  * ⚠️ **This is the DRAWN size and it is not the hurtbox.** A `Body.radius` in `src/sim/entity.ts` is

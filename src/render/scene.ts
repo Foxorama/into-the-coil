@@ -436,7 +436,7 @@ const TWIG_SHARE = 0.3;
  */
 const TWIG_MAX = 12;
 /** Frames a jag pattern is held for before the next one — a flicker at half the frame rate. */
-const BOLT_PAGE_STEPS = 2;
+const BOLT_PAGE_STEPS = 4;
 /**
  * Bright points along a link: every `BOLT_DOT_EVERY`th vertex, as a dot wider than the core — 0236.
  * *"It needs some bright points"*: a stroke of one width reads as a wire, and lightning is not a wire.
