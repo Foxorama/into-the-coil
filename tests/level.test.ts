@@ -12,7 +12,7 @@ import {
 } from '../src/content/formations.ts';
 import { BURST } from '../src/content/debris.ts';
 import { CAPACITY, CHAIN_TRAIL } from '../src/app/mount.ts';
-import { BOSSES, BOSS_KINDS, chainReach } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, CURTAIN_STANCES, chainReach, holeAt } from '../src/content/bosses.ts';
 import { INVULN_STEPS } from '../src/content/ships.ts';
 import { curtainSpacing, openBy, phaseFor, uncoilsBy } from '../src/app/boss.ts';
 import { BOSS_ATTACK_KINDS, BOSS_MOVE_KINDS, BOSS_STANCE_KINDS } from '../src/content/bosses.ts';
@@ -1859,9 +1859,21 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       further at a HARDER tier, which is the tell.
     */
     const hardest = DIFFICULTY_KINDS[DIFFICULTY_KINDS.length - 1]!;
-    for (const kind of uncoilers) {
+    /*
+      ⚠️ **EVERY PLACE A HOLE STANDS ACROSS THE LANE, SINCE 0498**, which gave each way the wall stands its
+      own. The walls across the lane leave their hole at their share of it; the backslant's line runs
+      from the far edge, so its share is counted from there. The walls along the lane leave theirs at a
+      share of the lane's LENGTH, which this does not ask about.
+    */
+    const places = (kind: (typeof BOSS_KINDS)[number]): number[] => {
+      const uncoil = BOSSES[kind].uncoil!;
+      return [
+        ...new Set([holeAt(uncoil, 'across'), holeAt(uncoil, 'slant'), holeAt(uncoil, 'astern'), ACROSS_SPAN - holeAt(uncoil, 'backslant')]),
+      ];
+    };
+    for (const [kind, place] of uncoilers.flatMap((k) => places(k).map((p) => [k, p] as const))) {
       const row = BOSSES[kind];
-      const uncoil = row.uncoil!;
+      const uncoil = { ...row.uncoil!, at: place };
       // The far wall is whichever side of the lane the hole is not on.
       const away = uncoil.at < ACROSS_SPAN / 2 ? 1 : -1;
       const { world } = playableWorld(solo(kind), hardest);
@@ -2082,10 +2094,14 @@ describe('0150 — a boss can empty everything it has, and then open', () => {
       through it. It is also the shape a hand reaches for when it wants the pattern hard over to one
       side, which is exactly what the chorus's is.
     */
+    // Every stance's hole since 0498: a share of whatever line it is on, so the same bounds hold for each.
     for (const kind of uncoilers) {
       const uncoil = BOSSES[kind].uncoil!;
-      expect(uncoil.at - uncoil.hole / 2, `${kind}'s hole hangs off the near edge of the lane`).toBeGreaterThan(0);
-      expect(uncoil.at + uncoil.hole / 2, `${kind}'s hole hangs off the far edge of the lane`).toBeLessThan(ACROSS_SPAN);
+      for (const stance of CURTAIN_STANCES) {
+        const at = holeAt(uncoil, stance);
+        expect(at - uncoil.hole / 2, `${kind}'s ${stance} hole hangs off the near end of its line`).toBeGreaterThan(0);
+        expect(at + uncoil.hole / 2, `${kind}'s ${stance} hole hangs off the far end of its line`).toBeLessThan(ACROSS_SPAN);
+      }
     }
   });
 

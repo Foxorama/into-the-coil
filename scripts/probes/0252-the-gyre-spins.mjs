@@ -40,8 +40,9 @@ export const PROBES = [
     guard: 'THE EIGHT WALLS, DRIVEN',
     edit: {
       path: 'src/app/boss.ts',
-      find: '  const hole = (uncoil.at / ACROSS_SPAN) * length;',
-      replace: '  const hole = uncoil.at;',
+      // ⚠️ Re-anchored by 0498, whose hole is the stance's own place.
+      find: '  const hole = (holeAt(uncoil, stance) / ACROSS_SPAN) * length;',
+      replace: '  const hole = holeAt(uncoil, stance);',
     },
   },
   {
@@ -78,8 +79,8 @@ export const PROBES = [
       path: 'src/content/bosses.ts',
       // ⚠️ Re-anchored by 0260, which starts the curtain at nine tenths, by 0332, which quickens it, and
       // by 0364, which moved the hole 26 → 31 with the zoom.
-      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
-      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
+      find: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, atBy: GYRE_HOLES, hole: 14, spin: true, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
+      replace: "    uncoil: { from: 0.9, every: 0.1, gap: 3, at: 31, atBy: GYRE_HOLES, hole: 14, spin: false, quicken: { by: 0.88, least: 0.04 }, apart: 150 },",
     },
   },
 ];

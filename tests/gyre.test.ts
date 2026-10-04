@@ -29,7 +29,7 @@
 import { describe, expect, it } from 'vitest';
 import { advanceLevel, BOSS_DEATH_STEPS, GameFrame } from '../src/app/frame.ts';
 import { cogTurn, curtainSpacing, curtainStance, uncoilsBy } from '../src/app/boss.ts';
-import { BOSSES, BOSS_KINDS, CURTAIN_STANCES } from '../src/content/bosses.ts';
+import { BOSSES, BOSS_KINDS, CURTAIN_STANCES, holeAt } from '../src/content/bosses.ts';
 import { LEVELS, type LevelRow } from '../src/content/levels.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { SHOTS } from '../src/content/shots.ts';
@@ -237,6 +237,40 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(LEVELS.shoal.theme).toBe('labyrinth');
   });
 
+  it('0498 — THE HOLES MOVE: each wall’s hole is away from the one before it, where the ship has to be', () => {
+    /*
+      *"I want the holes to be in different positions to keep the player actively moving around the
+      screen."* Driven through all eight walls, in the units the player flies: a wall across the lane is
+      passed at its hole's ACROSS, and a wall along the lane at its hole's distance AHEAD of the camera.
+      Two walls in a row of the same kind whose holes are within a hole's width of each other leave the
+      ship where it was, which is the thing asked away.
+    */
+    const acrossKinds: readonly string[] = ['across', 'slant', 'backslant', 'astern'];
+    const holes = walls(8).map((wall) => {
+      const stance = curtainStance(gyre.spin, wall.k);
+      const crossing = acrossKinds.includes(stance);
+      const axis = wall.shots.map((s) => (crossing ? s.across : s.along - wall.cameraAlong)).sort((a, b) => a - b);
+      let widest = 0;
+      let centre = NaN;
+      for (let i = 1; i < axis.length; i++) {
+        if (axis[i]! - axis[i - 1]! > widest) {
+          widest = axis[i]! - axis[i - 1]!;
+          centre = (axis[i]! + axis[i - 1]!) / 2;
+        }
+      }
+      return { stance, crossing, centre };
+    });
+    for (let i = 0; i < holes.length; i++) {
+      const here = holes[i]!;
+      const next = holes[(i + 1) % holes.length]!;
+      if (here.crossing !== next.crossing) continue;
+      expect(
+        Math.abs(next.centre - here.centre),
+        `the ${here.stance} opens at ${here.centre.toFixed(1)} and the ${next.stance} after it at ${next.centre.toFixed(1)}`,
+      ).toBeGreaterThan(gyre.hole);
+    }
+  });
+
   it('THE EIGHT WALLS, DRIVEN: each one line with one hole at the same share of it, each spanning a whole axis of the field', () => {
     for (const wall of walls(8)) {
       const { k, shots, hullAlong, cameraAlong, scroll } = wall;
@@ -349,7 +383,8 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
         read off the curtain the fight threw; `length` is a shot short of the whole line at each end,
         which is what the spacing in the tolerance pays for.
       */
-      const expected = (gyre.at / ACROSS_SPAN) * (length + spacing);
+      // The stance's own share since 0498, which gave each way the wall stands its own hole.
+      const expected = (holeAt(gyre, stance) / ACROSS_SPAN) * (length + spacing);
       expect(
         Math.abs(centre - expected),
         `curtain ${k} (${stance})'s hole sits ${centre.toFixed(1)} along a line of ${length.toFixed(1)} and the row's share puts it at ${expected.toFixed(1)}`,
@@ -440,7 +475,9 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       let thrown = -1;
       // The hole's across on a wall that stands across the lane is the row's own `at`, and the far
       // corner from it is whichever lane edge is further away.
-      const start = gyre.at < ACROSS_SPAN / 2 ? ACROSS_SPAN - PLAYER_MARGIN : PLAYER_MARGIN;
+      // The wall from astern's own hole since 0498.
+      const target = holeAt(gyre, 'astern');
+      const start = target < ACROSS_SPAN / 2 ? ACROSS_SPAN - PLAYER_MARGIN : PLAYER_MARGIN;
       /*
         Flat out for the hole and then held there, through the same seam a device drives — the
         ship's own inertia and the ship's own top speed, never a position written each step.
@@ -454,7 +491,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       world.input = {
         contribute: (intent) => {
           intent.along = 0;
-          const err = gyre.at - world.ship.across;
+          const err = target - world.ship.across;
           intent.across = !fly ? 0 : err > 6 ? 1 : err < -6 ? -1 : err / 6;
         },
         spend: () => {},
@@ -494,7 +531,7 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
     expect(
       flown.hit,
       `a ship flying flat out from the worst corner of its box was caught ${(flown.at / STEPS_PER_SECOND).toFixed(2)} s after the ` +
-        `wall from astern was thrown, at ${flown.across.toFixed(1)} across against a hole at ${gyre.at}`,
+        `wall from astern was thrown, at ${flown.across.toFixed(1)} across against a hole at ${holeAt(gyre, 'astern')}`,
     ).toBe(false);
   });
 
