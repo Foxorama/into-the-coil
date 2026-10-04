@@ -81,7 +81,7 @@ export const FIRE_GRID = VOLLEY_CYCLE / 4;
  * slot was measured first and was the unison 0098 reports; a THREE-slot window left a capped ship
  * time to kill a two-hit body before its volley, which `scripts/weigh-bullets.mjs` showed as the
  * shoal level under forty per cent. This is the window every body's first volley lands in;
- * `ENTRY_SLOTS` is what keeps a formation out of one step of it.
+ * The wave's turns are what keep a formation out of one step of it (0499; `ENTRY_SLOTS` until then).
  *
  * ⚠️ **It never adds a volley to a body that was about to fire anyway**: the entry gap is a ceiling
  * on the count, not a second clock.
@@ -127,7 +127,51 @@ export const ENTRY_VOLLEY = FIRE_GRID * 2;
 export const SEEN_BEFORE_VOLLEY = FIRE_GRID * 5;
 
 /**
- * How many grid slots a wave's members are dealt across, behind their entry window — 0259.
+ * The share of a member's own reload its wave's first volleys are dealt across — 0499.
+ *
+ * ── THE WAVE FIRES IN TURN ──────────────────────────────────────────────────────────────────────
+ *
+ * `docs/decisions/0499-the-wave-fires-in-turn.md`. Reported: *"everything that fires multiple
+ * bullets needs to space out the fire for the group a bit as they all kind of create an undodgeable
+ * wall at the moment."* The three-slot deal below (0259) dealt a wave's members by index modulo
+ * three, which spaced one rank and nothing wider. ⚠️ **Measured, it was rarely the wall**: a lead line
+ * of five or six folds into two ranks a third of a second apart and already opened over half its
+ * reload, and a flanking stream reaches the view one body at a time. The decision has the figures.
+ *
+ * ⚠️ **HALF, AND THE OTHER HALF IS THE POINT.** The members fire one after another down the line
+ * across the first half of the reload, and the second half is the gap no member of the wave fires
+ * in — the place to move through. The whole reload was the other option and it was refused: a
+ * trickle with no rest in it is a wall spread thin. The player chose half.
+ *
+ * ⚠️ **A SHARE OF THE ROW'S OWN RELOAD, SO EVERY KIND SWEEPS AT ITS OWN SPEED.** A turret line at
+ * Savior sweeps over 27 steps and a picket line over 42 — the number here is how a group takes
+ * turns, and the cadence that turns are taken in is the row's.
+ */
+export const SWEEP_SHARE = 0.5;
+
+/**
+ * Steps between one member's turn and the next in a wave of `count` reloading every `reload` steps —
+ * 0499. Fractional on purpose: the turns are rounded to the grid where they land, by `turnOnGrid`, so
+ * a wave of six over 33 steps lands 0, 6, 12, 18, 24, 30 rather than six turns of 6 that overrun.
+ */
+export function turnGapFor(count: number, reload: number): number {
+  return count > 1 ? (reload * SWEEP_SHARE) / count : 0;
+}
+
+/**
+ * A wait in steps, put on the grid — 0499. **Rounded to the grid, which is 0096's and not
+ * negotiable.** At the hardest tiers half a reload holds fewer grid slots than a big wave has members,
+ * and two neighbours then share one: a pair, in order, rather than a rank.
+ */
+export function turnOnGrid(steps: number): number {
+  return Math.round(steps / FIRE_GRID) * FIRE_GRID;
+}
+
+/**
+ * ── HOW MANY GRID SLOTS A WAVE'S MEMBERS WERE DEALT ACROSS — 0259, SUPERSEDED BY 0499 ABOVE ─────
+ *
+ * ⚠️ **`ENTRY_SLOTS` was three, and it is gone.** What follows is why it existed, kept because the
+ * defect it answered — a rank firing on one step — is still the case the turns must not reopen.
  *
  * ── THE FOLD WAS TWO SLOTS WIDE AND A RANK IS THREE BODIES ──────────────────────────────────────
  *
@@ -154,8 +198,14 @@ export const SEEN_BEFORE_VOLLEY = FIRE_GRID * 5;
  * and that is the version 0259 measured and rejected. Here the member holding slot 0 still fires
  * inside the original window — a wave always has one, because the slot is the member's own index —
  * and only the second and third of a rank wait the extra tenth and fifth of a second.
+ *
+ * ⚠️ **AND THREE SLOTS BY INDEX WAS ONLY EVER RIGHT FOR A RANK.** Anything entering together wider
+ * than three would have put its fourth member on its first's slot, for life — shipped content barely
+ * does that, which is why the guard holding three against the widest rank stayed green. The turns in
+ * `src/app/frame.ts` keep this deal's one promise — the first to
+ * arrive fires inside the window, so a wave still announces itself — and are taken from what has
+ * actually arrived, so they hold for any shape. 0499.
  */
-export const ENTRY_SLOTS = 3;
 
 /**
  * The nearest cadence to `steps` that lands on the grid, never shorter than one grid unit.

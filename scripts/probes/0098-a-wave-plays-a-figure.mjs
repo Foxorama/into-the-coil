@@ -30,10 +30,12 @@ export const PROBES = [
     */
     broke: 'the entry deal flattened, so a rank opens fire as one volley again',
     guard: '0098 — THE REPORTED ONE: a formation opens fire as a figure rather than as one volley',
+    // ⚠️ Re-anchored by 0499: the deal is the wave's turns, taken at the entry, and a body with no
+    // wave to take them with is what a flattened deal is now — every member of a rank goes at once.
     edit: {
       path: 'src/app/frame.ts',
-      find: '    e.entrySlot = i % ENTRY_SLOTS;\n  }\n}',
-      replace: '    e.entrySlot = 0;\n  }\n}',
+      find: '    e.turnOf = index + 1;\n',
+      replace: '    e.turnOf = 0;\n',
     },
   },
   {

@@ -25,9 +25,9 @@ export const PROBES = [
     guard: 'THE SEEN WINDOW: a body is on the screen for half a second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;\n',
-      replace:
-        '      const entry = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;\n      if (entry < e.fireIn) e.fireIn = entry;\n',
+      // ⚠️ Re-anchored by 0499, which named the window `seen` and put the wave's turn beside it.
+      find: '      e.fireIn = seen + turnWait(w, e, seen) + 1;\n',
+      replace: '      const entry = seen + turnWait(w, e, seen) + 1;\n      if (entry < e.fireIn) e.fireIn = entry;\n',
     },
   },
   {
@@ -38,8 +38,10 @@ export const PROBES = [
     guard: 'and a body arriving ACROSS the lane is seen for the same half second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const enteredAcross =\n      e.steerAcross !== 0 &&',
-      replace: '    const enteredAcross =\n      false &&',
+      // ⚠️ Re-anchored by 0499, which moved the two edges into `entersNow` so a wave's members can ask
+      // it of each other; the break is the same one, one indent shallower.
+      find: '  const enteredAcross =\n    e.steerAcross !== 0 &&',
+      replace: '  const enteredAcross =\n    false &&',
     },
   },
   {

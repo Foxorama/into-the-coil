@@ -196,8 +196,10 @@ export interface Entity extends Body {
    */
   fireIn: number;
   /**
-   * Which grid slot this body takes when its hull enters the view — its place in its own wave, in
-   * `0…ENTRY_SLOTS`. `docs/decisions/0259-the-bullets-stay-on-the-screen.md`.
+   * This body's place in the order its wave fires in — `docs/decisions/0499-the-wave-fires-in-turn.md`:
+   * rank by rank as they stand, across the lane within a rank, unique within the wave. It was a grid
+   * slot `0…3` under `docs/decisions/0259-the-bullets-stay-on-the-screen.md`; since 0499 it orders
+   * the members that cross an edge on the SAME step, and `turnAt` below orders everyone else.
    *
    * ⚠️ **A FIELD, ON EXACTLY `firePhase`'s TERMS, AND FOR THE SAME REASON IT COULD NOT BE DERIVED.**
    * The first version read the slot back out of `fireIn` — the spawn spread is whole grid units, so
@@ -216,6 +218,24 @@ export interface Entity extends Body {
    * fires soonest — a boss, a shot and a piece of debris all want the plain answer.
    */
   entrySlot: number;
+  /**
+   * Which wave this body takes its turns with, or `0` for none — 0499. A level's wave is its index
+   * plus one; a boss's call is minus one less its step, so two calls are two waves.
+   *
+   * ⚠️ **A NUMBER AND NOT A REFERENCE**, because the members find each other by scanning the pool on
+   * the rare step one of them enters, and a pool slot is recycled: what is compared is a label.
+   */
+  turnOf: number;
+  /**
+   * Steps between this body's turn and the next member's — half its own reload over its wave's size,
+   * fractional — or `0` for a body with nobody to take turns with. 0499.
+   */
+  turnGap: number;
+  /**
+   * The step this body's first volley was dealt to, once it has entered — `0` until then. 0499: the
+   * next member of its wave to arrive goes no sooner than this plus `turnGap`.
+   */
+  turnAt: number;
   /**
    * Steps until this retires itself, or `0` for something that lives until the world removes it.
    *
@@ -594,6 +614,9 @@ export function makeEntity(): Entity {
     kind: 0,
     fireIn: 0,
     entrySlot: 0,
+    turnOf: 0,
+    turnGap: 0,
+    turnAt: 0,
     lifeFor: 0,
     steerAcross: 0,
     holdFor: 0,
@@ -669,6 +692,9 @@ export function reset(e: Entity, along: number, across: number, body: Body, kind
   e.kind = kind;
   e.fireIn = 0;
   e.entrySlot = 0;
+  e.turnOf = 0;
+  e.turnGap = 0;
+  e.turnAt = 0;
   e.lifeFor = 0;
   e.steerAcross = 0;
   e.holdFor = 0;

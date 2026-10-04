@@ -14,10 +14,12 @@ export const PROBES = [
     // step it appears, and it is the seen window that goes red rather than the dry budget.
     broke: 'the entry volley removed, so a body enters the view with its whole reload ahead of it',
     guard: 'THE SEEN WINDOW: a body is on the screen for half a second',
+    // ⚠️ Re-anchored by 0499, which named the window `seen` and added the wave's turn to it; the
+    // break is the same — the count is never set on the entry step.
     edit: {
       path: 'src/app/frame.ts',
-      find: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;\n',
-      replace: '      void e;\n',
+      find: '      e.fireIn = seen + turnWait(w, e, seen) + 1;\n',
+      replace: '      void seen;\n',
     },
   },
   {
@@ -86,8 +88,9 @@ export const PROBES = [
       // count is decremented on, and without it the volley lands a step early and off the grid.
       // ⚠️ Re-anchored again by 0326, which set the count in place rather than through `entry` and put
       // the seen window in front of it; the `+ 1` is still the step the count is decremented on.
-      find: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID + 1;',
-      replace: '      e.fireIn = SEEN_BEFORE_VOLLEY + nextOnGrid(w.steps, ENTRY_VOLLEY) + e.entrySlot * FIRE_GRID;',
+      // ⚠️ And by 0499, which named the window `seen` and put the wave's turn beside it.
+      find: '      e.fireIn = seen + turnWait(w, e, seen) + 1;',
+      replace: '      e.fireIn = seen + turnWait(w, e, seen);',
     },
   },
   {
