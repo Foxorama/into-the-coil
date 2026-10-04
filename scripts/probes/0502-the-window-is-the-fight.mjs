@@ -45,8 +45,8 @@ export const PROBES = [
     guard: 'and the window is the gap: the script resumes when it closes, not later',
     edit: {
       path: 'src/content/levels.ts',
-      find: "  { at: 2450, enemy: 'turret', formation: 'vee', count: 6, lane: 47 },",
-      replace: "  { at: 2495, enemy: 'turret', formation: 'vee', count: 6, lane: 47 },",
+      find: "  { at: 2450, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
+      replace: "  { at: 2489, enemy: 'warden', formation: 'column', count: 5, lane: 42 },",
     },
   },
   {
