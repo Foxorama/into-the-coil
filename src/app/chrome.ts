@@ -1864,7 +1864,7 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   align-items: center;
   gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw);
 }
-.itc-hangar-pilot-card .itc-hangar-pilot-bio { font-size: 0.76em; margin: 0.1em 0; line-height: 1.25; }
+.itc-hangar-pilot-card .itc-hangar-pilot-bio { font-size: 0.72em; margin: 0.05em 0; line-height: 1.22; }
 /*
   Two thirds of the panel the plate where the screen is narrower than a laptop's: at a 1024x768's three
   fifths its card was a column of the bio a few words wide, and the hangar tab ran under the fold.
@@ -1880,7 +1880,12 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 .itc-hangar-groups, .itc-parts-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw); align-items: start; }
 .itc-hangar-group, .itc-parts-group { display: flex; flex-direction: column; gap: min(0.35rem, 0.9cqh); min-width: 0; }
 .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band {
-  grid-template-columns: 5.2em auto minmax(0, 1fr) auto;
+  /*
+    The band's name in a column only as wide as the longest of them needs, so the segments keep the rest:
+    with the Thunderbolt's guns (0545), *Catherine wheel* took a second line at 5.2em and the hangar tab
+    stood at the fold of a 1280x720 with every letter spaced wider.
+  */
+  grid-template-columns: max-content auto minmax(0, 1fr) auto;
   grid-template-areas: 'label less track more' '. . hint .';
 }
 /* Written past the slot rules below, which lay each slot out as a grid of its own count to a row. */
@@ -1895,7 +1900,9 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   padding-bottom: 0.2em;
   border-bottom: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
 }
-.itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { padding: 0.2em 0.1em; }
+.itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { padding: 0.1em 0.1em; row-gap: 0.1em; }
+/* The way out a step smaller than the title's buttons: it is the plate's foot, and the plate is the screen's height. */
+.itc-hangar-choices, .itc-parts-choices, .itc-shop-choices { font-size: 0.88em; }
 .itc-hangar-group .itc-hangar-option, .itc-parts-group .itc-parts-option { font-size: 0.8em; padding: 0.22em 0.25em; }
 /*
   The pilots' head given back its height: the band's own label goes, as the title's does — the faces are

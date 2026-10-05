@@ -49,7 +49,10 @@ that a margin measured on this machine's fonts alone is not one.
 - **The dash.** About twenty-five of its em across, on a stand a third of the screen at its narrowest: at
   1024x768 it ran under the plate. Capping its type by the width set the counts at eight pixels on a
   phone, so it wraps instead — the stacks under the lives and the shell, in the same frame.
-- **Spare**, with the wider letters: 18 px at 1280x720, 26 at 1024x768, 20 or more on every phone.
+- **Spare**, with the wider letters: 40 px at 1280x720 and 45 at 1024x768 once the Thunderbolt's guns
+  (0545) had landed under it — *Catherine wheel* took the 18 px that were there before, so the bands'
+  names stand in a column as wide as the longest needs, the bio and Back are a step down, and the bands
+  a little closer. 20 or more on every phone.
 
 ## Raised for the screen
 
