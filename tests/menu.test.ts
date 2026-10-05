@@ -367,8 +367,9 @@ describe('a screen that expires presses its own control, and says how long it wa
     // and a pause that timed out would resume — or quit — a run its owner had walked away from.
     // ⚠️ **AND THE GAME OVER SINCE 0517**, on `victory`'s terms: it ends a run and adds it up, and the
     // run-over screen's countdown was the cost of an offer this one does not make.
+    // ⚠️ **AND THE HANGAR SINCE 0521**, on Settings' terms: a player fitting out a ship is choosing.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['ended', 'guide', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['ended', 'guide', 'hangar', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 
@@ -656,7 +657,12 @@ describe('Back goes to whoever opened the menu — 0458', () => {
       expect(SCREEN_KINDS, `${screen} goes back to a screen that does not exist`).toContain(back);
       // Left by its own Back, or by its own clock — 0511: the pause goes back to the count-in, which
       // nobody leaves by pressing anything because it leaves into the run by itself.
-      const leaves = SCREENS[back].back !== null || SCREENS[back].timeout !== null;
+      /*
+        ⚠️ **OR THE TITLE — 0521.** The hangar's Back is the title, the first row to name it outright:
+        Settings reaches it as `'opener'`. The title has no Back because it is the root every menu is
+        opened from, and it is left by *Fly* — which is not the count-in's case this line was written for.
+      */
+      const leaves = back === 'title' || SCREENS[back].back !== null || SCREENS[back].timeout !== null;
       expect(leaves, `${screen} goes back to a screen that cannot itself be left`).toBe(true);
     }
     // A tab strip lists the screen it is drawn on, or the open tab is not one of its tabs.

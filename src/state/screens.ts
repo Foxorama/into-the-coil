@@ -30,7 +30,7 @@ import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
 import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
-import { SHIPS } from '../content/ships.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { WEAPONS } from '../content/weapons.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
@@ -39,6 +39,7 @@ export const SCREEN_KINDS = [
   'intro',
   'title',
   'settings',
+  'hangar',
   'guide',
   'playing',
   'gameOver',
@@ -85,6 +86,20 @@ export interface ScreenAction {
 export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' | 'hand' | 'steer' | 'credits';
 
 /**
+ * Every slot the hangar fits on a ship — 0521. Closed. The plate is the first; the plan's queue
+ * (`reports/the-hangar-planned-2026-10-05.md`) names the rest.
+ *
+ * ⚠️ **NOT A SETTING, AND THAT IS WHY IT IS A SECOND NAME.** A setting has one value, held by the
+ * settings slice; a slot has one value PER SHIP, held by the hangar, and the band shows the value for
+ * the ship of the pilot on it. Folded into `SettingName` it would have to be a field of
+ * `SettingsState`, which is keyed by this union — a field that could only ever hold one ship's plate.
+ */
+export type SlotName = 'plate';
+
+/** What a band on a screen may choose: a setting, or a slot of the ship on the hangar's stand. */
+export type ChoiceName = SettingName | SlotName;
+
+/**
  * One setting a screen offers, and the options it offers for it.
  *
  * ⚠️ **`name` is the SETTING and not a label**, which is what lets the shell route a press without a
@@ -98,7 +113,7 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
  * escape hatches that would take.
  */
 export interface ScreenChoice {
-  name: SettingName;
+  name: ChoiceName;
   /** What the row is called on screen. */
   label: string;
   /** The options, in the order the content hub lists them. Position is the value. */
@@ -334,6 +349,26 @@ function pilotHint(kind: GolferKind): string {
   return `${ship.label} · ${WEAPONS[ship.weapon].label}`;
 }
 
+/** The pilot band's faces, on the title and in the hangar — one list, so the two cannot differ. */
+const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) }));
+
+/** A ship's name to follow *the* — the Firebird's label carries its own article. */
+function plainLabel(kind: ShipKind): string {
+  return SHIPS[kind].label.replace(/^The /, '');
+}
+
+/**
+ * What the hangar's dash band says when `ship`'s other dashes are shut — 0521, or `null` when one is
+ * open. On the row's terms: the words are the screen's, and the shell only says which case it is in.
+ */
+export function plateWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
+  if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its dash';
+  return borrowable ? null : 'Beat the jellyfish in another ship to borrow its dash';
+}
+
+/** What the hangar is called, on its door on the title and over the screen itself — 0521. */
+const HANGAR_TITLE = 'Hangin’ Out';
+
 /**
  * Whether a screen leaving for `then` — run out or skipped — begins a run rather than showing a screen
  * — 0513.
@@ -458,15 +493,17 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   title: {
     heading: GAME_TITLE,
     pause: null,
+    // 0521: the hangar between them — where the pilot about to fly is fitted out, so beside *Fly*.
     actions: [
       { label: 'Fly', hint: '' },
+      { label: HANGAR_TITLE, hint: '' },
       { label: 'Settings', hint: '' },
     ],
     choices: [
       {
         name: 'pilot',
         label: 'Pilot',
-        options: GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) })),
+        options: pilotOptions,
         faces: 'portraits',
         on: 'all',
         // A press on the highlighted pilot flies them — 0513.
@@ -585,6 +622,50 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     inRun: false,
     back: 'opener',
     tabs: ['settings', 'guide'],
+    opensOn: 'choice',
+  },
+  /**
+   * *Hangin’ Out*, the hangar — `docs/decisions/0521-the-hangar-opens.md`. Reached from the title; the
+   * pilot on the stand, and the slots of the ship they fly.
+   *
+   * ⚠️ **THE PILOT BAND IS THE TITLE'S OWN SETTING, OFFERED A SECOND TIME, AND IT STEPS.** Asked for:
+   * *"allows you to select your pilot, then …"*. It is one value in one slice, so the two bands cannot
+   * disagree, and a pilot chosen here is the one the title flies. A press does not fly from here: the
+   * hangar is where a ship is fitted, and *Fly* is the title's.
+   *
+   * ⚠️ **THE READOUT IS UP OVER IT**, because the plate is what this screen fits and the readout is the
+   * plate: `src/app/chrome.ts` shows it over any screen offering the `plate` slot, read off this row.
+   */
+  hangar: {
+    heading: HANGAR_TITLE,
+    pause: null,
+    actions: [{ label: 'Back', hint: '' }],
+    choices: [
+      {
+        name: 'pilot',
+        label: 'Pilot',
+        options: pilotOptions,
+        faces: 'portraits',
+        on: 'all',
+        press: 'steps',
+      },
+      {
+        name: 'plate',
+        label: 'Dash',
+        options: SHIP_KINDS.map((kind) => ({ label: SHIPS[kind].hud.name, hint: 'The dash from the ' + plainLabel(kind) })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+    ],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'title',
+    tabs: [],
     opensOn: 'choice',
   },
   /**

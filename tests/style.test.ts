@@ -111,10 +111,20 @@ describe('the chooser is the table', () => {
     for (const [name, row] of Object.entries(SCREENS)) {
       for (const choice of row.choices) where.set(choice.name, [...(where.get(choice.name) ?? []), name]);
     }
-    for (const [setting, screens] of where) expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
+    /*
+      ⚠️ **EXCEPT THE PILOT, ON THE TITLE AND IN THE HANGAR — 0521.** Asked for: the hangar *"allows you to
+      select your pilot, then …"*, because what it fits is that pilot's ship. It is one value in one slice,
+      so the two bands cannot disagree, and the title is still where a pilot is flown from. Named here
+      rather than loosened to *at most two*, so a third screen offering it is red.
+    */
+    for (const [setting, screens] of where) {
+      if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar').toEqual(['hangar', 'title']);
+      else expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
+    }
     // 0512: and the touch section's two, on Settings with the rest.
     // 0517: and the continues band, on the title beside the tier.
-    expect([...where.keys()].sort()).toEqual(['credits', 'difficulty', 'hand', 'pilot', 'sound', 'steer', 'style', 'travel']);
+    // 0521: and the hangar's dash, a slot of the ship on its stand rather than a setting.
+    expect([...where.keys()].sort()).toEqual(['credits', 'difficulty', 'hand', 'pilot', 'plate', 'sound', 'steer', 'style', 'travel']);
   });
 });
 

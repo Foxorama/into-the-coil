@@ -70,7 +70,7 @@ export const PROBES = [
       path: 'src/app/chrome.ts',
       // 0063 made the readout follow the SIMULATION rather than the screen, so the level break keeps
       // it. The break is the same one: a readout up over screens that are not the game.
-      find: "      hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting));",
+      find: "      hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting || fitting));",
       replace: "      hud.classList.toggle('itc-playing-hud-shown', true);",
     },
   },

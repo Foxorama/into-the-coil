@@ -53,8 +53,8 @@ export const PROBES = [
     guard: 'is untouched by a run, which is the whole reason it is not on one',
     edit: {
       path: 'src/state/root.ts',
-      find: '  return agree(run === state.run ? state : { screen: state.screen, run, settings: state.settings });',
-      replace: '  return agree(run === state.run ? state : { screen: state.screen, run, settings: initialSettings });',
+      find: '  return agree(run === state.run ? state : { ...state, run });',
+      replace: '  return agree(run === state.run ? state : { ...state, run, settings: initialSettings });',
     },
   },
   {

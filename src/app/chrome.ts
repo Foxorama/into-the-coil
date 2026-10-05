@@ -29,7 +29,7 @@
  * twice. `tests/chrome.test.ts` is the guard.
  */
 
-import { SCREENS, STEPS_PER_SECOND, type Screen, type SettingName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../state/screens.ts';
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
@@ -114,6 +114,27 @@ const PANELLED: readonly Screen[] = (Object.keys(SCREENS) as Screen[]).filter(ha
  * was meant to make screens safer to add.
  */
 const each = (part = ''): string => PANELLED.map((screen) => `.${prefixFor(screen).slice(0, -1)}${part}`).join(', ');
+
+/**
+ * The screens with a band of faces and the pilot card under it — 0513's title, and since 0521 the
+ * hangar. Read off the rows, on `PANELLED`'s terms, so a third screen offering the pilots is styled.
+ */
+const FACED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].choices.some((c) => c.faces === 'portraits'));
+
+/**
+ * `rule` once per screen with faces, as one selector list.
+ *
+ * ⚠️ **THE WHOLE SELECTOR PER SCREEN, WHICH `each` CANNOT DO.** `each` is a comma list, so a part
+ * written after it binds to its last selector only — the trap the face rules below were spelled out by
+ * hand to avoid. A function of the prefix writes the compound once and the list repeats all of it.
+ */
+const faced = (rule: (p: string) => string): string => FACED.map((screen) => rule(prefixFor(screen))).join(', ');
+
+/** The screens with a band on them — the title, Settings and the hangar — on `FACED`'s terms. */
+const BANDED: readonly Screen[] = PANELLED.filter((screen) => SCREENS[screen].choices.length > 0);
+
+/** `rule` once per screen with a band, on `faced`'s terms. */
+const banded = (rule: (p: string) => string): string => BANDED.map((screen) => rule(prefixFor(screen))).join(', ');
 
 /**
  * The title's star sky — 0437: three layers, far to near, each a handful of soft dots on a tile of
@@ -904,10 +925,21 @@ ${each('-action')} {
   width is a fraction of the column with a character cap, so a desktop does not draw a button the
   width of a table.
 */
-.itc-title-choices { width: min(100%, 26em); gap: min(0.7rem, 1.8cqh); }
+/*
+  ⚠️ **34em SINCE 0521, AND IT WAS 26 FOR THREE.** The hangar made the row four — the chip, Fly, the
+  hangar and Settings, one line each. At 26em it had 31 pixels to spare on this machine's fonts, which
+  CI's wider ones spent and 30 more: Settings off a 1024x768's edge.
+
+  ⚠️ **AND THE QUIET THREE A STEP SMALLER, BECAUSE THE CAP WAS NOT THE CASE THAT FAILED.** With the
+  table up, a 1024x768's column is 562 pixels, not the cap, and CI's fonts set the row about a quarter
+  wider than this machine's — so it went off the edge again at 34em. Measured with ten rows on the
+  table: 31 % of the row spare at 1024x768, 23 % at 480x320 (whose row CI already passed on with less),
+  and more everywhere else.
+*/
+.itc-title-choices { width: min(100%, 34em); gap: min(0.7rem, 1.8cqh); }
 .itc-title-action { width: 100%; }
 .itc-title-choices > :first-child { font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
-.itc-title-choices > :nth-child(n+2) { font-size: 0.85em; padding: 0.4em 0.9em; opacity: 0.9; }
+.itc-title-choices > :nth-child(n+2) { font-size: 0.8em; padding: 0.4em 0.55em; opacity: 0.9; }
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1520,6 +1552,11 @@ ${each('-band-less')} { grid-area: less; }
 ${each('-band-more')} { grid-area: more; }
 ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 /*
+  A shut option — 0521, a dash not yet won: drawn, so the player knows it is there, and told by its
+  outline as well as its fade, so it is not a matter of contrast alone.
+*/
+${banded((p) => `.${p}option:disabled`)} { opacity: 0.38; border-style: dashed; cursor: not-allowed; }
+/*
   ⚠️ A FILLED segment against a HOLLOW one, not two colours — decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and which setting is on is exactly the kind of state a
   hue alone would hide.
@@ -1567,17 +1604,17 @@ ${each('-option-on')} {
   was half drawn and no scroll reached the rest of it. Safe centring centres a row that fits and
   starts one that does not at the start, where the scroll can reach all of it.
 */
-.itc-title-options-faces { justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 0.3em; gap: 0.7em; }
+${faced((p) => `.${p}options-faces`)} { justify-content: safe center; overflow-x: auto; scrollbar-width: none; padding: 0.3em; gap: 0.7em; }
 /*
   ⚠️ **SPELLED OUT AND NOT BY each(), AND THE FIRST VERSION WAS.** each() is a comma list, so a part
   written after it — a child, a second class — binds to its LAST selector only, and the portraits drew
-  as 585-pixel ovals. Only the title has faces, so only its prefix is here.
+  as 585-pixel ovals. Since 0521 the hangar has faces too, and faced() writes each rule whole per screen.
 */
 /*
   ⚠️ **A CARD SINCE 0513: THE FACE, AND THE NAME THEY GO BY UNDER IT.** The button is the card and the
   canvas is the round face inside it, so the ring is drawn round the face and the name stands clear of it.
 */
-.itc-title-option.itc-title-option-face {
+${faced((p) => `.${p}option.${p}option-face`)} {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
@@ -1589,16 +1626,16 @@ ${each('-option-on')} {
   opacity: 0.6;
   transition: transform 0.15s ease-out, opacity 0.15s ease-out;
 }
-.itc-title-option-face > canvas {
+${faced((p) => `.${p}option-face > canvas`)} {
   display: block;
   width: clamp(2.4rem, 11cqh, 3.6rem);
   height: clamp(2.4rem, 11cqh, 3.6rem);
   border-radius: 50%;
 }
-.itc-title-option-name { font-size: 0.72em; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
-.itc-title-option-face.itc-title-option-on { opacity: 1; transform: scale(1.06); }
+${faced((p) => `.${p}option-name`)} { font-size: 0.72em; font-weight: 600; letter-spacing: 0.04em; white-space: nowrap; }
+${faced((p) => `.${p}option-face.${p}option-on`)} { opacity: 1; transform: scale(1.06); }
 /* The band's own line is the panel's to say to the eye, and stays for a reader. */
-.itc-title-band-faces .itc-title-band-hint {
+${faced((p) => `.${p}band-faces .${p}band-hint`)} {
   position: absolute;
   width: 1px;
   height: 1px;
@@ -1613,7 +1650,7 @@ ${each('-option-on')} {
   one line, who they are, and the craft and its gun. Left-aligned words in a centred card, so a longer
   line wraps under its own start rather than round the middle.
 */
-.itc-title-pilot-card {
+${faced((p) => `.${p}pilot-card`)} {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
@@ -1623,14 +1660,14 @@ ${each('-option-on')} {
   background: color-mix(in srgb, var(--itc-ink) 6%, transparent);
   text-align: left;
 }
-.itc-title-pilot-ship { display: flex; align-items: center; justify-content: center; width: clamp(4rem, 18cqh, 9rem); }
-.itc-title-pilot-ship > canvas { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 0.6em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
-.itc-title-pilot-words { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
-.itc-title-pilot-name { font-size: 1.25em; font-weight: 800; letter-spacing: 0.02em; }
-.itc-title-pilot-who { font-size: 0.8em; opacity: 0.7; letter-spacing: 0.06em; }
-.itc-title-pilot-bio { margin: 0.2em 0; font-size: 0.85em; line-height: 1.3; opacity: 0.9; }
-.itc-title-pilot-craft { font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--itc-ally, var(--itc-ink)); }
-.itc-title-pilot-gun { font-size: 0.8em; opacity: 0.85; }
+${faced((p) => `.${p}pilot-ship`)} { display: flex; align-items: center; justify-content: center; width: clamp(4rem, 18cqh, 9rem); }
+${faced((p) => `.${p}pilot-ship > canvas`)} { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 0.6em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
+${faced((p) => `.${p}pilot-words`)} { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+${faced((p) => `.${p}pilot-name`)} { font-size: 1.25em; font-weight: 800; letter-spacing: 0.02em; }
+${faced((p) => `.${p}pilot-who`)} { font-size: 0.8em; opacity: 0.7; letter-spacing: 0.06em; }
+${faced((p) => `.${p}pilot-bio`)} { margin: 0.2em 0; font-size: 0.85em; line-height: 1.3; opacity: 0.9; }
+${faced((p) => `.${p}pilot-craft`)} { font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--itc-ally, var(--itc-ink)); }
+${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 /*
   ⚠️ **AND THE PILOT SCREEN GIVES BACK THE HEIGHT THE CARD TAKES — 0513.** The card is new and the
   screen is the height it was, so two things the card made redundant go: the bands' labels — the faces
@@ -1642,13 +1679,18 @@ ${each('-option-on')} {
 .itc-title-choices { flex-direction: row; }
 .itc-title-choices > :first-child { flex: 2 1 0; }
 .itc-title-choices > :nth-child(n+2) { flex: 1 1 0; }
+/*
+  ⚠️ **ONE LINE A BUTTON — 0521.** The hangar's name is two words, and with three buttons and the chip
+  in the row it wrapped: a button two lines tall, and on the smallest phone a row taller than the tiers.
+*/
+.itc-title-choices > * { white-space: nowrap; }
 /* The highlighted card's name is the card's ink, not the fill's: the fill is the face's ring now. */
-.itc-title-option-face.itc-title-option-on .itc-title-option-name { color: var(--itc-ink); }
+${faced((p) => `.${p}option-face.${p}option-on .${p}option-name`)} { color: var(--itc-ink); }
 /*
   The band the cursor is on. The ring is the shared focus outline further down (the -action-cursor
   class is set on the band itself), and a faint glass behind the row says which row a step moves.
 */
-.itc-title-band.itc-title-action-cursor, .itc-settings-band.itc-settings-action-cursor {
+${banded((p) => `.${p}band.${p}action-cursor`)} {
   background: color-mix(in srgb, var(--itc-ink) 8%, transparent);
 }
 /*
@@ -1851,7 +1893,29 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-title-band-label { display: none; }
   .itc-title-option { font-size: 0.92em; }
-  .itc-title-option-face > canvas { width: clamp(1.9rem, 9cqh, 2.6rem); height: clamp(1.9rem, 9cqh, 2.6rem); }
+  ${faced((p) => `.${p}option-face > canvas`)} { width: clamp(1.9rem, 9cqh, 2.6rem); height: clamp(1.9rem, 9cqh, 2.6rem); }
+  /*
+    ── THE HANGAR ON A PHONE — 0521 ────────────────────────────────────────────────────────────────
+
+    Two columns, on the title's terms: the pilot and their card on the left, the dash beside them, the
+    dash's four in two rows of two. Stacked, the pilot, the card, the dash and Back were a desktop's
+    height and Back went under an 844x390's fold. The bands drop their labels as the title's do; each
+    still names itself to a reader.
+  */
+  .itc-hangar-settings-box {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: 'pilot dash' 'card dash';
+    align-items: center;
+    gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw);
+  }
+  .itc-hangar-band-faces { grid-area: pilot; }
+  .itc-hangar-pilot-card { grid-area: card; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) { grid-area: dash; }
+  .itc-hangar-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  .itc-hangar-band-label { display: none; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3em; }
+  .itc-hangar-option { font-size: 0.85em; }
   /*
     The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
     to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
@@ -1879,11 +1943,12 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-band-faces { grid-area: pilot; }
   .itc-title-band:not(.itc-title-band-faces) { grid-area: tier; }
   .itc-title-choices { grid-area: choices; }
-  .itc-title-pilot-card { grid-area: card; padding: 0.3em 0.6em; gap: 0.1em 0.6em; font-size: 0.76em; }
-  .itc-title-pilot-gun { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-title-pilot-card { grid-area: card; }
+  ${faced((p) => `.${p}pilot-card`)} { padding: 0.3em 0.6em; gap: 0.1em 0.6em; font-size: 0.76em; }
+  ${faced((p) => `.${p}pilot-gun`)} { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The pronouns and the home on the name's line, and the line about them one line long. */
-  .itc-title-pilot-words { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
-  .itc-title-pilot-bio, .itc-title-pilot-gun, .itc-title-pilot-craft { flex-basis: 100%; }
+  ${faced((p) => `.${p}pilot-words`)} { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
+  ${faced((p) => `.${p}pilot-bio, .${p}pilot-gun, .${p}pilot-craft`)} { flex-basis: 100%; }
   .itc-title-body .itc-title-pilot-bio { -webkit-line-clamp: 1; }
   .itc-title-board-score, .itc-title-board-pilot { white-space: nowrap; }
   /* How far each run got goes on every phone, and the table is the height of the faces and card beside it. */
@@ -1897,13 +1962,19 @@ ${each('-band[hidden]')} { display: none; }
   .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.78em; padding: 0.3em 0.4em; }
   .itc-title-body .itc-title-choices > * { padding-top: 0.3em; padding-bottom: 0.3em; }
   /*
+    ⚠️ **AND A NARROWER SIDE TO EACH BUTTON — 0521.** On a phone the row is the column's whole width
+    and four one-line buttons stand in it; the side padding is the one part of a button no word needs,
+    and CI's wider fonts took the row's last 38 pixels at 480x320.
+  */
+  .itc-title-body .itc-title-choices > * { padding-left: 0.5em; padding-right: 0.5em; }
+  /*
     The names under the faces go on a phone: the card beside them names the highlighted pilot, each
     face names itself to a reader, and the line they took was the margin CI's wider fonts need.
   */
-  .itc-title-option-name { display: none; }
-  .itc-title-pilot-ship { width: clamp(3rem, 16cqh, 5rem); }
-  .itc-title-pilot-name { font-size: 1.05em; }
-  .itc-title-pilot-bio {
+  ${faced((p) => `.${p}option-name`)} { display: none; }
+  ${faced((p) => `.${p}pilot-ship`)} { width: clamp(3rem, 16cqh, 5rem); }
+  ${faced((p) => `.${p}pilot-name`)} { font-size: 1.05em; }
+  ${faced((p) => `.${p}pilot-bio`)} {
     margin: 0.1em 0;
     font-size: 0.78em;
     line-height: 1.2;
@@ -1913,19 +1984,19 @@ ${each('-band[hidden]')} { display: none; }
     overflow: hidden;
   }
   /* The craft's name is the picture beside it; the gun's line says what it fires. */
-  .itc-title-pilot-craft { display: none; }
-  .itc-title-pilot-who { font-size: 0.72em; }
+  ${faced((p) => `.${p}pilot-craft`)} { display: none; }
+  ${faced((p) => `.${p}pilot-who`)} { font-size: 0.72em; }
   /*
     ⚠️ **ON THE SHORTEST PHONES THE LINE ABOUT WHO THEY ARE GOES**, and the card is a name, a home and
     a gun beside the ship. Below 360 tall there is no row of the screen to give it without the tier or
     *Fly* going under the fold, and those are the two things a run cannot start without.
   */
   @container (max-height: 360px) {
-    .itc-title-pilot-bio { display: none; }
+    ${faced((p) => `.${p}pilot-bio`)} { display: none; }
     /* And the tier's names, the buttons and the ship a step smaller, which is the room CI's fonts need. */
     .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.7em; }
     .itc-title-body .itc-title-choices > * { font-size: 0.85em; }
-    .itc-title-pilot-ship { width: 2.6rem; }
+    ${faced((p) => `.${p}pilot-ship`)} { width: 2.6rem; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -2079,10 +2150,10 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   background-clip: border-box;
 }
 /* The card's ring is the run as well, drawn round the portrait rather than over the card (0513). */
-.itc-title-option-face.itc-title-option-on { background-image: none; box-shadow: none; }
-.itc-title-option-face.itc-title-option-on > canvas { box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
-.itc-title-option:not(.itc-title-option-on), .itc-settings-option:not(.itc-settings-option-on) { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
-.itc-title-option-face, .itc-title-option-face:not(.itc-title-option-on) { border-color: transparent; }
+${faced((p) => `.${p}option-face.${p}option-on`)} { background-image: none; box-shadow: none; }
+${faced((p) => `.${p}option-face.${p}option-on > canvas`)} { box-shadow: 0 0 0 3px var(--itc-ink), 0 0 0.8em color-mix(in srgb, var(--itc-ink) 50%, transparent); }
+${banded((p) => `.${p}option:not(.${p}option-on)`)} { border-color: color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, var(--itc-ink)); }
+${faced((p) => `.${p}option-face, .${p}option-face:not(.${p}option-on)`)} { border-color: transparent; }
 /*
   ── THE CHIP — 0517 ───────────────────────────────────────────────────────────────────────────────
 
@@ -2116,7 +2187,7 @@ ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
 }
 .itc-title-chip .itc-title-option:hover { --itc-glass: color-mix(in srgb, var(--itc-void) 70%, var(--itc-ally, var(--itc-ink))); }
 /* A card lights under the pointer. */
-.itc-title-option-face:hover > canvas { box-shadow: 0 0 0 2px color-mix(in srgb, var(--itc-ink) 60%, transparent); }
+${faced((p) => `.${p}option-face:hover > canvas`)} { box-shadow: 0 0 0 2px color-mix(in srgb, var(--itc-ink) 60%, transparent); }
 /*
   The banner's rule, under every heading but the name's — which has the badge, and on the splash the
   loading light, as its line. Out of flow, hung from the heading, so the panel is the height it was.
@@ -2536,7 +2607,7 @@ interface Panel {
    * list cannot be both without the painter re-deriving the grouping from an index, which is the
    * second description this file already refuses elsewhere.
    */
-  options: Partial<Readonly<Record<SettingName, readonly HTMLButtonElement[]>>>;
+  options: Partial<Readonly<Record<ChoiceName, readonly HTMLButtonElement[]>>>;
   /** Each choice's band — 0458: the row the cursor stops on, its two steps and its hint line. */
   bands: readonly Band[];
   /** The tab strip's buttons, in the row's `tabs` order — 0458. Empty on a screen with no tabs. */
@@ -2560,7 +2631,14 @@ interface Panel {
 
 /** One choice, drawn as a band — 0458. */
 interface Band {
-  name: SettingName;
+  name: ChoiceName;
+  /**
+   * Which options may be landed on — 0521. Every one, until `setOpen` shuts some: a hangar slot the
+   * ship has not been won in for.
+   */
+  open: readonly boolean[];
+  /** Why the shut ones are shut, said on the hint line in place of the option's hint, or `null`. */
+  why: string | null;
   /** The row itself: what the cursor rings and what holds the keyboard's focus. */
   root: HTMLElement;
   less: HTMLButtonElement;
@@ -2840,7 +2918,7 @@ export interface Chrome {
    * is a ship, so the counter is the one the pilot flies; called when the shell knows it, and a no-op
    * when it has not changed.
    */
-  setShip(ship: ShipRow): void;
+  setShip(ship: ShipRow, plate: ShipRow): void;
   /**
    * Whether the trigger discs are up — 0437. On a touch screen each disc says its stack's count, so the
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
@@ -2943,7 +3021,12 @@ export interface Chrome {
    * copy of `src/state/slices/settings.ts`, and the two would disagree the first time anything
    * dispatched without going through here.
    */
-  setChoice(name: SettingName, index: number): void;
+  setChoice(name: ChoiceName, index: number): void;
+  /**
+   * Which of a band's options may be landed on, and why the rest may not — 0521, a hangar slot the ship
+   * has not been won in for. The shut ones are drawn and cannot be pressed, and a step passes over them.
+   */
+  setOpen(name: ChoiceName, open: readonly boolean[], why: string | null): void;
   /**
    * Switch the chrome's typeface role — the UI half of a style, decision 0070.
    *
@@ -3546,7 +3629,7 @@ export function makeChrome(
     of pilots tells them apart: a thumb's first landing on a card is a look, and the cursor's press is a
     decision.
   */
-  onChoice: (name: SettingName, index: number, pointer: boolean) => void,
+  onChoice: (name: ChoiceName, index: number, pointer: boolean) => void,
   // 0212: the music room's seek. A fraction of the walk, and the shell decides what that means.
   onSeek: (through: number) => void,
   // 0412: the intro's skip, pressed.
@@ -3615,14 +3698,21 @@ export function makeChrome(
   */
   /** The ship drawn on the card, in pixels per world unit — twice the readout's icons. */
   const CARD_SHIP_PIXELS_PER_UNIT = ICON_PIXELS_PER_UNIT * 2;
-  // @setup: a ship is baked the first time its pilot is highlighted, and kept for the page.
-  const cardShips = new Map<number, HTMLCanvasElement>();
-  const shipOnCard = (sprite: number): HTMLCanvasElement => {
-    let canvas = cardShips.get(sprite);
+  /*
+    @setup: a ship is baked the first time its pilot is highlighted, and kept for the page.
+
+    ⚠️ **ONE CANVAS PER CARD, AND IT WAS ONE PER SHIP — 0521.** An element has one parent, so with a
+    second card (the hangar's) the same canvas appended there was taken out of the title's, and the
+    title's card showed no ship. Kept per screen; the bake is the second card's, once.
+  */
+  const cardShips: Partial<Record<Screen, Map<number, HTMLCanvasElement>>> = {};
+  const shipOnCard = (screen: Screen, sprite: number): HTMLCanvasElement => {
+    const kept = (cardShips[screen] ??= new Map<number, HTMLCanvasElement>());
+    let canvas = kept.get(sprite);
     if (canvas === undefined) {
       const kind = SPRITE_KINDS[sprite];
       canvas = kind === undefined ? document.createElement('canvas') : bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT);
-      cardShips.set(sprite, canvas);
+      kept.set(sprite, canvas);
     }
     return canvas;
   };
@@ -3635,7 +3725,8 @@ export function makeChrome(
     craft: HTMLElement;
     gun: HTMLElement;
   }
-  let pilotCard: PilotCard | null = null;
+  /** Each screen's card under its band of faces — the title's (0513) and the hangar's (0521). */
+  const pilotCards: Partial<Record<Screen, PilotCard>> = {};
   const buildPilotCard = (prefix: string): PilotCard => {
     const part = (tag: string, name: string): HTMLElement => {
       const el = document.createElement(tag);
@@ -3655,8 +3746,9 @@ export function makeChrome(
     root.append(ship, words);
     return { root, ship, name, who, bio, craft, gun };
   };
-  const paintPilot = (golfer: GolferKind | undefined): void => {
-    if (pilotCard === null || golfer === undefined) return;
+  const paintPilot = (screen: Screen, golfer: GolferKind | undefined): void => {
+    const pilotCard = pilotCards[screen];
+    if (pilotCard === undefined || golfer === undefined) return;
     const row = GOLFERS[golfer];
     const ship = SHIPS[row.ship];
     const weapon = WEAPONS[ship.weapon];
@@ -3665,7 +3757,7 @@ export function makeChrome(
     pilotCard.bio.textContent = row.bio;
     pilotCard.craft.textContent = ship.label;
     pilotCard.gun.textContent = weapon.label + ' — ' + weapon.hint;
-    pilotCard.ship.replaceChildren(shipOnCard(ship.sprite));
+    pilotCard.ship.replaceChildren(shipOnCard(screen, ship.sprite));
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
@@ -3931,7 +4023,7 @@ export function makeChrome(
       option carries no value — the content hub's order IS the value — so the shell narrows an index
       against its own table rather than this file narrowing a string.
     */
-    const options: Partial<Record<SettingName, HTMLButtonElement[]>> = {};
+    const options: Partial<Record<ChoiceName, HTMLButtonElement[]>> = {};
     // Not `bands`: that name is the trigger discs', further down, and the two are different things.
     const choiceBands: Band[] = [];
     for (const choice of row.choices) {
@@ -4029,6 +4121,8 @@ export function makeChrome(
         hint,
         // The pilot's line is the name as well as what they fly: the face alone does not say who it is.
         hints: choice.options.map((option) => (choice.faces === 'portraits' ? option.label + ' — ' + option.hint : option.hint)),
+        open: choice.options.map(() => true),
+        why: null,
         index: 0,
         on: choice.on,
         press: choice.press,
@@ -4052,7 +4146,8 @@ export function makeChrome(
       */
       if (choice.faces === 'portraits') {
         line.classList.add(prefix + 'band-faces');
-        pilotCard = buildPilotCard(prefix);
+        const pilotCard = buildPilotCard(prefix);
+        pilotCards[screen] = pilotCard;
         settingsBox.appendChild(pilotCard.root);
       }
     }
@@ -4262,6 +4357,8 @@ export function makeChrome(
   dice.appendChild(swing);
   hud.appendChild(dice);
   wearShip(SHIPS.fighter);
+  /** The ship whose dash the readout has on — 0521, so `setShip` can tell a new plate from the same one. */
+  let wornPlate: ShipRow = SHIPS.fighter;
 
   /*
     ── WHERE TO PRESS, ON A DEVICE WHERE THAT IS A PLACE RATHER THAN A KEY ─────────────────────────
@@ -4512,13 +4609,32 @@ export function makeChrome(
    * can see, and a press past *Burn* that came round to *Legendary* is a tier nobody asked for; a press
    * on the band itself (`activate`) is the one way round, because it has no direction to be wrong about.
    */
+  /*
+    ⚠️ **A STEP SKIPS WHAT IS SHUT — 0521**, to the next open option that way, and stands still where
+    there is none: a locked dash is shown so the player knows it is there, and is never landed on.
+  */
+  /**
+   * A band's hint line and its two steps, from what is on it and what is open — 0458, and since 0521 a
+   * band with shut options says why in the hint's place, and a step with no open option that way is
+   * shown as going nowhere.
+   */
+  const sayBand = (band: Band): void => {
+    band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
+    band.less.disabled = !band.open.some((open, i) => open && i < band.index);
+    band.more.disabled = !band.open.some((open, i) => open && i > band.index);
+  };
   const stepBand = (band: Band, delta: number, round: boolean): void => {
     const count = band.hints.length;
     if (count === 0) return;
-    let next = band.index + delta;
-    if (round) next = (next + count) % count;
-    else next = Math.max(0, Math.min(count - 1, next));
-    if (next !== band.index) onChoice(band.name, next, false);
+    let next = band.index;
+    for (let tried = 0; tried < count; tried++) {
+      let at = next + delta;
+      if (round) at = (at + count) % count;
+      else if (at < 0 || at >= count) return;
+      next = at;
+      if (band.open[next] !== false) break;
+    }
+    if (next !== band.index && band.open[next] !== false) onChoice(band.name, next, false);
   };
   /** The band whose row the cursor is on, or `undefined` on a row of buttons. */
   const bandAtCursor = (): Band | undefined => {
@@ -4545,10 +4661,18 @@ export function makeChrome(
 
   return {
     elements,
-    setShip(ship: ShipRow): void {
+    setShip(ship: ShipRow, plate: ShipRow): void {
+      /*
+        ⚠️ **THE PLATE BEFORE THE NO-OP, BECAUSE IT CHANGES WITHOUT THE SHIP — 0521.** A dash fitted in the
+        hangar is the same ship wearing another ship's plate, and a check on the sprite alone would leave
+        the readout dressed as it was.
+      */
+      if (plate !== wornPlate) {
+        wearShip(plate);
+        wornPlate = plate;
+      }
       const sprite = ship.sprite;
       if (sprite === livesSprite) return;
-      wearShip(ship);
       const fresh = iconOf(sprite);
       fresh.className = livesIcon.className;
       fresh.setAttribute('aria-hidden', 'true');
@@ -4802,7 +4926,12 @@ export function makeChrome(
         field about to move, and the readout is part of what the player is getting ready to read.
       */
       const counting = screen !== null && SCREENS[screen].pause === 'held' && !SCREENS[screen].dims;
-      hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting));
+      /*
+        ⚠️ **AND OVER A SCREEN THAT FITS THE PLATE — 0521**: the readout IS the plate, so the hangar shows
+        the real one in its corner rather than a picture of it. Read off the row's choices, never its name.
+      */
+      const fitting = screen !== null && SCREENS[screen].choices.some((c) => c.name === 'plate');
+      hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting || fitting));
       // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
       scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && ((SCREENS[screen].steps && SCREENS[screen].inRun) || counting));
       // 0511: the pause button where a pause is offered, and nowhere else.
@@ -4947,7 +5076,7 @@ export function makeChrome(
       // long it will keep saying it.
       timer.textContent = seconds === null ? '' : String(seconds);
     },
-    setChoice(name: SettingName, index: number): void {
+    setChoice(name: ChoiceName, index: number): void {
       for (const screen of Object.keys(panels) as Screen[]) {
         const panel = panels[screen];
         const buttons = panel?.options[name];
@@ -4961,11 +5090,9 @@ export function makeChrome(
         const band = panel.bands.find((b) => b.name === name);
         if (band === undefined) continue;
         band.index = index;
-        band.hint.textContent = band.hints[index] ?? '';
+        sayBand(band);
         // 0513: a band of faces says who the one on it is, on the card under it.
-        if (band.faces === 'portraits') paintPilot(GOLFER_KINDS[index]);
-        band.less.disabled = index <= 0;
-        band.more.disabled = index >= band.hints.length - 1;
+        if (band.faces === 'portraits') paintPilot(screen, GOLFER_KINDS[index]);
         /*
           A face scrolled off a long roster's track is brought back into view when it is chosen.
 
@@ -4981,6 +5108,19 @@ export function makeChrome(
           if (left < track.scrollLeft) track.scrollLeft = left;
           else if (left + chosen.offsetWidth > track.scrollLeft + track.clientWidth) track.scrollLeft = left + chosen.offsetWidth - track.clientWidth;
         }
+      }
+    },
+    setOpen(name: ChoiceName, open: readonly boolean[], why: string | null): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const panel = panels[screen];
+        const buttons = panel?.options[name];
+        const band = panel?.bands.find((b) => b.name === name);
+        if (buttons === undefined || band === undefined) continue;
+        band.open = open;
+        band.why = why;
+        // A shut option is shown and cannot be pressed: `disabled` takes it off the pointer and the reader.
+        for (let i = 0; i < buttons.length; i++) buttons[i]!.disabled = open[i] === false;
+        sayBand(band);
       }
     },
     setFace(face: 'pixel' | 'clean'): void {
