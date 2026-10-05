@@ -5,7 +5,7 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { BOARD_SHOWN, SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { choose } from './title.ts';
+import { choose, openHangar, shown } from './title.ts';
 import { SCREENS, SCREEN_KINDS, type Screen } from '../src/state/screens.ts';
 // 0212: the music room's readout is the one part of a screen that appears after the screen does.
 import { MUSIC_LEVELS, MUSIC_LEVEL_LABEL } from '../src/content/music.ts';
@@ -745,6 +745,95 @@ describe.runIf(chromePath)('0538 — the title’s plates hold what is on them',
         return out;
       }, prefixFor('title'));
       expect(faults, `${viewport.what} (${viewport.width}x${viewport.height})`).toEqual([]);
+      await page.context().close();
+    }
+  });
+});
+
+describe.runIf(chromePath)('0547 — the hangar’s plates hold what is on them, whole', () => {
+  /*
+    THE REPORTED ONE: at 667x375 the hangar's pilot card stood beside the faces in the 39 pixels they
+    left, and drew "Bac" and "they/" — the name and the line about them cut by the card's own edge, at
+    the plate's. The fit guard above saw none of it: every box it kept was on the display, because what
+    the card hid it counts as not drawn, and the plate cuts by its clip path rather than an overflow.
+
+    ⚠️ **AN INVARIANT, AND IN THE PLAYER'S PIXELS.** Every leaf and control drawn on a standing tab's
+    plate is inside the plate's edges, and none is part-hidden by a box inside the plate that clips —
+    a thing drawn half is a thing cut. A scroller is not a cut, since what it hides is a scroll away, and
+    a word that ends in an ellipsis is cut short on purpose and stays inside its own box. No change that
+    put half a word or half a button on a plate would be correct.
+
+    ⚠️ **EVERY PILOT, BECAUSE THE CARD IS AS WIDE AS WHOEVER IS ON IT** — 0415's argument, and the cut
+    at 812x375 was the Marmot's home alone. Each pilot's name and line are written into the card in
+    turn, on `fillTheRoom`'s terms, since most of the roster is shut on a first visit.
+  */
+  const STANDING = SCREEN_KINDS.filter((s) => SCREENS[s].stand !== null);
+  it('draws every control and word on each tab’s plate whole and inside it, for every pilot, on every device', async () => {
+    expect(STANDING.length, 'no screen stands, so this guard is measuring nothing').toBeGreaterThan(0);
+    for (const viewport of VIEWPORTS) {
+      const page = await open(viewport);
+      await openHangar(page);
+      const faults: string[] = [];
+      let measured = 0;
+      for (const screen of STANDING) {
+        if ((await page.locator(shown(screen)).count()) === 0) {
+          const tabs = STANDING.map((s) => `${shown(s)} .${prefixFor(s)}tab`).join(', ');
+          await page.locator(tabs, { hasText: SCREENS[screen].heading }).first().click();
+          await page.waitForSelector(shown(screen));
+        }
+        for (const kind of GOLFER_KINDS) {
+          const seen = await page.evaluate(
+            ({ p, name, who }: { p: string; name: string; who: string }) => {
+              const plate = document.querySelector<HTMLElement>('.' + p + 'shown .' + p + 'plate');
+              if (plate === null) return { count: 0, out: ['no plate to measure'] };
+              const nameEl = plate.querySelector('.' + p + 'pilot-name');
+              if (nameEl !== null) nameEl.textContent = name;
+              const whoEl = plate.querySelector('.' + p + 'pilot-who');
+              if (whoEl !== null) whoEl.textContent = who;
+              const P = plate.getBoundingClientRect();
+              const out: string[] = [];
+              let count = 0;
+              for (const el of plate.querySelectorAll<HTMLElement>('*')) {
+                if (el.children.length > 0 && !(el instanceof HTMLButtonElement)) continue;
+                const r = el.getBoundingClientRect();
+                if (r.width === 0 || r.height === 0 || getComputedStyle(el).visibility === 'hidden') continue;
+                let left = r.left;
+                let top = r.top;
+                let right = r.right;
+                let bottom = r.bottom;
+                let cutBy = '';
+                for (let up = el.parentElement; up !== null && up !== plate; up = up.parentElement) {
+                  const style = getComputedStyle(up);
+                  if (style.overflow === 'visible') continue;
+                  const c = up.getBoundingClientRect();
+                  const was = { left, top, right, bottom };
+                  left = Math.max(left, c.left);
+                  top = Math.max(top, c.top);
+                  right = Math.min(right, c.right);
+                  bottom = Math.min(bottom, c.bottom);
+                  // A scroller hides what is a scroll away; a line ending in an ellipsis is cut short on purpose (0538).
+                  const meant = /auto|scroll/.test(style.overflow) || style.textOverflow === 'ellipsis';
+                  const clipped = left > was.left + 0.5 || top > was.top + 0.5 || right < was.right - 0.5 || bottom < was.bottom - 0.5;
+                  if (clipped && !meant && cutBy === '') cutBy = up.className.split(' ')[0] ?? 'a box';
+                }
+                // Hidden whole by a box that clips is not drawn, so it is not on the plate to be cut.
+                if (right <= left || bottom <= top) continue;
+                count++;
+                const what = ((el.textContent ?? '').trim() || el.getAttribute('aria-label') || el.className).slice(0, 40);
+                if (cutBy !== '') out.push(`"${what}" is cut by ${cutBy}`);
+                const edge = Math.min(left - P.left, top - P.top, P.right - right, P.bottom - bottom);
+                if (edge < -0.5) out.push(`"${what}" runs ${(-edge).toFixed(1)} px past the plate's edge`);
+              }
+              return { count, out };
+            },
+            { p: prefixFor(screen), name: GOLFERS[kind].name, who: GOLFERS[kind].pronouns + ' · ' + GOLFERS[kind].home },
+          );
+          measured += seen.count;
+          for (const fault of seen.out) faults.push(`${screen}, ${kind}: ${fault}`);
+        }
+      }
+      expect(measured, `${viewport.what}: nothing was measured on any plate`).toBeGreaterThan(0);
+      expect([...new Set(faults)], `${viewport.what} (${viewport.width}x${viewport.height})`).toEqual([]);
       await page.context().close();
     }
   });
