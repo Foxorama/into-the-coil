@@ -75,6 +75,10 @@ the hangar is two columns, the pilot and their card beside the dash: stacked, Ba
 - **The pilot card was one per page and is one per screen.** The ship on it was one cached canvas per
   sprite, and an element has one parent: the hangar's card took the title's ship. Photographed and
   fixed; each screen keeps its own.
+- **The title's row of buttons is 34em, and was 26 for three.** With the hangar's button it had 31
+  pixels to spare on this machine's fonts; CI's spent them and 30 more, putting Settings off a 1024x768.
+  Measured after: a fifth of the row spare at 480x320 (the side padding is narrower on a phone), and
+  more everywhere else.
 - **`tests/menu.test.ts`'s *Back goes somewhere that can be left*** named the count-in's case. The
   hangar is the first row whose Back is the title outright; the title is left by *Fly*, and the test
   now says so.

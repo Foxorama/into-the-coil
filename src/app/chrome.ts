@@ -925,7 +925,13 @@ ${each('-action')} {
   width is a fraction of the column with a character cap, so a desktop does not draw a button the
   width of a table.
 */
-.itc-title-choices { width: min(100%, 26em); gap: min(0.7rem, 1.8cqh); }
+/*
+  ⚠️ **34em SINCE 0521, AND IT WAS 26 FOR THREE.** The hangar made the row four — the chip, Fly, the
+  hangar and Settings, one line each — and at 26em it had 31 pixels to spare on this machine's fonts,
+  which CI's wider ones spent and 30 more: Settings off a 1024x768's edge. Measured at 34em, each row
+  has a fifth of its width to spare at every size the layout tests fly.
+*/
+.itc-title-choices { width: min(100%, 34em); gap: min(0.7rem, 1.8cqh); }
 .itc-title-action { width: 100%; }
 .itc-title-choices > :first-child { font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
 .itc-title-choices > :nth-child(n+2) { font-size: 0.85em; padding: 0.4em 0.9em; opacity: 0.9; }
@@ -1950,6 +1956,12 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.78em; padding: 0.3em 0.4em; }
   .itc-title-body .itc-title-choices > * { padding-top: 0.3em; padding-bottom: 0.3em; }
+  /*
+    ⚠️ **AND A NARROWER SIDE TO EACH BUTTON — 0521.** On a phone the row is the column's whole width
+    and four one-line buttons stand in it; the side padding is the one part of a button no word needs,
+    and CI's wider fonts took the row's last 38 pixels at 480x320.
+  */
+  .itc-title-body .itc-title-choices > * { padding-left: 0.5em; padding-right: 0.5em; }
   /*
     The names under the faces go on a phone: the card beside them names the highlighted pilot, each
     face names itself to a reader, and the line they took was the margin CI's wider fonts need.
