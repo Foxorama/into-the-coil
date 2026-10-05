@@ -37,7 +37,7 @@ import { makeDeaths } from '../src/sim/collide.ts';
 import { holdStation, SCROLL_PER_STEP } from '../src/sim/flight.ts';
 import { makeIntent } from '../src/sim/intent.ts';
 import { makeRng } from '../src/sim/rng.ts';
-import { SHIP_START_ALONG, corridorFor, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
+import { SHIP_START_ALONG, corridorFor, firstVolleyIn, layRoom, respawn, type LevelScore, type World } from '../src/app/frame.ts';
 import { CAPACITY, CHAIN_TRAIL, NECK_SLOTS } from '../src/app/mount.ts';
 import type { Intent } from '../src/sim/intent.ts';
 import type { Surface } from '../src/render/surface.ts';
@@ -524,7 +524,7 @@ export function playableWorld(
     scrollRate: SCROLL_PER_STEP,
     warp: 0,
     // 0093 took the two cadence numbers off `ShipRow`; the base weapon is the empty list.
-    fireIn: weaponFor(shipRow, []).fireEvery,
+    fireIn: firstVolleyIn(0, weaponFor(shipRow, []).fireEvery),
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,

@@ -17,7 +17,7 @@
 import type { ShipKind } from './ships.ts';
 
 /** Every rim. Closed — a new one is a row here and a painter in `src/render/bake.ts`. */
-export const RIM_KINDS = ['snowflake', 'whitewall', 'spinner'] as const;
+export const RIM_KINDS = ['snowflake', 'whitewall', 'spinner', 'bolts'] as const;
 export type RimKind = (typeof RIM_KINDS)[number];
 
 export interface RimRow {
@@ -50,4 +50,6 @@ export const RIMS: Record<RimKind, RimRow> = {
     at one credit, where the thrusters are three and a dangle two.
   */
   spinner: { name: 'Mothership spinners', hint: 'Silver spokes that never stop turning', from: null, price: 1000, turn: [0.7, 0.8] },
+  // The Thunderbolt's — 0545: the predecessor's chopper wore bright rims; these are its lightning.
+  bolts: { name: 'Lightning spokes', hint: 'A cyan bolt across a dark dish', from: 'thunderbolt', price: null, turn: null },
 };

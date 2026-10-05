@@ -2557,7 +2557,12 @@ describe('0109 — a death punctuates the music rather than getting it out of th
       under the outcomes and none of them is counted as one. It is read off the frame's own mapping,
       so the ray's cue (0442) is a gun's and not an outcome's — it sat AT the pulse's gain.
     */
-    const guns: readonly CueKind[] = [...new Set(WEAPON_KINDS.map((k) => cueOfFlight(WEAPONS[k].flight))), 'missile'];
+    /*
+      ⚠️ **AND THE CATHERINE WHEEL'S CRACKLE, SINCE 0545.** The wheel is thrown once every ten beats and
+      burns for nine of them, crackling on each: the crackle is the wheel's own stream, the sound that
+      never stops in that pilot's run, and is held under the outcomes as the throw is.
+    */
+    const guns: readonly CueKind[] = [...new Set(WEAPON_KINDS.map((k) => cueOfFlight(WEAPONS[k].flight))), 'missile', 'crackle'];
     const outcomes = CUE_KINDS.filter((k) => !guns.includes(k) && k !== 'threat');
     expect(outcomes.length, 'the table has no outcome cues, so this measured nothing').toBeGreaterThan(6);
     for (const weapon of guns) {
@@ -3052,7 +3057,8 @@ describe('0173 — a cue happens somewhere', () => {
     // times the pulse's 0.067, and its send is the smallest in the table; the rule is about a tail under a
     // REPEAT, and what it protects is the gun that never stops.
     // And the ray's, since 0442: one ring every eight steps, the arc's own cadence, and authored dry.
-    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray'];
+    // And the tether's sizzle, since 0545: it lands at the tether's rate, as `hit` lands at the gun's.
+    const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();
     }

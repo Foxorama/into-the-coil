@@ -64,6 +64,11 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
     ctx.fill();
   };
   const part = (a: Pt, b: Pt, share: number): Pt => [a[0] + (b[0] - a[0]) * share, a[1] + (b[1] - a[1]) * share];
+  // 0546: a marmot, on the same stride, with his own body.
+  if (golfer.figure === 'marmot') {
+    paintMarmotRunner(ctx, golfer, leap, lean, [ft, fs, bt, bs], line, disc);
+    return;
+  }
   // The arms swing against the legs.
   const armFront = leap ? 150 : -ft * 0.9;
   const armBack = leap ? 130 : -bt * 0.9;
@@ -206,6 +211,204 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
   disc(hx - 0.1, hy - 1.65, 0.18, shade(golfer.cap, 0.3));
 }
 
+/** The Marmot's own colours, beside his row's: his muzzle and belly, his visor, his helmet's bolt — 0546. */
+const MARMOT = {
+  muzzle: '#c79a68',
+  visor: '#ff9f1c',
+  bolt: '#7ae7ff',
+  teeth: '#fff8ec',
+  nose: '#2a1a10',
+} as const;
+
+/**
+ * The Marmot running out of the bar, side on, facing +x — 0546: the golfer's stride, on shorter legs
+ * under a plump body in his riding suit, his tail bushed out behind, and his helmet on with its visor
+ * down, the ears moulded into the shell and a cyan bolt down its side. His feet land where a golfer's
+ * do, so he stands on the same deck.
+ */
+function paintMarmotRunner(
+  ctx: CanvasRenderingContext2D,
+  marmot: RunnerRow,
+  leap: boolean,
+  lean: number,
+  [ft, fs, bt, bs]: readonly [number, number, number, number],
+  line: (points: readonly Pt[], colour: string, width: number) => void,
+  disc: (x: number, y: number, r: number, colour: string) => void,
+): void {
+  const deg = Math.PI / 180;
+  // Short legs: the hip sits low, so the feet still land on the deck at +5.
+  const hip: Pt = [0, 2.2];
+  const shoulder: Pt = [hip[0] + Math.sin(lean) * 2.3, hip[1] - Math.cos(lean) * 2.3];
+  const limb = (from: Pt, a1: number, l1: number, a2: number, l2: number): [Pt, Pt] => {
+    const knee: Pt = [from[0] + Math.sin(a1 * deg) * l1, from[1] + Math.cos(a1 * deg) * l1];
+    const foot: Pt = [knee[0] + Math.sin((a1 + a2) * deg) * l2, knee[1] + Math.cos((a1 + a2) * deg) * l2];
+    return [knee, foot];
+  };
+  // The tail behind, bushy, flung up by the run.
+  ctx.fillStyle = marmot.hair;
+  ctx.beginPath();
+  ctx.ellipse(hip[0] - 1.5, hip[1] - 0.7, 0.75, 1.55, leap ? -0.3 : -0.75, 0, Math.PI * 2);
+  ctx.fill();
+  // The back leg and arm, in shadow.
+  const [bk, bf] = limb(hip, bt, 1.4, bs, 1.45);
+  line([hip, bk, bf], shade(marmot.shirt, -0.3), 1.05);
+  line([bf, [bf[0] + 0.7, bf[1]]], shade(marmot.skin, -0.25), 0.75);
+  const [be, bh] = limb(shoulder, leap ? 130 : -bt * 0.9, 1.1, leap ? -20 : 70, 1);
+  line([shoulder, be, bh], shade(marmot.shirt, -0.3), 0.75);
+  // The body: plump, in the suit, with his belly's fur at the open front.
+  ctx.fillStyle = marmot.shirt;
+  ctx.beginPath();
+  ctx.ellipse((hip[0] + shoulder[0]) / 2, (hip[1] + shoulder[1]) / 2, 1.45, 1.75, lean, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = MARMOT.muzzle;
+  ctx.beginPath();
+  ctx.ellipse((hip[0] + shoulder[0]) / 2 + 0.75, (hip[1] + shoulder[1]) / 2 + 0.1, 0.55, 1.05, lean, 0, Math.PI * 2);
+  ctx.fill();
+  // The front leg and arm, and a paw.
+  const [fk, ff] = limb(hip, ft, 1.4, fs, 1.45);
+  line([hip, fk, ff], marmot.shirt, 1.1);
+  line([ff, [ff[0] + 0.75, ff[1]]], marmot.skin, 0.8);
+  const [fe, fh] = limb(shoulder, leap ? 150 : -ft * 0.9, 1.1, leap ? -20 : 75, 1);
+  line([shoulder, fe, fh], marmot.shirt, 0.8);
+  disc(fh[0], fh[1], 0.38, marmot.skin);
+  // The helmet: a black shell with its ear bumps, a sheen, the bolt, and the visor down in amber.
+  const head: Pt = [shoulder[0] + Math.sin(lean) * 1.4, shoulder[1] - Math.cos(lean) * 1.4];
+  const [hx, hy] = head;
+  disc(hx - 0.5, hy - 1.15, 0.45, marmot.cap);
+  disc(hx + 0.3, hy - 1.3, 0.45, marmot.cap);
+  disc(hx, hy, 1.4, marmot.cap);
+  ctx.globalAlpha = 0.35;
+  disc(hx - 0.35, hy - 0.5, 0.75, shade(marmot.cap, 0.6));
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = MARMOT.bolt;
+  ctx.beginPath();
+  ctx.moveTo(hx - 0.6, hy - 0.95);
+  ctx.lineTo(hx - 0.05, hy - 0.95);
+  ctx.lineTo(hx - 0.35, hy - 0.3);
+  ctx.lineTo(hx + 0.05, hy - 0.3);
+  ctx.lineTo(hx - 0.7, hy + 0.75);
+  ctx.lineTo(hx - 0.5, hy + 0.05);
+  ctx.lineTo(hx - 0.85, hy + 0.05);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = MARMOT.visor;
+  ctx.beginPath();
+  ctx.moveTo(hx + 0.35, hy - 0.75);
+  ctx.lineTo(hx + 1.4, hy - 0.4);
+  ctx.lineTo(hx + 1.35, hy + 0.45);
+  ctx.lineTo(hx + 0.4, hy + 0.35);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.7;
+  line([[hx + 0.6, hy - 0.5], [hx + 1.15, hy - 0.3]], shade(MARMOT.visor, 0.6), 0.18);
+  ctx.globalAlpha = 1;
+}
+
+/**
+ * The Marmot's portrait for the select screen — 0546: head and shoulders, front on, in twentieths of
+ * the square, as `paintPortrait` draws a golfer. His riding suit's shoulders and collar, and his helmet
+ * with its ears moulded in and the visor pushed up, so his face shows in the opening: the fur, the cream
+ * muzzle and cheeks, two bright eyes, his nose and his two front teeth.
+ */
+function paintMarmotPortrait(ctx: CanvasRenderingContext2D, marmot: GolferRow): void {
+  const disc = (x: number, y: number, r: number, colour: string): void => {
+    ctx.fillStyle = colour;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  // The suit: shoulders and a high collar, a zip down its front.
+  ctx.fillStyle = marmot.shirt;
+  ctx.beginPath();
+  ctx.moveTo(1.6, 20);
+  ctx.quadraticCurveTo(1.8, 15.2, 6.4, 14.4);
+  ctx.lineTo(13.6, 14.4);
+  ctx.quadraticCurveTo(18.2, 15.2, 18.4, 20);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = shade(marmot.shirt, 0.4);
+  ctx.lineWidth = 0.35;
+  ctx.beginPath();
+  ctx.moveTo(10, 15.6);
+  ctx.lineTo(10, 20);
+  ctx.stroke();
+  // The helmet's shell: round, its two ear bumps over the crown, and a sheen across the top.
+  disc(6.4, 3.6, 2, marmot.cap);
+  disc(13.6, 3.6, 2, marmot.cap);
+  disc(10, 9.4, 6.5, marmot.cap);
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = shade(marmot.cap, 0.7);
+  ctx.beginPath();
+  ctx.ellipse(8.2, 5.4, 3, 1.4, -0.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // The cyan bolt down one side of the shell.
+  ctx.fillStyle = MARMOT.bolt;
+  ctx.beginPath();
+  ctx.moveTo(15.2, 5);
+  ctx.lineTo(16.4, 5.6);
+  ctx.lineTo(15.6, 8.4);
+  ctx.lineTo(16.6, 8.6);
+  ctx.lineTo(14.6, 13);
+  ctx.lineTo(15.1, 9.6);
+  ctx.lineTo(14.2, 9.4);
+  ctx.closePath();
+  ctx.fill();
+  // The opening, and his face in it: fur, the cream muzzle and cheeks.
+  ctx.fillStyle = shade(marmot.cap, -0.4);
+  ctx.beginPath();
+  ctx.ellipse(10, 10.6, 4.4, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = marmot.skin;
+  ctx.beginPath();
+  ctx.ellipse(10, 10.8, 4, 3.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = MARMOT.muzzle;
+  ctx.beginPath();
+  ctx.ellipse(10, 12.4, 2.6, 1.9, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // The eyes, each with a glint, and the nose and the mouth under it.
+  disc(8.2, 9.8, 0.62, '#1a120b');
+  disc(11.8, 9.8, 0.62, '#1a120b');
+  disc(8.45, 9.55, 0.2, '#ffffff');
+  disc(12.05, 9.55, 0.2, '#ffffff');
+  ctx.fillStyle = MARMOT.nose;
+  ctx.beginPath();
+  ctx.ellipse(10, 11.5, 0.75, 0.55, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = MARMOT.nose;
+  ctx.lineWidth = 0.3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(10, 12);
+  ctx.lineTo(10, 12.8);
+  ctx.moveTo(8.9, 13);
+  ctx.quadraticCurveTo(10, 13.6, 11.1, 13);
+  ctx.stroke();
+  ctx.fillStyle = MARMOT.teeth;
+  ctx.fillRect(9.45, 13.1, 0.5, 0.8);
+  ctx.fillRect(10.05, 13.1, 0.5, 0.8);
+  // The visor, pushed up over the brow: amber, with a glare across it.
+  ctx.fillStyle = MARMOT.visor;
+  ctx.beginPath();
+  ctx.moveTo(4.6, 7.4);
+  ctx.quadraticCurveTo(10, 4.4, 15.4, 7.4);
+  ctx.lineTo(15, 8.6);
+  ctx.quadraticCurveTo(10, 6.2, 5, 8.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 0.6;
+  ctx.fillStyle = shade(MARMOT.visor, 0.6);
+  ctx.beginPath();
+  ctx.moveTo(6.4, 7);
+  ctx.quadraticCurveTo(8, 6, 9.6, 5.8);
+  ctx.lineTo(9.6, 6.4);
+  ctx.quadraticCurveTo(8, 6.6, 6.6, 7.6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+}
+
 /**
  * A head under a hood, in profile, facing +x — 0416. The hood is a cowl bigger than the skull, its back
  * falling to the shoulders and its peak overhanging the brow, so the face is a lit edge in a shadow:
@@ -260,6 +463,12 @@ export function paintPortrait(ctx: CanvasRenderingContext2D, golfer: GolferRow, 
   const u = size / 20;
   ctx.save();
   ctx.scale(u, u);
+  // 0546: the Marmot in his helmet, visor up.
+  if (golfer.figure === 'marmot') {
+    paintMarmotPortrait(ctx, golfer);
+    ctx.restore();
+    return;
+  }
   const disc = (x: number, y: number, r: number, colour: string): void => {
     ctx.fillStyle = colour;
     ctx.beginPath();

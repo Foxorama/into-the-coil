@@ -20,7 +20,7 @@ import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { QUETZAL_CANNON, QUETZAL_THROAT, drawKind } from '../src/render/bake.ts';
 import { inside, tracingPen, type Pass } from './paths.ts';
 import { BOLT_STEPS } from '../src/render/scene.ts';
-import type { Surface } from '../src/render/surface.ts';
+import { BOLT_HOSTILE, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD } from '../src/sim/flight.ts';
 import type { Entity } from '../src/sim/entity.ts';
@@ -140,8 +140,8 @@ class Recorder implements Surface {
   readonly strokes: { points: number[]; count: number; width: number; alpha: number; hostile: boolean }[] = [];
   clear(): void {}
   blit(): void {}
-  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean): void {
-    this.strokes.push({ points: Array.from(points.subarray(0, count * 2)), count, width, alpha, hostile });
+  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone): void {
+    this.strokes.push({ points: Array.from(points.subarray(0, count * 2)), count, width, alpha, hostile: tone === BOLT_HOSTILE });
   }
 }
 
@@ -579,8 +579,8 @@ describe('0459 — the laser leaves from under its gun', () => {
       blit(sprite: number): void {
         order.push(`blit:${sprite}`);
       },
-      bolt(_points: Float32Array, _count: number, _width: number, _alpha: number, hostile: boolean): void {
-        order.push(hostile ? 'beam' : 'bolt');
+      bolt(_points: Float32Array, _count: number, _width: number, _alpha: number, tone: BoltTone): void {
+        order.push(tone === BOLT_HOSTILE ? 'beam' : 'bolt');
       },
     };
     const fan = thrown(d);

@@ -11,7 +11,7 @@
  */
 
 import type { Atlas } from './bake.ts';
-import type { Surface } from './surface.ts';
+import { BOLT_FLAME, BOLT_HOSTILE, type BoltTone, type Surface } from './surface.ts';
 
 /**
  * The device-pixel-ratio ceiling, per 0022.
@@ -40,6 +40,8 @@ export class CanvasSurface implements Surface {
   private boltInk = UNSET;
   // The enemy's lightning — 0248. Its own inks; the dark halo is the same space.
   private hostileInk = UNSET;
+  // The Catherine wheel's tether — 0545: the player's own fire, amber and gold.
+  private flameInk = UNSET;
   private boltDark = '#000000';
 
   constructor(private readonly ctx: CanvasRenderingContext2D, atlas: Atlas) {
@@ -86,6 +88,7 @@ export class CanvasSurface implements Surface {
   setBolt(inks: BoltInks): void {
     this.boltInk = inks.player;
     this.hostileInk = inks.hostile;
+    this.flameInk = inks.flame;
     this.boltDark = inks.dark;
   }
 
@@ -193,10 +196,10 @@ export class CanvasSurface implements Surface {
    * **And the context is put back** — `source-over`, alpha one — before this returns, because every
    * blit after it would otherwise be added to the frame too.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number, hostile: boolean, beam = false): void {
+  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, beam = false): void {
     if (count < 1) return;
     const ctx = this.ctx;
-    const ink = hostile ? this.hostileInk : this.boltInk;
+    const ink = tone === BOLT_HOSTILE ? this.hostileInk : tone === BOLT_FLAME ? this.flameInk : this.boltInk;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
@@ -244,10 +247,11 @@ export interface BoltInk {
   readonly core: string;
 }
 
-/** The player's bolt and the enemy's, and the dark rim they share. */
+/** The player's bolt, the enemy's, the flame's (0545), and the dark rim they share. */
 export interface BoltInks {
   readonly player: BoltInk;
   readonly hostile: BoltInk;
+  readonly flame: BoltInk;
   readonly dark: string;
 }
 

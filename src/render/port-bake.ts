@@ -761,6 +761,8 @@ const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   caddie: { paint: paintSaucer, jets: [[-CADDIE_DISC, 0]] },
   firebird: null,
   estate: null,
+  // Side-on in the fight already, as the cars are — 0546.
+  thunderbolt: null,
 };
 
 /** How far over each frame of the tilt leans — side-on, then a fifth of the way at a time; `blue` is all of it. */

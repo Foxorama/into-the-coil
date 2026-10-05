@@ -13,7 +13,7 @@
 import type { ShipKind } from './ships.ts';
 
 /** Every golfer, in the predecessor's roster order — the order the select screen offers them in. Closed. */
-export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo'] as const;
+export const GOLFER_KINDS = ['feather', 'woo', 'larry', 'bo', 'marmot'] as const;
 
 export type GolferKind = (typeof GOLFER_KINDS)[number];
 
@@ -43,11 +43,22 @@ export interface RunnerRow {
   pants?: string;
   /** Sleeves to the wrist. Absent is a polo's short ones. */
   longSleeves?: boolean;
+  /**
+   * What body they are drawn with — 0546. Absent is a golfer; the Marmot is a marmot, in a riding suit
+   * (`shirt`) and a full-face helmet (`cap`), his fur `skin` and `hair`. A row says its own, and the
+   * painter's fallback is the person every other runner is (0282).
+   */
+  figure?: 'marmot';
 }
 
 export interface GolferRow extends RunnerRow {
   /** Their name, as the select screen and the menu say it. */
   name: string;
+  /**
+   * The name they go by, under their card on the pilot band — 0546. It was the first word of `name`,
+   * which is *The* for the Marmot; a row says its own.
+   */
+  goesBy: string;
   /**
    * The ship they fly, and with it the gun — 0441: *"each pilot has their own ship."* On the golfer
    * and not on the ship, because who flies what is a fact about the pilot: a fifth golfer may be given
@@ -84,6 +95,14 @@ export interface GolferRow extends RunnerRow {
   saved: readonly string[];
   /** And what they might say when they are the one who came for them — *"relatable to their character"*, on the same terms. */
   saving: readonly string[];
+  /**
+   * Who must have cleared the game before this pilot may fly, or empty for one who flies from the first
+   * run — 0546. Asked: *"locked until you beat the game with every pilot (on any difficulty, but must
+   * clear it with all four starting pilots) - he can show up on the list of random rescuee's with some
+   * voice lines before he's unlocked as a teaser though."* A clear is a win in the pilot's own ship
+   * (`won` in `src/state/slices/hangar.ts`): any tier, any credits, as 0521 counts every win.
+   */
+  opensAfter: readonly GolferKind[];
 }
 
 /** What every golfer wears under the cap and polo: the predecessor intro's trousers, shoes and bag. */
@@ -97,6 +116,7 @@ export const KIT = {
 export const GOLFERS: Record<GolferKind, GolferRow> = {
   feather: {
     name: 'Feather Fade',
+    goesBy: 'Feather',
     ship: 'caddie',
     home: 'Nairobi',
     pronouns: 'she/her',
@@ -109,6 +129,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 0.98,
     bio: 'Reads wind off kites over the Ngong Hills, a feather in her cap; a controlled fade on every shot.',
     voice: 1.14,
+    opensAfter: [],
     saved: [
       'You found me! I felt the wind change, and I hoped it was you.',
       'I was starting to think nobody was coming. Thank you.',
@@ -126,6 +147,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   woo: {
     name: 'Huang-Woo Hook',
+    goesBy: 'Huang-Woo',
     ship: 'fighter',
     home: 'Busan',
     pronouns: 'he/she/they',
@@ -138,6 +160,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Names a club by the sound of the strike, blindfold; striped irons, and a hook into Gwangalli harbour.',
     voice: 1.03,
+    opensAfter: [],
     saved: [
       'I heard your guns through the walls. I knew someone had come.',
       'It was so dark in there. Thank you for finding me.',
@@ -155,6 +178,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   larry: {
     name: 'Longshot Larry',
+    goesBy: 'Longshot',
     ship: 'estate',
     home: 'Perth',
     pronouns: 'he/him',
@@ -167,6 +191,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1.08,
     bio: 'Three long-drive titles, a dented driver on the mantel, two kids and a kelpie, and a road train.',
     voice: 0.8,
+    opensAfter: [],
     saved: [
       'Mate! You came for me! Thought I was a goner in there.',
       'Get me home to the kids and the dog. I owe you a cold one.',
@@ -184,6 +209,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   bo: {
     name: 'Backspin Bo',
+    goesBy: 'Backspin',
     ship: 'firebird',
     home: 'Portland',
     pronouns: 'they/them',
@@ -196,6 +222,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     build: 1,
     bio: 'Spins it back on a string; roasts coffee named for their spin rate; once lost a playoff to backspin.',
     voice: 0.95,
+    opensAfter: [],
     saved: [
       'You came back for me. I’m naming my next coffee roast after you.',
       'I thought I’d be stuck in there forever. Thank you. Really.',
@@ -211,7 +238,62 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
       'All that way, and worth every second. Let’s go.',
     ],
   },
+  /**
+   * The Marmot — 0546. *The Far Carry*'s Marmot Bartender: he pocketed golf balls from the trade tents,
+   * tended the 19th-hole bar on the tips, and slipped off to play the spaceport par-3 whenever the jar
+   * was full. He rides the Thunderbolt in a full-face motorbike helmet, ears moulded into the shell.
+   *
+   * ⚠️ **LOCKED BEHIND THE FOUR, AND RESCUABLE BEFORE IT** — *"he can show up on the list of random
+   * rescuee's with some voice lines before he's unlocked as a teaser though."* `rescuable` walks every
+   * kind, so he is in the Viper's pool from the first run; `opensAfter` is what keeps him off the
+   * select until all four have cleared the game.
+   *
+   * ⚠️ **HIS LINES LAND FOR A PLAYER WHO NEVER MET HIM** — 0426's rule: *you came, I'm out, thank you*,
+   * in his voice — a bartender's, a little gruff, and short. Any `saving` line may answer any `saved`.
+   */
+  marmot: {
+    name: 'The Marmot',
+    goesBy: 'Marmot',
+    ship: 'thunderbolt',
+    home: 'The 19th Hole',
+    pronouns: 'he/him',
+    // His helmet, black; his riding suit, brown leather; his fur, and its darker guard hairs.
+    cap: '#15171e',
+    shirt: '#4a3122',
+    skin: '#8a5a34',
+    hair: '#5f3c20',
+    cut: 'crop',
+    stubble: false,
+    build: 0.82,
+    figure: 'marmot',
+    bio: 'Pocketed golf balls from the trade tents and tended the 19th-hole bar on the tips; plays the par-3 when the jar is full.',
+    // High and quick: a small animal's voice, and the whistle a marmot is named for.
+    voice: 1.38,
+    opensAfter: ['feather', 'woo', 'larry', 'bo'],
+    saved: [
+      'About time! I was down to my last golf ball in there.',
+      'You came for me? Drinks are on the house. Forever.',
+      'Out! Never thought I’d miss sweeping the bar.',
+      'That thing kept thumping. Sound of my bike’s better. Thanks.',
+      'Took you long enough. Kidding. Thank you. Really.',
+    ],
+    saving: [
+      'Hop on! Mind the tail.',
+      'Easy now. I’ve got you. Hold on to something.',
+      'Nobody gets left behind. Not on my bike.',
+      'Last call, pal. We’re going home.',
+      'Heard you were stuck. Came straight over.',
+    ],
+  },
 };
+
+/**
+ * Whether `golfer` may fly, by the ships that have cleared the game — 0546. A pilot whose `opensAfter`
+ * is empty always may; one who names pilots may once every one of them has won in their own ship.
+ */
+export function pilotOpen(golfer: GolferKind, won: Readonly<Record<ShipKind, boolean>>): boolean {
+  return GOLFERS[golfer].opensAfter.every((k) => won[GOLFERS[k].ship]);
+}
 
 /** Who flies if nobody has chosen — Bo, the pilot 0412 drew, for a player who skips straight past. */
 export const DEFAULT_GOLFER: GolferKind = 'bo';

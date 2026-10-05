@@ -23,7 +23,8 @@ import { PLAYER_ALONG_SPAN, PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { screenX, screenY, type Surface } from './surface.ts';
+import { BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
+import { TETHER_BOLT_KIND } from '../content/weapons.ts';
 
 /**
  * Draw one frame.
@@ -430,6 +431,14 @@ const BOLT_VERTICES = 13;
 const TWIG_VERTICES = 3;
 /** Stroke width of the core, in world units. The glow under it is four times this, the flash fourteen — 0238. */
 const BOLT_WIDTH = 0.5;
+/**
+ * The Catherine wheel's tether's ripple — 0545: at most a unit off the line, three waves along it,
+ * running along it a little each step. Its width is its link's `radius`, which the frame sets to how
+ * far either side of the line it lands, and is drawn as a beam's is, so it is as wide as it hits.
+ */
+const TETHER_RIPPLE = 0.9;
+const TETHER_WAVES = 3 * Math.PI * 2;
+const TETHER_RUN = 0.35;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
@@ -561,8 +570,30 @@ export function paintBolts(
       hurts would be a lie about where the player may be. One that jags does so on a path it keeps
       from its warning to its fade, which is the difference from lightning (0388, above).
     */
+    /*
+      ⚠️ **THE CATHERINE WHEEL'S TETHER IS A ROPE OF FIRE, NOT A FLASH — 0545.** Laid every step from the
+      muzzle to the wheel and drawn as a held line (`beam`'s stack, so it is light that stays on rather
+      than a strike that collapses), in the flame's inks, rippling gently along its length as the wheel
+      pulls it. No twig and no points: those say *lightning*, and this is a burning cord.
+    */
+    if (e.kind === TETHER_BOLT_KIND) {
+      const last = BOLT_VERTICES - 1;
+      for (let v = 0; v <= last; v++) {
+        const t = v / last;
+        // Pinned at both ends; a ripple of a unit at most in the middle, running along it with time.
+        const off = Math.sin(t * Math.PI) * TETHER_RIPPLE * Math.sin(t * TETHER_WAVES + e.spin * TETHER_RUN);
+        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+        const inView = along - cameraAlong;
+        LINK[v * 2] = screenX(view, inView, across);
+        LINK[v * 2 + 1] = screenY(view, inView, across);
+      }
+      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * view.scale, 1, BOLT_FLAME, true);
+      continue;
+    }
     const beam = e.kind === BEAM_BOLT_KIND;
     const hostile = e.kind === RAIN_BOLT_KIND || beam;
+    const tone = hostile ? BOLT_HOSTILE : BOLT_PLAYER;
     const warning = hostile && e.lifeFor > (beam ? e.holdFor : BOLT_STEPS);
     /*
       ⚠️ **AND A JAGGED BEAM IS A ZIGZAG, WARNED ALONG THE SAME ZIGZAG — 0388.** *"A random jagged
@@ -581,10 +612,10 @@ export function paintBolts(
         BEAM_PATH[i * 2 + 1] = screenY(view, inView, across);
       }
       if (warning) {
-        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, BOLT_HOSTILE);
       } else {
         const held = beamHum(e);
-        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, true, true);
+        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, true);
       }
       continue;
     }
@@ -611,25 +642,25 @@ export function paintBolts(
       LINK[v * 2 + 1] = screenY(view, inView, across);
     }
     if (warning) {
-      surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, true);
+      surface.bolt(LINK, BOLT_VERTICES, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, BOLT_HOSTILE);
       continue;
     }
     if (beam) {
       // The stroke's own width is a quarter of the visible body (`src/render/canvas.ts`), so a
       // quarter of the hurt width draws the body exactly as wide as the beam hurts.
       const held = beamHum(e);
-      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, true, true);
+      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, true);
       continue;
     }
     // Fades over its life: a flash, brightest and widest the step it lands, collapsing after — 0470.
     const fade = Math.pow(e.lifeFor / BOLT_STEPS, BOLT_FADE_POWER);
     const core = BOLT_WIDTH * (BOLT_CORE_DYING + (BOLT_CORE_STRUCK - BOLT_CORE_DYING) * fade);
-    surface.bolt(LINK, BOLT_VERTICES, core * view.scale, fade, hostile);
+    surface.bolt(LINK, BOLT_VERTICES, core * view.scale, fade, tone);
     // The bright points: a dot on every third inner vertex, over the stroke — 0236.
     for (let v = BOLT_DOT_EVERY; v < last; v += BOLT_DOT_EVERY) {
       DOT[0] = LINK[v * 2]!;
       DOT[1] = LINK[v * 2 + 1]!;
-      surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade, hostile);
+      surface.bolt(DOT, 1, BOLT_WIDTH * BOLT_DOT_WIDTH * view.scale, fade, tone);
     }
     /*
       The twigs: one from a vertex a third to two thirds along, out to the side the hash says, and
@@ -640,9 +671,9 @@ export function paintBolts(
     const reach = TWIG_SHARE * length > TWIG_MAX ? TWIG_MAX : TWIG_SHARE * length;
     const from = 4 + ((seed + page) & 3);
     const side = jag(seed, from + 17, page) < 0 ? -1 : 1;
-    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, from, side, reach, core * 0.6 * view.scale, fade * 0.8, hostile);
+    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, from, side, reach, core * 0.6 * view.scale, fade * 0.8, tone);
     const fork = 2 + (((seed >> 3) + page) & 3);
-    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, fork, -side, reach * TWIG_SECOND, core * 0.5 * view.scale, fade * 0.7, hostile);
+    paintTwig(surface, view, e, cameraAlong, endAlong, endAcross, nAlong, nAcross, length, amp, page, fork, -side, reach * TWIG_SECOND, core * 0.5 * view.scale, fade * 0.7, tone);
   }
 }
 
@@ -668,7 +699,7 @@ function paintTwig(
   reach: number,
   width: number,
   alpha: number,
-  hostile: boolean,
+  tone: BoltTone,
 ): void {
   const seed = e.spin;
   const last = BOLT_VERTICES - 1;
@@ -686,7 +717,7 @@ function paintTwig(
     TWIG[v * 2] = screenX(view, inView, across);
     TWIG[v * 2 + 1] = screenY(view, inView, across);
   }
-  surface.bolt(TWIG, TWIG_VERTICES, width, alpha, hostile);
+  surface.bolt(TWIG, TWIG_VERTICES, width, alpha, tone);
 }
 
 /*
@@ -748,7 +779,7 @@ export function paintBodyBolts(surface: Surface, view: View, table: Int32Array, 
         count++;
       }
     }
-    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, true);
+    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, BOLT_HOSTILE);
   }
 }
 
@@ -1411,6 +1442,6 @@ function paintWarp(surface: Surface, view: View, cameraAlong: number, warp: numb
       capsule twenty-eight pixels fat with round ends, and the sky at speed was a screen of pills. A
       streak is a line; under a pixel of core, the flash is a soft edge to it rather than a shape.
     */
-    surface.bolt(STREAK, 2, 0.3 + 0.7 * depth, warp * (0.3 + 0.6 * depth), false);
+    surface.bolt(STREAK, 2, 0.3 + 0.7 * depth, warp * (0.3 + 0.6 * depth), BOLT_PLAYER);
   }
 }

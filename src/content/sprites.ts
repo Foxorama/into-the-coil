@@ -85,6 +85,13 @@ export const SPRITE_KINDS = [
   'estateTubeHit',
   'estateTubes',
   'estateTubesHit',
+  // The Marmot's Thunderbolt — 0545: *The Far Carry*'s hot-rod space chopper, from the side, him riding it.
+  'thunderbolt',
+  'thunderboltHit',
+  'thunderboltTube',
+  'thunderboltTubeHit',
+  'thunderboltTubes',
+  'thunderboltTubesHit',
   // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
   'spinnerWheel',
   'spinnerWheelHit',
@@ -1112,6 +1119,19 @@ export const SPRITE_KINDS = [
   'shieldLattice240a',
   'shieldLattice240b',
   'shieldLattice240c',
+  // The Thunderbolt's shell — 0545: a cage of forked lightning in the arc's own cyan.
+  'shieldStorm0a',
+  'shieldStorm0b',
+  'shieldStorm0c',
+  'shieldStorm120a',
+  'shieldStorm120b',
+  'shieldStorm120c',
+  'shieldStorm180a',
+  'shieldStorm180b',
+  'shieldStorm180c',
+  'shieldStorm240a',
+  'shieldStorm240b',
+  'shieldStorm240c',
   /*
     ── A SURGE IS WORN — `docs/decisions/0373-a-special-is-the-guns-own.md` ─────────────────────────
 
@@ -1141,6 +1161,14 @@ export const SPRITE_KINDS = [
   */
   'shuriken',
   'shurikenTurn',
+  /*
+    The Catherine wheel — 0545: a spoked wheel of gold fire with a white hub, turned by the frame as it
+    spins; its fade, the same wheel burning down; and a cinder off its rim, a streak with a white-hot
+    head turned along its flight. A cinder and not an ember because `ember` is the fish's, 0480.
+  */
+  'catherine',
+  'catherineFade',
+  'cinder',
   /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
@@ -1611,6 +1639,12 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   estateTubeHit: SHIP_BOX,
   estateTubes: SHIP_BOX,
   estateTubesHit: SHIP_BOX,
+  thunderbolt: SHIP_BOX,
+  thunderboltHit: SHIP_BOX,
+  thunderboltTube: SHIP_BOX,
+  thunderboltTubeHit: SHIP_BOX,
+  thunderboltTubes: SHIP_BOX,
+  thunderboltTubesHit: SHIP_BOX,
   /*
     0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
     of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at
@@ -2499,6 +2533,18 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shieldLattice240a: 12,
   shieldLattice240b: 12,
   shieldLattice240c: 12,
+  shieldStorm0a: 12,
+  shieldStorm0b: 12,
+  shieldStorm0c: 12,
+  shieldStorm120a: 12,
+  shieldStorm120b: 12,
+  shieldStorm120c: 12,
+  shieldStorm180a: 12,
+  shieldStorm180b: 12,
+  shieldStorm180c: 12,
+  shieldStorm240a: 12,
+  shieldStorm240b: 12,
+  shieldStorm240c: 12,
   // Round the whole hull with a margin — the ship is 7, so its wingtips sit inside the rim. 0373.
   auraHunt: 12,
   auraOverdrive: 12,
@@ -2537,6 +2583,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     commit and every guard was green about it: the pair is never compared anywhere.
   */
   shurikenTurn: 5.6,
+  /*
+    The wheel is drawn twice its hurtbox across with its flames, so the hub and spokes are what lands
+    and the burning rim reads as the sparks it throws — 0545. An ember is a short streak.
+  */
+  catherine: 16,
+  catherineFade: 16,
+  cinder: 4.5,
   /*
     ⚠️ **A LITTLE UNDER HALF THE SHIP, AND THREE PAGES OF ONE SIZE** — 0442. Bigger than a pulse,
     because it is one body a volley and has to be seen to be aimed; well under the blade, because it

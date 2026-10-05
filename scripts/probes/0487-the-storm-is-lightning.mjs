@@ -48,8 +48,9 @@ export const PROBES = [
     guard: 'THE CONSIDERED ONE, IN PIXELS',
     edit: {
       path: 'src/render/scene.ts',
-      find: '    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, true);',
-      replace: '    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, false);',
+      // 0545's bolt verb takes a tone where it took a flag.
+      find: '    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, BOLT_HOSTILE);',
+      replace: '    surface.bolt(BODY_PATH, count, BOLT_WIDTH * BODY_BOLT_WIDTH * view.scale, 1, BOLT_PLAYER);',
     },
   },
 ];

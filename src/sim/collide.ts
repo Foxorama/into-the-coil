@@ -323,6 +323,73 @@ export function blastInto(
 }
 
 /**
+ * A tether from `(rootAlong, rootAcross)` to `(endAlong, endAcross)` against a pool — 0545, the
+ * Catherine wheel's: *"a fire tether back to the spaceship that you can use to hit things with."* It
+ * lands `damage` on every target whose body comes within `reach` of the line, on the blades' terms:
+ * a target takes it only so often, on its own clock (or `gate`'s, a boss's hull for its body), the
+ * bucket `collideInto` keeps for a blade (0391). Returns how many it destroyed.
+ *
+ * ⚠️ **A LINE, AND NOT A BODY SWEPT ALONG ONE.** The tether is the whole length from the gun to the
+ * wheel every step, so what it touches is a distance from a segment, and nothing about how fast either
+ * end moved. A body the line passed clean over between two steps was not touched, which at a few units
+ * a step of sweep is a body smaller than the line's own reach.
+ *
+ * ⚠️ **STONE STOPS IT AS IT STOPS A BLAST — 0349.** It lands on a body only where the line from the
+ * root to the point it touches is clear, so it cannot reach round a wall to the far side of it.
+ */
+export function tetherInto(
+  targets: Pool<Entity>,
+  rootAlong: number,
+  rootAcross: number,
+  endAlong: number,
+  endAcross: number,
+  reach: number,
+  damage: number,
+  damageScale: number,
+  flashSteps: number,
+  deaths: Deaths | null,
+  hits: Deaths | null,
+  gap: number,
+  gate: Entity | null = null,
+  corridor: Corridor | null = null,
+): number {
+  const dA = endAlong - rootAlong;
+  const dC = endAcross - rootAcross;
+  const lengthSq = dA * dA + dC * dC;
+  let destroyed = 0;
+  for (let t = targets.size - 1; t >= 0; t--) {
+    const target = targets.at(t);
+    if (target.invulnFor > 0) continue;
+    const clock = gate ?? target;
+    // The nearest point of the line to the target's centre.
+    const along = lengthSq > 0 ? ((target.along - rootAlong) * dA + (target.across - rootAcross) * dC) / lengthSq : 0;
+    const share = along < 0 ? 0 : along > 1 ? 1 : along;
+    const pA = rootAlong + dA * share;
+    const pC = rootAcross + dC * share;
+    const offA = target.along - pA;
+    const offC = target.across - pC;
+    const within = reach + target.radius;
+    if (offA * offA + offC * offC > within * within) continue;
+    if (gap > 0 && clock.bladeIn > gap * (BLADE_BURST - 1)) continue;
+    if (!clearLine(corridor, rootAlong, rootAcross, pA, pC)) continue;
+    if (gap > 0) clock.bladeIn += gap;
+    target.health -= damage * damageScale;
+    if (hits !== null && hits.count < hits.along.length) {
+      hits.along[hits.count] = pA;
+      hits.across[hits.count] = pC;
+      hits.count++;
+    }
+    if (target.health <= 0) {
+      killed(targets, t, deaths);
+      destroyed++;
+      continue;
+    }
+    flash(target, flashSteps);
+  }
+  return destroyed;
+}
+
+/**
  * Blasts against one animal — a head, and the nodes that spend what lands on them on it — landing
  * once each however much of the animal they cover. `docs/decisions/0372-a-death-keeps-the-ladders.md`.
  *

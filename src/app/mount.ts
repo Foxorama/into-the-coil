@@ -97,7 +97,7 @@ import {
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
 import { INTRO_CUES, SPLASH_STEPS } from '../content/port.ts';
-import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
+import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
@@ -109,6 +109,7 @@ import {
   SHIP_START_ALONG,
   bossOnField,
   detonateArsenal,
+  firstVolleyIn,
   landmarksFor,
   canThrow,
   holdFinale,
@@ -123,7 +124,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, liveryWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, liveryWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor } from '../content/livery.ts';
@@ -1041,7 +1042,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
-  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact));
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard));
 
   // Whether the pad's Start was pressed since the last tick — 0511. Set from inside the step, spent in `onTick`.
   let pauseAsked = false;
@@ -1197,7 +1198,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       entry. `weaponFor(shipRow, [])` is the one description of *what an unupgraded ship fires at*,
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
-    fireIn: weaponFor(shipRow, []).fireEvery,
+    // From step nought, the first volley of the run is the first of a life — 0545's `firstVolleyIn`.
+    fireIn: firstVolleyIn(0, weaponFor(shipRow, []).fireEvery),
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
@@ -2020,6 +2022,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         tap to see, tap again to fly — and after a run the card flown last is one tap from flying again.
       */
       const kind = GOLFER_KINDS[index] ?? DEFAULT_GOLFER;
+      // 0546: a shut pilot's card cannot be pressed; this is the belt to that brace, for a pad's press.
+      if (!pilotOpen(kind, state.hangar.won)) return;
       /*
         ⚠️ **ONLY WHERE THE BAND TAKES — 0521.** The hangar offers the same band and its press steps: a
         pilot is looked at there to be fitted out, and *Fly* is the title's. Read off the shown row's band.
@@ -2133,6 +2137,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     readout dressed in it. Then the ship itself, as the pilot band always refitted it.
   */
   function fitHangar(): void {
+    // 0546: which pilots may fly, by the wins so far, on the title's band and the hangar's alike.
+    chrome.setOpen('pilot', GOLFER_KINDS.map((kind) => pilotOpen(kind, state.hangar.won)), pilotWhy(state.hangar.won));
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
@@ -2522,7 +2528,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSpace(want);
     // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
     const hostile = place === null ? null : THEMES[place].bolt;
-    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact));
+    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard));
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 

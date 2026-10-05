@@ -834,6 +834,19 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldLattice240a: 'hazard',
   shieldLattice240b: 'hazard',
   shieldLattice240c: 'hazard',
+  // The Thunderbolt's cage of lightning in the arc's own cyan, which is the player's — 0545.
+  shieldStorm0a: 'player',
+  shieldStorm0b: 'player',
+  shieldStorm0c: 'player',
+  shieldStorm120a: 'player',
+  shieldStorm120b: 'player',
+  shieldStorm120c: 'player',
+  shieldStorm180a: 'player',
+  shieldStorm180b: 'player',
+  shieldStorm180c: 'player',
+  shieldStorm240a: 'player',
+  shieldStorm240b: 'player',
+  shieldStorm240c: 'player',
   // The seeker surge in the seeker's own ink, which is the purple asked for; the gun's in the gold
   // the hazard ink already is — 0373. Both are the player's, behind the ship and never a threat.
   auraHunt: 'ally',
@@ -845,6 +858,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // Steel, since 0238 — *"steel coloured"* — an ink of its own, because a blade is not a bullet.
   shuriken: 'blade',
   shurikenTurn: 'blade',
+  // The player's own fire — 0545: amber spokes and a gold rim, never the hostile `fire`.
+  catherine: 'bullet',
+  catherineFade: 'bullet',
+  cinder: 'hazard',
   /*
     ⚠️ **THE RAY'S RINGS ARE THE ALLY INK — 0442** — *"purple energy rings"*, and the player's own
     purple is `ally`, the seekers' lavender. Never `void`, which is the serpent's hostile violet: the
@@ -908,6 +925,12 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   estateTubeHit: 'hazard',
   estateTubes: 'player',
   estateTubesHit: 'hazard',
+  thunderbolt: 'player',
+  thunderboltHit: 'hazard',
+  thunderboltTube: 'player',
+  thunderboltTubeHit: 'hazard',
+  thunderboltTubes: 'player',
+  thunderboltTubesHit: 'hazard',
   // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
   spinnerWheel: 'player',
   spinnerWheelHit: 'hazard',
@@ -1737,6 +1760,8 @@ export function shaded(
   points: readonly Pt[],
   alpha = 1,
   smooth = false,
+  /** Holes cut out of what is washed, `evenodd` — 0545, the gap under the Marmot's arm. */
+  holes: readonly (readonly Pt[])[] = [],
 ): void {
   const wash = ctx.createLinearGradient(
     f.half + from[0] * f.r,
@@ -1751,6 +1776,7 @@ export function shaded(
   ctx.beginPath();
   if (smooth) curveLoop(ctx, f, points);
   else trace(ctx, f, points);
+  for (const hole of holes) trace(ctx, f, hole);
   ctx.fill('evenodd');
   ctx.globalAlpha = 1;
 }
@@ -2220,7 +2246,7 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, po
 */
 
 /** Every flyable ship's art, by kind — what `drawKind` and the port both draw. */
-type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate';
+type ShipArt = 'fighter' | 'caddie' | 'firebird' | 'estate' | 'thunderbolt';
 
 /** One tube's place on a hull: where its casing ends at the front, and how long the casing is. */
 interface TubeAt {
@@ -2289,13 +2315,19 @@ function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }:
  * the missile in each roof turret at one tube and two — 0448. `tests/mounts.test.ts` holds the ship rows'
  * `muzzle` and `tubes` to these, so a turret moved in the drawing cannot leave its missiles behind.
  */
-export function carMounts(ship: 'firebird' | 'estate'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
+export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
   const firebird = ship === 'firebird';
   const box = (x: number, y: number): Pt => (firebird ? inBox([[x, y]], 1, 1.5) : inBox([[x, y]], 0, 1))[0]!;
-  const spans = firebird ? FIREBIRD_TURRETS : ESTATE_TURRETS;
-  const mid = firebird ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2 : (ESTATE_TURRET_TOP + ESTATE_RACK) / 2;
+  // 0545: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
+  const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : THUNDERBOLT_PODS;
+  const mid = firebird
+    ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2
+    : ship === 'estate'
+      ? (ESTATE_TURRET_TOP + ESTATE_RACK) / 2
+      : (THUNDERBOLT_POD_TOP + THUNDERBOLT_FENDER) / 2;
+  const muzzle = firebird ? FIREBIRD_HUB : ship === 'estate' ? ESTATE_STAR : THUNDERBOLT_BALL;
   return {
-    muzzle: firebird ? box(FIREBIRD_STAR[0], FIREBIRD_STAR[1]) : box(ESTATE_BALL[0], ESTATE_BALL[1]),
+    muzzle: box(muzzle[0], muzzle[1]),
     // The orange nose `paintTurrets` draws runs to a tenth short of the turret's front.
     tubes: spans.map((stage) => stage.map(([, to]) => box(to - 0.1, mid))),
   };
@@ -2657,9 +2689,15 @@ const ESTATE_TURRET_TOP = -8.8;
 /** Where the Firebird's turrets sit on its roof, in the predecessor's frame. */
 const FIREBIRD_TURRET_BASE = -4.9;
 
-/** The centre of the Firebird's launcher star, and of the estate's rod ball — where each gun fires from. */
-const FIREBIRD_STAR: Pt = [13.6, -3.3];
-const ESTATE_BALL: Pt = [14, -3.8];
+/**
+ * Where each car's own gun fires from — since 0545, the hub of the spare wheel on the Firebird's spindle
+ * and the steel star in the face of the estate's launcher block. They were the Firebird's launcher star
+ * at (13.6, −3.3) and the estate's rod ball at (14, −3.8), which are the shuriken's and the arc's mounts
+ * now (`MOUNTS`), stood on any ship flying them.
+ */
+const FIREBIRD_HUB: Pt = [13.6, -5.4];
+const FIREBIRD_HUB_R = 2;
+const ESTATE_STAR: Pt = [14.2, -0.1];
 
 /** The Firebird's roof, a straight line from the back of the greenhouse to its front. */
 const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
@@ -2669,14 +2707,21 @@ const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
  * the shuriken launcher standing on the hood, turrets on the roof, and fat tyres under the sills.
  */
 function firebirdOutline(stage: number, own = true): Pt[] {
-  // 0525: with another ship's gun the hood runs straight from the cowl to where the nose falls.
-  const launcher: Pt[] = own
-    ? [
-        [11.6, -1.95],
-        [11.6, -4.8],
-        [15.6, -4.8],
-      ]
-    : [];
+  /*
+    0545: the Catherine wheel's spindle on the hood — a post up from it and the spare wheel on its top,
+    the next one lit from it. 0525: with another ship's gun the hood runs straight from the cowl to
+    where the nose falls.
+  */
+  const launcher: Pt[] = [];
+  if (own) {
+    // Two units across, over 0106's floor at the shipped camera: at 1.4 it was 2.1 px.
+    launcher.push([12.6, -1.9], [12.6, -3.6]);
+    for (let i = 0; i <= 12; i++) {
+      const a = Math.PI * 0.62 + (i * Math.PI * 1.76) / 12;
+      launcher.push([FIREBIRD_HUB[0] + Math.cos(a) * FIREBIRD_HUB_R, FIREBIRD_HUB[1] + Math.sin(a) * FIREBIRD_HUB_R]);
+    }
+    launcher.push([14.6, -3.6], [14.6, -1.5]);
+  }
   return [
     [-17, 5],
     // The tail panel stands tall and square, and the deck runs level with the beltline from it to the
@@ -2700,7 +2745,7 @@ function firebirdOutline(stage: number, own = true): Pt[] {
     ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
     [6, -4.8],
     [10.8, -2.1],
-    // The launcher on the hood: a block the blades leave from.
+    // The spindle on the hood, the spare wheel on its top — 0545.
     ...launcher,
     // The hood falls to a low nose — *"the front is a little high"* (0516).
     [15.6, -1.25],
@@ -2724,12 +2769,6 @@ const estateRoof = (): number => ESTATE_RACK;
  * the rack, and its wheels under the sills.
  */
 function estateOutline(stage: number, own = true): Pt[] {
-  // The rod's ball, an octagon about (14, −3.8), from its lower left round the top to its lower right.
-  const ball: Pt[] = [];
-  for (let i = 0; i <= 6; i++) {
-    const a = Math.PI * 0.75 + (i * Math.PI * 1.5) / 6;
-    ball.push([ESTATE_BALL[0] + Math.cos(a) * 2.1, ESTATE_BALL[1] + Math.sin(a) * 2.1]);
-  }
   return [
     [-18, 6],
     [-18, 3],
@@ -2742,14 +2781,375 @@ function estateOutline(stage: number, own = true): Pt[] {
     [0.5, -4.76],
     [4, -5],
     [11, 1],
-    // The lightning rod on the bonnet, its ball above it — and with another ship's gun, the bonnet
-    // running straight on to the nose (0525).
-    ...(own ? ([[12.9, 1.27], [12.9, -2.3], ...ball, [15.1, -2.3], [15.1, 1.59]] as Pt[]) : []),
+    // The shuriken launcher on the bonnet, a block with the steel star in its face — 0545, where the
+    // lightning rod stood — and with another ship's gun, the bonnet running straight on to the nose (0525).
+    ...(own ? ([[12.6, 1.22], [12.6, -1.6], [15.9, -1.6], [15.9, 1.7]] as Pt[]) : []),
     [18, 2],
     [18, 6],
     ...wheelUnder(9, 6.4, 2.9, 6),
     ...wheelUnder(-9, 6.4, 2.9, 6),
   ];
+}
+
+/*
+  ── THE THUNDERBOLT — 0545 ───────────────────────────────────────────────────────────────────────
+
+  *"I want to add in The Thunderbolt from Golf-Stars with The Marmot as the pilot riding it, he'll have
+  a cool motorbike spacesuit helmet."* The predecessor's mythic hot-rod chopper (`C:\Golf-Stars\src\
+  render\shipArt.ts`, `chopper`, read for this): fat tyres on bright rims, a long low frame, raked forks,
+  high bars, flame along the frame — drawn from the side in that art's ±20 frame as the cars are, about
+  (0, 1). Its golf bag stood where the rider sits; here the Marmot rides, so the bag is gone and his
+  missile pods stand on the rear fender where a bag would be strapped.
+
+  ⚠️ **THE RIDER IS SILHOUETTE.** He is on the hull as the cars' turrets are: one outline takes in the
+  bike, his back, his helmet with its ear bumps, his arm out to the bars and the bars, so everything on
+  him is paint on a sealed hull. The gap between his arm, the tank and the bars is a hole in that outline
+  rather than a filled wedge, so the bike reads as a bike with a rider on it and not a lump.
+*/
+
+/** Where the Thunderbolt's pods stand on the rack over its rear fender, in the predecessor's frame, at one tube and two. */
+const THUNDERBOLT_PODS: readonly (readonly (readonly [number, number])[])[] = [[], [[-14.6, -11]], [[-15.8, -13.2], [-12.8, -10.6]]];
+/** The rack's top over the rear fender, and how high a pod stands on it. */
+const THUNDERBOLT_FENDER = 1.4;
+const THUNDERBOLT_POD_TOP = -1.6;
+/** The lightning ball on the fork crown — where the arc fires from, and how big it is. */
+const THUNDERBOLT_BALL: Pt = [15.2, -3.4];
+const THUNDERBOLT_BALL_R = 1.8;
+/** The helmet: its centre and radius, in the predecessor's frame. */
+const THUNDERBOLT_HELMET: Pt = [-2, -8.6];
+const THUNDERBOLT_HELMET_R = 3.3;
+/** Both wheels' centres and their tyre, and the sill the frame stands on over them. */
+const THUNDERBOLT_FRONT: Pt = [12.6, 6.4];
+const THUNDERBOLT_REAR: Pt = [-11, 6.4];
+const THUNDERBOLT_TYRE = 3.8;
+const THUNDERBOLT_SILL = 5;
+/**
+ * The outline's arc under each tyre, a tenth of a unit over the tyre painted in it: the arc is ten
+ * chords, and each cuts inside the circle the painter fills by about a twentieth of a unit.
+ */
+const THUNDERBOLT_TYRE_ARC = THUNDERBOLT_TYRE + 0.1;
+
+/** The helmet's outline from behind over the crown to the visor, with a moulded bump for each ear. */
+function helmetArc(): Pt[] {
+  const [hx, hy] = THUNDERBOLT_HELMET;
+  const out: Pt[] = [];
+  const from = (150 * Math.PI) / 180;
+  const to = (390 * Math.PI) / 180;
+  for (let i = 0; i <= 24; i++) {
+    const a = from + ((to - from) * i) / 24;
+    // Two bumps over the crown, a little behind its top: the ears, moulded into the shell — rounded,
+    // a cosine each, so they read as a marmot's ears under the shell and not as a crest.
+    const ear = (c: number): number => {
+      const d = Math.abs(a - (c * Math.PI) / 180) / 0.3;
+      return d >= 1 ? 0 : 0.5 + 0.5 * Math.cos(d * Math.PI);
+    };
+    const r = THUNDERBOLT_HELMET_R + 0.7 * (ear(236) + ear(276));
+    out.push([hx + Math.cos(a) * r, hy + Math.sin(a) * r]);
+  }
+  return out;
+}
+
+/** The Thunderbolt and its rider from the side, in the predecessor's frame, at `stage` tubes. */
+function thunderboltOutline(stage: number, own = true): Pt[] {
+  const ball: Pt[] = [];
+  if (own) {
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI * 0.95 + (i * Math.PI * 1.6) / 8;
+      ball.push([THUNDERBOLT_BALL[0] + Math.cos(a) * THUNDERBOLT_BALL_R, THUNDERBOLT_BALL[1] + Math.sin(a) * THUNDERBOLT_BALL_R]);
+    }
+  }
+  return [
+    // The rear fender, hugging the back of the tyre and rolling up to the rack over it.
+    [-15.4, 6],
+    [-15.9, 4],
+    [-15.3, 2.4],
+    [-14.2, THUNDERBOLT_FENDER],
+    ...turretsOn(THUNDERBOLT_PODS[stage]!, () => THUNDERBOLT_FENDER, THUNDERBOLT_POD_TOP),
+    [-8.8, THUNDERBOLT_FENDER],
+    // The seat's back, and his tail curled up off it behind him.
+    [-9.4, -0.6],
+    [-10.4, -2],
+    [-11.6, -3.2],
+    [-10.8, -4.6],
+    [-9.6, -4],
+    [-9, -2.8],
+    // His back, hunched forward to the bars.
+    [-8.2, -3.8],
+    [-6.8, -5.8],
+    [-5, -7],
+    ...helmetArc(),
+    // The chin of the helmet, and the top of his arm out to the grip.
+    [1.2, -6.6],
+    [5, -8.4],
+    [9, -10],
+    // The ape-hanger bar, up and forward from the grip, and its riser down to the fork crown.
+    [9.2, -11],
+    [12.6, -11.2],
+    [12.8, -10.2],
+    [11, -9.6],
+    [11, -6.2],
+    [11.8, -5],
+    // The lightning ball on the fork crown — or, with another ship's gun, the fork running straight on.
+    ...ball,
+    [13, -2.2],
+    // The fork raked down to a short front fender hugging the top of the front tyre.
+    [14.2, 1.6],
+    [15.8, 2],
+    [17.2, 3.6],
+    [17.6, THUNDERBOLT_SILL],
+    ...wheelUnder(THUNDERBOLT_FRONT[0], THUNDERBOLT_FRONT[1], THUNDERBOLT_TYRE_ARC, THUNDERBOLT_SILL),
+    // The engine slung between the wheels.
+    [8.8, THUNDERBOLT_SILL],
+    [6, 5.8],
+    [-5.4, 5.8],
+    [-7, THUNDERBOLT_SILL],
+    ...wheelUnder(THUNDERBOLT_REAR[0], THUNDERBOLT_REAR[1], THUNDERBOLT_TYRE_ARC, THUNDERBOLT_SILL),
+  ];
+}
+
+/** The gap under his arm, between it, the tank and the bars' riser: a hole in the outline. */
+const THUNDERBOLT_GAP: readonly Pt[] = [
+  [2.6, -4.6],
+  [5.4, -6.5],
+  [8.8, -8.3],
+  [9.4, -7.4],
+  [9.4, -4.8],
+  [7.6, -4],
+  [2.8, -3.8],
+];
+
+function drawThunderbolt(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'boltTank', livery: string | null = null): void {
+  /*
+    Black lacquer with a blue cast, as the predecessor's `#16181f` was, read by its chrome and its flame;
+    the arc's cyan as light (the ball, the rims, the helmet's bolt); and the Marmot in a riding suit the
+    brown of his own fur, from the player's amber taken toward the dark — every colour a palette role,
+    so the high-contrast palette answers it as it answers every hull.
+  */
+  const body = livery ?? shade(mix(palette.space, palette.player, 0.12), 0.14);
+  const chrome = shade(palette.trim, 0.7);
+  const fur = shade(mix(palette.bullet, palette.space, 0.42), 0.05);
+  const suit = shade(mix(palette.bullet, palette.space, 0.62), -0.05);
+  const helmet = shade(palette.space, 0.18);
+  const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
+  const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
+  const outline = box(thunderboltOutline(stage, own));
+  ctx.fillStyle = body;
+  trace(ctx, f, outline);
+  trace(ctx, f, box(THUNDERBOLT_GAP));
+  seal(ctx);
+  // The lacquer, lit from above — with the gap under his arm cut out of it, as it is out of the hull.
+  shaded(ctx, f, at(0, -11), at(0, 6), shade(body, 0.3), shade(body, -0.3), outline, 1, false, [box(THUNDERBOLT_GAP)]);
+  // The rider: his suit over the back and the arm, his tail in fur, and a paw on the grip.
+  poly(ctx, f, suit, box([
+    [-9, -2.8],
+    [-8.2, -3.8],
+    [-6.8, -5.8],
+    [-5, -7],
+    [-2.6, -5.4],
+    [1.2, -6.6],
+    [5, -8.4],
+    [8.6, -9.8],
+    [8.8, -8.3],
+    [5.4, -6.5],
+    [2.6, -4.6],
+    [-1, -2.6],
+    [-6, -1.4],
+  ]));
+  seam(ctx, f, shade(suit, 0.35), 0.03, box([
+    [-7.8, -3.3],
+    [-6.2, -5.2],
+    [-4.6, -6.2],
+  ]), 0.8);
+  poly(ctx, f, fur, box([
+    [-10.4, -2],
+    [-11.6, -3.2],
+    [-10.8, -4.6],
+    [-9.6, -4],
+    [-9, -2.8],
+  ]));
+  // The light along its fur: light, not body, so it may be finer than the floor (0227).
+  poly(ctx, f, shade(fur, 0.3), box([
+    [-11.1, -3.3],
+    [-10.7, -4.2],
+    [-9.9, -3.8],
+  ]), 0.75);
+  // His leg, from the hip down to the footpeg in front of the engine, and a boot on the peg.
+  poly(ctx, f, suit, box([
+    [-6.4, -1.6],
+    [-1.6, -1.2],
+    [1.6, 0.2],
+    [3.4, 3],
+    [1.8, 3.4],
+    [0, 1.2],
+    [-4.6, 0.6],
+  ]));
+  poly(ctx, f, shade(palette.space, 0.12), box([
+    [1.4, 2.2],
+    [3.6, 2],
+    [4.8, 3.4],
+    [4.6, 4.1],
+    [1.4, 4.1],
+  ]));
+  // His paw on the grip, tucked inside the bar's outline.
+  const [px, py] = at(9.95, -8.9);
+  disc(ctx, f, fur, px, py, 0.92 * 0.062);
+  // The helmet: black, a sheen across its crown, the ear bumps lit, a cyan bolt down its side, and the
+  // visor down in the shot's amber with a glare across it.
+  poly(ctx, f, helmet, box(helmetArc()));
+  shaded(ctx, f, at(-3, -12), at(-1, -6), shade(helmet, 0.45), shade(helmet, -0.1), box(helmetArc()));
+  poly(ctx, f, palette.player, box([
+    [-4.6, -10.2],
+    [-2.6, -10.4],
+    [-3.4, -8.8],
+    [-1.8, -8.9],
+    [-4.2, -6.4],
+    [-3.6, -8.1],
+    [-5, -8],
+  ]));
+  poly(ctx, f, palette.bullet, box([
+    [-1, -9.6],
+    [0.9, -9.4],
+    [0.95, -7.7],
+    [0.2, -7.1],
+    [-1, -7.4],
+  ]));
+  poly(ctx, f, shade(palette.bullet, 0.55), box([
+    [0.2, -9.3],
+    [0.7, -9.2],
+    [0.3, -8.2],
+  ]), 0.85);
+  // The tank under his chest, a sheen along its top, and on it one of its three looks — 0528's slot.
+  // Under the gap below his arm, not into it: its top runs a hair below the gap's floor.
+  const tank: Pt[] = [
+    [-1.2, -3.3],
+    [2.6, -3.55],
+    [7.4, -3.6],
+    [8.6, -2.8],
+    [7.4, -1.5],
+    [-1, -1.4],
+  ];
+  shaded(ctx, f, at(0, -4), at(0, -1.8), shade(body, 0.55), shade(body, 0.05), box(tank));
+  /*
+    ⚠️ **LIGHT ON THE LACQUER, NOT BODY.** The tank is two units deep, under 0106's floor for any mark
+    that is part of it, so the bolt is a neon decal glowing on it and the paw print gold leaf catching
+    the light — both translucent, on 0227's paint-on-hull rule; the pinstripes are strokes.
+  */
+  if (art === 'boltTank') {
+    poly(ctx, f, palette.player, box([
+      [0.2, -3.5],
+      [3.8, -3.6],
+      [3, -2.9],
+      [6.6, -3.2],
+      [2.4, -2.1],
+      [3.2, -2.7],
+      [0.4, -2.5],
+    ]), 0.85);
+  } else if (art === 'pawprint') {
+    const gold = shade(palette.hazard, 0.1);
+    const [cx, cy] = at(4, -2.6);
+    disc(ctx, f, gold, cx, cy, 0.75 * 0.062 * 1.2, 0.85);
+    for (const [dx, dy] of [
+      [-1.3, -0.9],
+      [-0.4, -1.35],
+      [0.6, -1.35],
+      [1.4, -0.9],
+    ] as const) {
+      const [tx, ty] = at(4 + dx, -2.6 + dy * 0.75);
+      disc(ctx, f, gold, tx, ty, 0.42 * 0.062 * 1.2, 0.85);
+    }
+  } else {
+    for (const y of [-3.35, -2.35]) {
+      seam(ctx, f, shade(palette.hazard, 0.1), 0.03, box([
+        [-0.4, y],
+        [4, y - 0.2],
+        [7.6, y + 0.1],
+      ]), 0.95);
+    }
+  }
+  // The engine: two chrome jugs in a V over a dark block, and the pipe swept back low to its end.
+  poly(ctx, f, shade(palette.trim, -0.35), box([
+    [-4.8, 1],
+    [4.6, 1],
+    [5.6, 5.4],
+    [-5.4, 5.4],
+  ]));
+  for (const [x0, lean] of [
+    [-3.2, -1],
+    [1.4, 1],
+  ] as const) {
+    shaded(ctx, f, at(x0, -1.6), at(x0, 1.2), shade(chrome, 0.2), shade(chrome, -0.35), box([
+      [x0 - 1.4, 1.2],
+      [x0 + 1.4, 1.2],
+      [x0 + 1.4 + lean * 0.9, -1.4],
+      [x0 - 1.4 + lean * 0.9, -1.4],
+    ]));
+  }
+  // Hot-rod flame along the lower frame, in the player's amber and gold — never the hostile `fire`.
+  poly(ctx, f, palette.bullet, box([
+    [10.4, 4.4],
+    [3.6, 4.4],
+    [5.6, 4.9],
+    [0.4, 4.6],
+    [3, 5.4],
+    [-3.8, 5],
+    [-0.4, 5.7],
+    [10.6, 5.2],
+  ]), 0.8);
+  // Flame is light and not body, so its licks may be finer than the floor (0227).
+  poly(ctx, f, palette.hazard, box([
+    [10, 4.6],
+    [5.2, 4.6],
+    [6.4, 4.95],
+    [3, 4.8],
+    [5, 5.3],
+    [10.2, 5.05],
+  ]), 0.8);
+  // The rack's chrome lip over the rear fender, and the long seat under him.
+  seam(ctx, f, chrome, 0.035, box([
+    [-13.6, THUNDERBOLT_FENDER + 0.5],
+    [-9.4, THUNDERBOLT_FENDER + 0.5],
+  ]), 0.9);
+  poly(ctx, f, shade(palette.space, 0.08), box([
+    [-9.4, -0.6],
+    [-6, -1.4],
+    [-1.2, -1.9],
+    [-1, -0.9],
+    [-9, 0.6],
+  ]));
+  // The fork and the bars in chrome over the lacquer.
+  seam(ctx, f, chrome, 0.07, box([
+    [11.2, -4.4],
+    [13.2, 1.3],
+  ]), 0.95);
+  seam(ctx, f, chrome, 0.06, box([
+    [10.4, -6.4],
+    [10.4, -10.2],
+    [12.1, -10.55],
+  ]), 0.95);
+  // The pods on the rear fender, in the lacquer banded in chrome, their warheads in the shot's orange.
+  paintTurrets(ctx, f, palette, THUNDERBOLT_PODS[stage]!, THUNDERBOLT_POD_TOP, THUNDERBOLT_FENDER, box, { shell: shade(body, 0.25), band: chrome });
+  paintWheels(ctx, f, palette, 'thunderbolt', rim);
+  // The pipe, swept back low on the near side over the rear tyre to its end behind the fender.
+  shaded(ctx, f, at(0, 2.6), at(0, 4.5), shade(chrome, 0.25), shade(chrome, -0.4), box([
+    [3.6, 2.6],
+    [-14.6, 2.6],
+    [-15.4, 3.5],
+    [-14.6, 4.5],
+    [3.6, 4.5],
+  ]));
+  // The headlamp under the crown, and a tail lamp on the fender — the shot's orange, never the enemy's red.
+  const [lx, ly] = at(12.2, -0.8);
+  glow(ctx, f, palette.impact, lx, ly, 1.8 * 0.062, 0.6);
+  disc(ctx, f, palette.impact, lx, ly, 0.95 * 0.062);
+  const [tx, ty] = at(-14, 2.9);
+  disc(ctx, f, palette.bullet, tx, ty, 0.9 * 0.062);
+  // The lightning ball on the fork crown: the arc's cyan, its light, a white heart.
+  if (own) {
+    const [bx, by] = at(THUNDERBOLT_BALL[0], THUNDERBOLT_BALL[1]);
+    disc(ctx, f, palette.player, bx, by, (THUNDERBOLT_BALL_R - 0.2) * 0.062);
+    glow(ctx, f, palette.player, bx, by, 3.2 * 0.062, 0.6);
+    disc(ctx, f, palette.impact, bx, by, 0.95 * 0.062);
+  }
 }
 
 /**
@@ -2824,6 +3224,10 @@ export function drawPlayerShip(
       break;
     case 'estate':
       drawEstate(ctx, f, palette, stage, own, rim, art, livery);
+      break;
+    // The Marmot riding it, as the cars carry their tubes in their rooflines — 0545.
+    case 'thunderbolt':
+      drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery);
       break;
     default: {
       const unhandled: never = ship;
@@ -3012,6 +3416,17 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
       // Short of the dish's edge by what keeps a bar's square corner inside it: √(0.84² − 0.25²) is 0.80.
       for (const a of [turn, turn + Math.PI / 2]) poly(ctx, f, silver, spoke(cx, cy, r * 0.78, r * 0.5, a));
       disc(ctx, f, palette.player, cx, cy, r * 0.28);
+      return;
+    }
+    /*
+      The Thunderbolt's — 0545: one fat slash of the arc's cyan across a dark dish, round a chrome hub —
+      a lightning strike at the size a wheel is drawn. Half a radius thick, on the spinner's terms: a
+      wheel is five pixels across, and a zigzag at that size is a smudge.
+    */
+    case 'bolts': {
+      disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
+      poly(ctx, f, palette.player, spoke(cx, cy, r * 0.78, r * 0.5, turn + 0.6));
+      disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * 0.28);
       return;
     }
     default: {
@@ -3269,19 +3684,41 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
       [8.6, 1.2],
     ]));
   }
-  // The shaker scoop on the hood, in the lacquer with a gold lip, and the steel star the blades leave from.
+  /*
+    The spindle on the hood, in the lacquer with a gold collar, and the spare Catherine wheel on its top
+    — 0545: amber with gold spiral blades round a white-hot hub, where the next wheel is lit from. It was
+    a shaker scoop with the shuriken launcher's steel star in it, which the shuriken's mount draws now.
+  */
   if (own) {
-    shaded(ctx, f, at(0, -4.8), at(0, -2), shade(body, 0.35), shade(body, -0.2), box([
-      [11.6, -4.8],
-      [15.6, -4.8],
-      [15.6, -2],
-      [11.6, -2],
+    shaded(ctx, f, at(12.6, 0), at(14.6, 0), shade(body, 0.35), shade(body, -0.2), box([
+      [12.6, -1.9],
+      [12.6, -3.6],
+      [14.6, -3.6],
+      [14.6, -1.5],
     ]));
     seam(ctx, f, stripe, pin, box([
-      [12.2, -4.35],
-      [15, -4.35],
+      [13, -2.6],
+      [14.2, -2.6],
     ]), 0.95);
-    poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.2)));
+    /*
+      ⚠️ **AT THE SHIPPED CAMERA THE WHOLE WHEEL IS FOUR UNITS ACROSS**, so its spiral blades are light
+      over it and not body: an amber disc and a white hub each clear 0106's floor, and the blades between
+      them are translucent, on 0227's paint-on-hull rule. The mounts' smaller spare (`pinwheelAt`) is
+      drawn for a ship borrowing the gun.
+    */
+    const [hx, hy] = at(FIREBIRD_HUB[0], FIREBIRD_HUB[1]);
+    const reach = (FIREBIRD_HUB_R - 0.1) * 0.062;
+    disc(ctx, f, palette.bullet, hx, hy, reach);
+    for (let k = 0; k < 4; k++) {
+      const a = (k * Math.PI) / 2;
+      poly(ctx, f, shade(palette.hazard, 0.3), [
+        [hx + Math.cos(a) * reach * 0.3, hy + Math.sin(a) * reach * 0.3],
+        [hx + Math.cos(a + 0.5) * reach * 0.95, hy + Math.sin(a + 0.5) * reach * 0.95],
+        [hx + Math.cos(a + 1.1) * reach * 0.85, hy + Math.sin(a + 1.1) * reach * 0.85],
+      ], 0.75);
+    }
+    glow(ctx, f, palette.impact, hx, hy, reach * 0.8, 0.7);
+    disc(ctx, f, palette.impact, hx, hy, reach * 0.48);
   }
   // Its turrets on the roof, in its own black and gold.
   paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
@@ -3474,24 +3911,22 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   ]));
   // Its turrets on the rack, in its own burl banded in gilt.
   paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
-  // The lightning rod on the bonnet: a slate rod with a chrome coil round it, a lit ball, and its light.
+  /*
+    The shuriken launcher on the bonnet — 0545: a slate block with a gilt lip along its top and the steel
+    star in its face, where the blades leave. It was the lightning rod, which the arc's mount draws now.
+  */
   if (own) {
-    poly(ctx, f, palette.trim, box([
-      [12.9, -2.3],
-      [15.1, -2.3],
-      [15.1, 1.2],
-      [12.9, 1.2],
+    shaded(ctx, f, at(0, -1.6), at(0, 1.6), shade(palette.trim, 0.3), shade(palette.trim, -0.3), box([
+      [12.6, -1.6],
+      [15.9, -1.6],
+      [15.9, 1.6],
+      [12.6, 1.6],
     ]));
-    shaded(ctx, f, at(12.6, -1.6), at(15.4, 0.4), shade(palette.trim, 0.75), shade(palette.trim, 0.05), box([
-      [12.9, -1.5],
-      [15.1, -1.5],
-      [15.1, 0.3],
-      [12.9, 0.3],
-    ]));
-    const [bx, by] = at(ESTATE_BALL[0], ESTATE_BALL[1]);
-    disc(ctx, f, palette.player, bx, by, 1.9 * 0.062);
-    glow(ctx, f, palette.player, bx, by, 3.4 * 0.062, 0.6);
-    disc(ctx, f, palette.impact, bx, by, 0.9 * 0.062);
+    seam(ctx, f, shade(gilt, 0.3), 0.04, box([
+      [13.1, -1.2],
+      [15.4, -1.2],
+    ]), 0.9);
+    poly(ctx, f, palette.blade, box(steelStar(ESTATE_STAR[0], ESTATE_STAR[1], 1.25)));
   }
   // A headlamp at the bumper, a tail lamp at the tailgate — the shot's orange, never the enemy's red.
   poly(ctx, f, palette.impact, box([
@@ -3663,7 +4098,37 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.056);
     },
   },
+  /*
+    The Catherine wheel's spindle — 0545: a slate post with a spare wheel pinned at its top, amber with
+    gold spiral blades round a white hub, where the next wheel is lit from. From above, the same small
+    wheel seen flat on its arm.
+  */
+  catherine: {
+    top: (ctx, f, palette, p, m) => {
+      poly(ctx, f, palette.trim, [p(-0.05, -0.045), p(m[0], -0.045), p(m[0], 0.045), p(-0.05, 0.045)]);
+      pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.13);
+    },
+    side: (ctx, f, palette, p, m) => {
+      poly(ctx, f, palette.trim, [p(-0.055, 0), p(0.055, 0), p(m[0] + 0.03, m[1]), p(m[0] - 0.03, m[1])]);
+      pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.14);
+    },
+  },
 };
+
+/** A small Catherine wheel about `c`, `reach` out, in the box's radius — the launcher's spare, placed. */
+function pinwheelAt(ctx: Pen, f: Frame, palette: Palette, c: Pt, reach: number): void {
+  disc(ctx, f, palette.bullet, c[0], c[1], reach);
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2;
+    poly(ctx, f, shade(palette.hazard, 0.25), [
+      [c[0] + Math.cos(a) * reach * 0.2, c[1] + Math.sin(a) * reach * 0.2],
+      [c[0] + Math.cos(a + 0.5) * reach * 0.95, c[1] + Math.sin(a + 0.5) * reach * 0.95],
+      [c[0] + Math.cos(a + 1.1) * reach * 0.85, c[1] + Math.sin(a + 1.1) * reach * 0.85],
+    ]);
+  }
+  glow(ctx, f, palette.impact, c[0], c[1], reach * 0.7, 0.7);
+  disc(ctx, f, palette.impact, c[0], c[1], reach * 0.28);
+}
 
 /** A steel star of eight points about `c`, `reach` out, in the box's radius — the launcher's, placed. */
 function starAt(c: Pt, reach: number): Pt[] {
@@ -12990,6 +13455,61 @@ function drawPlumePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
 }
 
 /**
+ * The Thunderbolt's shell — 0545: a cage of forked lightning, the predecessor's chopper wreathed in it.
+ * One jagged bolt runs the length of the plate's arc where a hit lands, in the arc's own cyan over a
+ * glow, and short forks reach in from it toward the ship; `shimmer` is which third of them is lit.
+ * No stream: the zigzag is a fixed rhythm, so the same plate on every bake.
+ */
+function drawStormPlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette): void {
+  const cyan = palette.player;
+  const { radius, edge, unit, angle } = at;
+  plateArc(ctx, at, radius, PLATE_SWEEP * 0.75, cyan, edge * 2, 0.08, 'butt');
+  const knots = 11;
+  const sweep = PLATE_SWEEP * 1.6;
+  const first = angle - sweep / 2;
+  const jagged = (k: number): number => radius + edge * (k % 2 === 0 ? 0.45 : -0.15) * (k % 4 < 2 ? 1 : 0.7);
+  const path = (width: number, colour: string, alpha: number): void => {
+    ctx.beginPath();
+    for (let k = 0; k <= knots; k++) {
+      const [x, y] = platePoint(at, first + (k * sweep) / knots, jagged(k));
+      if (k === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = colour;
+    ctx.lineWidth = width;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+  };
+  path(0.36 * unit, cyan, 0.3);
+  path(Math.max(1.2, 0.09 * unit), shade(cyan, 0.45), 0.95);
+  // The forks, in from every other knot toward the ship, the lit third bright.
+  for (let k = 1; k < knots; k += 2) {
+    const a = first + (k * sweep) / knots;
+    const fade = plateFade(at, a);
+    const lit = ((k - 1) / 2) % 3 === shimmer;
+    const [x0, y0] = platePoint(at, a, jagged(k));
+    const [x1, y1] = platePoint(at, a + 0.04, radius - edge * 0.55);
+    const [x2, y2] = platePoint(at, a - 0.03, radius - edge * 0.95);
+    ctx.globalAlpha = (lit ? 0.95 : 0.45) * fade;
+    ctx.strokeStyle = lit ? shade(cyan, 0.6) : cyan;
+    ctx.lineWidth = Math.max(1, (lit ? 0.07 : 0.05) * unit);
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    // A knot of light where the fork leaves the bolt, the lit third bright — the lattice's studs.
+    ctx.globalAlpha = (lit ? 1 : 0.6) * fade;
+    ctx.fillStyle = lit ? shade(cyan, 0.6) : cyan;
+    ctx.beginPath();
+    ctx.arc(x0, y0, Math.max(0.9, (lit ? 0.13 : 0.1) * unit), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/**
  * The estate's shell — 0492. *"Solid-gold trim, fuzzy dice, the works"*: a gilt trellis between two
  * gilt rails, as a woody's roof rack or a garden gate is, with a stud where every bar crosses.
  * `shimmer` is which third of the studs is lit.
@@ -13293,6 +13813,18 @@ export function drawKind(
     case 'estateTubes':
     case 'estateTubesHit':
       drawPlayerShip(ctx, f, palette, 'estate', 2);
+      return;
+    case 'thunderbolt':
+    case 'thunderboltHit':
+      drawPlayerShip(ctx, f, palette, 'thunderbolt', 0);
+      return;
+    case 'thunderboltTube':
+    case 'thunderboltTubeHit':
+      drawPlayerShip(ctx, f, palette, 'thunderbolt', 1);
+      return;
+    case 'thunderboltTubes':
+    case 'thunderboltTubesHit':
+      drawPlayerShip(ctx, f, palette, 'thunderbolt', 2);
       return;
     /*
       0527: the Mothership's spinner at its own radius of one, unturned; the frame turns the blit. A body
@@ -15309,6 +15841,100 @@ export function drawKind(
       if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.45, 0.85);
       return;
     }
+    case 'catherine':
+    case 'catherineFade': {
+      /*
+        ── A CATHERINE WHEEL — 0545 ─────────────────────────────────────────────────────────────────
+
+        *"A spinning fire wheel disc like a catherine wheel firework."* A pinwheel: six spiral spokes of
+        amber and gold from a white-hot hub to a gold rim, and a flame tongue off the rim behind each
+        spoke, trailing against the way it turns — the frame turns the bitmap a little each step, so the
+        spiral is what reads as the spin. The hull is the wheel's face, the hurtbox's own size; the
+        flames are light, translucent, on 0227's paint-on-hull rule.
+
+        The fade is the same wheel burning down — darker, its flames short — for the last of its life.
+      */
+      const fading = kind === 'catherineFade';
+      const face = 0.62;
+      const amber = palette.bullet;
+      const gold = palette.hazard;
+      ctx.arc(half, half, r * face, 0, Math.PI * 2);
+      seal(ctx);
+      // The flames, behind the face: a tongue off the rim behind each spoke, curling back against the spin.
+      const tongue = fading ? 0.8 : 1.05;
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3;
+        const tip = a - 0.75;
+        poly(
+          ctx,
+          f,
+          k % 2 === 0 ? gold : amber,
+          [
+            [Math.cos(a + 0.18) * face, Math.sin(a + 0.18) * face],
+            [Math.cos(a - 0.3) * (face + (tongue - face) * 0.6), Math.sin(a - 0.3) * (face + (tongue - face) * 0.6)],
+            [Math.cos(tip) * tongue, Math.sin(tip) * tongue],
+            [Math.cos(a - 0.42) * face, Math.sin(a - 0.42) * face],
+          ],
+          fading ? 0.4 : 0.75,
+        );
+      }
+      // The spokes: six arcs of the spiral, gold on the amber face, wide at the hub's edge.
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3;
+        const points: Pt[] = [];
+        for (let s = 0; s <= 6; s++) {
+          const t = s / 6;
+          const rad = 0.14 + t * (face - 0.16);
+          const at = a + t * 1.1;
+          points.push([Math.cos(at) * rad, Math.sin(at) * rad]);
+        }
+        for (let s = 6; s >= 0; s--) {
+          const t = s / 6;
+          const rad = 0.14 + t * (face - 0.16);
+          const at = a + t * 1.1 + 0.32 * (1 - t * 0.6);
+          points.push([Math.cos(at) * rad, Math.sin(at) * rad]);
+        }
+        poly(ctx, f, fading ? shade(gold, -0.35) : shade(gold, 0.25), points, fading ? 0.7 : 0.95);
+      }
+      band(ctx, f, fading ? shade(gold, -0.3) : gold, 0, 0, face, face - 0.07, 0.9);
+      glow(ctx, f, palette.impact, 0, 0, fading ? 0.22 : 0.34, fading ? 0.5 : 0.85);
+      disc(ctx, f, fading ? shade(gold, 0.2) : palette.impact, 0, 0, 0.12);
+      return;
+    }
+    case 'cinder': {
+      /*
+        A cinder off the wheel's rim — 0545: a white-hot head and a tail of gold going to amber, turned
+        along its flight by the frame. A streak and never a dot: a round dot of fire is what a hostile
+        bullet is in the volcano, and the shape is what tells them apart there (0295).
+      */
+      ctx.arc(half + r * 0.55, half, r * 0.24, 0, Math.PI * 2);
+      seal(ctx);
+      poly(
+        ctx,
+        f,
+        palette.bullet,
+        [
+          [0.5, -0.2],
+          [-1.05, 0],
+          [0.5, 0.2],
+        ],
+        0.6,
+      );
+      poly(
+        ctx,
+        f,
+        shade(palette.hazard, 0.3),
+        [
+          [0.55, -0.12],
+          [-0.45, 0],
+          [0.55, 0.12],
+        ],
+        0.8,
+      );
+      glow(ctx, f, palette.impact, 0.55, 0, 0.4, 0.8);
+      disc(ctx, f, palette.impact, 0.55, 0, 0.13);
+      return;
+    }
     case 'shuriken':
     case 'shurikenTurn': {
       /*
@@ -16123,7 +16749,19 @@ export function drawKind(
     case 'shieldLattice180c':
     case 'shieldLattice240a':
     case 'shieldLattice240b':
-    case 'shieldLattice240c': {
+    case 'shieldLattice240c':
+    case 'shieldStorm0a':
+    case 'shieldStorm0b':
+    case 'shieldStorm0c':
+    case 'shieldStorm120a':
+    case 'shieldStorm120b':
+    case 'shieldStorm120c':
+    case 'shieldStorm180a':
+    case 'shieldStorm180b':
+    case 'shieldStorm180c':
+    case 'shieldStorm240a':
+    case 'shieldStorm240b':
+    case 'shieldStorm240c': {
       const plate = shieldPlateOf(SPRITE[kind]);
       if (plate === null) throw new Error(`${kind} stands at no place on any ship's shell`);
       const at = plateAt(size, SPRITE_EXTENT[kind], SHIELD_ANGLES[plate.place]!);
@@ -16140,6 +16778,9 @@ export function drawKind(
           return;
         case 'lattice':
           drawLatticePlate(ctx, at, plate.shimmer, palette);
+          return;
+        case 'storm':
+          drawStormPlate(ctx, at, plate.shimmer, palette);
           return;
         default: {
           const never: never = look;

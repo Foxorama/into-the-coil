@@ -405,6 +405,21 @@ function plainLabel(kind: ShipKind): string {
 }
 
 /**
+ * What the pilot band says while a pilot is still shut — 0546, or `null` when every pilot may fly. It
+ * names who has still to clear the game, so the band says how far there is to go as well as where.
+ */
+export function pilotWhy(won: Readonly<Record<ShipKind, boolean>>): string | null {
+  for (const kind of GOLFER_KINDS) {
+    const left = GOLFERS[kind].opensAfter.filter((k) => !won[GOLFERS[k].ship]);
+    if (left.length === 0) continue;
+    const names = left.map((k) => GOLFERS[k].name);
+    const list = names.length === 1 ? names[0]! : names.slice(0, -1).join(', ') + ' and ' + names[names.length - 1]!;
+    return 'Beat the jellyfish with ' + list + ' to fly ' + GOLFERS[kind].name;
+  }
+  return null;
+}
+
+/**
  * What the hangar's dash band says when `ship`'s other dashes are shut — 0521, or `null` when one is
  * open. On the row's terms: the words are the screen's, and the shell only says which case it is in.
  */

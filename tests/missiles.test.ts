@@ -3,6 +3,7 @@ import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { GameFrame, type World } from '../src/app/frame.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
+import { WEAPONS } from '../src/content/weapons.ts';
 import { MISSILES } from '../src/content/missiles.ts';
 import { SHOTS } from '../src/content/shots.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
@@ -104,6 +105,9 @@ describe('the ship fires it without being asked', () => {
   it('fires less often than the gun does, in every ship', () => {
     // Every ship since 0441: the second weapon is slower than whichever gun the ship flies.
     for (const ship of SHIP_KINDS) {
+      // Not a wheel on a tether — 0545: thrown once and burning nine beats in ten, it has no rate of
+      // fire to be slower than, as `tests/pickups.test.ts`'s counter-beat says of it too.
+      if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
       const base = weaponFor(SHIPS[ship], []);
       expect(base.missileEvery, `${ship}: the second weapon fires as fast as the first`).toBeGreaterThan(base.fireEvery);
     }

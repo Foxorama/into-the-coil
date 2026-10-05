@@ -44,7 +44,8 @@ function flying(ship: ShipKind, tubes: number) {
 
 describe('0448 — each ship fires from its own guns', () => {
   it('THE ROWS ARE THE DRAWING: each car’s muzzle and roof tubes are where its bake draws them', () => {
-    for (const ship of ['firebird', 'estate'] as const) {
+    // And the Thunderbolt, drawn side-on in the same frame since 0546 — its pods on the rack, its ball on the crown.
+    for (const ship of ['firebird', 'estate', 'thunderbolt'] as const) {
       const drawn = carMounts(ship);
       const row = SHIPS[ship];
       expect(row.muzzle.along, `${ship}: the row's gun is not the hood gun drawn`).toBeCloseTo(drawn.muzzle[0] * R, 1);
@@ -57,7 +58,9 @@ describe('0448 — each ship fires from its own guns', () => {
           expect(Math.hypot(tube.along - x * R, tube.across - y * R), `${ship}: tube ${i} of ${stage} is off its drawn turret`).toBeLessThan(NEAR);
         });
       }
-      // On the roof: every turret is above the hood gun, which is above the centreline.
+      // On the roof: every turret is above the hood gun, which is above the centreline. A chopper has
+      // no roof — its pods ride the rack over the rear fender, under its rider — so this is the cars'.
+      if (ship === 'thunderbolt') continue;
       expect(row.muzzle.across, `${ship}: the hood gun is under the centreline`).toBeLessThan(0);
       for (const tube of row.tubes[2]) expect(tube.across, `${ship}: a tube is lower than the hood`).toBeLessThan(row.muzzle.across);
     }

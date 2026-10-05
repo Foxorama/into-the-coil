@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SHIP_KINDS } from '../src/content/ships.ts';
+import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { SPECIALS } from '../src/content/specials.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { initialHangar, specialOpen } from '../src/state/slices/hangar.ts';
@@ -28,12 +28,14 @@ describe('the slot', () => {
   });
 
   it('THE ASK: the shuriken’s special on the lightning gun, once both are won — and not before', () => {
-    expect(ownSpecial('firebird')).toBe('whirlpool');
-    const fit = { slice: 'hangar', type: 'special', ship: 'estate', from: 'firebird' } as const;
-    expect(reduce(initialState, fit).hangar.special.estate, 'fitted with nothing won').toBe('estate');
-    expect(reduce(wonIn('firebird'), fit).hangar.special.estate, 'fitted onto a ship never won in').toBe('estate');
-    expect(reduce(wonIn('estate'), fit).hangar.special.estate, 'fitted from a ship never won in').toBe('estate');
-    expect(reduce(wonIn('firebird', 'estate'), fit).hangar.special.estate).toBe('firebird');
+    // The shuriken is the estate's and the lightning gun the Thunderbolt's since 0545: the ask is the same pairing.
+    expect(ownSpecial('estate')).toBe('whirlpool');
+    expect(SHIPS.thunderbolt.weapon).toBe('arc');
+    const fit = { slice: 'hangar', type: 'special', ship: 'thunderbolt', from: 'estate' } as const;
+    expect(reduce(initialState, fit).hangar.special.thunderbolt, 'fitted with nothing won').toBe('thunderbolt');
+    expect(reduce(wonIn('estate'), fit).hangar.special.thunderbolt, 'fitted onto a ship never won in').toBe('thunderbolt');
+    expect(reduce(wonIn('thunderbolt'), fit).hangar.special.thunderbolt, 'fitted from a ship never won in').toBe('thunderbolt');
+    expect(reduce(wonIn('estate', 'thunderbolt'), fit).hangar.special.thunderbolt).toBe('estate');
   });
 
   it('is the dash’s rule, word for word', () => {
@@ -51,14 +53,16 @@ describe('the slot', () => {
 
 describe('the run', () => {
   it('opens on two of the fitted special', () => {
-    const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none', special: 'whirlpool' });
-    expect(begun.run.arsenal.gun).toEqual(['whirlpool', 'whirlpool']);
+    // A special that is not the estate's own (the whirlpool since 0545), or a run ignoring the fitting still passes.
+    const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none', special: 'storm' });
+    expect(begun.run.arsenal.gun).toEqual(['storm', 'storm']);
   });
 
   it('opens on the ship’s own when the shell names none', () => {
     const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none' });
     expect(begun.run.arsenal).toEqual(startingArsenal('estate', 'savior'));
-    expect(begun.run.arsenal.gun).toEqual(['storm', 'storm']);
+    // The estate opens on the shuriken's whirlpools since 0545.
+    expect(begun.run.arsenal.gun).toEqual(['whirlpool', 'whirlpool']);
   });
 
   it('a nova fitted to the fighter goes on the ward’s trigger, and Burn adds no void on top', () => {

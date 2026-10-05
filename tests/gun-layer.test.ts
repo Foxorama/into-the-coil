@@ -41,7 +41,8 @@ describe('a fitted ship', () => {
   });
 
   it('with another’s, fires it from its hardpoint plus the gun’s own mount, in the ship’s view', () => {
-    expect(BORROWED).toHaveLength(12);
+    // Five ships with four guns each they do not carry, since 0545 and 0546 made both five.
+    expect(BORROWED).toHaveLength(20);
     for (const [ship, gun] of BORROWED) {
       const row = fitted(SHIPS[ship], gun);
       const mount = WEAPONS[gun].mount[SHIPS[ship].view];
@@ -138,10 +139,11 @@ describe('the run', () => {
     const lifecycle = makeLifecycle(built.world, (action: Action) => {
       current = reduce(current, action);
     }, () => current.run);
-    lifecycle.begin('savior', 'estate', 'free', undefined, 'shuriken');
-    expect(built.world.shipRow.weapon).toBe('shuriken');
-    expect(built.world.shipRow.muzzle).toEqual(fitted(SHIPS.estate, 'shuriken').muzzle);
-    expect(current.run.gun).toBe('shuriken');
+    // A gun that is not the estate's own (the shuriken since 0545), or the break below changes nothing.
+    lifecycle.begin('savior', 'estate', 'free', undefined, 'arc');
+    expect(built.world.shipRow.weapon).toBe('arc');
+    expect(built.world.shipRow.muzzle).toEqual(fitted(SHIPS.estate, 'arc').muzzle);
+    expect(current.run.gun).toBe('arc');
   });
 
   it('flies the gun it began with through everything a run does, and its ship’s own when none is named', () => {
@@ -159,7 +161,9 @@ describe('the run', () => {
       state = reduce(state, action);
       expect(state.run.gun, `${action.type} dropped the fitted gun`).toBe('arc');
     }
-    expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none' }).run.gun).toBe('arc');
+    // The estate's own is the shuriken since 0545, and the Thunderbolt's the arc.
+    expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none' }).run.gun).toBe('shuriken');
+    expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'thunderbolt', credits: 'none' }).run.gun).toBe('arc');
     expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'fighter', credits: 'none' }).run.gun).toBe('pulse');
   });
 });
