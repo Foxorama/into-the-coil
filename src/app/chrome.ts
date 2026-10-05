@@ -1581,6 +1581,11 @@ ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 */
 ${banded((p) => `.${p}option:disabled`)} { opacity: 0.38; border-style: dashed; cursor: not-allowed; }
 /*
+  A pilot not yet open — 0539: their face as a silhouette, a dark shape on the card, so the player sees
+  someone is there and not who. The band's line says what opens them.
+*/
+${faced((p) => `.${p}option:disabled .${p}face`)} { filter: brightness(0.12) saturate(0); }
+/*
   ⚠️ A FILLED segment against a HOLLOW one, not two colours — decision 0024 puts "colour never carries
   meaning alone" in the unconditional tier, and which setting is on is exactly the kind of state a
   hue alone would hide.
@@ -1786,11 +1791,12 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 /*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
-  what hangs, five, in rows of three. A phone shows only the one that is on, below.
+  what hangs, five, in rows of three. A phone shows only the one that is on, below. Five a row since
+  0539 put a fifth ship in the hangar: one row each still, as tall as it was.
 */
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) .itc-hangar-options,
 .itc-hangar-band:has([${SETTING_ATTR}="gun"]) .itc-hangar-options,
-.itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) .itc-hangar-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: grid; gap: 0.3em; }
@@ -2716,9 +2722,39 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
 @keyframes itc-hud-dice-back-b { 0% { transform: none; } 14% { transform: rotate(34deg); } 34% { transform: rotate(-20deg); } 52% { transform: rotate(11deg); } 70% { transform: rotate(-5deg); } 86% { transform: rotate(2deg); } 100% { transform: none; } }
 @keyframes itc-hud-dice-fore-a { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 @keyframes itc-hud-dice-fore-b { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
+/*
+  The Thunderbolt: a hot-rod bridge, the predecessor's chopper deck carried (0538). Raked corners, flame
+  tongues licking up its lower edge in the ink, and a fork of lightning crackling off its top corner in
+  the trim, flickering on its own.
+*/
+.itc-playing-hud-hotrod { border-radius: 0.3em 1.1em 0.3em 1.1em; }
+.itc-playing-hud-hotrod::before {
+  content: '';
+  inset: auto 0 -0.3em 0;
+  height: 0.85em;
+  border-radius: 0 0 0.3em 1.1em;
+  background: repeating-linear-gradient(118deg, color-mix(in srgb, var(--itc-ink) 75%, transparent) 0 0.3em, transparent 0.3em 0.62em);
+  -webkit-mask-image: linear-gradient(0deg, #000 20%, transparent);
+  mask-image: linear-gradient(0deg, #000 20%, transparent);
+  opacity: 0.75;
+  animation: itc-hud-flicker 0.9s ease-in-out infinite alternate;
+}
+.itc-playing-hud-hotrod::after {
+  content: '';
+  inset: -0.55em -0.35em auto auto;
+  width: 1.1em;
+  height: 1.3em;
+  background: var(--itc-ally);
+  clip-path: polygon(55% 0, 20% 52%, 46% 52%, 26% 100%, 82% 40%, 54% 40%, 78% 0);
+  filter: drop-shadow(0 0 0.2em var(--itc-ally));
+  animation: itc-hud-crackle 2.6s steps(1) infinite;
+}
+@keyframes itc-hud-flicker { from { opacity: 0.55; } to { opacity: 0.85; } }
+@keyframes itc-hud-crackle { 0%, 62% { opacity: 1; } 64% { opacity: 0.25; } 68% { opacity: 1; } 71% { opacity: 0.4; } 74%, 100% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-hanging .itc-playing-hud-dice,
-  .itc-playing-hud-dice-back-a, .itc-playing-hud-dice-back-b, .itc-playing-hud-dice-fore-a, .itc-playing-hud-dice-fore-b { animation: none; }
+  .itc-playing-hud-dice-back-a, .itc-playing-hud-dice-back-b, .itc-playing-hud-dice-fore-a, .itc-playing-hud-dice-fore-b,
+  .itc-playing-hud-hotrod::before, .itc-playing-hud-hotrod::after { animation: none; }
 }
 .itc-playing-boss { filter: none; padding: 0 0.9em; }
 .itc-playing-boss-shown { display: flex; align-items: center; }

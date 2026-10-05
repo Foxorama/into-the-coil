@@ -957,6 +957,9 @@ export const CUES: Record<CueKind, CueRow> = {
    * A Catherine wheel is thrown — 0538. The whoomp of a firework catching, a hiss of its fuse burning
    * up through it, and a whirr rising a fifth as it spins up on the way out. Every ten beats and alone
    * — the wheel is the slowest gun there is — so it has more room than the guns that repeat.
+   *
+   * ⚠️ **UNDER A BEAT, AS EVERY GUN IS — 0104.** A cue that outlasts a beat ducks the music, and a gun
+   * that ducked would hold the bed down every four seconds for the whole run. It was half a second.
    */
   wheel: {
     twin: 'wheel-thrown',
@@ -968,9 +971,9 @@ export const CUES: Record<CueKind, CueRow> = {
       // The whoomp: a soft kick a fifth down onto the root, driven, as a fuse takes.
       { wave: 'sine', from: inKey(11), to: inKey(7), seconds: 0.18, gain: 0.75, attack: 0.002, curve: 3, drive: 0.4 },
       // The catch: noise opening upward, warm, as the flame goes round the wheel.
-      { wave: 'noise', from: 0, to: 0, seconds: 0.4, gain: 0.4, attack: 0.02, curve: 2, lowFrom: 900, lowTo: 5200, highFrom: 260, q: 0.8, pan: 0, panTo: 0.2 },
+      { wave: 'noise', from: 0, to: 0, seconds: 0.34, gain: 0.4, attack: 0.02, curve: 2, lowFrom: 900, lowTo: 5200, highFrom: 260, q: 0.8, pan: 0, panTo: 0.2 },
       // The whirr: a filtered saw spinning up a fifth, wobbling as a wheel does.
-      { wave: 'saw', from: inKey(14), to: inKey(18), at: 0.05, seconds: 0.45, gain: 0.16, attack: 0.04, curve: 2.2, lowFrom: 1200, lowTo: 3400, highFrom: 300, q: 1.2, vibrato: 14 },
+      { wave: 'saw', from: inKey(14), to: inKey(18), at: 0.03, seconds: 0.33, gain: 0.16, attack: 0.04, curve: 2.2, lowFrom: 1200, lowTo: 3400, highFrom: 300, q: 1.2, vibrato: 14 },
     ],
   },
   /**
@@ -994,12 +997,14 @@ export const CUES: Record<CueKind, CueRow> = {
   },
   /**
    * The tether lands — 0538: a short sizzle, a burn on something wet. Bright noise thinning fast, over
-   * the faintest thump. `hold` keeps a tether held across a pack from being one long hiss.
+   * the faintest thump. `hold` keeps a tether held across a pack from being one long hiss. Dry, as `hit`
+   * is, because it comes at the tether's landing rate; and over every gun and under `hit`, because it
+   * is something the player did (0145).
    */
   sizzle: {
     twin: 'impact-flash',
     hold: 6,
-    gain: 0.18,
+    gain: 0.26,
     glue: 0.08,
     layers: [
       { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.55, attack: 0.002, curve: 2.6, lowFrom: 11000, lowTo: 5000, highFrom: 3000, highTo: 1800, q: 0.9 },

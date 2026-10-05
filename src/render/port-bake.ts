@@ -761,6 +761,8 @@ const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   caddie: { paint: paintSaucer, jets: [[-CADDIE_DISC, 0]] },
   firebird: null,
   estate: null,
+  // Side-on in the fight already, as the cars are — 0539.
+  thunderbolt: null,
 };
 
 /** How far over each frame of the tilt leans — side-on, then a fifth of the way at a time; `blue` is all of it. */
@@ -818,7 +820,7 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
   // 0526: or, flying another ship's gun, that gun's side-on mount standing on the rim at the nose.
   const fitted = gunNow('caddie');
-  if (fitted === SHIPS.caddie.body.gun) {
+  if (fitted === SHIPS.caddie.weapon) {
     const gun = raygunProfile();
     ctx.fillStyle = palette.trim;
     ctx.beginPath();
