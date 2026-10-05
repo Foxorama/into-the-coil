@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'the shuriken’s special on the lightning gun, once both are won',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return plateOpen(state, ship, from);',
-      replace: '  return true;',
+      // The signature with it, since 0526's gun slot says the same line under its own.
+      find: 'export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return plateOpen(state, ship, from);',
+      replace: 'export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {\n  return true;',
     },
   },
   {
@@ -46,8 +47,8 @@ export const PROBES = [
     guard: 'the estate’s storm fitted to the fighter',
     edit: {
       path: 'src/app/mount.ts',
-      find: '    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(state.hangar.special[ship]));',
-      replace: '    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(ship));',
+      find: 'state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon);',
+      replace: 'state.settings.credits, ownSpecial(ship), SHIPS[state.hangar.gun[ship]].weapon);',
     },
   },
 ];

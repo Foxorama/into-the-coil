@@ -2737,8 +2737,20 @@ function estateOutline(stage: number, own = true): Pt[] {
   gun draws the same ship without its own (`own` false: no pods, no ray gun, no launcher, no rod — each
   drawing's outline closes over where its gun stood) and then that gun's mount at the ship's hardpoint
   (`paintMount`), last, over the hull it stands on.
+
+  ⚠️ **AND THE DEFAULT IS WHAT `withGun` SAYS, SINCE 0526**, so the twelve calls `drawKind` makes by
+  sprite name — and the intro's, and a glyph's — draw a ship with the gun the shell fitted while it bakes
+  that ship's sprites, and its own the rest of the time. Nothing is set outside `withGun`, so a bake that
+  is not asked for a fitting draws exactly what 0525 proved against `main`.
 */
-export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number, gun: WeaponKind = SHIPS[ship].weapon): void {
+export function drawPlayerShip(
+  ctx: Pen,
+  f: Frame,
+  palette: Palette,
+  ship: ShipArt,
+  stage: number,
+  gun: WeaponKind = gunNow(ship),
+): void {
   const own = gun === SHIPS[ship].weapon;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
     stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
@@ -3290,6 +3302,39 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   the point this draws its mouth at. `tests/mounts.test.ts` holds every pairing to it.
 */
 
+/** The ship being baked with another ship's gun, while `withGun` runs — 0526; `null` the rest of the time. */
+let fitting: { readonly ship: ShipArt; readonly gun: WeaponKind } | null = null;
+
+/**
+ * `bake` with `ship` drawn carrying `gun` wherever it is drawn without a gun named — 0526: a sprite, a
+ * glyph, the intro's hangar. Restored after, whatever `bake` throws, on `bakeGlyph`'s `bubbled` terms.
+ */
+export function withGun<T>(ship: ShipArt, gun: WeaponKind, bake: () => T): T {
+  const was = fitting;
+  fitting = { ship, gun };
+  try {
+    return bake();
+  } finally {
+    fitting = was;
+  }
+}
+
+/**
+ * `ship`'s six sprites in `atlas` — its hull at no tubes, one and two, each with its hurt twin — baked
+ * again with `gun`, in place — 0526, on `bakeNebula`'s terms: no new atlas, and nothing to hand the
+ * surface, which blits the same array. A hurt twin re-draws its base, so the wash lands on the new gun.
+ */
+export function bakeShipGun(atlas: Atlas, palette: Palette, ship: ShipArt, gun: WeaponKind): void {
+  const bitmaps = atlas.bitmaps as CanvasImageSource[];
+  for (const hull of SHIPS[ship].hulls) {
+    for (const index of [hull.base, hull.hit]) {
+      const kind = SPRITE_KINDS[index];
+      if (kind === undefined) continue;
+      bitmaps[index] = withGun(ship, gun, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
+    }
+  }
+}
+
 /** A box's radius in world units: a sprite's frame puts it at 0.42 of the extent — `tests/mounts.test.ts`'s `R`. */
 const BOX_R = SHIP_BOX * 0.42;
 
@@ -3413,6 +3458,20 @@ export function paintMount(ctx: Pen, f: Frame, palette: Palette, gun: WeaponKind
   const hx = row.hardpoint.along / BOX_R;
   const hy = row.hardpoint.across / BOX_R;
   MOUNTS[gun][row.view](ctx, f, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
+}
+
+/**
+ * `gun`'s mount in `view` with its hardpoint at `at`, in the box's radius — 0526, for a drawing that is
+ * not the fight's: the intro's saucer is seen from the side, where its fight drawing is from above.
+ */
+export function paintMountAt(ctx: Pen, f: Frame, palette: Palette, gun: WeaponKind, view: GunView, at: Pt): void {
+  const muzzle = WEAPONS[gun].mount[view];
+  MOUNTS[gun][view](ctx, f, palette, (x, y) => [at[0] + x, at[1] + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
+}
+
+/** The gun `ship` is drawn with now: the one `withGun` names for it, or its own — 0526. */
+export function gunNow(ship: ShipArt): WeaponKind {
+  return fitting !== null && fitting.ship === ship ? fitting.gun : SHIPS[ship].weapon;
 }
 
 /** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */

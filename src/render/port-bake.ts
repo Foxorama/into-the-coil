@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, drawPlayerShip, glow, mix, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeSize, disc, drawPlayerShip, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
@@ -814,13 +814,21 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   // The hover light under its belly, seen only from the side — the beam it rides is under it.
   if (e > 0.3) glow(ctx, f, palette.player, 0, SAUCER_BELLY * e + 0.08, 0.42, 0.45 * e);
   // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
-  const gun = raygunProfile();
-  ctx.fillStyle = palette.trim;
-  ctx.beginPath();
-  trace(ctx, box, [[0.6, gun[0]![1]], ...gun, [0.6, gun[gun.length - 1]![1]]]);
-  ctx.fill();
-  ctx.stroke();
-  paintRaygun(ctx, box, palette, false);
+  // 0526: or, flying another ship's gun, that gun's side-on mount standing on the rim at the nose.
+  const fitted = gunNow('caddie');
+  if (fitted === SHIPS.caddie.weapon) {
+    const gun = raygunProfile();
+    ctx.fillStyle = palette.trim;
+    ctx.beginPath();
+    trace(ctx, box, [[0.6, gun[0]![1]], ...gun, [0.6, gun[gun.length - 1]![1]]]);
+    ctx.fill();
+    ctx.stroke();
+    paintRaygun(ctx, box, palette, false);
+  } else {
+    // The rim's nose is the top view's hardpoint (`CADDIE_DISC` of the box), so the mount stands where
+    // the fight's drawing has it, and goes under the lens with its root as the ray gun's does.
+    paintMountAt(ctx, box, palette, fitted, 'side', [CADDIE_DISC, 0]);
+  }
   // The belly: under the rim, in shadow.
   const belly = ctx.createLinearGradient(0, Y(0), 0, Y(under));
   belly.addColorStop(0, shade(body, -0.25));

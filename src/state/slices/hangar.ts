@@ -60,6 +60,13 @@ export interface HangarState {
    * its win, offering the specials of ships that have been won in, on the dash's exact rule.
    */
   special: Readonly<Record<ShipKind, ShipKind>>;
+  /**
+   * Whose gun each ship flies — 0526: a ship kind, because a gun is the one that ship carries (0441),
+   * and every ship flies its own. *"Only onto ships you've won in"*, answered while it was planned — a
+   * ship's own slot, open with its win, offering the guns of ships that have been won in, on the dash's
+   * rule. 0525 drew every pairing and made the frame fly it.
+   */
+  gun: Readonly<Record<ShipKind, ShipKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -69,7 +76,8 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'earned'; shards: number }
   | { slice: 'hangar'; type: 'bought'; dangle: DangleKind }
   | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null }
-  | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind };
+  | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind }
+  | { slice: 'hangar'; type: 'gun'; ship: ShipKind; from: ShipKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -86,6 +94,7 @@ export const initialHangar: HangarState = {
   owned: perDangle((kind) => DANGLES[kind].price === null),
   hung: perShip((kind) => SHIPS[kind].hangs),
   special: perShip((kind) => kind),
+  gun: perShip((kind) => kind),
 };
 
 /** Each dangle mapped to `of(kind)`, on `perShip`'s terms. */
@@ -120,6 +129,11 @@ export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind):
   return plateOpen(state, ship, from);
 }
 
+/** Whether `ship` may fly `from`'s gun — 0526, on the dash's rule, as the special is. */
+export function gunOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
+  return plateOpen(state, ship, from);
+}
+
 export function reduceHangar(state: HangarState, action: HangarAction): HangarState {
   switch (action.type) {
     // Identity preserved when nothing moved, as every slice keeps it, so the shell writes the key
@@ -149,6 +163,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'special':
       if (state.special[action.ship] === action.from || !specialOpen(state, action.ship, action.from)) return state;
       return { ...state, special: { ...state.special, [action.ship]: action.from } };
+    // 0526: the gun, on the special's terms.
+    case 'gun':
+      if (state.gun[action.ship] === action.from || !gunOpen(state, action.ship, action.from)) return state;
+      return { ...state, gun: { ...state.gun, [action.ship]: action.from } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

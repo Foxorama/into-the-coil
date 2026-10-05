@@ -17,7 +17,8 @@ import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, mix, viewFor } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeShipGun, mix, viewFor, withGun } from '../render/bake.ts';
+import type { WeaponKind } from '../content/weapons.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, withTheGame } from '../render/port-bake.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
@@ -102,7 +103,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shieldsOf } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, shieldsOf, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -123,7 +124,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, plateWhy, specialWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, gunWhy, plateWhy, specialWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
@@ -145,7 +146,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { plateOpen, specialOpen } from '../state/slices/hangar.ts';
+import { gunOpen, plateOpen, specialOpen } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -973,6 +974,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let view = measure();
   let dpr = fitCanvas(canvas, ctx, viewportWidth(host), viewportHeight(host));
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
+  // 0526: which gun each ship's sprites in `atlas` carry; absent is its own, which a full bake always is.
+  const atlasGuns: Partial<Record<ShipKind, WeaponKind>> = {};
+  const atlasRebaked = (): void => {
+    for (const kind of SHIP_KINDS) delete atlasGuns[kind];
+    fitAtlasGun();
+  };
   // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
   let port: Atlas | null = null;
   /*
@@ -1435,7 +1442,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const resolution = view.scale * dpr;
       // With the golfer who was picked — 0415. The port is dropped when the intro ends, so a new pick
       // always meets a fresh bake.
-      if (port === null || atlasIsStale(port, 'side', resolution)) port = bakePort(colours, resolution, GOLFERS[state.settings.pilot]);
+      // 0526: and the pilot's ship with the gun the hangar fitted it, which is the gun the run will fly.
+      const pilot = GOLFERS[state.settings.pilot];
+      if (port === null || atlasIsStale(port, 'side', resolution)) {
+        port = withGun(pilot.ship, SHIPS[state.hangar.gun[pilot.ship]].weapon, () => bakePort(colours, resolution, pilot));
+      }
       world.intro = 0;
       showPort();
       // Its beats from the first — 0412.
@@ -1457,7 +1468,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       savedLine = pick.pick(GOLFERS[finaleSaved].saved);
       savingLine = pick.pick(GOLFERS[chosen].saving);
       const resolution = view.scale * dpr;
-      finale = withTheGame(bakePort(colours, resolution, GOLFERS[chosen]), bakeFinale(resolution));
+      // 0526: the run's ship with the run's gun, as it flew the fight.
+      const port = withGun(state.run.ship, state.run.gun, () => bakePort(colours, resolution, GOLFERS[chosen]));
+      finale = withTheGame(port, bakeFinale(resolution));
       // And it goes on from the fight's last frame — 0426: nothing has stepped since the death beat ended.
       holdFinale(world);
       world.outro = 0;
@@ -1732,6 +1745,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (rearmed) {
       // 0525: the ship with the run's gun — its own row, or that row firing another's gun from its mount.
       world.shipRow = fitted(SHIPS[state.run.ship], state.run.gun);
+      // 0526: and the atlas wearing it.
+      fitAtlasGun();
       world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
       // 0521: in the dash the hangar fitted to it.
@@ -1852,7 +1867,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     pilotArmed = true;
     const ship = GOLFERS[state.settings.pilot].ship;
     // 0524: on the special the hangar fitted that ship with — its own, until a win lets it borrow one.
-    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(state.hangar.special[ship]));
+    // 0526: and with the gun it fitted — the ship's own, until a win lets it borrow one.
+    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon);
   };
   function fly(): void {
     if (flownThisVisit) {
@@ -2017,6 +2033,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const from = SHIP_KINDS[index];
       if (from !== undefined) dispatch({ slice: 'hangar', type: 'special', ship: GOLFERS[state.settings.pilot].ship, from });
     }
+    // 0526: whose gun that ship flies, on the special's terms.
+    else if (name === 'gun') {
+      const from = SHIP_KINDS[index];
+      if (from !== undefined) dispatch({ slice: 'hangar', type: 'gun', ship: GOLFERS[state.settings.pilot].ship, from });
+    }
     // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
     else if (name === 'ware') {
       if (WARES[index] !== undefined) shelf = index;
@@ -2069,6 +2090,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const lendable = SHIP_KINDS.some((from, i) => from !== ship && specials[i] === true);
     chrome.setOpen('special', specials, specialWhy(ship, state.hangar.won[ship], lendable));
     chrome.setChoice('special', SHIP_KINDS.indexOf(state.hangar.special[ship]));
+    // 0526: the gun, on the same rule and in the same words.
+    const guns = SHIP_KINDS.map((from) => gunOpen(state.hangar, ship, from));
+    const lent = SHIP_KINDS.some((from, i) => from !== ship && guns[i] === true);
+    chrome.setOpen('gun', guns, gunWhy(ship, state.hangar.won[ship], lent));
+    chrome.setChoice('gun', SHIP_KINDS.indexOf(state.hangar.gun[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
@@ -2120,12 +2146,36 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   function fitPilot(): void {
     const ship = GOLFERS[state.settings.pilot].ship;
-    const row = SHIPS[ship];
+    // 0526: with the gun the hangar fitted it, so the pick is seen as it will be flown.
+    const row = fitted(SHIPS[ship], SHIPS[state.hangar.gun[ship]].weapon);
     chrome.setShip(row, SHIPS[state.hangar.plate[ship]]);
+    fitAtlasGun();
     if (state.run.lives > 0) return;
     world.shipRow = row;
     world.weapon = weaponFor(row, [], row.missile);
     wearHull(world);
+  }
+  /*
+    ⚠️ **THE GAME'S ATLAS CARRIES THE FITTED GUN — 0526.** A ship's six sprites are baked with its own
+    gun with everything else; the one ship flying another's has its six baked again, in place, as the
+    sky's are at a place boundary (`bakeNebula`), and a ship that flew a borrowed gun last run is put back.
+    After any full bake every ship is its own again, so each bake site calls this; so does the pilot's
+    fitting and a run's rearming. The intro's and the finale's atlases hold the game's bitmaps by
+    reference, so they are composed again when anything moved.
+  */
+  function fitAtlasGun(): void {
+    const inRun = state.run.lives > 0;
+    const flying = inRun ? state.run.ship : GOLFERS[state.settings.pilot].ship;
+    const gun = inRun ? state.run.gun : SHIPS[state.hangar.gun[flying]].weapon;
+    let moved = false;
+    for (const kind of SHIP_KINDS) {
+      const want = kind === flying ? gun : SHIPS[kind].weapon;
+      if ((atlasGuns[kind] ?? SHIPS[kind].weapon) === want) continue;
+      bakeShipGun(atlas, colours, kind, want);
+      atlasGuns[kind] = want;
+      moved = true;
+    }
+    if (moved) showPort();
   }
   showPilot();
 
@@ -2394,6 +2444,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
       // Not over the port's own atlas while the intro is drawing from it — 0411.
       if (world.intro === null) surface.setAtlas(atlas);
+      // 0526: a full bake is every ship on its own gun, so the fitted one is laid on again.
+      atlasRebaked();
     }
     const clouds = place === null ? PALETTES[palette].sky : THEMES[place].nebula[palette];
     /*
@@ -3825,6 +3877,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       // draws the new sky with it (0416).
       if (world.intro === null) surface.setAtlas(atlas);
       else showPort();
+      // 0526: and the fitted gun laid on again, as at a place boundary.
+      atlasRebaked();
     }
     view = next;
     dpr = nextDpr;

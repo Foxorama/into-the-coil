@@ -45,7 +45,7 @@ import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES } from '../src/content/bosses.ts';
 import { LEVELS, LEVEL_KINDS, laneAcross } from '../src/content/levels.ts';
 import { weaponFor } from '../src/content/pickups.ts';
-import { SHIPS, shipCarrying } from '../src/content/ships.ts';
+import { SHIPS, fitted, shipCarrying } from '../src/content/ships.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 import { ACROSS_SPAN } from '../src/sim/camera.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -87,15 +87,17 @@ function arena(kind) {
  * @param {import('../src/content/bosses.ts').BossKind} kind
  * @param {import('../src/content/weapons.ts').WeaponKind} gun
  * @param {{ difficulty?: import('../src/content/difficulty.ts').DifficultyKind,
- *   lane?: number | 'boss', short?: number | null, cap?: number }} [options]
+ *   lane?: number | 'boss', short?: number | null, cap?: number,
+ *   ship?: import('../src/content/ships.ts').ShipKind }} [options]
  * @returns {{ seconds: number | null, killed?: number, phaseAt: { phase: number, at: number }[] }}
  */
-export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, short = null, cap = CAP_SECONDS } = {}) {
+export function flyFight(kind, gun, { difficulty = 'savior', lane = MIDDLE, short = null, cap = CAP_SECONDS, ship = shipCarrying(gun) } = {}) {
   // `authored` is the content multiplied by nothing, which is no tier's button — 0356.
   const { world, wrecks } = playableWorld(arena(kind), difficulty === 'authored' ? undefined : difficulty);
   const frame = new GameFrame(world);
-  // In the ship the gun is keyed to — 0441 — so the gun is the one it flies with.
-  world.shipRow = SHIPS[shipCarrying(gun)];
+  // In the ship the gun is keyed to — 0441 — so the gun is the one it flies with; or, 0526, in `ship`
+  // with the gun fitted at its hardpoint, as the hangar fits it.
+  world.shipRow = fitted(SHIPS[ship], gun);
   world.weapon = weaponFor(world.shipRow, []);
   wearHull(world);
   const row = BOSSES[kind];
