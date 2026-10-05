@@ -203,11 +203,14 @@ describe('0538 — the Catherine wheel', () => {
     const { world, frame } = armed();
     for (let i = 0; i < 60; i++) step(world, frame);
     const disc = wheels(world)[0]!;
+    // Half way down the tether, well clear of the wheel, so what lands is the tether's alone.
     const body = target(world, (disc.along - world.ship.along) / 2, (disc.across - world.ship.across) / 2);
+    expect(Math.hypot(body.along - disc.along, body.across - disc.across), 'the body is under the wheel').toBeGreaterThan(DISC.radius + 2 + 10);
     const start = body.health;
     const seconds = 2;
     for (let i = 0; i < 60 * seconds; i++) step(world, frame);
-    const most = (60 / GUN.landGap!) * seconds * Math.max(WHEEL.tetherDamage, DISC.damage) + 4 * Math.max(WHEEL.tetherDamage, DISC.damage);
+    // The bucket: one landing every `landGap` steps, and the burst of four it may owe — 0391's.
+    const most = ((60 * seconds) / GUN.landGap! + 4) * WHEEL.tetherDamage;
     expect(start - body.health, 'it landed more than the bucket allows').toBeLessThanOrEqual(most);
     expect(start - body.health, 'it landed nothing').toBeGreaterThan(0);
   });

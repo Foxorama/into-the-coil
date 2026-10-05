@@ -20,18 +20,26 @@ const FOUR: readonly GolferKind[] = ['feather', 'woo', 'larry', 'bo'];
  * A 2D context that takes every call the painters make and counts what fills and strokes — the golfer
  * painters transform and draw ellipses, which the bake's tracing pen does not stand in for.
  */
-function counting(): { ctx: CanvasRenderingContext2D; drawn: () => number } {
+function counting(): { ctx: CanvasRenderingContext2D; drawn: () => number; filled: Set<string> } {
   let drawn = 0;
+  const filled = new Set<string>();
   const gradient = { addColorStop: (): void => {} };
-  const ctx = new Proxy({} as Record<string | symbol, unknown>, {
-    get(target, key) {
-      if (key in target) return target[key];
-      if (key === 'fill' || key === 'stroke' || key === 'fillRect') return () => void drawn++;
+  const target: Record<string | symbol, unknown> = {};
+  const ctx = new Proxy(target, {
+    get(t, key) {
+      if (key in t) return t[key];
+      if (key === 'fill' || key === 'fillRect') {
+        return () => {
+          drawn++;
+          if (typeof t.fillStyle === 'string') filled.add(t.fillStyle);
+        };
+      }
+      if (key === 'stroke') return () => void drawn++;
       if (key === 'createLinearGradient' || key === 'createRadialGradient') return () => gradient;
       return () => {};
     },
   });
-  return { ctx: ctx as unknown as CanvasRenderingContext2D, drawn: () => drawn };
+  return { ctx: ctx as unknown as CanvasRenderingContext2D, drawn: () => drawn, filled };
 }
 
 function wonIn(...ships: ShipKind[]): State {
@@ -90,14 +98,19 @@ describe('0539 — and he is a teaser in the Viper from the first run', () => {
 
 describe('0539 — his body is his row’s', () => {
   it('runs and leaps on his own figure, and draws his portrait, with every one of the pilot’s poses', () => {
+    // His own: the helmet's black and the visor's amber, which no golfer's drawing paints.
     for (const pose of ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap'] as const) {
-      const { ctx, drawn } = counting();
+      const { ctx, drawn, filled } = counting();
       paintRunner(ctx, GOLFERS.marmot, pose, 1);
       expect(drawn(), `${pose} drew nothing`).toBeGreaterThan(5);
+      expect(filled.has(GOLFERS.marmot.cap), `${pose} wears no helmet`).toBe(true);
+      expect(filled.has('#ff9f1c'), `${pose} has no visor`).toBe(true);
     }
-    const { ctx, drawn } = counting();
+    const { ctx, drawn, filled } = counting();
     paintPortrait(ctx, GOLFERS.marmot, 128);
     expect(drawn(), 'his portrait drew nothing').toBeGreaterThan(5);
+    expect(filled.has('#ff9f1c'), 'his portrait has no visor').toBe(true);
+    expect(filled.has(GOLFERS.marmot.skin), 'his portrait shows no face').toBe(true);
   });
 
   it('and nobody else is drawn as a marmot', () => {
