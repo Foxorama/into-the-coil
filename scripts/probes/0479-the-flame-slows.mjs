@@ -15,7 +15,8 @@ export const PROBES = [
     guard: 'EVERY WALL ARRIVES WHOLE',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  enemyShots: 200,',
+      // 196 since 0537 gave four to the blasts; the break is still 140.
+      find: '  enemyShots: 196,',
       replace: '  enemyShots: 140,',
     },
   },
@@ -27,7 +28,8 @@ export const PROBES = [
     guard: 'a salvo thrown as fast as the triggers allow opens every rift it throws',
     edit: {
       path: 'src/app/mount.ts',
-      find: '  blasts: 9,',
+      // Thirteen since 0537; the break is still the old six.
+      find: '  blasts: 13,',
       replace: '  blasts: 6,',
     },
   },

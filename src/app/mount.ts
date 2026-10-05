@@ -248,8 +248,14 @@ export const CAPACITY = {
 
     ⚠️ **NINE SINCE 0479, WHERE A RIFT IS OPEN FOR 150 STEPS.** *"The void bomb needs to last 1 sec
     longer."* The same salvo holds eight open at once, and the pyre is the ninth.
+
+    ⚠️ **THIRTEEN SINCE 0537, FOR A CANDLE THROWN INTO THAT SALVO.** A candle's fireworks stand for 36
+    steps a star every twelve, and the reaches overlap their fuses, so four are open at once at most —
+    counted star by star in `tests/candle.test.ts`. A candle thrown the moment the throw gap after the
+    eighth void opens finds all eight rifts still open; four more is what keeps a firework from finding
+    the pool full and landing nothing. Paid by the enemy shots, below.
   */
-  blasts: 9,
+  blasts: 13,
   /*
     ⚠️ **TWO HUNDRED SINCE 0479, AND IT WAS A HUNDRED AND FIFTY.** The flame went from 1.8 a step to 1.1,
     so the gyre's wheel's flames are on the field longer, and its fight — curtains of forty-one beside
@@ -257,8 +263,11 @@ export const CAPACITY = {
     pool unbounded. At 150 a curtain met a full pool and came out short, which is a second way through
     (`tests/level.test.ts`, *every wall arrives whole*) — and at Legend the fight was already reaching
     exactly 150 before the flame moved. Every other level peaks at 80 or under.
+
+    ⚠️ **A HUNDRED AND NINETY-SIX SINCE 0537**, which gave four to the blasts. The gyre's 174 at Legend,
+    flown by `scripts/weigh-stuck.mjs`, is still twenty-two under it.
   */
-  enemyShots: 200,
+  enemyShots: 196,
   /*
     ⚠️ **ELEVEN COME OUT OF THE PARTICLE SHARE — 0283, AND 0022 NAMES IT AS THE SHEDDABLE ONE.** The
     pools total EXACTLY 500 and `tests/budget.test.ts` holds that ceiling, so a serpent with a body
@@ -1121,6 +1130,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     novaOffset: 0,
     novaAcross: 0,
     novaBossHit: false,
+    candleKind: null,
+    candleFired: 0,
+    candleIn: 0,
+    fireworks: 0,
     throwIn: 0,
     stormFor: 0,
     stormFlicker: 0,

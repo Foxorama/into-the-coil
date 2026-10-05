@@ -110,7 +110,8 @@ export const PROBES = [
     // The pool at its size before 0377: a banked salvo's last rifts find it full and open nothing.
     broke: 'a blast pool too small for a salvo of rifts',
     guard: 'a salvo thrown as fast as the triggers allow opens every rift it throws',
-    edit: { path: 'src/app/mount.ts', find: '  blasts: 9,', replace: '  blasts: 4,' },
+    // Thirteen since 0537 gave the candle's fireworks room beside the salvo; the break is still four.
+    edit: { path: 'src/app/mount.ts', find: '  blasts: 13,', replace: '  blasts: 4,' },
   },
   {
     decision: '0377',

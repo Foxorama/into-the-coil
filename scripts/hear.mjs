@@ -971,6 +971,18 @@ if (args.has('play')) {
         const pressed = k * 2 * bar + bar / 2;
         const bus = (cue) => (CUES[cue].throughHush === true ? clear : cues);
         put(bus(row.cue), row.cue, pressed, ACROSS_SPAN / 2);
+        // A candle throws from its own clock rather than a `shot` — 0537: its first star is the press,
+        // the rest pop on the grid after it, and each goes off its own fuse later.
+        if (row.candle !== null && row.lands !== null) {
+          const c = row.candle;
+          for (let k = 0; k < c.stars; k++) {
+            const left = k === 0 ? pressed : (Math.floor(pressed / c.every) + k) * c.every;
+            if (k > 0) put(bus('candleStar'), 'candleStar', left, ACROSS_SPAN / 2);
+            const fuse = Math.max(1, Math.round(c.reaches[k % c.reaches.length] / SHOTS[c.star].speed));
+            put(bus(row.lands), row.lands, gridded(row.lands, left + fuse), ACROSS_SPAN / 2);
+          }
+          return;
+        }
         if (row.lands === null || row.shot === null) return;
         const fuse = Math.max(1, Math.round(row.reach / SHOTS[row.shot].speed));
         put(bus(row.lands), row.lands, gridded(row.lands, pressed + fuse), ACROSS_SPAN / 2);

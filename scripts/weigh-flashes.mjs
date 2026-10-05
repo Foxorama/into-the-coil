@@ -86,6 +86,8 @@ const SCENARIOS = [
   { name: 'voidMissile', query: 'weapon=pulse', special: 'voidMissile' },
   { name: 'hunt', query: 'weapon=pulse', special: 'hunt' },
   { name: 'overdrive', query: 'weapon=pulse', special: 'overdrive' },
+  // 0537: eight fireworks in two seconds, lit again the moment the gap after the last allows.
+  { name: 'candle', query: 'weapon=pulse', special: 'candle' },
   ...['jormungandr', 'volans', 'quetzal', 'gyre', 'hoarfrost', 'hydra', 'medusa'].flatMap((boss, i) =>
     [100, 50, 15].map((hp) => ({ name: `${boss}@${hp}`, query: 'weapon=arc', level: i, bossHp: hp })),
   ),

@@ -368,10 +368,11 @@ describe('the trigger reaches the arsenal and nothing else', () => {
     // And since 0374 a thrown special may go off as a storm instead of a blast, and a whirlpool is
     // opened rather than thrown: four shapes, and a row is exactly one of them. 0377 adds the rift,
     // which is thrown and opens where it lands: five. 0447 adds the nova, burst from the ship: six.
+    // 0537 adds the candle, whose stars are thrown and go off as fireworks: seven.
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova].filter((shape) => shape !== null).length;
-      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift and a nova`).toBe(1);
+      const shapes = [row.becomes, row.storm, row.surge, row.whirl, row.rift, row.nova, row.candle].filter((shape) => shape !== null).length;
+      expect(shapes, `${kind} is not exactly one of a blast, a storm, a surge, a whirlpool, a rift, a nova and a candle`).toBe(1);
       expect(
         row.shot !== null,
         `${kind} throws something it does not go off as, or goes off as something it never throws`,
@@ -472,7 +473,9 @@ describe('0378 — every special is heard as itself', () => {
     expect(new Set(lands).size, `two specials go off alike: ${lands.join(', ')}`).toBe(lands.length);
     for (const kind of SPECIAL_KINDS) {
       const row = SPECIALS[kind];
-      expect(row.lands !== null, `${kind} goes off without a sound, or has one it never goes off with`).toBe(row.shot !== null);
+      // A candle throws its stars from its own clock rather than a `shot` on the press — 0537 — and
+      // each goes off, so it is a thrown special here.
+      expect(row.lands !== null, `${kind} goes off without a sound, or has one it never goes off with`).toBe(row.shot !== null || row.candle !== null);
     }
   });
 

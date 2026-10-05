@@ -709,6 +709,8 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   pickupSeeker: 'ally',
   pickupArc: 'player',
   pickupShuriken: 'blade',
+  // The roman candle's — 0537: the gold of its stars, which no other face of the bomb pickup wears.
+  pickupCandle: 'hazard',
   pickupShield: 'pickup',
   /*
     The ward's faces — 0447. The void wears its own lavender; the nova wears the white of the heart it
@@ -739,6 +741,23 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // never read as the thing that eats their shots (0291).
   voidBall: 'ally',
   riftZone: 'ally',
+  // The candle's star is gold fire — 0537: the player's own warm inks, never the hostile `fire`.
+  candleStar: 'hazard',
+  /*
+    ⚠️ **THE PLAYER'S OWN THREE AND NOT THE BLAST'S ONE — 0537.** A firework lands on the ship on its
+    one step as every blast does (`collideIntoOne` over the blast pool), and the ray's burst has done so
+    in the ally ink since 0442: a firework seventy units ahead of the ship is not a ring the player is
+    asked to be outside of, it is fireworks. The gold is the hazard ink, so one in three still says it.
+  */
+  fireworkGold: 'hazard',
+  fireworkGoldBloom: 'hazard',
+  fireworkGoldFall: 'hazard',
+  fireworkCyan: 'player',
+  fireworkCyanBloom: 'player',
+  fireworkCyanFall: 'player',
+  fireworkLavender: 'ally',
+  fireworkLavenderBloom: 'ally',
+  fireworkLavenderFall: 'ally',
   /*
     ⚠️ **THE HAZARD INK, WHICH THE PLAYER'S OWN WEAPONS DO NOT USE — and that is the point.** A bomb's
     blast hurts the player as well as everything else in it, so it is the one thing the ship fires
@@ -15189,6 +15208,54 @@ export function drawKind(
       }
       return;
     }
+    case 'pickupCandle': {
+      /*
+        A ROMAN CANDLE THROWING A STAR — the bomb pickup's fourth face, 0537. A tube laid on the
+        diagonal, its mouth at the top right and a gold star leaving it in a spray of sparks: told
+        from the bomb by being long and thin where the bomb is round, from the bolt by its straight
+        sides, and from the star by having one point of light rather than four blades.
+
+        Glyph at three quarters of the box and a bubble round it, on the arc face's terms — 0236.
+      */
+      const fg: Frame = { half, r: r * PICKUP_GLYPH };
+      // The tube: from the bottom left to its mouth just past the middle, square-ended.
+      const along = (t: number, side: number): Pt => [-0.78 + t * 1.02 + side * 0.2, 0.78 - t * 1.02 + side * 0.2];
+      const mouth: Pt = [0.24, -0.24];
+      const star: Pt = [0.5, -0.5];
+      trace(ctx, fg, [along(0, -1), along(1, -1), along(1, 1), along(0, 1)]);
+      // And the star leaving its mouth, which is body and not light: the hull is the tube and the star.
+      ring(ctx, fg, star[0], star[1], 0.19);
+      seal(ctx);
+      bubble(ctx, f, palette, palette[INK_OF[kind]]);
+      // Its paper's stripes, in the player's orange across the gold, on the tube.
+      for (let k = 0; k < 3; k++) {
+        const t0 = 0.1 + k * 0.27;
+        poly(ctx, fg, palette.bullet, [along(t0, -0.9), along(t0 + 0.13, -0.9), along(t0 + 0.13, 0.9), along(t0, 0.9)]);
+      }
+      // The mouth, dark.
+      poly(ctx, fg, shade(palette.hazard, -0.55), [along(0.95, -0.9), along(1, -0.9), along(1, 0.9), along(0.95, 0.9)]);
+      // The sparks it throws out round the star, in a cone off the mouth.
+      for (let k = 0; k < 7; k++) {
+        const a = -Math.PI / 4 + (k - 3) * 0.3;
+        const reach = k % 2 === 0 ? 0.62 : 0.46;
+        poly(
+          ctx,
+          fg,
+          shade(palette.hazard, 0.45),
+          [
+            [mouth[0] + Math.cos(a + 1.57) * 0.03, mouth[1] + Math.sin(a + 1.57) * 0.03],
+            [mouth[0] + Math.cos(a) * reach, mouth[1] + Math.sin(a) * reach],
+            [mouth[0] + Math.cos(a - 1.57) * 0.03, mouth[1] + Math.sin(a - 1.57) * 0.03],
+          ],
+          0.75,
+        );
+      }
+      // The star: gold with a white-hot heart.
+      disc(ctx, fg, shade(palette.hazard, 0.3), star[0], star[1], 0.17);
+      glow(ctx, fg, palette.impact, star[0], star[1], 0.3, 0.8);
+      disc(ctx, fg, palette.impact, star[0], star[1], 0.09);
+      return;
+    }
     /*
       ── THE RAY GUN'S RINGS — 0442 ──────────────────────────────────────────────────────────────
 
@@ -15779,6 +15846,105 @@ export function drawKind(
         billow(ctx, half, edge * 0.97, 0.06, 7, 0.2, orange, 0.8);
         billow(ctx, half, edge * 0.7, 0.1, 5, 1.9, gold, 0.85);
         glow(ctx, f, '#ffffff', 0, 0, (edge * 0.45) / r, 0.85);
+      }
+      return;
+    }
+    case 'candleStar': {
+      /*
+        A ROMAN CANDLE'S STAR — 0537: a ball of gold fire with a white heart, and a tail of glitter
+        thrown back the way it came. The frame turns it along its flight, so the tail is always behind.
+        The hull is the ball; the tail is light, translucent, on 0227's paint-on-hull rule.
+      */
+      ctx.arc(half, half, r * 0.36, 0, Math.PI * 2);
+      seal(ctx);
+      const gold = palette.hazard;
+      glow(ctx, f, palette.bullet, -0.35, 0, 0.75, 0.5);
+      poly(
+        ctx,
+        f,
+        shade(gold, 0.35),
+        [
+          [-0.2, -0.22],
+          [-1.0, 0],
+          [-0.2, 0.22],
+        ],
+        0.6,
+      );
+      // The glitter: sparks shed along the tail, smaller and dimmer the further back they are.
+      for (let k = 0; k < 5; k++) {
+        const back = 0.45 + k * 0.12;
+        disc(ctx, f, palette.impact, -back, (k % 2 === 0 ? 1 : -1) * 0.12 * (1 - k * 0.15), 0.06 - k * 0.008, 0.8 - k * 0.12);
+      }
+      glow(ctx, f, palette.impact, 0, 0, 0.42, 0.85);
+      disc(ctx, f, palette.impact, 0, 0, 0.16);
+      return;
+    }
+    case 'fireworkGold':
+    case 'fireworkGoldBloom':
+    case 'fireworkGoldFall':
+    case 'fireworkCyan':
+    case 'fireworkCyanBloom':
+    case 'fireworkCyanFall':
+    case 'fireworkLavender':
+    case 'fireworkLavenderBloom':
+    case 'fireworkLavenderFall': {
+      /*
+        ── A FIREWORK IS STREAKS OF LIGHT WITH THE DARK BETWEEN THEM — 0537 ─────────────────────────
+
+        Drawn to the edge of its box on the blast's rule: the extent is the damage diameter, so the
+        sparks' heads at the edge are the edge of what it lands on. Three pictures — the burst, short
+        sparks round a white heart; the bloom, every spark at full length with a lit star at its
+        head; the fall, the heads going to glitter and the trails dimming behind them.
+
+        ⚠️ **THE HULL IS ONLY THE HEART, AND THAT IS WHAT KEEPS IT UNDER THE FLASH CAP.** A blast is a
+        filled disc and is paced by `THROW_GAP_STEPS`; a candle sets off eight fireworks in under two
+        seconds, so its light has to be thin — 0024's general flash is a brightness swing over an
+        area, and two dozen streaks a few pixels wide are not one. `scripts/weigh-flashes.mjs` holds
+        what this argues.
+
+        ⚠️ **THE SPARKS ALTERNATE LONG AND SHORT**, two rings of them, so a bloom reads as a peony with
+        depth rather than a clock face. No stream: the same firework on every bake.
+      */
+      const ink = palette[INK_OF[kind]];
+      const page = kind.endsWith('Bloom') ? 1 : kind.endsWith('Fall') ? 2 : 0;
+      const edge = (half - ctx.lineWidth / 2) / r;
+      ctx.arc(half, half, edge * r * 0.1, 0, Math.PI * 2);
+      seal(ctx);
+      const sparks = 20;
+      const lit = shade(ink, 0.55);
+      glow(ctx, f, ink, 0, 0, edge * (page === 0 ? 0.55 : page === 1 ? 0.4 : 0.25), page === 2 ? 0.25 : 0.45);
+      for (let k = 0; k < sparks; k++) {
+        const a = (k / sparks) * Math.PI * 2 + (k % 2) * 0.08;
+        const reach = k % 2 === 0 ? 1 : 0.82;
+        // Where the streak runs from and to, as shares of the edge, by page.
+        const from = page === 0 ? 0.12 : page === 1 ? 0.3 : 0.62;
+        const to = (page === 0 ? 0.55 : page === 1 ? 0.97 : 0.97) * reach;
+        const wide = page === 2 ? 0.018 : 0.03;
+        const cos = Math.cos(a);
+        const sin = Math.sin(a);
+        poly(
+          ctx,
+          f,
+          page === 2 ? ink : lit,
+          [
+            [cos * from * edge - sin * wide * 0.3, sin * from * edge + cos * wide * 0.3],
+            [cos * to * edge - sin * wide, sin * to * edge + cos * wide],
+            [cos * to * edge + sin * wide, sin * to * edge - cos * wide],
+            [cos * from * edge + sin * wide * 0.3, sin * from * edge - cos * wide * 0.3],
+          ],
+          page === 2 ? 0.45 : 0.8,
+        );
+        // The star at the head of each spark: white-hot in the bloom, glitter in the fall.
+        const headAt = to * edge;
+        if (page === 1) disc(ctx, f, palette.impact, cos * headAt, sin * headAt, 0.05, 0.85);
+        if (page === 2) {
+          disc(ctx, f, lit, cos * headAt, sin * headAt, 0.035, 0.8);
+          disc(ctx, f, palette.impact, cos * headAt * 0.88, sin * headAt * 0.88, 0.022, 0.6);
+        }
+      }
+      if (page === 0) {
+        glow(ctx, f, palette.impact, 0, 0, edge * 0.22, 0.85);
+        disc(ctx, f, palette.impact, 0, 0, edge * 0.08);
       }
       return;
     }

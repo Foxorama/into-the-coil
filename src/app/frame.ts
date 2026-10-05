@@ -107,7 +107,7 @@ import {
 } from '../content/pickups.ts';
 import { WEAPONS, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
-import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
+import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
 import { COG_TICK, belch, cogTurn, curtainStance, foldTurn, muzzleAcrossOf, muzzleAlongOf, openBy, phaseFor, stepBoss, swingTo, throwCurtain, uncoilsBy } from './boss.ts';
 import { BEAM_BOLT_KIND, RAIN_BOLT_KIND } from '../content/bosses.ts';
@@ -612,10 +612,31 @@ const EXPLOSION_KIND = 1;
  */
 export const THROW_GAP_STEPS = 20;
 
-/** Whether `kind` may leave the ship this step: a surge or a whirlpool always; a throw after its gap. */
+/**
+ * Whether `kind` may leave the ship this step: a surge or a whirlpool always; a throw after its gap.
+ *
+ * ⚠️ **A CANDLE IS A THROW, THOUGH IT HAS NO `shot` — 0537.** Its stars are thrown bodies that go off,
+ * so it waits for the gap like a bomb, and it holds the gap for as long as it fires: a bomb pressed
+ * under a candle would be a ninth explosion inside its two seconds.
+ */
 export function canThrow(w: World, kind: SpecialKind): boolean {
-  return SPECIALS[kind].shot === null || w.throwIn <= 0;
+  const row = SPECIALS[kind];
+  return (row.shot === null && row.candle === null) || w.throwIn <= 0;
 }
+
+/**
+ * How long a firework is on screen — 0537: a tenth of a second of burst, a quarter of bloom, and a
+ * quarter of a second falling to glitter. The damage lands on the first step, as every blast's does.
+ */
+const FIREWORK_STEPS = 36;
+/** The kind a firework carries in the blast pool, beside an explosion, a rift and a ray's burst. */
+export const FIREWORK_KIND = 4;
+// @setup: a firework's three pictures in each of its three colours, taken in turn burst by burst.
+const FIREWORK_PAGES = [
+  [SPRITE.fireworkGold, SPRITE.fireworkGoldBloom, SPRITE.fireworkGoldFall],
+  [SPRITE.fireworkCyan, SPRITE.fireworkCyanBloom, SPRITE.fireworkCyanFall],
+  [SPRITE.fireworkLavender, SPRITE.fireworkLavenderBloom, SPRITE.fireworkLavenderFall],
+] as const;
 
 /**
  * How long a ray ring's burst is on screen — a fifth of a second, the flash and then its fading rim —
@@ -638,7 +659,10 @@ function stepExplosions(w: World): void {
     let sprite: number;
     if (blast.kind === EXPLOSION_KIND) sprite = blast.lifeFor > 22 ? SPRITE.blast : blast.lifeFor > 10 ? SPRITE.blastFire : SPRITE.blastSmoke;
     else if (blast.kind === RAY_BURST_KIND) sprite = blast.lifeFor > RAY_BURST_STEPS / 2 ? SPRITE.rayBurst : SPRITE.rayFade;
-    else continue;
+    else if (blast.kind === FIREWORK_KIND) {
+      const pages = FIREWORK_PAGES[blast.face % FIREWORK_PAGES.length]!;
+      sprite = blast.lifeFor > FIREWORK_STEPS - 6 ? pages[0] : blast.lifeFor > 14 ? pages[1] : pages[2];
+    } else continue;
     blast.sprite = sprite;
     blast.spriteBase = sprite;
     blast.spriteHit = sprite;
@@ -1052,6 +1076,16 @@ export interface World {
   novaOffset: number;
   novaAcross: number;
   novaBossHit: boolean;
+  /**
+   * The roman candle firing — 0537: which special it is, how many of its stars have left, and steps
+   * until the next does; `null` when no candle is firing. Its stars are bombs in `bombs` and its
+   * fireworks blasts in `blasts`, so a lost life clears them with every other throw.
+   */
+  candleKind: SpecialKind | null;
+  candleFired: number;
+  candleIn: number;
+  /** Fireworks set off this run, so each burst takes the next of the three colours in turn — 0537. */
+  fireworks: number;
   /** Steps until a thrown special may leave the ship again — 0375's `THROW_GAP_STEPS`. */
   throwIn: number;
   /**
@@ -2096,6 +2130,8 @@ export class GameFrame implements Frame {
     // can see* is one promise rather than one per weapon — 0048.
     // Before the pools step, so a bomb that reaches its fuse this step leaves a blast where it was
     // rather than one step further on.
+    // A firing candle's next star first, so it leaves on the step its clock says — 0537.
+    stepCandle(w);
     stepBombs(w);
     stepEntities(w.bombs, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     stepEntities(w.blasts, w.cameraAlong);
@@ -3871,9 +3907,24 @@ function stepBombs(w: World): void {
   for (let i = w.bombs.size - 1; i >= 0; i--) {
     const bomb = w.bombs.at(i);
     if (bomb.lifeFor > 1 && bomb.along + bomb.velAlong >= edge) bomb.lifeFor = 1;
+    /*
+      ⚠️ **AND THE SIDES, SINCE A CANDLE'S STARS FLY ACROSS — 0537.** A bomb goes straight up the lane;
+      a star fanned off a ship at the edge of the lane is heading out of it, and the across cull would
+      release it there with its fuse unspent. It goes off at the edge, on 0377's argument.
+    */
+    if (bomb.lifeFor > 1 && bomb.velAcross !== 0) {
+      const next = bomb.across + bomb.velAcross;
+      if (next <= 0 || next >= ACROSS_SPAN) bomb.lifeFor = 1;
+    }
     if (bomb.lifeFor > 1) continue;
     // Which special this was — `launchSpecial` put it on the body — 0374.
     const row = SPECIALS[SPECIAL_KINDS[bomb.kind] ?? 'bomb'];
+    // A star goes off as a firework — 0537.
+    if (row.candle !== null) {
+      burstFirework(w, bomb.along, bomb.across, row.candle);
+      if (row.lands !== null) w.onCue(row.lands, bomb.across);
+      continue;
+    }
     // A storm where a bomb has a blast: bolts, not a ring — 0374.
     if (row.storm !== null) {
       unleashStorm(w, bomb.along, bomb.across, row.storm, row.lands);
@@ -4488,6 +4539,16 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
     w.onCue(row.cue, w.novaAcross);
     return;
   }
+  // A candle lights and fires its first star now, and the rest on its own clock — 0537.
+  if (row.candle !== null) {
+    w.onCue(row.cue, w.ship.across);
+    w.candleKind = kind;
+    w.candleFired = 0;
+    fireStar(w, kind, row.candle);
+    // It holds the throw gap for as long as it fires, and the gap after its last star — `canThrow`.
+    w.throwIn = (row.candle.stars - 1) * row.candle.every + THROW_GAP_STEPS;
+    return;
+  }
   if (row.shot === null) return;
   const body = SHOTS[row.shot];
   const thrown = w.bombs.spawn();
@@ -4505,6 +4566,74 @@ export function launchSpecial(w: World, kind: SpecialKind): void {
   thrown.lifeFor = Math.max(1, Math.round(row.reach / body.speed));
   // And the next throw waits, so explosions stay under three a second — 0024, 0375.
   w.throwIn = THROW_GAP_STEPS;
+}
+
+/*
+  ── THE ROMAN CANDLE — 0537 ──────────────────────────────────────────────────────────────────────
+
+  *"A roman candle of fireworks blasting out and filling a good chunk of the screen with fireworks."*
+  A star leaves the ship every `every` steps until `stars` have gone, each from where the ship is when
+  it leaves — so a candle held on a moving ship sprays, as a real one does. The stars sweep across the
+  fan from one side of the nose to the other, and each flies to its turn of `reaches`, where its fuse
+  runs out in `stepBombs` and it goes off as a firework in the blast pool.
+
+  ⚠️ **THE STARS ARE BOMBS AND THE FIREWORKS ARE BLASTS, AND NOTHING ELSE IS NEW.** A star is in no
+  pairing and goes off where it was aimed; a firework lands once through the blast pairings, on the
+  boss through `bossShare`, and on the ship on its one step as every blast does. A lost life clears
+  both pools, and `candleKind` with them.
+*/
+
+/** Fire the candle's next star from the ship, and count it. */
+function fireStar(w: World, kind: SpecialKind, candle: Candle): void {
+  const index = w.candleFired;
+  w.candleFired++;
+  /*
+    ⚠️ **THE FIRST STAR ANSWERS THE PRESS AND THE REST ARE ON THE GRID — 0104, 0094.** A press must be
+    immediate; what follows it is on a clock the player is no longer holding, so it waits for the
+    beat's grid, as the guns' volleys do, and the volley is a figure in time with the music.
+  */
+  w.candleIn = stepsToGrid(w.steps, candle.every);
+  if (w.candleFired >= candle.stars) w.candleKind = null;
+  const star = w.bombs.spawn();
+  // A star the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+  if (star === null) return;
+  const body = SHOTS[candle.star];
+  const angle = candle.stars > 1 ? candle.fan * (-1 + (2 * index) / (candle.stars - 1)) : 0;
+  const reach = candle.reaches[index % candle.reaches.length]!;
+  reset(star, w.ship.along + MUZZLE_ALONG, w.ship.across, body, SPECIAL_KINDS.indexOf(kind));
+  // In the camera's frame, like every speed (0023): the fan is the one the player sees.
+  star.velAlong = body.speed * Math.cos(angle) + w.scrollPerStep;
+  star.velAcross = body.speed * Math.sin(angle);
+  star.turn = angle;
+  star.prevTurn = angle;
+  star.lifeFor = Math.max(1, Math.round(reach / body.speed));
+  // The first star's pop is the press's own cue, which carries it — 0378: a press is heard as itself.
+  if (index > 0) w.onCue('candleStar', w.ship.across);
+}
+
+/** Fire the candle's next star when its clock comes round. */
+function stepCandle(w: World): void {
+  if (w.candleKind === null) return;
+  const candle = SPECIALS[w.candleKind].candle;
+  if (candle === null) {
+    w.candleKind = null;
+    return;
+  }
+  w.candleIn--;
+  if (w.candleIn > 0) return;
+  fireStar(w, w.candleKind, candle);
+}
+
+/** A star's fuse is out: a firework where it was, in the next of the three colours. */
+function burstFirework(w: World, along: number, across: number, candle: Candle): void {
+  const blast = w.blasts.spawn();
+  w.fireworks++;
+  if (blast === null) return;
+  reset(blast, along, across, SHOTS[candle.burst], FIREWORK_KIND);
+  blast.face = w.fireworks % FIREWORK_PAGES.length;
+  // It holds station in the world, as a bomb's blast does.
+  blast.lifeFor = FIREWORK_STEPS;
+  blast.bossShare = candle.bossShare;
 }
 
 /**
@@ -10781,6 +10910,8 @@ export function respawn(w: World): void {
   // And a nova still growing, on the same terms — 0447.
   w.nova.clear();
   w.novaKind = null;
+  // And a candle still firing: its stars and fireworks went with the pools above — 0537.
+  w.candleKind = null;
   // A surge went with the ship that wore it — 0373. `stepSurge` ends it at the wreck; this is sure.
   w.surgeFor = 0;
   w.aura.clear();

@@ -28,8 +28,10 @@ import { SPRITE } from './sprites.ts';
  * holding two different things, and nothing ever fired it. The typed specials are that second thing.
  *
  * ⚠️ **All six** (`reports/the-arsenal-planned-2026-09-26.md`); the shield's void is the last, 0377.
+ * The ray's nova came after them (0447), and the roman candle after that (0537) — the special of a gun
+ * that has not landed yet, so it is thrown from every bomb pickup before any ship opens on it.
  */
-export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova'] as const;
+export const SPECIAL_KINDS = ['bomb', 'hunt', 'overdrive', 'storm', 'whirlpool', 'voidMissile', 'nova', 'candle'] as const;
 
 /**
  * What the player can be carrying. Derived from the list rather than written beside it, so a kind
@@ -214,6 +216,34 @@ export interface NovaRing {
   swell: number;
 }
 
+/**
+ * A roman candle: stars fired from the ship one after another, fanned across the lane, each going off
+ * where its fuse runs out as a firework that lands on everything inside it — 0537. *"A roman candle of
+ * fireworks blasting out and filling a good chunk of the screen with fireworks."*
+ */
+export interface Candle {
+  /** How many stars it fires. */
+  stars: number;
+  /** Steps between one star and the next — on the beat's grid, so the volley is a figure. */
+  every: number;
+  /**
+   * How far off the lane's axis the outermost stars leave, in radians either side. The stars sweep
+   * from one side to the other in the order they are fired.
+   */
+  fan: number;
+  /**
+   * How far each star flies before it bursts, in world units, by its place in the volley — taken in
+   * turn, so the bursts tile the screen near and far rather than standing on one arc.
+   */
+  reaches: readonly number[];
+  /** What a star is in flight — a row in `SHOTS`, thrown as a bomb is and hurting nothing. */
+  star: ShotKind;
+  /** What a burst is — a row in `SHOTS`, landed through the blast pairings as a bomb's blast is. */
+  burst: ShotKind;
+  /** What each burst lands on a boss it reaches, as a share of the boss's full health, once. */
+  bossShare: number;
+}
+
 export interface SpecialRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
   label: string;
@@ -270,6 +300,8 @@ export interface SpecialRow {
   rift: Rift | null;
   /** The ring it bursts from the ship, or `null` — 0447. */
   nova: Nova | null;
+  /** The stars it fires from the ship, one after another, or `null` — 0537. */
+  candle: Candle | null;
   /*
     ── `charges` WAS HERE, AND IT WAS ONE ON EVERY ROW BUT THE BOMB'S — 0441 ─────────────────────
 
@@ -340,6 +372,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     nova: null,
+    candle: null,
     // The bomb pickup's face — the H-bomb in its bubble, since 0441; it was the bare `bomb` before.
     face: SPRITE.pickupBomb,
     cue: 'bomb',
@@ -366,6 +399,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     nova: null,
+    candle: null,
     face: SPRITE.pickupSeeker,
     cue: 'hunt',
     lands: null,
@@ -390,6 +424,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     nova: null,
+    candle: null,
     // The face of what it is earned from: the forward missiles' pickup.
     face: SPRITE.pickupMissile,
     cue: 'overdrive',
@@ -420,6 +455,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: null,
     nova: null,
+    candle: null,
     face: SPRITE.pickupArc,
     cue: 'stormThrow',
     lands: 'storm',
@@ -456,6 +492,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: { arms: 3, blades: 8, ahead: 60, start: 6, gap: 5, twist: 0.25, grow: 0.6, spin: 0.05, damage: 4, swell: 2.2 },
     rift: null,
     nova: null,
+    candle: null,
     face: SPRITE.pickupShuriken,
     cue: 'whirlpool',
     lands: null,
@@ -485,6 +522,7 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     whirl: null,
     rift: { radius: 36, steps: 150, bossShare: 0.1 },
     nova: null,
+    candle: null,
     // Its own face since 0447 — the swirl in its bubble. It wore the shield's while a shield was the
     // only way to earn one.
     face: SPRITE.pickupVoid,
@@ -537,9 +575,53 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
         { behind: 19, swell: 0.7 },
       ],
     },
+    candle: null,
     face: SPRITE.pickupNova,
     cue: 'nova',
     lands: null,
+    hushes: false,
+  },
+  /**
+   * The Catherine wheel's — 0537, ahead of its gun: *"a roman candle of fireworks blasting out and
+   * filling a good chunk of the screen with fireworks."* On the gun trigger, so the bomb pickup offers
+   * it to every ship from the day it lands, and the Firebird opens on two once its wheel does.
+   *
+   * ⚠️ **EIGHT STARS, ONE EVERY HALF BEAT, FANNED AND SWEEPING.** A candle is a tube that fires its
+   * stars one after another; held on a moving ship it sprays them, so each leaves where the ship is
+   * when it leaves. The reaches alternate near and far, and the fan sweeps the stars from one side of
+   * the nose to the other, so eight bursts of twenty-two units tile the screen ahead near and far.
+   *
+   * ⚠️ **A BURST IS SPARKS AND NOT A FILLED FLASH — 0024, 0457.** Eight bursts in under two seconds is
+   * more than three a second; what keeps them under the cap is that a firework's light is thin streaks
+   * over most of its area, and `scripts/weigh-flashes.mjs` is what says so, not this paragraph.
+   *
+   * ⚠️ **A HUNDREDTH OF A BOSS A BURST**, so the bomb's twentieth (0372) is five bursts on the boss; a
+   * fan aimed at one measured two to six on the seven bosses. 0537 has the table; they are play numbers.
+   */
+  candle: {
+    /*
+      ⚠️ **"Candle", AND IT WAS "Roman candle" UNTIL CI'S FONTS READ IT.** How to play stacks every
+      face's label in one column as wide as the widest (0432), so the longest name in the bomb pickup's
+      four widens the column for every row and squeezes the words beside it into wrapping. On CI's fonts
+      that pushed the guide's Back button off the smallest landscape phone (`tests/layout.browser.test.ts`).
+      The face is a roman candle and the hint says fireworks; the name is the shorter word.
+    */
+    label: 'Candle',
+    hint: 'A spray of fireworks ahead',
+    side: 'gun',
+    shot: null,
+    becomes: null,
+    reach: 0,
+    bossShare: 0,
+    surge: null,
+    storm: null,
+    whirl: null,
+    rift: null,
+    nova: null,
+    candle: { stars: 8, every: 12, fan: 0.55, reaches: [72, 112, 92, 128], star: 'candleStar', burst: 'firework', bossShare: 0.01 },
+    face: SPRITE.pickupCandle,
+    cue: 'candle',
+    lands: 'firework',
     hushes: false,
   },
 };
