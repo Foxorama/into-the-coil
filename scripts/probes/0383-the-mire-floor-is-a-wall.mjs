@@ -15,8 +15,9 @@ export const PROBES = [
     guard: 'THE ASK, IN LANE UNITS: the lower row of pools is just off the screen',
     edit: {
       path: 'src/content/pools.ts',
-      find: '      { at: 0.66, wide: 0.1, top: 0.753, deep: 0.038 },',
-      replace: '      { at: 0.66, wide: 0.1, top: 0.686, deep: 0.038 },',
+      // Re-anchored by 0535, which laid the lower row again under larger pools.
+      find: '      { at: 0.72, wide: 0.1, top: 0.754, deep: 0.036 },',
+      replace: '      { at: 0.72, wide: 0.1, top: 0.686, deep: 0.036 },',
     },
   },
   {
@@ -27,36 +28,30 @@ export const PROBES = [
     guard: 'THE ASK, IN LANE UNITS: the lower row of pools is just off the screen',
     edit: {
       path: 'src/content/pools.ts',
-      find: '      { at: 0.66, wide: 0.1, top: 0.753, deep: 0.038 },',
-      replace: '      { at: 0.66, wide: 0.1, top: 0.75, deep: 0.038 },',
+      // Re-anchored by 0535, as above.
+      find: '      { at: 0.72, wide: 0.1, top: 0.754, deep: 0.036 },',
+      replace: '      { at: 0.72, wide: 0.1, top: 0.75, deep: 0.036 },',
     },
   },
   {
     decision: '0383',
     suite: 'tests/floor.test.ts',
     // Lower than asked: the lower row sunk, and the upper row with it, so the pools barely show.
-    broke: 'every pool sunk a further five lanes, past *just* off the screen',
+    broke: 'the lower row sunk a further five lanes, past *just* off the screen',
     guard: 'THE ASK, IN LANE UNITS: the lower row of pools is just off the screen',
     edit: {
       path: 'src/content/pools.ts',
+      // Re-anchored by 0535 on its lower row, the four the ask's *"just off"* is about, sunk alone.
       find:
-        '      { at: 0.03, wide: 0.12, top: 0.739, deep: 0.042 },\n' +
-        '      { at: 0.17, wide: 0.09, top: 0.755, deep: 0.034 },\n' +
-        '      { at: 0.29, wide: 0.15, top: 0.743, deep: 0.05 },\n' +
-        '      { at: 0.43, wide: 0.08, top: 0.761, deep: 0.03 },\n' +
-        '      { at: 0.53, wide: 0.13, top: 0.737, deep: 0.046 },\n' +
-        '      { at: 0.66, wide: 0.1, top: 0.753, deep: 0.038 },\n' +
-        '      { at: 0.76, wide: 0.14, top: 0.741, deep: 0.052 },\n' +
-        '      { at: 0.9, wide: 0.08, top: 0.757, deep: 0.032 },',
+        '      { at: 0.05, wide: 0.1, top: 0.755, deep: 0.034 },\n' +
+        '      { at: 0.29, wide: 0.1, top: 0.753, deep: 0.038 },\n' +
+        '      { at: 0.5, wide: 0.08, top: 0.757, deep: 0.032 },\n' +
+        '      { at: 0.72, wide: 0.1, top: 0.754, deep: 0.036 },',
       replace:
-        '      { at: 0.03, wide: 0.12, top: 0.76, deep: 0.042 },\n' +
-        '      { at: 0.17, wide: 0.09, top: 0.776, deep: 0.034 },\n' +
-        '      { at: 0.29, wide: 0.15, top: 0.764, deep: 0.05 },\n' +
-        '      { at: 0.43, wide: 0.08, top: 0.782, deep: 0.03 },\n' +
-        '      { at: 0.53, wide: 0.13, top: 0.758, deep: 0.046 },\n' +
-        '      { at: 0.66, wide: 0.1, top: 0.774, deep: 0.038 },\n' +
-        '      { at: 0.76, wide: 0.14, top: 0.762, deep: 0.052 },\n' +
-        '      { at: 0.9, wide: 0.08, top: 0.778, deep: 0.032 },',
+        '      { at: 0.05, wide: 0.1, top: 0.776, deep: 0.034 },\n' +
+        '      { at: 0.29, wide: 0.1, top: 0.774, deep: 0.038 },\n' +
+        '      { at: 0.5, wide: 0.08, top: 0.778, deep: 0.032 },\n' +
+        '      { at: 0.72, wide: 0.1, top: 0.775, deep: 0.036 },',
     },
   },
   {
@@ -67,8 +62,9 @@ export const PROBES = [
     guard: 'never rises steeper than a cap is baked for',
     edit: {
       path: 'src/content/levels.ts',
-      find: '          112, 112, 111, 109, 108, 107, 107, 108, 110, 112,',
-      replace: '          112, 112, 111, 107, 108, 107, 107, 108, 110, 112,',
+      // Re-anchored by 0535, which brought every knot two lanes down.
+      find: '          114, 114, 113, 111, 110, 109, 109, 110, 112, 114,',
+      replace: '          114, 114, 113, 109, 110, 109, 109, 110, 112, 114,',
     },
   },
   {
