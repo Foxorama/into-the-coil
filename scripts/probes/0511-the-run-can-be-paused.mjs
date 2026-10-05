@@ -57,8 +57,8 @@ export const PROBES = [
     guard: 'a quit is kept on the table',
     edit: {
       path: 'src/app/mount.ts',
-      find: '        recordRun(false);\n        dispatch({ slice: \'screen\', type: \'show\', screen: \'title\' });',
-      replace: "        dispatch({ slice: 'screen', type: 'show', screen: 'title' });",
+      find: '        recordRun(false);\n        // 0522: and a quit',
+      replace: '        // 0522: and a quit',
     },
   },
   {

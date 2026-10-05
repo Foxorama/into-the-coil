@@ -57,17 +57,22 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
   // ⚠️ Only ever `true` is read: a win is gained and never taken back, on the slice's own terms.
   for (const kind of SHIP_KINDS) if (wonDoc?.[kind] === true) won[kind] = true;
   const plate = { ...base.plate };
-  const opened: HangarState = { won, plate: base.plate };
+  const opened: HangarState = { ...base, won };
   for (const kind of SHIP_KINDS) {
     const fitted = shipOf(plateDoc?.[kind]);
     if (fitted !== null && plateOpen(opened, kind, fitted)) plate[kind] = fitted;
   }
-  return { won, plate };
+  /*
+    0522: the balance — a new field on version 1, so a document written before it reads as none, on
+    the settings' per-field terms. A whole number at least nought, or the base's.
+  */
+  const shards = Number.isSafeInteger(doc.shards) && (doc.shards as number) >= 0 ? (doc.shards as number) : base.shards;
+  return { won, plate, shards };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  return JSON.stringify({ v: HANGAR_VERSION, won: hangar.won, plate: hangar.plate });
+  return JSON.stringify({ v: HANGAR_VERSION, won: hangar.won, plate: hangar.plate, shards: hangar.shards });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

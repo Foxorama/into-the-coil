@@ -30,8 +30,10 @@ whole game.
 
 Upgrades and buffs **carry forward across levels, through a death and through a continue** —
 [0372](decisions/0372-a-death-keeps-the-ladders.md), reversing
-[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)'s *lost on a death*. There is
-**no shop and no currency** — everything is found in the level and applied the instant you touch it.
+[0039](decisions/0039-a-run-is-lives-and-a-death-costs-the-arsenal.md)'s *lost on a death*. **Nothing
+that changes a run is bought** — everything is found in the level and applied the instant you touch it.
+A run's score pays Star Shards, and they buy only looks —
+[0522](decisions/0522-the-score-pays-in-shards.md).
 
 A run carries **three lives**, fixed. **A death spends one and nothing else**: both ladders, both
 kinds and the arsenal's charges are the ship that comes back —
@@ -419,19 +421,22 @@ auto-fire and low-input control schemes.
 
 **A kill is worth its enemy's points times the streak, a boss is worth its own points flat, and a
 cleared level pays a bonus for what the ship still holds** —
-[0428](decisions/0428-the-score-is-kept.md). The score is **not a currency**. It buys nothing, and
-the *no shop* below is untouched.
+[0428](decisions/0428-the-score-is-kept.md). **A run pays one Star Shard for every 10,000 points of
+its best credit**, once, when it ends — [0522](decisions/0522-the-score-pays-in-shards.md), reversing
+0428's *not a currency*. The shards buy looks and nothing a run can feel.
 
 | | |
 |---|---|
 | **the streak** | kills without a hit, ×1 up to ×8, one step every ten kills. **Any hit ends it, a shield's included.** A level boundary does not |
 | **in play** | top right: the run's score, the multiplier and the way to the next step |
 | **the break** | the level's points, its rank (S–D, by the share killed and the hits taken), the bonus for each shield, each bomb (the gun's charges) and each missile powerup (the tubes' charges) held, the level's total and the run's |
-| **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, the level reached and where it lands on the table |
+| **the end** | the victory shows every level's rank, the points, the bonuses and the final score; the run over shows the score, the level reached and where it lands on the table; both ends say the Star Shards paid, and the run over what stopping would pay |
+| **the shards** | the best credit's score, one per 10,000, paid at the run's end — victory, game over, the run-over offer running out, or a quit — and never at a continue; the balance is in the hangar, kept with it — [0522](decisions/0522-the-score-pays-in-shards.md) |
 | **a continue** | starts the score again: the credit that ran out goes on the table with its score and the level it reached — [0438](decisions/0438-the-score-is-the-credits.md) |
 | **the table** | the best ten runs, kept on the device; the best five on the title, standing still — [0429](decisions/0429-the-table-is-kept.md), [0458](decisions/0458-the-title-is-rows.md) |
 
-⚠️ Every number in it is a play number, and none has been played.
+⚠️ Every number in it is a play number. One has been played: a one-credit clear on *Legendary Pilot*
+scored 1,579,750 — 157 shards.
 
 ## Save and resume
 
@@ -535,7 +540,11 @@ Not claimed: blind-friendly play, and textless. For a positional shooter both ar
 
 ## Deliberately not in this game
 
-- **No shop, no currency, no economy.** Re-adding one is an argued reversal, not a drift.
+- **Nothing that changes a run is for sale.** A currency and a shop exist since
+  [0522](decisions/0522-the-score-pays-in-shards.md), and they sell looks: a dash, a dangle, a flame's
+  colour. Selling anything the simulation reads — a gun, a life, a charge, a shield — is an argued
+  reversal of 0522, not a drift. It was *no shop, no currency, no economy* until then, and no decision
+  had argued it: the one sentence behind it was about power found in a level.
 - **No procedural level generation.** Levels are authored; the chart between them is the variety.
 - **No always-online anything.** The game makes no network requests after load.
 

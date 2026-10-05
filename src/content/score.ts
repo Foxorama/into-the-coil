@@ -23,6 +23,18 @@ export const STREAK_STEP = 10;
 /** The most the streak can multiply a kill by. Reached at `STREAK_STEP × (cap − 1)` kills. */
 export const MULTIPLIER_CAP = 8;
 
+/**
+ * Points to a Star Shard — `docs/decisions/0522-the-score-pays-in-shards.md`. Asked for: *"the highest
+ * points you earned in a continue run grant you 1 Star Shard per 10,000 pts."* The first played clear,
+ * Legendary on one credit, scored 1,579,750: 157 shards.
+ */
+export const SHARD_POINTS = 10_000;
+
+/** The Star Shards `points` are worth: whole shards, rounded down. */
+export function shardsFor(points: number): number {
+  return Math.floor(Math.max(0, points) / SHARD_POINTS);
+}
+
 /** What a kill is multiplied by, `streak` kills since the last hit. */
 export function multiplierFor(streak: number): number {
   return Math.min(MULTIPLIER_CAP, 1 + Math.floor(Math.max(0, streak) / STREAK_STEP));

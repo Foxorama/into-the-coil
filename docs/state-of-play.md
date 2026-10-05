@@ -1161,6 +1161,15 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE HANGAR IS A QUEUE OF TEN, BEING BUILT IN ORDER — 2026-10-05
+
+[`the-hangar-planned`](../reports/the-hangar-planned-2026-10-05.md) is the plan, the player's answers
+and the prices, and **holds the order, so this file does not.** Landed so far:
+[0521](decisions/0521-the-hangar-opens.md) (the hangar and the unlocks) and
+[0522](decisions/0522-the-score-pays-in-shards.md) (Star Shards); item 3, Cosmo's and the dangles, is
+next. Each decision's *Owed* names its play. **Read the plan's *Pressure-tested* before item 5**: the
+guns swapping is the expensive half, and it was asked for knowing that.
+
 ### ⚠️ THE BOSSES' LOOK IS BUILT, IN THE PLAN'S ORDER, AND NONE OF IT HAS BEEN PLAYED — 2026-10-04
 
 [`the-bosses-look-planned`](../reports/the-bosses-look-planned-2026-10-04.md) is the plan and **holds
