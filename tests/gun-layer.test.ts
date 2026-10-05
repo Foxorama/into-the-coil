@@ -139,10 +139,11 @@ describe('the run', () => {
     const lifecycle = makeLifecycle(built.world, (action: Action) => {
       current = reduce(current, action);
     }, () => current.run);
-    lifecycle.begin('savior', 'estate', 'free', undefined, 'shuriken');
-    expect(built.world.shipRow.weapon).toBe('shuriken');
-    expect(built.world.shipRow.muzzle).toEqual(fitted(SHIPS.estate, 'shuriken').muzzle);
-    expect(current.run.gun).toBe('shuriken');
+    // A gun that is not the estate's own (the shuriken since 0545), or the break below changes nothing.
+    lifecycle.begin('savior', 'estate', 'free', undefined, 'arc');
+    expect(built.world.shipRow.weapon).toBe('arc');
+    expect(built.world.shipRow.muzzle).toEqual(fitted(SHIPS.estate, 'arc').muzzle);
+    expect(current.run.gun).toBe('arc');
   });
 
   it('flies the gun it began with through everything a run does, and its ship’s own when none is named', () => {

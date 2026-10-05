@@ -53,8 +53,9 @@ describe('the slot', () => {
 
 describe('the run', () => {
   it('opens on two of the fitted special', () => {
-    const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none', special: 'whirlpool' });
-    expect(begun.run.arsenal.gun).toEqual(['whirlpool', 'whirlpool']);
+    // A special that is not the estate's own (the whirlpool since 0545), or a run ignoring the fitting still passes.
+    const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none', special: 'storm' });
+    expect(begun.run.arsenal.gun).toEqual(['storm', 'storm']);
   });
 
   it('opens on the ship’s own when the shell names none', () => {

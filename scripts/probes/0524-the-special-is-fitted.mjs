@@ -44,7 +44,7 @@ export const PROBES = [
     decision: '0524',
     suite: 'tests/special-slot.browser.test.ts',
     broke: 'the shell beginning a run on the ship’s own special, never the hangar’s',
-    guard: 'the estate’s storm fitted to the fighter',
+    guard: 'the Thunderbolt’s storm fitted to the fighter',
     edit: {
       path: 'src/app/mount.ts',
       find: 'state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);',

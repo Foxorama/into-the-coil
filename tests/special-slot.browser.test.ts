@@ -34,10 +34,11 @@ afterAll(async () => {
 });
 
 describe.runIf(chromePath)('0524 — a run opens on the special the hangar fitted', () => {
-  it('the estate’s storm fitted to the fighter, both won in, and the run holds two storms', async () => {
+  it('the Thunderbolt’s storm fitted to the fighter, both won in, and the run holds two storms', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, fighter: true, estate: true } }));
+    // The storm rides the lightning gun, the Thunderbolt's since 0545.
+    await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, won: { ...initialHangar.won, fighter: true, thunderbolt: true } }));
     const page = await context.newPage();
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
@@ -47,7 +48,7 @@ describe.runIf(chromePath)('0524 — a run opens on the special the hangar fitte
     const hook = GOLFER_KINDS.find((kind) => GOLFERS[kind].ship === 'fighter')!;
     const hangar = prefixFor('hangar');
     await page.locator(`${shown('hangar')} [${SETTING_ATTR}="pilot"] .${hangar}option >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
-    await page.locator(`${shown('hangar')} [${SETTING_ATTR}="special"] .${hangar}option >> nth=${SHIP_KINDS.indexOf('estate')}`).click();
+    await page.locator(`${shown('hangar')} [${SETTING_ATTR}="special"] .${hangar}option >> nth=${SHIP_KINDS.indexOf('thunderbolt')}`).click();
     await back(page, 'hangar');
     await fly(page);
 

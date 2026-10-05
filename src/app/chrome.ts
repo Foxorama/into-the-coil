@@ -1834,7 +1834,11 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-parts-band:has([${SETTING_ATTR}="livery"]) { grid-area: livery; }
 .itc-parts-band:has([${SETTING_ATTR}="tone"]) { grid-area: tone; }
 .itc-parts-band:has([${SETTING_ATTR}="flame"]) { grid-area: flame; }
-.itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options,
+/*
+  0546: the wheels four a row since the Thunderbolt brought its own — in rows of three the fourth took a
+  second row, and on CI's wider type that put Back under a 1280x720's fold.
+*/
+.itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
 .itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /*
