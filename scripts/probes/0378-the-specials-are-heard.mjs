@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'the press plays its row’s cue on the step it is pressed',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    w.onCue(row.cue, w.ship.across);',
-      replace: "    w.onCue('shield', w.ship.across);",
+      // The surge's own, by the line before it: 0537's candle plays its press the same way.
+      find: '    w.surgeFor = row.surge.steps;\n    w.onCue(row.cue, w.ship.across);',
+      replace: "    w.surgeFor = row.surge.steps;\n    w.onCue('shield', w.ship.across);",
     },
   },
   {
@@ -69,8 +70,9 @@ export const PROBES = [
     guard: 'what it goes off as when it does',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    if (row.lands !== null) w.onCue(row.lands, bomb.across);',
-      replace: '',
+      // The bomb's own, by the comment that closes over it: 0537's candle sounds its landing the same way.
+      find: '      cue in the file that goes quiet on the frame the screen is fullest.\n    */\n    if (row.lands !== null) w.onCue(row.lands, bomb.across);',
+      replace: '      cue in the file that goes quiet on the frame the screen is fullest.\n    */',
     },
   },
   {

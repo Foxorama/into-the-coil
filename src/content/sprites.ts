@@ -922,6 +922,8 @@ export const SPRITE_KINDS = [
   // ringed in the void's own ink, drawn at exactly the radius that negates.
   'voidBall',
   'riftZone',
+  // The roman candle's star — 0537: a ball of gold fire with a glittering tail behind it.
+  'candleStar',
   /*
     ⚠️ **A RING, drawn at exactly the radius that does the damage.** A blast whose picture is smaller
     than its reach kills things the player watched it miss; one whose picture is larger makes them
@@ -958,6 +960,24 @@ export const SPRITE_KINDS = [
   */
   'blastFire',
   'blastSmoke',
+  /*
+    ── A STAR GOES OFF AS A FIREWORK, IN THREE PICTURES AND THREE COLOURS — 0537 ─────────────────────
+
+    The burst, the bloom and the fall, each drawn to exactly the damage radius on the blast's rule, in
+    the player's own three inks — gold, cyan, lavender — taken in turn star by star, so a candle's
+    spray reads as fireworks rather than as one explosion eight times. Never `fire`, which is a meaning
+    ink that says *this will burn you*, and never a filled disc: a firework is streaks of light with
+    the dark between them, which is what keeps eight of them under 0024's flash cap.
+  */
+  'fireworkGold',
+  'fireworkGoldBloom',
+  'fireworkGoldFall',
+  'fireworkCyan',
+  'fireworkCyanBloom',
+  'fireworkCyanFall',
+  'fireworkLavender',
+  'fireworkLavenderBloom',
+  'fireworkLavenderFall',
   // `lifeIcon` stood here — the plus the HUD counted lives with — until 0430 counted them in ships.
   /*
     ⚠️ **THREE PICKUP SILHOUETTES, NOT ONE IN THREE COLOURS.**
@@ -1003,6 +1023,8 @@ export const SPRITE_KINDS = [
   'pickupArc',
   // The weapon pickup's third face — a four-bladed star with a hole, the shuriken's own glyph. 0234.
   'pickupShuriken',
+  // The bomb pickup's roman candle face — 0537: a striped tube throwing a star, the candle's own glyph.
+  'pickupCandle',
   /*
     ⚠️ **A HERALDIC SHIELD, and it is the one pickup whose meaning a player already owns.** The other
     three are arbitrary glyphs the game has to teach — a plus, a holed square, a hexagon — and the
@@ -2340,6 +2362,8 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   stormBall: 10,
   // The void missile flies as the storm's ball does — 0377, and is as big since 0379.
   voidBall: 10,
+  // The candle's star with its tail — 0537: smaller than a bomb, because eight of them leave at once.
+  candleStar: 8,
   // The rift is drawn at its diameter, which is the reach that negates — 0377, the blast's rule.
   riftZone: 72,
   /*
@@ -2365,6 +2389,16 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // The explosion's later frames — 0375: the bomb's own blast, so the bomb's own extent.
   blastFire: 68,
   blastSmoke: 68,
+  // A firework is drawn at its diameter, which is its reach — 0537, the blast's rule.
+  fireworkGold: 44,
+  fireworkGoldBloom: 44,
+  fireworkGoldFall: 44,
+  fireworkCyan: 44,
+  fireworkCyanBloom: 44,
+  fireworkCyanFall: 44,
+  fireworkLavender: 44,
+  fireworkLavenderBloom: 44,
+  fireworkLavenderFall: 44,
   blastWidest: 136,
   /*
     ── THREE PICKUPS, THREE SIZES, AND THEY WERE ALL 4.6 ──────────────────────────────────────────
@@ -2401,6 +2435,7 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   // The same pickup, offering another gun's special — the same size on purpose. 0233, 0441.
   pickupArc: 8,
   pickupShuriken: 8,
+  pickupCandle: 8,
   pickupMissile: 7.33,
   pickupSeeker: 7.33,
   pickupShield: 6.67,

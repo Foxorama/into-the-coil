@@ -133,6 +133,10 @@ export const CUE_KINDS = [
   'voidThrow',
   'rift',
   'nova',
+  // The roman candle's — 0537: its fuse catching, each star leaving the tube, and each burst.
+  'candle',
+  'candleStar',
+  'firework',
   'shield',
   'death',
   'pickup',
@@ -238,6 +242,10 @@ export const TWIN_KINDS = [
   'rift-opens',
   /** A nova's ring appears round the ship and bursts outward, drawn at the radius it lands at — `openNova`, 0447. */
   'nova-appears',
+  /** A roman candle's star leaves the ship, fanned across the lane with its tail behind it — `fireStar`, 0537. */
+  'candle-fires',
+  /** A star goes off as a firework in the next of its three colours, drawn at the radius it lands at — `burstFirework`, 0537. */
+  'firework-bursts',
   /** A mark leaves the shell and a pip leaves the readout — 0050, 0045. */
   'shell-mark',
   /** The ship scatters `BURST.ship` fragments, and its upgrades with them — 0036, 0066. */
@@ -2101,6 +2109,80 @@ export const CUES: Record<CueKind, CueRow> = {
       // The air the ring pushes: noise opening upward, either side.
       { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: -0.5, panTo: -0.9 },
       { wave: 'noise', from: 0, to: 0, seconds: 0.45, gain: 0.26, attack: 0.02, curve: 2, lowFrom: 1800, lowTo: 9000, highFrom: 400, highTo: 2600, pan: 0.5, panTo: 0.9 },
+    ],
+  },
+  /**
+   * The roman candle is lit and its first star leaves — 0537. A fuse catching, a bright hiss that spits
+   * as it burns down, and inside it the first star's pop: the press is one cue, heard as itself (0378),
+   * and the seven stars after it are `candleStar`.
+   */
+  candle: {
+    twin: 'candle-fires',
+    // A press, like the bomb's: immediate, and only its consequences get much of the room.
+    air: 0.2,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.08,
+    layers: [
+      // The fuse: bright noise, thin and close, burning down as it goes.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.4, gain: 0.5, attack: 0.006, curve: 1.6, lowFrom: 11000, lowTo: 6000, highFrom: 3800, highTo: 2600, q: 0.9, pan: 0, panTo: 0.2 },
+      // Its spits: held noise in short bursts, as a fuse catches unevenly.
+      { wave: 'noise', from: 3600, to: 2400, at: 0.06, seconds: 0.05, gain: 0.32, attack: 0.001, curve: 4, lowFrom: 9000, highFrom: 1800, pan: -0.2 },
+      { wave: 'noise', from: 4200, to: 2800, at: 0.18, seconds: 0.04, gain: 0.26, attack: 0.001, curve: 4, lowFrom: 9000, highFrom: 1800, pan: 0.25 },
+      // The first star's pop, as `candleStar` pops: hollow, the fifth falling onto the root.
+      { wave: 'sine', from: inKey(11), to: inKey(7), seconds: 0.09, gain: 0.7, attack: 0.001, curve: 3.6, drive: 0.25 },
+      // And its whistle, climbing the octave as it goes up.
+      { wave: 'sine', from: inKey(21), to: inKey(28), at: 0.02, seconds: 0.22, gain: 0.14, attack: 0.01, curve: 2.4, vibrato: 12 },
+    ],
+  },
+  /**
+   * A star leaves the tube — 0537. The pop a roman candle makes: a short, hollow thump on the fifth
+   * falling to the root, a puff of air, and a whistle climbing the octave as the star goes up. Eight in
+   * a row on the half beat, so it is short and it is quiet; the bursts are what is loud.
+   */
+  candleStar: {
+    twin: 'candle-fires',
+    air: 0.25,
+    hold: 6,
+    // Over the pulse's, which never stops and so sits under everything it causes — 0145.
+    gain: 0.27,
+    glue: 0.08,
+    // Stronger on the beat than off it, so eight in a row are a figure and not a drone — 0104.
+    figure: [1, 0.7, 0.85, 0.7],
+    layers: [
+      // The pop: hollow, a fifth falling onto the root.
+      { wave: 'sine', from: inKey(11), to: inKey(7), seconds: 0.09, gain: 0.8, attack: 0.001, curve: 3.6, drive: 0.25 },
+      // The puff of air out of the tube.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.12, gain: 0.32, attack: 0.002, curve: 3, lowFrom: 2400, lowTo: 900, highFrom: 300 },
+      // The whistle: the root's octave climbing to the next, thin, as the star rises.
+      { wave: 'sine', from: inKey(21), to: inKey(28), at: 0.02, seconds: 0.22, gain: 0.14, attack: 0.01, curve: 2.4, vibrato: 12 },
+    ],
+  },
+  /**
+   * A star bursts — 0537. A firework heard from below: a crack, a dull boom on the root under it, and
+   * then the crackle of its glitter falling, a scatter of tiny snaps either side. Lighter than the
+   * blast, because eight of them go off in two seconds and the bomb stays the loudest thing a charge
+   * buys.
+   */
+  firework: {
+    twin: 'firework-bursts',
+    air: 0.6,
+    // A consequence, on the grid as every blast is — 0104.
+    onGrid: true,
+    duck: 0.2,
+    hold: 6,
+    gain: 0.3,
+    glue: 0.14,
+    layers: [
+      // The crack.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.04, gain: 0.6, attack: 0.0003, curve: 6, lowFrom: 9000, lowTo: 3200, highFrom: 900 },
+      // The boom under it, onto the root.
+      { wave: 'sine', from: inKey(7), to: inKey(0), at: 0.003, seconds: 0.26, gain: 0.55, attack: 0.001, curve: 2.8, drive: 0.45 },
+      // The glitter falling: a scatter of snaps, each later and somewhere else.
+      { wave: 'noise', from: 7200, to: 5000, at: 0.12, seconds: 0.05, gain: 0.3, attack: 0.001, curve: 4, lowFrom: 12000, highFrom: 3000, pan: -0.5 },
+      { wave: 'noise', from: 6800, to: 4600, at: 0.2, seconds: 0.05, gain: 0.26, attack: 0.001, curve: 4, lowFrom: 12000, highFrom: 3000, pan: 0.45 },
+      { wave: 'noise', from: 7600, to: 5200, at: 0.29, seconds: 0.04, gain: 0.22, attack: 0.001, curve: 4, lowFrom: 12000, highFrom: 3200, pan: -0.15 },
+      { wave: 'noise', from: 0, to: 0, at: 0.1, seconds: 0.45, gain: 0.14, attack: 0.03, curve: 2.2, lowFrom: 10000, lowTo: 5000, highFrom: 3000, pan: 0.2, panTo: -0.2 },
     ],
   },
   /**

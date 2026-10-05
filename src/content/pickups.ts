@@ -88,7 +88,8 @@ export const BOMB_KINDS: readonly SpecialKind[] = SPECIAL_KINDS.filter((k) => SP
  * ⚠️ **AND IT IS BACK, IN THE WEAPON'S PLACE — 0441.** *"Weapon pickups will instead be bomb pickups
  * … the pickup will still cycle, but a player can pick up any type and get a bomb of that type."* A
  * gun is the ship's and has no ladder now, so the pickup that climbed it buys a charge of whichever
- * gun's special it is showing — a bomb, a storm or a whirlpool — whatever gun the ship flies.
+ * gun's special it is showing — a bomb, a storm, a whirlpool or a roman candle — whatever gun the ship
+ * flies.
  */
 export const PICKUP_KINDS = ['bomb', 'missile', 'shield', 'ward'] as const;
 

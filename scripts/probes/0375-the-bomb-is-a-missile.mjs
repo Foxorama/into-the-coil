@@ -59,8 +59,9 @@ export const PROBES = [
     guard: 'never goes off more than three times a second',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return SPECIALS[kind].shot === null || w.throwIn <= 0;',
-      replace: '  return SPECIALS[kind].shot !== undefined;',
+      // 0537 put the candle into the gap as well; the break still opens it for every throw.
+      find: '  return (row.shot === null && row.candle === null) || w.throwIn <= 0;',
+      replace: '  return row.shot !== undefined;',
     },
   },
 ];

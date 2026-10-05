@@ -63,6 +63,9 @@ export type ShotKind =
   | 'bomb'
   | 'stormBall'
   | 'voidBall'
+  // The roman candle's star and the firework it goes off as — 0537.
+  | 'candleStar'
+  | 'firework'
   | 'blast'
   | 'blastHalf'
   | 'blastWide'
@@ -402,6 +405,8 @@ export const SHOT_KINDS: readonly ShotKind[] = [
   'bomb',
   'stormBall',
   'voidBall',
+  'candleStar',
+  'firework',
   'blast',
   'blastHalf',
   'blastWide',
@@ -1034,6 +1039,24 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * number; what it does is the rift it opens where its fuse runs out.
    */
   voidBall: { sprite: SPRITE.voidBall, spriteHit: SPRITE.voidBall, radius: 2.5, health: 1, damage: 0, speed: 1.5, fission: SPENT_BY_ARRIVING },
+  /**
+   * A roman candle's star — 0537. Thrown as the bomb is and hurting nothing in flight, on the bomb's
+   * argument: where it bursts is the whole of what it does. Faster than a bomb, because eight of them
+   * leave in under two seconds and a star still in the air when the last leaves is a fan that never
+   * fills. At 3.5 the farthest is out in 37 steps and three are aloft at most, so a bomb thrown just
+   * before the candle still fits beside them in the bomb pool's four.
+   */
+  candleStar: { sprite: SPRITE.candleStar, spriteHit: SPRITE.candleStar, radius: 2, health: 1, damage: 0, speed: 3.5, fission: SPENT_BY_ARRIVING },
+  /**
+   * What a star becomes — 0537: a firework two thirds of a bomb's blast across, landing the blast's six
+   * on everything inside it, once. Drawn to its radius on the blast's rule (`tests/bombs.test.ts`): the
+   * edge of the sparks is the edge of what it hits.
+   *
+   * ⚠️ **22, AND IT WAS 16 UNTIL THE FIRST PHOTOGRAPH.** At sixteen a burst was a quarter of the lane's
+   * height across, most of it dark, and the three or four open at once read as a few fireworks rather
+   * than a screen filling with them. `scripts/weigh-flashes.mjs` read both sizes under the cap.
+   */
+  firework: { sprite: SPRITE.fireworkGold, spriteHit: SPRITE.fireworkGold, radius: 22, health: 1, damage: 6, speed: 0, fission: SPENT_BY_ARRIVING },
   /**
    * What a bomb becomes: six pulses of damage, everywhere inside a third of the lane.
    *
