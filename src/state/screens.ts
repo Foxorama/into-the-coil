@@ -31,7 +31,9 @@ import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
-import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
+import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
+import { RIMS, RIM_KINDS } from '../content/rims.ts';
+import { OWNABLES, WARES, type OwnableKind } from '../content/wares.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
 
@@ -42,6 +44,7 @@ export const SCREEN_KINDS = [
   'title',
   'settings',
   'hangar',
+  'parts',
   'shop',
   'guide',
   'playing',
@@ -100,7 +103,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0523: and what hangs from the dash.
 // 0524: and the special a run opens with.
 // 0526: and the gun it flies.
-export type SlotName = 'plate' | 'dangle' | 'special' | 'gun';
+// 0527: and what its wheels wear, on the Paint & Parts tab.
+export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -387,6 +391,17 @@ export function gunWhy(ship: ShipKind, won: boolean, borrowable: boolean): strin
   return slotWhy(ship, won, borrowable, 'gun');
 }
 
+/**
+ * What the wheels band says when it offers nothing but the car's own — 0527: a ship with no wheels says
+ * so, and a car says how to open the rest, the dash's sentence and Cosmo's, since either opens some.
+ */
+export function rimWhy(ship: ShipKind, wheeled: boolean, won: boolean, borrowable: boolean, bought: boolean): string | null {
+  if (!wheeled) return 'The ' + plainLabel(ship) + ' flies on no wheels';
+  if (bought || borrowable) return null;
+  const sentence = slotWhy(ship, won, borrowable, 'wheels');
+  return sentence === null ? null : sentence + ', or buy a set at Cosmo’s';
+}
+
 /** A ship's own slot, shut: why, in the one sentence every such slot uses — 0521's, since 0524 shared. */
 function slotWhy(ship: ShipKind, won: boolean, borrowable: boolean, what: string): string | null {
   if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its ' + what;
@@ -402,11 +417,13 @@ export function dangleWhy(boughtAny: boolean): string | null {
 }
 
 /**
- * What the shelf says of the ware in the window — 0523: that it is owned, or how far the balance is
- * from it, or `null` when it can be bought and the band says its price.
+ * What the shelf says of the ware in the window — 0523: that it is owned and where it is put on, or how
+ * far the balance is from it, or `null` when it can be bought and the band says its price. 0527: a rim
+ * is fitted on Paint & Parts, where a dangle hangs in the hangar.
  */
-export function wareWhy(owned: boolean, shards: number, price: number): string | null {
-  if (owned) return 'Yours — hang it in the hangar';
+export function wareWhy(ware: OwnableKind, owned: boolean, shards: number): string | null {
+  if (owned) return RIM_KINDS.some((rim) => rim === ware) ? 'Yours — fit it in Paint & Parts' : 'Yours — hang it in the hangar';
+  const price = OWNABLES[ware].price ?? 0;
   return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
 }
 
@@ -751,8 +768,56 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'title',
-    // 0523: and Cosmo's beside it, one place to the player — buying and fitting.
-    tabs: ['hangar', 'shop'],
+    // 0523: and Cosmo's beside it, one place to the player — buying and fitting. 0527: and Paint & Parts between.
+    tabs: ['hangar', 'parts', 'shop'],
+    opensOn: 'choice',
+  },
+  /**
+   * *Paint & Parts* — `docs/decisions/0527-the-wheels-turn.md`. The hangar's second tab: how each ship
+   * looks — its wheels, and as the plan's next items land its nose art, its livery and its flame — where
+   * *Hangin' Out* keeps what it flies with and what its dash wears. Asked, when the hangar was about to
+   * reach eight slots: a third tab, named *"Paint & Parts"*.
+   *
+   * ⚠️ **THE PILOTS AGAIN, ON THE SAME SETTING**, because which ship is being dressed is whose it is; a
+   * face chosen here is the pilot chosen on the hangar and the title, one setting on three bands.
+   */
+  parts: {
+    heading: 'Paint & Parts',
+    pause: null,
+    actions: [{ label: 'Back', hint: '' }],
+    choices: [
+      {
+        name: 'pilot',
+        label: 'Pilot',
+        options: pilotOptions,
+        faces: 'portraits',
+        on: 'all',
+        press: 'steps',
+      },
+      /*
+        0527: the wheels — every rim in the table's order, named with where it comes from. Built by
+        walking `RIM_KINDS`; a ship with no wheels shows them all shut and says so.
+      */
+      {
+        name: 'rim',
+        label: 'Wheels',
+        options: RIM_KINDS.map((kind) => {
+          const rim = RIMS[kind];
+          return { label: rim.name, hint: rim.hint + ' — ' + (rim.from === null ? 'from Cosmo’s' : 'from the ' + plainLabel(rim.from)) };
+        }),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+    ],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'title',
+    tabs: ['hangar', 'parts', 'shop'],
     opensOn: 'choice',
   },
   /**
@@ -774,7 +839,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       {
         name: 'ware',
         label: 'On the shelf',
-        options: WARES.map((kind) => ({ label: DANGLES[kind].name, hint: String(DANGLES[kind].price) + ' Star Shards — ' + DANGLES[kind].hint })),
+        options: WARES.map((kind) => ({ label: OWNABLES[kind].name, hint: String(OWNABLES[kind].price) + ' Star Shards — ' + OWNABLES[kind].hint })),
         faces: 'words',
         on: 'all',
         press: 'steps',
@@ -787,7 +852,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'title',
-    tabs: ['hangar', 'shop'],
+    tabs: ['hangar', 'parts', 'shop'],
     opensOn: 'choice',
   },
   /**

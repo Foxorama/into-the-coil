@@ -23,7 +23,9 @@
  */
 
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../../content/ships.ts';
-import { DANGLES, DANGLE_KINDS, type DangleKind } from '../../content/dangles.ts';
+import type { DangleKind } from '../../content/dangles.ts';
+import { RIMS, type RimKind } from '../../content/rims.ts';
+import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 
 export interface HangarState {
   /**
@@ -42,10 +44,10 @@ export interface HangarState {
    */
   shards: number;
   /**
-   * Which dangles the player has — 0523. The free ones from the start; a bought one from the moment it
-   * is paid for, and never taken back.
+   * What the player has — 0523's dangles, and since 0527 every ownable kind (`src/content/wares.ts`).
+   * The free ones from the start; a bought one from the moment it is paid for, and never taken back.
    */
-  owned: Readonly<Record<DangleKind, boolean>>;
+  owned: Readonly<Record<OwnableKind, boolean>>;
   /**
    * What hangs from each ship's dash, or `null` for nothing — 0523. Each ship opens on its row's
    * `hangs`. Any dangle the player owns may hang on any ship: answered while it was planned, *a bought
@@ -67,6 +69,11 @@ export interface HangarState {
    * rule. 0525 drew every pairing and made the frame fly it.
    */
   gun: Readonly<Record<ShipKind, ShipKind>>;
+  /**
+   * What each car's wheels wear — 0527, or `null` for a ship with none. A car's own rim, the other car's
+   * on the dash's rule, and a bought one on any car from the moment it is bought, as a dangle is.
+   */
+  rim: Readonly<Record<ShipKind, RimKind | null>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -74,10 +81,11 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'won'; ship: ShipKind }
   | { slice: 'hangar'; type: 'plate'; ship: ShipKind; plate: ShipKind }
   | { slice: 'hangar'; type: 'earned'; shards: number }
-  | { slice: 'hangar'; type: 'bought'; dangle: DangleKind }
+  | { slice: 'hangar'; type: 'bought'; ware: OwnableKind }
   | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null }
   | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind }
-  | { slice: 'hangar'; type: 'gun'; ship: ShipKind; from: ShipKind };
+  | { slice: 'hangar'; type: 'gun'; ship: ShipKind; from: ShipKind }
+  | { slice: 'hangar'; type: 'rim'; ship: ShipKind; rim: RimKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -91,26 +99,38 @@ export const initialHangar: HangarState = {
   won: perShip(() => false),
   plate: perShip((kind) => kind),
   shards: 0,
-  owned: perDangle((kind) => DANGLES[kind].price === null),
+  owned: perOwnable((kind) => OWNABLES[kind].price === null),
   hung: perShip((kind) => SHIPS[kind].hangs),
   special: perShip((kind) => kind),
   gun: perShip((kind) => kind),
+  rim: perShip((kind) => SHIPS[kind].wheels?.rim ?? null),
 };
 
-/** Each dangle mapped to `of(kind)`, on `perShip`'s terms. */
-function perDangle<T>(of: (kind: DangleKind) => T): Record<DangleKind, T> {
-  const out: Partial<Record<DangleKind, T>> = {};
-  for (const kind of DANGLE_KINDS) out[kind] = of(kind);
-  return out as Record<DangleKind, T>;
+/** Each ownable kind mapped to `of(kind)`, on `perShip`'s terms. */
+function perOwnable<T>(of: (kind: OwnableKind) => T): Record<OwnableKind, T> {
+  const out: Partial<Record<OwnableKind, T>> = {};
+  for (const kind of OWNABLE_KINDS) out[kind] = of(kind);
+  return out as Record<OwnableKind, T>;
 }
 
 /**
- * Whether `dangle` can be bought now — 0523: it is for sale, not already owned, and the balance covers
+ * Whether `ware` can be bought now — 0523: it is for sale, not already owned, and the balance covers
  * it. The shop says why not when it cannot; this is the rule, and the reducer is held to it.
  */
-export function canBuy(state: HangarState, dangle: DangleKind): boolean {
-  const price = DANGLES[dangle].price;
-  return price !== null && !state.owned[dangle] && state.shards >= price;
+export function canBuy(state: HangarState, ware: OwnableKind): boolean {
+  const price = OWNABLES[ware].price;
+  return price !== null && !state.owned[ware] && state.shards >= price;
+}
+
+/**
+ * Whether `ship`'s wheels may wear `rim` — 0527. Never on a ship with no wheels. A rim that comes on a
+ * car is on the dash's rule — its own always, the other car's once both are won in — and one only
+ * Cosmo's sells is on any car once it is owned, as a dangle hangs on any dash.
+ */
+export function rimOpen(state: HangarState, ship: ShipKind, rim: RimKind): boolean {
+  if (SHIPS[ship].wheels === null) return false;
+  const from = RIMS[rim].from;
+  return from === null ? state.owned[rim] : plateOpen(state, ship, from);
 }
 
 /**
@@ -150,9 +170,9 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     }
     // 0523: paid for once, in full, and owned for good; anything else is refused and moves nothing.
     case 'bought': {
-      const price = DANGLES[action.dangle].price;
-      if (price === null || !canBuy(state, action.dangle)) return state;
-      return { ...state, shards: state.shards - price, owned: { ...state.owned, [action.dangle]: true } };
+      const price = OWNABLES[action.ware].price;
+      if (price === null || !canBuy(state, action.ware)) return state;
+      return { ...state, shards: state.shards - price, owned: { ...state.owned, [action.ware]: true } };
     }
     // 0523: an owned dangle, or nothing, on any ship.
     case 'hung':
@@ -167,6 +187,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'gun':
       if (state.gun[action.ship] === action.from || !gunOpen(state, action.ship, action.from)) return state;
       return { ...state, gun: { ...state.gun, [action.ship]: action.from } };
+    // 0527: the wheels, refused on a ship with none and on a rim not open to it.
+    case 'rim':
+      if (state.rim[action.ship] === action.rim || !rimOpen(state, action.ship, action.rim)) return state;
+      return { ...state, rim: { ...state.rim, [action.ship]: action.rim } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

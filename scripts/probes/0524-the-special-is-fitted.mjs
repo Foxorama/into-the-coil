@@ -47,8 +47,8 @@ export const PROBES = [
     guard: 'the estate’s storm fitted to the fighter',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon);',
-      replace: 'state.settings.credits, ownSpecial(ship), SHIPS[state.hangar.gun[ship]].weapon);',
+      find: 'state.settings.credits, ownSpecial(state.hangar.special[ship]), SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);',
+      replace: 'state.settings.credits, ownSpecial(ship), SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);',
     },
   },
 ];

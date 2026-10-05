@@ -116,8 +116,12 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * rift is open for 150 steps where it was 90, so a banked salvo holds eight open: three more. Fifty-three
  * more blits of a baked bitmap at the worst second of one fight, on a desktop target. The particle
  * share was not touched.
+ *
+ * ⚠️ **AND 746 SINCE 0527, ON THE SHIP'S LINE.** A car on the Mothership's spinners wears a turning
+ * picture over each wheel, because a picture baked into the hull cannot turn: two more blits of a baked
+ * bitmap, for the whole of a run in the one ship that wears them. Nothing else was re-sliced.
  */
-const WORST_CASE = 744;
+const WORST_CASE = 746;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;

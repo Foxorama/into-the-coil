@@ -206,7 +206,9 @@ And once the plan was written:
    was under: the ray on the estate cleared the serpent's first phase in 7.8 volleys, answered on the
    serpent's row (the ray at 0.93). The hangar was laid out again for a fourth band.
 7. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
-   estate's whitewall are each one entry of its set — with the tyre's outline untouched.
+   estate's whitewall are each one entry of its set — with the tyre's outline untouched. **Built as
+   [0527](../docs/decisions/0527-the-wheels-turn.md)**, with the Mothership's spinners at Cosmo's for
+   1000 and turning, and the hangar's third tab, *Paint & Parts*, where items 8–10 land.
 8. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
    nose art for the fighter, a crest on the estate's bonnet and the saucer's dome.
 9. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
@@ -232,14 +234,20 @@ pays 157 shards. Set on that:
 |---|---|---|
 | base | **250** | the cheaper things — the first dangles: the eucalyptus tree, the family in the frame, the golf ball |
 | next | **400** | Ion Thrusters |
+| top | **1000** | the Mothership's spinning wheels — set by the player after item 6 |
 
 *"let's set the cheaper stuff at 250 shards for a base level and then Ion Thursters being 400 shards
 at the next tier."* About two clears for a dangle and three for the thrusters.
 
+## Answered after item 6
+- **Who Cosmo is:** *"Cosmo is just a name for now."*
+- **Whether the shop says purchases live in this browser:** *"Don't warn about lost purchases."*
+- **What sixteen boss fights cost in CI**, read off #542's green run: the twelve borrowed pairings
+  are 158 s in `tests/gun-floor.test.ts`, on a shard that finished in four minutes while the slowest
+  took nine, so the run's length did not move.
+- **The wheels gained a ware:** *"from Golf-Stars add the full sick spinning wheels from The Mothership
+  into Cosmo's for 1000 shards"* — the predecessor's saucer's landing-gear wheels, a dark tyre, a
+  silver rim and cross spokes, turning. A third price tier, above the thrusters.
+
 ## Owed
-- **Who Cosmo is.** A name on a screen, or a face with a line, like the pilots have.
-- **Whether losing the device's storage losing the purchases needs saying in the shop.** The game
-  makes no network requests after load, so there is nowhere else to keep them.
-- **What sixteen boss fights cost in CI**, measured on the gun slot's own run before it merges —
-  that guard is already among the suite's slow ones.
-- A play of each change on its branch preview, before the next is built.
+- A play of each change on its branch preview.

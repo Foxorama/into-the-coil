@@ -9,7 +9,8 @@ import { back, fly, openHangar, shown } from './title.ts';
 import { seedOnce } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
-import { DANGLE_KINDS, WARES, type DangleKind } from '../src/content/dangles.ts';
+import { DANGLE_KINDS, type DangleKind } from '../src/content/dangles.ts';
+import { WARES } from '../src/content/wares.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
 /**
@@ -73,7 +74,9 @@ describe.runIf(chromePath)('0523 — Cosmo’s sells a dangle, and the run wears
 
     // Every ware in the window hangs from the dash before a shard is spent.
     const wares = `${shown('shop')} [${SETTING_ATTR}="ware"] .${SHOP}option`;
+    // 0527: every ware that hangs — a rim on the shelf is not worn on the dash.
     for (const [i, ware] of WARES.entries()) {
+      if (!DANGLE_KINDS.some((d) => d === ware)) continue;
       await page.locator(`${wares} >> nth=${i}`).click();
       expect(await hanging(page), `${ware} in the window was not tried on the dash`).toBe(ware);
     }

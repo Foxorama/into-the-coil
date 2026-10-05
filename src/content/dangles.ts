@@ -40,5 +40,4 @@ export const DANGLES: Record<DangleKind, DangleRow> = {
   golfball: { name: 'Golf ball', hint: 'Dimpled, on a string — a keepsake from the Far Carry', price: 250 },
 };
 
-/** What Cosmo's sells, in the table's order: every dangle with a price. */
-export const WARES: readonly DangleKind[] = DANGLE_KINDS.filter((kind) => DANGLES[kind].price !== null);
+// What Cosmo's sells is every ownable row with a price — `src/content/wares.ts` since 0527.

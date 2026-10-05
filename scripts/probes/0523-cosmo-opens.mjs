@@ -13,8 +13,8 @@ export const PROBES = [
     guard: 'refuses a ware the balance does not cover',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return price !== null && !state.owned[dangle] && state.shards >= price;',
-      replace: '  return price !== null && !state.owned[dangle];',
+      find: '  return price !== null && !state.owned[ware] && state.shards >= price;',
+      replace: '  return price !== null && !state.owned[ware];',
     },
   },
   {
@@ -24,7 +24,7 @@ export const PROBES = [
     guard: 'takes the price and gives the ware, once',
     edit: {
       path: 'src/state/slices/hangar.ts',
-      find: '  return price !== null && !state.owned[dangle] && state.shards >= price;',
+      find: '  return price !== null && !state.owned[ware] && state.shards >= price;',
       replace: '  return price !== null && state.shards >= price;',
     },
   },
@@ -57,7 +57,7 @@ export const PROBES = [
     guard: 'tries the ware on the dash, buys it once',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    chrome.setDangle(state.screen.current === 'shop' && ware !== undefined ? ware : hung);",
+      find: "    chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : hung);",
       replace: '    chrome.setDangle(hung);',
     },
   },

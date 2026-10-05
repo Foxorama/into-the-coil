@@ -33,12 +33,13 @@ import { SCREENS, STEPS_PER_SECOND, type ChoiceName, type Screen } from '../stat
 import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
-import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
-import { bakeAtlas, bakeGlyph, bakeShipGun, chartTileX, chartTileY, drawChart, mix, shade, withGun } from '../render/bake.ts';
-import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
+import { SHIP_BOX, SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
+import { RIMS } from '../content/rims.ts';
+import { bakeAtlas, bakeGlyph, bakeShipFit, chartTileX, chartTileY, drawChart, mix, shade, withFit } from '../render/bake.ts';
+import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, ownFit, sameFit, type Fit, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
-import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
+import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -1255,7 +1256,7 @@ ${faceTurns()}
   The readout has the other corner.
 */
 /* 0523: and Cosmo's, the hangar's other tab, wears the same balance in the same corner. */
-.itc-hangar-sheet, .itc-shop-sheet {
+.itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet {
   position: absolute;
   top: min(0.9rem, 2.5cqh);
   right: min(1.2rem, 2.5cqw);
@@ -1267,8 +1268,8 @@ ${faceTurns()}
   background: color-mix(in srgb, var(--itc-ink) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
 }
-.itc-hangar-sheet-label, .itc-shop-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
-.itc-hangar-sheet-value, .itc-shop-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
+.itc-hangar-sheet-label, .itc-parts-sheet-label, .itc-shop-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.itc-hangar-sheet-value, .itc-parts-sheet-value, .itc-shop-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
 @property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
 .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet {
   display: grid;
@@ -1685,6 +1686,17 @@ ${faced((p) => `.${p}pilot-card`)} {
 }
 ${faced((p) => `.${p}pilot-ship`)} { display: flex; align-items: center; justify-content: center; width: clamp(4rem, 18cqh, 9rem); }
 ${faced((p) => `.${p}pilot-ship > canvas`)} { display: block; width: 100%; height: auto; filter: drop-shadow(0 0 0.6em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 35%, transparent)); }
+/*
+  0527: a car on spinners turns them on the card too, as it does in the fight — each wheel its own
+  picture laid over the tyre the car's row names, turned here rather than baked, at the rim's rates.
+  Still for a reader who asks for less motion, as every other turning thing in the chrome is.
+*/
+${faced((p) => `.${p}pilot-ship`)} { position: relative; }
+${faced((p) => `.${p}pilot-ship > .${p}pilot-wheel`)} { position: absolute; height: auto; filter: none; transform: translate(-50%, -50%); animation: itc-wheel-turn var(--itc-turn, 0.7s) linear infinite; }
+@keyframes itc-wheel-turn { from { transform: translate(-50%, -50%) rotate(0deg); } to { transform: translate(-50%, -50%) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  ${faced((p) => `.${p}pilot-ship > .${p}pilot-wheel`)} { animation: none; }
+}
 ${faced((p) => `.${p}pilot-words`)} { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
 ${faced((p) => `.${p}pilot-name`)} { font-size: 1.25em; font-weight: 800; letter-spacing: 0.02em; }
 ${faced((p) => `.${p}pilot-who`)} { font-size: 0.8em; opacity: 0.7; letter-spacing: 0.06em; }
@@ -1720,11 +1732,29 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-hangar-band:has([${SETTING_ATTR}="special"]) { grid-area: special; }
 .itc-hangar-band:has([${SETTING_ATTR}="gun"]) { grid-area: gun; }
 /*
+  ── PAINT AND PARTS — 0527, the hangar's second tab ────────────────────────────────────────────────
+
+  The hangar's own columns: the pilot and their card on the left, the ship's looks down the right —
+  its wheels, and the plan's nose art, livery and flame as they land. The wheels' three stand in a row.
+*/
+.itc-parts-settings-box {
+  display: grid;
+  width: min(100%, 64em);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: 'pilot wheels' 'card wheels';
+  align-items: center;
+  gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
+}
+.itc-parts-band-faces { grid-area: pilot; }
+.itc-parts-pilot-card { grid-area: card; }
+.itc-parts-band:has([${SETTING_ATTR}="rim"]) { grid-area: wheels; }
+.itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/*
   0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
   the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
   wider type, over it — and the room they need was under Back and between the rows.
 */
-.itc-hangar-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
+.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
 /*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
@@ -1734,8 +1764,8 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-hangar-band:has([${SETTING_ATTR}="gun"]) .itc-hangar-options,
 .itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) .itc-hangar-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
-.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; gap: 0.3em; }
+.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
+.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: grid; gap: 0.3em; }
 /*
   ⚠️ **AND THE PILOT SCREEN GIVES BACK THE HEIGHT THE CARD TAKES — 0513.** The card is new and the
   screen is the height it was, so two things the card made redundant go: the bands' labels — the faces
@@ -1970,11 +2000,11 @@ ${each('-band[hidden]')} { display: none; }
     height and Back went under an 844x390's fold. The bands drop their labels as the title's do; each
     still names itself to a reader.
   */
-  .itc-hangar-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
-  .itc-hangar-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
-  .itc-hangar-band-label { display: none; }
-  .itc-hangar-option { font-size: 0.8em; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { padding: 0.25em 0.3em; }
+  .itc-hangar-settings-box, .itc-parts-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
+  .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  .itc-hangar-band-label, .itc-parts-band-label { display: none; }
+  .itc-hangar-option, .itc-parts-option { font-size: 0.8em; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { padding: 0.25em 0.3em; }
   /*
     ⚠️ **ON A PHONE A SLOT SHOWS THE ONE THAT IS ON, AND ITS ARROWS STEP IT — 0523.** Two bands of four
     and five, each name two lines in half a phone, were the column's height three times over and put
@@ -1982,16 +2012,16 @@ ${each('-band[hidden]')} { display: none; }
     step passes over what is shut, so the band's line — which says why a thing is shut — is what tells
     the player there is more to win or buy. One line, cut short rather than wrapped.
   */
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: flex; justify-content: center; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on) { display: none; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { width: 100%; white-space: nowrap; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options { display: flex; justify-content: center; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { width: 100%; white-space: nowrap; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The balance a step smaller, so it keeps its corner clear of the tabs on a narrow phone. */
   /*
     And in the bottom corner rather than the top. On a phone the tabs are the heading's size and reach
     the top right, where the balance stood over Cosmo's own tab at 844x390; beside Back is clear.
   */
-  .itc-hangar-sheet, .itc-shop-sheet { font-size: 0.8em; top: auto; bottom: min(0.9rem, 2.5cqh); }
+  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; top: auto; bottom: min(0.9rem, 2.5cqh); }
   /*
     The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
     to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
@@ -2085,7 +2115,7 @@ ${each('-band[hidden]')} { display: none; }
       480x320's floor, given back from over the tabs, which still clear the readout.
     */
     .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
-    .itc-hangar-panel, .itc-shop-panel { padding-top: 15cqh; }
+    .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 15cqh; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -3805,8 +3835,8 @@ export function makeChrome(
 
   /** The chrome's own icons, at a fixed size, copied out of a bake so the atlas keeps its own. */
   const icons = bakeAtlas(colours, 'side', ICON_PIXELS_PER_UNIT);
-  // 0526: which gun each ship's icons carry; absent is its own, as the bake made them.
-  const iconGuns: Partial<Record<ShipKind, WeaponKind>> = {};
+  // 0526: how each ship's icons are fitted; absent is as it comes, as the bake made them.
+  const iconFits: Partial<Record<ShipKind, Fit>> = {};
   const iconOf = (sprite: number): HTMLCanvasElement => {
     const source = icons.bitmaps[sprite];
     const canvas = document.createElement('canvas');
@@ -3872,23 +3902,24 @@ export function makeChrome(
     ⚠️ **AND ONE PER GUN, SINCE 0526**: a ship drawn with a borrowed gun is a different picture of the same
     sprite, baked under `withGun` and kept beside its own.
   */
+  // 0527: and one per fit — the gun and the rim.
   const cardShips: Partial<Record<Screen, Map<string, HTMLCanvasElement>>> = {};
-  const shipOnCard = (screen: Screen, ship: ShipKind, gun: WeaponKind): HTMLCanvasElement => {
+  const shipOnCard = (screen: Screen, ship: ShipKind, fit: Fit): HTMLCanvasElement => {
     const kept = (cardShips[screen] ??= new Map<string, HTMLCanvasElement>());
-    const key = ship + ':' + gun;
+    const key = ship + ':' + fit.gun + ':' + String(fit.rim);
     let canvas = kept.get(key);
     if (canvas === undefined) {
       const kind = SPRITE_KINDS[SHIPS[ship].sprite];
       canvas =
         kind === undefined
           ? document.createElement('canvas')
-          : withGun(ship, gun, () => bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT));
+          : withFit(ship, fit, () => bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT));
       kept.set(key, canvas);
     }
     return canvas;
   };
-  /** Which gun the fitted ship carries, for the pilot card — 0526; set by `setShip`, `null` before it. */
-  let cardGun: { ship: ShipKind; gun: WeaponKind } | null = null;
+  /** How the fitted ship is fitted, for the pilot card — 0526's gun, 0527's rim; set by `setShip`. */
+  let cardFit: { ship: ShipKind; fit: Fit } | null = null;
   interface PilotCard {
     root: HTMLElement;
     ship: HTMLElement;
@@ -3919,20 +3950,39 @@ export function makeChrome(
     root.append(ship, words);
     return { root, ship, name, who, bio, craft, gun };
   };
+  /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
+  const cardWheels: Partial<Record<Screen, HTMLCanvasElement[]>> = {};
   const paintPilot = (screen: Screen, golfer: GolferKind | undefined): void => {
     const pilotCard = pilotCards[screen];
     if (pilotCard === undefined || golfer === undefined) return;
     const row = GOLFERS[golfer];
     const ship = SHIPS[row.ship];
-    // 0526: the gun the hangar fitted that ship with, when the card is the fitted ship's; its own otherwise.
-    const gun = cardGun !== null && cardGun.ship === row.ship ? cardGun.gun : ship.weapon;
-    const weapon = WEAPONS[gun];
+    // 0526: how the hangar fitted that ship, when the card is the fitted ship's; as it comes otherwise.
+    const fit = cardFit !== null && cardFit.ship === row.ship ? cardFit.fit : ownFit(row.ship);
+    const weapon = WEAPONS[fit.gun];
     pilotCard.name.textContent = row.name;
     pilotCard.who.textContent = row.pronouns + ' · ' + row.home;
     pilotCard.bio.textContent = row.bio;
     pilotCard.craft.textContent = ship.label;
     pilotCard.gun.textContent = weapon.label + ' — ' + weapon.hint;
-    pilotCard.ship.replaceChildren(shipOnCard(screen, row.ship, gun));
+    pilotCard.ship.replaceChildren(shipOnCard(screen, row.ship, fit));
+    // 0527: and a car on a turning rim turns it here, each wheel laid over its tyre and spun by the stylesheet.
+    const rates = fit.rim === null ? null : RIMS[fit.rim].turn;
+    if (ship.wheels !== null && rates !== null) {
+      const prefix = prefixFor(screen);
+      const radius = ship.wheels.radius;
+      const wheels = (cardWheels[screen] ??= [0, 1].map(() => bakeGlyph('spinnerWheel', colours, CARD_SHIP_PIXELS_PER_UNIT)));
+      ship.wheels.at.forEach((at, i) => {
+        const wheel = wheels[i]!;
+        wheel.className = prefix + 'pilot-wheel';
+        wheel.style.left = String(50 + (at.along / SHIP_BOX) * 100) + '%';
+        wheel.style.top = String(50 + (at.across / SHIP_BOX) * 100) + '%';
+        // A sprite's box is its frame's radius over 0.42, the spinner's as the ship's: the tyre's box, in the ship's.
+        wheel.style.width = String((radius / 0.42 / SHIP_BOX) * 100) + '%';
+        wheel.style.setProperty('--itc-turn', String(rates[i === 0 ? 0 : 1]) + 's');
+        pilotCard.ship.appendChild(wheel);
+      });
+    }
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
@@ -4046,7 +4096,7 @@ export function makeChrome(
     let sheet: HTMLElement | null = null;
     // 0517: and the game over, the fourth — a run that could not be continued is added up there.
     // 0522: and the hangar, whose one line is the Star Shards the player holds.
-    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar' || screen === 'shop') {
+    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar' || screen === 'parts' || screen === 'shop') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
       panel.appendChild(sheet);
@@ -4891,13 +4941,15 @@ export function makeChrome(
         that ship's sprites baked again with it, and the counter and the title's flyer are taken afresh;
         the pilot cards are repainted, since the band painted them before the fitting was known.
       */
+      // 0527: the whole fit, read off the fitted row — its gun, and the rim its wheels wear.
       const kind = SHIP_KINDS.find((k) => SHIPS[k].sprite === ship.sprite);
-      const gunChanged = kind !== undefined && (iconGuns[kind] ?? SHIPS[kind].weapon) !== ship.weapon;
+      const fit: Fit = { gun: ship.weapon, rim: ship.wheels?.rim ?? null };
+      const gunChanged = kind !== undefined && !sameFit(iconFits[kind] ?? ownFit(kind), fit);
       if (kind !== undefined && gunChanged) {
-        bakeShipGun(icons, colours, kind, ship.weapon);
-        iconGuns[kind] = ship.weapon;
+        bakeShipFit(icons, colours, kind, fit);
+        iconFits[kind] = fit;
       }
-      if (kind !== undefined) cardGun = { ship: kind, gun: ship.weapon };
+      if (kind !== undefined) cardFit = { ship: kind, fit };
       livesGun = WEAPONS[ship.weapon].label;
       for (const screen of Object.keys(panels) as Screen[]) {
         const band = panels[screen]?.bands.find((b) => b.faces === 'portraits');

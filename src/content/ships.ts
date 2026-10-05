@@ -21,10 +21,11 @@
 
 import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
-import { SPRITE } from './sprites.ts';
+import { SHIP_BOX, SPRITE } from './sprites.ts';
 import { WEAPONS, type WeaponKind } from './weapons.ts';
 import type { MissileKind } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
+import type { RimKind } from './rims.ts';
 
 /** Every flyable ship. Closed. */
 export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate';
@@ -127,6 +128,13 @@ export interface ShipRow extends Body {
    */
   hangs: DangleKind | null;
   /**
+   * Its wheels — `docs/decisions/0527-the-wheels-turn.md`: where each stands about the ship's centre and
+   * how big its tyre is, in world units, and the rim it comes on; or `null` for a ship with none. The
+   * painters read these and the frame stands a spinner's turning picture on them, so the two cannot
+   * part. A car's own drawing put them there first, in the predecessor's frame (`PREDECESSOR_UNIT`).
+   */
+  wheels: Wheels | null;
+  /**
    * The deflector shell this ship wears — `docs/decisions/0492-the-shields-wear-the-ship.md`. The
    * readout wore the ship since 0451 and the shell round the hull did not: one honeycomb in the
    * player's ink for all four. What it DOES is not here — the orbit, the places and the layout are
@@ -220,17 +228,60 @@ export interface Mount {
 export type GunView = 'side' | 'top';
 
 /**
+ * How a ship is fitted, for everything that draws it — 0527: the gun it carries (0526) and the rim on its
+ * wheels, `null` for a ship with none. One record, so the plan's later looks are a field here and every
+ * re-bake carries them, rather than a scope per look.
+ */
+export interface Fit {
+  readonly gun: WeaponKind;
+  readonly rim: RimKind | null;
+}
+
+/** A ship as it comes: its own gun and its own rim. */
+export function ownFit(ship: ShipKind): Fit {
+  const row = SHIPS[ship];
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null };
+}
+
+/** Whether two fits draw the same ship. */
+export function sameFit(a: Fit, b: Fit): boolean {
+  return a.gun === b.gun && a.rim === b.rim;
+}
+
+/** A car's wheels — 0527: each centre, front first, the tyre's radius, and the rim it comes on. */
+export interface Wheels {
+  readonly at: readonly [Mount, Mount];
+  readonly radius: number;
+  readonly rim: RimKind;
+}
+
+/**
+ * One unit of the predecessor's ±20 art frame, in world units — the cars were drawn there (`inBox` in
+ * `src/render/bake.ts`, 0.062 of the box's radius), so their wheels are said in it and converted once.
+ */
+const PREDECESSOR_UNIT = 0.062 * SHIP_BOX * 0.42;
+
+/** A wheel `(x, y)` in the predecessor's frame on a car drawn about `(cx, cy)` there, in world units. */
+function wheelAt(x: number, y: number, cx: number, cy: number): Mount {
+  return { along: (x - cx) * PREDECESSOR_UNIT, across: (y - cy) * PREDECESSOR_UNIT };
+}
+
+/**
  * `row` flying `gun` — 0525. Its own gun is the row as it is. Another's is the row with that gun, and a
  * muzzle at the row's hardpoint plus the gun's own mount in the row's view, so the shot leaves the mount
  * the bake draws there (`src/render/bake.ts` reads the same two numbers).
  *
  * ⚠️ **A ROW, SO THE FRAME DOES NOT LEARN THAT GUNS MOVE.** `weaponFor` reads `weapon` and the frame reads
  * `muzzle`, off the ship row it was handed; the shell hands it this one.
+ *
+ * 0527: and its wheels wearing `rim`, so the frame turns a spinner from the row as it reads the muzzle.
+ * A ship with no wheels wears none whatever is asked.
  */
-export function fitted(row: ShipRow, gun: WeaponKind): ShipRow {
-  if (gun === row.weapon) return row;
+export function fitted(row: ShipRow, gun: WeaponKind, rim: RimKind | null = row.wheels?.rim ?? null): ShipRow {
+  const wheels = row.wheels === null || rim === null || rim === row.wheels.rim ? row.wheels : { ...row.wheels, rim };
+  if (gun === row.weapon) return wheels === row.wheels ? row : { ...row, wheels };
   const mount = WEAPONS[gun].mount[row.view];
-  return { ...row, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };
+  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };
 }
 
 /**
@@ -341,6 +392,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The studio's own readout, violet into cyan (0439), in a gunsight's corners.
     hud: { name: 'Gunsight', motif: 'bracket', ink: { from: 'player' }, trim: { from: 'ally' } },
     hangs: null,
+    wheels: null,
     // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
     shield: {
       look: 'honeycomb',
@@ -408,6 +460,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The saucer's own green, lifted to read as text, and its ray dish's lavender — the probe deck.
     hud: { name: 'Probe deck', motif: 'orbit', ink: { from: 'player', toward: 'acid', by: 0.55, lift: 0.2 }, trim: { from: 'ally' } },
     hangs: null,
+    wheels: null,
     // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
     shield: {
       look: 'bubble',
@@ -456,6 +509,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // Its phoenix's gold on its black lacquer, the rim running from its tail lamp's orange.
     hud: { name: 'Chequered flag', motif: 'checker', ink: { from: 'hazard' }, trim: { from: 'bullet' } },
     hangs: null,
+    // 0527: front and back, about the drawing's centre at (1, 1.5) — the Trans Am's gold snowflakes (0516).
+    wheels: { at: [wheelAt(12, 6, 1, 1.5), wheelAt(-10, 6, 1, 1.5)], radius: 3.6 * PREDECESSOR_UNIT, rim: 'snowflake' },
     // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
     shield: {
       look: 'plumes',
@@ -502,6 +557,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The gilt, a shade paler to read as text, and the burl of its doors for the rim's dark end.
     hud: { name: 'Woody', motif: 'walnut', ink: { from: 'hazard', lift: 0.25 }, trim: { from: 'hazard', lift: -0.45 } },
     hangs: 'dice',
+    // 0527: under the sills, about the drawing's centre at (0, 1) — whitewalls, as 0461 drew them.
+    wheels: { at: [wheelAt(9, 6.4, 0, 1), wheelAt(-9, 6.4, 0, 1)], radius: 2.9 * PREDECESSOR_UNIT, rim: 'whitewall' },
     // A gilt trellis between gilt rails, a stud at every crossing — 0492.
     shield: {
       look: 'lattice',
