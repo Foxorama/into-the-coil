@@ -102,7 +102,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, shieldsOf } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, shieldsOf } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -123,13 +123,15 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, type Screen, type SettingName } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, plateWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import { boardLines, endSheet, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
 import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
+import { readHangar, writeHangar } from '../save/hangar.ts';
+import { plateOpen } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1340,7 +1342,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     sound's chime rides one.
   */
   const keptStore = browserStore();
-  let state: State = { ...initialState, settings: readSettings(keptStore, initialState.settings) };
+  // 0521: and the hangar — the ships won in and how each is fitted — on the settings' terms.
+  let state: State = {
+    ...initialState,
+    settings: readSettings(keptStore, initialState.settings),
+    hangar: readHangar(keptStore, initialState.hangar),
+  };
   /** Whether the viewport is one the game may be played in at all — the orientation gate's answer. */
   let playable = false;
   /** Fixed steps left before the current screen expires by itself. `0` on a screen that waits. */
@@ -1674,6 +1681,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     const keptChanged =
       next.settings !== state.settings && serialiseSettings(next.settings) !== serialiseSettings(state.settings);
+    // 0521: the slice keeps its identity when nothing moved, so a changed hangar is a changed reference.
+    const hangarChanged = next.hangar !== state.hangar;
     state = next;
     /*
       ⚠️ **Re-resolved on a CHANGE of the list, by identity, not on every dispatch.** `weaponFor`
@@ -1686,7 +1695,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world.shipRow = SHIPS[state.run.ship];
       world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
-      chrome.setShip(world.shipRow);
+      // 0521: in the dash the hangar fitted to it.
+      chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]]);
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -1731,6 +1741,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     if (travelChanged) applyTravel();
     if (keptChanged) writeSettings(keptStore, state.settings);
+    /*
+      ⚠️ **WRITTEN THE MOMENT IT MOVES — 0521**, which for a win is the moment the jellyfish dies: the
+      agreement in `src/state/root.ts` wins the ship as the finale is shown, and a page closed during it
+      has still won.
+    */
+    if (hangarChanged) {
+      writeHangar(keptStore, state.hangar);
+      fitHangar();
+    }
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
     if (moved) enterScreen(was, state.screen.current);
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
@@ -1822,13 +1841,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // ⚠️ No arm for `travel`, because it has no control to press — 0340, and its row says why.
     else if (screen === 'gameOver') lifecycle.resume();
     /*
-      ⚠️ **THE TITLE IS *FLY* AND *SETTINGS* — 0458, and *Fly* since 0513**, in the order
-      `src/state/screens.ts` lists them. Fly flies the highlighted pilot on the tier the band shows.
+      ⚠️ **THE TITLE IS *FLY*, THE HANGAR AND *SETTINGS* — 0458, *Fly* since 0513 and the hangar since
+      0521**, in the order `src/state/screens.ts` lists them. Fly flies the highlighted pilot on the tier
+      the band shows.
     */
     else if (screen === 'title') {
       if (index === 0) fly();
+      else if (index === 1) dispatch({ slice: 'screen', type: 'show', screen: 'hangar' });
       else dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
-    }
+    } else if (screen === 'hangar') dispatch({ slice: 'screen', type: 'show', screen: 'title' });
     /*
       ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
       or the key first and marks the splash pressed; a pad's confirm clicks the prompt too, with no
@@ -1875,7 +1896,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     ⚠️ **It dispatches and stops.** What a style CHANGES is decided in one place below, off the state,
     so a second way in — a pad, a later settings screen — cannot apply half of it.
   */
-  (name: SettingName, index: number, pointer: boolean): void => {
+  (name: ChoiceName, index: number, pointer: boolean): void => {
     if (name === 'style') dispatch({ slice: 'settings', type: 'style', style: STYLE_KINDS[index] ?? DEFAULT_STYLE });
     // The second setting, and it is one more line here because 0070 built the mechanism rather than
     // the style. `SOUND_KINDS` IS the order `src/state/screens.ts` built the options in.
@@ -1896,7 +1917,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         tap to see, tap again to fly — and after a run the card flown last is one tap from flying again.
       */
       const kind = GOLFER_KINDS[index] ?? DEFAULT_GOLFER;
-      if (kind === state.settings.pilot && (!pointer || pilotArmed)) {
+      /*
+        ⚠️ **ONLY WHERE THE BAND TAKES — 0521.** The hangar offers the same band and its press steps: a
+        pilot is looked at there to be fitted out, and *Fly* is the title's. Read off the shown row's band.
+      */
+      const takes = SCREENS[state.screen.current].choices.some((c) => c.name === 'pilot' && c.press === 'takes');
+      if (takes && kind === state.settings.pilot && (!pointer || pilotArmed)) {
         fly();
         return;
       }
@@ -1916,6 +1942,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (name === 'credits') {
       dispatch({ slice: 'settings', type: 'credits', credits: CREDIT_KINDS[index] ?? DEFAULT_CREDIT });
       chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
+    }
+    /*
+      0521: the hangar's dash, for the ship of the pilot on its band. `SHIP_KINDS` IS the order the band
+      was built in. The reducer refuses a shut dash, and the dispatch re-reads the band either way.
+    */
+    else if (name === 'plate') {
+      const plate = SHIP_KINDS[index];
+      if (plate !== undefined) dispatch({ slice: 'hangar', type: 'plate', ship: GOLFERS[state.settings.pilot].ship, plate });
     }
   },
   /*
@@ -1946,6 +1980,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   function showPilot(): void {
     chrome.setChoice('pilot', GOLFER_KINDS.indexOf(state.settings.pilot));
+    fitHangar();
+  }
+  /*
+    ⚠️ **THE HANGAR'S DASH BAND IS THE PILOT'S SHIP'S — 0521**, so it is re-read whenever the pilot or the
+    hangar moves: which dashes that ship may wear, why the rest are shut, the one it has on, and the
+    readout dressed in it. Then the ship itself, as the pilot band always refitted it.
+  */
+  function fitHangar(): void {
+    const ship = GOLFERS[state.settings.pilot].ship;
+    const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
+    const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
+    chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable));
+    chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
     fitPilot();
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
@@ -1977,8 +2024,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     one, this is what the world is carrying.
   */
   function fitPilot(): void {
-    const row = SHIPS[GOLFERS[state.settings.pilot].ship];
-    chrome.setShip(row);
+    const ship = GOLFERS[state.settings.pilot].ship;
+    const row = SHIPS[ship];
+    chrome.setShip(row, SHIPS[state.hangar.plate[ship]]);
     if (state.run.lives > 0) return;
     world.shipRow = row;
     world.weapon = weaponFor(row, [], row.missile);

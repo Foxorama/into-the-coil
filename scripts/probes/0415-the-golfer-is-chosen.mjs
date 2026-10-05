@@ -40,7 +40,7 @@ export const PROBES = [
     guard: 'a first tap on another card says who they are',
     edit: {
       path: 'src/app/mount.ts',
-      find: '      if (kind === state.settings.pilot && (!pointer || pilotArmed)) {',
+      find: '      if (takes && kind === state.settings.pilot && (!pointer || pilotArmed)) {',
       replace: '      if (true) {',
     },
   },

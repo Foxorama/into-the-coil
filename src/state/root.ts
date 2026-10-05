@@ -18,17 +18,20 @@ import {
   initialSettings,
   reduceSettings,
 } from './slices/settings.ts';
+import { type HangarAction, type HangarState, initialHangar, reduceHangar } from './slices/hangar.ts';
 import { LEVEL_KINDS } from '../content/levels.ts';
 import { CREDITS } from '../content/credits.ts';
 
 /** Every slice. Closed — a new one fails `State` to build until it has been given a shape below. */
-export type SliceName = 'screen' | 'run' | 'settings';
+// 0521: and the hangar, which outlives every run as the settings do.
+export type SliceName = 'screen' | 'run' | 'settings' | 'hangar';
 
 /** What each slice holds. The one place a slice name is tied to its type. */
 interface SliceState {
   screen: ScreenState;
   run: RunState;
   settings: SettingsState;
+  hangar: HangarState;
 }
 
 /**
@@ -38,9 +41,14 @@ interface SliceState {
 export type State = { readonly [K in SliceName]: SliceState[K] };
 
 /** Every action in the game. Each names its slice, which is what makes routing a lookup. */
-export type Action = ScreenAction | RunAction | SettingsAction;
+export type Action = ScreenAction | RunAction | SettingsAction | HangarAction;
 
-export const initialState: State = { screen: initialScreen, run: initialRun, settings: initialSettings };
+export const initialState: State = {
+  screen: initialScreen,
+  run: initialRun,
+  settings: initialSettings,
+  hangar: initialHangar,
+};
 
 /**
  * Route an action to the slice that owns it, then let the one cross-slice agreement have its say.
@@ -57,7 +65,7 @@ export const initialState: State = { screen: initialScreen, run: initialRun, set
 export function reduce(state: State, action: Action): State {
   if (action.slice === 'screen') {
     const screen = reduceScreen(state.screen, action);
-    return agree(screen === state.screen ? state : { screen, run: state.run, settings: state.settings });
+    return agree(screen === state.screen ? state : { ...state, screen });
   }
   /*
     ⚠️ **The settings slice takes part in NO agreement, and that is the point of it.** What a run is
@@ -67,10 +75,16 @@ export function reduce(state: State, action: Action): State {
   */
   if (action.slice === 'settings') {
     const settings = reduceSettings(state.settings, action);
-    return settings === state.settings ? state : { screen: state.screen, run: state.run, settings };
+    return settings === state.settings ? state : { ...state, settings };
+  }
+  // 0521: the hangar takes part in an agreement only as its subject — a run finished wins its ship —
+  // so a fitting changed between runs can move no screen and no run, on the settings' terms above.
+  if (action.slice === 'hangar') {
+    const hangar = reduceHangar(state.hangar, action);
+    return hangar === state.hangar ? state : { ...state, hangar };
   }
   const run = reduceRun(state.run, action);
-  return agree(run === state.run ? state : { screen: state.screen, run, settings: state.settings });
+  return agree(run === state.run ? state : { ...state, run });
 }
 
 /** The actions the agreements below need. Module-level, so routing allocates nothing extra. */
@@ -98,7 +112,7 @@ const SHOW_FINALE: ScreenAction = { slice: 'screen', type: 'show', screen: 'outr
 function agree(state: State): State {
   if (state.run.lives <= 0 && state.screen.current === 'playing') {
     const over = CREDITS[state.run.credits].continues ? SHOW_GAME_OVER : SHOW_ENDED;
-    return { screen: reduceScreen(state.screen, over), run: state.run, settings: state.settings };
+    return { ...state, screen: reduceScreen(state.screen, over) };
   }
   /*
     THE SECOND AGREEMENT: a level cleared past the end of the run is the run finished.
@@ -110,8 +124,16 @@ function agree(state: State): State {
     `docs/decisions/0015-the-layer-ladder.md` gives this layer no capabilities precisely so rules
     like it can be played out in a unit test.
   */
+  /*
+    ⚠️ **AND THE RUN FINISHED IS ITS SHIP WON — 0521**, at the same moment and for the same reason it
+    is here: *"when you beat the jellyfish with a pilot and ship you unlock that ship."* The finale's
+    opening is the jellyfish beaten, so a page closed during the finale has still won; the victory
+    screen nineteen seconds later would have lost it. The run's ship, read off the run, so a pilot
+    changed on the title afterwards cannot move which ship was won in.
+  */
   if (state.screen.current === 'cleared' && state.run.level >= LEVEL_KINDS.length) {
-    return { screen: reduceScreen(state.screen, SHOW_FINALE), run: state.run, settings: state.settings };
+    const hangar = reduceHangar(state.hangar, { slice: 'hangar', type: 'won', ship: state.run.ship });
+    return { ...state, screen: reduceScreen(state.screen, SHOW_FINALE), hangar };
   }
   return state;
 }

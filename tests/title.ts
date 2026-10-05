@@ -17,7 +17,7 @@ import type { Page } from 'playwright-core';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { CREDIT_KINDS, type CreditKind } from '../src/content/credits.ts';
-import { SCREENS, type Screen, type SettingName } from '../src/state/screens.ts';
+import { SCREENS, type ChoiceName, type Screen } from '../src/state/screens.ts';
 
 /** The CSS selector for a screen's shown overlay. */
 export const shown = (screen: Screen): string => '.' + prefixFor(screen) + 'shown';
@@ -27,8 +27,11 @@ async function pressOn(page: Page, screen: Screen, label: string): Promise<void>
   await page.locator(shown(screen) + ' .' + prefixFor(screen) + 'action', { hasText: label }).first().click();
 }
 
-/** Choose option `index` on the band for `setting`, on whichever screen offers it. */
-export async function choose(page: Page, setting: SettingName, index: number): Promise<void> {
+/**
+ * Choose option `index` on the band for `setting`, on whichever screen offers it — the first in the
+ * table, so the pilot is chosen on the title and not in the hangar (0521).
+ */
+export async function choose(page: Page, setting: ChoiceName, index: number): Promise<void> {
   const screen = (Object.keys(SCREENS) as Screen[]).find((s) => SCREENS[s].choices.some((c) => c.name === setting));
   if (screen === undefined) throw new Error(`no screen offers ${setting}`);
   const options = `[${SETTING_ATTR}="${setting}"] .${prefixFor(screen)}option`;
@@ -86,11 +89,18 @@ const HUD_SHOWN = '.itc-playing-hud-shown';
 /** The intro's Skip, up once the game behind it has loaded — 0412. */
 const SKIP_SHOWN = '.' + prefixFor('intro') + 'skip-shown';
 
-/** From the title: open Settings. */
+/** From the title: open Settings — the third of its buttons since 0521 put the hangar second. */
 export async function openSettings(page: Page): Promise<void> {
   await page.waitForSelector(shown('title'), { state: 'attached' });
-  await pressOn(page, 'title', SCREENS.title.actions[1]!.label);
+  await pressOn(page, 'title', SCREENS.title.actions[2]!.label);
   await page.waitForSelector(shown('settings'), { state: 'attached' });
+}
+
+/** From the title: open the hangar — 0521. */
+export async function openHangar(page: Page): Promise<void> {
+  await page.waitForSelector(shown('title'), { state: 'attached' });
+  await pressOn(page, 'title', SCREENS.title.actions[1]!.label);
+  await page.waitForSelector(shown('hangar'), { state: 'attached' });
 }
 
 /** From the title: open Settings, then the music room. */

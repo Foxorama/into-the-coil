@@ -608,15 +608,18 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     expect(await ring(), 'a press on the chip moved the ring off it').toBe(credits.label);
     await nudge(page, MENU_DPAD_BUTTONS.right);
     expect(await ring(), 'right from the chip did not come back to Fly').toBe(SCREENS.title.actions[0]!.label);
+    // 0521: the hangar stands between Fly and Settings, and is walked on the way.
     await nudge(page, MENU_DPAD_BUTTONS.right);
-    expect(await ring(), 'right from Fly did not reach Settings').toBe(SCREENS.title.actions[1]!.label);
+    expect(await ring(), 'right from Fly did not reach the hangar').toBe(SCREENS.title.actions[1]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await ring(), 'right from the hangar did not reach Settings').toBe(SCREENS.title.actions[2]!.label);
 
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     await page.waitForSelector(shownScreen('settings'), { timeout: 15_000 });
     await nudge(page, MENU_BACK_BUTTONS[0]!);
     await page.waitForSelector(shownScreen('title'), { timeout: 15_000 });
     expect(await ring(), 'B came back to the title with the ring somewhere the player did not leave it').toBe(
-      SCREENS.title.actions[1]!.label,
+      SCREENS.title.actions[2]!.label,
     );
     expect(await shown(page, '.itc-playing-hud'), 'a press on the title started a run').toBe(false);
     await page.context().close();

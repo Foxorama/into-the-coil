@@ -26,8 +26,8 @@ export const PROBES = [
     guard: 'on every device',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '.itc-title-options-faces { justify-content: safe center;',
-      replace: '.itc-title-options-faces { justify-content: center;',
+      find: '${faced((p) => `.${p}options-faces`)} { justify-content: safe center;',
+      replace: '${faced((p) => `.${p}options-faces`)} { justify-content: center;',
     },
   },
   {
