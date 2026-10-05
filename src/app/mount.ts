@@ -1929,8 +1929,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     /*
       ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
-      or the key first and marks the splash pressed; a pad's confirm clicks the prompt too, with no
-      gesture the page could turn the sound on with, and that is the press the splash does not take.
+      or the key first and marks the splash pressed. A pad's confirm never reaches here: `onIdle` takes
+      it on the splash and marks it pressed itself — 0531.
     */
     else if (screen === 'splash') {
       if (splashPressed) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
@@ -3580,6 +3580,23 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (introReady) unlockAudio();
       else introWantsSound = true;
       if (menuAsk.confirm && introReady) leaveIntro();
+      return;
+    }
+    /*
+      ⚠️ **ON THE SPLASH THE PAD'S CONFIRM GOES ON — 0531, AND 0513 HAD IT REFUSED.** The refusal was
+      for the sound: a pad's press grants the page nothing to turn it on with. But a pad is the only
+      thing in some players' hands, and a splash that waits for a press it will not take from them is
+      a game that never starts — reported as *"gamepad appears to be not working at all"*. So the
+      press is taken exactly as a key's is, remembered if the game is still loading and gone on with
+      by `onTick` the step it may, and it ASKS for the sound, which arrives wherever the page already
+      has a gesture to give it.
+    */
+    if (state.screen.current === 'splash') {
+      if (!menuAsk.confirm) return;
+      splashPressed = true;
+      if (prewarmDone()) unlockAudio();
+      else introWantsSound = true;
+      chrome.setDevice('pad');
       return;
     }
     // On the finale the pad's confirm skips, as it does on the intro once it may — 0418.

@@ -1,8 +1,8 @@
 // The breaks behind docs/decisions/0513-the-pilot-flies.md.
 //
 // ⚠️ The way in has three presses in it — the splash's, the pilot's, the skip's — and each has a press
-// it must refuse: the splash a pad's, the pilot screen a thumb's first landing, the run the key that
-// skipped into it. Most breaks below let one of those through.
+// it must refuse: the pilot screen a thumb's first landing, the run the key that skipped into it. Most
+// breaks below let one of those through. The splash refused a pad's too, until 0531 took it.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -15,17 +15,6 @@ export const PROBES = [
       path: 'src/app/mount.ts',
       find: "        if (splashPressed) dispatch({ slice: 'screen', type: 'show', screen: 'title' });\n        else chrome.setActionShown('splash', 0, true);",
       replace: "        dispatch({ slice: 'screen', type: 'show', screen: 'title' });",
-    },
-  },
-  {
-    decision: '0513',
-    suite: 'tests/intro.browser.test.ts',
-    broke: "the splash going on for a pad's press, into a page that cannot make a sound",
-    guard: "does not go on for a pad's press",
-    edit: {
-      path: 'src/app/mount.ts',
-      find: "      if (splashPressed) dispatch({ slice: 'screen', type: 'show', screen: 'title' });\n    } else if (screen === 'settings') {",
-      replace: "      dispatch({ slice: 'screen', type: 'show', screen: 'title' });\n    } else if (screen === 'settings') {",
     },
   },
   {

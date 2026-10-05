@@ -243,16 +243,30 @@ describe.runIf(chromePath)('the page opens on the name, and asks for a press onc
     await page.context().close();
   });
 
-  it("does not go on for a pad's press, which cannot turn the sound on", async () => {
-    // A pad's button is polled and grants no activation (0412), so the page could not be heard after it.
+  it('0531 — goes on for a pad, and a pad and nothing else flies from the boot into a run', async () => {
+    /*
+      ⚠️ **FROM THE BOOT, AND NOTHING BUT THE PAD — 0531.** 0513 had the splash refuse a pad's press,
+      because it grants no sound, and this test held that refusal; a player with only a pad in their
+      hands then had a game that never started. Every pad test past this file opened with
+      `pastIntro`'s Escape, so the one screen a pad could not leave was the one none of them saw.
+
+      ⚠️ **PRESSED WHILE IT LOADS**, the harder half: the press is remembered and the splash goes on
+      the step it may, as a key's is.
+    */
     const page = await open();
-    await page.waitForSelector(PROMPT, { timeout: INTRO_READY_MS });
-    await afterFrames(page, 8);
-    await pad(page, [MENU_CONFIRM_BUTTONS[0]!]);
-    await afterFrames(page, 8);
-    await pad(page, []);
-    await afterFrames(page, 30);
-    expect(await shown(page, TITLE), "the splash went on for a pad's press, into a page that cannot make a sound").toBe(false);
+    const press = async (): Promise<void> => {
+      await afterFrames(page, 8);
+      await pad(page, [MENU_CONFIRM_BUTTONS[0]!]);
+      await afterFrames(page, 8);
+      await pad(page, []);
+    };
+    await press();
+    await page.waitForSelector(TITLE, { timeout: INTRO_READY_MS });
+    // Fly, where the ring opens, and the first flight's intro skipped by the same button.
+    await press();
+    await page.waitForSelector(SKIP_SHOWN, { timeout: INTRO_READY_MS });
+    await press();
+    await page.waitForSelector(HUD, { timeout: INTRO_READY_MS });
     await page.context().close();
   });
 
