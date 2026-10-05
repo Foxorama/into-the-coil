@@ -27,6 +27,7 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS, SPLASH_STEPS } from '../src/content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, type GolferKind } from '../src/content/golfers.ts';
 import { MUSIC_LAYERS } from '../src/content/music.ts';
+import { SHIPS } from '../src/content/ships.ts';
 import { SCREENS, STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 vi.setConfig({ testTimeout: 180_000 });
@@ -467,8 +468,13 @@ describe.runIf(chromePath)('the pilot screen: a tap looks, a second tap flies', 
     await afterFrames(page, 4);
     expect(await shown(page, TITLE), 'a first tap on a pilot flew them').toBe(true);
     expect(await card(), 'the panel did not take the pilot who was tapped').toBe(GOLFERS.larry.name);
-    const bio = await page.textContent(TITLE + ' .' + prefixFor('title') + 'pilot-bio');
-    expect(bio, 'the panel does not say who Larry is').toBe(GOLFERS.larry.bio);
+    /*
+      ⚠️ **WHAT THEY FLY, AND IT WAS THEIR BIO — 0538.** The title's line is the run: the name, the ship
+      and the gun. Who Larry is was moved to the hangar on the player's word, so the look this tap
+      makes is held by the ship it would fly, which is the thing a pick changes.
+    */
+    const craft = await page.textContent(TITLE + ' .' + prefixFor('title') + 'pilot-craft');
+    expect(craft, 'the line does not say what Larry flies').toBe(SHIPS[GOLFERS.larry.ship].label);
     await larry.click();
     await page.waitForSelector(SKIP_SHOWN, { timeout: 5_000 });
     expect(await shown(page, TITLE), 'a second tap on the highlighted pilot did not fly them').toBe(false);

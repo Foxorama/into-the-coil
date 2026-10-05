@@ -590,29 +590,37 @@ describe.runIf(chromePath)('the music room reads as the grid it is drawn as', ()
     const pilots = pilot.options.map((o) => o.label);
     expect(await filled('pilot'), 'left on the pilot band did not choose the pilot before').toBe(pilots[pilots.indexOf(flying) - 1]);
 
-    // Down through every row to Fly, then along it to Settings — the one the old walk could not reach.
-    // 0513: Fly and Settings stand side by side on every device, so Settings is along the row, not under it.
+    // Down through every row to Fly, then down into the quiet row and along it to Settings — the one the old walk could not reach.
     await nudge(page, MENU_DPAD_BUTTONS.down);
     await nudge(page, MENU_DPAD_BUTTONS.down);
     expect(await ring()).toBe(SCREENS.title.actions[0]!.label);
     /*
-      0517: the continues chip stands left of Fly. Left reaches it, A steps it round and leaves the ring
-      on it — a chip is a button the cursor walks, not a band it moves along — and right comes back.
+      0538: Fly leads alone, and the quiet row is under it — the chip, the hangar, Settings, in that order.
+      Down from Fly lands on the one standing nearest under its middle, which is the hangar's.
+    */
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    expect(await ring(), 'down from Fly did not reach the quiet row under its middle').toBe(SCREENS.title.actions[1]!.label);
+    /*
+      0517: the continues chip stands first in the row. Left reaches it, A steps it round and leaves the
+      ring on it — a chip is a button the cursor walks, not a band it moves along — and right comes back.
     */
     const credits = SCREENS.title.choices.find((c) => c.name === 'credits')!;
     await nudge(page, MENU_DPAD_BUTTONS.left);
-    expect(await ring(), 'left from Fly did not reach the continues chip').toBe(credits.label);
+    expect(await ring(), 'left from the hangar did not reach the continues chip').toBe(credits.label);
     const credited = await filled('credits');
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     expect(await filled('credits'), 'A on the continues chip did not step it').not.toBe(credited);
     expect(await ring(), 'a press on the chip moved the ring off it').toBe(credits.label);
     await nudge(page, MENU_DPAD_BUTTONS.right);
-    expect(await ring(), 'right from the chip did not come back to Fly').toBe(SCREENS.title.actions[0]!.label);
-    // 0521: the hangar stands between Fly and Settings, and is walked on the way.
-    await nudge(page, MENU_DPAD_BUTTONS.right);
-    expect(await ring(), 'right from Fly did not reach the hangar').toBe(SCREENS.title.actions[1]!.label);
+    expect(await ring(), 'right from the chip did not come back to the hangar').toBe(SCREENS.title.actions[1]!.label);
     await nudge(page, MENU_DPAD_BUTTONS.right);
     expect(await ring(), 'right from the hangar did not reach Settings').toBe(SCREENS.title.actions[2]!.label);
+    // And up out of the quiet row is Fly, from any of it.
+    await nudge(page, MENU_DPAD_BUTTONS.up);
+    expect(await ring(), 'up from Settings is not Fly').toBe(SCREENS.title.actions[0]!.label);
+    await nudge(page, MENU_DPAD_BUTTONS.down);
+    await nudge(page, MENU_DPAD_BUTTONS.right);
+    expect(await ring(), 'down from Fly and right did not reach Settings').toBe(SCREENS.title.actions[2]!.label);
 
     await nudge(page, MENU_CONFIRM_BUTTONS[0]!);
     await page.waitForSelector(shownScreen('settings'), { timeout: 15_000 });

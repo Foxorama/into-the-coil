@@ -11,6 +11,8 @@
 // Usage:
 //   node scripts/shot-menus.mjs                 every screen, 1280x720 and 844x390, into shots/
 //   node scripts/shot-menus.mjs --out=menus     elsewhere under the repo
+//   node scripts/shot-menus.mjs --sizes=guard   at the layout guard's six sizes instead
+//   node scripts/shot-menus.mjs --only=title    the title alone
 //
 // The seeds are the documents the page reads: `itc_scores` (every field `entryFrom` in
 // src/save/scores.ts requires, `continues` and `when` included — an entry missing one is dropped
@@ -68,10 +70,23 @@ const scores = JSON.stringify({
 });
 
 /** The sizes: the laptop every budget is argued against (0153), and the phone the chrome is sized for (0465). */
-const SIZES = [
+const PAIR = [
   { tag: 'desk', width: 1280, height: 720, phone: false },
   { tag: 'phone', width: 844, height: 390, phone: true },
 ];
+/**
+ * `--sizes=guard`: the six the layout guard holds (`VIEWPORTS` in tests/layout.browser.test.ts), opened
+ * as it opens them — no touch, one pixel a pixel — because the plan hands each item over at these.
+ */
+const GUARD = [
+  [480, 320],
+  [667, 375],
+  [812, 375],
+  [915, 412],
+  [1024, 768],
+  [1280, 720],
+].map(([width, height]) => ({ tag: `${width}x${height}`, width, height, phone: false }));
+const SIZES = arg('sizes', 'pair') === 'guard' ? GUARD : PAIR;
 
 /** A screen's shown panel, by the prefix src/app/chrome.ts gives it. Checked, not assumed: no panel, no picture. */
 const shown = (screen) => `.itc-${screen}-shown`;
@@ -89,9 +104,10 @@ try {
     await context.addInitScript(
       ([h, s]) => {
         localStorage.setItem('itc_hangar', h);
-        localStorage.setItem('itc_scores', s);
+        if (s !== null) localStorage.setItem('itc_scores', s);
       },
-      [hangar, scores],
+      // `--bare`: no table, which is the title every first visit sees and a different layout (0460).
+      [hangar, process.argv.includes('--bare') ? null : scores],
     );
     const page = await context.newPage();
     await page.goto(pathToFileURL(dist).href);
@@ -106,6 +122,11 @@ try {
       written.push(path);
     };
     await shoot('title');
+    // `--only=title`: the one screen an item touched, for the turns of a layout pass.
+    if (arg('only', '') === 'title') {
+      await context.close();
+      continue;
+    }
     await page.locator(`${shown('title')} .itc-title-action`, { hasText: 'Hangin' }).first().click();
     await page.waitForSelector(shown('hangar'));
     await page.waitForTimeout(600);

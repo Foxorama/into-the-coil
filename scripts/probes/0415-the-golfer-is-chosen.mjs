@@ -84,13 +84,14 @@ export const PROBES = [
     decision: '0415',
     suite: 'tests/layout.browser.test.ts',
     // ⚠️ Re-pointed by 0458: the title's buttons are Fly and Settings, side by side on a phone, and
-    // the break is the same row stacking into two.
+    // the break is the same row stacking into two. ⚠️ And by 0538: Fly leads alone, and the row held
+    // is the quiet one under it, which a column stacks the same way.
     broke: 'the title’s buttons stacked on a phone, so the second takes a row of its own',
     guard: 'keeps the title’s choices in one row on a phone',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '  .itc-title-choices { flex-direction: row; gap: min(0.6rem, 1.5cqw); }',
-      replace: '  .itc-title-choices { flex-direction: column; gap: min(0.6rem, 1.5cqw); }',
+      find: '  .itc-title-choices { flex-direction: row; gap: min(0.45rem, 1.4cqh) min(0.6rem, 1.5cqw); }',
+      replace: '  .itc-title-choices { flex-direction: column; gap: min(0.45rem, 1.4cqh) min(0.6rem, 1.5cqw); }',
     },
   },
 ];

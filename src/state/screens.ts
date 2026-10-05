@@ -134,7 +134,22 @@ export type ChoiceName = SettingName | SlotName | ShelfName;
  * be narrowed to a `StyleKind`, and `docs/decisions/0016-a-hub-enumerates-kinds.md` bans exactly the
  * escape hatches that would take.
  */
-export interface ScreenChoice {
+export type ScreenChoice = ChoiceRow &
+  (
+    | { faces: 'words' | 'chip' }
+    | {
+        faces: 'portraits';
+        /**
+         * What stands under a band of faces about the one that is on — 0538. `'whole'` is 0513's card:
+         * the ship, the name, the pronouns and home, who they are, the craft and its gun. `'line'` is the
+         * name, the craft and the gun on one line — the title's, where the bio was the heaviest text on
+         * the screen and said nothing about the run about to be flown; the person is read in the hangar.
+         */
+        card: 'line' | 'whole';
+      }
+  );
+
+interface ChoiceRow {
   name: ChoiceName;
   /** What the row is called on screen. */
   label: string;
@@ -189,6 +204,15 @@ export interface ScreenRow {
    * makes a list navigable at all.
    */
   actions: readonly ScreenAction[];
+  /**
+   * Whether the first action stands alone, a row of its own over the rest — 0538. The title's *Fly* is
+   * the one thing that starts a run, and beside the hangar, the chip and Settings it was one button of
+   * four at three sizes; alone it is the screen's primary and the rest are the quiet row under it.
+   *
+   * ⚠️ **A FACT ABOUT THE ROW, on `pushed`'s terms**: the walk reads it (`src/app/chrome.ts`), so the
+   * cursor's rows are the rows drawn, and `screen === 'title'` there would be the hub naming an instance.
+   */
+  leads: boolean;
   /**
    * The settings this screen lets the player change, if any.
    *
@@ -495,6 +519,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   splash: {
     heading: GAME_TITLE,
     pause: null,
+    leads: false,
     actions: [{ label: 'Press to begin', hint: '' }],
     choices: [],
     steps: false,
@@ -530,6 +555,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   intro: {
     heading: '',
     pause: null,
+    leads: false,
     actions: [],
     choices: [],
     steps: false,
@@ -586,6 +612,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   title: {
     heading: GAME_TITLE,
     pause: null,
+    // 0538: *Fly* alone, and the hangar, the chip and Settings the quiet row under it.
+    leads: true,
     // 0521: the hangar between them — where the pilot about to fly is fitted out, so beside *Fly*.
     actions: [
       { label: 'Fly', hint: '' },
@@ -598,6 +626,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Pilot',
         options: pilotOptions,
         faces: 'portraits',
+        // 0538: who they are is the hangar's; here, what the run is.
+        card: 'line',
         on: 'all',
         // A press on the highlighted pilot flies them — 0513.
         press: 'takes',
@@ -648,6 +678,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   settings: {
     heading: 'Settings',
     pause: null,
+    leads: false,
     // Past the bands, on 0070's terms: the music room is a place to go, and Back is a way out.
     actions: [
       { label: 'Music room', hint: '' },
@@ -732,6 +763,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   hangar: {
     heading: HANGAR_TITLE,
     pause: null,
+    leads: false,
     actions: [{ label: 'Back', hint: '' }],
     choices: [
       {
@@ -739,6 +771,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Pilot',
         options: pilotOptions,
         faces: 'portraits',
+        card: 'whole',
         on: 'all',
         press: 'steps',
       },
@@ -816,6 +849,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   parts: {
     heading: 'Paint & Parts',
     pause: null,
+    leads: false,
     actions: [{ label: 'Back', hint: '' }],
     choices: [
       {
@@ -823,6 +857,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         label: 'Pilot',
         options: pilotOptions,
         faces: 'portraits',
+        card: 'whole',
         on: 'all',
         press: 'steps',
       },
@@ -906,6 +941,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   shop: {
     heading: 'Cosmo’s Cosmetics',
     pause: null,
+    leads: false,
     actions: [
       { label: 'Buy', hint: '' },
       { label: 'Back', hint: '' },
@@ -942,6 +978,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   guide: {
     heading: 'How to play',
     pause: null,
+    leads: false,
     actions: [{ label: 'Back', hint: '' }],
     choices: [],
     steps: false,
@@ -959,6 +996,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   playing: {
     heading: '',
     actions: [],
+    leads: false,
     choices: [],
     steps: true,
     dims: false,
@@ -1013,6 +1051,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   gameOver: {
     heading: 'Run over',
     pause: null,
+    leads: false,
     actions: [{ label: 'Continue', hint: '' }],
     choices: [],
     steps: false,
@@ -1048,6 +1087,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   ended: {
     heading: 'Game over',
     pause: null,
+    leads: false,
     actions: [{ label: 'Main Menu', hint: '' }],
     choices: [],
     steps: false,
@@ -1089,6 +1129,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   cleared: {
     heading: 'Level clear',
     pause: null,
+    leads: false,
     actions: [{ label: 'Onward', hint: '' }],
     choices: [],
     steps: true,
@@ -1144,6 +1185,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     // starts.** `pushed` below is what says so, and is why this row has a panel at all.
     heading: '',
     pause: null,
+    leads: false,
     actions: [],
     choices: [],
     steps: true,
@@ -1165,6 +1207,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   outro: {
     heading: '',
     pause: null,
+    leads: false,
     actions: [],
     choices: [],
     steps: false,
@@ -1189,6 +1232,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   victory: {
     heading: 'Coil cleared',
     pause: null,
+    leads: false,
     actions: [{ label: 'Again', hint: '' }],
     choices: [],
     steps: false,
@@ -1222,6 +1266,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   music: {
     heading: 'Music',
     pause: null,
+    leads: false,
     actions: [
       ...THEME_KINDS.map((kind) => ({ label: THEMES[kind].title, hint: '' })),
       { label: 'Play all', hint: 'each place in turn, then round again' },
@@ -1267,6 +1312,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   paused: {
     heading: 'Paused',
     pause: 'held',
+    leads: false,
     actions: [
       { label: 'Resume', hint: '' },
       { label: 'Settings', hint: '' },
@@ -1292,6 +1338,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   quit: {
     heading: 'Quit this run?',
     pause: 'held',
+    leads: false,
     actions: [
       { label: 'Keep playing', hint: '' },
       { label: 'Quit', hint: '' },
@@ -1319,6 +1366,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
   resuming: {
     heading: 'Ready',
     pause: 'held',
+    leads: false,
     actions: [],
     choices: [],
     steps: false,

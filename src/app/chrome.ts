@@ -938,10 +938,16 @@ ${each('-action')} {
   table: 31 % of the row spare at 1024x768, 23 % at 480x320 (whose row CI already passed on with less),
   and more everywhere else.
 */
-.itc-title-choices { width: min(100%, 34em); gap: min(0.7rem, 1.8cqh); }
+/*
+  ⚠️ **FLY ALONE, AND THE QUIET ROW AT ONE SIZE — 0538.** It was four controls at three sizes in one
+  row: the chip, a double-ringed Fly twice its neighbours' height, and the hangar and Settings a step
+  smaller. Fly is the row's whole width now, over a row of three that are all the same button, so the
+  one thing that starts a run is the one thing that looks like it.
+*/
+.itc-title-choices { width: min(100%, 34em); gap: min(0.7rem, 1.8cqh); flex-wrap: wrap; }
 .itc-title-action { width: 100%; }
-.itc-title-choices > :first-child { font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
-.itc-title-choices > :nth-child(n+2) { font-size: 0.8em; padding: 0.4em 0.55em; opacity: 0.9; }
+.itc-title-choices > .itc-title-action-lead { flex: 1 0 100%; order: -2; font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
+.itc-title-choices > :not(.itc-title-action-lead) { font-size: 0.8em; padding: 0.4em 0.55em; opacity: 0.9; }
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1704,6 +1710,55 @@ ${faced((p) => `.${p}pilot-bio`)} { margin: 0.2em 0; font-size: 0.85em; line-hei
 ${faced((p) => `.${p}pilot-craft`)} { font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--itc-ally, var(--itc-ink)); }
 ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 /*
+  ── THE LINE — 0538 ─────────────────────────────────────────────────────────────────────────────────
+
+  Under the title's faces: the name, the craft and the gun on one line, the run the pilot is about to
+  fly. Each part stands off the last by a middot rather than a wrap, and the line is cut short rather
+  than wrapped, because it is the one row of the plate whose length is a pilot's and not the screen's.
+*/
+.itc-title-pilot-line {
+  max-width: 100%;
+  font-size: 0.85em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The card's parts share these names, and its sizes and its phone's hiding are written for every faced screen. */
+.itc-title-pilot-line > [class] { display: inline; font-size: 1em; letter-spacing: normal; text-transform: none; white-space: nowrap; overflow: visible; }
+.itc-title-pilot-line > .itc-title-pilot-name { font-weight: 800; letter-spacing: 0.02em; }
+.itc-title-pilot-line > .itc-title-pilot-craft { color: var(--itc-ally, var(--itc-ink)); font-weight: 700; }
+.itc-title-pilot-line > .itc-title-pilot-gun { opacity: 0.85; font-weight: 500; }
+.itc-title-pilot-line > * + *::before { content: '·'; margin: 0 0.55em; color: var(--itc-ink); opacity: 0.5; }
+/*
+  ── THE TITLE'S TWO PLATES — 0538 ──────────────────────────────────────────────────────────────────
+
+  The table and the rows, each in the cut-corner frame the crossing's plate wears (0341), with the
+  title's run of the two inks for a rim (0440): violet at the top-left cut, cyan at the bottom-right.
+  It was five things of five shapes on the void with no edge between the table and the column beside it.
+
+  ⚠️ **THE FRAME IS A RIM UNDER A GLASS, AND THE TWO CUTS ARE DRAWN.** The rim is a background clipped
+  to the border box under a glass clipped to the padding box, which is how every control here wears a
+  gradient edge; the clip path cuts two corners and takes the rim with them, so each cut is a square
+  with one diagonal drawn through it, in the ink of the end of the run it is at.
+
+  ⚠️ **AN EMPTY TABLE DRAWS NO PLATE**: the board is not displayed while the body is bare, and its
+  frame is the board's own.
+*/
+.itc-title-board, .itc-title-main {
+  --itc-cut: 0.9em;
+  --itc-plate-glass: color-mix(in srgb, var(--itc-void) 84%, transparent);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--itc-ally, var(--itc-ink)) calc(50% - 1px), var(--itc-ally, var(--itc-ink)) calc(50% + 1px), transparent calc(50% + 1px)) top left / var(--itc-cut) var(--itc-cut) no-repeat border-box,
+    linear-gradient(135deg, transparent calc(50% - 1px), var(--itc-ink) calc(50% - 1px), var(--itc-ink) calc(50% + 1px), transparent calc(50% + 1px)) bottom right / var(--itc-cut) var(--itc-cut) no-repeat border-box,
+    linear-gradient(180deg, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 9%, transparent), transparent 45%) padding-box,
+    linear-gradient(var(--itc-plate-glass), var(--itc-plate-glass)) padding-box,
+    linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
+  clip-path: polygon(var(--itc-cut) 0, 100% 0, 100% calc(100% - var(--itc-cut)), calc(100% - var(--itc-cut)) 100%, 0 100%, 0 var(--itc-cut));
+  padding: min(1rem, 2.4cqh) min(1.4rem, 2.4cqw);
+  box-sizing: border-box;
+}
+/*
   ── THE HANGAR — 0521, two columns at every size since 0523 ─────────────────────────────────────
 
   The pilot and their card on the left, the ship's slots stacked on the right: the dash, and what hangs
@@ -1803,8 +1858,7 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-title-band { grid-template-areas: 'less track more' 'hint hint hint'; }
 .itc-title-band-label { display: none; }
 .itc-title-choices { flex-direction: row; }
-.itc-title-choices > :first-child { flex: 2 1 0; }
-.itc-title-choices > :nth-child(n+2) { flex: 1 1 0; }
+.itc-title-choices > :not(.itc-title-action-lead) { flex: 1 1 0; }
 /*
   ⚠️ **ONE LINE A BUTTON — 0521.** The hangar's name is two words, and with three buttons and the chip
   in the row it wrapped: a button two lines tall, and on the smallest phone a row taller than the tiers.
@@ -2083,24 +2137,36 @@ ${each('-band[hidden]')} { display: none; }
     wherever there was width for it, and the table's names wrapped at 667 and doubled its height: a
     breakpoint moves a problem to the width beside it, so there is none.
   */
-  .itc-title-main, .itc-title-settings-box { display: contents; }
-  .itc-title-body:not(.itc-title-body-bare) {
-    grid-template-columns: max-content minmax(0, 1fr);
-    grid-template-areas: 'board pilot' 'board card' 'tier tier' 'choices choices';
-    align-items: center;
-  }
-  .itc-title-body.itc-title-body-bare { grid-template-areas: 'pilot' 'card' 'tier' 'choices'; }
-  .itc-title-board { grid-area: board; }
-  .itc-title-band-faces { grid-area: pilot; }
-  .itc-title-band:not(.itc-title-band-faces) { grid-area: tier; }
-  .itc-title-choices { grid-area: choices; }
-  .itc-title-pilot-card { grid-area: card; }
+  /*
+    ⚠️ **TWO PLATES ON A PHONE TOO, AND THE CELLS WERE THE BODY'S — 0538.** 0513 stood the main column
+    aside so the faces, the card, the tier and the buttons were four cells of the body, the tier and the
+    buttons across both columns. With the card a line and its row gone, the rows fit their own plate
+    beside the table's, and a plate cannot be drawn round cells that belong to its parent.
+  */
+  .itc-title-body:not(.itc-title-body-bare) { grid-template-columns: max-content minmax(0, 1fr); align-items: center; }
+  .itc-title-main { width: 100%; padding: min(0.6rem, 2cqh) min(0.9rem, 2cqw); }
+  .itc-title-board { padding: min(0.6rem, 2cqh) min(0.9rem, 2cqw); }
+  /*
+    The cut a step smaller: Settings stands in the plate's bottom-right corner and the faces in its
+    top-left, and with the plate's phone padding their focus rings reached into a 0.9em cut on every
+    phone the guard holds — the ring is clipped by the plate before it is drawn.
+  */
+  .itc-title-main, .itc-title-board { --itc-cut: 0.45em; }
+  /*
+    ⚠️ **AND THE ROWS IN IT GIVE BACK WHAT FLY'S ROW COSTS.** Measured at 667x375 with a full table, the
+    rows' plate was 20 pixels taller than the screen: Fly's row is one more than the title had, and the
+    tier's names take two lines in a column beside the table where they took one across the body. The
+    faces a little smaller and closer to their track, Fly a thumb tall and no taller, the tier's names a
+    step down — padding and type above their floors, and no row of the screen.
+  */
+  .itc-title-options-faces { padding: 0.15em 0.3em; }
+  .itc-title-option-face > canvas { width: clamp(1.7rem, 8cqh, 2.3rem); height: clamp(1.7rem, 8cqh, 2.3rem); }
+  .itc-title-body .itc-title-band:not(.itc-title-band-faces) { padding-top: 0.1em; padding-bottom: 0.1em; }
   ${faced((p) => `.${p}pilot-card`)} { padding: 0.3em 0.6em; gap: 0.1em 0.6em; font-size: 0.76em; }
   ${faced((p) => `.${p}pilot-gun`)} { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The pronouns and the home on the name's line, and the line about them one line long. */
   ${faced((p) => `.${p}pilot-words`)} { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 0.6em; }
   ${faced((p) => `.${p}pilot-bio, .${p}pilot-gun, .${p}pilot-craft`)} { flex-basis: 100%; }
-  .itc-title-body .itc-title-pilot-bio { -webkit-line-clamp: 1; }
   .itc-title-board-score, .itc-title-board-pilot { white-space: nowrap; }
   /* How far each run got goes on every phone, and the table is the height of the faces and card beside it. */
   .itc-title-body .itc-title-board-reached { display: none; }
@@ -2110,7 +2176,7 @@ ${each('-band[hidden]')} { display: none; }
     The tier's three names on one line each where they fit — two lines each was the band's height twice
     over — and the buttons a thumb tall and no taller, with room left for CI's wider fonts.
   */
-  .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.78em; padding: 0.3em 0.4em; }
+  .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.72em; padding: 0.25em 0.35em; }
   .itc-title-body .itc-title-choices > * { padding-top: 0.3em; padding-bottom: 0.3em; }
   /*
     ⚠️ **AND A NARROWER SIDE TO EACH BUTTON — 0521.** On a phone the row is the column's whole width
@@ -2189,10 +2255,34 @@ ${each('-band[hidden]')} { display: none; }
     .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
     .itc-title-board-reached { display: none; }
     .itc-title-board-rows { grid-template-columns: auto auto auto; }
+    /*
+      0538: and on the narrowest the quiet row had 5 % of its row spare at 480x320 after the rest of
+      this block — so the plates' own sides, the panel's, and the gap between the two plates give
+      theirs, which is width beside the words rather than any of the words; and the quiet row a step down.
+    */
+    .itc-title-main, .itc-title-board { padding: 0.35em 0.45em; }
+    .itc-title-main { padding-top: 0.6em; padding-bottom: 0.6em; }
+    .itc-title-panel { padding-left: 2cqw; padding-right: 2cqw; }
+    .itc-title-body { column-gap: 2cqw; }
+    .itc-title-body .itc-title-choices { column-gap: 0.35em; }
+    .itc-title-panel .itc-title-body .itc-title-choices > :not(.itc-title-action-lead) { font-size: 0.66em; }
   }
-  .itc-title-choices { flex-direction: row; gap: min(0.6rem, 1.5cqw); }
-  .itc-title-choices > :first-child { flex: 2 1 0; font-size: 1.05em; padding: 0.4em 0.8em; }
-  .itc-title-choices > :nth-child(n+2) { flex: 1 1 0; }
+  /*
+    ⚠️ **ON A PHONE THE TABLE GIVES BACK ITS WIDTH, AND THE QUIET ROW ITS SIDES — 0538.** The rows' plate
+    stands beside the table's now, where the tier and the buttons used to run across both, and measured
+    with a full table the quiet row's three one-line buttons had 1 % of their row spare at 667x375 and
+    3 % at 480x320 — CI's fonts set a row about a quarter wider than this machine's (0521), so it would
+    have wrapped there. The places' numbers go — the five stand best first and say their order by
+    standing in it — the heading is spaced closer, and the quiet row is set a step down with narrower sides.
+  */
+  .itc-title-body .itc-title-board-place { display: none; }
+  .itc-title-body .itc-title-board-rows { grid-template-columns: auto auto; }
+  .itc-title-body .itc-title-board-heading { letter-spacing: 0.12em; white-space: nowrap; }
+  .itc-title-body .itc-title-choices > :not(.itc-title-action-lead) { padding-left: 0.3em; padding-right: 0.3em; font-size: 0.7em; }
+  .itc-title-body .itc-title-chip .itc-title-option { padding: 0.3em 0.45em; }
+  .itc-title-choices { flex-direction: row; gap: min(0.45rem, 1.4cqh) min(0.6rem, 1.5cqw); }
+  .itc-title-body .itc-title-choices > .itc-title-action-lead { font-size: 1em; padding: 0.2em 0.8em; }
+  .itc-title-choices > :not(.itc-title-action-lead) { flex: 1 1 0; }
   .itc-guide-body { gap: min(0.5rem, 1.6cqh) min(1.5rem, 3cqw); }
   .itc-guide-key, .itc-guide-controls { gap: 0.15em 0.6em; line-height: 1.2; }
   .itc-guide-key-icon { width: 1.8em; height: 1.8em; }
@@ -2309,7 +2399,7 @@ ${each('-action:hover')}, .itc-intro-skip:hover {
   box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 38%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 18%, transparent);
 }
 /* Launch is the screen's one way into a run: its rim glows brighter than Settings under it. 0458. */
-.itc-title-choices > :first-child { box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 14%, transparent); }
+.itc-title-choices > .itc-title-action-lead { box-shadow: 0 0 1.2em color-mix(in srgb, var(--itc-ink) 30%, transparent), inset 0 0 1.2em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 14%, transparent); }
 /* A chosen setting, the open tab and the place that is playing are filled with the run, the void's ink on it. */
 ${each('-option-on')}, ${each('-tab-on')}, .itc-music-action-playing {
   background-image: linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink));
@@ -2902,13 +2992,20 @@ interface Band {
  * each band, the actions. Since 0511 and 0512 a control or a band can be off the screen for now, and
  * one that is gone is not a stop.
  */
-function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[]): HTMLElement[][] {
+function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[], leads: boolean): HTMLElement[][] {
   const rows: HTMLElement[][] = [];
   if (tabs.length > 0) rows.push([...tabs]);
   for (const band of bands) if (!band.root.hidden && band.faces !== 'chip') rows.push([band.root]);
-  // 0517: a chip is drawn among the actions, after them, so it is walked there too.
-  const shown = controls.filter((c) => !c.hidden);
-  for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
+  /*
+    0538: a row whose first action leads walks it alone, and the quiet row under it after — the rows the
+    stylesheet draws. 0517: a chip is drawn in the quiet row, first, so it is walked there first too.
+  */
+  const lead = leads ? controls[0] : undefined;
+  if (lead !== undefined && !lead.hidden) rows.push([lead]);
+  const shown: HTMLElement[] = [];
+  if (lead !== undefined) for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
+  for (const control of controls) if (control !== lead && !control.hidden) shown.push(control);
+  if (lead === undefined) for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
   if (shown.length > 0) rows.push(shown);
   return rows;
 }
@@ -3977,23 +4074,39 @@ export function makeChrome(
   };
   /** How the fitted ship is fitted, for the pilot card — 0526's gun, 0527's rim; set by `setShip`. */
   let cardFit: { ship: ShipKind; fit: Fit } | null = null;
+  /** The parts a card has; a line (0538) has the name, the craft and the gun, and the rest are `null`. */
   interface PilotCard {
     root: HTMLElement;
-    ship: HTMLElement;
+    ship: HTMLElement | null;
     name: HTMLElement;
-    who: HTMLElement;
-    bio: HTMLElement;
+    who: HTMLElement | null;
+    bio: HTMLElement | null;
     craft: HTMLElement;
     gun: HTMLElement;
+    card: 'line' | 'whole';
   }
   /** Each screen's card under its band of faces — the title's (0513) and the hangar's (0521). */
   const pilotCards: Partial<Record<Screen, PilotCard>> = {};
-  const buildPilotCard = (prefix: string): PilotCard => {
+  const buildPilotCard = (prefix: string, card: 'line' | 'whole'): PilotCard => {
     const part = (tag: string, name: string): HTMLElement => {
       const el = document.createElement(tag);
       el.className = prefix + 'pilot-' + name;
       return el;
     };
+    /*
+      ⚠️ **A LINE IS ITS OWN ELEMENT, NOT THE CARD WITH PARTS HIDDEN — 0538.** A card whose bio the
+      stylesheet hides is still a card in the tree, saying the bio to anything that reads it, and a
+      later rule that shows it again puts the heaviest text back on the title without anyone deciding to.
+    */
+    if (card === 'line') {
+      const root = part('div', 'line');
+      root.setAttribute('aria-hidden', 'true');
+      const name = part('span', 'name');
+      const craft = part('span', 'craft');
+      const gun = part('span', 'gun');
+      root.append(name, craft, gun);
+      return { root, ship: null, name, who: null, bio: null, craft, gun, card };
+    }
     const root = part('div', 'card');
     root.setAttribute('aria-hidden', 'true');
     const ship = part('div', 'ship');
@@ -4005,7 +4118,7 @@ export function makeChrome(
     const gun = part('div', 'gun');
     words.append(name, who, bio, craft, gun);
     root.append(ship, words);
-    return { root, ship, name, who, bio, craft, gun };
+    return { root, ship, name, who, bio, craft, gun, card };
   };
   /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
   const cardWheels: Partial<Record<Screen, HTMLCanvasElement[]>> = {};
@@ -4018,11 +4131,14 @@ export function makeChrome(
     const fit = cardFit !== null && cardFit.ship === row.ship ? cardFit.fit : ownFit(row.ship);
     const weapon = WEAPONS[fit.gun];
     pilotCard.name.textContent = row.name;
-    pilotCard.who.textContent = row.pronouns + ' · ' + row.home;
-    pilotCard.bio.textContent = row.bio;
     pilotCard.craft.textContent = ship.label;
-    pilotCard.gun.textContent = weapon.label + ' — ' + weapon.hint;
-    pilotCard.ship.replaceChildren(shipOnCard(screen, row.ship, fit));
+    // 0538: a line names the gun; the card says what it does as well.
+    pilotCard.gun.textContent = pilotCard.card === 'line' ? weapon.label : weapon.label + ' — ' + weapon.hint;
+    if (pilotCard.who !== null) pilotCard.who.textContent = row.pronouns + ' · ' + row.home;
+    if (pilotCard.bio !== null) pilotCard.bio.textContent = row.bio;
+    if (pilotCard.ship === null) return;
+    const shipBox = pilotCard.ship;
+    shipBox.replaceChildren(shipOnCard(screen, row.ship, fit));
     // 0527: and a car on a turning rim turns it here, each wheel laid over its tyre and spun by the stylesheet.
     const rates = fit.rim === null ? null : RIMS[fit.rim].turn;
     if (ship.wheels !== null && rates !== null) {
@@ -4037,7 +4153,7 @@ export function makeChrome(
         // A sprite's box is its frame's radius over 0.42, the spinner's as the ship's: the tyre's box, in the ship's.
         wheel.style.width = String((radius / 0.42 / SHIP_BOX) * 100) + '%';
         wheel.style.setProperty('--itc-turn', String(rates[i === 0 ? 0 : 1]) + 's');
-        pilotCard.ship.appendChild(wheel);
+        shipBox.appendChild(wheel);
       });
     }
   };
@@ -4271,6 +4387,8 @@ export function makeChrome(
       const control = document.createElement('button');
       control.type = 'button';
       control.className = prefix + 'action';
+      // 0538: the action that leads, which the stylesheet stands alone over the quiet row.
+      if (row.leads && index === 0) control.classList.add(prefix + 'action-lead');
       control.textContent = action.label;
       /*
         The hint, INSIDE the button so it is part of what the control announces itself as.
@@ -4429,7 +4547,7 @@ export function makeChrome(
       */
       if (choice.faces === 'portraits') {
         line.classList.add(prefix + 'band-faces');
-        const pilotCard = buildPilotCard(prefix);
+        const pilotCard = buildPilotCard(prefix, choice.card);
         pilotCards[screen] = pilotCard;
         settingsBox.appendChild(pilotCard.root);
       }
@@ -4468,7 +4586,7 @@ export function makeChrome(
       screen does not have or miss one it does.
     */
     // Rewritten in place by `setActionShown` and `setTouch`, so `follow` below reads the walk as it stands.
-    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls);
+    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls, row.leads);
     /*
       ⚠️ **ONE CURSOR, WHOEVER MOVED IT.** A click, a tap or the Tab key puts the platform's focus on a
       control without asking the chrome; read back here, so the next push of a stick starts from where
@@ -5031,7 +5149,7 @@ export function makeChrome(
         // A class the stylesheet lays a touch screen's panel out by, on the panel the screen has.
         panel.root.classList.toggle(prefixFor(screen) + 'touch', touch);
         for (const band of panel.bands) if (band.on === 'touch') band.root.hidden = !touch;
-        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, SCREENS[screen].leads));
       }
     },
     setHand(hand: HandKind): void {
@@ -5310,9 +5428,18 @@ export function makeChrome(
       if (panel !== undefined && screen !== null) {
         const kept = remembered[screen];
         const bandsFrom = panel.tabs.length > 0 ? 1 : 0;
-        const opens = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0 ? bandsFrom : panel.rows.length - 1;
+        /*
+          ⚠️ **ON THE FIRST ACTION, FOUND, AND IT WAS THE LAST ROW'S FIRST STOP — 0538.** While the actions
+          were one row that was the same place; with *Fly* leading, the last row is the quiet one and its
+          first stop the chip, so a returning player's first press would have stepped the continues.
+        */
+        const first = panel.controls.find((c) => !c.hidden);
+        const actionRow = first === undefined ? -1 : panel.rows.findIndex((r) => r.includes(first));
+        const choosing = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0;
+        const opens = choosing ? bandsFrom : actionRow >= 0 ? actionRow : panel.rows.length - 1;
         cursor.row = kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
-        cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : 0;
+        const opensCol = !choosing && first !== undefined && cursor.row === actionRow ? Math.max(0, panel.rows[actionRow]!.indexOf(first)) : 0;
+        cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : opensCol;
       }
       paintFocus(true, false);
     },
@@ -5363,7 +5490,13 @@ export function makeChrome(
           A push along a row the layout has no opinion about still gets a move — 0214's note, and the
           reason it existed: the player does not know which way the chrome laid a row out.
         */
-        if (axis === 'x' || rows.length === 1) {
+        /*
+          ⚠️ **AND A ROW OF ONE HAS NO ALONG, SO THE PUSH GOES ON TO THE NEXT ROW — 0538.** *Fly* leads
+          alone, and stepping a row of one round its own end is a push that does nothing: right off the
+          title's primary was a dead axis, which is what this fallback exists to prevent. Right goes on
+          down and left goes back up, the way a reading order runs.
+        */
+        if ((axis === 'x' && row.length > 1) || rows.length === 1) {
           cursor.col = (cursor.col + delta + row.length) % row.length;
           paintFocus();
           return;
@@ -5509,7 +5642,7 @@ export function makeChrome(
       const control = panel?.controls[index];
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
-      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, SCREENS[screen].leads));
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {
