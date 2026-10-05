@@ -209,8 +209,9 @@ export interface ScreenRow {
    * the one thing that starts a run, and beside the hangar, the chip and Settings it was one button of
    * four at three sizes; alone it is the screen's primary and the rest are the quiet row under it.
    *
-   * ⚠️ **A FACT ABOUT THE ROW, on `pushed`'s terms**: the walk reads it (`src/app/chrome.ts`), so the
-   * cursor's rows are the rows drawn, and `screen === 'title'` there would be the hub naming an instance.
+   * ⚠️ **A FACT ABOUT THE ROW, on `pushed`'s terms**: the chrome marks the action that leads and the
+   * stylesheet stands it alone, and `screen === 'title'` there would be the hub naming an instance. The
+   * walk needs nothing from it — inside a row of buttons the boxes decide where a push lands (0214).
    */
   leads: boolean;
   /**

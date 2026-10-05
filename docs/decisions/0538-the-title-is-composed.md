@@ -20,7 +20,7 @@ Out* and *Settings* at one size.**
 | | |
 |---|---|
 | **the line** | `card: 'line'` on the title's pilot band (`src/state/screens.ts`): the name, the craft and the fitted gun on one line. The hangar's bands say `card: 'whole'` and keep 0513's card. A line is its own element, not the card with parts hidden — a hidden bio is still in the tree, and one rule showing it again puts it back without anyone deciding to |
-| **Fly leads** | `leads: true` on the title's row: its first action stands on a row of its own. The walk reads it (`walkOf` in `src/app/chrome.ts`), so the cursor's rows are the rows drawn: the bands, *Fly*, then the quiet row with the chip first |
+| **Fly leads** | `leads: true` on the title's row: the chrome marks its first action and the stylesheet stands it on a row of its own, over the quiet row with the chip first |
 | **the plates** | the crossing's cut-corner frame ([0341](0341-the-crossing-reads-as-a-nav-plate.md)) with the title's run of inks for a rim ([0440](0440-every-screen-speaks-with-the-titles-voice.md)) — violet at the top-left cut, cyan at the bottom-right. An empty table draws no plate |
 | **on a phone** | the two plates side by side, as the columns were; the rows' plate is a box rather than the body's cells (0513 stood it aside), because a plate cannot be drawn round cells that belong to its parent |
 
@@ -43,13 +43,16 @@ wider fonts.
   focus ring in the plate's bottom-right cut and the faces' in its top-left on every phone. The cut is
   half as deep on a phone. That is the one new guard.
 
-## The walk
+## The walk, which did not change
 
-*Fly* alone on a row is a row of one, and a sideways push along a row of one stepped round to itself: a
-dead axis, which [0214](0214-a-grid-is-not-a-list.md)'s fallback exists to prevent and its own guard caught. A push along a row of one
-goes on to the next row, right down and left up, the way the reading order runs. The title still opens
-on *Fly* — the cursor now looks for the first action rather than the last row's first stop, which was
-the same place only while the actions were one row.
+The first build split the walk too: *Fly* a row of its own, the quiet row under it. That needed two more
+repairs — a sideways push on a row of one stepped round to itself, a dead axis, and the title opened on
+the quiet row's chip — and three probes. **The probe that took the split away stayed green.** Inside a
+row of buttons the boxes already decide where a push lands ([0214](0214-a-grid-is-not-a-list.md)), so
+with the actions left as one row down from *Fly* is the button under its middle, up from the quiet row is
+*Fly*, right off *Fly* steps along the row, and the title opens on *Fly* because it is the row's first.
+The split and both repairs were taken out again, and the walk is as it was. The re-recorded 0458 walk in
+`tests/menu.browser.test.ts` holds what the player presses through.
 
 ## Raised, and answered by the picture
 
@@ -61,7 +64,7 @@ glass keeps the words over it. It stays where it was.
 
 `tests/layout.browser.test.ts`: the plates' cuts, with each control grown by the cursor's ring read off
 the stylesheet; the phone's one-row rule, amended to the quiet row with *Fly* above it.
-`tests/menu.browser.test.ts`: the 0458 walk re-recorded through *Fly*'s row and the quiet row.
+`tests/menu.browser.test.ts`: the 0458 walk re-recorded down from *Fly* into the quiet row and back up.
 `tests/intro.browser.test.ts`: a first tap on a face says what that pilot flies, where it said their bio.
 Probes in `scripts/probes/0538-the-title-is-composed.mjs`; 0063's, 0415's and 0513's re-anchored.
 

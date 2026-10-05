@@ -2992,20 +2992,20 @@ interface Band {
  * each band, the actions. Since 0511 and 0512 a control or a band can be off the screen for now, and
  * one that is gone is not a stop.
  */
-function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[], leads: boolean): HTMLElement[][] {
+function walkOf(tabs: readonly HTMLElement[], bands: readonly Band[], controls: readonly HTMLElement[]): HTMLElement[][] {
   const rows: HTMLElement[][] = [];
   if (tabs.length > 0) rows.push([...tabs]);
   for (const band of bands) if (!band.root.hidden && band.faces !== 'chip') rows.push([band.root]);
   /*
-    0538: a row whose first action leads walks it alone, and the quiet row under it after — the rows the
-    stylesheet draws. 0517: a chip is drawn in the quiet row, first, so it is walked there first too.
+    0517: a chip is drawn among the actions, after them, so it is walked there too.
+
+    ⚠️ **AND THE TITLE'S FLY, ALONE OVER THE QUIET ROW, IS STILL ONE ROW OF BUTTONS HERE — 0538.** Inside
+    a row of buttons the boxes decide (0214), so down from *Fly* is the button under its middle and up
+    from the quiet row is *Fly*. A walk that split the row was written first, and its probe stayed green:
+    the boxes had already said everything it said.
   */
-  const lead = leads ? controls[0] : undefined;
-  if (lead !== undefined && !lead.hidden) rows.push([lead]);
-  const shown: HTMLElement[] = [];
-  if (lead !== undefined) for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
-  for (const control of controls) if (control !== lead && !control.hidden) shown.push(control);
-  if (lead === undefined) for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
+  const shown = controls.filter((c) => !c.hidden);
+  for (const band of bands) if (!band.root.hidden && band.faces === 'chip') shown.push(band.root);
   if (shown.length > 0) rows.push(shown);
   return rows;
 }
@@ -4586,7 +4586,7 @@ export function makeChrome(
       screen does not have or miss one it does.
     */
     // Rewritten in place by `setActionShown` and `setTouch`, so `follow` below reads the walk as it stands.
-    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls, row.leads);
+    const rows: HTMLElement[][] = walkOf(tabs, choiceBands, controls);
     /*
       ⚠️ **ONE CURSOR, WHOEVER MOVED IT.** A click, a tap or the Tab key puts the platform's focus on a
       control without asking the chrome; read back here, so the next push of a stick starts from where
@@ -5149,7 +5149,7 @@ export function makeChrome(
         // A class the stylesheet lays a touch screen's panel out by, on the panel the screen has.
         panel.root.classList.toggle(prefixFor(screen) + 'touch', touch);
         for (const band of panel.bands) if (band.on === 'touch') band.root.hidden = !touch;
-        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, SCREENS[screen].leads));
+        panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
       }
     },
     setHand(hand: HandKind): void {
@@ -5428,18 +5428,9 @@ export function makeChrome(
       if (panel !== undefined && screen !== null) {
         const kept = remembered[screen];
         const bandsFrom = panel.tabs.length > 0 ? 1 : 0;
-        /*
-          ⚠️ **ON THE FIRST ACTION, FOUND, AND IT WAS THE LAST ROW'S FIRST STOP — 0538.** While the actions
-          were one row that was the same place; with *Fly* leading, the last row is the quiet one and its
-          first stop the chip, so a returning player's first press would have stepped the continues.
-        */
-        const first = panel.controls.find((c) => !c.hidden);
-        const actionRow = first === undefined ? -1 : panel.rows.findIndex((r) => r.includes(first));
-        const choosing = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0;
-        const opens = choosing ? bandsFrom : actionRow >= 0 ? actionRow : panel.rows.length - 1;
+        const opens = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0 ? bandsFrom : panel.rows.length - 1;
         cursor.row = kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
-        const opensCol = !choosing && first !== undefined && cursor.row === actionRow ? Math.max(0, panel.rows[actionRow]!.indexOf(first)) : 0;
-        cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : opensCol;
+        cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : 0;
       }
       paintFocus(true, false);
     },
@@ -5490,13 +5481,7 @@ export function makeChrome(
           A push along a row the layout has no opinion about still gets a move — 0214's note, and the
           reason it existed: the player does not know which way the chrome laid a row out.
         */
-        /*
-          ⚠️ **AND A ROW OF ONE HAS NO ALONG, SO THE PUSH GOES ON TO THE NEXT ROW — 0538.** *Fly* leads
-          alone, and stepping a row of one round its own end is a push that does nothing: right off the
-          title's primary was a dead axis, which is what this fallback exists to prevent. Right goes on
-          down and left goes back up, the way a reading order runs.
-        */
-        if ((axis === 'x' && row.length > 1) || rows.length === 1) {
+        if (axis === 'x' || rows.length === 1) {
           cursor.col = (cursor.col + delta + row.length) % row.length;
           paintFocus();
           return;
@@ -5642,7 +5627,7 @@ export function makeChrome(
       const control = panel?.controls[index];
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
-      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls, SCREENS[screen].leads));
+      panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {

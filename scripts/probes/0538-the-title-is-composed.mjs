@@ -2,7 +2,11 @@
 //
 // Asked for: *"The main menu is a pure mess at the moment with stuff everywhere."* The title is two
 // plates now, Fly leads alone over a quiet row, and the card under the faces is a line. One guard is
-// new — the plates' cuts — and the walk's guards were re-recorded; these show each still fires.
+// new — the plates' cuts — and the phone's one-row guard was amended to the quiet row.
+//
+// ⚠️ Three more were written first, for a walk that split Fly from the quiet row, and the one that took
+// the split away stayed GREEN: inside a row of buttons the boxes already decide (0214). The walk was put
+// back as it was, and those probes went with it — the decision has the account.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -20,38 +24,14 @@ export const PROBES = [
   },
   {
     decision: '0538',
-    suite: 'tests/menu.browser.test.ts',
-    // The cursor opening on the last row's first stop, as it did while the actions were one row.
-    broke: 'the title opening on the quiet row’s chip, so a returning player’s first press steps the continues',
-    guard: '0458 — walks the title by rows',
+    suite: 'tests/layout.browser.test.ts',
+    // Fly not marked, so the stylesheet draws it as one of the quiet row.
+    broke: 'Fly not marked as the action that leads, so it stands in the quiet row at the quiet row’s size',
+    guard: 'keeps the title’s choices in one row on a phone',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '        const opens = choosing ? bandsFrom : actionRow >= 0 ? actionRow : panel.rows.length - 1;',
-      replace: '        const opens = choosing ? bandsFrom : panel.rows.length - 1;',
-    },
-  },
-  {
-    decision: '0538',
-    suite: 'tests/menu.browser.test.ts',
-    // A row of one stepped round its own end, which is a push that does nothing.
-    broke: 'right on Fly stepping a row of one round to itself, a dead axis',
-    guard: 'still steps a column when the layout has no answer for the axis',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: "        if ((axis === 'x' && row.length > 1) || rows.length === 1) {",
-      replace: "        if (axis === 'x' || rows.length === 1) {",
-    },
-  },
-  {
-    decision: '0538',
-    suite: 'tests/menu.browser.test.ts',
-    // The walk not told that Fly leads, so the cursor walks one row of four the stylesheet draws as two.
-    broke: 'the walk reading the actions as one row while the screen draws Fly over the quiet row',
-    guard: '0458 — walks the title by rows',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: '  const lead = leads ? controls[0] : undefined;',
-      replace: '  const lead = undefined;',
+      find: "      if (row.leads && index === 0) control.classList.add(prefix + 'action-lead');",
+      replace: '',
     },
   },
 ];
