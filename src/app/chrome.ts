@@ -1816,6 +1816,13 @@ ${each('-tab')} {
 }
 ${each('-tab-on')} { background: var(--itc-ink); color: var(--itc-void); opacity: 1; }
 ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px solid currentColor; outline-offset: 3px; }
+/*
+  0527: the hangar's strip holds three since Paint & Parts, and on a phone each wrapped to two lines and
+  put Back under the fold. One line each, the strip sized to the width a little more tightly; on a
+  desktop it is the size it was, the cap.
+*/
+.itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: clamp(0.75rem, min(2.6cqw, 6cqh), 1.5rem); gap: 0.5em; }
+.itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.25em 0.8em; }
 /* Settings' bands and its two buttons, at the title's column width. */
 .itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
 .itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
