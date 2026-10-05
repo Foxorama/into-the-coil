@@ -1778,6 +1778,12 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 */
 .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
 /*
+  0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
+  one row CI's wider type put the fifth off a 667x375's edge.
+*/
+.itc-shop-band .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
+.itc-shop-band .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
+/*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
   what hangs, five, in rows of three. A phone shows only the one that is on, below.
