@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openHangar, shown } from './title.ts';
+import { seedOnce } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -56,23 +57,8 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     // The fighter and the estate won in; the default pilot's Firebird not. Filled once, before the page runs.
     const won = { ...initialHangar, won: { ...initialHangar.won, fighter: true, estate: true } };
-    /*
-      ⚠️ **ONCE, MARKED ON THE TAB AND NOT IN THE STORE UNDER TEST.** An init script runs again on every
-      reload, and this one filled the key whenever it read empty — so a store that read empty for a
-      moment after the reload was filled with the seed again, and the fitting this test checks was
-      overwritten by the test itself. Red on CI as *the fitting was gone from the key after a reload*.
-      `window.name` outlives a reload in the same tab and is not storage, so the seed is written once —
-      on the game's page only: the blank page a new tab opens on runs this too, and `window.name` carries
-      across a navigation, so marking it there would skip the page the seed is for.
-    */
-    await context.addInitScript(
-      ([key, value]) => {
-        if (location.protocol !== 'file:' || window.name === 'itc-seeded') return;
-        window.name = 'itc-seeded';
-        localStorage.setItem(key!, value!);
-      },
-      [HANGAR_KEY, serialiseHangar(won)],
-    );
+    // Once per tab — `tests/seed.ts` says why a seed that refilled an empty key overwrote this test's fitting.
+    await seedOnce(context, HANGAR_KEY, serialiseHangar(won));
     const page = await context.newPage();
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
