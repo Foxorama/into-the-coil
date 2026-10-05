@@ -126,7 +126,20 @@ import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, beginsRun, plateWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
-import { boardLines, endSheet, entryOf, levelSheet, overSheet, runScore, runSheet, tallyAtClear } from './score.ts';
+import {
+  boardLines,
+  creditEnded,
+  endSheet,
+  entryOf,
+  freshLedger,
+  levelSheet,
+  overSheet,
+  payRun,
+  runScore,
+  runSheet,
+  shardsOwed,
+  tallyAtClear,
+} from './score.ts';
 import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
@@ -1603,13 +1616,27 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   /** The row a run just set, lit on the title until the next run begins. `-1` for none. */
   let freshPlace = -1;
   let runRecorded = false;
+  /*
+    THE RUN'S STAR SHARDS — 0522: its best credit, paid once when it ends. Every credit that ends is put
+    on it as it goes on the table, and `bank` pays it at each of the run's true ends below — never at a
+    continue, which ends a credit and not the run. Begun again with each run.
+  */
+  // @setup: one ledger for the page, emptied in place when a run begins.
+  const ledger = freshLedger();
+  const bank = (): number => {
+    const shards = payRun(ledger);
+    if (shards > 0) dispatch({ slice: 'hangar', type: 'earned', shards });
+    return shards;
+  };
   const syncScore = (): void => {
     chrome.setScore(runScore(state.run, world.score), world.score.streak);
   };
   const recordRun = (cleared: boolean): number | null => {
     if (runRecorded) return freshPlace < 0 ? null : freshPlace;
     runRecorded = true;
-    const placed = recordScore(scoreStore, entryOf(state.run, world.score, state.settings.pilot, cleared, Date.now()));
+    const entry = entryOf(state.run, world.score, state.settings.pilot, cleared, Date.now());
+    creditEnded(ledger, entry.score);
+    const placed = recordScore(scoreStore, entry);
     scoreTable = placed.table;
     freshPlace = placed.place ?? -1;
     chrome.setBoard(boardLines(scoreTable), freshPlace);
@@ -1623,15 +1650,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (now === 'gameOver') {
       // Where it would land, read off the table without writing it — 0438. It is written on the way out.
       const would = placeScore(scoreTable, entryOf(state.run, world.score, state.settings.pilot, false, Date.now()));
-      chrome.setSheet('gameOver', overSheet(state.run, world.score, would.place));
+      // 0522: and what the run would pay if it stopped here, this credit counted with the rest.
+      chrome.setSheet('gameOver', overSheet(state.run, world.score, would.place, shardsOwed(ledger, runScore(state.run, world.score))));
     } else if (now === 'ended') {
       // 0517: no offer to wait on, so the run goes on the table as it arrives, as a victory's does.
-      chrome.setSheet('ended', endSheet(state.run, world.score, recordRun(false)));
+      const place = recordRun(false);
+      chrome.setSheet('ended', endSheet(state.run, world.score, place, bank()));
     } else if (now === 'victory') {
-      chrome.setSheet('victory', runSheet(state.run, recordRun(true)));
+      const place = recordRun(true);
+      chrome.setSheet('victory', runSheet(state.run, place, bank()));
     } else if (now === 'title' && was === 'gameOver') {
       // The continue ran out, or was walked away from: the run is over and it goes on the table.
       recordRun(false);
+      bank();
     }
   };
 
@@ -1643,6 +1674,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // A new run: nothing on the table is its yet, and last run's row stops being lit on the title.
     if (action.slice === 'run' && action.type === 'begin') {
       runRecorded = false;
+      ledger.best = 0;
+      ledger.paid = false;
       if (freshPlace >= 0) {
         freshPlace = -1;
         chrome.setBoard(boardLines(scoreTable), -1);
@@ -1880,6 +1913,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       else {
         // A quit is kept on the table like a run over, if it makes the ten — answered 2026-10-02.
         recordRun(false);
+        // 0522: and a quit is a run's end, so it is paid — a player who stops is not made to fly it out.
+        bank();
         dispatch({ slice: 'screen', type: 'show', screen: 'title' });
       }
     } else if (screen === 'music') onMusicRoom(index);
@@ -1993,6 +2028,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
     chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable));
     chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
+    // 0522: and the balance, under the hangar's heading — what the shop will take.
+    chrome.setSheet('hangar', [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' }]);
     fitPilot();
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.

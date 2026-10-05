@@ -191,7 +191,9 @@ describe('0428 — the run banks each level, and a death keeps it', () => {
     let state: State = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: SHIP, credits: 'free' });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(0, 1000, 1, 1, 0, { shield: 1, bomb: 1, missile: 1 }) });
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(1, 2000, 1, 5, 5, { shield: 0, bomb: 2, missile: 0 }) });
-    const said = Object.fromEntries(runSheet(state.run, 2).map((l) => [l.label, l.value]));
+    const said = Object.fromEntries(runSheet(state.run, 2, 157).map((l) => [l.label, l.value]));
+    // 0522: and the shards the run paid.
+    expect(said['Star Shards']).toBe('+157');
     expect(said.Bonuses).toBe(bankedBonus(state.run));
     expect(said['Final score']).toBe(bankedScore(state.run));
     expect(said.Points).toBe(3000);
@@ -246,11 +248,13 @@ describe('0438 — a continue starts the score again, and the table keeps the cr
   it('the run over says the score, how far the credit got, and where it lands on the table', () => {
     const state = ranOutOnThree();
     const flying = { points: 500, streak: 0, best: 0, kills: 3, spawned: 9, hits: 3 };
-    const said = Object.fromEntries(overSheet(state.run, flying, 4).map((l) => [l.label, l.value]));
+    const said = Object.fromEntries(overSheet(state.run, flying, 4, 12).map((l) => [l.label, l.value]));
     expect(said.Score).toBe(bankedScore(state.run) + 500);
     expect(said.Reached).toBe('Level 3');
     expect(said['High score']).toBe('#5');
-    expect(Object.fromEntries(overSheet(state.run, flying, null).map((l) => [l.label, l.value]))['High score']).toBe('—');
+    // 0522: what the run would pay if it stopped here — a figure, not a payment, so no plus sign.
+    expect(said['Star Shards']).toBe('12');
+    expect(Object.fromEntries(overSheet(state.run, flying, null, 0).map((l) => [l.label, l.value]))['High score']).toBe('—');
   });
 
   it('the frame’s count starts again with the credit, streak and all', () => {

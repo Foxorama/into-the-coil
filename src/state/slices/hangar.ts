@@ -35,12 +35,18 @@ export interface HangarState {
    * (`src/content/ships.ts`), and every ship opens on its own.
    */
   plate: Readonly<Record<ShipKind, ShipKind>>;
+  /**
+   * The Star Shards the player holds — 0522. Paid at the end of every run for its best credit, and
+   * spent in the shop the plan's next item opens. A whole number, never below nothing.
+   */
+  shards: number;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
 export type HangarAction =
   | { slice: 'hangar'; type: 'won'; ship: ShipKind }
-  | { slice: 'hangar'; type: 'plate'; ship: ShipKind; plate: ShipKind };
+  | { slice: 'hangar'; type: 'plate'; ship: ShipKind; plate: ShipKind }
+  | { slice: 'hangar'; type: 'earned'; shards: number };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -53,6 +59,7 @@ function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
 export const initialHangar: HangarState = {
   won: perShip(() => false),
   plate: perShip((kind) => kind),
+  shards: 0,
 };
 
 /**
@@ -72,6 +79,11 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'plate':
       if (state.plate[action.ship] === action.plate || !plateOpen(state, action.ship, action.plate)) return state;
       return { ...state, plate: { ...state.plate, [action.ship]: action.plate } };
+    // 0522: whole shards only, and a run that earned none moves nothing — so nothing is written for it.
+    case 'earned': {
+      const shards = Math.floor(action.shards);
+      return shards > 0 ? { ...state, shards: state.shards + shards } : state;
+    }
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

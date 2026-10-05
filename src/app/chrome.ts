@@ -1246,6 +1246,27 @@ ${faceTurns()}
   the score uses. The rank is stamped rather than counted. The real number is in the line as text for
   a reader, clipped out of sight, and the counter draws what the eye sees.
 */
+/*
+  ── THE HANGAR'S BALANCE — 0522 ─────────────────────────────────────────────────────────────────
+
+  One line, the Star Shards held, pinned in the top right corner where the run's score stands in play,
+  so it costs the screen no height: as a line under the heading it put Back under a 480x320's fold.
+  The readout has the other corner.
+*/
+.itc-hangar-sheet {
+  position: absolute;
+  top: min(0.9rem, 2.5cqh);
+  right: min(1.2rem, 2.5cqw);
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  padding: 0.35em 0.9em;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--itc-ink) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
+}
+.itc-hangar-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.itc-hangar-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
 @property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
 .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet {
   display: grid;
@@ -3870,7 +3891,8 @@ export function makeChrome(
     */
     let sheet: HTMLElement | null = null;
     // 0517: and the game over, the fourth — a run that could not be continued is added up there.
-    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended') {
+    // 0522: and the hangar, whose one line is the Star Shards the player holds.
+    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
       panel.appendChild(sheet);

@@ -175,7 +175,8 @@ And once the plan was written:
 2. **Star Shards.** The best credit of a run, `floor(score / 10 000)`, paid at the true run ends
    and shown on their screens; the balance on the hangar. 0428's *not a currency* is reversed in
    the decision, and `docs/game.md`'s *no shop* line is rewritten in the same PR — moved here from
-   item 1 while it was built, because a currency is what first makes that line untrue.
+   item 1 while it was built, because a currency is what first makes that line untrue. **Built as
+   [0522](../docs/decisions/0522-the-score-pays-in-shards.md).**
 3. **The dangle slot, and Cosmo's Cosmetics.** Every plate gets a place to hang from; a dangle is a
    row with its own drawing and its own swing weights on the existing swing. The dice, the
    eucalyptus tree, the family in the frame and the golf ball. The shop tab, a provisional price on

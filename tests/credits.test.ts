@@ -84,7 +84,7 @@ describe('the game over’s account', () => {
     state = reduce(state, { slice: 'run', type: 'scored', tally: tallyOf(0, 1000, 8, 10, 1, { shield: 1, bomb: 0, missile: 0 }) });
     state = reduce(state, { slice: 'run', type: 'levelCleared' });
     const now = flying(500, 2, 10, 3);
-    const lines = endSheet(state.run, now, 0);
+    const lines = endSheet(state.run, now, 0, 3);
     const value = (label: string): number | string | undefined => lines.find((l) => l.label === label)?.value;
     expect(value('Reached')).toBe('Level 2');
     expect(value('Kills')).toBe(10);
@@ -92,11 +92,13 @@ describe('the game over’s account', () => {
     expect(value('Hits taken')).toBe(4);
     expect(value('Final score')).toBe(runScore(state.run, now));
     expect(value('High score')).toBe('#1');
+    // 0522: and what the run paid, as the account's last line.
+    expect(lines[lines.length - 1]).toEqual({ label: 'Star Shards', value: '+3', tone: 'total' });
   });
 
   it('says something true of a run that died on the first level with nothing sent', () => {
     const state = reduce(reduce(initialState, begin('none')), PLAY);
-    const lines = endSheet(state.run, flying(0, 0, 0, 0), null);
+    const lines = endSheet(state.run, flying(0, 0, 0, 0), null, 0);
     expect(lines.find((l) => l.label === 'Shot down')?.value).toBe('0%');
     expect(lines.some((l) => l.label === 'Ranks'), 'ranks shown for a run that cleared nothing').toBe(false);
   });

@@ -6,6 +6,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { choose, openSettings } from './title.ts';
+import { seedOnce } from './seed.ts';
 import { SETTINGS_KEY, serialiseSettings, settingsFrom } from '../src/save/settings.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
 import { STYLE_KINDS } from '../src/content/styles.ts';
@@ -55,12 +56,7 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     // Filled before the page's own script runs, and only once — a reload must read what the page wrote.
-    await context.addInitScript(
-      ([key, value]) => {
-        if (localStorage.getItem(key!) === null) localStorage.setItem(key!, value!);
-      },
-      [SETTINGS_KEY, serialiseSettings(kept)],
-    );
+    await seedOnce(context, SETTINGS_KEY, serialiseSettings(kept));
     const page = await context.newPage();
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });

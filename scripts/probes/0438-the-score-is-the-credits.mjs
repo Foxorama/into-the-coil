@@ -35,8 +35,8 @@ export const PROBES = [
     guard: 'the run over says the score, how far the credit got, and where it lands',
     edit: {
       path: 'src/app/score.ts',
-      find: "    { label: 'High score', value: placeLabel(place), tone: 'plain' },\n  ];",
-      replace: "    { label: 'High score', value: placeLabel(null), tone: 'plain' },\n  ];",
+      find: "    { label: 'High score', value: placeLabel(place), tone: 'plain' },\n    /*",
+      replace: "    { label: 'High score', value: placeLabel(null), tone: 'plain' },\n    /*",
     },
   },
   {

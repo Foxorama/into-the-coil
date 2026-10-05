@@ -7,7 +7,7 @@
  * `tests/score.test.ts` asks them here.
  */
 
-import { BONUSES, BONUS_KINDS, tallyOf, type BonusKind, type Held, type LevelTally } from '../content/score.ts';
+import { BONUSES, BONUS_KINDS, shardsFor, tallyOf, type BonusKind, type Held, type LevelTally } from '../content/score.ts';
 import { GOLFERS } from '../content/golfers.ts';
 import { bankedBonus, bankedScore, type RunState } from '../state/slices/run.ts';
 import type { ScoreEntry } from '../save/scores.ts';
@@ -31,6 +31,50 @@ export function tallyAtClear(run: RunState, score: LevelScore, shields: number):
 /** The run's score as it stands: every cleared level, and the points of the level being flown. */
 export function runScore(run: RunState, score: LevelScore): number {
   return bankedScore(run) + score.points;
+}
+
+/*
+  ── A RUN'S STAR SHARDS — 0522 ─────────────────────────────────────────────────────────────────────
+
+  Asked for: *"the highest points you earned in a continue run grant you 1 Star Shard per 10,000 pts.
+  in a non-continue run, you'll only have highest score for that run."* So a run pays for its BEST
+  credit, once, at the run's end — never the credits added up, which would pay Freeplay's endless
+  continues for every one of them, and never at a continue, which ends a credit and not the run.
+*/
+
+/** What a run has earned towards its Star Shards. The shell keeps one, and a new run starts it again. */
+export interface ShardLedger {
+  /** The best credit's score so far. */
+  best: number;
+  /** Whether the run has been paid, so a second way out of it pays nothing. */
+  paid: boolean;
+}
+
+/** A run that has scored nothing and been paid nothing. */
+export function freshLedger(): ShardLedger {
+  return { best: 0, paid: false };
+}
+
+/** A credit has ended on `score` — a continue, or the run's last. */
+export function creditEnded(ledger: ShardLedger, score: number): void {
+  if (score > ledger.best) ledger.best = score;
+}
+
+/** The shards the run would pay with a credit still being flown on `score`: its best credit, either way. */
+export function shardsOwed(ledger: ShardLedger, score: number): number {
+  return shardsFor(Math.max(ledger.best, score));
+}
+
+/** The run's end: its shards, once. A second end of the same run pays nothing. */
+export function payRun(ledger: ShardLedger): number {
+  if (ledger.paid) return 0;
+  ledger.paid = true;
+  return shardsFor(ledger.best);
+}
+
+/** The account's line for the shards a run paid — 0522. */
+function shardLine(shards: number): SheetLine {
+  return { label: 'Star Shards', value: '+' + String(shards), tone: 'total' };
 }
 
 /** The label a bonus line wears: what it is and how many were held. */
@@ -65,7 +109,7 @@ export function ranksOf(run: RunState): string {
  * The victory's account — 0428: *"end of game level showing total score with total bonuses"*, and
  * where the run landed on the table (0429).
  */
-export function runSheet(run: RunState, place: number | null): SheetLine[] {
+export function runSheet(run: RunState, place: number | null, shards: number): SheetLine[] {
   const bonus = bankedBonus(run);
   const score = bankedScore(run);
   const lines: SheetLine[] = [];
@@ -74,6 +118,8 @@ export function runSheet(run: RunState, place: number | null): SheetLine[] {
   lines.push({ label: 'Bonuses', value: bonus, tone: 'plain' });
   lines.push({ label: 'Final score', value: score, tone: 'total' });
   lines.push({ label: 'High score', value: placeLabel(place), tone: 'plain' });
+  // 0522: and what the run paid, last, because it is what the run is worth after the score.
+  lines.push(shardLine(shards));
   return lines;
 }
 
@@ -83,11 +129,16 @@ export function runSheet(run: RunState, place: number | null): SheetLine[] {
  * lands on the table — `place` is where it WOULD land, because it is put there only when the player
  * continues or the offer runs out, and either way it lands exactly there.
  */
-export function overSheet(run: RunState, score: LevelScore, place: number | null): SheetLine[] {
+export function overSheet(run: RunState, score: LevelScore, place: number | null, owed: number): SheetLine[] {
   return [
     { label: 'Score', value: runScore(run, score), tone: 'total' },
     { label: 'Reached', value: 'Level ' + String(run.level + 1), tone: 'plain' },
     { label: 'High score', value: placeLabel(place), tone: 'plain' },
+    /*
+      0522: what the run will pay if it stops here — its best credit so far, this one among them. Not
+      paid yet: a continue may beat it, and the run pays once, when it ends.
+    */
+    { label: 'Star Shards', value: String(owed), tone: 'plain' },
   ];
 }
 
@@ -100,7 +151,7 @@ export function overSheet(run: RunState, score: LevelScore, place: number | null
  * hits are the frame's, and a run that died on level one would otherwise read as nothing shot at all.
  * A run with one credit is the whole run, so the tallies are every level it cleared.
  */
-export function endSheet(run: RunState, score: LevelScore, place: number | null): SheetLine[] {
+export function endSheet(run: RunState, score: LevelScore, place: number | null, shards: number): SheetLine[] {
   let kills = score.kills;
   let spawned = score.spawned;
   let hits = score.hits;
@@ -120,6 +171,7 @@ export function endSheet(run: RunState, score: LevelScore, place: number | null)
   lines.push({ label: 'Bonuses', value: bonus, tone: 'plain' });
   lines.push({ label: 'Final score', value: total, tone: 'total' });
   lines.push({ label: 'High score', value: placeLabel(place), tone: 'plain' });
+  lines.push(shardLine(shards));
   return lines;
 }
 
