@@ -22,7 +22,7 @@
 import type { Body } from '../sim/entity.ts';
 import type { Ink } from './palette.ts';
 import { SPRITE } from './sprites.ts';
-import type { WeaponKind } from './weapons.ts';
+import { WEAPONS, type WeaponKind } from './weapons.ts';
 import type { MissileKind } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 
@@ -71,6 +71,18 @@ export interface ShipRow extends Body {
    * the side is the middle of its door.
    */
   muzzle: Mount;
+  /**
+   * How this ship is drawn — 0525: from the side (the cars, since 0441's play) or from above. A gun
+   * borrowed from another ship is drawn the same way, so a car wears it standing on its hood and the
+   * fighter wears it lying along its nose.
+   */
+  view: GunView;
+  /**
+   * Where a borrowed gun stands on this ship, in world units about its centre — 0525: the hood of a car,
+   * the nose of the fighter, the rim of the saucer. The ship's own gun is part of its drawing and fires
+   * from `muzzle`; another's is drawn here and fires from here plus its own `mount` (`fitted`).
+   */
+  hardpoint: Mount;
   /**
    * Where each missile leaves, with one tube fitted and with two — 0448. The first of a pair still pops
    * to the top of the lane and the second to the bottom (`fireMissiles`), so a pair from two turrets on
@@ -204,6 +216,23 @@ export interface Mount {
   readonly across: number;
 }
 
+/** How a ship is drawn, and so how a gun on it is — 0525. Closed. */
+export type GunView = 'side' | 'top';
+
+/**
+ * `row` flying `gun` — 0525. Its own gun is the row as it is. Another's is the row with that gun, and a
+ * muzzle at the row's hardpoint plus the gun's own mount in the row's view, so the shot leaves the mount
+ * the bake draws there (`src/render/bake.ts` reads the same two numbers).
+ *
+ * ⚠️ **A ROW, SO THE FRAME DOES NOT LEARN THAT GUNS MOVE.** `weaponFor` reads `weapon` and the frame reads
+ * `muzzle`, off the ship row it was handed; the shell hands it this one.
+ */
+export function fitted(row: ShipRow, gun: WeaponKind): ShipRow {
+  if (gun === row.weapon) return row;
+  const mount = WEAPONS[gun].mount[row.view];
+  return { ...row, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };
+}
+
 /**
  * Where a gun on the centreline fires from: three units ahead of the centre, clear of the hurtbox. It was
  * `MUZZLE_ALONG` in `src/app/frame.ts` for every ship until 0448.
@@ -297,6 +326,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // cigars (0469, `SHIP_POD_MK3` in the bake); the flared pods reached 1.31, and 1.48 before 0449.
     wingtip: 3.85,
     muzzle: NOSE,
+    // 0525: drawn from above, and a borrowed gun lies along the nose's spine, behind its tip.
+    view: 'top',
+    hardpoint: { along: 1.18, across: 0 },
     tubes: SIDE_TUBES,
     // Its two nacelles: 0.78 of the 7-unit hull's radius back, 0.21 of it out (`SHIP_CORE` in the bake).
     nozzles: [
@@ -348,6 +380,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wingtip: 2.84,
     // The ray gun's orb, at the nose — its front, where the rings leave.
     muzzle: { along: 4.46, across: 0 },
+    // 0525: from above, a borrowed gun seated on the rim at the nose, where its own ray gun's housing is.
+    view: 'top',
+    hardpoint: { along: 2.84, across: 0 },
     // The warhead in each pod, hung off its sides: the top one alone, then both.
     tubes: [[], [{ along: 1.18, across: -3.55 }], [{ along: 1.18, across: -3.55 }, { along: 1.18, across: 3.55 }]],
     // Its two drives, on the back of the rim either side of the centreline — the pair it burns in the
@@ -408,6 +443,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // The launcher on its hood: the steel star's centre (`drawFirebird` in the bake; `CAR_MOUNTS` holds
     // these to the drawing).
     muzzle: { along: 3.08, across: -1.18 },
+    // 0525: from the side, a borrowed gun standing on the hood where its own launcher stands.
+    view: 'side',
+    hardpoint: { along: 3.08, across: -0.76 },
     // The orange nose of the missile in each roof turret.
     tubes: [[], [{ along: 0.76, across: -1.92 }], [{ along: 0.07, across: -1.92 }, { along: 1.05, across: -1.92 }]],
     // One pipe, low at the back bumper.
@@ -451,6 +489,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wingtip: 2.2,
     // The lightning rod's ball on its bonnet (`drawEstate` in the bake): the arc's first link leaves it.
     muzzle: { along: 3.43, across: -1.18 },
+    // 0525: from the side, a borrowed gun standing on the bonnet where its own lightning rod stands.
+    view: 'side',
+    hardpoint: { along: 3.43, across: 0.11 },
     // The orange nose of the missile in each turret on the roof rack.
     tubes: [[], [{ along: -1.22, across: -2.04 }], [{ along: -2.18, across: -2.04 }, { along: -0.66, across: -2.04 }]],
     // One pipe, under the tailgate.

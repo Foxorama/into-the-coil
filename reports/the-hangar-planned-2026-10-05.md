@@ -193,11 +193,16 @@ And once the plan was written:
    muzzle is the hardpoint plus the gun's own offset. The guns come out of the cars' outlines and
    the hit twins, the run carries a fitted gun, and `shipCarrying` goes. **Proved by the sheet
    baking byte-identical** with every ship on its own gun, so a refactor that moved a pixel is
-   found before any new drawing hides it.
-6. **The gun slot.** The twelve new pairings drawn and photographed at the shipped camera; the
-   boss floor flown in all sixteen, with any pairing under forty seconds answered on its boss's or
-   its gun's row as 0441 answered the pterodactyl; `tests/mounts.test.ts` holding every pairing's
-   muzzle to its drawing; the slot in the hangar; the atlas baking the fitted gun only.
+   found before any new drawing hides it. **Built as [0525](../docs/decisions/0525-the-gun-is-a-layer.md)**,
+   and the premise moved while it was built: cutting a car's gun out of its one outline would not have
+   baked byte-identical (an anti-aliased join), so the own-gun drawing was not cut at all — a borrowed
+   gun takes a second branch, and the own-gun traces were proved identical to `main`'s, call for call.
+   The twelve pairings' mounts were drawn here too, and are owed a design pass.
+6. **The gun slot.** The hangar's gun band, on the special's rule; the run's six ship sprites re-baked
+   with the fitted gun in place in the atlas at a run's start and after every full bake, and the lives
+   icon, the pilot card and the intro's hangar with them; the boss floor flown in all sixteen, with
+   any pairing under forty seconds answered on its boss's or its gun's row as 0441 answered the
+   pterodactyl.
 7. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
    estate's whitewall are each one entry of its set — with the tyre's outline untouched.
 8. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a

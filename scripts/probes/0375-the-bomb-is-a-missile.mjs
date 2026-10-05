@@ -16,8 +16,9 @@ export const PROBES = [
       path: 'src/content/weapons.ts',
       // ⚠️ Re-anchored by 0441, which rewrote the row's note; the pulse's weight two lines up is what
       // makes it the pulse's, since the ray opens on the bomb too.
-      find: "    bossWeight: 1,\n    special: 'bomb',\n    bursts: null,",
-      replace: "    bossWeight: 1,\n    special: 'overdrive',\n    bursts: null,",
+      // ⚠️ And by 0525, whose mount note follows the special on every row: the pulse's is the twin barrels.
+      find: "    bossWeight: 1,\n    special: 'bomb',\n    // 0525: twin barrels",
+      replace: "    bossWeight: 1,\n    special: 'overdrive',\n    // 0525: twin barrels",
     },
   },
   {

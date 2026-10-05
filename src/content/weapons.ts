@@ -22,6 +22,7 @@
 
 import type { ShotKind } from './shots.ts';
 import type { SpecialKind } from './specials.ts';
+import type { GunView, Mount } from './ships.ts';
 
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
@@ -95,6 +96,12 @@ export interface WeaponRow {
    */
   special: SpecialKind;
   /**
+   * Where its shot leaves its mount when another ship borrows it, from that ship's hardpoint, in world
+   * units, in each of the two views a ship is drawn in — 0525. The bake draws the mount to these, so the
+   * muzzle a borrowing ship fires from (`fitted`, `src/content/ships.ts`) is the one it shows.
+   */
+  mount: Readonly<Record<GunView, Mount>>;
+  /**
    * What a `burst` shot goes off as where it arrives — a row in `SHOTS`, landed through the blast
    * pairings — or `null` for every other flight. 0442.
    */
@@ -161,6 +168,10 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     weight: 1,
     bossWeight: 1,
     special: 'bomb',
+    // 0525: twin barrels, their mouths forward of the mount — lying along a nose, or standing on a hood.
+    // 1.42 from above and not 1.66: on the saucer's rim the mouths' glow ran 1.6 px past the sprite's box.
+    // And 0.95 from the side and not 1.18: the estate's bonnet is far forward, and so were its mouths.
+    mount: { top: { along: 1.42, across: 0 }, side: { along: 0.95, across: -0.47 } },
     bursts: null,
     reach: 0,
     falloff: 0,
@@ -194,6 +205,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     bossWeight: 1.5,
     // The lightning blast — 0374.
     special: 'storm',
+    // 0525: the rod's ball — over the mount from above, at the top of the rod from the side.
+    mount: { top: { along: 0.79, across: 0 }, side: { along: 0, across: -1.3 } },
     bursts: null,
     /*
       ── THE FIRST JUMP IS 82, AND IT WAS 68 — 0443 ──────────────────────────────────────────────────
@@ -259,6 +272,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     landGap: 2,
     // The whirlpool — 0374.
     special: 'whirlpool',
+    // 0525: the steel star the blades leave — in the launcher's face, from above or from the side.
+    mount: { top: { along: 0.71, across: 0 }, side: { along: 0, across: -0.36 } },
     bursts: null,
     reach: 0,
     falloff: 0,
@@ -298,6 +313,9 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     bossWeight: 1,
     // The nova, on the ward's trigger — 0447. It was the bomb until the nova landed.
     special: 'nova',
+    // 0525: the dish's front, where the rings leave — forward of the housing either way.
+    // 1.1 from the side and not 1.42, for the estate's far-forward bonnet, as the pulse's is.
+    mount: { top: { along: 1.78, across: 0 }, side: { along: 1.1, across: -0.55 } },
     bursts: 'rayBurst',
     reach: 0,
     falloff: 0,

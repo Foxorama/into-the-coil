@@ -48,7 +48,8 @@
 
 import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
-import { SHIPS, type ShipKind } from '../content/ships.ts';
+import { SHIPS, fitted, type ShipKind } from '../content/ships.ts';
+import type { WeaponKind } from '../content/weapons.ts';
 import type { CreditKind } from '../content/credits.ts';
 import type { SpecialKind } from '../content/specials.ts';
 import { makeRng } from '../sim/rng.ts';
@@ -64,7 +65,8 @@ export interface Lifecycle {
    * hangar's fitting for that ship (0524): what the run opens with two of — the ship's own by default,
    * which is what the rig and the tests that fly a run begin on; the shell always passes the fitting.
    */
-  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind): void;
+  // 0525: and the gun, the ship's own by default, as the special is.
+  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
   /**
@@ -105,7 +107,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
   };
 
   return {
-    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind): void {
+    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
         argument `enemyRows` and `pickupRows` make in `mount`: a per-spawn lookup by string key is a
@@ -113,8 +115,8 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       world.difficulty = DIFFICULTIES[difficulty];
       // And the ship, resolved to its row once, on the same terms — 0441. `startLevel` respawns it,
-      // so its hull and hurtbox are this row's from the first frame.
-      world.shipRow = SHIPS[ship];
+      // so its hull and hurtbox are this row's from the first frame. 0525: with the gun it flies.
+      world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon);
       /*
         ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
         answer for a scene proving the page draws and the wrong one for an authored level: it puts
@@ -141,7 +143,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
       // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
-      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits, special });
+      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits, special, gun });
       // ⚠️ `false`: not seamless. A run begins on a swept field with the camera at zero, whatever
       // the last one ended as — 0058 and 0067.
       enterLevel(false);

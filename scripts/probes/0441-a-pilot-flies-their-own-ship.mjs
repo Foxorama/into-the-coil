@@ -27,8 +27,9 @@ export const PROBES = [
     guard: 'a run begins in the ship it is given',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '        ship: action.ship,\n        missile: SHIPS[action.ship].missile,',
-      replace: '        ship: DEFAULT_SHIP,\n        missile: SHIPS[action.ship].missile,',
+      // ⚠️ Re-anchored by 0525, which begins the run's gun beside its ship.
+      find: '        ship: action.ship,\n        gun: action.gun ?? SHIPS[action.ship].weapon,\n        missile: SHIPS[action.ship].missile,',
+      replace: '        ship: DEFAULT_SHIP,\n        gun: action.gun ?? SHIPS[action.ship].weapon,\n        missile: SHIPS[action.ship].missile,',
     },
   },
   {
