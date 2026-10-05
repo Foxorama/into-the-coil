@@ -78,7 +78,15 @@ export async function samePhase(page: Page, screen: Screen, act: () => Promise<v
     still. So the page draws on its own for a moment first, and the taken clock settles before the first read.
   */
   await page.waitForTimeout(400);
+  /*
+    ⚠️ **INSTALLED IS NOT TAKEN: THE CLOCK IS PAUSED.** Playwright's installed clock goes on at the wall's
+    pace — measured, 31 frames in half a second of nobody calling `runFor` — so every read was a bob apart
+    *plus however long the page took to be read*, which is nothing alone and a visible bob under CI's load:
+    1.5 % of the stand "moving" standing still, and two probes reading the pad one way filtered and the
+    other way whole. Paused, the same half second is no frames, and a bob apart is a bob apart.
+  */
   await page.clock.install();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 1000));
   await page.clock.runFor(1000);
   /*
     ⚠️ **AND IT WAITS FOR THE STAND TO BE STILL, A BOB APART, BEFORE IT ACTS.** Alone, two reads a bob
