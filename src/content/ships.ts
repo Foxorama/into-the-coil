@@ -24,6 +24,7 @@ import type { Ink } from './palette.ts';
 import { SPRITE } from './sprites.ts';
 import type { WeaponKind } from './weapons.ts';
 import type { MissileKind } from './missiles.ts';
+import type { DangleKind } from './dangles.ts';
 
 /** Every flyable ship. Closed. */
 export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate';
@@ -107,6 +108,12 @@ export interface ShipRow extends Body {
    * rim runs from into that ink, and the dressing the plate wears — the predecessor's bridges, carried.
    */
   hud: HudTheme;
+  /**
+   * What hangs from this ship's dash until the hangar changes it — `docs/decisions/0523-cosmo-opens.md`,
+   * or `null` for nothing. The estate's fuzzy dice (0461) were its walnut plate's dressing; since 0523
+   * they are the dangle slot's, and the estate opens with them hung, so its dash is as it was.
+   */
+  hangs: DangleKind | null;
   /**
    * The deflector shell this ship wears — `docs/decisions/0492-the-shields-wear-the-ship.md`. The
    * readout wore the ship since 0451 and the shell round the hull did not: one honeycomb in the
@@ -301,6 +308,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // The studio's own readout, violet into cyan (0439), in a gunsight's corners.
     hud: { name: 'Gunsight', motif: 'bracket', ink: { from: 'player' }, trim: { from: 'ally' } },
+    hangs: null,
     // The honeycomb deflector the game's shell always was, in the player's own ink — 0430.
     shield: {
       look: 'honeycomb',
@@ -364,6 +372,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1 / CADDIE_DISC, outside: 0.8 / CADDIE_DISC },
     // The saucer's own green, lifted to read as text, and its ray dish's lavender — the probe deck.
     hud: { name: 'Probe deck', motif: 'orbit', ink: { from: 'player', toward: 'acid', by: 0.55, lift: 0.2 }, trim: { from: 'ally' } },
+    hangs: null,
     // A soap film in its ray dish’s lavender, a light sliding over it — 0492.
     shield: {
       look: 'bubble',
@@ -408,6 +417,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // Its phoenix's gold on its black lacquer, the rim running from its tail lamp's orange.
     hud: { name: 'Chequered flag', motif: 'checker', ink: { from: 'hazard' }, trim: { from: 'bullet' } },
+    hangs: null,
     // Its phoenix’s feathers: black lacquer read by gold edges, as the car is — 0492.
     shield: {
       look: 'plumes',
@@ -450,6 +460,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     intro: { hangar: 1, outside: 1 },
     // The gilt, a shade paler to read as text, and the burl of its doors for the rim's dark end.
     hud: { name: 'Woody', motif: 'walnut', ink: { from: 'hazard', lift: 0.25 }, trim: { from: 'hazard', lift: -0.45 } },
+    hangs: 'dice',
     // A gilt trellis between gilt rails, a stud at every crossing — 0492.
     shield: {
       look: 'lattice',

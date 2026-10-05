@@ -36,6 +36,7 @@ import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
 import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
 import { DICE, HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
+import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
 import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
@@ -1253,7 +1254,8 @@ ${faceTurns()}
   so it costs the screen no height: as a line under the heading it put Back under a 480x320's fold.
   The readout has the other corner.
 */
-.itc-hangar-sheet {
+/* 0523: and Cosmo's, the hangar's other tab, wears the same balance in the same corner. */
+.itc-hangar-sheet, .itc-shop-sheet {
   position: absolute;
   top: min(0.9rem, 2.5cqh);
   right: min(1.2rem, 2.5cqw);
@@ -1265,8 +1267,8 @@ ${faceTurns()}
   background: color-mix(in srgb, var(--itc-ink) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
 }
-.itc-hangar-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
-.itc-hangar-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
+.itc-hangar-sheet-label, .itc-shop-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+.itc-hangar-sheet-value, .itc-shop-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
 @property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
 .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet {
   display: grid;
@@ -1690,6 +1692,28 @@ ${faced((p) => `.${p}pilot-bio`)} { margin: 0.2em 0; font-size: 0.85em; line-hei
 ${faced((p) => `.${p}pilot-craft`)} { font-size: 0.8em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--itc-ally, var(--itc-ink)); }
 ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 /*
+  ── THE HANGAR — 0521, two columns at every size since 0523 ─────────────────────────────────────
+
+  The pilot and their card on the left, the ship's slots stacked on the right: the dash, and what hangs
+  from it. Stacked down one column, three bands, the card, the tabs and Back were taller than a
+  1280x720, and on a phone the dash's column was already beside the pilot's (0521). A slot's options
+  are a grid, two to a row, so a long name keeps its line. The band is placed by the slot its options
+  belong to, read off the attribute the chrome gives every strip.
+*/
+.itc-hangar-settings-box {
+  display: grid;
+  width: min(100%, 64em);
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-areas: 'pilot dash' 'card hanging';
+  align-items: center;
+  gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
+}
+.itc-hangar-band-faces { grid-area: pilot; }
+.itc-hangar-pilot-card { grid-area: card; }
+.itc-hangar-band:has([${SETTING_ATTR}="plate"]) { grid-area: dash; }
+.itc-hangar-band:has([${SETTING_ATTR}="dangle"]) { grid-area: hanging; }
+.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3em; }
+/*
   ⚠️ **AND THE PILOT SCREEN GIVES BACK THE HEIGHT THE CARD TAKES — 0513.** The card is new and the
   screen is the height it was, so two things the card made redundant go: the bands' labels — the faces
   are the pilots and the tier's line names the tier, and each band still names itself to a reader —
@@ -1923,20 +1947,28 @@ ${each('-band[hidden]')} { display: none; }
     height and Back went under an 844x390's fold. The bands drop their labels as the title's do; each
     still names itself to a reader.
   */
-  .itc-hangar-settings-box {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas: 'pilot dash' 'card dash';
-    align-items: center;
-    gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw);
-  }
-  .itc-hangar-band-faces { grid-area: pilot; }
-  .itc-hangar-pilot-card { grid-area: card; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) { grid-area: dash; }
+  .itc-hangar-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
   .itc-hangar-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-hangar-band-label { display: none; }
-  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3em; }
-  .itc-hangar-option { font-size: 0.85em; }
+  .itc-hangar-option { font-size: 0.8em; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { padding: 0.25em 0.3em; }
+  /*
+    ⚠️ **ON A PHONE A SLOT SHOWS THE ONE THAT IS ON, AND ITS ARROWS STEP IT — 0523.** Two bands of four
+    and five, each name two lines in half a phone, were the column's height three times over and put
+    Back under a 480x320's fold; three to a row cut the names off. The arrows were always there, and a
+    step passes over what is shut, so the band's line — which says why a thing is shut — is what tells
+    the player there is more to win or buy. One line, cut short rather than wrapped.
+  */
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: flex; justify-content: center; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on) { display: none; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { width: 100%; white-space: nowrap; }
+  .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* The balance a step smaller, so it keeps its corner clear of the tabs on a narrow phone. */
+  /*
+    And in the bottom corner rather than the top. On a phone the tabs are the heading's size and reach
+    the top right, where the balance stood over Cosmo's own tab at 844x390; beside Back is clear.
+  */
+  .itc-hangar-sheet, .itc-shop-sheet { font-size: 0.8em; top: auto; bottom: min(0.9rem, 2.5cqh); }
   /*
     The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
     to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
@@ -2018,6 +2050,13 @@ ${each('-band[hidden]')} { display: none; }
     .itc-title-body .itc-title-band:not(.itc-title-band-faces) .itc-title-option { font-size: 0.7em; }
     .itc-title-body .itc-title-choices > * { font-size: 0.85em; }
     ${faced((p) => `.${p}pilot-ship`)} { width: 2.6rem; }
+    /*
+      0523: and the hangar's card goes — the faces say who is on the stand and the readout's lives icon
+      is their ship — because three bands, the tabs and Back are the whole of a 480x320, and the panel
+      starts under the readout's corner rather than behind it.
+    */
+    .itc-hangar-pilot-card { display: none; }
+    .itc-hangar-panel, .itc-shop-panel { padding-top: 17cqh; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -2409,8 +2448,75 @@ ${faced((p) => `.${p}option-face:hover > canvas`)} { box-shadow: 0 0 0 2px color
   light ink with a shadow under each.
 */
 .itc-playing-hud-dice { display: none; position: absolute; left: 50%; top: 100%; width: 0; height: 0; pointer-events: none; }
-.itc-playing-hud-walnut .itc-playing-hud-dice { display: block; animation: itc-hud-dice 3.6s ease-in-out infinite alternate; }
+/*
+  0523: the mount shows whenever anything hangs, on any plate — it was the walnut plate's alone — and
+  of its bodies only the one the readout says hangs.
+*/
+.itc-playing-hud-hanging .itc-playing-hud-dice { display: block; animation: itc-hud-dice 3.6s ease-in-out infinite alternate; }
 .itc-playing-hud-dice-swing { position: absolute; left: 0; top: 0; }
+.itc-playing-hud-hang { display: none; position: absolute; left: 0; top: 0; }
+${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-hang-${kind}`).join(', ')} { display: block; }
+/*
+  ── WHAT ELSE HANGS — 0523 ──────────────────────────────────────────────────────────────────────
+
+  One strand each, a little longer than the dice's, and a thing on it the size of a count: the
+  eucalyptus tree a car-air-freshener pine, the family three of the alien's own in a gilt frame, the
+  golf ball dimpled. Each with the dice's hairline and void halo, so it is found on any sky.
+*/
+.itc-playing-hud-hang-strand { height: 1.25em; transform: rotate(5deg); }
+.itc-playing-hud-tree, .itc-playing-hud-frame, .itc-playing-hud-ball {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: rotate(-5deg);
+  filter:
+    drop-shadow(0 0 0.05em color-mix(in srgb, var(--itc-lit) 90%, transparent))
+    drop-shadow(0 0 0.08em var(--itc-void))
+    drop-shadow(0 0.15em 0.25em color-mix(in srgb, var(--itc-void) 60%, transparent));
+}
+.itc-playing-hud-tree {
+  width: 1.15em;
+  height: 1.6em;
+  margin-left: -0.575em;
+  background: linear-gradient(170deg, color-mix(in srgb, var(--itc-leaf) 70%, var(--itc-lit)), var(--itc-leaf) 60%, color-mix(in srgb, var(--itc-leaf) 70%, var(--itc-void)));
+  clip-path: polygon(50% 0, 72% 24%, 61% 24%, 84% 49%, 70% 49%, 96% 78%, 57% 78%, 57% 92%, 43% 92%, 43% 78%, 4% 78%, 30% 49%, 16% 49%, 39% 24%, 28% 24%);
+}
+/*
+  The family: three of the alien's own, the tall one in the middle, each a round head with two dark
+  eyes on a pair of shoulders, in the acid's green on a dusk of the ally's lavender, so they are three
+  and not one green smudge at the size of a count.
+*/
+.itc-playing-hud-frame {
+  width: 1.85em;
+  height: 1.4em;
+  margin-left: -0.925em;
+  box-sizing: border-box;
+  border: 0.15em solid var(--itc-gilt);
+  border-radius: 0.12em;
+  background:
+    radial-gradient(circle at 15% 46%, var(--itc-void) 0 0.035em, transparent 0.05em),
+    radial-gradient(circle at 29% 46%, var(--itc-void) 0 0.035em, transparent 0.05em),
+    radial-gradient(circle at 43% 30%, var(--itc-void) 0 0.04em, transparent 0.055em),
+    radial-gradient(circle at 57% 30%, var(--itc-void) 0 0.04em, transparent 0.055em),
+    radial-gradient(circle at 72% 50%, var(--itc-void) 0 0.03em, transparent 0.045em),
+    radial-gradient(circle at 84% 50%, var(--itc-void) 0 0.03em, transparent 0.045em),
+    radial-gradient(circle at 22% 46%, var(--itc-alien) 0 0.19em, transparent 0.205em),
+    radial-gradient(circle at 50% 32%, var(--itc-alien) 0 0.23em, transparent 0.245em),
+    radial-gradient(circle at 78% 50%, var(--itc-alien) 0 0.16em, transparent 0.175em),
+    radial-gradient(ellipse 0.3em 0.22em at 22% 100%, var(--itc-alien) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.36em 0.36em at 50% 100%, var(--itc-alien) 0 92%, transparent 100%),
+    radial-gradient(ellipse 0.26em 0.2em at 78% 100%, var(--itc-alien) 0 92%, transparent 100%),
+    linear-gradient(color-mix(in srgb, var(--itc-ally) 55%, var(--itc-void)), color-mix(in srgb, var(--itc-ally) 30%, var(--itc-void)));
+}
+.itc-playing-hud-ball {
+  width: 1.05em;
+  height: 1.05em;
+  margin-left: -0.525em;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--itc-ball-shade) 70%, var(--itc-void)) 0 0.03em, transparent 0.045em) 0 0 / 0.21em 0.21em,
+    radial-gradient(circle at 34% 30%, var(--itc-lit) 0, var(--itc-lit) 30%, var(--itc-ball-shade) 100%);
+}
 .itc-playing-hud-dice-strand {
   position: absolute;
   left: -0.04em;
@@ -2504,7 +2610,7 @@ ${faced((p) => `.${p}option-face:hover > canvas`)} { box-shadow: 0 0 0 2px color
 @keyframes itc-hud-dice-fore-a { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 @keyframes itc-hud-dice-fore-b { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-walnut .itc-playing-hud-dice,
+  .itc-playing-hud-orbit::before, .itc-playing-hud-orbit::after, .itc-playing-hud-hanging .itc-playing-hud-dice,
   .itc-playing-hud-dice-back-a, .itc-playing-hud-dice-back-b, .itc-playing-hud-dice-fore-a, .itc-playing-hud-dice-fore-b { animation: none; }
 }
 .itc-playing-boss { filter: none; padding: 0 0.9em; }
@@ -2952,6 +3058,11 @@ export interface Chrome {
    * estate's dash swing against it (0461). Fired by the frame on the step it starts, never per frame.
    */
   swayDice(way: number): void;
+  /**
+   * What hangs from the readout's dash, or nothing — 0523. The hangar's fitting in a run and over the
+   * hangar; the ware in the window over the shop.
+   */
+  setDangle(dangle: DangleKind | null): void;
   /**
    * Redraw the in-game readout. Called on a change, never per frame.
    *
@@ -3892,7 +4003,7 @@ export function makeChrome(
     let sheet: HTMLElement | null = null;
     // 0517: and the game over, the fourth — a run that could not be continued is added up there.
     // 0522: and the hangar, whose one line is the Star Shards the player holds.
-    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar') {
+    if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar' || screen === 'shop') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
       panel.appendChild(sheet);
@@ -4363,8 +4474,29 @@ export function makeChrome(
     inherits the strip's inks and the score's reds are set on the screens' root, which it is not under.
   */
   dice.style.setProperty('--itc-fur', shade(mix(colours.enemy, colours.bullet, 0.3), -0.18));
+  /*
+    0523: the other dangles' inks, on the fur's terms — every one a role moved, so the high-contrast
+    palette answers it. The tree is the pickup's mint deepened, the frame the hazard's gilt, the family
+    in it the acid's green toward the mint, and the golf ball the light ink, shaded by the sky.
+  */
+  dice.style.setProperty('--itc-leaf', shade(mix(colours.pickup, colours.acid, 0.35), -0.2));
+  dice.style.setProperty('--itc-gilt', colours.hazard);
+  dice.style.setProperty('--itc-alien', mix(colours.acid, colours.pickup, 0.5));
+  dice.style.setProperty('--itc-ball-shade', mix(colours.impact, colours.sky, 0.45));
   const swing = document.createElement('div');
   swing.className = 'itc-playing-hud-dice-swing';
+  /*
+    ⚠️ **EVERY DANGLE ON THE ONE SWING — 0523.** Each is a body of its own under the swing, so the frame's
+    lurch (`swayDice`) swings whichever hangs, and the class on the readout says which is shown. The dice
+    are the first body; the rest hang from one strand each.
+  */
+  const hangs = (kind: DangleKind): HTMLElement => {
+    const body = document.createElement('div');
+    body.className = 'itc-playing-hud-hang itc-playing-hud-hang-' + kind;
+    swing.appendChild(body);
+    return body;
+  };
+  const diceBody = hangs('dice');
   for (const [strand, face] of [
     ['a', 'five'],
     ['b', 'three'],
@@ -4374,7 +4506,19 @@ export function makeChrome(
     const die = document.createElement('div');
     die.className = 'itc-playing-hud-die itc-playing-hud-die-' + face;
     string.appendChild(die);
-    swing.appendChild(string);
+    diceBody.appendChild(string);
+  }
+  for (const [kind, part] of [
+    ['eucalyptus', 'tree'],
+    ['family', 'frame'],
+    ['golfball', 'ball'],
+  ] as const) {
+    const string = document.createElement('div');
+    string.className = 'itc-playing-hud-dice-strand itc-playing-hud-hang-strand';
+    const thing = document.createElement('div');
+    thing.className = 'itc-playing-hud-' + part;
+    string.appendChild(thing);
+    hangs(kind).appendChild(string);
   }
   dice.appendChild(swing);
   hud.appendChild(dice);
@@ -4719,6 +4863,11 @@ export function makeChrome(
     setHand(hand: HandKind): void {
       trigger.classList.toggle('itc-playing-trigger-left', hand === 'left');
     },
+    setDangle(dangle: DangleKind | null): void {
+      // 0523: the readout says what hangs, and the stylesheet shows that body and no other.
+      hud.classList.toggle('itc-playing-hud-hanging', dangle !== null);
+      for (const kind of DANGLE_KINDS) hud.classList.toggle('itc-playing-hud-hangs-' + kind, kind === dangle);
+    },
     swayDice(way: number): void {
       // `kick`'s two classes, so a second lurch the same way runs the swing again.
       const name = 'itc-playing-hud-dice-' + (way > 0 ? 'back' : 'fore');
@@ -4952,7 +5101,8 @@ export function makeChrome(
         ⚠️ **AND OVER A SCREEN THAT FITS THE PLATE — 0521**: the readout IS the plate, so the hangar shows
         the real one in its corner rather than a picture of it. Read off the row's choices, never its name.
       */
-      const fitting = screen !== null && SCREENS[screen].choices.some((c) => c.name === 'plate');
+      // 0523: and over the shop, whose ware is tried on the dash before it is bought.
+      const fitting = screen !== null && SCREENS[screen].choices.some((c) => c.name === 'plate' || c.name === 'ware');
       hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting || fitting));
       // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
       scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && ((SCREENS[screen].steps && SCREENS[screen].inRun) || counting));

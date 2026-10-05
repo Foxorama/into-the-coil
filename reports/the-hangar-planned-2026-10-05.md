@@ -180,7 +180,8 @@ And once the plan was written:
 3. **The dangle slot, and Cosmo's Cosmetics.** Every plate gets a place to hang from; a dangle is a
    row with its own drawing and its own swing weights on the existing swing. The dice, the
    eucalyptus tree, the family in the frame and the golf ball. The shop tab, a provisional price on
-   each row, and buying.
+   each row, and buying. **Built as [0523](../docs/decisions/0523-cosmo-opens.md)**, at 250 each and
+   on the one swing the dice already had, rather than swing weights of their own.
 4. **The special slot.** The run carries a fitted special and `startingArsenal` reads it, with the
    gun row's `special` as the default. No art, no new fight: every special is already thrown from
    every ship. First of the loadout slots because it is the cheapest, and it puts the unlock rule

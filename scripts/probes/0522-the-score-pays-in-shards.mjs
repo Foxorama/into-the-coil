@@ -35,8 +35,8 @@ export const PROBES = [
     guard: 'is kept between visits, beside the wins',
     edit: {
       path: 'src/save/hangar.ts',
-      find: '  return JSON.stringify({ v: HANGAR_VERSION, won: hangar.won, plate: hangar.plate, shards: hangar.shards });',
-      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won: hangar.won, plate: hangar.plate });',
+      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung });',
+      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, owned, hung });',
     },
   },
   {
@@ -57,7 +57,7 @@ export const PROBES = [
     guard: 'the game over says what the run paid, the key holds it, and the hangar shows the balance',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    chrome.setSheet('hangar', [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' }]);\n",
+      find: "    chrome.setSheet('hangar', balance);\n",
       replace: '',
     },
   },
