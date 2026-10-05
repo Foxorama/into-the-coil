@@ -203,10 +203,11 @@ export const PROBES = [
       // ⚠️ Re-anchored by 0355, which sizes the row by the tier's cap rather than by `MAX_SHIELDS`, and
       // by 0373, which counts the stack and names what it throws next.
       // ⚠️ Re-anchored by 0441: the ship's row is the world's, set per run.
+      // ⚠️ And by 0539: the stacks are read off the arsenal given, so the stand can count an opening one.
       find:
-        '    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());',
+        '    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf(state.run.arsenal));',
       replace:
-        '    chrome.setHud(state.run.lives, world.ship.health, world.shipRow.health, stacksOf());',
+        '    chrome.setHud(state.run.lives, world.ship.health, world.shipRow.health, stacksOf(state.run.arsenal));',
     },
   },
 ];

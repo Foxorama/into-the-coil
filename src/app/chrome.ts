@@ -1269,10 +1269,11 @@ ${faceTurns()}
   The readout has the other corner.
 */
 /* 0523: and Cosmo's, the hangar's other tab, wears the same balance in the same corner. */
+/*
+  0539: in the stand's top corner, in the flow of the stand — the corner the readout came down from,
+  and no longer over the tabs, which are the plate's.
+*/
 .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet {
-  position: absolute;
-  top: min(0.9rem, 2.5cqh);
-  right: min(1.2rem, 2.5cqw);
   display: flex;
   align-items: baseline;
   gap: 0.5em;
@@ -1727,8 +1728,9 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   Under the title's faces: the name, the craft and the gun on one line, the run the pilot is about to
   fly. Each part stands off the last by a middot rather than a wrap, and the line is cut short rather
   than wrapped, because it is the one row of the plate whose length is a pilot's and not the screen's.
+  0539: and Paint and Parts' too, whose ship is being dressed — who the pilot is, is the hangar tab's.
 */
-.itc-title-pilot-line {
+${faced((p) => `.${p}pilot-line`)} {
   max-width: 100%;
   font-size: 0.85em;
   white-space: nowrap;
@@ -1736,11 +1738,11 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   text-overflow: ellipsis;
 }
 /* The card's parts share these names, and its sizes and its phone's hiding are written for every faced screen. */
-.itc-title-pilot-line > [class] { display: inline; font-size: 1em; letter-spacing: normal; text-transform: none; white-space: nowrap; overflow: visible; }
-.itc-title-pilot-line > .itc-title-pilot-name { font-weight: 800; letter-spacing: 0.02em; }
-.itc-title-pilot-line > .itc-title-pilot-craft { color: var(--itc-ally, var(--itc-ink)); font-weight: 700; }
-.itc-title-pilot-line > .itc-title-pilot-gun { opacity: 0.85; font-weight: 500; }
-.itc-title-pilot-line > * + *::before { content: '·'; margin: 0 0.55em; color: var(--itc-ink); opacity: 0.5; }
+${faced((p) => `.${p}pilot-line > [class]`)} { display: inline; font-size: 1em; letter-spacing: normal; text-transform: none; white-space: nowrap; overflow: visible; }
+${faced((p) => `.${p}pilot-line > .${p}pilot-name`)} { font-weight: 800; letter-spacing: 0.02em; }
+${faced((p) => `.${p}pilot-line > .${p}pilot-craft`)} { color: var(--itc-ally, var(--itc-ink)); font-weight: 700; }
+${faced((p) => `.${p}pilot-line > .${p}pilot-gun`)} { opacity: 0.85; font-weight: 500; }
+${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.55em; color: var(--itc-ink); opacity: 0.5; }
 /*
   ── THE TITLE'S TWO PLATES — 0538 ──────────────────────────────────────────────────────────────────
 
@@ -1755,8 +1757,10 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 
   ⚠️ **AN EMPTY TABLE DRAWS NO PLATE**: the board is not displayed while the body is bare, and its
   frame is the board's own.
+
+  0539: and the hangar family's plate, on the same terms — one frame for every plate a menu stands in.
 */
-.itc-title-board, .itc-title-main {
+.itc-title-board, .itc-title-main, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate {
   --itc-cut: 0.9em;
   --itc-plate-glass: color-mix(in srgb, var(--itc-void) 84%, transparent);
   border: 1px solid transparent;
@@ -1779,66 +1783,147 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-title-main .itc-title-option-face { padding-left: 0.15em; padding-right: 0.15em; }
 .itc-title-main .itc-title-option-name { font-size: 0.64em; letter-spacing: 0; }
 /*
-  ── THE HANGAR — 0521, two columns at every size since 0523 ─────────────────────────────────────
+  ── THE STAND AND THE PLATE — 0539 ───────────────────────────────────────────────────────────────
 
-  The pilot and their card on the left, the ship's slots stacked on the right: the dash, and what hangs
-  from it. Stacked down one column, three bands, the card, the tabs and Back were taller than a
-  1280x720, and on a phone the dash's column was already beside the pilot's (0521). A slot's options
-  are a grid, two to a row, so a long name keeps its line. The band is placed by the slot its options
-  belong to, read off the attribute the chrome gives every strip.
+  The hangar's three tabs are one picture: the stand on the left — the balance in its top corner and the
+  dash at its foot, and once the port is painted behind it the ship on its pad above the dash — and the
+  plate on the right, over the wall and the bay where the picture is darkest. The plate's head is the
+  tab strip, then the pilots, then the bands under the row's headings, two to a row, and Back in its foot.
+
+  It was bands on the void: the pilot band in a large box, the slots in a grid, Back floating under
+  them, three heading-sized pills over everything, and the readout in the play corner. Nothing said it
+  was a place. Read off the row (stand) through the boxes the chrome builds for it, never the name.
 */
-.itc-hangar-settings-box {
+.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel {
   display: grid;
-  width: min(100%, 64em);
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  /*
-    0524: and the special under what hangs, the card beside both. 0526: and the gun beside the special,
-    under the card — a fourth band down the right column put the tabs under the readout on a 1280x720
-    and Back under an 844x390's fold, and the arms are a pair the player reads across.
-  */
-  grid-template-areas: 'pilot dash' 'card hanging' 'gun special';
-  align-items: center;
-  gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  align-items: stretch;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  padding: min(0.75rem, 2cqh) min(1.6rem, 2.5cqw);
+  gap: min(1.6rem, 2.5cqw);
+  text-align: left;
 }
-.itc-hangar-band-faces { grid-area: pilot; }
-.itc-hangar-pilot-card { grid-area: card; }
-.itc-hangar-band:has([${SETTING_ATTR}="plate"]) { grid-area: dash; }
-.itc-hangar-band:has([${SETTING_ATTR}="dangle"]) { grid-area: hanging; }
-.itc-hangar-band:has([${SETTING_ATTR}="special"]) { grid-area: special; }
-.itc-hangar-band:has([${SETTING_ATTR}="gun"]) { grid-area: gun; }
+.itc-hangar-stand, .itc-parts-stand, .itc-shop-stand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-width: 0;
+}
 /*
-  ── PAINT AND PARTS — 0527, the hangar's second tab ────────────────────────────────────────────────
-
-  The hangar's own columns: the pilot and their card on the left, the ship's looks down the right —
-  its wheels, and the plan's nose art, livery and flame as they land. The wheels' three stand in a row.
-  0528: and the art under the wheels, its three in a row too.
-  0529: and the paint under the art — the colour one at a time on every screen, as a phone shows every
-  slot, because thirteen in a grid were the column's height; the tone's three in a row.
+  ⚠️ **THE DASH IS THE READOUT, IN THE READOUT'S OWN TYPE.** The element is the one a run reads, moved
+  down here; its type is the strip's, written the strip's way against the same box and set a step
+  down, because the stand is two fifths of the screen and the strip is all of it. The dangle swings off
+  it as it does in play (0466), which is why the cell keeps room under it.
 */
-.itc-parts-settings-box {
-  display: grid;
-  width: min(100%, 64em);
-  /*
-    0530: and the flame beside the tone, the right column's last row split three to two — a fifth band
-    down it put Back under a 1280x720's fold.
-  */
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.6fr) minmax(0, 0.4fr);
-  grid-template-areas: 'pilot wheels wheels' 'pilot art art' 'card livery livery' 'card tone flame';
-  align-items: center;
-  gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
+.itc-hangar-dash, .itc-parts-dash, .itc-shop-dash {
+  align-self: center;
+  margin-top: auto;
+  padding-bottom: 3.6em;
+  font: 600 calc(0.8 * clamp(${STRIP.fontFloorRem}rem, ${STRIP.fontCqh}cqh, ${STRIP.fontCapRem}rem))/1 system-ui, sans-serif;
+  pointer-events: none;
+  max-width: 100%;
 }
-.itc-parts-band-faces { grid-area: pilot; }
-.itc-parts-pilot-card { grid-area: card; }
-.itc-parts-band:has([${SETTING_ATTR}="rim"]) { grid-area: wheels; }
-.itc-parts-band:has([${SETTING_ATTR}="art"]) { grid-area: art; }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) { grid-area: livery; }
-.itc-parts-band:has([${SETTING_ATTR}="tone"]) { grid-area: tone; }
-.itc-parts-band:has([${SETTING_ATTR}="flame"]) { grid-area: flame; }
 /*
   0546: the wheels four a row since the Thunderbolt brought its own — in rows of three the fourth took a
   second row, and on CI's wider type that put Back under a 1280x720's fold.
 */
 .itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+/*
+  ⚠️ **AND IT WRAPS RATHER THAN SHRINKS.** The readout is about twenty-five of its em across and the stand
+  is a third of the screen where it is narrowest: at a 1024x768 it ran under the plate, and capping its
+  type by the width set the counts at eight pixels on a phone. Where the stand is narrower than the
+  readout, the stacks go under the lives and the shell, a second row in the same frame.
+*/
+.itc-hangar-dash > .itc-playing-hud, .itc-parts-dash > .itc-playing-hud, .itc-shop-dash > .itc-playing-hud { flex-wrap: wrap; justify-content: center; row-gap: 0.7em; }
+/* On a stand the counts are the preview, so a touch screen's discs saying them in play does not hide them here. */
+.itc-hangar-dash .itc-playing-hud-touch > .itc-playing-hud-stack,
+.itc-parts-dash .itc-playing-hud-touch > .itc-playing-hud-stack,
+.itc-shop-dash .itc-playing-hud-touch > .itc-playing-hud-stack { position: static; width: auto; height: auto; overflow: visible; clip-path: none; }
+.itc-hangar-plate, .itc-parts-plate, .itc-shop-plate {
+  display: flex;
+  flex-direction: column;
+  gap: min(0.55rem, 1.4cqh);
+  min-width: 0;
+  align-self: center;
+  max-height: 100%;
+}
+/*
+  The plate's head is the pilots and what is said of them, side by side; under it each heading runs the
+  plate's width with a band to a line — its name, then its segments in one row — which is the plan's own
+  picture of it. Two headings side by side, as the first build had them, were half the plate each: the
+  dash's four names were clipped at a 1280x720, and the hangar tab ran 77 pixels under its fold.
+*/
+.itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box {
+  display: grid;
+  /* The faces as wide as the roster, a step smaller than the title's, so none is cut; the card the rest. */
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw);
+}
+.itc-hangar-pilot-card .itc-hangar-pilot-bio { font-size: 0.76em; margin: 0.1em 0; line-height: 1.25; }
+/*
+  Two thirds of the panel the plate where the screen is narrower than a laptop's: at a 1024x768's three
+  fifths its card was a column of the bio a few words wide, and the hangar tab ran under the fold.
+*/
+@container (max-width: 1100px) {
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); }
+}
+/* And on a tablet, the card under the faces rather than beside them: it has the height and not the width. */
+@container (max-width: 1100px) and (min-height: 461px) {
+  .itc-hangar-pilot-card { grid-column: 1 / -1; }
+}
+.itc-hangar-groups, .itc-parts-groups, .itc-shop-band { grid-column: 1 / -1; }
+.itc-hangar-groups, .itc-parts-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw); align-items: start; }
+.itc-hangar-group, .itc-parts-group { display: flex; flex-direction: column; gap: min(0.35rem, 0.9cqh); min-width: 0; }
+.itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band {
+  grid-template-columns: 5.2em auto minmax(0, 1fr) auto;
+  grid-template-areas: 'label less track more' '. . hint .';
+}
+/* Written past the slot rules below, which lay each slot out as a grid of its own count to a row. */
+.itc-hangar-plate .itc-hangar-group .itc-hangar-band .itc-hangar-options,
+.itc-parts-plate .itc-parts-group .itc-parts-band .itc-parts-options { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.itc-hangar-group-heading, .itc-parts-group-heading {
+  font-size: 0.72em;
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--itc-ally, var(--itc-ink));
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
+}
+.itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { padding: 0.2em 0.1em; }
+.itc-hangar-group .itc-hangar-option, .itc-parts-group .itc-parts-option { font-size: 0.8em; padding: 0.22em 0.25em; }
+/*
+  The pilots' head given back its height: the band's own label goes, as the title's does — the faces are
+  the pilots, and the band still names itself to a reader — and the card's ship a step smaller.
+*/
+/* One row: the faces' line is said to a reader and stands off the glass, so a second row was a gap. */
+.itc-hangar-plate .itc-hangar-band-faces, .itc-parts-plate .itc-parts-band-faces { grid-template-areas: 'less track more'; padding: 0.1em 0.4em; }
+.itc-hangar-options-faces, .itc-parts-options-faces { padding-top: 0.15em; padding-bottom: 0.15em; }
+.itc-hangar-band-faces .itc-hangar-band-label, .itc-parts-band-faces .itc-parts-band-label { display: none; }
+/* And the names under the faces, which the card and the line beside them say for the one that is on. */
+.itc-hangar-option-name, .itc-parts-option-name { display: none; }
+.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.9rem, 7.5cqh, 3rem); height: clamp(1.9rem, 7.5cqh, 3rem); }
+.itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces { gap: 0.4em; }
+.itc-hangar-plate .itc-hangar-option-face, .itc-parts-plate .itc-parts-option-face { padding-left: 0.15em; padding-right: 0.15em; }
+.itc-hangar-pilot-card { padding: 0.35em 0.8em; grid-template-columns: minmax(0, 1fr); }
+/* Who they are: what they fly is the ship on the stand and the Loadout under it, so the card says it once. */
+.itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
+/*
+  The ship on the stand, over the dash, as large as the stand lets it be — the ship being fitted. Its own
+  rule for the stand: the card's sized it as a thumbnail beside words.
+*/
+.itc-hangar-stand > .itc-hangar-pilot-ship, .itc-parts-stand > .itc-parts-pilot-ship {
+  align-self: center;
+  width: min(80%, 26rem, 38cqh);
+  margin-top: auto;
+}
+.itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { font-size: 0.66em; text-align: left; }
+.itc-hangar-choices, .itc-parts-choices, .itc-shop-choices { flex-direction: row; justify-content: flex-end; gap: min(0.8rem, 2cqw); }
 .itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
 .itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /*
@@ -1850,12 +1935,6 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-options { grid-template-columns: minmax(0, 1fr); }
 .itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on),
 .itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
-/*
-  0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
-  the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
-  wider type, over it — and the room they need was under Back and between the rows.
-*/
-.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
 /*
   0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
   one row CI's wider type put the fifth off a 667x375's edge.
@@ -1928,8 +2007,20 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   put Back under the fold. One line each, the strip sized to the width a little more tightly; on a
   desktop it is the size it was, the cap.
 */
-.itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs { font-size: clamp(0.75rem, min(2.6cqw, 6cqh), 1.5rem); gap: 0.5em; }
-.itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.25em 0.8em; }
+/*
+  ⚠️ **FOLDER TABS ON THE PLATE'S HEAD — 0539, AND THEY WERE PILLS OVER EVERYTHING.** Three heading-sized
+  pills centred over the screen, attached to nothing. The strip runs along the plate's top edge now in
+  the plate's own type, a rule under it; the open tab is filled and stands on the rule, the others are
+  set back. The open tab is still the screen's name (0458), so the plate has no heading of its own.
+*/
+.itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs {
+  font-size: clamp(0.75rem, min(1.7cqw, 4.2cqh), 1.15rem);
+  gap: 0.3em;
+  justify-content: flex-start;
+  border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 60%, var(--itc-ink));
+}
+.itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { white-space: nowrap; padding: 0.35em 0.9em 0.3em; border-radius: 0.55em 0.55em 0 0; border-bottom-width: 0; }
+.itc-hangar-tab:not(.itc-hangar-tab-on), .itc-parts-tab:not(.itc-parts-tab-on), .itc-shop-tab:not(.itc-shop-tab-on) { opacity: 0.6; }
 /* Settings' bands and its two buttons, at the title's column width. */
 .itc-settings-settings-box, .itc-settings-choices { width: min(100%, 34em); }
 .itc-settings-choices { flex-direction: row; justify-content: center; gap: min(0.8rem, 2cqw); }
@@ -2116,15 +2207,44 @@ ${each('-band[hidden]')} { display: none; }
   */
   .itc-hangar-settings-box, .itc-parts-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
   /*
-    0529: Paint & Parts' four slots, on a phone: the colour and its tone side by side across both columns,
-    under the card and the art — four down the right put Back twenty pixels under an 844x390's fold.
+    0539: the plate's headings two to a row on a phone as on a desktop, so Paint and Parts' five and the
+    hangar's four stand two deep under the faces; the card's place is the hangar tab's, and a step down.
   */
+  .itc-hangar-group, .itc-parts-group { gap: min(0.3rem, 1cqh); }
+  .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; padding: 0 0.1em; row-gap: 0.05em; }
+  /* Paint has three bands to Parts' two, and its column is the plate's height: the headings' own spacing gives. */
+  .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.15em; }
+  .itc-hangar-plate .itc-hangar-group, .itc-parts-plate .itc-parts-group { gap: 0.15rem; }
   /*
-    0530: and with the flame, five, which beside the card are a desktop's height; on a phone the card
-    goes, as it goes on the shortest, and the slots pair off under the faces. The faces say whose ship.
+    And beside the faces on a phone the card is the name and where they are from: the bio is two lines
+    the screen has not got, and the ship, the craft and the gun are the dash and the bands under it.
   */
-  .itc-parts-pilot-card { display: none; }
-  .itc-parts-settings-box { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: 'pilot wheels' 'art livery' 'tone flame'; }
+  .itc-hangar-pilot-card { grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; }
+  /* Beside the faces in what the faces leave: one line each, cut short rather than pushing the plate wider. */
+  .itc-hangar-pilot-card .itc-hangar-pilot-words { flex-wrap: nowrap; flex-direction: column; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-name, .itc-hangar-pilot-card .itc-hangar-pilot-who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-ship, .itc-hangar-pilot-card .itc-hangar-pilot-bio,
+  .itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
+  /*
+    ⚠️ **ON A PHONE THE PLATE TAKES TWO THIRDS, AND ITS TABS THEIR WORDS' WIDTH.** The three tabs' names
+    are one line each and the plate's whole head; at three fifths of a 667x375 the strip ran off the
+    plate, and a tab past the plate's edge is past its clip too, so a press on it found the overlay.
+  */
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); padding: min(0.6rem, 2cqh) min(1rem, 2cqw); gap: min(1rem, 2cqw); }
+  .itc-hangar-tab, .itc-parts-tab, .itc-shop-tab { padding: 0.3em 0.55em 0.25em; }
+  .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { padding: min(0.5rem, 1.6cqh) min(0.9rem, 2cqw); gap: min(0.45rem, 1.4cqh); }
+  /*
+    ⚠️ **AND ON THE NARROWEST THE PLATE TAKES THE WIDTH, WITH THE STAND UNDER IT** — the plan's own
+    answer for 480x320. The stand is laid in the same cell, behind; the balance moves into the plate's
+    foot beside Back, where the dash cannot be, and the dash stands under the glass.
+  */
+  @container (max-width: 620px) {
+    .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { grid-template-columns: minmax(0, 1fr); }
+    .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand, .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { grid-area: 1 / 1; }
+    .itc-hangar-stand, .itc-parts-stand, .itc-shop-stand { opacity: 0.35; }
+    .itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { z-index: 1; }
+  }
   .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-hangar-band-label, .itc-parts-band-label { display: none; }
   .itc-hangar-option, .itc-parts-option { font-size: 0.8em; }
@@ -2140,12 +2260,8 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option:not(.itc-hangar-option-on), .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { width: 100%; white-space: nowrap; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  /* The balance a step smaller, so it keeps its corner clear of the tabs on a narrow phone. */
-  /*
-    And in the bottom corner rather than the top. On a phone the tabs are the heading's size and reach
-    the top right, where the balance stood over Cosmo's own tab at 844x390; beside Back is clear.
-  */
-  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; top: auto; bottom: min(0.9rem, 2.5cqh); }
+  /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
+  .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; }
   /*
     The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
     to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
@@ -2251,16 +2367,8 @@ ${each('-band[hidden]')} { display: none; }
       starts under the readout's corner rather than behind it.
     */
     .itc-hangar-pilot-card { display: none; }
-    /*
-      0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen.
-      0526: and the gun under the faces, the special under it; the third row was five pixels past a
-      480x320's floor, given back from over the tabs, which still clear the readout.
-    */
-    .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
-    /* 0529: and Paint & Parts the same — its card goes, the faces say whose ship is being dressed. */
-    .itc-parts-pilot-card { display: none; }
-    .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'art livery' 'tone flame'; }
-    .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 15cqh; }
+    /* 0539: and the faces run the plate where the card stood beside them, so the headings start a row under. */
+    .itc-hangar-band-faces { grid-column: 1 / -1; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -3015,6 +3123,8 @@ interface Panel {
   sheet: HTMLElement | null;
   /** The high scores, and the body that drops their column while there are none — 0429, 0458. `null` off the title. */
   board: { root: HTMLElement; body: HTMLElement } | null;
+  /** The cell on the stand the readout is moved down into while the screen is up — 0539. `null` off the stand. */
+  dash: HTMLElement | null;
 }
 
 /** One choice, drawn as a band — 0458. */
@@ -4151,7 +4261,12 @@ export function makeChrome(
   }
   /** Each screen's card under its band of faces — the title's (0513) and the hangar's (0521). */
   const pilotCards: Partial<Record<Screen, PilotCard>> = {};
-  const buildPilotCard = (prefix: string, card: 'line' | 'whole'): PilotCard => {
+  /*
+    0539: on a screen that stands, the ship is built for the stand rather than for the card — the caller
+    puts it there, over the dash, the size the stand gives it — and a line has one too. Until the port is
+    painted behind the stand (item 3 of the plan) this is the ship being fitted, drawn large.
+  */
+  const buildPilotCard = (prefix: string, card: 'line' | 'whole', standing: boolean): PilotCard => {
     const part = (tag: string, name: string): HTMLElement => {
       const el = document.createElement(tag);
       el.className = prefix + 'pilot-' + name;
@@ -4169,7 +4284,7 @@ export function makeChrome(
       const craft = part('span', 'craft');
       const gun = part('span', 'gun');
       root.append(name, craft, gun);
-      return { root, ship: null, name, who: null, bio: null, craft, gun, card };
+      return { root, ship: standing ? part('div', 'ship') : null, name, who: null, bio: null, craft, gun, card };
     }
     const root = part('div', 'card');
     root.setAttribute('aria-hidden', 'true');
@@ -4181,7 +4296,8 @@ export function makeChrome(
     const craft = part('div', 'craft');
     const gun = part('div', 'gun');
     words.append(name, who, bio, craft, gun);
-    root.append(ship, words);
+    if (standing) root.append(words);
+    else root.append(ship, words);
     return { root, ship, name, who, bio, craft, gun, card };
   };
   /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
@@ -4330,13 +4446,39 @@ export function makeChrome(
       Empty until the shell pushes it: what goes on it is the run's business and the shell's, not this
       file's, on `setActionHint`'s terms.
     */
+    /*
+      ── A SCREEN THAT STANDS IN THE PORT — 0539 ────────────────────────────────────────────────────
+
+      Two boxes where the panel was one: the stand, which holds the balance in its top corner and the
+      dash at its foot (and the ship on its pad, once the port is painted behind it), and the plate,
+      which holds the tabs in its head, the bands and the way out. The row says whether a screen
+      stands (`stand`), never its name.
+    */
+    let stand: HTMLElement | null = null;
+    let plate: HTMLElement | null = null;
+    let dash: HTMLElement | null = null;
+    if (row.stand !== null) {
+      stand = document.createElement('div');
+      stand.className = prefix + 'stand';
+      dash = document.createElement('div');
+      dash.className = prefix + 'dash';
+      stand.appendChild(dash);
+      plate = document.createElement('div');
+      plate.className = prefix + 'plate';
+      panel.append(stand, plate);
+    }
+    // What the tabs, the bands and the actions go into: the plate on a stand, the panel everywhere else.
+    const host = plate ?? panel;
+
     let sheet: HTMLElement | null = null;
     // 0517: and the game over, the fourth — a run that could not be continued is added up there.
     // 0522: and the hangar, whose one line is the Star Shards the player holds.
     if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar' || screen === 'parts' || screen === 'shop') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
-      panel.appendChild(sheet);
+      // 0539: on the stand, in its top corner — the corner the readout came down from.
+      if (stand !== null) stand.insertBefore(sheet, dash);
+      else panel.appendChild(sheet);
     }
 
     /*
@@ -4366,7 +4508,7 @@ export function makeChrome(
         strip.appendChild(button);
         tabs.push(button);
       }
-      panel.appendChild(strip);
+      host.appendChild(strip);
     }
 
     /*
@@ -4434,8 +4576,8 @@ export function makeChrome(
       */
       if (crossing !== null) panel.appendChild(crossing.root);
       // 0458: the bands above the actions, which is the order the cursor walks them in.
-      panel.appendChild(settingsBox);
-      panel.appendChild(choices);
+      host.appendChild(settingsBox);
+      host.appendChild(choices);
     }
 
     /*
@@ -4612,10 +4754,42 @@ export function makeChrome(
       */
       if (choice.faces === 'portraits') {
         line.classList.add(prefix + 'band-faces');
-        const pilotCard = buildPilotCard(prefix, choice.card);
+        const pilotCard = buildPilotCard(prefix, choice.card, stand !== null);
         pilotCards[screen] = pilotCard;
         settingsBox.appendChild(pilotCard.root);
+        // 0539: the ship over the dash, on the stand.
+        if (stand !== null && pilotCard.ship !== null) stand.insertBefore(pilotCard.ship, dash);
       }
+    }
+    /*
+      ── THE PLATE'S HEADINGS — 0539 ────────────────────────────────────────────────────────────────
+
+      On a stand the bands stand under the headings the row gives (`stand.groups`), each band moved
+      into its group in the group's order; one in no group stays at the head, as the pilots do.
+
+      ⚠️ **AND THE WALK IS THE ORDER DRAWN.** The row lists its choices in the order they were added —
+      the dash before the gun on the hangar — and the groups draw them in another, so the bands are
+      walked as the document has them: up and down go to the band above and below, never across a heading.
+    */
+    if (row.stand !== null && row.stand.groups.length > 0) {
+      // One box for the headings, so they split the plate between them whatever the head above is.
+      const groups = document.createElement('div');
+      groups.className = prefix + 'groups';
+      settingsBox.appendChild(groups);
+      for (const group of row.stand.groups) {
+        const box = document.createElement('div');
+        box.className = prefix + 'group';
+        const heading = document.createElement('div');
+        heading.className = prefix + 'group-heading';
+        heading.textContent = group.label;
+        box.appendChild(heading);
+        for (const name of group.bands) {
+          const band = choiceBands.find((b) => b.name === name);
+          if (band !== undefined) box.appendChild(band.root);
+        }
+        groups.appendChild(box);
+      }
+      choiceBands.sort((a, b) => (a.root.compareDocumentPosition(b.root) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
     }
     // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
     if (settingsBox.childElementCount === 0) settingsBox.remove();
@@ -4674,7 +4848,7 @@ export function makeChrome(
     panel.addEventListener('focusin', follow);
     listeners.push(() => panel.removeEventListener('focusin', follow));
 
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board };
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash };
     elements.push(root);
   }
 
@@ -5459,7 +5633,21 @@ export function makeChrome(
         the real one in its corner rather than a picture of it. Read off the row's choices, never its name.
       */
       // 0523: and over the shop, whose ware is tried on the dash before it is bought.
-      const fitting = screen !== null && SCREENS[screen].choices.some((c) => c.name === 'plate' || c.name === 'ware');
+      /*
+        ⚠️ **AND DOWN ON THE STAND, NOT IN THE PLAY CORNER — 0539.** It stood where a run puts it, top
+        left, saying the counts of a run that is not running. On a screen that stands the readout is
+        moved into the stand's dash cell — the same element, keeping its classes, so everything that
+        reads it by class still does — and back into the strip, first, the moment the screen goes.
+        Asked for: *"the dashboard display should be down in the shop and hanger section not the top
+        left."* Read off the row's `stand`, which since 0539 is also what says the readout is up here.
+      */
+      const standing = screen === null ? null : (panels[screen]?.dash ?? null);
+      if (standing !== null) {
+        if (hud.parentElement !== standing) standing.appendChild(hud);
+      } else if (hud.parentElement !== strip) {
+        strip.prepend(hud);
+      }
+      const fitting = screen !== null && SCREENS[screen].stand !== null;
       hud.classList.toggle('itc-playing-hud-shown', screen !== null && (SCREENS[screen].steps || counting || fitting));
       // The score with it, on its terms: up wherever the ship flies, the break and the burn too — 0428.
       scoreBox.classList.toggle('itc-playing-score-shown', screen !== null && ((SCREENS[screen].steps && SCREENS[screen].inRun) || counting));

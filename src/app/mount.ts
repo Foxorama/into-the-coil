@@ -47,7 +47,7 @@ import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcro
 import { DEBRIS } from '../content/debris.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SIDES, SPECIALS, type Side, type SpecialKind } from '../content/specials.ts';
-import { chargesIn, ownSpecial } from '../state/slices/run.ts';
+import { chargesIn, livesFor, ownSpecial, startingArsenal, type Arsenal } from '../state/slices/run.ts';
 
 /**
  * The face a trigger's button and readout wear over an empty stack, so the icon never goes: the gun's
@@ -74,7 +74,7 @@ import {
   type PickupKind,
   weaponFor,
 } from '../content/pickups.ts';
-import { AUTHORED, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
+import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, TUNED } from '../content/difficulty.ts';
 import { DEFAULT_SOUND, SOUND_KINDS } from '../content/sound.ts';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../content/styles.ts';
 import { nextOnGrid } from '../content/cadence.ts';
@@ -102,7 +102,7 @@ import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, bl
 import { makeFinaleScene } from '../render/finale.ts';
 import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
-import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
+import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
 import {
   GameFrame,
@@ -1590,7 +1590,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * none on Burn, where an empty row of sockets would be a promise of something the tier withholds.
    */
   const syncHud = (): void => {
-    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf());
+    /*
+      ⚠️ **ON THE STAND, WHAT THE RUN WILL OPEN WITH — 0539.** The readout stood over the hangar saying
+      ×0 ships and ×0 of every stack: the counts of a run that was not running, which reads as a bug
+      report. Down on the stand it is a preview: the lives the tier gives, the shell it opens with, and
+      the arsenal the pilot's ship would be issued with the special the hangar fitted it — each from the
+      function the run's own begin uses, so the two cannot say different things.
+    */
+    if (SCREENS[state.screen.current].stand !== null) {
+      const ship = GOLFERS[state.settings.pilot].ship;
+      const tier = DIFFICULTIES[state.settings.difficulty];
+      const arsenal = startingArsenal(ship, state.settings.difficulty, ownSpecial(state.hangar.special[ship]));
+      chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), tier.shellCap, stacksOf(arsenal));
+      return;
+    }
+    chrome.setHud(state.run.lives, shieldsOf(world.shipRow, world.ship.health), world.difficulty.shellCap, stacksOf(state.run.arsenal));
     chrome.setTriggers(triggers());
   };
 
@@ -1598,10 +1612,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * What each trigger throws next and how many it holds — the top of its stack, or a face that stands
    * for the side over an empty one, so the readout never loses its icon — 0373, 0376.
    */
-  const stacksOf = (): { label: string; sprite: number; charges: number }[] => {
+  const stacksOf = (arsenal: Arsenal): { label: string; sprite: number; charges: number }[] => {
     const out: { label: string; sprite: number; charges: number }[] = [];
     for (const side of SIDES) {
-      const stack = state.run.arsenal[side];
+      const stack = arsenal[side];
       const row = SPECIALS[stack[stack.length - 1] ?? EMPTY_FACE[side]];
       out.push({ label: row.label, sprite: row.face, charges: stack.length });
     }
@@ -1630,7 +1644,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * what it throws next and the count of its own stack. The hit test is told the same number of bands
    * (`bands` below), so the picture cannot claim a band the canvas is not listening on.
    */
-  const triggers = (): { label: string; sprite: number; charges: number }[] => (touchable ? stacksOf() : []);
+  const triggers = (): { label: string; sprite: number; charges: number }[] => (touchable ? stacksOf(state.run.arsenal) : []);
 
   /*
     ── A STEP ON A SCREEN THE SIMULATION IS NOT RUNNING ────────────────────────────────────────────
@@ -2203,6 +2217,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const shown = DANGLE_KINDS.find((kind) => kind === ware);
     chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : hung);
     fitPilot();
+    // 0539: and the dash on the stand, which counts what this pilot's ship opens with — the special the hangar fitted.
+    syncHud();
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
   chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
