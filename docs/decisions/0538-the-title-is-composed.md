@@ -38,7 +38,14 @@ wider fonts.
   On every phone the table's place numbers go — the five stand best first and say their order by
   standing in it — its heading is spaced closer, and the quiet row is set a step down; on the narrowest,
   the panel's and the plates' own sides give theirs. 22 % spare at 480x320, which is where the row
-  stood before this change and where CI has passed it; 27 % at 667x375 and more elsewhere.
+  stood before this change; 27 % at 667x375 and more elsewhere. **CI wrapped it anyway**, at 480x320,
+  and Settings went under the fold. So the quiet row's buttons may now shrink to nothing and cut their
+  words short rather than wrap — the music room's answer ([0210](0210-the-title-plays-the-music.md)):
+  a row that holds by a margin of fonts is not a rule. Measured with every letter spaced 0.08 em wider,
+  the row is one line at every size and nothing scrolls.
+- **The faces.** CI also cut the fourth face at 1024x768, where the plate's sides had come out of the
+  faces' track and left it 10 % spare. The names under the faces are what grow with a font, so they and
+  the gaps between the cards gave: 36 % spare there, 28 % with the letters spaced wider.
 - **The cuts.** A clip path takes what is drawn round a box with it, and the first build put Settings'
   focus ring in the plate's bottom-right cut and the faces' in its top-left on every phone. The cut is
   half as deep on a phone. That is the one new guard.

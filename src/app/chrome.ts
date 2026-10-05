@@ -948,6 +948,13 @@ ${each('-action')} {
 .itc-title-action { width: 100%; }
 .itc-title-choices > .itc-title-action-lead { flex: 1 0 100%; order: -2; font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
 .itc-title-choices > :not(.itc-title-action-lead) { font-size: 0.8em; padding: 0.4em 0.55em; opacity: 0.9; }
+/*
+  ⚠️ **AND THE QUIET ROW CANNOT WRAP, ON ANY FONT.** Measured with 22 % of the row spare at 480x320 on
+  this machine's fonts, CI's wrapped it and Settings went under the fold. A button may shrink to nothing
+  and cut its words short rather than push the row onto a second line — the music room's answer (0210),
+  for its reason: a row that holds by a margin of fonts is not a rule.
+*/
+.itc-title-choices > :not(.itc-title-action-lead) { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }
@@ -1755,9 +1762,17 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
     linear-gradient(var(--itc-plate-glass), var(--itc-plate-glass)) padding-box,
     linear-gradient(100deg, var(--itc-ally, var(--itc-ink)), var(--itc-ink)) border-box;
   clip-path: polygon(var(--itc-cut) 0, 100% 0, 100% calc(100% - var(--itc-cut)), calc(100% - var(--itc-cut)) 100%, 0 100%, 0 var(--itc-cut));
-  padding: min(1rem, 2.4cqh) min(1.4rem, 2.4cqw);
+  padding: min(1rem, 2.4cqh) min(1.1rem, 2cqw);
   box-sizing: border-box;
 }
+/*
+  ⚠️ **THE FACES CLOSER IN THE PLATE.** The plate's sides came out of the faces' track, and at 1024x768
+  it had 10 % spare on this machine's fonts: CI's set the names under the faces wider and the fourth was
+  cut. The names are what grow with a font, so they and the gaps between the cards are what give.
+*/
+.itc-title-main .itc-title-options-faces { gap: 0.4em; }
+.itc-title-main .itc-title-option-face { padding-left: 0.15em; padding-right: 0.15em; }
+.itc-title-main .itc-title-option-name { font-size: 0.64em; letter-spacing: 0; }
 /*
   ── THE HANGAR — 0521, two columns at every size since 0523 ─────────────────────────────────────
 
@@ -2215,6 +2230,12 @@ ${each('-band[hidden]')} { display: none; }
     .itc-title-body .itc-title-choices > * { font-size: 0.85em; }
     ${faced((p) => `.${p}pilot-ship`)} { width: 2.6rem; }
     /*
+      0538: and the title's panel gives back its own top and bottom, which is padding before it is
+      anything the player reads. With Fly's row added, 480x320 had 19 px spare on this machine's fonts and
+      one with every letter spaced wider — measured — scrolled by a pixel.
+    */
+    .itc-title-panel { padding-top: 2cqh; padding-bottom: 2cqh; }
+    /*
       0523: and the hangar's card goes — the faces say who is on the stand and the readout's lives icon
       is their ship — because three bands, the tabs and Back are the whole of a 480x320, and the panel
       starts under the readout's corner rather than behind it.
@@ -2419,15 +2440,18 @@ ${faced((p) => `.${p}option-face, .${p}option-face:not(.${p}option-on)`)} { bord
   segment's fill, because beside Fly and Settings it reads as one of them, and the words are the state.
 */
 /*
-  As wide as its words on one line: a mode in three lines of a button is the band again, sideways.
+  On one line: a mode in three lines of a button is the band again, sideways.
 
-  ⚠️ **DRAWN BEFORE FLY, AND WALKED AFTER IT.** A push down from the tier lands on the button standing
-  nearest across from it, and with the chip on the right that was Settings; with Fly between the two,
-  it is Fly, as it was. The walk still opens on Fly, which is first in the row the cursor reads.
+  ⚠️ **DRAWN FIRST IN THE QUIET ROW, AND WALKED AFTER THE ACTIONS.** The boxes decide inside a row of
+  buttons (0214), so left from the hangar is the chip wherever the DOM has it. The walk still opens on
+  Fly, which is first in the row the cursor reads.
+
+  ⚠️ **AND IT SHRINKS WITH THE REST OF THE QUIET ROW — 0538.** It was as wide as its words; beside Fly
+  that cost nothing, and in a row of three the size of the screen it was the word that wrapped the row.
 */
-.itc-title-choices > .itc-title-chip { display: flex; flex: 1 1 0; min-width: max-content; padding: 0; opacity: 1; order: -1; }
-.itc-title-chip .itc-title-options { flex: 1 1 auto; }
-.itc-title-chip .itc-title-option { white-space: nowrap; }
+.itc-title-choices > .itc-title-chip { display: flex; flex: 1 1 0; min-width: 0; padding: 0; opacity: 1; order: -1; }
+.itc-title-chip .itc-title-options { flex: 1 1 auto; min-width: 0; }
+.itc-title-chip .itc-title-option { white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .itc-title-chip .itc-title-option:not(.itc-title-option-on) { display: none; }
 .itc-title-chip .itc-title-option {
   --itc-glass: color-mix(in srgb, var(--itc-void) 80%, transparent);
