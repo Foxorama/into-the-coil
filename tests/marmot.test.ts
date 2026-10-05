@@ -7,7 +7,7 @@ import { initialState, reduce, type State } from '../src/state/root.ts';
 import { paintPortrait, paintRunner } from '../src/render/golfer-art.ts';
 
 /**
- * THE MARMOT — `docs/decisions/0539-the-marmot-rides.md`.
+ * THE MARMOT — `docs/decisions/0546-the-marmot-rides.md`.
  *
  * *"Locked until you beat the game with every pilot (on any difficulty, but must clear it with all four
  * starting pilots) - he can show up on the list of random rescuee's with some voice lines before he's
@@ -48,7 +48,7 @@ function wonIn(...ships: ShipKind[]): State {
   return state;
 }
 
-describe('0539 — the Marmot is locked behind the four', () => {
+describe('0546 — the Marmot is locked behind the four', () => {
   it('THE ASK: he flies the Thunderbolt, and the Thunderbolt the lightning gun', () => {
     expect(GOLFERS.marmot.ship).toBe('thunderbolt');
     expect(SHIPS.thunderbolt.weapon).toBe('arc');
@@ -82,7 +82,7 @@ describe('0539 — the Marmot is locked behind the four', () => {
   });
 });
 
-describe('0539 — and he is a teaser in the Viper from the first run', () => {
+describe('0546 — and he is a teaser in the Viper from the first run', () => {
   it('he is in every other pilot’s rescue pool', () => {
     for (const kind of FOUR) expect(rescuable(kind), kind).toContain('marmot');
   });
@@ -96,7 +96,7 @@ describe('0539 — and he is a teaser in the Viper from the first run', () => {
   });
 });
 
-describe('0539 — his body is his row’s', () => {
+describe('0546 — his body is his row’s', () => {
   it('runs and leaps on his own figure, and draws his portrait, with every one of the pilot’s poses', () => {
     // His own: the helmet's black and the visor's amber, which no golfer's drawing paints.
     for (const pose of ['pilotRun0', 'pilotRun1', 'pilotRun2', 'pilotRun3', 'pilotLeap'] as const) {

@@ -61,7 +61,7 @@ export const ART: Record<ArtKind, ArtRow> = {
   woody: { name: 'Bare woody', hint: 'Burl and gilt, as it left the showroom', ship: 'estate' },
   crest: { name: 'Family crest', hint: 'A gilt shield on the front door', ship: 'estate' },
   daisies: { name: 'Flower power', hint: 'White daisies on the tailgate panel', ship: 'estate' },
-  // The Thunderbolt's tank — 0538: the predecessor's chopper wore lightning, and the Marmot rides it.
+  // The Thunderbolt's tank — 0545: the predecessor's chopper wore lightning, and the Marmot rides it.
   boltTank: { name: 'Lightning tank', hint: 'One cyan bolt down the tank', ship: 'thunderbolt' },
   pawprint: { name: 'Paw print', hint: 'The Marmot’s own paw, in gold on the tank', ship: 'thunderbolt' },
   pinstripes: { name: 'Pinstripes', hint: 'Hand-pulled gold lines along the tank', ship: 'thunderbolt' },

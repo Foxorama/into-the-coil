@@ -41,7 +41,7 @@ export const PROBES = [
     guard: 'and a DEATH rejoins the grid rather than restarting it, which is where the phase used to go',
     edit: {
       path: 'src/app/frame.ts',
-      // 0538's `firstVolleyIn` is the gun's grid, or the beat's for a gun slower than one.
+      // 0545's `firstVolleyIn` is the gun's grid, or the beat's for a gun slower than one.
       find: '  w.fireIn = firstVolleyIn(w.steps, w.weapon.fireEvery);\n  w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);',
       replace: '  w.fireIn = w.weapon.fireEvery;\n  w.missileIn = w.weapon.missileEvery;',
     },

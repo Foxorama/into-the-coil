@@ -2558,7 +2558,7 @@ describe('0109 — a death punctuates the music rather than getting it out of th
       so the ray's cue (0442) is a gun's and not an outcome's — it sat AT the pulse's gain.
     */
     /*
-      ⚠️ **AND THE CATHERINE WHEEL'S CRACKLE, SINCE 0538.** The wheel is thrown once every ten beats and
+      ⚠️ **AND THE CATHERINE WHEEL'S CRACKLE, SINCE 0545.** The wheel is thrown once every ten beats and
       burns for nine of them, crackling on each: the crackle is the wheel's own stream, the sound that
       never stops in that pilot's run, and is held under the outcomes as the throw is.
     */
@@ -3057,7 +3057,7 @@ describe('0173 — a cue happens somewhere', () => {
     // times the pulse's 0.067, and its send is the smallest in the table; the rule is about a tail under a
     // REPEAT, and what it protects is the gun that never stops.
     // And the ray's, since 0442: one ring every eight steps, the arc's own cadence, and authored dry.
-    // And the tether's sizzle, since 0538: it lands at the tether's rate, as `hit` lands at the gun's.
+    // And the tether's sizzle, since 0545: it lands at the tether's rate, as `hit` lands at the gun's.
     const STREAMS: CueKind[] = ['pulse', 'missile', 'threat', 'hit', 'arc', 'zap', 'ray', 'sizzle'];
     for (const kind of STREAMS) {
       expect(CUES[kind].air, `${kind} rides the fire cadence and states a room`).toBeUndefined();

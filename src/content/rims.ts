@@ -50,6 +50,6 @@ export const RIMS: Record<RimKind, RimRow> = {
     at one credit, where the thrusters are three and a dangle two.
   */
   spinner: { name: 'Mothership spinners', hint: 'Silver spokes that never stop turning', from: null, price: 1000, turn: [0.7, 0.8] },
-  // The Thunderbolt's — 0538: the predecessor's chopper wore bright rims; these are its lightning.
+  // The Thunderbolt's — 0545: the predecessor's chopper wore bright rims; these are its lightning.
   bolts: { name: 'Lightning spokes', hint: 'A cyan bolt across a dark dish', from: 'thunderbolt', price: null, turn: null },
 };

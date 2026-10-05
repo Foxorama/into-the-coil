@@ -41,7 +41,7 @@ describe('a fitted ship', () => {
   });
 
   it('with another’s, fires it from its hardpoint plus the gun’s own mount, in the ship’s view', () => {
-    // Five ships with four guns each they do not carry, since 0538 and 0539 made both five.
+    // Five ships with four guns each they do not carry, since 0545 and 0546 made both five.
     expect(BORROWED).toHaveLength(20);
     for (const [ship, gun] of BORROWED) {
       const row = fitted(SHIPS[ship], gun);
@@ -160,7 +160,7 @@ describe('the run', () => {
       state = reduce(state, action);
       expect(state.run.gun, `${action.type} dropped the fitted gun`).toBe('arc');
     }
-    // The estate's own is the shuriken since 0538, and the Thunderbolt's the arc.
+    // The estate's own is the shuriken since 0545, and the Thunderbolt's the arc.
     expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none' }).run.gun).toBe('shuriken');
     expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'thunderbolt', credits: 'none' }).run.gun).toBe('arc');
     expect(reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'fighter', credits: 'none' }).run.gun).toBe('pulse');

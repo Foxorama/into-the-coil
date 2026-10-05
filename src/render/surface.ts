@@ -59,7 +59,7 @@ export interface Surface {
    * exists to prevent.
    *
    * `tone` says which inks it is stroked in: the player's, the enemy's — the serpent's lightning,
-   * `docs/decisions/0248-the-serpent-strikes.md` — or since 0538 the flame's, the Catherine wheel's
+   * `docs/decisions/0248-the-serpent-strikes.md` — or since 0545 the flame's, the Catherine wheel's
    * tether in the player's amber and gold. A number rather than a colour, on the same terms as the
    * inks themselves: a string per stroke per frame would be a hash lookup on the hot path. It was a
    * flag, `hostile`, until there were three.
@@ -73,7 +73,7 @@ export interface Surface {
   bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, beam?: boolean): void;
 }
 
-/** Which inks a bolt is stroked in — 0538. Closed: the player's, the enemy's, the flame's. */
+/** Which inks a bolt is stroked in — 0545. Closed: the player's, the enemy's, the flame's. */
 export type BoltTone = 0 | 1 | 2;
 export const BOLT_PLAYER: BoltTone = 0;
 export const BOLT_HOSTILE: BoltTone = 1;

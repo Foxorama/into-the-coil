@@ -79,7 +79,7 @@ const SCENARIOS = [
   { name: 'arc', query: 'weapon=arc' },
   { name: 'shuriken', query: 'weapon=shuriken' },
   { name: 'ray', query: 'weapon=ray' },
-  // 0538: the Catherine wheel, its embers and its tether.
+  // 0545: the Catherine wheel, its embers and its tether.
   { name: 'catherine', query: 'weapon=catherine' },
   { name: 'bomb', query: 'weapon=pulse', special: 'bomb' },
   { name: 'storm', query: 'weapon=arc', special: 'storm' },

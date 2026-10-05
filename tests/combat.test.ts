@@ -1187,7 +1187,7 @@ describe('damage is legible on the body that took it', () => {
       never flashes, because nothing shoots it: its hurt slot is its other turn. Read off the weapon
       table rather than off a name, so a second coiling gun is covered the day it is a row.
 
-      ⚠️ **AND THE CATHERINE WHEEL, SINCE 0538, ON THE SAME TERMS.** It lands on what it touches as a
+      ⚠️ **AND THE CATHERINE WHEEL, SINCE 0545, ON THE SAME TERMS.** It lands on what it touches as a
       blade does, ended by its clock and never by an arrival, and nothing shoots it.
     */
     const blades = new Set(WEAPON_KINDS.filter((k) => WEAPONS[k].flight === 'coil' || WEAPONS[k].flight === 'tether').map((k) => WEAPONS[k].shot));

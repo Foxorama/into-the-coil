@@ -28,7 +28,7 @@ describe('the slot', () => {
   });
 
   it('THE ASK: the shuriken’s special on the lightning gun, once both are won — and not before', () => {
-    // The shuriken is the estate's and the lightning gun the Thunderbolt's since 0538: the ask is the same pairing.
+    // The shuriken is the estate's and the lightning gun the Thunderbolt's since 0545: the ask is the same pairing.
     expect(ownSpecial('estate')).toBe('whirlpool');
     expect(SHIPS.thunderbolt.weapon).toBe('arc');
     const fit = { slice: 'hangar', type: 'special', ship: 'thunderbolt', from: 'estate' } as const;
@@ -60,7 +60,7 @@ describe('the run', () => {
   it('opens on the ship’s own when the shell names none', () => {
     const begun = reduce(initialState, { slice: 'run', type: 'begin', difficulty: 'savior', ship: 'estate', credits: 'none' });
     expect(begun.run.arsenal).toEqual(startingArsenal('estate', 'savior'));
-    // The estate opens on the shuriken's whirlpools since 0538.
+    // The estate opens on the shuriken's whirlpools since 0545.
     expect(begun.run.arsenal.gun).toEqual(['whirlpool', 'whirlpool']);
   });
 

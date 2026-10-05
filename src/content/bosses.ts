@@ -4013,7 +4013,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       fell furthest are weighted, on the pterodactyl's pattern (0441).
     */
     /*
-      0538: and the Catherine wheel, at its own 0.6 in 39.3–39.6 s in every ship against the floor's forty.
+      0545: and the Catherine wheel, at its own 0.6 in 39.3–39.6 s in every ship against the floor's forty.
       Not monotonic: at 0.62 it was faster, 38.4 s, because the damage moves the fish's phases. At 0.55 its
       best is 43 s, measured.
     */
@@ -4275,7 +4275,7 @@ export const BOSSES: Record<BossKind, BossRow> = {
       arc killed it in 32.5 s and the ray in 35.8 against 0260's forty, while the pulse and the shuriken
       took 40.2. The weights put both at 40.6–40.7 and leave the other two where they were.
 
-      0538: and the Catherine wheel, at its own 0.6, in 39 s — it hangs in the gyre's face for nine beats
+      0545: and the Catherine wheel, at its own 0.6, in 39 s — it hangs in the gyre's face for nine beats
       in ten. A twentieth less puts it at the others' forty-one.
     */
     gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.57 },

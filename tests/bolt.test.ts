@@ -212,7 +212,7 @@ describe('0520 — the light is loud', () => {
       const colours = PALETTES[palette];
       for (const place of THEME_KINDS) {
         const hostileGlow = THEMES[place].bolt ?? colours.enemy;
-        // And the flame's, since 0538 — the Catherine wheel's tether, in the player's amber.
+        // And the flame's, since 0545 — the Catherine wheel's tether, in the player's amber.
         for (const [who, glow, tone] of [
           ['player', colours.player, BOLT_PLAYER],
           ['hostile', hostileGlow, BOLT_HOSTILE],

@@ -380,7 +380,7 @@ function plainLabel(kind: ShipKind): string {
 }
 
 /**
- * What the pilot band says while a pilot is still shut — 0539, or `null` when every pilot may fly. It
+ * What the pilot band says while a pilot is still shut — 0546, or `null` when every pilot may fly. It
  * names who has still to clear the game, so the band says how far there is to go as well as where.
  */
 export function pilotWhy(won: Readonly<Record<ShipKind, boolean>>): string | null {

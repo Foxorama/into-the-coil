@@ -323,7 +323,7 @@ export function blastInto(
 }
 
 /**
- * A tether from `(rootAlong, rootAcross)` to `(endAlong, endAcross)` against a pool — 0538, the
+ * A tether from `(rootAlong, rootAcross)` to `(endAlong, endAcross)` against a pool — 0545, the
  * Catherine wheel's: *"a fire tether back to the spaceship that you can use to hit things with."* It
  * lands `damage` on every target whose body comes within `reach` of the line, on the blades' terms:
  * a target takes it only so often, on its own clock (or `gate`'s, a boss's hull for its body), the

@@ -64,7 +64,7 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
     ctx.fill();
   };
   const part = (a: Pt, b: Pt, share: number): Pt => [a[0] + (b[0] - a[0]) * share, a[1] + (b[1] - a[1]) * share];
-  // 0539: a marmot, on the same stride, with his own body.
+  // 0546: a marmot, on the same stride, with his own body.
   if (golfer.figure === 'marmot') {
     paintMarmotRunner(ctx, golfer, leap, lean, [ft, fs, bt, bs], line, disc);
     return;
@@ -211,7 +211,7 @@ export function paintRunner(ctx: CanvasRenderingContext2D, golfer: RunnerRow, po
   disc(hx - 0.1, hy - 1.65, 0.18, shade(golfer.cap, 0.3));
 }
 
-/** The Marmot's own colours, beside his row's: his muzzle and belly, his visor, his helmet's bolt — 0539. */
+/** The Marmot's own colours, beside his row's: his muzzle and belly, his visor, his helmet's bolt — 0546. */
 const MARMOT = {
   muzzle: '#c79a68',
   visor: '#ff9f1c',
@@ -221,7 +221,7 @@ const MARMOT = {
 } as const;
 
 /**
- * The Marmot running out of the bar, side on, facing +x — 0539: the golfer's stride, on shorter legs
+ * The Marmot running out of the bar, side on, facing +x — 0546: the golfer's stride, on shorter legs
  * under a plump body in his riding suit, his tail bushed out behind, and his helmet on with its visor
  * down, the ears moulded into the shell and a cyan bolt down its side. His feet land where a golfer's
  * do, so he stands on the same deck.
@@ -305,7 +305,7 @@ function paintMarmotRunner(
 }
 
 /**
- * The Marmot's portrait for the select screen — 0539: head and shoulders, front on, in twentieths of
+ * The Marmot's portrait for the select screen — 0546: head and shoulders, front on, in twentieths of
  * the square, as `paintPortrait` draws a golfer. His riding suit's shoulders and collar, and his helmet
  * with its ears moulded in and the visor pushed up, so his face shows in the opening: the fur, the cream
  * muzzle and cheeks, two bright eyes, his nose and his two front teeth.
@@ -463,7 +463,7 @@ export function paintPortrait(ctx: CanvasRenderingContext2D, golfer: GolferRow, 
   const u = size / 20;
   ctx.save();
   ctx.scale(u, u);
-  // 0539: the Marmot in his helmet, visor up.
+  // 0546: the Marmot in his helmet, visor up.
   if (golfer.figure === 'marmot') {
     paintMarmotPortrait(ctx, golfer);
     ctx.restore();

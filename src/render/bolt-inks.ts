@@ -17,7 +17,7 @@ function inkOf(glow: string, core: string): BoltInk {
 
 /**
  * Every ink a bolt needs, from the palette's roles: the player's, the enemy's, the flame's — the
- * Catherine wheel's tether, 0538, the player's own fire and never the hostile `fire` — and the rim's dark.
+ * Catherine wheel's tether, 0545, the player's own fire and never the hostile `fire` — and the rim's dark.
  */
 export function boltInks(
   glow: string,

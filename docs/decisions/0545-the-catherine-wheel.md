@@ -1,7 +1,7 @@
-# 0538 — The Catherine wheel
+# 0545 — The Catherine wheel
 
 **Accepted 2026-10-05.** Item 2 of [`the-thunderbolt-planned`](../../reports/the-thunderbolt-planned-2026-10-05.md),
-with [0539](0539-the-marmot-rides.md). A fifth gun and a fifth way a shot flies, beside
+with [0546](0546-the-marmot-rides.md). A fifth gun and a fifth way a shot flies, beside
 [0233](0233-a-weapon-is-a-kind-and-a-pickup-cycles.md)'s, [0234](0234-a-blade-circles-the-ship.md)'s and
 [0442](0442-the-ray-gun.md)'s; and the guns move between the ships, against
 [0441](0441-a-pilot-flies-their-own-ship.md)'s first fitting of them.
@@ -114,7 +114,7 @@ hangs, spinning; **going back and forth sweeps the tether across a body off its 
 burns down and is gone before the next; it throws short embers spent by arriving; its tether is drawn as
 wide as it lands from the muzzle to the wheel; a body held across it takes only the bucket's worth; it goes
 with the ship. The boss floors fly it in every ship, and every borrowed pairing. Probes in
-`scripts/probes/0538-the-catherine-wheel.mjs`; those of 0094, 0250, 0375, 0377, 0378, 0391, 0475, 0477,
+`scripts/probes/0545-the-catherine-wheel.mjs`; those of 0094, 0250, 0375, 0377, 0378, 0391, 0475, 0477,
 0479 and 0487 were re-anchored on the lines this moved.
 
 ## Owed

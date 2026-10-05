@@ -192,7 +192,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
           `${ship}: at tier ${tier} a missile leaves every ${cycles} cycles exactly, which is ON the lattice rather than across it`,
         ).toBe(false);
         /*
-          ⚠️ **NOT OF A WHEEL ON A TETHER, SINCE 0538.** *Slower than the pulse* is about a gun that fires
+          ⚠️ **NOT OF A WHEEL ON A TETHER, SINCE 0545.** *Slower than the pulse* is about a gun that fires
           volleys; the Catherine wheel is thrown once and burns for nine beats in ten, so its cadence is
           how long one lasts and not a rate of fire the missiles could be slower than.
         */
@@ -232,7 +232,7 @@ describe('0093 — the gun is on the musical grid, at every tier and not at two 
       for (let tier = 0; tier <= UPGRADE_TIERS; tier++) {
         const missiles = Array.from({ length: tier }, () => 'missile' as const);
         const weapon = weaponFor(SHIPS[ship], missiles);
-        // Not of a wheel on a tether, on the claim above's terms — 0538: it has no volleys to cross.
+        // Not of a wheel on a tether, on the claim above's terms — 0545: it has no volleys to cross.
         if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
         const missileEvery = weapon.missileEvery;
         const gunEvery = weapon.fireEvery;

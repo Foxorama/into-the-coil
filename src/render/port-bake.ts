@@ -761,7 +761,7 @@ const HANGAR_ART: Record<ShipKind, HangarArt | null> = {
   caddie: { paint: paintSaucer, jets: [[-CADDIE_DISC, 0]] },
   firebird: null,
   estate: null,
-  // Side-on in the fight already, as the cars are — 0539.
+  // Side-on in the fight already, as the cars are — 0546.
   thunderbolt: null,
 };
 

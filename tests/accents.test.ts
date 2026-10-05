@@ -154,7 +154,7 @@ const HULLLESS: readonly SpriteKind[] = [
   'shieldLattice240a',
   'shieldLattice240b',
   'shieldLattice240c',
-  // And the Thunderbolt's cage of lightning — 0539, light on the same terms.
+  // And the Thunderbolt's cage of lightning — 0546, light on the same terms.
   'shieldStorm0a',
   'shieldStorm0b',
   'shieldStorm0c',

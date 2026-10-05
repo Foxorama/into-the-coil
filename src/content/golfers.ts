@@ -44,7 +44,7 @@ export interface RunnerRow {
   /** Sleeves to the wrist. Absent is a polo's short ones. */
   longSleeves?: boolean;
   /**
-   * What body they are drawn with — 0539. Absent is a golfer; the Marmot is a marmot, in a riding suit
+   * What body they are drawn with — 0546. Absent is a golfer; the Marmot is a marmot, in a riding suit
    * (`shirt`) and a full-face helmet (`cap`), his fur `skin` and `hair`. A row says its own, and the
    * painter's fallback is the person every other runner is (0282).
    */
@@ -55,7 +55,7 @@ export interface GolferRow extends RunnerRow {
   /** Their name, as the select screen and the menu say it. */
   name: string;
   /**
-   * The name they go by, under their card on the pilot band — 0539. It was the first word of `name`,
+   * The name they go by, under their card on the pilot band — 0546. It was the first word of `name`,
    * which is *The* for the Marmot; a row says its own.
    */
   goesBy: string;
@@ -97,7 +97,7 @@ export interface GolferRow extends RunnerRow {
   saving: readonly string[];
   /**
    * Who must have cleared the game before this pilot may fly, or empty for one who flies from the first
-   * run — 0539. Asked: *"locked until you beat the game with every pilot (on any difficulty, but must
+   * run — 0546. Asked: *"locked until you beat the game with every pilot (on any difficulty, but must
    * clear it with all four starting pilots) - he can show up on the list of random rescuee's with some
    * voice lines before he's unlocked as a teaser though."* A clear is a win in the pilot's own ship
    * (`won` in `src/state/slices/hangar.ts`): any tier, any credits, as 0521 counts every win.
@@ -239,7 +239,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     ],
   },
   /**
-   * The Marmot — 0539. *The Far Carry*'s Marmot Bartender: he pocketed golf balls from the trade tents,
+   * The Marmot — 0546. *The Far Carry*'s Marmot Bartender: he pocketed golf balls from the trade tents,
    * tended the 19th-hole bar on the tips, and slipped off to play the spaceport par-3 whenever the jar
    * was full. He rides the Thunderbolt in a full-face motorbike helmet, ears moulded into the shell.
    *
@@ -288,7 +288,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
 };
 
 /**
- * Whether `golfer` may fly, by the ships that have cleared the game — 0539. A pilot whose `opensAfter`
+ * Whether `golfer` may fly, by the ships that have cleared the game — 0546. A pilot whose `opensAfter`
  * is empty always may; one who names pilots may once every one of them has won in their own ship.
  */
 export function pilotOpen(golfer: GolferKind, won: Readonly<Record<ShipKind, boolean>>): boolean {

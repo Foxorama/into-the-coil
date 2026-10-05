@@ -33,7 +33,7 @@ export type ShotKind =
   | 'pulse'
   | 'arc'
   | 'shuriken'
-  // The Catherine wheel and the embers it throws — 0538, a `cinder` because `ember` is the fish's sprite.
+  // The Catherine wheel and the embers it throws — 0545, a `cinder` because `ember` is the fish's sprite.
   | 'catherine'
   | 'cinder'
   // The ray gun's rings and what they go off as where they land — 0442.
@@ -439,7 +439,7 @@ const BLAST_RADIUS = 34;
 export const BLADE_EDGE = 12;
 
 /**
- * How many landings a Catherine wheel survives — 0538: more than it can make in its life, so it is
+ * How many landings a Catherine wheel survives — 0545: more than it can make in its life, so it is
  * ended by its clock and never by what it touches. Its life is 216 steps and it lands at most once an
  * impact flash, which is a few dozen; a thousand is the honest way to write *never*.
  */
@@ -535,7 +535,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
   */
   shuriken: { sprite: SPRITE.shuriken, spriteHit: SPRITE.shurikenTurn, radius: 2.24, health: BLADE_EDGE, damage: 2, speed: 1.2, fission: SPENT_BY_ARRIVING },
   /**
-   * The Catherine wheel — 0538. Thrown out to hang and spin; it is not spent by what it touches, so
+   * The Catherine wheel — 0545. Thrown out to hang and spin; it is not spent by what it touches, so
    * its health is a count of landings it could never run out of, and it is ended by its clock.
    * `speed` is how fast it leaves the muzzle before it slows to hang.
    *
@@ -544,7 +544,7 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    */
   catherine: { sprite: SPRITE.catherine, spriteHit: SPRITE.catherine, radius: 4.2, health: WHEEL_EDGE, damage: 2, speed: 3, fission: SPENT_BY_ARRIVING },
   /**
-   * An ember off the wheel's rim — 0538: *"short sparking fire embers."* Spent by arriving, as a pulse
+   * An ember off the wheel's rim — 0545: *"short sparking fire embers."* Spent by arriving, as a pulse
    * is, and short-lived: the wheel's row says how long. A streak with a white-hot head, turned along its
    * flight, never a round dot — a round dot of fire is what a hostile bullet looks like in the volcano.
    */

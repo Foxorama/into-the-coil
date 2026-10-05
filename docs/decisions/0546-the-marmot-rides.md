@@ -1,7 +1,7 @@
-# 0539 — The Marmot rides
+# 0546 — The Marmot rides
 
 **Accepted 2026-10-05.** Item 2 of [`the-thunderbolt-planned`](../../reports/the-thunderbolt-planned-2026-10-05.md),
-with [0538](0538-the-catherine-wheel.md), which moves the guns. A fifth pilot and a fifth ship beside
+with [0545](0545-the-catherine-wheel.md), which moves the guns. A fifth pilot and a fifth ship beside
 [0415](0415-the-golfer-is-chosen.md)'s four and [0441](0441-a-pilot-flies-their-own-ship.md)'s.
 
 ## The ask
@@ -83,7 +83,7 @@ moment the last does; the band's sentence names who is left; he is in the rescue
 run with five lines each way; his runner and portrait draw. The Thunderbolt is held where every ship is
 — its paint on its hull and over the floor, its muzzle and tubes where its drawing puts them
 (`tests/mounts.test.ts`), every borrowed gun on it, and flown in the boss floors as every ship is.
-Probes in `scripts/probes/0539-the-marmot-rides.mjs`.
+Probes in `scripts/probes/0546-the-marmot-rides.mjs`.
 
 ## Owed
 

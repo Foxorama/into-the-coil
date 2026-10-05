@@ -158,7 +158,7 @@ export interface ShipRow extends Body {
  *   **bubble**     a soap film with a light sliding over it: the saucer's, in its ray's lavender
  *   **plumes**     gold-edged black feathers laid along the arc: the Firebird's phoenix
  *   **lattice**    a gilt trellis between two gilt rails, studded where it crosses: the estate's
- *   **storm**      a cage of forked lightning in the arc's cyan: the Thunderbolt's (0538)
+ *   **storm**      a cage of forked lightning in the arc's cyan: the Thunderbolt's (0545)
  */
 export type ShieldLook = 'honeycomb' | 'bubble' | 'plumes' | 'lattice' | 'storm';
 
@@ -192,7 +192,7 @@ export interface HudInk {
  *   **orbit**    a dashed orbit about the plate and a slow bio-pulse: the saucer's probe deck
  *   **checker**  a chequered flag down its leading end and a carbon weave: a racer's dash
  *   **walnut**   walnut grain, a chrome lip and fuzzy dice: the wagon's woody dash
- *   **hotrod**   raked corners, flames licking its lower edge and a fork of lightning: the chopper's (0538)
+ *   **hotrod**   raked corners, flames licking its lower edge and a fork of lightning: the chopper's (0545)
  */
 export type HudMotif = 'bracket' | 'orbit' | 'checker' | 'walnut' | 'hotrod';
 
@@ -283,7 +283,7 @@ function wheelAt(x: number, y: number, cx: number, cy: number): Mount {
 }
 
 /**
- * The two cars' own guns since 0538, where each drawing's mouth is: the hub of the spare wheel on the
+ * The two cars' own guns since 0545, where each drawing's mouth is: the hub of the spare wheel on the
  * Firebird's spindle, drawn about (1, 1.5), and the steel star in the face of the estate's launcher
  * block, drawn about (0, 1) — `FIREBIRD_HUB` and `ESTATE_STAR` in `src/render/bake.ts`.
  */
@@ -502,7 +502,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
-   * hood, and since 0538 the Catherine wheel: *"for the Firebird let's give it a fire themed weapon."*
+   * hood, and since 0545 the Catherine wheel: *"for the Firebird let's give it a fire themed weapon."*
    * Its hood was redrawn round the wheel's spindle; the shuriken launcher it wore is the shuriken's
    * mount now, which any ship flying the shuriken stands on its hardpoint (0525).
    */
@@ -524,7 +524,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // star above the centreline. Since 0448 the pair leaves the star itself and flies out to here.
     wingtip: 1.13,
     // The hub of the spare wheel on its spindle on the hood (`drawFirebird` in the bake; `CAR_MOUNTS`
-    // holds this to the drawing) — 0538. It was the shuriken launcher's star, at (3.08, −1.18).
+    // holds this to the drawing) — 0545. It was the shuriken launcher's star, at (3.08, −1.18).
     muzzle: FIREBIRD_HUB,
     // 0525: from the side, a borrowed gun standing on the hood where its own launcher stands.
     view: 'side',
@@ -556,7 +556,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
-   * and since 0538 the shuriken: *"let's move the shurikens to the station wagon to replace the
+   * and since 0545 the shuriken: *"let's move the shurikens to the station wagon to replace the
    * lightning gun we're giving to the Marmot."* Its bonnet was redrawn round a launcher block with the
    * steel star in its face; the lightning rod it wore is the arc's mount now (0525).
    */
@@ -576,7 +576,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
-    // The steel star in the launcher's face on its bonnet (`drawEstate` in the bake) — 0538. It was the
+    // The steel star in the launcher's face on its bonnet (`drawEstate` in the bake) — 0545. It was the
     // lightning rod's ball, at (3.43, −1.18).
     muzzle: ESTATE_STAR,
     // 0525: from the side, a borrowed gun standing on the bonnet where its own lightning rod stands.
@@ -608,7 +608,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     },
   },
   /**
-   * The Marmot's — `docs/decisions/0539-the-marmot-rides.md`. *The Far Carry*'s Thunderbolt, *"a hot-rod
+   * The Marmot's — `docs/decisions/0546-the-marmot-rides.md`. *The Far Carry*'s Thunderbolt, *"a hot-rod
    * space chopper — fat wheels, a bag stood between the bars, wreathed in flame and forked lightning"*,
    * with the Marmot riding it, and the arc: *"he'll have the lightning gun equipped with it's specials
    * as his default."* Drawn from the side as the cars are, in the predecessor's frame about (0, 1)
@@ -646,9 +646,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     hud: { name: 'Hot rod', motif: 'hotrod', ink: { from: 'bullet', lift: 0.2 }, trim: { from: 'player' } },
     hangs: null,
     wheels: { at: [wheelAt(12.6, 6.4, 0, 1), wheelAt(-11, 6.4, 0, 1)], radius: 3.8 * PREDECESSOR_UNIT, rim: 'bolts' },
-    // 0538: a cyan bolt down its tank, the Marmot's paw in gold, gold pinstripes.
+    // 0545: a cyan bolt down its tank, the Marmot's paw in gold, gold pinstripes.
     arts: ['boltTank', 'pawprint', 'pinstripes'],
-    // A cage of forked lightning — 0538.
+    // A cage of forked lightning — 0545.
     shield: {
       look: 'storm',
       places: [

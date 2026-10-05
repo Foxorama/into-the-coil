@@ -1581,7 +1581,7 @@ ${each('-band-step:disabled')} { opacity: 0.2; cursor: default; }
 */
 ${banded((p) => `.${p}option:disabled`)} { opacity: 0.38; border-style: dashed; cursor: not-allowed; }
 /*
-  A pilot not yet open — 0539: their face as a silhouette, a dark shape on the card, so the player sees
+  A pilot not yet open — 0546: their face as a silhouette, a dark shape on the card, so the player sees
   someone is there and not who. The band's line says what opens them.
 */
 ${faced((p) => `.${p}option:disabled .${p}face`)} { filter: brightness(0.12) saturate(0); }
@@ -1792,7 +1792,7 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
   what hangs, five, in rows of three. A phone shows only the one that is on, below. Five a row since
-  0539 put a fifth ship in the hangar: one row each still, as tall as it was.
+  0546 put a fifth ship in the hangar: one row each still, as tall as it was.
 */
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) .itc-hangar-options,
 .itc-hangar-band:has([${SETTING_ATTR}="gun"]) .itc-hangar-options,
@@ -2723,7 +2723,7 @@ ${DANGLE_KINDS.map((kind) => `.itc-playing-hud-hangs-${kind} .itc-playing-hud-ha
 @keyframes itc-hud-dice-fore-a { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 @keyframes itc-hud-dice-fore-b { 0% { transform: none; } 14% { transform: rotate(-34deg); } 34% { transform: rotate(20deg); } 52% { transform: rotate(-11deg); } 70% { transform: rotate(5deg); } 86% { transform: rotate(-2deg); } 100% { transform: none; } }
 /*
-  The Thunderbolt: a hot-rod bridge, the predecessor's chopper deck carried (0538). Raked corners, flame
+  The Thunderbolt: a hot-rod bridge, the predecessor's chopper deck carried (0545). Raked corners, flame
   tongues licking up its lower edge in the ink, and a fork of lightning crackling off its top corner in
   the trim, flickering on its own.
 */
@@ -4412,7 +4412,7 @@ export function makeChrome(
             const name = document.createElement('span');
             name.className = prefix + 'option-name';
             name.setAttribute('aria-hidden', 'true');
-            // The name they go by — 0539, on the row; the first word of the name was *The* for the Marmot.
+            // The name they go by — 0546, on the row; the first word of the name was *The* for the Marmot.
             name.textContent = GOLFERS[golfer].goesBy;
             button.append(portraitOf(golfer, prefix), name);
           }

@@ -110,7 +110,7 @@ export const CUE_KINDS = [
   'zap',
   'throw',
   'ray',
-  // The Catherine wheel's — 0538: its throw, its crackle on the beat while it burns, and its tether landing.
+  // The Catherine wheel's — 0545: its throw, its crackle on the beat while it burns, and its tether landing.
   'wheel',
   'crackle',
   'sizzle',
@@ -218,9 +218,9 @@ export const TWIN_KINDS = [
   'bolt-appears',
   /** A blade leaves the ship and starts its spiral — 0234. */
   'blade-appears',
-  /** A Catherine wheel leaves the muzzle on its tether and flies out to hang — `throwWheel`, 0538. */
+  /** A Catherine wheel leaves the muzzle on its tether and flies out to hang — `throwWheel`, 0545. */
   'wheel-thrown',
-  /** Embers spray off a burning wheel's rim — `throwEmbers`, 0538. */
+  /** Embers spray off a burning wheel's rim — `throwEmbers`, 0545. */
   'embers-fly',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
@@ -954,7 +954,7 @@ export const CUES: Record<CueKind, CueRow> = {
    * thing rather than the air it moves, and the one part that says *blade* and not *gust*.
    */
   /**
-   * A Catherine wheel is thrown — 0538. The whoomp of a firework catching, a hiss of its fuse burning
+   * A Catherine wheel is thrown — 0545. The whoomp of a firework catching, a hiss of its fuse burning
    * up through it, and a whirr rising a fifth as it spins up on the way out. Every ten beats and alone
    * — the wheel is the slowest gun there is — so it has more room than the guns that repeat.
    *
@@ -977,7 +977,7 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * A burning wheel crackles — 0538, once a beat while it spins. A scatter of small snaps over a bed of
+   * A burning wheel crackles — 0545, once a beat while it spins. A scatter of small snaps over a bed of
    * hiss, either side of the middle: the sparks coming off it, heard and seen at once. Quiet, because it
    * is under everything for nine beats in ten.
    */
@@ -996,7 +996,7 @@ export const CUES: Record<CueKind, CueRow> = {
     ],
   },
   /**
-   * The tether lands — 0538: a short sizzle, a burn on something wet. Bright noise thinning fast, over
+   * The tether lands — 0545: a short sizzle, a burn on something wet. Bright noise thinning fast, over
    * the faintest thump. `hold` keeps a tether held across a pack from being one long hiss. Dry, as `hit`
    * is, because it comes at the tether's landing rate; and over every gun and under `hit`, because it
    * is something the player did (0145).

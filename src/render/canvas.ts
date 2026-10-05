@@ -40,7 +40,7 @@ export class CanvasSurface implements Surface {
   private boltInk = UNSET;
   // The enemy's lightning — 0248. Its own inks; the dark halo is the same space.
   private hostileInk = UNSET;
-  // The Catherine wheel's tether — 0538: the player's own fire, amber and gold.
+  // The Catherine wheel's tether — 0545: the player's own fire, amber and gold.
   private flameInk = UNSET;
   private boltDark = '#000000';
 
@@ -247,7 +247,7 @@ export interface BoltInk {
   readonly core: string;
 }
 
-/** The player's bolt, the enemy's, the flame's (0538), and the dark rim they share. */
+/** The player's bolt, the enemy's, the flame's (0545), and the dark rim they share. */
 export interface BoltInks {
   readonly player: BoltInk;
   readonly hostile: BoltInk;

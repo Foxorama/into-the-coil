@@ -13,7 +13,7 @@ import { reset, type Entity } from '../src/sim/entity.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
 
 /**
- * THE CATHERINE WHEEL — `docs/decisions/0538-the-catherine-wheel.md`.
+ * THE CATHERINE WHEEL — `docs/decisions/0545-the-catherine-wheel.md`.
  *
  * *"A spinning fire wheel disc like a catherine wheel firework that shoots out short sparking fire
  * embers and has a fire tether back to the spaceship that you can use to hit things with, the tether
@@ -68,7 +68,7 @@ function target(world: World, ahead: number, aside: number): Entity {
   return enemy;
 }
 
-describe('0538 — the guns move', () => {
+describe('0545 — the guns move', () => {
   it('THE ASK: the Firebird flies the Catherine wheel, the estate the shuriken, the Thunderbolt the arc', () => {
     expect(SHIPS.firebird.weapon).toBe('catherine');
     expect(SHIPS.estate.weapon).toBe('shuriken');
@@ -81,7 +81,7 @@ describe('0538 — the guns move', () => {
   });
 });
 
-describe('0538 — the Catherine wheel', () => {
+describe('0545 — the Catherine wheel', () => {
   it('throws one wheel on the first beat of a life, and then one every ten beats on the run’s grid', () => {
     expect(GUN.fireEvery).toBe(10 * VOLLEY_CYCLE);
     expect(WHEEL.life).toBe(9 * VOLLEY_CYCLE);

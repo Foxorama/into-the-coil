@@ -211,7 +211,7 @@ export function boardLines(table: readonly ScoreEntry[]): BoardLine[] {
   return table.map((entry, index) => ({
     place: String(index + 1) + '.',
     score: String(entry.score),
-    // The name they go by — 0539: the first word of *The Marmot* is *The*.
+    // The name they go by — 0546: the first word of *The Marmot* is *The*.
     pilot: GOLFERS[entry.pilot].goesBy,
     reached: entry.cleared ? 'Clear' : 'L' + String(entry.levels + 1),
   }));

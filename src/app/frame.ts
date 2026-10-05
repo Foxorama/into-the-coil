@@ -2076,7 +2076,7 @@ export class GameFrame implements Frame {
     steerMissiles(w);
     // After the ship has flown this step, so a blade circles where the ship now is — 0234.
     steerBlades(w);
-    // And a wheel to where it hangs, and its embers off it — 0538.
+    // And a wheel to where it hangs, and its embers off it — 0545.
     steerWheels(w);
     // And a ring's ripple — 0442.
     stepRays(w);
@@ -2147,7 +2147,7 @@ export class GameFrame implements Frame {
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     // A link rides the camera and retires on its own lifetime; the cull is a formality it never reaches.
     stepEntities(w.bolts, w.cameraAlong);
-    // The tether, after the ship and the wheel have both moved, so it runs between where they are — 0538.
+    // The tether, after the ship and the wheel have both moved, so it runs between where they are — 0545.
     layTether(w);
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
@@ -2207,7 +2207,7 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    // A wheel is not spent by arriving either, and its tether lands by hand — 0538: both into the log.
+    // A wheel is not spent by arriving either, and its tether lands by hand — 0545: both into the log.
     const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? w.hits : null;
     /*
       ⚠️ **AND THE RAY'S, IN A LOG OF ITS OWN — 0442.** A ring is spent by arriving like a pulse, so
@@ -2223,7 +2223,7 @@ export class GameFrame implements Frame {
       enemy and one on the boss's hull that its body shares. Counted down here, once a step, before
       anything lands; nothing allocates.
     */
-    // The wheel and its tether share it — 0538: one clock on a body for everything the gun lands slowly.
+    // The wheel and its tether share it — 0545: one clock on a body for everything the gun lands slowly.
     const bladeGap = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
     for (let i = 0; i < w.enemies.size; i++) {
       const e = w.enemies.at(i);
@@ -2299,7 +2299,7 @@ export class GameFrame implements Frame {
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
     // A ring on armour still goes off where it landed — the burst is the ring's, not the wound's.
     if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
-    // The tether, on the same clocks and the same log as the wheel it holds — 0538.
+    // The tether, on the same clocks and the same log as the wheel it holds — 0545.
     const wheelRow = WEAPONS[w.weapon.kind].wheel;
     if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
@@ -3362,7 +3362,7 @@ function stepsToGrid(now: number, cadence: number): number {
 }
 
 /**
- * Steps until a life's first volley — 0538: on the gun's own grid, or on the beat's if the gun's
+ * Steps until a life's first volley — 0545: on the gun's own grid, or on the beat's if the gun's
  * cadence is longer than a beat. Every gun before the Catherine wheel fired at least once a beat, so
  * for them this is `stepsToGrid` exactly; the wheel's ten beats would have left a new life four
  * seconds without a gun.
@@ -3437,7 +3437,7 @@ function fireVolley(w: World): void {
     case 'burst':
       firePulse(w);
       return;
-    // A wheel thrown to hang on its tether — 0538.
+    // A wheel thrown to hang on its tether — 0545.
     case 'tether':
       throwWheel(w);
       return;
@@ -3599,7 +3599,7 @@ function steerBlades(w: World): void {
 }
 
 /*
-  ── THE CATHERINE WHEEL — `docs/decisions/0538-the-catherine-wheel.md` ───────────────────────────
+  ── THE CATHERINE WHEEL — `docs/decisions/0545-the-catherine-wheel.md` ───────────────────────────
 
   *"It fires out a spinning fire wheel disc like a catherine wheel firework that shoots out short
   sparking fire embers and has a fire tether back to the spaceship that you can use to hit things with,
@@ -3737,7 +3737,7 @@ function throwEmbers(w: World, b: Entity, wheel: CatherineWheel): void {
 const EMBER_FLARE = 0.45;
 
 /**
- * The tether's landing — 0538. The line from the muzzle to the wheel against every body, and the boss's
+ * The tether's landing — 0545. The line from the muzzle to the wheel against every body, and the boss's
  * hull and body on the hull's clock, gated by the gun's `landGap` as the wheel itself is.
  */
 function landTether(w: World, wheel: CatherineWheel, shootable: boolean, gunOpen: number, gap: number, hull: Entity | null): number {
@@ -3758,7 +3758,7 @@ function landTether(w: World, wheel: CatherineWheel, shootable: boolean, gunOpen
 }
 
 /**
- * The tether's picture — 0538: one bolt link from the muzzle to the wheel, laid after everything has
+ * The tether's picture — 0545: one bolt link from the muzzle to the wheel, laid after everything has
  * moved, so it leaves the gun and reaches the wheel exactly where both are drawn. It lives one step and
  * is laid again on the next, in the flame's inks (`TETHER_BOLT_KIND`). A wheel burning down drops it.
  */
@@ -11199,7 +11199,7 @@ export function respawn(w: World): void {
   */
   // ⚠️ A RESPAWN REJOINS THE GRID RATHER THAN RESTARTING IT — 0094. A full cadence here would put the
   // gun back at whatever phase the death happened at, which is the one moment in a run guaranteed to
-  // be at an arbitrary place in the bar. And no later than the next beat — 0538's `firstVolleyIn`.
+  // be at an arbitrary place in the bar. And no later than the next beat — 0545's `firstVolleyIn`.
   w.fireIn = firstVolleyIn(w.steps, w.weapon.fireEvery);
   w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
 }

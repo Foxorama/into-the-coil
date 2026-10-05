@@ -105,7 +105,7 @@ describe('the ship fires it without being asked', () => {
   it('fires less often than the gun does, in every ship', () => {
     // Every ship since 0441: the second weapon is slower than whichever gun the ship flies.
     for (const ship of SHIP_KINDS) {
-      // Not a wheel on a tether — 0538: thrown once and burning nine beats in ten, it has no rate of
+      // Not a wheel on a tether — 0545: thrown once and burning nine beats in ten, it has no rate of
       // fire to be slower than, as `tests/pickups.test.ts`'s counter-beat says of it too.
       if (WEAPONS[SHIPS[ship].weapon].flight === 'tether') continue;
       const base = weaponFor(SHIPS[ship], []);

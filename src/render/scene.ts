@@ -432,7 +432,7 @@ const TWIG_VERTICES = 3;
 /** Stroke width of the core, in world units. The glow under it is four times this, the flash fourteen — 0238. */
 const BOLT_WIDTH = 0.5;
 /**
- * The Catherine wheel's tether's ripple — 0538: at most a unit off the line, three waves along it,
+ * The Catherine wheel's tether's ripple — 0545: at most a unit off the line, three waves along it,
  * running along it a little each step. Its width is its link's `radius`, which the frame sets to how
  * far either side of the line it lands, and is drawn as a beam's is, so it is as wide as it hits.
  */
@@ -571,7 +571,7 @@ export function paintBolts(
       from its warning to its fade, which is the difference from lightning (0388, above).
     */
     /*
-      ⚠️ **THE CATHERINE WHEEL'S TETHER IS A ROPE OF FIRE, NOT A FLASH — 0538.** Laid every step from the
+      ⚠️ **THE CATHERINE WHEEL'S TETHER IS A ROPE OF FIRE, NOT A FLASH — 0545.** Laid every step from the
       muzzle to the wheel and drawn as a held line (`beam`'s stack, so it is light that stays on rather
       than a strike that collapses), in the flame's inks, rippling gently along its length as the wheel
       pulls it. No twig and no points: those say *lightning*, and this is a burning cord.

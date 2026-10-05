@@ -1198,7 +1198,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       entry. `weaponFor(shipRow, [])` is the one description of *what an unupgraded ship fires at*,
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
-    // From step nought, the first volley of the run is the first of a life — 0538's `firstVolleyIn`.
+    // From step nought, the first volley of the run is the first of a life — 0545's `firstVolleyIn`.
     fireIn: firstVolleyIn(0, weaponFor(shipRow, []).fireEvery),
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
@@ -2022,7 +2022,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         tap to see, tap again to fly — and after a run the card flown last is one tap from flying again.
       */
       const kind = GOLFER_KINDS[index] ?? DEFAULT_GOLFER;
-      // 0539: a shut pilot's card cannot be pressed; this is the belt to that brace, for a pad's press.
+      // 0546: a shut pilot's card cannot be pressed; this is the belt to that brace, for a pad's press.
       if (!pilotOpen(kind, state.hangar.won)) return;
       /*
         ⚠️ **ONLY WHERE THE BAND TAKES — 0521.** The hangar offers the same band and its press steps: a
@@ -2137,7 +2137,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     readout dressed in it. Then the ship itself, as the pilot band always refitted it.
   */
   function fitHangar(): void {
-    // 0539: which pilots may fly, by the wins so far, on the title's band and the hangar's alike.
+    // 0546: which pilots may fly, by the wins so far, on the title's band and the hangar's alike.
     chrome.setOpen('pilot', GOLFER_KINDS.map((kind) => pilotOpen(kind, state.hangar.won)), pilotWhy(state.hangar.won));
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));

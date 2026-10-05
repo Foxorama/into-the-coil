@@ -38,7 +38,7 @@ export const PROBES = [
     guard: 'each target keeps its own clock',
     edit: {
       path: 'src/sim/collide.ts',
-      // `collideInto`'s, by the loop after it: 0538's `tetherInto` keeps the same clock the same way.
+      // `collideInto`'s, by the loop after it: 0545's `tetherInto` keeps the same clock the same way.
       find: '    const clock = gate ?? target;\n    for (let s = shots.size - 1; s >= 0; s--) {',
       replace: '    const clock = gate ?? targets.at(0);\n    for (let s = shots.size - 1; s >= 0; s--) {',
     },

@@ -834,7 +834,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   shieldLattice240a: 'hazard',
   shieldLattice240b: 'hazard',
   shieldLattice240c: 'hazard',
-  // The Thunderbolt's cage of lightning in the arc's own cyan, which is the player's — 0538.
+  // The Thunderbolt's cage of lightning in the arc's own cyan, which is the player's — 0545.
   shieldStorm0a: 'player',
   shieldStorm0b: 'player',
   shieldStorm0c: 'player',
@@ -858,7 +858,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // Steel, since 0238 — *"steel coloured"* — an ink of its own, because a blade is not a bullet.
   shuriken: 'blade',
   shurikenTurn: 'blade',
-  // The player's own fire — 0538: amber spokes and a gold rim, never the hostile `fire`.
+  // The player's own fire — 0545: amber spokes and a gold rim, never the hostile `fire`.
   catherine: 'bullet',
   catherineFade: 'bullet',
   cinder: 'hazard',
@@ -1760,7 +1760,7 @@ export function shaded(
   points: readonly Pt[],
   alpha = 1,
   smooth = false,
-  /** Holes cut out of what is washed, `evenodd` — 0538, the gap under the Marmot's arm. */
+  /** Holes cut out of what is washed, `evenodd` — 0545, the gap under the Marmot's arm. */
   holes: readonly (readonly Pt[])[] = [],
 ): void {
   const wash = ctx.createLinearGradient(
@@ -2318,7 +2318,7 @@ function paintTube(ctx: Pen, f: Frame, palette: Palette, { at: [x, y], length }:
 export function carMounts(ship: 'firebird' | 'estate' | 'thunderbolt'): { muzzle: Pt; tubes: readonly (readonly Pt[])[] } {
   const firebird = ship === 'firebird';
   const box = (x: number, y: number): Pt => (firebird ? inBox([[x, y]], 1, 1.5) : inBox([[x, y]], 0, 1))[0]!;
-  // 0538: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
+  // 0545: the Thunderbolt's pods on its rear fender, and its lightning ball on the fork crown.
   const spans = firebird ? FIREBIRD_TURRETS : ship === 'estate' ? ESTATE_TURRETS : THUNDERBOLT_PODS;
   const mid = firebird
     ? (FIREBIRD_TURRET_TOP + FIREBIRD_TURRET_BASE) / 2
@@ -2690,7 +2690,7 @@ const ESTATE_TURRET_TOP = -8.8;
 const FIREBIRD_TURRET_BASE = -4.9;
 
 /**
- * Where each car's own gun fires from — since 0538, the hub of the spare wheel on the Firebird's spindle
+ * Where each car's own gun fires from — since 0545, the hub of the spare wheel on the Firebird's spindle
  * and the steel star in the face of the estate's launcher block. They were the Firebird's launcher star
  * at (13.6, −3.3) and the estate's rod ball at (14, −3.8), which are the shuriken's and the arc's mounts
  * now (`MOUNTS`), stood on any ship flying them.
@@ -2708,7 +2708,7 @@ const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
  */
 function firebirdOutline(stage: number, own = true): Pt[] {
   /*
-    0538: the Catherine wheel's spindle on the hood — a post up from it and the spare wheel on its top,
+    0545: the Catherine wheel's spindle on the hood — a post up from it and the spare wheel on its top,
     the next one lit from it. 0525: with another ship's gun the hood runs straight from the cowl to
     where the nose falls.
   */
@@ -2745,7 +2745,7 @@ function firebirdOutline(stage: number, own = true): Pt[] {
     ...turretsOn(FIREBIRD_TURRETS[stage]!, firebirdRoof, FIREBIRD_TURRET_TOP),
     [6, -4.8],
     [10.8, -2.1],
-    // The spindle on the hood, the spare wheel on its top — 0538.
+    // The spindle on the hood, the spare wheel on its top — 0545.
     ...launcher,
     // The hood falls to a low nose — *"the front is a little high"* (0516).
     [15.6, -1.25],
@@ -2781,7 +2781,7 @@ function estateOutline(stage: number, own = true): Pt[] {
     [0.5, -4.76],
     [4, -5],
     [11, 1],
-    // The shuriken launcher on the bonnet, a block with the steel star in its face — 0538, where the
+    // The shuriken launcher on the bonnet, a block with the steel star in its face — 0545, where the
     // lightning rod stood — and with another ship's gun, the bonnet running straight on to the nose (0525).
     ...(own ? ([[12.6, 1.22], [12.6, -1.6], [15.9, -1.6], [15.9, 1.7]] as Pt[]) : []),
     [18, 2],
@@ -2792,7 +2792,7 @@ function estateOutline(stage: number, own = true): Pt[] {
 }
 
 /*
-  ── THE THUNDERBOLT — 0538 ───────────────────────────────────────────────────────────────────────
+  ── THE THUNDERBOLT — 0545 ───────────────────────────────────────────────────────────────────────
 
   *"I want to add in The Thunderbolt from Golf-Stars with The Marmot as the pilot riding it, he'll have
   a cool motorbike spacesuit helmet."* The predecessor's mythic hot-rod chopper (`C:\Golf-Stars\src\
@@ -3225,7 +3225,7 @@ export function drawPlayerShip(
     case 'estate':
       drawEstate(ctx, f, palette, stage, own, rim, art, livery);
       break;
-    // The Marmot riding it, as the cars carry their tubes in their rooflines — 0538.
+    // The Marmot riding it, as the cars carry their tubes in their rooflines — 0545.
     case 'thunderbolt':
       drawThunderbolt(ctx, f, palette, stage, own, rim, art, livery);
       break;
@@ -3419,7 +3419,7 @@ export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx:
       return;
     }
     /*
-      The Thunderbolt's — 0538: one fat slash of the arc's cyan across a dark dish, round a chrome hub —
+      The Thunderbolt's — 0545: one fat slash of the arc's cyan across a dark dish, round a chrome hub —
       a lightning strike at the size a wheel is drawn. Half a radius thick, on the spinner's terms: a
       wheel is five pixels across, and a zigzag at that size is a smudge.
     */
@@ -3686,7 +3686,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
   }
   /*
     The spindle on the hood, in the lacquer with a gold collar, and the spare Catherine wheel on its top
-    — 0538: amber with gold spiral blades round a white-hot hub, where the next wheel is lit from. It was
+    — 0545: amber with gold spiral blades round a white-hot hub, where the next wheel is lit from. It was
     a shaker scoop with the shuriken launcher's steel star in it, which the shuriken's mount draws now.
   */
   if (own) {
@@ -3912,7 +3912,7 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   // Its turrets on the rack, in its own burl banded in gilt.
   paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
   /*
-    The shuriken launcher on the bonnet — 0538: a slate block with a gilt lip along its top and the steel
+    The shuriken launcher on the bonnet — 0545: a slate block with a gilt lip along its top and the steel
     star in its face, where the blades leave. It was the lightning rod, which the arc's mount draws now.
   */
   if (own) {
@@ -4099,7 +4099,7 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
     },
   },
   /*
-    The Catherine wheel's spindle — 0538: a slate post with a spare wheel pinned at its top, amber with
+    The Catherine wheel's spindle — 0545: a slate post with a spare wheel pinned at its top, amber with
     gold spiral blades round a white hub, where the next wheel is lit from. From above, the same small
     wheel seen flat on its arm.
   */
@@ -13455,7 +13455,7 @@ function drawPlumePlate(ctx: Pen, at: PlateAt, shimmer: number, palette: Palette
 }
 
 /**
- * The Thunderbolt's shell — 0538: a cage of forked lightning, the predecessor's chopper wreathed in it.
+ * The Thunderbolt's shell — 0545: a cage of forked lightning, the predecessor's chopper wreathed in it.
  * One jagged bolt runs the length of the plate's arc where a hit lands, in the arc's own cyan over a
  * glow, and short forks reach in from it toward the ship; `shimmer` is which third of them is lit.
  * No stream: the zigzag is a fixed rhythm, so the same plate on every bake.
@@ -15844,7 +15844,7 @@ export function drawKind(
     case 'catherine':
     case 'catherineFade': {
       /*
-        ── A CATHERINE WHEEL — 0538 ─────────────────────────────────────────────────────────────────
+        ── A CATHERINE WHEEL — 0545 ─────────────────────────────────────────────────────────────────
 
         *"A spinning fire wheel disc like a catherine wheel firework."* A pinwheel: six spiral spokes of
         amber and gold from a white-hot hub to a gold rim, and a flame tongue off the rim behind each
@@ -15903,7 +15903,7 @@ export function drawKind(
     }
     case 'cinder': {
       /*
-        A cinder off the wheel's rim — 0538: a white-hot head and a tail of gold going to amber, turned
+        A cinder off the wheel's rim — 0545: a white-hot head and a tail of gold going to amber, turned
         along its flight by the frame. A streak and never a dot: a round dot of fire is what a hostile
         bullet is in the volcano, and the shape is what tells them apart there (0295).
       */

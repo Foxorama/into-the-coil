@@ -44,7 +44,7 @@ function flying(ship: ShipKind, tubes: number) {
 
 describe('0448 — each ship fires from its own guns', () => {
   it('THE ROWS ARE THE DRAWING: each car’s muzzle and roof tubes are where its bake draws them', () => {
-    // And the Thunderbolt, drawn side-on in the same frame since 0539 — its pods on the rack, its ball on the crown.
+    // And the Thunderbolt, drawn side-on in the same frame since 0546 — its pods on the rack, its ball on the crown.
     for (const ship of ['firebird', 'estate', 'thunderbolt'] as const) {
       const drawn = carMounts(ship);
       const row = SHIPS[ship];

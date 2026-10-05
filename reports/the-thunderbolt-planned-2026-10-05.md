@@ -135,8 +135,8 @@ names his.
 - **Item 1** — [0537](../docs/decisions/0537-the-candle-is-lit.md), merged as #554. The candle is called
   *Candle* on screen: *Roman candle* widened How to play's key until the guide's Back button sat off the
   smallest phone on CI's fonts.
-- **Item 2** — [0538](../docs/decisions/0538-the-catherine-wheel.md) and
-  [0539](../docs/decisions/0539-the-marmot-rides.md). Three things changed against the plan:
+- **Item 2** — [0545](../docs/decisions/0545-the-catherine-wheel.md) and
+  [0546](../docs/decisions/0546-the-marmot-rides.md). Three things changed against the plan:
   - **The cars' hoods were redrawn round their new guns**, where the plan kept the old drawings and stood
     the new defaults on the hardpoints. The paint guard refused that: a ship's own gun is part of its
     silhouette, and a borrowed mount stands off it by design.

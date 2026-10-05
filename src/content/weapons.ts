@@ -52,12 +52,12 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *   **tether**    one body at a time, thrown out ahead to hang spinning in the camera's frame on a
  *                 tether back to the muzzle, for the row's `wheel.life`. It lands on what it touches
  *                 as a blade does, throws embers that are spent by arriving, and the tether lands on
- *                 whatever crosses it. Past the leash it is towed after the ship. 0538
+ *                 whatever crosses it. Past the leash it is towed after the ship. 0545
  */
 export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether';
 
 /**
- * A Catherine wheel on a tether — `docs/decisions/0538-the-catherine-wheel.md`. *"A spinning fire
+ * A Catherine wheel on a tether — `docs/decisions/0545-the-catherine-wheel.md`. *"A spinning fire
  * wheel disc like a catherine wheel firework that shoots out short sparking fire embers and has a fire
  * tether back to the spaceship that you can use to hit things with."* Every number in steps and world
  * units, in the camera's frame.
@@ -90,7 +90,7 @@ export interface CatherineWheel {
 }
 
 /**
- * The `kind` the Catherine wheel's tether carries in the bolt pool — 0538, beside the serpent's rain (1)
+ * The `kind` the Catherine wheel's tether carries in the bolt pool — 0545, beside the serpent's rain (1)
  * and a boss's beam (2) in `src/content/bosses.ts`. Here because the frame lays it and the painter
  * strokes it, and this layer is below both.
  */
@@ -191,7 +191,7 @@ export interface WeaponRow {
    * twelve steps the gap is 0.4 of a turn.
    */
   turn: number;
-  /** The wheel a `tether` gun throws, or `null` for every other flight — 0538. */
+  /** The wheel a `tether` gun throws, or `null` for every other flight — 0545. */
   wheel: CatherineWheel | null;
 }
 
@@ -373,7 +373,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     wheel: null,
   },
   /**
-   * Backspin Bo's gun on the Firebird since 0538 — the Catherine wheel. Asked for: *"it fires out a
+   * Backspin Bo's gun on the Firebird since 0545 — the Catherine wheel. Asked for: *"it fires out a
    * spinning fire wheel disc like a catherine wheel firework that shoots out short sparking fire
    * embers and has a fire tether back to the spaceship that you can use to hit things with, the tether
    * stays attached to the disc and the car and you can go back and forth with it."* And: *"fires out
@@ -392,7 +392,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * ⚠️ **THREE THINGS LAND, AND TWO OF THEM SHARE THE BLADES' CLOCK.** The wheel and the tether land on
    * a body only so often, on 0391's bucket and this row's `landGap`, so a tether held across a boss is
    * not sixty landings a second. The embers are spent by arriving, as pulses are. What each is worth
-   * was set on the boss instruments beside the other four guns — 0538 has the table.
+   * was set on the boss instruments beside the other four guns — 0545 has the table.
    *
    * ⚠️ **FIRE IN THE PLAYER'S INKS.** `fire` is the hostile meaning ink; the wheel, its embers and its
    * tether are the player's amber and gold (`bullet`, `hazard`) with a white-hot heart.
@@ -410,13 +410,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       ⚠️ **0.6, AND IT WAS 1 UNTIL THE BOSSES WERE FLOWN — 0372's knob.** At one the wheel, its tether and
       its embers together took the gyre, the medusa and the fish in 24 to 26 seconds from their best
       place, where every other gun's best is 40 to 41 and the floor is forty. A hanging wheel is in the
-      boss's face for nine beats in ten; what it lands on everything else is untouched. 0538 has the table.
+      boss's face for nine beats in ten; what it lands on everything else is untouched. 0545 has the table.
     */
     bossWeight: 0.6,
     landGap: 2,
     // The roman candle — 0537, landed ahead of the wheel.
     special: 'candle',
-    // 0538: the spindle the wheel spins on, its hub at the top of a post from the side and over the mount from above.
+    // 0545: the spindle the wheel spins on, its hub at the top of a post from the side and over the mount from above.
     mount: { top: { along: 0.95, across: 0 }, side: { along: 0.35, across: -1.35 } },
     bursts: null,
     reach: 0,
