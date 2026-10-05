@@ -55,6 +55,11 @@ export interface GolferRow extends RunnerRow {
   /** Their name, as the select screen and the menu say it. */
   name: string;
   /**
+   * The name they go by, under their card on the pilot band — 0539. It was the first word of `name`,
+   * which is *The* for the Marmot; a row says its own.
+   */
+  goesBy: string;
+  /**
    * The ship they fly, and with it the gun — 0441: *"each pilot has their own ship."* On the golfer
    * and not on the ship, because who flies what is a fact about the pilot: a fifth golfer may be given
    * a ship that already exists.
@@ -111,6 +116,7 @@ export const KIT = {
 export const GOLFERS: Record<GolferKind, GolferRow> = {
   feather: {
     name: 'Feather Fade',
+    goesBy: 'Feather',
     ship: 'caddie',
     home: 'Nairobi',
     pronouns: 'she/her',
@@ -141,6 +147,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   woo: {
     name: 'Huang-Woo Hook',
+    goesBy: 'Huang-Woo',
     ship: 'fighter',
     home: 'Busan',
     pronouns: 'he/she/they',
@@ -171,6 +178,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   larry: {
     name: 'Longshot Larry',
+    goesBy: 'Longshot',
     ship: 'estate',
     home: 'Perth',
     pronouns: 'he/him',
@@ -201,6 +209,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
   },
   bo: {
     name: 'Backspin Bo',
+    goesBy: 'Backspin',
     ship: 'firebird',
     home: 'Portland',
     pronouns: 'they/them',
@@ -244,6 +253,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
    */
   marmot: {
     name: 'The Marmot',
+    goesBy: 'Marmot',
     ship: 'thunderbolt',
     home: 'The 19th Hole',
     pronouns: 'he/him',

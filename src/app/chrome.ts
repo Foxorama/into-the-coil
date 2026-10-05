@@ -4412,7 +4412,8 @@ export function makeChrome(
             const name = document.createElement('span');
             name.className = prefix + 'option-name';
             name.setAttribute('aria-hidden', 'true');
-            name.textContent = GOLFERS[golfer].name.split(' ')[0] ?? GOLFERS[golfer].name;
+            // The name they go by — 0539, on the row; the first word of the name was *The* for the Marmot.
+            name.textContent = GOLFERS[golfer].goesBy;
             button.append(portraitOf(golfer, prefix), name);
           }
         } else {
