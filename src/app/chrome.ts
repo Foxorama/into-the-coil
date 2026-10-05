@@ -2079,9 +2079,13 @@ ${each('-band[hidden]')} { display: none; }
       starts under the readout's corner rather than behind it.
     */
     .itc-hangar-pilot-card { display: none; }
-    /* 0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen. */
+    /*
+      0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen.
+      0526: and the gun under the faces, the special under it; the third row was five pixels past a
+      480x320's floor, given back from over the tabs, which still clear the readout.
+    */
     .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
-    .itc-hangar-panel, .itc-shop-panel { padding-top: 17cqh; }
+    .itc-hangar-panel, .itc-shop-panel { padding-top: 15cqh; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
