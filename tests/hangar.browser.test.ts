@@ -56,9 +56,20 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     // The fighter and the estate won in; the default pilot's Firebird not. Filled once, before the page runs.
     const won = { ...initialHangar, won: { ...initialHangar.won, fighter: true, estate: true } };
+    /*
+      ⚠️ **ONCE, MARKED ON THE TAB AND NOT IN THE STORE UNDER TEST.** An init script runs again on every
+      reload, and this one filled the key whenever it read empty — so a store that read empty for a
+      moment after the reload was filled with the seed again, and the fitting this test checks was
+      overwritten by the test itself. Red on CI as *the fitting was gone from the key after a reload*.
+      `window.name` outlives a reload in the same tab and is not storage, so the seed is written once —
+      on the game's page only: the blank page a new tab opens on runs this too, and `window.name` carries
+      across a navigation, so marking it there would skip the page the seed is for.
+    */
     await context.addInitScript(
       ([key, value]) => {
-        if (localStorage.getItem(key!) === null) localStorage.setItem(key!, value!);
+        if (location.protocol !== 'file:' || window.name === 'itc-seeded') return;
+        window.name = 'itc-seeded';
+        localStorage.setItem(key!, value!);
       },
       [HANGAR_KEY, serialiseHangar(won)],
     );
@@ -104,8 +115,10 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     await pastIntro(page);
     await openHangar(page);
     // The key first, so a fitting lost from storage and one lost on the way to the picture are two failures.
-    const reread = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
-    expect(reread.plate.fighter, 'the fitting was gone from the key after a reload').toBe('estate');
+    // The raw text in the message, so a store that lost the write and one that kept the wrong thing differ.
+    const raw = await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY);
+    const reread = hangarFrom(raw, initialHangar);
+    expect(reread.plate.fighter, `the fitting was gone from the key after a reload — it held ${String(raw)}`).toBe('estate');
     // The pilot is picked each visit (0415), so Hook is chosen again; the fighter's dash was kept.
     await page.locator(`${faces} >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
     /*
