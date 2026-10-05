@@ -61,10 +61,10 @@ export const PROBES = [
     edit: {
       path: 'src/state/screens.ts',
       // ⚠️ The row gained `choices` — decision 0070 — then `pushed` — 0340 — then `skips` and `inRun` —
-      // 0418. Same break, current text. ⚠️ And one field to a line since 0458 added three more. And `leads` — 0538.
-      find: "  playing: {\n    heading: '',\n    actions: [],\n    leads: false,\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: null,",
+      // 0418. Same break, current text. ⚠️ And one field to a line since 0458 added three more. And `leads` — 0538. And `stand` — 0539.
+      find: "  playing: {\n    heading: '',\n    actions: [],\n    leads: false,\n    stand: null,\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: null,",
       replace:
-        "  playing: {\n    heading: '',\n    actions: [],\n    leads: false,\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: { steps: 60, then: null },",
+        "  playing: {\n    heading: '',\n    actions: [],\n    leads: false,\n    stand: null,\n    choices: [],\n    steps: true,\n    dims: false,\n    timeout: { steps: 60, then: null },",
     },
   },
   {
