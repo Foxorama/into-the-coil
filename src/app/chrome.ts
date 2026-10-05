@@ -1737,12 +1737,14 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   The hangar's own columns: the pilot and their card on the left, the ship's looks down the right —
   its wheels, and the plan's nose art, livery and flame as they land. The wheels' three stand in a row.
   0528: and the art under the wheels, its three in a row too.
+  0529: and the paint under the art — the colour one at a time on every screen, as a phone shows every
+  slot, because thirteen in a grid were the column's height; the tone's three in a row.
 */
 .itc-parts-settings-box {
   display: grid;
   width: min(100%, 64em);
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-areas: 'pilot wheels' 'card art';
+  grid-template-areas: 'pilot wheels' 'pilot art' 'card livery' 'card tone';
   align-items: center;
   gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
 }
@@ -1750,8 +1752,14 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-parts-pilot-card { grid-area: card; }
 .itc-parts-band:has([${SETTING_ATTR}="rim"]) { grid-area: wheels; }
 .itc-parts-band:has([${SETTING_ATTR}="art"]) { grid-area: art; }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) { grid-area: livery; }
+.itc-parts-band:has([${SETTING_ATTR}="tone"]) { grid-area: tone; }
 .itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options,
-.itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
+.itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-options { display: flex; justify-content: center; width: 100%; }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option { width: 100%; }
 /*
   0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
   the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
@@ -2011,6 +2019,11 @@ ${each('-band[hidden]')} { display: none; }
     still names itself to a reader.
   */
   .itc-hangar-settings-box, .itc-parts-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
+  /*
+    0529: Paint & Parts' four slots, on a phone: the colour and its tone side by side across both columns,
+    under the card and the art — four down the right put Back twenty pixels under an 844x390's fold.
+  */
+  .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'card art' 'livery tone'; }
   .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-hangar-band-label, .itc-parts-band-label { display: none; }
   .itc-hangar-option, .itc-parts-option { font-size: 0.8em; }
@@ -2125,6 +2138,9 @@ ${each('-band[hidden]')} { display: none; }
       480x320's floor, given back from over the tabs, which still clear the readout.
     */
     .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
+    /* 0529: and Paint & Parts the same — its card goes, the faces say whose ship is being dressed. */
+    .itc-parts-pilot-card { display: none; }
+    .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'art livery' 'tone .'; }
     .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 15cqh; }
   }
   /*
@@ -3925,7 +3941,7 @@ export function makeChrome(
   const cardShips: Partial<Record<Screen, Map<string, HTMLCanvasElement>>> = {};
   const shipOnCard = (screen: Screen, ship: ShipKind, fit: Fit): HTMLCanvasElement => {
     const kept = (cardShips[screen] ??= new Map<string, HTMLCanvasElement>());
-    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art;
+    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art + ':' + String(fit.livery);
     let canvas = kept.get(key);
     if (canvas === undefined) {
       const kind = SPRITE_KINDS[SHIPS[ship].sprite];

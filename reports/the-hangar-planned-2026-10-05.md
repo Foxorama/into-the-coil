@@ -215,6 +215,8 @@ And once the plan was written:
    its win, on *Paint & Parts*.
 9. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
    can all work. The running lights stay cyan and the high-contrast look stays on roles, as above.
+   **Built as [0529](../docs/decisions/0529-the-livery-is-free.md)**: twelve hues in three tones on two
+   bands, the body's ink alone.
 10. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
    weighed against the frost shot on the frost ship's level before it ships.
 

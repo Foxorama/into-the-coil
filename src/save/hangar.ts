@@ -21,7 +21,7 @@ import { DANGLE_KINDS } from '../content/dangles.ts';
 import { RIM_KINDS } from '../content/rims.ts';
 import { ART_KINDS } from '../content/art.ts';
 import { OWNABLE_KINDS, type OwnableKind } from '../content/wares.ts';
-import { type HangarState, artOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { type HangarState, artOpen, gunOpen, liveryOf, liveryOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
 /** Where the hangar lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
@@ -117,13 +117,21 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     const raw = ART_KINDS.find((a) => a === artDoc?.[kind]);
     if (raw !== undefined && artOpen(opened, kind, raw)) art[kind] = raw;
   }
-  return { won, plate, shards, owned, hung, special, gun, rim, art };
+  // 0529: each ship's paint — a hue and a tone the lists can paint, on a ship won in; the factory's otherwise.
+  const liveryDoc = perShipOf(doc.livery);
+  const livery = { ...base.livery };
+  for (const kind of SHIP_KINDS) {
+    const raw = liveryDoc?.[kind];
+    const read = typeof raw === 'object' && raw !== null ? liveryOf((raw as { hue?: unknown }).hue, (raw as { tone?: unknown }).tone) : null;
+    if (read !== null && liveryOpen(opened, kind)) livery[kind] = read;
+  }
+  return { won, plate, shards, owned, hung, special, gun, rim, art, livery };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun, rim, art } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art });
+  const { won, plate, shards, owned, hung, special, gun, rim, art, livery } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art, livery });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

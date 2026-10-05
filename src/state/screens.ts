@@ -34,6 +34,7 @@ import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { ART } from '../content/art.ts';
+import { HUES, TONES } from '../content/livery.ts';
 import { OWNABLES, WARES, type OwnableKind } from '../content/wares.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -106,7 +107,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0526: and the gun it flies.
 // 0527: and what its wheels wear, on the Paint & Parts tab.
 // 0528: and what it wears on its nose, its dome or its flank.
-export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art';
+// 0529: and the colour its body is painted, a hue and a tone.
+export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art' | 'livery' | 'tone';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -401,6 +403,17 @@ export function artOptions(ship: ShipKind): { label: string; hint: string }[] {
 /** What the art band says while only the ship's first look is open — 0528, the dash's sentence. */
 export function artWhy(ship: ShipKind, won: boolean): string | null {
   return won ? null : 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its art';
+}
+
+/** What the colour band says before the ship can be painted — 0529, the same sentence. */
+export function liveryWhy(ship: ShipKind, won: boolean): string | null {
+  return won ? null : 'Beat the jellyfish in the ' + plainLabel(ship) + ' to paint it';
+}
+
+/** What the tone band says when there is no paint to tone — 0529. */
+export function toneWhy(won: boolean, painted: boolean): string | null {
+  if (!won) return null;
+  return painted ? null : 'Choose a colour first: the factory’s paint has its own tone';
 }
 
 /**
@@ -830,6 +843,27 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'art',
         label: 'Art',
         options: artOptions('fighter'),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      /*
+        0529: the body's colour — the factory's first, then every hue round the wheel — and its tone. Two
+        bands rather than a wheel, because a band is the picker every device already works: a step of
+        either is a press a pad, a mouse and a thumb all make.
+      */
+      {
+        name: 'livery',
+        label: 'Colour',
+        options: [{ label: 'Factory', hint: 'The paint it came in' }, ...HUES.map((hue) => ({ label: hue.name, hint: hue.name + ' paint, over the whole body' }))],
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      {
+        name: 'tone',
+        label: 'Tone',
+        options: TONES.map((tone) => ({ label: tone.name, hint: 'The colour ' + tone.name.toLowerCase() })),
         faces: 'words',
         on: 'all',
         press: 'steps',
