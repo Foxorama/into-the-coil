@@ -33,7 +33,8 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, shieldPlateOf } from '../content/ships.ts';
+import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, shieldPlateOf, type GunView } from '../content/ships.ts';
+import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
 /** Side profile for a horizontally scrolling screen, top-down for a vertical one. */
@@ -2077,7 +2078,7 @@ function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
   ctx.closePath();
 }
 
-export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): void {
+export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, pods = true): void {
   const body = palette.player;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
@@ -2128,7 +2129,8 @@ export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number): v
   poly(ctx, f, palette.impact, SHIP_CANOPY_LIGHT, 0.85);
   for (const side of [SHIP_NACELLE, mirrored(SHIP_NACELLE)]) poly(ctx, f, palette.flame, side);
   for (const side of [SHIP_CORE, mirrored(SHIP_CORE)]) poly(ctx, f, palette.hazard, side);
-  if (tier >= 1) {
+  // 0525: the pods are the pulse's, so a fighter flying another ship's gun wears none.
+  if (tier >= 1 && pods) {
     for (const side of [1, -1] as const) {
       // A dark band down each pod's length, so the pod reads as a fitted part rather than a second wing
       // — 0469: along the cigar, at its waist, and 0.15 wide so it clears the floor.
@@ -2421,10 +2423,11 @@ function podDetour(): Pt[] {
  * run out through its rim at the nose. One path, so the gun, the pylons and the disc share edges and no
  * area: 0194's `evenodd` trap.
  */
-function caddieHull(stage: number): Pt[] {
+function caddieHull(stage: number, own = true): Pt[] {
   const D = CADDIE_DISC;
-  // Where the housing's ball leaves the rim — 0467.
-  const meets = housingSeat().onDisc;
+  // Where the housing's ball leaves the rim — 0467. With another ship's gun there is no housing, and the
+  // rim runs all the way round to the nose (0525).
+  const meets = own ? housingSeat().onDisc : 0;
   // The lower half, from where the gun leaves the rim round to the tail, a pod's detour in it at two.
   const lower = (pod: boolean): Pt[] => {
     const out: Pt[] = [];
@@ -2445,7 +2448,7 @@ function caddieHull(stage: number): Pt[] {
   };
   const below = lower(stage >= 2);
   const above = mirrored(lower(stage >= 1)).reverse().slice(1);
-  return [...below, ...above, ...raygunProfile()];
+  return own ? [...below, ...above, ...raygunProfile()] : [...below, ...above];
 }
 
 /**
@@ -2487,43 +2490,44 @@ export function caddieMounts(): { muzzle: Pt; tubes: readonly (readonly Pt[])[] 
  * (`paintSaucer` in `port-bake.ts`), where the housing hangs under the rim's edge and its lens is seen,
  * which is what `onDisc` false keeps.
  */
-export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true): void {
+/*
+  ⚠️ **AND PLACED, SINCE 0525**, as a gun another ship borrows: `place` puts the housing's centre where a
+  mount wants it and `s` scales it, so its dish's front lands on the borrowing ship's muzzle. With neither
+  — the caddie's own gun, and the hangar's — `place` is the identity and `s` is one, which return the very
+  numbers this drew before there was a choice: no arithmetic is added to the caddie's own pixels.
+*/
+export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true, at?: Pt, s = 1): void {
   const chrome = shade(palette.trim, 0.65);
+  const { x: hx0 } = RAYGUN.housing;
+  const P = at === undefined ? (x: number, y: number): Pt => [x, y] : (x: number, y: number): Pt => [at[0] + (x - hx0) * s, at[1] + y * s];
+  const ring = (cx: number, r: number, count: number): Pt[] => roundel(cx, 0, r, count, 0, Math.PI * 2).map(([x, y]) => P(x, y));
   const b = RAYGUN.barrel;
   const { x: hx, r: hr } = RAYGUN.housing;
   const { x: ox, r: or } = RAYGUN.dish;
   // The barrel first, so the housing and the dish sit over its ends: chrome lit along its top, the
   // rings' light down its middle to the dish's mouth.
-  shaded(ctx, f, [0, -b], [0, b], shade(chrome, 0.4), shade(chrome, -0.35), [
-    [hx, -b],
-    [ox, -b],
-    [ox, b],
-    [hx, b],
-  ]);
-  seam(ctx, f, shade(palette.ally, 0.35), 0.045, [
-    [hx + hr * 0.8, 0],
-    [ox - or * 0.7, 0],
-  ], 0.9);
+  shaded(ctx, f, P(0, -b), P(0, b), shade(chrome, 0.4), shade(chrome, -0.35), [P(hx, -b), P(ox, -b), P(ox, b), P(hx, b)]);
+  seam(ctx, f, shade(palette.ally, 0.35), 0.045 * s, [P(hx + hr * 0.8, 0), P(ox - or * 0.7, 0)], 0.9);
   if (onDisc) {
     // The ball, in the rim's shadow: dark where it comes out from under the rim, lit toward the muzzle.
-    shaded(ctx, f, [CADDIE_DISC, 0], [hx + hr, 0], shade(chrome, -0.6), shade(chrome, 0.3), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
+    shaded(ctx, f, P(CADDIE_DISC, 0), P(hx + hr, 0), shade(chrome, -0.6), shade(chrome, 0.3), ring(hx, hr, 28));
   } else {
     // The ball: chrome, lit above and ahead, dark below and behind.
-    shaded(ctx, f, [hx + hr * 0.2, -hr], [hx - hr * 0.2, hr], shade(chrome, 0.55), shade(chrome, -0.45), roundel(hx, 0, hr, 28, 0, Math.PI * 2));
+    shaded(ctx, f, P(hx + hr * 0.2, -hr), P(hx - hr * 0.2, hr), shade(chrome, 0.55), shade(chrome, -0.45), ring(hx, hr, 28));
     // The lens: the rings' lavender, deep at its edge, two rings of light in it about the heart.
     const lens = RAYGUN.lens;
-    shaded(ctx, f, [hx, -lens], [hx, lens], shade(palette.ally, 0.05), shade(palette.ally, -0.5), roundel(hx, 0, lens, 24, 0, Math.PI * 2));
-    seam(ctx, f, shade(palette.ally, 0.45), 0.04, roundel(hx, 0, lens * 0.74, 18, 0, Math.PI * 2), 0.9, true);
-    seam(ctx, f, shade(palette.ally, 0.6), 0.04, roundel(hx, 0, lens * 0.44, 14, 0, Math.PI * 2), 0.9, true);
-    glow(ctx, f, palette.ally, hx, 0, lens * 1.25, 0.65);
-    disc(ctx, f, palette.impact, hx + 0.01, 0, RAYGUN.heart);
+    shaded(ctx, f, P(hx, -lens), P(hx, lens), shade(palette.ally, 0.05), shade(palette.ally, -0.5), ring(hx, lens, 24));
+    seam(ctx, f, shade(palette.ally, 0.45), 0.04 * s, ring(hx, lens * 0.74, 18), 0.9, true);
+    seam(ctx, f, shade(palette.ally, 0.6), 0.04 * s, ring(hx, lens * 0.44, 14), 0.9, true);
+    glow(ctx, f, palette.ally, ...P(hx, 0), lens * 1.25 * s, 0.65);
+    disc(ctx, f, palette.impact, ...P(hx + 0.01, 0), RAYGUN.heart * s);
   }
   // The dish: a chrome lip round a mouth deep in the rings' lavender, with a ring of their light lit in
   // it. A ring goes in and a ring comes out, and nothing about it is a point.
-  disc(ctx, f, shade(palette.ally, -0.45), ox, 0, or);
-  glow(ctx, f, palette.ally, ox, 0, or * 0.9, 0.75);
-  seam(ctx, f, shade(palette.ally, 0.55), 0.03, roundel(ox, 0, or * 0.5, 16, 0, Math.PI * 2), 0.95, true);
-  seam(ctx, f, shade(chrome, 0.35), 0.035, roundel(ox, 0, or - 0.02, 20, 0, Math.PI * 2), 1, true);
+  disc(ctx, f, shade(palette.ally, -0.45), ...P(ox, 0), or * s);
+  glow(ctx, f, palette.ally, ...P(ox, 0), or * 0.9 * s, 0.75);
+  seam(ctx, f, shade(palette.ally, 0.55), 0.03 * s, ring(ox, or * 0.5, 16), 0.95, true);
+  seam(ctx, f, shade(chrome, 0.35), 0.035 * s, ring(ox, or - 0.02, 20), 1, true);
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
@@ -2638,7 +2642,15 @@ const firebirdRoof = (x: number): number => -4.6 + ((x + 2) / 8) * -0.2;
  * The Firebird from the side, in the predecessor's frame: ducktail, cabin, long hood to a pointed nose,
  * the shuriken launcher standing on the hood, turrets on the roof, and fat tyres under the sills.
  */
-function firebirdOutline(stage: number): Pt[] {
+function firebirdOutline(stage: number, own = true): Pt[] {
+  // 0525: with another ship's gun the hood runs straight from the cowl to where the nose falls.
+  const launcher: Pt[] = own
+    ? [
+        [11.6, -1.95],
+        [11.6, -4.8],
+        [15.6, -4.8],
+      ]
+    : [];
   return [
     [-17, 5],
     // The tail panel stands tall and square, and the deck runs level with the beltline from it to the
@@ -2663,9 +2675,7 @@ function firebirdOutline(stage: number): Pt[] {
     [6, -4.8],
     [10.8, -2.1],
     // The launcher on the hood: a block the blades leave from.
-    [11.6, -1.95],
-    [11.6, -4.8],
-    [15.6, -4.8],
+    ...launcher,
     // The hood falls to a low nose — *"the front is a little high"* (0516).
     [15.6, -1.25],
     [17.6, -0.6],
@@ -2687,7 +2697,7 @@ const estateRoof = (): number => ESTATE_RACK;
  * windscreen sloping to the bonnet, the lightning rod standing on the bonnet with its ball, turrets on
  * the rack, and its wheels under the sills.
  */
-function estateOutline(stage: number): Pt[] {
+function estateOutline(stage: number, own = true): Pt[] {
   // The rod's ball, an octagon about (14, −3.8), from its lower left round the top to its lower right.
   const ball: Pt[] = [];
   for (let i = 0; i <= 6; i++) {
@@ -2706,12 +2716,9 @@ function estateOutline(stage: number): Pt[] {
     [0.5, -4.76],
     [4, -5],
     [11, 1],
-    // The lightning rod on the bonnet, its ball above it.
-    [12.9, 1.27],
-    [12.9, -2.3],
-    ...ball,
-    [15.1, -2.3],
-    [15.1, 1.59],
+    // The lightning rod on the bonnet, its ball above it — and with another ship's gun, the bonnet
+    // running straight on to the nose (0525).
+    ...(own ? ([[12.9, 1.27], [12.9, -2.3], ...ball, [15.1, -2.3], [15.1, 1.59]] as Pt[]) : []),
     [18, 2],
     [18, 6],
     ...wheelUnder(9, 6.4, 2.9, 6),
@@ -2723,7 +2730,16 @@ function estateOutline(stage: number): Pt[] {
  * A ship in the one box, at no tubes, one or two — 0441. `f` is the box's frame; the fighter is drawn
  * at its own hull's size inside it, as its capped tier always was (0229).
  */
-export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number): void {
+/*
+  ⚠️ **A GUN IS FITTED, AND ITS OWN IS DRAWN AS IT ALWAYS WAS — 0525.** `gun` is the ship's own by
+  default, and then every line below runs exactly as it did before there was a choice: the same calls
+  in the same order, so the sprites a ship flies its own gun in cannot move by a pixel. Another ship's
+  gun draws the same ship without its own (`own` false: no pods, no ray gun, no launcher, no rod — each
+  drawing's outline closes over where its gun stood) and then that gun's mount at the ship's hardpoint
+  (`paintMount`), last, over the hull it stands on.
+*/
+export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, stage: number, gun: WeaponKind = SHIPS[ship].weapon): void {
+  const own = gun === SHIPS[ship].weapon;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
     stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
   let tubes: readonly TubeAt[] = [];
@@ -2734,8 +2750,10 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
       const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
       ctx.fillStyle = palette.player;
       trace(ctx, fh, SHIP_HULL);
-      trace(ctx, fh, SHIP_POD_MK3);
-      trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      if (own) {
+        trace(ctx, fh, SHIP_POD_MK3);
+        trace(ctx, fh, mirrored(SHIP_POD_MK3));
+      }
       trace(ctx, fh, SHIP_CANARD);
       trace(ctx, fh, mirrored(SHIP_CANARD));
       seal(ctx);
@@ -2743,23 +2761,25 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
       shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(palette.player, 0.15), shade(palette.player, -0.4), SHIP_HULL);
       // And the wingtip pods the same light, bright at the nose and in shadow behind — along the cigar (0469).
-      for (const pod of [SHIP_POD_MK3, mirrored(SHIP_POD_MK3)]) {
-        shaded(ctx, fh, [0.1, 0], [-1, 0], shade(palette.player, 0.1), shade(palette.player, -0.42), pod);
+      if (own) {
+        for (const pod of [SHIP_POD_MK3, mirrored(SHIP_POD_MK3)]) {
+          shaded(ctx, fh, [0.1, 0], [-1, 0], shade(palette.player, 0.1), shade(palette.player, -0.42), pod);
+        }
       }
-      paintShip(ctx, fh, palette, 2);
-      jazzFighter(ctx, fh, palette);
+      paintShip(ctx, fh, palette, 2, own);
+      jazzFighter(ctx, fh, palette, own);
       break;
     }
     // The saucer hangs its pods off its sides, in its own outline — 0461.
     case 'caddie':
-      drawCaddie(ctx, f, palette, stage);
+      drawCaddie(ctx, f, palette, stage, own);
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette, stage);
+      drawFirebird(ctx, f, palette, stage, own);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette, stage);
+      drawEstate(ctx, f, palette, stage, own);
       break;
     default: {
       const unhandled: never = ship;
@@ -2767,6 +2787,7 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
     }
   }
   for (const tube of tubes) paintTube(ctx, f, palette, tube);
+  if (!own) paintMount(ctx, f, palette, gun, ship);
 }
 
 /**
@@ -2775,7 +2796,7 @@ export function drawPlayerShip(ctx: Pen, f: Frame, palette: Palette, ship: ShipA
  * light down each wing's leading edge, and its engines and its pods' muzzles glowing. In the hull's own
  * radius, as `paintShip` is.
  */
-function jazzFighter(ctx: Pen, f: Frame, palette: Palette): void {
+function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true): void {
   poly(ctx, f, palette.ally, [
     [0.74, 0],
     [0.62, -0.09],
@@ -2794,7 +2815,8 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette): void {
   seam(ctx, f, shade(palette.player, 0.35), 0.035, mirrored(edge), 0.6);
   for (const side of [1, -1] as const) {
     glow(ctx, f, palette.hazard, -0.68, 0.21 * side, 0.22, 0.6);
-    glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
+    // 0525: the pods' muzzles glow only where there are pods.
+    if (pods) glow(ctx, f, palette.hazard, -0.09, -0.96 * side, 0.15, 0.6);
   }
 }
 
@@ -2804,15 +2826,15 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette): void {
  * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
  * ray gun, fed from a chamber on its face ahead of the dome (0463).
  */
-function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
   const body = mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
   const D = CADDIE_DISC;
   ctx.fillStyle = body;
-  trace(ctx, f, caddieHull(stage));
+  trace(ctx, f, caddieHull(stage, own));
   seal(ctx);
   // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
-  paintRaygun(ctx, f, palette);
+  if (own) paintRaygun(ctx, f, palette);
   if (stage >= 1) paintPod(ctx, f, palette, -1);
   if (stage >= 2) paintPod(ctx, f, palette, 1);
   // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
@@ -2912,7 +2934,7 @@ function paintTurrets(
  * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
   /*
     ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
     Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
@@ -2934,7 +2956,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
   const stripe = shade(gold, 0.15);
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
-  const outline = box(firebirdOutline(stage));
+  const outline = box(firebirdOutline(stage, own));
   ctx.fillStyle = body;
   trace(ctx, f, outline);
   seal(ctx);
@@ -3040,17 +3062,19 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
     [8.6, 1.2],
   ]));
   // The shaker scoop on the hood, in the lacquer with a gold lip, and the steel star the blades leave from.
-  shaded(ctx, f, at(0, -4.8), at(0, -2), shade(body, 0.35), shade(body, -0.2), box([
-    [11.6, -4.8],
-    [15.6, -4.8],
-    [15.6, -2],
-    [11.6, -2],
-  ]));
-  seam(ctx, f, stripe, pin, box([
-    [12.2, -4.35],
-    [15, -4.35],
-  ]), 0.95);
-  poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.2)));
+  if (own) {
+    shaded(ctx, f, at(0, -4.8), at(0, -2), shade(body, 0.35), shade(body, -0.2), box([
+      [11.6, -4.8],
+      [15.6, -4.8],
+      [15.6, -2],
+      [11.6, -2],
+    ]));
+    seam(ctx, f, stripe, pin, box([
+      [12.2, -4.35],
+      [15, -4.35],
+    ]), 0.95);
+    poly(ctx, f, palette.blade, box(steelStar(FIREBIRD_STAR[0], FIREBIRD_STAR[1], 1.2)));
+  }
   // Its turrets on the roof, in its own black and gold.
   paintTurrets(ctx, f, palette, FIREBIRD_TURRETS[stage]!, FIREBIRD_TURRET_TOP, FIREBIRD_TURRET_BASE, box, { shell: body, band: gold });
   // A headlamp in the impact ink at the nose with the player's cyan round it, a tail lamp in the shot's
@@ -3099,11 +3123,11 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number): void
  * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
  * the bonnet, and its turrets on the roof rack.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
   const gilt = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
-  const outline = box(estateOutline(stage));
+  const outline = box(estateOutline(stage, own));
   ctx.fillStyle = gilt;
   trace(ctx, f, outline);
   seal(ctx);
@@ -3219,19 +3243,19 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
   // Its turrets on the rack, in its own burl banded in gilt.
   paintTurrets(ctx, f, palette, ESTATE_TURRETS[stage]!, ESTATE_TURRET_TOP, ESTATE_RACK, box, { shell: shade(wood, -0.25), band: shade(gilt, 0.3) });
   // The lightning rod on the bonnet: a slate rod with a chrome coil round it, a lit ball, and its light.
-  poly(ctx, f, palette.trim, box([
-    [12.9, -2.3],
-    [15.1, -2.3],
-    [15.1, 1.2],
-    [12.9, 1.2],
-  ]));
-  shaded(ctx, f, at(12.6, -1.6), at(15.4, 0.4), shade(palette.trim, 0.75), shade(palette.trim, 0.05), box([
-    [12.9, -1.5],
-    [15.1, -1.5],
-    [15.1, 0.3],
-    [12.9, 0.3],
-  ]));
-  {
+  if (own) {
+    poly(ctx, f, palette.trim, box([
+      [12.9, -2.3],
+      [15.1, -2.3],
+      [15.1, 1.2],
+      [12.9, 1.2],
+    ]));
+    shaded(ctx, f, at(12.6, -1.6), at(15.4, 0.4), shade(palette.trim, 0.75), shade(palette.trim, 0.05), box([
+      [12.9, -1.5],
+      [15.1, -1.5],
+      [15.1, 0.3],
+      [12.9, 0.3],
+    ]));
     const [bx, by] = at(ESTATE_BALL[0], ESTATE_BALL[1]);
     disc(ctx, f, palette.player, bx, by, 1.9 * 0.062);
     glow(ctx, f, palette.player, bx, by, 3.4 * 0.062, 0.6);
@@ -3250,6 +3274,145 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number): void {
     [-16, 5.6],
     [-17.8, 5.6],
   ]));
+}
+
+/*
+  ── A BORROWED GUN, ON ITS MOUNT — 0525 ─────────────────────────────────────────────────────────────
+
+  *"I do want guns to be interchangable per ship as well."* A ship flying another ship's gun is drawn
+  without its own (`drawPlayerShip`'s `own`), and the borrowed gun is laid on it here, at the ship's
+  `hardpoint` and in the ship's `view`: standing on the hood of a car, lying along the nose of the fighter
+  or seated on the rim of the saucer. Eight drawings — four guns, two views — rather than twelve made for
+  one ship each, so a fifth gun is two drawings and a fifth ship is a hardpoint.
+
+  ⚠️ **THE MUZZLE IS READ, NOT PLACED.** Each mount ends where its weapon row's `mount` says the shot
+  leaves, in that view, so the point a borrowing ship fires from (`fitted`, `src/content/ships.ts`) is
+  the point this draws its mouth at. `tests/mounts.test.ts` holds every pairing to it.
+*/
+
+/** A box's radius in world units: a sprite's frame puts it at 0.42 of the extent — `tests/mounts.test.ts`'s `R`. */
+const BOX_R = SHIP_BOX * 0.42;
+
+/**
+ * A mount's drawing about the hardpoint, in the box's radius: `p` places a point given from the
+ * hardpoint, and `m` is the muzzle, given the same way, that the drawing ends at.
+ */
+type MountPainter = (ctx: Pen, f: Frame, palette: Palette, p: (x: number, y: number) => Pt, m: Pt) => void;
+
+const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
+  /*
+    The pulse: twin barrels, chrome, on a dark pad — the fighter's pods are a pair, and two mouths are
+    what reads as a pulse. Each mouth lit in the pods' hazard.
+  */
+  pulse: {
+    top: (ctx, f, palette, p, [mx]) => {
+      const chrome = shade(palette.trim, 0.65);
+      disc(ctx, f, shade(palette.trim, -0.45), ...p(0.04, 0), 0.13);
+      for (const side of [-1, 1] as const) {
+        shaded(ctx, f, p(0, side * 0.07 - 0.03), p(0, side * 0.07 + 0.03), shade(chrome, 0.3), shade(chrome, -0.35), [
+          p(0, side * 0.07 - 0.032),
+          p(mx, side * 0.07 - 0.032),
+          p(mx, side * 0.07 + 0.032),
+          p(0, side * 0.07 + 0.032),
+        ]);
+        glow(ctx, f, palette.hazard, ...p(mx, side * 0.07), 0.07, 0.75);
+      }
+    },
+    side: (ctx, f, palette, p, [mx, my]) => {
+      const chrome = shade(palette.trim, 0.65);
+      shaded(ctx, f, p(0, -0.2), p(0, 0), shade(palette.trim, 0.1), shade(palette.trim, -0.45), [
+        p(-0.13, 0),
+        p(-0.11, -0.2),
+        p(0.09, -0.2),
+        p(0.12, 0),
+      ]);
+      for (const dy of [-0.045, 0.045]) {
+        poly(ctx, f, chrome, [p(0.05, my + dy - 0.025), p(mx, my + dy - 0.025), p(mx, my + dy + 0.025), p(0.05, my + dy + 0.025)]);
+        glow(ctx, f, palette.hazard, ...p(mx, my + dy), 0.06, 0.75);
+      }
+    },
+  },
+  /*
+    The ray gun: the caddie's own, a chrome emitter with a lavender lens, a short barrel and an open dish
+    the rings leave — drawn as the hangar's side view draws it (`paintRaygun`, `onDisc` false), scaled so
+    its dish's front is the muzzle. Side-on it stands on a short pylon.
+  */
+  ray: {
+    top: (ctx, f, palette, p, [mx]) => {
+      paintRaygun(ctx, f, palette, false, p(0, 0), mx / (RAYGUN.tip - RAYGUN.housing.x));
+    },
+    side: (ctx, f, palette, p, [mx, my]) => {
+      poly(ctx, f, shade(palette.trim, -0.35), [p(-0.04, 0), p(0.04, 0), p(0.04, my), p(-0.04, my)]);
+      paintRaygun(ctx, f, palette, false, p(0, my), mx / (RAYGUN.tip - RAYGUN.housing.x));
+    },
+  },
+  /*
+    The shuriken: the Firebird's launcher — a block in the lacquer with a gold lip and the steel star the
+    blades leave in its face — and from above, the same launcher's drum, gold-lipped, the star on it.
+  */
+  shuriken: {
+    top: (ctx, f, palette, p, m) => {
+      poly(ctx, f, shade(palette.trim, -0.45), [p(-0.06, -0.06), p(m[0], -0.06), p(m[0], 0.06), p(-0.06, 0.06)]);
+      disc(ctx, f, shade(palette.space, 0.2), ...p(m[0], m[1]), 0.16);
+      band(ctx, f, palette.hazard, ...p(m[0], m[1]), 0.16, 0.13);
+      poly(ctx, f, palette.blade, starAt(p(m[0], m[1]), 0.12));
+    },
+    side: (ctx, f, palette, p, m) => {
+      const body = shade(mix(palette.space, palette.hazard, 0.08), 0.16);
+      shaded(ctx, f, p(0, -0.18), p(0, 0), shade(body, 0.35), shade(body, -0.2), [p(-0.124, -0.18), p(0.124, -0.18), p(0.124, 0), p(-0.124, 0)]);
+      seam(ctx, f, shade(palette.hazard, 0.15), 0.045, [p(-0.09, -0.152), p(0.09, -0.152)], 0.95);
+      poly(ctx, f, palette.blade, starAt(p(m[0], m[1]), 0.074));
+    },
+  },
+  /*
+    The arc: the estate's lightning rod — a slate rod, a chrome coil, the ball in the player's cyan with
+    its light — and from above, the ball over its coil, rings of chrome round the light.
+  */
+  arc: {
+    top: (ctx, f, palette, p, m) => {
+      const chrome = shade(palette.trim, 0.65);
+      poly(ctx, f, palette.trim, [p(-0.05, -0.05), p(m[0], -0.05), p(m[0], 0.05), p(-0.05, 0.05)]);
+      band(ctx, f, chrome, ...p(m[0], m[1]), 0.15, 0.11);
+      disc(ctx, f, palette.player, ...p(m[0], m[1]), 0.105);
+      glow(ctx, f, palette.player, ...p(m[0], m[1]), 0.2, 0.6);
+      disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.05);
+    },
+    side: (ctx, f, palette, p, m) => {
+      poly(ctx, f, palette.trim, [p(-0.068, 0), p(0.068, 0), p(0.068, m[1] + 0.05), p(-0.068, m[1] + 0.05)]);
+      shaded(ctx, f, p(-0.09, m[1] + 0.13), p(0.09, m[1] + 0.25), shade(palette.trim, 0.75), shade(palette.trim, 0.05), [
+        p(-0.068, m[1] + 0.13),
+        p(0.068, m[1] + 0.13),
+        p(0.068, m[1] + 0.24),
+        p(-0.068, m[1] + 0.24),
+      ]);
+      disc(ctx, f, palette.player, ...p(m[0], m[1]), 0.118);
+      glow(ctx, f, palette.player, ...p(m[0], m[1]), 0.21, 0.6);
+      disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.056);
+    },
+  },
+};
+
+/** A steel star of eight points about `c`, `reach` out, in the box's radius — the launcher's, placed. */
+function starAt(c: Pt, reach: number): Pt[] {
+  const out: Pt[] = [];
+  for (let k = 0; k < 8; k++) {
+    const a = (k * Math.PI) / 4 + Math.PI / 8;
+    const r = k % 2 === 0 ? reach : reach * 0.42;
+    out.push([c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r]);
+  }
+  return out;
+}
+
+/**
+ * `gun`'s mount on `ship`, at its hardpoint and in its view — 0525. The muzzle is the gun row's, in world
+ * units, carried into the box's radius as the hardpoint is.
+ */
+export function paintMount(ctx: Pen, f: Frame, palette: Palette, gun: WeaponKind, ship: ShipArt): void {
+  const row = SHIPS[ship];
+  const muzzle = WEAPONS[gun].mount[row.view];
+  const hx = row.hardpoint.along / BOX_R;
+  const hy = row.hardpoint.across / BOX_R;
+  MOUNTS[gun][row.view](ctx, f, palette, (x, y) => [hx + x, hy + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
 }
 
 /** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */

@@ -30,8 +30,9 @@ export const PROBES = [
     guard: 'a death costs the life and nothing else: both ladders, both kinds and the arsenal stay',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '            ship: state.ship,\n            missile: state.missile,',
-      replace: "            ship: 'fighter',\n            missile: 'straight',",
+      // ⚠️ Re-anchored by 0525, which carries the run's gun beside its ship.
+      find: '            ship: state.ship,\n            gun: state.gun,\n            missile: state.missile,',
+      replace: "            ship: 'fighter',\n            gun: state.gun,\n            missile: 'straight',",
     },
   },
   {
@@ -57,8 +58,9 @@ export const PROBES = [
       path: 'src/state/slices/run.ts',
       // Anchored on the continue's own note on the score (0438), the one text no other case has.
       // ⚠️ Re-anchored by 0441: the run carries its ship where it carried a gun.
-      find: '        upgrades: state.upgrades,\n        ship: state.ship,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
-      replace: '        upgrades: [],\n        ship: state.ship,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      // ⚠️ And by 0525, which carries the run's gun beside its ship.
+      find: '        upgrades: state.upgrades,\n        ship: state.ship,\n        gun: state.gun,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
+      replace: '        upgrades: [],\n        ship: state.ship,\n        gun: state.gun,\n        missile: state.missile,\n        difficulty: state.difficulty,\n        /*\n          ⚠️ **THE SCORE STARTS AGAIN — 0438**',
     },
   },
   {

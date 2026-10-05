@@ -15,7 +15,7 @@ import { OPENING_CHARGES, SIDES, SPECIALS, type Side, type SpecialKind } from '.
 import { UPGRADE_TIERS, tiersOf, type UpgradeKind } from '../../content/pickups.ts';
 import { DIFFICULTIES, type DifficultyKind } from '../../content/difficulty.ts';
 import { SHIPS, type ShipKind } from '../../content/ships.ts';
-import { WEAPONS } from '../../content/weapons.ts';
+import { WEAPONS, type WeaponKind } from '../../content/weapons.ts';
 import type { MissileKind } from '../../content/missiles.ts';
 import type { LevelTally } from '../../content/score.ts';
 import { DEFAULT_CREDIT, type CreditKind } from '../../content/credits.ts';
@@ -149,9 +149,15 @@ export interface RunState {
    */
   upgrades: readonly UpgradeKind[];
   /**
-   * The ship this run is flown in — 0441, and with it the gun, which nothing changes.
+   * The ship this run is flown in — 0441.
    */
   ship: ShipKind;
+  /**
+   * The gun it is flown with — 0525: the ship's own, or since the hangar may fit one, another's. Fixed
+   * for the run, as the gun always was (0441); on the run and not read off the ship, because the shell
+   * resolves the world's ship row from the two (`fitted`) every time the run is rearmed.
+   */
+  gun: WeaponKind;
   /**
    * Which tube the missile ladder is on — 0233.
    *
@@ -208,7 +214,8 @@ export type RunAction =
     0524: and on the special the hangar fitted, or — absent — the ship's own gun's. The default lives
     here, in shared code; the hangar's fitting is the instance, and the shell always passes it.
   */
-  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind }
+  // 0525: and with the gun the hangar fitted, or — absent — the ship's own, on the special's terms.
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind; gun?: WeaponKind }
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
@@ -235,6 +242,7 @@ export const initialRun: RunState = {
   arsenal: { gun: [], tubes: [], ward: [] },
   upgrades: [],
   ship: DEFAULT_SHIP,
+  gun: SHIPS[DEFAULT_SHIP].weapon,
   missile: SHIPS[DEFAULT_SHIP].missile,
   difficulty: DEFAULT_DIFFICULTY,
   tallies: [],
@@ -251,6 +259,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: startingArsenal(action.ship, action.difficulty, action.special ?? ownSpecial(action.ship)),
         upgrades: [],
         ship: action.ship,
+        gun: action.gun ?? SHIPS[action.ship].weapon,
         missile: SHIPS[action.ship].missile,
         difficulty: action.difficulty,
         tallies: [],
@@ -285,6 +294,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: state.arsenal,
         upgrades: state.upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: state.missile,
         difficulty: state.difficulty,
         /*
@@ -318,6 +328,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
             arsenal: state.arsenal,
             upgrades: state.upgrades,
             ship: state.ship,
+            gun: state.gun,
             missile: state.missile,
             difficulty: state.difficulty,
             tallies: state.tallies,
@@ -336,6 +347,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal,
         upgrades: state.upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -358,6 +370,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: withStack(state.arsenal, action.side, left),
         upgrades: state.upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -413,6 +426,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: state.arsenal,
         upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: action.kind,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -438,6 +452,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: state.arsenal,
         upgrades: state.upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: state.tallies,
@@ -452,6 +467,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
         arsenal: state.arsenal,
         upgrades: state.upgrades,
         ship: state.ship,
+        gun: state.gun,
         missile: state.missile,
         difficulty: state.difficulty,
         tallies: [...state.tallies, action.tally],
