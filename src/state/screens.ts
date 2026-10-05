@@ -33,6 +33,7 @@ import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
 import { WEAPONS } from '../content/weapons.ts';
+import { SPECIALS } from '../content/specials.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
 export const SCREEN_KINDS = [
@@ -97,7 +98,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
  * `SettingsState`, which is keyed by this union — a field that could only ever hold one ship's plate.
  */
 // 0523: and what hangs from the dash.
-export type SlotName = 'plate' | 'dangle';
+// 0524: and the special a run opens with.
+export type SlotName = 'plate' | 'dangle' | 'special';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -371,8 +373,18 @@ function plainLabel(kind: ShipKind): string {
  * open. On the row's terms: the words are the screen's, and the shell only says which case it is in.
  */
 export function plateWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
-  if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its dash';
-  return borrowable ? null : 'Beat the jellyfish in another ship to borrow its dash';
+  return slotWhy(ship, won, borrowable, 'dash');
+}
+
+/** What the special band says when `ship`'s other specials are shut — 0524, on the dash's words exactly. */
+export function specialWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
+  return slotWhy(ship, won, borrowable, 'special');
+}
+
+/** A ship's own slot, shut: why, in the one sentence every such slot uses — 0521's, since 0524 shared. */
+function slotWhy(ship: ShipKind, won: boolean, borrowable: boolean, what: string): string | null {
+  if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its ' + what;
+  return borrowable ? null : 'Beat the jellyfish in another ship to borrow its ' + what;
 }
 
 /**
@@ -691,6 +703,21 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'dangle',
         label: 'Hanging',
         options: [{ label: 'Nothing', hint: 'A clear dash' }, ...DANGLE_KINDS.map((kind) => ({ label: DANGLES[kind].name, hint: DANGLES[kind].hint }))],
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      /*
+        0524: the special a run opens with two of — each ship's own gun's, in the ship table's order,
+        named as the bomb pickup's faces name them. Built by walking `SHIP_KINDS`.
+      */
+      {
+        name: 'special',
+        label: 'Special',
+        options: SHIP_KINDS.map((kind) => {
+          const special = SPECIALS[WEAPONS[SHIPS[kind].weapon].special];
+          return { label: special.label, hint: special.hint + ' — from the ' + plainLabel(kind) };
+        }),
         faces: 'words',
         on: 'all',
         press: 'steps',

@@ -35,8 +35,8 @@ export const PROBES = [
     guard: 'is kept between visits, beside the wins',
     edit: {
       path: 'src/save/hangar.ts',
-      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung });',
-      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, owned, hung });',
+      find: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special });',
+      replace: '  return JSON.stringify({ v: HANGAR_VERSION, won, plate, owned, hung, special });',
     },
   },
   {

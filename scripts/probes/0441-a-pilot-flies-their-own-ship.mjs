@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'a run begins in the ship it is given',
     edit: {
       path: 'src/state/slices/run.ts',
-      find: '  const own = WEAPONS[SHIPS[ship].weapon].special;',
-      replace: "  const own: SpecialKind = 'bomb';",
+      // 0524: the ship's own special is `ownSpecial` now, which `begin` falls back to.
+      find: '  return WEAPONS[SHIPS[ship].weapon].special;',
+      replace: "  return 'bomb';",
     },
   },
   {

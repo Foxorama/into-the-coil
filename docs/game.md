@@ -125,8 +125,9 @@ box, with one hurtbox, so what tells them apart is the gun:
 | Backspin Bo | the Firebird, the black car with the gold phoenix | **shuriken**, thrown from its hubcaps |
 | Longshot Larry | the Gilded Estate, the gold wagon | **arc**, from a lightning rod on the roof rack |
 
-A ship opens a run on its whole gun and two charges of that gun's special, and carries its missile
-tubes on its own hull.
+A ship opens a run on its whole gun and two charges of the special fitted to it in the hangar — its own
+gun's, until the ship and another have both been won in and it borrows theirs
+([0524](decisions/0524-the-special-is-fitted.md)) — and carries its missile tubes on its own hull.
 
 **Level 1 roster:** your prologue pick, plus three drawn from the unlocked pool. Always four on
 offer. The draw is seeded from the run seed, so resuming does not reroll it.

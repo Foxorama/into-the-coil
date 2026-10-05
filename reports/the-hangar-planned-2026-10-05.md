@@ -185,7 +185,8 @@ And once the plan was written:
 4. **The special slot.** The run carries a fitted special and `startingArsenal` reads it, with the
    gun row's `special` as the default. No art, no new fight: every special is already thrown from
    every ship. First of the loadout slots because it is the cheapest, and it puts the unlock rule
-   that guns will share in front of a player before the guns cost anything.
+   that guns will share in front of a player before the guns cost anything. **Built as
+   [0524](../docs/decisions/0524-the-special-is-fitted.md).**
 5. **The gun is its own layer** — and nothing the player sees changes. Each ship authors a
    hardpoint, in the view it is drawn in, and may override it for one gun. Each gun authors its
    mount's drawing from the side and from above, and where its shot leaves that drawing. The

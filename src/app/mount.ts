@@ -47,7 +47,7 @@ import { MOTE_BAND, flythroughSteps, makeMotes, moteAcross, moteAlong, weaveAcro
 import { DEBRIS } from '../content/debris.ts';
 import { SPECIAL_BINDINGS } from '../content/actions.ts';
 import { SIDES, SPECIALS, type Side, type SpecialKind } from '../content/specials.ts';
-import { chargesIn } from '../state/slices/run.ts';
+import { chargesIn, ownSpecial } from '../state/slices/run.ts';
 
 /**
  * The face a trigger's button and readout wear over an empty stack, so the icon never goes: the gun's
@@ -123,7 +123,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, plateWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, plateWhy, specialWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
@@ -145,7 +145,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { plateOpen } from '../state/slices/hangar.ts';
+import { plateOpen, specialOpen } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1845,7 +1845,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let splashPressed = false;
   const startRun = (): void => {
     pilotArmed = true;
-    lifecycle.begin(state.settings.difficulty, GOLFERS[state.settings.pilot].ship, state.settings.credits);
+    const ship = GOLFERS[state.settings.pilot].ship;
+    // 0524: on the special the hangar fitted that ship with — its own, until a win lets it borrow one.
+    lifecycle.begin(state.settings.difficulty, ship, state.settings.credits, ownSpecial(state.hangar.special[ship]));
   };
   function fly(): void {
     if (flownThisVisit) {
@@ -2005,6 +2007,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const dangle = index === 0 ? null : DANGLE_KINDS[index - 1];
       if (dangle !== undefined) dispatch({ slice: 'hangar', type: 'hung', ship: GOLFERS[state.settings.pilot].ship, dangle });
     }
+    // 0524: whose special that ship opens with. `SHIP_KINDS` IS the order the band was built in.
+    else if (name === 'special') {
+      const from = SHIP_KINDS[index];
+      if (from !== undefined) dispatch({ slice: 'hangar', type: 'special', ship: GOLFERS[state.settings.pilot].ship, from });
+    }
     // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
     else if (name === 'ware') {
       if (WARES[index] !== undefined) shelf = index;
@@ -2052,6 +2059,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
     chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable));
     chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
+    // 0524: the special, on the dash's rule and in its words.
+    const specials = SHIP_KINDS.map((from) => specialOpen(state.hangar, ship, from));
+    const lendable = SHIP_KINDS.some((from, i) => from !== ship && specials[i] === true);
+    chrome.setOpen('special', specials, specialWhy(ship, state.hangar.won[ship], lendable));
+    chrome.setChoice('special', SHIP_KINDS.indexOf(state.hangar.special[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);

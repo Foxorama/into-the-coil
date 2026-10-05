@@ -1704,7 +1704,8 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   display: grid;
   width: min(100%, 64em);
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-areas: 'pilot dash' 'card hanging';
+  /* 0524: and the special under what hangs, the card beside both. */
+  grid-template-areas: 'pilot dash' 'card hanging' 'card special';
   align-items: center;
   gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
 }
@@ -1712,7 +1713,17 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-hangar-pilot-card { grid-area: card; }
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) { grid-area: dash; }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) { grid-area: hanging; }
-.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.3em; }
+.itc-hangar-band:has([${SETTING_ATTR}="special"]) { grid-area: special; }
+/*
+  0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
+  readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
+  what hangs, five, in rows of three. A phone shows only the one that is on, below.
+*/
+.itc-hangar-band:has([${SETTING_ATTR}="plate"]) .itc-hangar-options,
+.itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.itc-hangar-band:has([${SETTING_ATTR}="dangle"]) .itc-hangar-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
+.itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-options { display: grid; gap: 0.3em; }
 /*
   ⚠️ **AND THE PILOT SCREEN GIVES BACK THE HEIGHT THE CARD TAKES — 0513.** The card is new and the
   screen is the height it was, so two things the card made redundant go: the bands' labels — the faces
@@ -2056,6 +2067,8 @@ ${each('-band[hidden]')} { display: none; }
       starts under the readout's corner rather than behind it.
     */
     .itc-hangar-pilot-card { display: none; }
+    /* 0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen. */
+    .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'special hanging'; }
     .itc-hangar-panel, .itc-shop-panel { padding-top: 17cqh; }
   }
   /*
