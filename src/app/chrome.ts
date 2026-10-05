@@ -34,11 +34,11 @@ import type { Palette, PaletteName } from '../content/palette.ts';
 import { PICKUPS, PICKUP_CYCLE_STEPS, PICKUP_KINDS, faceOf } from '../content/pickups.ts';
 import { SIDES, SIDE_LABELS } from '../content/specials.ts';
 import { SPRITE, SPRITE_KINDS } from '../content/sprites.ts';
-import { bakeAtlas, bakeGlyph, chartTileX, chartTileY, drawChart, mix, shade } from '../render/bake.ts';
-import { DICE, HUD_MOTIFS, SHIPS, type HudInk, type ShipRow } from '../content/ships.ts';
+import { bakeAtlas, bakeGlyph, bakeShipGun, chartTileX, chartTileY, drawChart, mix, shade, withGun } from '../render/bake.ts';
+import { DICE, HUD_MOTIFS, SHIPS, SHIP_KINDS, type HudInk, type ShipKind, type ShipRow } from '../content/ships.ts';
 import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
-import { WEAPONS } from '../content/weapons.ts';
+import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
@@ -1704,8 +1704,12 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
   display: grid;
   width: min(100%, 64em);
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  /* 0524: and the special under what hangs, the card beside both. */
-  grid-template-areas: 'pilot dash' 'card hanging' 'card special';
+  /*
+    0524: and the special under what hangs, the card beside both. 0526: and the gun beside the special,
+    under the card — a fourth band down the right column put the tabs under the readout on a 1280x720
+    and Back under an 844x390's fold, and the arms are a pair the player reads across.
+  */
+  grid-template-areas: 'pilot dash' 'card hanging' 'gun special';
   align-items: center;
   gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
 }
@@ -1714,12 +1718,20 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) { grid-area: dash; }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) { grid-area: hanging; }
 .itc-hangar-band:has([${SETTING_ATTR}="special"]) { grid-area: special; }
+.itc-hangar-band:has([${SETTING_ATTR}="gun"]) { grid-area: gun; }
+/*
+  0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
+  the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
+  wider type, over it — and the room they need was under Back and between the rows.
+*/
+.itc-hangar-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
 /*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
   what hangs, five, in rows of three. A phone shows only the one that is on, below.
 */
 .itc-hangar-band:has([${SETTING_ATTR}="plate"]) .itc-hangar-options,
+.itc-hangar-band:has([${SETTING_ATTR}="gun"]) .itc-hangar-options,
 .itc-hangar-band:has([${SETTING_ATTR}="special"]) .itc-hangar-options { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .itc-hangar-band:has([${SETTING_ATTR}="dangle"]) .itc-hangar-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
@@ -2067,9 +2079,13 @@ ${each('-band[hidden]')} { display: none; }
       starts under the readout's corner rather than behind it.
     */
     .itc-hangar-pilot-card { display: none; }
-    /* 0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen. */
-    .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'special hanging'; }
-    .itc-hangar-panel, .itc-shop-panel { padding-top: 17cqh; }
+    /*
+      0524: and the special goes under the faces, in the room the card gave, so Back keeps the screen.
+      0526: and the gun under the faces, the special under it; the third row was five pixels past a
+      480x320's floor, given back from over the tabs, which still clear the readout.
+    */
+    .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
+    .itc-hangar-panel, .itc-shop-panel { padding-top: 15cqh; }
   }
   /*
     ⚠️ **THE NARROWEST PHONES DROP THE BAND'S LABEL, AND KEEP ITS HINT.** At 480 wide the label's
@@ -3789,6 +3805,8 @@ export function makeChrome(
 
   /** The chrome's own icons, at a fixed size, copied out of a bake so the atlas keeps its own. */
   const icons = bakeAtlas(colours, 'side', ICON_PIXELS_PER_UNIT);
+  // 0526: which gun each ship's icons carry; absent is its own, as the bake made them.
+  const iconGuns: Partial<Record<ShipKind, WeaponKind>> = {};
   const iconOf = (sprite: number): HTMLCanvasElement => {
     const source = icons.bitmaps[sprite];
     const canvas = document.createElement('canvas');
@@ -3850,17 +3868,27 @@ export function makeChrome(
     second card (the hangar's) the same canvas appended there was taken out of the title's, and the
     title's card showed no ship. Kept per screen; the bake is the second card's, once.
   */
-  const cardShips: Partial<Record<Screen, Map<number, HTMLCanvasElement>>> = {};
-  const shipOnCard = (screen: Screen, sprite: number): HTMLCanvasElement => {
-    const kept = (cardShips[screen] ??= new Map<number, HTMLCanvasElement>());
-    let canvas = kept.get(sprite);
+  /*
+    ⚠️ **AND ONE PER GUN, SINCE 0526**: a ship drawn with a borrowed gun is a different picture of the same
+    sprite, baked under `withGun` and kept beside its own.
+  */
+  const cardShips: Partial<Record<Screen, Map<string, HTMLCanvasElement>>> = {};
+  const shipOnCard = (screen: Screen, ship: ShipKind, gun: WeaponKind): HTMLCanvasElement => {
+    const kept = (cardShips[screen] ??= new Map<string, HTMLCanvasElement>());
+    const key = ship + ':' + gun;
+    let canvas = kept.get(key);
     if (canvas === undefined) {
-      const kind = SPRITE_KINDS[sprite];
-      canvas = kind === undefined ? document.createElement('canvas') : bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT);
-      kept.set(sprite, canvas);
+      const kind = SPRITE_KINDS[SHIPS[ship].sprite];
+      canvas =
+        kind === undefined
+          ? document.createElement('canvas')
+          : withGun(ship, gun, () => bakeGlyph(kind, colours, CARD_SHIP_PIXELS_PER_UNIT));
+      kept.set(key, canvas);
     }
     return canvas;
   };
+  /** Which gun the fitted ship carries, for the pilot card — 0526; set by `setShip`, `null` before it. */
+  let cardGun: { ship: ShipKind; gun: WeaponKind } | null = null;
   interface PilotCard {
     root: HTMLElement;
     ship: HTMLElement;
@@ -3896,13 +3924,15 @@ export function makeChrome(
     if (pilotCard === undefined || golfer === undefined) return;
     const row = GOLFERS[golfer];
     const ship = SHIPS[row.ship];
-    const weapon = WEAPONS[ship.weapon];
+    // 0526: the gun the hangar fitted that ship with, when the card is the fitted ship's; its own otherwise.
+    const gun = cardGun !== null && cardGun.ship === row.ship ? cardGun.gun : ship.weapon;
+    const weapon = WEAPONS[gun];
     pilotCard.name.textContent = row.name;
     pilotCard.who.textContent = row.pronouns + ' · ' + row.home;
     pilotCard.bio.textContent = row.bio;
     pilotCard.craft.textContent = ship.label;
     pilotCard.gun.textContent = weapon.label + ' — ' + weapon.hint;
-    pilotCard.ship.replaceChildren(shipOnCard(screen, ship.sprite));
+    pilotCard.ship.replaceChildren(shipOnCard(screen, row.ship, gun));
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
@@ -4390,6 +4420,11 @@ export function makeChrome(
     it boots.
   */
   let livesSprite: number = SPRITE.fighter;
+  /*
+    0526: and the gun that ship flies, said with the lives — the icon is hidden from a reader, and since
+    the hangar fits another ship's gun the picture is the one place that said which; set by `setShip`.
+  */
+  let livesGun: string = WEAPONS[SHIPS.fighter.weapon].label;
   let livesIcon: HTMLElement = iconOf(livesSprite);
   livesIcon.className = 'itc-playing-hud-icon itc-playing-hud-ship';
   livesIcon.setAttribute('aria-hidden', 'true');
@@ -4850,8 +4885,26 @@ export function makeChrome(
         wearShip(plate);
         wornPlate = plate;
       }
+      /*
+        ⚠️ **AND THE GUN, WHICH ALSO CHANGES WITHOUT THE SPRITE — 0526.** `ship` is the fitted row
+        (`fitted`), so its `weapon` is the gun it flies. When that is another ship's, the icon atlas has
+        that ship's sprites baked again with it, and the counter and the title's flyer are taken afresh;
+        the pilot cards are repainted, since the band painted them before the fitting was known.
+      */
+      const kind = SHIP_KINDS.find((k) => SHIPS[k].sprite === ship.sprite);
+      const gunChanged = kind !== undefined && (iconGuns[kind] ?? SHIPS[kind].weapon) !== ship.weapon;
+      if (kind !== undefined && gunChanged) {
+        bakeShipGun(icons, colours, kind, ship.weapon);
+        iconGuns[kind] = ship.weapon;
+      }
+      if (kind !== undefined) cardGun = { ship: kind, gun: ship.weapon };
+      livesGun = WEAPONS[ship.weapon].label;
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const band = panels[screen]?.bands.find((b) => b.faces === 'portraits');
+        if (band !== undefined) paintPilot(screen, GOLFER_KINDS[band.index]);
+      }
       const sprite = ship.sprite;
-      if (sprite === livesSprite) return;
+      if (sprite === livesSprite && !gunChanged) return;
       const fresh = iconOf(sprite);
       fresh.className = livesIcon.className;
       fresh.setAttribute('aria-hidden', 'true');
@@ -4904,7 +4957,7 @@ export function makeChrome(
         slot.count.textContent = '×' + String(held);
         slot.group.setAttribute('aria-label', String(held) + (held === 1 ? ' charge' : ' charges') + ', next ' + stack.label);
       });
-      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives');
+      livesGroup.setAttribute('aria-label', String(Math.max(0, lives)) + ' lives, ' + livesGun);
       // Grown once, to whatever the ship's full health turns out to be. A later ship with a different
       // maximum is a table edit, not a rewrite of this.
       while (pips.length < maxHealth) {

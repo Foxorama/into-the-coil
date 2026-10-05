@@ -34,7 +34,7 @@ import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, TUNED as TUNED_KIND, fireGapFor } from '../src/content/difficulty.ts';
+import { DIFFICULTIES, DIFFICULTY_KINDS, TUNED as TUNED_KIND } from '../src/content/difficulty.ts';
 
 /**
  * How far a boss's own lunge carries its hull along the lane, in world units — 0289.
@@ -65,7 +65,7 @@ const rearOf = (row: (typeof BOSSES)[keyof typeof BOSSES]): number => (row.move.
 const REAL_BOSSES = LEVEL_KINDS.map((kind) => LEVELS[kind].boss);
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { BAR_SECONDS } from '../src/content/music.ts';
-import { DISTANCES, LANES, flyFight } from '../scripts/weigh-boss.mjs';
+import { expectBossFloor } from './boss-floor.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
 
 /**
@@ -2453,13 +2453,10 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
       const row = BOSSES[kind];
       if (row.chain !== null) continue;
       {
-        let quickest: ReturnType<typeof flyFight> | null = null;
-        for (const lane of [...LANES, 'boss' as const]) {
-          for (const short of DISTANCES) {
-            const fight = flyFight(kind, gun, { lane, short, cap: 240 });
-            if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
-          }
-        }
+        /*
+          ⚠️ **THE FLIGHT AND THE TWO CHECKS ARE `tests/boss-floor.ts` SINCE 0526**, which flies the twelve
+          borrowed pairings through the same function in `tests/gun-floor.test.ts`. What they do, and why:
+        */
         /*
           ⚠️ **A GUN THAT OUTLASTS THE CAP FROM EVERY PLACE HAS BEEN MEASURED, AND IT IS OVER THE FLOOR — 0455.**
           This said *"measured nothing"* until the held lanes were put in shares of the lane, and then
@@ -2470,28 +2467,13 @@ describe('0124 — a boss lasts long enough to be one, at the loadout the game i
           forty-second floor cannot fault. Failing it would redden the guard for a boss further from what
           it guards against.
         */
-        if (quickest === null) continue;
-        expect(quickest.seconds!, `the ${gun} kills ${kind} in ${quickest.seconds!.toFixed(1)}s on the tuned tier`).toBeGreaterThanOrEqual(40);
         /*
           ⚠️ **EACH PHASE'S TIME SUMMED OVER EVERY TIME IT IS ENTERED — 0476.** A fed jellyfish crosses
           back over a line (0404's *"the bell closes again"*), so a phase can be entered twice; each
           stretch read as a phase of its own failed a fifth of a second spent back in phase four. What
           0260 asks is that every attack is seen, which is the time the fight spends in it.
         */
-        const spent = new Map<number, number>();
-        quickest!.phaseAt.forEach((entered, i) => {
-          const ends = quickest!.phaseAt[i + 1]?.at ?? quickest!.seconds!;
-          spent.set(entered.phase, (spent.get(entered.phase) ?? 0) + ends - entered.at);
-        });
-        for (const [index, seconds] of spent) {
-          const phase = row.phases[index]!;
-          if (phase.stance.kind === 'bare') continue;
-          const volleys = (seconds * STEPS_PER_SECOND) / fireGapFor(phase.fireEvery, TUNED);
-          expect(
-            volleys,
-            `against the ${gun}, ${kind}'s phase ${index + 1} lasts ${seconds.toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
-          ).toBeGreaterThanOrEqual(8);
-        }
+        expectBossFloor(kind, gun);
       }
     }
   });

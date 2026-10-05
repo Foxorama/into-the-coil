@@ -113,7 +113,8 @@ describe.runIf(chromePath)('the run-over screen offers to continue, and the offe
       changed changes this with it — 0039 forbids a test that pins a number a hand is still moving.
     */
     const lives = await page.getAttribute('.itc-playing-hud-group[aria-label*="lives"]', 'aria-label');
-    expect(lives, 'the continue did not restock the run').toBe(String(DIFFICULTIES[QUICKEST].lives) + ' lives');
+    // The count before the comma: since 0526 the label says the gun flying after it.
+    expect(lives?.split(',')[0], 'the continue did not restock the run').toBe(String(DIFFICULTIES[QUICKEST].lives) + ' lives');
     await page.context().close();
   });
 });

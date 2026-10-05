@@ -28,8 +28,9 @@ export const PROBES = [
     guard: 'runs the pilot who was chosen out of the bar',
     edit: {
       path: 'src/app/mount.ts',
-      find: 'port = bakePort(colours, resolution, GOLFERS[state.settings.pilot]);',
-      replace: 'port = bakePort(colours, resolution, GOLFERS.feather);',
+      // The pilot is named once since 0526, which bakes their ship with its fitted gun beside them.
+      find: '      const pilot = GOLFERS[state.settings.pilot];',
+      replace: '      const pilot = GOLFERS.feather;',
     },
   },
   {

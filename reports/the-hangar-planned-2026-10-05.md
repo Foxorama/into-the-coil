@@ -202,7 +202,9 @@ And once the plan was written:
    with the fitted gun in place in the atlas at a run's start and after every full bake, and the lives
    icon, the pilot card and the intro's hangar with them; the boss floor flown in all sixteen, with
    any pairing under forty seconds answered on its boss's or its gun's row as 0441 answered the
-   pterodactyl.
+   pterodactyl. **Built as [0526](../docs/decisions/0526-the-gun-is-fitted.md).** One of the twelve
+   was under: the ray on the estate cleared the serpent's first phase in 7.8 volleys, answered on the
+   serpent's row (the ray at 0.93). The hangar was laid out again for a fourth band.
 7. **Wheels.** Each car authors its own set of rims — the Firebird's gold snowflakes and the
    estate's whitewall are each one entry of its set — with the tyre's outline untouched.
 8. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a

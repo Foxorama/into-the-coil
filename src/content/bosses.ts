@@ -3589,7 +3589,13 @@ export const BOSSES: Record<BossKind, BossRow> = {
     health: 900,
     damage: 3,
     // The lightning at its own 1, not the arc's 1.5 — 0372: it was already this animal's quickest gun.
-    gunWeights: { arc: 1 },
+    /*
+      ⚠️ **AND THE RAY AT 0.93 — 0526.** Fitted to the estate, the ray fires from the bonnet's hardpoint,
+      well forward of the saucer's rim, and the serpent's first phase went in 7.0 s: 7.8 volleys where
+      0260 asks eight. Every other borrowed pairing met every floor, so this is the serpent's answer and
+      not the ray's. The saucer's own ray takes the whole fight in about 50 s, far over the floor anyway.
+    */
+    gunWeights: { arc: 1, ray: 0.93 },
     /*
       ⚠️ **114 → 130, AND IT IS THE PRICE OF THE LUNGE RATHER THAN A TASTE — 0289.** 0101 holds every
       boss out of the player's half at the NEAR end of its swing, measured at `station − drift − rear

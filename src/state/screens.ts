@@ -99,7 +99,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
  */
 // 0523: and what hangs from the dash.
 // 0524: and the special a run opens with.
-export type SlotName = 'plate' | 'dangle' | 'special';
+// 0526: and the gun it flies.
+export type SlotName = 'plate' | 'dangle' | 'special' | 'gun';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -379,6 +380,11 @@ export function plateWhy(ship: ShipKind, won: boolean, borrowable: boolean): str
 /** What the special band says when `ship`'s other specials are shut — 0524, on the dash's words exactly. */
 export function specialWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
   return slotWhy(ship, won, borrowable, 'special');
+}
+
+/** What the gun band says when `ship`'s other guns are shut — 0526, on the same words. */
+export function gunWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
+  return slotWhy(ship, won, borrowable, 'gun');
 }
 
 /** A ship's own slot, shut: why, in the one sentence every such slot uses — 0521's, since 0524 shared. */
@@ -703,6 +709,21 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'dangle',
         label: 'Hanging',
         options: [{ label: 'Nothing', hint: 'A clear dash' }, ...DANGLE_KINDS.map((kind) => ({ label: DANGLES[kind].name, hint: DANGLES[kind].hint }))],
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      /*
+        0526: the gun the ship flies — each ship's own, in the ship table's order, named as the pilot
+        card names it, with the ship it comes from. Built by walking `SHIP_KINDS`.
+      */
+      {
+        name: 'gun',
+        label: 'Gun',
+        options: SHIP_KINDS.map((kind) => {
+          const gun = WEAPONS[SHIPS[kind].weapon];
+          return { label: gun.label, hint: gun.hint + ' — from the ' + plainLabel(kind) };
+        }),
         faces: 'words',
         on: 'all',
         press: 'steps',

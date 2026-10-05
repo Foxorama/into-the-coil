@@ -18,7 +18,7 @@ import { SHIPS, SHIP_KINDS, shipCarrying } from '../src/content/ships.ts';
 import { muzzleAcrossOf, muzzleAlongOf, phaseFor } from '../src/app/boss.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BOSSES, RAIN_BOLT_KIND } from '../src/content/bosses.ts';
 import { DEBRIS_KIND } from '../src/content/debris.ts';
-import { DIFFICULTIES, DIFFICULTY_KINDS, fireGapFor, type DifficultyKind } from '../src/content/difficulty.ts';
+import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { CUES, type CueKind } from '../src/content/cues.ts';
 import { cueSeconds } from '../src/app/sound.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
@@ -37,7 +37,7 @@ import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flig
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
 import { WEAPON_KINDS } from '../src/content/weapons.ts';
-import { DISTANCES, LANES, flyFight } from '../scripts/weigh-boss.mjs';
+import { expectSerpentFloor } from './boss-floor.ts';
 
 /** The serpent alone, a short way in, with no mid-boss in front of it. */
 const SERPENT_ONLY: LevelRow = {
@@ -2324,35 +2324,12 @@ describe('0307 — the serpent is armoured', () => {
       went with it. `flyFight` flies each gun in the ship that carries it (`shipCarrying`), and the
       serpent went to 900 health in 0441 so that every gun clears the same twenty-eight seconds there.
     */
-    const FLOOR_SECONDS = 28;
-    const row = BOSSES.jormungandr;
-    const tuned = DIFFICULTIES.savior;
+    // The twenty-eight is `SERPENT_FLOOR_SECONDS` and the flight `expectSerpentFloor`, in `tests/boss-floor.ts`
+    // since 0526 flew the twelve borrowed pairings through it too (`tests/gun-floor.test.ts`). A fight past
+    // the cap from every place is over the floor, not unmeasured — 0455, as in tests/level.test.ts.
     // Every gun is some ship's, so flying every gun is flying every ship — 0441.
     expect(WEAPON_KINDS.map((gun) => shipCarrying(gun)).sort(), 'a ship flies no gun here, so it was never flown').toEqual([...SHIP_KINDS].sort());
-    for (const gun of WEAPON_KINDS) {
-      let quickest: ReturnType<typeof flyFight> | null = null;
-      for (const lane of [...LANES, 'boss' as const]) {
-        for (const short of DISTANCES) {
-          const fight = flyFight('jormungandr', gun, { lane, short, cap: 240 });
-          if (fight.seconds !== null && (quickest === null || fight.seconds < quickest.seconds!)) quickest = fight;
-        }
-      }
-      // A fight past the cap from every place is over the floor, not unmeasured — 0455, as in tests/level.test.ts.
-      if (quickest === null) continue;
-      expect(quickest.seconds!, `the ${gun} kills the serpent in ${quickest!.seconds!.toFixed(1)}s in the ${shipCarrying(gun)} on the tuned tier`).toBeGreaterThanOrEqual(FLOOR_SECONDS);
-      expect(
-        quickest!.phaseAt.map((p) => p.phase),
-        `the ${gun}'s quickest fight skipped a phase, so an attack was never thrown at all`,
-      ).toEqual(row.phases.map((_phase, i) => i));
-      quickest!.phaseAt.forEach((entered, i) => {
-        const ends = quickest!.phaseAt[i + 1]?.at ?? quickest!.seconds!;
-        const volleys = ((ends - entered.at) * STEPS_PER_SECOND) / fireGapFor(row.phases[entered.phase]!.fireEvery, tuned);
-        expect(
-          volleys,
-          `against the ${gun}, the serpent's phase ${entered.phase + 1} lasts ${(ends - entered.at).toFixed(1)}s and gets ${volleys.toFixed(1)} volleys away`,
-        ).toBeGreaterThanOrEqual(8);
-      });
-    }
+    for (const gun of WEAPON_KINDS) expectSerpentFloor(gun, shipCarrying(gun));
   });
 });
 
