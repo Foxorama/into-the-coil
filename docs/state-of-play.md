@@ -1175,6 +1175,15 @@ leaves the player:
 - the Mire's pools joined and teal, the shore lower — [0535](decisions/0535-the-mire-runs-teal.md);
 - and a guard repair found on the way — [0536](decisions/0536-the-splash-counts-frames.md).
 
+### ⚠️ THE MENUS ARE A PLACE: A QUEUE OF FIVE, NONE BUILT, FIVE ANSWERS OWED — 2026-10-05
+
+The title and the hangar family reported as *"a pure mess … stuff everywhere"*, with the dash to come
+down off the play corner and Cosmo's to get categories and a preview.
+[`the-menus-are-a-place`](../reports/the-menus-are-a-place-2026-10-05.md) is the plan — photographed
+on `main` before it was written — and **holds the order, so this file does not.** Its first two items
+need no answer from the player; its *Answers* table is empty and the fifth item waits on one row of it.
+Built on the hangar queue below, which is complete.
+
 ### ⚠️ THE HANGAR IS A QUEUE OF TEN, BEING BUILT IN ORDER — 2026-10-05
 
 [`the-hangar-planned`](../reports/the-hangar-planned-2026-10-05.md) is the plan, the player's answers
