@@ -525,21 +525,33 @@ describe.runIf(chromePath)('0370 — the tiers explain themselves on every scree
       break on one machine's fonts and not another's is measuring the headroom, so this measures the
       shape: every choice lies within the height of the first, on every phone in the list.
     */
+    /*
+      ⚠️ **THE QUIET ROW, SINCE 0538, AND FLY OVER IT.** *Fly* leads alone on a row of its own and the
+      hangar, the chip and Settings are the row under it, so the shape held is that: the quiet row is
+      one row, and *Fly* stands wholly above it. A quiet row that wraps is the second row this guard was
+      written for, and it is the one CI's wider fonts would make first.
+    */
+    expect(SCREENS.title.leads, 'the title no longer leads with Fly, so this guard is measuring the wrong shape').toBe(true);
     for (const viewport of VIEWPORTS.filter((v) => v.height < 460)) {
       const page = await open(viewport);
       await showOnly(page, 'title');
-      const rows = await page.evaluate((p: string) => {
-        return [...document.querySelectorAll<HTMLElement>('.' + p + 'choices > *')].map((card) => {
+      const { lead, rows } = await page.evaluate((p: string) => {
+        const box = (card: Element): { what: string; top: number; bottom: number } => {
           const r = card.getBoundingClientRect();
           return { what: card.firstChild?.textContent ?? '', top: r.top, bottom: r.bottom };
-        });
+        };
+        const all = [...document.querySelectorAll<HTMLElement>('.' + p + 'choices > *')];
+        const led = all.find((card) => card.classList.contains(p + 'action-lead'));
+        return { lead: led === undefined ? null : box(led), rows: all.filter((card) => card !== led).map(box) };
       }, prefixFor('title'));
       const first = rows[0];
-      expect(first, `${viewport.what}: the title has no choices`).toBeDefined();
+      expect(lead, `${viewport.what}: the title has no action that leads`).not.toBeNull();
+      expect(first, `${viewport.what}: the title has no quiet row`).toBeDefined();
       for (const card of rows) {
-        const at = `${viewport.what}: ${card.what} is outside the row the tiers make`;
+        const at = `${viewport.what}: ${card.what} is outside the quiet row`;
         expect(card.top, at).toBeGreaterThanOrEqual(first!.top - 0.5);
         expect(card.bottom, at).toBeLessThanOrEqual(first!.bottom + 0.5);
+        expect(lead!.bottom, `${viewport.what}: ${lead!.what} is not above ${card.what}`).toBeLessThanOrEqual(card.top + 0.5);
       }
       await page.context().close();
     }
@@ -685,6 +697,56 @@ describe.runIf(chromePath)('0460 — the title’s sky drifts by whole tiles', (
     expect(sizes!.length, 'the sky has fewer layers than a sky of stars').toBeGreaterThan(2);
     expect(sizes!.filter((s) => !/^\d+(\.\d+)?px \d+(\.\d+)?px$/.test(s)), 'layers that are not a tile').toEqual([]);
     await page.context().close();
+  });
+});
+
+describe.runIf(chromePath)('0538 — the title’s plates hold what is on them', () => {
+  /*
+    The table and the rows each stand in a plate with two corners cut off, and a cut corner clips what
+    is under it — a clip path takes the box AND what is drawn round it, so a control standing in a cut
+    loses its corner and, when the cursor is on it, its focus ring. Measured on the first build: Settings'
+    ring in the bottom-right cut and the faces' in the top-left, on every phone the guard holds.
+
+    ⚠️ **AN INVARIANT, AND IN THE PLAYER'S PIXELS.** No change that put a control in its own frame's cut
+    would be correct. Each control is grown by the ring the cursor draws round it, read off the stylesheet
+    by putting the cursor's class on it, and must stand clear of both cuts and inside the plate's edges.
+  */
+  it('keeps every control, ring and all, out of its plate’s cut corners, on every device', async () => {
+    for (const viewport of VIEWPORTS) {
+      const page = await open(viewport);
+      await showOnly(page, 'title');
+      const faults = await page.evaluate((p: string) => {
+        const out: string[] = [];
+        const plates = [...document.querySelectorAll<HTMLElement>('.' + p + 'board, .' + p + 'main')].filter((el) => el.getBoundingClientRect().width > 0);
+        if (plates.length < 2) out.push(`${plates.length} plates drawn, with a table up`);
+        for (const plate of plates) {
+          const R = plate.getBoundingClientRect();
+          const said = getComputedStyle(plate).getPropertyValue('--itc-cut').trim();
+          const cut = said.endsWith('em') ? parseFloat(said) * parseFloat(getComputedStyle(plate).fontSize) : parseFloat(said);
+          if (!(cut > 0)) out.push(`a plate says its cut is "${said}"`);
+          for (const el of plate.querySelectorAll<HTMLElement>('.' + p + 'action, .' + p + 'band, .' + p + 'chip')) {
+            const B = el.getBoundingClientRect();
+            if (B.width === 0) continue;
+            el.classList.add(p + 'action-cursor');
+            const style = getComputedStyle(el);
+            const ring = parseFloat(style.outlineWidth) + parseFloat(style.outlineOffset);
+            el.classList.remove(p + 'action-cursor');
+            const name = (el.getAttribute('aria-label') ?? el.textContent ?? '').trim();
+            const left = B.left - ring - R.left;
+            const top = B.top - ring - R.top;
+            const right = R.right - B.right - ring;
+            const bottom = R.bottom - B.bottom - ring;
+            if (left + top < cut) out.push(`${name} in the top-left cut by ${(cut - left - top).toFixed(1)} px`);
+            if (right + bottom < cut) out.push(`${name} in the bottom-right cut by ${(cut - right - bottom).toFixed(1)} px`);
+            const edge = Math.min(left, top, right, bottom);
+            if (edge < -0.5) out.push(`${name} past its plate's edge by ${(-edge).toFixed(1)} px`);
+          }
+        }
+        return out;
+      }, prefixFor('title'));
+      expect(faults, `${viewport.what} (${viewport.width}x${viewport.height})`).toEqual([]);
+      await page.context().close();
+    }
   });
 });
 
