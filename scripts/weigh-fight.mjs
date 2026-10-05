@@ -180,6 +180,9 @@ export function weighFight(kind, options = {}) {
   const sweepSeconds = options.sweepSeconds ?? 8;
   const level = LEVELS[kind];
   const { world } = playableWorld(level, options.difficulty);
+  // The tier's boss numbers replaced, for the solver and its guard: they fly the row's health at the
+  // tier's toughness, and a tier's `bossToughness` is a stated departure on top of it — 0532.
+  if (options.bosses !== undefined) world.difficulty = { ...world.difficulty, bossToughness: options.bosses };
   const frame = new GameFrame(world);
   const carried = [];
   for (let i = 0; i < missileTier; i++) carried.push('missile');

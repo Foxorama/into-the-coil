@@ -1099,7 +1099,15 @@ describe('0252/0332 — the gyre spins, and is set into the wall', () => {
       if (world.roomOpen > 0 && openedAt < 0) openedAt = step;
     }
     expect(parked, 'no shot was ever parked on the wreck, so this guard drove nothing').toBeGreaterThan(3);
-    expect(laid, 'the wreck came back with the boss’s health rather than its own').toBeLessThan(world.bossFullHealth);
+    /*
+      ⚠️ **UNDER THE ROW'S HEALTH AS WELL AS THE FIGHT'S — 0532.** `reset` lays the row's raw health, and
+      since a tier's end boss may hold more than its toughness says, the fight's full health on Legend
+      is 1725 over a row of 1500: a wreck laid at the row's whole health sat under the first number and
+      this went green over the very break it is for.
+    */
+    expect(laid, 'the wreck came back with the boss’s health rather than its own').toBeLessThan(
+      Math.min(world.bossFullHealth, BOSSES.gyre.health),
+    );
     expect(eaten, `${eaten} of ${parked} shots were spent on the wreck`).toBeGreaterThan(0);
     expect(flashed, 'the wreck took hits and never showed one').toBeGreaterThan(0);
     expect(killedAt, 'the wreck could not be killed').toBeGreaterThan(0);
