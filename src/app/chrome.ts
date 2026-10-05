@@ -1850,9 +1850,30 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   flex-direction: column;
   gap: min(0.55rem, 1.4cqh);
   min-width: 0;
-  align-self: center;
   max-height: 100%;
 }
+/*
+  ⚠️ **0548: THE PLATE IS THE PANEL'S HEIGHT ON EVERY TAB, AND IT WAS ITS CONTENT'S.** Centred on its own
+  height, each tab's plate stood at another size, and the strip on its head jumped up and down the screen
+  as the tabs were stepped. The strip is at the top now and Back at the foot, wherever a tab's bands end.
+*/
+.itc-hangar-plate > .itc-hangar-choices, .itc-parts-plate > .itc-parts-choices, .itc-shop-plate > .itc-shop-choices { margin-top: auto; }
+/*
+  0548: the shoulders that step the tabs, at the strip's two ends while a pad is in hand — set apart from
+  the tabs, in a key's frame, so they read as what to press and never as a fourth tab.
+*/
+${each('-tab-key')} {
+  align-self: center;
+  font-size: 0.7em;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  padding: 0.15em 0.45em;
+  border: 1px solid currentColor;
+  border-radius: 0.35em;
+  opacity: 0.7;
+}
+${each('-tab-key[hidden]')} { display: none; }
+.itc-hangar-tab-key:last-child, .itc-parts-tab-key:last-child, .itc-shop-tab-key:last-child { margin-left: auto; }
 /*
   The plate's head is the pilots and what is said of them, side by side; under it each heading runs the
   plate's width with a band to a line — its name, then its segments in one row — which is the plan's own
@@ -1878,7 +1899,7 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 @container (max-width: 1100px) and (min-height: 461px) {
   .itc-hangar-pilot-card { grid-column: 1 / -1; }
 }
-.itc-hangar-groups, .itc-parts-groups, .itc-shop-band { grid-column: 1 / -1; }
+.itc-hangar-groups, .itc-parts-groups, .itc-shop-band:not(.itc-shop-band-faces) { grid-column: 1 / -1; }
 .itc-hangar-groups, .itc-parts-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw); align-items: start; }
 .itc-hangar-group, .itc-parts-group { display: flex; flex-direction: column; gap: min(0.35rem, 0.9cqh); min-width: 0; }
 .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band {
@@ -1911,14 +1932,14 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   the pilots, and the band still names itself to a reader — and the card's ship a step smaller.
 */
 /* One row: the faces' line is said to a reader and stands off the glass, so a second row was a gap. */
-.itc-hangar-plate .itc-hangar-band-faces, .itc-parts-plate .itc-parts-band-faces { grid-template-areas: 'less track more'; padding: 0.1em 0.4em; }
-.itc-hangar-options-faces, .itc-parts-options-faces { padding-top: 0.15em; padding-bottom: 0.15em; }
-.itc-hangar-band-faces .itc-hangar-band-label, .itc-parts-band-faces .itc-parts-band-label { display: none; }
+.itc-hangar-plate .itc-hangar-band-faces, .itc-parts-plate .itc-parts-band-faces, .itc-shop-plate .itc-shop-band-faces { grid-template-areas: 'less track more'; padding: 0.1em 0.4em; }
+.itc-hangar-options-faces, .itc-parts-options-faces, .itc-shop-options-faces { padding-top: 0.15em; padding-bottom: 0.15em; }
+.itc-hangar-band-faces .itc-hangar-band-label, .itc-parts-band-faces .itc-parts-band-label, .itc-shop-band-faces .itc-shop-band-label { display: none; }
 /* And the names under the faces, which the card and the line beside them say for the one that is on. */
-.itc-hangar-option-name, .itc-parts-option-name { display: none; }
-.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas { width: clamp(1.9rem, 7.5cqh, 3rem); height: clamp(1.9rem, 7.5cqh, 3rem); }
-.itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces { gap: 0.4em; }
-.itc-hangar-plate .itc-hangar-option-face, .itc-parts-plate .itc-parts-option-face { padding-left: 0.15em; padding-right: 0.15em; }
+.itc-hangar-option-name, .itc-parts-option-name, .itc-shop-option-name { display: none; }
+.itc-hangar-option-face > canvas, .itc-parts-option-face > canvas, .itc-shop-option-face > canvas { width: clamp(1.9rem, 7.5cqh, 3rem); height: clamp(1.9rem, 7.5cqh, 3rem); }
+.itc-hangar-plate .itc-hangar-options-faces, .itc-parts-plate .itc-parts-options-faces, .itc-shop-plate .itc-shop-options-faces { gap: 0.4em; }
+.itc-hangar-plate .itc-hangar-option-face, .itc-parts-plate .itc-parts-option-face, .itc-shop-plate .itc-shop-option-face { padding-left: 0.15em; padding-right: 0.15em; }
 .itc-hangar-pilot-card { padding: 0.35em 0.8em; grid-template-columns: minmax(0, 1fr); }
 /* Who they are: what they fly is the ship on the stand and the Loadout under it, so the card says it once. */
 .itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
@@ -1939,8 +1960,8 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
   one row CI's wider type put the fifth off a 667x375's edge.
 */
-.itc-shop-band .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
-.itc-shop-band .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
+.itc-shop-band:not(.itc-shop-band-faces) .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
+.itc-shop-band:not(.itc-shop-band-faces) .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 /*
   ── COSMO'S COUNTER — 0542 ──────────────────────────────────────────────────────────────────────────
 
@@ -1971,7 +1992,7 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 .itc-shop-keeper-words { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
 .itc-shop-keeper-name { font-size: 1.15em; font-weight: 800; letter-spacing: 0.02em; }
 .itc-shop-keeper-line { margin: 0; font-size: 0.85em; font-style: italic; opacity: 0.92; }
-.itc-shop-plate .itc-shop-band { grid-template-columns: max-content auto minmax(0, 1fr) auto; grid-template-areas: 'label less track more' '. . hint .'; padding: 0.1em; }
+.itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) { grid-template-columns: max-content auto minmax(0, 1fr) auto; grid-template-areas: 'label less track more' '. . hint .'; padding: 0.1em; }
 .itc-shop-plate .itc-shop-band-label { font-size: 0.66em; text-align: left; }
 /* The aisle says nothing under it: a shelf's line is the shelf's, so the line kept for one is not kept here. */
 .itc-shop-plate [data-itc-setting='aisle'] ~ .itc-shop-band-hint { display: none; }
@@ -2239,7 +2260,7 @@ ${each('-band[hidden]')} { display: none; }
     height and Back went under an 844x390's fold. The bands drop their labels as the title's do; each
     still names itself to a reader.
   */
-  .itc-hangar-settings-box, .itc-parts-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
+  .itc-hangar-settings-box, .itc-parts-settings-box, .itc-shop-settings-box { gap: min(0.45rem, 1.6cqh) min(1rem, 2cqw); }
   /*
     0539: the plate's headings two to a row on a phone as on a desktop, so Paint and Parts' five and the
     hangar's four stand two deep under the faces; the card's place is the hangar tab's, and a step down.
@@ -2255,9 +2276,9 @@ ${each('-band[hidden]')} { display: none; }
     shelf's name took was the room "Eucalyptus" needed to stay on its face at 667x375.
   */
   .itc-shop-plate .itc-shop-band-label { display: none; }
-  .itc-shop-plate .itc-shop-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  .itc-shop-plate .itc-shop-band:not(.itc-shop-band-faces) { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   /* A step smaller still, for CI's wider letters, under which "Mothership" was ten pixels past its face. */
-  .itc-shop-band .itc-shop-option { font-size: 0.76em; padding-left: 0.2em; padding-right: 0.2em; }
+  .itc-shop-band:not(.itc-shop-band-faces) .itc-shop-option { font-size: 0.76em; padding-left: 0.2em; padding-right: 0.2em; }
   .itc-shop-keeper { padding: 0.2em 0.6em; gap: 0.1em 0.6em; }
   .itc-shop-keeper-face { width: clamp(2rem, 9cqh, 2.8rem); }
   .itc-shop-keeper-line { font-size: 0.78em; }
@@ -4414,6 +4435,8 @@ export function makeChrome(
   };
   /** How to play's controls cells, by device column — 0458, so the device in hand can be lit. */
   const guideDevices: Record<GuideDevice, HTMLElement[]> = { keyboard: [], pad: [], touch: [] };
+  /** The shoulder glyphs at every tab strip's ends — 0548, shown while the device in hand is a pad. */
+  const tabKeys: HTMLElement[] = [];
 
   const panels: Partial<Record<Screen, Panel>> = {};
   /** The ship that crosses the title's sky — 0437 — kept so `setShip` can put the pilot's own in it. */
@@ -4566,6 +4589,20 @@ export function makeChrome(
       strip.className = prefix + 'tabs';
       strip.setAttribute('role', 'tablist');
       strip.setAttribute('aria-label', row.heading);
+      /*
+        0548: the shoulders at the strip's two ends while a pad is in hand — LB and RB have stepped the tabs
+        since 0458, and nothing on the screen said so, so the way across was up to the strip and along it.
+      */
+      const shoulder = (said: string): HTMLElement => {
+        const key = document.createElement('span');
+        key.className = prefix + 'tab-key';
+        key.textContent = said;
+        key.setAttribute('aria-hidden', 'true');
+        key.hidden = true;
+        tabKeys.push(key);
+        return key;
+      };
+      strip.appendChild(shoulder('LB'));
       for (const tab of row.tabs) {
         const button = document.createElement('button');
         button.type = 'button';
@@ -4583,6 +4620,7 @@ export function makeChrome(
         strip.appendChild(button);
         tabs.push(button);
       }
+      strip.appendChild(shoulder('RB'));
       host.appendChild(strip);
     }
 
@@ -5370,6 +5408,15 @@ export function makeChrome(
     const panel = shownScreen === null ? undefined : panels[shownScreen];
     return panel?.rows[cursor.row]?.[cursor.col];
   };
+  /**
+   * The cursor on a tab strip stands on the tab that is open — 0548. Up into the strip went to the tab
+   * standing nearest above, and a strip kept from a visit went back to the tab it was on then.
+   */
+  const onOpenTab = (): void => {
+    const panel = shownScreen === null ? undefined : panels[shownScreen];
+    if (panel === undefined || shownScreen === null || panel.tabs.length === 0 || cursor.row !== 0) return;
+    cursor.col = Math.max(0, SCREENS[shownScreen].tabs.indexOf(shownScreen));
+  };
   /*
     ⚠️ **`scroll` IS FALSE WHEN A SCREEN APPEARS — 0458.** Focusing an element scrolls it into view, and
     the title now opens on *Launch*, below the bands: on a window too short for the title, showing it
@@ -5775,6 +5822,12 @@ export function makeChrome(
       }
       // 0458: the screen being left keeps where its cursor was, for the player who comes back to it.
       if (shownScreen !== null && panels[shownScreen] !== undefined) remembered[shownScreen] = { row: cursor.row, col: cursor.col };
+      /*
+        0548: and a tab opened from its strip keeps the cursor on the strip. It went to the new tab's first
+        band, so crossing two tabs on a pad was up, along, press and up again — Cosmo's to Hangin' Out
+        was a walk the player had to know.
+      */
+      const fromStrip = shownScreen !== null && screen !== null && SCREENS[shownScreen].tabs.includes(screen) && (panels[shownScreen]?.tabs.length ?? 0) > 0 && cursor.row === 0;
       shownScreen = screen;
       paintTriggers();
       paintBoss();
@@ -5788,8 +5841,9 @@ export function makeChrome(
         const kept = remembered[screen];
         const bandsFrom = panel.tabs.length > 0 ? 1 : 0;
         const opens = SCREENS[screen].opensOn === 'choice' && panel.bands.length > 0 ? bandsFrom : panel.rows.length - 1;
-        cursor.row = kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
+        cursor.row = fromStrip && panel.tabs.length > 0 ? 0 : kept !== undefined && kept.row < panel.rows.length ? kept.row : Math.max(0, opens);
         cursor.col = kept !== undefined && kept.col < (panel.rows[cursor.row]?.length ?? 0) ? kept.col : 0;
+        onOpenTab();
       }
       paintFocus(true, false);
     },
@@ -5876,6 +5930,7 @@ export function makeChrome(
           }
         });
       }
+      onOpenTab();
       paintFocus();
     },
     activate(): void {
@@ -5898,6 +5953,7 @@ export function makeChrome(
       for (const each of GUIDE_DEVICES) {
         for (const cell of guideDevices[each]) cell.classList.toggle(prefixFor('guide') + 'controls-device-on', each === device);
       }
+      for (const key of tabKeys) key.hidden = device !== 'pad';
     },
     setTimer(seconds: number | null): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];

@@ -1190,7 +1190,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0540: the stand's clock and its camera, written as a tab that stands in the port is shown.
     stand: null,
     standView: { ...view },
-    standKeeper: false,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
@@ -1516,7 +1515,6 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
       if (world.stand === null) world.stand = 0;
       standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
-      world.standKeeper = stand.keeper !== null;
       // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
       surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
       showPort();

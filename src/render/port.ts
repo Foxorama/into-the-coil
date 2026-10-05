@@ -123,7 +123,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: boolean): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
   surface.clear();
   paintRoom(surface, view, t, sky);
   paintLamps(surface, view);
@@ -133,14 +133,12 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   paintDeck(surface, view);
   /*
     0542: Cosmo behind the counter of their stall, by the pad — the bust first, so the counter is in front.
-    ⚠️ **ONLY ON COSMO'S TAB.** The hangar's camera sees the deck from 58 units along, and Cosmo's needs the
-    stall past 60 to hold it whole beside the ship, so no place for it is out of the one frame and in the
-    other: drawn on every tab, it stood cut in half at the hangar's edge. The intro's room never had it.
+    ⚠️ **ON EVERY TAB SINCE 0548, AND IT WAS COSMO'S ALONE.** The hangar's camera saw the deck from 58 units
+    along and would have cut the stall in half; the three tabs share Cosmo's camera now, so the stall is
+    whole in all of them and the room does not lose a shop when a tab is stepped. The intro never had it.
   */
-  if (keeper) {
-    put(surface, view, PORT_SPRITE.cosmo, STAGE.keeper.along, STAGE.keeper.across);
-    put(surface, view, PORT_SPRITE.stall, STAGE.stall.along, STAGE.stall.across);
-  }
+  put(surface, view, PORT_SPRITE.cosmo, STAGE.keeper.along, STAGE.keeper.across);
+  put(surface, view, PORT_SPRITE.stall, STAGE.stall.along, STAGE.stall.across);
   // The pilot's beam and pad, and the Viper's pad, empty.
   const beam = PORT_EXTENT.beam;
   put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2);
