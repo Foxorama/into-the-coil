@@ -33,6 +33,7 @@ import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
+import { ART } from '../content/art.ts';
 import { OWNABLES, WARES, type OwnableKind } from '../content/wares.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -104,7 +105,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0524: and the special a run opens with.
 // 0526: and the gun it flies.
 // 0527: and what its wheels wear, on the Paint & Parts tab.
-export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim';
+// 0528: and what it wears on its nose, its dome or its flank.
+export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -389,6 +391,16 @@ export function specialWhy(ship: ShipKind, won: boolean, borrowable: boolean): s
 /** What the gun band says when `ship`'s other guns are shut — 0526, on the same words. */
 export function gunWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
   return slotWhy(ship, won, borrowable, 'gun');
+}
+
+/** `ship`'s three looks as a band offers them — 0528: by name, each with its line. */
+export function artOptions(ship: ShipKind): { label: string; hint: string }[] {
+  return SHIPS[ship].arts.map((kind) => ({ label: ART[kind].name, hint: ART[kind].hint }));
+}
+
+/** What the art band says while only the ship's first look is open — 0528, the dash's sentence. */
+export function artWhy(ship: ShipKind, won: boolean): string | null {
+  return won ? null : 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its art';
 }
 
 /**
@@ -805,6 +817,19 @@ export const SCREENS: Record<Screen, ScreenRow> = {
           const rim = RIMS[kind];
           return { label: rim.name, hint: rim.hint + ' — ' + (rim.from === null ? 'from Cosmo’s' : 'from the ' + plainLabel(rim.from)) };
         }),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      /*
+        0528: the look on its nose, its dome or its flank — three places, because every ship authors its
+        own three (`arts` on its row) and no ship wears another's. The row names the fighter's; the shell
+        names the three of whichever ship is on the stand (`setLabels`), as it marks which are open.
+      */
+      {
+        name: 'art',
+        label: 'Art',
+        options: artOptions('fighter'),
         faces: 'words',
         on: 'all',
         press: 'steps',

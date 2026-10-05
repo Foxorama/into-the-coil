@@ -123,7 +123,7 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, gunWhy, plateWhy, rimWhy, specialWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, gunWhy, plateWhy, rimWhy, specialWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { WARES } from '../content/wares.ts';
@@ -147,7 +147,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { artOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1474,7 +1474,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       savingLine = pick.pick(GOLFERS[chosen].saving);
       const resolution = view.scale * dpr;
       // 0526: the run's ship with the run's gun, as it flew the fight.
-      const port = withFit(state.run.ship, { gun: state.run.gun, rim: state.hangar.rim[state.run.ship] }, () => bakePort(colours, resolution, GOLFERS[chosen]));
+      const port = withFit(state.run.ship, { gun: state.run.gun, rim: state.hangar.rim[state.run.ship], art: state.hangar.art[state.run.ship] }, () => bakePort(colours, resolution, GOLFERS[chosen]));
       finale = withTheGame(port, bakeFinale(resolution));
       // And it goes on from the fight's last frame — 0426: nothing has stepped since the death beat ended.
       holdFinale(world);
@@ -1755,7 +1755,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world.weapon = weaponFor(world.shipRow, state.run.upgrades, state.run.missile);
       // The lives counter is the ship being flown — 0430 — and the run's ship is the pilot's (0441).
       // 0521: in the dash the hangar fitted to it.
-      chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]]);
+      chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]], { gun: state.run.gun, rim: state.hangar.rim[state.run.ship], art: state.hangar.art[state.run.ship] });
       /*
         ⚠️ **THE HULL FOLLOWS THE WEAPON, which is the whole of `docs/game.md`'s *every upgrade
         changes how the ship looks on screen*** — 0081. Reported from play as the fifth defect:
@@ -2033,6 +2033,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const dangle = index === 0 ? null : DANGLE_KINDS[index - 1];
       if (dangle !== undefined) dispatch({ slice: 'hangar', type: 'hung', ship: GOLFERS[state.settings.pilot].ship, dangle });
     }
+    // 0528: which of that ship's own three looks it wears; its row's `arts` IS the order of the band.
+    else if (name === 'art') {
+      const ship = GOLFERS[state.settings.pilot].ship;
+      const art = SHIPS[ship].arts[index];
+      if (art !== undefined) dispatch({ slice: 'hangar', type: 'art', ship, art });
+    }
     // 0527: what that car's wheels wear. `RIM_KINDS` IS the order the band was built in.
     else if (name === 'rim') {
       const rim = RIM_KINDS[index];
@@ -2115,6 +2121,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setOpen('rim', rims, rimWhy(ship, SHIPS[ship].wheels !== null, state.hangar.won[ship], swapped, bought));
     const rim = state.hangar.rim[ship];
     chrome.setChoice('rim', rim === null ? -1 : RIM_KINDS.indexOf(rim));
+    // 0528: the look — the band named for this ship's three, the first open always and the rest with its win.
+    chrome.setLabels('art', artOptions(ship));
+    chrome.setOpen('art', SHIPS[ship].arts.map((art) => artOpen(state.hangar, ship, art)), artWhy(ship, state.hangar.won[ship]));
+    chrome.setChoice('art', SHIPS[ship].arts.indexOf(state.hangar.art[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
@@ -2170,7 +2180,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const ship = GOLFERS[state.settings.pilot].ship;
     // 0526: with the gun the hangar fitted it, so the pick is seen as it will be flown.
     const row = fitted(SHIPS[ship], SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);
-    chrome.setShip(row, SHIPS[state.hangar.plate[ship]]);
+    chrome.setShip(row, SHIPS[state.hangar.plate[ship]], hangarFit(ship));
     fitAtlasGun();
     if (state.run.lives > 0) return;
     world.shipRow = row;
@@ -2189,7 +2199,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   function fitAtlasGun(): void {
     const inRun = state.run.lives > 0;
     const flying = inRun ? state.run.ship : GOLFERS[state.settings.pilot].ship;
-    const fit: Fit = inRun ? { gun: state.run.gun, rim: state.hangar.rim[flying] } : hangarFit(flying);
+    const fit: Fit = inRun ? { gun: state.run.gun, rim: state.hangar.rim[flying], art: state.hangar.art[flying] } : hangarFit(flying);
     let moved = false;
     for (const kind of SHIP_KINDS) {
       const want = kind === flying ? fit : ownFit(kind);
@@ -2202,7 +2212,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   }
   /** How the hangar has fitted `ship` — 0527: its gun and its rim. */
   function hangarFit(ship: ShipKind): Fit {
-    return { gun: SHIPS[state.hangar.gun[ship]].weapon, rim: state.hangar.rim[ship] };
+    return { gun: SHIPS[state.hangar.gun[ship]].weapon, rim: state.hangar.rim[ship], art: state.hangar.art[ship] };
   }
   showPilot();
 

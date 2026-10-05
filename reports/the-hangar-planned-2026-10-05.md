@@ -210,7 +210,9 @@ And once the plan was written:
    [0527](../docs/decisions/0527-the-wheels-turn.md)**, with the Mothership's spinners at Cosmo's for
    1000 and turning, and the hangar's third tab, *Paint & Parts*, where items 8–10 land.
 8. **Hood and nose art.** Each ship authors its own: the Firebird's phoenix and its alternatives, a
-   nose art for the fighter, a crest on the estate's bonnet and the saucer's dome.
+   nose art for the fighter, a crest on the estate's bonnet and the saucer's dome. **Built as
+   [0528](../docs/decisions/0528-the-noses-are-painted.md)**: three looks a ship, its own and two with
+   its win, on *Paint & Parts*.
 9. **The livery.** A free colour for each ship's body, through a picker a pad, a mouse and a thumb
    can all work. The running lights stay cyan and the high-contrast look stays on roles, as above.
 10. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
