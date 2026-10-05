@@ -103,9 +103,26 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
     await openHangar(page);
+    // The key first, so a fitting lost from storage and one lost on the way to the picture are two failures.
+    const reread = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
+    expect(reread.plate.fighter, 'the fitting was gone from the key after a reload').toBe('estate');
     // The pilot is picked each visit (0415), so Hook is chosen again; the fighter's dash was kept.
     await page.locator(`${faces} >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
-    expect(await worn(page), 'the fitting was forgotten across a reload').toBe(SHIPS.estate.hud.motif);
+    /*
+      ⚠️ **WHAT THE SCREEN SAYS, IN THE MESSAGE** — once red on CI and never here (2026-10-05): the readout
+      wore the fighter's own dash after the reload. The pilot on the card and the dash the band marks say
+      whether the click chose Hook, and whether the hangar read the fitting, or only the readout missed it.
+    */
+    const seen = await page.evaluate(
+      ([card, marked]) => ({
+        pilot: document.querySelector(card!)?.textContent ?? null,
+        dash: document.querySelector(marked!)?.textContent ?? null,
+      }),
+      [`${shown('hangar')} .${HANGAR}pilot-name`, `${dashes}[aria-pressed="true"]`],
+    );
+    expect(await worn(page), `the fitting was forgotten across a reload — the card said ${String(seen.pilot)}, the band ${String(seen.dash)}`).toBe(
+      SHIPS.estate.hud.motif,
+    );
     await context.close();
   });
 });
