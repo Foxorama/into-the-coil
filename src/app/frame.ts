@@ -94,7 +94,7 @@ import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKin
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
-import { type DifficultyRow, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
+import { type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
 import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
@@ -10575,7 +10575,8 @@ function spawnBoss(w: World): void {
   // In LEVEL coordinates like every other authored place — 0076; at the current FIGHT's distance,
   // which is the mid-boss's or the end boss's — 0247.
   reset(boss, fightAt(w) + w.levelOrigin, ACROSS_SPAN / 2, w.bossRow);
-  boss.health = toughnessFor(w.bossRow.health, w.difficulty);
+  // And by which fight it is, on the tier's own row — 0532.
+  boss.health = bossToughnessFor(w.bossRow.health, w.difficulty, w.fight === 0 ? 'mid' : 'end');
   // Recorded, because a phase is a fraction of what the boss STARTED with and the row no longer
   // says what that was. `src/app/boss.ts` takes it as an argument for exactly that reason.
   w.bossFullHealth = boss.health;

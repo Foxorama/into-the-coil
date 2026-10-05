@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { GameFrame, advanceLevel, respawn, takeShield, type World } from '../src/app/frame.ts';
 import { makeLifecycle } from '../src/app/lifecycle.ts';
-import { AUTHORED, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
+import { AUTHORED, BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, type DifficultyKind, type DifficultyRow } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_DROP, type LevelRow } from '../src/content/levels.ts';
 import { PICKUPS, PICKUP_KINDS } from '../src/content/pickups.ts';
 import { MAX_SHIELDS, SHIPS, SHIP_KINDS, shieldsOf } from '../src/content/ships.ts';
@@ -77,6 +77,10 @@ describe('0355 — the rows', () => {
     // guard in the suite that names no tier.
     for (const axis of ['toughness', 'fireGap', 'closing', 'shotSpeed', 'aggression', 'crowd'] as const) {
       expect(AUTHORED[axis], `the baseline multiplies ${axis}`).toBe(1);
+    }
+    // And its bosses in both fights — 0532's multiplier is a tier's, never the content's.
+    for (const fight of BOSS_FIGHTS) {
+      expect(AUTHORED.bossToughness[fight], `the baseline multiplies the ${fight} boss`).toBe(1);
     }
     expect(AUTHORED.shellOpen, 'the baseline opens a life wearing a shell').toBe(0);
     expect(AUTHORED.shellCap, 'the baseline cannot carry what a shield pickup gives').toBe(MAX_SHIELDS);

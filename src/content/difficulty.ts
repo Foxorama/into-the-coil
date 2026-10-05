@@ -61,7 +61,7 @@ export const DIFFICULTY_KINDS = ['legendary', 'savior', 'burn'] as const;
 /** Derived from the list, so a tier cannot exist in the union and be missing from the table. */
 export type DifficultyKind = (typeof DIFFICULTY_KINDS)[number];
 
-export interface DifficultyRow extends Multipliers, CorridorLimit {
+export interface DifficultyRow extends Multipliers, CorridorLimit, BossHold {
   /**
    * What the player picks, and what they would be called for finishing it.
    *
@@ -229,6 +229,40 @@ export interface CorridorLimit {
   corridor: { narrowest: number; slope: number };
 }
 
+/**
+ * The two fights a level has — 0247: the mid-boss's and the end boss's. `src/app/frame.ts` keeps it
+ * as `fight`, `0` and `1`, and names it here only where a tier reads it.
+ */
+export const BOSS_FIGHTS = ['mid', 'end'] as const;
+
+/** Derived from the list, so a fight cannot exist in the union and be missing from a row. */
+export type BossFight = (typeof BOSS_FIGHTS)[number];
+
+/** How much longer a tier's bosses hold than its `toughness` says — a per-row literal, so it rides no margin. */
+export interface BossHold {
+  /**
+   * Multiplier on a boss's health ON TOP OF `toughness`, by which fight it is —
+   * `docs/decisions/0532-the-legend-holds-longer.md`.
+   *
+   * ⚠️ **ASKED OF ONE TIER, FROM A PLAY OF IT:** *"legendary difficulty — minibosses need probably twice
+   * as much health as they do now; end bosses need about +15% health"*. So Legend's row says 2 and
+   * 1.15, and every other row says `AS_TOUGH`, the default — 0282: the row states its version, and
+   * the fallback is shared.
+   *
+   * ⚠️ **NOT A `Multipliers` AXIS, AND THAT IS THE WHOLE OF WHY SAVIOR AND BURN DID NOT MOVE.** An axis
+   * is Savior's value moved a margin per step (0356), so doubling Legend's would have been Savior's
+   * doubled and Burn's quadrupled — the tuned tier re-tuned by a play of another one. A literal, like
+   * `lives` and the shell, moves the row that was asked about and no other.
+   *
+   * ⚠️ **AND IT PUTS LEGEND'S MID-BOSSES ABOVE SAVIOR'S** — two against 1.6 — which no other number on
+   * the row does. Said in 0532 with the fights measured, and the player's to answer.
+   */
+  bossToughness: Readonly<Record<BossFight, number>>;
+}
+
+/** A boss exactly as tough as the tier's `toughness` says, in both fights — the default, 0532. */
+export const AS_TOUGH: Readonly<Record<BossFight, number>> = { mid: 1, end: 1 };
+
 /** Every multiplier axis — the keys of `Multipliers`, so a new axis is a compile error until it has a margin. */
 export type MultiplierAxis = keyof Multipliers;
 
@@ -271,7 +305,8 @@ export const SAVIOR: Multipliers = {
  * is), and `crowd` has a measured ceiling on Burn — see `PINNED`.
  *
  * - `toughness` 1.6 is Savior's own departure, so Legend is the content's health exactly — *"length
- *   is not difficulty"*, and below one it would shorten bosses and nothing else.
+ *   is not difficulty"*, and below one it would shorten bosses and nothing else. Its BOSSES hold
+ *   longer since 0532, by a literal on its row (`bossToughness`) rather than by this margin.
  * - `crowd` 1.15 likewise, so Legend's volleys are the authored counts.
  * - the four the player feels as TIME — `fireGap`, `closing`, `shotSpeed`, `aggression` — sit
  *   further out than Savior's own departure, so Legend is gentler than the content on each: *"we also
@@ -395,7 +430,9 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
    * Asked for, first: *"this should provide me no challenge, but still require concentration"*; and
    * on 2026-09-22 *"playable by anyone and they should be able to have fun."* Since 0356 it is gentler
    * than the content on the four axes the player feels as time, and exactly the content on health and
-   * on how much a volley holds.
+   * on how much a volley holds — but for its bosses, which since 0532 hold longer than the content
+   * on the player's word: *"minibosses need probably twice as much health … end bosses need about
+   * +15% health"*.
    */
   legendary: {
     title: 'Legendary Pilot',
@@ -409,6 +446,13 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     ...multipliersFor('legendary'),
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
+    /*
+      Twice the mid-boss and fifteen percent more end boss, over a `toughness` of one — 0532, the
+      player's numbers from a play of this tier. Measured on the pulse, the mid-boss fights went from
+      12–17 s to 20–29 s — past their level's window of 25 in three levels of seven, where the waves
+      past it come in over the fight (0502) — and every one is now longer than Savior's 17–23.
+    */
+    bossToughness: { mid: 2, end: 1.15 },
   },
   /**
    * The tier the game is tuned for — `SAVIOR` is its multipliers, and the other two are derived.
@@ -424,6 +468,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     ...multipliersFor('savior'),
     // Never narrower than 44, turns at about 19° — 0350, the player's number.
     corridor: { narrowest: 44, slope: 0.35 },
+    // Its bosses as tough as `toughness` says — the tuned tier, and 0532 asked nothing of it.
+    bossToughness: AS_TOUGH,
   },
   /**
    * The tier that is supposed to end runs: Savior a margin up on every axis but `aggression` and
@@ -455,6 +501,8 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
+    // As tough as `toughness` says — 0532 is a literal on Legend's row, so it does not ripple here.
+    bossToughness: AS_TOUGH,
   },
 };
 
@@ -489,6 +537,8 @@ export const AUTHORED: DifficultyRow = {
   crowd: 1,
   // The widest corridor any tier flies — the player's own number for `legendary`, 0350.
   corridor: { narrowest: 56, slope: 0.25 },
+  // The content's bosses at the content's health — 0532 is a tier's, never the baseline's.
+  bossToughness: AS_TOUGH,
 };
 
 /*
@@ -535,6 +585,17 @@ export const AUTHORED: DifficultyRow = {
  */
 export function toughnessFor(base: number, tier: DifficultyRow): number {
   return Math.max(1, Math.ceil(base * tier.toughness));
+}
+
+/**
+ * The health a boss of `base` health has on a given tier, in the level's `fight` — 0532.
+ *
+ * ⚠️ **`toughnessFor` with the row's boss multiplier on top, and nothing else.** Rounded up and floored
+ * at one for that function's reasons; at `AS_TOUGH` the product is `toughness` exactly, so a tier that
+ * says nothing about its bosses gets the very number it got before this existed.
+ */
+export function bossToughnessFor(base: number, tier: DifficultyRow, fight: BossFight): number {
+  return Math.max(1, Math.ceil(base * tier.toughness * tier.bossToughness[fight]));
 }
 
 /**

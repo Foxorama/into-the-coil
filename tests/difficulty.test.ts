@@ -13,7 +13,10 @@ import {
   SAVIOR,
   TUNED,
   type DifficultyKind,
+  type DifficultyRow,
   type MultiplierAxis,
+  BOSS_FIGHTS,
+  bossToughnessFor,
   fireGapFor,
   toughnessFor,
 } from '../src/content/difficulty.ts';
@@ -390,7 +393,7 @@ describe('the two helpers cannot produce a body that does not work', () => {
   it('and never makes something take fewer, whatever the tiers turn out to be', () => {
     /*
       The weaker property, kept alongside the stronger one because it is the one that must hold even
-      between two tiers with the SAME toughness — the bosses are walked here and the enemies above.
+      between two tiers with the SAME toughness.
     */
     for (const [easier, harder] of PAIRS) {
       for (const kind of ENEMY_KINDS) {
@@ -400,11 +403,14 @@ describe('the two helpers cannot produce a body that does not work', () => {
           `a ${kind} takes fewer hits on ${harder} than on ${easier}`,
         ).toBeGreaterThanOrEqual(toughnessFor(base, DIFFICULTIES[easier]));
       }
-      for (const kind of BOSS_KINDS) {
-        expect(toughnessFor(BOSSES[kind].health, DIFFICULTIES[harder])).toBeGreaterThanOrEqual(
-          toughnessFor(BOSSES[kind].health, DIFFICULTIES[easier]),
-        );
-      }
+      /*
+        ⚠️ **THE BOSSES WERE WALKED HERE TOO, AND 0532 DEMOTED THAT HALF TO A TASTE** —
+        `docs/decisions/0532-the-legend-holds-longer.md`, one edit and a reason (0192). Asked: *"legendary
+        difficulty — minibosses need probably twice as much health as they do now"*, which puts Legend's
+        sentinel at 348 against Savior's 279. That is a correct change reddening it, so it was never an
+        invariant: a boss's health is a tier's row, and the claim is `0532-held` in `tests/authored.ts`,
+        printed every run with every boss it is not true of.
+      */
     }
   });
 });
@@ -425,31 +431,32 @@ describe('a boss still opens in its first phase, however tough the tier made it'
       Correct answer, wrong reason, and the whole middle of the fight unmeasured. What is walked now
       is every threshold in the table.
     */
+    // In both fights, at the health the frame gives it — 0532 made that the tier's row per fight.
     for (const tier of DIFFICULTY_KINDS) {
-      for (const kind of BOSS_KINDS) {
+      for (const kind of BOSS_KINDS) for (const fight of BOSS_FIGHTS) {
         const row = BOSSES[kind];
-        const full = toughnessFor(row.health, DIFFICULTIES[tier]);
+        const full = bossToughnessFor(row.health, DIFFICULTIES[tier], fight);
         row.phases.forEach((phase, index) => {
           // Just inside this phase's threshold, in health the boss actually has. The phase there is
           // this one, on every tier, because a tier changes how long a fight is and never its shape.
           const health = full * phase.upTo - 0.5;
           if (health <= 0) return;
-          expect(phaseFor(row, health, full), `${kind} is not in phase ${index} at ${phase.upTo} on ${tier}`).toBe(
+          expect(phaseFor(row, health, full), `${kind} is not in phase ${index} at ${phase.upTo} on ${tier}, ${fight}`).toBe(
             phase,
           );
         });
-        expect(phaseFor(row, full, full), `${kind} does not open in its first phase on ${tier}`).toBe(row.phases[0]);
+        expect(phaseFor(row, full, full), `${kind} does not open in its first phase on ${tier}, ${fight}`).toBe(row.phases[0]);
       }
     }
   });
 
   it('and still reaches its last phase before it dies', () => {
     for (const tier of DIFFICULTY_KINDS) {
-      for (const kind of BOSS_KINDS) {
+      for (const kind of BOSS_KINDS) for (const fight of BOSS_FIGHTS) {
         const row = BOSSES[kind];
-        const full = toughnessFor(row.health, DIFFICULTIES[tier]);
+        const full = bossToughnessFor(row.health, DIFFICULTIES[tier], fight);
         const last = row.phases[row.phases.length - 1]!;
-        expect(phaseFor(row, 1, full), `${kind} never reaches its last phase on ${tier}`).toBe(last);
+        expect(phaseFor(row, 1, full), `${kind} never reaches its last phase on ${tier}, ${fight}`).toBe(last);
       }
     }
   });
@@ -601,6 +608,62 @@ describe('the tier reaches the field, and not only the table', () => {
     // Stated as a duration as well, because *steps* is the unit the code thinks in and *seconds* is
     // the one the player does — and a fight that got one step longer is not a difficulty tier.
     expect((hardest - easiest) / STEPS_PER_SECOND, 'a harder tier bought under a second').toBeGreaterThan(1);
+  });
+
+  it('0532: puts each fight’s boss down at what its tier’s row says for THAT fight', () => {
+    /*
+      `docs/decisions/0532-the-legend-holds-longer.md`. Asked: *"legendary difficulty — minibosses need
+      probably twice as much health as they do now; end bosses need about +15% health"*. So the row
+      says a number per fight, and what is held is that the frame reads the one for the fight it is
+      in — the mid-boss's on `fight` 0, the end boss's on 1 — through the real spawn.
+
+      ⚠️ **ON A ROW MADE FOR THE TEST, AND IN SHOTS.** Compared against `bossToughnessFor` it would
+      agree with a helper that dropped the row's number as readily as with one that kept it (0027), and
+      on the real tiers it would be a guard on the player's numbers, which a correct play could move.
+      So the content's own toughness, three times the mid-boss and twice the end boss, and the
+      expectation is the row's health times three and times two: a number nothing in `src/` computed.
+
+      ⚠️ **The same kind in both fights**, so the only thing that differs between the two readings is
+      which fight it is: a frame that read one fight's number for both, or neither, fails.
+    */
+    const asked: DifficultyRow = { ...AUTHORED, bossToughness: { mid: 3, end: 2 } };
+    const twoFights: LevelRow = {
+      waves: [],
+      pickups: [],
+      landmarks: [],
+      bossAt: 700,
+      midBoss: { kind: 'sentinel', at: 200, windowSeconds: 25 },
+      sections: NO_SECTIONS,
+      boss: 'sentinel',
+      theme: 'approach',
+    };
+    {
+      const { world } = playableWorld(twoFights);
+      world.difficulty = asked;
+      const frame = new GameFrame(world);
+      const putDown: number[] = [];
+      for (let step = 0; step < 20_000 && putDown.length < 2; step++) {
+        world.ship.health = world.shipRow.health;
+        if (world.bossSpawned && !world.bossBeaten && world.bossPool.size > 0) {
+          if (putDown.length === world.fight) putDown.push(world.bossFullHealth);
+          // The mid-boss is killed at once: what it was put down with is all this reads.
+          if (world.fight === 0) {
+            const hull = world.bossPool.at(0);
+            hull.health = 1;
+            world.ship.prevAcross = world.ship.across;
+            world.ship.across = hull.across;
+          }
+        }
+        frame.step();
+      }
+      expect(putDown.length, 'the walk did not meet both fights').toBe(2);
+      expect(putDown[0], 'the mid-boss was not put down at three times its health, which its tier asked').toBe(
+        BOSSES.sentinel.health * 3,
+      );
+      expect(putDown[1], 'the end boss was not put down at twice its health, which its tier asked').toBe(
+        BOSSES.sentinel.health * 2,
+      );
+    }
   });
 });
 

@@ -61,7 +61,7 @@ function over(base: string, top: string, alpha: number): string {
 import { loopsAt } from './bakes.ts';
 import { SAMPLE_RATE, sampleCue } from '../src/app/sound.ts';
 import { PICKUP_CYCLE_STEPS } from '../src/content/pickups.ts';
-import { DIFFICULTIES } from '../src/content/difficulty.ts';
+import { BOSS_FIGHTS, DIFFICULTIES, DIFFICULTY_KINDS, bossToughnessFor } from '../src/content/difficulty.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 
 /** The three changes a player crosses while flying the same stretch of level — 0167's own exclusion. */
@@ -450,6 +450,30 @@ function measureSeen(): void {
   observe('0479-seen', quickest !== undefined && quickest.seconds >= FLOOR, quickest === undefined ? ['no boss throws a bullet'] : lines);
 }
 
+/**
+ * 0532 — a harder tier's boss holds no less than an easier one's, in either fight. Advisory since the
+ * player asked Legend's mid-bosses to hold twice the content's health, past Savior's 1.6; every boss
+ * it is not true of is printed with both tiers' healths.
+ */
+function measureHeld(): void {
+  const under: string[] = [];
+  for (let i = 1; i < DIFFICULTY_KINDS.length; i++) {
+    const easier = DIFFICULTY_KINDS[i - 1]!;
+    const harder = DIFFICULTY_KINDS[i]!;
+    // Each boss in the fight its level puts it in, which is the only pairing a player meets.
+    for (const level of LEVEL_KINDS) {
+      const { midBoss, boss } = LEVELS[level];
+      const fought = midBoss === null ? [[boss, BOSS_FIGHTS[1]] as const] : [[midBoss.kind, BOSS_FIGHTS[0]] as const, [boss, BOSS_FIGHTS[1]] as const];
+      for (const [kind, fight] of fought) {
+        const a = bossToughnessFor(BOSSES[kind].health, DIFFICULTIES[easier], fight);
+        const b = bossToughnessFor(BOSSES[kind].health, DIFFICULTIES[harder], fight);
+        if (b < a) under.push(`the ${kind}, ${fight} boss of ${level}: ${b} on ${harder}, ${a} on ${easier}`);
+      }
+    }
+  }
+  observe('0532-held', under.length === 0, under);
+}
+
 function measureAll(): void {
   measureNotes();
   measureLead();
@@ -466,6 +490,7 @@ function measureAll(): void {
   measureStruck();
   measureNote();
   measureSeen();
+  measureHeld();
 }
 
 /**
