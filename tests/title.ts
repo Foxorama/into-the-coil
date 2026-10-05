@@ -18,6 +18,7 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { DIFFICULTY_KINDS, type DifficultyKind } from '../src/content/difficulty.ts';
 import { CREDIT_KINDS, type CreditKind } from '../src/content/credits.ts';
 import { SCREENS, type ChoiceName, type Screen } from '../src/state/screens.ts';
+import { SHELF_KINDS, SHELVES, type OwnableKind } from '../src/content/wares.ts';
 
 /** The CSS selector for a screen's shown overlay. */
 export const shown = (screen: Screen): string => '.' + prefixFor(screen) + 'shown';
@@ -113,4 +114,16 @@ export async function openRoom(page: Page): Promise<void> {
 /** From Settings or How to play: Back, to whichever screen opened it. */
 export async function back(page: Page, from: Screen): Promise<void> {
   await pressOn(page, from, 'Back');
+}
+
+/**
+ * On Cosmo's: put `ware` in the window, as a player does — 0542: the aisle to the shelf it is on, then the
+ * ware on that shelf. By the tables, so a ware moved to another shelf moves the helper with it.
+ */
+export async function pickWare(page: Page, ware: OwnableKind): Promise<void> {
+  const shelf = SHELF_KINDS.find((kind) => SHELVES[kind].wares.includes(ware));
+  if (shelf === undefined) throw new Error(`${ware} is on no shelf`);
+  const options = (name: string): string => `${shown('shop')} [${SETTING_ATTR}="${name}"] .${prefixFor('shop')}option`;
+  await page.locator(`${options('aisle')} >> nth=${SHELF_KINDS.indexOf(shelf)}`).click();
+  await page.locator(`${options(shelf)} >> nth=${SHELVES[shelf].wares.indexOf(ware)}`).click();
 }

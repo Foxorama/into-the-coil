@@ -11,7 +11,7 @@ import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { RIM_KINDS } from '../src/content/rims.ts';
-import { WARES } from '../src/content/wares.ts';
+import { SHELF_KINDS, SHELVES } from '../src/content/wares.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
 /**
@@ -48,7 +48,18 @@ describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn',
     const parts = prefixFor('parts');
     await page.locator(`${shown('hangar')} .${prefixFor('hangar')}tab`, { hasText: SCREENS.shop.heading }).click();
     await page.waitForSelector(shown('shop'), { state: 'attached' });
-    await page.locator(`${shown('shop')} [${SETTING_ATTR}="ware"] .${shop}option >> nth=${WARES.indexOf('spinner')}`).click();
+    /*
+      0542: TRIED ON BEFORE IT IS BOUGHT. The spinners in Cosmo's window are on the car on its pad, and
+      turning, before a shard is spent — the aisle to the wheels, then the spinners off that shelf.
+    */
+    const option = (band: string, nth: number) => page.locator(`${shown('shop')} [${SETTING_ATTR}="${band}"] .${shop}option >> nth=${nth}`);
+    const tried = await samePhase(page, 'shop', async () => {
+      await option('aisle', SHELF_KINDS.indexOf('wheels')).dispatchEvent('click');
+      await option('wheels', SHELVES.wheels.wares.indexOf('spinner')).dispatchEvent('click');
+    });
+    expect(tried.change, `the car on Cosmo's pad does not try the spinners on: ${tried.change.toFixed(4)} of the stand moved, against ${tried.noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * tried.noise, 0.002));
+    expect(tried.after, `the spinners tried on do not turn: ${tried.after.toFixed(4)} a bob apart, against ${tried.noise.toFixed(4)}`).toBeGreaterThan(Math.max(3 * tried.noise, 0.001));
+    expect(hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar).rim.firebird, 'trying the spinners on fitted them').not.toBe('spinner');
     await page.locator(`${shown('shop')} .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
     const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.owned.spinner, 'Buy did not buy the spinners').toBe(true);

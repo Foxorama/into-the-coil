@@ -109,6 +109,9 @@ export const PORT_KINDS = [
   'veil',
   // 0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port.
   'blueWheel',
+  // 0542: Cosmo, and the stall by the pilot's pad they keep their counter at.
+  'cosmo',
+  'stall',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -176,6 +179,9 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   veil: 1,
   // 0540: the fight's spinner, at hangar size — baked at it rather than blitted up, on the ships' terms above.
   blueWheel: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
+  // 0542: a bust a head taller than the counter, and the stall's square box.
+  cosmo: 14,
+  stall: 30,
 };
 
 /**
@@ -271,6 +277,13 @@ export const STAGE = {
   bay: 180,
   /** The ceiling lamps, along. */
   lamps: [72, 128] as readonly number[],
+  /**
+   * Cosmo's stall, on the deck between the bar's door and the pilot's pad — 0542: its centre, and where
+   * Cosmo stands behind its counter. Beside the pad, so the shop's camera has the counter and the ship it
+   * tries things on in the stand's part of the screen together.
+   */
+  stall: { along: 64, across: 85 },
+  keeper: { along: 63, across: 80 },
   /** The alarm beacons, which turn once the Viper has gone. */
   beacons: [
     [174, 30],
@@ -285,7 +298,7 @@ export const STAGE = {
  * asked (`standViewInto`), so a share that would show past the room's wall shows the wall instead.
  *
  * ⚠️ **A FIELD ON EACH SCREEN'S ROW AND NEVER A CONSTANT** (0282): the hangar stands on the pad, Paint &
- * Parts closer on it, Cosmo's at the bar — `src/state/screens.ts`. A fourth tab authors its own.
+ * Parts closer on it, Cosmo's between the pad and their stall (0542) — `src/state/screens.ts`. A fourth tab authors its own.
  */
 export interface StandCamera {
   along: number;

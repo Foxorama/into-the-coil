@@ -36,7 +36,8 @@ import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
-import { OWNABLES, WARES, type OwnableKind } from '../content/wares.ts';
+import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
+import { COSMO, type KeeperRow } from '../content/cosmo.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
 
@@ -113,10 +114,14 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art' | 'livery' | 'tone' | 'flame';
 
 /**
- * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
+ * Cosmo's shelves — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
  * is kept, and the band is where the player is looking, which the shell holds while the shop is up.
+ *
+ * ⚠️ **A BAND A SHELF SINCE 0542, AND AN AISLE.** It was one band of every ware; each shelf is the band of
+ * its own table's wares (`SHELF_KINDS`), and the aisle steps which shelf is in view, so a fourth table is
+ * a fourth band of the same shape and never a new name here.
  */
-export type ShelfName = 'ware';
+export type ShelfName = ShelfKind | 'aisle';
 
 /** What a band on a screen may choose: a setting, a slot of the ship on the hangar's stand, or a ware. */
 export type ChoiceName = SettingName | SlotName | ShelfName;
@@ -199,9 +204,14 @@ export interface StandRow {
   groups: readonly { label: string; bands: readonly ChoiceName[] }[];
   /**
    * Where the port's camera stands while the tab is up — 0540: on the pad for the hangar, closer on it
-   * for Paint & Parts, at the bar for Cosmo's. Each tab's own; the room is the intro's.
+   * for Paint & Parts, beside the stall for Cosmo's (0542). Each tab's own; the room is the intro's.
    */
   camera: StandCamera;
+  /**
+   * Who keeps the counter on this tab, whose face and line head its plate — 0542: Cosmo, on Cosmo's;
+   * `null` on a tab with no counter. A row of the keepers' content, so a second shop is a second keeper.
+   */
+  keeper: KeeperRow | null;
 }
 
 export interface ScreenRow {
@@ -819,6 +829,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       ],
       // 0540: on the pilot's pad, the ship on it in the stand's half of the screen.
       camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 1.5, x: 0.2, y: 0.52 },
+      keeper: null,
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -915,6 +926,7 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       ],
       // 0540: closer on the pad, so the wheels, the nose and the flame are large.
       camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 2.3, x: 0.2, y: 0.48 },
+      keeper: null,
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -1010,22 +1022,43 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     heading: 'Cosmo’s Cosmetics',
     pause: null,
     leads: false,
-    // 0539: one shelf until Cosmo's counter (item 5 of the plan) has a shelf per table.
-    // 0540: at the bar, its counter and its lit shelf; the ship on its pad beyond it.
-    stand: { groups: [], camera: { along: STAGE.bar.along, across: STAGE.bar.across, zoom: 1.6, x: 0.18, y: 0.5 } },
+    /*
+      ⚠️ **0542: AT COSMO'S STALL, BY THE PAD, AND IT WAS AT THE BAR (0540).** The plan stood the camera at
+      the bar, the counter and its lit shelf filling the stand, with the ship on its pad beyond — and asked
+      that every ware be tried on where it goes, a rim on the ship's wheels and a flame in its exhaust. The
+      bar's window and the pad are sixty-four units apart, which no camera that fills the screen fits in a
+      stand a third of it wide: at the bar the ship stood under the plate. So Cosmo keeps a stall on the deck
+      beside the pad, and the camera stands between the two.
+    */
+    stand: { groups: [], camera: { along: 80, across: 84, zoom: 1.4, x: 0.2, y: 0.5 }, keeper: COSMO },
+    // 0542: Buy names the price of the ware in the window, written by the shell — `Buy · 250 ✦`.
     actions: [
       { label: 'Buy', hint: '' },
       { label: 'Back', hint: '' },
     ],
+    /*
+      0542: the aisle, which steps the shelf in view, and a shelf per table — each its own wares, named with
+      their price by the shell (`setLabels`), so what is owned can say so. Built by walking `SHELF_KINDS`.
+    */
     choices: [
       {
-        name: 'ware',
-        label: 'On the shelf',
-        options: WARES.map((kind) => ({ label: OWNABLES[kind].name, hint: String(OWNABLES[kind].price) + ' Star Shards — ' + OWNABLES[kind].hint })),
+        name: 'aisle',
+        label: 'Aisle',
+        options: SHELF_KINDS.map((kind) => ({ label: SHELVES[kind].label, hint: '' })),
         faces: 'words',
         on: 'all',
         press: 'steps',
       },
+      ...SHELF_KINDS.map(
+        (kind): ScreenChoice => ({
+          name: kind,
+          label: SHELVES[kind].label,
+          options: SHELVES[kind].wares.map((ware) => ({ label: OWNABLES[ware].name, hint: OWNABLES[ware].hint })),
+          faces: 'words',
+          on: 'all',
+          press: 'steps',
+        }),
+      ),
     ],
     steps: false,
     // 0540: on the hangar's terms.

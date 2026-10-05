@@ -5,12 +5,11 @@ import type { Browser, Page } from 'playwright-core';
 import { chromePath, launchChromium } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
-import { back, fly, openHangar, shown } from './title.ts';
+import { back, fly, openHangar, pickWare, shown } from './title.ts';
 import { seedOnce } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { FLAME_KINDS } from '../src/content/flames.ts';
-import { WARES } from '../src/content/wares.ts';
 import { SCREENS } from '../src/state/screens.ts';
 
 /**
@@ -87,7 +86,12 @@ describe.runIf(chromePath)('0530 — the thrusters bought and fitted burn blue i
     const parts = prefixFor('parts');
     await page.locator(`${shown('hangar')} .${prefixFor('hangar')}tab`, { hasText: SCREENS.shop.heading }).click();
     await page.waitForSelector(shown('shop'), { state: 'attached' });
-    await page.locator(`${shown('shop')} [${SETTING_ATTR}="ware"] .${shop}option >> nth=${WARES.indexOf('ion')}`).click();
+    // 0542: tried on before it is bought — the thrusters in Cosmo's window burn blue under the ship on its pad.
+    const bare = await royalBlue(page);
+    await pickWare(page, 'ion');
+    await page.waitForTimeout(400);
+    const tried = await royalBlue(page);
+    expect(tried, `the thrusters in the window do not burn on the pad: ${tried} royal-blue pixels, against ${bare} before`).toBeGreaterThan(Math.max(4 * bare, 40));
     await page.locator(`${shown('shop')} .${shop}action`, { hasText: SCREENS.shop.actions[0]!.label }).click();
     await page.locator(`${shown('shop')} .${shop}tab`, { hasText: SCREENS.parts.heading }).click();
     await page.waitForSelector(shown('parts'), { state: 'attached' });

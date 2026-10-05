@@ -41,6 +41,7 @@ function hangarJetsOf(ship: ShipKind): readonly Pt[] {
   return HANGAR_ART[ship]?.jets ?? jetsOf(ship);
 }
 import { paintRunner } from './golfer-art.ts';
+import { paintCosmo } from './cosmo-art.ts';
 
 /**
  * Bake every piece of the port for one palette, at the resolution it will be blitted at, with the
@@ -179,6 +180,10 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     */
     case 'blueWheel':
       return bakeGlyph('spinnerWheel', palette, pixelsPerUnit * HANGAR_SCALE);
+    // 0542: Cosmo's bust, the portrait's own drawing (`src/render/cosmo-art.ts`), behind the stall's counter.
+    case 'cosmo':
+      paintCosmo(ctx, palette, size);
+      return canvas;
     case 'viper':
       paintViper(ctx, f, palette, size);
       return canvas;
@@ -196,6 +201,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'ceiling':
     case 'deck':
     case 'lamp':
+    case 'stall':
     case 'bar':
     case 'door':
     case 'spill':
@@ -323,6 +329,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     }
     case 'bar':
       paintBar(ctx, palette, px);
+      return;
+    case 'stall':
+      paintStall(ctx, palette);
       return;
     case 'door': {
       // A sliding hatch with a lit porthole: it slides behind the facade, so it is drawn whole.
@@ -506,6 +515,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'viperFlare':
     case 'viperSurge':
     case 'blueWheel':
+    case 'cosmo':
       throw new Error(`bakePort: ${kind} is drawn in the ship's own frame`);
     default: {
       const never: never = kind;
@@ -664,6 +674,69 @@ function paintBar(ctx: CanvasRenderingContext2D, palette: Palette, px: number): 
   ctx.fillRect(23, 25.5, 5, 0.5);
   ctx.fillRect(23, 29.5, 5, 0.5);
   void palette;
+}
+
+/**
+ * Cosmo's stall — 0542: a counter on the deck by the pilot's pad, under a striped awning on two posts,
+ * with the shop's name on its front and a few of the shelf's wares on top — a die, a little tree, a
+ * framed photo, a golf ball. In world units about its centre; Cosmo stands behind it (`paintStand`).
+ * The counter in the ally's violet, deep, and its trim in the hazard's gold: the shop's colours are the
+ * shop's chrome's — a plate's run of the two inks (0440) — so it reads as the thing the plate is.
+ */
+function paintStall(ctx: CanvasRenderingContext2D, palette: Palette): void {
+  const counter = shade(palette.ally, -0.5);
+  // The posts.
+  ctx.fillStyle = PORT_INK.woodLight;
+  ctx.fillRect(-13, -12, 1, 13);
+  ctx.fillRect(12, -12, 1, 13);
+  // The awning: stripes of the two inks, its lower edge scalloped.
+  for (let i = 0; i < 9; i++) {
+    ctx.fillStyle = i % 2 === 0 ? shade(palette.ally, -0.1) : palette.impact;
+    ctx.fillRect(-14.5 + i * (29 / 9), -14.5, 29 / 9 + 0.05, 2.6);
+    ctx.beginPath();
+    ctx.arc(-14.5 + (i + 0.5) * (29 / 9), -11.9, 29 / 18, 0, Math.PI);
+    ctx.fill();
+  }
+  ctx.fillStyle = PORT_INK.woodDark;
+  ctx.fillRect(-14.8, -14.9, 29.6, 0.5);
+  // The counter, its top board, and a gold line under it.
+  ctx.fillStyle = counter;
+  ctx.fillRect(-13.5, 1, 27, 14);
+  ctx.fillStyle = PORT_INK.woodLight;
+  ctx.fillRect(-14, 0.4, 28, 1.4);
+  ctx.fillStyle = palette.hazard;
+  ctx.fillRect(-13.5, 2.3, 27, 0.35);
+  ctx.fillRect(-13.5, 13.4, 27, 0.35);
+  // The name on the front, in the gold.
+  ctx.fillStyle = palette.hazard;
+  ctx.font = 'bold 3.2px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('COSMO’S', 0, 6.4);
+  ctx.font = '1.9px system-ui, sans-serif';
+  ctx.fillStyle = shade(palette.hazard, -0.15);
+  ctx.fillText('COSMETICS', 0, 9.8);
+  // A few of the wares on the counter, at its two ends: a red die and a tree, a framed photo and a ball.
+  ctx.fillStyle = mix(palette.enemy, palette.bullet, 0.3);
+  ctx.fillRect(-12, -1.3, 1.7, 1.7);
+  ctx.fillStyle = palette.impact;
+  ctx.fillRect(-11.6, -0.9, 0.35, 0.35);
+  ctx.fillRect(-10.9, -0.2, 0.35, 0.35);
+  ctx.fillStyle = shade(mix(palette.pickup, palette.acid, 0.35), -0.2);
+  ctx.beginPath();
+  ctx.moveTo(-8.2, 0.4);
+  ctx.lineTo(-6.9, -2.6);
+  ctx.lineTo(-5.6, 0.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = palette.hazard;
+  ctx.fillRect(7, -2.2, 2.2, 2.6);
+  ctx.fillStyle = mix(palette.acid, palette.pickup, 0.5);
+  ctx.fillRect(7.4, -1.8, 1.4, 1.8);
+  ctx.fillStyle = palette.impact;
+  ctx.beginPath();
+  ctx.arc(11, -0.4, 0.85, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DANGLES, DANGLE_KINDS } from '../src/content/dangles.ts';
-import { OWNABLES, WARES } from '../src/content/wares.ts';
+import { OWNABLES, SHELF_KINDS, SHELVES, WARES } from '../src/content/wares.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { canBuy, initialHangar } from '../src/state/slices/hangar.ts';
@@ -36,10 +36,24 @@ describe('the shelf', () => {
     for (const kind of WARES) expect(initialHangar.owned[kind], `${kind} was owned before it was bought`).toBe(false);
   });
 
-  it('offers every ware on the shop’s band, in the table’s order, saying its price', () => {
-    const band = SCREENS.shop.choices.find((c) => c.name === 'ware')!;
-    expect(band.options.map((o) => o.label)).toEqual(WARES.map((kind) => OWNABLES[kind].name));
-    band.options.forEach((option, i) => expect(option.hint).toContain(String(OWNABLES[WARES[i]!].price) + ' Star Shards'));
+  /*
+    ⚠️ **A SHELF A TABLE SINCE 0542, AND IT WAS ONE BAND OF EVERY WARE.** Every ware is on exactly one shelf,
+    each shelf in its table's order, each a band of the shop's, and the aisle names them all — so a ware
+    added to a table is on its shelf, and a table added is a shelf, with nothing typed here. The price on
+    a ware's face is the shell's to write (`setLabels`), and `tests/cosmo.browser.test.ts` reads it there.
+  */
+  it('0542 — puts every ware on its own table’s shelf, in the table’s order, and every shelf on the shop', () => {
+    const shelved = SHELF_KINDS.flatMap((kind) => SHELVES[kind].wares);
+    expect(shelved, 'a ware is on two shelves, or a shelf holds what is not sold').toHaveLength(WARES.length);
+    expect([...shelved].sort(), 'a ware for sale is on no shelf').toEqual([...WARES].sort());
+    for (const kind of SHELF_KINDS) {
+      const band = SCREENS.shop.choices.find((c) => c.name === kind);
+      expect(band, `the ${kind} shelf is not on the shop`).toBeDefined();
+      expect(band!.options.map((o) => o.label)).toEqual(SHELVES[kind].wares.map((ware) => OWNABLES[ware].name));
+      expect(WARES.filter((ware) => SHELVES[kind].wares.includes(ware)), `the ${kind} shelf is not in its table's order`).toEqual(SHELVES[kind].wares);
+    }
+    const aisle = SCREENS.shop.choices.find((c) => c.name === 'aisle');
+    expect(aisle?.options.map((o) => o.label), 'the aisle does not name every shelf, in order').toEqual(SHELF_KINDS.map((kind) => SHELVES[kind].label));
   });
 });
 

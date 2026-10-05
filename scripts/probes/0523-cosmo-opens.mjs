@@ -68,7 +68,7 @@ export const PROBES = [
     guard: 'tries the ware on the dash, buys it once',
     edit: {
       path: 'src/app/mount.ts',
-      find: "      chrome.setActionShown('shop', 0, !state.hangar.owned[ware]);",
+      find: "      chrome.setActionShown('shop', 0, !owned);",
       replace: "      chrome.setActionShown('shop', 0, true);",
     },
   },
