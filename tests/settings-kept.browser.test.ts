@@ -78,9 +78,15 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
 
     await page.reload();
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
+    /*
+      ⚠️ **THE KEY AS THE RELOADED PAGE FOUND IT, IN THE MESSAGE** — red twice on CI and never here
+      (2026-10-05). A key that lost the write and a band that does not show a kept value fail on the same
+      line; the text read before anything is pressed tells the two apart.
+    */
+    const reread = await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY);
     await pastIntro(page);
     await openSettings(page);
-    expect(await marked(page, 'settings', 'travel'), 'the crossing was forgotten across a reload').toBe(
+    expect(await marked(page, 'settings', 'travel'), `the crossing was forgotten across a reload — the key held ${String(reread)}`).toBe(
       TRAVEL_KINDS.indexOf(travel),
     );
     await context.close();

@@ -31,6 +31,7 @@ import { INTRO_STEPS } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
+import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
 import { WEAPONS } from '../content/weapons.ts';
 
 /** Every screen, in no particular order — nothing indexes this list by position. Closed. */
@@ -40,6 +41,7 @@ export const SCREEN_KINDS = [
   'title',
   'settings',
   'hangar',
+  'shop',
   'guide',
   'playing',
   'gameOver',
@@ -94,10 +96,17 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
  * the ship of the pilot on it. Folded into `SettingName` it would have to be a field of
  * `SettingsState`, which is keyed by this union — a field that could only ever hold one ship's plate.
  */
-export type SlotName = 'plate';
+// 0523: and what hangs from the dash.
+export type SlotName = 'plate' | 'dangle';
 
-/** What a band on a screen may choose: a setting, or a slot of the ship on the hangar's stand. */
-export type ChoiceName = SettingName | SlotName;
+/**
+ * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
+ * is kept, and the band is where the player is looking, which the shell holds while the shop is up.
+ */
+export type ShelfName = 'ware';
+
+/** What a band on a screen may choose: a setting, a slot of the ship on the hangar's stand, or a ware. */
+export type ChoiceName = SettingName | SlotName | ShelfName;
 
 /**
  * One setting a screen offers, and the options it offers for it.
@@ -364,6 +373,23 @@ function plainLabel(kind: ShipKind): string {
 export function plateWhy(ship: ShipKind, won: boolean, borrowable: boolean): string | null {
   if (!won) return 'Beat the jellyfish in the ' + plainLabel(ship) + ' to change its dash';
   return borrowable ? null : 'Beat the jellyfish in another ship to borrow its dash';
+}
+
+/**
+ * What the hangar's dangle band says while nothing has been bought — 0523, so the shut ones say where
+ * they are sold; `null` once one has, and the band says what is on it.
+ */
+export function dangleWhy(boughtAny: boolean): string | null {
+  return boughtAny ? null : 'More to hang at Cosmo’s, the next tab';
+}
+
+/**
+ * What the shelf says of the ware in the window — 0523: that it is owned, or how far the balance is
+ * from it, or `null` when it can be bought and the band says its price.
+ */
+export function wareWhy(owned: boolean, shards: number, price: number): string | null {
+  if (owned) return 'Yours — hang it in the hangar';
+  return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
 }
 
 /** What the hangar is called, on its door on the title and over the screen itself — 0521. */
@@ -657,6 +683,18 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         on: 'all',
         press: 'steps',
       },
+      /*
+        0523: what hangs from the dash — nothing first, then every dangle in the table's order, the ones
+        not owned shut and saying where to get them. Built by walking `DANGLE_KINDS`.
+      */
+      {
+        name: 'dangle',
+        label: 'Hanging',
+        options: [{ label: 'Nothing', hint: 'A clear dash' }, ...DANGLE_KINDS.map((kind) => ({ label: DANGLES[kind].name, hint: DANGLES[kind].hint }))],
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
     ],
     steps: false,
     dims: true,
@@ -665,7 +703,43 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     skips: false,
     inRun: false,
     back: 'title',
-    tabs: [],
+    // 0523: and Cosmo's beside it, one place to the player — buying and fitting.
+    tabs: ['hangar', 'shop'],
+    opensOn: 'choice',
+  },
+  /**
+   * *Cosmo's Cosmetics* — `docs/decisions/0523-cosmo-opens.md`. The hangar's second tab: the shelf of
+   * what is for sale, *Buy*, and the balance in the corner.
+   *
+   * ⚠️ **THE READOUT IS UP OVER IT TOO, WEARING THE WARE IN THE WINDOW**, so a dangle is seen swinging
+   * from the player's own dash before a shard is spent — the chrome shows it over any screen offering a
+   * slot or a ware, read off the row.
+   */
+  shop: {
+    heading: 'Cosmo’s Cosmetics',
+    pause: null,
+    actions: [
+      { label: 'Buy', hint: '' },
+      { label: 'Back', hint: '' },
+    ],
+    choices: [
+      {
+        name: 'ware',
+        label: 'On the shelf',
+        options: WARES.map((kind) => ({ label: DANGLES[kind].name, hint: String(DANGLES[kind].price) + ' Star Shards — ' + DANGLES[kind].hint })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+    ],
+    steps: false,
+    dims: true,
+    timeout: null,
+    pushed: false,
+    skips: false,
+    inRun: false,
+    back: 'title',
+    tabs: ['hangar', 'shop'],
     opensOn: 'choice',
   },
   /**

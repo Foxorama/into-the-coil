@@ -368,8 +368,9 @@ describe('a screen that expires presses its own control, and says how long it wa
     // ⚠️ **AND THE GAME OVER SINCE 0517**, on `victory`'s terms: it ends a run and adds it up, and the
     // run-over screen's countdown was the cost of an offer this one does not make.
     // ⚠️ **AND THE HANGAR SINCE 0521**, on Settings' terms: a player fitting out a ship is choosing.
+    // ⚠️ **AND COSMO'S SINCE 0523**, on the same terms: a player at a shelf is choosing.
     expect(waiting.sort(), 'a screen that should wait for a hand expires by itself').toEqual(
-      ['ended', 'guide', 'hangar', 'music', 'paused', 'playing', 'quit', 'settings', 'splash', 'title', 'travel', 'victory'].sort(),
+      ['ended', 'guide', 'hangar', 'music', 'paused', 'playing', 'quit', 'settings', 'shop', 'splash', 'title', 'travel', 'victory'].sort(),
     );
   });
 

@@ -22,7 +22,8 @@
  * can see this slice, which is 0024's *no comfort setting may touch the sim* held for a cosmetic.
  */
 
-import { SHIP_KINDS, type ShipKind } from '../../content/ships.ts';
+import { SHIPS, SHIP_KINDS, type ShipKind } from '../../content/ships.ts';
+import { DANGLES, DANGLE_KINDS, type DangleKind } from '../../content/dangles.ts';
 
 export interface HangarState {
   /**
@@ -40,13 +41,27 @@ export interface HangarState {
    * spent in the shop the plan's next item opens. A whole number, never below nothing.
    */
   shards: number;
+  /**
+   * Which dangles the player has — 0523. The free ones from the start; a bought one from the moment it
+   * is paid for, and never taken back.
+   */
+  owned: Readonly<Record<DangleKind, boolean>>;
+  /**
+   * What hangs from each ship's dash, or `null` for nothing — 0523. Each ship opens on its row's
+   * `hangs`. Any dangle the player owns may hang on any ship: answered while it was planned, *a bought
+   * thing fits any ship from the moment it is bought*; it is not one of a ship's own slots, which wait
+   * for its win.
+   */
+  hung: Readonly<Record<ShipKind, DangleKind | null>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
 export type HangarAction =
   | { slice: 'hangar'; type: 'won'; ship: ShipKind }
   | { slice: 'hangar'; type: 'plate'; ship: ShipKind; plate: ShipKind }
-  | { slice: 'hangar'; type: 'earned'; shards: number };
+  | { slice: 'hangar'; type: 'earned'; shards: number }
+  | { slice: 'hangar'; type: 'bought'; dangle: DangleKind }
+  | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -60,7 +75,25 @@ export const initialHangar: HangarState = {
   won: perShip(() => false),
   plate: perShip((kind) => kind),
   shards: 0,
+  owned: perDangle((kind) => DANGLES[kind].price === null),
+  hung: perShip((kind) => SHIPS[kind].hangs),
 };
+
+/** Each dangle mapped to `of(kind)`, on `perShip`'s terms. */
+function perDangle<T>(of: (kind: DangleKind) => T): Record<DangleKind, T> {
+  const out: Partial<Record<DangleKind, T>> = {};
+  for (const kind of DANGLE_KINDS) out[kind] = of(kind);
+  return out as Record<DangleKind, T>;
+}
+
+/**
+ * Whether `dangle` can be bought now — 0523: it is for sale, not already owned, and the balance covers
+ * it. The shop says why not when it cannot; this is the rule, and the reducer is held to it.
+ */
+export function canBuy(state: HangarState, dangle: DangleKind): boolean {
+  const price = DANGLES[dangle].price;
+  return price !== null && !state.owned[dangle] && state.shards >= price;
+}
 
 /**
  * Whether `ship` may wear `plate`'s dash. Its own always; another's once the ship has been won in and
@@ -84,6 +117,17 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
       const shards = Math.floor(action.shards);
       return shards > 0 ? { ...state, shards: state.shards + shards } : state;
     }
+    // 0523: paid for once, in full, and owned for good; anything else is refused and moves nothing.
+    case 'bought': {
+      const price = DANGLES[action.dangle].price;
+      if (price === null || !canBuy(state, action.dangle)) return state;
+      return { ...state, shards: state.shards - price, owned: { ...state.owned, [action.dangle]: true } };
+    }
+    // 0523: an owned dangle, or nothing, on any ship.
+    case 'hung':
+      if (state.hung[action.ship] === action.dangle) return state;
+      if (action.dangle !== null && !state.owned[action.dangle]) return state;
+      return { ...state, hung: { ...state.hung, [action.ship]: action.dangle } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

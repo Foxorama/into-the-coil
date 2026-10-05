@@ -23,7 +23,7 @@ hangar.** It does not save a run in progress.
 | A copy of the page itself | Cache Storage, named `into-the-coil-<version>` | So the game still opens when you have no network |
 | The ten best runs: each one's score, which golfer flew it, the difficulty, how far it got, how many continues it took, and the date it ended | Local Storage, key `itc_scores` | So the title screen can show the high scores |
 | Your settings: the look, sound on or off, how long the crossing between places lasts, the difficulty last chosen, and whether runs may be continued | Local Storage, key `itc_settings` | So the game opens the way you left it |
-| Your hangar: which ships you have won a run in, how each ship is fitted out, and how many Star Shards you hold | Local Storage, key `itc_hangar` | So what you have unlocked stays unlocked |
+| Your hangar: which ships you have won a run in, how each ship is fitted out, how many Star Shards you hold, and what you have bought with them | Local Storage, key `itc_hangar` | So what you have unlocked stays unlocked |
 
 That cache holds the game's own program — the same file the server sent you — and nothing about you.
 It is the ordinary mechanism that lets an installed web app work offline.

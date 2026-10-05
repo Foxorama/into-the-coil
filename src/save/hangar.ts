@@ -17,6 +17,7 @@
  */
 
 import { SHIP_KINDS, type ShipKind } from '../content/ships.ts';
+import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 import { type HangarState, plateOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
@@ -67,12 +68,29 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     the settings' per-field terms. A whole number at least nought, or the base's.
   */
   const shards = Number.isSafeInteger(doc.shards) && (doc.shards as number) >= 0 ? (doc.shards as number) : base.shards;
-  return { won, plate, shards };
+  /*
+    0523: what is owned, and what hangs where — new fields on version 1, on the same terms. Only `true`
+    is read of what is owned, as of a win; a dangle hung that the document's own list does not own reads
+    as the ship's own, so an edited document buys nothing. `null` is read as nothing hung.
+  */
+  const ownedDoc = typeof doc.owned === 'object' && doc.owned !== null ? (doc.owned as Partial<Record<DangleKind, unknown>>) : null;
+  const owned = { ...base.owned };
+  for (const kind of DANGLE_KINDS) if (ownedDoc?.[kind] === true) owned[kind] = true;
+  const hungDoc = perShipOf(doc.hung);
+  const hung = { ...base.hung };
+  for (const kind of SHIP_KINDS) {
+    const raw = hungDoc?.[kind];
+    if (raw === null) hung[kind] = null;
+    const dangle = DANGLE_KINDS.find((d) => d === raw);
+    if (dangle !== undefined && owned[dangle]) hung[kind] = dangle;
+  }
+  return { won, plate, shards, owned, hung };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  return JSON.stringify({ v: HANGAR_VERSION, won: hangar.won, plate: hangar.plate, shards: hangar.shards });
+  const { won, plate, shards, owned, hung } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

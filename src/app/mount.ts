@@ -123,7 +123,8 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, plateWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, plateWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { DANGLES, DANGLE_KINDS, WARES } from '../content/dangles.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -1788,6 +1789,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
+    // 0523: into or out of Cosmo's, the readout swaps the ware in the window for what the ship has hung.
+    if (moved && (was === 'shop') !== (state.screen.current === 'shop')) fitHangar();
     /*
       ⚠️ **A PRESS BELONGS TO ONE SCREEN, and this is the only place that can know a screen changed.**
       `docs/decisions/0055-a-press-belongs-to-one-screen.md`. Reported from play: starting a run with
@@ -1836,6 +1839,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * screen, or a run has been flown. False at boot, so a thumb's first landing on a card is a look.
    */
   let pilotArmed = false;
+  /** Which of Cosmo's wares is in the window — 0523. The shell's, and kept for nothing past the visit. */
+  let shelf = 0;
   /** Whether the splash has had a press the page could turn the sound on with — 0513. */
   let splashPressed = false;
   const startRun = (): void => {
@@ -1883,6 +1888,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       else if (index === 1) dispatch({ slice: 'screen', type: 'show', screen: 'hangar' });
       else dispatch({ slice: 'screen', type: 'show', screen: 'settings' });
     } else if (screen === 'hangar') dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+    /*
+      ⚠️ **COSMO'S — 0523: *BUY*, THEN *BACK*.** Buy takes the ware in the window; the reducer refuses one
+      that is owned or that the balance does not cover, so a press that cannot buy changes nothing.
+    */
+    else if (screen === 'shop') {
+      const ware = WARES[shelf];
+      if (index === 0 && ware !== undefined) dispatch({ slice: 'hangar', type: 'bought', dangle: ware });
+      else if (index !== 0) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+    }
     /*
       ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
       or the key first and marks the splash pressed; a pad's confirm clicks the prompt too, with no
@@ -1986,6 +2000,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const plate = SHIP_KINDS[index];
       if (plate !== undefined) dispatch({ slice: 'hangar', type: 'plate', ship: GOLFERS[state.settings.pilot].ship, plate });
     }
+    // 0523: what hangs from that ship's dash — nothing first, then `DANGLE_KINDS`, the order it was built in.
+    else if (name === 'dangle') {
+      const dangle = index === 0 ? null : DANGLE_KINDS[index - 1];
+      if (dangle !== undefined) dispatch({ slice: 'hangar', type: 'hung', ship: GOLFERS[state.settings.pilot].ship, dangle });
+    }
+    // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
+    else if (name === 'ware') {
+      if (WARES[index] !== undefined) shelf = index;
+      fitHangar();
+    }
   },
   /*
     THE MUSIC ROOM'S BAR WAS DRAGGED — 0212.
@@ -2029,7 +2053,24 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable));
     chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
-    chrome.setSheet('hangar', [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' }]);
+    const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
+    chrome.setSheet('hangar', balance);
+    chrome.setSheet('shop', balance);
+    /*
+      0523: what hangs — nothing first, then every dangle, the ones not owned shut — and Cosmo's shelf:
+      the ware in the window, what stands between the player and it, and Buy only while it can be.
+    */
+    const hung = state.hangar.hung[ship];
+    chrome.setOpen('dangle', [true, ...DANGLE_KINDS.map((kind) => state.hangar.owned[kind])], dangleWhy(WARES.some((kind) => state.hangar.owned[kind])));
+    chrome.setChoice('dangle', hung === null ? 0 : 1 + DANGLE_KINDS.indexOf(hung));
+    const ware = WARES[shelf];
+    if (ware !== undefined) {
+      chrome.setChoice('ware', shelf);
+      chrome.setOpen('ware', WARES.map(() => true), wareWhy(state.hangar.owned[ware], state.hangar.shards, DANGLES[ware].price ?? 0));
+      chrome.setActionShown('shop', 0, !state.hangar.owned[ware]);
+    }
+    // The readout wears the ware in the window over the shop, so it is seen hung before it is bought.
+    chrome.setDangle(state.screen.current === 'shop' && ware !== undefined ? ware : hung);
     fitPilot();
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
