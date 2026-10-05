@@ -21,6 +21,10 @@ decision once it lands; this is the queue.
 Looked at on `main` at `52d9dd95`, from the built page, at 1280×720 and an 844×390 touch context,
 with a seeded five-row table and a seeded hangar in which every ship has been won in, the balance is
 1240 and two wares are owned — so every band shows its open state, not its first-visit one.
+**`scripts/shot-menus.mjs` is the instrument**: it seeds exactly that and shoots the title, the three
+hangar tabs and Settings at both sizes, and each item below is handed over with the same set taken
+again. (The first pass seeded a table with no `continues` or `when`, and the title showed none —
+`entryFrom` drops such a row silently. The script carries every field.)
 
 ### The title
 
