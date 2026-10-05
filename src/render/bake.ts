@@ -35,6 +35,7 @@ import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
 import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
 import type { RimKind } from '../content/rims.ts';
+import type { ArtKind } from '../content/art.ts';
 import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
@@ -2756,6 +2757,8 @@ export function drawPlayerShip(
   gun: WeaponKind = gunNow(ship),
   // 0527: and the rim on its wheels, as `withFit` says or as it comes; nothing on a ship with none.
   rim: RimKind | null = fitNow(ship).rim,
+  // 0528: and the look on its nose, its dome or its flank — one of its own three (`arts` on its row).
+  art: ArtKind = fitNow(ship).art,
 ): void {
   const own = gun === SHIPS[ship].weapon;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
@@ -2785,19 +2788,19 @@ export function drawPlayerShip(
         }
       }
       paintShip(ctx, fh, palette, 2, own);
-      jazzFighter(ctx, fh, palette, own);
+      jazzFighter(ctx, fh, palette, own, art);
       break;
     }
     // The saucer hangs its pods off its sides, in its own outline — 0461.
     case 'caddie':
-      drawCaddie(ctx, f, palette, stage, own);
+      drawCaddie(ctx, f, palette, stage, own, art);
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette, stage, own, rim);
+      drawFirebird(ctx, f, palette, stage, own, rim, art);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette, stage, own, rim);
+      drawEstate(ctx, f, palette, stage, own, rim, art);
       break;
     default: {
       const unhandled: never = ship;
@@ -2814,15 +2817,50 @@ export function drawPlayerShip(
  * light down each wing's leading edge, and its engines and its pods' muzzles glowing. In the hull's own
  * radius, as `paintShip` is.
  */
-function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true): void {
-  poly(ctx, f, palette.ally, [
-    [0.74, 0],
-    [0.62, -0.09],
-    [0.44, -0.09],
-    [0.54, 0],
-    [0.44, 0.09],
-    [0.62, 0.09],
-  ]);
+function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: ArtKind = 'chevron'): void {
+  /*
+    0528: its nose wears one of its three looks. The nose is 0.14 of the hull's radius either side of the
+    spine near the tip and 0106's floor is 0.142 of it at the shipped camera, so each is one or two bold
+    shapes rather than a pattern: the chevron it always had; a shark's white jaw with its throat dark and
+    two white eyes behind it; or one white stripe tapering to the tip. The throat is the hull's own deep
+    shade and not the void's ink, which this close to the tip would read as a hole through the nose.
+  */
+  if (art === 'sharkmouth') {
+    poly(ctx, f, palette.impact, [
+      [0.95, 0],
+      [0.66, -0.12],
+      [0.5, -0.12],
+      [0.66, 0],
+      [0.5, 0.12],
+      [0.66, 0.12],
+    ]);
+    poly(ctx, f, shade(palette.player, -0.7), [
+      [0.88, 0],
+      [0.66, -0.075],
+      [0.58, -0.075],
+      [0.68, 0],
+      [0.58, 0.075],
+      [0.66, 0.075],
+    ]);
+    for (const side of [1, -1] as const) disc(ctx, f, palette.impact, 0.4, 0.15 * side, 0.075);
+  } else if (art === 'racing') {
+    poly(ctx, f, palette.impact, [
+      [0.92, 0],
+      [0.7, -0.075],
+      [0.36, -0.075],
+      [0.36, 0.075],
+      [0.7, 0.075],
+    ]);
+  } else {
+    poly(ctx, f, palette.ally, [
+      [0.74, 0],
+      [0.62, -0.09],
+      [0.44, -0.09],
+      [0.54, 0],
+      [0.44, 0.09],
+      [0.62, 0.09],
+    ]);
+  }
   const edge: readonly Pt[] = [
     [0.66, -0.13],
     [0.34, -0.23],
@@ -2844,7 +2882,7 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true): void {
  * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
  * ray gun, fed from a chamber on its face ahead of the dome (0463).
  */
-function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'glass'): void {
   const body = mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
   const D = CADDIE_DISC;
@@ -2876,10 +2914,20 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     glow(ctx, f, palette.player, Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.15, 0.55);
     disc(ctx, f, shade(palette.player, 0.3), Math.cos(a) * 0.885 * D, Math.sin(a) * 0.885 * D, 0.065);
   }
-  // The dome: glass shaded deep at its base, a lit crown, a rim of light round it, and a glint.
-  shaded(ctx, f, [-0.2 * D, -0.45 * D], [0.2 * D, 0.45 * D], shade(palette.glass, 0.25), shade(palette.glass, -0.35), roundel(0, 0, 0.46 * D, 28, 0, Math.PI * 2));
-  disc(ctx, f, shade(palette.glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, 0.7);
-  seam(ctx, f, shade(palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
+  /*
+    The dome: glass shaded deep at its base, a lit crown, a rim of light round it, and a glint. 0528: or
+    mirrored in gold, the visor; or with its pilot under the glass — Feather, green, two dark eyes to the
+    front, under the crown's light and the glint so the glass still reads as glass.
+  */
+  const visor = art === 'visor';
+  const glass = visor ? palette.hazard : palette.glass;
+  shaded(ctx, f, [-0.2 * D, -0.45 * D], [0.2 * D, 0.45 * D], shade(glass, 0.25), shade(glass, -0.35), roundel(0, 0, 0.46 * D, 28, 0, Math.PI * 2));
+  if (art === 'pilot') {
+    disc(ctx, f, shade(palette.acid, 0.2), 0.03 * D, 0, 0.28 * D);
+    for (const side of [1, -1] as const) disc(ctx, f, palette.space, 0.13 * D, 0.1 * D * side, 0.095 * D);
+  }
+  disc(ctx, f, shade(glass, 0.4), -0.06 * D, -0.1 * D, 0.28 * D, art === 'pilot' ? 0.3 : 0.7);
+  seam(ctx, f, shade(visor ? palette.hazard : palette.player, 0.4), 0.04, roundel(0, 0, 0.44 * D, 16, Math.PI * 0.55, Math.PI * 1.45), 0.75, true);
   disc(ctx, f, palette.impact, -0.15 * D, -0.17 * D, 0.075, 0.9);
 }
 
@@ -2962,6 +3010,17 @@ function spoke(cx: number, cy: number, reach: number, width: number, a: number):
   ];
 }
 
+/** A daisy's petals about `(x, y)` — 0528: eight, `reach` out, their roots at `root`; one polygon. */
+function daisy(x: number, y: number, reach: number, root: number): Pt[] {
+  const out: Pt[] = [];
+  for (let k = 0; k < 16; k++) {
+    const a = (k * Math.PI) / 8;
+    const r = k % 2 === 0 ? reach : root;
+    out.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
+  }
+  return out;
+}
+
 /**
  * A snowflake wheel's gold about `(x, y)`, `reach` out and turned `turn`: ten spikes from a ring at two
  * fifths of it, one polygon and one mark.
@@ -3031,7 +3090,7 @@ function paintTurrets(
  * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null): void {
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'phoenix'): void {
   /*
     ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
     Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
@@ -3136,23 +3195,55 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
     head toward the nose, two wings up, a forked tail trailing back. ONE polygon: 0463's three slivers
     at half their size were each under 0106's floor (1.7 px across on 1280×720), and a decal is one
     shape anyway.
+
+    0528: or hot-rod flames in its place — three licks of gold running back from the front fender, a
+    paler tongue inside them, every lick and the tongue over the floor; or one broad rally stripe nose
+    to tail through the door, gold on the lacquer, 2.2 of the predecessor's units deep for the same floor.
   */
-  poly(ctx, f, gold, box([
-    [9.6, 0],
-    [8.6, -1.4],
-    [7.6, -0.6],
-    [6, -1.8],
-    [4.6, -0.5],
-    [2.6, -1.8],
-    [1.6, -0.4],
-    [0.4, 0.2],
-    [-2.4, 1.2],
-    [-0.6, 1.1],
-    [-2.2, 2.4],
-    [1.4, 2],
-    [5.6, 2.2],
-    [8.6, 1.2],
-  ]));
+  if (art === 'flames') {
+    poly(ctx, f, gold, box([
+      [14.5, -1.5],
+      [8.5, -1.4],
+      [3.5, -2],
+      [7, -0.5],
+      [1.5, 0.2],
+      [6.5, 1],
+      [3, 2.2],
+      [9, 1.9],
+      [14.5, 2],
+    ]));
+    poly(ctx, f, shade(gold, 0.55), box([
+      [14, -0.8],
+      [9.5, -0.7],
+      [6, 0.2],
+      [9.5, 1.1],
+      [14, 1.3],
+    ]));
+  } else if (art === 'rally') {
+    poly(ctx, f, gold, box([
+      [-14, -0.6],
+      [14.5, -0.6],
+      [14.5, 1.6],
+      [-14, 1.6],
+    ]));
+  } else {
+    poly(ctx, f, gold, box([
+      [9.6, 0],
+      [8.6, -1.4],
+      [7.6, -0.6],
+      [6, -1.8],
+      [4.6, -0.5],
+      [2.6, -1.8],
+      [1.6, -0.4],
+      [0.4, 0.2],
+      [-2.4, 1.2],
+      [-0.6, 1.1],
+      [-2.2, 2.4],
+      [1.4, 2],
+      [5.6, 2.2],
+      [8.6, 1.2],
+    ]));
+  }
   // The shaker scoop on the hood, in the lacquer with a gold lip, and the steel star the blades leave from.
   if (own) {
     shaded(ctx, f, at(0, -4.8), at(0, -2), shade(body, 0.35), shade(body, -0.2), box([
@@ -3215,7 +3306,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
  * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
  * the bonnet, and its turrets on the roof rack.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null): void {
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'woody'): void {
   const gilt = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
@@ -3283,6 +3374,34 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     [11.6, 1.45],
     [17.4, 2.35],
   ]), 0.8);
+  /*
+    0528: and on the burl, one of its looks — bare, as it left the showroom; a family crest on the front
+    door, a gilt shield with a field in the running light's cyan; or flower power, two white daisies on
+    the back panel round gilt hearts. Every mark is over 0106's floor at the shipped camera, the shield's
+    field and the daisies' hearts by a few tenths of a pixel.
+  */
+  if (art === 'crest') {
+    poly(ctx, f, shade(gilt, 0.55), box([
+      [3.2, 1.4],
+      [6.8, 1.4],
+      [6.8, 3.1],
+      [5, 4.8],
+      [3.2, 3.1],
+    ]));
+    poly(ctx, f, palette.player, box([
+      [3.9, 1.95],
+      [6.1, 1.95],
+      [6.1, 3.05],
+      [5, 4.1],
+      [3.9, 3.05],
+    ]));
+  } else if (art === 'daisies') {
+    for (const x of [-11.5, -6]) {
+      poly(ctx, f, palette.impact, box(daisy(x, 3, 2.3, 1.25)));
+      const [cx, cy] = at(x, 3);
+      disc(ctx, f, shade(gilt, 0.35), cx, cy, 1.05 * 0.062);
+    }
+  }
   // Chrome bumpers, fore and aft, lit along their tops.
   for (const [from, to] of [
     [15.6, 18],

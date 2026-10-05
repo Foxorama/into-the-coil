@@ -19,8 +19,9 @@
 import { SHIP_KINDS, type ShipKind } from '../content/ships.ts';
 import { DANGLE_KINDS } from '../content/dangles.ts';
 import { RIM_KINDS } from '../content/rims.ts';
+import { ART_KINDS } from '../content/art.ts';
 import { OWNABLE_KINDS, type OwnableKind } from '../content/wares.ts';
-import { type HangarState, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { type HangarState, artOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
 /** Where the hangar lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
@@ -109,13 +110,20 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     const raw = RIM_KINDS.find((r) => r === rimDoc?.[kind]);
     if (raw !== undefined && rimOpen(owning, kind, raw)) rim[kind] = raw;
   }
-  return { won, plate, shards, owned, hung, special, gun, rim };
+  // 0528: each ship's look, refused unless it is its own and open to it.
+  const artDoc = perShipOf(doc.art);
+  const art = { ...base.art };
+  for (const kind of SHIP_KINDS) {
+    const raw = ART_KINDS.find((a) => a === artDoc?.[kind]);
+    if (raw !== undefined && artOpen(opened, kind, raw)) art[kind] = raw;
+  }
+  return { won, plate, shards, owned, hung, special, gun, rim, art };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun, rim } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim });
+  const { won, plate, shards, owned, hung, special, gun, rim, art } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim, art });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

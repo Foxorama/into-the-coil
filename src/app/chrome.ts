@@ -1736,19 +1736,22 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 
   The hangar's own columns: the pilot and their card on the left, the ship's looks down the right —
   its wheels, and the plan's nose art, livery and flame as they land. The wheels' three stand in a row.
+  0528: and the art under the wheels, its three in a row too.
 */
 .itc-parts-settings-box {
   display: grid;
   width: min(100%, 64em);
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-areas: 'pilot wheels' 'card wheels';
+  grid-template-areas: 'pilot wheels' 'card art';
   align-items: center;
   gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
 }
 .itc-parts-band-faces { grid-area: pilot; }
 .itc-parts-pilot-card { grid-area: card; }
 .itc-parts-band:has([${SETTING_ATTR}="rim"]) { grid-area: wheels; }
-.itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.itc-parts-band:has([${SETTING_ATTR}="art"]) { grid-area: art; }
+.itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options,
+.itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /*
   0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
   the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
@@ -2838,7 +2841,10 @@ interface Band {
   more: HTMLButtonElement;
   /** The live option's hint, written under the track. */
   hint: HTMLElement;
-  /** The options' hints, by position — the row's, so the band says what the live one means. */
+  /**
+   * The options' hints, by position — the row's, so the band says what the live one means; or since 0528
+   * the shell's, for a band whose options are named by the ship on the stand (`setLabels`).
+   */
   hints: readonly string[];
   /** Which option is on — written by `setChoice`, read by a step. */
   index: number;
@@ -3111,7 +3117,7 @@ export interface Chrome {
    * is a ship, so the counter is the one the pilot flies; called when the shell knows it, and a no-op
    * when it has not changed.
    */
-  setShip(ship: ShipRow, plate: ShipRow): void;
+  setShip(ship: ShipRow, plate: ShipRow, fit: Fit): void;
   /**
    * Whether the trigger discs are up — 0437. On a touch screen each disc says its stack's count, so the
    * readout's two stack groups are taken off the glass and kept for a reader, who cannot see a disc.
@@ -3225,6 +3231,12 @@ export interface Chrome {
    * has not been won in for. The shut ones are drawn and cannot be pressed, and a step passes over them.
    */
   setOpen(name: ChoiceName, open: readonly boolean[], why: string | null): void;
+  /**
+   * What a band's options are called and what each means — 0528, for a slot whose options are the ship's
+   * own: the art band's three places are the looks of whichever ship is on the stand. Position for
+   * position, as many as the row has.
+   */
+  setLabels(name: ChoiceName, options: readonly { label: string; hint: string }[]): void;
   /**
    * Switch the chrome's typeface role — the UI half of a style, decision 0070.
    *
@@ -3909,11 +3921,11 @@ export function makeChrome(
     ⚠️ **AND ONE PER GUN, SINCE 0526**: a ship drawn with a borrowed gun is a different picture of the same
     sprite, baked under `withGun` and kept beside its own.
   */
-  // 0527: and one per fit — the gun and the rim.
+  // 0527: and one per fit — the gun and the rim, and since 0528 the look.
   const cardShips: Partial<Record<Screen, Map<string, HTMLCanvasElement>>> = {};
   const shipOnCard = (screen: Screen, ship: ShipKind, fit: Fit): HTMLCanvasElement => {
     const kept = (cardShips[screen] ??= new Map<string, HTMLCanvasElement>());
-    const key = ship + ':' + fit.gun + ':' + String(fit.rim);
+    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art;
     let canvas = kept.get(key);
     if (canvas === undefined) {
       const kind = SPRITE_KINDS[SHIPS[ship].sprite];
@@ -4932,7 +4944,7 @@ export function makeChrome(
 
   return {
     elements,
-    setShip(ship: ShipRow, plate: ShipRow): void {
+    setShip(ship: ShipRow, plate: ShipRow, fit: Fit): void {
       /*
         ⚠️ **THE PLATE BEFORE THE NO-OP, BECAUSE IT CHANGES WITHOUT THE SHIP — 0521.** A dash fitted in the
         hangar is the same ship wearing another ship's plate, and a check on the sprite alone would leave
@@ -4948,9 +4960,8 @@ export function makeChrome(
         that ship's sprites baked again with it, and the counter and the title's flyer are taken afresh;
         the pilot cards are repainted, since the band painted them before the fitting was known.
       */
-      // 0527: the whole fit, read off the fitted row — its gun, and the rim its wheels wear.
+      // 0527: the whole fit — its gun, the rim its wheels wear, and since 0528 its look — as the shell says.
       const kind = SHIP_KINDS.find((k) => SHIPS[k].sprite === ship.sprite);
-      const fit: Fit = { gun: ship.weapon, rim: ship.wheels?.rim ?? null };
       const gunChanged = kind !== undefined && !sameFit(iconFits[kind] ?? ownFit(kind), fit);
       if (kind !== undefined && gunChanged) {
         bakeShipFit(icons, colours, kind, fit);
@@ -5417,6 +5428,20 @@ export function makeChrome(
         band.why = why;
         // A shut option is shown and cannot be pressed: `disabled` takes it off the pointer and the reader.
         for (let i = 0; i < buttons.length; i++) buttons[i]!.disabled = open[i] === false;
+        sayBand(band);
+      }
+    },
+    setLabels(name: ChoiceName, options: readonly { label: string; hint: string }[]): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const panel = panels[screen];
+        const buttons = panel?.options[name];
+        const band = panel?.bands.find((b) => b.name === name);
+        if (buttons === undefined || band === undefined) continue;
+        for (let i = 0; i < buttons.length; i++) {
+          const option = options[i];
+          if (option !== undefined) buttons[i]!.textContent = option.label;
+        }
+        band.hints = options.map((option) => option.hint);
         sayBand(band);
       }
     },

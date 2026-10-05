@@ -25,6 +25,7 @@
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../../content/ships.ts';
 import type { DangleKind } from '../../content/dangles.ts';
 import { RIMS, type RimKind } from '../../content/rims.ts';
+import { ART, type ArtKind } from '../../content/art.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 
 export interface HangarState {
@@ -74,6 +75,11 @@ export interface HangarState {
    * on the dash's rule, and a bought one on any car from the moment it is bought, as a dangle is.
    */
   rim: Readonly<Record<ShipKind, RimKind | null>>;
+  /**
+   * What each ship wears on its nose, its dome or its flank — 0528: one of its own three looks, the first
+   * until it is won in and any of them after.
+   */
+  art: Readonly<Record<ShipKind, ArtKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -85,7 +91,8 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null }
   | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind }
   | { slice: 'hangar'; type: 'gun'; ship: ShipKind; from: ShipKind }
-  | { slice: 'hangar'; type: 'rim'; ship: ShipKind; rim: RimKind };
+  | { slice: 'hangar'; type: 'rim'; ship: ShipKind; rim: RimKind }
+  | { slice: 'hangar'; type: 'art'; ship: ShipKind; art: ArtKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -104,6 +111,7 @@ export const initialHangar: HangarState = {
   special: perShip((kind) => kind),
   gun: perShip((kind) => kind),
   rim: perShip((kind) => SHIPS[kind].wheels?.rim ?? null),
+  art: perShip((kind) => SHIPS[kind].arts[0]),
 };
 
 /** Each ownable kind mapped to `of(kind)`, on `perShip`'s terms. */
@@ -131,6 +139,15 @@ export function rimOpen(state: HangarState, ship: ShipKind, rim: RimKind): boole
   if (SHIPS[ship].wheels === null) return false;
   const from = RIMS[rim].from;
   return from === null ? state.owned[rim] : plateOpen(state, ship, from);
+}
+
+/**
+ * Whether `ship` may wear `art` — 0528. Only a look drawn for that ship; its first always, and the other
+ * two once it has been won in — answered while it was planned: a win unlocks *"ship + parts + its gun"*.
+ */
+export function artOpen(state: HangarState, ship: ShipKind, art: ArtKind): boolean {
+  if (ART[art].ship !== ship) return false;
+  return art === SHIPS[ship].arts[0] || state.won[ship];
 }
 
 /**
@@ -191,6 +208,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'rim':
       if (state.rim[action.ship] === action.rim || !rimOpen(state, action.ship, action.rim)) return state;
       return { ...state, rim: { ...state.rim, [action.ship]: action.rim } };
+    // 0528: the look, refused unless it is this ship's own and open to it.
+    case 'art':
+      if (state.art[action.ship] === action.art || !artOpen(state, action.ship, action.art)) return state;
+      return { ...state, art: { ...state.art, [action.ship]: action.art } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

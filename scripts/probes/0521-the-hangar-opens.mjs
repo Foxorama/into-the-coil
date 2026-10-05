@@ -58,8 +58,8 @@ export const PROBES = [
     guard: 'shuts what is not won, fits what is, keeps it, and flies in it',
     edit: {
       path: 'src/app/mount.ts',
-      find: '      chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]]);',
-      replace: '      chrome.setShip(world.shipRow, world.shipRow);',
+      find: 'chrome.setShip(world.shipRow, SHIPS[state.hangar.plate[state.run.ship]], {',
+      replace: 'chrome.setShip(world.shipRow, world.shipRow, {',
     },
   },
   {

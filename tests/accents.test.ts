@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { INK_OF, MOUTH_INK, drawKind } from '../src/render/bake.ts';
+import { INK_OF, MOUTH_INK, drawKind, withFit } from '../src/render/bake.ts';
+import { SHIPS, SHIP_KINDS, ownFit } from '../src/content/ships.ts';
 
 /*
   ⚠️ **FILE-LEVEL, BECAUSE THE WORK IS SEVEN PLACES DEEP NOW AND THE DEFAULT IS A WALL CLOCK.** The
@@ -1031,5 +1032,36 @@ describe('0390 — a dud icicle looks like one', () => {
       return Math.max(b.maxX - b.minX, b.maxY - b.minY);
     };
     expect(reach('frostSpent') / reach('frost'), 'the icicle that melts is as big on the screen as the shard that bursts').toBeLessThanOrEqual(0.9);
+  });
+});
+
+describe('0528 — every look a ship may wear is held where its own is', () => {
+  /*
+    ⚠️ **THE TWO CLAIMS ABOVE, OVER EVERY LOOK AND NOT ONLY THE ONE A SPRITE IS BAKED IN.** A body above
+    is drawn as it comes — `drawKind` takes each ship's own look — so the eight looks the hangar opens on
+    a win would be held by nothing: a flame licking off the flank, a crest's field under the floor. Each
+    is drawn here as the shell draws it, under `withFit`, and asked what every body is asked: every solid
+    mark on the hull, and every solid mark wide enough to be drawn at the shipped camera.
+  */
+  it('every solid mark of every look is on its hull and over the floor', () => {
+    for (const ship of SHIP_KINDS) {
+      const kind = SPRITE_KINDS[SHIPS[ship].hulls[0].base]!;
+      for (const art of SHIPS[ship].arts) {
+        const { hull, paint } = withFit(ship, { ...ownFit(ship), art }, () => hullAndPaint(kind));
+        paint.forEach((mark, i) => {
+          if (mark.alpha < SOLID || mark.composite === 'destination-out') return;
+          const gap = clearance(hull, mark);
+          if (Number.isFinite(gap)) {
+            const floor = mark.colour === INK.space ? HOLE_CLEARANCE_PX : 0;
+            expect(gap, `mark ${i + 1} of the ${ship}'s ${art} comes within ${gap.toFixed(2)}px of the outside of its hull`).toBeGreaterThanOrEqual(floor);
+          }
+          for (const subpath of mark.subpaths) {
+            const box = boundsOf({ ...mark, subpaths: [subpath] });
+            const thinnest = Math.min(box.maxX - box.minX, box.maxY - box.minY);
+            expect(thinnest, `mark ${i + 1} of the ${ship}'s ${art} is ${thinnest.toFixed(2)}px across, so it is not drawn`).toBeGreaterThanOrEqual(2.5);
+          }
+        });
+      }
+    }
   });
 });
