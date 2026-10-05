@@ -129,8 +129,8 @@ describe('the chooser is the table', () => {
     // 0521: and the hangar's dash, a slot of the ship on its stand rather than a setting.
     // 0523: and what hangs from it, and Cosmo's shelf.
     // 0524: and the special a run opens with; 0526: and the gun it flies; 0527: and what its wheels wear.
-    // 0528: and its art; 0529: and its paint, a colour and a tone.
-    expect([...where.keys()].sort()).toEqual(['art', 'credits', 'dangle', 'difficulty', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'ware']);
+    // 0528: and its art; 0529: and its paint, a colour and a tone; 0530: and its flame.
+    expect([...where.keys()].sort()).toEqual(['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'ware']);
   });
 });
 

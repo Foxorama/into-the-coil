@@ -21,7 +21,7 @@ import type { Palette } from '../content/palette.ts';
 import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, drawPlayerShip, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
@@ -86,6 +86,8 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
   const jet: Frame = { half: size / 2, r: (size * 0.42) / FLAME_BOX };
   // And a surge's is `SURGE_BOX` times, on the same terms — 0416.
   const surge: Frame = { half: size / 2, r: (size * 0.42) / SURGE_BOX };
+  // 0530: the pilot's ship burns the flame the hangar fitted it, as it does in the fight.
+  const jets = flameInks(palette, fitNow(pilot.ship).flame);
   switch (kind) {
     /*
       ⚠️ **THE PILOT'S OWN SHIP SINCE 0441**, and its own nozzles. Its frame is the fight's box rather
@@ -119,22 +121,22 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       to the other as the ship tilts.
     */
     case 'blueIdle':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 0.4 * JET, 0.07 * JET, 0.22 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.4 * JET, 0.07 * JET, 0.22 * JET);
       return canvas;
     case 'blueBurn':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
       return canvas;
     case 'blueFlare':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, hangarJetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, hangarJetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
       return canvas;
     case 'blueTopBurn':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, jetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 0.95 * JET, 0.09 * JET, 0.4 * JET);
       return canvas;
     case 'blueTopFlare':
-      paintJets(ctx, jet, palette.bullet, palette.hazard, palette.impact, jetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
+      paintJets(ctx, jet, jets.outer, jets.inner, palette.impact, jetsOf(pilot.ship), 1.35 * JET, 0.115 * JET, 0.55 * JET);
       return canvas;
     case 'blueTopSurge':
-      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', jetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
+      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', jetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     /*
       ⚠️ **THE SURGE: THE FLAME THE LAUNCH IS HEARD IN — 0416.** Near twice a flare's length, half as wide
@@ -143,7 +145,7 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       and lets it die back into it (`SURGE_STEPS`).
     */
     case 'blueSurge':
-      paintJets(ctx, surge, palette.bullet, palette.hazard, '#ffffff', hangarJetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
+      paintJets(ctx, surge, jets.outer, jets.inner, '#ffffff', hangarJetsOf(pilot.ship), 2.3 * JET, 0.17 * JET, 0.95 * JET);
       return canvas;
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);

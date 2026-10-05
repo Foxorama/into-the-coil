@@ -27,6 +27,7 @@ import type { MissileKind } from './missiles.ts';
 import type { DangleKind } from './dangles.ts';
 import type { RimKind } from './rims.ts';
 import type { ArtKind } from './art.ts';
+import type { FlameKind } from './flames.ts';
 
 /** Every flyable ship. Closed. */
 export type ShipKind = 'fighter' | 'caddie' | 'firebird' | 'estate';
@@ -246,15 +247,17 @@ export interface Fit {
   readonly art: ArtKind;
   // 0529: and its body's colour as an ink, or `null` for the factory's.
   readonly livery: string | null;
+  // 0530: and what its engines burn.
+  readonly flame: FlameKind;
 }
 
-/** A ship as it comes: its own gun, its own rim, its own look and the factory's paint. */
+/** A ship as it comes: its own gun, its own rim, its own look, the factory's paint and the standard flame. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null, flame: 'standard' };
 }
 
-/** Whether two fits draw the same ship. */
+/** Whether two fits draw the same ship — its hull; the flame is baked apart from it (`bakeFlame`). */
 export function sameFit(a: Fit, b: Fit): boolean {
   return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;
 }

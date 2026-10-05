@@ -17,7 +17,7 @@ import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, withTheGame } from '../render/port-bake.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
@@ -123,10 +123,11 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, gunWhy, liveryWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, liveryWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor } from '../content/livery.ts';
+import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { WARES } from '../content/wares.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
@@ -149,7 +150,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { artOpen, flameOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -982,8 +983,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let atlas = bakeAtlas(colours, viewFor(view.alongAxis), view.scale * dpr);
   // 0526: how each ship's sprites in `atlas` are fitted; absent is as it comes, which a full bake always is.
   const atlasFits: Partial<Record<ShipKind, Fit>> = {};
+  // 0530: the flame the atlas's exhaust burns; the standard, which a full bake always is.
+  let atlasFlame: FlameKind = 'standard';
   const atlasRebaked = (): void => {
     for (const kind of SHIP_KINDS) delete atlasFits[kind];
+    atlasFlame = 'standard';
     fitAtlasGun();
   };
   // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
@@ -2041,6 +2045,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     } else if (name === 'tone') {
       dispatch({ slice: 'hangar', type: 'tone', ship: GOLFERS[state.settings.pilot].ship, tone: index });
     }
+    // 0530: what that ship's engines burn — `FLAME_KINDS` in order.
+    else if (name === 'flame') {
+      const flame = FLAME_KINDS[index];
+      if (flame !== undefined) dispatch({ slice: 'hangar', type: 'flame', ship: GOLFERS[state.settings.pilot].ship, flame });
+    }
     // 0528: which of that ship's own three looks it wears; its row's `arts` IS the order of the band.
     else if (name === 'art') {
       const ship = GOLFERS[state.settings.pilot].ship;
@@ -2143,6 +2152,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('livery', paint === null ? 0 : 1 + paint.hue);
     chrome.setOpen('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
     chrome.setChoice('tone', paint === null ? -1 : paint.tone);
+    // 0530: the flame — the standard always, a bought one on any ship.
+    chrome.setOpen('flame', FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind)), flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])));
+    chrome.setChoice('flame', FLAME_KINDS.indexOf(state.hangar.flame[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
@@ -2226,6 +2238,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       atlasFits[kind] = want;
       moved = true;
     }
+    // 0530: and the exhaust's one set of sprites, in the flame the flying ship burns.
+    if (fit.flame !== atlasFlame) {
+      bakeFlame(atlas, colours, fit.flame);
+      atlasFlame = fit.flame;
+      moved = true;
+    }
     if (moved) showPort();
   }
   /**
@@ -2233,7 +2251,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * (`liveryFor`, which keeps the high-contrast look on its roles), as the hangar has them.
    */
   function fitOf(ship: ShipKind, gun: WeaponKind): Fit {
-    return { gun, rim: state.hangar.rim[ship], art: state.hangar.art[ship], livery: liveryFor(state.hangar.livery[ship], palette) };
+    return { gun, rim: state.hangar.rim[ship], art: state.hangar.art[ship], livery: liveryFor(state.hangar.livery[ship], palette), flame: state.hangar.flame[ship] };
   }
   /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it. */
   function hangarFit(ship: ShipKind): Fit {

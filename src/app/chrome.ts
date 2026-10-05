@@ -1743,8 +1743,12 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-parts-settings-box {
   display: grid;
   width: min(100%, 64em);
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  grid-template-areas: 'pilot wheels' 'pilot art' 'card livery' 'card tone';
+  /*
+    0530: and the flame beside the tone, the right column's last row split three to two — a fifth band
+    down it put Back under a 1280x720's fold.
+  */
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.6fr) minmax(0, 0.4fr);
+  grid-template-areas: 'pilot wheels wheels' 'pilot art art' 'card livery livery' 'card tone flame';
   align-items: center;
   gap: min(0.9rem, 2cqh) min(1.5rem, 2.5cqw);
 }
@@ -1754,18 +1758,31 @@ ${faced((p) => `.${p}pilot-gun`)} { font-size: 0.8em; opacity: 0.85; }
 .itc-parts-band:has([${SETTING_ATTR}="art"]) { grid-area: art; }
 .itc-parts-band:has([${SETTING_ATTR}="livery"]) { grid-area: livery; }
 .itc-parts-band:has([${SETTING_ATTR}="tone"]) { grid-area: tone; }
+.itc-parts-band:has([${SETTING_ATTR}="flame"]) { grid-area: flame; }
 .itc-parts-band:has([${SETTING_ATTR}="rim"]) .itc-parts-options,
 .itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
 .itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-options { display: flex; justify-content: center; width: 100%; }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option { width: 100%; }
+/*
+  The colour and the flame one at a time, the one on filling the band: a grid of one column, since every
+  slot's options are a grid (below) and a flex here lost to it and left the chip its word's width. The
+  flame's two names are wider than its half of the row could hold side by side.
+*/
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-options,
+.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-options { grid-template-columns: minmax(0, 1fr); }
+.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on),
+.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-option:not(.itc-parts-option-on) { display: none; }
 /*
   0526: and the panel stands a little lower than the centre, its rows a little closer. Four slots made
   the screen tall enough that, centred, its tabs met the readout's corner on a 1280x720 — with CI's
   wider type, over it — and the room they need was under Back and between the rows.
 */
 .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 8cqh; gap: min(1rem, 2cqh); }
+/*
+  0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
+  one row CI's wider type put the fifth off a 667x375's edge.
+*/
+.itc-shop-band .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
+.itc-shop-band .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 /*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
@@ -2023,7 +2040,12 @@ ${each('-band[hidden]')} { display: none; }
     0529: Paint & Parts' four slots, on a phone: the colour and its tone side by side across both columns,
     under the card and the art — four down the right put Back twenty pixels under an 844x390's fold.
   */
-  .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'card art' 'livery tone'; }
+  /*
+    0530: and with the flame, five, which beside the card are a desktop's height; on a phone the card
+    goes, as it goes on the shortest, and the slots pair off under the faces. The faces say whose ship.
+  */
+  .itc-parts-pilot-card { display: none; }
+  .itc-parts-settings-box { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: 'pilot wheels' 'art livery' 'tone flame'; }
   .itc-hangar-band, .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
   .itc-hangar-band-label, .itc-parts-band-label { display: none; }
   .itc-hangar-option, .itc-parts-option { font-size: 0.8em; }
@@ -2140,7 +2162,7 @@ ${each('-band[hidden]')} { display: none; }
     .itc-hangar-settings-box { grid-template-areas: 'pilot dash' 'gun hanging' 'special .'; }
     /* 0529: and Paint & Parts the same — its card goes, the faces say whose ship is being dressed. */
     .itc-parts-pilot-card { display: none; }
-    .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'art livery' 'tone .'; }
+    .itc-parts-settings-box { grid-template-areas: 'pilot wheels' 'art livery' 'tone flame'; }
     .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { padding-top: 15cqh; }
   }
   /*

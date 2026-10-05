@@ -218,7 +218,9 @@ And once the plan was written:
    **Built as [0529](../docs/decisions/0529-the-livery-is-free.md)**: twelve hues in three tones on two
    bands, the body's ink alone.
 10. **Ion Thrusters.** The exhaust's ink becomes a slot; the blue flame is the first thing it sells,
-   weighed against the frost shot on the frost ship's level before it ships.
+   weighed against the frost shot on the frost ship's level before it ships. **Built as
+   [0530](../docs/decisions/0530-the-ions-burn-blue.md)**: a royal blue, forty degrees off the frost's
+   cyan, photographed against its shard and hail on the Rime. The plan's ten items are built.
 
 The order is the save first, because every later item writes to it; then shards, so the very next
 run already earns; then the shop, the first thing there is to buy. **The guns come before the
