@@ -927,14 +927,19 @@ ${each('-action')} {
 */
 /*
   ⚠️ **34em SINCE 0521, AND IT WAS 26 FOR THREE.** The hangar made the row four — the chip, Fly, the
-  hangar and Settings, one line each — and at 26em it had 31 pixels to spare on this machine's fonts,
-  which CI's wider ones spent and 30 more: Settings off a 1024x768's edge. Measured at 34em, each row
-  has a fifth of its width to spare at every size the layout tests fly.
+  hangar and Settings, one line each. At 26em it had 31 pixels to spare on this machine's fonts, which
+  CI's wider ones spent and 30 more: Settings off a 1024x768's edge.
+
+  ⚠️ **AND THE QUIET THREE A STEP SMALLER, BECAUSE THE CAP WAS NOT THE CASE THAT FAILED.** With the
+  table up, a 1024x768's column is 562 pixels, not the cap, and CI's fonts set the row about a quarter
+  wider than this machine's — so it went off the edge again at 34em. Measured with ten rows on the
+  table: 31 % of the row spare at 1024x768, 23 % at 480x320 (whose row CI already passed on with less),
+  and more everywhere else.
 */
 .itc-title-choices { width: min(100%, 34em); gap: min(0.7rem, 1.8cqh); }
 .itc-title-action { width: 100%; }
 .itc-title-choices > :first-child { font-size: 1.2em; letter-spacing: 0.08em; padding: 0.5em 1em; }
-.itc-title-choices > :nth-child(n+2) { font-size: 0.85em; padding: 0.4em 0.9em; opacity: 0.9; }
+.itc-title-choices > :nth-child(n+2) { font-size: 0.8em; padding: 0.4em 0.55em; opacity: 0.9; }
 ${each('-action:hover')} {
   background: rgba(255, 255, 255, 0.12);
 }

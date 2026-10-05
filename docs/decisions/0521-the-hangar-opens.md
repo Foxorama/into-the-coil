@@ -77,8 +77,10 @@ the hangar is two columns, the pilot and their card beside the dash: stacked, Ba
   fixed; each screen keeps its own.
 - **The title's row of buttons is 34em, and was 26 for three.** With the hangar's button it had 31
   pixels to spare on this machine's fonts; CI's spent them and 30 more, putting Settings off a 1024x768.
-  Measured after: a fifth of the row spare at 480x320 (the side padding is narrower on a phone), and
-  more everywhere else.
+  The cap was not the case that failed: with the table up, that screen's column is 562 pixels, and CI
+  set the row about a quarter wider than this machine. So the quiet three — the chip, the hangar and
+  Settings — are a step smaller with narrower sides. Measured with ten rows on the table: 31 % of the
+  row spare at 1024x768, 23 % at 480x320, more everywhere else.
 - **`tests/menu.test.ts`'s *Back goes somewhere that can be left*** named the count-in's case. The
   hangar is the first row whose Back is the title outright; the title is left by *Fly*, and the test
   now says so.
