@@ -25,8 +25,9 @@ export const PROBES = [
     guard: 'THE FLOOR UNDER THE ACID',
     edit: {
       path: 'src/render/bake.ts',
-      find: '  const surface = light?.lit ?? mix(land, glow, 0.36);',
-      replace: '  const surface = glow;\n  void light;',
+      // Re-anchored by 0535, which named the surface `green` beside the teal it runs into.
+      find: '  const green = light?.lit ?? mix(land, glow, 0.36);',
+      replace: '  const green = glow;',
     },
   },
   {
@@ -37,8 +38,9 @@ export const PROBES = [
     guard: 'THE FLOOR: every colour a planet’s land is lit in',
     edit: {
       path: 'src/content/themes.ts',
-      find: "      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#0c5c16' },",
-      replace: "      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#4ad85a' },",
+      // Re-anchored by 0535, which states the teal beside it.
+      find: "      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#0c5c16', acid: '#07585a' },",
+      replace: "      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#4ad85a', acid: '#07585a' },",
     },
   },
   {

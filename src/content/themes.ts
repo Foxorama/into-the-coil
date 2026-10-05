@@ -132,6 +132,12 @@ export interface LandLight {
   readonly canopy: string;
   /** The sun on the tops of the trees — the lightest thing the land is ever painted in. */
   readonly lit: string;
+  /**
+   * The teal a place's acid runs into — `docs/decisions/0535-the-mire-runs-teal.md`. Optional on
+   * 0282's terms: a place with no pools states none. Stated HERE rather than mixed in the baker so the
+   * gameplay floor (`tests/jungle.test.ts`, 0347) holds it against every ink, as it holds `lit`.
+   */
+  readonly acid?: string;
 }
 
 export interface ThemeRow {
@@ -1511,10 +1517,15 @@ export const THEMES: Record<ThemeKind, ThemeRow> = {
       ⚠️ **THE SWAMP'S COLOURS, AND THE ACID IS THE BRIGHTEST OF THEM — 0352.** `lit` is the surface
       of the pools, a saturated acid green as bright as the floor lets an area low in the lane be: the
       worst ink keeps 3.12:1 over it on vivid. `canopy` is the roof's leaf and `far` the drowned trees.
+
+      ⚠️ **AND `acid` IS THE TEAL IT RUNS INTO, AT THE SAME LIGHT — 0535.** *"More teal colouring and
+      blending."* Teal at the floor's ceiling is a dark one: `#07585a` is luminance 0.0776 against
+      `lit`'s 0.0779, so the floor does not move and the colour is all hue. High-contrast's is `lit`'s
+      light again, 0.0211 against 0.0218.
     */
     land: {
-      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#0c5c16' },
-      'high-contrast': { far: '#0a2a08', canopy: '#102008', lit: '#083008' },
+      vivid: { far: '#2b3c12', canopy: '#1c3a10', lit: '#0c5c16', acid: '#07585a' },
+      'high-contrast': { far: '#0a2a08', canopy: '#102008', lit: '#083008', acid: '#052d2f' },
     },
     // Grown, not built: bruise-purple, toxic yellow where it leaks, a blank white eye, and spores.
     /*

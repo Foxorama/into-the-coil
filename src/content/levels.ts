@@ -1839,6 +1839,15 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       bank was before 0383, give or take its hills. And at 106 it takes eight lanes off the bottom of a
       box that ends at 114, so the ship keeps a hundred of its hundred and eight at the shore's highest.
 
+      ⚠️ **AND THEN TWO LANES DOWN, EVERY KNOT — 0535: IT STANDS BETWEEN 108 AND 115.** *"The ground
+      level sits slightly too high above the pools… the pools graphic is at a good distance, but the
+      ground level is just a bit high."* So the pools stayed and the shore came down to them: a lane
+      and a half of bank over the highest pool at the shore's lowest (`tests/floor.test.ts` holds one
+      lane), eight at its highest. The hills are the same hills. What it changes in play: the ship
+      keeps two more lanes everywhere, and still meets the shore at every knot — the box's floor is
+      114 and the hull reaches two lanes under its centre, 1.4 on the forgiving hurtbox. A wave
+      authored above 90 is still put down where it was written, and one lower is bent two lanes less.
+
       ⚠️ **HILLS OF THREE TO SEVEN LANES, NEVER STEEPER THAN TWO A TILE** — a rise of 9.5°, gentle enough
       to be ground rather than a wall standing up out of it, and 480 units round, a little over two
       screens, so the eye does not find the repeat.
@@ -1850,10 +1859,10 @@ export const LEVELS: Record<LevelKind, LevelRow> = {
       passages: [],
       bank: {
         shore: [
-          112, 112, 111, 109, 108, 107, 107, 108, 110, 112,
-          113, 113, 112, 111, 111, 110, 108, 106, 106, 107,
-          109, 111, 112, 112, 111, 109, 108, 108, 109, 110,
-          110, 109, 107, 106, 106, 107, 108, 110, 111, 112,
+          114, 114, 113, 111, 110, 109, 109, 110, 112, 114,
+          115, 115, 114, 113, 113, 112, 110, 108, 108, 109,
+          111, 113, 114, 114, 113, 111, 110, 110, 111, 112,
+          112, 111, 109, 108, 108, 109, 110, 112, 113, 114,
         ],
         caps: MIRE_BANK_CAPS,
         bed: MIRE_BED,

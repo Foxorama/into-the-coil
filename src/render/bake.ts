@@ -5596,50 +5596,150 @@ function drawBankFill(ctx: Pen, size: number, ink: BankInk): void {
  * next, is whole on both sides of it.
  */
 function drawBed(ctx: Pen, size: number, part: number, parts: number, land: string, glow: string, light?: LandLight): void {
+  const pools = POOLS_OF.mire;
+  if (pools === null) return;
   /*
     ⚠️ **LIT FROM WITHIN, AND AS BRIGHT ACROSS THEIR AREA AS THE FLOOR ALLOWS — 0352.** *"Vibrant
-    glowing acid pools"* is a lit area low in the lane, where shots are read. The surface of each pool
-    is the place's `lit` — a saturated acid green at the floor's ceiling, the brightest colour the land
-    states — falling away with depth into the ground. The vibrance is in the saturation, and in the
-    thin bright lines on the surface, which are strokes and not an area.
+    glowing acid pools"* is a lit area low in the lane, where shots are read. The surface is the place's
+    `lit` — a saturated acid green at the floor's ceiling — and the vibrance is in the saturation, and in
+    the thin bright lines on the surface, which are strokes and not an area.
+
+    ⚠️ **AND IT RUNS TEAL — 0535.** *"More teal colouring and blending… a mix blend of the current greens
+    and bubbles and mix of blended green and teal and teal."* Two blends, as a luminous liquid deepens:
+    ALONG, the water's own colour from `tints`, green to teal and back, one gradient laid over every
+    pool and channel at once so a channel carries one pool's colour into the next; and DOWN, every body
+    going teal under its surface and staying teal, never into the mud — a glow, not a puddle. The teal
+    is the place's stated `acid`, at `lit`'s light, so the floor 0352 holds does not move.
   */
-  const surface = light?.lit ?? mix(land, glow, 0.36);
-  const depth = mix(surface, land, 0.6);
+  const green = light?.lit ?? mix(land, glow, 0.36);
+  const teal = light?.acid ?? green;
+  const deepTeal = mixDown(teal, land, 0.35);
   // Pixels per whole drawing along, and per tile-twice-the-lane across: the ground tile's fractions.
   const drawing = size * parts;
   const tile = size * 2;
-  for (const spot of POOLS_OF.mire?.spots ?? []) {
+  const lane = size / SPRITE_EXTENT.mireBedA;
+  const tints = pools.tints;
+  const tintAt = (x: number): number => {
+    const f = (((x % 1) + 1) % 1) * tints.length;
+    const k = Math.floor(f);
+    const from = tints[k % tints.length]!;
+    return from + (tints[(k + 1) % tints.length]! - from) * (f - k);
+  };
+  // The glow's own light moved into its blue, which is the glow turned teal: lines, never an area.
+  const tealGlow = toTeal(glow);
+  // The along gradient, three drawings wide in this half's pixels so the wrap blends as the rest does.
+  const water = ctx.createLinearGradient(-drawing - part * size, 0, 2 * drawing - part * size, 0);
+  for (let round = 0; round < 3; round += 1) {
+    for (let k = 0; k < tints.length; k += 1) water.addColorStop((round + k / tints.length) / 3, mixDown(green, teal, tints[k]!));
+  }
+  /*
+    A hollow with sloping banks: a pool and the channel out of it overlap by a few lanes, and the
+    pool's bank runs down under the channel's surface there, so the join is mud shelving into the
+    stream. Banks straight down read as a row of boxes on the first photograph; the lens before it had
+    banks so shallow that its ends were slivers. The surface bulges about half as far as the lens did,
+    because acid is level.
+  */
+  const hollow = (at: number, top: number, wide: number, deep: number): void => {
+    const shelf = wide * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(at, top);
+    ctx.quadraticCurveTo(at + wide / 2, top - deep * 0.08, at + wide, top);
+    ctx.bezierCurveTo(at + wide - shelf, top + deep * 1.2, at + shelf, top + deep * 1.2, at, top);
+    ctx.closePath();
+  };
+  // Every pool this half draws, gathered once so each pass below can lay itself over all of them.
+  const bodies: { at: number; top: number; wide: number; deep: number; tint: number }[] = [];
+  for (const spot of pools.spots) {
     for (let round = -1; round <= 1; round += 1) {
       const at = (spot.at + round) * drawing - part * size;
       const wide = spot.wide * drawing;
-      if (at > size || at + wide < 0) continue;
-      const deep = spot.deep * tile;
-      const top = spot.top * tile - size / 2;
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = vertical(ctx, size, top / size, surface, (top + deep) / size, depth);
-      // A shallow lens rather than a box: a pool is a hollow the acid has filled.
-      ctx.beginPath();
-      ctx.moveTo(at, top);
-      ctx.quadraticCurveTo(at + wide / 2, top - deep * 0.15, at + wide, top);
-      ctx.quadraticCurveTo(at + wide / 2, top + deep * 0.9, at, top);
-      ctx.closePath();
+      if (at - 2 * lane > size || at + wide + 2 * lane < 0) continue;
+      bodies.push({ at, top: spot.top * tile - size / 2, wide, deep: spot.deep * tile, tint: tintAt(spot.at + spot.wide / 2) });
+    }
+  }
+  /*
+    The four passes are each laid over EVERY body before the next begins — the predecessor's toxic
+    water's idea, in this file's terms: what is under every body (the halo) is never drawn over one,
+    so two that overlap are one body with no shore between them, and only the edge against the mud
+    keeps its light.
+  */
+  // 1. The halo: the acid's light on the mud round it, so a pool eases into the bank instead of sitting on it.
+  // Three widening rings, faint, so it feathers out rather than drawing a second outline.
+  ctx.globalAlpha = 0.16;
+  for (const b of bodies) {
+    ctx.fillStyle = mixDown(land, mixDown(green, teal, b.tint), 0.5);
+    for (let ring = 1; ring <= 3; ring += 1) {
+      const out = ring * 0.45 * lane;
+      hollow(b.at - out * 1.6, b.top - out, b.wide + out * 3.2, b.deep + out * 2);
       ctx.fill();
-      // Ripples on the surface: thin, bright, a few to a pool.
-      ctx.globalAlpha = 0.55;
-      ctx.strokeStyle = glow;
-      ctx.lineWidth = Math.max(1, tile * 0.0015);
-      for (let r = 0; r < 3; r += 1) {
-        // Inside the lens, whose floor is under half its depth: ripples below it would float in the ground.
-        const y = top + deep * (0.07 + r * 0.1);
-        const inset = wide * (0.14 + r * 0.1);
-        ctx.beginPath();
-        ctx.moveTo(at + inset, y);
-        ctx.lineTo(at + wide - inset, y);
-        ctx.stroke();
-      }
+    }
+  }
+  // 2. The water, in its colour along.
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = water;
+  for (const b of bodies) {
+    hollow(b.at, b.top, b.wide, b.deep);
+    ctx.fill();
+  }
+  // 3. The depth: a lane of the surface's own colour, then teal, deepening — still lit at the bottom.
+  for (const b of bodies) {
+    const floor = b.deep * 0.9;
+    const g = ctx.createLinearGradient(0, b.top, 0, b.top + floor);
+    g.addColorStop(0, rgba(teal, 0));
+    g.addColorStop(Math.min(0.5, (0.9 * lane) / floor), rgba(teal, 0));
+    g.addColorStop(Math.min(0.8, (2.6 * lane) / floor), rgba(teal, 0.8));
+    g.addColorStop(1, rgba(deepTeal, 0.95));
+    ctx.fillStyle = g;
+    hollow(b.at, b.top, b.wide, b.deep);
+    ctx.fill();
+  }
+  // 4. The lines: the lit skin of each surface, and a ripple or two under it, in the glow its water is.
+  ctx.lineCap = 'round';
+  for (const b of bodies) {
+    const ink = mix(glow, tealGlow, b.tint);
+    // In from the ends past where a channel overlaps the pool it runs into, so no skin is drawn inside the next.
+    const inset = b.wide * 0.12 + 3 * lane;
+    if (b.wide <= inset * 2) continue;
+    const skin = b.top + 0.3 * lane;
+    ctx.globalAlpha = 0.75;
+    ctx.strokeStyle = ink;
+    ctx.lineWidth = Math.max(1, 0.4 * lane);
+    ctx.beginPath();
+    ctx.moveTo(b.at + inset, skin);
+    ctx.quadraticCurveTo(b.at + b.wide / 2, skin - b.deep * 0.08, b.at + b.wide - inset, skin);
+    ctx.stroke();
+    ctx.globalAlpha = 0.4;
+    ctx.lineWidth = Math.max(1, 0.25 * lane);
+    for (let r = 1; r <= 2; r += 1) {
+      const y = b.top + (0.4 + 0.9 * r) * lane;
+      const inner = inset + b.wide * 0.1 * r;
+      if (b.wide <= inner * 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(b.at + inner, y);
+      ctx.lineTo(b.at + b.wide - inner, y);
+      ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
+}
+
+/**
+ * `mix`, rounded down — 0535. Every channel of a blend is between the two it came from, and sRGB's
+ * curve bends upward, so the exact blend is never lighter than the lighter end; rounded to the nearest
+ * it can be, by a shade: green `#083008` to teal `#052d2f` gains a step of blue before it loses one of
+ * green, and came out over the floor `tests/mire.test.ts` holds. Rounded down it cannot.
+ */
+function mixDown(from: string, to: string, by: number): string {
+  if (by <= 0) return from;
+  const read = (hex: string): number[] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [a, b] = [read(from), read(to)];
+  return `#${a.map((v, i) => Math.floor(v + (b[i]! - v) * by + 1e-9).toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** A colour with its green's light moved into its blue — a glow turned teal at the same brightness — 0535. */
+function toTeal(hex: string): string {
+  const [r, g] = [1, 3].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `#${[r!, g!, Math.round(g! * 0.9)].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
 /**
@@ -11362,10 +11462,12 @@ function drawAcidCap(ctx: Pen, size: number, rise: number, land: string, glow: s
     every knot whatever the two caps' rises — a gradient anchored on the tile would step at each join.
   */
   const bands = 6;
+  // Green at the surface and teal under it, as the bed's pools are since 0535, and lit further down.
+  const teal = light?.acid ?? lit;
   for (let b = 0; b < bands; b++) {
     const from = b * 0.9 * unit;
     ctx.globalAlpha = 1;
-    ctx.fillStyle = mix(lit, land, (b / bands) * 0.85);
+    ctx.fillStyle = mixDown(mixDown(lit, teal, Math.min(1, b / 2)), land, (b / bands) * 0.6);
     ctx.beginPath();
     ctx.moveTo(0, faceY(0) + from);
     ctx.lineTo(size, faceY(size) + from);
@@ -11374,17 +11476,18 @@ function drawAcidCap(ctx: Pen, size: number, rise: number, land: string, glow: s
     ctx.closePath();
     ctx.fill();
   }
-  // Ripples on it, thin and bright, and the edge the shore always has.
+  // Ripples on it, thin and bright — the lower one in the glow turned teal, as the water under it is — and the edge the shore always has.
   ctx.globalAlpha = 0.55;
-  ctx.strokeStyle = glow;
   ctx.lineWidth = Math.max(1, unit * 0.18);
-  for (const [from, to, down] of [[0.1, 0.55, 1.4], [0.45, 0.9, 2.6]] as const) {
+  for (const [from, to, down, ink] of [[0.1, 0.55, 1.4, glow], [0.45, 0.9, 2.6, toTeal(glow)]] as const) {
+    ctx.strokeStyle = ink;
     ctx.beginPath();
     ctx.moveTo(size * from, faceY(size * from) + down * unit);
     ctx.lineTo(size * to, faceY(size * to) + down * unit);
     ctx.stroke();
   }
   ctx.globalAlpha = 0.85;
+  ctx.strokeStyle = glow;
   ctx.lineWidth = Math.max(1, 0.7 * unit);
   ctx.lineCap = 'butt';
   ctx.beginPath();
