@@ -4269,6 +4269,12 @@ function stepWhirl(w: World): void {
 
   ⚠️ **ITS PICTURE IS ITS RADIUS.** The pieces are laid at exactly the radius that lands this step,
   so what the player sees the ring pass is what it popped — 0036.
+
+  ⚠️ **AND THE RINGS INSIDE IT ARE A PICTURE AND NOTHING ELSE — 0533.** *"Two slightly smaller inner
+  rings for visual effect."* Each trails the outer ring by its row's `behind`, drawn smaller by its
+  `swell`, and lands nothing: everything it passes the outer edge has already crossed. The nova stays
+  open until the last of them is past the view, but it lands only while the OUTER ring is still inside
+  it, so it reaches exactly as far as one ring did.
 */
 
 /** The steps a nova's ring has grown, as a radius. */
@@ -4292,7 +4298,27 @@ function placeNova(w: World, nova: Nova): void {
   const was = novaRadius(nova, w.novaAge > 0 ? w.novaAge - 1 : 0);
   const centreAlong = w.cameraAlong + w.novaOffset;
   const wasAlong = w.prevCameraAlong + w.novaOffset;
-  const around = Math.ceil((TAU * radius) / NOVA_SPACING);
+  // The ring that lands first, so a pool with no room lays a picture short and never the edge — 0533.
+  if (!layNovaRing(w, centreAlong, wasAlong, radius, was, 1)) return;
+  for (let r = 0; r < nova.rings.length; r++) {
+    const ring = nova.rings[r]!;
+    const inner = radius - ring.behind;
+    if (inner < nova.start) continue;
+    // Its first step is grown out of the ship's own radius, never through the centre from the far side.
+    const innerWas = was - ring.behind > nova.start ? was - ring.behind : nova.start;
+    if (!layNovaRing(w, centreAlong, wasAlong, inner, innerWas, ring.swell)) return;
+  }
+}
+
+/**
+ * Lay one ring of the nova at `radius`, drawn at `swell` — 0533. False when the pool had no room.
+ *
+ * ⚠️ **THE SPACING SHRINKS WITH THE PIECE.** Half a piece apart is what makes two triangle windows sum
+ * to an even band, and a piece drawn at 0.7 is 0.7 as long — so a thinner ring is laid in more pieces
+ * for its length, not the outer ring's count drawn smaller, which would bead at every join.
+ */
+function layNovaRing(w: World, centreAlong: number, wasAlong: number, radius: number, was: number, swell: number): boolean {
+  const around = Math.ceil((TAU * radius) / (NOVA_SPACING * swell));
   const pieces = around > NOVA_LEAST_PIECES ? around : NOVA_LEAST_PIECES;
   const margin = SPRITE_EXTENT.novaArc;
   for (let i = 0; i < pieces; i++) {
@@ -4305,14 +4331,23 @@ function placeNova(w: World, nova: Nova): void {
     if (across < -margin || across > ACROSS_SPAN + margin) continue;
     const piece = w.nova.spawn();
     // A ring the pool has no room for is laid short rather than grown — `src/sim/pool.ts`.
-    if (piece === null) return;
+    if (piece === null) return false;
     reset(piece, along, across, NOVA_PIECE);
+    piece.swell = swell;
     piece.prevAlong = wasAlong + cos * was;
     piece.prevAcross = w.novaAcross + sin * was;
     // Lying along the ring: a quarter turn on from the way out to it.
     piece.turn = turnFor(angle + Math.PI * 1.5);
     piece.prevTurn = piece.turn;
   }
+  return true;
+}
+
+/** How far the last ring inside a nova trails its edge — 0533. Nought for a nova of one ring. */
+function novaTrail(nova: Nova): number {
+  let trail = 0;
+  for (let r = 0; r < nova.rings.length; r++) if (nova.rings[r]!.behind > trail) trail = nova.rings[r]!.behind;
+  return trail;
 }
 
 /** Burst a nova from where the ship is. A second one replaces the first. */
@@ -4341,20 +4376,31 @@ function stepNova(w: World): void {
   const now = novaRadius(nova, w.novaAge);
   const centreAlong = w.cameraAlong + w.novaOffset;
   const centreAcross = w.novaAcross;
+  // The farthest corner of the view from its centre: past it, the edge has nothing left to cross.
+  const inView = w.novaOffset;
+  const farAlong = inView > w.view.alongSpan - inView ? inView : w.view.alongSpan - inView;
+  const farAcross = centreAcross > ACROSS_SPAN - centreAcross ? centreAcross : ACROSS_SPAN - centreAcross;
+  const far = Math.sqrt(farAlong * farAlong + farAcross * farAcross);
+  /*
+    ⚠️ **IT LANDS ONLY WHILE THE EDGE IS IN REACH — 0533.** One ring closed the step its edge passed
+    `far`, so that was its last landing; the rings inside it keep the nova open a few steps longer, and
+    without this the edge would go on striking what waits beyond the view in those steps.
+  */
+  const landing = was - SPRITE_EXTENT.novaArc <= far;
   // Every hostile shot its band touches.
-  for (let i = w.enemyShots.size - 1; i >= 0; i--) {
+  for (let i = w.enemyShots.size - 1; landing && i >= 0; i--) {
     const shot = w.enemyShots.at(i);
     const d = Math.hypot(shot.along - centreAlong, shot.across - centreAcross);
     if (crossed(d - shot.radius - nova.band, was, now + nova.band, first) || crossed(d, was, now, first)) w.enemyShots.releaseAt(i);
   }
   // Every body whose centre it crossed, once — through the kill log, so a pop bursts and is heard.
-  for (let i = w.enemies.size - 1; i >= 0; i--) {
+  for (let i = w.enemies.size - 1; landing && i >= 0; i--) {
     const body = w.enemies.at(i);
     const d = Math.hypot(body.along - centreAlong, body.across - centreAcross);
     if (crossed(d, was, now, first)) strike(w.enemies, i, nova.damage, IMPACT_FLASH_STEPS, w.deaths);
   }
   // The boss, once a nova, the first step it crosses the head or any of the body.
-  if (!w.novaBossHit && bossTargetable(w)) {
+  if (landing && !w.novaBossHit && bossTargetable(w)) {
     const head = w.bossPool.at(0);
     let reaches = crossed(Math.hypot(head.along - centreAlong, head.across - centreAcross) - head.radius, was, now, first);
     for (let i = 0; !reaches && i < w.bossBody.size; i++) {
@@ -4370,11 +4416,8 @@ function stepNova(w: World): void {
       }
     }
   }
-  // Past the farthest corner of the view, it is gone.
-  const inView = w.novaOffset;
-  const farAlong = inView > w.view.alongSpan - inView ? inView : w.view.alongSpan - inView;
-  const farAcross = centreAcross > ACROSS_SPAN - centreAcross ? centreAcross : ACROSS_SPAN - centreAcross;
-  if (now - SPRITE_EXTENT.novaArc > Math.sqrt(farAlong * farAlong + farAcross * farAcross)) {
+  // Past the farthest corner of the view — the last ring inside it too, since 0533 — it is gone.
+  if (now - novaTrail(nova) - SPRITE_EXTENT.novaArc > far) {
     w.nova.clear();
     w.novaKind = null;
     return;

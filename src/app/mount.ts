@@ -348,8 +348,15 @@ export const CAPACITY = {
     the height of the lane and its whole round is on screen, fewer as it grows past the edges. Forty
     keeps the tenth of headroom the shots keep, paid out of the worst case on 0153's terms — a desktop
     target and a baked bitmap each — rather than out of a pool that is already measured full.
+
+    ⚠️ **A HUNDRED AND EIGHTY SINCE 0533, AND FORTY WAS ALREADY SHORT.** Thirty was measured at the
+    ship's station; flown forward, one ring laid fifty, and the pool cut it — a ring with a gap in it,
+    which nothing caught. 0533 adds two thinner rings inside it, each laid in more pieces for its length
+    because a smaller piece is a shorter one: 161 at the worst place the ship can press it from, swept
+    over the lane and both views. A hundred and eighty is the tenth of headroom again, and
+    `tests/ward.test.ts` sweeps the lane to see the pool never fill.
   */
-  nova: 40,
+  nova: 180,
   boss: 1,
   /*
     ⚠️ **TEN: TWELVE, AND IT WAS EIGHT** — raised for 0066's death scatter, which

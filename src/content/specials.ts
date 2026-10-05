@@ -195,6 +195,23 @@ export interface Nova {
   damage: number;
   /** What it lands on a boss it reaches, as a share of the boss's full health, once — 0372's shape. */
   bossShare: number;
+  /**
+   * The rings drawn inside it, travelling with it — 0533. *"Two slightly smaller inner rings for
+   * visual effect."* Empty is one ring.
+   *
+   * ⚠️ **A PICTURE AND NOTHING ELSE.** Only the outer ring lands: every inner ring is behind an edge
+   * that has already crossed everything it passes, so none of them strikes, pops or reaches anything,
+   * and the nova reaches exactly as far as it did with none.
+   */
+  rings: readonly NovaRing[];
+}
+
+/** One ring drawn inside a nova — 0533. */
+export interface NovaRing {
+  /** World units its radius trails the outer ring's by. It is laid once that leaves it at least `start`. */
+  behind: number;
+  /** How big its band is drawn against the outer ring's — thinner and shorter-glowing, as `swell` is. */
+  swell: number;
 }
 
 export interface SpecialRow {
@@ -501,8 +518,25 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
     storm: null,
     whirl: null,
     rift: null,
-    // 3.5 a step crosses the reference view's diagonal from the ship's station in about a second.
-    nova: { start: 6, grow: 3.5, band: 3, damage: 12, bossShare: 0.05 },
+    /*
+      2.9 a step — 0533, *"needs to travel slightly slower"*: it was 3.5, the lane's height in 0.55 s
+      and the reference view's far corner in 0.95 s; it is 0.67 s and 1.15 s, a sixth slower. It still
+      closes past every corner, so it reaches exactly as far.
+
+      The two inner rings — 0533 — trail it by a band and a gap each, a little thinner each time: a
+      ring is about seven units of glow across, so ten and nineteen behind leave a dark line between.
+    */
+    nova: {
+      start: 6,
+      grow: 2.9,
+      band: 3,
+      damage: 12,
+      bossShare: 0.05,
+      rings: [
+        { behind: 10, swell: 0.85 },
+        { behind: 19, swell: 0.7 },
+      ],
+    },
     face: SPRITE.pickupNova,
     cue: 'nova',
     lands: null,
