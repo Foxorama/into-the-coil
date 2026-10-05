@@ -1161,6 +1161,20 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE PLAY OF 2026-10-05 IS BUILT AND NONE OF IT HAS BEEN PLAYED
+
+One PR each, all merged; each decision's *Owed* names what the play has to look at, and the vetoes it
+leaves the player:
+
+- the pad alone past the splash — [0531](decisions/0531-the-pad-begins.md);
+- the bosses' health by tier and fight, settled on the player's numbers —
+  [0532](decisions/0532-the-legend-holds-longer.md), whose open question is Savior's mid-boss ladder;
+- the ray's nova slower and three rings — [0533](decisions/0533-the-nova-is-three-rings.md);
+- the frost inked teal and reaching the far side — [0534](decisions/0534-the-frost-reaches-across.md),
+  which moved the hydra's frost and the cold aura too;
+- the Mire's pools joined and teal, the shore lower — [0535](decisions/0535-the-mire-runs-teal.md);
+- and a guard repair found on the way — [0536](decisions/0536-the-splash-counts-frames.md).
+
 ### ⚠️ THE HANGAR IS A QUEUE OF TEN, BEING BUILT IN ORDER — 2026-10-05
 
 [`the-hangar-planned`](../reports/the-hangar-planned-2026-10-05.md) is the plan, the player's answers
