@@ -147,10 +147,20 @@ export const PALETTES: Record<PaletteName, Palette> = {
     void: '#e86bff',
     // Vermilion: redder than `bullet`'s amber and yellower than `enemy`'s pink-red — 0249.
     fire: '#ff7a3a',
-    // Ice: a saturated cyan, the one cold thing that hurts — 0253. Bright enough for the floor on
-    // every place's backdrop with the sky counted (`tests/sky.test.ts`), and far from `ally`'s
-    // lavender.
-    frost: '#5ef0ff',
+    // Ice: the one cold thing that hurts — 0253. Bright enough for the floor on every place's backdrop
+    // with the sky counted (`tests/sky.test.ts`), and far from `ally`'s lavender.
+    /*
+      ⚠️ **TEAL SINCE 0534, AND IT WAS A CYAN `#5ef0ff`.** Played: *"the blue of the bullets is hard to
+      distinguish from the background on all the frost projectiles they probably need some teal or
+      other contrasting colours."* The cyan cleared every hex floor and lost on the picture: the Rime
+      Shelf is steel-blue sky over aqua ice, so the cyan sat on its own background's hue and only
+      lightness told it apart, and the icicle's shadowed belly read at **2.69:1** against the ground
+      at its worst twentieth — under the game's own floor. Baked and laid on photographs of the fight,
+      this teal moves every frost sprite a fifth further from the ground in CIEDE2000 and the icicle
+      to 3.13:1 with its belly lifted. It also leaves the player's own cyan hull (`#7ae7ff`), which
+      the old ink sat seven degrees of hue from. `docs/decisions/0534-the-frost-reaches-across.md`.
+    */
+    frost: '#40ffd0',
     // Near-white and deliberately the brightest thing in the palette: a flash reads as an impact
     // because it is momentarily louder than everything around it, not because of its hue.
     impact: '#fff4e6',

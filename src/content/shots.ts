@@ -297,10 +297,21 @@ export type Fission =
  * three was one burst of thirty-six flakes. `least` equal to `most` is a fixed fuse, said on the row.
  *
  * ⚠️ **Rolled on the frame's own fuse stream**, per 0021 — a burst's timing must not move a wave.
+ *
+ * ⚠️ **`most` MAY BE `'far'`: THE FAR SIDE OF THE SCREEN, WHICH IS A PLACE AND NOT A COUNT —
+ * `docs/decisions/0534-the-frost-reaches-across.md`.** *"The frost attacks need to account for different
+ * resolutions and travel and explode randomly from just in front of the boss to the far side of the
+ * screen."* A fuse in steps is a distance from whatever threw the shot, and 0364 moved every thrower a
+ * fifth further from the player without moving a single fuse — so the frost ship's snowflakes, which
+ * never opened in the back three tenths of the screen, now could not reach the player at all. `'far'` is
+ * the steps this shot takes, on its own heading, to reach the near edge of the ship's box or to leave the
+ * lane, whichever is sooner, worked out on the step the fuse is lit; the roll is between `least` and
+ * that. Both ends are fixed against the camera's trailing edge, the one edge every device puts in the
+ * same place, so it is the same fight on every screen.
  */
 export interface Fuse {
   least: number;
-  most: number;
+  most: number | 'far';
 }
 
 /** A shot that is spent by arriving and by nothing else — every shot but the frost. */
@@ -909,8 +920,9 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
 
     The fuses are in steps because the frame counts in steps; in seconds, 0.75, 0.67 and 1.5. The
     first is what puts the split on the screen and not at the hull; the second is what puts the
-    snowflake in the player's half of the lane; the third is what keeps a screen of flakes from
-    outliving the volley after it — `tests/frost.test.ts` counts what is alive.
+    snowflake in the player's half of the lane — and since 0534, anywhere on to the far side of it; the
+    third is what keeps a screen of flakes from outliving the volley after it — `tests/frost.test.ts`
+    counts what is alive.
   */
   /*
     ⚠️ **AND THE FIRST TWO ARE RANGES NOW, AND THE SHARDS LEAVE HALF A SECOND APART — 0371.** *"Firing multiple ice bullets has them staggered by a half second or so and they need
@@ -953,9 +965,20 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
     */
     fission: [
       { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },
-      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },
+      { after: { least: 60, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },
       { after: { least: 130, most: 130 }, into: 'nothing' },
     ],
+    /*
+      ⚠️ **AND EACH BOLT FLIES ON TO ANYWHERE FROM A SECOND OUT TO THE FAR SIDE OF THE SCREEN — 0534.**
+      *"The frost attacks don't go far enough now that we've changed the zoom levels … the intent is to
+      give the player room to dodge and move, but to make the player have to dodge and move and make
+      the player have to fly into the slowing aura."* The bolts' 60 to 72 steps opened every snowflake
+      in a band from 29% to 55% of the screen at Savior, so the back of the screen — where a ship goes
+      to get away from the cold — was never asked about. The shard still bursts just in front of the
+      hull, on the stagger's terms; then each of its three bolts rolls its own length, from 0482's
+      second to the near edge of the ship's box, so one shard is three clouds strewn from the hull's
+      front to the player's end.
+    */
   },
   /**
    * The player's second auto-weapon: slower than the pulse, and worth three of it.

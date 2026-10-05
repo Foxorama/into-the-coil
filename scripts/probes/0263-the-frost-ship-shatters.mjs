@@ -37,7 +37,8 @@ export const PROBES = [
     edit: {
       path: 'src/app/frame.ts',
       // ⚠️ Re-anchored by 0371, which rolls the fuse rather than reading it.
-      find: '  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;\n',
+      // And by 0534, which hands it the child so a fuse can run to the far side of the screen.
+      find: '  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after, child) : 0;\n',
       replace: '  child.fireIn = 0;\n',
     },
   },
@@ -62,8 +63,8 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       // ⚠️ Re-anchored by 0371: the fuses are ranges.
-      // And by 0482: the frost is a cloud.
-      find: "    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },\n      { after: { least: 130, most: 130 }, into: 'nothing' },\n    ],",
+      // And by 0482: the frost is a cloud. And by 0534: the bolt runs to the far side.
+      find: "    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },\n      { after: { least: 130, most: 130 }, into: 'nothing' },\n    ],",
       replace: '    fission: SPENT_BY_ARRIVING,',
     },
   },
@@ -134,8 +135,9 @@ export const PROBES = [
     edit: {
       path: 'src/content/shots.ts',
       // Re-anchored by 0482, across the cloud's comment: the stagger off and the snowflake of twenty-four.
-      find: "    stagger: 40,\n    /*\n      ⚠️ **A CLOUD AND NOT TWO BANGS — 0482.** *\"It's still two cluster bombs really close together and\n      rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a\n      non-event.\"* The two bolts popped 0.7 s apart and 20 units apart, and each ring flew out at the\n      shard's whole speed to 77 units before it melted: dense for a moment, gone the next. Now three\n      bolts split sooner and wider, each opens a second later into six flakes at a sixth of the\n      speed, and they linger: three clouds no more than a fifth of the lane in radius, a field to thread.\n    */\n    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
-      replace: "    /*\n      ⚠️ **A CLOUD AND NOT TWO BANGS — 0482.** *\"It's still two cluster bombs really close together and\n      rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a\n      non-event.\"* The two bolts popped 0.7 s apart and 20 units apart, and each ring flew out at the\n      shard's whole speed to 77 units before it melted: dense for a moment, gone the next. Now three\n      bolts split sooner and wider, each opens a second later into six flakes at a sixth of the\n      speed, and they linger: three clouds no more than a fifth of the lane in radius, a field to thread.\n    */\n    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 72 }, into: 'ring', shots: 24, pace: 0.16 },",
+      // And by 0534, whose bolt runs to the far side.
+      find: "    stagger: 40,\n    /*\n      ⚠️ **A CLOUD AND NOT TWO BANGS — 0482.** *\"It's still two cluster bombs really close together and\n      rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a\n      non-event.\"* The two bolts popped 0.7 s apart and 20 units apart, and each ring flew out at the\n      shard's whole speed to 77 units before it melted: dense for a moment, gone the next. Now three\n      bolts split sooner and wider, each opens a second later into six flakes at a sixth of the\n      speed, and they linger: three clouds no more than a fifth of the lane in radius, a field to thread.\n    */\n    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },",
+      replace: "    /*\n      ⚠️ **A CLOUD AND NOT TWO BANGS — 0482.** *\"It's still two cluster bombs really close together and\n      rather than creating a navigable cloud of shrapnel, it creates either too much or it creates a\n      non-event.\"* The two bolts popped 0.7 s apart and 20 units apart, and each ring flew out at the\n      shard's whole speed to 77 units before it melted: dense for a moment, gone the next. Now three\n      bolts split sooner and wider, each opens a second later into six flakes at a sixth of the\n      speed, and they linger: three clouds no more than a fifth of the lane in radius, a field to thread.\n    */\n    fission: [\n      { after: { least: 24, most: 36 }, into: 'fan', shots: 3, spread: 1 },\n      { after: { least: 60, most: 'far' }, into: 'ring', shots: 24, pace: 0.16 },",
     },
   },
 ];
