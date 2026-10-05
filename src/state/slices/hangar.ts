@@ -26,6 +26,7 @@ import { SHIPS, SHIP_KINDS, type ShipKind } from '../../content/ships.ts';
 import type { DangleKind } from '../../content/dangles.ts';
 import { RIMS, type RimKind } from '../../content/rims.ts';
 import { ART, type ArtKind } from '../../content/art.ts';
+import { HUES, TONES, type Livery } from '../../content/livery.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 
 export interface HangarState {
@@ -80,6 +81,11 @@ export interface HangarState {
    * until it is won in and any of them after.
    */
   art: Readonly<Record<ShipKind, ArtKind>>;
+  /**
+   * Each ship's body colour — 0529: a hue and a tone, or `null` for the factory's paint. Open with the
+   * ship's win, as its other looks are; any of the colours once it is.
+   */
+  livery: Readonly<Record<ShipKind, Livery | null>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -92,7 +98,10 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind }
   | { slice: 'hangar'; type: 'gun'; ship: ShipKind; from: ShipKind }
   | { slice: 'hangar'; type: 'rim'; ship: ShipKind; rim: RimKind }
-  | { slice: 'hangar'; type: 'art'; ship: ShipKind; art: ArtKind };
+  | { slice: 'hangar'; type: 'art'; ship: ShipKind; art: ArtKind }
+  // 0529: the hue a ship's body is painted, `null` for the factory's; and its tone, on the hue it has.
+  | { slice: 'hangar'; type: 'livery'; ship: ShipKind; hue: number | null }
+  | { slice: 'hangar'; type: 'tone'; ship: ShipKind; tone: number };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -112,7 +121,23 @@ export const initialHangar: HangarState = {
   gun: perShip((kind) => kind),
   rim: perShip((kind) => SHIPS[kind].wheels?.rim ?? null),
   art: perShip((kind) => SHIPS[kind].arts[0]),
+  livery: perShip(() => null),
 };
+
+/**
+ * Whether `ship` may be painted — 0529: once it has been won in, as its other looks open. The factory's
+ * paint is always its own.
+ */
+export function liveryOpen(state: HangarState, ship: ShipKind): boolean {
+  return state.won[ship];
+}
+
+/** A livery the lists can paint: a hue and a tone each a place in its list. */
+export function liveryOf(hue: unknown, tone: unknown): Livery | null {
+  const h = typeof hue === 'number' && Number.isInteger(hue) && hue >= 0 && hue < HUES.length ? hue : null;
+  const t = typeof tone === 'number' && Number.isInteger(tone) && tone >= 0 && tone < TONES.length ? tone : null;
+  return h === null || t === null ? null : { hue: h, tone: t };
+}
 
 /** Each ownable kind mapped to `of(kind)`, on `perShip`'s terms. */
 function perOwnable<T>(of: (kind: OwnableKind) => T): Record<OwnableKind, T> {
@@ -212,6 +237,24 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
     case 'art':
       if (state.art[action.ship] === action.art || !artOpen(state, action.ship, action.art)) return state;
       return { ...state, art: { ...state.art, [action.ship]: action.art } };
+    /*
+      0529: a hue, on the tone the ship's paint already has — Bright for a ship coming off the factory's —
+      or the factory's paint back. Refused before the ship's win, and a hue past the list is no hue.
+    */
+    case 'livery': {
+      const was = state.livery[action.ship];
+      if (action.hue === null) return was === null ? state : { ...state, livery: { ...state.livery, [action.ship]: null } };
+      const next = liveryOf(action.hue, was?.tone ?? 1);
+      if (next === null || !liveryOpen(state, action.ship) || (was !== null && was.hue === next.hue)) return state;
+      return { ...state, livery: { ...state.livery, [action.ship]: next } };
+    }
+    // 0529: a tone, on a ship already painted a hue; the factory's paint has no tone to change.
+    case 'tone': {
+      const was = state.livery[action.ship];
+      const next = was === null ? null : liveryOf(was.hue, action.tone);
+      if (next === null || was === null || was.tone === next.tone || !liveryOpen(state, action.ship)) return state;
+      return { ...state, livery: { ...state.livery, [action.ship]: next } };
+    }
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

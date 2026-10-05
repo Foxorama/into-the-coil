@@ -56,8 +56,8 @@ export const PROBES = [
     guard: 'a look fitted is kept and drawn on the card',
     edit: {
       path: 'src/app/chrome.ts',
-      find: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art;",
-      replace: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim);",
+      find: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art + ':' + String(fit.livery);",
+      replace: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + String(fit.livery);",
     },
   },
   {

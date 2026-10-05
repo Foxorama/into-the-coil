@@ -244,17 +244,19 @@ export interface Fit {
   readonly rim: RimKind | null;
   // 0528: and the look on its nose, its dome or its flank.
   readonly art: ArtKind;
+  // 0529: and its body's colour as an ink, or `null` for the factory's.
+  readonly livery: string | null;
 }
 
-/** A ship as it comes: its own gun, its own rim and its own look. */
+/** A ship as it comes: its own gun, its own rim, its own look and the factory's paint. */
 export function ownFit(ship: ShipKind): Fit {
   const row = SHIPS[ship];
-  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0] };
+  return { gun: row.weapon, rim: row.wheels?.rim ?? null, art: row.arts[0], livery: null };
 }
 
 /** Whether two fits draw the same ship. */
 export function sameFit(a: Fit, b: Fit): boolean {
-  return a.gun === b.gun && a.rim === b.rim && a.art === b.art;
+  return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;
 }
 
 /** A car's wheels — 0527: each centre, front first, the tyre's radius, and the rim it comes on. */

@@ -2083,8 +2083,8 @@ function traceStar(ctx: Pen, f: Frame, scale: number, phase: number): void {
   ctx.closePath();
 }
 
-export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, pods = true): void {
-  const body = palette.player;
+export function paintShip(ctx: Pen, f: Frame, palette: Palette, tier: number, pods = true, paint: string = palette.player): void {
+  const body = paint;
   const dark = shade(body, -0.32);
   const light = shade(body, 0.5);
   // ⚠️ No plume on the hull since 0230: the exhaust is an entity that follows the ship, and a flame
@@ -2536,11 +2536,12 @@ export function paintRaygun(ctx: Pen, f: Frame, palette: Palette, onDisc = true,
 }
 
 /** One of the saucer's missile pods, painted on its hull: `side` −1 is the top one. */
-function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1): void {
+function paintPod(ctx: Pen, f: Frame, palette: Palette, side: 1 | -1, paint: string | null = null): void {
   const { y, tail, mouth, wide, point } = CADDIE_POD;
   const at = (x: number, off: number): Pt => [x, (y + off) * side];
   const [back, front] = CADDIE_PYLON;
-  const body = mix(palette.player, palette.acid, 0.55);
+  // 0529: in the saucer's paint, when it has one.
+  const body = paint ?? mix(palette.player, palette.acid, 0.55);
   // The pylon, in the saucer's own shadow, and a seam where it meets the pod.
   poly(ctx, f, shade(body, -0.45), [
     [back + 0.03, (CADDIE_DISC - 0.04) * side],
@@ -2759,6 +2760,8 @@ export function drawPlayerShip(
   rim: RimKind | null = fitNow(ship).rim,
   // 0528: and the look on its nose, its dome or its flank — one of its own three (`arts` on its row).
   art: ArtKind = fitNow(ship).art,
+  // 0529: and the colour its body is painted, or `null` for the factory's — the body's ink and nothing else.
+  livery: string | null = fitNow(ship).livery,
 ): void {
   const own = gun === SHIPS[ship].weapon;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
@@ -2769,7 +2772,7 @@ export function drawPlayerShip(
     case 'fighter': {
       tubes = tubesOf(TUBES_ON.fighter);
       const fh: Frame = { half: f.half, r: f.r * (FIGHTER_HULL / SHIP_BOX) };
-      ctx.fillStyle = palette.player;
+      ctx.fillStyle = livery ?? palette.player;
       trace(ctx, fh, SHIP_HULL);
       if (own) {
         trace(ctx, fh, SHIP_POD_MK3);
@@ -2780,27 +2783,27 @@ export function drawPlayerShip(
       seal(ctx);
       // Lit from above and ahead before the livery goes on, so the hull has volume under it — 0461.
       // Deeper since 0463: lit to near white, the hull left the livery nothing to stand against.
-      shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(palette.player, 0.15), shade(palette.player, -0.4), SHIP_HULL);
+      shaded(ctx, fh, [0.4, -0.7], [-0.4, 0.7], shade(livery ?? palette.player, 0.15), shade(livery ?? palette.player, -0.4), SHIP_HULL);
       // And the wingtip pods the same light, bright at the nose and in shadow behind — along the cigar (0469).
       if (own) {
         for (const pod of [SHIP_POD_MK3, mirrored(SHIP_POD_MK3)]) {
-          shaded(ctx, fh, [0.1, 0], [-1, 0], shade(palette.player, 0.1), shade(palette.player, -0.42), pod);
+          shaded(ctx, fh, [0.1, 0], [-1, 0], shade(livery ?? palette.player, 0.1), shade(livery ?? palette.player, -0.42), pod);
         }
       }
-      paintShip(ctx, fh, palette, 2, own);
+      paintShip(ctx, fh, palette, 2, own, livery ?? palette.player);
       jazzFighter(ctx, fh, palette, own, art);
       break;
     }
     // The saucer hangs its pods off its sides, in its own outline — 0461.
     case 'caddie':
-      drawCaddie(ctx, f, palette, stage, own, art);
+      drawCaddie(ctx, f, palette, stage, own, art, livery);
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette, stage, own, rim, art);
+      drawFirebird(ctx, f, palette, stage, own, rim, art, livery);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette, stage, own, rim, art);
+      drawEstate(ctx, f, palette, stage, own, rim, art, livery);
       break;
     default: {
       const unhandled: never = ship;
@@ -2882,8 +2885,9 @@ function jazzFighter(ctx: Pen, f: Frame, palette: Palette, pods = true, art: Art
  * glass dome and six lights round it. The lights are the player's cyan here, and the nose carries the
  * ray gun, fed from a chamber on its face ahead of the dome (0463).
  */
-function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'glass'): void {
-  const body = mix(palette.player, palette.acid, 0.55);
+function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, art: ArtKind = 'glass', livery: string | null = null): void {
+  // 0529: or its paint.
+  const body = livery ?? mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
   const D = CADDIE_DISC;
   ctx.fillStyle = body;
@@ -2891,8 +2895,8 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   seal(ctx);
   // The ray gun before the disc, so the disc covers it to the rim: it hangs under the lip — 0493.
   if (own) paintRaygun(ctx, f, palette);
-  if (stage >= 1) paintPod(ctx, f, palette, -1);
-  if (stage >= 2) paintPod(ctx, f, palette, 1);
+  if (stage >= 1) paintPod(ctx, f, palette, -1, livery);
+  if (stage >= 2) paintPod(ctx, f, palette, 1, livery);
   // The disc lit from above and ahead, in shadow behind and below, so it has a top and turns — 0461.
   shaded(ctx, f, [0.3 * D, -0.8 * D], [-0.4 * D, 0.9 * D], shade(body, 0.35), shade(body, -0.25), roundel(0, 0, D * 0.97, 36, 0, Math.PI * 2));
   // The rim: a dark band, a lit lip along its upper edge, and a line of light along the band's inside.
@@ -3090,7 +3094,7 @@ function paintTurrets(
  * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'phoenix'): void {
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'phoenix', livery: string | null = null): void {
   /*
     ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
     Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
@@ -3107,7 +3111,8 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
     still finds themselves (0441) without the car turning blue. The 0461 jazz and the 0463 pinstripe
     are in the history; what survives of them is the sheen, the rims, the lamps and the spoiler.
   */
-  const body = shade(mix(palette.space, palette.hazard, 0.08), 0.16);
+  // 0529: or its paint.
+  const body = livery ?? shade(mix(palette.space, palette.hazard, 0.08), 0.16);
   const gold = palette.hazard;
   const stripe = shade(gold, 0.15);
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 1, 1.5);
@@ -3306,12 +3311,14 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
  * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
  * the bonnet, and its turrets on the roof rack.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'woody'): void {
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null, art: ArtKind = 'woody', livery: string | null = null): void {
   const gilt = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
   const outline = box(estateOutline(stage, own));
-  ctx.fillStyle = gilt;
+  // 0529: its paint is the body the burl is panelled into — the wood stays wood, and the trim stays gilt.
+  const paint = livery ?? gilt;
+  ctx.fillStyle = paint;
   trace(ctx, f, outline);
   seal(ctx);
   /*
@@ -3326,7 +3333,7 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
     jazz pass had put there to be seen. The cyan is a pinstripe along the top of the burl, and the
     burl is a warm wood rather than the gilt darkened.
   */
-  shaded(ctx, f, at(0, -6), at(0, 6), shade(gilt, 0.4), shade(gilt, -0.35), outline);
+  shaded(ctx, f, at(0, -6), at(0, 6), shade(paint, 0.4), shade(paint, -0.35), outline);
   // The burl, under the glass and over the sills, framed in gilt, with its grain.
   const wood = shade(mix(gilt, palette.bullet, 0.55), -0.55);
   shaded(ctx, f, at(0, 0.6), at(0, 5.4), shade(wood, 0.12), shade(wood, -0.2), box([
