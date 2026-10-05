@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { GameFrame, launchSpecial, type World } from '../src/app/frame.ts';
+import { CAPACITY } from '../src/app/mount.ts';
 import { ACTIONS, DEFAULT_BINDINGS } from '../src/content/actions.ts';
 import { DIFFICULTIES, DIFFICULTY_KINDS } from '../src/content/difficulty.ts';
 import { ENEMIES } from '../src/content/enemies.ts';
@@ -10,7 +11,7 @@ import { SHOTS } from '../src/content/shots.ts';
 import { SIDES, SPECIALS, WARD_KINDS } from '../src/content/specials.ts';
 import { SPRITE, SPRITE_EXTENT } from '../src/content/sprites.ts';
 import { WEAPONS } from '../src/content/weapons.ts';
-import { ACROSS_SPAN } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { reset, type Entity } from '../src/sim/entity.ts';
 import { startingArsenal } from '../src/state/slices/run.ts';
 import { NO_LEVEL, playableWorld } from './world.ts';
@@ -111,6 +112,8 @@ describe('0447 — the nova', () => {
     const { world, frame } = quiet();
     launchSpecial(world, 'nova');
     let drawnSteps = 0;
+    // 0533: how many pieces of each inner ring were ever laid — every ring the row names is drawn.
+    const ringsSeen = NOVA.rings.map(() => 0);
     for (let i = 0; i < 200 && world.novaKind !== null; i++) {
       frame.step();
       if (world.novaKind === null) break;
@@ -120,8 +123,18 @@ describe('0447 — the nova', () => {
         const piece = world.nova.at(p);
         expect(piece.sprite).toBe(SPRITE.novaArc);
         const d = Math.hypot(piece.along - centreAlong, piece.across - world.novaAcross);
-        // The picture IS the radius — 0036 — to well under a unit.
-        expect(Math.abs(d - radius), 'a piece is drawn off the radius that lands').toBeLessThan(0.01);
+        /*
+          The picture IS the radius — 0036 — to well under a unit: a piece at full size lies on the
+          ring that lands, and since 0533 a smaller one lies on one of the row's inner rings, at its
+          own distance behind the edge and drawn at its own size. Nothing else is laid.
+        */
+        if (piece.swell === 1) {
+          expect(Math.abs(d - radius), 'a piece is drawn off the radius that lands').toBeLessThan(0.01);
+        } else {
+          const ring = NOVA.rings.findIndex((r) => r.swell === piece.swell && Math.abs(d - (radius - r.behind)) < 0.01);
+          expect(ring, `a piece drawn at ${piece.swell} lies on none of the inner rings, ${(radius - d).toFixed(2)} behind the edge`).toBeGreaterThanOrEqual(0);
+          ringsSeen[ring]!++;
+        }
         expect(piece.across, 'a piece was laid off the screen').toBeGreaterThan(-SPRITE_EXTENT.novaArc - 0.01);
         expect(piece.across, 'a piece was laid off the screen').toBeLessThan(ACROSS_SPAN + SPRITE_EXTENT.novaArc + 0.01);
       }
@@ -129,8 +142,66 @@ describe('0447 — the nova', () => {
     }
     expect(world.novaKind, 'the nova never closed').toBeNull();
     expect(world.nova.size, 'pieces were left on the screen after it closed').toBe(0);
+    for (let r = 0; r < NOVA.rings.length; r++) expect(ringsSeen[r], `inner ring ${r} was never drawn`).toBeGreaterThan(0);
     // About a second — the row's own arithmetic, held in seconds the player watches it for.
     expect(drawnSteps / 60, 'the ring crossed the screen faster than a player can see it').toBeGreaterThan(0.4);
     expect(drawnSteps / 60, 'the ring hung about long after it had passed').toBeLessThan(1.5);
+  });
+});
+
+/**
+ * THE RINGS INSIDE IT — `docs/decisions/0533-the-nova-is-three-rings.md`. *"Needs to travel slightly
+ * slower and needs two slightly smaller inner rings for visual effect."* The rings keep the nova open
+ * until the last of them has left the view, and neither that nor the slower edge may change how far it
+ * reaches, and the pool must hold every piece of all three wherever the ship presses it from.
+ */
+describe('0533 — the nova is three rings', () => {
+  it('reaches no farther for the rings that keep it open: nothing beyond its edge’s last landing is struck', () => {
+    const { world, frame } = quiet();
+    // The edge's last landing is the step it grows past the far corner by a piece, exactly as one ring
+    // closed there; a body just beyond that, ahead of the view, is inside where the last ring closes.
+    const inView = world.ship.along - world.cameraAlong;
+    const farAlong = Math.max(inView, world.view.alongSpan - inView);
+    const farAcross = Math.max(world.ship.across, ACROSS_SPAN - world.ship.across);
+    const lastLanding = Math.hypot(farAlong, farAcross) + SPRITE_EXTENT.novaArc + NOVA.grow;
+    const trail = Math.max(0, ...NOVA.rings.map((r) => r.behind));
+    expect(trail, 'the row has no ring trailing the edge, so there is nothing to hold here').toBeGreaterThan(NOVA.grow * 2);
+    const beyond = body(world, world.ship.along + lastLanding + NOVA.grow, world.ship.across);
+    launchSpecial(world, 'nova');
+    let open = 0;
+    for (let i = 0; i < 300 && world.novaKind !== null; i++) {
+      frame.step();
+      open++;
+      expect(world.enemies.size, 'the body beyond the view was taken away, so this measures nothing').toBe(1);
+    }
+    expect(world.novaKind, 'the nova never closed').toBeNull();
+    expect(beyond.health, 'the edge struck past its last landing while the rings inside it were still out').toBe(999);
+    // And the edge reached it before the nova closed — so it was the gate that spared it, not the clock.
+    expect(NOVA.start + open * NOVA.grow, 'the nova closed before its edge reached the body').toBeGreaterThan(lastLanding + NOVA.grow);
+  });
+
+  it('never fills its pool, wherever across the lane and the view the ship presses it from', () => {
+    for (const [width, height] of [
+      [1280, 720],
+      [ACROSS_SPAN * MAX_ASPECT * 10, ACROSS_SPAN * 10],
+    ] as const) {
+      for (let along = 10; along < 280; along += 10) {
+        for (let across = 10; across < ACROSS_SPAN; across += 10) {
+          const { world, frame } = quiet();
+          world.view = viewOf(width, height);
+          if (along > world.view.alongSpan) continue;
+          world.ship.along = world.cameraAlong + along;
+          world.ship.across = across;
+          launchSpecial(world, 'nova');
+          let most = world.nova.size;
+          for (let i = 0; i < 300 && world.novaKind !== null; i++) {
+            frame.step();
+            if (world.nova.size > most) most = world.nova.size;
+          }
+          // Strictly under: a full pool is a ring that was laid short — `src/sim/pool.ts`.
+          expect(most, `the nova pressed from ${along}, ${across} filled its pool of ${CAPACITY.nova}`).toBeLessThan(CAPACITY.nova);
+        }
+      }
+    }
   });
 });

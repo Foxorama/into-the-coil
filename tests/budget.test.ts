@@ -120,8 +120,15 @@ const read = (p: string): string => readFileSync(resolve(root, p), 'utf8');
  * ⚠️ **AND 746 SINCE 0527, ON THE SHIP'S LINE.** A car on the Mothership's spinners wears a turning
  * picture over each wheel, because a picture baked into the hull cannot turn: two more blits of a baked
  * bitmap, for the whole of a run in the one ship that wears them. Nothing else was re-sliced.
+ *
+ * ⚠️ **AND 886 SINCE 0533, ON THE PLAYER-PROJECTILE LINE.** *"Two slightly smaller inner rings"* on the
+ * nova, which is three rings laid in pieces where it was one — and the one was already laid short,
+ * fifty pieces into a pool of forty, once the ship pressed it from forward of its station. Measured
+ * over the lane and both views, the worst is 161; the pool is 180, with the shots' headroom. A hundred
+ * and forty more blits of a baked bitmap for the second a charge is spent, on a desktop target. The
+ * particle share was not touched.
  */
-const WORST_CASE = 746;
+const WORST_CASE = 886;
 
 /** Long enough that anything accumulating per frame has visibly accumulated. Ten seconds of play. */
 const FRAMES = 600;
