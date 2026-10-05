@@ -14271,8 +14271,9 @@ export function drawKind(
         [-0.45, 0.2],
       ]);
       seal(ctx);
-      // The belly in shadow: everything below the ridge that runs point to root.
-      poly(ctx, f, shade(palette.frost, -0.35), [
+      // The belly in shadow: everything below the ridge that runs point to root. A fifth down and not
+      // a third since 0534 — at a third it was the half of the icicle the Rime Shelf's ground swallowed.
+      poly(ctx, f, shade(palette.frost, -0.2), [
         [-0.9, 0.01],
         [0.78, 0.01],
         [0.6, 0.19],

@@ -26,7 +26,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { GameFrame, SHIP_START_ALONG } from '../src/app/frame.ts';
+import { GameFrame, SHIP_START_ALONG, stepsToFar } from '../src/app/frame.ts';
 import { SHIPS } from '../src/content/ships.ts';
 import { phaseFor } from '../src/app/boss.ts';
 import { BOSSES, BOSS_KINDS, chillRadiusAt, type BossAttack, type BossKind } from '../src/content/bosses.ts';
@@ -38,9 +38,9 @@ import { DIFFICULTY_KINDS, fireGapFor } from '../src/content/difficulty.ts';
 import { SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { INK_OF, drawKind } from '../src/render/bake.ts';
-import { ACROSS_SPAN, viewOf } from '../src/sim/camera.ts';
+import { ACROSS_SPAN, MIN_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { tracingPen } from './paths.ts';
-import { reset } from '../src/sim/entity.ts';
+import { reset, type Entity } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN } from '../src/sim/flight.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { NO_SECTIONS, playableWorld } from './world.ts';
@@ -137,6 +137,22 @@ function freshAt(world: Driven['world'], stage: number): number {
 
 /** Shards the hull has thrown since the last call. */
 const freshShards = (world: Driven['world']): number => freshAt(world, 0);
+
+/** A stage authored in steps at both ends — every one but the bolt's, which runs to the far side (0534). */
+const fixed = (most: number | 'far'): number => {
+  if (most === 'far') throw new Error('this stage runs to the far side of the screen, not for a count of steps');
+  return most;
+};
+
+/**
+ * Where a shot's fuse ends, at one end of its row's range — 0534. `'far'` is resolved against where
+ * the shot is now, so a fuse pinned to it burns out at the far side of the screen.
+ */
+const endOf = (world: Driven['world'], shot: Entity, stage: number, end: 'least' | 'most'): number => {
+  const fuse = SHOTS.frost.fission[stage]!.after;
+  if (end === 'least') return fuse.least;
+  return fuse.most === 'far' ? Math.max(fuse.least, stepsToFar(world, shot)) : fuse.most;
+};
 
 describe('0253 — the frost ship chills', () => {
   it('THE FROST: a shard between the acid and the rock in size and speed, in its own cold ink — and the Rime Shelf’s real boss is the one thing that throws it and the one hull that chills', () => {
@@ -555,16 +571,31 @@ describe('0263 — the frost ship shatters', () => {
     for (const end of ['least', 'most'] as const) lifeOfOneShard(end);
   });
 
-  /** Every shot at `stage` whose fuse was lit this step: inside the row's range, then pinned to `end`. */
-  function pinFuses(d: Driven, stage: number, end: 'least' | 'most'): void {
+  /**
+   * Every shot at `stage` whose fuse was lit this step: inside the row's range, then pinned to `end` —
+   * and how long that is, in steps.
+   *
+   * ⚠️ **ONE LENGTH FOR THE WHOLE STAGE, AND AT THE FAR END IT IS THE SHORTEST OF THEM — 0534.** A bolt's
+   * far side is its own: the fan's edges leave the lane before the middle reaches the ship's box. So
+   * at `most` every bolt is pinned to the soonest far side among them, which puts one ring exactly
+   * there and every other one short of its own — and the drive below can still count the stage as one.
+   */
+  function pinFuses(d: Driven, stage: number, end: 'least' | 'most'): number {
     const fuse = stages[stage]!.after;
+    let length = Number.POSITIVE_INFINITY;
     for (let i = 0; i < d.world.enemyShots.size; i++) {
       const shot = d.world.enemyShots.at(i);
       if (shot.turnsLeft !== stage) continue;
       expect(shot.fireIn, `a stage ${stage} fuse was rolled outside the row's range`).toBeGreaterThanOrEqual(fuse.least);
-      expect(shot.fireIn).toBeLessThanOrEqual(fuse.most);
-      shot.fireIn = fuse[end];
+      // Lit a step ago, so the far side is a step nearer than when it was rolled.
+      expect(shot.fireIn).toBeLessThanOrEqual(fuse.most === 'far' ? Math.max(fuse.least, stepsToFar(d.world, shot) + 1) : fuse.most);
+      length = Math.min(length, endOf(d.world, shot, stage, end));
     }
+    for (let i = 0; i < d.world.enemyShots.size; i++) {
+      const shot = d.world.enemyShots.at(i);
+      if (shot.turnsLeft === stage) shot.fireIn = length;
+    }
+    return length;
   }
 
   function lifeOfOneShard(end: 'least' | 'most'): void {
@@ -576,16 +607,16 @@ describe('0263 — the frost ship shatters', () => {
     const shards = world.enemyShots.size;
     expect(shards, 'the wall threw nothing').toBeGreaterThanOrEqual(1);
     for (let i = 0; i < shards; i++) expect(between(headingOf(d, i), Math.PI), 'a shard from the wall is not flying down the lane').toBeLessThan(1e-6);
-    pinFuses(d, 0, end);
+    const fanLength = pinFuses(d, 0, end);
 
     // The first fuse: nothing opens before it burns down. A stage is exactly as long as its fuse,
     // counted from the step the shot came to be — the volley step above is the first of them.
     const fan = stages[0]!;
     if (fan.into !== 'fan') return;
-    for (let s = 1; s < fan.after[end]; s++) {
+    for (let s = 1; s < fanLength; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `a shard opened ${fan.after[end] - s} steps early at the ${end} fuse`).toBe(shards);
+      expect(world.enemyShots.size, `a shard opened ${fanLength - s} steps early at the ${end} fuse`).toBe(shards);
     }
     const splitAlong: number[] = [];
     const splitAcross: number[] = [];
@@ -596,7 +627,7 @@ describe('0263 — the frost ship shatters', () => {
     park(d);
     frame.step();
     expect(world.enemyShots.size, 'the shard did not open into the fan').toBe(shards * fan.shots);
-    pinFuses(d, 1, end);
+    const ringLength = pinFuses(d, 1, end);
     let widest = 0;
     for (let i = 0; i < world.enemyShots.size; i++) {
       const bolt = world.enemyShots.at(i);
@@ -620,38 +651,49 @@ describe('0263 — the frost ship shatters', () => {
     const ring = stages[1]!;
     if (ring.into !== 'ring') return;
     const bolts = world.enemyShots.size;
-    for (let s = 1; s < ring.after[end]; s++) {
+    for (let s = 1; s < ringLength; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `a bolt opened ${ring.after[end] - s} steps early at the ${end} fuse`).toBe(bolts);
+      expect(world.enemyShots.size, `a bolt opened ${ringLength - s} steps early at the ${end} fuse`).toBe(bolts);
     }
     park(d);
     frame.step();
     expect(world.enemyShots.size, 'the bolts did not open into snowflakes').toBe(bolts * ring.shots);
-    pinFuses(d, 2, end);
+    const meltLength = pinFuses(d, 2, end);
     let forward = 0;
+    let atTheFarSide = 0;
     for (let i = 0; i < world.enemyShots.size; i++) {
       const flake = world.enemyShots.at(i);
       expect(flake.turnsLeft, 'a flake is not at the last stage').toBe(2);
       // Frost that will not burst, since 0390: the row's own spent icicle.
       expect(flake.sprite, 'a flake is not frost').toBe(SHOTS.frost.spriteSpent);
       if (flake.velAlong - world.scrollPerStep > 0.1) forward++;
-      // In the player's units: the snowflake opens in the near half of the screen, where the ship is.
-      expect(flake.along, `the snowflake opened in the far half of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan / 2);
-      // And the other end, which a fixed fuse never had: at the longest, still where the ship can be.
-      expect(flake.along, `the snowflake opened behind the ship's box at the ${end} fuse`).toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN);
+      /*
+        ⚠️ **THE NEAR HALF AT THE SHORTEST AND NO LONGER AT THE LONGEST — 0534.** This held both ends in
+        the near half of the screen, which was 0263's *"the second is what puts the snowflake in the
+        player's half of the lane"*. The play since asked for the far side as well, so the near half is
+        what the shortest bolt still owes, and the longest is held to the far side below.
+      */
+      if (end === 'least') expect(flake.along, `the snowflake opened in the far half of the screen at the ${end} fuse`).toBeLessThan(world.cameraAlong + world.view.alongSpan / 2);
+      // In the player's units: never behind the ship's box, and never off the lane — a flake is a step old.
+      expect(flake.along, `the snowflake opened behind the ship's box at the ${end} fuse`).toBeGreaterThan(world.cameraAlong + PLAYER_ALONG_MARGIN - 0.5);
+      expect(flake.across, `the snowflake opened off the lane at the ${end} fuse`).toBeGreaterThan(-0.5);
+      expect(flake.across, `the snowflake opened off the lane at the ${end} fuse`).toBeLessThan(ACROSS_SPAN + 0.5);
+      // Within a bolt's step of the far side: the near edge of the ship's box, or an edge of the lane.
+      if (flake.along < world.cameraAlong + PLAYER_ALONG_MARGIN + 1.5 || flake.across < 1.5 || flake.across > ACROSS_SPAN - 1.5) atTheFarSide++;
     }
     // A snowflake is thrown every way, so some of it comes back up the lane at where the ship will be.
     expect(forward, 'no flake flies back up the lane').toBeGreaterThan(0);
+    // ⚠️ And at the longest, a ring opens AT the far side — 0534's *"to the far side of the screen"*.
+    if (end === 'most') expect(atTheFarSide, 'at the longest fuse no snowflake opened at the far side of the screen').toBeGreaterThan(0);
 
     // The melt: a flake ends, and is seen ending.
-    const melt = stages[2]!;
     // A flake that leaves the lane is the cull's before it is the melt's, so what is held for the
     // fuse's length is that the snowflake is still there, not that every flake of it is.
-    for (let s = 1; s < melt.after[end]; s++) {
+    for (let s = 1; s < meltLength; s++) {
       park(d);
       frame.step();
-      expect(world.enemyShots.size, `the snowflake melted ${melt.after[end] - s} steps early`).toBeGreaterThan(0);
+      expect(world.enemyShots.size, `the snowflake melted ${meltLength - s} steps early`).toBeGreaterThan(0);
     }
     const flakes = world.enemyShots.size;
     const meltAlong: number[] = [];
@@ -709,7 +751,7 @@ describe('0263 — the frost ship shatters', () => {
     }
     // And it only melts: never six shards that open into seventy-two.
     const melt = stages[stages.length - 1]!;
-    for (let s = 1; s <= melt.after.most; s++) {
+    for (let s = 1; s <= fixed(melt.after.most); s++) {
       park(d);
       frame.step();
       expect(world.enemyShots.size, 'a piece of the shatter opened again').toBeLessThanOrEqual(6);
@@ -840,7 +882,7 @@ describe('0371 — the ice is staggered', () => {
     // *"A random length before they explode"*: inside the row's range, and more than one length of it.
     for (const fuse of rolled) {
       expect(fuse).toBeGreaterThanOrEqual(fan.after.least);
-      expect(fuse).toBeLessThanOrEqual(fan.after.most);
+      expect(fuse).toBeLessThanOrEqual(fixed(fan.after.most));
     }
     expect(rolled.size, 'every shard burned the same fuse').toBeGreaterThan(1);
   });
@@ -964,7 +1006,6 @@ describe('0482 — the frost is a cloud', () => {
       size is each flake's distance from the point its ring opened at — so a flake flying at the shard's
       whole speed, which is the report's *"too much, then nothing"*, is seventy units out.
     */
-    const stages = SHOTS.frost.fission;
     for (const end of ['least', 'most'] as const) {
       const d = frostAt(1);
       const { world, frame } = d;
@@ -983,7 +1024,8 @@ describe('0482 — the frost is a cloud', () => {
           const shot = world.enemyShots.at(i);
           if (shot.turnsLeft !== stage || shot.fireIn <= 0 || pinned.has(shot)) continue;
           pinned.add(shot);
-          shot.fireIn = stages[stage]!.after[end];
+          // Each bolt to its own far side at the longest — 0534.
+          shot.fireIn = endOf(world, shot, stage, end);
         }
       };
       const at = (stage: number): number => {
@@ -1035,6 +1077,85 @@ describe('0482 — the frost is a cloud', () => {
       expect(melted, `the cloud never melted at the ${end} fuse`).toBeGreaterThan(opened);
       expect((opened - split) / STEPS_PER_SECOND, `the two bursts of a shard were ${((opened - split) / STEPS_PER_SECOND).toFixed(2)} s apart at the ${end} fuse`).toBeGreaterThanOrEqual(1);
       expect(widest, `a flake ended ${widest.toFixed(1)} units from where its ring opened at the ${end} fuse`).toBeLessThanOrEqual(ACROSS_SPAN / 5);
+    }
+  });
+});
+
+/**
+ * The frost reaches across — `docs/decisions/0534-the-frost-reaches-across.md`. Played: *"the boss
+ * shattering frost attacks don't go far enough now that we've changed the zoom levels … the intent is to
+ * give the player room to dodge and move, but to make the player have to dodge and move and make the
+ * player have to fly into the slowing aura."*
+ */
+describe('0534 — the frost reaches across', () => {
+  it('THE REACH, DRIVEN: in every phase of both frost fights that throws a shard, on every tier, a tenth of the snowflakes open in the back fifth of the screen, and none behind the ship’s box', () => {
+    /*
+      ⚠️ **IN SHARES OF THE NARROWEST SCREEN, WHICH IS THE ONE A PLAYER SEES THE WHOLE OF.** Measured
+      before 0534, the frost ship's snowflakes opened between 29% and 55% of a 16:9 screen at Savior and
+      no nearer than 18% at Burn, a tenth of them no nearer than 23% — so a ship parked in the back fifth
+      was never asked to move, which is the report. Driven, not computed: every snowflake that opens is
+      counted where the frame opens it, so a fuse that changes, a station that moves or a tier that
+      speeds the bolts up each move this number the way they move the picture.
+
+      ⚠️ **A TENTH, AND NOT ONE.** Burn's quicker bolts already put the odd ring in the back fifth before
+      0534; one ring in thirty seconds is not a fight that reaches the player.
+
+      ⚠️ **AND NONE BEHIND THE SHIP'S BOX**, the other end of the same roll: a ring the player cannot fly
+      to is a burst the picture shows and the fight does not use. Half a unit, because a flake is a
+      step old when it is first seen.
+    */
+    const narrow = ACROSS_SPAN * MIN_ASPECT;
+    for (const kind of ['hoarfrost', 'hydra'] as const) {
+      const row = BOSSES[kind];
+      for (let phase = 0; phase < row.phases.length; phase++) {
+        // A summon is the adds, and an add shatters where it dies rather than where a fuse ends.
+        if ((row.phases[phase]!.attack ?? row.attack).kind === 'summon') continue;
+        for (const tier of DIFFICULTY_KINDS) {
+          const { world } = playableWorld({ ...FROST_ONLY, boss: kind }, tier);
+          const frame = new GameFrame(world);
+          for (let i = 0; i < 900 && (world.bossPool.size === 0 || i < 700); i++) {
+            world.ship.health = world.shipRow.health;
+            frame.step();
+          }
+          expect(world.bossPool.size, `${kind} never arrived`).toBe(1);
+          const at = Math.max(0.02, row.phases[phase]!.upTo - 0.01);
+          let shards = 0;
+          let rings = 0;
+          let back = 0;
+          let nearest = Number.POSITIVE_INFINITY;
+          for (let s = 0; s < STEPS_PER_SECOND * 30; s++) {
+            world.bossPool.at(0).health = world.bossFullHealth * at;
+            world.ship.health = world.shipRow.health;
+            world.ship.invulnFor = 2;
+            world.ship.along = world.cameraAlong + PLAYER_ALONG_MARGIN;
+            world.ship.across = 3;
+            world.ship.velAcross = 0;
+            frame.step();
+            const thrown = freshAt(world, 0);
+            freshAt(world, 1);
+            // Six flakes a ring, all born on one point on one step: count the ring once.
+            const opened: number[] = [];
+            for (let i = 0; i < world.enemyShots.size; i++) {
+              const flake = world.enemyShots.at(i);
+              if (flake.kind !== SHOT_INDEX.frost || flake.turnsLeft !== 2 || flake.entrySlot !== 0) continue;
+              flake.entrySlot = -1;
+              const inView = flake.along - world.cameraAlong;
+              if (!opened.some((o) => Math.abs(o - inView) < 0.5)) opened.push(inView);
+            }
+            // Whatever was in flight when the window opened was thrown in the phase before it — and on
+            // the first step every flake already alive is unseen, however long ago it opened.
+            if (s < STEPS_PER_SECOND * 5) continue;
+            for (const o of opened) nearest = Math.min(nearest, o);
+            shards += thrown;
+            rings += opened.length;
+            back += opened.filter((o) => o < narrow / 5).length;
+          }
+          if (shards === 0) continue;
+          expect(rings, `${kind} phase ${phase + 1} at ${tier}: shards were thrown and no snowflake opened`).toBeGreaterThan(0);
+          expect(back / rings, `${kind} phase ${phase + 1} at ${tier}: ${back} of ${rings} snowflakes opened in the back fifth of the screen`).toBeGreaterThanOrEqual(0.1);
+          expect(nearest, `${kind} phase ${phase + 1} at ${tier}: a snowflake opened ${nearest.toFixed(1)} units from the trailing edge, behind the ship's box`).toBeGreaterThan(PLAYER_ALONG_MARGIN - 0.5);
+        }
+      }
     }
   });
 });

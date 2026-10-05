@@ -5470,9 +5470,10 @@ function throwChild(w: World, along: number, across: number, kind: number, stage
   const row = SHOT_ROWS[kind]!;
   reset(child, along, across, row, kind);
   child.turnsLeft = stage;
-  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after) : 0;
+  // Flying before its fuse is lit, because a fuse to the far side is measured along the heading — 0534.
   child.velAlong = Math.cos(angle) * speed + w.scrollPerStep;
   child.velAcross = Math.sin(angle) * speed;
+  child.fireIn = stage < row.fission.length ? fuseFor(w, row.fission[stage]!.after, child) : 0;
   /*
     ⚠️ **A CHILD THAT WILL NOT BURST WEARS THE ROW'S SPENT ART — 0390**, pointed along the heading it
     flies straight on for the rest of its life: *"so that the player knows whether an icicle is going to
@@ -6040,8 +6041,34 @@ function spreadShots(w: World): void {
  * the fuse stream, so shards thrown together do not open together. A fixed fuse still draws, and
  * that costs nothing: the stream is the fuse's alone.
  */
-function fuseFor(w: World, fuse: Fuse): number {
-  return fuse.least + w.fuseRng.int(0, fuse.most - fuse.least);
+function fuseFor(w: World, fuse: Fuse, shot: Entity): number {
+  const most = fuse.most === 'far' ? Math.max(fuse.least, stepsToFar(w, shot)) : fuse.most;
+  return fuse.least + w.fuseRng.int(0, most - fuse.least);
+}
+
+/**
+ * How many steps a shot flies, on its own heading, before it reaches the far side of the screen — the
+ * near edge of the ship's box along, or either edge of the lane across, whichever comes first.
+ * `docs/decisions/0534-the-frost-reaches-across.md`, and what a `Fuse` with `most: 'far'` rolls up to.
+ *
+ * ⚠️ **IN THE CAMERA'S FRAME, AND AGAINST THE TRAILING EDGE**, which every device puts in the same place:
+ * lookahead varies only at the leading edge (0023), so a shot thrown towards the player meets the same
+ * far side on a phone, a 16:9 monitor and a 21:9 one, and the roll is the same fight on each.
+ *
+ * ⚠️ **ACROSS AS WELL AS ALONG**, because a bolt from the fan's edge flown the length of the screen
+ * would otherwise open its snowflake off the lane — a burst the model resolves and the picture never
+ * shows, which is 0036's own failure.
+ *
+ * ⚠️ **ZERO FOR A SHOT THAT NEVER GETS THERE** — one flying up the lane and straight — so its fuse is
+ * its `least`, the length it had before the far side existed. Exported for `tests/frost.test.ts`, which
+ * pins a bolt to this end and reads where it opens in the player's units.
+ */
+export function stepsToFar(w: World, shot: Entity): number {
+  const along = shot.velAlong - w.scrollPerStep;
+  let steps = along < 0 ? (shot.along - w.cameraAlong - PLAYER_ALONG_MARGIN) / -along : Number.POSITIVE_INFINITY;
+  if (shot.velAcross > 0) steps = Math.min(steps, (ACROSS_SPAN - shot.across) / shot.velAcross);
+  else if (shot.velAcross < 0) steps = Math.min(steps, shot.across / -shot.velAcross);
+  return Number.isFinite(steps) ? Math.max(0, Math.floor(steps)) : 0;
 }
 
 function fissionShots(w: World): void {
@@ -6054,7 +6081,7 @@ function fissionShots(w: World): void {
     // Fresh from a muzzle: the fuse is lit on the step it was thrown, which is this one. A child
     // arrives with its fuse already lit — `throwChild` says why.
     if (shot.fireIn === 0) {
-      shot.fireIn = fuseFor(w, stage.after);
+      shot.fireIn = fuseFor(w, stage.after, shot);
       continue;
     }
     if (--shot.fireIn > 0) continue;

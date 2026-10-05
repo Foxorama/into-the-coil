@@ -24,8 +24,9 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, IN LANE UNITS AND SECONDS',
     edit: {
       path: 'src/content/shots.ts',
-      find: "      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
-      replace: "      { after: { least: 36, most: 48 }, into: 'ring', shots: 6, pace: 0.16 },",
+      // Re-anchored by 0534, whose bolt runs on to the far side: the short end is what this breaks.
+      find: "      { after: { least: 60, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },",
+      replace: "      { after: { least: 36, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },",
     },
   },
 ];

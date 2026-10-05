@@ -56,7 +56,8 @@ export const PROBES = [
     guard: 'THE STAGGER, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return fuse.least + w.fuseRng.int(0, fuse.most - fuse.least);',
+      // Re-anchored by 0534: the top of the roll may be the far side, resolved into `most` above it.
+      find: '  return fuse.least + w.fuseRng.int(0, most - fuse.least);',
       replace: '  return fuse.least;',
     },
   },
@@ -101,8 +102,9 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/app/frame.ts',
-      find: '  return fuse.least + w.fuseRng.int(0, fuse.most - fuse.least);',
-      replace: '  return fuse.least + w.fuseRng.int(0, fuse.most - fuse.least) + 1;',
+      // Re-anchored by 0534, as above.
+      find: '  return fuse.least + w.fuseRng.int(0, most - fuse.least);',
+      replace: '  return fuse.least + w.fuseRng.int(0, most - fuse.least) + 1;',
     },
   },
   {
@@ -113,9 +115,9 @@ export const PROBES = [
     guard: 'THE FISSION, DRIVEN',
     edit: {
       path: 'src/content/shots.ts',
-      // Re-anchored by 0482: a second later, at a sixth of the speed.
-      find: "      { after: { least: 60, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
-      replace: "      { after: { least: 20, most: 72 }, into: 'ring', shots: 6, pace: 0.16 },",
+      // Re-anchored by 0482: a second later, at a sixth of the speed. And by 0534: on to the far side.
+      find: "      { after: { least: 60, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },",
+      replace: "      { after: { least: 20, most: 'far' }, into: 'ring', shots: 6, pace: 0.16 },",
     },
   },
 ];
