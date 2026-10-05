@@ -109,6 +109,7 @@ import {
   SHIP_START_ALONG,
   bossOnField,
   detonateArsenal,
+  firstVolleyIn,
   landmarksFor,
   canThrow,
   holdFinale,
@@ -1041,7 +1042,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // the player's weapon; the core is the brightest ink there is, because lightning is.
   // And the serpent's lightning in the enemy's ink with the same white core — 0248.
   // Solved once per palette by `boltInks`, which gives each a hot heart — 0520.
-  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact));
+  surface.setBolt(boltInks(colours.player, colours.impact, colours.space, colours.enemy, colours.impact, colours.bullet, colours.hazard));
 
   // Whether the pad's Start was pressed since the last tick — 0511. Set from inside the step, spent in `onTick`.
   let pauseAsked = false;
@@ -1197,7 +1198,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       entry. `weaponFor(shipRow, [])` is the one description of *what an unupgraded ship fires at*,
       which is the same reason `tests/pickups.test.ts` drives an empty list to get the base weapon.
     */
-    fireIn: weaponFor(shipRow, []).fireEvery,
+    // From step nought, the first volley of the run is the first of a life — 0538's `firstVolleyIn`.
+    fireIn: firstVolleyIn(0, weaponFor(shipRow, []).fireEvery),
     missileIn: weaponFor(shipRow, []).missileEvery,
     ship,
     shipRow,
@@ -2522,7 +2524,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSpace(want);
     // A hostile bolt in the place's own glow where it authors one, the enemy's ink elsewhere — 0459.
     const hostile = place === null ? null : THEMES[place].bolt;
-    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact));
+    surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostile ?? colours.enemy, colours.impact, colours.bullet, colours.hazard));
     /*
       ── AND THE SKY ITSELF BELONGS TO THE PLACE NOW — 0195 ────────────────────────────────────────
 

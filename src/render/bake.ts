@@ -845,6 +845,10 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   // Steel, since 0238 — *"steel coloured"* — an ink of its own, because a blade is not a bullet.
   shuriken: 'blade',
   shurikenTurn: 'blade',
+  // The player's own fire — 0538: amber spokes and a gold rim, never the hostile `fire`.
+  catherine: 'bullet',
+  catherineFade: 'bullet',
+  cinder: 'hazard',
   /*
     ⚠️ **THE RAY'S RINGS ARE THE ALLY INK — 0442** — *"purple energy rings"*, and the player's own
     purple is `ally`, the seekers' lavender. Never `void`, which is the serpent's hostile violet: the
@@ -2783,7 +2787,8 @@ export function drawPlayerShip(
   // 0529: and the colour its body is painted, or `null` for the factory's — the body's ink and nothing else.
   livery: string | null = fitNow(ship).livery,
 ): void {
-  const own = gun === SHIPS[ship].weapon;
+  // The gun its body was drawn round, which since 0538 is not always the one it flies by default.
+  const own = gun === SHIPS[ship].body.gun;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
     stage >= 2 ? on.two : stage === 1 ? [on.one] : [];
   let tubes: readonly TubeAt[] = [];
@@ -3663,7 +3668,37 @@ const MOUNTS: Record<WeaponKind, Record<GunView, MountPainter>> = {
       disc(ctx, f, palette.impact, ...p(m[0], m[1]), 0.056);
     },
   },
+  /*
+    The Catherine wheel's spindle — 0538: a slate post with a spare wheel pinned at its top, amber with
+    gold spiral blades round a white hub, where the next wheel is lit from. From above, the same small
+    wheel seen flat on its arm.
+  */
+  catherine: {
+    top: (ctx, f, palette, p, m) => {
+      poly(ctx, f, palette.trim, [p(-0.05, -0.045), p(m[0], -0.045), p(m[0], 0.045), p(-0.05, 0.045)]);
+      pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.13);
+    },
+    side: (ctx, f, palette, p, m) => {
+      poly(ctx, f, palette.trim, [p(-0.055, 0), p(0.055, 0), p(m[0] + 0.03, m[1]), p(m[0] - 0.03, m[1])]);
+      pinwheelAt(ctx, f, palette, p(m[0], m[1]), 0.14);
+    },
+  },
 };
+
+/** A small Catherine wheel about `c`, `reach` out, in the box's radius — the launcher's spare, placed. */
+function pinwheelAt(ctx: Pen, f: Frame, palette: Palette, c: Pt, reach: number): void {
+  disc(ctx, f, palette.bullet, c[0], c[1], reach);
+  for (let k = 0; k < 4; k++) {
+    const a = (k * Math.PI) / 2;
+    poly(ctx, f, shade(palette.hazard, 0.25), [
+      [c[0] + Math.cos(a) * reach * 0.2, c[1] + Math.sin(a) * reach * 0.2],
+      [c[0] + Math.cos(a + 0.5) * reach * 0.95, c[1] + Math.sin(a + 0.5) * reach * 0.95],
+      [c[0] + Math.cos(a + 1.1) * reach * 0.85, c[1] + Math.sin(a + 1.1) * reach * 0.85],
+    ]);
+  }
+  glow(ctx, f, palette.impact, c[0], c[1], reach * 0.7, 0.7);
+  disc(ctx, f, palette.impact, c[0], c[1], reach * 0.28);
+}
 
 /** A steel star of eight points about `c`, `reach` out, in the box's radius — the launcher's, placed. */
 function starAt(c: Pt, reach: number): Pt[] {
@@ -15307,6 +15342,100 @@ export function drawKind(
       band(ctx, f, fading ? shade(ring, 0.2) : shade(ring, 0.6), 0, 0, rim, rim - 0.16, fading ? 0.6 : 0.95);
       glow(ctx, f, ring, 0, 0, rim * 0.85, fading ? 0.35 : 0.8);
       if (!fading) glow(ctx, f, palette.impact, 0, 0, rim * 0.45, 0.85);
+      return;
+    }
+    case 'catherine':
+    case 'catherineFade': {
+      /*
+        ── A CATHERINE WHEEL — 0538 ─────────────────────────────────────────────────────────────────
+
+        *"A spinning fire wheel disc like a catherine wheel firework."* A pinwheel: six spiral spokes of
+        amber and gold from a white-hot hub to a gold rim, and a flame tongue off the rim behind each
+        spoke, trailing against the way it turns — the frame turns the bitmap a little each step, so the
+        spiral is what reads as the spin. The hull is the wheel's face, the hurtbox's own size; the
+        flames are light, translucent, on 0227's paint-on-hull rule.
+
+        The fade is the same wheel burning down — darker, its flames short — for the last of its life.
+      */
+      const fading = kind === 'catherineFade';
+      const face = 0.62;
+      const amber = palette.bullet;
+      const gold = palette.hazard;
+      ctx.arc(half, half, r * face, 0, Math.PI * 2);
+      seal(ctx);
+      // The flames, behind the face: a tongue off the rim behind each spoke, curling back against the spin.
+      const tongue = fading ? 0.8 : 1.05;
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3;
+        const tip = a - 0.75;
+        poly(
+          ctx,
+          f,
+          k % 2 === 0 ? gold : amber,
+          [
+            [Math.cos(a + 0.18) * face, Math.sin(a + 0.18) * face],
+            [Math.cos(a - 0.3) * (face + (tongue - face) * 0.6), Math.sin(a - 0.3) * (face + (tongue - face) * 0.6)],
+            [Math.cos(tip) * tongue, Math.sin(tip) * tongue],
+            [Math.cos(a - 0.42) * face, Math.sin(a - 0.42) * face],
+          ],
+          fading ? 0.4 : 0.75,
+        );
+      }
+      // The spokes: six arcs of the spiral, gold on the amber face, wide at the hub's edge.
+      for (let k = 0; k < 6; k++) {
+        const a = (k * Math.PI) / 3;
+        const points: Pt[] = [];
+        for (let s = 0; s <= 6; s++) {
+          const t = s / 6;
+          const rad = 0.14 + t * (face - 0.16);
+          const at = a + t * 1.1;
+          points.push([Math.cos(at) * rad, Math.sin(at) * rad]);
+        }
+        for (let s = 6; s >= 0; s--) {
+          const t = s / 6;
+          const rad = 0.14 + t * (face - 0.16);
+          const at = a + t * 1.1 + 0.32 * (1 - t * 0.6);
+          points.push([Math.cos(at) * rad, Math.sin(at) * rad]);
+        }
+        poly(ctx, f, fading ? shade(gold, -0.35) : shade(gold, 0.25), points, fading ? 0.7 : 0.95);
+      }
+      band(ctx, f, fading ? shade(gold, -0.3) : gold, 0, 0, face, face - 0.07, 0.9);
+      glow(ctx, f, palette.impact, 0, 0, fading ? 0.22 : 0.34, fading ? 0.5 : 0.85);
+      disc(ctx, f, fading ? shade(gold, 0.2) : palette.impact, 0, 0, 0.12);
+      return;
+    }
+    case 'cinder': {
+      /*
+        A cinder off the wheel's rim — 0538: a white-hot head and a tail of gold going to amber, turned
+        along its flight by the frame. A streak and never a dot: a round dot of fire is what a hostile
+        bullet is in the volcano, and the shape is what tells them apart there (0295).
+      */
+      ctx.arc(half + r * 0.55, half, r * 0.24, 0, Math.PI * 2);
+      seal(ctx);
+      poly(
+        ctx,
+        f,
+        palette.bullet,
+        [
+          [0.5, -0.2],
+          [-1.05, 0],
+          [0.5, 0.2],
+        ],
+        0.6,
+      );
+      poly(
+        ctx,
+        f,
+        shade(palette.hazard, 0.3),
+        [
+          [0.55, -0.12],
+          [-0.45, 0],
+          [0.55, 0.12],
+        ],
+        0.8,
+      );
+      glow(ctx, f, palette.impact, 0.55, 0, 0.4, 0.8);
+      disc(ctx, f, palette.impact, 0.55, 0, 0.13);
       return;
     }
     case 'shuriken':

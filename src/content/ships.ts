@@ -75,6 +75,18 @@ export interface ShipRow extends Body {
    */
   muzzle: Mount;
   /**
+   * The gun drawn into this ship's body, and where that drawing's mouth is — 0538. The bake draws it as
+   * part of the hull whenever it is fitted, and any other gun on the hardpoint (0525).
+   *
+   * ⚠️ **NOT ALWAYS `weapon`, SINCE 0538 MOVED THE GUNS.** *"Let's move the shurikens to the station
+   * wagon to replace the lightning gun we're giving to the Marmot"*, and the Firebird took the Catherine
+   * wheel. The estate's bonnet was drawn round its lightning rod and the Firebird's hood round its
+   * steel star, and those drawings are good: a ship flying the gun its body was drawn for still wears
+   * it, and its new default stands on its hardpoint like any borrowed gun. `muzzle` is the default's,
+   * so the row as it stands is the ship as it flies; `fitted` reads this one for the drawn gun.
+   */
+  body: { readonly gun: WeaponKind; readonly muzzle: Mount };
+  /**
    * How this ship is drawn — 0525: from the side (the cars, since 0441's play) or from above. A gun
    * borrowed from another ship is drawn the same way, so a car wears it standing on its hood and the
    * fighter wears it lying along its nose.
@@ -294,8 +306,15 @@ function wheelAt(x: number, y: number, cx: number, cy: number): Mount {
 export function fitted(row: ShipRow, gun: WeaponKind, rim: RimKind | null = row.wheels?.rim ?? null): ShipRow {
   const wheels = row.wheels === null || rim === null || rim === row.wheels.rim ? row.wheels : { ...row.wheels, rim };
   if (gun === row.weapon) return wheels === row.wheels ? row : { ...row, wheels };
+  // 0538: the gun its body was drawn round fires from that drawing's own mouth.
+  if (gun === row.body.gun) return { ...row, wheels, weapon: gun, muzzle: row.body.muzzle };
+  return { ...row, wheels, weapon: gun, muzzle: hardpointMuzzle(row, gun) };
+}
+
+/** Where `gun` fires from standing on `row`'s hardpoint: the hardpoint plus the gun's own mount — 0525. */
+export function hardpointMuzzle(row: ShipRow, gun: WeaponKind): Mount {
   const mount = WEAPONS[gun].mount[row.view];
-  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };
+  return { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across };
 }
 
 /**
@@ -382,6 +401,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     damage: 0,
     weapon: 'pulse',
     missile: 'straight',
+    body: { gun: 'pulse', muzzle: NOSE },
     hulls: [
       { base: SPRITE.fighter, hit: SPRITE.fighterHit },
       { base: SPRITE.fighterTube, hit: SPRITE.fighterTubeHit },
@@ -433,6 +453,7 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     damage: 0,
     weapon: 'ray',
     missile: 'straight',
+    body: { gun: 'ray', muzzle: { along: 4.46, across: 0 } },
     hulls: [
       { base: SPRITE.caddie, hit: SPRITE.caddieHit },
       { base: SPRITE.caddieTube, hit: SPRITE.caddieTubeHit },
@@ -492,7 +513,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
   },
   /**
    * Backspin Bo's — *The Far Carry*'s Firebird, the black muscle car with the gold phoenix across the
-   * hood, and the shuriken launcher.
+   * hood, and since 0538 the Catherine wheel: *"for the Firebird let's give it a fire themed weapon."*
+   * Its hood was drawn round the shuriken launcher, which it still wears when it flies the shuriken.
    */
   firebird: {
     label: 'The Firebird',
@@ -501,8 +523,11 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     radius: 2,
     health: 1,
     damage: 0,
-    weapon: 'shuriken',
+    weapon: 'catherine',
     missile: 'straight',
+    // The launcher on its hood: the steel star's centre (`drawFirebird` in the bake; `CAR_MOUNTS` holds
+    // these to the drawing). Where its own gun fired from until 0538.
+    body: { gun: 'shuriken', muzzle: { along: 3.08, across: -1.18 } },
     hulls: [
       { base: SPRITE.firebird, hit: SPRITE.firebirdHit },
       { base: SPRITE.firebirdTube, hit: SPRITE.firebirdTubeHit },
@@ -511,9 +536,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     // How far either side of the nose its helix's two strands open from — the height of the launcher's
     // star above the centreline. Since 0448 the pair leaves the star itself and flies out to here.
     wingtip: 1.13,
-    // The launcher on its hood: the steel star's centre (`drawFirebird` in the bake; `CAR_MOUNTS` holds
-    // these to the drawing).
-    muzzle: { along: 3.08, across: -1.18 },
+    // The Catherine wheel's spindle on its hardpoint: the hardpoint plus the wheel's side mount — 0538.
+    muzzle: { along: 3.43, across: -2.11 },
     // 0525: from the side, a borrowed gun standing on the hood where its own launcher stands.
     view: 'side',
     hardpoint: { along: 3.08, across: -0.76 },
@@ -544,7 +568,9 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
   },
   /**
    * Longshot Larry's — *The Far Carry*'s Gilded Estate, *"solid-gold trim, fuzzy dice, the works"*,
-   * and the lightning.
+   * and since 0538 the shuriken: *"let's move the shurikens to the station wagon to replace the
+   * lightning gun we're giving to the Marmot."* Its bonnet was drawn round the lightning rod, which it
+   * still wears when it flies the arc.
    */
   estate: {
     label: 'Gilded Estate',
@@ -553,8 +579,11 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     radius: 2,
     health: 1,
     damage: 0,
-    weapon: 'arc',
+    weapon: 'shuriken',
     missile: 'straight',
+    // The lightning rod's ball on its bonnet (`drawEstate` in the bake): where the arc's first link left
+    // until 0538.
+    body: { gun: 'arc', muzzle: { along: 3.43, across: -1.18 } },
     hulls: [
       { base: SPRITE.estate, hit: SPRITE.estateHit },
       { base: SPRITE.estateTube, hit: SPRITE.estateTubeHit },
@@ -562,8 +591,8 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     ],
     // The outside of its tyres, which is as wide as a wagon is.
     wingtip: 2.2,
-    // The lightning rod's ball on its bonnet (`drawEstate` in the bake): the arc's first link leaves it.
-    muzzle: { along: 3.43, across: -1.18 },
+    // The shuriken launcher on its hardpoint: the hardpoint plus the launcher's side mount — 0538.
+    muzzle: { along: 3.43, across: -0.25 },
     // 0525: from the side, a borrowed gun standing on the bonnet where its own lightning rod stands.
     view: 'side',
     hardpoint: { along: 3.43, across: 0.11 },

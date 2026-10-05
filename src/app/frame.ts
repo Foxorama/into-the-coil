@@ -45,6 +45,7 @@ import {
   nearestInBox,
   overlaps,
   strike,
+  tetherInto,
   wound,
   type Collected,
   type Deaths,
@@ -95,7 +96,7 @@ import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type Formation
 import { DEFAULT_ORIGIN, FIGHT_FIRING_IN, FIGHT_LEAD, MID_BOSS_DROP, laneAcross, type LevelRow } from '../content/levels.ts';
 import { BODY_BOLT_FIELDS, BODY_BOLT_SLOTS, BODY_BOLT_SPAN, BOSSES, type Aura, type BossRow, type Chain, type Chill, type Entrance, type Leap, type Necks, type SummonFrom, type Tail, type TailArt, type Uncoil, chainReach, chillRadiusAt, gunWeightOn, wreckHealth } from '../content/bosses.ts';
 import { type DifficultyRow, bossToughnessFor, crowdFor, fireGapFor, toughnessFor } from '../content/difficulty.ts';
-import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
+import { ENTRY_VOLLEY, SEEN_BEFORE_VOLLEY, VOLLEY_CYCLE, nextOnGrid, turnGapFor, turnOnGrid } from '../content/cadence.ts';
 import {
   PICKUP_CYCLE_STEPS,
   PICKUP_KINDS,
@@ -105,7 +106,7 @@ import {
   type PickupRow,
   type Weapon,
 } from '../content/pickups.ts';
-import { WEAPONS, type FlightKind } from '../content/weapons.ts';
+import { TETHER_BOLT_KIND, WEAPONS, type CatherineWheel, type FlightKind } from '../content/weapons.ts';
 import { MISSILES } from '../content/missiles.ts';
 import { POD_ACROSS, POD_NOSE, SPECIALS, SPECIAL_KINDS, podSide, pyreFor, type Candle, type Nova, type Rift, type SpecialKind, type Storm, type Surge, type Whirl } from '../content/specials.ts';
 import type { CueKind } from '../content/cues.ts';
@@ -2075,6 +2076,8 @@ export class GameFrame implements Frame {
     steerMissiles(w);
     // After the ship has flown this step, so a blade circles where the ship now is — 0234.
     steerBlades(w);
+    // And a wheel to where it hangs, and its embers off it — 0538.
+    steerWheels(w);
     // And a ring's ripple — 0442.
     stepRays(w);
     steerEnemies(w);
@@ -2144,6 +2147,8 @@ export class GameFrame implements Frame {
     stepEntities(w.missiles, w.cameraAlong, cullPlayerShotAlong(w.cameraAlong, w.view.alongSpan));
     // A link rides the camera and retires on its own lifetime; the cull is a formality it never reaches.
     stepEntities(w.bolts, w.cameraAlong);
+    // The tether, after the ship and the wheel have both moved, so it runs between where they are — 0538.
+    layTether(w);
     // After the hull and the bolts have both moved, so a beam's root is on the hull this step — 0250.
     pinBeams(w);
     // Before the shots move, so a bent velocity is the one this step integrates — 0327.
@@ -2202,7 +2207,8 @@ export class GameFrame implements Frame {
       (0227) and a place for the `hit` cue — and it is `null` for the pulse so the pulse's picture
       does not gain sparks it never had.
     */
-    const bladeHits = w.weapon.flight === 'coil' ? w.hits : null;
+    // A wheel is not spent by arriving either, and its tether lands by hand — 0538: both into the log.
+    const bladeHits = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? w.hits : null;
     /*
       ⚠️ **AND THE RAY'S, IN A LOG OF ITS OWN — 0442.** A ring is spent by arriving like a pulse, so
       nothing tells anyone where; it goes off where it landed, so it needs the place. Its own log rather
@@ -2217,7 +2223,8 @@ export class GameFrame implements Frame {
       enemy and one on the boss's hull that its body shares. Counted down here, once a step, before
       anything lands; nothing allocates.
     */
-    const bladeGap = w.weapon.flight === 'coil' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
+    // The wheel and its tether share it — 0538: one clock on a body for everything the gun lands slowly.
+    const bladeGap = w.weapon.flight === 'coil' || w.weapon.flight === 'tether' ? (WEAPONS[w.weapon.kind].landGap ?? 0) : 0;
     for (let i = 0; i < w.enemies.size; i++) {
       const e = w.enemies.at(i);
       if (e.bladeIn > 0) e.bladeIn--;
@@ -2292,6 +2299,9 @@ export class GameFrame implements Frame {
     const armoured = w.bossRow.chain !== null && w.bossRow.chain.hurt === 0;
     // A ring on armour still goes off where it landed — the burst is the ring's, not the wound's.
     if (shootable) collideInto(w.playerShots, w.bossBody, 1, gunOpen, IMPACT_FLASH_STEPS, null, rayHits ?? (armoured ? w.hits : bladeHits), bladeGap, hull);
+    // The tether, on the same clocks and the same log as the wheel it holds — 0538.
+    const wheelRow = WEAPONS[w.weapon.kind].wheel;
+    if (wheelRow !== null) killedByShots += landTether(w, wheelRow, shootable, gunOpen, bladeGap, hull);
     // What the blades landed this step, before the missiles add theirs — the `hit` cue reads it. A
     // pulse glancing off armour is in the log for its spark, and the pool shrinking already cues it.
     let bites = bladeHits === null ? 0 : w.hits.count;
@@ -3352,6 +3362,16 @@ function stepsToGrid(now: number, cadence: number): number {
 }
 
 /**
+ * Steps until a life's first volley — 0538: on the gun's own grid, or on the beat's if the gun's
+ * cadence is longer than a beat. Every gun before the Catherine wheel fired at least once a beat, so
+ * for them this is `stepsToGrid` exactly; the wheel's ten beats would have left a new life four
+ * seconds without a gun.
+ */
+export function firstVolleyIn(now: number, fireEvery: number): number {
+  return stepsToGrid(now, fireEvery < VOLLEY_CYCLE ? fireEvery : VOLLEY_CYCLE);
+}
+
+/**
  * The player's auto-fire.
  *
  * ⚠️ **No input is read here and there is no action for it.** `src/content/actions.ts` says there is
@@ -3376,6 +3396,8 @@ export function cueOfFlight(flight: FlightKind): CueKind {
       return 'throw';
     case 'burst':
       return 'ray';
+    case 'tether':
+      return 'wheel';
     default: {
       const unhandled: never = flight;
       return unhandled;
@@ -3414,6 +3436,10 @@ function fireVolley(w: World): void {
     // A ring flies as a pulse does; what it does on arriving is the collision step's — 0442.
     case 'burst':
       firePulse(w);
+      return;
+    // A wheel thrown to hang on its tether — 0538.
+    case 'tether':
+      throwWheel(w);
       return;
     default: {
       const unhandled: never = w.weapon.flight;
@@ -3571,6 +3597,196 @@ function steerBlades(w: World): void {
     }
   }
 }
+
+/*
+  ── THE CATHERINE WHEEL — `docs/decisions/0538-the-catherine-wheel.md` ───────────────────────────
+
+  *"It fires out a spinning fire wheel disc like a catherine wheel firework that shoots out short
+  sparking fire embers and has a fire tether back to the spaceship that you can use to hit things with,
+  the tether stays attached to the disc and the car and you can go back and forth with it."* Answered
+  while it was planned: it hangs, on a leash.
+
+  ⚠️ **ONE BODY IN THE PULSE'S POOL, AND ITS EMBERS BESIDE IT** — a ship carries one gun, the blades'
+  argument (0233). The wheel is a shot that is not spent by arriving and is ended by its clock; its
+  embers are shots that are. The tether is not a body: it is the line from the muzzle to the wheel,
+  landed in the collision step (`tetherInto`) and drawn as one bolt link laid after everything moved.
+*/
+
+/** The `kind` the wheel carries in `playerShots` — beside a pulse's 0, a blade's 1 and a ring's 2. */
+export const WHEEL_KIND = 3;
+/** And an ember off its rim. */
+const EMBER_KIND = 4;
+
+/**
+ * How far inside the screen's leading edge the wheel may hang, in world units: its drawn half-width, so
+ * a wheel thrown from a ship at the top of the screen hangs on it rather than off it and out of play.
+ */
+const WHEEL_EDGE_MARGIN = 6;
+
+/** Throw a wheel from the muzzle. A wheel still burning when the next is thrown goes out with it. */
+function throwWheel(w: World): void {
+  const gun = WEAPONS[w.weapon.kind];
+  // On the grid, like every gun — 0094. Ten beats.
+  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  const wheel = gun.wheel;
+  if (wheel === null) return;
+  for (let i = w.playerShots.size - 1; i >= 0; i--) if (w.playerShots.at(i).kind === WHEEL_KIND) w.playerShots.releaseAt(i);
+  const disc = w.playerShots.spawn();
+  if (disc === null) return;
+  w.onCue('wheel', w.ship.across);
+  const row = SHOTS[gun.shot];
+  const muzzle = w.shipRow.muzzle;
+  reset(disc, w.ship.along + muzzle.along, w.ship.across + muzzle.across, row, WHEEL_KIND);
+  disc.velAlong = w.scrollPerStep;
+  disc.damage = w.weapon.damage;
+  disc.lifeFor = wheel.life;
+  // Where it is going to hang, in the world: `hang` ahead of the muzzle, carried with the camera.
+  disc.fromAlong = disc.along + wheel.hang;
+  disc.fromAcross = disc.across;
+}
+
+/**
+ * Every wheel in the air: carried with the camera to where it hangs, held on its leash, turned, faded,
+ * and throwing its embers — and every ember left to fly. The velocity is set and `stepEntities`
+ * integrates it, as a blade's is, so the swept collision sees the whole of a step.
+ */
+function steerWheels(w: World): void {
+  const wheel = WEAPONS[w.weapon.kind].wheel;
+  if (wheel === null) return;
+  const speed = SHOTS[WEAPONS[w.weapon.kind].shot].speed;
+  const rootAlong = w.ship.along + w.shipRow.muzzle.along;
+  const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  const far = w.cameraAlong + w.scrollPerStep + w.view.alongSpan - WHEEL_EDGE_MARGIN;
+  for (let i = w.playerShots.size - 1; i >= 0; i--) {
+    const b = w.playerShots.at(i);
+    if (b.kind !== WHEEL_KIND) continue;
+    // Where it hangs rides the camera: the wheel is a place on the screen, and the ship the moving end.
+    b.fromAlong += w.scrollPerStep;
+    if (b.fromAlong > far) b.fromAlong = far;
+    if (b.fromAcross < WHEEL_EDGE_MARGIN) b.fromAcross = WHEEL_EDGE_MARGIN;
+    if (b.fromAcross > ACROSS_SPAN - WHEEL_EDGE_MARGIN) b.fromAcross = ACROSS_SPAN - WHEEL_EDGE_MARGIN;
+    /*
+      ⚠️ **ON A LEASH — answered while it was planned.** Past `leash` from the muzzle, the place it hangs
+      is pulled after the ship until it is `leash` away again, so the tether never spans the screen and
+      a ship that flies off drags its wheel behind it rather than leaving it.
+    */
+    const dA = b.fromAlong - rootAlong;
+    const dC = b.fromAcross - rootAcross;
+    const d = Math.sqrt(dA * dA + dC * dC);
+    if (d > wheel.leash) {
+      b.fromAlong = rootAlong + (dA * wheel.leash) / d;
+      b.fromAcross = rootAcross + (dC * wheel.leash) / d;
+    }
+    // Out of the stone: a wheel hangs in the corridor, never inside a wall (0349).
+    const corridor = w.corridor;
+    if (corridor !== null) {
+      const side = stoneAt(corridor, b.fromAlong, b.fromAcross, b.radius);
+      if (side !== 0) b.fromAcross = faceAt(corridor, b.fromAlong, side) - side * (b.radius + 0.5);
+    }
+    // It closes `settle` of the way each step, no faster than the row's speed: out fast, and slowing.
+    let vA = (b.fromAlong - (b.along + w.scrollPerStep)) * wheel.settle;
+    let vC = (b.fromAcross - b.across) * wheel.settle;
+    const v = Math.sqrt(vA * vA + vC * vC);
+    if (v > speed) {
+      vA = (vA * speed) / v;
+      vC = (vC * speed) / v;
+    }
+    b.velAlong = w.scrollPerStep + vA;
+    b.velAcross = vC;
+    // It spins: the frame turns the bitmap, folded into one turn either side (`turnFor`'s range).
+    const turned = b.turn + wheel.spin;
+    b.turn = turned > Math.PI ? turned - Math.PI * 2 : turned;
+    // And burns down over its last beat: the same wheel, darker, its flames short.
+    if (b.lifeFor <= wheel.fade) {
+      b.sprite = SPRITE.catherineFade;
+      b.spriteBase = SPRITE.catherineFade;
+      b.spriteHit = SPRITE.catherineFade;
+      continue;
+    }
+    if (w.steps % wheel.emberEvery === 0) throwEmbers(w, b, wheel);
+    // And it crackles once a beat while it burns, where it is — heard with the sparks it throws.
+    if (w.steps % VOLLEY_CYCLE === 0) w.onCue('crackle', b.across);
+  }
+}
+
+/**
+ * A spray of embers off the wheel's rim — *"short sparking fire embers."* Evenly round the rim from
+ * where the wheel has turned to, thrown off it the way it turns and a little outward, carrying the
+ * wheel's own motion, and gone in `emberLife` steps.
+ */
+function throwEmbers(w: World, b: Entity, wheel: CatherineWheel): void {
+  const row = SHOTS[wheel.ember];
+  for (let k = 0; k < wheel.embers; k++) {
+    const a = b.turn + (k * Math.PI * 2) / wheel.embers;
+    const ember = w.playerShots.spawn();
+    // An ember the pool has no room for is dropped, not grown — `src/sim/pool.ts` has the argument.
+    if (ember === null) return;
+    reset(ember, b.along + Math.cos(a) * wheel.rim, b.across + Math.sin(a) * wheel.rim, row, EMBER_KIND);
+    // Off the rim the way it turns — a quarter turn on from the spoke — and a little outward.
+    const heading = a + Math.PI * 0.5 - EMBER_FLARE;
+    ember.velAlong = b.velAlong + Math.cos(heading) * row.speed;
+    ember.velAcross = b.velAcross + Math.sin(heading) * row.speed;
+    const turn = heading > Math.PI ? heading - Math.PI * 2 : heading < -Math.PI ? heading + Math.PI * 2 : heading;
+    ember.turn = turn;
+    ember.prevTurn = turn;
+    ember.lifeFor = wheel.emberLife;
+  }
+}
+
+/** How far an ember leans out from the rim's tangent, in radians: enough that the spray opens outward. */
+const EMBER_FLARE = 0.45;
+
+/**
+ * The tether's landing — 0538. The line from the muzzle to the wheel against every body, and the boss's
+ * hull and body on the hull's clock, gated by the gun's `landGap` as the wheel itself is.
+ */
+function landTether(w: World, wheel: CatherineWheel, shootable: boolean, gunOpen: number, gap: number, hull: Entity | null): number {
+  let disc: Entity | null = null;
+  for (let i = 0; i < w.playerShots.size && disc === null; i++) if (w.playerShots.at(i).kind === WHEEL_KIND) disc = w.playerShots.at(i);
+  if (disc === null || disc.lifeFor <= wheel.fade) return 0;
+  const rootAlong = w.ship.along + w.shipRow.muzzle.along;
+  const rootAcross = w.ship.across + w.shipRow.muzzle.across;
+  const landedBefore = w.hits.count;
+  let destroyed = tetherInto(w.enemies, rootAlong, rootAcross, disc.along, disc.across, wheel.tether, wheel.tetherDamage, 1, IMPACT_FLASH_STEPS, w.deaths, w.hits, gap, null, w.corridor);
+  if (shootable) {
+    destroyed += tetherInto(w.bossPool, rootAlong, rootAcross, disc.along, disc.across, wheel.tether, wheel.tetherDamage, gunOpen, IMPACT_FLASH_STEPS, w.bossDeaths, w.hits, gap, hull, w.corridor);
+    tetherInto(w.bossBody, rootAlong, rootAcross, disc.along, disc.across, wheel.tether, wheel.tetherDamage, gunOpen, IMPACT_FLASH_STEPS, null, w.hits, gap, hull, w.corridor);
+  }
+  // It sizzles where it landed, on top of the hit every landing makes — its `hold` keeps it a burn.
+  if (w.hits.count > landedBefore) w.onCue('sizzle', w.hits.across[landedBefore]!);
+  return destroyed;
+}
+
+/**
+ * The tether's picture — 0538: one bolt link from the muzzle to the wheel, laid after everything has
+ * moved, so it leaves the gun and reaches the wheel exactly where both are drawn. It lives one step and
+ * is laid again on the next, in the flame's inks (`TETHER_BOLT_KIND`). A wheel burning down drops it.
+ */
+function layTether(w: World): void {
+  const wheel = WEAPONS[w.weapon.kind].wheel;
+  if (wheel === null) return;
+  for (let i = 0; i < w.playerShots.size; i++) {
+    const disc = w.playerShots.at(i);
+    if (disc.kind !== WHEEL_KIND || disc.lifeFor <= wheel.fade) continue;
+    const link = w.bolts.spawn();
+    if (link === null) return;
+    reset(link, disc.along, disc.across, TETHER_BODY, TETHER_BOLT_KIND);
+    // As wide as it lands, which is what the painter draws it at — a beam's rule (0250).
+    link.radius = wheel.tether;
+    link.prevAlong = disc.prevAlong;
+    link.prevAcross = disc.prevAcross;
+    link.velAlong = 0;
+    link.fromAlong = w.ship.along + w.shipRow.muzzle.along - disc.along;
+    link.fromAcross = w.ship.across + w.shipRow.muzzle.across - disc.across;
+    // One step: it is drawn, and the next step's `stepEntities` releases it just before the next is laid.
+    link.lifeFor = 1;
+    link.spin = w.steps;
+    return;
+  }
+}
+
+/** The tether as a body in the bolt pool: a picture, in no pairing — it lands through `landTether`. */
+const TETHER_BODY: Body = { sprite: SPRITE.arcNode, spriteHit: SPRITE.arcNode, radius: 0, health: 1, damage: 0 };
 
 /**
  * Chain lightning — `docs/decisions/0233-a-weapon-is-a-kind-and-a-pickup-cycles.md`.
@@ -10983,8 +11199,8 @@ export function respawn(w: World): void {
   */
   // ⚠️ A RESPAWN REJOINS THE GRID RATHER THAN RESTARTING IT — 0094. A full cadence here would put the
   // gun back at whatever phase the death happened at, which is the one moment in a run guaranteed to
-  // be at an arbitrary place in the bar.
-  w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
+  // be at an arbitrary place in the bar. And no later than the next beat — 0538's `firstVolleyIn`.
+  w.fireIn = firstVolleyIn(w.steps, w.weapon.fireEvery);
   w.missileIn = stepsToGrid(w.steps, w.weapon.missileEvery);
 }
 

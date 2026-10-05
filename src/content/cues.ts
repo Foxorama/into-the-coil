@@ -110,6 +110,10 @@ export const CUE_KINDS = [
   'zap',
   'throw',
   'ray',
+  // The Catherine wheel's — 0538: its throw, its crackle on the beat while it burns, and its tether landing.
+  'wheel',
+  'crackle',
+  'sizzle',
   'threat',
   'hit',
   'kill',
@@ -214,6 +218,10 @@ export const TWIN_KINDS = [
   'bolt-appears',
   /** A blade leaves the ship and starts its spiral — 0234. */
   'blade-appears',
+  /** A Catherine wheel leaves the muzzle on its tether and flies out to hang — `throwWheel`, 0538. */
+  'wheel-thrown',
+  /** Embers spray off a burning wheel's rim — `throwEmbers`, 0538. */
+  'embers-fly',
   /** An enemy's shot appears on the field — `fireEnemies`. */
   'threat-appears',
   /** A spray of embers appears where a breaching boss goes through the edge of the lane — 0313. */
@@ -945,6 +953,59 @@ export const CUES: Record<CueKind, CueRow> = {
    * ⚠️ **The ring is a triangle three octaves over the root, falling a tone** — the metal of the
    * thing rather than the air it moves, and the one part that says *blade* and not *gust*.
    */
+  /**
+   * A Catherine wheel is thrown — 0538. The whoomp of a firework catching, a hiss of its fuse burning
+   * up through it, and a whirr rising a fifth as it spins up on the way out. Every ten beats and alone
+   * — the wheel is the slowest gun there is — so it has more room than the guns that repeat.
+   */
+  wheel: {
+    twin: 'wheel-thrown',
+    air: 0.3,
+    hold: 6,
+    gain: 0.22,
+    glue: 0.1,
+    layers: [
+      // The whoomp: a soft kick a fifth down onto the root, driven, as a fuse takes.
+      { wave: 'sine', from: inKey(11), to: inKey(7), seconds: 0.18, gain: 0.75, attack: 0.002, curve: 3, drive: 0.4 },
+      // The catch: noise opening upward, warm, as the flame goes round the wheel.
+      { wave: 'noise', from: 0, to: 0, seconds: 0.4, gain: 0.4, attack: 0.02, curve: 2, lowFrom: 900, lowTo: 5200, highFrom: 260, q: 0.8, pan: 0, panTo: 0.2 },
+      // The whirr: a filtered saw spinning up a fifth, wobbling as a wheel does.
+      { wave: 'saw', from: inKey(14), to: inKey(18), at: 0.05, seconds: 0.45, gain: 0.16, attack: 0.04, curve: 2.2, lowFrom: 1200, lowTo: 3400, highFrom: 300, q: 1.2, vibrato: 14 },
+    ],
+  },
+  /**
+   * A burning wheel crackles — 0538, once a beat while it spins. A scatter of small snaps over a bed of
+   * hiss, either side of the middle: the sparks coming off it, heard and seen at once. Quiet, because it
+   * is under everything for nine beats in ten.
+   */
+  crackle: {
+    twin: 'embers-fly',
+    air: 0.25,
+    onGrid: true,
+    hold: 6,
+    gain: 0.16,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.3, gain: 0.3, attack: 0.01, curve: 2.2, lowFrom: 9000, lowTo: 6000, highFrom: 2400 },
+      { wave: 'noise', from: 6800, to: 5000, at: 0.03, seconds: 0.03, gain: 0.5, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 3200, pan: -0.4 },
+      { wave: 'noise', from: 7400, to: 5400, at: 0.11, seconds: 0.03, gain: 0.42, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 3400, pan: 0.35 },
+      { wave: 'noise', from: 6200, to: 4600, at: 0.19, seconds: 0.025, gain: 0.36, attack: 0.0005, curve: 5, lowFrom: 12000, highFrom: 3000, pan: -0.1 },
+    ],
+  },
+  /**
+   * The tether lands — 0538: a short sizzle, a burn on something wet. Bright noise thinning fast, over
+   * the faintest thump. `hold` keeps a tether held across a pack from being one long hiss.
+   */
+  sizzle: {
+    twin: 'impact-flash',
+    hold: 6,
+    gain: 0.18,
+    glue: 0.08,
+    layers: [
+      { wave: 'noise', from: 0, to: 0, seconds: 0.16, gain: 0.55, attack: 0.002, curve: 2.6, lowFrom: 11000, lowTo: 5000, highFrom: 3000, highTo: 1800, q: 0.9 },
+      { wave: 'sine', from: inKey(7), to: inKey(0), seconds: 0.06, gain: 0.3, attack: 0.001, curve: 4 },
+    ],
+  },
   throw: {
     twin: 'blade-appears',
     /*

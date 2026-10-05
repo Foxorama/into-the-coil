@@ -19,7 +19,7 @@ import { boltInks } from '../src/render/bolt-inks.ts';
 import { luminance } from './contrast.ts';
 import { withTheGame } from '../src/render/port-bake.ts';
 import { BOLT_STEPS, STROKES_PER_LINK, paintBolts } from '../src/render/scene.ts';
-import type { Surface } from '../src/render/surface.ts';
+import { BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, type Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset, type Entity } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
@@ -34,7 +34,7 @@ const HOSTILE = PALETTES.vivid.enemy;
 function canvas(): { surface: CanvasSurface; pen: ReturnType<typeof tracingPen>['pen']; inks: () => readonly Stroke[] } {
   const { pen, trace } = tracingPen();
   const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE));
+  surface.setBolt(boltInks(GLOW, CORE, DARK, HOSTILE, CORE, PALETTES.vivid.bullet, PALETTES.vivid.hazard));
   return { surface, pen, inks: () => trace.inks };
 }
 
@@ -59,7 +59,7 @@ describe('0470 — the light is additive', () => {
       ['a beam', LINE, 3, true],
     ] as const) {
       const { surface, pen, inks } = canvas();
-      surface.bolt(points, count, 2, 0.9, false, beam);
+      surface.bolt(points, count, 2, 0.9, BOLT_PLAYER, beam);
       expect(pen.globalCompositeOperation, `${name} left the context adding`).toBe('source-over');
       expect(pen.globalAlpha, `${name} left the context's alpha down`).toBe(1);
       expect(inks().length, `${name} was not stroked`).toBeGreaterThan(1);
@@ -81,7 +81,7 @@ describe('0470 — the light is additive', () => {
     */
     const width = 3;
     const { surface, inks } = canvas();
-    surface.bolt(LINE, 3, width, 1, true, true);
+    surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, true);
     const layers = light(inks());
     expect(layers.length, 'a beam is a flash with a different name').toBeGreaterThanOrEqual(4);
     for (let i = 1; i < layers.length; i++) {
@@ -96,7 +96,7 @@ describe('0470 — the light is additive', () => {
     expect(rim.width, 'the rim is inside the body it should edge').toBeGreaterThan(4 * width);
     // And the stacks really are two — the flash is not drawn with the beam's layers or vice versa.
     const flash = canvas();
-    flash.surface.bolt(LINE, 3, width, 1, true, false);
+    flash.surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, false);
     // By what is stroked and not by how many: since 0520 a flash has as many layers of light as a beam.
     const shape = (s: readonly Stroke[]): string => s.map((l) => `${l.width}/${l.alpha}`).join(' ');
     expect(shape(light(flash.inks())), 'a flash is drawn as a beam').not.toBe(shape(layers));
@@ -212,12 +212,17 @@ describe('0520 — the light is loud', () => {
       const colours = PALETTES[palette];
       for (const place of THEME_KINDS) {
         const hostileGlow = THEMES[place].bolt ?? colours.enemy;
-        for (const [who, glow, hostile] of [['player', colours.player, false], ['hostile', hostileGlow, true]] as const) {
+        // And the flame's, since 0538 — the Catherine wheel's tether, in the player's amber.
+        for (const [who, glow, tone] of [
+          ['player', colours.player, BOLT_PLAYER],
+          ['hostile', hostileGlow, BOLT_HOSTILE],
+          ['flame', colours.bullet, BOLT_FLAME],
+        ] as const) {
           for (const [what, points, count] of [['flash', LINE, 3], ['dot', POINT, 1]] as const) {
             const { pen, trace } = tracingPen();
             const surface = new CanvasSurface(pen as unknown as CanvasRenderingContext2D, { bitmaps: [], extents: [] } as unknown as Atlas);
-            surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostileGlow, colours.impact));
-            surface.bolt(points, count, width, 1, hostile);
+            surface.setBolt(boltInks(colours.player, colours.impact, colours.space, hostileGlow, colours.impact, colours.bullet, colours.hazard));
+            surface.bolt(points, count, width, 1, tone);
             const glows = trace.inks.filter((s) => s.colour === glow);
             const narrowestGlow = Math.min(...glows.map((s) => s.width));
             const hearts = trace.inks.filter((s) => s.width < narrowestGlow && s.width > width + 1e-9 && s.alpha === 1);

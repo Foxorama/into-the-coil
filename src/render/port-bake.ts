@@ -818,7 +818,7 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   // The ray gun, run out through the rim at the nose: its outline from inside the rim, and the gun on it — 0461.
   // 0526: or, flying another ship's gun, that gun's side-on mount standing on the rim at the nose.
   const fitted = gunNow('caddie');
-  if (fitted === SHIPS.caddie.weapon) {
+  if (fitted === SHIPS.caddie.body.gun) {
     const gun = raygunProfile();
     ctx.fillStyle = palette.trim;
     ctx.beginPath();

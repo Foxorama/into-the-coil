@@ -30,7 +30,7 @@ import { DEFAULT_PALETTE, PALETTES } from '../src/content/palette.ts';
 import { FLARE_SWELL, INK_OF, drawKind } from '../src/render/bake.ts';
 import { tracingPen } from './paths.ts';
 import { BOLT_STEPS, paintBodyBolts, paintScene } from '../src/render/scene.ts';
-import { screenX, screenY, type Surface } from '../src/render/surface.ts';
+import { BOLT_HOSTILE, screenX, screenY, type BoltTone, type Surface } from '../src/render/surface.ts';
 import { ACROSS_SPAN, MIN_ASPECT, cullPlayerShotAlong, viewOf } from '../src/sim/camera.ts';
 import { reset } from '../src/sim/entity.ts';
 import { PLAYER_ALONG_MARGIN, PLAYER_LEAD, PLAYER_MARGIN } from '../src/sim/flight.ts';
@@ -166,8 +166,8 @@ class Recorder implements Surface {
   readonly strokes: { count: number; alpha: number; hostile: boolean }[] = [];
   clear(): void {}
   blit(): void {}
-  bolt(_points: Float32Array, count: number, _width: number, alpha: number, hostile: boolean): void {
-    this.strokes.push({ count, alpha, hostile });
+  bolt(_points: Float32Array, count: number, _width: number, alpha: number, tone: BoltTone): void {
+    this.strokes.push({ count, alpha, hostile: tone === BOLT_HOSTILE });
   }
 }
 
@@ -3076,8 +3076,8 @@ describe('0487 — the storm is lightning', () => {
     readonly strokes: { points: number[]; hostile: boolean }[] = [];
     clear(): void {}
     blit(): void {}
-    bolt(points: Float32Array, count: number, _width: number, _alpha: number, hostile: boolean): void {
-      this.strokes.push({ points: Array.from(points.subarray(0, count * 2)), hostile });
+    bolt(points: Float32Array, count: number, _width: number, _alpha: number, tone: BoltTone): void {
+      this.strokes.push({ points: Array.from(points.subarray(0, count * 2)), hostile: tone === BOLT_HOSTILE });
     }
   }
 

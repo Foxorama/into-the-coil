@@ -86,7 +86,7 @@ const core = PALETTES.vivid.impact;
 const heart = THEMES.core;
 /** A bolt's inks in `place`, as `src/app/mount.ts` sets them there. */
 const inksIn = (place: typeof heart): BoltInks =>
-  boltInks(PALETTES.vivid.player, core, PALETTES.vivid.space, place.bolt ?? PALETTES.vivid.enemy, core);
+  boltInks(PALETTES.vivid.player, core, PALETTES.vivid.space, place.bolt ?? PALETTES.vivid.enemy, core, PALETTES.vivid.bullet, PALETTES.vivid.hazard);
 /** The vessels' lit core, as `tests/medusa.test.ts` derives it from the bake. */
 const vessel = mix(mix(heart.nebula.vivid, HEART_ROSE, 0.6), '#ffffff', 0.35);
 

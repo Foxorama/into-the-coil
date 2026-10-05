@@ -1142,6 +1142,14 @@ export const SPRITE_KINDS = [
   'shuriken',
   'shurikenTurn',
   /*
+    The Catherine wheel — 0538: a spoked wheel of gold fire with a white hub, turned by the frame as it
+    spins; its fade, the same wheel burning down; and a cinder off its rim, a streak with a white-hot
+    head turned along its flight. A cinder and not an ember because `ember` is the fish's, 0480.
+  */
+  'catherine',
+  'catherineFade',
+  'cinder',
+  /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
     *"Four concentric purple energy rings that explode on impact with a small energy explosion."* Four
@@ -2537,6 +2545,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
     commit and every guard was green about it: the pair is never compared anywhere.
   */
   shurikenTurn: 5.6,
+  /*
+    The wheel is drawn twice its hurtbox across with its flames, so the hub and spokes are what lands
+    and the burning rim reads as the sparks it throws — 0538. An ember is a short streak.
+  */
+  catherine: 16,
+  catherineFade: 16,
+  cinder: 4.5,
   /*
     ⚠️ **A LITTLE UNDER HALF THE SHIP, AND THREE PAGES OF ONE SIZE** — 0442. Bigger than a pulse,
     because it is one body a volley and has to be seen to be aimed; well under the blade, because it

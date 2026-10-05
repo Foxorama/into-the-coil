@@ -27,7 +27,7 @@ import type { GunView, Mount } from './ships.ts';
 /**
  * Every gun. Closed — and since 0441 the order means nothing: no pickup cycles over it.
  */
-export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray'] as const;
+export const WEAPON_KINDS = ['pulse', 'arc', 'shuriken', 'ray', 'catherine'] as const;
 
 /** Derived from the list, so a kind cannot exist in the union and be missing from the table. */
 export type WeaponKind = (typeof WEAPON_KINDS)[number];
@@ -49,8 +49,52 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *                 crosses, once per impact flash, and is gone at the edge of the screen. 0234, 0244
  *   **burst**     a body in flight like `straight`, spent by arriving — and where it arrives it goes
  *                 off as the row's `bursts`, a small blast that lands on everything inside it. 0442
+ *   **tether**    one body at a time, thrown out ahead to hang spinning in the camera's frame on a
+ *                 tether back to the muzzle, for the row's `wheel.life`. It lands on what it touches
+ *                 as a blade does, throws embers that are spent by arriving, and the tether lands on
+ *                 whatever crosses it. Past the leash it is towed after the ship. 0538
  */
-export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst';
+export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether';
+
+/**
+ * A Catherine wheel on a tether — `docs/decisions/0538-the-catherine-wheel.md`. *"A spinning fire
+ * wheel disc like a catherine wheel firework that shoots out short sparking fire embers and has a fire
+ * tether back to the spaceship that you can use to hit things with."* Every number in steps and world
+ * units, in the camera's frame.
+ */
+export interface CatherineWheel {
+  /** Steps the wheel lasts from the throw; it fades over the last `fade` of them. */
+  life: number;
+  fade: number;
+  /** How far ahead of the muzzle it is thrown to hang, in world units. */
+  hang: number;
+  /** What share of the way to where it hangs it closes each step — it flies out fast and slows. */
+  settle: number;
+  /** The longest the tether may be. Past it the wheel is towed after the ship. */
+  leash: number;
+  /** Radians the wheel turns each step. */
+  spin: number;
+  /** How far from the hub the embers leave, in world units — the rim of the drawn wheel. */
+  rim: number;
+  /** Steps between one spray of embers and the next, and how many each spray throws. */
+  emberEvery: number;
+  embers: number;
+  /** The ember's row in `SHOTS`: spent by arriving, as a pulse is. */
+  ember: ShotKind;
+  /** Steps an ember lives — they are short. */
+  emberLife: number;
+  /** How far either side of the tether's line a body is crossed by it, in world units. */
+  tether: number;
+  /** What the tether takes off a body each time it lands, gated by the row's `landGap` as a blade is. */
+  tetherDamage: number;
+}
+
+/**
+ * The `kind` the Catherine wheel's tether carries in the bolt pool — 0538, beside the serpent's rain (1)
+ * and a boss's beam (2) in `src/content/bosses.ts`. Here because the frame lays it and the painter
+ * strokes it, and this layer is below both.
+ */
+export const TETHER_BOLT_KIND = 3;
 
 export interface WeaponRow {
   /** What the player would call it. Terse, per `docs/game.md`'s voice rule. */
@@ -147,6 +191,8 @@ export interface WeaponRow {
    * twelve steps the gap is 0.4 of a turn.
    */
   turn: number;
+  /** The wheel a `tether` gun throws, or `null` for every other flight — 0538. */
+  wheel: CatherineWheel | null;
 }
 
 export const WEAPONS: Record<WeaponKind, WeaponRow> = {
@@ -177,6 +223,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     falloff: 0,
     coil: 0,
     turn: 0,
+    wheel: null,
   },
   /**
    * Longshot Larry's gun on the gilded estate — chain lightning. Asked for, 2026-09-05: *"a chain
@@ -241,6 +288,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     falloff: 0.6,
     coil: 0,
     turn: 0,
+    wheel: null,
   },
   /**
    * Backspin Bo's gun on the Firebird — the shuriken launcher,
@@ -285,6 +333,7 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     */
     coil: 12,
     turn: 0.21,
+    wheel: null,
   },
   /**
    * Feather Fade's gun on the little green caddie — the ray gun, 0442. Asked for: *"a ray gun that
@@ -321,5 +370,69 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     falloff: 0,
     coil: 0,
     turn: 0,
+    wheel: null,
+  },
+  /**
+   * Backspin Bo's gun on the Firebird since 0538 — the Catherine wheel. Asked for: *"it fires out a
+   * spinning fire wheel disc like a catherine wheel firework that shoots out short sparking fire
+   * embers and has a fire tether back to the spaceship that you can use to hit things with, the tether
+   * stays attached to the disc and the car and you can go back and forth with it."* And: *"fires out
+   * every 4 secs and fades away at 3.6 seconds give or take before the new one fires out."*
+   *
+   * ⚠️ **TEN BEATS AND NINE — 240 STEPS AND 216.** Four seconds is exactly ten of the music's beats
+   * (`VOLLEY_CYCLE`), so the cadence is on the grid every gun is on, and the wheel is gone a beat
+   * before the next is thrown. The first wheel of a life is thrown on the next beat, not four seconds
+   * in (`firstVolleyIn` in `src/app/frame.ts`).
+   *
+   * ⚠️ **IT HANGS, ON A LEASH** — answered while it was planned: *"it flies out ahead, slows, and hangs
+   * spinning where it stopped; moving the ship sweeps the tether across whatever is between them. Past
+   * the leash's length it is towed after the ship."* So the wheel is a place and the ship is the moving
+   * end, and the tether is the sweep the player steers.
+   *
+   * ⚠️ **THREE THINGS LAND, AND TWO OF THEM SHARE THE BLADES' CLOCK.** The wheel and the tether land on
+   * a body only so often, on 0391's bucket and this row's `landGap`, so a tether held across a boss is
+   * not sixty landings a second. The embers are spent by arriving, as pulses are. What each is worth
+   * was set on the boss instruments beside the other four guns — 0538 has the table.
+   *
+   * ⚠️ **FIRE IN THE PLAYER'S INKS.** `fire` is the hostile meaning ink; the wheel, its embers and its
+   * tether are the player's amber and gold (`bullet`, `hazard`) with a white-hot heart.
+   */
+  catherine: {
+    label: 'Catherine wheel',
+    hint: 'A fire wheel on a tether',
+    shot: 'catherine',
+    flight: 'tether',
+    fireEvery: 240,
+    barrels: 1,
+    links: 1,
+    weight: 1,
+    bossWeight: 1,
+    landGap: 2,
+    // The roman candle — 0537, landed ahead of the wheel.
+    special: 'candle',
+    // 0538: the spindle the wheel spins on, its hub at the top of a post from the side and over the mount from above.
+    mount: { top: { along: 0.95, across: 0 }, side: { along: 0.35, across: -1.35 } },
+    bursts: null,
+    reach: 0,
+    falloff: 0,
+    coil: 0,
+    turn: 0,
+    wheel: {
+      life: 216,
+      fade: 24,
+      hang: 66,
+      settle: 0.09,
+      leash: 96,
+      spin: 0.32,
+      rim: 5.4,
+      emberEvery: 2,
+      embers: 3,
+      ember: 'cinder',
+      emberLife: 16,
+      // ⚠️ 0.9, and it was 1.6 until the first photograph: drawn as wide as it hits, a cord of 3.2
+      // units was a bar across the screen that outshone the wheel it holds.
+      tether: 0.9,
+      tetherDamage: 1,
+    },
   },
 };
