@@ -92,6 +92,12 @@ more than the nine the blast pool held, and dropped a firework at nine. Thirteen
 slot. The four came from the enemy shots, whose worst measured (the gyre at Legend, 174) is still
 twenty-two under 196, so `CAPACITY`'s total and the frame's worst case are unchanged.
 
+**It is called "Candle", and was "Roman candle" until CI read it.** How to play stacks each pickup's
+face labels in one column as wide as the widest ([0432](0432-the-key-cycles.md)); the longer name widened
+the column for every row, and on CI's fonts the words beside it wrapped until the guide's Back button sat
+off the smallest landscape phone (`tests/layout.browser.test.ts`, green on this machine's fonts). The
+face shows a roman candle and the hint says fireworks; the name is the word that fits.
+
 **`canThrow` learned that a candle is a throw.** It let anything with no `shot` through at any time,
 which was right while that meant a surge or a whirlpool. A candle has no `shot` and throws eight things,
 so it waits for the gap and holds it until its last star plus the gap: a bomb under a candle would be a

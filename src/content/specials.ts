@@ -599,7 +599,14 @@ export const SPECIALS: Record<SpecialKind, SpecialRow> = {
    * fan aimed at one measured two to six on the seven bosses. 0537 has the table; they are play numbers.
    */
   candle: {
-    label: 'Roman candle',
+    /*
+      ⚠️ **"Candle", AND IT WAS "Roman candle" UNTIL CI'S FONTS READ IT.** How to play stacks every
+      face's label in one column as wide as the widest (0432), so the longest name in the bomb pickup's
+      four widens the column for every row and squeezes the words beside it into wrapping. On CI's fonts
+      that pushed the guide's Back button off the smallest landscape phone (`tests/layout.browser.test.ts`).
+      The face is a roman candle and the hint says fireworks; the name is the shorter word.
+    */
+    label: 'Candle',
     hint: 'A spray of fireworks ahead',
     side: 'gun',
     shot: null,
