@@ -1,12 +1,12 @@
-import { describe, it, expect, afterAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import type { Browser, Page } from 'playwright-core';
-import { chromePath, launchChromium } from './chromium.ts';
+import type { Page } from 'playwright-core';
+import { chromePath } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { back, fly, openHangar, shown } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { keptContext, keyedOut, seedOnce } from './seed.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { GOLFERS, GOLFER_KINDS } from '../src/content/golfers.ts';
@@ -26,11 +26,6 @@ import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 vi.setConfig({ testTimeout: 120_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
-
-let browser: Browser | undefined;
-afterAll(async () => {
-  await browser?.close();
-});
 
 const HANGAR = prefixFor('hangar');
 const dashes = `${shown('hangar')} [${SETTING_ATTR}="plate"] .${HANGAR}option`;
@@ -53,13 +48,13 @@ async function worn(page: Page): Promise<string | null> {
 
 describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the run wears it', () => {
   it('shuts what is not won, fits what is, keeps it, and flies in it', async () => {
-    browser ??= await launchChromium({ headless: true });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    // On disk, as a player's browser keeps it — `tests/seed.ts` says why not a fresh context's memory.
+    const { context, close } = await keptContext({ width: 1280, height: 720 });
     // The fighter and the estate won in; the default pilot's Firebird not. Filled once, before the page runs.
     const won = { ...initialHangar, won: { ...initialHangar.won, fighter: true, estate: true } };
     // Once per tab — `tests/seed.ts` says why a seed that refilled an empty key overwrote this test's fitting.
     await seedOnce(context, HANGAR_KEY, serialiseHangar(won));
-    const page = await context.newPage();
+    const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
@@ -104,7 +99,7 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     // The raw text in the message, so a store that lost the write and one that kept the wrong thing differ.
     const raw = await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY);
     const reread = hangarFrom(raw, initialHangar);
-    expect(reread.plate.fighter, `the fitting was gone from the key after a reload — it held ${String(raw)}`).toBe('estate');
+    expect(reread.plate.fighter, `the fitting was gone from the key after a reload — it held ${String(raw)}; ${await keyedOut(context, page)}`).toBe('estate');
     // The pilot is picked each visit (0415), so Hook is chosen again; the fighter's dash was kept.
     await page.locator(`${faces} >> nth=${GOLFER_KINDS.indexOf(hook)}`).click();
     /*
@@ -122,6 +117,6 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
     expect(await worn(page), `the fitting was forgotten across a reload — the card said ${String(seen.pilot)}, the band ${String(seen.dash)}`).toBe(
       SHIPS.estate.hud.motif,
     );
-    await context.close();
+    await close();
   });
 });

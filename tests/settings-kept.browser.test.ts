@@ -1,12 +1,12 @@
-import { describe, it, expect, afterAll, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import type { Browser, Page } from 'playwright-core';
-import { chromePath, launchChromium } from './chromium.ts';
+import type { Page } from 'playwright-core';
+import { chromePath } from './chromium.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { choose, openSettings } from './title.ts';
-import { seedOnce } from './seed.ts';
+import { keptContext, keyedOut, seedOnce } from './seed.ts';
 import { SETTINGS_KEY, serialiseSettings, settingsFrom } from '../src/save/settings.ts';
 import { initialSettings, type SettingsState } from '../src/state/slices/settings.ts';
 import { STYLE_KINDS } from '../src/content/styles.ts';
@@ -30,11 +30,6 @@ vi.setConfig({ testTimeout: 120_000 });
 
 const dist = pathToFileURL(resolve(fileURLToPath(new URL('..', import.meta.url)), 'dist/index.html')).href;
 
-let browser: Browser | undefined;
-afterAll(async () => {
-  await browser?.close();
-});
-
 /** Every kept setting off its default. */
 const kept: SettingsState = {
   ...initialSettings,
@@ -53,11 +48,11 @@ async function marked(page: Page, screen: Screen, setting: SettingName): Promise
 
 describe.runIf(chromePath)('0510 — the page opens the way it was left', () => {
   it('reads the key before it marks a band, and a band pressed is written for the next visit', async () => {
-    browser ??= await launchChromium({ headless: true });
-    const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    // On disk, as a player's browser keeps it — `tests/seed.ts` says why not a fresh context's memory.
+    const { context, close } = await keptContext({ width: 1280, height: 720 });
     // Filled before the page's own script runs, and only once — a reload must read what the page wrote.
     await seedOnce(context, SETTINGS_KEY, serialiseSettings(kept));
-    const page = await context.newPage();
+    const page = context.pages()[0] ?? (await context.newPage());
     await page.goto(dist);
     await page.waitForSelector('#app canvas', { timeout: CANVAS_MS });
     await pastIntro(page);
@@ -84,11 +79,12 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
       line; the text read before anything is pressed tells the two apart.
     */
     const reread = await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY);
+    const store = await keyedOut(context, page);
     await pastIntro(page);
     await openSettings(page);
-    expect(await marked(page, 'settings', 'travel'), `the crossing was forgotten across a reload — the key held ${String(reread)}`).toBe(
+    expect(await marked(page, 'settings', 'travel'), `the crossing was forgotten across a reload — the key held ${String(reread)}; ${store}`).toBe(
       TRAVEL_KINDS.indexOf(travel),
     );
-    await context.close();
+    await close();
   });
 });
