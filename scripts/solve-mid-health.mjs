@@ -25,11 +25,16 @@
 // fight solved here to 24–57 s against the 17–23 asked for. A quantity is checked in the case it is
 // applied to (0280), and the case a player meets is a tier.
 //
+// ⚠️ **AT THE TUNED TIER'S TOUGHNESS, WITHOUT ITS BOSS NUMBER — 0532.** Savior's row holds its
+// mid-bosses an eighth over its toughness, the player's ask on top of this ladder; solved with it, the
+// ratio would take the eighth straight back out of the row's health. So the fight here is flown with
+// `AS_TOUGH`, and what a Savior player meets is this ladder's seconds and then the eighth.
+//
 // It exits non-zero if any level's mid-boss is not fought, on the same terms as its siblings: an
 // instrument that measured nothing must not report success.
 
 import { BOSSES } from '../src/content/bosses.ts';
-import { TUNED } from '../src/content/difficulty.ts';
+import { AS_TOUGH, TUNED } from '../src/content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS } from '../src/content/levels.ts';
 import { carriedAt, weighFight } from './weigh-fight.mjs';
 
@@ -40,7 +45,7 @@ for (const kind of LEVEL_KINDS) {
   if (level.midBoss === null) continue;
   const row = BOSSES[level.midBoss.kind];
   const want = MID_BOSS_SECONDS[kind];
-  const r = weighFight(kind, { ...carriedAt(kind), difficulty: TUNED });
+  const r = weighFight(kind, { ...carriedAt(kind), difficulty: TUNED, bosses: AS_TOUGH });
   if (!r.fought) {
     unfought++;
     continue;

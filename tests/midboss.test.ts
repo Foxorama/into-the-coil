@@ -22,7 +22,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { BOSSES } from '../src/content/bosses.ts';
-import { TUNED } from '../src/content/difficulty.ts';
+import { AS_TOUGH, TUNED } from '../src/content/difficulty.ts';
 import { BOSS_DEATH_STEPS } from '../src/app/frame.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { LEVELS, LEVEL_KINDS, MID_BOSS_SECONDS, type LevelKind } from '../src/content/levels.ts';
@@ -49,11 +49,17 @@ const CLOSE_ENOUGH_SECONDS = 3;
   which no tier is since 0356, and Savior's toughness made every fight it passed run 24–57 s against
   the 17–23 its level asks for. Reported: *"on saviour difficulty, there's some spots, especially
   around minibosses, that it's too bullety."*
+
+  ⚠️ **AT THE TUNED TIER'S TOUGHNESS, WITHOUT ITS BOSS NUMBER — 0532.** This guard is the solver's
+  precision, and the solver solves the row's health; Savior's mid-bosses hold an eighth more on top,
+  the player's ask after a play, which put the chorus at 25 s against its 22 here. That eighth is a
+  stated departure from this ladder rather than a miss of it, so it is taken off here as the solver
+  takes it off — `scripts/solve-mid-health.mjs` — and the seconds a Savior player meets are in 0532.
 */
 const met = new Map<LevelKind, ReturnType<typeof weighFight>>();
 for (const kind of LEVEL_KINDS) {
   if (LEVELS[kind].midBoss === null) continue;
-  met.set(kind, weighFight(kind, { ...carriedAt(kind), difficulty: TUNED }));
+  met.set(kind, weighFight(kind, { ...carriedAt(kind), difficulty: TUNED, bosses: AS_TOUGH }));
 }
 
 describe('0269 — a mid-boss is fought for as long as its level says', () => {

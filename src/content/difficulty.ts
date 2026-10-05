@@ -245,17 +245,14 @@ export interface BossHold {
    * `docs/decisions/0532-the-legend-holds-longer.md`.
    *
    * ⚠️ **ASKED OF ONE TIER, FROM A PLAY OF IT:** *"legendary difficulty — minibosses need probably twice
-   * as much health as they do now; end bosses need about +15% health"*. So Legend's row says 2 and
-   * 1.15, and every other row says `AS_TOUGH`, the default — 0282: the row states its version, and
-   * the fallback is shared.
+   * as much health as they do now; end bosses need about +15% health"*, then settled from a second
+   * play as Legend's mid-bosses at 1.5 and Savior's at 1.125, so Savior's hold a fifth more. Burn
+   * says `AS_TOUGH`, the default — 0282: the row states its version, and the fallback is shared.
    *
-   * ⚠️ **NOT A `Multipliers` AXIS, AND THAT IS THE WHOLE OF WHY SAVIOR AND BURN DID NOT MOVE.** An axis
-   * is Savior's value moved a margin per step (0356), so doubling Legend's would have been Savior's
-   * doubled and Burn's quadrupled — the tuned tier re-tuned by a play of another one. A literal, like
-   * `lives` and the shell, moves the row that was asked about and no other.
-   *
-   * ⚠️ **AND IT PUTS LEGEND'S MID-BOSSES ABOVE SAVIOR'S** — two against 1.6 — which no other number on
-   * the row does. Said in 0532 with the fights measured, and the player's to answer.
+   * ⚠️ **NOT A `Multipliers` AXIS, AND THAT IS WHY BURN DID NOT MOVE.** An axis is Savior's value
+   * moved a margin per step (0356), so raising Legend's would have moved Savior's and Burn's with it —
+   * the tuned tier re-tuned by a play of another one. A literal, like `lives` and the shell, moves the
+   * rows that were asked about and no other.
    */
   bossToughness: Readonly<Record<BossFight, number>>;
 }
@@ -447,12 +444,11 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     // Never narrower than 56, and turns that lean at about 14° — 0350, the player's number.
     corridor: { narrowest: 56, slope: 0.25 },
     /*
-      Twice the mid-boss and fifteen percent more end boss, over a `toughness` of one — 0532, the
-      player's numbers from a play of this tier. Measured on the pulse, the mid-boss fights went from
-      12–17 s to 20–29 s — past their level's window of 25 in three levels of seven, where the waves
-      past it come in over the fight (0502) — and every one is now longer than Savior's 17–23.
+      Half again the mid-boss and fifteen percent more end boss, over a `toughness` of one — 0532, the
+      player's numbers from a play of this tier. Asked first as twice; settled at one and a half so
+      Savior's mid-bosses, raised with it, hold a fifth more than these.
     */
-    bossToughness: { mid: 2, end: 1.15 },
+    bossToughness: { mid: 1.5, end: 1.15 },
   },
   /**
    * The tier the game is tuned for — `SAVIOR` is its multipliers, and the other two are derived.
@@ -468,8 +464,12 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     ...multipliersFor('savior'),
     // Never narrower than 44, turns at about 19° — 0350, the player's number.
     corridor: { narrowest: 44, slope: 0.35 },
-    // Its bosses as tough as `toughness` says — the tuned tier, and 0532 asked nothing of it.
-    bossToughness: AS_TOUGH,
+    /*
+      Its mid-bosses an eighth over `toughness` — 1.8 of the content against Legend's 1.5, a fifth more —
+      and its end bosses as `toughness` says. 0532: the player's answer, asked for the tuned tier to stay
+      above the gentle one after Legend's mid-bosses rose.
+    */
+    bossToughness: { mid: 1.125, end: 1 },
   },
   /**
    * The tier that is supposed to end runs: Savior a margin up on every axis but `aggression` and
@@ -501,7 +501,7 @@ export const DIFFICULTIES: Record<DifficultyKind, DifficultyRow> = {
     ...multipliersFor('burn'),
     // Never narrower than 34, turns at about 30° — 0350, the player's number.
     corridor: { narrowest: 34, slope: 0.58 },
-    // As tough as `toughness` says — 0532 is a literal on Legend's row, so it does not ripple here.
+    // As tough as `toughness` says — 0532 is a literal on Legend's and Savior's rows, so it does not ripple here.
     bossToughness: AS_TOUGH,
   },
 };

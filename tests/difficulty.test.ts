@@ -393,7 +393,7 @@ describe('the two helpers cannot produce a body that does not work', () => {
   it('and never makes something take fewer, whatever the tiers turn out to be', () => {
     /*
       The weaker property, kept alongside the stronger one because it is the one that must hold even
-      between two tiers with the SAME toughness.
+      between two tiers with the SAME toughness — the bosses are walked here and the enemies above.
     */
     for (const [easier, harder] of PAIRS) {
       for (const kind of ENEMY_KINDS) {
@@ -404,13 +404,19 @@ describe('the two helpers cannot produce a body that does not work', () => {
         ).toBeGreaterThanOrEqual(toughnessFor(base, DIFFICULTIES[easier]));
       }
       /*
-        ⚠️ **THE BOSSES WERE WALKED HERE TOO, AND 0532 DEMOTED THAT HALF TO A TASTE** —
-        `docs/decisions/0532-the-legend-holds-longer.md`, one edit and a reason (0192). Asked: *"legendary
-        difficulty — minibosses need probably twice as much health as they do now"*, which puts Legend's
-        sentinel at 348 against Savior's 279. That is a correct change reddening it, so it was never an
-        invariant: a boss's health is a tier's row, and the claim is `0532-held` in `tests/authored.ts`,
-        printed every run with every boss it is not true of.
+        ⚠️ **THE BOSSES, IN BOTH FIGHTS, AT THE HEALTH THE FRAME GIVES THEM — AND STILL HARD.**
+        `docs/decisions/0532-the-legend-holds-longer.md` gave each tier a boss number per fight, and when
+        Legend's mid-bosses rose the player asked for Savior's to hold a fifth more than them. So the
+        ordering is the player's own ask rather than an accident of the margins, and 0532 keeps it hard.
       */
+      for (const kind of BOSS_KINDS) {
+        for (const fight of BOSS_FIGHTS) {
+          expect(
+            bossToughnessFor(BOSSES[kind].health, DIFFICULTIES[harder], fight),
+            `the ${kind} holds less as the ${fight} boss on ${harder} than on ${easier}`,
+          ).toBeGreaterThanOrEqual(bossToughnessFor(BOSSES[kind].health, DIFFICULTIES[easier], fight));
+        }
+      }
     }
   });
 });

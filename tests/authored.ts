@@ -46,7 +46,6 @@ export const AUTHORED_IDS = [
   '0323-struck',
   '0325-note',
   '0479-seen',
-  '0532-held',
 ] as const;
 
 export type AuthoredId = (typeof AUTHORED_IDS)[number];
@@ -220,17 +219,6 @@ export const AUTHORED: Record<AuthoredId, AuthoredClaim> = {
     claim: 'every bullet a boss throws takes at least 0.8 s across the 95 units from the fish’s station to a ship at 60, at Savior',
     correctly: 'one fast shot telegraphed long enough to be read before it leaves — a beam is, and a bullet could be',
     decision: '0479-the-flame-slows',
-  },
-  /*
-    Demoted from `tests/difficulty.test.ts`'s *never makes something take fewer*, which walked the
-    bosses beside the enemies until the player asked for Legend's mid-bosses at twice the content's
-    health — over Savior's 1.6. Printed so the tier that holds its mid-bosses longest is a line on
-    every run, rather than a fact found by playing Savior after Legend.
-  */
-  '0532-held': {
-    claim: 'no boss holds less on a harder tier than on an easier one, in either fight',
-    correctly: 'Legend’s mid-bosses asked for at twice the content’s health, above Savior’s 1.6, from a play of Legend',
-    decision: '0532-the-legend-holds-longer',
   },
 };
 

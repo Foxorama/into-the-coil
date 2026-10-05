@@ -42,8 +42,21 @@ export const PROBES = [
   },
   {
     decision: '0532',
+    suite: 'tests/difficulty.test.ts',
+    // The first ask's number: Legend's mid-bosses at twice the content, over Savior's 1.8 — the
+    // ordering the player asked to keep, inverted.
+    broke: 'Legend’s mid-bosses holding more than Savior’s',
+    guard: 'and never makes something take fewer, whatever the tiers turn out to be',
+    edit: {
+      path: 'src/content/difficulty.ts',
+      find: '    bossToughness: { mid: 1.5, end: 1.15 },',
+      replace: '    bossToughness: { mid: 2, end: 1.15 },',
+    },
+  },
+  {
+    decision: '0532',
     suite: 'tests/tier-shell.test.ts',
-    // Every fixture that names no tier stands on this row, so its mid-bosses would hold twice the
+    // Every fixture that names no tier stands on this row, so its bosses would hold more than the
     // content under every guard in the suite.
     broke: 'the baseline given Legend’s boss numbers, so the content’s bosses are stated nowhere',
     guard: 'THE BASELINE',
