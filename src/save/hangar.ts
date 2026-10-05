@@ -17,8 +17,10 @@
  */
 
 import { SHIP_KINDS, type ShipKind } from '../content/ships.ts';
-import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
-import { type HangarState, gunOpen, plateOpen, specialOpen } from '../state/slices/hangar.ts';
+import { DANGLE_KINDS } from '../content/dangles.ts';
+import { RIM_KINDS } from '../content/rims.ts';
+import { OWNABLE_KINDS, type OwnableKind } from '../content/wares.ts';
+import { type HangarState, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
 import type { Store } from './store.ts';
 
 /** Where the hangar lives. Named once; `PRIVACY.md` names it too, and a test holds the two together. */
@@ -73,9 +75,10 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     is read of what is owned, as of a win; a dangle hung that the document's own list does not own reads
     as the ship's own, so an edited document buys nothing. `null` is read as nothing hung.
   */
-  const ownedDoc = typeof doc.owned === 'object' && doc.owned !== null ? (doc.owned as Partial<Record<DangleKind, unknown>>) : null;
+  // 0527: every ownable kind, the rims with the dangles, read the same way.
+  const ownedDoc = typeof doc.owned === 'object' && doc.owned !== null ? (doc.owned as Partial<Record<OwnableKind, unknown>>) : null;
   const owned = { ...base.owned };
-  for (const kind of DANGLE_KINDS) if (ownedDoc?.[kind] === true) owned[kind] = true;
+  for (const kind of OWNABLE_KINDS) if (ownedDoc?.[kind] === true) owned[kind] = true;
   const hungDoc = perShipOf(doc.hung);
   const hung = { ...base.hung };
   for (const kind of SHIP_KINDS) {
@@ -98,13 +101,21 @@ export function hangarFrom(text: string | null, base: HangarState): HangarState 
     const from = shipOf(gunDoc?.[kind]);
     if (from !== null && gunOpen(opened, kind, from)) gun[kind] = from;
   }
-  return { won, plate, shards, owned, hung, special, gun };
+  // 0527: each car's rim, refused unless its wins or what it owns open it — the ship's own otherwise.
+  const rimDoc = perShipOf(doc.rim);
+  const rim = { ...base.rim };
+  const owning: HangarState = { ...opened, owned };
+  for (const kind of SHIP_KINDS) {
+    const raw = RIM_KINDS.find((r) => r === rimDoc?.[kind]);
+    if (raw !== undefined && rimOpen(owning, kind, raw)) rim[kind] = raw;
+  }
+  return { won, plate, shards, owned, hung, special, gun, rim };
 }
 
 /** The hangar as it is written. */
 export function serialiseHangar(hangar: HangarState): string {
-  const { won, plate, shards, owned, hung, special, gun } = hangar;
-  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun });
+  const { won, plate, shards, owned, hung, special, gun, rim } = hangar;
+  return JSON.stringify({ v: HANGAR_VERSION, won, plate, shards, owned, hung, special, gun, rim });
 }
 
 /** The hangar in `store` laid over `base`, or `base`. Never throws. */

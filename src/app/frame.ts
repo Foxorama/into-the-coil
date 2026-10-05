@@ -87,6 +87,7 @@ import type { Rng } from '../sim/rng.ts';
 import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import type { ShipRow } from '../content/ships.ts';
+import { RIMS } from '../content/rims.ts';
 import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, SHIELD_ORBIT, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
@@ -921,6 +922,11 @@ export interface World {
    * ship, so the root of the flame is behind the hull.
    */
   exhaust: Pool<Entity>;
+  /**
+   * A car's turning wheels — 0527: one picture over each wheel while the ship flies on a rim that turns
+   * (the Mothership's spinners), and none otherwise. A pool for the exhaust's reason, drawn over the ship.
+   */
+  wheels: Pool<Entity>;
   /**
    * A surge's aura: one entity, on the ship while a surge lasts — 0373. A pool of one for the
    * exhaust's reason: the painter is handed pools and does not know what a ship is wearing.
@@ -2535,6 +2541,8 @@ export class GameFrame implements Frame {
     // After the wreck check, so the flame goes out on the step the hull does and not one later —
     // 0230. It reads the pool rather than `flying`, which was true at the top of this step.
     stepExhaust(w);
+    // And the wheels, on the same terms — 0527.
+    stepWheels(w);
     // And whether the ship lurched, for the dice on the estate's dash — 0461.
     stepJolt(w);
 
@@ -4766,6 +4774,53 @@ function stepShields(w: World): void {
     orb.prevAcross = orb.across;
     orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
     orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
+  }
+}
+
+/** What a turning wheel is as a body: a picture on the ship, hitting and hit by nothing — 0527. */
+// @setup: one body, read by `reset` whenever a wheel comes on.
+const WHEEL_BODY = { sprite: SPRITE.spinnerWheel, spriteHit: SPRITE.spinnerWheelHit, radius: 0, health: 1, damage: 0 };
+
+/** The spinner's own radius in world units: its bitmap's frame has a radius of one (`SPRITE_EXTENT`). */
+const SPINNER_RADIUS = SPRITE_EXTENT.spinnerWheel * 0.42;
+
+/**
+ * A car's turning wheels — `docs/decisions/0527-the-wheels-turn.md`. While the ship flies on a rim that
+ * turns, one picture stands over each wheel its row names, swelled to that tyre, turning at the rim's
+ * rate — front and back at their own, as the Mothership's did — forward, as a car rolling nose-first
+ * turns. It wears the ship's hurt twin whenever the ship does, so a hit or a blink takes the wheels too.
+ * Out the step the hull is, and never on a ship with no wheels or a rim baked still.
+ *
+ * ⚠️ **Carried by hand, as the exhaust is**: nothing else steps this pool. Nothing allocates.
+ */
+function stepWheels(w: World): void {
+  const wheels = w.shipRow.wheels;
+  const rates = wheels === null ? null : RIMS[wheels.rim].turn;
+  if (wheels === null || rates === null || w.shipPool.size === 0) {
+    w.wheels.clear();
+    return;
+  }
+  while (w.wheels.size < wheels.at.length) {
+    const wheel = w.wheels.spawn();
+    if (wheel === null) break;
+    reset(wheel, w.ship.along, w.ship.across, WHEEL_BODY);
+  }
+  const hurt = w.ship.sprite === w.ship.spriteHit;
+  const sprite = hurt ? SPRITE.spinnerWheelHit : SPRITE.spinnerWheel;
+  for (let i = 0; i < w.wheels.size; i++) {
+    const wheel = w.wheels.at(i);
+    const at = i === 0 ? wheels.at[0] : wheels.at[1];
+    wheel.sprite = sprite;
+    wheel.spriteBase = sprite;
+    wheel.spriteHit = sprite;
+    wheel.swell = wheels.radius / SPINNER_RADIUS;
+    wheel.prevAlong = wheel.along;
+    wheel.prevAcross = wheel.across;
+    wheel.along = w.ship.along + at.along;
+    wheel.across = w.ship.across + at.across;
+    wheel.prevTurn = wheel.turn;
+    const next = wheel.turn + (TAU * STEP_MS) / ((i === 0 ? rates[0] : rates[1]) * 1000);
+    wheel.turn = next > Math.PI ? next - TAU : next;
   }
 }
 
@@ -10669,6 +10724,7 @@ export function respawn(w: World): void {
     ship that died wearing some of them.
   */
   w.shieldOrbs.clear();
+  w.wheels.clear();
   /*
     ── THE SHIP COMES BACK INTO ITS POOL, WHICH IT ONLY HAS TO DO BECAUSE IT LEFT ──────────────────
 

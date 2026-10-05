@@ -85,6 +85,9 @@ export const SPRITE_KINDS = [
   'estateTubeHit',
   'estateTubes',
   'estateTubesHit',
+  // 0527: the Mothership's spinner on its own, turned by the frame over each wheel of a car wearing it.
+  'spinnerWheel',
+  'spinnerWheelHit',
   'drifter',
   'drifterHit',
   'lancer',
@@ -1586,6 +1589,13 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   estateTubeHit: SHIP_BOX,
   estateTubes: SHIP_BOX,
   estateTubesHit: SHIP_BOX,
+  /*
+    0527: a box whose frame's radius is the Firebird's tyre — 3.6 of the predecessor's units, each 0.062
+    of a ship's box radius — so the spinner is painted to a radius of one and stands over that tyre at
+    scale one; the estate's smaller one is the same bitmap swelled down (`stepWheels`).
+  */
+  spinnerWheel: 3.6 * 0.062 * SHIP_BOX,
+  spinnerWheelHit: 3.6 * 0.062 * SHIP_BOX,
   drifter: 5.5,
   drifterHit: 5.5,
   /*

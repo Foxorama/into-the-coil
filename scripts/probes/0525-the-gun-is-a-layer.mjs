@@ -13,8 +13,8 @@ export const PROBES = [
     guard: 'fires it from its hardpoint plus the gun’s own mount',
     edit: {
       path: 'src/content/ships.ts',
-      find: '  return { ...row, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };',
-      replace: '  return { ...row, weapon: gun, muzzle: row.hardpoint };',
+      find: '  return { ...row, wheels, weapon: gun, muzzle: { along: row.hardpoint.along + mount.along, across: row.hardpoint.across + mount.across } };',
+      replace: '  return { ...row, wheels, weapon: gun, muzzle: row.hardpoint };',
     },
   },
   {
@@ -46,7 +46,7 @@ export const PROBES = [
     guard: 'begins in the world with the fitted ship',
     edit: {
       path: 'src/app/lifecycle.ts',
-      find: '      world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon);',
+      find: '      world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon, rim ?? undefined);',
       replace: '      world.shipRow = SHIPS[ship];',
     },
   },

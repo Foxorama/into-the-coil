@@ -116,17 +116,20 @@ describe('the chooser is the table', () => {
       select your pilot, then …"*, because what it fits is that pilot's ship. It is one value in one slice,
       so the two bands cannot disagree, and the title is still where a pilot is flown from. Named here
       rather than loosened to *at most two*, so a third screen offering it is red.
+
+      0527: and on *Paint & Parts*, the hangar's second tab, for the same reason — what it dresses is that
+      pilot's ship. Named, as the hangar was.
     */
     for (const [setting, screens] of where) {
-      if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar').toEqual(['hangar', 'title']);
+      if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar’s tabs').toEqual(['hangar', 'parts', 'title']);
       else expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
     }
     // 0512: and the touch section's two, on Settings with the rest.
     // 0517: and the continues band, on the title beside the tier.
     // 0521: and the hangar's dash, a slot of the ship on its stand rather than a setting.
     // 0523: and what hangs from it, and Cosmo's shelf.
-    // 0524: and the special a run opens with; 0526: and the gun it flies.
-    expect([...where.keys()].sort()).toEqual(['credits', 'dangle', 'difficulty', 'gun', 'hand', 'pilot', 'plate', 'sound', 'special', 'steer', 'style', 'travel', 'ware']);
+    // 0524: and the special a run opens with; 0526: and the gun it flies; 0527: and what its wheels wear.
+    expect([...where.keys()].sort()).toEqual(['credits', 'dangle', 'difficulty', 'gun', 'hand', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'travel', 'ware']);
   });
 });
 

@@ -33,7 +33,8 @@ import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
 import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
-import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, shieldPlateOf, type GunView } from '../content/ships.ts';
+import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
+import type { RimKind } from '../content/rims.ts';
 import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
@@ -886,6 +887,9 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   estateTubeHit: 'hazard',
   estateTubes: 'player',
   estateTubesHit: 'hazard',
+  // 0527: the spinner is the player's, as the car it turns on is, and flashes as the car does.
+  spinnerWheel: 'player',
+  spinnerWheelHit: 'hazard',
   drifterHit: 'impact',
   lancerHit: 'impact',
   weaverHit: 'impact',
@@ -2738,9 +2742,9 @@ function estateOutline(stage: number, own = true): Pt[] {
   drawing's outline closes over where its gun stood) and then that gun's mount at the ship's hardpoint
   (`paintMount`), last, over the hull it stands on.
 
-  ⚠️ **AND THE DEFAULT IS WHAT `withGun` SAYS, SINCE 0526**, so the twelve calls `drawKind` makes by
+  ⚠️ **AND THE DEFAULT IS WHAT `withFit` SAYS, SINCE 0526**, so the twelve calls `drawKind` makes by
   sprite name — and the intro's, and a glyph's — draw a ship with the gun the shell fitted while it bakes
-  that ship's sprites, and its own the rest of the time. Nothing is set outside `withGun`, so a bake that
+  that ship's sprites, and its own the rest of the time. Nothing is set outside `withFit`, so a bake that
   is not asked for a fitting draws exactly what 0525 proved against `main`.
 */
 export function drawPlayerShip(
@@ -2750,6 +2754,8 @@ export function drawPlayerShip(
   ship: ShipArt,
   stage: number,
   gun: WeaponKind = gunNow(ship),
+  // 0527: and the rim on its wheels, as `withFit` says or as it comes; nothing on a ship with none.
+  rim: RimKind | null = fitNow(ship).rim,
 ): void {
   const own = gun === SHIPS[ship].weapon;
   const tubesOf = (on: { one: TubeAt; two: readonly [TubeAt, TubeAt] }): readonly TubeAt[] =>
@@ -2788,10 +2794,10 @@ export function drawPlayerShip(
       break;
     // The cars carry their tubes as turrets in their own rooflines.
     case 'firebird':
-      drawFirebird(ctx, f, palette, stage, own);
+      drawFirebird(ctx, f, palette, stage, own, rim);
       break;
     case 'estate':
-      drawEstate(ctx, f, palette, stage, own);
+      drawEstate(ctx, f, palette, stage, own, rim);
       break;
     default: {
       const unhandled: never = ship;
@@ -2878,13 +2884,92 @@ function drawCaddie(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
 }
 
 /**
- * A snowflake wheel's gold about `(x, y)` in the predecessor's frame, `reach` out: ten spikes from a
- * ring at two fifths of it, one polygon and one mark.
+ * ── THE RIMS — 0527 ─────────────────────────────────────────────────────────────────────────────────
+ *
+ * Each car's wheels, from its row (`wheels` in `src/content/ships.ts`), with the rim it is fitted with:
+ * the tyre is the car's and the rim is drawn to it, so any rim fits either car. Painted where each car
+ * painted its own wheels, so nothing over or under them moves.
  */
-function snowflake(x: number, y: number, reach: number): Pt[] {
+function paintWheels(ctx: Pen, f: Frame, palette: Palette, ship: ShipArt, rim: RimKind | null): void {
+  const wheels = SHIPS[ship].wheels;
+  if (wheels === null) return;
+  const r = wheels.radius / BOX_R;
+  for (const at of wheels.at) {
+    disc(ctx, f, shade(palette.trim, -0.25), at.along / BOX_R, at.across / BOX_R, r);
+    paintRim(ctx, f, palette, rim ?? wheels.rim, at.along / BOX_R, at.across / BOX_R, r, 0);
+  }
+}
+
+/**
+ * A rim inside a tyre of radius `r` about `(cx, cy)`, in the frame's radius, turned `turn` — everything
+ * inside the rubber, which is the car's. The Mothership's spinners are also baked on their own and
+ * turned by the frame over each wheel (`stepWheels`), so this draws exactly the dish they cover.
+ *
+ * ⚠️ **SAID AS FRACTIONS OF THE TYRE, AND THE FRACTIONS ARE THE CARS' OWN NUMBERS.** The Firebird's
+ * snowflake was a 2.55 dish and a 2.5 star in a 3.6 tyre; the estate's whitewall a 2.3 to 1.6 band in
+ * a 2.9 one. Said over their own tyre they are the drawings 0516 and 0461 made.
+ */
+export function paintRim(ctx: Pen, f: Frame, palette: Palette, rim: RimKind, cx: number, cy: number, r: number, turn: number): void {
+  switch (rim) {
+    // The Trans Am's — 0516: ten gold spikes over a dark dish, round a hub.
+    case 'snowflake':
+      disc(ctx, f, shade(palette.hazard, -0.6), cx, cy, r * (2.55 / 3.6));
+      poly(ctx, f, palette.hazard, snowflake(cx, cy, r * (2.5 / 3.6), turn));
+      disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * (0.95 / 3.6));
+      return;
+    // The estate's — 0461: a whitewall, a gilt hubcap and a chrome boss.
+    case 'whitewall':
+      band(ctx, f, palette.impact, cx, cy, r * (2.3 / 2.9), r * (1.6 / 2.9));
+      disc(ctx, f, shade(palette.hazard, 0.2), cx, cy, r * (1.4 / 2.9));
+      disc(ctx, f, shade(palette.trim, 0.6), cx, cy, r * (0.9 / 2.9));
+      return;
+    /*
+      The Mothership's (the predecessor's `ufo`): a cross of silver spokes on a dark dish, a hub at the
+      middle — here lit in the player's cyan, the running lights' colour, so the one thing turning on the
+      car is the one thing that glows.
+
+      ⚠️ **HALF A RADIUS THICK, BECAUSE A CAR'S WHEEL IS FIVE PIXELS ACROSS.** The Mothership's wheel had
+      a silver rim and four hairline spokes, drawn for a card; at the fight's camera a car's tyre is about
+      five pixels in radius and 0106's floor is two and a half, so every mark here is at least half a
+      radius — two bars that cross, and a hub — and the rim and a glint the first drawing had were
+      measured under it (`tests/accents.test.ts`) and went. A fat cross is also what reads as turning.
+    */
+    case 'spinner': {
+      const silver = shade(palette.trim, 0.75);
+      disc(ctx, f, shade(palette.trim, -0.55), cx, cy, r * 0.84);
+      // Short of the dish's edge by what keeps a bar's square corner inside it: √(0.84² − 0.25²) is 0.80.
+      for (const a of [turn, turn + Math.PI / 2]) poly(ctx, f, silver, spoke(cx, cy, r * 0.78, r * 0.5, a));
+      disc(ctx, f, palette.player, cx, cy, r * 0.28);
+      return;
+    }
+    default: {
+      const unhandled: never = rim;
+      return unhandled;
+    }
+  }
+}
+
+/** A bar through `(cx, cy)` at angle `a`, `reach` out each way and `width` across: one spoke pair. */
+function spoke(cx: number, cy: number, reach: number, width: number, a: number): Pt[] {
+  const c = Math.cos(a);
+  const s = Math.sin(a);
+  const w = width / 2;
+  return [
+    [cx + c * reach - s * w, cy + s * reach + c * w],
+    [cx + c * reach + s * w, cy + s * reach - c * w],
+    [cx - c * reach + s * w, cy - s * reach - c * w],
+    [cx - c * reach - s * w, cy - s * reach + c * w],
+  ];
+}
+
+/**
+ * A snowflake wheel's gold about `(x, y)`, `reach` out and turned `turn`: ten spikes from a ring at two
+ * fifths of it, one polygon and one mark.
+ */
+function snowflake(x: number, y: number, reach: number, turn = 0): Pt[] {
   const out: Pt[] = [];
   for (let k = 0; k < 20; k++) {
-    const a = (k * Math.PI) / 10;
+    const a = (k * Math.PI) / 10 + turn;
     const r = k % 2 === 0 ? reach : reach * 0.4;
     out.push([x + Math.cos(a) * r, y + Math.sin(a) * r]);
   }
@@ -2946,7 +3031,7 @@ function paintTurrets(
  * phoenix across the flank — with the shuriken launcher standing on the hood, its steel star where the
  * blades leave from (the ship's `wingtip`), and its turrets on the roof.
  */
-function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
+function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null): void {
   /*
     ── BLACK, READ BY ITS GOLD EDGES — 0468 ──────────────────────────────────────────────────────────
     Played: *"the firebird has gone too far away from the black and gold trans am."* It had: the body
@@ -2987,13 +3072,8 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
     (0516). ONE polygon a wheel, as the launcher's star is: a spoke on its own at this size is under
     0106's floor.
   */
-  for (const x of [12, -10]) {
-    const [cx, cy] = at(x, 6);
-    disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 3.6 * 0.062);
-    disc(ctx, f, shade(gold, -0.6), cx, cy, 2.55 * 0.062);
-    poly(ctx, f, gold, box(snowflake(x, 6, 2.5)));
-    disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.95 * 0.062);
-  }
+  // 0527: on its row, with the rim it is fitted with — `paintRim`'s snowflake is this car's own.
+  paintWheels(ctx, f, palette, 'firebird', rim);
   /*
     The gold pinstripes, each inside the silhouette (`tests/accents.test.ts`): the beltline from the
     tail to the nose, the rocker between the wheels, an arch over each wheel stopped short of the sill,
@@ -3135,7 +3215,7 @@ function drawFirebird(ctx: Pen, f: Frame, palette: Palette, stage: number, own =
  * along the doors, the player's cyan as its running light, the lightning gun as a tesla rod standing on
  * the bonnet, and its turrets on the roof rack.
  */
-function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true): void {
+function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = true, rim: RimKind | null = null): void {
   const gilt = palette.hazard;
   const box = (points: readonly Pt[]): Pt[] => inBox(points, 0, 1);
   const at = (x: number, y: number): Pt => box([[x, y]])[0]!;
@@ -3215,14 +3295,8 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
       [from, 6],
     ]));
   }
-  // The wheels over the sills: rubber in the slate trim, a whitewall, a gilt hubcap with a chrome boss.
-  for (const x of [9, -9]) {
-    const [cx, cy] = at(x, 6.4);
-    disc(ctx, f, shade(palette.trim, -0.25), cx, cy, 2.9 * 0.062);
-    band(ctx, f, palette.impact, cx, cy, 2.3 * 0.062, 1.6 * 0.062);
-    disc(ctx, f, shade(gilt, 0.2), cx, cy, 1.4 * 0.062);
-    disc(ctx, f, shade(palette.trim, 0.6), cx, cy, 0.9 * 0.062);
-  }
+  // The wheels over the sills, on its row — 0527; `paintRim`'s whitewall is this car's own.
+  paintWheels(ctx, f, palette, 'estate', rim);
   // The glasshouses, split by a pillar in the gilt.
   poly(ctx, f, palette.glass, box([
     [-12.8, -3.4],
@@ -3302,16 +3376,19 @@ function drawEstate(ctx: Pen, f: Frame, palette: Palette, stage: number, own = t
   the point this draws its mouth at. `tests/mounts.test.ts` holds every pairing to it.
 */
 
-/** The ship being baked with another ship's gun, while `withGun` runs — 0526; `null` the rest of the time. */
-let fitting: { readonly ship: ShipArt; readonly gun: WeaponKind } | null = null;
+/**
+ * The ship being baked fitted otherwise than it comes, while `withFit` runs — 0526's gun, and since 0527
+ * the whole `Fit`; `null` the rest of the time.
+ */
+let fitting: { readonly ship: ShipArt; readonly fit: Fit } | null = null;
 
 /**
- * `bake` with `ship` drawn carrying `gun` wherever it is drawn without a gun named — 0526: a sprite, a
- * glyph, the intro's hangar. Restored after, whatever `bake` throws, on `bakeGlyph`'s `bubbled` terms.
+ * `bake` with `ship` drawn as `fit` says wherever it is drawn without one named — 0526: a sprite, a glyph,
+ * the intro's hangar. Restored after, whatever `bake` throws, on `bakeGlyph`'s `bubbled` terms.
  */
-export function withGun<T>(ship: ShipArt, gun: WeaponKind, bake: () => T): T {
+export function withFit<T>(ship: ShipArt, fit: Fit, bake: () => T): T {
   const was = fitting;
-  fitting = { ship, gun };
+  fitting = { ship, fit };
   try {
     return bake();
   } finally {
@@ -3321,18 +3398,23 @@ export function withGun<T>(ship: ShipArt, gun: WeaponKind, bake: () => T): T {
 
 /**
  * `ship`'s six sprites in `atlas` — its hull at no tubes, one and two, each with its hurt twin — baked
- * again with `gun`, in place — 0526, on `bakeNebula`'s terms: no new atlas, and nothing to hand the
- * surface, which blits the same array. A hurt twin re-draws its base, so the wash lands on the new gun.
+ * again as `fit` says, in place — 0526, on `bakeNebula`'s terms: no new atlas, and nothing to hand the
+ * surface, which blits the same array. A hurt twin re-draws its base, so the wash lands on the new fit.
  */
-export function bakeShipGun(atlas: Atlas, palette: Palette, ship: ShipArt, gun: WeaponKind): void {
+export function bakeShipFit(atlas: Atlas, palette: Palette, ship: ShipArt, fit: Fit): void {
   const bitmaps = atlas.bitmaps as CanvasImageSource[];
   for (const hull of SHIPS[ship].hulls) {
     for (const index of [hull.base, hull.hit]) {
       const kind = SPRITE_KINDS[index];
       if (kind === undefined) continue;
-      bitmaps[index] = withGun(ship, gun, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
+      bitmaps[index] = withFit(ship, fit, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
     }
   }
+}
+
+/** How `ship` is drawn now: as `withFit` says, or as it comes. */
+export function fitNow(ship: ShipArt): Fit {
+  return fitting !== null && fitting.ship === ship ? fitting.fit : ownFit(ship);
 }
 
 /** A box's radius in world units: a sprite's frame puts it at 0.42 of the extent — `tests/mounts.test.ts`'s `R`. */
@@ -3469,9 +3551,9 @@ export function paintMountAt(ctx: Pen, f: Frame, palette: Palette, gun: WeaponKi
   MOUNTS[gun][view](ctx, f, palette, (x, y) => [at[0] + x, at[1] + y], [muzzle.along / BOX_R, muzzle.across / BOX_R]);
 }
 
-/** The gun `ship` is drawn with now: the one `withGun` names for it, or its own — 0526. */
+/** The gun `ship` is drawn with now: the one `withFit` names for it, or its own — 0526. */
 export function gunNow(ship: ShipArt): WeaponKind {
-  return fitting !== null && fitting.ship === ship ? fitting.gun : SHIPS[ship].weapon;
+  return fitNow(ship).gun;
 }
 
 /** Which way a thrust frame leans, read off its name: +1 for a climb (the tip below), −1 for a dive. */
@@ -12911,6 +12993,18 @@ export function drawKind(
     case 'estateTubes':
     case 'estateTubesHit':
       drawPlayerShip(ctx, f, palette, 'estate', 2);
+      return;
+    /*
+      0527: the Mothership's spinner at its own radius of one, unturned; the frame turns the blit. A body
+      of its own — the dish, sealed in the one outline — because it is laid over the car and not into it.
+    */
+    case 'spinnerWheel':
+    case 'spinnerWheelHit':
+      ctx.fillStyle = shade(palette.trim, -0.55);
+      ctx.beginPath();
+      ring(ctx, f, 0, 0, 0.84);
+      seal(ctx);
+      paintRim(ctx, f, palette, 'spinner', 0, 0, 1, 0);
       return;
     /*
       ⚠️ **EACH FRAME OF A CYCLE IS ITS OWN ARM, AND THE ARM NAMES ITS INDEX — 0410.** Reading the index

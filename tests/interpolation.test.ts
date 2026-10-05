@@ -100,6 +100,7 @@ function stationKeepingWorld(surface: Surface): World {
     shipPool,
     shieldOrbs: new Pool<Entity>(MAX_SHIELDS, makeEntity),
     exhaust: new Pool<Entity>(1, makeEntity),
+    wheels: new Pool<Entity>(2, makeEntity),
     aura: new Pool<Entity>(1, makeEntity),
     surgeFor: 0,
     surgeKind: null,

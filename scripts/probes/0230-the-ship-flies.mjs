@@ -84,8 +84,8 @@ export const PROBES = [
     edit: {
       path: 'src/app/mount.ts',
       // ⚠️ Re-anchored by 0233: the bolts sit between the bombs and the exhaust now.
-      find: 'bolts, exhaust, shieldOrbs, shipPool],',
-      replace: 'bolts, shieldOrbs, shipPool, exhaust],',
+      find: 'bolts, exhaust, shieldOrbs, shipPool, wheels],',
+      replace: 'bolts, shieldOrbs, shipPool, exhaust, wheels],',
     },
   },
 ];

@@ -49,6 +49,7 @@
 import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { SHIPS, fitted, type ShipKind } from '../content/ships.ts';
+import type { RimKind } from '../content/rims.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import type { CreditKind } from '../content/credits.ts';
 import type { SpecialKind } from '../content/specials.ts';
@@ -66,7 +67,7 @@ export interface Lifecycle {
    * which is what the rig and the tests that fly a run begin on; the shell always passes the fitting.
    */
   // 0525: and the gun, the ship's own by default, as the special is.
-  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind): void;
+  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind, rim?: RimKind | null): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
   /**
@@ -107,7 +108,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
   };
 
   return {
-    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind): void {
+    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind, gun?: WeaponKind, rim?: RimKind | null): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
         argument `enemyRows` and `pickupRows` make in `mount`: a per-spawn lookup by string key is a
@@ -116,7 +117,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       world.difficulty = DIFFICULTIES[difficulty];
       // And the ship, resolved to its row once, on the same terms — 0441. `startLevel` respawns it,
       // so its hull and hurtbox are this row's from the first frame. 0525: with the gun it flies.
-      world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon);
+      world.shipRow = fitted(SHIPS[ship], gun ?? SHIPS[ship].weapon, rim ?? undefined);
       /*
         ⚠️ **`seedField` is NOT called here, and it used to be.** A random opening field is the right
         answer for a scene proving the page draws and the wrong one for an authored level: it puts

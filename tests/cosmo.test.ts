@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DANGLES, DANGLE_KINDS, WARES } from '../src/content/dangles.ts';
+import { DANGLES, DANGLE_KINDS } from '../src/content/dangles.ts';
+import { OWNABLES, WARES } from '../src/content/wares.ts';
 import { SHIPS, SHIP_KINDS } from '../src/content/ships.ts';
 import { initialState, reduce, type State } from '../src/state/root.ts';
 import { canBuy, initialHangar } from '../src/state/slices/hangar.ts';
@@ -20,9 +21,11 @@ const holding = (shards: number): State => ({ ...initialState, hangar: { ...init
 
 describe('the shelf', () => {
   it('THE ASK: a eucalyptus tree, the alien’s family in a frame and a golf ball, at 250 shards each', () => {
-    expect(WARES.map((kind) => DANGLES[kind].name)).toEqual(['Eucalyptus tree', 'Family photo', 'Golf ball']);
+    // 0527: the shelf is every ownable thing with a price, the dangles first.
+    const dangles = WARES.filter((kind) => DANGLE_KINDS.some((d) => d === kind));
+    expect(dangles.map((kind) => OWNABLES[kind].name)).toEqual(['Eucalyptus tree', 'Family photo', 'Golf ball']);
     // *"let's set the cheaper stuff at 250 shards for a base level"*.
-    for (const kind of WARES) expect(DANGLES[kind].price, kind).toBe(250);
+    for (const kind of dangles) expect(OWNABLES[kind].price, kind).toBe(250);
   });
 
   it('the fuzzy dice are not for sale: every player has them, and the estate opens with them hung', () => {
@@ -35,43 +38,43 @@ describe('the shelf', () => {
 
   it('offers every ware on the shop’s band, in the table’s order, saying its price', () => {
     const band = SCREENS.shop.choices.find((c) => c.name === 'ware')!;
-    expect(band.options.map((o) => o.label)).toEqual(WARES.map((kind) => DANGLES[kind].name));
-    for (const option of band.options) expect(option.hint).toContain('250 Star Shards');
+    expect(band.options.map((o) => o.label)).toEqual(WARES.map((kind) => OWNABLES[kind].name));
+    band.options.forEach((option, i) => expect(option.hint).toContain(String(OWNABLES[WARES[i]!].price) + ' Star Shards'));
   });
 });
 
 describe('buying', () => {
   it('takes the price and gives the ware, once', () => {
     // Enough for two, so it is owning the ware that refuses the second — not the balance.
-    const bought = reduce(holding(600), { slice: 'hangar', type: 'bought', dangle: 'golfball' });
+    const bought = reduce(holding(600), { slice: 'hangar', type: 'bought', ware: 'golfball' });
     expect(bought.hangar.shards).toBe(350);
     expect(bought.hangar.owned.golfball).toBe(true);
-    const again = reduce(bought, { slice: 'hangar', type: 'bought', dangle: 'golfball' });
+    const again = reduce(bought, { slice: 'hangar', type: 'bought', ware: 'golfball' });
     expect(again, 'a ware owned was bought again').toBe(bought);
   });
 
   it('refuses a ware the balance does not cover, and takes nothing', () => {
     const short = holding(249);
     expect(canBuy(short.hangar, 'eucalyptus')).toBe(false);
-    expect(reduce(short, { slice: 'hangar', type: 'bought', dangle: 'eucalyptus' }), 'a ware was bought on credit').toBe(short);
+    expect(reduce(short, { slice: 'hangar', type: 'bought', ware: 'eucalyptus' }), 'a ware was bought on credit').toBe(short);
     expect(canBuy(holding(250).hangar, 'eucalyptus'), 'the exact price did not buy it').toBe(true);
   });
 
   it('refuses what is not for sale', () => {
     const rich = holding(10_000);
-    expect(reduce(rich, { slice: 'hangar', type: 'bought', dangle: 'dice' })).toBe(rich);
+    expect(reduce(rich, { slice: 'hangar', type: 'bought', ware: 'dice' })).toBe(rich);
   });
 
   it('the shelf says what stands between the player and the ware', () => {
-    expect(wareWhy(true, 0, 250)).toContain('hang it');
-    expect(wareWhy(false, 157, 250)).toBe('Need 93 more Star Shards');
-    expect(wareWhy(false, 250, 250)).toBe(null);
+    expect(wareWhy('golfball', true, 0)).toContain('hang it');
+    expect(wareWhy('golfball', false, 157)).toBe('Need 93 more Star Shards');
+    expect(wareWhy('golfball', false, 250)).toBe(null);
   });
 });
 
 describe('hanging', () => {
   it('anything owned hangs on any ship, won in or not, and nothing is an answer', () => {
-    const owned = reduce(holding(250), { slice: 'hangar', type: 'bought', dangle: 'family' });
+    const owned = reduce(holding(250), { slice: 'hangar', type: 'bought', ware: 'family' });
     for (const ship of SHIP_KINDS) {
       expect(reduce(owned, { slice: 'hangar', type: 'hung', ship, dangle: 'family' }).hangar.hung[ship], ship).toBe('family');
       expect(reduce(owned, { slice: 'hangar', type: 'hung', ship, dangle: 'dice' }).hangar.hung[ship], ship).toBe('dice');
@@ -87,7 +90,7 @@ describe('hanging', () => {
 
 describe('the key', () => {
   it('keeps what was bought and what hangs where', () => {
-    let state = reduce(holding(600), { slice: 'hangar', type: 'bought', dangle: 'eucalyptus' });
+    let state = reduce(holding(600), { slice: 'hangar', type: 'bought', ware: 'eucalyptus' });
     state = reduce(state, { slice: 'hangar', type: 'hung', ship: 'caddie', dangle: 'eucalyptus' });
     state = reduce(state, { slice: 'hangar', type: 'hung', ship: 'estate', dangle: null });
     expect(hangarFrom(serialiseHangar(state.hangar), initialHangar)).toEqual(state.hangar);
