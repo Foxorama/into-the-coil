@@ -540,9 +540,13 @@ export const SHOTS: Record<ShotKind, ShotRow> = {
    * `speed` is how fast it leaves the muzzle before it slows to hang.
    *
    * ⚠️ **ITS HURTBOX IS ITS HUB AND HALF ITS SPOKES**, inside the drawn wheel and its glow on the
-   * picture-is-the-hurtbox band (`tests/combat.test.ts`). The sparks off its rim are the embers.
+   * picture-is-the-hurtbox band (`tests/combat.test.ts`). The sparks off its rim are the embers. Both
+   * halved in 0549 with the drawing, 4.2 to 2.1.
+   *
+   * ⚠️ **5, AND IT WAS 3 — 0549.** It is thrown three quarters of the screen now rather than 66 units,
+   * 160 of them on a 16:9 view; at 3 that was a wheel still crawling out a second after the throw.
    */
-  catherine: { sprite: SPRITE.catherine, spriteHit: SPRITE.catherine, radius: 4.2, health: WHEEL_EDGE, damage: 2, speed: 3, fission: SPENT_BY_ARRIVING },
+  catherine: { sprite: SPRITE.catherine, spriteHit: SPRITE.catherine, radius: 2.1, health: WHEEL_EDGE, damage: 2, speed: 5, fission: SPENT_BY_ARRIVING },
   /**
    * An ember off the wheel's rim — 0545: *"short sparking fire embers."* Spent by arriving, as a pulse
    * is, and short-lived: the wheel's row says how long. A streak with a white-hot head, turned along its

@@ -19,7 +19,7 @@ import { boltInks } from '../src/render/bolt-inks.ts';
 import { luminance } from './contrast.ts';
 import { withTheGame } from '../src/render/port-bake.ts';
 import { BOLT_STEPS, STROKES_PER_LINK, paintBolts } from '../src/render/scene.ts';
-import { BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, type Surface } from '../src/render/surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, type Surface } from '../src/render/surface.ts';
 import { viewOf } from '../src/sim/camera.ts';
 import { makeEntity, reset, type Entity } from '../src/sim/entity.ts';
 import { Pool } from '../src/sim/pool.ts';
@@ -53,13 +53,14 @@ describe('0470 — the light is additive', () => {
       context left `lighter` adds every blit that follows — the ship, the HUD — to the frame, which is
       the failure this guard is really for: it would be invisible in any test that counts calls.
     */
-    for (const [name, points, count, beam] of [
-      ['a flash', LINE, 3, false],
-      ['a dot', POINT, 1, false],
-      ['a beam', LINE, 3, true],
+    for (const [name, points, count, look] of [
+      ['a flash', LINE, 3, BOLT_FLASH],
+      ['a dot', POINT, 1, BOLT_FLASH],
+      ['a beam', LINE, 3, BOLT_BEAM],
+      ['a rope', LINE, 3, BOLT_ROPE],
     ] as const) {
       const { surface, pen, inks } = canvas();
-      surface.bolt(points, count, 2, 0.9, BOLT_PLAYER, beam);
+      surface.bolt(points, count, 2, 0.9, BOLT_PLAYER, look);
       expect(pen.globalCompositeOperation, `${name} left the context adding`).toBe('source-over');
       expect(pen.globalAlpha, `${name} left the context's alpha down`).toBe(1);
       expect(inks().length, `${name} was not stroked`).toBeGreaterThan(1);
@@ -81,7 +82,7 @@ describe('0470 — the light is additive', () => {
     */
     const width = 3;
     const { surface, inks } = canvas();
-    surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, true);
+    surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, BOLT_BEAM);
     const layers = light(inks());
     expect(layers.length, 'a beam is a flash with a different name').toBeGreaterThanOrEqual(4);
     for (let i = 1; i < layers.length; i++) {
@@ -96,7 +97,7 @@ describe('0470 — the light is additive', () => {
     expect(rim.width, 'the rim is inside the body it should edge').toBeGreaterThan(4 * width);
     // And the stacks really are two — the flash is not drawn with the beam's layers or vice versa.
     const flash = canvas();
-    flash.surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, false);
+    flash.surface.bolt(LINE, 3, width, 1, BOLT_HOSTILE, BOLT_FLASH);
     // By what is stroked and not by how many: since 0520 a flash has as many layers of light as a beam.
     const shape = (s: readonly Stroke[]): string => s.map((l) => `${l.width}/${l.alpha}`).join(' ');
     expect(shape(light(flash.inks())), 'a flash is drawn as a beam').not.toBe(shape(layers));

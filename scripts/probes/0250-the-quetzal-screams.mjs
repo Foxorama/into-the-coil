@@ -94,9 +94,9 @@ export const PROBES = [
         draws them. And by 0453, whose beams say their own count of points. And by 0470, whose beam
         blooms as it lights and is stroked as a beam.
       */
-      // And by 0545, whose bolt verb takes a tone where it took a flag.
-      find: '        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, true);',
-      replace: '        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * view.scale, held, BOLT_HOSTILE, true);',
+      // And by 0545, whose bolt verb takes a tone where it took a flag, and 0549, a look where it took a flag.
+      find: '        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, BOLT_BEAM);',
+      replace: '        surface.bolt(BEAM_PATH, points, BOLT_WIDTH * view.scale, held, BOLT_HOSTILE, BOLT_BEAM);',
     },
   },
   {

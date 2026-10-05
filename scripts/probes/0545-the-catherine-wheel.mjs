@@ -53,13 +53,14 @@ export const PROBES = [
     suite: 'tests/wheel.test.ts',
     broke: 'no leash, so the tether runs the length of the lane',
     guard: 'is on a leash',
-    edit: { path: 'src/app/frame.ts', find: '    if (d > wheel.leash) {', replace: '    if (d > wheel.leash * 10) {' },
+    // 0549: the leash a share of the screen, and held only while there is a tether.
+    edit: { path: 'src/app/frame.ts', find: '    if (b.lifeFor > wheel.fade && d > leash) {', replace: '    if (b.lifeFor > wheel.fade && d > leash * 10) {' },
   },
   {
     decision: '0545',
     suite: 'tests/wheel.test.ts',
     broke: 'a wheel that never burns down',
-    guard: 'burns down over its last beat',
+    guard: 'burns down once its tether lets go',
     edit: { path: 'src/app/frame.ts', find: '    if (b.lifeFor <= wheel.fade) {\n      b.sprite = SPRITE.catherineFade;', replace: '    if (b.lifeFor <= 0) {\n      b.sprite = SPRITE.catherineFade;' },
   },
   {

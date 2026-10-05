@@ -862,6 +862,7 @@ export const INK_OF: Record<SpriteKind, keyof Palette> = {
   catherine: 'bullet',
   catherineFade: 'bullet',
   cinder: 'hazard',
+  cinderCool: 'bullet',
   /*
     ⚠️ **THE RAY'S RINGS ARE THE ALLY INK — 0442** — *"purple energy rings"*, and the player's own
     purple is `ally`, the seekers' lavender. Never `void`, which is the serpent's hostile violet: the
@@ -15897,42 +15898,85 @@ export function drawKind(
         poly(ctx, f, fading ? shade(gold, -0.35) : shade(gold, 0.25), points, fading ? 0.7 : 0.95);
       }
       band(ctx, f, fading ? shade(gold, -0.3) : gold, 0, 0, face, face - 0.07, 0.9);
-      glow(ctx, f, palette.impact, 0, 0, fading ? 0.22 : 0.34, fading ? 0.5 : 0.85);
-      disc(ctx, f, fading ? shade(gold, 0.2) : palette.impact, 0, 0, 0.12);
+      if (fading) {
+        glow(ctx, f, palette.impact, 0, 0, 0.22, 0.5);
+        disc(ctx, f, shade(gold, 0.2), 0, 0, 0.12);
+        return;
+      }
+      /*
+        ⚠️ **THE HEART IS WHITE-HOT — 0549.** *"Visually the center should be white hot."* Three steps out
+        from white, over the spokes' roots so the heat reads as eating into them: a gold light half way
+        to the rim, a white light inside it, a pale-gold ring and a solid white core a fifth of the face
+        across — at half the size the wheel was, a hub of 0545's 0.12 was a pixel or two.
+      */
+      glow(ctx, f, shade(gold, 0.5), 0, 0, face * 0.8, 0.7);
+      glow(ctx, f, palette.impact, 0, 0, face * 0.62, 0.85);
+      band(ctx, f, shade(gold, 0.75), 0, 0, 0.21, 0.16, 0.9);
+      disc(ctx, f, palette.impact, 0, 0, 0.17);
       return;
     }
-    case 'cinder': {
+    case 'cinder':
+    case 'cinderCool': {
       /*
         A cinder off the wheel's rim — 0545: a white-hot head and a tail of gold going to amber, turned
         along its flight by the frame. A streak and never a dot: a round dot of fire is what a hostile
         bullet is in the volcano, and the shape is what tells them apart there (0295).
+
+        ⚠️ **IN DEPTH — 0549.** *"The sparks should have a lot more depth to them."* Five layers where
+        there were two: a faint amber light round the whole streak, a long amber tail, a gold body inside
+        it, a pale-gold filament inside that, and the white-hot head in its own light. And they are light
+        (`LIGHT_KINDS`), so a spray burns brighter where its streaks cross. The cooled one, which a
+        cinder turns into half way through its flight, has lost its white: a deep amber head on a
+        shorter, dimmer tail — so a spray is hot at the wheel and cooling at its edge.
       */
+      const cool = kind === 'cinderCool';
+      const amber = palette.bullet;
+      const gold = palette.hazard;
       ctx.arc(half + r * 0.55, half, r * 0.24, 0, Math.PI * 2);
       seal(ctx);
+      glow(ctx, f, amber, 0.1, 0, 0.9, cool ? 0.3 : 0.45);
       poly(
         ctx,
         f,
-        palette.bullet,
+        cool ? shade(amber, -0.25) : amber,
         [
-          [0.5, -0.2],
+          [0.5, -0.24],
           [-1.05, 0],
-          [0.5, 0.2],
+          [0.5, 0.24],
         ],
-        0.6,
+        cool ? 0.45 : 0.6,
       );
       poly(
         ctx,
         f,
-        shade(palette.hazard, 0.3),
+        cool ? amber : gold,
         [
-          [0.55, -0.12],
-          [-0.45, 0],
-          [0.55, 0.12],
+          [0.55, -0.16],
+          [-0.7, 0],
+          [0.55, 0.16],
         ],
+        cool ? 0.6 : 0.8,
+      );
+      if (cool) {
+        glow(ctx, f, gold, 0.55, 0, 0.32, 0.6);
+        // Translucent: a cooled head is light finer than a solid mark may be (0227).
+        disc(ctx, f, shade(gold, 0.2), 0.55, 0, 0.11, 0.85);
+        return;
+      }
+      poly(
+        ctx,
+        f,
+        shade(gold, 0.6),
+        [
+          [0.55, -0.08],
+          [-0.3, 0],
+          [0.55, 0.08],
+        ],
+        // Translucent: a filament of light, finer than a solid mark may be and off the head (0227).
         0.8,
       );
-      glow(ctx, f, palette.impact, 0.55, 0, 0.4, 0.8);
-      disc(ctx, f, palette.impact, 0.55, 0, 0.13);
+      glow(ctx, f, palette.impact, 0.55, 0, 0.42, 0.85);
+      disc(ctx, f, palette.impact, 0.55, 0, 0.14);
       return;
     }
     case 'shuriken':
