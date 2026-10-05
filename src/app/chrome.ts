@@ -2267,13 +2267,24 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-group-heading, .itc-parts-group-heading { padding-bottom: 0.15em; }
   .itc-hangar-plate .itc-hangar-group, .itc-parts-plate .itc-parts-group { gap: 0.15rem; }
   /*
-    And beside the faces on a phone the card is the name and where they are from: the bio is two lines
+    And on a phone the card is the name and where they are from: the bio is two lines
     the screen has not got, and the ship, the craft and the gun are the dash and the bands under it.
   */
   .itc-hangar-pilot-card { grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; }
-  /* Beside the faces in what the faces leave: one line each, cut short rather than pushing the plate wider. */
-  .itc-hangar-pilot-card .itc-hangar-pilot-words { flex-wrap: nowrap; flex-direction: column; }
-  .itc-hangar-pilot-card .itc-hangar-pilot-name, .itc-hangar-pilot-card .itc-hangar-pilot-who { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /*
+    ⚠️ **ON A PHONE THE CARD IS UNDER THE FACES, ONE LINE — 0547.** Beside them it had what the roster
+    left: 39 pixels at 667x375, where it drew "Bac" and "they/" and its own edge took the rest, and at
+    812x375 CI's wider letters cut the Marmot's home off. Under them, the name and who they are are one
+    row across the plate, at every phone width and for every pilot, and cost one line of the height: 0513's
+    lesson again, that a breakpoint between beside and under only moves the cut to the width next to it.
+  */
+  .itc-hangar-pilot-card { grid-column: 1 / -1; }
+  .itc-hangar-pilot-card .itc-hangar-pilot-words { flex-wrap: wrap; flex-direction: row; align-items: baseline; column-gap: 0.6em; }
+  /*
+    Each on one line and never cut short — 0547: a name ending in an ellipsis is a pilot the player cannot
+    name, and the row has the plate's width to give them. Should a name ever outgrow it, the two wrap.
+  */
+  .itc-hangar-pilot-card .itc-hangar-pilot-name, .itc-hangar-pilot-card .itc-hangar-pilot-who { white-space: nowrap; }
   .itc-hangar-pilot-card .itc-hangar-pilot-ship, .itc-hangar-pilot-card .itc-hangar-pilot-bio,
   .itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
   /*
