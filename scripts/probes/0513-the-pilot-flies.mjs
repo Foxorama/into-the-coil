@@ -75,11 +75,12 @@ export const PROBES = [
   {
     decision: '0513',
     suite: 'tests/intro.browser.test.ts',
-    broke: 'the card naming the pilot and never saying who they are',
+    // ⚠️ Re-pointed by 0538: the title's line says what the pilot flies, and the bio is the hangar's.
+    broke: 'the line naming the pilot and never saying what they fly',
     guard: 'a first tap on another card says who they are',
     edit: {
       path: 'src/app/chrome.ts',
-      find: '    pilotCard.bio.textContent = row.bio;',
+      find: '    pilotCard.craft.textContent = ship.label;',
       replace: '',
     },
   },
