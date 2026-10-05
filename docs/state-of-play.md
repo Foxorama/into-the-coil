@@ -1180,9 +1180,9 @@ leaves the player:
 The title and the hangar family reported as *"a pure mess … stuff everywhere"*, with the dash to come
 down off the play corner and Cosmo's to get categories and a preview.
 [`the-menus-are-a-place`](../reports/the-menus-are-a-place-2026-10-05.md) is the plan — photographed
-on `main` before it was written — and **holds the order, so this file does not.** Its first two items
-need no answer from the player; its *Answers* table is empty and the fifth item waits on one row of it.
-Built on the hangar queue below, which is complete.
+on `main` before it was written — and **holds the order, so this file does not.** Its five answers are
+given, in its *Answers* table; nothing in it waits on the player but the word to start item 1. Built on
+the hangar queue below, which is complete.
 
 ### ⚠️ THE HANGAR IS A QUEUE OF TEN, BEING BUILT IN ORDER — 2026-10-05
 

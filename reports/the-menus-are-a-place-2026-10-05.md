@@ -197,8 +197,8 @@ does. The room is baked at the fitted ship when any of the three is opened and d
   stays in view on its pad beyond it, and **Cosmo stands behind the counter** — a face and a line, like
   the pilots', which the player names below. The plate carries **three shelves, one per table**:
   *Hanging*, *Wheels*, *Flames*, each a band of its wares with the price on the ware's face and a
-  shut look on what is already owned. On a desktop all three shelves show; on a phone a category band
-  above one shelf, stepping between them. **A ware in the window is tried on where it goes** — a dangle
+  shut look on what is already owned, under a category band that steps the shelf in view; a desktop
+  shows as many shelves as fit, a phone one — see *The answers* for how it grows. **A ware in the window is tried on where it goes** — a dangle
   on the dash, a rim on the ship's wheels, a flame in its exhaust — on the stage, before a shard is
   spent, which is 0523's rule extended from the dash to the pad. ***Buy* names the price** —
   *Buy · 250 ✦* — and on an owned ware it is replaced by *Yours — fit it in the hangar*, so there is
@@ -276,15 +276,26 @@ Each PR from `main`, one open at a time, photographed at 480×320, 667×375, 812
 
 ## The answers
 
+Given 2026-10-05, the same evening:
+
 | question | answer |
 |---|---|
-| does the bio leave the title for the hangar? | |
-| does the title stay in the sky, with only the hangar family in the port? | |
-| who is Cosmo — the alien in the family photo, or someone else? | |
-| the three shelves by table on a desktop, a category band on a phone — or tabs inside the shop? | |
-| does the dash in the hangar show what the run opens with, rather than zeros? | |
+| does the bio leave the title for the hangar? | **yes** |
+| does the title stay in the sky, with only the hangar family in the port? | **yes** |
+| who is Cosmo — the alien in the family photo, or someone else? | **yes**, the alien |
+| the three shelves by table on a desktop, a category band on a phone — or tabs inside the shop? | **yes, so far** — *"there'll be more cosmetics added for lots of things so it'll need space to grow"* |
+| does the dash in the hangar show what the run opens with, rather than zeros? | **yes** |
+
+**The shop is built to grow, on the fourth answer.** The shelves are the ownable tables walked in
+`src/content/wares.ts`'s order, so a new kind of cosmetic — a horn, a decal, a trail — is a table, a
+line in that list, and a shelf, never a layout change. What the layout owes is the room: the plate
+shows as many shelves as fit its height at the device's type and **the category band is always
+there**, stepping the shelf in view, so a desktop with three shelves and a phone with one are the same
+screen at different heights, and a sixth table scrolls the same way the first did. A shelf with more
+wares than fit a row wraps, as the dangle band does today. Nothing about this is a cap: no shelf
+count, no ware count, is a number anywhere.
 
 ## Owed
 
-- The player's answers above; items 1 and 2 need none of them, and item 5 needs the third.
 - A play of each change on its branch preview, and the pad walk re-recorded once item 1 lands.
+- Item 1 on the player's word.
