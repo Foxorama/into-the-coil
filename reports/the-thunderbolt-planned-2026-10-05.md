@@ -59,8 +59,7 @@ decides lives in its decision once it lands; this is the queue.
 the Firebird's shuriken goes to the estate, and the Firebird takes a gun that does not exist yet. Each
 move needs the next: land the Thunderbolt first and two ships share the arc; land the wheel first and
 the shuriken or the arc is nobody's. Either way a ship goes unflown in the boss floor, and that guard
-is right to go red. So the roster changes in one PR, and only the hangar's storage — which nothing on
-screen depends on — goes ahead of it.
+is right to go red. So the roster changes in one PR.
 
 **A disc that hangs is the sound reading of *go back and forth*.** A wheel fixed ahead of the nose is a
 lance and moving only moves the whole thing; a flail is fun to whip and hard to aim. A wheel that hangs
@@ -108,28 +107,28 @@ names his.
 - **The roman candle** — on the gun trigger: a candle on the hood fires eight stars in a sweeping fan
   up the lane, one every half beat, each bursting into a firework that lands on everything inside it.
   It joins the bomb pickup's pool for every ship, as every gun's special does.
-- **The hangar keeps what it had opened.** v2 stores guns and specials by kind. A v1 document is read,
-  not discarded: its wins kept, and every gun and special its wins opened under the old table kept
-  open — so a win in the estate before this change still opens the arc. Otherwise a player loses the
-  arc until they have cleared the game four times and then once more on the Thunderbolt.
 - **Sounds**: the wheel's launch (a thump and a fuse hiss), a crackle on each beat while it spins, a
   sizzle when the tether lands, a quieter ember spit, rate-limited; the candle's thumps and each
   burst's crack and crackle tail; a whistle for the Marmot's voice blip. All on the beat grid.
 
 ## The queue
 
-1. **The hangar keeps guns by kind.** `itc_hangar` v2: `gun` and `special` hold a `WeaponKind` and a
-   `SpecialKind`; a v1 document is read through the v1 table and keeps everything it had opened. The
-   unlock rule becomes *a win in a ship opens its own gun and special*, written against the row rather
-   than against a ship name. Nothing on screen changes. **Rollback note**: v2 cannot be read by v1.
-2. **The roman candle**, with its cues and its face. It lands before its gun, because a special
+1. **The roman candle**, with its cues and its face. It lands before its gun, because a special
    does not need one to be played: the bomb pickup offers every gun's special to every ship, so the
-   candle is in every run from this item on, and the Firebird's own stack takes it in item 3.
-3. **The Thunderbolt, the Marmot, the Catherine wheel.** The roster change, atomic for the reason
+   candle is in every run from this item on, and the Firebird's own stack takes it in item 2.
+2. **The Thunderbolt, the Marmot, the Catherine wheel.** The roster change, atomic for the reason
    above: the fifth ship and pilot, the lock and the teaser, the arc on the Thunderbolt, the shuriken
    drawn as the estate's own gun, the wheel and its launcher on the Firebird with the candle as its
    special, the wheel's cues and the Marmot's lines; the hangar's grids at five; the boss floor flown
    in every ship and the gun floor in every pairing; the wheel's numbers set on the instruments.
+3. **The hangar keeps guns by kind.** `itc_hangar` v2: `gun` and `special` hold a `WeaponKind` and a
+   `SpecialKind` rather than the ship they came from, and the unlock rule becomes *a win in a ship
+   opens its own gun and special*, written against the row rather than a ship name. Last, and still
+   worth doing: answered, *"don't worry about the saves for now, there are currently no saved games or
+   anything to worry about, and I don't currently plan to do a weapon swap like this in future … so
+   let's do the save state as the last thing because it's worth doing anyway."* So item 2 moves the
+   guns under v1, where a fit saved as *the Firebird's gun* follows the Firebird's new gun, and no v1
+   document is translated. **Rollback note**: v2 cannot be read by v1.
 
 ## Owed
 
