@@ -406,7 +406,13 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     barrels: 1,
     links: 1,
     weight: 1,
-    bossWeight: 1,
+    /*
+      ⚠️ **0.6, AND IT WAS 1 UNTIL THE BOSSES WERE FLOWN — 0372's knob.** At one the wheel, its tether and
+      its embers together took the gyre, the medusa and the fish in 24 to 26 seconds from their best
+      place, where every other gun's best is 40 to 41 and the floor is forty. A hanging wheel is in the
+      boss's face for nine beats in ten; what it lands on everything else is untouched. 0538 has the table.
+    */
+    bossWeight: 0.6,
     landGap: 2,
     // The roman candle — 0537, landed ahead of the wheel.
     special: 'candle',

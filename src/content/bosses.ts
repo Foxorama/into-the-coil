@@ -4012,7 +4012,12 @@ export const BOSSES: Record<BossKind, BossRow> = {
       shuriken in 38.9 and the ray in 39.2 against 0260's forty, with the pulse at 41.1. The guns that
       fell furthest are weighted, on the pterodactyl's pattern (0441).
     */
-    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95 },
+    /*
+      0538: and the Catherine wheel, at its own 0.6 in 39.3–39.6 s in every ship against the floor's forty.
+      Not monotonic: at 0.62 it was faster, 38.4 s, because the damage moves the fish's phases. At 0.55 its
+      best is 43 s, measured.
+    */
+    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95, catherine: 0.55 },
     damage: 3,
     station: 155,
     drift: 5,
@@ -4269,8 +4274,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       it when the pool emptied and the wreck lies in the pool after the death. Read at the death, the
       arc killed it in 32.5 s and the ray in 35.8 against 0260's forty, while the pulse and the shuriken
       took 40.2. The weights put both at 40.6–40.7 and leave the other two where they were.
+
+      0538: and the Catherine wheel, at its own 0.6, in 39 s — it hangs in the gyre's face for nine beats
+      in ten. A twentieth less puts it at the others' forty-one.
     */
-    gunWeights: { arc: 1.2, ray: 0.82 },
+    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.57 },
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
