@@ -11,10 +11,11 @@
 
 import { DANGLES, DANGLE_KINDS, type DangleKind } from './dangles.ts';
 import { RIMS, RIM_KINDS, type RimKind } from './rims.ts';
+import { FLAMES, FLAME_KINDS, type FlameKind } from './flames.ts';
 
 /** Everything the hangar can own. Closed. */
-export const OWNABLE_KINDS = [...DANGLE_KINDS, ...RIM_KINDS] as const;
-export type OwnableKind = DangleKind | RimKind;
+export const OWNABLE_KINDS = [...DANGLE_KINDS, ...RIM_KINDS, ...FLAME_KINDS] as const;
+export type OwnableKind = DangleKind | RimKind | FlameKind;
 
 /** What the shop needs of a thing: its name, its line, and its price, or `null` for one never sold. */
 export interface OwnableRow {
@@ -24,7 +25,7 @@ export interface OwnableRow {
 }
 
 /** Each ownable kind's row, read off its own table. */
-export const OWNABLES: Record<OwnableKind, OwnableRow> = { ...DANGLES, ...RIMS };
+export const OWNABLES: Record<OwnableKind, OwnableRow> = { ...DANGLES, ...RIMS, ...FLAMES };
 
 /** What Cosmo's sells, in `OWNABLE_KINDS`'s order: everything with a price. */
 export const WARES: readonly OwnableKind[] = OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null);

@@ -27,6 +27,7 @@ import type { DangleKind } from '../../content/dangles.ts';
 import { RIMS, type RimKind } from '../../content/rims.ts';
 import { ART, type ArtKind } from '../../content/art.ts';
 import { HUES, TONES, type Livery } from '../../content/livery.ts';
+import type { FlameKind } from '../../content/flames.ts';
 import { OWNABLES, OWNABLE_KINDS, type OwnableKind } from '../../content/wares.ts';
 
 export interface HangarState {
@@ -86,6 +87,11 @@ export interface HangarState {
    * ship's win, as its other looks are; any of the colours once it is.
    */
   livery: Readonly<Record<ShipKind, Livery | null>>;
+  /**
+   * What each ship's engines burn — 0530: the standard flame, or one bought at Cosmo's, on any ship from
+   * the moment it is bought, as a dangle hangs on any dash.
+   */
+  flame: Readonly<Record<ShipKind, FlameKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -101,7 +107,9 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'art'; ship: ShipKind; art: ArtKind }
   // 0529: the hue a ship's body is painted, `null` for the factory's; and its tone, on the hue it has.
   | { slice: 'hangar'; type: 'livery'; ship: ShipKind; hue: number | null }
-  | { slice: 'hangar'; type: 'tone'; ship: ShipKind; tone: number };
+  | { slice: 'hangar'; type: 'tone'; ship: ShipKind; tone: number }
+  // 0530: what that ship's engines burn.
+  | { slice: 'hangar'; type: 'flame'; ship: ShipKind; flame: FlameKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -122,7 +130,13 @@ export const initialHangar: HangarState = {
   rim: perShip((kind) => SHIPS[kind].wheels?.rim ?? null),
   art: perShip((kind) => SHIPS[kind].arts[0]),
   livery: perShip(() => null),
+  flame: perShip(() => 'standard'),
 };
+
+/** Whether a ship may burn `flame` — 0530: the standard flame always, one bought on any ship. */
+export function flameOpen(state: HangarState, flame: FlameKind): boolean {
+  return state.owned[flame];
+}
 
 /**
  * Whether `ship` may be painted — 0529: once it has been won in, as its other looks open. The factory's
@@ -255,6 +269,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
       if (next === null || was === null || was.tone === next.tone || !liveryOpen(state, action.ship)) return state;
       return { ...state, livery: { ...state.livery, [action.ship]: next } };
     }
+    // 0530: a flame the player has, on any ship.
+    case 'flame':
+      if (state.flame[action.ship] === action.flame || !flameOpen(state, action.flame)) return state;
+      return { ...state, flame: { ...state.flame, [action.ship]: action.flame } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;

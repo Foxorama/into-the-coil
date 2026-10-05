@@ -35,6 +35,7 @@ import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { ART } from '../content/art.ts';
 import { HUES, TONES } from '../content/livery.ts';
+import { FLAMES, FLAME_KINDS } from '../content/flames.ts';
 import { OWNABLES, WARES, type OwnableKind } from '../content/wares.ts';
 import { WEAPONS } from '../content/weapons.ts';
 import { SPECIALS } from '../content/specials.ts';
@@ -108,7 +109,8 @@ export type SettingName = 'difficulty' | 'style' | 'sound' | 'travel' | 'pilot' 
 // 0527: and what its wheels wear, on the Paint & Parts tab.
 // 0528: and what it wears on its nose, its dome or its flank.
 // 0529: and the colour its body is painted, a hue and a tone.
-export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art' | 'livery' | 'tone';
+// 0530: and what its engines burn.
+export type SlotName = 'plate' | 'dangle' | 'special' | 'gun' | 'rim' | 'art' | 'livery' | 'tone' | 'flame';
 
 /**
  * Cosmo's shelf — 0523: which ware the shop has in its window. Neither a setting nor a slot: nothing
@@ -416,6 +418,11 @@ export function toneWhy(won: boolean, painted: boolean): string | null {
   return painted ? null : 'Choose a colour first: the factory’s paint has its own tone';
 }
 
+/** What the flame band says while only the standard is had — 0530: where the rest are sold. */
+export function flameWhy(bought: boolean): string | null {
+  return bought ? null : 'Ion Thrusters are at Cosmo’s, the next tab';
+}
+
 /**
  * What the wheels band says when it offers nothing but the car's own — 0527: a ship with no wheels says
  * so, and a car says how to open the rest, the dash's sentence and Cosmo's, since either opens some.
@@ -444,10 +451,10 @@ export function dangleWhy(boughtAny: boolean): string | null {
 /**
  * What the shelf says of the ware in the window — 0523: that it is owned and where it is put on, or how
  * far the balance is from it, or `null` when it can be bought and the band says its price. 0527: a rim
- * is fitted on Paint & Parts, where a dangle hangs in the hangar.
+ * is fitted on Paint & Parts, where a dangle hangs in the hangar — and since 0530 a flame is too.
  */
 export function wareWhy(ware: OwnableKind, owned: boolean, shards: number): string | null {
-  if (owned) return RIM_KINDS.some((rim) => rim === ware) ? 'Yours — fit it in Paint & Parts' : 'Yours — hang it in the hangar';
+  if (owned) return DANGLE_KINDS.some((dangle) => dangle === ware) ? 'Yours — hang it in the hangar' : 'Yours — fit it in Paint & Parts';
   const price = OWNABLES[ware].price ?? 0;
   return shards < price ? 'Need ' + String(price - shards) + ' more Star Shards' : null;
 }
@@ -864,6 +871,15 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         name: 'tone',
         label: 'Tone',
         options: TONES.map((tone) => ({ label: tone.name, hint: 'The colour ' + tone.name.toLowerCase() })),
+        faces: 'words',
+        on: 'all',
+        press: 'steps',
+      },
+      // 0530: what the engines burn — the standard, then every flame Cosmo's sells. Built by walking `FLAME_KINDS`.
+      {
+        name: 'flame',
+        label: 'Flame',
+        options: FLAME_KINDS.map((kind) => ({ label: FLAMES[kind].name, hint: FLAMES[kind].hint })),
         faces: 'words',
         on: 'all',
         press: 'steps',

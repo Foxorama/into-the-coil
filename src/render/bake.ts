@@ -32,10 +32,11 @@ import { makeRng, type Rng } from '../sim/rng.ts';
 import { coneOf } from '../content/volcano.ts';
 import { POOLS_OF } from '../content/pools.ts';
 import { VEINS_OF, trunkAt } from '../content/veins.ts';
-import { THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
+import { LEAN_KINDS, THRUST, THRUST_KINDS, THRUST_ROOT, type ThrustKind } from '../content/exhaust.ts';
 import { CADDIE_DISC, SHIELD_ANGLES, SHIELD_ORBIT, SHIPS, ownFit, shieldPlateOf, type Fit, type GunView } from '../content/ships.ts';
 import type { RimKind } from '../content/rims.ts';
 import type { ArtKind } from '../content/art.ts';
+import { FLAMES, type FlameKind } from '../content/flames.ts';
 import { WEAPONS, type WeaponKind } from '../content/weapons.ts';
 import { bodyOf, type FoeBody, type SharedKind } from './foes.ts';
 
@@ -3714,7 +3715,58 @@ const THRUST_LEAN = 0.35;
  * one pipe is low at its bumper burned two flames into the slope of its boot. The frame now lays one
  * of these on each of the ship's own `nozzles` (`stepExhaust`), and the fighter's pair is two blits.
  */
-function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number): void {
+/**
+ * A flame's inks — 0530: its body, its tongue, and the reverse burn's wisp. The standard's are the
+ * palette's own, as the flame always was; another's are its row's, its wisp its body's ink.
+ */
+export function flameInks(palette: Palette, flame: FlameKind): { outer: string; inner: string; wisp: string } {
+  const inks = FLAMES[flame].inks;
+  return inks === null ? { outer: palette.bullet, inner: palette.hazard, wisp: palette.flame } : { outer: inks.outer, inner: inks.inner, wisp: inks.outer };
+}
+
+/**
+ * The flame being baked, while `withFlame` runs — 0530; the standard the rest of the time. The flame is
+ * every ship's one set of sprites, so it is scoped apart from `withFit`, which is a ship's.
+ */
+let flaming: FlameKind = 'standard';
+
+/** `bake` with every flame drawn as `flame` — the game's exhaust sprites, and the intro's jets. */
+export function withFlame<T>(flame: FlameKind, bake: () => T): T {
+  const was = flaming;
+  flaming = flame;
+  try {
+    return bake();
+  } finally {
+    flaming = was;
+  }
+}
+
+/** The flame drawn now. */
+export function flameNow(): FlameKind {
+  return flaming;
+}
+
+/**
+ * The exhaust's sprites in `atlas` baked again as `flame`, in place — 0530, on `bakeShipFit`'s terms. One
+ * set for every ship, because one ship flies at a time and its flame is the one on the screen.
+ */
+export function bakeFlame(atlas: Atlas, palette: Palette, flame: FlameKind): void {
+  const bitmaps = atlas.bitmaps as CanvasImageSource[];
+  // Every frame the exhaust's table names — its own list, never a guess from a sprite's name (0016).
+  for (const thrust of THRUST_KINDS) {
+    for (const lean of LEAN_KINDS) {
+      for (const index of THRUST[thrust].frames[lean]) {
+        const kind = SPRITE_KINDS[index];
+        if (kind === undefined) continue;
+        bitmaps[index] = withFlame(flame, () => bakeOne(kind, palette, atlas.view, atlas.pixelsPerUnit, atlas.theme));
+      }
+    }
+  }
+}
+
+function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, flick: boolean, lean: number, flame: FlameKind = flaming): void {
+  // 0530: in the flame's own inks — the standard's orange round yellow, or the ion's blues.
+  const { outer, inner, wisp } = flameInks(palette, flame);
   const y = 0;
   const side = 1;
   const at = (x: number, off: number, side: 1 | -1): Pt => [x, off * side + lean * THRUST_LEAN * (THRUST_ROOT - x)];
@@ -3722,15 +3774,15 @@ function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, fl
   {
     switch (state) {
       case 'idle':
-        glow(ctx, f, palette.hazard, 0.55, y * side + shift(0.55), 0.5, 0.6);
-        poly(ctx, f, palette.bullet, [
+        glow(ctx, f, inner, 0.55, y * side + shift(0.55), 0.5, 0.6);
+        poly(ctx, f, outer, [
           at(0.92, y - 0.19, side),
           at(0.3, y - 0.16, side),
           at(flick ? -0.35 : -0.55, y, side),
           at(0.3, y + 0.16, side),
           at(0.92, y + 0.19, side),
         ], 0.8);
-        poly(ctx, f, palette.hazard, [
+        poly(ctx, f, inner, [
           at(0.92, y - 0.11, side),
           at(0.4, y - 0.09, side),
           at(flick ? 0.05 : -0.1, y, side),
@@ -3740,8 +3792,8 @@ function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, fl
         disc(ctx, f, palette.impact, 0.76, y * side + shift(0.76), 0.11, 0.85);
         break;
       case 'burn':
-        glow(ctx, f, palette.hazard, 0.4, y * side + shift(0.4), 0.6, 0.7);
-        poly(ctx, f, palette.bullet, [
+        glow(ctx, f, inner, 0.4, y * side + shift(0.4), 0.6, 0.7);
+        poly(ctx, f, outer, [
           at(0.94, y - 0.17, side),
           at(0.3, y - 0.15, side),
           at(-0.3, y - 0.1, side),
@@ -3750,7 +3802,7 @@ function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, fl
           at(0.3, y + 0.15, side),
           at(0.94, y + 0.17, side),
         ], 0.85);
-        poly(ctx, f, palette.hazard, [
+        poly(ctx, f, inner, [
           at(0.94, y - 0.1, side),
           at(0.2, y - 0.08, side),
           at(flick ? -0.55 : -0.42, y, side),
@@ -3766,8 +3818,8 @@ function paintThrust(ctx: Pen, f: Frame, palette: Palette, state: ThrustKind, fl
         ], 0.9);
         break;
       case 'ease':
-        glow(ctx, f, palette.flame, 0.7, y * side + shift(0.7), 0.4, 0.5);
-        poly(ctx, f, palette.flame, [
+        glow(ctx, f, wisp, 0.7, y * side + shift(0.7), 0.4, 0.5);
+        poly(ctx, f, wisp, [
           at(0.92, y - 0.14, side),
           at(0.5, y - 0.1, side),
           at(0.2, y, side),
