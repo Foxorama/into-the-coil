@@ -152,9 +152,10 @@ describe('the picture', () => {
     /*
       ⚠️ **OR ON THE STAND, SINCE 0540**, which is baked from the same pieces: the hangar's tabs stand in the
       room, and a car on a rim that turns has its spinners drawn there and in no frame of the intro.
+      0542: and Cosmo's tab, the one stand with a keeper, has their stall.
     */
     const stand = new RecordingSurface();
-    paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'));
+    paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'), true);
     for (const b of stand.blits) seen.add(b.sprite);
     const unseen = PORT_KINDS.filter((kind) => !seen.has(PORT_SPRITE[kind]));
     expect(unseen, 'baked for the intro and the stand and never drawn in either').toEqual([]);

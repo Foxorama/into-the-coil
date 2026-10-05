@@ -41,6 +41,8 @@ import { DANGLE_KINDS, type DangleKind } from '../content/dangles.ts';
 // 0513: the pilot card names the gun the pilot's ship carries, and says it in a line.
 import { WEAPONS } from '../content/weapons.ts';
 import { paintPortrait } from '../render/golfer-art.ts';
+import { paintCosmo } from '../render/cosmo-art.ts';
+import { SHELF_KINDS } from '../content/wares.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { DEFAULT_BINDINGS } from '../content/actions.ts';
 import { PAD_SPECIAL_BUTTONS } from './pad.ts';
@@ -1940,6 +1942,40 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 .itc-shop-band .itc-shop-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.3em; }
 .itc-shop-band .itc-shop-option { font-size: 0.85em; padding-left: 0.3em; padding-right: 0.3em; }
 /*
+  ── COSMO'S COUNTER — 0542 ──────────────────────────────────────────────────────────────────────────
+
+  The keeper at the plate's head — Cosmo's face in a ring of the ally's violet, the name, and the line —
+  then the aisle, then a shelf a line: its name in a column, its wares in a row, each with its price on
+  its face. A shelf's wares are in rows of three, so a shelf that grows wraps as the dangles' band does.
+*/
+.itc-shop-keeper {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.2em 0.9em;
+  padding: 0.35em 0.8em;
+  border-radius: 0.75em;
+  background: color-mix(in srgb, var(--itc-ink) 6%, transparent);
+  text-align: left;
+}
+.itc-shop-keeper-face {
+  display: block;
+  width: clamp(2.4rem, 10cqh, 4.4rem);
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 30%, var(--itc-void)), var(--itc-void));
+  box-shadow: 0 0 0 2px var(--itc-ally, var(--itc-ink)), 0 0 0.8em color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 40%, transparent);
+}
+.itc-shop-keeper-words { display: flex; flex-direction: column; gap: 0.15em; min-width: 0; }
+.itc-shop-keeper-name { font-size: 1.15em; font-weight: 800; letter-spacing: 0.02em; }
+.itc-shop-keeper-line { margin: 0; font-size: 0.85em; font-style: italic; opacity: 0.92; }
+.itc-shop-plate .itc-shop-band { grid-template-columns: max-content auto minmax(0, 1fr) auto; grid-template-areas: 'label less track more' '. . hint .'; padding: 0.1em; }
+.itc-shop-plate .itc-shop-band-label { font-size: 0.66em; text-align: left; }
+/* The aisle says nothing under it: a shelf's line is the shelf's, so the line kept for one is not kept here. */
+.itc-shop-plate [data-itc-setting='aisle'] ~ .itc-shop-band-hint { display: none; }
+/*
   0524: with three slots the right column was a desktop's height — two to a row put the tabs under the
   readout's corner on a 1280x720 — so the dash's four and the special's four stand in one row each, and
   what hangs, five, in rows of three. A phone shows only the one that is on, below. Five a row since
@@ -2209,6 +2245,22 @@ ${each('-band[hidden]')} { display: none; }
     hangar's four stand two deep under the faces; the card's place is the hangar tab's, and a step down.
   */
   .itc-hangar-group, .itc-parts-group { gap: min(0.3rem, 1cqh); }
+  /*
+    0542: on a phone Cosmo's shows the shelf the aisle has in view and no other — the aisle is how a phone
+    walks the shelves, and the walk passes over the ones not drawn — and the keeper a step smaller.
+  */
+  .itc-shop-band-away { display: none; }
+  /*
+    And its bands drop their labels as the hangar's do: the aisle says which shelf is up, and the column a
+    shelf's name took was the room "Eucalyptus" needed to stay on its face at 667x375.
+  */
+  .itc-shop-plate .itc-shop-band-label { display: none; }
+  .itc-shop-plate .itc-shop-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; }
+  /* A step smaller still, for CI's wider letters, under which "Mothership" was ten pixels past its face. */
+  .itc-shop-band .itc-shop-option { font-size: 0.76em; padding-left: 0.2em; padding-right: 0.2em; }
+  .itc-shop-keeper { padding: 0.2em 0.6em; gap: 0.1em 0.6em; }
+  .itc-shop-keeper-face { width: clamp(2rem, 9cqh, 2.8rem); }
+  .itc-shop-keeper-line { font-size: 0.78em; }
   .itc-hangar-groups, .itc-parts-groups { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .itc-hangar-group .itc-hangar-band, .itc-parts-group .itc-parts-band { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: 'less track more' 'hint hint hint'; padding: 0 0.1em; row-gap: 0.05em; }
   /* Paint has three bands to Parts' two, and its column is the plate's height: the headings' own spacing gives. */
@@ -3123,6 +3175,8 @@ interface Panel {
   board: { root: HTMLElement; body: HTMLElement } | null;
   /** The cell on the stand the readout is moved down into while the screen is up — 0539. `null` off the stand. */
   dash: HTMLElement | null;
+  /** The keeper behind the counter, their card on the plate and the line they are saying — 0542. `null` with no counter. */
+  keeper: { root: HTMLElement; line: HTMLElement } | null;
 }
 
 /** One choice, drawn as a band — 0458. */
@@ -3398,6 +3452,9 @@ export interface NowPlaying {
  */
 const ICON_PIXELS_PER_UNIT = 28;
 
+/** The keeper's face on the plate, in canvas pixels — 0542: twice the largest it is drawn, so it is sharp at two to one. */
+const KEEPER_FACE_PIXELS = 160;
+
 /**
  * The studio's badge, as the shell already ships it — 0437. A sidecar of 0008's closed list and the
  * service worker's precache, so naming it here adds no file to the build and nothing that fails
@@ -3576,6 +3633,15 @@ export interface Chrome {
    * The cursor's row is the shown actions, so a walk cannot land on one that is gone.
    */
   setActionShown(screen: Screen, index: number, shown: boolean): void;
+  /** Say what one of a screen's actions is called now — 0542: Cosmo's *Buy* names the price of the ware in the window. */
+  setActionLabel(screen: Screen, index: number, label: string): void;
+  /**
+   * Which of a screen's shelves is in view — 0542: the aisle's. A phone shows that shelf alone, and a
+   * desktop every shelf it has the height for; the walk passes over a shelf that is not drawn.
+   */
+  setInView(screen: Screen, shelf: ChoiceName): void;
+  /** What the keeper behind the counter is saying — 0542: Cosmo's line, under their face on the plate. */
+  setKeeperLine(screen: Screen, line: string): void;
   /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
@@ -4787,6 +4853,39 @@ export function makeChrome(
       }
       choiceBands.sort((a, b) => (a.root.compareDocumentPosition(b.root) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
     }
+    /*
+      ── THE KEEPER — 0542 ──────────────────────────────────────────────────────────────────────────
+
+      Who stands behind the counter, at the head of the plate: their face, their name, and what they are
+      saying (`setKeeperLine`), as a pilot's card stands under the faces. The face is Cosmo's painter —
+      the one keeper there is; a second would bring a painter of their own with them.
+    */
+    let keeper: Panel['keeper'] = null;
+    const keeperRow = row.stand?.keeper ?? null;
+    if (keeperRow !== null) {
+      const card = document.createElement('div');
+      card.className = prefix + 'keeper';
+      const face = document.createElement('canvas');
+      face.className = prefix + 'keeper-face';
+      face.width = KEEPER_FACE_PIXELS;
+      face.height = KEEPER_FACE_PIXELS;
+      face.setAttribute('aria-hidden', 'true');
+      const pen = face.getContext('2d');
+      if (pen !== null) paintCosmo(pen, colours, KEEPER_FACE_PIXELS);
+      const words = document.createElement('div');
+      words.className = prefix + 'keeper-words';
+      const name = document.createElement('div');
+      name.className = prefix + 'keeper-name';
+      name.textContent = keeperRow.name;
+      const line = document.createElement('p');
+      line.className = prefix + 'keeper-line';
+      line.setAttribute('aria-live', 'polite');
+      line.textContent = keeperRow.greet;
+      words.append(name, line);
+      card.append(face, words);
+      settingsBox.prepend(card);
+      keeper = { root: card, line };
+    }
     // A screen with no bands has nothing in their box, and an empty flex child is a gap with no row.
     if (settingsBox.childElementCount === 0) settingsBox.remove();
 
@@ -4844,7 +4943,7 @@ export function makeChrome(
     panel.addEventListener('focusin', follow);
     listeners.push(() => panel.removeEventListener('focusin', follow));
 
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash };
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper };
     elements.push(root);
   }
 
@@ -5738,7 +5837,15 @@ export function makeChrome(
       }
       // Off the row, to the next one up or down, round the ends — a ring of rows, as the list was.
       const from = atCursor()?.getBoundingClientRect();
-      cursor.row = (cursor.row + delta + rows.length) % rows.length;
+      /*
+        ⚠️ **AND PAST A ROW THAT IS NOT DRAWN — 0542.** A phone shows Cosmo's shelf in view alone, the rest
+        hidden by the stylesheet rather than taken out of the walk, because a desktop draws them all and
+        the walk is built once. A row whose every control has no box is not a stop: the push goes on.
+      */
+      for (let tries = 0; tries < rows.length; tries++) {
+        cursor.row = (cursor.row + delta + rows.length) % rows.length;
+        if (rows[cursor.row]!.some((control) => control.getClientRects().length > 0)) break;
+      }
       const landing = rows[cursor.row]!;
       // Into a row of several, onto the one standing nearest across from where the cursor was.
       cursor.col = 0;
@@ -5877,6 +5984,24 @@ export function makeChrome(
       if (panel === undefined || control === undefined || control.hidden === !shown) return;
       control.hidden = !shown;
       panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+    },
+    setActionLabel(screen: Screen, index: number, label: string): void {
+      // The first text of the button, so a hint inside it (`-action-hint`) is kept.
+      const first = panels[screen]?.controls[index]?.firstChild;
+      if (first !== null && first !== undefined && first.nodeType === Node.TEXT_NODE && first.nodeValue !== label) first.nodeValue = label;
+    },
+    setInView(screen: Screen, shelf: ChoiceName): void {
+      const panel = panels[screen];
+      if (panel === undefined) return;
+      const prefix = prefixFor(screen);
+      for (const band of panel.bands) {
+        if (!SHELF_KINDS.some((kind) => kind === band.name)) continue;
+        band.root.classList.toggle(prefix + 'band-away', band.name !== shelf);
+      }
+    },
+    setKeeperLine(screen: Screen, line: string): void {
+      const keeper = panels[screen]?.keeper;
+      if (keeper !== null && keeper !== undefined && keeper.line.textContent !== line) keeper.line.textContent = line;
     },
     setBubble(line: string | null, shown: number, x: number, y: number, hang: 'above' | 'below', name = '', mark = ''): void {
       if (line === null) {

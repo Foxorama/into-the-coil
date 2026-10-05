@@ -131,7 +131,8 @@ import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
-import { WARES } from '../content/wares.ts';
+import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
+import { COSMO } from '../content/cosmo.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
 import {
@@ -1189,6 +1190,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0540: the stand's clock and its camera, written as a tab that stands in the port is shown.
     stand: null,
     standView: { ...view },
+    standKeeper: false,
     outro: null,
     finale: makeFinaleScene(),
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
@@ -1508,11 +1510,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const resolution = view.scale * dpr;
       const standing = GOLFERS[state.settings.pilot];
       if (port === null || atlasIsStale(port, 'side', resolution)) {
-        port = withFit(standing.ship, hangarFit(standing.ship), () => bakePort(colours, resolution, standing));
-        portFit = { ship: standing.ship, fit: hangarFit(standing.ship) };
+        // 0542: in the fit the stand wears — the ware in Cosmo's window tried on, on the shop.
+        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing));
+        portFit = { ship: standing.ship, fit: standFit(standing.ship) };
       }
       if (world.stand === null) world.stand = 0;
       standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
+      world.standKeeper = stand.keeper !== null;
       // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
       surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
       showPort();
@@ -1942,8 +1946,30 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * screen, or a run has been flown. False at boot, so a thumb's first landing on a card is a look.
    */
   let pilotArmed = false;
-  /** Which of Cosmo's wares is in the window — 0523. The shell's, and kept for nothing past the visit. */
-  let shelf = 0;
+  /**
+   * Which of Cosmo's shelves is in view and which ware each has picked — 0523's window, and a shelf per
+   * table since 0542. The shell's, and kept for nothing past the visit. The ware in the window is the
+   * picked one of the shelf in view.
+   */
+  let aisle: ShelfKind = SHELF_KINDS[0];
+  const picked = Object.fromEntries(SHELF_KINDS.map((kind) => [kind, 0])) as Record<ShelfKind, number>;
+  /** What was bought last, so Cosmo thanks the player for it until the window moves — 0542. */
+  let justSold: OwnableKind | null = null;
+  const windowWare = (): OwnableKind | undefined => SHELVES[aisle].wares[picked[aisle]];
+  /*
+    ⚠️ **TRIED ON WHERE IT GOES — 0542.** A ware in the window on Cosmo's is worn by the ship on its pad
+    before a shard is spent: a dangle on the dash (0523), a rim on the wheels of a ship that has them, a
+    flame in the exhaust. Only while the shop is up; anywhere else the stand wears what the hangar fitted.
+  */
+  function standFit(ship: ShipKind): Fit {
+    const fit = hangarFit(ship);
+    if (state.screen.current !== 'shop') return fit;
+    const ware = windowWare();
+    const rim = RIM_KINDS.find((kind) => kind === ware);
+    if (rim !== undefined) return SHIPS[ship].wheels === null ? fit : { ...fit, rim };
+    const flame = FLAME_KINDS.find((kind) => kind === ware);
+    return flame === undefined ? fit : { ...fit, flame };
+  }
   /** Whether the splash has had a press the page could turn the sound on with — 0513. */
   let splashPressed = false;
   const startRun = (): void => {
@@ -1999,9 +2025,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       that is owned or that the balance does not cover, so a press that cannot buy changes nothing.
     */
     else if (screen === 'shop') {
-      const ware = WARES[shelf];
-      if (index === 0 && ware !== undefined) dispatch({ slice: 'hangar', type: 'bought', ware });
-      else if (index !== 0) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
+      const ware = windowWare();
+      if (index === 0 && ware !== undefined) {
+        // 0542: and Cosmo thanks the player for it, which the dispatch's re-read of the shop says.
+        if (!state.hangar.owned[ware] && state.hangar.shards >= (OWNABLES[ware].price ?? 0)) justSold = ware;
+        dispatch({ slice: 'hangar', type: 'bought', ware });
+      } else if (index !== 0) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
     }
     /*
       ⚠️ **THE SPLASH'S PROMPT — 0513, ONLY AFTER A GESTURE.** The capture-phase `unlock` hears the click
@@ -2146,9 +2175,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       if (from !== undefined) dispatch({ slice: 'hangar', type: 'gun', ship: GOLFERS[state.settings.pilot].ship, from });
     }
     // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
-    else if (name === 'ware') {
-      if (WARES[index] !== undefined) shelf = index;
+    // 0542: the aisle steps the shelf in view; a shelf's band picks its ware and brings that shelf into view.
+    else if (name === 'aisle') {
+      const kind = SHELF_KINDS[index];
+      if (kind !== undefined) aisle = kind;
+      justSold = null;
       fitHangar();
+    } else {
+      const kind = SHELF_KINDS.find((shelf) => shelf === name);
+      if (kind !== undefined && SHELVES[kind].wares[index] !== undefined) {
+        aisle = kind;
+        picked[kind] = index;
+        justSold = null;
+        fitHangar();
+      }
     }
   },
   /*
@@ -2177,6 +2217,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     menu's *Pilot* button's hint (0415). The boot cards mark nobody (0462): they are shown before
     anyone has chosen, so a mark there could only name the default.
   */
+  /**
+   * What Cosmo says of the ware in the window — 0542, in Cosmo's words (`src/content/cosmo.ts`): thanks for
+   * what was just bought, where an owned one is fitted, that a ship with no wheels cannot try a rim, how
+   * far the balance is from it, or the greeting.
+   */
+  function keeperLine(ware: OwnableKind, owned: boolean, ship: ShipKind): string {
+    if (justSold === ware) return COSMO.sold;
+    const hangs = DANGLE_KINDS.some((kind) => kind === ware);
+    if (owned) return COSMO.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
+    if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.noWheels;
+    const price = OWNABLES[ware].price ?? 0;
+    if (state.hangar.shards < price) return COSMO.short.replace('{short}', String(price - state.hangar.shards));
+    return COSMO.greet;
+  }
   function showPilot(): void {
     chrome.setChoice('pilot', GOLFER_KINDS.indexOf(state.settings.pilot));
     fitHangar();
@@ -2243,11 +2297,28 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const hung = state.hangar.hung[ship];
     chrome.setOpen('dangle', [true, ...DANGLE_KINDS.map((kind) => state.hangar.owned[kind])], dangleWhy(DANGLE_KINDS.some((kind) => DANGLES[kind].price !== null && state.hangar.owned[kind])));
     chrome.setChoice('dangle', hung === null ? 0 : 1 + DANGLE_KINDS.indexOf(hung));
-    const ware = WARES[shelf];
+    /*
+      0542: every shelf, each ware named with its price on its face — or as the player's, which is the shut
+      look an owned one wears — the shelf in view marked on the aisle, the ware in the window filled on its
+      shelf, Buy naming its price, and Cosmo saying what the shop's state is.
+    */
+    const ware = windowWare();
+    for (const kind of SHELF_KINDS) {
+      const wares = SHELVES[kind].wares;
+      chrome.setLabels(
+        kind,
+        wares.map((w) => ({ label: OWNABLES[w].name + ' · ' + (state.hangar.owned[w] ? 'yours' : String(OWNABLES[w].price) + ' ✦'), hint: OWNABLES[w].hint })),
+      );
+      chrome.setOpen(kind, wares.map(() => true), kind === aisle && ware !== undefined ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards) : null);
+      chrome.setChoice(kind, kind === aisle ? picked[kind] : -1);
+    }
+    chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
+    chrome.setInView('shop', aisle);
     if (ware !== undefined) {
-      chrome.setChoice('ware', shelf);
-      chrome.setOpen('ware', WARES.map(() => true), wareWhy(ware, state.hangar.owned[ware], state.hangar.shards));
-      chrome.setActionShown('shop', 0, !state.hangar.owned[ware]);
+      const owned = state.hangar.owned[ware];
+      chrome.setActionShown('shop', 0, !owned);
+      chrome.setActionLabel('shop', 0, 'Buy · ' + String(OWNABLES[ware].price ?? 0) + ' ✦');
+      chrome.setKeeperLine('shop', keeperLine(ware, owned, ship));
     }
     // The readout wears the ware in the window over the shop, so it is seen hung before it is bought.
     const shown = DANGLE_KINDS.find((kind) => kind === ware);
@@ -2261,7 +2332,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     */
     if (port !== null && world.stand !== null) {
       const onPad = GOLFERS[state.settings.pilot];
-      const fit = hangarFit(onPad.ship);
+      // 0542: the fit the stand wears, with Cosmo's window tried on while the shop is up.
+      const fit = standFit(onPad.ship);
       /*
         ⚠️ **AND THE FLAME — 0541.** `sameFit` leaves the flame out, because the game's atlas burns it in
         one set of sprites kept apart (`atlasFlame`, 0530); the port's ship pieces bake their flames with the
@@ -2310,7 +2382,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setShip(row, SHIPS[state.hangar.plate[ship]], hangarFit(ship));
     fitAtlasGun();
     if (state.run.lives > 0) return;
-    world.shipRow = row;
+    // 0542: the wheels the stand wears, so a rim tried on at Cosmo's turns on the pad as a fitted one does.
+    world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[state.hangar.gun[ship]].weapon, standFit(ship).rim) : row;
     world.weapon = weaponFor(row, [], row.missile);
     wearHull(world);
   }

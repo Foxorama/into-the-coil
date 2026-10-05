@@ -29,3 +29,28 @@ export const OWNABLES: Record<OwnableKind, OwnableRow> = { ...DANGLES, ...RIMS, 
 
 /** What Cosmo's sells, in `OWNABLE_KINDS`'s order: everything with a price. */
 export const WARES: readonly OwnableKind[] = OWNABLE_KINDS.filter((kind) => OWNABLES[kind].price !== null);
+
+/**
+ * Cosmo's shelves — 0542: one per ownable table, in this file's order — what hangs, what turns, what
+ * burns — each holding that table's wares, the ones with a price.
+ *
+ * ⚠️ **BUILT TO GROW, ON THE PLAYER'S WORD**: *"there'll be more cosmetics added for lots of things so
+ * it'll need space to grow."* A new kind of cosmetic — a horn, a decal, a trail — is a table, a line in
+ * `OWNABLE_KINDS` above, and a row here: a shelf, never a layout change. Nothing about the shop is a count
+ * of shelves or of wares; the plate shows as many shelves as it has the height for, and the aisle steps.
+ */
+export const SHELF_KINDS = ['hanging', 'wheels', 'flames'] as const;
+export type ShelfKind = (typeof SHELF_KINDS)[number];
+
+/** What a shelf is called on the plate and on the aisle, and its wares in its table's order. */
+export interface ShelfRow {
+  readonly label: string;
+  readonly wares: readonly OwnableKind[];
+}
+
+/** Each shelf's row, its wares read off its own table — the priced rows of it. */
+export const SHELVES: Record<ShelfKind, ShelfRow> = {
+  hanging: { label: 'Hanging', wares: DANGLE_KINDS.filter((kind) => DANGLES[kind].price !== null) },
+  wheels: { label: 'Wheels', wares: RIM_KINDS.filter((kind) => RIMS[kind].price !== null) },
+  flames: { label: 'Flames', wares: FLAME_KINDS.filter((kind) => FLAMES[kind].price !== null) },
+};

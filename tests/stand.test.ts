@@ -45,12 +45,12 @@ const SIZES = [
 
 const STANDING = SCREEN_KINDS.filter((s) => SCREENS[s].stand !== null);
 
-function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird): Blit[] {
+function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird, camera = SCREENS[screen].stand!.camera): Blit[] {
   const base = viewOf(width, height);
   const view = { ...base };
-  standViewInto(base, SCREENS[screen].stand!.camera, width, height, view);
+  standViewInto(base, camera, width, height, view);
   const surface = new RecordingSurface();
-  paintStand(surface, view, t, SKY, ship);
+  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper !== null);
   return surface.blits;
 }
 
@@ -92,12 +92,17 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       screen's edge, which is what `standViewInto` holds it back from.
     */
     const widest = [Math.round(1080 * MAX_ASPECT), 1080] as const;
-    for (const screen of STANDING) {
+    /*
+      0542: and a camera at the bar, which no tab stands at since Cosmo's moved to the stall — the hold is
+      `standViewInto`'s for every camera a tab may author, so it is asked of the one at the room's wall.
+    */
+    const atTheBar = { along: STAGE.bar.along, across: STAGE.bar.across, zoom: 1.6, x: 0.18, y: 0.5 };
+    for (const [screen, camera] of [...STANDING.map((s) => [s, SCREENS[s].stand!.camera] as const), ['hangar', atTheBar] as const]) {
       for (const [width, height] of [...SIZES, widest]) {
-        const blits = drawStand(screen, width, height);
+        const blits = drawStand(screen, width, height, 0, SHIPS.firebird, camera);
         const walls = all(blits, 'wall');
         const deck = all(blits, 'deck');
-        const at = `${screen} at ${width}x${height}`;
+        const at = `${screen} (camera at ${camera.along}) at ${width}x${height}`;
         const extent = PORT_EXTENT.wall * walls[0]!.scale;
         expect(Math.min(...walls.map((b) => b.x - extent / 2)), `${at}: the wall stops short of the screen's left`).toBeLessThanOrEqual(0.5);
         expect(Math.min(...walls.map((b) => b.y - extent / 2)), `${at}: the wall stops short of the screen's top`).toBeLessThanOrEqual(0.5);
@@ -116,5 +121,35 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     }
     expect(all(drawStand('parts', 1280, 720, 0, SHIPS.firebird), 'blueWheel'), 'a spinner is drawn over a rim that does not turn').toEqual([]);
     expect(all(drawStand('parts', 1280, 720, 0, SHIPS.fighter), 'blueWheel'), 'a spinner is drawn on a ship with no wheels').toEqual([]);
+  });
+
+  /*
+    ⚠️ **COSMO KEEPS A STALL BY THE PAD, AND THE TAB'S CAMERA HOLDS BOTH — 0542.** The plan put the counter at the
+    bar; a camera there loses the ship, and the ship on its pad is where a ware is tried on. So the tab's
+    camera is the one place in the room that shows Cosmo, the stall and the ship at once, at every size.
+  */
+  it('0542 — stands Cosmo at the stall beside the pad on the keeper’s tab alone, with Cosmo, the stall and the ship in view at every size', () => {
+    for (const screen of STANDING.filter((s) => SCREENS[s].stand!.keeper !== null)) {
+      for (const [width, height] of SIZES) {
+        const blits = drawStand(screen, width, height);
+        const at = `${screen} at ${width}x${height}`;
+        for (const kind of ['cosmo', 'stall', 'blueSide'] as const) {
+          const drawn = all(blits, kind);
+          expect(drawn, `${at}: ${kind} is not drawn once`).toHaveLength(1);
+          const half = (PORT_EXTENT[kind] * drawn[0]!.scale) / 2;
+          expect(drawn[0]!.x - half * 0.5, `${at}: ${kind} is off the left of the screen`).toBeGreaterThanOrEqual(0);
+          expect(drawn[0]!.x + half * 0.5, `${at}: ${kind} reaches past the stand into the plate`).toBeLessThanOrEqual(width * 0.45);
+          expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeGreaterThan(0);
+          expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeLessThan(height);
+        }
+        // Behind his counter: the stall is drawn over him, so he stands at it rather than on it.
+        expect(blits.indexOf(all(blits, 'stall')[0]!), `${at}: the stall is drawn under Cosmo`).toBeGreaterThan(blits.indexOf(all(blits, 'cosmo')[0]!));
+      }
+    }
+    expect(STANDING.some((s) => SCREENS[s].stand!.keeper !== null), 'no tab has a keeper, so this measures nothing').toBe(true);
+    // And on no other tab, where the stall stood cut in half at the frame's edge.
+    for (const screen of STANDING.filter((s) => SCREENS[s].stand!.keeper === null)) {
+      for (const kind of ['cosmo', 'stall'] as const) expect(all(drawStand(screen, 1280, 720), kind), `${screen}: ${kind} is drawn`).toEqual([]);
+    }
   });
 });

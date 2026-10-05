@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { DEFAULT_STYLE, STYLES, STYLE_KINDS } from '../src/content/styles.ts';
 import { SCREENS } from '../src/state/screens.ts';
 import { initialState, reduce, type Action } from '../src/state/root.ts';
+import { SHELF_KINDS } from '../src/content/wares.ts';
 
 /**
  * A STYLE IS A SETTING, AND IT MAY NOT REACH THE GAME.
@@ -130,7 +131,10 @@ describe('the chooser is the table', () => {
     // 0523: and what hangs from it, and Cosmo's shelf.
     // 0524: and the special a run opens with; 0526: and the gun it flies; 0527: and what its wheels wear.
     // 0528: and its art; 0529: and its paint, a colour and a tone; 0530: and its flame.
-    expect([...where.keys()].sort()).toEqual(['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'ware']);
+    // 0542: and Cosmo's shelf is a shelf a table and the aisle that steps them, every one read off the table.
+    expect([...where.keys()].sort()).toEqual(
+      ['art', 'credits', 'dangle', 'difficulty', 'flame', 'gun', 'hand', 'livery', 'pilot', 'plate', 'rim', 'sound', 'special', 'steer', 'style', 'tone', 'travel', 'aisle', ...SHELF_KINDS].sort(),
+    );
   });
 });
 
