@@ -19,7 +19,8 @@ import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
-import { bakePort, withTheGame } from '../render/port-bake.ts';
+import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
+import { standViewInto } from '../render/port.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -1009,13 +1010,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   };
   // The intro's own atlas, while the intro is up — 0411; baked by `applyScreen`.
   let port: Atlas | null = null;
+  // 0540: whose ship, fitted how, the port's ship pieces were last baked for while a tab stands in it.
+  let portFit: { ship: ShipKind; fit: Fit } | null = null;
   /*
     ⚠️ **THE INTRO DRAWS FROM ITS PIECES AND THE GAME'S TOGETHER — 0416**, because the sky it flies is
     the first level's and is in the game's atlas. Composed again whenever the game's changes — a place
     re-baked, a rotation — since the composition holds references to the bitmaps it was made from.
   */
   const showPort = (): void => {
-    if (port !== null && world.intro !== null) surface.setAtlas(withTheGame(port, atlas));
+    // 0540: and while a tab stands in the port, which draws from the same two.
+    if (port !== null && (world.intro !== null || world.stand !== null)) surface.setAtlas(withTheGame(port, atlas));
     /*
       And the finale — 0418 — but the GAME's pieces first since 0426: it paints the fight's own scene
       with `paintScene`, which blits by the game's indices, and the port's and its own come after.
@@ -1182,6 +1186,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // 0362: a run's picture runs on the sim's own clock, and only the music room says otherwise.
     pictureSteps: null,
     intro: null,
+    // 0540: the stand's clock and its camera, written as a tab that stands in the port is shown.
+    stand: null,
+    standView: { ...view },
     outro: null,
     finale: makeFinaleScene(),
     // 0401: nothing heard yet — the shell writes the heart's strength here once a frame.
@@ -1488,6 +1495,35 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       world.intro = null;
       port = null;
       surface.setAtlas(atlas);
+    }
+    /*
+      ⚠️ **AND A TAB THAT STANDS IN THE PORT, ON THE INTRO'S TERMS — 0540.** The port is baked here, at the
+      fit, the first time one of the hangar's tabs is shown and whenever it has gone stale; it is kept
+      across the three tabs, which are one room seen from three places, and dropped the moment the screen
+      shown is none of them — so a run's memory is what it was before the hangar opened. Each tab's
+      camera is written into the world's stand view here, which a resize reaches through `setPlayable`.
+    */
+    const stand = SCREENS[screen].stand;
+    if (stand !== null && playable) {
+      const resolution = view.scale * dpr;
+      const standing = GOLFERS[state.settings.pilot];
+      if (port === null || atlasIsStale(port, 'side', resolution)) {
+        port = withFit(standing.ship, hangarFit(standing.ship), () => bakePort(colours, resolution, standing));
+        portFit = { ship: standing.ship, fit: hangarFit(standing.ship) };
+      }
+      if (world.stand === null) world.stand = 0;
+      standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
+      // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
+      surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, 0);
+      showPort();
+    } else if (world.stand !== null) {
+      world.stand = null;
+      surface.setSize(viewportWidth(host), viewportHeight(host), colours.space, view.barAcross);
+      if (world.intro === null) {
+        port = null;
+        portFit = null;
+        surface.setAtlas(atlas);
+      }
     }
     /*
       ⚠️ **THE FINALE, ON THE INTRO'S TERMS — 0418**: baked here, at the resolution it will be blitted at,
@@ -2219,6 +2255,20 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     fitPilot();
     // 0539: and the dash on the stand, which counts what this pilot's ship opens with — the special the hangar fitted.
     syncHud();
+    /*
+      0540: and the ship on the pad, which is the preview: its pieces of the port baked again when the
+      pilot or the fit has moved, and only then — a press that changed nothing costs nothing.
+    */
+    if (port !== null && world.stand !== null) {
+      const onPad = GOLFERS[state.settings.pilot];
+      const fit = hangarFit(onPad.ship);
+      if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit)) {
+        const into = port;
+        withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad));
+        portFit = { ship: onPad.ship, fit };
+        showPort();
+      }
+    }
   }
   // 0458: the difficulty band opens on the tier the state holds, which is `TUNED` until one is chosen.
   chrome.setChoice('difficulty', DIFFICULTY_KINDS.indexOf(state.settings.difficulty));
@@ -2564,8 +2614,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const backdrop: ThemeKind = place ?? 'approach';
     if (atlasIsStale(atlas, atlas.view, view.scale * dpr, backdrop)) {
       atlas = bakeAtlas(colours, atlas.view, view.scale * dpr, backdrop);
-      // Not over the port's own atlas while the intro is drawing from it — 0411.
-      if (world.intro === null) surface.setAtlas(atlas);
+      // Not over the port's own atlas while the intro is drawing from it — 0411 — or the stand (0540).
+      if (world.intro === null && world.stand === null) surface.setAtlas(atlas);
+      else showPort();
       // 0526: a full bake is every ship on its own gun, so the fitted one is laid on again.
       atlasRebaked();
     }
@@ -3785,6 +3836,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         else chrome.setActionShown('splash', 0, true);
       }
     }
+    // The stand's clock — 0540: what idles on it, the bob, the flame and the sky past the bay.
+    if (world.stand !== null) world.stand++;
     // The intro's clock — 0411. Its countdown below is what ends it; this is what it has shown.
     if (world.intro !== null) {
       world.intro++;
@@ -4013,8 +4066,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (atlasIsStale(atlas, wantView, wantResolution, atlas.theme)) {
       atlas = bakeAtlas(colours, wantView, wantResolution, atlas.theme);
       // The port's is re-baked by `applyScreen`, which `setPlayable` below runs — 0411 — and the intro
-      // draws the new sky with it (0416).
-      if (world.intro === null) surface.setAtlas(atlas);
+      // draws the new sky with it (0416). And the stand's, on the intro's terms — 0540.
+      if (world.intro === null && world.stand === null) surface.setAtlas(atlas);
       else showPort();
       // 0526: and the fitted gun laid on again, as at a place boundary.
       atlasRebaked();

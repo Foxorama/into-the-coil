@@ -7,6 +7,7 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
 import { seedOnce } from './seed.ts';
+import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { ART } from '../src/content/art.ts';
@@ -39,10 +40,11 @@ async function names(page: Page): Promise<string[]> {
   return page.locator(`${shown('parts')} [${SETTING_ATTR}="art"] .${PARTS}option`).allTextContents();
 }
 
-/** The card's ship, as the bytes of its picture — a different look is a different picture. */
-async function card(page: Page): Promise<string> {
-  return page.evaluate((sel) => (document.querySelector(sel) as HTMLCanvasElement | null)?.toDataURL() ?? '', `${shown('parts')} .${PARTS}pilot-ship > canvas`);
-}
+/*
+  ⚠️ **THE SHIP ON THE PAD, AND IT WAS THE CARD'S — 0540.** The card's ship went when the port came to stand
+  behind the tab; the preview is the ship on its pad, on the game's canvas, read as the stand's colours
+  against what the stand moves standing still (`tests/stand.ts` says why not byte for byte).
+*/
 
 describe.runIf(chromePath)('0528 — every ship wears its own art', () => {
   it('the band names the ship on the stand’s three, and a look fitted is kept and drawn on the card', async () => {
@@ -59,11 +61,12 @@ describe.runIf(chromePath)('0528 — every ship wears its own art', () => {
 
     // The default pilot flies the Firebird, won in: its three, all open.
     expect(await names(page)).toEqual(SHIPS.firebird.arts.map((art) => ART[art].name));
-    const before = await card(page);
-    await page.locator(`${shown('parts')} [${SETTING_ATTR}="art"] .${PARTS}option >> nth=${SHIPS.firebird.arts.indexOf('flames')}`).click();
+    const { noise, change } = await samePhase(page, 'parts', () =>
+      page.locator(`${shown('parts')} [${SETTING_ATTR}="art"] .${PARTS}option >> nth=${SHIPS.firebird.arts.indexOf('flames')}`).dispatchEvent('click'),
+    );
     const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.art.firebird, 'the flames were not fitted').toBe('flames');
-    expect(await card(page), 'the card still shows the look it had').not.toBe(before);
+    expect(change, `the ship on the pad still wears the look it had: ${change.toFixed(4)} of the stand moved, against ${noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * noise, 0.002));
 
     // Hook on the stand: the band names the fighter's three, the first open and the rest shut — never won in.
     const hook = GOLFER_KINDS.find((kind) => GOLFERS[kind].ship === 'fighter')!;

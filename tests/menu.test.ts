@@ -453,6 +453,10 @@ describe('a screen says whether it stops the world and whether it hides it', () 
     travel: 'a caption over a ship that is burning between two places, and still being flown — 0340',
     // ⚠️ **AND THE FIRST OF THEM BEHIND WHICH NOTHING MOVES — 0511**: the field is what is counted down to.
     resuming: 'the count-in over the stopped field the player is about to fly again — 0511',
+    // ⚠️ **AND THE HANGAR'S THREE TABS, WHICH STAND IN THE PORT — 0540**: the intro's room, held still.
+    hangar: 'the port the pilot hangs out in, the ship on its pad — 0540',
+    parts: 'the port, closer on the pad — 0540',
+    shop: 'the port, at the bar — 0540',
   };
 
   /*

@@ -504,6 +504,8 @@ function firingAt(row: EnemyRow, distance: number): World {
     // 0362: the sim's own clock, as a run has it.
     pictureSteps: null,
     intro: null,
+    stand: null,
+    standView: viewOf(VIEWPORT.width, VIEWPORT.height),
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.
@@ -659,6 +661,8 @@ function aimedAtTheShip(distance: number, input: InputSource, lane = 0): { world
     // 0362: the sim's own clock, as a run has it.
     pictureSteps: null,
     intro: null,
+    stand: null,
+    standView: viewOf(VIEWPORT.width, VIEWPORT.height),
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.

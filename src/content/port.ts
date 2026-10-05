@@ -35,7 +35,7 @@
  * a layer up in `src/state/screens.ts`, so the seconds are in the comment beside each number.
  */
 
-import { SHIP_BOX } from './sprites.ts';
+import { SHIP_BOX, SPRITE_EXTENT } from './sprites.ts';
 
 /**
  * How much bigger a ship is in the hangar than in flight — 0441, as 0450 corrected it.
@@ -107,6 +107,8 @@ export const PORT_KINDS = [
   'pool',
   'contrail',
   'veil',
+  // 0540: a turning rim, at hangar size, for a car on its pad while a tab stands in the port.
+  'blueWheel',
 ] as const;
 /*
   ⚠️ **NO STAR FIELDS OF ITS OWN SINCE 0416**: *"can we make the starfield for the ships cooler, like it
@@ -172,6 +174,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   pool: 40,
   contrail: 16,
   veil: 1,
+  // 0540: the fight's spinner, at hangar size — baked at it rather than blitted up, on the ships' terms above.
+  blueWheel: SPRITE_EXTENT.spinnerWheel * HANGAR_SCALE,
 };
 
 /**
@@ -273,6 +277,23 @@ export const STAGE = {
     [104, 24],
   ] as readonly (readonly [number, number])[],
 } as const;
+
+/**
+ * Where a camera stands in the room when a menu stands in it — 0540: the point of the room it is on, in
+ * `STAGE`'s units, how much closer than the intro's own picture it is, and where on the screen that
+ * point stands, as a share of its width and height. The room is held inside the screen whatever is
+ * asked (`standViewInto`), so a share that would show past the room's wall shows the wall instead.
+ *
+ * ⚠️ **A FIELD ON EACH SCREEN'S ROW AND NEVER A CONSTANT** (0282): the hangar stands on the pad, Paint &
+ * Parts closer on it, Cosmo's at the bar — `src/state/screens.ts`. A fourth tab authors its own.
+ */
+export interface StandCamera {
+  along: number;
+  across: number;
+  zoom: number;
+  x: number;
+  y: number;
+}
 
 /**
  * Every moment the intro turns on, in steps from its first frame.

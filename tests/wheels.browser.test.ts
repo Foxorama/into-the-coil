@@ -7,6 +7,7 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
 import { seedOnce } from './seed.ts';
+import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { RIM_KINDS } from '../src/content/rims.ts';
@@ -56,16 +57,20 @@ describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn',
     // The default pilot flies the Firebird; its wheels band offers the spinners now, and takes them.
     await page.locator(`${shown('shop')} .${shop}tab`, { hasText: SCREENS.parts.heading }).click();
     await page.waitForSelector(shown('parts'), { state: 'attached' });
-    expect(await page.locator(`${shown('parts')} .${parts}pilot-wheel`).count(), 'turning wheels before any were fitted').toBe(0);
-    await page.locator(`${shown('parts')} [${SETTING_ATTR}="rim"] .${parts}option >> nth=${RIM_KINDS.indexOf('spinner')}`).click();
+    /*
+      ⚠️ **ON THE PAD, AND IT WAS THE CARD — 0540.** The card's ship and the two wheels the stylesheet turned
+      on it went when the port came to stand behind the tab: the spinners are drawn turning over the car on
+      its pad, which `tests/stand.test.ts` holds blit by blit. What the page says is that they arrived there
+      — the pad's picture moved, past what the stand moves standing still (`tests/stand.ts`).
+    */
+    const { noise, change, after } = await samePhase(page, 'parts', () =>
+      page.locator(`${shown('parts')} [${SETTING_ATTR}="rim"] .${parts}option >> nth=${RIM_KINDS.indexOf('spinner')}`).dispatchEvent('click'),
+    );
     const fitted = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(fitted.rim.firebird, 'the spinners were not fitted').toBe('spinner');
-
-    // Two wheels on the card, each turning — the stylesheet's animation running on both.
-    const wheels = page.locator(`${shown('parts')} .${parts}pilot-wheel`);
-    expect(await wheels.count(), 'the card does not show the spinners turning').toBe(2);
-    const turning = await wheels.evaluateAll((els) => els.map((el) => getComputedStyle(el).animationName));
-    expect(turning, 'a wheel on the card is not turning').toEqual(['itc-wheel-turn', 'itc-wheel-turn']);
+    expect(change, `the car on the pad does not wear the spinners: ${change.toFixed(4)} of the stand moved, against ${noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * noise, 0.002));
+    // And they turn: read a whole bob apart, the stand is no longer still once they are on.
+    expect(after, `the spinners on the pad do not turn: ${after.toFixed(4)} of the stand moved a bob apart, against ${noise.toFixed(4)} before`).toBeGreaterThan(Math.max(3 * noise, 0.001));
     await context.close();
   });
 });

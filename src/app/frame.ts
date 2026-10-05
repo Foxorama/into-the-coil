@@ -75,7 +75,7 @@ import type { InputSource } from './input.ts';
 import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBodyBolts, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
-import { paintPort } from '../render/port.ts';
+import { paintPort, paintStand } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
@@ -1757,6 +1757,13 @@ export interface World {
    * in place of the scene. Nothing that steps reads it, because nothing steps under the intro.
    */
   intro: number | null;
+  /**
+   * How many steps a screen standing in the port has been up, or null on every other — 0540, on
+   * `intro`'s terms: the shell writes it, and the draw hands it to the port's stand in place of the scene.
+   */
+  stand: number | null;
+  /** The camera the stand is seen through — 0540: the screen's own view moved by its tab's camera, written by the shell. */
+  standView: View;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2765,6 +2772,11 @@ export class GameFrame implements Frame {
     // but the sky it flies through is the first level's, from the game's sprites in that atlas (0416).
     if (w.intro !== null) {
       paintPort(w.surface, w.view, w.intro + alpha, w.sky, w.shipRow);
+      return;
+    }
+    // And the hangar's tabs, standing in the same room — 0540.
+    if (w.stand !== null) {
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

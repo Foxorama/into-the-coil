@@ -1184,7 +1184,8 @@ on `main` before it was written — and **holds the order, so this file does not
 given, in its *Answers* table; the word to start was given 2026-10-05. Landed so far:
 
 - the title in two plates, *Fly* alone over a quiet row, the card a line — [0538](decisions/0538-the-title-is-composed.md);
-- the hangar's tabs a stand and a plate, the readout down on the stand counting the opening complement — [0539](decisions/0539-the-readout-stands-down.md).
+- the hangar's tabs a stand and a plate, the readout down on the stand counting the opening complement — [0539](decisions/0539-the-readout-stands-down.md);
+- the port behind them, the ship on its pad the preview, a camera per tab — [0540](decisions/0540-the-hangar-is-the-port.md).
 
 Each is owed a play on its branch preview.
 

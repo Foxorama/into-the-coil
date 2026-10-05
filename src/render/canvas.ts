@@ -95,6 +95,13 @@ export class CanvasSurface implements Surface {
   clear(): void {
     const ctx = this.ctx;
     if (this.bar <= 0) {
+      /*
+        ⚠️ **AND THE LAST FRAME'S CLIP PUT BACK HERE TOO — 0540.** A bar that went to none (a tab standing
+        in the port, which has no bar) left the clip a barred frame set, so every frame after was still
+        drawn below the bar and the bar kept the last black it was filled with. `restore` with nothing
+        saved does nothing, which is every frame of a screen that never had a bar.
+      */
+      ctx.restore();
       ctx.fillStyle = this.space;
       ctx.fillRect(0, 0, this.width, this.height);
       return;
