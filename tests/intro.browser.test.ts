@@ -22,6 +22,7 @@ import { chromePath, launchChromium } from './chromium.ts';
 import { CANVAS_MS, INTRO_READY_MS } from './intro.ts';
 import { afterFrames } from './frames.ts';
 import { MENU_CONFIRM_BUTTONS } from '../src/app/menu.ts';
+import { MAX_STEPS } from '../src/app/loop.ts';
 import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { INTRO_STEPS, SPLASH_STEPS } from '../src/content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, type GolferKind } from '../src/content/golfers.ts';
@@ -89,12 +90,19 @@ async function open(): Promise<Page> {
   // Each screen as it is first shown, in order, by the page's own clock — the splash test reads it.
   await page.addInitScript(
     (selectors: Record<string, string>) => {
-      const first: { screen: string; at: number }[] = [];
+      const first: { screen: string; at: number; frame: number }[] = [];
       (window as unknown as { __itcFirstShown: typeof first }).__itcFirstShown = first;
+      // The page's frames, counted, so a screen's time can be read in frames as well as in ms — 0536.
+      let frames = 0;
+      const tick = (): void => {
+        frames++;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
       new MutationObserver(() => {
         for (const [screen, selector] of Object.entries(selectors)) {
           if (first.some((f) => f.screen === screen)) continue;
-          if (document.querySelector(selector) !== null) first.push({ screen, at: performance.now() });
+          if (document.querySelector(selector) !== null) first.push({ screen, at: performance.now(), frame: frames });
         }
       }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['class', 'hidden'] });
     },
@@ -197,14 +205,27 @@ describe.runIf(chromePath)('the page opens on the name, and asks for a press onc
     */
     const page = await open();
     await page.waitForSelector(PROMPT, { timeout: INTRO_READY_MS });
-    const order = await page.evaluate(() => (window as unknown as { __itcFirstShown: { screen: string; at: number }[] }).__itcFirstShown);
+    const order = await page.evaluate(
+      () => (window as unknown as { __itcFirstShown: { screen: string; at: number; frame: number }[] }).__itcFirstShown,
+    );
     expect(order[0]?.screen, 'the page did not open on the splash').toBe('splash');
-    const splashAt = order.find((o) => o.screen === 'splash')!.at;
-    const promptAt = order.find((o) => o.screen === 'prompt')?.at;
-    expect(promptAt, 'the prompt was never recorded as shown').toBeDefined();
+    const splash = order.find((o) => o.screen === 'splash')!;
+    const prompt = order.find((o) => o.screen === 'prompt');
+    expect(prompt, 'the prompt was never recorded as shown').toBeDefined();
     // In seconds the player sees: the name is up for at least the steps it is owed, so it is read.
-    expect((promptAt! - splashAt) / 1000, 'the press was asked for before the name had been on the screen its time').toBeGreaterThanOrEqual(
+    expect((prompt!.at - splash.at) / 1000, 'the press was asked for before the name had been on the screen its time').toBeGreaterThanOrEqual(
       (SPLASH_STEPS / STEPS_PER_SECOND) * 0.95,
+    );
+    /*
+      ⚠️ **AND IN FRAMES, BECAUSE THE SECONDS PASSED OVER THEIR OWN BREAK ON A LOADED RUNNER** — 0536,
+      found on 0532's CI. The splash is shown before the loop's first step, and the page's boot runs between
+      the two: on a busy CI machine that alone was 1.4 s, so a prompt put up on the very first step read
+      as the name's whole time on screen. The loop takes at most `MAX_STEPS` steps a frame, so the
+      steps the name is owed cannot pass in fewer frames than this, however slow the machine — 0044's
+      class: wall clock read where steps were meant.
+    */
+    expect(prompt!.frame - splash.frame, 'the press was asked for in fewer frames than the name’s steps can pass in').toBeGreaterThanOrEqual(
+      Math.ceil(SPLASH_STEPS / MAX_STEPS),
     );
     // And it waits: nothing pressed, nothing moves on.
     await afterFrames(page, 90);
