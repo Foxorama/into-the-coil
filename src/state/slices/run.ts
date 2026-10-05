@@ -90,14 +90,25 @@ function withStack(arsenal: Arsenal, side: Side, stack: readonly SpecialKind[]):
   own is thrown first. Not for a ship whose own special is already the ward's: *"if the player starts
   as feather with the nova ring … they don't get a bonus void bomb on top."*
 */
-export function startingArsenal(ship: ShipKind, difficulty: DifficultyKind): Arsenal {
-  const own = WEAPONS[SHIPS[ship].weapon].special;
+/*
+  ⚠️ **THE FITTED SPECIAL SINCE 0524, AND THE SHIP'S OWN BY DEFAULT.** The hangar may fit a ship with
+  another won ship's special — *"pair the shuriken special with the lightning gun once you've unlocked
+  both"* — and a run opens on two of whichever is fitted. The ward rule reads the side of THAT special,
+  so a fighter fitted with the nova opens with no void on top, as the caddie always has.
+*/
+export function startingArsenal(ship: ShipKind, difficulty: DifficultyKind, special: SpecialKind = ownSpecial(ship)): Arsenal {
+  const own = special;
   const side = SPECIALS[own].side;
   const opening: SpecialKind[] = [];
   for (let i = 0; i < OPENING_CHARGES; i++) opening.push(own);
   const ward: SpecialKind[] = [];
   if (side !== 'ward') for (const kind of DIFFICULTIES[difficulty].opensWith) ward.push(kind);
   return withStack({ gun: [], tubes: [], ward }, side, side === 'ward' ? [...ward, ...opening] : opening);
+}
+
+/** The special a ship's own gun brings — 0441's opening, and since 0524 the hangar's default. */
+export function ownSpecial(ship: ShipKind): SpecialKind {
+  return WEAPONS[SHIPS[ship].weapon].special;
 }
 
 export interface RunState {
@@ -193,7 +204,11 @@ export type RunAction =
     what the reducer and the frame read.
   */
   // 0517: and on its credits, which the title chose.
-  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind }
+  /*
+    0524: and on the special the hangar fitted, or — absent — the ship's own gun's. The default lives
+    here, in shared code; the hangar's fitting is the instance, and the shell always passes it.
+  */
+  | { slice: 'run'; type: 'begin'; difficulty: DifficultyKind; ship: ShipKind; credits: CreditKind; special?: SpecialKind }
   | { slice: 'run'; type: 'continued' }
   | { slice: 'run'; type: 'lifeLost' }
   | { slice: 'run'; type: 'took'; special: SpecialKind }
@@ -233,7 +248,7 @@ export function reduceRun(state: RunState, action: RunAction): RunState {
       return {
         lives: livesFor(action.difficulty),
         level: 0,
-        arsenal: startingArsenal(action.ship, action.difficulty),
+        arsenal: startingArsenal(action.ship, action.difficulty, action.special ?? ownSpecial(action.ship)),
         upgrades: [],
         ship: action.ship,
         missile: SHIPS[action.ship].missile,

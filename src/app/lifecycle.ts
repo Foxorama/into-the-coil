@@ -50,6 +50,7 @@ import { DIFFICULTIES, type DifficultyKind } from '../content/difficulty.ts';
 import { LEVELS, LEVEL_KINDS } from '../content/levels.ts';
 import { SHIPS, type ShipKind } from '../content/ships.ts';
 import type { CreditKind } from '../content/credits.ts';
+import type { SpecialKind } from '../content/specials.ts';
 import { makeRng } from '../sim/rng.ts';
 import type { Action } from '../state/root.ts';
 import type { RunState } from '../state/slices/run.ts';
@@ -59,9 +60,11 @@ export interface Lifecycle {
   /**
    * A run at a chosen tier in a chosen ship, from the top: level one, an empty field, a full
    * complement of lives. The ship is the pilot's (0441), resolved by the shell; the credits are the
-   * title's band (0517), and say whether the run may be continued when it runs out.
+   * title's band (0517), and say whether the run may be continued when it runs out. The special is the
+   * hangar's fitting for that ship (0524): what the run opens with two of — the ship's own by default,
+   * which is what the rig and the tests that fly a run begin on; the shell always passes the fitting.
    */
-  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind): void;
+  begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind): void;
   /** The burn to the next place begins. Nothing about the run or the field moves — 0340. */
   onward(): void;
   /**
@@ -102,7 +105,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
   };
 
   return {
-    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind): void {
+    begin(difficulty: DifficultyKind, ship: ShipKind, credits: CreditKind, special?: SpecialKind): void {
       /*
         ⚠️ **Resolved to a ROW here, once, and the frame never looks a tier up by name.** Same
         argument `enemyRows` and `pickupRows` make in `mount`: a per-spawn lookup by string key is a
@@ -138,7 +141,7 @@ export function makeLifecycle(world: World, dispatch: (action: Action) => void, 
       */
       // ⚠️ `begin` FIRST, because it resets the level index to zero and `enterLevel` reads it. The
       // tier travels with it: `src/state/slices/run.ts` is where a run's lives come from now.
-      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits });
+      dispatch({ slice: 'run', type: 'begin', difficulty, ship, credits, special });
       // ⚠️ `false`: not seamless. A run begins on a swept field with the camera at zero, whatever
       // the last one ended as — 0058 and 0067.
       enterLevel(false);

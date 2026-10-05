@@ -125,7 +125,8 @@ describe('the chooser is the table', () => {
     // 0517: and the continues band, on the title beside the tier.
     // 0521: and the hangar's dash, a slot of the ship on its stand rather than a setting.
     // 0523: and what hangs from it, and Cosmo's shelf.
-    expect([...where.keys()].sort()).toEqual(['credits', 'dangle', 'difficulty', 'hand', 'pilot', 'plate', 'sound', 'steer', 'style', 'travel', 'ware']);
+    // 0524: and the special a run opens with.
+    expect([...where.keys()].sort()).toEqual(['credits', 'dangle', 'difficulty', 'hand', 'pilot', 'plate', 'sound', 'special', 'steer', 'style', 'travel', 'ware']);
   });
 });
 

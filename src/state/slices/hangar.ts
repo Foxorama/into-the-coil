@@ -53,6 +53,13 @@ export interface HangarState {
    * for its win.
    */
   hung: Readonly<Record<ShipKind, DangleKind | null>>;
+  /**
+   * Whose special each ship opens a run with — 0524: a ship kind, because a special is the one that
+   * ship's own gun brings, and every ship opens on its own. Answered while it was planned: *"pair the
+   * shuriken special with the lightning gun once you've unlocked both"* — a ship's own slot, open with
+   * its win, offering the specials of ships that have been won in, on the dash's exact rule.
+   */
+  special: Readonly<Record<ShipKind, ShipKind>>;
 }
 
 /** ⚠️ **Every action names its slice**, per 0017. */
@@ -61,7 +68,8 @@ export type HangarAction =
   | { slice: 'hangar'; type: 'plate'; ship: ShipKind; plate: ShipKind }
   | { slice: 'hangar'; type: 'earned'; shards: number }
   | { slice: 'hangar'; type: 'bought'; dangle: DangleKind }
-  | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null };
+  | { slice: 'hangar'; type: 'hung'; ship: ShipKind; dangle: DangleKind | null }
+  | { slice: 'hangar'; type: 'special'; ship: ShipKind; from: ShipKind };
 
 /** Each ship kind mapped to `of(kind)`. Built by walking `SHIP_KINDS`, so a fifth ship is answered. */
 function perShip<T>(of: (kind: ShipKind) => T): Record<ShipKind, T> {
@@ -77,6 +85,7 @@ export const initialHangar: HangarState = {
   shards: 0,
   owned: perDangle((kind) => DANGLES[kind].price === null),
   hung: perShip((kind) => SHIPS[kind].hangs),
+  special: perShip((kind) => kind),
 };
 
 /** Each dangle mapped to `of(kind)`, on `perShip`'s terms. */
@@ -101,6 +110,14 @@ export function canBuy(state: HangarState, dangle: DangleKind): boolean {
  */
 export function plateOpen(state: HangarState, ship: ShipKind, plate: ShipKind): boolean {
   return plate === ship || (state.won[ship] && state.won[plate]);
+}
+
+/**
+ * Whether `ship` may open with `from`'s special — 0524, the dash's rule exactly, and one line rather
+ * than a second spelling of it: a ship's own slot, open with its win, offering what won ships bring.
+ */
+export function specialOpen(state: HangarState, ship: ShipKind, from: ShipKind): boolean {
+  return plateOpen(state, ship, from);
 }
 
 export function reduceHangar(state: HangarState, action: HangarAction): HangarState {
@@ -128,6 +145,10 @@ export function reduceHangar(state: HangarState, action: HangarAction): HangarSt
       if (state.hung[action.ship] === action.dangle) return state;
       if (action.dangle !== null && !state.owned[action.dangle]) return state;
       return { ...state, hung: { ...state.hung, [action.ship]: action.dangle } };
+    // 0524: on the dash's terms — refused unless the ship and the special's ship have both been won in.
+    case 'special':
+      if (state.special[action.ship] === action.from || !specialOpen(state, action.ship, action.from)) return state;
+      return { ...state, special: { ...state.special, [action.ship]: action.from } };
     default: {
       // Adding a member to `HangarAction` fails to compile HERE — 0016's fifth defeat.
       const unhandled: never = action;
