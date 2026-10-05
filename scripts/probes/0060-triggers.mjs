@@ -63,8 +63,9 @@ export const PROBES = [
     guard: 'draws one button per owned trigger',
     edit: {
       path: 'src/app/mount.ts',
-      find: '(touchable ? stacksOf() : [])',
-      replace: '(touchable ? stacksOf().slice(0, 1) : [])',
+      // ⚠️ Re-anchored by 0539: the stacks are read off the arsenal given.
+      find: '(touchable ? stacksOf(state.run.arsenal) : [])',
+      replace: '(touchable ? stacksOf(state.run.arsenal).slice(0, 1) : [])',
     },
   },
   {
