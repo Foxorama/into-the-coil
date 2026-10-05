@@ -1185,7 +1185,8 @@ given, in its *Answers* table; the word to start was given 2026-10-05. Landed so
 
 - the title in two plates, *Fly* alone over a quiet row, the card a line — [0538](decisions/0538-the-title-is-composed.md);
 - the hangar's tabs a stand and a plate, the readout down on the stand counting the opening complement — [0539](decisions/0539-the-readout-stands-down.md);
-- the port behind them, the ship on its pad the preview, a camera per tab — [0540](decisions/0540-the-hangar-is-the-port.md).
+- the port behind them, the ship on its pad the preview, a camera per tab — [0540](decisions/0540-the-hangar-is-the-port.md);
+- every look photographed on the pad, the saucer's paint and dome and the flame chosen brought to it — [0541](decisions/0541-the-looks-are-on-the-pad.md).
 
 Each is owed a play on its branch preview.
 

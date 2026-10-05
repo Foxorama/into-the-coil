@@ -832,7 +832,14 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
   const phi = (lean * Math.PI) / 2;
   const c = Math.sin(phi);
   const e = Math.cos(phi);
-  const body = mix(palette.player, palette.acid, 0.55);
+  /*
+    ⚠️ **IN THE FIT, AS THE FIGHT'S DRAWING IS — 0541.** The side view kept the factory's body and the
+    plain glass dome whatever the hangar fitted, so on the pad (0540) the saucer was the one ship whose
+    paint and look were fitted blind. Its paint is the body's ink, as `drawCaddie`'s is; its look is the
+    dome's, as the top view's is: the glass, the pilot under it, or the visor's gold.
+  */
+  const fit = fitNow('caddie');
+  const body = fit.livery ?? mix(palette.player, palette.acid, 0.55);
   const dark = shade(body, -0.5);
   const outline = Math.max(1, size * 0.014);
   // Never a zero radius, which an ellipse draws as nothing and a path joins as a spike.
@@ -937,13 +944,21 @@ function paintSaucer(ctx: CanvasRenderingContext2D, box: Frame, palette: Palette
     half(0, domeAt, SAUCER_DOME, SAUCER_DOME * c, 0, Math.PI);
     ctx.closePath();
   };
-  ctx.fillStyle = palette.glass;
+  const visor = fit.art === 'visor';
+  const glass = visor ? palette.hazard : palette.glass;
+  ctx.fillStyle = glass;
   domePath();
   ctx.fill();
   ctx.save();
   domePath();
   ctx.clip();
-  disc(ctx, f, shade(palette.glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, 0.8);
+  // 0541: the pilot under the glass — the top view's green, one dark eye to the front from the side.
+  const pilot = fit.art === 'pilot';
+  if (pilot) {
+    disc(ctx, f, shade(palette.acid, 0.2), 0.02, domeAt - 0.42 * domeHigh, 0.22);
+    disc(ctx, f, palette.space, 0.15, domeAt - 0.5 * domeHigh, 0.06);
+  }
+  disc(ctx, f, shade(glass, 0.35), -0.06, domeAt - 0.18 * domeHigh, 0.3, pilot ? 0.3 : 0.8);
   disc(ctx, f, palette.impact, -0.14, domeAt - 0.36 * domeHigh, 0.11, 0.85);
   ctx.restore();
   ctx.strokeStyle = palette.space;

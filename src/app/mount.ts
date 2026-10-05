@@ -2262,7 +2262,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (port !== null && world.stand !== null) {
       const onPad = GOLFERS[state.settings.pilot];
       const fit = hangarFit(onPad.ship);
-      if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit)) {
+      /*
+        ⚠️ **AND THE FLAME — 0541.** `sameFit` leaves the flame out, because the game's atlas burns it in
+        one set of sprites kept apart (`atlasFlame`, 0530); the port's ship pieces bake their flames with the
+        ship, so a flame chosen and compared by `sameFit` alone burned the last one on the pad.
+      */
+      if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit) || portFit.fit.flame !== fit.flame) {
         const into = port;
         withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad));
         portFit = { ship: onPad.ship, fit };
