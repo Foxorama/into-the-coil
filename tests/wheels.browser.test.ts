@@ -34,7 +34,7 @@ afterAll(async () => {
 });
 
 describe.runIf(chromePath)('0527 — the spinners are bought, fitted, and turn', () => {
-  it('bought at Cosmo’s for 1000, fitted to the Firebird on Paint & Parts, turning on its card', async () => {
+  it('bought at Cosmo’s for 1000, fitted to the Firebird on Paint & Parts, turning on its pad', async () => {
     browser ??= await launchChromium({ headless: true });
     const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
     await seedOnce(context, HANGAR_KEY, serialiseHangar({ ...initialHangar, shards: 1000 }));

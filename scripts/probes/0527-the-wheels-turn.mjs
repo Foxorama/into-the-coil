@@ -64,12 +64,13 @@ export const PROBES = [
   {
     decision: '0527',
     suite: 'tests/wheels.browser.test.ts',
-    broke: 'the card in Paint & Parts showing the spinners still',
-    guard: 'turning on its card',
+    // ⚠️ Re-pointed by 0540: no card on Paint & Parts has a ship now; the spinners turn on the pad.
+    broke: 'the car on the pad in Paint & Parts showing the spinners still',
+    guard: 'turning on its pad',
     edit: {
-      path: 'src/app/chrome.ts',
-      find: '    if (ship.wheels !== null && rates !== null) {',
-      replace: '    if (ship.wheels === null && rates !== null) {',
+      path: 'src/render/port.ts',
+      find: '  if (wheels !== null && rates !== null) {',
+      replace: '  if (wheels === null && rates !== null) {',
     },
   },
 ];
