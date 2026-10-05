@@ -114,4 +114,33 @@ describe.runIf(chromePath)('0539 — the readout stands down on the hangar’s t
     expect(parent, 'the readout did not go back into the play strip for the run').toBe('itc-playing-strip');
     await page.context().close();
   });
+
+  /*
+    ⚠️ **0540: THE ROOM TO THE TOP OF THE SCREEN, AND THE BAR BACK OVER THE TITLE.** A desktop keeps a bar
+    across the top for the play readout (0500), black, and the frame clipped under it; the hangar's tabs have
+    no readout up there, so the room is drawn to the top. The first build left the clip a barred frame had
+    set, and the stand stood under a black band. Read off the game's canvas: the top rows over the stand.
+  */
+  it('0540 — draws the port to the top of a desktop’s screen, and the bar comes back for the title', async () => {
+    const page = await open(1280, 720);
+    const top = (): Promise<number> =>
+      page.evaluate(() => {
+        const canvas = document.querySelector<HTMLCanvasElement>('#app canvas')!;
+        const k = canvas.width / canvas.getBoundingClientRect().width;
+        const row = canvas.getContext('2d')!.getImageData(0, Math.floor(3 * k), Math.floor(canvas.width * 0.35), 1).data;
+        let lit = 0;
+        for (let i = 0; i < row.length; i += 4) if (row[i]! + row[i + 1]! + row[i + 2]! > 30) lit++;
+        return lit / (row.length / 4);
+      });
+    await page.waitForTimeout(300);
+    expect(await top(), 'the title has no bar to come back to, so this measures nothing').toBeLessThan(0.05);
+    await openHangar(page);
+    await page.waitForTimeout(300);
+    expect(await top(), 'a black band stands over the room at the top of the hangar').toBeGreaterThan(0.9);
+    await back(page, 'hangar');
+    await page.waitForSelector(shown('title'), { state: 'attached' });
+    await page.waitForTimeout(300);
+    expect(await top(), 'the bar did not come back over the title').toBeLessThan(0.05);
+    await page.context().close();
+  });
 });

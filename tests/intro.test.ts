@@ -31,10 +31,10 @@ import {
   type PortKind,
 } from '../src/content/port.ts';
 import { SPRITE } from '../src/content/sprites.ts';
-import { CADDIE_DISC, SHIPS, SHIP_KINDS, type ShipKind } from '../src/content/ships.ts';
+import { CADDIE_DISC, SHIPS, SHIP_KINDS, fitted, type ShipKind } from '../src/content/ships.ts';
 import { DEFAULT_GOLFER, GOLFERS } from '../src/content/golfers.ts';
 import { SKY } from '../src/app/mount.ts';
-import { paintPort } from '../src/render/port.ts';
+import { paintPort, paintStand } from '../src/render/port.ts';
 import { screenX, type Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf, type View } from '../src/sim/camera.ts';
 import { SCROLL_PER_STEP } from '../src/sim/flight.ts';
@@ -149,8 +149,15 @@ describe('the picture', () => {
   it('draws every piece of the port it bakes, at some moment of it', () => {
     const seen = new Set<number>();
     for (let t = 0; t < INTRO_STEPS; t += 1) for (const b of drawAt(t, NARROW).blits) seen.add(b.sprite);
+    /*
+      ⚠️ **OR ON THE STAND, SINCE 0540**, which is baked from the same pieces: the hangar's tabs stand in the
+      room, and a car on a rim that turns has its spinners drawn there and in no frame of the intro.
+    */
+    const stand = new RecordingSurface();
+    paintStand(stand, viewOf(NARROW.width, NARROW.height), 0, SKY, fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner'));
+    for (const b of stand.blits) seen.add(b.sprite);
     const unseen = PORT_KINDS.filter((kind) => !seen.has(PORT_SPRITE[kind]));
-    expect(unseen, 'baked for the intro and never drawn in it').toEqual([]);
+    expect(unseen, 'baked for the intro and the stand and never drawn in either').toEqual([]);
   });
 
   it('has the Viper through the bay before the bar door opens, so the pilot runs after her', () => {

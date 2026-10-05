@@ -514,6 +514,8 @@ export function playableWorld(
     // 0362: the sim's own clock, as a run has it.
     pictureSteps: null,
     intro: null,
+    stand: null,
+    standView: viewOf(1280, 720),
     outro: null,
     finale: makeFinaleScene(),
     // 0401: no heart heard, so none beating.

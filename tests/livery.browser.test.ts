@@ -7,6 +7,7 @@ import { SETTING_ATTR, prefixFor } from '../src/app/chrome.ts';
 import { CANVAS_MS, pastIntro } from './intro.ts';
 import { openHangar, shown } from './title.ts';
 import { seedOnce } from './seed.ts';
+import { samePhase } from './stand.ts';
 import { HANGAR_KEY, hangarFrom, serialiseHangar } from '../src/save/hangar.ts';
 import { initialHangar } from '../src/state/slices/hangar.ts';
 import { HUES } from '../src/content/livery.ts';
@@ -57,14 +58,15 @@ describe.runIf(chromePath)('0529 — a ship painted on Paint & Parts is painted 
     const shut = async (): Promise<boolean[]> => tones.evaluateAll((els) => els.map((el) => (el as HTMLButtonElement).disabled));
     expect(await shut(), 'a tone is open on the factory’s paint').toEqual([true, true, true]);
 
-    const card = `${shown('parts')} .${PARTS}pilot-ship > canvas`;
-    const factoryCard = await picture(page, card);
+    // 0540: the ship on its pad in the port behind the tab, which replaced the card's — `tests/stand.ts`.
     const blue = HUES.findIndex((hue) => hue.name === 'Blue');
-    await page.locator(`${shown('parts')} [${SETTING_ATTR}="livery"] .${PARTS}option >> nth=${1 + blue}`).dispatchEvent('click');
+    const { noise, change } = await samePhase(page, 'parts', () =>
+      page.locator(`${shown('parts')} [${SETTING_ATTR}="livery"] .${PARTS}option >> nth=${1 + blue}`).dispatchEvent('click'),
+    );
     const kept = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
     expect(kept.livery.firebird, 'the paint was not kept').toEqual({ hue: blue, tone: 1 });
     expect(await shut(), 'the tones did not open with the colour').toEqual([false, false, false]);
-    expect(await picture(page, card), 'the card is still in the factory’s paint').not.toBe(factoryCard);
+    expect(change, `the ship on the pad is still in the factory’s paint: ${change.toFixed(4)} of the stand moved, against ${noise.toFixed(4)} standing still`).toBeGreaterThan(Math.max(3 * noise, 0.002));
 
     await page.locator(`${shown('parts')} .${PARTS}tab`, { hasText: SCREENS.hangar.heading }).click();
     await page.waitForSelector(shown('hangar'), { state: 'attached' });

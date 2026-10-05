@@ -52,12 +52,17 @@ export const PROBES = [
   {
     decision: '0528',
     suite: 'tests/art.browser.test.ts',
-    broke: 'the card kept per gun and rim, so a look chosen is never drawn on it',
+    /*
+      0540: it was the card's cache kept per gun and rim. The card's ship went when the port came to stand
+      behind the tab, so that break reached nothing and stayed green; the look is drawn on the pad now, and
+      what keeps it from being drawn there is the fit compared without it, so the pad is never re-baked.
+    */
+    broke: 'the fit compared without its look, so a look chosen is never drawn on the pad',
     guard: 'a look fitted is kept and drawn on the card',
     edit: {
-      path: 'src/app/chrome.ts',
-      find: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + fit.art + ':' + String(fit.livery);",
-      replace: "    const key = ship + ':' + fit.gun + ':' + String(fit.rim) + ':' + String(fit.livery);",
+      path: 'src/content/ships.ts',
+      find: '  return a.gun === b.gun && a.rim === b.rim && a.art === b.art && a.livery === b.livery;',
+      replace: '  return a.gun === b.gun && a.rim === b.rim && a.livery === b.livery;',
     },
   },
   {

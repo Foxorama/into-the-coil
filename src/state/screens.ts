@@ -27,7 +27,7 @@ import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
-import { INTRO_STEPS } from '../content/port.ts';
+import { INTRO_STEPS, STAGE, type StandCamera } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
@@ -197,6 +197,11 @@ export interface StandRow {
    * plate's head, as the pilots do. A fact about each tab: a fourth tab writes its own.
    */
   groups: readonly { label: string; bands: readonly ChoiceName[] }[];
+  /**
+   * Where the port's camera stands while the tab is up — 0540: on the pad for the hangar, closer on it
+   * for Paint & Parts, at the bar for Cosmo's. Each tab's own; the room is the intro's.
+   */
+  camera: StandCamera;
 }
 
 export interface ScreenRow {
@@ -812,6 +817,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         { label: 'Loadout', bands: ['gun', 'special'] },
         { label: 'Dash', bands: ['plate', 'dangle'] },
       ],
+      // 0540: on the pilot's pad, the ship on it in the stand's half of the screen.
+      camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 1.5, x: 0.2, y: 0.52 },
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -876,7 +883,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       },
     ],
     steps: false,
-    dims: true,
+    // 0540: the port stands behind it, so the screen shows the picture rather than painting over it.
+    dims: false,
     timeout: null,
     pushed: false,
     skips: false,
@@ -905,6 +913,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         { label: 'Parts', bands: ['rim', 'flame'] },
         { label: 'Paint', bands: ['art', 'livery', 'tone'] },
       ],
+      // 0540: closer on the pad, so the wheels, the nose and the flame are large.
+      camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 2.3, x: 0.2, y: 0.48 },
     },
     actions: [{ label: 'Back', hint: '' }],
     choices: [
@@ -978,7 +988,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       },
     ],
     steps: false,
-    dims: true,
+    // 0540: on the hangar's terms.
+    dims: false,
     timeout: null,
     pushed: false,
     skips: false,
@@ -1000,7 +1011,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     pause: null,
     leads: false,
     // 0539: one shelf until Cosmo's counter (item 5 of the plan) has a shelf per table.
-    stand: { groups: [] },
+    // 0540: at the bar, its counter and its lit shelf; the ship on its pad beyond it.
+    stand: { groups: [], camera: { along: STAGE.bar.along, across: STAGE.bar.across, zoom: 1.6, x: 0.18, y: 0.5 } },
     actions: [
       { label: 'Buy', hint: '' },
       { label: 'Back', hint: '' },
@@ -1016,7 +1028,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       },
     ],
     steps: false,
-    dims: true,
+    // 0540: on the hangar's terms.
+    dims: false,
     timeout: null,
     pushed: false,
     skips: false,

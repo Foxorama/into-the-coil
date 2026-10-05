@@ -1920,15 +1920,6 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 .itc-hangar-pilot-card { padding: 0.35em 0.8em; grid-template-columns: minmax(0, 1fr); }
 /* Who they are: what they fly is the ship on the stand and the Loadout under it, so the card says it once. */
 .itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
-/*
-  The ship on the stand, over the dash, as large as the stand lets it be — the ship being fitted. Its own
-  rule for the stand: the card's sized it as a thumbnail beside words.
-*/
-.itc-hangar-stand > .itc-hangar-pilot-ship, .itc-parts-stand > .itc-parts-pilot-ship {
-  align-self: center;
-  width: min(80%, 26rem, 38cqh);
-  margin-top: auto;
-}
 .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { font-size: 0.66em; text-align: left; }
 .itc-hangar-choices, .itc-parts-choices, .itc-shop-choices { flex-direction: row; justify-content: flex-end; gap: min(0.8rem, 2cqw); }
 .itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
@@ -4269,9 +4260,9 @@ export function makeChrome(
   /** Each screen's card under its band of faces — the title's (0513) and the hangar's (0521). */
   const pilotCards: Partial<Record<Screen, PilotCard>> = {};
   /*
-    0539: on a screen that stands, the ship is built for the stand rather than for the card — the caller
-    puts it there, over the dash, the size the stand gives it — and a line has one too. Until the port is
-    painted behind the stand (item 3 of the plan) this is the ship being fitted, drawn large.
+    ⚠️ **ON A SCREEN THAT STANDS, NO SHIP — 0540.** The ship on its pad in the port behind the stand is the
+    preview, at two and a half times the fight's size and wearing the fit (0539 drew the card's ship large
+    on the stand until the port was there to stand it on). A card on a screen that stands is words.
   */
   const buildPilotCard = (prefix: string, card: 'line' | 'whole', standing: boolean): PilotCard => {
     const part = (tag: string, name: string): HTMLElement => {
@@ -4291,11 +4282,11 @@ export function makeChrome(
       const craft = part('span', 'craft');
       const gun = part('span', 'gun');
       root.append(name, craft, gun);
-      return { root, ship: standing ? part('div', 'ship') : null, name, who: null, bio: null, craft, gun, card };
+      return { root, ship: null, name, who: null, bio: null, craft, gun, card };
     }
     const root = part('div', 'card');
     root.setAttribute('aria-hidden', 'true');
-    const ship = part('div', 'ship');
+    const ship = standing ? null : part('div', 'ship');
     const words = part('div', 'words');
     const name = part('div', 'name');
     const who = part('div', 'who');
@@ -4303,8 +4294,8 @@ export function makeChrome(
     const craft = part('div', 'craft');
     const gun = part('div', 'gun');
     words.append(name, who, bio, craft, gun);
-    if (standing) root.append(words);
-    else root.append(ship, words);
+    if (ship !== null) root.append(ship);
+    root.append(words);
     return { root, ship, name, who, bio, craft, gun, card };
   };
   /** Each card's two turning wheels — 0527, baked the first time a car on spinners is shown there. */
@@ -4764,8 +4755,6 @@ export function makeChrome(
         const pilotCard = buildPilotCard(prefix, choice.card, stand !== null);
         pilotCards[screen] = pilotCard;
         settingsBox.appendChild(pilotCard.root);
-        // 0539: the ship over the dash, on the stand.
-        if (stand !== null && pilotCard.ship !== null) stand.insertBefore(pilotCard.ship, dash);
       }
     }
     /*

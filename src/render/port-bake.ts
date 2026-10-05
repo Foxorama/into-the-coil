@@ -18,10 +18,10 @@
  */
 
 import type { Palette } from '../content/palette.ts';
-import { FLAME_BOX, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
+import { FLAME_BOX, HANGAR_SCALE, PILOT_STANDS, PORT_EXTENT, PORT_INK, PORT_KINDS, SURGE_BOX, VIPER, type PortKind } from '../content/port.ts';
 import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
-import { bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
+import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
@@ -54,6 +54,28 @@ export function bakePort(palette: Palette, pixelsPerUnit: number, pilot: GolferR
     extents: PORT_KINDS.map((kind) => PORT_EXTENT[kind]),
     pixelsPerUnit,
   };
+}
+
+/**
+ * The pieces drawn from the pilot's ship and its fit — 0540: the ship as the hangar and the chase see it
+ * and every flame it burns. Everything else in the port is the room, the Viper and the runner.
+ *
+ * ⚠️ **READ OFF THE TABLE BY THE PORT'S OWN WORD FOR THE PILOT'S SHIP**, which is *blue* in every name
+ * since 0411 (it was the fighter's colour; 0441 made it whichever ship the pilot flies), and every piece
+ * `bakePiece` draws from `pilot.ship` is one. A piece added for that ship named any other way would keep
+ * the last fit on the pad until the port was baked again — at the next visit, never wrong for longer.
+ */
+const SHIP_PIECES: readonly PortKind[] = PORT_KINDS.filter((kind) => kind.startsWith('blue'));
+
+/**
+ * Bake again, in place, the port's pieces that are the pilot's ship — 0540: a slot changed on a tab that
+ * stands in the port, and the ship on the pad is the preview. Under the fit the caller gives (`withFit`),
+ * as `bakePort` is; the room is not touched, so a fitting costs a ship and its flames, not the room.
+ * On `bakeShipFit`'s terms for the game's atlas.
+ */
+export function bakePortShip(port: Atlas, palette: Palette, pilot: GolferRow): void {
+  const bitmaps = port.bitmaps as CanvasImageSource[];
+  for (const kind of SHIP_PIECES) bitmaps[PORT_KINDS.indexOf(kind)] = bakePiece(kind, palette, port.pixelsPerUnit, pilot);
 }
 
 /**
@@ -150,6 +172,13 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
     case 'viperSurge':
       paintJets(ctx, surge, VIPER.flame, VIPER.core, '#ffffff', VIPER_JETS, 2.4, 0.14, 1.0);
       return canvas;
+    /*
+      0540: the fight's spinner, drawn by the fight's own painter at the hangar's scale — the stand turns it
+      over each tyre of a car on a rim that turns (`paintStand`), as the card turned it until the port stood
+      behind the tab.
+    */
+    case 'blueWheel':
+      return bakeGlyph('spinnerWheel', palette, pixelsPerUnit * HANGAR_SCALE);
     case 'viper':
       paintViper(ctx, f, palette, size);
       return canvas;
@@ -476,6 +505,7 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'viperBurn':
     case 'viperFlare':
     case 'viperSurge':
+    case 'blueWheel':
       throw new Error(`bakePort: ${kind} is drawn in the ship's own frame`);
     default: {
       const never: never = kind;

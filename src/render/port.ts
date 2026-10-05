@@ -41,11 +41,15 @@ import {
   SURGE_CURVE,
   SURGE_STEPS,
   TILT,
+  type StandCamera,
   TRACK_DELAY,
   TRAIL_EVERY,
   TRAIL_SAMPLES,
 } from '../content/port.ts';
 import type { ShipRow } from '../content/ships.ts';
+import { RIMS } from '../content/rims.ts';
+import { SPRITE_EXTENT } from '../content/sprites.ts';
+import { STEPS_PER_SECOND } from '../state/screens.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { SCROLL_PER_STEP } from '../sim/flight.ts';
 import { paintSky, type Sky } from './scene.ts';
@@ -109,6 +113,83 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
 }
 
 /**
+ * ── THE STAND — 0540 ──────────────────────────────────────────────────────────────────────────────
+ *
+ * The hangar's tabs, standing in the intro's room: the Viper gone and her pad empty, the beacons dark,
+ * the bar's door shut, and the pilot's ship on its own pad, at idle on its beam and bobbing, wearing the
+ * fit — the port's ship sprites are baked under it, as the intro's are. `t` is how long the stand has
+ * been up, and drives only what idles: the bob, the flame, the sky past the bay. Nothing here has a
+ * beat, because nothing here happens; the room is a place the pilot hangs out in.
+ *
+ * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
+ */
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow): void {
+  surface.clear();
+  paintRoom(surface, view, t, sky);
+  paintLamps(surface, view);
+  // The bar, its door shut: nobody is coming out of it.
+  put(surface, view, PORT_SPRITE.door, STAGE.doorway.along, STAGE.doorway.across);
+  put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
+  paintDeck(surface, view);
+  // The pilot's beam and pad, and the Viper's pad, empty.
+  const beam = PORT_EXTENT.beam;
+  put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2);
+  put(surface, view, PORT_SPRITE.pad, STAGE.viperPad, STAGE.deck);
+  put(surface, view, PORT_SPRITE.pad, STAGE.bluePad, STAGE.deck);
+  // Lit from the first frame and never going: its idle flame for as long as the stand is up.
+  const size = ship.intro.hangar;
+  const across = STAGE.blueRide + blueBobAt(t);
+  paintBlue(surface, view, t, STAGE.bluePad, across, 0, Number.POSITIVE_INFINITY, size);
+  /*
+    A car on a rim that turns turns it on the pad, as it does in the fight (0527, `stepWheels`): the
+    spinner over each tyre its row names, swelled to that tyre, front and back at the rim's own rates.
+  */
+  const wheels = ship.wheels;
+  const rates = wheels === null ? null : RIMS[wheels.rim].turn;
+  if (wheels !== null && rates !== null) {
+    const unit = HANGAR_SCALE * size;
+    const swell = (wheels.radius / (SPRITE_EXTENT.spinnerWheel * 0.42)) * size;
+    const seconds = t / STEPS_PER_SECOND;
+    for (let i = 0; i < wheels.at.length; i++) {
+      const at = wheels.at[i]!;
+      const turn = ((Math.PI * 2 * seconds) / (i === 0 ? rates[0] : rates[1])) % (Math.PI * 2);
+      put(surface, view, PORT_SPRITE.blueWheel, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, turn, swell);
+    }
+  }
+  paintEdge(surface, view);
+}
+
+/**
+ * The view the stand is seen through — 0540: the screen's own `base`, closer by the camera's `zoom`, with
+ * the camera's point of the room at its share of the screen (`x`, `y` of `width` × `height`), and held
+ * inside the room, so no edge of it shows the void the room is painted on. Written into `out`, so a
+ * resize or a change of tab costs no allocation; and in a portrait view, which is never played, the
+ * base itself.
+ */
+export function standViewInto(base: View, camera: StandCamera, width: number, height: number, out: View): void {
+  out.alongSpan = base.alongSpan;
+  out.acrossSpan = base.acrossSpan;
+  out.alongAxis = base.alongAxis;
+  // No bar: it is the play readout's (0500), and on the stand the readout is down in the dash (0539).
+  out.barAcross = 0;
+  if (base.alongAxis !== 'x' || base.scale <= 0) {
+    out.scale = base.scale;
+    out.gutterAlong = base.gutterAlong;
+    out.gutterAcross = base.gutterAcross;
+    return;
+  }
+  const scale = base.scale * camera.zoom;
+  out.scale = scale;
+  // The room's left wall no further in than the screen's left edge, and the sky past the bay, which is
+  // painted across the view's own span, no further in than the right; the truss above the top and the
+  // deck below the bottom.
+  const along = camera.x * width - camera.along * scale;
+  out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, along));
+  const across = camera.y * height - camera.across * scale;
+  out.gutterAcross = Math.min(0, Math.max(height - ACROSS_SPAN * scale, across));
+}
+
+/**
  * Cover the whole canvas in the palette's space at `alpha` — one blit of a one-unit square, scaled past
  * every edge. The backdrop the screens either side of the intro are drawn on, so a fade to it is a fade
  * into the next screen (0416).
@@ -160,7 +241,15 @@ function surgeAt(t: number, go: number): number {
   ── THE HANGAR ───────────────────────────────────────────────────────────────────────────────────
 */
 
-function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number): void {
+/*
+  ⚠️ **THE ROOM IS DRAWN BY THESE, FOR THE INTRO AND FOR THE STAND ALIKE — 0540.** The hangar's tabs
+  stand in this room, held still, and a second copy of how the room is drawn would be a room that drifts
+  from the intro's the first time either is touched. What the two pictures share is here; what happens
+  in the room — the Viper, the alarm, the pilot — stays in `paintHangar`.
+*/
+
+/** The first level's sky past the bay, drifting, and the back wall and the truss over it. */
+function paintRoom(surface: Surface, view: View, t: number, sky: Sky): void {
   // The first level's sky past the bay, drifting — the room covers the rest of it (0416).
   paintSky(surface, view, t * HANGAR_DRIFT, sky, 0, 0, GAME_BASE);
   // The back wall, the truss and the lamps.
@@ -174,6 +263,43 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   for (let along = ceiling / 2; along < STAGE.bay; along += ceiling) {
     put(surface, view, PORT_SPRITE.ceiling, along, STAGE.ceiling - ceiling / 2, 1, 0, TILE_OVERLAP);
   }
+}
+
+/** The lamps hung from the truss. */
+function paintLamps(surface: Surface, view: View): void {
+  const lamp = PORT_EXTENT.lamp;
+  for (let i = 0; i < STAGE.lamps.length; i++) {
+    put(surface, view, PORT_SPRITE.lamp, STAGE.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
+  }
+}
+
+/** The deck, every plank of it to the bay. */
+function paintDeck(surface: Surface, view: View): void {
+  const deck = PORT_EXTENT.deck;
+  for (let along = deck / 2; along < STAGE.bay; along += deck) {
+    for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) {
+      put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
+    }
+  }
+}
+
+/** The edge of the room, over everything that flies out through it. */
+function paintEdge(surface: Surface, view: View): void {
+  put(surface, view, PORT_SPRITE.field, STAGE.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
+  put(surface, view, PORT_SPRITE.bayTop, STAGE.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
+  put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
+}
+
+/** How fast the pilot's ship bobs on its pad's beam, in radians a step — a period of about 105 steps. */
+export const BLUE_BOB_RATE = 0.06;
+
+/** How far the pilot's ship bobs on its pad's beam at `t`, before it goes. */
+function blueBobAt(t: number): number {
+  return Math.sin(t * BLUE_BOB_RATE + 1.7) * 0.6;
+}
+
+function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number): void {
+  paintRoom(surface, view, t, sky);
   // The alarm, turning once she has gone: a beacon sweeps past the viewer once a turn.
   if (t >= BEATS.alarm) {
     const turn = ((t - BEATS.alarm) / ALARM_PERIOD) * Math.PI * 2;
@@ -184,10 +310,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
       put(surface, view, PORT_SPRITE.beacon, at[0], at[1], lit, 0, 1 + 0.6 * sweep);
     }
   }
-  const lamp = PORT_EXTENT.lamp;
-  for (let i = 0; i < STAGE.lamps.length; i++) {
-    put(surface, view, PORT_SPRITE.lamp, STAGE.lamps[i]!, STAGE.ceiling - 2 + lamp / 2);
-  }
+  paintLamps(surface, view);
   /*
     The bar: the light inside it and the door that slides back across it, then the front of it. It
     opens once, for the pilot, and stays open — it opened for Venoma too from 0416 until 0444.
@@ -197,12 +320,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   put(surface, view, PORT_SPRITE.door, STAGE.doorway.along - 13 * open, STAGE.doorway.across);
   put(surface, view, PORT_SPRITE.bar, STAGE.bar.along, STAGE.bar.across);
   // The deck.
-  const deck = PORT_EXTENT.deck;
-  for (let along = deck / 2; along < STAGE.bay; along += deck) {
-    for (let across = STAGE.deck + deck / 2; across < ACROSS_SPAN + deck / 2; across += deck) {
-      put(surface, view, PORT_SPRITE.deck, along, across, 1, 0, TILE_OVERLAP);
-    }
-  }
+  paintDeck(surface, view);
   if (open > 0) put(surface, view, PORT_SPRITE.pool, STAGE.doorway.along + 6, STAGE.deck + 1, open * 0.7);
   // The pads, and the beams each ship rides until it goes.
   const beam = PORT_EXTENT.beam;
@@ -215,7 +333,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
   const viperAlong = STAGE.viperPad + launched(t, BEATS.viperGo);
   const viperAcross = STAGE.viperRide - LIFT * ease(t, BEATS.viperLift, BEATS.viperGo) + viperBob;
   paintViper(surface, view, t, viperAlong, viperAcross, BEATS.viperLit, BEATS.viperGo);
-  const blueBob = t < BEATS.blueGo ? Math.sin(t * 0.06 + 1.7) * 0.6 : 0;
+  const blueBob = t < BEATS.blueGo ? blueBobAt(t) : 0;
   const blueAlong = STAGE.bluePad + launched(t, BEATS.blueGo, BLUE_LAUNCH_ACCEL);
   const blueAcross = STAGE.blueRide - LIFT * ease(t, BEATS.blueLift, BEATS.blueGo) + blueBob;
   paintBlue(surface, view, t, blueAlong, blueAcross, BEATS.blueLit, BEATS.blueGo, size);
@@ -252,9 +370,7 @@ function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitA
     if (blink > 0) put(surface, view, PORT_SPRITE.flash, blueAlong + cockpitAlong, blueAcross + cockpitAcross, blink * 0.5, 0, 0.25);
   }
   // The edge of the room, over everything that flies out through it.
-  put(surface, view, PORT_SPRITE.field, STAGE.bay + 1, (STAGE.ceiling + STAGE.deck) / 2, 0.8);
-  put(surface, view, PORT_SPRITE.bayTop, STAGE.bay + 2, PORT_EXTENT.bayTop / 2 - 4);
-  put(surface, view, PORT_SPRITE.bayBottom, STAGE.bay + 2, ACROSS_SPAN - PORT_EXTENT.bayBottom / 2 + 4);
+  paintEdge(surface, view);
 }
 
 /** The Viper and her engine — the surge its launch is heard in — and the flash she leaves the pad in. */
