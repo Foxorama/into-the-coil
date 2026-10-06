@@ -44,17 +44,18 @@ function hangarJetsOf(ship: ShipKind): readonly Pt[] {
 import { paintRunner } from './golfer-art.ts';
 import { paintCosmo } from './cosmo-art.ts';
 import { KEEPER_FACES, paintUnityStanding } from './keeper-art.ts';
-import { KEEPERS } from '../content/keepers.ts';
+import { KEEPERS, KEEPER_KINDS } from '../content/keepers.ts';
 
 /**
  * Bake every piece of the port for one palette, at the resolution it will be blitted at, with the
  * chosen golfer as the pilot who runs for the ship — 0415.
  */
-export function bakePort(palette: Palette, pixelsPerUnit: number, pilot: GolferRow): Atlas {
+export function bakePort(palette: Palette, pixelsPerUnit: number, pilot: GolferRow, sharp = 1): Atlas {
   return {
     view: 'side',
     theme: 'approach',
-    bitmaps: PORT_KINDS.map((kind) => bakePiece(kind, palette, pixelsPerUnit, pilot)),
+    // 0563: what the stand's camera comes close on, baked as much sharper as it is closer; the room is not.
+    bitmaps: PORT_KINDS.map((kind) => bakePiece(kind, palette, SHARP_PIECES.has(kind) ? pixelsPerUnit * sharp : pixelsPerUnit, pilot)),
     extents: PORT_KINDS.map((kind) => PORT_EXTENT[kind]),
     pixelsPerUnit,
   };
@@ -77,10 +78,20 @@ const SHIP_PIECES: readonly PortKind[] = PORT_KINDS.filter((kind) => kind.starts
  * as `bakePort` is; the room is not touched, so a fitting costs a ship and its flames, not the room.
  * On `bakeShipFit`'s terms for the game's atlas.
  */
-export function bakePortShip(port: Atlas, palette: Palette, pilot: GolferRow): void {
+export function bakePortShip(port: Atlas, palette: Palette, pilot: GolferRow, sharp = 1): void {
   const bitmaps = port.bitmaps as CanvasImageSource[];
-  for (const kind of SHIP_PIECES) bitmaps[PORT_KINDS.indexOf(kind)] = bakePiece(kind, palette, port.pixelsPerUnit, pilot);
+  for (const kind of SHIP_PIECES) bitmaps[PORT_KINDS.indexOf(kind)] = bakePiece(kind, palette, port.pixelsPerUnit * sharp, pilot);
 }
+
+/**
+ * ⚠️ **SHARPER WHERE THE CAMERA COMES CLOSE — 0563.** A sprite is drawn at its extent whatever its bitmap's
+ * size (`blit`), so a piece can be baked at more pixels than the room without anything else knowing. The
+ * stand's camera stands closer than the room was baked for: the pilot's ship and the keepers, which are
+ * what it comes close on, are baked that much sharper, and the room behind them is left soft — which is
+ * the depth the eye reads as distance, and costs nothing. Every keeper's figure and counter, read off
+ * their rows, so a fourth keeper is sharpened without a line here.
+ */
+const SHARP_PIECES: ReadonlySet<PortKind> = new Set<PortKind>([...SHIP_PIECES, ...KEEPER_KINDS.flatMap((kind) => [KEEPERS[kind].figure, KEEPERS[kind].counter])]);
 
 /**
  * The port's pieces with the game's after them — 0416. The sky outside is the first level's, and it

@@ -38,6 +38,8 @@ import {
   RUN_FRAME_STEPS,
   RUN_SPEED,
   STAGE,
+  STAND_PAD_AT,
+  STAND_SHIP_SHARE,
   SURGE_CURVE,
   SURGE_STEPS,
   TILT,
@@ -210,6 +212,35 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
   out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, along));
   const across = camera.y * height - camera.across * scale;
   out.gutterAcross = Math.min(0, Math.max(height - ACROSS_SPAN * scale, across));
+}
+
+/**
+ * The stand's camera fitted to the column the plate leaves it — 0563, written into `out`.
+ *
+ * The row's camera says where it stands and how close it would like to be. Fitted, the pad stands at
+ * `STAND_PAD_AT` of the column, and the camera is drawn back from the row's zoom wherever it would put the
+ * ship's box past `STAND_SHIP_SHARE` of the column, or the keeper, their counter or the viewport in the
+ * back wall more than a quarter of their width off the screen's left — the keeper and the stars are each
+ * the player's own ask (0550), and a camera close enough to lose them is too close.
+ */
+export function fitStand(camera: StandCamera, base: View, width: number, box: { left: number; width: number }, keeper: KeeperKind | null, out: StandCamera): void {
+  out.along = camera.along;
+  out.across = camera.across;
+  out.y = camera.y;
+  out.x = (box.left + box.width * STAND_PAD_AT) / width;
+  out.zoom = camera.zoom;
+  if (base.scale <= 0 || box.width <= 0) return;
+  // The furthest left the camera must keep on the screen, in the room's units: the viewport's pane, and the keeper's two pieces less a quarter of each.
+  let keep: number = STAGE.viewport.along;
+  if (keeper !== null) {
+    const kept = KEEPERS[keeper];
+    keep = Math.min(keep, STAGE.stall.along - PORT_EXTENT[kept.counter] / 4, STAGE.stall.along + kept.at.along - PORT_EXTENT[kept.figure] / 4);
+  }
+  // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
+  const reach = camera.along - keep + 0.5;
+  const fitsShip = (box.width * STAND_SHIP_SHARE) / (PORT_EXTENT.blueSide * base.scale);
+  const keepsLeft = reach > 0 ? (out.x * width) / (reach * base.scale) : Number.POSITIVE_INFINITY;
+  out.zoom = Math.min(camera.zoom, fitsShip, keepsLeft);
 }
 
 /**

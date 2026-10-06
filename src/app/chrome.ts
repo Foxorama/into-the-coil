@@ -3897,6 +3897,11 @@ export interface Chrome {
   /** What the keeper behind the counter is saying — 0542: Cosmo's line, under their face on the plate. */
   setKeeperLine(screen: Screen, line: string): void;
   /**
+   * Where the stand's column is on the screen, in CSS pixels — 0563, for the camera to be fitted to it.
+   * `null` off a stand or before it is laid out. A read of layout, made on a screen change or a resize.
+   */
+  standBox(screen: Screen): { left: number; width: number } | null;
+  /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
    * them, hung `above` or `below` it, with the speaker's `name` over the words beside a `mark` in their
@@ -6546,6 +6551,12 @@ export function makeChrome(
       const spoken = panel.spoken;
       if (spoken !== null && SHELF_KINDS.some((kind) => kind === spoken.name)) panel.spoken = panel.bands.find((b) => b.name === shelf) ?? spoken;
       paintCard(panel);
+    },
+    standBox(screen: Screen): { left: number; width: number } | null {
+      const stand = panels[screen]?.dash?.parentElement;
+      if (stand === null || stand === undefined) return null;
+      const box = stand.getBoundingClientRect();
+      return box.width > 0 ? { left: box.left, width: box.width } : null;
     },
     setKeeperLine(screen: Screen, line: string): void {
       const keeper = panels[screen]?.keeper;
