@@ -11,7 +11,7 @@
  */
 
 import type { Atlas } from './bake.ts';
-import { BOLT_FLAME, BOLT_HOSTILE, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_FLASH, BOLT_HOSTILE, BOLT_ROPE, type BoltLook, type BoltTone, type Surface } from './surface.ts';
 
 /**
  * The device-pixel-ratio ceiling, per 0022.
@@ -196,14 +196,17 @@ export class CanvasSurface implements Surface {
    * light the player stands beside for half a second, and drawn as a flash it was the road above.
    * `BEAM_LAYERS` is five deep: the wash, the rim, the body at exactly the width the beam hurts, an
    * inner glow at half of it and a hot core at a fifth — each narrower one brighter, which is what
-   * gives a column of light its depth. The caller says which with `beam`.
+   * gives a column of light its depth. The caller says which with `look`.
+   *
+   * ⚠️ **AND A ROPE HAS A THIRD — 0549**, `ROPE_LAYERS`: the Catherine wheel's tether, which is held as a
+   * beam is but is fire and not a column of light — a deep amber body in a dark rim, its heart gold.
    *
    * ⚠️ **Nothing here allocates**: `beginPath`, `moveTo`, `lineTo` and `stroke` write into the
    * context's own path, the layers are module constants, and the points are the caller's buffer.
    * **And the context is put back** — `source-over`, alpha one — before this returns, because every
    * blit after it would otherwise be added to the frame too.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, beam = false): void {
+  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, look: BoltLook = BOLT_FLASH): void {
     if (count < 1) return;
     const ctx = this.ctx;
     const ink = tone === BOLT_HOSTILE ? this.hostileInk : tone === BOLT_FLAME ? this.flameInk : this.boltInk;
@@ -216,7 +219,7 @@ export class CanvasSurface implements Surface {
     // The flash and the dark rim wrap the bolt and not its dots: a dot with its own wash is a
     // bead, a dot with its own rim is a dark disc punched in the flash, and the eye reads either as
     // a string of lights rather than as one flash. A dot is its glow and its core — 0238.
-    const layers = count === 1 ? DOT_LAYERS : beam ? BEAM_LAYERS : FLASH_LAYERS;
+    const layers = count === 1 ? DOT_LAYERS : look === BOLT_BEAM ? BEAM_LAYERS : look === BOLT_ROPE ? ROPE_LAYERS : FLASH_LAYERS;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i]!;
       ctx.globalCompositeOperation = layer.additive ? 'lighter' : 'source-over';
@@ -310,4 +313,20 @@ export const BEAM_LAYERS: readonly BoltLayer[] = [
   { width: 2.4, alpha: 0.4, ink: 'glow', additive: true },
   { width: 1.4, alpha: 0.6, ink: 'glow', additive: true },
   { width: 0.8, alpha: 1, ink: 'core', additive: true },
+];
+
+/**
+ * A rope of fire — the Catherine wheel's tether, 0549: *"the tether also needs some more depth to it."*
+ * A beam's figure — a body exactly as wide as it lands at four, a rim outside it — with a wider, fainter
+ * wash of amber light round the whole cord, and a heart that runs amber to pale to gold rather than to
+ * the impact white: in the flame's inks the `hot` layer is the amber taken halfway to white and the core
+ * is gold. The crackle the scene draws over it is flashes, on `FLASH_LAYERS`.
+ */
+export const ROPE_LAYERS: readonly BoltLayer[] = [
+  { width: 9, alpha: 0.12, ink: 'glow', additive: true },
+  { width: 4.6, alpha: 0.45, ink: 'dark', additive: false },
+  { width: 4, alpha: 0.45, ink: 'glow', additive: true },
+  { width: 2.4, alpha: 0.6, ink: 'glow', additive: true },
+  { width: 1.3, alpha: 0.85, ink: 'hot', additive: true },
+  { width: 0.6, alpha: 1, ink: 'core', additive: true },
 ];

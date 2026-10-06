@@ -23,7 +23,7 @@ import { PLAYER_ALONG_SPAN, PLAYER_MARGIN } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
-import { BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
+import { BOLT_BEAM, BOLT_FLAME, BOLT_HOSTILE, BOLT_PLAYER, BOLT_ROPE, screenX, screenY, type BoltTone, type Surface } from './surface.ts';
 import { TETHER_BOLT_KIND } from '../content/weapons.ts';
 
 /**
@@ -439,6 +439,46 @@ const BOLT_WIDTH = 0.5;
 const TETHER_RIPPLE = 0.9;
 const TETHER_WAVES = 3 * Math.PI * 2;
 const TETHER_RUN = 0.35;
+/*
+  ── THE TETHER CRACKLES — 0549 ───────────────────────────────────────────────────────────────────
+
+  *"The tether also needs some more depth to it and should be slightly thinner, it needs to look more
+  crackling and dynamic."* Three things over 0545's one rippling cord. The cord itself is a rope of
+  fire (`ROPE_LAYERS`), its ripple two waves running opposite ways so it writhes rather than slides. Over
+  it, two filaments of the same fire jag about it on the bolt's own hash, re-rolled every
+  `BOLT_PAGE_STEPS` as lightning is — the crackle — pinned at both ends and widest at its middle. And
+  two sparks jump along the first filament from page to page. Five strokes a tether, all counted.
+
+  The tether lets go when its wheel starts to burn down (0549: at 3.4 s); it fades over its last
+  `TETHER_FADE_STEPS`, read off the steps it has left (`holdFor`).
+*/
+/** The second wave on the cord, running the other way: amplitude, waves along it, and speed. */
+const TETHER_RIPPLE_BACK = 0.4;
+const TETHER_WAVES_BACK = 5 * Math.PI * 2;
+const TETHER_RUN_BACK = 0.6;
+/**
+ * How far a crackling filament strays off the cord, in world units. 1.1 at first, on the bolt's thirteen
+ * vertices: photographed, a 160-unit tether had legs of twelve units and the filaments read as a kinked
+ * double line. Finer and wider is what crackles.
+ */
+const TETHER_CRACKLE = 1.8;
+/** Vertices on a tether, both ends included — a leg of five units on a 160-unit throw. */
+const TETHER_VERTICES = 33;
+/**
+ * How far short of the wheel's centre the tether is drawn, in world units: the wheel's face (0.62 of its
+ * 8-unit sprite's half). A bolt is stroked over everything, so a cord to the centre laid its round cap
+ * and its dark rim over the white-hot heart — photographed, 0549.
+ */
+const TETHER_HUB = 2.5;
+/** The filaments' core widths, in world units — a flash's figure at a fraction of the arc's. */
+const TETHER_FILAMENT = 0.16;
+const TETHER_FILAMENT_SECOND = 0.11;
+/** A spark on the filament, in world units across its core. */
+const TETHER_SPARK = 0.3;
+/** Steps the tether fades over before it lets go — a fifth of a second. */
+const TETHER_FADE_STEPS = 12;
+/** How many `bolt` calls one tether costs: its cord, two filaments and two sparks. */
+export const STROKES_PER_TETHER = 5;
 /** How far a vertex may sit off the straight line, as a fraction of the link's length. */
 const BOLT_JAG = 0.16;
 /** And an absolute ceiling on that, in world units, so a long link is not a wide one. */
@@ -522,6 +562,9 @@ const LINK = new Float32Array(BOLT_VERTICES * 2);
 // @setup: the twig's own, for the same reason and lifetime.
 const TWIG = new Float32Array(TWIG_VERTICES * 2);
 
+// @setup: a tether's own, finer than a link — 0549.
+const TETHER = new Float32Array(TETHER_VERTICES * 2);
+
 // @setup: a jagged beam's knots, both ends included, refilled per beam — 0388.
 const BEAM_PATH = new Float32Array(BEAM_MAX_POINTS * 2);
 
@@ -572,23 +615,47 @@ export function paintBolts(
     */
     /*
       ⚠️ **THE CATHERINE WHEEL'S TETHER IS A ROPE OF FIRE, NOT A FLASH — 0545.** Laid every step from the
-      muzzle to the wheel and drawn as a held line (`beam`'s stack, so it is light that stays on rather
-      than a strike that collapses), in the flame's inks, rippling gently along its length as the wheel
-      pulls it. No twig and no points: those say *lightning*, and this is a burning cord.
+      muzzle to the wheel and drawn as a held line (its own stack since 0549, `ROPE_LAYERS`, so it is
+      fire that stays on rather than a strike that collapses), in the flame's inks, writhing along its
+      length as the wheel pulls it. No twig: that says *lightning*, and this is a burning cord — but
+      since 0549 it crackles, two thin filaments of fire jagging about it with sparks along them.
     */
     if (e.kind === TETHER_BOLT_KIND) {
-      const last = BOLT_VERTICES - 1;
-      for (let v = 0; v <= last; v++) {
-        const t = v / last;
-        // Pinned at both ends; a ripple of a unit at most in the middle, running along it with time.
-        const off = Math.sin(t * Math.PI) * TETHER_RIPPLE * Math.sin(t * TETHER_WAVES + e.spin * TETHER_RUN);
-        const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
-        const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
-        const inView = along - cameraAlong;
-        LINK[v * 2] = screenX(view, inView, across);
-        LINK[v * 2 + 1] = screenY(view, inView, across);
+      const held = e.holdFor >= TETHER_FADE_STEPS ? 1 : e.holdFor <= 0 ? 0 : e.holdFor / TETHER_FADE_STEPS;
+      const page = Math.floor(e.spin / BOLT_PAGE_STEPS);
+      const last = TETHER_VERTICES - 1;
+      // It stops at the wheel's face, not its heart; `t` runs from the muzzle (0) to there (1).
+      const reach = length > TETHER_HUB ? 1 - TETHER_HUB / length : 0;
+      // The cord, then each filament over it: pass -1 is the cord, 0 and 1 the filaments.
+      for (let pass = -1; pass < 2; pass++) {
+        for (let v = 0; v <= last; v++) {
+          const t = (v / last) * reach;
+          // Pinned at both ends; two waves running opposite ways, a unit or so at most in the middle.
+          const swell = Math.sin((v / last) * Math.PI);
+          let off = swell * (TETHER_RIPPLE * Math.sin(t * TETHER_WAVES + e.spin * TETHER_RUN) + TETHER_RIPPLE_BACK * Math.sin(t * TETHER_WAVES_BACK - e.spin * TETHER_RUN_BACK));
+          // The crackle rises off the cord within a few joins of each end rather than over the whole length.
+          const lift = v < 4 ? v / 4 : v > last - 4 ? (last - v) / 4 : 1;
+          if (pass >= 0) off += lift * TETHER_CRACKLE * jag(pass * 7919 + 1, v, page);
+          const along = endAlong + e.fromAlong * (1 - t) + nAlong * off;
+          const across = endAcross + e.fromAcross * (1 - t) + nAcross * off;
+          const inView = along - cameraAlong;
+          TETHER[v * 2] = screenX(view, inView, across);
+          TETHER[v * 2 + 1] = screenY(view, inView, across);
+        }
+        if (pass === -1) {
+          surface.bolt(TETHER, TETHER_VERTICES, e.radius * BEAM_STROKE * view.scale, held, BOLT_FLAME, BOLT_ROPE);
+          continue;
+        }
+        surface.bolt(TETHER, TETHER_VERTICES, (pass === 0 ? TETHER_FILAMENT : TETHER_FILAMENT_SECOND) * view.scale, held * (pass === 0 ? 0.9 : 0.6), BOLT_FLAME);
+        if (pass !== 0) continue;
+        // Two sparks on the first filament, jumping from join to join with its page.
+        for (let s = 0; s < 2; s++) {
+          const at = 1 + (Math.floor(((jag(31 + s, 0, page) + 1) / 2) * (last - 1)) % (last - 1));
+          DOT[0] = TETHER[at * 2]!;
+          DOT[1] = TETHER[at * 2 + 1]!;
+          surface.bolt(DOT, 1, TETHER_SPARK * view.scale, held, BOLT_FLAME);
+        }
       }
-      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * view.scale, 1, BOLT_FLAME, true);
       continue;
     }
     const beam = e.kind === BEAM_BOLT_KIND;
@@ -615,7 +682,7 @@ export function paintBolts(
         surface.bolt(BEAM_PATH, points, BOLT_WIDTH * WARNING_WIDTH * view.scale, WARNING_ALPHA, BOLT_HOSTILE);
       } else {
         const held = beamHum(e);
-        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, true);
+        surface.bolt(BEAM_PATH, points, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, BOLT_BEAM);
       }
       continue;
     }
@@ -649,7 +716,7 @@ export function paintBolts(
       // The stroke's own width is a quarter of the visible body (`src/render/canvas.ts`), so a
       // quarter of the hurt width draws the body exactly as wide as the beam hurts.
       const held = beamHum(e);
-      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, true);
+      surface.bolt(LINK, BOLT_VERTICES, e.radius * BEAM_STROKE * beamBloom(e) * view.scale, held, BOLT_HOSTILE, BOLT_BEAM);
       continue;
     }
     // Fades over its life: a flash, brightest and widest the step it lands, collapsing after — 0470.

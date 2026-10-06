@@ -6,6 +6,9 @@ with [0546](0546-the-marmot-rides.md). A fifth gun and a fifth way a shot flies,
 [0442](0442-the-ray-gun.md)'s; and the guns move between the ships, against
 [0441](0441-a-pilot-flies-their-own-ship.md)'s first fitting of them.
 
+⚠️ **Its cadence, life, reach, leash, size and boss weights are [0549](0549-the-wheel-is-playable.md)'s
+since 2026-10-06**; the numbers below are this decision's, kept as the record of what was first built.
+
 ## The ask
 
 > *"For default weapons, let's move the shurikens to the station wagon to replace the lightning gun

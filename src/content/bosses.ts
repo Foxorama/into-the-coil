@@ -4016,8 +4016,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       0545: and the Catherine wheel, at its own 0.6 in 39.3–39.6 s in every ship against the floor's forty.
       Not monotonic: at 0.62 it was faster, 38.4 s, because the damage moves the fish's phases. At 0.55 its
       best is 43 s, measured.
+
+      0549: and 1.45 since the wheel is thrown to the no-fly wall, where it hangs past the fish's middle and
+      most of its embers miss — at 0.55 that took 114 s. At 1.45, 42 s.
     */
-    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95, catherine: 0.55 },
+    gunWeights: { arc: 1.3, shuriken: 0.95, ray: 0.95, catherine: 1.45 },
     damage: 3,
     station: 155,
     drift: 5,
@@ -4131,8 +4134,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       each beam, and the ray's pursuit (`weigh-boss`, on its lane at 45) took it in 35 s from 46. Every
       held lane got slower — a leaning, easing hull is harder to sit under — so health would have
       lengthened the fights that already grew, and the weight is the gyre's own answer (0475).
+
+      0549: and the Catherine wheel at 1.8 — thrown to the no-fly wall it hangs off the bird's patrol, and at
+      the gun's 0.6 it took 285 s. At 1.8, 96 s held and 43 s on its lane, where 0545 had it at 93.
     */
-    gunWeights: { arc: 1.1, ray: 0.82 },
+    gunWeights: { arc: 1.1, ray: 0.82, catherine: 1.8 },
     damage: 3,
     station: 154,
     drift: 6,
@@ -4277,8 +4283,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
 
       0545: and the Catherine wheel, at its own 0.6, in 39 s — it hangs in the gyre's face for nine beats
       in ten. A twentieth less puts it at the others' forty-one.
+
+      0549: 1.42, since the wheel is thrown to the no-fly wall and hangs past the gyre — 108 s at 0.57; at
+      1.5 it was 39 s, and at 1.42 the others' forty-one.
     */
-    gunWeights: { arc: 1.2, ray: 0.82, catherine: 0.57 },
+    gunWeights: { arc: 1.2, ray: 0.82, catherine: 1.42 },
     damage: 3,
     station: 156,
     // ⚠️ **ZERO SINCE 0332**, and it is the `socket` move's other half: a hull that holds one place
@@ -4424,6 +4433,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 21,
     // Doubled by 0260, from 940. 1800 from 1600 — 0441: the arc at the true cap took it in 36 s.
     health: 1800,
+    // 0549: the wheel thrown to the no-fly wall hangs past the frost ship — 198 s at its 0.6; 72 s at 1.6, 0545's.
+    gunWeights: { catherine: 1.6 },
     damage: 3,
     station: 157,
     drift: 5,
@@ -4574,6 +4585,8 @@ export const BOSSES: Record<BossKind, BossRow> = {
     radius: 21,
     // Doubled by 0260, from 1000. 1860 from 1700 — 0441: the arc at the true cap took it in 37 s.
     health: 1860,
+    // 0549: set from its own lane, where at 1.25 the wheel took it in 30 s; at 0.9, 41 s there and 66 s held.
+    gunWeights: { catherine: 0.9 },
     damage: 3,
     /*
       ⚠️ **154 → 178 — 0459.** *"Hydra needs to be closer to the right edge of the screen, it's too far
@@ -4795,8 +4808,11 @@ export const BOSSES: Record<BossKind, BossRow> = {
       ⚠️ **THE LIGHTNING AT 1.4, NOT ITS 1.5 — 0476**, on the gyre's and the pterodactyl's pattern.
       Re-banded for the feeding, the open bell's doubled damage runs over a wider band, and the arc took
       the fight in 38.5 s against 0260's forty; the other three guns were 49–64 s.
+
+      0549: and the Catherine wheel at 0.57 — thrown to the no-fly wall it took her in 39.7 s at its 0.6, the
+      one boss it got quicker on. At 0.57, 43 s.
     */
-    gunWeights: { arc: 1.4 },
+    gunWeights: { arc: 1.4, catherine: 0.57 },
     damage: 3,
     /*
       ⚠️ **190, FROM 152 — 0476.** *"It should be set a bit further back in the screen for the fight, you

@@ -52,7 +52,7 @@ export type WeaponKind = (typeof WEAPON_KINDS)[number];
  *   **tether**    one body at a time, thrown out ahead to hang spinning in the camera's frame on a
  *                 tether back to the muzzle, for the row's `wheel.life`. It lands on what it touches
  *                 as a blade does, throws embers that are spent by arriving, and the tether lands on
- *                 whatever crosses it. Past the leash it is towed after the ship. 0545
+ *                 whatever crosses it. Past the leash it is towed after the ship. 0545, 0549
  */
 export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether';
 
@@ -63,14 +63,25 @@ export type FlightKind = 'straight' | 'chain' | 'coil' | 'burst' | 'tether';
  * units, in the camera's frame.
  */
 export interface CatherineWheel {
-  /** Steps the wheel lasts from the throw; it fades over the last `fade` of them. */
+  /**
+   * Steps the wheel lasts from the throw; it burns down over the last `fade` of them, and its tether
+   * lets go the step that starts — 0549. A life longer than the gun's cadence is a wheel still burning
+   * down when the next is thrown.
+   */
   life: number;
   fade: number;
-  /** How far ahead of the muzzle it is thrown to hang, in world units. */
-  hang: number;
+  /**
+   * How far ahead of the muzzle it is thrown to hang, as a share of the screen's long side — 0549:
+   * *"it should reach across 75% of the screen or to the no-fly zone wall, whichever is closer."* A
+   * share of the view the player has, because the ask is a share of the screen they see.
+   */
+  reach: number;
   /** What share of the way to where it hangs it closes each step — it flies out fast and slows. */
   settle: number;
-  /** The longest the tether may be. Past it the wheel is towed after the ship. */
+  /**
+   * The longest the tether may be, as a share of the screen's long side, as `reach` is. Past it the
+   * wheel is towed after the ship.
+   */
   leash: number;
   /** Radians the wheel turns each step. */
   spin: number;
@@ -379,10 +390,11 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * stays attached to the disc and the car and you can go back and forth with it."* And: *"fires out
    * every 4 secs and fades away at 3.6 seconds give or take before the new one fires out."*
    *
-   * ⚠️ **TEN BEATS AND NINE — 240 STEPS AND 216.** Four seconds is exactly ten of the music's beats
-   * (`VOLLEY_CYCLE`), so the cadence is on the grid every gun is on, and the wheel is gone a beat
-   * before the next is thrown. The first wheel of a life is thrown on the next beat, not four seconds
-   * in (`firstVolleyIn` in `src/app/frame.ts`).
+   * ⚠️ **NINE BEATS AND TEN — 216 STEPS AND 240, SINCE 0549.** 0545 threw every ten beats and burned
+   * out a beat before the next. Asked for since: the wheel is thrown
+   * every 3.6 s, still on the grid every gun is on (`VOLLEY_CYCLE`), its tether lets go at 3.4 s and it
+   * burns down until 4 s — so the next is out while the last is ending. The first wheel of a life is
+   * thrown on the next beat (`firstVolleyIn` in `src/app/frame.ts`).
    *
    * ⚠️ **IT HANGS, ON A LEASH** — answered while it was planned: *"it flies out ahead, slows, and hangs
    * spinning where it stopped; moving the ship sweeps the tether across whatever is between them. Past
@@ -402,7 +414,8 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     hint: 'A fire wheel on a tether',
     shot: 'catherine',
     flight: 'tether',
-    fireEvery: 240,
+    // Nine beats since 0549 (it was ten): the next wheel is out while the last is still burning down.
+    fireEvery: 216,
     barrels: 1,
     links: 1,
     weight: 1,
@@ -423,21 +436,44 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
     falloff: 0,
     coil: 0,
     turn: 0,
+    /*
+      ⚠️ **THE TETHER LETS GO AT 3.4 SECONDS AND THE NEXT WHEEL IS THROWN AT 3.6 — 0549.** Played:
+      *"the tether should fade out at 3.4sec and then the new wheel should fire at 3.6 sec, so it's
+      firing while the old wheel is visible and ending."* So a life of four seconds burning down over
+      its last 0.6 (`life - fade` is 204 steps, 3.4 s), thrown every nine beats (216, 3.6 s): for the
+      last 0.4 s of each wheel the next is already out, and only one ever has a tether.
+    */
     wheel: {
-      life: 216,
-      fade: 24,
-      hang: 66,
+      life: 240,
+      fade: 36,
+      // 0549: three quarters of the screen, or the no-fly wall where that is nearer — `steerWheels`.
+      reach: 0.75,
       settle: 0.09,
-      leash: 96,
+      /*
+        ⚠️ 0.8, and 0.9 for one proof: on 16:9 that was 192 units, and a ship can get no further than about
+        190 from a wheel at the wall — corner to corner — so the leash never acted and its guard could not
+        fail. 170 tows a wheel after a ship that retreats across the lane, and leaves the 160 of a throw free.
+      */
+      leash: 0.8,
       spin: 0.32,
-      rim: 5.4,
+      // 0549: half of 0545's 5.4, with the wheel drawn half the size — *"a lot smaller"*.
+      rim: 2.7,
       emberEvery: 2,
       embers: 3,
       ember: 'cinder',
-      emberLife: 16,
-      // ⚠️ 0.9, and it was 1.6 until the first photograph: drawn as wide as it hits, a cord of 3.2
-      // units was a bar across the screen that outshone the wheel it holds.
-      tether: 0.9,
+      /*
+        ⚠️ **17, AND IT WAS 16 — 0549: *"the spark spray should spray out to the same size as it
+        currently does."*** An ember leaves the rim leaning out from its tangent (`EMBER_FLARE`), so how
+        far from the hub it ends is the rim and its flight added at that lean: 5.4 and 24 units of flight
+        ended 26.8 out, and from a rim of 2.7 the same 26.8 is 25.5 of flight, seventeen steps at 1.5.
+      */
+      emberLife: 17,
+      /*
+        ⚠️ 0.7 since 0549 — *"slightly thinner"* — and 0.9 before it, and 1.6 until 0545's first
+        photograph: drawn as wide as it hits, a cord of 3.2 units was a bar across the screen that
+        outshone the wheel it holds.
+      */
+      tether: 0.7,
       tetherDamage: 1,
     },
   },

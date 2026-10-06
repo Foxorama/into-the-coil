@@ -274,6 +274,8 @@ export interface Entity extends Body {
    * ⚠️ **And two more since 0250, on the same terms — a hold is a hold.** A boss carries the steps
    * it has left to brace, still across the lane, while its lasers are on; a beam bolt carries the
    * steps its strike lasts once its warning has run. `docs/decisions/0250-the-quetzal-screams.md`.
+   * And a Catherine wheel's tether link carries the steps the tether has before it lets go, which the
+   * painter fades it over — `docs/decisions/0549-the-wheel-is-playable.md`.
    */
   holdFor: number;
   /**

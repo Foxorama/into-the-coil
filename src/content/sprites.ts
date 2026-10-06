@@ -1164,11 +1164,14 @@ export const SPRITE_KINDS = [
   /*
     The Catherine wheel — 0545: a spoked wheel of gold fire with a white hub, turned by the frame as it
     spins; its fade, the same wheel burning down; and a cinder off its rim, a streak with a white-hot
-    head turned along its flight. A cinder and not an ember because `ember` is the fish's, 0480.
+    head turned along its flight. A cinder and not an ember because `ember` is the fish's, 0480. And
+    since 0549 the same cinder cooled, which it turns into half way through its flight, so a spray is
+    white-hot at the wheel and deep amber at its edge — the depth in it.
   */
   'catherine',
   'catherineFade',
   'cinder',
+  'cinderCool',
   /*
     ── THE RAY GUN'S RINGS, IN THREE PAGES, AND WHERE THEY LAND IN TWO — 0442 ──────────────────────
 
@@ -1594,6 +1597,9 @@ export const LIGHT_KINDS: readonly SpriteKind[] = [
   'rayFade',
   // The nova's band.
   'novaArc',
+  // The Catherine wheel's sparks — 0549: two crossing burn white where they cross, which is the depth asked for.
+  'cinder',
+  'cinderCool',
 ];
 
 /**
@@ -2585,11 +2591,14 @@ export const SPRITE_EXTENT: Record<SpriteKind, number> = {
   shurikenTurn: 5.6,
   /*
     The wheel is drawn twice its hurtbox across with its flames, so the hub and spokes are what lands
-    and the burning rim reads as the sparks it throws — 0545. An ember is a short streak.
+    and the burning rim reads as the sparks it throws — 0545. Half the size since 0549, *"a lot
+    smaller"*, with its spray reaching as far as it did. An ember is a short streak, and a cooled one
+    a shorter one.
   */
-  catherine: 16,
-  catherineFade: 16,
+  catherine: 8,
+  catherineFade: 8,
   cinder: 4.5,
+  cinderCool: 3.6,
   /*
     ⚠️ **A LITTLE UNDER HALF THE SHIP, AND THREE PAGES OF ONE SIZE** — 0442. Bigger than a pulse,
     because it is one body a volley and has to be seen to be aimed; well under the blade, because it

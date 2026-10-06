@@ -3630,19 +3630,21 @@ export const WHEEL_KIND = 3;
 const EMBER_KIND = 4;
 
 /**
- * How far inside the screen's leading edge the wheel may hang, in world units: its drawn half-width, so
- * a wheel thrown from a ship at the top of the screen hangs on it rather than off it and out of play.
+ * How far inside the lane's edges the wheel may hang, in world units: its drawn half-width (8 across
+ * since 0549, it was 16), so a wheel thrown from a ship at the lane's edge hangs on it rather than off it.
  */
-const WHEEL_EDGE_MARGIN = 6;
+const WHEEL_EDGE_MARGIN = 4;
 
-/** Throw a wheel from the muzzle. A wheel still burning when the next is thrown goes out with it. */
+/**
+ * Throw a wheel from the muzzle. A wheel still burning down when the next is thrown is left to finish —
+ * 0549: *"so it's firing while the old wheel is visible and ending."* Its tether let go before this.
+ */
 function throwWheel(w: World): void {
   const gun = WEAPONS[w.weapon.kind];
-  // On the grid, like every gun — 0094. Ten beats.
+  // On the grid, like every gun — 0094. Nine beats.
   w.fireIn = stepsToGrid(w.steps, w.weapon.fireEvery);
   const wheel = gun.wheel;
   if (wheel === null) return;
-  for (let i = w.playerShots.size - 1; i >= 0; i--) if (w.playerShots.at(i).kind === WHEEL_KIND) w.playerShots.releaseAt(i);
   const disc = w.playerShots.spawn();
   if (disc === null) return;
   w.onCue('wheel', w.ship.across);
@@ -3652,8 +3654,9 @@ function throwWheel(w: World): void {
   disc.velAlong = w.scrollPerStep;
   disc.damage = w.weapon.damage;
   disc.lifeFor = wheel.life;
-  // Where it is going to hang, in the world: `hang` ahead of the muzzle, carried with the camera.
-  disc.fromAlong = disc.along + wheel.hang;
+  // Where it is going to hang, in the world: `reach` of the screen ahead of the muzzle, carried with
+  // the camera, and held short of the no-fly wall by `steerWheels` — 0549.
+  disc.fromAlong = disc.along + wheel.reach * w.view.alongSpan;
   disc.fromAcross = disc.across;
 }
 
@@ -3668,9 +3671,27 @@ function steerWheels(w: World): void {
   const speed = SHOTS[WEAPONS[w.weapon.kind].shot].speed;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
-  const far = w.cameraAlong + w.scrollPerStep + w.view.alongSpan - WHEEL_EDGE_MARGIN;
+  /*
+    ⚠️ **NO FURTHER THAN THE NO-FLY WALL — 0549.** *"It should reach across 75% of the screen or to the
+    no-fly zone wall, whichever is closer."* The wall is the front of the player's own box,
+    `PLAYER_LEAD` from the camera (0074, 0359), and it is inside the screen's edge on every aspect the
+    view allows; the edge stays in the `min` so a view narrower than the box would still hold it on screen.
+  */
+  const wall = w.cameraAlong + w.scrollPerStep + PLAYER_LEAD;
+  const edge = w.cameraAlong + w.scrollPerStep + w.view.alongSpan - WHEEL_EDGE_MARGIN;
+  const far = wall < edge ? wall : edge;
+  const leash = wheel.leash * w.view.alongSpan;
   for (let i = w.playerShots.size - 1; i >= 0; i--) {
     const b = w.playerShots.at(i);
+    if (b.kind === EMBER_KIND) {
+      // An ember cools over the second half of its flight: white-hot off the rim, deep amber at its end — 0549.
+      if (b.lifeFor * 2 <= wheel.emberLife) {
+        b.sprite = SPRITE.cinderCool;
+        b.spriteBase = SPRITE.cinderCool;
+        b.spriteHit = SPRITE.cinderCool;
+      }
+      continue;
+    }
     if (b.kind !== WHEEL_KIND) continue;
     // Where it hangs rides the camera: the wheel is a place on the screen, and the ship the moving end.
     b.fromAlong += w.scrollPerStep;
@@ -3680,14 +3701,15 @@ function steerWheels(w: World): void {
     /*
       ⚠️ **ON A LEASH — answered while it was planned.** Past `leash` from the muzzle, the place it hangs
       is pulled after the ship until it is `leash` away again, so the tether never spans the screen and
-      a ship that flies off drags its wheel behind it rather than leaving it.
+      a ship that flies off drags its wheel behind it rather than leaving it. A wheel whose tether has
+      let go is held by nothing, and burns down where it hangs (0549).
     */
     const dA = b.fromAlong - rootAlong;
     const dC = b.fromAcross - rootAcross;
     const d = Math.sqrt(dA * dA + dC * dC);
-    if (d > wheel.leash) {
-      b.fromAlong = rootAlong + (dA * wheel.leash) / d;
-      b.fromAcross = rootAcross + (dC * wheel.leash) / d;
+    if (b.lifeFor > wheel.fade && d > leash) {
+      b.fromAlong = rootAlong + (dA * leash) / d;
+      b.fromAcross = rootAcross + (dC * leash) / d;
     }
     // Out of the stone: a wheel hangs in the corridor, never inside a wall (0349).
     const corridor = w.corridor;
@@ -3753,9 +3775,13 @@ const EMBER_FLARE = 0.45;
  * hull and body on the hull's clock, gated by the gun's `landGap` as the wheel itself is.
  */
 function landTether(w: World, wheel: CatherineWheel, shootable: boolean, gunOpen: number, gap: number, hull: Entity | null): number {
+  // The one wheel still on its tether: since 0549 the last is burning down beside it for a while.
   let disc: Entity | null = null;
-  for (let i = 0; i < w.playerShots.size && disc === null; i++) if (w.playerShots.at(i).kind === WHEEL_KIND) disc = w.playerShots.at(i);
-  if (disc === null || disc.lifeFor <= wheel.fade) return 0;
+  for (let i = 0; i < w.playerShots.size && disc === null; i++) {
+    const b = w.playerShots.at(i);
+    if (b.kind === WHEEL_KIND && b.lifeFor > wheel.fade) disc = b;
+  }
+  if (disc === null) return 0;
   const rootAlong = w.ship.along + w.shipRow.muzzle.along;
   const rootAcross = w.ship.across + w.shipRow.muzzle.across;
   const landedBefore = w.hits.count;
@@ -3793,6 +3819,8 @@ function layTether(w: World): void {
     // One step: it is drawn, and the next step's `stepEntities` releases it just before the next is laid.
     link.lifeFor = 1;
     link.spin = w.steps;
+    // The steps it has left before it lets go, which the painter fades it over — 0549.
+    link.holdFor = disc.lifeFor - wheel.fade;
     return;
   }
 }

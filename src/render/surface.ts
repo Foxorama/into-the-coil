@@ -67,10 +67,13 @@ export interface Surface {
    * `beam` strokes it as a held column of light rather than as a flash —
    * `docs/decisions/0470-the-light-is-additive.md`. A laser is on for half a second and the player
    * stands beside it; a flash is gone in eight steps. Drawn as the same stack, the laser was a flat
-   * band with a line down it. A flag on the flag's terms, and absent is a flash. **Still one verb**:
-   * a beam is a polyline stroked some number of times, counted as one bolt, exactly as a flash is.
+   * band with a line down it. Absent is a flash. **Still one verb**: a beam is a polyline stroked some
+   * number of times, counted as one bolt, exactly as a flash is.
+   *
+   * `look` was a flag, `beam`, until 0549 gave the Catherine wheel's tether a third: a rope of fire,
+   * which is neither a flash nor a column — a number on `tone`'s terms.
    */
-  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, beam?: boolean): void;
+  bolt(points: Float32Array, count: number, width: number, alpha: number, tone: BoltTone, look?: BoltLook): void;
 }
 
 /** Which inks a bolt is stroked in — 0545. Closed: the player's, the enemy's, the flame's. */
@@ -78,6 +81,12 @@ export type BoltTone = 0 | 1 | 2;
 export const BOLT_PLAYER: BoltTone = 0;
 export const BOLT_HOSTILE: BoltTone = 1;
 export const BOLT_FLAME: BoltTone = 2;
+
+/** Which stack a bolt is stroked in — 0470, 0549. Closed: a flash, a beam, a rope of fire. */
+export type BoltLook = 0 | 1 | 2;
+export const BOLT_FLASH: BoltLook = 0;
+export const BOLT_BEAM: BoltLook = 1;
+export const BOLT_ROPE: BoltLook = 2;
 
 /**
  * The horizontal screen position, in CSS pixels, of a point in the camera's window.
