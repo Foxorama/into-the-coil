@@ -53,4 +53,16 @@ export const PROBES = [
       replace: '  viewport: { along: 120, across: 40 },',
     },
   },
+  {
+    decision: '0550',
+    suite: 'tests/layout.browser.test.ts',
+    // A keeper who only greets kept on a phone's plate, which put Back under the fold on Paint & Parts.
+    broke: 'the greeting card on a phone’s plate',
+    guard: 'needs no scrolling on any of them',
+    edit: {
+      path: 'src/app/chrome.ts',
+      find: '  .itc-shop-keeper-greets, .itc-hangar-keeper-greets, .itc-parts-keeper-greets { display: none; }\n',
+      replace: '',
+    },
+  },
 ];

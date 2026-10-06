@@ -27,7 +27,8 @@ the only stars on the screen were a sliver past the plate's right edge.
 | **a tab's keeper** | the `keeper` on its stand row, a kind and no longer a row: Unity on Hangin' Out, MMXXVI on Paint & Parts, Cosmo on Cosmo's. Its bust and counter are drawn beside the pad and nobody else's is; its card heads the plate with its face and its line |
 | **the faces** | each keeper's own painter, `KEEPER_FACES` in `src/render/keeper-art.ts`, one drawing for the card and the port — on 0542's terms for Cosmo |
 | **the viewport** | a hole two wall tiles wide and one high in the back wall (`STAGE.viewport`), with no tile drawn over it, so the first level's sky the room is painted over shows through; a riveted frame with two struts and a faint sheen goes over it. In the room, so the intro has it too |
-| **the card** | one look on all three tabs, a step smaller than Cosmo's was: the face a size down, the line beside the name |
+| **the card** | one look on all three tabs, a step smaller than Cosmo's was: the face a size down, the line beside the name. Every class is still its screen's own (`prefixFor`), the three selectors listed together |
+| **on a phone** | a keeper with no shop — who only greets — has no card on the plate. Their bust and sign are in the stand beside it; Cosmo's card stays, because it says the shop's state and nothing else does |
 
 ## Who they are
 
@@ -54,6 +55,10 @@ tab, which 0548 leaves room for, at the cost 0548 was written to remove.
 and its plate grew past the other two tabs' plates, which 0548 holds against. One look on all three is the
 smaller one.
 
+**On a phone, Unity and MMXXVI say nothing on the plate.** Paint's three bands fill the plate's height on a
+phone, and the card put Back eight pixels past the plate at 667x375 and sixteen under the fold at 480x320.
+Their line is the same whatever the player does, and their counter is in the picture beside it.
+
 **The viewport is cut on a phone.** At 844x390 the shard counter is over its top left corner. More than half
 the pane is on the screen at every size the layout guard runs at, which is what is held.
 
@@ -64,7 +69,7 @@ name one keeper, and every tab's keeper, counter and ship are in the stand at th
 drawn once, its pane in the stand's part of the screen with at least half its height on the screen, no wall
 tile over it, and the sky drawn before the wall. `tests/intro.test.ts`: every baked piece is drawn by the
 intro or by the stand for some keeper. `tests/layout.browser.test.ts`'s 0547 guard and
-`tests/still.browser.test.ts` hold the card on the plates. Probes in `scripts/probes/0550-every-tab-has-a-keeper.mjs`.
+`tests/still.browser.test.ts` hold the card on the plates, and the layout guard at 480x320 holds the greeting off a phone's. Probes in `scripts/probes/0550-every-tab-has-a-keeper.mjs`.
 
 ## Owed
 
