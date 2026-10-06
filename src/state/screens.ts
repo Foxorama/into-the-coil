@@ -453,7 +453,8 @@ const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hi
  * and the ship under the player's eye three ways at once. Each row still names its camera; this is the
  * one they share today, and a tab that wants another writes its own.
  */
-const PORT_CAMERA: StandCamera = { along: 94, across: 80, zoom: 1.9, x: 0.28, y: 0.52 };
+// 0568: no closer than the room's whole height and a little — the truss to the deck — so a bigger screen shows more hangar.
+const PORT_CAMERA: StandCamera = { along: 142, across: 74, zoom: 1.15, x: 0.6, y: 0.5 };
 
 /** A ship's name to follow *the* — the Firebird's label carries its own article. */
 function plainLabel(kind: ShipKind): string {

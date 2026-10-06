@@ -4,17 +4,7 @@
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
-  {
-    decision: '0562',
-    suite: 'tests/foot.browser.test.ts',
-    broke: 'the plate capped at the laptop size again',
-    guard: 'sets the plate a third larger',
-    edit: {
-      path: 'src/app/chrome.ts',
-      find: '.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { font-size: clamp(0.85rem, max(min(5.4cqh, 1.25rem), 2.5cqh), 2.2rem); }',
-      replace: '.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { font-size: clamp(0.85rem, min(5.4cqh, 1.25rem), 2.2rem); }',
-    },
-  },
+  // The growing plate's probe went with 0568, which turned the guard round; its probe is 0568's.
   {
     decision: '0562',
     suite: 'tests/foot.browser.test.ts',

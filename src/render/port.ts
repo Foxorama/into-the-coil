@@ -40,6 +40,7 @@ import {
   STAGE,
   STAND_PAD_AT,
   STAND_SHIP_SHARE,
+  STAND_SKY,
   SURGE_CURVE,
   SURGE_STEPS,
   TILT,
@@ -154,16 +155,21 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);
     if (row.stands === 'on') put(surface, view, PORT_SPRITE[row.figure], along, across);
   }
-  // The pilot's beam and pad, and the Viper's pad, empty.
+  /*
+    0568: the pilot's ship on the pad by the bay — the Viper's, empty since she went — with the open bay
+    and the stars past it on its right, and the inner pad free for the keeper. On the inner pad it stood
+    in front of the counter, with the bay off the screen: *"the ship over lays the trade stand"*.
+  */
+  const pad = STAGE.standPad;
   const beam = PORT_EXTENT.beam;
-  put(surface, view, PORT_SPRITE.beam, STAGE.bluePad, STAGE.deck - beam / 2 + 2);
-  put(surface, view, PORT_SPRITE.pad, STAGE.viperPad, STAGE.deck);
-  put(surface, view, PORT_SPRITE.pad, STAGE.bluePad, STAGE.deck);
+  put(surface, view, PORT_SPRITE.beam, pad, STAGE.deck - beam / 2 + 2);
+  // The ship's pad alone: the inner one stood under the keeper's counter, half under it — *"poorly aligned"*.
+  put(surface, view, PORT_SPRITE.pad, pad, STAGE.deck);
   // Lit from the first frame and never going: its idle flame for as long as the stand is up.
   const size = ship.intro.hangar;
   // 0567: and up off it for a moment when something is fitted.
   const across = STAGE.blueRide + blueBobAt(t) - hopAt(t - hop);
-  paintBlue(surface, view, t, STAGE.bluePad, across, 0, Number.POSITIVE_INFINITY, size);
+  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
     picture over each tyre its row names, swelled to that tyre — the spinners rolling front and back at
@@ -179,7 +185,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     for (let i = 0; i < wheels.at.length; i++) {
       const at = wheels.at[i]!;
       const sprite = BLUE_WHEELS[wheelFrame(wheel, i, seconds)]!;
-      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
+      put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
     }
   }
   paintEdge(surface, view);
@@ -193,7 +199,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
  * base itself.
  */
 export function standViewInto(base: View, camera: StandCamera, width: number, height: number, out: View, below = 0): void {
-  out.alongSpan = base.alongSpan;
+  // 0568: the sky is painted out past the bay as far as the stand may look, so the open bay shows stars and never the void.
+  out.alongSpan = Math.max(base.alongSpan, STAGE.bay + STAND_SKY);
   out.acrossSpan = base.acrossSpan;
   out.alongAxis = base.alongAxis;
   // No bar: it is the play readout's (0500), and on the stand the readout is down in the dash (0539).
@@ -210,7 +217,7 @@ export function standViewInto(base: View, camera: StandCamera, width: number, he
   // painted across the view's own span, no further in than the right; the truss above the top and the
   // deck below the bottom.
   const along = camera.x * width - camera.along * scale;
-  out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, along));
+  out.gutterAlong = Math.min(0, Math.max(width - out.alongSpan * scale, along));
   const across = camera.y * height - camera.across * scale;
   // 0566: `below` is how much of the screen's foot is under the plate, where the deck may end short of the edge.
   out.gutterAcross = Math.min(0, Math.max(height - below - ACROSS_SPAN * scale, across));
@@ -242,7 +249,11 @@ export function fitStand(
   out.zoom = camera.zoom;
   if (base.scale <= 0 || box.width <= 0) return;
   // The furthest left the camera must keep on the screen, in the room's units: the viewport's pane, and the keeper's two pieces less a quarter of each.
-  let keep: number = STAGE.viewport.along;
+  /*
+    0568: not the back wall's viewport any more — it was kept for its stars (0550), and the open bay shows
+    them now, past the ship. Holding it in view held the camera back a third.
+  */
+  let keep: number = STAGE.standPad;
   if (keeper !== null) {
     const kept = KEEPERS[keeper];
     keep = Math.min(keep, STAGE.stall.along - PORT_EXTENT[kept.counter] / 4, STAGE.stall.along + kept.at.along - PORT_EXTENT[kept.figure] / 4);
@@ -250,8 +261,18 @@ export function fitStand(
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
   const fitsShip = (box.width * STAND_SHIP_SHARE) / (PORT_EXTENT.blueSide * base.scale);
-  const keepsLeft = reach > 0 ? (out.x * width) / (reach * base.scale) : Number.POSITIVE_INFINITY;
-  out.zoom = Math.min(camera.zoom, fitsShip, keepsLeft);
+  // 0568: kept in the column, not the screen — the plate stands on its left, over the room.
+  const keepsLeft = reach > 0 ? (out.x * width - box.left) / (reach * base.scale) : Number.POSITIVE_INFINITY;
+  /*
+    0568: the bay open on the right with the stars past it — *"I want to see the end of the hangar and the
+    open starfield on the right hand side"* — is the camera's place, on the pad by the bay, and its row's
+    zoom, the room's whole height: no rule here, since with those none was ever the one that held.
+  */
+  // Never so far back that the room stops short of the column's foot — or the screen's, where the column
+  // ends only a panel's padding above it: the deck stands on its floor.
+  const foot = (box.top ?? 0) + (box.height ?? 0);
+  const fills = (screenHeight > 0 && screenHeight - foot < screenHeight * 0.05 ? screenHeight : foot) / (ACROSS_SPAN * base.scale);
+  out.zoom = Math.max(fills, Math.min(camera.zoom, fitsShip, keepsLeft));
 }
 
 /**

@@ -7,12 +7,13 @@ export const PROBES = [
   {
     decision: '0563',
     suite: 'tests/stand.test.ts',
-    broke: 'the stand camera back at 0548’s distance',
+    // 0568: the row's zoom no longer decides the camera — the bay does — so the break is the ship let shrink.
+    broke: 'the ship allowed a twelfth of its column, the camera drawn back to suit it',
     guard: 'draws the pilot’s ship past a sixth',
     edit: {
-      path: 'src/state/screens.ts',
-      find: 'const PORT_CAMERA: StandCamera = { along: 94, across: 80, zoom: 1.9, x: 0.28, y: 0.52 };',
-      replace: 'const PORT_CAMERA: StandCamera = { along: 94, across: 80, zoom: 1.4, x: 0.28, y: 0.52 };',
+      path: 'src/content/port.ts',
+      find: 'export const STAND_SHIP_SHARE = 0.34;',
+      replace: 'export const STAND_SHIP_SHARE = 0.08;',
     },
   },
 ];

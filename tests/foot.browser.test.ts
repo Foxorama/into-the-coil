@@ -39,21 +39,24 @@ async function opened(width: number, height: number): Promise<Page> {
   return page;
 }
 
-/** The gun band's first option's type, in CSS pixels. */
-async function gunType(page: Page): Promise<number> {
-  const option = page.locator(`${shown('hangar')} [${SETTING_ATTR}="gun"] .${HANGAR}option`).first();
-  return option.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-}
 
-describe.runIf(chromePath)('0562 — the plate grows with the screen, and its foot says what is under the cursor', () => {
-  it('sets the plate a third larger at 1920x1080 than at 1280x720', async () => {
+describe.runIf(chromePath)('0562 and 0568 — the plate is one size, and its foot says what is under the cursor', () => {
+  /*
+    ⚠️ **TURNED ROUND BY 0568.** 0562 held the plate a third larger at 1920x1080; played, *"the menu's take
+    up like 80% of the screen space … everything is way too big and zoomed in"*. The plate is one width now,
+    and the bigger screen shows more of the hangar: asked in pixels, the plate is no wider at 1920x1080 than
+    at 1280x720, and takes under a quarter of the bigger screen.
+  */
+  it('holds the plate to one width, and gives the bigger screen to the hangar', async () => {
+    const plateOf = async (page: Page): Promise<number> => (await page.locator(`${shown('hangar')} .${HANGAR}plate`).boundingBox())!.width;
     const laptop = await opened(1280, 720);
-    const small = await gunType(laptop);
+    const small = await plateOf(laptop);
     await laptop.context().close();
     const large = await opened(1920, 1080);
-    const big = await gunType(large);
+    const big = await plateOf(large);
     await large.context().close();
-    expect(big, `the gun band is ${big}px at 1920x1080 against ${small}px at 1280x720`).toBeGreaterThanOrEqual(small * 1.3);
+    expect(big, `the plate is ${big}px at 1920x1080 against ${small}px at 1280x720`).toBeLessThanOrEqual(small + 1);
+    expect(big / 1920, 'the plate takes a quarter of a 1920 screen or more').toBeLessThan(0.25);
   });
 
   it('names the option tried on, large, on the card, and stands the balance in the plate beside Back', async () => {

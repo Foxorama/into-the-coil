@@ -14,8 +14,9 @@ export const PROBES = [
     guard: 'stands every tab in the room with the Viper gone',
     edit: {
       path: 'src/render/port.ts',
-      find: '  paintBlue(surface, view, t, STAGE.bluePad, across, 0, Number.POSITIVE_INFINITY, size);',
-      replace: '  paintBlue(surface, view, t, STAGE.bluePad, across, BEATS.blueLit, Number.POSITIVE_INFINITY, size);',
+      // 0568: on the stand's own pad.
+      find: '  paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);',
+      replace: '  paintBlue(surface, view, t, pad, across, BEATS.blueLit, Number.POSITIVE_INFINITY, size);',
     },
   },
   {
@@ -26,7 +27,7 @@ export const PROBES = [
     guard: 'keeps the room over every edge of the screen',
     edit: {
       path: 'src/render/port.ts',
-      find: '  out.gutterAlong = Math.min(0, Math.max(width - base.alongSpan * scale, along));',
+      find: '  out.gutterAlong = Math.min(0, Math.max(width - out.alongSpan * scale, along));',
       replace: '  out.gutterAlong = along;',
     },
   },
@@ -39,8 +40,8 @@ export const PROBES = [
     edit: {
       path: 'src/render/port.ts',
       // ⚠️ Re-pointed by 0557: the turn is read off the rim's row now.
-      find: '      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);',
-      replace: '      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, 0 * seconds, swell);',
+      find: '      put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);',
+      replace: '      put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, 0 * seconds, swell);',
     },
   },
   {
