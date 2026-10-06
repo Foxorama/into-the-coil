@@ -1772,6 +1772,8 @@ export interface World {
    * 0567. Absent until the first fit; written by the shell, read by the stand's painter.
    */
   standHop?: number;
+  /** 0569: where each keeper is this visit — an index into their row's `spots`, written by the shell after every run. */
+  standSpots?: Readonly<Record<KeeperKind, number>>;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2784,7 +2786,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP, w.standKeeper === null ? 0 : (w.standSpots?.[w.standKeeper] ?? 0));
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

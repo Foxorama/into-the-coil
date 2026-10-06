@@ -13,8 +13,9 @@ export const PROBES = [
     guard: 'draws each tab’s own keeper at the counter',
     edit: {
       path: 'src/render/port.ts',
-      find: '    const row = KEEPERS[keeper];',
-      replace: "    const row = KEEPERS['cosmo'];",
+      // 0569: the row is read once for the keeper and their spot.
+      find: '  const row = keeper === null ? null : KEEPERS[keeper];',
+      replace: "  const row = keeper === null ? null : KEEPERS['cosmo'];",
     },
   },
   {

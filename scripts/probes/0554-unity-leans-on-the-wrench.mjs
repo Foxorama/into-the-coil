@@ -12,8 +12,9 @@ export const PROBES = [
     guard: 'stands the tab’s keeper at their counter beside the pad',
     edit: {
       path: 'src/render/port.ts',
-      find: '    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);\n    if (row.stands === \'on\') put(surface, view, PORT_SPRITE[row.figure], along, across);',
-      replace: '    if (row.stands === \'on\') put(surface, view, PORT_SPRITE[row.figure], along, across);\n    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);',
+      // 0569: read off the keeper's spot at the counter, where it said `stands` on the row.
+      find: "    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);\n    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);",
+      replace: "    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);\n    put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);",
     },
   },
 ];

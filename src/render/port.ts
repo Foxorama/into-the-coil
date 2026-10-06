@@ -131,7 +131,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP, spot = 0): void {
   surface.clear();
   paintRoom(surface, view, t, sky);
   paintLamps(surface, view);
@@ -146,14 +146,19 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
     whole beside the pad, so the counter there is the tab's: Unity's bench, MMXXVI's booth, Cosmo's stall.
     The intro never had one.
   */
-  if (keeper !== null) {
-    const row = KEEPERS[keeper];
-    // 0554: and where they stand is theirs — behind the counter, or on it, as Unity stands on their bench.
-    const along = STAGE.stall.along + row.at.along;
-    const across = STAGE.stall.across + row.at.across;
-    if (row.stands === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across);
+  /*
+    0569: and the keeper wherever they are this visit — at their counter, at the ship, or out, the counter
+    standing empty. Their row lists where they may be; the shell says which (`spot`), after every run.
+  */
+  const row = keeper === null ? null : KEEPERS[keeper];
+  const place = row === null ? null : (row.spots[spot] ?? row.spots[0]);
+  if (row !== null && place !== null) {
+    // 0554: at the counter, where they stand is theirs — behind it, or on it, as Unity stands on their bench.
+    const along = STAGE.stall.along + place.offset.along;
+    const across = STAGE.stall.across + place.offset.across;
+    if (place.at === 'counter' && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], along, across);
     put(surface, view, PORT_SPRITE[row.counter], STAGE.stall.along, STAGE.stall.across);
-    if (row.stands === 'on') put(surface, view, PORT_SPRITE[row.figure], along, across);
+    if (place.at === 'counter' && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], along, across);
   }
   /*
     0568: the pilot's ship on the pad by the bay — the Viper's, empty since she went — with the open bay
@@ -169,6 +174,9 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   const size = ship.intro.hangar;
   // 0567: and up off it for a moment when something is fitted.
   const across = STAGE.blueRide + blueBobAt(t) - hopAt(t - hop);
+  // 0569: a keeper at the ship rides its bob — looking over it from behind, or standing on its roof.
+  const atShip = row !== null && place !== null && place.at === 'ship';
+  if (atShip && place.drawn === 'behind') put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along, across + place.offset.across);
   paintBlue(surface, view, t, pad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
@@ -188,6 +196,7 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
       put(surface, view, sprite, pad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
     }
   }
+  if (atShip && place.drawn === 'over') put(surface, view, PORT_SPRITE[row.figure], pad + place.offset.along, across + place.offset.across);
   paintEdge(surface, view);
 }
 
@@ -256,7 +265,8 @@ export function fitStand(
   let keep: number = STAGE.standPad;
   if (keeper !== null) {
     const kept = KEEPERS[keeper];
-    keep = Math.min(keep, STAGE.stall.along - PORT_EXTENT[kept.counter] / 4, STAGE.stall.along + kept.at.along - PORT_EXTENT[kept.figure] / 4);
+    // At the counter's place; the counter is there wherever they are, and a figure elsewhere is by the ship.
+    keep = Math.min(keep, STAGE.stall.along - PORT_EXTENT[kept.counter] / 4, STAGE.stall.along + kept.spots[0].offset.along - PORT_EXTENT[kept.figure] / 4);
   }
   // Half a unit to spare, so what is kept is on the screen and not on its edge by a rounding.
   const reach = camera.along - keep + 0.5;
