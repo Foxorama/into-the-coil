@@ -31,9 +31,12 @@ const HANGAR = prefixFor('hangar');
 const dashes = `${shown('hangar')} [${SETTING_ATTR}="plate"] .${HANGAR}option`;
 const faces = `${shown('hangar')} [${SETTING_ATTR}="pilot"] .${HANGAR}option`;
 
-/** Which of the dash band's options can be pressed, in the ship table's order. */
+/**
+ * Which of the dash band's options can be fitted, in the ship table's order. 0561: a slot's shut option
+ * is marked `aria-disabled` and stays pressable, so it can be tried on; `disabled` is the other bands'.
+ */
 async function openDashes(page: Page): Promise<boolean[]> {
-  return page.evaluate((sel) => [...document.querySelectorAll<HTMLButtonElement>(sel)].map((b) => !b.disabled), dashes);
+  return page.evaluate((sel) => [...document.querySelectorAll<HTMLButtonElement>(sel)].map((b) => !b.disabled && b.getAttribute('aria-disabled') !== 'true'), dashes);
 }
 
 /** The motif class the readout wears, read off the element the player sees. */
@@ -78,7 +81,9 @@ describe.runIf(chromePath)('0521 — the hangar fits what has been won, and the 
 
     // A shut dash cannot be pressed; the estate's is fitted, and the readout wears it at once.
     await page.locator(`${dashes} >> nth=${SHIP_KINDS.indexOf('caddie')}`).click({ force: true });
-    expect(await worn(page), 'a shut dash was fitted').toBe(SHIPS.fighter.hud.motif);
+    // 0561: a press on a shut dash tries it on — the readout wears it, to be seen — and fits nothing.
+    const refused = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);
+    expect(refused.plate.fighter, 'a shut dash was fitted').toBe('fighter');
     await page.locator(`${dashes} >> nth=${SHIP_KINDS.indexOf('estate')}`).click();
     expect(await worn(page), 'the readout did not put on the dash fitted').toBe(SHIPS.estate.hud.motif);
     const written = hangarFrom(await page.evaluate((key) => localStorage.getItem(key), HANGAR_KEY), initialHangar);

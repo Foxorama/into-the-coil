@@ -57,8 +57,8 @@ export const PROBES = [
     guard: 'tries the ware on the dash, buys it once',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : hung);",
-      replace: '    chrome.setDangle(hung);',
+      find: "    chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : seen().hung[ship]);",
+      replace: '    chrome.setDangle(seen().hung[ship]);',
     },
   },
   {

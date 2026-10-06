@@ -149,6 +149,8 @@ describe.runIf(chromePath)('0548 — the hangar holds still', () => {
     const keys = await page.locator(`${shown('shop')} .${prefixFor('shop')}tab-key`).evaluateAll((els) => els.map((el) => (el as HTMLElement).getBoundingClientRect().width > 0));
     expect(keys, 'LB and RB are not both drawn on the strip with a pad in hand').toEqual([true, true]);
     // Up from the first band lands on the tab that is OPEN, not the one standing nearest above it.
+    // 0561: Cosmo's opens on its own first band, under the line of faces, so the strip is two rows up.
+    await tap(page, MENU_DPAD_BUTTONS.up);
     await tap(page, MENU_DPAD_BUTTONS.up);
     expect((await where(page)).ring, 'up into the strip did not land on the open tab').toBe(SCREENS.shop.heading);
     // Along to Hangin' Out and pressed: it opens, and the ring stays on the strip, on it.

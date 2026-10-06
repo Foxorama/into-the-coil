@@ -125,13 +125,13 @@ import {
   type World,
 } from './frame.ts';
 import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
-import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, liveryWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen } from '../state/screens.ts';
+import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
 import { HUES, TONES, liveryFor } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
-import { OWNABLES, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
+import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
 import { COSMO } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
@@ -153,7 +153,7 @@ import { placeScore, readScores, recordScore } from '../save/scores.ts';
 import { browserStore } from '../save/store.ts';
 import { readSettings, serialiseSettings, writeSettings } from '../save/settings.ts';
 import { readHangar, writeHangar } from '../save/hangar.ts';
-import { artOpen, flameOpen, gunOpen, plateOpen, rimOpen, specialOpen } from '../state/slices/hangar.ts';
+import { artOpen, flameOpen, gunOpen, plateOpen, reduceHangar, rimOpen, specialOpen, type HangarAction, type HangarState } from '../state/slices/hangar.ts';
 import { combineDevices } from './devices.ts';
 import { attachInput } from './input.ts';
 import { attachMenuPad, makeMenuAsk } from './menu.ts';
@@ -1406,6 +1406,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   const keptStore = browserStore();
   // 0521: and the hangar — the ships won in and how each is fitted — on the settings' terms.
+  /*
+    0561: the slot option tried on and not fitted — see `seen` below. Declared up here, with the state,
+    because everything that draws the fitted ship reads it.
+  */
+  let look: { name: SlotName; index: number } | null = null;
+  // @setup: built once, so a try reads a hangar in which every option is open.
+  const EVERY_SHIP_WON = Object.fromEntries(SHIP_KINDS.map((kind) => [kind, true])) as Record<ShipKind, boolean>;
+  // @setup: and every ware owned.
+  const EVERY_WARE_OWNED = Object.fromEntries(OWNABLE_KINDS.map((kind) => [kind, true])) as Record<OwnableKind, boolean>;
   let state: State = {
     ...initialState,
     settings: readSettings(keptStore, initialState.settings),
@@ -1640,7 +1649,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (SCREENS[state.screen.current].stand !== null) {
       const ship = GOLFERS[state.settings.pilot].ship;
       const tier = DIFFICULTIES[state.settings.difficulty];
-      const arsenal = startingArsenal(ship, state.settings.difficulty, ownSpecial(state.hangar.special[ship]));
+      // 0561: with the special tried on, so the dash counts what the run would open with if it were fitted.
+      const arsenal = startingArsenal(ship, state.settings.difficulty, ownSpecial(seen().special[ship]));
       chrome.setHud(livesFor(state.settings.difficulty), shieldsOf(SHIPS[ship], openingHealthFor(SHIPS[ship], tier)), tier.shellCap, stacksOf(arsenal));
       return;
     }
@@ -1939,7 +1949,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // would fight a player who had tabbed away from it.
     if (moved) applyScreen();
     // 0523: into or out of Cosmo's, the readout swaps the ware in the window for what the ship has hung.
-    if (moved && (was === 'shop') !== (state.screen.current === 'shop')) fitHangar();
+    // 0561: and any screen change lets go of an option tried on, so the stand and the atlas wear the fit again.
+    const tried = look !== null;
+    if (moved) look = null;
+    if (moved && (tried || (was === 'shop') !== (state.screen.current === 'shop'))) fitHangar();
     /*
       ⚠️ **A PRESS BELONGS TO ONE SCREEN, and this is the only place that can know a screen changed.**
       `docs/decisions/0055-a-press-belongs-to-one-screen.md`. Reported from play: starting a run with
@@ -2003,6 +2016,70 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     before a shard is spent: a dangle on the dash (0523), a rim on the wheels of a ship that has them, a
     flame in the exhaust. Only while the shop is up; anywhere else the stand wears what the hangar fitted.
   */
+  /*
+    ⚠️ **TRIED ON, NOT FITTED — 0561.** The cursor stepping a slot's band puts that option on the ship on
+    its pad, on the readout and on the dash, and fits nothing: *"seeing how it immediately looks is good,
+    but it shouldn't auto-equip when scrolling menus."* The shell's, like Cosmo's window, and let go of
+    whenever the screen changes. A shut option is tried on too — it is what the player is chasing.
+  */
+  /** The hangar as the stand shows it: the fitted one, with the option tried on worn — locks and all set aside. */
+  function seen(): HangarState {
+    if (look === null || SCREENS[state.screen.current].stand === null) return state.hangar;
+    const action = slotAction(look.name, look.index, GOLFERS[state.settings.pilot].ship);
+    if (action === null) return state.hangar;
+    // Every ship won and every ware owned, so the reducer wears what it would refuse to fit; then the real ones back.
+    const h = state.hangar;
+    const open = reduceHangar({ ...h, won: EVERY_SHIP_WON, owned: EVERY_WARE_OWNED }, action);
+    return { ...open, won: h.won, owned: h.owned, shards: h.shards };
+  }
+  /**
+   * What fitting option `index` of slot `name` on `ship` is, as an action — each band's position read off
+   * the list the band was built from (`src/state/screens.ts`), or `null` past its end.
+   */
+  function slotAction(name: SlotName, index: number, ship: ShipKind): HangarAction | null {
+    switch (name) {
+      // 0521: the dash, `SHIP_KINDS` in order.
+      case 'plate': {
+        const plate = SHIP_KINDS[index];
+        return plate === undefined ? null : { slice: 'hangar', type: 'plate', ship, plate };
+      }
+      // 0523: what hangs — the empty hook first, then `DANGLE_KINDS`.
+      case 'dangle': {
+        const dangle = index === 0 ? null : DANGLE_KINDS[index - 1];
+        return dangle === undefined ? null : { slice: 'hangar', type: 'hung', ship, dangle };
+      }
+      // 0529: the paint — the factory's first, then `HUES` — and its tone, `TONES` in order.
+      case 'livery':
+        return index > HUES.length ? null : { slice: 'hangar', type: 'livery', ship, hue: index === 0 ? null : index - 1 };
+      case 'tone':
+        return { slice: 'hangar', type: 'tone', ship, tone: index };
+      // 0530: what the engines burn, `FLAME_KINDS` in order.
+      case 'flame': {
+        const flame = FLAME_KINDS[index];
+        return flame === undefined ? null : { slice: 'hangar', type: 'flame', ship, flame };
+      }
+      // 0528: that ship's own three looks; its row's `arts` IS the order of the band.
+      case 'art': {
+        const art = SHIPS[ship].arts[index];
+        return art === undefined ? null : { slice: 'hangar', type: 'art', ship, art };
+      }
+      // 0527: the wheels, `RIM_KINDS` in order.
+      case 'rim': {
+        const rim = RIM_KINDS[index];
+        return rim === undefined ? null : { slice: 'hangar', type: 'rim', ship, rim };
+      }
+      // 0524 and 0526: whose special and whose gun, `SHIP_KINDS` in order.
+      case 'special':
+      case 'gun': {
+        const from = SHIP_KINDS[index];
+        return from === undefined ? null : { slice: 'hangar', type: name, ship, from };
+      }
+      default: {
+        const unhandled: never = name;
+        return unhandled;
+      }
+    }
+  }
   function standFit(ship: ShipKind): Fit {
     const fit = hangarFit(ship);
     if (state.screen.current !== 'shop') return fit;
@@ -2172,49 +2249,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       chrome.setChoice('credits', CREDIT_KINDS.indexOf(state.settings.credits));
     }
     /*
-      0521: the hangar's dash, for the ship of the pilot on its band. `SHIP_KINDS` IS the order the band
-      was built in. The reducer refuses a shut dash, and the dispatch re-reads the band either way.
+      0521 onward: a slot of the pilot's ship, fitted. `slotAction` reads the band's position; the reducer
+      refuses a shut one, and the dispatch re-reads the band either way. 0561: a fit ends the try.
     */
-    else if (name === 'plate') {
-      const plate = SHIP_KINDS[index];
-      if (plate !== undefined) dispatch({ slice: 'hangar', type: 'plate', ship: GOLFERS[state.settings.pilot].ship, plate });
-    }
-    // 0523: what hangs from that ship's dash — nothing first, then `DANGLE_KINDS`, the order it was built in.
-    else if (name === 'dangle') {
-      const dangle = index === 0 ? null : DANGLE_KINDS[index - 1];
-      if (dangle !== undefined) dispatch({ slice: 'hangar', type: 'hung', ship: GOLFERS[state.settings.pilot].ship, dangle });
-    }
-    // 0529: that ship's paint — the factory's first, then `HUES` in order — and its tone, `TONES` in order.
-    else if (name === 'livery') {
-      dispatch({ slice: 'hangar', type: 'livery', ship: GOLFERS[state.settings.pilot].ship, hue: index === 0 ? null : index - 1 });
-    } else if (name === 'tone') {
-      dispatch({ slice: 'hangar', type: 'tone', ship: GOLFERS[state.settings.pilot].ship, tone: index });
-    }
-    // 0530: what that ship's engines burn — `FLAME_KINDS` in order.
-    else if (name === 'flame') {
-      const flame = FLAME_KINDS[index];
-      if (flame !== undefined) dispatch({ slice: 'hangar', type: 'flame', ship: GOLFERS[state.settings.pilot].ship, flame });
-    }
-    // 0528: which of that ship's own three looks it wears; its row's `arts` IS the order of the band.
-    else if (name === 'art') {
-      const ship = GOLFERS[state.settings.pilot].ship;
-      const art = SHIPS[ship].arts[index];
-      if (art !== undefined) dispatch({ slice: 'hangar', type: 'art', ship, art });
-    }
-    // 0527: what that car's wheels wear. `RIM_KINDS` IS the order the band was built in.
-    else if (name === 'rim') {
-      const rim = RIM_KINDS[index];
-      if (rim !== undefined) dispatch({ slice: 'hangar', type: 'rim', ship: GOLFERS[state.settings.pilot].ship, rim });
-    }
-    // 0524: whose special that ship opens with. `SHIP_KINDS` IS the order the band was built in.
-    else if (name === 'special') {
-      const from = SHIP_KINDS[index];
-      if (from !== undefined) dispatch({ slice: 'hangar', type: 'special', ship: GOLFERS[state.settings.pilot].ship, from });
-    }
-    // 0526: whose gun that ship flies, on the special's terms.
-    else if (name === 'gun') {
-      const from = SHIP_KINDS[index];
-      if (from !== undefined) dispatch({ slice: 'hangar', type: 'gun', ship: GOLFERS[state.settings.pilot].ship, from });
+    else if (isSlot(name)) {
+      look = null;
+      const before = state.hangar;
+      const action = slotAction(name, index, GOLFERS[state.settings.pilot].ship);
+      if (action !== null) dispatch(action);
+      // Nothing moved — the one tried on was the one fitted — so the stand is put back by hand.
+      if (state.hangar === before) fitHangar();
     }
     // 0523: the ware in Cosmo's window — the shell's to hold, kept for nothing past the visit.
     // 0542: the aisle steps the shelf in view; a shelf's band picks its ware and brings that shelf into view.
@@ -2246,7 +2290,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   // 0458: a tab, which is a screen shown like any other.
   (screen: Screen) => dispatch({ slice: 'screen', type: 'show', screen }),
   // 0511: the pause button. An arrow, because `pauseRun` is written further down.
-  () => pauseRun());
+  () => pauseRun(),
+  // 0561: an option tried on, or let go of — worn on the stand, fitted to nothing.
+  (name: ChoiceName, index: number) => {
+    look = index >= 0 && isSlot(name) ? { name, index } : null;
+    fitHangar();
+  });
   for (const element of chrome.elements) host.appendChild(element);
   // 0437: the discs say the stacks on a touch screen, so the readout stops saying them twice.
   chrome.setTouch(touchable);
@@ -2288,17 +2337,19 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const ship = GOLFERS[state.settings.pilot].ship;
     const open = SHIP_KINDS.map((plate) => plateOpen(state.hangar, ship, plate));
     const borrowable = SHIP_KINDS.some((plate) => plate !== ship && open[SHIP_KINDS.indexOf(plate)]);
-    chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable));
+    // 0561: and why each shut option is, for the one the cursor tries on.
+    const whysOf = (name: SlotName, opens: readonly boolean[]): (string | null)[] => opens.map((o, i) => (o ? null : optionWhy(name, ship, i, state.hangar.won)));
+    chrome.setOpen('plate', open, plateWhy(ship, state.hangar.won[ship], borrowable), whysOf('plate', open));
     chrome.setChoice('plate', SHIP_KINDS.indexOf(state.hangar.plate[ship]));
     // 0524: the special, on the dash's rule and in its words.
     const specials = SHIP_KINDS.map((from) => specialOpen(state.hangar, ship, from));
     const lendable = SHIP_KINDS.some((from, i) => from !== ship && specials[i] === true);
-    chrome.setOpen('special', specials, specialWhy(ship, state.hangar.won[ship], lendable));
+    chrome.setOpen('special', specials, specialWhy(ship, state.hangar.won[ship], lendable), whysOf('special', specials));
     chrome.setChoice('special', SHIP_KINDS.indexOf(state.hangar.special[ship]));
     // 0526: the gun, on the same rule and in the same words.
     const guns = SHIP_KINDS.map((from) => gunOpen(state.hangar, ship, from));
     const lent = SHIP_KINDS.some((from, i) => from !== ship && guns[i] === true);
-    chrome.setOpen('gun', guns, gunWhy(ship, state.hangar.won[ship], lent));
+    chrome.setOpen('gun', guns, gunWhy(ship, state.hangar.won[ship], lent), whysOf('gun', guns));
     chrome.setChoice('gun', SHIP_KINDS.indexOf(state.hangar.gun[ship]));
     /*
       0527: the wheels, on Paint & Parts — every rim open to this car, why the rest are shut, and the one
@@ -2307,7 +2358,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const rims = RIM_KINDS.map((rim) => rimOpen(state.hangar, ship, rim));
     const swapped = RIM_KINDS.some((rim, i) => RIMS[rim].from !== null && RIMS[rim].from !== ship && rims[i] === true);
     const bought = RIM_KINDS.some((rim, i) => RIMS[rim].from === null && rims[i] === true);
-    chrome.setOpen('rim', rims, rimWhy(ship, SHIPS[ship].wheels !== null, state.hangar.won[ship], swapped, bought));
+    chrome.setOpen('rim', rims, rimWhy(ship, SHIPS[ship].wheels !== null, state.hangar.won[ship], swapped, bought), whysOf('rim', rims));
     const rim = state.hangar.rim[ship];
     chrome.setChoice('rim', rim === null ? -1 : RIM_KINDS.indexOf(rim));
     // 0528: the look — the band named for this ship's three, the first open always and the rest with its win.
@@ -2325,7 +2376,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setOpen('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
     chrome.setChoice('tone', paint === null ? -1 : paint.tone);
     // 0530: the flame — the standard always, a bought one on any ship.
-    chrome.setOpen('flame', FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind)), flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])));
+    const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind));
+    chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
     chrome.setChoice('flame', FLAME_KINDS.indexOf(state.hangar.flame[ship]));
     // 0522: and the balance, under the hangar's heading — what the shop will take.
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
@@ -2337,7 +2389,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       the ware in the window, what stands between the player and it, and Buy only while it can be.
     */
     const hung = state.hangar.hung[ship];
-    chrome.setOpen('dangle', [true, ...DANGLE_KINDS.map((kind) => state.hangar.owned[kind])], dangleWhy(DANGLE_KINDS.some((kind) => DANGLES[kind].price !== null && state.hangar.owned[kind])));
+    const hooks = [true, ...DANGLE_KINDS.map((kind) => state.hangar.owned[kind])];
+    chrome.setOpen('dangle', hooks, dangleWhy(DANGLE_KINDS.some((kind) => DANGLES[kind].price !== null && state.hangar.owned[kind])), whysOf('dangle', hooks));
     chrome.setChoice('dangle', hung === null ? 0 : 1 + DANGLE_KINDS.indexOf(hung));
     /*
       0542: every shelf, each ware named with its price on its face — or as the player's, which is the shut
@@ -2364,7 +2417,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     // The readout wears the ware in the window over the shop, so it is seen hung before it is bought.
     const shown = DANGLE_KINDS.find((kind) => kind === ware);
-    chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : hung);
+    // 0561: and what hangs tried on, over the hangar.
+    chrome.setDangle(state.screen.current === 'shop' && shown !== undefined ? shown : seen().hung[ship]);
     fitPilot();
     // 0539: and the dash on the stand, which counts what this pilot's ship opens with — the special the hangar fitted.
     syncHud();
@@ -2419,13 +2473,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   */
   function fitPilot(): void {
     const ship = GOLFERS[state.settings.pilot].ship;
-    // 0526: with the gun the hangar fitted it, so the pick is seen as it will be flown.
-    const row = fitted(SHIPS[ship], SHIPS[state.hangar.gun[ship]].weapon, state.hangar.rim[ship]);
-    chrome.setShip(row, SHIPS[state.hangar.plate[ship]], hangarFit(ship));
+    // 0526: with the gun the hangar fitted it, so the pick is seen as it will be flown; 0561: or the one tried on.
+    const h = seen();
+    const row = fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, h.rim[ship]);
+    chrome.setShip(row, SHIPS[h.plate[ship]], hangarFit(ship));
     fitAtlasGun();
     if (state.run.lives > 0) return;
     // 0542: the wheels the stand wears, so a rim tried on at Cosmo's turns on the pad as a fitted one does.
-    world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[state.hangar.gun[ship]].weapon, standFit(ship).rim) : row;
+    world.shipRow = state.screen.current === 'shop' ? fitted(SHIPS[ship], SHIPS[h.gun[ship]].weapon, standFit(ship).rim) : row;
     world.weapon = weaponFor(row, [], row.missile);
     wearHull(world);
   }
@@ -2462,12 +2517,13 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * How `ship` is fitted flying `gun` — 0527's rim, 0528's look, 0529's paint on this palette
    * (`liveryFor`, which keeps the high-contrast look on its roles), as the hangar has them.
    */
-  function fitOf(ship: ShipKind, gun: WeaponKind): Fit {
-    return { gun, rim: state.hangar.rim[ship], art: state.hangar.art[ship], livery: liveryFor(state.hangar.livery[ship], palette), flame: state.hangar.flame[ship] };
+  function fitOf(ship: ShipKind, gun: WeaponKind, h: HangarState = state.hangar): Fit {
+    return { gun, rim: h.rim[ship], art: h.art[ship], livery: liveryFor(h.livery[ship], palette), flame: h.flame[ship] };
   }
-  /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it. */
+  /** How the hangar has fitted `ship` — 0527: its own fit, with the gun the hangar gave it; 0561: as the stand shows it. */
   function hangarFit(ship: ShipKind): Fit {
-    return fitOf(ship, SHIPS[state.hangar.gun[ship]].weapon);
+    const h = seen();
+    return fitOf(ship, SHIPS[h.gun[ship]].weapon, h);
   }
   showPilot();
 
