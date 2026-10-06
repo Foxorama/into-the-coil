@@ -80,8 +80,9 @@ export const PROBES = [
     guard: 'gates on a rotation INTO portrait, mid-run — the way a player actually meets this',
     edit: {
       path: 'src/app/mount.ts',
-      find: "    if (next.alongAxis !== 'x') {\n      setPlayable(false);\n      return;\n    }",
-      replace: "    if (next.alongAxis !== 'x') {\n      setPlayable(true);\n      return;\n    }",
+      // 0566: a stand may stand upright; every other screen is gated, which is what this breaks.
+      find: "      if (!standsTall()) {\n        setPlayable(false);\n        return;\n      }",
+      replace: "      if (!standsTall()) {\n        setPlayable(true);\n        return;\n      }",
     },
   },
   {

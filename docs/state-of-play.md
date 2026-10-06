@@ -1161,6 +1161,25 @@ ONE MESSAGE.**
   plainly which half of the report it did NOT move — the band the cues sit in — and `0325-note` in
   `tests/authored.ts` names the cues that still have no note, on every run.
 
+### ⚠️ THE HANGAR FAMILY IS REVIEWED AND REBUILT, AND NONE OF IT HAS BEEN PLAYED — 2026-10-07
+
+[`the-hangar-family-reviewed`](../reports/the-hangar-family-reviewed-2026-10-07.md) is the review, the
+player's five answers and the queue of eight. One PR each from `main`, in order; each decision's
+*What is owed* is the play it needs:
+
+- the pilots' bios as pilots' — [0560](decisions/0560-the-bios-fly.md);
+- the cursor tries on and only a press fits; shut options reachable; the Cockpit — [0561](decisions/0561-the-cursor-tries-on.md);
+- the plate grows with the screen and has a focus card at its foot — [0562](decisions/0562-the-plate-grows.md);
+- the stand's camera closer and fitted to its column — [0563](decisions/0563-the-ship-is-the-picture.md),
+  which pushed back on a camera per tab and asks the player about the room;
+- Cosmo's sub-tabs, tiles and confirm sheet — [0564](decisions/0564-cosmos-sells-pictures.md);
+- Paint & Parts in swatches and pictures — [0565](decisions/0565-paint-in-swatches.md);
+- the phone pass and the hangar held upright — [0566](decisions/0566-the-phone-pass.md);
+- a fitting is felt: the hop, two cues and the count — [0567](decisions/0567-a-fitting-is-felt.md),
+  whose cues wait for the ear.
+
+Run `gh pr list` for which of the last three are still landing.
+
 ### ⚠️ THE PLAY OF 2026-10-05 IS BUILT AND NONE OF IT HAS BEEN PLAYED
 
 One PR each, all merged; each decision's *Owed* names what the play has to look at, and the vetoes it

@@ -75,7 +75,7 @@ import type { InputSource } from './input.ts';
 import { beamAcrossAt, beamDistance } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
 import { BOLT_STEPS, paintBodyBolts, paintBolts, paintScene, type Bound, type Landmarks, type Room, type Sky } from '../render/scene.ts';
-import { paintPort, paintStand } from '../render/port.ts';
+import { NO_HOP, paintPort, paintStand } from '../render/port.ts';
 import { hydraJointOf } from '../content/necks.ts';
 import { paintFinale, type FinaleScene } from '../render/finale.ts';
 import { bandAt, deepestFace, faceAt, heldAt, laneIn, layFaces, layShore, outOfStone, squeezeAt, stoneAt, type Corridor } from '../sim/corridor.ts';
@@ -1767,6 +1767,11 @@ export interface World {
   standView: View;
   /** Whose counter stands by the pad — 0550: the tab's own keeper, written by the shell with the camera. */
   standKeeper: KeeperKind | null;
+  /**
+   * The stand's step at which the ship on the pad was last fitted with something, so it hops on its beam —
+   * 0567. Absent until the first fit; written by the shell, read by the stand's painter.
+   */
+  standHop?: number;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2779,7 +2784,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper, w.standHop ?? NO_HOP);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

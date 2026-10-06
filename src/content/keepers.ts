@@ -32,6 +32,15 @@ export interface ShopLines {
   readonly sold: string;
   /** Said when the ware in the window is wheels and the ship on the pad has none to try them on. */
   readonly noWheels: string;
+  /**
+   * 0564: said when the shop is walked into, one a visit in turn, until the player looks at something — so
+   * the first thing heard is a greeting and never a remark about whatever ware happens to be in the window.
+   */
+  readonly arrive: readonly string[];
+  /** 0564: said when the ware just bought is fitted at the counter. */
+  readonly fitted: string;
+  /** 0564: said when every ware in the shop is the player's. */
+  readonly soldOut: string;
 }
 
 /** Who stands behind a counter, what their counter is, and the lines they have. */
@@ -70,6 +79,14 @@ export const COSMO = {
     short: 'Come back with {short} more Star Shards, friend.',
     sold: 'Pleasure doing business. It suits you.',
     noWheels: 'Lovely set — shame your ship has no wheels to try them on.',
+    arrive: [
+      'Welcome, welcome! Try anything on — no charge for looking.',
+      'Back again? Have a browse, friend.',
+      'Ah, a pilot with taste. Look around.',
+      'Fresh stock on every shelf. Well — the same stock, freshly dusted.',
+    ],
+    fitted: 'There. Wear it well.',
+    soldOut: 'You’ve cleaned me out, friend. More stock soon.',
   },
 } as const satisfies KeeperRow;
 

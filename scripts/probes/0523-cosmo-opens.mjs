@@ -64,12 +64,13 @@ export const PROBES = [
   {
     decision: '0523',
     suite: 'tests/cosmo.browser.test.ts',
+    // 0564: an owned ware's first action is Fit it now, so the break is Buy offered on it again.
     broke: 'Buy left up on a ware already owned',
     guard: 'tries the ware on the dash, buys it once',
     edit: {
       path: 'src/app/mount.ts',
-      find: "      chrome.setActionShown('shop', 0, !owned);",
-      replace: "      chrome.setActionShown('shop', 0, true);",
+      find: "owned ? 'Fit it now' : ",
+      replace: "owned && Number.isNaN(0) ? 'Fit it now' : ",
     },
   },
   {

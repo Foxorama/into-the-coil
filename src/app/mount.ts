@@ -17,7 +17,7 @@ import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
 import { fitStand, standViewInto } from '../render/port.ts';
@@ -101,7 +101,7 @@ import { INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
-import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -128,10 +128,10 @@ import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
-import { HUES, TONES, liveryFor } from '../content/livery.ts';
+import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
-import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
+import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
 import { COSMO } from '../content/keepers.ts';
 import { type Action, type State, initialState, reduce } from '../state/root.ts';
 import { hudBar, makeChrome } from './chrome.ts';
@@ -1639,8 +1639,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const width = viewportWidth(host);
     const box = chrome.standBox(state.screen.current);
     if (box === null) return;
-    fitStand(stand.camera, view, width, box, stand.keeper, framed);
-    standViewInto(view, framed, width, viewportHeight(host), world.standView);
+    const height = viewportHeight(host);
+    fitStand(stand.camera, view, width, box, stand.keeper, framed, height);
+    // 0566: in portrait the plate is under the stand, and the deck may stop above the screen's foot.
+    standViewInto(view, framed, width, height, world.standView, Math.max(0, height - (box.top + box.height)));
   }
 
   /**
@@ -1968,6 +1970,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (hangarChanged) {
       writeHangar(keptStore, state.hangar);
       fitHangar();
+      /*
+        0567: on a stand, a change to the hangar is a fitting or a purchase, and it is felt: the ship hops on
+        its beam, and a sound says which — the pickup's for a fitting, the chime for a sale. Both cues the
+        game already has, on a sound left on; which is right is the player's ear's to say.
+      */
+      if (world.stand !== null && action.slice === 'hangar') {
+        world.standHop = world.stand;
+        if (audioOut.ready()) speaker.play(action.type === 'bought' ? 'chime' : 'pickup');
+      }
     }
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
     if (moved) enterScreen(state.screen.current);
@@ -1975,11 +1986,21 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (moved && state.screen.current === 'title' && runOnField) leaveRun();
     // Only on a real transition: `show` moves focus, and re-focusing a button on every dispatch
     // would fight a player who had tabbed away from it.
-    if (moved) applyScreen();
+    /*
+      0566: off a stand in portrait, the gate comes back — Back from the hangar to the title, which is not
+      drawn on its side. Through the gate's own door, which applies the screen as it shuts.
+    */
+    if (moved && playable && measure().alongAxis !== 'x' && !standsTall()) setPlayable(false);
+    else if (moved) applyScreen();
     // 0523: into or out of Cosmo's, the readout swaps the ware in the window for what the ship has hung.
     // 0561: and any screen change lets go of an option tried on, so the stand and the atlas wear the fit again.
     const tried = look !== null;
     if (moved) look = null;
+    // 0564: walking into Cosmo's is arriving — a greeting, the next in turn.
+    if (moved && state.screen.current === 'shop') {
+      arriving = true;
+      shopVisits++;
+    }
     if (moved && (tried || (was === 'shop') !== (state.screen.current === 'shop'))) fitHangar();
     /*
       ⚠️ **A PRESS BELONGS TO ONE SCREEN, and this is the only place that can know a screen changed.**
@@ -2038,6 +2059,14 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   const picked = Object.fromEntries(SHELF_KINDS.map((kind) => [kind, 0])) as Record<ShelfKind, number>;
   /** What was bought last, so Cosmo thanks the player for it until the window moves — 0542. */
   let justSold: OwnableKind | null = null;
+  /** 0564: what was fitted at the counter last, so Cosmo says so until the window moves. */
+  let justFitted: OwnableKind | null = null;
+  /**
+   * 0564: whether the player has just walked in and not yet looked at anything — Cosmo greets them then,
+   * one arrival line a visit in turn, rather than remarking on whichever ware the window opened on.
+   */
+  let arriving = false;
+  let shopVisits = 0;
   const windowWare = (): OwnableKind | undefined => SHELVES[aisle].wares[picked[aisle]];
   /*
     ⚠️ **TRIED ON WHERE IT GOES — 0542.** A ware in the window on Cosmo's is worn by the ship on its pad
@@ -2108,6 +2137,40 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
     }
   }
+  /*
+    0565: a small picture of `ship` in `fit`, for a band's option — baked once per fit and kept, so stepping
+    a band does not bake the ship again on every press; the shelf of them is let go once it holds a few
+    dozen, which is more fits than a visit tries.
+  */
+  // A list searched by ship and fit, never a table keyed by a string (0016): a few dozen at most.
+  const thumbs: { ship: ShipKind; fit: Fit; canvas: HTMLCanvasElement }[] = [];
+  // A thumbnail's pixels across, for a picture two ems wide on a doubled screen; and how many are kept.
+  const THUMB_PIXELS = 96;
+  const THUMBS_KEPT = 48;
+  function thumbOf(ship: ShipKind, fit: Fit): HTMLCanvasElement | null {
+    const sprite = SPRITE_KINDS.find((kind) => kind === ship);
+    if (sprite === undefined) return null;
+    const kept = thumbs.find((t) => t.ship === ship && sameFit(t.fit, fit) && t.fit.flame === fit.flame);
+    if (kept !== undefined) return kept.canvas;
+    if (thumbs.length > THUMBS_KEPT) thumbs.length = 0;
+    const canvas = withFit(ship, fit, () => bakeGlyph(sprite, colours, THUMB_PIXELS / SPRITE_EXTENT[sprite]));
+    thumbs.push({ ship, fit, canvas });
+    return canvas;
+  }
+  /** 0564: fitting `ware` to `ship` as an action, or `null` where it cannot go — wheels on a ship with none. */
+  function fitNow(ware: OwnableKind, ship: ShipKind): HangarAction | null {
+    const dangle = DANGLE_KINDS.find((kind) => kind === ware);
+    if (dangle !== undefined) return { slice: 'hangar', type: 'hung', ship, dangle };
+    const rim = RIM_KINDS.find((kind) => kind === ware);
+    if (rim !== undefined) return SHIPS[ship].wheels === null ? null : { slice: 'hangar', type: 'rim', ship, rim };
+    const flame = FLAME_KINDS.find((kind) => kind === ware);
+    return flame === undefined ? null : { slice: 'hangar', type: 'flame', ship, flame };
+  }
+  /** 0564: whether `ship` has `ware` on already. */
+  function wears(ware: OwnableKind, ship: ShipKind): boolean {
+    const h = state.hangar;
+    return h.hung[ship] === ware || h.rim[ship] === ware || h.flame[ship] === ware;
+  }
   function standFit(ship: ShipKind): Fit {
     const fit = hangarFit(ship);
     if (state.screen.current !== 'shop') return fit;
@@ -2174,9 +2237,35 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     else if (screen === 'shop') {
       const ware = windowWare();
       if (index === 0 && ware !== undefined) {
-        // 0542: and Cosmo thanks the player for it, which the dispatch's re-read of the shop says.
-        if (!state.hangar.owned[ware] && state.hangar.shards >= (OWNABLES[ware].price ?? 0)) justSold = ware;
-        dispatch({ slice: 'hangar', type: 'bought', ware });
+        const ship = GOLFERS[state.settings.pilot].ship;
+        const price = OWNABLES[ware].price ?? 0;
+        /*
+          0564: theirs already — *Fit it now* fits it to the ship on the pad, and Cosmo says so. Short of it,
+          nothing: the button and Cosmo have said by how much. Otherwise the sheet asks first, with the
+          balance before and after, and only its Buy buys — *"a confirm sheet"*.
+        */
+        if (state.hangar.owned[ware]) {
+          const fit = fitNow(ware, ship);
+          if (fit !== null) {
+            justFitted = ware;
+            dispatch(fit);
+          }
+        } else if (state.hangar.shards >= price) {
+          chrome.ask(
+            'shop',
+            {
+              title: 'Buy the ' + OWNABLES[ware].name + '?',
+              lines: [String(price) + ' ✦', 'Star Shards ' + String(state.hangar.shards) + ' → ' + String(state.hangar.shards - price)],
+              yes: 'Buy',
+              no: 'Not now',
+            },
+            () => {
+              // 0542: and Cosmo thanks the player for it, which the dispatch's re-read of the shop says.
+              justSold = ware;
+              dispatch({ slice: 'hangar', type: 'bought', ware });
+            },
+          );
+        }
       } else if (index !== 0) dispatch({ slice: 'screen', type: 'show', screen: 'title' });
     }
     /*
@@ -2294,6 +2383,9 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const kind = SHELF_KINDS[index];
       if (kind !== undefined) aisle = kind;
       justSold = null;
+      // 0564: looked at something, so Cosmo talks about it now rather than greeting.
+      justFitted = null;
+      arriving = false;
       fitHangar();
     } else {
       const kind = SHELF_KINDS.find((shelf) => shelf === name);
@@ -2301,6 +2393,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
         aisle = kind;
         picked[kind] = index;
         justSold = null;
+        justFitted = null;
+        arriving = false;
         fitHangar();
       }
     }
@@ -2342,7 +2436,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
    * far the balance is from it, or the greeting.
    */
   function keeperLine(ware: OwnableKind, owned: boolean, ship: ShipKind): string {
+    if (arriving) return COSMO.shop.arrive[shopVisits % COSMO.shop.arrive.length]!;
+    if (justFitted === ware) return COSMO.shop.fitted;
     if (justSold === ware) return COSMO.shop.sold;
+    if (WARES.every((w) => state.hangar.owned[w])) return COSMO.shop.soldOut;
     const hangs = DANGLE_KINDS.some((kind) => kind === ware);
     if (owned) return COSMO.shop.owned.replace('{where}', hangs ? SCREENS.hangar.heading : SCREENS.parts.heading);
     if (RIM_KINDS.some((kind) => kind === ware) && SHIPS[ship].wheels === null) return COSMO.shop.noWheels;
@@ -2403,6 +2500,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('livery', paint === null ? 0 : 1 + paint.hue);
     chrome.setOpen('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
     chrome.setChoice('tone', paint === null ? -1 : paint.tone);
+    /*
+      0565: the paints as swatches — each hue in the tone the ship's paint has, or Bright off the factory's —
+      and the tones as the hue it is painted. The tone is not drawn on the factory's paint, which has its own.
+    */
+    const tone = paint?.tone ?? 1;
+    chrome.setSwatches('livery', [null, ...HUES.map((_, hue) => liveryInk({ hue, tone }))], [colours.player, colours.space]);
+    chrome.setSwatches('tone', TONES.map((_, t) => (paint === null ? null : liveryInk({ hue: paint.hue, tone: t }))), [colours.player, colours.space]);
+    chrome.setBandShown('tone', paint !== null);
+    // 0565: and the wheels and the art each with the ship wearing them beside the name.
+    const base = hangarFit(ship);
+    chrome.setThumbs('rim', RIM_KINDS.map((rim) => (SHIPS[ship].wheels === null ? null : thumbOf(ship, { ...base, rim }))));
+    chrome.setThumbs('art', SHIPS[ship].arts.map((art) => thumbOf(ship, { ...base, art })));
     // 0530: the flame — the standard always, a bought one on any ship.
     const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind));
     chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));
@@ -2432,9 +2541,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const ware = windowWare();
     for (const kind of SHELF_KINDS) {
       const wares = SHELVES[kind].wares;
-      chrome.setLabels(
+      // 0564: the name on the tile, and under it what it is to the player — its price, theirs, or short.
+      chrome.setLabels(kind, wares.map((w) => ({ label: OWNABLES[w].name, hint: OWNABLES[w].hint })));
+      chrome.setTags(
         kind,
-        wares.map((w) => ({ label: OWNABLES[w].name + ' · ' + (state.hangar.owned[w] ? 'yours' : String(OWNABLES[w].price) + ' ✦'), hint: OWNABLES[w].hint })),
+        wares.map((w) => {
+          const price = OWNABLES[w].price ?? 0;
+          if (state.hangar.owned[w]) return { text: 'Yours', tone: 'owned' as const };
+          return { text: String(price) + ' ✦', tone: state.hangar.shards < price ? ('short' as const) : ('price' as const) };
+        }),
       );
       chrome.setOpen(kind, wares.map(() => true), kind === aisle && ware !== undefined ? wareWhy(ware, state.hangar.owned[ware], state.hangar.shards) : null);
       chrome.setChoice(kind, kind === aisle ? picked[kind] : -1);
@@ -2442,9 +2557,16 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('aisle', SHELF_KINDS.indexOf(aisle));
     chrome.setInView('shop', aisle);
     if (ware !== undefined) {
+      /*
+        0564: the shop's first action says what a press of it does with the ware in the window — buys it,
+        says how far short the balance is, or, once it is theirs, fits it to the ship on the pad there and
+        then — *Fit it now* — and is put away once it is fitted, or cannot be.
+      */
       const owned = state.hangar.owned[ware];
-      chrome.setActionShown('shop', 0, !owned);
-      chrome.setActionLabel('shop', 0, 'Buy · ' + String(OWNABLES[ware].price ?? 0) + ' ✦');
+      const price = OWNABLES[ware].price ?? 0;
+      const fit = fitNow(ware, ship);
+      chrome.setActionShown('shop', 0, !owned || (fit !== null && !wears(ware, ship)));
+      chrome.setActionLabel('shop', 0, owned ? 'Fit it now' : state.hangar.shards < price ? 'Need ' + String(price - state.hangar.shards) + ' more ✦' : 'Buy · ' + String(price) + ' ✦');
       chrome.setKeeperLine('shop', keeperLine(ware, owned, ship));
     }
     // The readout wears the ware in the window over the shop, so it is seen hung before it is bought.
@@ -2488,6 +2610,8 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     would leave a level's walk playing under Settings.
   */
   function goBack(): void {
+    // 0564: a sheet asking is put away first, and that is the whole of the press.
+    if (chrome.dismiss()) return;
     const screen = state.screen.current;
     const back = SCREENS[screen].back;
     if (back === null) return;
@@ -4254,14 +4378,30 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let fittedHeight = 0;
   let fittedDpr = 0;
 
+  /*
+    ── PORTRAIT IN THE HANGAR — 0566 ─────────────────────────────────────────────────────────────────
+
+    Asked: is portrait allowed in the hangar family? *"yes"*. 0031's gate is about the FLIGHT — side-on art
+    moving the wrong way across a portrait screen — and nothing in the hangar moves anywhere: the room is a
+    still picture with a ship idling in it. So the gate stands down while a screen that stands (`stand`)
+    is up, and comes back the moment the screen is any other, the title included; nothing flies in
+    portrait, and the room is drawn side-on as ever, across the top of the screen, the plate under it.
+    The view the world is given is the landscape view of the screen turned on its side — its scale is
+    what the room is drawn at — so everything that reads the view still reads a side view.
+  */
+  const standsTall = (): boolean => SCREENS[state.screen.current].stand !== null;
+  const tallStand = (): View => viewOf(viewportHeight(host), viewportWidth(host), 0);
   /** Re-measure, re-fit and — only if the orientation or resolution actually moved — re-bake. */
   const onResize = (): void => {
-    const next = measure();
+    let next = measure();
     // Gate FIRST and return: a view that is not drawn needs no fit and no atlas, and baking the
     // top-down sprites for a rotation nobody will see is the one expensive thing a resize can do.
     if (next.alongAxis !== 'x') {
-      setPlayable(false);
-      return;
+      if (!standsTall()) {
+        setPlayable(false);
+        return;
+      }
+      next = tallStand();
     }
     const width = viewportWidth(host);
     const height = viewportHeight(host);
