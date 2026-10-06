@@ -77,6 +77,13 @@ describe.runIf(chromePath)('0510 — the page opens the way it was left', () => 
       ⚠️ **THE KEY AS THE RELOADED PAGE FOUND IT, IN THE MESSAGE** — red twice on CI and never here
       (2026-10-05). A key that lost the write and a band that does not show a kept value fail on the same
       line; the text read before anything is pressed tells the two apart.
+
+      ⚠️ **AND IT HAS ANSWERED, ONCE (2026-10-07, PR 580's third run): THE STORE EMPTIED.** The key held null
+      and the page's whole store had no keys — not this one lost but every one, the seed's included. Nothing
+      in the game empties the store (no clear, no remove), and the write was read back before the reload.
+      So it is the browser: a persistent profile's store read back empty across a reload that came hard on
+      a write, under CI's load. What is owed is a guard that does not race the browser's commit, without a
+      wait sized by guesswork (0245) — not a rerun.
     */
     const reread = await page.evaluate((key) => localStorage.getItem(key), SETTINGS_KEY);
     const store = await keyedOut(context, page);
