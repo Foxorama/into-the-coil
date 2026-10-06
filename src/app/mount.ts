@@ -1970,6 +1970,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (hangarChanged) {
       writeHangar(keptStore, state.hangar);
       fitHangar();
+      /*
+        0567: on a stand, a change to the hangar is a fitting or a purchase, and it is felt: the ship hops on
+        its beam, and a sound says which — the pickup's for a fitting, the chime for a sale. Both cues the
+        game already has, on a sound left on; which is right is the player's ear's to say.
+      */
+      if (world.stand !== null && action.slice === 'hangar') {
+        world.standHop = world.stand;
+        if (audioOut.ready()) speaker.play(action.type === 'bought' ? 'chime' : 'pickup');
+      }
     }
     // The account goes on before the screen is shown, so its lines animate in as it appears — 0428.
     if (moved) enterScreen(state.screen.current);

@@ -130,7 +130,7 @@ export function paintPort(surface: Surface, view: View, t: number, sky: Sky, shi
  *
  * ⚠️ **ON THE HOT LIST WITH THE REST OF THIS FILE**: blits over constant tables, and nothing allocated.
  */
-export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null): void {
+export function paintStand(surface: Surface, view: View, t: number, sky: Sky, ship: ShipRow, keeper: KeeperKind | null, hop = NO_HOP): void {
   surface.clear();
   paintRoom(surface, view, t, sky);
   paintLamps(surface, view);
@@ -161,7 +161,8 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   put(surface, view, PORT_SPRITE.pad, STAGE.bluePad, STAGE.deck);
   // Lit from the first frame and never going: its idle flame for as long as the stand is up.
   const size = ship.intro.hangar;
-  const across = STAGE.blueRide + blueBobAt(t);
+  // 0567: and up off it for a moment when something is fitted.
+  const across = STAGE.blueRide + blueBobAt(t) - hopAt(t - hop);
   paintBlue(surface, view, t, STAGE.bluePad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
     A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
@@ -364,6 +365,22 @@ export const BLUE_BOB_RATE = 0.06;
 /** How far the pilot's ship bobs on its pad's beam at `t`, before it goes. */
 function blueBobAt(t: number): number {
   return Math.sin(t * BLUE_BOB_RATE + 1.7) * 0.6;
+}
+
+/** A stand's `hopAt` before anything has been fitted: long enough ago that no hop is under way. */
+export const NO_HOP = -1e9;
+/** How long the ship's hop on a fitting lasts, in steps, and how high it goes, in world units — 0567. */
+const HOP_STEPS = 26;
+const HOP_HEIGHT = 2.4;
+
+/**
+ * How far the ship stands up off its beam `since` steps after it was fitted — 0567: up and settling, a
+ * hop with one small bounce, so a fitting lands as something done to the ship and not a pill changing colour.
+ */
+function hopAt(since: number): number {
+  if (since < 0 || since >= HOP_STEPS) return 0;
+  const u = since / HOP_STEPS;
+  return HOP_HEIGHT * Math.abs(Math.sin(u * Math.PI * 1.5)) * (1 - u);
 }
 
 function paintHangar(surface: Surface, view: View, t: number, sky: Sky, cockpitAlong: number, cockpitAcross: number, size: number): void {

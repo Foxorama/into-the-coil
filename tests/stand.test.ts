@@ -273,3 +273,26 @@ describe('0563 — the ship is the picture', () => {
     }
   });
 });
+
+describe('0567 — a fitting is felt', () => {
+  /*
+    A fitting changed a pill's colour and the picture did nothing. Asked in pixels: a fifth of a second
+    after something is fitted, the ship stands higher on its beam than it does with nothing fitted, by
+    pixels a player sees; and by half a second it is back.
+  */
+  it('hops the ship on its beam when it is fitted, and settles it again', () => {
+    const base = viewOf(1280, 720);
+    const view = { ...base };
+    standViewInto(base, SCREENS.hangar.stand!.camera, 1280, 720, view);
+    const shipY = (t: number, hop: number): number => {
+      const surface = new RecordingSurface();
+      paintStand(surface, view, t, SKY, SHIPS.firebird, null, hop);
+      return all(surface.blits, 'blueSide')[0]!.y;
+    };
+    const t = 400;
+    const still = shipY(t, -1e9);
+    const lifted = shipY(t, t - Math.round(STEPS_PER_SECOND / 5));
+    expect(still - lifted, `the ship stood ${(still - lifted).toFixed(1)}px up a fifth of a second after a fitting`).toBeGreaterThan(6);
+    expect(Math.abs(shipY(t, t - STEPS_PER_SECOND / 2) - still), 'the ship had not settled half a second after a fitting').toBeLessThan(0.5);
+  });
+});

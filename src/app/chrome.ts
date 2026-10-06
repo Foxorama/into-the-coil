@@ -1287,6 +1287,20 @@ ${faceTurns()}
   border: 1px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 45%, transparent);
 }
 .itc-hangar-sheet-label, .itc-parts-sheet-label, .itc-shop-sheet-label { font-size: 0.75em; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; opacity: 0.8; }
+/*
+  0567: a balance that moved counts from where it was, over most of a second, the figure the reader hears
+  said at once underneath — the shell's words are the truth and the count is what the eye sees.
+*/
+@property --itc-sheet-from { syntax: '<integer>'; inherits: false; initial-value: 0; }
+@keyframes itc-shards-count { from { --itc-sheet-n: var(--itc-sheet-from); } }
+.itc-hangar-sheet-moved, .itc-parts-sheet-moved, .itc-shop-sheet-moved { counter-reset: itc-shards var(--itc-sheet-n); animation: itc-shards-count 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) backwards; }
+.itc-hangar-sheet-moved::after, .itc-parts-sheet-moved::after, .itc-shop-sheet-moved::after { content: counter(itc-shards); }
+.itc-hangar-sheet-moved > .itc-hangar-sheet-said, .itc-parts-sheet-moved > .itc-parts-sheet-said, .itc-shop-sheet-moved > .itc-shop-sheet-said {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .itc-hangar-sheet-moved, .itc-parts-sheet-moved, .itc-shop-sheet-moved { animation: none; }
+}
 .itc-hangar-sheet-value, .itc-parts-sheet-value, .itc-shop-sheet-value { font-size: 1.2em; font-weight: 800; font-variant-numeric: tabular-nums; }
 @property --itc-sheet-n { syntax: '<integer>'; inherits: false; initial-value: 0; }
 .itc-cleared-sheet, .itc-victory-sheet, .itc-gameover-sheet, .itc-ended-sheet {
@@ -6027,6 +6041,9 @@ export function makeChrome(
     bossBar.classList.toggle('itc-playing-boss-shown', shownScreen !== null && SCREENS[shownScreen].steps && bossFraction >= 0);
   };
 
+  /** What each screen's sheet last said, and its last total — 0567, so a sheet said again is not rebuilt. */
+  const sheetSaid: Partial<Record<Screen, string>> = {};
+  const sheetTotals: Partial<Record<Screen, number>> = {};
   /** The sheet up over a screen, asking — 0564, and how to give the cursor its walk back. */
   let asking: { sheet: HTMLElement; put: () => void } | null = null;
   /** The hand the player is holding the game in — 0458's `setDevice`, kept since 0561 for a band's words. */
@@ -6445,6 +6462,16 @@ export function makeChrome(
     setSheet(screen: Screen, lines: readonly SheetLine[] | null): void {
       const sheet = panels[screen]?.sheet;
       if (sheet === null || sheet === undefined) return;
+      /*
+        0567: the same lines again are nothing — the hangar's shell says its balance on every fitting — and a
+        total that moved counts from where it was to where it is, so a purchase is seen to cost something.
+      */
+      const key = lines === null ? '' : lines.map((l) => l.label + '=' + String(l.value)).join('|');
+      if (sheetSaid[screen] === key) return;
+      sheetSaid[screen] = key;
+      const total = lines?.find((l) => l.tone === 'total')?.value;
+      const was = sheetTotals[screen];
+      if (typeof total === 'number') sheetTotals[screen] = total;
       sheet.replaceChildren();
       if (lines === null) return;
       const prefix = prefixFor(screen);
@@ -6471,6 +6498,11 @@ export function makeChrome(
         if (line.tone === 'total') {
           label.classList.add(prefix + 'sheet-total');
           value.classList.add(prefix + 'sheet-total');
+          // 0567: and from the balance it last said, on a screen that stands.
+          if (typeof line.value === 'number' && was !== undefined && was !== line.value && SCREENS[screen].stand !== null) {
+            value.style.setProperty('--itc-sheet-from', String(Math.round(was)));
+            value.classList.add(prefix + 'sheet-moved');
+          }
         }
         sheet.append(label, value);
       });
