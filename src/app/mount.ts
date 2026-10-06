@@ -17,7 +17,7 @@ import { animate, type Entity, makeEntity, reset } from '../sim/entity.ts';
 import { Pool } from '../sim/pool.ts';
 import { makeCollected, makeDeaths } from '../sim/collide.ts';
 import { makeRng } from '../sim/rng.ts';
-import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
+import { atlasIsStale, bakeAtlas, bakeGlyph, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
 import { fitStand, standViewInto } from '../render/port.ts';
@@ -101,7 +101,7 @@ import { INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
-import { SPRITE, SPRITE_EXTENT } from '../content/sprites.ts';
+import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../content/sprites.ts';
 import { holdStation, PLAYER_LEAD, SCROLL_PER_STEP } from '../sim/flight.ts';
 import { MAX_NOZZLES, MAX_SHIELDS, SHIPS, SHIP_KINDS, fitted, openingHealthFor, ownFit, sameFit, shieldsOf, type Fit, type ShipKind } from '../content/ships.ts';
 import { makeIntent } from '../sim/intent.ts';
@@ -128,7 +128,7 @@ import { makeLifecycle, type Lifecycle } from './lifecycle.ts';
 import { SCREENS, STEPS_PER_SECOND, beginsRun, dangleWhy, artOptions, artWhy, flameWhy, gunWhy, isSlot, liveryWhy, optionWhy, pilotWhy, plateWhy, rimWhy, specialWhy, toneWhy, wareWhy, type ChoiceName, type Screen, type SlotName } from '../state/screens.ts';
 import { DANGLES, DANGLE_KINDS } from '../content/dangles.ts';
 import { RIMS, RIM_KINDS } from '../content/rims.ts';
-import { HUES, TONES, liveryFor } from '../content/livery.ts';
+import { HUES, TONES, liveryFor, liveryInk } from '../content/livery.ts';
 import { FLAMES, FLAME_KINDS, type FlameKind } from '../content/flames.ts';
 import type { WeaponKind } from '../content/weapons.ts';
 import { OWNABLES, OWNABLE_KINDS, SHELF_KINDS, SHELVES, WARES, type OwnableKind, type ShelfKind } from '../content/wares.ts';
@@ -2121,6 +2121,31 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       }
     }
   }
+  /*
+    0565: a small picture of `ship` in `fit`, for a band's option — baked once per fit and kept, so stepping
+    a band does not bake the ship again on every press; the shelf of them is let go once it holds a few
+    dozen, which is more fits than a visit tries.
+  */
+  const thumbs: Record<string, HTMLCanvasElement> = {};
+  let thumbCount = 0;
+  // A thumbnail's pixels across, for a picture two ems wide on a doubled screen; and how many are kept.
+  const THUMB_PIXELS = 96;
+  const THUMBS_KEPT = 48;
+  function thumbOf(ship: ShipKind, fit: Fit): HTMLCanvasElement | null {
+    const sprite = SPRITE_KINDS.find((kind) => kind === ship);
+    if (sprite === undefined) return null;
+    const key = ship + '|' + String(fit.gun) + '|' + String(fit.rim) + '|' + String(fit.art) + '|' + String(fit.livery) + '|' + String(fit.flame);
+    const kept = thumbs[key];
+    if (kept !== undefined) return kept;
+    if (thumbCount > THUMBS_KEPT) {
+      for (const k of Object.keys(thumbs)) delete thumbs[k];
+      thumbCount = 0;
+    }
+    const baked = withFit(ship, fit, () => bakeGlyph(sprite, colours, THUMB_PIXELS / SPRITE_EXTENT[sprite]));
+    thumbs[key] = baked;
+    thumbCount++;
+    return baked;
+  }
   /** 0564: fitting `ware` to `ship` as an action, or `null` where it cannot go — wheels on a ship with none. */
   function fitNow(ware: OwnableKind, ship: ShipKind): HangarAction | null {
     const dangle = DANGLE_KINDS.find((kind) => kind === ware);
@@ -2464,6 +2489,18 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     chrome.setChoice('livery', paint === null ? 0 : 1 + paint.hue);
     chrome.setOpen('tone', TONES.map(() => won && paint !== null), toneWhy(won, paint !== null));
     chrome.setChoice('tone', paint === null ? -1 : paint.tone);
+    /*
+      0565: the paints as swatches — each hue in the tone the ship's paint has, or Bright off the factory's —
+      and the tones as the hue it is painted. The tone is not drawn on the factory's paint, which has its own.
+    */
+    const tone = paint?.tone ?? 1;
+    chrome.setSwatches('livery', [null, ...HUES.map((_, hue) => liveryInk({ hue, tone }))], [colours.player, colours.space]);
+    chrome.setSwatches('tone', TONES.map((_, t) => (paint === null ? null : liveryInk({ hue: paint.hue, tone: t }))), [colours.player, colours.space]);
+    chrome.setBandShown('tone', paint !== null);
+    // 0565: and the wheels and the art each with the ship wearing them beside the name.
+    const base = hangarFit(ship);
+    chrome.setThumbs('rim', RIM_KINDS.map((rim) => (SHIPS[ship].wheels === null ? null : thumbOf(ship, { ...base, rim }))));
+    chrome.setThumbs('art', SHIPS[ship].arts.map((art) => thumbOf(ship, { ...base, art })));
     // 0530: the flame — the standard always, a bought one on any ship.
     const flames = FLAME_KINDS.map((kind) => flameOpen(state.hangar, kind));
     chrome.setOpen('flame', flames, flameWhy(FLAME_KINDS.some((kind) => FLAMES[kind].price !== null && state.hangar.owned[kind])), whysOf('flame', flames));

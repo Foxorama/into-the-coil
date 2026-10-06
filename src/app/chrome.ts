@@ -2087,20 +2087,36 @@ ${each('-tab-key[hidden]')} { display: none; }
 .itc-hangar-pilot-card .itc-hangar-pilot-craft, .itc-hangar-pilot-card .itc-hangar-pilot-gun { display: none; }
 .itc-hangar-group .itc-hangar-band-label, .itc-parts-group .itc-parts-band-label { font-size: 0.66em; text-align: left; }
 .itc-hangar-choices, .itc-parts-choices, .itc-shop-choices { flex-direction: row; justify-content: flex-end; gap: min(0.8rem, 2cqw); }
-.itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options,
-.itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.itc-parts-band:has([${SETTING_ATTR}="art"]) .itc-parts-options { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 /*
-  The colour and the flame one at a time, the one on filling the band: a grid of one column, since every
-  slot's options are a grid (below) and a flex here lost to it and left the chip its word's width. The
-  flame's two names are wider than its half of the row could hold side by side.
+  ── PAINT & PARTS IN PICTURES — 0565 ─────────────────────────────────────────────────────────────
+
+  The colour and its tone are swatches — a row of every paint the ship can wear, each the ink it paints the
+  body, and the factory's a split of the ship's own two — where *Factory* was one word across the plate.
+  Their names are for a reader and the card. The flames side by side, the one Cosmo's sells padlocked
+  until it is bought; the wheels and the art each with the ship wearing them beside the name.
 */
 .itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-options,
-.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-options { grid-template-columns: minmax(0, 1fr); }
-.itc-parts-band:has([${SETTING_ATTR}="livery"]) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look),
-.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-option:not(.itc-parts-option-on):not(.itc-parts-option-look) { display: none; }
-/* 0561: and while one is tried on, it is the one shown, in the fitted one's place. */
-.itc-parts-band:has([${SETTING_ATTR}="livery"]):has(.itc-parts-option-look) .itc-parts-option-on:not(.itc-parts-option-look),
-.itc-parts-band:has([${SETTING_ATTR}="flame"]):has(.itc-parts-option-look) .itc-parts-option-on:not(.itc-parts-option-look) { display: none; }
+.itc-parts-band:has([${SETTING_ATTR}="tone"]) .itc-parts-options { display: flex; flex-wrap: wrap; gap: 0.35em; align-items: center; }
+.itc-parts-band:has([${SETTING_ATTR}="flame"]) .itc-parts-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.itc-parts-option.itc-parts-option-swatch {
+  flex: none;
+  width: 1.75em;
+  height: 1.75em;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--itc-swatch);
+  color: transparent;
+  text-indent: -999em;
+  white-space: nowrap;
+  opacity: 1;
+}
+.itc-parts-option.itc-parts-option-swatch::before { text-indent: 0; }
+.itc-parts-option-swatch.itc-parts-option-on { box-shadow: 0 0 0 2px var(--itc-void), 0 0 0 4px var(--itc-ink); }
+.itc-parts-option-swatch.itc-parts-option-shut { opacity: 0.35; }
+.itc-parts-option-swatch.itc-parts-option-shut::before, .itc-parts-option-swatch.itc-parts-option-shut::after { display: none; }
+.itc-hangar-option-thumbed, .itc-parts-option-thumbed { display: flex; align-items: center; justify-content: center; gap: 0.3em; }
+.itc-hangar-option-thumb, .itc-parts-option-thumb { flex: none; width: 2.1em; height: 2.1em; margin: -0.25em 0; }
 /*
   0530: Cosmo's shelf in rows of three, as what hangs is — five wares since the thrusters joined, and in
   one row CI's wider type put the fifth off a 667x375's edge.
@@ -2594,6 +2610,19 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces):not(:has(.itc-hangar-option-on, .itc-hangar-option-look)) .itc-hangar-option:first-child,
   .itc-parts-band:not(.itc-parts-band-faces):not(:has(.itc-parts-option-on, .itc-parts-option-look)) .itc-parts-option:first-child { display: block; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-option, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-option { width: 100%; white-space: nowrap; }
+  /*
+    0565: on a phone a paint is one at a time like every slot, a chip with its paint down its left edge and
+    its name — twelve dots wrapped to three rows and put Paint & Parts' plate twenty pixels past the others.
+  */
+  .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-options .itc-parts-option.itc-parts-option-swatch {
+    width: 100%;
+    height: auto;
+    border-radius: 0.4em;
+    color: inherit;
+    text-indent: 0;
+    padding: 0.25em 0.3em 0.25em 1.8em;
+    background: var(--itc-swatch) left / 1.4em 100% no-repeat;
+  }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
   .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; }
@@ -4006,6 +4035,18 @@ export interface Chrome {
   ask(screen: Screen, question: { title: string; lines: readonly string[]; yes: string; no: string }, yes: () => void): void;
   /** Put a sheet away without its `yes` — 0564. True if one was up, so Back knows it was spent. */
   dismiss(): boolean;
+  /**
+   * A picture beside each of a band's options — 0565: the ship wearing that option, for a slot whose
+   * options are seen on the ship (its wheels, its art). Position for position; `null` leaves one bare.
+   */
+  setThumbs(name: ChoiceName, thumbs: readonly (CanvasImageSource | null)[]): void;
+  /**
+   * A paint swatch for each of a band's options — 0565: the ink each would paint the body, `null` for the
+   * factory's own, drawn as a split of the ship's two inks. The option's name stays for a reader.
+   */
+  setSwatches(name: ChoiceName, inks: readonly (string | null)[], factory: readonly [string, string]): void;
+  /** Whether a band is drawn and walked — 0565: the tone, which says nothing on the factory's paint. */
+  setBandShown(name: ChoiceName, shown: boolean): void;
   /**
    * Put what a golfer is saying in the finale's bubble — 0418: the whole `line`, of which the first
    * `shown` letters are said, at canvas pixel (`x`, `y`) — the speaker's mouth — with its tail toward
@@ -6848,6 +6889,60 @@ export function makeChrome(
         },
       };
       paintFocus();
+    },
+    setThumbs(name: ChoiceName, thumbs: readonly (CanvasImageSource | null)[]): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const buttons = panels[screen]?.options[name];
+        if (buttons === undefined) continue;
+        const prefix = prefixFor(screen);
+        buttons.forEach((button, i) => {
+          const source = thumbs[i] ?? null;
+          let thumb = button.querySelector<HTMLCanvasElement>('.' + prefix + 'option-thumb');
+          if (source === null) {
+            thumb?.remove();
+            button.classList.remove(prefix + 'option-thumbed');
+            return;
+          }
+          if (thumb === null) {
+            thumb = document.createElement('canvas');
+            thumb.className = prefix + 'option-thumb';
+            thumb.setAttribute('aria-hidden', 'true');
+            button.prepend(thumb);
+          }
+          const width = 'width' in source ? Number(source.width) : 0;
+          const height = 'height' in source ? Number(source.height) : 0;
+          if (thumb.width !== width) thumb.width = width;
+          if (thumb.height !== height) thumb.height = height;
+          const ctx = thumb.getContext('2d');
+          ctx?.clearRect(0, 0, width, height);
+          ctx?.drawImage(source, 0, 0);
+          button.classList.add(prefix + 'option-thumbed');
+        });
+      }
+    },
+    setSwatches(name: ChoiceName, inks: readonly (string | null)[], factory: readonly [string, string]): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const buttons = panels[screen]?.options[name];
+        if (buttons === undefined) continue;
+        const prefix = prefixFor(screen);
+        buttons.forEach((button, i) => {
+          const ink = inks[i];
+          button.classList.add(prefix + 'option-swatch');
+          button.style.setProperty('--itc-swatch', ink === null || ink === undefined ? 'linear-gradient(135deg, ' + factory[0] + ' 50%, ' + factory[1] + ' 50%)' : ink);
+          // The name is the reader's and the card's; the eye has the colour.
+          if (button.getAttribute('aria-label') === null) button.setAttribute('aria-label', button.textContent ?? '');
+          button.title = button.getAttribute('aria-label') ?? '';
+        });
+      }
+    },
+    setBandShown(name: ChoiceName, shown: boolean): void {
+      for (const screen of Object.keys(panels) as Screen[]) {
+        const panel = panels[screen];
+        const band = panel?.bands.find((b) => b.name === name);
+        if (panel === undefined || band === undefined || band.root.hidden === !shown) continue;
+        band.root.hidden = !shown;
+        if (asking === null) panel.rows.splice(0, panel.rows.length, ...walkOf(panel.tabs, panel.bands, panel.controls));
+      }
     },
     dismiss(): boolean {
       if (asking === null) return false;
