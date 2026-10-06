@@ -390,10 +390,10 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
    * stays attached to the disc and the car and you can go back and forth with it."* And: *"fires out
    * every 4 secs and fades away at 3.6 seconds give or take before the new one fires out."*
    *
-   * ⚠️ **SIX BEATS, 144 STEPS AND 160, SINCE 0551** — nine beats and ten, 216 and 240, since 0549. 0545
-   * threw every ten beats and burned out a beat before the next. Asked for since: the wheel is thrown
-   * every 2.4 s, still on the grid every gun is on (`VOLLEY_CYCLE`), its tether lets go at 2.27 s and it
-   * burns down until 2.67 s — so the next is out while the last is ending. The first wheel of a life is
+   * ⚠️ **FIVE BEATS, 120 STEPS AND 136, SINCE 0553** — six beats and 160 since 0551, nine beats and ten,
+   * 216 and 240, since 0549. 0545 threw every ten beats and burned out a beat before the next. Asked for
+   * since: the wheel is thrown every 2 s, still on the grid every gun is on (`VOLLEY_CYCLE`), its tether
+   * lets go at 1.87 s and it burns down until 2.27 s — so the next is out while the last is ending. The first wheel of a life is
    * thrown on the next beat (`firstVolleyIn` in `src/app/frame.ts`).
    *
    * ⚠️ **IT HANGS, ON A LEASH** — answered while it was planned: *"it flies out ahead, slows, and hangs
@@ -420,8 +420,11 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       refire gap that we have now)."* 30% of nine beats is 6.3, and the gun is held to the beat grid
       (0094), so it is six — a third off, not three tenths — and the wheel's life and burn-down are a
       third off with it, which is what keeps the shape of the overlap the same.
+
+      Five beats since 0553: *"let's take another .4sec off the catherine wheel fire rate and decay...
+      just slightly too slow on the refire."* 0.4 s is one beat exactly, so it stays on the grid.
     */
-    fireEvery: 144,
+    fireEvery: 120,
     barrels: 1,
     links: 1,
     weight: 1,
@@ -454,8 +457,14 @@ export const WEAPONS: Record<WeaponKind, WeaponRow> = {
       cadence."* A life of 160 steps (2.67 s) burning down over its last 24 (0.4 s), so the tether lets go
       at 136 (2.27 s) and the next is thrown at 144 (2.4 s) — 0549's 3.4, 3.6 and 4 s, each times two thirds.
     */
+    /*
+      ⚠️ **AND SINCE 0553 EACH IS 0.4 S SOONER.** *"Take another .4sec off the catherine wheel fire rate and
+      decay."* The throw and the life each lose a beat (24 steps); the burn-down keeps its 0.4 s, so the
+      tether lets go at 112 (1.87 s), the next is thrown at 120 (2 s) and the last is gone at 136 (2.27 s).
+      The two gaps the player kept — let-go to throw, 0.13 s, and the overlap, 0.27 s — are unchanged.
+    */
     wheel: {
-      life: 160,
+      life: 136,
       fade: 24,
       /*
         0.6 since 0551, 0.75 since 0549: *"let's make it 60% instead of 75% of screen size to get a bit more
