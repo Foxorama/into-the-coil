@@ -761,45 +761,39 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.beginPath();
   ctx.ellipse(44 * u, 38.5 * u, 3.8 * u, 2.2 * u, 0, 0, Math.PI * 2);
   ctx.fill();
-  // The bill. The lower first, tucked under; then the upper — long and flat from its root on the face to
-  // a broad spoon of a tip, its top lit, a nostril near the root and the nail at the tip.
-  ctx.fillStyle = shade(bill, -0.12);
-  ctx.lineWidth = Math.max(1, 1.8 * u);
-  ctx.beginPath();
-  ctx.moveTo(55 * u, 43.4 * u);
-  ctx.quadraticCurveTo(62 * u, 42.6 * u, 67.5 * u, 42.8 * u);
-  ctx.quadraticCurveTo(66 * u, 46.2 * u, 61 * u, 46.2 * u);
-  ctx.quadraticCurveTo(56.5 * u, 46.2 * u, 55 * u, 43.4 * u);
-  ctx.closePath();
-  ctx.fill();
-  ctx.stroke();
-  ctx.lineWidth = line;
-  // 0556: out of the middle of the brow, level with the eyes' line, and shorter for the gentler turn.
+  /*
+    The bill: the upper — out of the middle of the brow, level with the eyes' line, shorter for the gentler
+    turn, and a broad paddle as deep at its tip as at its root, the tip a full round rather than a point
+    (0556) — its top lit, a nostril near the root and the nail at the tip. Then the lower over the upper's
+    foot, outlined only round its outside. 0555's black mouth was a stroke that outlined the last path
+    traced — the shade strip along the upper's foot — rather than the bill, so the upper is traced again
+    before it is stroked.
+  */
+  const upper = () => {
+    ctx.beginPath();
+    ctx.moveTo(54 * u, 33.5 * u);
+    ctx.bezierCurveTo(59 * u, 33.2 * u, 62 * u, 35 * u, 66 * u, 34.8 * u);
+    ctx.bezierCurveTo(71 * u, 34.6 * u, 74.5 * u, 36.5 * u, 74.5 * u, 39.2 * u);
+    ctx.bezierCurveTo(74.5 * u, 42 * u, 71.5 * u, 43.6 * u, 67.5 * u, 43.6 * u);
+    ctx.quadraticCurveTo(60.5 * u, 43.2 * u, 55.5 * u, 44 * u);
+    ctx.quadraticCurveTo(52 * u, 39 * u, 54 * u, 33.5 * u);
+    ctx.closePath();
+  };
   ctx.fillStyle = bill;
-  ctx.beginPath();
-  ctx.moveTo(54 * u, 33.5 * u);
-  ctx.bezierCurveTo(59 * u, 33 * u, 62 * u, 35.6 * u, 66 * u, 35.6 * u);
-  ctx.bezierCurveTo(71.5 * u, 35.6 * u, 74.5 * u, 37.6 * u, 73.8 * u, 40.6 * u);
-  ctx.quadraticCurveTo(72.6 * u, 43.4 * u, 67.5 * u, 43.2 * u);
-  ctx.quadraticCurveTo(60.5 * u, 42.8 * u, 55.5 * u, 44 * u);
-  ctx.quadraticCurveTo(52 * u, 39 * u, 54 * u, 33.5 * u);
-  ctx.closePath();
+  upper();
   ctx.fill();
   ctx.save();
   ctx.clip();
   ctx.fillStyle = shade(bill, 0.25);
   ctx.beginPath();
   ctx.moveTo(54 * u, 33.5 * u);
-  ctx.bezierCurveTo(59 * u, 33 * u, 62 * u, 35.6 * u, 66 * u, 35.6 * u);
-  ctx.bezierCurveTo(69.5 * u, 35.6 * u, 72.5 * u, 36.8 * u, 73.3 * u, 38.4 * u);
-  ctx.bezierCurveTo(67 * u, 37.6 * u, 61 * u, 38.2 * u, 54.5 * u, 37.8 * u);
+  ctx.bezierCurveTo(59 * u, 33.2 * u, 62 * u, 35 * u, 66 * u, 34.8 * u);
+  ctx.bezierCurveTo(70 * u, 34.6 * u, 73 * u, 35.8 * u, 74 * u, 37.6 * u);
+  ctx.bezierCurveTo(67 * u, 37 * u, 61 * u, 37.8 * u, 54.5 * u, 37.6 * u);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = shade(bill, -0.12);
-  ctx.beginPath();
-  ctx.ellipse(64 * u, 43 * u, 12 * u, 1.8 * u, 0, 0, Math.PI * 2);
-  ctx.fill();
   ctx.restore();
+  upper();
   ctx.stroke();
   ctx.fillStyle = shade(bill, -0.45);
   ctx.beginPath();
@@ -807,14 +801,31 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.fill();
   ctx.fillStyle = shade(bill, -0.2);
   ctx.beginPath();
-  ctx.ellipse(72.6 * u, 39.2 * u, 1.1 * u, 1.5 * u, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(72.4 * u, 38.6 * u, 1.2 * u, 1.6 * u, 0.3, 0, Math.PI * 2);
   ctx.fill();
-  // The smile, turned up at the corner of the bill into the cheek.
-  ctx.lineWidth = Math.max(1, 1.6 * u);
+  // The lower, laid over the upper's dark foot so it hides it, then outlined round its outside only.
+  ctx.fillStyle = shade(bill, -0.1);
   ctx.beginPath();
-  ctx.moveTo(55.5 * u, 43.6 * u);
-  ctx.quadraticCurveTo(52.8 * u, 43.4 * u, 52 * u, 41.4 * u);
+  ctx.moveTo(55 * u, 42 * u);
+  ctx.quadraticCurveTo(62 * u, 41.6 * u, 69 * u, 42 * u);
+  ctx.quadraticCurveTo(69 * u, 46.4 * u, 62 * u, 46.6 * u);
+  ctx.quadraticCurveTo(56.5 * u, 46.6 * u, 55 * u, 42 * u);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(69 * u, 43.2 * u);
+  ctx.quadraticCurveTo(69 * u, 46.4 * u, 62 * u, 46.6 * u);
+  ctx.quadraticCurveTo(56.5 * u, 46.6 * u, 55.2 * u, 43.4 * u);
   ctx.stroke();
+  // Where the two meet: a thin crease in the bill's own ink, turned up at the corner into a small smile.
+  ctx.strokeStyle = shade(bill, -0.45);
+  ctx.lineWidth = Math.max(1, 1 * u);
+  ctx.beginPath();
+  ctx.moveTo(68.6 * u, 43.3 * u);
+  ctx.quadraticCurveTo(61 * u, 42.8 * u, 55.5 * u, 43.4 * u);
+  ctx.quadraticCurveTo(53.4 * u, 43.3 * u, 52.8 * u, 41.8 * u);
+  ctx.stroke();
+  ctx.strokeStyle = dark;
   // The helmet's near side: the bubble's rim, a long highlight and a glint, the light on its antenna.
   ctx.strokeStyle = palette.blade;
   ctx.lineWidth = Math.max(1, 1.6 * u);
