@@ -10,7 +10,7 @@ import { PORT_EXTENT, PORT_KINDS, PORT_SPRITE, STAGE, type PortKind } from '../s
 import { KEEPERS, KEEPER_KINDS } from '../src/content/keepers.ts';
 import { SHIPS, fitted } from '../src/content/ships.ts';
 import { SKY } from '../src/app/mount.ts';
-import { paintStand, standViewInto } from '../src/render/port.ts';
+import { fitStand, paintStand, standViewInto } from '../src/render/port.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
 import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND } from '../src/state/screens.ts';
@@ -50,7 +50,14 @@ const STANDING = SCREEN_KINDS.filter((s) => SCREENS[s].stand !== null);
 function drawStand(screen: (typeof STANDING)[number], width: number, height: number, t = 0, ship = SHIPS.firebird, camera = SCREENS[screen].stand!.camera): Blit[] {
   const base = viewOf(width, height);
   const view = { ...base };
-  standViewInto(base, camera, width, height, view);
+  /*
+    0563: through the camera the page uses — the row's, fitted to the stand's column. The column is the
+    stylesheet's (the plate takes 1.6 of 2.6 above 1100 wide, 2 of 3 below, after the panel's padding);
+    modelled here because this runs without a page, and held in the page by tests/stand.browser.test.ts.
+  */
+  const fitted = { ...camera };
+  fitStand(camera, base, width, { left: width * 0.02, width: width * (width > 1100 ? 0.36 : 0.31) }, SCREENS[screen].stand!.keeper, fitted);
+  standViewInto(base, fitted, width, height, view);
   const surface = new RecordingSurface();
   paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper);
   return surface.blits;
@@ -247,6 +254,22 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
         expect(sky.length, `${at}: no sky is drawn behind the room`).toBeGreaterThan(0);
         expect(Math.max(...sky.map((b) => blits.indexOf(b))), `${at}: the sky is drawn over the wall`).toBeLessThan(blits.indexOf(all(blits, 'wall')[0]!));
       }
+    }
+  });
+});
+
+describe('0563 — the ship is the picture', () => {
+  /*
+    The review measured the ship on the pad at about 170 pixels of a 1280x720, smaller than the keeper's
+    counter beside it — a box of 200, under a sixth of the screen. Asked in what the player sees: the ship's
+    box on the laptop is past a sixth of the screen across. It is not more because the keeper and the
+    viewport are kept in view (0550) and the ship in its column: those, not this number, set the camera.
+  */
+  it('draws the pilot’s ship past a sixth of a laptop’s width, in its column', () => {
+    for (const screen of STANDING) {
+      const ship = all(drawStand(screen, 1280, 720), 'blueSide')[0]!;
+      const box = PORT_EXTENT.blueSide * ship.scale;
+      expect(box, `${screen}: the ship's box is ${Math.round(box)}px of 1280`).toBeGreaterThanOrEqual(1280 * 0.17);
     }
   });
 });

@@ -51,7 +51,7 @@ export const PROBES = [
     guard: 'the Firebird painted blue',
     edit: {
       path: 'src/app/mount.ts',
-      find: '        withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad));',
+      find: '        withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad, portSharp));',
       replace: '',
     },
   },

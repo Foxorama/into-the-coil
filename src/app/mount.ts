@@ -20,7 +20,7 @@ import { makeRng } from '../sim/rng.ts';
 import { atlasIsStale, bakeAtlas, bakeGround, bakeLandmark, bakeNebula, bakeFlame, bakeShipFit, mix, viewFor, withFit } from '../render/bake.ts';
 import { RANGE_OF, type Atlas } from '../render/bake.ts';
 import { bakePort, bakePortShip, withTheGame } from '../render/port-bake.ts';
-import { standViewInto } from '../render/port.ts';
+import { fitStand, standViewInto } from '../render/port.ts';
 import { bakeFinale } from '../render/finale-bake.ts';
 import { screenX, screenY } from '../render/surface.ts';
 import { CanvasSurface, renderScale } from '../render/canvas.ts';
@@ -97,7 +97,7 @@ import {
 // 0212: the words the room's readout puts a rung in — the composer's own, not a second set.
 import { MUSIC_LEVEL_LABEL, type MusicLayer } from '../content/music.ts';
 import { bakePlace, makeAudioOut, makeSpeaker, prewarmAudio, prewarmDone } from './sound.ts';
-import { INTRO_CUES, SPLASH_STEPS } from '../content/port.ts';
+import { INTRO_CUES, SPLASH_STEPS, type StandCamera } from '../content/port.ts';
 import { DEFAULT_GOLFER, GOLFERS, GOLFER_KINDS, pilotOpen, rescuable, type GolferKind, type GolferRow } from '../content/golfers.ts';
 import { FINALE_CUES, SAVED_BUBBLE, SAVED_MOUTH, SAVING_BUBBLE, SAVING_MOUTH, blipsAt, fighterAt, lettersSaid, viperAt } from '../content/finale.ts';
 import { makeFinaleScene } from '../render/finale.ts';
@@ -1013,6 +1013,10 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
   let port: Atlas | null = null;
   // 0540: whose ship, fitted how, the port's ship pieces were last baked for while a tab stands in it.
   let portFit: { ship: ShipKind; fit: Fit } | null = null;
+  // 0563: how much sharper than the room the port's ship and keepers were baked — the stand camera's zoom, or 1 for the intro's.
+  let portSharp = 1;
+  // @setup: 0563's camera fitted to the stand's column, written in place by `frameStand`.
+  const framed: StandCamera = { along: 0, across: 0, zoom: 1, x: 0, y: 0 };
   /*
     ⚠️ **THE INTRO DRAWS FROM ITS PIECES AND THE GAME'S TOGETHER — 0416**, because the sky it flies is
     the first level's and is in the game's atlas. Composed again whenever the game's changes — a place
@@ -1497,6 +1501,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       const pilot = GOLFERS[state.settings.pilot];
       if (port === null || atlasIsStale(port, 'side', resolution)) {
         port = withFit(pilot.ship, hangarFit(pilot.ship), () => bakePort(colours, resolution, pilot));
+        portSharp = 1;
       }
       world.intro = 0;
       showPort();
@@ -1518,12 +1523,15 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     if (stand !== null && playable) {
       const resolution = view.scale * dpr;
       const standing = GOLFERS[state.settings.pilot];
-      if (port === null || atlasIsStale(port, 'side', resolution)) {
+      // 0563: the ship and the keepers sharper by as much as the camera is closer — and the intro's port, baked plain, is baked again.
+      if (port === null || atlasIsStale(port, 'side', resolution) || portSharp !== stand.camera.zoom) {
         // 0542: in the fit the stand wears — the ware in Cosmo's window tried on, on the shop.
-        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing));
+        port = withFit(standing.ship, standFit(standing.ship), () => bakePort(colours, resolution, standing, stand.camera.zoom));
         portFit = { ship: standing.ship, fit: standFit(standing.ship) };
+        portSharp = stand.camera.zoom;
       }
       if (world.stand === null) world.stand = 0;
+      // 0563: the row's camera until the chrome is laid out; `frameStand` fits it to the column once it is.
       standViewInto(view, stand.camera, viewportWidth(host), viewportHeight(host), world.standView);
       world.standKeeper = stand.keeper;
       // And no bar over the room: the bar is the play readout's (0500), and here the readout is in the dash.
@@ -1612,8 +1620,28 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     // And Settings under a held run has no music room: the room walks a level over the run's field.
     chrome.setActionShown('settings', 0, !held);
     chrome.show(playable ? screen : null);
+    // 0563: and the stand's camera framed on the column the chrome has just laid out.
+    frameStand();
     tickTimer();
   };
+
+  /*
+    ⚠️ **THE CAMERA FITS THE STAND'S COLUMN, NOT THE SCREEN — 0563.** The row's camera says where it stands
+    and how close it would like to be; the column the plate leaves is a fact about the screen, a third of a
+    4:3 and two fifths of a 16:9. So the pad is stood at the column's own share across, and the camera is
+    drawn back where the ship at that zoom would run under the plate. Read off the laid-out column, so a
+    plate that grows (0562) or a phone's narrower column is answered by the same line, and again on every
+    resize: the stand's view was only written when a screen changed.
+  */
+  function frameStand(): void {
+    const stand = SCREENS[state.screen.current].stand;
+    if (stand === null || world.stand === null || !playable) return;
+    const width = viewportWidth(host);
+    const box = chrome.standBox(state.screen.current);
+    if (box === null) return;
+    fitStand(stand.camera, view, width, box, stand.keeper, framed);
+    standViewInto(view, framed, width, viewportHeight(host), world.standView);
+  }
 
   /**
    * Push the countdown's whole seconds at the chrome, and only when the digit has actually moved.
@@ -2441,7 +2469,7 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
       */
       if (portFit === null || portFit.ship !== onPad.ship || !sameFit(portFit.fit, fit) || portFit.fit.flame !== fit.flame) {
         const into = port;
-        withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad));
+        withFit(onPad.ship, fit, () => bakePortShip(into, colours, onPad, portSharp));
         portFit = { ship: onPad.ship, fit };
         showPort();
       }
@@ -4264,6 +4292,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     surface.setSize(width, height, colours.space, next.barAcross);
     // Last, so a resumed loop's first frame draws at the size that was just fitted.
     setPlayable(true);
+    // 0563: and a stand's camera fitted to its column again — and its bar left off, as the stand leaves it.
+    if (world.stand !== null) {
+      surface.setSize(width, height, colours.space, 0);
+      frameStand();
+    }
   };
 
   /*
