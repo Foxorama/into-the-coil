@@ -1934,13 +1934,17 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   and what it is to the player. Each band's own line under itself is not drawn on a stand any more; it
   is kept for a reader and for the card to be read against.
 */
+/*
+  One row: the card on the left, the balance and the actions beside it and the keys under those. Stacked,
+  card over balance over Back, the foot was three lines high, and on CI's wider letters it put Paint &
+  Parts' plate three pixels past the others at 1280x720.
+*/
 .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas: 'focus sheet' 'focus choices' 'glyphs glyphs';
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'focus sheet choices' 'focus glyphs glyphs';
   align-items: center;
-  justify-items: end;
-  gap: 0.3em 0.8em;
+  gap: 0.25em 0.7em;
 }
 .itc-hangar-focus, .itc-parts-focus, .itc-shop-focus {
   grid-area: focus;
@@ -1968,7 +1972,7 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
 @container (max-height: 360px) {
   .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
 }
-.itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { grid-area: glyphs; justify-self: start; font-size: 0.62em; font-weight: 700; letter-spacing: 0.04em; opacity: 0.6; min-width: 0; }
+.itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { grid-area: glyphs; justify-self: end; text-align: right; font-size: 0.62em; font-weight: 700; letter-spacing: 0.04em; opacity: 0.6; min-width: 0; }
 .itc-hangar-foot > .itc-hangar-sheet, .itc-parts-foot > .itc-parts-sheet, .itc-shop-foot > .itc-shop-sheet { grid-area: sheet; }
 .itc-hangar-foot > .itc-hangar-choices, .itc-parts-foot > .itc-parts-choices, .itc-shop-foot > .itc-shop-choices { grid-area: choices; }
 .itc-hangar-band-hint, .itc-parts-band-hint, .itc-shop-band-hint { display: none; }
@@ -2518,7 +2522,8 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-focus-state, .itc-parts-focus-state, .itc-shop-focus-state { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .itc-hangar-focus-eyebrow, .itc-parts-focus-eyebrow, .itc-shop-focus-eyebrow, .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { display: none; }
   .itc-hangar-focus-name, .itc-parts-focus-name, .itc-shop-focus-name { font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { gap: 0.3em 0.5em; }
+  .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { gap: 0.3em 0.5em; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices'; }
+  .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
   /* 0561's tick stands down on a phone, where a band shows one option and its fill already says it is fitted. */
   .itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before { display: none; }
   /*

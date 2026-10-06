@@ -20,8 +20,9 @@ as the cursor did. The balance stood in the stand's top corner, about 1200 px fr
 | **a very wide screen** | from 19:9 the plate stops at 40 em across and the stand takes the rest |
 | **the focus card** | at the plate's foot: the band's name small, the option large, what it is, and what it is to the player — *Fitted*, how to fit it in the hand's words, what opens a shut one, or a ware's state at Cosmo's. It speaks for the band the cursor is on, and keeps speaking for it when the cursor goes to the actions. The aisle speaks for the shelf in view. A band of faces drops the name its line carries, since the card has just said it |
 | **the bands' own lines** | not drawn on a stand. They are kept in the page for a reader, and the card says the same thing in one place |
-| **the balance** | in the foot, over *Back* and *Buy*. On Cosmo's, while the ware in the window is one the balance covers, it says *After* and the balance after it |
-| **the keys** | one small line under the card, in the hand's words: *← → try · Enter fit · Esc back · Q E tabs*, a pad's glyphs, nothing on touch. Cosmo's says *pick*. It is not drawn below 360 px tall |
+| **the balance** | in the foot, on *Back*'s line beside it and *Buy*. On Cosmo's, while the ware in the window is one the balance covers, it says *After* and the balance after it |
+| **the keys** | one small line under the balance and the actions, in the hand's words: *← → try · Enter fit · Esc back · Q E tabs*, a pad's glyphs, nothing on touch. Cosmo's says *pick*. It is not drawn on a phone |
+| **the foot is one row** | the card on the left, the balance, the actions and the keys beside it. Stacked, card over balance over Back, it was three lines high, and on CI's wider letters it put Paint & Parts' plate three pixels past the others at 1280×720. Checked here with `* { letter-spacing: 0.05em }` laid over the page, which reproduces CI's widths |
 | **Q and E** | step the tabs on a keyboard, as LB and RB do on a pad. The keyboard had no way across but the strip |
 | **on a phone** | the card is the option and its state on two short lines. 0561's tick stands down, because a phone's band shows one option and its fill already says it is fitted |
 
@@ -39,7 +40,7 @@ and every reference the review names does.
 
 `tests/foot.browser.test.ts`: the gun band's type is at least 1.3× larger at 1920×1080 than at
 1280×720. The card names the gun tried on, and then the special when the cursor goes down. The
-balance is on the plate and stands over Back. Its two probes cap the type again and freeze the card.
+balance is on the plate, on Back's line, to its left. Its two probes cap the type again and freeze the card.
 `tests/layout.browser.test.ts` holds the six phone-to-laptop sizes. The key line was the four pixels
 that made Cosmo's scroll at 480×320, and it stands down there.
 

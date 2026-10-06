@@ -57,6 +57,7 @@ describe.runIf(chromePath)('0562 — the plate grows with the screen, and its fo
   });
 
   it('names the option tried on, large, on the card, and stands the balance in the plate beside Back', async () => {
+    // (The balance is read on its line, so a foot stacked again, balance over Back, fails here too.)
     const page = await opened(1280, 720);
     await page.keyboard.press('ArrowDown');
     await page.keyboard.press('ArrowRight');
@@ -73,7 +74,9 @@ describe.runIf(chromePath)('0562 — the plate grows with the screen, and its fo
     const sheet = (await page.locator(`${shown('hangar')} .${HANGAR}sheet`).boundingBox())!;
     const back = (await page.locator(`${shown('hangar')} .${HANGAR}action`).first().boundingBox())!;
     expect(sheet.x >= plate.x && sheet.x + sheet.width <= plate.x + plate.width, 'the balance is not on the plate').toBe(true);
-    expect(Math.abs(sheet.y + sheet.height - back.y) < back.height, 'the balance does not stand over Back').toBe(true);
+    // Beside Back, on its line and to its left.
+    const middle = (box: { y: number; height: number }): number => box.y + box.height / 2;
+    expect(Math.abs(middle(sheet) - middle(back)) < back.height / 2 && sheet.x + sheet.width <= back.x, 'the balance does not stand beside Back').toBe(true);
     await page.context().close();
   });
 });
