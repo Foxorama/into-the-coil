@@ -106,13 +106,16 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
     ⚠️ **A BILL AND A NECK — 0555.** *"the space duck needs to be cuter and have a proper bill and not a
     hamburger mouth, also needs a neck"*. Turned three quarters to the pad, on a neck out of the collar
     ring, the booth a painter's mess round them (`paintMmxxvi`, `paintBooth`).
+
+    ⚠️ **TWO UNITS LOWER — 0556.** *"Lower the duck a bit so they're head is visible without being blocked
+    by the stand"*: at Cosmo's five up, the beret sat in the awning's scallops.
   */
   mmxxvi: {
     name: 'MMXXVI',
     greet: 'We’ll make it look good.',
     figure: 'mmxxvi',
     counter: 'booth',
-    at: { along: -1, across: -5 },
+    at: { along: -1, across: -3 },
     stands: 'behind',
     sign: ['MMXXVI', 'PAINT & PARTS'],
     shop: null,

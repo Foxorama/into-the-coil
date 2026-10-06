@@ -631,14 +631,14 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.beginPath();
   ctx.ellipse(50 * u, (RING - 0.5) * u, 15.5 * u, 2.6 * u, 0, 0, Math.PI * 2);
   ctx.fill();
-  // The neck: rising out of the ring and leaning into the head, the far side in shade.
+  // The neck: straight up out of the ring under the head, a little narrower at the top, the far side in
+  // shade — 0556: 0555's S leaned the head off its own body.
   ctx.fillStyle = feather;
   ctx.beginPath();
-  ctx.moveTo(37 * u, (RING + 1) * u);
-  ctx.quadraticCurveTo(33 * u, 54 * u, 37 * u, 45 * u);
+  ctx.moveTo(37.5 * u, (RING + 1) * u);
+  ctx.quadraticCurveTo(36.5 * u, 54 * u, 39 * u, 45 * u);
   ctx.lineTo(55 * u, 45 * u);
-  // The throat tucked in under the bill, and the breast out below it, as a duck's neck is an S.
-  ctx.bezierCurveTo(51 * u, 51 * u, 57 * u, 57 * u, 63 * u, (RING + 1) * u);
+  ctx.quadraticCurveTo(57.5 * u, 54 * u, 60.5 * u, (RING + 1) * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -741,10 +741,11 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
   ctx.lineTo(42 * u, 8.8 * u);
   ctx.stroke();
   ctx.lineWidth = line;
-  // The eyes: big and glossy, the far one narrowed by the turn of the head, two glints in each.
-  for (const [x, y, rx, ry, glint] of [
-    [42, 27.5, 3.6, 4.5, 1.5],
-    [56.4, 26.6, 1.6, 3.1, 0.75],
+  // The eyes: small dark beads either side of the bill's root, one glint each — 0556: 0555's big
+  // two-glint ovals were too much.
+  for (const [x, y, rx, ry] of [
+    [44.5, 28.5, 2.5, 3.1],
+    [56.5, 28, 2.1, 2.9],
   ] as const) {
     ctx.fillStyle = dark;
     ctx.beginPath();
@@ -752,69 +753,67 @@ function paintMmxxvi(ctx: CanvasRenderingContext2D, palette: Palette, size: numb
     ctx.fill();
     ctx.fillStyle = palette.impact;
     ctx.beginPath();
-    ctx.arc((x - rx * 0.35) * u, (y - ry * 0.4) * u, glint * u, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc((x + rx * 0.35) * u, (y + ry * 0.45) * u, glint * 0.45 * u, 0, Math.PI * 2);
+    ctx.arc((x - rx * 0.3) * u, (y - ry * 0.35) * u, 0.85 * u, 0, Math.PI * 2);
     ctx.fill();
   }
   // A pink cheek under the near eye.
   ctx.fillStyle = rgba(palette.enemy, 0.35);
   ctx.beginPath();
-  ctx.ellipse(43 * u, 39.5 * u, 4 * u, 2.3 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(44 * u, 38.5 * u, 3.8 * u, 2.2 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   // The bill. The lower first, tucked under; then the upper — long and flat from its root on the face to
   // a broad spoon of a tip, its top lit, a nostril near the root and the nail at the tip.
   ctx.fillStyle = shade(bill, -0.12);
   ctx.lineWidth = Math.max(1, 1.8 * u);
   ctx.beginPath();
-  ctx.moveTo(56 * u, 46.4 * u);
-  ctx.quadraticCurveTo(64 * u, 45.6 * u, 70.5 * u, 45.8 * u);
-  ctx.quadraticCurveTo(69 * u, 49.4 * u, 63 * u, 49.4 * u);
-  ctx.quadraticCurveTo(58 * u, 49.4 * u, 56 * u, 46.4 * u);
+  ctx.moveTo(55 * u, 43.4 * u);
+  ctx.quadraticCurveTo(62 * u, 42.6 * u, 67.5 * u, 42.8 * u);
+  ctx.quadraticCurveTo(66 * u, 46.2 * u, 61 * u, 46.2 * u);
+  ctx.quadraticCurveTo(56.5 * u, 46.2 * u, 55 * u, 43.4 * u);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
   ctx.lineWidth = line;
+  // 0556: out of the middle of the brow, level with the eyes' line, and shorter for the gentler turn.
   ctx.fillStyle = bill;
   ctx.beginPath();
-  ctx.moveTo(55 * u, 35.5 * u);
-  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
-  ctx.bezierCurveTo(75 * u, 38.2 * u, 78.5 * u, 40.5 * u, 77.6 * u, 43.6 * u);
-  ctx.quadraticCurveTo(76 * u, 46.4 * u, 70 * u, 46.2 * u);
-  ctx.quadraticCurveTo(62 * u, 45.8 * u, 56.5 * u, 47 * u);
-  ctx.quadraticCurveTo(53 * u, 42 * u, 55 * u, 35.5 * u);
+  ctx.moveTo(54 * u, 33.5 * u);
+  ctx.bezierCurveTo(59 * u, 33 * u, 62 * u, 35.6 * u, 66 * u, 35.6 * u);
+  ctx.bezierCurveTo(71.5 * u, 35.6 * u, 74.5 * u, 37.6 * u, 73.8 * u, 40.6 * u);
+  ctx.quadraticCurveTo(72.6 * u, 43.4 * u, 67.5 * u, 43.2 * u);
+  ctx.quadraticCurveTo(60.5 * u, 42.8 * u, 55.5 * u, 44 * u);
+  ctx.quadraticCurveTo(52 * u, 39 * u, 54 * u, 33.5 * u);
   ctx.closePath();
   ctx.fill();
   ctx.save();
   ctx.clip();
   ctx.fillStyle = shade(bill, 0.25);
   ctx.beginPath();
-  ctx.moveTo(55 * u, 35.5 * u);
-  ctx.bezierCurveTo(61 * u, 35.5 * u, 64 * u, 38.6 * u, 69 * u, 38.4 * u);
-  ctx.bezierCurveTo(73 * u, 38.3 * u, 76 * u, 39.6 * u, 77 * u, 41.2 * u);
-  ctx.bezierCurveTo(70 * u, 40.4 * u, 63 * u, 41.2 * u, 55.5 * u, 40.6 * u);
+  ctx.moveTo(54 * u, 33.5 * u);
+  ctx.bezierCurveTo(59 * u, 33 * u, 62 * u, 35.6 * u, 66 * u, 35.6 * u);
+  ctx.bezierCurveTo(69.5 * u, 35.6 * u, 72.5 * u, 36.8 * u, 73.3 * u, 38.4 * u);
+  ctx.bezierCurveTo(67 * u, 37.6 * u, 61 * u, 38.2 * u, 54.5 * u, 37.8 * u);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = shade(bill, -0.12);
   ctx.beginPath();
-  ctx.ellipse(66 * u, 46 * u, 14 * u, 2 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse(64 * u, 43 * u, 12 * u, 1.8 * u, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   ctx.stroke();
   ctx.fillStyle = shade(bill, -0.45);
   ctx.beginPath();
-  ctx.ellipse(62 * u, 39.6 * u, 1.4 * u, 0.6 * u, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(60 * u, 36.8 * u, 1.3 * u, 0.55 * u, 0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = shade(bill, -0.2);
   ctx.beginPath();
-  ctx.ellipse(76.4 * u, 41.8 * u, 1.2 * u, 1.6 * u, 0.3, 0, Math.PI * 2);
+  ctx.ellipse(72.6 * u, 39.2 * u, 1.1 * u, 1.5 * u, 0.3, 0, Math.PI * 2);
   ctx.fill();
   // The smile, turned up at the corner of the bill into the cheek.
   ctx.lineWidth = Math.max(1, 1.6 * u);
   ctx.beginPath();
-  ctx.moveTo(56.5 * u, 46.8 * u);
-  ctx.quadraticCurveTo(53.6 * u, 46.6 * u, 52.8 * u, 44.4 * u);
+  ctx.moveTo(55.5 * u, 43.6 * u);
+  ctx.quadraticCurveTo(52.8 * u, 43.4 * u, 52 * u, 41.4 * u);
   ctx.stroke();
   // The helmet's near side: the bubble's rim, a long highlight and a glint, the light on its antenna.
   ctx.strokeStyle = palette.blade;
@@ -873,7 +872,7 @@ function bubble(ctx: CanvasRenderingContext2D, u: number): void {
  */
 function head(ctx: CanvasRenderingContext2D, u: number, dx: number, dy: number): void {
   ctx.beginPath();
-  ctx.ellipse((43 + dx) * u, (32 + dy) * u, 19 * u, 17.5 * u, 0, 0, Math.PI * 2);
-  ctx.moveTo((64 + dx) * u, (35 + dy) * u);
-  ctx.ellipse((55 + dx) * u, (35 + dy) * u, 9 * u, 8 * u, 0, 0, Math.PI * 2);
+  ctx.ellipse((46 + dx) * u, (32 + dy) * u, 18.5 * u, 17.5 * u, 0, 0, Math.PI * 2);
+  ctx.moveTo((64.5 + dx) * u, (35 + dy) * u);
+  ctx.ellipse((56.5 + dx) * u, (35 + dy) * u, 8 * u, 7.5 * u, 0, 0, Math.PI * 2);
 }
