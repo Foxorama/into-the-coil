@@ -127,7 +127,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'coils',
     stubble: false,
     build: 0.98,
-    bio: 'Reads wind off kites over the Ngong Hills, a feather in her cap; a controlled fade on every shot.',
+    bio: 'Learned to read solar wind flying kites over the Ngong Hills; a feather on the dash, and a slow, sure drift through any crossfire.',
     voice: 1.14,
     opensAfter: [],
     saved: [
@@ -158,7 +158,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'sweep',
     stubble: false,
     build: 1,
-    bio: 'Names a club by the sound of the strike, blindfold; striped irons, and a hook into Gwangalli harbour.',
+    bio: 'Flies by ear with the canopy blacked out and names every gun by its report; once hooked under the Gwangalli bridge at full burn.',
     voice: 1.03,
     opensAfter: [],
     saved: [
@@ -189,7 +189,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'crop',
     stubble: true,
     build: 1.08,
-    bio: 'Three long-drive titles, a dented driver on the mantel, two kids and a kelpie, and a road train.',
+    bio: 'Three long-haul records, a dented fender on the mantel, two kids and a kelpie, and a wagon that once towed a road train through a meteor storm.',
     voice: 0.8,
     opensAfter: [],
     saved: [
@@ -220,7 +220,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     cut: 'tousled',
     stubble: false,
     build: 1,
-    bio: 'Spins it back on a string; roasts coffee named for their spin rate; once lost a playoff to backspin.',
+    bio: 'Puts spin on everything, shots included; roasts coffee named for their barrel rolls; once lost a dogfight to their own ricochet.',
     voice: 0.95,
     opensAfter: [],
     saved: [
@@ -266,7 +266,7 @@ export const GOLFERS: Record<GolferKind, GolferRow> = {
     stubble: false,
     build: 0.82,
     figure: 'marmot',
-    bio: 'Pocketed golf balls from the trade tents and tended the 19th-hole bar on the tips; plays the par-3 when the jar is full.',
+    bio: 'Tends the spaceport bar on tips and pockets whatever the trade tents drop; rides the Thunderbolt out whenever the jar is full.',
     // High and quick: a small animal's voice, and the whistle a marmot is named for.
     voice: 1.38,
     opensAfter: ['feather', 'woo', 'larry', 'bo'],
