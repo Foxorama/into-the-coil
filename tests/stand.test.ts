@@ -139,7 +139,7 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       for (const [width, height] of SIZES) {
         const blits = drawStand(screen, width, height);
         const at = `${screen} at ${width}x${height}`;
-        for (const kind of [keeper.bust, keeper.counter, 'blueSide'] as const) {
+        for (const kind of [keeper.figure, keeper.counter, 'blueSide'] as const) {
           const drawn = all(blits, kind);
           expect(drawn, `${at}: ${kind} is not drawn once`).toHaveLength(1);
           const half = (PORT_EXTENT[kind] * drawn[0]!.scale) / 2;
@@ -148,8 +148,11 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeGreaterThan(0);
           expect(drawn[0]!.y, `${at}: ${kind} is not on the screen`).toBeLessThan(height);
         }
-        // Behind their counter: the counter is drawn over them, so they stand at it rather than on it.
-        expect(blits.indexOf(all(blits, keeper.counter)[0]!), `${at}: the counter is drawn under its keeper`).toBeGreaterThan(blits.indexOf(all(blits, keeper.bust)[0]!));
+        // Behind their counter, it is drawn over them; on it, as Unity stands on their bench (0554), under them.
+        const counter = blits.indexOf(all(blits, keeper.counter)[0]!);
+        const figure = blits.indexOf(all(blits, keeper.figure)[0]!);
+        if (keeper.stands === 'behind') expect(counter, `${at}: ${keeper.name} is drawn over the counter they stand behind`).toBeGreaterThan(figure);
+        else expect(figure, `${at}: ${keeper.name} is drawn under the counter they stand on`).toBeGreaterThan(counter);
       }
     }
   });
@@ -168,7 +171,7 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
       for (const kind of KEEPER_KINDS) {
         const row = KEEPERS[kind];
         const expected = kind === SCREENS[screen].stand!.keeper ? 1 : 0;
-        expect(all(blits, row.bust), `${screen}: ${row.name} is drawn ${all(blits, row.bust).length} times`).toHaveLength(expected);
+        expect(all(blits, row.figure), `${screen}: ${row.name} is drawn ${all(blits, row.figure).length} times`).toHaveLength(expected);
         expect(all(blits, row.counter), `${screen}: ${row.name}'s counter is drawn ${all(blits, row.counter).length} times`).toHaveLength(expected);
       }
     }

@@ -189,7 +189,8 @@ export const PORT_EXTENT: Record<PortKind, number> = {
   // 0542: a bust a head taller than the counter, and the stall's square box.
   cosmo: 14,
   stall: 30,
-  // 0550: every keeper a bust Cosmo's size, behind a counter in the stall's box.
+  // 0550: every keeper a bust Cosmo's size, behind a counter in the stall's box — and 0554, Unity whole on
+  // their bench, the wrench they lean on in the box with them.
   unity: 14,
   bench: 30,
   mmxxvi: 14,
@@ -292,12 +293,11 @@ export const STAGE = {
   /** The ceiling lamps, along. */
   lamps: [72, 128] as readonly number[],
   /**
-   * Cosmo's stall, on the deck between the bar's door and the pilot's pad — 0542: its centre, and where
-   * Cosmo stands behind its counter. Beside the pad, so the shop's camera has the counter and the ship it
-   * tries things on in the stand's part of the screen together.
+   * Cosmo's stall, on the deck between the bar's door and the pilot's pad — 0542: its centre. Beside the
+   * pad, so the shop's camera has the counter and the ship it tries things on in the stand's part of the
+   * screen together. Where each keeper stands at it is their own row's (`KeeperRow.at`, 0554).
    */
   stall: { along: 64, across: 85 },
-  keeper: { along: 63, across: 80 },
   /**
    * The viewport in the back wall — 0550: *"can we fit in a starry background to emphasise the space
    * station nature of it?"* The bay is behind the plate on every tab, so the stars were seen only past the
