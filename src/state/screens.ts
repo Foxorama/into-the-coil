@@ -27,7 +27,7 @@ import { HANDS, HAND_KINDS, STEERS, STEER_KINDS } from '../content/touch.ts';
 // 0210: the music room's buttons ARE the place table — `state` sits above `content` on 0015's ladder.
 import { THEMES, THEME_KINDS } from '../content/themes.ts';
 import { CREDITS, CREDIT_KINDS } from '../content/credits.ts';
-import { INTRO_STEPS, STAGE, type StandCamera } from '../content/port.ts';
+import { INTRO_STEPS, type StandCamera } from '../content/port.ts';
 import { OUTRO_STEPS } from '../content/finale.ts';
 import { GOLFERS, GOLFER_KINDS, type GolferKind } from '../content/golfers.ts';
 import { SHIPS, SHIP_KINDS, type ShipKind } from '../content/ships.ts';
@@ -436,6 +436,14 @@ function pilotHint(kind: GolferKind): string {
 /** The pilot band's faces, on the title and in the hangar — one list, so the two cannot differ. */
 const pilotOptions = GOLFER_KINDS.map((kind) => ({ label: GOLFERS[kind].name, hint: pilotHint(kind) }));
 
+/**
+ * Where the port's camera stands on the hangar's three tabs — 0548: one place, between Cosmo's stall and
+ * the pilot's pad, at one zoom. Each tab had its own (0540, 0542), and stepping the tabs moved the room
+ * and the ship under the player's eye three ways at once. Each row still names its camera; this is the
+ * one they share today, and a tab that wants another writes its own.
+ */
+const PORT_CAMERA: StandCamera = { along: 80, across: 84, zoom: 1.4, x: 0.2, y: 0.5 };
+
 /** A ship's name to follow *the* — the Firebird's label carries its own article. */
 function plainLabel(kind: ShipKind): string {
   return SHIPS[kind].label.replace(/^The /, '');
@@ -827,8 +835,8 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         { label: 'Loadout', bands: ['gun', 'special'] },
         { label: 'Dash', bands: ['plate', 'dangle'] },
       ],
-      // 0540: on the pilot's pad, the ship on it in the stand's half of the screen.
-      camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 1.5, x: 0.2, y: 0.52 },
+      // 0548: the port's one camera, the pad and Cosmo's stall in it — it was on the pad at 1.5 (0540).
+      camera: PORT_CAMERA,
       keeper: null,
     },
     actions: [{ label: 'Back', hint: '' }],
@@ -924,8 +932,12 @@ export const SCREENS: Record<Screen, ScreenRow> = {
         { label: 'Parts', bands: ['rim', 'flame'] },
         { label: 'Paint', bands: ['art', 'livery', 'tone'] },
       ],
-      // 0540: closer on the pad, so the wheels, the nose and the flame are large.
-      camera: { along: STAGE.bluePad, across: STAGE.blueRide, zoom: 2.3, x: 0.2, y: 0.48 },
+      /*
+        0548: the port's one camera. It was closer on the pad at 2.3 (0540), so the wheels, the nose and the
+        flame were large — and the room jumped a size every time the tab was stepped onto, which was asked
+        to stop. The looks are still read close on rig/looks.html.
+      */
+      camera: PORT_CAMERA,
       keeper: null,
     },
     actions: [{ label: 'Back', hint: '' }],
@@ -1028,9 +1040,9 @@ export const SCREENS: Record<Screen, ScreenRow> = {
       that every ware be tried on where it goes, a rim on the ship's wheels and a flame in its exhaust. The
       bar's window and the pad are sixty-four units apart, which no camera that fills the screen fits in a
       stand a third of it wide: at the bar the ship stood under the plate. So Cosmo keeps a stall on the deck
-      beside the pad, and the camera stands between the two.
+      beside the pad, and the camera stands between the two — the port's one camera since 0548.
     */
-    stand: { groups: [], camera: { along: 80, across: 84, zoom: 1.4, x: 0.2, y: 0.5 }, keeper: COSMO },
+    stand: { groups: [], camera: PORT_CAMERA, keeper: COSMO },
     // 0542: Buy names the price of the ware in the window, written by the shell — `Buy · 250 ✦`.
     actions: [
       { label: 'Buy', hint: '' },
@@ -1039,8 +1051,21 @@ export const SCREENS: Record<Screen, ScreenRow> = {
     /*
       0542: the aisle, which steps the shelf in view, and a shelf per table — each its own wares, named with
       their price by the shell (`setLabels`), so what is owned can say so. Built by walking `SHELF_KINDS`.
+
+      ⚠️ **0548: AND THE PILOTS FIRST, ON THE SAME SETTING**, because the ware in the window is tried on the
+      ship on the pad, and which ship that is was a tab away: a rim tried on a ship with no wheels showed
+      nothing, and the way to see it on a car was Back a tab, a pilot, and across again.
     */
     choices: [
+      {
+        name: 'pilot',
+        label: 'Pilot',
+        options: pilotOptions,
+        faces: 'portraits',
+        card: 'line',
+        on: 'all',
+        press: 'steps',
+      },
       {
         name: 'aisle',
         label: 'Aisle',

@@ -1,7 +1,7 @@
 // The breaks behind docs/decisions/0542-cosmos-counter.md.
 //
 // Cosmo's counter: a shelf per table, the price on the face and on Buy, Cosmo's line, every ware tried on
-// where it goes, and the stall on Cosmo's tab alone. Each put back as it was.
+// where it goes, and the stall by the pad — on every tab since 0548. Each put back as it was.
 
 /** @type {import('../prove-guard.mjs').Probe[]} */
 export const PROBES = [
@@ -68,13 +68,14 @@ export const PROBES = [
   {
     decision: '0542',
     suite: 'tests/stand.test.ts',
-    // The stall on every tab, where it stood cut in half at the hangar's edge.
-    broke: 'Cosmo’s stall drawn on every tab',
-    guard: 'on the keeper’s tab alone',
+    // The stall gone from the room, Cosmo standing at nothing. 0548 drew it on every tab, where this probe
+    // was the stall drawn on every tab and its guard said it must not be.
+    broke: 'Cosmo’s stall not drawn by the pad',
+    guard: 'stands Cosmo at the stall beside the pad on every tab',
     edit: {
       path: 'src/render/port.ts',
-      find: '  if (keeper) {',
-      replace: '  if (keeper || !keeper) {',
+      find: '  put(surface, view, PORT_SPRITE.stall, STAGE.stall.along, STAGE.stall.across);',
+      replace: '',
     },
   },
   {
