@@ -120,9 +120,12 @@ describe('the chooser is the table', () => {
 
       0527: and on *Paint & Parts*, the hangar's second tab, for the same reason — what it dresses is that
       pilot's ship. Named, as the hangar was.
+
+      0548: and on *Cosmo's*, the third tab — what it tries a ware on is that pilot's ship, and changing
+      which ship meant leaving the shop. Named, as the other two were.
     */
     for (const [setting, screens] of where) {
-      if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar’s tabs').toEqual(['hangar', 'parts', 'title']);
+      if (setting === 'pilot') expect(screens.sort(), 'the pilot is offered somewhere other than the title and the hangar’s tabs').toEqual(['hangar', 'parts', 'shop', 'title']);
       else expect(screens, `${setting} is offered on more than one screen`).toHaveLength(1);
     }
     // 0512: and the touch section's two, on Settings with the rest.

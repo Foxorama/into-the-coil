@@ -1764,8 +1764,6 @@ export interface World {
   stand: number | null;
   /** The camera the stand is seen through — 0540: the screen's own view moved by its tab's camera, written by the shell. */
   standView: View;
-  /** Whether the tab standing names a keeper, whose stall is then drawn by the pad — 0542, written by the shell. */
-  standKeeper: boolean;
   /** How many steps the finale has been up, or null on every other screen — 0418, on `intro`'s terms. */
   outro: number | null;
   /**
@@ -2778,7 +2776,7 @@ export class GameFrame implements Frame {
     }
     // And the hangar's tabs, standing in the same room — 0540.
     if (w.stand !== null) {
-      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow, w.standKeeper);
+      paintStand(w.surface, w.standView, w.stand + alpha, w.sky, w.shipRow);
       return;
     }
     // And the finale, going on from the fight's last frame — 0418, 0426.

@@ -50,7 +50,7 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
   const view = { ...base };
   standViewInto(base, camera, width, height, view);
   const surface = new RecordingSurface();
-  paintStand(surface, view, t, SKY, ship, SCREENS[screen].stand!.keeper !== null);
+  paintStand(surface, view, t, SKY, ship);
   return surface.blits;
 }
 
@@ -70,8 +70,9 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     }
   });
 
-  it('puts the ship on its pad in the stand’s part of the screen, on the hangar’s two tabs, at every size', () => {
-    for (const screen of STANDING.filter((s) => SCREENS[s].stand!.camera.along === STAGE.bluePad)) {
+  it('puts the ship on its pad in the stand’s part of the screen, on every tab, at every size', () => {
+    // 0548: every tab, and it was the two whose camera stood on the pad — none does now, which left it asking nothing.
+    for (const screen of STANDING) {
       for (const [width, height] of SIZES) {
         const ship = all(drawStand(screen, width, height), 'blueSide')[0]!;
         const half = (PORT_EXTENT.blueSide * ship.scale) / 2;
@@ -127,9 +128,12 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
     ⚠️ **COSMO KEEPS A STALL BY THE PAD, AND THE TAB'S CAMERA HOLDS BOTH — 0542.** The plan put the counter at the
     bar; a camera there loses the ship, and the ship on its pad is where a ware is tried on. So the tab's
     camera is the one place in the room that shows Cosmo, the stall and the ship at once, at every size.
+
+    0548: and the stall is drawn on every tab, so every tab's camera is asked to hold it whole — the
+    hangar's cut it in half at the frame's edge, which is why it was Cosmo's alone until the three shared one.
   */
-  it('0542 — stands Cosmo at the stall beside the pad on the keeper’s tab alone, with Cosmo, the stall and the ship in view at every size', () => {
-    for (const screen of STANDING.filter((s) => SCREENS[s].stand!.keeper !== null)) {
+  it('0542 — stands Cosmo at the stall beside the pad on every tab, with Cosmo, the stall and the ship in view at every size', () => {
+    for (const screen of STANDING) {
       for (const [width, height] of SIZES) {
         const blits = drawStand(screen, width, height);
         const at = `${screen} at ${width}x${height}`;
@@ -145,11 +149,6 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
         // Behind his counter: the stall is drawn over him, so he stands at it rather than on it.
         expect(blits.indexOf(all(blits, 'stall')[0]!), `${at}: the stall is drawn under Cosmo`).toBeGreaterThan(blits.indexOf(all(blits, 'cosmo')[0]!));
       }
-    }
-    expect(STANDING.some((s) => SCREENS[s].stand!.keeper !== null), 'no tab has a keeper, so this measures nothing').toBe(true);
-    // And on no other tab, where the stall stood cut in half at the frame's edge.
-    for (const screen of STANDING.filter((s) => SCREENS[s].stand!.keeper === null)) {
-      for (const kind of ['cosmo', 'stall'] as const) expect(all(drawStand(screen, 1280, 720), kind), `${screen}: ${kind} is drawn`).toEqual([]);
     }
   });
 });
