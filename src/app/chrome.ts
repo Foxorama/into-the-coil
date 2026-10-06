@@ -1900,6 +1900,16 @@ ${each('-tab-key[hidden]')} { display: none; }
 @container (max-width: 1100px) and (min-height: 461px) {
   .itc-hangar-pilot-card { grid-column: 1 / -1; }
 }
+/*
+  0550: and where the card stands beside the faces, the keeper stands over them, the card beside both. The
+  bio is the row's height there, twice the faces', and the keeper across the plate on a row of its own put
+  the hangar tab's plate fourteen pixels taller than the other two on CI's wider letters.
+*/
+@container (min-width: 1101px) {
+  .itc-hangar-keeper { grid-column: 1; grid-row: 1; }
+  .itc-hangar-band-faces { grid-column: 1; grid-row: 2; }
+  .itc-hangar-pilot-card { grid-column: 2; grid-row: 1 / span 2; }
+}
 .itc-hangar-groups, .itc-parts-groups, .itc-shop-band:not(.itc-shop-band-faces) { grid-column: 1 / -1; }
 .itc-hangar-groups, .itc-parts-groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: min(0.55rem, 1.3cqh) min(1.2rem, 2cqw); align-items: start; }
 .itc-hangar-group, .itc-parts-group { display: flex; flex-direction: column; gap: min(0.35rem, 0.9cqh); min-width: 0; }

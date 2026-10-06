@@ -28,6 +28,7 @@ the only stars on the screen were a sliver past the plate's right edge.
 | **the faces** | each keeper's own painter, `KEEPER_FACES` in `src/render/keeper-art.ts`, one drawing for the card and the port — on 0542's terms for Cosmo |
 | **the viewport** | a hole two wall tiles wide and one high in the back wall (`STAGE.viewport`), with no tile drawn over it, so the first level's sky the room is painted over shows through; a riveted frame with two struts and a faint sheen goes over it. In the room, so the intro has it too |
 | **the card** | one look on all three tabs, a step smaller than Cosmo's was: the face a size down, the line beside the name. Every class is still its screen's own (`prefixFor`), the three selectors listed together |
+| **on Hangin' Out at a desktop** | the keeper's card stands over the faces in their column, the pilot's card beside both, rather than across the plate on a row of its own. The bio sets that row's height at twice the faces', and on CI's fonts the row of its own put the hangar tab's plate 14 px taller than the other two, which `tests/still.browser.test.ts` failed |
 | **on a phone** | a keeper with no shop — who only greets — has no card on the plate. Their bust and sign are in the stand beside it; Cosmo's card stays, because it says the shop's state and nothing else does |
 
 ## Who they are
@@ -69,7 +70,10 @@ name one keeper, and every tab's keeper, counter and ship are in the stand at th
 drawn once, its pane in the stand's part of the screen with at least half its height on the screen, no wall
 tile over it, and the sky drawn before the wall. `tests/intro.test.ts`: every baked piece is drawn by the
 intro or by the stand for some keeper. `tests/layout.browser.test.ts`'s 0547 guard and
-`tests/still.browser.test.ts` hold the card on the plates, and the layout guard at 480x320 holds the greeting off a phone's. Probes in `scripts/probes/0550-every-tab-has-a-keeper.mjs`.
+`tests/still.browser.test.ts` hold the card on the plates, and the layout guard at 480x320 holds the greeting off a phone's. Probes in `scripts/probes/0550-every-tab-has-a-keeper.mjs`. The card over the faces has no probe: taking it
+out reddens 0548's guard on CI's fonts and not on this machine's (it was reproduced here only by forcing
+Verdana, which is near the runner's), so a local proof would call it still green. Its first CI run, red on
+exactly that guard, is the failure it was seen to cause.
 
 ## Owed
 
