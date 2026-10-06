@@ -102,6 +102,10 @@ export const KEEPERS: Record<KeeperKind, KeeperRow> = {
   /*
     ⚠️ **MMXXVI: THE SPACE DUCK — 0550.** *"for paints and parts a space duck named MMXXVI - we'll make it
     look good"*. The year in numerals is the name as given; the paint shop's booth is theirs.
+
+    ⚠️ **A BILL AND A NECK — 0555.** *"the space duck needs to be cuter and have a proper bill and not a
+    hamburger mouth, also needs a neck"*. Turned three quarters to the pad, on a neck out of the collar
+    ring, the booth a painter's mess round them (`paintMmxxvi`, `paintBooth`).
   */
   mmxxvi: {
     name: 'MMXXVI',
