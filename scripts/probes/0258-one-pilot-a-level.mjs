@@ -85,8 +85,8 @@ export const PROBES = [
     guard: 'THE LOOP: a charger turns at the back of the player’s box',
     edit: {
       path: 'src/app/frame.ts',
-      find: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {',
-      replace: '        if (outward ? inView >= PLAYER_LEAD - LOOP_TURN_ROOM : e.along <= ship.along) {',
+      find: '        if (outward ? inView >= leadFor(w.view.alongSpan) - LOOP_TURN_ROOM : inView <= PLAYER_ALONG_MARGIN + LOOP_TURN_ROOM) {',
+      replace: '        if (outward ? inView >= leadFor(w.view.alongSpan) - LOOP_TURN_ROOM : e.along <= ship.along) {',
     },
   },
 ];

@@ -35,9 +35,9 @@ export const PROBES = [
       // And by 0380, which threads the breaker's own stream, and by 0384, which threads the mouths, and
       // by 0388, which threads the laser's.
       find:
-        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths);',
+        '      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths, past);',
       replace:
-        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths);',
+        '      throwAttack(head.attack, bullet, kind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths, past);',
     },
   },
   {

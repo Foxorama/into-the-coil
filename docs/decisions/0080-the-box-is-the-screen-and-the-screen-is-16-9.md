@@ -4,6 +4,9 @@
 [`the-third-play-test`](../../reports/the-third-play-test-2026-08-08.md), after
 [0078](0078-the-sky-moves-a-third-faster.md) took the sky's speed.
 
+⚠️ **Superseded in part by [0552](0552-the-box-is-every-screen.md)**: the box is the screen on every
+screen now, not only on 16:9. The floor, the fraction and the letterbox stand.
+
 **Amends [0023](0023-the-long-axis-is-the-scroll-axis.md)** — its clamp, and its *rejected:
 letterboxing to a single authored aspect*. **Takes the trade
 [0074](0074-the-box-is-drawn.md) named and refused.**

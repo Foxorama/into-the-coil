@@ -37,7 +37,7 @@ export const PROBES = [
       path: 'src/sim/camera.ts',
       // ⚠️ Re-anchored by 0338, which made the view a third floor. The break is the same break: the
       // entry pinned to a flat 120, which is inside the player's box on every device.
-      find: '  const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;\n  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);',
+      find: '  const ahead = shipAlong - cameraAlong + FLANK_CLEAR_AIR;\n  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), FLANK_CEILING);',
       replace: '  return FLANK_ALONG;',
     },
   },
@@ -57,8 +57,8 @@ export const PROBES = [
       path: 'src/sim/camera.ts',
       // ⚠️ Re-anchored by 0338. Dropping BOTH floors is still what this breaks — the view's and
       // `FLANK_ALONG`'s — so a player at the back drags every flanker back with them.
-      find: '  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);',
-      replace: '  return Math.min(ahead, MAX_ALONG_SPAN);',
+      find: '  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), FLANK_CEILING);',
+      replace: '  return Math.min(ahead, FLANK_CEILING);',
     },
   },
 ];

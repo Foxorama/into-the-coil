@@ -151,7 +151,7 @@ export const PROBES = [
     guard: '0293 — and it turns only where it hits something',
     edit: {
       path: 'src/app/frame.ts',
-      find: '    const ceiling = PLAYER_LEAD - item.radius;',
+      find: '    const ceiling = leadFor(w.view.alongSpan) - item.radius;',
       replace: '    const ceiling = floor + 6;',
     },
   },

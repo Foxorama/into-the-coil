@@ -19,8 +19,8 @@ export const PROBES = [
     guard: 'THE REPORTED ONE, FOR THE THIRD TIME: a body arriving from the side is first SEEN at the front of the screen',
     edit: {
       path: 'src/sim/camera.ts',
-      find: '  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), MAX_ALONG_SPAN);',
-      replace: '  return Math.min(Math.max(FLANK_ALONG, ahead), MAX_ALONG_SPAN);',
+      find: '  return Math.min(Math.max(FLANK_ALONG, ahead, alongSpan), FLANK_CEILING);',
+      replace: '  return Math.min(Math.max(FLANK_ALONG, ahead), FLANK_CEILING);',
     },
   },
   {

@@ -563,6 +563,12 @@ export function stepBoss(
    * keeps time on it, for the reason the bob keeps time on `pace`.
    */
   pacedAlong: number,
+  /**
+   * How much further this screen's box reaches than the narrowest one's — `boxPastFor` (0552). The
+   * station and every fall that is drawn across the box are moved on by it, so a wider screen is the
+   * same fight with more room behind the ship rather than a boss stood mid-screen.
+   */
+  past: number,
 ): number {
   const phase = phaseFor(row, boss.health, fullHealth);
 
@@ -614,7 +620,7 @@ export function stepBoss(
   const reared = phase.rear;
   const lunge = row.move.kind === 'bob' && row.move.rear > 0 ? row.move.rear * (reared?.lunge ?? 1) : 0;
   const rear = lunge > 0 ? lunge * Math.cos(boss.bobPhase) : 0;
-  const station = cameraAlong + row.station + (reared?.stand ?? 0) + drift + rear;
+  const station = cameraAlong + row.station + past + (reared?.stand ?? 0) + drift + rear;
   /*
     Track it: the ask is how far off station the boss is, capped at the approach rate.
 
@@ -902,7 +908,7 @@ export function stepBoss(
   const fraction = boss.health / (fullHealth > 0 ? fullHealth : row.health);
   // A many-headed boss's volley leaves its first head unless a round says which — 0384, `heads` below.
   boss.muzzleAt = mouths.length > 0 ? 0 : -1;
-  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, phase.cue, mouths);
+  throwAttack(phase.attack ?? row.attack, bullet, bulletKind, boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, phase.cue, mouths, past);
   return direction;
 }
 
@@ -994,6 +1000,8 @@ function throwAttack(
   cue: CueKind | undefined,
   /** The mouths of a many-headed boss, `stepBoss`'s — empty for every other (0384). */
   mouths: Float64Array,
+  /** `stepBoss`'s `past` — 0552. */
+  past: number,
 ): void {
   const speed = bullet.speed * tier.shotSpeed;
   /*
@@ -1222,7 +1230,7 @@ function throwAttack(
       for (let i = 0; i < count; i++) {
         const bolt = bolts.spawn();
         if (bolt === null) break;
-        const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+        const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);
         reset(bolt, along, 0, bullet, RAIN_BOLT_KIND);
         bolt.velAlong = scrollPerStep;
         bolt.fromAlong = 0;
@@ -1288,7 +1296,7 @@ function throwAttack(
       const warning = attack.warning ?? 0;
       const narrowest = ACROSS_SPAN * MIN_ASPECT;
       const centre = roams
-        ? cameraAlong + breakerRng.range(PLAYER_ALONG_MARGIN + attack.span / 2, narrowest - attack.span / 2)
+        ? cameraAlong + breakerRng.range(PLAYER_ALONG_MARGIN + attack.span / 2, narrowest + past - attack.span / 2)
         : boss.along;
       const edge = warning > 0 ? ACROSS_SPAN + bullet.radius * BREAKER_TIP : ACROSS_SPAN + bullet.radius;
       /*
@@ -1478,7 +1486,7 @@ function throwAttack(
       boss.headAt++;
       // ⚠️ AND THE HEAD'S OWN SOUND — 0308. The round is what makes three attacks tellable apart, so it
       // is the one place a per-attack cue was always going to have to be chosen.
-      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths);
+      throwAttack(head.attack, SHOTS[head.shot], SHOT_INDEX[head.shot], boss, row, phase, fraction, tier, ship, shots, cameraAlong, scrollPerStep, bolts, rainRng, breakerRng, beamRng, onCue, head.cue, mouths, past);
       /*
         ⚠️ **AND THE HEAD'S OWN ROOM — 0322.** *"The void balls [need] to be spaced out slightly more
         between the acid sprays."* AFTER the recursion, which is the only place it works: a `sweep` sets
@@ -1607,11 +1615,13 @@ export function belch(
   cameraAlong: number,
   scrollPerStep: number,
   rockRng: Rng,
+  /** `boxPastFor` this view — 0552: a rock falls anywhere the ship can be. */
+  past: number,
 ): void {
   for (let i = 0; i < fall.count; i++) {
     const shot = shots.spawn();
     if (shot === null) break;
-    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);
+    const along = cameraAlong + rockRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);
     reset(shot, along, -rock.radius, rock, kind);
     shot.velAlong = scrollPerStep;
     shot.velAcross = speed;

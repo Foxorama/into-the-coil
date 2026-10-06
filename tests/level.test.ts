@@ -29,8 +29,9 @@ import {
   MIN_ASPECT,
   ROAM_MAX,
   ROAM_MIN,
+  viewOf,
 } from '../src/sim/camera.ts';
-import { SCROLL_PER_STEP, SHIP_SPEED } from '../src/sim/flight.ts';
+import { SCROLL_PER_STEP, SHIP_SPEED, boxPastFor } from '../src/sim/flight.ts';
 import { SPRITE, SPRITE_EXTENT, SPRITE_KINDS } from '../src/content/sprites.ts';
 import { STEPS_PER_SECOND } from '../src/state/screens.ts';
 import { MAX_BARRELS, SPREAD_STEP, UPGRADE_TIERS, weaponFor } from '../src/content/pickups.ts';
@@ -630,6 +631,31 @@ describe('a boss fight can reach all of its phases', () => {
       for (let i = 0; i < 600; i++) frame.step();
       const later = world.bossPool.at(0).along - world.cameraAlong;
       expect(Math.abs(later - BOSSES.sentinel.station), 'the boss drifted out of the camera frame').toBeLessThan(room);
+    });
+
+    it('and on a phone it holds the same place from the screen’s front edge, with the extra room behind the ship', () => {
+      /*
+        ⚠️ **0552.** The box reaches the front of every screen now, so a boss left at its 16:9 station
+        on a 20:9 phone would stand mid-screen with the ship free to fly round the front of it. It is
+        moved on by exactly what the box is — `boxPastFor` — so the fight is the 16:9 fight measured
+        from the front edge, and what a wider screen adds is room behind the ship.
+      */
+      const { world } = playableWorld(soloBoss);
+      world.view = viewOf(915, 412);
+      const past = boxPastFor(world.view.alongSpan);
+      expect(past, 'a 20:9 phone shows no more than 16:9, so this measures nothing').toBeGreaterThan(20);
+      const frame = new GameFrame(world);
+      for (let i = 0; i < 960; i++) {
+        world.fireIn = Number.MAX_SAFE_INTEGER;
+        frame.step();
+      }
+      expect(world.bossPool.size, 'the boss is not on the field').toBe(1);
+      const fromFront = world.view.alongSpan - (world.bossPool.at(0).along - world.cameraAlong);
+      const fromFrontOnTheDesk = viewOf(1920, 1080).alongSpan - BOSSES.sentinel.station;
+      expect(
+        Math.abs(fromFront - fromFrontOnTheDesk),
+        `the boss stands ${fromFront.toFixed(1)} units from a phone's front edge and ${fromFrontOnTheDesk.toFixed(1)} from a 16:9 one`,
+      ).toBeLessThan(BOSSES.sentinel.drift + 2);
     });
 
     it('and it never stops moving along the lane, which is what a fight is', () => {

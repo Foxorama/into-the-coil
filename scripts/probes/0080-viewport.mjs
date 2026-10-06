@@ -17,9 +17,16 @@ export const PROBES = [
       ⚠️ THE REPORTED ONE, restored exactly: the aspect floor back at 1.5. The box goes back to 150
       units against a 16:9 view of 177.8, and the strip the ship cannot enter goes back to a fifth of
       the screen. Nothing about the code looks wrong in this state — it is what shipped.
+
+      ⚠️ **RE-AIMED BY 0552, AND THE RE-AIMING IS THE FINDING.** Since the box is every screen's own
+      (`leadFor`), a lower floor no longer leaves any of a 16:9 screen out of reach — the strip guard
+      stays green because the defect it was written for cannot come back this way, and 0552's own
+      probe breaks the clamp directly. What the floor at 1.5 still breaks is `PLAYER_LEAD` meaning the
+      reference screen's wall: content measured against the narrowest box would be measured against a
+      screen nobody plays on, and the ship on 16:9 flies past it.
     */
-    broke: 'the aspect floor returned to 1.5, so a fifth of the screen stops being playable again',
-    guard: 'THE REPORTED ONE: the strip in front of the wall is a sliver, in pixels of a real screen',
+    broke: 'the aspect floor returned to 1.5, so the narrowest box is no longer the 16:9 screen’s',
+    guard: 'and the ship really is against it, rather than both being wrong in the same place',
     edit: { path: 'src/sim/camera.ts', find: 'export const MIN_ASPECT = REFERENCE_ASPECT;', replace: 'export const MIN_ASPECT = 1.5;' },
   },
   {

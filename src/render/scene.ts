@@ -19,7 +19,7 @@ import { knotOf, opened, type Corridor } from '../sim/corridor.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 // The edge of the box the ship flies in — 0335: the room's walls stand exactly there, which is what
 // makes them a picture of a rule rather than a second one. `sim/` is below `render/` on the ladder.
-import { PLAYER_ALONG_SPAN, PLAYER_MARGIN } from '../sim/flight.ts';
+import { PLAYER_MARGIN, boxPastFor } from '../sim/flight.ts';
 import type { Entity } from '../sim/entity.ts';
 import { BEAM_MAX_POINTS, beamPoints, beamShift, beamT, jag } from '../sim/jag.ts';
 import type { Pool } from '../sim/pool.ts';
@@ -239,7 +239,7 @@ export interface Bound {
   sprite: number;
   /** The tiling period down the lane, in world units. */
   extent: number;
-  /** How far ahead of the camera the edge sits, in world units. */
+  /** How far ahead of the camera the edge sits on the narrowest view, in world units; a wider one adds `boxPastFor` (0552). */
   inView: number;
 }
 
@@ -947,7 +947,7 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
       shows, the frame is the same picture on every device: the far side framed, the near side open.
       Every piece moves AWAY from the ship, so the picture of the bound is still outside the bound.
     */
-    const past = Math.max(0, view.alongSpan - PLAYER_ALONG_SPAN);
+    const past = boxPastFor(view.alongSpan);
     for (let i = 0; i < pieces.length; i++) {
       const piece = pieces[i]!;
       const along = room.rest + piece.along + past + (piece.far ? room.open * ROOT_WITHDRAW : 0) - cameraAlong;
@@ -970,9 +970,11 @@ function paintRoom(surface: Surface, view: View, room: Room | null, cameraAlong:
   */
   const near = PLAYER_MARGIN - half;
   const far = ACROSS_SPAN - PLAYER_MARGIN + half;
-  paintWalls(surface, view, room.sprite, room.extent, room.from, room.to, near, far, cameraAlong, NO_PASSAGES);
+  // ⚠️ `room.to` is the narrowest view's wall, and this view's box reaches `boxPastFor` further — 0552.
+  const to = room.to + boxPastFor(view.alongSpan);
+  paintWalls(surface, view, room.sprite, room.extent, room.from, to, near, far, cameraAlong, NO_PASSAGES);
   // And the far wall across the lane, its own face at the forward edge of the box, corner to corner.
-  const endInView = room.to - cameraAlong + half;
+  const endInView = to - cameraAlong + half;
   if (endInView > view.alongSpan + room.extent || endInView < -room.extent) return;
   const down = Math.ceil((ACROSS_SPAN + room.extent) / room.extent);
   /*
@@ -1083,10 +1085,12 @@ function paintCorridor(surface: Surface, view: View, corridor: Corridor | null, 
 function paintBound(surface: Surface, view: View, bound: Bound | null): void {
   if (bound === null || bound.extent <= 0) return;
   const count = Math.ceil(view.acrossSpan / bound.extent);
+  // The narrowest view's wall, moved on to this view's — 0552, the same sum the clamp makes.
+  const inView = bound.inView + boxPastFor(view.alongSpan);
   for (let i = 0; i < count; i++) {
     // Centred, because `blit` centres — half a period on from the mark's own edge.
     const across = i * bound.extent + bound.extent / 2;
-    surface.blit(bound.sprite, screenX(view, bound.inView, across), screenY(view, bound.inView, across), view.scale);
+    surface.blit(bound.sprite, screenX(view, inView, across), screenY(view, inView, across), view.scale);
   }
 }
 

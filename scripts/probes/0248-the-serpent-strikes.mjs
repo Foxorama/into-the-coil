@@ -66,8 +66,8 @@ export const PROBES = [
     guard: 'THE RAIN: a volley draws its warning lines first',
     edit: {
       path: 'src/app/boss.ts',
-      find: '        const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);',
-      replace: '        const along = cameraAlong + PLAYER_LEAD + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD);',
+      find: '        const along = cameraAlong + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);',
+      replace: '        const along = cameraAlong + PLAYER_LEAD + past + rainRng.range(PLAYER_ALONG_MARGIN, PLAYER_LEAD + past);',
     },
   },
   {

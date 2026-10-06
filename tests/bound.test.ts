@@ -224,6 +224,42 @@ describe('how much of the screen the player owns', () => {
     ).toBeLessThan(0.1);
   });
 
+  /*
+    ⚠️ **AND ON EVERY SCREEN, NOT THE 16:9 ONE — 0552.** *"On mobile tho it's now a good third of the
+    screen is visible dead space."* The guard above was only ever asked at 1280×720, which is the one
+    aspect where the box and the view were the same rectangle; a 20:9 phone's strip was 25%, and a
+    1080p browser window under the desktop's bar 24%, while it stayed green. Each camera here is a real
+    screen in CSS pixels, flown by the real frame and drawn by the real painter.
+  */
+  it.each([
+    ['a 1080p browser window', 1920, 870],
+    ['a 1440p browser window', 2560, 1230],
+    ['a 19.5:9 phone', 844, 390],
+    ['a 20:9 phone', 915, 412],
+    ['a 21:9 phone', 960, 411],
+  ] as const)('ON %s TOO: the strip in front of the wall is a sliver, and the wall is drawn where the ship stops (%i×%i)', (_name, width, height) => {
+    const { recorder, frame, world } = pushingForward(width, height);
+    for (let i = 0; i < 600; i++) frame.step();
+    frame.draw(0);
+    const shipPx = (world.ship.along - world.cameraAlong) * world.view.scale + world.view.gutterAlong;
+    const edgePx = width - world.view.gutterAlong;
+    const strip = (edgePx - shipPx) / width;
+    expect(strip, 'the ship is off the leading edge, so this measures nothing').toBeGreaterThan(0);
+    expect(
+      strip,
+      `${(strip * 100).toFixed(1)}% of a ${width}×${height} screen ahead of the ship is playfield it cannot enter`,
+    ).toBeLessThan(0.1);
+    const ship = recorder.blits.find((b) => b.sprite === SPRITE.fighter);
+    const marks = marksOf(recorder);
+    expect(ship, 'the ship was not drawn, so this measures nothing').toBeDefined();
+    expect(marks.length, 'the boundary was not drawn at all').toBeGreaterThan(0);
+    const hullPx = SHIPS.fighter.radius * world.view.scale;
+    expect(
+      Math.abs(ship!.x - marks[0]!.x),
+      `the ship stops ${Math.abs(ship!.x - marks[0]!.x).toFixed(1)}px from the line that says where it stops`,
+    ).toBeLessThanOrEqual(hullPx);
+  });
+
   it('and the trailing edge gives up the same share, because the box is the view’s own shape', () => {
     // The other half of *"correctly be a rectangle"*: an inset that is generous at one end and mean
     // at the other is a box that is not the shape of the thing it sits in.
