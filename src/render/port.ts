@@ -48,13 +48,17 @@ import {
 } from '../content/port.ts';
 import { KEEPERS, type KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { RIMS } from '../content/rims.ts';
+import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
 import { SPRITE_EXTENT } from '../content/sprites.ts';
 import { STEPS_PER_SECOND } from '../state/screens.ts';
 import { ACROSS_SPAN, type View } from '../sim/camera.ts';
 import { SCROLL_PER_STEP } from '../sim/flight.ts';
 import { paintSky, type Sky } from './scene.ts';
 import { screenX, screenY, type Surface } from './surface.ts';
+
+/** The pad's wheel pictures, in the order a rim shows its own — 0557. */
+// @setup: three indices for the lifetime of the module.
+const BLUE_WHEELS: readonly number[] = [PORT_SPRITE.blueWheel0, PORT_SPRITE.blueWheel1, PORT_SPRITE.blueWheel2];
 
 /** How much bigger than its box a tile is blitted, so the seam between two can never show the space behind. */
 const TILE_OVERLAP = 1.03;
@@ -158,19 +162,21 @@ export function paintStand(surface: Surface, view: View, t: number, sky: Sky, sh
   const across = STAGE.blueRide + blueBobAt(t);
   paintBlue(surface, view, t, STAGE.bluePad, across, 0, Number.POSITIVE_INFINITY, size);
   /*
-    A car on a rim that turns turns it on the pad, as it does in the fight (0527, `stepWheels`): the
-    spinner over each tyre its row names, swelled to that tyre, front and back at the rim's own rates.
+    A car on a rim that moves moves it on the pad, as it does in the fight (0527, `stepWheels`): the rim's
+    picture over each tyre its row names, swelled to that tyre — the spinners rolling front and back at
+    their own rates, the lightning striking a new crack each flash (0557). Its pictures are baked off the
+    fitted rim into `BLUE_WHEELS` (`bakePortShip`).
   */
   const wheels = ship.wheels;
-  const rates = wheels === null ? null : RIMS[wheels.rim].turn;
-  if (wheels !== null && rates !== null) {
+  const wheel = wheels === null ? null : RIMS[wheels.rim].wheel;
+  if (wheels !== null && wheel !== null) {
     const unit = HANGAR_SCALE * size;
     const swell = (wheels.radius / (SPRITE_EXTENT.spinnerWheel * 0.42)) * size;
     const seconds = t / STEPS_PER_SECOND;
     for (let i = 0; i < wheels.at.length; i++) {
       const at = wheels.at[i]!;
-      const turn = ((Math.PI * 2 * seconds) / (i === 0 ? rates[0] : rates[1])) % (Math.PI * 2);
-      put(surface, view, PORT_SPRITE.blueWheel, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, turn, swell);
+      const sprite = BLUE_WHEELS[wheelFrame(wheel, i, seconds)]!;
+      put(surface, view, sprite, STAGE.bluePad + at.along * unit, across + at.across * unit, 1, wheelTurn(wheel, i, seconds), swell);
     }
   }
   paintEdge(surface, view);

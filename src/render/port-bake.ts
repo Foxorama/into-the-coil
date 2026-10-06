@@ -23,6 +23,7 @@ import type { GolferRow } from '../content/golfers.ts';
 import { makeRng } from '../sim/rng.ts';
 import { bakeGlyph, bakeSize, disc, drawPlayerShip, fitNow, flameInks, glow, gunNow, mix, paintMountAt, paintRaygun, poly, raygunProfile, rgba, shade, trace, type Atlas, type Frame, type Pt } from './bake.ts';
 import { CADDIE_DISC, SHIPS, type ShipKind } from '../content/ships.ts';
+import { RIMS } from '../content/rims.ts';
 import { FIGHTER_HULL, SHIP_BOX } from '../content/sprites.ts';
 
 /** A flame's length and width against the fight's box, where they were against the fighter's hull. */
@@ -96,6 +97,17 @@ export function withTheGame(port: Atlas, game: Atlas): Atlas {
     // The game's lights at the game's indices — 0520. The port's own pieces are all body.
     light: [...port.bitmaps.map(() => false), ...(game.light ?? game.bitmaps.map(() => false))],
   };
+}
+
+/**
+ * The `n`th picture the pilot's fitted rim shows over a wheel, at hangar size — 0557. A rim with fewer
+ * pictures repeats its last, and a rim baked still bakes the spinner, which no car on it ever draws.
+ */
+function bakeWheel(n: number, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {
+  const rim = fitNow(pilot.ship).rim;
+  const wheel = rim === null ? null : RIMS[rim].wheel;
+  const frame = wheel === null ? null : wheel.frames[Math.min(n, wheel.frames.length - 1)]!;
+  return bakeGlyph(frame === null ? 'spinnerWheel' : frame.base, palette, pixelsPerUnit * HANGAR_SCALE);
 }
 
 function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilot: GolferRow): HTMLCanvasElement {
@@ -180,8 +192,12 @@ function bakePiece(kind: PortKind, palette: Palette, pixelsPerUnit: number, pilo
       over each tyre of a car on a rim that turns (`paintStand`), as the card turned it until the port stood
       behind the tab.
     */
-    case 'blueWheel':
-      return bakeGlyph('spinnerWheel', palette, pixelsPerUnit * HANGAR_SCALE);
+    case 'blueWheel0':
+      return bakeWheel(0, palette, pixelsPerUnit, pilot);
+    case 'blueWheel1':
+      return bakeWheel(1, palette, pixelsPerUnit, pilot);
+    case 'blueWheel2':
+      return bakeWheel(2, palette, pixelsPerUnit, pilot);
     // 0542: Cosmo's bust, the portrait's own drawing (`src/render/cosmo-art.ts`), behind the stall's counter.
     case 'cosmo':
       paintCosmo(ctx, palette, size);
@@ -536,7 +552,9 @@ function paintPiece(ctx: CanvasRenderingContext2D, kind: PortKind, palette: Pale
     case 'viperBurn':
     case 'viperFlare':
     case 'viperSurge':
-    case 'blueWheel':
+    case 'blueWheel0':
+    case 'blueWheel1':
+    case 'blueWheel2':
     case 'cosmo':
     case 'unity':
     case 'mmxxvi':

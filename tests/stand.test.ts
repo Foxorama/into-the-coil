@@ -13,7 +13,8 @@ import { SKY } from '../src/app/mount.ts';
 import { paintStand, standViewInto } from '../src/render/port.ts';
 import type { Surface } from '../src/render/surface.ts';
 import { MAX_ASPECT, viewOf } from '../src/sim/camera.ts';
-import { SCREENS, SCREEN_KINDS } from '../src/state/screens.ts';
+import { SCREENS, SCREEN_KINDS, STEPS_PER_SECOND } from '../src/state/screens.ts';
+import { RIMS, WHEEL_FRAMES } from '../src/content/rims.ts';
 
 interface Blit {
   sprite: number;
@@ -56,6 +57,10 @@ function drawStand(screen: (typeof STANDING)[number], width: number, height: num
 }
 
 const all = (blits: readonly Blit[], kind: PortKind): Blit[] => blits.filter((b) => b.sprite === PORT_SPRITE[kind]);
+
+/** Every picture laid over a wheel on the pad, whichever of a rim's it is — 0557. */
+const WHEEL_SPRITES: readonly number[] = PORT_KINDS.filter((kind) => kind.startsWith('blueWheel')).map((kind) => PORT_SPRITE[kind]);
+const wheelsOn = (blits: readonly Blit[]): Blit[] => blits.filter((b) => WHEEL_SPRITES.includes(b.sprite));
 
 describe('0540 — the hangar’s tabs stand in the port', () => {
   it('stands every tab in the room with the Viper gone, the beacons dark, the door shut and nobody running', () => {
@@ -115,14 +120,43 @@ describe('0540 — the hangar’s tabs stand in the port', () => {
 
   it('turns a car’s spinners on the pad, each at its rim’s own rate, and draws no spinner on a rim that is still', () => {
     const spinning = fitted(SHIPS.firebird, SHIPS.firebird.weapon, 'spinner');
-    const before = all(drawStand('parts', 1280, 720, 0, spinning), 'blueWheel');
-    const after = all(drawStand('parts', 1280, 720, 7, spinning), 'blueWheel');
+    const before = wheelsOn(drawStand('parts', 1280, 720, 0, spinning));
+    const after = wheelsOn(drawStand('parts', 1280, 720, 7, spinning));
     expect(before, 'the spinners are not over both tyres').toHaveLength(SHIPS.firebird.wheels!.at.length);
     for (let i = 0; i < before.length; i++) {
       expect(after[i]!.turn, `spinner ${i} is not turning`).not.toBeCloseTo(before[i]!.turn, 3);
+      expect(after[i]!.sprite, `spinner ${i} changed its picture, and it has one`).toBe(before[i]!.sprite);
     }
-    expect(all(drawStand('parts', 1280, 720, 0, SHIPS.firebird), 'blueWheel'), 'a spinner is drawn over a rim that does not turn').toEqual([]);
-    expect(all(drawStand('parts', 1280, 720, 0, SHIPS.fighter), 'blueWheel'), 'a spinner is drawn on a ship with no wheels').toEqual([]);
+    expect(wheelsOn(drawStand('parts', 1280, 720, 0, SHIPS.firebird)), 'a spinner is drawn over a rim that does not turn').toEqual([]);
+    expect(wheelsOn(drawStand('parts', 1280, 720, 0, SHIPS.fighter)), 'a spinner is drawn on a ship with no wheels').toEqual([]);
+  });
+
+  it('0557 — the Thunderbolt’s lightning crackles on the pad: a new crack every sixteenth of a second, struck somewhere new', () => {
+    /*
+      Played: *"they just look like a teal bar … make them crackle like lightning"*. Held in what the player
+      sees: in one second on the pad, every one of the rim's cracks lands on each wheel, the picture is
+      never the same two flashes running, and the two wheels are never showing one crack at one angle.
+    */
+    const wheel = RIMS.bolts.wheel!;
+    expect(WHEEL_SPRITES.length, 'the pad bakes fewer wheel pictures than a rim shows in turn').toBeGreaterThanOrEqual(WHEEL_FRAMES);
+    const seen = [new Set<number>(), new Set<number>()];
+    let last: Blit[] | null = null;
+    // A step at a time through one second: a flash is about four steps, so every flash is read.
+    for (let t = 0; t < STEPS_PER_SECOND; t++) {
+      const now = wheelsOn(drawStand('parts', 1280, 720, t, SHIPS.thunderbolt));
+      expect(now, 'the lightning is not over both tyres').toHaveLength(2);
+      expect(now[0]!.sprite === now[1]!.sprite && Math.abs(now[0]!.turn - now[1]!.turn) < 1e-6, `both wheels strike one crack at one angle at step ${t}`).toBe(false);
+      for (let i = 0; i < 2; i++) seen[i]!.add(now[i]!.sprite);
+      if (last !== null) {
+        for (let i = 0; i < 2; i++) {
+          const held = last[i]!.sprite === now[i]!.sprite && Math.abs(last[i]!.turn - now[i]!.turn) < 1e-6;
+          const flashed = last[i]!.sprite !== now[i]!.sprite && Math.abs(last[i]!.turn - now[i]!.turn) > 0.5;
+          expect(held || flashed, `wheel ${i} at step ${t} neither held its crack nor struck a new one somewhere else`).toBe(true);
+        }
+      }
+      last = now;
+    }
+    for (let i = 0; i < 2; i++) expect(seen[i]!.size, `wheel ${i} showed ${seen[i]!.size} of the ${wheel.frames.length} cracks in a second`).toBe(wheel.frames.length);
   });
 
   /*

@@ -89,8 +89,8 @@ import type { EnemyKind, EnemyRow } from '../content/enemies.ts';
 import { ROWS_OF } from '../content/arms.ts';
 import type { KeeperKind } from '../content/keepers.ts';
 import type { ShipRow } from '../content/ships.ts';
-import { RIMS } from '../content/rims.ts';
-import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, SHIELD_ORBIT, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
+import { RIMS, wheelFrame, wheelTurn } from '../content/rims.ts';
+import { DICE, INVULN_STEPS, SHIELD_LAYOUT, SHIELD_MARK, SHIELD_ANGLES, shellOrbit, fullHealthFor, hullFor, openingHealthFor, shieldsOf, tubeOf } from '../content/ships.ts';
 import { SHOTS, SHOT_INDEX, SHOT_ROWS, type Fuse, type ShotKind, type ShotRow } from '../content/shots.ts';
 import { BURST, DEBRIS, DEBRIS_BY_KIND, DEBRIS_KIND, DEBRIS_ROWS, type DebrisKind } from '../content/debris.ts';
 import { FORMATIONS, gapAcross, streamOffset, type FormationKind, type FormationRow } from '../content/formations.ts';
@@ -5220,8 +5220,10 @@ function stepShields(w: World): void {
     // Carried by hand, because nothing else steps this pool — and the renderer interpolates from it.
     orb.prevAlong = orb.along;
     orb.prevAcross = orb.across;
-    orb.along = w.ship.along + Math.cos(angle) * SHIELD_ORBIT;
-    orb.across = w.ship.across + Math.sin(angle) * SHIELD_ORBIT;
+    // 0557: at the shell's own orbit, which the bake curved the plate round.
+    const orbit = shellOrbit(w.shipRow.shield);
+    orb.along = w.ship.along + Math.cos(angle) * orbit;
+    orb.across = w.ship.across + Math.sin(angle) * orbit;
   }
 }
 
@@ -5243,8 +5245,8 @@ const SPINNER_RADIUS = SPRITE_EXTENT.spinnerWheel * 0.42;
  */
 function stepWheels(w: World): void {
   const wheels = w.shipRow.wheels;
-  const rates = wheels === null ? null : RIMS[wheels.rim].turn;
-  if (wheels === null || rates === null || w.shipPool.size === 0) {
+  const row = wheels === null ? null : RIMS[wheels.rim].wheel;
+  if (wheels === null || row === null || w.shipPool.size === 0) {
     w.wheels.clear();
     return;
   }
@@ -5254,10 +5256,18 @@ function stepWheels(w: World): void {
     reset(wheel, w.ship.along, w.ship.across, WHEEL_BODY);
   }
   const hurt = w.ship.sprite === w.ship.spriteHit;
-  const sprite = hurt ? SPRITE.spinnerWheelHit : SPRITE.spinnerWheel;
+  /*
+    0557: on the run's own clock, read by the rim's row as the pad reads it (`wheelFrame`, `wheelTurn`) —
+    a roll interpolated between steps like any turn, and a strike NOT: a crack that lands somewhere new
+    is there at once, where a turn swept between two would be a wheel spinning through it.
+  */
+  const now = (w.steps * STEP_MS) / 1000;
+  const was = ((w.steps - 1) * STEP_MS) / 1000;
   for (let i = 0; i < w.wheels.size; i++) {
     const wheel = w.wheels.at(i);
     const at = i === 0 ? wheels.at[0] : wheels.at[1];
+    const frame = row.frames[wheelFrame(row, i, now)]!;
+    const sprite = SPRITE[hurt ? frame.hit : frame.base];
     wheel.sprite = sprite;
     wheel.spriteBase = sprite;
     wheel.spriteHit = sprite;
@@ -5266,9 +5276,10 @@ function stepWheels(w: World): void {
     wheel.prevAcross = wheel.across;
     wheel.along = w.ship.along + at.along;
     wheel.across = w.ship.across + at.across;
-    wheel.prevTurn = wheel.turn;
-    const next = wheel.turn + (TAU * STEP_MS) / ((i === 0 ? rates[0] : rates[1]) * 1000);
-    wheel.turn = next > Math.PI ? next - TAU : next;
+    const turn = wheelTurn(row, i, now);
+    const struck = row.hold > 0 && Math.floor(now / row.hold) !== Math.floor(was / row.hold);
+    wheel.prevTurn = struck ? turn : wheelTurn(row, i, was);
+    wheel.turn = turn;
   }
 }
 

@@ -145,8 +145,8 @@ export interface ShipRow extends Body {
   /**
    * The deflector shell this ship wears — `docs/decisions/0492-the-shields-wear-the-ship.md`. The
    * readout wore the ship since 0451 and the shell round the hull did not: one honeycomb in the
-   * player's ink for all four. What it DOES is not here — the orbit, the places and the layout are
-   * one for every ship, so a shield is a shield — only what it looks like.
+   * player's ink for all four. What it DOES is not here — the places and the layout are one for every
+   * ship, so a shield is a shield — only what it looks like, and since 0557 how far out it stands.
    */
   shield: ShieldShell;
 }
@@ -169,6 +169,12 @@ export type ShieldLook = 'honeycomb' | 'bubble' | 'plumes' | 'lattice' | 'storm'
 export interface ShieldShell {
   readonly look: ShieldLook;
   readonly places: readonly [ShieldFrames, ShieldFrames, ShieldFrames, ShieldFrames];
+  /**
+   * How far from the ship's centre this shell stands, in world units, when not `SHIELD_ORBIT` — 0557.
+   * Played: *"the lightning shield cosmetic needs to be positioned slightly further away from the
+   * spaceship because it overwhelms the ship itself"*. Read through `shellOrbit`, which holds the default.
+   */
+  readonly orbit?: number;
 }
 
 export type ShieldFrames = readonly [number, number, number];
@@ -648,9 +654,10 @@ export const SHIPS: Record<ShipKind, ShipRow> = {
     wheels: { at: [wheelAt(12.6, 6.4, 0, 1), wheelAt(-11, 6.4, 0, 1)], radius: 3.8 * PREDECESSOR_UNIT, rim: 'bolts' },
     // 0545: a cyan bolt down its tank, the Marmot's paw in gold, gold pinstripes.
     arts: ['boltTank', 'pawprint', 'pinstripes'],
-    // A cage of forked lightning — 0545.
+    // A cage of forked lightning — 0545. 0557: a unit and a half further out than the rest, clear of the bike.
     shield: {
       look: 'storm',
+      orbit: 7.1,
       places: [
         [SPRITE.shieldStorm0a, SPRITE.shieldStorm0b, SPRITE.shieldStorm0c],
         [SPRITE.shieldStorm120a, SPRITE.shieldStorm120b, SPRITE.shieldStorm120c],
@@ -691,6 +698,14 @@ export const MAX_SHIELDS = 3;
  * it is here rather than in `src/app/frame.ts` since 0430 because the plates are baked round it too.
  */
 export const SHIELD_ORBIT = 5.6;
+
+/**
+ * Where `shell` stands from the ship's centre — its own orbit, or `SHIELD_ORBIT` — 0557. Read by the
+ * frame that places the plates and the bake that curves them, so the two cannot disagree.
+ */
+export function shellOrbit(shell: ShieldShell): number {
+  return shell.orbit ?? SHIELD_ORBIT;
+}
 
 /**
  * Where a plate of the deflector shell may stand, in radians from the nose —
