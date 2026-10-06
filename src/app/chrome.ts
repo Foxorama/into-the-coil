@@ -1641,10 +1641,18 @@ ${banded((p) => `.${p}option-shut.${p}option-look`)} { opacity: 0.8; }
 .itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before {
   content: '✓';
   position: absolute;
-  left: 0.3em;
-  top: 0.1em;
-  font-size: 0.75em;
+  left: -0.45em;
+  top: -0.55em;
+  width: 1.3em;
+  height: 1.3em;
+  line-height: 1.3em;
+  text-align: center;
+  border-radius: 50%;
+  font-size: 0.7em;
   font-weight: 800;
+  background: var(--itc-ink);
+  color: var(--itc-void);
+  box-shadow: 0 0 0 2px var(--itc-void);
 }
 ${banded((p) => `.${p}band-refused`)} { animation: itc-refused 0.32s ease-out; }
 @keyframes itc-refused {
@@ -1917,7 +1925,70 @@ ${faced((p) => `.${p}pilot-line > * + *::before`)} { content: '·'; margin: 0 0.
   height, each tab's plate stood at another size, and the strip on its head jumped up and down the screen
   as the tabs were stepped. The strip is at the top now and Back at the foot, wherever a tab's bands end.
 */
-.itc-hangar-plate > .itc-hangar-choices, .itc-parts-plate > .itc-parts-choices, .itc-shop-plate > .itc-shop-choices { margin-top: auto; }
+.itc-hangar-plate > .itc-hangar-foot, .itc-parts-plate > .itc-parts-foot, .itc-shop-plate > .itc-shop-foot { margin-top: auto; }
+/*
+  ── THE PLATE'S FOOT — 0562 ────────────────────────────────────────────────────────────────────────
+
+  The focus card across the plate, and under it the keys on the left, then the balance and the actions on
+  the right. The card is the biggest type on the plate after the tabs: the option's name, what it is,
+  and what it is to the player. Each band's own line under itself is not drawn on a stand any more; it
+  is kept for a reader and for the card to be read against.
+*/
+/*
+  One row: the card on the left, the balance and the actions beside it and the keys under those. Stacked,
+  card over balance over Back, the foot was three lines high, and on CI's wider letters it put Paint &
+  Parts' plate three pixels past the others at 1280x720.
+*/
+.itc-hangar-foot, .itc-parts-foot, .itc-shop-foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas: 'focus sheet choices' 'focus glyphs glyphs';
+  align-items: center;
+  gap: 0.25em 0.7em;
+}
+.itc-hangar-focus, .itc-parts-focus, .itc-shop-focus {
+  grid-area: focus;
+  justify-self: stretch;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: 'eyebrow name state' 'said said said';
+  align-items: baseline;
+  align-content: center;
+  gap: 0.15em 0.6em;
+  padding: 0.4em 0.8em;
+  border-radius: 0.5em;
+  background: color-mix(in srgb, var(--itc-ink) 7%, transparent);
+  border-left: 3px solid var(--itc-ink);
+  min-width: 0;
+}
+.itc-hangar-focus-shut, .itc-parts-focus-shut, .itc-shop-focus-shut { border-left-style: dashed; }
+.itc-hangar-focus-eyebrow, .itc-parts-focus-eyebrow, .itc-shop-focus-eyebrow { grid-area: eyebrow; font-size: 0.62em; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; opacity: 0.7; }
+.itc-hangar-focus-name, .itc-parts-focus-name, .itc-shop-focus-name { grid-area: name; font-size: 1.1em; font-weight: 800; min-width: 0; line-height: 1.15; }
+.itc-hangar-focus-state, .itc-parts-focus-state, .itc-shop-focus-state { grid-area: state; font-size: 0.75em; font-weight: 700; text-align: right; opacity: 0.9; }
+.itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { grid-area: said; font-size: 0.78em; font-weight: 400; opacity: 0.85; }
+.itc-hangar-glyphs:empty, .itc-parts-glyphs:empty, .itc-shop-glyphs:empty { display: none; }
+/* Not on the shortest screens, where the line was the four pixels that made Cosmo's scroll at 480x320. */
+@container (max-height: 360px) {
+  .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
+}
+.itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { grid-area: glyphs; justify-self: end; text-align: right; font-size: 0.62em; font-weight: 700; letter-spacing: 0.04em; opacity: 0.6; min-width: 0; }
+.itc-hangar-foot > .itc-hangar-sheet, .itc-parts-foot > .itc-parts-sheet, .itc-shop-foot > .itc-shop-sheet { grid-area: sheet; }
+.itc-hangar-foot > .itc-hangar-choices, .itc-parts-foot > .itc-parts-choices, .itc-shop-foot > .itc-shop-choices { grid-area: choices; }
+.itc-hangar-band-hint, .itc-parts-band-hint, .itc-shop-band-hint { display: none; }
+/*
+  ── THE PLATE GROWS WITH THE SCREEN — 0562 ──────────────────────────────────────────────────────────
+
+  The plate's type was capped at a laptop's, so at 1920x1080 it was the 1280x720 plate with half of it
+  empty. Its em now runs with the short side past the cap, to a ceiling, and the plate's spacing is in
+  its em, so the whole plate is a larger copy rather than a small one with air under it.
+*/
+.itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { font-size: clamp(0.85rem, max(min(5.4cqh, 1.25rem), 2.5cqh), 2.2rem); }
+.itc-hangar-plate, .itc-parts-plate, .itc-shop-plate { padding: min(0.8em, 2.4cqh) min(0.9em, 2cqw); gap: min(0.5em, 1.4cqh); }
+/* On a screen much wider than it is tall, the plate stops growing across and the stand takes the rest. */
+@container (min-aspect-ratio: 19/9) {
+  .itc-hangar-panel, .itc-parts-panel, .itc-shop-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 40em); }
+}
 /*
   0548: the shoulders that step the tabs, at the strip's two ends while a pad is in hand — set apart from
   the tabs, in a key's frame, so they read as what to press and never as a fourth tab.
@@ -2145,7 +2216,8 @@ ${each('-tab:focus-visible')}, ${each('-band:focus-visible')} { outline: 3px sol
   set back. The open tab is still the screen's name (0458), so the plate has no heading of its own.
 */
 .itc-hangar-tabs, .itc-parts-tabs, .itc-shop-tabs {
-  font-size: clamp(0.75rem, min(1.7cqw, 4.2cqh), 1.15rem);
+  /* 0562: in the plate's em, so the strip grows with the plate; the width still holds it on a phone. */
+  font-size: max(0.75rem, min(0.92em, 1.7cqw, 4.2cqh));
   gap: 0.3em;
   justify-content: flex-start;
   border-bottom: 2px solid color-mix(in srgb, var(--itc-ally, var(--itc-ink)) 60%, var(--itc-ink));
@@ -2445,6 +2517,21 @@ ${each('-band[hidden]')} { display: none; }
   .itc-hangar-band:not(.itc-hangar-band-faces) .itc-hangar-band-hint, .itc-parts-band:not(.itc-parts-band-faces) .itc-parts-band-hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   /* The balance a step smaller on a phone, in the stand's corner where it stands on a desktop (0539). */
   .itc-hangar-sheet, .itc-parts-sheet, .itc-shop-sheet { font-size: 0.8em; }
+  /* 0562: the card in one line on a phone — the option and what it is to the player; the rest is the band's. */
+  .itc-hangar-focus, .itc-parts-focus, .itc-shop-focus { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'name' 'state'; padding: 0.2em 0.5em; font-size: 0.8em; }
+  .itc-hangar-focus-state, .itc-parts-focus-state, .itc-shop-focus-state { text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-hangar-focus-eyebrow, .itc-parts-focus-eyebrow, .itc-shop-focus-eyebrow, .itc-hangar-focus-said, .itc-parts-focus-said, .itc-shop-focus-said { display: none; }
+  .itc-hangar-focus-name, .itc-parts-focus-name, .itc-shop-focus-name { font-size: 1em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .itc-hangar-foot, .itc-parts-foot, .itc-shop-foot { gap: 0.3em 0.5em; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'focus focus' 'sheet choices'; }
+  /*
+    On Cosmo's the card would say only the name the lit ware already says, and its line is the height the
+    shelf needs: CI's wider letters put the shop's plate twelve pixels past the others at 667x375 with it.
+  */
+  .itc-shop-focus { display: none; }
+  .itc-shop-foot { grid-template-areas: 'sheet choices'; }
+  .itc-hangar-glyphs, .itc-parts-glyphs, .itc-shop-glyphs { display: none; }
+  /* 0561's tick stands down on a phone, where a band shows one option and its fill already says it is fitted. */
+  .itc-hangar-option-on:not(.itc-hangar-option-face)::before, .itc-parts-option-on:not(.itc-parts-option-face)::before { display: none; }
   /*
     The pilot card on a phone: the ship smaller beside the words, and the line about who they are kept
     to the lines it needs — 0513. The height is the axis that ran out on every phone this screen has met.
@@ -3310,11 +3397,35 @@ interface Panel {
   dash: HTMLElement | null;
   /** The keeper behind the counter, their card on the plate and the line they are saying — 0542. `null` with no counter. */
   keeper: { root: HTMLElement; line: HTMLElement } | null;
+  /**
+   * The focus card at the plate's foot — 0562: what the band the cursor is on, or was last on, has under
+   * it, said large in one place. `null` off a stand.
+   */
+  focus: FocusCard | null;
+  /** The band the focus card speaks for: the one the cursor is on, or the last one it was on. */
+  spoken: Band | null;
+  /** 0562: the keys that do things here, in the hand's words, or `null` off a stand. */
+  glyphs: HTMLElement | null;
+}
+
+/** The focus card's four lines — 0562. */
+interface FocusCard {
+  root: HTMLElement;
+  /** The band's name, small, over the option. */
+  eyebrow: HTMLElement;
+  /** The option itself, large. */
+  name: HTMLElement;
+  /** What it is. */
+  said: HTMLElement;
+  /** What it is to the player: fitted, how to fit it, what opens it, what it costs. */
+  state: HTMLElement;
 }
 
 /** One choice, drawn as a band — 0458. */
 interface Band {
   name: ChoiceName;
+  /** What the row calls it — the focus card's eyebrow (0562). */
+  label: string;
   /**
    * Which options may be landed on — 0521. Every one, until `setOpen` shuts some: a hangar slot the
    * ship has not been won in for.
@@ -3934,6 +4045,12 @@ export type GuideDevice = 'keyboard' | 'pad' | 'touch';
 const GUIDE_DEVICES: readonly GuideDevice[] = ['keyboard', 'pad', 'touch'];
 /** How an option tried on is fitted, in the words of the hand holding the game — 0561. */
 const FITS: Record<GuideDevice, string> = { keyboard: 'Enter or a click fits it', pad: 'A fits it', touch: 'tap it to fit it' };
+/** The keys that do things on a plate, in the hand's words — 0562. Touch has none to name. */
+const GLYPHS: Record<GuideDevice, string> = {
+  keyboard: '← → try · Enter {verb} · Esc back · Q E tabs',
+  pad: '◀ ▶ try · Ⓐ {verb} · Ⓑ back · LB RB tabs',
+  touch: '',
+};
 const GUIDE_DEVICE_LABELS: Record<GuideDevice, string> = { keyboard: 'Keyboard', pad: 'Pad', touch: 'Touch' };
 /** The standard mapping's face buttons by index, as an Xbox-style pad prints them. */
 const PAD_FACE_NAMES: readonly string[] = ['A', 'B', 'X', 'Y'];
@@ -4700,9 +4817,11 @@ export function makeChrome(
     if (screen === 'cleared' || screen === 'victory' || screen === 'gameOver' || screen === 'ended' || screen === 'hangar' || screen === 'parts' || screen === 'shop') {
       sheet = document.createElement('div');
       sheet.className = prefix + 'sheet';
-      // 0539: on the stand, in its top corner — the corner the readout came down from.
-      if (stand !== null) stand.insertBefore(sheet, dash);
-      else panel.appendChild(sheet);
+      /*
+        0562: on a stand, in the plate's foot beside the actions — Buy is what spends it, and the balance
+        stood a screen away from it, in the stand's top corner where 0539 put it. Placed with the foot below.
+      */
+      if (stand === null) panel.appendChild(sheet);
     }
 
     /*
@@ -4816,7 +4935,37 @@ export function makeChrome(
       if (crossing !== null) panel.appendChild(crossing.root);
       // 0458: the bands above the actions, which is the order the cursor walks them in.
       host.appendChild(settingsBox);
-      host.appendChild(choices);
+      if (plate === null) host.appendChild(choices);
+    }
+    /*
+      ── THE PLATE'S FOOT — 0562 ──────────────────────────────────────────────────────────────────────
+
+      The focus card across it, and under the card the keys, the balance and the actions. The card says
+      in one place what each band said in a small line under itself, which moved as the cursor did; the
+      balance stands beside Buy, which spends it.
+    */
+    let focus: FocusCard | null = null;
+    let glyphs: HTMLElement | null = null;
+    if (plate !== null) {
+      const foot = document.createElement('div');
+      foot.className = prefix + 'foot';
+      const card = document.createElement('div');
+      card.className = prefix + 'focus';
+      card.setAttribute('aria-live', 'polite');
+      const line = (part: string): HTMLElement => {
+        const element = document.createElement('span');
+        element.className = prefix + 'focus-' + part;
+        card.appendChild(element);
+        return element;
+      };
+      focus = { root: card, eyebrow: line('eyebrow'), name: line('name'), said: line('said'), state: line('state') };
+      glyphs = document.createElement('span');
+      glyphs.className = prefix + 'glyphs';
+      glyphs.setAttribute('aria-hidden', 'true');
+      foot.append(card, glyphs);
+      if (sheet !== null) foot.appendChild(sheet);
+      foot.appendChild(choices);
+      plate.appendChild(foot);
     }
 
     /*
@@ -4997,6 +5146,7 @@ export function makeChrome(
       }
       const band: Band = {
         name: choice.name,
+        label: choice.label,
         root: line,
         less,
         more,
@@ -5158,7 +5308,9 @@ export function makeChrome(
     panel.addEventListener('focusin', follow);
     listeners.push(() => panel.removeEventListener('focusin', follow));
 
-    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper };
+    // 0562: the card opens speaking for the screen's first band of its own, which is where the cursor opens (0561).
+    const spoken = focus === null ? null : (choiceBands.find((b) => b.faces === 'words') ?? null);
+    panels[screen] = { root, controls, timer, options, bands: choiceBands, tabs, rows, now: nowPlaying, crossing, sheet, board, dash, keeper, focus, spoken, glyphs };
     elements.push(root);
   }
 
@@ -5599,6 +5751,10 @@ export function makeChrome(
     for (const row of panel.rows) {
       for (const control of row) control.classList.toggle(ring, control === here);
     }
+    // 0562: the focus card speaks for the band the cursor is on, and keeps speaking for it when the cursor leaves the bands.
+    const on = panel.bands.find((band) => band.root === here && band.faces !== 'chip');
+    if (on !== undefined) panel.spoken = on;
+    paintCard(panel);
     // Focus the element as well, so the keyboard, the screen reader and the pad all agree about where
     // the player is — one cursor, three devices.
     if (focus && here !== undefined && document.activeElement !== here) here.focus({ preventScroll: !scroll });
@@ -5631,11 +5787,46 @@ export function makeChrome(
       band.hint.textContent = fits ? said + ' · ' + FITS[device] : said;
       band.less.disabled = shown <= 0;
       band.more.disabled = shown >= band.hints.length - 1;
+      paintCardOf(band);
       return;
     }
     band.hint.textContent = band.why ?? band.hints[band.index] ?? '';
     band.less.disabled = !band.open.some((open, i) => open && i < band.index);
     band.more.disabled = !band.open.some((open, i) => open && i > band.index);
+    paintCardOf(band);
+  };
+  /** Which of Cosmo's shelves is in view, by screen — 0542's `setInView`, kept since 0562 for the card. */
+  const inView: Partial<Record<Screen, ChoiceName>> = {};
+  /**
+   * Fill a plate's focus card — 0562: the band it speaks for, the option under the cursor or fitted, what
+   * it is, and what it is to the player. The aisle speaks for the shelf it has in view.
+   */
+  const paintCard = (panel: Panel): void => {
+    const card = panel.focus;
+    let band = panel.spoken;
+    if (card === null || band === null) return;
+    if (band.name === 'aisle') band = panel.bands.find((b) => b.name === inView.shop) ?? band;
+    const shown = band.look >= 0 ? band.look : band.index;
+    const button = band.buttons[shown];
+    const shut = shown >= 0 && band.open[shown] === false;
+    let state = '';
+    if (shown < 0) state = band.why ?? '';
+    else if (shut) state = band.whys[shown] ?? band.why ?? '';
+    else if (band.press === 'tries') state = band.look >= 0 ? FITS[device] : 'Fitted';
+    else state = band.why ?? '';
+    const name = button === undefined ? '' : (button.getAttribute('aria-label') ?? button.textContent ?? '');
+    const hint = shown < 0 ? '' : (band.hints[shown] ?? '');
+    // A band of faces carries the name in its line (0513); the card has said it already, large.
+    const said = band.faces === 'portraits' ? hint.slice(hint.indexOf(' — ') + 3) : hint;
+    if (card.eyebrow.textContent !== band.label) card.eyebrow.textContent = band.label;
+    if (card.name.textContent !== name) card.name.textContent = name;
+    if (card.said.textContent !== said) card.said.textContent = said;
+    if (card.state.textContent !== state) card.state.textContent = state;
+    card.root.classList.toggle(card.root.className.split(' ')[0] + '-shut', shut);
+  };
+  /** Fill the card of whichever plate holds this band. */
+  const paintCardOf = (band: Band): void => {
+    for (const panel of Object.values(panels)) if (panel !== undefined && panel.bands.includes(band)) paintCard(panel);
   };
   /** Draw which option of a band that tries is tried on — 0561: the ring on the option, not the row. */
   const paintLook = (band: Band): void => {
@@ -6212,6 +6403,16 @@ export function makeChrome(
       for (const key of tabKeys) key.hidden = device !== 'pad';
       // 0561: a band that tries says how to fit in the hand's words, so it says it again.
       for (const panel of Object.values(panels)) for (const band of panel?.bands ?? []) if (band.press === 'tries') sayBand(band);
+      /*
+        0562: and the plate's foot says which keys do what, in the hand's words — none on a touch screen,
+        where everything is pressed where it is drawn. A screen whose bands try on fits; Cosmo's picks.
+      */
+      for (const name of Object.keys(panels) as Screen[]) {
+        const glyphs = panels[name]?.glyphs;
+        if (glyphs === null || glyphs === undefined) continue;
+        const verb = SCREENS[name].choices.some((c) => c.press === 'tries') ? 'fit' : 'pick';
+        glyphs.textContent = GLYPHS[device].replace('{verb}', verb);
+      }
     },
     setTimer(seconds: number | null): void {
       const panel = shownScreen === null ? undefined : panels[shownScreen];
@@ -6340,6 +6541,11 @@ export function makeChrome(
         if (!SHELF_KINDS.some((kind) => kind === band.name)) continue;
         band.root.classList.toggle(prefix + 'band-away', band.name !== shelf);
       }
+      // 0562: and the card speaks for the shelf in view, the ware in the window.
+      inView[screen] = shelf;
+      const spoken = panel.spoken;
+      if (spoken !== null && SHELF_KINDS.some((kind) => kind === spoken.name)) panel.spoken = panel.bands.find((b) => b.name === shelf) ?? spoken;
+      paintCard(panel);
     },
     setKeeperLine(screen: Screen, line: string): void {
       const keeper = panels[screen]?.keeper;

@@ -2383,7 +2383,11 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     const balance = [{ label: 'Star Shards', value: state.hangar.shards, tone: 'total' as const }];
     chrome.setSheet('hangar', balance);
     chrome.setSheet('parts', balance);
-    chrome.setSheet('shop', balance);
+    // 0562: and on Cosmo's, what is left after the ware in the window, while it is one the balance covers.
+    const forSale = windowWare();
+    const price = forSale === undefined ? null : OWNABLES[forSale].price;
+    const left = forSale === undefined || price === null || state.hangar.owned[forSale] ? -1 : state.hangar.shards - price;
+    chrome.setSheet('shop', left < 0 ? balance : [...balance, { label: 'After', value: left, tone: 'plain' as const }]);
     /*
       0523: what hangs — nothing first, then every dangle, the ones not owned shut — and Cosmo's shelf:
       the ware in the window, what stands between the player and it, and Buy only while it can be.
@@ -3774,6 +3778,12 @@ export function mount(host: Element, palette: PaletteName = 'vivid'): Mounted | 
     }
     if (e.key === 'Escape') {
       goBack();
+      return;
+    }
+    // 0562: Q and E step the tabs, as a pad's shoulders do — the keyboard had no way across but the strip.
+    if ((e.code === 'KeyQ' || e.code === 'KeyE') && row.tabs.length > 0) {
+      e.preventDefault();
+      chrome.tab(e.code === 'KeyQ' ? -1 : 1);
       return;
     }
     const band = document.activeElement instanceof HTMLElement && document.activeElement.getAttribute('role') === 'group';
